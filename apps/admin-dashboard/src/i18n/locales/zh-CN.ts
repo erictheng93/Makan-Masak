@@ -1630,6 +1630,15 @@ const zhCN: Messages = {
       cashier: "收银员",
     },
   },
+  myLeaves: {
+    subtitle: "查看自己的假期余额并提交请假申请",
+    cancelRequest: "取消申请",
+    confirmCancel: "确认取消",
+    dismiss: "先不要",
+    noBalances: "尚未有假期余额",
+    noBalancesHint: "店长设置假别并发放年度假期后会显示在这里",
+    cancellationReason: "取消原因",
+  },
   myShifts: {
     title: "我的班表",
     subtitle: "查看自己的班次并提出换班申请",
@@ -1682,6 +1691,7 @@ const zhCN: Messages = {
   },
   nav: {
     myShifts: "我的班表",
+    myLeaves: "我的请假",
     featureUnavailable: "尚未开放",
     platform: "平台概览",
     dashboard: "仪表板",
@@ -1727,6 +1737,7 @@ const zhCN: Messages = {
   },
   pages: {
     myShifts: "我的班表",
+    myLeaves: "我的请假",
     printAgents: "打印代理",
     members: "会员管理",
     optionGroups: "共用选项组",
@@ -2223,8 +2234,8 @@ const zhCN: Messages = {
       reasonPlaceholder: "请输入请假原因...",
       attachments: "附件",
       required: "必填",
-      uploadPrompt: "点击或拖拽文件上传",
-      formatNote: "支持 PDF、JPG、PNG 格式",
+      attachmentUrlHint:
+        "请粘贴证明文件的链接（PDF 或照片均可），审核者会直接打开该网址。",
       submit: "提交申请",
       period: "期间",
     },
@@ -2264,6 +2275,7 @@ const zhCN: Messages = {
       selectStartDate: "请选择开始日期",
       selectEndDate: "请选择结束日期",
       reasonMinLength: "请假原因至少需要 10 个字符",
+      attachmentUrlInvalid: "请粘贴以 http:// 或 https:// 开头的完整链接",
     },
     warnings: {
       insufficientBalance:

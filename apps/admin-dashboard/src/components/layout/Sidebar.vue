@@ -154,6 +154,7 @@ import {
   MessageSquare,
   CalendarCheck,
   CalendarClock,
+  CalendarOff,
   Printer,
   Carrot,
   TrendingUp,
@@ -335,6 +336,17 @@ const navigationItems = computed(() => {
       path: "/dashboard/my-shifts",
       label: t("nav.myShifts"),
       icon: CalendarClock,
+      visible: true,
+      module: "staff_management",
+      section: "restaurant",
+    },
+    {
+      // Same population and the same module as my-shifts: it only ever shows
+      // the signed-in user's own leave (#344).
+      name: "my-leaves",
+      path: "/dashboard/my-leaves",
+      label: t("nav.myLeaves"),
+      icon: CalendarOff,
       visible: true,
       module: "staff_management",
       section: "restaurant",

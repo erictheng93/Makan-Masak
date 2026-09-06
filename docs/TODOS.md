@@ -89,10 +89,11 @@ these were on a real screen:**
   `startPeriod`/`endPeriod`. Zod stripped it, so every half-day request was
   filed as a full day.
 
-**In `LeaveView.vue`'s components, which no route reaches
+**In `LeaveView.vue`'s components, which no route reached
 ([#344](https://github.com/erictheng93/Makan-Masak/issues/344)), so nobody
 ever saw them.** They were fixed anyway — the types are shared, and leaving
-them wrong would have kept the pin from compiling:
+them wrong would have kept the pin from compiling. All four have since been
+deleted with #344; the entries below are kept because #330 references them:
 
 - `LeaveRequestList.vue` and `LeaveApprovalList.vue` rendered
   `request.daysCount`; the column is `total_days`.
@@ -140,12 +141,23 @@ Both need a product decision, so neither was fixed in place.
   collects `File` objects, and neither caller sends them. The column is a
   single `attachment_url` and no upload endpoint is wired, so a request that
   is *required* to carry proof is always stored with none.
-- **#344** — `LeaveView.vue` has no route and no importer, which makes
-  `LeaveApprovalList`, `LeaveBalanceCard`, `LeaveCalendar` and
-  `LeaveRequestList` unreachable. The live path is `LeavesTab.vue` at
-  `/dashboard/employees/leaves`. Either delete them or route them and add the
-  `/dashboard/leaves/:id` detail page that `handleViewDetails` already
-  pushes to.
+- **#344 — done 2026-09-06.** `LeaveView.vue` had no route and no importer,
+  which made `LeaveApprovalList`, `LeaveBalanceCard`, `LeaveCalendar` and
+  `LeaveRequestList` unreachable. All five are deleted. Neither option in the
+  issue was taken as written, because the dead code was hiding a live gap:
+  `LeavesTab.vue` sits under `/dashboard/employees`, which is `[ADMIN, OWNER]`,
+  so roles 2-4 had **no** leave UI — no balance, no request, no cancel — while
+  the API had been built for them all along (`GET /:restaurantId/requests`,
+  `GET /requests/:id` and `POST /requests/:id/cancel` each carry an
+  unreachable "not a manager, so only your own" branch). `MyLeavesView.vue` at
+  `/dashboard/my-leaves` is that surface, shaped like `MyShiftsView` (#320) and
+  needing no new endpoint. One API change went with it: `GET
+  /:restaurantId/types` was `requireRole([ADMIN, OWNER])` while the write it
+  feeds, `POST /:restaurantId/requests`, has no role gate at all — an employee
+  could file a request but not list the types needed to pick one. The read is
+  now open to every role in the restaurant; the type mutations are not.
+  No `/dashboard/leaves/:id` detail page: a request row already carries
+  everything it would have shown.
 
 **Fixed in place the same day** (small, no decision needed): the reject box in
 `LeaveDecisionCard` said 拒絕原因（可選） while `rejectLeaveRequestSchema`
@@ -154,7 +166,27 @@ request dialog was handed the whole restaurant's balances and
 `getTypeBalance()` takes the first row per leave type, so it quoted an
 arbitrary colleague's remaining days; and `leavesService.cancelRequest()`
 posted no body to an endpoint that requires `reason` — it had no callers and
-was removed.
+was removed. (It came back with #344, taking `reason` as a required argument;
+`MyLeavesView` is the caller.)
+
+### Orphaned leave i18n keys left behind by #344
+
+**Priority:** P4 **Status:** deferred 2026-09-06
+
+Deleting `LeaveView.vue` orphaned the keys only it read, in all six
+`apps/admin-dashboard/src/i18n/locales/*.ts`: the whole `leaves.tabs` block,
+`leaves.title`, `leaves.subtitle`, `leaves.apply`, `leaves.teamLeaves`,
+`leaves.leaveBalance`, `leaves.leaveCalendar`, the `leaves.approval` block, and
+every `leaveActions.*` key except `cancelReasonPrompt`.
+
+**Why deferred:** they are inert — `pnpm check:i18n-locales` compares locales
+against each other, not against usage, so parity still passes and nothing but
+bundle bytes is affected. A bulk removal across six files was also the highest
+-conflict edit available while #343 was concurrently adding keys to the same
+files. Do it as its own change, and re-grep first: `leaves.balance.*`,
+`leaves.list.*`, `leaves.request.*`, `leaves.errors.*`, `leaves.warnings.*`
+and `leaves.status.*` are all still live in `LeaveRequestDialog` or
+`MyLeavesView`.
 
 ## database / money schema
 

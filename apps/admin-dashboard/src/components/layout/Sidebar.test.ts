@@ -218,6 +218,12 @@ describe("Sidebar", () => {
     expect(wrapper.find('[data-testid="nav-item-my-shifts"]').exists()).toBe(
       true,
     );
+    // #344: same reasoning, and the reason leave self-service was invisible
+    // for so long -- /employees/leaves is the only other leave entry and it is
+    // behind canAccessAdminFeatures.
+    expect(wrapper.find('[data-testid="nav-item-my-leaves"]').exists()).toBe(
+      true,
+    );
     expect(wrapper.find('[data-testid="nav-item-employees"]').exists()).toBe(
       false,
     );

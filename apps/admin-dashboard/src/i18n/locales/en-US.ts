@@ -1754,6 +1754,16 @@ const enUS: Messages = {
       cashier: "Cashier",
     },
   },
+  myLeaves: {
+    subtitle: "Check your leave balance and file a leave request",
+    cancelRequest: "Cancel request",
+    confirmCancel: "Confirm cancellation",
+    dismiss: "Keep it",
+    noBalances: "No leave balance yet",
+    noBalancesHint:
+      "Balances appear here once your manager sets up leave types and grants the year's allowance",
+    cancellationReason: "Cancellation reason",
+  },
   myShifts: {
     title: "My Shifts",
     subtitle: "Review your own shifts and ask for a swap",
@@ -1806,6 +1816,7 @@ const enUS: Messages = {
   },
   nav: {
     myShifts: "My Shifts",
+    myLeaves: "My Leave",
     featureUnavailable: "Not yet available",
     platform: "Platform Overview",
     dashboard: "Dashboard",
@@ -1852,6 +1863,7 @@ const enUS: Messages = {
   },
   pages: {
     myShifts: "My Shifts",
+    myLeaves: "My Leave",
     printAgents: "Print Agents",
     members: "Members",
     optionGroups: "Shared Option Groups",
@@ -2356,8 +2368,8 @@ const enUS: Messages = {
       reasonPlaceholder: "Enter reason for leave...",
       attachments: "Attachments",
       required: "Required",
-      uploadPrompt: "Click or drag files to upload",
-      formatNote: "Supported formats: PDF, JPG, PNG",
+      attachmentUrlHint:
+        "Paste a link to your supporting document (PDF or photo). The approver opens this URL directly.",
       submit: "Submit Request",
       period: "Period",
     },
@@ -2397,6 +2409,8 @@ const enUS: Messages = {
       selectStartDate: "Please select a start date",
       selectEndDate: "Please select an end date",
       reasonMinLength: "Reason must be at least 10 characters",
+      attachmentUrlInvalid:
+        "Enter a full link starting with http:// or https://",
     },
     warnings: {
       insufficientBalance:

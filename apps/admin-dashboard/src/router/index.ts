@@ -191,6 +191,25 @@ const routes: RouteRecordRaw[] = [
           ],
         },
       },
+      {
+        // Employee-facing, like my-shifts: own balances, own leave requests,
+        // own cancellations. The manager surface is /employees/leaves, which
+        // is ADMIN/OWNER-only, so without this page roles 2-4 had no leave UI
+        // at all (#344).
+        path: "my-leaves",
+        name: "MyLeaves",
+        component: () => import("@/views/MyLeavesView.vue"),
+        meta: {
+          titleKey: "pages.myLeaves",
+          roles: [
+            UserRole.ADMIN,
+            UserRole.OWNER,
+            UserRole.CHEF,
+            UserRole.SERVICE,
+            UserRole.CASHIER,
+          ],
+        },
+      },
       // Employee Management (replaces old /users route)
       {
         path: "employees",

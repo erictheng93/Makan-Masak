@@ -1657,6 +1657,16 @@ const viVN: Messages = {
       cashier: "Thu ngân",
     },
   },
+  myLeaves: {
+    subtitle: "Xem số ngày phép còn lại và gửi đơn xin nghỉ phép",
+    cancelRequest: "Huỷ đơn",
+    confirmCancel: "Xác nhận huỷ",
+    dismiss: "Giữ lại",
+    noBalances: "Chưa có số ngày phép",
+    noBalancesHint:
+      "Sẽ hiển thị sau khi quản lý thiết lập loại phép và cấp phép năm",
+    cancellationReason: "Lý do huỷ",
+  },
   myShifts: {
     title: "Ca của tôi",
     subtitle: "Xem ca làm của bạn và gửi yêu cầu đổi ca",
@@ -1709,6 +1719,7 @@ const viVN: Messages = {
   },
   nav: {
     myShifts: "Ca của tôi",
+    myLeaves: "Nghỉ phép của tôi",
     featureUnavailable: "Chưa khả dụng",
     platform: "Tổng quan nền tảng",
     dashboard: "Bảng điều khiển",
@@ -1755,6 +1766,7 @@ const viVN: Messages = {
   },
   pages: {
     myShifts: "Ca của tôi",
+    myLeaves: "Nghỉ phép của tôi",
     printAgents: "Tác nhân in",
     members: "Quản lý thành viên",
     optionGroups: "Nhóm tùy chọn dùng chung",
@@ -2261,8 +2273,8 @@ const viVN: Messages = {
       reasonPlaceholder: "Nhập lý do nghỉ phép...",
       attachments: "Tệp đính kèm",
       required: "Bắt buộc",
-      uploadPrompt: "Nhấp hoặc kéo tệp để tải lên",
-      formatNote: "Định dạng hỗ trợ: PDF, JPG, PNG",
+      attachmentUrlHint:
+        "Dán liên kết tới giấy tờ chứng minh (PDF hoặc ảnh). Người phê duyệt sẽ mở trực tiếp URL này.",
       submit: "Gửi yêu cầu",
       period: "Giai đoạn",
     },
@@ -2302,6 +2314,8 @@ const viVN: Messages = {
       selectStartDate: "Vui lòng chọn ngày bắt đầu",
       selectEndDate: "Vui lòng chọn ngày kết thúc",
       reasonMinLength: "Lý do phải có ít nhất 10 ký tự",
+      attachmentUrlInvalid:
+        "Nhập liên kết đầy đủ bắt đầu bằng http:// hoặc https://",
     },
     warnings: {
       insufficientBalance:

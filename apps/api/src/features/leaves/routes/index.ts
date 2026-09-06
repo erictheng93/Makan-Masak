@@ -59,10 +59,17 @@ function callerRestaurantId(user: SessionUser): string | undefined {
 // ========================================
 
 // GET /:restaurantId/types - Get all leave types
+//
+// Readable by every role in the restaurant, unlike the POST/PUT/DELETE below.
+// An employee may file a leave request (POST /:restaurantId/requests carries no
+// requireRole), and the request form cannot offer a leave type it is not
+// allowed to list -- the manager-only read made the employee-facing write
+// unusable (#344). requireRestaurantAccess still confines the read to the
+// caller's own restaurant, and a leave type is non-secret config: code, name,
+// accrual policy.
 app.get(
   "/:restaurantId/types",
   authMiddleware,
-  requireRole([USER_ROLES.ADMIN, USER_ROLES.OWNER]),
   requireRestaurantAccess("restaurantId"),
   validateParams(leaveSchemas.restaurantIdParam),
   async (c) => {

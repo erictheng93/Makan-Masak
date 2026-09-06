@@ -45,9 +45,20 @@ vi.mock("../../../shared/middleware", async () => {
       c.set("user", mocks.currentUser);
       await next();
     },
-    requireRole: () => async (_c: Context, next: Next) => {
-      await next();
-    },
+    // Enforced rather than waved through: which routes carry a role gate is
+    // the thing under test in "lets any employee read leave types" (#344), and
+    // a pass-through stub cannot tell a guarded route from an open one.
+    requireRole:
+      (allowedRoles: number[]) => async (_c: Context, next: Next) => {
+        if (!allowedRoles.includes(mocks.currentUser.role)) {
+          throw new ApiError(
+            "INSUFFICIENT_ROLE",
+            "Insufficient permissions",
+            403,
+          );
+        }
+        await next();
+      },
     requireRestaurantAccess: () => async (_c: Context, next: Next) => {
       await next();
     },
@@ -362,6 +373,47 @@ describe("leaves routes", () => {
     );
     expect(accrueResponse.status).toBe(200);
     expect(mocks.accrueLeaveBalances).toHaveBeenCalledWith(RESTAURANT_ID, 2026);
+  });
+
+  it("lets any employee read leave types but not change them", async () => {
+    // An employee may file a leave request -- POST /:restaurantId/requests
+    // carries no role gate -- and the request form cannot offer a type it is
+    // not allowed to list, so the read is open to every role in the restaurant
+    // while the writes stay ADMIN/OWNER (#344).
+    mocks.currentUser.id = "user-7";
+    mocks.currentUser.role = 2; // chef
+    mocks.getLeaveTypes.mockResolvedValue([leaveType()]);
+    const env = createEnv();
+
+    const listResponse = await app.fetch(
+      new Request(`https://test/${RESTAURANT_ID}/types`),
+      env as never,
+    );
+    expect(listResponse.status).toBe(200);
+    expect(mocks.getLeaveTypes).toHaveBeenCalledWith(RESTAURANT_ID);
+
+    const createResponse = await withSilencedRouteError(() =>
+      app.fetch(
+        jsonRequest(`https://test/${RESTAURANT_ID}/types`, "POST", {
+          code: "ANNUAL",
+          name: "Annual",
+          accrualType: "yearly",
+          accrualAmount: 14,
+        }),
+        env as never,
+      ),
+    );
+    expect(createResponse.status).toBe(403);
+    expect(mocks.createLeaveType).not.toHaveBeenCalled();
+
+    const deleteResponse = await withSilencedRouteError(() =>
+      app.fetch(
+        new Request("https://test/types/3", { method: "DELETE" }),
+        env as never,
+      ),
+    );
+    expect(deleteResponse.status).toBe(403);
+    expect(mocks.deleteLeaveType).not.toHaveBeenCalled();
   });
 
   it("restricts employees to their own balances and requests", async () => {

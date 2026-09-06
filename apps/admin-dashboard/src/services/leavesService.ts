@@ -166,6 +166,21 @@ class LeavesService {
   async rejectRequest(requestId: number, reason?: string): Promise<void> {
     await this.api.post(`/leaves/requests/${requestId}/reject`, { reason });
   }
+
+  /**
+   * Cancel a leave request.
+   *
+   * `reason` is required, not optional: cancelLeaveRequestSchema is
+   * `{ reason: nonEmptyString.max(500) }`, so an empty body is a 400. An
+   * earlier version of this method sent one and was deleted unused in
+   * 5b88e6fe -- do not restore that shape (#344).
+   *
+   * The canceller is bound to the session by the route handler, which also
+   * enforces "your own request unless admin/owner", so no userId is sent.
+   */
+  async cancelRequest(requestId: number, reason: string): Promise<void> {
+    await this.api.post(`/leaves/requests/${requestId}/cancel`, { reason });
+  }
 }
 
 // Export singleton instance

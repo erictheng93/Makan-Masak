@@ -1809,6 +1809,15 @@ const zhTWCore = {
     },
   },
 
+  myLeaves: {
+    subtitle: "查看自己的假期餘額並送出請假申請",
+    cancelRequest: "取消申請",
+    confirmCancel: "確認取消",
+    dismiss: "先不要",
+    noBalances: "尚未有假期餘額",
+    noBalancesHint: "店長設定假別並發放年度假期後會顯示在這裡",
+    cancellationReason: "取消原因",
+  },
   myShifts: {
     title: "我的班表",
     subtitle: "查看自己的班次並提出換班申請",
@@ -1862,6 +1871,7 @@ const zhTWCore = {
   // 導航
   nav: {
     myShifts: "我的班表",
+    myLeaves: "我的請假",
     featureUnavailable: "尚未開放",
     platform: "平台總覽",
     dashboard: "儀表板",
@@ -1909,6 +1919,7 @@ const zhTWCore = {
   // 頁面標題
   pages: {
     myShifts: "我的班表",
+    myLeaves: "我的請假",
     printAgents: "列印代理",
     members: "會員管理",
     optionGroups: "共用選項組",
@@ -2429,8 +2440,8 @@ const zhTWCore = {
       attachments: "附件",
       period: "期間",
       required: "必填",
-      uploadPrompt: "點擊或拖曳檔案上傳",
-      formatNote: "支援 PDF、JPG、PNG 格式",
+      attachmentUrlHint:
+        "請貼上證明文件的連結（PDF 或照片皆可），審核者會直接開啟這個網址。",
       submit: "送出申請",
     },
     balance: {
@@ -2469,6 +2480,7 @@ const zhTWCore = {
       selectStartDate: "請選擇開始日期",
       selectEndDate: "請選擇結束日期",
       reasonMinLength: "請假原因至少需要 10 個字元",
+      attachmentUrlInvalid: "請貼上以 http:// 或 https:// 開頭的完整連結",
     },
     warnings: {
       insufficientBalance:

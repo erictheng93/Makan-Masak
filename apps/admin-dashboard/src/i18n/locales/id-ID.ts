@@ -1771,6 +1771,16 @@ const idID: Messages = {
       cashier: "Kasir",
     },
   },
+  myLeaves: {
+    subtitle: "Lihat sisa cuti Anda dan ajukan permohonan cuti",
+    cancelRequest: "Batalkan pengajuan",
+    confirmCancel: "Konfirmasi pembatalan",
+    dismiss: "Jangan batalkan",
+    noBalances: "Belum ada saldo cuti",
+    noBalancesHint:
+      "Akan muncul setelah manajer menyiapkan jenis cuti dan memberikan jatah tahunan",
+    cancellationReason: "Alasan pembatalan",
+  },
   myShifts: {
     title: "Shift Saya",
     subtitle: "Lihat shift Anda dan ajukan permintaan tukar shift",
@@ -1823,6 +1833,7 @@ const idID: Messages = {
   },
   nav: {
     myShifts: "Shift Saya",
+    myLeaves: "Cuti Saya",
     featureUnavailable: "Belum tersedia",
     platform: "Gambaran Platform",
     dashboard: "Dasbor",
@@ -1869,6 +1880,7 @@ const idID: Messages = {
   },
   pages: {
     myShifts: "Shift Saya",
+    myLeaves: "Cuti Saya",
     printAgents: "Agen cetak",
     members: "Manajemen Anggota",
     optionGroups: "Grup Opsi Bersama",
@@ -2372,8 +2384,8 @@ const idID: Messages = {
       reasonPlaceholder: "Masukkan alasan cuti...",
       attachments: "Lampiran",
       required: "Wajib",
-      uploadPrompt: "Klik atau seret file untuk mengunggah",
-      formatNote: "Format yang didukung: PDF, JPG, PNG",
+      attachmentUrlHint:
+        "Tempel tautan dokumen pendukung (PDF atau foto). Penyetuju akan membuka URL ini langsung.",
       submit: "Kirim Pengajuan",
       period: "Periode",
     },
@@ -2413,6 +2425,8 @@ const idID: Messages = {
       selectStartDate: "Silakan pilih tanggal mulai",
       selectEndDate: "Silakan pilih tanggal selesai",
       reasonMinLength: "Alasan minimal 10 karakter",
+      attachmentUrlInvalid:
+        "Masukkan tautan lengkap yang dimulai dengan http:// atau https://",
     },
     warnings: {
       insufficientBalance:

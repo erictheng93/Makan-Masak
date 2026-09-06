@@ -1654,6 +1654,15 @@ const jaJP: Messages = {
       cashier: "レジ係",
     },
   },
+  myLeaves: {
+    subtitle: "自分の休暇残日数を確認し、休暇を申請します",
+    cancelRequest: "申請を取り消す",
+    confirmCancel: "取り消しを確定",
+    dismiss: "やめる",
+    noBalances: "休暇残日数がまだありません",
+    noBalancesHint: "店長が休暇種別を設定し、年度分を付与すると表示されます",
+    cancellationReason: "取消理由",
+  },
   myShifts: {
     title: "マイシフト",
     subtitle: "自分のシフトを確認し、交代を申請します",
@@ -1706,6 +1715,7 @@ const jaJP: Messages = {
   },
   nav: {
     myShifts: "マイシフト",
+    myLeaves: "マイ休暇",
     featureUnavailable: "未提供",
     platform: "プラットフォーム概要",
     dashboard: "ダッシュボード",
@@ -1752,6 +1762,7 @@ const jaJP: Messages = {
   },
   pages: {
     myShifts: "マイシフト",
+    myLeaves: "マイ休暇",
     printAgents: "プリントエージェント",
     members: "会員管理",
     optionGroups: "共有オプショングループ",
@@ -2258,8 +2269,8 @@ const jaJP: Messages = {
       reasonPlaceholder: "休暇の理由を入力してください...",
       attachments: "添付ファイル",
       required: "必須",
-      uploadPrompt: "クリックまたはドラッグでファイルをアップロード",
-      formatNote: "対応形式: PDF, JPG, PNG",
+      attachmentUrlHint:
+        "証明書類のリンク（PDF または写真）を貼り付けてください。承認者はこの URL を直接開きます。",
       submit: "申請を送信",
       period: "期間",
     },
@@ -2299,6 +2310,8 @@ const jaJP: Messages = {
       selectStartDate: "開始日を選択してください",
       selectEndDate: "終了日を選択してください",
       reasonMinLength: "理由は10文字以上で入力してください",
+      attachmentUrlInvalid:
+        "http:// または https:// で始まる完全な URL を入力してください",
     },
     warnings: {
       insufficientBalance:
