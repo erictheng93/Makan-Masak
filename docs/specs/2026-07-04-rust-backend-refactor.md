@@ -208,16 +208,19 @@ Results:
 The current API contract report covers 21 modules. The main API exposes 48
 feature dirs and 50 route mounts (41 feature dirs have an `index.ts` module).
 
-Tooling limitation: `scripts/check-api-contracts.cjs` regex-extracts only
-top-level field names from exported Zod `z.object` schemas in
-`apps/api/src/contracts/schemas/`. It captures no HTTP method, path, auth
-requirement, field type, or side-effect information, and it silently drops
-schema files its regex cannot parse (`integrations.ts` exists on disk but
-yields zero schemas, which is why the snapshot says 21 modules while 22 files
-exist). The existing tool therefore cannot express the coverage this spec
-requires; Phase 0 must build a new contract generator in
+Tooling limitation: `scripts/check-api-contracts.cjs` captures no HTTP method,
+path, auth requirement, or side-effect information, so it still cannot express
+the coverage this spec requires; Phase 0 must build a new contract generator in
 `packages/backend-contracts` rather than extend `contract:report` alone.
 `contract:report` remains useful as a field-drift tripwire during migration.
+
+> **Updated 2026-09-06 ([#336](https://github.com/erictheng93/Makan-Masak/issues/336)).**
+> Two of the limitations recorded here are gone. The script no longer
+> regex-extracts anything — it imports the schemas and walks them — so it does
+> capture field types, and it no longer silently drops a file its regex could
+> not parse. `integrations.ts` now yields 7 schemas and the report covers 22
+> modules, not 21. The missing method/path/auth/side-effect axes are unchanged,
+> and remain the reason Phase 0 needs its own generator.
 
 Before Rust implementation, contract coverage
 must be expanded so every route that will be ported has:
@@ -555,7 +558,8 @@ Exit criteria:
 - The new `packages/backend-contracts` generator covers every route planned for
   Rust migration with method, path, auth, schemas, and side effects. The
   existing `contract:report` field-shape snapshot stays green but is not the
-  coverage gate (see Contract Gaps: it captures top-level field names only).
+  coverage gate (see Contract Gaps: since #336 it captures every field path
+  and its type, but still no method, path, auth or side effects).
 - Docs explain which backend docs are authoritative.
 - Parity runner can execute against the current TypeScript backend.
 

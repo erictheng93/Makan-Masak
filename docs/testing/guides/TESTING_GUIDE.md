@@ -98,12 +98,22 @@ pnpm --filter @makanmasak/api test
 
 ### 2.5 API Contract 測試
 
-透過 Zod schema 建立 `.api-contracts-snapshot.json`，防止 API shape 意外漂移。
+`apps/api/src/contracts/schemas/*.ts` 的 Zod schema 會被**實際 import 進來**
+（透過 tsx）逐層走訪，每個欄位路徑連同型別寫進
+`.api-contracts-snapshot.json`，防止 API shape 意外漂移。
 
-⚠️ 快照只記**欄位名**，不記型別。欄位增刪會被擋下來，但欄位型別改變（例如
-`createdAt` 從 ISO 字串變成 Unix 毫秒數）不會——那是真實的 wire-contract
-破壞，卻會安靜通過。改欄位型別時請自行確認下游。缺口記在
-`docs/TODOS.md` §「API contracts」。
+擋得下來的：任意深度的欄位增刪、**欄位型別改變**（`createdAt` 從 ISO 字串變成
+Unix 毫秒數）、optional／nullable 的得失、enum 成員與 literal 值的增減、陣列元素
+型別、`.loose()` catchall 的得失。展開到 `data.items[].itemSnapshot.name`
+這種巢狀路徑，spread（`...TimestampFields`）與 envelope helper
+（`successEnvelope(X)`）的內容也一樣涵蓋。
+
+⚠️ 仍擋不下來的：`.int()`／`.min()`／`.regex()` 這類 refinement 不進標籤，所以
+`z.number()` 與 `z.number().int()` 看起來一樣；改名依然只會顯示成一刪一增；不在
+`apps/api/src/contracts/schemas/*.ts` export 的東西完全不在範圍內。
+
+快照格式為 v2（`$schemaVersion: 2`）。若讀到舊格式，`contract:check` 會直接失敗
+並要求先跑一次 `contract:update`。
 
 ```bash
 pnpm contract:check    # 比對 snapshot（CI 使用）

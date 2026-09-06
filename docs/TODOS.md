@@ -14,7 +14,7 @@ places, and this file says which:
 | Disposition | Items |
 | --- | --- |
 | **Done** — shipped 2026-09-05 | safeTransaction removal (`1dd7a164`), coupons return type (`719e54f7`), contract-script header (`ac7043de`) |
-| **Moved to issues** — needs design, touches billing, or is multi-week | [#333](https://github.com/erictheng93/Makan-Masak/issues/333) usage meter, [#334](https://github.com/erictheng93/Makan-Masak/issues/334) money cutover, [#335](https://github.com/erictheng93/Makan-Masak/issues/335) marketplace Phase 4, [#336](https://github.com/erictheng93/Makan-Masak/issues/336) contract types |
+| **Moved to issues** — needs design, touches billing, or is multi-week | [#333](https://github.com/erictheng93/Makan-Masak/issues/333) usage meter, [#334](https://github.com/erictheng93/Makan-Masak/issues/334) money cutover, [#335](https://github.com/erictheng93/Makan-Masak/issues/335) marketplace Phase 4, ~~[#336](https://github.com/erictheng93/Makan-Masak/issues/336) contract types~~ (closed 2026-09-06) |
 | **Stays here** — no actionable next step | RealtimeSession (blocked on Cloudflare), payment acquirer (product decision), marketplace Phase 5 (post-MVP), GroupOrders harness (cost exceeds benefit), production deploy (needs credentials only) |
 
 Deliberately not filed as issues: the four "stays here" items have no action
@@ -25,22 +25,40 @@ rather than tracking anything.
 
 ### Record field types in the API contract snapshot
 
-**Priority:** P2 **Status:** → **[#336](https://github.com/erictheng93/Makan-Masak/issues/336)** (filed 2026-09-05). The half that needed no design shipped in `ac7043de`: the script no longer claims to detect type changes, and `docs/testing/guides/TESTING_GUIDE.md` §2.5 carries the same caveat. The extractor work moved to the issue because changing the snapshot format invalidates the whole baseline. **Files:** `scripts/check-api-contracts.cjs`, `.api-contracts-snapshot.json`
+**Priority:** P2 **Status:** Completed 2026-09-06,
+[#336](https://github.com/erictheng93/Makan-Masak/issues/336).
+**Files:** `scripts/check-api-contracts.cjs`, `.api-contracts-snapshot.json`,
+`tests/unit/check-api-contracts.test.ts`
 
-**Context:** `contract:check` reports schema-field additions/removals, but its static extractor stores only field names. Consequently, a wire-contract change such as menu/category `createdAt` and `updatedAt` changing from ISO strings to Unix-millisecond numbers produces no contract warning. The script's header currently overstates this capability by saying type changes are detected.
+**Root cause:** the extractor never evaluated the schemas — it read the source
+text with a regex and harvested identifiers sitting before a `:` at brace-depth
+one. Types were the reported symptom; whole fields were the actual hole.
+`...TimestampFields` produced nothing (so `createdAt` was not in the snapshot at
+all, in any schema), `successEnvelope(X)` was matched against a hard-coded table
+that returned the literal `["success", "data"]`, and a helper call wrapping an
+inline `z.object({...})` recorded the *inner* object's keys as if they were the
+response's top level. 46 schemas — `orders.OrderStatusEnum` among them — were
+invisible entirely.
 
-**Scope:**
+**Fix:** the schemas are now imported for real (`require("tsx/cjs")`, then
+`require()` of the `.ts` file) and `schema._zod.def` is walked, which is both
+shorter than the scanner it replaced and complete by construction. The snapshot
+is format v2: one entry per field path, carrying a type label
+(`union(date|number|string)`, `string|null?`, `enum(cancelled|…|refunded)`,
+`object+catchall`). A changed label diffs as breaking. 192 schemas / ~1,000
+names became 238 schemas / 2,855 field paths, with nothing lost — `--update`
+printed a name-level v1→v2 delta so the regeneration was reviewable, and its
+only 12 "losses" were three group-orders schemas whose fields moved to their
+true depth under `data.`.
 
-- Extend the extractor and snapshot to persist each field's Zod type, including optionality/nullability and nested response objects where practical.
-- Diff type changes as breaking changes and update the script documentation.
-- ~~Resolve the current `contract:check` baseline delta for `seats.SEAT_SENSITIVE_FIELDS` (`pendingQrCode`, `pendingQrCodeVersion`, and `pendingQrPreparedAt`)~~ — **resolved.** `pnpm contract:check` reports "No contract changes detected" as of 2026-09-05; the baseline was reconciled at some point after 2026-08-13.
+`pnpm contract:check` also ran from **no gate at all** — not CI, not
+`verify:push`, not the pre-commit hook. It is now a step in both, and
+`tests/unit/check-api-contracts.test.ts` is registered in
+`scripts/guard-suites.txt`.
 
-**Re-verified 2026-09-05 — still open.** `.api-contracts-snapshot.json` still
-stores each schema as a bare array of field names (e.g.
-`authentication/TokenPairSchema = ["expiresAt", "refreshToken", "token"]`), with
-no type information, and `scripts/check-api-contracts.cjs` still claims
-otherwise in its header (lines 8 and 19: "or type changed", "Reports additions,
-removals, and type changes"). Only the third scope item above has been cleared.
+**Still not detected** (recorded in the script header and TESTING_GUIDE §2.5,
+not filed): refinements (`.int()`, `.min()`, `.regex()`) are not part of the
+label; a rename is still one removal plus one addition.
 
 ## shared-types wire drift
 

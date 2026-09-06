@@ -711,6 +711,8 @@ There is also a sub-schema `OrderItem.status` at line 291 with `z.enum(["pending
 - Changing the enum membership in `OrderStatusEnum` (`apps/api/src/contracts/schemas/orders.ts:22-30`) will **NOT** trip the contract test. This is good news — Phase 2 doesn't need to coordinate with `pnpm contract:update`.
 - ⚠️ However, the contract snapshot has a blind spot for enum drift — recommend Phase 8 (post-cleanup) to either delete this contract or extend the snapshot generator to capture enum values.
 
+> **Superseded 2026-09-06 ([#336](https://github.com/erictheng93/Makan-Masak/issues/336)).** The generator was extended, so both bullets above are now inverted. The snapshot stores `orders.OrderStatusEnum` as `enum(cancelled|confirmed|delivered|paid|pending|preparing|ready|refunded)`, and every field carries its type. **Changing enum membership now DOES trip `pnpm contract:check`** — Phase 2 must run `pnpm contract:update` in the same commit.
+
 **Postman collections / Insomnia exports:** None found in repo.
 
 **Public-facing markdown docs that may pin enum values:**
@@ -727,7 +729,7 @@ The plan and this investigation doc are the only matches inside `docs/`. No READ
 
 ⚠️ **One public API consumer at risk:** the dynamically-generated Swagger UI served from `apps/api/src/openapi/integration.ts`. Anyone using the public API docs has been told a 5-member string enum that mismatches reality. Phase 2 must update the OpenAPI integration schema as part of the canonical-type rollout.
 
-⚠️ **Contract test blind spot:** `.api-contracts-snapshot.json` tracks field names only, not enum values. The migration won't trigger contract failure, but a follow-up should extend the snapshot generator (out of scope for this plan).
+⚠️ ~~**Contract test blind spot:** `.api-contracts-snapshot.json` tracks field names only, not enum values. The migration won't trigger contract failure, but a follow-up should extend the snapshot generator (out of scope for this plan).~~ **The follow-up shipped 2026-09-06 ([#336](https://github.com/erictheng93/Makan-Masak/issues/336)): enum values are snapshotted and the migration WILL trip `pnpm contract:check`. Run `pnpm contract:update` in the same commit.**
 
 ✅ **No legacy mobile / partner SDK** — wire format change is internal-only.
 
@@ -983,7 +985,7 @@ This decision is a Phase 0.5 hard gate item — the user should approve before P
 | kitchen-display localStorage cache rejection storm | certain | one-time `GET /api/v1/kitchen/orders` per active tab | Phase 5 — flip validator to `typeof === "string"`, accept the rebuild | N/A — expected behavior |
 | Customer-app `OrderTrackingView.vue` Record<number,…> lookups silently fail | certain (already failing in prod) | UI shows default branch instead of correct icon/color | Phase 5 — full rewrite of OrderTrackingView | N/A — already broken |
 | API emits mixed wire format during staged deploy | medium | downstream Zod validators reject | Phase 6.1 dual-emit window OR atomic deploy | API 5xx > 0.5% |
-| Contract test (`pnpm contract:check`) blocks deploy | low | blocks merge | §7 finding: snapshot tracks field names only, not enum values — won't trip | N/A |
+| Contract test (`pnpm contract:check`) blocks deploy | ~~low~~ **certain since 2026-09-06** | blocks merge | ~~§7 finding: snapshot tracks field names only, not enum values — won't trip~~ — [#336](https://github.com/erictheng93/Makan-Masak/issues/336) made the snapshot type-aware and put the check in CI. Run `pnpm contract:update` in the same commit | CI red |
 | OpenAPI/Swagger UI still serves wrong 5-member enum | high (existing) | external API consumers get wrong contract | Phase 2 update `apps/api/src/openapi/integration.ts:277-283` in lockstep | N/A — bug already shipped |
 | `state-machine.test.ts` reverse-lookup `OrderStatus[upper]` breaks | high | 79-ref test file fails | Phase 2 Task 14 — rewrite to direct string lookup | CI red |
 | `cache-coherence.test.ts` `OrderStatus.PENDING` sites break | high | 76-ref test file fails | Phase 2 — bulk rewrite | CI red |

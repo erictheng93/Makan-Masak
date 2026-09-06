@@ -98,7 +98,7 @@ If something goes wrong:
 
 ## Non-Issues (Confirmed Safe)
 
-- **Contract tests:** `.api-contracts-snapshot.json` tracks field names only, not enum values — the migration does not trip contract tests.
+- ~~**Contract tests:** `.api-contracts-snapshot.json` tracks field names only, not enum values — the migration does not trip contract tests.~~ **No longer true as of 2026-09-06 ([#336](https://github.com/erictheng93/Makan-Masak/issues/336)).** The snapshot pins `orders.OrderStatusEnum` as `enum(cancelled|confirmed|delivered|paid|pending|preparing|ready|refunded)` and `pnpm contract:check` now runs in CI, so changing the membership fails the build. Run `pnpm contract:update` in the same commit as the enum change and review the diff.
 - **IndexedDB (customer-app):** `OfflineOrder` does not contain a `status` field — no migration needed.
 - **Print agent:** Zero OrderStatus references — unaffected.
 - **Backup scheduler / image processor:** Zero OrderStatus references — unaffected.

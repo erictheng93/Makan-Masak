@@ -220,6 +220,13 @@ jobs:
       - name: 🎨 Design palette guard
         run: pnpm run check:design-palette
 
+      # The response-contract snapshot. It compares every field path and its
+      # Zod type against .api-contracts-snapshot.json, so a field that changes
+      # type -- an ISO string becoming Unix milliseconds -- fails here. Before
+      # 2026-09-06 the script ran from no gate at all, and stored names only.
+      - name: 📐 API contract snapshot
+        run: pnpm run contract:check
+
       - name: 🧪 守門腳本回歸測試
         if: needs.changes.outputs.guard_tests == 'true'
         run: pnpm run test:ci-guards

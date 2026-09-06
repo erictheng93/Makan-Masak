@@ -24,6 +24,7 @@
 # Format: <guard script> <regression suite>
 
 scripts/classify-ci-changes.sh                       tests/unit/ci-change-classifier.test.ts
+scripts/check-api-contracts.cjs                      tests/unit/check-api-contracts.test.ts
 scripts/check-docs-drift.cjs                         tests/unit/code-scanning-regressions.test.ts
 scripts/check-migration-dual-track.cjs               tests/unit/migration-dual-track.test.ts
 scripts/check-no-automated-destructive-wrangler.cjs  tests/unit/check-no-automated-destructive-wrangler.test.ts
