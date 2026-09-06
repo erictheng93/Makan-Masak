@@ -71,6 +71,7 @@
 
         <!-- Expand toggle -->
         <button
+          data-testid="leave-expand-toggle"
           class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-ios-bg transition-colors text-ios-text/40"
           @click="toggleExpanded"
         >
@@ -191,6 +192,23 @@
           <p class="text-xs font-semibold text-ios-text/50 mb-1">請假原因</p>
           <p class="text-sm text-ios-text/70">{{ request.reason }}</p>
         </div>
+
+        <!-- Attachment. This card is the live approval UI and had no
+             attachment row at all, so an approver could not see the proof
+             document even once it was stored (#343). -->
+        <div v-if="attachmentHref" class="mt-3">
+          <p class="text-xs font-semibold text-ios-text/50 mb-1">證明文件</p>
+          <a
+            :href="attachmentHref"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="leave-attachment-link"
+            class="inline-flex items-center gap-1.5 text-sm text-ios-primary rounded-full bg-ios-blue-soft px-3 py-1.5 transition-all duration-300 ease-out hover:bg-ios-blue-soft/70"
+          >
+            <Paperclip class="w-3.5 h-3.5" />
+            {{ attachmentLabel }}
+          </a>
+        </div>
       </div>
     </Transition>
   </div>
@@ -198,9 +216,10 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { ChevronDown } from "lucide-vue-next";
+import { ChevronDown, Paperclip } from "lucide-vue-next";
 import LeaveTimelineStrip from "./LeaveTimelineStrip.vue";
 import { useLeaveConflict } from "@/composables/useLeaveConflict";
+import { safeExternalHref } from "@/utils/safeExternalHref";
 import type { LeaveRequest, LeaveBalance } from "@/services/leavesService";
 
 interface Props {
@@ -231,6 +250,23 @@ const toggleExpanded = () => {
 const employeeName = computed(
   () => props.request.employee?.fullName || `員工${props.request.employeeId}`,
 );
+
+// The URL is employee-supplied, so it goes through safeExternalHref before it
+// reaches an href — javascript:/data: never becomes a link. Any http(s) host is
+// allowed here (the document lives on whatever drive the employee uses), which
+// is the same call LeaveApprovalList makes.
+const attachmentHref = computed(() =>
+  safeExternalHref(props.request.attachmentUrl, { allowAnyHttpHost: true }),
+);
+
+const attachmentLabel = computed(() => {
+  if (!attachmentHref.value) return "";
+  try {
+    return new URL(attachmentHref.value).hostname;
+  } catch {
+    return attachmentHref.value;
+  }
+});
 
 const { sameDayColleagues, urgencyLevel } = useLeaveConflict(
   computed(() => props.request),

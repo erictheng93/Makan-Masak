@@ -165,64 +165,30 @@
             </div>
           </div>
 
-          <!-- 附件上傳 (如需要證明文件) -->
+          <!-- 證明文件連結 (如需要證明文件) -->
           <div
             v-if="selectedLeaveType?.requiresDocumentation"
             class="form-group"
           >
-            <label class="form-label">
+            <label class="form-label required" for="leave-attachment-url">
               {{ t("leaves.request.attachments") }}
-              <span class="label-note">
-                ({{ t("leaves.request.required") }})
-              </span>
             </label>
-            <div class="file-upload-area">
-              <input
-                ref="fileInput"
-                type="file"
-                class="file-input"
-                multiple
-                accept=".pdf,.jpg,.jpeg,.png"
-                @change="handleFileSelect"
-              />
-              <div class="file-upload-prompt">
-                <svg
-                  class="icon-upload"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    d="M5.5 13a3.5 3.5 0 01-.369-6.98 4 4 0 117.753-1.977A4.5 4.5 0 1113.5 13H11V9.413l1.293 1.293a1 1 0 001.414-1.414l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.413V13H5.5z"
-                  />
-                </svg>
-                <p>{{ t("leaves.request.uploadPrompt") }}</p>
-                <p class="file-format-note">
-                  {{ t("leaves.request.formatNote") }}
-                </p>
-              </div>
-            </div>
-            <div v-if="formData.attachments.length > 0" class="file-list">
-              <div
-                v-for="(file, index) in formData.attachments"
-                :key="index"
-                class="file-item"
-              >
-                <span class="file-name">{{ file.name }}</span>
-                <button
-                  type="button"
-                  class="btn-remove-file"
-                  @click="removeFile(index)"
-                >
-                  <svg class="icon" viewBox="0 0 20 20" fill="currentColor">
-                    <path
-                      fill-rule="evenodd"
-                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                      clip-rule="evenodd"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </div>
+            <input
+              id="leave-attachment-url"
+              v-model.trim="formData.attachmentUrl"
+              type="url"
+              class="form-input"
+              :class="{ error: errors.attachmentUrl }"
+              inputmode="url"
+              placeholder="https://..."
+              data-testid="leave-attachment-url"
+            />
+            <span v-if="errors.attachmentUrl" class="error-message">
+              {{ errors.attachmentUrl }}
+            </span>
+            <p v-else class="field-hint">
+              {{ t("leaves.request.attachmentUrlHint") }}
+            </p>
           </div>
 
           <!-- 警告訊息 -->
@@ -312,7 +278,10 @@ export interface LeaveRequestFormData {
   endDate: string;
   endPeriod: "full" | "am" | "pm";
   reason: string;
-  attachments: File[];
+  // Single http(s) link, matching leave_requests.attachment_url — the column is
+  // one TEXT field, not a list, and the API only ever accepted a URL. The
+  // dialog used to collect File[] that no caller could send (#343).
+  attachmentUrl?: string;
 }
 
 const props = defineProps<Props>();
@@ -329,7 +298,7 @@ const formData = ref<LeaveRequestFormData>({
   endDate: "",
   endPeriod: "full",
   reason: "",
-  attachments: [],
+  attachmentUrl: "",
 });
 
 // 錯誤訊息
@@ -352,6 +321,18 @@ const selectedLeaveType = computed(() => {
   return props.leaveTypes.find((t) => t.id === formData.value.leaveTypeId);
 });
 
+// 附件連結驗證。與後端 createLeaveRequestSchema 的 httpUrlSchema 對齊：
+// 只收 http/https 絕對網址，其他一律擋在前端，避免送出後才吃 400。
+const isHttpUrl = (value: string | undefined): boolean => {
+  if (!value) return false;
+  try {
+    const protocol = new URL(value).protocol.toLowerCase();
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
 // 表單驗證
 const isFormValid = computed(() => {
   return (
@@ -361,7 +342,7 @@ const isFormValid = computed(() => {
     formData.value.reason.trim().length >= 10 &&
     calculatedDays.value > 0 &&
     (!selectedLeaveType.value?.requiresDocumentation ||
-      formData.value.attachments.length > 0)
+      isHttpUrl(formData.value.attachmentUrl))
   );
 });
 
@@ -448,22 +429,6 @@ const checkNoticeRequirement = () => {
   }
 };
 
-// 處理檔案選擇
-const handleFileSelect = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  if (target.files) {
-    formData.value.attachments = [
-      ...formData.value.attachments,
-      ...Array.from(target.files),
-    ];
-  }
-};
-
-// 移除檔案
-const removeFile = (index: number) => {
-  formData.value.attachments.splice(index, 1);
-};
-
 // 處理提交
 const handleSubmit = async () => {
   // 驗證表單
@@ -485,6 +450,13 @@ const handleSubmit = async () => {
     errors.value.reason = t("leaves.errors.reasonMinLength");
   }
 
+  if (
+    selectedLeaveType.value?.requiresDocumentation &&
+    !isHttpUrl(formData.value.attachmentUrl)
+  ) {
+    errors.value.attachmentUrl = t("leaves.errors.attachmentUrlInvalid");
+  }
+
   if (Object.keys(errors.value).length > 0) {
     return;
   }
@@ -495,6 +467,8 @@ const handleSubmit = async () => {
     emit("submit", {
       ...formData.value,
       leaveTypeId: Number(formData.value.leaveTypeId),
+      // "" would fail the API's z.url(); send nothing instead.
+      attachmentUrl: formData.value.attachmentUrl || undefined,
     });
   } finally {
     isSubmitting.value = false;
@@ -518,7 +492,7 @@ const resetForm = () => {
     endDate: "",
     endPeriod: "full",
     reason: "",
-    attachments: [],
+    attachmentUrl: "",
   };
   errors.value = {};
   warnings.value = [];
@@ -743,100 +717,10 @@ watch(
   flex-shrink: 0;
 }
 
-/* 檔案上傳 */
-.file-upload-area {
-  position: relative;
-  border: 2px dashed #d1d5db;
-  border-radius: 8px;
-  padding: 24px;
-  text-align: center;
-  cursor: pointer;
-  transition:
-    border-color 0.2s,
-    background 0.2s;
-}
-
-.file-upload-area:hover {
-  border-color: #007aff;
-  background: #f9fafb;
-}
-
-.file-input {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.file-upload-prompt {
-  pointer-events: none;
-}
-
-.icon-upload {
-  width: 40px;
-  height: 40px;
+.field-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
   color: #9ca3af;
-  margin: 0 auto 8px;
-}
-
-.file-upload-prompt p {
-  margin: 4px 0;
-  font-size: 14px;
-  color: #6b7280;
-}
-
-.file-format-note {
-  font-size: 12px !important;
-  color: #9ca3af !important;
-}
-
-/* 檔案列表 */
-.file-list {
-  margin-top: 12px;
-}
-
-.file-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background: #f3f4f6;
-  border-radius: 6px;
-  margin-bottom: 8px;
-}
-
-.file-name {
-  font-size: 14px;
-  color: #374151;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.btn-remove-file {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: #ff3b30;
-  flex-shrink: 0;
-}
-
-.btn-remove-file:hover {
-  background: #fee2e2;
-  border-radius: 4px;
-}
-
-.btn-remove-file .icon {
-  width: 16px;
-  height: 16px;
 }
 
 /* 警告訊息 */

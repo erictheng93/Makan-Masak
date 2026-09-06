@@ -4,6 +4,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import LeavesTab from "./LeavesTab.vue";
 import LeaveRequestDialog from "@/components/leaves/LeaveRequestDialog.vue";
+import type { LeaveRequestFormData } from "@/components/leaves/LeaveRequestDialog.vue";
 import { leavesService } from "@/services/leavesService";
 import type { LeaveBalance, LeaveType } from "@makanmasak/shared-types";
 
@@ -37,6 +38,7 @@ vi.mock("@/services/leavesService", () => ({
     getRestaurantBalances: vi.fn(),
     createLeaveType: vi.fn(),
     deleteLeaveType: vi.fn(),
+    createRequest: vi.fn(),
   },
 }));
 
@@ -221,5 +223,53 @@ describe("LeavesTab request dialog balances", () => {
     expect(passed[0]).toEqual(
       expect.objectContaining({ employeeId: "user-me", remainingDays: 14 }),
     );
+  });
+});
+
+// This is the boundary #343 actually broke: the dialog collected the
+// attachment, this handler built the payload without it, and the request was
+// filed with attachment_url = null. A dialog-only test would not have caught
+// it -- the dialog was doing its part all along.
+describe("LeavesTab request payload", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  async function submitFromDialog(formData: Partial<LeaveRequestFormData>) {
+    const wrapper = await mountTab([
+      leaveType({ requiresDocumentation: true }),
+    ]);
+    wrapper.findComponent(LeaveRequestDialog).vm.$emit("submit", {
+      leaveTypeId: 1,
+      startDate: "2026-10-01",
+      startPeriod: "full",
+      endDate: "2026-10-01",
+      endPeriod: "full",
+      reason: "需要證明文件的病假申請",
+      ...formData,
+    } satisfies LeaveRequestFormData);
+    await flushPromises();
+    return wrapper;
+  }
+
+  it("forwards the attachment link to the create endpoint", async () => {
+    await submitFromDialog({
+      attachmentUrl: "https://drive.example.com/cert.pdf",
+    });
+
+    expect(leavesService.createRequest).toHaveBeenCalledOnce();
+    expect(leavesService.createRequest).toHaveBeenCalledWith(
+      "restaurant-1",
+      expect.objectContaining({
+        attachmentUrl: "https://drive.example.com/cert.pdf",
+      }),
+    );
+  });
+
+  it("sends no attachmentUrl when there is none", async () => {
+    await submitFromDialog({ attachmentUrl: undefined });
+
+    expect(leavesService.createRequest).toHaveBeenCalledOnce();
+    // Not "" -- the endpoint validates with z.url() and would 400 on it.
+    const payload = vi.mocked(leavesService.createRequest).mock.calls[0][1];
+    expect(payload.attachmentUrl).toBeUndefined();
   });
 });

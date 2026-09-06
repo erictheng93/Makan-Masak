@@ -457,6 +457,10 @@ const handleLeaveRequest = async (formData: LeaveRequestFormData) => {
       startPeriod: formData.startPeriod || "full",
       endPeriod: formData.endPeriod || "full",
       reason: formData.reason,
+      // The dialog used to hand over File[] that nothing forwarded, so every
+      // documented request was filed with attachment_url = null (#343). The
+      // column is a single URL; pass it through, omitted when blank.
+      attachmentUrl: formData.attachmentUrl,
     });
     showRequestDialog.value = false;
     await loadData();
