@@ -1,4 +1,15 @@
-import { api } from "./api";
+import { api, unwrapApiList } from "./api";
+
+export type EmergencyAlertSeverity = "critical" | "high" | "medium" | "low";
+
+export interface EmergencyAlert {
+  id: string;
+  alertType: string;
+  severity: EmergencyAlertSeverity;
+  title: string;
+  description: string;
+  createdAt: number;
+}
 
 class OwnerService {
   getQuickActionRoute(action: string): string | null {
@@ -11,30 +22,18 @@ class OwnerService {
     return routes[action] ?? null;
   }
 
-  // These two have live call sites (OwnerView handleAlertAction) but no
-  // endpoint: the API mounts no top-level /alerts, and the /backup/alerts and
-  // /monitoring/alerts routes are a different concern with different methods.
-  // They are unreachable today only because OwnerView's alert list is a
-  // hardcoded empty ref, so they are kept rather than deleted until #285
-  // decides whether the emergency-alert panel is built or removed.
-  async resolveEmergencyAlert(alertId: number): Promise<void> {
-    try {
-      await api.post(`/alerts/${alertId}/resolve`);
-      console.log("Emergency alert resolved:", alertId);
-    } catch (error) {
-      console.error("Error resolving emergency alert:", error);
-      throw error;
-    }
+  /** Open operational alerts for the signed-in owner's restaurant (#285). */
+  async listEmergencyAlerts(): Promise<EmergencyAlert[]> {
+    const response = await api.get<EmergencyAlert[]>("/alerts");
+    return unwrapApiList<EmergencyAlert>(response.data);
   }
 
-  async escalateEmergencyAlert(alertId: number): Promise<void> {
-    try {
-      await api.post(`/alerts/${alertId}/escalate`);
-      console.log("Emergency alert escalated:", alertId);
-    } catch (error) {
-      console.error("Error escalating emergency alert:", error);
-      throw error;
-    }
+  async resolveEmergencyAlert(alertId: string): Promise<void> {
+    await api.post(`/alerts/${alertId}/resolve`);
+  }
+
+  async escalateEmergencyAlert(alertId: string): Promise<void> {
+    await api.post(`/alerts/${alertId}/escalate`);
   }
 }
 

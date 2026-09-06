@@ -73,6 +73,10 @@ export { PartnershipService } from "./PartnershipService";
 export { VerificationService } from "./VerificationService";
 export { FeedbackService } from "./FeedbackService";
 export {
+  RestaurantAlertService,
+  type RaiseAlertInput,
+} from "./RestaurantAlertService";
+export {
   TenantMemberDirectoryService,
   type AuditActor,
   type TenantScope,

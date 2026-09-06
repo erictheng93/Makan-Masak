@@ -78,6 +78,10 @@
     {
       "fresh": "0019_coupon_valid_period_ms.sql",
       "reason": "coupons is a platform-API table; the management-api database has no coupons row whose validity window could be paired against."
+    },
+    {
+      "fresh": "0020_restaurant_alerts.sql",
+      "reason": "restaurant_alerts holds owner-facing operational alerts for platform-API restaurants; the management-api database has no restaurants row to raise or scope an alert against."
     }
   ],
   "legacyOnly": [

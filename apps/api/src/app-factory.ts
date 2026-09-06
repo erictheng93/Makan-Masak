@@ -116,6 +116,7 @@ import {
   type UnlaunchedFeatureKey,
 } from "./shared/feature-adoption";
 import feedbackFeature from "./features/feedback";
+import alertsFeature from "./features/alerts";
 import billingFeature from "./features/billing";
 import subscriptionsFeature from "./features/subscriptions";
 import meFeature from "./features/me";
@@ -778,6 +779,7 @@ export function createApp(
   apiV1.route("/discovery", discoveryFeature.routes);
   apiV1.route("/markets", marketsFeature.routes);
   apiV1.route("/feedback", feedbackFeature.routes);
+  apiV1.route("/alerts", alertsFeature.routes); // 店主營運告警 (#285) — admin/owner only
   apiV1.route("/billing", billingFeature.routes);
   apiV1.route("/me", meFeature.routes);
   apiV1.route("/notifications", notificationsRoutes);

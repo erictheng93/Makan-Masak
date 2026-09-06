@@ -380,7 +380,7 @@
               {{ alert.description }}
             </p>
             <p class="text-xs text-red-600 mt-1">
-              {{ alert.time }}
+              {{ formatAlertTime(alert.createdAt) }}
             </p>
           </div>
           <div class="flex space-x-2">
@@ -412,6 +412,7 @@ import { useCurrency } from "@/composables/useCurrency";
 import { api, unwrapApiList } from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
 import { ownerService } from "@/services/ownerService";
+import type { EmergencyAlert } from "@/services/ownerService";
 import { schedulingService } from "@/services/schedulingService";
 import {
   hasRequestFailure,
@@ -682,10 +683,12 @@ const systemHealth = computed(() => {
   ];
 });
 
-// --- Emergency alerts (no dedicated API; kept empty unless future API added) ---
-const emergencyAlerts = ref<
-  Array<{ id: number; title: string; description: string; time: string }>
->([]);
+// --- Emergency alerts (#285): open operational alerts, refreshed by the
+// same 30s poll as the rest of the dashboard. ---
+const emergencyAlerts = ref<EmergencyAlert[]>([]);
+
+const formatAlertTime = (createdAtMs: number) =>
+  new Date(createdAtMs).toLocaleString();
 
 // --- Helpers ---
 const getStatusText = (status: string) => {
@@ -732,6 +735,7 @@ async function fetchAllData() {
       usersRes,
       healthRes,
       onShiftRes,
+      alertsRes,
     ] = await Promise.allSettled([
       api.get(buildScopedUrl("/analytics/dashboard", { period: "today" })),
       api.get(buildScopedUrl("/orders/active")),
@@ -741,6 +745,7 @@ async function fetchAllData() {
       restaurantId
         ? schedulingService.getClockedInEmployees(restaurantId)
         : Promise.resolve([]),
+      ownerService.listEmergencyAlerts(),
     ]);
 
     // Dashboard summary + top items + table status
@@ -812,6 +817,12 @@ async function fetchAllData() {
       ) as typeof healthData.value;
     }
 
+    // Emergency alerts (#285). Left untouched on failure so a transient error
+    // blanks the panel rather than silently claiming there is nothing wrong.
+    if (alertsRes.status === "fulfilled") {
+      emergencyAlerts.value = alertsRes.value;
+    }
+
     const requestFailed = hasRequestFailure([
       dashboardRes,
       activeOrdersRes,
@@ -838,7 +849,7 @@ const handleQuickAction = (action: string) => {
 };
 
 // --- Emergency alert handler ---
-const handleEmergencyAlert = async (alertId: number, action: string) => {
+const handleEmergencyAlert = async (alertId: string, action: string) => {
   try {
     if (action === "resolve") {
       await ownerService.resolveEmergencyAlert(alertId);
