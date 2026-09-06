@@ -10,6 +10,7 @@ import {
   validateParams,
 } from "../../../middleware/validation";
 import { IngredientService } from "../services/IngredientService";
+import { alertIfBelowMinimum } from "../../alerts/producers";
 import { RecipeService } from "../services/RecipeService";
 import {
   restaurantIdParamSchema,
@@ -136,6 +137,8 @@ routes.get(
       throw notFound("Ingredient not found", "INGREDIENT_NOT_FOUND");
     }
 
+    await alertIfBelowMinimum(c.env, restaurantId, ingredient);
+
     return c.json({ success: true, data: { ingredient } });
   },
 );
@@ -187,6 +190,12 @@ routes.patch(
       throw notFound("Ingredient not found", "INGREDIENT_NOT_FOUND");
     }
 
+    await alertIfBelowMinimum(
+      c.env,
+      restaurantId,
+      await service.get(restaurantId, id),
+    );
+
     return c.json({ success: true, data: { updated: true } });
   },
 );
@@ -215,6 +224,12 @@ routes.post(
         "INGREDIENT_STOCK_CONFLICT",
       );
     }
+
+    await alertIfBelowMinimum(
+      c.env,
+      restaurantId,
+      await service.get(restaurantId, id),
+    );
 
     return c.json({ success: true, data: updated });
   },

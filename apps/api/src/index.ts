@@ -151,6 +151,15 @@ export default {
         console.log("[Cron] Group order expiry sweep result:", result);
       }
 
+      // Rides the shared */5 tick rather than adding a cron entry (#285).
+      if (cronMatches(event.cron, "*/5 * * * *")) {
+        console.log("[Cron] Running overdue order alert sweep...");
+        const { raiseOverdueOrderAlerts } =
+          await import("./workers/overdue-order-alerts");
+        const result = await raiseOverdueOrderAlerts(env);
+        console.log("[Cron] Overdue order alert sweep result:", result);
+      }
+
       if (cronMatches(event.cron, "0 2 * * *")) {
         console.log("[Cron] Running storage usage snapshot...");
         const { snapshotStorageUsage } =
