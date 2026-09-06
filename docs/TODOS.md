@@ -127,20 +127,35 @@ separate decision from fixing live ones.
 
 ## leaves
 
-### Attachment upload is a shell, and four leave components are unrouted
+### Attachment upload was a shell, and four leave components were unrouted
 
 **Priority:** P2 **Status:** → **[#343](https://github.com/erictheng93/Makan-Masak/issues/343)**,
 **[#344](https://github.com/erictheng93/Makan-Masak/issues/344)** (filed
 2026-09-05, found while closing
 [#330](https://github.com/erictheng93/Makan-Masak/issues/330))
 
-Both need a product decision, so neither was fixed in place.
+Both needed a product decision. Both are now done.
 
-- **#343** — `LeaveRequestDialog` gates its submit button on
+- **#343 — done 2026-09-06.** `LeaveRequestDialog` gated its submit button on
   `attachments.length > 0` when the leave type requires documentation,
-  collects `File` objects, and neither caller sends them. The column is a
+  collected `File` objects, and neither caller sent them. The column is a
   single `attachment_url` and no upload endpoint is wired, so a request that
-  is *required* to carry proof is always stored with none.
+  was *required* to carry proof was always stored with none. Of the issue's
+  three options, **option 2** was taken: the dialog asks for the link, because
+  that is the only thing the whole chain can already carry end to end — the
+  column is one URL, `createLeaveRequestSchema.attachmentUrl` is `httpUrlSchema`,
+  and `LeaveService.createLeaveRequest` spreads it straight into the insert.
+  The submit gate now tests for a real http(s) URL rather than a picked file,
+  and a blank field emits `undefined` rather than `""`, which would fail the
+  endpoint's `z.url()`.
+
+  The issue recorded five broken boundaries; there was a sixth. It blamed
+  `LeaveApprovalList` for never showing the attachment row, but that component
+  was only reachable from the dead `LeaveView` (#344, deleted). The **live**
+  approval UI, `LeaveDecisionCard`, had no attachment markup at all — so a
+  stored document would still have been invisible to every approver. It now
+  renders the link, through `safeExternalHref` because the URL is
+  employee-supplied and lands in an `href`.
 - **#344 — done 2026-09-06.** `LeaveView.vue` had no route and no importer,
   which made `LeaveApprovalList`, `LeaveBalanceCard`, `LeaveCalendar` and
   `LeaveRequestList` unreachable. All five are deleted. Neither option in the
@@ -168,6 +183,42 @@ arbitrary colleague's remaining days; and `leavesService.cancelRequest()`
 posted no body to an endpoint that requires `reason` — it had no callers and
 was removed. (It came back with #344, taking `reason` as a required argument;
 `MyLeavesView` is the caller.)
+
+### Upload leave documents instead of pasting a link
+
+**Priority:** P3 **Status:** deferred 2026-09-06 (decided in #343)
+
+#343 shipped the paste-a-link form of the attachment because it needed no new
+storage and no new endpoint. The cost is real: an employee photographing a
+doctor's note on a phone has to host it somewhere first, so the documentation
+requirement is satisfiable but awkward, and adoption will show that.
+
+**What a real upload would take, and why it was not lazy.** `apps/api` has no
+user-content R2 bucket — only `BACKUP_STORAGE` — so the plumbing would come
+from `apps/image-processor`, which already does `File` → R2 → URL with auth,
+rate limiting, size checks, a security scan, a metadata table and an orphan
+sweep. It cannot be reused as-is on three counts:
+
+- `POST /images/upload` is `requireRole([0, 1, 2])`, but
+  `POST /:restaurantId/requests` has no role gate, so roles 3-4 file leave and
+  could not upload. Widening the shared endpoint would also let a cashier add
+  arbitrary images to the restaurant's library.
+- `ALLOWED_MIME_TYPES` is images only. Adding `application/pdf` to that var
+  widens every upload, including menu photos.
+- `useImageUpload` downsamples client-side to a 600px webp for its `medium`
+  variant. That is the URL callers store, and it would make a photographed
+  certificate illegible. Only the always-stored `original` variant is usable
+  here.
+
+So it wants its own route with its own gates rather than a flag on the existing
+one. **Decide the delivery side first:** `GET /images/:imageId/:variant` is
+unauthenticated and `Cache-Control: public, max-age=31536000, immutable`. That
+is correct for a menu photo and a deliberate choice for a medical certificate —
+the id is a uuidv7, so the URL is unguessable but permanently public once
+leaked. An authenticated delivery route is not a drop-in either: the admin
+dashboard authenticates with bearer tokens, so a plain `<a href>` to a guarded
+endpoint does not work, and the approval card would need a fetch-and-blob or a
+short-lived signed URL.
 
 ### Orphaned leave i18n keys left behind by #344
 
