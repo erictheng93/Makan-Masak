@@ -270,6 +270,14 @@ export const useAuthStore = defineStore("auth", () => {
         UserRole.SERVICE,
         UserRole.CASHIER,
       ],
+      // Own shift + own clock in/out, same reasoning as MyShifts (#308).
+      MyAttendance: [
+        UserRole.ADMIN,
+        UserRole.OWNER,
+        UserRole.CHEF,
+        UserRole.SERVICE,
+        UserRole.CASHIER,
+      ],
       Analytics: [UserRole.ADMIN, UserRole.OWNER],
       Settings: [UserRole.ADMIN, UserRole.OWNER],
       Service: [UserRole.ADMIN, UserRole.OWNER, UserRole.SERVICE],

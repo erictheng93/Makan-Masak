@@ -210,6 +210,25 @@ const routes: RouteRecordRaw[] = [
           ],
         },
       },
+      {
+        // Employee-facing, like my-shifts: the signed-in user's own shift for
+        // today and their own clock in/out. The manager surface is
+        // /employees/attendance, which is ADMIN/OWNER-only, so without this
+        // page roles 2-4 had no way to clock in at all (#308).
+        path: "my-attendance",
+        name: "MyAttendance",
+        component: () => import("@/views/MyAttendanceView.vue"),
+        meta: {
+          titleKey: "pages.myAttendance",
+          roles: [
+            UserRole.ADMIN,
+            UserRole.OWNER,
+            UserRole.CHEF,
+            UserRole.SERVICE,
+            UserRole.CASHIER,
+          ],
+        },
+      },
       // Employee Management (replaces old /users route)
       {
         path: "employees",

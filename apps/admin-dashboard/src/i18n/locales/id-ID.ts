@@ -1771,6 +1771,11 @@ const idID: Messages = {
       cashier: "Kasir",
     },
   },
+  myAttendance: {
+    title: "Absensi Saya",
+    subtitle: "Lihat shift hari ini dan lakukan absen masuk/keluar sendiri",
+  },
+
   myLeaves: {
     subtitle: "Lihat sisa cuti Anda dan ajukan permohonan cuti",
     cancelRequest: "Batalkan pengajuan",
@@ -1833,6 +1838,7 @@ const idID: Messages = {
   },
   nav: {
     myShifts: "Shift Saya",
+    myAttendance: "Absensi Saya",
     myLeaves: "Cuti Saya",
     featureUnavailable: "Belum tersedia",
     platform: "Gambaran Platform",
@@ -1880,6 +1886,7 @@ const idID: Messages = {
   },
   pages: {
     myShifts: "Shift Saya",
+    myAttendance: "Absensi Saya",
     myLeaves: "Cuti Saya",
     printAgents: "Agen cetak",
     members: "Manajemen Anggota",

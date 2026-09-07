@@ -155,6 +155,7 @@ import {
   CalendarCheck,
   CalendarClock,
   CalendarOff,
+  Clock,
   Printer,
   Carrot,
   TrendingUp,
@@ -347,6 +348,17 @@ const navigationItems = computed(() => {
       path: "/dashboard/my-leaves",
       label: t("nav.myLeaves"),
       icon: CalendarOff,
+      visible: true,
+      module: "staff_management",
+      section: "restaurant",
+    },
+    {
+      // Same population and the same module as my-shifts: it only ever clocks
+      // the signed-in user in and out (#308).
+      name: "my-attendance",
+      path: "/dashboard/my-attendance",
+      label: t("nav.myAttendance"),
+      icon: Clock,
       visible: true,
       module: "staff_management",
       section: "restaurant",

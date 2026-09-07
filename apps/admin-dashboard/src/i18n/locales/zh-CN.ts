@@ -1630,6 +1630,11 @@ const zhCN: Messages = {
       cashier: "收银员",
     },
   },
+  myAttendance: {
+    title: "我的出勤",
+    subtitle: "查看今天的班次并完成上下班打卡",
+  },
+
   myLeaves: {
     subtitle: "查看自己的假期余额并提交请假申请",
     cancelRequest: "取消申请",
@@ -1691,6 +1696,7 @@ const zhCN: Messages = {
   },
   nav: {
     myShifts: "我的班表",
+    myAttendance: "我的出勤",
     myLeaves: "我的请假",
     featureUnavailable: "尚未开放",
     platform: "平台概览",
@@ -1737,6 +1743,7 @@ const zhCN: Messages = {
   },
   pages: {
     myShifts: "我的班表",
+    myAttendance: "我的出勤",
     myLeaves: "我的请假",
     printAgents: "打印代理",
     members: "会员管理",
