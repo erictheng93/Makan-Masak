@@ -752,12 +752,28 @@ const getOrderSubmitErrorMessage = (error: unknown) => {
   return t(getOrderSubmitErrorI18nKey(error));
 };
 
+/**
+ * Idempotency key for the cart currently being submitted. Generated once and
+ * reused for every retry of the *same* cart, which is the whole point: a
+ * customer whose connection dropped mid-submit is told "please try again", and
+ * the second tap has to be recognisable as the same order rather than a new
+ * one. Cleared on success so the next cart gets a fresh key.
+ *
+ * Deliberately shared by both submit branches. Signing in is one of the things
+ * a customer may well do between two attempts at the same cart, and the key
+ * has to survive that: `/orders` and `/guest-orders` write the same column
+ * under the same unique index, so the same key still deduplicates across the
+ * switch. A per-branch ref would mint a second key and book a second order.
+ */
+const pendingOrderMutationId = ref<string | null>(null);
+
 // 提交訂單 Mutation (authenticated)
 const { mutate: createOrder } = useMutation({
   mutationFn: (orderData: CreateOrderRequest) =>
     orderApi.createOrder(orderData),
   onSuccess: (order) => {
     toast.success(t("toast.orderSubmitSuccess"));
+    pendingOrderMutationId.value = null;
     cartStore.clearCart();
     router.push(
       `/restaurant/${props.restaurantId}/table/${props.tableId}/order/${order.id}`,
@@ -769,22 +785,13 @@ const { mutate: createOrder } = useMutation({
   },
 });
 
-/**
- * Idempotency key for the cart currently being submitted. Generated once and
- * reused for every retry of the *same* cart, which is the whole point: a guest
- * whose connection dropped mid-submit is told "please try again", and the
- * second tap has to be recognisable as the same order rather than a new one.
- * Cleared on success so the next cart gets a fresh key.
- */
-const pendingGuestMutationId = ref<string | null>(null);
-
 // 訪客訂單 Mutation (dine-in without login)
 const { mutate: createGuestOrder } = useMutation({
   mutationFn: (orderData: CreateGuestOrderRequest) =>
     orderApi.createGuestOrder(orderData),
   onSuccess: (response) => {
     toast.success(t("toast.orderSubmitSuccess"));
-    pendingGuestMutationId.value = null;
+    pendingOrderMutationId.value = null;
     cartStore.clearCart();
     router.push(
       `/restaurant/${props.restaurantId}/table/${props.tableId}/order/${response.order.id}`,
@@ -1082,9 +1089,9 @@ const submitOrder = async () => {
     isSubmitting.value = true;
     showConfirmation.value = false;
 
-    // Minted once per cart, not per tap -- see pendingGuestMutationId.
-    if (!pendingGuestMutationId.value) {
-      pendingGuestMutationId.value = crypto.randomUUID();
+    // Minted once per cart, not per tap -- see pendingOrderMutationId.
+    if (!pendingOrderMutationId.value) {
+      pendingOrderMutationId.value = crypto.randomUUID();
     }
 
     const isAuthenticated = hasCustomerAccessToken();
@@ -1105,7 +1112,7 @@ const submitOrder = async () => {
           notes: item.notes,
         })),
         notes: orderNotes.value.trim() || undefined,
-        clientMutationId: pendingGuestMutationId.value ?? undefined,
+        clientMutationId: pendingOrderMutationId.value ?? undefined,
       };
 
       createGuestOrder(guestOrderData);
@@ -1126,6 +1133,7 @@ const submitOrder = async () => {
         couponCode: appliedCoupon.value
           ? couponCode.value.trim().toUpperCase()
           : undefined,
+        clientMutationId: pendingOrderMutationId.value ?? undefined,
       };
 
       createOrder(orderData);

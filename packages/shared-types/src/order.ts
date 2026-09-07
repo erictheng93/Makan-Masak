@@ -330,6 +330,17 @@ export interface CreateOrderRequest {
   items: CreateOrderItemRequest[];
   notes?: string;
   couponCode?: string; // 優惠券代碼
+  /**
+   * Idempotency key for this submission, enforced by the unique index on
+   * (restaurant_id, client_mutation_id); a replay comes back as
+   * CLIENT_MUTATION_DUPLICATE / 409 rather than a second order.
+   *
+   * The authenticated path has nothing else guarding it — the KV active-order
+   * lock is guest-only — so a connection dropped between the commit and the
+   * response leaves the customer looking at "please try again", and a second
+   * tap without this key books the kitchen for two.
+   */
+  clientMutationId?: string;
 }
 
 export interface CreateOrderItemRequest {

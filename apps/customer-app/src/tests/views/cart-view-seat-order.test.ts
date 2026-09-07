@@ -2,6 +2,13 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { ref } from "vue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import CartView from "@/views/CartView.vue";
+// Deliberately the real module, not a mock: it is the single in-memory slot
+// CartView reads to pick its submit branch, so setting it here flips the
+// component onto the authenticated path exactly as signing in would.
+import {
+  clearCustomerAccessToken,
+  setCustomerAccessToken,
+} from "@/services/customerAccessToken";
 
 const routeQuery = vi.hoisted(() => ({
   current: {} as Record<string, unknown>,
@@ -124,6 +131,7 @@ describe("CartView seat orders", () => {
     // is row 6. The header must show "02".
     routeQuery.current = { seatId: "6", seatNumber: "02" };
     sessionStorage.clear();
+    clearCustomerAccessToken();
     createOrder.mockResolvedValue({ id: 123 });
     createGuestOrder.mockResolvedValue({ order: { id: 123 } });
   });
@@ -205,6 +213,80 @@ describe("CartView seat orders", () => {
     expect(createGuestOrder.mock.calls[1][0].clientMutationId).not.toBe(
       firstKey,
     );
+  });
+
+  it("carries a mutation id on the authenticated path too", async () => {
+    // The authenticated path has no KV active-order lock behind it -- that
+    // guard is guest-only -- so this key is the only thing standing between a
+    // dropped connection and a second order.
+    setCustomerAccessToken("customer-token");
+    createOrder.mockRejectedValueOnce(new Error("Network Error"));
+
+    const wrapper = mount(CartView, {
+      props: { restaurantId: "restaurant-1", tableId: 4 },
+      global: { stubs: { RouterLink: true } },
+    });
+    await flushPromises();
+
+    await wrapper.find("button[data-testid='confirm']").trigger("click");
+    await flushPromises();
+
+    expect(createGuestOrder).not.toHaveBeenCalled();
+    const firstKey = createOrder.mock.calls[0][0].clientMutationId;
+    expect(typeof firstKey).toBe("string");
+    expect(firstKey.length).toBeGreaterThan(0);
+
+    await wrapper.find("button[data-testid='confirm']").trigger("click");
+    await flushPromises();
+
+    expect(createOrder).toHaveBeenCalledTimes(2);
+    expect(createOrder.mock.calls[1][0].clientMutationId).toBe(firstKey);
+  });
+
+  it("mints a fresh mutation id once an authenticated order has gone through", async () => {
+    setCustomerAccessToken("customer-token");
+
+    const wrapper = mount(CartView, {
+      props: { restaurantId: "restaurant-1", tableId: 4 },
+      global: { stubs: { RouterLink: true } },
+    });
+    await flushPromises();
+
+    await wrapper.find("button[data-testid='confirm']").trigger("click");
+    await flushPromises();
+    const firstKey = createOrder.mock.calls[0][0].clientMutationId;
+
+    await wrapper.find("button[data-testid='confirm']").trigger("click");
+    await flushPromises();
+
+    expect(createOrder.mock.calls[1][0].clientMutationId).not.toBe(firstKey);
+  });
+
+  it("keeps the same key when the customer signs in between two attempts", async () => {
+    // Signing in is one of the obvious things to try after a failed submit,
+    // and it moves the same cart from /guest-orders to /orders. Both write the
+    // same client_mutation_id column under the same unique index, so one key
+    // spanning the switch is what makes the retry a retry. A per-branch key
+    // would look like a fresh order and the kitchen would cook twice.
+    createGuestOrder.mockRejectedValueOnce(new Error("Network Error"));
+
+    const wrapper = mount(CartView, {
+      props: { restaurantId: "restaurant-1", tableId: 4 },
+      global: { stubs: { RouterLink: true } },
+    });
+    await flushPromises();
+
+    await wrapper.find("button[data-testid='confirm']").trigger("click");
+    await flushPromises();
+    const guestKey = createGuestOrder.mock.calls[0][0].clientMutationId;
+
+    setCustomerAccessToken("customer-token");
+
+    await wrapper.find("button[data-testid='confirm']").trigger("click");
+    await flushPromises();
+
+    expect(createOrder).toHaveBeenCalledTimes(1);
+    expect(createOrder.mock.calls[0][0].clientMutationId).toBe(guestKey);
   });
 
   it("omits the seat label when only the row id is known", async () => {

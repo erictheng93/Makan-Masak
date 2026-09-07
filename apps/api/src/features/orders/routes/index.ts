@@ -30,6 +30,7 @@ import {
   notFound,
   forbidden,
   badRequest,
+  conflict,
 } from "../../../shared/utils/api-error";
 import { moduleGate } from "../../../middleware/moduleGate";
 import { quotaGate } from "../../../middleware/quotaGate";
@@ -385,9 +386,29 @@ app.post(
         ? new Date(data.scheduledTime)
         : undefined,
       couponCode: data.couponCode,
+      clientMutationId: data.clientMutationId,
     };
 
-    const order = await ordersService.createOrder(createOrderData, user.id);
+    let order;
+    try {
+      order = await ordersService.createOrder(createOrderData, user.id);
+    } catch (error) {
+      // The unique index did its job: this cart was already committed under the
+      // same key. Say so with a 409 the client can act on — the customer app
+      // maps this code to "your order is already in" — instead of letting a
+      // bare sentinel message fall through to a 500 that reads like a failure
+      // and invites yet another tap.
+      if (
+        error instanceof Error &&
+        error.message === "CLIENT_MUTATION_DUPLICATE"
+      ) {
+        throw conflict(
+          "Client mutation has already been processed",
+          "CLIENT_MUTATION_DUPLICATE",
+        );
+      }
+      throw error;
+    }
     await meterEmit(c, "orders.created", {
       restaurantId: data.restaurantId,
       metadata: { orderId: order.id },

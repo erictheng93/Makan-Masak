@@ -51,6 +51,25 @@ describe("order validation", () => {
     expect(result.success).toBe(true);
   });
 
+  it("keeps the idempotency key, and caps it at the column's width", () => {
+    // zod drops whatever it does not declare, which is how the key went
+    // missing on this path for as long as it did: everything behind the schema
+    // -- the service, the column, the unique index, the 409 -- was already in
+    // place and simply never saw one.
+    const parsed = createOrderSchema.parse({
+      ...baseOrder,
+      clientMutationId: "cart-9f2c-1",
+    });
+    expect(parsed.clientMutationId).toBe("cart-9f2c-1");
+
+    expect(
+      createOrderSchema.safeParse({
+        ...baseOrder,
+        clientMutationId: "x".repeat(101),
+      }).success,
+    ).toBe(false);
+  });
+
   it("sanitizes free-text order notes and customization instructions", () => {
     const result = createOrderSchema.parse({
       ...baseOrder,
