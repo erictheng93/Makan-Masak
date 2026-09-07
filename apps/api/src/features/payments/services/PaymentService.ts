@@ -83,9 +83,32 @@ export class PaymentService {
       .limit(1);
 
     if (!existing) {
+      // The one rejection left untraced (#350). `payment_audit_log` is read by
+      // (restaurant_id, occurred_at_ms), so a row with no restaurant is a
+      // record nobody can retrieve — and an order id that does not resolve is
+      // a caller bug rather than an operational event.
       throw new ApiError("ORDER_NOT_FOUND", "Order not found", 404);
     }
 
+    try {
+      return await this.runPayment(input, options, existing);
+    } catch (error) {
+      await this.recordPaymentFailure(existing, input, options, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Everything past the order lookup, split out so `processPayment` can wrap
+   * one `try` around the whole rejection surface instead of repeating a record
+   * call at each `throw`. Failures inside the closing batch are covered too:
+   * a D1 error there is as real a payment failure as a rejected amount.
+   */
+  private async runPayment(
+    input: PaymentRequestInput,
+    options: ProcessPaymentOptions,
+    existing: typeof orders.$inferSelect,
+  ): Promise<ProcessPaymentResult> {
     if (
       options.user?.restaurantId &&
       options.user.role !== 0 &&
@@ -286,6 +309,63 @@ export class PaymentService {
         authorizedTotal: serverTotal,
       },
     };
+  }
+
+  /**
+   * Record a rejected payment attempt (#350).
+   *
+   * Audit-only by necessity: `payment_transactions` gains its row inside the
+   * batch at the end of `runPayment`, so a rejection never has a transaction
+   * to mark `"failed"`. That status becomes writable only once a gateway
+   * authorisation flow inserts a pending row up front, which this codebase
+   * does not have — `processPayment` records a payment that already
+   * succeeded rather than asking anyone to authorise one.
+   *
+   * Best-effort by construction: the caller must learn why the payment was
+   * refused whether or not this write lands, so a failure here is logged and
+   * swallowed and the original error is re-thrown by `processPayment`.
+   */
+  private async recordPaymentFailure(
+    order: typeof orders.$inferSelect,
+    input: PaymentRequestInput,
+    options: ProcessPaymentOptions,
+    error: unknown,
+  ): Promise<void> {
+    try {
+      const apiError = error instanceof ApiError ? error : null;
+      const submittedAmount =
+        input.paymentMode === "partial"
+          ? (input.payments ?? []).reduce(
+              (sum, payment) => sum + payment.amount,
+              0,
+            )
+          : (input.amount ?? null);
+
+      await this.paymentAudit.append({
+        restaurantId: order.restaurantId,
+        eventType: PAYMENT_AUDIT_EVENT_TYPES.FAILURE,
+        provider: input.gateway ?? input.method ?? "internal",
+        amount: order.totalAmountCents ?? null,
+        currency: options.currency ?? null,
+        errorCode: apiError?.code ?? "UNEXPECTED_ERROR",
+        errorMessage: apiError?.message ?? "Payment failed before completion",
+        // Deliberately not `options.customerInfo` or `options.metadata`: this
+        // row exists to explain the refusal, not to copy the request.
+        rawPayload: {
+          orderId: input.orderId,
+          paymentMode: input.paymentMode,
+          submittedAmount,
+          serverTotalCents: order.totalAmountCents ?? null,
+          idempotencyKey: options.idempotencyKey ?? null,
+        },
+      });
+    } catch (auditError) {
+      console.error("Failed to record payment failure", {
+        orderId: input.orderId,
+        restaurantId: order.restaurantId,
+        error: auditError,
+      });
+    }
   }
 
   private async findPaymentByIdempotencyKey(key: string) {
