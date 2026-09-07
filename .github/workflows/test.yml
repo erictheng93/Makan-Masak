@@ -266,15 +266,23 @@ jobs:
         # Building packages only avoids the unrelated frontend/Worker builds.
         run: pnpm exec turbo run build --filter="./packages/**"
 
-      - name: 🧪 執行所有單元測試
-        if: github.event_name == 'pull_request'
-        run: |
-          mkdir -p test-results
-          pnpm exec vitest run --reporter=default --reporter=json --outputFile.json=./test-results/unit-tests.json
-
-      - name: 📊 產生覆蓋率報告
-        # On main/manual, coverage is the test run; do not run Vitest twice.
-        if: github.event_name != 'pull_request'
+      - name: 🧪 單元測試與覆蓋率門檻
+        # One step, every event, always with --coverage.
+        #
+        # The per-glob thresholds in vitest.config.ts are a gate, not a
+        # report. Until 2026-09-07 this step was gated on
+        # `github.event_name != 'pull_request'` and the PR path ran a
+        # coverage-less `vitest run` instead, so the gate only ever ran on the
+        # push *after* the merge that broke it. That is not a hypothetical:
+        # main sat red from 2026-09-05 to 2026-09-07 because #299 stage A4
+        # shipped a CSV export and a whole platform router untested, taking
+        # `apps/api/src/features/**` branches to 77.88% against a 78%
+        # threshold -- and every one of its PR runs had reported green.
+        #
+        # Running Vitest twice is still what we refuse to do; this is one run
+        # that happens to also collect coverage. Measured cost of the coverage
+        # instrumentation on top of the plain run: ~45s (this job went 6.2 ->
+        # 7.0 min), against a 20 minute job timeout.
         run: |
           mkdir -p test-results
           pnpm exec vitest run --coverage --reporter=default --reporter=json --outputFile.json=./test-results/unit-tests.json
