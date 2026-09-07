@@ -3,7 +3,18 @@
  * Business logic for employee leave/time-off management
  */
 
-import { eq, and, gte, lte, between, sql, desc, asc, or } from "drizzle-orm";
+import {
+  eq,
+  and,
+  gte,
+  lte,
+  between,
+  sql,
+  desc,
+  asc,
+  or,
+  isNull,
+} from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { D1Database } from "@cloudflare/workers-types";
 import { BaseService, type CloudflareEnv } from "./base";
@@ -262,14 +273,19 @@ export class LeaveService extends BaseService {
         role: users.role,
         restaurantId: users.restaurantId,
         isActive: users.isActive,
+        deletedAt: users.deletedAt,
       })
       .from(users)
       .where(eq(users.id, approverId))
       .limit(1);
 
+    // Archiving deactivates too, so `isActive` alone would already reject a
+    // departed approver -- but authority is not the place to depend on two
+    // columns staying in step (#337).
     if (
       !approver ||
       !approver.isActive ||
+      approver.deletedAt !== null ||
       (approver.role !== USER_ROLES.ADMIN && approver.role !== USER_ROLES.OWNER)
     ) {
       throw new Error("Approver is not authorized");
@@ -692,11 +708,18 @@ export class LeaveService extends BaseService {
           ),
         );
 
+      // Departed employees accrue nothing: a year's entitlement handed to
+      // someone who has left leaves a balance nobody can spend and inflates
+      // every restaurant-wide balance report (#337).
       const employees = await this.db
         .select()
         .from(users)
         .where(
-          and(eq(users.restaurantId, restaurantId), eq(users.isActive, true)),
+          and(
+            eq(users.restaurantId, restaurantId),
+            eq(users.isActive, true),
+            isNull(users.deletedAt),
+          ),
         );
 
       // Pre-check which balances already exist
@@ -902,14 +925,24 @@ export class LeaveService extends BaseService {
   ): Promise<LeaveRequest> {
     try {
       // The request must be filed for an employee of the target restaurant —
-      // never accept an employeeId from another tenant.
+      // never accept an employeeId from another tenant. A departed employee is
+      // rejected the same way: they are off every staff picker, so the only
+      // way to reach this with their id is a stale client or a guessed one
+      // (#337). Existing requests keep resolving; only new ones are refused.
       const [employee] = await this.db
-        .select({ restaurantId: users.restaurantId })
+        .select({
+          restaurantId: users.restaurantId,
+          deletedAt: users.deletedAt,
+        })
         .from(users)
         .where(eq(users.id, data.employeeId))
         .limit(1);
 
-      if (!employee || employee.restaurantId !== data.restaurantId) {
+      if (
+        !employee ||
+        employee.restaurantId !== data.restaurantId ||
+        employee.deletedAt !== null
+      ) {
         throw new Error("Employee not found in restaurant");
       }
 

@@ -292,6 +292,28 @@ type ShiftTemplateInput = typeof shiftTemplates.$inferInsert & {
   hourlyRate?: number | null;
 };
 
+/**
+ * The employee a schedule row joins to, with the archive reduced to a flag.
+ *
+ * A schedule keeps resolving its employee after they leave -- that is the point
+ * of archiving rather than deleting. But the name alone reads as though they
+ * still work here, so the caller gets told which it is and renders the label in
+ * its own locale. The timestamp itself is not useful to a roster grid, so only
+ * the boolean crosses the boundary (#337).
+ */
+type JoinedEmployee = {
+  id: string;
+  fullName: string | null;
+  role: number;
+  deletedAt: Date | null;
+} | null;
+
+function withArchiveFlag(employee: JoinedEmployee) {
+  if (!employee) return null;
+  const { deletedAt, ...rest } = employee;
+  return { ...rest, isArchived: deletedAt !== null };
+}
+
 // ========================================
 // Scheduling Service
 // ========================================
@@ -544,6 +566,7 @@ export class SchedulingService extends BaseService {
           id: users.id,
           fullName: users.fullName,
           role: users.role,
+          deletedAt: users.deletedAt,
         },
         shiftTemplate: shiftTemplates,
       })
@@ -563,7 +586,7 @@ export class SchedulingService extends BaseService {
 
     const items = schedules.map((row) => ({
       ...row.schedule,
-      employee: row.employee,
+      employee: withArchiveFlag(row.employee),
       shiftTemplate: row.shiftTemplate,
     }));
 
@@ -577,7 +600,12 @@ export class SchedulingService extends BaseService {
     const [result] = await this.db
       .select({
         schedule: employeeSchedules,
-        employee: { id: users.id, fullName: users.fullName, role: users.role },
+        employee: {
+          id: users.id,
+          fullName: users.fullName,
+          role: users.role,
+          deletedAt: users.deletedAt,
+        },
         shiftTemplate: shiftTemplates,
       })
       .from(employeeSchedules)
@@ -593,7 +621,7 @@ export class SchedulingService extends BaseService {
 
     return {
       ...result.schedule,
-      employee: result.employee,
+      employee: withArchiveFlag(result.employee),
       shiftTemplate: result.shiftTemplate,
     };
   }
@@ -2181,7 +2209,10 @@ export class SchedulingService extends BaseService {
     shiftTemplateId?: number;
   }): Promise<AvailableEmployee[]> {
     try {
-      // Get all active employees in the restaurant
+      // Get all active employees in the restaurant. Archiving deactivates as
+      // well, so `isActive` alone would already hide a departed employee --
+      // but this picker must not depend on the two columns staying in step
+      // (#337).
       const allEmployees = await this.db
         .select({
           id: users.id,
@@ -2193,6 +2224,7 @@ export class SchedulingService extends BaseService {
           and(
             eq(users.restaurantId, params.restaurantId),
             eq(users.isActive, true),
+            isNull(users.deletedAt),
           ),
         );
 

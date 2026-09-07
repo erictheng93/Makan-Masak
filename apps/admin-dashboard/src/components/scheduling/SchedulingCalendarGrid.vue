@@ -88,12 +88,10 @@
                       backgroundColor: template.colorCode + '22',
                       color: template.colorCode,
                     }"
-                    :title="
-                      schedule.employee?.fullName || schedule.employeeName || ''
-                    "
+                    :title="employeeLabel(schedule)"
                   >
                     <span class="truncate max-w-[70px]">{{
-                      schedule.employee?.fullName || schedule.employeeName || ""
+                      employeeLabel(schedule)
                     }}</span>
                     <button
                       class="opacity-0 group-hover:opacity-100 transition-opacity ml-auto shrink-0 hover:bg-black/10 rounded-full p-0.5"
@@ -133,10 +131,24 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { useI18n } from "vue-i18n";
 import { X, Plus } from "lucide-vue-next";
 import type { ShiftTemplate, EmployeeSchedule } from "@/types/scheduling";
 import type { UserId } from "@/types/api-user";
 import { toLocalDateStr } from "@/utils/dateUtils";
+
+const { t } = useI18n();
+
+/**
+ * A past shift still names whoever worked it, including someone who has since
+ * left -- the roster hides them, the history does not. Without the marker the
+ * cell reads as though they are still on staff (#337).
+ */
+function employeeLabel(schedule: EmployeeSchedule): string {
+  const name = schedule.employee?.fullName || schedule.employeeName || "";
+  if (!name || !schedule.employee?.isArchived) return name;
+  return `${name}（${t("users.roster.archived")}）`;
+}
 
 const props = defineProps<{
   schedules: EmployeeSchedule[];

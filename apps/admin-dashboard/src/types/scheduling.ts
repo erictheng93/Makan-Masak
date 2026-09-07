@@ -73,7 +73,9 @@ export interface EmployeeSchedule {
   restaurantId: string;
   employeeId: UserId;
   employeeName?: string; // Joined from users table
-  employee?: { id: UserId; fullName?: string }; // Enriched employee data
+  // Enriched employee data. `isArchived` marks someone who has left: the
+  // roster hides them, but their past shifts still have to name them (#337).
+  employee?: { id: UserId; fullName?: string; isArchived?: boolean };
   shiftTemplateId: number | null;
   shiftTemplate?: ShiftTemplate;
   workDate: string; // YYYY-MM-DD
