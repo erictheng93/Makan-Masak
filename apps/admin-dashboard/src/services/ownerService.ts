@@ -6,8 +6,11 @@ export interface EmergencyAlert {
   id: string;
   alertType: string;
   severity: EmergencyAlertSeverity;
+  /** English fallback written by the producer; the panel prefers a translation. */
   title: string;
   description: string;
+  /** Structured facts the locale strings interpolate. */
+  details?: Record<string, unknown> | null;
   createdAt: number;
 }
 

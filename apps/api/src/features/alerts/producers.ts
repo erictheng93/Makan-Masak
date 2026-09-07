@@ -10,6 +10,12 @@ import type { Env } from "../../types/env";
  * Wording, severity and dedupe keys live here rather than at the call sites so
  * two producers cannot drift into describing the same condition differently.
  *
+ * The stored `title`/`description` are an English fallback, not what the owner
+ * reads. `details` carries the facts, and the dashboard renders them through
+ * `owner.alerts.<alertType>` in the viewer's locale — the panel ships in six.
+ * A producer added without locale keys still renders, in English, rather than
+ * showing a key.
+ *
  * Every producer swallows its own failure: raising an alert is a side effect of
  * a business operation, and a failed insert must not roll back the stock
  * movement or the sweep that triggered it. This is the one place where losing
@@ -56,12 +62,15 @@ export function raiseLowStockAlert(
     severity: depleted
       ? RESTAURANT_ALERT_SEVERITY.CRITICAL
       : RESTAURANT_ALERT_SEVERITY.HIGH,
-    title: depleted ? `${input.name} 已用盡` : `${input.name} 低於安全庫存`,
+    title: depleted
+      ? `${input.name} is out of stock`
+      : `${input.name} is below its minimum stock level`,
     description: depleted
-      ? `${input.name} 目前庫存為 0 ${input.unit}，需要立即補貨。`
-      : `${input.name} 目前庫存 ${input.currentStock} ${input.unit}，低於安全庫存 ${input.minStockLevel} ${input.unit}。`,
+      ? `${input.name} is at 0 ${input.unit} and needs restocking.`
+      : `${input.name} is at ${input.currentStock} ${input.unit}, below the ${input.minStockLevel} ${input.unit} minimum.`,
     details: {
       ingredientId: input.ingredientId,
+      name: input.name,
       currentStock: input.currentStock,
       minStockLevel: input.minStockLevel,
       unit: input.unit,
@@ -127,8 +136,8 @@ export function raiseOverdueOrderAlert(
     restaurantId: input.restaurantId,
     alertType: "order_overdue",
     severity: RESTAURANT_ALERT_SEVERITY.HIGH,
-    title: `訂單 ${input.orderNumber} 已逾時`,
-    description: `訂單 ${input.orderNumber} 已經 ${input.minutesLate} 分鐘未完成，目前狀態為 ${input.status}。`,
+    title: `Order ${input.orderNumber} is overdue`,
+    description: `Order ${input.orderNumber} has been unfinished for ${input.minutesLate} minutes and is still ${input.status}.`,
     details: {
       orderId: input.orderId,
       orderNumber: input.orderNumber,

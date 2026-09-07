@@ -374,10 +374,10 @@
         >
           <div>
             <p class="font-medium text-red-900">
-              {{ alert.title }}
+              {{ alertTitle(alert) }}
             </p>
             <p class="text-sm text-red-700">
-              {{ alert.description }}
+              {{ alertDescription(alert) }}
             </p>
             <p class="text-xs text-red-600 mt-1">
               {{ formatAlertTime(alert.createdAt) }}
@@ -413,6 +413,7 @@ import { api, unwrapApiList } from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
 import { ownerService } from "@/services/ownerService";
 import type { EmergencyAlert } from "@/services/ownerService";
+import { createAlertPresenter } from "@/utils/alertPresentation";
 import { schedulingService } from "@/services/schedulingService";
 import {
   hasRequestFailure,
@@ -701,6 +702,11 @@ const getStatusText = (status: string) => {
   };
   return statusMap[status] || status;
 };
+
+// Presentation lives in a testable module; this view only wires it up.
+const alertPresenter = createAlertPresenter(t, getStatusText);
+const alertTitle = alertPresenter.title;
+const alertDescription = alertPresenter.description;
 
 function buildScopedUrl(
   path: string,
