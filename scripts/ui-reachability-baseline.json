@@ -1,0 +1,85 @@
+{
+  "note": "Accepted-unreachable Vue files, per app. Every path here is dead UI that check-ui-reachability.cjs found and a human has not yet ruled on — the file is not endorsed, only recorded, so the check fails on NEW dead UI instead of on the existing backlog. `needsReview` is the softer bucket: no import edge, but the name appears somewhere in production source, so the tool declines to call it dead. See the UI reachability section of docs/TODOS.md for the per-file findings. Regenerate with `node scripts/check-ui-reachability.cjs --update-baseline` and review the diff; entries should only ever be removed.",
+  "generatedBy": "node scripts/check-ui-reachability.cjs --update-baseline",
+  "apps": {
+    "apps/admin-dashboard": {
+      "unreachableViews": [
+        "apps/admin-dashboard/src/views/UsersView.vue",
+        "apps/admin-dashboard/src/views/backup/BackupDashboard.vue",
+        "apps/admin-dashboard/src/views/backup/BackupMonitoring.vue",
+        "apps/admin-dashboard/src/views/scheduling/SchedulingAnalyticsView.vue"
+      ],
+      "unreachableComponents": [
+        "apps/admin-dashboard/src/components/PerformanceDashboard.vue",
+        "apps/admin-dashboard/src/components/PerformanceTrendChart.vue",
+        "apps/admin-dashboard/src/components/RoleBasedNavigation.vue",
+        "apps/admin-dashboard/src/components/StatCard.vue",
+        "apps/admin-dashboard/src/components/StatisticsDashboard.vue",
+        "apps/admin-dashboard/src/components/backup/BackupAlert.vue",
+        "apps/admin-dashboard/src/components/backup/BackupListItem.vue",
+        "apps/admin-dashboard/src/components/backup/RestoreBackupModal.vue",
+        "apps/admin-dashboard/src/components/charts/BaseChart.vue",
+        "apps/admin-dashboard/src/components/charts/ShiftDistributionChart.vue",
+        "apps/admin-dashboard/src/components/charts/TrendChart.vue",
+        "apps/admin-dashboard/src/components/charts/WorkHoursChart.vue",
+        "apps/admin-dashboard/src/components/common/SkeletonLoader.vue",
+        "apps/admin-dashboard/src/components/monitoring/AdvancedFilterPanel.vue",
+        "apps/admin-dashboard/src/components/monitoring/DashboardLayoutEditor.vue",
+        "apps/admin-dashboard/src/components/monitoring/RealtimeMonitorPanel.vue",
+        "apps/admin-dashboard/src/components/payment/BankTransferInfo.vue",
+        "apps/admin-dashboard/src/components/payment/OrderSummary.vue",
+        "apps/admin-dashboard/src/components/payment/PaymentForm.vue",
+        "apps/admin-dashboard/src/components/payment/PaymentMethodSelector.vue",
+        "apps/admin-dashboard/src/components/payment/PaymentProcessing.vue",
+        "apps/admin-dashboard/src/components/payment/PaymentSteps.vue",
+        "apps/admin-dashboard/src/components/payment/StripeCardElement.vue",
+        "apps/admin-dashboard/src/components/ui/LoadingSpinner.vue"
+      ],
+      "unreachableOther": [
+        "apps/admin-dashboard/src/layouts/CashierLayout.vue"
+      ],
+      "needsReview": []
+    },
+    "apps/customer-app": {
+      "unreachableViews": [],
+      "unreachableComponents": [
+        "apps/customer-app/src/components/LazyImage.vue"
+      ],
+      "unreachableOther": [],
+      "needsReview": []
+    },
+    "apps/kitchen-display": {
+      "unreachableViews": [],
+      "unreachableComponents": [
+        "apps/kitchen-display/src/components/KeyboardShortcutFeedback.vue",
+        "apps/kitchen-display/src/components/VirtualOrderGrid.vue",
+        "apps/kitchen-display/src/components/audio/AudioSettings.vue",
+        "apps/kitchen-display/src/components/audio/InteractiveAudioPanel.vue",
+        "apps/kitchen-display/src/components/error/ErrorReportsDashboard.vue",
+        "apps/kitchen-display/src/components/health/SystemHealthDashboard.vue",
+        "apps/kitchen-display/src/components/optimization/BundleAnalyzerPanel.vue",
+        "apps/kitchen-display/src/components/orders/BatchOperations.vue",
+        "apps/kitchen-display/src/components/orders/PriorityTimingManager.vue",
+        "apps/kitchen-display/src/components/performance/PerformanceDashboard.vue",
+        "apps/kitchen-display/src/components/shortcuts/EnhancedShortcutsPanel.vue",
+        "apps/kitchen-display/src/components/shortcuts/KeyboardShortcutsHelp.vue",
+        "apps/kitchen-display/src/components/statistics/InteractiveStatsPanel.vue",
+        "apps/kitchen-display/src/components/workflow/WorkflowAutomation.vue"
+      ],
+      "unreachableOther": [],
+      "needsReview": []
+    },
+    "apps/management-portal": {
+      "unreachableViews": [],
+      "unreachableComponents": [],
+      "unreachableOther": [],
+      "needsReview": []
+    },
+    "apps/onboarding-app": {
+      "unreachableViews": [],
+      "unreachableComponents": [],
+      "unreachableOther": [],
+      "needsReview": []
+    }
+  }
+}

@@ -764,6 +764,172 @@ Generated route files carry TODO comments and no failure, so a half-migrated
 route can ship looking finished. Make the generated skeleton throw until the
 logic is filled in, and put a checklist in the generated file.
 
+### 44 Vue files nothing in the running apps can reach
+
+**Priority:** P3 **Status:** open, measured 2026-09-07 **Tool:** `pnpm
+check:ui-reachability` (`scripts/check-ui-reachability.cjs`,
+`scripts/ui-reachability-baseline.json`)
+
+**The archetype, first.** #285, #307, #308, #309, #313 and #344 are all one
+bug: a component and its API both get built, the two are never wired, and the
+result is UI nobody can open. It reads as live code during maintenance and
+absorbs effort — #344's `LeaveView.vue` was mistaken for a working page during
+an earlier fix, and `ClockInOutPanel` sat unreachable long enough for every
+attendance number downstream of it to be structurally stuck. Nothing detected
+any of them; each was found by hand. A component's own unit test passes
+perfectly well on a component nobody renders, which is exactly why
+`ClockInOutPanel.test.ts` stayed green through #308.
+
+`scripts/check-ui-reachability.cjs` is the detector. It takes the transitive
+closure of import edges from each app's `src/main.ts`, `src/App.vue` and
+`src/router/index.ts`, and reports every `.vue` file under `src/` the closure
+never touches. Working on import edges rather than on the route table is what
+makes the router shapes fall out for free: `component: () => import(...)` is
+just a dynamic import, `children:` nesting is irrelevant because the edge
+exists at any depth, and a redirect-only route like `{ path: "leaves",
+redirect: { name: "EmployeeLeaves" } }` names no component so there is simply
+nothing to find. Test files are excluded as importers — counting them is
+precisely what hid #308.
+
+**Validated against both known cases before the numbers below were trusted.**
+Run against the tree at `d08c7f4b^` it reports `ClockInOutPanel.vue`
+unreachable, and against `b3181120^` it reports `LeaveView.vue` plus exactly
+the four components #344 found with it (`LeaveApprovalList`,
+`LeaveBalanceCard`, `LeaveCalendar`, `LeaveRequestList`) — reproducing both
+issues from scratch. `MyLeavesView.vue`, `MyShiftsView.vue` and `LeavesTab.vue`
+read as reachable in both trees and at HEAD.
+
+| app | views | components | other | dead |
+| --- | --- | --- | --- | --- |
+| admin-dashboard | 4 | 24 | 1 | 29 |
+| kitchen-display | 0 | 14 | 0 | 14 |
+| customer-app | 0 | 1 | 0 | 1 |
+| management-portal | 0 | 0 | 0 | 0 |
+| onboarding-app | 0 | 0 | 0 | 0 |
+
+**admin-dashboard, 13 roots and 16 files they drag with them.** Only the roots
+are decisions; the children die or live with their parent.
+
+- `views/UsersView.vue` — no route, no importer. Standalone.
+- `views/backup/BackupDashboard.vue` and `views/backup/BackupMonitoring.vue` —
+  neither is routed. The dashboard pulls in `components/backup/BackupAlert.vue`,
+  `BackupListItem.vue` and `RestoreBackupModal.vue`, so the backup UI is five
+  files with no way in. Note `components/backup/CreateBackupModal.vue` is *not*
+  here: it is alive through `useAsyncModals()`.
+- `views/scheduling/SchedulingAnalyticsView.vue` — not routed, and it is the
+  only consumer of `components/charts/ShiftDistributionChart.vue`,
+  `TrendChart.vue` and `WorkHoursChart.vue`, which in turn are the only
+  consumers of `components/charts/BaseChart.vue`. Five files.
+- `components/payment/PaymentForm.vue` — the largest cluster. It is the only
+  importer of `BankTransferInfo`, `OrderSummary`, `PaymentMethodSelector`,
+  `PaymentProcessing`, `PaymentSteps` and `StripeCardElement`, and it and
+  `StripeCardElement` between them are the only importers of
+  `components/ui/LoadingSpinner.vue`. Eight files.
+  Read it alongside "Defer real payment acquirer integration" under `payments /
+  provider integrations` above — this looks like the acquirer UI that the
+  product decision left stranded, not a corpse.
+- `components/StatisticsDashboard.vue` — sole importer of
+  `components/StatCard.vue` and `components/PerformanceTrendChart.vue`. Three
+  files.
+- `components/PerformanceDashboard.vue`, `components/RoleBasedNavigation.vue`,
+  `components/common/SkeletonLoader.vue`,
+  `components/monitoring/AdvancedFilterPanel.vue`, `DashboardLayoutEditor.vue`,
+  `RealtimeMonitorPanel.vue` — six standalone orphans.
+- `layouts/CashierLayout.vue` — the only dead layout. `/cashier` redirects to
+  `/dashboard/pos/checkout` and `views/CashierView.vue` is routed, so the
+  layout was left behind by that reshuffle.
+
+**kitchen-display, 14 orphans and no cluster** — every one is a root, nothing
+imports anything else here: `components/KeyboardShortcutFeedback.vue`,
+`VirtualOrderGrid.vue`, `audio/AudioSettings.vue`,
+`audio/InteractiveAudioPanel.vue`, `error/ErrorReportsDashboard.vue`,
+`health/SystemHealthDashboard.vue`, `optimization/BundleAnalyzerPanel.vue`,
+`orders/BatchOperations.vue`, `orders/PriorityTimingManager.vue`,
+`performance/PerformanceDashboard.vue`, `shortcuts/EnhancedShortcutsPanel.vue`,
+`shortcuts/KeyboardShortcutsHelp.vue`, `statistics/InteractiveStatsPanel.vue`,
+`workflow/WorkflowAutomation.vue`. This is 14 of the app's 26 components: more
+than half of kitchen-display's component directory has never been mounted.
+
+**customer-app, one:** `components/LazyImage.vue`. **management-portal and
+onboarding-app are clean.**
+
+**What the tool could not decide statically: none of the 44.** The soft bucket
+is empty. Every file above has no import edge *and* no name-shaped mention
+anywhere in live source, so each is asserted dead on two independent signals
+rather than one. Four call sites elsewhere are genuinely undecidable and are
+reported separately, none of which can reach any of the 44:
+
+- `components/layout/Sidebar.vue:54` and `:72` — `<component :is="'router-link'">`,
+  a vue-router built-in named by a string.
+- `main.ts:52` — `app.component("ErrorDisplay", ErrorDisplay)`. The name is
+  usable in any template without an import; the component itself is statically
+  imported there, so it is reachable regardless.
+- `apps/kitchen-display/src/services/performanceOptimizationService.ts:220` —
+  `await import(/* @vite-ignore */ componentPath)`, path read from a
+  `data-lazy-component` DOM attribute. In principle this could resurrect any of
+  the 14; in fact it cannot. The only thing that ever sets that attribute is
+  the `v-lazy-component` directive the same service registers — `main.ts:60`
+  does install it — and no template in the repo uses `v-lazy-component`, so
+  nothing carries the attribute the observer looks for.
+
+The five Vue apps hold 52 distinct `:is` bindings in total, and every one
+except `'router-link'` is an *expression* (a lucide icon, `item.icon`, a
+ternary, `DevOtpEcho`). Whatever those evaluate to had to be imported, so the
+ordinary graph already covers them — which is why the tool does not report
+them and why the undecidable list is four entries rather than fifty.
+
+**False-positive risk.** The resolver over-resolves on purpose: it probes
+`.vue` for extensionless specifiers even though Vite would not, folds case, and
+treats a name mentioned in live source as evidence of life. All 44 were then
+re-checked independently of the tool, by scanning every one of the 2,452 text
+files in the repo — apps, packages, configs — for each name outside tests,
+docs and `scripts/`. Twenty-three have zero occurrences anywhere at all. The
+remaining twenty-one are accounted for one by one: thirteen are named only by
+another dead file in the same cluster, and the rest are collisions with
+something that is not a component — a `BackupAlert` interface in
+`stores/backup.ts` and in the API's `BackupService`, an `OrderSummary` type in
+`packages/shared-types`, a `StatCard` type in management-portal, an
+`AudioSettings` interface in kitchen-display's `audioService.ts`, and two i18n
+comment lines in its `zh-TW.ts`. `apps/customer-app/src/components/LazyImage.vue`
+is the one that needed care: `packages/shared/plugins/lazyLoading.ts` registers
+a `LazyImage` globally, but it imports `packages/shared/components/LazyImage.vue`,
+a different file — and nothing in any app imports that plugin either.
+
+Independent corroboration for the backup cluster already existed in the repo:
+`apps/api/src/shared/feature-adoption.ts:44` records that
+"`views/backup/BackupDashboard.vue` has no router entry and no referrer, and
+the backup modals are only opened from it" — written by hand months ago, and
+matched exactly by the tool.
+
+The category to distrust, if any, is `kitchen-display`: 14 orphans in one app
+is the profile of a systematic miss rather than fourteen separate mistakes. It
+is not one here — every one is a root with no importer at all, so there is no
+edge shape to have missed — but re-check that app first if the tool ever
+disagrees with reality.
+
+**Do not bulk-delete on the count.** #344 needed a product decision, not a
+`rm`; the payment cluster is almost certainly a deferred feature; and the
+scheduling-analytics and backup views may be worth routing rather than
+deleting. Each root is its own decision.
+
+**Making it a CI gate needs three things, in this order.** (1) A human review
+of `scripts/ui-reachability-baseline.json` — 44 accepted entries is the gate's
+starting debt and nobody has ruled on them yet. (2) Add
+`pnpm check:ui-reachability` to `scripts/verify.sh`'s `verify:push` block and
+to `.github/workflows/test.yml`, next to `check:design-palette`. It runs in
+about a second and needs no dependencies, so it is cheap enough for
+`.husky/pre-commit` too. (3) Decide the stale-entry policy: today a baseline
+entry that becomes reachable prints a notice and passes, which keeps the file
+from blocking unrelated work but lets it rot. Once the backlog is triaged,
+flipping stale entries to a failure turns the baseline into a real ratchet that
+can only shrink.
+
+**Expect one regeneration soon.** #308 landed as `d08c7f4b` while this was
+being built, so `ClockInOutPanel.vue` is already wired and correctly absent
+from the baseline. Any other in-flight fix that wires up one of the 44 will
+show as a stale entry until someone runs
+`node scripts/check-ui-reachability.cjs --update-baseline`.
+
 ## admin-dashboard
 
 ### Seven unimplemented TODOs across scheduling, POS, queue and backup
