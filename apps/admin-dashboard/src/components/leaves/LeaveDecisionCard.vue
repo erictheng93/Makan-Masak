@@ -253,8 +253,7 @@ const employeeName = computed(
 
 // The URL is employee-supplied, so it goes through safeExternalHref before it
 // reaches an href — javascript:/data: never becomes a link. Any http(s) host is
-// allowed here (the document lives on whatever drive the employee uses), which
-// is the same call LeaveApprovalList makes.
+// allowed here, because the document lives on whatever drive the employee uses.
 const attachmentHref = computed(() =>
   safeExternalHref(props.request.attachmentUrl, { allowAnyHttpHost: true }),
 );
