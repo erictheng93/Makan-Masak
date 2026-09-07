@@ -15,6 +15,20 @@ const publicUserId = "018f0000-0000-7000-8000-000000000101";
 const loginUserId = "018f0000-0000-7000-8000-000000000102";
 const validateUserId = "018f0000-0000-7000-8000-000000000103";
 
+/**
+ * Production hashes at cost 10 (CLAUDE.md), which is ~2.5s per operation in
+ * bcryptjs on a developer machine. The two tests that seed a real hash then log
+ * in pay it twice -- `bcrypt.compare` inherits the cost recorded in the hash --
+ * so they sat at ~5s against a 5s testTimeout and went red whenever the suite
+ * was under load, passing again in isolation. That is the "just re-run it" red
+ * CLAUDE.md warns about, so the fixture drops the cost instead.
+ *
+ * Safe because nothing here asserts on the work factor: these tests check which
+ * credentials the service accepts and what it mints, and bcrypt reads the cost
+ * from the hash it is verifying. Never use this for a password that is stored.
+ */
+const FIXTURE_BCRYPT_COST = 4;
+
 describe("AuthService refresh token rotation", () => {
   let testDb: TestDatabase;
 
@@ -112,7 +126,7 @@ describe("AuthService refresh token rotation", () => {
       id: loginUserId,
       username: "owner-login",
       fullName: "Owner Login",
-      passwordHash: await bcrypt.hash("CorrectHorse123!", 10),
+      passwordHash: await bcrypt.hash("CorrectHorse123!", FIXTURE_BCRYPT_COST),
       role: 1,
       isActive: true,
       tokenVersion: 3,
@@ -273,7 +287,7 @@ describe("AuthService refresh token rotation", () => {
       id: loginUserId,
       username: "owner-login",
       fullName: "Owner Login",
-      passwordHash: await bcrypt.hash("CorrectHorse123!", 10),
+      passwordHash: await bcrypt.hash("CorrectHorse123!", FIXTURE_BCRYPT_COST),
       role: 1,
       isActive: true,
       tokenVersion: 3,
