@@ -73,12 +73,12 @@ MakanMasak is a modern, serverless restaurant management system built on Cloudfl
   `pnpm db:migrate:prod` is safe for 0006 onward.
 
   That ledger row is **not** a claim that the live schema equals the baseline:
-  production has 126 tables against the baseline's 117, and the two lineages
+  production has 127 tables against the baseline's 117, and the two lineages
   still differ. Never use it as evidence that they match — a rebuild-from-
-  baseline or a schema diff has to establish that separately. (126 counts
-  everything but `sqlite_%` and `d1_%`; the 120 in the STRICT bullet below drops
+  baseline or a schema diff has to establish that separately. (127 counts
+  everything but `sqlite_%` and `d1_%`; the 121 in the STRICT bullet below drops
   the fts5 shadow tables as well. The two figures describe the same database
-  under different exclusions, and both were re-measured 2026-09-06.)
+  under different exclusions, and both were re-measured 2026-09-07.)
 - **Before applying anything to production D1 by hand**: `wrangler d1 export`
   fails on this database (`cannot export databases with Virtual Tables (fts5)`),
   so build the schema copy by pulling `sql` out of `sqlite_master` instead.
@@ -100,18 +100,20 @@ MakanMasak is a modern, serverless restaurant management system built on Cloudfl
   live in `packages/database/strict-table-policy.json`; `pnpm check:strict-tables`
   enforces both rules for migrations, not the live schema. All 117 tables in the
   baseline are already STRICT, but production was built from the legacy track and
-  is almost entirely non-STRICT: **5 of 120** non-shadow tables
+  is almost entirely non-STRICT: **6 of 121** non-shadow tables
   (`coupons`, `ingredient_stock_movements`, `print_agents`, `receipts`,
-  `restaurant_customers`) — measured against production on 2026-09-06 right
-  after `0019` was applied. The first four were first measured 2026-09-02 after
-  `0016` shipped and did not move for `0017` or `0018`, both of which are
-  `ALTER TABLE` and add no tables. `coupons` is the fifth and the first legacy
+  `restaurant_alerts`, `restaurant_customers`) — measured against production on
+  2026-09-07 right after `0020` was applied. The first four were first measured
+  2026-09-02 after `0016` shipped and did not move for `0017` or `0018`, both of
+  which are `ALTER TABLE` and add no tables. `coupons` is the first legacy
   table to become STRICT by being **recreated**: `0019` rebuilt it to move
   `valid_from` / `valid_to` to `_ms` INTEGER (#271) and carried `) STRICT` on
-  the `__new_coupons` staging table by hand. So the ratio moves two ways — a
-  new table arrives STRICT, and a recreate-table migration converts one — but
-  the remaining 115 legacy tables stay unprotected until something recreates
-  them.
+  the `__new_coupons` staging table by hand. `restaurant_alerts` is the sixth
+  and arrived the ordinary way — a new table created STRICT by `0020` (#285).
+  So the ratio moves two ways — a new table arrives STRICT, and a
+  recreate-table migration converts one — but only the second kind shrinks the
+  exposure: the denominator grew with `0020`, so the remaining 115 legacy tables
+  stay unprotected until something recreates them.
 
   The "15 of 119" this file and issue #297 previously recorded was an artifact of
   the query, not a real count. `sql LIKE '%STRICT%'` is a substring match, so it
