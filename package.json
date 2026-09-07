@@ -72,6 +72,7 @@
     "check:test-scripts": "node scripts/check-package-test-scripts.cjs",
     "check:no-automated-destructive-wrangler": "node scripts/check-no-automated-destructive-wrangler.cjs",
     "check:design-palette": "node scripts/check-design-palette.cjs",
+    "check:ui-reachability": "node scripts/check-ui-reachability.cjs",
     "check:docs-drift": "node scripts/check-docs-drift.cjs",
     "docs:sync": "node scripts/check-docs-drift.cjs --write",
     "check:i18n-locales": "tsx scripts/i18n-locale-coverage.ts",
