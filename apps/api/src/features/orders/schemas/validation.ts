@@ -154,6 +154,14 @@ export const createOrderSchema = z
     deliveryInfo: deliveryInfoSchema.optional(),
     scheduledTime: dateStringSchema,
     couponCode: z.string().max(50).optional(),
+    // Idempotency key for this submission. `orders` carries a unique index on
+    // (restaurant_id, client_mutation_id), and the database service maps the
+    // violation to CLIENT_MUTATION_DUPLICATE — but zod strips whatever it does
+    // not declare, so without this line the whole mechanism stayed unreachable
+    // from the authenticated path. Unlike guest orders, this path has no KV
+    // active-order lock behind it, so this key is its only defence against a
+    // retry after a dropped connection creating a second order.
+    clientMutationId: z.string().max(100).optional(),
   })
   .refine((data) => !data.waitingListId || !!data.customerPhone, {
     message: "customerPhone is required for waiting-list pre-orders",

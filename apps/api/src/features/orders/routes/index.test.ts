@@ -343,6 +343,60 @@ describe("orders routes", () => {
     );
   });
 
+  it("carries the idempotency key all the way to the service", async () => {
+    // Two layers have to hold for this to pass, and each fails silently on its
+    // own: zod strips any field createOrderSchema does not declare, and
+    // createOrderData is an object literal, so omitting an optional field
+    // there is perfectly legal TypeScript. Asserting a 201 would prove
+    // neither — only the argument the service actually received does.
+    serviceMocks.createOrder.mockResolvedValue({ id: 1004 });
+
+    const response = await routes.fetch(
+      jsonRequest("/", {
+        restaurantId: "restaurant-1",
+        items: [{ menuItemId: 7, quantity: 1, price: 120 }],
+        tableId: 3,
+        clientMutationId: "cart-9f2c-1",
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(201);
+    expect(serviceMocks.createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ clientMutationId: "cart-9f2c-1" }),
+      "user-42",
+    );
+  });
+
+  it("answers a replayed key with 409 rather than a 500", async () => {
+    // The unique index on (restaurant_id, client_mutation_id) rejects the
+    // second write and the database service reports it as this sentinel. Left
+    // unmapped it reaches the global handler as an unknown error, and the
+    // customer sees a generic failure for an order that did go through — which
+    // is exactly the message that makes them tap again.
+    serviceMocks.createOrder.mockRejectedValue(
+      new Error("CLIENT_MUTATION_DUPLICATE"),
+    );
+
+    const response = await withSilencedRouteError(() =>
+      routes.fetch(
+        jsonRequest("/", {
+          restaurantId: "restaurant-1",
+          items: [{ menuItemId: 7, quantity: 1, price: 120 }],
+          tableId: 3,
+          clientMutationId: "cart-9f2c-1",
+        }),
+        createEnv() as never,
+      ),
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      error: { code: "CLIENT_MUTATION_DUPLICATE" },
+    });
+  });
+
   it("gates shop-channel orders on shop mode", async () => {
     gateMocks.assertShopOrderingEnabled.mockRejectedValue(
       Object.assign(new Error("This restaurant is not accepting shop orders"), {
