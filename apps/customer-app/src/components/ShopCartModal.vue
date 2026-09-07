@@ -447,6 +447,18 @@ const { formatPrice } = useCurrency();
 const shopCartStore = useShopCartStore();
 const isSubmitting = ref(false);
 
+/**
+ * Idempotency key for the cart currently being submitted, minted once per cart
+ * and reused by every retry of it. `orders` carries a unique index on
+ * (restaurant_id, client_mutation_id), so a second attempt at the same cart
+ * comes back as CLIENT_MUTATION_DUPLICATE / 409 instead of a second order.
+ *
+ * Shared by both branches below on purpose: signing in between two attempts
+ * moves the same cart from /guest-orders to /orders, and both write that same
+ * column. Cleared on success so the next cart gets a fresh key.
+ */
+const pendingOrderMutationId = ref<string | null>(null);
+
 const deliveryAddress = ref("");
 const deliveryPhone = ref("");
 const deliveryInstructions = ref("");
@@ -521,6 +533,11 @@ const handleCheckout = async () => {
   try {
     isSubmitting.value = true;
 
+    // Minted once per cart, not per tap — see pendingOrderMutationId.
+    if (!pendingOrderMutationId.value) {
+      pendingOrderMutationId.value = crypto.randomUUID();
+    }
+
     // 準備訂單資料
     const waitingListCustomerPhone = getWaitingListCustomerPhone();
     if (props.waitingTicketId && !waitingListCustomerPhone) {
@@ -548,6 +565,7 @@ const handleCheckout = async () => {
         orderType: "shop",
       },
       totalAmount: shopCartStore.totalWithDelivery,
+      clientMutationId: pendingOrderMutationId.value,
       deliveryInfo: {
         type: props.waitingTicketId ? "dine_in" : shopCartStore.fulfillmentType,
         ...(!props.waitingTicketId &&
@@ -585,6 +603,7 @@ const handleCheckout = async () => {
         })),
         notes: orderData.deliveryInfo?.instructions,
         deliveryInfo: orderData.deliveryInfo,
+        clientMutationId: pendingOrderMutationId.value,
       };
       const guestResult = await apiClient.post<GuestOrderResponse>(
         "/guest-orders",
@@ -598,6 +617,9 @@ const handleCheckout = async () => {
     }
     // apiClient unwraps response.data.data, so orderResult IS the order object
     const orderId = orderResult.id;
+
+    // This cart is committed; the next one must not be deduplicated against it.
+    pendingOrderMutationId.value = null;
 
     // 清空購物車
     shopCartStore.clearCart();

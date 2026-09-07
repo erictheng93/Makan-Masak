@@ -194,4 +194,45 @@ describe("ShopCartModal checkout payload", () => {
       expect.objectContaining({ shopQrCode: SHOP_QR_CODE }),
     );
   });
+
+  it("reuses one idempotency key across a retry of the same cart", async () => {
+    // Takeaway goes to the same endpoints and the same client_mutation_id
+    // column as dine-in. Without a key a customer whose connection dropped
+    // mid-submit taps again and the shop makes the order twice.
+    hasCustomerAccessToken.mockReturnValue(true);
+    post.mockRejectedValueOnce(new Error("Network Error"));
+    post.mockResolvedValue({ id: 501 });
+
+    const wrapper = mountModal();
+    const submit = wrapper.get('[data-testid="submit-order-btn"]');
+
+    await submit.trigger("click");
+    await flushPromises();
+    const firstKey = post.mock.calls[0][1].clientMutationId;
+    expect(typeof firstKey).toBe("string");
+    expect(firstKey.length).toBeGreaterThan(0);
+
+    await submit.trigger("click");
+    await flushPromises();
+
+    expect(post).toHaveBeenCalledTimes(2);
+    expect(post.mock.calls[1][1].clientMutationId).toBe(firstKey);
+  });
+
+  it("mints a fresh key for the cart that follows a committed order", async () => {
+    hasCustomerAccessToken.mockReturnValue(true);
+    post.mockResolvedValue({ id: 501 });
+
+    const wrapper = mountModal();
+    const submit = wrapper.get('[data-testid="submit-order-btn"]');
+
+    await submit.trigger("click");
+    await flushPromises();
+    const firstKey = post.mock.calls[0][1].clientMutationId;
+
+    await submit.trigger("click");
+    await flushPromises();
+
+    expect(post.mock.calls[1][1].clientMutationId).not.toBe(firstKey);
+  });
 });
