@@ -2,3 +2,88 @@ packages:
   - 'apps/*'
   - 'packages/*'
   - 'packages/shared/src/i18n'
+
+# pnpm 11 stopped reading settings from package.json#pnpm and restricted
+# .npmrc to auth/registry settings, so everything below used to live in one of
+# those two files. It is not new configuration -- it is the same configuration
+# in the only place pnpm 12 still reads it. Moving it is not optional: pnpm
+# ignores the old locations silently, so a stale copy reads as "no overrides"
+# rather than as an error.
+engineStrict: true
+enablePrePostScripts: true
+
+# Was package.json#pnpm.onlyBuiltDependencies. pnpm 11 replaced the four
+# build-permission lists with a single name -> boolean map, and naming what may
+# build is no longer enough: a dependency shipping an install script that is
+# neither allowed nor denied fails the install outright with
+# ERR_PNPM_IGNORED_BUILDS. pnpm 10 ignored those same packages silently, so
+# every `false` here records the behaviour the repo already had rather than a
+# new decision. A new dependency with an install script has to be listed too --
+# pnpm writes the placeholder itself and then refuses to install until it is
+# resolved.
+allowBuilds:
+  "better-sqlite3": true
+  "workerd": true
+  # Chromium comes from `playwright install`, not from this postinstall.
+  "@playwright/browser-chromium": false
+  "core-js": false
+  "esbuild": false
+  "protobufjs": false
+  "unix-dgram": false
+  "vue-demi": false
+
+# Was package.json#pnpm.overrides. Every entry is load-bearing: the security
+# pins hold transitive advisories down, and @types/node, jsdom and terser keep
+# the workspace on a single vitest/vite instance (see CLAUDE.md -- two vite
+# copies mid-load trip ERR_INTERNAL_ASSERTION and fail the whole suite at
+# startup).
+overrides:
+  "esbuild": "^0.25.0"
+  "drizzle-orm": "0.45.2"
+  "better-sqlite3": "12.6.0"
+  "incur>zod": "^4.3.6"
+  "uuid": "^14.0.0"
+  "@grpc/grpc-js": "^1.14.4"
+  "@isaacs/brace-expansion": "^5.0.1"
+  "@opentelemetry/core": "^2.8.0"
+  "@protobufjs/utf8": "^1.1.1"
+  "@types/node": "^25.0.5"
+  "ajv@^6": "^6.14.0"
+  "brace-expansion@^1": "^1.1.13"
+  "brace-expansion@^2": "^2.0.3"
+  "brace-expansion@^4 || ^5": "^5.0.6"
+  "baseline-browser-mapping": "2.10.37"
+  "caniuse-lite": "1.0.30001799"
+  "dompurify": "^3.4.11"
+  "fast-xml-builder": "^1.1.7"
+  "fast-xml-parser": "^5.7.0"
+  "flatted": "^3.4.2"
+  "follow-redirects": "^1.16.0"
+  "form-data": "^4.0.6"
+  "hono": "^4.12.25"
+  "joi": "^17.13.4"
+  "js-yaml@^3": "^3.15.0"
+  "js-yaml@^4": "^4.2.0"
+  "js-cookie": "^3.0.7"
+  "jsdom": "^27.4.0"
+  "lodash": "^4.18.1"
+  "lodash-es": "^4.18.1"
+  "minimatch@^3": "^3.1.4"
+  "minimatch@^5": "^5.1.8"
+  "minimatch@^9": "^9.0.7"
+  "minimatch@^10": "^10.2.3"
+  "path-to-regexp@^0.1": "^0.1.13"
+  "picomatch@^2": "^2.3.2"
+  "picomatch@^4": "^4.0.4"
+  "postcss": "^8.5.10"
+  "protobufjs": "^7.6.3"
+  "qs@^6": "^6.14.2"
+  "rollup": "^4.59.0"
+  "serialize-javascript": "^7.0.5"
+  "socket.io-parser": "^4.2.6"
+  "terser": "^5.48.0"
+  "undici": "^6.27.0"
+  "vite@^5 || ^6 || ^7": "^7.3.5"
+  "vitest": "^4.1.0"
+  "ws": "^8.21.0"
+  "yaml@^2": "^2.8.3"

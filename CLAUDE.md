@@ -168,7 +168,29 @@ them has a snapshot.
 ### Prerequisites
 
 - Node.js 22+ (`package.json` engines requires `>=22.13.0`)
-- pnpm 10+ (required — repo pins `pnpm@10.24.0` via `packageManager`; engines floor is `>=8.0.0`, enforced via `.npmrc`)
+- pnpm 12 (required — repo pins `pnpm@12.3.4` via `packageManager`; engines floor is `>=8.0.0`, enforced by `engineStrict` in `pnpm-workspace.yaml`)
+
+  **Every pnpm setting lives in `pnpm-workspace.yaml`.** pnpm 11 stopped reading
+  `package.json#pnpm` and restricted `.npmrc` to auth and registry settings, and
+  it ignores the old locations **silently** — a setting left behind reads as
+  "off", not as an error. That is not a cosmetic risk here: `overrides` (49
+  entries) carries both the transitive security pins and the `@types/node` /
+  `jsdom` / `terser` pins that keep the workspace on a single vitest/vite
+  instance, and `onlyBuiltDependencies` became `allowBuilds`, without which
+  `better-sqlite3` and `workerd` never build and every real-D1 test fails. If
+  you add a pnpm setting, put it in `pnpm-workspace.yaml` and nowhere else.
+
+  One lockfile entry needs a hand: `xlsx` is a CDN tarball
+  (`https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`), and lockfiles written
+  before pnpm 10.26 recorded no `integrity` for HTTP tarballs. pnpm 11.4+ fails
+  closed on that with `ERR_PNPM_MISSING_TARBALL_INTEGRITY`. The hash now in the
+  lockfile was taken from the tarball after diffing it against the copy already
+  unpacked in `node_modules/.pnpm` from the last pnpm 10 install — byte
+  identical, so it pins content with independent evidence behind it rather than
+  whatever the CDN served that afternoon. SheetJS stopped publishing to npm at
+  0.18.5, so there is no registry hash to check against; if that entry ever has
+  to be re-pinned, re-derive it the same way rather than trusting a fresh
+  download on its own.
 - Cloudflare Account (paid plan for D1, R2, Images)
 
 ### Quick Start
@@ -365,9 +387,10 @@ fully loaded.   code: 'ERR_INTERNAL_ASSERTION'
 
 That surfaces as the whole suite failing at startup with zero tests run, roughly
 one run in six — the kind of red that gets waved through as "just re-run it".
-`pnpm.overrides` in the root `package.json` pins all three, and the per-package
-declarations were aligned to match so they do not contradict the override.
-`package.json` takes no comments, which is why the reason is recorded here.
+`overrides` in `pnpm-workspace.yaml` pins all three, and the per-package
+declarations were aligned to match so they do not contradict the override. The
+override used to live in `package.json#pnpm`, which pnpm 12 no longer reads —
+moving it back there does not fail, it just silently unpins all three.
 
 Adding a package that declares its own version of any of the three re-splits the
 graph. Check what is **linked**, not what is left in the virtual store:
