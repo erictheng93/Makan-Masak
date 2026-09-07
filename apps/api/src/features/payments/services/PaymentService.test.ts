@@ -259,6 +259,42 @@ function statementContaining(statements: PreparedStatement[], text: string) {
   return statements.find((statement) => statement.sql.includes(text));
 }
 
+// `PaymentAuditService.prepareAppend` binds positionally, so decode the row
+// once here rather than indexing into `values` at every call site.
+const AUDIT_COLUMNS = [
+  "id",
+  "restaurantId",
+  "paymentTransactionId",
+  "subscriptionId",
+  "eventType",
+  "provider",
+  "providerEventId",
+  "providerEventType",
+  "amount",
+  "currency",
+  "rawPayload",
+  "errorCode",
+  "errorMessage",
+  "occurredAtMs",
+] as const;
+
+// The success path writes its audit rows through drizzle (`payload` set); the
+// failure path goes through `db.prepare` (`payload` undefined). Both land in
+// `statements`, so filter on which writer produced them.
+function preparedAuditEvents(statements: PreparedStatement[]) {
+  return statements
+    .filter(
+      (statement) =>
+        statement.payload === undefined &&
+        statement.sql.includes("payment_audit_log"),
+    )
+    .map((statement) =>
+      Object.fromEntries(
+        AUDIT_COLUMNS.map((name, index) => [name, statement.values[index]]),
+      ),
+    );
+}
+
 describe("PaymentService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -433,8 +469,18 @@ describe("PaymentService", () => {
       status: 422,
     });
 
-    expect(committed).toEqual([]);
-    expect(statements).toEqual([]);
+    // The rejection is now traced (#350), but the original guarantee still
+    // holds: nothing that mutates payment state ran. The only committed
+    // statement is the audit row.
+    expect(
+      preparedAuditEvents(statements).map((event) => event.errorCode),
+    ).toEqual(["IDEMPOTENCY_ORDER_MISMATCH"]);
+    expect(
+      statements.filter((statement) => statement.payload !== undefined),
+    ).toEqual([]);
+    expect(committed.map((statement) => statement.sql)).toEqual([
+      expect.stringContaining("payment_audit_log"),
+    ]);
     expect(mocks.db.batch).not.toHaveBeenCalled();
   });
 
@@ -492,8 +538,8 @@ describe("PaymentService", () => {
   });
 
   it("does not commit payment ledger writes when a middle write fails", async () => {
-    const { db, committed } = createD1WithBatchFailure((statement) =>
-      statement.sql.includes("UPDATE payment_transactions"),
+    const { db, committed, statements } = createD1WithBatchFailure(
+      (statement) => statement.sql.includes("UPDATE payment_transactions"),
     );
     queueOrderRows([[order()]]);
     mockOrderUpdate([{ status: "paid", paymentStatus: "paid" }]);
@@ -509,8 +555,20 @@ describe("PaymentService", () => {
     ).rejects.toThrow("injected batch failure");
 
     expect(db.batch).toHaveBeenCalledOnce();
+    // This is the drift the audit row matters most for: the order was already
+    // flipped to paid, the ledger never landed, and before #350 the only trace
+    // was a console line. The thrown value is a plain Error, not an ApiError,
+    // so it is recorded under UNEXPECTED_ERROR.
     expect(committed.map((statement) => statement.sql)).toEqual([
       expect.stringContaining("UPDATE orders"),
+      expect.stringContaining("payment_audit_log"),
+    ]);
+    expect(preparedAuditEvents(statements)).toEqual([
+      expect.objectContaining({
+        eventType: "failure",
+        errorCode: "UNEXPECTED_ERROR",
+        restaurantId: "restaurant-1",
+      }),
     ]);
   });
 
@@ -691,7 +749,7 @@ describe("PaymentService", () => {
   });
 
   it("rejects finalized orders and staff roles without payment authority", async () => {
-    const { db } = createD1();
+    const { db, statements } = createD1();
     queueOrderRows([
       // Deliberately the pre-#311 spelling. Rows written before the three
       // writers moved to "completed" still exist, and `isAlreadyFinalized`
@@ -746,11 +804,15 @@ describe("PaymentService", () => {
       code: "INSUFFICIENT_ROLE",
       status: 403,
     });
-    expect(db.prepare).not.toHaveBeenCalled();
+    // Before #350 these three attempts vanished without a record: the ATTEMPT
+    // audit row is written inside the batch, which none of them reach.
+    expect(
+      preparedAuditEvents(statements).map((event) => event.errorCode),
+    ).toEqual(["ORDER_NOT_PAYABLE", "ORDER_NOT_PAYABLE", "INSUFFICIENT_ROLE"]);
   });
 
   it("rejects missing orders, restaurant mismatches, and stale totals", async () => {
-    const { db } = createD1();
+    const { db, statements } = createD1();
     queueOrderRows([
       [],
       [order({ restaurantId: "restaurant-1" })],
@@ -817,7 +879,132 @@ describe("PaymentService", () => {
       code: "PARTIAL_PAYMENT_TOTAL_MISMATCH",
       status: 409,
     });
+    // ORDER_NOT_FOUND is the one rejection with no restaurant to scope a row
+    // to, so it stays untraced; the other three are recorded.
+    expect(
+      preparedAuditEvents(statements).map((event) => event.errorCode),
+    ).toEqual([
+      "FORBIDDEN",
+      "PAYMENT_AMOUNT_MISMATCH",
+      "PARTIAL_PAYMENT_TOTAL_MISMATCH",
+    ]);
+  });
+
+  it("records a failure audit row scoped to the order's restaurant", async () => {
+    const { db, statements } = createD1();
+    queueOrderRows([[order({ totalAmountCents: 12000 })]]);
+    mockOrderUpdate();
+
+    await expect(
+      new PaymentService(env(db)).processPayment({
+        orderId: "order-101",
+        paymentMode: "full",
+        amount: 119,
+        method: "cash",
+      }),
+    ).rejects.toMatchObject({ code: "PAYMENT_AMOUNT_MISMATCH", status: 409 });
+
+    const events = preparedAuditEvents(statements);
+    expect(events).toEqual([
+      expect.objectContaining({
+        restaurantId: "restaurant-1",
+        eventType: "failure",
+        errorCode: "PAYMENT_AMOUNT_MISMATCH",
+        provider: "cash",
+        amount: 12000,
+        // No `payment_transactions` row exists to point at: that insert lives
+        // inside the batch this attempt never reached.
+        paymentTransactionId: null,
+      }),
+    ]);
+    expect(JSON.parse(String(events[0].rawPayload))).toMatchObject({
+      orderId: "order-101",
+      paymentMode: "full",
+      submittedAmount: 119,
+      serverTotalCents: 12000,
+    });
+    expect(
+      statementContaining(statements, "INSERT INTO payment_transactions"),
+    ).toBeUndefined();
+  });
+
+  it("attributes a cross-tenant attempt to the target restaurant", async () => {
+    const { db, statements } = createD1();
+    queueOrderRows([[order({ restaurantId: "restaurant-1" })]]);
+    mockOrderUpdate();
+
+    await expect(
+      new PaymentService(env(db)).processPayment(
+        { orderId: "order-101", paymentMode: "full", amount: 120 },
+        {
+          user: {
+            id: "user-42",
+            username: "owner",
+            role: 1,
+            restaurantId: "restaurant-2",
+          },
+        },
+      ),
+    ).rejects.toMatchObject({ code: "FORBIDDEN", status: 403 });
+
+    // The row belongs to the restaurant whose order was targeted, not to the
+    // caller's own restaurant — otherwise the trace lands in the wrong tenant's
+    // audit log and the victim cannot see it.
+    expect(preparedAuditEvents(statements)).toEqual([
+      expect.objectContaining({
+        restaurantId: "restaurant-1",
+        errorCode: "FORBIDDEN",
+      }),
+    ]);
+  });
+
+  it("records nothing when the order does not exist", async () => {
+    const { db } = createD1();
+    queueOrderRows([[]]);
+    mockOrderUpdate();
+
+    await expect(
+      new PaymentService(env(db)).processPayment({
+        orderId: "order-404",
+        paymentMode: "full",
+        amount: 120,
+      }),
+    ).rejects.toMatchObject({ code: "ORDER_NOT_FOUND", status: 404 });
+
     expect(db.prepare).not.toHaveBeenCalled();
+  });
+
+  it("surfaces the original rejection when the audit write itself fails", async () => {
+    const { db } = createD1();
+    queueOrderRows([[order({ totalAmountCents: 12000 })]]);
+    mockOrderUpdate();
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    db.prepare.mockImplementation((sql: string) => {
+      const statement: PreparedStatement = {
+        sql,
+        values: [],
+        bind: vi.fn(() => statement),
+        run: vi.fn(async () => {
+          throw new Error("audit sink down");
+        }),
+      };
+      return statement;
+    });
+
+    // Observability must not decide whether the payment path is correct: the
+    // caller still has to see why the payment was refused.
+    await expect(
+      new PaymentService(env(db)).processPayment({
+        orderId: "order-101",
+        paymentMode: "full",
+        amount: 119,
+      }),
+    ).rejects.toMatchObject({ code: "PAYMENT_AMOUNT_MISMATCH", status: 409 });
+
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 
   it("exposes ApiError details for mismatched expected totals", async () => {
