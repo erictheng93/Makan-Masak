@@ -1809,6 +1809,11 @@ const zhTWCore = {
     },
   },
 
+  myAttendance: {
+    title: "我的出勤",
+    subtitle: "查看今天的班次並完成上下班打卡",
+  },
+
   myLeaves: {
     subtitle: "查看自己的假期餘額並送出請假申請",
     cancelRequest: "取消申請",
@@ -1871,6 +1876,7 @@ const zhTWCore = {
   // 導航
   nav: {
     myShifts: "我的班表",
+    myAttendance: "我的出勤",
     myLeaves: "我的請假",
     featureUnavailable: "尚未開放",
     platform: "平台總覽",
@@ -1919,6 +1925,7 @@ const zhTWCore = {
   // 頁面標題
   pages: {
     myShifts: "我的班表",
+    myAttendance: "我的出勤",
     myLeaves: "我的請假",
     printAgents: "列印代理",
     members: "會員管理",

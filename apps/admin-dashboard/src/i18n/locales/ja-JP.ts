@@ -1654,6 +1654,11 @@ const jaJP: Messages = {
       cashier: "レジ係",
     },
   },
+  myAttendance: {
+    title: "マイ勤怠",
+    subtitle: "本日のシフトを確認し、出退勤を打刻します",
+  },
+
   myLeaves: {
     subtitle: "自分の休暇残日数を確認し、休暇を申請します",
     cancelRequest: "申請を取り消す",
@@ -1715,6 +1720,7 @@ const jaJP: Messages = {
   },
   nav: {
     myShifts: "マイシフト",
+    myAttendance: "マイ勤怠",
     myLeaves: "マイ休暇",
     featureUnavailable: "未提供",
     platform: "プラットフォーム概要",
@@ -1762,6 +1768,7 @@ const jaJP: Messages = {
   },
   pages: {
     myShifts: "マイシフト",
+    myAttendance: "マイ勤怠",
     myLeaves: "マイ休暇",
     printAgents: "プリントエージェント",
     members: "会員管理",

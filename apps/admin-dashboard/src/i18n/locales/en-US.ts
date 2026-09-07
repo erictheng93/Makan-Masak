@@ -1754,6 +1754,11 @@ const enUS: Messages = {
       cashier: "Cashier",
     },
   },
+  myAttendance: {
+    title: "My Attendance",
+    subtitle: "See today's shift and clock yourself in and out",
+  },
+
   myLeaves: {
     subtitle: "Check your leave balance and file a leave request",
     cancelRequest: "Cancel request",
@@ -1816,6 +1821,7 @@ const enUS: Messages = {
   },
   nav: {
     myShifts: "My Shifts",
+    myAttendance: "My Attendance",
     myLeaves: "My Leave",
     featureUnavailable: "Not yet available",
     platform: "Platform Overview",
@@ -1863,6 +1869,7 @@ const enUS: Messages = {
   },
   pages: {
     myShifts: "My Shifts",
+    myAttendance: "My Attendance",
     myLeaves: "My Leave",
     printAgents: "Print Agents",
     members: "Members",

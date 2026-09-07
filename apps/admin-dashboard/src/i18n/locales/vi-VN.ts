@@ -1657,6 +1657,11 @@ const viVN: Messages = {
       cashier: "Thu ngân",
     },
   },
+  myAttendance: {
+    title: "Chấm công của tôi",
+    subtitle: "Xem ca làm hôm nay và tự chấm công vào/ra",
+  },
+
   myLeaves: {
     subtitle: "Xem số ngày phép còn lại và gửi đơn xin nghỉ phép",
     cancelRequest: "Huỷ đơn",
@@ -1719,6 +1724,7 @@ const viVN: Messages = {
   },
   nav: {
     myShifts: "Ca của tôi",
+    myAttendance: "Chấm công của tôi",
     myLeaves: "Nghỉ phép của tôi",
     featureUnavailable: "Chưa khả dụng",
     platform: "Tổng quan nền tảng",
@@ -1766,6 +1772,7 @@ const viVN: Messages = {
   },
   pages: {
     myShifts: "Ca của tôi",
+    myAttendance: "Chấm công của tôi",
     myLeaves: "Nghỉ phép của tôi",
     printAgents: "Tác nhân in",
     members: "Quản lý thành viên",

@@ -224,6 +224,13 @@ describe("Sidebar", () => {
     expect(wrapper.find('[data-testid="nav-item-my-leaves"]').exists()).toBe(
       true,
     );
+    // #308: the clock panel's only other mount point is
+    // /employees/attendance, which is behind canAccessAdminFeatures -- so
+    // without this entry the people who actually work the shifts cannot
+    // clock in.
+    expect(
+      wrapper.find('[data-testid="nav-item-my-attendance"]').exists(),
+    ).toBe(true);
     expect(wrapper.find('[data-testid="nav-item-employees"]').exists()).toBe(
       false,
     );
