@@ -38,9 +38,13 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 🐚 Enable pnpm via corepack
+        # Bare `corepack prepare` follows package.json's `packageManager`; a
+        # second, hand-maintained pin here drifts out of date silently.
+        env:
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
         run: |
           corepack enable
-          corepack prepare pnpm@10.24.0 --activate
+          corepack prepare --activate
 
       - name: 📥 Install dependencies
         run: pnpm install --frozen-lockfile
