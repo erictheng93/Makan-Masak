@@ -2316,6 +2316,22 @@ const zhTWCore = {
     systemHealth: "系統健康狀態",
     uptime: "運行時間",
     emergency: "緊急警報",
+    alerts: {
+      inventory_depleted: {
+        title: "{name} 已用盡",
+        description: "{name} 目前庫存為 0 {unit}，需要立即補貨。",
+      },
+      inventory_low: {
+        title: "{name} 低於安全庫存",
+        description:
+          "{name} 目前庫存 {currentStock} {unit}，低於安全庫存 {minStockLevel} {unit}。",
+      },
+      order_overdue: {
+        title: "訂單 {orderNumber} 已逾時",
+        description:
+          "訂單 {orderNumber} 已經 {minutesLate} 分鐘未完成，目前狀態為 {status}。",
+      },
+    },
     resolve: "解決",
     escalate: "升級處理",
     operationFailed: "操作失敗",
@@ -2396,30 +2412,17 @@ const zhTWCore = {
       accrualAmount: "給假天數",
       requiresApproval: "需要審核",
       save: "儲存",
-      cancel: "取消",
       deleteConfirm: "確定要刪除這個假別嗎？",
       createFailed: "新增假別失敗",
       deleteFailed: "刪除假別失敗",
     },
-    title: "請假管理",
-    subtitle: "管理員工請假申請與假期餘額",
-    apply: "申請請假",
     myLeaves: "我的請假",
-    teamLeaves: "團隊請假",
-    leaveBalance: "假期餘額",
-    leaveCalendar: "請假日曆",
     status: {
       pending: "待審核",
       approved: "已批准",
       rejected: "已拒絕",
       cancelled: "已取消",
-    },
-    form: {
-      leaveType: "假別",
-      startDate: "開始日期",
-      endDate: "結束日期",
-      reason: "請假原因",
-      reasonPlaceholder: "請輸入請假原因...",
+      withdrawn: "已撤回",
     },
     request: {
       new: "申請請假",
@@ -2438,41 +2441,20 @@ const zhTWCore = {
       reason: "請假原因",
       reasonPlaceholder: "請輸入請假原因...",
       attachments: "附件",
-      period: "期間",
-      required: "必填",
       attachmentUrlHint:
         "請貼上證明文件的連結（PDF 或照片皆可），審核者會直接開啟這個網址。",
       submit: "送出申請",
     },
     balance: {
       title: "假期餘額",
-      daysRemaining: "天剩餘",
       used: "已用",
-      total: "總計",
       remaining: "剩餘",
       days: "天",
       pending: "待審核",
-      carryover: "結轉",
-      expiresOn: "到期日",
-      requestLeave: "申請請假",
       unknownType: "未知假別",
     },
     list: {
-      allStatus: "全部狀態",
-      allTypes: "全部假別",
-      search: "搜尋請假記錄...",
       noRequests: "暫無請假記錄",
-    },
-    approval: {
-      pending: "待審核",
-      approved: "已核准",
-      rejected: "已拒絕",
-      pendingRequests: "待審核申請",
-      approve: "批准",
-      reject: "拒絕",
-      noPending: "目前沒有待審核的請假申請",
-      reviewer: "審核人",
-      unknownEmployee: "未知員工",
     },
     errors: {
       endBeforeStart: "結束日期不能早於開始日期",
@@ -2490,24 +2472,14 @@ const zhTWCore = {
         "此假別需要提前 {required} 天申請，但您只提前了 {actual} 天",
       noticeTag: "提前",
     },
-    tabs: {
-      myLeaves: "我的請假",
-      approvals: "審批管理",
-      calendar: "日曆檢視",
-    },
     messages: {
       loadFailed: "載入請假資料失敗",
       initFailed: "初始化請假資料失敗",
       submitSuccess: "請假申請提交成功！",
       submitFailed: "請假申請提交失敗",
-      cancelConfirm: "確定要取消此請假申請嗎？",
       cancelSuccess: "已取消請假申請",
       cancelFailed: "取消失敗",
-      approveConfirm: "確定要批准此請假申請嗎？",
-      approveSuccess: "已批准請假申請",
       approveFailed: "批准失敗",
-      rejectPrompt: "請輸入拒絕原因：",
-      rejectSuccess: "已拒絕請假申請",
       rejectFailed: "拒絕失敗",
     },
   },
@@ -4364,20 +4336,6 @@ const zhTWCore = {
     statusCancelled: "已取消",
   },
 
-  leaveActions: {
-    submitSuccess: "請假申請提交成功！",
-    submitFailed: "請假申請提交失敗",
-    cancelConfirm: "確定要取消此請假申請嗎？",
-    cancelSuccess: "已取消請假申請",
-    cancelFailed: "取消失敗",
-    approveConfirm: "確定要批准此請假申請嗎？",
-    approveSuccess: "已批准請假申請",
-    approveFailed: "批准失敗",
-    rejectPrompt: "請輸入拒絕原因：",
-    rejectSuccess: "已拒絕請假申請",
-    rejectFailed: "拒絕失敗",
-  },
-
   // 支付系統
   payment: {
     recommended: "推薦",
@@ -5755,7 +5713,6 @@ const zhTWRuntimeKeys = {
   },
   leaveActions: {
     cancelReasonPrompt: "請輸入取消原因",
-    approve: "核准",
   },
   orders: {
     status: {

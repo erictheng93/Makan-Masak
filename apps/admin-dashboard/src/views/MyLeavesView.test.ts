@@ -272,4 +272,21 @@ describe("MyLeavesView (admin dashboard)", () => {
 
     expect(wrapper.find('[data-testid="my-leaves-error"]').exists()).toBe(true);
   });
+
+  /**
+   * The status pill is rendered as t(`leaves.status.${request.status}`), so the
+   * literal key never appears in the source and nothing else ties the block to
+   * LEAVE_STATUSES. Two ways that breaks silently, both already seen: the block
+   * shipped with four of the five statuses, so a withdrawn request rendered the
+   * raw key; and an unused-key sweep read all four as orphans and nearly
+   * deleted them (#344). Real messages here, not the mocked `t`.
+   */
+  it("has a label for every leave status the dynamic key can produce", async () => {
+    const { LEAVE_STATUSES } = await import("@makanmasak/shared-types");
+    const { default: zhTW } = await import("@/i18n/locales/zh-TW");
+    const status = (zhTW as unknown as Record<string, Record<string, unknown>>)
+      .leaves.status as Record<string, string>;
+
+    expect(Object.keys(status).sort()).toEqual([...LEAVE_STATUSES].sort());
+  });
 });

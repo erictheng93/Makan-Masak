@@ -222,22 +222,110 @@ short-lived signed URL.
 
 ### Orphaned leave i18n keys left behind by #344
 
-**Priority:** P4 **Status:** deferred 2026-09-06
+**Priority:** P4 **Status:** done 2026-09-07
 
-Deleting `LeaveView.vue` orphaned the keys only it read, in all six
-`apps/admin-dashboard/src/i18n/locales/*.ts`: the whole `leaves.tabs` block,
-`leaves.title`, `leaves.subtitle`, `leaves.apply`, `leaves.teamLeaves`,
-`leaves.leaveBalance`, `leaves.leaveCalendar`, the `leaves.approval` block, and
-every `leaveActions.*` key except `cancelReasonPrompt`.
+Deleting `LeaveView.vue` orphaned the keys only it read. 51 of them, gone from
+all six `apps/admin-dashboard/src/i18n/locales/*.ts`: the whole `leaves.tabs`,
+`leaves.form` and `leaves.approval` blocks, `leaves.title`, `leaves.subtitle`,
+`leaves.apply`, `leaves.teamLeaves`, `leaves.leaveBalance`,
+`leaves.leaveCalendar`, five `leaves.balance.*`, three `leaves.list.*`, two
+`leaves.request.*`, `leaves.manage.cancel`, five `leaves.messages.*`, and every
+`leaveActions.*` key except `cancelReasonPrompt` — which emptied zh-TW's
+`leaveActions` block in `zhTWCore` entirely, since its one live key lives in the
+separate `zhTWRuntimeKeys` object. 4531 → 4481 leaf keys per locale, identical
+in all six.
 
-**Why deferred:** they are inert — `pnpm check:i18n-locales` compares locales
-against each other, not against usage, so parity still passes and nothing but
-bundle bytes is affected. A bulk removal across six files was also the highest
--conflict edit available while #343 was concurrently adding keys to the same
-files. Do it as its own change, and re-grep first: `leaves.balance.*`,
-`leaves.list.*`, `leaves.request.*`, `leaves.errors.*`, `leaves.warnings.*`
-and `leaves.status.*` are all still live in `LeaveRequestDialog` or
-`MyLeavesView`.
+**The trap, for whoever does the next one of these.** A grep for the literal
+key string is not a safe test. `MyLeavesView` reads status labels as
+``t(`leaves.status.${request.status}`)``, so `leaves.status.pending` and its
+three siblings appear nowhere in the source and a literal sweep calls them
+orphans. Deleting them would have blanked the status pills on the page shipped
+the day before. `LeavesTab` does the same with ``leaves.manage.accrual${...}``.
+Resolve every ``t(`prefix.${...}`)`` site to its static prefix first and treat
+everything under it as live. Two more traps: `grep "leaves.apply"` matches
+`data-testid="leaves-apply"` because `.` is a regex wildcard (use `grep -F`),
+and `leaves`/`leaveActions` each appear in *two* merged objects per file, so a
+first-match edit silently misses the second copy.
+
+**How it was verified:** flatten every locale to a leaf-key list before and
+after, diff the sets, and assert each locale lost exactly the 51 intended keys
+and gained nothing. `pnpm check:i18n-locales` then still reports all five target
+locales complete, and the admin-dashboard suite is green at 113 files / 703
+tests.
+
+**Two adjacent bugs the audit turned up, fixed in the same change:**
+
+- `leaves.status` carried four keys while `LEAVE_STATUSES` has five. A
+  `withdrawn` request would have rendered the raw string
+  `leaves.status.withdrawn` in `MyLeavesView`. Nothing writes that status
+  today, but the column's CHECK constraint and the query filter schema both
+  accept it. Added in all six locales, reusing the existing
+  `employees.leave.withdrawn` translations.
+- `leaveActions.cancelReasonPrompt` had been machine-translated from the *key
+  name* rather than the zh-TW string in en-US, ja-JP, vi-VN and id-ID
+  ("Cancel Reason Prompt", 「キャンセル理由のプロンプト」, "Hủy lý do nhắc nhở",
+  "Batalkan Alasan Prompt"). It is the cancel-reason placeholder on
+  `MyLeavesView`, so four locales were showing a label instead of an
+  instruction. Retranslated.
+
+### No check catches an unreferenced i18n key
+
+**Priority:** P3 **Status:** open, measured 2026-09-07
+
+**Root cause of the entry above, and it is systemic.** `pnpm
+check:i18n-locales` compares each target locale against the zh-TW source — it
+answers "is every key translated?" and never "is every key used?". So a key
+outlives its only consumer silently, forever; parity stays green because the
+key is orphaned in all six locales at once.
+
+Measured across the four Vue apps with locale files, counting a key as live if
+it appears literally in source **or** falls under a ``t(`prefix.${...}`)``
+prefix:
+
+| app | leaf keys | unreferenced | |
+| --- | --- | --- | --- |
+| admin-dashboard | 4481 | 535 | 12% |
+| kitchen-display | 839 | 111 | 13% |
+| onboarding-app | 89 | 19 | 21% |
+| management-portal | 216 | 6 | 3% |
+
+671 keys, ~12% of the total. The 51 removed for #344 were about a tenth of
+admin-dashboard's share.
+
+**Scope when someone takes this on:** the detector is the easy half — the
+prefix-resolution rule above is the whole algorithm. The hard half is that a
+gate needs a baseline of 671 accepted orphans to start green, and each one has
+to be looked at before it can be deleted or accepted: some are genuinely dead
+like these were, some are half-built features, and some are reachable through a
+dynamic prefix the heuristic cannot see. Do not bulk-delete on the count.
+
+### admin-dashboard's target locales were never in the translation approval scope
+
+**Priority:** P3 **Status:** open, found 2026-09-07
+
+`docs/i18n/locale-approval-manifest.json` records the maintainer acceptance of
+machine translation, and its `apps` list is `["kitchen-display",
+"onboarding-app", "management-portal"]` — **admin-dashboard is not in it**, nor
+are `en-US` or `ja-JP` in its `locales`. So the largest locale set in the repo
+(4481 keys x 5 target locales) has never been through that review.
+
+Found via `leaveActions.cancelReasonPrompt`, which was
+`"Cancel Reason Prompt"` in en-US against `"請輸入取消原因"` in zh-TW — English
+derived from the *key name* rather than the source string, and it was the
+visible placeholder on `MyLeavesView`. That one is fixed; the class is not.
+Detecting the rest automatically does not work: a heuristic for "the value is
+just the key name" flags 28 strings in the `leaves` namespace alone and all but
+one are correct, because short UI labels legitimately match their key
+(`retry` → "Retry", `save` → "Save"). Separating them needs a human reading
+source and target side by side.
+
+**Do not regenerate the handoff CSV to "fix" this.**
+`docs/i18n/locale-translator-handoff.csv` is a 2026-05-26 snapshot and the
+manifest pins its sha256 as the thing the maintainer approved. Re-exporting it
+changes that hash and invalidates the signed approval, in exchange for nothing:
+`pnpm check:i18n-locales` — the only i18n check in CI and in `verify:push` —
+never reads it. It is expected to be stale with respect to the 51 keys #344
+removed.
 
 ## database / money schema
 
