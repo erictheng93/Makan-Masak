@@ -20,6 +20,8 @@ const mocks = vi.hoisted(() => ({
   update: vi.fn(),
   listOrders: vi.fn(),
   revealContact: vi.fn(),
+  exportMembers: vi.fn(),
+  recomputeAll: vi.fn(),
   enforcePiiRevealThrottle: vi.fn(),
 }));
 
@@ -58,6 +60,8 @@ vi.mock("@makanmasak/database", () => ({
       update: mocks.update,
       listOrders: mocks.listOrders,
       revealContact: mocks.revealContact,
+      exportMembers: mocks.exportMembers,
+      recomputeAll: mocks.recomputeAll,
     };
   }),
 }));
@@ -488,5 +492,232 @@ describe("members routes", () => {
 
     expect(response.status).toBe(429);
     expect(mocks.revealContact).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The masked CSV export (spec 7.1) and the `buildMemberCsv` helper behind it.
+ *
+ * Two fixtures on purpose. Every cell in the builder is a `??`, an optional
+ * chain or a ternary, so a single fully-populated member only ever exercises
+ * one side of each: the file would still render, and a `null` slipping through
+ * as the string "null" -- or a `tags: null` throwing on `.join` -- would ship
+ * unnoticed. FULL_MEMBER takes the left-hand side of all of them, EMPTY_MEMBER
+ * the right.
+ */
+const FULL_MEMBER = {
+  memberId: MEMBER_ID,
+  displayName: "A Customer",
+  maskedPhone: "09**-***-123",
+  maskedEmail: "a***@example.com",
+  locale: "zh-TW",
+  orderCount: 4,
+  cancelledOrderCount: 1,
+  totalSpentCents: 12345,
+  avgOrderValueCents: 3086,
+  firstOrderAt: new Date("2026-01-02T03:04:05.000Z"),
+  lastOrderAt: new Date("2026-02-03T04:05:06.000Z"),
+  // A space inside a tag is why the join is pipe-separated rather than
+  // space-separated; keep one here so that stays asserted.
+  tags: ["vip", "regular guest"],
+  note: "prefers a window seat",
+  isBlocked: true,
+  blockedReason: "chargeback",
+  marketingReachable: true,
+  status: "active" as const,
+};
+
+const EMPTY_MEMBER = {
+  memberId: "01972f31-05a2-7b8c-a4f8-0000000000bb",
+  displayName: null,
+  maskedPhone: null,
+  maskedEmail: null,
+  locale: null,
+  orderCount: 0,
+  cancelledOrderCount: 0,
+  totalSpentCents: 0,
+  avgOrderValueCents: 0,
+  firstOrderAt: null,
+  lastOrderAt: null,
+  tags: null,
+  note: null,
+  isBlocked: false,
+  blockedReason: null,
+  marketingReachable: false,
+  status: "deleted" as const,
+};
+
+describe("members export", () => {
+  it("writes every column of a populated and an empty member without leaking a null", async () => {
+    mocks.exportMembers.mockResolvedValue({
+      members: [FULL_MEMBER, EMPTY_MEMBER],
+      total: 2,
+      truncated: false,
+    });
+
+    const response = await app.fetch(
+      jsonRequest(`https://test/${RESTAURANT_ID}/members/export`, "POST", {}),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe(
+      "text/csv; charset=utf-8",
+    );
+    expect(response.headers.get("x-export-total")).toBe("2");
+    expect(response.headers.get("x-export-truncated")).toBe("false");
+
+    // Asserted as bytes, not as text: `Response.text()` decodes with a
+    // TextDecoder, which silently strips a leading BOM -- so a string
+    // assertion here would pass just as happily against a file that never had
+    // one. The BOM is load-bearing: without it Excel on Windows reads the
+    // UTF-8 display names as the system codepage and renders them as mojibake.
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    expect(Array.from(bytes.slice(0, 3))).toEqual([0xef, 0xbb, 0xbf]);
+
+    const body = new TextDecoder().decode(bytes);
+    const [header, populated, empty] = body.split("\n");
+    expect(header).toBe(
+      "member_id,display_name,masked_phone,masked_email,locale,order_count," +
+        "cancelled_order_count,total_spent_cents,avg_order_value_cents," +
+        "first_order_at_ms,last_order_at_ms,tags,note,is_blocked," +
+        "blocked_reason,marketing_reachable,status",
+    );
+    expect(populated).toBe(
+      [
+        MEMBER_ID,
+        "A Customer",
+        "09**-***-123",
+        "a***@example.com",
+        "zh-TW",
+        "4",
+        "1",
+        "12345",
+        "3086",
+        String(FULL_MEMBER.firstOrderAt.getTime()),
+        String(FULL_MEMBER.lastOrderAt.getTime()),
+        "vip | regular guest",
+        "prefers a window seat",
+        "true",
+        "chargeback",
+        "true",
+        "active",
+      ].join(","),
+    );
+    // Every nullable column collapses to an empty cell, never the text "null",
+    // and `tags: null` does not throw on its way to the join.
+    expect(empty).toBe(
+      `${EMPTY_MEMBER.memberId},,,,,0,0,0,0,,,,,false,,false,deleted`,
+    );
+  });
+
+  it("names the file after the restaurant and the day, and reports truncation", async () => {
+    mocks.exportMembers.mockResolvedValue({
+      members: [],
+      total: 5000,
+      truncated: true,
+    });
+
+    const response = await app.fetch(
+      jsonRequest(`https://test/${RESTAURANT_ID}/members/export`, "POST", {
+        blocked: "true",
+      }),
+      createEnv() as never,
+    );
+
+    const day = new Date().toISOString().slice(0, 10);
+    expect(response.headers.get("content-disposition")).toBe(
+      `attachment; filename="members-${RESTAURANT_ID}-${day}.csv"`,
+    );
+    // An operator reconciling a capped export against the directory needs to
+    // be told the file is short rather than discovering it by counting.
+    expect(response.headers.get("x-export-total")).toBe("5000");
+    expect(response.headers.get("x-export-truncated")).toBe("true");
+    expect(mocks.exportMembers).toHaveBeenCalledWith(
+      { restaurantId: RESTAURANT_ID },
+      expect.objectContaining({ blocked: true }),
+      expect.objectContaining({ userId: "user-42" }),
+    );
+  });
+
+  it("audits a bodyless export as the whole directory, with null actor headers", async () => {
+    mocks.exportMembers.mockResolvedValue({
+      members: [],
+      total: 0,
+      truncated: false,
+    });
+
+    const response = await app.fetch(
+      new Request(`https://test/${RESTAURANT_ID}/members/export`, {
+        method: "POST",
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(200);
+    // A request arriving without the proxy headers must audit as null, not as
+    // the string "undefined" -- the audit row is the record of who copied the
+    // directory out.
+    expect(mocks.exportMembers).toHaveBeenCalledWith(
+      { restaurantId: RESTAURANT_ID },
+      {},
+      { userId: "user-42", ipAddress: null, userAgent: null },
+    );
+  });
+
+  it("rejects an export filter the list query does not define", async () => {
+    const response = await app.fetch(
+      jsonRequest(`https://test/${RESTAURANT_ID}/members/export`, "POST", {
+        primaryPhone: "0912345678",
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(400);
+    expect(mocks.exportMembers).not.toHaveBeenCalled();
+  });
+});
+
+describe("members recompute", () => {
+  it("returns the reconciliation result the service reports", async () => {
+    mocks.recomputeAll.mockResolvedValue({ updated: 3, deleted: 1 });
+
+    const response = await app.fetch(
+      new Request(`https://test/${RESTAURANT_ID}/members/recompute`, {
+        method: "POST",
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(200);
+    expect(
+      await readData<{ updated: number; deleted: number }>(response),
+    ).toEqual({ success: true, data: { updated: 3, deleted: 1 } });
+    expect(mocks.recomputeAll).toHaveBeenCalledWith({
+      restaurantId: RESTAURANT_ID,
+    });
+  });
+});
+
+describe("members patch actor metadata", () => {
+  it("audits null actor headers when the request carries none", async () => {
+    mocks.update.mockResolvedValue({ outcome: "updated", member: MEMBER });
+
+    const response = await app.fetch(
+      new Request(`https://test/${RESTAURANT_ID}/members/${MEMBER_ID}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: "called ahead" }),
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.update).toHaveBeenCalledWith(
+      { restaurantId: RESTAURANT_ID },
+      MEMBER_ID,
+      { note: "called ahead" },
+      { userId: "user-42", ipAddress: null, userAgent: null },
+    );
   });
 });
