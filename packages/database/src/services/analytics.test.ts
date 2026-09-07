@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
 import { orders, restaurants, tables } from "../schema";
 import {
   createTestDatabase,
@@ -317,6 +318,51 @@ describe("AnalyticsService order analytics", () => {
     expect(result.cancelledOrders).toBe(1);
   });
 
+  it("buckets popular time slots at the shop's hour, not UTC", async () => {
+    // Measured against production on 2026-09-01: a Taipei shop whose orders
+    // were placed at 09:48, 10:35, 10:54, 23:21, 23:38, 01:34 and 01:35 (+08)
+    // had them reported as hours 1, 2, 2, 15, 15, 17, 17 -- uniformly eight
+    // hours early -- and the dashboard announced a 16:00-18:00 peak to a shop
+    // that had served nobody that afternoon (#290).
+    await testDb.drizzle.insert(orders).values([
+      // 20:00 and 21:00 Taipei: the evening peak a night market actually has.
+      order("evening-1", "H-001", "2026-01-08T12:00:00.000Z", 10000),
+      order("evening-2", "H-002", "2026-01-08T12:30:00.000Z", 10000),
+      order("late-1", "H-003", "2026-01-08T13:00:00.000Z", 10000),
+    ]);
+
+    const result = await new AnalyticsService(
+      testDb.bindings.DB,
+      {} as never,
+    ).getOrderAnalytics(window);
+
+    expect(result.popularTimeSlots).toEqual([
+      { hour: 20, orderCount: 2 },
+      { hour: 21, orderCount: 1 },
+    ]);
+  });
+
+  it("resolves the hour offset per restaurant rather than assuming +08", async () => {
+    // #329 removed the implicit +8 from these helpers precisely because it
+    // mis-bucketed shops that had chosen another zone. Tokyo is +09, so the
+    // same instant lands an hour later than it would for Taipei.
+    await testDb.drizzle
+      .update(restaurants)
+      .set({ timezone: "Asia/Tokyo" })
+      .where(eq(restaurants.id, "analytics-restaurant"));
+
+    await testDb.drizzle
+      .insert(orders)
+      .values([order("tokyo-1", "H-101", "2026-01-08T12:00:00.000Z", 10000)]);
+
+    const result = await new AnalyticsService(
+      testDb.bindings.DB,
+      {} as never,
+    ).getOrderAnalytics(window);
+
+    expect(result.popularTimeSlots).toEqual([{ hour: 21, orderCount: 1 }]);
+  });
+
   it("does not report a 100% conversion rate when some orders were cancelled", async () => {
     // Guards the tempting one-line version of the fix above: filtering
     // totalOrders by status too makes the rate a set divided by itself.
@@ -584,9 +630,19 @@ describe("AnalyticsService table analytics", () => {
     );
     // What #272 is about: both the numerator (COUNT DISTINCT table_id) and the
     // denominator (the subquery over `tables`) must exclude soft-deleted tables.
-    // The `hour` bucket itself is still UTC (#290) — deliberately not pinned
-    // here, or fixing the timezone would read as breaking this test.
+    //
+    // The hour is now pinned too (#290). The seeded orders are at
+    // 2026-01-08T12:00:00Z, which is 20:00 in Taipei -- the shop's own evening
+    // peak, not the lunchtime hour UTC bucketing used to report.
+    //
+    // occupancyRate stays 100 because both halves count the same population:
+    // the numerator's join filters on deletedAt only, so tables 1 and 4 are
+    // both in it, and the denominator counts those same two. Adding
+    // `is_active` to the denominator alone -- the change #290 asked us to
+    // consider -- would leave table 4 in the numerator and drop it from the
+    // denominator, and this assertion would read 200.
     expect(tableAnalytics.peakHours).toHaveLength(1);
+    expect(tableAnalytics.peakHours[0].hour).toBe(20);
     expect(tableAnalytics.peakHours[0].occupancyRate).toBe(100);
     expect(tableAnalytics.averageTurnoverTime).toBe(30);
     expect(performance.tableUtilization).toBeCloseTo(8.333333, 5);

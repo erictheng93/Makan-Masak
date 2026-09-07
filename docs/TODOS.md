@@ -927,61 +927,49 @@ The account is `bdddc08c066a9abc285d75fe5947a468`, which is not the one a local 
 
 **Token permissions**, derived from the bindings actually declared across the ten `wrangler.toml` files. Account: Workers Scripts Edit, Workers KV Storage Edit, Workers R2 Storage Edit, D1 Edit, Queues Edit, Vectorize Edit, Workers AI Edit, **Cloudflare Pages Edit**, Account Settings Read. Zone (`makanmasak.com`): Workers Routes Edit, DNS Edit for the four `custom_domain` entries. Pages Edit is the one most easily missed — the five frontends deploy with `wrangler pages deploy`, which Workers Scripts Edit does not cover, and `pnpm -r run deploy:prod` reaches them. Do not add a client-IP restriction: GitHub-hosted runner addresses are not stable.
 
-### `coupons` is migrated in the repo but not in production
+### ~~`coupons` is migrated in the repo but not in production~~
 
-**Priority:** P1 **Status:** Open (identified 2026-09-06) **Files:**
+**Priority:** P1 **Status:** **Completed 2026-09-06.** `0019` (and `0018`, which
+was pending alongside it) are applied to `makanmasak-prod`, and `apps/api` was
+redeployed onto the new schema. `wrangler d1 migrations list` reports "No
+migrations to apply". **Files:**
 `packages/database/migrations_fresh/0019_coupon_valid_period_ms.sql`
 
-**Context:** `a9743a7d` (#271) changed `coupons.valid_from` / `valid_to` from
-TEXT to `valid_from_ms` / `valid_to_ms` INTEGER. The code is on `main`; the
-migration is written, guarded and verified, but **has not been applied to
-`makanmasak-prod`**, which still has the TEXT columns. So `main` and the live
-schema disagree, and a deploy that skips the migration makes every read of the
-`coupons` table fail — Drizzle's `select()` enumerates columns, so it raises
-`no such column: valid_from_ms` before it can find nothing.
+**What was wrong:** `a9743a7d` (#271) changed `coupons.valid_from` / `valid_to`
+from TEXT to `valid_from_ms` / `valid_to_ms` INTEGER and landed on `main`, but
+the migration had not been applied to production, so `main` and the live schema
+disagreed.
 
-**Blast radius, stated honestly.** Production `coupons` holds 0 rows, so no
-coupon is redeemable either way. What breaks is the *lookup*: applying any
-voucher code to a market checkout or a service booking would answer 500 instead
-of `VOUCHER_NOT_FOUND`. Coupon admin endpoints would 500 outright.
+**Pre-flight, per CLAUDE.md — the surplus-column risk was real and came back
+clean.** `d1 export` fails on this database (fts5), so the schema copy was built
+from `sqlite_master` (583 objects; only the four fts5 shadow tables failed to
+recreate, because the virtual table makes them itself) and `0018` + `0019` were
+replayed against it. Production's `coupons` column set turned out to match
+`__new_coupons` one-for-one — 23 columns each, differing only in the two being
+renamed — so nothing would be silently dropped. The replay's schema diff showed
+exactly four changed objects, all intended: the `coupons` table,
+`idx_coupons_valid_period` re-pointed at the `_ms` columns, `store_id` added to
+`platform_integrations`, and the new
+`platform_integrations_platform_store_idx`.
 
-**This cannot fire on its own.** `deploy-production.yml` has never successfully
-run and its `workflow_run` trigger is still commented out (see the item above),
-so every deploy is a deliberate manual act by someone who also holds the
-credentials to migrate. This is an ordering note for that person, not a live
-incident.
+**Verified against production after applying:** `pragma_table_info('coupons')`
+shows `valid_from_ms` / `valid_to_ms` as `INTEGER NOT NULL`; all seven indexes
+and both triggers are present; no `__new_coupons` or `__coupon_cascade_guard`
+left behind (check this with `LIKE '\_\_%' ESCAPE '\'` — an unescaped `__`
+matches every name, since `_` is a wildcard). `coupons` is production's 5th
+STRICT table, so CLAUDE.md's STRICT bullet moved 4 → 5.
 
-**Scope — in this order:**
-
-1. Pre-flight per CLAUDE.md, because prod's lineage is the legacy track and its
-   `coupons` column set is not guaranteed to match the baseline: rebuild the
-   schema from prod's `sqlite_master` (`d1 export` fails on this database —
-   fts5 virtual tables), replay `0019` against that copy, and diff the resulting
-   `coupons` DDL. The `INSERT ... SELECT` names columns explicitly on both
-   sides, so a column production *lacks* aborts the file before the `DROP` —
-   but a *surplus* legacy column would be dropped silently. The diff is what
-   catches that.
-2. `pnpm db:migrate:prod`.
-3. Verify: `pragma_table_info('coupons')` shows the two `_ms` columns; the seven
-   indexes and two triggers are present; no `__new_coupons` or
-   `__coupon_cascade_guard` left behind. `coupons` also becomes production's
-   5th STRICT table, so the count in CLAUDE.md's STRICT bullet moves 4 → 5.
-4. Only then deploy.
-
-The migration opens with a CHECK-only guard that aborts it untouched unless
-`coupon_usage`, `coupon_distributions`, `user_coupons` and
-`service_bookings.coupon_id` are all empty, so step 2 cannot silently
-cascade-delete redemption history if the row counts have moved since
-2026-09-05.
-
-**Do not "fix" this by chaining `db:migrate:prod` into `deploy:prod`.** That
-would make the step-1 pre-flight unrunnable and put a recreate-table migration
-on an unattended path, which is the same shape as the automation
-`scripts/check-no-automated-destructive-wrangler.cjs` exists to prevent. The
-ordering is documentation, deliberately.
-
-**Not filed as an issue.** It needs credentials only — the category this file's
-triage table already keeps here rather than diluting the issue backlog.
+**The deploy is not optional, and the ordering note understated it.** This entry
+previously framed the risk as "a deploy that skips the migration breaks coupon
+reads". Applying the migration first inverts the same mismatch and breaks them
+just as thoroughly: the live Worker predated `a9743a7d` by about ninety minutes,
+so between the migration and the redeploy the public
+`GET /api/v1/coupons/available/:restaurantId` answered 500 with
+`Failed query: select "id", "restaurant_id", ...` — Drizzle enumerating a column
+the table no longer had. Only `apps/api` reads `coupons`, so only it needed
+redeploying; it now answers 200 with `{"success":true,"data":[]}`, the correct
+answer for an empty table. **A schema/code split of this shape has no safe
+order — it has a short window either way, and the two steps belong together.**
 
 ## health probes
 

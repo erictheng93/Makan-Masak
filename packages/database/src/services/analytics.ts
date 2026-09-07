@@ -344,15 +344,32 @@ export class AnalyticsService extends BaseService {
           ),
         );
 
-      // 熱門時段分析 (createdAt is Unix ms, divide by 1000 for strftime)
+      // 熱門時段分析。
+      //
+      // The hour has to be cut at the shop's own offset, like every other
+      // bucket in this file. Bucketing in UTC shifted a Taipei shop's whole
+      // day by eight hours: measured against production on 2026-09-01, orders
+      // placed at 09:48, 10:35, 10:54, 23:21, 23:38, 01:34 and 01:35 (+08)
+      // came back as hours 1, 2, 2, 15, 15, 17, 17, and the dashboard told a
+      // shop with no afternoon trade that its peak was 16:00-18:00 (#290).
+      //
+      // Resolved per restaurant rather than hardcoded to +8 -- that shortcut
+      // is what #329 removed from these helpers, because it silently
+      // mis-bucketed every shop that had chosen another zone and was shown
+      // that choice back.
+      const orderHour = strftimeFromUnixMs(
+        "%H",
+        orders.createdAt,
+        await this.offsetMinutesFor(restaurantId),
+      );
       const popularTimeSlots = await this.db
         .select({
-          hour: sql<number>`CAST(strftime('%H', ${orders.createdAt} / 1000, 'unixepoch') AS INTEGER)`,
+          hour: sql<number>`CAST(${orderHour} AS INTEGER)`,
           orderCount: count(),
         })
         .from(orders)
         .where(conditions.length > 0 ? and(...conditions) : undefined)
-        .groupBy(sql`strftime('%H', ${orders.createdAt} / 1000, 'unixepoch')`)
+        .groupBy(orderHour)
         .orderBy(desc(count()));
 
       // Growth against the window immediately before this one, the same
@@ -752,10 +769,30 @@ export class AnalyticsService extends BaseService {
         )
         .orderBy(desc(sumMoneyAmount(orders.totalAmountCents)));
 
-      // 高峰時段 (createdAt is Unix ms, divide by 1000 for strftime)
+      // 高峰時段. Same business-hour boundary as every other bucket here --
+      // see the note in getOrderAnalytics for what UTC bucketing did to a
+      // Taipei shop's numbers (#290).
+      //
+      // On the denominator: `tableCountCondition` counts tables that are not
+      // soft-deleted, and deliberately does NOT also require `is_active`. That
+      // differs from getDashboardData's tableStatus on purpose. tableStatus is
+      // a live snapshot whose three figures must satisfy
+      // total = occupied + available, so it counts only tables that can be
+      // seated right now. This is a historical window, and `is_active` is a
+      // current flag: a table parked in 維護中 today would otherwise vanish
+      // from the denominator of a month it was serving customers throughout,
+      // inflating that month's occupancy after the fact. What does matter is
+      // that the two halves agree, and they do -- the numerator's join is
+      // filtered by `isNull(tables.deletedAt)` and nothing more, so the rate
+      // cannot exceed 100%.
+      const peakHourExpr = strftimeFromUnixMs(
+        "%H",
+        orders.createdAt,
+        await this.offsetMinutesFor(restaurantId),
+      );
       const peakHours = await this.db
         .select({
-          hour: sql<number>`CAST(strftime('%H', ${orders.createdAt} / 1000, 'unixepoch') AS INTEGER)`,
+          hour: sql<number>`CAST(${peakHourExpr} AS INTEGER)`,
           occupancyRate: sql<number>`
             ROUND(
               COUNT(DISTINCT ${orders.tableId}) * 100.0 /
@@ -767,10 +804,8 @@ export class AnalyticsService extends BaseService {
         .from(orders)
         .innerJoin(tables, eq(orders.tableId, tables.id))
         .where(and(...conditions, isNull(tables.deletedAt)))
-        .groupBy(sql`strftime('%H', ${orders.createdAt} / 1000, 'unixepoch')`)
-        .orderBy(
-          sql`CAST(strftime('%H', ${orders.createdAt} / 1000, 'unixepoch') AS INTEGER)`,
-        );
+        .groupBy(peakHourExpr)
+        .orderBy(sql`CAST(${peakHourExpr} AS INTEGER)`);
 
       // 平均翻台時間
       const [{ averageTurnoverTime }] = await this.db

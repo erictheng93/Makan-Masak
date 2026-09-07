@@ -25,10 +25,7 @@
     "test:run": "cross-env NODE_OPTIONS=\"--max-old-space-size=6144 --expose-gc\" vitest run",
     "test:watch": "cross-env NODE_OPTIONS=\"--max-old-space-size=6144 --expose-gc\" vitest --watch",
     "test:coverage": "cross-env NODE_OPTIONS=\"--max-old-space-size=6144 --expose-gc\" vitest run --coverage",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate:prod": "wrangler d1 migrations apply makanmasak-prod --remote --env production --config=../../apps/api/wrangler.toml",
-    "db:studio": "drizzle-kit studio",
-    "db:seed": "tsx scripts/seed.ts"
+    "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
     "@makanmasak/utils": "workspace:*",

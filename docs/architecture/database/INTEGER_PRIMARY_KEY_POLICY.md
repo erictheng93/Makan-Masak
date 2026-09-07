@@ -12,6 +12,12 @@ surfaces that declare `integer("id").primaryKey({ autoIncrement: true })` and
 fails when a surface is missing from the inventory or when the inventory keeps a
 stale table.
 
+An entry's identity is `schemaFile#tableName`; nothing records a line number.
+The guard used to pin one per entry, which made any edit above an id a contract
+change and produced sixteen commits of pure resync churn before it was removed
+(#346). A failure still reports the line it discovered, as a place to look
+rather than a value to keep in sync.
+
 The highest-risk migrations, `orders` and `users`, were staged in
 `UUID_V7_PK_MIGRATION_DRILL.md` and have since **shipped** — both are `TEXT`
 UUID v7 primary keys in current schema (see that doc's updated status note),

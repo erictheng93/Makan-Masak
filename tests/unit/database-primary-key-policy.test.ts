@@ -19,10 +19,18 @@ const allowedMigrationPlans = new Set(["retain", "migrate_to_uuid_v7"]);
 interface IntegerPrimaryKeySurface {
   tableName: string;
   schemaFile: string;
+  // Reported in failures, never asserted, and deliberately absent from the
+  // inventory. Pinning it turned every edit above an id into a contract change,
+  // and the commit that moved the line was never the one that saw the red
+  // build -- a9743a7d shifted three ids in coupons.ts and main stayed red for
+  // two further commits that had not touched a schema file (#346).
   line: number;
 }
 
-interface IntegerPrimaryKeyPolicyEntry extends IntegerPrimaryKeySurface {
+interface IntegerPrimaryKeyPolicyEntry extends Omit<
+  IntegerPrimaryKeySurface,
+  "line"
+> {
   category: "legacy_domain" | "leaf_local" | "audit_log" | "join_edge";
   migrationPlan: "retain" | "migrate_to_uuid_v7";
   migrationPhase?: string;
@@ -113,7 +121,8 @@ describe("database primary key policy", () => {
 
     const missing = discovered
       .filter((surface) => !policyByKey.has(keyOf(surface)))
-      .map(keyOf);
+      // Carry the line into the message so a failure still says where to look.
+      .map((surface) => `${keyOf(surface)} @${surface.line}`);
     const stale = policy
       .filter((entry) => !discoveredByKey.has(keyOf(entry)))
       .map(keyOf);
@@ -123,7 +132,6 @@ describe("database primary key policy", () => {
     for (const surface of discovered) {
       const entry = policyByKey.get(keyOf(surface));
       expect(entry, keyOf(surface)).toBeDefined();
-      expect(entry?.line).toBe(surface.line);
       expect(allowedCategories.has(entry?.category ?? ""), keyOf(surface)).toBe(
         true,
       );

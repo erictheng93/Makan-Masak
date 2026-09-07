@@ -100,13 +100,18 @@ MakanMasak is a modern, serverless restaurant management system built on Cloudfl
   live in `packages/database/strict-table-policy.json`; `pnpm check:strict-tables`
   enforces both rules for migrations, not the live schema. All 117 tables in the
   baseline are already STRICT, but production was built from the legacy track and
-  is almost entirely non-STRICT: **4 of 120** non-shadow tables
-  (`ingredient_stock_movements`, `print_agents`, `receipts`,
-  `restaurant_customers`) — first measured 2026-09-02 after `0016` shipped, and
-  unchanged when re-measured against production on 2026-09-06, since `0017` and
-  `0018` are both `ALTER TABLE` and add no tables. Every new table arrives
-  STRICT, so this ratio only moves as tables are added; the 116 legacy ones stay
-  unprotected until something recreates them.
+  is almost entirely non-STRICT: **5 of 120** non-shadow tables
+  (`coupons`, `ingredient_stock_movements`, `print_agents`, `receipts`,
+  `restaurant_customers`) — measured against production on 2026-09-06 right
+  after `0019` was applied. The first four were first measured 2026-09-02 after
+  `0016` shipped and did not move for `0017` or `0018`, both of which are
+  `ALTER TABLE` and add no tables. `coupons` is the fifth and the first legacy
+  table to become STRICT by being **recreated**: `0019` rebuilt it to move
+  `valid_from` / `valid_to` to `_ms` INTEGER (#271) and carried `) STRICT` on
+  the `__new_coupons` staging table by hand. So the ratio moves two ways — a
+  new table arrives STRICT, and a recreate-table migration converts one — but
+  the remaining 115 legacy tables stay unprotected until something recreates
+  them.
 
   The "15 of 119" this file and issue #297 previously recorded was an artifact of
   the query, not a real count. `sql LIKE '%STRICT%'` is a substring match, so it

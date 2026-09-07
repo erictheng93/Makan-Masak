@@ -2,7 +2,6 @@
   {
     "tableName": "ai_configurations",
     "schemaFile": "packages/database/src/schema/ai-analytics.ts",
-    "line": 15,
     "category": "leaf_local",
     "migrationPlan": "retain",
     "rationale": "Per-restaurant singleton configuration; restaurant_id is the stable external identity."
@@ -10,7 +9,6 @@
   {
     "tableName": "ai_usage_logs",
     "schemaFile": "packages/database/src/schema/ai-analytics.ts",
-    "line": 49,
     "category": "audit_log",
     "migrationPlan": "retain",
     "rationale": "Append-only operational log with no public identifier contract."
@@ -18,7 +16,6 @@
   {
     "tableName": "audit_logs",
     "schemaFile": "packages/database/src/schema/audit-logs.ts",
-    "line": 55,
     "category": "audit_log",
     "migrationPlan": "retain",
     "rationale": "Append-only audit trail; integer ids are local ordering handles."
@@ -26,7 +23,6 @@
   {
     "tableName": "categories",
     "schemaFile": "packages/database/src/schema/categories.ts",
-    "line": 9,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Menu category rows are domain entities exposed through APIs."
@@ -34,7 +30,6 @@
   {
     "tableName": "coupon_distributions",
     "schemaFile": "packages/database/src/schema/coupons.ts",
-    "line": 198,
     "category": "leaf_local",
     "migrationPlan": "retain",
     "rationale": "Distribution rows are internal history under coupon identity."
@@ -42,7 +37,6 @@
   {
     "tableName": "coupon_templates",
     "schemaFile": "packages/database/src/schema/coupons.ts",
-    "line": 244,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Coupon template rows are reusable domain entities."
@@ -50,7 +44,6 @@
   {
     "tableName": "coupon_usage",
     "schemaFile": "packages/database/src/schema/coupons.ts",
-    "line": 143,
     "category": "join_edge",
     "migrationPlan": "retain",
     "rationale": "Usage rows are edges between coupons, orders, and users."
@@ -58,7 +51,6 @@
   {
     "tableName": "coupons",
     "schemaFile": "packages/database/src/schema/coupons.ts",
-    "line": 57,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Coupons are business entities and should not rely on local autoincrement ids long term."
@@ -66,7 +58,6 @@
   {
     "tableName": "customer_favorites",
     "schemaFile": "packages/database/src/schema/customers.ts",
-    "line": 87,
     "category": "join_edge",
     "migrationPlan": "retain",
     "rationale": "Favorite rows are unique edges from customer to target."
@@ -74,7 +65,6 @@
   {
     "tableName": "customer_phone_verification_tokens",
     "schemaFile": "packages/database/src/schema/customers.ts",
-    "line": 206,
     "category": "leaf_local",
     "migrationPlan": "retain",
     "rationale": "Short-lived verification token rows have no public identity."
@@ -82,7 +72,6 @@
   {
     "tableName": "data_integrity_audit",
     "schemaFile": "packages/database/src/schema/data-integrity-audit.ts",
-    "line": 13,
     "category": "audit_log",
     "migrationPlan": "retain",
     "rationale": "Migration guard audit rows are local operational records."
@@ -90,7 +79,6 @@
   {
     "tableName": "dish_search_index",
     "schemaFile": "packages/database/src/schema/discovery.ts",
-    "line": 16,
     "category": "leaf_local",
     "migrationPlan": "retain",
     "rationale": "Search index rows are derived records keyed by indexed content."
@@ -98,7 +86,6 @@
   {
     "tableName": "error_reports",
     "schemaFile": "packages/database/src/schema/error-reports.ts",
-    "line": 10,
     "category": "audit_log",
     "migrationPlan": "retain",
     "rationale": "Error report ids are local diagnostic handles, not domain identifiers."
@@ -106,7 +93,6 @@
   {
     "tableName": "system_alerts",
     "schemaFile": "packages/database/src/schema/error-reports.ts",
-    "line": 56,
     "category": "audit_log",
     "migrationPlan": "retain",
     "rationale": "System alerts are operational records with local ordering only."
@@ -114,7 +100,6 @@
   {
     "tableName": "feedback_responses",
     "schemaFile": "packages/database/src/schema/feedback.ts",
-    "line": 101,
     "category": "leaf_local",
     "migrationPlan": "retain",
     "rationale": "Response rows are children of feedback records."
@@ -122,7 +107,6 @@
   {
     "tableName": "shop_feedback",
     "schemaFile": "packages/database/src/schema/feedback.ts",
-    "line": 46,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Shop feedback can cross customer and restaurant workflows."
@@ -130,7 +114,6 @@
   {
     "tableName": "forecast_cache",
     "schemaFile": "packages/database/src/schema/forecast.ts",
-    "line": 17,
     "category": "leaf_local",
     "migrationPlan": "retain",
     "rationale": "Forecast cache rows are derived and scoped by restaurant/item/date."
@@ -138,7 +121,6 @@
   {
     "tableName": "ingredient_definitions",
     "schemaFile": "packages/database/src/schema/forecast.ts",
-    "line": 55,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Ingredients are catalog entities referenced by recipes and planning."
@@ -146,7 +128,6 @@
   {
     "tableName": "ingredient_stock_movements",
     "schemaFile": "packages/database/src/schema/forecast.ts",
-    "line": 99,
     "category": "audit_log",
     "migrationPlan": "retain",
     "rationale": "Append-only stock ledger; nothing addresses a movement by id and the monotonic integer is what orders two movements recorded in the same millisecond."
@@ -154,7 +135,6 @@
   {
     "tableName": "menu_item_ingredients",
     "schemaFile": "packages/database/src/schema/forecast.ts",
-    "line": 157,
     "category": "join_edge",
     "migrationPlan": "retain",
     "rationale": "Recipe ingredient rows are edges between menu items and ingredient definitions."
@@ -162,7 +142,6 @@
   {
     "tableName": "image_processing_jobs",
     "schemaFile": "packages/database/src/schema/images.ts",
-    "line": 47,
     "category": "leaf_local",
     "migrationPlan": "retain",
     "rationale": "Processing jobs are internal workflow rows keyed by image id."
@@ -170,7 +149,6 @@
   {
     "tableName": "image_views",
     "schemaFile": "packages/database/src/schema/images.ts",
-    "line": 33,
     "category": "audit_log",
     "migrationPlan": "retain",
     "rationale": "Image view records are append-only analytics events."
@@ -178,7 +156,6 @@
   {
     "tableName": "leave_approval_rules",
     "schemaFile": "packages/database/src/schema/leaves/leave-approval-rules.ts",
-    "line": 18,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Approval rules are configurable workflow entities."
@@ -186,7 +163,6 @@
   {
     "tableName": "employee_leave_balances",
     "schemaFile": "packages/database/src/schema/leaves/leave-balances.ts",
-    "line": 24,
     "category": "leaf_local",
     "migrationPlan": "retain",
     "rationale": "Leave balances are scoped by employee, leave type, and year."
@@ -194,7 +170,6 @@
   {
     "tableName": "leave_calendar_events",
     "schemaFile": "packages/database/src/schema/leaves/leave-calendar-events.ts",
-    "line": 17,
     "category": "leaf_local",
     "migrationPlan": "retain",
     "rationale": "Calendar events are derived scheduling rows under leave requests."
@@ -202,7 +177,6 @@
   {
     "tableName": "leave_requests",
     "schemaFile": "packages/database/src/schema/leaves/leave-requests.ts",
-    "line": 24,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Leave requests are workflow entities visible across approvals and scheduling."
@@ -210,7 +184,6 @@
   {
     "tableName": "leave_types",
     "schemaFile": "packages/database/src/schema/leaves/leave-types.ts",
-    "line": 26,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Leave types are configurable domain entities."
@@ -218,7 +191,6 @@
   {
     "tableName": "market_checkout_child_orders",
     "schemaFile": "packages/database/src/schema/markets.ts",
-    "line": 210,
     "category": "join_edge",
     "migrationPlan": "retain",
     "rationale": "Child order rows bridge checkout sessions and restaurant order ids."
@@ -226,7 +198,6 @@
   {
     "tableName": "market_checkout_payments",
     "schemaFile": "packages/database/src/schema/markets.ts",
-    "line": 242,
     "category": "leaf_local",
     "migrationPlan": "retain",
     "rationale": "Payment rows expose payment_id as the stable provider-facing identifier."
@@ -234,7 +205,6 @@
   {
     "tableName": "market_join_requests",
     "schemaFile": "packages/database/src/schema/markets.ts",
-    "line": 126,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Join requests are workflow entities across market and restaurant operations."
@@ -242,7 +212,6 @@
   {
     "tableName": "restaurant_market_memberships",
     "schemaFile": "packages/database/src/schema/markets.ts",
-    "line": 83,
     "category": "join_edge",
     "migrationPlan": "retain",
     "rationale": "Membership rows are edges between restaurants and markets."
@@ -250,7 +219,6 @@
   {
     "tableName": "menu_items",
     "schemaFile": "packages/database/src/schema/menu-items.ts",
-    "line": 16,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Menu items are public catalog entities across ordering and discovery."
@@ -258,7 +226,6 @@
   {
     "tableName": "order_items",
     "schemaFile": "packages/database/src/schema/order-items.ts",
-    "line": 10,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Order item ids appear in order lifecycle and refund workflows."
@@ -266,7 +233,6 @@
   {
     "tableName": "payment_transactions",
     "schemaFile": "packages/database/src/schema/payments.ts",
-    "line": 36,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Payment transactions cross provider, order, and reconciliation boundaries."
@@ -274,7 +240,6 @@
   {
     "tableName": "refund_transactions",
     "schemaFile": "packages/database/src/schema/payments.ts",
-    "line": 89,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Refund transactions cross provider, order, and cashier workflows."
@@ -282,7 +247,6 @@
   {
     "tableName": "platform_integrations",
     "schemaFile": "packages/database/src/schema/platform-integrations.ts",
-    "line": 46,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Platform integrations are tenant-visible configuration entities."
@@ -290,7 +254,6 @@
   {
     "tableName": "platform_menu_mappings",
     "schemaFile": "packages/database/src/schema/platform-menu-mappings.ts",
-    "line": 37,
     "category": "join_edge",
     "migrationPlan": "retain",
     "rationale": "Menu mappings are edges between local and external platform items."
@@ -298,7 +261,6 @@
   {
     "tableName": "platform_webhook_logs",
     "schemaFile": "packages/database/src/schema/platform-webhook-logs.ts",
-    "line": 39,
     "category": "audit_log",
     "migrationPlan": "retain",
     "rationale": "Webhook logs are append-only integration audit records."
@@ -306,7 +268,6 @@
   {
     "tableName": "qr_batches",
     "schemaFile": "packages/database/src/schema/qr-codes.ts",
-    "line": 57,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "QR batches are operational entities for public code generation."
@@ -314,7 +275,6 @@
   {
     "tableName": "qr_downloads",
     "schemaFile": "packages/database/src/schema/qr-codes.ts",
-    "line": 44,
     "category": "audit_log",
     "migrationPlan": "retain",
     "rationale": "QR download records are local audit events."
@@ -322,7 +282,6 @@
   {
     "tableName": "qr_templates",
     "schemaFile": "packages/database/src/schema/qr-codes.ts",
-    "line": 24,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "QR templates are reusable configuration entities."
@@ -330,7 +289,6 @@
   {
     "tableName": "restaurant_service_items",
     "schemaFile": "packages/database/src/schema/restaurant-service-items.ts",
-    "line": 20,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Service items are catalog entities used by booking workflows."
@@ -338,7 +296,6 @@
   {
     "tableName": "restaurant_faqs",
     "schemaFile": "packages/database/src/schema/restaurants.ts",
-    "line": 146,
     "category": "leaf_local",
     "migrationPlan": "retain",
     "rationale": "FAQ rows are scoped children of restaurant identity."
@@ -346,7 +303,6 @@
   {
     "tableName": "employee_availability",
     "schemaFile": "packages/database/src/schema/scheduling/employee-availability.ts",
-    "line": 17,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Availability rows are scheduling workflow entities."
@@ -354,7 +310,6 @@
   {
     "tableName": "employee_schedules",
     "schemaFile": "packages/database/src/schema/scheduling/employee-schedules.ts",
-    "line": 24,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Employee schedules are primary scheduling workflow entities."
@@ -362,7 +317,6 @@
   {
     "tableName": "scheduling_conflicts",
     "schemaFile": "packages/database/src/schema/scheduling/scheduling-conflicts.ts",
-    "line": 18,
     "category": "audit_log",
     "migrationPlan": "retain",
     "rationale": "Conflict rows are derived diagnostics for schedule generation."
@@ -370,7 +324,6 @@
   {
     "tableName": "scheduling_rules",
     "schemaFile": "packages/database/src/schema/scheduling/scheduling-rules.ts",
-    "line": 18,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Scheduling rules are configurable domain entities."
@@ -378,7 +331,6 @@
   {
     "tableName": "shift_templates",
     "schemaFile": "packages/database/src/schema/scheduling/shift-templates.ts",
-    "line": 24,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Shift templates are reusable scheduling entities."
@@ -386,7 +338,6 @@
   {
     "tableName": "schedule_swap_requests",
     "schemaFile": "packages/database/src/schema/scheduling/swap-requests.ts",
-    "line": 18,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Swap requests are employee-visible workflow entities."
@@ -394,7 +345,6 @@
   {
     "tableName": "seats",
     "schemaFile": "packages/database/src/schema/seats.ts",
-    "line": 19,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Seats are floor-plan domain entities referenced by QR and table flows."
@@ -402,7 +352,6 @@
   {
     "tableName": "tables",
     "schemaFile": "packages/database/src/schema/tables.ts",
-    "line": 9,
     "category": "legacy_domain",
     "migrationPlan": "migrate_to_uuid_v7",
     "rationale": "Tables are core restaurant layout entities referenced by orders and seats."
@@ -410,7 +359,6 @@
   {
     "tableName": "email_verification_tokens",
     "schemaFile": "packages/database/src/schema/verification.ts",
-    "line": 72,
     "category": "leaf_local",
     "migrationPlan": "retain",
     "rationale": "Email verification tokens are short-lived local records."
@@ -418,7 +366,6 @@
   {
     "tableName": "password_change_logs",
     "schemaFile": "packages/database/src/schema/verification.ts",
-    "line": 178,
     "category": "audit_log",
     "migrationPlan": "retain",
     "rationale": "Password change logs are append-only security audit records."
@@ -426,7 +373,6 @@
   {
     "tableName": "password_reset_tokens",
     "schemaFile": "packages/database/src/schema/verification.ts",
-    "line": 17,
     "category": "leaf_local",
     "migrationPlan": "retain",
     "rationale": "Password reset tokens are short-lived local records."
@@ -434,7 +380,6 @@
   {
     "tableName": "phone_verification_tokens",
     "schemaFile": "packages/database/src/schema/verification.ts",
-    "line": 122,
     "category": "leaf_local",
     "migrationPlan": "retain",
     "rationale": "Phone verification tokens are short-lived local records."

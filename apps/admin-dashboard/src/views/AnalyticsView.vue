@@ -426,6 +426,7 @@ import {
   analyticsDateRange,
   type AnalyticsPeriod,
 } from "@/utils/analyticsPeriod";
+import { buildBusinessHourSlots } from "@/utils/businessHourSlots";
 import { api } from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
 import {
@@ -614,43 +615,12 @@ const popularItems = computed(() => {
 });
 
 // Computed: business hours from popular time slots
-const businessHours = computed(() => {
-  const slots = performanceData.value.popularTimeSlots || [];
-  if (slots.length === 0) return [];
-
-  // Group into 2-hour slots
-  const slotMap = new Map<string, number>();
-  const slotOrder: string[] = [];
-
-  for (let startHour = 6; startHour < 24; startHour += 2) {
-    const endHour = Math.min(startHour + 2, 24);
-    const label = `${String(startHour).padStart(2, "0")}:00 - ${String(endHour).padStart(2, "0")}:00`;
-    slotMap.set(label, 0);
-    slotOrder.push(label);
-  }
-
-  for (const slot of slots) {
-    if (slot.hour == null) continue; // Skip null hours
-    const startHour = Math.floor(slot.hour / 2) * 2;
-    if (startHour < 6) continue; // Skip very early hours
-    const clampedStart = Math.max(6, startHour);
-    const endHour = Math.min(clampedStart + 2, 24);
-    const label = `${String(clampedStart).padStart(2, "0")}:00 - ${String(endHour).padStart(2, "0")}:00`;
-    if (slotMap.has(label)) {
-      slotMap.set(label, (slotMap.get(label) || 0) + slot.orderCount);
-    }
-  }
-
-  const maxOrders = Math.max(...slotMap.values(), 1);
-
-  return slotOrder
-    .map((label) => ({
-      time: label,
-      orders: slotMap.get(label) || 0,
-      percentage: Math.round(((slotMap.get(label) || 0) / maxOrders) * 100),
-    }))
-    .filter((s) => s.orders > 0 || selectedPeriod.value === "today");
-});
+const businessHours = computed(() =>
+  buildBusinessHourSlots(
+    performanceData.value.popularTimeSlots || [],
+    selectedPeriod.value === "today",
+  ),
+);
 
 // Computed: revenue chart data
 const revenueChartData = computed(() => {
