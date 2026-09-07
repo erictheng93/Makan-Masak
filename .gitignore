@@ -229,6 +229,9 @@ tmpclaude-*
 
 # Git worktrees
 .worktrees/
+# Claude Code spawns agent worktrees here. They carry a full node_modules,
+# so an `add -A` from any session would commit one into the repo.
+.claude/worktrees/
 .superpowers/
 .gstack/
 .impeccable/
