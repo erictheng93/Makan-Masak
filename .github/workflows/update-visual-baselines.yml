@@ -37,14 +37,11 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 🐚 Enable pnpm via corepack
-        # Bare `corepack prepare` follows package.json's `packageManager`; a
-        # second, hand-maintained pin here drifts out of date silently.
-        env:
-          COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
-        run: |
-          corepack enable
-          corepack prepare --activate
+      - name: 📦 Install pnpm
+        # Same container and same corepack failure as the e2e-tests job in
+        # test.yml; see the comment there. Reads `packageManager` from
+        # package.json, so there is no second pin to drift.
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
 
       - name: 📥 Install dependencies
         run: pnpm install --frozen-lockfile

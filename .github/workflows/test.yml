@@ -376,25 +376,25 @@ jobs:
       options: --ipc=host
     env:
       HOME: /root
-      # Corepack's download prompt is interactive. This container has no TTY,
-      # so corepack declines the fetch and then tries to require the binary it
-      # never downloaded, failing with MODULE_NOT_FOUND. Job-level because
-      # every step here shells out to pnpm, not just the prepare.
-      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
 
     steps:
       - name: 📦 Checkout 程式碼
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: 📦 啟用 pnpm via corepack
-        # No version here on purpose: bare `corepack prepare` activates the
-        # `packageManager` field from package.json. Pinning it separately is
-        # what broke this job -- the pin said 10.24.0 while packageManager had
-        # moved to 12.3.4, so `pnpm install` asked corepack for a version the
-        # prepare step had not fetched.
-        run: |
-          corepack enable
-          corepack prepare --activate
+      - name: 📦 安裝 pnpm
+        # Not corepack. Inside this container corepack prints
+        # "Preparing pnpm@12.3.4+sha512... for immediate activation...", exits
+        # 0 in ~300ms having fetched nothing, and the shim then dies on
+        # `Cannot find module .../corepack/v1/pnpm/12.3.4/bin/pnpm.cjs`.
+        # Disabling its download prompt did not change that, so the fetch is
+        # not what is being skipped.
+        #
+        # Every other job in this workflow resolves pnpm from the same
+        # `packageManager` field through this action and none of them has the
+        # problem, so this one now does what they do. No version input here
+        # either -- the action reads package.json, so there is still no second
+        # pin to drift.
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
 
       - name: 📥 安裝依賴
         run: pnpm install --frozen-lockfile
