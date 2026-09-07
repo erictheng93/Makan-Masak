@@ -2469,7 +2469,10 @@ const zhCN: Messages = {
     optionalNotes: "选填备注...",
     paymentFailed: "付款失败",
     amountMismatch:
-      "金额与服务器记录的订单总额不符。此画面上的折扣只改变显示，不会送到服务器。",
+      "金额与服务器记录的订单总额不符。请重新加载订单后再试一次。",
+    discountReason: "收银台折扣 {percent}%",
+    discountCouponConflict: "这张订单已经使用优惠券，无法再套用收银台折扣。",
+    discountFailed: "套用折扣失败",
     orderTime: "下单时间",
     orderCompleted: "订单 {orderNumber} 已完成",
     paymentSuccess: "付款成功！",

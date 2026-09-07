@@ -9,6 +9,7 @@ import {
   gte,
   lte,
   inArray,
+  notInArray,
   isNull,
   like,
   or,
@@ -1217,6 +1218,142 @@ export class OrderService extends BaseService {
       return updatedOrder;
     } catch (error) {
       this.handleError(error, "addItemsToOrder");
+    }
+  }
+
+  /**
+   * Set the order-level discount and recompute the total from it.
+   *
+   * The counter needs this because the server is the only authority on what an
+   * order costs: `PaymentService` compares the client's `amount` and
+   * `expectedTotal` against `orders.total_amount_cents` and refuses anything
+   * else. A discount applied only in the till's own state therefore cannot be
+   * paid at all -- it turns into PAYMENT_AMOUNT_MISMATCH (#327).
+   *
+   * Takes a *percentage*, never an amount. The money is derived here, from
+   * this order's own stored cents, so no float from a caller ever becomes a
+   * price -- a client-supplied total is exactly what #295 established must not
+   * be trusted, and keeping the arithmetic in the cents layer avoids a
+   * major-unit round trip that can land a half cent off.
+   *
+   * Guarded on `version` like `addItemsToOrder`, and on status via the same
+   * conditional UPDATE, so a discount cannot land on an order that another
+   * writer has just closed. The payable set is wider than PENDING/CONFIRMED --
+   * the till works on `ready` and `delivered` orders -- so the guard is stated
+   * as "not yet finalized" instead, matching what PaymentService will accept.
+   */
+  async applyOrderDiscount(
+    id: string,
+    discountPercent: number,
+    expectedVersion?: number,
+  ): Promise<Order> {
+    try {
+      const existingOrder = await this.db.query.orders.findFirst({
+        where: eq(orders.id, id),
+      });
+      if (!existingOrder) {
+        throw new Error("Order not found");
+      }
+      if (
+        expectedVersion !== undefined &&
+        existingOrder.version !== expectedVersion
+      ) {
+        throw new Error("Order version conflict");
+      }
+      // `discount_amount_cents` is one column holding one figure, and the
+      // coupon path already owns it. Writing a manual discount over it would
+      // silently cancel the customer's coupon while `coupon_code` went on
+      // claiming otherwise, so the counter has to void and re-ring instead.
+      // Separating the two is a schema change (#327).
+      if (existingOrder.couponCode) {
+        throw new Error("Order already carries a coupon discount");
+      }
+
+      const currentSubtotalCents = resolveMoneyCents(
+        existingOrder.subtotalCents,
+        "Order subtotal",
+      );
+      const currentTaxCents = resolveMoneyCents(
+        existingOrder.taxAmountCents,
+        "Order tax amount",
+      );
+      const currentServiceChargeCents = resolveMoneyCents(
+        existingOrder.serviceChargeCents,
+        "Order service charge",
+      );
+
+      // Rates are recovered from the stored cents rather than re-read from
+      // settings: a rate change after the order was placed must not silently
+      // reprice it.
+      const taxRate =
+        currentSubtotalCents > 0 ? currentTaxCents / currentSubtotalCents : 0;
+      const serviceChargeRate =
+        currentSubtotalCents > 0
+          ? currentServiceChargeCents / currentSubtotalCents
+          : 0;
+      const deliveryFee =
+        existingOrder.deliveryInfo?.type === "delivery"
+          ? (existingOrder.deliveryInfo.deliveryFee ?? 0)
+          : 0;
+
+      // The discount may not exceed what is being charged for the food, so the
+      // total can never go negative. The delivery fee is excluded from the
+      // ceiling for the same reason it is excluded from tax: it is carriage,
+      // not consumption, and discounting it would be giving away the courier.
+      const discountCeilingCents =
+        currentSubtotalCents + currentTaxCents + currentServiceChargeCents;
+      if (!Number.isFinite(discountPercent)) {
+        throw new Error("Discount percent must be a number");
+      }
+      if (discountPercent < 0 || discountPercent > 100) {
+        throw new Error("Discount percent must be between 0 and 100");
+      }
+      const requestedDiscountCents = Math.min(
+        Math.round((discountCeilingCents * discountPercent) / 100),
+        discountCeilingCents,
+      );
+
+      const { discountAmountCents, totalAmountCents } =
+        this.calculateOrderTotal(
+          fromCents(currentSubtotalCents),
+          taxRate,
+          serviceChargeRate,
+          fromCents(requestedDiscountCents),
+          deliveryFee,
+        );
+
+      const observedVersion = existingOrder.version;
+      const updated = await this.db
+        .update(orders)
+        .set({
+          discountAmountCents,
+          totalAmountCents,
+          version: sql`${orders.version} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(orders.id, id),
+            eq(orders.version, observedVersion),
+            notInArray(orders.status, [
+              ORDER_STATUS.CANCELLED,
+              ORDER_STATUS.PAID,
+              ORDER_STATUS.REFUNDED,
+            ]),
+          ),
+        )
+        .returning({ id: orders.id });
+
+      if (updated.length === 0) {
+        // Either another writer moved the version, or the order reached a
+        // finalized status between the read and the write. Both mean the
+        // caller's view is stale; the distinction is not worth a second query.
+        throw new Error("Order version conflict");
+      }
+
+      return (await this.getOrder(id)) as Order;
+    } catch (error) {
+      this.handleError(error, "applyOrderDiscount");
     }
   }
 

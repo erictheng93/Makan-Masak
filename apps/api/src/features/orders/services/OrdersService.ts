@@ -113,6 +113,15 @@ function mapOrderItemMutationError(error: unknown): unknown {
   if (message.includes("Order not found")) {
     return notFound("Order not found", "ORDER_NOT_FOUND");
   }
+  if (message.includes("Discount percent must be")) {
+    return badRequest(message, "INVALID_DISCOUNT_PERCENT");
+  }
+  if (message.includes("already carries a coupon discount")) {
+    return badRequest(
+      "This order already carries a coupon discount",
+      "ORDER_HAS_COUPON_DISCOUNT",
+    );
+  }
   return error;
 }
 
@@ -126,6 +135,7 @@ const ORDER_AUDIT_ACTIONS: Readonly<Record<string, string>> = {
   ORDER_ITEMS_ADDED: AUDIT_ACTIONS.ORDER_UPDATE,
   ORDER_ITEM_QUANTITY_CHANGED: AUDIT_ACTIONS.ORDER_UPDATE,
   ORDER_ITEM_REMOVED: AUDIT_ACTIONS.ORDER_UPDATE,
+  ORDER_DISCOUNT_APPLIED: AUDIT_ACTIONS.ORDER_UPDATE,
   ORDER_CANCELLED: AUDIT_ACTIONS.ORDER_CANCEL,
   ORDER_DELETED: AUDIT_ACTIONS.ORDER_CANCEL,
 };
@@ -489,6 +499,77 @@ export class OrdersService implements IOrdersService {
         "Failed to add items to order",
         error instanceof Error ? error : undefined,
         { orderId: id, itemCount: items.length },
+      );
+      throw mapOrderItemMutationError(error);
+    }
+  }
+
+  /**
+   * Apply an order-level discount at the counter.
+   *
+   * The percentage arrives from the till; the money does not. This computes the
+   * figure from the order's own stored subtotal, tax and service charge, so a
+   * tampered or merely stale client cannot decide what an order costs -- the
+   * same rule `calculateOrderTotal`'s callers already follow for customer
+   * requests (#295).
+   *
+   * Refused when the order carries a coupon. `orders.discount_amount_cents` is
+   * one column for one figure, and the coupon path already owns it; writing a
+   * manual discount over it would silently cancel the customer's coupon and
+   * leave `coupon_code` claiming otherwise. Splitting the two is a schema
+   * change, so until then the counter has to void and re-ring (#327).
+   */
+  async applyOrderDiscount(
+    id: string,
+    discountPercent: number,
+    reason: string,
+    userId?: string,
+    expectedVersion?: number,
+  ): Promise<Order> {
+    try {
+      const order = await this.getOrder(id);
+      if (!order) {
+        throw notFound("Order not found");
+      }
+      this.logger.info("Applying order discount", {
+        orderId: id,
+        discountPercent,
+        userId,
+      });
+
+      // The percentage goes down as a percentage: the base service holds the
+      // order's cents and derives the money there, so nothing in this layer
+      // can put a rounded float into a price.
+      const updatedOrder = await this.baseOrderService.applyOrderDiscount(
+        id,
+        discountPercent,
+        expectedVersion,
+      );
+
+      await Promise.all([
+        this.invalidateOrderCache(id),
+        this.logOrderActivity(
+          id,
+          "ORDER_DISCOUNT_APPLIED",
+          userId,
+          {
+            discountPercent,
+            reason,
+            totalBefore: order.totalAmount,
+            totalAfter: updatedOrder.totalAmount,
+            discountAfter: updatedOrder.discountAmount,
+          },
+          updatedOrder.restaurantId,
+        ),
+        this.broadcastNewOrder(updatedOrder),
+      ]);
+
+      return updatedOrder;
+    } catch (error) {
+      this.logger.error(
+        "Failed to apply order discount",
+        error instanceof Error ? error : undefined,
+        { orderId: id, discountPercent },
       );
       throw mapOrderItemMutationError(error);
     }

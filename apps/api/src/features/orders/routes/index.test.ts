@@ -18,6 +18,7 @@ const serviceMocks = vi.hoisted(() => ({
   previewCoupon: vi.fn(),
   addItemsToOrder: vi.fn(),
   changeOrderItemQuantity: vi.fn(),
+  applyOrderDiscount: vi.fn(),
 }));
 const platformOrderServiceMocks = vi.hoisted(() => ({
   syncStatusToPlatform: vi.fn(),
@@ -1263,6 +1264,130 @@ describe("orders item modification routes", () => {
       mock.mockReset();
     }
     authState.user = { id: "user-42", role: 1, restaurantId: "restaurant-1" };
+  });
+
+  describe("POST /:id/discount", () => {
+    it("sends only the percentage, never a price", async () => {
+      serviceMocks.getOrder.mockResolvedValue(openOrder);
+      serviceMocks.applyOrderDiscount.mockResolvedValue({
+        ...openOrder,
+        discountAmount: 10,
+        totalAmount: 90,
+        version: 4,
+      });
+
+      const res = await routes.fetch(
+        jsonRequest("/order-1/discount", {
+          discountPercent: 10,
+          reason: "Counter discount 10%",
+          expectedVersion: 3,
+        }),
+        createEnv(),
+      );
+
+      expect(res.status).toBe(200);
+      expect(serviceMocks.applyOrderDiscount).toHaveBeenCalledOnce();
+      expect(serviceMocks.applyOrderDiscount).toHaveBeenCalledWith(
+        "order-1",
+        10,
+        "Counter discount 10%",
+        "user-42",
+        3,
+      );
+    });
+
+    it("rejects a body that names an amount instead of a percentage", async () => {
+      // The whole point of #327: the till says how much off, never how much to
+      // charge. This is a 400 because `discountPercent` is required, not
+      // because the extra key is refused -- Zod strips unknown keys. Stripping
+      // is fine here precisely because nothing downstream reads an amount.
+      serviceMocks.getOrder.mockResolvedValue(openOrder);
+
+      const res = await withSilencedRouteError(() =>
+        routes.fetch(
+          jsonRequest("/order-1/discount", {
+            discountAmount: 10,
+            reason: "Counter discount",
+          }),
+          createEnv(),
+        ),
+      );
+
+      expect(res.status).toBe(400);
+      expect(serviceMocks.applyOrderDiscount).not.toHaveBeenCalled();
+    });
+
+    it("requires a reason, because the audit log is the only record", async () => {
+      serviceMocks.getOrder.mockResolvedValue(openOrder);
+
+      const res = await withSilencedRouteError(() =>
+        routes.fetch(
+          jsonRequest("/order-1/discount", { discountPercent: 10 }),
+          createEnv(),
+        ),
+      );
+
+      expect(res.status).toBe(400);
+      expect(serviceMocks.applyOrderDiscount).not.toHaveBeenCalled();
+    });
+
+    it("refuses a percentage outside 0-100", async () => {
+      serviceMocks.getOrder.mockResolvedValue(openOrder);
+
+      const res = await withSilencedRouteError(() =>
+        routes.fetch(
+          jsonRequest("/order-1/discount", {
+            discountPercent: 150,
+            reason: "oops",
+          }),
+          createEnv(),
+        ),
+      );
+
+      expect(res.status).toBe(400);
+      expect(serviceMocks.applyOrderDiscount).not.toHaveBeenCalled();
+    });
+
+    it("lets a cashier discount, unlike the item-editing routes", async () => {
+      // Taking money is the cashier's job. Safe to widen because the body
+      // carries no price -- the server still derives the money itself.
+      authState.user = { id: "user-9", role: 4, restaurantId: "restaurant-1" };
+      serviceMocks.getOrder.mockResolvedValue(openOrder);
+      serviceMocks.applyOrderDiscount.mockResolvedValue({
+        ...openOrder,
+        discountAmount: 5,
+        totalAmount: 95,
+      });
+
+      const res = await routes.fetch(
+        jsonRequest("/order-1/discount", {
+          discountPercent: 5,
+          reason: "Counter discount 5%",
+        }),
+        createEnv(),
+      );
+
+      expect(res.status).toBe(200);
+      expect(serviceMocks.applyOrderDiscount).toHaveBeenCalledOnce();
+    });
+
+    it("refuses a cross-tenant order", async () => {
+      authState.user = { id: "user-9", role: 4, restaurantId: "restaurant-2" };
+      serviceMocks.getOrder.mockResolvedValue(openOrder);
+
+      const res = await withSilencedRouteError(() =>
+        routes.fetch(
+          jsonRequest("/order-1/discount", {
+            discountPercent: 5,
+            reason: "Counter discount 5%",
+          }),
+          createEnv(),
+        ),
+      );
+
+      expect(res.status).toBe(403);
+      expect(serviceMocks.applyOrderDiscount).not.toHaveBeenCalled();
+    });
   });
 
   describe("POST /:id/items", () => {

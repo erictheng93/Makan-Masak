@@ -1326,22 +1326,65 @@ const applyDiscount = () => {
   showDiscountModal.value = true;
 };
 
-const confirmApplyDiscount = () => {
-  if (!selectedOrder.value || !discountPercentInput.value) return;
-  showDiscountModal.value = false;
-  const discount =
-    (selectedOrder.value.subtotal +
-      selectedOrder.value.serviceCharge +
-      selectedOrder.value.taxAmount) *
-    (discountPercentInput.value / 100);
-  selectedOrder.value.discountAmount = Math.max(0, discount);
-  selectedOrder.value.totalAmount = Math.max(
-    0,
-    selectedOrder.value.subtotal +
-      selectedOrder.value.serviceCharge +
-      selectedOrder.value.taxAmount -
-      selectedOrder.value.discountAmount,
-  );
+/**
+ * Send the discount to the server and take its answer as the price.
+ *
+ * This used to recompute the totals in place and post nothing, which could not
+ * work: `PaymentService` prices the order from `orders.total_amount_cents` and
+ * refuses any `amount`/`expectedTotal` that disagrees, so a locally discounted
+ * order answered PAYMENT_AMOUNT_MISMATCH and simply could not be paid. Worse,
+ * `printReceipt` sends whatever total is on screen, so a receipt printed
+ * before payment showed a discount the database had never agreed to (#327).
+ *
+ * Only the percentage is sent. The server derives the money from the order's
+ * own stored cents, so this screen never names a price.
+ */
+const confirmApplyDiscount = async () => {
+  if (!selectedOrder.value || !discountPercentInput.value || isProcessing.value)
+    return;
+
+  const percent = discountPercentInput.value;
+  isProcessing.value = true;
+  paymentError.value = "";
+
+  try {
+    const response = await api.post(
+      `/orders/${selectedOrder.value.id}/discount`,
+      {
+        discountPercent: percent,
+        reason: t("cashier.discountReason", { percent }),
+      },
+    );
+    const updated = unwrapApiPayload<{
+      discountAmount?: number;
+      totalAmount?: number;
+    }>(response.data.data);
+
+    selectedOrder.value.discountAmount = updated.discountAmount ?? 0;
+    selectedOrder.value.totalAmount =
+      updated.totalAmount ?? selectedOrder.value.totalAmount;
+
+    const orderIndex = orders.value.findIndex(
+      (o) => o.id === selectedOrder.value!.id,
+    );
+    if (orderIndex > -1) {
+      orders.value[orderIndex].discountAmount =
+        selectedOrder.value.discountAmount;
+      orders.value[orderIndex].totalAmount = selectedOrder.value.totalAmount;
+    }
+
+    showDiscountModal.value = false;
+  } catch (error) {
+    console.error("Failed to apply discount:", error);
+    const code = extractApiErrorCode(error);
+    paymentError.value =
+      code === "ORDER_HAS_COUPON_DISCOUNT"
+        ? t("cashier.discountCouponConflict")
+        : (apiErrorMessage(error) ?? t("cashier.discountFailed"));
+    showDiscountModal.value = false;
+  } finally {
+    isProcessing.value = false;
+  }
 };
 
 const printReceipt = async () => {

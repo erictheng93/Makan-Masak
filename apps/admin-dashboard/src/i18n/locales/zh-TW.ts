@@ -2506,7 +2506,10 @@ const zhTWCore = {
     confirmPayment: "確認付款",
     paymentFailed: "付款失敗，請重試",
     amountMismatch:
-      "金額與伺服器記錄的訂單總額不符。此畫面上的折扣只改變顯示，不會送到伺服器。",
+      "金額與伺服器記錄的訂單總額不符。請重新載入訂單後再試一次。",
+    discountReason: "收銀台折扣 {percent}%",
+    discountCouponConflict: "這張訂單已經使用優惠券，無法再套用收銀台折扣。",
+    discountFailed: "套用折扣失敗",
     paymentMethods: {
       cash: "現金",
       card: "信用卡",

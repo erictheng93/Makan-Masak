@@ -770,6 +770,102 @@ function withBeforeBatch(
   } as unknown as D1Database;
 }
 
+describe("OrderService applyOrderDiscount", () => {
+  let testDb: TestDatabase;
+
+  beforeAll(async () => {
+    testDb = await createTestDatabase();
+  }, REAL_D1_SETUP_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await testDb?.dispose();
+  });
+
+  beforeEach(async () => {
+    await testDb.truncateAll();
+    await seedMenuItem(testDb);
+  });
+
+  const service = () =>
+    new OrderService(testDb.bindings.DB, { JWT_SECRET: "test" });
+
+  async function seedOrder() {
+    return service().createOrder({
+      restaurantId,
+      items: [{ menuItemId, quantity: 2 }],
+    });
+  }
+
+  it("derives the money from the order's own cents and rewrites the total", async () => {
+    const order = await seedOrder();
+    const discounted = await service().applyOrderDiscount(order.id, 10);
+
+    const base =
+      (order.subtotal ?? 0) +
+      (order.taxAmount ?? 0) +
+      (order.serviceCharge ?? 0);
+
+    expect(discounted.discountAmount).toBeCloseTo(base * 0.1, 2);
+    expect(discounted.totalAmount).toBeCloseTo(
+      (order.totalAmount ?? 0) - (discounted.discountAmount ?? 0),
+      2,
+    );
+  });
+
+  it("bumps the version so a concurrent writer loses", async () => {
+    const order = await seedOrder();
+    const discounted = await service().applyOrderDiscount(order.id, 10);
+    expect(discounted.version).toBe((order.version ?? 0) + 1);
+
+    // The stale caller still holds the pre-discount version.
+    await expect(
+      service().applyOrderDiscount(order.id, 20, order.version),
+    ).rejects.toThrow(/version conflict/i);
+  });
+
+  it("refuses a percentage outside 0-100 rather than clamping silently", async () => {
+    const order = await seedOrder();
+    await expect(service().applyOrderDiscount(order.id, 101)).rejects.toThrow(
+      /between 0 and 100/i,
+    );
+    await expect(service().applyOrderDiscount(order.id, -1)).rejects.toThrow(
+      /between 0 and 100/i,
+    );
+  });
+
+  it("never lets the total go negative at 100%", async () => {
+    const order = await seedOrder();
+    const discounted = await service().applyOrderDiscount(order.id, 100);
+    expect(discounted.totalAmount).toBeGreaterThanOrEqual(0);
+  });
+
+  it("refuses to overwrite a coupon discount", async () => {
+    const order = await seedOrder();
+    await testDb.drizzle
+      .update(orders)
+      .set({ couponCode: "SAVE10" })
+      .where(eq(orders.id, order.id));
+
+    // One column holds one figure; a manual discount would cancel the coupon
+    // while coupon_code went on claiming it applied (#327).
+    await expect(service().applyOrderDiscount(order.id, 10)).rejects.toThrow(
+      /coupon discount/i,
+    );
+  });
+
+  it("refuses once the order is finalized", async () => {
+    const order = await seedOrder();
+    await testDb.drizzle
+      .update(orders)
+      .set({ status: "paid" })
+      .where(eq(orders.id, order.id));
+
+    await expect(service().applyOrderDiscount(order.id, 10)).rejects.toThrow(
+      /version conflict/i,
+    );
+  });
+});
+
 describe("OrderService createOrder atomicity", () => {
   let testDb: TestDatabase;
 

@@ -2523,7 +2523,11 @@ const idID: Messages = {
     orderDetails: "Detail Pesanan",
     paymentFailed: "Pembayaran gagal",
     amountMismatch:
-      "Jumlah tidak cocok dengan total pesanan di server. Diskon yang diterapkan di layar ini hanya mengubah tampilan dan tidak pernah dikirim ke server.",
+      "Jumlah tidak cocok dengan total pesanan di server. Muat ulang pesanan lalu coba lagi.",
+    discountReason: "Diskon kasir {percent}%",
+    discountCouponConflict:
+      "Pesanan ini sudah memakai kupon, sehingga diskon kasir tidak dapat diterapkan.",
+    discountFailed: "Gagal menerapkan diskon",
     paymentSuccess: "Pembayaran Berhasil!",
     orderCompleted: "Pesanan {orderNumber} selesai",
     digitalPayment: "Pembayaran Digital",

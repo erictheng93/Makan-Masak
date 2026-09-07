@@ -931,6 +931,51 @@ app.delete(
 );
 
 /**
+ * Apply a counter discount to an order
+ * POST /api/v1/orders/:id/discount
+ *
+ * Cashiers get this one, unlike the item-editing routes above: taking money is
+ * their job and a till discount is part of it. The order is priced by the
+ * server either way -- the body carries a percentage, never an amount -- so the
+ * widened role does not widen what a caller can decide (#327).
+ */
+app.post(
+  "/:id/discount",
+  customerAuthMiddleware,
+  requireRole([0, 1, 4]), // Admin, Owner, Cashier
+  moduleGate("online_ordering"),
+  validateParams(orderSchemas.params),
+  validateBody(orderSchemas.applyDiscount),
+  async (c) => {
+    const { id } = c.get("validatedParams");
+    const { discountPercent, reason, expectedVersion } = c.get("validatedBody");
+    const user: AuthUser = c.get("user");
+    const ordersService = new OrdersService(c.env);
+
+    const order = await ordersService.getOrder(id);
+    if (!order) {
+      throw notFound("Order not found");
+    }
+    if (user.role !== 0 && user.restaurantId !== order.restaurantId) {
+      throw forbidden("Access denied");
+    }
+
+    const updatedOrder = await ordersService.applyOrderDiscount(
+      id,
+      discountPercent,
+      reason,
+      user.id,
+      expectedVersion,
+    );
+
+    return c.json({
+      success: true,
+      data: serializeOrderForWire(updatedOrder),
+    });
+  },
+);
+
+/**
  * Bulk order operations
  * POST /api/v1/orders/bulk
  */

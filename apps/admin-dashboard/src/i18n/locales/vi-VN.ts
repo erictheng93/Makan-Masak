@@ -2510,7 +2510,11 @@ const viVN: Messages = {
     orderTime: "Thời gian đặt hàng",
     paymentFailed: "Thanh toán không thành công",
     amountMismatch:
-      "Số tiền không khớp với tổng đơn hàng trên máy chủ. Giảm giá áp dụng ở màn hình này chỉ thay đổi hiển thị và không được gửi lên máy chủ.",
+      "Số tiền không khớp với tổng đơn hàng trên máy chủ. Hãy tải lại đơn hàng và thử lại.",
+    discountReason: "Giảm giá tại quầy {percent}%",
+    discountCouponConflict:
+      "Đơn hàng này đã dùng phiếu giảm giá nên không thể áp dụng giảm giá tại quầy.",
+    discountFailed: "Không áp dụng được giảm giá",
     paymentSuccess: "Thanh toán thành công!",
     orderCompleted: "Đơn hàng {orderNumber} đã hoàn thành",
     cashShort: "Thiếu tiền mặt {amount}",

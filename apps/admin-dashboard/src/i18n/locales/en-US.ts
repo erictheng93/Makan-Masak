@@ -2525,7 +2525,11 @@ const enUS: Messages = {
     },
     paymentFailed: "Payment failed",
     amountMismatch:
-      "Amount does not match the order total on record. A discount applied on this screen changes only what is displayed and never reaches the server.",
+      "Amount does not match the order total on record. Reload the order and try again.",
+    discountReason: "Counter discount {percent}%",
+    discountCouponConflict:
+      "This order already uses a coupon, so a counter discount cannot be applied.",
+    discountFailed: "Could not apply the discount",
     refundType: "Refund Type",
     refundTypes: {
       full: "Full Refund",

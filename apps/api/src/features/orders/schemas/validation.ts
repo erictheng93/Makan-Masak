@@ -456,6 +456,16 @@ export const changeOrderItemQuantitySchema = z.object({
   expectedVersion: expectedVersionSchema,
 });
 
+// A counter discount is expressed as a percentage, never as an amount: the
+// server derives the money from the order's own stored cents, so a client
+// cannot name a price (#327). `reason` is required and lands in the audit log
+// -- an amount-affecting operation has to leave behind who did it and why.
+export const applyOrderDiscountSchema = z.object({
+  discountPercent: z.number().min(0).max(100),
+  reason: z.string().trim().min(1).max(200),
+  expectedVersion: expectedVersionSchema,
+});
+
 // DELETE carries no body, so the version travels as a query parameter.
 export const removeOrderItemQuerySchema = z.object({
   expectedVersion: z.string().regex(/^\d+$/).transform(Number).optional(),
@@ -682,6 +692,7 @@ export const orderSchemas = {
   addItems: addOrderItemsSchema,
   changeItemQuantity: changeOrderItemQuantitySchema,
   removeItemQuery: removeOrderItemQuerySchema,
+  applyDiscount: applyOrderDiscountSchema,
 };
 
 // Export delivery-related schemas

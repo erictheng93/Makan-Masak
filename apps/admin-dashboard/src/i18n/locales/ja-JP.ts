@@ -2510,7 +2510,11 @@ const jaJP: Messages = {
     cashShort: "{amount} による現金不足",
     paymentFailed: "支払いに失敗しました",
     amountMismatch:
-      "サーバー上の注文合計と金額が一致しません。この画面の割引は表示を変えるだけで、サーバーには送信されません。",
+      "サーバー上の注文合計と金額が一致しません。注文を再読み込みしてからもう一度お試しください。",
+    discountReason: "レジ割引 {percent}%",
+    discountCouponConflict:
+      "この注文はすでにクーポンを使用しているため、レジ割引は適用できません。",
+    discountFailed: "割引を適用できませんでした",
     paymentSuccess: "支払いが成功しました！",
     orderTime: "注文時間",
     orderCompleted: "注文{orderNumber}が完了しました",
