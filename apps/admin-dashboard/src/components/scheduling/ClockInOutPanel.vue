@@ -126,10 +126,18 @@
           maxlength="200"
         ></textarea>
         <div class="notes-actions">
-          <button class="btn-cancel" @click="cancelNotes">
+          <button
+            class="btn-cancel"
+            data-testid="clock-notes-cancel"
+            @click="cancelNotes"
+          >
             {{ t("common.cancel") }}
           </button>
-          <button class="btn-confirm" @click="confirmClock">
+          <button
+            class="btn-confirm"
+            data-testid="clock-notes-confirm"
+            @click="confirmClock"
+          >
             {{ t("common.confirm") }}
           </button>
         </div>

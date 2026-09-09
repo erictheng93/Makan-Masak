@@ -27,6 +27,41 @@ import type {
   WeeklySummary,
 } from "@/types/scheduling";
 
+/**
+ * Reshape a list response into the paginated envelope every caller expects.
+ *
+ * The three list methods below used to do `return response.data.data!`, typed
+ * as `Promise<PaginatedResponse<T>>`. That typechecked only because the generic
+ * was `api.get<PaginatedResponse<T>>`, which claims the server nests a
+ * paginated envelope inside `data`. It does not: `data` is the bare array and
+ * `pagination` is its sibling. So every caller's `response.data` was
+ * `undefined`, and `.length` / `.filter` / `for..of` on it threw at runtime —
+ * silently, inside a try/catch that turned the whole panel into an error card.
+ *
+ * That is why the attendance clock-in panel still did not work after #308 wired
+ * it up: the component was reachable and its data layer was not.
+ */
+function toPaginated<T>(body: {
+  // Structural rather than `ApiResponse<T[]>`: two different ApiResponse types
+  // are in scope here (types/index carries `pagination`, types/scheduling does
+  // not), and naming either one makes the other fail to assign.
+  success: boolean;
+  data?: T[];
+  pagination?: PaginatedResponse<T>["pagination"];
+}): PaginatedResponse<T> {
+  const data = body.data ?? [];
+  return {
+    success: body.success,
+    data,
+    pagination: body.pagination ?? {
+      page: 1,
+      limit: data.length,
+      total: data.length,
+      totalPages: 1,
+    },
+  };
+}
+
 class SchedulingService {
   private api: typeof api;
 
@@ -104,11 +139,11 @@ class SchedulingService {
     filters: ScheduleFilters,
   ): Promise<PaginatedResponse<EmployeeSchedule>> {
     const { restaurantId, ...params } = filters;
-    const response = await this.api.get<PaginatedResponse<EmployeeSchedule>>(
+    const response = await this.api.get<EmployeeSchedule[]>(
       `/scheduling/${restaurantId}/schedules`,
       params,
     );
-    return response.data.data!;
+    return toPaginated(response.data);
   }
 
   /**
@@ -294,11 +329,11 @@ class SchedulingService {
     filters: ConflictFilters,
   ): Promise<PaginatedResponse<SchedulingConflict>> {
     const { restaurantId, ...params } = filters;
-    const response = await this.api.get<PaginatedResponse<SchedulingConflict>>(
+    const response = await this.api.get<SchedulingConflict[]>(
       `/scheduling/${restaurantId}/conflicts`,
       params,
     );
-    return response.data.data!;
+    return toPaginated(response.data);
   }
 
   /**
@@ -327,11 +362,11 @@ class SchedulingService {
     filters: SwapRequestFilters,
   ): Promise<PaginatedResponse<SwapRequest>> {
     const { restaurantId, ...params } = filters;
-    const response = await this.api.get<PaginatedResponse<SwapRequest>>(
+    const response = await this.api.get<SwapRequest[]>(
       `/scheduling/${restaurantId}/swap-requests`,
       params,
     );
-    return response.data.data!;
+    return toPaginated(response.data);
   }
 
   /**

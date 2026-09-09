@@ -38,6 +38,7 @@
                 </label>
                 <input
                   v-model="form.name"
+                  data-testid="coupon-name"
                   type="text"
                   required
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
@@ -52,6 +53,7 @@
                 </label>
                 <input
                   v-model="form.code"
+                  data-testid="coupon-code"
                   type="text"
                   required
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
@@ -73,6 +75,7 @@
                 </label>
                 <select
                   v-model="form.discountType"
+                  data-testid="coupon-discount-type"
                   required
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 >
@@ -113,6 +116,7 @@
                 <div class="relative">
                   <input
                     v-model.number="form.discountValue"
+                    data-testid="coupon-discount-value"
                     type="number"
                     step="0.01"
                     min="0"
@@ -138,6 +142,7 @@
                 <div class="relative">
                   <input
                     v-model.number="form.maxDiscountAmount"
+                    data-testid="coupon-max-discount"
                     type="number"
                     step="0.01"
                     min="0"
@@ -160,6 +165,7 @@
                 <div class="relative">
                   <input
                     v-model.number="form.minOrderAmount"
+                    data-testid="coupon-min-order"
                     type="number"
                     step="0.01"
                     min="0"
@@ -222,6 +228,7 @@
                 </label>
                 <input
                   v-model="form.validFrom"
+                  data-testid="coupon-valid-from"
                   type="datetime-local"
                   required
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
@@ -235,6 +242,7 @@
                 </label>
                 <input
                   v-model="form.validTo"
+                  data-testid="coupon-valid-to"
                   type="datetime-local"
                   required
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
@@ -354,6 +362,7 @@
               </button>
               <button
                 type="submit"
+                data-testid="coupon-submit"
                 class="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 :disabled="isSubmitting || !isFormValid"
               >

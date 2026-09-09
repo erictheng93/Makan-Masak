@@ -11,6 +11,7 @@
       <div class="flex items-center space-x-4">
         <button
           class="px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 transition-colors"
+          data-testid="open-create-coupon"
           @click="showCreateModal = true"
         >
           <PlusIcon class="w-5 h-5 inline mr-2" />
