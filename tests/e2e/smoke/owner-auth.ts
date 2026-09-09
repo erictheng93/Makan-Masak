@@ -13,7 +13,12 @@ const LOCK_TIMEOUT_MS = 30_000;
 export const hasSmokeOwnerCredentials = !!AUTH_USERNAME && !!AUTH_PASSWORD;
 
 export interface SmokeOwnerUser {
-  id: number;
+  /**
+   * TEXT UUID v7. This was declared `number` and never caught, because nothing
+   * assigned the value anywhere the compiler could compare it against the
+   * shared `SmokeUser` shape.
+   */
+  id: string;
   username: string;
   role: number;
   restaurantId?: string | null;

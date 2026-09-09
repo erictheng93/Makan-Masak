@@ -1,6 +1,8 @@
 import { createHmac } from "node:crypto";
 
 export interface SmokeUser {
+  /** TEXT UUID v7 — `users.id` moved off integer autoincrement. */
+  id?: string;
   restaurantId?: string | null;
   role?: number;
 }

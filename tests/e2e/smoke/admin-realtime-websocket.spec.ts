@@ -30,7 +30,8 @@ interface LoginBody {
     token?: string;
     refreshToken?: string;
     user?: {
-      id: number;
+      // TEXT UUID v7, matching users.id.
+      id: string;
       username: string;
       fullName?: string;
       email?: string;
