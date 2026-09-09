@@ -1090,6 +1090,47 @@ describe("customer identity routes", () => {
     ).toBe(true);
   });
 
+  it("keeps phone resend responses uniform once the OTP quota is spent", async () => {
+    const phone = "+886912345678";
+    // enforceOtpRateLimit allows 3 per phone per hour while this endpoint's own
+    // identifier quota is 5, so requests 4 and 5 are the window where a pending
+    // identity would answer differently from a number nobody has registered.
+    const spentQuota = { [`customer_otp_phone:${phone}`]: "3" };
+    const knownDb = createDb({
+      first: [
+        passwordIdentityRow({ provider_uid: phone, verified_at_ms: null }),
+      ],
+    });
+
+    const known = await request(
+      "/auth/resend-verification",
+      "POST",
+      { identifier: phone },
+      { DB: knownDb, RATE_LIMIT_KV: createKv({ ...spentQuota }) },
+    ).response;
+    const unknown = await request(
+      "/auth/resend-verification",
+      "POST",
+      { identifier: phone },
+      {
+        DB: createDb({ first: [null] }),
+        RATE_LIMIT_KV: createKv({ ...spentQuota }),
+      },
+    ).response;
+
+    expect([known.status, unknown.status]).toEqual([200, 200]);
+    await expect(known.json()).resolves.toEqual(await unknown.json());
+    // The quota is checked before the insert, so nothing is written -- the
+    // point is that the refusal stays invisible, not that it stops applying.
+    expect(
+      knownDb.state.statements.some((statement) =>
+        statement.sql.includes(
+          "INSERT INTO customer_phone_verification_tokens",
+        ),
+      ),
+    ).toBe(false);
+  });
+
   it("marks pending phone password identities verified after OTP verification", async () => {
     const db = createDb({
       first: [

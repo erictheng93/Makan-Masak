@@ -50,6 +50,14 @@ const DUMMY_PASSWORD_HASH =
   "$2a$10$UGDZBxi4dnR2z5YoJLJ/V.ny1wknPCO8ncfLy1PgTOknCb8DJDmQm";
 const PASSWORD_LOGIN_ERROR_MESSAGE = "Invalid identifier or password";
 const PASSWORD_LOGIN_ERROR_CODE = "INVALID_CREDENTIALS";
+// Errors /auth/resend-verification must swallow on the phone branch. Each is
+// raised only from inside issuePhoneOtp, which an unknown identifier never
+// reaches, so letting one out is itself the answer to "does this number have an
+// account?".
+const PHONE_RESEND_SILENT_ERROR_CODES = new Set([
+  "SMS_SEND_FAILED",
+  "OTP_RATE_LIMITED",
+]);
 const COMMON_PASSWORDS = new Set([
   "1234567890",
   "password",
@@ -543,11 +551,19 @@ routes.post(
         try {
           await issuePhoneOtp(c, identifier.value);
         } catch (error) {
-          // A vendor rejection must not reveal that this phone has an account.
-          // The token is already stored and expires naturally; mirror the email
-          // path by hiding only the delivery result from this public endpoint.
+          // Neither a vendor rejection nor a spent OTP quota may reveal that
+          // this phone has an account. The per-phone OTP quota (3/hour) is
+          // lower than this endpoint's own identifier quota
+          // (PASSWORD_RATE_LIMIT_IDENTIFIER_MAX), so the 4th resend within the
+          // hour used to answer 400 OTP_RATE_LIMITED for a pending identity
+          // and 200 for an unknown number -- a working enumeration oracle.
+          // Mirror the email path instead: do the work, report nothing about
+          // how it went. An unsent token expires on its own.
           if (
-            !(error instanceof ApiError && error.code === "SMS_SEND_FAILED")
+            !(
+              error instanceof ApiError &&
+              PHONE_RESEND_SILENT_ERROR_CODES.has(error.code)
+            )
           ) {
             throw error;
           }
