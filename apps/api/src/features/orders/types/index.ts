@@ -326,15 +326,6 @@ export interface OrderStatusTransition {
   }>;
 }
 
-// Integration and External Data
-export interface PaymentIntegration {
-  provider: "stripe" | "paypal" | "square" | "local_gateway";
-  transactionId?: string;
-  paymentIntentId?: string;
-  chargeId?: string;
-  metadata?: Record<string, unknown>;
-}
-
 export interface OrderReceipt {
   orderNumber: string;
   restaurantInfo: RestaurantInfo;
@@ -422,14 +413,6 @@ export interface IOrdersService {
       notes?: string;
     }>
   >;
-
-  // Payment Operations
-  updatePaymentStatus(
-    id: string,
-    paymentStatus: OrderPaymentStatus,
-    paymentMethod?: OrderPaymentMethod,
-    transactionData?: PaymentIntegration,
-  ): Promise<Order | null>;
 
   // Analytics and Reporting
   getOrderAnalytics(

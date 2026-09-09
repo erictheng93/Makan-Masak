@@ -156,7 +156,10 @@ export const ORDER_STATUS_TRANSITIONS: Record<string, readonly string[]> = {
   confirmed: ["preparing", "cancelled"],
   preparing: ["ready", "cancelled"],
   ready: ["delivered", "cancelled"],
-  delivered: ["paid", "refunded"],
+  // PaymentService owns the transition to paid because it atomically creates
+  // the transaction and updates the order's payment fields. A fulfilment-only
+  // status update must never manufacture a paid order with no payment record.
+  delivered: ["refunded"],
   paid: [],
   cancelled: [],
   refunded: [],
@@ -173,19 +176,11 @@ export const CANCELLABLE_ORDER_STATUSES: readonly string[] = Object.entries(
 /** Statuses each staff role may set. Owners retain full control of their own
  * restaurant; route-level restaurant access remains the tenancy boundary. */
 export const ROLE_STATUS_PERMISSIONS: Record<number, readonly OrderStatus[]> = {
-  0: [
-    "pending",
-    "confirmed",
-    "preparing",
-    "ready",
-    "delivered",
-    "paid",
-    "cancelled",
-  ],
-  1: ["confirmed", "preparing", "ready", "delivered", "paid", "cancelled"],
+  0: ["pending", "confirmed", "preparing", "ready", "delivered", "cancelled"],
+  1: ["confirmed", "preparing", "ready", "delivered", "cancelled"],
   2: ["preparing", "ready"],
   3: ["delivered"],
-  4: ["confirmed", "paid"],
+  4: ["confirmed"],
 } as const;
 
 /**

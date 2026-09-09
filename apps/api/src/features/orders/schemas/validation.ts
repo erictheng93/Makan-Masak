@@ -188,16 +188,6 @@ export const updateOrderSchema = z.object({
   reviewComment: z.string().max(500).optional(),
 });
 
-// Payment update schema
-export const updatePaymentStatusSchema = z.object({
-  paymentStatus: orderPaymentStatusSchema,
-  paymentMethod: orderPaymentMethodSchema.optional(),
-  transactionId: z.string().max(100).optional(),
-  paymentIntentId: z.string().max(100).optional(),
-  chargeId: z.string().max(100).optional(),
-  metadata: z.record(z.string(), z.any()).optional(),
-});
-
 // Order filtering and query schemas
 export const orderFilterSchema = z.object({
   restaurantId: z.string().optional(),

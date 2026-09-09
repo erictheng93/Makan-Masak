@@ -14,7 +14,6 @@ import {
 import {
   Order,
   OrderStatus,
-  OrderPaymentStatus,
   OrderPaymentMethod,
   RealtimeEventType,
 } from "@makanmasak/shared-types";
@@ -54,7 +53,6 @@ import type {
   BulkOrderOperation,
   BulkOrderResult,
   OrderReceipt,
-  PaymentIntegration,
   IOrdersService,
   CallerContext,
   SelectedCustomizations,
@@ -894,34 +892,6 @@ export class OrdersService implements IOrdersService {
         { orderId: id },
       );
       return [];
-    }
-  }
-
-  // Payment Operations
-  async updatePaymentStatus(
-    id: string,
-    _paymentStatus: OrderPaymentStatus,
-    _paymentMethod?: OrderPaymentMethod,
-    _transactionData?: PaymentIntegration,
-  ): Promise<Order | null> {
-    try {
-      // This would require extending base service or direct database access
-      const order = await this.getOrder(id);
-      if (!order) return null;
-
-      // Update payment information
-      // Implementation would depend on base service capabilities
-
-      await this.invalidateOrderCache(id);
-
-      return order;
-    } catch (error) {
-      this.logger.error(
-        "Failed to update payment status",
-        error instanceof Error ? error : undefined,
-        { orderId: id },
-      );
-      throw error;
     }
   }
 

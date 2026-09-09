@@ -1017,7 +1017,6 @@ const getNextStatus = (currentStatus: string) => {
     confirmed: "preparing",
     preparing: "ready",
     ready: "delivered",
-    delivered: "paid",
   };
   return statusFlow[currentStatus] || null;
 };

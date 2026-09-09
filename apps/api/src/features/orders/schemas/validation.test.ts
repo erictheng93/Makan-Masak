@@ -17,7 +17,6 @@ import {
   popularItemsQuerySchema,
   previewCouponSchema,
   updateOrderItemSchema,
-  updatePaymentStatusSchema,
   validateBulkOrderIds,
   validateOrderAmount,
   validateOrderStatusTransition,
@@ -208,15 +207,7 @@ describe("order validation", () => {
     });
   });
 
-  it("validates payment, item, subscription, and parameter schemas", () => {
-    expect(
-      updatePaymentStatusSchema.parse({
-        paymentStatus: "paid",
-        paymentMethod: "card",
-        metadata: { terminal: "front" },
-      }),
-    ).toMatchObject({ paymentStatus: "paid", paymentMethod: "card" });
-
+  it("validates item, subscription, and parameter schemas", () => {
     expect(
       updateOrderItemSchema.parse({
         status: "ready",

@@ -644,6 +644,24 @@ describe("orders routes", () => {
     },
   );
 
+  it("rejects paid on the fulfilment status endpoint", async () => {
+    serviceMocks.getOrder.mockResolvedValue({
+      id: "order-1",
+      restaurantId: "restaurant-1",
+      status: "delivered",
+    });
+
+    const response = await withSilencedRouteError(() =>
+      routes.fetch(
+        jsonRequest("/order-1/status", { status: "paid" }, "PUT"),
+        createEnv() as never,
+      ),
+    );
+
+    expect(response.status).toBe(403);
+    expect(serviceMocks.updateOrderStatus).not.toHaveBeenCalled();
+  });
+
   it("requires a restaurant scope for admin statistics and active orders", async () => {
     authState.user = { id: "user-1", role: 0, restaurantId: null };
 

@@ -185,6 +185,17 @@ describe("OrdersView", () => {
     ).toBe(false);
   });
 
+  it("does not offer a fulfilment update that marks a delivered order paid", () => {
+    const order = makeOrder({ status: "delivered" });
+    orderStore.orders = [order];
+
+    const wrapper = mount(OrdersView);
+
+    expect(
+      wrapper.find(`[data-testid="admin-order-update-${order.id}"]`).exists(),
+    ).toBe(false);
+  });
+
   // The server's machine allows preparing -> cancelled and ready -> cancelled.
   // This screen used to offer the button only for pending and confirmed, so a
   // customer who left once the kitchen had started gave the owner no way out

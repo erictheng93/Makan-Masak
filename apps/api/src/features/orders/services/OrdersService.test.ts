@@ -941,7 +941,7 @@ describe("OrdersService workflows", () => {
     });
   });
 
-  it("covers status history, payment status, and search fallback paths", async () => {
+  it("covers status history and search fallback paths", async () => {
     const env = createEnv();
     const service = new OrdersService(env as never);
 
@@ -972,12 +972,6 @@ describe("OrdersService workflows", () => {
     } finally {
       consoleError.mockRestore();
     }
-
-    getBaseOrder.mockResolvedValueOnce(createOrder());
-    await expect(
-      service.updatePaymentStatus("42", "completed", "cash"),
-    ).resolves.toMatchObject({ id: "42" });
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith("order:42:full");
 
     getBaseOrders.mockRejectedValueOnce(new Error("search backend down"));
     const searchConsoleError = vi
@@ -1215,15 +1209,11 @@ describe("OrdersService workflows", () => {
     expect(updateBaseOrderStatus).toHaveBeenCalledTimes(2);
   });
 
-  it("allows a shop owner to mark a delivered order paid", async () => {
+  it("does not let a bulk fulfilment update mark an order paid", async () => {
     const service = new OrdersService(createEnv() as never);
     getBaseOrder.mockResolvedValue(
       createOrder({ id: "20", status: "delivered" }),
     );
-    updateBaseOrderStatus.mockResolvedValue(
-      createOrder({ id: "20", status: "paid" }),
-    );
-
     const result = await service.bulkUpdateOrders(
       {
         batchId: "batch-owner-paid",
@@ -1236,20 +1226,22 @@ describe("OrdersService workflows", () => {
     );
 
     expect(result).toMatchObject({
-      successCount: 1,
-      failedCount: 0,
-      errors: [],
+      successCount: 0,
+      failedCount: 1,
+      errors: [
+        {
+          orderId: "20",
+          error: "Invalid status transition from delivered to paid",
+        },
+      ],
       results: [
         {
           orderId: "20",
-          success: true,
+          success: false,
         },
       ],
     });
-    expect(updateBaseOrderStatus).toHaveBeenCalledWith(
-      "20",
-      expect.objectContaining({ status: "paid" }),
-    );
+    expect(updateBaseOrderStatus).not.toHaveBeenCalled();
   });
 
   it("builds analytics and popular item cache entries from base stats", async () => {
@@ -1563,15 +1555,6 @@ describe("OrdersService workflows", () => {
     expect(receipt.timestamps.deliveredAt).toBeUndefined();
   });
 
-  it("returns null when updating payment status for a missing order", async () => {
-    const service = new OrdersService(createEnv() as never);
-
-    getBaseOrder.mockResolvedValueOnce(null);
-    await expect(
-      service.updatePaymentStatus("404", "completed"),
-    ).resolves.toBeNull();
-  });
-
   it("adds order items through the base service and invalidates caches", async () => {
     const env = createEnv();
     const updated = createOrder({
@@ -1862,6 +1845,22 @@ describe("OrdersService workflows", () => {
         createOrder({ status: "confirmed", version: 7 }) as never,
       ),
     ).rejects.toThrow("Failed to update order status");
+  });
+
+  it("refuses to mark a delivered order paid outside the payment flow", async () => {
+    const service = new OrdersService(createEnv() as never);
+
+    await expect(
+      service.updateOrderStatus(
+        "42",
+        { status: "paid" },
+        "20",
+        1,
+        undefined,
+        createOrder({ status: "delivered", version: 7 }) as never,
+      ),
+    ).rejects.toMatchObject({ code: "INVALID_STATUS_TRANSITION" });
+    expect(updateBaseOrderStatus).not.toHaveBeenCalled();
   });
 
   it("checks caller restaurant access when cancelling orders", async () => {
