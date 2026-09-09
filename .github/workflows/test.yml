@@ -354,12 +354,133 @@ jobs:
       - name: 🗄️ 執行 real-integration 測試
         run: pnpm test:real-integration
 
+  # 店家後台 E2E，打真的 API 與真的 D1。
+  #
+  # Distinct from the e2e-tests job below in the one way that matters: that job
+  # serves `vite preview`, which does not apply `server.proxy`, so the admin
+  # app's relative `/api/v1` calls have nothing behind them. This job runs
+  # `vite dev` against a live `wrangler dev` worker on a migrated + seeded local
+  # D1, so every request the browser makes is really served.
+  #
+  # Runs on pull_request as well as push. The coverage gate was moved onto PRs
+  # on 2026-09-07 for exactly this reason — a gate that only runs after the
+  # merge reports the breakage to the wrong person, too late. This repo has no
+  # branch protection, so a red job here cannot block anyone either way.
+  #
+  # E2E_STRICT=1 is load-bearing: without it, an unreachable stack or missing
+  # fixture turns into a skip, and a skipped suite reads exactly like a passing
+  # one in the summary. That is the failure mode this job exists to end.
+  admin-real-e2e:
+    name: 🖥️ 店家後台 E2E (real API + real D1)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: >-
+      needs.changes.outputs.frontend == 'true' || needs.changes.outputs.integration == 'true' || needs.changes.outputs.full == 'true'
+
+    timeout-minutes: 25
+    container:
+      image: mcr.microsoft.com/playwright:v1.57.0-noble
+      options: --ipc=host
+    env:
+      HOME: /root
+
+    steps:
+      - name: 📦 Checkout 程式碼
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: 📦 安裝 pnpm
+        # Not corepack — see the e2e-tests job for why it fake-succeeds in this
+        # container. No version input: the action reads packageManager.
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+      - name: 📥 安裝依賴
+        run: pnpm install --frozen-lockfile
+
+      - name: 🏗️ 建置內部套件
+        # vite dev resolves app source directly, but the Worker imports
+        # workspace packages from their build output.
+        run: pnpm --filter @makanmasak/api^... build
+
+      - name: 🔐 寫入 CI dev.vars
+        # QR_SIGNING_KEY is required, not optional: creating a table,
+        # regenerating a QR code and batch-creating seats all throw without it.
+        run: |
+          cat > apps/api/.dev.vars <<'EOF'
+          JWT_SECRET=ci-admin-e2e-jwt-secret-minimum-32-chars-long
+          INTERNAL_API_TOKEN=ci-admin-e2e-internal-token-minimum-32-chars-long
+          QR_SIGNING_KEY=ci-admin-e2e-qr-signing-key-minimum-32-chars-long
+          CORS_ORIGIN=http://localhost:3000,http://localhost:3001,http://localhost:3002
+          NODE_ENV=test
+          EOF
+
+      - name: 🗄️ Migrate + seed 本地 D1
+        # Both scripts pass --persist-to ./.wrangler/shared-state, which is the
+        # same state directory apps/api's dev script opens. Running the migrate
+        # from apps/api without that flag seeds a database the API never reads.
+        run: |
+          pnpm db:migrate:local:api
+          pnpm db:seed:local
+
+      - name: 🚀 啟動 API 與 admin dashboard
+        run: |
+          mkdir -p /tmp/admin-e2e-logs
+          (cd apps/api && pnpm exec wrangler dev \
+             --persist-to ../../.wrangler/shared-state \
+             > /tmp/admin-e2e-logs/api.log 2>&1 &)
+          (cd apps/admin-dashboard && pnpm exec vite --port 3001 --host 0.0.0.0 \
+             > /tmp/admin-e2e-logs/admin.log 2>&1 &)
+
+      - name: ⏳ 等待服務就緒
+        run: |
+          for probe in http://localhost:8787/info http://localhost:3001; do
+            elapsed=0
+            until curl -sf "$probe" >/dev/null 2>&1; do
+              if [ "$elapsed" -ge 150 ]; then
+                echo "::error::$probe did not respond within 150s"
+                tail -n 100 /tmp/admin-e2e-logs/*.log || true
+                exit 1
+              fi
+              sleep 2
+              elapsed=$((elapsed + 2))
+            done
+            echo "$probe ready in ${elapsed}s"
+          done
+
+      - name: 🧪 執行店家後台 E2E
+        run: pnpm exec playwright test --project=admin-real
+        env:
+          E2E_ADMIN_URL: http://localhost:3001
+          WORKFLOW_API_URL: http://localhost:8787
+          WORKFLOW_AUTH_USERNAME: owner1
+          WORKFLOW_AUTH_PASSWORD: owner123
+          WORKFLOW_RESTAURANT_ID: 019469a0-0099-7000-8000-000000000099
+          E2E_STRICT: "1"
+
+      - name: 🛑 停止服務
+        if: always()
+        run: |
+          pkill -f "wrangler dev" || true
+          pkill -f "vite" || true
+
+      - name: 📎 上傳日誌與報告
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: admin-real-e2e
+          path: |
+            /tmp/admin-e2e-logs/
+            playwright-report/
+            test-results/
+          retention-days: 7
+
   # E2E 測試 (mock API — no real backend needed)
   #
-  # All customer/journey tests use page.route() mocks from
-  # tests/e2e/helpers/mock-api.ts to intercept API calls. Admin tests
-  # use preAuthAdmin() + mock routes. Integration tests (real API) are
-  # excluded — they require a live backend and should run in nightly CI.
+  # Customer/journey coverage only. The mock layer these once used
+  # (tests/e2e/helpers/mock-api.ts, preAuthAdmin) was deleted in b936600f along
+  # with the specs that consumed it; what remains here is the kitchen-display
+  # spec and the CI-smoke preview check. Real-backend admin coverage lives in
+  # the admin-real-e2e job above; real-backend integration coverage is the
+  # `integration` project, which still has no scheduled runner.
   #
   # Runs inside the pinned Playwright Linux container so browser binaries
   # and system dependencies are pre-installed. Upgrading Playwright
@@ -464,12 +585,22 @@ jobs:
           fi
 
       - name: 🧪 執行 E2E 測試
-        # Pushes run a small preview smoke because the full Chromium/Admin E2E
-        # suite is currently too large and flaky for fast-feedback CI.
+        # Pushes run a small preview smoke because the full Chromium E2E suite
+        # is currently too large and flaky for fast-feedback CI.
         # Manual dispatch keeps the full suite available for investigation.
+        #
+        # `--project=admin` used to be appended here. It pointed at
+        # tests/e2e/admin, which b936600f emptied in 2026-05, so from then until
+        # 2026-09 this step ran 3 tests and reported success — an empty project
+        # only fails the run when *every* selected project is empty, and
+        # chromium absorbed it. The admin suite now lives in `admin-real` and
+        # needs a real API and a real D1, neither of which this job has: it
+        # serves `vite preview`, which does not apply server.proxy, so the admin
+        # app's relative /api/v1 calls have nothing behind them. That suite runs
+        # in the `admin-real-e2e` job instead.
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            pnpm exec playwright test --project=chromium --project=admin
+            pnpm exec playwright test --project=chromium
           else
             pnpm exec playwright test --config playwright.ci-smoke.config.ts
           fi
