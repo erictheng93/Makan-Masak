@@ -1,7 +1,13 @@
 <template>
   <Teleport to="body">
     <Transition name="confirm-modal">
-      <div v-if="modalState" class="fixed inset-0 z-50 overflow-y-auto">
+      <div
+        v-if="modalState"
+        data-testid="confirm-modal"
+        role="dialog"
+        aria-modal="true"
+        class="fixed inset-0 z-50 overflow-y-auto"
+      >
         <div class="flex items-center justify-center min-h-screen px-4">
           <div
             class="fixed inset-0 bg-black/30 backdrop-blur-sm"
@@ -34,12 +40,14 @@
               </p>
               <div class="flex gap-2.5 justify-center">
                 <button
+                  data-testid="confirm-modal-cancel"
                   class="px-5 py-2.5 text-[14px] font-semibold text-ios-text bg-ios-bg rounded-full hover:bg-ios-separator transition-colors"
                   @click="close(false)"
                 >
                   {{ t("common.cancel") }}
                 </button>
                 <button
+                  data-testid="confirm-modal-confirm"
                   class="px-5 py-2.5 text-[14px] font-semibold text-white rounded-full transition-colors"
                   :class="
                     modalState.type === 'danger'
