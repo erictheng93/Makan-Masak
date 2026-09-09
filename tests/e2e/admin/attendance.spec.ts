@@ -65,9 +65,13 @@ async function createTodaySchedule(
       method: "POST",
       body: {
         name: `E2E Shift ${suffix()}`,
-        startTime: "09:00",
-        endTime: "17:00",
-        durationMinutes: 480,
+        // A full-day window on purpose. `clocked-in` only counts a shift that
+        // is in progress right now, so a fixed 09:00-17:00 fixture passes when
+        // the suite runs in the afternoon and fails at night — a flake that
+        // depends on the wall clock rather than on the code under test.
+        startTime: "00:00",
+        endTime: "23:59",
+        durationMinutes: 1439,
       },
     },
   );
@@ -85,11 +89,11 @@ async function createTodaySchedule(
         employeeId,
         shiftTemplateId: template.body.data?.id,
         workDate: todayLocalIso(),
-        startTime: "09:00",
-        endTime: "17:00",
+        startTime: "00:00",
+        endTime: "23:59",
         // Required, and not derived from start/end — omitting it is a 400 that
         // names a field the UI never shows.
-        scheduledHours: 8,
+        scheduledHours: 24,
       },
     },
   );

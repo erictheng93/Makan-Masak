@@ -33,6 +33,8 @@ import {
   type NotificationCategory,
 } from "./NotificationService";
 import { amountFromCents, toCents } from "../utils/money";
+import { BusinessTimezoneResolver } from "../utils/business-timezone";
+import { businessDateNow } from "../utils/sql-time";
 
 // ========================================
 // Types
@@ -320,6 +322,7 @@ function withArchiveFlag(employee: JoinedEmployee) {
 
 export class SchedulingService extends BaseService {
   private notificationService: NotificationService;
+  private readonly businessTimezone = new BusinessTimezoneResolver(this.db);
 
   constructor(d1: D1Database, env: CloudflareEnv) {
     super(d1, env);
@@ -995,11 +998,23 @@ export class SchedulingService extends BaseService {
   /**
    * Get currently clocked-in employees for a given date
    */
+  /**
+   * Employees currently on shift: clocked in, not yet clocked out, on today's
+   * roster.
+   *
+   * "Today" is the shop's date, not the server's. This used to be
+   * `new Date().toISOString().split("T")[0]`, i.e. UTC — so for a UTC+8 shop
+   * every clock-in between 00:00 and 08:00 local counted against the *previous*
+   * day's roster and the 目前在班 tile read zero for eight hours a day,
+   * regardless of who was actually working. Same defect #290 removed from the
+   * analytics hour buckets.
+   */
   async getClockedInEmployees(
     restaurantId: string,
     date?: string,
   ): Promise<EmployeeSchedule[]> {
-    const targetDate = date || new Date().toISOString().split("T")[0];
+    const offsetMinutes =
+      await this.businessTimezone.offsetMinutes(restaurantId);
 
     const results = await this.db
       .select()
@@ -1007,7 +1022,9 @@ export class SchedulingService extends BaseService {
       .where(
         and(
           eq(employeeSchedules.restaurantId, restaurantId),
-          eq(employeeSchedules.workDate, targetDate),
+          date
+            ? eq(employeeSchedules.workDate, date)
+            : eq(employeeSchedules.workDate, businessDateNow(offsetMinutes)),
           isNotNull(employeeSchedules.clockInTime),
           isNull(employeeSchedules.clockOutTime),
         ),
