@@ -87,6 +87,10 @@ h2{
 h3{
   margin:26px 0 10px; font-size:16px; font-weight:700; letter-spacing:-.01em;
 }
+.card h4{
+  margin:18px 0 6px; font-size:13px; font-weight:700; letter-spacing:.02em;
+  text-transform:uppercase; color:var(--ink-3);
+}
 p{margin:10px 0}
 
 .card{
@@ -201,6 +205,7 @@ footer{
     <span><b>後端</b> api.makanmasak.com</span>
     <span><b>帳號</b> <code>owner1</code>（role 1 店主）</span>
     <span><b>餐廳</b> 麻吉 Demo 廣東粥 <code>019fa136-…31a1</code></span>
+    <span><b>最後追蹤</b> 2026-09-09（21 列中 14 列已修，見結論摘要下方的後續進展）</span>
   </div>
 </header>
 
@@ -228,31 +233,36 @@ footer{
 
 <section>
   <h2>結論摘要</h2>
-  <p>共 20 項發現。其中 <b>5 項是流程走不完的硬阻斷</b>，4 項已在本次直接修掉。</p>
+  <p>共 20 項發現（拆成 21 列，F10 分 a／b 兩項）。其中 <b>5 項是流程走不完的硬阻斷</b>，4 項已在本次直接修掉。</p>
+  <p class="note">
+    <b>「處置」欄是 2026-09-09 的現況，不是 09-01 當天的判定。</b>
+    當天所有未當場修掉的都標「開 issue」；那之後陸續修掉的變化記在下方兩張後續進展卡裡，
+    報告本文（各項發現的描述與證據）維持 09-01 的原樣不動。
+  </p>
   <div class="tablewrap">
     <table>
       <thead>
         <tr><th class="mono">#</th><th>發現</th><th>流程</th><th>類型</th><th>處置</th></tr>
       </thead>
       <tbody>
-        <tr><td class="mono">F10a</td><td>沒有任何 UI 能建立「假別」，請假申請永遠送不出去</td><td>人事</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue">開 issue</span></td></tr>
+        <tr><td class="mono">F10a</td><td>沒有任何 UI 能建立「假別」，請假申請永遠送不出去</td><td>人事</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag ok">已上線</span></td></tr>
         <tr><td class="mono">F10b</td><td>「初始化假期餘額」必定 400</td><td>人事</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag fixed">已修</span></td></tr>
-        <tr><td class="mono">F7</td><td>全站沒有打卡入口，出勤流程整條是裝飾</td><td>人事</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue">開 issue</span></td></tr>
-        <tr><td class="mono">F16</td><td>系統設定 28 個欄位只有 8 個會存，其餘按「儲存」後靜默丟棄</td><td>設定</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue">開 issue</span></td></tr>
-        <tr><td class="mono">F20</td><td>店主完全沒有「訂閱與帳務」介面</td><td>設定</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue">開 issue</span></td></tr>
-        <tr><td class="mono">F2</td><td>訂單推到「已付款」但 payment_status 仍 pending，之後不能退款也不能取消</td><td>店務</td><td><span class="tag data">資料</span></td><td><span class="tag issue">開 issue</span></td></tr>
-        <tr><td class="mono">F3</td><td>PaymentService 寫入的 <code>payment_status="paid"</code> 不在正規集合內，讀回一律變 pending</td><td>店務</td><td><span class="tag data">資料</span></td><td><span class="tag issue">開 issue</span></td></tr>
-        <tr><td class="mono">F11</td><td>數據分析 KPI 把已取消訂單算成營收，同頁報表沒有</td><td>分析</td><td><span class="tag data">資料</span></td><td><span class="tag issue">開 issue</span></td></tr>
-        <tr><td class="mono">F12</td><td>期間選單寫「本月」，實作是「最近 30 天」</td><td>分析</td><td><span class="tag data">資料</span></td><td><span class="tag issue">開 issue</span></td></tr>
-        <tr><td class="mono">F1</td><td>員工動態永遠「離線」；KPI「在線員工」其實是啟用帳號數</td><td>店務</td><td><span class="tag data">資料</span></td><td><span class="tag issue">開 issue</span></td></tr>
-        <tr><td class="mono">F8</td><td>出勤率／缺席的分母是全體員工，與當天排班無關</td><td>人事</td><td><span class="tag data">資料</span></td><td><span class="tag issue">開 issue</span></td></tr>
-        <tr><td class="mono">F13</td><td>營業時段分析用 UTC 小時分桶（已開的 #290，production 確認成立）</td><td>分析</td><td><span class="tag data">資料</span></td><td>併入 #290</td></tr>
+        <tr><td class="mono">F7</td><td>全站沒有打卡入口，出勤流程整條是裝飾</td><td>人事</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag ok">已上線</span></td></tr>
+        <tr><td class="mono">F16</td><td>系統設定 28 個欄位只有 8 個會存，其餘按「儲存」後靜默丟棄</td><td>設定</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag ok">已上線</span></td></tr>
+        <tr><td class="mono">F20</td><td>店主完全沒有「訂閱與帳務」介面</td><td>設定</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue">仍開著</span></td></tr>
+        <tr><td class="mono">F2</td><td>訂單推到「已付款」但 payment_status 仍 pending，之後不能退款也不能取消</td><td>店務</td><td><span class="tag data">資料</span></td><td><span class="tag fixed">部分修</span></td></tr>
+        <tr><td class="mono">F3</td><td>PaymentService 寫入的 <code>payment_status="paid"</code> 不在正規集合內，讀回一律變 pending</td><td>店務</td><td><span class="tag data">資料</span></td><td><span class="tag ok">已上線</span></td></tr>
+        <tr><td class="mono">F11</td><td>數據分析 KPI 把已取消訂單算成營收，同頁報表沒有</td><td>分析</td><td><span class="tag data">資料</span></td><td><span class="tag ok">已上線</span></td></tr>
+        <tr><td class="mono">F12</td><td>期間選單寫「本月」，實作是「最近 30 天」</td><td>分析</td><td><span class="tag data">資料</span></td><td><span class="tag ok">已上線</span></td></tr>
+        <tr><td class="mono">F1</td><td>員工動態永遠「離線」；KPI「在線員工」其實是啟用帳號數</td><td>店務</td><td><span class="tag data">資料</span></td><td><span class="tag ok">已上線</span></td></tr>
+        <tr><td class="mono">F8</td><td>出勤率／缺席的分母是全體員工，與當天排班無關</td><td>人事</td><td><span class="tag data">資料</span></td><td><span class="tag ok">已上線</span></td></tr>
+        <tr><td class="mono">F13</td><td>營業時段分析用 UTC 小時分桶（已開的 #290，production 確認成立）</td><td>分析</td><td><span class="tag data">資料</span></td><td><span class="tag ok">已上線</span></td></tr>
         <tr><td class="mono">F14</td><td>AI 洞察頁一開啟就自動送出付費生成請求</td><td>分析</td><td><span class="tag ux">成本</span></td><td><span class="tag fixed">已修</span></td></tr>
         <tr><td class="mono">F17</td><td>「重置為預設值」是完全的空操作（附危險確認對話框）</td><td>設定</td><td><span class="tag ux">體驗</span></td><td><span class="tag fixed">已修</span></td></tr>
         <tr><td class="mono">F4</td><td>每次開後台都跳「網絡連接已恢復」，且文案硬寫中文</td><td>全站</td><td><span class="tag ux">體驗</span></td><td><span class="tag fixed">已修</span></td></tr>
-        <tr><td class="mono">F5</td><td>API 全端點約 1–4 秒，偶發 <code>ERR_CONNECTION_CLOSED</code></td><td>全站</td><td><span class="tag ux">效能</span></td><td><span class="tag issue">開 issue</span></td></tr>
-        <tr><td class="mono">F18</td><td>稅率與服務費後端已接好，前端沒有任何欄位</td><td>設定</td><td><span class="tag ux">缺口</span></td><td><span class="tag issue">開 issue</span></td></tr>
-        <tr><td class="mono">F19</td><td>時區下拉有 9 個選項，但所有日期分桶都硬寫 +08</td><td>設定</td><td><span class="tag ux">缺口</span></td><td><span class="tag issue">開 issue</span></td></tr>
+        <tr><td class="mono">F5</td><td>API 全端點約 1–4 秒，偶發 <code>ERR_CONNECTION_CLOSED</code></td><td>全站</td><td><span class="tag ux">效能</span></td><td><span class="tag fixed">部分修</span></td></tr>
+        <tr><td class="mono">F18</td><td>稅率與服務費後端已接好，前端沒有任何欄位</td><td>設定</td><td><span class="tag ux">缺口</span></td><td><span class="tag ok">已上線</span></td></tr>
+        <tr><td class="mono">F19</td><td>時區下拉有 9 個選項，但所有日期分桶都硬寫 +08</td><td>設定</td><td><span class="tag ux">缺口</span></td><td><span class="tag ok">已上線</span></td></tr>
         <tr><td class="mono">F9</td><td>SchedulingView 沒掛路由：換班申請與排班清單進不去</td><td>人事</td><td><span class="tag ux">缺口</span></td><td><span class="tag fixed">已修（後續）</span></td></tr>
         <tr><td class="mono">F15</td><td>AI 未設定的錯誤訊息是未在地化英文，且沒有前往設定的連結</td><td>分析</td><td><span class="tag ux">體驗</span></td><td><span class="tag fixed">已修（後續）</span></td></tr>
         <tr><td class="mono">F6</td><td>「QR 碼管理模式」必填欄位做成純 div，鍵盤與螢幕閱讀器用不了</td><td>店務</td><td><span class="tag ux">a11y</span></td><td><span class="tag fixed">已修（後續）</span></td></tr>
@@ -298,6 +308,174 @@ footer{
       六個 deployable 全部上線。那次順手修掉了本報告 F14 提到的
       「AI 洞察一開啟就自動送出付費請求」，並把 F6 所在的那個元件連同整個 purple／indigo 色系
       一起從原始碼移除。與本報告其他發現無關。
+    </p>
+  </div>
+
+  <div class="card" style="--ac:var(--green)">
+    <h3 style="margin-top:0">後續進展（2026-09-09 驗證）</h3>
+    <p>
+      這一輪把 21 列逐項回頭比對現在的原始碼，並對 production 重新實測。
+      結果：<b>11 項已修並且已經在線上</b>、2 項部分修、1 項仍原封不動，
+      另外驗出 <b>1 個因為修好 F16 才變得碰得到的新問題</b>。
+      每一項都追到「哪個 commit 改的」與「那個 commit 在不在線上這版裡」，不以 issue 被關掉作結——
+      #307–#313 有七個是在 2026-09-07 06:35–06:36 同一分鐘內批次關掉的，那種關法不構成證據。
+    </p>
+
+    <h4>已修並已上線（11 項）</h4>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th class="mono">#</th><th>issue</th><th>commit</th><th>驗證</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">F10a</td><td>#307</td><td class="mono">8d29ffd4</td>
+            <td><code>leavesService.createLeaveType()</code> 與 <code>LeavesTab.vue</code> 的建立假別入口都在了。新租戶開站不再是死結。</td>
+          </tr>
+          <tr>
+            <td class="mono">F7</td><td>#308</td><td class="mono">d08c7f4b</td>
+            <td><code>AttendanceOverviewTab.vue:178</code> import 了 <code>ClockInOutPanel</code>，<code>:49</code> 掛上。管理端打卡入口已上線。<br><b>員工自助那半還沒上線</b>：<code>/dashboard/my-attendance</code>（roles 2–4 也進得去）在 <code>dd792bd2</code>，已進 main 但比線上這版晚 20 分鐘。</td>
+          </tr>
+          <tr>
+            <td class="mono">F8</td><td>#308</td><td class="mono">0348e33e</td>
+            <td>分母改成<b>當天排班人數</b>。沒人排班時 rate 回 <code>null</code>、顯示「—」而不是 0%，休假的人也不再被算成缺席。</td>
+          </tr>
+          <tr>
+            <td class="mono">F16</td><td>#309</td><td class="mono">4c176539</td>
+            <td><code>saveSettings</code> 現在送店名／電話／地址／城市／行政區／營業時間／時區／最低消費／自動確認訂單／稅率／服務費；其餘純 console 偏好收在 <code>settings.adminConsole</code> 底下，和「伺服器真的會讀的設定」分開。</td>
+          </tr>
+          <tr>
+            <td class="mono">F18</td><td>#313</td><td class="mono">e0709905</td>
+            <td>加了 <code>taxRatePercent</code>／<code>serviceChargeRatePercent</code> 兩個欄位，存檔時用 <code>percentToRate</code> 轉成後端要的分數（5% → 0.05）。</td>
+          </tr>
+          <tr>
+            <td class="mono">F19</td><td>#313 → #329</td><td class="mono">business-<br>timezone.ts</td>
+            <td>時區升格成 <code>restaurants</code> 的欄位，<code>BusinessTimezoneResolver.offsetMinutes()</code> 是唯一來源，<code>analytics.ts</code> 與 <code>ForecastService</code> 全部改讀它，硬寫的 <code>'+8 hours'</code> 沒了。七個支援時區<b>都是固定 offset</b>（不含日光節約）是刻意的——D1 的 <code>DATE(..., ?)</code> 只吃常數修飾詞，有測試從 ICU 反推守著這條。</td>
+          </tr>
+          <tr>
+            <td class="mono">F11</td><td>#312</td><td class="mono">d1f73402</td>
+            <td>營收查詢拆出來並加上 <code>inArray(status, FULFILLED_ORDER_STATUSES)</code>。<code>totalOrders</code> 刻意<b>不</b>過濾——它是轉換率的分母，一起過濾就會恆為 100%，原始碼裡有註解說明這個取捨。</td>
+          </tr>
+          <tr>
+            <td class="mono">F12</td><td>#312</td><td class="mono">21aeddc1</td>
+            <td>期間邊界抽成 <code>utils/analyticsPeriod.ts</code> 並改成<b>日曆邊界</b>：本週＝週一、本月＝1 號零點、本季＝季初、本年＝1/1。<br>但 F12 的附帶那半還在，見下方殘留。</td>
+          </tr>
+          <tr>
+            <td class="mono">F13</td><td>#290</td><td class="mono">28af72b2</td>
+            <td><code>peakHours</code> 改用 <code>strftimeFromUnixMs("%H", createdAt, offsetMinutesFor(restaurantId))</code>，夜市尖峰不再被報成中午。</td>
+          </tr>
+          <tr>
+            <td class="mono">F3</td><td>#311</td><td class="mono">c096a0f7</td>
+            <td><code>PaymentService</code> 改寫 <code>"completed"</code>，正規集合補上 <code>"partial_refunded"</code>（<code>refundPayment</code> 真的會寫它，漏了就讀回 pending）。<br>全 repo 殘留的 <code>paymentStatus: "paid"</code> 只在 <code>market_checkout_sessions</code> 與 <code>split_bills</code> 上，那是「這份分帳結清了嗎」，不是 <code>orders</code>，語意不同。</td>
+          </tr>
+          <tr>
+            <td class="mono">F1</td><td>（無 issue）</td><td class="mono">04dbae69</td>
+            <td>員工狀態改由 <code>staffPresence(user.id, onShiftIds)</code> 判定，來源就是打卡訊號。KPI 標籤從「在線員工」改成 <code>owner.kpi.onShift</code>，值是 <code>onShift/activeStaff</code>。<br>這正是 09-01 報告當時說「不要直接換成 <code>isActive</code> 了事」的那條路——先有 F7 的打卡訊號，這一格才有東西可顯示。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>部分修（2 項）</h4>
+    <p>
+      <b>F2 / #310 — 仍開，而且核心沒動。</b>
+      有進展的是取消那一側：<code>canCancel</code> 不再寫死 pending／confirmed，改由
+      <code>ORDER_STATUS_TRANSITIONS</code> 推導出 <code>CANCELLABLE_ORDER_STATUSES</code>，
+      再加一道角色守門，所以 preparing／ready 現在取消得掉了。
+      但 payment_status 在後台仍然<b>無路可寫</b>：<code>OrdersService.updatePaymentStatus</code>
+      逐字還是那個空殼——參數全 <code>_</code> 前綴、同一句
+      <code>Implementation would depend on base service capabilities</code>、直接回傳未修改的 order，
+      而且仍然沒有任何路由呼叫它。推到「已付款」之後不能退款也不能取消這條死路照舊。
+    </p>
+    <p>
+      <b>F5 / #316 — 快了大約一個數量級的尾巴，但沒到目標。</b>
+      2026-09-09 實測：<code>/info</code> 暖機後連測 12 次落在
+      <b>0.42–0.49 秒</b>；另一輪 8 次含冷啟是 0.45–1.45 秒。
+      <code>/api/v1/monitoring/health</code> 4 次 0.45–1.71 秒。
+      對照 09-01 的 <code>/info</code> 1.05–4.09 秒外加一次 10 秒 timeout——<b>4 秒的尾巴與 timeout 都不見了</b>。
+      做掉的是三件事：<b>#322</b> 拿掉 Smart Placement（它把 Worker 放到北美，而 D1 主庫在 APAC，每筆查詢都是跨太平洋來回）、
+      <b>#321</b> D1 改走 Sessions API 並開讀取副本、<b>#324</b> 公開健康檢查不再每次做 KV 寫入。
+      線上 <code>/api/v1/system/health</code> 現在回 <code>servedByRegion: "APAC"</code>、
+      KV <code>probe: "read"</code> 2ms、D1 118ms，三個修正都看得到。
+      仍離 P99 &lt; 300ms 有距離，剩下的地板是 <b>#323</b>（冷啟動／bundle）；
+      <b>#325</b>（<code>ERR_CONNECTION_CLOSED</code>）是與延遲不同的獨立故障，也仍開著。
+    </p>
+
+    <h4>仍然原封不動（1 項）</h4>
+    <p>
+      <b>F20 / #315</b>——<code>router/index.ts:520</code> 的 subscriptions 仍是
+      <code>roles: [UserRole.ADMIN]</code>，側邊欄仍然沒有店主視角的帳務入口。
+      這本來就是「文件放錯層，還是產品缺一頁」的產品決策題，不是可以逕自修掉的 bug。
+    </p>
+
+    <h4>新問題：修好 F16 讓一整類壞掉的錯誤路徑變成活的　<span class="tag issue">#352</span></h4>
+    <p>
+      最低消費從「存不進去」變成「真的會擋單」之後，
+      <code>packages/database/src/services/order.ts:662</code> 這段就從碰不到變成碰得到了。
+      追它怎麼變成 HTTP 回應時發現<b>整條鏈路是壞的，而且不只這一條</b>——
+      這比 09-01 報告在 F18 附帶裡註記的「幣別硬寫成 RM」嚴重得多，那時只看到症狀的表面。
+    </p>
+    <p>
+      <b>顧客金額沒到最低消費，收到的是 HTTP 500。</b>
+      這個 <code>throw new Error(中文字串)</code> 穿過 <code>OrdersService.ts:291-326</code> 的 catch
+      （只比對 6 個 sentinel）、穿過兩條路由的 catch（只比對 <code>CLIENT_MUTATION_DUPLICATE</code>），
+      到 <code>app-factory.ts:394</code> 的全域處理器；
+      <code>ErrorSanitizer.sanitizeError</code> 對不上任何分類器
+      （沒有 <code>JWT</code>／<code>validation</code>／<code>constraint</code>／<code>not found</code> 等字樣），
+      落到 generic 分支 → <b>500</b>、<code>code: "GENERIC_ERROR"</code>，
+      訊息則經 <code>sanitizeMessage</code> <b>原文放行</b>。
+      諷刺的是同檔 <code>:526</code> 的 <code>Restaurant not found</code> 反而回對了 404——
+      因為它<b>碰巧</b>含有 <code>not found</code>。現在的對錯是靠英文字串巧合，不是靠設計。
+    </p>
+    <p>
+      而且這是<b>一整類，不是一個點</b>。<code>createOrder</code> 裡有 5 條商業規則拒絕同樣落成 500：
+      <code>:580</code> 餐廳未營業、<code>:611</code> 桌位不可用、<code>:652</code> 優惠券驗證失敗、
+      <code>:662</code> 最低消費、<code>:838</code> 缺貨。
+      （缺貨其實有對應的 mapper <code>OrdersService.ts:98</code>，但它只掛在改單路徑
+      <code>:503</code>／<code>:574</code>／<code>:657</code>，沒掛在 <code>createOrder</code>。）
+      另外 8 條是有正確轉譯的，所以要補的是缺口，不是新建管線。
+    </p>
+    <p>
+      <b>幣別那半仍然成立，而且修法是現成的。</b>
+      訊息把幣別硬寫成 <code>RM</code>（<code>最低消費：RM${minOrderAmount.toFixed(2)}</code>），
+      而這家店的 <code>settings.currency</code> 是 <b>TWD</b>。
+      <code>packages/utils/src/currency.ts</code> 早就有
+      <code>formatCurrency(amount, currency)</code>（TWD／MYR／VND 的符號、位置、小數位都處理了），
+      <code>packages/database</code> 本來就依賴 <code>@makanmasak/utils</code>，
+      而 <code>getMinimumOrderAmount</code> 已經把 <code>restaurant.settings</code> 讀進來了——
+      不需要新增任何管線。
+    </p>
+    <p>
+      唯一需要決定的是慣例：<code>packages/database</code> 裡有<b>兩套互相矛盾</b>的做法，
+      而且 <code>coupon.ts:81-82</code> 那條「packages/database 不能依賴 API 層的 ApiError」的註解
+      <b>已經過期</b>——<code>ApiError</code> 早就搬到 <code>packages/utils</code>，
+      同 package 的 <code>ticket-primitives/state-machine.ts:43</code> 與
+      <code>reservation-state-machine.ts:43</code> 已經在直接丟它，
+      而 <code>apps/api/src/shared/utils/api-error.ts</code> 是純 re-export，
+      所以全域處理器的 <code>instanceof</code> 會正確命中。
+      正是這個「要先選一套」讓它不符合本報告當初「不需要決策才直接修」的標準，
+      因此開成 <b>#352</b> 而不是逕自修掉。
+    </p>
+
+    <h4>殘留（已修項目沒修完的部分）</h4>
+    <p>
+      <b>F12 的「同一頁兩個窗口」還在。</b>
+      期間邊界改成日曆邊界了，但 <code>AnalyticsView.vue</code> 的
+      <code>getDashboardPeriod()</code> 仍把 <code>quarter</code> 映射成 <code>"month"</code>，
+      所以選「本季」時上方 KPI 抓的是月資料、下方圖表抓的是日曆季，兩個窗口照舊對不起來。
+    </p>
+
+    <h4>線上版本（2026-09-09 現查）</h4>
+    <p>
+      admin-dashboard 的 Pages 生產部署是 <code>4d719b6</code>（2026-09-07 15:19 +08），
+      apps/api Worker 最後一次部署在 2026-09-07 07:25 UTC。
+      上面 11 項「已上線」的 commit 全部用
+      <code>git merge-base --is-ancestor &lt;commit&gt; 4d719b6</code> 逐一確認過是該版的祖先。
+      main 之後又前進了 10 個 commit，其中與本報告相關的只有
+      <code>dd792bd2</code>（員工自助打卡頁），<b>尚未上線</b>。
+    </p>
+    <p class="note">
+      上面那張 2026-09-02 的卡片說「特別確認過 #312 沒有被修掉」——<b>那句話已經過期</b>。
+      #312 在 2026-09-04 由 <code>d1f73402</code> 與 <code>21aeddc1</code> 修掉並已上線。
+      該卡片維持當日原樣不動，這裡註記以免誤讀。
     </p>
   </div>
 </section>
