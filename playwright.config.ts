@@ -69,14 +69,36 @@ export default defineConfig({
       use: { ...devices["iPad Pro"] },
     },
 
-    // Admin dashboard tests — baseURL points to the admin app (port 3001)
+    // Admin dashboard tests — real API, real D1, no request mocking.
+    //
+    // Named `admin-real`, not `admin`. The old `admin` project pointed at this
+    // same directory after b936600f deleted its 19 mock-based specs, and stayed
+    // in the config for 3.5 months collecting zero tests. That was not inert:
+    // `--project=admin` alone exits 1 with "No tests found", but combined with a
+    // non-empty sibling — which is exactly how .github/workflows/test.yml
+    // invoked it — the empty project is absorbed and the run reports green.
+    // Renaming means any stale `--project=admin` now fails loudly instead.
+    //
+    // workers:1 as well as fullyParallel:false — the latter only serialises
+    // within one file, and these specs share one restaurant's rows in D1.
     {
-      name: "admin",
+      name: "admin-real",
       testDir: "./tests/e2e/admin",
+      fullyParallel: false,
+      workers: 1,
+      // A cold wrangler-dev isolate answers its first calls in seconds, and the
+      // specs assert against the server after every write.
+      timeout: 180_000,
+      // Deliberately not the root's CI value of 2: a retry against a real
+      // mutating backend re-runs over dirty state, so retries hide ordering
+      // bugs here rather than absorbing flake.
+      retries: 0,
       use: {
         ...devices["Desktop Chrome"],
         baseURL: process.env.E2E_ADMIN_URL || "http://localhost:3001",
         viewport: { width: 1280, height: 800 },
+        actionTimeout: 20_000,
+        navigationTimeout: 45_000,
       },
     },
 
