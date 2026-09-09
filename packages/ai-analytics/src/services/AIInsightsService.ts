@@ -3,7 +3,6 @@
  * Generates business insights using LLM providers
  */
 
-import { getCurrentTimestamp } from "@makanmasak/database";
 import { v7 as uuidv7 } from "uuid";
 import { createProvider } from "../providers";
 import type { BaseLLMProvider } from "../providers";
@@ -541,15 +540,18 @@ ${metrics.profitLeaders
     restaurantId: string,
     timeRange: TimeRangeParams,
   ): Promise<AIAnalyticsReport | null> {
-    const now = getCurrentTimestamp();
+    // Unix ms, not an ISO string: `expires_at_ms > ?` has to be a numeric
+    // comparison. The previous shape compared ISO text lexicographically,
+    // which is the same defect #271 removed from coupons.
+    const now = Date.now();
     const query = `
       SELECT data
       FROM ai_insights_cache
       WHERE restaurant_id = ?
         AND insight_type = 'full_report'
         AND time_range = ?
-        AND expires_at > ?
-      ORDER BY generated_at DESC
+        AND expires_at_ms > ?
+      ORDER BY generated_at_ms DESC
       LIMIT 1
     `;
 
@@ -570,36 +572,41 @@ ${metrics.profitLeaders
   }
 
   private async cacheReport(report: AIAnalyticsReport): Promise<void> {
-    const expiresAt = new Date(Date.now() + 6 * 60 * 60 * 1000); // 6 hours
-    const now = getCurrentTimestamp();
+    const now = Date.now();
+    const expiresAtMs = now + 6 * 60 * 60 * 1000; // 6 hours
 
+    // The table is STRICT, so an ISO string in an INTEGER column is a hard
+    // error rather than SQLite quietly storing text — which is the point.
     const query = `
       INSERT INTO ai_insights_cache (
+        id,
         restaurant_id,
         insight_type,
         time_range,
         data,
         confidence_score,
-        generated_at,
-        expires_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        generated_at_ms,
+        expires_at_ms
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT (restaurant_id, insight_type, time_range)
       DO UPDATE SET
         data = excluded.data,
-        generated_at = excluded.generated_at,
-        expires_at = excluded.expires_at
+        confidence_score = excluded.confidence_score,
+        generated_at_ms = excluded.generated_at_ms,
+        expires_at_ms = excluded.expires_at_ms
     `;
 
     await this.db
       .prepare(query)
       .bind(
+        crypto.randomUUID(),
         report.restaurantId,
         "full_report",
         report.timeRange.range,
         JSON.stringify(report),
         0.85,
         now,
-        expiresAt.toISOString(),
+        expiresAtMs,
       )
       .run();
   }

@@ -82,6 +82,10 @@
     {
       "fresh": "0020_restaurant_alerts.sql",
       "reason": "restaurant_alerts holds owner-facing operational alerts for platform-API restaurants; the management-api database has no restaurants row to raise or scope an alert against."
+    },
+    {
+      "fresh": "0021_ai_insights_cache.sql",
+      "reason": "ai_insights_cache backs AIInsightsService, which runs against the platform API database; the management-api database has no restaurants row to scope a cached insight report against, and never generates one."
     }
   ],
   "legacyOnly": [

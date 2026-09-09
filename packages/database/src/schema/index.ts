@@ -135,6 +135,7 @@ export {
 export { dishSearchIndexRelations } from "./discovery";
 export {
   aiConfigurationsRelations,
+  aiInsightsCacheRelations,
   aiUsageLogsRelations,
 } from "./ai-analytics";
 export {
