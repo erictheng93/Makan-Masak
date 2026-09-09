@@ -87,6 +87,7 @@
         <button
           class="flex-1 py-2 rounded-full text-sm font-semibold bg-ios-green text-white hover:bg-green-600 transition-colors"
           :disabled="isProcessing"
+          data-testid="leave-approve"
           @click="handleApprove"
         >
           <span

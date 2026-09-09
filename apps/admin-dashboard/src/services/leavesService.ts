@@ -154,10 +154,20 @@ class LeavesService {
   }
 
   /**
-   * Approve a leave request
+   * Approve a leave request.
+   *
+   * The body is not optional even though every field in it is.
+   * `approveLeaveRequestSchema` is `{ comments?: string }`, so `{}` validates
+   * — but `validateBody` calls `await c.req.json()` before it ever reaches the
+   * schema, and that throws on an absent body, which the middleware turns into
+   * `400 INVALID_JSON`. Sending no body therefore made approval fail 100% of
+   * the time. Same shape as the cancel bug in #344; see `cancelRequest` below.
+   *
+   * The approver is bound to the session by the route handler, so no userId is
+   * sent.
    */
-  async approveRequest(requestId: number): Promise<void> {
-    await this.api.post(`/leaves/requests/${requestId}/approve`);
+  async approveRequest(requestId: number, comments?: string): Promise<void> {
+    await this.api.post(`/leaves/requests/${requestId}/approve`, { comments });
   }
 
   /**
