@@ -108,6 +108,15 @@ test.describe("系統設定 (real API)", () => {
 
       // Path 1 (general tab): a top-level restaurants column.
       await page.getByTestId("settings-tab-general").click();
+
+      // Wait for the form to actually hold the server's value before changing
+      // it. The settings fetch is still in flight right after navigation, and
+      // when it lands it repopulates every field — silently discarding an
+      // edit made a moment too early, which surfaces much later as "the value
+      // I typed was not in the PUT body".
+      await expect(page.getByTestId("settings-timezone")).toHaveValue(
+        original.timezone ?? "",
+      );
       await page.getByTestId("settings-timezone").selectOption(nextTimezone);
 
       // Path 2 (orders tab): a key the server reads out of the settings JSON.

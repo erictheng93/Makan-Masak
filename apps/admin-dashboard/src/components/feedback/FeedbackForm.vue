@@ -22,6 +22,7 @@
                 ? 'bg-ios-blue text-white shadow-sm'
                 : 'bg-gray-100 text-ios-text/85 hover:bg-gray-200'
             "
+            :data-testid="`feedback-category-${cat.value}`"
             @click="form.category = cat.value"
           >
             <component :is="cat.icon" class="w-3.5 h-3.5" />
@@ -76,6 +77,7 @@
           </label>
           <select
             v-model="form.relatedModule"
+            data-testid="feedback-module"
             class="w-full px-3 py-2 bg-gray-50 border-0 rounded-xl text-sm text-ios-text focus:ring-2 focus:ring-ios-blue/30 focus:bg-white transition-all"
           >
             <option v-for="mod in modules" :key="mod" :value="mod">
@@ -93,6 +95,7 @@
         </label>
         <input
           v-model="form.subject"
+          data-testid="feedback-subject"
           type="text"
           :placeholder="t('feedback.form.subjectPlaceholder')"
           maxlength="200"
@@ -111,6 +114,7 @@
         </label>
         <textarea
           v-model="form.description"
+          data-testid="feedback-description"
           :placeholder="t('feedback.form.descriptionPlaceholder')"
           rows="5"
           maxlength="5000"
@@ -132,6 +136,7 @@
         </button>
         <button
           type="submit"
+          data-testid="feedback-submit"
           :disabled="isSubmitting || !isValid"
           class="flex-1 py-2.5 rounded-full text-sm font-semibold bg-ios-blue text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
         >
