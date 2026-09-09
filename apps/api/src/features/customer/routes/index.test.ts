@@ -855,6 +855,28 @@ describe("customer identity routes", () => {
     expect(notificationMocks.sendNotification).not.toHaveBeenCalled();
   });
 
+  it("refuses phone registration before database access when production SMS is unavailable", async () => {
+    const db = createDb({ first: [null] });
+
+    const response = await request(
+      "/auth/register",
+      "POST",
+      {
+        identifier: "+886912345678",
+        password: "long-password",
+        displayName: "Phone User",
+      },
+      { DB: db, NODE_ENV: "production" },
+    ).response;
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      error: { code: "SMS_CHANNEL_UNAVAILABLE" },
+    });
+    expect(db.state.statements).toHaveLength(0);
+  });
+
   it("skips email dispatch entirely for phone registration", async () => {
     // E.164 already: normalizeE164Phone is stubbed in this file and only
     // prefixes "+", so a local 09xxxxxxxx form would not normalize here.
@@ -967,6 +989,105 @@ describe("customer identity routes", () => {
       "203.0.113.10",
       expect.any(Number),
     ]);
+  });
+
+  it("issues a new OTP when resending verification for a pending phone identity", async () => {
+    const db = createDb({
+      first: [
+        passwordIdentityRow({
+          provider_uid: "+886912345678",
+          verified_at_ms: null,
+        }),
+      ],
+    });
+
+    const response = await request(
+      "/auth/resend-verification",
+      "POST",
+      { identifier: "+886912345678" },
+      { DB: db },
+    ).response;
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      success: true,
+      data: { sent: true },
+    });
+    expect(
+      db.state.statements.find((statement) =>
+        statement.sql.includes(
+          "INSERT INTO customer_phone_verification_tokens",
+        ),
+      )?.args,
+    ).toEqual([
+      "+886912345678",
+      expect.stringMatching(/^hash:/),
+      expect.any(Number),
+      "203.0.113.10",
+      expect.any(Number),
+    ]);
+  });
+
+  it("refuses phone resend before identity lookup when production SMS is unavailable", async () => {
+    const db = createDb({ first: [null] });
+
+    const response = await request(
+      "/auth/resend-verification",
+      "POST",
+      { identifier: "+886912345678" },
+      { DB: db, NODE_ENV: "production" },
+    ).response;
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      error: { code: "SMS_CHANNEL_UNAVAILABLE" },
+    });
+    expect(db.state.statements).toHaveLength(0);
+  });
+
+  it("keeps phone resend responses uniform when SMS delivery fails", async () => {
+    const smsFetch = vi
+      .fn()
+      .mockResolvedValue(new Response("[1]\r\nstatuscode=v"));
+    const env = {
+      NODE_ENV: "production",
+      SMS_PROVIDER: "mitake",
+      MITAKE_USERNAME: "acct",
+      MITAKE_PASSWORD: "secret",
+      SMS_FETCH: smsFetch,
+    };
+    const knownDb = createDb({
+      first: [
+        passwordIdentityRow({
+          provider_uid: "+886912345678",
+          verified_at_ms: null,
+        }),
+      ],
+    });
+
+    const known = await request(
+      "/auth/resend-verification",
+      "POST",
+      { identifier: "+886912345678" },
+      { DB: knownDb, ...env },
+    ).response;
+    const unknown = await request(
+      "/auth/resend-verification",
+      "POST",
+      { identifier: "+886900000000" },
+      { DB: createDb({ first: [null] }), ...env },
+    ).response;
+
+    expect([known.status, unknown.status]).toEqual([200, 200]);
+    await expect(known.json()).resolves.toEqual(await unknown.json());
+    expect(
+      knownDb.state.statements.some((statement) =>
+        statement.sql.includes(
+          "INSERT INTO customer_phone_verification_tokens",
+        ),
+      ),
+    ).toBe(true);
   });
 
   it("marks pending phone password identities verified after OTP verification", async () => {

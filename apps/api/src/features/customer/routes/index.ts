@@ -244,9 +244,13 @@ routes.post("/auth/register", validateBody(registerSchema), async (c) => {
   const body = c.get("validatedBody");
   rejectWeakPassword(body.password);
   const identifier = parseAuthIdentifier(body.identifier);
-  // Before any row is written: an email registration that cannot be delivered
-  // leaves an account nobody can ever verify.
-  if (identifier.kind === "email") assertEmailChannelAvailable(c.env);
+  // Before any row is written: a registration that cannot be delivered leaves
+  // an account nobody can ever verify.
+  if (identifier.kind === "email") {
+    assertEmailChannelAvailable(c.env);
+  } else {
+    assertSmsChannelAvailable(c.env);
+  }
   await enforcePasswordRateLimit(c, "register", identifier.value);
 
   const existing = await loadPasswordIdentity(c.env, identifier.value);
@@ -514,8 +518,12 @@ routes.post(
     const { identifier: rawIdentifier } = c.get("validatedBody");
     const identifier = parseAuthIdentifier(rawIdentifier);
     // Before the identity lookup, for the same enumeration reason as
-    // /forgot-password. See assertEmailChannelAvailable.
-    if (identifier.kind === "email") assertEmailChannelAvailable(c.env);
+    // /forgot-password. See the channel availability guards.
+    if (identifier.kind === "email") {
+      assertEmailChannelAvailable(c.env);
+    } else {
+      assertSmsChannelAvailable(c.env);
+    }
     await enforcePasswordRateLimit(c, "resend_verification", identifier.value);
 
     const identity = await loadPasswordIdentity(c.env, identifier.value);
@@ -531,6 +539,19 @@ routes.post(
           EMAIL_VERIFY_TTL_MS,
           identity.display_name,
         );
+      } else {
+        try {
+          await issuePhoneOtp(c, identifier.value);
+        } catch (error) {
+          // A vendor rejection must not reveal that this phone has an account.
+          // The token is already stored and expires naturally; mirror the email
+          // path by hiding only the delivery result from this public endpoint.
+          if (
+            !(error instanceof ApiError && error.code === "SMS_SEND_FAILED")
+          ) {
+            throw error;
+          }
+        }
       }
     }
 
@@ -1114,20 +1135,10 @@ async function issuePhoneOtp<E extends { Bindings: Env }>(
 ): Promise<IssuedPhoneOtp> {
   const now = Date.now();
   const nodeEnv = c.env.NODE_ENV;
-  const isProduction = nodeEnv === "production";
   const canEchoDevOtp = nodeEnv === "development" || nodeEnv === "test";
   const smsProvider = createSmsProvider(c.env);
 
-  // A production deploy with no SMS vendor cannot deliver the code to anyone.
-  // Refuse up front rather than returning success for a message that will never
-  // arrive — a silent success here is what made production login unusable.
-  if (smsProvider.name === "noop" && isProduction) {
-    throw new ApiError(
-      "SMS_CHANNEL_UNAVAILABLE",
-      "SMS delivery is not configured",
-      503,
-    );
-  }
+  assertSmsChannelAvailable(c.env, smsProvider.name);
 
   const otp = generateOtp();
   const otpHash = await bcrypt.hash(otp, 10);
@@ -1251,6 +1262,17 @@ function assertEmailChannelAvailable(env: Env): void {
   throw new ApiError(
     "EMAIL_CHANNEL_UNAVAILABLE",
     "Email delivery is not configured",
+    503,
+  );
+}
+
+function assertSmsChannelAvailable(env: Env, providerName?: string): void {
+  if (env.NODE_ENV !== "production") return;
+  if ((providerName ?? createSmsProvider(env).name) !== "noop") return;
+
+  throw new ApiError(
+    "SMS_CHANNEL_UNAVAILABLE",
+    "SMS delivery is not configured",
     503,
   );
 }
