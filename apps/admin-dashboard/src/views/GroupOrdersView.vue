@@ -794,6 +794,7 @@
                 type="number"
                 min="2"
                 max="20"
+                data-testid="create-expected-members"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 :placeholder="t('groupOrders.expectedMembersPlaceholder')"
               />

@@ -11,12 +11,14 @@
       <div class="flex items-center space-x-3">
         <button
           class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+          data-testid="settings-reset"
           @click="resetToDefaults"
         >
           {{ t("settings.resetDefaults") }}
         </button>
         <button
           class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          data-testid="settings-save"
           @click="saveSettings"
         >
           {{ t("settings.saveSettings") }}
@@ -37,6 +39,7 @@
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
           ]"
           :data-active="activeTab === tab.id"
+          :data-testid="`settings-tab-${tab.id}`"
           @click="activeTab = tab.id"
         >
           {{ tab.name }}
@@ -1702,6 +1705,7 @@
             type="number"
             min="6"
             max="32"
+            data-testid="settings-password-min-length"
             class="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
