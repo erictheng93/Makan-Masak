@@ -1837,6 +1837,7 @@ const idID: Messages = {
     },
   },
   nav: {
+    billing: "Paket & Pemakaian",
     myShifts: "Shift Saya",
     myAttendance: "Absensi Saya",
     myLeaves: "Cuti Saya",
@@ -1885,6 +1886,7 @@ const idID: Messages = {
     waitingManagement: "Manajemen Menunggu",
   },
   pages: {
+    billing: "Paket & Pemakaian",
     myShifts: "Shift Saya",
     myAttendance: "Absensi Saya",
     myLeaves: "Cuti Saya",
@@ -5670,6 +5672,37 @@ const idID: Messages = {
       printJobs: "Tugas cetak",
       aiRequests: "Permintaan AI",
       storageBytes: "Penyimpanan terpakai",
+    },
+  },
+  billing: {
+    title: "Paket & Pemakaian",
+    subtitle: "Paket Anda saat ini, masa uji coba, dan pemakaian siklus ini",
+    currentPlan: "Paket saat ini",
+    statusActive: "Aktif",
+    statusInactive: "Nonaktif",
+    trialRemaining: "Sisa {days} hari masa uji coba",
+    usageTitle: "Pemakaian siklus ini",
+    usageEmpty: "Belum ada pemakaian tercatat pada siklus ini.",
+    modulesTitle: "Fitur yang termasuk",
+    moduleOn: "Aktif",
+    moduleOff: "Nonaktif",
+    changePlanTitle: "Perlu ganti paket?",
+    changePlanHint:
+      "Perubahan paket ditangani tim platform. Ajukan tiket dukungan dan kami akan menghubungi Anda.",
+    changePlanCta: "Ajukan tiket dukungan",
+    loadFailed: "Gagal memuat informasi langganan. Silakan coba lagi.",
+    tier: {
+      trial: "Uji coba",
+      basic: "Dasar",
+      standard: "Standar",
+      premium: "Premium",
+      enterprise: "Enterprise",
+    },
+    meter: {
+      "orders.created": "Pesanan dibuat",
+      "api.requests": "Permintaan API",
+      "print.jobs": "Tugas cetak",
+      "ai.requests": "Permintaan AI",
     },
   },
 };

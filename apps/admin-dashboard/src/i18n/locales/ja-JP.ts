@@ -1719,6 +1719,7 @@ const jaJP: Messages = {
     },
   },
   nav: {
+    billing: "プランと使用量",
     myShifts: "マイシフト",
     myAttendance: "マイ勤怠",
     myLeaves: "マイ休暇",
@@ -1767,6 +1768,7 @@ const jaJP: Messages = {
     waitingManagement: "待機管理",
   },
   pages: {
+    billing: "プランと使用量",
     myShifts: "マイシフト",
     myAttendance: "マイ勤怠",
     myLeaves: "マイ休暇",
@@ -5634,6 +5636,37 @@ const jaJP: Messages = {
       printJobs: "印刷ジョブ",
       aiRequests: "AI リクエスト",
       storageBytes: "ストレージ使用量",
+    },
+  },
+  billing: {
+    title: "プランと使用量",
+    subtitle: "現在のプラン、試用期間、今期の使用量",
+    currentPlan: "現在のプラン",
+    statusActive: "有効",
+    statusInactive: "無効",
+    trialRemaining: "試用期間はあと {days} 日です",
+    usageTitle: "今期の使用量",
+    usageEmpty: "今期の使用記録はまだありません。",
+    modulesTitle: "含まれる機能",
+    moduleOn: "有効",
+    moduleOff: "無効",
+    changePlanTitle: "プランを変更しますか？",
+    changePlanHint:
+      "プラン変更はプラットフォームチームが対応します。サポートチケットからご連絡ください。",
+    changePlanCta: "サポートチケットを作成",
+    loadFailed: "サブスクリプション情報を読み込めませんでした。",
+    tier: {
+      trial: "トライアル",
+      basic: "ベーシック",
+      standard: "スタンダード",
+      premium: "プレミアム",
+      enterprise: "エンタープライズ",
+    },
+    meter: {
+      "orders.created": "作成された注文",
+      "api.requests": "API リクエスト",
+      "print.jobs": "印刷ジョブ",
+      "ai.requests": "AI リクエスト",
     },
   },
 };

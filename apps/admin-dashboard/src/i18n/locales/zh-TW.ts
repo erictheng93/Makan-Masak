@@ -1875,6 +1875,7 @@ const zhTWCore = {
   },
   // 導航
   nav: {
+    billing: "訂閱與用量",
     myShifts: "我的班表",
     myAttendance: "我的出勤",
     myLeaves: "我的請假",
@@ -1924,6 +1925,7 @@ const zhTWCore = {
 
   // 頁面標題
   pages: {
+    billing: "訂閱與用量",
     myShifts: "我的班表",
     myAttendance: "我的出勤",
     myLeaves: "我的請假",
@@ -5788,6 +5790,37 @@ const zhTWRuntimeKeys = {
     permissions: {
       orderProcessing: "訂單處理",
       cashier: "收銀",
+    },
+  },
+  billing: {
+    title: "訂閱與用量",
+    subtitle: "查看你目前的方案、試用期與本期用量",
+    currentPlan: "目前方案",
+    statusActive: "使用中",
+    statusInactive: "已停用",
+    trialRemaining: "試用期剩餘 {days} 天",
+    usageTitle: "本期用量",
+    usageEmpty: "本期尚無用量紀錄。",
+    modulesTitle: "方案包含的功能",
+    moduleOn: "已啟用",
+    moduleOff: "未啟用",
+    changePlanTitle: "需要調整方案？",
+    changePlanHint:
+      "方案變更目前由平台團隊處理，請透過支援工單提出，我們會與你聯繫。",
+    changePlanCta: "提出支援工單",
+    loadFailed: "無法載入訂閱資訊，請稍後再試。",
+    tier: {
+      trial: "試用",
+      basic: "基本",
+      standard: "標準",
+      premium: "進階",
+      enterprise: "企業",
+    },
+    meter: {
+      "orders.created": "建立訂單",
+      "api.requests": "API 請求",
+      "print.jobs": "列印工作",
+      "ai.requests": "AI 請求",
     },
   },
 };

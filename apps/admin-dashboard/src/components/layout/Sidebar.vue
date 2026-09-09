@@ -152,6 +152,7 @@ import {
   UsersRound,
   Crown,
   MessageSquare,
+  Wallet,
   CalendarCheck,
   CalendarClock,
   CalendarOff,
@@ -472,6 +473,14 @@ const navigationItems = computed(() => {
       label: t("nav.monitoring"),
       icon: Activity,
       visible: authStore.canAccessAdminFeatures,
+      section: "platform",
+    },
+    {
+      name: "billing",
+      path: "/dashboard/billing",
+      label: t("nav.billing"),
+      icon: Wallet,
+      visible: authStore.hasPermission([UserRole.ADMIN, UserRole.OWNER]),
       section: "platform",
     },
     {

@@ -1695,6 +1695,7 @@ const zhCN: Messages = {
     },
   },
   nav: {
+    billing: "订阅与用量",
     myShifts: "我的班表",
     myAttendance: "我的出勤",
     myLeaves: "我的请假",
@@ -1742,6 +1743,7 @@ const zhCN: Messages = {
     accountManagement: "帐号管理",
   },
   pages: {
+    billing: "订阅与用量",
     myShifts: "我的班表",
     myAttendance: "我的出勤",
     myLeaves: "我的请假",
@@ -5503,6 +5505,37 @@ const zhCN: Messages = {
       printJobs: "打印任务",
       aiRequests: "AI 请求",
       storageBytes: "存储容量",
+    },
+  },
+  billing: {
+    title: "订阅与用量",
+    subtitle: "查看你当前的方案、试用期与本期用量",
+    currentPlan: "当前方案",
+    statusActive: "使用中",
+    statusInactive: "已停用",
+    trialRemaining: "试用期剩余 {days} 天",
+    usageTitle: "本期用量",
+    usageEmpty: "本期暂无用量记录。",
+    modulesTitle: "方案包含的功能",
+    moduleOn: "已启用",
+    moduleOff: "未启用",
+    changePlanTitle: "需要调整方案？",
+    changePlanHint:
+      "方案变更目前由平台团队处理，请通过支持工单提出，我们会与你联系。",
+    changePlanCta: "提交支持工单",
+    loadFailed: "无法加载订阅信息，请稍后再试。",
+    tier: {
+      trial: "试用",
+      basic: "基本",
+      standard: "标准",
+      premium: "进阶",
+      enterprise: "企业",
+    },
+    meter: {
+      "orders.created": "创建订单",
+      "api.requests": "API 请求",
+      "print.jobs": "打印任务",
+      "ai.requests": "AI 请求",
     },
   },
 };

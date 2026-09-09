@@ -1820,6 +1820,7 @@ const enUS: Messages = {
     },
   },
   nav: {
+    billing: "Plan & Usage",
     myShifts: "My Shifts",
     myAttendance: "My Attendance",
     myLeaves: "My Leave",
@@ -1868,6 +1869,7 @@ const enUS: Messages = {
     platformCustomers: "Platform Customers",
   },
   pages: {
+    billing: "Plan & Usage",
     myShifts: "My Shifts",
     myAttendance: "My Attendance",
     myLeaves: "My Leave",
@@ -5640,6 +5642,37 @@ const enUS: Messages = {
       printJobs: "Print jobs",
       aiRequests: "AI requests",
       storageBytes: "Storage used",
+    },
+  },
+  billing: {
+    title: "Plan & Usage",
+    subtitle: "Your current plan, trial window and usage this cycle",
+    currentPlan: "Current plan",
+    statusActive: "Active",
+    statusInactive: "Inactive",
+    trialRemaining: "{days} days left in your trial",
+    usageTitle: "Usage this cycle",
+    usageEmpty: "No usage recorded this cycle yet.",
+    modulesTitle: "Included features",
+    moduleOn: "On",
+    moduleOff: "Off",
+    changePlanTitle: "Need a different plan?",
+    changePlanHint:
+      "Plan changes are handled by the platform team. Raise a support ticket and we will get back to you.",
+    changePlanCta: "Raise a support ticket",
+    loadFailed: "Could not load your subscription. Please try again.",
+    tier: {
+      trial: "Trial",
+      basic: "Basic",
+      standard: "Standard",
+      premium: "Premium",
+      enterprise: "Enterprise",
+    },
+    meter: {
+      "orders.created": "Orders created",
+      "api.requests": "API requests",
+      "print.jobs": "Print jobs",
+      "ai.requests": "AI requests",
     },
   },
 };

@@ -1723,6 +1723,7 @@ const viVN: Messages = {
     },
   },
   nav: {
+    billing: "Gói & Mức dùng",
     myShifts: "Ca của tôi",
     myAttendance: "Chấm công của tôi",
     myLeaves: "Nghỉ phép của tôi",
@@ -1771,6 +1772,7 @@ const viVN: Messages = {
     },
   },
   pages: {
+    billing: "Gói & Mức dùng",
     myShifts: "Ca của tôi",
     myAttendance: "Chấm công của tôi",
     myLeaves: "Nghỉ phép của tôi",
@@ -5641,6 +5643,37 @@ const viVN: Messages = {
       printJobs: "Lệnh in",
       aiRequests: "Yêu cầu AI",
       storageBytes: "Dung lượng lưu trữ",
+    },
+  },
+  billing: {
+    title: "Gói & Mức dùng",
+    subtitle: "Gói hiện tại, thời gian dùng thử và mức sử dụng kỳ này",
+    currentPlan: "Gói hiện tại",
+    statusActive: "Đang hoạt động",
+    statusInactive: "Ngừng hoạt động",
+    trialRemaining: "Còn {days} ngày dùng thử",
+    usageTitle: "Mức dùng kỳ này",
+    usageEmpty: "Chưa có dữ liệu sử dụng trong kỳ này.",
+    modulesTitle: "Tính năng đi kèm",
+    moduleOn: "Bật",
+    moduleOff: "Tắt",
+    changePlanTitle: "Cần đổi gói?",
+    changePlanHint:
+      "Việc đổi gói do đội ngũ nền tảng xử lý. Hãy gửi phiếu hỗ trợ, chúng tôi sẽ liên hệ với bạn.",
+    changePlanCta: "Gửi phiếu hỗ trợ",
+    loadFailed: "Không tải được thông tin gói. Vui lòng thử lại.",
+    tier: {
+      trial: "Dùng thử",
+      basic: "Cơ bản",
+      standard: "Tiêu chuẩn",
+      premium: "Cao cấp",
+      enterprise: "Doanh nghiệp",
+    },
+    meter: {
+      "orders.created": "Đơn đã tạo",
+      "api.requests": "Yêu cầu API",
+      "print.jobs": "Lệnh in",
+      "ai.requests": "Yêu cầu AI",
     },
   },
 };

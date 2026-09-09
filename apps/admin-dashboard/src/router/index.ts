@@ -336,6 +336,20 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        // The owner-facing half of "訂閱與帳務". /dashboard/subscriptions is the
+        // platform-operator console (role 0, lists every tenant); until this
+        // route existed a shop owner had no way to see their own plan, trial
+        // window or usage at all, even though /me/modules and /me/usage had
+        // been serving exactly that data with no frontend consumer (#315/F20).
+        path: "billing",
+        name: "Billing",
+        component: () => import("@/views/BillingView.vue"),
+        meta: {
+          titleKey: "pages.billing",
+          roles: [UserRole.ADMIN, UserRole.OWNER],
+        },
+      },
+      {
         path: "settings",
         name: "Settings",
         component: () => import("@/views/SettingsView.vue"),
