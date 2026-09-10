@@ -122,6 +122,27 @@ describe("getOrderSubmitErrorI18nKey", () => {
     ).toBe("toast.orderSubmitTableUnavailable");
   });
 
+  // #352 changed these three from a 500 GENERIC_ERROR into real codes. Without
+  // registry entries the customer would keep seeing "unknown error" for a
+  // rejection the server can now name precisely.
+  it.each([
+    ["RESTAURANT_UNAVAILABLE", 409, "toast.orderSubmitRestaurantUnavailable"],
+    ["TABLE_UNAVAILABLE", 409, "toast.orderSubmitTableUnavailable"],
+    ["COUPON_INVALID", 400, "toast.couponFailed"],
+  ])(
+    "maps the createOrder rejection %s to its own toast",
+    (code, status, key) => {
+      expect(
+        getOrderSubmitErrorI18nKey({
+          response: {
+            status,
+            data: { error: { code, message: "server text, never displayed" } },
+          },
+        }),
+      ).toBe(key);
+    },
+  );
+
   it("falls back to the shared unknown key instead of server messages", () => {
     expect(
       getOrderSubmitErrorI18nKey(

@@ -12,8 +12,13 @@ const ORDER_SUBMIT_ERROR_KEYS: Record<string, string> = {
   INVALID_RESTAURANT_ID: "toast.orderSubmitRestaurantUnavailable",
   RESTAURANT_NOT_FOUND: "toast.orderSubmitRestaurantUnavailable",
   RESTAURANT_CLOSED: "toast.orderSubmitRestaurantUnavailable",
+  // #352: createOrder's own gates. Until that fix they arrived as 500
+  // GENERIC_ERROR, so this registry never had a chance to match them — a
+  // closed restaurant and a retired table both surfaced as "unknown error".
+  RESTAURANT_UNAVAILABLE: "toast.orderSubmitRestaurantUnavailable",
   TABLE_OCCUPIED: "toast.orderSubmitTableUnavailable",
   TABLE_NOT_AVAILABLE: "toast.orderSubmitTableUnavailable",
+  TABLE_UNAVAILABLE: "toast.orderSubmitTableUnavailable",
   EMPTY_ORDER_ITEMS: "toast.cartCannotBeEmpty",
   TOO_MANY_ORDER_ITEMS: "toast.orderSubmitFailed",
   INVALID_MENU_ITEM_ID: "toast.orderSubmitMenuItemUnavailable",
@@ -24,6 +29,7 @@ const ORDER_SUBMIT_ERROR_KEYS: Record<string, string> = {
   INVALID_EMAIL_FORMAT: "toast.orderSubmitInvalidContact",
   NOTES_TOO_LONG: "toast.orderSubmitNotesTooLong",
   INVALID_COUPON_CODE_FORMAT: "toast.couponFailed",
+  COUPON_INVALID: "toast.couponFailed",
   WAITING_LIST_PREORDER_EXISTS: "toast.orderSubmitDuplicate",
   WAITING_LIST_TICKET_NOT_FOUND: "toast.orderSubmitFailed",
   WAITING_LIST_TICKET_NOT_ACTIVE: "toast.orderSubmitFailed",
