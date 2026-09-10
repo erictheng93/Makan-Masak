@@ -47,11 +47,12 @@ describe("Customer analytics — tenant isolation", () => {
     const myCustomer = await customer("Mine");
     const theirCustomer = await customer("Theirs");
 
-    // One customer here, 3 fulfilled orders of NT$120 each.
+    // One customer here, 3 collected orders of NT$120 each.
     for (let i = 0; i < 3; i += 1) {
       await seed.order(String(mine.id), {
         customerId: myCustomer,
         status: "paid",
+        paymentStatus: "completed",
       });
     }
     // A much heavier customer at the other restaurant. If either rollup leaks,
@@ -60,6 +61,7 @@ describe("Customer analytics — tenant isolation", () => {
       await seed.order(String(theirs.id), {
         customerId: theirCustomer,
         status: "paid",
+        paymentStatus: "completed",
         totalAmountCents: 900_00,
       });
     }
@@ -93,12 +95,14 @@ describe("Customer analytics — tenant isolation", () => {
     await seed.order(String(restaurant.id), {
       customerId: regular,
       status: "paid",
+      paymentStatus: "completed",
       createdAt: inRange,
     });
     for (let i = 0; i < 5; i += 1) {
       await seed.order(String(restaurant.id), {
         customerId: regular,
         status: "paid",
+        paymentStatus: "completed",
         createdAt: outOfRange,
         totalAmountCents: 500_00,
       });
@@ -115,18 +119,26 @@ describe("Customer analytics — tenant isolation", () => {
     expect(result.customerLifetimeValue).toBe(120);
   });
 
-  it("excludes unfulfilled orders from lifetime value but not from order count", async () => {
+  it("excludes uncollected and cancelled orders from lifetime value but not from order count", async () => {
     const restaurant = await seed.restaurant({ name: "analytics-statuses" });
     const buyer = await customer("Buyer");
 
     await seed.order(String(restaurant.id), {
       customerId: buyer,
       status: "paid",
+      paymentStatus: "completed",
     });
     await seed.order(String(restaurant.id), {
       customerId: buyer,
       status: "cancelled",
+      paymentStatus: "completed",
       totalAmountCents: 999_00,
+    });
+    await seed.order(String(restaurant.id), {
+      customerId: buyer,
+      status: "delivered",
+      paymentStatus: "pending",
+      totalAmountCents: 500_00,
     });
 
     const analytics = new AnalyticsService(testApp.env.DB, testApp.env);
@@ -134,8 +146,8 @@ describe("Customer analytics — tenant isolation", () => {
       restaurantId: String(restaurant.id),
     });
 
-    // Order count spans every status; lifetime value only the fulfilled ones.
-    expect(result.averageOrdersPerCustomer).toBe(2);
+    // Count every order, but recognise only collected, non-cancelled revenue.
+    expect(result.averageOrdersPerCustomer).toBe(3);
     expect(result.customerLifetimeValue).toBe(120);
   });
 });
