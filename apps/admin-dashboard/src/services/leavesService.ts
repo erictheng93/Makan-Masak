@@ -156,12 +156,14 @@ class LeavesService {
   /**
    * Approve a leave request.
    *
-   * The body is not optional even though every field in it is.
-   * `approveLeaveRequestSchema` is `{ comments?: string }`, so `{}` validates
-   * — but `validateBody` calls `await c.req.json()` before it ever reaches the
-   * schema, and that throws on an absent body, which the middleware turns into
-   * `400 INVALID_JSON`. Sending no body therefore made approval fail 100% of
-   * the time. Same shape as the cancel bug in #344; see `cancelRequest` below.
+   * `approveLeaveRequestSchema` is `{ comments?: string }`, so the body is
+   * genuinely optional: since #355 `validateBody` hands an absent or empty
+   * body to the schema as `{}` instead of failing the JSON parse first, and
+   * an all-optional schema accepts that. (Before #355 it did not, and
+   * approval failed 100% of the time until this method was made to send a
+   * body — see #344 for the same shape on cancel.) We keep sending
+   * `{ comments }` because it is what actually carries the comment; sending
+   * nothing would work too.
    *
    * The approver is bound to the session by the route handler, so no userId is
    * sent.
@@ -181,9 +183,11 @@ class LeavesService {
    * Cancel a leave request.
    *
    * `reason` is required, not optional: cancelLeaveRequestSchema is
-   * `{ reason: nonEmptyString.max(500) }`, so an empty body is a 400. An
-   * earlier version of this method sent one and was deleted unused in
-   * 5b88e6fe -- do not restore that shape (#344).
+   * `{ reason: nonEmptyString.max(500) }`, so an empty body is still a 400 --
+   * now a `VALIDATION_ERROR` naming `reason` rather than the misleading
+   * `INVALID_JSON` it was before #355. An earlier version of this method sent
+   * no body and was deleted unused in 5b88e6fe -- do not restore that shape
+   * (#344).
    *
    * The canceller is bound to the session by the route handler, which also
    * enforces "your own request unless admin/owner", so no userId is sent.
