@@ -738,6 +738,109 @@ describe("customer identity routes", () => {
     expect(notificationMocks.sendNotification).toHaveBeenCalledOnce();
   });
 
+  it("issues an account-bound OTP for phone password resets", async () => {
+    const phone = "+886912345678";
+    const db = createDb({
+      first: [
+        passwordIdentityRow({
+          customer_id: "customer-phone",
+          provider_uid: phone,
+        }),
+      ],
+    });
+
+    const response = await request(
+      "/auth/forgot-password",
+      "POST",
+      { identifier: phone },
+      { DB: db },
+    ).response;
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      success: true,
+      data: { sent: true },
+    });
+    expect(
+      db.state.statements.find((statement) =>
+        statement.sql.includes(
+          "INSERT INTO customer_phone_verification_tokens",
+        ),
+      )?.args,
+    ).toEqual([
+      "customer-phone",
+      phone,
+      expect.stringMatching(/^hash:\d{6}$/),
+      expect.any(Number),
+      expect.anything(),
+      expect.any(Number),
+    ]);
+    expect(
+      db.state.statements.some((statement) =>
+        statement.sql.includes("INSERT INTO customer_verification_tokens"),
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps phone forgot-password responses uniform once the OTP quota is spent", async () => {
+    const phone = "+886912345678";
+    const spentQuota = { [`customer_otp_phone:${phone}`]: "3" };
+    const known = await request(
+      "/auth/forgot-password",
+      "POST",
+      { identifier: phone },
+      {
+        DB: createDb({
+          first: [passwordIdentityRow({ provider_uid: phone })],
+        }),
+        RATE_LIMIT_KV: createKv({ ...spentQuota }),
+      },
+    ).response;
+    const unknown = await request(
+      "/auth/forgot-password",
+      "POST",
+      { identifier: phone },
+      {
+        DB: createDb({ first: [null] }),
+        RATE_LIMIT_KV: createKv({ ...spentQuota }),
+      },
+    ).response;
+
+    expect([known.status, unknown.status]).toEqual([200, 200]);
+    await expect(known.json()).resolves.toEqual(await unknown.json());
+  });
+
+  it("keeps phone forgot-password responses uniform when SMS delivery fails", async () => {
+    const phone = "+886912345678";
+    const env = {
+      NODE_ENV: "production",
+      SMS_PROVIDER: "mitake",
+      MITAKE_USERNAME: "acct",
+      MITAKE_PASSWORD: "secret",
+      SMS_FETCH: vi.fn().mockResolvedValue(new Response("[1]\r\nstatuscode=v")),
+    };
+    const known = await request(
+      "/auth/forgot-password",
+      "POST",
+      { identifier: phone },
+      {
+        DB: createDb({
+          first: [passwordIdentityRow({ provider_uid: phone })],
+        }),
+        ...env,
+      },
+    ).response;
+    const unknown = await request(
+      "/auth/forgot-password",
+      "POST",
+      { identifier: phone },
+      { DB: createDb({ first: [null] }), ...env },
+    ).response;
+
+    expect([known.status, unknown.status]).toEqual([200, 200]);
+    await expect(known.json()).resolves.toEqual(await unknown.json());
+  });
+
   // #298: production shipped for months with no working email provider and
   // every deploy green, because the routes answered 201/200 for mail that was
   // never sent. The SMS side already refuses up front; these pin the same
@@ -983,6 +1086,7 @@ describe("customer identity routes", () => {
         ),
       )?.args,
     ).toEqual([
+      "customer-phone",
       "+886912345678",
       expect.stringMatching(/^hash:/),
       expect.any(Number),
@@ -1020,6 +1124,7 @@ describe("customer identity routes", () => {
         ),
       )?.args,
     ).toEqual([
+      "customer-1",
       "+886912345678",
       expect.stringMatching(/^hash:/),
       expect.any(Number),
@@ -1163,6 +1268,51 @@ describe("customer identity routes", () => {
         statement.sql.includes("SET primary_phone"),
       )?.args,
     ).toEqual(["+886912345678", expect.any(Number), "customer-phone"]);
+  });
+
+  it("exchanges an account-bound phone OTP for a one-time reset token", async () => {
+    const phone = "+886912345678";
+    const db = createDb({
+      first: [
+        {
+          id: 10,
+          customer_id: "customer-phone",
+          otp_code: "hash:123456",
+          attempts: 0,
+        },
+        passwordIdentityRow({
+          customer_id: "customer-phone",
+          provider_uid: phone,
+        }),
+      ],
+    });
+
+    const response = await request(
+      "/auth/verify-otp",
+      "POST",
+      { phone, otp: "123456", purpose: "password_reset" },
+      { DB: db },
+    ).response;
+    const body = (await response.json()) as {
+      success: boolean;
+      data: { resetToken: string };
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.data.resetToken.length).toBeGreaterThan(20);
+    const insert = db.state.statements.find((statement) =>
+      statement.sql.includes("INSERT INTO customer_verification_tokens"),
+    );
+    expect(insert?.args).toEqual(
+      expect.arrayContaining([
+        "customer-phone",
+        "password_reset",
+        phone,
+        await sha256Hex(body.data.resetToken),
+      ]),
+    );
+    expect(insert?.args).not.toContain(body.data.resetToken);
   });
 
   it("returns success for forgot-password when the identifier does not exist", async () => {

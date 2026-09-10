@@ -50,11 +50,11 @@ const DUMMY_PASSWORD_HASH =
   "$2a$10$UGDZBxi4dnR2z5YoJLJ/V.ny1wknPCO8ncfLy1PgTOknCb8DJDmQm";
 const PASSWORD_LOGIN_ERROR_MESSAGE = "Invalid identifier or password";
 const PASSWORD_LOGIN_ERROR_CODE = "INVALID_CREDENTIALS";
-// Errors /auth/resend-verification must swallow on the phone branch. Each is
+// Errors account-recovery routes must swallow on the phone branch. Each is
 // raised only from inside issuePhoneOtp, which an unknown identifier never
 // reaches, so letting one out is itself the answer to "does this number have an
 // account?".
-const PHONE_RESEND_SILENT_ERROR_CODES = new Set([
+const PHONE_OTP_SILENT_ERROR_CODES = new Set([
   "SMS_SEND_FAILED",
   "OTP_RATE_LIMITED",
 ]);
@@ -86,6 +86,7 @@ const requestOtpSchema = z.object({
 const verifyOtpSchema = z.object({
   phone: phoneSchema,
   otp: z.string().regex(/^\d{6}$/),
+  purpose: z.enum(["password_reset"]).optional(),
 });
 
 const passwordSchema = z.string().min(PASSWORD_MIN_LENGTH).max(256);
@@ -329,7 +330,7 @@ routes.post("/auth/register", validateBody(registerSchema), async (c) => {
       );
     }
   } else {
-    await issuePhoneOtp(c, identifier.value);
+    await issuePhoneOtp(c, identifier.value, customerId);
   }
 
   return c.json(
@@ -395,7 +396,11 @@ routes.post(
     const identifier = parseAuthIdentifier(rawIdentifier);
     // Before the identity lookup, so the refusal cannot depend on whether the
     // account exists. See assertEmailChannelAvailable.
-    if (identifier.kind === "email") assertEmailChannelAvailable(c.env);
+    if (identifier.kind === "email") {
+      assertEmailChannelAvailable(c.env);
+    } else {
+      assertSmsChannelAvailable(c.env);
+    }
     await enforcePasswordRateLimit(c, "forgot", identifier.value);
 
     const identity = await loadPasswordIdentity(c.env, identifier.value);
@@ -403,14 +408,30 @@ routes.post(
       // `delivered` is deliberately ignored: this endpoint answers identically
       // whether or not the account exists, so it cannot report send failures
       // either. The helper logs them.
-      await createAndSendVerificationToken(
-        c,
-        "password_reset",
-        identifier.value,
-        identity.customer_id,
-        PASSWORD_RESET_TTL_MS,
-        identity.display_name,
-      );
+      if (identifier.kind === "email") {
+        await createAndSendVerificationToken(
+          c,
+          "password_reset",
+          identifier.value,
+          identity.customer_id,
+          PASSWORD_RESET_TTL_MS,
+          identity.display_name,
+        );
+      } else {
+        try {
+          await issuePhoneOtp(c, identifier.value, identity.customer_id);
+        } catch (error) {
+          if (
+            error instanceof ApiError &&
+            PHONE_OTP_SILENT_ERROR_CODES.has(error.code)
+          ) {
+            // Delivery and quota failures occur only after the account lookup.
+            // Exposing either would reveal that this phone has an account.
+          } else {
+            throw error;
+          }
+        }
+      }
     }
 
     return c.json({
@@ -549,7 +570,7 @@ routes.post(
         );
       } else {
         try {
-          await issuePhoneOtp(c, identifier.value);
+          await issuePhoneOtp(c, identifier.value, identity.customer_id);
         } catch (error) {
           // Neither a vendor rejection nor a spent OTP quota may reveal that
           // this phone has an account. The per-phone OTP quota (3/hour) is
@@ -562,7 +583,7 @@ routes.post(
           if (
             !(
               error instanceof ApiError &&
-              PHONE_RESEND_SILENT_ERROR_CODES.has(error.code)
+              PHONE_OTP_SILENT_ERROR_CODES.has(error.code)
             )
           ) {
             throw error;
@@ -579,10 +600,10 @@ routes.post(
 );
 
 routes.post("/auth/verify-otp", validateBody(verifyOtpSchema), async (c) => {
-  const { phone, otp } = c.get("validatedBody");
+  const { phone, otp, purpose } = c.get("validatedBody");
   const now = Date.now();
   const token = await c.env.DB.prepare(
-    `SELECT id, otp_code, attempts
+    `SELECT id, customer_id, otp_code, attempts
        FROM customer_phone_verification_tokens
       WHERE phone = ?
         AND used_at_ms IS NULL
@@ -591,7 +612,12 @@ routes.post("/auth/verify-otp", validateBody(verifyOtpSchema), async (c) => {
       LIMIT 1`,
   )
     .bind(phone, now)
-    .first<{ id: number; otp_code: string; attempts: number }>();
+    .first<{
+      id: number;
+      customer_id: string | null;
+      otp_code: string;
+      attempts: number;
+    }>();
 
   if (!token || token.attempts >= MAX_OTP_ATTEMPTS) {
     throw unauthorized("Invalid or expired OTP", "INVALID_OTP");
@@ -610,6 +636,41 @@ routes.post("/auth/verify-otp", validateBody(verifyOtpSchema), async (c) => {
   }
 
   const pendingPasswordIdentity = await loadPasswordIdentity(c.env, phone);
+
+  if (purpose === "password_reset") {
+    if (
+      !token.customer_id ||
+      !pendingPasswordIdentity ||
+      token.customer_id !== pendingPasswordIdentity.customer_id
+    ) {
+      throw unauthorized("Invalid or expired OTP", "INVALID_OTP");
+    }
+
+    await c.env.DB.prepare(
+      `UPDATE customer_phone_verification_tokens
+          SET used_at_ms = ?
+        WHERE id = ?`,
+    )
+      .bind(now, token.id)
+      .run();
+
+    const resetToken = await createVerificationToken(
+      c,
+      "password_reset",
+      phone,
+      pendingPasswordIdentity.customer_id,
+      PASSWORD_RESET_TTL_MS,
+    );
+
+    return c.json({
+      success: true,
+      data: {
+        resetToken,
+        expiresInSeconds: PASSWORD_RESET_TTL_MS / 1000,
+      },
+    });
+  }
+
   const customer =
     pendingPasswordIdentity && pendingPasswordIdentity.verified_at_ms === null
       ? await verifyPendingPhonePasswordIdentity(
@@ -1148,6 +1209,7 @@ export function buildOtpSmsBody(
 async function issuePhoneOtp<E extends { Bindings: Env }>(
   c: Context<E>,
   phone: string,
+  customerId?: string,
 ): Promise<IssuedPhoneOtp> {
   const now = Date.now();
   const nodeEnv = c.env.NODE_ENV;
@@ -1165,10 +1227,17 @@ async function issuePhoneOtp<E extends { Bindings: Env }>(
   // OTP_TTL_MS), whereas a sent code with no stored hash is unverifiable.
   await c.env.DB.prepare(
     `INSERT INTO customer_phone_verification_tokens
-        (phone, otp_code, expires_at_ms, ip_address, created_at_ms)
-       VALUES (?, ?, ?, ?, ?)`,
+        (customer_id, phone, otp_code, expires_at_ms, ip_address, created_at_ms)
+       VALUES (?, ?, ?, ?, ?, ?)`,
   )
-    .bind(phone, otpHash, now + OTP_TTL_MS, clientIp(c), now)
+    .bind(
+      customerId ?? null,
+      phone,
+      otpHash,
+      now + OTP_TTL_MS,
+      clientIp(c),
+      now,
+    )
     .run();
 
   if (smsProvider.name !== "noop") {
@@ -1421,8 +1490,8 @@ async function loadVerificationToken(
  * because varying their response would turn them into account-existence
  * oracles.
  *
- * `delivered` is true for phone identifiers — there is no email to send, and
- * the OTP is issued separately.
+ * Phone identifiers are rejected with `delivered: false`; phone delivery must
+ * go through the OTP flow instead of creating an unreachable link token.
  */
 async function createAndSendVerificationToken<E extends { Bindings: Env }>(
   c: Context<E>,
@@ -1432,28 +1501,16 @@ async function createAndSendVerificationToken<E extends { Bindings: Env }>(
   ttlMs: number,
   displayName: string,
 ): Promise<{ delivered: boolean }> {
-  const token = randomToken();
-  const tokenHash = await sha256Hex(token);
-  const now = Date.now();
-  await c.env.DB.prepare(
-    `INSERT INTO customer_verification_tokens
-      (id, customer_id, purpose, identifier, token_hash, expires_at_ms,
-       ip_address, created_at_ms)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-  )
-    .bind(
-      generateUUID(),
-      customerId,
-      purpose,
-      identifier,
-      tokenHash,
-      now + ttlMs,
-      clientIp(c),
-      now,
-    )
-    .run();
+  if (!identifier.includes("@")) return { delivered: false };
 
-  if (!identifier.includes("@")) return { delivered: true };
+  const token = await createVerificationToken(
+    c,
+    purpose,
+    identifier,
+    customerId,
+    ttlMs,
+  );
+  const now = Date.now();
 
   const appUrl =
     (c.env as Env & { CUSTOMER_APP_URL?: string }).CUSTOMER_APP_URL ??
@@ -1492,6 +1549,36 @@ async function createAndSendVerificationToken<E extends { Bindings: Env }>(
   }
 
   return { delivered: result.success };
+}
+
+async function createVerificationToken<E extends { Bindings: Env }>(
+  c: Context<E>,
+  purpose: "password_reset" | "email_verify",
+  identifier: string,
+  customerId: string,
+  ttlMs: number,
+): Promise<string> {
+  const token = randomToken();
+  const tokenHash = await sha256Hex(token);
+  const now = Date.now();
+  await c.env.DB.prepare(
+    `INSERT INTO customer_verification_tokens
+      (id, customer_id, purpose, identifier, token_hash, expires_at_ms,
+       ip_address, created_at_ms)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(
+      generateUUID(),
+      customerId,
+      purpose,
+      identifier,
+      tokenHash,
+      now + ttlMs,
+      clientIp(c),
+      now,
+    )
+    .run();
+  return token;
 }
 
 async function revokeAllCustomerRefreshRecords(
