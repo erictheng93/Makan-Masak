@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>未結 issue 優先級調查 · 2026-09-04</title>
+<title>未結 issue 優先級調查 · 2026-09-04（2026-09-09 複驗 · 2026-09-10 追加）</title>
 <style>
   :root{
     --bg:#F2F2F7; --card:#fff; --ink:#1C1C1E; --ink2:#3A3A3C; --mute:#8E8E93;
@@ -21,6 +21,7 @@
   .sub{color:var(--mute);font-size:14px}
   section{background:var(--card);border-radius:22px;padding:26px 28px;margin-bottom:20px;box-shadow:var(--shadow)}
   h2{font-size:20px;letter-spacing:-.01em;margin:0 0 6px}
+  h2 .pill{vertical-align:middle;margin-left:8px;position:relative;top:-1px}
   h3{font-size:16px;margin:26px 0 8px;color:var(--ink)}
   p{margin:10px 0;color:var(--ink2)}
   .lede{color:var(--ink2);margin:0 0 18px}
@@ -37,15 +38,22 @@
   .p1{background:rgba(255,149,0,.14);color:#9A5A00}
   .p2{background:rgba(0,122,255,.12);color:#0058B8}
   .p3{background:rgba(142,142,147,.16);color:#5A5A5F}
+  .done{background:rgba(52,199,89,.14);color:#1E7A34}
+  .live{background:rgba(52,199,89,.14);color:#1E7A34}
+  .undeployed{background:rgba(255,149,0,.16);color:#9A5A00}
+  .stillopen{background:rgba(255,59,48,.12);color:#C4271E}
   .note{border-left:3px solid var(--orange);background:rgba(255,149,0,.06);
     border-radius:0 14px 14px 0;padding:13px 17px;margin:16px 0}
   .good{border-left-color:var(--green);background:rgba(52,199,89,.07)}
   .bad{border-left-color:var(--red);background:rgba(255,59,48,.06)}
+  .upd{border-left-color:var(--blue);background:rgba(0,122,255,.06)}
+  .upd b:first-child{color:#0058B8}
   ol,ul{color:var(--ink2);padding-left:22px}
   li{margin:6px 0}
   .chain{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0;font-size:14px}
   .chain b{background:rgba(0,122,255,.10);color:#0058B8;border-radius:999px;padding:5px 14px;font-weight:600}
   .chain span{color:var(--mute)}
+  .strike{color:var(--mute);text-decoration:line-through}
   footer{color:var(--mute);font-size:13px;text-align:center;margin-top:32px}
 </style>
 </head>
@@ -54,12 +62,172 @@
 
 <header>
   <h1>未結 issue 優先級調查</h1>
-  <div class="sub">2026-09-04 · 涵蓋 #307–#313、#326、#316 群組 · 每一項都對照當前程式碼與 production 複驗過</div>
+  <div class="sub">
+    2026-09-04 原始調查 · <b>2026-09-09 全面複驗並更新</b> · <b>2026-09-10 追加 E2E 建置期間的發現</b><br>
+    涵蓋 #307–#313、#326、#316 群組 · 對照 <code>main@34bf3da5</code>、production D1 <code>makanmasak-prod</code>、線上實測
+  </div>
 </header>
+
+<section>
+  <h2>2026-09-09 複驗摘要</h2>
+  <p class="lede">原始調查追蹤 12 張，<b>8 張已關、4 張仍開</b>。但這次複驗最要緊的不是關了幾張——是<strong>已經修好、已經驗收過的東西，有一部分還沒有上線</strong>。（<b>2026-09-10 追加</b>：其中 #308 連「修好」都還不算——元件接上去了、資料層是壞的，見下方追加一節。）</p>
+
+  <table>
+    <tr><th>Issue</th><th>當時</th><th>現在</th><th>修在哪</th><th>線上</th></tr>
+    <tr><td>#311 付款狀態詞彙</td><td><span class="pill p0">P0</span></td><td><span class="pill done">已關 09-07</span></td><td><code>c096a0f7</code></td><td><span class="pill live">已上線</span></td></tr>
+    <tr><td>#310 payment_status 無路可寫</td><td><span class="pill p0">P0</span></td><td><span class="pill stillopen">仍開著</span></td><td>大半已修，殘餘見下</td><td><span class="pill live">部分已上線</span></td></tr>
+    <tr><td>#312 數據分析</td><td><span class="pill p0">P0</span></td><td><span class="pill done">已關 09-07</span></td><td><code>d1f73402</code> <code>21aeddc1</code></td><td><span class="pill live">已上線</span></td></tr>
+    <tr><td>#326 已登入下單無冪等</td><td><span class="pill p0">P0</span></td><td><span class="pill done">已關 09-07</span></td><td><code>f2117cf6</code> <code>2fd61021</code></td><td><span class="pill undeployed">未部署</span></td></tr>
+    <tr><td>#309 系統設定靜默丟棄</td><td><span class="pill p1">P1</span></td><td><span class="pill done">已關 09-07</span></td><td><code>4c176539</code></td><td><span class="pill live">已上線</span></td></tr>
+    <tr><td>#307 假別死結</td><td><span class="pill p2">P2</span></td><td><span class="pill done">已關 09-07</span></td><td><code>8d29ffd4</code></td><td><span class="pill live">已上線</span></td></tr>
+    <tr><td>#308 出勤流程是裝飾</td><td><span class="pill p2">P2</span></td><td><span class="pill stillopen">關太早</span></td><td><code>d08c7f4b</code> … <code>dd792bd2</code>，但接上去之後仍不能用，見 09-10 追加</td><td><span class="pill undeployed">最後一段未部署</span></td></tr>
+    <tr><td>#313 稅率／服務費／時區</td><td><span class="pill p2">P2</span></td><td><span class="pill done">已關 09-07</span></td><td><code>e0709905</code> <code>ddeab5c0</code></td><td><span class="pill live">已上線</span></td></tr>
+    <tr><td>#324 KV probe 成本</td><td><span class="pill p3">P3</span></td><td><span class="pill done">已關 09-05</span></td><td><code>6861f02e</code> <code>ff9ed03f</code></td><td><span class="pill live">已上線（實測確認）</span></td></tr>
+    <tr><td>#316 全端點 1–4 秒</td><td><span class="pill p3">P3</span></td><td><span class="pill stillopen">仍開著</span></td><td>—</td><td>—</td></tr>
+    <tr><td>#323 Worker 冷啟動地板</td><td><span class="pill p3">P3</span></td><td><span class="pill stillopen">仍開著</span></td><td>—</td><td>—</td></tr>
+    <tr><td>#325 ERR_CONNECTION_CLOSED</td><td><span class="pill p3">P3</span></td><td><span class="pill stillopen">仍開著</span></td><td>—</td><td>—</td></tr>
+  </table>
+
+  <div class="note good">
+    <b>原始調查的判斷後來全部成立。</b>四張 P0 確實照 #311 → #310 → #312 → #326 的順序修；
+    #312 的修法確實踩到了本文警告的那個陷阱邊緣，而修的人明確避開了
+    （<code>d1f73402</code> 的 commit message 就在講「不能一起過濾 <code>totalOrders</code>，否則轉換率永遠 100%」，
+    並補了一條專門用來殺掉那個單行版本的測試）；#326 確實只差 schema 與路由兩行，
+    而且確實就是「只加 zod 欄位不會報錯」那個假綠燈。
+  </div>
+</section>
+
+<section>
+  <h2>最要緊的新發現：修好的東西有一段停在 main<span class="pill undeployed">未部署</span></h2>
+  <p class="lede">這份文件是<b>照線上會發生什麼壞事</b>排序的。既然如此，「已合併」不等於「已解決」——線上跑的是部署出去的那一版。</p>
+
+  <h3>三個 deployable 現在各停在哪</h3>
+  <table>
+    <tr><th>目標</th><th>線上版本</th><th>落後</th></tr>
+    <tr><td>API Worker <code>makanmasak-api-prod</code></td><td>部署於 <b>2026-09-07 15:25 (+08)</b></td><td>其後 6 個 commit</td></tr>
+    <tr><td>admin-dashboard Pages</td><td>來源 commit <code>4d719b67</code>（09-07 15:19）</td><td>同上</td></tr>
+    <tr><td>customer-app Pages</td><td>來源 commit <code>1dd7a164</code>（<b>09-05</b> 14:40）</td><td>5 個 commit</td></tr>
+  </table>
+
+  <h3>沒上線的四件事，以及線上因此是什麼狀態</h3>
+  <table>
+    <tr><th>Commit</th><th>內容</th><th>線上現況</th></tr>
+    <tr><td><code>994890f7</code></td><td>#327 收銀台折扣送到伺服器（<code>POST /orders/:id/discount</code>）</td><td><b>打過折的單結不了帳。</b>已上線的 <code>e66896b3</code> 讓伺服器以 <code>orders.total_amount_cents</code> 為準核對金額，折扣沒送過去就是 <code>PAYMENT_AMOUNT_MISMATCH</code>。這是當初刻意選的「明確失敗」，但它的解藥已經寫好了，只是還在 main 上。</td></tr>
+    <tr><td><code>f2117cf6</code> + <code>2fd61021</code></td><td>#326 已登入顧客下單的冪等鍵</td><td><b>兩半都沒上線。</b>API 那半在 15:25 部署之後才進 main；顧客端那半連 Pages 都還停在 09-05。issue 已關為「完成」，但線上仍是重複點擊會做兩份。</td></tr>
+    <tr><td><code>50a72c0d</code></td><td>#350 被拒絕的付款寫 <code>FAILURE</code> 稽核列</td><td>線上仍然是零痕跡。production <code>payment_audit_log</code> 今日仍為 <b>0 筆</b>。</td></tr>
+    <tr><td><code>dd792bd2</code></td><td>#308 員工端自己的打卡入口 <code>MyAttendanceView</code></td><td>店長端的打卡面板（<code>d08c7f4b</code>）已上線；<b>員工自己那條路徑還沒有</b>。</td></tr>
+  </table>
+
+  <div class="note bad">
+    <b>這正是本文最後一節那個形狀的第五個實例。</b>「issue 已關」這個訊號的範圍，
+    由「有沒有人按下合併」決定，而不是由「線上有沒有這段程式碼」決定，所以它結構上不可能反映部署狀態。
+    <strong>驗收一張 production-bug，最後一步必須是打線上，不是看 issue 顏色。</strong>
+  </div>
+
+  <div class="note">
+    <b>建議的下一步是部署，不是再修東西。</b>四個 commit 都已經過完整驗收（各自的 commit message 都附了突變驗收紀錄），
+    而其中一個正在讓線上的收銀台結不了帳。照 <code>docs/</code> 的滾動更新原則，這裡沒有跨服務契約順序問題，
+    也沒有破壞性 schema 變更——<code>994890f7</code> 動到 <code>packages/database</code>，所以 API 與 admin 要一起出。
+  </div>
+</section>
+
+<section>
+  <h2>2026-09-10 追加：建 E2E 套件時撞出來的四件事<span class="pill stillopen">其中兩張要重開</span></h2>
+  <p class="lede">
+    這一節不是複驗，是副產品。為 <code>master-user-flow</code>「2. 店家後台」補真實後端 E2E 的過程中，
+    有四件事只有靠「把它跑起來」才會浮出來——<strong>其中兩件直接推翻了本文上面那張表裡的「已關」</strong>。
+    共同形狀是：<b>單元測試看不到，因為它們各自都對；型別看不到，因為型別本身在說謊。</b>
+  </p>
+
+  <table>
+    <tr><th>發現</th><th>影響</th><th>本文原本怎麼記</th><th>處置</th></tr>
+    <tr>
+      <td><b>#308 出勤流程仍然不能用</b></td>
+      <td>打卡面板在執行期就壞掉</td>
+      <td><span class="pill done">已關 09-07</span> 最後一段未部署</td>
+      <td><span class="pill done">已修</span> <code>046f90b0</code></td>
+    </tr>
+    <tr>
+      <td><b>「目前在班」每天有 8 小時說謊</b></td>
+      <td>UTC+8 的店，凌晨 00:00–08:00 恆為 0</td>
+      <td>未記錄</td>
+      <td><span class="pill done">已修</span> <code>7a23fdb6</code></td>
+    </tr>
+    <tr>
+      <td><b><code>ai_insights_cache</code> 線上不存在</b></td>
+      <td>AI 洞察按下生成必炸</td>
+      <td>未記錄</td>
+      <td><span class="pill done">已修</span> <code>40485da0</code></td>
+    </tr>
+    <tr>
+      <td><b>請假「批准」100% 失敗</b></td>
+      <td>送空 body 撞 <code>validateBody</code></td>
+      <td>未記錄（#307 只涵蓋假別）</td>
+      <td><span class="pill done">已修</span> <code>690d4994</code></td>
+    </tr>
+  </table>
+
+  <div class="note bad">
+    <b>#308 應該重開，或至少加註。</b>本文記它「已關 09-07、最後一段未部署」——
+    但 <code>dd792bd2</code> 把 <code>ClockInOutPanel</code> 接上去之後，它其實仍然不能用：
+    <code>schedulingService</code> 的三個列表方法都寫 <code>return response.data.data!</code>，
+    宣告卻是 <code>PaginatedResponse&lt;T&gt;</code>。伺服器把陣列放在 <code>data</code>、<code>pagination</code> 是兄弟欄位，
+    所以每個呼叫端的 <code>response.data</code> 都是 <code>undefined</code>，
+    <code>.length</code> / <code>.filter</code> 全在 try/catch 裡炸成一張錯誤卡。
+    D1 裡明明有那位員工今天的排班，畫面照樣顯示「今天沒有排班／載入失敗」。
+    <strong>元件到得了、資料層不能用——「已關」與「能用」之間又多了一層。</strong>
+  </div>
+
+  <div class="note bad">
+    <b>「目前在班」的日界是 UTC。</b><code>getClockedInEmployees</code> 拿
+    <code>new Date().toISOString().split("T")[0]</code> 去比 <code>work_date</code>，
+    所以 UTC+8 的店每天凌晨那 8 小時，不管誰打了卡，儀表板的「目前在班」都是 0。
+    這是 #290 從 analytics 小時分桶移除掉的同一個缺陷，現在改用同一支工具
+    （<code>businessDateNow(offsetMinutes)</code>）。
+    實測證據：同一筆排班用本地日期建 → 回 0，用 UTC 日期建 → 回 1，時間 00:30。
+  </div>
+
+  <div class="note bad">
+    <b><code>ai_insights_cache</code> 這張表從來沒被建立過。</b>
+    它的 CREATE TABLE 只存在於 <code>packages/database/migrations/</code> 與 <code>migrations_v2/</code>——
+    CLAUDE.md 明載這兩個目錄沒有任何 <code>wrangler.toml</code> 引用。
+    查線上 <code>makanmasak-prod</code> 也確認沒有（只有 <code>ai_configurations</code> 與 <code>ai_usage_logs</code>）。
+    而 <code>AIInsightsService.generateReport()</code> 結尾是無條件、不在 try/catch 內的
+    <code>await this.cacheReport(report)</code>——所以 AI 洞察只要真的按下生成就 <code>no such table</code>。
+    補的 migration 順手把時間戳從 ISO 字串改成 INTEGER ms（舊寫法用 <code>expires_at &gt; ?</code> 做字典序比較，
+    和 #271 從 coupons 移除的是同一類），並用 STRICT 讓舊寫法直接被資料庫拒絕。
+  </div>
+
+  <div class="note">
+    <b>兩張舊 issue 的前提已經過期，不必再排進佇列。</b>
+    <b>#270</b> 說後台建的揪團拿不到主揪 <code>memberToken</code>、永遠送不出去——create 回應現在 top-level 就有
+    <code>memberToken</code> 與 <code>recoveryCode</code>，完整路徑（建團 → 加購物車 → finalize）跑得完並產出真實
+    <code>masterOrderId</code>。
+    <b>#260</b> 說座位數編輯必失敗、批量新增座位不可能成功——兩者都成功（容量 4→6 讀得回，批量建 4 個座位、每個都帶簽章 QR）。
+    這兩條之所以能錯這麼久沒被發現，原因和上面那四件事是同一個：<b>沒有任何自動化在驅動那些 UI。</b>
+  </div>
+
+  <div class="note good">
+    <b>現在有東西在驅動了。</b><code>tests/e2e/admin/</code> 共 41 個測試，覆蓋
+    <code>master-user-flow</code> 第 2 欄全部 18 個節點，打真 API 與真 D1，全檔零 <code>page.route</code>。
+    上面四個修正各自都有對應的迴歸守門，並做過突變驗收（把舊碼放回去確認測試轉紅）。
+    另外修掉一個 CI 假綠燈：<code>--project=admin</code> 指向一個 2026-05 就被清空的目錄，
+    單獨跑會 exit 1，但和 <code>chromium</code> 併跑就被吸收成 exit 0——自那時起貢獻 0 測試、一路綠。
+  </div>
+
+  <div class="note">
+    <b>#315 / F20（店主沒有訂閱與帳務介面）已經有介面了。</b>
+    <code>GET /me/modules</code> 與 <code>GET /me/usage</code> 一直在提供店主自己的方案、試用期與計量用量，
+    但前端零消費者。現在 <code>/dashboard/billing</code> 把它們渲染出來，包含方案<em>不</em>含哪些功能。
+    刻意沒做升級按鈕——產品裡沒有自助改方案的路徑，按了會是第二個死路，所以 CTA 導到支援工單。
+  </div>
+</section>
 
 <section>
   <h2>排序依據</h2>
   <p class="lede">用「線上會發生什麼壞事」乘上「多容易發生」排，不是 issue 編號，也不是修起來的難易。</p>
+
+  <h3>2026-09-04 的排序（歷史紀錄）</h3>
   <table>
     <tr><th>級</th><th>Issue</th><th>為什麼在這一級</th></tr>
     <tr><td><span class="pill p0">P0</span></td><td>#311 → #310 → #312 → #326</td><td>金額與付款狀態的正確性。四張互相咬合，順序不能亂。</td></tr>
@@ -67,10 +235,21 @@
     <tr><td><span class="pill p2">P2</span></td><td>#307 → #308 → #313</td><td>功能整條沒有起點，但不會弄壞資料。</td></tr>
     <tr><td><span class="pill p3">P3</span></td><td>#323 / #324 / #325</td><td>效能。目前無真實流量，P99 不可量測，基準線剛被 #322 改變。</td></tr>
   </table>
+
+  <h3>2026-09-09 的排序</h3>
+  <table>
+    <tr><th>級</th><th>要做的事</th><th>為什麼在這一級</th></tr>
+    <tr><td><span class="pill p0">P0</span></td><td><b>部署</b> main 上那四個 commit</td><td>不是新工作。線上現在有一個「按折扣就結不了帳」的狀態，而它的修正已經寫好、驗收完、躺在 main 上。</td></tr>
+    <tr><td><span class="pill p1">P1</span></td><td>#310 的殘餘</td><td>「更新」鈕仍會把訂單推到 <code>paid</code>，而營收仍計入手按出來的 <code>paid</code>。目前 production 零筆 <code>paid</code>，所以是潛伏而非發生中。</td></tr>
+    <tr><td><span class="pill p2">P2</span></td><td>#316 / #323 / #325</td><td>方向被今天的量測改變了——最大的一段不在 Worker 裡。見下節。</td></tr>
+    <tr><td><span class="pill p2">P2</span></td><td>#351 測試逾時</td><td>不是效能問題，是<b>會訓練所有人忽略紅燈</b>的問題，包括真的迴歸。</td></tr>
+    <tr><td><span class="pill p2">P2</span></td><td>#333 / #334</td><td>計費列放大與 money cents cutover 擱淺。都是會隨流量長大的債，不是現在的故障。</td></tr>
+    <tr><td><span class="pill p3">P3</span></td><td>#315 / #335 / #350 後半</td><td>都要先有產品決定才動得了。</td></tr>
+  </table>
 </section>
 
 <section>
-  <h2>最重要的一件事：P0 四張有依賴順序</h2>
+  <h2>P0 四張有依賴順序<span class="pill done">已依序完成</span></h2>
   <p>它們看起來是四個獨立的 bug，實際上是同一條付款資料流上的四個斷點。<strong>照編號或照難易度修，會在錯的基礎上調數字。</strong></p>
   <div class="chain">
     <b>#311 定調詞彙</b><span>→</span><b>#310 補上寫入路徑</b><span>→</span><b>#312 修營收口徑</b><span>→</span><b>#326 補冪等</b>
@@ -81,13 +260,20 @@
     <li><b>#310 在 #312 之前。</b>#312 的營收目前以 <code>orders.status IN (paid, delivered, served)</code> 為準，而 #310 證明店主按「更新」就能把狀態推到 <code>paid</code> 卻沒有收到錢。先修 #312 的 status 過濾，數字仍然含這種「按出來的」訂單。</li>
     <li><b>#326 可以並行。</b>它在下單路徑上，與付款狀態無關，唯一的相依是不要和 #310 同時改 <code>orders</code> 的寫入而互相衝突。</li>
   </ol>
+  <div class="note upd">
+    <b>複驗（09-09）：</b>實際的落地順序就是 <code>c096a0f7</code>（#311，09-04 07:34）→ <code>e66896b3</code>（收銀台改走
+    <code>POST /payments</code>，12:39）→ <code>d1f73402</code>／<code>21aeddc1</code>（#312，12:54）→ <code>f2117cf6</code>（#326，09-07）。
+    第 2 點的推論成立且比預期更強：修 #310 的過程中，<code>PaymentService</code> 被改成以
+    <code>orders.total_amount_cents</code> 推導 <code>serverTotal</code>，這後來直接決定了 #327 折扣缺陷的真實形狀
+    ——不是「悄悄收全額」，而是「根本收不了」。<b>先修上游確實改變了下游 issue 的內容。</b>
+  </div>
 </section>
 
 <section>
-  <h2>#311 · 付款狀態詞彙分裂</h2>
+  <h2>#311 · 付款狀態詞彙分裂<span class="pill done">已修並上線</span></h2>
   <p class="lede">issue 的修法方向正確，但範圍要擴大兩處，同時有一個好消息。</p>
 
-  <h3>現況是三套詞彙在打架</h3>
+  <h3>現況是三套詞彙在打架（2026-09-04）</h3>
   <table>
     <tr><th>層</th><th>詞彙</th></tr>
     <tr><td>正規型別 <code>ORDER_PAYMENT_STATUSES</code></td><td><code>pending</code> · <code>completed</code> · <code>failed</code> · <code>refunded</code></td></tr>
@@ -110,9 +296,19 @@
     收斂到 <code>completed</code> 是三個字面值 + 一個型別的改動，不碰控制流。
   </div>
 
-  <div class="note">
-    <b>時間成本只會上升。</b>production 目前七筆訂單全是 <code>pending</code>，零筆需要遷移。
-    一旦有第一筆真實付款進來，就要多寫一支 backfill。
+  <div class="note upd">
+    <b>複驗（09-09）：兩處擴大範圍都被採納了。</b>用本節下方那支掃描重跑，現在
+    <code>.update(orders)</code> 帶 <code>paymentStatus</code> 的三個非測試寫入點
+    （<code>PaymentService.ts:432</code>、<code>:451</code>、<code>MarketCheckoutPOSPaymentService.ts:339</code>）
+    全部寫 <code>"completed"</code>，<code>ORDER_PAYMENT_STATUSES</code> 也補進了 <code>partial_refunded</code>。
+    多做的一件事是<b>沒有直接刪掉 <code>"paid"</code></b>：路由層留了一張
+    <code>PAYMENT_STATUS_ALIASES = { paid: "completed" }</code>，而恆等那一半是從
+    <code>ORDER_PAYMENT_STATUSES</code> 推導、不是手抄——因為這裡的後備是靜默的 <code>"pending"</code>
+    而不是報錯，手抄清單漏一個值不會失敗，只會安靜地用錯的狀態過濾。那正是
+    <code>partial_refunded</code> 當初出事的方式。
+    <br><br>
+    <b>時間成本那一條也兌現了：</b>production 今天仍是 7 筆訂單、<code>payment_status</code> 全為
+    <code>pending</code>（3 cancelled / 3 pending / 1 delivered），<b>零筆需要 backfill</b>。
   </div>
 
   <h3>不要一起改的</h3>
@@ -121,22 +317,62 @@
 </section>
 
 <section>
-  <h2>#310 · 付款狀態在後台無路可寫</h2>
+  <h2>#310 · 付款狀態在後台無路可寫<span class="pill stillopen">仍開著</span></h2>
   <p class="lede">三項主張全部複驗成立，另外找到一個讓它「看起來有覆蓋」的假象。</p>
   <p><code>updatePaymentStatusSchema</code> 其實已經寫好了（<code>validation.ts:184</code>），只是沒有任何路由掛它。所以連請求驗證都備好了，差的只有端點與實作。</p>
 
   <div class="note bad">
-    <b>它的測試鎖住了空殼。</b><code>OrdersService.test.ts:898-902</code> 斷言的是
+    <b>它的測試鎖住了空殼。</b><code>OrdersService.test.ts</code> 斷言的是
     「回傳的 order id 是 42」與「快取被清掉」，<strong>完全沒有斷言付款狀態有被寫入任何地方</strong>。
     所以這兩個測試在一個什麼都不做的空殼上是綠的，方法看起來有覆蓋。
   </div>
 
   <h3>可以先切出來的一項</h3>
   <p>前端 <code>canCancel</code> 只允許 <code>pending</code>/<code>confirmed</code>，但伺服器的 <code>ORDER_STATUS_TRANSITIONS</code> 允許 <code>preparing → cancelled</code> 與 <code>ready → cancelled</code>——<b>前端比後端更嚴</b>。這一項不依賴 #311，是純前端判斷式放寬，可獨立成一個 commit，而且是三項裡最直接影響店主日常的：客人中途走人時，目前只能把單一路推到 paid，那正是「進死路」的入口。</p>
+
+  <div class="note upd">
+    <b>已修的（都已上線）：</b>
+    <ul>
+      <li><b>收銀台走真的付款端點。</b><code>e66896b3</code>：<code>CashierView</code> 原本打
+        <code>PUT /orders/:id/status</code> 再打一個<b>後端根本不存在</b>的 <code>/pos/quick-payment</code>，
+        404 被 <code>catch {}</code> 吞掉。改走 <code>POST /api/v1/payments</code>，一次寫齊交易列、
+        <code>payment_status</code>、<code>payment_transaction_id</code>，並帶跨重試共用的 <code>Idempotency-Key</code>。</li>
+      <li><b><code>canCancel</code> 改成推導而非抄寫。</b><code>717a9b36</code>：<code>ORDER_STATUS_TRANSITIONS</code>
+        搬進 <code>packages/shared-types</code>，新增 <code>CANCELLABLE_ORDER_STATUSES</code>，前端／API／database 三邊都推導。
+        順帶補上前端缺的角色檢查——這個畫面也服務廚師／送菜／收銀，按鈕本來對他們渲染、點下去必 403。</li>
+    </ul>
+    <b>還沒修的（issue 因此仍開著）：</b>
+    <ul>
+      <li><b><code>getNextStatus</code> 仍有 <code>delivered: "paid"</code></b>（<code>OrdersView.vue:1020</code>）。
+        issue 的第 1 點建議是讓「更新」在 <code>delivered</code> 停住，沒有做。所以那條「按出來的 paid」的路徑<b>還在</b>。</li>
+      <li><b>營收仍計入手按的 <code>paid</code>。</b><code>analytics.ts:51</code> 的
+        <code>FULFILLED_ORDER_STATUSES</code> 仍是 <code>["paid","delivered","served"]</code>。
+        #312 修掉的是<b>已取消</b>訂單被計為營收，不是這一條。</li>
+      <li><b><code>canRefund</code> 仍要求 <code>paymentTransactionId</code></b>（<code>:893</code>）。
+        收銀台修好之後，正常收款的單有這個欄位了，所以退款鈕會出現；但手按到 <code>paid</code> 的單沒有，仍是死路。</li>
+      <li><b><code>updatePaymentStatus</code> 仍是空殼</b>（<code>OrdersService.ts:820</code>，內容仍是
+        <code>// Implementation would depend on base service capabilities</code>），<code>updatePaymentStatusSchema</code>
+        仍沒有任何路由掛它。這是<b>刻意的</b>：收銀台有正確路徑之後，再造一個沒有使用者的寫入點沒有意義。</li>
+    </ul>
+  </div>
+
+  <div class="note bad">
+    <b>那個假綠燈只被修掉一半。</b><code>#311</code> 拿掉了測試裡的 <code>"paid" as never</code> 轉型
+    （現在是型別正確的 <code>"completed"</code>），但斷言<b>一字未改</b>：
+    仍然只有 <code>toMatchObject({ id: "42" })</code> 與快取被刪。
+    型別現在對了，<strong>覆蓋率的假象原封不動</strong>。真要收掉這一條，
+    要嘛刪掉方法，要嘛給它一個斷言「有東西被寫進去」的測試。
+  </div>
+
+  <h3>殘餘部分的驗收條件</h3>
+  <ul>
+    <li>把 <code>delivered: "paid"</code> 放回去 → 專門測「更新鈕在 delivered 停住」的測試必須轉紅。</li>
+    <li>production 上 <code>SELECT COUNT(*) FROM orders WHERE status='paid' AND payment_transaction_id IS NULL</code> 必須維持 0。今天是 0（線上根本沒有 <code>paid</code> 訂單），所以這是<b>潛伏</b>而非發生中——但它也表示這一條目前沒有真實資料在惡化，可以慢慢決定。</li>
+  </ul>
 </section>
 
 <section>
-  <h2>#312 · 數據分析</h2>
+  <h2>#312 · 數據分析<span class="pill done">已修並上線</span></h2>
   <p class="lede">實際是三個缺陷，不是兩個。而且修法有一個很容易做錯的細節。</p>
 
   <div class="note bad">
@@ -159,10 +395,26 @@
               quarter:"month",   // ← 本季被映射成 month
               year:"year" };</code></pre>
   <p>選「本季」時，<code>/analytics/performance</code> 收到 <b>90 天</b>的日期範圍，而 <code>/analytics/dashboard</code> 收到 <code>period=month</code>。這是與 status 過濾<b>獨立的第二個成因</b>——修好過濾後，選本季時兩半仍然對不起來。</p>
+
+  <div class="note upd">
+    <b>複驗（09-09）：三個缺陷全修，而且那個陷阱被明確避開了。</b>
+    <ul>
+      <li><code>d1f73402</code> 就是照「拆成兩個查詢」做的，並且<b>另外補了一條專門用來殺死單行版本的測試</b>
+        ——斷言轉換率不是 100%。commit message 直接寫明「filtering totalOrders too fails both」。
+        線上實測數字也對上了：production 7 筆訂單裡 3 筆是 <code>cancelled</code>，正是當時 KPI 卡片
+        NT$1,185 與報表 NT$570 那 NT$615 的差額。</li>
+      <li><code>21aeddc1</code> 把期間邏輯抽到 <code>src/utils/analyticsPeriod.ts</code>——原本它是
+        <code>&lt;script setup&gt;</code> 裡的區域函式，<b>測試根本搆不到</b>。測試在 import 前釘
+        <code>process.env.TZ</code>，並且有一條測試明講「UTC 上看起來像上個月是對的，不是要拿 UTC getter 去『修』的 bug」。</li>
+      <li>缺陷三獨立開成 <b>#328</b> 並已修（<code>21aeddc1</code> 一併處理）——當時的判斷是
+        「dashboard 端點根本把參數丟掉，所以那個錯誤映射不影響任何東西」，這一點也被寫進 commit message
+        當作「為什麼先不動它」的理由。</li>
+    </ul>
+  </div>
 </section>
 
 <section>
-  <h2>#326 · 已登入下單無冪等</h2>
+  <h2>#326 · 已登入下單無冪等<span class="pill done">已修</span><span class="pill undeployed">未部署</span></h2>
   <p class="lede">比 issue 估的還小。服務層整條鏈已經接好了。</p>
   <table>
     <tr><th>層</th><th>狀態</th></tr>
@@ -178,10 +430,27 @@
     <strong>型別檢查不會報錯</strong>（物件字面值少一個 optional 欄位完全合法），
     測試若只斷言「回應 201」也會過。必須直接斷言 mock 收到了那把鍵。
   </div>
+
+  <div class="note upd">
+    <b>複驗（09-09）：兩行都在（<code>validation.ts:164</code>、<code>routes/index.ts:389</code>），
+    而且測試確實是斷言 service 收到的參數而不是 201。</b>修的人還做了突變驗收：拿掉 schema 那一行，
+    <b>剛好兩條</b>測試轉紅。三件本文沒估到的事：
+    <ul>
+      <li><b>409 映射原本也不存在。</b>DB 層丟的 <code>CLIENT_MUTATION_DUPLICATE</code> 沒有被對應，
+        會以未知錯誤落到全域 handler——顧客看到「失敗」但訂單其實成立了，而顧客端六個語系<b>早就備好</b>的
+        重複提示 toast 永遠到不了。那是最容易催出第三次點擊的訊息。</li>
+      <li><b>顧客端的鍵鑄造時機也是錯的。</b>原本每次點擊鑄一把新的，等於每次重試在伺服器眼中都是新訂單。
+        改成<b>每張購物車鑄一次</b>，並讓訪客與已登入兩個分支共用同一個 ref——中途登入會把同一張車從
+        <code>/guest-orders</code> 換到 <code>/orders</code>，兩者寫同一個欄位、同一個唯一索引。</li>
+      <li><code>ShopCartModal</code> 的外帶／店取結帳有一模一樣的缺陷，一併修掉。</li>
+    </ul>
+    <b>但這兩個 commit 都還沒上線。</b>API 那半在 15:25 部署之後才進 main，顧客端那半的 Pages
+    還停在 09-05 的 <code>1dd7a164</code>。<strong>線上目前仍然是重複點擊會做兩份。</strong>
+  </div>
 </section>
 
 <section>
-  <h2>#309 · 系統設定靜默丟棄</h2>
+  <h2>#309 · 系統設定靜默丟棄<span class="pill done">已修並上線</span></h2>
   <p class="lede">後端完全有能力接收。這是<strong>純前端</strong>修正，範圍縮小到一支檔案。</p>
   <ul>
     <li><code>restaurantSettingsSchema</code> <b>明確宣告</b>了 <code>minOrderAmount</code>、<code>autoAcceptOrders</code>、<code>timezone</code>、<code>maxOrdersPerHour</code>，其餘靠 <code>.loose()</code> 放行。</li>
@@ -193,10 +462,23 @@
     <b>驗收不能看 UI 訊息。</b>這張的本質就是「UI 報成功但值沒離開瀏覽器」，
     任何以 UI 訊息為準的驗收都會重現同一個假象。條件是：改值 → 儲存 → <b>重整</b> → 值還在。
   </div>
+  <div class="note upd">
+    <b>複驗（09-09）：<code>saveSettings</code> 現在送出的欄位遠多於原本那 8 個</b>——
+    <code>name</code>／<code>phone</code>／<code>address</code>／<code>city</code>／<code>district</code>／
+    <code>businessHours</code>／<code>isAvailable</code>／<code>supportsTakeaway</code>／<code>supportsDelivery</code>
+    等頂層欄位，加上 <code>settings</code> 內的一整組。
+    <br><br>
+    有一項的做法比本文預期的更好：<b>「最低消費」的開關沒有被存起來</b>。
+    因為對伺服器的閘門而言 <code>0</code> 與「停用」是同一件事（<code>minOrderAmount &gt; 0</code>），
+    存兩份就是邀請它們日後不一致——載入時從金額反推開關即可。
+    <br>
+    另外 <code>timezone</code> 被<b>移出 <code>settings</code>、升成 <code>restaurants</code> 的欄位</b>
+    （<code>6e600d2e</code>），因為每一個營業日分桶都從那裡讀偏移量；一個界線放兩個地方，正是報表與收銀機對不起來的成因（#329）。
+  </div>
 </section>
 
 <section>
-  <h2>#307 · 假別死結</h2>
+  <h2>#307 · 假別死結<span class="pill done">已修並上線</span></h2>
   <p class="lede">後端 CRUD 是完整的三支，不是一支。純前端修正。</p>
   <table>
     <tr><th>方法</th><th>路徑</th><th>守門</th></tr>
@@ -210,33 +492,146 @@
     守門改成在 handler 內以 id 反查租戶。這不是漏洞，但掃跨租戶問題時會長得像漏洞——
     #275 就是這個形狀：<b>守門寫在 handler 內，只看中介層清單會誤判</b>。
   </div>
+  <div class="note upd">
+    <b>複驗（09-09）：</b><code>8d29ffd4</code> 接上了 UI，<code>LeavesTab.vue</code>／<code>MyLeavesView.vue</code>／
+    <code>LeaveRequestDialog.vue</code> 都在用 <code>leavesService</code>，且已隨 <code>4d719b67</code> 上線。
+    但 <b>production <code>leave_types</code> 今天仍是 0 筆</b>——功能可用，只是還沒有人建過假別。
+    <strong>驗收這一張要真的去建一筆，不能看 UI 有沒有出現。</strong>這與 #309 的驗收條件是同一個道理。
+  </div>
+</section>
+
+<section>
+  <h2>#308 / #313 · 原本併在 P2 的兩張<span class="pill done">已修</span></h2>
+  <p class="lede">原始調查把它們歸在「功能整條沒有起點」，沒有展開。複驗時補上。</p>
+  <h3>#313 稅率／服務費／時區</h3>
+  <p>後端早就接好、前端沒有欄位。<code>e0709905</code> 補上稅率與服務費欄位，<code>ddeab5c0</code> 讓店主重新選得到時區——
+  而時區這一項連帶把它從 <code>settings</code> 的 JSON 鍵升級成 <code>restaurants</code> 的欄位（見 #309）。兩者都已上線。</p>
+  <h3>#308 出勤流程整條是裝飾</h3>
+  <p>這張的形狀最值得記：<code>ClockInOutPanel.vue</code> <b>零 import</b>，全站沒有打卡入口，
+  所以下游每一個出勤數字結構上都固定是零。<code>d08c7f4b</code> 給了店長端入口（已上線），
+  <code>0348e33e</code> 把出勤率的分母改成排班而不是薪資名冊，<code>dd792bd2</code> 給員工自己一個
+  <code>MyAttendanceView</code>——<b>最後這個還沒上線</b>。</p>
+  <div class="note bad">
+    <b>它的單元測試從頭到尾都是綠的。</b><code>ClockInOutPanel.test.ts</code> 把一個沒有任何頁面渲染的元件
+    掛起來測，測了好幾個月。<strong>元件自己的測試對「有沒有人渲染它」完全沒有意見。</strong>
+    這件事後來直接催生了 <code>check:ui-reachability</code>，見最後一節。
+  </div>
+</section>
+
+<section>
+  <h2>P3（效能）：方向被今天的量測改變了</h2>
+  <p class="lede">原始判斷是「基準線剛被 #322 改變、P99 不可量測，所以排最後」。第一句仍然對，但今天重測之後，<b>最大的一段不在 Worker 裡</b>。</p>
+
+  <h3>#324 已關，而且當初那個「KV 比 D1 貴三倍」的數字本身是錯的<span class="pill done">已修並上線</span></h3>
+  <p><code>runBasicHealthCheck</code> 原本用<b>同一個</b>在 D1 查詢之前啟動的時鐘替兩個檢查報時，
+  所以 D1 花掉的時間被<b>重複計進 KV 那個數字裡</b>。#324 的「KV 356–421ms」裡有 115–169ms 是 D1 被算了第二次。
+  現在兩個探針並行、各自計時，KV 檢查還帶一個 <code>probe</code> 欄位說明它做的是哪一種工作。</p>
+  <p>今天對線上 <code>GET /api/v1/system/health</code> 取 6 次：</p>
+  <pre><code>db 244  kv 6  read
+db 122  kv 5  read
+db 129  kv 4  read
+db 119  kv 4  read
+db 123  kv 3  read
+db 126  kv 3  read</code></pre>
+  <p><b>D1 119–244ms，KV 讀 3–6ms。</b>公開路徑上的三次 write-class 往返已經沒有了（<code>ff9ed03f</code>）。</p>
+  <div class="note">
+    <b>這不證明 KV 寫入路徑變快了。</b>公開探針現在讀的是一把<b>從不寫入</b>的哨兵鍵，
+    量到的是 miss 的成本。要量寫入必須走 <code>?deep=1</code>，而那條需要 bearer token——
+    公開豁免是路徑比對的，刻意不涵蓋它。
+  </div>
+
+  <h3>新發現：這個 zone 的 TLS 握手比 Worker 本身還貴</h3>
+  <p>今天從同一台機器、同一分鐘內量三個主機（每個 3–5 次）：</p>
+  <table>
+    <tr><th>主機</th><th>TCP connect</th><th>TLS 完成</th><th>TTFB</th></tr>
+    <tr><td><code>api.makanmasak.com</code></td><td>8–16ms</td><td><b>281–297ms</b></td><td>431–457ms</td></tr>
+    <tr><td><code>makanmasak-admin.pages.dev</code></td><td>12–41ms</td><td>43–104ms</td><td>60–180ms</td></tr>
+    <tr><td><code>www.cloudflare.com</code></td><td>12–25ms</td><td>36–98ms</td><td>46–112ms</td></tr>
+  </table>
+  <p>兩邊都是 TLSv1.3、同一個簽發者（Google Trust Services WE1）。
+  <code>api.makanmasak.com</code> 的兩個 IP（<code>172.67.205.100</code>／<code>104.21.61.27</code>）分別釘住測過，
+  <b>apex <code>makanmasak.com</code> 也一樣</b>——所以慢的是這個 zone，不是某一台邊緣機器。</p>
+  <p>而在<b>重複使用同一條連線</b>時，<code>/info</code> 的 TTFB 是 <b>136–139ms</b>。</p>
+  <div class="chain">
+    <b>握手 ~280ms</b><span>+</span><b>Worker 段 ~137ms</b><span>=</span><b>冷連線 ~430ms</b>
+  </div>
+  <p>這對三張未結的效能 issue 各有不同意義：</p>
+  <ul>
+    <li><b>#323（冷啟動地板）</b>：它引用的「<code>/info</code> 150ms–1.1s」大部分不是 Worker 的成本。
+      扣掉握手之後 <code>/info</code> 穩定在 ~137ms，而那還含到邊緣的網路往返。
+      <strong>要先把量測改成 keep-alive，否則一直在測 TLS。</strong></li>
+    <li><b>#316（全端點 1–4 秒）</b>：對每次都開新連線的用戶端（curl 迴圈、部分行動網路），
+      280ms 是每一筆請求都要付的固定成本，而它與 Worker、D1、KV 全都無關。</li>
+    <li><b>#325（ERR_CONNECTION_CLOSED）</b>：這是<b>連線層</b>的故障，而現在發現連線層本身有異常成本。
+      兩者可能是同一件事的兩面，值得先併在一起查。</li>
+  </ul>
+  <div class="note">
+    <b>這是單一觀測點的量測，還不能定調。</b>一台開發機、一個網路位置、一個時段。
+    定調前要做的兩件事：從<b>另一個網路／地區</b>重現同樣的對照組（重點是同時測 pages.dev 當基準線，
+    而不是只看絕對值），以及確認它是否與 colo 有關。
+    在那之前，這是一條<b>有對照組、可重現</b>的線索，不是結論。
+  </div>
+
+  <h3>原始判斷裡仍然成立的部分</h3>
+  <ul>
+    <li><b>P99 目前仍不可量測。</b>讀取查詢幾乎全是我們自己在測。用開發者機器的 curl 迴圈算不出 P99。</li>
+    <li><b>遙測是現成的。</b><code>advancedAnalyticsMiddleware</code> 已掛在 <code>app.use("*")</code>，每個請求都寫進 <code>makanmasak-metrics-prod</code>。缺的只是真實流量。</li>
+    <li>在那之前，這幾張應該用 P50 與結構性條件（colo 落點、握手 vs Worker 段、根因指名）驗收，不要對著 P99 宣稱達標。</li>
+  </ul>
 </section>
 
 <section>
   <h2>一再出現的同一個形狀</h2>
-  <p class="lede">這輪調查裡它又出現了兩次，值得單獨記下來。</p>
+  <p class="lede">原始調查記了四個實例。複驗又添了三個，其中一個已經長出工具了。</p>
   <p><strong>檢查的範圍由被檢查的東西決定，所以結構上不可能失敗。</strong></p>
   <table>
     <tr><th>案例</th><th>看起來</th><th>實際</th></tr>
-    <tr><td><code>updatePaymentStatus</code> 的測試</td><td>方法有覆蓋</td><td>只斷言回傳值與快取，空殼也是綠的</td></tr>
+    <tr><td><code>updatePaymentStatus</code> 的測試</td><td>方法有覆蓋</td><td>只斷言回傳值與快取，空殼也是綠的（<b>今天仍是</b>）</td></tr>
     <tr><td>#326 若只加 zod 欄位</td><td>型別檢查過、測試綠</td><td>物件字面值少一個 optional 欄位完全合法</td></tr>
     <tr><td><code>pnpm verify</code> 在 main 上</td><td>✓ All checks passed</td><td>0 packages，什麼都沒檢查</td></tr>
-    <tr><td><code>sql LIKE '%STRICT%'</code></td><td>15/119 張 STRICT</td><td>吃到 <code>ON DELETE RESTRICT</code> 與 <code>district</code>，真值 3</td></tr>
+    <tr><td><code>sql LIKE '%STRICT%'</code></td><td>15/119 張 STRICT</td><td>吃到 <code>ON DELETE RESTRICT</code> 與 <code>district</code>；重測後是 6/121（09-07）</td></tr>
+    <tr><td><b>新</b> <code>ClockInOutPanel.test.ts</code></td><td>元件有測試、長期全綠</td><td>沒有任何頁面渲染它，下游出勤數字結構上固定為零</td></tr>
+    <tr><td><b>新</b> #324 的「KV 比 D1 貴三倍」</td><td>兩個探針各有數字</td><td>共用一個時鐘，D1 的時間被算進 KV 那一格</td></tr>
+    <tr><td><b>新</b> 「issue 已關」</td><td>修好了</td><td>只表示有人按了合併，不表示線上有這段程式碼</td></tr>
   </table>
-  <p>共同的解法是<b>突變驗收</b>：把舊的錯誤放回去，確認檢查真的轉紅。上面每一張 issue 的驗收清單裡都補了這一條。</p>
+  <p>共同的解法是<b>突變驗收</b>：把舊的錯誤放回去，確認檢查真的轉紅。上面每一張 issue 的驗收清單裡都補了這一條，而 09-04 之後落地的 commit 幾乎每一個都在 message 裡附了突變紀錄。</p>
+
+  <div class="note good">
+    <b>其中一個形狀已經長出工具了。</b><code>scripts/check-ui-reachability.cjs</code>（<code>e4e7e59b</code>）
+    從每個 app 的 <code>main.ts</code>／<code>App.vue</code>／<code>router/index.ts</code> 取 import 邊的傳遞閉包，
+    列出 <code>src/</code> 下永遠走不到的 <code>.vue</code>。
+    #285、#307、#308、#309、#313、#344 <b>六張是同一個 bug</b>，全部靠人工發現。
+    最關鍵的一條規則是<b>把測試檔排除在 importer 之外</b>——把它們算進去，正是當初藏住 #308 的原因。
+    目前基準線 44 個檔（admin 29、kitchen 14、customer 1）。
+    <br><br>
+    <b>它刻意還沒有變成 gate</b>：基準線上那 44 個還沒有人一一裁決，
+    而「一開始就宣告現有欠債沒問題」的 gate 不該存在。所以它現在只是 <code>pnpm check:ui-reachability</code>，
+    不在 <code>verify</code>、pre-commit 或 CI 裡。<strong>這個取捨是對的，但它也表示這道檢查目前靠人記得跑。</strong>
+  </div>
 </section>
 
 <section>
-  <h2>P3（效能）為什麼排在最後</h2>
-  <ul>
-    <li><b>基準線剛被 #322 改變。</b>移除 Smart Placement 後 Worker 落點從 100% 北美變成 0%，<code>database.responseTime</code> 從 115–169ms 變成 P50 91ms。#323 與 #324 的舊數字都含跨太平洋成本，必須重測。</li>
-    <li><b>P99 目前不可量測。</b>24 小時讀取查詢約 1,475 次，多半是我們自己在測。用開發者機器的 curl 迴圈算不出 P99。</li>
-    <li><b>遙測是現成的。</b><code>advancedAnalyticsMiddleware</code> 已掛在 <code>app.use("*")</code>，每個請求都寫進 <code>makanmasak-metrics-prod</code>。缺的只是真實流量。</li>
-  </ul>
-  <p>在那之前，這幾張應該用 P50 與結構性條件（colo 落點、根因指名）驗收，不要對著 P99 宣稱達標。</p>
+  <h2>現在還開著的</h2>
+  <p class="lede">2026-09-09 的完整未結清單。前四張是本文原本就在追的，中段是這段期間新開的，最後三張不在本文範圍、未複驗。</p>
+  <table>
+    <tr><th>Issue</th><th>級</th><th>現況</th></tr>
+    <tr><td>#310 payment_status 無路可寫</td><td><span class="pill p1">P1</span></td><td>大半已修並上線。殘餘是「更新」鈕仍推得到 <code>paid</code>、營收仍計入它、空殼方法還在。production 零筆 <code>paid</code>，潛伏中。</td></tr>
+    <tr><td>#316 全端點 1–4 秒</td><td><span class="pill p2">P2</span></td><td>追蹤傘。今天的量測指出握手約 280ms、Worker 段約 137ms，要先分開這兩者再談。</td></tr>
+    <tr><td>#323 Worker 冷啟動地板</td><td><span class="pill p2">P2</span></td><td>量測方式要先改成 keep-alive，否則量的是 TLS。</td></tr>
+    <tr><td>#325 ERR_CONNECTION_CLOSED</td><td><span class="pill p2">P2</span></td><td>連線層故障，可能與上面那個握手異常是同一件事，建議併查。</td></tr>
+    <tr><td>#333 計費列放大</td><td><span class="pill p2">P2</span></td><td><code>api.requests</code> 每個請求寫一列 <code>usage_events</code>，索引放大後每請求約 9 個 D1 row write。會隨流量長大。</td></tr>
+    <tr><td>#334 money cents cutover 擱淺</td><td><span class="pill p2">P2</span></td><td>唯一存活的 SQL 在沒有任何 <code>wrangler.toml</code> 讀的 legacy 軌上。</td></tr>
+    <tr><td>#351 測試在全量跑時逾時</td><td><span class="pill p2">P2</span></td><td>四個 admin view 測試單獨跑全過。同類根因已有範本（<code>4f375d6a</code> bcrypt cost），但這批成因不同，不能照抄。<b>驗收必須在有負載的情況下重跑。</b></td></tr>
+    <tr><td>#315 訂閱與帳務介面</td><td><span class="pill p3">P3</span></td><td>需要產品決定：文件把它畫在店家後台，實際是 role 0 專用。</td></tr>
+    <tr><td>#335 商圈 Phase 4</td><td><span class="pill p3">P3</span></td><td>前置條件已滿足，功能從未開建。</td></tr>
+    <tr><td>#350 付款失敗告警</td><td><span class="pill p3">P3</span></td><td>寫入那一半已完成（<code>50a72c0d</code>，<b>未部署</b>）。告警那一半待決：哪些失敗值得打擾店主。<code>"failed"</code> 交易狀態要等兩階段流程，前置條件不存在。</td></tr>
+    <tr><td>#191 / #286 / #296</td><td><span class="pill p3">—</span></td><td>不在本文範圍（訪客 Turnstile、評價系統、手機註冊孤兒帳號）。<b>本次未複驗</b>。</td></tr>
+  </table>
 </section>
 
-<footer>調查於 2026-09-04 · 對照 commit <code>433b32a2</code> 與 production D1 <code>makanmasak-prod</code></footer>
+<footer>
+  原始調查 2026-09-04（對照 commit <code>433b32a2</code>）· 複驗更新 2026-09-09（對照 <code>main@34bf3da5</code>、production D1 <code>makanmasak-prod</code>、線上 <code>api.makanmasak.com</code> 實測）
+</footer>
 
 </div>
 </body>
