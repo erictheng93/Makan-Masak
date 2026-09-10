@@ -180,6 +180,10 @@ describe("i18n Integration Tests", () => {
     const toastKeys = [
       "toast.orderSubmitSuccess",
       "toast.orderSubmitFailed",
+      // Reached only through the order-submit code registry, so a locale that
+      // forgot it would surface as a raw key in a toast rather than a build
+      // failure (#352).
+      "toast.orderSubmitBelowMinimum",
       "toast.cartCannotBeEmpty",
       "toast.scanSuccess",
       "toast.cameraInitFailed",

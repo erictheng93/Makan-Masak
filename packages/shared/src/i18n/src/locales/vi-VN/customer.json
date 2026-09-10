@@ -460,6 +460,7 @@
     "orderSubmitQrInvalid": "Mã QR bàn này không còn hợp lệ. Vui lòng quét lại mã QR trên bàn.",
     "orderSubmitMenuItemUnavailable": "Một số món không còn phục vụ. Vui lòng cập nhật giỏ hàng và thử lại.",
     "orderSubmitInsufficientInventory": "Một số món không đủ hàng. Vui lòng cập nhật giỏ hàng và thử lại.",
+    "orderSubmitBelowMinimum": "Đơn hàng chưa đạt mức tối thiểu của nhà hàng. Vui lòng thêm món và thử lại.",
     "orderSubmitRestaurantUnavailable": "Nhà hàng hiện chưa nhận đơn.",
     "orderSubmitTableUnavailable": "Bàn này hiện không thể đặt món. Vui lòng nhờ nhân viên hỗ trợ.",
     "orderSubmitSeatUnavailable": "Ghế này hiện không thể đặt món. Vui lòng quét lại mã QR.",

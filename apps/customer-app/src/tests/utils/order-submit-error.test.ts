@@ -122,13 +122,14 @@ describe("getOrderSubmitErrorI18nKey", () => {
     ).toBe("toast.orderSubmitTableUnavailable");
   });
 
-  // #352 changed these three from a 500 GENERIC_ERROR into real codes. Without
+  // #352 changed these from a 500 GENERIC_ERROR into real codes. Without
   // registry entries the customer would keep seeing "unknown error" for a
   // rejection the server can now name precisely.
   it.each([
     ["RESTAURANT_UNAVAILABLE", 409, "toast.orderSubmitRestaurantUnavailable"],
     ["TABLE_UNAVAILABLE", 409, "toast.orderSubmitTableUnavailable"],
     ["COUPON_INVALID", 400, "toast.couponFailed"],
+    ["MINIMUM_ORDER_NOT_MET", 400, "toast.orderSubmitBelowMinimum"],
   ])(
     "maps the createOrder rejection %s to its own toast",
     (code, status, key) => {
@@ -142,6 +143,31 @@ describe("getOrderSubmitErrorI18nKey", () => {
       ).toBe(key);
     },
   );
+
+  // The figures are in `details`; this registry resolves a key only, so the
+  // toast must stay static. Pinned so a later "just interpolate it" change has
+  // to update this expectation deliberately.
+  it("ignores the structured details on a minimum-order rejection", () => {
+    expect(
+      getOrderSubmitErrorI18nKey({
+        response: {
+          status: 400,
+          data: {
+            error: {
+              code: "MINIMUM_ORDER_NOT_MET",
+              message: "訂單未達最低消費標準。最低消費：NT$300…",
+              details: {
+                minOrderAmount: 300,
+                currentAmount: 20,
+                shortfall: 280,
+                currency: "TWD",
+              },
+            },
+          },
+        },
+      }),
+    ).toBe("toast.orderSubmitBelowMinimum");
+  });
 
   it("falls back to the shared unknown key instead of server messages", () => {
     expect(

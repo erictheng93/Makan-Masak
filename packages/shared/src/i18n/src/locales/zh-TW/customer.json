@@ -460,6 +460,7 @@
     "orderSubmitQrInvalid": "此桌位 QR Code 已失效，請重新掃描桌上的 QR Code。",
     "orderSubmitMenuItemUnavailable": "部分商品已暫停供應，請更新購物車後再試。",
     "orderSubmitInsufficientInventory": "部分商品庫存不足，請更新購物車後再試。",
+    "orderSubmitBelowMinimum": "訂單金額未達本店最低消費，請再加點後重試。",
     "orderSubmitRestaurantUnavailable": "此餐廳目前暫停接單。",
     "orderSubmitTableUnavailable": "此桌位目前無法點餐，請洽現場人員協助。",
     "orderSubmitSeatUnavailable": "此座位目前無法點餐，請重新掃描 QR Code。",

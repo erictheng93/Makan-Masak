@@ -460,6 +460,7 @@
     "orderSubmitQrInvalid": "Kod QR meja ini tidak lagi sah. Sila imbas semula kod QR di atas meja.",
     "orderSubmitMenuItemUnavailable": "Satu atau lebih item tidak lagi tersedia. Sila kemas kini troli dan cuba lagi.",
     "orderSubmitInsufficientInventory": "Stok satu atau lebih item tidak mencukupi. Sila kemas kini troli dan cuba lagi.",
+    "orderSubmitBelowMinimum": "Pesanan ini kurang daripada jumlah pesanan minimum restoran. Sila tambah item dan cuba lagi.",
     "orderSubmitRestaurantUnavailable": "Restoran ini tidak menerima pesanan buat masa ini.",
     "orderSubmitTableUnavailable": "Meja ini tidak tersedia untuk pesanan. Sila minta bantuan staf.",
     "orderSubmitSeatUnavailable": "Tempat duduk ini tidak tersedia untuk pesanan. Sila imbas kod QR sekali lagi.",

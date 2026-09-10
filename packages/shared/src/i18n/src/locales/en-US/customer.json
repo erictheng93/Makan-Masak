@@ -460,6 +460,7 @@
     "orderSubmitQrInvalid": "This table QR code is no longer valid. Please scan the QR code on the table again.",
     "orderSubmitMenuItemUnavailable": "One or more items are no longer available. Please update your cart and try again.",
     "orderSubmitInsufficientInventory": "One or more items do not have enough stock. Please update your cart and try again.",
+    "orderSubmitBelowMinimum": "This order is below the restaurant's minimum order amount. Please add more items and try again.",
     "orderSubmitRestaurantUnavailable": "This restaurant is not accepting orders right now.",
     "orderSubmitTableUnavailable": "This table is not available for ordering. Please ask staff for help.",
     "orderSubmitSeatUnavailable": "This seat is not available for ordering. Please scan the QR code again.",

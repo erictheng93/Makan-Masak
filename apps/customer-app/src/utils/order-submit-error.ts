@@ -16,6 +16,13 @@ const ORDER_SUBMIT_ERROR_KEYS: Record<string, string> = {
   // GENERIC_ERROR, so this registry never had a chance to match them — a
   // closed restaurant and a retired table both surfaced as "unknown error".
   RESTAURANT_UNAVAILABLE: "toast.orderSubmitRestaurantUnavailable",
+  // The API sends the exact figures in `error.details`
+  // ({ minOrderAmount, currentAmount, shortfall, currency }), but this registry
+  // resolves a key and nothing else — `parseUserFacingError` reads transport
+  // facts only and never touches `details`. So the toast is deliberately
+  // static; rendering "you need NT$280 more" needs the resolver to carry
+  // params, which is a change to the shared contract, not to this table.
+  MINIMUM_ORDER_NOT_MET: "toast.orderSubmitBelowMinimum",
   TABLE_OCCUPIED: "toast.orderSubmitTableUnavailable",
   TABLE_NOT_AVAILABLE: "toast.orderSubmitTableUnavailable",
   TABLE_UNAVAILABLE: "toast.orderSubmitTableUnavailable",
