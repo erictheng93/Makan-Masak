@@ -86,6 +86,23 @@ export const customerIdentityApi = {
     );
   },
 
+  /**
+   * Same endpoint as `verifyOtp`, but `purpose: "password_reset"` makes it
+   * answer with a short-lived reset token instead of a session — the phone
+   * counterpart of the link mailed to an email account (#353). The two cannot
+   * share one signature: the response type differs, and a phone reset must not
+   * sign the diner in on the strength of a code they were sent because they had
+   * *lost* their password.
+   */
+  verifyPasswordResetOtp(phone: string, otp: string) {
+    return apiClient.post<{ resetToken: string; expiresInSeconds: number }>(
+      "/customer/auth/verify-otp",
+      { phone, otp, purpose: "password_reset" },
+      // A rejected code is this endpoint's answer, not an expired session.
+      { credentialCheck: true },
+    );
+  },
+
   register(input: {
     identifier: string;
     password: string;
@@ -109,10 +126,17 @@ export const customerIdentityApi = {
     );
   },
 
+  /**
+   * `devOtp` is echoed only by a non-production API (`NODE_ENV` development or
+   * test) and only on the phone branch — the local SMS provider is a no-op, so
+   * without it the phone reset flow cannot be exercised on a dev machine at
+   * all. Never present in production.
+   */
   forgotPassword(identifier: string) {
-    return apiClient.post<{ sent: boolean }>("/customer/auth/forgot-password", {
-      identifier,
-    });
+    return apiClient.post<{ sent: boolean; devOtp?: string }>(
+      "/customer/auth/forgot-password",
+      { identifier },
+    );
   },
 
   resetPassword(token: string, newPassword: string) {

@@ -135,6 +135,11 @@ describe("i18n Integration Tests", () => {
       "auth.forgotPasswordHint",
       "auth.forgotPasswordSubmit",
       "auth.forgotPasswordSent",
+      // Phone resets answer with an SMS code, not a mail link (#353).
+      "auth.forgotPasswordOtpSent",
+      "auth.forgotPasswordOtpHint",
+      "auth.forgotPasswordOtpInvalid",
+      "auth.forgotPasswordVerifyOtp",
       "auth.resetPasswordTitle",
       "auth.resetPasswordHint",
       "auth.newPassword",
