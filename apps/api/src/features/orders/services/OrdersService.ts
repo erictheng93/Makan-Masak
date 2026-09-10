@@ -287,6 +287,14 @@ export class OrdersService implements IOrdersService {
       });
       return order;
     } catch (error) {
+      // The base service now rejects its own business rules as ApiErrors
+      // (restaurant/table unavailable, invalid coupon, minimum order,
+      // inventory lost to a race — #352). They are already carrying the code,
+      // status and details the client needs, so pass them straight through
+      // rather than relabelling them; and do not log them at error level,
+      // because a customer whose cart is under the minimum is not an incident.
+      if (error instanceof ApiError) throw error;
+
       if (error instanceof Error) {
         // A selection the catalog refuses — an unanswered required group, or
         // more choices than the group allows. It is the request that is wrong,

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RealtimeEventType } from "@makanmasak/shared-types";
 import type { Order, OrderItem } from "@makanmasak/shared-types";
+import { ApiError } from "../../../shared/utils/api-error";
 import { OrdersService } from "./OrdersService";
 
 const createBaseOrder = vi.hoisted(() => vi.fn());
@@ -307,6 +308,80 @@ describe("OrdersService realtime broadcasts", () => {
       name: "ApiError",
       status: 400,
       code: "DELIVERY_NOT_ENABLED",
+    });
+  });
+
+  // #352：基礎服務現在自己把「餐廳關店 / 桌子停用 / 券不成立 / 未達低消 /
+  // 庫存被搶走」拒絕成 ApiError。這一層唯一該做的是原封不動放行——重新包裝
+  // 或掉到最後的 `throw error` 之前先 logger.error，都是把顧客的錯當成事故。
+  it("passes a base-service ApiError through untouched instead of relabelling it", async () => {
+    const rejection = new ApiError(
+      "MINIMUM_ORDER_NOT_MET",
+      "訂單未達最低消費標準。最低消費：NT$300，目前金額：NT$20，還需：NT$280",
+      400,
+      {
+        minOrderAmount: 300,
+        currentAmount: 20,
+        shortfall: 280,
+        currency: "TWD",
+      },
+    );
+    createBaseOrder.mockRejectedValue(rejection);
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const service = new OrdersService(createEnv() as never);
+
+    let caught: unknown;
+    try {
+      await service.createOrder({
+        restaurantId: "restaurant-1",
+        orderType: "shop",
+        items: [{ menuItemId: 101, quantity: 2 }],
+      });
+    } catch (error) {
+      caught = error;
+    }
+    // Read the calls before restoring: mockRestore() also resets them, so a
+    // restore inside a `finally` would leave every log assertion below
+    // vacuously true.
+    const errorLogs = consoleError.mock.calls.map((call) => String(call[0]));
+    consoleError.mockRestore();
+
+    // Identity, not shape: a re-wrap would still match toMatchObject.
+    expect(caught).toBe(rejection);
+    expect(caught).toMatchObject({
+      name: "ApiError",
+      status: 400,
+      code: "MINIMUM_ORDER_NOT_MET",
+      details: expect.objectContaining({ currency: "TWD", shortfall: 280 }),
+    });
+    expect(createBaseOrder).toHaveBeenCalledOnce();
+    expect(createBaseOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ restaurantId: "restaurant-1" }),
+    );
+    // A cart under the restaurant's minimum is not a server incident.
+    expect(
+      errorLogs.filter((line) => line.includes("Failed to create order")),
+    ).toEqual([]);
+  });
+
+  it("still maps a 409 conflict from the base service without touching its status", async () => {
+    createBaseOrder.mockRejectedValue(
+      new ApiError("INSUFFICIENT_INVENTORY", "Insufficient inventory", 409),
+    );
+    const service = new OrdersService(createEnv() as never);
+
+    await expect(
+      service.createOrder({
+        restaurantId: "restaurant-1",
+        orderType: "shop",
+        items: [{ menuItemId: 101, quantity: 1 }],
+      }),
+    ).rejects.toMatchObject({
+      name: "ApiError",
+      status: 409,
+      code: "INSUFFICIENT_INVENTORY",
     });
   });
 });

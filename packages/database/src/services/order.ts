@@ -44,10 +44,29 @@ import type {
   OrderStatus,
   SelectedCustomizations,
 } from "@makanmasak/shared-types";
+import {
+  ApiError,
+  badRequest,
+  conflict,
+  formatCurrency,
+  CURRENCY_CONFIGS,
+  DEFAULT_CURRENCY,
+  type CurrencyCode,
+} from "@makanmasak/utils";
 import { amountFromCents, fromCents, toRequiredCents } from "../utils/money";
 import { IngredientConsumptionService } from "./ingredient-consumption";
 import { loadAssembledMenuItemOptions } from "./menu-options";
 import { TenantMemberDirectoryService } from "./TenantMemberDirectoryService";
+
+// `restaurants.settings.currency` is a free-form string in the schema, so it
+// can hold anything an older admin build wrote. Narrow it here rather than
+// casting: an unknown code falls back to the platform default instead of
+// reaching `formatCurrency` and coming back as a bare number.
+function resolveCurrency(currency: string | undefined): CurrencyCode {
+  return currency && currency in CURRENCY_CONFIGS
+    ? (currency as CurrencyCode)
+    : DEFAULT_CURRENCY;
+}
 
 // Derived from the shared status machine rather than restated. These two used
 // to be separate hand-maintained lists and they disagreed; the gap was not
@@ -538,34 +557,6 @@ export class OrderService extends BaseService {
     }
   }
 
-  // 驗證訂單是否符合最低消費要求
-  async validateMinimumOrder(
-    restaurantId: string,
-    orderAmount: number,
-  ): Promise<{ valid: boolean; message?: string; shortfall?: number }> {
-    try {
-      const { minOrderAmount, enabled } =
-        await this.getMinimumOrderAmount(restaurantId);
-
-      if (!enabled) {
-        return { valid: true };
-      }
-
-      if (orderAmount >= minOrderAmount) {
-        return { valid: true };
-      }
-
-      const shortfall = minOrderAmount - orderAmount;
-      return {
-        valid: false,
-        message: `訂單未達最低消費標準。最低消費：RM${minOrderAmount.toFixed(2)}，目前金額：RM${orderAmount.toFixed(2)}，還需：RM${shortfall.toFixed(2)}`,
-        shortfall,
-      };
-    } catch (error) {
-      this.handleError(error, "validateMinimumOrder");
-    }
-  }
-
   // 創建訂單
   async createOrder(data: CreateOrderData): Promise<Order> {
     try {
@@ -576,8 +567,12 @@ export class OrderService extends BaseService {
         where: eq(restaurants.id, restaurantIdStr),
       });
 
+      // 這些是顧客請求本身的問題，不是伺服器故障。丟 ApiError（來自
+      // @makanmasak/utils，與 API 層 re-export 的是同一個類別）讓
+      // app-factory 的 `err instanceof ApiError` 分支直接輸出 4xx，
+      // 而不是掉進 ErrorSanitizer 變成 500 GENERIC_ERROR（#352）。
       if (!restaurant || !restaurant.isAvailable) {
-        throw new Error("Restaurant is not available");
+        throw conflict("Restaurant is not available", "RESTAURANT_UNAVAILABLE");
       }
 
       // 外送必須由店家開啟才收單。前端只是不顯示外送選項，直接打 API 帶
@@ -608,7 +603,7 @@ export class OrderService extends BaseService {
         });
 
         if (!table || !table.isActive) {
-          throw new Error("Table is not available");
+          throw conflict("Table is not available", "TABLE_UNAVAILABLE");
         }
       }
 
@@ -649,7 +644,10 @@ export class OrderService extends BaseService {
           discountAmount = validationResult.discountAmount || 0;
           validatedCoupon = validationResult.coupon;
         } else {
-          throw new Error(`優惠券驗證失敗: ${validationResult.error}`);
+          throw badRequest(
+            `優惠券驗證失敗: ${validationResult.error}`,
+            "COUPON_INVALID",
+          );
         }
       }
 
@@ -659,8 +657,25 @@ export class OrderService extends BaseService {
 
       if (minOrderAmount > 0 && orderAmountAfterDiscount < minOrderAmount) {
         const shortfall = minOrderAmount - orderAmountAfterDiscount;
-        throw new Error(
-          `訂單未達最低消費標準。最低消費：RM${minOrderAmount.toFixed(2)}，目前金額：RM${orderAmountAfterDiscount.toFixed(2)}，還需：RM${shortfall.toFixed(2)}`,
+        // 幣別跟著店家設定走。這裡曾經硬寫 `RM`，所以一家 TWD 的店會告訴
+        // 顧客「最低消費 RM300」（#352）。details 帶結構化數字，前端可以自己
+        // 排版，不必去 parse 這句話。
+        const currency = resolveCurrency(settings.currency);
+        throw badRequest(
+          `訂單未達最低消費標準。最低消費：${formatCurrency(
+            minOrderAmount,
+            currency,
+          )}，目前金額：${formatCurrency(
+            orderAmountAfterDiscount,
+            currency,
+          )}，還需：${formatCurrency(shortfall, currency)}`,
+          "MINIMUM_ORDER_NOT_MET",
+          {
+            minOrderAmount,
+            currentAmount: orderAmountAfterDiscount,
+            shortfall,
+            currency,
+          },
         );
       }
 
@@ -835,7 +850,10 @@ export class OrderService extends BaseService {
           error instanceof Error &&
           /NOT NULL constraint failed: restaurants\.id/i.test(error.message)
         ) {
-          throw new Error("Insufficient inventory");
+          // 有人在這張單準備期間把庫存買走了。與改單路徑
+          // (`mapOrderItemMutationError`) 對外同一個代碼與狀態碼，顧客端才
+          // 不會因為走哪條路而看到兩種結果。
+          throw conflict("Insufficient inventory", "INSUFFICIENT_INVENTORY");
         }
         throw error;
       }
@@ -859,6 +877,13 @@ export class OrderService extends BaseService {
       // Fallback: should not happen, but safe to degrade gracefully
       return this.mapToOrder({ ...order, items });
     } catch (error) {
+      // A business-rule rejection raised above already carries its code and
+      // status. Everything below this line inspects `message` and ends at
+      // `handleError`, which rebuilds the error as a plain `Error` — so
+      // without this line an ApiError loses its identity here and surfaces
+      // as a 500 anyway (#352).
+      if (error instanceof ApiError) throw error;
+
       const message = error instanceof Error ? error.message : String(error);
       // Different SQLite / D1 surfaces quote the UNIQUE violation column
       // differently:

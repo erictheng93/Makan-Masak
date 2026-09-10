@@ -1,5 +1,6 @@
 import { drizzle } from "drizzle-orm/d1";
 import type { D1Database, KVNamespace } from "@cloudflare/workers-types";
+import { ApiError } from "@makanmasak/utils";
 import * as schema from "../schema";
 import {
   QueryCache,
@@ -226,6 +227,14 @@ export class BaseService {
 
   // 通用錯誤處理
   protected handleError(error: unknown, operation: string): never {
+    // A deliberate business-rule rejection already carries its code, status and
+    // details. The tail of this method rebuilds every error as a plain
+    // `new Error(message)`, which would strip exactly that and leave the API's
+    // `err instanceof ApiError` branch unreachable — a 400 arriving at the
+    // customer as a 500 GENERIC_ERROR (#352). Pass it through untouched, and
+    // do not log it: it is not a server fault.
+    if (error instanceof ApiError) throw error;
+
     // 安全地記錄錯誤，避免循環引用問題
     if (error instanceof Error) {
       console.error(`Database error in ${operation}:`, error.message);

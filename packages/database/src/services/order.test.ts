@@ -24,8 +24,10 @@ import {
   orderItems,
   orders,
   restaurants,
+  tables,
   users,
 } from "../schema";
+import { ApiError, DEFAULT_CURRENCY, formatCurrency } from "@makanmasak/utils";
 import {
   createTestDatabase,
   REAL_D1_SETUP_TIMEOUT_MS,
@@ -1167,6 +1169,236 @@ describe("OrderService createOrder atomicity", () => {
       expect(restaurant.totalOrders ?? 0).toBe(0);
     },
   );
+});
+
+// 這一組全部是「顧客送來的請求本身不成立」。#352 之前它們是
+// `throw new Error("...")`，一路穿過 OrdersService、路由、app-factory 的
+// sanitizer，最後變成 500 GENERIC_ERROR —— 顧客看到的是系統壞了，而不是
+// 自己的單哪裡不對。斷言重點在 code / status / details，不在字串。
+describe("OrderService createOrder business-rule rejections", () => {
+  let testDb: TestDatabase;
+
+  beforeAll(async () => {
+    testDb = await createTestDatabase();
+  }, REAL_D1_SETUP_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await testDb?.dispose();
+  });
+
+  beforeEach(async () => {
+    await testDb.truncateAll();
+    await seedMenuItem(testDb);
+  });
+
+  const service = () =>
+    new OrderService(testDb.bindings.DB, { JWT_SECRET: "test" });
+
+  async function updateSettings(
+    settings: NonNullable<typeof restaurants.$inferSelect.settings>,
+  ) {
+    await testDb.drizzle
+      .update(restaurants)
+      .set({ settings })
+      .where(eq(restaurants.id, restaurantId));
+  }
+
+  // `rejects.toThrow` only ever proves "something threw". These rejections are
+  // now carrying a code, a status and (for the minimum) structured details, so
+  // the thrown value itself has to be inspected.
+  async function rejectionOf(run: () => Promise<unknown>): Promise<ApiError> {
+    try {
+      await run();
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      return error as ApiError;
+    }
+    throw new Error("expected createOrder to reject, but it resolved");
+  }
+
+  it("rejects an order below the minimum as 400 MINIMUM_ORDER_NOT_MET with the shortfall", async () => {
+    await updateSettings({
+      taxRate: 0,
+      serviceChargeRate: 0,
+      minOrderAmount: 300,
+      currency: "TWD",
+    });
+
+    const error = await rejectionOf(() =>
+      service().createOrder({
+        restaurantId,
+        items: [{ menuItemId, quantity: 2 }],
+      }),
+    );
+
+    expect(error.status).toBe(400);
+    expect(error.code).toBe("MINIMUM_ORDER_NOT_MET");
+    expect(error.details).toEqual(
+      expect.objectContaining({
+        minOrderAmount: 300,
+        currentAmount: 20,
+        shortfall: 280,
+        currency: "TWD",
+      }),
+    );
+  });
+
+  it("formats the minimum-order message in the restaurant's own currency", async () => {
+    await updateSettings({
+      taxRate: 0,
+      serviceChargeRate: 0,
+      minOrderAmount: 300,
+      currency: "TWD",
+    });
+
+    const twdError = await rejectionOf(() =>
+      service().createOrder({
+        restaurantId,
+        items: [{ menuItemId, quantity: 2 }],
+      }),
+    );
+
+    // The hardcoded `RM` was the bug: the live demo restaurant is TWD and was
+    // being quoted Malaysian ringgit for a Taiwanese price.
+    expect(twdError.message).toContain("NT$300");
+    expect(twdError.message).not.toContain("RM");
+
+    await updateSettings({
+      taxRate: 0,
+      serviceChargeRate: 0,
+      minOrderAmount: 50,
+      currency: "MYR",
+    });
+
+    const myrError = await rejectionOf(() =>
+      service().createOrder({
+        restaurantId,
+        items: [{ menuItemId, quantity: 2 }],
+      }),
+    );
+
+    expect(myrError.message).toContain("RM");
+    expect(myrError.message).not.toContain("NT$");
+    expect(myrError.details).toEqual(
+      expect.objectContaining({ currency: "MYR", shortfall: 30 }),
+    );
+  });
+
+  it("falls back to the platform default currency when the setting is missing or unknown", async () => {
+    await updateSettings({
+      taxRate: 0,
+      serviceChargeRate: 0,
+      minOrderAmount: 300,
+      currency: "XYZ",
+    });
+
+    const error = await rejectionOf(() =>
+      service().createOrder({
+        restaurantId,
+        items: [{ menuItemId, quantity: 2 }],
+      }),
+    );
+
+    expect(error.details).toEqual(
+      expect.objectContaining({ currency: DEFAULT_CURRENCY }),
+    );
+    expect(error.message).toContain(formatCurrency(300, DEFAULT_CURRENCY));
+  });
+
+  it("rejects an unavailable restaurant as 409 RESTAURANT_UNAVAILABLE", async () => {
+    await testDb.drizzle
+      .update(restaurants)
+      .set({ isAvailable: false })
+      .where(eq(restaurants.id, restaurantId));
+
+    const error = await rejectionOf(() =>
+      service().createOrder({
+        restaurantId,
+        items: [{ menuItemId, quantity: 1 }],
+      }),
+    );
+
+    expect(error.status).toBe(409);
+    expect(error.code).toBe("RESTAURANT_UNAVAILABLE");
+  });
+
+  it("rejects a deactivated or unknown table as 409 TABLE_UNAVAILABLE", async () => {
+    const [inactiveTable] = await testDb.drizzle
+      .insert(tables)
+      .values({
+        restaurantId,
+        number: "A1",
+        qrCode: "TABLE-A1-INACTIVE",
+        isActive: false,
+      })
+      .returning({ id: tables.id });
+
+    const deactivated = await rejectionOf(() =>
+      service().createOrder({
+        restaurantId,
+        tableId: inactiveTable.id,
+        items: [{ menuItemId, quantity: 1 }],
+      }),
+    );
+    expect(deactivated.status).toBe(409);
+    expect(deactivated.code).toBe("TABLE_UNAVAILABLE");
+
+    // A sticker for a table that no longer exists reaches the same place.
+    const unknown = await rejectionOf(() =>
+      service().createOrder({
+        restaurantId,
+        tableId: inactiveTable.id + 9999,
+        items: [{ menuItemId, quantity: 1 }],
+      }),
+    );
+    expect(unknown.status).toBe(409);
+    expect(unknown.code).toBe("TABLE_UNAVAILABLE");
+  });
+
+  it("rejects an unusable coupon code as 400 COUPON_INVALID", async () => {
+    const error = await rejectionOf(() =>
+      service().createOrder({
+        restaurantId,
+        couponCode: "NO-SUCH-CODE",
+        items: [{ menuItemId, quantity: 1 }],
+      }),
+    );
+
+    expect(error.status).toBe(400);
+    expect(error.code).toBe("COUPON_INVALID");
+    expect(error.message).toContain("優惠券驗證失敗");
+  });
+
+  it("rejects stock lost between the availability check and the write as 409 INSUFFICIENT_INVENTORY", async () => {
+    // prepareOrderItems sees 10 in stock; another order drains it before the
+    // batch lands, so the conditional inventory update matches no rows and the
+    // batch trips the `restaurants.id` NOT NULL sentinel. That race used to
+    // surface as a 500 (#352) even though the modify-order path had been
+    // answering the identical condition with 409 INSUFFICIENT_INVENTORY.
+    const racingService = new OrderService(
+      withBeforeBatch(testDb.bindings.DB as unknown as D1Database, async () => {
+        await testDb.drizzle
+          .update(menuItems)
+          .set({ inventoryCount: 0 })
+          .where(eq(menuItems.id, menuItemId));
+      }),
+      { JWT_SECRET: "test" },
+    );
+
+    const error = await rejectionOf(() =>
+      racingService.createOrder({
+        restaurantId,
+        items: [{ menuItemId, quantity: 1 }],
+      }),
+    );
+
+    expect(error.status).toBe(409);
+    expect(error.code).toBe("INSUFFICIENT_INVENTORY");
+
+    // The whole batch rolled back with it: no orphan order or items.
+    await expect(testDb.drizzle.select().from(orders)).resolves.toEqual([]);
+    await expect(testDb.drizzle.select().from(orderItems)).resolves.toEqual([]);
+  });
 });
 
 describe("OrderService cancelOrder atomicity", () => {

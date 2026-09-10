@@ -78,8 +78,15 @@ export type CouponEligibilityCode =
 
 /**
  * 優惠券資格檢查失敗錯誤。
- * packages/database 不能依賴 API 層的 ApiError，
- * 因此擲出帶穩定 code 的一般 Error，由 API 層轉譯成 ApiError。
+ *
+ * 帶穩定 code 的一般 Error，由 API 層對照 `CouponEligibilityCode` 轉譯成
+ * 對應的 ApiError 與狀態碼。
+ *
+ * 注意：這裡不是「packages/database 不能依賴 ApiError」——那句舊註解已不成立。
+ * ApiError 住在 `@makanmasak/utils`，本套件本來就依賴它，
+ * `ticket-primitives/state-machine.ts` 與 `order.ts` 也直接擲出 ApiError。
+ * 這個類別留著是因為它的 code 列舉是 API 層對照表的來源，
+ * 換掉會動到轉譯表——那是另一張票的範圍（#352 刻意不擴大）。
  * 可透過 `CouponService.EligibilityError` 取得（免經 package index 再匯出）。
  */
 export class CouponEligibilityError extends Error {
