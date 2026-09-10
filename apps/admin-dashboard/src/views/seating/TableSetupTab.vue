@@ -43,6 +43,7 @@
       </button>
       <button
         class="flex items-center px-5 py-2.5 rounded-full text-[13px] font-semibold bg-ios-blue text-white hover:bg-blue-600 transition-colors shadow-sm"
+        data-testid="open-create-table"
         @click="showTableModal = true"
       >
         <Plus class="w-4 h-4 mr-1.5" />
@@ -242,6 +243,7 @@
               <button
                 :class="[ACTION_PILL, TONAL.neutral]"
                 class="flex-1"
+                :data-testid="`edit-table-${table.id}`"
                 @click="editTable(table)"
               >
                 <Pencil class="h-3.5 w-3.5" />
@@ -269,6 +271,7 @@
               <button
                 v-if="table.qrMode === 'seat'"
                 :class="[ACTION_PILL, TONAL.neutral]"
+                :data-testid="`manage-seats-${table.id}`"
                 @click="manageSeats(table)"
               >
                 <Armchair class="h-3.5 w-3.5" />
@@ -325,6 +328,7 @@
         </p>
         <button
           class="mt-4 inline-flex items-center px-5 py-2.5 bg-ios-blue text-white rounded-full hover:bg-blue-600 transition-colors text-sm font-semibold"
+          data-testid="open-create-table-empty"
           @click="showTableModal = true"
         >
           <Plus class="h-4 w-4 mr-1.5" />
@@ -356,6 +360,7 @@
                   </label>
                   <input
                     v-model="tableForm.tableNumber"
+                    data-testid="table-number"
                     type="text"
                     required
                     class="w-full px-3 py-2 border border-ios-separator rounded-xl focus:ring-2 focus:ring-ios-blue/30 focus:border-ios-blue text-sm"
@@ -369,6 +374,7 @@
                   >
                   <input
                     v-model="tableForm.tableName"
+                    data-testid="table-name"
                     type="text"
                     class="w-full px-3 py-2 border border-ios-separator rounded-xl focus:ring-2 focus:ring-ios-blue/30 focus:border-ios-blue text-sm"
                   />
@@ -383,6 +389,7 @@
                   </label>
                   <select
                     v-model.number="tableForm.capacity"
+                    data-testid="table-capacity"
                     required
                     class="w-full px-3 py-2 border border-ios-separator rounded-xl focus:ring-2 focus:ring-ios-blue/30 focus:border-ios-blue text-sm"
                   >
@@ -411,6 +418,7 @@
                   >
                   <input
                     v-model="tableForm.location"
+                    data-testid="table-location"
                     type="text"
                     :placeholder="t('tables.form.locationPlaceholder')"
                     class="w-full px-3 py-2 border border-ios-separator rounded-xl focus:ring-2 focus:ring-ios-blue/30 focus:border-ios-blue text-sm"
@@ -465,6 +473,7 @@
                 </button>
                 <button
                   type="submit"
+                  data-testid="table-submit"
                   class="px-5 py-2.5 bg-ios-blue text-white rounded-full hover:bg-blue-600 transition-colors text-sm font-semibold"
                 >
                   {{ editingTable ? t("common.update") : t("common.add") }}

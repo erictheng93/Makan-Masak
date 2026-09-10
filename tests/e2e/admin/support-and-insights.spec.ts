@@ -18,6 +18,8 @@
 import { expect, test } from "@playwright/test";
 import {
   apiRequest,
+  getAdminContext,
+  requireAdmin,
   assertAuthenticated,
   assertNoOverlayError,
   getOwnerContext,
@@ -102,27 +104,79 @@ test.describe("平台支援工單 (real API)", () => {
     await assertNoOverlayError(page);
   });
 
-  test("closing a ticket is an admin action an owner cannot perform", async () => {
-    test.setTimeout(120_000);
+  test("a ticket goes 開單 → 回覆 → 結案 across both roles", async () => {
+    test.setTimeout(180_000);
     await requireStack();
+    await requireAdmin();
 
-    const { token } = await getOwnerContext();
-    const list = await apiRequest<never>("/api/v1/feedback", { token });
-    const body = list.body as unknown as FeedbackListBody;
-    const ticket = (body.feedback ?? [])[0];
-    test.skip(!ticket?.id, "no ticket available to attempt a status change on");
+    const { token: ownerToken } = await getOwnerContext();
+    const { token: adminToken } = await getAdminContext();
+    const subject = `E2E Lifecycle ${suffix()}`;
 
-    // The lifecycle is split across two roles by design. Asserting the refusal
-    // documents why an owner-only spec cannot cover 開單 → 結案 end to end.
-    const attempt = await apiRequest(`/api/v1/feedback/${ticket!.id}/status`, {
-      token,
-      method: "PUT",
-      body: { status: "resolved" },
+    // Opening is requireRole([1]) — the shop's own action.
+    const opened = await apiRequest<FeedbackRow>("/api/v1/feedback", {
+      token: ownerToken,
+      method: "POST",
+      body: {
+        subject,
+        description:
+          "Raised by the admin E2E suite to walk the full ticket lifecycle.",
+        category: "other",
+        priority: "low",
+      },
     });
+    expect(opened.ok, `ticket create returned ${opened.status}`).toBe(true);
+    const ticketId = opened.body.data?.id;
+    expect(ticketId, "created ticket id").toBeTruthy();
+
+    // The owner cannot close their own ticket. Asserting the refusal is what
+    // makes the admin half below meaningful rather than incidental.
+    const ownerAttempt = await apiRequest(
+      `/api/v1/feedback/${ticketId}/status`,
+      { token: ownerToken, method: "PUT", body: { status: "resolved" } },
+    );
     expect(
-      attempt.status,
-      "owner must not be able to move a ticket's status",
+      ownerAttempt.status,
+      "an owner must not be able to resolve their own ticket",
     ).toBe(403);
+
+    // Platform side: reply, then close.
+    const replied = await apiRequest(`/api/v1/feedback/${ticketId}/responses`, {
+      token: adminToken,
+      method: "POST",
+      // The field is `message`, not `content` — the two are easy to confuse
+      // because the ticket itself uses `description`.
+      body: { message: "Looked at by the platform team." },
+    });
+    expect(replied.ok, `ticket reply returned ${replied.status}`).toBe(true);
+
+    const resolved = await apiRequest<FeedbackRow>(
+      `/api/v1/feedback/${ticketId}/status`,
+      { token: adminToken, method: "PUT", body: { status: "resolved" } },
+    );
+    expect(resolved.ok, `ticket resolve returned ${resolved.status}`).toBe(
+      true,
+    );
+
+    // Closing has to record who closed it and when — a status flip on its own
+    // leaves no audit trail on a customer-facing support record.
+    const record = resolved.body.data as unknown as Record<string, unknown>;
+    expect(record.resolvedAt, "resolvedAt must be stamped").toBeTruthy();
+    expect(record.resolvedBy, "resolvedBy must be recorded").toBeTruthy();
+
+    // And the shop sees the outcome, read back through its own token.
+    await expect
+      .poll(
+        async () => {
+          const fresh = await apiRequest<FeedbackRow>(
+            `/api/v1/feedback/${ticketId}`,
+            { token: ownerToken },
+          );
+          return fresh.body.data?.status;
+        },
+        { timeout: POLL_TIMEOUT },
+      )
+      .toBe("resolved");
   });
 });
 

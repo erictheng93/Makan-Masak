@@ -7,14 +7,13 @@
  * surface, and the ones with writes have their write covered elsewhere
  * (attendance for scheduling, settings for the shop row).
  *
- * Selector note: four of these five views carry no data-testid at all
- * (OwnerView, the employee list, the seating create modal, and all three
- * ai-analytics views), and the seating modal's labels are not associated with
- * their inputs, so `getByLabel` does not resolve either. Rather than add hooks
- * across four unrelated views in one pass, these tests assert on what the
- * pages genuinely commit to — the requests they issue, the rows they render,
- * and the few hooks that do exist. Where that limits the assertion, it is
- * called out inline.
+ * Selector note: OwnerView, the employee list and the three ai-analytics views
+ * carry no data-testid at all, and adding hooks there would not make the
+ * assertions stronger — they are read-only surfaces, and what matters is the
+ * requests they issue and the rows they render. So those tests assert exactly
+ * that. The seating modal is the exception and did get hooks, because its
+ * write path has a history of breakage (#260) and was otherwise reachable only
+ * by driving the API around the UI.
  */
 import { expect, test } from "@playwright/test";
 import {
@@ -33,6 +32,13 @@ import {
 interface TableRow {
   id?: number;
   number?: string;
+  capacity?: number;
+  qrCode?: string | null;
+}
+
+interface SeatRow {
+  id?: number;
+  seatNumber?: string;
   qrCode?: string | null;
 }
 
@@ -146,6 +152,134 @@ test.describe("桌位設定 (real API)", () => {
       await assertNoOverlayError(page);
     } finally {
       if (table.id) await apiCleanup(`/api/v1/tables/${table.id}`, token);
+    }
+  });
+
+  test("owner creates and re-capacities a table through the modal (#260)", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    await requireStack();
+
+    const { login, token, restaurantId } = await getOwnerContext();
+    const tableNumber = `E2E-${suffix().slice(0, 4).toUpperCase()}`;
+    let tableId: number | undefined;
+
+    await installAdminSession(page, login);
+
+    try {
+      await gotoAdmin(page, "/dashboard/seating/table-setup", {
+        expectApi: "/api/v1/tables",
+      });
+      await assertAuthenticated(page);
+
+      await page.getByTestId("open-create-table").click();
+      await page.getByTestId("table-number").fill(tableNumber);
+      await page.getByTestId("table-name").fill(`E2E Table ${suffix()}`);
+      await page.getByTestId("table-capacity").selectOption("4");
+
+      const created = page.waitForResponse(
+        (response) =>
+          response.url().includes("/api/v1/tables") &&
+          response.request().method() === "POST",
+      );
+      await page.getByTestId("table-submit").click();
+      const createResponse = await created;
+      expect(
+        createResponse.ok(),
+        `table create returned ${createResponse.status()}`,
+      ).toBe(true);
+
+      const createdBody = (await createResponse.json()) as { data?: TableRow };
+      tableId = createdBody.data?.id;
+      expect(typeof tableId, "created table id").toBe("number");
+
+      // #260 reported the capacity edit as always failing. It does not — but
+      // the claim went unchecked for weeks because nothing drove this modal.
+      await page.getByTestId(`edit-table-${tableId}`).click();
+      await page.getByTestId("table-capacity").selectOption("6");
+
+      const updated = page.waitForResponse(
+        (response) =>
+          response.url().includes(`/api/v1/tables/${tableId}`) &&
+          response.request().method() === "PUT",
+      );
+      await page.getByTestId("table-submit").click();
+      const updateResponse = await updated;
+      expect(
+        updateResponse.ok(),
+        `capacity edit returned ${updateResponse.status()}`,
+      ).toBe(true);
+
+      await expect
+        .poll(
+          async () => {
+            const list = await apiRequest<TableRow[]>(
+              `/api/v1/tables?restaurantId=${restaurantId}&limit=100`,
+              { token },
+            );
+            return (list.body.data ?? []).find((row) => row.id === tableId)
+              ?.capacity;
+          },
+          { timeout: POLL_TIMEOUT },
+        )
+        .toBe(6);
+
+      await assertNoOverlayError(page);
+    } finally {
+      if (tableId) await apiCleanup(`/api/v1/tables/${tableId}`, token);
+    }
+  });
+
+  test("batch seat creation issues a signed QR per seat (#260)", async () => {
+    test.setTimeout(120_000);
+    await requireStack();
+
+    const { token, restaurantId } = await getOwnerContext();
+    const created = await apiRequest<TableRow>("/api/v1/tables", {
+      token,
+      method: "POST",
+      body: {
+        restaurantId,
+        number: `E2E-${suffix().slice(0, 4).toUpperCase()}`,
+        capacity: 4,
+      },
+    });
+    const tableId = created.body.data?.id;
+
+    try {
+      // #260 said batch seat creation could never succeed. It does — four
+      // seats, each with its own signed QR. Seat and table codes are signed,
+      // unlike the public shop code, so a seat without a signature is a seat
+      // nobody can order from.
+      const seats = await apiRequest<SeatRow[]>("/api/v1/seats/batch-create", {
+        token,
+        method: "POST",
+        body: { tableId, restaurantId, seatCount: 4 },
+      });
+      expect(seats.ok, `batch seat create returned ${seats.status}`).toBe(true);
+
+      const rows = seats.body.data ?? [];
+      expect(rows).toHaveLength(4);
+      for (const seat of rows) {
+        expect(
+          seat.qrCode,
+          `seat ${seat.seatNumber} must carry a QR`,
+        ).toBeTruthy();
+        expect(
+          seat.qrCode,
+          `seat ${seat.seatNumber} QR must be signed`,
+        ).toContain("sig=");
+      }
+      // Numbered in order, because the printed stickers have to match.
+      expect(rows.map((seat) => seat.seatNumber)).toEqual([
+        "01",
+        "02",
+        "03",
+        "04",
+      ]);
+    } finally {
+      if (tableId) await apiCleanup(`/api/v1/tables/${tableId}`, token);
     }
   });
 });

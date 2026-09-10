@@ -78,6 +78,28 @@ export const OWNER_PASSWORD =
   optionalEnv("SMOKE_AUTH_PASSWORD") ??
   "owner123";
 
+/**
+ * Platform admin (role 0). Seeded by scripts/seed-local.sql alongside the owner.
+ *
+ * Needed because several flows are split across two roles by design and cannot
+ * be walked end to end from one login: raising a support ticket is
+ * `requireRole([1])` while resolving it is `requireRole([0])`, and coupon
+ * deletion is admin-only. Without this the suite could only ever assert the
+ * owner's half plus a 403.
+ *
+ * The production admin password is NOT `admin123` — it was changed and is
+ * unknown — so anything using this is local-only by construction.
+ */
+export const ADMIN_USERNAME =
+  optionalEnv("E2E_ADMIN_USERNAME") ??
+  optionalEnv("WORKFLOW_ADMIN_USERNAME") ??
+  "admin";
+
+export const ADMIN_PASSWORD =
+  optionalEnv("E2E_ADMIN_PASSWORD") ??
+  optionalEnv("WORKFLOW_ADMIN_PASSWORD") ??
+  "admin123";
+
 const RESTAURANT_ID_OVERRIDE =
   optionalEnv("WORKFLOW_RESTAURANT_ID") ?? optionalEnv("SMOKE_RESTAURANT_ID");
 
@@ -188,6 +210,52 @@ export async function getOwnerContext(): Promise<OwnerContext> {
   ).toBeTruthy();
 
   return { login, token: token!, restaurantId: restaurantId! };
+}
+
+let adminLoginPromise: Promise<SmokeLoginData> | undefined;
+
+/** Memoised per worker, same as the owner login. */
+export function getAdminLogin(): Promise<SmokeLoginData> {
+  adminLoginPromise ??= smokeLogin(API_URL, ADMIN_USERNAME, ADMIN_PASSWORD);
+  adminLoginPromise = adminLoginPromise.catch((error) => {
+    adminLoginPromise = undefined;
+    throw error;
+  });
+  return adminLoginPromise;
+}
+
+export interface AdminContext {
+  login: SmokeLoginData;
+  token: string;
+}
+
+/**
+ * A platform-admin session. Note there is no restaurantId: role 0 is not bound
+ * to a shop, so any restaurant-scoped call made with this token has to pass the
+ * id explicitly.
+ */
+export async function getAdminContext(): Promise<AdminContext> {
+  const login = await getAdminLogin();
+  expect(login.token, "admin login should return a token").toBeTruthy();
+  expect(login.user?.role, "admin login should be role 0").toBe(0);
+  return { login, token: login.token! };
+}
+
+/**
+ * Skips (or, under STRICT, fails) unless a platform-admin login is available.
+ *
+ * Separate from `requireStack` because the admin credentials are a local-seed
+ * convenience: pointed at a deployed environment they will not work, and a
+ * two-role spec should skip there rather than fail.
+ */
+export async function requireAdmin(): Promise<void> {
+  try {
+    await getAdminLogin();
+  } catch (error) {
+    const reason = `platform admin login unavailable (${(error as Error).message})`;
+    if (STRICT) throw new Error(reason);
+    test.skip(true, reason);
+  }
 }
 
 /**
