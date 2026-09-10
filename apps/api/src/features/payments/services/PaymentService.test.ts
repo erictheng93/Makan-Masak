@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
     insert: vi.fn(),
     batch: vi.fn(),
   },
+  raisePaymentFailedAlert: vi.fn(),
 }));
 
 let currentOrderUpdateChanges = 1;
@@ -24,6 +25,13 @@ vi.mock("drizzle-orm/d1", () => ({
 vi.mock("@makanmasak/utils", async (importOriginal) => ({
   ...((await importOriginal()) as Record<string, unknown>),
   generateUUID: vi.fn(() => "audit-id"),
+}));
+
+// Partial: `OWNER_ALERTED_PAYMENT_FAILURE_CODES` is the policy under test, so
+// the real set has to survive the mock — only the producer is stubbed.
+vi.mock("../../alerts/producers", async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
+  raisePaymentFailedAlert: mocks.raisePaymentFailedAlert,
 }));
 
 interface PreparedStatement {
@@ -235,6 +243,7 @@ function envWithRealtime(db: unknown) {
 function order(overrides: Record<string, unknown> = {}) {
   return {
     id: "order-101",
+    orderNumber: "A-001",
     restaurantId: "restaurant-1",
     status: "confirmed",
     paymentStatus: "pending",
@@ -1004,6 +1013,119 @@ describe("PaymentService", () => {
     ).rejects.toMatchObject({ code: "PAYMENT_AMOUNT_MISMATCH", status: 409 });
 
     expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it("alerts the owner when the submitted amount disagrees with the total", async () => {
+    const { db } = createD1();
+    queueOrderRows([[order({ totalAmountCents: 12000 })]]);
+    mockOrderUpdate();
+
+    await expect(
+      new PaymentService(env(db)).processPayment(
+        {
+          orderId: "order-101",
+          paymentMode: "full",
+          amount: 119,
+          method: "cash",
+        },
+        { currency: "TWD" },
+      ),
+    ).rejects.toMatchObject({ code: "PAYMENT_AMOUNT_MISMATCH", status: 409 });
+
+    expect(mocks.raisePaymentFailedAlert).toHaveBeenCalledOnce();
+    expect(mocks.raisePaymentFailedAlert).toHaveBeenCalledWith(
+      expect.objectContaining({ DB: db }),
+      expect.objectContaining({
+        restaurantId: "restaurant-1",
+        orderId: "order-101",
+        orderNumber: "A-001",
+        errorCode: "PAYMENT_AMOUNT_MISMATCH",
+        // Major units, matching what the owner sees on the order.
+        submittedAmount: 119,
+        serverTotal: 120,
+        currency: "TWD",
+      }),
+    );
+  });
+
+  // The drift case: `UPDATE orders` already flipped the order to paid and the
+  // ledger write never landed, so only the owner can reconcile it.
+  it("alerts the owner when the closing batch fails after the order flipped", async () => {
+    const { db } = createD1WithBatchFailure((statement) =>
+      statement.sql.includes("UPDATE payment_transactions"),
+    );
+    queueOrderRows([[order()]]);
+    mockOrderUpdate([{ status: "paid", paymentStatus: "paid" }]);
+
+    await expect(
+      new PaymentService(env(db)).processPayment({
+        orderId: "order-101",
+        paymentMode: "full",
+        amount: 120,
+        expectedTotal: 120,
+        method: "cash",
+      }),
+    ).rejects.toThrow("injected batch failure");
+
+    expect(mocks.raisePaymentFailedAlert).toHaveBeenCalledOnce();
+    expect(mocks.raisePaymentFailedAlert).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        restaurantId: "restaurant-1",
+        orderId: "order-101",
+        errorCode: "UNEXPECTED_ERROR",
+      }),
+    );
+  });
+
+  // A double-tap on a finalised order is not the owner's problem: the money is
+  // where it should be. It stays in the audit log and off the panel.
+  it("keeps a non-payable order out of the owner's alert panel", async () => {
+    const { db, statements } = createD1();
+    queueOrderRows([[order({ status: "paid", paymentStatus: "completed" })]]);
+    mockOrderUpdate();
+
+    await expect(
+      new PaymentService(env(db)).processPayment({
+        orderId: "order-101",
+        paymentMode: "full",
+        amount: 120,
+      }),
+    ).rejects.toMatchObject({ code: "ORDER_NOT_PAYABLE", status: 409 });
+
+    expect(
+      preparedAuditEvents(statements).map((event) => event.errorCode),
+    ).toEqual(["ORDER_NOT_PAYABLE"]);
+    expect(mocks.raisePaymentFailedAlert).not.toHaveBeenCalled();
+  });
+
+  // Same posture as the audit write: the caller must learn why the payment was
+  // refused whether or not the alert lands.
+  it("surfaces the original rejection when the alert producer throws", async () => {
+    const { db } = createD1();
+    queueOrderRows([[order({ totalAmountCents: 12000 })]]);
+    mockOrderUpdate();
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    mocks.raisePaymentFailedAlert.mockRejectedValueOnce(
+      new Error("alert sink down"),
+    );
+
+    await expect(
+      new PaymentService(env(db)).processPayment({
+        orderId: "order-101",
+        paymentMode: "full",
+        amount: 119,
+      }),
+    ).rejects.toMatchObject({ code: "PAYMENT_AMOUNT_MISMATCH", status: 409 });
+
+    expect(mocks.raisePaymentFailedAlert).toHaveBeenCalledOnce();
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to raise payment failure alert",
+      expect.objectContaining({ orderId: "order-101" }),
+    );
     consoleError.mockRestore();
   });
 

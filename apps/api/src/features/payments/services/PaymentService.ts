@@ -20,6 +20,10 @@ import {
   finalizeOrderStatusSideEffects,
   invalidateOrderCache,
 } from "../../orders/services/order-finalization";
+import {
+  OWNER_ALERTED_PAYMENT_FAILURE_CODES,
+  raisePaymentFailedAlert,
+} from "../../alerts/producers";
 
 export interface ProcessPaymentOptions {
   user?: AuthUser;
@@ -324,6 +328,12 @@ export class PaymentService {
    * Best-effort by construction: the caller must learn why the payment was
    * refused whether or not this write lands, so a failure here is logged and
    * swallowed and the original error is re-thrown by `processPayment`.
+   *
+   * The audit row traces every rejection; the owner alert is deliberately
+   * narrower. `OWNER_ALERTED_PAYMENT_FAILURE_CODES` names the failures that
+   * describe the restaurant's money rather than a caller's mistake, and the
+   * two writes are separately guarded so a dead audit sink cannot also
+   * silence the alert.
    */
   private async recordPaymentFailure(
     order: typeof orders.$inferSelect,
@@ -331,23 +341,24 @@ export class PaymentService {
     options: ProcessPaymentOptions,
     error: unknown,
   ): Promise<void> {
-    try {
-      const apiError = error instanceof ApiError ? error : null;
-      const submittedAmount =
-        input.paymentMode === "partial"
-          ? (input.payments ?? []).reduce(
-              (sum, payment) => sum + payment.amount,
-              0,
-            )
-          : (input.amount ?? null);
+    const apiError = error instanceof ApiError ? error : null;
+    const errorCode = apiError?.code ?? "UNEXPECTED_ERROR";
+    const submittedAmount =
+      input.paymentMode === "partial"
+        ? (input.payments ?? []).reduce(
+            (sum, payment) => sum + payment.amount,
+            0,
+          )
+        : (input.amount ?? null);
 
+    try {
       await this.paymentAudit.append({
         restaurantId: order.restaurantId,
         eventType: PAYMENT_AUDIT_EVENT_TYPES.FAILURE,
         provider: input.gateway ?? input.method ?? "internal",
         amount: order.totalAmountCents ?? null,
         currency: options.currency ?? null,
-        errorCode: apiError?.code ?? "UNEXPECTED_ERROR",
+        errorCode,
         errorMessage: apiError?.message ?? "Payment failed before completion",
         // Deliberately not `options.customerInfo` or `options.metadata`: this
         // row exists to explain the refusal, not to copy the request.
@@ -364,6 +375,31 @@ export class PaymentService {
         orderId: input.orderId,
         restaurantId: order.restaurantId,
         error: auditError,
+      });
+    }
+
+    if (!OWNER_ALERTED_PAYMENT_FAILURE_CODES.has(errorCode)) return;
+
+    try {
+      await raisePaymentFailedAlert(this.env, {
+        restaurantId: order.restaurantId,
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        errorCode,
+        paymentMode: input.paymentMode,
+        // Major units on both sides, so the owner reads the same figures the
+        // order screen shows rather than cents.
+        submittedAmount: submittedAmount ?? undefined,
+        serverTotal: amountFromCents(order.totalAmountCents) ?? undefined,
+        currency: options.currency,
+      });
+    } catch (alertError) {
+      // The producer swallows its own failures; this guard is here so a future
+      // one that does not cannot replace the rejection the caller must see.
+      console.error("Failed to raise payment failure alert", {
+        orderId: input.orderId,
+        restaurantId: order.restaurantId,
+        error: alertError,
       });
     }
   }
