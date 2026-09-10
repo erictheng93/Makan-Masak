@@ -14,10 +14,12 @@ import {
   between,
   categories,
   eq,
+  FULFILLED_ORDER_STATUSES,
   inArray,
   menuItems,
   orderItems,
   orders,
+  REVENUE_RECOGNISED_PAYMENT_STATUSES,
   sql,
   type createDatabase,
 } from "@makanmasak/database";
@@ -26,19 +28,6 @@ import type {
   ProductCategory,
   TimeRangeParams,
 } from "../types";
-
-/**
- * Order statuses that count as "fulfilled" for revenue/analytics.
- *
- * `orders.status` uses the ORDER_STATUS union
- * (pending/confirmed/preparing/ready/delivered/paid/cancelled/refunded) — it
- * never contains the literal "completed", so the old `eq(orders.status,
- * "completed")` filter silently matched zero rows. Of that union, only "paid"
- * and "delivered" represent a successfully fulfilled order. (The database
- * analytics service also lists "served", but that is an ORDER_ITEMS status, not
- * an orders.status, so it is intentionally omitted here.)
- */
-const FULFILLED_ORDER_STATUSES = ["paid", "delivered"] as const;
 
 interface RawProductMetrics {
   menu_item_id: number;
@@ -264,7 +253,14 @@ export class ProductAnalysisService {
           ELSE ${menuItems.costPriceCents} / 100.0
         END`,
         total_orders: sql<number>`COALESCE(COUNT(DISTINCT ${orders.id}), 0)`,
-        total_revenue: sql<number>`COALESCE(SUM(${orderItems.totalPriceCents}), 0) / 100.0`,
+        total_revenue: sql<number>`COALESCE(SUM(CASE
+          WHEN ${inArray(
+            orders.paymentStatus,
+            REVENUE_RECOGNISED_PAYMENT_STATUSES,
+          )}
+          THEN ${orderItems.totalPriceCents}
+          ELSE 0
+        END), 0) / 100.0`,
         first_item_count: sql<number>`0`,
         view_count: sql<number>`COALESCE(${menuItems.viewCount}, 0)`,
         cart_addition_count: sql<number>`0`,
@@ -308,7 +304,14 @@ export class ProductAnalysisService {
       .select({
         date: sql<string>`DATE(${orders.createdAt} / 1000, 'unixepoch')`,
         orders: sql<number>`COUNT(*)`,
-        revenue: sql<number>`COALESCE(SUM(${orderItems.totalPriceCents}), 0) / 100.0`,
+        revenue: sql<number>`COALESCE(SUM(CASE
+          WHEN ${inArray(
+            orders.paymentStatus,
+            REVENUE_RECOGNISED_PAYMENT_STATUSES,
+          )}
+          THEN ${orderItems.totalPriceCents}
+          ELSE 0
+        END), 0) / 100.0`,
       })
       .from(orders)
       .innerJoin(orderItems, eq(orders.id, orderItems.orderId))

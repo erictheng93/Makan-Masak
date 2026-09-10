@@ -77,6 +77,49 @@ describe("AnalyticsService revenue analytics", () => {
     ]);
   });
 
+  it("counts only collected orders as revenue while keeping delivery fulfilled", async () => {
+    await testDb.drizzle.insert(orders).values([
+      order("unpaid-delivery", "R-001", "2026-01-08T12:00:00.000Z", 90000, {
+        status: "delivered",
+        paymentStatus: "pending",
+        actualPrepTime: 12,
+      }),
+      order("collected", "R-002", "2026-01-08T13:00:00.000Z", 30000, {
+        status: "paid",
+        paymentStatus: "completed",
+        paymentTransactionId: "payment-1",
+        actualPrepTime: 18,
+      }),
+    ]);
+
+    const service = new AnalyticsService(testDb.bindings.DB, {} as never);
+    const revenue = await service.getRevenueAnalytics({
+      restaurantId: "analytics-restaurant",
+      dateFrom: "2026-01-08T00:00:00.000Z",
+      dateTo: "2026-01-09T00:00:00.000Z",
+      groupBy: "day",
+    });
+    const operational = await service.getOrderAnalytics({
+      restaurantId: "analytics-restaurant",
+      dateFrom: "2026-01-08T00:00:00.000Z",
+      dateTo: "2026-01-09T00:00:00.000Z",
+    });
+
+    expect(revenue).toEqual([
+      expect.objectContaining({
+        revenue: 300,
+        orderCount: 1,
+        averageOrderValue: 300,
+      }),
+    ]);
+    expect(operational).toMatchObject({
+      totalRevenue: 300,
+      averageOrderValue: 300,
+      completedOrders: 2,
+      averagePreparationTime: 15,
+    });
+  });
+
   it("buckets a UTC evening order into the following Taipei business day", async () => {
     await testDb.drizzle
       .insert(orders)
@@ -661,6 +704,7 @@ function order(
     orderNumber,
     restaurantId: "analytics-restaurant",
     status: "paid",
+    paymentStatus: "completed",
     totalAmountCents,
     createdAt: new Date(createdAt),
     updatedAt: new Date(createdAt),

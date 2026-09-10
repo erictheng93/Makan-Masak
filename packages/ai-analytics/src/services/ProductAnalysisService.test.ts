@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { FULFILLED_ORDER_STATUSES } from "@makanmasak/database";
 import { ProductAnalysisService } from "./ProductAnalysisService";
 
 function createQuery(result: unknown) {
@@ -94,14 +95,24 @@ describe("ProductAnalysisService money reads", () => {
     expect(collectSqlColumns(selectedFields[0].total_revenue)).toContain(
       "total_price_cents",
     );
+    expect(collectSqlColumns(selectedFields[0].total_revenue)).toContain(
+      "payment_status",
+    );
     expect(collectSqlColumns(selectedFields[0].total_revenue)).not.toContain(
       "total_price",
     );
     expect(collectSqlColumns(selectedFields[1].revenue)).toContain(
       "total_price_cents",
     );
+    expect(collectSqlColumns(selectedFields[1].revenue)).toContain(
+      "payment_status",
+    );
     expect(collectSqlColumns(selectedFields[1].revenue)).not.toContain(
       "total_price",
+    );
+    expect(FULFILLED_ORDER_STATUSES).toContain("delivered");
+    expect(collectSqlColumns(selectedFields[0].total_orders)).not.toContain(
+      "payment_status",
     );
   });
 });

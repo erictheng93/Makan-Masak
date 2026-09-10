@@ -12,9 +12,11 @@ import {
   lte,
   lt,
   ne,
+  notInArray,
   sql,
   sum,
   type SQL,
+  type SQLWrapper,
 } from "drizzle-orm";
 import {
   categories,
@@ -30,6 +32,10 @@ import {
   sumMoneyAmount,
 } from "../utils/money-sql";
 import {
+  FULFILLED_ORDER_STATUSES,
+  REVENUE_RECOGNISED_PAYMENT_STATUSES,
+} from "../utils/order-analytics";
+import {
   businessDateNow,
   dateFromUnixMs,
   strftimeFromUnixMs,
@@ -42,17 +48,20 @@ import {
 } from "../utils/business-timezone";
 import { BaseService } from "./base";
 
-/**
- * Status values that represent a "successfully completed" order for analytics.
- * The orders.status column never contains the literal string "completed" — older
- * queries used `eq(status, "completed")` and silently matched zero rows. Use this
- * array with `inArray(orders.status, ...)` for revenue / fulfillment analytics.
- */
-const FULFILLED_ORDER_STATUSES: readonly string[] = [
-  "paid",
-  "delivered",
-  "served",
-];
+function recognisedRevenueCents(centsColumn: SQLWrapper): SQL<number> {
+  return sql<number>`CASE
+    WHEN ${revenueRecognisedOrder()}
+    THEN ${centsColumn}
+    ELSE 0
+  END`;
+}
+
+function revenueRecognisedOrder(): SQL {
+  return and(
+    inArray(orders.paymentStatus, REVENUE_RECOGNISED_PAYMENT_STATUSES),
+    notInArray(orders.status, ["cancelled", "refunded"]),
+  )!;
+}
 
 type RevenueDataRow = {
   date: string;
@@ -228,8 +237,7 @@ export class AnalyticsService extends BaseService {
         conditions.push(lte(orders.createdAt, new Date(dateTo)));
       }
 
-      // 排除已取消訂單（計入所有已確認、製作中、已完成的營收）
-      conditions.push(sql`${orders.status} != 'cancelled'`);
+      conditions.push(revenueRecognisedOrder());
 
       // 生成日期分組 SQL
       const dateGroupSql = this.getDateGroupSQL(
@@ -306,9 +314,7 @@ export class AnalyticsService extends BaseService {
           averageOrderValue: avgMoneyAmount(orders.totalAmountCents),
         })
         .from(orders)
-        .where(
-          and(...conditions, inArray(orders.status, FULFILLED_ORDER_STATUSES)),
-        );
+        .where(and(...conditions, revenueRecognisedOrder()));
 
       // 已完成訂單數
       const [{ completedOrders }] = await this.db
@@ -440,12 +446,7 @@ export class AnalyticsService extends BaseService {
     const [priorRevenue] = await this.db
       .select({ total: sumMoneyAmount(orders.totalAmountCents) })
       .from(orders)
-      .where(
-        and(
-          ...priorConditions,
-          inArray(orders.status, FULFILLED_ORDER_STATUSES),
-        ),
-      );
+      .where(and(...priorConditions, revenueRecognisedOrder()));
 
     const priorRevenueTotal = Number(priorRevenue.total) || 0;
     const priorOrderTotal = priorOrders.total;
@@ -492,7 +493,9 @@ export class AnalyticsService extends BaseService {
           itemName: menuItems.name,
           categoryName: categories.name,
           quantity: sum(orderItems.quantity),
-          revenue: sumMoneyAmount(orderItems.totalPriceCents),
+          revenue: sumMoneyAmount(
+            recognisedRevenueCents(orderItems.totalPriceCents),
+          ),
         })
         .from(orderItems)
         .innerJoin(orders, eq(orderItems.orderId, orders.id))
@@ -509,7 +512,9 @@ export class AnalyticsService extends BaseService {
           categoryId: categories.id,
           categoryName: categories.name,
           quantity: sum(orderItems.quantity),
-          revenue: sumMoneyAmount(orderItems.totalPriceCents),
+          revenue: sumMoneyAmount(
+            recognisedRevenueCents(orderItems.totalPriceCents),
+          ),
           itemCount: count(sql`DISTINCT ${menuItems.id}`),
         })
         .from(orderItems)
@@ -518,7 +523,11 @@ export class AnalyticsService extends BaseService {
         .innerJoin(categories, eq(menuItems.categoryId, categories.id))
         .where(conditions.length > 0 ? and(...conditions) : undefined)
         .groupBy(categories.id, categories.name)
-        .orderBy(desc(sumMoneyAmount(orderItems.totalPriceCents)));
+        .orderBy(
+          desc(
+            sumMoneyAmount(recognisedRevenueCents(orderItems.totalPriceCents)),
+          ),
+        );
 
       // 表現差的菜品（近期很少被點）
       const lowPerformingItems = await this.db
@@ -672,7 +681,7 @@ export class AnalyticsService extends BaseService {
           and(
             ...conditions,
             sql`${orders.customerId} IS NOT NULL`,
-            inArray(orders.status, FULFILLED_ORDER_STATUSES),
+            revenueRecognisedOrder(),
           ),
         )
         .groupBy(orders.customerId)
@@ -694,9 +703,7 @@ export class AnalyticsService extends BaseService {
         })
         .from(orders)
         .innerJoin(customers, eq(orders.customerId, customers.id))
-        .where(
-          and(...conditions, inArray(orders.status, FULFILLED_ORDER_STATUSES)),
-        )
+        .where(and(...conditions, revenueRecognisedOrder()))
         .groupBy(orders.customerId, customers.displayName)
         .orderBy(desc(sumMoneyAmount(orders.totalAmountCents)))
         .limit(limit);
@@ -756,7 +763,9 @@ export class AnalyticsService extends BaseService {
             END
           `,
           averageOccupancyTime: tables.averageOccupancyMinutes,
-          totalRevenue: sumMoneyAmount(orders.totalAmountCents),
+          totalRevenue: sumMoneyAmount(
+            recognisedRevenueCents(orders.totalAmountCents),
+          ),
         })
         .from(tables)
         .leftJoin(orders, eq(tables.id, orders.tableId))
@@ -767,7 +776,9 @@ export class AnalyticsService extends BaseService {
           tables.averageOccupancyMinutes,
           tables.totalUsage,
         )
-        .orderBy(desc(sumMoneyAmount(orders.totalAmountCents)));
+        .orderBy(
+          desc(sumMoneyAmount(recognisedRevenueCents(orders.totalAmountCents))),
+        );
 
       // 高峰時段. Same business-hour boundary as every other bucket here --
       // see the note in getOrderAnalytics for what UTC bucketing did to a
@@ -878,15 +889,16 @@ export class AnalyticsService extends BaseService {
         "-1 month",
       );
 
-      // 訂單數計非取消訂單；營收計已結帳訂單 (paid / delivered / served)
-      // 先前用 eq(status, "completed") 一直過不了，因為 orders 表實際
-      // 狀態是 pending/confirmed/preparing/ready/delivered/served/paid/cancelled，
-      // 根本沒有 "completed"，所以 dashboard 永遠顯示 0。
+      // 訂單數計非取消訂單；營收則依 payment_status = completed 判斷已收款。
+      // 履約狀態與收款狀態刻意分開，delivered 但尚未結帳的訂單仍算訂單，
+      // 不算營收。
 
       // 今日營收和訂單數
       const todayStatsQuery = this.db
         .select({
-          revenue: sumMoneyAmount(orders.totalAmountCents),
+          revenue: sumMoneyAmount(
+            recognisedRevenueCents(orders.totalAmountCents),
+          ),
           orderCount: count(),
         })
         .from(orders)
@@ -907,14 +919,16 @@ export class AnalyticsService extends BaseService {
           and(
             eq(orders.restaurantId, restaurantId),
             eq(orderBusinessDate, businessDateNow(offsetMinutes)),
-            inArray(orders.status, FULFILLED_ORDER_STATUSES),
+            revenueRecognisedOrder(),
           ),
         );
 
       // 本月營收和訂單數
       const monthStatsQuery = this.db
         .select({
-          revenue: sumMoneyAmount(orders.totalAmountCents),
+          revenue: sumMoneyAmount(
+            recognisedRevenueCents(orders.totalAmountCents),
+          ),
           orderCount: count(),
         })
         .from(orders)
@@ -935,14 +949,16 @@ export class AnalyticsService extends BaseService {
           and(
             eq(orders.restaurantId, restaurantId),
             eq(orderBusinessMonth, currentBusinessMonth),
-            inArray(orders.status, FULFILLED_ORDER_STATUSES),
+            revenueRecognisedOrder(),
           ),
         );
 
       // 上月資料（用於計算成長率）
       const lastMonthStatsQuery = this.db
         .select({
-          revenue: sumMoneyAmount(orders.totalAmountCents),
+          revenue: sumMoneyAmount(
+            recognisedRevenueCents(orders.totalAmountCents),
+          ),
           orderCount: count(),
         })
         .from(orders)
@@ -963,7 +979,7 @@ export class AnalyticsService extends BaseService {
           and(
             eq(orders.restaurantId, restaurantId),
             eq(orderBusinessMonth, previousBusinessMonth),
-            inArray(orders.status, FULFILLED_ORDER_STATUSES),
+            revenueRecognisedOrder(),
           ),
         );
 
@@ -990,7 +1006,9 @@ export class AnalyticsService extends BaseService {
           itemId: menuItems.id,
           itemName: menuItems.name,
           quantity: sum(orderItems.quantity),
-          revenue: sumMoneyAmount(orderItems.totalPriceCents),
+          revenue: sumMoneyAmount(
+            recognisedRevenueCents(orderItems.totalPriceCents),
+          ),
         })
         .from(orderItems)
         .innerJoin(orders, eq(orderItems.orderId, orders.id))
@@ -1180,7 +1198,7 @@ export class AnalyticsService extends BaseService {
       conditions.push(lte(orders.createdAt, new Date(dateTo)));
     }
     // Same population as the revenue query it is netted against.
-    conditions.push(sql`${orders.status} != 'cancelled'`);
+    conditions.push(revenueRecognisedOrder());
 
     const dateGroupSql = this.getDateGroupSQL(
       groupBy,
@@ -1218,7 +1236,7 @@ export class AnalyticsService extends BaseService {
     if (restaurantId) {
       conditions.push(eq(orders.restaurantId, restaurantId));
     }
-    conditions.push(sql`${orders.status} != 'cancelled'`);
+    conditions.push(revenueRecognisedOrder());
 
     if (dateFrom && dateTo) {
       const dateRange = this.getPreviousDateRange(dateFrom, dateTo);
