@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { flushPromises, mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import GroupOrdersView from "./GroupOrdersView.vue";
 import {
   groupOrdersService,
@@ -113,6 +113,20 @@ const apiError = (code: string, status: number) => ({
 });
 
 describe("GroupOrdersView finalization recovery", () => {
+  // The first mount of this view in a worker costs ~470ms against a loaded
+  // machine while every later mount costs ~85ms -- Vue's render warm-up and
+  // jsdom's first DOM build for this tree, paid once per test file. Left in
+  // the first `it`, that one-off lands inside the 5s testTimeout and is what
+  // tipped this file over under `turbo run test` (#351). Pay it here instead,
+  // under the hook's own budget, so every timed body only re-renders.
+  beforeAll(async () => {
+    vi.mocked(groupOrdersService.getGroupOrders).mockResolvedValue([]);
+    vi.mocked(groupOrdersService.getGroupOrderStats).mockResolvedValue(stats);
+    const warmup = mount(GroupOrdersView);
+    await flushPromises();
+    warmup.unmount();
+  }, 30_000);
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(groupOrdersService.getGroupOrders).mockResolvedValue([
@@ -143,24 +157,30 @@ describe("GroupOrdersView finalization recovery", () => {
     ).toBeTruthy();
     expect(wrapper.text()).toContain("SPLIT_BILL_FAILED");
     expect(wrapper.text()).toContain("2026-08-22T10:05:00.000Z");
+  });
 
-    for (const status of [
-      "active",
-      "finalizing",
-      "checkout",
-      "completed",
-      "cancelled",
-    ] as const) {
-      const nonFailedWrapper = await mountSelectedOrder(
+  // Split out of the test above, and one case per status rather than a loop:
+  // this asserts the complementary case, and five mounts in a single body is
+  // ~4s of the 5s budget once the machine is oversubscribed (#351). One mount
+  // per body keeps each well under it.
+  it.each([
+    "active",
+    "finalizing",
+    "checkout",
+    "completed",
+    "cancelled",
+  ] as const)(
+    "hides the recovery control when the group order status is %s",
+    async (status) => {
+      const wrapper = await mountSelectedOrder(
         failedGroupOrder({ status, finalizeFailure: undefined }),
       );
+
       expect(
-        nonFailedWrapper
-          .find('[data-testid="recover-finalization-group-1"]')
-          .exists(),
+        wrapper.find('[data-testid="recover-finalization-group-1"]').exists(),
       ).toBe(false);
-    }
-  });
+    },
+  );
 
   it("calls recovery and refreshes the group orders after success", async () => {
     const wrapper = await mountSelectedOrder();
