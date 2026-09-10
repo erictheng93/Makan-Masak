@@ -46,11 +46,19 @@ interface UserRow {
   username?: string;
 }
 
-/** Local calendar date — the panel matches on the shop's today, not UTC's. */
+// seed-local.sql's restaurant uses Asia/Taipei. Keep both the fixture and
+// browser on that business day even when the CI runner's timezone is UTC.
+const RESTAURANT_TIMEZONE = "Asia/Taipei";
+test.use({ timezoneId: RESTAURANT_TIMEZONE });
+
+/** The seeded shop's calendar date, independent of the test runner's zone. */
 function todayLocalIso(): string {
-  const now = new Date();
-  const offsetMs = now.getTimezoneOffset() * 60_000;
-  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: RESTAURANT_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 }
 
 async function createTodaySchedule(

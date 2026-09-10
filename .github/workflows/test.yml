@@ -420,6 +420,10 @@ jobs:
         run: |
           pnpm db:migrate:local:api
           pnpm db:seed:local
+          pnpm exec wrangler d1 execute makanmakan-local --local \
+            --persist-to ./.wrangler/shared-state \
+            --config=./apps/api/wrangler.toml \
+            --file=./scripts/seed-e2e-fixtures.sql
 
       - name: 🚀 啟動 API 與 admin dashboard
         # AI has no local emulation. Disable remote bindings so startup does
