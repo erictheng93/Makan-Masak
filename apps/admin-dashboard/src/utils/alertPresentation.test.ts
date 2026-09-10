@@ -55,14 +55,55 @@ describe("createAlertPresenter", () => {
     const t = vi.fn(echoT);
     const presenter = createAlertPresenter(t, identityStatus);
     const unknown = alert({
-      alertType: "payment_failed",
-      title: "Payment failed",
-      description: "A card payment was declined.",
+      alertType: "table_unattended",
+      title: "Table 7 has been waiting",
+      description: "Table 7 has had no service for 20 minutes.",
     });
 
-    expect(presenter.title(unknown)).toBe("Payment failed");
-    expect(presenter.description(unknown)).toBe("A card payment was declined.");
+    expect(presenter.title(unknown)).toBe("Table 7 has been waiting");
+    expect(presenter.description(unknown)).toBe(
+      "Table 7 has had no service for 20 minutes.",
+    );
     expect(t).not.toHaveBeenCalled();
+  });
+
+  // #350: a refused payment reaches the panel with the order and the reason,
+  // both of which have to survive into the translated message.
+  it("renders a payment failure through its locale key", () => {
+    const t = vi.fn(echoT);
+    const presenter = createAlertPresenter(t, identityStatus);
+    const paymentFailed = alert({
+      alertType: "payment_failed",
+      severity: "critical",
+      title: "Payment failed for order A-001",
+      description: "Payment for order A-001 was refused (UNEXPECTED_ERROR).",
+      details: {
+        orderId: "0198c3a4-5b6c-7d8e-9f01-2345678900ff",
+        orderNumber: "A-001",
+        errorCode: "UNEXPECTED_ERROR",
+        paymentMode: "full",
+        submittedAmount: 119,
+        serverTotal: 120,
+        currency: "TWD",
+      },
+    });
+
+    expect(presenter.title(paymentFailed)).toBe(
+      "t:owner.alerts.payment_failed.title",
+    );
+    expect(presenter.description(paymentFailed)).toBe(
+      "t:owner.alerts.payment_failed.description",
+    );
+    expect(t).toHaveBeenCalledWith(
+      "owner.alerts.payment_failed.title",
+      expect.objectContaining({
+        orderNumber: "A-001",
+        errorCode: "UNEXPECTED_ERROR",
+        submittedAmount: 119,
+        serverTotal: 120,
+        currency: "TWD",
+      }),
+    );
   });
 
   // The status inside an alert has to read the same as the status everywhere

@@ -2177,6 +2177,11 @@ const viVN: Messages = {
         description:
           "Đơn hàng {orderNumber} chưa hoàn tất trong {minutesLate} phút và vẫn ở trạng thái {status}.",
       },
+      payment_failed: {
+        title: "Thanh toán đơn hàng {orderNumber} thất bại",
+        description:
+          "Thanh toán cho đơn hàng {orderNumber} đã bị từ chối ({errorCode}). Hãy kiểm tra trạng thái thanh toán của đơn hàng trước khi đối soát.",
+      },
     },
     resolve: "Giải quyết",
     escalate: "Báo cáo cấp trên",

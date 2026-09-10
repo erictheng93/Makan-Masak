@@ -2340,6 +2340,11 @@ const zhTWCore = {
         description:
           "訂單 {orderNumber} 已經 {minutesLate} 分鐘未完成，目前狀態為 {status}。",
       },
+      payment_failed: {
+        title: "訂單 {orderNumber} 付款失敗",
+        description:
+          "訂單 {orderNumber} 的付款遭拒（{errorCode}），請先確認該訂單的付款狀態再進行對帳。",
+      },
     },
     resolve: "解決",
     escalate: "升級處理",

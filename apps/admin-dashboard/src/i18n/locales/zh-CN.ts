@@ -2139,6 +2139,11 @@ const zhCN: Messages = {
         description:
           "订单 {orderNumber} 已经 {minutesLate} 分钟未完成，当前状态为 {status}。",
       },
+      payment_failed: {
+        title: "订单 {orderNumber} 支付失败",
+        description:
+          "订单 {orderNumber} 的支付被拒绝（{errorCode}），请先确认该订单的支付状态再进行对账。",
+      },
     },
     resolve: "解决",
     escalate: "升级处理",

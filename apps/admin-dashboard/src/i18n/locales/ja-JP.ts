@@ -2173,6 +2173,11 @@ const jaJP: Messages = {
         description:
           "注文 {orderNumber} は {minutesLate} 分間未完了で、状態は {status} のままです。",
       },
+      payment_failed: {
+        title: "注文 {orderNumber} の支払いが失敗しました",
+        description:
+          "注文 {orderNumber} の支払いが拒否されました（{errorCode}）。照合の前に注文の支払い状態を確認してください。",
+      },
     },
     resolve: "解決",
     escalate: "エスカレーション",

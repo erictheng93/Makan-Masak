@@ -2272,6 +2272,11 @@ const enUS: Messages = {
         description:
           "Order {orderNumber} has been unfinished for {minutesLate} minutes and is still {status}.",
       },
+      payment_failed: {
+        title: "Payment failed for order {orderNumber}",
+        description:
+          "Payment for order {orderNumber} was refused ({errorCode}). Check the order's payment state before reconciling.",
+      },
     },
     resolve: "Resolve",
     escalate: "Escalate",

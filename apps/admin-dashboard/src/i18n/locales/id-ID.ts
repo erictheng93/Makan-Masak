@@ -2288,6 +2288,11 @@ const idID: Messages = {
         description:
           "Pesanan {orderNumber} belum selesai selama {minutesLate} menit dan masih berstatus {status}.",
       },
+      payment_failed: {
+        title: "Pembayaran pesanan {orderNumber} gagal",
+        description:
+          "Pembayaran untuk pesanan {orderNumber} ditolak ({errorCode}). Periksa status pembayaran pesanan sebelum melakukan rekonsiliasi.",
+      },
     },
     resolve: "Selesaikan",
     escalate: "Eskalasi",
