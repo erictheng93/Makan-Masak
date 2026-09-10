@@ -75,6 +75,7 @@ describe("Business-day bucketing follows the restaurant's timezone", () => {
     const shop = await seed.restaurant({ timezone });
     await seed.order(shop.id, {
       status: "paid",
+      paymentStatus: "completed",
       createdAt: placedAt,
       updatedAt: placedAt,
     });
@@ -113,6 +114,7 @@ describe("Business-day bucketing follows the restaurant's timezone", () => {
     });
     await seed.order(shop.id, {
       status: "paid",
+      paymentStatus: "completed",
       createdAt: LATE_EVENING,
       updatedAt: LATE_EVENING,
     });
@@ -127,6 +129,7 @@ describe("Business-day bucketing follows the restaurant's timezone", () => {
     const shop = await seed.restaurant({ timezone: "America/New_York" });
     await seed.order(shop.id, {
       status: "paid",
+      paymentStatus: "completed",
       createdAt: LATE_EVENING,
       updatedAt: LATE_EVENING,
     });

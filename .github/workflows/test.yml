@@ -397,9 +397,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: 🏗️ 建置內部套件
-        # vite dev resolves app source directly, but the Worker imports
-        # workspace packages from their build output.
-        run: pnpm --filter @makanmasak/api^... build
+        # Both apps import workspace build output; the admin dependency graph
+        # also includes i18n, which is absent from the API's dependencies.
+        run: pnpm --filter @makanmasak/api^... --filter makanmasak-admin-dashboard^... build
 
       - name: 🔐 寫入 CI dev.vars
         # QR_SIGNING_KEY is required, not optional: creating a table,
@@ -422,9 +422,11 @@ jobs:
           pnpm db:seed:local
 
       - name: 🚀 啟動 API 與 admin dashboard
+        # AI has no local emulation. Disable remote bindings so startup does
+        # not require Cloudflare credentials for these local-D1 tests.
         run: |
           mkdir -p /tmp/admin-e2e-logs
-          (cd apps/api && pnpm exec wrangler dev \
+          (cd apps/api && pnpm exec wrangler dev --local \
              --persist-to ../../.wrangler/shared-state \
              > /tmp/admin-e2e-logs/api.log 2>&1 &)
           (cd apps/admin-dashboard && pnpm exec vite --port 3001 --host 0.0.0.0 \
