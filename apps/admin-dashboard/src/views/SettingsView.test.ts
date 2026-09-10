@@ -2,7 +2,7 @@
 
 import { mount, flushPromises } from "@vue/test-utils";
 import { ref } from "vue";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import SettingsView from "./SettingsView.vue";
 import { AxiosHeaders, type AxiosResponse } from "axios";
 import type { ApiResponse } from "@/types";
@@ -108,6 +108,67 @@ function apiGetResponse<T>(data: T): AxiosResponse<ApiResponse<T>> {
   };
 }
 
+// No test in this file asserts on these three panels' own output, and each of
+// them costs a render on every mount -- the booking-slots panel additionally
+// runs its own async load, which lands in whichever timed body did the mount.
+// The api.get mock for /service-bookings/slots is kept so a stub can be
+// dropped again without re-deriving it.
+const settingsStubs = {
+  IntegrationsSettings: true,
+  RestaurantServiceItemsManager: true,
+  ServiceBookingSlotsManager: true,
+};
+
+// Two one-off costs used to be paid inside whichever timed body happened to
+// hit them first, which is why this file failed only under `turbo run test`
+// (#351). Measured on a loaded 4-core box:
+//
+//   * the first mount of this 3,000-line view costs ~1,240ms; later mounts
+//     cost ~200-440ms.
+//   * the first `getComputedStyle` call in a jsdom environment costs ~2,070ms
+//     (jsdom builds its CSSOM lazily), and the first `isVisible()` on top of
+//     that another ~470ms. Steady state is ~60ms. Only the "does not show
+//     desktop notification controls" test calls `isVisible()`, so it paid the
+//     whole ~2.5s -- half the 5s testTimeout -- for the rest of the file.
+//
+// Both are re-usable state, not per-test work, so pay them once here under the
+// hook's own budget. Do not replace this with a raised testTimeout: the point
+// is that the timed bodies stop containing one-off costs at all.
+beforeAll(async () => {
+  vi.mocked(useAuthStore).mockReturnValue({
+    restaurantId: "restaurant-warmup",
+  } as unknown as ReturnType<typeof useAuthStore>);
+  vi.mocked(useRoute).mockReturnValue({
+    query: {},
+  } as unknown as ReturnType<typeof useRoute>);
+  vi.mocked(api.get).mockImplementation(async (url: string) => {
+    if (url.endsWith("/contact-profile")) {
+      return apiGetResponse({ messagingChannels: {}, faqs: [] });
+    }
+    if (url.endsWith("/service-items")) {
+      return apiGetResponse([]);
+    }
+    if (url === "/service-bookings/slots") {
+      return apiGetResponse({ slots: [] });
+    }
+    return apiGetResponse({});
+  });
+  vi.mocked(marketsService.listMarkets).mockResolvedValue([]);
+  vi.mocked(marketsService.listRestaurantMemberships).mockResolvedValue([]);
+  vi.mocked(marketsService.listJoinRequests).mockResolvedValue([]);
+
+  const warmup = mount(SettingsView, {
+    global: {
+      stubs: settingsStubs,
+    },
+  });
+  await flushPromises();
+  // Exercises the same path the notification-visibility assertion uses, so the
+  // jsdom CSSOM and the resolved-value machinery are both warm by then.
+  warmup.findAll('input[type="checkbox"]')[0]?.isVisible();
+  warmup.unmount();
+}, 30_000);
+
 describe("SettingsView market join requests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -199,10 +260,7 @@ describe("SettingsView market join requests", () => {
   it("lets a restaurant owner submit a market join request from settings", async () => {
     const wrapper = mount(SettingsView, {
       global: {
-        stubs: {
-          IntegrationsSettings: true,
-          RestaurantServiceItemsManager: true,
-        },
+        stubs: settingsStubs,
       },
     });
     await flushPromises();
@@ -275,10 +333,7 @@ describe("SettingsView guest ordering availability", () => {
   async function mountSettings() {
     const wrapper = mount(SettingsView, {
       global: {
-        stubs: {
-          IntegrationsSettings: true,
-          RestaurantServiceItemsManager: true,
-        },
+        stubs: settingsStubs,
       },
     });
     await flushPromises();
@@ -567,10 +622,7 @@ describe("SettingsView shop QR management", () => {
       .mockImplementation(() => undefined);
     const wrapper = mount(SettingsView, {
       global: {
-        stubs: {
-          IntegrationsSettings: true,
-          RestaurantServiceItemsManager: true,
-        },
+        stubs: settingsStubs,
       },
     });
     await flushPromises();
@@ -614,10 +666,7 @@ describe("SettingsView shop QR management", () => {
 
     mount(SettingsView, {
       global: {
-        stubs: {
-          IntegrationsSettings: true,
-          RestaurantServiceItemsManager: true,
-        },
+        stubs: settingsStubs,
       },
     });
     await flushPromises();
@@ -628,10 +677,7 @@ describe("SettingsView shop QR management", () => {
   it("does not show desktop notification controls on the QR Code tab", async () => {
     const wrapper = mount(SettingsView, {
       global: {
-        stubs: {
-          IntegrationsSettings: true,
-          RestaurantServiceItemsManager: true,
-        },
+        stubs: settingsStubs,
       },
     });
     await flushPromises();
@@ -682,10 +728,7 @@ describe("SettingsView shop QR management", () => {
     });
     const wrapper = mount(SettingsView, {
       global: {
-        stubs: {
-          IntegrationsSettings: true,
-          RestaurantServiceItemsManager: true,
-        },
+        stubs: settingsStubs,
       },
     });
     await flushPromises();
