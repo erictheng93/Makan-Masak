@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { flushPromises, mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import PlatformMarketCheckoutsView from "./PlatformMarketCheckoutsView.vue";
 import { marketCheckoutsService } from "@/services/marketCheckoutsService";
 
@@ -22,7 +22,7 @@ vi.mock("@/services/marketCheckoutsService", () => ({
 }));
 
 describe("PlatformMarketCheckoutsView", () => {
-  beforeEach(() => {
+  function configureServiceMocks() {
     vi.clearAllMocks();
     vi.spyOn(window, "confirm").mockReturnValue(true);
     vi.stubGlobal(
@@ -331,11 +331,63 @@ describe("PlatformMarketCheckoutsView", () => {
         childPayments: [],
       },
     });
-  });
+  }
 
-  it("lists market checkouts and opens child order details", async () => {
+  beforeEach(configureServiceMocks);
+
+  // The first mount of this view in a worker costs ~740ms against a loaded
+  // machine; later mounts cost ~250ms. That one-off is Vue render warm-up
+  // plus jsdom's first DOM build for this tree -- re-usable state, not
+  // per-test work -- so pay it here under the hook budget rather than inside
+  // whichever timed body happens to run first.
+  beforeAll(async () => {
+    configureServiceMocks();
+    const warmup = mount(PlatformMarketCheckoutsView);
+    await flushPromises();
+    warmup.unmount();
+  }, 30_000);
+
+  async function mountView() {
     const wrapper = mount(PlatformMarketCheckoutsView);
     await flushPromises();
+    return wrapper;
+  }
+
+  async function applyDateAndAlertFilters(
+    wrapper: Awaited<ReturnType<typeof mountView>>,
+  ) {
+    await wrapper
+      .get('[data-testid="market-checkout-date-from"]')
+      .setValue("2026-06-01");
+    await wrapper
+      .get('[data-testid="market-checkout-date-to"]')
+      .setValue("2026-06-02");
+    await wrapper
+      .get('[data-testid="market-checkout-operation-alert"]')
+      .setValue("provider_webhook_failed");
+    await wrapper
+      .get('[data-testid="market-checkout-filter"]')
+      .trigger("click");
+    await flushPromises();
+  }
+
+  async function openCheckoutDetail(
+    wrapper: Awaited<ReturnType<typeof mountView>>,
+  ) {
+    await wrapper
+      .get('[data-testid="open-checkout-checkout-1"]')
+      .trigger("click");
+    await flushPromises();
+  }
+
+  // Every one of these used to be one stage of a single 341-line `it` that
+  // burned ~3.7s of the 5s testTimeout on a loaded machine -- eight
+  // interaction rounds in one body, which is what made it fail under
+  // `turbo run test` and pass on its own (#351). They assert about separate
+  // panels, so they are separate tests; each re-mounts, which the warm-up
+  // above keeps cheap.
+  it("lists market checkouts with their operation alerts, summary and provider status", async () => {
+    const wrapper = await mountView();
 
     expect(marketCheckoutsService.list).toHaveBeenCalledWith({
       page: 1,
@@ -387,18 +439,6 @@ describe("PlatformMarketCheckoutsView", () => {
       "Provider refund URL",
     );
 
-    await wrapper
-      .get('[data-testid="check-provider-connectivity"]')
-      .trigger("click");
-    await flushPromises();
-
-    expect(marketCheckoutsService.checkProviderConnectivity).toHaveBeenCalled();
-    expect(
-      wrapper.get('[data-testid="provider-connectivity-check"]').text(),
-    ).toContain("未檢查");
-    expect(
-      wrapper.get('[data-testid="provider-connectivity-check"]').text(),
-    ).toContain("Provider split gateway URL is configured");
     expect(wrapper.get('[data-testid="checkout-summary"]').text()).toContain(
       "GMV",
     );
@@ -426,20 +466,28 @@ describe("PlatformMarketCheckoutsView", () => {
     expect(wrapper.get('[data-testid="vendor-settlements"]').text()).toContain(
       "$152",
     );
+  });
+
+  it("checks provider connectivity on demand", async () => {
+    const wrapper = await mountView();
 
     await wrapper
-      .get('[data-testid="market-checkout-date-from"]')
-      .setValue("2026-06-01");
-    await wrapper
-      .get('[data-testid="market-checkout-date-to"]')
-      .setValue("2026-06-02");
-    await wrapper
-      .get('[data-testid="market-checkout-operation-alert"]')
-      .setValue("provider_webhook_failed");
-    await wrapper
-      .get('[data-testid="market-checkout-filter"]')
+      .get('[data-testid="check-provider-connectivity"]')
       .trigger("click");
     await flushPromises();
+
+    expect(marketCheckoutsService.checkProviderConnectivity).toHaveBeenCalled();
+    expect(
+      wrapper.get('[data-testid="provider-connectivity-check"]').text(),
+    ).toContain("未檢查");
+    expect(
+      wrapper.get('[data-testid="provider-connectivity-check"]').text(),
+    ).toContain("Provider split gateway URL is configured");
+  });
+
+  it("applies the date and alert filters to the list, summary and vendor queries", async () => {
+    const wrapper = await mountView();
+    await applyDateAndAlertFilters(wrapper);
 
     expect(marketCheckoutsService.list).toHaveBeenLastCalledWith({
       page: 1,
@@ -462,6 +510,11 @@ describe("PlatformMarketCheckoutsView", () => {
       dateFrom: "2026-06-01",
       dateTo: "2026-06-02",
     });
+  });
+
+  it("exports checkouts, vendor settlements and the accounting ledger under the active filters", async () => {
+    const wrapper = await mountView();
+    await applyDateAndAlertFilters(wrapper);
 
     await wrapper.get('[data-testid="export-checkouts"]').trigger("click");
     await flushPromises();
@@ -497,11 +550,11 @@ describe("PlatformMarketCheckoutsView", () => {
       dateFrom: "2026-06-01",
       dateTo: "2026-06-02",
     });
+  });
 
-    await wrapper
-      .get('[data-testid="open-checkout-checkout-1"]')
-      .trigger("click");
-    await flushPromises();
+  it("opens child order details with the parent payment timeline", async () => {
+    const wrapper = await mountView();
+    await openCheckoutDetail(wrapper);
 
     expect(marketCheckoutsService.get).toHaveBeenCalledWith("checkout-1");
     expect(wrapper.get('[data-testid="checkout-detail"]').text()).toContain(
@@ -610,12 +663,18 @@ describe("PlatformMarketCheckoutsView", () => {
     expect(
       wrapper.get('[data-testid="checkout-provider-alerts"]').text(),
     ).toContain("Provider 退款仍在處理中");
+  });
+
+  it("reconciles an open checkout and refreshes its settlement panel", async () => {
+    const wrapper = await mountView();
+    await openCheckoutDetail(wrapper);
+
     await wrapper.get('[data-testid="reconcile-checkout"]').trigger("click");
     await flushPromises();
 
     expect(marketCheckoutsService.reconcile).toHaveBeenCalledWith("checkout-1");
     expect(marketCheckoutsService.get).toHaveBeenCalledWith("checkout-1");
-    expect(marketCheckoutsService.list).toHaveBeenCalledTimes(3);
+    expect(marketCheckoutsService.list).toHaveBeenCalledTimes(2);
     expect(
       wrapper.get('[data-testid="checkout-parent-payment"]').text(),
     ).toContain("子交易 1");
@@ -665,6 +724,11 @@ describe("PlatformMarketCheckoutsView", () => {
     expect(
       wrapper.get('[data-testid="checkout-child-payments"]').text(),
     ).toContain("pay-1");
+  });
+
+  it("refunds an open checkout through the admin reason code", async () => {
+    const wrapper = await mountView();
+    await openCheckoutDetail(wrapper);
 
     await wrapper.get('[data-testid="refund-checkout"]').trigger("click");
     await flushPromises();
