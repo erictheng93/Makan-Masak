@@ -404,6 +404,7 @@ routes.post(
     await enforcePasswordRateLimit(c, "forgot", identifier.value);
 
     const identity = await loadPasswordIdentity(c.env, identifier.value);
+    let issued: IssuedPhoneOtp | undefined;
     if (identity) {
       // `delivered` is deliberately ignored: this endpoint answers identically
       // whether or not the account exists, so it cannot report send failures
@@ -419,7 +420,11 @@ routes.post(
         );
       } else {
         try {
-          await issuePhoneOtp(c, identifier.value, identity.customer_id);
+          issued = await issuePhoneOtp(
+            c,
+            identifier.value,
+            identity.customer_id,
+          );
         } catch (error) {
           if (
             error instanceof ApiError &&
@@ -436,7 +441,20 @@ routes.post(
 
     return c.json({
       success: true,
-      data: { sent: true },
+      // The dev echo rides the same NODE_ENV gate as /auth/request-otp, which
+      // already hands back the code itself outside production. Local dev runs
+      // the "noop" SMS provider and stores the OTP bcrypt-hashed, so without
+      // this the phone reset screen cannot be exercised on a dev machine at
+      // all. It does make dev an account-existence oracle — the field appears
+      // only when the lookup found an identity — which is accepted knowingly:
+      // an environment that already publishes the code to anyone who asks has
+      // nothing smaller left to protect, and the gate is env-only, so the
+      // production response stays byte-identical (`{ sent: true }`) for known
+      // and unknown numbers alike.
+      data: {
+        sent: true,
+        ...(issued?.devOtp ? { devOtp: issued.devOtp } : {}),
+      },
     });
   },
 );

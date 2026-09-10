@@ -782,6 +782,58 @@ describe("customer identity routes", () => {
     ).toBe(false);
   });
 
+  it("echoes the phone reset code only behind the same dev gate as request-otp", async () => {
+    const phone = "+886912345678";
+    const identity = () =>
+      createDb({ first: [passwordIdentityRow({ provider_uid: phone })] });
+
+    // NODE_ENV=test: the local SMS provider is a no-op, so without the echo the
+    // reset screen cannot be exercised on a dev machine at all.
+    const dev = await request(
+      "/auth/forgot-password",
+      "POST",
+      { identifier: phone },
+      { DB: identity() },
+    ).response;
+
+    // Production: the gate is env-only, so known and unknown numbers still get
+    // the identical body — the echo must not become an existence oracle there.
+    const prodEnv = {
+      NODE_ENV: "production",
+      SMS_PROVIDER: "mitake",
+      MITAKE_USERNAME: "acct",
+      MITAKE_PASSWORD: "secret",
+      SMS_FETCH: vi
+        .fn()
+        .mockResolvedValue(new Response("[1]\r\nmsgid=990001\r\nstatuscode=1")),
+    };
+    const prodKnown = await request(
+      "/auth/forgot-password",
+      "POST",
+      { identifier: phone },
+      { DB: identity(), ...prodEnv },
+    ).response;
+    const prodUnknown = await request(
+      "/auth/forgot-password",
+      "POST",
+      { identifier: phone },
+      { DB: createDb({ first: [null] }), ...prodEnv },
+    ).response;
+
+    await expect(dev.json()).resolves.toMatchObject({
+      success: true,
+      data: { sent: true, devOtp: expect.stringMatching(/^\d{6}$/) },
+    });
+    await expect(prodKnown.json()).resolves.toEqual({
+      success: true,
+      data: { sent: true },
+    });
+    await expect(prodUnknown.json()).resolves.toEqual({
+      success: true,
+      data: { sent: true },
+    });
+  });
+
   it("keeps phone forgot-password responses uniform once the OTP quota is spent", async () => {
     const phone = "+886912345678";
     const spentQuota = { [`customer_otp_phone:${phone}`]: "3" };
