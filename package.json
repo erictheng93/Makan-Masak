@@ -59,6 +59,7 @@
     "db:migrate:prod:mgmt": "wrangler d1 migrations apply makanmasak-management-prod --remote --env production --config=./apps/management-api/wrangler.toml",
     "db:reset:local": "rm -rf .wrangler/shared-state/v3/d1/ apps/api/.wrangler/state/v3/d1/ apps/management-api/.wrangler/state/v3/d1/ && pnpm db:migrate:local",
     "db:seed:local": "wrangler d1 execute makanmakan-local --local --persist-to ./.wrangler/shared-state --file=./scripts/seed-local.sql --config=./apps/api/wrangler.toml",
+    "db:seed:local:e2e": "wrangler d1 execute makanmakan-local --local --persist-to ./.wrangler/shared-state --file=./scripts/seed-e2e-fixtures.sql --config=./apps/api/wrangler.toml",
     "db:backup": "npx tsx scripts/backup-database.ts",
     "db:test-migrations": "npx tsx scripts/test-migrations-v2.ts",
     "setup:secrets": "npx tsx scripts/setup-secrets.ts",

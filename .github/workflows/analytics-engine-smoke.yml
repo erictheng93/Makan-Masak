@@ -1,10 +1,12 @@
 name: 📈 Analytics Engine SQL smoke
 
-# Split out of nightly-integration.yml so it can actually be scheduled.
-# That workflow's cron is commented out and its integration-tests job has been
-# failing since May, so anything living inside it never runs on a schedule and
-# would be drowned in a red run if it did. This check takes ~35 seconds and
-# needs nothing but a token, so it stands alone.
+# Split out of nightly-integration.yml. At the time, that workflow's cron was
+# commented out and its integration-tests job had been broken since May, so
+# anything living inside it never ran on a schedule and would have been drowned
+# in a red run if it did. Both are fixed (#357) and the two now run on the same
+# cron, but this check still stands alone on purpose: it takes ~35 seconds and
+# needs nothing but a token, where the integration job needs a Worker, a D1 and
+# a browser. Keeping them separate keeps this one's verdict readable.
 on:
   schedule:
     # 02:00 UTC+8 (Taiwan) — 18:00 UTC daily

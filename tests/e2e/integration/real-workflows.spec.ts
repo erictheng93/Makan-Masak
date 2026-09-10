@@ -59,14 +59,23 @@ const MANAGEMENT_WORKFLOW_API_URL =
     ? new URL("/api/v1", MANAGEMENT_PORTAL_URL).toString().replace(/\/$/, "")
     : undefined);
 
+/**
+ * Local fallbacks are owner1/owner123 — the account scripts/seed-local.sql
+ * creates, and the same pair tests/e2e/admin/admin-e2e.ts falls back to.
+ *
+ * They used to be grandmaShop/password123, which came from
+ * scripts/seed-mock-data.sql. b936600f deleted that file, so against a
+ * freshly seeded local D1 the fallback 401s and every test that needs a
+ * login skips on "login failed" rather than on anything true (#357).
+ */
 const AUTH_USERNAME =
   optionalEnv("WORKFLOW_AUTH_USERNAME") ||
   optionalEnv("SMOKE_AUTH_USERNAME") ||
-  (IS_LOCAL_API ? "grandmaShop" : undefined);
+  (IS_LOCAL_API ? "owner1" : undefined);
 const AUTH_PASSWORD =
   optionalEnv("WORKFLOW_AUTH_PASSWORD") ||
   optionalEnv("SMOKE_AUTH_PASSWORD") ||
-  (IS_LOCAL_API ? "password123" : undefined);
+  (IS_LOCAL_API ? "owner123" : undefined);
 const CHEF_USERNAME = optionalEnv("WORKFLOW_CHEF_USERNAME");
 const CHEF_PASSWORD = optionalEnv("WORKFLOW_CHEF_PASSWORD");
 const MANAGEMENT_TOKEN =
@@ -1375,7 +1384,13 @@ test.describe("Real system workflows", () => {
         }>;
       };
       expect(createRequestBody.guestName).toBe("Workflow UI");
-      expect(createRequestBody.phoneLastDigits).toBe("678");
+      // Asserted absent, not equal to "678". df34417e (#193, #189) removed the
+      // pickup-digits step from both order payloads — the order number is the
+      // pickup identifier — and apps/customer-app's own unit test
+      // ("sends no pickup digits") pins the same thing. This spec kept
+      // asserting the pre-df34417e contract because nothing had run it since
+      // b936600f; the nightly runs it again as of #357.
+      expect(createRequestBody.phoneLastDigits).toBeUndefined();
       expect(createRequestBody.notes).toBe("workflow table note");
       expect(createRequestBody.items).toEqual([
         expect.objectContaining({

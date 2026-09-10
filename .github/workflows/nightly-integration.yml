@@ -1,23 +1,23 @@
 name: 🌙 Nightly Integration Tests
 
-# Integration tests hit a real Wrangler dev server + seeded D1 database.
-# They are slower, flakier, and depend on real infrastructure.
+# Runs the `integration` Playwright project — tests/e2e/integration/
+# real-workflows.spec.ts, 17 tests, zero `page.route()` — against a real
+# `wrangler dev` Worker and a real local D1.
 #
-# Scope: runs every spec under tests/e2e/integration/, which includes:
-#   - p0-release-gates.spec.ts (Tier 1 P0 blockers)
-#   - p1-current-quarter-gates.spec.ts (Tier 2 P1 Strengthen Partial)
-#   - real API integration smokes (admin-order-management.real, kitchen-display.real, customer-dine-in, etc.)
+# This is the only scheduled job that drives the customer SPA against a real
+# backend. `test.yml`'s `e2e-tests` serves `vite preview` with no API behind
+# it, and its `admin-real-e2e` covers the admin dashboard only.
 #
-# Solo-dev mode (2026-05-04): cron and PR auto-runs are disabled to cut CI
-# noise during active development. Run manually before releases via:
-#   gh workflow run nightly-integration.yml --ref <branch>
-# Re-enable the schedule below once the project has multiple contributors
-# or moves out of dev stage.
+# The schedule was commented out in 2026-05 ("solo-dev mode"), and while nobody
+# was looking the job stopped being runnable at all: it invoked three spec files
+# and two SQL files that b936600f had deleted, and it seeded a database the API
+# never opened. Unscheduled is how that went unnoticed for four months, so the
+# cron is back on.
 
 on:
-  # schedule:
-  #   # 2 AM UTC+8 (Taiwan time) — 18:00 UTC daily
-  #   - cron: "0 18 * * *"
+  schedule:
+    # 2 AM UTC+8 (Taiwan time) — 18:00 UTC daily
+    - cron: "0 18 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -27,226 +27,259 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  NODE_VERSION: "22"
-
 jobs:
   integration-tests:
     name: 🔗 Integration Tests (real API)
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
+    # Same pinned image as test.yml's browser jobs: browsers and system deps
+    # are preinstalled and match the @playwright/test version in package.json.
+    # Upgrading Playwright means bumping both, in the same PR.
+    container:
+      image: mcr.microsoft.com/playwright:v1.57.0-noble
+      options: --ipc=host
+    env:
+      HOME: /root
+
     steps:
       - name: 📦 Checkout 程式碼
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: 📦 安裝 pnpm
+        # Not corepack — inside this container it exits 0 having fetched
+        # nothing and the shim then dies. See the e2e-tests job in test.yml.
+        # No version input: the action reads `packageManager`.
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
-
-      - name: 🔧 設置 Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
 
       - name: 📥 安裝依賴
         run: pnpm install --frozen-lockfile
 
-      - name: 🏗️ 建置應用程式
-        run: pnpm run build
+      - name: 🏗️ 建置內部套件
+        # The customer app runs from source under `vite`, but the Worker
+        # imports workspace packages from their build output.
+        run: pnpm --filter @makanmasak/api^... build
 
-      # .dev.vars is gitignored; create a CI-only copy with:
-      #   - JWT_SECRET >=32 chars so authMiddleware doesn't 500 on SERVER_CONFIG_ERROR
-      #   - CORS_ORIGIN list matching the localhost preview ports
-      #   - ALLOW_TEST_SIGNATURE=true so the E2 webhook gate can use the
-      #     literal "test-fixture-signature" HMAC bypass (see
-      #     apps/api/src/features/integrations/routes/webhook.ts isTestSignatureAllowed).
-      #   - NODE_ENV=test so X-Payment-Gateway-Fixture is honored by the
-      #     payments route (see apps/api/src/features/payments/routes/index.ts
-      #     fixtureAllowed check).
       - name: 🔐 寫入 CI dev.vars
+        # .dev.vars is gitignored, so CI writes its own:
+        #   - JWT_SECRET >= 32 chars, or authMiddleware 500s on
+        #     SERVER_CONFIG_ERROR instead of authenticating.
+        #   - QR_SIGNING_KEY, because table/seat QR paths throw without it.
+        #   - CORS_ORIGIN covering the ports the SPAs are served on.
         run: |
           cat > apps/api/.dev.vars <<'EOF'
           JWT_SECRET=ci-integration-gate-jwt-secret-minimum-32-chars-long
+          INTERNAL_API_TOKEN=ci-integration-internal-token-minimum-32-chars-long
+          QR_SIGNING_KEY=ci-integration-qr-signing-key-minimum-32-chars-long
           CORS_ORIGIN=http://localhost:3000,http://localhost:3001,http://localhost:3002
-          ALLOW_TEST_SIGNATURE=true
           NODE_ENV=test
           EOF
 
-      # Local D1 persistence path difference:
-      #   - `pnpm db:migrate:local` / `pnpm db:seed:mock` write to
-      #     ./.wrangler/shared-state via --persist-to.
-      #   - `cd apps/api && pnpm dev` (wrangler dev with no --persist-to)
-      #     reads from apps/api/.wrangler/state by default.
-      # To avoid seeding the wrong DB, run every migration and seed step with
-      # working-directory: apps/api so wrangler resolves the same default
-      # state path that `pnpm dev` will later read from.
-      - name: 🗄️ 初始化本地 D1 (migrations_fresh)
-        working-directory: apps/api
-        run: pnpm wrangler d1 migrations apply makanmakan-local --local
-
-      - name: 🌱 Seed mock data (seed-mock-data.sql)
-        working-directory: apps/api
+      - name: 🗄️ Migrate + seed 本地 D1
+        # Both root scripts pass --persist-to ./.wrangler/shared-state, which is
+        # the state directory the API opens below. Running wrangler from
+        # apps/api without that flag writes to apps/api/.wrangler/state instead
+        # — a database nothing reads. That is what this job used to do, and the
+        # reason its seeded accounts were invisible to the API.
+        #
+        # db:seed:local:e2e adds what real-workflows.spec.ts discovers its
+        # fixtures from — a table and two available menu items. Without it the
+        # spec skips every customer flow on "local discovery failed" and the
+        # job goes green having checked one page load.
         run: |
-          pnpm wrangler d1 execute makanmakan-local --local \
-            --file=../../scripts/seed-mock-data.sql
+          pnpm db:migrate:local:api
+          pnpm db:seed:local
+          pnpm db:seed:local:e2e
 
-      # 0048_add_test_accounts.sql is intentionally NOT applied:
-      #   - it references outdated column names (created_at vs the
-      #     current created_at_ms / updated_at_ms), and
-      #   - none of its accounts (owner1, chef1, service1, cashier1 …)
-      #     are referenced by any P0 or P1 gate in tests/e2e/integration;
-      #     the gates authenticate as the admin / grandmaShop / grandma_*
-      #     users seeded by scripts/seed-mock-data.sql.
-      # If that changes in future, fix the migration's column names and
-      # restaurant_id UUID binding before re-enabling here.
-      - name: 🎯 Apply dev-only P0 gate seed (0049)
-        working-directory: apps/api
+      - name: 🚀 啟動 API 與 customer app
+        # `vite` (dev), not `vite preview`: dev applies server.proxy, which is
+        # what puts the Worker behind the SPA's relative /api/v1 calls.
+        # `preview` does not proxy, so the customer app had no API behind it.
+        #
+        # `--local` is load-bearing, not decoration. apps/api/wrangler.toml
+        # declares an [ai] binding, and AI has no local emulation: without this
+        # flag wrangler opens a remote proxy session for it, which in a
+        # non-interactive shell dies with "it's necessary to set a
+        # CLOUDFLARE_API_TOKEN environment variable" and takes the whole Worker
+        # with it — the dev server never binds 8787 and every probe below times
+        # out. `--local` disables remote bindings, so env.AI reports "not
+        # supported" (nothing under test calls it) and the Worker starts.
         run: |
-          pnpm wrangler d1 execute makanmakan-local --local \
-            --file=../../packages/database/migrations/dev-only/0049_p0_gate_seed.sql
+          mkdir -p /tmp/integration-logs
+          (cd apps/api && pnpm exec wrangler dev --local \
+             --persist-to ../../.wrangler/shared-state \
+             > /tmp/integration-logs/api.log 2>&1 &)
+          (cd apps/customer-app && pnpm exec vite --port 3000 --host 0.0.0.0 \
+             > /tmp/integration-logs/customer.log 2>&1 &)
 
-      # NOTE: the orphan packages/database/src/migrations/005_backup_system.sql
-      # is superseded by migrations_fresh/0021_backup_system.sql (applied
-      # automatically by the step above) and migrations/0058_backup_system.sql
-      # on the legacy track. 005 itself is still in the tree but never
-      # executed by any migration runner, so its bogus index on
-      # backup_records.created_at (a column that does not exist) no longer
-      # blocks the A6 gate.
-
-      - name: 🚀 啟動 API dev server
-        run: |
-          cd apps/api && pnpm dev > /tmp/api-server.log 2>&1 &
-
-      - name: 🚀 啟動 customer-app preview
-        env:
-          VITE_API_BASE_URL: /api/v1
-        run: |
-          (cd apps/customer-app && npx vite preview --port 3000 --host 0.0.0.0 > /tmp/customer-preview.log 2>&1 &)
-
-      # Wait for the two services we actually depend on.
-      #   - /info is the app-level public endpoint that returns 200 JSON
-      #     (see apps/api/src/app-factory.ts). /api/v1/health does NOT
-      #     exist — it used to be the wait-on target and the 90s timeout
-      #     masked that wrangler dev was already up but the probe was
-      #     wrong. Switching to /info makes readiness detection honest.
       - name: ⏳ 等待服務就緒
+        # /info is the app-level public endpoint (apps/api/src/app-factory.ts).
+        # There is no unauthenticated /api/v1/health.
         run: |
-          npx wait-on \
-            http://localhost:8787/info \
-            http://localhost:3000 \
-            --timeout 90000
+          for probe in http://localhost:8787/info http://localhost:3000; do
+            elapsed=0
+            until curl -sf "$probe" >/dev/null 2>&1; do
+              if [ "$elapsed" -ge 240 ]; then
+                echo "::error::$probe did not respond within 240s"
+                tail -n 100 /tmp/integration-logs/*.log || true
+                exit 1
+              fi
+              sleep 2
+              elapsed=$((elapsed + 2))
+            done
+            echo "$probe ready in ${elapsed}s"
+          done
 
-      # Warm-up the menu_items query path against the seeded test restaurant.
-      # Audit run #24861758340 saw a transient `createGuestOrder` 409
-      # MENU_ITEM_UNAVAILABLE on first attempt that succeeded on retry —
-      # symptomatic of a cold prepared-statement / D1 query compile on the
-      # first menu_items read. Hitting the public menu endpoint once before
-      # tests start forces that compilation and validates seeded availability,
-      # so the Tier 2 P1 gates don't waste their first attempt as a warm-up.
-      # If the menu endpoint is missing or returns an empty list, fail loud
-      # here rather than letting a downstream gate misattribute the failure.
-      - name: 🔥 Warm-up menu_items query path
-        run: |
-          set -e
-          BODY=$(curl --fail --silent --show-error --retry 3 --retry-delay 2 \
-            "http://localhost:8787/api/v1/menu/019469a0-0001-7000-8000-000000000001")
-          echo "$BODY" | head -c 500
-          echo ""
-          # Sanity check: response must contain at least one menu item id.
-          # node -e is more portable than jq across Ubuntu runner images.
-          # The /menu/{id} endpoint returns categories with `itemCount` per
-          # category (not nested item arrays). Treat any non-zero total as a
-          # successful warm-up signal — that means the menu_items table was
-          # queried for the count and the seed is visible.
-          node -e "const r=JSON.parse(process.argv[1]); if(!r.success) {console.error('warm-up: success=false'); process.exit(1)}; const cats = r.data?.categories ?? []; const total = cats.reduce((s,c)=>s+(c.itemCount ?? (c.items?.length ?? 0)),0); if(!total) {console.error('warm-up: zero menu items returned — seed not visible'); process.exit(1)}; console.log('warm-up ok: '+total+' items across '+cats.length+' categories')" "$BODY"
-
-      - name: 📦 安裝 Playwright Chromium
-        run: npx playwright install chromium --with-deps
-
-      # Scope narrow: only the Tier 1 P0 release gates and Tier 2 P1
-      # current-quarter gates. The broader `tests/e2e/integration/`
-      # directory also contains:
-      #   - Browser-driven `.real.spec.ts` suites (admin, kitchen) and
-      #     customer-dine-in.spec.ts, which expect `/api/v1` on
-      #     localhost:3000 to be reverse-proxied to the API. Vite
-      #     `preview` does not proxy, and customer-app's CSP blocks
-      #     absolute http URLs, so those need a separate transport fix
-      #     before they can run here.
-      #   - Pre-existing issues unrelated to P0/P1 gate enforcement
-      #     (e.g. A6's `include_tables: ["menus", ...]` — the schema
-      #     table is `menu_items`, so the POST /backup/create returns
-      #     400 before restore even runs).
-      # When those are addressed, expand this list (or drop back to
-      # `--project=integration` with no explicit spec args).
-      # --workers=1 overrides playwright.config.ts's CI default of 2.
-      # Tier 1 / Tier 2 gates share state through the real D1 database
-      # (cash_shifts, coupons.used_count, idempotency_keys, order
-      # active-dedup KV). With 2 workers CI saw cross-file contention:
-      # repeated `cancelOrder(NN) cleanup warning: 500 "Order cannot
-      # be cancelled"` in cleanup, plus sporadic C5 / C10 failures
-      # where one worker's order state leaked into the other's
-      # assertions. Forcing serial avoids this without changing the
-      # project's `fullyParallel: false`, which only serialises within
-      # a single spec file.
-      - name: 🧪 執行 Integration Tests (P0 + P1 gates)
-        # p1-new-missing-gates.spec.ts contains a `test.describe.fixme(...)`
-        # block (18 unimplemented Batch-2 gates) plus a non-fixme block with
-        # the promoted E3 gate. Playwright auto-skips the fixme tests, so
-        # adding this file only adds the promoted gate(s) to the run.
-        run: |
-          npx playwright test \
-            tests/e2e/integration/p0-release-gates.spec.ts \
-            tests/e2e/integration/p1-current-quarter-gates.spec.ts \
-            tests/e2e/integration/p1-new-missing-gates.spec.ts \
-            --project=integration \
-            --workers=1
+      - name: 🔎 驗證 seed 落在 API 讀取的資料庫
+        # Fails loudly here rather than letting every test skip with
+        # "local discovery failed". Checks both halves of the old breakage:
+        # the restaurant row (seeded data reachable at all) and an owner1
+        # login (the account scripts/seed-local.sql actually creates — the
+        # grandmaShop/password123 pair this job used to assume came from
+        # scripts/seed-mock-data.sql and 401s since it was deleted).
         env:
+          RESTAURANT_ID: 019469a0-0099-7000-8000-000000000099
+        run: |
+          # `set -eu`, not `set -euo pipefail`: a container job's default shell
+          # here is `sh -e {0}` (dash), which rejects `-o pipefail` outright and
+          # takes the step down with it. Nothing below is a pipeline anyway.
+          set -eu
+
+          cat > /tmp/assert-seed.cjs <<'NODE'
+          const [, , label, requiredPath, raw] = process.argv;
+          let body;
+          try {
+            body = JSON.parse(raw);
+          } catch {
+            console.error(`${label}: response was not JSON: ${raw.slice(0, 300)}`);
+            process.exit(1);
+          }
+          const value = requiredPath
+            .split(".")
+            .reduce((node, key) => (node == null ? node : node[key]), body);
+          if (!body.success || !value) {
+            console.error(`${label}: missing ${requiredPath} in ${raw.slice(0, 300)}`);
+            process.exit(1);
+          }
+          console.log(`${label}: ok (${requiredPath}=${value})`);
+          NODE
+
+          RESTAURANT_BODY=$(curl --fail --silent --show-error \
+            "http://localhost:8787/api/v1/restaurants/${RESTAURANT_ID}")
+          node /tmp/assert-seed.cjs "seeded restaurant readable" "data.id" "$RESTAURANT_BODY"
+
+          LOGIN_BODY=$(curl --fail --silent --show-error \
+            -H 'Content-Type: application/json' \
+            -d '{"username":"owner1","password":"owner123"}' \
+            "http://localhost:8787/api/v1/auth/login")
+          node /tmp/assert-seed.cjs "owner1 login" "data.token" "$LOGIN_BODY"
+
+          MENU_BODY=$(curl --fail --silent --show-error \
+            "http://localhost:8787/api/v1/menu/${RESTAURANT_ID}")
+          node /tmp/assert-seed.cjs "e2e menu fixtures visible" "data.menuItems.0.id" "$MENU_BODY"
+
+      - name: 🧪 執行 Integration Tests
+        # By project name, not by file list: the previous file list named three
+        # specs that no longer exist, which is only discoverable by running it.
+        # --workers=1 overrides the root config's CI default of 2; these tests
+        # share one restaurant's rows in a real D1 (cash_shifts, coupon
+        # used_count, idempotency keys, the active-order dedup KV), and 2
+        # workers produced cross-file contention.
+        #
+        # Not run under WORKFLOW_STRICT: most of this spec needs services this
+        # job deliberately does not stand up (the admin dashboard — covered by
+        # test.yml's admin-real-e2e — plus the kitchen display, management
+        # portal, management API and onboarding app), and strict mode turns
+        # every one of those skips into a failure. The summary step below
+        # prints passed/failed/skipped so a green tick is not read as "all 17
+        # ran".
+        run: pnpm exec playwright test --project=integration --workers=1
+        env:
+          WORKFLOW_API_URL: http://localhost:8787
+          WORKFLOW_CUSTOMER_URL: http://localhost:3000
           E2E_BASE_URL: http://localhost:3000
+          WORKFLOW_AUTH_USERNAME: owner1
+          WORKFLOW_AUTH_PASSWORD: owner123
+          # Fixed ids from scripts/seed-e2e-fixtures.sql.
+          WORKFLOW_RESTAURANT_ID: 019469a0-0099-7000-8000-000000000099
+          WORKFLOW_TABLE_ID: "9001"
+          WORKFLOW_MENU_ITEM_ID: "9001"
 
       - name: 🛑 停止服務
         if: always()
         run: |
           pkill -f "wrangler dev" || true
-          pkill -f "vite preview" || true
+          pkill -f "vite" || true
 
-      - name: 📎 上傳 API 日誌
+      - name: 📎 上傳日誌與報告
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
-          name: integration-api-logs
-          path: /tmp/api-server.log
-          retention-days: 7
-
-      - name: 📎 上傳測試報告
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: always()
-        with:
-          name: integration-test-report
-          path: playwright-report/
+          name: integration-logs-and-report
+          path: |
+            /tmp/integration-logs/
+            playwright-report/
+            test-results/
           retention-days: 14
 
-      - name: 📸 上傳失敗截圖
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: failure()
-        with:
-          name: integration-test-screenshots
-          path: test-results/
-          retention-days: 7
-
       - name: 📊 生成測試摘要
+        # A pass count is not the interesting number here — a skipped test
+        # reads like a passing one in a green tick, and most of this spec
+        # skips. The per-test table is what says which of the 17 actually ran.
         if: always()
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
         run: |
           {
             echo "## 🌙 Nightly Integration Tests"
             echo ""
-            echo "**分支**: ${{ github.ref_name }}"
+            echo "**分支**: ${BRANCH_NAME}"
             echo "**時間**: $(date -u '+%Y-%m-%d %H:%M UTC')"
             echo ""
-            echo "### Coverage"
-            echo "- tests/e2e/integration/p0-release-gates.spec.ts (Tier 1 P0)"
-            echo "- tests/e2e/integration/p1-current-quarter-gates.spec.ts (Tier 2 P1)"
-            echo "- real API integration smokes"
+            echo "\`playwright test --project=integration\` — tests/e2e/integration/real-workflows.spec.ts"
             echo ""
-            echo "詳細報告請查看 Artifacts 區域"
           } >> "$GITHUB_STEP_SUMMARY"
+
+          cat > /tmp/summarize.cjs <<'NODE'
+          const fs = require("node:fs");
+
+          const reportPath = "playwright-report/results.json";
+          if (!fs.existsSync(reportPath)) {
+            console.log("No results.json — the run did not reach Playwright.");
+            process.exit(0);
+          }
+
+          const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+          const rows = [];
+          const walk = (suite) => {
+            for (const spec of suite.specs ?? []) {
+              const result = spec.tests?.[0]?.results?.[0];
+              rows.push({
+                title: spec.title,
+                status: result?.status ?? "unknown",
+                note:
+                  result?.error?.message?.split("\n")[0] ??
+                  result?.errors?.[0]?.message?.split("\n")[0] ??
+                  "",
+              });
+            }
+            for (const child of suite.suites ?? []) walk(child);
+          };
+          for (const suite of report.suites ?? []) walk(suite);
+
+          const tally = {};
+          for (const row of rows) tally[row.status] = (tally[row.status] ?? 0) + 1;
+
+          const lines = ["| 結果 | 數量 |", "| --- | --- |"];
+          for (const [status, count] of Object.entries(tally)) {
+            lines.push(`| ${status} | ${count} |`);
+          }
+          const cell = (text) => text.replace(/\|/g, "\\|");
+          lines.push("", "| 測試 | 結果 | 備註 |", "| --- | --- | --- |");
+          for (const row of rows) {
+            lines.push(`| ${cell(row.title)} | ${row.status} | ${cell(row.note)} |`);
+          }
+          console.log(lines.join("\n"));
+          NODE
+
+          node /tmp/summarize.cjs >> "$GITHUB_STEP_SUMMARY"

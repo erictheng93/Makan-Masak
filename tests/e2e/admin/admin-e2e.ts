@@ -64,9 +64,10 @@ export const STRICT =
  * scripts/seed-local.sql seeds owner1/owner123 against restaurant
  * 019469a0-0099-7000-8000-000000000099.
  *
- * Note the older suite falls back to `grandmaShop`/`password123`
- * (real-workflows.spec.ts). That account came from scripts/seed-mock-data.sql,
- * deleted in b936600f, and now 401s.
+ * The older suite (real-workflows.spec.ts) used to fall back to
+ * `grandmaShop`/`password123`, from scripts/seed-mock-data.sql — deleted in
+ * b936600f, so that pair 401s. It now falls back to the same owner1/owner123
+ * as this file (#357).
  */
 export const OWNER_USERNAME =
   optionalEnv("WORKFLOW_AUTH_USERNAME") ??
