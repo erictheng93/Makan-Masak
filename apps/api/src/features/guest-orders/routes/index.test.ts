@@ -773,12 +773,23 @@ describe("guest order routes", () => {
     expect(createOrder).not.toHaveBeenCalled();
   });
 
-  it("maps known order creation conflicts", async () => {
+  // The route used to recognise "Menu item N is not available" by regex and
+  // build its own 409. `prepareOrderItems` now throws the ApiError itself
+  // (#352), so the only correct thing left to do here is get out of the way:
+  // rewrapping would discard the details that name the item.
+  it("passes a menu-item rejection through with its code and details intact", async () => {
     setSelectFixtures({ restaurants: [[activeGuestRestaurant()]] });
-    createOrder.mockRejectedValue(new Error("Menu item 101 is not available"));
+    createOrder.mockRejectedValue(
+      new ApiError(
+        "MENU_ITEM_UNAVAILABLE",
+        "Menu item 101 is not available",
+        409,
+        { menuItemId: 101, name: "Nasi Lemak" },
+      ),
+    );
 
     const response = await withSilencedRouteError(() =>
-      routes.fetch(
+      createRoutesWithApiErrorHandler().fetch(
         new Request("https://test/", {
           method: "POST",
           body: JSON.stringify(validGuestOrderBody()),
@@ -787,8 +798,14 @@ describe("guest order routes", () => {
       ),
     );
 
-    expect(response.status).toBe(500);
-    await expect(response.text()).resolves.toBe("Internal Server Error");
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      error: {
+        code: "MENU_ITEM_UNAVAILABLE",
+        details: { menuItemId: 101, name: "Nasi Lemak" },
+      },
+    });
   });
 
   it("returns guest order details for token-authenticated guests", async () => {

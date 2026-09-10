@@ -398,6 +398,51 @@ describe("orders routes", () => {
     });
   });
 
+  // Only the guest route ever translated "menu item unavailable"; on this,
+  // authenticated route the same catalog rejection reached the global handler
+  // unrecognised and came back as a 500 (#352). The database service now
+  // throws the ApiError itself, so nothing between here and the handler has to
+  // recognise anything.
+  it.each([
+    [
+      "MENU_ITEM_UNAVAILABLE",
+      new ApiError(
+        "MENU_ITEM_UNAVAILABLE",
+        "Menu item 101 is not available",
+        409,
+        { menuItemId: 101 },
+      ),
+    ],
+    [
+      "INSUFFICIENT_INVENTORY",
+      new ApiError(
+        "INSUFFICIENT_INVENTORY",
+        "Insufficient inventory for Nasi Lemak",
+        409,
+        { menuItemId: 101, name: "Nasi Lemak", requested: 12, available: 10 },
+      ),
+    ],
+  ])("surfaces %s from the catalog check as a 409", async (code, rejection) => {
+    serviceMocks.createOrder.mockRejectedValue(rejection);
+
+    const response = await withSilencedRouteError(() =>
+      routes.fetch(
+        jsonRequest("/", {
+          restaurantId: "restaurant-1",
+          items: [{ menuItemId: 101, quantity: 1, price: 120 }],
+          tableId: 3,
+        }),
+        createEnv() as never,
+      ),
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      error: { code },
+    });
+  });
+
   it("gates shop-channel orders on shop mode", async () => {
     gateMocks.assertShopOrderingEnabled.mockRejectedValue(
       Object.assign(new Error("This restaurant is not accepting shop orders"), {

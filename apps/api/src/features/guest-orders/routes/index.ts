@@ -193,12 +193,15 @@ app.post(
         isGuestOrder: true,
       });
     } catch (error) {
-      if (
-        error instanceof Error &&
-        /^Menu item \d+ is not available$/.test(error.message)
-      ) {
-        throw conflict(error.message, "MENU_ITEM_UNAVAILABLE");
-      }
+      // The database service now rejects its own business rules as ApiErrors
+      // (#352), so they arrive complete with code, status and details. Rewrap
+      // one here and the details are lost and the status is decided twice.
+      //
+      // This replaces the `/^Menu item \d+ is not available$/` arm that used to
+      // live here: `prepareOrderItems` was its only producer and it now throws
+      // ApiError("MENU_ITEM_UNAVAILABLE", …, 409) itself — the same code and
+      // status this arm was assigning, plus the menu item id in details.
+      if (error instanceof ApiError) throw error;
 
       if (
         error instanceof Error &&

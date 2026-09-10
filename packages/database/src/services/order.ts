@@ -2233,8 +2233,23 @@ export class OrderService extends BaseService {
     for (const item of items) {
       const menuItem = menuItemMap.get(item.menuItemId);
 
+      // Both of these are the request's fault, so they carry their own code and
+      // status rather than a message for someone downstream to pattern-match
+      // (#352). The message text is unchanged so existing assertions and logs
+      // still read the same; what is new is that `details` names the item, and
+      // that the authenticated orders route stops answering 500 for them —
+      // only the guest route ever translated the first, and neither translated
+      // the second.
       if (!menuItem || !menuItem.isAvailable) {
-        throw new Error(`Menu item ${item.menuItemId} is not available`);
+        throw new ApiError(
+          "MENU_ITEM_UNAVAILABLE",
+          `Menu item ${item.menuItemId} is not available`,
+          409,
+          {
+            menuItemId: item.menuItemId,
+            ...(menuItem && { name: menuItem.name }),
+          },
+        );
       }
 
       const requestedTotal =
@@ -2244,7 +2259,21 @@ export class OrderService extends BaseService {
         menuItem.inventoryCount !== null &&
         menuItem.inventoryCount < requestedTotal
       ) {
-        throw new Error(`Insufficient inventory for ${menuItem.name}`);
+        // `requested` is the running total for this menu item, not this line's
+        // quantity: two lines of the same dish are what tips a cart over the
+        // stock it has, and a client that only sees its own line cannot tell
+        // why 6 was refused when 6 were in stock.
+        throw new ApiError(
+          "INSUFFICIENT_INVENTORY",
+          `Insufficient inventory for ${menuItem.name}`,
+          409,
+          {
+            menuItemId: item.menuItemId,
+            name: menuItem.name,
+            requested: requestedTotal,
+            available: menuItem.inventoryCount,
+          },
+        );
       }
 
       let unitPriceCents = resolveMoneyCents(

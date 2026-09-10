@@ -1369,6 +1369,58 @@ describe("OrderService createOrder business-rule rejections", () => {
     expect(error.message).toContain("優惠券驗證失敗");
   });
 
+  // The up-front catalog check, as opposed to the lost-the-race case below.
+  // Both conditions now answer with the same code and status; before #352 this
+  // one was a 500 on every route and the race was a 500 too.
+  it("rejects an unavailable menu item up front as 409 MENU_ITEM_UNAVAILABLE", async () => {
+    await testDb.drizzle
+      .update(menuItems)
+      .set({ isAvailable: false })
+      .where(eq(menuItems.id, menuItemId));
+
+    const error = await rejectionOf(() =>
+      service().createOrder({
+        restaurantId,
+        items: [{ menuItemId, quantity: 1 }],
+      }),
+    );
+
+    expect(error.status).toBe(409);
+    expect(error.code).toBe("MENU_ITEM_UNAVAILABLE");
+    expect(error.details).toEqual(
+      expect.objectContaining({ menuItemId, name: "Nasi Lemak" }),
+    );
+  });
+
+  it("rejects a cart that exceeds stock up front as 409 INSUFFICIENT_INVENTORY", async () => {
+    // Two lines of the same dish: 6 + 6 against 10 in stock. `requested` is
+    // the running total, which is the only number that explains the refusal —
+    // neither line is individually too large.
+    const error = await rejectionOf(() =>
+      service().createOrder({
+        restaurantId,
+        items: [
+          { menuItemId, quantity: 6 },
+          { menuItemId, quantity: 6 },
+        ],
+      }),
+    );
+
+    expect(error.status).toBe(409);
+    expect(error.code).toBe("INSUFFICIENT_INVENTORY");
+    expect(error.details).toEqual(
+      expect.objectContaining({
+        menuItemId,
+        name: "Nasi Lemak",
+        requested: 12,
+        available: 10,
+      }),
+    );
+
+    // Nothing was written on the way to the refusal.
+    await expect(testDb.drizzle.select().from(orders)).resolves.toEqual([]);
+  });
+
   it("rejects stock lost between the availability check and the write as 409 INSUFFICIENT_INVENTORY", async () => {
     // prepareOrderItems sees 10 in stock; another order drains it before the
     // batch lands, so the conditional inventory update matches no rows and the
