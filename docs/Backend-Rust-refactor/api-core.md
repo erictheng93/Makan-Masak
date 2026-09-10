@@ -648,9 +648,13 @@ other parse failure (e.g. invalid JSON body), throws a generic
 parameters", "INVALID_JSON"|"INVALID_QUERY"|"INVALID_PARAMS")`. Validated
 output is stored on context as `validatedBody`/`validatedQuery`/
 `validatedParams`, typed via Hono generics (`z.infer<T>`).
-`shared/middleware/validation.ts` is an **unused duplicate** (explicitly
-commented "NOT actively used" in its own header) — the canonical
-implementation is `middleware/validation.ts`; do not port both.
+`validateBody` reads the body through `c.req.raw.clone()` and hands an
+absent or empty body to the schema as `{}`, so the schema — not the JSON
+parse — decides whether a body was required (#355); a body that is present
+but unparseable is still `INVALID_JSON`. `validateOptionalBody` is an alias
+of `validateBody` kept for existing call sites.
+The unused duplicate at `shared/middleware/validation.ts` was deleted with
+that change; the canonical implementation is `middleware/validation.ts`.
 
 ### Idempotency (`middleware/idempotency.ts`)
 
