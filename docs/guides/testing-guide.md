@@ -434,7 +434,16 @@ describe("API Worker", () => {
 
 ### Playwright 設置
 
-**playwright.config.ts**
+**playwright.config.ts**（實際檔案為準，以下為結構摘要）
+
+四個 project，各自對應一組目錄，不是瀏覽器矩陣：
+
+| Project | testDir | 內容 |
+| --- | --- | --- |
+| `chromium` | `./tests/e2e`（排除 `admin/`、`integration/`、`smoke/`） | ci-smoke preview + kitchen-display |
+| `admin-real` | `./tests/e2e/admin` | 店家後台，真 API + 真 D1，禁用 `page.route()` |
+| `integration` | `./tests/e2e/integration` | 跨系統流程，真後端，序列執行 |
+| `smoke` | `./tests/e2e/smoke` | 對任一環境（本機／production）的最小 canary |
 
 ```typescript
 import { defineConfig, devices } from "@playwright/test";
@@ -444,11 +453,14 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: "html",
+  workers: process.env.CI ? 2 : undefined,
+  reporter: [
+    ["html", { outputFolder: "playwright-report" }],
+    ["json", { outputFile: "playwright-report/results.json" }],
+  ],
 
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: process.env.E2E_BASE_URL || "http://localhost:3000",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
@@ -456,29 +468,33 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      testIgnore: ["**/admin/**", "**/integration/**", "**/smoke/**"],
       use: { ...devices["Desktop Chrome"] },
     },
     {
-      name: "firefox",
-      use: { ...devices["Desktop Firefox"] },
+      name: "admin-real",
+      testDir: "./tests/e2e/admin",
+      fullyParallel: false,
+      workers: 1,
+      use: { ...devices["Desktop Chrome"] },
     },
     {
-      name: "webkit",
-      use: { ...devices["Desktop Safari"] },
+      name: "integration",
+      testDir: "./tests/e2e/integration",
+      fullyParallel: false,
+      use: { ...devices["Desktop Chrome"] },
     },
     {
-      name: "Mobile Chrome",
-      use: { ...devices["Pixel 5"] },
+      name: "smoke",
+      testDir: "./tests/e2e/smoke",
+      fullyParallel: false,
+      use: { ...devices["Desktop Chrome"] },
     },
   ],
-
-  webServer: {
-    command: "pnpm run dev",
-    url: "http://localhost:3000",
-    reuseExistingServer: !process.env.CI,
-  },
 });
 ```
+
+只有一個瀏覽器 project 是刻意的：`firefox`／`webkit`／`Mobile Chrome`／`Mobile Safari`／`Tablet` 曾與 `chromium` 共用同一個 testDir 與 testIgnore，收集到的是同一批測試，等於同樣的訊號跑六遍（#356）。要恢復跨瀏覽器覆蓋，得先有值得跑兩遍的測試；`tests/unit/playwright-project-testdirs.test.ts` 會擋住任何兩個檔案選擇相同的 project。
 
 ### E2E 測試範例
 

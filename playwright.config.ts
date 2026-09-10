@@ -8,15 +8,20 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  // CI workers: 2 — conservative parallelism inside the Playwright
-  // Docker container. 4 workers caused Firefox OOM / browser-crash
-  // ("Target page, context or browser has been closed") because the
-  // GitHub Actions runner only has ~7 GB RAM and 4 simultaneous
-  // Firefox processes exceeded that. 2 workers halves sequential
-  // runtime (158 tests → ~8 min per browser) while staying within
-  // the container's memory budget. The `integration` project keeps
-  // its own `fullyParallel: false` so its sequential semantics are
-  // unaffected by this global setting.
+  // CI workers: 2 — a memory ceiling inside the Playwright Docker container,
+  // where a GitHub Actions runner has ~7 GB RAM and each worker is a browser.
+  //
+  // It is no longer a runtime tuning knob for the root `testDir`: `chromium`
+  // collects 3 tests (ci-smoke/preview.spec.ts plus the two kitchen-display
+  // specs) and finishes in seconds. The projects this value actually bounds
+  // are `smoke` (111 tests) and `admin-real` (41). The figure it used to cite
+  // — 158 tests, ~8 min per browser, 4 simultaneous Firefox processes going
+  // OOM — described the tests/e2e/journeys and tests/e2e/specs suites deleted
+  // by b936600f in 2026-05, and the five extra browser projects that ran them.
+  //
+  // `admin-real` (workers: 1) and `integration` (fullyParallel: false, plus
+  // --workers=1 from .github/workflows/nightly-integration.yml) override this
+  // themselves: both mutate one restaurant's rows in a real D1.
   workers: process.env.CI ? 2 : undefined,
   reporter: [
     ["html", { outputFolder: "playwright-report" }],
@@ -33,40 +38,27 @@ export default defineConfig({
   },
 
   projects: [
-    // Desktop browsers — customer & journey tests only
+    // Everything under tests/e2e that is not claimed by a directory-scoped
+    // project below: today that is ci-smoke/preview.spec.ts and the two
+    // kitchen-display specs.
+    //
+    // One browser, deliberately. This used to be six — firefox, webkit,
+    // Mobile Chrome, Mobile Safari and Tablet sat alongside it with the same
+    // testDir and the same testIgnore, so after b936600f deleted
+    // tests/e2e/journeys and tests/e2e/specs all six collected the identical
+    // 3 tests and cross-browser coverage of the customer flows they were
+    // written for no longer existed to run (#356). Six copies of the same
+    // signal read like a browser matrix without being one, so the other five
+    // are gone.
+    //
+    // If cross-browser coverage is wanted again, it needs specs that are
+    // worth running twice first; tests/unit/playwright-project-testdirs.test.ts
+    // fails on any two projects that would collect the same files, so
+    // re-adding a browser is a decision someone has to make explicitly.
     {
       name: "chromium",
       testIgnore: ["**/admin/**", "**/integration/**", "**/smoke/**"],
       use: { ...devices["Desktop Chrome"] },
-    },
-    {
-      name: "firefox",
-      testIgnore: ["**/admin/**", "**/integration/**", "**/smoke/**"],
-      use: { ...devices["Desktop Firefox"] },
-    },
-    {
-      name: "webkit",
-      testIgnore: ["**/admin/**", "**/integration/**", "**/smoke/**"],
-      use: { ...devices["Desktop Safari"] },
-    },
-
-    // Mobile devices — customer & journey tests only
-    {
-      name: "Mobile Chrome",
-      testIgnore: ["**/admin/**", "**/integration/**", "**/smoke/**"],
-      use: { ...devices["Pixel 5"] },
-    },
-    {
-      name: "Mobile Safari",
-      testIgnore: ["**/admin/**", "**/integration/**", "**/smoke/**"],
-      use: { ...devices["iPhone 12"] },
-    },
-
-    // Tablet — customer & journey tests only
-    {
-      name: "Tablet",
-      testIgnore: ["**/admin/**", "**/integration/**", "**/smoke/**"],
-      use: { ...devices["iPad Pro"] },
     },
 
     // Admin dashboard tests — real API, real D1, no request mocking.

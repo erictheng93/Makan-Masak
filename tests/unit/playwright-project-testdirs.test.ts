@@ -23,6 +23,16 @@ function specFilesUnder(dir: string): string[] {
 }
 
 /**
+ * `testMatch` / `testIgnore` accept a string, a RegExp, or an array of either.
+ * Order carries no meaning, so sort before comparing.
+ */
+function normalizePatterns(value: unknown): string[] {
+  if (value === undefined) return [];
+  const patterns = Array.isArray(value) ? value : [value];
+  return patterns.map((pattern) => String(pattern)).sort();
+}
+
+/**
  * Guards the failure mode that hid an empty Playwright project for 3.5 months.
  *
  * `playwright.config.ts` declared a project named `admin` pointing at
@@ -41,6 +51,46 @@ describe("playwright project testDirs", () => {
 
   it("declares at least one project", () => {
     expect(projects.length).toBeGreaterThan(0);
+  });
+
+  /**
+   * The other half of b936600f, and the half the checks above cannot see
+   * (#356).
+   *
+   * `firefox`, `webkit`, `Mobile Chrome`, `Mobile Safari` and `Tablet` each
+   * declared the root testDir and the identical testIgnore, so once
+   * tests/e2e/journeys and tests/e2e/specs were deleted, all six browser
+   * projects collected exactly the same 3 tests. Nothing failed — the
+   * kitchen-display specs simply ran six times, and a reader of the config
+   * would reasonably conclude they had cross-browser coverage.
+   *
+   * Two projects with the same testDir/testMatch/testIgnore always collect the
+   * same files, so a duplicate key here is a duplicate suite. A genuine
+   * cross-browser matrix would trip this too — that is the point: it is a
+   * decision worth making on purpose, and whoever makes it updates this test
+   * and says which specs are worth running twice.
+   */
+  it("has no two projects that collect the same files", () => {
+    const seen = new Map<string, string[]>();
+
+    for (const project of projects) {
+      const key = JSON.stringify({
+        testDir: project.testDir ?? playwrightConfig.testDir ?? ".",
+        testMatch: normalizePatterns(project.testMatch),
+        testIgnore: normalizePatterns(project.testIgnore),
+      });
+      seen.set(key, [...(seen.get(key) ?? []), project.name ?? "(unnamed)"]);
+    }
+
+    const duplicates = [...seen.entries()]
+      .filter(([, names]) => names.length > 1)
+      .map(([key, names]) => `${names.join(", ")} all select ${key}`);
+
+    expect(
+      duplicates,
+      `these projects have identical file selection, so each extra one re-runs ` +
+        `the same tests under a different name:\n  ${duplicates.join("\n  ")}`,
+    ).toEqual([]);
   });
 
   it.each(
