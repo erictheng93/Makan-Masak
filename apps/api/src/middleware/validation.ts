@@ -1,3 +1,4 @@
+import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { z } from "zod";
 import { badRequest } from "../shared/utils/api-error";
@@ -35,11 +36,41 @@ export const boundedLimitQuery = (defaultValue = "20", max = 100) =>
 // Variables, so c.get("validatedBody"|"validatedQuery"|"validatedParams")
 // returns z.infer<typeof schema> in handlers chained after the middleware.
 
+/**
+ * Read the request body as text without consuming it.
+ *
+ * Reading through a clone leaves `c.req.raw` intact, so handlers chained after
+ * the validator can still call `c.req.json()` / `c.req.text()`, and so can
+ * `idempotencyMiddleware`, which clones the same way. If an upstream
+ * middleware already consumed the raw body the clone throws — Hono's own
+ * body cache still holds the text, so fall back to it rather than reporting a
+ * perfectly good request as malformed.
+ */
+const readBodyText = async (c: Context): Promise<string> => {
+  try {
+    return await c.req.raw.clone().text();
+  } catch {
+    return await c.req.text();
+  }
+};
+
+/**
+ * Validate a JSON request body.
+ *
+ * An absent or empty body is handed to the schema as `{}` so the *schema*
+ * decides whether a body was required: a schema whose fields are all optional
+ * accepts the call, and one with required fields fails with a
+ * `VALIDATION_ERROR` that names the missing fields. A body that is present but
+ * unparseable is still `INVALID_JSON` — that distinction is the whole point,
+ * and #355 records what collapsing it costs (approval endpoints that 400'd
+ * with the wrong reason until the client was made to send a dummy body).
+ */
 export const validateBody = <T extends z.ZodTypeAny>(schema: T) =>
   createMiddleware<{ Variables: { validatedBody: z.infer<T> } }>(
     async (c, next) => {
       try {
-        const body = await c.req.json();
+        const rawBody = await readBodyText(c);
+        const body = rawBody ? JSON.parse(rawBody) : {};
         const validated = schema.parse(body);
         c.set("validatedBody", validated);
         await next();
@@ -57,30 +88,11 @@ export const validateBody = <T extends z.ZodTypeAny>(schema: T) =>
   );
 
 /**
- * Validate a JSON request body when it is present, while preserving endpoints
- * that historically accepted an empty POST body.
+ * @deprecated Identical to {@link validateBody} since #355 — that one now
+ * tolerates an absent body too. Kept so existing call sites keep compiling;
+ * new code should use `validateBody`.
  */
-export const validateOptionalBody = <T extends z.ZodTypeAny>(schema: T) =>
-  createMiddleware<{ Variables: { validatedBody: z.infer<T> } }>(
-    async (c, next) => {
-      try {
-        const rawBody = await c.req.raw.clone().text();
-        const body = rawBody ? JSON.parse(rawBody) : {};
-        const validated = schema.parse(body);
-        c.set("validatedBody", validated);
-        await next();
-      } catch (error) {
-        if (error instanceof z.ZodError) {
-          throw badRequest(
-            "Validation failed",
-            "VALIDATION_ERROR",
-            formatZodDetails(error),
-          );
-        }
-        throw badRequest("Invalid JSON body", "INVALID_JSON");
-      }
-    },
-  );
+export const validateOptionalBody = validateBody;
 
 export const validateQuery = <T extends z.ZodTypeAny>(schema: T) =>
   createMiddleware<{ Variables: { validatedQuery: z.infer<T> } }>(
