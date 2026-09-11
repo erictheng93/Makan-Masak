@@ -1873,8 +1873,67 @@ const zhTWCore = {
       expired: "已過期",
     },
   },
+  // 顧客評價（#286）
+  reviews: {
+    title: "顧客評價",
+    description: "查看顧客對訂單與菜色的評分，並回覆尚未處理的評價。",
+    summary: {
+      heading: "評價總覽",
+      average: "平均評分",
+      count: "共 {count} 則評價",
+      unreplied: "{count} 則待回覆",
+      allReplied: "全部已回覆",
+      distribution: "評分分布",
+      starLabel: "{rating} 星",
+    },
+    filters: {
+      rating: "評分",
+      all: "全部",
+      replied: "回覆狀態",
+      repliedNo: "未回覆",
+      repliedYes: "已回覆",
+      from: "起始日期",
+      to: "結束日期",
+      reset: "清除篩選",
+    },
+    card: {
+      guest: "訪客",
+      order: "訂單 {orderNumber}",
+      orderUnknown: "無訂單編號",
+      dishRatings: "菜色評分",
+      dishUnknown: "已下架的餐點",
+      noContent: "顧客未留下文字評價。",
+      replyHeading: "店家回覆",
+      replyPlaceholder: "寫下對這則評價的回覆…",
+      replySubmit: "回覆",
+      replySending: "送出中…",
+    },
+    empty: {
+      title: "尚無顧客評價",
+      hint: "顧客完成訂單後就能留下評價，評價會顯示在這裡。",
+      filteredTitle: "沒有符合條件的評價",
+      filteredHint: "試著放寬評分、回覆狀態或日期範圍。",
+    },
+    pagination: {
+      summary: "第 {page} / {totalPages} 頁 · 共 {total} 則",
+      prev: "上一頁",
+      next: "下一頁",
+    },
+    errors: {
+      noRestaurant: "請先選擇要查看的店家。",
+      loadFailed: "無法載入顧客評價，請稍後再試。",
+      forbidden: "沒有權限查看這家店的顧客評價。",
+      replyFailed: "回覆失敗，請稍後再試。",
+      replyRequired: "請先輸入回覆內容。",
+      notFound: "找不到這則評價，請重新整理後再試。",
+    },
+    messages: {
+      replied: "已送出回覆。",
+    },
+  },
   // 導航
   nav: {
+    reviews: "顧客評價",
     billing: "訂閱與用量",
     myShifts: "我的班表",
     myAttendance: "我的出勤",
@@ -1925,6 +1984,7 @@ const zhTWCore = {
 
   // 頁面標題
   pages: {
+    reviews: "顧客評價",
     billing: "訂閱與用量",
     myShifts: "我的班表",
     myAttendance: "我的出勤",

@@ -377,6 +377,19 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        // Diner reviews of completed orders (#286). Distinct from
+        // /dashboard/feedback, which is the platform's support-ticket queue —
+        // #266 records the two being confused. This one is restaurant-scoped,
+        // so it is deliberately absent from adminRestaurantOptionalRoutes.
+        path: "reviews",
+        name: "Reviews",
+        component: () => import("@/views/ReviewsView.vue"),
+        meta: {
+          titleKey: "pages.reviews",
+          roles: [UserRole.ADMIN, UserRole.OWNER],
+        },
+      },
+      {
         path: "pos",
         component: () => import("@/views/POSView.vue"),
         meta: {

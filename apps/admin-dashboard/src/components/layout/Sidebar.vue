@@ -160,6 +160,7 @@ import {
   Printer,
   Carrot,
   TrendingUp,
+  Star,
 } from "lucide-vue-next";
 
 interface Props {
@@ -410,6 +411,18 @@ const navigationItems = computed(() => {
       label: t("nav.members"),
       icon: UserRound,
       visible: authStore.canAccessAdminFeatures,
+      section: "restaurant",
+    },
+    {
+      // Sits with the customer-facing group (優惠券 → 會員 → 顧客評價) rather
+      // than the platform section: these are one shop's own diners, and the
+      // page is restaurant-scoped. 意見反饋 is the platform support queue and
+      // stays where it is (#266).
+      name: "reviews",
+      path: "/dashboard/reviews",
+      label: t("nav.reviews"),
+      icon: Star,
+      visible: authStore.hasPermission([UserRole.ADMIN, UserRole.OWNER]),
       section: "restaurant",
     },
     {
