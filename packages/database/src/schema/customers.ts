@@ -81,6 +81,44 @@ export const customerPreferences = sqliteTable("customer_preferences", {
     .default(sql`(unixepoch('now') * 1000)`),
 });
 
+/**
+ * Marketing notification preferences (#335).
+ *
+ * Deliberately *not* folded into `customer_preferences` above. That table
+ * predates STRICT, stores quiet hours as TEXT `"HH:MM"` that nothing ever
+ * evaluated, and its `marketing_opt_in` / `promo_from_favorites_opt_in` flags
+ * have no reader. Widening it in place would have meant recreating a legacy
+ * table to gain STRICT and re-typing two columns, in the same change as the
+ * feature that first reads them.
+ *
+ * This is the table the broadcast fan-out reads, and it is the only one:
+ *
+ *  * `marketing_enabled` short-circuits a send regardless of consent rows. A
+ *    preference toggle and a consent record answer different questions ("do I
+ *    want these?" vs "did you lawfully ask me?"), so both must be true.
+ *  * `followed_only` decides whether a market's followers may be reached by a
+ *    vendor inside that market (`includeMarketFollowers`). It never affects a
+ *    direct follow.
+ *  * Quiet hours are minutes from midnight (0-1439) rather than "HH:MM" text,
+ *    evaluated in the *sender's* timezone. NULL on either bound means no quiet
+ *    window at all; start === end is a zero-length window, not a whole day.
+ */
+export const customerNotificationPreferences = sqliteTable(
+  "customer_notification_preferences",
+  {
+    customerId: text("customer_id")
+      .primaryKey()
+      .references(() => customers.id, { onDelete: "cascade" }),
+    marketingEnabled: integer("marketing_enabled").notNull().default(1),
+    followedOnly: integer("followed_only").notNull().default(1),
+    quietHoursStartMin: integer("quiet_hours_start_min"),
+    quietHoursEndMin: integer("quiet_hours_end_min"),
+    updatedAt: integer("updated_at_ms", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(unixepoch('now') * 1000)`),
+  },
+);
+
 export const customerFavorites = sqliteTable(
   "customer_favorites",
   {

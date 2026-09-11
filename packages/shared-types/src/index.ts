@@ -27,3 +27,4 @@ export * from "./ingredient";
 export * from "./coupon";
 export * from "./consents";
 export * from "./auth-providers";
+export * from "./broadcasts";

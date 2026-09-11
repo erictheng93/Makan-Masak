@@ -24,6 +24,7 @@ export * from "./images";
 export * from "./coupons";
 export * from "./leaves";
 export * from "./markets";
+export * from "./marketing-broadcasts";
 export * from "./scheduling";
 export * from "./pos";
 export * from "./group-orders";

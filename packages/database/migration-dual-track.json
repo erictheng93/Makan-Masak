@@ -94,6 +94,10 @@
     {
       "fresh": "0023_reviews.sql",
       "reason": "reviews stores diner feedback on platform-API orders and recomputes restaurants.rating / menu_items.rating from it; the management-api database has no orders, menu_items or restaurants rows to hang a review off or aggregate into."
+    },
+    {
+      "fresh": "0024_marketing_broadcasts.sql",
+      "reason": "Marketing broadcasts fan out platform-API web push to customers who follow a restaurant or a market; the management-api database has no customers, customer_favorites, customer_push_subscriptions, restaurants or markets rows to resolve an audience or scope a send against."
     }
   ],
   "legacyOnly": [
