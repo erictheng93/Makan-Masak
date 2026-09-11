@@ -3,8 +3,10 @@
 **Date:** 2026-09-12
 **Related issue:** #323 (filed 2026-09-03, before #322 moved the Worker to APAC)
 **Live version measured:** `efe1eb7b-f1a2-4ba8-8d2e-d756687c6bc4`, deployed 2026-09-10T04:12Z
-**Status:** Premise confirmed and quantified. No code change shipped — every change small
-enough to belong to this issue was measured and rejected on its own numbers.
+**Status:** Premise confirmed and quantified. This investigation itself shipped no code —
+every change small enough to belong to #323 was measured and rejected on its own numbers.
+The one change large enough to matter was split out as #362 and **has since shipped**: see
+[Fix (#362)](#fix-362--defer-module-scope-zod-construction) below.
 
 ## Summary
 
@@ -379,6 +381,134 @@ Two smaller follow-ups, neither a cold-start fix:
   key-details support with it. 27.3 KiB for three `satisfies()` calls that always answer the
   same thing on workerd.
 
+## Fix (#362) — defer module-scope zod construction
+
+Shipped on `fix/362-lazy-feature-mount`. The number section 2 named to beat was ~217 ms of
+~405 ms of module evaluation.
+
+### Mechanism: `z.lazy`, not lazy mounting
+
+Section 4 assumed deferring the schemas "means the feature routers mount lazily". It does
+not. `z.lazy(() => z.object({...}))` is a cheap placeholder — zod 4 runs the thunk on the
+first `parse()` and caches the result on the shared `def` — and every validator in
+`middleware/validation.ts` takes `z.ZodTypeAny`, so the schema can stay exactly where it is
+and the mounting in `app-factory.ts` never changes. Measured cost of the wrapper itself, cold
+and un-JITted: 200 eager 13-field objects cost 304 ms to build, 200 `z.lazy` wrappers cost
+2.2 ms — the wrapper defers ~99% of construction.
+
+482 schemas across 63 files were wrapped: module-scope consts under `features/*/schemas/`,
+the same in route modules, inline schemas handed straight to
+`validateBody`/`validateQuery`/`validateParams`, and two members of `commonSchemas`.
+
+Two boundaries fell out of the mechanism rather than being chosen:
+
+- **A schema something composes from stays eager.** `ZodLazy` carries only the shared
+  `ZodType` surface, so `.extend()` / `.pick()` / `.omit()` / `.merge()` / `.partial()` /
+  `.shape` and the per-type refinements (`.max()`, `.int()`, ...) are not on it. TypeScript
+  rejects the wrap, which is how the boundary was found rather than guessed: wrapping
+  everything indiscriminately produced 97 compile errors, and walking them back — including
+  the ones that only surfaced downstream, where a broken `...schema.shape` spread turned a
+  route handler's `validatedQuery` into `unknown` — is what produced the exclusion rule.
+  `z.infer<typeof schema>` is identical through the wrapper, so no consumer type moved.
+- **`src/contracts/` is excluded.** It contributes zero bytes to the Worker bundle, so
+  wrapping it buys nothing — and it would have been actively harmful: the `lazy` case in
+  `scripts/check-api-contracts.cjs` recurses into `def.getter()` while discarding the
+  `|null` / `?` suffix it accumulated on the way in, so a wrapped response schema silently
+  reports `object|null` as `object`. That latent bug is worth fixing before anyone lazifies
+  a contract schema; it is untouched here because nothing reaches it.
+
+### Numbers
+
+Node against the bundle wrangler builds, same method as section 2, interleaved A/B in one
+process over 11 rounds so both bundles see the same machine, median:
+
+| | before | after | delta |
+| --- | --- | --- | --- |
+| **module evaluate** | **473.4 ms** | **246.0 ms** | **−227.4 ms (−48.0%)** |
+| compile | 144.1 ms | 143.4 ms | within noise |
+| bundle (minified) | 2338.11 KiB | 2343.76 KiB | +5.65 KiB (+0.24%) |
+| bundle (gzip) | 580.32 KiB | 580.98 KiB | +0.66 KiB |
+
+That run landed at load average 4, and its `before` reproduces section 2 (473 ms against
+405–460 ms, 144 ms compile against 73 ms — Node's V8 on a busier laptop, same shape). Two
+earlier runs of the same A/B at load average 8–26 read 1067.5 → 559.9 ms and 892.3 → 494.3 ms:
+the absolute values roughly double under load but the ratio does not move — −47.6%, −44.6%,
+−48.0% across three independent runs. The ratio is the measurement.
+
+Compile is unchanged, which is worth stating plainly: this removes *execution*, not bytes. The
+bundle grows 5.65 KiB because 482 schema expressions each gained a closure, and the note at
+`apps/api/wrangler.toml:9` about this Worker being compile-bound still stands — `z.lazy` does
+nothing for that term.
+
+What moves onto the request path is ~1 ms, once per schema, and only for schemas a request
+actually reaches: first `POST /api/v1/auth/login` with a bad body 14.2 → 15.2 ms, second call
+4.7 → 4.9 ms. The `SmartRouter` first-`match()` build is a separate term and is untouched
+(111.0 → 113.3 ms) — which also confirms the two costs really are independent.
+
+Evidence that behaviour did not move: 2783 unit tests in `apps/api` pass, `pnpm
+contract:check` reports no contract change, and a 30-case differential replayed against both
+bundles in the same harness — 14 of them 400s straight out of the validators — returns
+identical status codes and identical error payloads down to the `details` field lists. The
+only two responses that differ are `/system/health` and `/monitoring/health`, in their
+timestamps and latency numbers.
+
+**Record `Worker Startup Time` from the next deploy in #362.** `wrangler` prints it on upload
+and the platform rejects above 400 ms; limitation 4 below is still open, and this change is
+the first thing that should have moved it.
+
+### Assessed and not shipped: per-prefix lazy mounting
+
+The other candidate for #362 was replacing `apiV1.route("/menu", menuFeature.routes)` with a
+proxy that imports the feature on first hit. It was measured and then rejected on three
+findings, in that order.
+
+**The headroom is real but smaller than it looks.** A bundle with 50 of the 51 features
+stripped out of `app-factory.ts` (orders left resident, i.e. the best case a lazy mount could
+reach for a request that touches one prefix) evaluates in 247.7 ms against the shipped
+547.7 ms on the same machine and in the same interleaved run — so ~300 ms, or 55% of what remains after `z.lazy`. But most of that is
+*moved*, not removed: the first request to each prefix pays that feature's evaluation inside
+`wallTime`, and section 4 already established that moving cost between startup and the first
+request is a wash on the wire because startup is on the client's critical path too. Only the
+features an isolate never touches are genuinely saved. Compile would not improve either — the
+code still ships, wrapped in esbuild `__esm` closures, which the fflate experiment showed
+*grows* the bundle.
+
+**It cannot preserve `hasConcreteApiRoute`.** The middleware at `app-factory.ts:666` answers
+404 by scanning `apiV1.routes` — the flattened registration table — and
+`hasConcreteApiRoute` (`app-factory.ts:192-210`) explicitly skips `route.method === "ALL"`.
+A lazy wrapper registered as `apiV1.all("/menu/*", proxy)` is therefore invisible to it and
+every request to a lazily-mounted prefix 404s; registered with explicit methods, its
+`"/menu/*"` pattern matches everything under the prefix, so `GET /api/v1/menu/does-not-exist`
+stops returning `ROUTE_NOT_FOUND`. Either way a route's behaviour changes, which is the one
+thing #362 was not allowed to do. Preserving it needs a build-time route manifest per
+feature — a much larger change with a new failure mode (manifest drift).
+
+**A sub-app gets a fresh context, and both halves of that were reproduced.** With
+`sub.fetch(c.req.raw, c.env, ...)`, a feature that reads `c.get("user")` sees `null` where the
+eager mount sees the value `optionalAuth` set, and the parent's `onError` never runs — the
+sub-app answers `500 Internal Server Error` as plain text instead of the unified
+`{success:false,error:{code,message}}` envelope. That matters here because the prefix-level
+middleware in `app-factory.ts` is where a lot of authorization lives:
+`apiV1.use("/restaurants/*", optionalAuth)`, `"/menu/*"` the same, and
+`authMiddleware` on `/pos/*`, `/payments/*`, `/users/*`, `/analytics/*`, `/ai-analytics/*`,
+`/system/*`, `/cache/*`, `/monitoring/*`, `/backup/*`, `/leaves/*`, `/scheduling/*`,
+`/forecast/*`, `/ingredients/*`, `/feedback/*`, `/notifications/*`, `/partnerships/*`,
+`/admin/*`. The full set of variables that would have to be forwarded is `user` (320 reads),
+`validatedParams` (276), `validatedBody` (213), `validatedQuery` (102), `customer` (38),
+`backupController` (13), `requestId` (5), `tenant` (3), `guestOrder` (3), `guestSession`,
+`requestTimestamp`, `healthStatus`, `analytics`. Hono offers no supported way to seed a
+sub-app's `Variables`, so every one of those would ride on bespoke plumbing where a missed
+key is a silent authorization bug. Two smaller hazards confirmed alongside: Hono throws if
+`route()` is called after the matcher is built (so "register on first request" is not
+available), and `c.executionCtx` throws when the runtime did not supply one, so a wrapper
+cannot pass it through unconditionally.
+
+Shared prefixes are a fourth constraint that survives all of the above — `/restaurants` is
+restaurants + members + reviews.publicRoutes, `/orders` is orders + group-orders +
+reviews.orderRoutes, `/auth` is auth + verification, `/admin/*` is four routers — and the
+comment at `app-factory.ts:686-698` records why the registration order of the orders mounts
+is load-bearing.
+
 ## Limitations — read before treating this as settled
 
 1. **One client, one network, one hour.** Every sample came from a single machine in Taiwan
@@ -425,5 +555,10 @@ Two smaller follow-ups, neither a cold-start fix:
 
 ## Files changed
 
-None. This investigation ships the document only; the three code changes it describes were
-built, measured and reverted, and their numbers are in section 4.
+The investigation itself shipped the document only; the three code changes in section 4 were
+built, measured and reverted, and their numbers are there.
+
+The #362 fix that followed changed 63 files under `apps/api/src` — 482 module-scope zod
+schemas wrapped in `z.lazy`, plus the convention note at the top of
+`apps/api/src/middleware/validation.ts` that explains to the next contributor when to wrap and
+when not to.
