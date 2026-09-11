@@ -14,7 +14,6 @@ export default [
       "*.d.ts",
       "coverage/**",
       "test-results/**",
-      "playwright-report/**",
       "**/*.vue.js",
     ],
   },

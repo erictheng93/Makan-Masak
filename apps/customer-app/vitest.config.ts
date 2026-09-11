@@ -13,8 +13,6 @@ export default defineConfig({
     exclude: [
       "**/node_modules/**",
       "**/dist/**",
-      "**/e2e/**", // Exclude Playwright E2E tests
-      "**/*.spec.ts", // Playwright uses .spec.ts convention
       // Phase 2 real-integration tests boot miniflare; they run under
       // the dedicated `vitest.real-integration.config.ts`, not the
       // default unit-test run. Mirrors kitchen-display's vitest.config.
