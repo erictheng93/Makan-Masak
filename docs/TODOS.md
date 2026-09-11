@@ -331,7 +331,7 @@ removed.
 
 ### Retire legacy REAL money columns with D1 drop-column cutover
 
-**Priority:** P3 → raised to P2 **Status:** → **[#334](https://github.com/erictheng93/Makan-Masak/issues/334)** (filed 2026-09-05). Detail below kept because the issue references it. **Corrected 2026-09-05 — the previous 2026-07-05 note, replaced here, was materially wrong:** The Drizzle schema end state is real: `packages/database/src/schema/` has **zero remaining legacy `REAL` money columns** — every `real()` column left is non-monetary (lat/lng, stock levels, ratings, `quantityPerServing`). But the executable cutover is no longer where the previous note said it was.
+**Priority:** P3 → raised to P2 **Status: ✅ DONE — nothing left to apply.** Verified read-only against production on 2026-09-12 under **[#334](https://github.com/erictheng93/Makan-Masak/issues/334)** (filed 2026-09-05): the cutover ran on 2026-07-24, `d1_migrations` already carries it, and no REAL money column survives. Results and the exact queries are in `docs/migration/MONEY_CENTS_FIELD_RETIREMENT.md`, section “Production state verified 2026-09-12” — read that rather than the analysis below, which predates the measurement. Detail below kept because the issue references it. **Corrected 2026-09-05 — the previous 2026-07-05 note, replaced here, was materially wrong:** The Drizzle schema end state is real: `packages/database/src/schema/` has **zero remaining legacy `REAL` money columns** — every `real()` column left is non-monetary (lat/lng, stock levels, ratings, `quantityPerServing`). But the executable cutover is no longer where the previous note said it was.
 
 **What the 2026-07-05 note claimed, and what is actually true:**
 
@@ -350,10 +350,12 @@ The guard logic (`CHECK (violation_count = 0)`, `PRAGMA defer_foreign_keys = ON`
 before/after row counts) still exists in those two files, but it is not
 reachable by any `pnpm db:migrate:*` path.
 
-**Still not verifiable from the repo:** whether the cutover was ever run against
-production D1. That is an operational fact — and note that production was built
-from the legacy lineage, so it is the one database where `0087`/`0088` could
-plausibly have been applied by hand.
+**~~Still not verifiable from the repo:~~ answered 2026-09-12.** Whether the
+cutover was ever run against production D1 was the open operational fact here.
+It was: the ledger rows are `0070`/`0071` under their pre-squash fresh-track
+names, applied 2026-07-24 09:26:33, and the live schema matches. So `0087`/`0088`
+were never needed by hand — the fresh-track originals ran before the squash
+deleted them. Keep the files; do not replay them.
 
 **Doc drift: resolved.** `docs/migration/MONEY_CENTS_FIELD_RETIREMENT.md` is now
 "Last reviewed: 2026-08-21" and its Current State section already documents the

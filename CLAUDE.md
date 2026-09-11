@@ -58,6 +58,11 @@ MakanMasak is a modern, serverless restaurant management system built on Cloudfl
   is referenced by any `wrangler.toml`. Despite the "deployment track" name,
   `migrations/` is applied by nothing, and replaying it from empty fails 107
   statements. Do not add migrations to either expecting them to ship.
+  Production's `d1_migrations` ledger also carries **pre-squash fresh-track**
+  filenames (`0023`, `0027`, `0067`, `0069`, `0070`, `0071`, all applied
+  2026-07-24) alongside the legacy ones, because those files ran before the
+  squash deleted them — a name there matching neither track on disk is
+  history, not drift (#334).
 - **Production's schema did not come from the baseline.** That `migrations_dir`
   points at the fresh track says where wrangler reads from; it says nothing about
   how the live database was built. `makanmasak-prod` was migrated off the legacy

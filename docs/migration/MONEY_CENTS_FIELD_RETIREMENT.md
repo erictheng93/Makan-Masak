@@ -1,6 +1,110 @@
 # Money Cents Field Retirement Plan
 
-Last reviewed: 2026-08-21
+Last reviewed: 2026-09-12
+
+## Production state verified 2026-09-12 (issue #334) — the cutover is live
+
+**The destructive cutover has already been applied to `makanmasak-prod`.**
+Everything below this section describes how to get there; nothing below still
+needs doing. Measured read-only against production on 2026-09-12 (`SELECT`
+only, via `pnpm exec wrangler d1 execute makanmasak-prod --remote --env
+production --json --command ...`):
+
+**1. The ledger already carries the cutover.** `d1_migrations` holds the
+**pre-squash fresh-track** filenames, applied in a single batch:
+
+| id | name | applied_at |
+| --- | --- | --- |
+| 24 | `0023_integrity_audit_and_money_cents.sql` | 2026-07-24 09:26:16 |
+| 28 | `0027_money_cents_retirement_audit.sql` | 2026-07-24 09:26:17 |
+| 67 | `0067_money_cents_retirement_rollout_guard.sql` | 2026-07-24 09:26:32 |
+| 69 | `0069_discount_percentage_bps.sql` | 2026-07-24 09:26:32 |
+| 70 | `0070_money_cents_cutover.sql` | 2026-07-24 09:26:33 |
+| 71 | `0071_market_checkout_child_order_cents_cutover.sql` | 2026-07-24 09:26:33 |
+
+Those are the `migrations_fresh/0070`/`0071` this document says were squashed
+away — the files are gone from the working tree, but they ran first and the
+ledger rows outlived them. The legacy track's own `0070`/`0071` are unrelated
+(`restaurant_service_items` / `catalog_item_types`); its copies of these steps
+are `0085`–`0088`. **No ledger write is needed, and nothing needs to be
+replayed.**
+
+**2. The schema is at the terminal state.** No table in production has a REAL
+money column. 13 tables carry a REAL column at all — 29 columns, every one
+non-monetary:
+
+| Table | REAL columns |
+| --- | --- |
+| `restaurants` | `latitude`, `longitude`, `rating` |
+| `markets`, `dish_search_index` | `latitude`, `longitude` |
+| `menu_items` | `rating` |
+| `ai_insights_cache` | `confidence_score` |
+| `menu_item_ingredients` | `quantity_per_serving` |
+| `ingredient_definitions` | `min_stock_level`, `current_stock` |
+| `ingredient_stock_movements` | `delta`, `balance_after` |
+| `shift_templates` | `overtime_multiplier` |
+| `leave_types` | `accrual_amount`, `carryover_max_days`, `payment_rate`, `max_usage_per_year` |
+| `leave_requests` | `total_days` |
+| `employee_leave_balances` | `total_days`, `used_days`, `pending_days`, `carryover_from_previous`, `carryover_to_next`, `manual_adjustment` |
+| `employee_schedules` | `scheduled_hours`, `actual_hours`, `overtime_hours` |
+
+That is exactly the 29 `real()` columns the Drizzle schema declares, and every
+one is on the "ratios, percentages, ratings, coordinates, fractional leave
+days" list this document excludes from the retirement.
+
+Checked positively as well, per the drop table further down: all 19 tables the
+cutover touched carry their `*_cents` columns as `INTEGER`, carry the four
+`*_bps` columns as `INTEGER`, and carry **none** of the 61 retired legacy
+columns. Row counts at the time of measurement:
+
+| Table | Rows | | Table | Rows |
+| --- | --- | --- | --- | --- |
+| `orders` | 7 | | `partnerships` | 0 |
+| `order_items` | 8 | | `partnership_plans` | 0 |
+| `menu_items` | 23 | | `partnership_usage_logs` | 0 |
+| `coupons` | 0 | | `verified_members` | 0 |
+| `coupon_usage` | 0 | | `market_checkout_child_orders` | 0 |
+| `group_orders` | 2 | | `market_checkout_sessions` | 0 |
+| `group_cart_items` | 1 | | `market_checkout_payments` | 0 |
+| `split_bills` | 1 | | `payment_transactions` | 0 |
+| `cash_shifts` | 0 | | `receipts` | 4 |
+| `cash_movements` | 0 | | `usage_events` | 1,303 |
+| `refunds` | 0 | | | |
+| `dish_search_index` | 23 | | | |
+| `ingredient_definitions` | 3 | | | |
+| `shift_templates` | 0 | | | |
+
+`receipts` and `usage_events` were checked too and are not money surfaces —
+`receipts` stores rendered text, `usage_events.quantity` is a meter count.
+Production is nearly empty, so read this as "the shape is right", not as "the
+write paths are proven".
+
+**3. FK orphan audit: clean.** Every one of the 69 production tables with a
+`restaurant_id` column has a declared foreign key to `restaurants(id)` — the
+declared-FK list and the has-the-column list are identical, so the
+`restaurant_fk` rebuild left nothing behind. `COUNT(*) ... WHERE restaurant_id
+IS NOT NULL AND restaurant_id NOT IN (SELECT id FROM restaurants)` returns **0
+for all 69**, and `SELECT COUNT(*) FROM pragma_foreign_key_check` returns 0
+across the whole database. The 45 tables the squashed
+`migrations_fresh/0028`–`0039` rebuilt are a strict subset of those 69.
+
+**4. `migrations/0087` and `0088` are inert and stay on disk.** They sit on
+`packages/database/migrations/`, which no `wrangler.toml` references, and the
+work they describe is already applied to the only database that could have
+wanted them. They are kept as the readable record of what was run — the fresh
+track's copies were squashed away, so deleting these would leave the cutover
+with no executable text anywhere. **Do not replay them against any database
+that already has the cutover**: they begin by `DROP COLUMN`-ing columns that no
+longer exist and would fail on the first statement.
+
+A schema-level regression guard now backs this up:
+`packages/database/src/testing/money-cents-retirement-rollout.test.ts` walks the
+Drizzle schema objects and fails on any REAL column whose name carries a money
+word (`price`, `amount`, `total`, `fee`, `cost`, `subtotal`, `tax`, `discount`,
+`tip`, `balance`) unless it ends `_cents`/`_bps` or appears in a small
+documented non-money allowlist. The text assertions elsewhere in that file only
+fire when someone writes a migration; this one fires on a `real("price")` added
+straight to a table.
 
 ## Current State
 

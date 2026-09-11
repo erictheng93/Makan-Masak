@@ -134,6 +134,56 @@ contamination and manufacture a false alarm — most `*_at_ms` columns here are 
 Always use `NOT IN ('integer','null')`. NOT NULL columns cannot hold NULL regardless of
 `STRICT` (SQLite enforces NOT NULL independently), so excluding `'null'` loses no signal.
 
+## Two more read-only sweeps that reuse this block (issue #334, 2026-09-12)
+
+Both were run with the same `$BASE` invocation and both came back clean. They
+answer different questions from the STRICT one, so they are recorded here
+rather than folded into the table above.
+
+**Which tables still declare a `REAL` column** — the money-cents retirement's
+exit condition. `LIKE '%real%'` over `sqlite_master.sql` finds the tables, but
+join `pragma_table_info` to get the columns, or you are back to substring
+matching on DDL:
+
+```bash
+$BASE --command "SELECT m.name AS tbl, p.name AS col FROM sqlite_master m
+  JOIN pragma_table_info(m.name) p
+ WHERE m.type='table' AND upper(p.type)='REAL'
+   AND m.name NOT LIKE 'sqlite_%' AND m.name NOT LIKE '%_fts%'
+   AND m.name NOT LIKE 'd1_%' AND m.name != '_cf_KV'
+ ORDER BY m.name, p.name;"
+```
+
+13 tables, 29 columns, every one non-monetary — the cutover is live in
+production. Full result in
+`docs/migration/MONEY_CENTS_FIELD_RETIREMENT.md`, section "Production state
+verified 2026-09-12".
+
+**Whether any `restaurant_id` is an orphan.** 69 tables carry the column, and
+all 69 have a declared FK to `restaurants(id)`; the table-with-column list and
+the declared-FK list come back identical:
+
+```bash
+$BASE --command "SELECT m.name FROM sqlite_master m JOIN pragma_table_info(m.name) p
+ WHERE m.type='table' AND p.name='restaurant_id'
+   AND m.name NOT LIKE 'sqlite_%' AND m.name NOT LIKE '%_fts%'
+   AND m.name NOT LIKE 'd1_%' AND m.name != '_cf_KV' ORDER BY m.name;"
+
+# then, ~23 tables per call, as scalar subqueries (not UNION ALL — see above):
+$BASE --command "SELECT
+  (SELECT COUNT(*) FROM \`orders\` WHERE \`restaurant_id\` IS NOT NULL
+     AND \`restaurant_id\` NOT IN (SELECT \`id\` FROM \`restaurants\`)) AS \"o_orders\", …;"
+```
+
+All 69 returned 0, and `SELECT COUNT(*) FROM pragma_foreign_key_check` returned
+0 for the whole database. Note that a bare column alias of a table name is a
+syntax error here (`near "order_items"`) — quote the aliases, as above.
+
+**zsh does not word-split an unquoted `$VAR`**, so a `for t in $TABLES` loop
+that works in bash silently passes the whole string as one table name and the
+query fails with `no such table: orders order_items …`. Generate the SQL with
+`node -e` and `--command "$(cat file.sql)"` instead.
+
 ## Adjacent finding (not STRICT-related)
 
 16 timestamp-named columns are declared `TEXT` rather than INTEGER in production, all in
