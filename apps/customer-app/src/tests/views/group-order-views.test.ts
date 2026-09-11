@@ -615,6 +615,38 @@ describe("GroupOrderView — submitting", () => {
     ).toBe(false);
   });
 
+  it("names the rule the host tripped instead of saying submitting failed", async () => {
+    // Finalizing runs the group cart through the same createOrder as checkout,
+    // so its refusals arrive with codes the order-submit registry already has
+    // copy for — the host is the only person who can act on them (#359).
+    groupOrderMock.submitOrder.mockRejectedValueOnce(
+      Object.assign(new Error("Insufficient inventory for 滷肉飯"), {
+        code: "INSUFFICIENT_INVENTORY",
+        status: 409,
+      }),
+    );
+
+    const wrapper = await mountView();
+    await wrapper.find('[data-testid="group-order-submit"]').trigger("click");
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="group-order-submit-error"]').text(),
+    ).toContain("toast.orderSubmitInsufficientInventory");
+  });
+
+  it("falls back to the group's own copy for a failure carrying no known code", async () => {
+    groupOrderMock.submitOrder.mockRejectedValueOnce(new Error("boom"));
+
+    const wrapper = await mountView();
+    await wrapper.find('[data-testid="group-order-submit"]').trigger("click");
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="group-order-submit-error"]').text(),
+    ).toContain("group.submitFailed");
+  });
+
   it("tells the host the order reached the restaurant even though submitting failed", async () => {
     groupOrderMock.submitOrder.mockRejectedValueOnce(
       Object.assign(new Error("Split total does not match order total"), {

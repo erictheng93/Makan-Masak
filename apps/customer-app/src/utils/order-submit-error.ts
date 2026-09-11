@@ -53,7 +53,7 @@ const identity = (key: string) => key;
  * envelope parsing and generic fallbacks to the shared resolver. In
  * particular, server messages are no longer regex-matched or displayed.
  */
-export const getOrderSubmitErrorI18nKey = (error: unknown): string => {
+const resolveOrderSubmitError = (error: unknown) => {
   const { code } = parseUserFacingError(error);
   const codeKeys = { ...ORDER_SUBMIT_ERROR_KEYS };
 
@@ -61,5 +61,23 @@ export const getOrderSubmitErrorI18nKey = (error: unknown): string => {
     codeKeys[code] = "toast.orderSubmitQrInvalid";
   }
 
-  return resolveUserFacingError(error, identity, { codeKeys }).message;
+  return resolveUserFacingError(error, identity, { codeKeys });
+};
+
+export const getOrderSubmitErrorI18nKey = (error: unknown): string =>
+  resolveOrderSubmitError(error).message;
+
+/**
+ * The registry's own answer, and nothing else — `undefined` when the failure
+ * carried no code this table knows. Screens that submit an order without being
+ * the checkout screen have their own copy for everything else, so they need to
+ * ask whether these codes matched rather than taking the resolver's generic
+ * fallback. Group ordering finalizes through the same `createOrder`, so the
+ * host of a group hits exactly the same rules as a solo diner (#359).
+ */
+export const getOrderSubmitErrorCodeI18nKey = (
+  error: unknown,
+): string | undefined => {
+  const resolved = resolveOrderSubmitError(error);
+  return resolved.presentation === "code" ? resolved.message : undefined;
 };

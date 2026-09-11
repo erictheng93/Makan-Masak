@@ -7,6 +7,7 @@ import HostRecoveryPanel from "@/components/group/HostRecoveryPanel.vue";
 import { useGroupOrder } from "@/composables/useGroupOrder";
 import { useI18n } from "@/composables/useI18n";
 import { getGroupOrderErrorI18nKey } from "@/utils/group-order-error";
+import { getOrderSubmitErrorCodeI18nKey } from "@/utils/order-submit-error";
 import type { SplitBillConfig } from "@/composables/useGroupOrder";
 import type { GroupOrderFeeMode } from "@makanmasak/shared-types";
 
@@ -158,8 +159,14 @@ async function submitGroupOrder(): Promise<void> {
     } else if (isHostOnlyError(error)) {
       submitError.value = t("group.hostOnlySubmit");
     } else {
+      // Finalizing runs the group cart through the same `createOrder` a solo
+      // diner uses, so a refusal arrives with the checkout screen's codes —
+      // out of stock, below the minimum, restaurant closed. The host is the
+      // one holding the cart, so say which rule they tripped rather than
+      // "submitting failed" (#359).
       submitError.value = t(
-        getGroupOrderErrorI18nKey(error, "group.submitFailed"),
+        getOrderSubmitErrorCodeI18nKey(error) ??
+          getGroupOrderErrorI18nKey(error, "group.submitFailed"),
       );
     }
   } finally {

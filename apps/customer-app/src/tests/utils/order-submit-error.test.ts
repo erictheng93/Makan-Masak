@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { getOrderSubmitErrorI18nKey } from "@/utils/order-submit-error";
+import {
+  getOrderSubmitErrorCodeI18nKey,
+  getOrderSubmitErrorI18nKey,
+} from "@/utils/order-submit-error";
 
 describe("getOrderSubmitErrorI18nKey", () => {
   it("localizes active guest order conflicts from API error codes", () => {
@@ -175,5 +178,26 @@ describe("getOrderSubmitErrorI18nKey", () => {
         new Error("Unexpected backend implementation detail"),
       ),
     ).toBe("errorPresentation.unknown");
+  });
+});
+
+describe("getOrderSubmitErrorCodeI18nKey", () => {
+  it("answers for a code this registry knows", () => {
+    expect(
+      getOrderSubmitErrorCodeI18nKey({
+        code: "INSUFFICIENT_INVENTORY",
+        status: 409,
+      }),
+    ).toBe("toast.orderSubmitInsufficientInventory");
+  });
+
+  /**
+   * The point of the narrower reading: a screen with its own copy for
+   * everything else must be able to tell "the registry matched" from "the
+   * resolver fell through to generic copy", which the key alone cannot say.
+   */
+  it("stays silent on a status-only or unknown failure so the caller keeps its own copy", () => {
+    expect(getOrderSubmitErrorCodeI18nKey({ status: 403 })).toBeUndefined();
+    expect(getOrderSubmitErrorCodeI18nKey(new Error("boom"))).toBeUndefined();
   });
 });
