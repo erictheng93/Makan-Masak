@@ -17,6 +17,14 @@
     "noFallthroughCasesInSwitch": true,
     "paths": {
       "@/*": ["./src/*"],
+      "@makanmasak/i18n": ["../../packages/shared/src/i18n/src/index.ts"],
+      "@makanmasak/i18n/locale-manager": [
+        "../../packages/shared/src/i18n/src/locale-manager.ts"
+      ],
+      "@makanmasak/i18n/static-messages": [
+        "../../packages/shared/src/i18n/src/static-messages.ts"
+      ],
+      "@makanmasak/i18n/types": ["../../packages/shared/src/i18n/src/types.ts"],
       "@makanmasak/utils": ["../../packages/utils/src"],
       "@makanmasak/utils/*": ["../../packages/utils/src/*"]
     },

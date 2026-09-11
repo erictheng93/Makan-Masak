@@ -258,7 +258,10 @@ export function createI18n<
 export function createAppI18n<
   T extends Record<string, unknown> = Record<string, unknown>,
 >(
-  app: "admin" | "customer" | "kitchen",
+  // Kept for call-site compatibility (see this package's README) but not read:
+  // messages are loaded per app afterwards, not chosen here. Underscored so the
+  // apps that now typecheck this source under noUnusedParameters stay green.
+  _app: "admin" | "customer" | "kitchen",
   options: Partial<I18nOptions> = {},
 ): I18n<T, {}, {}, string, boolean> {
   const locale = LocaleManager.getStoredLocale();

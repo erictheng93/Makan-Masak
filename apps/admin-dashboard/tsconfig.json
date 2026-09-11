@@ -22,6 +22,14 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
+      "@makanmasak/i18n": ["../../packages/shared/src/i18n/src/index.ts"],
+      "@makanmasak/i18n/locale-manager": [
+        "../../packages/shared/src/i18n/src/locale-manager.ts"
+      ],
+      "@makanmasak/i18n/static-messages": [
+        "../../packages/shared/src/i18n/src/static-messages.ts"
+      ],
+      "@makanmasak/i18n/types": ["../../packages/shared/src/i18n/src/types.ts"],
       "@makanmasak/shared": ["../../packages/shared"],
       "@makanmasak/shared/*": ["../../packages/shared/*"],
       "@makanmasak/database": ["../../packages/database/src"],
@@ -48,6 +56,7 @@
     "../../packages/shared/utils/unknown.ts",
     "../../packages/shared/utils/user-facing-error.ts",
     "../../packages/shared-types/src/**/*",
+    "../../packages/shared/src/i18n/src/**/*",
     "../../packages/utils/src/**/*"
   ],
   "exclude": [
