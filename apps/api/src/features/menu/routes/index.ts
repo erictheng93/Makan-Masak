@@ -280,8 +280,19 @@ app.get(
       throw notFound("Menu item not found");
     }
 
-    // Increment view count asynchronously (don't wait for completion)
-    c.executionCtx.waitUntil(service.incrementViewCount(id));
+    // Increment view count asynchronously (don't wait for completion).
+    //
+    // The .catch() is load-bearing, not defensive noise. incrementViewCount
+    // logs and then rethrows, and a promise handed to waitUntil that rejects
+    // is an unhandled rejection: the Workers runtime reports the invocation as
+    // `outcome: "exception"` even though this 200 has already been sent, which
+    // is the signal #325 was reading as "an uncaught exception is recycling the
+    // isolate". The view count is bookkeeping — a transient D1 write failure
+    // must not be able to colour the request it rode in on. Every other
+    // waitUntil in apps/api already swallows its own errors this way.
+    c.executionCtx.waitUntil(
+      service.incrementViewCount(id).catch(() => undefined),
+    );
 
     return c.json(createSuccessResponse(item), HTTP_STATUS.OK);
   },

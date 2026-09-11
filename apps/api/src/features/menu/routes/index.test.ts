@@ -165,7 +165,17 @@ function createEnv() {
   };
 }
 
+/**
+ * Promises the handler handed to `executionCtx.waitUntil` during the most
+ * recent `request(...)`. The runtime keeps the invocation alive for these
+ * after the response is sent; if one of them rejects, the Workers runtime
+ * reports the whole invocation as `outcome: "exception"` even though the
+ * client already has its 200 (#325).
+ */
+let waitUntilPromises: Promise<unknown>[] = [];
+
 function request(path: string, method = "GET", body?: unknown) {
+  waitUntilPromises = [];
   return routes.request(
     path,
     {
@@ -175,7 +185,12 @@ function request(path: string, method = "GET", body?: unknown) {
         body === undefined ? undefined : { "Content-Type": "application/json" },
     },
     createEnv() as never,
-    { waitUntil: vi.fn(), passThroughOnException: vi.fn() } as never,
+    {
+      waitUntil: vi.fn((promise: Promise<unknown>) => {
+        waitUntilPromises.push(promise);
+      }),
+      passThroughOnException: vi.fn(),
+    } as never,
   );
 }
 
@@ -404,6 +419,30 @@ describe("menu routes", () => {
     serviceFns.getMenuItem.mockResolvedValueOnce(null);
     response = await request("/items/404");
     expect(response.status).toBe(404);
+  });
+
+  // #325 investigated intermittent ERR_CONNECTION_CLOSED and asked whether an
+  // uncaught Worker exception was recycling the isolate. This route was the one
+  // place in apps/api that handed an unguarded promise to waitUntil:
+  // MenuService.incrementViewCount logs and then *rethrows*, so a transient D1
+  // write failure on a public menu read became an unhandled rejection and the
+  // invocation was reported `exception` after a 200 had already gone out.
+  // Every other waitUntil in the repo already swallows its own errors.
+  it("keeps a failing view-count write from rejecting the waitUntil promise", async () => {
+    serviceFns.incrementViewCount.mockRejectedValueOnce(
+      new Error("D1_ERROR: database is locked"),
+    );
+
+    const response = await request("/items/11");
+
+    // The client is unaffected: the count is bookkeeping, not part of the read.
+    expect(response.status).toBe(200);
+    expect(serviceFns.incrementViewCount).toHaveBeenCalledWith(11);
+
+    // And the background work the runtime is still holding must settle rather
+    // than reject. Awaiting it here is the assertion.
+    expect(waitUntilPromises).toHaveLength(1);
+    await expect(waitUntilPromises[0]).resolves.toBeUndefined();
   });
 
   it("creates, updates, and deletes menu items with search sync", async () => {
