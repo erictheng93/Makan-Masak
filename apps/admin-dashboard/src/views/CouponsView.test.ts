@@ -2,7 +2,16 @@
 
 import { flushPromises, mount } from "@vue/test-utils";
 import { nextTick } from "vue";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import CouponsView from "./CouponsView.vue";
 import { AxiosHeaders, type AxiosResponse } from "axios";
 import type { ApiResponse } from "@/types";
@@ -100,8 +109,20 @@ function summaryResponse() {
   return apiGetResponse<Record<string, never>>({ success: true, data: {} });
 }
 
+function mountCoupons() {
+  return mount(CouponsView);
+}
+
+// `findAll("button").find(...)` over this view's rendered tree, reused by the
+// warm-up and by the body that walks the filters.
+function paginationNext(wrapper: ReturnType<typeof mountCoupons>) {
+  return wrapper
+    .findAll("button")
+    .find((button) => button.text().includes("coupons.pagination.next"));
+}
+
 describe("CouponsView", () => {
-  beforeEach(() => {
+  function configureCouponMocks() {
     vi.clearAllMocks();
     moduleAccess.effectiveModules = { coupons: true };
     moduleAccess.isLoaded = true;
@@ -112,16 +133,55 @@ describe("CouponsView", () => {
       return Promise.resolve(couponResponse(21));
     });
     vi.mocked(api.post).mockResolvedValue({} as never);
-  });
+  }
+
+  beforeEach(configureCouponMocks);
 
   afterEach(() => vi.useRealTimers());
 
-  it("resets pagination before requesting status, discount, and search filters", async () => {
-    const wrapper = mount(CouponsView);
+  // `resets pagination before requesting status, discount, and search filters`
+  // is the first `it` in the file and was its slowest body by 2.2x -- 1,535ms
+  // in the #351 sweep, 695ms in the package suite measured here against 318ms
+  // for the next-worst (#360). Instrumented alone on a loaded 4-core box, its
+  // ~540ms of real work broke down as:
+  //
+  //   mount               133-310ms   <- one-off
+  //   flush                 30-81ms
+  //   findAll("button")     26-68ms   <- one-off (first tree scan + text())
+  //   pagination round      26-30ms
+  //   status round          18-33ms
+  //   discount round        31-75ms
+  //   search round          11-52ms + assertions
+  //
+  // So roughly half of it was the first mount and the first whole-tree button
+  // scan, and the rest is four genuine interaction rounds. The one-off half is
+  // re-usable state, not per-test work, so a `beforeAll` pays it once under the
+  // hook's own budget -- going through the same mount + flush + paginate path
+  // the body uses, so the first `trigger("click")` is warm too.
+  //
+  // The four rounds stay in one body on purpose: each filter has to be applied
+  // on top of the previous one for the assertions to say that the earlier
+  // filters survive a pagination reset, which is the regression this test
+  // exists for. Splitting them would either drop that or re-run the earlier
+  // rounds in every split, which is no cheaper.
+  beforeAll(async () => {
+    configureCouponMocks();
+    const warmup = mountCoupons();
     await flushPromises();
-    const next = wrapper
-      .findAll("button")
-      .find((button) => button.text().includes("coupons.pagination.next"));
+    await paginationNext(warmup)!.trigger("click");
+    await flushPromises();
+    warmup.unmount();
+  }, 30_000);
+
+  // `vi.useFakeTimers()` inside the filter body swaps the global timers for the
+  // rest of that test; `afterEach` restores them. Nothing here leaks into the
+  // warm-up, which runs before the first `beforeEach`.
+  afterAll(() => vi.useRealTimers());
+
+  it("resets pagination before requesting status, discount, and search filters", async () => {
+    const wrapper = mountCoupons();
+    await flushPromises();
+    const next = paginationNext(wrapper);
     await next!.trigger("click");
     await flushPromises();
 
