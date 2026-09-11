@@ -28,6 +28,13 @@ vi.mock("vue-router", () => ({
   useRouter: () => ({ back: vi.fn(), push: vi.fn() }),
 }));
 
+// ShopMenuView renders the shop's review block, which reaches for the API the
+// moment someone opens it. Nothing in this suite opens it; the mock only keeps
+// `@/services/api` (and its required VITE_API_BASE_URL) out of the graph.
+vi.mock("@/services/orderApi", () => ({
+  orderApi: { getRestaurantReviews: vi.fn() },
+}));
+
 vi.mock("vue-toastification", () => ({
   useToast: () => ({ success: vi.fn(), error: toastError }),
 }));

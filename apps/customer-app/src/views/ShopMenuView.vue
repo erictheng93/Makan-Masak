@@ -247,6 +247,16 @@
             </button>
           </section>
 
+          <!--
+            店家評分與評價：跟著搜尋框與狀態提示之後、菜單之前，讓人在點餐前
+            先看得到別人怎麼說。沒有任何評價時整塊不出現。
+          -->
+          <ShopReviewsSection
+            :restaurant-id="restaurantId"
+            :rating="restaurant?.rating"
+            :review-count="restaurant?.reviewCount"
+          />
+
           <section
             v-if="marketMemberships.length > 0"
             data-testid="shop-market-context"
@@ -644,6 +654,7 @@ import CustomizationModal from "@/components/CustomizationModal.vue";
 import ShopCartModal from "@/components/ShopCartModal.vue";
 import DesktopCartPanel from "@/components/DesktopCartPanel.vue";
 import { useIsDesktop } from "@/composables/useBreakpoint";
+import ShopReviewsSection from "@/components/reviews/ShopReviewsSection.vue";
 import { menuApi } from "@/services/menuApi";
 import { discoveryApi } from "@/services/discoveryApi";
 import { shopQrApi } from "@/services/shopQrApi";
