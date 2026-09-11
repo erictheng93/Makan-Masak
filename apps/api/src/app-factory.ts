@@ -117,6 +117,7 @@ import {
 } from "./shared/feature-adoption";
 import feedbackFeature from "./features/feedback";
 import alertsFeature from "./features/alerts";
+import reviewsFeature from "./features/reviews";
 import billingFeature from "./features/billing";
 import subscriptionsFeature from "./features/subscriptions";
 import meFeature from "./features/me";
@@ -623,6 +624,13 @@ export function createApp(
         // Scoped to /jobs rather than the whole feature: anything added under
         // /print later that a browser drives does use a session, and a bare
         // "/api/v1/print" would exempt it silently.
+        // A diner reviews an order by presenting the same bearer token that
+        // tracked it — a customer JWT or a KV guest token. Neither is a
+        // cookie, so the browser never attaches either one to a cross-site
+        // request and there is nothing for CSRF to defend; requiring a token
+        // here would simply lock guests out of reviewing, exactly as it did
+        // for the customer self-service flows above.
+        "/api/v1/orders/*/review",
         "/api/v1/print/jobs",
         "/api/v1/realtime/auth", // Public WebSocket token exchange; uses scoped tokens instead of session cookies
         "/api/v1/integrations/webhooks", // Platform webhooks (HMAC verified, no session)
@@ -752,6 +760,10 @@ export function createApp(
   apiV1.route("/kitchen", kitchenFeature.routes);
   apiV1.route("/orders/group", groupOrdersFeature.routes);
   apiV1.route("/orders", ordersFeature.routes);
+  // POST/GET /orders/:id/review (#286). Mounted after the orders feature so
+  // the two routers share the prefix without either owning the other's paths;
+  // both routes authorise through the order's own identity, not a role.
+  apiV1.route("/orders", reviewsFeature.orderRoutes);
   apiV1.route("/pos", posFeature.routes);
   apiV1.route("/payments", paymentsFeature.routes);
   // Manager feature mounts on two independent paths — /manager hosts the

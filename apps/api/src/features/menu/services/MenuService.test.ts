@@ -777,12 +777,8 @@ describe("MenuService", () => {
     ]);
     await service.incrementOrderCount(101, 2);
     await service.incrementViewCount(101);
-    await service.updateItemRating(101, 4.8);
     expect(dbService.incrementOrderCount).toHaveBeenCalledWith(101, 2);
     expect(dbService.incrementViewCount).toHaveBeenCalledWith(101);
-    expect(dbService.updateMenuItem).toHaveBeenCalledWith(101, {
-      rating: 4.8,
-    });
   });
 
   it("batch updates availability, prices, and category moves", async () => {

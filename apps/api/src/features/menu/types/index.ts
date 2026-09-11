@@ -365,7 +365,14 @@ export interface IMenuService {
   // Utility functions
   incrementOrderCount(menuItemId: number, increment?: number): Promise<void>;
   incrementViewCount(menuItemId: number): Promise<void>;
-  updateItemRating(menuItemId: number, rating: number): Promise<void>;
+  /**
+   * `updateItemRating` used to sit here. It had no callers in any app, and it
+   * was a plain setter on `menu_items.rating` — a column that is now derived,
+   * recomputed from the reviews table by
+   * `features/reviews/services/ReviewService` inside the same batch as the
+   * review write (#286). Keeping a setter beside a derived column is an
+   * invitation to overwrite the aggregate with a number nothing can reproduce.
+   */
 }
 
 // Event types for menu operations

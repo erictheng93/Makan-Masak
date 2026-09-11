@@ -805,20 +805,6 @@ export class MenuService implements IMenuService {
     }
   }
 
-  async updateItemRating(menuItemId: number, rating: number): Promise<void> {
-    try {
-      this.logger.debug("Updating item rating", { menuItemId, rating });
-      await this.dbService.updateMenuItem(menuItemId, { rating });
-    } catch (error) {
-      this.logger.error(
-        "Failed to update item rating",
-        error instanceof Error ? error : undefined,
-        { menuItemId },
-      );
-      throw error;
-    }
-  }
-
   async getCategoryById(id: number): Promise<Category | null> {
     return this.getCategory(id);
   }
