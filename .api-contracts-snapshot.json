@@ -279,6 +279,69 @@
         "success": "literal(true)"
       }
     },
+    "broadcasts": {
+      "BroadcastHistoryItemSchema": {
+        "$": "object+catchall",
+        "audienceCount": "number",
+        "body": "string",
+        "completedAt": "number|null",
+        "createdAt": "number",
+        "deliveredCount": "number",
+        "failedCount": "number",
+        "id": "string",
+        "scopeId": "string",
+        "scopeType": "enum(market|restaurant)",
+        "sentBy": "string|null",
+        "skippedCount": "number",
+        "title": "string",
+        "url": "string|null"
+      },
+      "BroadcastPaginationSchema": {
+        "$": "object",
+        "limit": "number",
+        "page": "number",
+        "total": "number",
+        "totalPages": "number"
+      },
+      "BroadcastScopeSchema": {
+        "$": "enum(market|restaurant)"
+      },
+      "ListBroadcastsResponse": {
+        "$": "object",
+        "data": "object",
+        "data.broadcasts": "array",
+        "data.broadcasts[]": "object+catchall",
+        "data.broadcasts[].audienceCount": "number",
+        "data.broadcasts[].body": "string",
+        "data.broadcasts[].completedAt": "number|null",
+        "data.broadcasts[].createdAt": "number",
+        "data.broadcasts[].deliveredCount": "number",
+        "data.broadcasts[].failedCount": "number",
+        "data.broadcasts[].id": "string",
+        "data.broadcasts[].scopeId": "string",
+        "data.broadcasts[].scopeType": "enum(market|restaurant)",
+        "data.broadcasts[].sentBy": "string|null",
+        "data.broadcasts[].skippedCount": "number",
+        "data.broadcasts[].title": "string",
+        "data.broadcasts[].url": "string|null",
+        "data.pagination": "object",
+        "data.pagination.limit": "number",
+        "data.pagination.page": "number",
+        "data.pagination.total": "number",
+        "data.pagination.totalPages": "number",
+        "success": "literal(true)"
+      },
+      "SendBroadcastResponse": {
+        "$": "object",
+        "data": "object+catchall",
+        "data.audienceCount": "number",
+        "data.deliveredCount": "number",
+        "data.failedCount": "number",
+        "data.id": "string",
+        "data.skippedCount": "number",
+        "success": "literal(true)"
+      }
+    },
     "coupons": {
       "BulkCouponResponse": {
         "$": "object",

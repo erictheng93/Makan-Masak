@@ -118,6 +118,7 @@ import {
 import feedbackFeature from "./features/feedback";
 import alertsFeature from "./features/alerts";
 import reviewsFeature from "./features/reviews";
+import broadcastsFeature from "./features/broadcasts";
 import billingFeature from "./features/billing";
 import subscriptionsFeature from "./features/subscriptions";
 import meFeature from "./features/me";
@@ -761,6 +762,10 @@ export function createApp(
   // router because the rest of reviews is owner-scoped; Hono merges both into
   // the /restaurants prefix.
   apiV1.route("/restaurants", reviewsFeature.publicRoutes);
+  // POST/GET /restaurants/:id/broadcasts — marketing push to followers (#335).
+  // Its own router for the same reason reviews has one: the rest of the
+  // restaurants feature is not owner-and-admin-only.
+  apiV1.route("/restaurants", broadcastsFeature.restaurantRoutes);
   apiV1.route("/menu", menuFeature.routes);
   apiV1.route("/kitchen", kitchenFeature.routes);
   apiV1.route("/orders/group", groupOrdersFeature.routes);
@@ -795,6 +800,10 @@ export function createApp(
   apiV1.route("/ingredients", ingredientsFeature.routes);
   apiV1.route("/discovery", discoveryFeature.routes);
   apiV1.route("/markets", marketsFeature.routes);
+  // POST/GET /markets/:id/broadcasts — market announcements (#335), role 0.
+  // Mounted after the public markets router so both share the prefix; the
+  // guards live inside the handlers.
+  apiV1.route("/markets", broadcastsFeature.marketRoutes);
   apiV1.route("/feedback", feedbackFeature.routes);
   apiV1.route("/alerts", alertsFeature.routes); // 店主營運告警 (#285) — admin/owner only
   apiV1.route("/reviews", reviewsFeature.routes); // 顧客評價 (#286) — admin/owner only

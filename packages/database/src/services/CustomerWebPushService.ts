@@ -98,6 +98,41 @@ export class CustomerWebPushService extends BaseService {
     };
   }
 
+  /**
+   * Deliver one arbitrary payload to one already-resolved subscription, doing
+   * the same failure bookkeeping `sendWaitingCalled` does.
+   *
+   * Exists so marketing broadcasts (#335) reuse the VAPID signing and aes128gcm
+   * encryption below instead of growing a second copy, while the audience,
+   * consent and quiet-hours rules stay in the API feature that owns them.
+   *
+   * A 404 or 410 from the push service means the browser threw the
+   * subscription away. That is reported to the caller as the status, and
+   * handled here the way every other failure is: `failure_count` is
+   * incremented, which takes the subscription out of every load query at 3 and
+   * makes it eligible for the 90-day prune. Nothing is deleted on the spot —
+   * a push service can 410 a subscription that a later re-subscribe revives
+   * under the same endpoint.
+   */
+  async deliverToSubscription(
+    subscription: DeliverySubscription,
+    payload: Record<string, unknown>,
+  ): Promise<DeliveryResult> {
+    try {
+      const result = await this.deliver({ subscription, payload });
+      if (result.ok) {
+        await this.markSuccess(subscription.id);
+      } else {
+        await this.markFailure(subscription.id);
+      }
+      return result;
+    } catch (error) {
+      await this.markFailure(subscription.id);
+      console.error("Customer web push delivery failed:", error);
+      return { ok: false, status: 0 };
+    }
+  }
+
   private async loadWaitingListSubscriptions(
     customerId: string,
   ): Promise<PushSubscriptionRow[]> {
