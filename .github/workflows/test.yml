@@ -397,9 +397,16 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: 🏗️ 建置內部套件
-        # Both apps import workspace build output; the admin dependency graph
-        # also includes i18n, which is absent from the API's dependencies.
-        run: pnpm --filter @makanmasak/api^... --filter makanmasak-admin-dashboard^... build
+        # Only the API's closure is built: it is the side that imports workspace
+        # `dist/` output. The admin filter used to be here for @makanmasak/i18n,
+        # the one package its closure added over this one that has a build
+        # script at all (auth-client and shared publish their source, and
+        # ai-analytics / shared-types / database / utils are already in the
+        # API's closure). The dev server now resolves i18n from source through
+        # the vite alias added for #361, so the extra filter builds nothing the
+        # dashboard needs. `tests/unit/workspace-source-aliases.test.ts` guards
+        # the alias that makes this safe.
+        run: pnpm --filter @makanmasak/api^... build
 
       - name: 🔐 寫入 CI dev.vars
         # QR_SIGNING_KEY is required, not optional: creating a table,
