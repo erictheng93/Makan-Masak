@@ -221,6 +221,19 @@
                 {{ t("orderTracking.cancelOrder") }}
               </button>
             </div>
+
+            <!--
+              評價：留在訂單卡片內，接在操作列之後。整張卡片本身是「看詳情」的
+              連結，所以這一塊要自己擋下點擊，不然選一顆星就跳頁了。
+            -->
+            <div @click.stop>
+              <OrderReviewSection
+                :order-id="order.id"
+                :order-status="order.status"
+                :items="order.items"
+                variant="inset"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -268,6 +281,7 @@ import { useI18n } from "@/composables/useI18n";
 import { useCurrency } from "@/composables/useCurrency";
 import { useConfirmModal } from "@/composables/useConfirmModal";
 import { useToast } from "vue-toastification";
+import OrderReviewSection from "@/components/reviews/OrderReviewSection.vue";
 import { customerOrderApi } from "@/services/customerOrderApi";
 import type { CustomerOrdersParams } from "@/services/customerOrderApi";
 import type { Order } from "@makanmasak/shared-types";

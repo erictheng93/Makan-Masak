@@ -1270,5 +1270,37 @@
         "default": "Tidak dapat menggunakan baucar. Sila cuba lagi."
       }
     }
+  },
+  "review": {
+    "cta": "Nilai pesanan ini",
+    "ctaHint": "Penilaian anda membantu pelanggan lain",
+    "formTitle": "Tinggalkan ulasan",
+    "ratingLabel": "Penilaian keseluruhan",
+    "ratingHint": "Pilih penilaian bintang dahulu",
+    "starLabel": "{count} bintang",
+    "contentLabel": "Ada apa-apa untuk ditambah? (pilihan)",
+    "contentPlaceholder": "Bagaimana makanan, layanan dan suasananya?",
+    "contentCounter": "{current}/{max}",
+    "itemsHeading": "Nilai setiap hidangan (pilihan)",
+    "submit": "Hantar ulasan",
+    "submitting": "Menghantar…",
+    "cancel": "Batal",
+    "success": "Terima kasih atas ulasan anda!",
+    "myReviewTitle": "Ulasan anda",
+    "ratingValue": "{rating} bintang",
+    "replyLabel": "Balasan daripada kedai",
+    "alreadyReviewed": "Anda sudah menilai pesanan ini",
+    "notReviewable": "Pesanan hanya boleh dinilai selepas selesai",
+    "itemNotInOrder": "Ada hidangan yang bukan daripada pesanan ini. Muat semula dan cuba lagi",
+    "itemDuplicate": "Setiap hidangan hanya boleh dinilai sekali",
+    "submitFailed": "Ulasan gagal dihantar. Sila cuba lagi nanti",
+    "shopReviewCount": "{count} ulasan",
+    "viewAll": "Lihat ulasan",
+    "hide": "Sembunyikan",
+    "loadMore": "Muat lagi",
+    "loading": "Memuatkan ulasan…",
+    "loadFailed": "Ulasan gagal dimuatkan",
+    "empty": "Belum ada ulasan",
+    "anonymous": "Pelanggan tanpa nama"
   }
 }

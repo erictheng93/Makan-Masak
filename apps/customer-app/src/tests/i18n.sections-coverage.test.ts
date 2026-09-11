@@ -876,7 +876,73 @@ describe("i18n Integration Tests", () => {
   });
 
   // ---------------------------------------------------------------
-  // 21. Parameterized Translations Across All 6 Locales
+  // 21. Review Section (#286)
+  // ---------------------------------------------------------------
+  describe("Review Section", () => {
+    const reviewKeys = [
+      "review.cta",
+      "review.ctaHint",
+      "review.formTitle",
+      "review.ratingLabel",
+      "review.ratingHint",
+      "review.starLabel",
+      "review.contentLabel",
+      "review.contentPlaceholder",
+      "review.contentCounter",
+      "review.itemsHeading",
+      "review.submit",
+      "review.submitting",
+      "review.cancel",
+      "review.success",
+      "review.myReviewTitle",
+      "review.ratingValue",
+      "review.replyLabel",
+      "review.alreadyReviewed",
+      "review.notReviewable",
+      "review.itemNotInOrder",
+      "review.itemDuplicate",
+      "review.submitFailed",
+      "review.shopReviewCount",
+      "review.viewAll",
+      "review.hide",
+      "review.loadMore",
+      "review.loading",
+      "review.loadFailed",
+      "review.empty",
+      "review.anonymous",
+    ];
+
+    it("should have all review keys in all 6 locales", () => {
+      assertKeysInAllLocales(reviewKeys);
+    });
+
+    it("should interpolate review.shopReviewCount in all 6 locales", () => {
+      // The shop header renders this next to the average, so a locale that
+      // dropped the placeholder would read as "reviews" with no number.
+      ALL_LOCALES.forEach((locale) => {
+        switchLanguage(locale);
+        expect(
+          tGlobal("review.shopReviewCount", { count: 12 }),
+          `review.shopReviewCount in ${locale}`,
+        ).toContain("12");
+      });
+    });
+
+    it("should interpolate review.contentCounter in all 6 locales", () => {
+      ALL_LOCALES.forEach((locale) => {
+        switchLanguage(locale);
+        const result = tGlobal("review.contentCounter", {
+          current: 20,
+          max: 1000,
+        });
+        expect(result, `review.contentCounter in ${locale}`).toContain("20");
+        expect(result, `review.contentCounter in ${locale}`).toContain("1000");
+      });
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // 22. Parameterized Translations Across All 6 Locales
   // ---------------------------------------------------------------
   describe("Parameterized Translations", () => {
     it("should handle cart.itemCount with count param in all locales", () => {

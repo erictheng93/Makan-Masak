@@ -1270,5 +1270,37 @@
         "default": "套用卷失敗，請稍後再試。"
       }
     }
+  },
+  "review": {
+    "cta": "評價這筆訂單",
+    "ctaHint": "你的評分會幫助其他顧客",
+    "formTitle": "留下你的評價",
+    "ratingLabel": "整體評分",
+    "ratingHint": "請先選擇星等",
+    "starLabel": "{count} 星",
+    "contentLabel": "想說些什麼？（選填）",
+    "contentPlaceholder": "餐點、服務或用餐環境如何？",
+    "contentCounter": "{current}/{max}",
+    "itemsHeading": "為每道餐點評分（選填）",
+    "submit": "送出評價",
+    "submitting": "送出中…",
+    "cancel": "取消",
+    "success": "感謝你的評價！",
+    "myReviewTitle": "你的評價",
+    "ratingValue": "{rating} 星",
+    "replyLabel": "店家回覆",
+    "alreadyReviewed": "這筆訂單已經評價過了",
+    "notReviewable": "訂單完成後才能評價",
+    "itemNotInOrder": "有餐點不屬於這筆訂單，請重新整理後再試",
+    "itemDuplicate": "同一道餐點只能評分一次",
+    "submitFailed": "評價送出失敗，請稍後再試",
+    "shopReviewCount": "{count} 則評價",
+    "viewAll": "看評價",
+    "hide": "收合",
+    "loadMore": "載入更多",
+    "loading": "載入評價中…",
+    "loadFailed": "評價載入失敗",
+    "empty": "還沒有評價",
+    "anonymous": "匿名顧客"
   }
 }

@@ -1270,5 +1270,37 @@
         "default": "Unable to apply the voucher. Please try again."
       }
     }
+  },
+  "review": {
+    "cta": "Review this order",
+    "ctaHint": "Your rating helps other diners",
+    "formTitle": "Leave a review",
+    "ratingLabel": "Overall rating",
+    "ratingHint": "Pick a star rating first",
+    "starLabel": "{count} stars",
+    "contentLabel": "Anything to add? (optional)",
+    "contentPlaceholder": "How were the food, the service and the room?",
+    "contentCounter": "{current}/{max}",
+    "itemsHeading": "Rate each dish (optional)",
+    "submit": "Submit review",
+    "submitting": "Submitting…",
+    "cancel": "Cancel",
+    "success": "Thanks for your review!",
+    "myReviewTitle": "Your review",
+    "ratingValue": "{rating} stars",
+    "replyLabel": "Reply from the shop",
+    "alreadyReviewed": "You have already reviewed this order",
+    "notReviewable": "An order can be reviewed once it is completed",
+    "itemNotInOrder": "One of the dishes is not part of this order. Reload and try again",
+    "itemDuplicate": "Each dish can only be rated once",
+    "submitFailed": "Your review could not be submitted. Please try again later",
+    "shopReviewCount": "{count} reviews",
+    "viewAll": "See reviews",
+    "hide": "Hide",
+    "loadMore": "Load more",
+    "loading": "Loading reviews…",
+    "loadFailed": "Reviews could not be loaded",
+    "empty": "No reviews yet",
+    "anonymous": "Anonymous diner"
   }
 }

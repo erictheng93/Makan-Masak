@@ -1270,5 +1270,37 @@
         "default": "Không thể áp dụng voucher. Vui lòng thử lại."
       }
     }
+  },
+  "review": {
+    "cta": "Đánh giá đơn hàng này",
+    "ctaHint": "Đánh giá của bạn giúp ích cho thực khách khác",
+    "formTitle": "Viết đánh giá",
+    "ratingLabel": "Đánh giá tổng thể",
+    "ratingHint": "Hãy chọn số sao trước",
+    "starLabel": "{count} sao",
+    "contentLabel": "Bạn muốn chia sẻ thêm? (không bắt buộc)",
+    "contentPlaceholder": "Món ăn, phục vụ và không gian thế nào?",
+    "contentCounter": "{current}/{max}",
+    "itemsHeading": "Chấm điểm từng món (không bắt buộc)",
+    "submit": "Gửi đánh giá",
+    "submitting": "Đang gửi…",
+    "cancel": "Hủy",
+    "success": "Cảm ơn đánh giá của bạn!",
+    "myReviewTitle": "Đánh giá của bạn",
+    "ratingValue": "{rating} sao",
+    "replyLabel": "Phản hồi từ quán",
+    "alreadyReviewed": "Bạn đã đánh giá đơn hàng này rồi",
+    "notReviewable": "Chỉ có thể đánh giá sau khi đơn hàng hoàn tất",
+    "itemNotInOrder": "Có món không thuộc đơn hàng này. Hãy tải lại rồi thử lại",
+    "itemDuplicate": "Mỗi món chỉ được chấm điểm một lần",
+    "submitFailed": "Không gửi được đánh giá. Vui lòng thử lại sau",
+    "shopReviewCount": "{count} đánh giá",
+    "viewAll": "Xem đánh giá",
+    "hide": "Thu gọn",
+    "loadMore": "Tải thêm",
+    "loading": "Đang tải đánh giá…",
+    "loadFailed": "Không tải được đánh giá",
+    "empty": "Chưa có đánh giá",
+    "anonymous": "Khách ẩn danh"
   }
 }

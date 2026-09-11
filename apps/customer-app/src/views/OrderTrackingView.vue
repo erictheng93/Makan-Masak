@@ -282,6 +282,17 @@
           </div>
         </div>
 
+        <!--
+          評價：放在訂單詳情之後、操作按鈕之前。餐點與金額都讀過了才問感想，
+          而且訂單一送達就會停在這一頁，是最自然的入口。
+        -->
+        <OrderReviewSection
+          :order-id="order.id"
+          :order-status="order.status"
+          :items="order.items"
+          variant="card"
+        />
+
         <!-- 操作按鈕 -->
         <div class="space-y-3">
           <!-- 取消訂單按鈕 (僅在可取消狀態顯示) -->
@@ -341,6 +352,7 @@ import { useI18n } from "@/composables/useI18n";
 import TimelineItem from "@/components/TimelineItem.vue";
 import OrderItemCard from "@/components/OrderItemCard.vue";
 import ConfirmationModal from "@/components/ConfirmationModal.vue";
+import OrderReviewSection from "@/components/reviews/OrderReviewSection.vue";
 import { orderApi } from "@/services/orderApi";
 import { hasCustomerAccessToken } from "@/services/customerAccessToken";
 import { formatDateTime } from "@/utils/format";

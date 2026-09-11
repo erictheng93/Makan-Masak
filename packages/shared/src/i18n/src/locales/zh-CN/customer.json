@@ -1270,5 +1270,37 @@
         "default": "应用券失败，请稍后再试。"
       }
     }
+  },
+  "review": {
+    "cta": "评价这笔订单",
+    "ctaHint": "你的评分会帮助其他顾客",
+    "formTitle": "留下你的评价",
+    "ratingLabel": "整体评分",
+    "ratingHint": "请先选择星级",
+    "starLabel": "{count} 星",
+    "contentLabel": "想说些什么？（选填）",
+    "contentPlaceholder": "餐点、服务或用餐环境如何？",
+    "contentCounter": "{current}/{max}",
+    "itemsHeading": "为每道餐点评分（选填）",
+    "submit": "提交评价",
+    "submitting": "提交中…",
+    "cancel": "取消",
+    "success": "感谢你的评价！",
+    "myReviewTitle": "你的评价",
+    "ratingValue": "{rating} 星",
+    "replyLabel": "商家回复",
+    "alreadyReviewed": "这笔订单已经评价过了",
+    "notReviewable": "订单完成后才能评价",
+    "itemNotInOrder": "有餐点不属于这笔订单，请刷新后重试",
+    "itemDuplicate": "同一道餐点只能评分一次",
+    "submitFailed": "评价提交失败，请稍后再试",
+    "shopReviewCount": "{count} 条评价",
+    "viewAll": "看评价",
+    "hide": "收起",
+    "loadMore": "加载更多",
+    "loading": "评价加载中…",
+    "loadFailed": "评价加载失败",
+    "empty": "还没有评价",
+    "anonymous": "匿名顾客"
   }
 }

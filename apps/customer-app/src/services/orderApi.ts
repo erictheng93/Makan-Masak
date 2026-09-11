@@ -87,6 +87,64 @@ export interface OrderTrackingInfo {
   queuePosition?: number;
 }
 
+/**
+ * Reviews (#286). The shapes mirror `apps/api/src/contracts/schemas/reviews.ts`
+ * exactly; timestamps are Unix milliseconds, as everywhere else on an order.
+ */
+export interface OrderReviewItemRating {
+  menuItemId: number;
+  menuItemName: string | null;
+  rating: number;
+}
+
+export interface OrderReviewReply {
+  content: string;
+  repliedBy: string | null;
+  repliedAt: number | null;
+}
+
+/** What the diner who wrote the review reads back. */
+export interface OrderReview {
+  id: string;
+  orderId: string;
+  restaurantId: string;
+  rating: number;
+  content: string | null;
+  createdAt: number;
+  updatedAt: number;
+  reply: OrderReviewReply | null;
+  items: OrderReviewItemRating[];
+}
+
+export interface SubmitOrderReviewInput {
+  /** 1-5, required. */
+  rating: number;
+  /** Free text, at most 1000 characters. */
+  content?: string | null;
+  /** Per-dish ratings, keyed on `menu_items.id`, at most 50. */
+  items?: Array<{ menuItemId: number; rating: number }>;
+}
+
+/** One row of the public list. Carries no customer or order identifier. */
+export interface PublicReview {
+  id: string;
+  rating: number;
+  content: string | null;
+  createdAt: number;
+  authorName: string | null;
+  reply: { content: string; repliedAt: number | null } | null;
+}
+
+export interface PublicReviewList {
+  reviews: PublicReview[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export interface CreateGuestOrderRequest {
   restaurantId: string;
   guestName: string;
@@ -609,21 +667,66 @@ export const orderApi = {
   },
 
   /**
-   * 提交訂單評價
+   * 提交訂單評價 (#286)
+   *
+   * `orderId` is the order's UUID (an order number or client mutation id also
+   * resolves server-side). The body is the canonical `content` + `items`
+   * shape; the server still accepts the older `comment` + `itemRatings` this
+   * method used to send, but nothing should add callers to that path.
+   *
+   * Empty text and an empty rating list are omitted rather than sent as null:
+   * an absent optional field and an explicitly-null one mean the same thing
+   * here, and the shorter body is the one the contract documents.
    */
   async submitOrderReview(
-    orderId: number,
-    review: {
-      rating: number; // 1-5 stars
-      comment?: string;
-      itemRatings?: Array<{
-        orderItemId: number;
-        rating: number;
-        comment?: string;
-      }>;
-    },
-  ): Promise<void> {
-    await apiClient.post(`/orders/${orderId}/review`, review);
+    orderId: string,
+    input: SubmitOrderReviewInput,
+  ): Promise<OrderReview> {
+    const content = input.content?.trim();
+    const body: Record<string, unknown> = { rating: input.rating };
+    if (content) {
+      body.content = content;
+    }
+    if (input.items?.length) {
+      body.items = input.items.map((item) => ({
+        menuItemId: item.menuItemId,
+        rating: item.rating,
+      }));
+    }
+
+    return apiClient.post<OrderReview>(`/orders/${orderId}/review`, body);
+  },
+
+  /**
+   * 讀取此訂單的評價；尚未評價時回傳 null
+   *
+   * Not-yet-reviewed is the ordinary state of every completed order, so the
+   * server's 404 is translated to `null` here. Any other failure still
+   * rejects — a 403 means the token does not own this order, which is a real
+   * problem the caller has to see.
+   */
+  async getOrderReview(orderId: string): Promise<OrderReview | null> {
+    try {
+      return await apiClient.get<OrderReview>(`/orders/${orderId}/review`);
+    } catch (error: unknown) {
+      if (isRecord(error) && error.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  },
+
+  /**
+   * 店家公開評價列表（免登入）
+   */
+  async getRestaurantReviews(
+    restaurantId: string,
+    options?: { page?: number; limit?: number },
+  ): Promise<PublicReviewList> {
+    return apiClient.get<PublicReviewList>(
+      `/restaurants/${restaurantId}/reviews`,
+      { page: options?.page ?? 1, limit: options?.limit ?? 10 },
+    );
   },
 
   /**

@@ -1270,5 +1270,37 @@
         "default": "Tidak dapat menerapkan voucher. Silakan coba lagi."
       }
     }
+  },
+  "review": {
+    "cta": "Beri ulasan untuk pesanan ini",
+    "ctaHint": "Penilaianmu membantu pelanggan lain",
+    "formTitle": "Tulis ulasan",
+    "ratingLabel": "Penilaian keseluruhan",
+    "ratingHint": "Pilih jumlah bintang dulu",
+    "starLabel": "{count} bintang",
+    "contentLabel": "Ada yang ingin ditambahkan? (opsional)",
+    "contentPlaceholder": "Bagaimana makanan, pelayanan, dan suasananya?",
+    "contentCounter": "{current}/{max}",
+    "itemsHeading": "Nilai setiap hidangan (opsional)",
+    "submit": "Kirim ulasan",
+    "submitting": "Mengirim…",
+    "cancel": "Batal",
+    "success": "Terima kasih atas ulasanmu!",
+    "myReviewTitle": "Ulasanmu",
+    "ratingValue": "{rating} bintang",
+    "replyLabel": "Balasan dari toko",
+    "alreadyReviewed": "Kamu sudah memberi ulasan untuk pesanan ini",
+    "notReviewable": "Pesanan baru bisa diulas setelah selesai",
+    "itemNotInOrder": "Ada hidangan yang bukan bagian dari pesanan ini. Muat ulang lalu coba lagi",
+    "itemDuplicate": "Setiap hidangan hanya bisa dinilai sekali",
+    "submitFailed": "Ulasan gagal dikirim. Coba lagi nanti",
+    "shopReviewCount": "{count} ulasan",
+    "viewAll": "Lihat ulasan",
+    "hide": "Sembunyikan",
+    "loadMore": "Muat lebih banyak",
+    "loading": "Memuat ulasan…",
+    "loadFailed": "Ulasan gagal dimuat",
+    "empty": "Belum ada ulasan",
+    "anonymous": "Pelanggan anonim"
   }
 }
