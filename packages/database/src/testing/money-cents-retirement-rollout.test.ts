@@ -1,7 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
+import { is } from "drizzle-orm";
+import { SQLiteTable, getTableConfig } from "drizzle-orm/sqlite-core";
 import { describe, expect, it } from "vitest";
+
+import * as schema from "../schema";
 
 interface ExpectedAuditSurface {
   tableName: string;
@@ -387,4 +391,107 @@ describe("money cents retirement rollout migration", () => {
       expect(sql).not.toContain("DROP COLUMN `discount_value_cents`");
     },
   );
+});
+
+// Every assertion above reads migration text, so it only catches a
+// reintroduced legacy money column if someone writes a migration for it. A
+// `real("price")` added straight to a Drizzle table ships without one, and
+// production (verified 2026-09-12, see
+// docs/migration/MONEY_CENTS_FIELD_RETIREMENT.md) now has zero REAL money
+// columns — there is nothing left to compare a drifted value against. The
+// block below walks the schema objects instead.
+const MONEY_WORDS = [
+  "price",
+  "amount",
+  "total",
+  "fee",
+  "cost",
+  "subtotal",
+  "tax",
+  "discount",
+  "tip",
+  "balance",
+];
+
+// Match snake_case segments rather than substrings: `overtime_multiplier`
+// contains "tip" and `cost_centre` would swallow anything, so a substring
+// test manufactures false positives while reading as if it were strict.
+function carriesMoneyWord(columnName: string): boolean {
+  return columnName.split("_").some((segment) => MONEY_WORDS.includes(segment));
+}
+
+// REAL columns that carry a money word and are genuinely not money. The
+// retirement plan calls these out by name ("ratios, percentages, ratings,
+// coordinates, fractional leave days"). Every entry states why; adding one is
+// the review point this guard exists to force.
+const NON_MONEY_REAL_ALLOWLIST = new Map<string, string>([
+  [
+    "ingredient_stock_movements.balance_after",
+    "ingredient stock balance in stock units, not currency",
+  ],
+  ["leave_requests.total_days", "fractional leave days (0.5 = half day)"],
+  ["employee_leave_balances.total_days", "fractional leave days"],
+  ["leave_types.accrual_amount", "leave days accrued per period, not currency"],
+]);
+
+interface SchemaColumn {
+  key: string;
+  sqlType: string;
+  name: string;
+}
+
+function schemaColumns(): SchemaColumn[] {
+  return Object.values(schema)
+    .filter((value): value is SQLiteTable => is(value, SQLiteTable))
+    .flatMap((table) => {
+      const config = getTableConfig(table);
+      return config.columns.map((column) => ({
+        key: `${config.name}.${column.name}`,
+        sqlType: column.getSQLType().toLowerCase(),
+        name: column.name,
+      }));
+    });
+}
+
+describe("money columns in the Drizzle schema", () => {
+  it("declares no REAL column that names money", () => {
+    const offenders = schemaColumns()
+      .filter((column) => column.sqlType === "real")
+      .filter(
+        (column) =>
+          carriesMoneyWord(column.name) &&
+          !/_(cents|bps)$/.test(column.name) &&
+          !NON_MONEY_REAL_ALLOWLIST.has(column.key),
+      )
+      .map((column) => column.key);
+
+    expect(
+      offenders,
+      "money is INTEGER cents after the 0087/0088 cutover, and production no longer carries the legacy REAL columns a drifted value could be reconciled against",
+    ).toEqual([]);
+  });
+
+  it("keeps the non-money REAL allowlist honest", () => {
+    // A stale entry silently widens the guard: the column it excused is gone,
+    // but the exemption still covers whatever later takes that name.
+    const live = new Set(
+      schemaColumns()
+        .filter((column) => column.sqlType === "real")
+        .map((column) => column.key),
+    );
+
+    expect(
+      [...NON_MONEY_REAL_ALLOWLIST.keys()].filter((key) => !live.has(key)),
+      "allowlist entries must still name a live REAL column",
+    ).toEqual([]);
+  });
+
+  it("keeps every *_cents and *_bps column an integer", () => {
+    const nonInteger = schemaColumns()
+      .filter((column) => /_(cents|bps)$/.test(column.name))
+      .filter((column) => column.sqlType !== "integer")
+      .map((column) => `${column.key}:${column.sqlType}`);
+
+    expect(nonInteger).toEqual([]);
+  });
 });
