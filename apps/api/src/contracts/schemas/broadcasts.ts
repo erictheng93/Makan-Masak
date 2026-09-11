@@ -76,3 +76,21 @@ export const ListBroadcastsResponse = successEnvelope(
     pagination: BroadcastPaginationSchema,
   }),
 );
+/**
+ * GET /api/v1/customer/notification-preferences
+ * PUT /api/v1/customer/notification-preferences
+ *
+ * `updatedAt` is null for a customer who has never saved the screen — the
+ * defaults are computed, not stored.
+ */
+export const CustomerNotificationPreferencesResponse = successEnvelope(
+  z
+    .object({
+      marketingEnabled: z.boolean(),
+      followedOnly: z.boolean(),
+      quietHoursStartMin: z.number().int().nullable(),
+      quietHoursEndMin: z.number().int().nullable(),
+      updatedAt: z.number().int().nullable(),
+    })
+    .strict(),
+);

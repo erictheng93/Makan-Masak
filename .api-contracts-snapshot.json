@@ -306,6 +306,16 @@
       "BroadcastScopeSchema": {
         "$": "enum(market|restaurant)"
       },
+      "CustomerNotificationPreferencesResponse": {
+        "$": "object",
+        "data": "object+catchall",
+        "data.followedOnly": "boolean",
+        "data.marketingEnabled": "boolean",
+        "data.quietHoursEndMin": "number|null",
+        "data.quietHoursStartMin": "number|null",
+        "data.updatedAt": "number|null",
+        "success": "literal(true)"
+      },
       "ListBroadcastsResponse": {
         "$": "object",
         "data": "object",

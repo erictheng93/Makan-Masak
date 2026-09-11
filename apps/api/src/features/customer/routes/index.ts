@@ -27,6 +27,7 @@ import {
   unauthorized,
 } from "../../../shared/utils/api-error";
 import oauthRoutes from "./oauth";
+import notificationPreferencesRoutes from "./notification-preferences";
 import {
   CUSTOMER_ACCESS_TOKEN_SECONDS,
   CUSTOMER_REFRESH_COOKIE,
@@ -1993,5 +1994,6 @@ function clientIp(c: Context): string {
 // Federated sign-in lives in its own file; the paths stay under /customer/auth
 // so the customer app sees one auth surface rather than two.
 routes.route("/", oauthRoutes);
+routes.route("/", notificationPreferencesRoutes);
 
 export default routes;
