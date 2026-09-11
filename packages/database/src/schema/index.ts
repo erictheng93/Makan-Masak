@@ -15,6 +15,7 @@ export * from "./service-bookings";
 export * from "./waiting-list";
 export * from "./orders";
 export * from "./order-items";
+export * from "./reviews";
 export * from "./sessions";
 export * from "./audit-logs";
 export * from "./error-reports";

@@ -90,6 +90,10 @@
     {
       "fresh": "0022_usage_meter_buckets.sql",
       "reason": "usage_meter_buckets is the write-side half of platform-API metering: it is written by the platform API request path and folded into usage_meters, both of which exist only in the platform database. The management-api database has no usage_events, usage_meters or restaurants rows to pair it against."
+    },
+    {
+      "fresh": "0023_reviews.sql",
+      "reason": "reviews stores diner feedback on platform-API orders and recomputes restaurants.rating / menu_items.rating from it; the management-api database has no orders, menu_items or restaurants rows to hang a review off or aggregate into."
     }
   ],
   "legacyOnly": [
