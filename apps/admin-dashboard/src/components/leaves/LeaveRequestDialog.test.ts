@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import LeaveRequestDialog from "./LeaveRequestDialog.vue";
 import type { LeaveRequestFormData } from "./LeaveRequestDialog.vue";
 
@@ -45,6 +45,26 @@ async function fillRequiredFields(
 
 const submitButton = (wrapper: ReturnType<typeof mountDialog>) =>
   wrapper.get(".btn-submit");
+
+// The first mount of this dialog in a worker, and the first `setValue` on top
+// of it, are one-offs that used to land in whichever timed body reached them
+// first -- here the very first `it`, which is why that body was the package's
+// slowest at 2,116ms in the #351 sweep while doing the least work of the four
+// (#360). Instrumented alone on a loaded 4-core box, its 452ms broke down as
+// mount 259ms + fill 164ms + assert 20ms, and inside the fill the first
+// `select` setValue alone cost 104ms against 3-78ms on later bodies.
+//
+// Vue render warm-up, jsdom's first DOM build for this tree and the first DOM
+// event dispatch are re-usable state rather than per-test work, so a
+// `beforeAll` pays them once under the hook's own budget, going through the
+// same `mountDialog` + `fillRequiredFields` path the bodies use. Do not
+// replace this with a raised testTimeout: the point is that the timed bodies
+// stop containing one-off costs at all.
+beforeAll(async () => {
+  const warmup = mountDialog();
+  await fillRequiredFields(warmup);
+  warmup.unmount();
+}, 30_000);
 
 describe("LeaveRequestDialog documentation requirement (#343)", () => {
   beforeEach(() => vi.clearAllMocks());
