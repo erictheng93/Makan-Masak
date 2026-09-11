@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import PlatformMarketsView from "./PlatformMarketsView.vue";
 import { marketsService } from "@/services/marketsService";
 import { discoveryService } from "@/services/discoveryService";
@@ -62,7 +62,7 @@ describe("PlatformMarketsView", () => {
   }));
   const routeQuery = {} as Record<string, unknown>;
 
-  beforeEach(() => {
+  function configureMarketMocks() {
     vi.clearAllMocks();
     vi.stubGlobal("URL", {
       createObjectURL,
@@ -263,7 +263,49 @@ describe("PlatformMarketsView", () => {
       unindexedAvailableDishCount: 0,
       restaurantsWithUnindexedAvailableDishes: 0,
     });
-  });
+  }
+
+  beforeEach(configureMarketMocks);
+
+  // This file has two one-offs and they used to land in two different bodies.
+  //
+  // The first mount of this ~3,200-line view is paid by the first `it`, which
+  // is why `switches restaurant context before opening menu or service
+  // settings` is the file's slowest body in the package suite (460ms) despite
+  // doing two clicks and four assertions. Instrumented alone on a loaded
+  // 4-core box it spent mount 186ms + flush 97ms of its 395ms.
+  //
+  // The editing panel behind `v-if="editingMarket"` -- ~165 lines of form,
+  // including this file's only `type="url"`, `type="number"` and `textarea`
+  // fields -- first renders in `saves market map layout metadata from the
+  // public profile form`, the fourth `it` and the first of the nine that click
+  // 編輯. That body is the one the #351 sweep ranked first at 2,734ms. Unlike
+  // the others in this round it is not one-off-dominated: instrumented, its
+  // 301ms was eleven segments of 5-70ms (mount 24, flush 66, findEditBtn 5,
+  // openEditor 42, five setValue 10-23 each, findSave+click 14, flush 70) --
+  // genuine per-test work, with only the panel's first render and the first
+  // setValue per input kind reusable.
+  //
+  // So the warm-up walks the whole path once: mount, flush, the whole-tree
+  // button scan, open the editor, and touch one field of each kind. Do not
+  // replace this with a raised testTimeout; and do not expect it to make the
+  // map-layout body cheap -- what is left there is real work.
+  beforeAll(async () => {
+    configureMarketMocks();
+    const warmup = mount(PlatformMarketsView);
+    await flushPromises();
+    await warmup
+      .findAll("button")
+      .find((button) => button.text() === "編輯")!
+      .trigger("click");
+    await warmup.get('[data-testid="market-map-title"]').setValue("暖機");
+    await warmup.get('[data-testid="market-map-description"]').setValue("暖機");
+    await warmup
+      .get('[data-testid="market-map-image-url"]')
+      .setValue("https://example.com/warmup.png");
+    await warmup.get('[data-testid="market-map-width"]').setValue("1");
+    warmup.unmount();
+  }, 30_000);
 
   it("switches restaurant context before opening menu or service settings", async () => {
     routeQuery.areaCity = "台中市";
