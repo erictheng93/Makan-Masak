@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { flushPromises, mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 import AttendanceOverviewTab from "./AttendanceOverviewTab.vue";
 
@@ -90,6 +90,24 @@ function mountTab() {
     },
   });
 }
+
+// The first mount of this tab in a worker is a one-off that used to land in
+// whichever timed body reached it first -- here the very first `it`, which is
+// why that one test was the file's slowest under `turbo run test` while the
+// nine after it were ordinary (#360, continuing #351). Instrumented alone on a
+// loaded 4-core box, "gives the attendance tab a clock-in entry point" spent
+// mount 244ms, flush 1ms, assert 24ms of its 279ms; the nine bodies after it
+// cost 49-147ms each because the warm-up was already paid.
+//
+// Vue render warm-up plus jsdom's first DOM build for this tree is re-usable
+// state, not per-test work, so pay it once here under the hook's own budget.
+// Do not replace this with a raised testTimeout: the point is that the timed
+// bodies stop containing one-off costs at all.
+beforeAll(async () => {
+  const warmup = mountTab();
+  await flushPromises();
+  warmup.unmount();
+}, 30_000);
 
 describe("AttendanceOverviewTab clock-in mount", () => {
   beforeEach(() => {
