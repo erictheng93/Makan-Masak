@@ -37,3 +37,4 @@ export * as GroupOrderContracts from "./schemas/group-orders";
 export * as IntegrationContracts from "./schemas/integrations";
 export * as CustomerContracts from "./schemas/customers";
 export * as QRCodeContracts from "./schemas/qr-codes";
+export * as ReviewContracts from "./schemas/reviews";

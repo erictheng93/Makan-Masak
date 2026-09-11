@@ -5,8 +5,16 @@ import {
   type RealIntegrationTestApp,
 } from "./helpers/real-test-app";
 import { buildSeedHelpers } from "./helpers/seed-helper";
-import { readData, readError } from "../helpers/read-json";
-import type { OrderReviewView } from "../../features/reviews/types";
+import { readData, readError, readEnvelope } from "../helpers/read-json";
+import { ReviewContracts, ContractHelpers } from "../../contracts";
+import type { ZodType } from "zod";
+import type {
+  OrderReviewView,
+  OwnerReviewView,
+  PublicReviewView,
+  ReviewPagination,
+  ReviewSummary,
+} from "../../features/reviews/types";
 
 /**
  * Customer reviews, end to end against real D1 (#286).
@@ -81,6 +89,27 @@ describe("Reviews — real integration", () => {
       .bind(orderId, menuItemId, now, now)
       .first<{ id: number }>();
     return row!.id;
+  }
+
+  /**
+   * Read a response and hold it to the published contract schema at the same
+   * time. The contract file is what the customer-app and admin-dashboard work
+   * is written against, so it has to be checked against the server that
+   * actually answers rather than against intent — `PublicReviewSchema` is
+   * `strict()`, so a leaked field fails here.
+   */
+  async function readContractData<T>(
+    schema: ZodType,
+    res: Response,
+  ): Promise<T> {
+    const envelope = await readEnvelope<T>(res);
+    ContractHelpers.assertMatchesSchema(schema, envelope);
+    if (!envelope.success || envelope.data === undefined) {
+      throw new Error(
+        `expected success envelope, got ${JSON.stringify(envelope)}`,
+      );
+    }
+    return envelope.data;
   }
 
   /** A guest token exactly as `POST /guest-orders` mints it. */
@@ -265,7 +294,10 @@ describe("Reviews — real integration", () => {
       });
 
       expect(res.status).toBe(201);
-      const review = await readData<OrderReviewView>(res);
+      const review = await readContractData<OrderReviewView>(
+        ReviewContracts.SubmitOrderReviewResponse,
+        res,
+      );
       expect(review).toMatchObject({
         orderId: order.id,
         restaurantId: restaurant.id,
@@ -553,17 +585,34 @@ describe("Reviews — real integration", () => {
   // ─────────────────────────────── diner reads ───────────────────────────────
 
   describe("GET /orders/:id/review", () => {
-    it("returns the diner's own review", async () => {
+    it("returns the diner's own review including the owner reply", async () => {
       const customer = await loginCustomer("+886911000008");
       const restaurant = await seed.restaurant();
       const order = await seed.order(restaurant.id, {
         status: "delivered",
         customerId: customer.customer.id,
       });
-      await call(`/orders/${order.id}/review`, {
-        token: customer.accessToken,
+      const created = await readData<OrderReviewView>(
+        await call(`/orders/${order.id}/review`, {
+          token: customer.accessToken,
+          method: "POST",
+          body: { rating: 4, content: "還不錯" },
+        }),
+      );
+
+      const owner = await seed.user({
+        id: 21,
+        role: 1,
+        restaurantId: restaurant.id,
+      });
+      const ownerToken = await testApp.authHelper.ownerToken(
+        owner.id,
+        restaurant.id,
+      );
+      await call(`/reviews/${restaurant.id}/${created.id}/reply`, {
+        token: ownerToken,
         method: "POST",
-        body: { rating: 4, content: "還不錯" },
+        body: { content: "謝謝光臨" },
       });
 
       const res = await call(`/orders/${order.id}/review`, {
@@ -571,12 +620,12 @@ describe("Reviews — real integration", () => {
       });
 
       expect(res.status).toBe(200);
-      const review = await readData<OrderReviewView>(res);
-      expect(review).toMatchObject({
-        rating: 4,
-        content: "還不錯",
-        reply: null,
-      });
+      const review = await readContractData<OrderReviewView>(
+        ReviewContracts.GetOrderReviewResponse,
+        res,
+      );
+      expect(review.reply).toMatchObject({ content: "謝謝光臨" });
+      expect(review.reply?.repliedAt).toEqual(expect.any(Number));
     });
 
     it("answers 404 when the order has not been reviewed", async () => {
@@ -588,6 +637,347 @@ describe("Reviews — real integration", () => {
       expect(res.status).toBe(404);
       await expect(readError(res)).resolves.toMatchObject({
         code: "REVIEW_NOT_FOUND",
+      });
+    });
+  });
+
+  // ────────────────────────────── owner surface ──────────────────────────────
+
+  describe("owner endpoints", () => {
+    async function restaurantWithReview(phone: string, rating = 4) {
+      const customer = await loginCustomer(phone);
+      const restaurant = await seed.restaurant();
+      const item = await seed.menuItem(restaurant.id, { name: "招牌牛肉麵" });
+      const order = await seed.order(restaurant.id, {
+        status: "delivered",
+        customerId: customer.customer.id,
+      });
+      await addOrderItem(order.id, item.id);
+
+      const review = await readData<OrderReviewView>(
+        await call(`/orders/${order.id}/review`, {
+          token: customer.accessToken,
+          method: "POST",
+          body: {
+            rating,
+            content: "服務很好",
+            items: [{ menuItemId: item.id, rating }],
+          },
+        }),
+      );
+
+      return { customer, restaurant, item, order, review };
+    }
+
+    it("lists a restaurant's reviews with their item ratings", async () => {
+      const { restaurant, item, review } =
+        await restaurantWithReview("+886911000010");
+      const owner = await seed.user({
+        id: 31,
+        role: 1,
+        restaurantId: restaurant.id,
+      });
+      const token = await testApp.authHelper.ownerToken(
+        owner.id,
+        restaurant.id,
+      );
+
+      const res = await call(`/reviews/${restaurant.id}`, { token });
+
+      expect(res.status).toBe(200);
+      const data = await readContractData<{
+        reviews: OwnerReviewView[];
+        pagination: ReviewPagination;
+      }>(ReviewContracts.ListRestaurantReviewsResponse, res);
+      expect(data.pagination).toMatchObject({ page: 1, limit: 20, total: 1 });
+      expect(data.reviews).toHaveLength(1);
+      expect(data.reviews[0]).toMatchObject({
+        id: review.id,
+        rating: 4,
+        content: "服務很好",
+      });
+      expect(data.reviews[0].orderNumber).toEqual(expect.any(String));
+      expect(data.reviews[0].items).toEqual([
+        expect.objectContaining({
+          menuItemId: item.id,
+          menuItemName: "招牌牛肉麵",
+        }),
+      ]);
+    });
+
+    it("filters by rating and by whether a reply exists", async () => {
+      const { restaurant, review } = await restaurantWithReview(
+        "+886911000011",
+        2,
+      );
+      const owner = await seed.user({
+        id: 32,
+        role: 1,
+        restaurantId: restaurant.id,
+      });
+      const token = await testApp.authHelper.ownerToken(
+        owner.id,
+        restaurant.id,
+      );
+
+      await expect(
+        readData<{ reviews: OwnerReviewView[] }>(
+          await call(`/reviews/${restaurant.id}?rating=2`, { token }),
+        ),
+      ).resolves.toMatchObject({
+        reviews: [expect.objectContaining({ id: review.id })],
+      });
+      await expect(
+        readData<{ reviews: OwnerReviewView[] }>(
+          await call(`/reviews/${restaurant.id}?rating=5`, { token }),
+        ),
+      ).resolves.toMatchObject({ reviews: [] });
+      await expect(
+        readData<{ reviews: OwnerReviewView[] }>(
+          await call(`/reviews/${restaurant.id}?replied=false`, { token }),
+        ),
+      ).resolves.toMatchObject({
+        reviews: [expect.objectContaining({ id: review.id })],
+      });
+      await expect(
+        readData<{ reviews: OwnerReviewView[] }>(
+          await call(`/reviews/${restaurant.id}?replied=true`, { token }),
+        ),
+      ).resolves.toMatchObject({ reviews: [] });
+    });
+
+    it("summarises the distribution and the reply backlog", async () => {
+      const { restaurant } = await restaurantWithReview("+886911000012", 3);
+      const owner = await seed.user({
+        id: 33,
+        role: 1,
+        restaurantId: restaurant.id,
+      });
+      const token = await testApp.authHelper.ownerToken(
+        owner.id,
+        restaurant.id,
+      );
+
+      const summary = await readContractData<ReviewSummary>(
+        ReviewContracts.RestaurantReviewSummaryResponse,
+        await call(`/reviews/${restaurant.id}/summary`, { token }),
+      );
+
+      expect(summary).toMatchObject({
+        average: 3,
+        count: 1,
+        unrepliedCount: 1,
+        distribution: { "1": 0, "2": 0, "3": 1, "4": 0, "5": 0 },
+      });
+    });
+
+    it("records a reply against the replying user", async () => {
+      const { restaurant, review } =
+        await restaurantWithReview("+886911000013");
+      const owner = await seed.user({
+        id: 34,
+        role: 1,
+        restaurantId: restaurant.id,
+      });
+      const token = await testApp.authHelper.ownerToken(
+        owner.id,
+        restaurant.id,
+      );
+
+      const res = await call(`/reviews/${restaurant.id}/${review.id}/reply`, {
+        token,
+        method: "POST",
+        body: { content: "謝謝您的回饋" },
+      });
+
+      expect(res.status).toBe(200);
+      const replied = await readContractData<OwnerReviewView>(
+        ReviewContracts.ReplyToReviewResponse,
+        res,
+      );
+      expect(replied.reply).toMatchObject({
+        content: "謝謝您的回饋",
+        repliedBy: owner.id,
+      });
+
+      const summary = await readData<ReviewSummary>(
+        await call(`/reviews/${restaurant.id}/summary`, { token }),
+      );
+      expect(summary.unrepliedCount).toBe(0);
+    });
+
+    it("refuses another restaurant's owner: 403 on the list, 403 on a reply into that restaurant", async () => {
+      const { restaurant, review } =
+        await restaurantWithReview("+886911000014");
+      const attackerRestaurant = await seed.restaurant();
+      const attacker = await seed.user({
+        id: 35,
+        role: 1,
+        restaurantId: attackerRestaurant.id,
+      });
+      const token = await testApp.authHelper.ownerToken(
+        attacker.id,
+        attackerRestaurant.id,
+      );
+
+      const list = await call(`/reviews/${restaurant.id}`, { token });
+      expect(list.status).toBe(403);
+
+      const summary = await call(`/reviews/${restaurant.id}/summary`, {
+        token,
+      });
+      expect(summary.status).toBe(403);
+
+      const reply = await call(`/reviews/${restaurant.id}/${review.id}/reply`, {
+        token,
+        method: "POST",
+        body: { content: "hijack" },
+      });
+      expect(reply.status).toBe(403);
+    });
+
+    it("answers 404 — not 403 — when the review id belongs to someone else", async () => {
+      const { review } = await restaurantWithReview("+886911000015");
+      const attackerRestaurant = await seed.restaurant();
+      const attacker = await seed.user({
+        id: 36,
+        role: 1,
+        restaurantId: attackerRestaurant.id,
+      });
+      const token = await testApp.authHelper.ownerToken(
+        attacker.id,
+        attackerRestaurant.id,
+      );
+
+      // Own restaurantId in the path (so the tenancy guard passes) plus the
+      // victim's reviewId — the only shape that reaches the service. It must
+      // not distinguish "not yours" from "does not exist".
+      const res = await call(
+        `/reviews/${attackerRestaurant.id}/${review.id}/reply`,
+        { token, method: "POST", body: { content: "hijack" } },
+      );
+
+      expect(res.status).toBe(404);
+      await expect(readError(res)).resolves.toMatchObject({
+        code: "REVIEW_NOT_FOUND",
+      });
+
+      const stillUnreplied = await testApp.testDb.bindings.DB.prepare(
+        `SELECT reply_content FROM reviews WHERE id = ?`,
+      )
+        .bind(review.id)
+        .first<{ reply_content: string | null }>();
+      expect(stillUnreplied?.reply_content).toBeNull();
+    });
+
+    it("lets an admin reply to any restaurant's review", async () => {
+      const { restaurant, review } =
+        await restaurantWithReview("+886911000016");
+      const admin = await seed.user({ id: 37, role: 0 });
+      const token = await testApp.authHelper.adminToken(undefined, admin.id);
+
+      const res = await call(`/reviews/${restaurant.id}/${review.id}/reply`, {
+        token,
+        method: "POST",
+        body: { content: "平台已協助處理" },
+      });
+
+      expect(res.status).toBe(200);
+      await expect(readData<OwnerReviewView>(res)).resolves.toMatchObject({
+        reply: expect.objectContaining({ repliedBy: admin.id }),
+      });
+    });
+
+    it("refuses a kitchen role outright", async () => {
+      const { restaurant } = await restaurantWithReview("+886911000017");
+      const chef = await seed.user({
+        id: 38,
+        role: 2,
+        restaurantId: restaurant.id,
+      });
+      const token = await testApp.authHelper.staffToken(
+        chef.id,
+        2,
+        restaurant.id,
+      );
+
+      const res = await call(`/reviews/${restaurant.id}`, { token });
+      expect(res.status).toBe(403);
+    });
+  });
+
+  // ────────────────────────────── public surface ──────────────────────────────
+
+  describe("GET /restaurants/:id/reviews", () => {
+    it("returns order-level reviews with the reply, masked author, and no customer identifiers", async () => {
+      const customer = await loginCustomer("+886911000020");
+      const restaurant = await seed.restaurant();
+      const item = await seed.menuItem(restaurant.id);
+      const order = await seed.order(restaurant.id, {
+        status: "delivered",
+        customerId: customer.customer.id,
+      });
+      await addOrderItem(order.id, item.id);
+      const review = await readData<OrderReviewView>(
+        await call(`/orders/${order.id}/review`, {
+          token: customer.accessToken,
+          method: "POST",
+          body: {
+            rating: 5,
+            content: "很推薦",
+            items: [{ menuItemId: item.id, rating: 5 }],
+          },
+        }),
+      );
+      const owner = await seed.user({
+        id: 41,
+        role: 1,
+        restaurantId: restaurant.id,
+      });
+      const ownerToken = await testApp.authHelper.ownerToken(
+        owner.id,
+        restaurant.id,
+      );
+      await call(`/reviews/${restaurant.id}/${review.id}/reply`, {
+        token: ownerToken,
+        method: "POST",
+        body: { content: "感謝支持" },
+      });
+
+      // No Authorization header at all: this list is public.
+      const res = await call(`/restaurants/${restaurant.id}/reviews`);
+
+      expect(res.status).toBe(200);
+      const data = await readContractData<{
+        reviews: PublicReviewView[];
+        pagination: ReviewPagination;
+      }>(ReviewContracts.ListPublicReviewsResponse, res);
+      expect(data.pagination.total).toBe(1);
+      expect(data.reviews).toHaveLength(1);
+      expect(data.reviews[0]).toMatchObject({
+        rating: 5,
+        content: "很推薦",
+        reply: { content: "感謝支持" },
+      });
+
+      // The diner is attributed, not identified: "顧客0020" -> "顧**".
+      expect(data.reviews[0].authorName).toBe("顧**");
+
+      const serialized = JSON.stringify(data);
+      expect(serialized).not.toContain(customer.customer.id);
+      expect(serialized).not.toContain(order.id);
+      expect(serialized).not.toContain(owner.id);
+      expect(serialized).not.toContain("顧客0020");
+      expect(data.reviews[0]).not.toHaveProperty("customerId");
+      expect(data.reviews[0].reply).not.toHaveProperty("repliedBy");
+    });
+
+    it("answers 404 for a restaurant that does not exist", async () => {
+      const res = await call(`/restaurants/${crypto.randomUUID()}/reviews`);
+
+      expect(res.status).toBe(404);
+      await expect(readEnvelope(res)).resolves.toMatchObject({
+        success: false,
       });
     });
   });

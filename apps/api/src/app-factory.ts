@@ -524,6 +524,7 @@ export function createApp(
         discovery: "/api/v1/discovery",
         markets: "/api/v1/markets",
         feedback: "/api/v1/feedback",
+        reviews: "/api/v1/reviews",
         billing: "/api/v1/billing",
         manager: "/api/v1/manager",
         auditLogs: "/api/v1/audit-logs",
@@ -756,6 +757,10 @@ export function createApp(
   // Note: /integrations/* auth is handled internally (webhooks are public with HMAC, admin routes use authMiddleware)
 
   apiV1.route("/restaurants", restaurantsFeature.routes);
+  // GET /restaurants/:id/reviews — the public review list (#286). A separate
+  // router because the rest of reviews is owner-scoped; Hono merges both into
+  // the /restaurants prefix.
+  apiV1.route("/restaurants", reviewsFeature.publicRoutes);
   apiV1.route("/menu", menuFeature.routes);
   apiV1.route("/kitchen", kitchenFeature.routes);
   apiV1.route("/orders/group", groupOrdersFeature.routes);
@@ -792,6 +797,7 @@ export function createApp(
   apiV1.route("/markets", marketsFeature.routes);
   apiV1.route("/feedback", feedbackFeature.routes);
   apiV1.route("/alerts", alertsFeature.routes); // 店主營運告警 (#285) — admin/owner only
+  apiV1.route("/reviews", reviewsFeature.routes); // 顧客評價 (#286) — admin/owner only
   apiV1.route("/billing", billingFeature.routes);
   apiV1.route("/me", meFeature.routes);
   apiV1.route("/notifications", notificationsRoutes);
