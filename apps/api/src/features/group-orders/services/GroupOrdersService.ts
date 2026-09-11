@@ -30,6 +30,7 @@ import type {
   GroupOrderSettings,
   SplitBillItem,
 } from "@makanmasak/shared-types";
+import { ApiError } from "../../../shared/utils/api-error";
 import { fromCents, toRequiredCents } from "../../../shared/utils/money";
 
 class ConsoleLogger {
@@ -1313,6 +1314,11 @@ export class GroupOrdersService implements IGroupOrderService {
    * This method deliberately stays thin: it claims the group-order mutex, maps
    * the group cart into `OrderService.createOrder`, records the master order,
    * then delegates member allocation to `splitBill`.
+   *
+   * Group-order states resolve to `{ success: false, error }`; a business-rule
+   * rejection from `createOrder` is rethrown as the `ApiError` it already is,
+   * so the route's global handler answers with its own code, status and
+   * details (#359).
    */
   async finalizeGroupOrder(groupOrderId: string): Promise<{
     success: boolean;
@@ -1666,9 +1672,16 @@ export class GroupOrdersService implements IGroupOrderService {
           );
       }
 
-      // 這條路徑走的是 DatabaseOrderService，拿不到 API 層的 ApiError 對應表，
-      // 所以外送守門（#295）在這裡自己翻譯。不記進 errorTracker：這是設定問題，
-      // 不是故障。
+      // `createOrder` 的業務規則拒絕本來就是 ApiError（來自 @makanmasak/utils，
+      // 與 API 層 re-export 的是同一個類別），已經帶著 code、status 與 details
+      // ——缺貨是哪一道菜、還剩幾份，低消差多少（#352）。原封不動往上丟，
+      // app-factory 的 `err instanceof ApiError` 分支就會照原樣回給揪團主人；
+      // 壓成一句通用字串等於把他唯一能動手修的資訊丟掉（#359）。也不記進
+      // errorTracker：購物車不符規則是點餐的人要處理的事，不是故障。
+      if (error instanceof ApiError) throw error;
+
+      // 外送守門（#295）在 createOrder 裡仍然是普通 Error，所以留在這裡翻譯。
+      // 同樣不記進 errorTracker：這是設定問題，不是故障。
       if (error instanceof Error && error.message === "DELIVERY_NOT_ENABLED") {
         return { success: false, error: "此店家未開放外送" };
       }

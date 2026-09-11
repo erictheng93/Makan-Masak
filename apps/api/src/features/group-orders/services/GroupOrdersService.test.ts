@@ -24,6 +24,7 @@ import {
   createMutationFixtureDb,
   type MutationFixtures,
 } from "@makanmasak/database/testing";
+import { ApiError } from "@makanmasak/utils";
 import { GroupOrdersService } from "./GroupOrdersService";
 import type { SplitBillRequest } from "../types";
 
@@ -74,6 +75,22 @@ function billsOf(
 
 function createService() {
   return new GroupOrdersService({} as D1Database);
+}
+
+/**
+ * Both error sinks end at `console.error`. Replacing them keeps a run that
+ * deliberately fails readable, and lets a test say which sink a failure
+ * reached — the distinction between an incident and a rejected request.
+ */
+function silenceServiceErrors(service: GroupOrdersService) {
+  return {
+    logError: vi
+      .spyOn(service["logger"], "error")
+      .mockImplementation(() => undefined),
+    trackError: vi
+      .spyOn(service["errorTracker"], "logError")
+      .mockImplementation(() => undefined),
+  };
 }
 
 type SelectFixtureName =
@@ -3194,6 +3211,67 @@ describe("GroupOrdersService formatting and cache behavior", () => {
         error: "Group order is already being finalized",
       });
       expect(createOrder).not.toHaveBeenCalled();
+    });
+
+    /**
+     * `createOrder` rejects its own business-rule failures as an `ApiError`
+     * carrying the code, status and figures the host needs to fix the cart
+     * (#352). Flattening all of that into one generic string left a host
+     * reading "Failed to finalize group order" with nothing to act on (#359).
+     */
+    it("rethrows createOrder's ApiError so the host keeps its code, status and details", async () => {
+      const { service, createOrder, db } = createFinalizeService();
+      const inventoryError = new ApiError(
+        "INSUFFICIENT_INVENTORY",
+        "Insufficient inventory for 滷肉飯",
+        409,
+        { menuItemId: 7, name: "滷肉飯", requested: 3, available: 1 },
+      );
+      createOrder.mockRejectedValueOnce(inventoryError);
+      const { logError, trackError } = silenceServiceErrors(service);
+
+      await expect(service.finalizeGroupOrder("group-1")).rejects.toBe(
+        inventoryError,
+      );
+
+      // A refused cart never became an order, so the claim is handed back and
+      // the host can retry the moment the cart is fixed.
+      expect(db.updates.map((update) => update.payload)).toEqual(
+        expect.arrayContaining([expect.objectContaining({ status: "active" })]),
+      );
+      // A cart the restaurant cannot fill is the diner's problem to fix, not
+      // an incident to page anyone about.
+      expect(trackError).not.toHaveBeenCalled();
+      expect(logError).not.toHaveBeenCalled();
+    });
+
+    it("keeps translating the delivery gate, which createOrder still raises as a plain Error", async () => {
+      const { service, createOrder } = createFinalizeService();
+      createOrder.mockRejectedValueOnce(new Error("DELIVERY_NOT_ENABLED"));
+      const { trackError } = silenceServiceErrors(service);
+
+      await expect(service.finalizeGroupOrder("group-1")).resolves.toEqual({
+        success: false,
+        error: "此店家未開放外送",
+      });
+      expect(trackError).not.toHaveBeenCalled();
+    });
+
+    it("still answers an unexpected failure generically, and logs it as one", async () => {
+      const { service, createOrder } = createFinalizeService();
+      createOrder.mockRejectedValueOnce(new Error("D1_ERROR: network failure"));
+      const { logError, trackError } = silenceServiceErrors(service);
+
+      await expect(service.finalizeGroupOrder("group-1")).resolves.toEqual({
+        success: false,
+        error: "Failed to finalize group order",
+      });
+      expect(trackError).toHaveBeenCalledWith(
+        "finalizeGroupOrder",
+        expect.any(Error),
+        expect.objectContaining({ groupOrderId: "group-1" }),
+      );
+      expect(logError).toHaveBeenCalledOnce();
     });
   });
 

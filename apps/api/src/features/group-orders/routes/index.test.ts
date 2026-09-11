@@ -6,8 +6,18 @@ import { ApiError } from "@makanmasak/utils";
 
 routes.onError((error, c) => {
   if (error instanceof ApiError) {
+    // Mirrors app-factory's ApiError branch, `details` included: a service
+    // failure that names the item and the shortfall is only worth
+    // propagating if the envelope carries it all the way out.
     return c.json(
-      { success: false, error: { code: error.code, message: error.message } },
+      {
+        success: false,
+        error: {
+          code: error.code,
+          message: error.message,
+          ...(error.details !== undefined && { details: error.details }),
+        },
+      },
       error.status as 400 | 401 | 403 | 404 | 409,
     );
   }
@@ -606,6 +616,43 @@ describe("group orders routes", () => {
 
     expect(forbiddenResponse.status).toBe(403);
     expect(finalizeGroupOrder).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * The host's cart is the one place these codes can be acted on — a name and
+   * a remaining count tell them what to remove (#359).
+   */
+  it("answers a lock with createOrder's own status, code and details", async () => {
+    isHostSession.mockResolvedValue(true);
+    finalizeGroupOrder.mockRejectedValue(
+      new ApiError(
+        "INSUFFICIENT_INVENTORY",
+        "Insufficient inventory for 滷肉飯",
+        409,
+        { menuItemId: 7, name: "滷肉飯", requested: 3, available: 1 },
+      ),
+    );
+
+    const response = await withSilencedRouteError(() =>
+      routes.fetch(
+        new Request(`https://test/${groupOrderId}/lock`, {
+          method: "POST",
+          body: JSON.stringify({ memberToken: "host-session" }),
+        }),
+        createRateLimitEnv() as never,
+      ),
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual(
+      expect.objectContaining({
+        success: false,
+        error: expect.objectContaining({
+          code: "INSUFFICIENT_INVENTORY",
+          details: expect.objectContaining({ menuItemId: 7 }),
+        }),
+      }),
+    );
   });
 
   it("lets an owner finalize an own-restaurant group without a diner token", async () => {
