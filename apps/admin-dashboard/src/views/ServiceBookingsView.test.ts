@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { flushPromises, mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import ServiceBookingsView from "./ServiceBookingsView.vue";
 import { serviceBookingsService } from "@/services/serviceBookingsService";
 
@@ -85,7 +85,7 @@ const confirmedBooking = {
 };
 
 describe("ServiceBookingsView", () => {
-  beforeEach(() => {
+  function configureServiceMocks() {
     vi.clearAllMocks();
     i18nMock.locale.value = "zh-TW";
     vi.mocked(serviceBookingsService.listBookings).mockResolvedValue([
@@ -108,7 +108,28 @@ describe("ServiceBookingsView", () => {
       ...pendingBooking,
       status: "cancelled",
     });
-  });
+  }
+
+  beforeEach(configureServiceMocks);
+
+  // The first mount of this view in a worker is a one-off that used to land in
+  // whichever timed body reached it first -- here the very first `it`, which is
+  // why that one body was the file's slowest under `turbo run test` (#360,
+  // continuing #351). Instrumented alone on a loaded 4-core box, "lists
+  // bookings scoped to the current restaurant" spent mount 99ms, flush 131ms,
+  // assertions 55ms of its 294ms, against a later body that mounts and flushes
+  // the same way for 150ms.
+  //
+  // Vue render warm-up plus jsdom's first DOM build for this tree is re-usable
+  // state, not per-test work, so pay it once here under the hook's own budget.
+  // The mock setup is factored out of `beforeEach` so the warm-up can reuse it
+  // rather than re-deriving the resolved values.
+  beforeAll(async () => {
+    configureServiceMocks();
+    const warmup = mount(ServiceBookingsView);
+    await flushPromises();
+    warmup.unmount();
+  }, 30_000);
 
   it("lists bookings scoped to the current restaurant", async () => {
     const wrapper = mount(ServiceBookingsView);
