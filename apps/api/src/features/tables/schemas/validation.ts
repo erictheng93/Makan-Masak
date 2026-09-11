@@ -8,94 +8,100 @@ import { z } from "zod";
 import { commonSchemas } from "../../../middleware/validation";
 
 // Table features schema
-export const tableFeaturesSchema = z
-  .object({
-    hasChargingPort: z.boolean().optional(),
-    hasWifi: z.boolean().optional(),
-    isAccessible: z.boolean().optional(),
-    hasView: z.boolean().optional(),
-    isQuietZone: z.boolean().optional(),
-    smokingAllowed: z.boolean().optional(),
-  })
-  .optional();
+export const tableFeaturesSchema = z.lazy(() =>
+  z
+    .object({
+      hasChargingPort: z.boolean().optional(),
+      hasWifi: z.boolean().optional(),
+      isAccessible: z.boolean().optional(),
+      hasView: z.boolean().optional(),
+      isQuietZone: z.boolean().optional(),
+      smokingAllowed: z.boolean().optional(),
+    })
+    .optional(),
+);
 
 // Create table schema
-export const createTableSchema = z
-  .object({
-    restaurantId: z.string(),
-    number: z.string().min(1).max(50),
-    name: z.string().min(1).max(50).optional(),
-    capacity: z.number().int().positive(),
-    location: z.string().max(100).optional(),
-    floor: z.number().int().positive().optional().default(1),
-    section: z.string().max(50).optional(),
-    features: tableFeaturesSchema,
-    isReservable: z.boolean().optional().default(true),
-    qrMode: z.enum(["table", "seat"]).optional(),
-    seatCount: z.number().int().nonnegative().max(100).optional(),
-    seatNumberingStyle: z.enum(["numeric", "alphabetic"]).optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.qrMode !== "seat") return;
+export const createTableSchema = z.lazy(() =>
+  z
+    .object({
+      restaurantId: z.string(),
+      number: z.string().min(1).max(50),
+      name: z.string().min(1).max(50).optional(),
+      capacity: z.number().int().positive(),
+      location: z.string().max(100).optional(),
+      floor: z.number().int().positive().optional().default(1),
+      section: z.string().max(50).optional(),
+      features: tableFeaturesSchema,
+      isReservable: z.boolean().optional().default(true),
+      qrMode: z.enum(["table", "seat"]).optional(),
+      seatCount: z.number().int().nonnegative().max(100).optional(),
+      seatNumberingStyle: z.enum(["numeric", "alphabetic"]).optional(),
+    })
+    .superRefine((data, ctx) => {
+      if (data.qrMode !== "seat") return;
 
-    if (data.seatCount === undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["seatCount"],
-        message: "Seat count is required in seat mode",
-      });
-      return;
-    }
+      if (data.seatCount === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["seatCount"],
+          message: "Seat count is required in seat mode",
+        });
+        return;
+      }
 
-    if (data.seatCount === 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["seatCount"],
-        message: "Seat count must be greater than 0 in seat mode",
-      });
-      return;
-    }
+      if (data.seatCount === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["seatCount"],
+          message: "Seat count must be greater than 0 in seat mode",
+        });
+        return;
+      }
 
-    if (data.seatCount > data.capacity) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["seatCount"],
-        message: "Seat count cannot exceed table capacity",
-      });
-    }
-  });
+      if (data.seatCount > data.capacity) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["seatCount"],
+          message: "Seat count cannot exceed table capacity",
+        });
+      }
+    }),
+);
 
 // Update table schema
-export const updateTableSchema = z
-  .object({
-    number: z.string().min(1).max(50).optional(),
-    name: z.string().min(1).max(50).optional(),
-    capacity: z.number().int().positive().optional(),
-    location: z.string().max(100).optional(),
-    floor: z.number().int().positive().optional(),
-    section: z.string().max(50).optional(),
-    features: tableFeaturesSchema,
-    isActive: z.boolean().optional(),
-    isReservable: z.boolean().optional(),
-    maintenanceNotes: z.string().max(500).optional(),
-    qrMode: z.enum(["table", "seat"]).optional(),
-    seatCount: z.number().int().nonnegative().max(100).optional(),
-    seatNumberingStyle: z.enum(["numeric", "alphabetic"]).optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (
-      data.qrMode === "seat" &&
-      data.seatCount !== undefined &&
-      data.capacity !== undefined &&
-      data.seatCount > data.capacity
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["seatCount"],
-        message: "Seat count cannot exceed table capacity",
-      });
-    }
-  });
+export const updateTableSchema = z.lazy(() =>
+  z
+    .object({
+      number: z.string().min(1).max(50).optional(),
+      name: z.string().min(1).max(50).optional(),
+      capacity: z.number().int().positive().optional(),
+      location: z.string().max(100).optional(),
+      floor: z.number().int().positive().optional(),
+      section: z.string().max(50).optional(),
+      features: tableFeaturesSchema,
+      isActive: z.boolean().optional(),
+      isReservable: z.boolean().optional(),
+      maintenanceNotes: z.string().max(500).optional(),
+      qrMode: z.enum(["table", "seat"]).optional(),
+      seatCount: z.number().int().nonnegative().max(100).optional(),
+      seatNumberingStyle: z.enum(["numeric", "alphabetic"]).optional(),
+    })
+    .superRefine((data, ctx) => {
+      if (
+        data.qrMode === "seat" &&
+        data.seatCount !== undefined &&
+        data.capacity !== undefined &&
+        data.seatCount > data.capacity
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["seatCount"],
+          message: "Seat count cannot exceed table capacity",
+        });
+      }
+    }),
+);
 
 // Table filters schema
 export const tableFilterSchema = commonSchemas.paginationQuery.extend({
@@ -125,38 +131,50 @@ export const tableFilterSchema = commonSchemas.paginationQuery.extend({
 // route skips order resolution and stores a null currentOrderId. A present
 // orderId still has to identify a real order — 0 and "" are rejected rather
 // than silently treated as "no order".
-export const occupyTableSchema = z.object({
-  orderId: z.union([z.number().int().positive(), z.string().min(1)]).optional(),
-  occupiedBy: z.string().max(100).optional(),
-  estimatedMinutes: z.number().int().positive().optional(),
-});
+export const occupyTableSchema = z.lazy(() =>
+  z.object({
+    orderId: z
+      .union([z.number().int().positive(), z.string().min(1)])
+      .optional(),
+    occupiedBy: z.string().max(100).optional(),
+    estimatedMinutes: z.number().int().positive().optional(),
+  }),
+);
 
 // Table cleaning schema
-export const cleanTableSchema = z.object({
-  notes: z.string().max(200).optional(),
-});
+export const cleanTableSchema = z.lazy(() =>
+  z.object({
+    notes: z.string().max(200).optional(),
+  }),
+);
 
 // QR code regeneration schema
-export const regenerateQRSchema = z.object({
-  customData: z.any().optional(),
-});
+export const regenerateQRSchema = z.lazy(() =>
+  z.object({
+    customData: z.any().optional(),
+  }),
+);
 
 // QR code options schema
-export const qrCodeOptionsSchema = z
-  .object({
-    size: z.enum(["small", "medium", "large"]).default("medium"),
-    format: z.enum(["png", "svg", "pdf"]).default("png"),
-    includeTableInfo: z.boolean().default(true),
-    customData: z.any().optional(),
-  })
-  .optional();
+export const qrCodeOptionsSchema = z.lazy(() =>
+  z
+    .object({
+      size: z.enum(["small", "medium", "large"]).default("medium"),
+      format: z.enum(["png", "svg", "pdf"]).default("png"),
+      includeTableInfo: z.boolean().default(true),
+      customData: z.any().optional(),
+    })
+    .optional(),
+);
 
 // Bulk QR generation schema
-export const generateQRBulkSchema = z.object({
-  restaurantId: z.string(),
-  tableIds: z.array(z.number().int().positive()).min(1).max(50),
-  options: qrCodeOptionsSchema,
-});
+export const generateQRBulkSchema = z.lazy(() =>
+  z.object({
+    restaurantId: z.string(),
+    tableIds: z.array(z.number().int().positive()).min(1).max(50),
+    options: qrCodeOptionsSchema,
+  }),
+);
 
 // Available tables query schema
 export const availableTablesQuerySchema = z.object({
@@ -170,9 +188,11 @@ export const tableStatsQuerySchema = z.object({
 });
 
 // QR code lookup schema
-export const qrCodeParamSchema = z.object({
-  qrCode: z.string(),
-});
+export const qrCodeParamSchema = z.lazy(() =>
+  z.object({
+    qrCode: z.string(),
+  }),
+);
 
 // Common parameter schemas
 export const idParamSchema = z.object({

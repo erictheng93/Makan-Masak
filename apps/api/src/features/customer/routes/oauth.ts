@@ -378,9 +378,11 @@ async function resolveIdentity({
   return { kind: "session", customerId, redirectTo: requestState.redirectTo };
 }
 
-const completeSchema = z.object({
-  code: z.string().min(1).max(200),
-});
+const completeSchema = z.lazy(() =>
+  z.object({
+    code: z.string().min(1).max(200),
+  }),
+);
 
 /**
  * Exchange the one-time code from the redirect for a session.
@@ -433,9 +435,11 @@ routes.post("/auth/oauth/complete", validateBody(completeSchema), async (c) => {
   });
 });
 
-const linkSchema = z.object({
-  bindingToken: z.string().min(1),
-});
+const linkSchema = z.lazy(() =>
+  z.object({
+    bindingToken: z.string().min(1),
+  }),
+);
 
 interface BindingClaims {
   type: string;

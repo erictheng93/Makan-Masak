@@ -20,7 +20,7 @@ import { resolveOrderIdentity } from "../../../shared/services/order-identity";
 
 const app = new Hono<{ Bindings: Env }>();
 const KITCHEN_SSE_TOKEN_SECONDS = 60;
-const notificationSettingsSchema = z.object({}).loose();
+const notificationSettingsSchema = z.lazy(() => z.object({}).loose());
 type NotificationSettings = Record<string, unknown>;
 interface NotificationSettingsRecord {
   settings?: NotificationSettings;

@@ -79,15 +79,19 @@ const phoneSchema = z
   .transform(normalizeE164Phone)
   .pipe(z.string().regex(/^\+[1-9]\d{6,14}$/));
 
-const requestOtpSchema = z.object({
-  phone: phoneSchema,
-});
+const requestOtpSchema = z.lazy(() =>
+  z.object({
+    phone: phoneSchema,
+  }),
+);
 
-const verifyOtpSchema = z.object({
-  phone: phoneSchema,
-  otp: z.string().regex(/^\d{6}$/),
-  purpose: z.enum(["password_reset"]).optional(),
-});
+const verifyOtpSchema = z.lazy(() =>
+  z.object({
+    phone: phoneSchema,
+    otp: z.string().regex(/^\d{6}$/),
+    purpose: z.enum(["password_reset"]).optional(),
+  }),
+);
 
 const passwordSchema = z.string().min(PASSWORD_MIN_LENGTH).max(256);
 
@@ -102,99 +106,125 @@ const loginSchema = z.object({
   password: z.string().min(1).max(256),
 });
 
-const forgotPasswordSchema = z.object({
-  identifier: z.string().trim().min(3).max(320),
-});
+const forgotPasswordSchema = z.lazy(() =>
+  z.object({
+    identifier: z.string().trim().min(3).max(320),
+  }),
+);
 
-const resetPasswordSchema = z.object({
-  token: z.string().trim().min(20).max(256),
-  newPassword: passwordSchema,
-});
+const resetPasswordSchema = z.lazy(() =>
+  z.object({
+    token: z.string().trim().min(20).max(256),
+    newPassword: passwordSchema,
+  }),
+);
 
-const tokenOnlySchema = z.object({
-  token: z.string().trim().min(20).max(256),
-});
+const tokenOnlySchema = z.lazy(() =>
+  z.object({
+    token: z.string().trim().min(20).max(256),
+  }),
+);
 
-const resendVerificationSchema = z.object({
-  identifier: z.string().trim().min(3).max(320),
-});
+const resendVerificationSchema = z.lazy(() =>
+  z.object({
+    identifier: z.string().trim().min(3).max(320),
+  }),
+);
 
-const profilePatchSchema = z.object({
-  displayName: z.string().trim().min(1).max(100).optional(),
-  avatarUrl: z.url().max(2048).nullable().optional(),
-  locale: z
-    .string()
-    .regex(/^[a-z]{2,3}(-[A-Z]{2})?$/)
-    .max(16)
-    .nullable()
-    .optional(),
-});
+const profilePatchSchema = z.lazy(() =>
+  z.object({
+    displayName: z.string().trim().min(1).max(100).optional(),
+    avatarUrl: z.url().max(2048).nullable().optional(),
+    locale: z
+      .string()
+      .regex(/^[a-z]{2,3}(-[A-Z]{2})?$/)
+      .max(16)
+      .nullable()
+      .optional(),
+  }),
+);
 
-const preferencesPatchSchema = z.object({
-  dietaryTags: z.array(z.string().min(1).max(50)).max(50).optional(),
-  allergens: z.array(z.string().min(1).max(50)).max(50).optional(),
-  defaultPartySize: z.number().int().min(1).max(20).nullable().optional(),
-  marketingOptIn: z.boolean().optional(),
-  waitingListOptIn: z.boolean().optional(),
-  promoFromFavoritesOptIn: z.boolean().optional(),
-  quietHoursStart: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/)
-    .nullable()
-    .optional(),
-  quietHoursEnd: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/)
-    .nullable()
-    .optional(),
-});
+const preferencesPatchSchema = z.lazy(() =>
+  z.object({
+    dietaryTags: z.array(z.string().min(1).max(50)).max(50).optional(),
+    allergens: z.array(z.string().min(1).max(50)).max(50).optional(),
+    defaultPartySize: z.number().int().min(1).max(20).nullable().optional(),
+    marketingOptIn: z.boolean().optional(),
+    waitingListOptIn: z.boolean().optional(),
+    promoFromFavoritesOptIn: z.boolean().optional(),
+    quietHoursStart: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/)
+      .nullable()
+      .optional(),
+    quietHoursEnd: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/)
+      .nullable()
+      .optional(),
+  }),
+);
 
-const pushSubscriptionSchema = z.object({
-  endpoint: z.string().transform(decodeHtmlEntities).pipe(z.url().max(4096)),
-  p256dh: z.string().min(1).max(2048),
-  auth: z.string().min(1).max(2048),
-  userAgent: z.string().max(1024).optional(),
-  deviceLabel: z.string().max(100).optional(),
-});
+const pushSubscriptionSchema = z.lazy(() =>
+  z.object({
+    endpoint: z.string().transform(decodeHtmlEntities).pipe(z.url().max(4096)),
+    p256dh: z.string().min(1).max(2048),
+    auth: z.string().min(1).max(2048),
+    userAgent: z.string().max(1024).optional(),
+    deviceLabel: z.string().max(100).optional(),
+  }),
+);
 
-const favoriteTargetTypeSchema = z.enum(["market", "restaurant", "dish"]);
+const favoriteTargetTypeSchema = z.lazy(() =>
+  z.enum(["market", "restaurant", "dish"]),
+);
 
-const favoriteQuerySchema = z.object({
-  targetType: favoriteTargetTypeSchema.optional(),
-});
+const favoriteQuerySchema = z.lazy(() =>
+  z.object({
+    targetType: favoriteTargetTypeSchema.optional(),
+  }),
+);
 
-const favoriteSchema = z.object({
-  targetType: favoriteTargetTypeSchema,
-  targetId: z.string().trim().min(1).max(128),
-});
+const favoriteSchema = z.lazy(() =>
+  z.object({
+    targetType: favoriteTargetTypeSchema,
+    targetId: z.string().trim().min(1).max(128),
+  }),
+);
 
-const recentMarketsQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(20).default(8),
-});
+const recentMarketsQuerySchema = z.lazy(() =>
+  z.object({
+    limit: z.coerce.number().int().min(1).max(20).default(8),
+  }),
+);
 
-const recentMarketSchema = z.object({
-  marketId: z.string().trim().min(1).max(128),
-  visitedAtMs: z.number().int().positive().optional(),
-});
+const recentMarketSchema = z.lazy(() =>
+  z.object({
+    marketId: z.string().trim().min(1).max(128),
+    visitedAtMs: z.number().int().positive().optional(),
+  }),
+);
 
-const consentSchema = z
-  .object({
-    consentType: z.enum(CUSTOMER_CONSENT_TYPES),
-    version: z.string().trim().min(1).max(100),
-    granted: z.boolean(),
-    source: z
-      .enum(["onboarding", "settings", "inline_prompt"])
-      .default("settings"),
-  })
-  .superRefine((value, ctx) => {
-    if (!isCustomerConsentVersion(value.consentType, value.version)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["version"],
-        message: "Unsupported customer consent version",
-      });
-    }
-  });
+const consentSchema = z.lazy(() =>
+  z
+    .object({
+      consentType: z.enum(CUSTOMER_CONSENT_TYPES),
+      version: z.string().trim().min(1).max(100),
+      granted: z.boolean(),
+      source: z
+        .enum(["onboarding", "settings", "inline_prompt"])
+        .default("settings"),
+    })
+    .superRefine((value, ctx) => {
+      if (!isCustomerConsentVersion(value.consentType, value.version)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["version"],
+          message: "Unsupported customer consent version",
+        });
+      }
+    }),
+);
 
 type CustomerRow = {
   id: string;

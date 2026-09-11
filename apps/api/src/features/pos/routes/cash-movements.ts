@@ -101,17 +101,21 @@ app.get(
   authMiddleware,
   requireRole([0, 1, 4]), // Admin, Owner, Cashier
   validateParams(
-    z.object({
-      registerId: z.uuid(),
-    }),
+    z.lazy(() =>
+      z.object({
+        registerId: z.uuid(),
+      }),
+    ),
   ),
   validateQuery(
-    z.object({
-      date: z
-        .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/)
-        .optional(),
-    }),
+    z.lazy(() =>
+      z.object({
+        date: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .optional(),
+      }),
+    ),
   ),
   async (c) => {
     const { registerId } = c.get("validatedParams");
@@ -144,9 +148,11 @@ app.post(
   authMiddleware,
   requireRole([0, 1]), // Admin or Owner only
   validateParams(
-    z.object({
-      movementId: z.uuid(),
-    }),
+    z.lazy(() =>
+      z.object({
+        movementId: z.uuid(),
+      }),
+    ),
   ),
   async (c) => {
     const { movementId } = c.get("validatedParams");
@@ -182,14 +188,18 @@ app.post(
   authMiddleware,
   requireRole([0, 1]), // Admin or Owner only
   validateParams(
-    z.object({
-      movementId: z.uuid(),
-    }),
+    z.lazy(() =>
+      z.object({
+        movementId: z.uuid(),
+      }),
+    ),
   ),
   validateBody(
-    z.object({
-      reason: z.string().max(200).optional(),
-    }),
+    z.lazy(() =>
+      z.object({
+        reason: z.string().max(200).optional(),
+      }),
+    ),
   ),
   async (c) => {
     const { movementId } = c.get("validatedParams");

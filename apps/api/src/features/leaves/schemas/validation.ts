@@ -12,8 +12,8 @@ import { httpUrlSchema } from "../../../shared/utils/url";
 
 // Base validation schemas
 const positiveInteger = z.number().int().positive();
-const nonNegativeInteger = z.number().int().min(0);
-const nonNegativeNumber = z.number().min(0);
+const nonNegativeInteger = z.lazy(() => z.number().int().min(0));
+const nonNegativeNumber = z.lazy(() => z.number().min(0));
 // `.trim()` before `.min(1)` — the reverse order measures the untrimmed string,
 // so a whitespace-only value passes and is stored as "". See the same note in
 // features/menu/schemas/validation.ts.
@@ -25,10 +25,10 @@ const idString = z.preprocess((value) => {
   return value;
 }, nonEmptyString);
 const optionalUrl = httpUrlSchema.optional();
-const dateString = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format");
-const yearInteger = z.number().int().min(2020).max(2100);
+const dateString = z.lazy(() =>
+  z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+);
+const yearInteger = z.lazy(() => z.number().int().min(2020).max(2100));
 // Restaurant ID: UUID v7 format
 const restaurantIdString = z.uuid("Restaurant ID must be a valid UUID");
 
@@ -88,75 +88,87 @@ const leaveTypeShapeSchema = z.object({
   icon: z.string().max(50).optional().nullable(),
 });
 
-export const createLeaveTypeSchema = leaveTypeShapeSchema.extend({
-  accrualBasedOnSeniority: z.boolean().default(false),
-  requiresApproval: z.boolean().default(true),
-  requiredApprovalLevels: positiveInteger.max(5).default(1),
-  minNoticeDays: nonNegativeInteger.default(0),
-  canCarryover: z.boolean().default(false),
-  requiresDocumentation: z.boolean().default(false),
-  isPaid: z.boolean().default(true),
-  paymentRate: z.number().min(0).max(1).default(1),
-  allowHalfDay: z.boolean().default(true),
-  isActive: z.boolean().default(true),
-  sortOrder: nonNegativeInteger.default(0),
-});
+export const createLeaveTypeSchema = z.lazy(() =>
+  leaveTypeShapeSchema.extend({
+    accrualBasedOnSeniority: z.boolean().default(false),
+    requiresApproval: z.boolean().default(true),
+    requiredApprovalLevels: positiveInteger.max(5).default(1),
+    minNoticeDays: nonNegativeInteger.default(0),
+    canCarryover: z.boolean().default(false),
+    requiresDocumentation: z.boolean().default(false),
+    isPaid: z.boolean().default(true),
+    paymentRate: z.number().min(0).max(1).default(1),
+    allowHalfDay: z.boolean().default(true),
+    isActive: z.boolean().default(true),
+    sortOrder: nonNegativeInteger.default(0),
+  }),
+);
 
 // restaurantId is omitted: a leave type can never be re-tenanted via update.
-export const updateLeaveTypeSchema = leaveTypeShapeSchema
-  .omit({ restaurantId: true })
-  .partial();
+export const updateLeaveTypeSchema = z.lazy(() =>
+  leaveTypeShapeSchema.omit({ restaurantId: true }).partial(),
+);
 
 // Leave Request Schemas
-export const createLeaveRequestSchema = z
-  .object({
-    restaurantId: restaurantIdString.optional(), // Injected by route handler from URL param
-    employeeId: idString.optional(), // Staff UUID from auth context
-    leaveTypeId: positiveInteger,
+export const createLeaveRequestSchema = z.lazy(() =>
+  z
+    .object({
+      restaurantId: restaurantIdString.optional(), // Injected by route handler from URL param
+      employeeId: idString.optional(), // Staff UUID from auth context
+      leaveTypeId: positiveInteger,
 
-    // Date & Duration
-    startDate: dateString,
-    endDate: dateString,
-    startPeriod: z.enum(["full", "am", "pm"]).default("full"),
-    endPeriod: z.enum(["full", "am", "pm"]).default("full"),
+      // Date & Duration
+      startDate: dateString,
+      endDate: dateString,
+      startPeriod: z.enum(["full", "am", "pm"]).default("full"),
+      endPeriod: z.enum(["full", "am", "pm"]).default("full"),
 
-    // Request Details
-    reason: nonEmptyString.max(500),
-    attachmentUrl: optionalUrl.nullable(),
-    emergencyContact: z.string().max(100).optional().nullable(),
-  })
-  .refine(
-    (data) => {
-      const start = new Date(data.startDate);
-      const end = new Date(data.endDate);
-      return end >= start;
-    },
-    { message: "End date must be equal to or after start date" },
-  );
+      // Request Details
+      reason: nonEmptyString.max(500),
+      attachmentUrl: optionalUrl.nullable(),
+      emergencyContact: z.string().max(100).optional().nullable(),
+    })
+    .refine(
+      (data) => {
+        const start = new Date(data.startDate);
+        const end = new Date(data.endDate);
+        return end >= start;
+      },
+      { message: "End date must be equal to or after start date" },
+    ),
+);
 
 // Identity fields (approverId/userId/adjustedBy) are intentionally absent from
 // the bodies below: the acting user is always derived from the authenticated
 // session, never from client input.
-export const approveLeaveRequestSchema = z.object({
-  comments: z.string().max(500).optional(),
-});
+export const approveLeaveRequestSchema = z.lazy(() =>
+  z.object({
+    comments: z.string().max(500).optional(),
+  }),
+);
 
-export const rejectLeaveRequestSchema = z.object({
-  reason: nonEmptyString.max(500),
-});
+export const rejectLeaveRequestSchema = z.lazy(() =>
+  z.object({
+    reason: nonEmptyString.max(500),
+  }),
+);
 
-export const cancelLeaveRequestSchema = z.object({
-  reason: nonEmptyString.max(500),
-});
+export const cancelLeaveRequestSchema = z.lazy(() =>
+  z.object({
+    reason: nonEmptyString.max(500),
+  }),
+);
 
 // Leave Balance Schemas
-export const adjustLeaveBalanceSchema = z.object({
-  employeeId: idString,
-  leaveTypeId: positiveInteger,
-  year: yearInteger,
-  adjustment: z.number().min(-365).max(365), // Allow both positive and negative adjustments
-  reason: nonEmptyString.max(500),
-});
+export const adjustLeaveBalanceSchema = z.lazy(() =>
+  z.object({
+    employeeId: idString,
+    leaveTypeId: positiveInteger,
+    year: yearInteger,
+    adjustment: z.number().min(-365).max(365), // Allow both positive and negative adjustments
+    reason: nonEmptyString.max(500),
+  }),
+);
 
 // restaurantId is deliberately absent: POST /:restaurantId/balances/accrue takes
 // it from the path, where requireRestaurantAccess has already checked it, and the
@@ -164,9 +176,11 @@ export const adjustLeaveBalanceSchema = z.object({
 // call 400 with `restaurantId: invalid_type` — the admin's "初始化假期餘額" button
 // could never succeed. Do not "fix" that by having the client send it: a second,
 // unguarded source of the tenant id is the shape behind #265 and #275.
-export const accrueLeaveBalancesSchema = z.object({
-  year: yearInteger,
-});
+export const accrueLeaveBalancesSchema = z.lazy(() =>
+  z.object({
+    year: yearInteger,
+  }),
+);
 
 // Leave Approval Rule Schemas
 // Defaults live on the create schema only — see leaveTypeShapeSchema.
@@ -196,44 +210,49 @@ const leaveApprovalRuleShapeSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-const baseLeaveApprovalRuleSchema = leaveApprovalRuleShapeSchema.extend({
-  enableAutoApproval: z.boolean().default(false),
-  enableAutoEscalation: z.boolean().default(false),
-  priority: nonNegativeInteger.default(0),
-  isActive: z.boolean().default(true),
-});
+const baseLeaveApprovalRuleSchema = z.lazy(() =>
+  leaveApprovalRuleShapeSchema.extend({
+    enableAutoApproval: z.boolean().default(false),
+    enableAutoEscalation: z.boolean().default(false),
+    priority: nonNegativeInteger.default(0),
+    isActive: z.boolean().default(true),
+  }),
+);
 
-export const createLeaveApprovalRuleSchema = baseLeaveApprovalRuleSchema
-  .refine(
-    (data) => {
-      if (data.approverType === "role" && !data.approverRoleIds) {
-        return false;
-      }
-      if (data.approverType === "specific_user" && !data.approverUserIds) {
-        return false;
-      }
-      return true;
-    },
-    { message: "Approver IDs must be provided based on approver type" },
-  )
-  .refine(
-    (data) => {
-      if (
-        data.enableAutoEscalation &&
-        (!data.escalationTimeoutHours || !data.escalationToUserId)
-      ) {
-        return false;
-      }
-      return true;
-    },
-    {
-      message:
-        "Escalation timeout and user must be provided when auto-escalation is enabled",
-    },
-  );
+export const createLeaveApprovalRuleSchema = z.lazy(() =>
+  baseLeaveApprovalRuleSchema
+    .refine(
+      (data) => {
+        if (data.approverType === "role" && !data.approverRoleIds) {
+          return false;
+        }
+        if (data.approverType === "specific_user" && !data.approverUserIds) {
+          return false;
+        }
+        return true;
+      },
+      { message: "Approver IDs must be provided based on approver type" },
+    )
+    .refine(
+      (data) => {
+        if (
+          data.enableAutoEscalation &&
+          (!data.escalationTimeoutHours || !data.escalationToUserId)
+        ) {
+          return false;
+        }
+        return true;
+      },
+      {
+        message:
+          "Escalation timeout and user must be provided when auto-escalation is enabled",
+      },
+    ),
+);
 
-export const updateLeaveApprovalRuleSchema =
-  leaveApprovalRuleShapeSchema.partial();
+export const updateLeaveApprovalRuleSchema = z.lazy(() =>
+  leaveApprovalRuleShapeSchema.partial(),
+);
 
 // Leave Calendar Event Schemas
 // Defaults live on the create schema only — see leaveTypeShapeSchema.
@@ -262,82 +281,106 @@ const leaveCalendarEventShapeSchema = z.object({
   icon: z.string().max(50).optional().nullable(),
 });
 
-export const createLeaveCalendarEventSchema =
+export const createLeaveCalendarEventSchema = z.lazy(() =>
   leaveCalendarEventShapeSchema.extend({
     isRecurring: z.boolean().default(false),
     isWorkingDay: z.boolean().default(false),
-  });
+  }),
+);
 
-export const updateLeaveCalendarEventSchema =
-  leaveCalendarEventShapeSchema.partial();
+export const updateLeaveCalendarEventSchema = z.lazy(() =>
+  leaveCalendarEventShapeSchema.partial(),
+);
 
 // Query Parameter Schemas
-export const leaveRequestFiltersSchema = z.object({
-  employeeId: idString.optional(),
-  leaveTypeId: z.string().regex(/^\d+$/).transform(Number).optional(),
-  status: z
-    .enum(["pending", "approved", "rejected", "cancelled", "withdrawn"])
-    .optional(),
-  startDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  endDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  page: boundedPageQuery(),
-  limit: boundedLimitQuery(),
-});
+export const leaveRequestFiltersSchema = z.lazy(() =>
+  z.object({
+    employeeId: idString.optional(),
+    leaveTypeId: z.string().regex(/^\d+$/).transform(Number).optional(),
+    status: z
+      .enum(["pending", "approved", "rejected", "cancelled", "withdrawn"])
+      .optional(),
+    startDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+    endDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+    page: boundedPageQuery(),
+    limit: boundedLimitQuery(),
+  }),
+);
 
-export const leaveBalanceQuerySchema = z.object({
-  employeeId: idString,
-  year: z.string().regex(/^\d+$/).transform(Number).optional(),
-});
+export const leaveBalanceQuerySchema = z.lazy(() =>
+  z.object({
+    employeeId: idString,
+    year: z.string().regex(/^\d+$/).transform(Number).optional(),
+  }),
+);
 
-export const holidaysQuerySchema = z.object({
-  restaurantId: restaurantIdString.optional(),
-  year: z.string().regex(/^\d+$/).transform(Number),
-});
+export const holidaysQuerySchema = z.lazy(() =>
+  z.object({
+    restaurantId: restaurantIdString.optional(),
+    year: z.string().regex(/^\d+$/).transform(Number),
+  }),
+);
 
-export const statisticsQuerySchema = z.object({
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-});
+export const statisticsQuerySchema = z.lazy(() =>
+  z.object({
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  }),
+);
 
-export const upcomingLeavesQuerySchema = z.object({
-  days: z.string().regex(/^\d+$/).transform(Number).prefault("30"),
-});
+export const upcomingLeavesQuerySchema = z.lazy(() =>
+  z.object({
+    days: z.string().regex(/^\d+$/).transform(Number).prefault("30"),
+  }),
+);
 
-export const expiringBalancesQuerySchema = z.object({
-  months: z.string().regex(/^\d+$/).transform(Number).prefault("3"),
-});
+export const expiringBalancesQuerySchema = z.lazy(() =>
+  z.object({
+    months: z.string().regex(/^\d+$/).transform(Number).prefault("3"),
+  }),
+);
 
 // Parameter Schemas
 export const restaurantIdParamSchema = z.object({
   restaurantId: restaurantIdString,
 });
 
-export const leaveTypeIdParamSchema = z.object({
-  id: z.string().regex(/^\d+$/).transform(Number),
-});
+export const leaveTypeIdParamSchema = z.lazy(() =>
+  z.object({
+    id: z.string().regex(/^\d+$/).transform(Number),
+  }),
+);
 
-export const leaveRequestIdParamSchema = z.object({
-  id: z.string().regex(/^\d+$/).transform(Number),
-});
+export const leaveRequestIdParamSchema = z.lazy(() =>
+  z.object({
+    id: z.string().regex(/^\d+$/).transform(Number),
+  }),
+);
 
-export const leaveApprovalRuleIdParamSchema = z.object({
-  id: z.string().regex(/^\d+$/).transform(Number),
-});
+export const leaveApprovalRuleIdParamSchema = z.lazy(() =>
+  z.object({
+    id: z.string().regex(/^\d+$/).transform(Number),
+  }),
+);
 
-export const leaveCalendarEventIdParamSchema = z.object({
-  id: z.string().regex(/^\d+$/).transform(Number),
-});
+export const leaveCalendarEventIdParamSchema = z.lazy(() =>
+  z.object({
+    id: z.string().regex(/^\d+$/).transform(Number),
+  }),
+);
 
-export const workingDayParamSchema = z.object({
-  restaurantId: restaurantIdString,
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-});
+export const workingDayParamSchema = z.lazy(() =>
+  z.object({
+    restaurantId: restaurantIdString,
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  }),
+);
 
 // Complex validation functions
 const validateLeaveRequestDates = (
@@ -422,21 +465,23 @@ const validateConsecutiveDays = (
 };
 
 // Comprehensive leave request validation
-export const validateCompleteLeaveRequest = createLeaveRequestSchema.refine(
-  (data) => {
-    try {
-      const days = calculateLeaveDays(
-        data.startDate,
-        data.endDate,
-        data.startPeriod,
-        data.endPeriod,
-      );
-      return days > 0;
-    } catch {
-      return false;
-    }
-  },
-  { message: "Invalid date range or period configuration" },
+export const validateCompleteLeaveRequest = z.lazy(() =>
+  createLeaveRequestSchema.refine(
+    (data) => {
+      try {
+        const days = calculateLeaveDays(
+          data.startDate,
+          data.endDate,
+          data.startPeriod,
+          data.endPeriod,
+        );
+        return days > 0;
+      } catch {
+        return false;
+      }
+    },
+    { message: "Invalid date range or period configuration" },
+  ),
 );
 
 // Export all schemas as a single object for easy import

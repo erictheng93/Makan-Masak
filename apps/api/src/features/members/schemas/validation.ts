@@ -8,9 +8,11 @@ export const restaurantIdParamSchema = z.object({
   restaurantId: z.string().min(1),
 });
 
-export const memberParamSchema = restaurantIdParamSchema.extend({
-  memberId: z.string().min(1),
-});
+export const memberParamSchema = z.lazy(() =>
+  restaurantIdParamSchema.extend({
+    memberId: z.string().min(1),
+  }),
+);
 
 /**
  * Size caps for the operator-supplied member fields below (spec §7.1 PATCH).
@@ -46,10 +48,12 @@ export const memberListQuerySchema = z.object({
   sort: z.enum(["recent", "spent", "orders", "name"]).optional(),
 });
 
-export const memberOrdersQuerySchema = z.object({
-  page: boundedPageQuery(),
-  limit: boundedLimitQuery("100"),
-});
+export const memberOrdersQuerySchema = z.lazy(() =>
+  z.object({
+    page: boundedPageQuery(),
+    limit: boundedLimitQuery("100"),
+  }),
+);
 
 /**
  * The reveal flow gates on a confirmation modal, not on typed justification,
@@ -57,9 +61,11 @@ export const memberOrdersQuerySchema = z.object({
  * one it is recorded in the audit metadata, which is why it is length-bounded
  * rather than free-form.
  */
-export const memberRevealContactBodySchema = z.object({
-  reason: z.string().trim().min(4).max(200).optional(),
-});
+export const memberRevealContactBodySchema = z.lazy(() =>
+  z.object({
+    reason: z.string().trim().min(4).max(200).optional(),
+  }),
+);
 
 /**
  * Tenant-local marker fields only (spec §7.1). `.strict()` is load-bearing:
@@ -69,27 +75,29 @@ export const memberRevealContactBodySchema = z.object({
  * quietly writing nothing instead. `.refine` below rejects an empty body:
  * a PATCH with nothing to change is a caller bug, not a no-op 200.
  */
-export const memberPatchBodySchema = z
-  .object({
-    // Replaces the whole list; there is no add/remove-one endpoint.
-    tags: z
-      .array(z.string().trim().min(1).max(MEMBER_TAG_MAX_LENGTH))
-      .max(MEMBER_MAX_TAGS)
-      .nullable()
-      .optional(),
-    note: z.string().trim().max(MEMBER_NOTE_MAX_LENGTH).nullable().optional(),
-    isBlocked: z.boolean().optional(),
-    blockedReason: z
-      .string()
-      .trim()
-      .max(MEMBER_BLOCKED_REASON_MAX_LENGTH)
-      .nullable()
-      .optional(),
-  })
-  .strict()
-  .refine((body) => Object.keys(body).length > 0, {
-    message: "At least one field must be provided",
-  });
+export const memberPatchBodySchema = z.lazy(() =>
+  z
+    .object({
+      // Replaces the whole list; there is no add/remove-one endpoint.
+      tags: z
+        .array(z.string().trim().min(1).max(MEMBER_TAG_MAX_LENGTH))
+        .max(MEMBER_MAX_TAGS)
+        .nullable()
+        .optional(),
+      note: z.string().trim().max(MEMBER_NOTE_MAX_LENGTH).nullable().optional(),
+      isBlocked: z.boolean().optional(),
+      blockedReason: z
+        .string()
+        .trim()
+        .max(MEMBER_BLOCKED_REASON_MAX_LENGTH)
+        .nullable()
+        .optional(),
+    })
+    .strict()
+    .refine((body) => Object.keys(body).length > 0, {
+      message: "At least one field must be provided",
+    }),
+);
 
 /**
  * The export body is the list filter set minus paging: one export is one file,
@@ -101,9 +109,9 @@ export const memberPatchBodySchema = z
  *
  * A bodyless POST is valid and exports the whole (masked) directory.
  */
-export const memberExportBodySchema = memberListQuerySchema
-  .omit({ page: true, limit: true })
-  .strict();
+export const memberExportBodySchema = z.lazy(() =>
+  memberListQuerySchema.omit({ page: true, limit: true }).strict(),
+);
 
 /**
  * Platform side (spec §7.2, stage A4). Keyed on the platform `customers.id`,
@@ -111,16 +119,22 @@ export const memberExportBodySchema = memberListQuerySchema
  * `requireRole([0])`. See `PlatformCustomerDirectoryService` for why the
  * tenant-side schemas above must never gain a `customerId` field.
  */
-export const platformCustomerParamSchema = z.object({
-  customerId: z.string().min(1),
-});
+export const platformCustomerParamSchema = z.lazy(() =>
+  z.object({
+    customerId: z.string().min(1),
+  }),
+);
 
-export const platformCustomerListQuerySchema = z.object({
-  page: boundedPageQuery(),
-  limit: boundedLimitQuery("100"),
-  // Same rule as the tenant list: full-value equality for phone and email,
-  // substring only for the display name.
-  search: z.string().trim().max(200).optional(),
-  status: z.enum(["active", "deleted"]).optional(),
-  sort: z.enum(["recent", "spent", "orders", "restaurants", "name"]).optional(),
-});
+export const platformCustomerListQuerySchema = z.lazy(() =>
+  z.object({
+    page: boundedPageQuery(),
+    limit: boundedLimitQuery("100"),
+    // Same rule as the tenant list: full-value equality for phone and email,
+    // substring only for the display name.
+    search: z.string().trim().max(200).optional(),
+    status: z.enum(["active", "deleted"]).optional(),
+    sort: z
+      .enum(["recent", "spent", "orders", "restaurants", "name"])
+      .optional(),
+  }),
+);

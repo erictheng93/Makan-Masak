@@ -211,14 +211,16 @@ import {
 // Create router
 const app = new Hono<{ Bindings: Env }>();
 const logger = new ConsoleLogger("OrdersRoutes");
-const orderBatchSyncSchema = z.object({}).loose();
+const orderBatchSyncSchema = z.lazy(() => z.object({}).loose());
 
 // Optional body for DELETE /orders/:id — carries a human cancellation reason.
 // Both the body and the field are optional; the value is trimmed and capped to
 // 500 chars by the handler (truncated rather than rejected) before it is stored.
-const cancelOrderBodySchema = z.object({
-  reason: z.string().optional(),
-});
+const cancelOrderBodySchema = z.lazy(() =>
+  z.object({
+    reason: z.string().optional(),
+  }),
+);
 
 function createBatchSyncId(payload: Record<string, unknown>): string {
   if (typeof payload.sync_id === "string" && payload.sync_id.trim()) {

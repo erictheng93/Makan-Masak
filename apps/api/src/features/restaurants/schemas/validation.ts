@@ -27,87 +27,96 @@ const decodeHtmlEntities = (value: string): string =>
 const sanitizeFreeText = (value: string): string =>
   decodeHtmlEntities(value).replace(/[<>"`=]/g, "");
 
-const contactUrlSchema = z
-  .string()
-  .transform(decodeHtmlEntities)
-  .pipe(httpUrlSchema);
+const contactUrlSchema = z.lazy(() =>
+  z.string().transform(decodeHtmlEntities).pipe(httpUrlSchema),
+);
 
 // Business hours validation schema
-const businessHoursSchema = z
-  .record(
-    z.string(),
-    z.object({
-      open: z
-        .string()
-        .regex(
-          /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
-          "Invalid time format (HH:MM)",
-        ),
-      close: z
-        .string()
-        .regex(
-          /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
-          "Invalid time format (HH:MM)",
-        ),
-      isOpen: z.boolean(),
-    }),
-  )
-  .optional();
+const businessHoursSchema = z.lazy(() =>
+  z
+    .record(
+      z.string(),
+      z.object({
+        open: z
+          .string()
+          .regex(
+            /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+            "Invalid time format (HH:MM)",
+          ),
+        close: z
+          .string()
+          .regex(
+            /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+            "Invalid time format (HH:MM)",
+          ),
+        isOpen: z.boolean(),
+      }),
+    )
+    .optional(),
+);
 
 // Restaurant settings validation schema
-const restaurantSettingsSchema = z
-  .object({
-    allowOnlineOrdering: z.boolean().optional(),
-    allowGuestOrders: z.boolean().optional(),
-    requireAdvanceBooking: z.boolean().optional(),
-    deliveryAvailable: z.boolean().optional(),
-    pickupAvailable: z.boolean().optional(),
-    minOrderAmount: z.number().min(0).optional(),
-    maxOrdersPerHour: z.number().int().min(1).optional(),
-    autoAcceptOrders: z.boolean().optional(),
-    currency: z.string().length(3).optional(), // ISO currency codes are 3 characters
-    // Fulfillment settings
-    enableDineIn: z.boolean().optional(),
-    enableTakeaway: z.boolean().optional(),
-    enableDelivery: z.boolean().optional(),
-    deliveryFee: z.number().min(0).optional(),
-    estimatedPrepTimeMin: z.number().int().min(1).optional(),
-    estimatedPrepTimeMax: z.number().int().min(1).optional(),
-  })
-  .loose(); // Allow additional properties
+const restaurantSettingsSchema = z.lazy(() =>
+  z
+    .object({
+      allowOnlineOrdering: z.boolean().optional(),
+      allowGuestOrders: z.boolean().optional(),
+      requireAdvanceBooking: z.boolean().optional(),
+      deliveryAvailable: z.boolean().optional(),
+      pickupAvailable: z.boolean().optional(),
+      minOrderAmount: z.number().min(0).optional(),
+      maxOrdersPerHour: z.number().int().min(1).optional(),
+      autoAcceptOrders: z.boolean().optional(),
+      currency: z.string().length(3).optional(), // ISO currency codes are 3 characters
+      // Fulfillment settings
+      enableDineIn: z.boolean().optional(),
+      enableTakeaway: z.boolean().optional(),
+      enableDelivery: z.boolean().optional(),
+      deliveryFee: z.number().min(0).optional(),
+      estimatedPrepTimeMin: z.number().int().min(1).optional(),
+      estimatedPrepTimeMax: z.number().int().min(1).optional(),
+    })
+    .loose(),
+); // Allow additional properties
 
-const messagingChannelsSchema = z
-  .object({
-    line: contactUrlSchema.optional(),
-    whatsapp: contactUrlSchema.optional(),
-    instagram: contactUrlSchema.optional(),
-    telegram: contactUrlSchema.optional(),
-  })
-  .strict();
+const messagingChannelsSchema = z.lazy(() =>
+  z
+    .object({
+      line: contactUrlSchema.optional(),
+      whatsapp: contactUrlSchema.optional(),
+      instagram: contactUrlSchema.optional(),
+      telegram: contactUrlSchema.optional(),
+    })
+    .strict(),
+);
 
-const restaurantFaqInputSchema = z.object({
-  question: z
-    .string()
-    .min(1, "Question is required")
-    .max(200)
-    .transform(sanitizeFreeText),
-  answer: z
-    .string()
-    .min(1, "Answer is required")
-    .max(1000)
-    .transform(sanitizeFreeText),
-  keywords: z
-    .array(z.string().min(1).max(50).transform(sanitizeFreeText))
-    .max(20)
-    .optional(),
-  displayOrder: z.number().int().min(0).max(1000).optional(),
-  isActive: z.boolean().optional(),
-});
+const restaurantFaqInputSchema = z.lazy(() =>
+  z.object({
+    question: z
+      .string()
+      .min(1, "Question is required")
+      .max(200)
+      .transform(sanitizeFreeText),
+    answer: z
+      .string()
+      .min(1, "Answer is required")
+      .max(1000)
+      .transform(sanitizeFreeText),
+    keywords: z
+      .array(z.string().min(1).max(50).transform(sanitizeFreeText))
+      .max(20)
+      .optional(),
+    displayOrder: z.number().int().min(0).max(1000).optional(),
+    isActive: z.boolean().optional(),
+  }),
+);
 
-const updateContactProfileSchema = z.object({
-  messagingChannels: messagingChannelsSchema.optional().default({}),
-  faqs: z.array(restaurantFaqInputSchema).max(50).optional().default([]),
-});
+const updateContactProfileSchema = z.lazy(() =>
+  z.object({
+    messagingChannels: messagingChannelsSchema.optional().default({}),
+    faqs: z.array(restaurantFaqInputSchema).max(50).optional().default([]),
+  }),
+);
 
 /**
  * Field shape without creation defaults.
@@ -165,34 +174,43 @@ const restaurantServiceItemShapeSchema = z.object({
   isPublic: z.boolean().optional(),
 });
 
-const restaurantServiceItemInputSchema =
+const restaurantServiceItemInputSchema = z.lazy(() =>
   restaurantServiceItemShapeSchema.extend({
     serviceType: z.enum(RESTAURANT_SERVICE_TYPES).optional().default("general"),
     requiresBooking: z.boolean().optional().default(false),
-  });
+  }),
+);
 
-const updateRestaurantServiceItemSchema = restaurantServiceItemShapeSchema
-  .partial()
-  .refine((value) => Object.keys(value).length > 0, {
-    message: "At least one field is required",
-  });
+const updateRestaurantServiceItemSchema = z.lazy(() =>
+  restaurantServiceItemShapeSchema
+    .partial()
+    .refine((value) => Object.keys(value).length > 0, {
+      message: "At least one field is required",
+    }),
+);
 
 // Common parameter schemas
 const idParam = z.object({
   id: z.string().min(1, "ID is required"),
 });
 
-const serviceItemParam = idParam.extend({
-  serviceItemId: z.coerce.number().int().min(1),
-});
+const serviceItemParam = z.lazy(() =>
+  idParam.extend({
+    serviceItemId: z.coerce.number().int().min(1),
+  }),
+);
 
-const tableValidationParam = idParam.extend({
-  tableId: z.coerce.number().int().min(1),
-});
+const tableValidationParam = z.lazy(() =>
+  idParam.extend({
+    tableId: z.coerce.number().int().min(1),
+  }),
+);
 
-const districtParam = z.object({
-  district: z.string().min(1, "District is required"),
-});
+const districtParam = z.lazy(() =>
+  z.object({
+    district: z.string().min(1, "District is required"),
+  }),
+);
 
 // Restaurant creation schema
 const createRestaurantSchema = z.object({
@@ -251,105 +269,124 @@ const createRestaurantSchema = z.object({
 });
 
 // Restaurant update schema (all fields optional except validation rules still apply)
-const updateRestaurantSchema = createRestaurantSchema.partial().extend({
-  isAvailable: z.boolean().optional(),
-  isActive: z.boolean().optional(),
-  latitude: z.number().min(-90).max(90).nullable().optional(),
-  longitude: z.number().min(-180).max(180).nullable().optional(),
-  supportsTakeaway: z.boolean().optional(),
-  supportsDelivery: z.boolean().optional(),
-  settings: restaurantSettingsSchema.optional(),
+const updateRestaurantSchema = z.lazy(() =>
+  createRestaurantSchema.partial().extend({
+    isAvailable: z.boolean().optional(),
+    isActive: z.boolean().optional(),
+    latitude: z.number().min(-90).max(90).nullable().optional(),
+    longitude: z.number().min(-180).max(180).nullable().optional(),
+    supportsTakeaway: z.boolean().optional(),
+    supportsDelivery: z.boolean().optional(),
+    settings: restaurantSettingsSchema.optional(),
 
-  // A column of its own, not a `settings` key (#329): every business-day
-  // bucket derives its SQL offset from it. An enum rather than a free string
-  // because only fixed-offset zones can be expressed as a SQLite modifier --
-  // accepting `America/New_York` here would store a boundary the report layer
-  // then silently ignores, which is the shape of the bug this replaces.
-  timezone: z.enum(SUPPORTED_BUSINESS_TIMEZONES).optional(),
-});
+    // A column of its own, not a `settings` key (#329): every business-day
+    // bucket derives its SQL offset from it. An enum rather than a free string
+    // because only fixed-offset zones can be expressed as a SQLite modifier --
+    // accepting `America/New_York` here would store a boundary the report layer
+    // then silently ignores, which is the shape of the bug this replaces.
+    timezone: z.enum(SUPPORTED_BUSINESS_TIMEZONES).optional(),
+  }),
+);
 
 // Restaurant list query parameters
-const restaurantFilterSchema = z.object({
-  page: z
-    .string()
-    .transform(Number)
-    .refine((val) => Number.isInteger(val) && val > 0, {
-      message: "Page must be a positive integer",
-    })
-    .optional(),
-  limit: z
-    .string()
-    .transform(Number)
-    .refine((val) => Number.isInteger(val) && val > 0 && val <= 100, {
-      message: "Limit must be a positive integer up to 100",
-    })
-    .optional(),
-  type: z
-    .string()
-    .max(50, "Type filter must be less than 50 characters")
-    .optional(),
-  district: z
-    .string()
-    .max(50, "District filter must be less than 50 characters")
-    .optional(),
-  isAvailable: z
-    .string()
-    .transform((val) => val === "true")
-    .optional(),
-});
+const restaurantFilterSchema = z.lazy(() =>
+  z.object({
+    page: z
+      .string()
+      .transform(Number)
+      .refine((val) => Number.isInteger(val) && val > 0, {
+        message: "Page must be a positive integer",
+      })
+      .optional(),
+    limit: z
+      .string()
+      .transform(Number)
+      .refine((val) => Number.isInteger(val) && val > 0 && val <= 100, {
+        message: "Limit must be a positive integer up to 100",
+      })
+      .optional(),
+    type: z
+      .string()
+      .max(50, "Type filter must be less than 50 characters")
+      .optional(),
+    district: z
+      .string()
+      .max(50, "District filter must be less than 50 characters")
+      .optional(),
+    isAvailable: z
+      .string()
+      .transform((val) => val === "true")
+      .optional(),
+  }),
+);
 
 // Nearby restaurants query parameters
-const nearbyQuerySchema = z.object({
-  limit: z
-    .string()
-    .regex(/^\d+$/, "Limit must be a number")
-    .transform(Number)
-    .refine((val) => val > 0 && val <= 50, {
-      message: "Limit must be between 1 and 50",
-    })
-    .prefault("10"),
-});
+const nearbyQuerySchema = z.lazy(() =>
+  z.object({
+    limit: z
+      .string()
+      .regex(/^\d+$/, "Limit must be a number")
+      .transform(Number)
+      .refine((val) => val > 0 && val <= 50, {
+        message: "Limit must be between 1 and 50",
+      })
+      .prefault("10"),
+  }),
+);
 
 // Popular restaurants query parameters
-const popularQuerySchema = z.object({
-  limit: z
-    .string()
-    .regex(/^\d+$/, "Limit must be a number")
-    .transform(Number)
-    .refine((val) => val > 0 && val <= 50, {
-      message: "Limit must be between 1 and 50",
-    })
-    .prefault("10"),
-});
+const popularQuerySchema = z.lazy(() =>
+  z.object({
+    limit: z
+      .string()
+      .regex(/^\d+$/, "Limit must be a number")
+      .transform(Number)
+      .refine((val) => val > 0 && val <= 50, {
+        message: "Limit must be between 1 and 50",
+      })
+      .prefault("10"),
+  }),
+);
 
 // Shop QR Code validation schemas
-const shopQrSettingsSchema = z.object({
-  displayName: z
-    .string()
-    .min(1, "Display name is required")
-    .max(100, "Display name must be less than 100 characters")
-    .optional(),
-  instructions: z
-    .string()
-    .max(500, "Instructions must be less than 500 characters")
-    .optional(),
-});
+const shopQrSettingsSchema = z.lazy(() =>
+  z.object({
+    displayName: z
+      .string()
+      .min(1, "Display name is required")
+      .max(100, "Display name must be less than 100 characters")
+      .optional(),
+    instructions: z
+      .string()
+      .max(500, "Instructions must be less than 500 characters")
+      .optional(),
+  }),
+);
 
-const updateShopModeSchema = z.object({
-  enabled: z.boolean(),
-  settings: shopQrSettingsSchema.optional(),
-});
+const updateShopModeSchema = z.lazy(() =>
+  z.object({
+    enabled: z.boolean(),
+    settings: shopQrSettingsSchema.optional(),
+  }),
+);
 
-const uploadQrImageSchema = z.object({
-  imageUrl: z.string().url("Invalid image URL").min(1, "Image URL is required"),
-});
+const uploadQrImageSchema = z.lazy(() =>
+  z.object({
+    imageUrl: z
+      .string()
+      .url("Invalid image URL")
+      .min(1, "Image URL is required"),
+  }),
+);
 
-const qrCodeParam = z.object({
-  qrCode: z
-    .string()
-    .min(1, "QR code is required")
-    .regex(/^SHOP-[A-Za-z0-9-]+$/, "Invalid shop QR code format"),
-});
+const qrCodeParam = z.lazy(() =>
+  z.object({
+    qrCode: z
+      .string()
+      .min(1, "QR code is required")
+      .regex(/^SHOP-[A-Za-z0-9-]+$/, "Invalid shop QR code format"),
+  }),
+);
 
 export const restaurantSchemas = {
   // Parameters

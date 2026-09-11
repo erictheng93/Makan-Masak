@@ -16,15 +16,17 @@ import { ORDER_STATUS_TRANSITIONS } from "../types";
 
 // Common validation patterns
 const idSchema = z.number().int().positive();
-const optionalIdSchema = z.number().int().positive().optional();
+const optionalIdSchema = z.lazy(() => z.number().int().positive().optional());
 const phoneSchema = z.string().max(20).optional();
 const emailSchema = z.email().optional();
-const idStringSchema = z.preprocess((value) => {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return String(value);
-  }
-  return value;
-}, z.string().trim().min(1));
+const idStringSchema = z.lazy(() =>
+  z.preprocess((value) => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return String(value);
+    }
+    return value;
+  }, z.string().trim().min(1)),
+);
 // Sanitize free-text user input by removing HTML metacharacters instead of
 // trying to strip whole tags/attributes, which can be bypassed by overlap.
 const sanitizeFreeText = (input: string): string => {
@@ -34,9 +36,9 @@ const sanitizeFreeText = (input: string): string => {
 const notesSchema = (maxLength: number) =>
   z.string().max(maxLength).transform(sanitizeFreeText);
 // const urlSchema = z.url().optional() // Available for future use
-const positiveNumberSchema = z.number().positive();
+const positiveNumberSchema = z.lazy(() => z.number().positive());
 // const nonNegativeNumberSchema = z.number().min(0) // Available for future use
-const dateStringSchema = z.iso.datetime().optional();
+const dateStringSchema = z.lazy(() => z.iso.datetime().optional());
 const paginationSchema = z.object({
   page: boundedPageQuery(),
   limit: boundedLimitQuery(),
@@ -47,41 +49,44 @@ const orderStatusSchema = z.enum(ORDER_STATUSES);
 
 // "paid" remains an accepted legacy query value and is normalized to
 // "completed" by the route before it reaches the database service.
-const orderPaymentStatusSchema = z.enum([...ORDER_PAYMENT_STATUSES, "paid"]);
+const orderPaymentStatusSchema = z.lazy(() =>
+  z.enum([...ORDER_PAYMENT_STATUSES, "paid"]),
+);
 
-const orderPaymentMethodSchema = z.enum(["cash", "card", "online", "ewallet"]);
+const orderPaymentMethodSchema = z.lazy(() =>
+  z.enum(["cash", "card", "online", "ewallet"]),
+);
 
-const orderItemStatusSchema = z.enum([
-  "pending",
-  "preparing",
-  "ready",
-  "delivered",
-]);
+const orderItemStatusSchema = z.lazy(() =>
+  z.enum(["pending", "preparing", "ready", "delivered"]),
+);
 
-const orderTypeSchema = z.enum(["shop", "table", "seat"]);
+const orderTypeSchema = z.lazy(() => z.enum(["shop", "table", "seat"]));
 
 const fulfillmentTypeSchema = z.enum(["dine_in", "takeaway", "delivery"]);
 
-const deliveryInfoSchema = z
-  .object({
-    type: fulfillmentTypeSchema,
-    address: z.string().max(200).optional(),
-    phone: z.string().max(20).optional(),
-    instructions: z.string().max(500).optional(),
-    deliveryFee: z.number().min(0).optional(),
-    estimatedDeliveryTime: z.number().int().min(0).optional(),
-  })
-  .refine(
-    (data) => {
-      if (data.type === "delivery") {
-        return !!data.address && !!data.phone;
-      }
-      return true;
-    },
-    {
-      message: "Address and phone are required for delivery orders",
-    },
-  );
+const deliveryInfoSchema = z.lazy(() =>
+  z
+    .object({
+      type: fulfillmentTypeSchema,
+      address: z.string().max(200).optional(),
+      phone: z.string().max(20).optional(),
+      instructions: z.string().max(500).optional(),
+      deliveryFee: z.number().min(0).optional(),
+      estimatedDeliveryTime: z.number().int().min(0).optional(),
+    })
+    .refine(
+      (data) => {
+        if (data.type === "delivery") {
+          return !!data.address && !!data.phone;
+        }
+        return true;
+      },
+      {
+        message: "Address and phone are required for delivery orders",
+      },
+    ),
+);
 
 // Customer information schema
 const customerInfoSchema = z
@@ -94,27 +99,33 @@ const customerInfoSchema = z
   .optional();
 
 // Customization schemas
-const customizationOptionSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  priceAdjustment: z.number().optional(),
-});
+const customizationOptionSchema = z.lazy(() =>
+  z.object({
+    id: z.string(),
+    name: z.string(),
+    priceAdjustment: z.number().optional(),
+  }),
+);
 
-const customizationGroupSchema = z.object({
-  id: z.string(),
-  optionName: z.string(),
-  choiceId: z.string(),
-  choiceName: z.string(),
-  priceAdjustment: z.number().optional(),
-});
+const customizationGroupSchema = z.lazy(() =>
+  z.object({
+    id: z.string(),
+    optionName: z.string(),
+    choiceId: z.string(),
+    choiceName: z.string(),
+    priceAdjustment: z.number().optional(),
+  }),
+);
 
-const addOnSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  unitPrice: positiveNumberSchema,
-  quantity: z.number().int().positive(),
-  totalPrice: positiveNumberSchema,
-});
+const addOnSchema = z.lazy(() =>
+  z.object({
+    id: z.string(),
+    name: z.string(),
+    unitPrice: positiveNumberSchema,
+    quantity: z.number().int().positive(),
+    totalPrice: positiveNumberSchema,
+  }),
+);
 
 const selectedCustomizationsSchema = z
   .object({
@@ -126,13 +137,15 @@ const selectedCustomizationsSchema = z
   .optional();
 
 // Order item schemas
-const createOrderItemSchema = z.object({
-  menuItemId: idSchema,
-  quantity: z.number().int().positive().max(99),
-  price: positiveNumberSchema.optional(),
-  customizations: selectedCustomizationsSchema,
-  notes: notesSchema(200).optional(),
-});
+const createOrderItemSchema = z.lazy(() =>
+  z.object({
+    menuItemId: idSchema,
+    quantity: z.number().int().positive().max(99),
+    price: positiveNumberSchema.optional(),
+    customizations: selectedCustomizationsSchema,
+    notes: notesSchema(200).optional(),
+  }),
+);
 
 // Main order creation schema
 export const createOrderSchema = z
@@ -169,12 +182,14 @@ export const createOrderSchema = z
   });
 
 // Order update schemas
-export const updateOrderStatusSchema = z.object({
-  status: orderStatusSchema,
-  notes: notesSchema(500).optional(),
-  estimatedReadyTime: dateStringSchema,
-  actualPrepTime: z.number().int().min(0).max(999).optional(), // in minutes
-});
+export const updateOrderStatusSchema = z.lazy(() =>
+  z.object({
+    status: orderStatusSchema,
+    notes: notesSchema(500).optional(),
+    estimatedReadyTime: dateStringSchema,
+    actualPrepTime: z.number().int().min(0).max(999).optional(), // in minutes
+  }),
+);
 
 export const updateOrderSchema = z.object({
   status: orderStatusSchema.optional(),
@@ -275,293 +290,346 @@ export const orderSearchSchema = z.object({
 });
 
 // Coupon validation schema
-export const previewCouponSchema = z.object({
-  restaurantId: z.string().min(1),
-  couponCode: z.string().min(1).max(50),
-  orderAmount: positiveNumberSchema,
-  userId: idStringSchema.optional(),
-  menuItems: z
-    .array(
-      z.object({
-        menuItemId: idSchema,
-        quantity: z.number().int().positive(),
-      }),
-    )
-    .optional(),
-});
+export const previewCouponSchema = z.lazy(() =>
+  z.object({
+    restaurantId: z.string().min(1),
+    couponCode: z.string().min(1).max(50),
+    orderAmount: positiveNumberSchema,
+    userId: idStringSchema.optional(),
+    menuItems: z
+      .array(
+        z.object({
+          menuItemId: idSchema,
+          quantity: z.number().int().positive(),
+        }),
+      )
+      .optional(),
+  }),
+);
 
 // Bulk operations schema
 // `export` and `archive` were advertised here but never implemented — the
 // service rejects them per order, so a batch of 100 came back 200 OK with 100
 // identical errors. Rejecting them at the boundary gives one 400 instead. The
 // service keeps its own guard for callers that bypass this schema.
-export const bulkOrderOperationSchema = z
-  .object({
-    action: z.enum(["update_status", "cancel"]),
-    orderIds: z.array(idStringSchema).min(1).max(100),
-    data: z
-      .object({
-        status: orderStatusSchema.optional(),
-        reason: z.string().max(200).optional(),
-        format: z.enum(["csv", "excel", "pdf"]).optional(),
-        notes: notesSchema(500).optional(),
-      })
-      .optional(),
-    batchId: z.uuid().optional(),
-  })
-  .superRefine((value, ctx) => {
-    // Without this, `update_status` with no status parsed fine, matched no
-    // branch in the service loop and returned 200 with every order silently
-    // untouched.
-    if (value.action === "update_status" && !value.data?.status) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["data", "status"],
-        message: "data.status is required for the update_status action",
-      });
-    }
-  });
+export const bulkOrderOperationSchema = z.lazy(() =>
+  z
+    .object({
+      action: z.enum(["update_status", "cancel"]),
+      orderIds: z.array(idStringSchema).min(1).max(100),
+      data: z
+        .object({
+          status: orderStatusSchema.optional(),
+          reason: z.string().max(200).optional(),
+          format: z.enum(["csv", "excel", "pdf"]).optional(),
+          notes: notesSchema(500).optional(),
+        })
+        .optional(),
+      batchId: z.uuid().optional(),
+    })
+    .superRefine((value, ctx) => {
+      // Without this, `update_status` with no status parsed fine, matched no
+      // branch in the service loop and returned 200 with every order silently
+      // untouched.
+      if (value.action === "update_status" && !value.data?.status) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["data", "status"],
+          message: "data.status is required for the update_status action",
+        });
+      }
+    }),
+);
 
 // Analytics and statistics schemas
-export const orderStatsQuerySchema = z.object({
-  restaurantId: z.string().optional(),
-  dateFrom: dateStringSchema,
-  dateTo: dateStringSchema,
-  timeRange: z
-    .enum(["today", "yesterday", "week", "month", "quarter", "year", "custom"])
-    .optional()
-    .default("today"),
-  groupBy: z.enum(["hour", "day", "week", "month"]).optional().default("day"),
-  includeItems: z
-    .string()
-    .transform((s) => s === "true")
-    .optional()
-    .prefault("false"),
-  includeCustomers: z
-    .string()
-    .transform((s) => s === "true")
-    .optional()
-    .prefault("false"),
-});
+export const orderStatsQuerySchema = z.lazy(() =>
+  z.object({
+    restaurantId: z.string().optional(),
+    dateFrom: dateStringSchema,
+    dateTo: dateStringSchema,
+    timeRange: z
+      .enum([
+        "today",
+        "yesterday",
+        "week",
+        "month",
+        "quarter",
+        "year",
+        "custom",
+      ])
+      .optional()
+      .default("today"),
+    groupBy: z.enum(["hour", "day", "week", "month"]).optional().default("day"),
+    includeItems: z
+      .string()
+      .transform((s) => s === "true")
+      .optional()
+      .prefault("false"),
+    includeCustomers: z
+      .string()
+      .transform((s) => s === "true")
+      .optional()
+      .prefault("false"),
+  }),
+);
 
-export const popularItemsQuerySchema = z.object({
-  restaurantId: idSchema,
-  timeRange: z
-    .enum(["today", "yesterday", "week", "month", "quarter", "year"])
-    .optional()
-    .default("month"),
-  limit: boundedLimitQuery("10"),
-  minQuantity: z
-    .string()
-    .regex(/^\d+$/)
-    .transform(Number)
-    .optional()
-    .prefault("1"),
-});
+export const popularItemsQuerySchema = z.lazy(() =>
+  z.object({
+    restaurantId: idSchema,
+    timeRange: z
+      .enum(["today", "yesterday", "week", "month", "quarter", "year"])
+      .optional()
+      .default("month"),
+    limit: boundedLimitQuery("10"),
+    minQuantity: z
+      .string()
+      .regex(/^\d+$/)
+      .transform(Number)
+      .optional()
+      .prefault("1"),
+  }),
+);
 
 // Export schema
-export const exportOrdersSchema = z.object({
-  format: z.enum(["csv", "excel", "pdf"]),
-  includeItems: z
-    .string()
-    .transform((s) => s === "true")
-    .optional()
-    .prefault("false"),
-  includeCustomerInfo: z
-    .string()
-    .transform((s) => s === "true")
-    .optional()
-    .prefault("true"),
-  columns: z.array(z.string()).optional(),
-  ...orderFilterSchema.omit({ page: true, limit: true }).shape,
-});
+export const exportOrdersSchema = z.lazy(() =>
+  z.object({
+    format: z.enum(["csv", "excel", "pdf"]),
+    includeItems: z
+      .string()
+      .transform((s) => s === "true")
+      .optional()
+      .prefault("false"),
+    includeCustomerInfo: z
+      .string()
+      .transform((s) => s === "true")
+      .optional()
+      .prefault("true"),
+    columns: z.array(z.string()).optional(),
+    ...orderFilterSchema.omit({ page: true, limit: true }).shape,
+  }),
+);
 
 // Order receipt generation schema
-export const generateReceiptSchema = z.object({
-  format: z.enum(["pdf", "html", "json"]).optional().default("pdf"),
-  includeQR: z
-    .string()
-    .transform((s) => s === "true")
-    .optional()
-    .prefault("true"),
-  language: z.enum(["en", "zh", "ms"]).optional().default("en"),
-  template: z.enum(["default", "thermal", "a4"]).optional().default("default"),
-});
+export const generateReceiptSchema = z.lazy(() =>
+  z.object({
+    format: z.enum(["pdf", "html", "json"]).optional().default("pdf"),
+    includeQR: z
+      .string()
+      .transform((s) => s === "true")
+      .optional()
+      .prefault("true"),
+    language: z.enum(["en", "zh", "ms"]).optional().default("en"),
+    template: z
+      .enum(["default", "thermal", "a4"])
+      .optional()
+      .default("default"),
+  }),
+);
 
 // Order item update schema
-export const updateOrderItemSchema = z.object({
-  status: orderItemStatusSchema.optional(),
-  quantity: z.number().int().positive().max(99).optional(),
-  customizations: selectedCustomizationsSchema,
-  notes: notesSchema(200).optional(),
-  price: positiveNumberSchema.optional(),
-});
+export const updateOrderItemSchema = z.lazy(() =>
+  z.object({
+    status: orderItemStatusSchema.optional(),
+    quantity: z.number().int().positive().max(99).optional(),
+    customizations: selectedCustomizationsSchema,
+    notes: notesSchema(200).optional(),
+    price: positiveNumberSchema.optional(),
+  }),
+);
 
 // Real-time subscription schema
-export const orderSubscriptionSchema = z.object({
-  restaurantId: idSchema,
-  roles: z.array(z.number().int().min(0).max(4)).min(1).max(5),
-  events: z
-    .array(
-      z.enum([
-        "ORDER_CREATED",
-        "ORDER_UPDATED",
-        "ORDER_STATUS_CHANGED",
-        "ORDER_CANCELLED",
-        "PAYMENT_STATUS_CHANGED",
-        "ORDER_ITEM_UPDATED",
-      ]),
-    )
-    .optional(),
-  tableIds: z.array(idSchema).optional(),
-});
+export const orderSubscriptionSchema = z.lazy(() =>
+  z.object({
+    restaurantId: idSchema,
+    roles: z.array(z.number().int().min(0).max(4)).min(1).max(5),
+    events: z
+      .array(
+        z.enum([
+          "ORDER_CREATED",
+          "ORDER_UPDATED",
+          "ORDER_STATUS_CHANGED",
+          "ORDER_CANCELLED",
+          "PAYMENT_STATUS_CHANGED",
+          "ORDER_ITEM_UPDATED",
+        ]),
+      )
+      .optional(),
+    tableIds: z.array(idSchema).optional(),
+  }),
+);
 
 // Parameter validation schemas
 export const orderIdParamSchema = z.object({
   id: z.string().trim().min(1),
 });
 
-export const orderBatchIdParamSchema = z.object({
-  batchId: z.uuid(),
-});
+export const orderBatchIdParamSchema = z.lazy(() =>
+  z.object({
+    batchId: z.uuid(),
+  }),
+);
 
-export const orderItemIdParamSchema = z.object({
-  orderId: z.string().trim().min(1),
-  itemId: z.string().regex(/^\d+$/).transform(Number),
-});
+export const orderItemIdParamSchema = z.lazy(() =>
+  z.object({
+    orderId: z.string().trim().min(1),
+    itemId: z.string().regex(/^\d+$/).transform(Number),
+  }),
+);
 
 // The staff item-edit routes are mounted under `/:id/items/:itemId`, matching
 // every other order route's `:id`. orderItemIdParamSchema above names it
 // `orderId` and belongs to a different path shape.
-export const orderItemPathParamSchema = z.object({
-  id: z.string().trim().min(1),
-  itemId: z.string().regex(/^\d+$/).transform(Number),
-});
+export const orderItemPathParamSchema = z.lazy(() =>
+  z.object({
+    id: z.string().trim().min(1),
+    itemId: z.string().regex(/^\d+$/).transform(Number),
+  }),
+);
 
 // `expectedVersion` carries the `orders.version` the client last saw. Optional
 // so a client that does not track it still works, but supplying it is what
 // turns two staff editing one order into a 409 instead of a silent overwrite.
-const expectedVersionSchema = z.number().int().nonnegative().optional();
+const expectedVersionSchema = z.lazy(() =>
+  z.number().int().nonnegative().optional(),
+);
 
-export const addOrderItemsSchema = z.object({
-  items: z.array(createOrderItemSchema).min(1).max(50),
-  expectedVersion: expectedVersionSchema,
-});
+export const addOrderItemsSchema = z.lazy(() =>
+  z.object({
+    items: z.array(createOrderItemSchema).min(1).max(50),
+    expectedVersion: expectedVersionSchema,
+  }),
+);
 
 // Quantity 0 is not accepted here; removal is DELETE on the item.
-export const changeOrderItemQuantitySchema = z.object({
-  quantity: z.number().int().min(1).max(99),
-  expectedVersion: expectedVersionSchema,
-});
+export const changeOrderItemQuantitySchema = z.lazy(() =>
+  z.object({
+    quantity: z.number().int().min(1).max(99),
+    expectedVersion: expectedVersionSchema,
+  }),
+);
 
 // A counter discount is expressed as a percentage, never as an amount: the
 // server derives the money from the order's own stored cents, so a client
 // cannot name a price (#327). `reason` is required and lands in the audit log
 // -- an amount-affecting operation has to leave behind who did it and why.
-export const applyOrderDiscountSchema = z.object({
-  discountPercent: z.number().min(0).max(100),
-  reason: z.string().trim().min(1).max(200),
-  expectedVersion: expectedVersionSchema,
-});
+export const applyOrderDiscountSchema = z.lazy(() =>
+  z.object({
+    discountPercent: z.number().min(0).max(100),
+    reason: z.string().trim().min(1).max(200),
+    expectedVersion: expectedVersionSchema,
+  }),
+);
 
 // DELETE carries no body, so the version travels as a query parameter.
-export const removeOrderItemQuerySchema = z.object({
-  expectedVersion: z.string().regex(/^\d+$/).transform(Number).optional(),
-});
+export const removeOrderItemQuerySchema = z.lazy(() =>
+  z.object({
+    expectedVersion: z.string().regex(/^\d+$/).transform(Number).optional(),
+  }),
+);
 
 // Review and rating schema
-export const addOrderReviewSchema = z.object({
-  rating: z.number().int().min(1).max(5),
-  comment: z.string().max(500).optional(),
-  itemRatings: z
-    .array(
-      z.object({
-        itemId: idSchema,
-        rating: z.number().int().min(1).max(5),
-        comment: z.string().max(200).optional(),
-      }),
-    )
-    .optional(),
-});
+export const addOrderReviewSchema = z.lazy(() =>
+  z.object({
+    rating: z.number().int().min(1).max(5),
+    comment: z.string().max(500).optional(),
+    itemRatings: z
+      .array(
+        z.object({
+          itemId: idSchema,
+          rating: z.number().int().min(1).max(5),
+          comment: z.string().max(200).optional(),
+        }),
+      )
+      .optional(),
+  }),
+);
 
 // Order modification schema (for special cases)
-export const modifyOrderSchema = z.object({
-  addItems: z.array(createOrderItemSchema).optional(),
-  removeItems: z.array(idSchema).optional(),
-  updateItems: z
-    .array(
-      z.object({
-        itemId: idSchema,
-        quantity: z.number().int().positive().max(99).optional(),
-        customizations: selectedCustomizationsSchema,
-        notes: notesSchema(200).optional(),
-      }),
-    )
-    .optional(),
-  notes: notesSchema(500).optional(),
-  reason: z.string().max(200),
-});
+export const modifyOrderSchema = z.lazy(() =>
+  z.object({
+    addItems: z.array(createOrderItemSchema).optional(),
+    removeItems: z.array(idSchema).optional(),
+    updateItems: z
+      .array(
+        z.object({
+          itemId: idSchema,
+          quantity: z.number().int().positive().max(99).optional(),
+          customizations: selectedCustomizationsSchema,
+          notes: notesSchema(200).optional(),
+        }),
+      )
+      .optional(),
+    notes: notesSchema(500).optional(),
+    reason: z.string().max(200),
+  }),
+);
 
 // Notification preferences schema
-export const notificationPreferencesSchema = z.object({
-  enablePush: z.boolean().optional().default(true),
-  enableEmail: z.boolean().optional().default(false),
-  enableSMS: z.boolean().optional().default(false),
-  statusUpdates: z.array(orderStatusSchema).optional(),
-  roles: z.array(z.number().int().min(0).max(4)).optional(),
-});
+export const notificationPreferencesSchema = z.lazy(() =>
+  z.object({
+    enablePush: z.boolean().optional().default(true),
+    enableEmail: z.boolean().optional().default(false),
+    enableSMS: z.boolean().optional().default(false),
+    statusUpdates: z.array(orderStatusSchema).optional(),
+    roles: z.array(z.number().int().min(0).max(4)).optional(),
+  }),
+);
 
 // Kitchen display specific schemas
-export const kitchenOrderFilterSchema = z.object({
-  restaurantId: idSchema,
-  status: z
-    .array(z.enum(["confirmed", "preparing", "ready"]))
-    .optional()
-    .default(["confirmed", "preparing"]),
-  priority: z.enum(["normal", "high", "urgent"]).optional(),
-  preparationTime: z.enum(["overdue", "soon", "normal"]).optional(),
-  assignedTo: optionalIdSchema,
-  orderType: orderTypeSchema.optional(),
-  fulfillmentType: fulfillmentTypeSchema.optional(),
-  limit: boundedLimitQuery("50"),
-});
+export const kitchenOrderFilterSchema = z.lazy(() =>
+  z.object({
+    restaurantId: idSchema,
+    status: z
+      .array(z.enum(["confirmed", "preparing", "ready"]))
+      .optional()
+      .default(["confirmed", "preparing"]),
+    priority: z.enum(["normal", "high", "urgent"]).optional(),
+    preparationTime: z.enum(["overdue", "soon", "normal"]).optional(),
+    assignedTo: optionalIdSchema,
+    orderType: orderTypeSchema.optional(),
+    fulfillmentType: fulfillmentTypeSchema.optional(),
+    limit: boundedLimitQuery("50"),
+  }),
+);
 
 // Advanced query validation
-export const advancedOrderQuerySchema = orderFilterSchema.extend({
-  includeItems: z
-    .string()
-    .transform((s) => s === "true")
-    .optional()
-    .prefault("false"),
-  includeCustomer: z
-    .string()
-    .transform((s) => s === "true")
-    .optional()
-    .prefault("false"),
-  includeRestaurant: z
-    .string()
-    .transform((s) => s === "true")
-    .optional()
-    .prefault("false"),
-  includeTable: z
-    .string()
-    .transform((s) => s === "true")
-    .optional()
-    .prefault("false"),
-  includeAnalytics: z
-    .string()
-    .transform((s) => s === "true")
-    .optional()
-    .prefault("false"),
-  fields: z
-    .string()
-    .transform((s) => s.split(","))
-    .optional(), // Select specific fields
-  excludeFields: z
-    .string()
-    .transform((s) => s.split(","))
-    .optional(), // Exclude specific fields
-});
+export const advancedOrderQuerySchema = z.lazy(() =>
+  orderFilterSchema.extend({
+    includeItems: z
+      .string()
+      .transform((s) => s === "true")
+      .optional()
+      .prefault("false"),
+    includeCustomer: z
+      .string()
+      .transform((s) => s === "true")
+      .optional()
+      .prefault("false"),
+    includeRestaurant: z
+      .string()
+      .transform((s) => s === "true")
+      .optional()
+      .prefault("false"),
+    includeTable: z
+      .string()
+      .transform((s) => s === "true")
+      .optional()
+      .prefault("false"),
+    includeAnalytics: z
+      .string()
+      .transform((s) => s === "true")
+      .optional()
+      .prefault("false"),
+    fields: z
+      .string()
+      .transform((s) => s.split(","))
+      .optional(), // Select specific fields
+    excludeFields: z
+      .string()
+      .transform((s) => s.split(","))
+      .optional(), // Exclude specific fields
+  }),
+);
 
 export const validateOrderStatusTransition = (
   currentStatus: string,
@@ -578,22 +646,26 @@ export const validateUserPermission = (
 };
 
 // Error handling schemas
-export const orderErrorSchema = z.object({
-  code: z.string(),
-  message: z.string(),
-  field: z.string().optional(),
-  value: z.any().optional(),
-  details: z.record(z.string(), z.any()).optional(),
-});
+export const orderErrorSchema = z.lazy(() =>
+  z.object({
+    code: z.string(),
+    message: z.string(),
+    field: z.string().optional(),
+    value: z.any().optional(),
+    details: z.record(z.string(), z.any()).optional(),
+  }),
+);
 
 // Batch validation for bulk operations
-export const validateBulkOrderIds = z
-  .array(idSchema)
-  .min(1)
-  .max(100)
-  .refine((ids) => new Set(ids).size === ids.length, {
-    message: "Order IDs must be unique",
-  });
+export const validateBulkOrderIds = z.lazy(() =>
+  z
+    .array(idSchema)
+    .min(1)
+    .max(100)
+    .refine((ids) => new Set(ids).size === ids.length, {
+      message: "Order IDs must be unique",
+    }),
+);
 
 // Custom validation functions
 export const validateOrderTiming = (

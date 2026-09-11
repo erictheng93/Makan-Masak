@@ -25,56 +25,70 @@ export const createFeedbackSchema = z.object({
     .optional(),
 });
 
-export const updateFeedbackSchema = createFeedbackSchema
-  .partial()
-  .refine((data) => Object.values(data).some((v) => v !== undefined), {
-    message: "At least one field must be provided",
-  });
+export const updateFeedbackSchema = z.lazy(() =>
+  createFeedbackSchema
+    .partial()
+    .refine((data) => Object.values(data).some((v) => v !== undefined), {
+      message: "At least one field must be provided",
+    }),
+);
 
-export const updateFeedbackStatusSchema = z.object({
-  status: z.enum(FEEDBACK_STATUSES),
-});
+export const updateFeedbackStatusSchema = z.lazy(() =>
+  z.object({
+    status: z.enum(FEEDBACK_STATUSES),
+  }),
+);
 
-export const addResponseSchema = z.object({
-  message: z
-    .string()
-    .min(1, "Message cannot be empty")
-    .max(2000, "Message must be at most 2000 characters"),
-  isInternal: z.boolean().optional().default(false),
-});
+export const addResponseSchema = z.lazy(() =>
+  z.object({
+    message: z
+      .string()
+      .min(1, "Message cannot be empty")
+      .max(2000, "Message must be at most 2000 characters"),
+    isInternal: z.boolean().optional().default(false),
+  }),
+);
 
-export const feedbackFiltersSchema = z.object({
-  category: z.enum(FEEDBACK_CATEGORIES).optional(),
-  status: z.enum(FEEDBACK_STATUSES).optional(),
-  priority: z.enum(FEEDBACK_PRIORITIES).optional(),
-  relatedModule: z.enum(FEEDBACK_MODULES).optional(),
-  restaurantId: z.string().optional(),
-  search: z.string().max(200).optional(),
-  page: z.coerce.number().int().positive().max(1000).optional().default(1),
-  limit: z.coerce.number().int().positive().max(100).optional().default(20),
-});
+export const feedbackFiltersSchema = z.lazy(() =>
+  z.object({
+    category: z.enum(FEEDBACK_CATEGORIES).optional(),
+    status: z.enum(FEEDBACK_STATUSES).optional(),
+    priority: z.enum(FEEDBACK_PRIORITIES).optional(),
+    relatedModule: z.enum(FEEDBACK_MODULES).optional(),
+    restaurantId: z.string().optional(),
+    search: z.string().max(200).optional(),
+    page: z.coerce.number().int().positive().max(1000).optional().default(1),
+    limit: z.coerce.number().int().positive().max(100).optional().default(20),
+  }),
+);
 
-export const feedbackIdParamSchema = z.object({
-  id: z.coerce.number().int().positive("ID must be a positive integer"),
-});
+export const feedbackIdParamSchema = z.lazy(() =>
+  z.object({
+    id: z.coerce.number().int().positive("ID must be a positive integer"),
+  }),
+);
 
-export const responseIdParamSchema = z.object({
-  id: z.coerce
-    .number()
-    .int()
-    .positive("Feedback ID must be a positive integer"),
-  responseId: z.coerce
-    .number()
-    .int()
-    .positive("Response ID must be a positive integer"),
-});
+export const responseIdParamSchema = z.lazy(() =>
+  z.object({
+    id: z.coerce
+      .number()
+      .int()
+      .positive("Feedback ID must be a positive integer"),
+    responseId: z.coerce
+      .number()
+      .int()
+      .positive("Response ID must be a positive integer"),
+  }),
+);
 
-export const updateResponseSchema = z.object({
-  message: z
-    .string()
-    .min(1, "Message cannot be empty")
-    .max(2000, "Message must be at most 2000 characters"),
-});
+export const updateResponseSchema = z.lazy(() =>
+  z.object({
+    message: z
+      .string()
+      .min(1, "Message cannot be empty")
+      .max(2000, "Message must be at most 2000 characters"),
+  }),
+);
 
 export type CreateFeedbackInput = z.infer<typeof createFeedbackSchema>;
 export type UpdateFeedbackInput = z.infer<typeof updateFeedbackSchema>;

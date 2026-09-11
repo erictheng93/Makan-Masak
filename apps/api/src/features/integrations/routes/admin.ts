@@ -116,13 +116,15 @@ adminRoutes.get("/:restaurantId/:platform", async (c) => {
  * incoming webhook at all. The server has no reason to be more permissive than
  * its own form (#338).
  */
-const connectPlatformSchema = z.object({
-  clientId: z.string().trim().min(1),
-  clientSecret: z.string().trim().min(1),
-  storeId: z.string().trim().min(1),
-  autoAcceptOrders: z.boolean().optional(),
-  menuSyncEnabled: z.boolean().optional(),
-});
+const connectPlatformSchema = z.lazy(() =>
+  z.object({
+    clientId: z.string().trim().min(1),
+    clientSecret: z.string().trim().min(1),
+    storeId: z.string().trim().min(1),
+    autoAcceptOrders: z.boolean().optional(),
+    menuSyncEnabled: z.boolean().optional(),
+  }),
+);
 
 // POST /:restaurantId/:platform/connect — connect platform
 adminRoutes.post(

@@ -38,7 +38,7 @@ type Context = {
 };
 
 // Validation schemas
-const createBackupSchema = z.object({
+const createBackupSchema = z.lazy(() => z.object({
   restaurant_id: z.uuid("Invalid restaurant ID"),
   configuration_id: z.uuid().optional(),
   name: z.string().min(1, "Backup name is required").max(100),
@@ -47,16 +47,16 @@ const createBackupSchema = z.object({
   include_tables: z.array(z.string()).optional(),
   exclude_tables: z.array(z.string()).optional(),
   force_immediate: z.boolean().default(false),
-});
+}));
 
-const uploadBackupSchema = z
+const uploadBackupSchema = z.lazy(() => z
   .object({
     backup_id: z.string().min(1).max(200).optional(),
     restaurant_id: z.union([z.string(), z.number()]).optional(),
   })
-  .loose();
+  .loose());
 
-export const listBackupsSchema = z.object({
+export const listBackupsSchema = z.lazy(() => z.object({
   restaurant_id: z.uuid("Invalid restaurant ID"),
   status: z
     .enum(["pending", "in_progress", "completed", "failed", "cancelled"])
@@ -70,9 +70,9 @@ export const listBackupsSchema = z.object({
     .enum(["started_at", "completed_at", "file_size", "name"])
     .default("started_at"),
   sort_order: z.enum(["asc", "desc"]).default("desc"),
-});
+}));
 
-const restoreBackupSchema = z.object({
+const restoreBackupSchema = z.lazy(() => z.object({
   restaurant_id: z.uuid("Invalid restaurant ID"),
   backup_id: z.uuid("Invalid backup ID"),
   restore_type: z.enum(["full", "selective"]),
@@ -83,9 +83,9 @@ const restoreBackupSchema = z.object({
     data_loss_risk_acknowledged: z.boolean(),
     confirmation_phrase: z.literal("I understand the risks"),
   }),
-});
+}));
 
-const configurationSchema = z.object({
+const configurationSchema = z.lazy(() => z.object({
   restaurant_id: z.uuid("Invalid restaurant ID"),
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
@@ -100,7 +100,7 @@ const configurationSchema = z.object({
   max_parallel_backups: z.number().min(1).max(10).default(3),
   notifications_enabled: z.boolean().default(true),
   notification_channels: z.array(z.string()).default(["email"]),
-});
+}));
 
 export function createBackupRoutes(): Hono<Context> {
   const backup = new Hono<Context>();

@@ -18,20 +18,22 @@ const idString = z.preprocess((value) => {
 }, z.string().trim().min(1));
 
 // 驗證 schemas
-export const validateCouponSchema = z.object({
-  code: z.string().min(1).max(50),
-  restaurantId: z.string().min(1),
-  orderAmount: z.number().positive(),
-  userId: idString.optional(),
-  menuItems: z
-    .array(
-      z.object({
-        menuItemId: z.number().int().positive(),
-        quantity: z.number().int().positive(),
-      }),
-    )
-    .optional(),
-});
+export const validateCouponSchema = z.lazy(() =>
+  z.object({
+    code: z.string().min(1).max(50),
+    restaurantId: z.string().min(1),
+    orderAmount: z.number().positive(),
+    userId: idString.optional(),
+    menuItems: z
+      .array(
+        z.object({
+          menuItemId: z.number().int().positive(),
+          quantity: z.number().int().positive(),
+        }),
+      )
+      .optional(),
+  }),
+);
 
 export const createCouponSchema = z.object({
   restaurantId: z.string().optional(),
@@ -52,31 +54,37 @@ export const createCouponSchema = z.object({
   isVisible: z.boolean().optional(),
 });
 
-export const updateCouponSchema = createCouponSchema
-  .omit({ restaurantId: true })
-  .partial()
-  .extend({ restaurantId: z.never().optional() });
+export const updateCouponSchema = z.lazy(() =>
+  createCouponSchema
+    .omit({ restaurantId: true })
+    .partial()
+    .extend({ restaurantId: z.never().optional() }),
+);
 
-export const couponFiltersSchema = z.object({
-  restaurantId: z.string().optional(),
-  isActive: z.boolean().optional(),
-  isVisible: z.boolean().optional(),
-  discountType: z.enum(["percentage", "fixed"]).optional(),
-  status: z.enum(["active", "expired", "exhausted", "inactive"]).optional(),
-  validOnly: z.boolean().optional(),
-  search: z.string().optional(),
-  page: boundedPageQuery(),
-  limit: boundedLimitQuery(),
-});
+export const couponFiltersSchema = z.lazy(() =>
+  z.object({
+    restaurantId: z.string().optional(),
+    isActive: z.boolean().optional(),
+    isVisible: z.boolean().optional(),
+    discountType: z.enum(["percentage", "fixed"]).optional(),
+    status: z.enum(["active", "expired", "exhausted", "inactive"]).optional(),
+    validOnly: z.boolean().optional(),
+    search: z.string().optional(),
+    page: boundedPageQuery(),
+    limit: boundedLimitQuery(),
+  }),
+);
 
-export const useCouponSchema = z.object({
-  couponId: z.number().int().positive(),
-  orderId: idString,
-  userId: idString.optional(),
-  discountAmount: z.number().positive(),
-  originalAmount: z.number().positive(),
-  finalAmount: z.number().min(0),
-});
+export const useCouponSchema = z.lazy(() =>
+  z.object({
+    couponId: z.number().int().positive(),
+    orderId: idString,
+    userId: idString.optional(),
+    discountAmount: z.number().positive(),
+    originalAmount: z.number().positive(),
+    finalAmount: z.number().min(0),
+  }),
+);
 
 /**
  * `targetCriteria` was `z.any()`, which meant a typo in the payload reached the
@@ -87,21 +95,25 @@ export const useCouponSchema = z.object({
  * resolves to, and letting a client assert it invites the stored total to
  * disagree with the rows actually written.
  */
-export const distributeTargetCriteriaSchema = z.object({
-  customerIds: z.array(z.string().min(1)).min(1).max(5000).optional(),
-  minOrders: z.number().int().positive().max(1000).optional(),
-});
+export const distributeTargetCriteriaSchema = z.lazy(() =>
+  z.object({
+    customerIds: z.array(z.string().min(1)).min(1).max(5000).optional(),
+    minOrders: z.number().int().positive().max(1000).optional(),
+  }),
+);
 
-export const distributeCouponSchema = z.object({
-  distributionType: z.enum(["manual", "auto", "bulk", "promotion"]),
-  targetType: z
-    .enum(["all", "user", "group", "new_user", "vip"])
-    .optional()
-    .default("all"),
-  targetCriteria: distributeTargetCriteriaSchema.optional(),
-  expiresAt: z.iso.datetime().optional(),
-  notes: z.string().max(500).optional(),
-});
+export const distributeCouponSchema = z.lazy(() =>
+  z.object({
+    distributionType: z.enum(["manual", "auto", "bulk", "promotion"]),
+    targetType: z
+      .enum(["all", "user", "group", "new_user", "vip"])
+      .optional()
+      .default("all"),
+    targetCriteria: distributeTargetCriteriaSchema.optional(),
+    expiresAt: z.iso.datetime().optional(),
+    notes: z.string().max(500).optional(),
+  }),
+);
 
 export const createTemplateSchema = z.object({
   restaurantId: z.string().optional(),
@@ -129,15 +141,19 @@ export const restaurantIdParamSchema = z.object({
 });
 
 // Bulk operations schemas
-export const bulkActionSchema = z.object({
-  couponIds: z.array(z.number().int().positive()).min(1),
-  action: z.enum(["activate", "deactivate", "delete"]),
-});
+export const bulkActionSchema = z.lazy(() =>
+  z.object({
+    couponIds: z.array(z.number().int().positive()).min(1),
+    action: z.enum(["activate", "deactivate", "delete"]),
+  }),
+);
 
-export const bulkCreateCouponsSchema = z.object({
-  coupons: z.array(createCouponSchema).min(1).max(50), // Limit bulk operations
-  skipValidation: z.boolean().optional().default(false),
-});
+export const bulkCreateCouponsSchema = z.lazy(() =>
+  z.object({
+    coupons: z.array(createCouponSchema).min(1).max(50), // Limit bulk operations
+    skipValidation: z.boolean().optional().default(false),
+  }),
+);
 
 // Analytics and reporting schemas
 export const statsQuerySchema = z.object({
@@ -147,11 +163,13 @@ export const statsQuerySchema = z.object({
   discountType: z.enum(["percentage", "fixed"]).optional(),
 });
 
-export const exportCouponsSchema = z.object({
-  format: z.enum(["csv", "json", "xlsx"]),
-  filters: couponFiltersSchema.optional(),
-  fields: z.array(z.string()).optional(),
-});
+export const exportCouponsSchema = z.lazy(() =>
+  z.object({
+    format: z.enum(["csv", "json", "xlsx"]),
+    filters: couponFiltersSchema.optional(),
+    fields: z.array(z.string()).optional(),
+  }),
+);
 
 // Validation error messages
 export const validationMessages = {

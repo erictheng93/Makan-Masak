@@ -71,80 +71,94 @@ const createSchema = z.object({
   reminderMinutesBefore: z.number().int().min(5).max(10080).optional(),
 });
 
-const recurringCreateSchema = createSchema.omit({ bookingDate: true }).extend({
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  count: z.number().int().min(1).max(MAX_PUBLIC_RECURRENCE_COUNT),
-  intervalWeeks: z.number().int().min(1).max(52).optional(),
-});
+const recurringCreateSchema = z.lazy(() =>
+  createSchema.omit({ bookingDate: true }).extend({
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    count: z.number().int().min(1).max(MAX_PUBLIC_RECURRENCE_COUNT),
+    intervalWeeks: z.number().int().min(1).max(52).optional(),
+  }),
+);
 
-const waitlistSchema = createSchema
-  .omit({
-    voucherCode: true,
-    paymentRequirement: true,
-    depositAmountCents: true,
-    reminderOptIn: true,
-    reminderMinutesBefore: true,
-  })
-  .extend({
-    notes: z.string().max(500).optional(),
-  });
+const waitlistSchema = z.lazy(() =>
+  createSchema
+    .omit({
+      voucherCode: true,
+      paymentRequirement: true,
+      depositAmountCents: true,
+      reminderOptIn: true,
+      reminderMinutesBefore: true,
+    })
+    .extend({
+      notes: z.string().max(500).optional(),
+    }),
+);
 
-const paySchema = z.object({
-  creditCardPublicId: z.string().min(1),
-  pin: z.string().optional(),
-});
+const paySchema = z.lazy(() =>
+  z.object({
+    creditCardPublicId: z.string().min(1),
+    pin: z.string().optional(),
+  }),
+);
 
-const contactProofSchema = z.object({
-  requireContact: z.boolean().optional().default(false),
-  customerPhone: z.string().min(3).max(30).optional(),
-  customerEmail: z.email().optional(),
-});
+const contactProofSchema = z.lazy(() =>
+  z.object({
+    requireContact: z.boolean().optional().default(false),
+    customerPhone: z.string().min(3).max(30).optional(),
+    customerEmail: z.email().optional(),
+  }),
+);
 
-const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-const timeSlotSchema = z.string().regex(/^\d{2}:\d{2}$/);
+const dateSchema = z.lazy(() => z.string().regex(/^\d{4}-\d{2}-\d{2}$/));
+const timeSlotSchema = z.lazy(() => z.string().regex(/^\d{2}:\d{2}$/));
 
-const createSlotSchema = z.object({
-  restaurantId: z.string().min(1),
-  serviceItemId: z.number().int().positive(),
-  date: dateSchema,
-  timeSlot: timeSlotSchema,
-  maxCapacity: z.number().int().min(1).max(1000),
-  isAvailable: z.boolean().optional().default(true),
-  blockReason: z.string().max(300).optional(),
-});
-
-const batchCreateSlotsSchema = z
-  .object({
+const createSlotSchema = z.lazy(() =>
+  z.object({
     restaurantId: z.string().min(1),
     serviceItemId: z.number().int().positive(),
-    startDate: dateSchema,
-    endDate: dateSchema,
-    timeSlots: z.array(timeSlotSchema).min(1).max(96),
+    date: dateSchema,
+    timeSlot: timeSlotSchema,
     maxCapacity: z.number().int().min(1).max(1000),
     isAvailable: z.boolean().optional().default(true),
-  })
-  .superRefine((value, ctx) => {
-    const totalSlots = countBatchSlots(
-      value.startDate,
-      value.endDate,
-      value.timeSlots.length,
-    );
-    if (totalSlots != null && totalSlots > MAX_BATCH_SLOT_CREATION_COUNT) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["timeSlots"],
-        message: `Cannot create more than ${MAX_BATCH_SLOT_CREATION_COUNT} slots at once`,
-      });
-    }
-  });
+    blockReason: z.string().max(300).optional(),
+  }),
+);
 
-const blockSlotSchema = z.object({
-  restaurantId: z.string().min(1),
-  serviceItemId: z.number().int().positive(),
-  date: dateSchema,
-  timeSlot: timeSlotSchema,
-  blockReason: z.string().max(300).optional(),
-});
+const batchCreateSlotsSchema = z.lazy(() =>
+  z
+    .object({
+      restaurantId: z.string().min(1),
+      serviceItemId: z.number().int().positive(),
+      startDate: dateSchema,
+      endDate: dateSchema,
+      timeSlots: z.array(timeSlotSchema).min(1).max(96),
+      maxCapacity: z.number().int().min(1).max(1000),
+      isAvailable: z.boolean().optional().default(true),
+    })
+    .superRefine((value, ctx) => {
+      const totalSlots = countBatchSlots(
+        value.startDate,
+        value.endDate,
+        value.timeSlots.length,
+      );
+      if (totalSlots != null && totalSlots > MAX_BATCH_SLOT_CREATION_COUNT) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["timeSlots"],
+          message: `Cannot create more than ${MAX_BATCH_SLOT_CREATION_COUNT} slots at once`,
+        });
+      }
+    }),
+);
+
+const blockSlotSchema = z.lazy(() =>
+  z.object({
+    restaurantId: z.string().min(1),
+    serviceItemId: z.number().int().positive(),
+    date: dateSchema,
+    timeSlot: timeSlotSchema,
+    blockReason: z.string().max(300).optional(),
+  }),
+);
 
 function countBatchSlots(
   startDate: string,

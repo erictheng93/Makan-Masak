@@ -3,6 +3,26 @@ import { createMiddleware } from "hono/factory";
 import { z } from "zod";
 import { badRequest } from "../shared/utils/api-error";
 
+/**
+ * Module-scope schemas in this Worker are wrapped in `z.lazy(() => ...)`.
+ *
+ * `app-factory.ts` imports all 51 features at module scope and every feature's
+ * routes import its schemas, so an eagerly-constructed schema is built on every
+ * cold start whether or not a request ever reaches its route. That was 54% of
+ * module-evaluation time — see `docs/investigations/2026-09-12-worker-cold-start-323.md`
+ * (#323/#362). `z.lazy` builds the inner schema on first parse and caches it on
+ * the shared def, so the cost moves from "every cold start" to "the first
+ * request that actually validates against it" (~1 ms, measured).
+ *
+ * When you add a schema, wrap it the same way. The exception is a schema that
+ * something else composes from — `ZodLazy` carries only the shared `ZodType`
+ * surface, so `.extend()` / `.pick()` / `.omit()` / `.merge()` / `.partial()` /
+ * `.shape` and the per-type refinements (`.max()`, `.int()`, ...) are not on it.
+ * Those bases stay eager; TypeScript rejects the wrap if you get it wrong.
+ * Everything here takes `z.ZodTypeAny`, so call sites never change, and
+ * `z.infer<typeof schema>` is identical through the wrapper.
+ */
+
 const formatZodDetails = (error: z.ZodError) =>
   error.issues.map((err) => ({
     field: err.path.join("."),
@@ -141,9 +161,11 @@ export const commonSchemas = {
     id: z.string().regex(/^\d+$/).transform(Number),
   }),
 
-  restaurantIdParam: z.object({
-    restaurantId: z.string().regex(/^\d+$/).transform(Number),
-  }),
+  restaurantIdParam: z.lazy(() =>
+    z.object({
+      restaurantId: z.string().regex(/^\d+$/).transform(Number),
+    }),
+  ),
 
   paginationQuery: z.object({
     page: boundedPageQuery(),
@@ -151,8 +173,10 @@ export const commonSchemas = {
     search: z.string().optional(),
   }),
 
-  dateRangeQuery: z.object({
-    startDate: z.iso.datetime().optional(),
-    endDate: z.iso.datetime().optional(),
-  }),
+  dateRangeQuery: z.lazy(() =>
+    z.object({
+      startDate: z.iso.datetime().optional(),
+      endDate: z.iso.datetime().optional(),
+    }),
+  ),
 };

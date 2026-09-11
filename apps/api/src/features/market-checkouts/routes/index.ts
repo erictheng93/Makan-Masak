@@ -67,36 +67,42 @@ const app = new Hono<{ Bindings: Env }>();
 const MARKET_CHECKOUT_INDEX_KEY = "market_checkout:index";
 const MARKET_CHECKOUT_INDEX_LIMIT = 200;
 
-const payMarketCheckoutSchema = z.object({
-  method: z.string().min(1).max(50).default("market_online"),
-  country: z.enum(["TW", "MY", "VN"]).optional().default("TW"),
-  currency: z.enum(["TWD", "MYR", "VND"]).optional().default("TWD"),
-  customerInfo: z
-    .object({
-      name: z.string().optional(),
-      email: z.email().optional(),
-      phone: z.string().optional(),
-    })
-    .optional(),
-  providerInput: z.record(z.string(), z.unknown()).optional(),
-});
+const payMarketCheckoutSchema = z.lazy(() =>
+  z.object({
+    method: z.string().min(1).max(50).default("market_online"),
+    country: z.enum(["TW", "MY", "VN"]).optional().default("TW"),
+    currency: z.enum(["TWD", "MYR", "VND"]).optional().default("TWD"),
+    customerInfo: z
+      .object({
+        name: z.string().optional(),
+        email: z.email().optional(),
+        phone: z.string().optional(),
+      })
+      .optional(),
+    providerInput: z.record(z.string(), z.unknown()).optional(),
+  }),
+);
 
-const recoverMarketCheckoutGuestTokenSchema = z.object({
-  orderId: z.preprocess((value) => {
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return String(value);
-    }
-    return value;
-  }, z.string().trim().min(1)),
-  phoneLastDigits: z
-    .string()
-    .regex(/^\d{3}$/)
-    .optional(),
-});
+const recoverMarketCheckoutGuestTokenSchema = z.lazy(() =>
+  z.object({
+    orderId: z.preprocess((value) => {
+      if (typeof value === "number" && Number.isFinite(value)) {
+        return String(value);
+      }
+      return value;
+    }, z.string().trim().min(1)),
+    phoneLastDigits: z
+      .string()
+      .regex(/^\d{3}$/)
+      .optional(),
+  }),
+);
 
-const refundMarketCheckoutSchema = z.object({
-  reason: z.string().max(500).optional(),
-});
+const refundMarketCheckoutSchema = z.lazy(() =>
+  z.object({
+    reason: z.string().max(500).optional(),
+  }),
+);
 
 app.post("/payment-webhooks/:provider", async (c) => {
   const provider = c.req.param("provider").toLowerCase();
@@ -719,9 +725,11 @@ app.post("/", optionalCanonicalCustomerAuthMiddleware, async (c) => {
   );
 });
 
-const applyVoucherSchema = z.object({
-  code: z.string().min(1).max(64),
-});
+const applyVoucherSchema = z.lazy(() =>
+  z.object({
+    code: z.string().min(1).max(64),
+  }),
+);
 
 // Apply a 卷 (voucher) code to an unpaid market checkout. Supports platform
 // vouchers, vendor-scoped vouchers, and stacked voucher bundles.

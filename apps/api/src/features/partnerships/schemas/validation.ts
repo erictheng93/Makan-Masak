@@ -72,39 +72,52 @@ const partnershipBaseSchema = z.object({
   metadata: z.record(z.string(), z.any()).optional(),
 });
 
-export const createPartnershipSchema = partnershipBaseSchema.extend({
-  verificationMethod: z
-    .enum(["manual", "email_domain", "id_card", "qr_code", "api"])
-    .default("manual"),
-});
+export const createPartnershipSchema = z.lazy(() =>
+  partnershipBaseSchema.extend({
+    verificationMethod: z
+      .enum(["manual", "email_domain", "id_card", "qr_code", "api"])
+      .default("manual"),
+  }),
+);
 
 /**
  * 更新合作夥伴Schema
  */
-export const updatePartnershipSchema = partnershipBaseSchema.partial();
+export const updatePartnershipSchema = z.lazy(() =>
+  partnershipBaseSchema.partial(),
+);
 
 /**
  * 合作夥伴查詢過濾器Schema
  */
-export const partnershipFiltersSchema = z.object({
-  partnerType: z
-    .enum(["university", "school", "corporation", "government", "ngo", "other"])
-    .optional(),
-  status: z
-    .enum(["draft", "active", "suspended", "expired", "terminated"])
-    .optional(),
-  isActive: z
-    .string()
-    .transform((val) => val === "true")
-    .optional(),
-  search: z.string().optional(),
-  contractActive: z
-    .string()
-    .transform((val) => val === "true")
-    .optional(),
-  page: boundedPageQuery(),
-  limit: boundedLimitQuery(),
-});
+export const partnershipFiltersSchema = z.lazy(() =>
+  z.object({
+    partnerType: z
+      .enum([
+        "university",
+        "school",
+        "corporation",
+        "government",
+        "ngo",
+        "other",
+      ])
+      .optional(),
+    status: z
+      .enum(["draft", "active", "suspended", "expired", "terminated"])
+      .optional(),
+    isActive: z
+      .string()
+      .transform((val) => val === "true")
+      .optional(),
+    search: z.string().optional(),
+    contractActive: z
+      .string()
+      .transform((val) => val === "true")
+      .optional(),
+    page: boundedPageQuery(),
+    limit: boundedLimitQuery(),
+  }),
+);
 
 // ================================================
 // PLAN SCHEMAS
@@ -171,50 +184,58 @@ const planBaseSchema = z.object({
   metadata: z.record(z.string(), z.any()).optional(),
 });
 
-export const createPlanSchema = planBaseSchema.extend({
-  minOrderAmount: z.number().nonnegative().optional().default(0),
-  priority: z.number().int().optional().default(0),
-  canCombineWithCoupons: z.boolean().optional().default(false),
-  canCombineWithPromotions: z.boolean().optional().default(false),
-  showOnMenu: z.boolean().optional().default(true),
-});
+export const createPlanSchema = z.lazy(() =>
+  planBaseSchema.extend({
+    minOrderAmount: z.number().nonnegative().optional().default(0),
+    priority: z.number().int().optional().default(0),
+    canCombineWithCoupons: z.boolean().optional().default(false),
+    canCombineWithPromotions: z.boolean().optional().default(false),
+    showOnMenu: z.boolean().optional().default(true),
+  }),
+);
 
 /**
  * 更新方案Schema
  */
-export const updatePlanSchema = planBaseSchema.partial().omit({
-  partnershipId: true,
-  restaurantId: true,
-});
+export const updatePlanSchema = z.lazy(() =>
+  planBaseSchema.partial().omit({
+    partnershipId: true,
+    restaurantId: true,
+  }),
+);
 
 /**
  * 方案查詢過濾器Schema
  */
-export const planFiltersSchema = z.object({
-  partnershipId: z.uuid().optional(),
-  restaurantId: z.string().optional(),
-  isActive: z
-    .string()
-    .transform((val) => val === "true")
-    .optional(),
-  validOnly: z
-    .string()
-    .transform((val) => val === "true")
-    .optional(),
-  page: boundedPageQuery(),
-  limit: boundedLimitQuery(),
-});
+export const planFiltersSchema = z.lazy(() =>
+  z.object({
+    partnershipId: z.uuid().optional(),
+    restaurantId: z.string().optional(),
+    isActive: z
+      .string()
+      .transform((val) => val === "true")
+      .optional(),
+    validOnly: z
+      .string()
+      .transform((val) => val === "true")
+      .optional(),
+    page: boundedPageQuery(),
+    limit: boundedLimitQuery(),
+  }),
+);
 
 /**
  * 驗證方案Schema
  */
-export const validatePlanSchema = z.object({
-  planId: z.uuid(),
-  memberId: z.uuid(),
-  orderAmount: z.number().positive(),
-  menuItems: z.array(z.string()).optional(),
-  categories: z.array(z.string()).optional(),
-});
+export const validatePlanSchema = z.lazy(() =>
+  z.object({
+    planId: z.uuid(),
+    memberId: z.uuid(),
+    orderAmount: z.number().positive(),
+    menuItems: z.array(z.string()).optional(),
+    categories: z.array(z.string()).optional(),
+  }),
+);
 
 // ================================================
 // MEMBER SCHEMAS
@@ -223,84 +244,94 @@ export const validatePlanSchema = z.object({
 /**
  * 會員認證申請Schema
  */
-export const memberVerificationSchema = z.object({
-  partnershipId: z.uuid(),
-  memberId: z.string().min(2).max(50), // 學號/工號
-  memberType: z.enum([
-    "student",
-    "employee",
-    "faculty",
-    "alumni",
-    "staff",
-    "other",
-  ]),
-  fullName: z.string().min(2).max(100),
-  email: z.email().optional(),
-  phone: z.string().min(8).max(20).optional(),
+export const memberVerificationSchema = z.lazy(() =>
+  z.object({
+    partnershipId: z.uuid(),
+    memberId: z.string().min(2).max(50), // 學號/工號
+    memberType: z.enum([
+      "student",
+      "employee",
+      "faculty",
+      "alumni",
+      "staff",
+      "other",
+    ]),
+    fullName: z.string().min(2).max(100),
+    email: z.email().optional(),
+    phone: z.string().min(8).max(20).optional(),
 
-  // 認證資訊
-  verificationMethod: z.enum([
-    "manual",
-    "email_domain",
-    "id_card",
-    "qr_code",
-    "api",
-  ]),
-  verificationDocumentUrl: z.url().optional(),
+    // 認證資訊
+    verificationMethod: z.enum([
+      "manual",
+      "email_domain",
+      "id_card",
+      "qr_code",
+      "api",
+    ]),
+    verificationDocumentUrl: z.url().optional(),
 
-  // 額外資訊
-  department: z.string().max(200).optional(),
-  gradeOrPosition: z.string().max(100).optional(),
-  studentIdPhotoUrl: z.url().optional(),
-});
+    // 額外資訊
+    department: z.string().max(200).optional(),
+    gradeOrPosition: z.string().max(100).optional(),
+    studentIdPhotoUrl: z.url().optional(),
+  }),
+);
 
 /**
  * 審核會員Schema
  */
-export const approveMemberSchema = z.object({
-  verificationExpiry: z.number().int().positive().optional(),
-});
+export const approveMemberSchema = z.lazy(() =>
+  z.object({
+    verificationExpiry: z.number().int().positive().optional(),
+  }),
+);
 
 /**
  * 拒絕會員Schema
  */
-export const rejectMemberSchema = z.object({
-  rejectionReason: z.string().min(5).max(500),
-});
+export const rejectMemberSchema = z.lazy(() =>
+  z.object({
+    rejectionReason: z.string().min(5).max(500),
+  }),
+);
 
 /**
  * 更新會員Schema
  */
-export const updateMemberSchema = z
-  .object({
-    email: z.email().optional(),
-    phone: z.string().min(8).max(20).optional(),
-    department: z.string().max(200).optional(),
-    gradeOrPosition: z.string().max(100).optional(),
-    notes: z.string().max(1000).optional(),
-    metadata: z.record(z.string(), z.any()).optional(),
-  })
-  .partial();
+export const updateMemberSchema = z.lazy(() =>
+  z
+    .object({
+      email: z.email().optional(),
+      phone: z.string().min(8).max(20).optional(),
+      department: z.string().max(200).optional(),
+      gradeOrPosition: z.string().max(100).optional(),
+      notes: z.string().max(1000).optional(),
+      metadata: z.record(z.string(), z.any()).optional(),
+    })
+    .partial(),
+);
 
 /**
  * 會員查詢過濾器Schema
  */
-export const memberFiltersSchema = z.object({
-  partnershipId: z.uuid().optional(),
-  status: z
-    .enum(["pending", "verified", "rejected", "expired", "suspended"])
-    .optional(),
-  memberType: z
-    .enum(["student", "employee", "faculty", "alumni", "staff", "other"])
-    .optional(),
-  search: z.string().optional(),
-  verifiedOnly: z
-    .string()
-    .transform((val) => val === "true")
-    .optional(),
-  page: boundedPageQuery(),
-  limit: boundedLimitQuery(),
-});
+export const memberFiltersSchema = z.lazy(() =>
+  z.object({
+    partnershipId: z.uuid().optional(),
+    status: z
+      .enum(["pending", "verified", "rejected", "expired", "suspended"])
+      .optional(),
+    memberType: z
+      .enum(["student", "employee", "faculty", "alumni", "staff", "other"])
+      .optional(),
+    search: z.string().optional(),
+    verifiedOnly: z
+      .string()
+      .transform((val) => val === "true")
+      .optional(),
+    page: boundedPageQuery(),
+    limit: boundedLimitQuery(),
+  }),
+);
 
 // ================================================
 // USAGE LOG SCHEMAS
@@ -309,60 +340,68 @@ export const memberFiltersSchema = z.object({
 /**
  * 記錄使用Schema
  */
-export const logUsageSchema = z.object({
-  partnershipId: z.uuid(),
-  planId: z.uuid(),
-  memberId: z.uuid(),
-  // orders.id is a text UUID/opaque id in the canonical DB schema.
-  orderId: idString,
-  restaurantId: z.string().min(1),
+export const logUsageSchema = z.lazy(() =>
+  z.object({
+    partnershipId: z.uuid(),
+    planId: z.uuid(),
+    memberId: z.uuid(),
+    // orders.id is a text UUID/opaque id in the canonical DB schema.
+    orderId: idString,
+    restaurantId: z.string().min(1),
 
-  // 折扣資訊
-  discountType: z.string(),
-  discountValue: z.number().nonnegative(),
-  discountAmount: z.number().nonnegative(),
+    // 折扣資訊
+    discountType: z.string(),
+    discountValue: z.number().nonnegative(),
+    discountAmount: z.number().nonnegative(),
 
-  // 訂單資訊
-  originalAmount: z.number().nonnegative(),
-  finalAmount: z.number().nonnegative(),
-  orderItems: z.array(z.any()).optional(),
+    // 訂單資訊
+    originalAmount: z.number().nonnegative(),
+    finalAmount: z.number().nonnegative(),
+    orderItems: z.array(z.any()).optional(),
 
-  // 使用資訊
-  channel: z.enum(["dine_in", "takeaway", "delivery", "online"]).optional(),
-  verificationMethod: z.string().optional(),
-  verifiedByUserId: z.number().int().positive().optional(),
+    // 使用資訊
+    channel: z.enum(["dine_in", "takeaway", "delivery", "online"]).optional(),
+    verificationMethod: z.string().optional(),
+    verifiedByUserId: z.number().int().positive().optional(),
 
-  // 額外資訊
-  metadata: z.record(z.string(), z.any()).optional(),
-});
+    // 額外資訊
+    metadata: z.record(z.string(), z.any()).optional(),
+  }),
+);
 
 /**
  * 使用記錄查詢過濾器Schema
  */
-export const usageLogFiltersSchema = z.object({
-  partnershipId: z.uuid().optional(),
-  planId: z.uuid().optional(),
-  memberId: z.uuid().optional(),
-  restaurantId: z.string().optional(),
-  status: z.enum(["pending", "completed", "cancelled", "refunded"]).optional(),
-  startDate: z
-    .string()
-    .transform((val) => new Date(val).getTime())
-    .optional(),
-  endDate: z
-    .string()
-    .transform((val) => new Date(val).getTime())
-    .optional(),
-  page: boundedPageQuery(),
-  limit: boundedLimitQuery(),
-});
+export const usageLogFiltersSchema = z.lazy(() =>
+  z.object({
+    partnershipId: z.uuid().optional(),
+    planId: z.uuid().optional(),
+    memberId: z.uuid().optional(),
+    restaurantId: z.string().optional(),
+    status: z
+      .enum(["pending", "completed", "cancelled", "refunded"])
+      .optional(),
+    startDate: z
+      .string()
+      .transform((val) => new Date(val).getTime())
+      .optional(),
+    endDate: z
+      .string()
+      .transform((val) => new Date(val).getTime())
+      .optional(),
+    page: boundedPageQuery(),
+    limit: boundedLimitQuery(),
+  }),
+);
 
 /**
  * 取消使用記錄Schema
  */
-export const cancelUsageSchema = z.object({
-  reason: z.string().min(5).max(500),
-});
+export const cancelUsageSchema = z.lazy(() =>
+  z.object({
+    reason: z.string().min(5).max(500),
+  }),
+);
 
 // ================================================
 // COMMON SCHEMAS
@@ -378,16 +417,20 @@ export const idParamSchema = z.object({
 /**
  * Partnership ID參數Schema
  */
-export const partnershipIdParamSchema = z.object({
-  partnershipId: z.uuid(),
-});
+export const partnershipIdParamSchema = z.lazy(() =>
+  z.object({
+    partnershipId: z.uuid(),
+  }),
+);
 
 /**
  * Plan ID參數Schema
  */
-export const planIdParamSchema = z.object({
-  planId: z.uuid(),
-});
+export const planIdParamSchema = z.lazy(() =>
+  z.object({
+    planId: z.uuid(),
+  }),
+);
 
 /**
  * Member ID參數Schema

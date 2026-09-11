@@ -25,39 +25,45 @@ export const createRegisterSchema = z.object({
   settings: z.record(z.string(), z.any()).optional(),
 });
 
-export const startShiftSchema = z.object({
-  registerId: z.uuid(),
-  operatorId: idString,
-  startAmount: z.number().min(0).refine(isCentAlignedAmount, {
-    message: "startAmount must not have more than two decimal places",
+export const startShiftSchema = z.lazy(() =>
+  z.object({
+    registerId: z.uuid(),
+    operatorId: idString,
+    startAmount: z.number().min(0).refine(isCentAlignedAmount, {
+      message: "startAmount must not have more than two decimal places",
+    }),
+    notes: z.string().max(500).optional(),
   }),
-  notes: z.string().max(500).optional(),
-});
+);
 
-export const endShiftSchema = z.object({
-  actualAmount: z.number().min(0).refine(isCentAlignedAmount, {
-    message: "actualAmount must not have more than two decimal places",
+export const endShiftSchema = z.lazy(() =>
+  z.object({
+    actualAmount: z.number().min(0).refine(isCentAlignedAmount, {
+      message: "actualAmount must not have more than two decimal places",
+    }),
+    closingNotes: z.string().max(500).optional(),
   }),
-  closingNotes: z.string().max(500).optional(),
-});
+);
 
-export const cashMovementSchema = z.object({
-  type: z.enum([
-    "cash_in",
-    "cash_out",
-    "count",
-    "adjustment",
-    "payout",
-    "deposit",
-  ]),
-  amount: z.number().refine(isCentAlignedAmount, {
-    message: "amount must not have more than two decimal places",
+export const cashMovementSchema = z.lazy(() =>
+  z.object({
+    type: z.enum([
+      "cash_in",
+      "cash_out",
+      "count",
+      "adjustment",
+      "payout",
+      "deposit",
+    ]),
+    amount: z.number().refine(isCentAlignedAmount, {
+      message: "amount must not have more than two decimal places",
+    }),
+    description: z.string().min(1).max(200),
+    denominationBreakdown: z.record(z.string(), z.number()).optional(),
+    referenceId: z.number().int().positive().optional(),
+    referenceType: z.string().optional(),
   }),
-  description: z.string().min(1).max(200),
-  denominationBreakdown: z.record(z.string(), z.number()).optional(),
-  referenceId: z.number().int().positive().optional(),
-  referenceType: z.string().optional(),
-});
+);
 
 export const printReceiptSchema = z.object({
   orderId: idString,
@@ -82,35 +88,47 @@ export const processRefundSchema = z.object({
   customerSignature: z.string().optional(),
 });
 
-export const marketCheckoutPosPaymentSchema = z.object({
-  registerId: z.uuid(),
-  shiftId: z.uuid().optional(),
-  paymentMethod: z.enum(["cash", "card", "digital_wallet"]).default("cash"),
-  country: z.enum(["TW", "MY", "VN"]).optional().default("TW"),
-  currency: z.enum(["TWD", "MYR", "VND"]).optional().default("TWD"),
-});
+export const marketCheckoutPosPaymentSchema = z.lazy(() =>
+  z.object({
+    registerId: z.uuid(),
+    shiftId: z.uuid().optional(),
+    paymentMethod: z.enum(["cash", "card", "digital_wallet"]).default("cash"),
+    country: z.enum(["TW", "MY", "VN"]).optional().default("TW"),
+    currency: z.enum(["TWD", "MYR", "VND"]).optional().default("TWD"),
+  }),
+);
 
-export const registerParamsSchema = z.object({
-  registerId: z.uuid(),
-});
+export const registerParamsSchema = z.lazy(() =>
+  z.object({
+    registerId: z.uuid(),
+  }),
+);
 
-export const printAgentParamsSchema = z.object({
-  agentId: z.uuid(),
-});
+export const printAgentParamsSchema = z.lazy(() =>
+  z.object({
+    agentId: z.uuid(),
+  }),
+);
 
-export const issuePrintAgentSchema = z.object({
-  label: z.string().trim().min(1).max(100),
-  // 省略 = 全店代理（廚房出單機之類），只拿沒有收銀機的收據。
-  registerId: z.uuid().optional(),
-});
+export const issuePrintAgentSchema = z.lazy(() =>
+  z.object({
+    label: z.string().trim().min(1).max(100),
+    // 省略 = 全店代理（廚房出單機之類），只拿沒有收銀機的收據。
+    registerId: z.uuid().optional(),
+  }),
+);
 
-export const shiftParamsSchema = z.object({
-  shiftId: z.uuid(),
-});
+export const shiftParamsSchema = z.lazy(() =>
+  z.object({
+    shiftId: z.uuid(),
+  }),
+);
 
-export const receiptParamsSchema = z.object({
-  receiptId: z.uuid(),
-});
+export const receiptParamsSchema = z.lazy(() =>
+  z.object({
+    receiptId: z.uuid(),
+  }),
+);
 
 export const queryPaginationSchema = z.object({
   page: boundedPageQuery(),
@@ -122,30 +140,34 @@ export const dateRangeQuerySchema = z.object({
   dateTo: z.iso.datetime().optional(),
 });
 
-export const registerQuerySchema = z
-  .object({
-    restaurantId: z.string().optional(),
-  })
-  .merge(queryPaginationSchema);
+export const registerQuerySchema = z.lazy(() =>
+  z
+    .object({
+      restaurantId: z.string().optional(),
+    })
+    .merge(queryPaginationSchema),
+);
 
-export const movementsQuerySchema = z
-  .object({
-    type: z
-      .enum([
-        "sale",
-        "refund",
-        "cash_in",
-        "cash_out",
-        "count",
-        "opening",
-        "closing",
-        "adjustment",
-        "payout",
-        "deposit",
-      ])
-      .optional(),
-  })
-  .merge(queryPaginationSchema);
+export const movementsQuerySchema = z.lazy(() =>
+  z
+    .object({
+      type: z
+        .enum([
+          "sale",
+          "refund",
+          "cash_in",
+          "cash_out",
+          "count",
+          "opening",
+          "closing",
+          "adjustment",
+          "payout",
+          "deposit",
+        ])
+        .optional(),
+    })
+    .merge(queryPaginationSchema),
+);
 
 export const statsQuerySchema = z
   .object({

@@ -26,10 +26,12 @@ app.get(
   authMiddleware,
   requireRole([0, 1]), // Admin or Owner
   validateQuery(
-    z.object({
-      restaurantId: z.string().optional(),
-      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    }),
+    z.lazy(() =>
+      z.object({
+        restaurantId: z.string().optional(),
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      }),
+    ),
   ),
   async (c) => {
     const user = c.get("user");
@@ -71,10 +73,12 @@ app.get(
   authMiddleware,
   requireRole([0, 1]), // Admin or Owner
   validateQuery(
-    z.object({
-      restaurantId: z.string().optional(),
-      period: z.enum(["day", "week", "month"]).optional().default("day"),
-    }),
+    z.lazy(() =>
+      z.object({
+        restaurantId: z.string().optional(),
+        period: z.enum(["day", "week", "month"]).optional().default("day"),
+      }),
+    ),
   ),
   async (c) => {
     const user = c.get("user");
@@ -119,21 +123,23 @@ app.get(
   authMiddleware,
   requireRole([0, 1]), // Admin or Owner
   validateQuery(
-    z.object({
-      restaurantId: z.string().optional(),
-      type: z.enum(["daily", "shift", "register-usage"]),
-      format: z.enum(["json", "csv", "pdf"]).optional().default("json"),
-      startDate: z
-        .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/)
-        .optional(),
-      endDate: z
-        .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/)
-        .optional(),
-      shiftId: z.uuid().optional(),
-      registerId: z.uuid().optional(),
-    }),
+    z.lazy(() =>
+      z.object({
+        restaurantId: z.string().optional(),
+        type: z.enum(["daily", "shift", "register-usage"]),
+        format: z.enum(["json", "csv", "pdf"]).optional().default("json"),
+        startDate: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .optional(),
+        endDate: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .optional(),
+        shiftId: z.uuid().optional(),
+        registerId: z.uuid().optional(),
+      }),
+    ),
   ),
   async (c) => {
     const user = c.get("user");

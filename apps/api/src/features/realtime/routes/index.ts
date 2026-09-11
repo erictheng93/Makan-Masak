@@ -205,10 +205,12 @@ realtimeRoutes.post(
 realtimeRoutes.post(
   "/auth/verify",
   validateBody(
-    z.object({
-      token: z.string().min(1, "Token is required"),
-      channel: z.string().min(1, "Channel is required").optional(),
-    }),
+    z.lazy(() =>
+      z.object({
+        token: z.string().min(1, "Token is required"),
+        channel: z.string().min(1, "Channel is required").optional(),
+      }),
+    ),
   ),
   async (c) => {
     const { token, channel } = c.get("validatedBody");
@@ -257,21 +259,23 @@ realtimeRoutes.post(
   authMiddleware,
   requireRole([0]),
   validateBody(
-    z.object({
-      token: z.string().min(1, "Token is required"),
-      reason: z
-        .enum([
-          "logout",
-          "password_change",
-          "permission_change",
-          "security_breach",
-          "admin_action",
-          "session_expired",
-          "manual",
-        ])
-        .default("manual"),
-      revokedBy: z.string().optional(),
-    }),
+    z.lazy(() =>
+      z.object({
+        token: z.string().min(1, "Token is required"),
+        reason: z
+          .enum([
+            "logout",
+            "password_change",
+            "permission_change",
+            "security_breach",
+            "admin_action",
+            "session_expired",
+            "manual",
+          ])
+          .default("manual"),
+        revokedBy: z.string().optional(),
+      }),
+    ),
   ),
   async (c) => {
     const { token, reason } = c.get("validatedBody");
@@ -315,21 +319,23 @@ realtimeRoutes.post(
   authMiddleware,
   requireRole([0]),
   validateBody(
-    z.object({
-      userId: z.string().min(1, "User ID is required"),
-      reason: z
-        .enum([
-          "logout",
-          "password_change",
-          "permission_change",
-          "security_breach",
-          "admin_action",
-          "session_expired",
-          "manual",
-        ])
-        .default("admin_action"),
-      revokedBy: z.string().optional(),
-    }),
+    z.lazy(() =>
+      z.object({
+        userId: z.string().min(1, "User ID is required"),
+        reason: z
+          .enum([
+            "logout",
+            "password_change",
+            "permission_change",
+            "security_breach",
+            "admin_action",
+            "session_expired",
+            "manual",
+          ])
+          .default("admin_action"),
+        revokedBy: z.string().optional(),
+      }),
+    ),
   ),
   async (c) => {
     const { userId, reason } = c.get("validatedBody");

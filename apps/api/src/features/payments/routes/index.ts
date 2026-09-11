@@ -28,84 +28,90 @@ const centAlignedAmount = (schema: z.ZodNumber) =>
     message: "amount must not have more than two decimal places",
   });
 
-const createPaymentRequestSchema = z
-  .object({
-    orderId: z.string().min(1),
-    restaurantId: z.string().min(1),
-    country: z.enum(["TW", "MY", "VN"]),
-    currency: z.enum(["TWD", "MYR", "VND"]),
-    amount: centAlignedAmount(z.number().finite().positive()),
-    method: z.string().min(1).max(50),
-    customerInfo: z
-      .object({
-        name: z.string().optional(),
-        email: z.email().optional(),
-        phone: z.string().optional(),
-      })
-      .optional(),
-    metadata: z.record(z.string(), z.unknown()).optional(),
-    returnUrl: z.url().optional(),
-    cancelUrl: z.url().optional(),
-  })
-  .loose();
+const createPaymentRequestSchema = z.lazy(() =>
+  z
+    .object({
+      orderId: z.string().min(1),
+      restaurantId: z.string().min(1),
+      country: z.enum(["TW", "MY", "VN"]),
+      currency: z.enum(["TWD", "MYR", "VND"]),
+      amount: centAlignedAmount(z.number().finite().positive()),
+      method: z.string().min(1).max(50),
+      customerInfo: z
+        .object({
+          name: z.string().optional(),
+          email: z.email().optional(),
+          phone: z.string().optional(),
+        })
+        .optional(),
+      metadata: z.record(z.string(), z.unknown()).optional(),
+      returnUrl: z.url().optional(),
+      cancelUrl: z.url().optional(),
+    })
+    .loose(),
+);
 
-const rootPaymentRequestSchema = z
-  .object({
-    orderId: z.string().min(1),
-    restaurantId: z.string().min(1).optional(),
-    country: z.enum(["TW", "MY", "VN"]).optional().default("TW"),
-    currency: z.enum(["TWD", "MYR", "VND"]).optional().default("TWD"),
-    paymentMode: z.enum(["full", "partial"]).optional().default("full"),
-    expectedTotal: centAlignedAmount(
-      z.number().finite().nonnegative(),
-    ).optional(),
-    payments: z
-      .array(
-        z.object({
-          method: z.string().min(1).max(50),
-          amount: centAlignedAmount(z.number().finite().nonnegative()),
-        }),
-      )
-      .min(1)
-      .max(20)
-      .optional(),
-    closeOrder: z.boolean().optional(),
-    method: z.string().min(1).max(50).optional(),
-    amount: centAlignedAmount(z.number().finite().nonnegative()).optional(),
-    gateway: z.string().min(1).max(50).optional(),
-    customerInfo: z
-      .object({
-        name: z.string().optional(),
-        email: z.email().optional(),
-        phone: z.string().optional(),
-      })
-      .optional(),
-    metadata: z.record(z.string(), z.unknown()).optional(),
-  })
-  .loose()
-  .superRefine((value, ctx) => {
-    if (value.paymentMode === "partial" && !value.payments?.length) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["payments"],
-        message: "payments are required for partial payment mode",
-      });
-    }
+const rootPaymentRequestSchema = z.lazy(() =>
+  z
+    .object({
+      orderId: z.string().min(1),
+      restaurantId: z.string().min(1).optional(),
+      country: z.enum(["TW", "MY", "VN"]).optional().default("TW"),
+      currency: z.enum(["TWD", "MYR", "VND"]).optional().default("TWD"),
+      paymentMode: z.enum(["full", "partial"]).optional().default("full"),
+      expectedTotal: centAlignedAmount(
+        z.number().finite().nonnegative(),
+      ).optional(),
+      payments: z
+        .array(
+          z.object({
+            method: z.string().min(1).max(50),
+            amount: centAlignedAmount(z.number().finite().nonnegative()),
+          }),
+        )
+        .min(1)
+        .max(20)
+        .optional(),
+      closeOrder: z.boolean().optional(),
+      method: z.string().min(1).max(50).optional(),
+      amount: centAlignedAmount(z.number().finite().nonnegative()).optional(),
+      gateway: z.string().min(1).max(50).optional(),
+      customerInfo: z
+        .object({
+          name: z.string().optional(),
+          email: z.email().optional(),
+          phone: z.string().optional(),
+        })
+        .optional(),
+      metadata: z.record(z.string(), z.unknown()).optional(),
+    })
+    .loose()
+    .superRefine((value, ctx) => {
+      if (value.paymentMode === "partial" && !value.payments?.length) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["payments"],
+          message: "payments are required for partial payment mode",
+        });
+      }
 
-    if (value.paymentMode === "full" && value.amount === undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["amount"],
-        message: "amount is required for full payment mode",
-      });
-    }
-  });
+      if (value.paymentMode === "full" && value.amount === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["amount"],
+          message: "amount is required for full payment mode",
+        });
+      }
+    }),
+);
 
-const refundSchema = z.object({
-  transactionId: z.string().min(1),
-  amount: centAlignedAmount(z.number().finite().positive()).optional(),
-  reason: z.string().max(500).optional(),
-});
+const refundSchema = z.lazy(() =>
+  z.object({
+    transactionId: z.string().min(1),
+    amount: centAlignedAmount(z.number().finite().positive()).optional(),
+    reason: z.string().max(500).optional(),
+  }),
+);
 
 const paymentMethodsByCountry: Record<string, string[]> = {
   TW: ["credit_card", "debit_card", "ecpay", "newebpay", "line_pay"],

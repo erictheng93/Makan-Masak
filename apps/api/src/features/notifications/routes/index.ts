@@ -28,50 +28,54 @@ const idString = z.preprocess((value) => {
   return value;
 }, z.string().trim().min(1));
 
-const testNotificationSchema = z.object({
-  /**
-   * 測試信的收件人。省略時預設寄給呼叫者本人；填了就必須是同店員工，
-   * 且 recipientEmail 要與該帳號的 email 相符（與 /send 同一套檢查）。
-   */
-  recipientId: idString.optional(),
-  recipientEmail: z.email(),
-  category: z.enum([
-    "leave_request_submitted",
-    "leave_request_approved",
-    "leave_request_rejected",
-    "leave_request_cancelled",
-    "schedule_created",
-    "schedule_updated",
-    "schedule_cancelled",
-    "swap_request_created",
-    "swap_request_approved",
-    "swap_request_rejected",
-    "shift_reminder",
-  ]),
-  type: z.enum(["email", "sms"]).default("email"),
-});
+const testNotificationSchema = z.lazy(() =>
+  z.object({
+    /**
+     * 測試信的收件人。省略時預設寄給呼叫者本人；填了就必須是同店員工，
+     * 且 recipientEmail 要與該帳號的 email 相符（與 /send 同一套檢查）。
+     */
+    recipientId: idString.optional(),
+    recipientEmail: z.email(),
+    category: z.enum([
+      "leave_request_submitted",
+      "leave_request_approved",
+      "leave_request_rejected",
+      "leave_request_cancelled",
+      "schedule_created",
+      "schedule_updated",
+      "schedule_cancelled",
+      "swap_request_created",
+      "swap_request_approved",
+      "swap_request_rejected",
+      "shift_reminder",
+    ]),
+    type: z.enum(["email", "sms"]).default("email"),
+  }),
+);
 
-const sendNotificationSchema = z.object({
-  recipientId: idString,
-  recipientEmail: z.email(),
-  category: z.enum([
-    "leave_request_submitted",
-    "leave_request_approved",
-    "leave_request_rejected",
-    "leave_request_cancelled",
-    "schedule_created",
-    "schedule_updated",
-    "schedule_cancelled",
-    "swap_request_created",
-    "swap_request_approved",
-    "swap_request_rejected",
-    "shift_reminder",
-  ]),
-  type: z.enum(["email", "sms"]).default("email"),
-  data: z.record(z.string(), z.any()),
-  priority: z.enum(["high", "normal", "low"]).default("normal"),
-  recipientPhone: z.string().optional(),
-});
+const sendNotificationSchema = z.lazy(() =>
+  z.object({
+    recipientId: idString,
+    recipientEmail: z.email(),
+    category: z.enum([
+      "leave_request_submitted",
+      "leave_request_approved",
+      "leave_request_rejected",
+      "leave_request_cancelled",
+      "schedule_created",
+      "schedule_updated",
+      "schedule_cancelled",
+      "swap_request_created",
+      "swap_request_approved",
+      "swap_request_rejected",
+      "shift_reminder",
+    ]),
+    type: z.enum(["email", "sms"]).default("email"),
+    data: z.record(z.string(), z.any()),
+    priority: z.enum(["high", "normal", "low"]).default("normal"),
+    recipientPhone: z.string().optional(),
+  }),
+);
 
 // Hono 的 Context 在 env 型別上是不變的（invariant，`set` 讓它逆變），
 // 所以這裡用泛型接住各路由自己的 Variables，而不是釘死成 Context<{Bindings: Env}>。

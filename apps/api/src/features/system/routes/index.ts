@@ -20,7 +20,7 @@ import { isDeepHealthRequest, probeCache } from "../../../core/health/probe";
 
 // Create feature router
 const routes = new Hono<{ Bindings: Env }>();
-const systemTelemetrySchema = z.object({}).loose();
+const systemTelemetrySchema = z.lazy(() => z.object({}).loose());
 
 function createTelemetryId(payload: Record<string, unknown>): string {
   for (const key of ["report_id", "reportId", "sync_id", "syncId", "id"]) {
@@ -898,9 +898,11 @@ routes.get(
   authMiddleware,
   requireRole([0]), // 僅管理員
   validateQuery(
-    z.object({
-      format: z.enum(["json", "prometheus"]).optional().default("json"),
-    }),
+    z.lazy(() =>
+      z.object({
+        format: z.enum(["json", "prometheus"]).optional().default("json"),
+      }),
+    ),
   ),
   async (c) => {
     const { format } = c.get("validatedQuery");

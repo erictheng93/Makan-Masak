@@ -27,19 +27,21 @@ const printReceiptRouteSchema = printReceiptSchema.extend({
   orderId: z.union([z.number().int().positive(), z.string().min(1)]),
 });
 
-export const receiptListQuerySchema = z.object({
-  startDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  endDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  receiptType: z.enum(["customer", "kitchen", "merchant"]).optional(),
-  page: boundedPageQuery(),
-  limit: boundedLimitQuery(),
-});
+export const receiptListQuerySchema = z.lazy(() =>
+  z.object({
+    startDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+    endDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+    receiptType: z.enum(["customer", "kitchen", "merchant"]).optional(),
+    page: boundedPageQuery(),
+    limit: boundedLimitQuery(),
+  }),
+);
 
 /**
  * 打印收據
@@ -175,9 +177,11 @@ app.get(
   authMiddleware,
   requireRole([0, 1, 4]), // Admin, Owner, Cashier
   validateParams(
-    z.object({
-      registerId: z.uuid(),
-    }),
+    z.lazy(() =>
+      z.object({
+        registerId: z.uuid(),
+      }),
+    ),
   ),
   validateQuery(receiptListQuerySchema),
   async (c) => {

@@ -44,14 +44,16 @@ function optionalCount(raw: string | undefined): number | undefined {
     : undefined;
 }
 
-const acknowledgementSchema = z.object({
-  // Additive on purpose: an agent that predates `indeterminate` only ever
-  // sends the first two values and keeps working untouched, so no version gate
-  // is needed on either side.
-  status: z.enum(["printed", "failed", "indeterminate"]),
-  printerName: z.string().trim().max(200).optional(),
-  response: z.string().max(2000).optional(),
-});
+const acknowledgementSchema = z.lazy(() =>
+  z.object({
+    // Additive on purpose: an agent that predates `indeterminate` only ever
+    // sends the first two values and keeps working untouched, so no version gate
+    // is needed on either side.
+    status: z.enum(["printed", "failed", "indeterminate"]),
+    printerName: z.string().trim().max(200).optional(),
+    response: z.string().max(2000).optional(),
+  }),
+);
 
 interface AgentIdentity {
   agentId: string;

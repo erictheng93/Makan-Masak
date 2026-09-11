@@ -17,9 +17,11 @@ app.post(
   authMiddleware,
   requireRole([0, 1, 4]),
   validateParams(
-    z.object({
-      checkoutId: z.string().min(1),
-    }),
+    z.lazy(() =>
+      z.object({
+        checkoutId: z.string().min(1),
+      }),
+    ),
   ),
   validateBody(marketCheckoutPosPaymentSchema),
   async (c) => {

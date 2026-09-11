@@ -24,19 +24,23 @@ const app = new Hono<{ Bindings: Env }>();
 const logger = new ConsoleLogger("CustomersRoutes");
 
 // Validation schema for order query
-export const myOrdersSchema = z.object({
-  page: boundedPageQuery(),
-  limit: boundedLimitQuery(),
-  status: z.union([z.string(), z.array(z.string())]).optional(),
-  dateFrom: z.string().optional(),
-  dateTo: z.string().optional(),
-});
+export const myOrdersSchema = z.lazy(() =>
+  z.object({
+    page: boundedPageQuery(),
+    limit: boundedLimitQuery(),
+    status: z.union([z.string(), z.array(z.string())]).optional(),
+    dateFrom: z.string().optional(),
+    dateTo: z.string().optional(),
+  }),
+);
 type MyOrdersQuery = z.infer<typeof myOrdersSchema>;
 
-export const myMarketCheckoutsSchema = z.object({
-  page: boundedPageQuery(),
-  limit: boundedLimitQuery(),
-});
+export const myMarketCheckoutsSchema = z.lazy(() =>
+  z.object({
+    page: boundedPageQuery(),
+    limit: boundedLimitQuery(),
+  }),
+);
 
 function toOrderStatuses(status: MyOrdersQuery["status"]): DbOrderStatus[] {
   return (typeof status === "string" ? [status] : status) as DbOrderStatus[];

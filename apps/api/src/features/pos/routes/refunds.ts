@@ -33,31 +33,33 @@ const processRefundRouteSchema = processRefundSchema.extend({
  * 沒有任何一層擋。同名的路徑參數在本檔其他路由都是 z.uuid()；header 版本先前
  * 是任意字串就直接進服務層查詢，並被原封不動寫進 refunds.register_id。
  */
-const posLedgerIdSchema = z.uuid();
+const posLedgerIdSchema = z.lazy(() => z.uuid());
 
-export const refundListQuerySchema = z.object({
-  startDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  endDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  status: z
-    .enum(["pending", "processing", "completed", "failed", "cancelled"])
-    .optional(),
-  orderId: z
-    .preprocess((value) => {
-      if (typeof value === "number" && Number.isFinite(value)) {
-        return String(value);
-      }
-      return value;
-    }, z.string().trim().min(1))
-    .optional(),
-  page: boundedPageQuery(),
-  limit: boundedLimitQuery(),
-});
+export const refundListQuerySchema = z.lazy(() =>
+  z.object({
+    startDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+    endDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+    status: z
+      .enum(["pending", "processing", "completed", "failed", "cancelled"])
+      .optional(),
+    orderId: z
+      .preprocess((value) => {
+        if (typeof value === "number" && Number.isFinite(value)) {
+          return String(value);
+        }
+        return value;
+      }, z.string().trim().min(1))
+      .optional(),
+    page: boundedPageQuery(),
+    limit: boundedLimitQuery(),
+  }),
+);
 
 function createRefundService(env: Env): RefundService {
   let alertSink: RefundServiceOptions["alertSink"];
@@ -144,9 +146,11 @@ app.get(
   authMiddleware,
   requireRole([0, 1, 4]), // Admin, Owner, Cashier
   validateParams(
-    z.object({
-      registerId: z.uuid(),
-    }),
+    z.lazy(() =>
+      z.object({
+        registerId: z.uuid(),
+      }),
+    ),
   ),
   validateQuery(refundListQuerySchema),
   async (c) => {
@@ -188,9 +192,11 @@ app.get(
   authMiddleware,
   requireRole([0, 1, 4]), // Admin, Owner, Cashier
   validateParams(
-    z.object({
-      refundId: z.uuid(),
-    }),
+    z.lazy(() =>
+      z.object({
+        refundId: z.uuid(),
+      }),
+    ),
   ),
   async (c) => {
     const { refundId } = c.get("validatedParams");
@@ -225,9 +231,11 @@ app.post(
   authMiddleware,
   requireRole([0, 1]), // Admin or Owner only
   validateParams(
-    z.object({
-      refundId: z.uuid(),
-    }),
+    z.lazy(() =>
+      z.object({
+        refundId: z.uuid(),
+      }),
+    ),
   ),
   async (c) => {
     const { refundId } = c.get("validatedParams");
@@ -257,14 +265,18 @@ app.post(
   authMiddleware,
   requireRole([0, 1]), // Admin or Owner only
   validateParams(
-    z.object({
-      refundId: z.uuid(),
-    }),
+    z.lazy(() =>
+      z.object({
+        refundId: z.uuid(),
+      }),
+    ),
   ),
   validateBody(
-    z.object({
-      reason: z.string().max(200).optional(),
-    }),
+    z.lazy(() =>
+      z.object({
+        reason: z.string().max(200).optional(),
+      }),
+    ),
   ),
   async (c) => {
     const { refundId } = c.get("validatedParams");
@@ -295,14 +307,18 @@ app.post(
   authMiddleware,
   requireRole([0, 1]), // Admin or Owner only
   validateParams(
-    z.object({
-      refundId: z.uuid(),
-    }),
+    z.lazy(() =>
+      z.object({
+        refundId: z.uuid(),
+      }),
+    ),
   ),
   validateBody(
-    z.object({
-      reason: z.string().max(200).optional(),
-    }),
+    z.lazy(() =>
+      z.object({
+        reason: z.string().max(200).optional(),
+      }),
+    ),
   ),
   async (c) => {
     const { refundId } = c.get("validatedParams");

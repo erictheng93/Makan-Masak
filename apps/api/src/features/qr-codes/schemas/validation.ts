@@ -7,52 +7,54 @@ import { z } from "zod";
 import { VALIDATION_LIMITS } from "../../../shared/constants";
 
 // QR Style validation schema
-const qrStyleSchema = z.object({
-  backgroundColor: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .optional(),
-  foregroundColor: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .optional(),
-  size: z.number().int().min(100).max(1000).optional(),
-  errorCorrection: z.enum(["L", "M", "Q", "H"]).optional(),
-  cornerStyle: z.enum(["square", "rounded", "circle"]).optional(),
-  dotStyle: z.enum(["square", "rounded", "circle"]).optional(),
-  gradientType: z.enum(["none", "linear", "radial"]).optional(),
-  gradientColors: z
-    .object({
-      start: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-      end: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-      direction: z.number().min(0).max(360).optional(),
-    })
-    .optional(),
-  logo: z
-    .object({
-      url: z.string().url(),
-      size: z.number().min(0).max(30),
-      borderRadius: z.number().min(0).max(50),
-      margin: z.number().min(0).max(20),
-    })
-    .optional(),
-  border: z
-    .object({
-      width: z.number().min(0).max(20),
-      color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-      style: z.enum(["solid", "dashed", "dotted"]),
-    })
-    .optional(),
-  shadow: z
-    .object({
-      enabled: z.boolean(),
-      color: z.string().regex(/^#[0-9A-Fa-f]{8}$/),
-      blur: z.number().min(0).max(50),
-      offsetX: z.number().min(-50).max(50),
-      offsetY: z.number().min(-50).max(50),
-    })
-    .optional(),
-});
+const qrStyleSchema = z.lazy(() =>
+  z.object({
+    backgroundColor: z
+      .string()
+      .regex(/^#[0-9A-Fa-f]{6}$/)
+      .optional(),
+    foregroundColor: z
+      .string()
+      .regex(/^#[0-9A-Fa-f]{6}$/)
+      .optional(),
+    size: z.number().int().min(100).max(1000).optional(),
+    errorCorrection: z.enum(["L", "M", "Q", "H"]).optional(),
+    cornerStyle: z.enum(["square", "rounded", "circle"]).optional(),
+    dotStyle: z.enum(["square", "rounded", "circle"]).optional(),
+    gradientType: z.enum(["none", "linear", "radial"]).optional(),
+    gradientColors: z
+      .object({
+        start: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+        end: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+        direction: z.number().min(0).max(360).optional(),
+      })
+      .optional(),
+    logo: z
+      .object({
+        url: z.string().url(),
+        size: z.number().min(0).max(30),
+        borderRadius: z.number().min(0).max(50),
+        margin: z.number().min(0).max(20),
+      })
+      .optional(),
+    border: z
+      .object({
+        width: z.number().min(0).max(20),
+        color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+        style: z.enum(["solid", "dashed", "dotted"]),
+      })
+      .optional(),
+    shadow: z
+      .object({
+        enabled: z.boolean(),
+        color: z.string().regex(/^#[0-9A-Fa-f]{8}$/),
+        blur: z.number().min(0).max(50),
+        offsetX: z.number().min(-50).max(50),
+        offsetY: z.number().min(-50).max(50),
+      })
+      .optional(),
+  }),
+);
 
 // Common parameter schema
 const idParam = z.object({
@@ -64,32 +66,42 @@ const idParam = z.object({
     }),
 });
 
-const qrCodeIdParam = z.object({
-  id: z.string().min(1, "QR code ID is required"),
-});
+const qrCodeIdParam = z.lazy(() =>
+  z.object({
+    id: z.string().min(1, "QR code ID is required"),
+  }),
+);
 
-const batchIdParam = z.object({
-  batchId: z.string().min(1, "Batch ID is required"),
-});
+const batchIdParam = z.lazy(() =>
+  z.object({
+    batchId: z.string().min(1, "Batch ID is required"),
+  }),
+);
 
-const shopQrCodeParam = z.object({
-  qrCode: z
-    .string()
-    .min(1, "QR code is required")
-    // Two formats coexist:
-    //   - Seeded short codes:    SHOP-GRANDMA-001
-    //   - Generated UUID codes:  SHOP-019469a0-0001-7000-8000-000000000001-1775000000
-    // Allow alphanumerics + dashes throughout, with a SHOP- prefix.
-    .regex(/^SHOP-[A-Za-z0-9-]+$/, "Invalid shop QR code format"),
-});
+const shopQrCodeParam = z.lazy(() =>
+  z.object({
+    qrCode: z
+      .string()
+      .min(1, "QR code is required")
+      // Two formats coexist:
+      //   - Seeded short codes:    SHOP-GRANDMA-001
+      //   - Generated UUID codes:  SHOP-019469a0-0001-7000-8000-000000000001-1775000000
+      // Allow alphanumerics + dashes throughout, with a SHOP- prefix.
+      .regex(/^SHOP-[A-Za-z0-9-]+$/, "Invalid shop QR code format"),
+  }),
+);
 
-const signedQrEntityParam = z.object({
-  entityId: z.coerce.number().int().positive(),
-});
+const signedQrEntityParam = z.lazy(() =>
+  z.object({
+    entityId: z.coerce.number().int().positive(),
+  }),
+);
 
-const signedQrQuery = z.object({
-  qrCode: z.string().url().max(4096),
-});
+const signedQrQuery = z.lazy(() =>
+  z.object({
+    qrCode: z.string().url().max(4096),
+  }),
+);
 
 // QR Generation schemas
 const generateQRSchema = z.object({
@@ -113,30 +125,32 @@ const generateQRSchema = z.object({
 });
 
 // Bulk QR Generation schema
-const bulkQRSchema = z.object({
-  tables: z
-    .array(
-      z.object({
-        id: z.number().int().positive(),
-        name: z.string().min(1).max(VALIDATION_LIMITS.NAME_MAX_LENGTH),
-        content: z.string().min(1).max(2000),
-        customStyle: qrStyleSchema.optional(),
-      }),
-    )
-    .min(1, "At least one table is required")
-    .max(100, "Maximum 100 tables allowed"),
-  defaultStyle: qrStyleSchema.optional(),
-  format: z.enum(["png", "svg", "pdf", "zip"]).default("zip"),
-  includeMetadata: z.boolean().default(true),
-  pdfSettings: z
-    .object({
-      layout: z.enum(["grid", "list"]).default("grid"),
-      itemsPerPage: z.number().int().min(1).max(50).default(12),
-      pageSize: z.enum(["A4", "A3", "Letter"]).default("A4"),
-      includeTableInfo: z.boolean().default(true),
-    })
-    .optional(),
-});
+const bulkQRSchema = z.lazy(() =>
+  z.object({
+    tables: z
+      .array(
+        z.object({
+          id: z.number().int().positive(),
+          name: z.string().min(1).max(VALIDATION_LIMITS.NAME_MAX_LENGTH),
+          content: z.string().min(1).max(2000),
+          customStyle: qrStyleSchema.optional(),
+        }),
+      )
+      .min(1, "At least one table is required")
+      .max(100, "Maximum 100 tables allowed"),
+    defaultStyle: qrStyleSchema.optional(),
+    format: z.enum(["png", "svg", "pdf", "zip"]).default("zip"),
+    includeMetadata: z.boolean().default(true),
+    pdfSettings: z
+      .object({
+        layout: z.enum(["grid", "list"]).default("grid"),
+        itemsPerPage: z.number().int().min(1).max(50).default(12),
+        pageSize: z.enum(["A4", "A3", "Letter"]).default("A4"),
+        includeTableInfo: z.boolean().default(true),
+      })
+      .optional(),
+  }),
+);
 
 // Template schemas
 const createTemplateSchema = z.object({

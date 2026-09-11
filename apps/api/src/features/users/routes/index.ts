@@ -32,11 +32,13 @@ import type { CreateUserData, UserFilters } from "../types";
 
 const app = new Hono<{ Bindings: Env }>();
 type IdParamInput = { id: string };
-const userIdParamSchema = z.object({
-  id: z.string().trim().min(1),
-});
-const notificationSettingsSchema = z.object({}).loose();
-const userSyncSchema = z.object({}).loose();
+const userIdParamSchema = z.lazy(() =>
+  z.object({
+    id: z.string().trim().min(1),
+  }),
+);
+const notificationSettingsSchema = z.lazy(() => z.object({}).loose());
+const userSyncSchema = z.lazy(() => z.object({}).loose());
 type NotificationSettings = Record<string, unknown>;
 interface NotificationSettingsRecord {
   settings?: NotificationSettings;

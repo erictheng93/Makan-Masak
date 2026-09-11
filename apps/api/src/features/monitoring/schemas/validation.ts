@@ -19,46 +19,54 @@ function decodeHtmlEntities(str: string): string {
 }
 
 // Operator schema that handles HTML-escaped values from security middleware
-const operatorSchema = z
-  .string()
-  .transform(decodeHtmlEntities)
-  .pipe(z.enum([">", "<", ">=", "<=", "="]));
+const operatorSchema = z.lazy(() =>
+  z
+    .string()
+    .transform(decodeHtmlEntities)
+    .pipe(z.enum([">", "<", ">=", "<=", "="])),
+);
 
 // Alert rule creation schema
-export const alertRuleSchema = z.object({
-  name: z.string().min(1).max(100),
-  condition: z.string().min(1).max(500).transform(decodeHtmlEntities),
-  metric: z.string().min(1).max(100),
-  operator: operatorSchema,
-  threshold: z.number(),
-  duration: z.number().int().positive().max(3600),
-  config: z.object({
-    type: z.enum(["email", "slack", "webhook", "sms"]),
-    severity: z.enum(["info", "warning", "critical", "fatal"]),
-    enabled: z.boolean(),
-    interval: z.number().int().positive().optional(),
-    recipients: z.array(z.string()).optional(),
-    webhookUrl: z.url().optional(),
-    template: z.string().optional(),
+export const alertRuleSchema = z.lazy(() =>
+  z.object({
+    name: z.string().min(1).max(100),
+    condition: z.string().min(1).max(500).transform(decodeHtmlEntities),
+    metric: z.string().min(1).max(100),
+    operator: operatorSchema,
+    threshold: z.number(),
+    duration: z.number().int().positive().max(3600),
+    config: z.object({
+      type: z.enum(["email", "slack", "webhook", "sms"]),
+      severity: z.enum(["info", "warning", "critical", "fatal"]),
+      enabled: z.boolean(),
+      interval: z.number().int().positive().optional(),
+      recipients: z.array(z.string()).optional(),
+      webhookUrl: z.url().optional(),
+      template: z.string().optional(),
+    }),
   }),
-});
+);
 
 // Error recording schema
-export const recordErrorSchema = z.object({
-  type: z.string().min(1).max(50),
-  message: z.string().min(1).max(1000),
-  severity: z.enum(["info", "warning", "critical", "fatal"]),
-  metadata: z.record(z.string(), z.any()).optional(),
-});
+export const recordErrorSchema = z.lazy(() =>
+  z.object({
+    type: z.string().min(1).max(50),
+    message: z.string().min(1).max(1000),
+    severity: z.enum(["info", "warning", "critical", "fatal"]),
+    metadata: z.record(z.string(), z.any()).optional(),
+  }),
+);
 
 // Metrics query schema
-export const metricsQuerySchema = z.object({
-  period: z.enum(["1h", "6h", "24h", "7d", "30d"]).optional().default("24h"),
-  granularity: z
-    .enum(["1m", "5m", "15m", "1h", "6h"])
-    .optional()
-    .default("15m"),
-});
+export const metricsQuerySchema = z.lazy(() =>
+  z.object({
+    period: z.enum(["1h", "6h", "24h", "7d", "30d"]).optional().default("24h"),
+    granularity: z
+      .enum(["1m", "5m", "15m", "1h", "6h"])
+      .optional()
+      .default("15m"),
+  }),
+);
 
 /**
  * Overview query schema.
@@ -67,43 +75,51 @@ export const metricsQuerySchema = z.object({
  * /overview already loads it to derive keyMetrics and trends, so embedding
  * costs the API nothing and saves the caller a second round trip.
  */
-export const overviewQuerySchema = z.object({
-  include: z.enum(["metrics"]).optional(),
-});
+export const overviewQuerySchema = z.lazy(() =>
+  z.object({
+    include: z.enum(["metrics"]).optional(),
+  }),
+);
 
 // Performance report query schema
-export const performanceReportQuerySchema = z.object({
-  days: z.string().regex(/^\d+$/).transform(Number).optional().prefault("7"),
-});
+export const performanceReportQuerySchema = z.lazy(() =>
+  z.object({
+    days: z.string().regex(/^\d+$/).transform(Number).optional().prefault("7"),
+  }),
+);
 
 // Test alert schema
-export const testAlertSchema = z.object({
-  type: z.enum(["slack", "webhook"]),
-  severity: z.enum(["info", "warning", "critical", "fatal"]),
-  webhookUrl: z.url().optional(),
-});
+export const testAlertSchema = z.lazy(() =>
+  z.object({
+    type: z.enum(["slack", "webhook"]),
+    severity: z.enum(["info", "warning", "critical", "fatal"]),
+    webhookUrl: z.url().optional(),
+  }),
+);
 
 // Alert rule update schema
-export const updateAlertRuleSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  condition: z.string().min(1).max(500).optional(),
-  metric: z.string().min(1).max(100).optional(),
-  operator: operatorSchema.optional(),
-  threshold: z.number().optional(),
-  duration: z.number().int().positive().max(3600).optional(),
-  config: z
-    .object({
-      type: z.enum(["email", "slack", "webhook", "sms"]).optional(),
-      severity: z.enum(["info", "warning", "critical", "fatal"]).optional(),
-      enabled: z.boolean().optional(),
-      interval: z.number().int().positive().optional(),
-      recipients: z.array(z.string()).optional(),
-      webhookUrl: z.url().optional(),
-      template: z.string().optional(),
-    })
-    .optional(),
-  isActive: z.boolean().optional(),
-});
+export const updateAlertRuleSchema = z.lazy(() =>
+  z.object({
+    name: z.string().min(1).max(100).optional(),
+    condition: z.string().min(1).max(500).optional(),
+    metric: z.string().min(1).max(100).optional(),
+    operator: operatorSchema.optional(),
+    threshold: z.number().optional(),
+    duration: z.number().int().positive().max(3600).optional(),
+    config: z
+      .object({
+        type: z.enum(["email", "slack", "webhook", "sms"]).optional(),
+        severity: z.enum(["info", "warning", "critical", "fatal"]).optional(),
+        enabled: z.boolean().optional(),
+        interval: z.number().int().positive().optional(),
+        recipients: z.array(z.string()).optional(),
+        webhookUrl: z.url().optional(),
+        template: z.string().optional(),
+      })
+      .optional(),
+    isActive: z.boolean().optional(),
+  }),
+);
 
 // Common query parameters
 export const paginationSchema = z.object({
@@ -112,21 +128,25 @@ export const paginationSchema = z.object({
 });
 
 // Date range schema
-export const dateRangeSchema = z.object({
-  startDate: z.iso.datetime().optional(),
-  endDate: z.iso.datetime().optional(),
-});
+export const dateRangeSchema = z.lazy(() =>
+  z.object({
+    startDate: z.iso.datetime().optional(),
+    endDate: z.iso.datetime().optional(),
+  }),
+);
 
 // Monitoring configuration schema
-export const monitoringConfigSchema = z.object({
-  enableMetrics: z.boolean().default(true),
-  enableAlerts: z.boolean().default(true),
-  enablePerformanceTracking: z.boolean().default(true),
-  metricsRetentionDays: z.number().int().positive().max(365).default(30),
-  alertThrottleDuration: z.number().int().positive().default(300), // 5 minutes
-  defaultSlackWebhook: z.url().optional(),
-  enableDebugLogging: z.boolean().default(false),
-});
+export const monitoringConfigSchema = z.lazy(() =>
+  z.object({
+    enableMetrics: z.boolean().default(true),
+    enableAlerts: z.boolean().default(true),
+    enablePerformanceTracking: z.boolean().default(true),
+    metricsRetentionDays: z.number().int().positive().max(365).default(30),
+    alertThrottleDuration: z.number().int().positive().default(300), // 5 minutes
+    defaultSlackWebhook: z.url().optional(),
+    enableDebugLogging: z.boolean().default(false),
+  }),
+);
 
 // Export types derived from schemas
 export type AlertRuleCreateRequest = z.infer<typeof alertRuleSchema>;

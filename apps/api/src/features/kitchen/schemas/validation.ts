@@ -7,12 +7,14 @@ import { z } from "zod";
 import { boundedLimitQuery } from "../../../middleware/validation";
 
 // Order Item Status Update Schema
-export const orderItemStatusUpdateSchema = z.object({
-  status: z.enum(["pending", "preparing", "ready", "completed"], {
-    error: "Status must be one of: pending, preparing, ready, completed",
+export const orderItemStatusUpdateSchema = z.lazy(() =>
+  z.object({
+    status: z.enum(["pending", "preparing", "ready", "completed"], {
+      error: "Status must be one of: pending, preparing, ready, completed",
+    }),
+    notes: z.string().optional().default(""),
   }),
-  notes: z.string().optional().default(""),
-});
+);
 
 // Route Parameter Schemas
 export const restaurantIdSchema = z.object({
@@ -31,56 +33,60 @@ export const restaurantIdSchema = z.object({
   }),
 });
 
-export const orderItemParamsSchema = z.object({
-  restaurantId: z.string().transform((val) => {
-    const num = parseInt(val, 10);
-    if (isNaN(num) || num <= 0) {
-      throw new z.ZodError([
-        {
-          code: z.ZodIssueCode.custom,
-          message: "Restaurant ID must be a positive integer",
-          path: ["restaurantId"],
-        },
-      ]);
-    }
-    return num;
+export const orderItemParamsSchema = z.lazy(() =>
+  z.object({
+    restaurantId: z.string().transform((val) => {
+      const num = parseInt(val, 10);
+      if (isNaN(num) || num <= 0) {
+        throw new z.ZodError([
+          {
+            code: z.ZodIssueCode.custom,
+            message: "Restaurant ID must be a positive integer",
+            path: ["restaurantId"],
+          },
+        ]);
+      }
+      return num;
+    }),
+    orderId: z.string().transform((val) => {
+      const num = parseInt(val, 10);
+      if (isNaN(num) || num <= 0) {
+        throw new z.ZodError([
+          {
+            code: z.ZodIssueCode.custom,
+            message: "Order ID must be a positive integer",
+            path: ["orderId"],
+          },
+        ]);
+      }
+      return num;
+    }),
+    itemId: z.string().transform((val) => {
+      const num = parseInt(val, 10);
+      if (isNaN(num) || num <= 0) {
+        throw new z.ZodError([
+          {
+            code: z.ZodIssueCode.custom,
+            message: "Item ID must be a positive integer",
+            path: ["itemId"],
+          },
+        ]);
+      }
+      return num;
+    }),
   }),
-  orderId: z.string().transform((val) => {
-    const num = parseInt(val, 10);
-    if (isNaN(num) || num <= 0) {
-      throw new z.ZodError([
-        {
-          code: z.ZodIssueCode.custom,
-          message: "Order ID must be a positive integer",
-          path: ["orderId"],
-        },
-      ]);
-    }
-    return num;
-  }),
-  itemId: z.string().transform((val) => {
-    const num = parseInt(val, 10);
-    if (isNaN(num) || num <= 0) {
-      throw new z.ZodError([
-        {
-          code: z.ZodIssueCode.custom,
-          message: "Item ID must be a positive integer",
-          path: ["itemId"],
-        },
-      ]);
-    }
-    return num;
-  }),
-});
+);
 
 // Query Parameter Schemas
-export const kitchenOrdersQuerySchema = z.object({
-  includeHistory: z
-    .string()
-    .optional()
-    .transform((val) => val === "true"),
-  limit: boundedLimitQuery("50", 200),
-});
+export const kitchenOrdersQuerySchema = z.lazy(() =>
+  z.object({
+    includeHistory: z
+      .string()
+      .optional()
+      .transform((val) => val === "true"),
+    limit: boundedLimitQuery("50", 200),
+  }),
+);
 
 // Type exports for use in routes
 export type OrderItemStatusUpdate = z.infer<typeof orderItemStatusUpdateSchema>;

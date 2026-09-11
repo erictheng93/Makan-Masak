@@ -4,35 +4,41 @@ import type { Env } from "../../../types/env";
 import { authMiddleware } from "../../../middleware/auth";
 import { validateBody } from "../../../middleware/validation";
 
-const timeOfDaySchema = z
-  .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Expected HH:mm in 24-hour time");
+const timeOfDaySchema = z.lazy(() =>
+  z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Expected HH:mm in 24-hour time"),
+);
 
-const notificationSettingsSchema = z
-  .object({
-    newOrders: z.boolean(),
-    systemAlerts: z.boolean(),
-    backupStatus: z.boolean(),
-    performanceAlerts: z.boolean(),
-    userActivity: z.boolean(),
-    inventoryAlerts: z.boolean(),
-    revenueUpdates: z.boolean(),
-    sound: z.boolean(),
-    vibration: z.boolean(),
-    quietHours: z.object({
-      enabled: z.boolean(),
-      start: timeOfDaySchema,
-      end: timeOfDaySchema,
-    }),
-  })
-  .loose();
+const notificationSettingsSchema = z.lazy(() =>
+  z
+    .object({
+      newOrders: z.boolean(),
+      systemAlerts: z.boolean(),
+      backupStatus: z.boolean(),
+      performanceAlerts: z.boolean(),
+      userActivity: z.boolean(),
+      inventoryAlerts: z.boolean(),
+      revenueUpdates: z.boolean(),
+      sound: z.boolean(),
+      vibration: z.boolean(),
+      quietHours: z.object({
+        enabled: z.boolean(),
+        start: timeOfDaySchema,
+        end: timeOfDaySchema,
+      }),
+    })
+    .loose(),
+);
 
-const settingsSyncSchema = z
-  .object({
-    sync_id: z.string().min(1).max(200).optional(),
-    restaurant_id: z.union([z.string(), z.number()]).optional(),
-  })
-  .loose();
+const settingsSyncSchema = z.lazy(() =>
+  z
+    .object({
+      sync_id: z.string().min(1).max(200).optional(),
+      restaurant_id: z.union([z.string(), z.number()]).optional(),
+    })
+    .loose(),
+);
 
 type NotificationSettings = z.infer<typeof notificationSettingsSchema>;
 type SettingsSyncInput = z.infer<typeof settingsSyncSchema>;

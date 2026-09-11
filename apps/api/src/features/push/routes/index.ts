@@ -6,31 +6,37 @@ import { validateBody } from "../../../middleware/validation";
 
 const SUBSCRIPTION_TTL_SECONDS = 60 * 60 * 24 * 365;
 
-const pushSubscriptionSchema = z.object({
-  endpoint: z.url().max(4096),
-  keys: z.object({
-    p256dh: z.string().min(1).max(2048),
-    auth: z.string().min(1).max(2048),
+const pushSubscriptionSchema = z.lazy(() =>
+  z.object({
+    endpoint: z.url().max(4096),
+    keys: z.object({
+      p256dh: z.string().min(1).max(2048),
+      auth: z.string().min(1).max(2048),
+    }),
   }),
-});
+);
 
-const subscribeSchema = z
-  .object({
-    subscription: pushSubscriptionSchema,
-    user_type: z.string().min(1).max(50).default("admin"),
-    role: z.union([z.string(), z.number()]).optional(),
-    restaurant_id: z.union([z.string(), z.number()]).optional(),
-    device_info: z.record(z.string(), z.unknown()).default({}),
-  })
-  .loose();
+const subscribeSchema = z.lazy(() =>
+  z
+    .object({
+      subscription: pushSubscriptionSchema,
+      user_type: z.string().min(1).max(50).default("admin"),
+      role: z.union([z.string(), z.number()]).optional(),
+      restaurant_id: z.union([z.string(), z.number()]).optional(),
+      device_info: z.record(z.string(), z.unknown()).default({}),
+    })
+    .loose(),
+);
 
-const unsubscribeSchema = z
-  .object({
-    endpoint: z.url().max(4096).optional(),
-    subscriptionId: z.string().min(1).max(256).optional(),
-    restaurant_id: z.union([z.string(), z.number()]).optional(),
-  })
-  .loose();
+const unsubscribeSchema = z.lazy(() =>
+  z
+    .object({
+      endpoint: z.url().max(4096).optional(),
+      subscriptionId: z.string().min(1).max(256).optional(),
+      restaurant_id: z.union([z.string(), z.number()]).optional(),
+    })
+    .loose(),
+);
 
 type PushSubscriptionRecord = {
   id: string;

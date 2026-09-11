@@ -31,9 +31,11 @@ function queryWithRestaurantId<T extends z.ZodRawShape>(shape: T) {
 }
 
 const analyticsQueryShape = {
-  dateFrom: z.iso.datetime().optional(),
-  dateTo: z.iso.datetime().optional(),
-  groupBy: z.enum(["day", "week", "month", "year"]).default("day"),
+  dateFrom: z.lazy(() => z.iso.datetime().optional()),
+  dateTo: z.lazy(() => z.iso.datetime().optional()),
+  groupBy: z.lazy(() =>
+    z.enum(["day", "week", "month", "year"]).default("day"),
+  ),
   limit: boundedLimitQuery("30"),
 };
 
@@ -91,20 +93,24 @@ export const financialReportQuerySchema = queryWithRestaurantId({
 });
 
 // SSE query schema
-export const sseQuerySchema = z.object({
-  lastEventId: z.string().optional(),
-});
+export const sseQuerySchema = z.lazy(() =>
+  z.object({
+    lastEventId: z.string().optional(),
+  }),
+);
 
 // Date range validation helper
-export const dateRangeSchema = z
-  .object({
-    dateFrom: z.iso.datetime(),
-    dateTo: z.iso.datetime(),
-  })
-  .refine((data) => new Date(data.dateFrom) <= new Date(data.dateTo), {
-    message: "dateFrom must be before or equal to dateTo",
-    path: ["dateFrom"],
-  });
+export const dateRangeSchema = z.lazy(() =>
+  z
+    .object({
+      dateFrom: z.iso.datetime(),
+      dateTo: z.iso.datetime(),
+    })
+    .refine((data) => new Date(data.dateFrom) <= new Date(data.dateTo), {
+      message: "dateFrom must be before or equal to dateTo",
+      path: ["dateFrom"],
+    }),
+);
 
 // Export type inference for TypeScript
 export type AnalyticsQuery = z.infer<typeof analyticsQuerySchema>;

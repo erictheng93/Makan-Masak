@@ -6,31 +6,40 @@ import { boundedLimitQuery } from "../../../middleware/validation";
 const supportedActions = ["update_menu_availability"] as const;
 const supportedResources = ["menu_item"] as const;
 
-export const managerActionSchema = z.object({
-  restaurantId: z.string().min(1),
-  action: z.enum(supportedActions),
-  resource: z.enum(supportedResources),
-  // Accept either string or number; the audit row stores a canonical string.
-  resourceId: z
-    .union([z.string().min(1), z.number().int().positive()])
-    .transform((v) => String(v)),
-  onBehalfOfUserId: z.string().trim().min(1).optional(),
-  reason: z.string().max(500).optional(),
-  // Free-form extension bag for action-specific arguments. The menu
-  // availability handler reads { isAvailable: boolean } when present.
-  payload: z.record(z.string(), z.any()).optional(),
-});
+export const managerActionSchema = z.lazy(() =>
+  z.object({
+    restaurantId: z.string().min(1),
+    action: z.enum(supportedActions),
+    resource: z.enum(supportedResources),
+    // Accept either string or number; the audit row stores a canonical string.
+    resourceId: z
+      .union([z.string().min(1), z.number().int().positive()])
+      .transform((v) => String(v)),
+    onBehalfOfUserId: z.string().trim().min(1).optional(),
+    reason: z.string().max(500).optional(),
+    // Free-form extension bag for action-specific arguments. The menu
+    // availability handler reads { isAvailable: boolean } when present.
+    payload: z.record(z.string(), z.any()).optional(),
+  }),
+);
 
-export const auditLogQuerySchema = z.object({
-  resourceId: z.string().min(1).optional(),
-  resource: z.string().min(1).optional(),
-  actorId: z.string().trim().min(1).optional(),
-  onBehalfOfUserId: z.string().trim().min(1).optional(),
-  restaurantId: z.string().min(1).optional(),
-  action: z.string().min(1).optional(),
-  limit: boundedLimitQuery("50"),
-  offset: z.string().regex(/^\d+$/).transform(Number).optional().prefault("0"),
-});
+export const auditLogQuerySchema = z.lazy(() =>
+  z.object({
+    resourceId: z.string().min(1).optional(),
+    resource: z.string().min(1).optional(),
+    actorId: z.string().trim().min(1).optional(),
+    onBehalfOfUserId: z.string().trim().min(1).optional(),
+    restaurantId: z.string().min(1).optional(),
+    action: z.string().min(1).optional(),
+    limit: boundedLimitQuery("50"),
+    offset: z
+      .string()
+      .regex(/^\d+$/)
+      .transform(Number)
+      .optional()
+      .prefault("0"),
+  }),
+);
 
 export type ManagerActionInput = z.infer<typeof managerActionSchema>;
 

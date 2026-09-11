@@ -29,7 +29,7 @@ import type { Env } from "../../../types/env";
 import { notFound, forbidden } from "../../../shared/utils/api-error";
 
 const routes = new Hono<{ Bindings: Env }>();
-const feedbackBatchSyncSchema = z.object({}).loose();
+const feedbackBatchSyncSchema = z.lazy(() => z.object({}).loose());
 
 function createFeedbackService(env: Env): FeedbackService {
   return new FeedbackService(env.DB, env);

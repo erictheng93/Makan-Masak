@@ -101,9 +101,11 @@ app.post(
   requireRole([0, 1, 4]), // Admin, Owner, Cashier
   validateParams(shiftParamsSchema),
   validateBody(
-    z.object({
-      reason: z.string().max(200).optional(),
-    }),
+    z.lazy(() =>
+      z.object({
+        reason: z.string().max(200).optional(),
+      }),
+    ),
   ),
   async (c) => {
     const { shiftId } = c.get("validatedParams");
@@ -166,9 +168,11 @@ app.get(
   authMiddleware,
   requireRole([0, 1, 4]), // Admin, Owner, Cashier
   validateParams(
-    z.object({
-      registerId: z.uuid(),
-    }),
+    z.lazy(() =>
+      z.object({
+        registerId: z.uuid(),
+      }),
+    ),
   ),
   async (c) => {
     const { registerId } = c.get("validatedParams");
