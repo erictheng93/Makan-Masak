@@ -254,7 +254,6 @@ app.post(
     );
     await meterEmit(c, "orders.created", {
       restaurantId: data.restaurantId,
-      metadata: { orderId: order.id, source: "guest-orders" },
     });
 
     // 7. Return order + guestToken

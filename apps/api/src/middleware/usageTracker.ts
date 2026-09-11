@@ -46,13 +46,10 @@ export async function usageTracker(c: Context<{ Bindings: Env }>, next: Next) {
   } finally {
     if (!shouldSkip(c)) {
       try {
-        await meterEmit(c, "api.requests", {
-          metadata: {
-            method: c.req.method,
-            path: c.req.path,
-            status: c.res.status,
-          },
-        });
+        // No metadata: method/path/status already reach Analytics Engine on
+        // every request via advancedAnalyticsMiddleware. See meterEmit's doc
+        // comment.
+        await meterEmit(c, "api.requests");
       } catch (error) {
         console.error("usageTracker.failed", { path: c.req.path, error });
       }

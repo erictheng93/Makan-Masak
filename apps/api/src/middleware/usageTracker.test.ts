@@ -34,11 +34,10 @@ describe("usageTracker", () => {
 
     expect(meterEmit).toHaveBeenCalledOnce();
     expect(meterEmit).toHaveBeenCalledWith(
-      expect.anything(),
-      "api.requests",
       expect.objectContaining({
-        metadata: expect.objectContaining({ path: "/api/v1/health" }),
+        req: expect.objectContaining({ path: "/api/v1/health" }),
       }),
+      "api.requests",
     );
   });
 
@@ -84,13 +83,10 @@ describe("usageTracker", () => {
 
     expect(meterEmit).toHaveBeenCalledOnce();
     expect(meterEmit).toHaveBeenCalledWith(
-      expect.anything(),
-      "api.requests",
       expect.objectContaining({
-        metadata: expect.objectContaining({
-          path: "/api/v1/pos/print-agents",
-        }),
+        req: expect.objectContaining({ path: "/api/v1/pos/print-agents" }),
       }),
+      "api.requests",
     );
   });
 
@@ -104,13 +100,10 @@ describe("usageTracker", () => {
 
     expect(meterEmit).toHaveBeenCalledOnce();
     expect(meterEmit).toHaveBeenCalledWith(
-      expect.anything(),
-      "api.requests",
       expect.objectContaining({
-        metadata: expect.objectContaining({
-          path: "/api/v1/print/jobsummary",
-        }),
+        req: expect.objectContaining({ path: "/api/v1/print/jobsummary" }),
       }),
+      "api.requests",
     );
   });
 });

@@ -291,13 +291,7 @@ app.post(
     if (!result.success || !result.data) {
       throw badRequest(result.error ?? "Failed to generate share code");
     }
-    await meterEmit(c, "orders.created", {
-      restaurantId,
-      metadata: {
-        groupOrderId: result.data.groupOrderId,
-        source: "group-generate-code",
-      },
-    });
+    await meterEmit(c, "orders.created", { restaurantId });
 
     return c.json({
       success: true,
@@ -409,7 +403,6 @@ app.post(
     }
     await meterEmit(c, "orders.created", {
       restaurantId: data.restaurantId,
-      metadata: { groupOrderId: result.data?.groupOrderId, source: "group" },
     });
 
     await broadcastGroupOrderEvent(

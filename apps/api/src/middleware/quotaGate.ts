@@ -12,6 +12,7 @@ import {
   BillingNotificationService,
   NOTIFICATION_CHANNELS,
 } from "../features/billing/services/BillingNotificationService";
+import { sumUnfoldedBucketQuantities } from "../shared/utils/usage-buckets";
 
 interface SubscriptionRow {
   plan_tier: PlanTier;
@@ -152,6 +153,30 @@ async function getPendingCount<E extends { Bindings: Env }>(
   return row?.total ?? 0;
 }
 
+/**
+ * Usage recorded in hourly buckets that the aggregator has not folded into
+ * `usage_meters` yet.
+ *
+ * Without this the gate could not see the current hour at all: `meterEmit`
+ * writes into the open bucket, and a bucket only reaches `usage_meters` after
+ * its hour closes and the hourly cron runs. A tenant could burn up to an hour
+ * of traffic past its hard limit before the gate noticed (#333).
+ */
+async function getUnfoldedBucketCount<E extends { Bindings: Env }>(
+  c: QuotaContext<E>,
+  restaurantId: string,
+  meterKey: MeterKey,
+  cycle: { startAt: number; endAt: number },
+): Promise<number> {
+  const totals = await sumUnfoldedBucketQuantities(c.env.DB, restaurantId, {
+    fromMs: cycle.startAt,
+    toMs: cycle.endAt,
+    meterKey,
+  });
+
+  return totals.get(meterKey) ?? 0;
+}
+
 function setQuotaWarning<E extends { Bindings: Env }>(
   c: QuotaContext<E>,
   meterKey: MeterKey,
@@ -233,7 +258,13 @@ export async function enforceQuota<E extends { Bindings: Env }>(
     cycle.startAt,
   );
   const pending = await getPendingCount(c, restaurantId, meterKey);
-  const effectiveCount = aggregated + pending;
+  const buckets = await getUnfoldedBucketCount(
+    c,
+    restaurantId,
+    meterKey,
+    cycle,
+  );
+  const effectiveCount = aggregated + pending + buckets;
 
   if (effectiveCount >= quota.hard) {
     setQuotaWarning(c, meterKey, effectiveCount, quota);

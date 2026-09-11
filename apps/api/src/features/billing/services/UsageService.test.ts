@@ -1,4 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Bucket reads are Drizzle and cannot run against the hand-rolled D1 stub
+// below. Stubbing the helper keeps these tests on what they cover — cycle
+// resolution and the shape of each response — while the bucket arithmetic and
+// the two-table history read are proven against real D1 in
+// usage-meter-buckets.real.integration.test.ts.
+const sumUnfoldedBucketQuantities = vi.hoisted(() =>
+  vi.fn(async () => new Map<string, number>()),
+);
+vi.mock("../../../shared/utils/usage-buckets", () => ({
+  sumUnfoldedBucketQuantities,
+}));
+
 import { UsageService } from "./UsageService";
 
 vi.mock("@makanmasak/utils", () => ({
@@ -65,6 +78,7 @@ function createDb(results: Record<string, QueryResult>) {
 describe("UsageService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sumUnfoldedBucketQuantities.mockResolvedValue(new Map());
   });
 
   it("combines aggregated and pending usage for an active paid cycle", async () => {
@@ -85,6 +99,9 @@ describe("UsageService", () => {
         { meter_key: "storage.bytes", total_quantity: 250 },
       ],
     });
+    sumUnfoldedBucketQuantities.mockResolvedValueOnce(
+      new Map([["orders.created", 7]]),
+    );
 
     const usage = await new UsageService(db as never).getCurrentUsage(
       "restaurant-1",
@@ -95,11 +112,20 @@ describe("UsageService", () => {
       cycleStartAt: 1710000000000,
       cycleEndAt: 1712678400000,
     });
+    expect(sumUnfoldedBucketQuantities).toHaveBeenCalledWith(
+      expect.anything(),
+      "restaurant-1",
+      expect.objectContaining({
+        fromMs: 1710000000000,
+        toMs: 1712678400000,
+      }),
+    );
     expect(usage.meters).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           meterKey: "orders.created",
-          total: 85,
+          // 80 aggregated + 5 pending events + 7 still in an unfolded bucket.
+          total: 92,
         }),
         expect.objectContaining({
           meterKey: "storage.bytes",
@@ -190,83 +216,6 @@ describe("UsageService", () => {
         lastAggregatedAt: 1712000000000,
       },
     ]);
-  });
-
-  it("lists usage events with bounded pagination and parsed metadata", async () => {
-    const { db, statements } = createDb({
-      eventCount: { total: 2 },
-      events: [
-        {
-          id: "event-1",
-          restaurant_id: "restaurant-1",
-          meter_key: "orders.created",
-          quantity: 3,
-          metadata: '{"source":"checkout"}',
-          aggregated_at_ms: 1711000000000,
-          occurred_at_ms: 1710900000000,
-        },
-        {
-          id: "event-2",
-          restaurant_id: "restaurant-1",
-          meter_key: "orders.created",
-          quantity: 1,
-          metadata: "not-json",
-          aggregated_at_ms: null,
-          occurred_at_ms: 1710800000000,
-        },
-      ],
-    });
-
-    const result = await new UsageService(db as never).listUsageEvents(
-      "restaurant-1",
-      {
-        meterKey: "orders.created",
-        from: 1710000000000,
-        to: 1712000000000,
-        page: 2,
-        limit: 500,
-      },
-    );
-
-    expect(statements[0].values).toEqual([
-      "restaurant-1",
-      "orders.created",
-      1710000000000,
-      1712000000000,
-    ]);
-    expect(statements[1].values).toEqual([
-      "restaurant-1",
-      "orders.created",
-      1710000000000,
-      1712000000000,
-      200,
-      200,
-    ]);
-    expect(result).toEqual({
-      page: 2,
-      limit: 200,
-      total: 2,
-      events: [
-        {
-          id: "event-1",
-          restaurantId: "restaurant-1",
-          meterKey: "orders.created",
-          quantity: 3,
-          metadata: { source: "checkout" },
-          aggregatedAt: 1711000000000,
-          occurredAt: 1710900000000,
-        },
-        {
-          id: "event-2",
-          restaurantId: "restaurant-1",
-          meterKey: "orders.created",
-          quantity: 1,
-          metadata: {},
-          aggregatedAt: null,
-          occurredAt: 1710800000000,
-        },
-      ],
-    });
   });
 
   it("emits storage snapshot usage events for non-empty counters", async () => {

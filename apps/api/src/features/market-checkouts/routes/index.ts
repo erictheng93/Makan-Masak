@@ -632,11 +632,6 @@ app.post("/", optionalCanonicalCustomerAuthMiddleware, async (c) => {
       );
       await meterEmit(c, "orders.created", {
         restaurantId: vendor.restaurantId,
-        metadata: {
-          orderId: childOrder.id,
-          source: "market-checkouts",
-          marketSlug: data.marketSlug,
-        },
       });
 
       children.push({

@@ -394,10 +394,7 @@ describe("group orders routes", () => {
     expect(meterEmit).toHaveBeenCalledWith(
       expect.anything(),
       "orders.created",
-      expect.objectContaining({
-        restaurantId: "restaurant-1",
-        metadata: expect.objectContaining({ source: "group-generate-code" }),
-      }),
+      expect.objectContaining({ restaurantId: "restaurant-1" }),
     );
 
     const createResponse = await routes.fetch(

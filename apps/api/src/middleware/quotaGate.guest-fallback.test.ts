@@ -1,5 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
+
+// The bucket read is Drizzle, so it cannot run against this file's hand-rolled
+// D1 stub. Stubbing it to "no unfolded buckets" keeps this test about what it
+// was always about — that the guest fallback resolves a restaurant and the
+// hard limit is enforced — and leaves the bucket arithmetic to the real-D1
+// suite (usage-meter-buckets.real.integration.test.ts).
+const sumUnfoldedBucketQuantities = vi.hoisted(() =>
+  vi.fn(async () => new Map<string, number>()),
+);
+vi.mock("../shared/utils/usage-buckets", () => ({
+  sumUnfoldedBucketQuantities,
+}));
+
 import { quotaGate } from "./quotaGate";
 import { ApiError } from "../shared/utils/api-error";
 
@@ -66,6 +79,11 @@ describe("quotaGate guest restaurant fallback", () => {
     );
 
     expect(res.status).toBe(429);
+    expect(sumUnfoldedBucketQuantities).toHaveBeenCalledWith(
+      expect.anything(),
+      "rest-guest-1",
+      expect.objectContaining({ meterKey: "orders.created" }),
+    );
     await expect(res.json()).resolves.toMatchObject({
       error: { code: "QUOTA_EXCEEDED" },
     });

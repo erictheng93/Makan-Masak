@@ -46,12 +46,13 @@ describe("createApp API middleware registration", () => {
         message: "CSRF token is required for this request",
       },
     });
+    // meterEmit no longer takes per-request metadata (#333), so the path is
+    // asserted on the context it was handed rather than on an options bag.
     expect(meterEmit).toHaveBeenCalledWith(
-      expect.anything(),
-      "api.requests",
       expect.objectContaining({
-        metadata: expect.objectContaining({ path: "/api/v1/coupons" }),
+        req: expect.objectContaining({ path: "/api/v1/coupons" }),
       }),
+      "api.requests",
     );
   });
 

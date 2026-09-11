@@ -352,10 +352,7 @@ describe("guest order routes", () => {
     expect(meterEmit).toHaveBeenCalledWith(
       expect.anything(),
       "orders.created",
-      {
-        restaurantId: "restaurant-1",
-        metadata: { orderId: 501, source: "guest-orders" },
-      },
+      { restaurantId: "restaurant-1" },
     );
   });
 

@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import type { MeterKey } from "@makanmasak/database";
-import { generateUUID } from "@makanmasak/utils";
 import type { Env } from "../../types/env";
+import { recordUsageBucketDelta } from "./usage-buckets";
 
 type MeterContext<E extends { Bindings: Env } = { Bindings: Env }> = Context<E>;
 
@@ -17,36 +17,26 @@ interface MeterTenant {
 export interface MeterEmitOptions {
   restaurantId?: string;
   quantity?: number;
-  metadata?: Record<string, unknown>;
 }
 
-interface UsageEventInput {
-  restaurantId: string;
-  meterKey: MeterKey;
-  quantity: number;
-  metadata: Record<string, unknown> | null;
-}
-
-export async function insertUsageEvent(
-  db: Env["DB"],
-  input: UsageEventInput,
-): Promise<void> {
-  await db
-    .prepare(
-      `INSERT INTO usage_events (
-        id, restaurant_id, meter_key, quantity, metadata
-      ) VALUES (?, ?, ?, ?, ?)`,
-    )
-    .bind(
-      generateUUID(),
-      input.restaurantId,
-      input.meterKey,
-      input.quantity,
-      input.metadata === null ? null : JSON.stringify(input.metadata),
-    )
-    .run();
-}
-
+/**
+ * Record one unit of metered usage for the restaurant this request belongs to.
+ *
+ * Writes into `usage_meter_buckets` — one row per (restaurant, meter, hour) —
+ * rather than one `usage_events` row per call (#333). Everything downstream
+ * reads a SUM, so the per-call row carried no information the hourly counter
+ * does not, while costing a row-write (plus index writes, plus the
+ * aggregator's UPDATE, plus the TTL DELETE) on every single API request.
+ *
+ * There is deliberately no `metadata` any more. The only caller that populated
+ * it usefully was `usageTracker`, with method/path/status — and those already
+ * reach Analytics Engine on every request via `advancedAnalyticsMiddleware`
+ * (middleware/analytics.ts, `event: "api_request"`, blobs carry endpoint,
+ * method and status_code, indexed by restaurant), which is the right store for
+ * high-cardinality per-request dimensions. The rest recorded an `orderId` or
+ * `receiptId` that is already a row in `orders` / `receipts`. Billing never
+ * read any of it.
+ */
 export async function meterEmit<E extends { Bindings: Env }>(
   c: MeterContext<E>,
   meterKey: MeterKey,
@@ -63,11 +53,10 @@ export async function meterEmit<E extends { Bindings: Env }>(
 
   if (!restaurantId) return;
 
-  const insertOp = insertUsageEvent(c.env.DB, {
+  const recordOp = recordUsageBucketDelta(c.env.DB, {
     restaurantId,
     meterKey,
     quantity: options.quantity ?? 1,
-    metadata: options.metadata ?? null,
   }).catch((error) => {
     console.error("meterEmit.failed", { meterKey, restaurantId, error });
   });
@@ -80,8 +69,8 @@ export async function meterEmit<E extends { Bindings: Env }>(
   }
 
   if (waitUntil) {
-    waitUntil(insertOp);
+    waitUntil(recordOp);
   } else {
-    await insertOp;
+    await recordOp;
   }
 }

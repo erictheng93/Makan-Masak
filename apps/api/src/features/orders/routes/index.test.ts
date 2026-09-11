@@ -337,10 +337,7 @@ describe("orders routes", () => {
     expect(gateMocks.meterEmit).toHaveBeenCalledWith(
       expect.anything(),
       "orders.created",
-      {
-        restaurantId: "restaurant-1",
-        metadata: { orderId: 1001 },
-      },
+      { restaurantId: "restaurant-1" },
     );
   });
 
@@ -1310,10 +1307,7 @@ describe("orders routes", () => {
     expect(gateMocks.meterEmit).toHaveBeenCalledWith(
       expect.anything(),
       "print.jobs",
-      {
-        restaurantId: "restaurant-1",
-        metadata: { orderId: "55" },
-      },
+      { restaurantId: "restaurant-1" },
     );
   });
 

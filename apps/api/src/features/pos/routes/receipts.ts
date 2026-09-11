@@ -88,9 +88,7 @@ app.post(
       throw badRequest(result.error || "打印收據失敗");
     }
 
-    await meterEmit(c, "print.jobs", {
-      metadata: { orderId: orderIdentity.id, receiptType: data.receiptType },
-    });
+    await meterEmit(c, "print.jobs");
 
     return c.json({
       success: true,
@@ -129,9 +127,7 @@ app.post(
       throw badRequest(result.error || "重打收據失敗");
     }
 
-    await meterEmit(c, "print.jobs", {
-      metadata: { receiptId },
-    });
+    await meterEmit(c, "print.jobs");
 
     return c.json({
       success: true,

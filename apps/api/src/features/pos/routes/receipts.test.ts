@@ -234,9 +234,6 @@ describe("POS receipt routes", () => {
     expect(gateMocks.meterEmit).toHaveBeenCalledWith(
       expect.anything(),
       "print.jobs",
-      expect.objectContaining({
-        metadata: expect.objectContaining({ orderId: 101 }),
-      }),
     );
   });
 
@@ -322,7 +319,6 @@ describe("POS receipt routes", () => {
     expect(gateMocks.meterEmit).toHaveBeenCalledWith(
       expect.anything(),
       "print.jobs",
-      expect.objectContaining({ metadata: { receiptId } }),
     );
 
     response = await request(`/${receiptId}/cancel`, { method: "POST" });

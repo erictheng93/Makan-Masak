@@ -44,9 +44,7 @@ function assertRestaurantScope(
 }
 
 async function trackAiRequest<E extends { Bindings: Env }>(c: Context<E>) {
-  await meterEmit(c, "ai.requests", {
-    metadata: { endpoint: c.req.path },
-  });
+  await meterEmit(c, "ai.requests");
 }
 
 /**

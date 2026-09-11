@@ -1,21 +1,27 @@
-import type { D1Database } from "@makanmasak/database";
+import { and, eq, isNull, lte, sql } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
+import {
+  drizzle,
+  shopSubscriptions,
+  usageEvents,
+  usageMeterBuckets,
+  usageMeters,
+  type D1Database,
+  type MeterKey,
+} from "@makanmasak/database";
 import { generateUUID } from "@makanmasak/utils";
 import type { Env } from "../types/env";
+import { listClosedUnfoldedBuckets } from "../shared/utils/usage-buckets";
 
-interface PendingUsageGroup {
-  restaurant_id: string;
-  meter_key: string;
-  delta: number;
-  first_occurred_at_ms: number;
-  last_occurred_at_ms: number;
-}
+type DrizzleDb = ReturnType<typeof drizzle>;
+type SqliteBatchItem = BatchItem<"sqlite">;
 
 interface SubscriptionCycleRow {
-  plan_tier: string;
-  trial_ends_at_ms: number | null;
-  billing_cycle_start_at_ms: number | null;
-  billing_cycle_end_at_ms: number | null;
-  created_at_ms: number;
+  planTier: string;
+  trialEndsAt: Date | null;
+  billingCycleStartAt: Date | null;
+  billingCycleEndAt: Date | null;
+  createdAt: Date;
 }
 
 interface UsageCycle {
@@ -24,6 +30,8 @@ interface UsageCycle {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const PENDING_EVENT_GROUP_LIMIT = 5000;
+const CLOSED_BUCKET_LIMIT = 5000;
 
 function fallbackMonthlyCycle(occurredAt: number): UsageCycle {
   const occurred = new Date(occurredAt);
@@ -49,129 +57,303 @@ function resolveUsageCycle(
   }
 
   if (
-    subscription.plan_tier !== "trial" &&
-    subscription.billing_cycle_start_at_ms !== null &&
-    subscription.billing_cycle_end_at_ms !== null
+    subscription.planTier !== "trial" &&
+    subscription.billingCycleStartAt !== null &&
+    subscription.billingCycleEndAt !== null
   ) {
     return {
-      startAt: subscription.billing_cycle_start_at_ms,
-      endAt: subscription.billing_cycle_end_at_ms,
+      startAt: subscription.billingCycleStartAt.getTime(),
+      endAt: subscription.billingCycleEndAt.getTime(),
     };
   }
 
-  if (subscription.plan_tier === "trial") {
+  if (subscription.planTier === "trial") {
+    const createdAt = subscription.createdAt.getTime();
     return {
-      startAt: subscription.created_at_ms,
-      endAt:
-        subscription.trial_ends_at_ms ??
-        subscription.created_at_ms + 14 * DAY_MS,
+      startAt: createdAt,
+      endAt: subscription.trialEndsAt?.getTime() ?? createdAt + 14 * DAY_MS,
     };
   }
 
   return fallbackMonthlyCycle(occurredAt);
 }
 
-async function getSubscriptionCycle(
-  db: D1Database,
-  restaurantId: string,
-): Promise<SubscriptionCycleRow | null> {
-  return await db
-    .prepare(
-      `SELECT plan_tier, trial_ends_at_ms, billing_cycle_start_at_ms,
-              billing_cycle_end_at_ms, created_at_ms
-         FROM shop_subscriptions
-        WHERE restaurant_id = ?
-        LIMIT 1`,
-    )
-    .bind(restaurantId)
-    .first<SubscriptionCycleRow>();
+/**
+ * One subscription read per restaurant per run, not one per group: a
+ * restaurant with five meters and twenty closed buckets would otherwise cost
+ * twenty-five identical `shop_subscriptions` lookups.
+ */
+function createCycleResolver(db: DrizzleDb) {
+  const cache = new Map<string, SubscriptionCycleRow | null>();
+
+  return async function cycleFor(
+    restaurantId: string,
+    occurredAt: number,
+  ): Promise<UsageCycle> {
+    if (!cache.has(restaurantId)) {
+      const [row] = await db
+        .select({
+          planTier: shopSubscriptions.planTier,
+          trialEndsAt: shopSubscriptions.trialEndsAt,
+          billingCycleStartAt: shopSubscriptions.billingCycleStartAt,
+          billingCycleEndAt: shopSubscriptions.billingCycleEndAt,
+          createdAt: shopSubscriptions.createdAt,
+        })
+        .from(shopSubscriptions)
+        .where(eq(shopSubscriptions.restaurantId, restaurantId))
+        .limit(1);
+      cache.set(restaurantId, row ?? null);
+    }
+
+    return resolveUsageCycle(cache.get(restaurantId) ?? null, occurredAt);
+  };
 }
 
-async function listPendingGroups(db: D1Database): Promise<PendingUsageGroup[]> {
-  const result = await db
-    .prepare(
-      `SELECT restaurant_id,
-              meter_key,
-              SUM(quantity) AS delta,
-              MIN(occurred_at_ms) AS first_occurred_at_ms,
-              MAX(occurred_at_ms) AS last_occurred_at_ms
-         FROM usage_events
-        WHERE aggregated_at_ms IS NULL
-        GROUP BY restaurant_id, meter_key
-        LIMIT 5000`,
-    )
-    .all<PendingUsageGroup>();
+/**
+ * Add `delta` to the (restaurant, meter, cycle) total. `usage_meters` is the
+ * store of record for invoicing, so this stays an additive upsert: folding the
+ * same work twice is prevented by the caller marking its source rows consumed
+ * in the same batch, not by this statement being idempotent on its own.
+ */
+function usageMeterUpsert(
+  db: DrizzleDb,
+  input: {
+    restaurantId: string;
+    meterKey: MeterKey;
+    cycle: UsageCycle;
+    delta: number;
+    now: number;
+  },
+): SqliteBatchItem {
+  const stamp = new Date(input.now);
 
-  return result.results ?? [];
+  return db
+    .insert(usageMeters)
+    .values({
+      id: generateUUID(),
+      restaurantId: input.restaurantId,
+      meterKey: input.meterKey,
+      cycleStartAt: new Date(input.cycle.startAt),
+      cycleEndAt: new Date(input.cycle.endAt),
+      totalQuantity: input.delta,
+      lastAggregatedAt: stamp,
+      createdAt: stamp,
+      updatedAt: stamp,
+    })
+    .onConflictDoUpdate({
+      target: [
+        usageMeters.restaurantId,
+        usageMeters.meterKey,
+        usageMeters.cycleStartAt,
+      ],
+      set: {
+        totalQuantity: sql`${usageMeters.totalQuantity} + excluded.total_quantity`,
+        lastAggregatedAt: stamp,
+        updatedAt: stamp,
+      },
+    });
+}
+
+interface PendingBucketGroup {
+  restaurantId: string;
+  meterKey: MeterKey;
+  maxBucketStartMs: number;
+  /** cycle start -> the cycle and the quantity folded into it */
+  cycles: Map<number, { cycle: UsageCycle; delta: number }>;
+}
+
+/**
+ * Fold closed `usage_meter_buckets` rows into `usage_meters`.
+ *
+ * Each (restaurant, meter) pair is folded in a single D1 batch: the
+ * `usage_meters` upserts for every cycle that pair's buckets fall in, followed
+ * by the UPDATE that stamps those buckets folded. D1 runs a batch in one
+ * transaction, so the counted-but-not-yet-marked window that would let a retry
+ * double count does not exist.
+ */
+async function foldClosedBuckets(
+  db: DrizzleDb,
+  rawDb: D1Database,
+  now: number,
+) {
+  const buckets = await listClosedUnfoldedBuckets(rawDb, {
+    nowMs: now,
+    limit: CLOSED_BUCKET_LIMIT,
+  });
+  const restaurants = new Set<string>();
+  if (buckets.length === 0) return { folded: 0, restaurants };
+
+  const cycleFor = createCycleResolver(db);
+  const groups = new Map<string, PendingBucketGroup>();
+
+  for (const bucket of buckets) {
+    const key = `${bucket.restaurantId}|${bucket.meterKey}`;
+    const group = groups.get(key) ?? {
+      restaurantId: bucket.restaurantId,
+      meterKey: bucket.meterKey,
+      maxBucketStartMs: bucket.bucketStartMs,
+      cycles: new Map(),
+    };
+
+    // Resolved per bucket, not per group: a pair's buckets can straddle a
+    // billing-cycle boundary, and attributing the whole group to the cycle of
+    // its earliest bucket would bill the wrong cycle for the rest.
+    const cycle = await cycleFor(bucket.restaurantId, bucket.bucketStartMs);
+    const existing = group.cycles.get(cycle.startAt);
+    group.cycles.set(cycle.startAt, {
+      cycle,
+      delta: (existing?.delta ?? 0) + bucket.quantity,
+    });
+    group.maxBucketStartMs = Math.max(
+      group.maxBucketStartMs,
+      bucket.bucketStartMs,
+    );
+    groups.set(key, group);
+  }
+
+  let folded = 0;
+
+  for (const group of groups.values()) {
+    const statements: SqliteBatchItem[] = [];
+    for (const { cycle, delta } of group.cycles.values()) {
+      statements.push(
+        usageMeterUpsert(db, {
+          restaurantId: group.restaurantId,
+          meterKey: group.meterKey,
+          cycle,
+          delta,
+          now,
+        }),
+      );
+    }
+
+    statements.push(
+      db
+        .update(usageMeterBuckets)
+        .set({ foldedAt: new Date(now), updatedAt: new Date(now) })
+        .where(
+          and(
+            isNull(usageMeterBuckets.foldedAt),
+            eq(usageMeterBuckets.restaurantId, group.restaurantId),
+            eq(usageMeterBuckets.meterKey, group.meterKey),
+            lte(
+              usageMeterBuckets.bucketStartAt,
+              new Date(group.maxBucketStartMs),
+            ),
+          ),
+        ),
+    );
+
+    const results = await db.batch(
+      statements as [SqliteBatchItem, ...SqliteBatchItem[]],
+    );
+    const markResult = results[results.length - 1] as
+      | { meta?: { changes?: number } }
+      | undefined;
+    folded += markResult?.meta?.changes ?? 0;
+    restaurants.add(group.restaurantId);
+  }
+
+  return { folded, restaurants };
+}
+
+interface PendingEventGroup {
+  restaurantId: string;
+  meterKey: MeterKey;
+  delta: number;
+  firstOccurredAtMs: number;
+  lastOccurredAtMs: number;
+}
+
+/**
+ * Fold whatever still lands in `usage_events`.
+ *
+ * `meterEmit` writes buckets now, but `UsageService.emitStorageSnapshots`
+ * still records `storage.bytes` as one event per restaurant per daily
+ * snapshot — a gauge reading rather than a request counter, so there is no
+ * per-request volume there to collapse into an hourly counter. This path also
+ * drains whatever per-request rows the table still held when the bucket writer
+ * shipped.
+ */
+async function foldPendingEvents(db: DrizzleDb, now: number) {
+  const groups = (await db
+    .select({
+      restaurantId: usageEvents.restaurantId,
+      meterKey: usageEvents.meterKey,
+      delta: sql<number>`SUM(${usageEvents.quantity})`,
+      firstOccurredAtMs: sql<number>`MIN(${usageEvents.occurredAt})`,
+      lastOccurredAtMs: sql<number>`MAX(${usageEvents.occurredAt})`,
+    })
+    .from(usageEvents)
+    .where(isNull(usageEvents.aggregatedAt))
+    .groupBy(usageEvents.restaurantId, usageEvents.meterKey)
+    .limit(PENDING_EVENT_GROUP_LIMIT)) as PendingEventGroup[];
+
+  const restaurants = new Set<string>();
+  let processed = 0;
+  if (groups.length === 0) return { processed, restaurants };
+
+  const cycleFor = createCycleResolver(db);
+
+  for (const group of groups) {
+    const cycle = await cycleFor(
+      group.restaurantId,
+      Number(group.firstOccurredAtMs),
+    );
+    const results = await db.batch([
+      usageMeterUpsert(db, {
+        restaurantId: group.restaurantId,
+        meterKey: group.meterKey,
+        cycle,
+        delta: Number(group.delta),
+        now,
+      }),
+      db
+        .update(usageEvents)
+        .set({ aggregatedAt: new Date(now) })
+        .where(
+          and(
+            isNull(usageEvents.aggregatedAt),
+            eq(usageEvents.restaurantId, group.restaurantId),
+            eq(usageEvents.meterKey, group.meterKey),
+            lte(
+              usageEvents.occurredAt,
+              new Date(Number(group.lastOccurredAtMs)),
+            ),
+          ),
+        ),
+    ]);
+
+    const markResult = results[1] as
+      | { meta?: { changes?: number } }
+      | undefined;
+    processed += markResult?.meta?.changes ?? 0;
+    restaurants.add(group.restaurantId);
+  }
+
+  return { processed, restaurants };
 }
 
 export async function aggregateUsageMeters(env: Env) {
   const startedAt = Date.now();
-  const groups = await listPendingGroups(env.DB);
-  const now = Date.now();
-  let processed = 0;
-  const restaurants = new Set<string>();
+  const db = drizzle(env.DB);
 
-  for (const group of groups) {
-    const subscription = await getSubscriptionCycle(
-      env.DB,
-      group.restaurant_id,
-    );
-    const cycle = resolveUsageCycle(subscription, group.first_occurred_at_ms);
+  const buckets = await foldClosedBuckets(db, env.DB, startedAt);
+  const events = await foldPendingEvents(db, startedAt);
 
-    await env.DB.prepare(
-      `INSERT INTO usage_meters (
-          id, restaurant_id, meter_key, cycle_start_at_ms, cycle_end_at_ms,
-          total_quantity, last_aggregated_at_ms, created_at_ms, updated_at_ms
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT (restaurant_id, meter_key, cycle_start_at_ms)
-        DO UPDATE SET
-          total_quantity = total_quantity + excluded.total_quantity,
-          last_aggregated_at_ms = excluded.last_aggregated_at_ms,
-          updated_at_ms = excluded.updated_at_ms`,
-    )
-      .bind(
-        generateUUID(),
-        group.restaurant_id,
-        group.meter_key,
-        cycle.startAt,
-        cycle.endAt,
-        group.delta,
-        now,
-        now,
-        now,
-      )
-      .run();
-
-    const updated = await env.DB.prepare(
-      `UPDATE usage_events
-          SET aggregated_at_ms = ?
-        WHERE aggregated_at_ms IS NULL
-          AND restaurant_id = ?
-          AND meter_key = ?
-          AND occurred_at_ms <= ?`,
-    )
-      .bind(
-        now,
-        group.restaurant_id,
-        group.meter_key,
-        group.last_occurred_at_ms,
-      )
-      .run();
-
-    processed += updated.meta.changes ?? 0;
-    restaurants.add(group.restaurant_id);
-  }
-
+  const restaurants = new Set([...buckets.restaurants, ...events.restaurants]);
   const durationMs = Date.now() - startedAt;
+
   console.log("usageAggregator.batch", {
-    processed,
+    processed: events.processed,
+    foldedBuckets: buckets.folded,
     restaurants: restaurants.size,
     durationMs,
   });
 
   return {
-    processed,
+    processed: events.processed,
+    foldedBuckets: buckets.folded,
     restaurants: restaurants.size,
     durationMs,
   };

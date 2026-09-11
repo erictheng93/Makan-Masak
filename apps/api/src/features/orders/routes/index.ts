@@ -411,7 +411,6 @@ app.post(
     }
     await meterEmit(c, "orders.created", {
       restaurantId: data.restaurantId,
-      metadata: { orderId: order.id },
     });
 
     return c.json(
@@ -1137,7 +1136,6 @@ app.get(
     const receipt = await ordersService.generateReceipt(id);
     await meterEmit(c, "print.jobs", {
       restaurantId: String(order.restaurantId),
-      metadata: { orderId: id },
     });
 
     return c.json({

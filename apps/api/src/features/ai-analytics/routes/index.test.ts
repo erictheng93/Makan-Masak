@@ -123,9 +123,12 @@ describe("ai analytics routes", () => {
       expect.anything(),
       expect.objectContaining({ key: "test-key", requireStrongKey: false }),
     );
-    expect(meterEmit).toHaveBeenCalledWith(expect.anything(), "ai.requests", {
-      metadata: { endpoint: "/config/restaurant-1" },
-    });
+    expect(meterEmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        req: expect.objectContaining({ path: "/config/restaurant-1" }),
+      }),
+      "ai.requests",
+    );
   });
 
   it("arms the weak-key guard when the worker runs in production", async () => {
