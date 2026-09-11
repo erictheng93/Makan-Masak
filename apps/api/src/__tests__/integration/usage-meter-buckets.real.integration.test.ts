@@ -83,7 +83,7 @@ async function seedRestaurant(id: string, name: string) {
 async function seedSubscription(restaurantId: string) {
   await testDb.drizzle.insert(shopSubscriptions).values({
     restaurantId,
-    planTier: "growth",
+    planTier: "pro",
     isActive: true,
     createdAt: new Date(HOUR_A - 30 * DAY_MS),
     billingCycleStartAt: new Date(HOUR_A - 10 * DAY_MS),
