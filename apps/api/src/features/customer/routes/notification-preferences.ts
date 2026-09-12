@@ -40,24 +40,30 @@ export const DEFAULT_NOTIFICATION_PREFERENCES = {
   updatedAt: null as number | null,
 };
 
-const quietHourSchema = z
-  .number()
-  .int()
-  .min(QUIET_HOURS_MIN_MINUTE)
-  .max(QUIET_HOURS_MAX_MINUTE)
-  .nullable();
+// Wrapped in `z.lazy` per the convention at the top of
+// `middleware/validation.ts` (#362) — see there for why.
+const quietHourSchema = z.lazy(() =>
+  z
+    .number()
+    .int()
+    .min(QUIET_HOURS_MIN_MINUTE)
+    .max(QUIET_HOURS_MAX_MINUTE)
+    .nullable(),
+);
 
 /**
  * Every field optional: a PUT carries the fields the screen changed and
  * anything omitted keeps its stored value. Sending `{}` is therefore a no-op
  * that still creates the row, which is what makes GET-then-PUT idempotent.
  */
-const notificationPreferencesSchema = z.object({
-  marketingEnabled: z.boolean().optional(),
-  followedOnly: z.boolean().optional(),
-  quietHoursStartMin: quietHourSchema.optional(),
-  quietHoursEndMin: quietHourSchema.optional(),
-});
+const notificationPreferencesSchema = z.lazy(() =>
+  z.object({
+    marketingEnabled: z.boolean().optional(),
+    followedOnly: z.boolean().optional(),
+    quietHoursStartMin: quietHourSchema.optional(),
+    quietHoursEndMin: quietHourSchema.optional(),
+  }),
+);
 
 export type NotificationPreferencesInput = z.infer<
   typeof notificationPreferencesSchema
