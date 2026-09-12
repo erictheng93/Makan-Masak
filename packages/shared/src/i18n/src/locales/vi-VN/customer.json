@@ -1317,5 +1317,28 @@
     "loadFailed": "Không tải được danh sách theo dõi",
     "empty": "Bạn chưa theo dõi khu chợ hay quán nào",
     "unknownTarget": "Chưa lấy được tên"
+  },
+  "notifications": {
+    "title": "Thông báo tiếp thị",
+    "subtitle": "Chọn những quán được phép gửi ưu đãi cho bạn",
+    "marketingLabel": "Nhận thông báo tiếp thị",
+    "marketingHint": "Ưu đãi, món mới và sự kiện. Bạn có thể tắt bất cứ lúc nào.",
+    "followedOnlyLabel": "Chỉ quán tôi theo dõi",
+    "followedOnlyHint": "Khi tắt, theo dõi một khu chợ cũng cho phép các quán trong đó gửi thông báo",
+    "quietHoursTitle": "Giờ không làm phiền",
+    "quietHoursHint": "Không nhận thông báo tiếp thị trong khoảng giờ này",
+    "quietHoursStart": "Từ",
+    "quietHoursEnd": "Đến",
+    "quietHoursSave": "Lưu khung giờ",
+    "quietHoursClear": "Xóa khung giờ",
+    "quietHoursIncomplete": "Hãy đặt cả giờ bắt đầu và giờ kết thúc, hoặc xóa cả hai",
+    "pushRequiredTitle": "Chưa bật thông báo đẩy",
+    "pushRequiredHint": "Thông báo tiếp thị cần bật thông báo đẩy trên thiết bị này trước",
+    "pushPermissionDenied": "Chưa cấp quyền thông báo đẩy",
+    "pushEnabled": "Đã bật thông báo đẩy",
+    "pushFailed": "Không bật được thông báo đẩy",
+    "saved": "Đã lưu cài đặt",
+    "saveFailed": "Không lưu được cài đặt. Vui lòng thử lại.",
+    "loadFailed": "Không tải được cài đặt. Vui lòng thử lại."
   }
 }

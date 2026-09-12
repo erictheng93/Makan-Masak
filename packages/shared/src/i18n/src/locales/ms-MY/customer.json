@@ -1317,5 +1317,28 @@
     "loadFailed": "Senarai ikutan gagal dimuatkan",
     "empty": "Anda belum mengikut mana-mana pasar atau kedai",
     "unknownTarget": "Nama tidak tersedia"
+  },
+  "notifications": {
+    "title": "Notifikasi pemasaran",
+    "subtitle": "Pilih kedai yang boleh menghantar tawaran kepada anda",
+    "marketingLabel": "Terima notifikasi pemasaran",
+    "marketingHint": "Tawaran, menu baharu dan acara. Boleh dimatikan bila-bila masa.",
+    "followedOnlyLabel": "Hanya kedai yang saya ikut",
+    "followedOnlyHint": "Jika dimatikan, mengikut sebuah pasar juga membenarkan kedai di dalamnya menghubungi anda",
+    "quietHoursTitle": "Waktu senyap",
+    "quietHoursHint": "Tiada notifikasi pemasaran dalam waktu ini",
+    "quietHoursStart": "Dari",
+    "quietHoursEnd": "Hingga",
+    "quietHoursSave": "Simpan waktu",
+    "quietHoursClear": "Kosongkan waktu",
+    "quietHoursIncomplete": "Tetapkan kedua-dua waktu mula dan tamat, atau kosongkan kedua-duanya",
+    "pushRequiredTitle": "Push belum diaktifkan",
+    "pushRequiredHint": "Notifikasi pemasaran memerlukan push diaktifkan pada peranti ini dahulu",
+    "pushPermissionDenied": "Kebenaran push tidak diberikan",
+    "pushEnabled": "Push telah diaktifkan",
+    "pushFailed": "Push gagal diaktifkan",
+    "saved": "Tetapan disimpan",
+    "saveFailed": "Tetapan gagal disimpan. Sila cuba lagi.",
+    "loadFailed": "Tetapan gagal dimuatkan. Sila cuba lagi."
   }
 }

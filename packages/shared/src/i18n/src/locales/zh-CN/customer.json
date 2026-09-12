@@ -1317,5 +1317,28 @@
     "loadFailed": "关注列表加载失败",
     "empty": "还没有关注任何商圈或店家",
     "unknownTarget": "暂时无法获取名称"
+  },
+  "notifications": {
+    "title": "营销推送设置",
+    "subtitle": "决定哪些店家可以给你推送优惠",
+    "marketingLabel": "接收营销推送",
+    "marketingHint": "包含优惠、新品与活动通知，可随时关闭",
+    "followedOnlyLabel": "只接收已关注的店家",
+    "followedOnlyHint": "关闭后，关注商圈时也会收到该商圈店家的推送",
+    "quietHoursTitle": "免打扰时段",
+    "quietHoursHint": "这段时间内不会收到营销推送",
+    "quietHoursStart": "开始",
+    "quietHoursEnd": "结束",
+    "quietHoursSave": "保存时段",
+    "quietHoursClear": "清除时段",
+    "quietHoursIncomplete": "免打扰时段的开始与结束需要一起设置，或一起清除",
+    "pushRequiredTitle": "尚未启用推送",
+    "pushRequiredHint": "营销推送需要先在这台设备上启用推送通知",
+    "pushPermissionDenied": "推送权限未开启",
+    "pushEnabled": "推送已启用",
+    "pushFailed": "推送启用失败",
+    "saved": "设置已保存",
+    "saveFailed": "设置保存失败，请稍后再试",
+    "loadFailed": "设置加载失败，请稍后再试"
   }
 }

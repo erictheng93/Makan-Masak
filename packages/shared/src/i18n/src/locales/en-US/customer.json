@@ -1317,5 +1317,28 @@
     "loadFailed": "Your follows could not be loaded",
     "empty": "You are not following any market or shop yet",
     "unknownTarget": "Name unavailable"
+  },
+  "notifications": {
+    "title": "Marketing notifications",
+    "subtitle": "Choose which shops may send you offers",
+    "marketingLabel": "Receive marketing notifications",
+    "marketingHint": "Offers, new dishes and events. You can turn this off at any time.",
+    "followedOnlyLabel": "Only shops I follow",
+    "followedOnlyHint": "When off, following a market also lets its shops reach you",
+    "quietHoursTitle": "Quiet hours",
+    "quietHoursHint": "No marketing notifications during these hours",
+    "quietHoursStart": "From",
+    "quietHoursEnd": "To",
+    "quietHoursSave": "Save hours",
+    "quietHoursClear": "Clear hours",
+    "quietHoursIncomplete": "Set both the start and the end of quiet hours, or clear both",
+    "pushRequiredTitle": "Push not enabled",
+    "pushRequiredHint": "Marketing notifications need push enabled on this device first",
+    "pushPermissionDenied": "Push permission was not granted",
+    "pushEnabled": "Push enabled",
+    "pushFailed": "Push could not be enabled",
+    "saved": "Settings saved",
+    "saveFailed": "Settings could not be saved. Please try again.",
+    "loadFailed": "Settings could not be loaded. Please try again."
   }
 }

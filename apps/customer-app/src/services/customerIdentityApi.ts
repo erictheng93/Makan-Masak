@@ -61,6 +61,38 @@ export interface CustomerRecentMarket {
   visitedAtMs: number;
 }
 
+/**
+ * `GET /customer/consents` answers with raw D1 rows rather than a camelCased
+ * view, and only with live grants (`granted = 1`, not revoked). So an absent
+ * `marketing` row means "no consent on file", which is what the UI has to read;
+ * a withdrawal is not represented as a `granted: 0` row in this response.
+ */
+export interface CustomerConsentRecord {
+  id: string;
+  consent_type: string;
+  version: string;
+  granted: number;
+  granted_at_ms: number;
+  source: string | null;
+}
+
+/**
+ * The preferences the marketing broadcast fan-out actually consults (#335).
+ * Distinct from `CustomerPreferences` above, which is the older
+ * `customer_preferences` row; its `marketingOptIn` /
+ * `promoFromFavoritesOptIn` flags have no reader.
+ *
+ * Quiet hours are minutes from midnight (0-1439) in the sender's timezone, and
+ * the two bounds are set or cleared together.
+ */
+export interface CustomerNotificationPreferences {
+  marketingEnabled: boolean;
+  followedOnly: boolean;
+  quietHoursStartMin: number | null;
+  quietHoursEndMin: number | null;
+  updatedAt: number | null;
+}
+
 export interface CustomerPushSubscription {
   id: string;
   endpoint: string;
@@ -256,6 +288,32 @@ export const customerIdentityApi = {
 
   removePushSubscription(id: string) {
     return apiClient.delete(`/customer/push-subscriptions/${id}`);
+  },
+
+  listConsents() {
+    return apiClient.get<CustomerConsentRecord[]>("/customer/consents");
+  },
+
+  getNotificationPreferences() {
+    return apiClient.get<CustomerNotificationPreferences>(
+      "/customer/notification-preferences",
+    );
+  },
+
+  /**
+   * A merge, not a replace: every field is optional and anything omitted keeps
+   * its stored value. Send only what the screen changed.
+   */
+  updateNotificationPreferences(input: {
+    marketingEnabled?: boolean;
+    followedOnly?: boolean;
+    quietHoursStartMin?: number | null;
+    quietHoursEndMin?: number | null;
+  }) {
+    return apiClient.put<CustomerNotificationPreferences>(
+      "/customer/notification-preferences",
+      input,
+    );
   },
 
   grantConsent(input: {

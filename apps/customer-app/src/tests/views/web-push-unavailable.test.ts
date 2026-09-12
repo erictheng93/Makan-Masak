@@ -74,7 +74,12 @@ vi.mock("@/services/customerIdentityApi", () => ({
     addPushSubscription: vi.fn(),
     listPushSubscriptions: vi.fn(),
     removePushSubscription: vi.fn(),
-    // #335 added the 追蹤中 list to this view, and it loads on mount.
+    // #335 moved the enable-push button into NotificationSettingsCard and added
+    // the 追蹤中 list, both of which load on mount. They are mocked rather than
+    // stubbed out because the button under test now renders inside one of them.
+    listConsents: vi.fn(),
+    getNotificationPreferences: vi.fn(),
+    updateNotificationPreferences: vi.fn(),
     listFavorites: vi.fn(),
     addFavorite: vi.fn(),
     removeFavorite: vi.fn(),
@@ -204,6 +209,17 @@ describe("web push shown as unavailable", () => {
       preferences: buildPreferences(),
     } as never);
     vi.mocked(customerIdentityApi.listFavorites).mockResolvedValue([]);
+    vi.mocked(customerIdentityApi.listConsents).mockResolvedValue([]);
+    vi.mocked(customerIdentityApi.getNotificationPreferences).mockResolvedValue(
+      {
+        marketingEnabled: true,
+        followedOnly: true,
+        quietHoursStartMin: null,
+        quietHoursEndMin: null,
+        updatedAt: null,
+      } as never,
+    );
+    vi.mocked(customerIdentityApi.listPushSubscriptions).mockResolvedValue([]);
     vi.mocked(waitingListApi.getQueueStatus).mockResolvedValue({
       restaurantId: "restaurant-1",
       totalWaiting: 0,

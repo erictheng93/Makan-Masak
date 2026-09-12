@@ -1317,5 +1317,28 @@
     "loadFailed": "追蹤清單載入失敗",
     "empty": "還沒有追蹤任何商圈或店家",
     "unknownTarget": "名稱暫時無法取得"
+  },
+  "notifications": {
+    "title": "行銷推播設定",
+    "subtitle": "決定哪些店家可以推播優惠給你",
+    "marketingLabel": "接收行銷推播",
+    "marketingHint": "包含優惠、新品與活動通知，隨時可以關閉",
+    "followedOnlyLabel": "只收追蹤中的店家",
+    "followedOnlyHint": "關閉後，追蹤商圈時也會收到該商圈店家的推播",
+    "quietHoursTitle": "免擾時段",
+    "quietHoursHint": "這段時間內不會收到行銷推播",
+    "quietHoursStart": "開始",
+    "quietHoursEnd": "結束",
+    "quietHoursSave": "儲存時段",
+    "quietHoursClear": "清除時段",
+    "quietHoursIncomplete": "免擾時段的開始與結束要一起設定，或一起清除",
+    "pushRequiredTitle": "尚未啟用推播",
+    "pushRequiredHint": "行銷推播需要先在這台裝置啟用推播通知",
+    "pushPermissionDenied": "推播權限未開啟",
+    "pushEnabled": "推播已啟用",
+    "pushFailed": "推播啟用失敗",
+    "saved": "設定已儲存",
+    "saveFailed": "設定儲存失敗，請稍後再試",
+    "loadFailed": "設定載入失敗，請稍後再試"
   }
 }

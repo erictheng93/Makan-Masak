@@ -178,24 +178,12 @@
                 class="h-5 w-5 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
               />
             </label>
-            <label class="flex items-center justify-between gap-4">
-              <span class="text-sm font-medium text-gray-700">行銷通知</span>
-              <input
-                v-model="preferences.marketingOptIn"
-                type="checkbox"
-                class="h-5 w-5 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
-              />
-            </label>
-            <label class="flex items-center justify-between gap-4">
-              <span class="text-sm font-medium text-gray-700">
-                只接收收藏店家的優惠
-              </span>
-              <input
-                v-model="preferences.promoFromFavoritesOptIn"
-                type="checkbox"
-                class="h-5 w-5 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
-              />
-            </label>
+            <!-- The marketing switches that used to sit here wrote
+                 customer_preferences.marketing_opt_in /
+                 promo_from_favorites_opt_in, which no send path has ever read.
+                 Marketing now lives in NotificationSettingsCard below, against
+                 the table the broadcast fan-out consults (#335). waiting_list_opt_in
+                 stays here: CustomerWebPushService does read it. -->
             <div class="flex flex-col sm:flex-row gap-3">
               <button
                 class="flex-1 px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition"
@@ -203,37 +191,14 @@
               >
                 儲存設定
               </button>
-              <!-- Web push is built but unlaunched, and the API answers its
-                   endpoints with 404 while it is switched off. The button stays
-                   visible, greyed and inert, rather than hidden: hiding it makes
-                   the product look smaller than it is, while leaving it live
-                   sends a subscribe request the API refuses. See
-                   composables/useFeatureAvailability.ts. -->
-              <button
-                data-testid="enable-push-button"
-                class="flex-1 flex items-center justify-center gap-2 px-4 py-3 border rounded-lg transition"
-                :class="
-                  pushUnavailable
-                    ? 'border-gray-200 text-gray-400 cursor-not-allowed select-none'
-                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                "
-                :disabled="pushUnavailable"
-                :data-disabled="pushUnavailable ? 'true' : undefined"
-                :aria-disabled="pushUnavailable ? 'true' : undefined"
-                :title="pushUnavailable ? PUSH_UNAVAILABLE_LABEL : undefined"
-                @click="enablePush"
-              >
-                啟用推播
-                <span v-if="pushUnavailable" class="text-xs">{{
-                  PUSH_UNAVAILABLE_LABEL
-                }}</span>
-              </button>
             </div>
             <p v-if="settingsMessage" class="text-sm text-gray-600">
               {{ settingsMessage }}
             </p>
           </div>
         </div>
+
+        <NotificationSettingsCard />
 
         <FollowingList />
 
@@ -332,34 +297,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { customerOrderApi } from "@/services/customerOrderApi";
 import { customerIdentityApi } from "@/services/customerIdentityApi";
-import customerPushService from "@/utils/push-notifications";
-import { useFeatureAvailability } from "@/composables/useFeatureAvailability";
 import { useI18n } from "@/composables/useI18n";
 import { useConfirmModal } from "@/composables/useConfirmModal";
 import FollowingList from "@/components/follow/FollowingList.vue";
-import { CUSTOMER_CONSENT_VERSIONS } from "@makanmasak/shared-types";
+import NotificationSettingsCard from "@/components/settings/NotificationSettingsCard.vue";
 
 const router = useRouter();
 const authStore = useAuthStore();
 const { t } = useI18n();
 const { confirm: confirmModal } = useConfirmModal();
-const { isDisabled } = useFeatureAvailability();
-
-/**
- * TODO(i18n): hard-coded zh-TW because the locale files were being edited in a
- * concurrent change when this landed, and this section already carries
- * hard-coded zh-TW copy ("通知與同意設定", "啟用推播"). Move to a translation
- * key alongside the rest of this card.
- */
-const PUSH_UNAVAILABLE_LABEL = "尚未開放";
-
-const pushUnavailable = computed(() => isDisabled("webPush"));
-
 const isLoading = ref(false);
 const settingsMessage = ref("");
 const profile = ref({
@@ -416,39 +367,10 @@ const savePreferences = async () => {
     preferences.value = await customerIdentityApi.updatePreferences(
       preferences.value,
     );
-    await customerIdentityApi.grantConsent({
-      consentType: "marketing",
-      version: CUSTOMER_CONSENT_VERSIONS.marketing,
-      granted: preferences.value.marketingOptIn,
-      source: "settings",
-    });
     settingsMessage.value = "設定已儲存";
   } catch (error) {
     console.error("Failed to save preferences:", error);
     settingsMessage.value = "設定儲存失敗";
-  }
-};
-
-const enablePush = async () => {
-  settingsMessage.value = "";
-  // Guarded here as well as on the button: the disabled attribute is
-  // presentation, and this is what actually keeps the subscribe request --
-  // which the API refuses while web push is unlaunched -- from being sent.
-  if (pushUnavailable.value) {
-    settingsMessage.value = `推播${PUSH_UNAVAILABLE_LABEL}`;
-    return;
-  }
-  try {
-    const permission = await customerPushService.requestPermission();
-    if (permission !== "granted") {
-      settingsMessage.value = "推播權限未開啟";
-      return;
-    }
-    const subscription = await customerPushService.subscribe();
-    settingsMessage.value = subscription ? "推播已啟用" : "推播啟用失敗";
-  } catch (error) {
-    console.error("Failed to enable push:", error);
-    settingsMessage.value = "推播啟用失敗";
   }
 };
 

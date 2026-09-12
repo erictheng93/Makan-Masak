@@ -1317,5 +1317,28 @@
     "loadFailed": "Daftar yang diikuti gagal dimuat",
     "empty": "Anda belum mengikuti pasar atau kedai mana pun",
     "unknownTarget": "Nama tidak tersedia"
+  },
+  "notifications": {
+    "title": "Notifikasi pemasaran",
+    "subtitle": "Pilih kedai yang boleh mengirimkan penawaran kepada Anda",
+    "marketingLabel": "Terima notifikasi pemasaran",
+    "marketingHint": "Penawaran, menu baru, dan acara. Bisa dimatikan kapan saja.",
+    "followedOnlyLabel": "Hanya kedai yang saya ikuti",
+    "followedOnlyHint": "Jika dimatikan, mengikuti sebuah pasar juga memperbolehkan kedai di dalamnya menghubungi Anda",
+    "quietHoursTitle": "Jam tenang",
+    "quietHoursHint": "Tidak ada notifikasi pemasaran pada jam ini",
+    "quietHoursStart": "Dari",
+    "quietHoursEnd": "Sampai",
+    "quietHoursSave": "Simpan jam",
+    "quietHoursClear": "Hapus jam",
+    "quietHoursIncomplete": "Tetapkan jam mulai dan jam selesai bersama-sama, atau hapus keduanya",
+    "pushRequiredTitle": "Push belum diaktifkan",
+    "pushRequiredHint": "Notifikasi pemasaran memerlukan push aktif di perangkat ini terlebih dahulu",
+    "pushPermissionDenied": "Izin push tidak diberikan",
+    "pushEnabled": "Push telah diaktifkan",
+    "pushFailed": "Push gagal diaktifkan",
+    "saved": "Pengaturan disimpan",
+    "saveFailed": "Pengaturan gagal disimpan. Silakan coba lagi.",
+    "loadFailed": "Pengaturan gagal dimuat. Silakan coba lagi."
   }
 }
