@@ -161,6 +161,12 @@ function createQuery(
       onWhere?.(selectedTable, condition);
       return builder;
     }),
+    groupBy: vi.fn(() => builder),
+    // A Drizzle subquery. It is never awaited, so it draws no fixture; the
+    // outer `.from()` receives this builder, which is not a registered table
+    // and therefore routes to the `rawSqlSubquery` bucket like the raw `sql`
+    // subquery it replaced.
+    as: vi.fn(() => builder),
     orderBy: vi.fn(() => builder),
     limit: vi.fn(() => builder),
     set: vi.fn(() => builder),
@@ -4006,7 +4012,10 @@ describe("GroupOrdersService formatting and cache behavior", () => {
     const rejectQuery = (message: string) => {
       const builder = {
         from: vi.fn(() => builder),
+        innerJoin: vi.fn(() => builder),
         where: vi.fn(() => builder),
+        groupBy: vi.fn(() => builder),
+        as: vi.fn(() => builder),
         then: (
           resolve: (value: unknown) => void,
           reject?: (reason: unknown) => void,
@@ -4017,6 +4026,9 @@ describe("GroupOrdersService formatting and cache behavior", () => {
     useDb(service, {
       select: vi
         .fn()
+        // The member-count subquery is built first and is never awaited on its
+        // own — it is only ever embedded in the average-size query below.
+        .mockImplementationOnce(() => rejectQuery("group sizes unused"))
         .mockImplementationOnce(() => rejectQuery("counts failed"))
         .mockImplementationOnce(() => rejectQuery("active failed"))
         .mockImplementationOnce(() => rejectQuery("avg size failed"))

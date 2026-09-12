@@ -8,7 +8,17 @@
 import { randomUUID } from "crypto";
 import type { D1Database } from "@cloudflare/workers-types";
 import { drizzle } from "drizzle-orm/d1";
-import { eq, and, sql, desc, asc, isNull, gte, inArray } from "drizzle-orm";
+import {
+  eq,
+  and,
+  sql,
+  count,
+  desc,
+  asc,
+  isNull,
+  gte,
+  inArray,
+} from "drizzle-orm";
 import {
   groupOrders,
   groupMembers,
@@ -3043,6 +3053,29 @@ export class GroupOrdersService implements IGroupOrderService {
       sql`COALESCE(${groupOrders.finalAmountCents}, 0) > 0`,
     ];
 
+    // One row per group inside the window, carrying its member count, so the
+    // outer query can average them.
+    //
+    // This used to be a raw `sql` subquery with `${startDate}` interpolated
+    // into it. A `sql` fragment carries no column context, so the
+    // `{ mode: "timestamp_ms" }` mapper on `created_at_ms` never ran and the
+    // `Date` reached D1 as an object — `D1_TYPE_ERROR` on every call, caught
+    // by `allSettled` below and turned into a silent `0` on the owner
+    // dashboard's "average group size" tile (#365). Built through the query
+    // builder the mapper applies, and `conditions` — the window and the
+    // restaurant filter — reaches it by construction instead of through a
+    // second hand-written copy that can drift from the one above it.
+    const groupSizes = this.db
+      .select({
+        groupOrderId: groupMembers.groupOrderId,
+        memberCount: count().as("member_count"),
+      })
+      .from(groupMembers)
+      .innerJoin(groupOrders, eq(groupMembers.groupOrderId, groupOrders.id))
+      .where(and(...conditions))
+      .groupBy(groupMembers.groupOrderId)
+      .as("group_sizes");
+
     // Run all independent queries in parallel
     const [countsResult, avgSizeResult, avgValueResult] =
       await Promise.allSettled([
@@ -3058,16 +3091,9 @@ export class GroupOrdersService implements IGroupOrderService {
             .where(and(...activeConditions)),
         ]),
         // Average group size
-        this.db.select({ avgSize: sql<number>`AVG(member_count)` }).from(
-          sql`(
-              SELECT ${groupMembers.groupOrderId}, COUNT(*) as member_count
-              FROM ${groupMembers}
-              JOIN ${groupOrders} ON ${groupMembers.groupOrderId} = ${groupOrders.id}
-              WHERE ${groupOrders.createdAt} >= ${startDate}
-              ${restaurantId ? sql`AND ${groupOrders.restaurantId} = ${restaurantId}` : sql``}
-              GROUP BY ${groupMembers.groupOrderId}
-            )`,
-        ),
+        this.db
+          .select({ avgSize: sql<number>`AVG(${groupSizes.memberCount})` })
+          .from(groupSizes),
         // Average order value
         this.db
           .select({
@@ -3088,6 +3114,15 @@ export class GroupOrdersService implements IGroupOrderService {
       });
     }
 
+    // A rejection still reads as 0, which is indistinguishable from "no groups
+    // in the window" and is exactly how #365 hid for as long as it did. The
+    // honest answer would be `null` rendered as "—", but the tile's whole chain
+    // would have to move with it — `avgGroupSize` is a `ref(0)` the admin view
+    // feeds through `?? 0` and then calls `.toFixed(1)` on in two places and
+    // multiplies for a progress-bar width — so a server-side `null` alone would
+    // be erased at that boundary and change nothing on screen. The guard is
+    // instead in `GroupOrdersService.statistics.test.ts`, which asserts against
+    // a real D1 that nothing was logged here at all.
     const avgSize =
       avgSizeResult.status === "fulfilled"
         ? avgSizeResult.value[0]?.avgSize || 0
