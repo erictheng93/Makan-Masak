@@ -5,6 +5,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import PlatformMarketsView from "./PlatformMarketsView.vue";
 import { marketsService } from "@/services/marketsService";
 import { discoveryService } from "@/services/discoveryService";
+import { broadcastsService } from "@/services/broadcastsService";
 import { useAuthStore } from "@/stores/auth";
 import { useRoute, useRouter } from "vue-router";
 
@@ -37,6 +38,23 @@ vi.mock("@/services/discoveryService", () => ({
 
 vi.mock("@/stores/auth", () => ({
   useAuthStore: vi.fn(),
+}));
+
+// The 推播 panel embeds BroadcastComposer (#335). Mocking its service keeps the
+// real `@/services/api` — and the auth clients it builds at import time — out of
+// this file entirely; `vue-toastification` is stubbed because the composer asks
+// for a toast and this view never installs the plugin.
+vi.mock("@/services/broadcastsService", () => ({
+  broadcastsService: {
+    send: vi.fn(),
+    list: vi.fn(),
+    sendToMarket: vi.fn(),
+    listForMarket: vi.fn(),
+  },
+}));
+
+vi.mock("vue-toastification", () => ({
+  useToast: () => ({ error: vi.fn(), success: vi.fn() }),
 }));
 
 vi.mock("vue-router", () => ({
@@ -237,6 +255,17 @@ describe("PlatformMarketsView", () => {
       format: "png",
       downloadUrl: "https://qr.example/market-fengjia.png",
     });
+    vi.mocked(broadcastsService.listForMarket).mockResolvedValue({
+      broadcasts: [],
+      pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+    });
+    vi.mocked(broadcastsService.sendToMarket).mockResolvedValue({
+      id: "bc-m1",
+      audienceCount: 80,
+      deliveredCount: 74,
+      failedCount: 3,
+      skippedCount: 5,
+    });
     vi.mocked(marketsService.listAdminJoinRequests).mockResolvedValue([]);
     vi.mocked(marketsService.approveJoinRequest).mockResolvedValue(undefined);
     vi.mocked(marketsService.rejectJoinRequest).mockResolvedValue(undefined);
@@ -304,6 +333,13 @@ describe("PlatformMarketsView", () => {
       .get('[data-testid="market-map-image-url"]')
       .setValue("https://example.com/warmup.png");
     await warmup.get('[data-testid="market-map-width"]').setValue("1");
+    // The 推播 panel is a second v-if block with its own component tree
+    // (BroadcastComposer, its i18n lookups and its history read), so its first
+    // render belongs here beside the editing panel's.
+    await warmup
+      .get('[data-testid="broadcast-market-market-1"]')
+      .trigger("click");
+    await flushPromises();
     warmup.unmount();
   }, 30_000);
 
@@ -2053,6 +2089,88 @@ describe("PlatformMarketsView", () => {
       },
     );
     expect(wrapper.text()).toContain("搜尋雞排");
+  });
+
+  // #335: the platform's market-scoped sends live here rather than on a page of
+  // their own. This is the one surface that already lists every market with a
+  // per-market action column, and market broadcasts are role 0 like the rest of
+  // it — a second page would duplicate the list to host one button.
+  it("opens a per-market broadcast composer and sends as that market", async () => {
+    const wrapper = mount(PlatformMarketsView);
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="market-broadcast-panel"]').exists(),
+    ).toBe(false);
+
+    await wrapper
+      .get('[data-testid="broadcast-market-market-1"]')
+      .trigger("click");
+    await flushPromises();
+    await flushPromises();
+
+    const panel = wrapper.get('[data-testid="market-broadcast-panel"]');
+    expect(panel.text()).toContain("逢甲夜市");
+    expect(broadcastsService.listForMarket).toHaveBeenCalledWith(
+      "market-1",
+      expect.objectContaining({ page: 1 }),
+    );
+    // Reused, not forked: the same composer the shop-owner page mounts, minus
+    // the market-followers flag the market route drops.
+    expect(
+      wrapper.find('[data-testid="broadcast-include-market"]').exists(),
+    ).toBe(false);
+
+    await wrapper.get('[data-testid="broadcast-title"]').setValue("颱風休市");
+    await wrapper
+      .get('[data-testid="broadcast-body"]')
+      .setValue("本週六暫停營業");
+    await wrapper.get('[data-testid="broadcast-submit"]').trigger("click");
+    await wrapper.get('[data-testid="broadcast-confirm"]').trigger("click");
+    await flushPromises();
+    await flushPromises();
+
+    expect(broadcastsService.sendToMarket).toHaveBeenCalledOnce();
+    expect(broadcastsService.sendToMarket).toHaveBeenCalledWith(
+      "market-1",
+      expect.objectContaining({ title: "颱風休市", body: "本週六暫停營業" }),
+    );
+    expect(broadcastsService.send).not.toHaveBeenCalled();
+
+    await wrapper
+      .get('[data-testid="close-market-broadcast"]')
+      .trigger("click");
+    expect(
+      wrapper.find('[data-testid="market-broadcast-panel"]').exists(),
+    ).toBe(false);
+  });
+
+  it("switches the composer to the market whose 推播 was pressed", async () => {
+    const wrapper = mount(PlatformMarketsView);
+    await flushPromises();
+
+    await wrapper
+      .get('[data-testid="broadcast-market-market-1"]')
+      .trigger("click");
+    await flushPromises();
+    await flushPromises();
+    vi.mocked(broadcastsService.listForMarket).mockClear();
+
+    await wrapper
+      .get('[data-testid="broadcast-market-market-2"]')
+      .trigger("click");
+    await flushPromises();
+    await flushPromises();
+
+    // A reused panel that kept the first market's history would let the
+    // operator read one market's budget while sending as another.
+    expect(
+      wrapper.get('[data-testid="market-broadcast-panel"]').text(),
+    ).toContain("一中商圈");
+    expect(broadcastsService.listForMarket).toHaveBeenLastCalledWith(
+      "market-2",
+      expect.objectContaining({ page: 1 }),
+    );
   });
 });
 

@@ -972,6 +972,14 @@
                 </button>
                 <button
                   type="button"
+                  :data-testid="`broadcast-market-${market.id}`"
+                  class="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
+                  @click="startBroadcast(market)"
+                >
+                  推播
+                </button>
+                <button
+                  type="button"
                   class="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
                   @click="startEditing(market)"
                 >
@@ -986,6 +994,42 @@
     <p v-if="marketQrError" class="text-sm text-red-600">
       {{ marketQrError }}
     </p>
+
+    <!-- 市集推播（#335）。刻意不開新頁：這裡已經是唯一列出每個市集、又帶
+         per-market 操作欄的畫面，而市集推播跟這頁一樣是 role 0，另開一頁只會
+         為了一顆按鈕把整張清單複製一次。元件與店家後台的 /dashboard/broadcasts
+         共用，差別由 scopeType 決定：額度 24 小時 1 則，且沒有「同時通知市集
+         追蹤者」（市集路由會丟掉那個欄位，不是預設 false）。 -->
+    <div
+      v-if="broadcastMarket"
+      data-testid="market-broadcast-panel"
+      class="rounded-lg border border-gray-200 bg-white p-5 shadow-ios-card"
+    >
+      <div
+        class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
+      >
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900">
+            市集推播：{{ broadcastMarket.name }}
+          </h2>
+          <p class="mt-1 text-sm text-gray-500">
+            以市集名義推播給追蹤這個市集、且同意行銷通知的顧客，每 24 小時 1
+            則。
+          </p>
+        </div>
+        <button
+          type="button"
+          data-testid="close-market-broadcast"
+          class="text-sm font-medium text-gray-500 hover:text-gray-700"
+          @click="closeBroadcast"
+        >
+          關閉
+        </button>
+      </div>
+      <div class="mt-4">
+        <BroadcastComposer scope-type="market" :scope-id="broadcastMarket.id" />
+      </div>
+    </div>
 
     <div
       v-if="editingMarket"
@@ -1889,6 +1933,7 @@ import {
   marketAreaReadinessCsvFilename,
 } from "@/utils/marketAreaReadinessExport";
 import { useDateFormatter } from "@/composables/useDateFormatter";
+import BroadcastComposer from "@/components/broadcasts/BroadcastComposer.vue";
 
 type MarketAreaKey = Pick<MarketAreaReadinessSummary, "city" | "district">;
 type EditableMarketVendor = MarketVendor & {
@@ -1936,6 +1981,7 @@ const discoveryReindexError = ref("");
 const query = ref(firstQueryString(route.query.marketSlug) ?? "");
 const readinessFilter = ref<MarketReadinessFilter>("all");
 const editingMarket = ref<MarketListItem | null>(null);
+const broadcastMarket = ref<MarketListItem | null>(null);
 const formError = ref("");
 const isImportingMarkets = ref(false);
 const marketImportFormat = ref<MarketImportFormat>("csv");
@@ -2574,6 +2620,14 @@ function manageImportedVendorGap(
 ) {
   if (!editingMarket.value) return;
   manageVendorGap(vendor, target, editingMarket.value);
+}
+
+function startBroadcast(market: MarketListItem) {
+  broadcastMarket.value = market;
+}
+
+function closeBroadcast() {
+  broadcastMarket.value = null;
 }
 
 function startEditing(market: MarketListItem) {
