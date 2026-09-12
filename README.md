@@ -197,7 +197,7 @@ Makan-Masak/
 
 ### Production-Ready Systems
 
-- Core API (<!-- gen:moduleCount -->41<!-- /gen --> feature modules, <!-- gen:routeGroups -->51<!-- /gen --> mounted route groups)<!-- counts verified by scripts/check-docs-drift.cjs -->
+- Core API (<!-- gen:moduleCount -->45<!-- /gen --> feature modules, <!-- gen:routeGroups -->59<!-- /gen --> mounted route groups)<!-- counts verified by scripts/check-docs-drift.cjs -->
 - JWT multi-role authentication with bcrypt
 - QR code ordering (table/seat/shop modes)
 - Employee scheduling & leave management
