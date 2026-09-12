@@ -1,5 +1,6 @@
 import { Context, Next } from "hono";
 import type { Env } from "../types/env";
+import { CORS_ALLOWED_REQUEST_HEADERS } from "./cors-headers";
 
 /**
  * Build allowed origins list based on environment configuration
@@ -78,19 +79,7 @@ export const corsMiddleware = async (
   // 嚴格控制允許的 headers
   c.res.headers.set(
     "Access-Control-Allow-Headers",
-    [
-      "Content-Type",
-      "Authorization",
-      "X-Requested-With",
-      "X-CSRF-Token",
-      "X-Client-Version",
-      "X-Client-Platform",
-      "X-Request-ID",
-      "X-Restaurant-ID",
-      "X-Table-ID",
-      "X-Guest-Device-Id",
-      "X-Guest-Token",
-    ].join(", "),
+    CORS_ALLOWED_REQUEST_HEADERS.join(", "),
   );
 
   // 暴露自定義 headers 給前端

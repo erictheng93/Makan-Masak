@@ -56,6 +56,48 @@ describe("corsMiddleware", () => {
     );
   });
 
+  it("allows the payment idempotency key and the till headers during preflight", async () => {
+    const app = createApp();
+
+    // CashierView settles through POST /payments with an Idempotency-Key and
+    // names the till on refunds. Refusing any of these in the preflight means
+    // the request is never sent, which the page can only report as
+    // "Network Error".
+    const response = await app.fetch(
+      new Request("https://api.test/api/v1/payments", {
+        method: "OPTIONS",
+        headers: {
+          Origin: "https://admin.makanmasak.com",
+          "Access-Control-Request-Method": "POST",
+          "Access-Control-Request-Headers":
+            "authorization, content-type, idempotency-key, x-csrf-token, x-register-id, x-shift-id",
+        },
+      }),
+      {
+        NODE_ENV: "production",
+        CORS_ORIGIN: "https://admin.makanmasak.com",
+      },
+    );
+
+    const allowedHeaders = response.headers
+      .get("Access-Control-Allow-Headers")
+      ?.toLowerCase()
+      .split(",")
+      .map((header) => header.trim());
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe(
+      "https://admin.makanmasak.com",
+    );
+    expect(allowedHeaders).toEqual(
+      expect.arrayContaining([
+        "idempotency-key",
+        "x-register-id",
+        "x-shift-id",
+      ]),
+    );
+  });
+
   it("does not send a browser policy that disables same-origin QR scanning", async () => {
     const app = createApp();
 
