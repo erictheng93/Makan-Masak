@@ -14,6 +14,11 @@
  *   - enum members and literal values added or removed
  *   - array element types, and object catchall (`.loose()`) gained or lost
  *
+ * `z.lazy` is transparent: it is resolved during the same wrapper peel that
+ * strips optional/nullable/default, so wrapping a schema in `z.lazy` (as #362
+ * did across apps/api/src/features) changes nothing in the snapshot, and a
+ * `.nullable()` on either side of the lazy still shows up on the label.
+ *
  * What it still does NOT detect:
  *   - refinements and checks — `.int()`, `.min()`, `.max()`, `.regex()` are not
  *     part of the label, so `z.number()` and `z.number().int()` look identical
@@ -89,18 +94,56 @@ function zodDef(value) {
 }
 
 /**
+ * Resolve a `z.lazy` to the schema it defers to.
+ *
+ * Prefer zod's memoised `_zod.innerType` over calling `def.getter()` again: a
+ * getter that builds its schema inline returns a *fresh* instance on every
+ * call, and the `<circular>` guard in `describe` compares node identity.
+ */
+function lazyTarget(node, def) {
+  const memoised = node && node._zod ? node._zod.innerType : undefined;
+  return memoised === undefined ? def.getter() : memoised;
+}
+
+/**
  * Peel optional/nullable/default/readonly/catch wrappers off a schema and
  * return the schema underneath plus the suffix that describes them.
+ *
+ * `lazy` is peeled here too, and deliberately so (#363): it is a deferral, not
+ * a type, so the wrappers on either side of it have to accumulate into one
+ * suffix. Resolving it in the caller instead restarted the peel and dropped
+ * everything already collected — `z.lazy(...).nullable()` described as
+ * `object`, not `object|null`.
+ *
+ * `circular` comes back true when the lazy chain closes on itself without ever
+ * reaching a concrete node (`const L = z.lazy(() => L)`, or two lazies that
+ * defer to each other). `describe`'s node-identity stack cannot catch that on
+ * its own once the resolution happens in here, so the peel keeps its own seen
+ * set and stops.
  */
 function unwrap(schema) {
   let node = schema;
   let nullable = false;
   let optional = false;
   let hasDefault = false;
+  let circular = false;
+  const seenLazy = new Set();
 
   for (;;) {
     const def = zodDef(node);
-    if (!def || !def.innerType) break;
+    if (!def) break;
+
+    if (def.type === "lazy") {
+      if (seenLazy.has(node)) {
+        circular = true;
+        break;
+      }
+      seenLazy.add(node);
+      node = lazyTarget(node, def);
+      continue;
+    }
+
+    if (!def.innerType) break;
 
     if (def.type === "optional") optional = true;
     else if (def.type === "nullable") nullable = true;
@@ -118,7 +161,7 @@ function unwrap(schema) {
 
   const suffix =
     (nullable ? "|null" : "") + (hasDefault ? "=" : "") + (optional ? "?" : "");
-  return { node, suffix };
+  return { node, suffix, circular };
 }
 
 /**
@@ -127,7 +170,7 @@ function unwrap(schema) {
  * the container are visible, not just on its leaves.
  */
 function describe(schema, keyPath, out, depth, stack) {
-  const { node, suffix } = unwrap(schema);
+  const { node, suffix, circular } = unwrap(schema);
   const def = zodDef(node);
 
   if (!def) {
@@ -135,7 +178,7 @@ function describe(schema, keyPath, out, depth, stack) {
     return;
   }
 
-  if (depth > MAX_DEPTH || stack.has(node)) {
+  if (circular || depth > MAX_DEPTH || stack.has(node)) {
     out[keyPath] = def.type + suffix + " <circular>";
     return;
   }
@@ -219,10 +262,6 @@ function describe(schema, keyPath, out, depth, stack) {
       out[keyPath] =
         `literal(${def.values.map((v) => JSON.stringify(v)).join("|")})` +
         suffix;
-      break;
-
-    case "lazy":
-      describe(def.getter(), keyPath, out, depth + 1, stack);
       break;
 
     case "pipe":

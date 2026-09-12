@@ -1,5 +1,6 @@
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 const require = createRequire(import.meta.url);
 
@@ -148,5 +149,91 @@ describe("contract snapshot diff", () => {
     expect(diffSnapshots(baseline, withoutSchema).removedSchemas).toEqual([
       "menu.CategorySchema",
     ]);
+  });
+});
+
+// Issue #363. `z.lazy` is a deferral, not a type, so describing a lazified
+// schema must produce exactly what describing the eager schema produces.
+// The describer used to recurse into `def.getter()` with a *fresh* unwrap,
+// which threw away every wrapper peeled off the outside of the lazy: a
+// `.nullable()` schema came back labelled `object`, not `object|null`.
+// #362 wrapped every module-scope schema in apps/api/src/features/** in
+// z.lazy, so the first contract schema to follow gets either false BREAKING
+// entries or — worse — a real nullability change reported as no change.
+describe("z.lazy is transparent to the describer", () => {
+  const eager = () => z.object({ a: z.string() });
+  const lazy = () => z.lazy(() => z.object({ a: z.string() }));
+
+  it("carries .nullable() through the lazy", () => {
+    expect(describeSchema(lazy().nullable())).toEqual(
+      describeSchema(eager().nullable()),
+    );
+    expect(describeSchema(lazy().nullable()).$).toBe("object|null");
+  });
+
+  it("carries .optional() through the lazy", () => {
+    expect(describeSchema(lazy().optional())).toEqual(
+      describeSchema(eager().optional()),
+    );
+    expect(describeSchema(lazy().optional()).$).toBe("object?");
+  });
+
+  it("carries .default() through the lazy", () => {
+    expect(describeSchema(lazy().default({ a: "x" }))).toEqual(
+      describeSchema(eager().default({ a: "x" })),
+    );
+    expect(describeSchema(lazy().default({ a: "x" })).$).toBe("object=");
+  });
+
+  it("carries a stack of wrappers through the lazy", () => {
+    expect(describeSchema(lazy().nullable().optional())).toEqual(
+      describeSchema(eager().nullable().optional()),
+    );
+    expect(describeSchema(lazy().nullable().optional()).$).toBe("object|null?");
+  });
+
+  it("merges wrappers applied on both sides of the lazy", () => {
+    const split = z.lazy(() => eager().nullable()).optional();
+
+    expect(describeSchema(split)).toEqual(
+      describeSchema(eager().nullable().optional()),
+    );
+  });
+
+  it("carries a wrapper on an object field that holds a lazy", () => {
+    const lazified = z.object({ b: lazy().nullable(), c: z.string() });
+    const plain = z.object({ b: eager().nullable(), c: z.string() });
+
+    expect(describeSchema(lazified)).toEqual(describeSchema(plain));
+    expect(describeSchema(lazified).b).toBe("object|null");
+  });
+
+  it("resolves a lazy that returns another lazy", () => {
+    const doubled = z.lazy(() => lazy()).nullable();
+
+    expect(describeSchema(doubled)).toEqual(describeSchema(eager().nullable()));
+  });
+
+  it("still reports <circular> for a self-referential lazy", () => {
+    type Tree = { name: string; children: Tree[] };
+    const TreeSchema: z.ZodType<Tree> = z.object({
+      name: z.string(),
+      children: z.array(z.lazy(() => TreeSchema)),
+    });
+
+    expect(describeSchema(TreeSchema)["children[]"]).toContain("<circular>");
+  });
+
+  it("does not hang on a lazy whose getter returns the lazy itself", () => {
+    const selfLazy: z.ZodType = z.lazy(() => selfLazy);
+
+    expect(describeSchema(selfLazy).$).toContain("<circular>");
+  });
+
+  it("does not hang on two lazies that defer to each other", () => {
+    const left: z.ZodType = z.lazy(() => right);
+    const right: z.ZodType = z.lazy(() => left);
+
+    expect(describeSchema(left.nullable()).$).toContain("<circular>");
   });
 });
