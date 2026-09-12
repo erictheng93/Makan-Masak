@@ -107,10 +107,17 @@ test.describe("訂閱與帳務 (real API)", () => {
     // Every meter the API reported has to be on the page. Asserting the set
     // rather than one row is what would catch a silently dropped meter.
     for (const meter of usage.body.data?.meters ?? []) {
+      const row = page.getByTestId(`billing-meter-${meter.meterKey}`);
       await expect(
-        page.getByTestId(`billing-meter-${meter.meterKey}`),
+        row,
         `meter ${meter.meterKey} should be rendered`,
       ).toBeVisible();
+      // The view falls back to the raw key when a label is missing, and every
+      // meter shipped that way: the row was visible, and read "api.requests".
+      await expect(
+        row,
+        `meter ${meter.meterKey} should be named`,
+      ).not.toContainText(meter.meterKey);
     }
 
     // Same for modules, including the disabled ones — an owner needs to see
@@ -121,9 +128,11 @@ test.describe("訂閱與帳務 (real API)", () => {
     );
     expect(moduleEntries.length).toBeGreaterThan(0);
     for (const [key, enabled] of moduleEntries) {
-      await expect(page.getByTestId(`billing-module-${key}`)).toHaveAttribute(
-        "data-enabled",
-        String(enabled),
+      const entry = page.getByTestId(`billing-module-${key}`);
+      await expect(entry).toHaveAttribute("data-enabled", String(enabled));
+      // Module keys are snake_case; a named entry never contains one.
+      await expect(entry, `module ${key} should be named`).not.toContainText(
+        key,
       );
     }
 

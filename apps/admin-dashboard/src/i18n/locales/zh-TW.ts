@@ -5600,6 +5600,9 @@ const zhTWCore = {
       ai_analytics: "AI 分析",
       platform_integration: "外送整合",
       loyalty: "忠誠方案",
+      pos: "POS 收銀",
+      inventory: "食材庫存",
+      staff_management: "人事管理",
     },
     form: {
       restaurantId: "店家 ID",
@@ -5942,10 +5945,11 @@ const zhTWRuntimeKeys = {
       enterprise: "企業",
     },
     meter: {
-      "orders.created": "建立訂單",
-      "api.requests": "API 請求",
-      "print.jobs": "列印工作",
-      "ai.requests": "AI 請求",
+      orders_created: "建立訂單",
+      api_requests: "API 請求",
+      print_jobs: "列印工作",
+      ai_requests: "AI 請求",
+      storage_bytes: "儲存空間（位元組）",
     },
   },
 };

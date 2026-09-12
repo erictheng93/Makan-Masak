@@ -5772,6 +5772,9 @@ const idID: Messages = {
       loyalty: "Loyalitas",
       reservations: "Reservasi",
       table_management: "Manajemen Meja",
+      pos: "Kasir POS",
+      inventory: "Inventaris",
+      staff_management: "Manajemen Staf",
     },
     modules: "Modul",
     plans: {
@@ -5833,10 +5836,11 @@ const idID: Messages = {
       enterprise: "Enterprise",
     },
     meter: {
-      "orders.created": "Pesanan dibuat",
-      "api.requests": "Permintaan API",
-      "print.jobs": "Tugas cetak",
-      "ai.requests": "Permintaan AI",
+      orders_created: "Pesanan dibuat",
+      api_requests: "Permintaan API",
+      print_jobs: "Tugas cetak",
+      ai_requests: "Permintaan AI",
+      storage_bytes: "Penyimpanan (byte)",
     },
   },
 };

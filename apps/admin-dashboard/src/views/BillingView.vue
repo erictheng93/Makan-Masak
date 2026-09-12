@@ -168,6 +168,7 @@ import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import { useI18n } from "@/i18n";
 import { api } from "@/services/api";
+import { meterMessagePath, moduleMessagePath } from "@/utils/billingLabels";
 
 interface UsageMeter {
   meterKey: string;
@@ -238,11 +239,11 @@ const cycleLabel = computed(() => {
 });
 
 function meterLabel(key: string): string {
-  return translateOr(`billing.meter.${key}`, key);
+  return translateOr(meterMessagePath(key), key);
 }
 
 function moduleLabel(key: string): string {
-  return translateOr(`billing.module.${key}`, key);
+  return translateOr(moduleMessagePath(key), key);
 }
 
 /** Percentage of the hard limit, clamped so an overage still renders a full bar. */

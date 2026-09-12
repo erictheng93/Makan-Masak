@@ -5738,6 +5738,9 @@ const enUS: Messages = {
       receipt_printing: "Receipt Printing",
       reservations: "Reservations",
       table_management: "Table Management",
+      pos: "POS",
+      inventory: "Inventory",
+      staff_management: "Staff Management",
     },
     loadError: "Load Error",
     plans: {
@@ -5800,10 +5803,11 @@ const enUS: Messages = {
       enterprise: "Enterprise",
     },
     meter: {
-      "orders.created": "Orders created",
-      "api.requests": "API requests",
-      "print.jobs": "Print jobs",
-      "ai.requests": "AI requests",
+      orders_created: "Orders created",
+      api_requests: "API requests",
+      print_jobs: "Print jobs",
+      ai_requests: "AI requests",
+      storage_bytes: "Storage (bytes)",
     },
   },
 };

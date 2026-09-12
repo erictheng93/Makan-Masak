@@ -5735,6 +5735,9 @@ const jaJP: Messages = {
       reservations: "予約",
       table_management: "テーブル管理",
       receipt_printing: "レシート印刷",
+      pos: "POS レジ",
+      inventory: "在庫管理",
+      staff_management: "スタッフ管理",
     },
     loadError: "ロードエラー",
     plans: {
@@ -5796,10 +5799,11 @@ const jaJP: Messages = {
       enterprise: "エンタープライズ",
     },
     meter: {
-      "orders.created": "作成された注文",
-      "api.requests": "API リクエスト",
-      "print.jobs": "印刷ジョブ",
-      "ai.requests": "AI リクエスト",
+      orders_created: "作成された注文",
+      api_requests: "API リクエスト",
+      print_jobs: "印刷ジョブ",
+      ai_requests: "AI リクエスト",
+      storage_bytes: "ストレージ（バイト）",
     },
   },
 };
