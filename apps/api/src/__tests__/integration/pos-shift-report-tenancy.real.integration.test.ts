@@ -239,4 +239,58 @@ describe("POS shift report — tenancy and D1 binding", () => {
     });
     expect(data.reportData.summary.totalSales).toBe(450);
   });
+
+  // Takings are money collected (#354). Both reports used to sum every order
+  // created in the window, so a served-but-unpaid order showed up as 今日業績 at
+  // the till the moment the kitchen marked it delivered, and so did a cancelled
+  // one.
+  it("counts only settled orders in the daily and shift takings", async () => {
+    const mine = await tenantWithOpenShift("takings");
+    await seedPaidOrder(mine.restaurantId, 27_000, "cash");
+
+    const unsettled = [
+      { cents: 18_000, status: "delivered", paymentStatus: "pending" },
+      { cents: 9_000, status: "cancelled", paymentStatus: "pending" },
+      { cents: 12_000, status: "refunded", paymentStatus: "refunded" },
+    ];
+    for (const order of unsettled) {
+      await seed.order(mine.restaurantId, {
+        totalAmountCents: order.cents,
+        totalAmount: order.cents / 100,
+        subtotalCents: order.cents,
+        subtotal: order.cents / 100,
+        paymentMethod: "cash",
+        paymentStatus: order.paymentStatus,
+        status: order.status,
+        createdAt: new Date(),
+      });
+    }
+
+    // The report's `date` is the shop's calendar day; seed.restaurant keeps
+    // the schema default of Asia/Taipei.
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Taipei",
+    }).format(new Date());
+
+    const dailyRes = await call(
+      `/pos/reports/daily?date=${today}&restaurantId=${mine.restaurantId}`,
+      mine.ownerToken,
+    );
+    expect(dailyRes.status).toBe(200);
+    const daily = await readData<{
+      summary: { totalOrders: number; totalSales: number };
+      paymentBreakdown: { cashOrders: number };
+    }>(dailyRes);
+    expect(daily.summary).toMatchObject({ totalOrders: 1, totalSales: 270 });
+    expect(daily.paymentBreakdown.cashOrders).toBe(1);
+
+    const shiftRes = await call(
+      `/pos/shifts/${mine.shiftId}/report`,
+      mine.ownerToken,
+    );
+    expect(shiftRes.status).toBe(200);
+    const shift = await readData<ShiftReportEnvelope>(shiftRes);
+    expect(shift.reportData.summary.totalSales).toBe(270);
+    expect(shift.reportData.orderStats.totalOrders).toBe(1);
+  });
 });

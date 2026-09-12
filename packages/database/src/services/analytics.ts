@@ -12,7 +12,6 @@ import {
   lte,
   lt,
   ne,
-  notInArray,
   sql,
   sum,
   type SQL,
@@ -33,7 +32,7 @@ import {
 } from "../utils/money-sql";
 import {
   FULFILLED_ORDER_STATUSES,
-  REVENUE_RECOGNISED_PAYMENT_STATUSES,
+  revenueRecognisedOrder,
 } from "../utils/order-analytics";
 import {
   businessDateNow,
@@ -54,13 +53,6 @@ function recognisedRevenueCents(centsColumn: SQLWrapper): SQL<number> {
     THEN ${centsColumn}
     ELSE 0
   END`;
-}
-
-function revenueRecognisedOrder(): SQL {
-  return and(
-    inArray(orders.paymentStatus, REVENUE_RECOGNISED_PAYMENT_STATUSES),
-    notInArray(orders.status, ["cancelled", "refunded"]),
-  )!;
 }
 
 type RevenueDataRow = {

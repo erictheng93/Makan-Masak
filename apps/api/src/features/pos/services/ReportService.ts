@@ -19,6 +19,7 @@ import {
   avgAbsMoneyAmount,
   avgMoneyAmount,
   dateFromUnixMs,
+  revenueRecognisedOrder,
   strftimeFromUnixMs,
   sumMoneyAmount,
 } from "@makanmasak/database";
@@ -114,6 +115,9 @@ export class ReportService {
             // 會把 Date 物件原封不動綁進去，D1 直接回 D1_TYPE_ERROR。
             gte(orders.createdAt, startedAt),
             lte(orders.createdAt, endedAt),
+            // 班次營收同樣只算收到錢的單，否則交班對帳會把沒結帳、
+            // 已取消的單當成應收現金 (#354)。
+            revenueRecognisedOrder(),
           ),
         );
 
@@ -297,6 +301,9 @@ export class ReportService {
           and(
             eq(orders.restaurantId, restaurantId),
             sql`${dateFromUnixMs(orders.createdAt, offsetMinutes)} = ${date}`,
+            // 收銀台的「今日業績」讀這裡。只算真的收到錢的單 (#354)：
+            // 已出餐未結帳、已取消的單都不是業績。
+            revenueRecognisedOrder(),
           ),
         );
 
@@ -330,6 +337,7 @@ export class ReportService {
           and(
             eq(orders.restaurantId, restaurantId),
             sql`${dateFromUnixMs(orders.createdAt, offsetMinutes)} = ${date}`,
+            revenueRecognisedOrder(),
           ),
         )
         .groupBy(menuItems.id, menuItems.name)
