@@ -838,7 +838,15 @@
                   }})
                 </label>
                 <div class="flex items-center space-x-2">
-                  <span class="text-gray-500">RM</span>
+                  <span
+                    class="text-gray-500"
+                    data-testid="settings-min-order-currency"
+                    >{{
+                      getCurrencySymbol(
+                        settings.system.currency as CurrencyCode,
+                      )
+                    }}</span
+                  >
                   <input
                     v-model.number="settings.orders.minimumOrderAmount"
                     type="number"
@@ -1882,6 +1890,7 @@ import { formatMarketMembershipLocation } from "@/utils/marketMembershipDisplay"
 import { setRestaurantCurrency } from "@/composables/useCurrency";
 import { printQRCodeSheet, toPrintableDataUrl } from "@/utils/qrPrintSheet";
 import type { CurrencyCode } from "@makanmasak/shared-types";
+import { getCurrencySymbol } from "@makanmasak/utils";
 
 const { t } = useI18n();
 const toast = useToast();

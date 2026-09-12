@@ -442,6 +442,36 @@ describe("SettingsView guest ordering availability", () => {
     expect(body.settings.minOrderAmount).toBe(0);
   });
 
+  // The prefix was a hardcoded "RM" beside a label reading "(TWD)", so a
+  // Taiwanese shop saw ringgit on the field that decides whether an order can
+  // be placed at all.
+  it("prefixes the minimum spend with the shop's own currency", async () => {
+    const baseGet = vi.mocked(api.get).getMockImplementation()!;
+    vi.mocked(api.get).mockImplementation(async (url: string) => {
+      if (url === "/restaurants/restaurant-1") {
+        return apiGetResponse({
+          name: "廣東粥",
+          isAvailable: true,
+          settings: {
+            allowGuestOrders: true,
+            currency: "TWD",
+            minOrderAmount: 200,
+            enableDineIn: true,
+            enableTakeaway: false,
+            enableDelivery: false,
+          },
+        });
+      }
+      return baseGet(url);
+    });
+
+    const wrapper = await mountSettings();
+
+    expect(
+      wrapper.get('[data-testid="settings-min-order-currency"]').text(),
+    ).toBe("NT$");
+  });
+
   // OrderService computes tax as `subtotalCents * taxRate`, so the server
   // wants a fraction while the owner types a percentage. Both rates had no
   // field at all on this screen, so every order carried taxAmount 0 and
