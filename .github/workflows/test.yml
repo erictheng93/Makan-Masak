@@ -475,13 +475,66 @@ jobs:
           pkill -f "wrangler dev" || true
           pkill -f "vite" || true
 
+      - name: 🩺 檢查 wrangler 是否中途崩潰
+        # A workerd/miniflare crash mid-run reads as "the last N specs failed
+        # with `fetch failed`" and nothing else: wrangler prints an *empty*
+        # error message followed by its "please create an issue" line, and
+        # every detail goes to its own debug log under
+        # $HOME/.config/.wrangler/logs (collected by the upload step below).
+        # Say so in the job summary so the next person does not have to
+        # download the artifact to learn that the Worker died rather than the
+        # tests. Informational only — the failing specs already fail the job,
+        # and a crash after the last spec should not turn a green run red.
+        if: always()
+        env:
+          API_LOG: /tmp/admin-e2e-logs/api.log
+          WRANGLER_LOG_DIR: ${{ env.HOME }}/.config/.wrangler/logs
+        run: |
+          set -eu
+          echo "wrangler debug logs in ${WRANGLER_LOG_DIR}:"
+          ls -1t "${WRANGLER_LOG_DIR}" || echo "  (directory missing)"
+          grep -q 'If you think this is a bug then please create an issue' "${API_LOG}" 2>/dev/null || exit 0
+          # wrangler names the log it wrote on the way out, so take it from
+          # api.log ('Logs were written to "..."') rather than guessing. Fall
+          # back to the newest file in the directory — the names are
+          # wrangler-<ISO timestamp>.log, so glob order is chronological.
+          LOGFILE=$(sed -n 's/.*Logs were written to "\([^"]*\)".*/\1/p' "${API_LOG}" | tail -n 1)
+          if [ -z "${LOGFILE}" ]; then
+            for candidate in "${WRANGLER_LOG_DIR}"/wrangler-*.log; do
+              if [ -f "${candidate}" ]; then LOGFILE="${candidate}"; fi
+            done
+          fi
+          {
+            echo '### ⚠️ wrangler dev 在測試途中崩潰'
+            echo ''
+            echo 'api.log 出現 workers-sdk 的 crash 指紋；Worker 之後不再服務，剩下的 spec 會全部以 fetch failed 失敗。'
+            echo ''
+            echo '最新的 wrangler 除錯日誌（已收進本 job 的 artifact）：'
+            echo ''
+            echo '```'
+            echo "${LOGFILE:-no wrangler-*.log under ${WRANGLER_LOG_DIR}}"
+            grep -B 6 -A 2 'If you think this is a bug then please create an issue' "${API_LOG}" |
+              sed 's/\x1b\[[0-9;]*m//g' | tail -n 20
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
+
       - name: 📎 上傳日誌與報告
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: admin-real-e2e
+          # $HOME/.config/.wrangler/logs is where wrangler writes the debug
+          # log it points at on a crash ("🪵 Logs were written to ...").
+          # `wrangler dev`'s own stderr in api.log carries an empty message,
+          # so without this the crash cannot be attributed after the fact.
+          # Every wrangler invocation in this job writes one, so the glob is
+          # never empty and if-no-files-found (default `warn`) stays useful.
+          # The dot-directories need no `include-hidden-files`: upload-artifact
+          # only skips hidden entries it discovers while walking, not the path
+          # it was handed (verified on run 34676859069).
           path: |
             /tmp/admin-e2e-logs/
+            ${{ env.HOME }}/.config/.wrangler/logs/
             playwright-report/
             test-results/
           retention-days: 7
