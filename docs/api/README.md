@@ -39,7 +39,7 @@ Authorization: Bearer <your_jwt_token>
 > 自動生成，請勿手動編輯。執行 `node scripts/check-docs-drift.cjs --write` 重新生成。
 > Source of truth: `apps/api/src/app-factory.ts` 的 `apiV1.route(...)` 掛載點。
 
-共 **51** 個掛載點（全部相對於 `/api/v1`）。
+共 **59** 個掛載點（全部相對於 `/api/v1`）。
 
 | Prefix | Router | 說明 |
 | ------ | ------ | ---- |
@@ -56,12 +56,16 @@ Authorization: Bearer <your_jwt_token>
 | `/guest-orders` | `guestOrdersRoutes` | 訪客點餐 (KV-based guest token auth) |
 | `/market-checkouts` | `marketCheckoutsFeature.routes` | 市場多攤位訪客結帳 |
 | `/credits` | `creditsFeature.routes` | 代幣儲值卡 (查餘額公開限流, 管理端點 admin) |
+| `/restaurants` | `membersFeature.routes` |  |
 | `/integrations` | `integrationsFeature.routes` | 外送平台串接 (webhooks 公開 HMAC 驗證, 管理端點內部驗證) |
 | `/restaurants` | `restaurantsFeature.routes` |  |
+| `/restaurants` | `reviewsFeature.publicRoutes` |  |
+| `/restaurants` | `broadcastsFeature.restaurantRoutes` |  |
 | `/menu` | `menuFeature.routes` |  |
 | `/kitchen` | `kitchenFeature.routes` |  |
 | `/orders/group` | `groupOrdersFeature.routes` |  |
 | `/orders` | `ordersFeature.routes` |  |
+| `/orders` | `reviewsFeature.orderRoutes` |  |
 | `/pos` | `posFeature.routes` |  |
 | `/payments` | `paymentsFeature.routes` |  |
 | `/manager` | `managerFeature.actionsRoutes` |  |
@@ -85,7 +89,10 @@ Authorization: Bearer <your_jwt_token>
 | `/ingredients` | `ingredientsFeature.routes` |  |
 | `/discovery` | `discoveryFeature.routes` |  |
 | `/markets` | `marketsFeature.routes` |  |
+| `/markets` | `broadcastsFeature.marketRoutes` |  |
 | `/feedback` | `feedbackFeature.routes` |  |
+| `/alerts` | `alertsFeature.routes` | 店主營運告警 (#285) — admin/owner only |
+| `/reviews` | `reviewsFeature.routes` | 顧客評價 (#286) — admin/owner only |
 | `/billing` | `billingFeature.routes` |  |
 | `/me` | `meFeature.routes` |  |
 | `/notifications` | `notificationsRoutes` |  |
@@ -93,6 +100,7 @@ Authorization: Bearer <your_jwt_token>
 | `/audit` | `auditRoutes` |  |
 | `/admin` | `adminSettingsRoutes` |  |
 | `/admin/markets` | `marketsFeature.adminRoutes` |  |
+| `/admin/customers` | `membersFeature.adminRoutes` |  |
 | `/admin/subscriptions` | `subscriptionsFeature.routes` |  |
 <!-- END GENERATED:api-surface -->
 
@@ -177,6 +185,35 @@ Authorization: Bearer <your_jwt_token>
 | POST   | `/restaurants/:id/qr/shop/upload-image` | 上傳 QR 圖片      | Admin/Owner |
 | PUT    | `/restaurants/:id/shop-mode`            | 啟用/停用店鋪模式 | Admin/Owner |
 
+### Members (`/restaurants`) — 8 routes
+
+租戶端會員目錄（#299 spec §7.1），與 `restaurantsFeature.routes` 共用 `/restaurants` 前綴。
+
+| Method | Path | Description | Auth |
+| ------ | ---- | ----------- | ---- |
+| GET | `/restaurants/:restaurantId/members` | 會員目錄列表（篩選、分頁） | Admin/Owner |
+| GET | `/restaurants/:restaurantId/members/stats` | 會員統計摘要 | Admin/Owner |
+| GET | `/restaurants/:restaurantId/members/:memberId` | 會員詳情 | Admin/Owner |
+| PATCH | `/restaurants/:restaurantId/members/:memberId` | 更新會員狀態／備註 | Admin/Owner |
+| GET | `/restaurants/:restaurantId/members/:memberId/orders` | 會員訂單歷史 | Admin/Owner |
+| POST | `/restaurants/:restaurantId/members/:memberId/reveal-contact` | 揭露會員聯絡方式（寫稽核、受限流） | Admin/Owner |
+| POST | `/restaurants/:restaurantId/members/export` | 匯出遮罩會員 CSV（寫稽核） | Admin/Owner |
+| POST | `/restaurants/:restaurantId/members/recompute` | 重算會員彙總 | Admin |
+
+### Public Reviews (`/restaurants`) — 1 route
+
+| Method | Path | Description | Auth |
+| ------ | ---- | ----------- | ---- |
+| GET | `/restaurants/:id/reviews` | 餐廳公開評價列表（顯示名遮罩） | Public |
+
+### Restaurant Broadcasts (`/restaurants`) — 2 routes
+
+| Method | Path | Description | Auth |
+| ------ | ---- | ----------- | ---- |
+| POST | `/restaurants/:id/broadcasts` | 對餐廳追蹤者發送推播 | Admin/Owner |
+| GET | `/restaurants/:id/broadcasts` | 發送歷史（新到舊） | Admin/Owner |
+
+
 ### Menu (`/menu`) — 17 routes
 
 | Method | Path                                     | Description      | Auth        |
@@ -217,6 +254,14 @@ Authorization: Bearer <your_jwt_token>
 | POST   | `/orders/export`         | 匯出訂單        | Admin/Owner |
 | GET    | `/orders/:id/receipt`    | 產生收據        | Protected   |
 | GET    | `/orders/active`         | 進行中訂單      | Protected   |
+
+### Order Reviews (`/orders`) — 2 routes
+
+| Method | Path | Description | Auth |
+| ------ | ---- | ----------- | ---- |
+| POST | `/orders/:id/review` | 顧客提交訂單評價 | Customer（可選登入，訂單 token 授權） |
+| GET | `/orders/:id/review` | 讀回該訂單評價與店家回覆 | Customer（可選登入，訂單 token 授權） |
+
 
 ### Guest Orders (`/guest-orders`) — 4 routes
 
@@ -783,6 +828,14 @@ so a token can never be replayed against a different room.
 | GET | `/markets/:slug/vendors` | 市場攤位列表 | Public |
 | GET | `/markets/:slug` | 依 slug 取得市場詳情 | Public |
 
+### Market Broadcasts (`/markets`) — 2 routes
+
+| Method | Path | Description | Auth |
+| ------ | ---- | ----------- | ---- |
+| POST | `/markets/:id/broadcasts` | 對市場追蹤者發送公告 | Admin |
+| GET | `/markets/:id/broadcasts` | 發送歷史（新到舊） | Admin |
+
+
 ### Admin Markets (`/admin/markets`) — 13 routes
 
 | Method | Path | Description | Auth |
@@ -800,6 +853,18 @@ so a token can never be replayed against a different room.
 | PUT | `/admin/markets/:id/vendors/:restaurantId` | 更新市場攤位 | Admin |
 | POST | `/admin/markets/:id/vendor-imports` | 批次匯入攤位 | Admin |
 | DELETE | `/admin/markets/:id/vendors/:restaurantId` | 移除市場攤位 | Admin |
+
+### Admin Customers (`/admin/customers`) — 4 routes
+
+平台端顧客目錄（#299 spec §7.2）。這是全站唯一以 `customers.id` 為語彙的 router，租戶端的 `/restaurants/:id/members` 刻意看不到跨租戶資料。
+
+| Method | Path | Description | Auth |
+| ------ | ---- | ----------- | ---- |
+| GET | `/admin/customers` | 平台顧客目錄列表 | Admin |
+| GET | `/admin/customers/:customerId` | 顧客詳情 | Admin |
+| GET | `/admin/customers/:customerId/restaurants` | 顧客的跨租戶消費切面 | Admin |
+| POST | `/admin/customers/:customerId/reveal-contact` | 揭露顧客聯絡方式（寫稽核、受限流） | Admin |
+
 
 ### Market Checkouts (`/market-checkouts`) — 18 routes
 
@@ -865,6 +930,27 @@ so a token can never be replayed against a different room.
 | POST | `/feedback/:id/responses` | 新增回覆 | Admin/Owner |
 | PUT | `/feedback/:id/responses/:responseId` | 更新回覆 | Admin/Owner |
 | DELETE | `/feedback/:id/responses/:responseId` | 刪除回覆 | Admin/Owner |
+
+### Alerts (`/alerts`) — 3 routes
+
+店主營運告警（#285）。
+
+| Method | Path | Description | Auth |
+| ------ | ---- | ----------- | ---- |
+| GET | `/alerts` | 未結案告警列表 | Admin/Owner |
+| POST | `/alerts/:id/resolve` | 結案告警 | Admin/Owner |
+| POST | `/alerts/:id/escalate` | 升級告警 | Admin/Owner |
+
+### Reviews (`/reviews`) — 3 routes
+
+顧客評價後台（#286）。顧客端提交在 `/orders/:id/review`，公開列表在 `/restaurants/:id/reviews`。
+
+| Method | Path | Description | Auth |
+| ------ | ---- | ----------- | ---- |
+| GET | `/reviews/:restaurantId` | 餐廳評價列表 | Admin/Owner |
+| GET | `/reviews/:restaurantId/summary` | 評分分布與待回覆數 | Admin/Owner |
+| POST | `/reviews/:restaurantId/:reviewId/reply` | 回覆單則評價 | Admin/Owner |
+
 
 ### Customer (`/customer`) — 19 routes
 

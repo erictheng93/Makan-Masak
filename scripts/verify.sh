@@ -107,6 +107,11 @@ else
   # Until 2026-09-06 this script ran from no gate at all -- not this tier, not
   # CI, not the pre-commit hook. A snapshot nobody compares is not a guard.
   step "API contracts" pnpm run contract:check
+  # Same story as the contract snapshot: this one ran from no gate either, and
+  # was red on main for eight findings nobody saw (#367). The numbers and the
+  # mount index it checks are derived from the code, so drift here means the
+  # docs describe an API that no longer exists.
+  step "docs drift" pnpm run check:docs-drift
   step "guard script regressions" pnpm run test:ci-guards
   step "package tests" pnpm exec turbo run test --concurrency="$TURBO_CONCURRENCY"
   step "root tests" pnpm exec vitest run --project root

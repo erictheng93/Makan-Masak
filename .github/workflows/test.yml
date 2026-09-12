@@ -227,6 +227,17 @@ jobs:
       - name: 📐 API contract snapshot
         run: pnpm run contract:check
 
+      # The module counts and the mount index in README.md, docs/api/README.md
+      # and docs/architecture/README.md are derived from apps/api/src, so drift
+      # means the docs describe an API that is not the one that ships. This ran
+      # from no gate at all until #367, and sat red on main with eight findings.
+      # It catches the direction that actually caused #367 -- a mount added
+      # under apps/api/ without its docs -- because that sets app=true. A
+      # docs-only edit classifies as neither app nor tooling and skips this job;
+      # verify.sh's push tier is the backstop there.
+      - name: 📚 Docs drift guard
+        run: pnpm run check:docs-drift
+
       - name: 🧪 守門腳本回歸測試
         if: needs.changes.outputs.guard_tests == 'true'
         run: pnpm run test:ci-guards

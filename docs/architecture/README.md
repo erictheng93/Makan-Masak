@@ -174,27 +174,27 @@ Data & State       D1（主庫＋管理庫）· KV ×6 · R2 ×3 · Durable Obje
 - **Testing**: Vitest, Playwright
 - **Print**: Local Node.js agent (Express + WebSocket)
 
-### 功能模組總覽 (<!-- gen:featureDirs -->49<!-- /gen --> 個 feature 目錄，其中 <!-- gen:moduleCount -->41<!-- /gen --> 個符合 `index.ts` 掛載模組規範)
+### 功能模組總覽 (<!-- gen:featureDirs -->53<!-- /gen --> 個 feature 目錄，其中 <!-- gen:moduleCount -->45<!-- /gen --> 個符合 `index.ts` 掛載模組規範)
 
 > 「目錄數」是 `apps/api/src/features/` 下的子目錄總數；「模組數」是其中匯出 `index.ts` 預設導出、可被 `app-factory.ts` 掛載的模組數。其餘目錄（如 `audit`、`customer`、`notifications`、`push`、`realtime` 等）改以直接 export router 的方式掛載。數字由 `scripts/check-docs-drift.cjs` 驗證。
 
 | 類別               | 模組                                                         |
 | ------------------ | ------------------------------------------------------------ |
-| **認證與用戶**     | authentication, users, customers, customer, verification, me |
+| **認證與用戶**     | authentication, users, customers, customer, verification, me, members |
 | **餐廳與菜單**     | restaurants, menu, discovery                                 |
 | **市場與攤位**     | markets, market-checkouts                                    |
 | **訂單系統**       | orders, guest-orders, group-orders                           |
 | **桌位與座位**     | tables, seats, qr-codes                                      |
 | **排隊與預約**     | queue, waiting-list, reservations, service-bookings          |
 | **支付與收銀 POS** | payments, pos, credits                                       |
-| **廚房**           | kitchen                                                      |
+| **廚房與出單**     | kitchen, print                                               |
 | **員工與管理**     | manager, scheduling, leaves                                  |
 | **優惠與合作**     | coupons, partnerships                                        |
 | **食材與預測**     | ingredients, forecast                                        |
 | **分析**           | analytics, ai-analytics                                      |
-| **顧客互動**       | feedback                                                     |
+| **顧客互動**       | feedback, reviews                                            |
 | **整合平台**       | integrations                                                 |
-| **即時通訊與通知** | realtime, sse, notifications, push                           |
+| **即時通訊與通知** | realtime, sse, notifications, push, broadcasts, alerts       |
 | **訂閱與計費**     | subscriptions, billing, admin-settings                       |
 | **稽核與系統運維** | audit, system, monitoring, backup, cache                     |
 
@@ -223,7 +223,7 @@ Data & State       D1（主庫＋管理庫）· KV ×6 · R2 ×3 · Durable Obje
 
 ---
 
-**最後更新**: 2026-06-09
+**最後更新**: 2026-09-13
 **架構版本**: 2.0 (Cloudflare Serverless)
-**功能模組**: 48
-**API 端點**: 400+
+**功能模組**: 53（其中 45 個為 `index.ts` 掛載模組）
+**API 端點**: 400+（59 個掛載點，見 `docs/api/README.md`）
