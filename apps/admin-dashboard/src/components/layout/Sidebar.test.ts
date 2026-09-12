@@ -236,6 +236,27 @@ describe("Sidebar", () => {
     );
   });
 
+  it("puts 推播訊息 in the shop section right after 顧客評價", () => {
+    authState.hasRestaurantContext = true;
+
+    const wrapper = mountSidebar();
+    const reviews = wrapper.find('[data-testid="nav-item-reviews"]');
+    const broadcasts = wrapper.find('[data-testid="nav-item-broadcasts"]');
+
+    expect(reviews.exists()).toBe(true);
+    expect(broadcasts.exists()).toBe(true);
+    // Reading what diners said and saying something back to them belong next
+    // to each other; the order is the only thing that makes that legible.
+    expect(
+      reviews.element.compareDocumentPosition(broadcasts.element) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // No ModuleGate wrapper and no unlaunched-feature greying: a broadcast
+    // needs followers, not a paid module.
+    expect(broadcasts.attributes("data-disabled")).toBeUndefined();
+    expect(broadcasts.attributes("href")).toBeUndefined();
+  });
+
   it("leaves other entries untouched when one feature is off", () => {
     disabledFeatures.value = new Set(["marketCheckouts"]);
 

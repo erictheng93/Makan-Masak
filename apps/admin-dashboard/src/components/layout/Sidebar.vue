@@ -161,6 +161,7 @@ import {
   Carrot,
   TrendingUp,
   Star,
+  Megaphone,
 } from "lucide-vue-next";
 
 interface Props {
@@ -422,6 +423,17 @@ const navigationItems = computed(() => {
       path: "/dashboard/reviews",
       label: t("nav.reviews"),
       icon: Star,
+      visible: authStore.hasPermission([UserRole.ADMIN, UserRole.OWNER]),
+      section: "restaurant",
+    },
+    {
+      // Sits straight after 顧客評價: both are this shop's own diners, one
+      // reading what they said and the other saying something to them. No
+      // module gate — a broadcast needs followers, not a paid module.
+      name: "broadcasts",
+      path: "/dashboard/broadcasts",
+      label: t("nav.broadcasts"),
+      icon: Megaphone,
       visible: authStore.hasPermission([UserRole.ADMIN, UserRole.OWNER]),
       section: "restaurant",
     },

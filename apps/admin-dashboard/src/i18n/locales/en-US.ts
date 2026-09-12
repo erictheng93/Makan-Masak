@@ -1877,8 +1877,73 @@ const enUS: Messages = {
       replied: "Reply sent.",
     },
   },
+  broadcasts: {
+    title: "Push messages",
+    description:
+      "Send one message to customers who follow this shop and have opted in to marketing.",
+    compose: {
+      heading: "Compose",
+      titleLabel: "Title",
+      titlePlaceholder: "e.g. Buy one get one free tonight",
+      bodyLabel: "Message",
+      bodyPlaceholder: "What should your customers know?",
+      urlLabel: "Link (optional)",
+      urlPlaceholder: "https://… or /markets/ximen",
+      urlHint:
+        "Where the notification opens. Leave it empty to send text only.",
+      includeMarket: "Also notify market followers",
+      includeMarketHint:
+        "Reach customers who follow this shop's market but not the shop itself (they can opt out).",
+      submit: "Review and send",
+      sending: "Sending…",
+    },
+    quota: {
+      remaining: "{remaining} of {limit} left today",
+      exhausted: "Today's allowance is used up. You can send again tomorrow.",
+    },
+    confirm: {
+      heading: "Confirm send",
+      audience:
+        "This goes to customers who follow this shop and consented to marketing",
+      audienceMarket:
+        "This goes to customers who follow this market and consented to marketing",
+      irreversible: "A push cannot be recalled or edited once it is sent.",
+      send: "Send now",
+      cancel: "Back to editing",
+    },
+    result: {
+      heading: "Sent",
+      audience: "People reached",
+      delivered: "Delivered",
+      failed: "Failed",
+      skipped: "Skipped",
+      note: "People reached counts people; delivered, failed and skipped count devices — one person with two phones counts twice. Skipped is usually a customer's quiet hours.",
+    },
+    history: {
+      heading: "Send history",
+      empty: "No push has been sent yet.",
+      sentAt: "Sent {time}",
+      linkLabel: "Link",
+      pagination: "Page {page} of {totalPages} · {total} in total",
+      prev: "Previous",
+      next: "Next",
+    },
+    errors: {
+      noRestaurant: "Pick a shop to send from first.",
+      loadFailed: "Could not load the send history. Please try again later.",
+      sendFailed: "The push could not be sent. Please try again later.",
+      forbidden: "You do not have permission to send a push for this audience.",
+      notFound: "This audience no longer exists. Refresh and try again.",
+      rateLimited:
+        "Send limit reached. You can send again in {hours}h {minutes}m.",
+      validation:
+        "The title, message or link is not valid. Adjust it and send again.",
+    },
+  },
+
   nav: {
     reviews: "Reviews",
+    broadcasts: "Push messages",
     billing: "Plan & Usage",
     myShifts: "My Shifts",
     myAttendance: "My Attendance",
@@ -1929,6 +1994,7 @@ const enUS: Messages = {
   },
   pages: {
     reviews: "Customer reviews",
+    broadcasts: "Push messages",
     billing: "Plan & Usage",
     myShifts: "My Shifts",
     myAttendance: "My Attendance",

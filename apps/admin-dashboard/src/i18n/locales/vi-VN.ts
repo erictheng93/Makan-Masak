@@ -1780,8 +1780,73 @@ const viVN: Messages = {
       replied: "Đã gửi phản hồi.",
     },
   },
+  broadcasts: {
+    title: "Tin đẩy",
+    description:
+      "Gửi một tin đến khách đang theo dõi cửa hàng và đã đồng ý nhận thông báo tiếp thị.",
+    compose: {
+      heading: "Soạn tin đẩy",
+      titleLabel: "Tiêu đề",
+      titlePlaceholder: "Ví dụ: Tối nay mua 1 tặng 1 gà rán",
+      bodyLabel: "Nội dung",
+      bodyPlaceholder: "Viết điều bạn muốn khách biết…",
+      urlLabel: "Liên kết (không bắt buộc)",
+      urlPlaceholder: "https://… hoặc /markets/ximen",
+      urlHint:
+        "Trang sẽ mở khi khách bấm vào thông báo. Để trống thì chỉ gửi chữ.",
+      includeMarket: "Thông báo cả cho người theo dõi chợ",
+      includeMarketHint:
+        "Gửi thêm cho khách theo dõi chợ của cửa hàng nhưng chưa theo dõi cửa hàng (họ có thể tự tắt).",
+      submit: "Xem lại và gửi",
+      sending: "Đang gửi…",
+    },
+    quota: {
+      remaining: "Hôm nay còn {remaining} / {limit} tin",
+      exhausted: "Đã dùng hết hạn mức hôm nay. Mai bạn có thể gửi tiếp.",
+    },
+    confirm: {
+      heading: "Xác nhận gửi",
+      audience:
+        "Tin sẽ đến khách đang theo dõi cửa hàng và đã đồng ý nhận tiếp thị",
+      audienceMarket:
+        "Tin sẽ đến khách đang theo dõi chợ này và đã đồng ý nhận tiếp thị",
+      irreversible: "Đã gửi thì không thu hồi hay sửa được.",
+      send: "Gửi ngay",
+      cancel: "Quay lại sửa",
+    },
+    result: {
+      heading: "Đã gửi",
+      audience: "Số người nhận",
+      delivered: "Gửi thành công",
+      failed: "Gửi thất bại",
+      skipped: "Bỏ qua",
+      note: "Số người nhận đếm theo người; thành công, thất bại và bỏ qua đếm theo thiết bị — một người có hai điện thoại sẽ tính hai lần. Bỏ qua thường là do giờ im lặng của khách.",
+    },
+    history: {
+      heading: "Lịch sử gửi",
+      empty: "Chưa gửi tin đẩy nào.",
+      sentAt: "Gửi lúc {time}",
+      linkLabel: "Liên kết",
+      pagination: "Trang {page} / {totalPages} · tổng {total} tin",
+      prev: "Trước",
+      next: "Sau",
+    },
+    errors: {
+      noRestaurant: "Hãy chọn cửa hàng để gửi trước.",
+      loadFailed: "Không tải được lịch sử gửi. Vui lòng thử lại sau.",
+      sendFailed: "Không gửi được tin đẩy. Vui lòng thử lại sau.",
+      forbidden: "Bạn không có quyền gửi tin đẩy cho đối tượng này.",
+      notFound: "Không tìm thấy đối tượng này. Hãy tải lại và thử lại.",
+      rateLimited:
+        "Đã đạt giới hạn gửi. Bạn có thể gửi lại sau {hours} giờ {minutes} phút.",
+      validation:
+        "Tiêu đề, nội dung hoặc liên kết chưa hợp lệ. Hãy sửa rồi gửi lại.",
+    },
+  },
+
   nav: {
     reviews: "Đánh giá",
+    broadcasts: "Tin đẩy",
     billing: "Gói & Mức dùng",
     myShifts: "Ca của tôi",
     myAttendance: "Chấm công của tôi",
@@ -1832,6 +1897,7 @@ const viVN: Messages = {
   },
   pages: {
     reviews: "Đánh giá của khách",
+    broadcasts: "Tin đẩy",
     billing: "Gói & Mức dùng",
     myShifts: "Ca của tôi",
     myAttendance: "Chấm công của tôi",

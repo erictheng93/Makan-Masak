@@ -1931,9 +1931,68 @@ const zhTWCore = {
       replied: "已送出回覆。",
     },
   },
+  broadcasts: {
+    title: "推播訊息",
+    description: "向追蹤本店、且同意接收行銷通知的顧客推送一則訊息。",
+    compose: {
+      heading: "撰寫推播",
+      titleLabel: "標題",
+      titlePlaceholder: "例如：今晚炸雞買一送一",
+      bodyLabel: "內容",
+      bodyPlaceholder: "寫下想讓顧客知道的事…",
+      urlLabel: "連結（選填）",
+      urlPlaceholder: "https://… 或 /markets/ximen",
+      urlHint: "顧客點開通知後前往的頁面；留空則只顯示文字。",
+      includeMarket: "同時通知市集追蹤者",
+      includeMarketHint:
+        "也推給追蹤本店所在市集、但還沒追蹤本店的顧客（他們可自行關閉）。",
+      submit: "預覽並發送",
+      sending: "發送中…",
+    },
+    quota: {
+      remaining: "今日剩餘 {remaining} / {limit} 則",
+      exhausted: "今日額度已用完，明天才能再發送。",
+    },
+    confirm: {
+      heading: "確認發送",
+      audience: "將推播給追蹤本店且同意行銷的顧客",
+      audienceMarket: "將推播給追蹤本市集且同意行銷的顧客",
+      irreversible: "推播送出後無法收回，也無法修改。",
+      send: "確認發送",
+      cancel: "返回修改",
+    },
+    result: {
+      heading: "已送出",
+      audience: "觸及人數",
+      delivered: "成功送達",
+      failed: "送達失敗",
+      skipped: "略過",
+      note: "觸及人數算人，送達／失敗／略過算裝置：同一個人有兩支手機就會算兩次。略過多半是顧客設定的勿擾時段。",
+    },
+    history: {
+      heading: "發送紀錄",
+      empty: "還沒有發送過推播。",
+      sentAt: "發送時間 {time}",
+      linkLabel: "連結",
+      pagination: "第 {page} / {totalPages} 頁 · 共 {total} 則",
+      prev: "上一頁",
+      next: "下一頁",
+    },
+    errors: {
+      noRestaurant: "請先選擇要推播的店家。",
+      loadFailed: "無法載入發送紀錄，請稍後再試。",
+      sendFailed: "推播發送失敗，請稍後再試。",
+      forbidden: "沒有權限為這個對象發送推播。",
+      notFound: "找不到這個推播對象，請重新整理後再試。",
+      rateLimited: "已達發送上限，{hours} 小時 {minutes} 分後可再發送。",
+      validation: "標題、內容或連結不符合規定，請調整後再送出。",
+    },
+  },
+
   // 導航
   nav: {
     reviews: "顧客評價",
+    broadcasts: "推播訊息",
     billing: "訂閱與用量",
     myShifts: "我的班表",
     myAttendance: "我的出勤",
@@ -1985,6 +2044,7 @@ const zhTWCore = {
   // 頁面標題
   pages: {
     reviews: "顧客評價",
+    broadcasts: "推播訊息",
     billing: "訂閱與用量",
     myShifts: "我的班表",
     myAttendance: "我的出勤",

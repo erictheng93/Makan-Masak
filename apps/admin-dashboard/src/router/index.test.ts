@@ -35,6 +35,20 @@ describe("admin dashboard router", () => {
     ]);
   });
 
+  it("restricts marketing broadcasts to admin and owner, and requires a shop", () => {
+    const resolved = router.resolve("/dashboard/broadcasts");
+
+    expect(resolved.name).toBe("Broadcasts");
+    expect(resolved.matched.at(-1)?.meta.roles).toEqual([
+      UserRole.ADMIN,
+      UserRole.OWNER,
+    ]);
+    // An admin with no shop selected has nothing to send as, so this page must
+    // stay out of the restaurant-optional list. Market-scoped sends live on the
+    // platform markets page instead.
+    expect(adminRestaurantOptionalRoutes).not.toContain("Broadcasts");
+  });
+
   it("keeps advanced scheduling reachable by admins and owners without changing the legacy redirect", () => {
     const advanced = router.resolve("/dashboard/employees/scheduling/advanced");
     const legacy = router

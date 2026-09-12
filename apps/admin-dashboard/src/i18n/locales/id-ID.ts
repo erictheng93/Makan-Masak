@@ -1895,8 +1895,75 @@ const idID: Messages = {
       replied: "Balasan terkirim.",
     },
   },
+  broadcasts: {
+    title: "Pesan dorong",
+    description:
+      "Kirim satu pesan ke pelanggan yang mengikuti toko ini dan sudah menyetujui notifikasi pemasaran.",
+    compose: {
+      heading: "Tulis pesan",
+      titleLabel: "Judul",
+      titlePlaceholder: "Contoh: Malam ini ayam goreng beli 1 gratis 1",
+      bodyLabel: "Isi pesan",
+      bodyPlaceholder: "Tulis hal yang ingin diketahui pelanggan…",
+      urlLabel: "Tautan (opsional)",
+      urlPlaceholder: "https://… atau /markets/ximen",
+      urlHint:
+        "Halaman yang dibuka saat notifikasi ditekan. Biarkan kosong untuk teks saja.",
+      includeMarket: "Beri tahu pengikut pasar juga",
+      includeMarketHint:
+        "Menjangkau pelanggan yang mengikuti pasar toko ini tetapi belum mengikuti tokonya (mereka bisa menonaktifkannya).",
+      submit: "Tinjau dan kirim",
+      sending: "Mengirim…",
+    },
+    quota: {
+      remaining: "Sisa {remaining} dari {limit} hari ini",
+      exhausted: "Kuota hari ini sudah habis. Anda bisa mengirim lagi besok.",
+    },
+    confirm: {
+      heading: "Konfirmasi pengiriman",
+      audience:
+        "Pesan ini dikirim ke pelanggan yang mengikuti toko ini dan menyetujui pemasaran",
+      audienceMarket:
+        "Pesan ini dikirim ke pelanggan yang mengikuti pasar ini dan menyetujui pemasaran",
+      irreversible:
+        "Pesan dorong tidak bisa ditarik atau diubah setelah dikirim.",
+      send: "Kirim sekarang",
+      cancel: "Kembali menyunting",
+    },
+    result: {
+      heading: "Terkirim",
+      audience: "Orang terjangkau",
+      delivered: "Berhasil dikirim",
+      failed: "Gagal dikirim",
+      skipped: "Dilewati",
+      note: "Orang terjangkau menghitung orang; berhasil, gagal dan dilewati menghitung perangkat — satu orang dengan dua ponsel terhitung dua kali. Dilewati biasanya karena jam tenang pelanggan.",
+    },
+    history: {
+      heading: "Riwayat pengiriman",
+      empty: "Belum ada pesan dorong yang dikirim.",
+      sentAt: "Dikirim {time}",
+      linkLabel: "Tautan",
+      pagination: "Halaman {page} dari {totalPages} · total {total}",
+      prev: "Sebelumnya",
+      next: "Berikutnya",
+    },
+    errors: {
+      noRestaurant: "Pilih dulu toko yang akan mengirim.",
+      loadFailed: "Gagal memuat riwayat pengiriman. Coba lagi nanti.",
+      sendFailed: "Pesan dorong gagal dikirim. Coba lagi nanti.",
+      forbidden:
+        "Anda tidak punya izin mengirim pesan dorong untuk audiens ini.",
+      notFound: "Audiens ini tidak ditemukan. Muat ulang lalu coba lagi.",
+      rateLimited:
+        "Batas pengiriman tercapai. Anda bisa mengirim lagi dalam {hours} jam {minutes} menit.",
+      validation:
+        "Judul, isi pesan atau tautan belum valid. Perbaiki lalu kirim lagi.",
+    },
+  },
+
   nav: {
     reviews: "Ulasan",
+    broadcasts: "Pesan dorong",
     billing: "Paket & Pemakaian",
     myShifts: "Shift Saya",
     myAttendance: "Absensi Saya",
@@ -1947,6 +2014,7 @@ const idID: Messages = {
   },
   pages: {
     reviews: "Ulasan pelanggan",
+    broadcasts: "Pesan dorong",
     billing: "Paket & Pemakaian",
     myShifts: "Shift Saya",
     myAttendance: "Absensi Saya",

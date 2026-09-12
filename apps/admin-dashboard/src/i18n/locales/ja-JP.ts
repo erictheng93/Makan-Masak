@@ -1777,8 +1777,74 @@ const jaJP: Messages = {
       replied: "返信を送信しました。",
     },
   },
+  broadcasts: {
+    title: "プッシュ通知",
+    description:
+      "この店舗をフォローし、マーケティング通知に同意したお客様へメッセージを送信します。",
+    compose: {
+      heading: "通知を作成",
+      titleLabel: "タイトル",
+      titlePlaceholder: "例：今夜はフライドチキンが1つ買うと1つ無料",
+      bodyLabel: "本文",
+      bodyPlaceholder: "お客様に伝えたい内容を入力…",
+      urlLabel: "リンク（任意）",
+      urlPlaceholder: "https://… または /markets/ximen",
+      urlHint: "通知をタップしたときに開くページ。空欄なら本文のみ送ります。",
+      includeMarket: "市場のフォロワーにも通知する",
+      includeMarketHint:
+        "この店舗が出店している市場をフォローしているが、店舗はまだフォローしていないお客様にも届きます（お客様側で解除できます）。",
+      submit: "確認して送信",
+      sending: "送信中…",
+    },
+    quota: {
+      remaining: "本日の残り {remaining} / {limit} 件",
+      exhausted: "本日の上限に達しました。明日また送信できます。",
+    },
+    confirm: {
+      heading: "送信の確認",
+      audience:
+        "この店舗をフォローし、マーケティングに同意したお客様へ送信します",
+      audienceMarket:
+        "この市場をフォローし、マーケティングに同意したお客様へ送信します",
+      irreversible: "送信後の取り消しや編集はできません。",
+      send: "送信する",
+      cancel: "編集に戻る",
+    },
+    result: {
+      heading: "送信しました",
+      audience: "到達人数",
+      delivered: "配信成功",
+      failed: "配信失敗",
+      skipped: "スキップ",
+      note: "到達人数は「人」、配信成功・失敗・スキップは「端末」の数です。スマートフォンを2台持つ方は2件になります。スキップはおもにお客様のサイレント時間帯です。",
+    },
+    history: {
+      heading: "送信履歴",
+      empty: "まだ送信したプッシュ通知はありません。",
+      sentAt: "送信日時 {time}",
+      linkLabel: "リンク",
+      pagination: "{page} / {totalPages} ページ · 全 {total} 件",
+      prev: "前へ",
+      next: "次へ",
+    },
+    errors: {
+      noRestaurant: "先に送信する店舗を選択してください。",
+      loadFailed:
+        "送信履歴を読み込めませんでした。しばらくしてお試しください。",
+      sendFailed:
+        "プッシュ通知を送信できませんでした。しばらくしてお試しください。",
+      forbidden: "この対象へ送信する権限がありません。",
+      notFound: "この送信対象が見つかりません。再読み込みしてお試しください。",
+      rateLimited:
+        "送信上限に達しました。{hours} 時間 {minutes} 分後に送信できます。",
+      validation:
+        "タイトル・本文・リンクのいずれかが条件を満たしていません。修正して送信してください。",
+    },
+  },
+
   nav: {
     reviews: "レビュー",
+    broadcasts: "プッシュ通知",
     billing: "プランと使用量",
     myShifts: "マイシフト",
     myAttendance: "マイ勤怠",
@@ -1829,6 +1895,7 @@ const jaJP: Messages = {
   },
   pages: {
     reviews: "お客様レビュー",
+    broadcasts: "プッシュ通知",
     billing: "プランと使用量",
     myShifts: "マイシフト",
     myAttendance: "マイ勤怠",

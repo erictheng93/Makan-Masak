@@ -390,6 +390,20 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        // Marketing pushes to this shop's followers (#335). Restaurant-scoped
+        // like reviews, so it is deliberately absent from
+        // adminRestaurantOptionalRoutes: an admin with no shop selected has
+        // nothing to send as. Market-scoped sends live on the platform markets
+        // page instead, which is role 0 only.
+        path: "broadcasts",
+        name: "Broadcasts",
+        component: () => import("@/views/BroadcastsView.vue"),
+        meta: {
+          titleKey: "pages.broadcasts",
+          roles: [UserRole.ADMIN, UserRole.OWNER],
+        },
+      },
+      {
         path: "pos",
         component: () => import("@/views/POSView.vue"),
         meta: {
