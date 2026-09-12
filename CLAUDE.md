@@ -410,6 +410,30 @@ done | sed 's#.*\.pnpm/##' | sort -u
 
 One line out means every package shares one instance; two or more names the peer
 set that split it (the `_@types+node@NN` segment is usually the culprit).
+`pnpm check:single-test-runner` is that same check as a gate — it runs in
+`verify:push` and in CI, and prints which packages landed on which instance.
+
+**`supports-color` is a fourth pin, and it is not an override.** `debug`
+declares `supports-color` as an optional peer, so pnpm 12 bubbles that peer up
+to every importer that reaches `debug` — which here is nearly all of them, via
+`jsdom`, `eslint` and `axios` among others. Where nothing in scope supplies it,
+pnpm resolves the `*` peer to the registry's newest; and `@oclif/core` (via
+`artillery`) supplies `^8` in its own subtree. So the graph ends up with both
+`jsdom@27(supports-color@10.2.2)` and `jsdom@27(supports-color@8.1.1)` — two
+jsdoms, therefore two vitests. That is why the workspace root carries a
+`supports-color` devDependency it never imports: with `resolvePeersFromWorkspaceRoot` on, the root's copy is what every
+importer resolves that bubbled peer to, and one answer means one vitest. An
+`overrides` entry does **not** substitute for it — overrides rewrite declared
+dependency specs and leave the auto-resolved peer at 10.x, which was measured
+(#366). Do not delete that devDependency as unused, and do not "fix" it by
+moving it into `overrides`.
+
+The split is latent rather than introduced: any change that makes pnpm
+re-resolve the lockfile triggers it, including deleting the lockfile and
+re-installing unmodified `package.json` files. The stored lockfile predates
+pnpm's current peer tracking, which is the only reason it was not already
+visible. So run the `readlink` check after any dependency bump, not only after
+one that touches vitest.
 
 Do **not** use `ls node_modules/.pnpm/vitest@*` for this — it counts directories,
 and pnpm leaves the pre-consolidation ones behind. Measured 2026-08-21 right after
@@ -716,7 +740,7 @@ what "the factory check" refers to.
 2. **KV Cache Misses**: Verify namespace configuration
 3. **Image Upload Failures**: Check R2 bucket permissions
 4. **WebSocket Disconnections**: Monitor Durable Objects health
-5. **Windows: `pnpm dev` fails with `*** std::terminate() called with no exception` followed by `MiniflareCoreError [ERR_RUNTIME_FAILURE]`**: First seen on wrangler 4.84.x (the repo now pins `^4.127.1`), this is a Windows regression triggered by **any** `inspector_port = N` line inside the `[dev]` block of a `wrangler.toml`. It reproduces on every port value (9229/9230/9500, etc.), on both Node 22 and Node 24, and on every installed workerd binary — port availability is not the factor; the toml field itself crashes the InspectorProxyWorker. **Every Workers app that has a `[dev]` block — `api`, `management-api`, `realtime`, `image-processor` — already has `inspector_port` commented out** in its `wrangler.toml` with an inline note (`backup-scheduler` is cron-only and has no `[dev]` block). Do not reintroduce it. If you need a pinned DevTools port, pass it via CLI flag (`wrangler dev --inspector-port N`) instead, which does not crash. Debug hint: first line to run if you see `std::terminate` in a future wrangler bump is `grep -rn "^inspector_port" apps/`.
+5. **Windows: `pnpm dev` fails with `*** std::terminate() called with no exception` followed by `MiniflareCoreError [ERR_RUNTIME_FAILURE]`**: First seen on wrangler 4.84.x (the repo now pins `^4.131.1`), this is a Windows regression triggered by **any** `inspector_port = N` line inside the `[dev]` block of a `wrangler.toml`. It reproduces on every port value (9229/9230/9500, etc.), on both Node 22 and Node 24, and on every installed workerd binary — port availability is not the factor; the toml field itself crashes the InspectorProxyWorker. **Every Workers app that has a `[dev]` block — `api`, `management-api`, `realtime`, `image-processor` — already has `inspector_port` commented out** in its `wrangler.toml` with an inline note (`backup-scheduler` is cron-only and has no `[dev]` block). Do not reintroduce it. If you need a pinned DevTools port, pass it via CLI flag (`wrangler dev --inspector-port N`) instead, which does not crash. Debug hint: first line to run if you see `std::terminate` in a future wrangler bump is `grep -rn "^inspector_port" apps/`.
 
 ### Debug Tools
 

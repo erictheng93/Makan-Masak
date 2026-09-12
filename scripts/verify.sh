@@ -92,6 +92,7 @@ else
   step "i18n locale coverage" pnpm run check:i18n-locales
   step "integration allowlist" node scripts/check-integration-allowlist.cjs
   step "package test scripts" node scripts/check-package-test-scripts.cjs
+  step "single test runner" node scripts/check-single-test-runner.cjs
   step "production config" env \
     CHECK_PRODUCTION_CONFIG_REQUIRE_DEPLOYMENT_SECRETS=false \
     pnpm run check:prod-config

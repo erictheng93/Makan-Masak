@@ -198,6 +198,14 @@ jobs:
       - name: 🧩 Package test script 檢查
         run: pnpm run check:test-scripts
 
+      # Two vite copies loaded through the root runner's Promise.all trip
+      # ERR_INTERNAL_ASSERTION and fail the whole suite at startup with zero
+      # tests run -- about one run in six, which reads as "just re-run it".
+      # This is CLAUDE.md's readlink check, run by a gate rather than by hand
+      # after someone remembers to (#366).
+      - name: 🧵 單一 test runner 實例檢查
+        run: pnpm run check:single-test-runner
+
       - name: 🚦 Production config 檢查
         run: pnpm run check:prod-config
         env:
