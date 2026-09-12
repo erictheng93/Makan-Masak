@@ -159,9 +159,17 @@ export class MarketCheckoutPaymentWebhookService {
             : providerTransactionId,
         providerPayload,
         updatedAt: nowDate,
+        // `now`, not `nowDate`. A value interpolated into a `sql` fragment is
+        // bound with no encoder — drizzle attaches the column's mapper only
+        // through the operator helpers and through a plain `.set()` value like
+        // `updatedAt` above — so a `Date` here reached D1 as an object and
+        // failed this entire UPDATE with `D1_TYPE_ERROR`, taking every paid and
+        // failed settlement with it (#365). These columns are
+        // `{ mode: "timestamp_ms" }`, so the fragment binds the epoch
+        // milliseconds the mapper would have produced.
         completedAt:
           status === "paid"
-            ? sql`COALESCE(${marketCheckoutPayments.completedAt}, ${nowDate})`
+            ? sql`COALESCE(${marketCheckoutPayments.completedAt}, ${now})`
             : sql`${marketCheckoutPayments.completedAt}`,
         refundedAt:
           status === "refunded" || status === "partial_refunded"
@@ -169,7 +177,7 @@ export class MarketCheckoutPaymentWebhookService {
             : sql`${marketCheckoutPayments.refundedAt}`,
         failedAt:
           status === "failed"
-            ? sql`COALESCE(${marketCheckoutPayments.failedAt}, ${nowDate})`
+            ? sql`COALESCE(${marketCheckoutPayments.failedAt}, ${now})`
             : sql`${marketCheckoutPayments.failedAt}`,
       })
       .where(eq(marketCheckoutPayments.paymentId, row.payment_id))
