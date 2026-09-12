@@ -235,6 +235,8 @@
           </div>
         </div>
 
+        <FollowingList />
+
         <!-- Quick Actions -->
         <div class="bg-white rounded-lg shadow p-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">
@@ -339,6 +341,7 @@ import customerPushService from "@/utils/push-notifications";
 import { useFeatureAvailability } from "@/composables/useFeatureAvailability";
 import { useI18n } from "@/composables/useI18n";
 import { useConfirmModal } from "@/composables/useConfirmModal";
+import FollowingList from "@/components/follow/FollowingList.vue";
 import { CUSTOMER_CONSENT_VERSIONS } from "@makanmasak/shared-types";
 
 const router = useRouter();

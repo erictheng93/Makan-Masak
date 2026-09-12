@@ -10,6 +10,7 @@ import {
   clearCustomerAccessToken,
   setCustomerAccessToken,
 } from "@/services/customerAccessToken";
+import { resetFollowing } from "@/composables/useFollowing";
 import { translate as t } from "@/utils/i18n";
 
 // 定義客戶用戶類型
@@ -224,6 +225,10 @@ export const useAuthStore = defineStore("auth", () => {
       error.value = null;
 
       clearCustomerAccessToken();
+      // The followed-markets list is module-level shared state, so without this
+      // the next diner to sign in on this device starts out looking at the
+      // previous one's follows (#335).
+      resetFollowing();
       sessionStorage.removeItem("customer_auth_token");
       localStorage.removeItem("customer_refresh_token");
       persistUser(null);

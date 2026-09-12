@@ -1302,5 +1302,20 @@
     "loadFailed": "Không tải được đánh giá",
     "empty": "Chưa có đánh giá",
     "anonymous": "Khách ẩn danh"
+  },
+  "follow": {
+    "follow": "Theo dõi",
+    "following": "Đang theo dõi",
+    "unfollow": "Bỏ theo dõi",
+    "followFailed": "Không thể theo dõi. Vui lòng thử lại.",
+    "unfollowFailed": "Không thể bỏ theo dõi. Vui lòng thử lại.",
+    "sectionTitle": "Đang theo dõi",
+    "sectionHint": "Chỉ những khu chợ và quán bạn theo dõi mới gửi được ưu đãi",
+    "marketsHeading": "Khu chợ",
+    "restaurantsHeading": "Quán",
+    "loading": "Đang tải danh sách theo dõi…",
+    "loadFailed": "Không tải được danh sách theo dõi",
+    "empty": "Bạn chưa theo dõi khu chợ hay quán nào",
+    "unknownTarget": "Chưa lấy được tên"
   }
 }

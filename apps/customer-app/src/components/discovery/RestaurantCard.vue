@@ -98,15 +98,26 @@
         · {{ restaurant.marketVendor.locationLabel }}
       </span>
     </RouterLink>
-    <button
-      v-if="canTakeaway"
-      type="button"
-      data-testid="restaurant-takeaway-button"
-      class="mt-3 w-full rounded-lg bg-ios-blue px-3 py-2 text-sm font-medium text-white"
-      @click="$emit('takeaway', restaurant)"
-    >
-      立即外帶
-    </button>
+    <!-- Outside the card-wide <button> above on purpose: a button inside a
+         button is invalid, and the browser would swallow one of the two
+         clicks. -->
+    <div class="mt-3 flex items-center gap-2">
+      <FollowButton
+        target-type="restaurant"
+        :target-id="restaurant.restaurantId"
+        :name="restaurant.name"
+        compact
+      />
+      <button
+        v-if="canTakeaway"
+        type="button"
+        data-testid="restaurant-takeaway-button"
+        class="flex-1 rounded-lg bg-ios-blue px-3 py-2 text-sm font-medium text-white"
+        @click="$emit('takeaway', restaurant)"
+      >
+        立即外帶
+      </button>
+    </div>
   </article>
 </template>
 
@@ -115,6 +126,7 @@ import { computed } from "vue";
 import { RouterLink } from "vue-router";
 import { useI18n } from "vue-i18n";
 import type { RestaurantListItem } from "@/services/discoveryApi";
+import FollowButton from "@/components/follow/FollowButton.vue";
 
 const { t } = useI18n();
 

@@ -1302,5 +1302,20 @@
     "loadFailed": "Ulasan gagal dimuatkan",
     "empty": "Belum ada ulasan",
     "anonymous": "Pelanggan tanpa nama"
+  },
+  "follow": {
+    "follow": "Ikut",
+    "following": "Diikuti",
+    "unfollow": "Berhenti ikut",
+    "followFailed": "Gagal mengikut. Sila cuba lagi.",
+    "unfollowFailed": "Gagal berhenti mengikut. Sila cuba lagi.",
+    "sectionTitle": "Diikuti",
+    "sectionHint": "Hanya pasar dan kedai yang anda ikut boleh menghantar tawaran",
+    "marketsHeading": "Pasar",
+    "restaurantsHeading": "Kedai",
+    "loading": "Memuatkan senarai ikutan…",
+    "loadFailed": "Senarai ikutan gagal dimuatkan",
+    "empty": "Anda belum mengikut mana-mana pasar atau kedai",
+    "unknownTarget": "Nama tidak tersedia"
   }
 }

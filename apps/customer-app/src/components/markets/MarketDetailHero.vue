@@ -32,11 +32,20 @@
             </span>
           </div>
         </div>
-        <span
-          class="rounded-full bg-ios-blue/10 px-3 py-1 text-sm font-medium text-ios-blue"
-        >
-          {{ tWithParams("markets.common.stallCount", { count: vendorCount }) }}
-        </span>
+        <div class="flex shrink-0 flex-col items-end gap-2">
+          <span
+            class="rounded-full bg-ios-blue/10 px-3 py-1 text-sm font-medium text-ios-blue"
+          >
+            {{
+              tWithParams("markets.common.stallCount", { count: vendorCount })
+            }}
+          </span>
+          <FollowButton
+            target-type="market"
+            :target-id="market.id"
+            :name="market.name"
+          />
+        </div>
       </div>
       <p v-if="market.description" class="text-sm leading-6 text-gray-700">
         {{ market.description }}
@@ -92,6 +101,7 @@ import { computed } from "vue";
 import type { MarketDetail } from "@/services/marketsApi";
 import { marketTypeLabelKey } from "@/utils/marketTypes";
 import { useI18n } from "@/composables/useI18n";
+import FollowButton from "@/components/follow/FollowButton.vue";
 
 const props = defineProps<{
   market: MarketDetail;

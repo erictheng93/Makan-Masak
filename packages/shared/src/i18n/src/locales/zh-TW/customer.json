@@ -1302,5 +1302,20 @@
     "loadFailed": "評價載入失敗",
     "empty": "還沒有評價",
     "anonymous": "匿名顧客"
+  },
+  "follow": {
+    "follow": "追蹤",
+    "following": "追蹤中",
+    "unfollow": "取消追蹤",
+    "followFailed": "追蹤失敗，請稍後再試",
+    "unfollowFailed": "取消追蹤失敗，請稍後再試",
+    "sectionTitle": "追蹤中",
+    "sectionHint": "追蹤的商圈與店家才會收到行銷推播",
+    "marketsHeading": "商圈",
+    "restaurantsHeading": "店家",
+    "loading": "載入追蹤清單中…",
+    "loadFailed": "追蹤清單載入失敗",
+    "empty": "還沒有追蹤任何商圈或店家",
+    "unknownTarget": "名稱暫時無法取得"
   }
 }

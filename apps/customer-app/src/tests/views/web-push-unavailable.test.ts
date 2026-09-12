@@ -17,6 +17,7 @@ import ProfileView from "@/views/ProfileView.vue";
 import JoinWaitingListView from "@/views/waiting-list/JoinWaitingListView.vue";
 import { waitingListApi } from "@/services/waitingListApi";
 import { customerIdentityApi } from "@/services/customerIdentityApi";
+import { resetFollowing } from "@/composables/useFollowing";
 import { customerOrderApi } from "@/services/customerOrderApi";
 import customerPushService from "@/utils/push-notifications";
 import { WaitingStatus } from "@makanmasak/shared-types";
@@ -73,7 +74,19 @@ vi.mock("@/services/customerIdentityApi", () => ({
     addPushSubscription: vi.fn(),
     listPushSubscriptions: vi.fn(),
     removePushSubscription: vi.fn(),
+    // #335 added the 追蹤中 list to this view, and it loads on mount.
+    listFavorites: vi.fn(),
+    addFavorite: vi.fn(),
+    removeFavorite: vi.fn(),
   },
+}));
+
+vi.mock("@/services/marketsApi", () => ({
+  marketsApi: { listMarkets: vi.fn() },
+}));
+
+vi.mock("@/services/menuApi", () => ({
+  menuApi: { getRestaurant: vi.fn() },
 }));
 
 vi.mock("@/stores/auth", () => ({
@@ -186,9 +199,11 @@ describe("web push shown as unavailable", () => {
     vi.mocked(customerOrderApi.getMyProfile).mockResolvedValue(
       buildProfile() as never,
     );
+    resetFollowing();
     vi.mocked(customerIdentityApi.getMe).mockResolvedValue({
       preferences: buildPreferences(),
     } as never);
+    vi.mocked(customerIdentityApi.listFavorites).mockResolvedValue([]);
     vi.mocked(waitingListApi.getQueueStatus).mockResolvedValue({
       restaurantId: "restaurant-1",
       totalWaiting: 0,

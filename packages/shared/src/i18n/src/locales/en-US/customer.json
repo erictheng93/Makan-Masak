@@ -1302,5 +1302,20 @@
     "loadFailed": "Reviews could not be loaded",
     "empty": "No reviews yet",
     "anonymous": "Anonymous diner"
+  },
+  "follow": {
+    "follow": "Follow",
+    "following": "Following",
+    "unfollow": "Unfollow",
+    "followFailed": "Could not follow. Please try again.",
+    "unfollowFailed": "Could not unfollow. Please try again.",
+    "sectionTitle": "Following",
+    "sectionHint": "Only the markets and shops you follow can send you offers",
+    "marketsHeading": "Markets",
+    "restaurantsHeading": "Shops",
+    "loading": "Loading your follows…",
+    "loadFailed": "Your follows could not be loaded",
+    "empty": "You are not following any market or shop yet",
+    "unknownTarget": "Name unavailable"
   }
 }

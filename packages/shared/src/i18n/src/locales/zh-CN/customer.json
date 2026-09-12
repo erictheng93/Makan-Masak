@@ -1302,5 +1302,20 @@
     "loadFailed": "评价加载失败",
     "empty": "还没有评价",
     "anonymous": "匿名顾客"
+  },
+  "follow": {
+    "follow": "关注",
+    "following": "已关注",
+    "unfollow": "取消关注",
+    "followFailed": "关注失败，请稍后再试",
+    "unfollowFailed": "取消关注失败，请稍后再试",
+    "sectionTitle": "已关注",
+    "sectionHint": "只有关注的商圈与店家才会推送营销通知",
+    "marketsHeading": "商圈",
+    "restaurantsHeading": "店家",
+    "loading": "正在加载关注列表…",
+    "loadFailed": "关注列表加载失败",
+    "empty": "还没有关注任何商圈或店家",
+    "unknownTarget": "暂时无法获取名称"
   }
 }
