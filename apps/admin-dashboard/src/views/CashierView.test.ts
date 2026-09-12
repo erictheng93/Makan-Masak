@@ -6,6 +6,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import CashierView from "./CashierView.vue";
 import { api } from "@/services/api";
 
+// Pinned so the calendar-day test below means the same thing on a UTC CI runner
+// as on a machine in Taipei; without it the UTC bug and the fix agree in UTC.
+process.env.TZ = "Asia/Taipei";
+
 vi.mock("@/i18n", () => ({
   useI18n: () => ({ t: (key: string) => key, locale: ref("zh-TW") }),
 }));
@@ -184,6 +188,29 @@ describe("CashierView", () => {
     // A retry that mints a fresh key is not a retry as far as the server is
     // concerned — it is a second payment.
     expect(keyOf(1)).toBe(keyOf(0));
+  });
+
+  // loadTodayRevenue took the date from toISOString(), which is UTC, so from
+  // midnight until 08:00 in Taipei the till showed yesterday's takings as
+  // today's.
+  it("asks for today's report by the shop's calendar day, not UTC's", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    // 00:30 on 13 September in Taipei, still 12 September in UTC.
+    vi.setSystemTime(new Date("2026-09-12T16:30:00.000Z"));
+    try {
+      mount(CashierView);
+      await flushPromises();
+
+      expect(api.get).toHaveBeenCalledWith(
+        "/pos/reports/daily",
+        expect.objectContaining({
+          date: "2026-09-13",
+          restaurantId: "restaurant-1",
+        }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("explains an amount mismatch instead of surfacing the raw HTTP failure", async () => {

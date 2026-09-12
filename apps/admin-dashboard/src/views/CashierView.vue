@@ -881,6 +881,7 @@ import { useCurrency } from "@/composables/useCurrency";
 import { useDateFormatter } from "@/composables/useDateFormatter";
 import { api, unwrapApiList, unwrapApiPayload } from "@/services/api";
 import { extractApiErrorCode } from "@/utils/errorHandler";
+import { toLocalDateStr } from "@/utils/dateUtils";
 import { useAuthStore } from "@/stores/auth";
 import type {
   Order as ApiOrder,
@@ -1179,7 +1180,9 @@ const loadCurrentShift = async () => {
 
 const loadTodayRevenue = async () => {
   try {
-    const today = new Date().toISOString().split("T")[0];
+    // The shop's calendar day, not UTC's: toISOString() gave Taipei the
+    // previous day's takings from midnight until 08:00.
+    const today = toLocalDateStr(new Date());
     const response = await api.get("/pos/reports/daily", {
       date: today,
       restaurantId: authStore.restaurantId,
