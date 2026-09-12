@@ -1200,6 +1200,14 @@ routes.post(
         .run();
     }
 
+    // `revoked_at_ms IS NULL` is load-bearing, not tidiness. Without it a
+    // customer who grants, withdraws, then grants again matches their own
+    // *revoked* grant, so nothing is appended and the newest row on the
+    // ledger stays the withdrawal — they can never opt back in, and
+    // GET /consents (which filters the same way) shows them as having
+    // consented to nothing. The marketing fan-out reads the newest row, so
+    // this is the difference between an audience a customer can rejoin and
+    // one they cannot.
     const duplicate = await c.env.DB.prepare(
       `SELECT id
          FROM customer_consents
@@ -1207,6 +1215,7 @@ routes.post(
           AND consent_type = ?
           AND version = ?
           AND granted = ?
+          AND revoked_at_ms IS NULL
         ORDER BY granted_at_ms DESC
         LIMIT 1`,
     )
