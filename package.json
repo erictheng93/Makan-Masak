@@ -71,6 +71,7 @@
     "audit:qr-format": "npx tsx scripts/audit-qr-format.ts",
     "check:no-test-doubles": "node scripts/check-no-test-doubles.cjs",
     "check:test-scripts": "node scripts/check-package-test-scripts.cjs",
+    "check:single-test-runner": "node scripts/check-single-test-runner.cjs",
     "check:no-automated-destructive-wrangler": "node scripts/check-no-automated-destructive-wrangler.cjs",
     "check:design-palette": "node scripts/check-design-palette.cjs",
     "check:ui-reachability": "node scripts/check-ui-reachability.cjs",

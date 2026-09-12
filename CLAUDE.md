@@ -410,6 +410,8 @@ done | sed 's#.*\.pnpm/##' | sort -u
 
 One line out means every package shares one instance; two or more names the peer
 set that split it (the `_@types+node@NN` segment is usually the culprit).
+`pnpm check:single-test-runner` is that same check as a gate — it runs in
+`verify:push` and in CI, and prints which packages landed on which instance.
 
 **`supports-color` is a fourth pin, and it is not an override.** `debug`
 declares `supports-color` as an optional peer, so pnpm 12 bubbles that peer up
