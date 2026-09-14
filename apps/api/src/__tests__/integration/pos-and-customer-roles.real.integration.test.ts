@@ -338,7 +338,9 @@ describe("POS and customer role coverage", () => {
       "/refunds/00000000-0000-4000-8000-000000000005/reject",
       "/refunds/00000000-0000-4000-8000-000000000006/cancel",
       "/shifts/stats?restaurantId=00000000-0000-4000-8000-000000000007",
-      "/reports/daily?date=2026-01-01",
+      // /reports/daily is not here: since #371 a cashier may read their own
+      // restaurant's day (and only theirs), covered in
+      // pos-shift-report-tenancy.real.integration.test.ts.
       "/reports/export?type=daily&startDate=2026-01-01",
     ];
 
