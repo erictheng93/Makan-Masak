@@ -205,7 +205,7 @@ footer{
     <span><b>後端</b> api.makanmasak.com</span>
     <span><b>帳號</b> <code>owner1</code>（role 1 店主）</span>
     <span><b>餐廳</b> 麻吉 Demo 廣東粥 <code>019fa136-…31a1</code></span>
-    <span><b>最後追蹤</b> 2026-09-09（21 列中 14 列已修，見結論摘要下方的後續進展）</span>
+    <span><b>最後追蹤</b> 2026-09-14（21 列全數收掉，見結論摘要下方的三張後續進展卡）</span>
   </div>
 </header>
 
@@ -235,8 +235,8 @@ footer{
   <h2>結論摘要</h2>
   <p>共 20 項發現（拆成 21 列，F10 分 a／b 兩項）。其中 <b>5 項是流程走不完的硬阻斷</b>，4 項已在本次直接修掉。</p>
   <p class="note">
-    <b>「處置」欄是 2026-09-09 的現況，不是 09-01 當天的判定。</b>
-    當天所有未當場修掉的都標「開 issue」；那之後陸續修掉的變化記在下方兩張後續進展卡裡，
+    <b>「處置」欄是 2026-09-14 的現況，不是 09-01 當天的判定。</b>
+    當天所有未當場修掉的都標「開 issue」；那之後陸續修掉的變化記在下方三張後續進展卡裡，
     報告本文（各項發現的描述與證據）維持 09-01 的原樣不動。
   </p>
   <div class="tablewrap">
@@ -246,26 +246,26 @@ footer{
       </thead>
       <tbody>
         <tr><td class="mono">F10a</td><td>沒有任何 UI 能建立「假別」，請假申請永遠送不出去</td><td>人事</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag ok">已上線</span></td></tr>
-        <tr><td class="mono">F10b</td><td>「初始化假期餘額」必定 400</td><td>人事</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag fixed">已修</span></td></tr>
-        <tr><td class="mono">F7</td><td>全站沒有打卡入口，出勤流程整條是裝飾</td><td>人事</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag ok">已上線</span></td></tr>
+        <tr><td class="mono">F10b</td><td>「初始化假期餘額」必定 400</td><td>人事</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag ok">已上線</span></td></tr>
+        <tr><td class="mono">F7</td><td>全站沒有打卡入口，出勤流程整條是裝飾</td><td>人事</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag ok">已上線（09-10 才真的能用）</span></td></tr>
         <tr><td class="mono">F16</td><td>系統設定 28 個欄位只有 8 個會存，其餘按「儲存」後靜默丟棄</td><td>設定</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag ok">已上線</span></td></tr>
-        <tr><td class="mono">F20</td><td>店主完全沒有「訂閱與帳務」介面</td><td>設定</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue">仍開著</span></td></tr>
-        <tr><td class="mono">F2</td><td>訂單推到「已付款」但 payment_status 仍 pending，之後不能退款也不能取消</td><td>店務</td><td><span class="tag data">資料</span></td><td><span class="tag fixed">部分修</span></td></tr>
+        <tr><td class="mono">F20</td><td>店主完全沒有「訂閱與帳務」介面</td><td>設定</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag ok">已上線</span></td></tr>
+        <tr><td class="mono">F2</td><td>訂單推到「已付款」但 payment_status 仍 pending，之後不能退款也不能取消</td><td>店務</td><td><span class="tag data">資料</span></td><td><span class="tag ok">已上線</span></td></tr>
         <tr><td class="mono">F3</td><td>PaymentService 寫入的 <code>payment_status="paid"</code> 不在正規集合內，讀回一律變 pending</td><td>店務</td><td><span class="tag data">資料</span></td><td><span class="tag ok">已上線</span></td></tr>
         <tr><td class="mono">F11</td><td>數據分析 KPI 把已取消訂單算成營收，同頁報表沒有</td><td>分析</td><td><span class="tag data">資料</span></td><td><span class="tag ok">已上線</span></td></tr>
         <tr><td class="mono">F12</td><td>期間選單寫「本月」，實作是「最近 30 天」</td><td>分析</td><td><span class="tag data">資料</span></td><td><span class="tag ok">已上線</span></td></tr>
         <tr><td class="mono">F1</td><td>員工動態永遠「離線」；KPI「在線員工」其實是啟用帳號數</td><td>店務</td><td><span class="tag data">資料</span></td><td><span class="tag ok">已上線</span></td></tr>
         <tr><td class="mono">F8</td><td>出勤率／缺席的分母是全體員工，與當天排班無關</td><td>人事</td><td><span class="tag data">資料</span></td><td><span class="tag ok">已上線</span></td></tr>
         <tr><td class="mono">F13</td><td>營業時段分析用 UTC 小時分桶（已開的 #290，production 確認成立）</td><td>分析</td><td><span class="tag data">資料</span></td><td><span class="tag ok">已上線</span></td></tr>
-        <tr><td class="mono">F14</td><td>AI 洞察頁一開啟就自動送出付費生成請求</td><td>分析</td><td><span class="tag ux">成本</span></td><td><span class="tag fixed">已修</span></td></tr>
-        <tr><td class="mono">F17</td><td>「重置為預設值」是完全的空操作（附危險確認對話框）</td><td>設定</td><td><span class="tag ux">體驗</span></td><td><span class="tag fixed">已修</span></td></tr>
-        <tr><td class="mono">F4</td><td>每次開後台都跳「網絡連接已恢復」，且文案硬寫中文</td><td>全站</td><td><span class="tag ux">體驗</span></td><td><span class="tag fixed">已修</span></td></tr>
-        <tr><td class="mono">F5</td><td>API 全端點約 1–4 秒，偶發 <code>ERR_CONNECTION_CLOSED</code></td><td>全站</td><td><span class="tag ux">效能</span></td><td><span class="tag fixed">部分修</span></td></tr>
+        <tr><td class="mono">F14</td><td>AI 洞察頁一開啟就自動送出付費生成請求</td><td>分析</td><td><span class="tag ux">成本</span></td><td><span class="tag ok">已上線</span></td></tr>
+        <tr><td class="mono">F17</td><td>「重置為預設值」是完全的空操作（附危險確認對話框）</td><td>設定</td><td><span class="tag ux">體驗</span></td><td><span class="tag ok">已上線</span></td></tr>
+        <tr><td class="mono">F4</td><td>每次開後台都跳「網絡連接已恢復」，且文案硬寫中文</td><td>全站</td><td><span class="tag ux">體驗</span></td><td><span class="tag ok">已上線</span></td></tr>
+        <tr><td class="mono">F5</td><td>API 全端點約 1–4 秒，偶發 <code>ERR_CONNECTION_CLOSED</code></td><td>全站</td><td><span class="tag ux">效能</span></td><td><span class="tag fixed">調查結案</span></td></tr>
         <tr><td class="mono">F18</td><td>稅率與服務費後端已接好，前端沒有任何欄位</td><td>設定</td><td><span class="tag ux">缺口</span></td><td><span class="tag ok">已上線</span></td></tr>
         <tr><td class="mono">F19</td><td>時區下拉有 9 個選項，但所有日期分桶都硬寫 +08</td><td>設定</td><td><span class="tag ux">缺口</span></td><td><span class="tag ok">已上線</span></td></tr>
-        <tr><td class="mono">F9</td><td>SchedulingView 沒掛路由：換班申請與排班清單進不去</td><td>人事</td><td><span class="tag ux">缺口</span></td><td><span class="tag fixed">已修（後續）</span></td></tr>
-        <tr><td class="mono">F15</td><td>AI 未設定的錯誤訊息是未在地化英文，且沒有前往設定的連結</td><td>分析</td><td><span class="tag ux">體驗</span></td><td><span class="tag fixed">已修（後續）</span></td></tr>
-        <tr><td class="mono">F6</td><td>「QR 碼管理模式」必填欄位做成純 div，鍵盤與螢幕閱讀器用不了</td><td>店務</td><td><span class="tag ux">a11y</span></td><td><span class="tag fixed">已修（後續）</span></td></tr>
+        <tr><td class="mono">F9</td><td>SchedulingView 沒掛路由：換班申請與排班清單進不去</td><td>人事</td><td><span class="tag ux">缺口</span></td><td><span class="tag ok">已上線</span></td></tr>
+        <tr><td class="mono">F15</td><td>AI 未設定的錯誤訊息是未在地化英文，且沒有前往設定的連結</td><td>分析</td><td><span class="tag ux">體驗</span></td><td><span class="tag ok">已上線</span></td></tr>
+        <tr><td class="mono">F6</td><td>「QR 碼管理模式」必填欄位做成純 div，鍵盤與螢幕閱讀器用不了</td><td>店務</td><td><span class="tag ux">a11y</span></td><td><span class="tag ok">已上線</span></td></tr>
       </tbody>
     </table>
   </div>
@@ -476,6 +476,268 @@ footer{
       上面那張 2026-09-02 的卡片說「特別確認過 #312 沒有被修掉」——<b>那句話已經過期</b>。
       #312 在 2026-09-04 由 <code>d1f73402</code> 與 <code>21aeddc1</code> 修掉並已上線。
       該卡片維持當日原樣不動，這裡註記以免誤讀。
+    </p>
+  </div>
+
+  <div class="card" style="--ac:var(--green)">
+    <h3 style="margin-top:0">後續進展（2026-09-14 驗證）</h3>
+    <p>
+      09-09 之後做了三件事，這張卡片依序記錄：
+    </p>
+    <ol>
+      <li><b>09-09～09-11 建了一套打真 API、真 D1 的店家後台 E2E</b>。它跑起來之後，推翻了上一張卡片的兩列「已上線」。</li>
+      <li><b>剩下的 F2、F20、F5，以及上一張卡片新開的 #352，全部收掉</b>。</li>
+      <li><b>09-12 在 production 再走一輪回歸 QA</b>。驗收上面的修正，並找到收銀台結帳在線上 100% 失敗的 CORS 問題。</li>
+    </ol>
+    <p>
+      結果：摘要表 21 列全數收掉，本報告開出的 issue 全部關閉。
+      09-12 那輪另開的 #368–#371 仍開著，列在本卡最後。
+    </p>
+
+    <h4>一、原本沒收掉的四項</h4>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th class="mono">#</th><th>issue</th><th>commit</th><th>現況</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">F2</td><td>#310<br>#354</td><td class="mono">442020df<br>8330bc61<br>307e3ec0</td>
+            <td>
+              產品決定是 <b><code>paid</code> 只由收款動作產生</b>，所以後台「更新」不再通往已付款，前後端都堵住了：
+              <code>getNextStatus</code> 停在 <code>delivered</code>；<code>ORDER_STATUS_TRANSITIONS.delivered</code>
+              與所有角色的 <code>ROLE_STATUS_PERMISSIONS</code> 都拿掉了 <code>paid</code>；單筆與批次更新都拒絕
+              <code>delivered → paid</code>。空殼 <code>updatePaymentStatus</code> 和沒掛路由的 schema 一起刪除。<br>
+              收款只剩 <code>POST /payments</code> 一條路，一次原子地寫入
+              <code>status='paid'</code>、<code>payment_status='completed'</code> 與交易 id。
+              現金也走這條，所以 <code>canRefund</code> 綁 <code>paymentTransactionId</code> 維持不動，現在是對的。<br>
+              營收口徑（#354）改成只算 <code>payment_status='completed'</code>、且沒有取消或退款的訂單。
+              09-13 的 <code>307e3ec0</code> 把同一個條件延伸到 POS 日報與班次報表。
+            </td>
+          </tr>
+          <tr>
+            <td class="mono">F20</td><td>#315</td><td class="mono">17f904e1<br>867545de<br>c257e82f</td>
+            <td>
+              新增 <code>/dashboard/billing</code>（role 0／1），側邊欄有「帳務」入口，
+              讀 <code>GET /me/modules</code> 與 <code>GET /me/usage</code>：方案、試用剩餘天數、各計量用量、模組開關。
+              <b>刻意沒有升級按鈕</b>，因為產品裡沒有自助改方案，CTA 導到支援工單。
+              <code>867545de</code> 修掉了用量與模組直接印出 key（<code>api.requests</code>、<code>menu_management</code>）的問題。
+              master-user-flow 的節點改成「方案 · 用量 · 模組／帳單明細（規劃中）」，
+              因為 production 沒有任何帳單或發票表。
+            </td>
+          </tr>
+          <tr>
+            <td class="mono">F5</td><td>#316<br>#323<br>#325<br>#362</td><td class="mono">4c1a3c32<br>91b4fceb</td>
+            <td>
+              <b>#325 無法重現，Worker 側的假設被實測排除。</b>
+              09-12 取樣 1,372 次、零斷線，<code>wrangler tail</code> 1,385 個事件全部是 <code>ok</code>。
+              只有兩次逾時，都是用戶端到邊緣的路徑，<code>clientTcpRtt</code> 約 900ms。
+              順手修了 menu 瀏覽計數一個沒接 catch 的 <code>waitUntil</code>。<br>
+              <b>#323 以調查結案。</b>冷啟動約 0.5 秒，約佔 9% 的請求。
+              主因是 51 個 feature 在模組層就建構 zod schema（約 405ms 模組 evaluate 中佔 ~217ms）。
+              修法在 #362（<code>91b4fceb</code>）：用 <code>z.lazy</code> 延遲 482 個 schema 的建構，已上線。<br>
+              09-12 從台灣量到的基準：<code>/info</code> 端到端 p50 暖 0.54 秒、冷 1.25 秒。
+              暖的時候 Worker 本身只用約 1ms，其餘是 TCP 0.24 + TLS 0.26 + 往返 0.21 秒的路上成本。
+              <b>P99 &lt; 300ms 仍無法宣稱</b>，因為沒有真實流量就沒有 P99。
+              另外發現台灣 HiNet 使用者會被導到 SJC，另開 #369，仍開著。
+              完整量測見 <code>docs/investigations/2026-09-12-*.md</code>。
+            </td>
+          </tr>
+          <tr>
+            <td class="mono">#352</td><td>#352</td><td class="mono">3e663f25<br>796a5260<br>05346589</td>
+            <td>
+              <code>createOrder</code> 的商業規則拒絕全部改成 4xx：
+              <code>RESTAURANT_UNAVAILABLE</code>／<code>TABLE_UNAVAILABLE</code>／<code>MENU_ITEM_UNAVAILABLE</code>／<code>INSUFFICIENT_INVENTORY</code> 回 409，
+              <code>COUPON_INVALID</code>／<code>MINIMUM_ORDER_NOT_MET</code> 回 400。
+              最低消費訊息改用 <code>formatCurrency</code> 顯示店家幣別，TWD 店不再看到 <code>RM</code>。
+              慣例定為 <code>packages/database</code> 直接丟 <code>@makanmasak/utils</code> 的 <code>ApiError</code>。
+              設定頁最低消費欄位寫死的 <code>RM</code> 前綴，也在 09-13 改成店家幣別。
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      <b>F12 的「殘留」不成立。</b>上一張卡片說選「本季」時，上方 KPI 和下方圖表是兩個窗口。
+      但 <code>AnalyticsService.getDashboardData(restaurantId)</code> 只收一個參數，
+      路由傳進去的 <code>period</code> 直接被丟掉（#328 當時就是這麼判斷的），
+      所以 <code>AnalyticsView.vue</code> 把 <code>quarter</code> 對到 <code>"month"</code> 的映射雖然還在，對結果沒有任何影響。
+      那是死碼，不是兩個窗口。
+    </p>
+
+    <h4>二、真實後端 E2E：跑起來才看得到的四個壞處</h4>
+    <p>
+      09-09 之前，店家後台<b>沒有任何自動化測試打過真的後端</b>。
+      <code>tests/e2e/smoke/owner-*.spec.ts</code> 登入是真的，但領域資料整包 mock 掉了。
+      所以本報告每一項「已修」，驗證都停在單元測試加人工實測。
+    </p>
+    <p>
+      新增的 <code>tests/e2e/admin/</code>（Playwright project <code>admin-real</code>）接的是
+      <code>pnpm dev:api</code> + <code>pnpm dev:admin</code> 與本機 D1，<b>全檔零 <code>page.route</code></b>。
+      每個寫入都斷言兩次：一次看 UI，一次從 API 讀回。
+      畫面顯示樂觀更新、實際寫入失敗的 view，第一次會過，第二次會紅。
+      分六個 commit 長到 <b>41 個測試、覆蓋 master-user-flow「2. 店家後台」全部 18 個節點</b>
+      （<code>c3e37f2e</code> → <code>64550bcf</code> → <code>e68e0370</code> → <code>046f90b0</code> →
+      <code>e9af8753</code> → <code>cf874f7c</code>）。
+    </p>
+    <p>建套件的過程撞出四件事，全都是單元測試看不到的形狀，因為每一邊各自都對：</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>發現</th><th>影響</th><th>commit</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>F7 接上之後仍不能用</b></td>
+            <td>
+              <code>schedulingService</code> 三個列表方法寫 <code>return response.data.data!</code>，
+              但伺服器把陣列直接放在 <code>data</code>，<code>pagination</code> 是它的兄弟欄位。
+              於是每個呼叫端拿到的都是 <code>undefined</code>，在 try/catch 裡炸成錯誤卡。
+              D1 裡明明有當天排班，打卡面板照樣顯示「今天沒有排班／載入失敗」。
+              <b>上一張卡片把 F7 記為已上線，只對了「入口到得了」這一半。</b>
+            </td>
+            <td class="mono">046f90b0</td>
+          </tr>
+          <tr>
+            <td><b>「目前在班」每天有 8 小時是 0</b></td>
+            <td>
+              <code>getClockedInEmployees</code> 用 UTC 日期比對 <code>work_date</code>，
+              所以 UTC+8 的店在凌晨 00:00–08:00 不管誰打了卡都讀成 0。
+              改用 <code>businessDateNow(offsetMinutes)</code>，和 #290 同一個修法。
+              突變驗收：放回 UTC 寫法，E2E 轉紅（Expected 1 / Received 0）。
+            </td>
+            <td class="mono">7a23fdb6</td>
+          </tr>
+          <tr>
+            <td><b>請假「批准」100% 失敗</b></td>
+            <td>
+              <code>approveRequest</code> 不送 body，而 <code>validateBody</code> 在比對 schema 之前就 <code>c.req.json()</code>，
+              空 body 直接 400 <code>INVALID_JSON</code>。
+              09-01 那輪請假流程卡在 F10a 的申請端，從來沒走到審核，所以沒發現。
+              路由測試永遠會帶 body，前端測試 mock 了 service，兩邊各自都是綠的。
+            </td>
+            <td class="mono">690d4994</td>
+          </tr>
+          <tr>
+            <td><b>AI 洞察按下生成必炸</b></td>
+            <td>
+              <code>ai_insights_cache</code> 的 DDL 只存在於沒有任何 <code>wrangler.toml</code> 讀取的兩條舊 migration 軌，
+              production 從來沒有這張表。F15 的 400 擋在它前面，所以一直看不到後面的 <code>no such table</code>。
+              補的 migration 是 STRICT，時間戳用 INTEGER ms。
+            </td>
+            <td class="mono">40485da0</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      另外有兩條 08-25 那輪的前提被測試推翻：#270 說後台建的揪團送不出去，#260 說座位數編輯與批量建座位必失敗。
+      兩者其實都能完成，現在各有一條端到端測試守著。
+    </p>
+
+    <h4>三、E2E 套件守住本報告的哪幾項</h4>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th class="mono">#</th><th>spec</th><th>斷言什麼</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">F2／F3</td><td class="mono">order-management</td><td>新訂單回報的 payment status 是正規值且未付款（#311）；推進狀態後伺服器端一致</td></tr>
+          <tr><td class="mono">F7</td><td class="mono">attendance</td><td>從面板打卡、下班後排班完成（#308）；「目前在班」算得到真實打卡</td></tr>
+          <tr><td class="mono">F9</td><td class="mono">dashboard-and-setup</td><td>員工管理進得了 #314 補上路由的進階排班頁</td></tr>
+          <tr><td class="mono">F10a</td><td class="mono">leaves</td><td>店主建立假別後「申請」鈕不再 disabled；批准與駁回都被伺服器記下</td></tr>
+          <tr><td class="mono">F14／F15</td><td class="mono">dashboard-and-setup</td><td>進 AI 洞察頁不花任何付費生成；未設定供應商時乾淨地回 400，不是 500 <code>no such table</code></td></tr>
+          <tr><td class="mono">F16／F18／F19</td><td class="mono">settings</td><td>
+            <b>斷言送出的 PUT body，不看成功訊息。</b>三條存檔路徑各測一個欄位：
+            <code>restaurants</code> 欄位（時區）、伺服器會讀的 settings 鍵（稅率）、<code>adminConsole</code> 鍵。
+            稅率輸入 7 必須送出 0.07。
+          </td></tr>
+          <tr><td class="mono">F20</td><td class="mono">billing</td><td>側邊欄進得去；方案／用量／模組與 <code>/me/*</code> 實際回傳一致，且每列不得印出自己的 key；方案變更導向支援工單</td></tr>
+          <tr><td class="mono">F11／F12</td><td class="mono">support-and-insights</td><td>營運分析頁發出它要渲染的讀取；<code>/performance</code> 與 <code>/revenue</code> 兩個營收端點<b>刻意</b>口徑不同，兩者都要有回應</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      CI 上是 <code>test.yml</code> 的 <code>admin-real-e2e</code> job，
+      在 push／PR 到 main 且動到前端或整合範圍時執行（<code>407bfcb2</code> 補了 CI 用的 fixture，
+      並把出勤 fixture 對齊到 Asia/Taipei，UTC runner 才會測到當天營業日）。
+      截至 09-14，這個 job 在 main 上最近 8 次（09-11 22:21 → 09-12 19:31 UTC）全部 success；
+      其中兩次整體 run 是 failure，但失敗的是別的 job。
+      順帶修掉的兩個假綠燈：舊的 <code>--project=admin</code> 指向一個 2026-05 就清空的目錄，
+      和 chromium 併跑時 exit 1 被吸收成 exit 0，所以改名成 <code>admin-real</code>，舊名會直接報錯；
+      另外刪掉五個只是重跑 kitchen-display 的瀏覽器 project（<code>99c5257a</code>），
+      並加了守門檢查每個 app 層 Playwright config 的 <code>testDir</code>（<code>ba3f32cf</code>）。
+    </p>
+    <p class="note warn">
+      <b>這套 E2E 有一個結構上的盲點。</b>它透過 vite proxy 走<b>同源</b>，瀏覽器永遠不發 CORS preflight。
+      下一節的收銀台 CORS 問題在 production 100% 發生，CI 卻一直是綠的，原因就在這裡。
+      要改成跨來源，追蹤在 #370。
+    </p>
+
+    <h4>四、2026-09-12 production 回歸 QA</h4>
+    <p>
+      以 <code>owner1</code> 用真瀏覽器在 production 驗收 09-09 之後才修的項目，
+      加上當天新上線的功能。測試資料事後逐列刪除，並與 baseline 比對確認沒有差異。
+    </p>
+    <p><b>驗收通過：</b></p>
+    <ul class="plain">
+      <li><b>F2 狀態鏈</b>：<code>delivered</code> 之後只剩查看；<code>PUT</code> 推到 paid 回 403；
+        走付款之後是 <code>paid</code>／<code>completed</code>；同一把冪等鍵重放不產生第二筆副作用；退款鈕可達。</li>
+      <li><b>F20 帳務頁</b>：頁面數字等於 <code>usage_meters</code> 加上尚未 fold 的小時桶。</li>
+      <li><b>#352</b>：未達最低消費回 400 <code>MINIMUM_ORDER_NOT_MET</code>，訊息用 NT$；缺貨回 409 <code>INSUFFICIENT_INVENTORY</code>。</li>
+    </ul>
+    <p><b>找到並修掉的（09-13 00:51–00:52 進 main，01:10 部署 api + admin）：</b></p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>問題</th><th>commit</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>
+              <b>收銀台「確認付款」在 production 100% 失敗。</b>F2 讓 CashierView 改走 <code>POST /payments</code>，
+              並帶必填的 <code>Idempotency-Key</code>，但 API 的 CORS allow-headers 沒有列它，preflight 被拒，
+              畫面只看得到 axios 的 <code>Network Error</code>，D1 零筆交易。
+              退款帶的 <code>X-Register-Id</code>／<code>X-Shift-Id</code> 也缺。
+              新增 <code>tests/unit/cors-request-headers.test.ts</code>：掃三個前端設定的每個 header 名稱，沒列在白名單就紅。
+              <br><b>F2 在 09-09 標成「已修」之後，到這裡才真的能在線上收款。</b>
+            </td>
+            <td class="mono">a582b29f</td>
+          </tr>
+          <tr><td>POS 今日業績與班次報表把未收款、已取消的訂單算進去，與 #354 的口徑不一致</td><td class="mono">307e3ec0</td></tr>
+          <tr><td>收銀台「今日業績」用 <code>toISOString()</code> 取日期，台北 00:00–08:00 查到的是昨天</td><td class="mono">fd7b2524</td></tr>
+          <tr><td>F20 帳務頁印出 <code>api.requests</code>、<code>menu_management</code>：vue-i18n 把 key 裡的點當成巢狀路徑，模組名稱也從未定義</td><td class="mono">867545de</td></tr>
+          <tr><td>設定頁最低消費欄位寫死 <code>RM</code> 前綴，標籤卻寫 TWD</td><td class="mono">05346589</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      <b>部署後在 production 實跑一次結帳</b>：現金、收 100、確認付款。
+      <code>POST /payments</code> 200、console 零錯誤；D1 有 <code>paid</code>／<code>completed</code>、1 筆交易、冪等鍵與 2 筆稽核。
+      重整後「今日業績」由伺服器回 <code>date=2026-09-13</code>，當時台北 01:14、UTC 仍是 9/12。
+    </p>
+
+    <h4>仍開著（09-12 那輪新開）</h4>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th class="mono">issue</th><th>內容</th><th>與本報告的關係</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">#368</td><td>「自動確認訂單」開關沒有作用：存成 <code>settings.autoAcceptOrders</code>，建單流程從不讀它</td><td>F16 讓它存得進去之後才看得到，和 #352 同一個形狀</td></tr>
+          <tr><td class="mono">#369</td><td>台灣 HiNet 使用者被導到 SJC，登入後的業務端點 0.9–1.2 秒</td><td>F5 的延續</td></tr>
+          <tr><td class="mono">#370</td><td><code>admin-real</code> E2E 永遠同源、不發 preflight</td><td>上面第三節的盲點</td></tr>
+          <tr><td class="mono">#371</td><td>收銀員打 <code>/pos/reports/daily</code> 回 403，今日業績對收銀員永遠是 NT$0；放寬權限時要一起修租戶檢查</td><td>收銀台，不在 09-01 範圍</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>線上版本（2026-09-14 現查）</h4>
+    <p>
+      admin Pages 生產部署的來源是 <code>0534658</code>（09-13）。本卡片與上一張卡片列出的 admin 端 commit
+      （含 09-01 當場修的 <code>29223caf</code>／<code>4e9daba8</code>／<code>b0f324ec</code>／<code>42e0e287</code>，
+      以及上一張卡片記為未上線的 <code>dd792bd2</code>）全部以
+      <code>git merge-base --is-ancestor &lt;commit&gt; 0534658</code> 逐一確認過。
+      摘要表因此把原本的「已修」「已修（後續）」一律改標「已上線」。
+      API Worker 最後一次部署是 2026-09-12 17:10Z，但 wrangler 不記錄來源 commit，
+      所以改用兩個條件判定：本卡片列出的 API 端 commit 都是 <code>05346589</code> 的祖先，且 commit 時間都早於部署時間。
+      customer Pages 是 <code>93c13f8</code>，含 #352 顧客端的文案對應。
+      main 之後前進的 5 個 commit 只動到 docs 與建置設定，與本報告無關。
+    </p>
+    <p class="note">
+      <b>上一張卡片（09-09）有幾句話已經過期。</b>
+      F2「核心沒動」、F20「原封不動」、F5 仍開、F12 殘留、<code>dd792bd2</code> 未上線，都已被本卡片取代；
+      F7「已上線」到 09-10 才真的能用。卡片維持當日原樣，這裡註記以免誤讀。
     </p>
   </div>
 </section>
@@ -1002,6 +1264,10 @@ onStatusChange(callback) {
   <p>
     註：production 前端落後 <code>origin/main</code> 30 個 commit，本報告每一項發現
     都已回頭在 <code>a59b76f</code> 的原始碼上確認，不是拿 main 的程式碼解釋線上行為。
+  </p>
+  <p>
+    後續追蹤：2026-09-02、2026-09-09、2026-09-14（對照 <code>origin/main@c9588043</code>、
+    admin Pages <code>0534658</code>、API Worker 2026-09-12 17:10Z 部署）。
   </p>
 </footer>
 
