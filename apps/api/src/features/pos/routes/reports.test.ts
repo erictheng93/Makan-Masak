@@ -179,6 +179,38 @@ describe("POS report routes", () => {
     expect(body.error?.message).toBe("daily unavailable");
   });
 
+  it("limits a cashier's daily report to their own restaurant", async () => {
+    mocks.user = {
+      id: "cashier-10",
+      username: "cashier",
+      role: 4,
+      restaurantId: "restaurant-1",
+    };
+
+    const own = await request(
+      "/daily?restaurantId=restaurant-1&date=2026-06-07",
+    );
+    expect(own.status).toBe(200);
+    expect(mocks.reportService.getDailyReport).toHaveBeenCalledWith(
+      "restaurant-1",
+      "2026-06-07",
+    );
+
+    vi.mocked(mocks.reportService.getDailyReport).mockClear();
+    const other = await request(
+      "/daily?restaurantId=restaurant-2&date=2026-06-07",
+    );
+    expect(other.status).toBe(403);
+    expect(mocks.reportService.getDailyReport).not.toHaveBeenCalled();
+
+    const implicit = await request("/daily?date=2026-06-07");
+    expect(implicit.status).toBe(200);
+    expect(mocks.reportService.getDailyReport).toHaveBeenCalledWith(
+      "restaurant-1",
+      "2026-06-07",
+    );
+  });
+
   it("returns register usage stats with default and explicit periods", async () => {
     let response = await request("/register-usage");
     let body = await json(response);

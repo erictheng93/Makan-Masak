@@ -213,6 +213,36 @@ describe("CashierView", () => {
     }
   });
 
+  it("shows unavailable rather than zero when the daily report fails", async () => {
+    vi.mocked(api.get).mockImplementation(async (url: string) => {
+      if (url === "/pos/reports/daily") throw new Error("Forbidden");
+      return { data: { success: true, data: [] } } as never;
+    });
+    const wrapper = mount(CashierView);
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="cashier-today-revenue"]').text()).toBe(
+      "—",
+    );
+  });
+
+  it("still shows zero when the daily report confirms no sales", async () => {
+    vi.mocked(api.get).mockImplementation(async (url: string) => {
+      if (url === "/pos/reports/daily") {
+        return {
+          data: { success: true, data: { summary: { totalSales: 0 } } },
+        } as never;
+      }
+      return { data: { success: true, data: [] } } as never;
+    });
+    const wrapper = mount(CashierView);
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="cashier-today-revenue"]').text()).toBe(
+      "0",
+    );
+  });
+
   it("explains an amount mismatch instead of surfacing the raw HTTP failure", async () => {
     // The server prices the order. A discount applied on this screen changes
     // only what is displayed here, so it arrives as a total the server does

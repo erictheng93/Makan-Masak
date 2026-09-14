@@ -2633,6 +2633,7 @@ const zhCN: Messages = {
     systemAmount: "系统金额",
     time: "时间",
     todayPerformance: "今日业绩",
+    revenueUnavailable: "目前无法获取今日业绩",
     tax: "税额",
     subtotal: "小计",
     total: "总计",

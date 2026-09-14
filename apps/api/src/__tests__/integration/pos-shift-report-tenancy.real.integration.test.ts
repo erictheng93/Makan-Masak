@@ -293,4 +293,43 @@ describe("POS shift report — tenancy and D1 binding", () => {
     expect(shift.reportData.summary.totalSales).toBe(270);
     expect(shift.reportData.orderStats.totalOrders).toBe(1);
   });
+
+  it("lets a cashier read only their own restaurant's settled daily revenue", async () => {
+    const mine = await tenantWithOpenShift("cashier-mine");
+    const other = await tenantWithOpenShift("cashier-other");
+    await seedPaidOrder(mine.restaurantId, 27_000, "cash");
+    await seedPaidOrder(other.restaurantId, 99_900, "card");
+    const cashier = await seed.user({
+      username: "cashier-daily",
+      role: 4,
+      restaurantId: mine.restaurantId,
+    });
+    const cashierToken = await testApp.authHelper.staffToken(
+      cashier.id,
+      4,
+      mine.restaurantId,
+    );
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Taipei",
+    }).format(new Date());
+
+    for (const path of [
+      `/pos/reports/daily?date=${today}&restaurantId=${mine.restaurantId}`,
+      `/pos/reports/daily?date=${today}`,
+    ]) {
+      const response = await call(path, cashierToken);
+      expect(response.status).toBe(200);
+      const report = await readData<{ summary: { totalSales: number } }>(
+        response,
+      );
+      expect(report.summary.totalSales).toBe(270);
+    }
+
+    const denied = await call(
+      `/pos/reports/daily?date=${today}&restaurantId=${other.restaurantId}`,
+      cashierToken,
+    );
+    expect(denied.status).toBe(403);
+    expect(await denied.text()).not.toContain("999");
+  });
 });

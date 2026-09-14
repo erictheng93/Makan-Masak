@@ -24,7 +24,7 @@ const app = new Hono<{ Bindings: Env }>();
 app.get(
   "/daily",
   authMiddleware,
-  requireRole([0, 1]), // Admin or Owner
+  requireRole([0, 1, 4]), // Admin, Owner, Cashier (own restaurant only)
   validateQuery(
     z.lazy(() =>
       z.object({
@@ -41,7 +41,7 @@ app.get(
     let finalRestaurantId: string | undefined;
     if (restaurantId) {
       finalRestaurantId = restaurantId;
-      if (user.role === 1 && user.restaurantId !== finalRestaurantId) {
+      if (user.role !== 0 && user.restaurantId !== finalRestaurantId) {
         throw forbidden("只能查看自己餐廳的報表");
       }
     } else if (user.restaurantId) {
@@ -88,7 +88,7 @@ app.get(
     let finalRestaurantId: string | undefined;
     if (restaurantId) {
       finalRestaurantId = restaurantId;
-      if (user.role === 1 && user.restaurantId !== finalRestaurantId) {
+      if (user.role !== 0 && user.restaurantId !== finalRestaurantId) {
         throw forbidden("只能查看自己餐廳的統計");
       }
     } else if (user.restaurantId) {
@@ -150,7 +150,7 @@ app.get(
     let finalRestaurantId: string | undefined;
     if (restaurantId) {
       finalRestaurantId = restaurantId;
-      if (user.role === 1 && user.restaurantId !== finalRestaurantId) {
+      if (user.role !== 0 && user.restaurantId !== finalRestaurantId) {
         throw forbidden("只能匯出自己餐廳的報表");
       }
     } else if (user.restaurantId) {

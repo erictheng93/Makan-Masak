@@ -2686,6 +2686,7 @@ const viVN: Messages = {
     transactionDetails: "Chi tiết giao dịch",
     shiftInfo: "Thông tin ca",
     todayPerformance: "Hiệu suất ngày hôm nay",
+    revenueUnavailable: "Không thể tải doanh thu hôm nay",
     systemAmount: "Số tiền hệ thống",
     serviceCharge: "Phí dịch vụ",
     selectReason: "Chọn một lý do",

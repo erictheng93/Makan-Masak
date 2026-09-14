@@ -2563,6 +2563,7 @@ const enUS: Messages = {
     completedOrders: "Completed Orders",
     todayRevenue: "Today's Revenue",
     todayPerformance: "Today's Performance",
+    revenueUnavailable: "Today's revenue is unavailable",
     orderNumber: "Order Number",
     tableNumber: "Table",
     takeaway: "Takeaway",

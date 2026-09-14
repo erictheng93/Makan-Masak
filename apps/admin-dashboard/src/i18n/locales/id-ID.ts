@@ -2698,6 +2698,7 @@ const idID: Messages = {
     time: "Waktu",
     total: "Total",
     todayPerformance: "Pertunjukan Hari Ini",
+    revenueUnavailable: "Pendapatan hari ini tidak tersedia",
     shiftInfo: "Pergeseran Info",
     totalOrders: "Jumlah Pesanan",
     subtotal: "Subtotal",

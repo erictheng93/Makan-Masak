@@ -18,8 +18,22 @@
           <p class="text-sm text-gray-500">
             {{ t("cashier.todayPerformance") }}
           </p>
-          <p class="text-lg font-semibold text-ios-green">
-            {{ formatPrice(todayRevenue) }}
+          <p
+            data-testid="cashier-today-revenue"
+            class="text-lg font-semibold text-ios-green"
+            role="status"
+            :aria-label="
+              todayRevenueUnavailable
+                ? t('cashier.revenueUnavailable')
+                : undefined
+            "
+            :title="
+              todayRevenueUnavailable
+                ? t('cashier.revenueUnavailable')
+                : undefined
+            "
+          >
+            {{ todayRevenueUnavailable ? "—" : formatPrice(todayRevenue) }}
           </p>
         </div>
       </div>
@@ -988,6 +1002,7 @@ const showShiftReport = ref(false);
 const showRefundDialog = ref(false);
 const actualCashAmount = ref(0);
 const todayRevenue = ref(0);
+const todayRevenueUnavailable = ref(false);
 
 // Modal 狀態
 const showDiscountModal = ref(false);
@@ -1190,9 +1205,12 @@ const loadTodayRevenue = async () => {
     if (response.data.success && response.data.data) {
       const report = unwrapApiPayload<DailyReportPayload>(response.data.data);
       todayRevenue.value = report.summary?.totalSales ?? report.totalSales ?? 0;
+      todayRevenueUnavailable.value = false;
+    } else {
+      todayRevenueUnavailable.value = true;
     }
   } catch {
-    // Keep default 0
+    todayRevenueUnavailable.value = true;
   }
 };
 
@@ -1295,7 +1313,9 @@ const processPayment = async () => {
       selectedOrder.value = null;
 
       // Update today's revenue
-      todayRevenue.value += completedOrder.value!.totalAmount;
+      if (!todayRevenueUnavailable.value) {
+        todayRevenue.value += completedOrder.value!.totalAmount;
+      }
     }
   } catch (error) {
     console.error("Payment processing error:", error);
@@ -1561,7 +1581,9 @@ const processRefund = async () => {
     // 更新統計數據
     shiftReport.value.refundCount++;
     shiftReport.value.totalRevenue -= refundData.value.amount;
-    todayRevenue.value -= refundData.value.amount;
+    if (!todayRevenueUnavailable.value) {
+      todayRevenue.value -= refundData.value.amount;
+    }
 
     closeRefundDialog();
   } catch (error) {

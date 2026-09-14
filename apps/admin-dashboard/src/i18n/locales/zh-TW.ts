@@ -2629,6 +2629,7 @@ const zhTWCore = {
     completedOrders: "已完成訂單",
     todayRevenue: "今日營收",
     todayPerformance: "今日業績",
+    revenueUnavailable: "目前無法取得今日業績",
     orderNumber: "訂單編號",
     tableNumber: "桌號",
     takeaway: "外帶",

@@ -2690,6 +2690,7 @@ const jaJP: Messages = {
     transactionDetails: "取引詳細",
     shiftReport: "シフトレポート",
     todayPerformance: "本日のパフォーマンス",
+    revenueUnavailable: "本日の売上を取得できません",
     totalOrders: "総注文数",
   },
   settings: {
