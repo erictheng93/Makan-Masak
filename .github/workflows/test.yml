@@ -396,6 +396,7 @@ jobs:
     if: >-
       needs.changes.outputs.frontend == 'true' || needs.changes.outputs.integration == 'true' || needs.changes.outputs.full == 'true'
 
+
     timeout-minutes: 25
     container:
       image: mcr.microsoft.com/playwright:v1.57.0-noble
@@ -459,7 +460,8 @@ jobs:
           (cd apps/api && pnpm exec wrangler dev --local \
              --persist-to ../../.wrangler/shared-state \
              > /tmp/admin-e2e-logs/api.log 2>&1 &)
-          (cd apps/admin-dashboard && pnpm exec vite --port 3001 --host 0.0.0.0 \
+          (cd apps/admin-dashboard && VITE_API_BASE_URL=http://localhost:8787/api/v1 \
+             pnpm exec vite --port 3001 --host 0.0.0.0 \
              > /tmp/admin-e2e-logs/admin.log 2>&1 &)
 
       - name: ⏳ 等待服務就緒
