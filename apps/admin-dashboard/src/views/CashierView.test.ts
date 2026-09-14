@@ -216,11 +216,48 @@ describe("CashierView", () => {
   it("shows unavailable rather than zero when the daily report fails", async () => {
     vi.mocked(api.get).mockImplementation(async (url: string) => {
       if (url === "/pos/reports/daily") throw new Error("Forbidden");
+      if (url === "/orders") {
+        return {
+          data: {
+            success: true,
+            data: [
+              {
+                id: "019fc320-c159-700c-a66c-39c9b98ed964",
+                orderNumber: "ORD-206",
+                table: { id: 2, number: "A1" },
+                customerInfo: { name: "Ada" },
+                status: "ready",
+                paymentStatus: "pending",
+                createdAt: Date.parse("2026-08-18T12:00:00.000Z"),
+                subtotal: 100,
+                totalAmount: 100,
+                items: [],
+              },
+            ],
+          },
+        } as never;
+      }
       return { data: { success: true, data: [] } } as never;
     });
     const wrapper = mount(CashierView);
     await flushPromises();
 
+    expect(wrapper.get('[data-testid="cashier-today-revenue"]').text()).toBe(
+      "—",
+    );
+    expect(
+      wrapper.get('[data-testid="cashier-today-revenue"]').attributes(),
+    ).toMatchObject({
+      "aria-label": "cashier.revenueUnavailable",
+      title: "cashier.revenueUnavailable",
+    });
+
+    vi.mocked(api.post).mockResolvedValueOnce({
+      data: { success: true, data: { transactionId: "txn-9" } },
+    } as never);
+    await checkout(wrapper);
+
+    // A payment cannot make an unavailable report look authoritative.
     expect(wrapper.get('[data-testid="cashier-today-revenue"]').text()).toBe(
       "—",
     );
@@ -240,6 +277,55 @@ describe("CashierView", () => {
 
     expect(wrapper.get('[data-testid="cashier-today-revenue"]').text()).toBe(
       "0",
+    );
+    expect(
+      wrapper
+        .get('[data-testid="cashier-today-revenue"]')
+        .attributes("aria-label"),
+    ).toBeUndefined();
+  });
+
+  it("uses an active register from the API for refunds without altering unavailable revenue", async () => {
+    vi.mocked(api.get).mockImplementation(async (url: string) => {
+      if (url === "/pos/registers") {
+        return {
+          data: { success: true, data: [{ id: "register-1", isActive: true }] },
+        } as never;
+      }
+      if (url === "/pos/shifts/current/register-1") {
+        return {
+          data: { success: true, data: { id: "shift-1" } },
+        } as never;
+      }
+      if (url === "/pos/reports/daily") throw new Error("Forbidden");
+      return { data: { success: true, data: [] } } as never;
+    });
+    vi.mocked(api.post).mockResolvedValue({ data: { success: true } } as never);
+    const wrapper = mount(CashierView);
+    await flushPromises();
+
+    await wrapper.get('[data-testid="cashier-open-refund"]').trigger("click");
+    await wrapper
+      .get('[data-testid="cashier-refund-order-number"]')
+      .setValue("order-1");
+    await wrapper.get('[data-testid="cashier-refund-amount"]').setValue("10");
+    await wrapper
+      .get('[data-testid="cashier-refund-reason"]')
+      .setValue("wrong_order");
+    await wrapper
+      .get('[data-testid="cashier-confirm-refund"]')
+      .trigger("click");
+    await flushPromises();
+
+    expect(api.post).toHaveBeenCalledWith(
+      "/pos/refunds/create",
+      expect.any(Object),
+      expect.objectContaining({
+        headers: { "X-Register-Id": "register-1", "X-Shift-Id": "shift-1" },
+      }),
+    );
+    expect(wrapper.get('[data-testid="cashier-today-revenue"]').text()).toBe(
+      "—",
     );
   });
 

@@ -22,24 +22,72 @@ test("the counter settles a guest order across origins and makes it refundable",
   await requireStack();
   expect(new URL(API_URL).origin).not.toBe(new URL(ADMIN_URL).origin);
 
-  const { token, restaurantId } = await getOwnerContext();
+  const { token, restaurantId, login } = await getOwnerContext();
   const menu = await apiRequest<{
-    menuItems?: Array<{ id: number; isAvailable?: boolean }>;
-    items?: Array<{ id: number; isAvailable?: boolean }>;
-    categories?: Array<{
-      items?: Array<{ id: number; isAvailable?: boolean }>;
-    }>;
+    menuItems: Array<{ id: number; isAvailable?: boolean }>;
   }>(`/api/v1/menu/${restaurantId}`);
   expect(menu.ok).toBe(true);
-  const items = [
-    ...(menu.body.data?.menuItems ?? []),
-    ...(menu.body.data?.items ?? []),
-    ...(menu.body.data?.categories ?? []).flatMap(
-      (category) => category.items ?? [],
-    ),
-  ];
-  const item = items.find((candidate) => candidate.isAvailable !== false);
+  const item = menu.body.data?.menuItems.find(
+    (candidate) => candidate.isAvailable !== false,
+  );
   expect(item?.id).toBeTruthy();
+
+  // CashierView selects the first active register (the API sorts by name).
+  // Reuse that ledger on repeat local runs, or create one on a fresh CI D1.
+  const registersResponse = await apiRequest<
+    Array<{ id: string; isActive: boolean }>
+  >(`/api/v1/pos/registers?restaurantId=${restaurantId}`, { token });
+  expect(registersResponse.ok).toBe(true);
+  let registerId = registersResponse.body.data?.find((r) => r.isActive)?.id;
+  if (!registerId) {
+    const registerResponse = await apiRequest<{ id: string }>(
+      "/api/v1/pos/registers",
+      {
+        token,
+        method: "POST",
+        body: {
+          name: `E2E Refund Register ${suffix()}`,
+          restaurantId,
+        },
+      },
+    );
+    expect(
+      registerResponse.ok,
+      `register creation returned ${registerResponse.status}`,
+    ).toBe(true);
+    registerId = registerResponse.body.data?.id;
+  }
+  expect(registerId).toBeTruthy();
+  expect(
+    login.user?.id,
+    "owner login should return an operator id",
+  ).toBeTruthy();
+  const currentShift = await apiRequest<{ id: string } | null>(
+    `/api/v1/pos/shifts/current/${registerId}`,
+    { token },
+  );
+  expect(currentShift.ok).toBe(true);
+  let shiftId = currentShift.body.data?.id;
+  if (!shiftId) {
+    const shiftResponse = await apiRequest<{ id: string }>(
+      "/api/v1/pos/shifts/start",
+      {
+        token,
+        method: "POST",
+        body: {
+          registerId,
+          operatorId: login.user!.id,
+          startAmount: 0,
+        },
+      },
+    );
+    expect(
+      shiftResponse.ok,
+      `shift creation returned ${shiftResponse.status}`,
+    ).toBe(true);
+    shiftId = shiftResponse.body.data?.id;
+  }
+  expect(shiftId).toBeTruthy();
 
   const created = await apiRequest<{
     order: { id: string; totalAmount: number };
@@ -90,6 +138,11 @@ test("the counter settles a guest order across origins and makes it refundable",
   });
   await assertAuthenticated(page);
   await page.locator(".cursor-pointer", { hasText: orderNumber }).click();
+  const cashPayment = page
+    .locator("button[data-selected]")
+    .filter({ hasText: /Cash|現金/ });
+  await cashPayment.click();
+  await expect(cashPayment).toHaveAttribute("data-selected", "true");
   await page
     .getByTestId("received-amount")
     .fill(String(freshBefore.body.data!.totalAmount));
@@ -107,16 +160,33 @@ test("the counter settles a guest order across origins and makes it refundable",
   expect(paymentHeaders["origin"]).toBe(new URL(ADMIN_URL).origin);
   expect(paymentHeaders["idempotency-key"]).toBeTruthy();
   await expect(page.getByTestId("payment-success")).toBeVisible();
+  await page.getByTestId("payment-success").getByRole("button").nth(1).click();
 
-  await gotoAdmin(page, "/dashboard/orders", { expectApi: "/api/v1/orders" });
-  await page.getByTestId("admin-orders-search").first().fill(orderNumber);
-  await expect(
-    page.getByTestId(`admin-order-refund-${order!.id}`).first(),
-  ).toBeVisible();
+  await page.getByTestId("cashier-open-refund").click();
+  await page.getByTestId("cashier-refund-order-number").fill(orderNumber);
+  await page
+    .getByTestId("cashier-refund-amount")
+    .fill(String(freshBefore.body.data!.totalAmount));
+  await page.getByTestId("cashier-refund-reason").selectOption("quality_issue");
+
+  const refundResponse = page.waitForResponse(
+    (response) =>
+      response.url() === `${API_URL}/api/v1/pos/refunds/create` &&
+      response.request().method() === "POST",
+  );
+  await page.getByTestId("cashier-confirm-refund").click();
+  const refund = await refundResponse;
+  expect(refund.ok(), `refund returned ${refund.status()}`).toBe(true);
+  const refundHeaders = await refund.request().allHeaders();
+  expect(refundHeaders["origin"]).toBe(new URL(ADMIN_URL).origin);
+  expect(refundHeaders["x-register-id"]).toBe(registerId);
+  expect(refundHeaders["x-shift-id"]).toBe(shiftId);
+  expect(refundHeaders.cookie?.includes("__Host-mm_staff_refresh=")).toBe(true);
+  await expect(page.getByTestId("cashier-refund-order-number")).toHaveCount(0);
   await assertNoOverlayError(page);
 
   // The browser login retired the setup token. Re-authenticate only after
-  // the UI assertions, then inspect the actual D1-backed order fields.
+  // the UI assertions, then inspect the actual D1-backed payment and refund.
   const inspectionLogin = await smokeLogin(
     API_URL,
     OWNER_USERNAME,
@@ -128,24 +198,23 @@ test("the counter settles a guest order across origins and makes it refundable",
   }>(`/api/v1/orders/${order!.id}`, { token: inspectionLogin.token });
   expect(fresh.body.data?.paymentStatus).toBe("completed");
   expect(fresh.body.data?.paymentTransactionId).toBeTruthy();
-});
-
-test("the cashier's register and shift headers survive a browser preflight", async ({
-  page,
-}) => {
-  await requireStack();
-  expect(new URL(API_URL).origin).not.toBe(new URL(ADMIN_URL).origin);
-  await gotoAdmin(page, "/login", { waitForApi: false });
-
-  const status = await page.evaluate(async (apiUrl) => {
-    const response = await fetch(`${apiUrl}/api/v1/pos/registers`, {
-      headers: { "X-Register-Id": "e2e", "X-Shift-Id": "e2e" },
-    });
-    return response.status;
-  }, API_URL);
-
-  // The unauthenticated route can refuse us; the browser must be allowed to
-  // read that response rather than rejecting the preflight as a Network Error.
-  expect(status).toBeGreaterThanOrEqual(400);
-  expect(status).toBeLessThan(500);
+  const refunds = await apiRequest<{
+    refunds: Array<{
+      originalOrderId: string;
+      refundAmountCents: number;
+      status: string;
+    }>;
+  }>(`/api/v1/pos/refunds/registers/${registerId}/refunds`, {
+    token: inspectionLogin.token,
+  });
+  expect(refunds.ok, `refund inspection returned ${refunds.status}`).toBe(true);
+  expect(refunds.body.data?.refunds).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        originalOrderId: order!.id,
+        refundAmountCents: Math.round(freshBefore.body.data!.totalAmount * 100),
+        status: "completed",
+      }),
+    ]),
+  );
 });

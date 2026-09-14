@@ -22,18 +22,10 @@
             data-testid="cashier-today-revenue"
             class="text-lg font-semibold text-ios-green"
             role="status"
-            :aria-label="
-              todayRevenueUnavailable
-                ? t('cashier.revenueUnavailable')
-                : undefined
-            "
-            :title="
-              todayRevenueUnavailable
-                ? t('cashier.revenueUnavailable')
-                : undefined
-            "
+            :aria-label="todayRevenueUnavailableLabel"
+            :title="todayRevenueUnavailableLabel"
           >
-            {{ todayRevenueUnavailable ? "—" : formatPrice(todayRevenue) }}
+            {{ todayRevenue === null ? "—" : formatPrice(todayRevenue) }}
           </p>
         </div>
       </div>
@@ -946,7 +938,7 @@ interface CashierOrder {
 
 interface RegisterPayload {
   id: string;
-  status?: string;
+  isActive: boolean;
 }
 
 interface ShiftPayload {
@@ -1001,8 +993,12 @@ const completedOrder = ref<CashierOrder | null>(null);
 const showShiftReport = ref(false);
 const showRefundDialog = ref(false);
 const actualCashAmount = ref(0);
-const todayRevenue = ref(0);
-const todayRevenueUnavailable = ref(false);
+// `null` means the daily report is still untrusted (loading or unavailable),
+// while 0 is a confirmed day with no sales.
+const todayRevenue = ref<number | null>(null);
+const todayRevenueUnavailableLabel = computed(() =>
+  todayRevenue.value === null ? t("cashier.revenueUnavailable") : undefined,
+);
 
 // Modal 狀態
 const showDiscountModal = ref(false);
@@ -1167,7 +1163,7 @@ const loadCurrentShift = async () => {
     });
     if (regResponse.data.success && regResponse.data.data) {
       const registers = unwrapApiList<RegisterPayload>(regResponse.data.data);
-      const activeRegister = registers.find((r) => r.status === "active");
+      const activeRegister = registers.find((r) => r.isActive === true);
       if (activeRegister) {
         currentShift.value.registerId = activeRegister.id;
         const shiftResponse = await api.get(
@@ -1205,12 +1201,11 @@ const loadTodayRevenue = async () => {
     if (response.data.success && response.data.data) {
       const report = unwrapApiPayload<DailyReportPayload>(response.data.data);
       todayRevenue.value = report.summary?.totalSales ?? report.totalSales ?? 0;
-      todayRevenueUnavailable.value = false;
     } else {
-      todayRevenueUnavailable.value = true;
+      todayRevenue.value = null;
     }
   } catch {
-    todayRevenueUnavailable.value = true;
+    todayRevenue.value = null;
   }
 };
 
@@ -1313,7 +1308,7 @@ const processPayment = async () => {
       selectedOrder.value = null;
 
       // Update today's revenue
-      if (!todayRevenueUnavailable.value) {
+      if (todayRevenue.value !== null) {
         todayRevenue.value += completedOrder.value!.totalAmount;
       }
     }
@@ -1581,7 +1576,7 @@ const processRefund = async () => {
     // 更新統計數據
     shiftReport.value.refundCount++;
     shiftReport.value.totalRevenue -= refundData.value.amount;
-    if (!todayRevenueUnavailable.value) {
+    if (todayRevenue.value !== null) {
       todayRevenue.value -= refundData.value.amount;
     }
 
