@@ -211,6 +211,22 @@ describe("POS report routes", () => {
     );
   });
 
+  it("rejects an explicit restaurant when a cashier has no restaurant", async () => {
+    mocks.user = {
+      id: "cashier-without-restaurant",
+      username: "cashier",
+      role: 4,
+      restaurantId: undefined,
+    };
+
+    const response = await request(
+      "/daily?restaurantId=undefined&date=2026-06-07",
+    );
+
+    expect(response.status).toBe(403);
+    expect(mocks.reportService.getDailyReport).not.toHaveBeenCalled();
+  });
+
   it("returns register usage stats with default and explicit periods", async () => {
     let response = await request("/register-usage");
     let body = await json(response);

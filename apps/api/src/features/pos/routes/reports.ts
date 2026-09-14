@@ -4,7 +4,11 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-import { authMiddleware, requireRole } from "../../../middleware/auth";
+import {
+  authMiddleware,
+  requireRole,
+  type AuthUser,
+} from "../../../middleware/auth";
 import { validateQuery } from "../../../middleware/validation";
 import { ReportService } from "../services/ReportService";
 import { PosTenantAccessService } from "../services/PosTenantAccessService";
@@ -16,6 +20,29 @@ import {
 } from "../../../shared/utils/api-error";
 
 const app = new Hono<{ Bindings: Env }>();
+
+function resolveReportRestaurantId(
+  user: AuthUser,
+  restaurantId: string | undefined,
+  forbiddenMessage: string,
+): string {
+  if (restaurantId) {
+    if (
+      user.role !== 0 &&
+      (user.restaurantId == null || String(user.restaurantId) !== restaurantId)
+    ) {
+      throw forbidden(forbiddenMessage);
+    }
+
+    return restaurantId;
+  }
+
+  if (user.restaurantId) {
+    return String(user.restaurantId);
+  }
+
+  throw badRequest("需要指定餐廳ID");
+}
 
 /**
  * 獲取日營業報表
@@ -37,21 +64,14 @@ app.get(
     const user = c.get("user");
     const { restaurantId, date } = c.get("validatedQuery");
 
-    // 確定餐廳ID
-    let finalRestaurantId: string | undefined;
-    if (restaurantId) {
-      finalRestaurantId = restaurantId;
-      if (user.role !== 0 && user.restaurantId !== finalRestaurantId) {
-        throw forbidden("只能查看自己餐廳的報表");
-      }
-    } else if (user.restaurantId) {
-      finalRestaurantId = String(user.restaurantId);
-    } else {
-      throw badRequest("需要指定餐廳ID");
-    }
+    const finalRestaurantId = resolveReportRestaurantId(
+      user,
+      restaurantId,
+      "只能查看自己餐廳的報表",
+    );
 
     const reportService = new ReportService(c.env.DB);
-    const result = await reportService.getDailyReport(finalRestaurantId!, date);
+    const result = await reportService.getDailyReport(finalRestaurantId, date);
 
     if (!result.success) {
       throw badRequest(result.error || "獲取日營業報表失敗");
@@ -84,22 +104,15 @@ app.get(
     const user = c.get("user");
     const { restaurantId, period } = c.get("validatedQuery");
 
-    // 確定餐廳ID
-    let finalRestaurantId: string | undefined;
-    if (restaurantId) {
-      finalRestaurantId = restaurantId;
-      if (user.role !== 0 && user.restaurantId !== finalRestaurantId) {
-        throw forbidden("只能查看自己餐廳的統計");
-      }
-    } else if (user.restaurantId) {
-      finalRestaurantId = String(user.restaurantId);
-    } else {
-      throw badRequest("需要指定餐廳ID");
-    }
+    const finalRestaurantId = resolveReportRestaurantId(
+      user,
+      restaurantId,
+      "只能查看自己餐廳的統計",
+    );
 
     const reportService = new ReportService(c.env.DB);
     const result = await reportService.getRegisterUsageStats(
-      finalRestaurantId!,
+      finalRestaurantId,
       period,
     );
 
@@ -146,18 +159,11 @@ app.get(
     const { restaurantId, type, format, startDate, shiftId } =
       c.get("validatedQuery");
 
-    // 確定餐廳ID
-    let finalRestaurantId: string | undefined;
-    if (restaurantId) {
-      finalRestaurantId = restaurantId;
-      if (user.role !== 0 && user.restaurantId !== finalRestaurantId) {
-        throw forbidden("只能匯出自己餐廳的報表");
-      }
-    } else if (user.restaurantId) {
-      finalRestaurantId = String(user.restaurantId);
-    } else {
-      throw badRequest("需要指定餐廳ID");
-    }
+    const finalRestaurantId = resolveReportRestaurantId(
+      user,
+      restaurantId,
+      "只能匯出自己餐廳的報表",
+    );
 
     const reportService = new ReportService(c.env.DB);
     let result: {
@@ -172,7 +178,7 @@ app.get(
           throw badRequest("日報表需要指定日期");
         }
         result = await reportService.getDailyReport(
-          finalRestaurantId!,
+          finalRestaurantId,
           startDate,
         );
         break;
@@ -190,7 +196,7 @@ app.get(
 
       case "register-usage":
         result = await reportService.getRegisterUsageStats(
-          finalRestaurantId!,
+          finalRestaurantId,
           "day",
         );
         break;

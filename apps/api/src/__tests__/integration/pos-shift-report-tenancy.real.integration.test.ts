@@ -45,6 +45,13 @@ describe("POS shift report — tenancy and D1 binding", () => {
   });
 
   const CSRF = "a".repeat(64);
+  const taipeiDateFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Taipei",
+  });
+
+  function todayInTaipei() {
+    return taipeiDateFormatter.format(new Date());
+  }
 
   function call(path: string, token: string, method = "GET", body?: unknown) {
     return testApp.app.fetch(
@@ -268,9 +275,7 @@ describe("POS shift report — tenancy and D1 binding", () => {
 
     // The report's `date` is the shop's calendar day; seed.restaurant keeps
     // the schema default of Asia/Taipei.
-    const today = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Taipei",
-    }).format(new Date());
+    const today = todayInTaipei();
 
     const dailyRes = await call(
       `/pos/reports/daily?date=${today}&restaurantId=${mine.restaurantId}`,
@@ -309,9 +314,7 @@ describe("POS shift report — tenancy and D1 binding", () => {
       4,
       mine.restaurantId,
     );
-    const today = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Taipei",
-    }).format(new Date());
+    const today = todayInTaipei();
 
     for (const path of [
       `/pos/reports/daily?date=${today}&restaurantId=${mine.restaurantId}`,
