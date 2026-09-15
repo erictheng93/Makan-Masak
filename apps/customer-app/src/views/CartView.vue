@@ -1098,6 +1098,11 @@ const submitOrder = async () => {
       const guestOrderData: CreateGuestOrderRequest = {
         restaurantId: props.restaurantId,
         guestName: customerInfo.value.name.trim() || "Guest",
+        // The cart collects 聯絡電話 on the guest path too, and the
+        // guest-orders schema has always accepted it, but this payload used to
+        // drop it -- so a guest order reached D1 with a name and no way to
+        // reach the diner.
+        customerPhone: customerInfo.value.phone.trim() || undefined,
         orderType: seatId.value ? "seat" : "table",
         tableId: props.tableId,
         seatId: seatId.value ?? undefined,

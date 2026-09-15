@@ -171,8 +171,13 @@ app.post(
         tableId: data.orderType === "shop" ? undefined : data.tableId,
         waitingListId: data.waitingListId,
         waitingListCustomerPhone: data.customerPhone,
+        // `customerPhone` used to feed the waiting-list lookup and nothing
+        // else, so a guest who filled in 聯絡電話 on the cart had it validated,
+        // sent and then dropped: `customer_info` stored the name alone and the
+        // shop had no way to call the diner back about their order.
         customerInfo: {
           name: data.guestName,
+          ...(data.customerPhone ? { phone: data.customerPhone } : {}),
         },
         items: data.items.map((item) => ({
           menuItemId: item.menuItemId,
