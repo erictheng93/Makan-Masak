@@ -964,6 +964,44 @@ tableNumber: null as string | null,</code></pre>
   </div>
 </section>
 
+<section>
+  <h2>與同日入駐流程那輪的重疊</h2>
+  <div class="card">
+    <p>
+      2026-09-15 同一天另有一輪走入駐流程的 QA，開了 #374–#381。
+      有兩處與本報告重疊，界線記在這裡以免重複做（兩邊的 issue 都已互相標註）：
+    </p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>本報告</th><th>對方</th><th>界線</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">C7 / #386</td>
+            <td class="mono">#377</td>
+            <td>
+              #377 涵蓋 <code>district</code> / <code>city</code> / <code>address</code>
+              三個佔位值的來源與「店主改不到」。
+              本報告額外的是顧客端下游：<code>type</code> 也被印出去而且後端更新 schema 根本沒收它、
+              <code>business_hours</code> 為 NULL 造成的「永遠休息中」與篩選下消失。
+              #377 標註「顧客端行政區清單是否會列出佔位字串未實測」—— 實測結果是<b>會</b>。
+            </td>
+          </tr>
+          <tr>
+            <td class="mono">C4 / #384</td>
+            <td class="mono">#374</td>
+            <td>
+              #374 涵蓋 email provider 的接線與 production secret 盤點，修掉它 email 那半就好。
+              本報告額外的是<b>簡訊那條</b>（含 <code>TWILIO_PHONE_NUMBER</code> 假值會讓
+              <code>hasTwilio()</code> 誤判）、顧客註冊的實測 503 與
+              <code>customers</code> 0 筆，以及空的 <code>REQUIRED_DEPLOYMENT_SECRETS</code>。
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
 <footer>
   <p>
     2026-09-15 · production 實測 · 顧客端（master-user-flow「1. 顧客端」）·
