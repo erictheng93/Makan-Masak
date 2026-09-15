@@ -944,12 +944,18 @@ export class OnboardingService {
     return `${base}-${crypto.randomUUID().slice(0, 8)}`;
   }
 
+  /**
+   * The result must pass apps/api's login schema, which only accepts
+   * /^[a-zA-Z0-9_-]+$/. Keeping the "." from an email local part such as
+   * "tan.mei" produced an owner who could set a password and then never log in:
+   * login rejects the username with VALIDATION_ERROR before checking it.
+   */
   private slugifyUsername(value: string): string {
     const username = value
       .toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9._-]/g, "-")
+      .replace(/[^a-z0-9_-]/g, "-")
       .replace(/-+/g, "-")
       .replace(/^-|-$/g, "")
       .slice(0, 40);

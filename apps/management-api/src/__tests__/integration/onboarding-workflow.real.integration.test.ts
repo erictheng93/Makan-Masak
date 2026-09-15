@@ -414,9 +414,14 @@ describe("Onboarding public API workflow — real integration", () => {
       status: "completed",
       subdomain: approvedSubdomain,
       ownerAccount: {
-        username: "tan.mei",
+        username: "tan-mei",
       },
     });
+    // The owner logs in through apps/api, whose login schema only accepts this
+    // pattern (USERNAME_REGEX in features/authentication/schemas/validation.ts).
+    // A contact email of "tan.mei@…" used to yield "tan.mei", which login
+    // rejects before it ever checks the password.
+    expect(ownerAccount.username).toMatch(/^[a-zA-Z0-9_-]+$/);
     expect(typeof approveJson.tenantId).toBe("string");
     expect(typeof ownerAccount.restaurantId).toBe("string");
     expect(typeof ownerAccount.userId).toBe("string");
@@ -446,7 +451,7 @@ describe("Onboarding public API workflow — real integration", () => {
       status: "active",
       platform_restaurant_id: ownerAccount.restaurantId,
       owner_user_id: ownerAccount.userId,
-      owner_username: "tan.mei",
+      owner_username: "tan-mei",
     });
 
     const restaurantRow = platformDb
@@ -475,7 +480,7 @@ describe("Onboarding public API workflow — real integration", () => {
     } & Record<string, unknown>;
     expect(userRow).toMatchObject({
       id: ownerAccount.userId,
-      username: "tan.mei",
+      username: "tan-mei",
       email: "tan.mei@example.com",
       full_name: "Tan Mei",
       role: 1,
@@ -541,7 +546,7 @@ describe("Onboarding public API workflow — real integration", () => {
       user_id: ownerAccount.userId,
       recipient_email: "tan.mei@example.com",
       recipient_name: "Tan Mei",
-      username: "tan.mei",
+      username: "tan-mei",
       setup_password_link: ownerAccount.setupPasswordLink,
       delivery_channel: "manual",
       status: "pending",
