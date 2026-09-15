@@ -18,7 +18,9 @@ const form = ref({
   contactPhone: "",
   latitude: null as number | null,
   longitude: null as number | null,
-  planId: "standard" as const,
+  // Self-service shops start on the trial; the page offers no plan choice, and
+  // the platform moves a shop onto a paid tier after it has been activated.
+  planId: "trial" as const,
 });
 
 const errors = ref<Record<string, string>>({});

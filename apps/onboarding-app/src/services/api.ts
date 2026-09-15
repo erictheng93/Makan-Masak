@@ -54,7 +54,7 @@ export interface CreateApplicationData {
   contactName: string;
   contactEmail: string;
   contactPhone: string;
-  planId: "standard" | "professional" | "enterprise";
+  planId: "trial" | "standard" | "professional" | "enterprise";
   latitude: number;
   longitude: number;
 }

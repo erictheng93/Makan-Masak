@@ -117,6 +117,7 @@ const idID: Messages = {
     enterprise: "Perusahaan",
     professional: "Profesional",
     standard: "Standar",
+    trial: "Uji coba gratis",
   },
   success: {
     button: {

@@ -117,6 +117,7 @@ const msMY: Messages = {
     enterprise: "Perusahaan",
     professional: "Profesional",
     standard: "Standard",
+    trial: "Percubaan percuma",
   },
   success: {
     button: {

@@ -18,7 +18,7 @@ export interface ApplicationData {
   contactPhone: string;
   latitude: number;
   longitude: number;
-  planId: "standard" | "professional" | "enterprise";
+  planId: "trial" | "standard" | "professional" | "enterprise";
   status: "pending" | "submitted" | "approved" | "rejected";
 }
 

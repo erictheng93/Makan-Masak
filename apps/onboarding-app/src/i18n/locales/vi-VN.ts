@@ -116,6 +116,7 @@ const viVN: Messages = {
     enterprise: "Doanh nghiệp",
     professional: "chuyên nghiệp",
     standard: "Tiêu chuẩn",
+    trial: "Dùng thử miễn phí",
   },
   success: {
     button: {

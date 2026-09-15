@@ -162,6 +162,7 @@ const enUS: Messages = {
   },
 
   plans: {
+    trial: "Free trial",
     standard: "Standard",
     professional: "Professional",
     enterprise: "Enterprise",

@@ -110,6 +110,7 @@ const zhCN: Messages = {
     enterprise: "企业版",
     professional: "专业版",
     standard: "标准版",
+    trial: "免费试用",
   },
   success: {
     button: {

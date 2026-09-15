@@ -151,6 +151,7 @@ const zhTW = {
   },
 
   plans: {
+    trial: "免費試用",
     standard: "標準版",
     professional: "專業版",
     enterprise: "企業版",

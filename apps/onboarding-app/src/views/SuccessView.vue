@@ -29,13 +29,14 @@ const copyToClipboard = (text: string) => {
 };
 
 const planLabels = computed<Record<string, string>>(() => ({
+  trial: t("plans.trial"),
   standard: t("plans.standard"),
   professional: t("plans.professional"),
   enterprise: t("plans.enterprise"),
 }));
 
 const getPlanLabel = (planId: string) => {
-  return planLabels.value[planId] || planLabels.value.standard;
+  return planLabels.value[planId] || planLabels.value.trial;
 };
 
 const handleStartNew = () => {
