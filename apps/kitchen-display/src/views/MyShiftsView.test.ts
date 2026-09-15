@@ -86,6 +86,7 @@ function buildRequest(overrides: Record<string, unknown> = {}) {
 }
 
 let MyShiftsView: Component;
+let KitchenHeader: Component;
 
 beforeAll(async () => {
   const routes = (await import("@/router")).default;
@@ -97,6 +98,14 @@ beforeAll(async () => {
 
   const loader = route!.component as () => Promise<{ default: Component }>;
   MyShiftsView = (await loader()).default;
+
+  // Warmed here for the same reason MyShiftsView is (#211): the first
+  // await import() of a component graph pays its whole transform cost, and
+  // inside a test body that cost lands on the 5s testTimeout. It passed
+  // standalone and timed out at 5017ms under a loaded verify:push, which is
+  // the signature of that mistake rather than of a real defect.
+  KitchenHeader = (await import("@/components/layout/KitchenHeader.vue"))
+    .default;
 }, 30_000);
 
 beforeEach(() => {
@@ -205,10 +214,6 @@ describe("MyShiftsView (kitchen display)", () => {
 
 describe("KitchenHeader entry point", () => {
   it("carries the button that reaches the swap page", async () => {
-    const KitchenHeader = (
-      await import("@/components/layout/KitchenHeader.vue")
-    ).default;
-
     const wrapper = mount(KitchenHeader, {
       props: {
         restaurantName: "阿嬤的店",
