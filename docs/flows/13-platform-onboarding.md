@@ -57,8 +57,10 @@
 > `API_BASE_URL`。production 的第一個值是 `https://admin.makanmasak.com`，所以連結落在
 > 店家後台的 `/reset-password`。改 `CORS_ORIGIN` 順序會改掉連結去哪。
 
-> **帳號是聯絡 Email 的 `@` 前綴**（`generateAvailableOwnerUsername`），撞名才加亂碼尾碼。
-> 登入不檢查 `isVerified`，設完密碼即可登入。
+> **帳號由聯絡 Email 的 `@` 前綴產生**（`generateAvailableOwnerUsername`），`.` 等字元會換成
+> `-`，撞名才加亂碼尾碼。這是因為 api 的登入 schema 只接受 `^[a-zA-Z0-9_-]+$`：
+> 過去保留了 `.`，`tan.mei@…` 會得到登不進去的 `tan.mei`。入口 B 的帳號由管理者輸入，
+> 建立時就走同一條 schema。登入不檢查 `isVerified`，設完密碼即可登入。
 
 > **餐廳 id 必須是 UUID v7。** 註解寫得很明白：v4 的 owner id 會讓這個租戶的菜單圖片上傳直接壞掉。
 
