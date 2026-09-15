@@ -1,0 +1,980 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>顧客端流程 QA — 2026-09-15</title>
+<style>
+:root{
+  --ground:#F2F2F7; --surface:#FFFFFF; --surface-2:#F8F8FB;
+  --ink:#1C1C1E; --ink-2:#55555C; --ink-3:#8A8A92;
+  --hair:rgba(28,28,30,.10); --hair-2:rgba(28,28,30,.06);
+  --shadow:0 1px 1.5px rgba(24,24,45,.05), 0 5px 16px rgba(24,24,45,.05);
+  --shadow-sm:0 1px 1px rgba(24,24,45,.05), 0 3px 10px rgba(24,24,45,.05);
+  --blue:#007AFF; --blue-ink:#0A5FC2;
+  --green:#34C759; --green-ink:#17803D;
+  --orange:#FF9500; --orange-ink:#A85F04;
+  --red:#FF3B30; --red-ink:#C1271D;
+  --purple:#AF52DE; --purple-ink:#7B2FB5;
+  --teal:#30B0C7; --teal-ink:#0D7C8F;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F0F13; --surface:#1B1B21; --surface-2:#212128;
+    --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#7E7E8A;
+    --hair:rgba(255,255,255,.14); --hair-2:rgba(255,255,255,.07);
+    --shadow:0 1px 1.5px rgba(0,0,0,.4), 0 5px 16px rgba(0,0,0,.35);
+    --shadow-sm:0 1px 1px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
+    --blue:#3B9BFF; --blue-ink:#7CBEFF;
+    --green:#4CD97A; --green-ink:#84E5A3;
+    --orange:#FFB03D; --orange-ink:#FFC978;
+    --red:#FF6961; --red-ink:#FF9A94;
+    --purple:#C77BEB; --purple-ink:#DBA9F4;
+    --teal:#4ECBE0; --teal-ink:#8CE0EE;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F0F13; --surface:#1B1B21; --surface-2:#212128;
+  --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#7E7E8A;
+  --hair:rgba(255,255,255,.14); --hair-2:rgba(255,255,255,.07);
+  --shadow:0 1px 1.5px rgba(0,0,0,.4), 0 5px 16px rgba(0,0,0,.35);
+  --shadow-sm:0 1px 1px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
+  --blue:#3B9BFF; --blue-ink:#7CBEFF;
+  --green:#4CD97A; --green-ink:#84E5A3;
+  --orange:#FFB03D; --orange-ink:#FFC978;
+  --red:#FF6961; --red-ink:#FF9A94;
+  --purple:#C77BEB; --purple-ink:#DBA9F4;
+  --teal:#4ECBE0; --teal-ink:#8CE0EE;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans","Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.7; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:960px; margin:0 auto; padding:36px 22px 80px}
+code{
+  font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:.87em; background:var(--surface-2); padding:1.5px 6px;
+  border-radius:6px; overflow-wrap:anywhere;
+}
+pre{
+  background:var(--surface-2); border-radius:14px; padding:13px 16px;
+  overflow-x:auto; font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  font-size:12.5px; line-height:1.65; margin:12px 0;
+}
+pre code{background:none; padding:0}
+a{color:var(--blue-ink); font-weight:600; text-decoration:none}
+a:hover{text-decoration:underline}
+
+header.mast{margin-bottom:26px}
+header.mast h1{
+  margin:0; font-size:31px; font-weight:900; letter-spacing:-.025em;
+  line-height:1.2; text-wrap:balance;
+}
+header.mast .sub{margin:8px 0 0; font-size:14.5px; color:var(--ink-2)}
+.meta{
+  display:flex; flex-wrap:wrap; gap:10px 26px; margin-top:16px;
+  background:var(--surface); border-radius:16px; padding:13px 18px;
+  box-shadow:var(--shadow); font-size:12.5px; color:var(--ink-2);
+}
+.meta b{color:var(--ink); font-weight:600}
+
+section{margin-top:34px}
+h2{
+  margin:0 0 14px; font-size:20px; font-weight:800; letter-spacing:-.015em;
+}
+h3{
+  margin:26px 0 10px; font-size:16px; font-weight:700; letter-spacing:-.01em;
+}
+.card h4{
+  margin:18px 0 6px; font-size:13px; font-weight:700; letter-spacing:.02em;
+  text-transform:uppercase; color:var(--ink-3);
+}
+p{margin:10px 0}
+
+.card{
+  background:var(--surface); border-radius:20px; padding:18px 22px 20px;
+  box-shadow:var(--shadow); margin:14px 0;
+}
+.card > :first-child{margin-top:0}
+.card > :last-child{margin-bottom:0}
+
+.finding{
+  --ac:var(--ink-3); --ac-ink:var(--ink-2);
+  background:var(--surface); border-radius:20px; box-shadow:var(--shadow);
+  margin:14px 0; overflow:hidden;
+}
+.finding.blocker{--ac:var(--red); --ac-ink:var(--red-ink)}
+.finding.data{--ac:var(--purple); --ac-ink:var(--purple-ink)}
+.finding.ux{--ac:var(--orange); --ac-ink:var(--orange-ink)}
+.finding.ok{--ac:var(--green); --ac-ink:var(--green-ink)}
+.finding-h{
+  display:flex; align-items:baseline; gap:11px; flex-wrap:wrap;
+  padding:14px 22px 12px;
+  background:color-mix(in srgb, var(--ac) 11%, var(--surface));
+  border-bottom:1px solid color-mix(in srgb, var(--ac) 20%, transparent);
+}
+.finding-h .id{
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  font-size:12px; font-weight:700; color:var(--ac-ink);
+  background:color-mix(in srgb, var(--ac) 18%, var(--surface));
+  padding:2px 10px; border-radius:999px; flex:none;
+}
+.finding-h h4{
+  margin:0; font-size:15.5px; font-weight:700; letter-spacing:-.01em;
+  flex:1; min-width:220px;
+}
+.finding-b{padding:14px 22px 18px}
+.finding-b > :first-child{margin-top:0}
+.finding-b > :last-child{margin-bottom:0}
+
+.tag{
+  display:inline-block; font-size:11px; font-weight:700; letter-spacing:.04em;
+  padding:2.5px 11px; border-radius:999px; white-space:nowrap;
+}
+.tag.blocker{background:color-mix(in srgb, var(--red) 16%, var(--surface)); color:var(--red-ink)}
+.tag.data{background:color-mix(in srgb, var(--purple) 16%, var(--surface)); color:var(--purple-ink)}
+.tag.ux{background:color-mix(in srgb, var(--orange) 18%, var(--surface)); color:var(--orange-ink)}
+.tag.ok{background:color-mix(in srgb, var(--green) 18%, var(--surface)); color:var(--green-ink)}
+.tag.fixed{background:color-mix(in srgb, var(--blue) 16%, var(--surface)); color:var(--blue-ink)}
+.tag.issue{background:color-mix(in srgb, var(--teal) 18%, var(--surface)); color:var(--teal-ink)}
+
+.evidence{
+  margin:12px 0; padding:11px 15px; border-radius:14px;
+  background:var(--surface-2); font-size:13.5px; line-height:1.65;
+}
+.evidence b{font-weight:600}
+.evidence .lbl{
+  display:block; font-size:10.5px; font-weight:700; letter-spacing:.12em;
+  color:var(--ink-3); margin-bottom:5px;
+}
+
+.tablewrap{overflow-x:auto; margin:14px 0; border-radius:18px; box-shadow:var(--shadow)}
+table{border-collapse:collapse; width:100%; background:var(--surface); font-size:13.5px}
+th,td{padding:10px 15px; text-align:left; vertical-align:top}
+th{
+  font-size:11px; font-weight:700; letter-spacing:.08em; color:var(--ink-3);
+  background:var(--surface-2); white-space:nowrap;
+}
+td{border-top:1px solid var(--hair-2)}
+td.mono, th.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:12px; white-space:nowrap}
+
+ul,ol{margin:10px 0; padding-left:22px}
+li{margin:5px 0}
+ul.plain{list-style:none; padding-left:0}
+ul.plain li{
+  position:relative; padding-left:16px;
+}
+ul.plain li::before{
+  content:""; position:absolute; left:0; top:11px;
+  width:5px; height:5px; border-radius:50%; background:var(--ink-3);
+}
+
+.note{
+  border-radius:14px; padding:12px 16px; margin:14px 0; font-size:13.5px;
+  background:color-mix(in srgb, var(--blue) 9%, transparent);
+}
+.note b{color:var(--blue-ink)}
+.warn{background:color-mix(in srgb, var(--orange) 12%, transparent)}
+.warn b{color:var(--orange-ink)}
+
+footer{
+  margin-top:44px; padding-top:18px; border-top:1px solid var(--hair-2);
+  font-size:12.5px; color:var(--ink-3);
+}
+@media (max-width:640px){
+  .wrap{padding:24px 14px 60px}
+  header.mast h1{font-size:24px}
+  .finding-h,.finding-b,.card{padding-left:16px; padding-right:16px}
+}
+</style>
+</head><body>
+<div class="wrap">
+
+<header class="mast">
+  <h1>顧客端流程 QA — 2026-09-15</h1>
+  <p class="sub">
+    依 <code>docs/architecture/master-user-flow.html</code> 的「1. 顧客端」四條子流程，
+    用真瀏覽器在 production 逐頁走過一遍：點餐主流程 → 訂單追蹤 → 座位與預約 → 揪團與市集。
+    這是繼 08-25 與 09-01 兩輪店家後台之後，<b>第一次走顧客端</b>。
+  </p>
+  <div class="meta">
+    <span><b>環境</b> production（非本機）</span>
+    <span><b>前端</b> makanmasak.com</span>
+    <span><b>後端</b> api.makanmasak.com</span>
+    <span><b>身分</b> 訪客（免登入）＋ <code>owner1</code> 推狀態</span>
+    <span><b>餐廳</b> 麻吉 Demo 廣東粥 <code>019fa136-…31a1</code></span>
+    <span><b>入口</b> 桌位 A1 的簽章 QR</span>
+  </div>
+</header>
+
+<section>
+  <h2>做了什麼</h2>
+  <div class="card">
+    <p>
+      掃真正的桌位 QR 進 production，照 master-user-flow 的節點順序逐一操作。
+      每個可疑畫面都往下追到「API 實際回了什麼」與「哪一行程式碼造成的」，不以畫面推論作結；
+      需要斷言資料庫事實時直接查 production D1，<b>寫入操作事後全部還原並與 baseline 逐表比對</b>。
+    </p>
+    <p><b>覆蓋範圍：</b></p>
+    <ul class="plain">
+      <li><b>點餐主流程</b>　掃桌位 QR → 瀏覽菜單 → 加入購物車 → 優惠券 → 顧客資訊 → 送出訂單</li>
+      <li><b>訂單追蹤</b>　待確認 → 已確認 → 製作中 → 準備完成 → 已送達（由店主端推狀態，觀察即時廣播）</li>
+      <li><b>座位與預約</b>　候位登記 → 叫號 → 確認抵達；線上訂位；預約服務</li>
+      <li><b>揪團與市集</b>　建立揪團 → 分帳設定 → 邀請 → 加入；市集探索</li>
+      <li><b>會員入口</b>　註冊；另外走了<b>店家公開碼</b>（shop mode）這條平行路徑</li>
+    </ul>
+    <p class="note">
+      <b>這輪的證據標準。</b>顧客端在 <code>tests/e2e/</code> 裡<b>一個測試都沒有</b>
+      （<code>admin/</code> 45 個、<code>kitchen-display/</code> 2 個、<code>smoke/</code> 130 個且領域資料整包 mock）。
+      所以這裡每一項「成立」都是 production 實測加上原始碼定位，沒有任何一項是靠既有測試背書的。
+    </p>
+  </div>
+</section>
+
+<section>
+  <h2>結論摘要</h2>
+  <p>
+    共 <b>16 項發現</b>。其中 <b>4 項是流程走不完的硬阻斷</b>，
+    <b>7 項在本輪直接修掉</b>，<b>9 項開成 issue</b>（#382–#390）。
+  </p>
+  <p class="note">
+    <b>「直接修 / 開 issue」的分界線沿用 09-01 那輪的標準：</b>
+    修法唯一且範圍收斂的直接修；需要先做產品或設計決定、或要動到全域路徑的開 issue，
+    並在 issue 裡附上自足的建議修法。
+  </p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th class="mono">#</th><th>發現</th><th>流程</th><th>類型</th><th>處置</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">C1</td><td>訪客套用優惠券後，購物車顯示折扣金額，建立的卻是原價訂單</td><td>點餐</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue">#382</span></td></tr>
+        <tr><td class="mono">C2</td><td>揪團沒有任何邀請入口，別人永遠加不進來</td><td>揪團</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">C3</td><td>再點一次餐之後，前一筆訂單的追蹤頁變成「沒有權限」</td><td>訂單追蹤</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue">#383</span></td></tr>
+        <tr><td class="mono">C4</td><td>顧客註冊在 production 100% 失敗，<code>customers</code> 表 0 筆</td><td>會員入口</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue">#384</span></td></tr>
+        <tr><td class="mono">C5</td><td>店家公開碼路徑的取餐方式：選了內用顯示外帶，購物車只給外帶／外送</td><td>點餐</td><td><span class="tag data">資料</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">C6</td><td>顧客端沒有線上訂位，但後端四條給顧客用的公開端點已上線</td><td>預約</td><td><span class="tag ux">缺口</span></td><td><span class="tag issue">#385</span></td></tr>
+        <tr><td class="mono">C7</td><td>新入駐的店在公開探索頁顯示 onboarding placeholder，且永遠「休息中」</td><td>探索</td><td><span class="tag data">資料</span></td><td><span class="tag issue">#386</span></td></tr>
+        <tr><td class="mono">C8</td><td>掃 QR 的點餐路徑沒有任何語系切換入口</td><td>全站</td><td><span class="tag ux">缺口</span></td><td><span class="tag issue">#387</span></td></tr>
+        <tr><td class="mono">C9</td><td>「預估還需 N 分鐘」寫死 15 分鐘基數，忽略每道菜設定的準備時間</td><td>訂單追蹤</td><td><span class="tag data">資料</span></td><td><span class="tag issue">#388</span></td></tr>
+        <tr><td class="mono">C10</td><td>購物車收集的「聯絡電話」在訪客訂單被丟掉</td><td>點餐</td><td><span class="tag data">資料</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">C11</td><td>訂單時間軸「正在製作」永遠沒有時間（唯一硬寫 null 的一格）</td><td>訂單追蹤</td><td><span class="tag ux">體驗</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">C12</td><td>即時更新只換狀態不帶時間戳，時間軸要重整才看得到時間</td><td>訂單追蹤</td><td><span class="tag ux">體驗</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">C13</td><td>購物車三處雙重幣別符號（「節省 <code>$NT$20</code>」）</td><td>點餐</td><td><span class="tag ux">體驗</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">C14</td><td>註冊失敗顯示「登入失敗」——四個 auth 動作共用同一句寫死文案</td><td>會員入口</td><td><span class="tag ux">體驗</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">C15</td><td>廚房單與收據的桌號永遠是 <code>null</code>（範圍外）</td><td>出單</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue">#389</span></td></tr>
+        <tr><td class="mono">C16</td><td>六處把 <code>$</code> 寫死在金額前，i18n 守門只掃語系檔不掃 template（範圍外）</td><td>全站</td><td><span class="tag ux">體驗</span></td><td><span class="tag issue">#390</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+<section>
+  <h2>點餐主流程：畫面一個價，伺服器另一個價</h2>
+
+  <div class="finding blocker">
+    <div class="finding-h">
+      <span class="id">C1</span>
+      <h4>訪客套用優惠券後，購物車顯示折扣後金額，實際建立的是原價訂單</h4>
+      <span class="tag issue">#382</span>
+    </div>
+    <div class="finding-b">
+      <p>
+        在 production 臨時建一張 NT$20 定額券（<code>QA0915COUPON</code>，事後已刪），
+        掃桌位 QR 以訪客身分套用，然後送出。
+      </p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>畫面／資料</th><th>值</th></tr></thead>
+          <tbody>
+            <tr><td>購物車「折扣」</td><td class="mono">−NT$20</td></tr>
+            <tr><td>購物車「總計」</td><td class="mono">NT$70</td></tr>
+            <tr><td>送出鈕文字</td><td class="mono">送出訂單 · NT$70</td></tr>
+            <tr><td>訂單追蹤頁「總計」</td><td class="mono">NT$90</td></tr>
+            <tr><td>D1 <code>orders.total_amount_cents</code></td><td class="mono">9000</td></tr>
+            <tr><td>D1 <code>orders.discount_amount_cents</code></td><td class="mono">0</td></tr>
+            <tr><td>D1 <code>orders.coupon_code</code></td><td class="mono">NULL</td></tr>
+            <tr><td>D1 <code>coupons.used_count</code></td><td class="mono">0</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        <code>CartView.vue:1100</code> 依 <code>!isAuthenticated &amp;&amp; isDineIn</code> 分兩條送出路徑。
+        已登入那條（<code>:1124-1136</code>）帶 <code>couponCode</code>；
+        <b>訪客那條（<code>:1102-1116</code>）沒有</b>。而總計是前端自己算的（<code>:841</code>），
+        所以折扣只存在於畫面上。
+      </p>
+      <p>
+        再往下一層，<code>POST /api/v1/guest-orders</code> 的 schema <b>根本沒有 <code>couponCode</code> 欄位</b>——
+        這不是漏送一個參數，是訪客訂單從來就不支援優惠券，但購物車對訪客顯示了完整的優惠券 UI，
+        <code>POST /coupons/validate</code> 也真的會回 200 並算出折扣。
+      </p>
+      <p class="note warn">
+        <b>掃 QR 免登入下單是顧客端的主路徑</b>，所以受影響的是絕大多數訂單。
+        production 目前 <code>coupons</code> 表 0 筆，所以還沒有人被咬到——但那是「沒有資料」，不是「沒有問題」。
+      </p>
+      <p>
+        沒有直接修，是因為有兩條都說得通的路要先選一條（讓 guest-orders 支援優惠券，
+        或在訪客路徑隱藏優惠券 UI），而 <code>usage_limit_per_user</code> 對沒有身分的訪客要用什麼當 key
+        需要決定。細節與建議寫在 issue 裡。
+      </p>
+    </div>
+  </div>
+
+  <div class="finding data">
+    <div class="finding-h">
+      <span class="id">C5</span>
+      <h4>店家公開碼路徑：選了「內用」顯示「外帶」，購物車只給外帶與外送</h4>
+      <span class="tag fixed">本輪已修</span>
+    </div>
+    <div class="finding-b">
+      <p>這家店的設定是 <code>enableDineIn: true, enableTakeaway: false, enableDelivery: false</code>。走 shop mode：</p>
+      <ol>
+        <li><code>/shop/order-type</code> 只提供「內用」—— <b>正確</b>，它讀的是店家設定</li>
+        <li>選內用後進 <code>/shop/menu?fulfillmentType=dine-in</code>，標頭徽章顯示 <b>「🛍️ 外帶」</b></li>
+        <li>打開購物車，「取餐方式」只有 <b>外帶</b> 與 <b>外送</b>，<b>沒有內用</b></li>
+        <li>點「外送」會展開外送地址／聯絡電話表單 —— 而同一畫面上就寫著「這間店目前沒有公開的預約、外送或現場服務」</li>
+      </ol>
+      <p>兩個獨立的根因：</p>
+      <ul class="plain">
+        <li>
+          <b>徽章</b>（<code>ShopMenuView.vue</code>）是三值當兩值的三元式：
+          <code>delivery ? 外送 : 外帶</code>。store 的 <code>fulfillmentType</code> 有
+          <code>"dine-in" | "takeaway" | "delivery"</code> 三個值，<code>dine-in</code> 掉進 else。
+        </li>
+        <li>
+          <b>購物車選項</b>（<code>ShopCartModal.vue</code>）：外帶按鈕<b>完全沒有守門</b>；
+          外送的守門是
+          <code>fulfillmentType === "delivery" || shopCartStore.deliveryFee &gt;= 0</code>，
+          而 <code>deliveryFee</code> 預設 0，<code>0 &gt;= 0</code> 恆真 —— 這個守門是空的。
+          內用則根本沒有按鈕。
+        </li>
+      </ul>
+      <div class="evidence">
+        <span class="lbl">修法</span>
+        兩者都改成讀店家自己的開關，也就是 <code>OrderTypeLandingView</code> 一直在用的那一組
+        <code>restaurants.settings.enableDineIn / enableTakeaway / enableDelivery</code>。
+        <code>ShopMenuView</code> 把三個布林當一個 <code>fulfillment</code> prop 傳給購物車，
+        購物車據此決定顯示哪幾顆按鈕。徽章改成三分支。
+        這樣購物車就不可能提供落地頁拒絕顯示的取餐方式。
+      </div>
+    </div>
+  </div>
+
+  <div class="finding data">
+    <div class="finding-h">
+      <span class="id">C10</span>
+      <h4>購物車收集的「聯絡電話」在訪客訂單被丟掉</h4>
+      <span class="tag fixed">本輪已修</span>
+    </div>
+    <div class="finding-b">
+      <p>
+        購物車的「顧客資訊」有姓名與聯絡電話兩欄。送出後查 production D1：
+      </p>
+      <pre><code>customer_info = {"name":"QA0915顧客"}</code></pre>
+      <p>
+        電話不見了。<code>CartView.vue</code> 的訪客 payload 沒有帶
+        <code>customerPhone</code>，即使 <code>CreateGuestOrderRequest</code> 型別有這個欄位、
+        伺服器 schema（<code>guest-orders/schemas/validation.ts:92</code>）也收。
+      </p>
+      <p>
+        而且就算前端送了也沒用：伺服器把 <code>data.customerPhone</code> 只拿去當
+        <code>waitingListCustomerPhone</code>，建單時寫的是
+        <code>customerInfo: { name: data.guestName }</code> —— 電話沒有進 <code>customer_info</code>。
+        所以這一條<b>前後端各缺一半</b>，兩邊都修了。
+      </p>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h">
+      <span class="id">C13</span>
+      <h4>購物車三處雙重幣別符號</h4>
+      <span class="tag fixed">本輪已修</span>
+    </div>
+    <div class="finding-b">
+      <p>套用優惠券後畫面寫「節省 <b><code>$NT$20</code></b>」。三處都是同一個寫法：</p>
+      <pre><code>{{ t("cart.saving") }} ${{ formatPrice(couponDiscountAmount) }}</code></pre>
+      <p>
+        <code>formatPrice()</code> 回的已經是 <code>NT$20</code>，前面那個 <code>$</code> 是多的。
+        <code>CartView.vue</code> 的 <code>:287</code>（最低消費）、<code>:298</code>（最高折抵）、
+        <code>:460</code>（節省金額）三處都改掉了。
+      </p>
+      <p class="note">
+        <b>這一類本來有守門，但守門的範圍不對。</b>
+        <code>src/tests/i18n.locale-consistency.test.ts:128</code> 有一條測試專抓
+        shell-style <code>${...}</code> 佔位符（就是上一輪 i18n 盤點留下的），
+        但它<b>只掃語系檔，不掃 template</b>。這三處寫在 <code>.vue</code> 裡，完整躲過。
+        順手全 repo 掃了一遍，另外六處在 admin-dashboard 與 kitchen-display，見 C16。
+      </p>
+    </div>
+  </div>
+</section>
+<section>
+  <h2>訂單追蹤：即時廣播是通的，時間軸不是</h2>
+  <p>
+    先講好的那半：<b>訂單狀態鏈的即時廣播完全正常</b>。
+    由店主端逐一推 <code>confirmed → preparing → ready → delivered</code>，
+    顧客追蹤頁在沒有重整的情況下每一步都跟上了（狀態文字、進度百分比、時間軸的完成標記、
+    到 <code>delivered</code> 後出現的評價區塊）。
+    master-user-flow 宣稱的「訂單事件經 Durable Object 廣播 → 顧客追蹤頁」這條是成立的。
+  </p>
+
+  <div class="finding blocker">
+    <div class="finding-h">
+      <span class="id">C3</span>
+      <h4>再點一次餐之後，前一筆訂單的追蹤頁變成「沒有權限執行此操作」</h4>
+      <span class="tag issue">#383</span>
+    </div>
+    <div class="finding-b">
+      <p>實測順序，全部在 production：</p>
+      <ol>
+        <li>掃桌位 QR 下單 → 訂單 A 追蹤頁正常</li>
+        <li>追蹤頁按「<b>繼續點餐</b>」→ 再下一筆 → 訂單 B 追蹤頁正常</li>
+        <li>回到訂單 A 的網址 → <code>GET /api/v1/guest-orders/&lt;A&gt;</code> → <b>403</b></li>
+      </ol>
+      <pre><code>訂單追蹤
+訂單編號: 載入失敗
+ApiException: 沒有權限執行此操作
+[重新載入]</code></pre>
+      <p>
+        訪客 token 是<b>一單一 token</b>：KV 裡存的
+        <code>guest_token:&lt;token&gt;</code> 帶著 <code>orderId</code>，
+        <code>middleware/guestAuth.ts:54-58</code> 會比對路由參數，不符就
+        <code>forbidden ACCESS_DENIED</code>。而前端只存<b>一把</b>
+        <code>localStorage["guest_auth_token"]</code>，第二筆訂單直接覆蓋第一筆。
+      </p>
+      <p class="note warn">
+        <b>「繼續點餐」就在追蹤頁上</b>，加點又是內用最常見的行為 —— 這條路徑是應用程式自己引導顧客走進去的。
+      </p>
+      <p>
+        對照組很說明問題：同一頁的<b>即時連線 token 早就是按訂單分鍵的</b>
+        （<code>makanmakan_guest_realtime_token:&lt;restaurantId&gt;:&lt;tableId&gt;:&lt;orderId&gt;</code>），
+        只有 API token 不是。
+      </p>
+      <p>
+        沒有直接修，是因為讀取點是 <code>services/api.ts:102</code> 的 <b>axios 攔截器</b>——
+        顧客端每一個請求都會經過它。改成分鍵要讓攔截器知道「這個請求是為哪一張單發的」，
+        不是能順手改掉的地方。建議修法（保留預設那把、另加 <code>guest_auth_token:&lt;orderId&gt;</code>）寫在 issue 裡。
+      </p>
+      <p class="note">
+        順帶一提，那個畫面把例外類別名稱 <code>ApiException:</code> 原文印給顧客看。
+        沒有單獨開 issue，因為修掉 #383 之後這個畫面本來就不該出現。
+      </p>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h">
+      <span class="id">C11</span>
+      <h4>訂單時間軸的「正在製作」永遠沒有時間</h4>
+      <span class="tag fixed">本輪已修</span>
+    </div>
+    <div class="finding-b">
+      <p>訂單走完整條鏈、重整之後的時間軸：</p>
+      <pre><code>訂單已建立  13:27
+訂單已確認  13:28
+正在製作    (沒有時間)
+準備完成    13:28
+已送達      13:28</code></pre>
+      <p>
+        <code>OrderTrackingView.vue</code> 的 <code>orderTimeline</code> 有五格，
+        其他四格各讀自己的 <code>createdAt</code> / <code>confirmedAt</code> /
+        <code>readyAt</code> / <code>deliveredAt</code>，
+        只有 preparing 那格寫死 <code>time: null</code>。
+      </p>
+      <p>
+        而 <code>orders.preparing_at_ms</code> 是有寫入的 —— 那筆訂單在 D1 裡
+        <code>preparing_at_ms = 1789450124008</code>。schema 也有
+        <code>preparingAt</code>（<code>packages/database/src/schema/orders.ts:100</code>）。
+        純粹是前端漏掉一格。改成 <code>time: order.value.preparingAt</code>。
+      </p>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h">
+      <span class="id">C12</span>
+      <h4>即時更新只換狀態不帶時間戳，時間軸的時間要重整才會出現</h4>
+      <span class="tag fixed">本輪已修</span>
+    </div>
+    <div class="finding-b">
+      <p>
+        這是上一條在實測時先浮現的症狀：推完整條狀態鏈之後，
+        <b>時間軸五格全部沒有時間</b>；按下重整，除了「正在製作」以外全部出現。
+        兩件事疊在一起，所以要分開。
+      </p>
+      <div class="evidence">
+        <span class="lbl">根因</span>
+        <code>handleWebSocketMessage</code> 用 <code>queryClient.setQueryData</code>
+        往快取的訂單上打一個 patch，而那個 patch <b>只有 <code>status</code> 與 <code>updatedAt</code></b>。
+        時間軸要讀的四個 <code>*At</code> 從頭到尾是 <code>undefined</code>，
+        除非顧客剛好重整。
+      </div>
+      <p>
+        修法是在 patch 之後
+        <code>invalidateQueries({ queryKey: ["order", orderId] })</code>，
+        讓畫面上的訂單回到伺服器的版本，而不是本地拼出來的版本。
+        一張單最多五次 refetch，代價可以忽略。
+      </p>
+    </div>
+  </div>
+
+  <div class="finding data">
+    <div class="finding-h">
+      <span class="id">C9</span>
+      <h4>「預估還需 N 分鐘」寫死 15 分鐘基數，忽略每道菜設定的準備時間</h4>
+      <span class="tag issue">#388</span>
+    </div>
+    <div class="finding-b">
+      <p>
+        追蹤頁顯示「預估還需 <b>15</b> 分鐘」。但這道菜在後台設的準備時間是 <b>12</b> 分鐘，
+        <code>GET /api/v1/menu/:restaurantId</code> 也照實回了 <code>preparationTime: 12</code>。
+      </p>
+      <pre><code>// packages/database/src/services/order.ts:2322-2323
+// 基礎準備時間（預設 15 分鐘）
+const basePrepTime = 15;</code></pre>
+      <p>
+        迴圈裡完全沒有讀 <code>menu_items.preparation_time</code>。
+        客製化選項會加時間，但基數永遠是 15。
+        店家在後台每道菜設的那個欄位，對顧客看到的數字<b>沒有任何影響</b>——
+        欄位存得進去、API 回得出來、就是沒有人讀，和 F16／F18 同一個形狀。
+      </p>
+      <p>
+        沒有直接修，是因為<b>多品項怎麼合成要決定</b>：現行程式碼用
+        <code>maxPrepTime</code> 取最大值，但那是在「所有菜基數都一樣」的前提下寫的，
+        換成各自不同之後 max 的語意會變（廚房並行？單一爐口加總？）。
+      </p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>揪團：核心功能沒有入口</h2>
+
+  <div class="finding blocker">
+    <div class="finding-h">
+      <span class="id">C2</span>
+      <h4>揪團沒有任何邀請入口，別人永遠加不進來</h4>
+      <span class="tag fixed">本輪已修</span>
+    </div>
+    <div class="finding-b">
+      <p>
+        建立揪團後的頁面有：分帳方式（均分／各付各／按比例）、服務費與稅金分攤、
+        總計、我的份額、繼續加菜、送出訂單、時間到自動送單、主揪權限救援。
+        <b>沒有分享、沒有邀請、沒有連結、沒有 QR。</b>
+      </p>
+      <p>「顯示代碼」那顆是<b>主揪權限救援碼</b>（這台裝置失去存取權時用的），不是邀請碼。</p>
+      <div class="evidence">
+        <span class="lbl">全部零件都在，只差沒接上</span>
+        <ul class="plain">
+          <li><code>useGroupOrder.ts:1056</code> 的 <code>getShareLink()</code> 存在，而且<b>有匯出</b>（<code>:1116</code>）</li>
+          <li>它有<b>三個單元測試</b>在守（<code>useGroupOrder.test.ts:512/513/833</code>）</li>
+          <li>路由 <code>/group/:shareCode</code> 有註冊（<code>router/index.ts:150</code>）</li>
+          <li><code>GroupOrderJoinView.vue</code> 完整可用</li>
+          <li>API 真的回 <code>shareCode</code>：<code>{"id":"da145367-…","shareCode":"X0V8VBQV","status":"active"}</code></li>
+          <li><b>但沒有任何 view 呼叫 <code>getShareLink()</code></b></li>
+        </ul>
+      </div>
+      <p>
+        手動把網址拼出來
+        （<code>https://makanmasak.com/group/X0V8VBQV</code>）就完全正常：
+        「群組訂單／QA0915 團主／成員 1／取餐方式 內用／到期時間 …／<b>加入群組訂單</b>」。
+        整個功能就差一顆按鈕。
+      </p>
+      <p class="note warn">
+        <b>這和 F7（打卡面板）、#267（RecipeEditor）是同一種形狀：</b>
+        元件寫完了、測試也綠，掛載點忘了接。
+        而且單元測試綠得特別有誤導性 —— 它們直接呼叫 composable 的函式，
+        從來不問「有沒有任何畫面會呼叫它」。
+      </p>
+      <div class="evidence">
+        <span class="lbl">修法</span>
+        新增 <code>components/group/InvitePanel.vue</code>（照
+        <code>HostRecoveryPanel.vue</code> 的卡片與按鈕樣式做），顯示邀請連結、複製按鈕與邀請代碼，
+        掛在 <code>GroupOrderView</code> 的救援面板上方。六個語系各補六把 key。
+        另外補<b>兩個測試</b>守這個缺口本身：面板要存在、<code>getShareLink</code> 要被呼叫到。
+      </div>
+      <p class="note">
+        <b>補測試時撞到一件值得記的事。</b>
+        <code>group-order-views.test.ts</code> 手寫的 <code>groupOrderMock</code> 少了
+        <code>getShareLink</code>，所以新畫面一 render 就
+        <code>TypeError: group.getShareLink is not a function</code>，27 個測試同時紅。
+        修法是<b>補進 mock</b>而不是讓 view 防禦性地檢查函式存不存在 ——
+        後者等於把「手寫 mock 與真實 composable 不同步」這個問題藏起來，
+        而那正是這個 bug 一開始能活下來的原因。
+      </p>
+    </div>
+  </div>
+</section>
+<section>
+  <h2>座位與預約：候位整條是通的，訂位整條不存在</h2>
+
+  <div class="finding ok">
+    <div class="finding-h">
+      <span class="id">OK</span>
+      <h4>候位登記 → 叫號 → 確認抵達，含即時推送，全部通過</h4>
+    </div>
+    <div class="finding-b">
+      <p>
+        <code>/r/:restaurantId/wait-list</code> 取號（姓名／手機／人數／備註）→
+        <code>POST /waiting-list</code> 201 → 票號 <code>A001</code>、前方組數 0、預估等待 5 分。
+        由店主端 <code>POST /waiting-list/:id/call</code> 叫號後，
+        <b>顧客頁在沒有重整的情況下</b>由「候位中」變成「已叫號」並長出「確認已抵達」按鈕；
+        按下去變「已確認抵達」。master-user-flow 的「候位登記 → 叫號通知 → 入座確認」三個節點都成立。
+      </p>
+      <p class="note">
+        叫號 API 需要 <code>tableId</code>，不帶會回
+        <code>400 需要指定桌位</code>。這是後台的事，不是顧客端問題，記在這裡以免下次重查。
+      </p>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h">
+      <span class="id">C6</span>
+      <h4>顧客端沒有線上訂位，但後端四條「給顧客用」的公開端點已在 production 上線</h4>
+      <span class="tag issue">#385</span>
+    </div>
+    <div class="finding-b">
+      <p>
+        master-user-flow 的「座位與預約流程」畫了四個節點，其中「線上訂位 時段·人數／訂位確認」
+        在顧客端<b>完全不存在</b>：沒有 view、沒有 route、沒有 API client。
+      </p>
+      <pre><code>$ grep -rl "reservation" apps/customer-app/src --include="*.vue" --include="*.ts"
+(無結果)</code></pre>
+      <p>
+        但後端不只存在，而且那四條路由<b>刻意放在 <code>authMiddleware</code> 之前</b>
+        （<code>reservations/routes/index.ts:55/87/107/135</code>），
+        <code>app-factory.ts:602-603</code> 也把它們明列在公開路由豁免裡。production 實測活著：
+      </p>
+      <pre><code>GET /api/v1/reservations/availability?restaurantId=…&amp;date=2026-09-20&amp;partySize=2
+→ 200 {"success":true,"data":{"date":"2026-09-20","partySize":2,"slots":[]}}</code></pre>
+      <p>
+        店家端也有 <code>seating/ReservationTab.vue</code>，兩張表都在 production。
+        這是 F20（訂閱與帳務）當初一模一樣的題目：<b>文件放錯層，還是產品缺一頁</b>，需要決定。
+      </p>
+      <p class="note warn">
+        <b>但有一半不需要等決策。</b>如果短期不做顧客訂位頁，
+        那四條公開端點應該先收回 <code>authMiddleware</code> 後面 ——
+        <code>POST /</code> 目前是任何人都能對任何餐廳建立訂位的未認證寫入面，而且沒有任何前端在用。
+      </p>
+    </div>
+  </div>
+
+  <div class="finding ok">
+    <div class="finding-h">
+      <span class="id">—</span>
+      <h4>預約服務：入口齊全，但 production 沒有資料可以走完</h4>
+    </div>
+    <div class="finding-b">
+      <p>
+        <code>ServiceBookingView</code> 有三個入口在用（<code>DiscoveryView</code>、
+        <code>ShopMenuView</code>、<code>MarketProductSearch</code>），路由也在。
+        但 production <code>restaurant_service_items</code> = <b>0 筆</b>，
+        <code>service_booking_slots</code> = 0 筆，所以這條流程<b>本輪未能驗證</b>。
+        這是「沒有資料」，不是發現。
+      </p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>探索與市集：空狀態正確，但新店的樣子不對</h2>
+
+  <div class="finding data">
+    <div class="finding-h">
+      <span class="id">C7</span>
+      <h4>新入駐的店在公開探索頁顯示 onboarding placeholder，且永遠「休息中」</h4>
+      <span class="tag issue">#386</span>
+    </div>
+    <div class="finding-b">
+      <p>production 唯一一家餐廳在 <code>/discover</code> 長這樣：</p>
+      <pre><code>麻吉 Demo 廣東粥
+onboarding · onboarding-ma-ji-demo-guang-don-c6ghyx
+休息中</code></pre>
+      <p>兩個獨立問題，都來自入駐建店時寫進去的初始值：</p>
+      <ul class="plain">
+        <li>
+          <b><code>type</code> 與 <code>district</code> 是 placeholder。</b>
+          <code>OnboardingService.ts:602</code> 寫死 <code>type: "onboarding"</code>，
+          <code>:975-981</code> 的 <code>initialRestaurantDistrict()</code> 產生
+          <code>onboarding-&lt;subdomain&gt;</code>。兩欄都是 NOT NULL，塞 placeholder 是為了過約束，
+          但 <code>DiscoveryView</code> 把 <code>type · district</code> 當副標題直接印給顧客看。
+          <code>district</code> 現在店主改得掉（#309 之後），<b><code>type</code> 沒有任何 UI 能改</b>。
+        </li>
+        <li>
+          <b>沒設營業時間 = 永遠休息中。</b>
+          <code>business_hours</code> 是 <code>NULL</code>（入駐流程不問也不寫），而
+          <code>isOpenNow.ts:19</code> 是 <code>if (!businessHours) return false;</code>。
+          再加上「只看營業中」篩選會 <code>filter(r =&gt; r.isOpen)</code>，這家店在該篩選下整個消失 ——
+          同時 <code>is_available = 1</code>，掃 QR 下單一路通到底。
+          <b>探索頁說休息中，實際上正在做生意。</b>
+        </li>
+      </ul>
+      <p>
+        <code>business_hours</code> 為 NULL 時該 fail-open、fail-closed 還是回第三態，
+        是需要決定的，所以開 issue。但「不要把內部識別碼印給顧客看」那半可以先做。
+      </p>
+    </div>
+  </div>
+
+  <div class="finding ok">
+    <div class="finding-h">
+      <span class="id">OK</span>
+      <h4>市集頁的空狀態正確</h4>
+    </div>
+    <div class="finding-b">
+      <p>
+        production <code>markets</code> = 0 筆，<code>/markets</code> 顯示
+        「尚未收錄可瀏覽的夜市或商圈 / 資料上架後會在這裡顯示可搜尋的夜市、商圈與店鋪。」——
+        正確的空狀態，沒有錯誤、沒有骨架卡死。
+      </p>
+      <p class="note">
+        因此<b>跨攤結帳、代幣／優惠卷、逐攤分帳整條本輪未能驗證</b>。
+        master-user-flow 的「揪團與夜市市集流程」右半邊需要有市集資料才能走。
+      </p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>會員入口：production 從來沒有人註冊成功過</h2>
+
+  <div class="finding blocker">
+    <div class="finding-h">
+      <span class="id">C4</span>
+      <h4>顧客註冊在 production 100% 失敗，<code>customers</code> 表 0 筆</h4>
+      <span class="tag issue">#384</span>
+    </div>
+    <div class="finding-b">
+      <pre><code>POST /api/v1/customer/auth/register  {"identifier":"…@example.com", …}
+→ 503 {"code":"EMAIL_CHANNEL_UNAVAILABLE","message":"Email delivery is not configured"}
+
+POST /api/v1/customer/auth/register  {"identifier":"0912345678", …}
+→ 503 {"code":"SMS_CHANNEL_UNAVAILABLE","message":"SMS delivery is not configured"}</code></pre>
+      <p>
+        兩種識別碼都不行。佐證：production <code>SELECT COUNT(*) FROM customers</code> = <b>0</b>。
+      </p>
+      <p>
+        <b>這不是程式碼問題，是 production 設定。</b>相關的程式碼 issue（#296、#298、#353）都已經關掉了，
+        缺的是憑證與旗標 —— 而且 <code>RESEND_API_KEY</code> 單獨補上是<b>沒有用的</b>，
+        必須同時在 <code>[env.production.vars]</code> 加 <code>USE_MAILCHANNELS = "false"</code>，
+        否則預設分支會走已停供的 MailChannels 免費通道。細節寫在 issue 裡。
+      </p>
+      <p class="note warn">
+        <b>影響範圍不只註冊。</b><code>/orders</code>（訂單歷史）與 <code>/profile</code>
+        都是 <code>requiresAuth</code>，在 production 一律到不了。
+        C1 的優惠券問題之所以「只影響訪客」，也是因為<b>沒有非訪客存在</b>。
+      </p>
+      <p>
+        另外 <code>scripts/check-production-config.cjs:28</code> 的
+        <code>REQUIRED_DEPLOYMENT_SECRETS</code> 是<b>空 Map</b>，
+        所以少 secret 部署不會警告。這是這件事能藏這麼久的原因之一。
+      </p>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h">
+      <span class="id">C14</span>
+      <h4>註冊失敗顯示「登入失敗」</h4>
+      <span class="tag fixed">本輪已修</span>
+    </div>
+    <div class="finding-b">
+      <p>上面那個 503 在畫面上長這樣：<b>登入失敗</b>。在註冊頁。</p>
+      <pre><code>// apps/customer-app/src/stores/auth.ts:57（修正前）
+const failureMessage = (_err: unknown): string => t("auth.loginFailed");</code></pre>
+      <p>
+        一句寫死的文案，被 <code>requestOtp</code> / <code>verifyOtp</code> /
+        <code>loginWithPassword</code> / <code>register</code> <b>四個動作共用</b>，
+        而且參數叫 <code>_err</code> —— 錯誤內容從頭到尾沒有被看過。
+        <code>RegisterView</code> 那邊其實寫對了
+        （<code>result.error || t("auth.registerFailed")</code>），是 store 先把錯的字串塞進 <code>result.error</code>。
+      </p>
+      <p>
+        修法是讓 <code>failureMessage</code> 收一個 fallback key，register 傳
+        <code>auth.registerFailed</code>（該 key 本來就存在）。
+        其餘三個動作屬於登入流程，維持原文案。
+      </p>
+      <p class="note">
+        「驗證通道沒設定」這種<b>重試永遠不會成功</b>的失敗值不值得一句專屬文案，是文案決定，留在 #384。
+      </p>
+    </div>
+  </div>
+</section>
+<section>
+  <h2>範圍外的兩項</h2>
+
+  <div class="finding blocker">
+    <div class="finding-h">
+      <span class="id">C15</span>
+      <h4>廚房單與收據的桌號永遠是 <code>null</code></h4>
+      <span class="tag issue">#389</span>
+    </div>
+    <div class="finding-b">
+      <p>
+        這是清測試資料時撞到的 —— 刪訂單被外鍵擋住，查下去發現 <code>receipts</code> 有一筆
+        自動產生的廚房單，內容是：
+      </p>
+      <pre><code>{"template":"kitchen","orderNumber":"H3KP-FA9A","customerName":"QA0915顧客",
+ "tableNumber":null, "items":[…]}</code></pre>
+      <p>那是一筆桌號 A1 的內用訂單。不是意外，是還沒做：</p>
+      <pre><code>// apps/api/src/features/pos/services/ReceiptService.ts:395-396
+// TODO: join `tables` to surface the table number — currently absent.
+tableNumber: null as string | null,</code></pre>
+      <p>
+        內用場景下，廚房與送菜員拿到的是一張<b>不知道要送去哪一桌</b>的單。
+        <code>orders.table_id</code> 就在手上，缺的只是一個 join。
+        沒有直接修，是因為列印那條路徑（<code>apps/print-agent</code> 的 ESC/POS 輸出）
+        本輪完全沒有測過，改了沒辦法驗收。
+      </p>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h">
+      <span class="id">C16</span>
+      <h4>另外六處把 <code>$</code> 寫死在金額前，而 i18n 守門只掃語系檔不掃 template</h4>
+      <span class="tag issue">#390</span>
+    </div>
+    <div class="finding-b">
+      <p>
+        修完 C13 之後全 repo 掃了一遍，另有六處：admin-dashboard 四處
+        （<code>ProcurementList.vue:56/62</code>、<code>RecentOrders.vue:83</code>、
+        <code>TopMenuItems.vue:64</code>）、kitchen-display 兩處
+        （<code>InteractiveStatsPanel.vue:252/437</code>）。
+      </p>
+      <p>
+        性質稍有不同：不是雙重符號，是把 <code>$</code> 寫死在一個未格式化的數字前面，
+        小數位也跟著錯（TWD 不用兩位）。這和 09-13 修掉的
+        「設定頁最低消費欄位寫死 <code>RM</code> 前綴，標籤卻寫 TWD」是同一件事的另一半。
+      </p>
+      <p>
+        issue 裡也建議補一條掃 template 的守門 —— 現有那條只掃語系檔，
+        所以顧客端那三處完整躲過。
+      </p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>本輪確認「沒問題」的（避免重複查）</h2>
+  <div class="card">
+    <ul class="plain">
+      <li><b>桌位 QR 的簽章驗證</b>　<code>GET /qr/verify/table</code> 200，正確導向 <code>/restaurant/:id/table/2</code></li>
+      <li><b>訂單狀態鏈的即時廣播</b>　五個狀態全部在不重整的情況下即時到頁，含進度百分比與評價區塊</li>
+      <li><b>候位的即時推送</b>　叫號後顧客頁自動由「候位中」變「已叫號」</li>
+      <li><b>#352 的顧客端那半</b>　數量超過庫存時 <code>POST /guest-orders</code> 回 <b>409</b>，畫面出現在地化 toast「部分商品庫存不足，請更新購物車後再試。」</li>
+      <li><b>冪等鍵</b>　<code>clientMutationId</code> 有送出，重放不產生第二筆</li>
+      <li><b>訪客下單的節流</b>　<code>ACTIVE_GUEST_ORDER_EXISTS</code> 429 有擋，畫面有在地化提示</li>
+      <li><b>優惠券空清單</b>　<code>coupons</code> 0 筆時正確顯示「目前沒有可用的優惠券」，不是錯誤</li>
+      <li><b>服務條款／隱私權政策</b>　<code>/terms</code> 與 <code>/privacy</code> 路由都存在</li>
+      <li><b>shop mode 的取餐方式落地頁</b>　只提供店家真的支援的方式（問題出在它<b>之後</b>的頁面，見 C5）</li>
+      <li><b>語系偵測邏輯本身</b>　<code>LocaleManager</code> 依 <code>navigator.language</code> 解析正確（問題是<b>之後改不掉</b>，見 C8）</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>一個誤判，記下來</h2>
+  <div class="card">
+    <p>
+      實測中一度認定「shop 購物車送出失敗時完全沒有任何回饋」，理由是連續兩次
+      <code>429</code> 之後畫面上找不到任何錯誤訊息。
+    </p>
+    <p>
+      <b>那是錯的。</b>toast 的顯示時間約 3 秒，而我當時是送出後等 6 秒才截取畫面文字 ——
+      量測窗口整個錯過了 toast。改成每 0.7–0.9 秒取樣一次之後，訊息清楚出現：
+      「您在此餐廳已有進行中的訂單，請等待完成後再送出新訂單。」
+      <code>ShopCartModal</code> 的錯誤管線是完整的
+      （<code>utils/order-submit-error.ts</code> 有一張 30 多個 code 的對照表）。
+    </p>
+    <p class="note">
+      <b>教訓：短生命週期的 UI 回饋要用取樣頻率高於其生命週期的方式量測</b>，
+      否則「沒看到」會被讀成「沒有」。這一條沒有進摘要表，因為它不是發現。
+    </p>
+  </div>
+</section>
+
+<section>
+  <h2>production 資料善後</h2>
+  <div class="card">
+    <p>本輪在 production 建立的東西，全部刪除並與 baseline 逐表比對：</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>表</th><th>baseline</th><th>結束時</th><th></th></tr></thead>
+        <tbody>
+          <tr><td class="mono">orders</td><td class="mono">7</td><td class="mono">7</td><td>OK</td></tr>
+          <tr><td class="mono">order_items</td><td class="mono">8</td><td class="mono">8</td><td>OK</td></tr>
+          <tr><td class="mono">customers</td><td class="mono">0</td><td class="mono">0</td><td>OK</td></tr>
+          <tr><td class="mono">group_orders</td><td class="mono">2</td><td class="mono">2</td><td>OK</td></tr>
+          <tr><td class="mono">group_members</td><td class="mono">2</td><td class="mono">2</td><td>OK</td></tr>
+          <tr><td class="mono">waiting_list</td><td class="mono">0</td><td class="mono">0</td><td>OK</td></tr>
+          <tr><td class="mono">coupons</td><td class="mono">0</td><td class="mono">0</td><td>OK</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note warn">
+      <b>交易資料刪掉不等於還原。</b>建單會動到三個非交易的累計欄位，刪除不會回滾，所以逐一還原：
+      <code>menu_items.order_count</code> 18 → <b>14</b>（實測起始值）、
+      <code>menu_items.inventory_count</code> 6 → <b>10</b>、
+      <code>restaurants.total_orders</code> 13 → <b>9</b>。
+      最後一個是推算的（計數器只增不減，本輪建了 4 筆），不是量到的 —— 記在這裡以免日後對帳時當成事實。
+      <code>view_count</code> 沒有變動（4 → 4）。
+    </p>
+    <p>
+      刪 <code>orders</code> 時被外鍵擋住，原因是 <code>receipts</code> 有一筆自動產生的廚房單
+      （就是 C15 那筆）。刪除順序是
+      <code>order_items → receipts → orders</code>。
+      另外 wrangler 對 <code>--remote</code> 的多敘述 <code>--command</code> 會靜默失敗，
+      要逐句執行才看得到 <code>changes</code>；偶發的
+      <code>account is not authorized [code: 7403]</code> 是暫時性的，重試即可。
+    </p>
+  </div>
+</section>
+
+<section>
+  <h2>下一步</h2>
+  <div class="card">
+    <p><b>建議優先序：</b></p>
+    <ol>
+      <li>
+        <b>#382（優惠券）</b>—— 顧客同意的金額和實際建立的訂單不一致，這是金流語意問題，
+        止血只要一個 <code>v-if</code>。
+      </li>
+      <li>
+        <b>#384（註冊）</b>—— 它擋住的不只是註冊，是整條會員線。
+        而且它需要的是使用者手上的憑證，別人做不了。
+      </li>
+      <li>
+        <b>#383（訂單追蹤 token）</b>—— 加點是內用最常見的行為，而應用程式自己引導顧客走進這條路。
+      </li>
+      <li>
+        <b>顧客端 E2E</b>—— 本輪 16 項裡有 9 項是「打真後端才看得到」的形狀，
+        而 <code>tests/e2e/</code> 目前顧客端零測試。
+        店家後台在 09-09～09-11 建了 45 個真後端測試之後，立刻推翻了前一輪兩列「已上線」；
+        顧客端還沒有經過那一關。
+      </li>
+    </ol>
+    <p class="note">
+      <b>master-user-flow 的四大門戶，現在走過兩個。</b>
+      「3. 現場作業」只有收銀在 09-12／09-14 走過，廚房（role 2）與送菜（role 3）沒有；
+      「4. 平台管理 + 入駐」從來沒有走過。C15 正是從現場作業那條路徑漏進來的。
+    </p>
+  </div>
+</section>
+
+<footer>
+  <p>
+    2026-09-15 · production 實測 · 顧客端（master-user-flow「1. 顧客端」）·
+    16 項發現，7 項本輪直接修，9 項開為 #382–#390。
+  </p>
+  <p>
+    前一輪：<a href="./2026-09-01-admin-dashboard-flow-qa.html">店家後台流程 QA — 2026-09-01</a>
+    （21 列全數收掉）。
+  </p>
+</footer>
+
+</div>
+</body>
+</html>
