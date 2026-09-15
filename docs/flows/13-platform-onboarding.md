@@ -53,9 +53,11 @@
 > `generateUnusablePassword()` 產生隨機字串再 bcrypt，真正的入口是設定密碼連結。
 > 所以核准之後、店主點連結之前，那個帳號是登不進去的。
 
-> **連結網域取 `CORS_ORIGIN` 的第一個值**（`buildSetupPasswordLink`），其次才是
-> `API_BASE_URL`。production 的第一個值是 `https://admin.makanmasak.com`，所以連結落在
-> 店家後台的 `/reset-password`。改 `CORS_ORIGIN` 順序會改掉連結去哪。
+> **連結網域取 `ADMIN_APP_URL`**（`buildSetupPasswordLink`；production 為
+> `https://admin.makanmasak.com`，本機為 `http://localhost:3001`），連結落在店家後台的
+> `/reset-password`。沒設時才退回 `CORS_ORIGIN` 的第一個值、再退回 `API_BASE_URL`——
+> 以前只有這條退路，所以改 `CORS_ORIGIN` 順序會悄悄把連結送到沒有這個頁面的 app；
+> 本機的第一個值還是沒有任何 app 在用的 `localhost:5177`。
 
 > **帳號由聯絡 Email 的 `@` 前綴產生**（`generateAvailableOwnerUsername`），`.` 等字元會換成
 > `-`，撞名才加亂碼尾碼。這是因為 api 的登入 schema 只接受 `^[a-zA-Z0-9_-]+$`：

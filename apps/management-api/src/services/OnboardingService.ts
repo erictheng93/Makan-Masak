@@ -1073,8 +1073,16 @@ export class OnboardingService {
     }
   }
 
+  /**
+   * The owner sets their password on the admin dashboard, so the link must be
+   * built on that app. ADMIN_APP_URL says so explicitly; the CORS_ORIGIN
+   * fallback only works while the admin origin happens to be listed first, and
+   * reordering that allow-list would silently send owners to an app with no
+   * /reset-password route.
+   */
   private buildSetupPasswordLink(token: string): string {
     const baseUrl =
+      this.env.ADMIN_APP_URL?.trim().replace(/\/+$/, "") ||
       this.firstConfiguredOrigin(this.env.CORS_ORIGIN) ||
       this.stripApiPath(this.env.API_BASE_URL) ||
       "http://localhost:3000";

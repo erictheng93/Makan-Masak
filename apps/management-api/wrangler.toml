@@ -21,6 +21,8 @@ API_VERSION = "v1"
 API_BASE_URL = "http://localhost:8789"
 CORS_ORIGIN = "http://localhost:5177,http://localhost:8789"
 LOG_LEVEL = "info"
+# Onboarding setup-password links are built on this origin (admin-dashboard).
+ADMIN_APP_URL = "http://localhost:3001"
 
 # D1 Database binding (management database)
 [[d1_databases]]
@@ -62,6 +64,7 @@ API_VERSION = "v1"
 API_BASE_URL = "https://manage-api.makanmasak.com"
 CORS_ORIGIN = "https://admin.makanmasak.com,https://management.makanmasak.com,https://onboarding.makanmasak.com"
 LOG_LEVEL = "warn"
+ADMIN_APP_URL = "https://admin.makanmasak.com"
 
 # Custom domain — wrangler provisions DNS + SSL automatically on deploy
 # since the makanmasak.com zone is already on this Cloudflare account.

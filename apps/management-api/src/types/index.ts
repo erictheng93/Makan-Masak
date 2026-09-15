@@ -21,6 +21,8 @@ export interface ManagementEnv {
   API_BASE_URL: string;
   CORS_ORIGIN: string;
   LOG_LEVEL: string;
+  /** Origin of the admin dashboard; onboarding setup-password links point here. */
+  ADMIN_APP_URL?: string;
 
   // Secrets (set via wrangler secret put)
   JWT_SECRET: string;

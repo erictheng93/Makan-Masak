@@ -66,7 +66,10 @@ function buildApplication(
   } as OnboardingApplication;
 }
 
-function buildEnv(cacheKv?: KVNamespace): ManagementEnv {
+function buildEnv(
+  cacheKv?: KVNamespace,
+  overrides: Partial<ManagementEnv> = {},
+): ManagementEnv {
   const noRowStatement = {
     bind: () => noRowStatement,
     first: async () => null,
@@ -98,6 +101,7 @@ function buildEnv(cacheKv?: KVNamespace): ManagementEnv {
       } as unknown as KVNamespace),
     DEPLOYMENT_STATUS_KV: {} as KVNamespace,
     BUNDLE_STORAGE: {} as R2Bucket,
+    ...overrides,
   } as unknown as ManagementEnv;
 }
 
@@ -314,6 +318,28 @@ describe("onboarding platform owner provisioning", () => {
     // one-time credential link must not be downgraded to v7 alongside the ids.
     expect(account.setupPasswordToken).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+  });
+
+  it("builds the setup link on ADMIN_APP_URL rather than the first CORS origin", async () => {
+    // buildEnv lists http://localhost:5173 first in CORS_ORIGIN; the link must
+    // still land on the admin app, which is the one with /reset-password.
+    const account = await createPlatformOwnerAccount(
+      buildEnv(undefined, { ADMIN_APP_URL: "https://admin.example.test/" }),
+    )(buildApplication(), "tenant-1");
+
+    expect(account.setupPasswordLink).toBe(
+      `https://admin.example.test/reset-password?token=${account.setupPasswordToken}`,
+    );
+  });
+
+  it("falls back to the first CORS origin when ADMIN_APP_URL is unset", async () => {
+    const account = await createPlatformOwnerAccount(
+      buildEnv(undefined, { ADMIN_APP_URL: undefined }),
+    )(buildApplication(), "tenant-1");
+
+    expect(account.setupPasswordLink).toBe(
+      `http://localhost:5173/reset-password?token=${account.setupPasswordToken}`,
     );
   });
 
