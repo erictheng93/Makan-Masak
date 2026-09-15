@@ -63,7 +63,7 @@
 | 收銀流程 | [11-floor-cashier.md](./11-floor-cashier.md) | [board](./boards/payment-and-refund.html) |
 | 出單與列印流程 | [12-floor-printing.md](./12-floor-printing.md) | — |
 
-### 平台管理（Management Portal · Onboarding，role 0）
+### 平台管理（Admin Dashboard 平台區 · Management Portal，role 0）
 
 | 流程 | 文件 |
 | --- | --- |
