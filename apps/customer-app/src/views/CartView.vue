@@ -284,9 +284,8 @@
                         {{ formatCouponDiscount(coupon) }}
                       </span>
                       <span v-if="coupon.minOrderAmount" class="text-gray-500">
-                        {{ t("cart.minOrder") }}: ${{
-                          formatPrice(coupon.minOrderAmount)
-                        }}
+                        {{ t("cart.minOrder") }}:
+                        {{ formatPrice(coupon.minOrderAmount) }}
                       </span>
                       <span
                         v-if="
@@ -295,9 +294,8 @@
                         "
                         class="text-gray-500"
                       >
-                        {{ t("cart.maxDiscount") }}: ${{
-                          formatPrice(coupon.maxDiscountAmount)
-                        }}
+                        {{ t("cart.maxDiscount") }}:
+                        {{ formatPrice(coupon.maxDiscountAmount) }}
                       </span>
                     </div>
 
@@ -457,9 +455,7 @@
                   }}</span>
                 </div>
                 <p class="text-sm text-ios-green mt-1">
-                  {{ t("cart.saving") }} ${{
-                    formatPrice(couponDiscountAmount)
-                  }}
+                  {{ t("cart.saving") }} {{ formatPrice(couponDiscountAmount) }}
                 </p>
               </div>
               <button
