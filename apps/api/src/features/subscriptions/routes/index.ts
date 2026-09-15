@@ -24,7 +24,14 @@ import {
 
 const router = new Hono<{ Bindings: Env }>();
 
-const formatZodDetails = (error: z.ZodError) =>
+// `z.ZodError` is the class, and the hook never touches a single one of its
+// methods -- only `issues`. Typing the parameter as the class was a claim the
+// code did not need and could not keep: @hono/zod-validator below 0.7 declared
+// a zod 3 peer while this workspace runs zod 4, so the mismatch stayed
+// invisible until 0.9.1 started reporting the real zod 4 error type
+// (`$ZodError`, which has no `format` / `flatten` / `addIssue` / `addIssues` /
+// `isEmpty`). The structural core type is what this function actually consumes.
+const formatZodDetails = (error: z.core.$ZodError) =>
   error.issues.map((err) => ({
     field: err.path.join("."),
     message: err.message,
@@ -32,7 +39,7 @@ const formatZodDetails = (error: z.ZodError) =>
   }));
 
 function unifiedValidationHook(
-  result: { success: boolean; error?: z.ZodError },
+  result: { success: boolean; error?: z.core.$ZodError },
   c: Context,
 ) {
   if (!result.success) {

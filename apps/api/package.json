@@ -17,9 +17,9 @@
     "lint": "eslint src"
   },
   "dependencies": {
-    "@hono/swagger-ui": "^0.5.2",
-    "@hono/zod-openapi": "^1.1.4",
-    "@hono/zod-validator": "^0.2.0",
+    "@hono/swagger-ui": "^0.6.1",
+    "@hono/zod-openapi": "^1.6.3",
+    "@hono/zod-validator": "^0.9.1",
     "@makanmasak/ai-analytics": "workspace:*",
     "@makanmasak/database": "workspace:*",
     "@makanmasak/queue-core": "workspace:*",

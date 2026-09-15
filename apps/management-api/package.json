@@ -19,7 +19,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@hono/zod-validator": "^0.5.0",
+    "@hono/zod-validator": "^0.9.1",
     "@makanmasak/utils": "workspace:*",
     "bcryptjs": "^2.4.3",
     "drizzle-orm": "^0.45.2",
