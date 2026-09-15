@@ -822,7 +822,13 @@
     "notAMember": "Anda belum tergabung dalam pesanan grup ini — buat atau gabung dulu.",
     "connectionError": "Koneksi gagal. Silakan coba lagi.",
     "recoveryCodeRequired": "Masukkan kode pemulihan Anda.",
-    "unknownError": "Terjadi kesalahan. Silakan coba lagi."
+    "unknownError": "Terjadi kesalahan. Silakan coba lagi.",
+    "inviteTitle": "Undang meja Anda",
+    "inviteDesc": "Kirim tautan ke siapa pun di meja Anda agar mereka bisa bergabung ke keranjang bersama ini.",
+    "inviteCopyLink": "Salin tautan undangan",
+    "inviteCopied": "Tautan undangan disalin",
+    "inviteCopyFailed": "Gagal menyalin, silakan salin tautan di bawah secara manual",
+    "inviteCodeLabel": "Kode undangan"
   },
   "messages": {
     "networkError": "Koneksi jaringan gagal, periksa koneksi Anda",

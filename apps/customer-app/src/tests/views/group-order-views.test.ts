@@ -39,6 +39,10 @@ const groupOrderMock = vi.hoisted(() => ({
   settleMyShare: vi.fn(),
   sessionExpired: { value: false },
   currentMemberId: { value: "m-1" },
+  // Mirrors the composable. A hand-written mock that omits a member the view
+  // calls fails as "not a function" at render, which reads like a view bug
+  // rather than a stale mock.
+  getShareLink: vi.fn(() => "https://example.test/group/SHARE123"),
 }));
 
 vi.mock("vue-router", async (importOriginal) => {
@@ -262,6 +266,47 @@ describe("GroupOrderView", () => {
     // A socket left open after the view is gone keeps receiving another
     // table's traffic and holds a Durable Object session for nobody.
     expect(groupOrderMock.disconnectRealtime).toHaveBeenCalled();
+  });
+
+  /**
+   * The whole point of a group order is that other people can join it, and the
+   * share link was the one piece with no UI: `getShareLink()` existed, was
+   * exported and was unit-tested, but no view ever called it, so a host could
+   * build a shared cart nobody could be invited into. These two assertions are
+   * what that gap looked like — the panel is absent, and the composable is
+   * never asked for a link.
+   */
+  it("shows the invite link so other diners can join", async () => {
+    const wrapper = mount(GroupOrderView, {
+      ...mountOptions,
+      props: { groupOrderId: "go-1" },
+    });
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="group-order-invite"]').exists()).toBe(
+      true,
+    );
+    expect(groupOrderMock.getShareLink).toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="invite-link-value"]').text()).toBe(
+      "https://example.test/group/SHARE123",
+    );
+    expect(wrapper.find('[data-testid="invite-share-code"]').text()).toBe(
+      "ABC12345",
+    );
+  });
+
+  it("hides the invite panel until the group order carries a share code", async () => {
+    groupOrderMock.groupOrder.value = null;
+
+    const wrapper = mount(GroupOrderView, {
+      ...mountOptions,
+      props: { groupOrderId: "go-1" },
+    });
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="group-order-invite"]').exists()).toBe(
+      false,
+    );
   });
 
   /**

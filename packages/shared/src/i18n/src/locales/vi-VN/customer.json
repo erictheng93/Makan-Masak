@@ -822,7 +822,13 @@
     "notAMember": "Bạn chưa ở trong đơn nhóm này — hãy tạo hoặc tham gia trước.",
     "connectionError": "Kết nối thất bại. Vui lòng thử lại.",
     "recoveryCodeRequired": "Nhập mã khôi phục của bạn.",
-    "unknownError": "Đã xảy ra lỗi. Vui lòng thử lại."
+    "unknownError": "Đã xảy ra lỗi. Vui lòng thử lại.",
+    "inviteTitle": "Mời bàn của bạn",
+    "inviteDesc": "Gửi liên kết cho những người cùng bàn để họ tham gia giỏ hàng chung này.",
+    "inviteCopyLink": "Sao chép liên kết mời",
+    "inviteCopied": "Đã sao chép liên kết mời",
+    "inviteCopyFailed": "Sao chép thất bại, vui lòng sao chép liên kết bên dưới theo cách thủ công",
+    "inviteCodeLabel": "Mã mời"
   },
   "messages": {
     "networkError": "Kết nối mạng thất bại, vui lòng kiểm tra kết nối của bạn",

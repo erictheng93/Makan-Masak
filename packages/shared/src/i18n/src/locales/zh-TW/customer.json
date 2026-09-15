@@ -822,7 +822,13 @@
     "notAMember": "你還不是這桌的成員，請先建立或加入群組訂單。",
     "connectionError": "連線失敗，請稍後再試。",
     "recoveryCodeRequired": "請輸入救援代碼。",
-    "unknownError": "發生未知錯誤，請稍後再試。"
+    "unknownError": "發生未知錯誤，請稍後再試。",
+    "inviteTitle": "邀請同桌一起點",
+    "inviteDesc": "把連結傳給同桌的人，他們就能加入這份共享購物車。",
+    "inviteCopyLink": "複製邀請連結",
+    "inviteCopied": "已複製邀請連結",
+    "inviteCopyFailed": "複製失敗，請手動複製下方連結",
+    "inviteCodeLabel": "邀請代碼"
   },
   "messages": {
     "networkError": "網路連接失敗，請檢查您的網路連接",

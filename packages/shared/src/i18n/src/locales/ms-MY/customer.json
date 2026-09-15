@@ -822,7 +822,13 @@
     "notAMember": "Anda belum menyertai pesanan kumpulan ini — cipta atau sertainya dahulu.",
     "connectionError": "Sambungan gagal. Sila cuba lagi.",
     "recoveryCodeRequired": "Masukkan kod pemulihan anda.",
-    "unknownError": "Sesuatu tidak kena. Sila cuba lagi."
+    "unknownError": "Sesuatu tidak kena. Sila cuba lagi.",
+    "inviteTitle": "Jemput meja anda",
+    "inviteDesc": "Hantar pautan kepada sesiapa di meja anda dan mereka boleh sertai troli kongsi ini.",
+    "inviteCopyLink": "Salin pautan jemputan",
+    "inviteCopied": "Pautan jemputan disalin",
+    "inviteCopyFailed": "Gagal menyalin, sila salin pautan di bawah secara manual",
+    "inviteCodeLabel": "Kod jemputan"
   },
   "messages": {
     "networkError": "Sambungan rangkaian gagal, sila semak sambungan anda",

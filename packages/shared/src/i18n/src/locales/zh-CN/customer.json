@@ -822,7 +822,13 @@
     "notAMember": "你还不是该桌的成员，请先创建或加入群组订单。",
     "connectionError": "连接失败，请稍后再试。",
     "recoveryCodeRequired": "请输入恢复代码。",
-    "unknownError": "发生未知错误，请稍后再试。"
+    "unknownError": "发生未知错误，请稍后再试。",
+    "inviteTitle": "邀请同桌一起点",
+    "inviteDesc": "把链接发给同桌的人，他们就能加入这份共享购物车。",
+    "inviteCopyLink": "复制邀请链接",
+    "inviteCopied": "已复制邀请链接",
+    "inviteCopyFailed": "复制失败，请手动复制下方链接",
+    "inviteCodeLabel": "邀请代码"
   },
   "messages": {
     "networkError": "网络连接失败，请检查您的网络连接",

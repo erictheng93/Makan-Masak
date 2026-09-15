@@ -822,7 +822,13 @@
     "notAMember": "You are not in this group order yet — create or join it first.",
     "connectionError": "Connection failed. Please try again.",
     "recoveryCodeRequired": "Enter your recovery code.",
-    "unknownError": "Something went wrong. Please try again."
+    "unknownError": "Something went wrong. Please try again.",
+    "inviteTitle": "Invite your table",
+    "inviteDesc": "Send the link to anyone at your table and they can join this shared cart.",
+    "inviteCopyLink": "Copy invite link",
+    "inviteCopied": "Invite link copied",
+    "inviteCopyFailed": "Copy failed, please copy the link below manually",
+    "inviteCodeLabel": "Invite code"
   },
   "messages": {
     "networkError": "Network connection failed, please check your connection",

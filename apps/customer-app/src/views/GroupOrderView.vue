@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import menuApi from "@/services/menuApi";
 import GroupCartPanel from "@/components/group/GroupCartPanel.vue";
 import HostRecoveryPanel from "@/components/group/HostRecoveryPanel.vue";
+import InvitePanel from "@/components/group/InvitePanel.vue";
 import { useGroupOrder } from "@/composables/useGroupOrder";
 import { useI18n } from "@/composables/useI18n";
 import { getGroupOrderErrorI18nKey } from "@/utils/group-order-error";
@@ -18,6 +19,9 @@ const props = defineProps<{
 const router = useRouter();
 const { t } = useI18n();
 const group = useGroupOrder({ restaurantId: "" });
+
+const shareCode = computed(() => group.groupOrder.value?.shareCode ?? "");
+const shareLink = computed(() => (shareCode.value ? group.getShareLink() : ""));
 const viewError = ref("");
 const splitNotice = ref("");
 const submitError = ref("");
@@ -375,6 +379,8 @@ onUnmounted(() => {
           {{ autoSubmitError }}
         </p>
       </div>
+
+      <InvitePanel :share-code="shareCode" :share-link="shareLink" />
 
       <HostRecoveryPanel
         :group-order-id="props.groupOrderId"
