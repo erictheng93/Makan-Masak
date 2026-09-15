@@ -180,7 +180,12 @@ describe("SettingsView market join requests", () => {
     } as unknown as ReturnType<typeof useRoute>);
     vi.mocked(api.get).mockImplementation(async (url: string) => {
       if (url === "/restaurants/restaurant-1") {
-        return apiGetResponse({ name: "雞排攤" });
+        return apiGetResponse({
+          name: "雞排攤",
+          address: "台中市西屯區文華路 12 號",
+          city: "台中市",
+          district: "西屯區",
+        });
       }
       if (url === "/restaurants/restaurant-1/contact-profile") {
         return apiGetResponse({ messagingChannels: {}, faqs: [] });
@@ -301,6 +306,9 @@ describe("SettingsView guest ordering availability", () => {
       if (url === "/restaurants/restaurant-1") {
         return apiGetResponse({
           name: "雞排攤",
+          address: "台中市西屯區文華路 12 號",
+          city: "台中市",
+          district: "西屯區",
           isAvailable: false,
           settings: {
             allowGuestOrders: false,
@@ -376,6 +384,35 @@ describe("SettingsView guest ordering availability", () => {
           estimatedPrepTimeMax: 20,
         }),
       }),
+    );
+  });
+
+  it("lets an owner replace city and district and rejects an empty district", async () => {
+    const wrapper = await mountSettings();
+    await wrapper.get('[data-testid="settings-city"]').setValue("Kuala Lumpur");
+    await wrapper
+      .get('[data-testid="settings-district"]')
+      .setValue("Bukit Bintang");
+    const save = wrapper
+      .findAll("button")
+      .find((button) => button.text() === "settings.saveSettings")!;
+    await save.trigger("click");
+    await flushPromises();
+    expect(api.put).toHaveBeenCalledWith(
+      "/restaurants/restaurant-1",
+      expect.objectContaining({
+        city: "Kuala Lumpur",
+        district: "Bukit Bintang",
+      }),
+    );
+
+    vi.mocked(api.put).mockClear();
+    await wrapper.get('[data-testid="settings-district"]').setValue("");
+    await save.trigger("click");
+    await flushPromises();
+    expect(api.put).not.toHaveBeenCalled();
+    expect(toastError).toHaveBeenCalledWith(
+      "settings.general.districtRequired",
     );
   });
 
@@ -537,7 +574,13 @@ describe("SettingsView guest ordering availability", () => {
   it("round-trips the timezone through the restaurant column, not settings", async () => {
     vi.mocked(api.get).mockImplementation(async (url: string) => {
       if (url === "/restaurants/restaurant-1") {
-        return apiGetResponse({ name: "雞排攤", timezone: "Asia/Tokyo" });
+        return apiGetResponse({
+          name: "雞排攤",
+          address: "台中市西屯區文華路 12 號",
+          city: "台中市",
+          district: "西屯區",
+          timezone: "Asia/Tokyo",
+        });
       }
       return apiGetResponse({});
     });

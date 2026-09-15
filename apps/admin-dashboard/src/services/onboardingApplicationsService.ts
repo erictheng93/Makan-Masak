@@ -28,6 +28,7 @@ export interface OnboardingApplication {
   createdAt: string;
   submittedAt?: string | null;
   completedAt?: string | null;
+  rejectionReason?: string | null;
   updatedAt: string;
 }
 
@@ -38,20 +39,39 @@ export interface OnboardingApplicationsResult {
   limit: number;
 }
 
+/**
+ * The raw setup token is deliberately absent: the one-time link already carries
+ * it, and the server stops handing the bare token to clients that never use it.
+ */
 export interface ProvisionedOwnerAccount {
   restaurantId: string;
   userId: string;
   username: string;
-  setupPasswordToken: string;
   setupPasswordLink: string;
   setupPasswordExpiresAt: string;
+}
+
+export interface CredentialDelivery {
+  id: string;
+  channel: "email" | "manual";
+  status: "sent" | "pending" | "failed";
+  recipientEmail: string;
+  recipientName: string;
+  setupPasswordExpiresAt: string;
+  errorMessage?: string;
 }
 
 export interface ApproveOnboardingApplicationResult {
   tenantId?: string;
   subdomain?: string;
   ownerAccount?: ProvisionedOwnerAccount;
+  credentialDelivery?: CredentialDelivery;
   status: "completed";
+}
+
+export interface SetupPasswordLinkResult {
+  ownerAccount: ProvisionedOwnerAccount;
+  credentialDelivery?: CredentialDelivery;
 }
 
 export const onboardingApplicationsService = {
@@ -82,11 +102,34 @@ export const onboardingApplicationsService = {
     return unwrapApiPayload<ApproveOnboardingApplicationResult>(response.data);
   },
 
-  async reject(applicationId: string): Promise<{ status: "rejected" }> {
+  async regenerateSetupLink(
+    applicationId: string,
+  ): Promise<SetupPasswordLinkResult> {
+    await ensureManagementAuthToken();
+    const response = await managementApi.post<{
+      ownerAccount?: ProvisionedOwnerAccount;
+      credentialDelivery?: CredentialDelivery;
+    }>(`/admin/onboarding/applications/${applicationId}/setup-link`, {});
+    const result = unwrapApiPayload<{
+      ownerAccount?: ProvisionedOwnerAccount;
+      credentialDelivery?: CredentialDelivery;
+    }>(response.data);
+    if (!result.ownerAccount)
+      throw new Error("Regenerated owner account is missing");
+    return {
+      ownerAccount: result.ownerAccount,
+      credentialDelivery: result.credentialDelivery,
+    };
+  },
+
+  async reject(
+    applicationId: string,
+    reason: string,
+  ): Promise<{ status: "rejected" }> {
     await ensureManagementAuthToken();
     const response = await managementApi.post<{ status: "rejected" }>(
       `/admin/onboarding/applications/${applicationId}/reject`,
-      {},
+      { reason },
     );
     return unwrapApiPayload<{ status: "rejected" }>(response.data);
   },

@@ -16,6 +16,9 @@ const form = ref({
   contactName: "",
   contactEmail: "",
   contactPhone: "",
+  address: "",
+  district: "",
+  city: "",
   latitude: null as number | null,
   longitude: null as number | null,
   // Self-service shops start on the trial; the page offers no plan choice, and
@@ -56,6 +59,18 @@ const validate = (): boolean => {
     errors.value.contactPhone = t("apply.validation.phoneRequired");
   }
 
+  if (form.value.address.trim().length < 3) {
+    errors.value.address = t("apply.validation.addressRequired");
+  }
+
+  if (!form.value.district.trim()) {
+    errors.value.district = t("apply.validation.districtRequired");
+  }
+
+  if (!form.value.city.trim()) {
+    errors.value.city = t("apply.validation.cityRequired");
+  }
+
   const latitude = parseCoordinate(form.value.latitude);
   const longitude = parseCoordinate(form.value.longitude);
 
@@ -88,6 +103,9 @@ const handleSubmit = async () => {
     contactName: form.value.contactName,
     contactEmail: form.value.contactEmail,
     contactPhone: form.value.contactPhone,
+    address: form.value.address,
+    district: form.value.district,
+    city: form.value.city,
     latitude,
     longitude,
     planId: form.value.planId,
@@ -95,7 +113,10 @@ const handleSubmit = async () => {
 
   if (success) {
     toast.success(t("apply.toast.submitSuccess"));
-    router.push("/success");
+    router.push({
+      path: "/success",
+      hash: `#${encodeURIComponent(store.applicationSecret!)}`,
+    });
   } else {
     toast.error(store.apiError || t("apply.toast.submitFailureFallback"));
   }
@@ -295,6 +316,68 @@ const useCurrentLocation = () => {
                 {{ errors.longitude }}
               </p>
             </div>
+          </div>
+        </div>
+
+        <!-- 店家地址 -->
+        <div>
+          <label for="onboarding-address" class="label"
+            >{{ t("apply.form.address.label") }} *</label
+          >
+          <input
+            id="onboarding-address"
+            v-model="form.address"
+            data-testid="onboarding-address"
+            type="text"
+            autocomplete="street-address"
+            maxlength="200"
+            class="input"
+            :class="{ 'input-error': errors.address }"
+            :placeholder="t('apply.form.address.placeholder')"
+          />
+          <p v-if="errors.address" class="mt-1 text-sm text-red-600">
+            {{ errors.address }}
+          </p>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="onboarding-district" class="label"
+              >{{ t("apply.form.district.label") }} *</label
+            >
+            <input
+              id="onboarding-district"
+              v-model="form.district"
+              data-testid="onboarding-district"
+              type="text"
+              autocomplete="address-level2"
+              maxlength="100"
+              class="input"
+              :class="{ 'input-error': errors.district }"
+              :placeholder="t('apply.form.district.placeholder')"
+            />
+            <p v-if="errors.district" class="mt-1 text-sm text-red-600">
+              {{ errors.district }}
+            </p>
+          </div>
+          <div>
+            <label for="onboarding-city" class="label"
+              >{{ t("apply.form.city.label") }} *</label
+            >
+            <input
+              id="onboarding-city"
+              v-model="form.city"
+              data-testid="onboarding-city"
+              type="text"
+              autocomplete="address-level1"
+              maxlength="100"
+              class="input"
+              :class="{ 'input-error': errors.city }"
+              :placeholder="t('apply.form.city.placeholder')"
+            />
+            <p v-if="errors.city" class="mt-1 text-sm text-red-600">
+              {{ errors.city }}
+            </p>
           </div>
         </div>
 

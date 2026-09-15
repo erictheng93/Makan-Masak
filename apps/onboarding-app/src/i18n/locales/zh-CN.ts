@@ -27,6 +27,9 @@ const zhCN: Messages = {
         label: "联络电话",
         placeholder: "02-1234-5678",
       },
+      address: { label: "店铺地址", placeholder: "例如：中山路 1 号" },
+      district: { label: "区", placeholder: "例如：西屯区" },
+      city: { label: "城市", placeholder: "例如：台中市" },
       location: {
         failure: "无法取得目前位置，请确认定位权限或手动输入座标",
         help: "用于夜市 / 商圈探索与附近搜寻。请使用店面或摊位的实际座标。",
@@ -64,6 +67,9 @@ const zhCN: Messages = {
       longitudeInvalid: "经度需介于 -180 到 180 之间",
       longitudeRequired: "请输入餐厅经度",
       phoneRequired: "请输入联络电话",
+      addressRequired: "请输入店铺地址",
+      districtRequired: "请输入区",
+      cityRequired: "请输入城市",
       subdomainInvalidFormat: "只能包含小写字母、数字和连字符",
       subdomainTaken: "此网址已被使用",
       subdomainTooShort: "至少需要 3 个字元",
@@ -115,7 +121,12 @@ const zhCN: Messages = {
   success: {
     button: {
       backHome: "返回首页",
+      viewStatus: "查看申请状态",
       goToAdmin: "前往管理后台",
+    },
+    statusLink: {
+      savePrompt: "请保存此链接，这是查询申请进度的唯一方式。",
+      copy: "复制查询链接",
     },
     contact: {
       prompt: "有任何问题？请联系",
@@ -129,6 +140,7 @@ const zhCN: Messages = {
       email: {
         prefix: "我们已发送确认邮件至",
         suffix: "，请查收。",
+        description: "申请状态有更新时，我们会发送 Email 通知您。",
         title: "确认邮件",
       },
       start: {
@@ -153,6 +165,30 @@ const zhCN: Messages = {
       title: "申请摘要",
     },
     title: "申请已送出！",
+  },
+  status: {
+    title: "申请状态",
+    subtitle: "查看您的餐厅申请最新审核进度。",
+    loading: "正在载入申请状态...",
+    businessName: "餐厅名称",
+    currentStatus: "当前状态",
+    rejectionReason: "未批准原因",
+    lastUpdated: "可使用刷新查看最新进度。",
+    refresh: "刷新状态",
+    backHome: "返回首页",
+    error: {
+      missingLink: "此申请状态链接不完整。",
+      invalidLink: "此申请状态链接无效。",
+      unavailable: "目前无法载入此申请，请稍后再试。",
+    },
+    labels: {
+      pending: "等待审核",
+      submitted: "等待审核",
+      approved: "已批准",
+      provisioning: "设置中",
+      completed: "已启用",
+      rejected: "未批准",
+    },
   },
 };
 

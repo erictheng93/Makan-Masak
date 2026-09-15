@@ -23,44 +23,39 @@ import {
   shopSubscriptions,
   TRIAL_DURATION_MS,
   users,
+  ResendEmailProvider,
 } from "@makanmasak/database";
 import { generateUUID } from "@makanmasak/utils";
 import bcrypt from "bcryptjs";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull, lt, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  onboardingApplicationAuditEvents,
+  onboardingApplicationRateLimits,
+  onboardingApplications,
+  onboardingCredentialDeliveries,
+  tenants,
+} from "../db/onboarding-tables";
 
-const onboardingCredentialDeliveries = sqliteTable(
-  "onboarding_credential_deliveries",
-  {
-    id: text("id").primaryKey(),
-    applicationId: text("application_id").notNull(),
-    tenantId: text("tenant_id").notNull(),
-    restaurantId: text("restaurant_id").notNull(),
-    userId: text("user_id").notNull(),
-    recipientEmail: text("recipient_email").notNull(),
-    recipientName: text("recipient_name").notNull(),
-    username: text("username").notNull(),
-    setupPasswordLink: text("setup_password_link").notNull(),
-    setupPasswordExpiresAt: text("setup_password_expires_at").notNull(),
-    deliveryChannel: text("delivery_channel").notNull(),
-    status: text("status").notNull(),
-    errorMessage: text("error_message"),
-    createdAt: text("created_at").notNull(),
-    updatedAt: text("updated_at").notNull(),
-  },
-);
+/** Applications accepted per client IP per window. */
+const APPLICATION_RATE_LIMIT = 5;
+const APPLICATION_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const APPLICATION_RATE_LIMIT_RETENTION_MS = 24 * 60 * 60 * 1000;
 
 type CredentialDeliveryChannel = "email" | "manual";
 type CredentialDeliveryStatus = "sent" | "pending" | "failed";
 
+/**
+ * A record of what was handed over, not the credential itself: the setup link
+ * embeds a live reset token, so it is built on demand from the platform token
+ * instead of being stored here.
+ */
 interface CredentialDelivery {
   id: string;
   channel: CredentialDeliveryChannel;
   status: CredentialDeliveryStatus;
   recipientEmail: string;
   recipientName: string;
-  setupPasswordLink: string;
   setupPasswordExpiresAt: string;
   errorMessage?: string;
 }
@@ -153,10 +148,10 @@ export class OnboardingService {
     await this.env.MANAGEMENT_DB.prepare(
       `INSERT INTO onboarding_applications (
         id, business_name, contact_name, contact_email, contact_phone,
-        plan_id, latitude, longitude, requested_subdomain, assigned_subdomain, status,
+        address, district, city, plan_id, latitude, longitude, requested_subdomain, assigned_subdomain, status,
         application_secret_hash, ip_address, user_agent, created_at, submitted_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         id,
@@ -164,6 +159,9 @@ export class OnboardingService {
         data.contactName,
         data.contactEmail,
         data.contactPhone,
+        data.address ?? null,
+        data.district ?? null,
+        data.city ?? null,
         data.planId ?? "trial",
         data.latitude,
         data.longitude,
@@ -183,6 +181,149 @@ export class OnboardingService {
       ...(await this.getApplication(id))!,
       applicationSecret,
     };
+  }
+
+  /**
+   * Atomically consume one application submission slot for a Cloudflare IP.
+   * D1's conditional UPSERT is used instead of KV so parallel Worker requests
+   * cannot all observe the same stale count and exceed the limit.
+   */
+  async consumeApplicationRateLimit(clientIp: string): Promise<boolean> {
+    const nowMs = Date.now();
+    const windowStartedAtMs =
+      nowMs - (nowMs % APPLICATION_RATE_LIMIT_WINDOW_MS);
+    const managementDb = drizzle(this.env.MANAGEMENT_DB);
+
+    // The conditional upsert both admits and counts in one statement, so
+    // parallel Workers cannot all read the same stale count and overshoot.
+    const admitted = await managementDb
+      .insert(onboardingApplicationRateLimits)
+      .values({ clientIp, windowStartedAtMs, requestCount: 1 })
+      .onConflictDoUpdate({
+        target: [
+          onboardingApplicationRateLimits.clientIp,
+          onboardingApplicationRateLimits.windowStartedAtMs,
+        ],
+        set: {
+          requestCount: sql`${onboardingApplicationRateLimits.requestCount} + 1`,
+        },
+        setWhere: sql`${onboardingApplicationRateLimits.requestCount} < ${APPLICATION_RATE_LIMIT}`,
+      })
+      .returning({
+        requestCount: onboardingApplicationRateLimits.requestCount,
+      });
+
+    // Best-effort retention; admission is still decided solely by the atomic
+    // statement above if this cleanup is delayed or fails.
+    try {
+      await managementDb
+        .delete(onboardingApplicationRateLimits)
+        .where(
+          lt(
+            onboardingApplicationRateLimits.windowStartedAtMs,
+            windowStartedAtMs - APPLICATION_RATE_LIMIT_RETENTION_MS,
+          ),
+        );
+    } catch (error) {
+      console.error("[OnboardingService] Rate-limit cleanup failed:", error);
+    }
+
+    return admitted.length > 0;
+  }
+
+  /** Notify platform operators without making applicant submission depend on Slack. */
+  async notifyPlatformOfNewApplication(
+    application: OnboardingApplication,
+  ): Promise<void> {
+    if (!this.env.SLACK_WEBHOOK_URL) {
+      if (this.env.NODE_ENV === "production") {
+        console.error(
+          "[OnboardingService] SLACK_WEBHOOK_URL is not configured; platform notification skipped",
+        );
+      }
+      return;
+    }
+
+    try {
+      const response = await fetch(this.env.SLACK_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          // The business name is applicant-supplied. Slack parses <!channel>
+          // and <http://…|text> out of message text, so an unescaped name
+          // could ping everyone or disguise a link.
+          text: [
+            "New MakanMasak onboarding application",
+            `Business: ${this.escapeSlackText(application.businessName)}`,
+            `Application ID: ${application.id}`,
+            `Review: ${this.buildAdminOnboardingLink()}`,
+          ].join("\n"),
+        }),
+      });
+      if (!response.ok) {
+        console.error(
+          `[OnboardingService] Application notification returned ${response.status}`,
+        );
+      }
+    } catch (error) {
+      console.error(
+        "[OnboardingService] Application notification failed:",
+        error,
+      );
+    }
+  }
+
+  /** Send the applicant a resumable status URL; the secret stays in its fragment. */
+  async sendApplicationReceivedEmail(
+    application: OnboardingApplication,
+    applicationSecret: string,
+  ): Promise<void> {
+    if (
+      this.env.ONBOARDING_EMAIL_ENABLED !== "true" ||
+      !this.env.ONBOARDING_EMAIL_FROM ||
+      !this.env.RESEND_API_KEY
+    ) {
+      if (this.env.ONBOARDING_EMAIL_ENABLED === "true") {
+        console.error(
+          "[OnboardingService] Applicant receipt email is enabled but sender or Resend key is missing",
+        );
+      }
+      return;
+    }
+
+    const statusLink = this.buildApplicationStatusLink(
+      application.id,
+      applicationSecret,
+    );
+    const text = [
+      `${application.contactName} 您好：`,
+      "",
+      `我們已收到「${application.businessName}」的申請，正在審核中。`,
+      `您可隨時在此查看申請狀態：${statusLink}`,
+    ].join("\n");
+
+    try {
+      const result = await new ResendEmailProvider(
+        this.env.RESEND_API_KEY,
+        this.env.ONBOARDING_EMAIL_FROM,
+      ).sendEmail({
+        to: application.contactEmail,
+        subject: `MakanMasak 已收到「${application.businessName}」的申請`,
+        html: `<pre>${this.escapeHtml(text)}</pre>`,
+        text,
+      });
+      if (!result.success) {
+        console.error(
+          "[OnboardingService] Application received email failed:",
+          result.error,
+        );
+      }
+    } catch (error) {
+      console.error(
+        "[OnboardingService] Application received email failed:",
+        error,
+      );
+    }
   }
 
   /**
@@ -439,22 +580,146 @@ export class OnboardingService {
     };
   }
 
-  async rejectApplication(applicationId: string): Promise<{
+  async rejectApplication(
+    applicationId: string,
+    reason: string,
+    actor?: { id: string; email: string },
+  ): Promise<{
     success: boolean;
     status?: OnboardingStatus;
+    rejectionReason?: string;
+    rejectedAtMs?: number;
     error?: string;
   }> {
     const application = await this.getApplication(applicationId);
     if (!application) return { success: false, error: "Application not found" };
-    if (["completed", "provisioning"].includes(application.status)) {
+    if (
+      ["completed", "provisioning", "rejected"].includes(application.status)
+    ) {
       return {
         success: false,
         error: `Cannot reject application with status: ${application.status}`,
       };
     }
 
-    await this.updateApplicationStatus(applicationId, "rejected");
-    return { success: true, status: "rejected" };
+    const rejectedAtMs = Date.now();
+    const managementDb = drizzle(this.env.MANAGEMENT_DB);
+    await managementDb
+      .update(onboardingApplications)
+      .set({
+        status: "rejected",
+        rejectionReason: reason,
+        rejectedAtMs,
+        // updated_at predates the timestamp rule and is still TEXT on this
+        // table; rejected_at_ms is the new column and carries the epoch.
+        updatedAt: new Date(rejectedAtMs).toISOString(),
+      })
+      .where(eq(onboardingApplications.id, applicationId));
+    await this.writeApplicationAuditEvent(applicationId, "rejected", actor, {
+      reason,
+    });
+    await this.sendApplicationRejectionEmail(application, reason);
+    return {
+      success: true,
+      status: "rejected",
+      rejectionReason: reason,
+      rejectedAtMs,
+    };
+  }
+
+  async regenerateSetupPasswordLink(
+    applicationId: string,
+    actor: { id: string; email: string },
+  ): Promise<{
+    success: boolean;
+    ownerAccount?: ProvisionedOwnerAccount;
+    credentialDelivery?: CredentialDelivery;
+    error?: string;
+  }> {
+    const application = await this.getApplication(applicationId);
+    if (!application) return { success: false, error: "Application not found" };
+    if (application.status !== "completed" || !application.tenantId) {
+      return { success: false, error: "Application has not been approved" };
+    }
+    if (!this.env.PLATFORM_DB) {
+      return { success: false, error: "Platform DB binding is not configured" };
+    }
+
+    const managementDb = drizzle(this.env.MANAGEMENT_DB);
+    const [tenant] = await managementDb
+      .select({
+        platformRestaurantId: tenants.platformRestaurantId,
+        ownerUserId: tenants.ownerUserId,
+        ownerUsername: tenants.ownerUsername,
+      })
+      .from(tenants)
+      .where(eq(tenants.id, application.tenantId))
+      .limit(1);
+    if (
+      !tenant?.platformRestaurantId ||
+      !tenant.ownerUserId ||
+      !tenant.ownerUsername
+    ) {
+      return { success: false, error: "Owner account is unavailable" };
+    }
+
+    const nowMs = Date.now();
+    const setupPasswordToken = crypto.randomUUID();
+    const setupPasswordExpiresAtMs = nowMs + 24 * 60 * 60 * 1000;
+    const ownerAccount: ProvisionedOwnerAccount = {
+      restaurantId: tenant.platformRestaurantId,
+      userId: tenant.ownerUserId,
+      username: tenant.ownerUsername,
+      setupPasswordToken,
+      setupPasswordLink: this.buildSetupPasswordLink(setupPasswordToken),
+      setupPasswordExpiresAt: new Date(setupPasswordExpiresAtMs).toISOString(),
+    };
+
+    // One batch: any link already handed out stops working at the same moment
+    // the replacement becomes valid.
+    const platformDb = drizzle(this.env.PLATFORM_DB);
+    await platformDb.batch([
+      platformDb
+        .update(passwordResetTokens)
+        .set({ usedAt: new Date(nowMs) })
+        .where(
+          and(
+            eq(passwordResetTokens.userId, ownerAccount.userId),
+            isNull(passwordResetTokens.usedAt),
+          ),
+        ),
+      platformDb.insert(passwordResetTokens).values({
+        userId: ownerAccount.userId,
+        token: setupPasswordToken,
+        tokenType: "email",
+        otpCode: null,
+        expiresAt: new Date(setupPasswordExpiresAtMs),
+        usedAt: null,
+        ipAddress: null,
+        userAgent: "management-onboarding-regeneration",
+        createdAt: new Date(nowMs),
+      }),
+    ]);
+
+    const pendingDelivery = await this.createCredentialDelivery(
+      application,
+      application.tenantId,
+      ownerAccount,
+    );
+    const delivery = await this.dispatchCredentialDelivery(
+      application,
+      ownerAccount,
+      pendingDelivery,
+    );
+    await this.writeApplicationAuditEvent(
+      applicationId,
+      "setup_link_regenerated",
+      actor,
+      {
+        deliveryId: delivery.id,
+      },
+    );
+    return { success: true, ownerAccount, credentialDelivery: delivery };
   }
 
   /**
@@ -602,9 +867,12 @@ export class OnboardingService {
           type: "onboarding",
           category: "restaurant",
           description: null,
-          address: this.initialRestaurantAddress(application),
-          district: this.initialRestaurantDistrict(application),
-          city: "台中市",
+          address:
+            application.address?.trim() ||
+            this.initialRestaurantAddress(application),
+          district:
+            application.district ?? this.initialRestaurantDistrict(application),
+          city: application.city ?? "台中市",
           phone: this.initialRestaurantPhone(application),
           email: application.contactEmail,
           latitude: application.latitude ?? null,
@@ -691,7 +959,7 @@ export class OnboardingService {
     tenantId: string,
     ownerAccount: ProvisionedOwnerAccount,
   ): Promise<CredentialDelivery> {
-    const now = new Date().toISOString();
+    const nowMs = Date.now();
     const channel =
       this.env.ONBOARDING_EMAIL_ENABLED === "true" ? "email" : "manual";
     const delivery: CredentialDelivery = {
@@ -700,31 +968,26 @@ export class OnboardingService {
       status: "pending",
       recipientEmail: application.contactEmail,
       recipientName: application.contactName,
-      setupPasswordLink: ownerAccount.setupPasswordLink,
       setupPasswordExpiresAt: ownerAccount.setupPasswordExpiresAt,
     };
 
     const managementDb = drizzle(this.env.MANAGEMENT_DB);
-    await managementDb
-      .insert(onboardingCredentialDeliveries)
-      .values({
-        id: delivery.id,
-        applicationId: application.id,
-        tenantId,
-        restaurantId: ownerAccount.restaurantId,
-        userId: ownerAccount.userId,
-        recipientEmail: delivery.recipientEmail,
-        recipientName: delivery.recipientName,
-        username: ownerAccount.username,
-        setupPasswordLink: delivery.setupPasswordLink,
-        setupPasswordExpiresAt: delivery.setupPasswordExpiresAt,
-        deliveryChannel: delivery.channel,
-        status: delivery.status,
-        errorMessage: delivery.errorMessage ?? null,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run();
+    await managementDb.insert(onboardingCredentialDeliveries).values({
+      id: delivery.id,
+      applicationId: application.id,
+      tenantId,
+      restaurantId: ownerAccount.restaurantId,
+      userId: ownerAccount.userId,
+      recipientEmail: delivery.recipientEmail,
+      recipientName: delivery.recipientName,
+      username: ownerAccount.username,
+      setupPasswordExpiresAtMs: Date.parse(ownerAccount.setupPasswordExpiresAt),
+      deliveryChannel: delivery.channel,
+      status: delivery.status,
+      errorMessage: delivery.errorMessage ?? null,
+      createdAtMs: nowMs,
+      updatedAtMs: nowMs,
+    });
 
     return delivery;
   }
@@ -754,10 +1017,9 @@ export class OnboardingService {
       .set({
         status: updatedDelivery.status,
         errorMessage: updatedDelivery.errorMessage ?? null,
-        updatedAt: new Date().toISOString(),
+        updatedAtMs: Date.now(),
       })
-      .where(eq(onboardingCredentialDeliveries.id, delivery.id))
-      .run();
+      .where(eq(onboardingCredentialDeliveries.id, delivery.id));
 
     return updatedDelivery;
   }
@@ -848,11 +1110,11 @@ export class OnboardingService {
     const resetToken = await this.env.PLATFORM_DB.prepare(
       `SELECT token, expires_at_ms
        FROM password_reset_tokens
-       WHERE user_id = ? AND used_at_ms IS NULL
+       WHERE user_id = ? AND used_at_ms IS NULL AND expires_at_ms > ?
        ORDER BY expires_at_ms DESC
        LIMIT 1`,
     )
-      .bind(tenant.owner_user_id)
+      .bind(tenant.owner_user_id, Date.now())
       .first<{ token: string; expires_at_ms: number }>();
 
     if (!resetToken) return undefined;
@@ -875,7 +1137,7 @@ export class OnboardingService {
       .select()
       .from(onboardingCredentialDeliveries)
       .where(eq(onboardingCredentialDeliveries.applicationId, applicationId))
-      .orderBy(desc(onboardingCredentialDeliveries.createdAt))
+      .orderBy(desc(onboardingCredentialDeliveries.createdAtMs))
       .limit(1);
 
     if (!row) return undefined;
@@ -886,8 +1148,9 @@ export class OnboardingService {
       status: row.status as CredentialDeliveryStatus,
       recipientEmail: row.recipientEmail,
       recipientName: row.recipientName,
-      setupPasswordLink: row.setupPasswordLink,
-      setupPasswordExpiresAt: row.setupPasswordExpiresAt,
+      setupPasswordExpiresAt: new Date(
+        row.setupPasswordExpiresAtMs,
+      ).toISOString(),
       errorMessage: row.errorMessage ?? undefined,
     };
   }
@@ -974,8 +1237,25 @@ export class OnboardingService {
     ) {
       return `Onboarding GPS ${application.latitude.toFixed(6)}, ${application.longitude.toFixed(6)}`;
     }
-
     return `Onboarding application ${application.id}`;
+  }
+
+  private async writeApplicationAuditEvent(
+    applicationId: string,
+    eventType: string,
+    actor: { id: string; email: string } | undefined,
+    metadata: Record<string, string>,
+  ): Promise<void> {
+    const managementDb = drizzle(this.env.MANAGEMENT_DB);
+    await managementDb.insert(onboardingApplicationAuditEvents).values({
+      id: generateUUID(),
+      applicationId,
+      eventType,
+      actorId: actor?.id ?? null,
+      actorEmail: actor?.email ?? null,
+      metadata: JSON.stringify(metadata),
+      createdAtMs: Date.now(),
+    });
   }
 
   private initialRestaurantDistrict(
@@ -993,6 +1273,49 @@ export class OnboardingService {
     }
 
     return phone;
+  }
+
+  /** Rejection is persisted first; an email failure must never undo it. */
+  private async sendApplicationRejectionEmail(
+    application: OnboardingApplication,
+    reason: string,
+  ): Promise<void> {
+    if (
+      this.env.ONBOARDING_EMAIL_ENABLED !== "true" ||
+      !this.env.ONBOARDING_EMAIL_FROM ||
+      !this.env.RESEND_API_KEY
+    ) {
+      return;
+    }
+
+    const text = [
+      `${application.contactName} 您好：`,
+      "",
+      `很抱歉，「${application.businessName}」的申請未能通過。`,
+      `原因：${reason}`,
+    ].join("\n");
+    try {
+      const result = await new ResendEmailProvider(
+        this.env.RESEND_API_KEY,
+        this.env.ONBOARDING_EMAIL_FROM,
+      ).sendEmail({
+        to: application.contactEmail,
+        subject: `MakanMasak「${application.businessName}」申請結果`,
+        html: `<pre>${this.escapeHtml(text)}</pre>`,
+        text,
+      });
+      if (!result.success) {
+        console.error(
+          "[OnboardingService] Application rejection email failed:",
+          result.error,
+        );
+      }
+    } catch (error) {
+      console.error(
+        "[OnboardingService] Application rejection email failed:",
+        error,
+      );
+    }
   }
 
   private async sendSetupPasswordEmail(
@@ -1016,47 +1339,38 @@ export class OnboardingService {
       };
     }
 
+    if (!this.env.RESEND_API_KEY) {
+      return {
+        attempted: true,
+        status: "failed",
+        errorMessage: "RESEND_API_KEY is not configured",
+      };
+    }
+
     try {
-      const response = await fetch("https://api.mailchannels.net/tx/v1/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          personalizations: [
-            {
-              to: [
-                {
-                  email: application.contactEmail,
-                  name: application.contactName,
-                },
-              ],
-            },
-          ],
-          from: {
-            email: fromEmail,
-            name: "MakanMasak Onboarding",
-          },
-          subject: "Set up your MakanMasak owner account",
-          content: [
-            {
-              type: "text/plain",
-              value: [
-                `Hi ${application.contactName},`,
-                "",
-                `Your MakanMasak owner account for ${application.businessName} is ready.`,
-                `Username: ${ownerAccount.username}`,
-                `Set your password here: ${ownerAccount.setupPasswordLink}`,
-                `This link expires at ${ownerAccount.setupPasswordExpiresAt}.`,
-              ].join("\n"),
-            },
-          ],
-        }),
+      const text = [
+        `${application.contactName} 您好：`,
+        "",
+        `您的店家「${application.businessName}」已開通。`,
+        `店主帳號：${ownerAccount.username}`,
+        `請在此設定密碼：${ownerAccount.setupPasswordLink}`,
+        `此連結將於 ${ownerAccount.setupPasswordExpiresAt} 到期。`,
+      ].join("\n");
+      const result = await new ResendEmailProvider(
+        this.env.RESEND_API_KEY,
+        fromEmail,
+      ).sendEmail({
+        to: application.contactEmail,
+        subject: `MakanMasak「${application.businessName}」店主帳號開通`,
+        html: `<pre>${text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")}</pre>`,
+        text,
       });
 
-      if (!response.ok) {
+      if (!result.success) {
         return {
           attempted: true,
           status: "failed",
-          errorMessage: `MailChannels returned ${response.status}`,
+          errorMessage: result.error ?? "Failed to send onboarding email",
         };
       }
 
@@ -1090,6 +1404,45 @@ export class OnboardingService {
     return `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
   }
 
+  private buildApplicationStatusLink(
+    applicationId: string,
+    applicationSecret: string,
+  ): string {
+    const baseUrl =
+      this.env.ONBOARDING_APP_URL ||
+      this.firstConfiguredOrigin(this.env.CORS_ORIGIN) ||
+      this.stripApiPath(this.env.API_BASE_URL) ||
+      "http://localhost:3000";
+    return `${baseUrl}/status/${encodeURIComponent(applicationId)}#${encodeURIComponent(applicationSecret)}`;
+  }
+
+  /**
+   * Slack reads `<…>` as control sequences (`<!channel>`, `<url|label>`), so
+   * applicant-supplied text must not carry them into a message.
+   */
+  private escapeSlackText(value: string): string {
+    return value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;");
+  }
+
+  private buildAdminOnboardingLink(): string {
+    const baseUrl =
+      this.env.ADMIN_APP_URL?.trim().replace(/\/+$/, "") ||
+      this.firstConfiguredOrigin(this.env.CORS_ORIGIN) ||
+      this.stripApiPath(this.env.API_BASE_URL) ||
+      "http://localhost:3001";
+    return `${baseUrl}/dashboard/platform/onboarding`;
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;");
+  }
+
   private firstConfiguredOrigin(value: string | undefined): string | undefined {
     if (!value || value.trim() === "*") return undefined;
     return value
@@ -1112,12 +1465,17 @@ export class OnboardingService {
       contactName: row.contact_name as string,
       contactEmail: row.contact_email as string,
       contactPhone: row.contact_phone as string,
+      address: row.address as string | undefined,
+      district: row.district as string | undefined,
+      city: row.city as string | undefined,
       planId: row.plan_id as OnboardingPlanId | null,
       latitude: row.latitude as number | undefined,
       longitude: row.longitude as number | undefined,
       requestedSubdomain: row.requested_subdomain as string | undefined,
       assignedSubdomain: row.assigned_subdomain as string | undefined,
       status: row.status as OnboardingStatus,
+      rejectionReason: row.rejection_reason as string | undefined,
+      rejectedAtMs: row.rejected_at_ms as number | undefined,
       tenantId: row.tenant_id as string | undefined,
       ipAddress: row.ip_address as string | undefined,
       userAgent: row.user_agent as string | undefined,

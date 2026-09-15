@@ -37,6 +37,60 @@
       {{ dashboardStore.error }}
     </div>
 
+    <section
+      v-if="showSetupChecklist"
+      data-testid="owner-setup-checklist"
+      class="card p-6"
+      aria-labelledby="owner-setup-checklist-title"
+    >
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h2
+            id="owner-setup-checklist-title"
+            class="text-lg font-semibold text-gray-900"
+          >
+            {{ t("dashboard.setupChecklist.title") }}
+          </h2>
+          <p class="mt-1 text-sm text-gray-600">
+            {{ t("dashboard.setupChecklist.description") }}
+          </p>
+        </div>
+        <button
+          type="button"
+          class="text-sm font-medium text-gray-500 hover:text-gray-700"
+          @click="dismissSetupChecklist"
+        >
+          {{ t("dashboard.setupChecklist.dismiss") }}
+        </button>
+      </div>
+      <ul class="mt-4 grid gap-3 sm:grid-cols-2" role="list">
+        <li
+          v-for="item in setupChecklist"
+          :key="item.key"
+          :data-testid="`setup-checklist-${item.key}`"
+          :data-status="item.state"
+          class="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3"
+        >
+          <span class="text-sm font-medium text-gray-800">{{
+            item.label
+          }}</span>
+          <router-link
+            v-if="item.state !== 'complete'"
+            :to="item.to"
+            class="text-sm font-medium text-primary-600 hover:text-primary-700"
+            >{{
+              item.state === "unknown"
+                ? t("dashboard.setupChecklist.check")
+                : t("dashboard.setupChecklist.complete")
+            }}</router-link
+          >
+          <span v-else class="text-sm font-medium text-emerald-700">{{
+            t("dashboard.setupChecklist.done")
+          }}</span>
+        </li>
+      </ul>
+    </section>
+
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <StatsCard
@@ -272,6 +326,7 @@ import { useRouter } from "vue-router";
 import { useI18n } from "@/i18n";
 import { useAuthStore } from "@/stores/auth";
 import { useDashboardStore } from "@/stores/dashboard";
+import { api, unwrapApiList, unwrapApiPayload } from "@/services/api";
 import type { ChartData, TopMenuItem } from "@/types";
 import { useDateFormatter } from "@/composables/useDateFormatter";
 import {
@@ -330,6 +385,153 @@ const ordersChartPeriod = ref<DashboardChartPeriod>("daily");
 const user = computed(() => authStore.user);
 const isLoading = computed(() => dashboardStore.isLoading);
 const canAccessAdminFeatures = computed(() => authStore.canAccessAdminFeatures);
+type ChecklistState = "complete" | "incomplete" | "unknown";
+const setupChecks = ref<Record<string, ChecklistState>>({});
+const setupChecklistDismissed = ref(false);
+const setupChecklist = computed(() => [
+  {
+    key: "profile",
+    label: t("dashboard.setupChecklist.profile"),
+    to: "/dashboard/settings",
+    state: setupChecks.value.profile ?? "unknown",
+  },
+  {
+    key: "menu",
+    label: t("dashboard.setupChecklist.menu"),
+    to: "/dashboard/menu",
+    state: setupChecks.value.menu ?? "unknown",
+  },
+  {
+    key: "tables",
+    label: t("dashboard.setupChecklist.tables"),
+    to: "/dashboard/seating",
+    state: setupChecks.value.tables ?? "unknown",
+  },
+  {
+    key: "guest-orders",
+    label: t("dashboard.setupChecklist.guestOrders"),
+    to: "/dashboard/settings?tab=orders",
+    state: setupChecks.value.guestOrders ?? "unknown",
+  },
+  {
+    key: "staff",
+    label: t("dashboard.setupChecklist.staff"),
+    to: "/dashboard/employees",
+    state: setupChecks.value.staff ?? "unknown",
+  },
+]);
+const setupChecklistStorageKey = computed(() =>
+  authStore.restaurantId
+    ? `makanmasak:setup-checklist-dismissed:${authStore.restaurantId}`
+    : "",
+);
+const showSetupChecklist = computed(
+  () =>
+    authStore.user?.role === 1 &&
+    authStore.hasRestaurantContext &&
+    !setupChecklistDismissed.value &&
+    setupChecklist.value.some(
+      (item) => item.key !== "staff" && item.state !== "complete",
+    ),
+);
+
+function dismissedChecklist() {
+  try {
+    return Boolean(
+      setupChecklistStorageKey.value &&
+      localStorage.getItem(setupChecklistStorageKey.value),
+    );
+  } catch {
+    return false;
+  }
+}
+
+function dismissSetupChecklist() {
+  try {
+    if (setupChecklistStorageKey.value)
+      localStorage.setItem(setupChecklistStorageKey.value, "1");
+  } catch {
+    // Storage can be unavailable in private browsing or embedded contexts.
+  }
+  setupChecklistDismissed.value = true;
+}
+
+async function loadSetupChecklist() {
+  if (authStore.user?.role !== 1 || !authStore.restaurantId) return;
+  setupChecklistDismissed.value = dismissedChecklist();
+  if (setupChecklistDismissed.value) return;
+  const restaurantId = authStore.restaurantId;
+  const checks = await Promise.allSettled([
+    api.get(`/restaurants/${restaurantId}`),
+    api.get(`/menu/${restaurantId}?includeAll=true`),
+    api.get("/tables", { restaurantId, limit: 1 }),
+    api.get("/users", { restaurantId, limit: 100 }),
+  ]);
+  const listState = (result: PromiseSettledResult<unknown>): ChecklistState => {
+    if (result.status === "rejected") return "unknown";
+    const response = result.value as { data?: unknown };
+    return unwrapApiList<unknown>(response.data).length > 0
+      ? "complete"
+      : "incomplete";
+  };
+  const profile =
+    checks[0].status === "fulfilled"
+      ? (unwrapApiPayload((checks[0].value as { data: unknown }).data) as {
+          name?: string;
+          address?: string;
+          city?: string;
+          district?: string;
+          isAvailable?: boolean;
+          settings?: { allowGuestOrders?: boolean };
+        })
+      : null;
+  const menu =
+    checks[1].status === "fulfilled"
+      ? (unwrapApiPayload((checks[1].value as { data: unknown }).data) as {
+          menuItems?: Array<{ isAvailable?: boolean }>;
+        })
+      : null;
+  const staff =
+    checks[3].status === "fulfilled"
+      ? unwrapApiList<{ role: number }>(
+          (checks[3].value as { data: unknown }).data,
+        )
+      : [];
+  setupChecks.value = {
+    profile:
+      checks[0].status === "rejected"
+        ? "unknown"
+        : profile?.name?.trim() &&
+            profile.address?.trim() &&
+            profile.city?.trim() &&
+            profile.district?.trim() &&
+            !profile.address.startsWith("Onboarding GPS ") &&
+            !profile.address.startsWith("Onboarding application ") &&
+            !profile.district.startsWith("onboarding-")
+          ? "complete"
+          : "incomplete",
+    menu:
+      checks[1].status === "rejected"
+        ? "unknown"
+        : menu?.menuItems?.some((item) => item.isAvailable === true)
+          ? "complete"
+          : "incomplete",
+    tables: listState(checks[2]),
+    guestOrders:
+      checks[0].status === "rejected"
+        ? "unknown"
+        : profile?.isAvailable === true &&
+            profile.settings?.allowGuestOrders === true
+          ? "complete"
+          : "incomplete",
+    staff:
+      checks[3].status === "rejected"
+        ? "unknown"
+        : staff.some((user) => user.role >= 2 && user.role <= 4)
+          ? "complete"
+          : "incomplete",
+  };
+}
 
 // Dashboard stats
 const todayOrders = computed(() => dashboardStore.todayOrders);
@@ -414,6 +616,7 @@ const navigateToOrder = () => {
 
 onMounted(async () => {
   // Initial data load
+  void loadSetupChecklist();
   await refreshData();
 
   dashboardStore.startAutoRefresh(30000);

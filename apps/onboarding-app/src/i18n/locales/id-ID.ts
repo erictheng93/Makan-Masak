@@ -27,6 +27,9 @@ const idID: Messages = {
         label: "Telepon",
         placeholder: "+1-234-567-8900",
       },
+      address: { label: "Alamat", placeholder: "misalnya Jalan Utama 1" },
+      district: { label: "Distrik", placeholder: "misalnya Distrik Pusat" },
+      city: { label: "Kota", placeholder: "misalnya Kota Taichung" },
       location: {
         failure:
           "Tidak dapat memperoleh lokasi Anda saat ini. Periksa izin lokasi atau masukkan koordinat secara manual.",
@@ -67,6 +70,9 @@ const idID: Messages = {
       longitudeInvalid: "Garis bujur harus antara -180 dan 180",
       longitudeRequired: "Silakan masukkan garis bujur restoran",
       phoneRequired: "Silakan masukkan nomor telepon",
+      addressRequired: "Silakan masukkan alamat",
+      districtRequired: "Silakan masukkan distrik",
+      cityRequired: "Silakan masukkan kota",
       subdomainInvalidFormat:
         "Hanya huruf kecil, angka, dan tanda hubung yang diperbolehkan",
       subdomainTaken: "URL ini sudah dipakai",
@@ -122,7 +128,13 @@ const idID: Messages = {
   success: {
     button: {
       backHome: "Kembali ke Rumah",
+      viewStatus: "Lihat Status Aplikasi",
       goToAdmin: "Buka Dasbor Admin",
+    },
+    statusLink: {
+      savePrompt:
+        "Simpan tautan ini. Ini satu-satunya cara untuk memeriksa progres aplikasi Anda.",
+      copy: "Salin tautan status",
     },
     contact: {
       prompt: "Ada pertanyaan? Kontak",
@@ -136,6 +148,7 @@ const idID: Messages = {
       email: {
         prefix: "Kami telah mengirimkan email konfirmasi ke",
         suffix: ". Silakan periksa kotak masuk Anda.",
+        description: "Kami akan mengirim email saat aplikasi Anda diperbarui.",
         title: "Email Konfirmasi",
       },
       start: {
@@ -162,6 +175,31 @@ const idID: Messages = {
       title: "Ringkasan Aplikasi",
     },
     title: "Aplikasi Dikirim!",
+  },
+  status: {
+    title: "Status Aplikasi",
+    subtitle: "Periksa status peninjauan terbaru aplikasi restoran Anda.",
+    loading: "Memuat status aplikasi...",
+    businessName: "Nama Restoran",
+    currentStatus: "Status Saat Ini",
+    rejectionReason: "Alasan Penolakan",
+    lastUpdated: "Segarkan untuk memeriksa pembaruan terbaru.",
+    refresh: "Segarkan Status",
+    backHome: "Kembali ke Rumah",
+    error: {
+      missingLink: "Tautan status ini tidak lengkap.",
+      invalidLink: "Tautan status ini tidak valid.",
+      unavailable:
+        "Kami tidak dapat memuat aplikasi ini. Silakan coba lagi nanti.",
+    },
+    labels: {
+      pending: "Menunggu Tinjauan",
+      submitted: "Menunggu Tinjauan",
+      approved: "Disetujui",
+      provisioning: "Sedang Disiapkan",
+      completed: "Diaktifkan",
+      rejected: "Tidak Disetujui",
+    },
   },
 };
 

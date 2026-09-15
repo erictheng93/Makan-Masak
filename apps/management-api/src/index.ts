@@ -105,7 +105,7 @@ app.onError((err, c) => {
               : sanitizeApiErrorDetails(err.details),
         },
       },
-      err.status as 400 | 401 | 403 | 404 | 409 | 500,
+      err.status as 400 | 401 | 403 | 404 | 409 | 429 | 500,
     );
   }
 

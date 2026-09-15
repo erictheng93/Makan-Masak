@@ -39,6 +39,9 @@ export interface ManagementEnv {
   SLACK_WEBHOOK_URL?: string; // Optional: for alert notifications
   ONBOARDING_EMAIL_ENABLED?: string;
   ONBOARDING_EMAIL_FROM?: string;
+  ONBOARDING_APP_URL?: string;
+  ADMIN_APP_URL?: string;
+  RESEND_API_KEY?: string;
   INTERNAL_API_TOKEN?: string;
 
   // D1 Database binding
@@ -408,12 +411,17 @@ export interface OnboardingApplication {
   contactName: string;
   contactEmail: string;
   contactPhone: string;
+  address?: string;
+  district?: string;
+  city?: string;
   planId: OnboardingPlanId | null;
   latitude?: number;
   longitude?: number;
   requestedSubdomain?: string;
   assignedSubdomain?: string;
   status: OnboardingStatus;
+  rejectionReason?: string;
+  rejectedAtMs?: number;
   tenantId?: string;
   ipAddress?: string;
   userAgent?: string;
@@ -431,6 +439,9 @@ export interface CreateApplicationRequest {
   contactName: string;
   contactEmail: string;
   contactPhone: string;
+  address?: string;
+  district?: string;
+  city?: string;
   planId?: OnboardingPlanId | null;
   latitude: number;
   longitude: number;

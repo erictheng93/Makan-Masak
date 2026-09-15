@@ -13,48 +13,21 @@ function buildEnv(overrides: Partial<EmailProviderEnv> = {}): EmailProviderEnv {
 
 describe("resolveEmailProviderName", () => {
   it.each([
-    [
-      "uses noop without an explicit MailChannels opt-in or Resend key",
-      {},
-      "noop",
-    ],
+    ["uses noop without a Resend key", {}, "noop"],
     [
       "defaults to Resend when its key is configured",
       { RESEND_API_KEY: "resend-key" },
       "resend",
     ],
     [
-      "uses Resend when MailChannels is explicitly disabled",
-      { USE_MAILCHANNELS: "false", RESEND_API_KEY: "resend-key" },
-      "resend",
-    ],
-    [
-      "uses noop when MailChannels is disabled without a Resend key",
-      { USE_MAILCHANNELS: "false" },
-      "noop",
-    ],
-    [
-      "uses MailChannels only when explicitly enabled",
+      "does not use the retired relay when an old opt-in remains",
       { USE_MAILCHANNELS: "true", RESEND_API_KEY: "resend-key" },
-      "mailchannels",
-    ],
-    [
-      "normalizes the MailChannels opt-in before comparing it",
-      { USE_MAILCHANNELS: " TRUE " },
-      "mailchannels",
-    ],
-    // The bug this whole issue came from was an opt-*out* test
-    // (`USE_MAILCHANNELS !== "false"`), which made every unset or unexpected
-    // value select the dead MailChannels relay. Only the literal opt-in counts.
-    [
-      "treats a non-'true' flag as no opt-in rather than as an opt-out",
-      { USE_MAILCHANNELS: "1", RESEND_API_KEY: "resend-key" },
       "resend",
     ],
     [
-      "treats an empty flag as no opt-in",
-      { USE_MAILCHANNELS: "", RESEND_API_KEY: "resend-key" },
-      "resend",
+      "does not use the retired relay without a Resend key",
+      { USE_MAILCHANNELS: "true" },
+      "noop",
     ],
   ] as const)("%s", (_description, env, expected) => {
     expect(resolveEmailProviderName(buildEnv(env))).toBe(expected);
@@ -102,6 +75,10 @@ describe("NotificationService template rendering", () => {
     });
 
     const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(request.headers).toMatchObject({
+      Authorization: "Bearer resend-key",
+      "User-Agent": "MakanMasak-Worker/1.0",
+    });
     const payload = JSON.parse(String(request.body)) as {
       subject: string;
       html: string;

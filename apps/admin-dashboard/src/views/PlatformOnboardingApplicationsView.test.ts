@@ -8,16 +8,23 @@ import {
   type OnboardingApplication,
 } from "@/services/onboardingApplicationsService";
 
+vi.mock("@/i18n", () => ({
+  useI18n: () => ({ t: (key: string) => key }),
+}));
+
 vi.mock("@/services/onboardingApplicationsService", () => ({
   onboardingApplicationsService: {
     list: vi.fn(),
     approve: vi.fn(),
+    regenerateSetupLink: vi.fn(),
     reject: vi.fn(),
   },
 }));
 
 const SETUP_LINK =
   "https://admin.example.test/reset-password?token=setup-token";
+const FRESH_LINK =
+  "https://admin.example.test/reset-password?token=fresh-token";
 
 function buildApplication(
   overrides: Partial<OnboardingApplication> = {},
@@ -44,8 +51,19 @@ function buildOwnerAccount(overrides = {}) {
     restaurantId: "restaurant-1",
     userId: "owner-1",
     username: "tan",
-    setupPasswordToken: "setup-token",
     setupPasswordLink: SETUP_LINK,
+    setupPasswordExpiresAt: "2099-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function buildDelivery(overrides = {}) {
+  return {
+    id: "delivery-1",
+    channel: "manual" as const,
+    status: "pending" as const,
+    recipientEmail: "tan@example.test",
+    recipientName: "Tan Mei",
     setupPasswordExpiresAt: "2099-01-01T00:00:00.000Z",
     ...overrides,
   };
@@ -76,10 +94,20 @@ describe("PlatformOnboardingApplicationsView", () => {
       tenantId: "T-1",
       subdomain: "laksa",
       ownerAccount: buildOwnerAccount(),
+      credentialDelivery: buildDelivery(),
       status: "completed",
     });
     vi.mocked(onboardingApplicationsService.reject).mockResolvedValue({
       status: "rejected",
+    });
+    vi.mocked(
+      onboardingApplicationsService.regenerateSetupLink,
+    ).mockResolvedValue({
+      ownerAccount: buildOwnerAccount({
+        setupPasswordLink: FRESH_LINK,
+        setupPasswordExpiresAt: "2099-02-01T00:00:00.000Z",
+      }),
+      credentialDelivery: buildDelivery({ id: "delivery-2" }),
     });
   });
 
@@ -92,10 +120,9 @@ describe("PlatformOnboardingApplicationsView", () => {
       limit: 50,
     });
     expect(wrapper.text()).toContain("Laksa Shop");
-    expect(wrapper.text()).toContain("待審核");
   });
 
-  it("approves and rejects applications then refreshes the list", async () => {
+  it("approves an application and shows the handoff", async () => {
     const wrapper = mount(PlatformOnboardingApplicationsView);
     await flushPromises();
 
@@ -106,22 +133,12 @@ describe("PlatformOnboardingApplicationsView", () => {
 
     expect(onboardingApplicationsService.approve).toHaveBeenCalledWith("APP-1");
     expect(onboardingApplicationsService.list).toHaveBeenCalledTimes(2);
-    const panel = wrapper.get('[data-testid="approved-owner-account"]');
-    expect(panel.text()).toContain("Laksa Shop");
     expect(wrapper.get('[data-testid="owner-handoff-username"]').text()).toBe(
       "tan",
     );
     expect(wrapper.get('[data-testid="owner-handoff-setup-link"]').text()).toBe(
       SETUP_LINK,
     );
-
-    await wrapper
-      .get('[data-testid="reject-onboarding-APP-1"]')
-      .trigger("click");
-    await flushPromises();
-
-    expect(onboardingApplicationsService.reject).toHaveBeenCalledWith("APP-1");
-    expect(onboardingApplicationsService.list).toHaveBeenCalledTimes(3);
   });
 
   it("allows approving submitted applications in the managed onboarding flow", async () => {
@@ -162,14 +179,11 @@ describe("PlatformOnboardingApplicationsView", () => {
     await copyUsername.trigger("click");
     await flushPromises();
     expect(writeText).toHaveBeenCalledWith("tan");
-    expect(copyUsername.text()).toBe("已複製");
 
     const copyLink = wrapper.get('[data-testid="copy-owner-setup-link"]');
     await copyLink.trigger("click");
     await flushPromises();
     expect(writeText).toHaveBeenLastCalledWith(SETUP_LINK);
-    expect(copyLink.text()).toBe("已複製");
-    expect(copyUsername.text()).toBe("複製");
   });
 
   it("reports a clipboard failure instead of claiming the copy worked", async () => {
@@ -183,15 +197,36 @@ describe("PlatformOnboardingApplicationsView", () => {
       .trigger("click");
     await flushPromises();
 
-    const copyLink = wrapper.get('[data-testid="copy-owner-setup-link"]');
-    await copyLink.trigger("click");
+    await wrapper.get('[data-testid="copy-owner-setup-link"]').trigger("click");
     await flushPromises();
 
     expect(writeText).toHaveBeenCalledOnce();
-    expect(copyLink.text()).toBe("複製");
     expect(wrapper.get('[data-testid="onboarding-error"]').text()).toContain(
-      "無法複製到剪貼簿",
+      "platformOnboarding.errors.copy",
     );
+  });
+
+  it("shows how the credentials were delivered, including a failed email", async () => {
+    vi.mocked(onboardingApplicationsService.approve).mockResolvedValue({
+      tenantId: "T-1",
+      ownerAccount: buildOwnerAccount(),
+      credentialDelivery: buildDelivery({
+        channel: "email",
+        status: "failed",
+        errorMessage: "RESEND_API_KEY is not configured",
+      }),
+      status: "completed",
+    });
+
+    const wrapper = mount(PlatformOnboardingApplicationsView);
+    await flushPromises();
+    await wrapper
+      .get('[data-testid="approve-onboarding-APP-1"]')
+      .trigger("click");
+    await flushPromises();
+
+    const delivery = wrapper.get('[data-testid="owner-handoff-delivery"]');
+    expect(delivery.text()).toContain("RESEND_API_KEY is not configured");
   });
 
   it("reopens the handoff for a completed application without provisioning again", async () => {
@@ -253,7 +288,7 @@ describe("PlatformOnboardingApplicationsView", () => {
 
     expect(
       wrapper.get('[data-testid="owner-handoff-unavailable"]').text(),
-    ).toContain("員工管理");
+    ).toContain("platformOnboarding.handoff.unavailable");
     expect(wrapper.find('[data-testid="copy-owner-setup-link"]').exists()).toBe(
       false,
     );
@@ -274,11 +309,108 @@ describe("PlatformOnboardingApplicationsView", () => {
     await wrapper.get('[data-testid="owner-handoff-APP-5"]').trigger("click");
     await flushPromises();
 
-    expect(wrapper.get('[data-testid="owner-link-expired"]').text()).toContain(
-      "已過期",
+    expect(wrapper.get('[data-testid="owner-link-expired"]').exists()).toBe(
+      true,
     );
-    const copyLink = wrapper.get('[data-testid="copy-owner-setup-link"]');
-    expect(copyLink.attributes("disabled")).toBeDefined();
+    expect(
+      wrapper
+        .get('[data-testid="copy-owner-setup-link"]')
+        .attributes("disabled"),
+    ).toBeDefined();
     expect(writeText).not.toHaveBeenCalled();
+  });
+
+  // Regenerating rotates the token, so a link already handed to an owner stops
+  // working. It must not be one stray click away while a usable link exists.
+  it("offers regeneration only once the link is unusable, and asks first", async () => {
+    mockList([buildApplication({ id: "APP-6", status: "completed" })]);
+
+    const wrapper = mount(PlatformOnboardingApplicationsView);
+    await flushPromises();
+    await wrapper.get('[data-testid="owner-handoff-APP-6"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="regenerate-setup-link"]').exists()).toBe(
+      false,
+    );
+
+    vi.mocked(onboardingApplicationsService.approve).mockResolvedValue({
+      tenantId: "T-6",
+      ownerAccount: buildOwnerAccount({
+        setupPasswordExpiresAt: "2020-01-01T00:00:00.000Z",
+      }),
+      status: "completed",
+    });
+    await wrapper.get('[data-testid="owner-handoff-APP-6"]').trigger("click");
+    await flushPromises();
+
+    await wrapper.get('[data-testid="regenerate-setup-link"]').trigger("click");
+    await flushPromises();
+    expect(
+      onboardingApplicationsService.regenerateSetupLink,
+    ).not.toHaveBeenCalled();
+
+    await wrapper
+      .get('[data-testid="confirm-regenerate-setup-link"]')
+      .trigger("click");
+    await flushPromises();
+
+    expect(
+      onboardingApplicationsService.regenerateSetupLink,
+    ).toHaveBeenCalledWith("APP-6");
+    expect(wrapper.get('[data-testid="owner-handoff-setup-link"]').text()).toBe(
+      FRESH_LINK,
+    );
+    expect(wrapper.find('[data-testid="regenerate-setup-link"]').exists()).toBe(
+      false,
+    );
+  });
+
+  it("rejects a submitted application only with a reason", async () => {
+    const wrapper = mount(PlatformOnboardingApplicationsView);
+    await flushPromises();
+
+    await wrapper
+      .get('[data-testid="reject-onboarding-APP-1"]')
+      .trigger("click");
+    await flushPromises();
+
+    const confirmReject = wrapper.get(
+      '[data-testid="confirm-reject-onboarding"]',
+    );
+    expect(confirmReject.attributes("disabled")).toBeDefined();
+    await wrapper
+      .get('[data-testid="onboarding-rejection-reason-input"]')
+      .setValue("Missing documents");
+    expect(confirmReject.attributes("disabled")).toBeUndefined();
+    await wrapper.get('[role="dialog"] form').trigger("submit");
+    await flushPromises();
+
+    expect(onboardingApplicationsService.reject).toHaveBeenCalledWith(
+      "APP-1",
+      "Missing documents",
+    );
+    expect(onboardingApplicationsService.list).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not offer rejection again after an application is rejected", async () => {
+    mockList([
+      buildApplication({
+        status: "rejected",
+        rejectionReason: "Missing documents",
+      }),
+    ]);
+
+    const wrapper = mount(PlatformOnboardingApplicationsView);
+    await flushPromises();
+
+    expect(
+      wrapper
+        .get('[data-testid="reject-onboarding-APP-1"]')
+        .attributes("disabled"),
+    ).toBeDefined();
+    expect(
+      wrapper.get('[data-testid="onboarding-rejection-reason"]').text(),
+    ).toContain("platformOnboarding.rejectionReason");
   });
 });

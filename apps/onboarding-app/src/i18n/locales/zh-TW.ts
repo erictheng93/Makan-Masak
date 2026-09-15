@@ -66,6 +66,9 @@ const zhTW = {
         label: "聯絡電話",
         placeholder: "02-1234-5678",
       },
+      address: { label: "店家地址", placeholder: "例如：中山路 1 號" },
+      district: { label: "鄉鎮市區", placeholder: "例如：西屯區" },
+      city: { label: "縣市", placeholder: "例如：台中市" },
       location: {
         label: "餐廳位置",
         help: "用於夜市 / 商圈探索與附近搜尋。請使用店面或攤位的實際座標。",
@@ -94,6 +97,9 @@ const zhTW = {
       emailRequired: "請輸入 Email",
       emailInvalid: "請輸入有效的 Email",
       phoneRequired: "請輸入聯絡電話",
+      addressRequired: "請輸入店家地址",
+      districtRequired: "請輸入鄉鎮市區",
+      cityRequired: "請輸入縣市",
       latitudeRequired: "請輸入餐廳緯度",
       latitudeInvalid: "緯度需介於 -90 到 90 之間",
       longitudeRequired: "請輸入餐廳經度",
@@ -131,6 +137,7 @@ const zhTW = {
         title: "確認郵件",
         prefix: "我們已發送確認郵件至",
         suffix: "，請查收。",
+        description: "申請狀態有更新時，我們會寄送 Email 通知您。",
       },
       deploy: {
         title: "平台審核",
@@ -144,9 +151,38 @@ const zhTW = {
     button: {
       goToAdmin: "前往管理後台",
       backHome: "返回首頁",
+      viewStatus: "查看申請狀態",
+    },
+    statusLink: {
+      savePrompt: "請保存此連結，這是查詢申請進度的唯一方式。",
+      copy: "複製查詢連結",
     },
     contact: {
       prompt: "有任何問題？請聯繫",
+    },
+  },
+  status: {
+    title: "申請狀態",
+    subtitle: "查看您的店家申請最新審核進度。",
+    loading: "正在載入申請狀態...",
+    businessName: "餐廳名稱",
+    currentStatus: "目前狀態",
+    rejectionReason: "未核准原因",
+    lastUpdated: "可使用重新整理查看最新進度。",
+    refresh: "重新整理狀態",
+    backHome: "返回首頁",
+    error: {
+      missingLink: "此申請狀態連結不完整。",
+      invalidLink: "此申請狀態連結無效。",
+      unavailable: "目前無法載入此申請，請稍後再試。",
+    },
+    labels: {
+      pending: "等待審核",
+      submitted: "等待審核",
+      approved: "已核准",
+      provisioning: "設定中",
+      completed: "已啟用",
+      rejected: "未核准",
     },
   },
 

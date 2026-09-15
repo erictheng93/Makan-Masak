@@ -27,6 +27,9 @@ const viVN: Messages = {
         label: "Điện thoại",
         placeholder: "+1-234-567-8900",
       },
+      address: { label: "Địa chỉ", placeholder: "ví dụ: 1 Đường Chính" },
+      district: { label: "Quận", placeholder: "ví dụ: Quận Trung Tâm" },
+      city: { label: "Thành phố", placeholder: "ví dụ: Thành phố Đài Trung" },
       location: {
         failure:
           "Không thể nhận được vị trí hiện tại của bạn. Kiểm tra quyền vị trí hoặc nhập tọa độ theo cách thủ công.",
@@ -66,6 +69,9 @@ const viVN: Messages = {
       longitudeInvalid: "Kinh độ phải nằm trong khoảng từ -180 đến 180",
       longitudeRequired: "Vui lòng nhập kinh độ của nhà hàng",
       phoneRequired: "Vui lòng nhập số điện thoại",
+      addressRequired: "Vui lòng nhập địa chỉ",
+      districtRequired: "Vui lòng nhập quận",
+      cityRequired: "Vui lòng nhập thành phố",
       subdomainInvalidFormat:
         "Chỉ cho phép chữ cái viết thường, số và dấu gạch nối",
       subdomainTaken: "URL này đã được sử dụng",
@@ -121,7 +127,13 @@ const viVN: Messages = {
   success: {
     button: {
       backHome: "Quay lại trang chủ",
+      viewStatus: "Xem trạng thái đơn đăng ký",
       goToAdmin: "Đi tới Bảng điều khiển dành cho quản trị viên",
+    },
+    statusLink: {
+      savePrompt:
+        "Hãy lưu liên kết này. Đây là cách duy nhất để kiểm tra tiến độ đơn đăng ký.",
+      copy: "Sao chép liên kết trạng thái",
     },
     contact: {
       prompt: "Có câu hỏi nào không? Liên hệ",
@@ -135,6 +147,8 @@ const viVN: Messages = {
       email: {
         prefix: "Chúng tôi đã gửi email xác nhận tới",
         suffix: ". Vui lòng kiểm tra hộp thư đến của bạn.",
+        description:
+          "Chúng tôi sẽ gửi email khi đơn đăng ký của bạn có cập nhật.",
         title: "Email xác nhận",
       },
       start: {
@@ -161,6 +175,30 @@ const viVN: Messages = {
       title: "Tóm tắt ứng dụng",
     },
     title: "Ứng dụng đã được gửi!",
+  },
+  status: {
+    title: "Trạng thái đơn đăng ký",
+    subtitle: "Kiểm tra trạng thái xét duyệt mới nhất.",
+    loading: "Đang tải trạng thái...",
+    businessName: "Tên nhà hàng",
+    currentStatus: "Trạng thái hiện tại",
+    rejectionReason: "Lý do từ chối",
+    lastUpdated: "Làm mới để kiểm tra cập nhật mới nhất.",
+    refresh: "Làm mới trạng thái",
+    backHome: "Quay lại trang chủ",
+    error: {
+      missingLink: "Liên kết trạng thái này không đầy đủ.",
+      invalidLink: "Liên kết trạng thái này không hợp lệ.",
+      unavailable: "Không thể tải đơn đăng ký này. Vui lòng thử lại sau.",
+    },
+    labels: {
+      pending: "Đang chờ xét duyệt",
+      submitted: "Đang chờ xét duyệt",
+      approved: "Đã phê duyệt",
+      provisioning: "Đang thiết lập",
+      completed: "Đã kích hoạt",
+      rejected: "Không được phê duyệt",
+    },
   },
 };
 

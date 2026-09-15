@@ -16,6 +16,9 @@ export interface ApplicationData {
   contactName: string;
   contactEmail: string;
   contactPhone: string;
+  address: string;
+  district: string;
+  city: string;
   latitude: number;
   longitude: number;
   planId: "trial" | "standard" | "professional" | "enterprise";

@@ -69,7 +69,7 @@ describe("onboardingApplicationsService", () => {
     });
   });
 
-  it("approves and rejects onboarding applications", async () => {
+  it("approves, regenerates setup links, and rejects applications with a reason", async () => {
     vi.mocked(managementApi.post)
       .mockResolvedValueOnce({
         data: {
@@ -90,11 +90,35 @@ describe("onboardingApplicationsService", () => {
         },
       } as never)
       .mockResolvedValueOnce({
+        data: {
+          data: {
+            ownerAccount: {
+              restaurantId: "restaurant-1",
+              userId: "owner-1",
+              username: "tan",
+              setupPasswordLink:
+                "https://admin.example.test/reset-password?token=fresh-token",
+              setupPasswordExpiresAt: "2026-07-01T00:00:00.000Z",
+            },
+            credentialDelivery: {
+              id: "delivery-2",
+              channel: "manual",
+              status: "pending",
+              recipientEmail: "tan@example.test",
+              recipientName: "Tan Mei",
+              setupPasswordExpiresAt: "2026-07-01T00:00:00.000Z",
+            },
+          },
+        },
+      } as never)
+      .mockResolvedValueOnce({
         data: { data: { status: "rejected" } },
       } as never);
 
     const approveResult = await onboardingApplicationsService.approve("APP-1");
-    await onboardingApplicationsService.reject("APP-2");
+    const setupLink =
+      await onboardingApplicationsService.regenerateSetupLink("APP-1");
+    await onboardingApplicationsService.reject("APP-2", "Missing documents");
 
     expect(approveResult.ownerAccount).toMatchObject({
       username: "tan",
@@ -108,9 +132,21 @@ describe("onboardingApplicationsService", () => {
     );
     expect(managementApi.post).toHaveBeenNthCalledWith(
       2,
-      "/admin/onboarding/applications/APP-2/reject",
+      "/admin/onboarding/applications/APP-1/setup-link",
       {},
     );
-    expect(ensureManagementAuthToken).toHaveBeenCalledTimes(2);
+    expect(setupLink).toMatchObject({
+      ownerAccount: {
+        setupPasswordLink:
+          "https://admin.example.test/reset-password?token=fresh-token",
+      },
+      credentialDelivery: { id: "delivery-2", status: "pending" },
+    });
+    expect(managementApi.post).toHaveBeenNthCalledWith(
+      3,
+      "/admin/onboarding/applications/APP-2/reject",
+      { reason: "Missing documents" },
+    );
+    expect(ensureManagementAuthToken).toHaveBeenCalledTimes(3);
   });
 });

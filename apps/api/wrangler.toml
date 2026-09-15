@@ -72,12 +72,8 @@ DEPLOYMENT_MODE = "saas"
 NOTIFICATION_FROM_EMAIL = "notifications@makanmasak.com"
 # RESEND_API_KEY - Set via: wrangler secret put RESEND_API_KEY
 #
-# NotificationService builds a MailChannels provider unless USE_MAILCHANNELS is
-# exactly "false" (packages/database/src/services/NotificationService.ts:857),
-# and the free MailChannels relay this code posts to is gone — the endpoint
-# answers 401, so verification email always fails and RESEND_API_KEY is never
-# even read. Keep this "false" so the Resend branch is reachable.
-USE_MAILCHANNELS = "false"
+# The retired unauthenticated MailChannels relay is not supported. Without a
+# RESEND_API_KEY secret the notification provider is disabled.
 #
 # SMS provider — switching vendors is config only, never code.
 # SMS_PROVIDER selects the vendor: "mitake" | "every8d" | "twilio" | "noop".
@@ -197,8 +193,6 @@ REALTIME_WS_URL = "ws://localhost:8788"
 DISCOVERY_EMBEDDING_MODEL = "@cf/baai/bge-m3"
 # Notification configuration
 NOTIFICATION_FROM_EMAIL = "dev-notifications@makanmasak.com"
-# See the top-level [vars] notes for this one.
-USE_MAILCHANNELS = "false"
 # Brand prefix on outbound OTP messages. Top-level [vars] is NOT inherited by
 # named environments, so this has to be repeated here or the env falls back to
 # the "MakanMasak" default hardcoded in buildOtpSmsBody().
@@ -287,8 +281,6 @@ DISCOVERY_EMBEDDING_MODEL = "@cf/baai/bge-m3"
 QUOTA_ENFORCEMENT_MODE = "enforce"
 # Notification configuration
 NOTIFICATION_FROM_EMAIL = "notifications@makanmasak.com"
-# See the top-level [vars] notes for this one.
-USE_MAILCHANNELS = "false"
 # Brand prefix on outbound OTP messages. Top-level [vars] is NOT inherited by
 # named environments, so this has to be repeated here or the env falls back to
 # the "MakanMasak" default hardcoded in buildOtpSmsBody().

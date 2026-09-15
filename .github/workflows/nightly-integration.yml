@@ -1,12 +1,12 @@
 name: 🌙 Nightly Integration Tests
 
 # Runs the `integration` Playwright project — tests/e2e/integration/
-# real-workflows.spec.ts, 17 tests, zero `page.route()` — against a real
-# `wrangler dev` Worker and a real local D1.
+# real-workflows.spec.ts, zero `page.route()` — against real `wrangler dev`
+# Workers and local D1 bindings.
 #
-# This is the only scheduled job that drives the customer SPA against a real
-# backend. `test.yml`'s `e2e-tests` serves `vite preview` with no API behind
-# it, and its `admin-real-e2e` covers the admin dashboard only.
+# This scheduled job drives customer, onboarding, and admin SPAs against real
+# local Workers. `test.yml`'s `e2e-tests` serves `vite preview` with no API
+# behind it, and its `admin-real-e2e` covers the admin dashboard only.
 #
 # The schedule was commented out in 2026-05 ("solo-dev mode"), and while nobody
 # was looking the job stopped being runnable at all: it invoked three spec files
@@ -74,6 +74,10 @@ jobs:
           CORS_ORIGIN=http://localhost:3000,http://localhost:3001,http://localhost:3002
           NODE_ENV=test
           EOF
+          cat > apps/management-api/.dev.vars <<'EOF'
+          JWT_SECRET=ci-integration-gate-jwt-secret-minimum-32-chars-long
+          NODE_ENV=test
+          EOF
 
       - name: 🗄️ Migrate + seed 本地 D1
         # Both root scripts pass --persist-to ./.wrangler/shared-state, which is
@@ -88,10 +92,11 @@ jobs:
         # job goes green having checked one page load.
         run: |
           pnpm db:migrate:local:api
+          pnpm db:migrate:local:mgmt
           pnpm db:seed:local
           pnpm db:seed:local:e2e
 
-      - name: 🚀 啟動 API 與 customer app
+      - name: 🚀 啟動 API、management API 與前端
         # `vite` (dev), not `vite preview`: dev applies server.proxy, which is
         # what puts the Worker behind the SPA's relative /api/v1 calls.
         # `preview` does not proxy, so the customer app had no API behind it.
@@ -111,12 +116,21 @@ jobs:
              > /tmp/integration-logs/api.log 2>&1 &)
           (cd apps/customer-app && pnpm exec vite --port 3000 --host 0.0.0.0 \
              > /tmp/integration-logs/customer.log 2>&1 &)
+          (cd apps/management-api && pnpm exec wrangler dev --local \
+             --persist-to ../../.wrangler/shared-state \
+             > /tmp/integration-logs/management-api.log 2>&1 &)
+          (cd apps/onboarding-app && pnpm exec vite --port 3011 --host 0.0.0.0 \
+             > /tmp/integration-logs/onboarding.log 2>&1 &)
+          (cd apps/admin-dashboard && pnpm exec vite --port 3001 --host 0.0.0.0 \
+             > /tmp/integration-logs/admin.log 2>&1 &)
 
       - name: ⏳ 等待服務就緒
         # /info is the app-level public endpoint (apps/api/src/app-factory.ts).
         # There is no unauthenticated /api/v1/health.
         run: |
-          for probe in http://localhost:8787/info http://localhost:3000; do
+          for probe in http://localhost:8787/info http://localhost:3000 \
+            http://localhost:8789/info http://localhost:3011 \
+            http://localhost:3001; do
             elapsed=0
             until curl -sf "$probe" >/dev/null 2>&1; do
               if [ "$elapsed" -ge 240 ]; then
@@ -186,17 +200,17 @@ jobs:
         # used_count, idempotency keys, the active-order dedup KV), and 2
         # workers produced cross-file contention.
         #
-        # Not run under WORKFLOW_STRICT: most of this spec needs services this
-        # job deliberately does not stand up (the admin dashboard — covered by
-        # test.yml's admin-real-e2e — plus the kitchen display, management
-        # portal, management API and onboarding app), and strict mode turns
-        # every one of those skips into a failure. The summary step below
-        # prints passed/failed/skipped so a green tick is not read as "all 17
-        # ran".
+        # Not run under WORKFLOW_STRICT: kitchen display and management portal
+        # are still outside this job. The onboarding activation test now has
+        # all required services, so it must run rather than silently skip.
+        # The summary step reports passed/failed/skipped counts.
         run: pnpm exec playwright test --project=integration --workers=1
         env:
           WORKFLOW_API_URL: http://localhost:8787
           WORKFLOW_CUSTOMER_URL: http://localhost:3000
+          WORKFLOW_OWNER_ACTIVATION_ADMIN_URL: http://localhost:3001
+          WORKFLOW_ONBOARDING_URL: http://localhost:3011
+          WORKFLOW_MANAGEMENT_API_URL: http://localhost:8789/api/v1
           E2E_BASE_URL: http://localhost:3000
           WORKFLOW_AUTH_USERNAME: owner1
           WORKFLOW_AUTH_PASSWORD: owner123

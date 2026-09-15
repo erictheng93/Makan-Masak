@@ -54,6 +54,9 @@ export interface CreateApplicationData {
   contactName: string;
   contactEmail: string;
   contactPhone: string;
+  address: string;
+  district: string;
+  city: string;
   planId: "trial" | "standard" | "professional" | "enterprise";
   latitude: number;
   longitude: number;
@@ -71,6 +74,9 @@ export interface ApplicationDetails {
   businessName: string;
   contactName: string;
   contactEmail: string;
+  address: string;
+  district?: string;
+  city?: string;
   latitude: number;
   longitude: number;
   planId: string;
@@ -79,6 +85,7 @@ export interface ApplicationDetails {
   tenantId?: string;
   createdAt: string;
   completedAt?: string;
+  rejectionReason?: string;
 }
 
 // ============================================================

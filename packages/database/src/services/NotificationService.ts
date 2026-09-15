@@ -114,7 +114,7 @@ export interface EmailProvider {
   }): Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
 
-export type EmailProviderName = "mailchannels" | "resend" | "noop";
+export type EmailProviderName = "resend" | "noop";
 
 export type EmailProviderEnv = Pick<
   CloudflareEnv,
@@ -123,16 +123,12 @@ export type EmailProviderEnv = Pick<
 
 /**
  * Select the email provider without constructing it so deployment defaults are
- * directly testable. MailChannels is opt-in because its unauthenticated relay
- * is no longer a working production default.
+ * directly testable. The retired unauthenticated MailChannels relay is never
+ * selected, even if an old deployment still has its opt-in flag.
  */
 export function resolveEmailProviderName(
   env: EmailProviderEnv,
 ): EmailProviderName {
-  if (env.USE_MAILCHANNELS?.trim().toLowerCase() === "true") {
-    return "mailchannels";
-  }
-
   return env.RESEND_API_KEY ? "resend" : "noop";
 }
 
@@ -147,73 +143,7 @@ export function resolveEmailProviderName(
 export type SMSProvider = SmsProvider;
 
 // ========================================
-// MailChannels Email Provider (Cloudflare Official Recommendation)
-// ========================================
-
-export class MailChannelsEmailProvider implements EmailProvider {
-  constructor(
-    private fromEmail: string = "notifications@makanmasak.com",
-    private fromName: string = "MakanMasak",
-  ) {}
-
-  async sendEmail(params: {
-    to: string;
-    subject: string;
-    html: string;
-    text?: string;
-  }) {
-    try {
-      const response = await fetch("https://api.mailchannels.net/tx/v1/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          personalizations: [
-            {
-              to: [{ email: params.to }],
-            },
-          ],
-          from: {
-            email: this.fromEmail,
-            name: this.fromName,
-          },
-          subject: params.subject,
-          content: [
-            {
-              type: "text/html",
-              value: params.html,
-            },
-            ...(params.text
-              ? [
-                  {
-                    type: "text/plain",
-                    value: params.text,
-                  },
-                ]
-              : []),
-          ],
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        return { success: false, error: `MailChannels error: ${errorText}` };
-      }
-
-      // MailChannels returns 202 Accepted with no body on success
-      return { success: true, messageId: "mailchannels-sent" };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  }
-}
-
-// ========================================
-// Resend Email Provider (Alternative)
+// Resend Email Provider
 // ========================================
 
 export class ResendEmailProvider implements EmailProvider {
@@ -234,6 +164,7 @@ export class ResendEmailProvider implements EmailProvider {
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
           "Content-Type": "application/json",
+          "User-Agent": "MakanMasak-Worker/1.0",
         },
         body: JSON.stringify({
           from: this.fromEmail,
@@ -244,10 +175,19 @@ export class ResendEmailProvider implements EmailProvider {
         }),
       });
 
-      const data = (await response.json()) as { message?: string; id?: string };
+      const responseText = await response.text();
+      let data: { message?: string; id?: string } = {};
+      try {
+        data = JSON.parse(responseText) as typeof data;
+      } catch {
+        // A gateway or proxy can return plain text or HTML on failure.
+      }
 
       if (!response.ok) {
-        return { success: false, error: data.message || "Email send failed" };
+        return {
+          success: false,
+          error: `Resend returned ${response.status}${data.message ? `: ${data.message}` : ""}`,
+        };
       }
 
       return { success: true, messageId: data.id };
@@ -886,12 +826,6 @@ export class NotificationService extends BaseService {
 
   private initializeProviders(env: CloudflareEnv) {
     switch (this.emailProviderName) {
-      case "mailchannels":
-        this.emailProvider = new MailChannelsEmailProvider(
-          env.NOTIFICATION_FROM_EMAIL || "notifications@makanmasak.com",
-          "MakanMasak",
-        );
-        break;
       case "resend":
         this.emailProvider = new ResendEmailProvider(
           env.RESEND_API_KEY!,

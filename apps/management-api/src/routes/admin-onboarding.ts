@@ -2,9 +2,13 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { badRequest, notFound } from "@makanmasak/utils";
 import type { ManagementEnv, OnboardingStatus } from "../types";
+import type { ManagementUser } from "../middleware/auth";
 import { OnboardingService } from "../services/OnboardingService";
 
-const router = new Hono<{ Bindings: ManagementEnv }>();
+const router = new Hono<{
+  Bindings: ManagementEnv;
+  Variables: { managementUser: ManagementUser };
+}>();
 
 const onboardingStatusSchema = z.enum([
   "submitted",
@@ -25,12 +29,17 @@ function publicApplication(application: {
   contactName: string;
   contactEmail: string;
   contactPhone: string;
+  address?: string;
+  district?: string;
+  city?: string;
   planId: string | null;
   latitude?: number;
   longitude?: number;
   requestedSubdomain?: string;
   assignedSubdomain?: string;
   status: OnboardingStatus;
+  rejectionReason?: string;
+  rejectedAtMs?: number;
   tenantId?: string;
   ipAddress?: string;
   userAgent?: string;
@@ -45,12 +54,17 @@ function publicApplication(application: {
     contactName: application.contactName,
     contactEmail: application.contactEmail,
     contactPhone: application.contactPhone,
+    address: application.address,
+    district: application.district,
+    city: application.city,
     planId: application.planId,
     latitude: application.latitude,
     longitude: application.longitude,
     requestedSubdomain: application.requestedSubdomain,
     assignedSubdomain: application.assignedSubdomain,
     status: application.status,
+    rejectionReason: application.rejectionReason,
+    rejectedAtMs: application.rejectedAtMs,
     tenantId: application.tenantId,
     ipAddress: application.ipAddress,
     userAgent: application.userAgent,
@@ -58,6 +72,32 @@ function publicApplication(application: {
     submittedAt: application.submittedAt,
     completedAt: application.completedAt,
     updatedAt: application.updatedAt,
+  };
+}
+
+/**
+ * The one-time link already carries the setup token, and no client needs the
+ * bare token, so it never leaves the service.
+ */
+function publicOwnerAccount(
+  ownerAccount:
+    | {
+        restaurantId: string;
+        userId: string;
+        username: string;
+        setupPasswordToken: string;
+        setupPasswordLink: string;
+        setupPasswordExpiresAt: string;
+      }
+    | undefined,
+) {
+  if (!ownerAccount) return undefined;
+  return {
+    restaurantId: ownerAccount.restaurantId,
+    userId: ownerAccount.userId,
+    username: ownerAccount.username,
+    setupPasswordLink: ownerAccount.setupPasswordLink,
+    setupPasswordExpiresAt: ownerAccount.setupPasswordExpiresAt,
   };
 }
 
@@ -108,16 +148,59 @@ router.post("/applications/:id/approve", async (c) => {
     data: {
       tenantId: result.tenantId,
       subdomain: result.subdomain,
-      ownerAccount: result.ownerAccount,
+      ownerAccount: publicOwnerAccount(result.ownerAccount),
       credentialDelivery: result.credentialDelivery,
       status: result.status ?? "completed",
     },
   });
 });
 
-router.post("/applications/:id/reject", async (c) => {
+router.post("/applications/:id/setup-link", async (c) => {
   const service = new OnboardingService(c.env);
-  const result = await service.rejectApplication(c.req.param("id"));
+  const result = await service.regenerateSetupPasswordLink(
+    c.req.param("id"),
+    c.get("managementUser"),
+  );
+  if (!result.success) {
+    if (result.error === "Application not found") {
+      throw notFound(result.error, "NOT_FOUND");
+    }
+    throw badRequest(
+      result.error ?? "Failed to regenerate setup link",
+      "INVALID_STATUS",
+    );
+  }
+  return c.json({
+    success: true,
+    data: {
+      ownerAccount: publicOwnerAccount(result.ownerAccount),
+      credentialDelivery: result.credentialDelivery,
+    },
+  });
+});
+
+const rejectApplicationSchema = z.object({
+  reason: z.string().trim().min(2).max(500),
+});
+
+router.post("/applications/:id/reject", async (c) => {
+  const parsed = rejectApplicationSchema.safeParse(
+    await c.req.json().catch(() => ({})),
+  );
+  if (!parsed.success) {
+    throw badRequest(
+      "Validation failed",
+      "VALIDATION_ERROR",
+      parsed.error.issues,
+    );
+  }
+
+  const service = new OnboardingService(c.env);
+  const result = await service.rejectApplication(
+    c.req.param("id"),
+    parsed.data.reason,
+    c.get("managementUser"),
+  );
 
   if (!result.success) {
     if (result.error === "Application not found") {
@@ -131,7 +214,11 @@ router.post("/applications/:id/reject", async (c) => {
 
   return c.json({
     success: true,
-    data: { status: result.status ?? "rejected" },
+    data: {
+      status: result.status ?? "rejected",
+      rejectionReason: result.rejectionReason,
+      rejectedAtMs: result.rejectedAtMs,
+    },
   });
 });
 

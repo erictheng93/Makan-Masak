@@ -71,6 +71,9 @@ const enUS: Messages = {
         label: "Phone",
         placeholder: "+1-234-567-8900",
       },
+      address: { label: "Street Address", placeholder: "e.g. 1 Main Street" },
+      district: { label: "District", placeholder: "e.g. Central District" },
+      city: { label: "City", placeholder: "e.g. Taichung City" },
       location: {
         label: "Restaurant Location",
         help: "Used for night market / district discovery and nearby search. Use the actual storefront or stall coordinates.",
@@ -101,6 +104,9 @@ const enUS: Messages = {
       emailRequired: "Please enter an email",
       emailInvalid: "Please enter a valid email",
       phoneRequired: "Please enter a phone number",
+      addressRequired: "Please enter the street address",
+      districtRequired: "Please enter the district",
+      cityRequired: "Please enter the city",
       latitudeRequired: "Please enter the restaurant latitude",
       latitudeInvalid: "Latitude must be between -90 and 90",
       longitudeRequired: "Please enter the restaurant longitude",
@@ -140,6 +146,8 @@ const enUS: Messages = {
         title: "Confirmation Email",
         prefix: "We've sent a confirmation email to",
         suffix: ". Please check your inbox.",
+        description:
+          "We will email you when there is an update on your application.",
       },
       deploy: {
         title: "Platform Review",
@@ -155,9 +163,40 @@ const enUS: Messages = {
     button: {
       goToAdmin: "Go to Admin Dashboard",
       backHome: "Back to Home",
+      viewStatus: "View Application Status",
+    },
+    statusLink: {
+      savePrompt:
+        "Save this link. It is the only way to check your application progress.",
+      copy: "Copy status link",
     },
     contact: {
       prompt: "Any questions? Contact",
+    },
+  },
+  status: {
+    title: "Application Status",
+    subtitle: "Check the latest review status for your restaurant application.",
+    loading: "Loading application status...",
+    businessName: "Restaurant Name",
+    currentStatus: "Current Status",
+    rejectionReason: "Reason for Rejection",
+    lastUpdated: "Use refresh to check for the latest update.",
+    refresh: "Refresh Status",
+    backHome: "Back to Home",
+    error: {
+      missingLink: "This status link is incomplete.",
+      invalidLink: "This status link is invalid.",
+      unavailable:
+        "We could not load this application. Please try again later.",
+    },
+    labels: {
+      pending: "Pending Review",
+      submitted: "Pending Review",
+      approved: "Approved",
+      provisioning: "Being Set Up",
+      completed: "Activated",
+      rejected: "Not Approved",
     },
   },
 

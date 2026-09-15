@@ -5,6 +5,16 @@
  */
 
 import type { Env } from "../types/env";
+import { ResendEmailProvider } from "@makanmasak/database";
+
+function escapeHtml(value: unknown): string {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
 
 export type AlertSeverity = "info" | "warning" | "error" | "critical";
 
@@ -80,35 +90,27 @@ export class SlackAlertChannel implements AlertChannel {
 }
 
 /**
- * Email Alert Channel (using MailChannels)
+ * Email Alert Channel
  */
 export class EmailAlertChannel implements AlertChannel {
   constructor(
     private toEmail: string,
+    private apiKey: string,
     private fromEmail: string = "alerts@makanmasak.com",
   ) {}
 
   async sendAlert(alert: Alert): Promise<void> {
     const html = this.generateAlertHTML(alert);
 
-    await fetch("https://api.mailchannels.net/tx/v1/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        personalizations: [{ to: [{ email: this.toEmail }] }],
-        from: {
-          email: this.fromEmail,
-          name: "MakanMasak Security System",
-        },
-        subject: `[${alert.severity.toUpperCase()}] ${alert.title}`,
-        content: [
-          {
-            type: "text/html",
-            value: html,
-          },
-        ],
-      }),
+    const result = await new ResendEmailProvider(
+      this.apiKey,
+      this.fromEmail,
+    ).sendEmail({
+      to: this.toEmail,
+      subject: `[${alert.severity.toUpperCase()}] ${alert.title}`,
+      html,
     });
+    if (!result.success) throw new Error(result.error ?? "Email alert failed");
   }
 
   private generateAlertHTML(alert: Alert): string {
@@ -139,11 +141,11 @@ export class EmailAlertChannel implements AlertChannel {
         <body>
           <div class="container">
             <div class="header">
-              <h2>🔐 ${alert.title}</h2>
+              <h2>🔐 ${escapeHtml(alert.title)}</h2>
               <p style="margin: 0;">Severity: ${alert.severity.toUpperCase()}</p>
             </div>
             <div class="content">
-              <p>${alert.message}</p>
+              <p>${escapeHtml(alert.message)}</p>
               ${
                 alert.metadata
                   ? `
@@ -153,7 +155,7 @@ export class EmailAlertChannel implements AlertChannel {
                     .map(
                       ([key, value]) => `
                     <div class="metadata-item">
-                      <span class="metadata-key">${key}:</span> ${value}
+                      <span class="metadata-key">${escapeHtml(key)}:</span> ${escapeHtml(value)}
                     </div>
                   `,
                     )
@@ -194,10 +196,11 @@ export class AlertService {
     }
 
     // Email alerts
-    if (this.env.ALERT_EMAIL_TO) {
+    if (this.env.ALERT_EMAIL_TO && this.env.RESEND_API_KEY) {
       this.channels.push(
         new EmailAlertChannel(
           this.env.ALERT_EMAIL_TO,
+          this.env.RESEND_API_KEY,
           this.env.NOTIFICATION_FROM_EMAIL || "alerts@makanmasak.com",
         ),
       );

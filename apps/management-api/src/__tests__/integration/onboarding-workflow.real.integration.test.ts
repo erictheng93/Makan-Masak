@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { sign } from "hono/jwt";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import bcrypt from "bcryptjs";
 import { D1DatabaseAdapter } from "../../../../../tests/helpers/d1-adapter";
 import app from "../../index";
@@ -37,6 +37,16 @@ type ApplicationList = {
 };
 
 type ApproveResult = ServiceData<OnboardingService["approveApplication"]>;
+
+/**
+ * The HTTP layer returns the one-time link but not the bare setup token, so
+ * tests that need the token read it back out of the link the operator gets.
+ */
+function tokenFromLink(setupPasswordLink: string): string {
+  const token = new URL(setupPasswordLink).searchParams.get("token");
+  if (!token) throw new Error(`no token in setup link: ${setupPasswordLink}`);
+  return token;
+}
 
 type ProvisionedTenant = {
   tenant: ServiceData<TenantService["provisionPlatformRestaurantTenant"]>;
@@ -169,12 +179,12 @@ function createPlatformDb() {
       recipient_email TEXT NOT NULL,
       recipient_name TEXT NOT NULL,
       username TEXT NOT NULL,
-      setup_password_link TEXT NOT NULL,
-      setup_password_expires_at TEXT NOT NULL,
+      setup_password_expires_at_ms INTEGER NOT NULL,
       delivery_channel TEXT NOT NULL,
       status TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
+      error_message TEXT,
+      created_at_ms INTEGER NOT NULL,
+      updated_at_ms INTEGER NOT NULL
     );
   `);
 
@@ -184,12 +194,14 @@ function createPlatformDb() {
 function createEnv(
   db: D1DatabaseAdapter,
   platformDb: D1DatabaseAdapter = createPlatformDb(),
+  overrides: Partial<ManagementEnv> = {},
 ): ManagementEnv {
   return {
     NODE_ENV: "test",
     API_VERSION: "v1",
     API_BASE_URL: "http://localhost",
-    CORS_ORIGIN: "http://localhost:3004",
+    CORS_ORIGIN: "http://localhost:5177,http://localhost:3004",
+    ADMIN_APP_URL: "http://localhost:3004",
     LOG_LEVEL: "error",
     JWT_SECRET: "test-secret",
     INTERNAL_API_TOKEN: "internal-token",
@@ -203,8 +215,11 @@ function createEnv(
     } as unknown as KVNamespace,
     DEPLOYMENT_STATUS_KV: {} as KVNamespace,
     BUNDLE_STORAGE: {} as R2Bucket,
+    ...overrides,
   };
 }
+
+afterEach(() => vi.unstubAllGlobals());
 
 function createApplicationBody() {
   return {
@@ -212,6 +227,9 @@ function createApplicationBody() {
     contactName: "Tan Mei",
     contactEmail: "tan.mei@example.com",
     contactPhone: "0912345678",
+    address: "12 Jalan Tun Sambanthan, Brickfields",
+    district: "Brickfields",
+    city: "Kuala Lumpur",
     planId: "standard",
     latitude: 24.147736,
     longitude: 120.673648,
@@ -234,6 +252,226 @@ async function managementToken() {
 }
 
 describe("Onboarding public API workflow — real integration", () => {
+  it("accepts a legacy application without address and provisions fallback location", async () => {
+    const db = createManagementDb();
+    const platformDb = createPlatformDb();
+    const env = createEnv(db, platformDb);
+    const { address, district, city, ...legacyBody } = createApplicationBody();
+    const created = await app.fetch(
+      new Request("https://management.test/api/v1/onboarding/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(legacyBody),
+      }),
+      env,
+    );
+    expect(created.status).toBe(201);
+    const createdData = await readData<CreatedApplication>(created);
+    const approved = await app.fetch(
+      new Request(
+        `https://management.test/api/v1/admin/onboarding/applications/${createdData.applicationId}/approve`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${await managementToken()}` },
+        },
+      ),
+      env,
+    );
+    expect(approved.status).toBe(200);
+    const approvedData = await readData<ApproveResult>(approved);
+    const row = platformDb
+      .raw()
+      .prepare("SELECT address, district, city FROM restaurants WHERE id = ?")
+      .get(approvedData.ownerAccount!.restaurantId) as {
+      address: string;
+      district: string;
+      city: string;
+    };
+    expect(row.address).toMatch(/^Onboarding GPS /);
+    expect(row.district).toMatch(/^onboarding-/);
+    expect(row.city).toBe("台中市");
+  });
+
+  it("rotates an expired setup token and appends a credential delivery audit trail", async () => {
+    const db = createManagementDb();
+    const platformDb = createPlatformDb();
+    const env = createEnv(db, platformDb);
+    const adminToken = await managementToken();
+    const created = await app.fetch(
+      new Request("https://management.test/api/v1/onboarding/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(createApplicationBody()),
+      }),
+      env,
+    );
+    const createdData = await readData<CreatedApplication>(created);
+    const approveUrl = `https://management.test/api/v1/admin/onboarding/applications/${createdData.applicationId}/approve`;
+    const approved = await app.fetch(
+      new Request(approveUrl, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+      env,
+    );
+    const approvedData = await readData<ApproveResult>(approved);
+    const oldLink = approvedData.ownerAccount!.setupPasswordLink;
+    const oldToken = tokenFromLink(oldLink);
+    platformDb
+      .raw()
+      .prepare(
+        "UPDATE password_reset_tokens SET expires_at_ms = ? WHERE token = ?",
+      )
+      .run(Date.now() - 1_000, oldToken);
+
+    const repeated = await app.fetch(
+      new Request(approveUrl, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+      env,
+    );
+    expect(
+      (await readData<ApproveResult>(repeated)).ownerAccount,
+    ).toBeUndefined();
+
+    const regenerated = await app.fetch(
+      new Request(
+        `https://management.test/api/v1/admin/onboarding/applications/${createdData.applicationId}/setup-link`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${adminToken}` },
+        },
+      ),
+      env,
+    );
+    expect(regenerated.status).toBe(200);
+    const result = await readData<{
+      ownerAccount: NonNullable<ApproveResult["ownerAccount"]>;
+      credentialDelivery: NonNullable<ApproveResult["credentialDelivery"]>;
+    }>(regenerated);
+    expect(result.ownerAccount.setupPasswordLink).not.toBe(oldLink);
+    expect(result.ownerAccount.setupPasswordExpiresAt).toBeTruthy();
+    // The delivery row records the handoff, not the credential: no link, no
+    // token, just who was told and when it lapses.
+    expect(result.credentialDelivery).not.toHaveProperty("setupPasswordLink");
+    expect(result.credentialDelivery.setupPasswordExpiresAt).toBe(
+      result.ownerAccount.setupPasswordExpiresAt,
+    );
+    const oldRow = platformDb
+      .raw()
+      .prepare("SELECT used_at_ms FROM password_reset_tokens WHERE token = ?")
+      .get(oldToken) as { used_at_ms: number };
+    expect(oldRow.used_at_ms).toBeGreaterThan(0);
+    const newRow = platformDb
+      .raw()
+      .prepare(
+        "SELECT used_at_ms, expires_at_ms FROM password_reset_tokens WHERE token = ?",
+      )
+      .get(tokenFromLink(result.ownerAccount.setupPasswordLink)) as {
+      used_at_ms: number | null;
+      expires_at_ms: number;
+    };
+    expect(newRow.used_at_ms).toBeNull();
+    expect(newRow.expires_at_ms).toBeGreaterThan(Date.now());
+    expect(
+      db
+        .raw()
+        .prepare(
+          "SELECT COUNT(*) AS count FROM onboarding_credential_deliveries WHERE application_id = ?",
+        )
+        .get(createdData.applicationId),
+    ).toMatchObject({ count: 2 });
+    expect(
+      db
+        .raw()
+        .prepare(
+          "SELECT actor_id, created_at_ms FROM onboarding_application_audit_events WHERE application_id = ? AND event_type = 'setup_link_regenerated'",
+        )
+        .get(createdData.applicationId),
+    ).toMatchObject({
+      actor_id: "workflow-admin",
+      created_at_ms: expect.any(Number),
+    });
+  });
+
+  it("completes approval and records failed setup-link delivery when Resend fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("denied", { status: 500 })),
+    );
+    const db = createManagementDb();
+    const platformDb = createPlatformDb();
+    const env = createEnv(db, platformDb, {
+      ONBOARDING_EMAIL_ENABLED: "true",
+      ONBOARDING_EMAIL_FROM: "onboarding@makanmasak.com",
+      RESEND_API_KEY: "test-key",
+    });
+    const token = await managementToken();
+    const created = await app.fetch(
+      new Request("https://management.test/api/v1/onboarding/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(createApplicationBody()),
+      }),
+      env,
+    );
+    const createdData = await readData<CreatedApplication>(created);
+    const approved = await app.fetch(
+      new Request(
+        `https://management.test/api/v1/admin/onboarding/applications/${createdData.applicationId}/approve`,
+        { method: "POST", headers: { Authorization: `Bearer ${token}` } },
+      ),
+      env,
+    );
+
+    expect(approved.status).toBe(200);
+    expect(
+      db
+        .raw()
+        .prepare(
+          "SELECT status, error_message FROM onboarding_credential_deliveries WHERE application_id = ?",
+        )
+        .get(createdData.applicationId),
+    ).toMatchObject({
+      status: "failed",
+      error_message: expect.stringContaining("500"),
+    });
+  });
+
+  it("rate limits concurrent application submissions from one Cloudflare IP", async () => {
+    const db = createManagementDb();
+    const env = createEnv(db);
+    const submit = (index: number) =>
+      app.fetch(
+        new Request("https://management.test/api/v1/onboarding/applications", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "cf-connecting-ip": "203.0.113.9",
+          },
+          body: JSON.stringify({
+            ...createApplicationBody(),
+            contactEmail: `rate-limit-${index}@example.com`,
+          }),
+        }),
+        env,
+      );
+
+    const responses = await Promise.all(
+      Array.from({ length: 6 }, (_, index) => submit(index)),
+    );
+
+    expect(
+      responses.filter((response) => response.status === 201),
+    ).toHaveLength(5);
+    const rejected = responses.find((response) => response.status === 429);
+    expect(rejected).toBeDefined();
+    await expect(readError(rejected!)).resolves.toMatchObject({
+      code: "RATE_LIMITED",
+    });
+  });
+
   it("does not expose the legacy public subdomain check endpoint", async () => {
     const db = createManagementDb();
     const platformDb = createPlatformDb();
@@ -294,6 +532,9 @@ describe("Onboarding public API workflow — real integration", () => {
       businessName: "Workflow Laksa",
       contactName: "Tan Mei",
       contactEmail: "tan.mei@example.com",
+      address: "12 Jalan Tun Sambanthan, Brickfields",
+      district: "Brickfields",
+      city: "Kuala Lumpur",
       latitude: 24.147736,
       longitude: 120.673648,
       planId: "standard",
@@ -425,10 +666,14 @@ describe("Onboarding public API workflow — real integration", () => {
     expect(typeof approveJson.tenantId).toBe("string");
     expect(typeof ownerAccount.restaurantId).toBe("string");
     expect(typeof ownerAccount.userId).toBe("string");
-    expect(typeof ownerAccount.setupPasswordToken).toBe("string");
+    // The link is what an operator hands over; the bare token is not part of
+    // the response at all.
     expect(ownerAccount.setupPasswordLink).toBe(
-      `http://localhost:3004/reset-password?token=${ownerAccount.setupPasswordToken}`,
+      `http://localhost:3004/reset-password?token=${tokenFromLink(
+        ownerAccount.setupPasswordLink,
+      )}`,
     );
+    expect("setupPasswordToken" in ownerAccount).toBe(false);
     expect("initialPassword" in ownerAccount).toBe(false);
     expect(credentialDelivery).toMatchObject({
       channel: "manual",
@@ -436,8 +681,9 @@ describe("Onboarding public API workflow — real integration", () => {
       recipientEmail: "tan.mei@example.com",
       recipientName: "Tan Mei",
     });
-    expect(credentialDelivery.setupPasswordLink).toBe(
-      ownerAccount.setupPasswordLink,
+    expect(credentialDelivery).not.toHaveProperty("setupPasswordLink");
+    expect(credentialDelivery.setupPasswordExpiresAt).toBe(
+      ownerAccount.setupPasswordExpiresAt,
     );
 
     const tenantRow = db
@@ -500,7 +746,7 @@ describe("Onboarding public API workflow — real integration", () => {
       .get(ownerAccount.userId);
     expect(resetTokenRow).toMatchObject({
       user_id: ownerAccount.userId,
-      token: ownerAccount.setupPasswordToken,
+      token: tokenFromLink(ownerAccount.setupPasswordLink),
       token_type: "email",
       used_at_ms: null,
     });
@@ -534,7 +780,8 @@ describe("Onboarding public API workflow — real integration", () => {
       .prepare(
         `SELECT application_id, tenant_id, restaurant_id, user_id,
                 recipient_email, recipient_name, username,
-                setup_password_link, delivery_channel, status
+                setup_password_expires_at_ms, delivery_channel, status,
+                created_at_ms
          FROM onboarding_credential_deliveries
          WHERE application_id = ?`,
       )
@@ -547,24 +794,32 @@ describe("Onboarding public API workflow — real integration", () => {
       recipient_email: "tan.mei@example.com",
       recipient_name: "Tan Mei",
       username: "tan-mei",
-      setup_password_link: ownerAccount.setupPasswordLink,
+      setup_password_expires_at_ms: Date.parse(
+        ownerAccount.setupPasswordExpiresAt,
+      ),
       delivery_channel: "manual",
       status: "pending",
+      created_at_ms: expect.any(Number),
+    });
+    // A stored link would be a live credential sitting in the control plane.
+    expect(
+      db
+        .raw()
+        .prepare("SELECT * FROM onboarding_credential_deliveries LIMIT 1")
+        .get(),
+    ).not.toHaveProperty("setup_password_link");
+
+    const onboardingRestaurant = platformDb
+      .raw()
+      .prepare("SELECT address, district, city FROM restaurants WHERE id = ?")
+      .get(ownerAccount.restaurantId);
+    expect(onboardingRestaurant).toMatchObject({
+      address: "12 Jalan Tun Sambanthan, Brickfields",
+      district: "Brickfields",
+      city: "Kuala Lumpur",
     });
 
-    const incompleteProfileCount = platformDb
-      .raw()
-      .prepare(
-        `SELECT COUNT(*) AS count
-         FROM restaurants
-         WHERE address = '待補充'
-            OR district = '待補充'
-            OR phone = '00000000'`,
-      )
-      .get();
-    expect(incompleteProfileCount).toMatchObject({ count: 0 });
-
-    const rejectResponse = await app.fetch(
+    const missingReason = await app.fetch(
       new Request(
         `https://management.test/api/v1/admin/onboarding/applications/${rejectedCandidateId}/reject`,
         {
@@ -574,11 +829,65 @@ describe("Onboarding public API workflow — real integration", () => {
       ),
       env,
     );
+    expect(missingReason.status).toBe(400);
+    await expect(readError(missingReason)).resolves.toMatchObject({
+      code: "VALIDATION_ERROR",
+    });
+
+    const rejectResponse = await app.fetch(
+      new Request(
+        `https://management.test/api/v1/admin/onboarding/applications/${rejectedCandidateId}/reject`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ reason: "Service area is not supported yet" }),
+        },
+      ),
+      env,
+    );
 
     expect(rejectResponse.status).toBe(200);
     await expect(rejectResponse.json()).resolves.toMatchObject({
       success: true,
-      data: { status: "rejected" },
+      data: {
+        status: "rejected",
+        rejectionReason: "Service area is not supported yet",
+      },
+    });
+    const repeatReject = await app.fetch(
+      new Request(
+        `https://management.test/api/v1/admin/onboarding/applications/${rejectedCandidateId}/reject`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ reason: "A different reason" }),
+        },
+      ),
+      env,
+    );
+    expect(repeatReject.status).toBe(400);
+    const rejectedStatusResponse = await app.fetch(
+      new Request(
+        `https://management.test/api/v1/onboarding/applications/${rejectedCandidateId}`,
+        {
+          headers: {
+            "X-Onboarding-Secret": rejectedCandidateJson.applicationSecret,
+          },
+        },
+      ),
+      env,
+    );
+    await expect(
+      readData<PublicApplication>(rejectedStatusResponse),
+    ).resolves.toMatchObject({
+      status: "rejected",
+      rejectionReason: "Service area is not supported yet",
     });
     expect(
       platformDb.raw().prepare("SELECT COUNT(*) AS count FROM users").get(),
@@ -777,7 +1086,7 @@ describe("Onboarding public API workflow — real integration", () => {
         userId: firstOwnerAccount.userId,
         restaurantId: firstOwnerAccount.restaurantId,
         username: firstOwnerAccount.username,
-        setupPasswordToken: firstOwnerAccount.setupPasswordToken,
+        setupPasswordLink: firstOwnerAccount.setupPasswordLink,
       },
       credentialDelivery: {
         status: "pending",
@@ -924,7 +1233,11 @@ describe("Onboarding public API workflow — real integration", () => {
         `https://management.test/api/v1/admin/onboarding/applications/${createJson.applicationId}/reject`,
         {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ reason: "Already approved" }),
         },
       ),
       env,

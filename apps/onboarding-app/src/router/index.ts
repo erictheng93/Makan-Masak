@@ -27,6 +27,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import("@/views/SuccessView.vue"),
     meta: { title: "申請成功" },
   },
+  {
+    path: "/status/:applicationId",
+    name: "ApplicationStatus",
+    component: () => import("@/views/ApplicationStatusView.vue"),
+    meta: { title: "申請狀態" },
+  },
 ];
 
 export const router = createRouter({

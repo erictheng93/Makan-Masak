@@ -4,43 +4,61 @@
       class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
     >
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">店家加入申請</h1>
+        <h1 class="text-2xl font-bold text-gray-900">
+          {{ t("platformOnboarding.title") }}
+        </h1>
         <p class="mt-1 text-sm text-gray-500">
-          審核自助開店申請，核准後由平台資源啟用租戶。
+          {{ t("platformOnboarding.subtitle") }}
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <select
           v-model="statusFilter"
           data-testid="onboarding-status-filter"
-          class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+          class="rounded-full bg-gray-100 px-4 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-primary-500/20"
           @change="loadApplications"
         >
-          <option value="">全部狀態</option>
-          <option value="submitted">待審核</option>
-          <option value="provisioning">建置中</option>
-          <option value="completed">已完成</option>
-          <option value="rejected">已拒絕</option>
+          <option value="">{{ t("platformOnboarding.filter.all") }}</option>
+          <option value="submitted">
+            {{ t("platformOnboarding.status.submitted") }}
+          </option>
+          <option value="provisioning">
+            {{ t("platformOnboarding.status.provisioning") }}
+          </option>
+          <option value="completed">
+            {{ t("platformOnboarding.status.completed") }}
+          </option>
+          <option value="rejected">
+            {{ t("platformOnboarding.status.rejected") }}
+          </option>
         </select>
         <button
           type="button"
           data-testid="refresh-onboarding-applications"
-          class="w-fit rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+          class="w-fit rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50"
           :disabled="isLoading"
           @click="loadApplications"
         >
-          {{ isLoading ? "讀取中..." : "重新整理" }}
+          {{
+            isLoading
+              ? t("platformOnboarding.loading")
+              : t("platformOnboarding.refresh")
+          }}
         </button>
       </div>
     </div>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <div class="rounded-lg bg-white p-4 shadow-ios-card">
-        <div class="text-sm font-medium text-gray-500">申請總數</div>
+      <div class="rounded-2xl bg-white p-4 shadow-ios-card">
+        <div class="text-sm font-medium text-gray-500">
+          {{ t("platformOnboarding.stats.total") }}
+        </div>
         <div class="mt-1 text-2xl font-bold text-gray-900">{{ total }}</div>
       </div>
-      <div class="rounded-lg bg-white p-4 shadow-ios-card">
-        <div class="text-sm font-medium text-gray-500">待審核</div>
+      <div class="rounded-2xl bg-white p-4 shadow-ios-card">
+        <div class="text-sm font-medium text-gray-500">
+          {{ t("platformOnboarding.stats.pending") }}
+        </div>
         <div
           data-testid="approvable-count"
           class="mt-1 text-2xl font-bold text-emerald-700"
@@ -48,8 +66,10 @@
           {{ approvableCount }}
         </div>
       </div>
-      <div class="rounded-lg bg-white p-4 shadow-ios-card">
-        <div class="text-sm font-medium text-gray-500">已拒絕</div>
+      <div class="rounded-2xl bg-white p-4 shadow-ios-card">
+        <div class="text-sm font-medium text-gray-500">
+          {{ t("platformOnboarding.stats.rejected") }}
+        </div>
         <div
           data-testid="rejected-count"
           class="mt-1 text-2xl font-bold text-amber-700"
@@ -62,7 +82,7 @@
     <p
       v-if="error"
       data-testid="onboarding-error"
-      class="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700"
+      class="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700"
     >
       {{ error }}
     </p>
@@ -70,50 +90,76 @@
     <section
       v-if="ownerHandoff"
       data-testid="approved-owner-account"
-      class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"
+      class="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-950 shadow-ios-card"
     >
       <div
         class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
       >
         <div>
           <h2 class="font-semibold">
-            {{ ownerHandoff.businessName }}：店主開通資訊
+            {{
+              t("platformOnboarding.handoff.title", {
+                business: ownerHandoff.businessName,
+              })
+            }}
           </h2>
           <p class="mt-1 text-emerald-800">
-            系統目前不寄信。請把帳號與設定密碼連結交給店主；連結 24
-            小時內有效，使用一次後即失效。
+            {{ t("platformOnboarding.handoff.manualNote") }}
           </p>
         </div>
         <button
           type="button"
           data-testid="dismiss-approved-owner-account"
-          class="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-100"
+          class="shrink-0 rounded-full bg-white px-4 py-1.5 text-sm font-medium text-emerald-800 hover:bg-emerald-100"
           @click="closeOwnerHandoff"
         >
-          關閉
+          {{ t("platformOnboarding.handoff.dismiss") }}
         </button>
       </div>
 
       <p
+        v-if="ownerHandoff.delivery"
+        data-testid="owner-handoff-delivery"
+        class="mt-4 rounded-2xl bg-white px-3 py-2"
+        :class="
+          ownerHandoff.delivery.status === 'failed'
+            ? 'text-red-700'
+            : 'text-emerald-800'
+        "
+      >
+        {{
+          t("platformOnboarding.handoff.delivery", {
+            channel: deliveryChannelLabel(ownerHandoff.delivery.channel),
+            status: deliveryStatusLabel(ownerHandoff.delivery.status),
+          })
+        }}
+        <span v-if="ownerHandoff.delivery.errorMessage" class="break-all">
+          — {{ ownerHandoff.delivery.errorMessage }}
+        </span>
+      </p>
+
+      <p
         v-if="!ownerHandoff.account"
         data-testid="owner-handoff-unavailable"
-        class="mt-4 rounded-lg bg-white px-3 py-2 text-amber-800"
+        class="mt-4 rounded-2xl bg-white px-3 py-2 text-amber-800"
       >
-        查無可用的設定密碼連結，店主可能已經設定過密碼。若店主無法登入，請切換到這家店，在「員工管理」替店主重設密碼。
+        {{ t("platformOnboarding.handoff.unavailable") }}
       </p>
 
       <template v-else>
         <p
           v-if="isLinkExpired"
           data-testid="owner-link-expired"
-          class="mt-4 rounded-lg bg-white px-3 py-2 text-amber-800"
+          class="mt-4 rounded-2xl bg-white px-3 py-2 text-amber-800"
         >
-          這條設定密碼連結已過期，店主無法再使用。請切換到這家店，在「員工管理」替店主重設密碼。
+          {{ t("platformOnboarding.handoff.expired") }}
         </p>
 
         <dl class="mt-4 grid gap-3 sm:grid-cols-2">
           <div>
-            <dt class="text-xs font-medium text-emerald-700">帳號</dt>
+            <dt class="text-xs font-medium text-emerald-700">
+              {{ t("platformOnboarding.handoff.username") }}
+            </dt>
             <dd class="mt-1 flex items-center gap-2">
               <span
                 data-testid="owner-handoff-username"
@@ -124,15 +170,21 @@
               <button
                 type="button"
                 data-testid="copy-owner-username"
-                class="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-100"
+                class="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100"
                 @click="copyField('username', ownerHandoff.account.username)"
               >
-                {{ copiedField === "username" ? "已複製" : "複製" }}
+                {{
+                  copiedField === "username"
+                    ? t("platformOnboarding.handoff.copied")
+                    : t("platformOnboarding.handoff.copy")
+                }}
               </button>
             </dd>
           </div>
           <div>
-            <dt class="text-xs font-medium text-emerald-700">有效期限</dt>
+            <dt class="text-xs font-medium text-emerald-700">
+              {{ t("platformOnboarding.handoff.expiresAt") }}
+            </dt>
             <dd
               data-testid="owner-handoff-expires-at"
               class="mt-1 break-all font-mono text-sm"
@@ -141,7 +193,9 @@
             </dd>
           </div>
           <div class="sm:col-span-2">
-            <dt class="text-xs font-medium text-emerald-700">設定密碼連結</dt>
+            <dt class="text-xs font-medium text-emerald-700">
+              {{ t("platformOnboarding.handoff.setupLink") }}
+            </dt>
             <dd class="mt-1 flex items-start gap-2">
               <span
                 data-testid="owner-handoff-setup-link"
@@ -152,18 +206,24 @@
               <button
                 type="button"
                 data-testid="copy-owner-setup-link"
-                class="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-100 disabled:opacity-50"
+                class="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
                 :disabled="isLinkExpired"
                 @click="
                   copyField('link', ownerHandoff.account.setupPasswordLink)
                 "
               >
-                {{ copiedField === "link" ? "已複製" : "複製" }}
+                {{
+                  copiedField === "link"
+                    ? t("platformOnboarding.handoff.copied")
+                    : t("platformOnboarding.handoff.copy")
+                }}
               </button>
             </dd>
           </div>
           <div class="sm:col-span-2">
-            <dt class="text-xs font-medium text-emerald-700">餐廳 / 使用者</dt>
+            <dt class="text-xs font-medium text-emerald-700">
+              {{ t("platformOnboarding.handoff.ids") }}
+            </dt>
             <dd class="mt-1 break-all font-mono text-sm">
               {{ ownerHandoff.account.restaurantId }} /
               {{ ownerHandoff.account.userId }}
@@ -171,11 +231,32 @@
           </div>
         </dl>
       </template>
+
+      <!--
+        Regenerating rotates the owner's token, so any link already handed over
+        stops working. It is offered only when there is nothing usable left to
+        hand over, and still asks for confirmation first.
+      -->
+      <div v-if="canRegenerateSetupLink" class="mt-4">
+        <button
+          type="button"
+          data-testid="regenerate-setup-link"
+          class="rounded-full bg-white px-4 py-1.5 text-sm font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
+          :disabled="actionId === ownerHandoff.applicationId"
+          @click="openRegenerateDialog"
+        >
+          {{
+            actionId === ownerHandoff.applicationId
+              ? t("platformOnboarding.handoff.regenerating")
+              : t("platformOnboarding.handoff.regenerate")
+          }}
+        </button>
+      </div>
     </section>
 
     <div
       v-if="isLoading"
-      class="flex items-center justify-center rounded-lg bg-white py-12 text-gray-500 shadow-ios-card"
+      class="flex items-center justify-center rounded-2xl bg-white py-12 text-gray-500 shadow-ios-card"
     >
       <div
         class="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-600"
@@ -185,44 +266,44 @@
     <div
       v-else-if="applications.length === 0"
       data-testid="onboarding-empty"
-      class="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500"
+      class="rounded-2xl bg-white p-8 text-center text-sm text-gray-500 shadow-ios-card"
     >
-      目前沒有符合條件的申請。
+      {{ t("platformOnboarding.empty") }}
     </div>
 
-    <div v-else class="overflow-hidden rounded-lg bg-white shadow-ios-card">
+    <div v-else class="overflow-hidden rounded-2xl bg-white shadow-ios-card">
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
             <th
               class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
             >
-              店家
+              {{ t("platformOnboarding.table.business") }}
             </th>
             <th
               class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
             >
-              聯絡人
+              {{ t("platformOnboarding.table.contact") }}
             </th>
             <th
               class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
             >
-              方案 / 網域
+              {{ t("platformOnboarding.table.planDomain") }}
             </th>
             <th
               class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
             >
-              狀態
+              {{ t("platformOnboarding.table.status") }}
             </th>
             <th
               class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
             >
-              送出時間
+              {{ t("platformOnboarding.table.submittedAt") }}
             </th>
             <th
               class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500"
             >
-              操作
+              {{ t("platformOnboarding.table.actions") }}
             </th>
           </tr>
         </thead>
@@ -251,6 +332,17 @@
               <div class="mt-0.5 text-xs text-gray-500">
                 {{ application.contactPhone }}
               </div>
+              <div
+                v-if="application.rejectionReason"
+                data-testid="onboarding-rejection-reason"
+                class="mt-1 text-xs text-red-700"
+              >
+                {{
+                  t("platformOnboarding.rejectionReason", {
+                    reason: application.rejectionReason,
+                  })
+                }}
+              </div>
             </td>
             <td class="px-4 py-4 text-sm text-gray-700">
               <div>{{ planLabel(application.planId) }}</div>
@@ -275,41 +367,137 @@
                   v-if="application.status === 'completed'"
                   type="button"
                   :data-testid="`owner-handoff-${application.id}`"
-                  class="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+                  class="rounded-full bg-gray-100 px-4 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50"
                   :disabled="actionId === application.id"
                   @click="showOwnerHandoff(application)"
                 >
-                  開通資訊
+                  {{ t("platformOnboarding.actions.handoff") }}
                 </button>
                 <button
                   type="button"
                   :data-testid="`approve-onboarding-${application.id}`"
-                  class="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                  class="rounded-full bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
                   :disabled="
                     actionId === application.id ||
                     !isApprovableStatus(application.status)
                   "
                   @click="approveApplication(application)"
                 >
-                  核准
+                  {{ t("platformOnboarding.actions.approve") }}
                 </button>
                 <button
                   type="button"
                   :data-testid="`reject-onboarding-${application.id}`"
-                  class="rounded-lg bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
+                  class="rounded-full bg-red-50 px-4 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
                   :disabled="
                     actionId === application.id ||
-                    ['completed', 'provisioning'].includes(application.status)
+                    ['completed', 'provisioning', 'rejected'].includes(
+                      application.status,
+                    )
                   "
-                  @click="rejectApplication(application.id)"
+                  @click="openRejectDialog(application.id)"
                 >
-                  拒絕
+                  {{ t("platformOnboarding.actions.reject") }}
                 </button>
               </div>
             </td>
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <div
+      v-if="rejectingApplicationId"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="reject-application-title"
+    >
+      <form
+        class="w-full max-w-md rounded-2xl bg-white p-6 shadow-ios-card"
+        @submit.prevent="rejectApplication"
+      >
+        <h2
+          id="reject-application-title"
+          class="text-lg font-semibold text-gray-900"
+        >
+          {{ t("platformOnboarding.reject.title") }}
+        </h2>
+        <p class="mt-1 text-sm text-gray-600">
+          {{ t("platformOnboarding.reject.description") }}
+        </p>
+        <label
+          for="onboarding-rejection-reason"
+          class="mt-4 block text-sm font-medium text-gray-700"
+        >
+          {{ t("platformOnboarding.reject.reasonLabel") }}
+        </label>
+        <textarea
+          id="onboarding-rejection-reason"
+          v-model="rejectionReason"
+          data-testid="onboarding-rejection-reason-input"
+          required
+          minlength="2"
+          maxlength="500"
+          rows="3"
+          class="mt-1 w-full rounded-2xl bg-gray-50 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500/20"
+        />
+        <div class="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            class="rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            @click="closeRejectDialog"
+          >
+            {{ t("common.cancel") }}
+          </button>
+          <button
+            type="submit"
+            data-testid="confirm-reject-onboarding"
+            class="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+            :disabled="rejectionReason.trim().length < 2 || Boolean(actionId)"
+          >
+            {{ t("platformOnboarding.reject.confirm") }}
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div
+      v-if="isRegenerateDialogOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="regenerate-setup-link-title"
+    >
+      <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-ios-card">
+        <h2
+          id="regenerate-setup-link-title"
+          class="text-lg font-semibold text-gray-900"
+        >
+          {{ t("platformOnboarding.regenerate.title") }}
+        </h2>
+        <p class="mt-1 text-sm text-gray-600">
+          {{ t("platformOnboarding.regenerate.description") }}
+        </p>
+        <div class="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            class="rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            @click="closeRegenerateDialog"
+          >
+            {{ t("common.cancel") }}
+          </button>
+          <button
+            type="button"
+            data-testid="confirm-regenerate-setup-link"
+            class="rounded-full bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+            :disabled="Boolean(actionId)"
+            @click="regenerateSetupLink"
+          >
+            {{ t("platformOnboarding.regenerate.confirm") }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -318,12 +506,15 @@
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import {
   onboardingApplicationsService,
+  type CredentialDelivery,
   type OnboardingApplication,
   type OnboardingApplicationStatus,
   type ProvisionedOwnerAccount,
 } from "@/services/onboardingApplicationsService";
 import { useDateFormatter } from "@/composables/useDateFormatter";
+import { useI18n } from "@/i18n";
 
+const { t } = useI18n();
 const { formatDateTime } = useDateFormatter();
 
 interface OwnerHandoff {
@@ -331,6 +522,8 @@ interface OwnerHandoff {
   businessName: string;
   /** null when the server has no unused setup link left for this owner. */
   account: ProvisionedOwnerAccount | null;
+  /** How the credentials were delivered, so a failed email is visible here. */
+  delivery: CredentialDelivery | null;
 }
 
 type CopyableField = "username" | "link";
@@ -343,6 +536,9 @@ const actionId = ref("");
 const error = ref("");
 const ownerHandoff = ref<OwnerHandoff | null>(null);
 const copiedField = ref<"" | CopyableField>("");
+const rejectingApplicationId = ref("");
+const rejectionReason = ref("");
+const isRegenerateDialogOpen = ref(false);
 let copiedResetTimer: ReturnType<typeof setTimeout> | undefined;
 
 const approvableCount = computed(
@@ -367,6 +563,12 @@ const isLinkExpired = computed(() => {
   return Number.isFinite(expiresAtMs) && expiresAtMs <= Date.now();
 });
 
+const canRegenerateSetupLink = computed(
+  () =>
+    Boolean(ownerHandoff.value) &&
+    (!ownerHandoff.value?.account || isLinkExpired.value),
+);
+
 async function loadApplications() {
   isLoading.value = true;
   error.value = "";
@@ -379,7 +581,7 @@ async function loadApplications() {
     total.value = result.total;
   } catch (loadError) {
     console.error("Failed to load onboarding applications:", loadError);
-    error.value = "店家加入申請暫時無法載入。";
+    error.value = t("platformOnboarding.errors.load");
   } finally {
     isLoading.value = false;
   }
@@ -388,12 +590,14 @@ async function loadApplications() {
 function openOwnerHandoff(
   application: OnboardingApplication,
   account: ProvisionedOwnerAccount | undefined,
+  delivery: CredentialDelivery | undefined,
 ) {
   copiedField.value = "";
   ownerHandoff.value = {
     applicationId: application.id,
     businessName: application.businessName,
     account: account ?? null,
+    delivery: delivery ?? null,
   };
 }
 
@@ -407,11 +611,15 @@ async function approveApplication(application: OnboardingApplication) {
   error.value = "";
   try {
     const result = await onboardingApplicationsService.approve(application.id);
-    openOwnerHandoff(application, result.ownerAccount);
+    openOwnerHandoff(
+      application,
+      result.ownerAccount,
+      result.credentialDelivery,
+    );
     await loadApplications();
   } catch (approveError) {
     console.error("Failed to approve onboarding application:", approveError);
-    error.value = "核准失敗。請確認申請狀態仍可核准。";
+    error.value = t("platformOnboarding.errors.approve");
   } finally {
     actionId.value = "";
   }
@@ -427,10 +635,14 @@ async function showOwnerHandoff(application: OnboardingApplication) {
   error.value = "";
   try {
     const result = await onboardingApplicationsService.approve(application.id);
-    openOwnerHandoff(application, result.ownerAccount);
+    openOwnerHandoff(
+      application,
+      result.ownerAccount,
+      result.credentialDelivery,
+    );
   } catch (handoffError) {
     console.error("Failed to load onboarding owner handoff:", handoffError);
-    error.value = "無法取得開通資訊，請稍後再試。";
+    error.value = t("platformOnboarding.errors.handoff");
   } finally {
     actionId.value = "";
   }
@@ -449,19 +661,68 @@ async function copyField(field: CopyableField, value: string) {
     }, 2000);
   } catch (copyError) {
     console.error("Failed to copy onboarding handoff field:", copyError);
-    error.value = "無法複製到剪貼簿，請手動選取文字複製。";
+    error.value = t("platformOnboarding.errors.copy");
   }
 }
 
-async function rejectApplication(applicationId: string) {
+function openRejectDialog(applicationId: string) {
+  rejectingApplicationId.value = applicationId;
+  rejectionReason.value = "";
+}
+
+function closeRejectDialog() {
+  rejectingApplicationId.value = "";
+  rejectionReason.value = "";
+}
+
+async function rejectApplication() {
+  const applicationId = rejectingApplicationId.value;
+  const reason = rejectionReason.value.trim();
+  if (!applicationId || !reason) return;
   actionId.value = applicationId;
   error.value = "";
   try {
-    await onboardingApplicationsService.reject(applicationId);
+    await onboardingApplicationsService.reject(applicationId, reason);
+    closeRejectDialog();
     await loadApplications();
   } catch (rejectError) {
     console.error("Failed to reject onboarding application:", rejectError);
-    error.value = "拒絕申請失敗，請稍後再試。";
+    error.value = t("platformOnboarding.errors.reject");
+  } finally {
+    actionId.value = "";
+  }
+}
+
+function openRegenerateDialog() {
+  isRegenerateDialogOpen.value = true;
+}
+
+function closeRegenerateDialog() {
+  isRegenerateDialogOpen.value = false;
+}
+
+async function regenerateSetupLink() {
+  const handoff = ownerHandoff.value;
+  if (!handoff) return;
+  actionId.value = handoff.applicationId;
+  error.value = "";
+  try {
+    const result = await onboardingApplicationsService.regenerateSetupLink(
+      handoff.applicationId,
+    );
+    ownerHandoff.value = {
+      ...handoff,
+      account: result.ownerAccount,
+      delivery: result.credentialDelivery ?? null,
+    };
+    copiedField.value = "";
+    closeRegenerateDialog();
+  } catch (setupLinkError) {
+    console.error(
+      "Failed to regenerate onboarding setup link:",
+      setupLinkError,
+    );
+    error.value = t("platformOnboarding.errors.regenerate");
   } finally {
     actionId.value = "";
   }
@@ -472,14 +733,15 @@ function isApprovableStatus(status: OnboardingApplicationStatus) {
 }
 
 function statusLabel(status: OnboardingApplicationStatus) {
-  return (
-    {
-      submitted: "待審核",
-      provisioning: "建置中",
-      completed: "已完成",
-      rejected: "已拒絕",
-    } satisfies Record<OnboardingApplicationStatus, string>
-  )[status];
+  return t(`platformOnboarding.status.${status}`);
+}
+
+function deliveryChannelLabel(channel: CredentialDelivery["channel"]) {
+  return t(`platformOnboarding.deliveryChannel.${channel}`);
+}
+
+function deliveryStatusLabel(status: CredentialDelivery["status"]) {
+  return t(`platformOnboarding.deliveryStatus.${status}`);
 }
 
 function statusClass(status: OnboardingApplicationStatus) {
@@ -496,11 +758,11 @@ function statusClass(status: OnboardingApplicationStatus) {
 function planLabel(planId: OnboardingApplication["planId"]) {
   return (
     {
-      trial: "試用",
+      trial: t("platformOnboarding.plan.trial"),
       standard: "Standard",
       professional: "Professional",
       enterprise: "Enterprise",
-    }[planId ?? "trial"] ?? "試用"
+    }[planId ?? "trial"] ?? t("platformOnboarding.plan.trial")
   );
 }
 

@@ -27,6 +27,9 @@ const createApplicationSchema = z.object({
   contactName: z.string().min(2).max(100),
   contactEmail: z.email(),
   contactPhone: z.string().min(8).max(20),
+  address: z.string().trim().min(3).max(200).optional(),
+  district: z.string().trim().min(1).max(100).optional(),
+  city: z.string().trim().min(1).max(100).optional(),
   planId: z
     .enum(["standard", "professional", "enterprise", "trial"])
     .nullable()
@@ -68,20 +71,41 @@ router.post("/applications", async (c) => {
   const onboardingService = new OnboardingService(c.env);
 
   try {
+    const ipAddress = c.req.header("cf-connecting-ip") || "unknown";
+    const allowed =
+      await onboardingService.consumeApplicationRateLimit(ipAddress);
+    if (!allowed) {
+      throw new ApiError(
+        "RATE_LIMITED",
+        "Too many application requests. Please try again later.",
+        429,
+      );
+    }
+
     const body = await c.req.json();
     const validated = createApplicationSchema.parse(body);
 
     // Get request metadata
-    const ipAddress =
-      c.req.header("cf-connecting-ip") ||
-      c.req.header("x-forwarded-for") ||
-      "unknown";
     const userAgent = c.req.header("user-agent") || "unknown";
 
     const application = await onboardingService.createApplication(validated, {
       ipAddress,
       userAgent,
     });
+
+    const notifications = Promise.all([
+      onboardingService.notifyPlatformOfNewApplication(application),
+      onboardingService.sendApplicationReceivedEmail(
+        application,
+        application.applicationSecret!,
+      ),
+    ]);
+    try {
+      c.executionCtx.waitUntil(notifications);
+    } catch {
+      // Hono app.fetch tests and non-Worker hosts have no ExecutionContext.
+      await notifications;
+    }
 
     return c.json(
       {
@@ -131,11 +155,16 @@ router.get("/applications/:id", async (c) => {
         businessName: application.businessName,
         contactName: application.contactName,
         contactEmail: application.contactEmail,
+        address: application.address,
+        district: application.district,
+        city: application.city,
         latitude: application.latitude,
         longitude: application.longitude,
         planId: application.planId,
         assignedSubdomain: application.assignedSubdomain,
         status: application.status,
+        rejectionReason: application.rejectionReason,
+        rejectedAtMs: application.rejectedAtMs,
         tenantId: application.tenantId,
         createdAt: application.createdAt,
         completedAt: application.completedAt,

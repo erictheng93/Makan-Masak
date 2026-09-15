@@ -42,6 +42,7 @@ export {
 export { isWebPushEnabled } from "./base";
 export {
   NotificationService,
+  ResendEmailProvider,
   // Pure provider-selection function: the API layer uses it to refuse email
   // flows in production when no vendor is configured, without building a
   // service just to ask.

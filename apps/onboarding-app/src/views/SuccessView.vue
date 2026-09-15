@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useOnboardingStore } from "@/stores/onboarding";
 import {
   CheckCircleIcon,
@@ -10,11 +10,25 @@ import {
 } from "@heroicons/vue/24/outline";
 import { useToast } from "vue-toastification";
 import { useI18n } from "@/i18n";
+import {
+  getApplicationSecretFromHash,
+  getApplicationStatusPath,
+} from "@/utils/application-status";
 
 const { t } = useI18n();
 const router = useRouter();
+const route = useRoute();
 const toast = useToast();
 const store = useOnboardingStore();
+const statusPath = computed(() => {
+  const secret = getApplicationSecretFromHash(route.hash);
+  return store.applicationId && secret
+    ? getApplicationStatusPath(store.applicationId, secret)
+    : null;
+});
+const statusUrl = computed(() =>
+  statusPath.value ? `${window.location.origin}${statusPath.value}` : null,
+);
 
 // Redirect if no submitted application data
 onMounted(() => {
@@ -164,11 +178,7 @@ const handleStartNew = () => {
                 {{ t("success.nextSteps.email.title") }}
               </p>
               <p class="text-sm text-gray-500">
-                {{ t("success.nextSteps.email.prefix") }}
-                <span class="font-medium">{{
-                  store.application?.contactEmail
-                }}</span
-                >{{ t("success.nextSteps.email.suffix") }}
+                {{ t("success.nextSteps.email.description") }}
               </p>
             </div>
           </div>
@@ -188,8 +198,33 @@ const handleStartNew = () => {
         </div>
       </div>
 
+      <div
+        v-if="statusUrl"
+        class="mt-8 rounded-lg border border-primary-200 bg-primary-50 p-4 text-left"
+        data-testid="onboarding-status-link"
+      >
+        <p class="text-sm font-medium text-gray-900">
+          {{ t("success.statusLink.savePrompt") }}
+        </p>
+        <p class="mt-2 break-all font-mono text-xs text-gray-700">
+          {{ statusUrl }}
+        </p>
+        <button
+          type="button"
+          class="btn btn-secondary mt-3"
+          data-testid="copy-onboarding-status-link"
+          @click="copyToClipboard(statusUrl)"
+        >
+          <DocumentDuplicateIcon class="mr-2 h-4 w-4" />
+          {{ t("success.statusLink.copy") }}
+        </button>
+      </div>
+
       <!-- 按鈕 -->
       <div class="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+        <a v-if="statusPath" :href="statusPath" class="btn btn-primary">
+          {{ t("success.button.viewStatus") }}
+        </a>
         <button type="button" class="btn btn-secondary" @click="handleStartNew">
           {{ t("success.button.backHome") }}
         </button>

@@ -84,6 +84,20 @@
           >
             <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
             <span v-if="!isCollapsed" class="ml-3">{{ item.label }}</span>
+            <span
+              v-if="
+                item.name === 'platform-onboarding' &&
+                submittedApplicationCount > 0
+              "
+              data-testid="submitted-applications-badge"
+              class="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-primary-600 px-1.5 py-0.5 text-xs font-semibold text-white"
+              :aria-label="
+                t('platformOnboarding.badgeAriaLabel', {
+                  count: submittedApplicationCount,
+                })
+              "
+              >{{ submittedApplicationCount }}</span
+            >
           </component>
         </template>
         <p
@@ -120,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, type Component } from "vue";
+import { computed, onMounted, ref, type Component } from "vue";
 import { useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { UserRole } from "@/types";
@@ -131,6 +145,7 @@ import {
 } from "@/composables/useFeatureAvailability";
 import ModuleGate from "@makanmasak/shared/components/ModuleGate.vue";
 import type { ModuleKey } from "@makanmasak/shared/types/module-access";
+import { onboardingApplicationsService } from "@/services/onboardingApplicationsService";
 import {
   Home,
   ShoppingCart,
@@ -181,6 +196,25 @@ const { t } = useI18n();
 const { isDisabled } = useFeatureAvailability();
 
 const user = computed(() => authStore.user);
+const submittedApplicationCount = ref(0);
+
+async function loadSubmittedApplicationCount() {
+  if (!authStore.isAdminRole) return;
+  try {
+    const result = await onboardingApplicationsService.list({
+      status: "submitted",
+      limit: 1,
+    });
+    submittedApplicationCount.value = result.total;
+  } catch (error) {
+    // The badge is supplementary navigation context. A failed count must not
+    // prevent any navigation or expose a management API error in the sidebar.
+    console.error(
+      "Failed to load submitted onboarding application count:",
+      error,
+    );
+  }
+}
 
 // Platform-level routes that don't require restaurant context
 const platformItemNames = new Set([
@@ -542,6 +576,8 @@ const navigationItems = computed(() => {
       };
     });
 });
+
+onMounted(loadSubmittedApplicationCount);
 
 const isActiveRoute = (path: string) => {
   if (path === "/dashboard" && route.path === "/dashboard") return true;

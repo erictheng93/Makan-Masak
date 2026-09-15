@@ -82,8 +82,42 @@
             <textarea
               v-model="settings.restaurant.address"
               rows="3"
+              :placeholder="t('settings.general.restaurantAddressPlaceholder')"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
+            <p v-if="hasTemporaryAddress" class="mt-2 text-sm text-amber-700">
+              {{ t("settings.general.onboardingPlaceholderHint") }}
+            </p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">{{
+              t("settings.general.city")
+            }}</label>
+            <input
+              v-model="settings.restaurant.city"
+              data-testid="settings-city"
+              type="text"
+              maxlength="50"
+              :placeholder="t('settings.general.cityPlaceholder')"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">{{
+              t("settings.general.district")
+            }}</label>
+            <input
+              v-model="settings.restaurant.district"
+              data-testid="settings-district"
+              type="text"
+              maxlength="50"
+              required
+              :placeholder="t('settings.general.districtPlaceholder')"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <p v-if="hasTemporaryDistrict" class="mt-2 text-sm text-amber-700">
+              {{ t("settings.general.onboardingPlaceholderHint") }}
+            </p>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">{{
@@ -2106,6 +2140,14 @@ const settings = reactive({
     },
   },
 });
+const hasTemporaryAddress = computed(
+  () =>
+    settings.restaurant.address.startsWith("Onboarding GPS ") ||
+    settings.restaurant.address.startsWith("Onboarding application "),
+);
+const hasTemporaryDistrict = computed(() =>
+  settings.restaurant.district.startsWith("onboarding-"),
+);
 
 watch(
   () => route.query.tab,
@@ -2329,6 +2371,10 @@ const saveSettings = async () => {
   try {
     const restaurantId = authStore.restaurantId;
     if (restaurantId) {
+      if (!settings.restaurant.district.trim()) {
+        toast.error(t("settings.general.districtRequired"));
+        return;
+      }
       const businessHours = buildBusinessHours();
       await api.put(`/restaurants/${restaurantId}`, {
         // Top-level restaurant columns.

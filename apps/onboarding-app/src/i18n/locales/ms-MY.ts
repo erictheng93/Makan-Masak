@@ -27,6 +27,9 @@ const msMY: Messages = {
         label: "telefon",
         placeholder: "+1-234-567-8900",
       },
+      address: { label: "Alamat", placeholder: "cth. 1 Jalan Utama" },
+      district: { label: "Daerah", placeholder: "cth. Daerah Tengah" },
+      city: { label: "Bandar", placeholder: "cth. Bandar Taichung" },
       location: {
         failure:
           "Tidak dapat mendapatkan lokasi semasa anda. Semak kebenaran lokasi atau masukkan koordinat secara manual.",
@@ -66,6 +69,9 @@ const msMY: Messages = {
       longitudeInvalid: "Longitud mestilah antara -180 dan 180",
       longitudeRequired: "Sila masukkan longitud restoran",
       phoneRequired: "Sila masukkan nombor telefon",
+      addressRequired: "Sila masukkan alamat",
+      districtRequired: "Sila masukkan daerah",
+      cityRequired: "Sila masukkan bandar",
       subdomainInvalidFormat:
         "Hanya huruf kecil, nombor dan sempang dibenarkan",
       subdomainTaken: "URL ini sudah diambil",
@@ -122,7 +128,13 @@ const msMY: Messages = {
   success: {
     button: {
       backHome: "Kembali ke Rumah",
+      viewStatus: "Lihat Status Permohonan",
       goToAdmin: "Pergi ke Papan Pemuka Pentadbir",
+    },
+    statusLink: {
+      savePrompt:
+        "Simpan pautan ini. Ini satu-satunya cara untuk menyemak kemajuan permohonan anda.",
+      copy: "Salin pautan status",
     },
     contact: {
       prompt: "Sebarang pertanyaan? Kenalan",
@@ -136,6 +148,8 @@ const msMY: Messages = {
       email: {
         prefix: "Kami telah menghantar e-mel pengesahan kepada",
         suffix: ". Sila semak peti masuk anda.",
+        description:
+          "Kami akan menghantar e-mel apabila permohonan anda dikemas kini.",
         title: "E-mel Pengesahan",
       },
       start: {
@@ -162,6 +176,31 @@ const msMY: Messages = {
       title: "Ringkasan Permohonan",
     },
     title: "Permohonan Dihantar!",
+  },
+  status: {
+    title: "Status Permohonan",
+    subtitle: "Semak status semakan terkini permohonan restoran anda.",
+    loading: "Memuatkan status...",
+    businessName: "Nama Restoran",
+    currentStatus: "Status Semasa",
+    rejectionReason: "Sebab Penolakan",
+    lastUpdated: "Segarkan untuk menyemak kemas kini terkini.",
+    refresh: "Segarkan Status",
+    backHome: "Kembali ke Rumah",
+    error: {
+      missingLink: "Pautan status ini tidak lengkap.",
+      invalidLink: "Pautan status ini tidak sah.",
+      unavailable:
+        "Kami tidak dapat memuatkan permohonan ini. Sila cuba lagi kemudian.",
+    },
+    labels: {
+      pending: "Menunggu Semakan",
+      submitted: "Menunggu Semakan",
+      approved: "Diluluskan",
+      provisioning: "Sedang Disediakan",
+      completed: "Diaktifkan",
+      rejected: "Tidak Diluluskan",
+    },
   },
 };
 

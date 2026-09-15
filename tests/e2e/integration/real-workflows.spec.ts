@@ -43,6 +43,9 @@ const ONBOARDING_URL =
   (ENABLE_LOCAL_MANAGEMENT_WORKFLOWS
     ? localOnboardingUrlFallback(API_URL)
     : undefined);
+const OWNER_ACTIVATION_ADMIN_URL = optionalEnv(
+  "WORKFLOW_OWNER_ACTIVATION_ADMIN_URL",
+);
 const MANAGEMENT_API_URL =
   optionalEnv("WORKFLOW_MANAGEMENT_API_URL") ||
   (ENABLE_LOCAL_MANAGEMENT_WORKFLOWS
@@ -2825,17 +2828,15 @@ test.describe("Real system workflows", () => {
     await expect(page.locator("vite-error-overlay")).toHaveCount(0);
   });
 
-  test("onboarding app submits the application form to the management API", async ({
+  test("onboarding application activates an owner who can log in", async ({
     page,
   }) => {
     skipWhen(
-      !ONBOARDING_URL || !MANAGEMENT_API_URL,
-      "WORKFLOW_ONBOARDING_URL and WORKFLOW_MANAGEMENT_API_URL are required",
+      !ONBOARDING_URL || !MANAGEMENT_API_URL || !OWNER_ACTIVATION_ADMIN_URL,
+      "WORKFLOW_ONBOARDING_URL, WORKFLOW_MANAGEMENT_API_URL, and WORKFLOW_OWNER_ACTIVATION_ADMIN_URL are required",
     );
 
     const suffix = randomSuffix();
-    const subdomain = `workflow-${suffix}`;
-
     await page.goto(`${ONBOARDING_URL}/apply`, {
       waitUntil: "domcontentloaded",
     });
@@ -2846,23 +2847,13 @@ test.describe("Real system workflows", () => {
       .getByTestId("onboarding-contact-email")
       .fill(`workflow-${suffix}@example.com`);
     await page.getByTestId("onboarding-contact-phone").fill("0912345678");
+    await page
+      .getByTestId("onboarding-address")
+      .fill("台中市西屯區文華路 100 號");
+    await page.getByTestId("onboarding-district").fill("西屯區");
+    await page.getByTestId("onboarding-city").fill("台中市");
     await page.getByTestId("onboarding-latitude").fill("24.147736");
     await page.getByTestId("onboarding-longitude").fill("120.673648");
-    await page.getByTestId("onboarding-subdomain").fill(subdomain);
-
-    await expect
-      .poll(async () => {
-        const response = await fetch(
-          `${MANAGEMENT_API_ORIGIN_URL}/api/v1/onboarding/subdomain/check?subdomain=${subdomain}`,
-        );
-        if (!response.ok) return false;
-        const body = (await response.json()) as {
-          success: boolean;
-          data?: { available?: boolean };
-        };
-        return body.success && body.data?.available === true;
-      })
-      .toBe(true);
 
     const createResponsePromise = page.waitForResponse(
       (response) =>
@@ -2882,13 +2873,91 @@ test.describe("Real system workflows", () => {
       data?: { applicationId?: string; assignedSubdomain?: string };
     };
     expect(createBody.success).toBe(true);
-    expect(createBody.data?.assignedSubdomain).toBe(subdomain);
+    expect(createResponse.status()).toBe(201);
+    expect(createBody.data?.applicationId).toBeTruthy();
+    expect(createBody.data?.assignedSubdomain).toBeTruthy();
 
-    await expect(page).toHaveURL(/\/success$/);
+    await expect(page).toHaveURL(/\/success(?:#.*)?$/);
     await expect(page.getByTestId("onboarding-success")).toBeVisible();
     await expect(
       page.getByText(/Pending Platform Review|等待平台審核/),
     ).toBeVisible();
     await expect(page.locator("vite-error-overlay")).toHaveCount(0);
+
+    const platformLogin = await fetch(`${API_URL}/api/v1/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: "admin", password: "admin123" }),
+    });
+    expect(platformLogin.status).toBe(200);
+    const platformBody = (await platformLogin.json()) as {
+      data?: { token?: string };
+    };
+    expect(platformBody.data?.token).toBeTruthy();
+
+    const exchange = await fetch(`${MANAGEMENT_API_URL}/auth/exchange`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: platformBody.data!.token }),
+    });
+    expect(exchange.status).toBe(200);
+    const exchangeBody = (await exchange.json()) as {
+      data?: { token?: string };
+    };
+    expect(exchangeBody.data?.token).toBeTruthy();
+
+    const approve = await fetch(
+      `${MANAGEMENT_API_URL}/admin/onboarding/applications/${createBody.data!.applicationId}/approve`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${exchangeBody.data!.token}` },
+      },
+    );
+    expect(approve.status).toBe(200);
+    const approveBody = (await approve.json()) as {
+      data?: {
+        ownerAccount?: {
+          username: string;
+          setupPasswordLink: string;
+          restaurantId: string;
+        };
+      };
+    };
+    const ownerAccount = approveBody.data?.ownerAccount;
+    expect(ownerAccount?.setupPasswordLink).toBeTruthy();
+
+    const setupUrl = new URL(ownerAccount!.setupPasswordLink);
+    await page.goto(
+      `${OWNER_ACTIVATION_ADMIN_URL}${setupUrl.pathname}${setupUrl.search}`,
+      {
+        waitUntil: "domcontentloaded",
+      },
+    );
+    await expect(page.locator("#new-password")).toBeVisible();
+    const password = `Owner@${suffix}Setup1`;
+    await page.locator("#new-password").fill(password);
+    await page.locator("#confirm-password").fill(password);
+    await page
+      .getByRole("button", { name: /重設密碼|Reset Password/i })
+      .click();
+    await expect(page).toHaveURL(/\/login$/);
+
+    await page.locator("#username").fill(ownerAccount!.username);
+    await page.locator("#password").fill(password);
+    await page.getByRole("button", { name: /登入|Login/i }).click();
+    await expect(page).toHaveURL(/\/dashboard(?:\/)?$/);
+    const me = await fetch(`${API_URL}/api/v1/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: ownerAccount!.username, password }),
+    });
+    expect(me.status).toBe(200);
+    const meBody = (await me.json()) as {
+      data?: { user?: { role?: number; restaurantId?: string } };
+    };
+    expect(meBody.data?.user).toMatchObject({
+      role: 1,
+      restaurantId: ownerAccount!.restaurantId,
+    });
   });
 });

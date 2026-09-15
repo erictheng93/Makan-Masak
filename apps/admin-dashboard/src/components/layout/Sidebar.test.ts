@@ -4,6 +4,11 @@ import { mount } from "@vue/test-utils";
 import { reactive, ref } from "vue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Sidebar from "./Sidebar.vue";
+import { onboardingApplicationsService } from "@/services/onboardingApplicationsService";
+
+vi.mock("@/services/onboardingApplicationsService", () => ({
+  onboardingApplicationsService: { list: vi.fn() },
+}));
 
 const routeState = reactive({
   path: "/dashboard/platform",
@@ -80,6 +85,12 @@ describe("Sidebar", () => {
     authState.canManageMenu = true;
     authState.canAccessAdminFeatures = true;
     disabledFeatures.value = new Set();
+    vi.mocked(onboardingApplicationsService.list).mockResolvedValue({
+      applications: [],
+      total: 0,
+      page: 1,
+      limit: 1,
+    });
   });
 
   function mountSidebar() {
@@ -121,6 +132,26 @@ describe("Sidebar", () => {
       false,
     );
     expect(wrapper.find('[data-testid="nav-item-menu"]').exists()).toBe(false);
+  });
+
+  it("shows the submitted application total on the platform onboarding entry", async () => {
+    vi.mocked(onboardingApplicationsService.list).mockResolvedValue({
+      applications: [],
+      total: 3,
+      page: 1,
+      limit: 1,
+    });
+
+    const wrapper = mountSidebar();
+    await vi.dynamicImportSettled();
+
+    expect(onboardingApplicationsService.list).toHaveBeenCalledWith({
+      status: "submitted",
+      limit: 1,
+    });
+    expect(
+      wrapper.get('[data-testid="submitted-applications-badge"]').text(),
+    ).toBe("3");
   });
 
   it("shows restaurant navigation under a shop section after selection", () => {
