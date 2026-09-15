@@ -37,16 +37,10 @@
                   v-if="shopCartStore.fulfillmentType"
                   :class="[
                     'ml-2 px-2 py-0.5 rounded-full text-xs font-medium',
-                    shopCartStore.fulfillmentType === 'delivery'
-                      ? 'bg-ios-orange/15 text-ios-orange'
-                      : 'bg-ios-green/15 text-ios-green',
+                    fulfillmentBadgeClass,
                   ]"
                 >
-                  {{
-                    shopCartStore.fulfillmentType === "delivery"
-                      ? t("shopCart.delivery")
-                      : t("shopCart.takeaway")
-                  }}
+                  {{ fulfillmentBadgeLabel }}
                 </span>
               </div>
               <p class="text-sm text-ios-secondary">
@@ -634,6 +628,7 @@
       :shop-qr-code="shopQrCode"
       :waiting-ticket-id="waitingTicketId"
       :ordering-disabled="orderingBlocked"
+      :fulfillment="shopFulfillment"
       @close="showCart = false"
     />
   </div>
@@ -731,6 +726,34 @@ const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery({
   queryFn: () => menuApi.getRestaurant(props.restaurantId),
   staleTime: 5 * 60 * 1000, // 5分鐘
 });
+
+// The badge used to be a two-way ternary (`delivery ? 外送 : 外帶`) over a
+// three-valued store, so a diner who picked 內用 on the order-type landing page
+// was told 外帶 on every menu screen.
+const fulfillmentBadgeLabel = computed(() => {
+  switch (shopCartStore.fulfillmentType) {
+    case "delivery":
+      return t("shopCart.delivery");
+    case "dine-in":
+      return t("orderTypeLanding.dineIn");
+    default:
+      return t("shopCart.takeaway");
+  }
+});
+
+// Same source OrderTypeLandingView gates its three buttons on, so the cart
+// cannot offer a method the landing page refused to show.
+const shopFulfillment = computed(() => ({
+  dineIn: restaurant.value?.settings?.enableDineIn ?? false,
+  takeaway: restaurant.value?.settings?.enableTakeaway ?? false,
+  delivery: restaurant.value?.settings?.enableDelivery ?? false,
+}));
+
+const fulfillmentBadgeClass = computed(() =>
+  shopCartStore.fulfillmentType === "delivery"
+    ? "bg-ios-orange/15 text-ios-orange"
+    : "bg-ios-green/15 text-ios-green",
+);
 
 const {
   data: menuStructure,

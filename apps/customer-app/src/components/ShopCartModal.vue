@@ -84,6 +84,19 @@
                   </p>
                   <div class="flex gap-2">
                     <button
+                      v-if="dineInEnabled"
+                      :class="[
+                        'flex-1 py-2 px-3 rounded-full text-sm font-semibold transition-colors',
+                        shopCartStore.fulfillmentType === 'dine-in'
+                          ? 'bg-green-500 text-white'
+                          : 'bg-gray-100 text-ios-secondary',
+                      ]"
+                      @click="shopCartStore.setFulfillmentType('dine-in')"
+                    >
+                      {{ t("orderTypeLanding.dineIn") }}
+                    </button>
+                    <button
+                      v-if="takeawayEnabled"
                       :class="[
                         'flex-1 py-2 px-3 rounded-full text-sm font-semibold transition-colors',
                         shopCartStore.fulfillmentType === 'takeaway'
@@ -434,6 +447,18 @@ const props = defineProps<{
    * which is the same answer the order endpoint would give.
    */
   orderingDisabled?: boolean;
+  /**
+   * The shop's own fulfillment switches, as OrderTypeLandingView reads them
+   * (`restaurants.settings.enable*`). Without them this modal offered 外帶 with
+   * no guard at all and 外送 behind `deliveryFee >= 0`, which is true for the
+   * default fee of 0 -- so a dine-in-only shop showed exactly the two methods
+   * it does not run, and never the one it does.
+   */
+  fulfillment?: {
+    dineIn: boolean;
+    takeaway: boolean;
+    delivery: boolean;
+  };
 }>();
 
 const emit = defineEmits<{
@@ -463,16 +488,18 @@ const deliveryAddress = ref("");
 const deliveryPhone = ref("");
 const deliveryInstructions = ref("");
 
-const deliveryEnabled = computed(() => {
-  if (props.waitingTicketId) {
-    return false;
-  }
-  // If user got to delivery selection on landing page, delivery is enabled
-  return (
-    shopCartStore.fulfillmentType === "delivery" ||
-    shopCartStore.deliveryFee >= 0
-  );
-});
+// A waiting-list pre-order is always eaten in, so it pins the method.
+const dineInEnabled = computed(
+  () => !props.waitingTicketId && (props.fulfillment?.dineIn ?? false),
+);
+
+const takeawayEnabled = computed(
+  () => !props.waitingTicketId && (props.fulfillment?.takeaway ?? false),
+);
+
+const deliveryEnabled = computed(
+  () => !props.waitingTicketId && (props.fulfillment?.delivery ?? false),
+);
 
 const getWaitingListCustomerPhone = () => {
   if (!props.waitingTicketId) {
