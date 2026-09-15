@@ -82,10 +82,7 @@
               <h3 class="text-lg font-medium text-green-900">
                 {{ t("auth.resetSuccess") }}
               </h3>
-              <p class="mt-2 text-sm text-green-700">
-                {{ successMessage }}
-              </p>
-              <p class="mt-3 text-sm text-green-600">
+              <p class="mt-2 text-sm text-green-600">
                 {{ t("auth.resetSuccessMessage") }}
               </p>
             </div>
@@ -380,7 +377,6 @@ const isLoading = ref(false);
 const success = ref(false);
 const error = ref("");
 const maskedEmail = ref("");
-const successMessage = ref("");
 const token = ref("");
 
 const form = reactive({
@@ -519,8 +515,9 @@ const handleSubmit = async () => {
     const data = response.data;
 
     if (data.success) {
+      // The success copy is all local (auth.resetSuccess / resetSuccessMessage).
+      // data.message is the API's untranslated English, so it is not shown.
       success.value = true;
-      successMessage.value = data.message || t("auth.passwordResetSuccess");
 
       // Redirect to login after 2 seconds
       setTimeout(() => {

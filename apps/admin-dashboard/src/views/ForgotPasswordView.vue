@@ -29,10 +29,7 @@
               <h3 class="text-lg font-medium text-green-900">
                 {{ t("auth.emailSent") }}
               </h3>
-              <p class="mt-2 text-sm text-green-700">
-                {{ successMessage }}
-              </p>
-              <p class="mt-3 text-sm text-green-600">
+              <p class="mt-2 text-sm text-green-600">
                 {{ t("auth.emailSentMessage") }}
               </p>
             </div>
@@ -159,7 +156,6 @@ const isLoading = ref(false);
 const success = ref(false);
 const error = ref("");
 const emailError = ref("");
-const successMessage = ref("");
 
 const form = reactive({
   email: "",
@@ -209,8 +205,9 @@ const handleSubmit = async () => {
     const data = response.data;
 
     if (data.success) {
+      // The success copy is all local (auth.emailSent / emailSentMessage).
+      // data.message is the API's untranslated English, so it is not shown.
       success.value = true;
-      successMessage.value = data.message || t("auth.resetEmailSent");
     } else {
       error.value = resolveUserFacingError(
         { response: { status: response.status, data } },
