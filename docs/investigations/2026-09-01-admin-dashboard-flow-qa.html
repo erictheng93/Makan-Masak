@@ -205,7 +205,7 @@ footer{
     <span><b>後端</b> api.makanmasak.com</span>
     <span><b>帳號</b> <code>owner1</code>（role 1 店主）</span>
     <span><b>餐廳</b> 麻吉 Demo 廣東粥 <code>019fa136-…31a1</code></span>
-    <span><b>最後追蹤</b> 2026-09-14（21 列全數收掉，見結論摘要下方的三張後續進展卡）</span>
+    <span><b>最後追蹤</b> 2026-09-15（21 列全數收掉，見結論摘要下方的四張後續進展卡）</span>
   </div>
 </header>
 
@@ -236,7 +236,7 @@ footer{
   <p>共 20 項發現（拆成 21 列，F10 分 a／b 兩項）。其中 <b>5 項是流程走不完的硬阻斷</b>，4 項已在本次直接修掉。</p>
   <p class="note">
     <b>「處置」欄是 2026-09-14 的現況，不是 09-01 當天的判定。</b>
-    當天所有未當場修掉的都標「開 issue」；那之後陸續修掉的變化記在下方三張後續進展卡裡，
+    當天所有未當場修掉的都標「開 issue」；那之後陸續修掉的變化記在下方四張後續進展卡裡，
     報告本文（各項發現的描述與證據）維持 09-01 的原樣不動。
   </p>
   <div class="tablewrap">
@@ -738,6 +738,98 @@ footer{
       <b>上一張卡片（09-09）有幾句話已經過期。</b>
       F2「核心沒動」、F20「原封不動」、F5 仍開、F12 殘留、<code>dd792bd2</code> 未上線，都已被本卡片取代；
       F7「已上線」到 09-10 才真的能用。卡片維持當日原樣，這裡註記以免誤讀。
+    </p>
+  </div>
+  <div class="card" style="--ac:var(--green)">
+    <h3 style="margin-top:0">後續進展（2026-09-15 現查）</h3>
+    <p>
+      這張卡片只做一件事：把上一張卡片最後那張「仍開著」的表更新到現況。
+      本報告的 21 列沒有變化，仍然全數收掉；本文與前三張卡片一律不改。
+    </p>
+
+    <h4>一、#370／#371 已經收掉並上線</h4>
+    <p>
+      兩者都在 <b>2026-09-14T09:16:09Z</b> 關閉。上一張卡片寫於同日 09:02Z 的 commit 之後、
+      關閉之前，所以它那張表把四列都寫成「仍開著」—— <b>其中兩列已經過期</b>。
+    </p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th class="mono">issue</th><th>commit</th><th>怎麼收的</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">#370</td>
+            <td class="mono">b0ab52ab<br>0cb782b0</td>
+            <td>
+              <code>admin-real</code> 不再只走 vite proxy：把真實 admin app 指向 <b>Worker 來源</b>，
+              在瀏覽器裡跑一次帶 <code>Idempotency-Key</code> 與 register／shift header 的結帳，
+              preflight 真的會發出去。後續的 <code>0cb782b0</code> 再補一次
+              <b>跨來源、帶認證的退款</b>，並回頭在本機 D1 斷言那筆退款。
+              09-12 那種「CI 全綠、線上 100% 失敗」的形狀，現在 CI 抓得到。
+            </td>
+          </tr>
+          <tr>
+            <td class="mono">#371</td>
+            <td class="mono">60db9623<br>4c6c32f8<br>8e506719</td>
+            <td>
+              role 4 可以讀<b>自己餐廳</b>的當日 POS 報表，<code>/reports/export</code> 與收銀機統計維持 owner／admin。
+              報表取不到時顯示「無法取得」而不是假的 NT$0。
+              <code>4c6c32f8</code> 把餐廳 ID 的解析收斂成單一 helper（沒有租戶的收銀員即使送字面
+              <code>undefined</code> 也要擋），租戶三種情況由
+              <code>pos-shift-report-tenancy.real.integration.test.ts</code> 對真 D1 守著。
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">
+      <code>8e506719</code> 值得單獨記一筆：<code>pos-and-customer-roles</code> 原本把
+      <code>/reports/daily</code> 列在「收銀員必須被拒絕」的清單裡，#371 刻意放寬之後
+      CI 的 real-integration job 就紅了（<code>expected 200 to be 403</code>）。
+      修法是<b>移除該列</b>而不是把它翻成 expect 200 —— 自家店／他店／無租戶三種情況已經有專屬檔案守著，
+      在這裡重複斷言只會讓下一次放寬權限時再紅一次。
+    </p>
+
+    <h4>二、線上版本（2026-09-15 現查）</h4>
+    <p>
+      admin Pages 生產部署的來源是 <code>0cb782b</code>（09-14），
+      API Worker production 最後一次部署是 <b>2026-09-14T09:17:29Z</b>（version <code>d557eab5</code>）。
+      上面五個 commit 的 author date 都是 09-14 09:02Z，早於那次部署，
+      所以 <b>#370／#371 的修正都已經在線上</b>。
+      唯一晚於部署的是 <code>8e506719</code>（09:31Z），它只動一個 real-integration 測試檔，沒有 runtime 影響。
+      本機 <code>main</code> 與 <code>origin/main</code> 同步（0 ahead／0 behind）。
+    </p>
+
+    <h4>三、仍開著（複查過）</h4>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th class="mono">issue</th><th>內容</th><th>2026-09-15 複查</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">#368</td>
+            <td>「自動確認訂單」存成 <code>settings.autoAcceptOrders</code>，建單流程從不讀它</td>
+            <td>
+              <b>仍然成立。</b>全 repo 掃過 <code>autoAcceptOrders</code>，只命中
+              <code>admin-dashboard/src/types/index.ts</code> 的型別、
+              <code>IntegrationsSettings.vue</code> 的 <b>Uber Eats 整合設定</b>（同名但不同東西），
+              以及一個測試。建單路徑零引用。
+            </td>
+          </tr>
+          <tr>
+            <td class="mono">#369</td>
+            <td>台灣 HiNet 使用者被導到 SJC，登入後業務端點 0.9–1.2 秒</td>
+            <td>未動。<code>P99 &lt; 300ms</code> 仍然無法宣稱——沒有真實流量就沒有 P99。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>四、一處死碼殘留</h4>
+    <p>
+      <code>AnalyticsView.vue:524</code> 的 <code>getDashboardPeriod()</code> 仍把
+      <code>quarter</code> 映射成 <code>"month"</code>。上一張卡片已經判定它是死碼
+      （<code>getDashboardData(restaurantId)</code> 只收一個參數，路由傳進去的 period 直接被丟掉），
+      本輪確認<b>該映射與其唯一呼叫點 <code>:672</code> 都還在</b>。
+      它不影響任何結果，屬於整潔問題，沒有為它開 issue。
     </p>
   </div>
 </section>
@@ -1264,6 +1356,10 @@ onStatusChange(callback) {
   <p>
     註：production 前端落後 <code>origin/main</code> 30 個 commit，本報告每一項發現
     都已回頭在 <code>a59b76f</code> 的原始碼上確認，不是拿 main 的程式碼解釋線上行為。
+  </p>
+  <p>
+    下一輪：<a href="./2026-09-15-customer-app-flow-qa.html">顧客端流程 QA — 2026-09-15</a>
+    （master-user-flow 的「1. 顧客端」）。
   </p>
   <p>
     後續追蹤：2026-09-02、2026-09-09、2026-09-14（對照 <code>origin/main@c9588043</code>、
