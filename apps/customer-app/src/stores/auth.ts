@@ -54,7 +54,14 @@ const toCustomerUser = (customer: CustomerSummary): CustomerUser => ({
   role: 5,
 });
 
-const failureMessage = (_err: unknown): string => t("auth.loginFailed");
+// Every auth action used to funnel through one hardcoded "login failed", so a
+// registration that the server refused -- including the 503 it returns when no
+// verification channel is configured -- told the customer their *login* had
+// failed, on the registration screen.
+const failureMessage = (
+  _err: unknown,
+  fallbackKey = "auth.loginFailed",
+): string => t(fallbackKey);
 
 const failureCode = (err: unknown): string | undefined => {
   const code = (err as { code?: unknown } | null)?.code;
@@ -203,7 +210,7 @@ export const useAuthStore = defineStore("auth", () => {
       const data = await customerIdentityApi.register(input);
       return { success: true, data };
     } catch (err: unknown) {
-      error.value = failureMessage(err);
+      error.value = failureMessage(err, "auth.registerFailed");
       return { success: false, error: error.value, code: failureCode(err) };
     } finally {
       isLoading.value = false;

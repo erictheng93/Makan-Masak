@@ -279,9 +279,28 @@ describe("customer auth store", () => {
       }),
     ).resolves.toEqual({
       success: false,
-      error: "auth.loginFailed",
+      // Not `auth.loginFailed`: this is registration. The store used to hand
+      // every auth action the same hardcoded login message, so a registration
+      // the server refused -- including the 503 it returns when no
+      // verification channel is configured -- told the diner their *login*
+      // had failed, on the registration screen.
+      error: "auth.registerFailed",
       code: "VERIFICATION_EMAIL_FAILED",
     });
     expect(store.isLoading).toBe(false);
+  });
+
+  it("keeps the login wording for sign-in failures", async () => {
+    vi.mocked(customerIdentityApi.loginWithPassword).mockRejectedValue(
+      new Error("nope"),
+    );
+    const store = useAuthStore();
+
+    await expect(
+      store.loginWithPassword("hock@example.com", "wrong"),
+    ).resolves.toEqual({
+      success: false,
+      error: "auth.loginFailed",
+    });
   });
 });
