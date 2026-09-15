@@ -471,6 +471,13 @@ const handleWebSocketMessage = (message: RealtimeEvent) => {
     };
   });
 
+  // The patch above carries `status` and nothing else, so every per-step
+  // timestamp the timeline reads (`confirmedAt`, `preparingAt`, `readyAt`,
+  // `deliveredAt`) stayed undefined for the whole live session -- the times
+  // only appeared if the diner happened to reload. Refetch so the rendered
+  // order is the server's, not a locally patched copy of it.
+  void queryClient.invalidateQueries({ queryKey: ["order", props.orderId] });
+
   toast.info(
     tWithParams("toast.orderStatusUpdated", {
       status: getStatusTitle(message.data.status as OrderStatus),
@@ -580,7 +587,10 @@ const orderTimeline = computed(() => {
       status: "preparing",
       title: t("orderTracking.timeline.preparing"),
       description: t("orderTracking.timeline.preparingDesc"),
-      time: null,
+      // The other four steps each read their own `*At`. This one was the only
+      // hardcoded `null`, so 正在製作 never showed a time even though
+      // `orders.preparing_at_ms` is written on every transition into it.
+      time: order.value.preparingAt,
       completed: currentStepIndex >= 2,
     },
     {
