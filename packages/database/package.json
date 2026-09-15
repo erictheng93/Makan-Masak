@@ -37,12 +37,12 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260804.1",
+    "@cloudflare/workers-types": "^5.20260914.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^25.0.5",
     "cross-env": "^10.1.0",
-    "drizzle-kit": "^0.31.6",
+    "drizzle-kit": "^0.31.10",
     "miniflare": "^3.20250718.3",
     "tsup": "^8.0.0",
     "tsx": "^4.0.0",

@@ -28,7 +28,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260804.1",
+    "@cloudflare/workers-types": "^5.20260914.1",
     "@makanmasak/database": "workspace:*",
     "@makanmasak/shared-types": "workspace:*",
     "@types/bcryptjs": "^2.4.6",

@@ -22,7 +22,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260804.1",
+    "@cloudflare/workers-types": "^5.20260914.1",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/ws": "^8.5.10",
     "@vitest/coverage-v8": "4.1.9",

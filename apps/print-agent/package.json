@@ -18,7 +18,7 @@
     "@makanmasak/database": "workspace:*",
     "@makanmasak/queue-core": "workspace:*",
     "@makanmasak/shared-types": "workspace:*",
-    "cors": "^2.8.5",
+    "cors": "^2.8.6",
     "dotenv": "^16.3.1",
     "express": "^4.22.2",
     "ws": "^8.21.0",
