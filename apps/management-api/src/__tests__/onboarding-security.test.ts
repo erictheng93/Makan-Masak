@@ -5,6 +5,16 @@ import type { ManagementEnv } from "../types";
 const onboardingMocks = vi.hoisted(() => ({
   createApplication: vi.fn(),
   getApplication: vi.fn(),
+  // The route admits a request only when this resolves true, so a mock that
+  // omits it fails as "is not a function" and every create-application case
+  // reads as a 500 -- which is what the suite did once the route started
+  // calling it. Default to admitting; the rate-limited case overrides it.
+  consumeApplicationRateLimit: vi.fn(async () => true),
+  // Both fire inside the create-application path (via waitUntil), so they are
+  // part of that route's contract with the service even though the response
+  // does not wait for them.
+  notifyPlatformOfNewApplication: vi.fn(async () => undefined),
+  sendApplicationReceivedEmail: vi.fn(async () => undefined),
   verifyApplicationSecret: vi.fn(),
 }));
 
