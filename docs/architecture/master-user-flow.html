@@ -233,8 +233,17 @@ body{
   margin-bottom:8px;
 }
 .grp .flow{justify-content:center}
+/* a second entry into the same flow, e.g. 入駐流程's direct-create door */
+.sub-h{
+  display:block; text-align:center;
+  font-size:10px; font-weight:600; color:var(--ink-3);
+  margin:10px 0 6px;
+}
+/* columns differ in group count; pin every footer to the bottom edge */
+.col{display:flex; flex-direction:column}
+.col > .grp:nth-last-child(2){margin-bottom:12px}
 .col-foot{
-  margin:12px 12px 0; padding:8px 11px; border-radius:12px;
+  margin:auto 12px 0; padding:8px 11px; border-radius:12px;
   background:color-mix(in srgb, var(--ac) 10%, transparent);
   font-size:10.5px; line-height:1.6; color:var(--ink-2);
 }
@@ -462,8 +471,8 @@ body{
         <span class="lg"><svg width="30" height="10" viewBox="0 0 30 10" fill="none" stroke="var(--flow-ext)" stroke-width="1.7" stroke-linecap="round"><path d="M1 5h22" stroke-dasharray="2 3"/><path d="m20 2 3.5 3-3.5 3"/></svg>外部系統互動</span>
       </div>
       <div class="stamp">
-        版本：<b class="mono">v1.0</b><br>
-        日期：<b class="mono">2026/08/19</b>
+        版本：<b class="mono">v1.1</b><br>
+        日期：<b class="mono">2026/09/15</b>
       </div>
     </div>
   </header>
@@ -586,6 +595,21 @@ body{
             <svg><use href="#i-store"/></svg>
             <h2>2. 店家後台</h2>
             <span class="who">Admin Dashboard<br>role 1 店主</span>
+          </div>
+
+          <div class="grp">
+            <span class="grp-h">開通與首次設定</span>
+            <div class="flow">
+              <div class="node"><svg class="node-ico"><use href="#i-key"/></svg><span class="node-t">收到開通資訊</span><span class="node-s">連結或帳密<br>由平台人工轉交</span></div>
+              <svg class="arr tight"><use href="#i-arrow"/></svg>
+              <div class="node"><svg class="node-ico"><use href="#i-lock"/></svg><span class="node-t">設定密碼</span><span class="node-s"><em class="mono">/reset-password</em><br>連結 24h 內有效</span></div>
+              <svg class="arr tight"><use href="#i-arrow"/></svg>
+              <div class="node"><svg class="node-ico"><use href="#i-login"/></svg><span class="node-t">首次登入</span><span class="node-s">平台提供帳號<br>進入店家後台</span></div>
+              <svg class="arr tight"><use href="#i-arrow"/></svg>
+              <div class="node"><svg class="node-ico"><use href="#i-pin"/></svg><span class="node-t">補齊店家資料</span><span class="node-s">地址 · 營業時間<br>預設地址需改</span></div>
+              <svg class="arr tight"><use href="#i-arrow"/></svg>
+              <div class="node"><svg class="node-ico"><use href="#i-store"/></svg><span class="node-t">開放點餐</span><span class="node-s">菜單 · 桌位 QR<br>開放訪客點餐</span></div>
+            </div>
           </div>
 
           <div class="grp">
@@ -721,21 +745,25 @@ body{
           <div class="col-head">
             <svg><use href="#i-shield"/></svg>
             <h2>4. 平台管理</h2>
-            <span class="who">Management Portal · Onboarding<br>role 0 平台管理者</span>
+            <span class="who">Admin Dashboard 平台區 · Management Portal<br>role 0 平台管理者</span>
           </div>
 
           <div class="grp">
             <span class="grp-h">入駐流程</span>
             <div class="flow">
-              <div class="node"><svg class="node-ico"><use href="#i-store"/></svg><span class="node-t">申請入駐</span><span class="node-s">公開申請頁<br><em class="mono">:3011</em></span></div>
+              <div class="node"><svg class="node-ico"><use href="#i-store"/></svg><span class="node-t">送出申請</span><span class="node-s">公開申請頁 <em class="mono">:3011</em><br>店名 · 聯絡人 · 座標</span></div>
               <svg class="arr tight"><use href="#i-arrow"/></svg>
-              <div class="node"><svg class="node-ico"><use href="#i-filecheck"/></svg><span class="node-t">提交資料</span><span class="node-s">店家資訊<br>營業證明</span></div>
+              <div class="node"><svg class="node-ico"><use href="#i-search"/></svg><span class="node-t">平台審核</span><span class="node-s">後台「開店申請」<br>核准 · 拒絕</span></div>
               <svg class="arr tight"><use href="#i-arrow"/></svg>
-              <div class="node"><svg class="node-ico"><use href="#i-search"/></svg><span class="node-t">平台審核</span><span class="node-s">申請列表<br>資格檢核</span></div>
+              <div class="node"><svg class="node-ico"><use href="#i-building"/></svg><span class="node-t">建立租戶</span><span class="node-s">租戶 · 訂閱<br>餐廳 · 店主帳號</span></div>
               <svg class="arr tight"><use href="#i-arrow"/></svg>
-              <div class="node"><svg class="node-ico"><use href="#i-check"/></svg><span class="node-t">核准／駁回</span><span class="node-s">核准開通<br>駁回通知</span></div>
+              <div class="node wide"><svg class="node-ico"><use href="#i-key"/></svg><span class="node-t">交付設定連結</span><span class="node-s">核准後畫面顯示一次<br>人工轉交 · 寄信規劃中</span></div>
+            </div>
+            <span class="sub-h">另一入口：平台直接建店</span>
+            <div class="flow">
+              <div class="node wide"><svg class="node-ico"><use href="#i-userplus"/></svg><span class="node-t">帳號管理</span><span class="node-s">建立店家 ＋ 店主<br>管理者代設密碼</span></div>
               <svg class="arr tight"><use href="#i-arrow"/></svg>
-              <div class="node"><svg class="node-ico"><use href="#i-building"/></svg><span class="node-t">建立租戶</span><span class="node-s">初始資料<br>店主帳號</span></div>
+              <div class="node"><svg class="node-ico"><use href="#i-key"/></svg><span class="node-t">轉交帳密</span><span class="node-s">帳號與密碼<br>人工轉交店主</span></div>
             </div>
           </div>
 
@@ -860,6 +888,7 @@ body{
         <li>訂單事件經 Durable Object 廣播，同時到達廚房顯示、送菜清單、收銀台與顧客追蹤頁，四端看到的是同一份狀態。</li>
         <li>金流結果由金流商 webhook 回寫；夜市跨攤結帳另走 market-checkouts，付款一次、分帳逐攤。</li>
         <li>租戶／授權／部署屬控制平面，由獨立的 Management API 承接，與各店營運 API 分開部署。</li>
+        <li><b>店主帳號不能自行註冊</b>：由平台核准開店申請，或在後台「帳號管理」直接建立。核准只產生一次性的設定密碼連結，<b>目前不寄信</b>，由平台人員轉交店主；逐步細節見 <a href="../flows/13-platform-onboarding.md">入駐流程</a>。</li>
         <li>系統由哪些東西組成、每個 Worker 綁了什麼資源，見 <a href="./system-architecture.html">系統架構圖</a>。</li>
         <li>每一條流程的<b>逐步細節與 edge cases</b> 寫在 <code>docs/flows/</code>；四張細節圖：<a href="../flows/boards/customer-ordering.html">點餐</a>、<a href="../flows/boards/order-status-chain.html">訂單狀態鏈</a>、<a href="../flows/boards/payment-and-refund.html">收款與退款</a>、<a href="../flows/boards/market-checkout.html">市集跨攤結帳</a>。</li>
       </ul>
