@@ -67,8 +67,8 @@
       {{ error }}
     </p>
 
-    <div
-      v-if="approvedOwnerAccount"
+    <section
+      v-if="ownerHandoff"
       data-testid="approved-owner-account"
       class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"
     >
@@ -76,48 +76,102 @@
         class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
       >
         <div>
-          <h2 class="font-semibold">店主帳號已啟用</h2>
+          <h2 class="font-semibold">
+            {{ ownerHandoff.businessName }}：店主開通資訊
+          </h2>
           <p class="mt-1 text-emerald-800">
-            請將以下一次性設定密碼連結交給店主。連結使用後即失效。
+            系統目前不寄信。請把帳號與設定密碼連結交給店主；連結 24
+            小時內有效，使用一次後即失效。
           </p>
         </div>
         <button
           type="button"
           data-testid="dismiss-approved-owner-account"
           class="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-100"
-          @click="approvedOwnerAccount = null"
+          @click="closeOwnerHandoff"
         >
           關閉
         </button>
       </div>
-      <dl class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <dt class="text-xs font-medium text-emerald-700">帳號</dt>
-          <dd class="mt-1 break-all font-mono text-sm">
-            {{ approvedOwnerAccount.username }}
-          </dd>
-        </div>
-        <div>
-          <dt class="text-xs font-medium text-emerald-700">設定密碼連結</dt>
-          <dd class="mt-1 break-all font-mono text-sm">
-            {{ approvedOwnerAccount.setupPasswordLink }}
-          </dd>
-        </div>
-        <div>
-          <dt class="text-xs font-medium text-emerald-700">有效期限</dt>
-          <dd class="mt-1 break-all font-mono text-sm">
-            {{ formatDate(approvedOwnerAccount.setupPasswordExpiresAt) }}
-          </dd>
-        </div>
-        <div>
-          <dt class="text-xs font-medium text-emerald-700">餐廳 / 使用者</dt>
-          <dd class="mt-1 break-all font-mono text-sm">
-            {{ approvedOwnerAccount.restaurantId }} /
-            {{ approvedOwnerAccount.userId }}
-          </dd>
-        </div>
-      </dl>
-    </div>
+
+      <p
+        v-if="!ownerHandoff.account"
+        data-testid="owner-handoff-unavailable"
+        class="mt-4 rounded-lg bg-white px-3 py-2 text-amber-800"
+      >
+        查無可用的設定密碼連結，店主可能已經設定過密碼。若店主無法登入，請切換到這家店，在「員工管理」替店主重設密碼。
+      </p>
+
+      <template v-else>
+        <p
+          v-if="isLinkExpired"
+          data-testid="owner-link-expired"
+          class="mt-4 rounded-lg bg-white px-3 py-2 text-amber-800"
+        >
+          這條設定密碼連結已過期，店主無法再使用。請切換到這家店，在「員工管理」替店主重設密碼。
+        </p>
+
+        <dl class="mt-4 grid gap-3 sm:grid-cols-2">
+          <div>
+            <dt class="text-xs font-medium text-emerald-700">帳號</dt>
+            <dd class="mt-1 flex items-center gap-2">
+              <span
+                data-testid="owner-handoff-username"
+                class="break-all font-mono text-sm"
+              >
+                {{ ownerHandoff.account.username }}
+              </span>
+              <button
+                type="button"
+                data-testid="copy-owner-username"
+                class="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-100"
+                @click="copyField('username', ownerHandoff.account.username)"
+              >
+                {{ copiedField === "username" ? "已複製" : "複製" }}
+              </button>
+            </dd>
+          </div>
+          <div>
+            <dt class="text-xs font-medium text-emerald-700">有效期限</dt>
+            <dd
+              data-testid="owner-handoff-expires-at"
+              class="mt-1 break-all font-mono text-sm"
+            >
+              {{ formatDate(ownerHandoff.account.setupPasswordExpiresAt) }}
+            </dd>
+          </div>
+          <div class="sm:col-span-2">
+            <dt class="text-xs font-medium text-emerald-700">設定密碼連結</dt>
+            <dd class="mt-1 flex items-start gap-2">
+              <span
+                data-testid="owner-handoff-setup-link"
+                class="break-all font-mono text-sm"
+              >
+                {{ ownerHandoff.account.setupPasswordLink }}
+              </span>
+              <button
+                type="button"
+                data-testid="copy-owner-setup-link"
+                class="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-100 disabled:opacity-50"
+                :disabled="isLinkExpired"
+                @click="
+                  copyField('link', ownerHandoff.account.setupPasswordLink)
+                "
+              >
+                {{ copiedField === "link" ? "已複製" : "複製" }}
+              </button>
+            </dd>
+          </div>
+          <div class="sm:col-span-2">
+            <dt class="text-xs font-medium text-emerald-700">餐廳 / 使用者</dt>
+            <dd class="mt-1 break-all font-mono text-sm">
+              {{ ownerHandoff.account.restaurantId }} /
+              {{ ownerHandoff.account.userId }}
+            </dd>
+          </div>
+        </dl>
+      </template>
+    </section>
 
     <div
       v-if="isLoading"
@@ -218,6 +272,16 @@
             <td class="px-4 py-4 text-right">
               <div class="flex justify-end gap-2">
                 <button
+                  v-if="application.status === 'completed'"
+                  type="button"
+                  :data-testid="`owner-handoff-${application.id}`"
+                  class="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+                  :disabled="actionId === application.id"
+                  @click="showOwnerHandoff(application)"
+                >
+                  開通資訊
+                </button>
+                <button
                   type="button"
                   :data-testid="`approve-onboarding-${application.id}`"
                   class="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
@@ -225,7 +289,7 @@
                     actionId === application.id ||
                     !isApprovableStatus(application.status)
                   "
-                  @click="approveApplication(application.id)"
+                  @click="approveApplication(application)"
                 >
                   核准
                 </button>
@@ -251,7 +315,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import {
   onboardingApplicationsService,
   type OnboardingApplication,
@@ -262,13 +326,24 @@ import { useDateFormatter } from "@/composables/useDateFormatter";
 
 const { formatDateTime } = useDateFormatter();
 
+interface OwnerHandoff {
+  applicationId: string;
+  businessName: string;
+  /** null when the server has no unused setup link left for this owner. */
+  account: ProvisionedOwnerAccount | null;
+}
+
+type CopyableField = "username" | "link";
+
 const statusFilter = ref<"" | OnboardingApplicationStatus>("submitted");
 const applications = ref<OnboardingApplication[]>([]);
 const total = ref(0);
 const isLoading = ref(false);
 const actionId = ref("");
 const error = ref("");
-const approvedOwnerAccount = ref<ProvisionedOwnerAccount | null>(null);
+const ownerHandoff = ref<OwnerHandoff | null>(null);
+const copiedField = ref<"" | CopyableField>("");
+let copiedResetTimer: ReturnType<typeof setTimeout> | undefined;
 
 const approvableCount = computed(
   () =>
@@ -282,6 +357,15 @@ const rejectedCount = computed(
       (application) => application.status === "rejected",
     ).length,
 );
+
+// Evaluated when the panel opens, not ticking: the link lives for 24 hours, so
+// a panel left open across expiry is not worth a timer.
+const isLinkExpired = computed(() => {
+  const expiresAt = ownerHandoff.value?.account?.setupPasswordExpiresAt;
+  if (!expiresAt) return false;
+  const expiresAtMs = new Date(expiresAt).getTime();
+  return Number.isFinite(expiresAtMs) && expiresAtMs <= Date.now();
+});
 
 async function loadApplications() {
   isLoading.value = true;
@@ -301,18 +385,71 @@ async function loadApplications() {
   }
 }
 
-async function approveApplication(applicationId: string) {
-  actionId.value = applicationId;
+function openOwnerHandoff(
+  application: OnboardingApplication,
+  account: ProvisionedOwnerAccount | undefined,
+) {
+  copiedField.value = "";
+  ownerHandoff.value = {
+    applicationId: application.id,
+    businessName: application.businessName,
+    account: account ?? null,
+  };
+}
+
+function closeOwnerHandoff() {
+  ownerHandoff.value = null;
+  copiedField.value = "";
+}
+
+async function approveApplication(application: OnboardingApplication) {
+  actionId.value = application.id;
   error.value = "";
   try {
-    const result = await onboardingApplicationsService.approve(applicationId);
-    approvedOwnerAccount.value = result.ownerAccount ?? null;
+    const result = await onboardingApplicationsService.approve(application.id);
+    openOwnerHandoff(application, result.ownerAccount);
     await loadApplications();
   } catch (approveError) {
     console.error("Failed to approve onboarding application:", approveError);
     error.value = "核准失敗。請確認申請狀態仍可核准。";
   } finally {
     actionId.value = "";
+  }
+}
+
+/**
+ * Approving a completed application is idempotent on the server: it returns
+ * the owner account that was already provisioned instead of creating another.
+ * That is what lets the handoff panel be reopened after it was dismissed.
+ */
+async function showOwnerHandoff(application: OnboardingApplication) {
+  actionId.value = application.id;
+  error.value = "";
+  try {
+    const result = await onboardingApplicationsService.approve(application.id);
+    openOwnerHandoff(application, result.ownerAccount);
+  } catch (handoffError) {
+    console.error("Failed to load onboarding owner handoff:", handoffError);
+    error.value = "無法取得開通資訊，請稍後再試。";
+  } finally {
+    actionId.value = "";
+  }
+}
+
+async function copyField(field: CopyableField, value: string) {
+  try {
+    if (!navigator.clipboard) {
+      throw new Error("Clipboard API is unavailable");
+    }
+    await navigator.clipboard.writeText(value);
+    copiedField.value = field;
+    clearTimeout(copiedResetTimer);
+    copiedResetTimer = setTimeout(() => {
+      copiedField.value = "";
+    }, 2000);
+  } catch (copyError) {
+    console.error("Failed to copy onboarding handoff field:", copyError);
+    error.value = "無法複製到剪貼簿，請手動選取文字複製。";
   }
 }
 
@@ -375,4 +512,5 @@ function formatDate(value?: string | null) {
 }
 
 onMounted(loadApplications);
+onBeforeUnmount(() => clearTimeout(copiedResetTimer));
 </script>
