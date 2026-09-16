@@ -317,7 +317,7 @@ describe("PlatformOnboardingApplicationsView", () => {
     await wrapper.get('[data-testid="owner-handoff-APP-5"]').trigger("click");
     await flushPromises();
 
-    expect(wrapper.get('[data-testid="owner-link-expired"]').exists()).toBe(
+    expect(wrapper.find('[data-testid="owner-link-expired"]').exists()).toBe(
       true,
     );
     expect(

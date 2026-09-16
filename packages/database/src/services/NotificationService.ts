@@ -7,15 +7,20 @@ import { BaseService, type CloudflareEnv } from "./base";
 import { createSmsProvider, TwilioSmsProvider, type SmsProvider } from "./sms";
 import type { D1Database } from "@cloudflare/workers-types";
 
-/** Strip all HTML tags from a string, looping until stable to handle nested fragments */
+/**
+ * Strip all HTML tags from a string.
+ *
+ * One pass, then drop any angle brackets the pass left behind (an unclosed
+ * "<b", or the leftovers of nested fragments such as "<<b>>"). The previous
+ * version re-ran the regex until the output stopped changing, which is
+ * quadratic on input like "<<<<<<" — CodeQL js/polynomial-redos, and this runs
+ * on notification bodies that carry user-entered text.
+ */
 function stripHtmlTags(html: string): string {
-  let result = html;
-  let prev;
-  do {
-    prev = result;
-    result = result.replace(/<[^>]*>/g, "");
-  } while (result !== prev);
-  return result;
+  return html
+    .replace(/<[^>]*>/g, "")
+    .replaceAll("<", "")
+    .replaceAll(">", "");
 }
 
 function escapeHtml(value: string): string {
