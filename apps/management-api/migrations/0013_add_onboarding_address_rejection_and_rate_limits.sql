@@ -43,7 +43,7 @@ CREATE INDEX IF NOT EXISTS idx_onboarding_application_audit_events_application
 --     rebuilt from there when an operator asks for it.
 --   * the timestamps become INTEGER Unix milliseconds, per the repo's timestamp
 --     rule. Existing TEXT values are converted rather than dropped.
-CREATE TABLE onboarding_credential_deliveries_rebuilt (
+CREATE TABLE __new_onboarding_credential_deliveries (
   id TEXT PRIMARY KEY,
   application_id TEXT NOT NULL REFERENCES onboarding_applications(id),
   tenant_id TEXT NOT NULL REFERENCES tenants(id),
@@ -60,7 +60,7 @@ CREATE TABLE onboarding_credential_deliveries_rebuilt (
   updated_at_ms INTEGER NOT NULL
 ) STRICT;
 
-INSERT INTO onboarding_credential_deliveries_rebuilt (
+INSERT INTO __new_onboarding_credential_deliveries (
   id, application_id, tenant_id, restaurant_id, user_id, recipient_email,
   recipient_name, username, setup_password_expires_at_ms,
   delivery_channel, status, error_message, created_at_ms, updated_at_ms
@@ -75,7 +75,7 @@ SELECT
 FROM onboarding_credential_deliveries;
 
 DROP TABLE onboarding_credential_deliveries;
-ALTER TABLE onboarding_credential_deliveries_rebuilt
+ALTER TABLE __new_onboarding_credential_deliveries
   RENAME TO onboarding_credential_deliveries;
 
 CREATE INDEX idx_onboarding_credential_deliveries_application

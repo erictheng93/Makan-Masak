@@ -39,8 +39,8 @@ export interface ManagementEnv {
   SLACK_WEBHOOK_URL?: string; // Optional: for alert notifications
   ONBOARDING_EMAIL_ENABLED?: string;
   ONBOARDING_EMAIL_FROM?: string;
+  /** Origin of the onboarding app; applicant status links point here. */
   ONBOARDING_APP_URL?: string;
-  ADMIN_APP_URL?: string;
   RESEND_API_KEY?: string;
   INTERNAL_API_TOKEN?: string;
 
