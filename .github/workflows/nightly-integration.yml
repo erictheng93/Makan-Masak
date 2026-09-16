@@ -37,7 +37,7 @@ jobs:
     # are preinstalled and match the @playwright/test version in package.json.
     # Upgrading Playwright means bumping both, in the same PR.
     container:
-      image: mcr.microsoft.com/playwright:v1.57.0-noble
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
       options: --ipc=host
     env:
       HOME: /root

@@ -399,7 +399,7 @@ jobs:
 
     timeout-minutes: 25
     container:
-      image: mcr.microsoft.com/playwright:v1.57.0-noble
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
       options: --ipc=host
     env:
       HOME: /root
@@ -580,7 +580,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.changes.outputs.frontend == 'true' || needs.changes.outputs.full == 'true'))
     timeout-minutes: 35
     container:
-      image: mcr.microsoft.com/playwright:v1.57.0-noble
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
       options: --ipc=host
     env:
       HOME: /root
