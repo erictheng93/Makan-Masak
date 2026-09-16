@@ -9,7 +9,15 @@ import {
 } from "@/services/onboardingApplicationsService";
 
 vi.mock("@/i18n", () => ({
-  useI18n: () => ({ t: (key: string) => key }),
+  // useDateFormatter reads `locale` as well as `t`; a mock without it throws
+  // inside every row's formatDate and the render silently aborts.
+  useI18n: () => ({ t: (key: string) => key, locale: { value: "zh-TW" } }),
+}));
+
+vi.mock("@/composables/useDateFormatter", () => ({
+  useDateFormatter: () => ({
+    formatDateTime: (date: Date) => date.toISOString(),
+  }),
 }));
 
 vi.mock("@/services/onboardingApplicationsService", () => ({
