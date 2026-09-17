@@ -45,7 +45,10 @@
               <p class="text-xs text-ios-secondary">
                 {{ t("waitingList.ticket.partiesAhead") }}
               </p>
-              <p class="mt-1 text-2xl font-semibold text-ios-text">
+              <p
+                data-testid="parties-ahead"
+                class="mt-1 text-2xl font-semibold text-ios-text"
+              >
                 {{ ticket.partiesAhead }}
               </p>
             </div>
