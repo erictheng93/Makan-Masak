@@ -19,7 +19,7 @@ export default defineConfig({
   // OOM — described the tests/e2e/journeys and tests/e2e/specs suites deleted
   // by b936600f in 2026-05, and the five extra browser projects that ran them.
   //
-  // `admin-real` and `customer-real` (workers: 1; 42 and 19 tests) and
+  // `admin-real` and `customer-real` (workers: 1; 42 and 21 tests) and
   // `integration` (fullyParallel: false, plus --workers=1 from
   // .github/workflows/nightly-integration.yml) override this themselves: all
   // three mutate one restaurant's rows in a real D1.
