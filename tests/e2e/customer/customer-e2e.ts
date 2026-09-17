@@ -537,6 +537,8 @@ export interface MenuFixture {
   categoryId: number;
   secondCategoryId: number;
   plainItem: { id: number; name: string; price: number };
+  /** A second plain dish, for flows where two diners must order different things. */
+  sideItem: { id: number; name: string; price: number };
   customItem: { id: number; name: string; price: number };
   spice: {
     groupName: string;
@@ -602,6 +604,7 @@ export async function createMenuFixture(
 
   const customItem = await createItem(category.id, `E2E 客製拉麵 ${s}`, 150);
   const plainItem = await createItem(secondCategory.id, `E2E 冬瓜茶 ${s}`, 40);
+  const sideItem = await createItem(category.id, `E2E 滷蛋 ${s}`, 20);
 
   const createGroup = async (body: Record<string, unknown>) => {
     const group = await apiData<{ id: string }>(
@@ -679,6 +682,7 @@ export async function createMenuFixture(
     categoryId: category.id,
     secondCategoryId: secondCategory.id,
     plainItem,
+    sideItem,
     customItem,
     spice: { groupName: spiceGroupName, mild, hot },
     addOn,
@@ -828,4 +832,107 @@ export function trackingPath(
   orderId: string,
 ): string {
   return `/restaurant/${restaurantId}/table/${tableId}/order/${orderId}`;
+}
+
+// ---------------------------------------------------------------------------
+// Market stalls
+// ---------------------------------------------------------------------------
+
+/** Marks the suite's own second stall, so a re-run finds it instead of adding another. */
+const MARKET_STALL_TYPE = "e2e_market_stall";
+
+export interface MarketStall {
+  restaurantId: string;
+  name: string;
+  dish: { id: number; name: string; price: number };
+}
+
+/**
+ * A second shop for market flows, found or created through the real API.
+ *
+ * Only the platform admin can create a restaurant, and `POST /restaurants`
+ * provisions its tenant through the management API's service binding — so the
+ * management worker has to be running for the first run against a fresh D1.
+ * Restaurants cannot be deleted, which is why this is find-or-create rather
+ * than create-and-clean-up: one stall per database, identified by its type.
+ */
+export async function ensureMarketStall(): Promise<MarketStall> {
+  const admin = await getAdmin();
+  const auth = { token: admin.token };
+
+  const existing = await apiData<Array<{ id: string; name: string }>>(
+    "find market stall",
+    `/api/v1/restaurants?type=${MARKET_STALL_TYPE}&limit=5`,
+    auth,
+  );
+  let stall = existing[0];
+  if (!stall) {
+    stall = await apiData<{ id: string; name: string }>(
+      "create market stall (needs the management API worker)",
+      "/api/v1/restaurants",
+      {
+        ...auth,
+        method: "POST",
+        body: {
+          name: "E2E 市集第二攤",
+          type: MARKET_STALL_TYPE,
+          category: "snack",
+          address: "E2E Night Market Road 2",
+          district: "E2E District",
+          city: "Taichung",
+          phone: "0422000002",
+        },
+      },
+    );
+  }
+
+  // Idempotent: guest orders on, one fulfilment method on (shop mode refuses
+  // to enable without one), shop mode on.
+  await apiData("enable guest takeaway", `/api/v1/restaurants/${stall.id}`, {
+    ...auth,
+    method: "PUT",
+    body: { settings: { allowGuestOrders: true, enableTakeaway: true } },
+  });
+  await apiData(
+    "enable shop mode",
+    `/api/v1/restaurants/${stall.id}/shop-mode`,
+    {
+      ...auth,
+      method: "PUT",
+      body: { enabled: true },
+    },
+  );
+
+  const dishName = "E2E 蚵仔煎";
+  const menu = await apiData<{
+    categories: Array<{ id: number }>;
+    menuItems: Array<{ id: number; name: string; price: number }>;
+  }>("read stall menu", `/api/v1/menu/${stall.id}`);
+  let dish = menu.menuItems.find((item) => item.name === dishName);
+  if (!dish) {
+    const categoryId =
+      menu.categories[0]?.id ??
+      (
+        await apiData<{ id: number }>(
+          "create stall category",
+          `/api/v1/menu/${stall.id}/categories`,
+          { ...auth, method: "POST", body: { name: "E2E 小吃" } },
+        )
+      ).id;
+    dish = await apiData<{ id: number; name: string; price: number }>(
+      "create stall dish",
+      `/api/v1/menu/${stall.id}/items`,
+      {
+        ...auth,
+        method: "POST",
+        body: { categoryId, name: dishName, price: 70 },
+      },
+    );
+  }
+
+  return {
+    restaurantId: stall.id,
+    name: stall.name,
+    dish: { id: dish.id, name: dish.name, price: dish.price },
+  };
 }
