@@ -63,6 +63,10 @@ function aliasMatches(find: string, specifier: string): boolean {
   return specifier === find || specifier.startsWith(`${find}/`);
 }
 
+function isSourcePath(target: string): boolean {
+  return target.split(/[\\/]/).includes("src");
+}
+
 function normalizeAlias(alias: unknown): AliasMap {
   if (!alias) return {};
   // The array form is equally valid; it just is not what any app here uses.
@@ -206,6 +210,16 @@ packageDirs.set(
 describe("workspace packages imported from source are aliased", () => {
   const configs: AppConfig[] = [];
 
+  it.each([
+    ["/repo/packages/shared/src/index.ts", true],
+    ["C:\\repo\\packages\\shared\\src\\index.ts", true],
+    ["C:/repo/packages/shared/src", true],
+    ["/repo/packages/shared/dist/index.js", false],
+    ["/repo/packages/shared/src-generated/index.js", false],
+  ])("recognizes source path segments in %s", (target, expected) => {
+    expect(isSourcePath(target)).toBe(expected);
+  });
+
   it("finds the Vite apps", () => {
     expect(viteApps.length).toBeGreaterThan(0);
   });
@@ -267,7 +281,7 @@ describe("workspace packages imported from source are aliased", () => {
               );
               continue;
             }
-            if (!config.alias[find].includes("/src")) {
+            if (!isSourcePath(config.alias[find])) {
               problems.push(
                 `${config.configFile} aliases "${find}" to ` +
                   `"${config.alias[find]}", which is not a source directory`,
