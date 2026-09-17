@@ -40,6 +40,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": resolve(__dirname, "./src"),
+      "@makanmasak/queue-core/print": resolve(
+        __dirname,
+        "../../packages/queue-core/src/print",
+      ),
       "@makanmasak/shared-types": resolve(
         __dirname,
         "../../packages/shared-types/src",

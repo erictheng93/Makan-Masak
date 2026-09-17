@@ -12,6 +12,7 @@ import {
   receipts,
   orders,
   orderItems,
+  tables,
 } from "@makanmasak/database";
 
 type OrderRow = typeof orders.$inferSelect;
@@ -379,9 +380,27 @@ export class ReceiptService {
 
     // Drizzle returns camelCase keys based on the schema definition; the
     // snake_case fallback chain that used to live here was dead code.
-    // Customer/table display names live outside the orders row — they're
-    // pulled from the customerInfo JSON snapshot and (TODO) a tables join.
+    // Customer display names come from the order's snapshot.
     const customerSnapshot = order.customerInfo ?? null;
+
+    // Keep the location on the receipt snapshot so reprints preserve it.
+    // Seat orders also print the table: orders have no persisted seat ID,
+    // and seats.currentOrderId is mutable occupancy, not a historical link.
+    // Scope the lookup to this restaurant to avoid printing another shop's table.
+    let tableNumber: string | null = null;
+    if (order.tableId != null) {
+      const [location] = await this.db
+        .select({ tableNumber: tables.number })
+        .from(tables)
+        .where(
+          and(
+            eq(tables.id, order.tableId),
+            eq(tables.restaurantId, order.restaurantId),
+          ),
+        )
+        .limit(1);
+      tableNumber = location?.tableNumber ?? null;
+    }
 
     // 外送地址只在 KDS 螢幕上看得到，出單票上沒有 —— 對要出門送餐的人來說，
     // 資訊在錯的地方（#295）。非外送單維持 null，格式化層不會印。
@@ -392,8 +411,7 @@ export class ReceiptService {
       template: templateName,
       orderNumber: order.orderNumber,
       customerName: customerSnapshot?.name ?? null,
-      // TODO: join `tables` to surface the table number — currently absent.
-      tableNumber: null as string | null,
+      tableNumber,
       deliveryAddress: delivery?.address ?? null,
       deliveryPhone: delivery?.phone ?? null,
       // `delivery_info.deliveryFee` 自 #295 起是伺服器端寫入的權威金額，且已

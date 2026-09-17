@@ -21,7 +21,17 @@ import {
   printAgents,
   receipts,
   restaurants,
+  tables,
+  categories,
+  menuItems,
+  orderItems,
 } from "@makanmasak/database";
+import { ReceiptService } from "../../features/pos/services/ReceiptService";
+import type { PrintRequest } from "@makanmasak/shared-types";
+import {
+  ReceiptFormattingService,
+  CommandBuilder,
+} from "@makanmasak/queue-core/print";
 import routes from "../../features/print/routes";
 import { hashPrintAgentKey } from "../../shared/utils/print-agent-key";
 
@@ -173,7 +183,7 @@ async function receiptRow(id: string) {
 async function claimedJob(response: Response) {
   return (await response.json()) as {
     success: boolean;
-    data: { receiptId: string; request: Record<string, unknown> } | null;
+    data: { receiptId: string; request: PrintRequest } | null;
   };
 }
 
@@ -183,6 +193,109 @@ describe("cloud print dispatch — real D1", () => {
     await seedShop(SHOP_A, REGISTER_A, ORDER_A, KEY_A);
     await seedShop(SHOP_B, REGISTER_B, ORDER_B, KEY_B);
   });
+
+  describe.each(["customer", "kitchen"] as const)(
+    "%s location on paper",
+    (kind) => {
+      it.each([
+        { name: "table order", tableId: 11, expected: "A1" },
+        { name: "seat order", tableId: 11, expected: "A1" },
+        {
+          name: "table from another restaurant",
+          tableId: 22,
+          expected: null,
+        },
+        { name: "takeaway", tableId: null, expected: null },
+        { name: "delivery", tableId: null, expected: null },
+      ])(
+        "prints the correct location for $name",
+        async ({ name, tableId, expected }) => {
+          await testDb.drizzle.insert(tables).values([
+            { id: 11, restaurantId: SHOP_A, number: "A1", qrCode: "table-a" },
+            { id: 22, restaurantId: SHOP_B, number: "B2", qrCode: "table-b" },
+          ]);
+          await testDb.drizzle
+            .insert(categories)
+            .values({ id: 1, restaurantId: SHOP_A, name: "Food" });
+          await testDb.drizzle.insert(menuItems).values({
+            id: 1,
+            restaurantId: SHOP_A,
+            categoryId: 1,
+            name: "Nasi Lemak",
+            priceCents: 1200,
+          });
+          await testDb.drizzle.insert(orderItems).values({
+            orderId: ORDER_A,
+            menuItemId: 1,
+            quantity: 1,
+            unitPriceCents: 1200,
+            totalPriceCents: 1200,
+            itemSnapshot: { name: "Nasi Lemak" },
+          });
+          await testDb.drizzle
+            .update(orders)
+            .set({
+              tableId,
+              orderType:
+                name === "seat order"
+                  ? "seat"
+                  : tableId == null
+                    ? "shop"
+                    : "table",
+              deliveryInfo:
+                name === "delivery"
+                  ? {
+                      type: "delivery",
+                      address: "1 Test Rd",
+                      phone: "0900000000",
+                    }
+                  : name === "takeaway"
+                    ? { type: "takeaway" }
+                    : { type: "dine_in" },
+            })
+            .where(eq(orders.id, ORDER_A));
+
+          const service = new ReceiptService(testDb.db);
+          if (kind === "kitchen") await seedShopAgent(SHOP_A, KITCHEN_KEY_A);
+          const result =
+            kind === "kitchen"
+              ? await service.createKitchenTicket(ORDER_A)
+              : await service.printReceipt({ orderId: ORDER_A }, REGISTER_A);
+          expect(result.success).toBe(true);
+          const stored = await receiptRow(result.data!.id);
+          expect(JSON.parse(stored!.content).tableNumber).toBe(expected);
+
+          // A reprint uses the persisted location, even if the table is renamed.
+          await testDb.drizzle
+            .update(tables)
+            .set({ number: "Renamed" })
+            .where(eq(tables.id, 11));
+          expect(await service.reprintReceipt(result.data!.id)).toEqual({
+            success: true,
+          });
+          const job = await claimedJob(
+            await poll(kind === "kitchen" ? KITCHEN_KEY_A : KEY_A),
+          );
+          expect(job.data?.receiptId).toBe(result.data!.id);
+          const request = job.data!.request;
+          expect(request.data.order.tableNumber ?? null).toBe(expected);
+          const formatted = await new ReceiptFormattingService().formatReceipt(
+            request,
+          );
+          const commands =
+            CommandBuilder.fromPrintContent(formatted).buildESCPOS();
+          if (expected) {
+            expect(commands).toMatch(
+              new RegExp("Table:\\s+" + expected + "\\n"),
+            );
+          } else {
+            expect(commands).not.toContain("Table:");
+          }
+          if (name === "delivery") expect(commands).toContain("1 Test Rd");
+        },
+      );
+    },
+  );
 
   it("hands a pending receipt to the agent holding that register's credential", async () => {
     await seedReceipt("receipt-a", REGISTER_A, ORDER_A);

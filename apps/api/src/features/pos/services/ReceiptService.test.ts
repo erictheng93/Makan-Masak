@@ -5,6 +5,7 @@ import {
   orders,
   receipts,
   restaurants,
+  tables,
 } from "@makanmasak/database";
 import {
   createSelectFixtureDb,
@@ -37,6 +38,7 @@ const fixtureTables = {
   orders,
   receipts,
   restaurants,
+  tables,
 };
 type SelectFixtureName = keyof typeof fixtureTables;
 
@@ -254,6 +256,32 @@ describe("ReceiptService", () => {
     vi.clearAllTimers();
     vi.useRealTimers();
   });
+
+  it.each([
+    { location: [{ tableNumber: "A1" }], expected: "A1" },
+    { location: [], expected: null },
+  ])(
+    "snapshots the available table ($expected)",
+    async ({ location, expected }) => {
+      uuidMocks.generateUUID.mockReturnValueOnce("receipt-1");
+      const mutations = mockMutations();
+      mockSelectResults({
+        orders: [[orderRow({ restaurantId: "restaurant-1", tableId: 11 })]],
+        orderItems: [[itemRow()]],
+        tables: [location],
+        receipts: [[receiptRow()]],
+      });
+      expect(
+        await createService().printReceipt({ orderId: "101" }, "register-1"),
+      ).toMatchObject({ success: true });
+      expect(mocks.db.insert).toHaveBeenCalledWith(receipts);
+      expect(mutations.inserted).toHaveLength(1);
+      expect(
+        JSON.parse((mutations.inserted[0] as { content: string }).content)
+          .tableNumber,
+      ).toBe(expected);
+    },
+  );
 
   // KDS 螢幕看得到送達地址，紙本出單票上沒有 —— 拿著紙出門的正是送餐的人
   // （#295）。
