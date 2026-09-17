@@ -97,7 +97,10 @@
               <dt class="text-gray-500">
                 {{ t("markets.checkout.subtotal") }}
               </dt>
-              <dd class="mt-1 font-semibold text-gray-900">
+              <dd
+                data-testid="market-checkout-subtotal"
+                class="mt-1 font-semibold text-gray-900"
+              >
                 {{ formatPrice(subtotalAmount) }}
               </dd>
             </div>

@@ -222,22 +222,22 @@ test.describe("點餐主流程 (real API)", () => {
       };
       orderId = body.data?.order?.id;
 
-      // Not yet reported as an issue when this was written: ShopCartModal
-      // sends the store's own spelling, deliveryInfo.type "dine-in", and the
-      // guest-orders schema only accepts "dine_in". So the dine-in button C5
-      // put back in the cart leads to a 400 VALIDATION_ERROR on submit.
-      test.fail(
-        true,
-        "shop dine-in checkout sends deliveryInfo.type 'dine-in'; POST /guest-orders requires 'dine_in' (issue pending)",
-      );
+      // The store spells it "dine-in" and POST /guest-orders accepts only
+      // "dine_in"; ShopCartModal used to send the store's spelling, so the
+      // dine-in button C5 put back in the cart answered 400 VALIDATION_ERROR
+      // on field deliveryInfo.type (fixed in 42c12e53).
       expect(
         { status: response.status(), error: body.error },
         "a dine-in shop order should be accepted",
       ).toEqual({ status: 201, error: undefined });
       await expect(page).toHaveURL(new RegExp(`/shop/order/${orderId}`));
+
+      // Read back: the order is stored as a dine-in shop order, not as the
+      // takeaway the server falls back to when no fulfilment arrives.
       const order = await readOrder(orderId!);
       expect(order).toEqual(
         expect.objectContaining({
+          orderType: "shop",
           deliveryInfo: expect.objectContaining({ type: "dine_in" }),
         }),
       );

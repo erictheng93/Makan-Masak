@@ -235,7 +235,7 @@ test.describe("夜市市集 (real API)", () => {
     await assertNoOverlayError(page);
   });
 
-  test("跨攤結帳 from the market page: a basket with two stalls submits one checkout", async () => {
+  test("跨攤結帳 from the market page: a basket with two stalls submits one checkout (#401)", async () => {
     const { page } = diner;
     await addFromStall(page, ownerRestaurantId, menu.plainItem.id, 1);
     await addFromStall(page, stall.restaurantId, stall.dish.id, 2);
@@ -259,13 +259,13 @@ test.describe("夜市市集 (real API)", () => {
     };
 
     // Everything above works: stalls, basket, phone digits. The submit is
-    // the open bug. /market-checkouts is mounted after csrfProtection in
-    // app-factory.ts and is not on its excludePaths, while the customer app
-    // sends no X-CSRF-Token at all — so every guest market checkout POST
+    // the open bug (#401). /market-checkouts is mounted after csrfProtection
+    // in app-factory.ts and is not on its excludePaths, while the customer
+    // app sends no X-CSRF-Token at all — so every guest market checkout POST
     // (create, voucher, pay) answers 403 CSRF_TOKEN_MISSING.
     test.fail(
       true,
-      "guest market checkout POSTs are CSRF-protected and the customer app sends no CSRF token (issue pending)",
+      "#401: guest market checkout POSTs are CSRF-protected and the customer app sends no CSRF token",
     );
     expect(
       { status: response.status(), error: body.error },
@@ -277,8 +277,8 @@ test.describe("夜市市集 (real API)", () => {
   test("跨攤結帳: one checkout is one real order per stall, and its page shows both", async () => {
     const { page } = diner;
     // Created through the same endpoint and body the market page sends, from
-    // outside the browser, because the page itself cannot get past CSRF (see
-    // the test above). What is under test here is the checkout page and the
+    // outside the browser, because the page itself cannot get past CSRF
+    // (#401, see the test above). What is under test here is the checkout page and the
     // orders behind it.
     const created = await apiData<{
       checkout: CheckoutSession;
@@ -351,23 +351,22 @@ test.describe("夜市市集 (real API)", () => {
       childTotal += order.totalAmount;
     }
     expect(childTotal, "the stall orders add up to the basket").toBe(subtotal);
-    await assertNoOverlayError(page);
 
-    // The open bug in this view: the checkout session's `subtotal` is summed
-    // in cents (orderTotalCents in POST /market-checkouts) and returned
-    // unconverted by toPublicMarketCheckout, while MarketCheckoutTrackingView
-    // formats it as a currency amount — so a NT$110 checkout reads NT$11,000.
-    test.fail(
-      true,
-      "market checkout page shows the cents subtotal as dollars (100x) — issue pending",
+    // The session's `subtotal` is in cents; the page used to format it as a
+    // currency amount, so a NT$110 checkout read NT$11,000 (fixed in
+    // f2a3ad0f). Anchored, with no digit allowed after the amount: `NT$110`
+    // is a substring of `NT$1100`, so a contains-check would pass a 10x error.
+    const amount = new RegExp(`^\\s*NT\\$${subtotal}(?!\\d)\\D*$`);
+    await expect(page.getByTestId("market-checkout-subtotal")).toHaveText(
+      amount,
     );
     await expect(page.getByTestId("market-checkout-payable")).toHaveText(
-      `NT$${subtotal}`,
-      { timeout: 5_000 },
+      amount,
     );
+    await assertNoOverlayError(page);
   });
 
-  test("優惠卷: a shop's voucher code entered on the checkout page discounts that stall", async () => {
+  test("優惠卷: a shop's voucher code entered on the checkout page discounts that stall (#401)", async () => {
     const { page } = diner;
     const owner = await getOwner();
     const code = `E2EMKT${suffix().toUpperCase()}`;
@@ -407,10 +406,11 @@ test.describe("夜市市集 (real API)", () => {
     await page.getByTestId("market-checkout-voucher-apply").click();
     const response = await applied;
 
-    // Same CSRF blocker as the market-page submit: the voucher POST is 403.
+    // Same CSRF blocker as the market-page submit (#401): the voucher POST
+    // is 403.
     test.fail(
       true,
-      "guest market checkout POSTs are CSRF-protected and the customer app sends no CSRF token (issue pending)",
+      "#401: guest market checkout POSTs are CSRF-protected and the customer app sends no CSRF token",
     );
     expect(response.status(), await response.text()).toBe(200);
     const subtotal = menu.plainItem.price + stall.dish.price;
@@ -434,8 +434,8 @@ test.describe("夜市市集 (real API)", () => {
     ).toEqual([ownChild.orderId]);
   });
 
-  test("完成付款: with no payment provider configured, paying must not mark the stall orders paid", async () => {
-    // Sent from outside the browser for the same CSRF reason, with exactly
+  test("完成付款: with no payment provider configured, paying must not mark the stall orders paid (#400)", async () => {
+    // Sent from outside the browser for the same CSRF reason (#401), with exactly
     // what the pay button sends: method "market_online", TW/TWD, and the
     // guest token that proves this diner holds the checkout.
     const pay = await apiRequest<{
@@ -485,7 +485,7 @@ test.describe("夜市市集 (real API)", () => {
     // callback — and records every stall order as paid.
     test.fail(
       true,
-      "market checkout self-certifies payment without a provider — issue pending",
+      "#400: market checkout self-certifies payment without a provider",
     );
     expect(
       {
