@@ -19,6 +19,7 @@ const getBaseOrderStatistics = vi.hoisted(() => vi.fn());
 const validateBaseCoupon = vi.hoisted(() => vi.fn());
 const releaseCouponUsageForCancelledOrder = vi.hoisted(() => vi.fn());
 const broadcastNewOrder = vi.hoisted(() => vi.fn());
+const broadcastOrderModified = vi.hoisted(() => vi.fn());
 const broadcastOrderStatusUpdate = vi.hoisted(() => vi.fn());
 const broadcastOrderCancelled = vi.hoisted(() => vi.fn());
 const generateEventId = vi.hoisted(() => vi.fn());
@@ -73,6 +74,7 @@ vi.mock("@makanmasak/database", () => ({
   RealtimeBroadcastService: function RealtimeBroadcastService() {
     return {
       broadcastNewOrder,
+      broadcastOrderModified,
       broadcastOrderStatusUpdate,
       broadcastOrderCancelled,
       generateEventId,
@@ -146,11 +148,17 @@ describe("OrdersService realtime broadcasts", () => {
     releaseCouponUsageForCancelledOrder.mockReset();
     releaseCouponUsageForCancelledOrder.mockResolvedValue(undefined);
     broadcastNewOrder.mockReset();
+    broadcastOrderModified.mockReset();
     broadcastOrderStatusUpdate.mockReset();
     broadcastOrderCancelled.mockReset();
     generateEventId.mockReset();
     generateEventId.mockReturnValue("evt-market-order");
     broadcastNewOrder.mockResolvedValue({
+      success: true,
+      eventId: "evt-market-order",
+      recipientCount: 2,
+    });
+    broadcastOrderModified.mockResolvedValue({
       success: true,
       eventId: "evt-market-order",
       recipientCount: 2,
@@ -517,11 +525,17 @@ describe("OrdersService workflows", () => {
     getBaseOrderStatistics.mockReset();
     validateBaseCoupon.mockReset();
     broadcastNewOrder.mockReset();
+    broadcastOrderModified.mockReset();
     broadcastOrderStatusUpdate.mockReset();
     broadcastOrderCancelled.mockReset();
     generateEventId.mockReset();
     generateEventId.mockReturnValue("evt-orders");
     broadcastNewOrder.mockResolvedValue({
+      success: true,
+      eventId: "evt-orders",
+      recipientCount: 2,
+    });
+    broadcastOrderModified.mockResolvedValue({
       success: true,
       eventId: "evt-orders",
       recipientCount: 2,
@@ -1648,12 +1662,15 @@ describe("OrdersService workflows", () => {
 
     expect(result).toBe(updated);
     expect(addBaseOrderItems).toHaveBeenCalledWith("42", items, undefined);
-    expect(broadcastNewOrder).toHaveBeenCalledWith(
+    // Modified, not new: the modified path also reaches the diner's open
+    // tracking page, which a plain NEW_ORDER never did.
+    expect(broadcastOrderModified).toHaveBeenCalledWith(
       expect.objectContaining({
         type: RealtimeEventType.NEW_ORDER,
         data: expect.objectContaining({ orderId: "42" }),
       }),
     );
+    expect(broadcastNewOrder).not.toHaveBeenCalled();
     expect(env.CACHE_KV.delete).toHaveBeenCalledWith("order:42:full");
     expect(env.CACHE_KV.delete).toHaveBeenCalledWith("order:42:basic");
   });
@@ -1807,7 +1824,9 @@ describe("OrdersService workflows", () => {
 
     // NEW_ORDER rather than a bespoke type: the kitchen store upserts by order
     // id, so the corrected item list replaces what the screen was holding.
-    expect(broadcastNewOrder).toHaveBeenCalledWith(
+    // Sent as a modification so the diner's tracking page is told as well.
+    expect(broadcastNewOrder).not.toHaveBeenCalled();
+    expect(broadcastOrderModified).toHaveBeenCalledWith(
       expect.objectContaining({
         type: RealtimeEventType.NEW_ORDER,
         data: expect.objectContaining({

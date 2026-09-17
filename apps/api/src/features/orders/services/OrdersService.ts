@@ -496,7 +496,7 @@ export class OrdersService implements IOrdersService {
           },
           updatedOrder.restaurantId,
         ),
-        this.broadcastNewOrder(updatedOrder),
+        this.broadcastNewOrder(updatedOrder, { modified: true }),
       ]);
 
       return updatedOrder;
@@ -567,7 +567,7 @@ export class OrdersService implements IOrdersService {
           },
           updatedOrder.restaurantId,
         ),
-        this.broadcastNewOrder(updatedOrder),
+        this.broadcastNewOrder(updatedOrder, { modified: true }),
       ]);
 
       return updatedOrder;
@@ -588,10 +588,13 @@ export class OrdersService implements IOrdersService {
    * display's handler upserts by order id (`stores/orders.ts` handleNewOrder),
    * so the full, corrected item list replaces what the screen was holding --
    * and the accompanying chime is wanted here, because a modified order is
-   * exactly the thing the kitchen must re-read.
+   * exactly the thing the kitchen must re-read. It goes out as a modification,
+   * which also reaches the diner's tracking page; that page only ever sees its
+   * own order, so a NEW_ORDER there can only mean "this order changed".
    * ponytail: reuses the existing event rather than adding an ORDER_MODIFIED
-   * type nothing subscribes to yet. Add one when a client needs to tell a
-   * modification from an arrival.
+   * type. Add one when a client needs to tell a modification from an arrival
+   * (the realtime router would need a case for it, or a new type reaches
+   * admins only).
    */
   async changeOrderItemQuantity(
     id: string,
@@ -650,7 +653,7 @@ export class OrdersService implements IOrdersService {
           },
           updatedOrder.restaurantId,
         ),
-        this.broadcastNewOrder(updatedOrder),
+        this.broadcastNewOrder(updatedOrder, { modified: true }),
       ]);
 
       return updatedOrder;
@@ -1344,7 +1347,16 @@ export class OrdersService implements IOrdersService {
   /**
    * 廣播新訂單事件
    */
-  private async broadcastNewOrder(order: Order): Promise<void> {
+  /**
+   * `modified` marks an existing order whose lines or total changed. Staff
+   * rooms receive the same NEW_ORDER either way; a modification is also sent
+   * to the order's customer room, the only room a diner's tracking page
+   * listens on.
+   */
+  private async broadcastNewOrder(
+    order: Order,
+    { modified = false }: { modified?: boolean } = {},
+  ): Promise<void> {
     try {
       const realtimeEvent: NewOrderEvent = {
         type: RealtimeEventType.NEW_ORDER,
@@ -1380,8 +1392,11 @@ export class OrdersService implements IOrdersService {
         },
       };
 
-      const result =
-        await this.realtimeBroadcastService.broadcastNewOrder(realtimeEvent);
+      const result = modified
+        ? await this.realtimeBroadcastService.broadcastOrderModified(
+            realtimeEvent,
+          )
+        : await this.realtimeBroadcastService.broadcastNewOrder(realtimeEvent);
 
       if (result.success) {
         this.logger.info("New order broadcasted successfully", {

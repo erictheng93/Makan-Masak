@@ -118,27 +118,21 @@ export class RealtimeBroadcastService {
     return this.broadcastRestaurantAndKitchen(event);
   }
 
+  /**
+   * An existing order whose lines or total changed (items added, a quantity
+   * changed, a discount applied). Staff rooms get the same NEW_ORDER payload
+   * they upsert on; the diner's tracking page gets it too, because it is
+   * connected to the order's customer room only and otherwise keeps showing
+   * the old lines until reloaded.
+   */
+  async broadcastOrderModified(event: NewOrderEvent): Promise<BroadcastResult> {
+    return this.broadcastStaffAndCustomer(event, event.data.orderId);
+  }
+
   async broadcastOrderStatusUpdate(
     event: OrderStatusUpdateEvent,
   ): Promise<BroadcastResult> {
-    const results = await Promise.all([
-      this.broadcastRestaurantAndKitchen(event),
-      this.broadcastEvent("customer", `order:${event.data.orderId}`, event),
-    ]);
-
-    const failed = results.find((result) => !result.success);
-    if (failed) {
-      return failed;
-    }
-
-    return {
-      success: true,
-      eventId: results[0]?.eventId ?? event.eventId,
-      recipientCount: results.reduce(
-        (sum, result) => sum + (result.recipientCount ?? 0),
-        0,
-      ),
-    };
+    return this.broadcastStaffAndCustomer(event, event.data.orderId);
   }
 
   async broadcastOrderItemStatusUpdate(
@@ -150,7 +144,9 @@ export class RealtimeBroadcastService {
   async broadcastOrderCancelled(
     event: OrderCancelledEvent,
   ): Promise<BroadcastResult> {
-    return this.broadcastRestaurantAndKitchen(event);
+    // The diner's page listens on the order's customer room. Without it a
+    // staff cancellation never reached an open tracking page.
+    return this.broadcastStaffAndCustomer(event, event.data.orderId);
   }
 
   async broadcastKitchenItemStatus(
@@ -185,6 +181,30 @@ export class RealtimeBroadcastService {
     // `restaurant:*` has no connection route today but is retained for
     // forward-compat rather than removed.
     return this.broadcastToRooms(event, ["restaurant", "kitchen", "admin"]);
+  }
+
+  private async broadcastStaffAndCustomer(
+    event: NewOrderEvent | OrderStatusUpdateEvent | OrderCancelledEvent,
+    orderId: string | number,
+  ): Promise<BroadcastResult> {
+    const results = await Promise.all([
+      this.broadcastRestaurantAndKitchen(event),
+      this.broadcastEvent("customer", `order:${orderId}`, event),
+    ]);
+
+    const failed = results.find((result) => !result.success);
+    if (failed) {
+      return failed;
+    }
+
+    return {
+      success: true,
+      eventId: results[0]?.eventId ?? event.eventId,
+      recipientCount: results.reduce(
+        (sum, result) => sum + (result.recipientCount ?? 0),
+        0,
+      ),
+    };
   }
 
   private async broadcastToRooms(

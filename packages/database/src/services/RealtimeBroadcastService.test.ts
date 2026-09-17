@@ -3,6 +3,7 @@ import { RealtimeEventType } from "@makanmasak/shared-types";
 import { RealtimeBroadcastService } from "./RealtimeBroadcastService";
 import type {
   NewOrderEvent,
+  OrderCancelledEvent,
   OrderStatusUpdateEvent,
 } from "@makanmasak/shared-types";
 
@@ -79,6 +80,21 @@ function orderStatusUpdateEvent(): OrderStatusUpdateEvent {
   };
 }
 
+function orderCancelledEvent(): OrderCancelledEvent {
+  return {
+    type: RealtimeEventType.ORDER_CANCELLED,
+    eventId: "evt-cancel-1",
+    timestamp: 1780308000000,
+    restaurantId: "restaurant-1",
+    data: {
+      orderId: "order-1001",
+      orderNumber: "A001",
+      reason: "Cancelled by user",
+      cancelledBy: { userId: "staff-1", userName: "System", role: "admin" },
+    },
+  };
+}
+
 describe("RealtimeBroadcastService", () => {
   it("fans out new order events to restaurant, kitchen, and admin rooms", async () => {
     const { env, idFromName, fetch } = createRealtimeEnv();
@@ -121,5 +137,47 @@ describe("RealtimeBroadcastService", () => {
     });
     expect(idFromName).toHaveBeenCalledWith("customer:order:1001");
     expect(fetch).toHaveBeenCalledTimes(4);
+  });
+
+  // The diner's tracking page is connected to `customer:order:{orderId}` and
+  // nothing else. Cancellations went only to the staff rooms, so a page left
+  // open kept offering "取消訂單" on an order staff had already cancelled until
+  // the diner reloaded (found on production, 2026-09-17).
+  it("fans out cancellations to the order-scoped customer room too", async () => {
+    const { env, idFromName, fetch } = createRealtimeEnv();
+    const service = new RealtimeBroadcastService(env);
+
+    const result = await service.broadcastOrderCancelled(orderCancelledEvent());
+
+    expect(result).toMatchObject({ success: true, recipientCount: 8 });
+    expect(idFromName).toHaveBeenCalledWith("admin:restaurant-1");
+    expect(idFromName).toHaveBeenCalledWith("kitchen:restaurant-1");
+    expect(idFromName).toHaveBeenCalledWith("customer:order:order-1001");
+    expect(fetch).toHaveBeenCalledTimes(4);
+  });
+
+  // Staff adding items, changing a quantity or applying a discount republish
+  // the order as NEW_ORDER so the kitchen display upserts it. The diner's page
+  // needs the same signal or it keeps showing the old lines and total.
+  it("sends a modified order to the staff rooms and the order's customer room", async () => {
+    const { env, idFromName, fetch } = createRealtimeEnv();
+    const service = new RealtimeBroadcastService(env);
+
+    const result = await service.broadcastOrderModified(newOrderEvent());
+
+    expect(result).toMatchObject({ success: true, recipientCount: 8 });
+    expect(idFromName).toHaveBeenCalledWith("kitchen:restaurant-1");
+    expect(idFromName).toHaveBeenCalledWith("admin:restaurant-1");
+    expect(idFromName).toHaveBeenCalledWith("customer:order:1001");
+    expect(fetch).toHaveBeenCalledTimes(4);
+  });
+
+  it("keeps a first-time order out of the customer room", async () => {
+    const { env, idFromName } = createRealtimeEnv();
+    const service = new RealtimeBroadcastService(env);
+
+    await service.broadcastNewOrder(newOrderEvent());
+
+    expect(idFromName).not.toHaveBeenCalledWith("customer:order:1001");
   });
 });
