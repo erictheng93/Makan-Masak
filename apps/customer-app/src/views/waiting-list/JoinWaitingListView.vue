@@ -283,8 +283,11 @@ const handleJoin = async () => {
       notes: notes.value || undefined,
     };
     const ticket = await waitingListApi.join(request);
-    await enrollWaitingListPush();
+    // The ticket first: awaiting enrollment left a diner who had not answered
+    // the browser's permission prompt on a disabled form, with the number they
+    // had just taken neither shown nor saved.
     routeToTicket(ticket);
+    void enrollWaitingListPush();
   } catch {
     formMessage.value = t("waitingList.errors.joinFailed");
   } finally {
