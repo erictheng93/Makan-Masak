@@ -98,7 +98,10 @@
                 :class="['w-10 h-10', getStatusColor(order.status).text]"
               />
             </div>
-            <h2 class="text-xl font-semibold text-ios-text mb-2">
+            <h2
+              data-testid="order-status-title"
+              class="text-xl font-semibold text-ios-text mb-2"
+            >
               {{ getStatusTitle(order.status) }}
             </h2>
             <p class="text-ios-secondary">
@@ -276,7 +279,9 @@
                 class="flex justify-between text-lg font-semibold text-ios-text pt-2 border-t border-ios-separator"
               >
                 <span>{{ t("common.total") }}</span>
-                <span>{{ formatPrice(order.totalAmount) }}</span>
+                <span data-testid="order-total">{{
+                  formatPrice(order.totalAmount)
+                }}</span>
               </div>
             </div>
           </div>
