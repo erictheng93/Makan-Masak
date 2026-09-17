@@ -109,11 +109,29 @@ test.describe("系統設定 (real API)", () => {
       // Path 1 (general tab): a top-level restaurants column.
       await page.getByTestId("settings-tab-general").click();
 
-      // Wait for the form to actually hold the server's value before changing
-      // it. The settings fetch is still in flight right after navigation, and
-      // when it lands it repopulates every field — silently discarding an
-      // edit made a moment too early, which surfaces much later as "the value
-      // I typed was not in the PUT body".
+      // Wait for the form to actually hold the server's values before changing
+      // anything. The settings fetch is still in flight right after
+      // navigation, and when it lands it repopulates every field — silently
+      // discarding an edit made a moment too early, which surfaces much later
+      // as "the value I typed was not in the PUT body". Land it before the
+      // edits instead and the save can also go out before it: saveSettings
+      // returns early while the district is still the form's empty default.
+      //
+      // The wait has to be on a field whose form default differs from the
+      // server's value. It used to be the timezone alone, but the form's
+      // default and the seeded shop are both Asia/Taipei, so that wait passed
+      // at once and the race stayed open (CI on 721c2123: "Expected
+      // Asia/Singapore, Received Asia/Taipei"). gotoAdmin's `expectApi` is a
+      // substring match and settles on /restaurants/:id/service-items too.
+      // The name field starts empty and is filled by the same assignment as
+      // the timezone, so seeing the server's name means the load has landed.
+      expect(
+        original.name,
+        "the seeded restaurant needs a name, or the wait below proves nothing",
+      ).toBeTruthy();
+      await expect(page.getByTestId("settings-restaurant-name")).toHaveValue(
+        original.name ?? "",
+      );
       await expect(page.getByTestId("settings-timezone")).toHaveValue(
         original.timezone ?? "",
       );
