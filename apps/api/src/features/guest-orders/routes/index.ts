@@ -346,7 +346,11 @@ app.post("/:id/cancel", guestTokenAuth, async (c) => {
   if (!orderId) throw badRequest("Missing order id");
 
   const ordersService = new OrdersService(c.env);
-  const order = await ordersService.getOrder(orderId, false);
+  // Decide cancellability from D1: the cached copy can still read pending after
+  // the kitchen has moved the order on.
+  const order = await ordersService.getOrder(orderId, false, undefined, {
+    bypassCache: true,
+  });
 
   if (!order) {
     throw notFound("Order not found");
@@ -381,12 +385,10 @@ app.post("/:id/cancel", guestTokenAuth, async (c) => {
     c.env.CACHE_KV.delete(lookupKey),
   ]);
 
-  // Also remove guest token to prevent further access
-  const authHeader = c.req.header("Authorization");
-  if (authHeader) {
-    const token = authHeader.substring(7);
-    await c.env.CACHE_KV.delete(`guest_token:${token}`);
-  }
+  // The guest token is left in place. It is scoped to this order and expires
+  // on its own, and the tracking page refetches with it straight after a
+  // successful cancel; deleting it turned that refetch into an error. A staff
+  // cancellation never deleted it either.
 
   return c.json({
     success: true,

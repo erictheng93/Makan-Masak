@@ -922,7 +922,7 @@ describe("guest order routes", () => {
     expect(updateOrder).not.toHaveBeenCalled();
   });
 
-  it("cancels pending guest orders and clears guest access keys", async () => {
+  it("cancels pending guest orders, clears the order lock, and keeps the tracking token", async () => {
     getOrder.mockResolvedValue({
       id: 501,
       status: "pending",
@@ -948,13 +948,21 @@ describe("guest order routes", () => {
       data: { order: { status: "cancelled" } },
     });
     expect(cancelOrder).toHaveBeenCalledWith("501", "Cancelled by guest");
+    // The cancellability check reads D1: a cached copy can still say pending
+    // after the kitchen has moved the order on.
+    expect(getOrder).toHaveBeenCalledWith("501", false, undefined, {
+      bypassCache: true,
+    });
     // No reverse lookup is stored, so the lock key is rebuilt from the token
     // this request presented — the same token that created the order.
     expect(env.CACHE_KV.delete).toHaveBeenCalledWith(
       `guest_active:restaurant-1:token:${CANCELLING_GUEST_TOKEN}`,
     );
     expect(env.CACHE_KV.delete).toHaveBeenCalledWith("guest_active_lookup:501");
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith(
+    // The token is scoped to this one order and expires on its own. Deleting
+    // it here made the tracking page's refetch right after a successful cancel
+    // fail, while a staff cancellation never deleted it.
+    expect(env.CACHE_KV.delete).not.toHaveBeenCalledWith(
       `guest_token:${CANCELLING_GUEST_TOKEN}`,
     );
   });
