@@ -41,6 +41,10 @@ vi.mock("@/services/customerAccessToken", () => ({
   hasCustomerAccessToken,
 }));
 
+const cartState = vi.hoisted(() => ({
+  fulfillmentType: "takeaway" as "dine-in" | "takeaway" | "delivery",
+}));
+
 vi.mock("@/stores/shopCart", () => ({
   useShopCartStore: () => ({
     isEmpty: false,
@@ -57,7 +61,7 @@ vi.mock("@/stores/shopCart", () => ({
     ],
     subtotal: 120,
     totalWithDelivery: 120,
-    fulfillmentType: "takeaway",
+    fulfillmentType: cartState.fulfillmentType,
     deliveryFee: 0,
     clearCart,
     updateQuantity: vi.fn(),
@@ -95,6 +99,48 @@ describe("ShopCartModal checkout payload", () => {
     clearCart.mockReset();
     routerPush.mockReset();
     toastError.mockReset();
+    cartState.fulfillmentType = "takeaway";
+  });
+
+  /**
+   * The store spells dine-in with a hyphen, as the route query and the landing
+   * page do; every order schema on the server spells it `dine_in`. Sending the
+   * store's value straight through made POST /guest-orders answer 400 for every
+   * dine-in shop order -- the only method a dine-in-only shop offers.
+   */
+  it.each([
+    ["dine-in", "dine_in"],
+    ["takeaway", "takeaway"],
+  ] as const)(
+    "sends fulfillment %s as the server's %s",
+    async (storeValue, apiValue) => {
+      cartState.fulfillmentType = storeValue;
+
+      await checkout();
+
+      expect(post).toHaveBeenCalledOnce();
+      expect(post).toHaveBeenCalledWith(
+        "/guest-orders",
+        expect.objectContaining({
+          deliveryInfo: expect.objectContaining({ type: apiValue }),
+        }),
+      );
+    },
+  );
+
+  it("sends dine-in as dine_in on the authenticated endpoint too", async () => {
+    hasCustomerAccessToken.mockReturnValue(true);
+    post.mockResolvedValue({ id: 501 });
+    cartState.fulfillmentType = "dine-in";
+
+    await checkout();
+
+    expect(post).toHaveBeenCalledWith(
+      "/orders",
+      expect.objectContaining({
+        deliveryInfo: expect.objectContaining({ type: "dine_in" }),
+      }),
+    );
   });
 
   it("sends no pickup digits — the order number is the pickup identifier", async () => {

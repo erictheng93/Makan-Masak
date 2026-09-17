@@ -594,7 +594,13 @@ const handleCheckout = async () => {
       totalAmount: shopCartStore.totalWithDelivery,
       clientMutationId: pendingOrderMutationId.value,
       deliveryInfo: {
-        type: props.waitingTicketId ? "dine_in" : shopCartStore.fulfillmentType,
+        // The store and the route query spell it "dine-in"; both order schemas
+        // on the server accept only "dine_in", so the hyphenated value made
+        // every dine-in shop order come back 400.
+        type:
+          props.waitingTicketId || shopCartStore.fulfillmentType === "dine-in"
+            ? "dine_in"
+            : shopCartStore.fulfillmentType,
         ...(!props.waitingTicketId &&
         shopCartStore.fulfillmentType === "delivery"
           ? {
