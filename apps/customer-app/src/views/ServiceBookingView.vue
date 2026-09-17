@@ -372,7 +372,14 @@ const { isDisabled } = useFeatureAvailability();
 const storedValueCreditsDisabled = computed(() =>
   isDisabled("storedValueCredits"),
 );
-const today = new Date().toISOString().slice(0, 10);
+// The diner's calendar day. toISOString() gives the UTC one, which in Taiwan
+// defaulted the date picker to yesterday from midnight until 08:00.
+const now = new Date();
+const today = [
+  now.getFullYear(),
+  String(now.getMonth() + 1).padStart(2, "0"),
+  String(now.getDate()).padStart(2, "0"),
+].join("-");
 
 const serviceItem = ref<RestaurantServiceItem | null>(null);
 const slots = ref<ServiceBookingAvailabilitySlot[]>([]);

@@ -1,6 +1,14 @@
 import { ref } from "vue";
 import { flushPromises, mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import ServiceBookingView from "@/views/ServiceBookingView.vue";
 import { restaurantContactApi } from "@/services/restaurantContactApi";
 import { serviceBookingsApi } from "@/services/serviceBookingsApi";
@@ -150,6 +158,34 @@ describe("ServiceBookingView", () => {
     expect(
       wrapper.findAll('[data-testid="service-booking-slot"]'),
     ).toHaveLength(2);
+  });
+
+  describe("default booking date", () => {
+    // Pinned here, not in vitest.config.ts: CI runs in UTC, where the local
+    // day and the UTC day are the same and the old code passes too.
+    const originalTz = process.env.TZ;
+    beforeAll(() => {
+      process.env.TZ = "Asia/Taipei";
+    });
+    afterAll(() => {
+      process.env.TZ = originalTz;
+      vi.useRealTimers();
+    });
+
+    it("is the diner's calendar day, not the UTC one, just after midnight", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      // 01:30 on 18 Sep in Taipei is still 17 Sep in UTC.
+      vi.setSystemTime(new Date("2026-09-17T17:30:00.000Z"));
+
+      mountView();
+      await flushPromises();
+      vi.useRealTimers();
+
+      expect(serviceBookingsApi.getAvailability).toHaveBeenCalledWith({
+        serviceItemId: 10,
+        date: "2026-09-18",
+      });
+    });
   });
 
   it("creates, pays, verifies, and cancels a service booking", async () => {
