@@ -3,9 +3,12 @@
  *
  * Same contract as `tests/e2e/admin/admin-e2e.ts`, which this is modelled on:
  * every request the browser makes is served by a real `wrangler dev` Worker
- * against a real local D1, nothing under `tests/e2e/customer/` calls
- * `page.route()`, fixtures are created through the real API, and every write
- * the UI performs is read back from the API afterwards.
+ * against a real local D1, fixtures are created through the real API, and every
+ * write the UI performs is read back from the API afterwards.
+ *
+ * `page.route()` appears exactly once (group-orders.spec.ts), and only to hold
+ * a real response back for a moment so a race window a phone opens on its own
+ * is wide enough to hit. No route here may fulfil or abort a request.
  *
  * Three things differ from the admin harness, and each is load-bearing:
  *

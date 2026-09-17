@@ -8,10 +8,15 @@
  * 09-15 walk found missing (C2) — every part of the join flow worked and there
  * was no way to reach it — so the guest here opens exactly the URL the host's
  * invite panel renders, never one assembled by the test.
+ *
+ * The second test is the one place in this suite that calls `page.route()`,
+ * and it never answers a request itself: it holds the real response to one
+ * real GET for a moment, to open a race window a real phone opens on its own.
  */
 import { expect, test, type Page } from "@playwright/test";
 import {
   Cleanup,
+  apiData,
   assertNoOverlayError,
   cancelOnCleanup,
   createMenuFixture,
@@ -39,6 +44,48 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   await cleanup.run();
 });
+
+interface GroupSummary {
+  groupOrder: { id: string; status: string };
+  cartItems: Array<{ menuItemId: number | string; quantity: number }>;
+}
+
+/** The group order as the API holds it. Public, like the page's own read. */
+function readGroup(groupOrderId: string): Promise<GroupSummary> {
+  return apiData<GroupSummary>(
+    "read group order",
+    `/api/v1/orders/group/${groupOrderId}`,
+  );
+}
+
+/** Scans the table, starts a group from its menu, lands on the group page. */
+async function startGroupFromMenu(
+  page: Page,
+  qrCode: string,
+): Promise<{ groupOrderId: string; shareCode: string }> {
+  await page.goto(qrPath(qrCode));
+  await page.getByTestId("start-group-order-button").click({
+    timeout: NAV_TIMEOUT,
+  });
+  await page.getByTestId("group-host-name-input").fill(e2eName("主揪"));
+  const created = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/v1/orders/group/create") &&
+      response.request().method() === "POST",
+  );
+  await page.getByTestId("group-create-submit").click();
+  const response = await created;
+  expect(response.status(), "group create").toBeLessThan(300);
+  const group = (
+    (await response.json()) as {
+      data: { groupOrderId: string; shareCode: string };
+    }
+  ).data;
+  await expect(page).toHaveURL(
+    new RegExp(`/group/order/${group.groupOrderId}$`),
+  );
+  return group;
+}
 
 /** From the group page to the table menu in group mode, then one dish in. */
 async function addDishInGroupMode(
@@ -74,28 +121,7 @@ test.describe("揪團 (real API + realtime)", () => {
       const table = await createTable(localCleanup);
 
       // --- 建立揪團 from the scanned table's menu ---------------------------
-      await host.page.goto(qrPath(table.qrCode));
-      await host.page.getByTestId("start-group-order-button").click({
-        timeout: NAV_TIMEOUT,
-      });
-      const hostName = e2eName("主揪");
-      await host.page.getByTestId("group-host-name-input").fill(hostName);
-      const created = host.page.waitForResponse(
-        (response) =>
-          response.url().endsWith("/api/v1/orders/group/create") &&
-          response.request().method() === "POST",
-      );
-      await host.page.getByTestId("group-create-submit").click();
-      const createResponse = await created;
-      expect(createResponse.status(), "group create").toBeLessThan(300);
-      const group = (
-        (await createResponse.json()) as {
-          data: { groupOrderId: string; shareCode: string };
-        }
-      ).data;
-      await expect(host.page).toHaveURL(
-        new RegExp(`/group/order/${group.groupOrderId}$`),
-      );
+      const group = await startGroupFromMenu(host.page, table.qrCode);
 
       // --- 分享碼邀請: C2 (09-15) put the invite panel on this page -----------
       const invite = host.page.getByTestId("group-order-invite");
@@ -193,6 +219,82 @@ test.describe("揪團 (real API + realtime)", () => {
     } finally {
       await host.context.close();
       await guest.context.close();
+      await localCleanup.run();
+    }
+  });
+
+  test("back from the shared cart, 加入 tapped at once still goes to the group cart, not the hidden personal cart", async ({
+    browser,
+  }) => {
+    const localCleanup = new Cleanup();
+    const host = await newDinerContext(browser);
+    try {
+      const table = await createTable(localCleanup);
+      const group = await startGroupFromMenu(host.page, table.qrCode);
+      await expect(host.page.getByTestId("group-order-menu-link")).toBeVisible({
+        timeout: NAV_TIMEOUT,
+      });
+
+      // The menu remounts with group mode off and only turns it on once its
+      // read of the stored group (GET /orders/group/:id) answers. On a phone
+      // that read takes as long as the network does; against a local worker
+      // it is over before a test can tap. This holds the real response back
+      // for 1.5s so the tap reliably lands inside that window. It does not
+      // mock anything: the request still reaches the real Worker and the
+      // page gets the Worker's real answer, only later.
+      await host.page.route(
+        (url) => url.pathname === `/api/v1/orders/group/${group.groupOrderId}`,
+        async (route) => {
+          if (route.request().method() !== "GET") {
+            await route.fallback();
+            return;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 1_500));
+          await route.continue();
+        },
+      );
+
+      await host.page.getByTestId("group-order-menu-link").click();
+      const add = host.page.getByTestId(`menu-item-add-${menu.plainItem.id}`);
+      await expect(add).toBeVisible({ timeout: NAV_TIMEOUT });
+
+      // Precondition: group mode is still off when the dish is tapped. If the
+      // group had already loaded, this would be the ordinary path and the
+      // test would prove nothing about the race.
+      const groupModeAtTap = await host.page
+        .getByTestId("group-cart-link")
+        .count();
+      await add.click();
+      expect(
+        groupModeAtTap,
+        "the tap has to land before the stored group finished loading",
+      ).toBe(0);
+
+      // The dish reaches the group order the API holds…
+      await expect
+        .poll(
+          async () =>
+            (await readGroup(group.groupOrderId)).cartItems.map((item) =>
+              Number(item.menuItemId),
+            ),
+          {
+            timeout: LIVE_TIMEOUT,
+            message:
+              "the dish tapped during the group reload must reach the group cart",
+          },
+        )
+        .toEqual([menu.plainItem.id]);
+
+      // …and not the personal cart, which group mode hides from the diner.
+      await expect(host.page.getByTestId("group-cart-link")).toBeVisible({
+        timeout: LIVE_TIMEOUT,
+      });
+      await expect(host.page.getByTestId("personal-cart-hidden")).toHaveCount(
+        0,
+      );
+      await assertNoOverlayError(host.page);
+    } finally {
+      await host.context.close();
       await localCleanup.run();
     }
   });
