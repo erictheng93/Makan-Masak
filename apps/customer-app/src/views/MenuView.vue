@@ -530,6 +530,12 @@ const isCreatingGroupOrder = ref(false);
 const isAddingGroupItem = ref(false);
 const pendingGroupAddCount = ref(0);
 let groupAddQueue: Promise<void> = Promise.resolve();
+/**
+ * The pending restore of this table's stored group order. Group mode stays off
+ * until loadGroupOrder answers, so an addition made before then has to wait
+ * for the answer rather than be routed by it being off.
+ */
+let groupRestore: Promise<void> = Promise.resolve();
 
 const invalidTableMessage = "此桌號無效或已停用，請重新掃描 QR Code。";
 const isValidTableId = computed(
@@ -798,6 +804,11 @@ const handleAddToCart = async (data: {
   customizations?: SelectedCustomizations;
   notes?: string;
 }) => {
+  // Returning from the shared cart remounts this view with group mode off
+  // until the stored group has loaded. Deciding before then put the item in
+  // the personal cart, which group mode hides, so it never reached the group.
+  await groupRestore;
+
   if (isGroupMode.value) {
     enqueueGroupCartAddition(data);
     return;
@@ -985,7 +996,7 @@ watch(
         props.tableId,
         currentSeatId,
       );
-      void restoreActiveGroupOrder();
+      groupRestore = restoreActiveGroupOrder();
     }
   },
   { immediate: true },

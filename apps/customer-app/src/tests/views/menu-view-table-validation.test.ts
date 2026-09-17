@@ -193,8 +193,11 @@ describe("MenuView table validation", () => {
     tableValidationResult.value = null;
     restaurantResult.value = null;
     menuResult.value = null;
-    groupOrderMock.groupOrder.value = null;
-    groupOrderMock.currentMemberId.value = "";
+    // Real refs, as useGroupOrder returns: with plain objects isGroupMode is a
+    // computed with nothing to track, so it only re-evaluates when some other
+    // reactive write happens to land first.
+    groupOrderMock.groupOrder = ref(null);
+    groupOrderMock.currentMemberId = ref("");
     groupOrderMock.error.value = null;
     groupOrderMock.createGroupOrder.mockReset();
     groupOrderMock.loadGroupOrder.mockReset();
@@ -394,6 +397,154 @@ describe("MenuView table validation", () => {
       notes: "less salt",
     });
     expect(addCartItem).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Coming back from the shared cart remounts the menu, and group mode only
+   * turns on once loadGroupOrder answers -- 1-4 s in production. A tap on 加入
+   * inside that window used to land in the personal cart, which group mode then
+   * hides, so the item silently never reached the group order (reproduced in
+   * production 2026-09-18: the host's first addition was not in
+   * group_cart_items).
+   */
+  it("holds an addition made while the active group is still loading until it knows where it goes", async () => {
+    let finishLoading: (() => void) | undefined;
+    tableValidationResult.value = {
+      isValid: true,
+      table: { number: "A1" },
+    };
+    restaurantResult.value = { name: "Part 1 Smoke Restaurant" };
+    menuResult.value = {
+      categories: [{ id: 10, name: "Part 1 Specials", sortOrder: 1 }],
+      menuItems: [
+        {
+          id: 101,
+          categoryId: 10,
+          name: "Part 1 Test Nasi Lemak",
+          description: "Coconut rice with sambal",
+          price: 120,
+          isFeatured: false,
+          isAvailable: true,
+          sortOrder: 1,
+        },
+      ],
+    };
+    readActiveGroupOrder.mockReturnValue({
+      groupOrderId: "go-1",
+      restaurantId: "restaurant-1",
+      tableId: "1",
+      savedAt: Date.now(),
+    });
+    groupOrderMock.loadGroupOrder.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finishLoading = () => {
+            groupOrderMock.currentMemberId.value = "m-1";
+            groupOrderMock.groupOrder.value = {
+              id: "go-1",
+              restaurantId: "restaurant-1",
+              tableId: "1",
+              status: "active",
+              cartItems: [],
+            };
+            resolve();
+          };
+        }),
+    );
+    groupOrderMock.addToCart.mockResolvedValue(undefined);
+
+    const wrapper = mount(MenuView, {
+      props: {
+        restaurantId: "restaurant-1",
+        tableId: 1,
+      },
+    });
+    await flushPromises();
+
+    const click = wrapper.get('[data-testid="menu-item-add"]').trigger("click");
+    await flushPromises();
+
+    expect(addCartItem).not.toHaveBeenCalled();
+
+    finishLoading?.();
+    await click;
+    await flushPromises();
+    await flushPromises();
+
+    expect(groupOrderMock.addToCart).toHaveBeenCalledOnce();
+    expect(groupOrderMock.addToCart).toHaveBeenCalledWith(
+      expect.objectContaining({ menuItemId: "101", quantity: 2 }),
+    );
+    expect(addCartItem).not.toHaveBeenCalled();
+  });
+
+  it("puts a held addition in the personal cart when the stored group turns out to be over", async () => {
+    let finishLoading: (() => void) | undefined;
+    tableValidationResult.value = {
+      isValid: true,
+      table: { number: "A1" },
+    };
+    restaurantResult.value = { name: "Part 1 Smoke Restaurant" };
+    menuResult.value = {
+      categories: [{ id: 10, name: "Part 1 Specials", sortOrder: 1 }],
+      menuItems: [
+        {
+          id: 101,
+          categoryId: 10,
+          name: "Part 1 Test Nasi Lemak",
+          description: "Coconut rice with sambal",
+          price: 120,
+          isFeatured: false,
+          isAvailable: true,
+          sortOrder: 1,
+        },
+      ],
+    };
+    readActiveGroupOrder.mockReturnValue({
+      groupOrderId: "go-1",
+      restaurantId: "restaurant-1",
+      tableId: "1",
+      savedAt: Date.now(),
+    });
+    groupOrderMock.loadGroupOrder.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finishLoading = () => {
+            groupOrderMock.currentMemberId.value = "m-1";
+            groupOrderMock.groupOrder.value = {
+              id: "go-1",
+              restaurantId: "restaurant-1",
+              tableId: "1",
+              status: "completed",
+              cartItems: [],
+            };
+            resolve();
+          };
+        }),
+    );
+
+    const wrapper = mount(MenuView, {
+      props: {
+        restaurantId: "restaurant-1",
+        tableId: 1,
+      },
+    });
+    await flushPromises();
+
+    const click = wrapper.get('[data-testid="menu-item-add"]').trigger("click");
+    await flushPromises();
+    finishLoading?.();
+    await click;
+    await flushPromises();
+
+    expect(groupOrderMock.addToCart).not.toHaveBeenCalled();
+    expect(addCartItem).toHaveBeenCalledOnce();
+    expect(addCartItem).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 101 }),
+      2,
+      { spicy: true },
+      "less salt",
+    );
   });
 
   it("subscribes to realtime while an active group is open on the menu", async () => {
