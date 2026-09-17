@@ -1,0 +1,1044 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>顧客端上線 Readiness QA</title>
+<style>
+:root{
+  --ground:#F2F2F7; --surface:#FFFFFF; --surface-2:#F8F8FB;
+  --ink:#1C1C1E; --ink-2:#55555C; --ink-3:#8A8A92;
+  --hair:rgba(28,28,30,.10); --hair-2:rgba(28,28,30,.06);
+  --shadow:0 1px 1.5px rgba(24,24,45,.05), 0 5px 16px rgba(24,24,45,.05);
+  --shadow-sm:0 1px 1px rgba(24,24,45,.05), 0 3px 10px rgba(24,24,45,.05);
+  --blue:#007AFF; --blue-ink:#0A5FC2;
+  --green:#34C759; --green-ink:#17803D;
+  --orange:#FF9500; --orange-ink:#A85F04;
+  --red:#FF3B30; --red-ink:#C1271D;
+  --purple:#AF52DE; --purple-ink:#7B2FB5;
+  --teal:#30B0C7; --teal-ink:#0D7C8F;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F0F13; --surface:#1B1B21; --surface-2:#212128;
+    --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#7E7E8A;
+    --hair:rgba(255,255,255,.14); --hair-2:rgba(255,255,255,.07);
+    --shadow:0 1px 1.5px rgba(0,0,0,.4), 0 5px 16px rgba(0,0,0,.35);
+    --shadow-sm:0 1px 1px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
+    --blue:#3B9BFF; --blue-ink:#7CBEFF;
+    --green:#4CD97A; --green-ink:#84E5A3;
+    --orange:#FFB03D; --orange-ink:#FFC978;
+    --red:#FF6961; --red-ink:#FF9A94;
+    --purple:#C77BEB; --purple-ink:#DBA9F4;
+    --teal:#4ECBE0; --teal-ink:#8CE0EE;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F0F13; --surface:#1B1B21; --surface-2:#212128;
+  --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#7E7E8A;
+  --hair:rgba(255,255,255,.14); --hair-2:rgba(255,255,255,.07);
+  --shadow:0 1px 1.5px rgba(0,0,0,.4), 0 5px 16px rgba(0,0,0,.35);
+  --shadow-sm:0 1px 1px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
+  --blue:#3B9BFF; --blue-ink:#7CBEFF;
+  --green:#4CD97A; --green-ink:#84E5A3;
+  --orange:#FFB03D; --orange-ink:#FFC978;
+  --red:#FF6961; --red-ink:#FF9A94;
+  --purple:#C77BEB; --purple-ink:#DBA9F4;
+  --teal:#4ECBE0; --teal-ink:#8CE0EE;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans","Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.7; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:960px; margin:0 auto; padding:36px 22px 80px}
+code{
+  font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:.87em; background:var(--surface-2); padding:1.5px 6px;
+  border-radius:6px; overflow-wrap:anywhere;
+}
+pre{
+  background:var(--surface-2); border-radius:14px; padding:13px 16px;
+  overflow-x:auto; font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  font-size:12.5px; line-height:1.65; margin:12px 0;
+}
+pre code{background:none; padding:0}
+a{color:var(--blue-ink); font-weight:600; text-decoration:none}
+a:hover{text-decoration:underline}
+
+header.mast{margin-bottom:26px}
+header.mast h1{
+  margin:0; font-size:31px; font-weight:900; letter-spacing:-.025em;
+  line-height:1.2; text-wrap:balance;
+}
+header.mast .sub{margin:8px 0 0; font-size:14.5px; color:var(--ink-2)}
+.meta{
+  display:flex; flex-wrap:wrap; gap:10px 26px; margin-top:16px;
+  background:var(--surface); border-radius:16px; padding:13px 18px;
+  box-shadow:var(--shadow); font-size:12.5px; color:var(--ink-2);
+}
+.meta b{color:var(--ink); font-weight:600}
+
+section{margin-top:34px}
+h2{
+  margin:0 0 14px; font-size:20px; font-weight:800; letter-spacing:-.015em;
+}
+h3{
+  margin:26px 0 10px; font-size:16px; font-weight:700; letter-spacing:-.01em;
+}
+.card h4{
+  margin:18px 0 6px; font-size:13px; font-weight:700; letter-spacing:.02em;
+  text-transform:uppercase; color:var(--ink-3);
+}
+p{margin:10px 0}
+
+.card{
+  background:var(--surface); border-radius:20px; padding:18px 22px 20px;
+  box-shadow:var(--shadow); margin:14px 0;
+}
+.card > :first-child{margin-top:0}
+.card > :last-child{margin-bottom:0}
+
+.finding{
+  --ac:var(--ink-3); --ac-ink:var(--ink-2);
+  background:var(--surface); border-radius:20px; box-shadow:var(--shadow);
+  margin:14px 0; overflow:hidden;
+}
+.finding.blocker{--ac:var(--red); --ac-ink:var(--red-ink)}
+.finding.data{--ac:var(--purple); --ac-ink:var(--purple-ink)}
+.finding.ux{--ac:var(--orange); --ac-ink:var(--orange-ink)}
+.finding.ok{--ac:var(--green); --ac-ink:var(--green-ink)}
+.finding-h{
+  display:flex; align-items:baseline; gap:11px; flex-wrap:wrap;
+  padding:14px 22px 12px;
+  background:color-mix(in srgb, var(--ac) 11%, var(--surface));
+  border-bottom:1px solid color-mix(in srgb, var(--ac) 20%, transparent);
+}
+.finding-h .id{
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  font-size:12px; font-weight:700; color:var(--ac-ink);
+  background:color-mix(in srgb, var(--ac) 18%, var(--surface));
+  padding:2px 10px; border-radius:999px; flex:none;
+}
+.finding-h h4{
+  margin:0; font-size:15.5px; font-weight:700; letter-spacing:-.01em;
+  flex:1; min-width:220px;
+}
+.finding-b{padding:14px 22px 18px}
+.finding-b > :first-child{margin-top:0}
+.finding-b > :last-child{margin-bottom:0}
+
+.tag{
+  display:inline-block; font-size:11px; font-weight:700; letter-spacing:.04em;
+  padding:2.5px 11px; border-radius:999px; white-space:nowrap;
+}
+.tag.blocker{background:color-mix(in srgb, var(--red) 16%, var(--surface)); color:var(--red-ink)}
+.tag.data{background:color-mix(in srgb, var(--purple) 16%, var(--surface)); color:var(--purple-ink)}
+.tag.ux{background:color-mix(in srgb, var(--orange) 18%, var(--surface)); color:var(--orange-ink)}
+.tag.ok{background:color-mix(in srgb, var(--green) 18%, var(--surface)); color:var(--green-ink)}
+.tag.fixed{background:color-mix(in srgb, var(--blue) 16%, var(--surface)); color:var(--blue-ink)}
+.tag.issue{background:color-mix(in srgb, var(--teal) 18%, var(--surface)); color:var(--teal-ink)}
+
+.evidence{
+  margin:12px 0; padding:11px 15px; border-radius:14px;
+  background:var(--surface-2); font-size:13.5px; line-height:1.65;
+}
+.evidence b{font-weight:600}
+.evidence .lbl{
+  display:block; font-size:10.5px; font-weight:700; letter-spacing:.12em;
+  color:var(--ink-3); margin-bottom:5px;
+}
+
+.tablewrap{overflow-x:auto; margin:14px 0; border-radius:18px; box-shadow:var(--shadow)}
+table{border-collapse:collapse; width:100%; background:var(--surface); font-size:13.5px}
+th,td{padding:10px 15px; text-align:left; vertical-align:top}
+th{
+  font-size:11px; font-weight:700; letter-spacing:.08em; color:var(--ink-3);
+  background:var(--surface-2); white-space:nowrap;
+}
+td{border-top:1px solid var(--hair-2)}
+table.verdict td:nth-child(-n+2){white-space:nowrap}
+td.mono, th.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:12px; white-space:nowrap}
+
+ul,ol{margin:10px 0; padding-left:22px}
+li{margin:5px 0}
+ul.plain{list-style:none; padding-left:0}
+ul.plain li{
+  position:relative; padding-left:16px;
+}
+ul.plain li::before{
+  content:""; position:absolute; left:0; top:11px;
+  width:5px; height:5px; border-radius:50%; background:var(--ink-3);
+}
+
+.note{
+  border-radius:14px; padding:12px 16px; margin:14px 0; font-size:13.5px;
+  background:color-mix(in srgb, var(--blue) 9%, transparent);
+}
+.note b{color:var(--blue-ink)}
+.warn{background:color-mix(in srgb, var(--orange) 12%, transparent)}
+.warn b{color:var(--orange-ink)}
+
+footer{
+  margin-top:44px; padding-top:18px; border-top:1px solid var(--hair-2);
+  font-size:12.5px; color:var(--ink-3);
+}
+@media (max-width:640px){
+  .wrap{padding:24px 14px 60px}
+  header.mast h1{font-size:24px}
+  .finding-h,.finding-b,.card{padding-left:16px; padding-right:16px}
+}
+</style>
+</head><body>
+<div class="wrap">
+
+<header class="mast">
+  <h1>顧客端上線 readiness QA — 2026-09-18</h1>
+  <p class="sub">
+    依 <code>docs/architecture/master-user-flow.html</code> 的「1. 顧客端」四條子流程——
+    點餐主流程、訂單追蹤、座位與預約、揪團與夜市市集——回答一個問題：<b>顧客端現在能不能上 production？</b>
+    方法是兩條線並行：用真瀏覽器在 production 重走每個節點（Playwright 驅動的手動探索），
+    以及在本機真後端上建第一組顧客端自動化 E2E。
+    接續 <a href="./2026-09-15-customer-app-flow-qa.html">09-15 的顧客端流程 QA</a>（C1–C16）。
+  </p>
+  <div class="meta">
+    <span><b>環境</b> production ＋ 本機真後端（E2E）</span>
+    <span><b>前端</b> makanmasak.com <code>index-D9Tvorwj.js</code></span>
+    <span><b>後端</b> api.makanmasak.com（Worker 版本 <code>69986268</code>）</span>
+    <span><b>身分</b> 兩個訪客瀏覽器身分 ＋ <code>owner1</code> 推狀態／收款</span>
+    <span><b>餐廳</b> 麻吉 Demo 廣東粥 <code>019fa136-…31a1</code></span>
+    <span><b>基準</b> 54 張表逐表比對，結束時零差異</span>
+  </div>
+</header>
+
+<section>
+  <h2>結論：各流程能不能上線</h2>
+  <div class="tablewrap">
+    <table class="verdict">
+      <thead><tr><th>流程</th><th>判定</th><th>理由</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>點餐主流程</b></td>
+          <td><span class="tag ux">有條件</span></td>
+          <td>
+            桌位 QR → 菜單 → 購物車（數量、品項備註、訂單備註、姓名、電話）→ 送出，在 production 全部通過。
+            但<b>店家公開碼（shop mode）的內用單在 production 100% 送不出去</b>（R1，本輪已修、<b>尚未部署</b>）；
+            訪客優惠券仍會被靜默丟棄（#382，上線前不要對訪客發券）。
+          </td>
+        </tr>
+        <tr>
+          <td><b>訂單追蹤</b></td>
+          <td><span class="tag ok">可上線</span></td>
+          <td>
+            確認 → 製作中 → 準備完成 → 已送達 → 現金結帳，每一步都不重整即時到頁，時間軸五格都有時間；
+            訪客自己取消只出現一則 toast。已知風險：加點後前一筆追蹤頁 403（#383，重測仍成立）、
+            service worker 讓回訪顧客整趟跑上一版前端（R3 / #395），後者也決定了本輪修正多快能到顧客手上。
+          </td>
+        </tr>
+        <tr>
+          <td><b>座位與預約</b></td>
+          <td><span class="tag ux">有條件</span></td>
+          <td>
+            候位的叫號與確認抵達即時可用，但<b>取號後畫面被通知權限詢問卡住、票號既不顯示也沒保存</b>（R7，本輪已修、尚未部署）。
+            線上訂位在顧客端不存在，而其公開寫入端點仍開著（#385）。
+            預約服務可建立、查詢、取消，但顯示「待付款」卻沒有任何付款途徑或說明（R9 / #398）。
+          </td>
+        </tr>
+        <tr>
+          <td><b>揪團與夜市市集</b></td>
+          <td><span class="tag blocker">不可上線</span></td>
+          <td>
+            揪團能把合併的單送進廚房，但<b>送出後團主與團員都看不到任何結果或追蹤入口</b>（R5 / #396），
+            回菜單立刻加的菜會掉進被隱藏的個人購物車（R4，本輪已修），正常來回幾次就被限流 429（R6 / #397）。
+            跨攤結帳在 production 從建立那一步就被 CSRF 擋下（R13 / #401），而擋在後面的「付款」<b>不經任何金流就把每一攤的訂單記為已付款</b>（R2 / #400）——
+            兩者必須一起修，先修 CSRF 等於打開付款的洞。市集在 production 0 筆。
+            代幣（儲值）功能在 production 由旗標關閉。
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note warn">
+    <b>五個「本輪已修」都還在本機分支 <code>fix/customer-readiness-2026-09-18</code>，沒有推送也沒有部署。</b>
+    在它們部署之前，上表的「有條件」要讀成「不可上線」：店家公開碼內用與候位取號是兩條完整走不下去的路。
+  </p>
+</section>
+
+<section>
+  <h2>上線前提：不是程式碼，是設定與資料</h2>
+  <div class="card">
+    <p>下面每一項都擋住某個節點，而且都不是改程式碼能解決的。全部實查，不是從設定檔推論：</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>前提</th><th>production 現況</th><th>擋住的節點</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>線上金流</td>
+            <td>api 的 secret 只有 <code>CLOUDFLARE_API_TOKEN</code>、<code>ENCRYPTION_KEY</code>、<code>INTERNAL_API_TOKEN</code>、<code>JWT_SECRET</code>、<code>QR_SIGNING_KEY</code> 五個；沒有任何金流商憑證，<code>[env.production.vars]</code> 也沒有 <code>MARKET_CHECKOUT_*</code></td>
+            <td>跨攤結帳、完成付款、預約服務預付、代幣儲值</td>
+          </tr>
+          <tr>
+            <td>寄信／簡訊</td>
+            <td>註冊實測仍回 <code>503 EMAIL_CHANNEL_UNAVAILABLE</code>，<code>customers</code> 0 筆</td>
+            <td>會員線整條（#384）</td>
+          </tr>
+          <tr>
+            <td>Web push</td>
+            <td>沒有 VAPID secret；前端 bundle（<code>push-notifications-BDHbGzdx.js</code>）用的是程式碼裡的佔位公鑰；訂閱端點只收會員</td>
+            <td>候位「叫號通知」的推播半邊（#399）</td>
+          </tr>
+          <tr>
+            <td>儲值代幣</td>
+            <td><code>GET /info</code> 的 <code>disabledFeatures</code> 含 <code>storedValueCredits</code>（旗標預設關）</td>
+            <td>代幣／優惠卷的「儲值扣抵」</td>
+          </tr>
+          <tr>
+            <td>市集與服務資料</td>
+            <td><code>markets</code> 0、<code>restaurant_market_memberships</code> 0、<code>restaurant_service_items</code> 0、<code>coupons</code> 0；只有一家正式店、一道上架菜、一張啟用中的桌子（座位桌全部停用）</td>
+            <td>探索市集、跨攤結帳、預約服務、座位 QR 在 production 無法以真實資料走完</td>
+          </tr>
+          <tr>
+            <td>測試租戶</td>
+            <td>09-16 入駐驗證建立的「QA 部署驗證測試店 勿用 20260916」公開列在 <code>/discover</code></td>
+            <td>探索頁（已留言於 #386）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>做了什麼</h2>
+  <div class="card">
+    <h4>production 手動探索</h4>
+    <ul class="plain">
+      <li><b>開始前量基準</b>：顧客端會寫到的 54 張表逐表計數，加上 <code>restaurants.total_orders</code>、<code>menu_items.inventory_count / order_count</code>、桌位與座位狀態。</li>
+      <li><b>點餐</b>：掃桌位 A1 的簽章 QR；購物車改數量、品項備註、訂單備註、姓名、電話後送出；另走店家公開碼 → 選內用 → 購物車 → 送出。</li>
+      <li><b>追蹤</b>：開著追蹤頁，由 <code>owner1</code> 逐步推狀態、以現金結帳；訪客自己取消；加點後回到前一筆。每一步記錄 WebSocket 事件、畫面與時間軸，不重整。</li>
+      <li><b>座位與預約</b>：候位取號 → 店主叫號（帶 <code>tableId</code>）→ 顧客確認抵達；以不寫入的請求確認訂位公開端點；臨時建一個服務與兩個時段，走一次顧客預約 → 確認碼查詢 → 取消。</li>
+      <li><b>揪團與市集</b>：同一個瀏覽器開第二個獨立身分，團主建立揪團 → 團員用邀請連結加入 → 兩邊加菜 → 團主送出；探索頁與市集頁。</li>
+      <li><b>會員入口</b>：註冊一次，確認 09-15 修的錯誤文案與 #384 現況。</li>
+      <li><b>結束後</b>逐列刪除本輪建立的資料、還原三個計數器，再跑一次 54 張表比對。</li>
+    </ul>
+    <p>
+      每個可疑畫面都往下追到「API 實際回了什麼」與「哪一行程式碼造成的」。
+      其中兩項（R3、R7）在第一眼看起來像別的問題，是追下去才分辨出來的，過程寫在各自的段落。
+    </p>
+    <h4>自動化 E2E</h4>
+    <p>
+      顧客端在 <code>tests/e2e/</code> 原本<b>零</b>個真後端測試。本輪在獨立 worktree 建立 <code>customer-real</code> Playwright 專案，
+      21 個測試逐節點覆蓋，連續兩次全綠；做法、覆蓋表與突變驗證見<a href="#e2e">自動化 E2E</a>一節。
+    </p>
+  </div>
+</section>
+
+<section>
+  <h2>發現總表</h2>
+  <p>
+    本輪新發現 <b>16 項</b>，編號接續 09-15 的 C1–C16 改用 R 字頭。其中 R1–R12 來自 production 手動探索，
+    R13–R16 由自動化 E2E 找到（R1 兩邊各自獨立找到）。
+    <b>5 項直接修掉</b>（都有先紅後綠的回歸測試），<b>7 項開 issue</b>（#395–#401），
+    1 項併入既有 issue 的留言，3 項只記錄。
+  </p>
+  <p class="note">
+    <b>分界線沿用前兩輪：</b>修法唯一、範圍收斂、能在本機用測試證明的直接修；
+    需要產品決定、需要憑證、或要動到全域路徑（service worker、限流、付款語意）的開 issue，issue 內附自足的建議修法與驗收步驟。
+  </p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th class="mono">#</th><th>發現</th><th>流程</th><th>類型</th><th>處置</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">R1</td><td>店家公開碼選「內用」送出，<code>POST /guest-orders</code> 100% 回 400（<code>dine-in</code> ≠ <code>dine_in</code>）</td><td>點餐</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">R2</td><td>市集結帳的「付款」在沒有金流時不收錢，直接把每攤訂單記為已付款</td><td>市集</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue">#400</span></td></tr>
+        <tr><td class="mono">R3</td><td>service worker 讓回訪顧客整趟跑上一版前端，部署的修正晚一整餐才到</td><td>全站</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue">#395</span></td></tr>
+        <tr><td class="mono">R4</td><td>揪團：從群組購物車回菜單立刻按「加入」，菜進了被隱藏的個人購物車，沒有進群組單</td><td>揪團</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">R5</td><td>揪團送出後沒有「已送出」狀態、沒有追蹤入口；重新整理顯示「無法載入群組訂單」</td><td>揪團</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue">#396</span></td></tr>
+        <tr><td class="mono">R6</td><td>揪團每次換頁都重換即時 token，同 IP 每分鐘 10 次就 429，同桌共用 Wi-Fi 必撞</td><td>揪團</td><td><span class="tag data">資料</span></td><td><span class="tag issue">#397</span></td></tr>
+        <tr><td class="mono">R7</td><td>候位取號 201 後畫面卡在停用的表單：先等通知權限回應才顯示票號，票號也沒保存</td><td>座位與預約</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">R8</td><td>Web push 在 production 送不到任何人，顧客卻照樣被詢問通知權限</td><td>座位與預約</td><td><span class="tag ux">缺口</span></td><td><span class="tag issue">#399</span></td></tr>
+        <tr><td class="mono">R9</td><td>服務預約顯示「待付款」但沒有任何付款途徑或說明；幣別寫死 TWD</td><td>座位與預約</td><td><span class="tag ux">缺口</span></td><td><span class="tag issue">#398</span></td></tr>
+        <tr><td class="mono">R10</td><td>團員加入後，自己頁面的「N 位成員」停在 1，要重新整理才對</td><td>揪團</td><td><span class="tag ux">體驗</span></td><td>記錄</td></tr>
+        <tr><td class="mono">R11</td><td>掃到已停用座位的 QR，畫面是「QR碼資料驗證失敗／處理QR碼時發生錯誤／重試」，重試永遠不會成功</td><td>點餐</td><td><span class="tag ux">體驗</span></td><td>記錄</td></tr>
+        <tr><td class="mono">R12</td><td>「QA 部署驗證測試店 勿用 20260916」公開列在顧客探索頁</td><td>探索</td><td><span class="tag data">資料</span></td><td><span class="tag issue">#386 留言</span></td></tr>
+        <tr><td class="mono">R13</td><td>市集結帳的訪客寫入（建立、套卷、付款）在 production 全被 CSRF 擋下，金流回呼也被擋</td><td>市集</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue">#401</span></td></tr>
+        <tr><td class="mono">R14</td><td>市集結帳頁把「分」當「元」顯示：NT$110 的結帳顯示 NT$11,000，套卷後應付金額單位混用</td><td>市集</td><td><span class="tag data">資料</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">R15</td><td>預約頁的預設日期是 UTC 的日期，台灣 00:00–08:00 開頁會預設成昨天</td><td>座位與預約</td><td><span class="tag data">資料</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">R16</td><td>（範圍外）後台新增員工用重複的 username，<code>POST /users</code> 回 500 而不是 409</td><td>店家後台</td><td><span class="tag ux">體驗</span></td><td>記錄</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>點餐主流程</h2>
+
+  <div class="finding blocker">
+    <div class="finding-h">
+      <span class="id">R1</span>
+      <h4>店家公開碼選「內用」送出，100% 回 400</h4>
+      <span class="tag fixed">本輪已修</span>
+    </div>
+    <div class="finding-b">
+      <p>
+        <code>/restaurant/:id/shop/order-type</code> 只提供「內用 Dine-in」（這家店只開內用），
+        選了之後菜單標頭顯示「內用 Dine-in」、購物車「取餐方式」也只有內用——09-15 修的 C5 在 production 確實生效了。
+        然後按「確認訂單」：
+      </p>
+      <pre><code>POST /api/v1/guest-orders
+{"restaurantId":"019fa136-…","guestName":"Guest","orderType":"shop",
+ "items":[{"menuItemId":2,"quantity":1}],"deliveryInfo":{"type":"dine-in"}, …}
+
+→ 400 {"code":"VALIDATION_ERROR","details":[{"field":"deliveryInfo.type",
+       "message":"Invalid option: expected one of \"dine_in\"|\"takeaway\"|\"delivery\""}]}</code></pre>
+      <p>畫面上是一則「請檢查輸入內容後再試一次。」，購物車原封不動。沒有任何輸入可以改，所以重試永遠一樣。</p>
+      <p>
+        購物車 store（<code>stores/shopCart.ts</code>）、路由 query、落地頁都把內用拼成 <code>dine-in</code>；
+        伺服器兩個建單 schema（<code>guest-orders/schemas/validation.ts</code>、<code>orders/schemas/validation.ts</code>）只收 <code>dine_in</code>。
+        <code>ShopCartModal.vue</code> 把 store 的值原樣塞進 <code>deliveryInfo.type</code>。
+      </p>
+      <p class="note warn">
+        <b>這是 09-15 那輪自己的修正打開的。</b>C5 之前購物車只給外帶與外送（值剛好合法，雖然店家不做）；
+        C5 讓購物車改讀店家開關、第一次出現「內用」按鈕，而那一輪只驗證了按鈕出現，沒有按下送出。
+        只開內用的店，店家公開碼從那天起就下不了單。
+      </p>
+      <h4>修法</h4>
+      <p>在 payload 邊界轉換，兩個端點（訪客與會員）共用同一個物件，所以一處改動兩條都修：</p>
+      <pre><code>type:
+  props.waitingTicketId || shopCartStore.fulfillmentType === "dine-in"
+    ? "dine_in"
+    : shopCartStore.fulfillmentType,</code></pre>
+      <div class="evidence">
+        <span class="lbl">回歸測試 · <code>shop-cart-checkout.test.ts</code></span>
+        新增「dine-in 送成 dine_in」（訪客、會員兩個端點）與「takeaway 原樣」。
+        修正前 2 個紅：<code>Received: "deliveryInfo": { "type": "dine-in" }</code>；修正後 11/11 綠。
+        commit <code>42c12e53</code>。E2E 也獨立撞到同一個 400，<code>ordering.spec.ts</code> 在修正後斷言 201 並讀回 <code>dine_in</code>。
+      </div>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h">
+      <span class="id">R11</span>
+      <h4>掃到已停用座位的 QR：錯誤訊息與「重試」都不對</h4>
+      <span>記錄</span>
+    </div>
+    <div class="finding-b">
+      <p>
+        production 的座位桌（S1、ST1、SEATQA、ZZ-SMOKE）全部停用，座位 QR 仍在資料庫裡。
+        掃 S1 座位 01：<code>GET /qr/verify/seat</code> → 404，畫面「QR碼資料驗證失敗／處理QR碼時發生錯誤／重試」。
+        對顧客而言那是「這個位子目前不能點餐，請找店員」，不是「QR 壞了、再試一次」。
+      </p>
+      <p>
+        <b>只記錄不開 issue</b>：只有店家停用了座位卻沒撕貼紙時會遇到，顧客會自然去找店員；
+        正確的座位點餐路徑本輪在 production 無法實測（沒有啟用中的座位），由本機 E2E 覆蓋。
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h4>通過的節點（production 實測）</h4>
+    <ul class="plain">
+      <li><b>掃桌位 QR</b>　<code>GET /qr/verify/table</code> 200 → <code>/restaurant/:id/table/2</code>，桌位驗證、餐廳、菜單三支 200，console 無錯誤。</li>
+      <li><b>購物車</b>　數量 +1（NT$90 × 2）、品項備註「少鹽」、訂單備註、姓名、電話全部進到 D1：<code>order_items.notes = "少鹽 QA0918"</code>、<code>orders.notes</code>、<code>customer_info = {"name":…,"phone":"0912000918"}</code>。</li>
+      <li><b>C10（09-15 修）</b>　電話在新版前端確實送出並寫入。<b>第一次實測時沒有</b>——那是 R3，不是 C10 回歸。</li>
+      <li><b>送出確認</b>　確認對話框「您即將提交總額 NT$180 的訂單」→ 201，取得訂單編號並導向追蹤頁。</li>
+      <li><b>C5（09-15 修）</b>　店家公開碼：落地頁只給內用、菜單標頭「內用 Dine-in」、購物車只有內用。</li>
+    </ul>
+    <p>
+      <b>客製／加購選項</b>在 production 沒有任何選項群組可以測（唯一上架的菜沒有選項），由本機 E2E 覆蓋。
+      <b>優惠券</b>：#382 相關的三個檔案自 09-15 開單後沒有變動，production 也沒有任何券，沒有重建資料重測。
+    </p>
+  </div>
+</section>
+
+<section>
+  <h2>訂單追蹤</h2>
+
+  <div class="finding blocker">
+    <div class="finding-h">
+      <span class="id">R3</span>
+      <h4>service worker 讓回訪顧客整趟跑上一版前端</h4>
+      <span class="tag issue">#395</span>
+    </div>
+    <div class="finding-b">
+      <p>
+        第一張單送出時，請求裡<b>沒有 <code>customerPhone</code></b>。main 上的 <code>CartView.vue</code> 會送，
+        部署的 <code>CartView-fGSKBdOb.js</code> 裡也有 <code>customerPhone:x.value.phone.trim()||void 0</code>。
+        第一個假設是 C10 沒部署或回歸——但 bundle 裡明明有。於是查頁面實際載入的是什麼：
+      </p>
+      <pre><code>document.scripts          → /assets/index-BeUlIVvH.js      ← 09-15 之前的版本
+fetch('/', no-store)      → index-D9Tvorwj.js               ← 目前部署的版本
+頁面載入的 CartView       → CartView-BMoqE6NF.js            ← 不是 fGSKBdOb
+Cache Storage precache    → index-D9Tvorwj.js、CartView-fGSKBdOb.js（已在背景更新完）</code></pre>
+      <p>
+        重新整理一次，載入 <code>index-D9Tvorwj.js</code>，下一張單就帶了電話。
+        這個瀏覽器前一次造訪 makanmasak.com 時裝好的 service worker，把舊的 <code>index.html</code> 與舊 chunk 從 precache 回給了這次造訪，
+        新版在背景裝好，但頁面不會自己換過去。
+      </p>
+      <p>
+        <code>vite.config.ts</code> 用 <code>registerType: "autoUpdate"</code>，但沒有在入口呼叫
+        <code>registerSW({ immediate: true })</code>，外掛注入的 <code>registerSW.js</code> 只註冊、不重新載入；
+        <code>/sw.js</code> 另外帶 <code>cache-control: max-age=14400</code>。
+      </p>
+      <p class="note warn">
+        <b>對上線的意義：</b>掃碼點餐的一次造訪就是一整餐，所以每次部署，回訪顧客晚一整餐才拿到。
+        這一輪與前兩天部署的每一個顧客端修正（追蹤頁即時更新、訪客自己取消、以及本輪的 R1／R4／R7）都受這個延遲約束。
+        同一個 <code>runtimeCaching</code> 規則還把帶 guest token 的 <code>GET /guest-orders/:id</code> 在裝置上快取 24 小時，
+        網路失敗時會靜默顯示舊的訂單狀態。
+      </p>
+      <p>
+        沒有直接修：service worker 改錯會讓已安裝的客戶端卡在壞版本、而且很難遠端救回，
+        需要在 preview 環境用兩次 build 驗證，不適合順手改。issue 內附完整修法與驗收步驟。
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h4>通過的節點（production 實測，追蹤頁全程不重整）</h4>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>店家動作</th><th>API</th><th>顧客追蹤頁</th></tr></thead>
+        <tbody>
+          <tr><td>確認</td><td class="mono">PUT /orders/:id/status 200</td><td>「已確認」，時間軸「訂單已確認 00:38」</td></tr>
+          <tr><td>開始製作</td><td class="mono">PUT … preparing 200</td><td>「製作中」，<b>「正在製作 00:38」</b>（C11 修正前這格永遠沒有時間）</td></tr>
+          <tr><td>準備完成 → 已送達</td><td class="mono">PUT … ready / delivered 200</td><td>「已送達」、100%、評價區塊出現，五格時間全部到齊（C12）</td></tr>
+          <tr><td>現金結帳</td><td class="mono">POST /payments 200 <code>orderStatus: paid</code></td><td>「已完成」「訂單已完成並結帳」</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="plain">
+      <li><b>訪客自己取消（09-18 修）</b>　真瀏覽器：<code>POST /guest-orders/:id/cancel</code> 200 → 重抓 200 → 「已取消」，toast 只出現一則「訂單已取消」。前一天的驗證是 Node 腳本，這次補上真頁面。</li>
+      <li><b>評價區塊</b>　送達後 <code>GET /orders/:id/review</code> 404 是「尚未評價」的正常回應（<code>orderApi.getOrderReview</code> 轉成 <code>null</code>），只是 console 會印一行錯誤。</li>
+    </ul>
+    <h4>重測仍成立的既有 issue</h4>
+    <ul class="plain">
+      <li><b>#383</b>　取消 A → 「繼續點餐」下 B → 回 A 的網址：<code>GET /guest-orders/&lt;A&gt;</code> 403，畫面「載入失敗 / ApiException: 沒有權限執行此操作」。已留言。</li>
+      <li><b>#388</b>　一份顯示「預估還需 15 分鐘」、兩份顯示 30 分鐘，仍是寫死的 15 分鐘基數；相關程式碼自開單後沒有變動。</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>座位與預約</h2>
+
+  <div class="finding blocker">
+    <div class="finding-h">
+      <span class="id">R7</span>
+      <h4>候位取號成功，畫面卻卡在停用的表單</h4>
+      <span class="tag fixed">本輪已修</span>
+    </div>
+    <div class="finding-b">
+      <pre><code>POST /api/v1/waiting-list → 201
+{"id":"wait_01a0b03f-…","queueDisplay":"A001","status":"waiting","partiesAhead":0, …}</code></pre>
+      <p>
+        7 秒後畫面仍是取號表單，「加入排隊」「用手機查詢號碼」「查看歷史紀錄」三顆按鈕全部停用，console 沒有任何錯誤。
+        09-15 同一條路徑是通的，所以先查瀏覽器狀態：<code>Notification.permission === "default"</code>、
+        <code>permissions.query({name:"notifications"})</code> 是 <code>prompt</code>——一個還沒被回答的權限詢問。
+      </p>
+      <pre><code>// JoinWaitingListView.vue（修正前）
+const ticket = await waitingListApi.join(request);
+await enrollWaitingListPush();   // → await Notification.requestPermission()
+routeToTicket(ticket);           // 票號頁與 localStorage 都在這之後</code></pre>
+      <p>
+        顧客不回答權限詢問，就看不到剛拿到的號碼；此時重新整理，因為票號還沒存，畫面是空白表單——而伺服器上已經有一張票。
+        直接開票號網址則一切正常（「A001 候位中 前方組數 0」），證明卡住的只有導向這一步。
+      </p>
+      <p>
+        詢問之所以出現，是 <code>webPush</code> 旗標預設開啟，<code>pushUnavailable</code> 守門永遠是 false，
+        而 production 根本送不出推播——那一半是 R8。
+      </p>
+      <h4>修法</h4>
+      <pre><code>const ticket = await waitingListApi.join(request);
+routeToTicket(ticket);          // 先顯示並保存票號
+void enrollWaitingListPush();   // 詢問不再擋路</code></pre>
+      <div class="evidence">
+        <span class="lbl">回歸測試 · <code>JoinWaitingListView.test.ts</code></span>
+        新增「權限詢問未回答時仍顯示並保存票號」：<code>requestPermission</code> 回傳永不 settle 的 promise。
+        修正前紅（<code>routerMocks.push</code> 未被呼叫），修正後綠；<code>web-push-unavailable.test.ts</code> 5/5 仍綠。
+        commit <code>1e4094d1</code>。
+      </div>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h">
+      <span class="id">R8</span>
+      <h4>Web push 在 production 送不到任何人</h4>
+      <span class="tag issue">#399</span>
+    </div>
+    <div class="finding-b">
+      <p>三層各自都足以讓推播送不到：</p>
+      <ul class="plain">
+        <li>api 沒有 <code>WEB_PUSH_VAPID_PUBLIC_KEY</code> / <code>WEB_PUSH_VAPID_PRIVATE_KEY</code>，<code>CustomerWebPushService.deliver()</code> 直接回 <code>{ ok: false }</code>。</li>
+        <li>customer-app 沒有設定 <code>VITE_VAPID_PUBLIC_KEY</code>，部署的 bundle 用程式碼裡的佔位公鑰 <code>BNxvNnqy…</code>。</li>
+        <li>訂閱送到會員端點，投遞查 <code>customer_id</code>；訪客沒有，而會員註冊在 production 不可用（#384）。</li>
+      </ul>
+      <p>R7 修掉的是「詢問擋住票號」；「根本不該詢問」需要決定旗標怎麼拆，開 issue。</p>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h">
+      <span class="id">R9</span>
+      <h4>服務預約「待付款」，但顧客沒有付款途徑</h4>
+      <span class="tag issue">#398</span>
+    </div>
+    <div class="finding-b">
+      <p>
+        production 沒有任何服務，所以臨時建一個「QA0918 預約服務」（NT$200、30 分鐘、需預約）與 09-19 14:00／14:30 兩個時段，事後刪除。
+        從店家公開頁的「店家服務 → 站內預約」進入：
+      </p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>步驟</th><th>結果</th></tr></thead>
+          <tbody>
+            <tr><td>查時段</td><td><code>GET /service-bookings/availability</code> 200，「14:00 剩 2」「14:30 剩 2」</td></tr>
+            <tr><td>建立預約</td><td>201，<code>paymentRequirement: "prepay"</code>、<code>paymentStatus: "unpaid"</code>；畫面「預約已建立／確認碼／應付 <b>$200</b>／狀態 <b>待付款</b>」；14:00 變「剩 1」</td></tr>
+            <tr><td>以確認碼＋電話查詢</td><td><code>GET /service-bookings/verify/:code</code> 200，列出預約與「取消預約」</td></tr>
+            <tr><td>取消</td><td><code>POST …/cancel</code> 200，「已取消」，14:00 回到「剩 2」</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        流程本身是通的。問題是「待付款」之後什麼都沒有：唯一的付款控制是儲值卡，而儲值在 production 關閉；
+        實際可行的只有店家端「確認收現」，顧客端沒有一個字說要到店付。
+        金額用 <code>Intl.NumberFormat(..., { currency: "TWD" })</code> 寫死台幣，<code>zh-TW</code> 下顯示 <code>$200</code>，
+        同一家店的菜單是 <code>NT$90</code>；馬來西亞與越南的店會顯示台幣。
+      </p>
+    </div>
+  </div>
+
+  <div class="finding data">
+    <div class="finding-h">
+      <span class="id">R15</span>
+      <h4>預約頁的預設日期是 UTC 的日期</h4>
+      <span class="tag fixed">本輪已修</span>
+    </div>
+    <div class="finding-b">
+      <p>
+        E2E agent 讀程式碼時發現：<code>ServiceBookingView.vue</code> 以 <code>new Date().toISOString().slice(0, 10)</code> 當日期預設值，那是 UTC 的日曆日。
+        台灣時間 00:00–08:00 打開預約頁，預設日期是昨天——查到的是過去的時段或沒有時段。
+      </p>
+      <div class="evidence">
+        <span class="lbl">回歸測試 · <code>service-booking-view.test.ts</code></span>
+        在測試檔內把 <code>process.env.TZ</code> 釘成 <code>Asia/Taipei</code>（CI 跑 UTC，新舊碼在 UTC 下字串相同），假時鐘 09-18 01:30（台北）。
+        修正前在 <code>TZ=UTC</code> 下也紅：<code>"date": "2026-09-17"</code>；修正後綠。commit <code>19eaa76f</code>。
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h4>通過的節點與既有 issue</h4>
+    <ul class="plain">
+      <li><b>叫號與確認抵達</b>　<code>owner1</code> <code>POST /waiting-list/:id/call {tableId: 2}</code> 200 → 顧客頁不重整變成「已叫號」並出現「確認已抵達」→ <code>POST …/confirm</code> 200 →「已確認抵達」。</li>
+      <li><b>線上訂位（#385）</b>　不寫入的探測：<code>POST /reservations {}</code> 回 <b>400</b>「缺少必填欄位」而不是 401，公開寫入端點仍開著；顧客端仍無訂位畫面。已留言。</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>揪團與夜市市集</h2>
+
+  <div class="finding blocker">
+    <div class="finding-h">
+      <span class="id">R4</span>
+      <h4>回到菜單立刻加菜，菜進了被隱藏的個人購物車</h4>
+      <span class="tag fixed">本輪已修</span>
+    </div>
+    <div class="finding-b">
+      <p>
+        團主從群組購物車按「繼續加菜」回到菜單，按「加入」。之後回到群組購物車，只看到團員的一道菜；
+        production D1 的 <code>group_cart_items</code> 也只有團員那一列。菜單頁多了一行
+        「你的 1 項單人購物車項目在群組點餐時會暫時隱藏」——團主的菜去了個人購物車。
+      </p>
+      <p>
+        網路紀錄裡那次「加入」沒有 <code>POST /orders/group/:id/cart</code>。
+        再來回三次，每次都在「加入」按鈕出現的當下點擊：第 1 次同樣掉進個人購物車，第 2、3 次正確。
+      </p>
+      <p>
+        回到菜單會重新掛載 <code>MenuView</code>，而 <code>isGroupMode</code> 要等
+        <code>restoreActiveGroupOrder()</code> 的 <code>loadGroupOrder</code> 回來才變 true（production 1–4 秒）。
+        在那之前 <code>handleAddToCart</code> 走個人購物車分支；群組模式一打開，這個項目就被隱藏。
+        顧客看到的是「已加入 招牌廣東粥 x1」的成功 toast。
+      </p>
+      <h4>修法</h4>
+      <pre><code>let groupRestore: Promise&lt;void&gt; = Promise.resolve();
+// watch(isTableValid) 裡：groupRestore = restoreActiveGroupOrder();
+
+const handleAddToCart = async (data) =&gt; {
+  await groupRestore;            // 等確定是不是群組模式再決定放哪個購物車
+  if (isGroupMode.value) { enqueueGroupCartAddition(data); return; }
+  …</code></pre>
+      <div class="evidence">
+        <span class="lbl">回歸測試 · <code>menu-view-table-validation.test.ts</code></span>
+        新增兩案：群組還在載入時的加入要等載入完進群組購物車；載入後發現群組已結束則進個人購物車。
+        修正前紅：<code>expected "vi.fn()" to not be called at all, but actually been called 1 times</code>（個人購物車被呼叫）。
+        把修正拿掉再跑一次同樣紅，放回去綠（48/48，含 <code>group-order-views.test.ts</code>）。
+        commit <code>44886e8c</code>。
+      </div>
+      <p class="note">
+        <b>測試本身也有一個洞。</b>既有 mock 的 <code>groupOrder</code> 與 <code>currentMemberId</code> 是普通的 <code>{ value }</code> 物件，
+        <code>isGroupMode</code> 這個 computed 沒有任何響應式依賴可追，只在別的響應式寫入剛好發生時才重算——
+        新測試第一次實作後仍紅，就是這個原因，而不是修法錯了。已改成和 <code>useGroupOrder</code> 一樣回傳真的 <code>ref</code>。
+      </p>
+    </div>
+  </div>
+
+  <div class="finding blocker">
+    <div class="finding-h">
+      <span class="id">R5</span>
+      <h4>揪團送出後，團主與團員都看不到任何結果</h4>
+      <span class="tag issue">#396</span>
+    </div>
+    <div class="finding-b">
+      <p>團主按「送出訂單」：</p>
+      <pre><code>POST /api/v1/orders/group/c2a0e0bd-…/lock → 200
+{"masterOrderId":"01a0b044-…","status":"completed"}
+
+D1: group_orders.status = completed
+    orders  925K-3A4A  status=pending  4 items  total_amount_cents=36000</code></pre>
+      <p>
+        伺服器端完全成功，四道菜（團員 1、團主 3）都在主訂單裡。但 8 秒後兩邊畫面都還是可編輯的購物車：
+        「繼續加菜」「我要結算」都在，只有「送出訂單」按鈕消失，沒有任何「已送出」字樣，也沒有追蹤入口。
+        團主重新整理後頂部出現「<b>無法載入群組訂單。</b>」——來自 <code>POST /realtime/auth/group-token</code> 400（群組已結束不再發即時 token），被當成載入失敗顯示。
+      </p>
+      <p>
+        <code>GroupOrderView</code> 刻意不把 <code>completed</code> 當鎖定（為了送出後還能結算），所以沒有「已送出」狀態；
+        <code>masterOrderId</code> 在前端沒有任何地方讀；lock 路由也沒替主訂單發 guest token，就算導去追蹤頁也會 401。
+        要讓成員看得到自己的單，需要決定成員用什麼憑證讀主訂單，所以開 issue。
+      </p>
+    </div>
+  </div>
+
+  <div class="finding data">
+    <div class="finding-h">
+      <span class="id">R6</span>
+      <h4>正常來回幾次就被限流 429，購物車失去即時同步</h4>
+      <span class="tag issue">#397</span>
+    </div>
+    <div class="finding-b">
+      <p>
+        整段揪團過程，同一個瀏覽器打了 12 次 <code>POST /realtime/auth/group-token</code>——每次打開群組購物車或回到菜單都重換一次。
+        第 6 個來回開始 429「請求過於頻繁，請稍後再試」，WebSocket 連不上，畫面沒有提示。
+        該端點限流是每 IP 每分鐘 10 次；同桌的人連同一個店家 Wi-Fi，共用同一個出口 IP。
+      </p>
+    </div>
+  </div>
+
+  <div class="finding blocker">
+    <div class="finding-h">
+      <span class="id">R2</span>
+      <h4>市集結帳「付款」不收錢，就把每攤訂單記為已付款</h4>
+      <span class="tag issue">#400</span>
+    </div>
+    <div class="finding-b">
+      <p>
+        production 沒有市集，也沒有任何金流憑證，所以先讀程式碼：顧客端 <code>MarketCheckoutTrackingView.payCheckout()</code> 送
+        <code>{"method":"market_online"}</code>；<code>createMarketCheckoutPaymentProvider()</code> 在
+        <code>MARKET_CHECKOUT_SPLIT_MODE</code> 未設定時（production 就是）回傳 <code>ChildTransactionMarketCheckoutPaymentProvider</code>，
+        它對每一攤呼叫收銀台記帳用的 <code>PaymentService.processPayment()</code>，<b>而且不帶 user</b>——
+        該服務的兩道角色守門都寫成 <code>if (options.user &amp;&amp; …)</code>，沒有 user 就兩道都跳過。
+      </p>
+      <p>讀程式碼的推論交給本機 E2E 實證（兩攤結帳、與前端相同的 body、只持有結帳的 guest token）：</p>
+      <pre><code>POST /api/v1/market-checkouts/:id/pay  {"method":"market_online","country":"TW","currency":"TWD"}
+→ 200  payment.status = "paid"
+
+orders（兩攤）              status=pending   payment_status=<b>completed</b>   paid_at_ms=NULL
+payment_transactions（兩列） method/gateway=market_online   status=<b>paid</b>   provider_transaction_id=NULL</code></pre>
+      <p class="note warn">
+        <b>任何拿到結帳連結的訪客都能把自己的市集訂單標成已付款，不需要付錢。</b>
+        它今天碰不到，只因為 R13 的 CSRF 把整個結帳擋在前面、而且 production 沒有市集。
+        issue 裡寫明了順序：付款要 fail closed（沒有金流就回 409、改到攤位付現）之後，才能修 CSRF。
+      </p>
+      <div class="evidence">
+        <span class="lbl">E2E</span>
+        <code>markets.spec.ts</code>「完成付款」以<b>正確行為</b>斷言（沒有金流時付款不得把攤位訂單記為已付款），目前標記 <code>test.fail</code> 並註明 #400；修好後移除標記即成為回歸測試。
+      </div>
+    </div>
+  </div>
+
+  <div class="finding blocker">
+    <div class="finding-h">
+      <span class="id">R13</span>
+      <h4>市集結帳的訪客寫入全被 CSRF 擋下</h4>
+      <span class="tag issue">#401</span>
+    </div>
+    <div class="finding-b">
+      <p>E2E 從市集頁加兩攤的菜按結帳，<code>POST /market-checkouts</code> 回 403。回到 production 用不寫入的請求確認（body 故意給 <code>{}</code>）：</p>
+      <pre><code>POST /api/v1/market-checkouts                 Origin: makanmasak.com → 403 CSRF_TOKEN_MISSING
+POST /api/v1/market-checkouts/&lt;id&gt;/pay        Origin: makanmasak.com → 403 CSRF_TOKEN_MISSING
+POST /api/v1/market-checkouts/&lt;id&gt;/voucher    Origin: makanmasak.com → 403 CSRF_TOKEN_MISSING
+POST /api/v1/market-checkouts/payment-webhooks/stripe（無 Origin）   → 403 INVALID_REQUEST_ORIGIN
+對照 POST /api/v1/guest-orders                Origin: makanmasak.com → 400 VALIDATION_ERROR（已通過 CSRF）</code></pre>
+      <p>
+        <code>app-factory.ts</code> 的 <code>csrfProtection</code> 排除清單列了訪客點餐、揪團、候位、服務預約等所有顧客自助流程，唯獨沒有
+        <code>/api/v1/market-checkouts</code>；customer-app 完全不送 CSRF token（它不用 session cookie）。
+        修法是在排除清單加上精確的市集自助路徑，但<b>不能早於 #400</b>，所以沒有直接修。
+      </p>
+    </div>
+  </div>
+
+  <div class="finding data">
+    <div class="finding-h">
+      <span class="id">R14</span>
+      <h4>市集結帳頁把「分」當「元」顯示</h4>
+      <span class="tag fixed">本輪已修</span>
+    </div>
+    <div class="finding-b">
+      <p>
+        E2E 建立一筆 NT$110 的兩攤結帳（從 Node 直接呼叫，繞過 R13），結帳頁顯示小計 <b>NT$11,000</b>。
+        API 每一個來源（建立、讀取、套卷、會員的結帳列表）的 <code>subtotal</code> 都是分，旁邊還有 <code>totalAmountCents</code>、<code>discountCents</code>；
+        admin 的 <code>PlatformMarketCheckoutsView</code> 也用 <code>formatCents()</code> 顯示它。
+        只有 <code>MarketCheckoutTrackingView</code> 把它直接交給吃「元」的 <code>formatPrice()</code>，
+        並用它減掉以「元」計的卷折抵來算應付金額。
+      </p>
+      <p class="note">
+        <b>既有測試為什麼沒抓到：</b>畫面測試餵 <code>subtotal: 240</code>（元），而同一個 app 的 <code>orderApi.test.ts</code> 餵 <code>24000</code>（分）；
+        斷言又是 <code>toContain("NT$240")</code>——<code>"NT$24000"</code> 也包含它。
+      </p>
+      <div class="evidence">
+        <span class="lbl">回歸測試 · <code>market-checkout-tracking-view.test.ts</code></span>
+        fixtures 改成 API 實際送的分，小計斷言改成 <code>/NT\$240(?!\d)/</code>。修正前 2 個紅：
+        <code>expected 'NT$23976' to contain 'NT$216'</code>；修正後 15/15 綠（相關 4 檔 41 個）。commit <code>f2a3ad0f</code>。
+      </div>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h">
+      <span class="id">R10</span>
+      <h4>團員自己的頁面，成員數停在「1 位成員」</h4>
+      <span>記錄</span>
+    </div>
+    <div class="finding-b">
+      <p>
+        團員加入後，團主頁即時變成「2 位成員」，團員自己的頁面等了 6 秒以上仍是「1 位成員」，換頁回來才正確。
+        <b>只記錄不開 issue</b>：數字錯但不影響加菜與送出，而 R6 修好之後即時連線穩定，這個數字很可能跟著好；
+        #397 驗收時一併確認。
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h4>通過的節點（production 實測）</h4>
+    <ul class="plain">
+      <li><b>C2（09-15 修）</b>　建立揪團後出現「邀請同桌一起點 / 複製邀請連結 / https://makanmasak.com/group/6P6473PR / 邀請代碼」。</li>
+      <li><b>加入</b>　第二個身分開邀請連結 → 「QA0918 團主 正在點餐／成員 1／內用／到期時間」→ 輸入名字 →
+        <code>POST /orders/group/join/6P6473PR</code> 200；團主頁不重整變成「2 位成員」，團員的菜即時出現在團主的群組購物車。</li>
+      <li><b>分帳</b>　均分／各付各／按比例、服務費依點餐金額／均攤／我來付，結算列「QA0918 團員 NT$90 / QA0918 團主 NT$270」與實際品項一致。</li>
+      <li><b>送出</b>　主訂單建立正確（見 R5），只是顧客端看不到。</li>
+      <li><b>市集頁</b>　<code>/markets</code> 顯示「尚未收錄可瀏覽的夜市或商圈」，空狀態正確。production 沒有市集，跨攤結帳無法以真資料實測。</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>會員入口（附帶確認）</h2>
+  <div class="card">
+    <ul class="plain">
+      <li><b>#384</b>　<code>POST /customer/auth/register</code>（email）仍回 <code>503 EMAIL_CHANNEL_UNAVAILABLE</code>，<code>customers</code> 仍 0 筆，沒有留下任何驗證 token 列。</li>
+      <li><b>C14（09-15 修）</b>　同一個 503 在註冊頁顯示「註冊失敗」，不再是「登入失敗」。</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>範圍外</h2>
+  <div class="finding ux">
+    <div class="finding-h">
+      <span class="id">R16</span>
+      <h4>後台新增員工用重複的 username 回 500</h4>
+      <span>記錄</span>
+    </div>
+    <div class="finding-b">
+      <p>
+        E2E 建立收銀員帳號時撞到：<code>POST /api/v1/users</code> 用已存在的 username 回 <code>500 GENERIC_ERROR</code>，應該是 409。
+        屬於店家後台（master-user-flow 第 2 節），不在本輪範圍；<b>只記錄</b>，建議併入下一輪後台 QA 一起處理。
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="e2e">
+  <h2>自動化 E2E</h2>
+  <div class="card">
+    <p>
+      顧客端在 <code>tests/e2e/</code> 原本<b>零</b>個打真後端的測試。本輪新增 Playwright 專案 <code>customer-real</code>：
+      <b>5 個 spec、21 個測試</b>，跑在本機 api ＋ realtime（WebSocket）＋ management-api（建第二個攤位要開租戶）＋ customer-app ＋ 全新 migrate 的本機 D1 上。
+    </p>
+    <ul class="plain">
+      <li><b>不攔截任何回應。</b>整套只有一處 <code>page.route()</code>（R4），而且只把真實回應延後 1.5 秒、不改內容；header 註明任何 route 都不得 fulfil 或 abort。</li>
+      <li><b>每個寫入畫面與 API 兩邊斷言。</b>下單後讀回訂單的品項、選項、備註、姓名、電話；叫號後讀回候位狀態；揪團送出後讀回主訂單的每一列。</li>
+      <li><b>即時更新要證明沒有重整。</b>追蹤測試在頁面上放一個標記，全程檢查它還在；WebSocket 事件另外記錄，分得出「伺服器沒送」與「頁面沒處理」。</li>
+      <li><b>已知 bug 用正確行為斷言、標 <code>test.fail</code>。</b>斷言寫的是應有行為，標記註明 issue 編號；修好時移除標記即成為回歸測試，而如果 bug 被別的修正意外修好，<code>test.fail</code> 會轉紅提醒。</li>
+      <li>fixtures 全部透過真 API 建立（桌位與簽章 QR、座位桌、選項群組、優惠券、服務與時段、市集與兩個攤位、收銀員帳號），<code>locale: zh-TW</code>、<code>timezoneId: Asia/Taipei</code>。</li>
+    </ul>
+
+    <h4>節點覆蓋（master-user-flow「1. 顧客端」）</h4>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>節點</th><th>測試</th><th>結果</th></tr></thead>
+        <tbody>
+          <tr><td>掃描 QR · 桌位</td><td class="mono">ordering.spec.ts</td><td><span class="tag ok">通過</span></td></tr>
+          <tr><td>掃描 QR · 座位</td><td class="mono">ordering.spec.ts</td><td><span class="tag ok">通過</span>（production 沒有啟用中的座位，這是唯一的覆蓋）</td></tr>
+          <tr><td>掃描 QR · 店家公開碼 → 選擇取餐</td><td class="mono">ordering.spec.ts</td><td><span class="tag ok">通過</span>（原為 <code>test.fail</code>，R1 修正後改成一般測試：201 且讀回 <code>deliveryInfo.type = dine_in</code>）</td></tr>
+          <tr><td>瀏覽菜單 · 分類</td><td class="mono">ordering.spec.ts</td><td><span class="tag ok">通過</span></td></tr>
+          <tr><td>瀏覽菜單 · 客製與加購選項 → 加入購物車（數量、備註）→ 送出</td><td class="mono">ordering.spec.ts</td><td><span class="tag ok">通過</span>（含必選／可選、加價反映在購物車與訂單、C10 電話）</td></tr>
+          <tr><td>優惠券折抵（訪客）</td><td class="mono">ordering.spec.ts</td><td><span class="tag issue">test.fail #382</span>　購物車 NT$60，訂單 NT$80、折扣 0</td></tr>
+          <tr><td>訂單追蹤 pending → delivered（含時間軸時間）</td><td class="mono">order-tracking.spec.ts</td><td><span class="tag ok">通過</span></td></tr>
+          <tr><td>店家改數量、店家取消</td><td class="mono">order-tracking.spec.ts</td><td><span class="tag ok">通過</span></td></tr>
+          <tr><td>訪客自己取消</td><td class="mono">order-tracking.spec.ts</td><td><span class="tag ok">通過</span>（已取消、一則 toast、重抓無 4xx）</td></tr>
+          <tr><td>delivered → paid</td><td class="mono">order-tracking.spec.ts</td><td><span class="tag ok">通過</span>（收銀員 <code>POST /payments</code>）</td></tr>
+          <tr><td>繼續點餐後回到前一筆</td><td class="mono">order-tracking.spec.ts</td><td><span class="tag issue">test.fail #383</span>　403 <code>Token does not match this order</code></td></tr>
+          <tr><td>候位登記 → 叫號通知 → 入座確認</td><td class="mono">seating-and-bookings.spec.ts</td><td><span class="tag ok">通過</span></td></tr>
+          <tr><td>候位登記（通知權限未回答）</td><td class="mono">seating-and-bookings.spec.ts</td><td><span class="tag ok">通過</span>（R7 回歸測試）</td></tr>
+          <tr><td>線上訂位</td><td>—</td><td>不可測：顧客端沒有畫面（#385）</td></tr>
+          <tr><td>預約服務</td><td class="mono">seating-and-bookings.spec.ts</td><td><span class="tag ok">通過</span>（讀回預約、時段名額減一）</td></tr>
+          <tr><td>建立揪團 → 邀請 → 加入 → 合單送出</td><td class="mono">group-orders.spec.ts</td><td><span class="tag ok">通過</span>（邀請連結取自 C2 的邀請面板）</td></tr>
+          <tr><td>揪團：回菜單立刻加菜</td><td class="mono">group-orders.spec.ts</td><td><span class="tag ok">通過</span>（R4 回歸測試）</td></tr>
+          <tr><td>探索市集 · 攤位總覽</td><td class="mono">markets.spec.ts</td><td><span class="tag ok">通過</span></td></tr>
+          <tr><td>跨攤結帳（從市集頁）</td><td class="mono">markets.spec.ts</td><td><span class="tag issue">test.fail #401</span>　403 <code>CSRF_TOKEN_MISSING</code></td></tr>
+          <tr><td>跨攤結帳（繞過 CSRF 從 Node 建立）→ 結帳頁</td><td class="mono">markets.spec.ts</td><td><span class="tag ok">通過</span>（每攤一筆真訂單；小計與應付皆為 <code>NT$110</code>，R14 修正後由 <code>test.fail</code> 改成一般測試）</td></tr>
+          <tr><td>代幣／優惠卷 · 卷碼核銷</td><td class="mono">markets.spec.ts</td><td><span class="tag issue">test.fail #401</span>　同一個 CSRF</td></tr>
+          <tr><td>代幣／優惠卷 · 儲值扣抵</td><td>—</td><td>不可測：市集結帳頁沒有代幣付款；預約頁的代幣控制在 <code>STORED_VALUE_CREDITS_ENABLED</code> 關閉時隱藏（本機、CI、production 皆關）</td></tr>
+          <tr><td>完成付款 · 結果回調 · 逐攤分帳</td><td class="mono">markets.spec.ts</td><td><span class="tag issue">test.fail #400</span>　見 R2 的實證</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>突變驗證：測試真的抓得到嗎</h4>
+    <p>每組至少把受守護的東西弄壞一次，看它紅，再還原：</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>組</th><th>弄壞了什麼</th><th>紅在哪一行</th></tr></thead>
+        <tbody>
+          <tr><td>點餐</td><td>訪客購物車 payload 拿掉 <code>customerPhone</code></td><td><code>"phone": "0963623236"</code> expected，<code>customerInfo</code> 裡沒有</td></tr>
+          <tr><td>追蹤</td><td>拿掉狀態更新後的重抓</td><td>「timeline step 訂單已確認 should show when it happened」，received 沒有時間</td></tr>
+          <tr><td>候位</td><td>讓票號頁的輪詢不做事</td><td>expected 已叫號，received 候位中</td></tr>
+          <tr><td>揪團</td><td>移除 <code>InvitePanel</code></td><td><code>getByTestId('group-order-invite')</code> not found</td></tr>
+          <tr><td>R4</td><td><code>MenuView.vue</code> 換回 <code>65372730</code> 的版本</td><td>「the dish tapped during the group reload must reach the group cart」expected <code>[9071]</code>，received <code>[]</code></td></tr>
+          <tr><td>R7</td><td><code>JoinWaitingListView.vue</code> 換回 <code>65372730</code> 的版本</td><td>「the diner must land on their ticket without answering the prompt」停在 <code>/wait-list</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">
+      <b>R4 測試另外檢查「點擊當下群組模式還沒開」</b>，否則在慢機器上重新載入可能先完成，測試會在沒有觸發競態的情況下通過。
+      <b>R7 測試另外檢查「確實請求過權限」</b>，避免因為根本沒走推播註冊而假通過。
+    </p>
+
+    <h4>執行結果</h4>
+    <div class="evidence">
+      <span class="lbl">全新 migrate ＋ seed 的本機 D1，連續兩次完整執行</span>
+      <code>21 passed (1.3m)</code>、<code>21 passed (1.2m)</code>——兩次都是 unexpected 0、flaky 0；
+      5 個預期失敗（#382、#383、#400、#401 ×2）各自失敗在預定的斷言上。
+      另外 E2E 分支的 <code>pnpm run typecheck:tests</code>、eslint、prettier 皆為 0。
+    </div>
+    <ul class="plain">
+      <li><b>CI</b>　<code>.github/workflows/test.yml</code> 新增 <code>customer-real-e2e</code> job（比照 <code>admin-real-e2e</code>，另起 realtime 與 management-api，worker 逐一啟動以免搶同一個 inspector port）。分支未推送，<b>尚未在 CI 上跑過</b>。</li>
+      <li><code>chromium</code> 專案改為忽略 <code>**/customer/**</code>，避免同一批測試被無後端的專案撿走。</li>
+      <li>產品程式碼只加了 4 個 <code>data-testid</code>（追蹤頁的狀態標題與總計、候位票號頁的前方組數、結帳頁小計）。</li>
+    </ul>
+
+    <h4>E2E 找到、手動探索沒有找到的</h4>
+    <p>
+      R13（CSRF）、R14（金額單位）、R16（範圍外），以及 R2 的資料庫實證。R15 是建測試時讀程式碼發現的。
+      R1 則是兩條線各自獨立找到——這是本輪唯一被兩邊同時抓到的阻斷。
+    </p>
+  </div>
+</section>
+
+<section>
+  <h2>本輪的修正與驗證</h2>
+  <div class="card">
+    <p>
+      兩個本機分支疊在一起：<code>origin/main</code>（<code>65372730</code>）→ <code>fix/customer-readiness-2026-09-18</code>（5 個修正）→
+      <code>test/customer-real-e2e</code>（10 個 E2E commit ＋ 本報告）。E2E 分支疊在修正分支上，是因為其中兩個測試（R1、R14）在修正前是 <code>test.fail</code>、修正後才是一般測試。
+    </p>
+    <p>修正分支的五個原子 commit，每個都附先紅後綠的回歸測試：</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th class="mono">commit</th><th>內容</th><th>發現</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">42c12e53</td><td>fix(customer): send shop dine-in orders as dine_in</td><td>R1</td></tr>
+          <tr><td class="mono">44886e8c</td><td>fix(customer): wait for the stored group before routing a menu addition</td><td>R4</td></tr>
+          <tr><td class="mono">1e4094d1</td><td>fix(customer): show the waiting-list ticket before asking about notifications</td><td>R7</td></tr>
+          <tr><td class="mono">f2a3ad0f</td><td>fix(customer): read the market checkout subtotal as cents</td><td>R14</td></tr>
+          <tr><td class="mono">19eaa76f</td><td>fix(customer): default the booking date to the diner's day, not UTC's</td><td>R15</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="evidence">
+      <span class="lbl">驗證</span>
+      每個 commit 前：該檔 eslint ＋ prettier、相關測試檔先紅後綠；customer-app <code>vue-tsc --noEmit</code> 通過（含測試檔）。
+      五個 commit 之後 <code>TURBO_SCM_BASE=origin/main pnpm verify</code>：affected 1 個 package，typecheck ＋ lint ＋ test 全綠，
+      customer-app <b>82 個測試檔、751 個測試</b>通過（3 分 6 秒）。
+    </div>
+    <p class="note warn">
+      <b>未推送、未部署。</b>五項都是 customer-app 的前端變更，部署範圍只有 <code>makanmasak-customer</code> Pages。
+      部署後，已裝過 service worker 的回訪顧客要到下一次造訪才拿得到（R3）。
+    </p>
+  </div>
+</section>
+
+<section>
+  <h2>production 資料善後</h2>
+  <div class="card">
+    <p>本輪在 production 建立的每一列都刪除，三個計數器還原，之後 54 張表再比對一次：<b>零差異</b>。</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>表</th><th>本輪新增</th><th>處理</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">orders / order_items</td><td class="mono">3 / 6</td><td>訪客單兩筆（一筆取消、一筆結帳）、揪團主訂單一筆</td></tr>
+          <tr><td class="mono">receipts</td><td class="mono">1</td><td>確認訂單時自動產生的廚房單</td></tr>
+          <tr><td class="mono">payment_transactions / payment_audit_log / idempotency_keys</td><td class="mono">1 / 2 / 1</td><td>現金結帳</td></tr>
+          <tr><td class="mono">group_orders / group_members / group_cart_items / split_bills / group_activity_logs</td><td class="mono">1 / 2 / 4 / 2 / 8</td><td>揪團</td></tr>
+          <tr><td class="mono">waiting_list</td><td class="mono">1</td><td>候位 A001</td></tr>
+          <tr><td class="mono">restaurant_service_items / service_booking_slots / service_bookings</td><td class="mono">1 / 2 / 1</td><td>臨時服務、時段、預約</td></tr>
+          <tr><td class="mono">audit_logs</td><td class="mono">3</td><td>訪客單的建立與取消</td></tr>
+          <tr><td class="mono">sessions</td><td class="mono">1</td><td><code>owner1</code> 登入（該帳號開始前沒有有效 session，沒有踢掉任何人）</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>刪除順序受外鍵約束：群組子表 → <code>group_orders</code> → <code>order_items</code> → <code>receipts</code> → 付款三表 → <code>orders</code>。計數器：</p>
+    <ul class="plain">
+      <li><code>restaurants.total_orders</code> 12 → <b>9</b>（本輪 3 筆，計數器只增不減）</li>
+      <li><code>menu_items#2.order_count</code> 21 → <b>14</b>；<code>inventory_count</code> 5 → <b>10</b>（取消的那筆有回補庫存，<code>order_count</code> 沒有回沖，即 #393）</li>
+    </ul>
+    <p>
+      還原不了、也不需要還原的：<code>audit_logs</code> 與 <code>restaurant_service_items</code> 的自增序號前進了；
+      KV 裡的 guest token、候位與群組快取依 TTL 自然過期。
+    </p>
+  </div>
+</section>
+
+<section>
+  <h2>下一步</h2>
+  <div class="card">
+    <ol>
+      <li><b>部署本輪五個修正</b>（customer Pages）。在那之前，店家公開碼內用與候位取號兩條路在 production 是斷的。</li>
+      <li><b>#395 service worker</b>——它決定了之後每一個顧客端修正多快到達顧客，優先於其他前端 issue。</li>
+      <li><b>#400 然後 #401</b>——市集要上線，付款必須先 fail closed，才能拿掉 CSRF 的擋路；兩者之前市集不要上架。</li>
+      <li><b>#396 揪團送出後的追蹤</b>，與 #383 一起做（兩者都需要以訂單分鍵的 guest token）。</li>
+      <li><b>#382 訪客優惠券</b>——在修好之前不要對訪客發券。</li>
+      <li><b>上線前提</b>由持有憑證的人處理：寄信／簡訊（#384）、VAPID（#399）、金流商；並清掉公開探索頁上的測試租戶。</li>
+      <li>#397、#398、#399、#385、#386、#387、#388 依序處理。</li>
+    </ol>
+  </div>
+</section>
+
+<footer>
+  <p>
+    2026-09-18 · production 實測 ＋ 本機 E2E · 顧客端（master-user-flow「1. 顧客端」）readiness ·
+    16 項發現，5 項本輪直接修，7 項開 issue（#395–#401）。
+  </p>
+  <p>
+    前一輪：<a href="./2026-09-15-customer-app-flow-qa.html">顧客端流程 QA — 2026-09-15</a>（C1–C16）；
+    店家後台：<a href="./2026-09-01-admin-dashboard-flow-qa.html">店家後台流程 QA — 2026-09-01</a>。
+  </p>
+</footer>
+
+</div>
+</body>
+</html>
