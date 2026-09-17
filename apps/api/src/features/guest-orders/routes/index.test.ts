@@ -824,7 +824,12 @@ describe("guest order routes", () => {
       success: true,
       data: { order: { id: 501 } },
     });
-    expect(getOrder).toHaveBeenCalledWith("501", true);
+    // Fresh, not cached: the tracking page refetches this the moment a
+    // realtime event says the order changed, and the KV copy can still be the
+    // pre-change order at that point (production, 2026-09-17).
+    expect(getOrder).toHaveBeenCalledWith("501", true, undefined, {
+      bypassCache: true,
+    });
   });
 
   it("validates guest item additions and order state", async () => {

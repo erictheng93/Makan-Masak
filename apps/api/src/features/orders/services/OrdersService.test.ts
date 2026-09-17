@@ -2234,3 +2234,40 @@ describe("OrdersService kitchen tickets", () => {
     ).resolves.toMatchObject({ id: "32", status: "confirmed" });
   });
 });
+
+describe("OrdersService order reads", () => {
+  beforeEach(() => {
+    getBaseOrder.mockReset();
+  });
+
+  it("serves a cached order when one is present", async () => {
+    const cached = createOrder({ id: "42", status: "pending" });
+    const env = createEnv({
+      cacheGet: async (key) => (key === "order:42:full" ? cached : null),
+    });
+    const service = new OrdersService(env as never);
+
+    await expect(service.getOrder("42")).resolves.toEqual(cached);
+    expect(getBaseOrder).not.toHaveBeenCalled();
+  });
+
+  // A diner's tracking page refetches when a realtime event arrives. The event
+  // is sent alongside the KV delete, not after it, and KV deletes are
+  // eventually consistent across locations, so the cache can still hold the
+  // pre-change order. Reading it there reverted a cancelled order to pending.
+  it("reads the database and leaves the cache alone when asked to bypass it", async () => {
+    const stale = createOrder({ id: "42", status: "pending" });
+    const fresh = createOrder({ id: "42", status: "cancelled" });
+    const env = createEnv({
+      cacheGet: async (key) => (key === "order:42:full" ? stale : null),
+    });
+    getBaseOrder.mockResolvedValue(fresh);
+    const service = new OrdersService(env as never);
+
+    await expect(
+      service.getOrder("42", true, undefined, { bypassCache: true }),
+    ).resolves.toMatchObject({ status: "cancelled" });
+    expect(env.CACHE_KV.get).not.toHaveBeenCalledWith("order:42:full", "json");
+    expect(env.CACHE_KV.put).not.toHaveBeenCalled();
+  });
+});

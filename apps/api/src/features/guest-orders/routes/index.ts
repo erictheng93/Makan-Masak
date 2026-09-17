@@ -285,7 +285,11 @@ app.get("/:id", guestTokenAuth, async (c) => {
   if (!orderId) throw badRequest("Missing order id");
 
   const ordersService = new OrdersService(c.env);
-  const order = await ordersService.getOrder(orderId, true);
+  // The tracking page calls this as soon as a realtime event says the order
+  // changed, which can be before the cached copy is gone. Read the database.
+  const order = await ordersService.getOrder(orderId, true, undefined, {
+    bypassCache: true,
+  });
 
   if (!order) {
     throw notFound("Order not found");

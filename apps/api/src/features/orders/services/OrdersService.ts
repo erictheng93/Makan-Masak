@@ -340,18 +340,30 @@ export class OrdersService implements IOrdersService {
     }
   }
 
+  /**
+   * `bypassCache` reads the database and neither reads nor refreshes the KV
+   * copy. Use it where a read follows a realtime event: writes broadcast and
+   * delete the cached order concurrently, and KV deletes are eventually
+   * consistent across locations, so the cached copy can still be the order as
+   * it was before the change the event announced.
+   */
   async getOrder(
     id: string,
     includeItems: boolean = true,
     caller?: CallerContext,
+    { bypassCache = false }: { bypassCache?: boolean } = {},
   ): Promise<Order | null> {
     try {
-      // Try cache first
       const cacheKey = `order:${id}:${includeItems ? "full" : "basic"}`;
-      const cached = (await this.cacheKV.get(cacheKey, "json")) as Order | null;
-      if (cached) {
-        this.assertRestaurantAccess(cached, caller);
-        return cached;
+      if (!bypassCache) {
+        const cached = (await this.cacheKV.get(
+          cacheKey,
+          "json",
+        )) as Order | null;
+        if (cached) {
+          this.assertRestaurantAccess(cached, caller);
+          return cached;
+        }
       }
 
       // Get from base service
@@ -361,10 +373,11 @@ export class OrdersService implements IOrdersService {
       // Defence-in-depth: verify caller has access to this order's restaurant
       this.assertRestaurantAccess(order, caller);
 
-      // Cache the result
-      await this.cacheKV.put(cacheKey, JSON.stringify(order), {
-        expirationTtl: 300,
-      }); // 5 minutes
+      if (!bypassCache) {
+        await this.cacheKV.put(cacheKey, JSON.stringify(order), {
+          expirationTtl: 300,
+        }); // 5 minutes
+      }
 
       return order;
     } catch (error) {
