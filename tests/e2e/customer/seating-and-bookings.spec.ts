@@ -171,6 +171,100 @@ test.describe("座位與預約流程 (real API)", () => {
     }
   });
 
+  test("候位登記 with the notification prompt still unanswered: the ticket shows, is saved, and survives a reload", async ({
+    browser,
+  }) => {
+    const localCleanup = new Cleanup();
+    const { context, page } = await newDinerContext(browser);
+    try {
+      const owner = await getOwner();
+      const rid = owner.restaurantId;
+
+      // Joining asks for notification permission. Headless Chromium settles
+      // Notification.requestPermission() at once, so here the join flow never
+      // waits on it; on a phone the promise stays pending until the diner taps
+      // Allow or Block, and many never do. Recreate that: permission reads
+      // "default" and requestPermission never settles. No request is touched —
+      // this only changes what the browser's own API answers.
+      await page.addInitScript(() => {
+        const marker = window as unknown as { __e2ePermissionAsked?: boolean };
+        Object.defineProperty(Notification, "permission", {
+          configurable: true,
+          get: () => "default",
+        });
+        Notification.requestPermission = () => {
+          marker.__e2ePermissionAsked = true;
+          return new Promise<NotificationPermission>(() => undefined);
+        };
+      });
+
+      await page.goto(`/r/${rid}/wait-list`);
+      const phone = mobileNumber();
+      await page.getByTestId("customer-name-input").fill(e2eName("未回應通知"));
+      await page.getByTestId("customer-phone-input").fill(phone);
+
+      const joined = page.waitForResponse(
+        (response) =>
+          response.url().endsWith("/api/v1/waiting-list") &&
+          response.request().method() === "POST",
+      );
+      await page.getByTestId("join-button").click();
+      const joinResponse = await joined;
+      expect(joinResponse.status(), "join waiting list").toBe(201);
+      const ticket = ((await joinResponse.json()) as { data: WaitingTicket })
+        .data;
+      localCleanup.add(`cancel waiting ticket ${ticket.id}`, () =>
+        apiRequest(`/api/v1/waiting-list/${ticket.id}`, {
+          method: "DELETE",
+          body: { customerPhone: phone },
+        }),
+      );
+
+      // The ticket is on screen while the prompt is still pending.
+      await expect(
+        page,
+        "the diner must land on their ticket without answering the prompt",
+      ).toHaveURL(new RegExp(`/wait-list/${ticket.id}$`), { timeout: 10_000 });
+      await expect(page.getByTestId("queue-number")).toHaveText(
+        ticket.queueDisplay,
+      );
+      // Precondition: the prompt really was asked for and left pending. If
+      // push enrolment were skipped, this test would exercise nothing.
+      await expect
+        .poll(
+          () =>
+            page.evaluate(
+              () =>
+                (window as unknown as { __e2ePermissionAsked?: boolean })
+                  .__e2ePermissionAsked === true,
+            ),
+          { message: "joining should have asked for notification permission" },
+        )
+        .toBe(true);
+
+      // Saved: the number survives a reload, and the join page hands it back.
+      const saved = await page.evaluate(() =>
+        window.localStorage.getItem("wl:lastTicket"),
+      );
+      expect(JSON.parse(saved ?? "{}")).toEqual(
+        expect.objectContaining({ ticketId: ticket.id, restaurantId: rid }),
+      );
+      await page.reload();
+      await expect(page.getByTestId("queue-number")).toHaveText(
+        ticket.queueDisplay,
+        { timeout: NAV_TIMEOUT },
+      );
+      await page.goto(`/r/${rid}/wait-list`);
+      await expect(page).toHaveURL(new RegExp(`/wait-list/${ticket.id}$`), {
+        timeout: NAV_TIMEOUT,
+      });
+      await assertNoOverlayError(page);
+    } finally {
+      await context.close();
+      await localCleanup.run();
+    }
+  });
+
   test("預約服務: book a slot the owner opened and read the booking back", async ({
     browser,
   }) => {
