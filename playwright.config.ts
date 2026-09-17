@@ -57,7 +57,12 @@ export default defineConfig({
     // re-adding a browser is a decision someone has to make explicitly.
     {
       name: "chromium",
-      testIgnore: ["**/admin/**", "**/integration/**", "**/smoke/**"],
+      testIgnore: [
+        "**/admin/**",
+        "**/customer/**",
+        "**/integration/**",
+        "**/smoke/**",
+      ],
       use: { ...devices["Desktop Chrome"] },
     },
 
@@ -89,6 +94,34 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
         baseURL: process.env.E2E_ADMIN_URL || "http://localhost:3001",
         viewport: { width: 1280, height: 800 },
+        actionTimeout: 20_000,
+        navigationTimeout: 45_000,
+      },
+    },
+
+    // Customer app tests — real API, real realtime worker, real D1.
+    //
+    // Same rules as `admin-real` and for the same reasons (one shop's rows,
+    // retries over dirty state hide ordering bugs), plus a third service: order
+    // tracking, the waiting list and group orders update over the realtime
+    // worker's WebSocket, so the gate in customer-e2e.ts probes it too.
+    //
+    // zh-TW is not cosmetic. The customer app picks its language from the
+    // browser, and the assertions target the Chinese strings a diner in Taiwan
+    // reads; under the default en-US locale they are simply not on the page.
+    {
+      name: "customer-real",
+      testDir: "./tests/e2e/customer",
+      fullyParallel: false,
+      workers: 1,
+      timeout: 180_000,
+      retries: 0,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: process.env.E2E_CUSTOMER_URL || "http://127.0.0.1:3000",
+        locale: "zh-TW",
+        timezoneId: "Asia/Taipei",
+        viewport: { width: 390, height: 844 },
         actionTimeout: 20_000,
         navigationTimeout: 45_000,
       },
