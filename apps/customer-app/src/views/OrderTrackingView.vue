@@ -544,7 +544,17 @@ const {
 });
 
 const { mutate: cancelOrder, isPending: isCancelling } = useMutation({
-  mutationFn: () => orderApi.cancelOrder(props.orderId),
+  // Same split as the order query below: a guest order is read, and must be
+  // cancelled, through /guest-orders. The staff route answered guests with 403.
+  mutationFn: () => {
+    const hasCustomerToken = hasCustomerAccessToken();
+    const hasGuestToken = !!localStorage.getItem("guest_auth_token");
+
+    if (!hasCustomerToken && hasGuestToken) {
+      return orderApi.cancelGuestOrder(props.orderId);
+    }
+    return orderApi.cancelOrder(props.orderId);
+  },
   onSuccess: () => {
     // Mark it cancelled before the refetch lands, so the realtime echo of this
     // same cancellation is not announced a second time.

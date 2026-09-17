@@ -23,6 +23,9 @@ const toast = vi.hoisted(() => ({
 }));
 // A plain `{ value }` stands in for the mutation's isPending ref.
 const cancelPending = vi.hoisted(() => ({ value: false }));
+const mutationOptions = vi.hoisted(() => ({
+  current: null as null | { mutationFn: () => Promise<unknown> },
+}));
 
 vi.mock("vue-router", () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -40,7 +43,10 @@ vi.mock("@tanstack/vue-query", () => ({
     error: ref(null),
     refetch: vi.fn(),
   }),
-  useMutation: () => ({ mutate: vi.fn(), isPending: cancelPending }),
+  useMutation: (options: { mutationFn: () => Promise<unknown> }) => {
+    mutationOptions.current = options;
+    return { mutate: vi.fn(), isPending: cancelPending };
+  },
 }));
 
 vi.mock("@/composables/useWebSocket", () => ({
@@ -74,6 +80,7 @@ vi.mock("@/services/orderApi", () => ({
     getGuestOrder: vi.fn(),
     getOrder: vi.fn(),
     cancelOrder: vi.fn(),
+    cancelGuestOrder: vi.fn(),
   },
 }));
 
@@ -252,6 +259,27 @@ describe("OrderTrackingView realtime events", () => {
 
     expect(queryClient.invalidateQueries).not.toHaveBeenCalled();
     expect(toast.info).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+});
+
+describe("OrderTrackingView cancel button", () => {
+  beforeEach(() => {
+    vi.mocked(orderApi.cancelOrder).mockReset();
+    vi.mocked(orderApi.cancelGuestOrder).mockReset();
+    localStorage.setItem("guest_auth_token", "gt_guest-token");
+  });
+
+  // POST /orders/:id/cancel is staff-only, so a diner who ordered through a
+  // table QR got 「你沒有執行此操作的權限」 (403). The page already reads a guest
+  // order through /guest-orders; cancelling has to take the same route.
+  it("cancels through the guest endpoint when the diner ordered as a guest", async () => {
+    const wrapper = mountView();
+
+    await mutationOptions.current?.mutationFn();
+
+    expect(orderApi.cancelGuestOrder).toHaveBeenCalledWith("1001");
+    expect(orderApi.cancelOrder).not.toHaveBeenCalled();
     wrapper.unmount();
   });
 });

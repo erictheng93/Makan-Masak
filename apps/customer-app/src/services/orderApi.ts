@@ -522,6 +522,18 @@ export const orderApi = {
   /**
    * 取消訂單
    */
+  /**
+   * Cancel an order placed as a guest. POST /orders/:id/cancel is staff-only;
+   * the guest route is authorised by the order-scoped guest token instead.
+   */
+  async cancelGuestOrder(orderId: string): Promise<Order> {
+    const response = await apiClient.post<Order | GuestOrderEnvelope>(
+      `/guest-orders/${orderId}/cancel`,
+      {},
+    );
+    return "order" in response ? response.order : response;
+  },
+
   async cancelOrder(orderId: string, reason?: string): Promise<Order> {
     const response = await apiClient.post<Order>(`/orders/${orderId}/cancel`, {
       reason,
