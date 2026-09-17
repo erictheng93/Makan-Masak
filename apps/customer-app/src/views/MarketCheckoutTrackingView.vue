@@ -98,7 +98,7 @@
                 {{ t("markets.checkout.subtotal") }}
               </dt>
               <dd class="mt-1 font-semibold text-gray-900">
-                {{ formatPrice(checkout.subtotal) }}
+                {{ formatPrice(subtotalAmount) }}
               </dd>
             </div>
             <div v-if="voucherDiscountCents > 0">
@@ -480,12 +480,17 @@ const voucherDiscountCents = computed(() => {
 
 const voucherDiscountAmount = computed(() => voucherDiscountCents.value / 100);
 
+// Every API source of a checkout (create, read, voucher, the account list)
+// sends `subtotal` in cents, beside totalAmountCents and discountCents;
+// formatPrice takes major units. Rendering it directly showed a NT$110
+// checkout as NT$11,000 and subtracted a voucher in dollars from cents.
+const subtotalAmount = computed(() => (checkout.value?.subtotal ?? 0) / 100);
+
 const payableAmount = computed(() => {
   if (checkout.value?.payment?.totalAmount != null) {
     return checkout.value.payment.totalAmount;
   }
-  const subtotal = checkout.value?.subtotal ?? 0;
-  return Math.max(0, subtotal - voucherDiscountAmount.value);
+  return Math.max(0, subtotalAmount.value - voucherDiscountAmount.value);
 });
 
 const payButtonLabel = computed(() => {

@@ -95,7 +95,9 @@ describe("MarketCheckoutTrackingView", () => {
           updatedAt: 1780308400000,
         },
       ],
-      subtotal: 240,
+      // The API sends subtotal in cents, like totalAmountCents and
+      // discountCents beside it (see orderApi.test.ts).
+      subtotal: 24000,
       createdAt: "2026-06-01T10:00:00.000Z",
     });
 
@@ -107,7 +109,9 @@ describe("MarketCheckoutTrackingView", () => {
     expect(summary.text()).toContain("逢甲夜市");
     expect(summary.text()).toContain("markets.checkout.statusSubmitted");
     expect(summary.text()).toContain("markets.common.stallCount:2");
-    expect(summary.text()).toContain("NT$240");
+    // Not toContain("NT$240"): a subtotal rendered as cents reads "NT$24000",
+    // which contains it -- exactly how a NT$110 checkout showed NT$11,000.
+    expect(summary.text()).toMatch(/NT\$240(?!\d)/);
 
     const childOrders = wrapper.findAll(
       '[data-testid="market-checkout-child-order"]',
@@ -180,7 +184,7 @@ describe("MarketCheckoutTrackingView", () => {
           tokenExpiresAt: "2026-06-01T12:00:00.000Z",
         },
       ],
-      subtotal: 160,
+      subtotal: 16000,
       createdAt: "2026-06-01T10:00:00.000Z",
     });
 
@@ -216,7 +220,7 @@ describe("MarketCheckoutTrackingView", () => {
           tokenExpiresAt: "2026-06-01T12:00:00.000Z",
         },
       ],
-      subtotal: 160,
+      subtotal: 16000,
       createdAt: "2026-06-01T10:00:00.000Z",
     });
 
@@ -264,7 +268,7 @@ describe("MarketCheckoutTrackingView", () => {
           tokenExpiresAt: "2026-06-01T12:00:00.000Z",
         },
       ],
-      subtotal: 160,
+      subtotal: 16000,
       createdAt: "2026-06-01T10:00:00.000Z",
     });
     recoverMarketCheckoutGuestToken.mockResolvedValueOnce({
@@ -318,7 +322,7 @@ describe("MarketCheckoutTrackingView", () => {
           tokenExpiresAt: "2026-06-01T12:00:00.000Z",
         },
       ],
-      subtotal: 240,
+      subtotal: 24000,
       createdAt: "2026-06-01T10:00:00.000Z",
     });
     payMarketCheckout.mockResolvedValueOnce({
@@ -377,7 +381,7 @@ describe("MarketCheckoutTrackingView", () => {
             },
           ],
         },
-        subtotal: 240,
+        subtotal: 24000,
         createdAt: "2026-06-01T10:00:00.000Z",
       },
       payment: {
@@ -443,7 +447,7 @@ describe("MarketCheckoutTrackingView", () => {
           tokenExpiresAt: "2026-06-01T12:00:00.000Z",
         },
       ],
-      subtotal: 240,
+      subtotal: 24000,
       createdAt: "2026-06-01T10:00:00.000Z",
     });
     applyMarketCheckoutVoucher.mockResolvedValueOnce({
@@ -469,7 +473,7 @@ describe("MarketCheckoutTrackingView", () => {
             tokenExpiresAt: "2026-06-01T12:00:00.000Z",
           },
         ],
-        subtotal: 240,
+        subtotal: 24000,
         appliedVoucher: {
           couponId: 5,
           code: "MARKET10",
@@ -491,7 +495,7 @@ describe("MarketCheckoutTrackingView", () => {
         market: { id: "market-1", slug: "fengjia", name: "逢甲夜市" },
         status: "submitted",
         childOrders: [],
-        subtotal: 240,
+        subtotal: 24000,
         createdAt: "2026-06-01T10:00:00.000Z",
       },
     });
@@ -530,7 +534,7 @@ describe("MarketCheckoutTrackingView", () => {
     ).toBe(false);
     expect(
       wrapper.get('[data-testid="market-checkout-payable"]').text(),
-    ).toContain("NT$240");
+    ).toMatch(/NT\$240(?!\d)/);
   });
 
   it("shows voucher-specific error messages", async () => {
@@ -539,7 +543,7 @@ describe("MarketCheckoutTrackingView", () => {
       market: { id: "market-1", slug: "fengjia", name: "逢甲夜市" },
       status: "submitted",
       childOrders: [],
-      subtotal: 240,
+      subtotal: 24000,
       createdAt: "2026-06-01T10:00:00.000Z",
     });
     applyMarketCheckoutVoucher.mockRejectedValueOnce(
@@ -579,7 +583,7 @@ describe("MarketCheckoutTrackingView", () => {
           tokenExpiresAt: "2026-06-01T12:00:00.000Z",
         },
       ],
-      subtotal: 160,
+      subtotal: 16000,
       createdAt: "2026-06-01T10:00:00.000Z",
     });
     payMarketCheckout.mockResolvedValueOnce({
@@ -627,7 +631,7 @@ describe("MarketCheckoutTrackingView", () => {
             updatedAt: "2026-06-01T10:10:00.000Z",
           },
         },
-        subtotal: 160,
+        subtotal: 16000,
         createdAt: "2026-06-01T10:00:00.000Z",
       },
       payment: {
@@ -712,7 +716,7 @@ describe("MarketCheckoutTrackingView", () => {
             tokenExpiresAt: "2026-06-01T12:00:00.000Z",
           },
         ],
-        subtotal: 160,
+        subtotal: 16000,
         createdAt: "2026-06-01T10:00:00.000Z",
       });
       payMarketCheckout.mockResolvedValueOnce({
@@ -756,7 +760,7 @@ describe("MarketCheckoutTrackingView", () => {
               updatedAt: "2026-06-01T10:10:00.000Z",
             },
           },
-          subtotal: 160,
+          subtotal: 16000,
           createdAt: "2026-06-01T10:00:00.000Z",
         },
         payment: {
@@ -830,7 +834,7 @@ describe("MarketCheckoutTrackingView", () => {
             tokenExpiresAt: "2026-06-01T12:00:00.000Z",
           },
         ],
-        subtotal: 240,
+        subtotal: 24000,
         createdAt: "2026-06-01T10:00:00.000Z",
       })
       .mockResolvedValueOnce({
@@ -904,7 +908,7 @@ describe("MarketCheckoutTrackingView", () => {
             updatedAt: "2026-06-01T10:15:00.000Z",
           },
         },
-        subtotal: 240,
+        subtotal: 24000,
         createdAt: "2026-06-01T10:00:00.000Z",
       });
     payMarketCheckout.mockResolvedValueOnce({
@@ -960,7 +964,7 @@ describe("MarketCheckoutTrackingView", () => {
             updatedAt: "2026-06-01T10:10:00.000Z",
           },
         },
-        subtotal: 240,
+        subtotal: 24000,
         createdAt: "2026-06-01T10:00:00.000Z",
       },
       payment: {
@@ -1084,7 +1088,7 @@ describe("MarketCheckoutTrackingView", () => {
           },
         ],
       },
-      subtotal: 240,
+      subtotal: 24000,
       createdAt: "2026-06-01T10:00:00.000Z",
     });
     payMarketCheckout.mockResolvedValueOnce({
@@ -1122,7 +1126,7 @@ describe("MarketCheckoutTrackingView", () => {
           paidAt: "2026-06-01T10:12:00.000Z",
           childPayments: [],
         },
-        subtotal: 240,
+        subtotal: 24000,
         createdAt: "2026-06-01T10:00:00.000Z",
       },
       payment: {
@@ -1209,7 +1213,7 @@ describe("MarketCheckoutTrackingView", () => {
           },
         ],
       },
-      subtotal: 160,
+      subtotal: 16000,
       createdAt: "2026-06-01T10:00:00.000Z",
     });
 
