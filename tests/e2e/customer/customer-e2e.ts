@@ -234,7 +234,6 @@ function memoLogin(
 
 const ownerLogin = memoLogin(OWNER_USERNAME, OWNER_PASSWORD);
 const adminLogin = memoLogin(ADMIN_USERNAME, ADMIN_PASSWORD);
-const cashierLogin = memoLogin(CASHIER_USERNAME, CASHIER_PASSWORD);
 
 export interface StaffContext {
   token: string;
@@ -260,37 +259,40 @@ export async function getAdmin(): Promise<{ token: string }> {
   return { token: login.token! };
 }
 
-let cashierProvisioned: Promise<void> | undefined;
+let cashierLoginPromise: Promise<SmokeLoginData> | undefined;
 
 /**
  * A role-4 session for the owner's shop, provisioning the account on first use.
- * Idempotent across runs: a 409 on create means an earlier run made it.
+ *
+ * Login is tried first rather than create-then-tolerate-a-conflict: a duplicate
+ * username currently comes back as a 500 GENERIC_ERROR, not a 409, so the
+ * create response cannot tell "already there" apart from a real failure.
  */
 export async function getCashier(): Promise<StaffContext> {
-  cashierProvisioned ??= (async () => {
-    const owner = await getOwner();
-    const created = await apiRequest("/api/v1/users", {
-      token: owner.token,
-      method: "POST",
-      body: {
-        username: CASHIER_USERNAME,
-        fullName: "E2E Customer Suite Cashier",
-        password: CASHIER_PASSWORD,
-        role: 4,
-        restaurantId: owner.restaurantId,
-      },
-    });
-    expect(
-      created.ok || created.status === 409,
-      `cashier provisioning returned ${created.status} ${JSON.stringify(created.body.error)}`,
-    ).toBe(true);
+  cashierLoginPromise ??= (async () => {
+    try {
+      return await smokeLogin(API_URL, CASHIER_USERNAME, CASHIER_PASSWORD);
+    } catch {
+      const owner = await getOwner();
+      await apiData("provision cashier", "/api/v1/users", {
+        token: owner.token,
+        method: "POST",
+        body: {
+          username: CASHIER_USERNAME,
+          fullName: "E2E Customer Suite Cashier",
+          password: CASHIER_PASSWORD,
+          role: 4,
+          restaurantId: owner.restaurantId,
+        },
+      });
+      return smokeLogin(API_URL, CASHIER_USERNAME, CASHIER_PASSWORD);
+    }
   })().catch((error) => {
-    cashierProvisioned = undefined;
+    cashierLoginPromise = undefined;
     throw error;
   });
-  await cashierProvisioned;
 
-  const login = await cashierLogin();
+  const login = await cashierLoginPromise;
   expect(login.user?.role, "cashier login is role 4").toBe(4);
   return {
     token: login.token!,

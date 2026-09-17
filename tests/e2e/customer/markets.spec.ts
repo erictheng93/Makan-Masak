@@ -155,6 +155,23 @@ test.beforeAll(async ({ browser }) => {
     );
   }
 
+  // A market is only public once a member stall has a searchable dish, and
+  // membership reaches the search index through the sync the add-vendor route
+  // triggers. Wait for the public list to agree before a page asks for it.
+  // `limit=17` keeps this probe off the cache key the directory page uses, so
+  // an early empty answer cannot be served back to the UI.
+  await expect
+    .poll(
+      async () => {
+        const listed = await apiRequest<{ markets: Array<{ id: string }> }>(
+          `/api/v1/markets?q=${encodeURIComponent(market.name)}&limit=17`,
+        );
+        return listed.body.data?.markets.some((row) => row.id === market.id);
+      },
+      { timeout: 60_000, message: "the new market never became public" },
+    )
+    .toBe(true);
+
   diner = await newDinerContext(browser);
 });
 
