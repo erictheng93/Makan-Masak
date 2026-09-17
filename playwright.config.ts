@@ -14,14 +14,15 @@ export default defineConfig({
   // It is no longer a runtime tuning knob for the root `testDir`: `chromium`
   // collects 3 tests (ci-smoke/preview.spec.ts plus the two kitchen-display
   // specs) and finishes in seconds. The projects this value actually bounds
-  // are `smoke` (111 tests) and `admin-real` (41). The figure it used to cite
+  // are `smoke` (111 tests) and `admin-real` (42). The figure it used to cite
   // — 158 tests, ~8 min per browser, 4 simultaneous Firefox processes going
   // OOM — described the tests/e2e/journeys and tests/e2e/specs suites deleted
   // by b936600f in 2026-05, and the five extra browser projects that ran them.
   //
-  // `admin-real` (workers: 1) and `integration` (fullyParallel: false, plus
-  // --workers=1 from .github/workflows/nightly-integration.yml) override this
-  // themselves: both mutate one restaurant's rows in a real D1.
+  // `admin-real` and `customer-real` (workers: 1; 42 and 19 tests) and
+  // `integration` (fullyParallel: false, plus --workers=1 from
+  // .github/workflows/nightly-integration.yml) override this themselves: all
+  // three mutate one restaurant's rows in a real D1.
   workers: process.env.CI ? 2 : undefined,
   reporter: [
     ["html", { outputFolder: "playwright-report" }],

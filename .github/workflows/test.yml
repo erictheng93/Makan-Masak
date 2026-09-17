@@ -563,6 +563,141 @@ jobs:
             test-results/
           retention-days: 7
 
+  # 顧客端 real-backend E2E: tests/e2e/customer, the `customer-real` project.
+  #
+  # The admin-real-e2e job's stack plus two workers:
+  # - apps/realtime, because order tracking and group orders are live over its
+  #   WebSocket; without it the tracking page renders and never updates.
+  # - apps/management-api, because markets.spec.ts needs a second stall and
+  #   POST /api/v1/restaurants provisions the tenant through the API's
+  #   MANAGEMENT_API service binding. On this fresh D1 that call happens every
+  #   run.
+  #
+  # The trigger adds `backend` to admin-real-e2e's: scripts/classify-ci-changes.sh
+  # files apps/realtime/* under backend only, and a realtime change is exactly
+  # what the live-tracking specs here would catch.
+  customer-real-e2e:
+    name: 🍜 顧客端 E2E (real API + realtime + real D1)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: >-
+      needs.changes.outputs.frontend == 'true' || needs.changes.outputs.integration == 'true' || needs.changes.outputs.backend == 'true' || needs.changes.outputs.full == 'true'
+
+
+    timeout-minutes: 25
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --ipc=host
+    env:
+      HOME: /root
+
+    steps:
+      - name: 📦 Checkout 程式碼
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: 📦 安裝 pnpm
+        # Not corepack — see the e2e-tests job for why it fake-succeeds in this
+        # container. No version input: the action reads packageManager.
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+      - name: 📥 安裝依賴
+        run: pnpm install --frozen-lockfile
+
+      - name: 🏗️ 建置內部套件
+        # The API's closure also covers what realtime (shared-types) and
+        # management-api (database, utils, shared-types) import from dist/.
+        run: pnpm --filter @makanmasak/api^... build
+
+      - name: 🔐 寫入 CI dev.vars
+        # One JWT_SECRET for all three workers: realtime verifies the tokens the
+        # API mints for guest and group sockets. INTERNAL_API_TOKEN must match
+        # between the API and management-api for tenant provisioning.
+        run: |
+          cat > apps/api/.dev.vars <<'EOF'
+          JWT_SECRET=ci-customer-e2e-jwt-secret-minimum-32-chars-long
+          INTERNAL_API_TOKEN=ci-customer-e2e-internal-token-minimum-32-chars-long
+          QR_SIGNING_KEY=ci-customer-e2e-qr-signing-key-minimum-32-chars-long
+          CORS_ORIGIN=http://localhost:3000,http://localhost:3001,http://localhost:3002
+          NODE_ENV=test
+          EOF
+          cat > apps/realtime/.dev.vars <<'EOF'
+          JWT_SECRET=ci-customer-e2e-jwt-secret-minimum-32-chars-long
+          EOF
+          cat > apps/management-api/.dev.vars <<'EOF'
+          JWT_SECRET=ci-customer-e2e-jwt-secret-minimum-32-chars-long
+          INTERNAL_API_TOKEN=ci-customer-e2e-internal-token-minimum-32-chars-long
+          EOF
+
+      - name: 🗄️ Migrate + seed 本地 D1
+        # db:migrate:local covers both the platform D1 and management-api's
+        # control-plane D1, all under ./.wrangler/shared-state.
+        run: |
+          pnpm db:migrate:local
+          pnpm db:seed:local
+          pnpm db:seed:local:e2e
+
+      - name: 🚀 依序啟動 realtime、management-api、API 與顧客端
+        # One at a time, each waiting for the previous one. Started together,
+        # two `wrangler dev` processes can pick the same inspector port and one
+        # exits with "Address already in use" (seen locally on 127.0.0.1:9230).
+        # Realtime first so the API's REALTIME_SESSION binding connects.
+        run: |
+          mkdir -p /tmp/customer-e2e-logs
+          wait_for() {
+            elapsed=0
+            until curl -sf "$1" >/dev/null 2>&1; do
+              if [ "$elapsed" -ge 150 ]; then
+                echo "::error::$1 did not respond within 150s"
+                tail -n 100 /tmp/customer-e2e-logs/*.log || true
+                exit 1
+              fi
+              sleep 2
+              elapsed=$((elapsed + 2))
+            done
+            echo "$1 ready in ${elapsed}s"
+          }
+          (cd apps/realtime && pnpm exec wrangler dev --local \
+             --persist-to ../../.wrangler/shared-state \
+             > /tmp/customer-e2e-logs/realtime.log 2>&1 &)
+          wait_for http://localhost:8788/health
+          (cd apps/management-api && pnpm exec wrangler dev --local \
+             --persist-to ../../.wrangler/shared-state \
+             > /tmp/customer-e2e-logs/management-api.log 2>&1 &)
+          wait_for http://localhost:8789/health
+          (cd apps/api && pnpm exec wrangler dev --local \
+             --persist-to ../../.wrangler/shared-state \
+             > /tmp/customer-e2e-logs/api.log 2>&1 &)
+          wait_for http://localhost:8787/info
+          (cd apps/customer-app && pnpm exec vite --port 3000 --host 0.0.0.0 \
+             > /tmp/customer-e2e-logs/customer.log 2>&1 &)
+          wait_for http://localhost:3000
+
+      - name: 🧪 執行顧客端 E2E
+        run: pnpm exec playwright test --project=customer-real
+        env:
+          E2E_CUSTOMER_URL: http://localhost:3000
+          E2E_API_URL: http://localhost:8787
+          E2E_REALTIME_URL: http://localhost:8788
+          E2E_STRICT: "1"
+
+      - name: 🛑 停止服務
+        if: always()
+        run: |
+          pkill -f "wrangler dev" || true
+          pkill -f "vite" || true
+
+      - name: 📎 上傳日誌與報告
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: customer-real-e2e
+          path: |
+            /tmp/customer-e2e-logs/
+            ${{ env.HOME }}/.config/.wrangler/logs/
+            playwright-report/
+            test-results/
+          retention-days: 7
+
   # E2E 測試 (mock API — no real backend needed)
   #
   # Customer/journey coverage only. The mock layer these once used
