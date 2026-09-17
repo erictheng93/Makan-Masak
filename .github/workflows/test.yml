@@ -228,6 +228,9 @@ jobs:
       - name: 🎨 Design palette guard
         run: pnpm run check:design-palette
 
+      - name: Currency formatting in Vue templates
+        run: pnpm run check:template-currency
+
       # The response-contract snapshot. It compares every field path and its
       # Zod type against .api-contracts-snapshot.json, so a field that changes
       # type -- an ISO string becoming Unix milliseconds -- fails here. Before

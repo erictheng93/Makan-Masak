@@ -1056,7 +1056,7 @@ const zhTWCore = {
       sold: "售出 {count} 份",
       quantity: "份數",
       totalLabel: "總計熱門菜品",
-      totalValue: "{quantity} 份 / ${revenue}",
+      totalValue: "{quantity} 份 / {revenue}",
     },
   },
 

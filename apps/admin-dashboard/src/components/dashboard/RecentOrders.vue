@@ -80,7 +80,7 @@
 
         <div class="flex-shrink-0 text-right">
           <p class="text-sm font-semibold text-gray-900">
-            ${{ order.total.toLocaleString() }}
+            {{ formatPrice(order.total) }}
           </p>
           <div class="flex items-center space-x-1 mt-1">
             <Clock class="w-3 h-3 text-gray-400" />
@@ -110,6 +110,7 @@
 <script setup lang="ts">
 // Remove unused computed import
 import { useI18n } from "@/i18n";
+import { useCurrency } from "@/composables/useCurrency";
 import { useDateFormatter } from "@/composables/useDateFormatter";
 import {
   ShoppingCart,
@@ -149,6 +150,7 @@ defineEmits<{
 }>();
 
 const { t } = useI18n();
+const { formatPrice } = useCurrency();
 const { formatTime, formatRelativeTime } = useDateFormatter();
 
 // createdAt is an ISO datetime, and formatTime reads a string as an "HH:mm"

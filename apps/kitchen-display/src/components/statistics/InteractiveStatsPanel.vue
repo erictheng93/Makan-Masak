@@ -248,9 +248,9 @@
             <div>
               <div class="flex justify-between text-sm mb-1">
                 <span class="text-gray-600">平均訂單價值</span>
-                <span class="font-medium"
-                  >${{ currentStats.performance.averageOrderValue }}</span
-                >
+                <span class="font-medium">{{
+                  formatPrice(currentStats.performance.averageOrderValue)
+                }}</span>
               </div>
               <div class="w-full bg-gray-200 rounded-full h-2">
                 <div
@@ -434,7 +434,7 @@
                       </td>
                       <td class="px-6 py-4 whitespace-nowrap">
                         <div class="text-sm text-gray-900">
-                          ${{ item.revenueContribution }}
+                          {{ formatPrice(item.revenueContribution) }}
                         </div>
                       </td>
                     </tr>
@@ -606,6 +606,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useI18n } from "@/i18n";
+import { useCurrency } from "@/composables/useCurrency";
 import {
   BarChart2 as ChartBarIcon,
   Clock as ClockIcon,
@@ -627,6 +628,7 @@ import { useToast } from "vue-toastification";
 import { kitchenStatisticsService } from "@/services/kitchenStatisticsService";
 
 const { t, locale } = useI18n();
+const { formatPrice } = useCurrency();
 const toast = useToast();
 const statsService = kitchenStatisticsService;
 

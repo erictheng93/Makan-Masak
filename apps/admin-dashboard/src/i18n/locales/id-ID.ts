@@ -1034,7 +1034,7 @@ const idID: Messages = {
       sold: "Terjual {count} porsi",
       quantity: "Jumlah",
       totalLabel: "Total Menu Populer",
-      totalValue: "{quantity} porsi / ${revenue}",
+      totalValue: "{quantity} porsi / {revenue}",
     },
   },
   reservation: {

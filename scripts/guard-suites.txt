@@ -33,3 +33,4 @@ scripts/check-production-config.cjs                  tests/unit/check-production
 scripts/check-strict-tables.cjs                      tests/unit/check-strict-tables.test.ts
 scripts/check-vitest-results.cjs                     tests/unit/check-vitest-results.test.ts
 scripts/generate-strict-baseline.cjs                 tests/unit/generate-strict-baseline.test.ts
+scripts/check-template-currency.cjs                  tests/unit/check-template-currency.test.ts

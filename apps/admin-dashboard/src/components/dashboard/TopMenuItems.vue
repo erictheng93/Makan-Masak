@@ -61,7 +61,7 @@
               </p>
               <span class="text-gray-300">•</span>
               <p class="text-xs text-green-600 font-medium">
-                ${{ item.revenue.toLocaleString() }}
+                {{ formatPrice(item.revenue) }}
               </p>
             </div>
           </div>
@@ -107,7 +107,7 @@
           {{
             t("charts.topMenuItems.totalValue", {
               quantity: totalQuantity,
-              revenue: totalRevenue.toLocaleString(),
+              revenue: formatPrice(totalRevenue),
             })
           }}
         </span>
@@ -120,8 +120,10 @@
 import { computed } from "vue";
 import { Package } from "lucide-vue-next";
 import { useI18n } from "@/i18n";
+import { useCurrency } from "@/composables/useCurrency";
 
 const { t } = useI18n();
+const { formatPrice } = useCurrency();
 
 interface TopMenuItem {
   id: string;

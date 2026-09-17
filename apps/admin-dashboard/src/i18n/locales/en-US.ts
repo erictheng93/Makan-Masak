@@ -1025,7 +1025,7 @@ const enUS: Messages = {
       sold: "Sold {count} servings",
       quantity: "Qty",
       totalLabel: "Total Popular Items",
-      totalValue: "{quantity} servings / ${revenue}",
+      totalValue: "{quantity} servings / {revenue}",
     },
   },
   reservation: {

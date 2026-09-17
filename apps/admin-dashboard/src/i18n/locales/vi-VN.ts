@@ -921,7 +921,7 @@ const viVN: Messages = {
       sold: "Đã bán {count} phần",
       quantity: "Số lượng",
       totalLabel: "Tổng món ăn phổ biến",
-      totalValue: "{quantity} phần / ${revenue}",
+      totalValue: "{quantity} phần / {revenue}",
     },
   },
   reservation: {

@@ -45,7 +45,7 @@
             <td class="py-2 text-sm text-right text-gray-500">
               {{
                 item.estimatedCost != null
-                  ? `$${item.estimatedCost.toFixed(2)}`
+                  ? formatPrice(item.estimatedCost)
                   : "-"
               }}
             </td>
@@ -53,13 +53,13 @@
         </tbody>
       </table>
       <div class="text-right text-sm font-medium text-gray-700 mt-1 px-2">
-        {{ t("forecast.subtotal") }}: ${{ group.totalCost.toFixed(2) }}
+        {{ t("forecast.subtotal") }}: {{ formatPrice(group.totalCost) }}
       </div>
     </div>
 
     <div v-if="groupedItems.length > 0" class="mt-4 pt-4 border-t text-right">
       <span class="text-lg font-bold text-gray-900">
-        {{ t("forecast.totalEstimatedCost") }}: ${{ totalCost.toFixed(2) }}
+        {{ t("forecast.totalEstimatedCost") }}: {{ formatPrice(totalCost) }}
       </span>
     </div>
   </div>
@@ -68,10 +68,12 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useI18n } from "@/i18n";
+import { useCurrency } from "@/composables/useCurrency";
 import { toCsv } from "@/utils/csv";
 import type { IngredientForecastItem } from "@makanmasak/shared-types";
 
 const { t } = useI18n();
+const { formatPrice } = useCurrency();
 
 const props = defineProps<{
   items: IngredientForecastItem[];

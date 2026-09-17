@@ -922,7 +922,7 @@ const jaJP: Messages = {
       sold: "{count} 食販売",
       quantity: "数量",
       totalLabel: "人気メニュー合計",
-      totalValue: "{quantity} 食 / ${revenue}",
+      totalValue: "{quantity} 食 / {revenue}",
     },
   },
   reservation: {

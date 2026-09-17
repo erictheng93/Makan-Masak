@@ -908,7 +908,7 @@ const zhCN: Messages = {
       sold: "售出 {count} 份",
       quantity: "份数",
       totalLabel: "总计热门菜品",
-      totalValue: "{quantity} 份 / ${revenue}",
+      totalValue: "{quantity} 份 / {revenue}",
     },
   },
   reservation: {

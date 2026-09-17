@@ -41,6 +41,7 @@ import NotificationPanel from "@/components/layout/NotificationPanel.vue";
 import RestaurantContextBanner from "@/components/layout/RestaurantContextBanner.vue";
 import { useRealtimeConnection } from "@/composables/useRealtimeConnection";
 import { useAuthStore } from "@/stores/auth";
+import { useRestaurantCurrency } from "@/composables/useRestaurantCurrency";
 
 const MOBILE_BREAKPOINT = 1024;
 const isMobile = ref(false);
@@ -49,6 +50,7 @@ const showNotifications = ref(false);
 
 const { connect, disconnect } = useRealtimeConnection();
 const authStore = useAuthStore();
+useRestaurantCurrency();
 
 function checkMobile() {
   const wasMobile = isMobile.value;

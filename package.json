@@ -73,6 +73,7 @@
     "check:test-scripts": "node scripts/check-package-test-scripts.cjs",
     "check:single-test-runner": "node scripts/check-single-test-runner.cjs",
     "check:no-automated-destructive-wrangler": "node scripts/check-no-automated-destructive-wrangler.cjs",
+    "check:template-currency": "node scripts/check-template-currency.cjs",
     "check:design-palette": "node scripts/check-design-palette.cjs",
     "check:ui-reachability": "node scripts/check-ui-reachability.cjs",
     "check:docs-drift": "node scripts/check-docs-drift.cjs",
