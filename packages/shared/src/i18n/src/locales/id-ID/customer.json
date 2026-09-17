@@ -489,6 +489,8 @@
     "orderSendFailed": "Pengiriman pesanan gagal, silakan coba lagi nanti",
     "orderCancelled": "Pesanan dibatalkan",
     "orderStatusUpdated": "Status pesanan diperbarui: {status}",
+    "orderCancelledByRestaurant": "Restoran telah membatalkan pesanan ini",
+    "orderUpdatedByRestaurant": "Restoran telah memperbarui pesanan Anda",
     "cancelOrderFailed": "Gagal membatalkan pesanan, silakan coba lagi nanti",
     "orderNotCancellable": "Pesanan ini sedang disiapkan dan tidak dapat dibatalkan lagi. Silakan hubungi staf.",
     "scanFailed": "Fungsi pemindaian gagal dimulai",

@@ -450,7 +450,39 @@ const getGuestRealtimeUrl = async () => {
   return response.wsUrl;
 };
 
+const cachedOrderStatus = () => {
+  const current = queryClient.getQueryData(["order", props.orderId]);
+  return isRecord(current) ? current.status : undefined;
+};
+
+// This page is connected to its order's customer room, which receives three
+// order events: a status change, a cancellation (by staff or by the diner),
+// and a staff edit of the lines or total, republished as NEW_ORDER. The last
+// two used to be dropped here, so the page went stale until reloaded.
 const handleWebSocketMessage = (message: RealtimeEvent) => {
+  if (message.type === RealtimeEventType.ORDER_CANCELLED) {
+    if (message.data.orderId !== props.orderId) {
+      return;
+    }
+    const alreadyShown = cachedOrderStatus() === "cancelled";
+    void queryClient.invalidateQueries({ queryKey: ["order", props.orderId] });
+    // The diner's own cancel button confirms with toast.orderCancelled, and
+    // that same cancellation is echoed here.
+    if (!alreadyShown && !isCancelling.value) {
+      toast.info(t("toast.orderCancelledByRestaurant"));
+    }
+    return;
+  }
+
+  if (message.type === RealtimeEventType.NEW_ORDER) {
+    if (message.data.orderId !== props.orderId) {
+      return;
+    }
+    void queryClient.invalidateQueries({ queryKey: ["order", props.orderId] });
+    toast.info(t("toast.orderUpdatedByRestaurant"));
+    return;
+  }
+
   if (message.type !== RealtimeEventType.ORDER_STATUS_UPDATE) {
     return;
   }
@@ -511,9 +543,14 @@ const {
   refetchOnWindowFocus: true,
 });
 
-const { mutate: cancelOrder } = useMutation({
+const { mutate: cancelOrder, isPending: isCancelling } = useMutation({
   mutationFn: () => orderApi.cancelOrder(props.orderId),
   onSuccess: () => {
+    // Mark it cancelled before the refetch lands, so the realtime echo of this
+    // same cancellation is not announced a second time.
+    queryClient.setQueryData(["order", props.orderId], (current: unknown) =>
+      isRecord(current) ? { ...current, status: "cancelled" } : current,
+    );
     toast.success(t("toast.orderCancelled"));
     refetch();
   },

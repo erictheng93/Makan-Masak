@@ -489,6 +489,8 @@
     "orderSendFailed": "订单送出失败，请稍后再试",
     "orderCancelled": "订单已取消",
     "orderStatusUpdated": "订单状态已更新：{status}",
+    "orderCancelledByRestaurant": "店家已取消这笔订单",
+    "orderUpdatedByRestaurant": "店家已更新您的订单内容",
     "cancelOrderFailed": "取消订单失败，请稍后再试",
     "orderNotCancellable": "订单已开始准备，无法取消，请洽询店员",
     "scanFailed": "扫描功能启动失败",

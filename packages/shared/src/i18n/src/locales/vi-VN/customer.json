@@ -489,6 +489,8 @@
     "orderSendFailed": "Gửi đơn hàng thất bại, vui lòng thử lại sau",
     "orderCancelled": "Đơn hàng đã hủy",
     "orderStatusUpdated": "Trạng thái đơn hàng đã cập nhật: {status}",
+    "orderCancelledByRestaurant": "Nhà hàng đã hủy đơn hàng này",
+    "orderUpdatedByRestaurant": "Nhà hàng đã cập nhật đơn hàng của bạn",
     "cancelOrderFailed": "Hủy đơn hàng thất bại, vui lòng thử lại sau",
     "orderNotCancellable": "Đơn hàng đang được chuẩn bị nên không thể hủy. Vui lòng liên hệ nhân viên.",
     "scanFailed": "Khởi động chức năng quét thất bại",

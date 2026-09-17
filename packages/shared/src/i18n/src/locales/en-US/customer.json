@@ -489,6 +489,8 @@
     "orderSendFailed": "Order sending failed, please try again later",
     "orderCancelled": "Order cancelled",
     "orderStatusUpdated": "Order status updated: {status}",
+    "orderCancelledByRestaurant": "The restaurant cancelled this order",
+    "orderUpdatedByRestaurant": "The restaurant updated your order",
     "cancelOrderFailed": "Failed to cancel order, please try again later",
     "orderNotCancellable": "This order is already being prepared and can no longer be cancelled. Please speak to staff.",
     "scanFailed": "Scan function failed to start",

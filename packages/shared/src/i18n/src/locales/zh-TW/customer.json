@@ -489,6 +489,8 @@
     "orderSendFailed": "訂單送出失敗，請稍後再試",
     "orderCancelled": "訂單已取消",
     "orderStatusUpdated": "訂單狀態已更新：{status}",
+    "orderCancelledByRestaurant": "店家已取消這筆訂單",
+    "orderUpdatedByRestaurant": "店家已更新您的訂單內容",
     "cancelOrderFailed": "取消訂單失敗，請稍後再試",
     "orderNotCancellable": "訂單已開始準備，無法取消，請洽詢店員",
     "scanFailed": "掃描功能啟動失敗",
