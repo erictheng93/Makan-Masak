@@ -1,6 +1,6 @@
 import type { Env } from "../../../types/env";
-import { PaymentService } from "../../payments/services/PaymentService";
 import { CreditService } from "../../credits/services/CreditService";
+import { isFeatureEnabled } from "../../../shared/feature-adoption";
 
 export type MarketCheckoutChildPaymentStatus = "paid" | "failed" | "refunded";
 export type MarketCheckoutSplitMode = "child_transactions" | "provider_split";
@@ -191,96 +191,6 @@ export interface MarketCheckoutProviderSplitGateway {
   process(
     input: MarketCheckoutProviderSplitGatewayInput,
   ): Promise<MarketCheckoutProviderSplitGatewayResult>;
-}
-
-export class ChildTransactionMarketCheckoutPaymentProvider implements MarketCheckoutPaymentProvider {
-  constructor(
-    private readonly env: Env,
-    private readonly paymentService = new PaymentService(env),
-  ) {}
-
-  async process(
-    input: MarketCheckoutPaymentProviderInput,
-  ): Promise<MarketCheckoutPaymentProviderResult> {
-    const childPaymentsByOrderId = new Map(
-      input.existingChildPayments?.map((payment) => [
-        payment.orderId,
-        payment,
-      ]) ?? [],
-    );
-    const parentIdempotencyKey =
-      input.requestIdempotencyKey ?? `market-checkout:${input.checkoutId}`;
-
-    for (const child of input.childOrders) {
-      if (childPaymentsByOrderId.get(child.orderId)?.status === "paid") {
-        continue;
-      }
-
-      const amount = Number(child.totalAmount ?? 0);
-      try {
-        const result = await this.paymentService.processPayment(
-          {
-            orderId: child.orderId,
-            paymentMode: "full",
-            amount,
-            expectedTotal: amount,
-            closeOrder: false,
-            method: input.method,
-            gateway: input.method,
-          },
-          {
-            country: input.country,
-            currency: input.currency,
-            idempotencyKey: `${parentIdempotencyKey}:${child.orderId}`,
-            customerInfo: input.customerInfo,
-            metadata: {
-              source: "market-checkouts",
-              marketCheckoutId: input.checkoutId,
-              marketSlug: input.marketSlug,
-              restaurantId: child.restaurantId,
-              splitMode: "child_transactions",
-            },
-          },
-        );
-
-        childPaymentsByOrderId.set(child.orderId, {
-          restaurantId: child.restaurantId,
-          restaurantName: child.restaurantName,
-          orderId: child.orderId,
-          orderNumber: child.orderNumber,
-          paymentId: result.data.paymentId,
-          status: "paid",
-          amount: result.data.authorizedTotal,
-          amountCents: Math.round(result.data.authorizedTotal * 100),
-        });
-      } catch (error) {
-        childPaymentsByOrderId.set(child.orderId, {
-          restaurantId: child.restaurantId,
-          restaurantName: child.restaurantName,
-          orderId: child.orderId,
-          orderNumber: child.orderNumber,
-          status: "failed",
-          amount,
-          amountCents: Math.round(amount * 100),
-          errorMessage:
-            error instanceof Error
-              ? error.message
-              : "Payment processing failed",
-        });
-      }
-    }
-
-    return {
-      provider: input.method,
-      splitMode: "child_transactions",
-      idempotencyKey: parentIdempotencyKey,
-      childPayments: input.childOrders
-        .map((child) => childPaymentsByOrderId.get(child.orderId))
-        .filter((payment): payment is MarketCheckoutChildPayment =>
-          Boolean(payment),
-        ),
-    };
-  }
 }
 
 export class ProviderSplitMarketCheckoutPaymentProvider implements MarketCheckoutPaymentProvider {
@@ -501,6 +411,14 @@ export function createMarketCheckoutPaymentProvider(
   method?: string,
 ): MarketCheckoutPaymentProvider {
   if (method === "credits") {
+    if (
+      !isFeatureEnabled(
+        { STORED_VALUE_CREDITS_ENABLED: env.STORED_VALUE_CREDITS_ENABLED },
+        "storedValueCredits",
+      )
+    ) {
+      throw new Error("Market checkout payment provider is not configured");
+    }
     return new CreditBalanceMarketCheckoutPaymentProvider(env);
   }
   const splitMode = env.MARKET_CHECKOUT_SPLIT_MODE;
@@ -517,7 +435,7 @@ export function createMarketCheckoutPaymentProvider(
     );
   }
 
-  return new ChildTransactionMarketCheckoutPaymentProvider(env);
+  throw new Error("Market checkout payment provider is not configured");
 }
 
 /**
@@ -666,7 +584,7 @@ export function getMarketCheckoutPaymentProviderStatus(
 
   return {
     splitMode,
-    readiness: "warning",
+    readiness: "not_configured",
     providerKind: "internal_child_transactions",
     providerSplitUrlConfigured,
     providerSplitHealthUrlConfigured,
@@ -675,15 +593,15 @@ export function getMarketCheckoutPaymentProviderStatus(
     providerSplitTokenConfigured,
     providerSplitSigningConfigured,
     providerWebhookSecretConfigured,
-    capabilities: [
-      "child_order_payments",
-      "idempotency",
-      "webhook_status_sync",
-      "refunds",
+    capabilities: [],
+    missingConfiguration: [
+      "MARKET_CHECKOUT_SPLIT_MODE",
+      ...(!providerSplitUrlConfigured
+        ? ["MARKET_CHECKOUT_PROVIDER_SPLIT_URL"]
+        : []),
     ],
-    missingConfiguration: [],
     notes: [
-      "Market checkouts are charged as child order transactions; configure provider_split for one aggregate provider authorization.",
+      "Customer online payments are unavailable; configure provider_split and its gateway URL. Cash payments use the staff POS route.",
     ],
   };
 }

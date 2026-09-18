@@ -3,6 +3,7 @@ import { orders, paymentTransactions } from "@makanmasak/database";
 import { createSelectFixtureDb } from "@makanmasak/database/testing";
 import type { KVNamespace } from "@cloudflare/workers-types";
 import type { Env } from "../../../types/env";
+import type { AuthUser } from "../../../middleware/auth";
 import { ApiError } from "../../../shared/utils/api-error";
 import { PaymentService } from "./PaymentService";
 
@@ -304,10 +305,135 @@ function preparedAuditEvents(statements: PreparedStatement[]) {
     );
 }
 
+function paymentService(envValue: Env) {
+  const service = new PaymentService(envValue);
+  const processPayment = service.processPayment.bind(service);
+  return {
+    processPayment(
+      input: Parameters<PaymentService["processPayment"]>[0],
+      options?: Omit<
+        Parameters<PaymentService["processPayment"]>[1],
+        "actor"
+      > & {
+        user?: AuthUser;
+      },
+    ) {
+      const { user, ...paymentOptions } = options ?? {};
+      return processPayment(input, {
+        actor: {
+          kind: "staff",
+          user:
+            user ??
+            ({
+              id: "cashier-1",
+              username: "cashier",
+              role: 4,
+              restaurantId: "restaurant-1",
+            } as AuthUser),
+        },
+        ...paymentOptions,
+      });
+    },
+  };
+}
+
 describe("PaymentService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(Date, "now").mockReturnValue(1780833600000);
+  });
+
+  it("rejects payment attempts that do not identify a trusted actor", async () => {
+    const { db } = createD1();
+
+    await expect(
+      // @ts-expect-error PaymentService requires an explicit trusted actor.
+      new PaymentService(env(db)).processPayment({
+        orderId: "order-101",
+        paymentMode: "full",
+        amount: 120,
+      }),
+    ).rejects.toMatchObject({
+      code: "PAYMENT_ACTOR_REQUIRED",
+      status: 403,
+    });
+  });
+
+  it("rejects provider actors without a provider transaction id", async () => {
+    const { db } = createD1();
+
+    await expect(
+      new PaymentService(env(db)).processPayment(
+        {
+          orderId: "order-101",
+          paymentMode: "full",
+          amount: 120,
+        },
+        {
+          actor: {
+            kind: "provider",
+            provider: "stripe",
+            providerTransactionId: "",
+          },
+        },
+      ),
+    ).rejects.toMatchObject({
+      code: "PAYMENT_ACTOR_REQUIRED",
+      status: 403,
+    });
+  });
+
+  it("records the verified provider and its transaction reference", async () => {
+    const { db, statements } = createD1();
+    queueOrderRows([[order()]]);
+    mockOrderUpdate([{ status: "paid", paymentStatus: "paid" }]);
+
+    const result = await new PaymentService(env(db)).processPayment(
+      {
+        orderId: "order-101",
+        paymentMode: "full",
+        amount: 120,
+        method: "card",
+        gateway: "untrusted-input-gateway",
+      },
+      {
+        actor: {
+          kind: "provider",
+          provider: "verified-provider",
+          providerTransactionId: "provider-payment-123",
+        },
+      },
+    );
+
+    expect(result.data.paymentStatus).toBe("completed");
+    expect(
+      statementContaining(statements, "INSERT INTO payment_transactions")
+        ?.payload,
+    ).toMatchObject({
+      gateway: "verified-provider",
+      providerTransactionId: "provider-payment-123",
+    });
+  });
+
+  it("rejects non-platform staff without a restaurant assignment", async () => {
+    const { db, statements } = createD1();
+    queueOrderRows([[order()]]);
+
+    await expect(
+      new PaymentService(env(db)).processPayment(
+        { orderId: "order-101", paymentMode: "full", amount: 120 },
+        {
+          actor: {
+            kind: "staff",
+            user: { id: "cashier-1", username: "cashier", role: 4 },
+          },
+        },
+      ),
+    ).rejects.toMatchObject({ code: "FORBIDDEN", status: 403 });
+    expect(
+      statementContaining(statements, "INSERT INTO payment_transactions"),
+    ).toBeUndefined();
+    expect(statementContaining(statements, "UPDATE orders")).toBeUndefined();
   });
 
   it("processes full payments from the authoritative order total", async () => {
@@ -316,7 +442,7 @@ describe("PaymentService", () => {
     mockOrderUpdate([{ status: "paid", paymentStatus: "paid" }]);
 
     await expect(
-      new PaymentService(env(db)).processPayment(
+      paymentService(env(db)).processPayment(
         {
           orderId: "order-101",
           paymentMode: "full",
@@ -401,7 +527,7 @@ describe("PaymentService", () => {
     queueReplayRows([[order()]], [[paymentTransaction()]]);
 
     await expect(
-      new PaymentService(env(db)).processPayment(
+      paymentService(env(db)).processPayment(
         {
           orderId: "order-101",
           paymentMode: "full",
@@ -438,7 +564,7 @@ describe("PaymentService", () => {
     );
 
     await expect(
-      new PaymentService(env(db)).processPayment(
+      paymentService(env(db)).processPayment(
         {
           orderId: "order-101",
           paymentMode: "full",
@@ -463,7 +589,7 @@ describe("PaymentService", () => {
     );
 
     await expect(
-      new PaymentService(env(db)).processPayment(
+      paymentService(env(db)).processPayment(
         {
           orderId: "order-mine",
           paymentMode: "full",
@@ -499,7 +625,7 @@ describe("PaymentService", () => {
       [[order({ restaurantId: "restaurant-1" })], [order()]],
       [[paymentTransaction()], [paymentTransaction()]],
     );
-    const service = new PaymentService(env(db));
+    const service = paymentService(env(db));
 
     await expect(
       service.processPayment(
@@ -554,7 +680,7 @@ describe("PaymentService", () => {
     mockOrderUpdate([{ status: "paid", paymentStatus: "paid" }]);
 
     await expect(
-      new PaymentService(env(db)).processPayment({
+      paymentService(env(db)).processPayment({
         orderId: "order-101",
         paymentMode: "full",
         amount: 120,
@@ -587,7 +713,7 @@ describe("PaymentService", () => {
     mockOrderUpdate([{ status: "paid", paymentStatus: "paid" }]);
 
     await expect(
-      new PaymentService(env(db)).processPayment({
+      paymentService(env(db)).processPayment({
         orderId: "order-101",
         paymentMode: "full",
         amount: 120,
@@ -608,7 +734,7 @@ describe("PaymentService", () => {
     mockOrderUpdate([{ status: "served", paymentStatus: "paid" }]);
 
     await expect(
-      new PaymentService(env(db)).processPayment({
+      paymentService(env(db)).processPayment({
         orderId: "order-101",
         paymentMode: "partial",
         expectedTotal: 120,
@@ -652,7 +778,7 @@ describe("PaymentService", () => {
     queueOrderRows([[order({ tableId: 9 })]]);
     mockOrderUpdate([{ status: "paid", paymentStatus: "paid" }]);
 
-    await new PaymentService(env(db)).processPayment({
+    await paymentService(env(db)).processPayment({
       orderId: "order-101",
       paymentMode: "full",
       amount: 120,
@@ -682,7 +808,7 @@ describe("PaymentService", () => {
     ]);
     mockOrderUpdate([{ status: "paid", paymentStatus: "paid" }]);
 
-    await new PaymentService(setup.env).processPayment(
+    await paymentService(setup.env).processPayment(
       {
         orderId: "order-101",
         paymentMode: "full",
@@ -735,7 +861,7 @@ describe("PaymentService", () => {
     mockOrderUpdate([{ status: "paid", paymentStatus: "paid" }]);
 
     await expect(
-      new PaymentService(setup.env).processPayment({
+      paymentService(setup.env).processPayment({
         orderId: "order-101",
         paymentMode: "full",
         amount: 120,
@@ -769,7 +895,7 @@ describe("PaymentService", () => {
       [order()],
     ]);
     mockOrderUpdate();
-    const service = new PaymentService(env(db));
+    const service = paymentService(env(db));
 
     await expect(
       service.processPayment({
@@ -829,7 +955,7 @@ describe("PaymentService", () => {
       [order({ totalAmountCents: 12000 })],
     ]);
     mockOrderUpdate();
-    const service = new PaymentService(env(db));
+    const service = paymentService(env(db));
 
     await expect(
       service.processPayment({
@@ -905,7 +1031,7 @@ describe("PaymentService", () => {
     mockOrderUpdate();
 
     await expect(
-      new PaymentService(env(db)).processPayment({
+      paymentService(env(db)).processPayment({
         orderId: "order-101",
         paymentMode: "full",
         amount: 119,
@@ -943,7 +1069,7 @@ describe("PaymentService", () => {
     mockOrderUpdate();
 
     await expect(
-      new PaymentService(env(db)).processPayment(
+      paymentService(env(db)).processPayment(
         { orderId: "order-101", paymentMode: "full", amount: 120 },
         {
           user: {
@@ -973,7 +1099,7 @@ describe("PaymentService", () => {
     mockOrderUpdate();
 
     await expect(
-      new PaymentService(env(db)).processPayment({
+      paymentService(env(db)).processPayment({
         orderId: "order-404",
         paymentMode: "full",
         amount: 120,
@@ -1005,7 +1131,7 @@ describe("PaymentService", () => {
     // Observability must not decide whether the payment path is correct: the
     // caller still has to see why the payment was refused.
     await expect(
-      new PaymentService(env(db)).processPayment({
+      paymentService(env(db)).processPayment({
         orderId: "order-101",
         paymentMode: "full",
         amount: 119,
@@ -1022,7 +1148,7 @@ describe("PaymentService", () => {
     mockOrderUpdate();
 
     await expect(
-      new PaymentService(env(db)).processPayment(
+      paymentService(env(db)).processPayment(
         {
           orderId: "order-101",
           paymentMode: "full",
@@ -1059,7 +1185,7 @@ describe("PaymentService", () => {
     mockOrderUpdate([{ status: "paid", paymentStatus: "paid" }]);
 
     await expect(
-      new PaymentService(env(db)).processPayment({
+      paymentService(env(db)).processPayment({
         orderId: "order-101",
         paymentMode: "full",
         amount: 120,
@@ -1087,7 +1213,7 @@ describe("PaymentService", () => {
     mockOrderUpdate();
 
     await expect(
-      new PaymentService(env(db)).processPayment({
+      paymentService(env(db)).processPayment({
         orderId: "order-101",
         paymentMode: "full",
         amount: 120,
@@ -1114,7 +1240,7 @@ describe("PaymentService", () => {
     );
 
     await expect(
-      new PaymentService(env(db)).processPayment({
+      paymentService(env(db)).processPayment({
         orderId: "order-101",
         paymentMode: "full",
         amount: 119,
@@ -1135,7 +1261,7 @@ describe("PaymentService", () => {
     mockOrderUpdate();
 
     await expect(
-      new PaymentService(env(db)).processPayment({
+      paymentService(env(db)).processPayment({
         orderId: "order-101",
         paymentMode: "full",
         amount: 120,

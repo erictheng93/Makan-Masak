@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Hono } from "hono";
 import { ApiError } from "../../../shared/utils/api-error";
 
 const mocks = vi.hoisted(() => ({
@@ -145,8 +146,16 @@ function createDb(rows: D1MockRows = {}) {
   };
 }
 
+let authenticated = true;
+
 function request(path: string, init: RequestInit = {}, db = createDb()) {
-  return routes.request(path, init, { DB: db } as never);
+  const app = new Hono<{ Variables: { user: typeof authState.user } }>();
+  app.use("*", async (c, next) => {
+    if (authenticated) c.set("user", authState.user);
+    await next();
+  });
+  app.route("/", routes);
+  return app.request(path, init, { DB: db } as never);
 }
 
 async function json(response: Response) {
@@ -175,6 +184,7 @@ function postJson(path: string, body: unknown, db = createDb()) {
 describe("payments routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authenticated = true;
     authState.user = {
       id: "018f0000-0000-7000-8000-000000000007",
       username: "cashier",
@@ -252,7 +262,7 @@ describe("payments routes", () => {
         gateway: "cash",
       },
       {
-        user: undefined,
+        actor: { kind: "staff", user: authState.user },
         country: "TW",
         currency: "TWD",
         idempotencyKey: "idem-1",
@@ -279,6 +289,19 @@ describe("payments routes", () => {
         },
       },
     });
+  });
+
+  it("rejects payment creation without an authenticated staff actor", async () => {
+    authenticated = false;
+    const response = await postJson("/", {
+      orderId: orderId101,
+      amount: 120,
+      method: "cash",
+    });
+
+    expect(response.status).toBe(401);
+    expect((await json(response)).error?.code).toBe("UNAUTHORIZED");
+    expect(mocks.paymentService.processPayment).not.toHaveBeenCalled();
   });
 
   it("requires restaurant scope for non-numeric order identifiers", async () => {

@@ -137,6 +137,41 @@ describe("MarketCheckoutTrackingView", () => {
     ).toContain('"paymentStatus":"pending"');
   });
 
+  it("tells the customer to pay each stall when online payment is unavailable", async () => {
+    getMarketCheckout.mockResolvedValueOnce({
+      id: "checkout-1",
+      market: { id: "market-1", slug: "fengjia", name: "逢甲夜市" },
+      status: "submitted",
+      childOrders: [
+        {
+          restaurantId: "restaurant-1",
+          restaurantName: "雞排攤",
+          orderId: 101,
+          orderNumber: "A001",
+          totalAmount: 160,
+          tokenExpiresAt: "2026-06-01T12:00:00.000Z",
+        },
+      ],
+      subtotal: 160,
+      createdAt: "2026-06-01T10:00:00.000Z",
+    });
+    payMarketCheckout.mockRejectedValueOnce({
+      code: "MARKET_CHECKOUT_PAYMENT_NOT_CONFIGURED",
+    });
+
+    const wrapper = mountView();
+    await flushPromises();
+    await wrapper.get('[data-testid="market-checkout-pay"]').trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="market-checkout-pay"]').exists()).toBe(
+      false,
+    );
+    expect(
+      wrapper.get('[data-testid="market-checkout-payment-unavailable"]').text(),
+    ).toBe("markets.checkout.unavailableHint");
+  });
+
   it("returns to the market page", async () => {
     getMarketCheckout.mockResolvedValueOnce({
       id: "checkout-1",

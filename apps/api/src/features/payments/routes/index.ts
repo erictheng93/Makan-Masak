@@ -155,6 +155,9 @@ async function handlePayment(c: PaymentContext) {
   const orderId = resolvedOrder?.id ?? input.orderId;
   const service = new PaymentService(c.env);
   const user: AuthUser | undefined = c.get("user");
+  if (!user) {
+    throw new ApiError("UNAUTHORIZED", "Authentication required", 401);
+  }
   const result = await service.processPayment(
     {
       orderId,
@@ -167,7 +170,7 @@ async function handlePayment(c: PaymentContext) {
       gateway: input.gateway ?? input.method,
     },
     {
-      user,
+      actor: { kind: "staff", user },
       country: input.country,
       currency: input.currency,
       idempotencyKey: c.req.header("Idempotency-Key") ?? undefined,

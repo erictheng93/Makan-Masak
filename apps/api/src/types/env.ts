@@ -31,6 +31,7 @@ export interface Env {
   ENCRYPTION_KEY: string; // For encrypting sensitive data like API keys
   QR_SIGNING_KEY: string; // HMAC key for signing QR code URLs
   CLIENT_BASE_URL?: string;
+  STORED_VALUE_CREDITS_ENABLED?: string;
 
   // ===== Deployment Mode Configuration =====
   /**

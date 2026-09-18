@@ -2853,207 +2853,51 @@ describe("market checkout routes", () => {
     expect(processPayment).not.toHaveBeenCalled();
   });
 
-  it("processes one aggregate market checkout payment across child orders", async () => {
+  it("fails closed when an online market payment provider is not configured", async () => {
+    setNoPersistedCheckoutFixtures();
     const env = createEnv();
     await env.CACHE_KV.put(
       "market_checkout:checkout-1",
-      JSON.stringify({
-        id: "checkout-1",
-        market: {
-          id: "market-1",
-          slug: "fengjia",
-          name: "逢甲夜市",
-          platformFeeRateBps: 350,
-        },
-        status: "submitted",
-        childOrders: [
-          {
-            restaurantId: "restaurant-1",
-            restaurantName: "雞排攤",
-            orderId: 1001,
-            orderNumber: "A001",
-            totalAmount: 120,
-            tokenExpiresAt: "2026-06-01T12:00:00.000Z",
-          },
-          {
-            restaurantId: "restaurant-2",
-            restaurantName: "甜點攤",
-            orderId: 1002,
-            orderNumber: "A002",
-            totalAmount: 80,
-            tokenExpiresAt: "2026-06-01T12:00:00.000Z",
-          },
-        ],
-        subtotal: 20000,
-        createdAt: "2026-06-01T10:00:00.000Z",
-      }),
-    );
-    processPayment
-      .mockResolvedValueOnce({
-        data: {
-          paymentId: "pay-1001",
-          orderId: 1001,
-          orderStatus: "preparing",
-          paymentStatus: "paid",
-          authorizedTotal: 120,
-        },
-      })
-      .mockResolvedValueOnce({
-        data: {
-          paymentId: "pay-1002",
-          orderId: 1002,
-          orderStatus: "ready",
-          paymentStatus: "paid",
-          authorizedTotal: 80,
-        },
-      });
-
-    const response = await routes.fetch(
-      new Request("https://test/checkout-1/pay", {
-        method: "POST",
-        headers: {
-          ...MARKET_HOLDER_HEADERS,
-          "Idempotency-Key": "market-pay-1",
-        },
-        body: JSON.stringify({
-          method: "line_pay",
-          country: "TW",
-          currency: "TWD",
-          customerInfo: { name: "Guest" },
-        }),
-      }),
-      env as never,
+      JSON.stringify(unpaidCheckoutSessionFixture()),
     );
 
-    expect(response.status).toBe(200);
-    expect(processPayment).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        orderId: 1001,
-        amount: 120,
-        expectedTotal: 120,
-        closeOrder: false,
-        method: "line_pay",
-      }),
-      expect.objectContaining({
-        country: "TW",
-        currency: "TWD",
-        idempotencyKey: "market-pay-1:1001",
-        metadata: expect.objectContaining({
-          source: "market-checkouts",
-          marketCheckoutId: "checkout-1",
-          restaurantId: "restaurant-1",
+    const response = await withSilencedRouteError(() =>
+      routes.fetch(
+        new Request("https://test/checkout-1/pay", {
+          method: "POST",
+          headers: MARKET_HOLDER_HEADERS,
+          body: JSON.stringify({ method: "market_online" }),
         }),
-      }),
+        env as never,
+      ),
     );
-    expect(processPayment).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        orderId: 1002,
-        amount: 80,
-        expectedTotal: 80,
-        closeOrder: false,
-        method: "line_pay",
-      }),
-      expect.objectContaining({
-        idempotencyKey: "market-pay-1:1002",
-        metadata: expect.objectContaining({
-          restaurantId: "restaurant-2",
-        }),
-      }),
+
+    await expectApiError(
+      response,
+      409,
+      "MARKET_CHECKOUT_PAYMENT_NOT_CONFIGURED",
     );
-    const json = (await response.json()) as {
-      data: {
-        payment: {
-          status: string;
-          method: string;
-          totalAmount: number;
-          parentPayment: {
-            paymentId: string;
-            status: string;
-            provider: string;
-            splitMode: string;
-            idempotencyKey: string;
-            amountCents: number;
-            paidAmountCents: number;
-            refundedAmountCents: number;
-            childPaymentIds: string[];
-          };
-          settlement: {
-            platformFeeRateBps: number;
-            platformFeeCents: number;
-            vendorNetAmountCents: number;
-            vendorAllocations: Array<{
-              restaurantId: string;
-              grossAmountCents: number;
-              refundedAmountCents: number;
-              platformFeeCents: number;
-              netAmountCents: number;
-            }>;
-          };
-          childPayments: Array<{ paymentId: string }>;
-        };
-      };
-    };
-    expect(json.data.payment).toMatchObject({
-      status: "paid",
-      method: "line_pay",
-      totalAmount: 200,
-      childPayments: [{ paymentId: "pay-1001" }, { paymentId: "pay-1002" }],
-      parentPayment: {
-        paymentId: "market_pay_checkout-1",
-        status: "paid",
-        provider: "line_pay",
-        splitMode: "child_transactions",
-        idempotencyKey: "market-pay-1",
-        amountCents: 20000,
-        paidAmountCents: 20000,
-        refundedAmountCents: 0,
-        childPaymentIds: ["pay-1001", "pay-1002"],
-      },
-      settlement: {
-        platformFeeRateBps: 350,
-        platformFeeCents: 700,
-        vendorNetAmountCents: 19300,
-        vendorAllocations: [
-          {
-            restaurantId: "restaurant-1",
-            grossAmountCents: 12000,
-            refundedAmountCents: 0,
-            platformFeeCents: 420,
-            netAmountCents: 11580,
-          },
-          {
-            restaurantId: "restaurant-2",
-            grossAmountCents: 8000,
-            refundedAmountCents: 0,
-            platformFeeCents: 280,
-            netAmountCents: 7720,
-          },
-        ],
-      },
-    });
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
-      "market_checkout:checkout-1",
-      expect.stringContaining('"payment"'),
-      { expirationTtl: 14400 },
-    );
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
-      "market_checkout:index",
-      expect.stringContaining('"paymentStatus":"paid"'),
-      { expirationTtl: 14400 },
-    );
-    expect(databaseMocks.updateValues[0]).toMatchObject({
-      paymentStatus: "paid",
-      paymentSummary: expect.objectContaining({
-        status: "paid",
-        totalAmount: 200,
-      }),
-    });
+    expect(processPayment).not.toHaveBeenCalled();
   });
 
   it("charges voucher-adjusted child totals and logs redemption failures", async () => {
-    const env = createEnv();
+    const env = {
+      ...createEnv(),
+      MARKET_CHECKOUT_SPLIT_MODE: "provider_split",
+      MARKET_CHECKOUT_PROVIDER_SPLIT_URL: "https://payments.example.test/split",
+    };
+    const fetcher = vi.fn(async () =>
+      Response.json({
+        provider: "line_pay",
+        providerTransactionId: "provider-transaction-1",
+        authorizedAmountCents: 18000,
+        allocations: [
+          { orderId: "1001", amountCents: 10800, paymentId: "pay-1001" },
+          { orderId: "1002", amountCents: 7200, paymentId: "pay-1002" },
+        ],
+      }),
+    );
+    vi.stubGlobal("fetch", fetcher);
     const consoleError = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
@@ -3062,6 +2906,12 @@ describe("market checkout routes", () => {
       "market_checkout:checkout-1",
       JSON.stringify({
         ...unpaidCheckoutSessionFixture(),
+        childOrders: unpaidCheckoutSessionFixture().childOrders.map(
+          (child) => ({
+            ...child,
+            orderId: String(child.orderId),
+          }),
+        ),
         appliedVoucher: {
           couponId: 42,
           code: "MARKET10",
@@ -3069,31 +2919,12 @@ describe("market checkout routes", () => {
           fundedBy: "platform",
           discountCents: 2000,
           allocations: [
-            { orderId: 1001, amountCents: 12000, discountCents: 1200 },
-            { orderId: 1002, amountCents: 8000, discountCents: 800 },
+            { orderId: "1001", amountCents: 12000, discountCents: 1200 },
+            { orderId: "1002", amountCents: 8000, discountCents: 800 },
           ],
         },
       }),
     );
-    processPayment
-      .mockResolvedValueOnce({
-        data: {
-          paymentId: "pay-1001",
-          orderId: 1001,
-          orderStatus: "preparing",
-          paymentStatus: "paid",
-          authorizedTotal: 108,
-        },
-      })
-      .mockResolvedValueOnce({
-        data: {
-          paymentId: "pay-1002",
-          orderId: 1002,
-          orderStatus: "ready",
-          paymentStatus: "paid",
-          authorizedTotal: 72,
-        },
-      });
 
     try {
       const response = await routes.fetch(
@@ -3110,24 +2941,15 @@ describe("market checkout routes", () => {
       );
 
       expect(response.status).toBe(200);
-      expect(processPayment).toHaveBeenNthCalledWith(
-        1,
-        expect.objectContaining({
-          orderId: 1001,
-          amount: 108,
-          expectedTotal: 108,
-        }),
-        expect.any(Object),
-      );
-      expect(processPayment).toHaveBeenNthCalledWith(
-        2,
-        expect.objectContaining({
-          orderId: 1002,
-          amount: 72,
-          expectedTotal: 72,
-        }),
-        expect.any(Object),
-      );
+      expect(fetcher).toHaveBeenCalledOnce();
+      const request = fetcher.mock.calls[0] as unknown as [string, RequestInit];
+      expect(JSON.parse(String(request[1].body))).toMatchObject({
+        amountCents: 18000,
+        allocations: [
+          { orderId: "1001", amountCents: 10800 },
+          { orderId: "1002", amountCents: 7200 },
+        ],
+      });
       expect(redeemVoucher).toHaveBeenCalledWith(
         expect.objectContaining({
           code: "MARKET10",
@@ -3152,14 +2974,14 @@ describe("market checkout routes", () => {
               vendorNetAmountCents: 19300,
               vendorAllocations: [
                 {
-                  orderId: 1001,
+                  orderId: "1001",
                   originalAmountCents: 12000,
                   platformDiscountCents: 1200,
                   settlementBaseCents: 12000,
                   grossAmountCents: 10800,
                 },
                 {
-                  orderId: 1002,
+                  orderId: "1002",
                   originalAmountCents: 8000,
                   platformDiscountCents: 800,
                   settlementBaseCents: 8000,
@@ -3172,7 +2994,142 @@ describe("market checkout routes", () => {
       });
     } finally {
       consoleError.mockRestore();
+      vi.unstubAllGlobals();
     }
+  });
+
+  it("persists provider split gateway failures as failed payment attempts", async () => {
+    const env = {
+      ...createEnv(),
+      MARKET_CHECKOUT_SPLIT_MODE: "provider_split",
+      MARKET_CHECKOUT_PROVIDER_SPLIT_URL: "https://payments.example.test/split",
+    };
+    const fetcher = vi.fn(async () => {
+      throw new Error("Provider unavailable");
+    });
+    vi.stubGlobal("fetch", fetcher);
+    await env.CACHE_KV.put(
+      "market_checkout:checkout-1",
+      JSON.stringify({
+        id: "checkout-1",
+        market: {
+          id: "market-1",
+          slug: "fengjia",
+          name: "逢甲夜市",
+          platformFeeRateBps: 350,
+        },
+        status: "submitted",
+        childOrders: [
+          {
+            restaurantId: "restaurant-1",
+            restaurantName: "雞排攤",
+            orderId: 1001,
+            orderNumber: "A001",
+            totalAmount: 999,
+            totalAmountCents: 12000,
+            tokenExpiresAt: "2026-06-01T12:00:00.000Z",
+          },
+        ],
+        subtotal: 12000,
+        appliedVoucher: {
+          couponId: 42,
+          code: "MARKET10",
+          name: "Market 10",
+          fundedBy: "platform",
+          discountCents: 1000,
+          reservationStatus: "reserved",
+          reservedAt: "2026-06-13T00:00:00.000Z",
+          allocations: [
+            { orderId: 1001, amountCents: 12000, discountCents: 1000 },
+          ],
+        },
+        createdAt: "2026-06-01T10:00:00.000Z",
+      }),
+    );
+
+    const response = await routes.fetch(
+      new Request("https://test/checkout-1/pay", {
+        method: "POST",
+        headers: MARKET_HOLDER_HEADERS,
+        body: JSON.stringify({ method: "stripe_connect" }),
+      }),
+      env as never,
+    );
+
+    expect(fetcher).toHaveBeenCalledOnce();
+    vi.unstubAllGlobals();
+    expect(response.status).toBe(202);
+    const json = (await response.json()) as {
+      data: {
+        payment: {
+          status: string;
+          totalAmount: number;
+          totalAmountCents: number;
+          paidAmountCents: number;
+          childPayments: Array<{
+            orderId: number;
+            status: string;
+            errorMessage?: string;
+          }>;
+          parentPayment: {
+            status: string;
+            splitMode: string;
+            provider: string;
+            paidAmountCents: number;
+          };
+        };
+      };
+    };
+    expect(json.data.payment).toMatchObject({
+      status: "failed",
+      totalAmount: 120,
+      totalAmountCents: 12000,
+      paidAmountCents: 0,
+      childPayments: [
+        {
+          orderId: 1001,
+          status: "failed",
+          errorMessage: "Provider unavailable",
+        },
+      ],
+      parentPayment: {
+        status: "failed",
+        provider: "stripe_connect",
+        splitMode: "provider_split",
+        paidAmountCents: 0,
+      },
+    });
+    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+      "market_checkout:checkout-1",
+      expect.stringContaining('"status":"failed"'),
+      { expirationTtl: 14400 },
+    );
+    expect(releaseVoucherReservation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        couponId: 42,
+        code: "MARKET10",
+        reservationStatus: "reserved",
+      }),
+    );
+    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+      "market_checkout:checkout-1",
+      expect.stringContaining('"reservationStatus":"released"'),
+      { expirationTtl: 14400 },
+    );
+    expect(
+      databaseMocks.updateValues.find(
+        (values) =>
+          typeof values === "object" &&
+          values != null &&
+          "paymentStatus" in values,
+      ),
+    ).toMatchObject({
+      paymentStatus: "failed",
+      paymentSummary: expect.objectContaining({
+        status: "failed",
+        paidAmountCents: 0,
+      }),
+    });
   });
 
   it("replays an already paid market checkout without charging twice", async () => {
@@ -3868,247 +3825,6 @@ describe("market checkout routes", () => {
       expect.stringContaining('"type":"provider_refund_pending"'),
       { expirationTtl: 14400 },
     );
-  });
-
-  it("records partial payment failures and retries only unpaid vendors", async () => {
-    const env = createEnv();
-    await env.CACHE_KV.put(
-      "market_checkout:checkout-1",
-      JSON.stringify({
-        id: "checkout-1",
-        market: { id: "market-1", slug: "fengjia", name: "逢甲夜市" },
-        status: "submitted",
-        childOrders: [
-          {
-            restaurantId: "restaurant-1",
-            restaurantName: "雞排攤",
-            orderId: 1001,
-            orderNumber: "A001",
-            totalAmount: 120,
-            tokenExpiresAt: "2026-06-01T12:00:00.000Z",
-          },
-          {
-            restaurantId: "restaurant-2",
-            restaurantName: "甜點攤",
-            orderId: 1002,
-            orderNumber: "A002",
-            totalAmount: 80,
-            tokenExpiresAt: "2026-06-01T12:00:00.000Z",
-          },
-        ],
-        subtotal: 20000,
-        createdAt: "2026-06-01T10:00:00.000Z",
-      }),
-    );
-    processPayment
-      .mockResolvedValueOnce({
-        data: {
-          paymentId: "pay-1001",
-          orderId: 1001,
-          orderStatus: "preparing",
-          paymentStatus: "paid",
-          authorizedTotal: 120,
-        },
-      })
-      .mockRejectedValueOnce(new Error("Gateway declined"));
-
-    const response = await routes.fetch(
-      new Request("https://test/checkout-1/pay", {
-        method: "POST",
-        headers: MARKET_HOLDER_HEADERS,
-        body: JSON.stringify({ method: "line_pay" }),
-      }),
-      env as never,
-    );
-
-    expect(response.status).toBe(202);
-    const json = (await response.json()) as {
-      data: {
-        payment: {
-          status: string;
-          paidAmount: number;
-          childPayments: Array<{
-            orderId: number;
-            status: string;
-            errorMessage?: string;
-          }>;
-        };
-      };
-    };
-    expect(json.data.payment).toMatchObject({
-      status: "partial_paid",
-      paidAmount: 120,
-    });
-    expect(json.data.payment.childPayments).toEqual([
-      expect.objectContaining({ orderId: 1001, status: "paid" }),
-      expect.objectContaining({
-        orderId: 1002,
-        status: "failed",
-        errorMessage: "Gateway declined",
-      }),
-    ]);
-
-    processPayment.mockClear();
-    processPayment.mockResolvedValueOnce({
-      data: {
-        paymentId: "pay-1002",
-        orderId: 1002,
-        orderStatus: "ready",
-        paymentStatus: "paid",
-        authorizedTotal: 80,
-      },
-    });
-
-    const retryResponse = await routes.fetch(
-      new Request("https://test/checkout-1/pay", {
-        method: "POST",
-        headers: MARKET_HOLDER_HEADERS,
-        body: JSON.stringify({ method: "line_pay" }),
-      }),
-      env as never,
-    );
-
-    expect(retryResponse.status).toBe(200);
-    expect(processPayment).toHaveBeenCalledTimes(1);
-    expect(processPayment).toHaveBeenCalledWith(
-      expect.objectContaining({ orderId: 1002 }),
-      expect.any(Object),
-    );
-    const retryJson = (await retryResponse.json()) as {
-      data: { payment: { status: string; paidAmount: number } };
-    };
-    expect(retryJson.data.payment).toMatchObject({
-      status: "paid",
-      paidAmount: 200,
-    });
-  });
-
-  it("persists provider split gateway failures as failed payment attempts", async () => {
-    const env = createEnv() as ReturnType<typeof createEnv> & {
-      MARKET_CHECKOUT_SPLIT_MODE: "provider_split";
-    };
-    env.MARKET_CHECKOUT_SPLIT_MODE = "provider_split";
-    await env.CACHE_KV.put(
-      "market_checkout:checkout-1",
-      JSON.stringify({
-        id: "checkout-1",
-        market: {
-          id: "market-1",
-          slug: "fengjia",
-          name: "逢甲夜市",
-          platformFeeRateBps: 350,
-        },
-        status: "submitted",
-        childOrders: [
-          {
-            restaurantId: "restaurant-1",
-            restaurantName: "雞排攤",
-            orderId: 1001,
-            orderNumber: "A001",
-            totalAmount: 999,
-            totalAmountCents: 12000,
-            tokenExpiresAt: "2026-06-01T12:00:00.000Z",
-          },
-        ],
-        subtotal: 12000,
-        appliedVoucher: {
-          couponId: 42,
-          code: "MARKET10",
-          name: "Market 10",
-          fundedBy: "platform",
-          discountCents: 1000,
-          reservationStatus: "reserved",
-          reservedAt: "2026-06-13T00:00:00.000Z",
-          allocations: [
-            { orderId: 1001, amountCents: 12000, discountCents: 1000 },
-          ],
-        },
-        createdAt: "2026-06-01T10:00:00.000Z",
-      }),
-    );
-
-    const response = await routes.fetch(
-      new Request("https://test/checkout-1/pay", {
-        method: "POST",
-        headers: MARKET_HOLDER_HEADERS,
-        body: JSON.stringify({ method: "stripe_connect" }),
-      }),
-      env as never,
-    );
-
-    expect(response.status).toBe(202);
-    const json = (await response.json()) as {
-      data: {
-        payment: {
-          status: string;
-          totalAmount: number;
-          totalAmountCents: number;
-          paidAmountCents: number;
-          childPayments: Array<{
-            orderId: number;
-            status: string;
-            errorMessage?: string;
-          }>;
-          parentPayment: {
-            status: string;
-            splitMode: string;
-            provider: string;
-            paidAmountCents: number;
-          };
-        };
-      };
-    };
-    expect(json.data.payment).toMatchObject({
-      status: "failed",
-      totalAmount: 120,
-      totalAmountCents: 12000,
-      paidAmountCents: 0,
-      childPayments: [
-        {
-          orderId: 1001,
-          status: "failed",
-          errorMessage:
-            "Market checkout provider split gateway is not configured",
-        },
-      ],
-      parentPayment: {
-        status: "failed",
-        provider: "stripe_connect",
-        splitMode: "provider_split",
-        paidAmountCents: 0,
-      },
-    });
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
-      "market_checkout:checkout-1",
-      expect.stringContaining('"status":"failed"'),
-      { expirationTtl: 14400 },
-    );
-    expect(releaseVoucherReservation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        couponId: 42,
-        code: "MARKET10",
-        reservationStatus: "reserved",
-      }),
-    );
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
-      "market_checkout:checkout-1",
-      expect.stringContaining('"reservationStatus":"released"'),
-      { expirationTtl: 14400 },
-    );
-    expect(
-      databaseMocks.updateValues.find(
-        (values) =>
-          typeof values === "object" &&
-          values != null &&
-          "paymentStatus" in values,
-      ),
-    ).toMatchObject({
-      paymentStatus: "failed",
-      paymentSummary: expect.objectContaining({
-        status: "failed",
-        paidAmountCents: 0,
-      }),
-    });
   });
 
   it("persists provider split next actions as pending payment attempts", async () => {
@@ -4982,7 +4698,7 @@ describe("market checkout routes", () => {
     await expect(childModeResponse.json()).resolves.toMatchObject({
       data: {
         splitMode: "child_transactions",
-        readiness: "warning",
+        readiness: "not_configured",
         providerKind: "internal_child_transactions",
       },
     });

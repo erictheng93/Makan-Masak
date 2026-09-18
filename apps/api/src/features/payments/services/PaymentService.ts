@@ -25,8 +25,16 @@ import {
   raisePaymentFailedAlert,
 } from "../../alerts/producers";
 
+export type PaymentActor =
+  | { kind: "staff"; user: AuthUser }
+  | {
+      kind: "provider";
+      provider: string;
+      providerTransactionId: string;
+    };
+
 export interface ProcessPaymentOptions {
-  user?: AuthUser;
+  actor: PaymentActor;
   country?: string;
   currency?: string;
   idempotencyKey?: string;
@@ -78,8 +86,15 @@ export class PaymentService {
 
   async processPayment(
     input: PaymentRequestInput,
-    options: ProcessPaymentOptions = {},
+    options: ProcessPaymentOptions,
   ): Promise<ProcessPaymentResult> {
+    if (!isPaymentActor(options?.actor)) {
+      throw new ApiError(
+        "PAYMENT_ACTOR_REQUIRED",
+        "A trusted payment actor is required",
+        403,
+      );
+    }
     const [existing] = await this.db
       .select()
       .from(orders)
@@ -114,14 +129,19 @@ export class PaymentService {
     existing: typeof orders.$inferSelect,
   ): Promise<ProcessPaymentResult> {
     if (
-      options.user?.restaurantId &&
-      options.user.role !== 0 &&
-      String(options.user.restaurantId) !== String(existing.restaurantId)
+      options.actor.kind === "staff" &&
+      options.actor.user.role !== 0 &&
+      (!options.actor.user.restaurantId ||
+        String(options.actor.user.restaurantId) !==
+          String(existing.restaurantId))
     ) {
       throw new ApiError("FORBIDDEN", "Access denied", 403);
     }
 
-    if (options.user && !canProcessPayment(options.user.role)) {
+    if (
+      options.actor.kind === "staff" &&
+      !canProcessPayment(options.actor.user.role)
+    ) {
       throw new ApiError("INSUFFICIENT_ROLE", "Insufficient permissions", 403);
     }
 
@@ -223,7 +243,14 @@ export class PaymentService {
           currency: options.currency ?? null,
           countryCode: options.country ?? null,
           paymentMethod: method,
-          gateway: input.gateway ?? input.method ?? null,
+          gateway:
+            options.actor.kind === "provider"
+              ? options.actor.provider
+              : (input.gateway ?? input.method ?? null),
+          providerTransactionId:
+            options.actor.kind === "provider"
+              ? options.actor.providerTransactionId
+              : null,
           idempotencyKey: options.idempotencyKey ?? null,
           customerInfo: jsonOrNull(options.customerInfo),
           metadata: jsonOrNull({
@@ -239,7 +266,10 @@ export class PaymentService {
         restaurantId: existing.restaurantId,
         paymentTransactionId: paymentId,
         eventType: PAYMENT_AUDIT_EVENT_TYPES.ATTEMPT,
-        provider: input.gateway ?? input.method ?? "internal",
+        provider:
+          options.actor.kind === "provider"
+            ? options.actor.provider
+            : (input.gateway ?? input.method ?? "internal"),
         amount: cents(serverTotal),
         currency: options.currency ?? null,
         rawPayload: {
@@ -262,7 +292,10 @@ export class PaymentService {
         restaurantId: existing.restaurantId,
         paymentTransactionId: paymentId,
         eventType: PAYMENT_AUDIT_EVENT_TYPES.SUCCESS,
-        provider: input.gateway ?? input.method ?? "internal",
+        provider:
+          options.actor.kind === "provider"
+            ? options.actor.provider
+            : (input.gateway ?? input.method ?? "internal"),
         amount: cents(serverTotal),
         currency: options.currency ?? null,
         rawPayload: { status: "paid" },
@@ -281,8 +314,12 @@ export class PaymentService {
           },
           previousStatus: existing.status as OrderStatus,
           newStatus: "paid",
-          updatedBy: options.user?.id,
-          updatedByRole: roleName(options.user?.role),
+          updatedBy:
+            options.actor.kind === "staff" ? options.actor.user.id : undefined,
+          updatedByRole:
+            options.actor.kind === "staff"
+              ? roleName(options.actor.user.role)
+              : "provider",
         });
       } catch (error) {
         console.error("Payment succeeded but order side effects failed", {
@@ -422,6 +459,7 @@ export class PaymentService {
       countryCode: string | null;
       paymentMethod: string;
       gateway: string | null;
+      providerTransactionId: string | null;
       idempotencyKey: string | null;
       customerInfo: unknown | null;
       metadata: unknown | null;
@@ -441,6 +479,7 @@ export class PaymentService {
       gateway: data.gateway,
       status: "pending",
       idempotencyKey: data.idempotencyKey,
+      providerTransactionId: data.providerTransactionId,
       customerInfo: data.customerInfo,
       metadata: data.metadata,
       createdAt: timestamp,
@@ -574,6 +613,24 @@ function processPaymentResultFromRow(
 
 function canProcessPayment(role: number): boolean {
   return [0, 1, 4].includes(role);
+}
+
+function isPaymentActor(actor: unknown): actor is PaymentActor {
+  if (!actor || typeof actor !== "object" || !("kind" in actor)) return false;
+
+  if (actor.kind === "staff") {
+    return "user" in actor && Boolean(actor.user);
+  }
+
+  return (
+    actor.kind === "provider" &&
+    "provider" in actor &&
+    typeof actor.provider === "string" &&
+    actor.provider.trim().length > 0 &&
+    "providerTransactionId" in actor &&
+    typeof actor.providerTransactionId === "string" &&
+    actor.providerTransactionId.trim().length > 0
+  );
 }
 
 function isAlreadyFinalized(

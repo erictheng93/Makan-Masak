@@ -58,6 +58,7 @@ import {
   type AppliedMarketCheckoutVoucher,
 } from "../services/MarketCheckoutVoucherService";
 import { fromCents } from "../../../shared/utils/money";
+import { isFeatureEnabled } from "../../../shared/feature-adoption";
 import { toCsv } from "../../../shared/utils/csv";
 import { createMarketCheckoutSchema } from "../schemas/validation";
 import { z } from "zod";
@@ -66,6 +67,23 @@ import { generateUUID } from "@makanmasak/utils";
 const app = new Hono<{ Bindings: Env }>();
 const MARKET_CHECKOUT_INDEX_KEY = "market_checkout:index";
 const MARKET_CHECKOUT_INDEX_LIMIT = 200;
+
+function hasOnlineMarketCheckoutPaymentProvider(
+  env: Env,
+  method: string,
+): boolean {
+  if (method === "credits") {
+    return isFeatureEnabled(
+      { STORED_VALUE_CREDITS_ENABLED: env.STORED_VALUE_CREDITS_ENABLED },
+      "storedValueCredits",
+    );
+  }
+
+  return (
+    env.MARKET_CHECKOUT_SPLIT_MODE === "provider_split" &&
+    Boolean(env.MARKET_CHECKOUT_PROVIDER_SPLIT_URL)
+  );
+}
 
 const payMarketCheckoutSchema = z.lazy(() =>
   z.object({
@@ -948,6 +966,14 @@ app.post("/:id/pay", optionalCanonicalCustomerAuthMiddleware, async (c) => {
         payment: session.payment,
       },
     });
+  }
+
+  if (!hasOnlineMarketCheckoutPaymentProvider(c.env, parsed.data.method)) {
+    throw new ApiError(
+      "MARKET_CHECKOUT_PAYMENT_NOT_CONFIGURED",
+      "Online payment is not available for this market; pay at the stall",
+      409,
+    );
   }
 
   const requestIdempotencyKey = c.req.header("Idempotency-Key");

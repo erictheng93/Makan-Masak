@@ -288,6 +288,13 @@
           >
             {{ t("markets.checkout.unavailableHint") }}
           </p>
+          <p
+            v-if="onlinePaymentUnavailable"
+            data-testid="market-checkout-payment-unavailable"
+            class="mt-2 text-sm text-gray-600"
+          >
+            {{ t("markets.checkout.unavailableHint") }}
+          </p>
 
           <p
             v-if="paymentError"
@@ -418,6 +425,7 @@ const isLoading = ref(true);
 const isPaying = ref(false);
 const error = ref<string | null>(null);
 const paymentError = ref<string | null>(null);
+const onlinePaymentUnavailable = ref(false);
 const paymentActionMessage = ref<string | null>(null);
 const orderAccessError = ref<string | null>(null);
 const voucherCode = ref("");
@@ -474,7 +482,10 @@ const paymentSummaryClass = computed(() => {
 });
 
 const canPayCheckout = computed(() => {
-  return !checkout.value?.payment || checkout.value.payment.status !== "paid";
+  return (
+    !onlinePaymentUnavailable.value &&
+    (!checkout.value?.payment || checkout.value.payment.status !== "paid")
+  );
 });
 
 const voucherDiscountCents = computed(() => {
@@ -544,6 +555,13 @@ async function payCheckout() {
     );
   } catch (payError) {
     console.error("Failed to pay market checkout:", payError);
+    if (
+      (payError as { code?: unknown })?.code ===
+      "MARKET_CHECKOUT_PAYMENT_NOT_CONFIGURED"
+    ) {
+      onlinePaymentUnavailable.value = true;
+      return;
+    }
     paymentError.value = t("markets.checkout.payFailed");
   } finally {
     isPaying.value = false;
