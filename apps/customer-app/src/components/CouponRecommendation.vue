@@ -43,8 +43,8 @@
               {{ coupon.description }}
             </p>
             <div class="text-xs text-ios-blue mt-1">
-              {{ t("cart.potentialSaving") }}: {{ currencySymbol
-              }}{{ calculatePotentialSaving(coupon) }}
+              {{ t("cart.potentialSaving") }}:
+              {{ calculatePotentialSaving(coupon) }}
             </div>
           </div>
           <button class="text-ios-blue text-sm font-medium">
@@ -63,7 +63,7 @@ import { useCurrency } from "@/composables/useCurrency";
 import type { CustomerCoupon } from "@/types/coupon";
 
 const { t } = useI18n();
-const { currencySymbol } = useCurrency();
+const { formatPrice } = useCurrency();
 
 const props = defineProps<{
   coupons: CustomerCoupon[];
@@ -104,11 +104,11 @@ const formatDiscount = (coupon: CustomerCoupon) => {
   if (coupon.discountType === "percentage") {
     return `${coupon.discountValue}% ${t("common.off")}`;
   } else {
-    return `${currencySymbol.value}${coupon.discountValue.toFixed(2)} ${t("common.off")}`;
+    return `${formatPrice(coupon.discountValue)} ${t("common.off")}`;
   }
 };
 
 const calculatePotentialSaving = (coupon: CustomerCoupon): string => {
-  return computeSaving(coupon).toFixed(2);
+  return formatPrice(computeSaving(coupon));
 };
 </script>
