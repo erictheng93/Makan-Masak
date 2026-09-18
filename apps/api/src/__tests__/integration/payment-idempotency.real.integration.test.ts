@@ -37,6 +37,16 @@ describe("payment idempotency replay", () => {
 
   const service = () => new PaymentService(testApp.env);
 
+  const staffActor = (restaurantId: string) => ({
+    kind: "staff" as const,
+    user: {
+      id: "018f0000-0000-7000-8000-000000000007",
+      username: "cashier",
+      role: 4,
+      restaurantId,
+    },
+  });
+
   const payment = (orderId: string) => ({
     orderId,
     paymentMode: "full" as const,
@@ -57,6 +67,7 @@ describe("payment idempotency replay", () => {
 
     const first = await service().processPayment(payment(order.id), {
       idempotencyKey: "idem-real-1",
+      actor: staffActor(restaurant.id),
     });
     expect(first.status).toBe(200);
 
@@ -64,6 +75,7 @@ describe("payment idempotency replay", () => {
     // check would 409 instead of replaying. It has to short-circuit earlier.
     const replay = await service().processPayment(payment(order.id), {
       idempotencyKey: "idem-real-1",
+      actor: staffActor(restaurant.id),
     });
 
     expect(replay).toEqual(first);
@@ -76,6 +88,7 @@ describe("payment idempotency replay", () => {
 
     await service().processPayment(payment(order.id), {
       idempotencyKey: "idem-real-paid",
+      actor: staffActor(restaurant.id),
     });
 
     // orders.payment_status is unconstrained TEXT, so a value outside
@@ -104,11 +117,13 @@ describe("payment idempotency replay", () => {
 
     await service().processPayment(payment(paid.id), {
       idempotencyKey: "idem-real-2",
+      actor: staffActor(restaurant.id),
     });
 
     await expect(
       service().processPayment(payment(unpaid.id), {
         idempotencyKey: "idem-real-2",
+        actor: staffActor(restaurant.id),
       }),
     ).rejects.toMatchObject({
       code: "IDEMPOTENCY_ORDER_MISMATCH",
