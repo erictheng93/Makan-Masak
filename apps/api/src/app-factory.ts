@@ -597,6 +597,14 @@ export function createApp(
         // prefix like "/api/v1/waiting-list" would also exempt the staff
         // routes under it (POST /:id/call), undoing the protection this
         // exclusion list exists to preserve.
+        // Guest checkout writes use possession tokens, callbacks use signed
+        // provider payloads. Keep refund and /admin routes CSRF-protected.
+        // The customer pay handler must fail closed without a provider (#400).
+        "/api/v1/market-checkouts$",
+        "/api/v1/market-checkouts/*/voucher",
+        "/api/v1/market-checkouts/*/pay",
+        "/api/v1/market-checkouts/*/guest-token",
+        "/api/v1/market-checkouts/payment-webhooks/*",
         "/api/v1/waiting-list$", // exact: POST / (join)
         // exact one segment down: the diner's own DELETE /:id (取消候位).
         // /:id/call, /:id/seat and /:id/expire are staff routes and stay

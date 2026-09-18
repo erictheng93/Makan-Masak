@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import {
   cashMovements,
   cashShifts,
@@ -67,6 +67,11 @@ const CSRF_HEADERS = {
   origin: "https://test",
   cookie: `csrf_token=${"a".repeat(64)}`,
   "x-csrf-token": "a".repeat(64),
+};
+const CUSTOMER_HEADERS = {
+  host: "test",
+  origin: "https://test",
+  "content-type": "application/json",
 };
 const POS_BASE = "https://test/api/v1/pos";
 
@@ -170,9 +175,12 @@ describe("Market checkouts API - real integration", () => {
 
   beforeEach(async () => {
     await testApp.testDb.truncateAll();
+    // Credit settlement is opt-in; tests that spend real balances enable it.
+    testApp.env.STORED_VALUE_CREDITS_ENABLED = "true";
   });
 
-  it("persists checkout sessions, survives KV expiry, and updates payment status", async () => {
+  it("rejects unconfigured payment without CSRF, then settles real credits after enablement", async () => {
+    testApp.env.STORED_VALUE_CREDITS_ENABLED = "false";
     const pushDeliveries: Array<{
       endpoint: string;
       payload: Record<string, unknown>;
@@ -224,7 +232,7 @@ describe("Market checkouts API - real integration", () => {
     const createRes = await testApp.app.fetch(
       new Request("https://test/api/v1/market-checkouts", {
         method: "POST",
-        headers: { ...CSRF_HEADERS, "content-type": "application/json" },
+        headers: CUSTOMER_HEADERS,
         body: JSON.stringify({
           marketSlug: market.slug,
           guestName: "Market Guest",
@@ -325,16 +333,85 @@ describe("Market checkouts API - real integration", () => {
     });
     expect(publicJson.checkout.childOrders).toHaveLength(2);
 
+    for (const method of ["market_online", "line_pay", "credits"]) {
+      const rejectedPayment = await testApp.app.fetch(
+        new Request(`https://test/api/v1/market-checkouts/${checkoutId}/pay`, {
+          method: "POST",
+          headers: { ...CUSTOMER_HEADERS, ...holderHeaders(createJson) },
+          body: JSON.stringify({ method }),
+        }),
+      );
+      expect(rejectedPayment.status).toBe(409);
+      expect(await rejectedPayment.json()).toMatchObject({
+        error: { code: "MARKET_CHECKOUT_PAYMENT_NOT_CONFIGURED" },
+      });
+    }
+    const unpaidOrders = await testApp.testDb.drizzle
+      .select({ paymentStatus: orders.paymentStatus, paidAt: orders.paidAt })
+      .from(orders)
+      .where(inArray(orders.id, childOrderIds))
+      .all();
+    expect(unpaidOrders).toHaveLength(2);
+    expect(unpaidOrders).toEqual([
+      { paymentStatus: "pending", paidAt: null },
+      { paymentStatus: "pending", paidAt: null },
+    ]);
+    expect(
+      await testApp.testDb.drizzle.select().from(paymentTransactions).all(),
+    ).toHaveLength(0);
+    expect(
+      await testApp.testDb.drizzle.select().from(marketCheckoutPayments).all(),
+    ).toHaveLength(0);
+    const unpaidSession = await testApp.testDb.drizzle
+      .select()
+      .from(marketCheckoutSessions)
+      .where(eq(marketCheckoutSessions.id, checkoutId))
+      .get();
+    expect(unpaidSession?.paymentStatus).toBe("pending");
+
+    await seedPlatformVoucher(testApp, "GUEST10");
+    const voucherRes = await testApp.app.fetch(
+      new Request(
+        `https://test/api/v1/market-checkouts/${checkoutId}/voucher`,
+        {
+          method: "POST",
+          headers: { ...CUSTOMER_HEADERS, ...holderHeaders(createJson) },
+          body: JSON.stringify({ code: "GUEST10" }),
+        },
+      ),
+    );
+    expect(voucherRes.status).toBe(200);
+    expect((await readData<AppliedVoucher>(voucherRes)).payableCents).toBe(
+      18000,
+    );
+    const removeVoucherRes = await testApp.app.fetch(
+      new Request(
+        `https://test/api/v1/market-checkouts/${checkoutId}/voucher`,
+        {
+          method: "DELETE",
+          headers: { ...CUSTOMER_HEADERS, ...holderHeaders(createJson) },
+        },
+      ),
+    );
+    expect(removeVoucherRes.status).toBe(200);
+
+    // Preserve the successful settlement/refund lifecycle using a provider
+    // that actually deducts funds, rather than the retired free-payment path.
+    testApp.env.STORED_VALUE_CREDITS_ENABLED = "true";
+    const creditCardPublicId = await issueCreditCard(testApp, 50000);
     const payRes = await testApp.app.fetch(
       new Request(`https://test/api/v1/market-checkouts/${checkoutId}/pay`, {
         method: "POST",
         headers: {
           ...holderHeaders(createJson),
-          ...CSRF_HEADERS,
+          ...CUSTOMER_HEADERS,
           "content-type": "application/json",
           "idempotency-key": `market-pay-${checkoutId}`,
         },
-        body: JSON.stringify({ method: "line_pay" }),
+        body: JSON.stringify({
+          method: "credits",
+          providerInput: { creditCardPublicId },
+        }),
       }),
     );
     expect(payRes.status).toBe(200);
@@ -351,8 +428,8 @@ describe("Market checkouts API - real integration", () => {
       paidAmount: 200,
       parentPayment: {
         status: "paid",
-        provider: "line_pay",
-        splitMode: "child_transactions",
+        provider: "credit_balance",
+        splitMode: "provider_split",
         amountCents: 20000,
         paidAmountCents: 20000,
         refundedAmountCents: 0,
@@ -373,8 +450,8 @@ describe("Market checkouts API - real integration", () => {
       paymentId: `market_pay_${checkoutId}`,
       checkoutId,
       marketId: market.id,
-      provider: "line_pay",
-      splitMode: "child_transactions",
+      provider: "credit_balance",
+      splitMode: "provider_split",
       idempotencyKey: `market-pay-${checkoutId}`,
       status: "paid",
       amountCents: 20000,
@@ -386,7 +463,7 @@ describe("Market checkouts API - real integration", () => {
     expect(parentPayment?.childPaymentIds).toHaveLength(2);
     expect(parentPayment?.providerPayload).toMatchObject({
       source: "market-checkouts",
-      splitMode: "child_transactions",
+      splitMode: "provider_split",
       settlement: {
         platformFeeRateBps: 350,
         platformFeeCents: 700,
