@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { sign } from "jsonwebtoken";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 import {
   GeoIntelligentRateLimiter,
   geoIntelligentRateLimitMiddleware,
@@ -300,30 +300,52 @@ describe("geoIntelligentRateLimitMiddleware", () => {
     expect(counterReads.every((key) => key.startsWith("rl:"))).toBe(true);
   });
 
-  it("weights the previous window so the limit still trips across a boundary", async () => {
-    // login allows 100 requests with a 1.2 burst multiplier => burst limit 120.
-    // Put 200 in the previous window and none in the current one. Even at the
-    // very start of a window the interpolated total must exceed the limit.
-    const rateLimitKv = createRateLimitKv();
-    const env = createEnv({ RATE_LIMIT_KV: rateLimitKv.namespace });
-    rateLimitKv.get.mockImplementation(async (key) => {
-      if (!key.startsWith("rl:")) return null;
-      const windowIndex = Number(key.split(":").pop());
-      const currentIndex = Math.floor(Date.now() / 60_000);
-      return windowIndex === currentIndex - 1 ? "200" : "0";
-    });
+  it.each([
+    [1_000, 429],
+    [45_000, 200],
+  ])(
+    "weights the previous window at %i ms into the current window",
+    async (elapsed, expectedStatus) => {
+      const clock = vi
+        .spyOn(Date, "now")
+        .mockReturnValue(Date.UTC(2026, 0, 1) + elapsed);
+      onTestFinished(() => clock.mockRestore());
+      // 200 previous requests exceed the 120 burst limit near the boundary,
+      // but decay below it later in the window. Wall-clock time must not decide
+      // which case this test exercises.
+      const rateLimitKv = createRateLimitKv();
+      const env = createEnv({ RATE_LIMIT_KV: rateLimitKv.namespace });
+      rateLimitKv.get.mockImplementation(async (key) => {
+        if (!key.startsWith("rl:")) return null;
+        const windowIndex = Number(key.split(":").pop());
+        const currentIndex = Math.floor(Date.now() / 60_000);
+        return windowIndex === currentIndex - 1 ? "200" : "0";
+      });
 
-    const app = new Hono<{ Bindings: Env }>();
-    app.use("*", geoIntelligentRateLimitMiddleware());
-    app.post("/api/v1/auth/login", (c) => c.json({ ok: true }));
+      const app = new Hono<{ Bindings: Env }>();
+      app.use(
+        "*",
+        geoIntelligentRateLimitMiddleware({
+          customLimits: {
+            "/api/v1/auth/login": {
+              requests: 100,
+              windowSeconds: 60,
+              burstMultiplier: 1.2,
+              blockDuration: 300,
+            },
+          },
+        }),
+      );
+      app.post("/api/v1/auth/login", (c) => c.json({ ok: true }));
 
-    const response = await fetchWithContext(app, env, "/api/v1/auth/login", {
-      method: "POST",
-      headers: { "CF-Connecting-IP": "203.0.113.11" },
-    });
+      const response = await fetchWithContext(app, env, "/api/v1/auth/login", {
+        method: "POST",
+        headers: { "CF-Connecting-IP": "203.0.113.11" },
+      });
 
-    expect(response.status).toBe(429);
-  });
+      expect(response.status).toBe(expectedStatus);
+    },
+  );
 
   it("uses verified bearer-token identity before route auth runs", async () => {
     const env = createMemoryEnv();

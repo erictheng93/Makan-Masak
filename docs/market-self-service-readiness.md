@@ -81,3 +81,16 @@ tests. No production database comparison was performed.
 A further regression test reproduced the short-weekday import bug: market `mon`
 was persisted as restaurant `mon` although eligibility reads `monday`. The import
 now normalizes aliases and tests opening status at a fixed Monday timestamp.
+
+The first affected-package gate passed all 820 admin tests and 2,911 API tests,
+but exposed an existing wall-clock-dependent rate-limit test. Its independent
+23-test rerun passed after fixing the clock and explicitly setting the test
+budget; production rate-limit behavior is unchanged. That test-only repair is
+kept in a separate commit. The final gate uses
+`TURBO_SCM_BASE=HEAD^ pnpm verify` while the market commit is HEAD, so committed
+market changes stay in scope. API dry-run build and final API typechecks also
+passed before this final gate.
+
+Final result: the anchored affected-package gate passed all 11 tasks. API passed
+255 files / 2,913 tests; admin passed 126 files / 820 tests. Typechecking and lint
+passed for both packages. The three focused real-D1 scenarios also passed.
