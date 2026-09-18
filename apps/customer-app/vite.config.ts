@@ -22,21 +22,18 @@ export default defineConfig({
       : []),
     VitePWA({
       registerType: "autoUpdate",
+      // The app registers the worker itself so it can reload as soon as an
+      // updated worker takes control of this client.
+      injectRegister: false,
       workbox: {
-        importScripts: ["/sw-push.js"],
+        importScripts: ["/sw-push.js", "/sw-cache-cleanup.js"],
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,woff2}"],
         runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/api\.makanmasak\.com\//,
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "api-cache",
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24, // 24 hours
-              },
-            },
-          },
+          // The API has a server-side public cache. Do not duplicate it in
+          // Cache Storage: menu and restaurant reads may carry credentials,
+          // while orders and tracking must always stay live.
           {
             urlPattern: /^https:\/\/images\.makanmasak\.com\//,
             handler: "CacheFirst",

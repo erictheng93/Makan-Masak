@@ -28,26 +28,17 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: "autoUpdate",
+      injectRegister: false,
       workbox: {
+        importScripts: ["/sw-push.js", "/sw-cache-cleanup.js"],
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,woff2}"],
         // Optimized runtime caching
         runtimeCaching: [
-          {
-            // API calls: Network first with cache fallback
-            urlPattern: /^https:\/\/api\.makanmasak\.com\//,
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "api-cache",
-              networkTimeoutSeconds: 5, // Fast timeout for better UX
-              expiration: {
-                maxEntries: 200, // Increased from 100
-                maxAgeSeconds: 60 * 60 * 24, // 24 hours
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
+          // API reads are deliberately excluded. The edge API cache serves
+          // public data, and client-side persistence risks storing guest or
+          // authenticated data and stale order state.
           {
             // Images: Cache first with network fallback
             urlPattern: /^https:\/\/images\.makanmasak\.com\//,

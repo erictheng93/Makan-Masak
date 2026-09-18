@@ -2,6 +2,7 @@ import { createApp } from "vue";
 import { createPinia } from "pinia";
 import { VueQueryPlugin } from "@tanstack/vue-query";
 import Toast from "vue-toastification";
+import { registerSW } from "virtual:pwa-register";
 import "vue-toastification/dist/index.css";
 
 import App from "./App.vue";
@@ -9,6 +10,10 @@ import router from "./router";
 import { setupI18n } from "./i18n";
 import "./assets/css/main.css";
 import { cleanupLegacyPWAStorage } from "./utils/legacy-pwa-storage-cleanup";
+
+// A fresh worker claims this tab under `autoUpdate`; reload its document so
+// returning diners do not complete a meal on the prior deployment.
+registerSW({ immediate: true });
 
 const app = createApp(App);
 
