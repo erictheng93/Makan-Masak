@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { RouteLocationNormalizedGeneric } from "vue-router";
 
 vi.mock("@/stores/auth", () => ({
@@ -25,6 +25,10 @@ function resolveProps(url: string) {
 describe("shop menu route", () => {
   const SHOP_QR_CODE = "SHOP-restaurant-1-1785563580";
 
+  beforeAll(async () => {
+    await import("@/router");
+  }, 30_000);
+
   it("carries the scanned code from the URL into the view", async () => {
     // This is the whole chain that lets a regenerated QR retire the old
     // sticker: `?qr=` rides every push from the landing page onward, and
@@ -45,5 +49,18 @@ describe("shop menu route", () => {
     );
 
     expect(props.shopQrCode).toBeUndefined();
+  });
+
+  it("marks shop order tracking routes so they use guest order realtime", async () => {
+    const props = await resolveProps(
+      "/restaurant/restaurant-1/shop/order/order-1001",
+    );
+
+    expect(props).toMatchObject({
+      restaurantId: "restaurant-1",
+      orderId: "order-1001",
+      tableId: 0,
+      isShopOrder: true,
+    });
   });
 });

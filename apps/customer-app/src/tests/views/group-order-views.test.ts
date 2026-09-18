@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, beforeAll } from "vitest";
 import { mount, RouterLinkStub, flushPromises } from "@vue/test-utils";
 
 const push = vi.hoisted(() => vi.fn());
@@ -715,6 +715,10 @@ describe("GroupOrderView — submitting", () => {
 });
 
 describe("group ordering routes", () => {
+  beforeAll(async () => {
+    await import("@/router");
+  }, 30_000);
+
   it("registers the join route on the same shape getShareLink builds", async () => {
     const { default: router } = await import("@/router");
     const join = router

@@ -212,7 +212,7 @@
                 order.customerName
               }}</span>
             </div>
-            <div class="flex justify-between text-sm">
+            <div v-if="tableNumber" class="flex justify-between text-sm">
               <span class="text-ios-secondary">{{
                 t("orderTracking.tableNumber")
               }}</span>
@@ -311,8 +311,15 @@
 
           <!-- 繼續點餐按鈕 -->
           <button
+            data-testid="continue-ordering"
             class="w-full bg-ios-blue text-white font-semibold py-3.5 px-4 rounded-full active:scale-[0.98] transition-transform duration-150"
-            @click="router.push(`/restaurant/${restaurantId}/table/${tableId}`)"
+            @click="
+              router.push(
+                isShopOrder
+                  ? `/restaurant/${restaurantId}/shop/menu`
+                  : `/restaurant/${restaurantId}/table/${tableId}`,
+              )
+            "
           >
             {{ t("orderTracking.continueOrdering") }}
           </button>
@@ -381,6 +388,7 @@ const props = defineProps<{
   restaurantId: string;
   tableId: number;
   orderId: string;
+  isShopOrder?: boolean;
 }>();
 
 const router = useRouter();
@@ -390,7 +398,7 @@ const { formatPrice } = useCurrency();
 const queryClient = useQueryClient();
 
 const showCancelConfirmation = ref(false);
-const guestRealtimeCacheKey = `makanmakan_guest_realtime_token:${props.restaurantId}:${props.tableId}:${props.orderId}`;
+const guestRealtimeCacheKey = `makanmakan_guest_realtime_token:${props.restaurantId}:${props.isShopOrder ? "shop" : props.tableId}:${props.orderId}`;
 const guestQrCacheKey = `makanmakan_table_qr:${props.restaurantId}:${props.tableId}`;
 const shouldUseGuestRealtime = computed(() => {
   const hasCustomerToken = hasCustomerAccessToken();
@@ -431,17 +439,14 @@ const getGuestRealtimeUrl = async () => {
     return cached.wsUrl;
   }
 
-  const qrCode = localStorage.getItem(guestQrCacheKey);
-  if (!qrCode) {
-    throw new Error("Missing signed table QR code");
-  }
-
-  const response = await orderApi.getGuestRealtimeToken({
-    restaurantId: props.restaurantId,
-    tableId: String(props.tableId),
-    orderId: String(props.orderId),
-    qrCode,
-  });
+  const guestToken = localStorage.getItem("guest_auth_token");
+  const response = props.isShopOrder
+    ? await orderApi.getGuestRealtimeToken({
+        restaurantId: props.restaurantId,
+        orderId: String(props.orderId),
+        guestToken: guestToken ?? undefined,
+      })
+    : await getTableGuestRealtimeToken();
 
   localStorage.setItem(
     guestRealtimeCacheKey,
@@ -453,6 +458,20 @@ const getGuestRealtimeUrl = async () => {
   );
 
   return response.wsUrl;
+};
+
+const getTableGuestRealtimeToken = async () => {
+  const qrCode = localStorage.getItem(guestQrCacheKey);
+  if (!qrCode) {
+    throw new Error("Missing signed table QR code");
+  }
+
+  return orderApi.getGuestRealtimeToken({
+    restaurantId: props.restaurantId,
+    tableId: String(props.tableId),
+    orderId: String(props.orderId),
+    qrCode,
+  });
 };
 
 const cachedOrderStatus = () => {
@@ -589,9 +608,7 @@ const canCancelOrder = computed(() => {
   );
 });
 
-const tableNumber = computed(
-  () => order.value?.table?.number ?? String(props.tableId),
-);
+const tableNumber = computed(() => order.value?.table?.number ?? null);
 
 const statusOrder = [
   "pending",

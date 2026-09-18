@@ -335,9 +335,10 @@ interface GuestOrderEnvelope {
 
 export interface GuestRealtimeTokenRequest {
   restaurantId: string;
-  tableId: string;
+  guestToken?: string;
+  tableId?: string;
   orderId?: string;
-  qrCode: string;
+  qrCode?: string;
 }
 
 // The mutating market checkout endpoints require proof the caller holds the

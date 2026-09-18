@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils";
-import { ref } from "vue";
+import { nextTick, ref } from "vue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import OrderTrackingView from "@/views/OrderTrackingView.vue";
 import { orderApi } from "@/services/orderApi";
@@ -11,6 +11,9 @@ const websocketOptions = vi.hoisted(() => ({
     onMessage: (message: unknown) => void;
   },
 }));
+
+const routerPush = vi.hoisted(() => vi.fn());
+const orderQueryData = ref<Record<string, unknown> | null>(null);
 const queryClient = vi.hoisted(() => ({
   setQueryData: vi.fn(),
   getQueryData: vi.fn(),
@@ -28,7 +31,7 @@ const mutationOptions = vi.hoisted(() => ({
 }));
 
 vi.mock("vue-router", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: routerPush }),
 }));
 
 vi.mock("vue-toastification", () => ({
@@ -38,7 +41,7 @@ vi.mock("vue-toastification", () => ({
 vi.mock("@tanstack/vue-query", () => ({
   useQueryClient: () => queryClient,
   useQuery: () => ({
-    data: ref(null),
+    data: orderQueryData,
     isLoading: ref(false),
     error: ref(null),
     refetch: vi.fn(),
@@ -84,12 +87,13 @@ vi.mock("@/services/orderApi", () => ({
   },
 }));
 
-function mountView() {
+function mountView(props: Record<string, unknown> = {}) {
   return mount(OrderTrackingView, {
     props: {
       restaurantId: "restaurant-1",
       tableId: 7,
       orderId: "1001",
+      ...props,
     },
     shallow: true,
   });
@@ -98,9 +102,90 @@ function mountView() {
 describe("OrderTrackingView guest realtime URL", () => {
   beforeEach(() => {
     websocketOptions.current = null;
+    routerPush.mockReset();
+    orderQueryData.value = null;
+    queryClient.setQueryData.mockReset();
+    queryClient.invalidateQueries.mockReset();
+    queryClient.setQueryData.mockImplementation(
+      (_key: unknown, updater: (current: unknown) => unknown) => {
+        orderQueryData.value = updater(orderQueryData.value) as Record<
+          string,
+          unknown
+        >;
+      },
+    );
+    localStorage.clear();
     vi.mocked(orderApi.getGuestRealtimeToken).mockReset();
     localStorage.setItem("guest_auth_token", "guest-token");
     localStorage.setItem("makanmakan_table_qr:restaurant-1:7", "signed-qr");
+  });
+
+  it("uses the guest order token when a shop order has no signed table QR", async () => {
+    vi.mocked(orderApi.getGuestRealtimeToken).mockResolvedValue({
+      token: "realtime-token",
+      expiresAt: "2099-01-01T00:00:00.000Z",
+      wsUrl:
+        "wss://realtime.example.test/customer/order:1001?token=realtime-token",
+    });
+    const wrapper = mountView({ tableId: 0, isShopOrder: true });
+
+    await expect(websocketOptions.current?.getUrl()).resolves.toBe(
+      "wss://realtime.example.test/customer/order:1001?token=realtime-token",
+    );
+    expect(orderApi.getGuestRealtimeToken).toHaveBeenCalledWith({
+      restaurantId: "restaurant-1",
+      orderId: "1001",
+      guestToken: "guest-token",
+    });
+    wrapper.unmount();
+  });
+
+  it("hides the table row and returns shop orders to the shop menu", async () => {
+    orderQueryData.value = {
+      id: "1001",
+      orderNumber: "ORD-1001",
+      createdAt: "2026-09-18T00:00:00.000Z",
+      items: [],
+      subtotal: 0,
+      total: 0,
+      status: "pending",
+      table: null,
+    };
+    const wrapper = mountView({ tableId: 0, isShopOrder: true });
+
+    expect(wrapper.text()).not.toContain("orderTracking.tableNumber");
+    await wrapper.get('[data-testid="continue-ordering"]').trigger("click");
+    expect(routerPush).toHaveBeenCalledWith(
+      "/restaurant/restaurant-1/shop/menu",
+    );
+    wrapper.unmount();
+  });
+
+  it("updates a shop order's visible status from its order-scoped websocket event", async () => {
+    orderQueryData.value = {
+      id: "1001",
+      orderNumber: "ORD-1001",
+      createdAt: "2026-09-18T00:00:00.000Z",
+      items: [],
+      subtotal: 0,
+      total: 0,
+      status: "pending",
+      table: null,
+    };
+    const wrapper = mountView({ tableId: 0, isShopOrder: true });
+
+    websocketOptions.current?.onMessage({
+      type: "order_status_update",
+      timestamp: "2026-09-18T00:01:00.000Z",
+      data: { orderId: "1001", status: "preparing" },
+    });
+    await nextTick();
+
+    expect(wrapper.text()).toContain("orderTracking.status.preparing");
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["order", "1001"],
+    });
+    wrapper.unmount();
   });
 
   it("uses and caches the order-scoped WebSocket URL returned by the API", async () => {

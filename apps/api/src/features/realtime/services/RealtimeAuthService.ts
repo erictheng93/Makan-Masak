@@ -772,6 +772,24 @@ export class RealtimeAuthService {
         return { error: "Guest token does not match this order" };
       }
 
+      const orderRows = await this.db
+        .select({
+          id: orders.id,
+          restaurantId: orders.restaurantId,
+        })
+        .from(orders)
+        .where(
+          and(
+            eq(orders.id, tokenData.orderId),
+            eq(orders.restaurantId, tokenData.restaurantId),
+          ),
+        )
+        .limit(1);
+
+      if (!orderRows[0]) {
+        return { error: "Guest token does not match this order" };
+      }
+
       return {
         restaurant: { id: tokenData.restaurantId },
         orderId: tokenData.orderId,

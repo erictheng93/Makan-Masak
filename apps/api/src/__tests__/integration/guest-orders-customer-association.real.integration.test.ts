@@ -15,7 +15,7 @@
  */
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { sign } from "hono/jwt";
+import { sign, verify } from "hono/jwt";
 import { customers, eq, orders } from "@makanmasak/database";
 import {
   createRealIntegrationTestApp,
@@ -107,6 +107,60 @@ describe("Guest orders — customer attribution (real D1)", () => {
     expect(readBack.status).toBe(200);
     const fetched = await readData<{ order: { id: string } }>(readBack);
     expect(fetched.order.id).toBe(created.order.id);
+  });
+
+  it("exchanges a shop guest token only for its own order-scoped realtime room", async () => {
+    const shop = await seedShop();
+    const created = await readData<GuestOrderCreated>(
+      await postGuestOrder(shop),
+    );
+    const row = await readOrderRow(created.order.id);
+    expect(row!.tableId).toBeNull();
+
+    const realtimeRes = await testApp.app.fetch(
+      new Request("https://test/api/v1/realtime/auth/guest-token", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          restaurantId: shop.restaurantId,
+          orderId: created.order.id,
+          guestToken: created.guestToken,
+        }),
+      }),
+    );
+    expect(realtimeRes.status).toBe(200);
+    const realtime = await readData<{ token: string }>(realtimeRes);
+    const payload = await verify(
+      realtime.token,
+      testApp.env.JWT_SECRET,
+      "HS256",
+    );
+
+    expect(payload).toMatchObject({
+      roomType: "customer",
+      roomId: `order:${created.order.id}`,
+      restaurantId: shop.restaurantId,
+      orderId: created.order.id,
+      scope: "guest-realtime",
+    });
+    expect(payload.tableId).toBeUndefined();
+
+    const otherShop = await seedShop();
+    const otherOrder = await readData<GuestOrderCreated>(
+      await postGuestOrder(otherShop),
+    );
+    const mismatchedRes = await testApp.app.fetch(
+      new Request("https://test/api/v1/realtime/auth/guest-token", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          restaurantId: otherShop.restaurantId,
+          orderId: otherOrder.order.id,
+          guestToken: created.guestToken,
+        }),
+      }),
+    );
+    expect(mismatchedRes.status).toBe(400);
   });
 
   it("returns the same response shape with and without a customer token", async () => {
@@ -306,6 +360,7 @@ describe("Guest orders — customer attribution (real D1)", () => {
         id: orders.id,
         customerId: orders.customerId,
         restaurantId: orders.restaurantId,
+        tableId: orders.tableId,
         orderType: orders.orderType,
         totalAmountCents: orders.totalAmountCents,
       })

@@ -229,6 +229,7 @@ const routes: RouteRecordRaw[] = [
       restaurantId: route.params.restaurantId,
       tableId: 0,
       orderId: String(route.params.orderId),
+      isShopOrder: true,
     }),
     meta: {
       titleKey: "navigation.orderTracking",

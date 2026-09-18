@@ -983,6 +983,9 @@ describe("RealtimeAuthService", () => {
         orderId: "42",
       },
     });
+    setSelectFixtures({
+      orders: [[{ id: "42", restaurantId: "restaurant-1" }]],
+    });
     const service = createService({ CACHE_KV: cache });
 
     const response = await service.generateGuestToken({
@@ -1012,6 +1015,25 @@ describe("RealtimeAuthService", () => {
       },
     });
     expect(cache.get).toHaveBeenCalledWith("guest_token:guest-1", "json");
+  });
+
+  it("denies guest realtime tokens when the claimed order is not owned by the restaurant", async () => {
+    const cache = createKV({
+      "guest_token:guest-1": {
+        restaurantId: "restaurant-1",
+        orderId: "42",
+      },
+    });
+    setSelectFixtures({ orders: [[]] });
+    const service = createService({ CACHE_KV: cache });
+
+    await expect(
+      service.generateGuestToken({
+        restaurantId: "restaurant-1",
+        orderId: "42",
+        guestToken: "guest-1",
+      }),
+    ).resolves.toEqual({ error: "Guest token does not match this order" });
   });
 
   it("generates guest table tokens from signed QR codes", async () => {
