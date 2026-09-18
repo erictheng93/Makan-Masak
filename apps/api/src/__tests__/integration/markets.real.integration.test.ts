@@ -10,6 +10,7 @@ import {
   restaurants,
   restaurantServiceItems,
   restaurantMarketMemberships,
+  shopSubscriptions,
 } from "@makanmasak/database";
 import { and, eq, isNull } from "drizzle-orm";
 import { readData, readEnvelope, type ServiceData } from "../helpers/read-json";
@@ -2009,6 +2010,77 @@ describe("Markets API — real integration", () => {
     const nearbyJson = await readData<DishSearch>(nearbyRes);
     expect(nearbyJson.results).toHaveLength(1);
     expect(nearbyJson.results[0].restaurantName).toBe("Inside Vendor");
+  });
+
+  it("lets an owner activate and deactivate takeaway through the shop-mode API", async () => {
+    const restaurant = await seed.restaurant({
+      supportsTakeaway: false,
+      enableShopMode: false,
+      shopQrCode: null,
+      businessHours: openAllWeek(),
+    });
+    await testApp.testDb.drizzle.insert(shopSubscriptions).values({
+      restaurantId: String(restaurant.id),
+      planTier: "basic",
+    });
+    await seed.user({
+      id: 20,
+      username: "self-service-owner",
+      role: 1,
+      restaurantId: String(restaurant.id),
+    });
+    const token = await testApp.authHelper.ownerToken(
+      20,
+      String(restaurant.id),
+    );
+    const headers = {
+      ...CSRF_HEADERS,
+      authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    };
+    const eligibility = async () =>
+      readData<TakeawayEligibility>(
+        await testApp.app.fetch(
+          new Request(
+            `https://test/api/v1/discovery/restaurants/${restaurant.id}/takeaway-eligibility`,
+          ),
+        ),
+      );
+    expect(await eligibility()).toEqual({
+      eligible: false,
+      reason: "takeaway_disabled",
+    });
+    const settingsResponse = await testApp.app.fetch(
+      new Request(`https://test/api/v1/restaurants/${restaurant.id}`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({
+          supportsTakeaway: true,
+          settings: { enableTakeaway: true },
+        }),
+      }),
+    );
+    expect(settingsResponse.status).toBe(200);
+    const setMode = (id: string, enabled: boolean) =>
+      testApp.app.fetch(
+        new Request(`https://test/api/v1/restaurants/${id}/shop-mode`, {
+          method: "PUT",
+          headers,
+          body: JSON.stringify({ enabled }),
+        }),
+      );
+    expect((await setMode(String(restaurant.id), true)).status).toBe(200);
+    expect(await eligibility()).toEqual({
+      eligible: true,
+      shopQrCode: expect.stringMatching(/^SHOP-/),
+    });
+    const other = await seed.restaurant();
+    expect((await setMode(String(other.id), true)).status).toBe(403);
+    expect((await setMode(String(restaurant.id), false)).status).toBe(200);
+    expect(await eligibility()).toEqual({
+      eligible: false,
+      reason: "takeaway_disabled",
+    });
   });
 
   it("returns shop QR code from takeaway eligibility only when eligible", async () => {

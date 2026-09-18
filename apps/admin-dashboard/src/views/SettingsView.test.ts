@@ -348,6 +348,46 @@ describe("SettingsView guest ordering availability", () => {
     return wrapper;
   }
 
+  it.each([true, false])(
+    "preserves authoritative fulfillment columns over stale JSON (%s)",
+    async (enabled) => {
+      vi.mocked(api.get).mockImplementation(async (url: string) =>
+        apiGetResponse(
+          url === "/restaurants/restaurant-1"
+            ? {
+                name: "Vendor",
+                district: "Datong",
+                supportsTakeaway: enabled,
+                supportsDelivery: enabled,
+                settings: {
+                  enableTakeaway: !enabled,
+                  enableDelivery: !enabled,
+                },
+              }
+            : {},
+        ),
+      );
+      const wrapper = await mountSettings();
+      await wrapper
+        .findAll("button")
+        .find((button) => button.text() === "settings.saveSettings")
+        ?.trigger("click");
+      await flushPromises();
+      expect(api.put).toHaveBeenCalledWith(
+        "/restaurants/restaurant-1",
+        expect.objectContaining({
+          supportsTakeaway: enabled,
+          supportsDelivery: enabled,
+          settings: expect.objectContaining({
+            enableTakeaway: enabled,
+            enableDelivery: enabled,
+          }),
+        }),
+      );
+      wrapper.unmount();
+    },
+  );
+
   it("saves the guest ordering switch to both restaurant availability gates", async () => {
     const wrapper = await mountSettings();
 

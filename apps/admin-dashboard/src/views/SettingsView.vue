@@ -2483,6 +2483,7 @@ const loadSettings = async () => {
         longitude?: number | null;
         isAvailable?: boolean;
         supportsTakeaway?: boolean;
+        supportsDelivery?: boolean;
         timezone?: string;
         businessHours?: Record<
           string,
@@ -2530,9 +2531,11 @@ const loadSettings = async () => {
         settings.orders.acceptGuestOrders =
           data.settings?.allowGuestOrders === true &&
           data.isAvailable !== false;
-        if (data.supportsTakeaway !== undefined) {
-          deliverySettings.enableTakeaway = data.supportsTakeaway;
-        }
+        // Discovery and order eligibility read columns, not legacy settings JSON.
+        deliverySettings.enableTakeaway =
+          data.supportsTakeaway ?? data.settings?.enableTakeaway ?? false;
+        deliverySettings.enableDelivery =
+          data.supportsDelivery ?? data.settings?.enableDelivery ?? false;
 
         // The screen shows one open/close pair for the week; take it from the
         // first day that has hours. Recording what was loaded is what lets
@@ -2556,12 +2559,6 @@ const loadSettings = async () => {
         }
         if (data.settings.enableDineIn !== undefined) {
           deliverySettings.enableDineIn = data.settings.enableDineIn;
-        }
-        if (data.settings.enableTakeaway !== undefined) {
-          deliverySettings.enableTakeaway = data.settings.enableTakeaway;
-        }
-        if (data.settings.enableDelivery !== undefined) {
-          deliverySettings.enableDelivery = data.settings.enableDelivery;
         }
         if (data.settings.deliveryFee !== undefined) {
           deliverySettings.deliveryFee = data.settings.deliveryFee;

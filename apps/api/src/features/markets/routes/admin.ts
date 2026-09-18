@@ -40,15 +40,32 @@ function restaurantBusinessHoursFromMarketOpeningHours(
     { open: string; close: string; closed?: boolean }
   > | null,
 ) {
+  const weekdays = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+  ];
   return Object.fromEntries(
-    Object.entries(openingHours ?? {}).map(([day, hours]) => [
-      day,
-      {
-        open: hours.open,
-        close: hours.close,
-        isOpen: !hours.closed,
-      },
-    ]),
+    weekdays.flatMap((day) => {
+      // Restaurant eligibility reads full weekday names. Prefer an explicit
+      // full name when a legacy market contains both spellings of the same day.
+      const hours = openingHours?.[day] ?? openingHours?.[day.slice(0, 3)];
+      if (!hours) return [];
+      return [
+        [
+          day,
+          {
+            open: hours.open ?? "00:00",
+            close: hours.close ?? "00:00",
+            isOpen: !hours.closed,
+          },
+        ],
+      ];
+    }),
   );
 }
 

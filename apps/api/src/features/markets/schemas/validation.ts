@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { marketOpeningHoursSchema } from "./opening-hours";
 
 const decodeHtmlEntities = (value: string): string =>
   value
@@ -150,7 +151,7 @@ export const createMarketSchema = z.object({
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
   boundaryGeojson: boundaryGeojsonSchema.nullable().optional(),
-  openingHours: z.record(z.string(), z.any()).nullable().optional(),
+  openingHours: marketOpeningHoursSchema.nullable().optional(),
   mapLayout: marketMapLayoutSchema.nullable().optional(),
   bannerUrl: urlSchema.nullable().optional(),
   logoUrl: urlSchema.nullable().optional(),

@@ -1,3 +1,5 @@
+import { marketOpeningHoursSchema } from "../schemas/opening-hours";
+
 export type MarketPublicReadinessIssueKey =
   | "description"
   | "location"
@@ -128,17 +130,9 @@ function hasText(value: string | null | undefined): boolean {
 }
 
 function hasOpeningHours(value: unknown): boolean {
-  if (!value || typeof value !== "object") return false;
-
-  return Object.values(value as Record<string, unknown>).some((day) => {
-    if (!day || typeof day !== "object") return false;
-    const hours = day as { open?: unknown; close?: unknown; closed?: unknown };
-    return (
-      hours.closed !== true &&
-      typeof hours.open === "string" &&
-      hours.open.trim().length > 0 &&
-      typeof hours.close === "string" &&
-      hours.close.trim().length > 0
-    );
-  });
+  const result = marketOpeningHoursSchema.safeParse(value);
+  return (
+    result.success &&
+    Object.values(result.data).some((day) => day && day.closed !== true)
+  );
 }

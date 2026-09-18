@@ -68,6 +68,7 @@ vi.mock("../../restaurants/services/RestaurantsService", () => ({
 }));
 
 import routes from "./admin";
+import { isOpenNow } from "../../discovery/utils/isOpenNow";
 import { ApiError } from "../../../shared/utils/api-error";
 
 routes.onError((err, c) => {
@@ -430,6 +431,35 @@ describe("markets admin routes", () => {
     expect(syncFns.onMarketMembershipChanged).toHaveBeenCalledWith(
       "restaurant-1",
     );
+  });
+
+  it("normalizes short market weekdays before creating a vendor", async () => {
+    marketsFns.getMarketById.mockResolvedValue({
+      id: "market-1",
+      city: "Taipei",
+      deletedAt: null,
+      openingHours: {
+        mon: { open: "10:00", close: "22:00" },
+        tuesday: { open: "11:00", close: "21:00" },
+        tue: { open: "00:00", close: "01:00" },
+        wed: { closed: true },
+      },
+    });
+    const res = await request("/market-1/vendor-imports", "POST", {
+      vendors: [
+        { name: "New Vendor", address: "Main Street", district: "Datong" },
+      ],
+    });
+    expect(res.status).toBe(200);
+    const hours = restaurantFns.createRestaurant.mock.calls[0][0].businessHours;
+    expect(hours).toEqual({
+      monday: { open: "10:00", close: "22:00", isOpen: true },
+      tuesday: { open: "11:00", close: "21:00", isOpen: true },
+      wednesday: { open: "00:00", close: "00:00", isOpen: false },
+    });
+    expect(
+      isOpenNow(hours, "Asia/Taipei", new Date("2026-09-14T04:00:00Z")),
+    ).toBe(true);
   });
 
   it("returns not found when importing into a missing market", async () => {
