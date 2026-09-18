@@ -598,6 +598,11 @@ export function createApp(
         // routes under it (POST /:id/call), undoing the protection this
         // exclusion list exists to preserve.
         "/api/v1/waiting-list$", // exact: POST / (join)
+        // exact one segment down: the diner's own DELETE /:id (取消候位).
+        // /:id/call, /:id/seat and /:id/expire are staff routes and stay
+        // protected — which is why this needs the "*...$" form rather than a
+        // bare "/api/v1/waiting-list/*".
+        "/api/v1/waiting-list/*$",
         "/api/v1/waiting-list/*/confirm",
         "/api/v1/reservations$", // exact: POST / (create)
         "/api/v1/reservations/*/cancel",

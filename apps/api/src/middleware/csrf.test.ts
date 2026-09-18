@@ -231,23 +231,26 @@ describe("csrfProtection excludePaths", () => {
         useDoubleSubmit: true,
         excludePaths: [
           "/api/v1/waiting-list$",
+          "/api/v1/waiting-list/*$",
           "/api/v1/waiting-list/*/confirm",
         ],
       }),
     );
     app.post("/api/v1/waiting-list", (c) => c.json({ ok: "join" }));
+    app.delete("/api/v1/waiting-list/:id", (c) => c.json({ ok: "cancel" }));
     app.post("/api/v1/waiting-list/:id/confirm", (c) =>
       c.json({ ok: "confirm" }),
     );
     app.post("/api/v1/waiting-list/:id/call", (c) => c.json({ ok: "call" }));
+    app.post("/api/v1/waiting-list/:id/seat", (c) => c.json({ ok: "seat" }));
     installApiErrorHandler(app);
     return app;
   }
 
-  function post(app: Hono, path: string) {
+  function post(app: Hono, path: string, method = "POST") {
     return app.fetch(
       new Request(`https://api.test${path}`, {
-        method: "POST",
+        method,
         headers: { Host: "api.test", "Content-Type": "application/json" },
         body: "{}",
       }),
@@ -264,10 +267,25 @@ describe("csrfProtection excludePaths", () => {
     );
   });
 
+  /**
+   * The diner's own cancel. It sits at the feature root with an id and no
+   * further segment, which neither "/api/v1/waiting-list$" (exact, no id) nor
+   * "/api/v1/waiting-list/*" (would also swallow /:id/call) can express —
+   * production answered 403 CSRF_TOKEN_MISSING to every 取消候位.
+   */
+  it("exempts the diner cancelling their own ticket", async () => {
+    const app = appWithExclusions();
+
+    expect((await post(app, "/api/v1/waiting-list/42", "DELETE")).status).toBe(
+      200,
+    );
+  });
+
   it("still protects the staff route under the same prefix", async () => {
     const app = appWithExclusions();
 
     // No CSRF token: an exact-match exclusion must not cascade to children.
     expect((await post(app, "/api/v1/waiting-list/42/call")).status).toBe(403);
+    expect((await post(app, "/api/v1/waiting-list/42/seat")).status).toBe(403);
   });
 });

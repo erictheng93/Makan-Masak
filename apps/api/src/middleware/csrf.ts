@@ -80,21 +80,33 @@ function getCookieValue(cookieHeader: string | undefined, name: string) {
     ?.slice(name.length + 1);
 }
 
+function wildcardPattern(excludePath: string): string {
+  return excludePath
+    .split("*")
+    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("[^/]+");
+}
+
 function isExcludedPath(path: string, excludePath: string): boolean {
   // A trailing "$" means exact path only — do not exempt anything nested under
   // it. Needed where a public customer route sits at the root of a feature
   // whose child routes are staff-only, e.g. POST /waiting-list is public but
   // POST /waiting-list/:id/call must stay protected.
+  //
+  // "*" combined with "$" is the same rule one segment down: the diner's own
+  // DELETE /waiting-list/:id must be exempt while /:id/call and /:id/seat stay
+  // protected. Neither half expresses that alone, and without it production
+  // answered 403 CSRF_TOKEN_MISSING to every 取消候位.
   if (excludePath.endsWith("$")) {
-    return path === excludePath.slice(0, -1);
+    const exact = excludePath.slice(0, -1);
+    if (exact.includes("*")) {
+      return new RegExp(`^${wildcardPattern(exact)}$`).test(path);
+    }
+    return path === exact;
   }
 
   if (excludePath.includes("*")) {
-    const escaped = excludePath
-      .split("*")
-      .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
-      .join("[^/]+");
-    return new RegExp(`^${escaped}(?:/.*)?$`).test(path);
+    return new RegExp(`^${wildcardPattern(excludePath)}(?:/.*)?$`).test(path);
   }
 
   return path === excludePath || path.startsWith(`${excludePath}/`);
