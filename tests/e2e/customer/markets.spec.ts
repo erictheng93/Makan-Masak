@@ -258,15 +258,12 @@ test.describe("夜市市集 (real API)", () => {
       error?: unknown;
     };
 
-    // Everything above works: stalls, basket, phone digits. The submit is
-    // the open bug (#401). /market-checkouts is mounted after csrfProtection
-    // in app-factory.ts and is not on its excludePaths, while the customer
-    // app sends no X-CSRF-Token at all — so every guest market checkout POST
-    // (create, voucher, pay) answers 403 CSRF_TOKEN_MISSING.
-    test.fail(
-      true,
-      "#401: guest market checkout POSTs are CSRF-protected and the customer app sends no CSRF token",
-    );
+    // The submit used to answer 403 CSRF_TOKEN_MISSING (#401): the customer
+    // app sends no X-CSRF-Token and /market-checkouts sat behind
+    // csrfProtection with nothing on its excludePaths. The guest write paths
+    // (create, voucher, pay, guest-token) are now exempt in app-factory.ts —
+    // they authorize by possession token, not by session cookie — while the
+    // refund and /admin routes stay protected.
     expect(
       { status: response.status(), error: body.error },
       "the basket should become a market checkout",
@@ -277,9 +274,9 @@ test.describe("夜市市集 (real API)", () => {
   test("跨攤結帳: one checkout is one real order per stall, and its page shows both", async () => {
     const { page } = diner;
     // Created through the same endpoint and body the market page sends, from
-    // outside the browser, because the page itself cannot get past CSRF
-    // (#401, see the test above). What is under test here is the checkout page and the
-    // orders behind it.
+    // outside the browser, so this test owns the checkout it asserts on rather
+    // than inheriting whatever the submit above produced. What is under test
+    // here is the checkout page and the orders behind it.
     const created = await apiData<{
       checkout: CheckoutSession;
       childOrders: Array<{
@@ -406,12 +403,8 @@ test.describe("夜市市集 (real API)", () => {
     await page.getByTestId("market-checkout-voucher-apply").click();
     const response = await applied;
 
-    // Same CSRF blocker as the market-page submit (#401): the voucher POST
-    // is 403.
-    test.fail(
-      true,
-      "#401: guest market checkout POSTs are CSRF-protected and the customer app sends no CSRF token",
-    );
+    // Same CSRF exemption as the market-page submit (#401): the voucher POST
+    // is possession-authorized and no longer answers 403.
     expect(response.status(), await response.text()).toBe(200);
     const subtotal = menu.plainItem.price + stall.dish.price;
     await expect(
@@ -435,9 +428,10 @@ test.describe("夜市市集 (real API)", () => {
   });
 
   test("完成付款: with no payment provider configured, paying must not mark the stall orders paid (#400)", async () => {
-    // Sent from outside the browser for the same CSRF reason (#401), with exactly
-    // what the pay button sends: method "market_online", TW/TWD, and the
-    // guest token that proves this diner holds the checkout.
+    // Sent from outside the browser, with exactly what the pay button sends:
+    // method "market_online", TW/TWD, and the guest token that proves this
+    // diner holds the checkout. Driving the button would assert the same
+    // request against a toast; the response body is the evidence wanted here.
     const pay = await apiRequest<{
       checkout?: CheckoutSession;
       payment?: {
@@ -477,16 +471,20 @@ test.describe("夜市市集 (real API)", () => {
         children,
       }),
     );
-    expect(pay.status, JSON.stringify(pay.body.error)).toBeLessThan(500);
-
     // With no MARKET_CHECKOUT_SPLIT_MODE set (the production default) the pay
-    // route uses ChildTransactionMarketCheckoutPaymentProvider, which calls
-    // PaymentService.processPayment directly — no gateway, no redirect, no
-    // callback — and records every stall order as paid.
-    test.fail(
-      true,
-      "#400: market checkout self-certifies payment without a provider",
-    );
+    // route used to fall back to ChildTransactionMarketCheckoutPaymentProvider,
+    // which called PaymentService.processPayment directly — no gateway, no
+    // redirect, no callback — and recorded every stall order as paid. That
+    // fallback is gone (#400): with no provider configured the route now
+    // refuses the payment outright.
+    expect(
+      { status: pay.status, code: pay.body.error?.code },
+      "an unconfigured market may not take a payment",
+    ).toEqual({
+      status: 409,
+      code: "MARKET_CHECKOUT_PAYMENT_NOT_CONFIGURED",
+    });
+
     expect(
       {
         paymentStatus: pay.body.data?.payment?.status,
