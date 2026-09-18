@@ -1045,7 +1045,7 @@ const formatCouponDiscount = (coupon: CustomerCoupon) => {
   if (coupon.discountType === "percentage") {
     return `${coupon.discountValue}% ${t("common.off")}`;
   } else {
-    return `$${formatPrice(coupon.discountValue)} ${t("common.off")}`;
+    return `${formatPrice(coupon.discountValue)} ${t("common.off")}`;
   }
 };
 
