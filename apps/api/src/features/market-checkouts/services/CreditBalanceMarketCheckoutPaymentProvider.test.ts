@@ -14,7 +14,9 @@ vi.mock("../../credits/services/CreditService", () => ({
   },
 }));
 
-const env = {} as Env;
+// The factory now refuses every method whose provider is not configured
+// (#400), and credits are configured by the feature flag.
+const env = { STORED_VALUE_CREDITS_ENABLED: "true" } as unknown as Env;
 
 const baseInput: MarketCheckoutPaymentProviderInput = {
   checkoutId: "checkout-1",
@@ -50,6 +52,12 @@ describe("CreditBalanceMarketCheckoutPaymentProvider", () => {
     expect(createMarketCheckoutPaymentProvider(env, "credits")).toBeInstanceOf(
       CreditBalanceMarketCheckoutPaymentProvider,
     );
+  });
+
+  it("factory refuses credits while the stored-value feature is off", () => {
+    expect(() =>
+      createMarketCheckoutPaymentProvider({} as Env, "credits"),
+    ).toThrow(/not configured/);
   });
 
   it("spends the aggregate total and maps paid child payments", async () => {
