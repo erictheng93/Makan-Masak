@@ -63,14 +63,14 @@
 
 ### 1. 開發環境
 
-- **Node.js**: >= 22.13.0
+- **Node.js**: >= 22.18.0
 - **pnpm**: 10.24.0（`packageManager` 欄位鎖定，透過 corepack 強制）
 - **Git**: 版本控制工具
 - **Terminal**: Bash/PowerShell/Zsh
 
 ```bash
 # 驗證環境
-node --version    # 應該 >= v22.13.0
+node --version    # 應該 >= v22.18.0
 pnpm --version    # 應該是 10.24.0
 git --version     # 任意版本
 ```

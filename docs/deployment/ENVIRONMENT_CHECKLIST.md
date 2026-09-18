@@ -67,7 +67,7 @@
 ### 本地開發環境
 
 - [ ] 🔧 Node.js 已安裝
-  - 版本: `□ >= 22.13.0` (運行 `node --version`)
+  - 版本: `□ >= 22.18.0` (運行 `node --version`)
 
 - [ ] 🔧 pnpm 已安裝
   - 版本: `□ 10.24.0`（`package.json` 的 `packageManager` 欄位鎖定，透過 corepack 強制，運行 `pnpm --version`）

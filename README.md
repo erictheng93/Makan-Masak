@@ -82,7 +82,7 @@ MakanMasak is a serverless, multi-tenant **night-market / 商圈 marketplace pla
 
 ### Prerequisites
 
-- Node.js 22+ (engines requires `>=22.13.0`)
+- Node.js 22+ (engines requires `>=22.18.0`)
 - pnpm 10+ (required - repo pins `pnpm@10.24.0` via `packageManager`; do not use npm or yarn)
 - Cloudflare Account (paid plan for D1, R2, Images)
 - Wrangler CLI: `pnpm add -g wrangler`

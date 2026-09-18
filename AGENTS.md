@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This repository is a `pnpm` workspace monorepo (Node >=22.13 and pnpm 10). Application code lives in `apps/`: the Vue front-ends `customer-app`, `admin-dashboard`, `kitchen-display`, `management-portal`, and `onboarding-app`; the Cloudflare Workers `api`, `management-api`, `realtime`, `image-processor`, and `backup-scheduler`; and the local Node daemon `print-agent`. Shared code lives in `packages/` (`shared`, `shared-types`, `database`, `utils`, `auth-client`, `ai-analytics`, `queue-core`, `queue-service`); `packages/shared/src/i18n` is also a workspace package. Cross-project tests and fixtures live in `tests/` with `unit`, `integration`, `e2e`, `visual`, `performance`, and `security` subfolders. Longer design and operational docs belong in `docs/`.
+This repository is a `pnpm` workspace monorepo (Node >=22.18 and pnpm 12). Application code lives in `apps/`: the Vue front-ends `customer-app`, `admin-dashboard`, `kitchen-display`, `management-portal`, and `onboarding-app`; the Cloudflare Workers `api`, `management-api`, `realtime`, `image-processor`, and `backup-scheduler`; and the local Node daemon `print-agent`. Shared code lives in `packages/` (`shared`, `shared-types`, `database`, `utils`, `auth-client`, `ai-analytics`, `queue-core`, `queue-service`); `packages/shared/src/i18n` is also a workspace package. Cross-project tests and fixtures live in `tests/` with `unit`, `integration`, `e2e`, `visual`, `performance`, and `security` subfolders. Longer design and operational docs belong in `docs/`.
 
 ## Codebase Memory MCP Notes
 

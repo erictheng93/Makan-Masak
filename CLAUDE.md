@@ -174,7 +174,13 @@ them has a snapshot.
 
 ### Prerequisites
 
-- Node.js 22+ (`package.json` engines requires `>=22.13.0`)
+- Node.js 22.18+ (`package.json` engines requires `>=22.18.0`). The floor is
+  set by the dependency graph, not by our code: `artillery@2.0.34` requires
+  `>= 22.18.0`, and with `engineStrict` on, pnpm refuses to install under
+  22.17. Because `pnpm run` reinstalls when `node_modules` is stale, that
+  surfaces as `ERR_PNPM_UNSUPPORTED_ENGINE` from `pnpm verify:push` before a
+  single check runs. After a dependency bump, recompute the floor from every
+  `engines` range in `pnpm-lock.yaml` rather than trusting this number.
 - pnpm 12 (required — repo pins `pnpm@12.3.4` via `packageManager`; engines floor is `>=8.0.0`, enforced by `engineStrict` in `pnpm-workspace.yaml`)
 
   **Every pnpm setting lives in `pnpm-workspace.yaml`.** pnpm 11 stopped reading
