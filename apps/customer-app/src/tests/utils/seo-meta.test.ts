@@ -99,7 +99,8 @@ function menuItem(overrides: Partial<MenuItem> = {}): MenuItem {
     catalogType: "menu_item",
     name: "鹽酥雞",
     description: "現炸招牌鹽酥雞",
-    price: 7500,
+    // Major units: the menu API sends amountFromCents(priceCents).
+    price: 75,
     spiceLevel: 0,
     sortOrder: 1,
     isAvailable: true,
@@ -245,7 +246,7 @@ describe("applyShopMenuSeoMeta", () => {
           id: 102,
           name: "地瓜薯條",
           description: undefined,
-          price: 5000,
+          price: 50,
         }),
         menuItem({ id: 103, name: "售完雞排", isAvailable: false }),
       ],
@@ -304,7 +305,7 @@ describe("applyShopMenuSeoMeta", () => {
             description: "現炸招牌鹽酥雞",
             offers: {
               "@type": "Offer",
-              price: "75.00",
+              price: "75",
               priceCurrency: "TWD",
               availability: "https://schema.org/InStock",
             },
@@ -314,7 +315,7 @@ describe("applyShopMenuSeoMeta", () => {
             name: "地瓜薯條",
             offers: {
               "@type": "Offer",
-              price: "50.00",
+              price: "50",
               priceCurrency: "TWD",
               availability: "https://schema.org/InStock",
             },
@@ -322,5 +323,42 @@ describe("applyShopMenuSeoMeta", () => {
         ],
       },
     ]);
+  });
+
+  it("prices the menu in the restaurant's own currency and country", () => {
+    applyShopMenuSeoMeta({
+      restaurant: restaurant({
+        timezone: "Asia/Kuala_Lumpur",
+        settings: { currency: "MYR" },
+      } as Partial<Restaurant>),
+      categories: [category()],
+      menuItems: [menuItem({ price: 12.5 })],
+      path: "/restaurant/restaurant-1/shop/menu",
+      origin: "https://makanmasak.com",
+    });
+
+    const jsonLd = shopMenuJsonLd();
+    expect(jsonLd.address.addressCountry).toBe("MY");
+    expect(jsonLd.hasMenu.hasMenuSection[0].hasMenuItem[0].offers).toEqual(
+      expect.objectContaining({ price: "12.50", priceCurrency: "MYR" }),
+    );
+  });
+
+  it("uses whole đồng and VN for a Vietnamese shop without a timezone", () => {
+    applyShopMenuSeoMeta({
+      restaurant: restaurant({
+        settings: { currency: "VND" },
+      } as Partial<Restaurant>),
+      categories: [category()],
+      menuItems: [menuItem({ price: 35000 })],
+      path: "/restaurant/restaurant-1/shop/menu",
+      origin: "https://makanmasak.com",
+    });
+
+    const jsonLd = shopMenuJsonLd();
+    expect(jsonLd.address.addressCountry).toBe("VN");
+    expect(jsonLd.hasMenu.hasMenuSection[0].hasMenuItem[0].offers).toEqual(
+      expect.objectContaining({ price: "35000", priceCurrency: "VND" }),
+    );
   });
 });

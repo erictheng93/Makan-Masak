@@ -1,5 +1,11 @@
 import type { MarketDetail } from "@/services/marketsApi";
 import type { Category, MenuItem, Restaurant } from "@makanmasak/shared-types";
+import {
+  getCurrencyConfig,
+  normalizeCurrencyCode,
+  DEFAULT_CURRENCY,
+  type CurrencyCode,
+} from "@makanmasak/utils";
 
 const SITE_NAME = "MakanMasak";
 const DEFAULT_IMAGE = "/og-image.png";
@@ -181,11 +187,45 @@ function marketStructuredData({
   };
 }
 
-function itemPrice(price: number) {
-  return (price / 100).toFixed(2);
+const COUNTRY_BY_TIMEZONE: Record<string, string> = {
+  "Asia/Taipei": "TW",
+  "Asia/Kuala_Lumpur": "MY",
+  "Asia/Ho_Chi_Minh": "VN",
+};
+
+const COUNTRY_BY_CURRENCY: Record<CurrencyCode, string> = {
+  TWD: "TW",
+  MYR: "MY",
+  VND: "VN",
+};
+
+function restaurantCurrency(restaurant: Restaurant): CurrencyCode {
+  return (
+    normalizeCurrencyCode(restaurant.settings?.currency) ?? DEFAULT_CURRENCY
+  );
 }
 
-function menuStructuredData(categories: Category[], menuItems: MenuItem[]) {
+function restaurantCountry(restaurant: Restaurant): string {
+  return (
+    (restaurant.timezone && COUNTRY_BY_TIMEZONE[restaurant.timezone]) ||
+    COUNTRY_BY_CURRENCY[restaurantCurrency(restaurant)]
+  );
+}
+
+/**
+ * schema.org wants a plain decimal string. The menu API already sends
+ * `price` in major units (amountFromCents), so dividing by 100 again turned a
+ * NT$75 dish into "0.75".
+ */
+function itemPrice(price: number, currency: CurrencyCode) {
+  return price.toFixed(getCurrencyConfig(currency)?.decimals ?? 2);
+}
+
+function menuStructuredData(
+  categories: Category[],
+  menuItems: MenuItem[],
+  currency: CurrencyCode,
+) {
   const availableItems = menuItems.filter((item) => item.isAvailable);
   const sections = categories
     .map((category) => {
@@ -199,8 +239,8 @@ function menuStructuredData(categories: Category[], menuItems: MenuItem[]) {
           ...(item.description ? { description: item.description } : {}),
           offers: {
             "@type": "Offer",
-            price: itemPrice(item.price),
-            priceCurrency: "TWD",
+            price: itemPrice(item.price, currency),
+            priceCurrency: currency,
             availability: "https://schema.org/InStock",
           },
         }));
@@ -261,7 +301,7 @@ function shopMenuStructuredData({
               ? { addressLocality: restaurant.district }
               : {}),
             ...(restaurant.city ? { addressRegion: restaurant.city } : {}),
-            addressCountry: "TW",
+            addressCountry: restaurantCountry(restaurant),
           },
         }
       : {}),
@@ -278,7 +318,11 @@ function shopMenuStructuredData({
       "@type": "OrderAction",
       target: canonicalUrl,
     },
-    hasMenu: menuStructuredData(categories, menuItems),
+    hasMenu: menuStructuredData(
+      categories,
+      menuItems,
+      restaurantCurrency(restaurant),
+    ),
   };
 }
 
