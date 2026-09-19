@@ -67,7 +67,10 @@ const restaurantSettingsSchema = z.lazy(() =>
       minOrderAmount: z.number().min(0).optional(),
       maxOrdersPerHour: z.number().int().min(1).optional(),
       autoAcceptOrders: z.boolean().optional(),
-      currency: z.string().length(3).optional(), // ISO currency codes are 3 characters
+      // Only the currencies the platform settles in. Any other code used to be
+      // accepted here and then silently read as TWD on every payment path; the
+      // payment resolver now refuses such a restaurant, so refuse the setting.
+      currency: z.enum(["TWD", "MYR", "VND"]).optional(),
       // Fulfillment settings
       enableDineIn: z.boolean().optional(),
       enableTakeaway: z.boolean().optional(),

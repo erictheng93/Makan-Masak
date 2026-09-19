@@ -2731,7 +2731,7 @@
       "RestaurantSettingsSchema": {
         "$": "object+catchall",
         "autoAcceptOrders": "boolean?",
-        "currency": "string?",
+        "currency": "enum(MYR|TWD|VND)?",
         "enableLoyaltyProgram": "boolean?",
         "enableQROrdering": "boolean?",
         "enableShopQR": "boolean?",
@@ -2782,7 +2782,7 @@
         "$": "object",
         "data": "object+catchall",
         "data.autoAcceptOrders": "boolean?",
-        "data.currency": "string?",
+        "data.currency": "enum(MYR|TWD|VND)?",
         "data.enableLoyaltyProgram": "boolean?",
         "data.enableQROrdering": "boolean?",
         "data.enableShopQR": "boolean?",

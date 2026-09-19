@@ -33,7 +33,7 @@ export const RestaurantSettingsSchema = z
     enableLoyaltyProgram: z.boolean().optional(),
     taxRate: z.number().optional(),
     serviceCharge: z.number().optional(),
-    currency: z.string().optional(),
+    currency: z.enum(["TWD", "MYR", "VND"]).optional(),
   })
   .loose();
 
