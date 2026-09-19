@@ -31,6 +31,7 @@ import {
   toPercentageBps,
   toRequiredCents,
 } from "../utils/money";
+import { computeDiscountCents } from "@makanmasak/utils";
 import { paginateWithCursor } from "../utils/pagination-helpers";
 import { BaseService } from "./base";
 
@@ -786,38 +787,39 @@ export class PartnershipService extends BaseService {
         }
       }
 
-      // 計算折扣金額
+      // 計算折扣金額 — 依方案所屬餐廳的幣別精度（TWD/VND 整數元）。
+      const currency = await this.getRestaurantCurrency(plan.restaurantId);
       let discountAmountCents = 0;
 
       switch (plan.discountType) {
-        case "percentage": {
-          const discountPercentage =
-            percentageFromBps(plan.discountPercentageBps) ?? 0;
-          discountAmountCents = Math.round(
-            orderAmountCents * (discountPercentage / 100),
-          );
-          if (
-            plan.maxDiscountAmountCents != null &&
-            discountAmountCents > plan.maxDiscountAmountCents
-          ) {
-            discountAmountCents = plan.maxDiscountAmountCents;
-          }
-          break;
-        }
-
+        case "percentage":
         case "fixed":
-          discountAmountCents = plan.discountValueCents ?? 0;
+          discountAmountCents = computeDiscountCents(
+            {
+              discountType: plan.discountType,
+              percent: percentageFromBps(plan.discountPercentageBps),
+              fixedCents: plan.discountValueCents,
+              maxDiscountCents: plan.maxDiscountAmountCents,
+            },
+            orderAmountCents,
+            currency,
+          );
           break;
 
         case "special_price":
-          // 特價模式：折扣金額 = 原價 - 特價
-          discountAmountCents =
-            orderAmountCents - (plan.discountValueCents ?? 0);
-          if (discountAmountCents < 0) discountAmountCents = 0;
+          // 特價模式：折扣金額 = 原價 - 特價。特價是設定值，向下取到幣別
+          // 精度前先算差額；結果再以 computeDiscountCents 的 fixed 規則收斂，
+          // 既不為負也不超過（取整後的）原價。
+          discountAmountCents = computeDiscountCents(
+            {
+              discountType: "fixed",
+              fixedCents: orderAmountCents - (plan.discountValueCents ?? 0),
+            },
+            orderAmountCents,
+            currency,
+          );
           break;
       }
-
-      discountAmountCents = Math.min(discountAmountCents, orderAmountCents);
       const finalAmountCents = Math.max(
         0,
         orderAmountCents - discountAmountCents,

@@ -130,6 +130,17 @@ export {
   type CurrencyCode,
 } from "./currency";
 
+// Currency-precision discount arithmetic and input validation
+export {
+  floorToCurrencyCents,
+  percentOfCents,
+  computeDiscountCents,
+  assertCurrencyAlignedCents,
+  isAlignedInEveryCurrency,
+  type DiscountRule,
+  type CurrencyPrecisionField,
+} from "./money-rounding";
+
 // Token utilities
 export {
   decodeJwtPayload,

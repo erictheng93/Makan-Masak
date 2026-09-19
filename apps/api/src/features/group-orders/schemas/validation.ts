@@ -204,18 +204,9 @@ export const splitBillSchema = z.lazy(() =>
             "Split type must be one of: equal, proportional, individual, by_item, custom",
         },
       ),
-      serviceChargeRate: z
-        .number()
-        .min(0, "Service charge rate cannot be negative")
-        .max(1, "Service charge rate cannot exceed 100%")
-        .optional()
-        .default(0),
-      taxRate: z
-        .number()
-        .min(0, "Tax rate cannot be negative")
-        .max(1, "Tax rate cannot exceed 100%")
-        .optional()
-        .default(0),
+      // Rates are not accepted: splitBill reads them from the restaurant's
+      // settings. A caller-supplied rate let the host price the bill. zod
+      // strips the unknown keys, so an older client sending them still parses.
       sharedServiceChargeCents: z
         .number()
         .int("Shared service charge must be in whole cents")

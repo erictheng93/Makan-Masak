@@ -28,6 +28,11 @@ import type {
   MenuItemOptions,
 } from "@makanmasak/shared-types";
 import { amountFromCents, toCents, toRequiredCents } from "../utils/money";
+import {
+  assertCurrencyAlignedCents,
+  isAlignedInEveryCurrency,
+  type CurrencyPrecisionField,
+} from "@makanmasak/utils";
 import { loadAssembledMenuItemOptions } from "./menu-options";
 
 const D1_IN_CLAUSE_LIMIT = 100;
@@ -125,6 +130,43 @@ export interface MenuItemOptionGroupState {
       priceAdjustmentCents: number | null;
     }>;
   }>;
+}
+
+/**
+ * Every money field a menu item write can carry, as stored cents, labelled
+ * with its request path so a CURRENCY_PRECISION 400 names what to fix.
+ * Includes the legacy `options` JSON: order pricing still falls back to it
+ * for items with no option-group links.
+ */
+function menuItemMoneyFields(
+  data: Pick<UpdateMenuItemData, "price" | "originalPrice" | "options">,
+): CurrencyPrecisionField[] {
+  const fields: CurrencyPrecisionField[] = [
+    { field: "price", cents: toCents(data.price) },
+    { field: "originalPrice", cents: toCents(data.originalPrice) },
+  ];
+  const options = data.options;
+  options?.sizes?.forEach((size, index) =>
+    fields.push({
+      field: `options.sizes[${index}].priceAdjustment`,
+      cents: toCents(size.priceAdjustment),
+    }),
+  );
+  options?.customizations?.forEach((customization, groupIndex) =>
+    customization.choices?.forEach((choice, index) =>
+      fields.push({
+        field: `options.customizations[${groupIndex}].choices[${index}].priceAdjustment`,
+        cents: toCents(choice.priceAdjustment),
+      }),
+    ),
+  );
+  options?.addOns?.forEach((addOn, index) =>
+    fields.push({
+      field: `options.addOns[${index}].price`,
+      cents: toCents(addOn.price),
+    }),
+  );
+  return fields;
 }
 
 function chunk<T>(values: T[], size: number): T[][] {
@@ -344,6 +386,23 @@ export class MenuService extends BaseService {
       .where(eq(menuItems.id, menuItemId));
     if (!item) throw new Error("Menu item not found");
     return item.restaurantId;
+  }
+
+  /**
+   * Reject prices finer than the restaurant's currency allows (NT$12.50 for
+   * TWD) with a 400 CURRENCY_PRECISION. Existing rows are not migrated; this
+   * only stops new ones.
+   */
+  private async assertMoneyPrecision(
+    restaurantId: string,
+    fields: CurrencyPrecisionField[],
+  ): Promise<void> {
+    // Whole units are valid in every currency: no need to look one up.
+    if (isAlignedInEveryCurrency(fields)) return;
+    assertCurrencyAlignedCents(
+      await this.getRestaurantCurrency(restaurantId),
+      fields,
+    );
   }
 
   // 獲取完整菜單結構
@@ -709,6 +768,15 @@ export class MenuService extends BaseService {
     if (items.length === 0) return [];
 
     try {
+      for (const [index, item] of items.entries()) {
+        await this.assertMoneyPrecision(
+          item.restaurantId,
+          menuItemMoneyFields(item).map((entry) => ({
+            ...entry,
+            field: `items[${index}].${entry.field}`,
+          })),
+        );
+      }
       const statements = items.map(
         (item) =>
           this.db
@@ -779,6 +847,10 @@ export class MenuService extends BaseService {
   // 創建菜單項目
   async createMenuItem(data: CreateMenuItemData): Promise<MenuItem> {
     try {
+      await this.assertMoneyPrecision(
+        data.restaurantId,
+        menuItemMoneyFields(data),
+      );
       const [item] = await this.db
         .insert(menuItems)
         .values(this.toMenuItemInsertValues(data))
@@ -806,6 +878,13 @@ export class MenuService extends BaseService {
     data: UpdateMenuItemData,
   ): Promise<MenuItem> {
     try {
+      const moneyFields = menuItemMoneyFields(data);
+      if (moneyFields.some((entry) => entry.cents != null)) {
+        await this.assertMoneyPrecision(
+          await this.restaurantIdForMenuItem(id),
+          moneyFields,
+        );
+      }
       const { price, originalPrice, ...updateData } = data;
       const [item] = await this.db
         .update(menuItems)
@@ -1245,6 +1324,10 @@ export class MenuService extends BaseService {
     data: typeof optionChoices.$inferInsert,
   ): Promise<typeof optionChoices.$inferSelect> {
     try {
+      await this.assertMoneyPrecision(
+        await this.restaurantIdForOptionGroup(data.groupId),
+        [{ field: "priceAdjustment", cents: data.priceAdjustmentCents }],
+      );
       const [choice] = await this.db
         .insert(optionChoices)
         .values(data)
@@ -1266,6 +1349,17 @@ export class MenuService extends BaseService {
     data: Partial<Omit<typeof optionChoices.$inferInsert, "id" | "groupId">>,
   ): Promise<typeof optionChoices.$inferSelect> {
     try {
+      if (data.priceAdjustmentCents != null) {
+        const [existing] = await this.db
+          .select({ groupId: optionChoices.groupId })
+          .from(optionChoices)
+          .where(eq(optionChoices.id, id));
+        if (!existing) throw new Error("Option choice not found");
+        await this.assertMoneyPrecision(
+          await this.restaurantIdForOptionGroup(existing.groupId),
+          [{ field: "priceAdjustment", cents: data.priceAdjustmentCents }],
+        );
+      }
       const [choice] = await this.db
         .update(optionChoices)
         .set({ ...data, updatedAt: new Date() })
@@ -1456,6 +1550,15 @@ export class MenuService extends BaseService {
   ): Promise<void> {
     try {
       const restaurantId = await this.restaurantIdForMenuItem(menuItemId);
+      await this.assertMoneyPrecision(
+        restaurantId,
+        groups.flatMap((group, groupIndex) =>
+          (group.choiceOverrides ?? []).map((override, index) => ({
+            field: `groups[${groupIndex}].choiceOverrides[${index}].priceAdjustment`,
+            cents: override.priceAdjustmentCents,
+          })),
+        ),
+      );
 
       const requestedGroups = await this.getOptionGroupsByIds(
         groups.map((group) => group.groupId),
@@ -1615,6 +1718,12 @@ export class MenuService extends BaseService {
     data: typeof menuItemOptionChoiceOverrides.$inferInsert,
   ): Promise<typeof menuItemOptionChoiceOverrides.$inferSelect> {
     try {
+      if (data.priceAdjustmentCents != null) {
+        await this.assertMoneyPrecision(
+          await this.restaurantIdForMenuItem(data.menuItemId),
+          [{ field: "priceAdjustment", cents: data.priceAdjustmentCents }],
+        );
+      }
       const [override] = await this.db
         .insert(menuItemOptionChoiceOverrides)
         .values(data)
@@ -1765,6 +1874,16 @@ export class MenuService extends BaseService {
     if (updates.length === 0) return;
 
     try {
+      await this.assertMoneyPrecision(
+        restaurantId,
+        updates.flatMap((update, index) => [
+          { field: `updates[${index}].price`, cents: toCents(update.price) },
+          {
+            field: `updates[${index}].originalPrice`,
+            cents: toCents(update.originalPrice),
+          },
+        ]),
+      );
       const now = new Date();
       const statements = updates.map(
         (update) =>

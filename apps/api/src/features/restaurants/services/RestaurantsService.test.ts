@@ -80,6 +80,7 @@ vi.mock("@makanmasak/database", async (importOriginal) => {
 });
 
 import { RestaurantsService } from "./RestaurantsService";
+import { badRequest } from "../../../shared/utils/api-error";
 
 function createService() {
   return new RestaurantsService(
@@ -251,6 +252,38 @@ describe("RestaurantsService", () => {
       "Emitting restaurant event",
       expect.objectContaining({ type: "RESTAURANT_UPDATED" }),
     );
+  });
+
+  it("keeps a rejected settings update as the caller's 400", async () => {
+    const rejection = badRequest(
+      "Amounts in TWD must be multiples of 1",
+      "CURRENCY_PRECISION",
+    );
+    mocks.dbService.updateRestaurant.mockRejectedValue(rejection);
+
+    await expect(
+      createService().updateRestaurant("restaurant-1", {
+        settings: { deliveryFee: 12.5 },
+      }),
+    ).rejects.toBe(rejection);
+    expect(mocks.dbService.updateRestaurant).toHaveBeenCalledOnce();
+    expect(mocks.cache.delete).not.toHaveBeenCalled();
+  });
+
+  it("keeps a rejected create as the caller's 400", async () => {
+    const rejection = badRequest(
+      "Amounts in TWD must be multiples of 1",
+      "CURRENCY_PRECISION",
+    );
+    mocks.dbService.createRestaurant.mockRejectedValue(rejection);
+
+    await expect(
+      createService().createRestaurant({
+        ...restaurant,
+        settings: { minOrderAmount: 99.5 },
+      } as never),
+    ).rejects.toBe(rejection);
+    expect(mocks.dbService.createRestaurant).toHaveBeenCalledOnce();
   });
 
   it("creates restaurants, provisions subscriptions, auto-attaches nearby markets, and invalidates list caches", async () => {

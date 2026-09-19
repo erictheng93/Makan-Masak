@@ -131,6 +131,7 @@ function setupUseCouponService({
     category: { id: number } | null;
   }>,
   userUsageCount = 0,
+  currency = "TWD",
 } = {}) {
   const service = createService();
   // select 呼叫順序鏡射 useCouponForOrder：訂單 → 優惠券 →
@@ -156,6 +157,9 @@ function setupUseCouponService({
       query: {
         menuItems: {
           findMany: vi.fn().mockResolvedValue(itemCategoryRows),
+        },
+        restaurants: {
+          findFirst: vi.fn().mockResolvedValue({ settings: { currency } }),
         },
       },
     },
@@ -564,6 +568,7 @@ describe("CouponsService", () => {
           },
         ],
         100,
+        "TWD",
       ),
     ).resolves.toEqual([
       { couponId: 1, saving: 15 },
@@ -583,8 +588,31 @@ describe("CouponsService", () => {
           },
         ],
         80,
+        "TWD",
       ),
     ).resolves.toEqual([{ couponId: 3, saving: 8 }]);
+  });
+
+  it("rounds potential savings to the currency's precision", async () => {
+    const service = createService();
+    const coupons = [
+      {
+        id: 4,
+        discountType: "percentage",
+        discountValue: 0,
+        discountPercentageBps: 1500,
+        maxDiscountAmount: null,
+        minOrderAmount: null,
+      },
+    ];
+
+    // 15% of 155: NT$23.25 → NT$23, RM23.25 stays.
+    await expect(
+      service.calculatePotentialSavings(coupons, 155, "TWD"),
+    ).resolves.toEqual([{ couponId: 4, saving: 23 }]);
+    await expect(
+      service.calculatePotentialSavings(coupons, 155, "MYR"),
+    ).resolves.toEqual([{ couponId: 4, saving: 23.25 }]);
   });
 
   it("aggregates coupon usage trends from db rows", async () => {
@@ -672,6 +700,29 @@ describe("CouponsService", () => {
           finalAmount: 90,
         }),
       );
+    });
+
+    it("rounds a redeemed percentage discount to the restaurant currency", async () => {
+      for (const [currency, discountAmount] of [
+        ["TWD", 23],
+        ["MYR", 23.25],
+      ] as const) {
+        const { service, useCoupon } = setupUseCouponService({
+          order: buildOrder({ subtotalCents: 15500 }),
+          coupon: buildRedeemableCoupon({ discountPercentageBps: 1500 }),
+          currency,
+        });
+
+        await service.useCouponForOrder(input);
+
+        expect(useCoupon).toHaveBeenCalledWith(
+          expect.objectContaining({
+            discountAmount,
+            originalAmount: 155,
+            finalAmount: 155 - discountAmount,
+          }),
+        );
+      }
     });
 
     it("redeems hidden-but-active coupons (isVisible is not enforced at redemption)", async () => {

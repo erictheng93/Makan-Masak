@@ -4,7 +4,11 @@
  * Business logic for coupon management and operations
  */
 
-import { CouponService as BaseCouponService } from "@makanmasak/database";
+import {
+  CouponService as BaseCouponService,
+  couponDiscountCents,
+} from "@makanmasak/database";
+import { computeDiscountCents, type CurrencyCode } from "@makanmasak/utils";
 import { coupons, couponUsage, orderItems, orders } from "@makanmasak/database";
 import { and, eq, gte, lte, ne, sql } from "drizzle-orm";
 import {
@@ -397,33 +401,29 @@ export class CouponsService extends BaseCouponService {
   async calculatePotentialSavings(
     coupons: AvailableCoupon[],
     orderAmount: number,
+    currency: CurrencyCode,
   ): Promise<Array<{ couponId: number; saving: number }>> {
-    const savings = [];
     const orderAmountCents = toRequiredCents(orderAmount);
 
-    for (const coupon of coupons) {
+    // Same rule as redemption (computeDiscountCents): rounded to the
+    // currency's precision, then capped.
+    return coupons.map((coupon) => {
       const normalizedCoupon = this.formatCouponMoneyFields(coupon);
-      let savingCents = 0;
-
-      if (normalizedCoupon.discountType === "percentage") {
-        savingCents = Math.round(
-          orderAmountCents * (normalizedCoupon.discountValue / 100),
-        );
-        const maxDiscountAmountCents = toCents(
-          normalizedCoupon.maxDiscountAmount,
-        );
-        if (maxDiscountAmountCents && savingCents > maxDiscountAmountCents) {
-          savingCents = maxDiscountAmountCents;
-        }
-      } else {
-        savingCents = toRequiredCents(normalizedCoupon.discountValue);
-      }
-
-      savingCents = Math.min(savingCents, orderAmountCents);
-      savings.push({ couponId: coupon.id, saving: fromCents(savingCents) });
-    }
-
-    return savings;
+      const isPercentage = normalizedCoupon.discountType === "percentage";
+      const savingCents = computeDiscountCents(
+        {
+          discountType: normalizedCoupon.discountType,
+          percent: isPercentage ? normalizedCoupon.discountValue : null,
+          fixedCents: isPercentage
+            ? null
+            : toRequiredCents(normalizedCoupon.discountValue),
+          maxDiscountCents: toCents(normalizedCoupon.maxDiscountAmount),
+        },
+        orderAmountCents,
+        currency,
+      );
+      return { couponId: coupon.id, saving: fromCents(savingCents) };
+    });
   }
 
   async useCouponForOrder(input: {
@@ -500,28 +500,12 @@ export class CouponsService extends BaseCouponService {
       throw toCouponApiError(error);
     }
 
-    let discountAmountCents = 0;
-
-    if (coupon.discountType === "percentage") {
-      const discountPercentage =
-        percentageFromBps(coupon.discountPercentageBps) ?? 0;
-      discountAmountCents = Math.round(
-        originalAmountCents * (discountPercentage / 100),
-      );
-      const maxDiscountAmountCents = coupon.maxDiscountAmountCents;
-      if (
-        maxDiscountAmountCents != null &&
-        discountAmountCents > maxDiscountAmountCents
-      ) {
-        discountAmountCents = maxDiscountAmountCents;
-      }
-    } else {
-      discountAmountCents = coupon.discountValueCents ?? 0;
-    }
-
-    discountAmountCents = Math.max(
-      0,
-      Math.min(discountAmountCents, originalAmountCents),
+    // The order's restaurant decides the precision: a TWD discount is whole
+    // dollars, rounded first and then capped, as on every other coupon path.
+    const discountAmountCents = couponDiscountCents(
+      coupon,
+      originalAmountCents,
+      await this.getRestaurantCurrency(order.restaurantId),
     );
     const finalAmountCents = originalAmountCents - discountAmountCents;
 

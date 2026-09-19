@@ -315,6 +315,9 @@ export class RestaurantsService {
 
       return restaurant as Restaurant;
     } catch (error) {
+      // A rejected input (e.g. settings.deliveryFee off the currency step,
+      // CURRENCY_PRECISION) is the caller's 400; keep its code.
+      if (error instanceof ApiError) throw error;
       this.logger.error("Failed to create restaurant", error as Error, {
         data,
       });
@@ -357,6 +360,8 @@ export class RestaurantsService {
 
       return restaurant as Restaurant | null;
     } catch (error) {
+      // A rejected input (CURRENCY_PRECISION) is the caller's 400, not 500.
+      if (error instanceof ApiError) throw error;
       this.logger.error("Failed to update restaurant", error as Error, {
         id,
         data,

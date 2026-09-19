@@ -132,6 +132,9 @@ describe("PartnershipService percentage discounts", () => {
         partnershipPlans: {
           findFirst: vi.fn(async () => plan),
         },
+        restaurants: {
+          findFirst: vi.fn(async () => ({ settings: { currency: "TWD" } })),
+        },
         verifiedMembers: {
           findFirst: vi.fn(async () => ({
             id: "member-1",
@@ -179,6 +182,9 @@ describe("PartnershipService percentage discounts", () => {
         partnershipPlans: {
           findFirst: vi.fn(async () => plan),
         },
+        restaurants: {
+          findFirst: vi.fn(async () => ({ settings: { currency: "TWD" } })),
+        },
         verifiedMembers: {
           findFirst: vi.fn(async () => ({
             id: "member-1",
@@ -196,6 +202,98 @@ describe("PartnershipService percentage discounts", () => {
       discountAmount: 30,
       finalAmount: 210,
     });
+  });
+});
+
+describe("PartnershipService currency precision", () => {
+  function buildPlan(overrides: Record<string, unknown> = {}) {
+    return {
+      id: "plan-1",
+      restaurantId: "restaurant-1",
+      isActive: true,
+      validFrom: new Date("2026-01-01T00:00:00Z"),
+      validTo: new Date("2099-12-31T23:59:59Z"),
+      usageLimitPerDay: null,
+      dailyUsageCount: 0,
+      usageLimitPerMember: null,
+      minOrderAmountCents: 0,
+      maxOrderAmountCents: null,
+      applicableDays: null,
+      applicableTimeSlots: null,
+      discountType: "percentage",
+      discountPercentageBps: 1500,
+      discountValueCents: null,
+      maxDiscountAmountCents: null,
+      ...overrides,
+    };
+  }
+
+  function buildService(plan: object, currency: string) {
+    const restaurantsFindFirst = vi.fn(async () => ({
+      settings: { currency },
+    }));
+    const service = createServiceWithDb({
+      query: {
+        partnershipPlans: { findFirst: vi.fn(async () => plan) },
+        restaurants: { findFirst: restaurantsFindFirst },
+        verifiedMembers: {
+          findFirst: vi.fn(async () => ({
+            id: "member-1",
+            status: "verified",
+          })),
+        },
+      },
+    });
+    return { service, restaurantsFindFirst };
+  }
+
+  it("rounds a TWD percentage discount to whole dollars", async () => {
+    const { service, restaurantsFindFirst } = buildService(buildPlan(), "TWD");
+
+    // 15% of NT$155 = NT$23.25 → NT$23.
+    const result = await service.validatePlan("plan-1", "member-1", 155);
+
+    expect(result).toMatchObject({
+      valid: true,
+      discountAmount: 23,
+      finalAmount: 132,
+    });
+    expect(restaurantsFindFirst).toHaveBeenCalledOnce();
+  });
+
+  it("keeps sen for MYR", async () => {
+    const { service } = buildService(buildPlan(), "MYR");
+
+    const result = await service.validatePlan("plan-1", "member-1", 155);
+
+    expect(result).toMatchObject({
+      discountAmount: 23.25,
+      finalAmount: 131.75,
+    });
+  });
+
+  it("floors a legacy fractional fixed discount for TWD", async () => {
+    const { service } = buildService(
+      buildPlan({ discountType: "fixed", discountValueCents: 1250 }),
+      "TWD",
+    );
+
+    const result = await service.validatePlan("plan-1", "member-1", 100);
+
+    expect(result).toMatchObject({ discountAmount: 12, finalAmount: 88 });
+  });
+
+  it("floors a special-price difference for TWD", async () => {
+    const { service } = buildService(
+      buildPlan({ discountType: "special_price", discountValueCents: 8050 }),
+      "TWD",
+    );
+
+    // NT$100 against a legacy NT$80.50 special price: the NT$19.50 difference
+    // is floored, so the customer pays a whole NT$81.
+    const result = await service.validatePlan("plan-1", "member-1", 100);
+
+    expect(result).toMatchObject({ discountAmount: 19, finalAmount: 81 });
   });
 });
 

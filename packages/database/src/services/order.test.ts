@@ -2406,6 +2406,196 @@ describe("OrderService ingredient consumption", () => {
   });
 });
 
+describe("OrderService currency precision", () => {
+  let testDb: TestDatabase;
+
+  beforeAll(async () => {
+    testDb = await createTestDatabase();
+  }, REAL_D1_SETUP_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await testDb?.dispose();
+  });
+
+  beforeEach(async () => {
+    await testDb.truncateAll();
+    await seedMenuItem(testDb);
+  });
+
+  const service = () =>
+    new OrderService(testDb.bindings.DB, { JWT_SECRET: "test" });
+
+  async function configure(
+    settings: NonNullable<typeof restaurants.$inferSelect.settings>,
+    priceCents: number,
+  ) {
+    await testDb.drizzle
+      .update(restaurants)
+      .set({ settings })
+      .where(eq(restaurants.id, restaurantId));
+    await testDb.drizzle
+      .update(menuItems)
+      .set({ priceCents, options: null })
+      .where(eq(menuItems.id, menuItemId));
+  }
+
+  async function storedOrder(id: string) {
+    const [row] = await testDb.drizzle
+      .select()
+      .from(orders)
+      .where(eq(orders.id, id));
+    return row;
+  }
+
+  it("rounds a TWD service charge to whole dollars: NT$155 + 10% = NT$171", async () => {
+    await configure({ currency: "TWD", serviceChargeRate: 0.1 }, 15500);
+
+    const order = await service().createOrder({
+      restaurantId,
+      items: [{ menuItemId, quantity: 1 }],
+    });
+
+    // Used to be 1550 / 17050: NT$170.50, which no till can take.
+    expect(await storedOrder(order.id)).toMatchObject({
+      subtotalCents: 15500,
+      serviceChargeCents: 1600,
+      totalAmountCents: 17100,
+    });
+  });
+
+  it("rounds TWD tax: 5% on NT$355 = NT$18, total NT$373", async () => {
+    await configure({ currency: "TWD", taxRate: 0.05 }, 35500);
+
+    const order = await service().createOrder({
+      restaurantId,
+      items: [{ menuItemId, quantity: 1 }],
+    });
+
+    expect(await storedOrder(order.id)).toMatchObject({
+      taxAmountCents: 1800,
+      totalAmountCents: 37300,
+    });
+  });
+
+  it("keeps sen for MYR: RM155 + 10% = RM15.50", async () => {
+    await configure({ currency: "MYR", serviceChargeRate: 0.1 }, 15500);
+
+    const order = await service().createOrder({
+      restaurantId,
+      items: [{ menuItemId, quantity: 1 }],
+    });
+
+    expect(await storedOrder(order.id)).toMatchObject({
+      serviceChargeCents: 1550,
+      totalAmountCents: 17050,
+    });
+  });
+
+  it("rounds a 15% TWD coupon on NT$155 to NT$23", async () => {
+    await configure({ currency: "TWD" }, 15500);
+    await testDb.drizzle.insert(coupons).values({
+      restaurantId,
+      code: "PCT15",
+      name: "15% off",
+      discountType: "percentage",
+      discountPercentageBps: 1500,
+      validFrom: new Date("2020-01-01T00:00:00.000Z"),
+      validTo: new Date("2099-12-31T00:00:00.000Z"),
+      isActive: true,
+      isVisible: true,
+    });
+
+    const order = await service().createOrder({
+      restaurantId,
+      items: [{ menuItemId, quantity: 1 }],
+      couponCode: "PCT15",
+    });
+
+    expect(await storedOrder(order.id)).toMatchObject({
+      discountAmountCents: 2300,
+      totalAmountCents: 13200,
+    });
+    const [usage] = await testDb.drizzle.select().from(couponUsage);
+    expect(usage).toMatchObject({
+      discountAmountCents: 2300,
+      originalAmountCents: 15500,
+      finalAmountCents: 13200,
+    });
+  });
+
+  it("rounds a TWD staff discount to whole dollars", async () => {
+    await configure({ currency: "TWD", serviceChargeRate: 0.1 }, 15500);
+    const order = await service().createOrder({
+      restaurantId,
+      items: [{ menuItemId, quantity: 1 }],
+    });
+
+    // 15% of NT$171 = NT$25.65 → NT$26.
+    await service().applyOrderDiscount(order.id, 15);
+
+    expect(await storedOrder(order.id)).toMatchObject({
+      serviceChargeCents: 1600,
+      discountAmountCents: 2600,
+      totalAmountCents: 14500,
+    });
+  });
+
+  it("re-applies the configured rate when items are added, not the rounded ratio", async () => {
+    await configure({ currency: "TWD", taxRate: 0.05 }, 1000);
+    const order = await service().createOrder({
+      restaurantId,
+      items: [{ menuItemId, quantity: 1 }],
+    });
+    // 5% of NT$10 = NT$0.50 → NT$1, which reads back as a 10% ratio.
+    expect(await storedOrder(order.id)).toMatchObject({
+      taxAmountCents: 100,
+      totalAmountCents: 1100,
+    });
+
+    await service().addItemsToOrder(order.id, [{ menuItemId, quantity: 9 }]);
+
+    // 5% of NT$100 = NT$5, not the NT$10 the ratio would give.
+    expect(await storedOrder(order.id)).toMatchObject({
+      subtotalCents: 10000,
+      taxAmountCents: 500,
+      totalAmountCents: 10500,
+    });
+  });
+
+  it("re-applies the configured rate when a quantity changes", async () => {
+    await configure({ currency: "TWD", taxRate: 0.05 }, 1000);
+    const order = await service().createOrder({
+      restaurantId,
+      items: [{ menuItemId, quantity: 1 }],
+    });
+
+    await service().changeOrderItemQuantity(order.id, order.items![0].id, 3);
+
+    // 5% of NT$30 = NT$1.50 → NT$2.
+    expect(await storedOrder(order.id)).toMatchObject({
+      subtotalCents: 3000,
+      taxAmountCents: 200,
+      totalAmountCents: 3200,
+    });
+  });
+
+  it("rounds the total of a legacy fractional TWD price to whole dollars", async () => {
+    // Priced NT$12.50 before precision was validated; not migrated.
+    await configure({ currency: "TWD", serviceChargeRate: 0.1 }, 1250);
+
+    const order = await service().createOrder({
+      restaurantId,
+      items: [{ menuItemId, quantity: 1 }],
+    });
+
+    expect(await storedOrder(order.id)).toMatchObject({
+      subtotalCents: 1250,
+      serviceChargeCents: 100,
+      totalAmountCents: 1400,
+    });
+  });
+});
+
 async function seedMenuItem(testDb: TestDatabase) {
   await testDb.drizzle.insert(restaurants).values({
     id: restaurantId,
@@ -2417,7 +2607,10 @@ async function seedMenuItem(testDb: TestDatabase) {
     city: "Test City",
     phone: "0912345678",
     isAvailable: true,
+    // MYR: the fixture's catalog prices (RM1.50 add-ons, RM15.50 totals)
+    // are legitimate sen amounts. TWD would round them to whole dollars.
     settings: {
+      currency: "MYR",
       taxRate: 0,
       serviceChargeRate: 0,
       minOrderAmount: 0,

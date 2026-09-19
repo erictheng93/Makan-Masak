@@ -228,7 +228,15 @@ describe("Menu API — real integration", () => {
   });
 
   it("round-trips option choice price and sold-out state through assembled menu", async () => {
-    const restaurant = await seed.restaurant();
+    // MYR: the RM1.50 option prices below are legitimate sen. A TWD shop
+    // cannot price an option at NT$1.50 (CURRENCY_PRECISION).
+    const restaurant = await seed.restaurant({
+      settings: {
+        allowOnlineOrdering: true,
+        allowGuestOrders: true,
+        currency: "MYR",
+      },
+    });
     await insertActiveSubscription(testApp, String(restaurant.id));
     const ownerToken = await testApp.authHelper.ownerToken(
       1,
@@ -369,7 +377,15 @@ describe("Menu API — real integration", () => {
   });
 
   it("replaces item option groups and rejects duplicate public ids", async () => {
-    const restaurant = await seed.restaurant();
+    // MYR: the RM1.50 option prices below are legitimate sen. A TWD shop
+    // cannot price an option at NT$1.50 (CURRENCY_PRECISION).
+    const restaurant = await seed.restaurant({
+      settings: {
+        allowOnlineOrdering: true,
+        allowGuestOrders: true,
+        currency: "MYR",
+      },
+    });
     await insertActiveSubscription(testApp, String(restaurant.id));
     const ownerToken = await testApp.authHelper.ownerToken(
       1,

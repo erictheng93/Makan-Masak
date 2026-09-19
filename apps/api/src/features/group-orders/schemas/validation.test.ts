@@ -40,11 +40,7 @@ describe("group order validation schemas", () => {
         splitType: "custom",
         customAmounts: [{ memberId, amount: 50 }],
       }),
-    ).toMatchObject({
-      splitType: "custom",
-      serviceChargeRate: 0,
-      taxRate: 0,
-    });
+    ).toMatchObject({ splitType: "custom" });
 
     expect(() => splitBillSchema.parse({ splitType: "custom" })).toThrow(
       "Custom splits or custom amounts are required when split type is custom",
@@ -52,26 +48,18 @@ describe("group order validation schemas", () => {
   });
 
   /**
-   * Rates are fractions, the same as `restaurants.settings.taxRate` and what
-   * `calculateOrderTotal` expects: 0.1 is 10%. The bound used to be 100, which
-   * accepted a percentage-shaped 10 — a hundredfold overcharge that looked
-   * like a perfectly ordinary value.
+   * The split takes no rates at all: splitBill reads them from the
+   * restaurant's settings, as an ordinary order does. An older client that
+   * still sends them parses — zod strips the keys — but they cannot price
+   * the bill.
    */
-  it("accepts rates as fractions and rejects percentage-shaped ones", () => {
-    expect(
-      splitBillSchema.parse({
-        splitType: "equal",
-        serviceChargeRate: 0.1,
-        taxRate: 0.05,
-      }),
-    ).toMatchObject({ serviceChargeRate: 0.1, taxRate: 0.05 });
-
-    expect(() =>
-      splitBillSchema.parse({ splitType: "equal", serviceChargeRate: 10 }),
-    ).toThrow();
-    expect(() =>
-      splitBillSchema.parse({ splitType: "equal", taxRate: 5 }),
-    ).toThrow();
+  it("strips caller-supplied rates", () => {
+    const parsed = splitBillSchema.parse({
+      splitType: "equal",
+      serviceChargeRate: 10,
+      taxRate: 0.05,
+    });
+    expect(parsed).toEqual({ splitType: "equal" });
   });
 
   it("normalizes activity and statistics queries", () => {

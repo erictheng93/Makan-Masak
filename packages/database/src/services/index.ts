@@ -19,7 +19,7 @@ export { AnalyticsService } from "./analytics";
 export { ErrorReportingService } from "./error-reporting";
 export { QRCodeService } from "./qrcode";
 export { ImageService } from "./image";
-export { CouponService } from "./coupon";
+export { CouponService, couponDiscountCents } from "./coupon";
 export { LeaveService } from "./LeaveService";
 export { SchedulingService } from "./SchedulingService";
 export type {
