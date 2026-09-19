@@ -1,4 +1,13 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  createTestDatabase,
+  REAL_D1_SETUP_TIMEOUT_MS,
+  type TestDatabase,
+} from "@makanmasak/database/testing";
+import {
+  buildSeedHelpers,
+  type SeedHelpers,
+} from "../../../__tests__/integration/helpers/seed-helper";
 import type { Env } from "../../../types/env";
 import { RestaurantOrderPushService } from "./RestaurantOrderPushService";
 
@@ -123,5 +132,88 @@ describe("RestaurantOrderPushService", () => {
     expect(result).toEqual({ attempted: 0, delivered: 0 });
     expect(env.CACHE_KV.list).not.toHaveBeenCalled();
     expect(deliverer).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["TWD", 120, "A001 · 2 items · NT$120"],
+    ["MYR", 12.5, "A001 · 2 items · RM 12.50"],
+    ["VND", 350000, "A001 · 2 items · 350.000 ₫"],
+  ] as const)("writes the total in %s", async (currency, totalAmount, body) => {
+    const deliverer = vi.fn(async () => ({ ok: true, status: 201 }));
+    const env = createEnv({ deliverer });
+
+    await new RestaurantOrderPushService(env).notifyNewOrder({
+      restaurantId: "restaurant-1",
+      orderId: "order-1001",
+      orderNumber: "A001",
+      totalAmount,
+      itemCount: 2,
+      currency,
+    });
+
+    expect(deliverer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({ body }),
+      }),
+    );
+  });
+});
+
+describe("RestaurantOrderPushService currency lookup (real D1)", () => {
+  let testDb: TestDatabase;
+  let seed: SeedHelpers;
+
+  beforeAll(async () => {
+    testDb = await createTestDatabase();
+    seed = buildSeedHelpers(testDb);
+  }, REAL_D1_SETUP_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await testDb?.dispose();
+  });
+
+  async function pushBodyFor(settings: Record<string, unknown> | null) {
+    await testDb.truncateAll();
+    const restaurant = await seed.restaurant({ settings });
+    const deliverer = vi.fn(async () => ({ ok: true, status: 201 }));
+    await testDb.bindings.CACHE_KV.put(
+      `push:subscription:${restaurant.id}:user-1:subscription-1`,
+      JSON.stringify({
+        id: "subscription-1",
+        restaurantId: restaurant.id,
+        subscription: {
+          endpoint: "https://push.example/subscription-1",
+          keys: { p256dh: "p256dh-key", auth: "auth-key" },
+        },
+      }),
+    );
+    const env = {
+      DB: testDb.bindings.DB,
+      CACHE_KV: testDb.bindings.CACHE_KV,
+      WEB_PUSH_DELIVERER: deliverer,
+    } as unknown as Env;
+
+    await new RestaurantOrderPushService(env).notifyNewOrder({
+      restaurantId: restaurant.id,
+      orderId: "order-1",
+      orderNumber: "A001",
+      totalAmount: 12.5,
+      itemCount: 1,
+    });
+    expect(deliverer).toHaveBeenCalledOnce();
+    const call = deliverer.mock.calls[0] as unknown as [
+      { payload: { body: string } },
+    ];
+    return call[0].payload.body;
+  }
+
+  it("reads the restaurant's saved currency", async () => {
+    expect(await pushBodyFor({ currency: "MYR" })).toBe(
+      "A001 · 1 items · RM 12.50",
+    );
+  });
+
+  it("falls back to the platform default when none is saved", async () => {
+    expect(await pushBodyFor(null)).toBe("A001 · 1 items · NT$13");
   });
 });
