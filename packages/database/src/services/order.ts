@@ -1525,12 +1525,20 @@ export class OrderService extends BaseService {
         0,
         currentSubtotalCents + unitPriceCents * delta,
       );
+      // Same whole-order recompute as addItemsToOrder: the delivery fee does
+      // not move with the item count, so it is read back from the stored
+      // delivery info rather than dropped from the new total.
+      const deliveryFee =
+        existingOrder.deliveryInfo?.type === "delivery"
+          ? (existingOrder.deliveryInfo.deliveryFee ?? 0)
+          : 0;
       const totals = this.calculateOrderTotal({
         currency: pricing.currency,
         subtotalCents: nextSubtotalCents,
         taxRate,
         serviceChargeRate,
         discountCents: currentDiscountCents,
+        deliveryFeeCents: toRequiredCents(deliveryFee),
       });
       // The discount carries across untouched, exactly as addItemsToOrder
       // carries it: a coupon is not re-validated against the new subtotal

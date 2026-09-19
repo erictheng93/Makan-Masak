@@ -174,6 +174,42 @@ describe("OrderService delivery orders", () => {
       expect(updated.totalAmount).toBe(25);
     });
 
+    // changeOrderItemQuantity recomputes the whole order too, and used to
+    // leave the fee out: raising or lowering a line waived the courier.
+    it("keeps the delivery fee when a line's quantity changes", async () => {
+      await seedShop({ enableDelivery: true, deliveryFee: 5 });
+
+      const order = await service().createOrder({
+        restaurantId,
+        items: [{ menuItemId, quantity: 2 }],
+        deliveryInfo: deliveryAddress,
+      });
+      expect(order.totalAmount).toBe(25);
+      const lineId = order.items![0].id;
+
+      const raised = await service().changeOrderItemQuantity(
+        order.id,
+        lineId,
+        3,
+      );
+      expect(raised.subtotal).toBe(30);
+      expect(raised.totalAmount).toBe(35);
+
+      const lowered = await service().changeOrderItemQuantity(
+        order.id,
+        lineId,
+        1,
+      );
+      expect(lowered.subtotal).toBe(10);
+      expect(lowered.totalAmount).toBe(15);
+
+      const [row] = await testDb.drizzle
+        .select({ totalAmountCents: orders.totalAmountCents })
+        .from(orders)
+        .where(eq(orders.id, order.id));
+      expect(row.totalAmountCents).toBe(1500);
+    });
+
     it("leaves takeaway and dine-in totals untouched", async () => {
       await seedShop({ enableDelivery: true, deliveryFee: 5 });
 
