@@ -189,7 +189,7 @@
               <!-- Amount -->
               <div class="text-right">
                 <p class="text-2xl font-bold text-orange-600">
-                  {{ formatPrice(order.totalAmount) }}
+                  {{ formatPriceIn(order.totalAmount, order.currency) }}
                 </p>
                 <p
                   v-if="order.paymentStatus === 'completed'"
@@ -289,7 +289,7 @@ import type { Order } from "@makanmasak/shared-types";
 const router = useRouter();
 const authStore = useAuthStore();
 const { t, tWithParams } = useI18n();
-const { formatPrice } = useCurrency();
+const { formatPriceIn } = useCurrency();
 const { confirm: confirmModal } = useConfirmModal();
 const toast = useToast();
 

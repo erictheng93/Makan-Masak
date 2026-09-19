@@ -73,6 +73,9 @@ export const OrderSchema = z
     serviceCharge: z.number().optional(),
     discount: z.number().optional(),
     totalAmount: z.number(),
+    // The restaurant's currency, present when the order is read with its
+    // restaurant (history, detail). Lists spanning restaurants format by it.
+    currency: z.enum(["TWD", "MYR", "VND"]).optional(),
     notes: z.string().optional().nullable(),
     items: z.array(OrderItemSchema).optional(),
     ...TimestampFields,

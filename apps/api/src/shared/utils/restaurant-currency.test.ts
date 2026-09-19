@@ -9,6 +9,7 @@ import {
   assertClientCurrencyMatches,
   countryForCurrency,
   currencyFromRestaurantSettings,
+  displayCurrencyFromRestaurantSettings,
   resolveCurrencyForRequest,
   resolveRestaurantCurrency,
   resolveSharedRestaurantCurrency,
@@ -64,6 +65,26 @@ describe("currencyFromRestaurantSettings", () => {
         "RESTAURANT_CURRENCY_INVALID",
         500,
       );
+    }
+  });
+});
+
+describe("displayCurrencyFromRestaurantSettings", () => {
+  it("reads what the strict variant reads", () => {
+    expect(displayCurrencyFromRestaurantSettings({ currency: " myr " })).toBe(
+      "MYR",
+    );
+    expect(
+      displayCurrencyFromRestaurantSettings(
+        JSON.stringify({ currency: "VND" }),
+      ),
+    ).toBe("VND");
+    expect(displayCurrencyFromRestaurantSettings(null)).toBe("TWD");
+  });
+
+  it("labels an unsupported currency as the default instead of throwing", () => {
+    for (const currency of ["USD", "NTD", 458, true]) {
+      expect(displayCurrencyFromRestaurantSettings({ currency })).toBe("TWD");
     }
   });
 });

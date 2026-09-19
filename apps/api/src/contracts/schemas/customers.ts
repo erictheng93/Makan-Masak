@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import { successEnvelope, PaginationSchema, TimestampFields } from "../helpers";
+import { OrderSchema } from "./orders";
 
 // ---------------------------------------------------------------------------
 // Entity Schemas
@@ -34,7 +35,8 @@ export const GetMeResponse = successEnvelope(CustomerSchema);
 
 export const GetMyOrdersResponse = z.object({
   success: z.literal(true),
-  data: z.array(z.unknown()),
+  // A bare array under `data`, with `pagination` beside it — not nested.
+  data: z.array(OrderSchema),
   pagination: PaginationSchema.optional(),
 });
 

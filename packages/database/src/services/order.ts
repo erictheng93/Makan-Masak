@@ -201,7 +201,7 @@ type OrderRestaurantRelation = Pick<
   typeof restaurants.$inferSelect,
   "id" | "name"
 > &
-  Partial<Pick<typeof restaurants.$inferSelect, "phone">>;
+  Partial<Pick<typeof restaurants.$inferSelect, "phone" | "settings">>;
 type OrderTableRelation = Pick<typeof tables.$inferSelect, "id" | "number">;
 type OrderCustomerRelation = Pick<
   typeof customers.$inferSelect,
@@ -973,7 +973,7 @@ export class OrderService extends BaseService {
       ),
       with: {
         restaurant: {
-          columns: { id: true, name: true },
+          columns: { id: true, name: true, settings: true },
         },
         table: {
           columns: { id: true, number: true },
@@ -1034,6 +1034,7 @@ export class OrderService extends BaseService {
               id: true,
               name: true,
               phone: true,
+              settings: true,
             },
           },
           table: {
@@ -1525,12 +1526,20 @@ export class OrderService extends BaseService {
         0,
         currentSubtotalCents + unitPriceCents * delta,
       );
+      // Same whole-order recompute as addItemsToOrder: the delivery fee does
+      // not move with the item count, so it is read back from the stored
+      // delivery info rather than dropped from the new total.
+      const deliveryFee =
+        existingOrder.deliveryInfo?.type === "delivery"
+          ? (existingOrder.deliveryInfo.deliveryFee ?? 0)
+          : 0;
       const totals = this.calculateOrderTotal({
         currency: pricing.currency,
         subtotalCents: nextSubtotalCents,
         taxRate,
         serviceChargeRate,
         discountCents: currentDiscountCents,
+        deliveryFeeCents: toRequiredCents(deliveryFee),
       });
       // The discount carries across untouched, exactly as addItemsToOrder
       // carries it: a coupon is not re-validated against the new subtotal
@@ -1819,7 +1828,7 @@ export class OrderService extends BaseService {
         where: whereClause,
         with: {
           restaurant: {
-            columns: { id: true, name: true },
+            columns: { id: true, name: true, settings: true },
           },
           table: {
             columns: { id: true, number: true },
@@ -2385,6 +2394,22 @@ export class OrderService extends BaseService {
 
   // 資料轉換
   private mapToOrder(order: OrderWithRelations): Order {
+    let restaurantInfo: Order["restaurant"];
+    let restaurantSettings: OrderRestaurantRelation["settings"];
+    if (order.restaurant) {
+      const { settings, ...info } = order.restaurant;
+      restaurantInfo = info;
+      restaurantSettings = settings;
+    }
+    // Present whenever the query loaded the restaurant's settings. A customer's
+    // order history spans restaurants, so each order has to say what currency
+    // its amounts are in. Display only — resolveRestaurantCurrency falls back
+    // to the default for an unset or invalid setting rather than failing the
+    // whole list over one merchant's broken JSON.
+    const currency =
+      restaurantSettings !== undefined
+        ? resolveRestaurantCurrency(restaurantSettings?.currency)
+        : undefined;
     const mapOrderItem = (item: OrderItemWithRelations): OrderItem => {
       const snapshot = item.itemSnapshot ?? undefined;
       const menuItem = item.menuItem ?? undefined;
@@ -2457,7 +2482,10 @@ export class OrderService extends BaseService {
       internalNotes: order.internalNotes ?? undefined,
       deliveryInfo: order.deliveryInfo ?? undefined,
       items: order.items?.map(mapOrderItem) || [],
-      restaurant: order.restaurant ?? undefined,
+      // The restaurant's settings are loaded only to name the currency; the
+      // rest of that JSON (rates, fees, flags) is not the order's to expose.
+      restaurant: restaurantInfo,
+      ...(currency ? { currency } : {}),
       table: order.table ?? undefined,
       // `customers.display_name` / `primary_phone` are the columns the relation
       // selects; CustomerProfile names them fullName / phone, so consumers

@@ -59,10 +59,32 @@ export function useCurrency(currencySource?: () => unknown) {
   /** Format an integer-cents amount (major × 100, for every currency). */
   const formatCents = (cents: number): string => formatPrice(cents / 100);
 
+  /**
+   * Format one row of a list that spans restaurants — a discovery result, an
+   * order in the history — in that row's own currency.
+   *
+   * The row carries it (`currency` on a search result or an order), so a
+   * component rendering many restaurants at once cannot bind a single
+   * currency the way `currencySource` does. Anything unusable falls back to
+   * the platform default, never to the last-visited restaurant.
+   */
+  const formatPriceIn = (amount: number, currency: unknown): string => {
+    const code = normalizeCurrencyCode(currency) ?? DEFAULT_CURRENCY;
+    const safeAmount =
+      typeof amount === "number" && !isNaN(amount) ? amount : 0;
+    return sharedFormatCurrency(safeAmount, code);
+  };
+
+  /** `formatPriceIn` for an integer-cents amount. */
+  const formatCentsIn = (cents: number, currency: unknown): string =>
+    formatPriceIn(cents / 100, currency);
+
   return {
     formatPrice,
     formatAmount,
     formatCents,
+    formatPriceIn,
+    formatCentsIn,
     currencySymbol,
     currencyCode,
   };

@@ -560,7 +560,7 @@ const emit = defineEmits<{
   ];
 }>();
 
-const { formatPrice } = useCurrency();
+const { formatPriceIn } = useCurrency();
 const { t, tWithParams } = useI18n();
 const router = useRouter();
 const query = ref(props.initialQuery);
@@ -1026,7 +1026,8 @@ async function loadServiceTypes() {
 function servicePriceLabel(service: ServiceSearchResult) {
   if (service.priceLabel) return service.priceLabel;
   if (typeof service.priceCents === "number") {
-    return formatPrice(service.priceCents / 100);
+    // A market's vendors are separate restaurants: price each in its own.
+    return formatPriceIn(service.priceCents / 100, service.currency);
   }
   return "";
 }

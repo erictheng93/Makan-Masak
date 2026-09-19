@@ -2954,6 +2954,7 @@ describe("GroupOrdersService formatting and cache behavior", () => {
           orderTotalCents: 3900,
         },
         [expect.objectContaining({ id: "cart-10", quantity: 2 })],
+        { amountsFrom: "order" },
       );
       expect(db.updates.map((update) => update.payload)).toEqual(
         expect.arrayContaining([
@@ -3033,6 +3034,7 @@ describe("GroupOrdersService formatting and cache behavior", () => {
           orderTotalCents: 3900,
         },
         [expect.objectContaining({ id: "cart-10", quantity: 2 })],
+        { amountsFrom: "order" },
       );
     });
 
@@ -3351,12 +3353,17 @@ describe("GroupOrdersService formatting and cache behavior", () => {
       );
       // Recovery deliberately maps the value currently stored on the group,
       // rather than reconstructing a split type from failure diagnostics.
-      expect(service.splitBill).toHaveBeenCalledWith("group-1", {
-        splitType: "individual",
-        sharedServiceChargeCents: 600,
-        sharedTaxCents: 300,
-        orderTotalCents: 3900,
-      });
+      expect(service.splitBill).toHaveBeenCalledWith(
+        "group-1",
+        {
+          splitType: "individual",
+          sharedServiceChargeCents: 600,
+          sharedTaxCents: 300,
+          orderTotalCents: 3900,
+        },
+        undefined,
+        { amountsFrom: "order" },
+      );
       expect(db.updates.map((update) => update.payload)).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -3395,13 +3402,18 @@ describe("GroupOrdersService formatting and cache behavior", () => {
         success: true,
         data: { masterOrderId: "order-1", status: "checkout" },
       });
-      expect(service.splitBill).toHaveBeenCalledWith("group-1", {
-        splitType: "custom",
-        customAmounts: [{ memberId: bearerMemberId, amount: 30 }],
-        sharedServiceChargeCents: 600,
-        sharedTaxCents: 300,
-        orderTotalCents: 3900,
-      });
+      expect(service.splitBill).toHaveBeenCalledWith(
+        "group-1",
+        {
+          splitType: "custom",
+          customAmounts: [{ memberId: bearerMemberId, amount: 30 }],
+          sharedServiceChargeCents: 600,
+          sharedTaxCents: 300,
+          orderTotalCents: 3900,
+        },
+        undefined,
+        { amountsFrom: "order" },
+      );
     });
 
     it.each(["missing", "departed"])(
@@ -3716,6 +3728,122 @@ describe("GroupOrdersService formatting and cache behavior", () => {
           fields: [{ field: "customAmounts[0].amount", amount: 12.5 }],
         }),
       });
+    });
+
+    it("rejects off-step caller-supplied shared amounts for TWD", async () => {
+      const service = createService();
+      useDb(
+        service,
+        createSplitDb({
+          restaurantSettings: { currency: "TWD" },
+          members: [hostMember],
+          items: [cartItem("cart-1", "member-1", 10000)],
+        }),
+      );
+
+      await expect(
+        service.splitBill("group-1", {
+          splitType: "equal",
+          sharedServiceChargeCents: 1250,
+          sharedTaxCents: 505,
+        }),
+      ).rejects.toMatchObject({
+        code: "CURRENCY_PRECISION",
+        status: 400,
+        details: expect.objectContaining({
+          currency: "TWD",
+          fields: [
+            { field: "sharedServiceChargeCents", amount: 12.5 },
+            { field: "sharedTaxCents", amount: 5.05 },
+          ],
+        }),
+      });
+    });
+
+    it("no longer skips the custom-amount check when shared amounts ride along", async () => {
+      const service = createService();
+      useDb(
+        service,
+        createSplitDb({
+          restaurantSettings: { currency: "TWD" },
+          members: [hostMember],
+        }),
+      );
+
+      await expect(
+        service.splitBill("group-1", {
+          splitType: "custom",
+          sharedTaxCents: 0,
+          customAmounts: [{ memberId: "member-1", amount: 12.5 }],
+        }),
+      ).rejects.toMatchObject({
+        code: "CURRENCY_PRECISION",
+        details: expect.objectContaining({
+          fields: [{ field: "customAmounts[0].amount", amount: 12.5 }],
+        }),
+      });
+    });
+
+    it("accepts on-step shared amounts for TWD and sen for MYR", async () => {
+      const twd = createService();
+      useDb(
+        twd,
+        createSplitDb({
+          restaurantSettings: { currency: "TWD" },
+          members: [hostMember],
+          items: [cartItem("cart-1", "member-1", 10000)],
+        }),
+      );
+      await expect(
+        twd.splitBill("group-1", {
+          splitType: "equal",
+          sharedServiceChargeCents: 1000,
+          sharedTaxCents: 500,
+        }),
+      ).resolves.toMatchObject({ success: true });
+
+      const myr = createService();
+      useDb(
+        myr,
+        createSplitDb({
+          restaurantSettings: { currency: "MYR" },
+          members: [hostMember],
+          items: [cartItem("cart-1", "member-1", 10000)],
+        }),
+      );
+      await expect(
+        myr.splitBill("group-1", {
+          splitType: "equal",
+          sharedServiceChargeCents: 1250,
+          sharedTaxCents: 505,
+        }),
+      ).resolves.toMatchObject({ success: true });
+    });
+
+    it("splits an order's own off-step figures during finalization", async () => {
+      const service = createService();
+      useDb(
+        service,
+        createSplitDb({
+          restaurantSettings: { currency: "TWD" },
+          members: [hostMember],
+          items: [cartItem("cart-1", "member-1", 10000)],
+        }),
+      );
+
+      await expect(
+        service.splitBill(
+          "group-1",
+          {
+            splitType: "equal",
+            sharedServiceChargeCents: 1250,
+            sharedTaxCents: 0,
+            orderTotalCents: 11250,
+          },
+          undefined,
+          { amountsFrom: "order" },
+        ),
+      ).resolves.toMatchObject({ success: true });
     });
 
     it("accepts the same custom amount for an MYR restaurant", async () => {

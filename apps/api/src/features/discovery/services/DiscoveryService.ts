@@ -35,12 +35,17 @@ import { isOpenNow } from "../utils/isOpenNow";
 import { catalogResultTypeFromTags } from "../utils/catalog-result-type";
 import { normalizeSearchTags } from "../utils/search-normalization";
 import { fromCents, toRequiredCents } from "../../../shared/utils/money";
+import { displayCurrencyFromRestaurantSettings } from "../../../shared/utils/restaurant-currency";
 import {
   SemanticDiscoveryService,
   type SemanticDishDocument,
 } from "./SemanticDiscoveryService";
 
 const KV_SEARCH_TTL = 15 * 60; // 15 minutes
+// The prefix names the cached payload's shape. Entries written before results
+// carried `currency` must not be served as if they had one, so a shape change
+// moves the key rather than waiting out the TTL.
+const DISH_SEARCH_CACHE_PREFIX = "search:query:cur1";
 const KV_RESTAURANT_TTL = 30 * 60; // 30 minutes
 const KV_SEARCH_VERSION_KEY = "search:query:version";
 const KV_SEARCH_REINDEXED_AT_KEY = "search:last_reindexed_at";
@@ -81,7 +86,11 @@ export class DiscoveryService {
 
     // 1. Check KV cache
     const searchVersion = await this.getSearchVersion();
-    const cacheKey = this.buildCacheKey("search:query", filters, searchVersion);
+    const cacheKey = this.buildCacheKey(
+      DISH_SEARCH_CACHE_PREFIX,
+      filters,
+      searchVersion,
+    );
     const cached = await this.kv.get(cacheKey);
     if (cached) {
       const parsed = JSON.parse(cached);
@@ -231,6 +240,7 @@ export class DiscoveryService {
           categoryName: dishSearchIndex.categoryName,
           restaurantId: dishSearchIndex.restaurantId,
           restaurantName: restaurants.name,
+          restaurantSettings: restaurants.settings,
           district: dishSearchIndex.district,
           businessHours: restaurants.businessHours,
           timezone: restaurants.timezone,
@@ -314,6 +324,7 @@ export class DiscoveryService {
             categoryName: dishSearchIndex.categoryName,
             restaurantId: dishSearchIndex.restaurantId,
             restaurantName: restaurants.name,
+            restaurantSettings: restaurants.settings,
             district: dishSearchIndex.district,
             businessHours: restaurants.businessHours,
             timezone: restaurants.timezone,
@@ -370,6 +381,7 @@ export class DiscoveryService {
       price: row.priceCents != null ? fromCents(row.priceCents) : 0,
       priceCents: row.priceCents,
       priceLabel: null,
+      currency: displayCurrencyFromRestaurantSettings(row.restaurantSettings),
       categoryName: row.categoryName,
       restaurantId: row.restaurantId,
       restaurantName: row.restaurantName,
@@ -856,6 +868,7 @@ export class DiscoveryService {
           tags: restaurantServiceItems.tags,
           restaurantId: restaurantServiceItems.restaurantId,
           restaurantName: restaurants.name,
+          restaurantSettings: restaurants.settings,
           district: restaurants.district,
           city: restaurants.city,
           latitude: restaurants.latitude,
@@ -900,6 +913,7 @@ export class DiscoveryService {
       serviceType: row.serviceType,
       priceCents: row.priceCents,
       priceLabel: row.priceLabel,
+      currency: displayCurrencyFromRestaurantSettings(row.restaurantSettings),
       durationMinutes: row.durationMinutes,
       requiresBooking: row.requiresBooking,
       bookingUrl: row.bookingUrl,
@@ -1072,6 +1086,7 @@ export class DiscoveryService {
         categoryName: dishSearchIndex.categoryName,
         restaurantId: dishSearchIndex.restaurantId,
         restaurantName: restaurants.name,
+        restaurantSettings: restaurants.settings,
         district: dishSearchIndex.district,
         businessHours: restaurants.businessHours,
         timezone: restaurants.timezone,
@@ -1100,6 +1115,7 @@ export class DiscoveryService {
       price: row.priceCents != null ? fromCents(row.priceCents) : 0,
       priceCents: row.priceCents,
       priceLabel: null,
+      currency: displayCurrencyFromRestaurantSettings(row.restaurantSettings),
       categoryName: row.categoryName,
       restaurantId: row.restaurantId,
       restaurantName: row.restaurantName,

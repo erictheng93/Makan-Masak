@@ -39,9 +39,14 @@ vi.mock("vue-i18n", async (importOriginal) => {
   };
 });
 
+// `formatPrice` follows the bound source, `formatPriceIn` the row's own
+// currency — the same split as the real composable, so a test can see which
+// one a list of several vendors uses.
 vi.mock("@/composables/useCurrency", () => ({
-  useCurrency: () => ({
-    formatPrice: (value: number) => `$${value}`,
+  useCurrency: (source?: () => unknown) => ({
+    formatPrice: (value: number) => `${(source?.() as string) ?? "$"}${value}`,
+    formatPriceIn: (value: number, currency?: string) =>
+      `${currency ?? "TWD"}${value}`,
   }),
 }));
 
@@ -146,6 +151,40 @@ describe("MarketProductSearch", () => {
       ...overrides,
     };
   }
+
+  // A market's vendors are separate restaurants, so service prices are
+  // labelled per row rather than with one currency for the whole market.
+  it("prices each service result in its own vendor's currency", async () => {
+    vi.mocked(discoveryApi.searchDishes).mockResolvedValueOnce({
+      results: [],
+      total: 0,
+    } as never);
+    vi.mocked(discoveryApi.searchServices).mockResolvedValueOnce({
+      results: [
+        service({
+          serviceItemId: 11,
+          restaurantId: "vendor-myr",
+          currency: "MYR",
+        } as never),
+        service({ serviceItemId: 12, restaurantId: "vendor-plain" }),
+      ],
+      total: 2,
+    } as never);
+
+    const wrapper = mount(MarketProductSearch, {
+      props: { marketId: "market-1", categories: ["小吃"], autoLoad: false },
+    });
+
+    await wrapper
+      .get('[data-testid="market-product-search-input"]')
+      .setValue("切水果");
+    await wrapper.get("form").trigger("submit.prevent");
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain("MYR30");
+      expect(wrapper.text()).toContain("TWD30");
+    });
+  });
 
   it("searches products within the selected market", async () => {
     vi.mocked(discoveryApi.searchDishes).mockResolvedValueOnce({
@@ -521,7 +560,8 @@ describe("MarketProductSearch", () => {
     });
     expect(wrapper.text()).toContain("代客切水果");
     expect(wrapper.text()).toContain("水果攤");
-    expect(wrapper.text()).toContain("$30");
+    // No currency on the fixture row: the default, not the current shop's.
+    expect(wrapper.text()).toContain("TWD30");
 
     const openServiceButton = wrapper.get(
       '[data-testid="service-result-open"]',

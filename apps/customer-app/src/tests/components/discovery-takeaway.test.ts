@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { mount, RouterLinkStub } from "@vue/test-utils";
-import { createPinia } from "pinia";
+import { createPinia, setActivePinia } from "pinia";
+import { useAppStore } from "@/stores/app";
 import DishResultCard from "@/components/discovery/DishResultCard.vue";
 import RestaurantCard from "@/components/discovery/RestaurantCard.vue";
 
@@ -61,6 +62,75 @@ describe("discovery takeaway buttons", () => {
     await wrapper.get('[data-testid="dish-takeaway-button"]').trigger("click");
 
     expect(wrapper.emitted("takeaway")?.[0]).toBeTruthy();
+  });
+
+  // Search results span restaurants; the card must price a dish in the
+  // restaurant that sells it, not in whichever shop was visited last.
+  it("prices a dish in the dish's own currency", () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    useAppStore().currentRestaurant = {
+      id: "other-restaurant",
+      settings: { currency: "TWD" },
+    } as never;
+
+    const wrapper = mount(DishResultCard, {
+      props: {
+        dish: {
+          menuItemId: 1,
+          dishName: "Nasi Lemak",
+          price: 12.5,
+          currency: "MYR",
+          categoryName: null,
+          restaurantId: "r1",
+          restaurantName: "馬來攤",
+          district: "北區",
+          isOpen: true,
+          supportsTakeaway: false,
+          supportsDelivery: false,
+          tags: [],
+        },
+      },
+      global: { plugins: [pinia] },
+    });
+
+    expect(wrapper.get('[data-testid="dish-result-price"]').text()).toBe(
+      "RM 12.50",
+    );
+  });
+
+  it("falls back to the platform default when a result carries no currency", () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    useAppStore().currentRestaurant = {
+      id: "other-restaurant",
+      settings: { currency: "MYR" },
+    } as never;
+
+    const wrapper = mount(DishResultCard, {
+      props: {
+        dish: {
+          menuItemId: 1,
+          dishName: "Bao",
+          price: 60,
+          categoryName: null,
+          restaurantId: "r1",
+          restaurantName: "包子攤",
+          district: "北區",
+          isOpen: true,
+          supportsTakeaway: false,
+          supportsDelivery: false,
+          tags: [],
+        },
+      },
+      global: { plugins: [pinia] },
+    });
+
+    // Not "RM 60.00": an unlabelled row is the default, never the currency of
+    // the shop the customer happens to be in.
+    expect(wrapper.get('[data-testid="dish-result-price"]').text()).toBe(
+      "NT$60",
+    );
   });
 
   it("shows available service labels on dish results", () => {

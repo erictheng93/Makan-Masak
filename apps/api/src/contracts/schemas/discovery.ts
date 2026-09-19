@@ -13,8 +13,26 @@ import { MenuItemSchema } from "./menu";
 // Response Contracts
 // ---------------------------------------------------------------------------
 
+/**
+ * Dish and service search results span restaurants, so each row names the
+ * currency its price is in; the customer app formats every row with it
+ * rather than with the last-visited shop's currency.
+ */
+const CrossRestaurantPriceSchema = z
+  .object({
+    restaurantId: z.string(),
+    priceCents: z.number().nullable(),
+    currency: z.enum(["TWD", "MYR", "VND"]),
+  })
+  .loose();
+
 export const SearchResponse = successEnvelope(
-  z.unknown(), // search results shape varies
+  z
+    .object({
+      results: z.array(CrossRestaurantPriceSchema),
+      total: z.number(),
+    })
+    .loose(),
 );
 
 export const BrowseRestaurantsResponse = successEnvelope(
@@ -29,6 +47,12 @@ export const GetRestaurantMenuResponse = successEnvelope(
     .loose(),
 );
 
-export const GetPopularItemsResponse = successEnvelope(z.unknown());
+export const GetPopularItemsResponse = successEnvelope(
+  z
+    .object({
+      dishes: z.array(CrossRestaurantPriceSchema),
+    })
+    .loose(),
+);
 
 export const ReindexResponse = successEnvelope(z.unknown());
