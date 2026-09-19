@@ -121,6 +121,11 @@ export {
   getCurrencyConfig,
   CURRENCY_CONFIGS,
   DEFAULT_CURRENCY,
+  normalizeCurrencyCode,
+  currencyStepCents,
+  roundToCurrencyCents,
+  isCurrencyAlignedCents,
+  allocateCents,
   type CurrencyFormatConfig,
   type CurrencyCode,
 } from "./currency";
