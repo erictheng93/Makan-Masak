@@ -4474,6 +4474,87 @@ describe("market checkout routes", () => {
     });
   });
 
+  it.each([["lastWebhook"], ["lastReconciliation"], ["lastRefund"]])(
+    "raises provider_amount_mismatch when %s was held for review",
+    async (eventKey) => {
+      const env = createEnv();
+      setMarketCheckoutSessionFixtures({
+        all: [
+          {
+            id: "checkout-review",
+            marketId: "market-1",
+            marketSlug: "fengjia",
+            marketName: "逢甲夜市",
+            status: "submitted",
+            paymentStatus: "pending",
+            subtotalCents: 12000,
+            childOrderCount: 1,
+            paymentSummary: {
+              status: "pending",
+              method: "market_online",
+              currency: "TWD",
+              country: "TW",
+              totalAmount: 120,
+              totalAmountCents: 12000,
+              paidAmount: 0,
+              paidAmountCents: 0,
+              childPayments: [],
+              parentPayment: {
+                paymentId: "market_pay_checkout-review",
+                status: "pending",
+                provider: "stripe",
+                splitMode: "provider_split",
+                idempotencyKey: "market-checkout:checkout-review",
+                [eventKey]: {
+                  provider: "stripe",
+                  eventId: "evt_underpaid",
+                  eventType: "payment_intent.succeeded",
+                  status: "review_required",
+                  reviewReason: "AMOUNT_MISMATCH",
+                  receivedAt: new Date().toISOString(),
+                },
+                amountCents: 12000,
+                paidAmountCents: 0,
+                refundedAmountCents: 0,
+                childPaymentIds: [],
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+            },
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+      });
+
+      const response = await routes.fetch(
+        new Request(
+          "https://test/admin?operationAlert=provider_amount_mismatch",
+        ),
+        env as never,
+      );
+      expect(response.status).toBe(200);
+      const json = (await response.json()) as {
+        data: {
+          checkouts: Array<{
+            id: string;
+            operationAlerts: Array<{ type: string; severity: string }>;
+          }>;
+          total: number;
+        };
+      };
+      expect(json.data.total).toBe(1);
+      expect(json.data.checkouts[0].operationAlerts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: "provider_amount_mismatch",
+            severity: "critical",
+          }),
+        ]),
+      );
+    },
+  );
+
   it("summarizes market checkout operations for platform admins", async () => {
     const env = createEnv();
     setMarketCheckoutSessionFixtures({

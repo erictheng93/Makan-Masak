@@ -67,7 +67,8 @@ export interface MarketCheckoutOperationAlert {
     | "provider_webhook_failed"
     | "provider_status_mismatch"
     | "provider_refund_pending"
-    | "provider_refund_failed";
+    | "provider_refund_failed"
+    | "provider_amount_mismatch";
   label: string;
   severity: "warning" | "critical";
 }

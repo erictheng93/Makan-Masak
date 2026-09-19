@@ -157,6 +157,48 @@ function bindParamsFor(env: Env, sqlFragment: string) {
   return vi.mocked(prepared.bind).mock.calls[0] ?? [];
 }
 
+function expectHeldForReview(
+  env: Env,
+  reason: string,
+  reportedCents: number | null,
+) {
+  const auditParams = vi
+    .mocked(env.DB.prepare)
+    .mock.results.flatMap((result, index) =>
+      normalizeSql(vi.mocked(env.DB.prepare).mock.calls[index][0]).includes(
+        "insert or ignore into payment_audit_log",
+      )
+        ? vi.mocked(result.value.bind).mock.calls
+        : [],
+    )
+    .find((params) => params.includes("failure"));
+  expect(auditParams).toEqual(
+    expect.arrayContaining([
+      "market_pay_checkout-1",
+      "failure",
+      reportedCents,
+      `MARKET_CHECKOUT_WEBHOOK_${reason}`,
+    ]),
+  );
+
+  const paymentUpdate = bindParamsFor(env, "update market_checkout_payments");
+  expect(paymentUpdate).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining('"status":"review_required"'),
+      "market_pay_checkout-1",
+    ]),
+  );
+  expect(paymentUpdate).not.toContain("paid");
+  expect(
+    vi
+      .mocked(env.DB.prepare)
+      .mock.calls.some(([sql]) =>
+        normalizeSql(sql).includes("update market_checkout_sessions"),
+      ),
+  ).toBe(false);
+  expect(env.CACHE_KV.put).not.toHaveBeenCalled();
+}
+
 function normalizeSql(sql: string): string {
   return sql.toLowerCase().replaceAll('"', "");
 }
@@ -172,7 +214,9 @@ describe("MarketCheckoutPaymentWebhookService", () => {
       data: {
         object: {
           id: "pi_1",
+          object: "payment_intent",
           amount_received: 12500,
+          currency: "twd",
           metadata: {
             marketCheckoutId: "checkout-1",
           },
@@ -479,16 +523,10 @@ describe("MarketCheckoutPaymentWebhookService", () => {
     });
   });
 
-  it("reconciles signed LINE Pay-compatible webhook events", async () => {
-    const rawBody = JSON.stringify({
-      id: "linepay-event-1",
-      type: "market_checkout.payment_paid",
-      status: "paid",
-      amount_received: 12500,
-      metadata: {
-        marketCheckoutId: "checkout-1",
-      },
-    });
+  it("reconciles a signed LINE Pay confirm result in whole TWD", async () => {
+    // LINE Pay's confirm response: whole-TWD amounts, a 19-digit numeric
+    // transactionId, and no currency (the adapter adds the one it confirmed).
+    const rawBody = `{"returnCode":"0000","returnMessage":"Success.","currency":"TWD","info":{"orderId":"market_pay_checkout-1","transactionId":2018082512345678910,"payInfo":[{"method":"CREDIT_CARD","amount":100},{"method":"POINT","amount":25}]}}`;
     const env = createEnv({
       paymentRow: paymentRow({
         provider: "linepay",
@@ -515,21 +553,335 @@ describe("MarketCheckoutPaymentWebhookService", () => {
 
     expect(result).toMatchObject({
       provider: "linepay",
-      eventId: "linepay-event-1",
-      eventType: "market_checkout.payment_paid",
+      eventId: "linepay-confirm:2018082512345678910",
       duplicate: false,
       reconciled: true,
       checkoutId: "checkout-1",
       paymentId: "market_pay_checkout-1",
       status: "paid",
     });
-    expect(
-      vi
-        .mocked(env.DB.prepare)
-        .mock.calls.some(([sql]) =>
-          normalizeSql(sql).includes("update market_checkout_payments"),
+    expect(bindParamsFor(env, "update market_checkout_payments")).toEqual(
+      expect.arrayContaining([
+        "paid",
+        12500,
+        0,
+        "2018082512345678910",
+        "market_pay_checkout-1",
+      ]),
+    );
+  });
+
+  it("reads LINE Pay amounts as whole TWD, so a cents-sized amount is held for review", async () => {
+    // NT$125 checkout; 12500 on the LINE Pay route means NT$12,500.
+    const rawBody = JSON.stringify({
+      id: "linepay-event-cents",
+      type: "market_checkout.payment_paid",
+      amount_received: 12500,
+      currency: "TWD",
+      metadata: { marketCheckoutId: "checkout-1" },
+    });
+    const env = createEnv({ paymentRow: paymentRow({ provider: "linepay" }) });
+    const { nonce, signature } = await linePaySignature(
+      "market-secret",
+      rawBody,
+    );
+
+    const result = await new MarketCheckoutPaymentWebhookService(env).handle(
+      "linepay",
+      rawBody,
+      new Headers({
+        "x-linepay-nonce": nonce,
+        "x-linepay-signature": signature,
+      }),
+    );
+
+    expect(result).toMatchObject({
+      reconciled: false,
+      reviewRequired: true,
+      reviewReason: "AMOUNT_MISMATCH",
+    });
+    expectHeldForReview(env, "AMOUNT_MISMATCH", 1250000);
+  });
+
+  it("ignores a LINE Pay confirm that did not succeed", async () => {
+    const rawBody = JSON.stringify({
+      returnCode: "1150",
+      returnMessage: "Transaction record not found.",
+      info: { orderId: "market_pay_checkout-1", transactionId: "1" },
+    });
+    const env = createEnv({ paymentRow: paymentRow({ provider: "linepay" }) });
+    const { nonce, signature } = await linePaySignature(
+      "market-secret",
+      rawBody,
+    );
+
+    const result = await new MarketCheckoutPaymentWebhookService(env).handle(
+      "linepay",
+      rawBody,
+      new Headers({
+        "x-linepay-nonce": nonce,
+        "x-linepay-signature": signature,
+      }),
+    );
+
+    expect(result).toMatchObject({ reconciled: false, duplicate: false });
+    expect(result.status).toBeUndefined();
+  });
+
+  it("converts Stripe VND amounts from whole dong", async () => {
+    // ₫100,000 is 10,000,000 internal cents and `amount_received: 100000`.
+    const rawBody = JSON.stringify({
+      id: "evt_vnd",
+      type: "payment_intent.succeeded",
+      data: {
+        object: {
+          id: "pi_vnd",
+          object: "payment_intent",
+          amount: 100000,
+          amount_received: 100000,
+          currency: "vnd",
+          metadata: { marketCheckoutId: "checkout-1" },
+        },
+      },
+    });
+    const env = createEnv({
+      paymentRow: paymentRow({
+        amount_cents: 10000000,
+        currency: "VND",
+        country_code: "VN",
+      }),
+    });
+
+    const result = await new MarketCheckoutPaymentWebhookService(env).handle(
+      "stripe",
+      rawBody,
+      new Headers({
+        "stripe-signature": await stripeSignature("market-secret", rawBody),
+      }),
+    );
+
+    expect(result).toMatchObject({ reconciled: true, status: "paid" });
+    expect(bindParamsFor(env, "update market_checkout_payments")).toEqual(
+      expect.arrayContaining(["paid", 10000000, 0, "pi_vnd"]),
+    );
+  });
+
+  it.each([
+    [
+      "an underpaid Stripe VND intent",
+      { amount_received: 99999, currency: "vnd" },
+      { amount_cents: 10000000, currency: "VND" },
+      "AMOUNT_MISMATCH",
+      9999900,
+    ],
+    [
+      "a payment in another currency",
+      { amount_received: 12500, currency: "usd" },
+      {},
+      "CURRENCY_MISMATCH",
+      null,
+    ],
+    [
+      "a payment with no amount",
+      { currency: "twd" },
+      {},
+      "AMOUNT_MISSING",
+      null,
+    ],
+    [
+      "a payment with no currency",
+      { amount_received: 12500 },
+      {},
+      "CURRENCY_MISSING",
+      null,
+    ],
+    [
+      "a payment row with no currency to check against",
+      { amount_received: 12500, currency: "twd" },
+      { currency: null },
+      "CURRENCY_MISSING",
+      12500,
+    ],
+  ])(
+    "holds %s for review instead of marking it paid",
+    async (_label, object, rowOverrides, reason, reportedCents) => {
+      const rawBody = JSON.stringify({
+        id: "evt_review",
+        type: "payment_intent.succeeded",
+        data: {
+          object: {
+            id: "pi_review",
+            object: "payment_intent",
+            ...object,
+            metadata: { marketCheckoutId: "checkout-1" },
+          },
+        },
+      });
+      const env = createEnv({ paymentRow: paymentRow(rowOverrides) });
+
+      const result = await new MarketCheckoutPaymentWebhookService(env).handle(
+        "stripe",
+        rawBody,
+        new Headers({
+          "stripe-signature": await stripeSignature("market-secret", rawBody),
+        }),
+      );
+
+      expect(result).toEqual({
+        provider: "stripe",
+        eventId: "evt_review",
+        eventType: "payment_intent.succeeded",
+        duplicate: false,
+        reconciled: false,
+        checkoutId: "checkout-1",
+        paymentId: "market_pay_checkout-1",
+        reviewRequired: true,
+        reviewReason: reason,
+      });
+      expectHeldForReview(env, reason, reportedCents);
+    },
+  );
+
+  it("settles a partial Stripe charge.refunded against the PaymentIntent", async () => {
+    const rawBody = JSON.stringify({
+      id: "evt_charge_refunded",
+      type: "charge.refunded",
+      data: {
+        object: {
+          id: "ch_1",
+          object: "charge",
+          amount: 12500,
+          amount_captured: 12500,
+          amount_refunded: 5000,
+          refunded: false,
+          currency: "twd",
+          payment_intent: "pi_1",
+          metadata: {},
+        },
+      },
+    });
+    const env = createEnv({
+      paymentRow: paymentRow({
+        status: "paid",
+        paid_amount_cents: 12500,
+        provider_transaction_id: "pi_1",
+      }),
+    });
+
+    const result = await new MarketCheckoutPaymentWebhookService(env).handle(
+      "stripe",
+      rawBody,
+      new Headers({
+        "stripe-signature": await stripeSignature("market-secret", rawBody),
+      }),
+    );
+
+    expect(result).toMatchObject({
+      reconciled: true,
+      status: "partial_refunded",
+    });
+    expect(bindParamsFor(env, "update market_checkout_payments")).toEqual(
+      expect.arrayContaining([
+        "partial_refunded",
+        12500,
+        5000,
+        "pi_1",
+        "market_pay_checkout-1",
+      ]),
+    );
+  });
+
+  it.each([
+    ["more than was paid", 12600, "AMOUNT_EXCEEDS_EXPECTED"],
+    ["nothing", 0, "AMOUNT_MISMATCH"],
+  ])("holds a refund of %s for review", async (_label, refunded, reason) => {
+    const rawBody = JSON.stringify({
+      id: "evt_refund_review",
+      type: "charge.refunded",
+      data: {
+        object: {
+          id: "ch_1",
+          object: "charge",
+          amount_refunded: refunded,
+          currency: "twd",
+          payment_intent: "pi_1",
+        },
+      },
+    });
+    const env = createEnv({
+      paymentRow: paymentRow({ status: "paid", paid_amount_cents: 12500 }),
+    });
+
+    const result = await new MarketCheckoutPaymentWebhookService(env).handle(
+      "stripe",
+      rawBody,
+      new Headers({
+        "stripe-signature": await stripeSignature("market-secret", rawBody),
+      }),
+    );
+
+    expect(result).toMatchObject({
+      reviewRequired: true,
+      reviewReason: reason,
+    });
+    expectHeldForReview(env, reason, refunded);
+  });
+
+  it("holds a refund event with no amount for review", async () => {
+    const rawBody = JSON.stringify({
+      id: "evt_refund_no_amount",
+      type: "market_checkout.payment_refunded",
+      currency: "TWD",
+      metadata: { marketCheckoutId: "checkout-1" },
+    });
+    const env = createEnv({
+      paymentRow: paymentRow({ status: "paid", paid_amount_cents: 12500 }),
+    });
+
+    const result = await new MarketCheckoutPaymentWebhookService(env).handle(
+      "mock_market_provider",
+      rawBody,
+      new Headers({
+        "x-webhook-signature": await signMockMarketCheckoutWebhook(
+          "market-secret",
+          rawBody,
         ),
-    ).toBe(true);
+      }),
+    );
+
+    expect(result).toMatchObject({
+      reviewRequired: true,
+      reviewReason: "AMOUNT_MISSING",
+    });
+  });
+
+  it("holds a fractional internal-cents amount for review", async () => {
+    const rawBody = JSON.stringify({
+      id: "evt_fraction",
+      type: "market_checkout.payment_paid",
+      amount_cents: 12500.5,
+      currency: "TWD",
+      metadata: { marketCheckoutId: "checkout-1" },
+    });
+    const env = createEnv({
+      paymentRow: paymentRow({ provider: "mock_market_provider" }),
+    });
+
+    const result = await new MarketCheckoutPaymentWebhookService(env).handle(
+      "mock_market_provider",
+      rawBody,
+      new Headers({
+        "x-webhook-signature": await signMockMarketCheckoutWebhook(
+          "market-secret",
+          rawBody,
+        ),
+      }),
+    );
+
+    expect(result).toMatchObject({
+      reviewRequired: true,
+      reviewReason: "AMOUNT_NOT_INTEGER",
+    });
   });
 
   it("reconciles failed status payloads with payment summary fallbacks", async () => {
@@ -615,7 +967,8 @@ describe("MarketCheckoutPaymentWebhookService", () => {
       data: {
         object: {
           id: "pi_refunded",
-          amount_refunded: 8400,
+          amount_refunded: 12500,
+          currency: "twd",
           metadata: {
             marketCheckoutId: "checkout-1",
           },
@@ -624,7 +977,7 @@ describe("MarketCheckoutPaymentWebhookService", () => {
     });
     const env = createEnv({
       paymentRow: paymentRow({
-        paid_amount_cents: 5000,
+        paid_amount_cents: 12500,
         provider_payload: "null",
         session_payment_summary: {
           method: "card",
@@ -656,7 +1009,7 @@ describe("MarketCheckoutPaymentWebhookService", () => {
       expect.arrayContaining([
         "refunded",
         12500,
-        8400,
+        12500,
         "pi_refunded",
         expect.stringContaining('"eventType":"charge.refunded"'),
         "market_pay_checkout-1",
@@ -672,9 +1025,10 @@ describe("MarketCheckoutPaymentWebhookService", () => {
       refundedAt: string;
       parentPayment: { note: string };
     };
+    // The payment row's currency is authoritative over a stale summary.
     expect(paymentSummary).toMatchObject({
       method: "card",
-      currency: "USD",
+      currency: "TWD",
       country: "US",
       childPayments: [{ paymentId: "child-1" }],
       parentPayment: { note: "existing" },
@@ -687,11 +1041,13 @@ describe("MarketCheckoutPaymentWebhookService", () => {
     );
   });
 
-  it("reconciles partial refunds with fallback amounts and mixed cache index rows", async () => {
+  it("reconciles partial refunds and mixed cache index rows", async () => {
     const rawBody = JSON.stringify({
       data: {
         object: {
           status: "partially_refunded",
+          amount_refunded: 5000,
+          currency: "twd",
           metadata: {
             marketCheckoutId: "checkout-1",
           },
@@ -731,7 +1087,7 @@ describe("MarketCheckoutPaymentWebhookService", () => {
       expect.arrayContaining([
         "partial_refunded",
         12500,
-        0,
+        5000,
         "existing-provider-txn",
         expect.stringContaining('"status":"partial_refunded"'),
         "market_pay_checkout-1",
@@ -843,6 +1199,8 @@ describe("MarketCheckoutPaymentWebhookService", () => {
       data: {
         object: {
           id: "pi_fallback",
+          amount_received: 12500,
+          currency: "twd",
           metadata: { marketCheckoutId: "checkout-1" },
         },
       },

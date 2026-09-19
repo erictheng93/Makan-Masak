@@ -302,7 +302,8 @@ interface MarketCheckoutOperationAlert {
     | "provider_webhook_failed"
     | "provider_status_mismatch"
     | "provider_refund_pending"
-    | "provider_refund_failed";
+    | "provider_refund_failed"
+    | "provider_amount_mismatch";
   label: string;
   severity: "warning" | "critical";
 }
@@ -410,6 +411,8 @@ interface MarketCheckoutProviderLastWebhook {
   eventType: string;
   status: string;
   receivedAt: string;
+  /** Set when status is "review_required": the money check that failed. */
+  reviewReason?: string;
   payload?: unknown;
   payloadSummary?: MarketCheckoutProviderPayloadSummary;
 }
@@ -2864,6 +2867,10 @@ function parseProviderPayloadLastWebhook(
     eventType: webhook.eventType,
     status: webhook.status,
     receivedAt: webhook.receivedAt,
+    reviewReason:
+      typeof webhook.reviewReason === "string"
+        ? webhook.reviewReason
+        : undefined,
     payloadSummary: summarizeProviderPayload(webhook.payload),
   };
 }
@@ -3683,6 +3690,21 @@ function buildMarketCheckoutOperationAlerts(
     alerts.push({
       type: "provider_refund_failed",
       label: "退款失敗",
+      severity: "critical",
+    });
+  }
+  // A provider reported money (amount or currency) that does not match the
+  // payment, and the event was held instead of applied.
+  if (
+    [
+      parentPayment.lastWebhook,
+      parentPayment.lastReconciliation,
+      parentPayment.lastRefund,
+    ].some((event) => event?.status === "review_required")
+  ) {
+    alerts.push({
+      type: "provider_amount_mismatch",
+      label: "金額不符待審",
       severity: "critical",
     });
   }

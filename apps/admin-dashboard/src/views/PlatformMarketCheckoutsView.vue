@@ -83,6 +83,7 @@
           <option value="provider_status_mismatch">狀態不一致</option>
           <option value="provider_refund_pending">退款處理中</option>
           <option value="provider_refund_failed">退款失敗</option>
+          <option value="provider_amount_mismatch">金額不符待審</option>
         </select>
         <input
           v-model="dateFrom"
@@ -1230,6 +1231,7 @@ function webhookStatusLabel(status: string) {
     failed: "付款失敗",
     refunded: "已退款",
     partial_refunded: "部分退款",
+    review_required: "金額不符待審",
   };
   return labels[status] ?? status;
 }
