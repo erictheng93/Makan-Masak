@@ -12,6 +12,12 @@ export interface CustomerOrdersResponse {
   };
 }
 
+/** The wire shape of GET /customers/me/orders. */
+interface CustomerOrdersEnvelope {
+  data?: Order[];
+  pagination?: Partial<CustomerOrdersResponse["pagination"]>;
+}
+
 export interface CustomerOrdersParams {
   page?: number;
   limit?: number;
@@ -52,8 +58,24 @@ export const customerOrderApi = {
     const queryString = queryParams.toString();
     const url = `/customers/me/orders${queryString ? `?${queryString}` : ""}`;
 
-    const response = await apiClient.get<CustomerOrdersResponse>(url);
-    return response;
+    // `apiClient.get` unwraps the envelope to `data` — for this endpoint a
+    // bare Order[], with `pagination` left behind as a sibling of `data`.
+    // Reading `response.orders` off that array yielded undefined and the
+    // history page rendered nothing, so the envelope is read whole here and
+    // mapped to the shape callers expect.
+    const envelope = (await apiClient.getPaginated<Order>(
+      url,
+    )) as unknown as CustomerOrdersEnvelope;
+
+    return {
+      orders: envelope.data ?? [],
+      pagination: {
+        page: envelope.pagination?.page ?? 1,
+        limit: envelope.pagination?.limit ?? params?.limit ?? 20,
+        total: envelope.pagination?.total ?? envelope.data?.length ?? 0,
+        totalPages: envelope.pagination?.totalPages ?? 1,
+      },
+    };
   },
 
   /**

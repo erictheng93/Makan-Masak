@@ -122,11 +122,14 @@ import { useCurrency } from "@/composables/useCurrency";
 import type { DishSearchResult } from "@/services/discoveryApi";
 
 const { t } = useI18n();
-const { formatPrice } = useCurrency();
 
 const props = defineProps<{
   dish: DishSearchResult;
 }>();
+
+// Search results span restaurants, so the card prices in the dish's own
+// currency rather than in the last-visited shop's.
+const { formatPrice } = useCurrency(() => props.dish.currency);
 
 defineEmits<{
   select: [dish: DishSearchResult];

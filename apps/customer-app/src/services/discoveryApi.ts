@@ -1,3 +1,4 @@
+import type { CurrencyCode } from "@makanmasak/shared-types";
 import { apiClient } from "./api";
 
 export interface DishSearchResult {
@@ -7,6 +8,13 @@ export interface DishSearchResult {
   price: number;
   priceCents?: number | null;
   priceLabel?: string | null;
+  /**
+   * The listing restaurant's currency. Results span restaurants, so a row is
+   * formatted with this and not with the currency of the shop the customer
+   * happens to have visited last. Optional only for cached payloads written
+   * before the field existed.
+   */
+  currency?: CurrencyCode;
   categoryName: string | null;
   restaurantId: string;
   restaurantName: string;
@@ -67,6 +75,8 @@ export interface ServiceSearchResult {
   serviceType: string;
   priceCents: number | null;
   priceLabel: string | null;
+  /** The listing restaurant's currency — see DishSearchResult.currency. */
+  currency?: CurrencyCode;
   durationMinutes: number | null;
   requiresBooking: boolean;
   bookingUrl: string | null;

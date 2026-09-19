@@ -28,9 +28,15 @@ vi.mock("@/composables/useI18n", () => ({
   }),
 }));
 
+// The fake keeps the real composable's distinction: `formatPrice` follows the
+// bound currency source, `formatPriceIn` follows the row's own currency. A
+// test can then see which one a list passes.
 vi.mock("@/composables/useCurrency", () => ({
-  useCurrency: () => ({
-    formatPrice: (amount: number) => `NT$${amount}`,
+  useCurrency: (source?: () => unknown) => ({
+    formatPrice: (amount: number) =>
+      `${(source?.() as string) ?? "TWD"}${amount}`,
+    formatPriceIn: (amount: number, currency?: string) =>
+      `${currency ?? "TWD"}${amount}`,
   }),
 }));
 
@@ -368,6 +374,51 @@ describe("DiscoveryView", () => {
         returnLabel: "搜尋結果",
       },
     });
+  });
+
+  // A service list spans restaurants, so each row is priced in its own
+  // restaurant's currency rather than in one currency for the whole page.
+  it("prices each service result in its own restaurant's currency", async () => {
+    const baseService = {
+      name: "代客切水果",
+      description: "現場代切並分裝",
+      serviceType: "general",
+      priceCents: 3000,
+      priceLabel: null,
+      durationMinutes: null,
+      requiresBooking: false,
+      bookingUrl: null,
+      tags: [],
+      restaurantName: "水果攤",
+      district: "西屯區",
+      city: "台中市",
+      isOpen: true,
+    };
+    const store = discoveryStore({
+      dishResults: [],
+      serviceResults: [
+        {
+          ...baseService,
+          serviceItemId: 7,
+          restaurantId: "service-myr",
+          currency: "MYR",
+        },
+        {
+          ...baseService,
+          serviceItemId: 8,
+          restaurantId: "service-plain",
+        },
+      ],
+      total: 2,
+    });
+    vi.mocked(useDiscoveryStore).mockReturnValue(store as never);
+
+    const wrapper = mountView();
+    await wrapper.vm.$nextTick();
+
+    const text = wrapper.text();
+    expect(text).toContain("MYR30");
+    expect(text).toContain("TWD30");
   });
 
   it("opens bookable service search results in the site booking flow", async () => {

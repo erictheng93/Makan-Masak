@@ -320,7 +320,7 @@ const { t, tWithParams } = useI18n();
 const router = useRouter();
 const route = useRoute();
 const store = useDiscoveryStore();
-const { formatPrice } = useCurrency();
+const { formatPriceIn } = useCurrency();
 const marketOptions = ref<MarketListItem[]>([]);
 const marketAreas = ref<{ city: string; districts: string[] }[]>([]);
 const categoryOptions = ref<string[]>([]);
@@ -405,7 +405,8 @@ const discoveryReturnLabel = computed(
 function servicePriceLabel(service: ServiceSearchResult) {
   if (service.priceLabel) return service.priceLabel;
   if (typeof service.priceCents === "number") {
-    return formatPrice(service.priceCents / 100);
+    // Service results span restaurants: price each in its own currency.
+    return formatPriceIn(service.priceCents / 100, service.currency);
   }
   return "";
 }
