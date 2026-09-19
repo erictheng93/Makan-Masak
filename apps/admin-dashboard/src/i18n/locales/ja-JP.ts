@@ -2785,6 +2785,10 @@ const jaJP: Messages = {
     totalOrders: "総注文数",
   },
   settings: {
+    serviceItems: {
+      price: "価格（{symbol}）",
+      noPrice: "価格未設定",
+    },
     title: "設定",
     subtitle: "レストランのシステム設定を管理",
     resetDefaults: "デフォルトに戻す",

@@ -2845,6 +2845,10 @@ const zhTWCore = {
 
   // 系統設定
   settings: {
+    serviceItems: {
+      price: "價格（{symbol}）",
+      noPrice: "未設定價格",
+    },
     title: "系統設定",
     subtitle: "管理餐廳系統偏好設定",
     resetDefaults: "重置為預設值",

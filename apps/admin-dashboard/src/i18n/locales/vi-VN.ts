@@ -2784,6 +2784,10 @@ const viVN: Messages = {
     selectReason: "Chọn một lý do",
   },
   settings: {
+    serviceItems: {
+      price: "Giá ({symbol})",
+      noPrice: "Chưa đặt giá",
+    },
     title: "Cài đặt",
     subtitle: "Quản lý cài đặt hệ thống nhà hàng",
     resetDefaults: "Đặt lại mặc định",

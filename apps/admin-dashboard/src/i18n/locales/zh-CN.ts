@@ -2732,6 +2732,10 @@ const zhCN: Messages = {
     transactionDetails: "交易明细",
   },
   settings: {
+    serviceItems: {
+      price: "价格（{symbol}）",
+      noPrice: "未设置价格",
+    },
     title: "系统设置",
     subtitle: "管理餐厅系统偏好设置",
     resetDefaults: "重置为默认值",

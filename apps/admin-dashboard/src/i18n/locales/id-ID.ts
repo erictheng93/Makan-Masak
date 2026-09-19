@@ -2798,6 +2798,10 @@ const idID: Messages = {
     transactionDetails: "Detail Transaksi",
   },
   settings: {
+    serviceItems: {
+      price: "Harga ({symbol})",
+      noPrice: "Harga belum diatur",
+    },
     title: "Pengaturan",
     subtitle: "Kelola preferensi sistem restoran",
     resetDefaults: "Kembalikan ke Default",

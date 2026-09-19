@@ -2781,6 +2781,10 @@ const enUS: Messages = {
     },
   },
   settings: {
+    serviceItems: {
+      price: "Price ({symbol})",
+      noPrice: "No price set",
+    },
     title: "Settings",
     subtitle: "Manage restaurant system preferences",
     resetDefaults: "Reset to Defaults",

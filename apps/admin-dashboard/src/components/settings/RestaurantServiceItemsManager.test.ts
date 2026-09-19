@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
 
 import { mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import RestaurantServiceItemsManager from "./RestaurantServiceItemsManager.vue";
 import { restaurantServiceItemsService } from "@/services/restaurantServiceItemsService";
+import {
+  clearRestaurantCurrency,
+  setRestaurantCurrency,
+} from "@/composables/useCurrency";
 
 // BaseEntity declares createdAt/updatedAt as Unix milliseconds, not ISO strings.
 const FIXTURE_TIMESTAMP_MS = 1_780_000_000_000;
@@ -85,6 +89,84 @@ describe("RestaurantServiceItemsManager", () => {
         isActive: true,
       }),
     );
+  });
+
+  describe("price in the restaurant's currency", () => {
+    const pricedItem = {
+      id: 7,
+      restaurantId: "restaurant-1",
+      name: "彩繪體驗",
+      serviceType: "activity" as const,
+      priceCents: 35000,
+      requiresBooking: true,
+      sortOrder: 0,
+      isActive: true,
+      isPublic: true,
+      createdAt: FIXTURE_TIMESTAMP_MS,
+      updatedAt: FIXTURE_TIMESTAMP_MS,
+    };
+
+    afterEach(clearRestaurantCurrency);
+
+    it("takes whole NT$ in a TWD shop and sends cents", async () => {
+      clearRestaurantCurrency();
+      vi.mocked(restaurantServiceItemsService.list).mockResolvedValue([
+        pricedItem,
+      ]);
+      vi.mocked(restaurantServiceItemsService.create).mockResolvedValueOnce(
+        pricedItem,
+      );
+      const wrapper = mount(RestaurantServiceItemsManager, {
+        props: { restaurantId: "restaurant-1" },
+      });
+      await flushPromises();
+
+      expect(wrapper.text()).toContain("NT$350");
+      const price = wrapper.get('[data-testid="service-price-input"]');
+      expect(price.attributes("step")).toBe("1");
+      expect(price.attributes("placeholder")).toBe("0");
+      expect(wrapper.get('label[for="service-price-input"]').text()).toContain(
+        "NT$",
+      );
+
+      await wrapper.get('[data-testid="service-name-input"]').setValue("導覽");
+      await price.setValue("350");
+      await wrapper.get("form").trigger("submit.prevent");
+
+      expect(restaurantServiceItemsService.create).toHaveBeenCalledWith(
+        "restaurant-1",
+        expect.objectContaining({ name: "導覽", priceCents: 35000 }),
+      );
+    });
+
+    it("takes RM with sen in an MYR shop and edits in major units", async () => {
+      setRestaurantCurrency("MYR");
+      vi.mocked(restaurantServiceItemsService.list).mockResolvedValue([
+        { ...pricedItem, priceCents: 1250 },
+      ]);
+      vi.mocked(restaurantServiceItemsService.update).mockResolvedValueOnce(
+        pricedItem,
+      );
+      const wrapper = mount(RestaurantServiceItemsManager, {
+        props: { restaurantId: "restaurant-1" },
+      });
+      await flushPromises();
+
+      expect(wrapper.text()).toContain("RM 12.50");
+      await wrapper.get('[data-testid="edit-service-7"]').trigger("click");
+      const price = wrapper.get('[data-testid="service-price-input"]');
+      expect(price.attributes("step")).toBe("0.01");
+      expect((price.element as HTMLInputElement).value).toBe("12.5");
+
+      await price.setValue("13.9");
+      await wrapper.get("form").trigger("submit.prevent");
+
+      expect(restaurantServiceItemsService.update).toHaveBeenCalledWith(
+        "restaurant-1",
+        7,
+        expect.objectContaining({ priceCents: 1390 }),
+      );
+    });
   });
 
   it("updates and removes existing service items", async () => {
