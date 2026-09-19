@@ -67,7 +67,13 @@ import { isFeatureEnabled } from "../../../shared/feature-adoption";
 import { toCsv } from "../../../shared/utils/csv";
 import { createMarketCheckoutSchema } from "../schemas/validation";
 import { z } from "zod";
-import { generateUUID } from "@makanmasak/utils";
+import {
+  DEFAULT_CURRENCY,
+  generateUUID,
+  normalizeCurrencyCode,
+  roundToCurrencyCents,
+  type CurrencyCode,
+} from "@makanmasak/utils";
 
 const app = new Hono<{ Bindings: Env }>();
 const MARKET_CHECKOUT_INDEX_KEY = "market_checkout:index";
@@ -839,6 +845,7 @@ app.post("/:id/voucher", optionalCanonicalCustomerAuthMiddleware, async (c) => {
     code: parsed.data.code,
     subtotalCents,
     childOrders: voucherChildOrders,
+    currency: await resolveMarketCheckoutCurrency(c.env, session),
   });
   const reservedNextVoucher = await voucherService.reserveUsage(nextVoucher);
   const appliedVoucher = combineAppliedMarketCheckoutVouchers([
@@ -2282,6 +2289,74 @@ function buildFailedMarketCheckoutPayment(input: {
 }
 
 /**
+ * The currency a checkout's money is in, before a payment row exists.
+ *
+ * A checkout that already has a payment uses its currency. Otherwise it is
+ * the child restaurants' `settings.currency`: unset is the platform default,
+ * an unsupported value fails closed, and vendors in different currencies
+ * cannot share one voucher or one charge. (Server-side currency authority for
+ * the pay route itself is being added separately; this only answers the
+ * question for discount rounding.)
+ */
+async function resolveMarketCheckoutCurrency(
+  env: Env,
+  session: MarketCheckoutSession,
+): Promise<CurrencyCode> {
+  const paymentCurrency = normalizeCurrencyCode(session.payment?.currency);
+  if (paymentCurrency) return paymentCurrency;
+
+  const restaurantIds = [
+    ...new Set(session.childOrders.map((child) => child.restaurantId)),
+  ].filter((id): id is string => typeof id === "string" && id !== "");
+  if (restaurantIds.length === 0) return DEFAULT_CURRENCY;
+
+  const rows = await createDatabase(env.DB)
+    .select({ id: restaurants.id, settings: restaurants.settings })
+    .from(restaurants)
+    .where(inArray(restaurants.id, restaurantIds))
+    .all();
+  const currencies = new Set<CurrencyCode>();
+  for (const row of rows) {
+    const configured = parseRestaurantSettings(row.settings).currency;
+    if (configured == null || configured === "") {
+      currencies.add(DEFAULT_CURRENCY);
+      continue;
+    }
+    const currency = normalizeCurrencyCode(configured);
+    if (!currency) {
+      throw new ApiError(
+        "RESTAURANT_CURRENCY_INVALID",
+        "A vendor in this checkout has an unsupported currency setting",
+        500,
+      );
+    }
+    currencies.add(currency);
+  }
+  if (currencies.size > 1) {
+    throw new ApiError(
+      "MIXED_CURRENCY_CHECKOUT",
+      "Vendors in this checkout use different currencies",
+      409,
+    );
+  }
+  return [...currencies][0] ?? DEFAULT_CURRENCY;
+}
+
+function parseRestaurantSettings(value: unknown): { currency?: unknown } {
+  if (value && typeof value === "object")
+    return value as { currency?: unknown };
+  if (typeof value !== "string") return {};
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === "object"
+      ? (parsed as { currency?: unknown })
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
  * Record a provider refund response that failed verification: lastRefund is
  * persisted as review_required (raising provider_amount_mismatch) with the
  * payment's status and amounts untouched, and a failure audit row keeps what
@@ -2367,6 +2442,9 @@ function buildMarketCheckoutSettlement(
   const platformFeeRateBps = clampPlatformFeeRateBps(
     session.market.platformFeeRateBps,
   );
+  // The fee is on the currency's step so each vendor's net payout is a real
+  // amount (no NT$5.60 fee on a NT$160 order).
+  const currency = normalizeCurrencyCode(payment.currency) ?? DEFAULT_CURRENCY;
   const voucherDiscountsByOrderId = buildVoucherDiscountAttribution(session);
   const vendorAllocations = session.childOrders.map((child) => {
     const childPayment = paymentByOrderId.get(child.orderId);
@@ -2387,8 +2465,9 @@ function buildMarketCheckoutSettlement(
             originalAmountCents - voucherDiscounts.vendorDiscountCents,
           )
         : 0;
-    const platformFeeCents = Math.round(
+    const platformFeeCents = roundToCurrencyCents(
       (settlementBaseCents * platformFeeRateBps) / 10000,
+      currency,
     );
 
     return {

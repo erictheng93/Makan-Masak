@@ -125,6 +125,20 @@ function setSettlementFixtures(
 // `beforeEach` would leave a spare `[]` sitting in the queue for every test
 // that never reads the table, and a newly added sessions query would silently
 // consume it instead of failing.
+/**
+ * Applying a voucher reads the vendors' `settings.currency` to round the
+ * discount; declare it (one TWD vendor, one on the platform default) without
+ * clearing the fixtures the test already set.
+ */
+function declareVendorCurrencies(
+  rows: unknown[] = [
+    { id: "restaurant-1", settings: { currency: "TWD" } },
+    { id: "restaurant-2", settings: null },
+  ],
+) {
+  databaseMocks.selectFixtures.set(restaurants, [rows]);
+}
+
 function setNoPersistedCheckoutFixtures() {
   setSelectFixtures({ marketCheckoutSessions: [[]] });
 }
@@ -2399,6 +2413,7 @@ describe("market checkout routes", () => {
 
   it("applies a voucher to an unpaid market checkout", async () => {
     const env = createEnv();
+    declareVendorCurrencies();
     await env.CACHE_KV.put(
       "market_checkout:checkout-1",
       JSON.stringify(unpaidCheckoutSessionFixture()),
@@ -2453,6 +2468,7 @@ describe("market checkout routes", () => {
         { orderId: 1001, restaurantId: "restaurant-1", amountCents: 12000 },
         { orderId: 1002, restaurantId: "restaurant-2", amountCents: 8000 },
       ],
+      currency: "TWD",
     });
     expect(env.CACHE_KV.put).toHaveBeenCalledWith(
       "market_checkout:checkout-1",
@@ -2461,8 +2477,127 @@ describe("market checkout routes", () => {
     );
   });
 
+  it.each([
+    [
+      "MYR vendors round in sen",
+      [
+        { id: "restaurant-1", settings: JSON.stringify({ currency: "myr" }) },
+        { id: "restaurant-2", settings: { currency: "MYR" } },
+      ],
+      200,
+      "MYR",
+    ],
+    [
+      "vendors in different currencies",
+      [
+        { id: "restaurant-1", settings: { currency: "TWD" } },
+        { id: "restaurant-2", settings: { currency: "VND" } },
+      ],
+      409,
+      "MIXED_CURRENCY_CHECKOUT",
+    ],
+    [
+      "a vendor with an unsupported currency",
+      [
+        { id: "restaurant-1", settings: { currency: "USD" } },
+        { id: "restaurant-2", settings: "not-json" },
+      ],
+      500,
+      "RESTAURANT_CURRENCY_INVALID",
+    ],
+  ])(
+    "prices a voucher in the vendors' currency: %s",
+    async (_label, vendors, status, expected) => {
+      const env = createEnv();
+      declareVendorCurrencies(vendors);
+      await env.CACHE_KV.put(
+        "market_checkout:checkout-1",
+        JSON.stringify(unpaidCheckoutSessionFixture()),
+      );
+      validateVoucherAndPrice.mockResolvedValue({
+        couponId: 42,
+        code: "MARKET10",
+        name: "Market 10",
+        fundedBy: "platform",
+        discountCents: 2000,
+        allocations: [
+          { orderId: 1001, amountCents: 12000, discountCents: 1200 },
+          { orderId: 1002, amountCents: 8000, discountCents: 800 },
+        ],
+      });
+
+      const response = await routes.fetch(
+        new Request("https://test/checkout-1/voucher", {
+          method: "POST",
+          headers: MARKET_HOLDER_HEADERS,
+          body: JSON.stringify({ code: "market10" }),
+        }),
+        env as never,
+      );
+
+      expect(response.status).toBe(status);
+      if (status === 200) {
+        expect(validateVoucherAndPrice).toHaveBeenCalledWith(
+          expect.objectContaining({ currency: expected }),
+        );
+      } else {
+        expect(await response.json()).toMatchObject({
+          error: { code: expected },
+        });
+        expect(validateVoucherAndPrice).not.toHaveBeenCalled();
+      }
+    },
+  );
+
+  it("prices a voucher in the currency of an existing payment", async () => {
+    const env = createEnv();
+    await env.CACHE_KV.put(
+      "market_checkout:checkout-1",
+      JSON.stringify({
+        ...unpaidCheckoutSessionFixture(),
+        payment: {
+          status: "failed",
+          method: "market_online",
+          currency: "VND",
+          country: "VN",
+          totalAmount: 200,
+          totalAmountCents: 20000,
+          paidAmount: 0,
+          paidAmountCents: 0,
+          childPayments: [],
+        },
+      }),
+    );
+    validateVoucherAndPrice.mockResolvedValue({
+      couponId: 42,
+      code: "MARKET10",
+      name: "Market 10",
+      fundedBy: "platform",
+      discountCents: 2000,
+      allocations: [
+        { orderId: 1001, amountCents: 12000, discountCents: 1200 },
+        { orderId: 1002, amountCents: 8000, discountCents: 800 },
+      ],
+    });
+
+    const response = await routes.fetch(
+      new Request("https://test/checkout-1/voucher", {
+        method: "POST",
+        headers: MARKET_HOLDER_HEADERS,
+        body: JSON.stringify({ code: "market10" }),
+      }),
+      env as never,
+    );
+
+    expect(response.status).toBe(200);
+    expect(validateVoucherAndPrice).toHaveBeenCalledWith(
+      expect.objectContaining({ currency: "VND" }),
+    );
+  });
+
   it("releases the reserved voucher slot when apply persistence fails", async () => {
     const env = createEnv();
+    declareVendorCurrencies();
     await env.CACHE_KV.put(
       "market_checkout:checkout-1",
       JSON.stringify(unpaidCheckoutSessionFixture()),
@@ -2508,6 +2643,7 @@ describe("market checkout routes", () => {
 
   it("applies an additional voucher against remaining child order amounts", async () => {
     const env = createEnv();
+    declareVendorCurrencies();
     await env.CACHE_KV.put(
       "market_checkout:checkout-1",
       JSON.stringify({
@@ -2563,6 +2699,7 @@ describe("market checkout routes", () => {
         { orderId: 1001, restaurantId: "restaurant-1", amountCents: 10000 },
         { orderId: 1002, restaurantId: "restaurant-2", amountCents: 7000 },
       ],
+      currency: "TWD",
     });
     expect(env.CACHE_KV.put).toHaveBeenCalledWith(
       "market_checkout:checkout-1",
@@ -2573,6 +2710,7 @@ describe("market checkout routes", () => {
 
   it("applies and removes vouchers from persisted checkouts when KV is empty", async () => {
     setSelectFixtures(persistedSessionFixtures(unpaidCheckoutSessionFixture()));
+    declareVendorCurrencies();
     validateVoucherAndPrice.mockResolvedValue({
       couponId: 42,
       code: "MARKET10",
