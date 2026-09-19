@@ -420,7 +420,11 @@ describe("CreditTopupService", () => {
     ["without a currency", { paidAmountCents: 1500 }, "CURRENCY_MISSING"],
   ])(
     "does not credit a paid confirmation %s",
-    async (_label, money, reason) => {
+    async (
+      _label,
+      money: { paidAmountCents?: number; paidCurrency?: string },
+      reason,
+    ) => {
       const fakeCreditService = creditService();
       const run = vi.fn(async () => ({ meta: { changes: 1 } }));
       const bind = vi.fn(() => ({ run }));
@@ -546,6 +550,8 @@ describe("Credit top-up gateway helpers", () => {
         intentId: "intent-1",
         publicId: "card-public-1",
         amountCents: 1000,
+        amountMinor: 1000,
+        currencyExponent: 2,
         currency: "TWD",
         idempotencyKey: "credit-topup:intent-1",
       }),
@@ -606,6 +612,8 @@ describe("Credit top-up gateway helpers", () => {
         intentId: "intent-1",
         publicId: "card-public-1",
         amountCents: 1000,
+        amountMinor: 1000,
+        currencyExponent: 2,
         currency: "TWD",
         idempotencyKey: "credit-topup:intent-1",
       }),
@@ -629,6 +637,8 @@ describe("Credit top-up gateway helpers", () => {
           intentId: "intent-1",
           publicId: "card-public-1",
           amountCents: 1000,
+          amountMinor: 1000,
+          currencyExponent: 2,
           currency: "TWD",
           idempotencyKey: "credit-topup:intent-1",
         }),
@@ -647,6 +657,8 @@ describe("Credit top-up gateway helpers", () => {
         intentId: "intent-1",
         publicId: "card-public-1",
         amountCents: 1000,
+        amountMinor: 1000,
+        currencyExponent: 2,
         currency: "TWD",
         idempotencyKey: "credit-topup:intent-1",
       }),
@@ -664,6 +676,8 @@ describe("Credit top-up gateway helpers", () => {
         intentId: "intent-1",
         publicId: "card-public-1",
         amountCents: 1000,
+        amountMinor: 1000,
+        currencyExponent: 2,
         currency: "TWD",
         idempotencyKey: "credit-topup:intent-1",
       }),
