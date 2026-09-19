@@ -2817,6 +2817,8 @@ const zhTWCore = {
     cashMatch: "現金金額吻合",
     cashOver: "現金溢出 {amount}",
     cashShort: "現金短缺 {amount}",
+    cashInsufficient: "收到的現金不足，還差 {amount}",
+    cashNotEntered: "請輸入收到的現金金額",
     endShift: "結束班次",
     alerts: {
       paymentSuccess: "付款處理成功",

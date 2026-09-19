@@ -2747,6 +2747,8 @@ const enUS: Messages = {
     cashMatch: "Cash matches perfectly",
     cashOver: "Cash over by {amount}",
     cashShort: "Cash short by {amount}",
+    cashInsufficient: "Cash received is short by {amount}",
+    cashNotEntered: "Enter the cash received",
     endShift: "End Shift",
     alerts: {
       paymentSuccess: "Payment processed successfully",

@@ -2676,6 +2676,8 @@ const zhCN: Messages = {
     cashMatch: "现金金额吻合",
     cashOver: "现金溢出 {amount}",
     cashShort: "现金短缺 {amount}",
+    cashInsufficient: "收到的现金不足，还差 {amount}",
+    cashNotEntered: "请输入收到的现金金额",
     cashierName: "收银员",
     confirmPayment: "确认付款",
     coupon: "优惠券",

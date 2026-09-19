@@ -2750,6 +2750,8 @@ const viVN: Messages = {
     paymentSuccess: "Thanh toán thành công!",
     orderCompleted: "Đơn hàng {orderNumber} đã hoàn thành",
     cashShort: "Thiếu tiền mặt {amount}",
+    cashInsufficient: "Tiền mặt nhận được còn thiếu {amount}",
+    cashNotEntered: "Nhập số tiền mặt đã nhận",
     printReport: "In báo cáo",
     noPendingOrders: "Không có lệnh chờ xử lý",
     received: "Đã nhận",

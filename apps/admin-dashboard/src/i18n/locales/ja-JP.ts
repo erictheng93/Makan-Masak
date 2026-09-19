@@ -2741,6 +2741,8 @@ const jaJP: Messages = {
     optionalNotes: "オプションのメモ...",
     orderDetails: "注文の詳細",
     cashShort: "{amount} による現金不足",
+    cashInsufficient: "受け取った現金が {amount} 不足しています",
+    cashNotEntered: "受け取った現金の金額を入力してください",
     paymentFailed: "支払いに失敗しました",
     amountMismatch:
       "サーバー上の注文合計と金額が一致しません。注文を再読み込みしてからもう一度お試しください。",

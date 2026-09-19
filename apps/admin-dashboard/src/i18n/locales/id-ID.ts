@@ -2741,6 +2741,8 @@ const idID: Messages = {
     coupon: "Kupon",
     cashOver: "Pembayaran tunai paling lambat {amount}",
     cashShort: "Uang tunai berkurang pada {amount}",
+    cashInsufficient: "Uang tunai yang diterima kurang {amount}",
+    cashNotEntered: "Masukkan jumlah uang tunai yang diterima",
     allOrdersCompleted: "Semua pesanan telah selesai",
     customer: "Pelanggan",
     discount: "Diskon",

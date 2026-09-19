@@ -4,6 +4,10 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { ref } from "vue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import CashierView from "./CashierView.vue";
+import {
+  clearRestaurantCurrency,
+  setRestaurantCurrency,
+} from "@/composables/useCurrency";
 import { api } from "@/services/api";
 
 // Pinned so the calendar-day test below means the same thing on a UTC CI runner
@@ -11,12 +15,25 @@ import { api } from "@/services/api";
 process.env.TZ = "Asia/Taipei";
 
 vi.mock("@/i18n", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: ref("zh-TW") }),
+  useI18n: () => ({
+    t: (key: string, params?: Record<string, unknown>) =>
+      params && "amount" in params ? `${key}:${String(params.amount)}` : key,
+    locale: ref("zh-TW"),
+  }),
 }));
 
-vi.mock("@/composables/useCurrency", () => ({
-  useCurrency: () => ({ currencySymbol: "$", formatPrice: String }),
-}));
+vi.mock("@/composables/useCurrency", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/composables/useCurrency")>();
+  return {
+    ...actual,
+    useCurrency: () => ({
+      ...actual.useCurrency(),
+      currencySymbol: "$",
+      formatPrice: String,
+    }),
+  };
+});
 
 vi.mock("@/composables/useDateFormatter", () => ({
   useDateFormatter: () => ({
@@ -129,6 +146,82 @@ describe("CashierView", () => {
     await wrapper.get('[data-testid="pay-btn"]').trigger("click");
     await flushPromises();
   }
+
+  describe("cash tendered", () => {
+    async function selectOrder() {
+      const wrapper = mount(CashierView);
+      await flushPromises();
+      await wrapper.find(".cursor-pointer").trigger("click");
+      return wrapper;
+    }
+
+    it("computes change in cents, not floats", async () => {
+      setRestaurantCurrency("MYR");
+      const wrapper = await selectOrder();
+      await wrapper.get('[data-testid="received-amount"]').setValue(100.1);
+
+      // 100.1 - 100 is 0.09999999999999432 in floating point.
+      expect(wrapper.get('[data-testid="cash-change"]').text()).toBe("0.1");
+      expect(
+        wrapper.get('[data-testid="pay-btn"]').attributes("disabled"),
+      ).toBeUndefined();
+      clearRestaurantCurrency();
+    });
+
+    it("says why a short cash payment cannot be confirmed", async () => {
+      setRestaurantCurrency("MYR");
+      const wrapper = await selectOrder();
+      await wrapper.get('[data-testid="received-amount"]').setValue(99.5);
+
+      expect(
+        wrapper.get('[data-testid="pay-btn"]').attributes("disabled"),
+      ).toBeDefined();
+      expect(wrapper.get('[data-testid="cash-insufficient"]').text()).toBe(
+        "cashier.cashInsufficient:0.5",
+      );
+      clearRestaurantCurrency();
+    });
+
+    it("asks for the cash before confirming, instead of a silent disabled button", async () => {
+      const wrapper = await selectOrder();
+
+      expect(
+        wrapper.get('[data-testid="pay-btn"]').attributes("disabled"),
+      ).toBeDefined();
+      expect(wrapper.get('[data-testid="cash-insufficient"]').text()).toBe(
+        "cashier.cashNotEntered",
+      );
+    });
+
+    it("never shows a negative zero when a TWD shortfall is below one dollar", async () => {
+      clearRestaurantCurrency();
+      const wrapper = await selectOrder();
+      await wrapper.get('[data-testid="received-amount"]').setValue(99.8);
+
+      // Rounded to whole NT$, 99.8 covers a NT$100 bill.
+      expect(wrapper.get('[data-testid="cash-change"]').text()).toBe("0");
+      expect(wrapper.find('[data-testid="cash-insufficient"]').exists()).toBe(
+        false,
+      );
+    });
+
+    it("steps the cash input by the shop currency's unit", async () => {
+      clearRestaurantCurrency();
+      const twd = await selectOrder();
+      const received = twd.get('[data-testid="received-amount"]');
+      expect(received.attributes("step")).toBe("1");
+      expect(received.attributes("placeholder")).toBe("0");
+      twd.unmount();
+
+      setRestaurantCurrency("MYR");
+      const myr = await selectOrder();
+      expect(
+        myr.get('[data-testid="received-amount"]').attributes("step"),
+      ).toBe("0.01");
+      myr.unmount();
+      clearRestaurantCurrency();
+    });
+  });
 
   it("settles through the real payment endpoint, carrying an idempotency key", async () => {
     vi.mocked(api.post).mockResolvedValue({
