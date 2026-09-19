@@ -28,6 +28,8 @@ export interface MarketCheckoutProviderLastWebhook {
   eventType: string;
   status: string;
   receivedAt: string;
+  /** Set when status is "review_required": the money check that failed. */
+  reviewReason?: string;
   payloadSummary?: MarketCheckoutProviderPayloadSummary;
 }
 
@@ -54,6 +56,8 @@ export interface MarketCheckoutListItem {
   status: "submitted";
   paymentStatus: MarketCheckoutPaymentStatus;
   subtotal: number;
+  /** The payment's currency, once the checkout has a payment. */
+  currency?: "TWD" | "MYR" | "VND";
   childOrderCount: number;
   operationAlerts?: MarketCheckoutOperationAlert[];
   createdAt: string;
@@ -67,7 +71,8 @@ export interface MarketCheckoutOperationAlert {
     | "provider_webhook_failed"
     | "provider_status_mismatch"
     | "provider_refund_pending"
-    | "provider_refund_failed";
+    | "provider_refund_failed"
+    | "provider_amount_mismatch";
   label: string;
   severity: "warning" | "critical";
 }
@@ -161,6 +166,8 @@ export interface MarketCheckoutListResult {
 
 export interface MarketCheckoutSummary {
   totalCheckouts: number;
+  /** null when the totals add up checkouts in more than one currency. */
+  currency?: string | null;
   totalSubtotalCents: number;
   paidAmountCents: number;
   refundedAmountCents: number;
@@ -172,6 +179,7 @@ export interface MarketCheckoutSummary {
     id: string;
     slug: string;
     name: string;
+    currency?: string | null;
     checkoutCount: number;
     subtotalCents: number;
     paidAmountCents: number;
@@ -182,6 +190,7 @@ export interface MarketCheckoutSummary {
 export interface MarketCheckoutVendorSettlement {
   restaurantId: string;
   restaurantName: string;
+  currency?: string | null;
   checkoutCount: number;
   childOrderCount: number;
   subtotalCents: number;

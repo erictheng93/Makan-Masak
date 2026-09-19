@@ -1,6 +1,7 @@
 import { Hono, type Context } from "hono";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import {
+  PAYMENT_AUDIT_EVENT_TYPES,
   createDatabase,
   marketCheckoutChildOrders,
   marketCheckoutSessions,
@@ -45,9 +46,16 @@ import {
   queryMarketCheckoutProviderSplitStatus,
   refundCreditMarketCheckoutPayment,
   refundMarketCheckoutProviderSplitPayment,
+  verifyProviderRefundResult,
   type MarketCheckoutProviderNextAction,
+  type MarketCheckoutProviderSplitRefundResult,
   type MarketCheckoutSplitMode,
 } from "../services/MarketCheckoutPaymentProvider";
+import { PaymentAuditService } from "../../billing/services/PaymentAuditService";
+import {
+  providerAmountToCents,
+  type ProviderMoneyIssue,
+} from "../../../shared/utils/provider-money";
 import { MarketCheckoutPaymentReconciliationService } from "../services/MarketCheckoutPaymentReconciliationService";
 import { MarketCheckoutPaymentWebhookService } from "../services/MarketCheckoutPaymentWebhookService";
 import {
@@ -62,7 +70,13 @@ import { isFeatureEnabled } from "../../../shared/feature-adoption";
 import { toCsv } from "../../../shared/utils/csv";
 import { createMarketCheckoutSchema } from "../schemas/validation";
 import { z } from "zod";
-import { generateUUID } from "@makanmasak/utils";
+import {
+  DEFAULT_CURRENCY,
+  generateUUID,
+  normalizeCurrencyCode,
+  roundToCurrencyCents,
+  type CurrencyCode,
+} from "@makanmasak/utils";
 import {
   countryForCurrency,
   currencyFromRestaurantSettings,
@@ -299,6 +313,8 @@ interface MarketCheckoutIndexItem {
   status: MarketCheckoutSession["status"];
   paymentStatus: MarketCheckoutPaymentSummary["status"] | "pending";
   subtotal: number;
+  /** The payment's currency, once there is a payment. */
+  currency?: MarketCheckoutPaymentSummary["currency"];
   childOrderCount: number;
   operationAlerts?: MarketCheckoutOperationAlert[];
   createdAt: string;
@@ -312,7 +328,8 @@ interface MarketCheckoutOperationAlert {
     | "provider_webhook_failed"
     | "provider_status_mismatch"
     | "provider_refund_pending"
-    | "provider_refund_failed";
+    | "provider_refund_failed"
+    | "provider_amount_mismatch";
   label: string;
   severity: "warning" | "critical";
 }
@@ -324,6 +341,8 @@ export interface MarketCheckoutSummaryItem extends MarketCheckoutIndexItem {
 interface MarketCheckoutVendorSettlement {
   restaurantId: string;
   restaurantName: string;
+  /** null when this vendor's checkouts were paid in different currencies. */
+  currency: string | null;
   checkoutCount: number;
   childOrderCount: number;
   subtotalCents: number;
@@ -420,6 +439,8 @@ interface MarketCheckoutProviderLastWebhook {
   eventType: string;
   status: string;
   receivedAt: string;
+  /** Set when status is "review_required": the money check that failed. */
+  reviewReason?: string;
   payload?: unknown;
   payloadSummary?: MarketCheckoutProviderPayloadSummary;
 }
@@ -854,6 +875,7 @@ app.post("/:id/voucher", optionalCanonicalCustomerAuthMiddleware, async (c) => {
     code: parsed.data.code,
     subtotalCents,
     childOrders: voucherChildOrders,
+    currency: await resolveMarketCheckoutCurrency(c.env, session),
   });
   const reservedNextVoucher = await voucherService.reserveUsage(nextVoucher);
   const appliedVoucher = combineAppliedMarketCheckoutVouchers([
@@ -1476,6 +1498,27 @@ app.post("/:id/refund", authMiddleware, requireRole([0]), async (c) => {
             reason: parsed.data.reason,
             allocations,
           });
+    // The provider's word on money is checked before it reaches the ledger:
+    // the refunded currency must be the payment's and the amount must be
+    // above zero and no more than was requested.
+    const refundIssue = verifyProviderRefundResult(
+      { amountCents, currency: session.payment.currency },
+      providerRefund,
+    );
+    if (refundIssue) {
+      await holdMarketCheckoutRefundForReview(c.env, {
+        session,
+        checkoutId,
+        providerRefund,
+        requestedAmountCents: amountCents,
+        issue: refundIssue,
+      });
+      throw new ApiError(
+        "MARKET_CHECKOUT_PROVIDER_REFUND_MISMATCH",
+        `Provider refund response was held for review: ${refundIssue.message}`,
+        502,
+      );
+    }
     const now = new Date().toISOString();
     const lastRefund: MarketCheckoutProviderLastWebhook = {
       provider: providerRefund.provider,
@@ -1501,10 +1544,16 @@ app.post("/:id/refund", authMiddleware, requireRole([0]), async (c) => {
     const refundedAmountCents = refundCompleted
       ? providerRefund.refundedAmountCents
       : 0;
+    // The amount, not the provider's label, decides full vs partial; only a
+    // full refund marks the child payments refunded.
+    const refundStatus =
+      refundedAmountCents === amountCents ? "refunded" : "partial_refunded";
     const refundedAmount = refundedAmountCents / 100;
     const refundedOrderIds = new Set(allocations.map((item) => item.orderId));
     const childPayments = session.payment.childPayments.map((payment) =>
-      refundCompleted && refundedOrderIds.has(payment.orderId)
+      refundCompleted &&
+      refundStatus === "refunded" &&
+      refundedOrderIds.has(payment.orderId)
         ? {
             ...payment,
             status: "refunded" as const,
@@ -1514,7 +1563,7 @@ app.post("/:id/refund", authMiddleware, requireRole([0]), async (c) => {
     );
     const paymentBase: MarketCheckoutPaymentSummary = {
       ...session.payment,
-      status: refundCompleted ? providerRefund.status : session.payment.status,
+      status: refundCompleted ? refundStatus : session.payment.status,
       refundedAmount: (session.payment.refundedAmount ?? 0) + refundedAmount,
       refundedAmountCents:
         (session.payment.refundedAmountCents ?? 0) + refundedAmountCents,
@@ -2289,6 +2338,101 @@ function buildFailedMarketCheckoutPayment(input: {
   };
 }
 
+/**
+ * The currency a checkout's money is in, for discount rounding.
+ *
+ * A checkout that already has a payment uses its recorded currency; otherwise
+ * the vendors' shared currency (`resolveSharedRestaurantCurrency`: unset is
+ * the platform default, an unsupported value fails closed, mixed vendors are
+ * MIXED_CURRENCY_CHECKOUT).
+ */
+async function resolveMarketCheckoutCurrency(
+  env: Env,
+  session: MarketCheckoutSession,
+): Promise<CurrencyCode> {
+  const paymentCurrency = normalizeCurrencyCode(session.payment?.currency);
+  if (paymentCurrency) return paymentCurrency;
+
+  const restaurantIds = session.childOrders
+    .map((child) => child.restaurantId)
+    .filter((id): id is string => typeof id === "string" && id !== "");
+  if (restaurantIds.length === 0) return DEFAULT_CURRENCY;
+  return resolveSharedRestaurantCurrency(env.DB, restaurantIds);
+}
+
+/**
+ * Record a provider refund response that failed verification: lastRefund is
+ * persisted as review_required (raising provider_amount_mismatch) with the
+ * payment's status and amounts untouched, and a failure audit row keeps what
+ * the provider reported.
+ */
+async function holdMarketCheckoutRefundForReview(
+  env: Env,
+  input: {
+    session: MarketCheckoutSession;
+    checkoutId: string;
+    providerRefund: MarketCheckoutProviderSplitRefundResult;
+    requestedAmountCents: number;
+    issue: ProviderMoneyIssue;
+  },
+) {
+  const payment = input.session.payment!;
+  const parentPayment = payment.parentPayment!;
+  const now = new Date().toISOString();
+  const lastRefund: MarketCheckoutProviderLastWebhook = {
+    provider: input.providerRefund.provider,
+    eventId: input.providerRefund.eventId ?? input.providerRefund.refundId,
+    eventType:
+      input.providerRefund.eventType ??
+      `market_checkout.refund_${input.providerRefund.status}`,
+    status: "review_required",
+    reviewReason: input.issue.code,
+    receivedAt: now,
+    payloadSummary: summarizeProviderPayload({
+      providerTransactionId:
+        input.providerRefund.providerTransactionId ??
+        parentPayment.providerTransactionId,
+      status: input.providerRefund.status,
+      amountRefundedCents: input.providerRefund.refundedAmountCents,
+      currency: input.providerRefund.currency,
+      providerPayload: input.providerRefund.providerPayload,
+    }),
+  };
+  const updatedSession: MarketCheckoutSession = {
+    ...input.session,
+    payment: {
+      ...payment,
+      parentPayment: { ...parentPayment, lastRefund, updatedAt: now },
+    },
+  };
+
+  await new PaymentAuditService(env.DB).append({
+    paymentTransactionId: parentPayment.paymentId,
+    eventType: PAYMENT_AUDIT_EVENT_TYPES.FAILURE,
+    provider: input.providerRefund.provider,
+    providerEventId: `${input.providerRefund.refundId}:review`,
+    providerEventType: lastRefund.eventType,
+    amount: input.providerRefund.refundedAmountCents,
+    currency: input.providerRefund.currency ?? null,
+    rawPayload: {
+      checkoutId: input.checkoutId,
+      source: "refund",
+      requestedAmountCents: input.requestedAmountCents,
+      expectedCurrency: payment.currency,
+      providerRefund: input.providerRefund,
+    },
+    errorCode: `MARKET_CHECKOUT_REFUND_${input.issue.code}`,
+    errorMessage: input.issue.message,
+  });
+  await env.CACHE_KV.put(
+    `market_checkout:${input.checkoutId}`,
+    JSON.stringify(updatedSession),
+    { expirationTtl: 4 * 60 * 60 },
+  );
+  await updatePersistedMarketCheckoutPayment(env, updatedSession);
+  await upsertMarketCheckoutIndex(env.CACHE_KV, updatedSession);
+}
+
 function buildMarketCheckoutSettlement(
   session: MarketCheckoutSession,
   payment: MarketCheckoutPaymentSummary,
@@ -2302,6 +2446,9 @@ function buildMarketCheckoutSettlement(
   const platformFeeRateBps = clampPlatformFeeRateBps(
     session.market.platformFeeRateBps,
   );
+  // The fee is on the currency's step so each vendor's net payout is a real
+  // amount (no NT$5.60 fee on a NT$160 order).
+  const currency = normalizeCurrencyCode(payment.currency) ?? DEFAULT_CURRENCY;
   const voucherDiscountsByOrderId = buildVoucherDiscountAttribution(session);
   const vendorAllocations = session.childOrders.map((child) => {
     const childPayment = paymentByOrderId.get(child.orderId);
@@ -2322,8 +2469,9 @@ function buildMarketCheckoutSettlement(
             originalAmountCents - voucherDiscounts.vendorDiscountCents,
           )
         : 0;
-    const platformFeeCents = Math.round(
+    const platformFeeCents = roundToCurrencyCents(
       (settlementBaseCents * platformFeeRateBps) / 10000,
+      currency,
     );
 
     return {
@@ -2907,16 +3055,39 @@ function parseProviderPayloadLastWebhook(
     eventType: webhook.eventType,
     status: webhook.status,
     receivedAt: webhook.receivedAt,
-    payloadSummary: summarizeProviderPayload(webhook.payload),
+    reviewReason:
+      typeof webhook.reviewReason === "string"
+        ? webhook.reviewReason
+        : undefined,
+    payloadSummary: summarizeProviderPayload(webhook.payload, webhook.provider),
   };
 }
 
+/**
+ * Admin-facing digest of a provider payload. Amounts come out in internal
+ * cents: a raw provider object (`data.object`, e.g. a Stripe PaymentIntent)
+ * is converted with that provider's unit for its currency — Stripe VND
+ * `amount: 100000` is ₫100,000, i.e. 10,000,000 cents — while our adapter's
+ * `amountCents` / `amountReceivedCents` / `amountRefundedCents` are already
+ * internal cents. An amount whose unit cannot be determined is left out
+ * rather than shown wrong.
+ */
 function summarizeProviderPayload(
   value: unknown,
+  provider = "",
 ): MarketCheckoutProviderPayloadSummary | undefined {
   if (!value || typeof value !== "object") return undefined;
   const payload = value as Record<string, unknown>;
   const nestedObject = objectRecord(objectRecord(payload.data)?.object);
+  const providerAmount = (amount: unknown) => {
+    if (typeof amount !== "number") return undefined;
+    const converted = providerAmountToCents(
+      provider,
+      nestedObject?.currency,
+      amount,
+    );
+    return converted.ok ? converted.cents : undefined;
+  };
   const providerPayload = objectRecord(payload.providerPayload);
   const nestedFailure = objectRecord(
     nestedObject?.last_payment_error ??
@@ -2930,13 +3101,14 @@ function summarizeProviderPayload(
     objectId: stringValue(nestedObject?.id ?? payload.id),
     providerTransactionId: stringValue(payload.providerTransactionId),
     status: stringValue(nestedObject?.status ?? payload.status),
-    amountCents: numberValue(nestedObject?.amount ?? payload.amountCents),
-    amountReceivedCents: numberValue(
-      nestedObject?.amount_received ?? payload.amountReceivedCents,
-    ),
-    amountRefundedCents: numberValue(
-      nestedObject?.amount_refunded ?? payload.amountRefundedCents,
-    ),
+    amountCents:
+      providerAmount(nestedObject?.amount) ?? numberValue(payload.amountCents),
+    amountReceivedCents:
+      providerAmount(nestedObject?.amount_received) ??
+      numberValue(payload.amountReceivedCents),
+    amountRefundedCents:
+      providerAmount(nestedObject?.amount_refunded) ??
+      numberValue(payload.amountRefundedCents),
     currency: stringValue(nestedObject?.currency ?? payload.currency),
     metadataKeys: metadataKeysFrom(
       nestedObject?.metadata ?? payload.metadata ?? providerPayload?.metadata,
@@ -3015,6 +3187,7 @@ async function readPersistedMarketCheckoutIndex(
     paymentStatus:
       row.paymentStatus as MarketCheckoutIndexItem["paymentStatus"],
     subtotal: row.subtotalCents,
+    currency: paymentCurrencyOf(row.paymentSummary),
     childOrderCount: row.childOrderCount,
     operationAlerts: buildMarketCheckoutOperationAlerts(
       (row.paymentSummary ?? undefined) as
@@ -3049,6 +3222,7 @@ async function readPersistedMarketCheckoutSummaryItems(
     paymentStatus:
       row.paymentStatus as MarketCheckoutIndexItem["paymentStatus"],
     subtotal: row.subtotalCents,
+    currency: paymentCurrencyOf(row.paymentSummary),
     childOrderCount: row.childOrderCount,
     payment: (row.paymentSummary ?? undefined) as
       | MarketCheckoutPaymentSummary
@@ -3135,6 +3309,7 @@ function buildMarketCheckoutAdminSummary(items: MarketCheckoutSummaryItem[]) {
       id: string;
       slug: string;
       name: string;
+      currency: string | null | undefined;
       checkoutCount: number;
       subtotalCents: number;
       paidAmountCents: number;
@@ -3142,6 +3317,9 @@ function buildMarketCheckoutAdminSummary(items: MarketCheckoutSummaryItem[]) {
     }
   >();
 
+  // Sums are only meaningful in one currency: `currency` is that currency,
+  // or null once checkouts in different currencies have been added together.
+  let currency: string | null | undefined;
   let subtotalCents = 0;
   let paidAmountCents = 0;
   let refundedAmountCents = 0;
@@ -3150,6 +3328,8 @@ function buildMarketCheckoutAdminSummary(items: MarketCheckoutSummaryItem[]) {
   for (const item of items) {
     const status = item.paymentStatus ?? "pending";
     paymentStatusCounts[status] = (paymentStatusCounts[status] ?? 0) + 1;
+    const itemCurrency = item.payment?.currency ?? item.currency;
+    currency = mergeSummaryCurrency(currency, itemCurrency);
     subtotalCents += item.subtotal;
     paidAmountCents += item.payment?.paidAmountCents ?? 0;
     refundedAmountCents += item.payment?.refundedAmountCents ?? 0;
@@ -3159,11 +3339,13 @@ function buildMarketCheckoutAdminSummary(items: MarketCheckoutSummaryItem[]) {
       id: item.market.id,
       slug: item.market.slug,
       name: item.market.name,
+      currency: undefined,
       checkoutCount: 0,
       subtotalCents: 0,
       paidAmountCents: 0,
       refundedAmountCents: 0,
     };
+    market.currency = mergeSummaryCurrency(market.currency, itemCurrency);
     market.checkoutCount += 1;
     market.subtotalCents += item.subtotal;
     market.paidAmountCents += item.payment?.paidAmountCents ?? 0;
@@ -3173,6 +3355,7 @@ function buildMarketCheckoutAdminSummary(items: MarketCheckoutSummaryItem[]) {
 
   return {
     totalCheckouts: items.length,
+    currency: currency ?? null,
     totalSubtotalCents: subtotalCents,
     paidAmountCents,
     refundedAmountCents,
@@ -3182,9 +3365,29 @@ function buildMarketCheckoutAdminSummary(items: MarketCheckoutSummaryItem[]) {
     childOrderCount,
     paymentStatusCounts,
     topMarkets: Array.from(markets.values())
+      .map((market) => ({ ...market, currency: market.currency ?? null }))
       .sort((a, b) => b.subtotalCents - a.subtotalCents)
       .slice(0, 5),
   };
+}
+
+/** undefined = nothing seen yet, null = more than one currency seen. */
+function mergeSummaryCurrency(
+  current: string | null | undefined,
+  next: string | undefined,
+): string | null | undefined {
+  if (!next || current === null) return current;
+  if (current === undefined) return next;
+  return current === next ? current : null;
+}
+
+function paymentCurrencyOf(
+  paymentSummary: unknown,
+): MarketCheckoutPaymentSummary["currency"] | undefined {
+  const currency = normalizeCurrencyCode(
+    (paymentSummary as { currency?: unknown } | null | undefined)?.currency,
+  );
+  return currency ?? undefined;
 }
 
 function buildMarketCheckoutVendorSettlements(
@@ -3192,7 +3395,10 @@ function buildMarketCheckoutVendorSettlements(
 ): MarketCheckoutVendorSettlement[] {
   const vendors = new Map<
     string,
-    MarketCheckoutVendorSettlement & { checkoutIds: Set<string> }
+    Omit<MarketCheckoutVendorSettlement, "currency"> & {
+      currency: string | null | undefined;
+      checkoutIds: Set<string>;
+    }
   >();
 
   for (const session of sessions) {
@@ -3211,6 +3417,7 @@ function buildMarketCheckoutVendorSettlements(
       const settlement = vendors.get(child.restaurantId) ?? {
         restaurantId: child.restaurantId,
         restaurantName: child.restaurantName,
+        currency: undefined,
         checkoutCount: 0,
         childOrderCount: 0,
         subtotalCents: 0,
@@ -3228,6 +3435,10 @@ function buildMarketCheckoutVendorSettlements(
       };
 
       settlement.checkoutIds.add(session.id);
+      settlement.currency = mergeSummaryCurrency(
+        settlement.currency,
+        session.payment?.currency,
+      );
       settlement.childOrderCount += 1;
       settlement.subtotalCents += orderChildTotalCents(child);
 
@@ -3260,6 +3471,7 @@ function buildMarketCheckoutVendorSettlements(
   return Array.from(vendors.values())
     .map(({ checkoutIds, ...vendor }) => ({
       ...vendor,
+      currency: vendor.currency ?? null,
       checkoutCount: checkoutIds.size,
       netPaidAmountCents: vendor.paidAmountCents - vendor.refundedAmountCents,
       vendorNetAmountCents:
@@ -3633,6 +3845,7 @@ async function upsertMarketCheckoutIndex(
     status: session.status,
     paymentStatus: session.payment?.status ?? "pending",
     subtotal: session.subtotal,
+    currency: session.payment?.currency,
     childOrderCount: session.childOrders.length,
     operationAlerts: buildMarketCheckoutOperationAlerts(session.payment),
     createdAt: session.createdAt,
@@ -3726,6 +3939,21 @@ function buildMarketCheckoutOperationAlerts(
     alerts.push({
       type: "provider_refund_failed",
       label: "退款失敗",
+      severity: "critical",
+    });
+  }
+  // A provider reported money (amount or currency) that does not match the
+  // payment, and the event was held instead of applied.
+  if (
+    [
+      parentPayment.lastWebhook,
+      parentPayment.lastReconciliation,
+      parentPayment.lastRefund,
+    ].some((event) => event?.status === "review_required")
+  ) {
+    alerts.push({
+      type: "provider_amount_mismatch",
+      label: "金額不符待審",
       severity: "critical",
     });
   }

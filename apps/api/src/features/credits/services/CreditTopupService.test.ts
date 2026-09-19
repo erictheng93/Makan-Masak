@@ -230,6 +230,8 @@ describe("CreditTopupService", () => {
       intentId: "intent-1",
       publicId: "card-public-1",
       amountCents: 1500,
+      amountMinor: 1500,
+      currencyExponent: 2,
       currency: "TWD",
       idempotencyKey: "credit-topup:intent-1",
     });
@@ -363,6 +365,8 @@ describe("CreditTopupService", () => {
       service.confirmIntent({
         intentId: "intent-1",
         status: "paid",
+        paidAmountCents: 1500,
+        paidCurrency: "TWD",
         providerPayload: { event: "paid" },
       }),
     ).resolves.toMatchObject({
@@ -399,6 +403,109 @@ describe("CreditTopupService", () => {
       credited: false,
       alreadyProcessed: true,
     });
+  });
+
+  it.each([
+    [
+      "underpaid",
+      { paidAmountCents: 1400, paidCurrency: "TWD" },
+      "AMOUNT_MISMATCH",
+    ],
+    [
+      "in another currency",
+      { paidAmountCents: 1500, paidCurrency: "MYR" },
+      "CURRENCY_MISMATCH",
+    ],
+    ["without an amount", { paidCurrency: "TWD" }, "AMOUNT_MISSING"],
+    ["without a currency", { paidAmountCents: 1500 }, "CURRENCY_MISSING"],
+  ])(
+    "does not credit a paid confirmation %s",
+    async (
+      _label,
+      money: { paidAmountCents?: number; paidCurrency?: string },
+      reason,
+    ) => {
+      const fakeCreditService = creditService();
+      const run = vi.fn(async () => ({ meta: { changes: 1 } }));
+      const bind = vi.fn(() => ({ run }));
+      const prepare = vi.fn(() => ({ bind }));
+      const mutations = mockMutationResults({
+        creditTopupIntents: {
+          update: [[intent({ errorCode: reason })]],
+        },
+      });
+      mockSelectResults({ creditTopupIntents: [[intent()]] });
+
+      const result = await new CreditTopupService(
+        env({ DB: { prepare } as never }),
+        fakeCreditService as never,
+        gateway(),
+      ).confirmIntent({
+        intentId: "intent-1",
+        status: "paid",
+        providerPayload: { event: "paid" },
+        ...money,
+      });
+
+      expect(result).toMatchObject({
+        credited: false,
+        alreadyProcessed: false,
+        reviewRequired: true,
+        reviewReason: reason,
+      });
+      expect(fakeCreditService.topup).not.toHaveBeenCalled();
+      expect(mutations.updated.at(-1)).toMatchObject({
+        errorCode: reason,
+        errorMessage: expect.any(String),
+      });
+      expect(mutations.updated.at(-1)).not.toHaveProperty("status");
+      expect(prepare).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT OR IGNORE INTO payment_audit_log"),
+      );
+      expect(bind).toHaveBeenCalledWith(
+        expect.any(String),
+        null,
+        "intent-1",
+        null,
+        "failure",
+        "credit_topup",
+        null,
+        null,
+        money.paidAmountCents ?? null,
+        money.paidCurrency ?? null,
+        expect.any(String),
+        `CREDIT_TOPUP_${reason}`,
+        expect.any(String),
+        expect.any(Number),
+      );
+    },
+  );
+
+  it("refuses top-up amounts that are not whole currency units", async () => {
+    mockMutationResults({});
+    const fakeGateway = gateway();
+    const service = new CreditTopupService(
+      env(),
+      creditService() as never,
+      fakeGateway,
+    );
+
+    await expect(
+      service.createIntent({
+        publicId: "card-public-1",
+        amountCents: 1550,
+        currency: "TWD",
+      }),
+    ).rejects.toMatchObject({ code: "CREDIT_TOPUP_AMOUNT_NOT_ALIGNED" });
+    await expect(
+      service.createIntent({
+        publicId: "card-public-1",
+        amountCents: 1500,
+        currency: "USD",
+      }),
+    ).rejects.toMatchObject({ code: "CREDIT_CURRENCY_UNSUPPORTED" });
+    expect(fakeGateway.createCharge).not.toHaveBeenCalled();
+    expect(mocks.db.select).not.toHaveBeenCalled();
   });
 
   it("guards confirmation identifiers and reads intents by id", async () => {
@@ -443,10 +550,40 @@ describe("Credit top-up gateway helpers", () => {
         intentId: "intent-1",
         publicId: "card-public-1",
         amountCents: 1000,
+        amountMinor: 1000,
+        currencyExponent: 2,
         currency: "TWD",
         idempotencyKey: "credit-topup:intent-1",
       }),
     ).rejects.toMatchObject({ code: "CREDIT_TOPUP_NOT_CONFIGURED" });
+  });
+
+  it("calls the injected fetch unbound, as workerd requires", async () => {
+    function strictFetch(this: unknown) {
+      if (this !== undefined && this !== globalThis) {
+        throw new TypeError("Illegal invocation");
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ providerTransactionId: "txn-1" })),
+      );
+    }
+
+    await expect(
+      new HttpCreditTopupGateway(
+        "https://pay.example.test/topups",
+        undefined,
+        undefined,
+        strictFetch as unknown as typeof fetch,
+      ).createCharge({
+        intentId: "intent-1",
+        publicId: "card-public-1",
+        amountCents: 1000,
+        amountMinor: 1000,
+        currencyExponent: 2,
+        currency: "TWD",
+        idempotencyKey: "credit-topup:intent-1",
+      }),
+    ).resolves.toMatchObject({ providerTransactionId: "txn-1" });
   });
 
   it("posts signed HTTP charge requests and normalizes gateway responses", async () => {
@@ -475,6 +612,8 @@ describe("Credit top-up gateway helpers", () => {
         intentId: "intent-1",
         publicId: "card-public-1",
         amountCents: 1000,
+        amountMinor: 1000,
+        currencyExponent: 2,
         currency: "TWD",
         idempotencyKey: "credit-topup:intent-1",
       }),
@@ -498,6 +637,8 @@ describe("Credit top-up gateway helpers", () => {
           intentId: "intent-1",
           publicId: "card-public-1",
           amountCents: 1000,
+          amountMinor: 1000,
+          currencyExponent: 2,
           currency: "TWD",
           idempotencyKey: "credit-topup:intent-1",
         }),
@@ -516,6 +657,8 @@ describe("Credit top-up gateway helpers", () => {
         intentId: "intent-1",
         publicId: "card-public-1",
         amountCents: 1000,
+        amountMinor: 1000,
+        currencyExponent: 2,
         currency: "TWD",
         idempotencyKey: "credit-topup:intent-1",
       }),
@@ -533,6 +676,8 @@ describe("Credit top-up gateway helpers", () => {
         intentId: "intent-1",
         publicId: "card-public-1",
         amountCents: 1000,
+        amountMinor: 1000,
+        currencyExponent: 2,
         currency: "TWD",
         idempotencyKey: "credit-topup:intent-1",
       }),

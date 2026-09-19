@@ -928,8 +928,9 @@ describe("Market checkouts API - real integration", () => {
       paidAmountCents: 17500,
       settlement: {
         platformFeeRateBps: 350,
-        platformFeeCents: 683,
-        vendorNetAmountCents: 18817,
+        // Fees round to whole NT$ per vendor: NT$4.03 -> NT$4, NT$2.80 -> NT$3.
+        platformFeeCents: 700,
+        vendorNetAmountCents: 18800,
         vendorAllocations: [
           expect.objectContaining({
             restaurantId: String(vendorA.id),
@@ -938,8 +939,8 @@ describe("Market checkouts API - real integration", () => {
             platformDiscountCents: 1200,
             vendorDiscountCents: 500,
             settlementBaseCents: 11500,
-            platformFeeCents: 403,
-            netAmountCents: 11097,
+            platformFeeCents: 400,
+            netAmountCents: 11100,
           }),
           expect.objectContaining({
             restaurantId: String(vendorB.id),
@@ -948,8 +949,8 @@ describe("Market checkouts API - real integration", () => {
             platformDiscountCents: 800,
             vendorDiscountCents: 0,
             settlementBaseCents: 8000,
-            platformFeeCents: 280,
-            netAmountCents: 7720,
+            platformFeeCents: 300,
+            netAmountCents: 7700,
           }),
         ],
       },
@@ -973,8 +974,8 @@ describe("Market checkouts API - real integration", () => {
     expect(accountingCsv).toContain(
       ",5000,discounts_contra_revenue,debit,800,",
     );
-    expect(accountingCsv).toContain(",2200,vendor_payable,credit,11097,");
-    expect(accountingCsv).toContain(",2200,vendor_payable,credit,7720,");
+    expect(accountingCsv).toContain(",2200,vendor_payable,credit,11100,");
+    expect(accountingCsv).toContain(",2200,vendor_payable,credit,7700,");
 
     const platformUsage = await testApp.testDb.drizzle
       .select()

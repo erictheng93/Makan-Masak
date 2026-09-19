@@ -12,12 +12,17 @@ import {
   createTestDatabase,
   type TestDatabase,
 } from "@makanmasak/database/testing";
-import { creditLedgerEntries } from "@makanmasak/database";
+import {
+  creditLedgerEntries,
+  creditTopupIntents,
+  paymentAuditLog,
+} from "@makanmasak/database";
 import { eq } from "drizzle-orm";
 import type { Env } from "../../types/env";
 import { CreditService } from "../../features/credits/services/CreditService";
 import {
   CreditTopupService,
+  HttpCreditTopupGateway,
   hmacSha256Hex,
   type CreditTopupGateway,
   type CreditTopupGatewayInput,
@@ -106,6 +111,8 @@ describe("CreditTopupService — intent lifecycle", () => {
     const first = await service.confirmIntent({
       intentId: intent.id,
       status: "paid",
+      paidAmountCents: 5000,
+      paidCurrency: "TWD",
     });
     expect(first).toMatchObject({ credited: true, balanceAfterCents: 5000 });
     expect(await balanceOf(card.publicId)).toBe(5000);
@@ -113,6 +120,8 @@ describe("CreditTopupService — intent lifecycle", () => {
     const replay = await service.confirmIntent({
       intentId: intent.id,
       status: "paid",
+      paidAmountCents: 5000,
+      paidCurrency: "TWD",
     });
     expect(replay.alreadyProcessed).toBe(true);
     expect(await balanceOf(card.publicId)).toBe(5000); // credited once
@@ -184,7 +193,12 @@ describe("CreditTopupWebhookService — signature + idempotency", () => {
       currency: "TWD",
     });
 
-    const body = JSON.stringify({ intentId: intent.id, status: "paid" });
+    const body = JSON.stringify({
+      intentId: intent.id,
+      status: "paid",
+      amountCents: 8000,
+      currency: "TWD",
+    });
     const result = await new CreditTopupWebhookService(buildEnv()).handle(
       body,
       await signedHeaders(body),
@@ -260,7 +274,12 @@ describe("CreditTopupWebhookService — signature + idempotency", () => {
       currency: "TWD",
     });
 
-    const body = JSON.stringify({ intentId: intent.id, status: "paid" });
+    const body = JSON.stringify({
+      intentId: intent.id,
+      status: "paid",
+      amountCents: 8000,
+      currency: "TWD",
+    });
     const webhook = new CreditTopupWebhookService(buildEnv());
 
     const first = await webhook.handle(body, await signedHeaders(body));
@@ -269,5 +288,156 @@ describe("CreditTopupWebhookService — signature + idempotency", () => {
     expect(first.credited).toBe(true);
     expect(second.duplicate).toBe(true);
     expect(await balanceOf(card.publicId)).toBe(8000); // credited once
+  });
+});
+
+/**
+ * The whole online top-up path against a fake provider at the HTTP boundary:
+ * the core posts the charge to the provider URL (a stubbed fetch standing in
+ * for the adapter), the adapter's signed webhook comes back, and only a
+ * webhook whose amount and currency match the intent credits the balance.
+ */
+describe("online top-up through a fake HTTP provider", () => {
+  async function startTopup(
+    currency: "TWD" | "MYR" | "VND",
+    amountCents: number,
+  ) {
+    const env = buildEnv();
+    const card = await new CreditService(env).issueCard({ currency });
+    const requests: Array<Record<string, unknown>> = [];
+    const fetcher = (async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      requests.push(body);
+      return new Response(
+        JSON.stringify({
+          providerTransactionId: `fake-${String(body.intentId)}`,
+          status: "requires_action",
+          nextAction: { type: "redirect", redirectUrl: "https://fake.pay/x" },
+        }),
+      );
+    }) as typeof fetch;
+    const service = new CreditTopupService(
+      env,
+      new CreditService(env),
+      new HttpCreditTopupGateway(
+        "https://fake-provider.test/topups",
+        undefined,
+        undefined,
+        fetcher,
+      ),
+    );
+    const { intent } = await service.createIntent({
+      publicId: card.publicId,
+      amountCents,
+      currency,
+    });
+    return { card, intent, requests };
+  }
+
+  async function deliver(body: Record<string, unknown>) {
+    const raw = JSON.stringify(body);
+    const timestamp = new Date().toISOString();
+    return new CreditTopupWebhookService(buildEnv()).handle(
+      raw,
+      new Headers({
+        "content-type": "application/json",
+        "x-credit-topup-signature": await hmacSha256Hex(
+          WEBHOOK_SECRET,
+          `${timestamp}.${raw}`,
+        ),
+        "x-credit-topup-signature-timestamp": timestamp,
+      }),
+    );
+  }
+
+  it.each([
+    ["TWD", 50000, 50000, 2],
+    ["MYR", 1250, 1250, 2],
+    ["VND", 10000000, 100000, 0],
+  ] as const)(
+    "%s: sends ISO minor units, refuses an underpaid webhook, credits the exact one",
+    async (currency, amountCents, amountMinor, currencyExponent) => {
+      const { card, intent, requests } = await startTopup(
+        currency,
+        amountCents,
+      );
+      expect(requests).toEqual([
+        expect.objectContaining({
+          intentId: intent.id,
+          amountCents,
+          amountMinor,
+          currencyExponent,
+          currency,
+        }),
+      ]);
+
+      const step = currency === "MYR" ? 1 : 100;
+      const underpaid = await deliver({
+        intentId: intent.id,
+        providerTransactionId: `fake-${intent.id}`,
+        status: "paid",
+        amountCents: amountCents - step,
+        currency,
+      });
+      expect(underpaid).toMatchObject({
+        credited: false,
+        reviewRequired: true,
+        reviewReason: "AMOUNT_MISMATCH",
+      });
+      expect(await balanceOf(card.publicId)).toBe(0);
+      const [held] = await testDb.drizzle
+        .select()
+        .from(creditTopupIntents)
+        .where(eq(creditTopupIntents.id, intent.id));
+      expect(held).toMatchObject({
+        status: "pending",
+        errorCode: "AMOUNT_MISMATCH",
+      });
+      const audit = await testDb.drizzle
+        .select()
+        .from(paymentAuditLog)
+        .where(eq(paymentAuditLog.paymentTransactionId, intent.id));
+      expect(audit).toEqual([
+        expect.objectContaining({
+          eventType: "failure",
+          amount: amountCents - step,
+          currency,
+          errorCode: "CREDIT_TOPUP_AMOUNT_MISMATCH",
+        }),
+      ]);
+
+      const paid = await deliver({
+        intentId: intent.id,
+        providerTransactionId: `fake-${intent.id}`,
+        status: "paid",
+        amountCents,
+        currency,
+      });
+      expect(paid).toMatchObject({ credited: true, status: "paid" });
+      expect(await balanceOf(card.publicId)).toBe(amountCents);
+    },
+  );
+
+  it("does not credit a webhook paid in another currency", async () => {
+    const { card, intent } = await startTopup("TWD", 50000);
+
+    const result = await deliver({
+      intentId: intent.id,
+      status: "paid",
+      amountCents: 50000,
+      currency: "MYR",
+    });
+
+    expect(result).toMatchObject({
+      credited: false,
+      reviewReason: "CURRENCY_MISMATCH",
+    });
+    expect(await balanceOf(card.publicId)).toBe(0);
+  });
+
+  it("refuses to start a top-up that is not a whole currency amount", async () => {
+    await expect(startTopup("TWD", 5050)).rejects.toMatchObject({
+      code: "CREDIT_TOPUP_AMOUNT_NOT_ALIGNED",
+    });
   });
 });

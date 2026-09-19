@@ -12,6 +12,10 @@ interface CreditTopupWebhookPayload {
   providerTransactionId?: string;
   provider_transaction_id?: string;
   status?: string;
+  /** Internal cents (major × 100). Required, with `currency`, on paid. */
+  amountCents?: number;
+  amount_cents?: number;
+  currency?: string;
   errorMessage?: string;
 }
 
@@ -21,6 +25,8 @@ export interface CreditTopupWebhookResult {
   intentId?: string;
   status?: "paid" | "failed";
   balanceAfterCents?: number;
+  reviewRequired?: boolean;
+  reviewReason?: string;
 }
 
 /**
@@ -60,6 +66,12 @@ export class CreditTopupWebhookService {
       intentId,
       providerTransactionId,
       status,
+      paidAmountCents:
+        typeof (payload.amountCents ?? payload.amount_cents) === "number"
+          ? (payload.amountCents ?? payload.amount_cents)
+          : undefined,
+      paidCurrency:
+        typeof payload.currency === "string" ? payload.currency : undefined,
       providerPayload: payload as unknown as Record<string, unknown>,
       errorMessage:
         typeof payload.errorMessage === "string"
@@ -73,6 +85,9 @@ export class CreditTopupWebhookService {
       intentId: result.intent.id,
       status,
       balanceAfterCents: result.balanceAfterCents,
+      ...(result.reviewRequired
+        ? { reviewRequired: true, reviewReason: result.reviewReason }
+        : {}),
     };
   }
 

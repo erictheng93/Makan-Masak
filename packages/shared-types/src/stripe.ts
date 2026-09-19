@@ -141,12 +141,10 @@ export const STRIPE_COUNTRY_METHODS = {
   VN: ["card", "alipay"],
 } as const;
 
-// Stripe 貨幣的最小單位
-export const STRIPE_CURRENCY_UNITS = {
-  TWD: 1, // 台幣：1 元 = 1 單位
-  MYR: 100, // 馬來西亞令吉：1 令吉 = 100 分
-  VND: 1, // 越南盾：1 盾 = 1 單位
-} as const;
+// Stripe amount units live in apps/api/src/shared/utils/provider-money.ts
+// (TWD and MYR are two-decimal in Stripe, VND is zero-decimal). The table that
+// used to sit here said TWD was zero-decimal, which would have charged 1/100
+// of every TWD amount; nothing imported it.
 
 export interface StripeCountryConfig {
   country: "TW" | "MY" | "VN";

@@ -71,6 +71,7 @@ export const mockMarketCheckoutProviderPaidResponse: MarketCheckoutProviderSplit
     providerTransactionId: "intent-market-checkout-1",
     status: "paid",
     authorizedAmountCents: 24000,
+    currency: "TWD",
     allocations: [
       {
         orderId: "101",

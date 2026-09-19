@@ -9,6 +9,11 @@ import type { Env } from "../../../types/env";
 import { ApiError } from "../../../shared/utils/api-error";
 import { timingSafeEqual } from "../../../shared/utils/timing-safe-equal";
 import { PaymentAuditService } from "../../billing/services/PaymentAuditService";
+import {
+  providerAmountToCents,
+  verifyProviderMoney,
+  type ProviderMoneyIssue,
+} from "../../../shared/utils/provider-money";
 import type { MarketCheckoutSplitMode } from "./MarketCheckoutPaymentProvider";
 import { redeemCachedMarketCheckoutVoucher } from "./MarketCheckoutVoucherService";
 
@@ -20,6 +25,25 @@ type MarketCheckoutWebhookStatus =
   | "refunded"
   | "partial_refunded";
 
+/**
+ * What arrives at `POST /market-checkouts/payment-webhooks/:provider`.
+ *
+ * Three shapes are accepted, and the route's `:provider` decides the unit of
+ * every provider-native amount field (see `shared/utils/provider-money.ts`):
+ *
+ * - Stripe events (`payment_intent.succeeded`, `charge.refunded`, ...):
+ *   `data.object.amount_received` / `amount_refunded` in Stripe's smallest
+ *   unit — for VND that is the whole dong, not cents.
+ * - LINE Pay confirm results forwarded by the adapter: `returnCode`,
+ *   `info.transactionId`, `info.payInfo[].amount` in whole TWD, plus the
+ *   `currency` the adapter sent in its confirm request (the confirm response
+ *   itself carries none).
+ * - Generic adapter events (`market_checkout.payment_*`): amounts in our
+ *   internal cents for every currency.
+ *
+ * `amount_cents` / `refunded_amount_cents` are always internal cents, whatever
+ * the provider.
+ */
 interface MarketCheckoutWebhookPayload {
   id?: string;
   type?: string;
@@ -28,15 +52,26 @@ interface MarketCheckoutWebhookPayload {
   amount_cents?: number;
   amount_received?: number;
   amount_refunded?: number;
+  refunded_amount_cents?: number;
   currency?: string;
+  returnCode?: string;
+  returnMessage?: string;
+  info?: {
+    orderId?: string;
+    transactionId?: string | number;
+    currency?: string;
+    payInfo?: Array<{ method?: string; amount?: number }>;
+  };
   data?: {
     object?: {
       id?: string;
+      object?: string;
       status?: string;
       amount?: number;
       amount_received?: number;
       amount_refunded?: number;
       currency?: string;
+      payment_intent?: string | null;
       metadata?: Record<string, unknown>;
     };
   };
@@ -73,6 +108,14 @@ export interface MarketCheckoutPaymentWebhookResult {
   checkoutId?: string;
   paymentId?: string;
   status?: MarketCheckoutWebhookStatus;
+  /**
+   * The provider reported money that does not match the payment row (wrong
+   * amount, wrong currency, or none at all). The row keeps its status, the
+   * event is recorded for review, and the request still answers 2xx so the
+   * provider stops redelivering an event that can never apply cleanly.
+   */
+  reviewRequired?: boolean;
+  reviewReason?: ProviderMoneyIssue["code"];
 }
 
 export class MarketCheckoutPaymentWebhookService {
@@ -90,9 +133,12 @@ export class MarketCheckoutPaymentWebhookService {
     await this.verifySignature(provider, rawBody, headers);
 
     const payload = JSON.parse(rawBody) as MarketCheckoutWebhookPayload;
-    const eventId = eventIdFrom(payload, headers);
+    // LINE Pay transaction ids are 19 digits — past 2^53, so JSON.parse has
+    // already rounded a numeric one. Recover the digits from the raw body.
+    const linePayTransactionId = linePayTransactionIdFrom(payload, rawBody);
+    const eventId = eventIdFrom(payload, headers, linePayTransactionId);
     const eventType = eventTypeFrom(payload, headers);
-    const status = statusFrom(payload, eventType);
+    let status = statusFrom(payload, eventType);
     if (!status) {
       return {
         provider,
@@ -103,7 +149,7 @@ export class MarketCheckoutPaymentWebhookService {
       };
     }
 
-    const identifiers = identifiersFrom(payload, headers);
+    const identifiers = identifiersFrom(payload, headers, linePayTransactionId);
     const audit = await new PaymentAuditService(this.env.DB).append({
       paymentTransactionId: identifiers.paymentId,
       eventType: PAYMENT_AUDIT_EVENT_TYPES.WEBHOOK_RECEIVED,
@@ -132,7 +178,32 @@ export class MarketCheckoutPaymentWebhookService {
     }
 
     const now = Date.now();
-    const amounts = amountsFrom(payload, row, status);
+    const settlement = settleWebhookMoney(provider, payload, row, status);
+    if (!settlement.ok) {
+      await this.holdForReview({
+        provider,
+        eventId,
+        eventType,
+        requestedStatus: status,
+        payload,
+        row,
+        settlement,
+        now,
+      });
+      return {
+        provider,
+        eventId,
+        eventType,
+        duplicate: false,
+        reconciled: false,
+        checkoutId: row.checkout_id,
+        paymentId: row.payment_id,
+        reviewRequired: true,
+        reviewReason: settlement.issue.code,
+      };
+    }
+    status = settlement.status;
+    const amounts = settlement;
     const providerTransactionId =
       identifiers.providerTransactionId ?? row.provider_transaction_id;
     const providerPayload = mergeProviderPayload(row.provider_payload, {
@@ -220,6 +291,71 @@ export class MarketCheckoutPaymentWebhookService {
       paymentId: row.payment_id,
       status,
     };
+  }
+
+  /**
+   * Record a webhook whose money does not match the payment row, without
+   * applying it: the payment keeps its status and amounts, `lastWebhook`
+   * carries `status: "review_required"` (which raises the
+   * `provider_amount_mismatch` operation alert), and a `failure` row lands in
+   * the payment audit log with what was reported and what was expected.
+   */
+  private async holdForReview(input: {
+    provider: string;
+    eventId: string | null;
+    eventType: string;
+    requestedStatus: MarketCheckoutWebhookStatus;
+    payload: MarketCheckoutWebhookPayload;
+    row: MarketCheckoutPaymentRow;
+    settlement: WebhookMoneyRejection;
+    now: number;
+  }) {
+    const { issue } = input.settlement;
+    await new PaymentAuditService(this.env.DB).append({
+      paymentTransactionId: input.row.payment_id,
+      eventType: PAYMENT_AUDIT_EVENT_TYPES.FAILURE,
+      provider: input.provider,
+      // The received event already owns (provider, eventId) in the unique
+      // index, so the review row needs its own key.
+      providerEventId: input.eventId ? `${input.eventId}:review` : null,
+      providerEventType: input.eventType,
+      amount: input.settlement.reportedCents ?? null,
+      currency:
+        typeof input.settlement.reportedCurrency === "string"
+          ? input.settlement.reportedCurrency
+          : null,
+      rawPayload: {
+        checkoutId: input.row.checkout_id,
+        requestedStatus: input.requestedStatus,
+        expectedAmountCents: input.settlement.expectedCents,
+        expectedCurrency: input.row.currency,
+        reportedAmountCents: input.settlement.reportedCents ?? null,
+        reportedCurrency: input.settlement.reportedCurrency ?? null,
+      },
+      errorCode: `MARKET_CHECKOUT_WEBHOOK_${issue.code}`,
+      errorMessage: issue.message,
+    });
+
+    await this.db
+      .update(marketCheckoutPayments)
+      .set({
+        providerPayload: mergeProviderPayload(input.row.provider_payload, {
+          lastWebhook: {
+            provider: input.provider,
+            eventId: input.eventId,
+            eventType: input.eventType,
+            status: "review_required",
+            requestedStatus: input.requestedStatus,
+            reviewReason: issue.code,
+            reviewMessage: issue.message,
+            receivedAt: new Date(input.now).toISOString(),
+            payload: input.payload,
+          },
+        }),
+        updatedAt: new Date(input.now),
+      })
+      .where(eq(marketCheckoutPayments.paymentId, input.row.payment_id))
+      .run();
   }
 
   private async findPayment(identifiers: {
@@ -403,13 +539,29 @@ const marketCheckoutPaymentRowSelection = {
   >`${marketCheckoutSessions.paymentSummary}`,
 };
 
-function eventIdFrom(payload: MarketCheckoutWebhookPayload, headers: Headers) {
+function eventIdFrom(
+  payload: MarketCheckoutWebhookPayload,
+  headers: Headers,
+  linePayTransactionId: string | undefined,
+) {
   return (
     headers.get("x-provider-event-id") ??
     payload.id ??
     payload.data?.object?.id ??
-    null
+    // A LINE Pay confirm result has no event id; one confirm per transaction.
+    (linePayTransactionId ? `linepay-confirm:${linePayTransactionId}` : null)
   );
+}
+
+function linePayTransactionIdFrom(
+  payload: MarketCheckoutWebhookPayload,
+  rawBody: string,
+): string | undefined {
+  const value = payload.info?.transactionId;
+  if (typeof value === "string" && value.length > 0) return value;
+  if (typeof value !== "number") return undefined;
+  const match = /"transactionId"\s*:\s*(\d+)/.exec(rawBody);
+  return match?.[1] ?? String(value);
 }
 
 function eventTypeFrom(
@@ -422,17 +574,27 @@ function eventTypeFrom(
 function identifiersFrom(
   payload: MarketCheckoutWebhookPayload,
   headers: Headers,
+  linePayTransactionId: string | undefined,
 ) {
   const metadata = {
     ...(payload.metadata ?? {}),
     ...(payload.data?.object?.metadata ?? {}),
   };
+  const object = payload.data?.object;
+  // A Stripe `charge.*` event carries the Charge (`ch_...`); the payment row
+  // holds the PaymentIntent id, which the charge names in `payment_intent`.
+  const stripeObjectTransactionId =
+    object?.object === "charge"
+      ? (stringValue(object.payment_intent) ?? object.id)
+      : object?.id;
 
   return {
     paymentId: stringValue(
       headers.get("x-market-payment-id") ??
         metadata.marketCheckoutPaymentId ??
-        metadata.market_checkout_payment_id,
+        metadata.market_checkout_payment_id ??
+        // The adapter sets LINE Pay's merchant `orderId` to the payment id.
+        payload.info?.orderId,
     ),
     checkoutId: stringValue(
       headers.get("x-market-checkout-id") ??
@@ -441,7 +603,8 @@ function identifiersFrom(
     ),
     providerTransactionId: stringValue(
       headers.get("x-provider-transaction-id") ??
-        payload.data?.object?.id ??
+        stripeObjectTransactionId ??
+        linePayTransactionId ??
         metadata.providerTransactionId ??
         metadata.provider_transaction_id,
     ),
@@ -484,6 +647,12 @@ function statusFrom(
     return "partial_refunded";
   }
 
+  // LINE Pay confirm: "0000" is the only success code. Anything else is left
+  // for status lookup to settle rather than guessed into "failed".
+  if (typeof payload.returnCode === "string" && payload.info) {
+    return payload.returnCode === "0000" ? "paid" : null;
+  }
+
   const rawStatus = (
     payload.status ??
     payload.data?.object?.status ??
@@ -499,45 +668,175 @@ function statusFrom(
   return null;
 }
 
-function amountsFrom(
+interface WebhookMoneySettlement {
+  ok: true;
+  status: MarketCheckoutWebhookStatus;
+  paidAmountCents: number;
+  refundedAmountCents: number;
+}
+
+interface WebhookMoneyRejection {
+  ok: false;
+  issue: ProviderMoneyIssue;
+  expectedCents: number;
+  reportedCents?: number;
+  reportedCurrency?: unknown;
+}
+
+/**
+ * Decide what a webhook does to the payment's money, or refuse it.
+ *
+ * A paid event must report exactly the row's amount in the row's currency; a
+ * refund event must report a cumulative refunded amount no larger than what
+ * was paid, and whether that is the whole payment decides between `refunded`
+ * and `partial_refunded` (Stripe sends `charge.refunded` for both). Missing
+ * money on either is a rejection, not a fallback to the expected amount.
+ */
+function settleWebhookMoney(
+  provider: string,
   payload: MarketCheckoutWebhookPayload,
   row: MarketCheckoutPaymentRow,
   status: MarketCheckoutWebhookStatus,
-) {
-  const payloadAmountCents =
-    numberValue(payload.amount_cents) ??
-    numberValue(payload.amount_received) ??
-    numberValue(payload.data?.object?.amount_received) ??
-    numberValue(payload.amount) ??
-    numberValue(payload.data?.object?.amount);
-  const refundedAmountCents =
-    numberValue(payload.amount_refunded) ??
-    numberValue(payload.data?.object?.amount_refunded);
-
-  if (status === "paid") {
+): WebhookMoneySettlement | WebhookMoneyRejection {
+  if (status === "failed") {
     return {
-      paidAmountCents: payloadAmountCents ?? row.amount_cents,
+      ok: true,
+      status,
+      paidAmountCents: row.paid_amount_cents,
       refundedAmountCents: row.refunded_amount_cents,
     };
   }
-  if (status === "refunded") {
+
+  if (status === "paid") {
+    const reported = reportedMoney(provider, payload, "paid");
+    const issue = firstMoneyIssue(
+      reported,
+      verifyProviderMoney({
+        expectedCents: row.amount_cents,
+        expectedCurrency: row.currency,
+        receivedCents: reported.cents,
+        receivedCurrency: reported.currency,
+      }),
+    );
+    if (issue) {
+      return {
+        ok: false,
+        issue,
+        expectedCents: row.amount_cents,
+        reportedCents: reported.cents,
+        reportedCurrency: reported.currency,
+      };
+    }
     return {
-      paidAmountCents: Math.max(row.paid_amount_cents, row.amount_cents),
-      refundedAmountCents: refundedAmountCents ?? row.amount_cents,
-    };
-  }
-  if (status === "partial_refunded") {
-    return {
-      paidAmountCents: Math.max(row.paid_amount_cents, row.amount_cents),
-      refundedAmountCents:
-        refundedAmountCents ?? Math.max(row.refunded_amount_cents, 0),
+      ok: true,
+      status,
+      paidAmountCents: row.amount_cents,
+      refundedAmountCents: row.refunded_amount_cents,
     };
   }
 
+  const paidCents =
+    row.paid_amount_cents > 0 ? row.paid_amount_cents : row.amount_cents;
+  const reported = reportedMoney(provider, payload, "refunded");
+  const issue =
+    firstMoneyIssue(
+      reported,
+      verifyProviderMoney({
+        expectedCents: paidCents,
+        expectedCurrency: row.currency,
+        receivedCents: reported.cents,
+        receivedCurrency: reported.currency,
+        mode: "at_most",
+      }),
+    ) ??
+    (reported.cents !== undefined && reported.cents <= 0
+      ? {
+          code: "AMOUNT_MISMATCH" as const,
+          message: "Provider reported a refund of nothing",
+        }
+      : null);
+  if (issue || reported.cents === undefined) {
+    return {
+      ok: false,
+      issue: issue ?? {
+        code: "AMOUNT_MISSING",
+        message: "Provider did not report an amount",
+      },
+      expectedCents: paidCents,
+      reportedCents: reported.cents,
+      reportedCurrency: reported.currency,
+    };
+  }
   return {
-    paidAmountCents: row.paid_amount_cents,
-    refundedAmountCents: row.refunded_amount_cents,
+    ok: true,
+    status: reported.cents === paidCents ? "refunded" : "partial_refunded",
+    paidAmountCents: paidCents,
+    refundedAmountCents: reported.cents,
   };
+}
+
+/**
+ * A currency problem is the most useful thing to tell a reviewer ("USD", not
+ * "Stripe cannot convert USD"), then a conversion failure, then the amount.
+ */
+function firstMoneyIssue(
+  reported: { issue?: ProviderMoneyIssue },
+  verification: ProviderMoneyIssue | null,
+): ProviderMoneyIssue | null {
+  if (verification?.code.startsWith("CURRENCY_")) return verification;
+  return reported.issue ?? verification;
+}
+
+/**
+ * The amount a webhook reports, converted to internal cents. Explicit
+ * `*_cents` fields are taken as internal cents; provider-native fields are
+ * converted with the provider's unit for the reported currency.
+ */
+function reportedMoney(
+  provider: string,
+  payload: MarketCheckoutWebhookPayload,
+  kind: "paid" | "refunded",
+): { cents?: number; currency?: unknown; issue?: ProviderMoneyIssue } {
+  const object = payload.data?.object;
+  const currency =
+    payload.currency ?? object?.currency ?? payload.info?.currency;
+
+  const explicitCents =
+    kind === "paid" ? payload.amount_cents : payload.refunded_amount_cents;
+  if (explicitCents !== undefined) {
+    return { cents: finiteNumber(explicitCents), currency };
+  }
+
+  const native =
+    kind === "paid"
+      ? (finiteNumber(payload.amount_received) ??
+        finiteNumber(object?.amount_received) ??
+        finiteNumber(payload.amount) ??
+        finiteNumber(object?.amount) ??
+        linePayPaidAmount(payload))
+      : (finiteNumber(payload.amount_refunded) ??
+        finiteNumber(object?.amount_refunded));
+  if (native === undefined) return { currency };
+
+  const converted = providerAmountToCents(provider, currency, native);
+  return converted.ok
+    ? { cents: converted.cents, currency }
+    : { currency, issue: converted.issue };
+}
+
+/** LINE Pay can split one payment across methods (points + card); sum them. */
+function linePayPaidAmount(
+  payload: MarketCheckoutWebhookPayload,
+): number | undefined {
+  const payInfo = payload.info?.payInfo;
+  if (!Array.isArray(payInfo) || payInfo.length === 0) return undefined;
+  let total = 0;
+  for (const entry of payInfo) {
+    const amount = finiteNumber(entry?.amount);
+    if (amount === undefined) return undefined;
+    total += amount;
+  }
+  return total;
 }
 
 function updatePaymentSummary(
@@ -558,7 +857,7 @@ function updatePaymentSummary(
     ...existing,
     status: input.status,
     method: existing.method ?? row.provider,
-    currency: existing.currency ?? row.currency ?? "TWD",
+    currency: row.currency ?? existing.currency ?? "TWD",
     country: existing.country ?? row.country_code ?? "TW",
     totalAmount: row.amount_cents / 100,
     totalAmountCents: row.amount_cents,
@@ -657,9 +956,13 @@ function stringValue(value: unknown): string | undefined {
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
-function numberValue(value: unknown): number | undefined {
+/**
+ * No rounding: a fractional amount is a unit error to be caught by
+ * verification, not smoothed over.
+ */
+function finiteNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value)
-    ? Math.round(value)
+    ? value
     : undefined;
 }
 

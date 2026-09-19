@@ -124,6 +124,7 @@ describe("MarketCheckoutVoucherService.computeDiscountCents", () => {
           maxDiscountAmountCents: null,
         },
         24000,
+        "TWD",
       ),
     ).toBe(2400);
   });
@@ -138,6 +139,7 @@ describe("MarketCheckoutVoucherService.computeDiscountCents", () => {
           maxDiscountAmountCents: null,
         },
         24000,
+        "TWD",
       ),
     ).toBe(3000);
   });
@@ -152,6 +154,7 @@ describe("MarketCheckoutVoucherService.computeDiscountCents", () => {
           maxDiscountAmountCents: 5000,
         },
         24000,
+        "TWD",
       ),
     ).toBe(5000);
   });
@@ -165,6 +168,7 @@ describe("MarketCheckoutVoucherService.computeDiscountCents", () => {
           maxDiscountAmountCents: null,
         },
         24000,
+        "TWD",
       ),
     ).toBe(3000);
   });
@@ -178,6 +182,7 @@ describe("MarketCheckoutVoucherService.computeDiscountCents", () => {
           maxDiscountAmountCents: null,
         },
         24000,
+        "TWD",
       ),
     ).toBe(24000);
   });
@@ -192,53 +197,147 @@ describe("MarketCheckoutVoucherService.computeDiscountCents", () => {
           maxDiscountAmountCents: null,
         },
         0,
+        "TWD",
       ),
     ).toBe(0);
   });
 });
 
+describe("MarketCheckoutVoucherService.computeDiscountCents currency precision", () => {
+  const percentage = (bps: number, max: number | null = null) => ({
+    discountType: "percentage" as const,
+    discountPercentageBps: bps,
+    discountValueCents: null,
+    maxDiscountAmountCents: max,
+  });
+
+  it("rounds a TWD percentage discount to whole dollars", () => {
+    // 15% of NT$103 = NT$15.45 -> NT$15; 15% of NT$117 = NT$17.55 -> NT$18.
+    expect(
+      MarketCheckoutVoucherService.computeDiscountCents(
+        percentage(1500),
+        10300,
+        "TWD",
+      ),
+    ).toBe(1500);
+    expect(
+      MarketCheckoutVoucherService.computeDiscountCents(
+        percentage(1500),
+        11700,
+        "TWD",
+      ),
+    ).toBe(1800);
+  });
+
+  it("keeps MYR sen", () => {
+    expect(
+      MarketCheckoutVoucherService.computeDiscountCents(
+        percentage(1500),
+        10300,
+        "MYR",
+      ),
+    ).toBe(1545);
+  });
+
+  it("rounds a VND percentage discount to whole dong", () => {
+    // 7% of ₫12,345 = ₫864.15 -> ₫864.
+    expect(
+      MarketCheckoutVoucherService.computeDiscountCents(
+        percentage(700),
+        1234500,
+        "VND",
+      ),
+    ).toBe(86400);
+  });
+
+  it("never gives more than an off-step cap or fixed value", () => {
+    expect(
+      MarketCheckoutVoucherService.computeDiscountCents(
+        percentage(5000, 1050),
+        24000,
+        "TWD",
+      ),
+    ).toBe(1000);
+    expect(
+      MarketCheckoutVoucherService.computeDiscountCents(
+        {
+          discountType: "fixed",
+          discountValueCents: 1050,
+          maxDiscountAmountCents: null,
+        },
+        24000,
+        "TWD",
+      ),
+    ).toBe(1000);
+  });
+});
+
 describe("MarketCheckoutVoucherService.splitDiscount", () => {
   it("splits proportionally by child amount", () => {
-    const allocations = MarketCheckoutVoucherService.splitDiscount(2400, [
-      { orderId: "1", amountCents: 16000 },
-      { orderId: "2", amountCents: 8000 },
-    ]);
+    const allocations = MarketCheckoutVoucherService.splitDiscount(
+      2400,
+      [
+        { orderId: "1", amountCents: 16000 },
+        { orderId: "2", amountCents: 8000 },
+      ],
+      "TWD",
+    );
     expect(allocations).toEqual([
       { orderId: "1", amountCents: 16000, discountCents: 1600 },
       { orderId: "2", amountCents: 8000, discountCents: 800 },
     ]);
   });
 
-  it("gives the rounding remainder to the largest child", () => {
-    // 1000 split over 3/3/4 -> floor 300/300/400 = 1000 (exact); use amounts
-    // that force a remainder: 100 over 333/333/334 of 1000.
-    const allocations = MarketCheckoutVoucherService.splitDiscount(100, [
-      { orderId: "1", amountCents: 333 },
-      { orderId: "2", amountCents: 333 },
-      { orderId: "3", amountCents: 334 },
-    ]);
-    const total = allocations.reduce((sum, a) => sum + a.discountCents, 0);
-    expect(total).toBe(100);
-    // largest child (order 3) absorbs the remainder
-    const largest = allocations.find((a) => a.orderId === "3")!;
-    expect(largest.discountCents).toBeGreaterThanOrEqual(34);
+  it("keeps every TWD share on whole dollars (no NT$33.33 shares)", () => {
+    // NT$100 over three equal stalls: 34 / 33 / 33, not 33.33 each.
+    const allocations = MarketCheckoutVoucherService.splitDiscount(
+      10000,
+      [
+        { orderId: "1", amountCents: 20000 },
+        { orderId: "2", amountCents: 20000 },
+        { orderId: "3", amountCents: 20000 },
+      ],
+      "TWD",
+    );
+    expect(allocations.map((a) => a.discountCents)).toEqual([3400, 3300, 3300]);
   });
 
-  it("always sums to the full discount", () => {
-    const allocations = MarketCheckoutVoucherService.splitDiscount(777, [
-      { orderId: "1", amountCents: 1234 },
-      { orderId: "2", amountCents: 5678 },
-      { orderId: "3", amountCents: 9012 },
-    ]);
+  it("splits VND on whole dong", () => {
+    const allocations = MarketCheckoutVoucherService.splitDiscount(
+      1000000,
+      [
+        { orderId: "1", amountCents: 6000000 },
+        { orderId: "2", amountCents: 3000000 },
+      ],
+      "VND",
+    );
+    expect(allocations.map((a) => a.discountCents)).toEqual([666700, 333300]);
+    expect(allocations.every((a) => a.discountCents % 100 === 0)).toBe(true);
+  });
+
+  it("always sums to the full discount (MYR keeps sen)", () => {
+    const allocations = MarketCheckoutVoucherService.splitDiscount(
+      777,
+      [
+        { orderId: "1", amountCents: 1234 },
+        { orderId: "2", amountCents: 5678 },
+        { orderId: "3", amountCents: 9012 },
+      ],
+      "MYR",
+    );
     const total = allocations.reduce((sum, a) => sum + a.discountCents, 0);
     expect(total).toBe(777);
   });
 
   it("assigns no discount when the subtotal is zero", () => {
-    const allocations = MarketCheckoutVoucherService.splitDiscount(500, [
-      { orderId: "1", amountCents: 0 },
-      { orderId: "2", amountCents: 0 },
-    ]);
+    const allocations = MarketCheckoutVoucherService.splitDiscount(
+      500,
+      [
+        { orderId: "1", amountCents: 0 },
+        { orderId: "2", amountCents: 0 },
+      ],
+      "TWD",
+    );
     expect(allocations.every((a) => a.discountCents === 0)).toBe(true);
   });
 });
@@ -495,6 +594,7 @@ describe("MarketCheckoutVoucherService.validateAndPrice", () => {
       service.validateAndPrice({
         code: "today",
         subtotalCents: 1000,
+        currency: "TWD" as const,
         childOrders: [
           { orderId: "1", restaurantId: "rest-1", amountCents: 1000 },
         ],
@@ -534,6 +634,7 @@ describe("MarketCheckoutVoucherService.validateAndPrice", () => {
       service.validateAndPrice({
         code: "later-today",
         subtotalCents: 1000,
+        currency: "TWD" as const,
         childOrders: [
           { orderId: "1", restaurantId: "rest-1", amountCents: 1000 },
         ],
@@ -568,6 +669,7 @@ describe("MarketCheckoutVoucherService.validateAndPrice", () => {
       service.validateAndPrice({
         code: " save10 ",
         subtotalCents: 5000,
+        currency: "TWD" as const,
         childOrders: [
           { orderId: "1", restaurantId: "rest-1", amountCents: 3000 },
           { orderId: "2", restaurantId: "rest-2", amountCents: 2000 },
@@ -610,6 +712,7 @@ describe("MarketCheckoutVoucherService.validateAndPrice", () => {
       service.validateAndPrice({
         code: "shop50",
         subtotalCents: 7000,
+        currency: "TWD" as const,
         childOrders: [
           { orderId: "1", restaurantId: "rest-1", amountCents: 3000 },
           { orderId: "2", restaurantId: "rest-2", amountCents: 4000 },
@@ -633,6 +736,7 @@ describe("MarketCheckoutVoucherService.validateAndPrice", () => {
       makeValidateUnitService(null, {}).validateAndPrice({
         code: "",
         subtotalCents: 1000,
+        currency: "TWD" as const,
         childOrders: [{ orderId: "1", amountCents: 1000 }],
       }),
     ).rejects.toMatchObject({ code: "VOUCHER_CODE_REQUIRED" });
@@ -641,6 +745,7 @@ describe("MarketCheckoutVoucherService.validateAndPrice", () => {
       makeValidateUnitService(null).validateAndPrice({
         code: "missing",
         subtotalCents: 1000,
+        currency: "TWD" as const,
         childOrders: [{ orderId: "1", amountCents: 1000 }],
       }),
     ).rejects.toMatchObject({ code: "VOUCHER_NOT_FOUND" });
@@ -665,6 +770,7 @@ describe("MarketCheckoutVoucherService.validateAndPrice", () => {
       }).validateAndPrice({
         code: "old",
         subtotalCents: 1000,
+        currency: "TWD" as const,
         childOrders: [{ orderId: "1", amountCents: 1000 }],
       }),
     ).rejects.toMatchObject({ code: "VOUCHER_EXPIRED" });
@@ -697,6 +803,7 @@ describe("MarketCheckoutVoucherService.validateAndPrice", () => {
     const checkout = {
       code: "tonight",
       subtotalCents: 1000,
+      currency: "TWD" as const,
       childOrders: [
         { orderId: "1", restaurantId: "rest-1", amountCents: 1000 },
       ],

@@ -128,6 +128,8 @@ The request body is:
   "currency": "TWD",
   "idempotencyKey": "market-checkout:checkout-1",
   "amountCents": 24000,
+  "amountMinor": 24000,
+  "currencyExponent": 2,
   "customerInfo": {
     "name": "Customer",
     "email": "customer@example.test",
@@ -143,24 +145,42 @@ The request body is:
       "restaurantName": "Chicken Stall",
       "orderId": 101,
       "orderNumber": "A001",
-      "amountCents": 16000
+      "amountCents": 16000,
+      "amountMinor": 16000
     },
     {
       "restaurantId": "restaurant-2",
       "restaurantName": "Dessert Stall",
       "orderId": 102,
       "orderNumber": "A002",
-      "amountCents": 8000
+      "amountCents": 8000,
+      "amountMinor": 8000
     }
   ]
 }
 ```
 
+Money units (binding; full table in
+`docs/runbooks/market-checkout-provider-adapter-handoff.md#money-units`):
+
+- `amountCents` is MakanMasak's internal unit: major units × 100 for **every**
+  currency. NT$240 = 24000, RM12.50 = 1250, ₫100,000 = 10000000.
+- `amountMinor` + `currencyExponent` is the same amount in ISO 4217 minor
+  units (TWD 2, MYR 2, VND 0). ₫100,000 is `amountMinor: 100000,
+  currencyExponent: 0`.
+- Never pass `amountCents` to a gateway as-is. Stripe takes `amountMinor`;
+  LINE Pay / ECPay / NewebPay take `amountMinor / 10^currencyExponent` (whole
+  TWD).
+- The core refuses to send an amount that is not on the currency's step (TWD
+  and VND whole units), so `amountMinor / 10^currencyExponent` is always an
+  integer for a whole-unit gateway.
+
 Provider requirements:
 
 - Treat `idempotencyKey` as stable for retries of the same market checkout
   payment attempt.
-- Authorize exactly `amountCents`.
+- Authorize exactly the amount described by `amountCents` (equivalently
+  `amountMinor` at `currencyExponent`) in `currency`.
 - Preserve enough metadata to send a webhook with at least one of:
   `marketCheckoutPaymentId`, `marketCheckoutId`, or provider transaction ID.
 - Return one allocation per child order when the payment is immediately paid.
@@ -177,6 +197,7 @@ Immediate paid response:
   "providerTransactionId": "intent-market-1",
   "status": "paid",
   "authorizedAmountCents": 24000,
+  "currency": "TWD",
   "allocations": [
     {
       "orderId": 101,
@@ -216,7 +237,10 @@ Response validation:
 
 - `provider` must be a non-empty string.
 - `providerTransactionId` must be a non-empty string.
-- `authorizedAmountCents` must be a number.
+- `authorizedAmountCents` must be a number, in internal cents.
+- For paid responses, `authorizedAmountCents` must equal the request's
+  `amountCents` and `currency` must equal the request's `currency`; anything
+  else fails the payment.
 - `status` may be `paid`, `pending`, or `requires_action`.
 - For paid responses, allocation amounts must match child order totals and each
   child order must appear once.
@@ -285,6 +309,22 @@ LINE Pay-compatible callbacks may use `x-linepay-nonce` and
 <secret><raw JSON body><nonce>
 ```
 
+Amounts in callbacks (see the runbook's money-units table):
+
+- Generic `market_checkout.payment_*` events carry internal cents
+  (`amount_cents` / `amount_received`, `refunded_amount_cents` /
+  `amount_refunded`) plus `currency`.
+- Stripe events posted to `/payment-webhooks/stripe` are read in Stripe's
+  unit for the object's `currency` (VND whole dong).
+- LINE Pay confirm results posted to `/payment-webhooks/linepay` are read in
+  whole TWD (`info.payInfo[].amount`, summed) and must carry the `currency` the
+  adapter confirmed.
+- A paid event must report exactly the payment's amount and currency; a
+  refund must not exceed what was paid. Otherwise the event is held for review
+  (payment status unchanged, `lastWebhook.status: "review_required"`, a
+  `failure` payment audit row, the `provider_amount_mismatch` alert) and the
+  endpoint still answers 2xx so the provider stops retrying.
+
 Generic paid callback:
 
 ```json
@@ -352,6 +392,8 @@ The request body is:
   "providerTransactionId": "intent-market-checkout-1",
   "idempotencyKey": "market-checkout:checkout-1",
   "amountCents": 24000,
+  "amountMinor": 24000,
+  "currencyExponent": 2,
   "currency": "TWD",
   "country": "TW"
 }
@@ -374,7 +416,11 @@ Expected response:
 ```
 
 Allowed `status` values are `pending`, `paid`, `failed`, `refunded`, and
-`partial_refunded`. Reconciliation updates `market_checkout_payments`,
+`partial_refunded`. `amountReceivedCents` / `amountRefundedCents` are internal
+cents and must be integers; `paid` requires `amountReceivedCents` equal to the
+payment and `currency` equal to its currency, and a refund status is settled by
+`amountRefundedCents` (whole payment → `refunded`, less → `partial_refunded`).
+A mismatch is held for review exactly like a webhook. Reconciliation updates `market_checkout_payments`,
 `market_checkout_sessions`, cached checkout session KV, and cached admin index
 KV. The raw provider response is stored under
 `provider_payload.lastReconciliation`.
@@ -403,6 +449,8 @@ The request body is:
   "providerTransactionId": "intent-market-checkout-1",
   "idempotencyKey": "market-checkout:checkout-1:refund",
   "amountCents": 24000,
+  "amountMinor": 24000,
+  "currencyExponent": 2,
   "currency": "TWD",
   "reason": "customer_request",
   "allocations": [
@@ -411,7 +459,8 @@ The request body is:
       "restaurantName": "Chicken Stall",
       "orderId": 101,
       "orderNumber": "A001",
-      "amountCents": 16000
+      "amountCents": 16000,
+      "amountMinor": 16000
     }
   ]
 }
@@ -434,7 +483,12 @@ Expected response:
 ```
 
 Allowed refund `status` values are `refunded`, `partial_refunded`, `pending`,
-and `failed`. Future route-level integration must fail closed when
+and `failed`. A completed refund must report `currency` equal to the request's
+and an integer `refundedAmountCents` above zero and at most the requested
+`amountCents`; its amount, not its label, decides full vs partial. Otherwise the
+route answers `502 MARKET_CHECKOUT_PROVIDER_REFUND_MISMATCH` and records the
+response as `lastRefund.status: "review_required"` without touching the
+ledger. Future route-level integration must fail closed when
 `MARKET_CHECKOUT_PROVIDER_REFUND_URL` is missing for provider split payments.
 
 ## Health Check Contract

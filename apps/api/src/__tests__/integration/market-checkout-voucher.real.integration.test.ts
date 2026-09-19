@@ -189,6 +189,7 @@ describe("MarketCheckoutVoucherService — validateAndPrice", () => {
     await seedCoupon({ code: "MARKET10", discountPercentageBps: 1000 });
 
     const applied = await makeService().validateAndPrice({
+      currency: "TWD",
       code: "market10", // case-insensitive
       subtotalCents: 24000,
       childOrders: [
@@ -210,6 +211,7 @@ describe("MarketCheckoutVoucherService — validateAndPrice", () => {
 
     await expect(
       makeService().validateAndPrice({
+        currency: "TWD",
         code: "SHOPONLY",
         subtotalCents: 24000,
         childOrders: [{ orderId: "101", amountCents: 24000 }],
@@ -222,6 +224,7 @@ describe("MarketCheckoutVoucherService — validateAndPrice", () => {
 
     await expect(
       makeService().validateAndPrice({
+        currency: "TWD",
         code: "MIN500",
         subtotalCents: 24000,
         childOrders: [{ orderId: "101", amountCents: 24000 }],
@@ -234,6 +237,7 @@ describe("MarketCheckoutVoucherService — validateAndPrice", () => {
 
     await expect(
       makeService().validateAndPrice({
+        currency: "TWD",
         code: "ONEUSE",
         subtotalCents: 24000,
         childOrders: [{ orderId: "101", amountCents: 24000 }],
@@ -249,6 +253,7 @@ describe("MarketCheckoutVoucherService — validateAndPrice", () => {
 
     await expect(
       makeService().validateAndPrice({
+        currency: "TWD",
         code: "OLD",
         subtotalCents: 24000,
         childOrders: [{ orderId: "101", amountCents: 24000 }],
@@ -259,6 +264,7 @@ describe("MarketCheckoutVoucherService — validateAndPrice", () => {
   it("rejects an unknown code", async () => {
     await expect(
       makeService().validateAndPrice({
+        currency: "TWD",
         code: "NOPE",
         subtotalCents: 24000,
         childOrders: [{ orderId: "101", amountCents: 24000 }],
@@ -279,6 +285,7 @@ describe("MarketCheckoutVoucherService — redeem", () => {
     const service = makeService();
 
     const applied = await service.validateAndPrice({
+      currency: "TWD",
       code: "MARKET10",
       subtotalCents: 24000,
       childOrders: [
@@ -318,6 +325,7 @@ describe("MarketCheckoutVoucherService — redeem", () => {
     await seedOrder("102", 8000);
     const service = makeService();
     const applied = await service.validateAndPrice({
+      currency: "TWD",
       code: "MARKET10",
       subtotalCents: 24000,
       childOrders: [
@@ -343,6 +351,7 @@ describe("MarketCheckoutVoucherService — redeem", () => {
     await seedOrder("102", 8000);
     const service = makeService();
     const applied = await service.validateAndPrice({
+      currency: "TWD",
       code: "MARKET10",
       subtotalCents: 24000,
       childOrders: [
@@ -372,6 +381,7 @@ describe("MarketCheckoutVoucherService — redeem", () => {
     await seedMarketCheckout("checkout-partial", ["101", "102"]);
     const service = makeService();
     const applied = await service.validateAndPrice({
+      currency: "TWD",
       code: "PARTIAL10",
       subtotalCents: 24000,
       childOrders: [

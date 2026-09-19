@@ -83,6 +83,7 @@
           <option value="provider_status_mismatch">狀態不一致</option>
           <option value="provider_refund_pending">退款處理中</option>
           <option value="provider_refund_failed">退款失敗</option>
+          <option value="provider_amount_mismatch">金額不符待審</option>
         </select>
         <input
           v-model="dateFrom"
@@ -235,7 +236,7 @@
               <div class="mt-1 text-xs text-gray-500">/{{ market.slug }}</div>
             </div>
             <div class="text-right text-sm font-semibold text-gray-900">
-              {{ formatCents(market.subtotalCents) }}
+              {{ formatMoneyCents(market.subtotalCents, market.currency) }}
             </div>
           </div>
           <div class="mt-3 flex flex-wrap gap-2 text-xs text-gray-600">
@@ -245,10 +246,14 @@
             <span
               class="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700"
             >
-              已收 {{ formatCents(market.paidAmountCents) }}
+              已收
+              {{ formatMoneyCents(market.paidAmountCents, market.currency) }}
             </span>
             <span class="rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">
-              已退 {{ formatCents(market.refundedAmountCents) }}
+              已退
+              {{
+                formatMoneyCents(market.refundedAmountCents, market.currency)
+              }}
             </span>
           </div>
         </article>
@@ -294,26 +299,32 @@
                 {{ vendor.childOrderCount }}
               </td>
               <td class="whitespace-nowrap px-4 py-3">
-                {{ formatCents(vendor.subtotalCents) }}
+                {{ formatMoneyCents(vendor.subtotalCents, vendor.currency) }}
               </td>
               <td class="whitespace-nowrap px-4 py-3 text-emerald-700">
-                {{ formatCents(vendor.paidAmountCents) }}
+                {{ formatMoneyCents(vendor.paidAmountCents, vendor.currency) }}
               </td>
               <td class="whitespace-nowrap px-4 py-3 text-slate-700">
-                {{ formatCents(vendor.refundedAmountCents) }}
+                {{
+                  formatMoneyCents(vendor.refundedAmountCents, vendor.currency)
+                }}
               </td>
               <td
                 class="whitespace-nowrap px-4 py-3 font-semibold text-gray-900"
               >
-                {{ formatCents(vendor.netPaidAmountCents) }}
+                {{
+                  formatMoneyCents(vendor.netPaidAmountCents, vendor.currency)
+                }}
               </td>
               <td class="whitespace-nowrap px-4 py-3 text-gray-700">
-                {{ formatCents(vendor.platformFeeCents) }}
+                {{ formatMoneyCents(vendor.platformFeeCents, vendor.currency) }}
               </td>
               <td
                 class="whitespace-nowrap px-4 py-3 font-semibold text-primary-700"
               >
-                {{ formatCents(vendor.vendorNetAmountCents) }}
+                {{
+                  formatMoneyCents(vendor.vendorNetAmountCents, vendor.currency)
+                }}
               </td>
               <td class="whitespace-nowrap pl-4 py-3 text-gray-600">
                 {{ vendor.failedPaymentCount }} 失敗 /
@@ -389,7 +400,7 @@
           <div>
             <div class="text-xs text-gray-500">總額</div>
             <div class="mt-1 text-sm font-semibold text-gray-900">
-              {{ formatCents(checkout.subtotal) }}
+              {{ formatMoneyCents(checkout.subtotal, checkout.currency) }}
             </div>
           </div>
           <div>
@@ -432,10 +443,17 @@
             v-if="selectedCheckout.payment"
             class="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700"
           >
-            已付款 {{ selectedCheckout.payment.paidAmount }} /
-            {{ selectedCheckout.payment.totalAmount }}
+            已付款
+            {{ formatCheckoutCents(selectedCheckout.payment.paidAmountCents) }}
+            /
+            {{ formatCheckoutCents(selectedCheckout.payment.totalAmountCents) }}
             <span v-if="selectedCheckout.payment.refundedAmount">
-              · 已退 {{ selectedCheckout.payment.refundedAmount }}
+              · 已退
+              {{
+                formatCheckoutCents(
+                  selectedCheckout.payment.refundedAmountCents ?? 0,
+                )
+              }}
             </span>
           </div>
           <button
@@ -489,7 +507,7 @@
           <span class="rounded-full bg-gray-100 px-2.5 py-1">
             已收
             {{
-              formatCents(
+              formatCheckoutCents(
                 selectedCheckout.payment.parentPayment.paidAmountCents,
               )
             }}
@@ -497,7 +515,7 @@
           <span class="rounded-full bg-slate-100 px-2.5 py-1">
             已退
             {{
-              formatCents(
+              formatCheckoutCents(
                 selectedCheckout.payment.parentPayment.refundedAmountCents,
               )
             }}
@@ -544,8 +562,8 @@
             {{ selectedCheckout.payment.parentPayment.lastWebhook.eventType }}
             ·
             {{
-              webhookStatusLabel(
-                selectedCheckout.payment.parentPayment.lastWebhook.status,
+              providerEventStatusLabel(
+                selectedCheckout.payment.parentPayment.lastWebhook,
               )
             }}
             ·
@@ -585,9 +603,8 @@
             }}
             ·
             {{
-              webhookStatusLabel(
-                selectedCheckout.payment.parentPayment.lastReconciliation
-                  .status,
+              providerEventStatusLabel(
+                selectedCheckout.payment.parentPayment.lastReconciliation,
               )
             }}
             ·
@@ -625,8 +642,8 @@
             {{ selectedCheckout.payment.parentPayment.lastRefund.eventType }}
             ·
             {{
-              webhookStatusLabel(
-                selectedCheckout.payment.parentPayment.lastRefund.status,
+              providerEventStatusLabel(
+                selectedCheckout.payment.parentPayment.lastRefund,
               )
             }}
             ·
@@ -693,7 +710,7 @@
               }}
               · 平台費
               {{
-                formatCents(
+                formatCheckoutCents(
                   selectedCheckout.payment.settlement.platformFeeCents,
                 )
               }}
@@ -702,7 +719,7 @@
           <div class="text-sm font-semibold text-gray-900">
             攤位淨收
             {{
-              formatCents(
+              formatCheckoutCents(
                 selectedCheckout.payment.settlement.vendorNetAmountCents,
               )
             }}
@@ -734,18 +751,18 @@
                   {{ allocation.orderNumber }}
                 </td>
                 <td class="whitespace-nowrap px-4 py-3 text-emerald-700">
-                  {{ formatCents(allocation.grossAmountCents) }}
+                  {{ formatCheckoutCents(allocation.grossAmountCents) }}
                 </td>
                 <td class="whitespace-nowrap px-4 py-3 text-slate-700">
-                  {{ formatCents(allocation.refundedAmountCents) }}
+                  {{ formatCheckoutCents(allocation.refundedAmountCents) }}
                 </td>
                 <td class="whitespace-nowrap px-4 py-3 text-gray-700">
-                  {{ formatCents(allocation.platformFeeCents) }}
+                  {{ formatCheckoutCents(allocation.platformFeeCents) }}
                 </td>
                 <td
                   class="whitespace-nowrap pl-4 py-3 font-semibold text-gray-900"
                 >
-                  {{ formatCents(allocation.netAmountCents) }}
+                  {{ formatCheckoutCents(allocation.netAmountCents) }}
                 </td>
               </tr>
             </tbody>
@@ -805,7 +822,7 @@
                   </span>
                 </td>
                 <td class="whitespace-nowrap px-4 py-3">
-                  {{ formatPrice(payment.amount) }}
+                  {{ formatCheckoutCents(payment.amountCents) }}
                 </td>
                 <td class="whitespace-nowrap px-4 py-3 text-xs text-gray-500">
                   {{ payment.paymentId || payment.refundId || "-" }}
@@ -837,7 +854,11 @@
               </p>
             </div>
             <div class="text-sm font-semibold text-gray-900">
-              {{ formatPrice(order.totalAmount) }}
+              {{
+                formatCheckoutCents(
+                  order.totalAmountCents ?? Math.round(order.totalAmount * 100),
+                )
+              }}
             </div>
           </div>
           <div class="mt-3 flex flex-wrap gap-2 text-xs">
@@ -874,6 +895,11 @@ import {
 } from "@/services/marketCheckoutsService";
 import { useI18n } from "@/i18n";
 import { useCurrency } from "@/composables/useCurrency";
+import {
+  CURRENCY_CONFIGS,
+  formatCurrency,
+  normalizeCurrencyCode,
+} from "@makanmasak/utils";
 import { useDateFormatter } from "@/composables/useDateFormatter";
 
 const { locale } = useI18n();
@@ -920,10 +946,34 @@ const summaryMetrics = computed(() => {
   const partialCount = summary.value.paymentStatusCounts.partial_paid ?? 0;
   return [
     { label: "Checkout", value: String(summary.value.totalCheckouts) },
-    { label: "GMV", value: formatCents(summary.value.totalSubtotalCents) },
-    { label: "已收", value: formatCents(summary.value.paidAmountCents) },
-    { label: "已退", value: formatCents(summary.value.refundedAmountCents) },
-    { label: "淨收", value: formatCents(summary.value.netPaidAmountCents) },
+    {
+      label: "GMV",
+      value: formatMoneyCents(
+        summary.value.totalSubtotalCents,
+        summary.value.currency,
+      ),
+    },
+    {
+      label: "已收",
+      value: formatMoneyCents(
+        summary.value.paidAmountCents,
+        summary.value.currency,
+      ),
+    },
+    {
+      label: "已退",
+      value: formatMoneyCents(
+        summary.value.refundedAmountCents,
+        summary.value.currency,
+      ),
+    },
+    {
+      label: "淨收",
+      value: formatMoneyCents(
+        summary.value.netPaidAmountCents,
+        summary.value.currency,
+      ),
+    },
     {
       label: "異常",
       value: String(failedCount + partialCount),
@@ -1222,6 +1272,15 @@ function paymentStatusLabel(status: MarketCheckoutPaymentStatus) {
   return labels[status];
 }
 
+/** Status of a provider event, with the reason when it was held for review. */
+function providerEventStatusLabel(event: {
+  status: string;
+  reviewReason?: string;
+}) {
+  const label = webhookStatusLabel(event.status);
+  return event.reviewReason ? `${label}（${event.reviewReason}）` : label;
+}
+
 function webhookStatusLabel(status: string) {
   const labels: Record<string, string> = {
     pending: "待付款",
@@ -1230,6 +1289,7 @@ function webhookStatusLabel(status: string) {
     failed: "付款失敗",
     refunded: "已退款",
     partial_refunded: "部分退款",
+    review_required: "金額不符待審",
   };
   return labels[status] ?? status;
 }
@@ -1245,7 +1305,7 @@ function providerPayloadSummaryLabel(
   const amount =
     amountCents === undefined
       ? undefined
-      : `${summary.currency ?? ""} ${formatProviderAmountCents(amountCents)}`.trim();
+      : `${summary.currency ?? ""} ${formatProviderAmountCents(amountCents, summary.currency)}`.trim();
   return [
     [identity, summary.status, amount].filter(Boolean).join(" · "),
     [summary.failureCode, summary.failureReason].filter(Boolean).join(" · "),
@@ -1257,11 +1317,17 @@ function providerPayloadSummaryLabel(
     .join(" · ");
 }
 
-function formatProviderAmountCents(value: number) {
+function formatProviderAmountCents(value: number, currency?: string) {
   // Plain grouped number, not money — the provider currency is rendered
-  // separately by the caller, so this must not carry a currency symbol.
+  // separately by the caller, so this must not carry a currency symbol. The
+  // server has already converted the provider's unit to internal cents; the
+  // decimals are the currency's own (RM12.50 keeps its sen, NT$ and ₫ have
+  // none), and an unknown currency shows two so nothing is rounded away.
+  const code = normalizeCurrencyCode(currency);
+  const decimals = code ? CURRENCY_CONFIGS[code].decimals : 2;
   return new Intl.NumberFormat(locale.value, {
-    maximumFractionDigits: 0,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   }).format(value / 100);
 }
 
@@ -1355,8 +1421,26 @@ function childPaymentClass(status: "paid" | "failed" | "refunded") {
   }[status];
 }
 
-function formatCents(value: number) {
-  return formatPrice(value / 100);
+/**
+ * Money in this view belongs to a checkout, a market or a vendor — not to the
+ * admin's active restaurant — so it is formatted in its own currency. `null`
+ * means the figure adds up checkouts in more than one currency, which has no
+ * single unit to show it in; `undefined` (no payment yet) falls back to the
+ * active currency.
+ */
+function formatMoneyCents(value: number, currency: string | null | undefined) {
+  if (currency === null) return "多幣別";
+  const code = normalizeCurrencyCode(currency);
+  return code ? formatCurrency(value / 100, code) : formatPrice(value / 100);
+}
+
+/** The selected checkout's money, in that checkout's currency. */
+function formatCheckoutCents(value: number) {
+  return formatMoneyCents(
+    value,
+    selectedCheckout.value?.payment?.currency ??
+      selectedCheckout.value?.currency,
+  );
 }
 
 function formatFeeRate(value: number) {

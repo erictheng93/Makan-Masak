@@ -24,6 +24,12 @@ import {
   marketCheckoutChildOrders,
   marketCheckoutSessions,
 } from "@makanmasak/database";
+import {
+  allocateCents,
+  currencyStepCents,
+  roundToCurrencyCents,
+  type CurrencyCode,
+} from "@makanmasak/utils";
 import type { Env } from "../../../types/env";
 import { badRequest, notFound } from "../../../shared/utils/api-error";
 import { fromCents, percentageFromBps } from "../../../shared/utils/money";
@@ -88,77 +94,70 @@ export class MarketCheckoutVoucherService {
 
   /**
    * Discount in cents for a coupon against a subtotal. Pure — unit tested.
-   * Percentage discounts honor `maxDiscountAmountCents`; everything clamps to
-   * the subtotal and floors at zero.
+   * Percentage discounts round on the currency's step (NT$ and ₫ are whole
+   * units) and honor `maxDiscountAmountCents`; a fixed or capped value is
+   * rounded *down* to the step so a voucher never gives more than it says;
+   * everything clamps to the subtotal and floors at zero.
    */
   static computeDiscountCents(
     coupon: NormalizedCoupon,
     subtotalCents: number,
+    currency: CurrencyCode,
   ): number {
     if (subtotalCents <= 0) return 0;
+    const step = currencyStepCents(currency);
+    const floorToStep = (cents: number) => Math.floor(cents / step) * step;
 
     let discountCents: number;
     if (coupon.discountType === "percentage") {
       const discountPercentage =
         percentageFromBps(coupon.discountPercentageBps) ?? 0;
-      discountCents = Math.round(subtotalCents * (discountPercentage / 100));
+      discountCents = roundToCurrencyCents(
+        subtotalCents * (discountPercentage / 100),
+        currency,
+      );
       if (
         coupon.maxDiscountAmountCents != null &&
         discountCents > coupon.maxDiscountAmountCents
       ) {
-        discountCents = coupon.maxDiscountAmountCents;
+        discountCents = floorToStep(coupon.maxDiscountAmountCents);
       }
     } else {
-      discountCents = coupon.discountValueCents ?? 0;
+      discountCents = floorToStep(coupon.discountValueCents ?? 0);
     }
 
-    return Math.max(0, Math.min(discountCents, subtotalCents));
+    return Math.max(0, Math.min(discountCents, floorToStep(subtotalCents)));
   }
 
   /**
-   * Split a total discount across child orders proportionally by amount. The
-   * largest child absorbs the rounding remainder so allocations always sum to
-   * the total discount. Pure — unit tested.
+   * Split a total discount across child orders in proportion to their
+   * amounts, every share on the currency's step and the shares summing
+   * exactly to the discount (largest remainder, ties to the earlier child).
+   * Pure — unit tested.
    */
   static splitDiscount(
     discountCents: number,
     childOrders: VoucherChildOrder[],
+    currency: CurrencyCode,
   ): VoucherAllocation[] {
     const subtotalCents = childOrders.reduce(
       (sum, child) => sum + child.amountCents,
       0,
     );
-    const allocations: VoucherAllocation[] = childOrders.map((child) => ({
+    const shares =
+      subtotalCents <= 0
+        ? childOrders.map(() => 0)
+        : allocateCents(
+            discountCents,
+            childOrders.map((child) => child.amountCents),
+            currency,
+          );
+
+    return childOrders.map((child, index) => ({
       orderId: child.orderId,
       amountCents: child.amountCents,
-      discountCents:
-        subtotalCents <= 0
-          ? 0
-          : Math.floor((discountCents * child.amountCents) / subtotalCents),
+      discountCents: shares[index],
     }));
-
-    const assigned = allocations.reduce(
-      (sum, alloc) => sum + alloc.discountCents,
-      0,
-    );
-    const remainder = discountCents - assigned;
-    if (remainder > 0 && subtotalCents > 0 && allocations.length > 0) {
-      // Give the remainder to the largest child order (deterministic tie-break
-      // by orderId so split is stable across retries).
-      let target = allocations[0];
-      for (const alloc of allocations) {
-        if (
-          alloc.amountCents > target.amountCents ||
-          (alloc.amountCents === target.amountCents &&
-            alloc.orderId < target.orderId)
-        ) {
-          target = alloc;
-        }
-      }
-      target.discountCents += remainder;
-    }
-
-    return allocations;
   }
 
   /**
@@ -168,6 +167,8 @@ export class MarketCheckoutVoucherService {
   async validateAndPrice(input: {
     code: string;
     subtotalCents: number;
+    /** The checkout's currency; discounts round on its step. */
+    currency: CurrencyCode;
     childOrders: VoucherChildOrder[];
   }): Promise<AppliedVoucher> {
     const code = input.code.trim().toUpperCase();
@@ -284,6 +285,7 @@ export class MarketCheckoutVoucherService {
         maxDiscountAmountCents: coupon.maxDiscountAmountCents,
       },
       applicableSubtotalCents,
+      input.currency,
     );
 
     if (discountCents <= 0) {
@@ -303,6 +305,7 @@ export class MarketCheckoutVoucherService {
       allocations: MarketCheckoutVoucherService.splitDiscount(
         discountCents,
         applicableChildOrders,
+        input.currency,
       ),
     };
   }

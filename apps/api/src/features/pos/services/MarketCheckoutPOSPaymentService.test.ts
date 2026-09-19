@@ -231,4 +231,49 @@ describe("MarketCheckoutPOSPaymentService", () => {
     ).rejects.toMatchObject({ code: "CURRENCY_MISMATCH", status: 400 });
     expect(env.CACHE_KV.put).not.toHaveBeenCalled();
   });
+
+  it.each([
+    // 3.5% of NT$120 = NT$4.20 -> NT$4; of NT$80 = NT$2.80 -> NT$3.
+    ["TWD", "TW", [400, 300], [11600, 7700]],
+    // MYR keeps sen: RM4.20 and RM2.80.
+    ["MYR", "MY", [420, 280], [11580, 7720]],
+  ] as const)(
+    "rounds each vendor's platform fee on the %s step",
+    async (currency, country, fees, nets) => {
+      resolveSharedRestaurantCurrency.mockResolvedValueOnce(currency);
+      const { env } = createEnv();
+
+      const result = await new MarketCheckoutPOSPaymentService(env).process({
+        checkoutId: "checkout-1",
+        registerId: "22222222-2222-4222-8222-222222222222",
+        shiftId: "11111111-1111-4111-8111-111111111111",
+        paymentMethod: "cash",
+        country,
+        currency,
+        operatorId: "user-7",
+        operatorRole: 4,
+        operatorRestaurantId: "restaurant-1",
+        idempotencyKey: `pos-checkout-${currency}`,
+      });
+
+      const settlement = (
+        result.payment as {
+          settlement: {
+            platformFeeCents: number;
+            vendorAllocations: Array<{
+              platformFeeCents: number;
+              netAmountCents: number;
+            }>;
+          };
+        }
+      ).settlement;
+      expect(
+        settlement.vendorAllocations.map((a) => a.platformFeeCents),
+      ).toEqual(fees);
+      expect(settlement.vendorAllocations.map((a) => a.netAmountCents)).toEqual(
+        nets,
+      );
+      expect(settlement.platformFeeCents).toBe(fees[0] + fees[1]);
+    },
+  );
 });

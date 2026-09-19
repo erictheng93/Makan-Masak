@@ -18,7 +18,11 @@ import {
   notFound,
 } from "../../../shared/utils/api-error";
 import { fromCents } from "../../../shared/utils/money";
-import { generateUUID } from "@makanmasak/utils";
+import {
+  generateUUID,
+  roundToCurrencyCents,
+  type CurrencyCode,
+} from "@makanmasak/utils";
 import {
   resolveCurrencyForRequest,
   resolveSharedRestaurantCurrency,
@@ -169,7 +173,7 @@ export class MarketCheckoutPOSPaymentService {
         createdAt: nowIso,
         updatedAt: nowIso,
       },
-      settlement: buildSettlement(session, childPayments),
+      settlement: buildSettlement(session, childPayments, currency),
     };
 
     await Promise.all(
@@ -580,13 +584,17 @@ function buildSettlement(
     orderNumber: string;
     amountCents: number;
   }>,
+  currency: CurrencyCode,
 ) {
   const platformFeeRateBps = clampPlatformFeeRateBps(
     session.platform_fee_rate_bps,
   );
   const vendorAllocations = childPayments.map((child) => {
-    const platformFeeCents = Math.round(
+    // Each vendor's fee is on the currency's step (NT$ and ₫ whole units), so
+    // its net payout is too.
+    const platformFeeCents = roundToCurrencyCents(
       (child.amountCents * platformFeeRateBps) / 10000,
+      currency,
     );
     return {
       restaurantId: child.restaurantId,
