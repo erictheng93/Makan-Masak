@@ -142,6 +142,73 @@ reason, a `failure` row goes to `payment_audit_log`, and the admin sees the
 redelivering; a refund response that fails the check makes the refund call
 answer `502 MARKET_CHECKOUT_PROVIDER_REFUND_MISMATCH`.
 
+## Local End-To-End Run With The Fake Provider
+
+`scripts/dev/fake-payment-provider.mjs` is a dependency-free Node adapter that
+implements create payment, status lookup, refund and health, signs the
+webhooks it sends back, and also serves the credit top-up charge endpoint.
+Use it to run the real pay -> webhook -> paid -> reconcile -> refund flow
+against a local API before any gateway exists.
+
+1. Add to `apps/api/.dev.vars` (gitignored; keep your existing secrets):
+
+   ```env
+   MARKET_CHECKOUT_SPLIT_MODE=provider_split
+   MARKET_CHECKOUT_PROVIDER_SPLIT_URL=http://127.0.0.1:8799/payments
+   MARKET_CHECKOUT_PROVIDER_STATUS_URL=http://127.0.0.1:8799/status
+   MARKET_CHECKOUT_PROVIDER_REFUND_URL=http://127.0.0.1:8799/refunds
+   MARKET_CHECKOUT_PROVIDER_SPLIT_HEALTH_URL=http://127.0.0.1:8799/health
+   MARKET_CHECKOUT_WEBHOOK_SECRET=fake-market-webhook-secret
+   CREDIT_TOPUP_PROVIDER_URL=http://127.0.0.1:8799/topups
+   CREDIT_TOPUP_WEBHOOK_SECRET=fake-topup-webhook-secret
+   ```
+
+2. Start the API and the fake provider (the provider's defaults match the
+   secrets above; point it at the API's port):
+
+   ```bash
+   pnpm dev:api                                   # http://127.0.0.1:8787
+   node scripts/dev/fake-payment-provider.mjs     # http://127.0.0.1:8799
+   # API on another port (8787 taken by another session):
+   #   cd apps/api && pnpm exec wrangler dev --port 8797
+   #   FAKE_PROVIDER_API_BASE=http://127.0.0.1:8797 node scripts/dev/fake-payment-provider.mjs
+   ```
+
+3. Create a market checkout and `POST /api/v1/market-checkouts/:id/pay` with
+   `{"method":"market_online","country":"TW","currency":"TWD"}` from the
+   customer app, or with curl sending `Origin: http://localhost:3000` (an
+   origin in `CORS_ORIGIN`) and the `x-guest-token` returned at creation. The
+   response is `pending` with a `redirect` next action pointing at the fake
+   provider, which logs `amountCents`, `amountMinor` and `currencyExponent`.
+
+4. Open (or curl) the redirect URL to "confirm" the payment; the fake provider
+   posts a signed webhook and prints the API's answer:
+
+   ```bash
+   curl "http://127.0.0.1:8799/confirm/<checkoutId>"                  # Stripe payment_intent.succeeded, correct amount
+   curl "http://127.0.0.1:8799/confirm/<checkoutId>?amount=19900"     # underpaid -> reviewRequired AMOUNT_MISMATCH
+   curl "http://127.0.0.1:8799/confirm/<checkoutId>?currency=USD"     # wrong currency -> reviewRequired CURRENCY_MISMATCH
+   curl "http://127.0.0.1:8799/confirm/<checkoutId>?style=linepay"    # LINE Pay confirm result in whole TWD
+   curl "http://127.0.0.1:8799/topups/confirm/<intentId>?amountCents=1" # underpaid top-up -> not credited
+   ```
+
+5. Reconcile and refund as a platform admin (role 0): log in with
+   `POST /api/v1/auth/login`, then send `Authorization: Bearer <token>`, the
+   returned `X-CSRF-Token` both as `x-csrf-token` and as the
+   `__Host-mm_csrf` cookie, and `Origin: http://localhost:3000` to
+   `POST /api/v1/market-checkouts/admin/:id/reconcile` and
+   `POST /api/v1/market-checkouts/:id/refund`.
+
+6. Inspect what was stored:
+
+   ```bash
+   cd apps/api && pnpm exec wrangler d1 execute makanmakan-local --local \
+     --persist-to ../../.wrangler/shared-state --command \
+     "SELECT status, currency, amount_cents, paid_amount_cents, refunded_amount_cents FROM market_checkout_payments"
+   ```
+
+   Held events show up in `payment_audit_log` with `event_type = 'failure'`.
+
 ## Required Environment Values
 
 Production provider split mode requires:
