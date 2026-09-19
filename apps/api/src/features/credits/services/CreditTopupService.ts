@@ -423,7 +423,11 @@ export class HttpCreditTopupGateway implements CreditTopupGateway {
       );
     }
 
-    const response = await this.fetcher(this.endpoint, {
+    // Detach before calling: `this.fetcher(...)` invokes the Workers global
+    // fetch with the gateway as `this`, which workerd rejects with "Illegal
+    // invocation" — every real provider call failed that way.
+    const fetcher = this.fetcher;
+    const response = await fetcher(this.endpoint, {
       method: "POST",
       headers,
       body,

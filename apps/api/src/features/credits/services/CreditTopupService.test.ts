@@ -552,6 +552,34 @@ describe("Credit top-up gateway helpers", () => {
     ).rejects.toMatchObject({ code: "CREDIT_TOPUP_NOT_CONFIGURED" });
   });
 
+  it("calls the injected fetch unbound, as workerd requires", async () => {
+    function strictFetch(this: unknown) {
+      if (this !== undefined && this !== globalThis) {
+        throw new TypeError("Illegal invocation");
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ providerTransactionId: "txn-1" })),
+      );
+    }
+
+    await expect(
+      new HttpCreditTopupGateway(
+        "https://pay.example.test/topups",
+        undefined,
+        undefined,
+        strictFetch as unknown as typeof fetch,
+      ).createCharge({
+        intentId: "intent-1",
+        publicId: "card-public-1",
+        amountCents: 1000,
+        amountMinor: 1000,
+        currencyExponent: 2,
+        currency: "TWD",
+        idempotencyKey: "credit-topup:intent-1",
+      }),
+    ).resolves.toMatchObject({ providerTransactionId: "txn-1" });
+  });
+
   it("posts signed HTTP charge requests and normalizes gateway responses", async () => {
     const fetcher = vi.fn(async () => {
       return new Response(

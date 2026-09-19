@@ -413,3 +413,43 @@ describe("provider refund wire format and verification", () => {
     expect(issue?.code ?? null).toBe(code);
   });
 });
+
+describe("HTTP gateways call fetch unbound", () => {
+  // workerd's global fetch throws "Illegal invocation" when called as a method
+  // of another object; this stand-in does the same.
+  function strictFetch(this: unknown) {
+    if (this !== undefined && this !== globalThis) {
+      throw new TypeError("Illegal invocation");
+    }
+    return Promise.resolve(
+      jsonResponse({
+        provider: "fake_adapter",
+        providerTransactionId: "pi_1",
+        status: "requires_action",
+        authorizedAmountCents: 0,
+        allocations: [],
+      }),
+    );
+  }
+
+  it("does not call the injected fetch as a method of the gateway", async () => {
+    const gateway = new HttpProviderSplitGateway(
+      "https://adapter.test/payments",
+      undefined,
+      strictFetch as unknown as typeof fetch,
+    );
+
+    await expect(
+      gateway.process({
+        checkoutId: "c1",
+        marketSlug: "m",
+        method: "market_online",
+        country: "TW",
+        currency: "TWD",
+        idempotencyKey: "k",
+        amountCents: 10000,
+        allocations: [],
+      }),
+    ).resolves.toMatchObject({ providerTransactionId: "pi_1" });
+  });
+});
