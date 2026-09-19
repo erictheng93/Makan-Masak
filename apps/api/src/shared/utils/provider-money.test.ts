@@ -57,6 +57,13 @@ describe("providerAmountToCents", () => {
     });
   });
 
+  it("names the unsupported currency before judging the amount", () => {
+    expect(providerAmountToCents("linepay", "MYR", 19.8)).toEqual({
+      ok: false,
+      issue: expect.objectContaining({ code: "CURRENCY_UNSUPPORTED" }),
+    });
+  });
+
   it("refuses fractional provider amounts", () => {
     expect(providerAmountToCents("linepay", "TWD", 250.5)).toEqual({
       ok: false,

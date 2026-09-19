@@ -98,15 +98,6 @@ export function providerAmountToCents(
       },
     };
   }
-  if (!Number.isSafeInteger(amount)) {
-    return {
-      ok: false,
-      issue: {
-        code: "AMOUNT_NOT_INTEGER",
-        message: `Provider amount ${String(amount)} is not an integer in the provider's unit`,
-      },
-    };
-  }
   const factor = providerFactor(provider, currency);
   if (factor == null) {
     return {
@@ -114,6 +105,15 @@ export function providerAmountToCents(
       issue: {
         code: "CURRENCY_UNSUPPORTED",
         message: `${provider} does not settle ${currency}`,
+      },
+    };
+  }
+  if (!Number.isSafeInteger(amount)) {
+    return {
+      ok: false,
+      issue: {
+        code: "AMOUNT_NOT_INTEGER",
+        message: `Provider amount ${String(amount)} is not an integer in the provider's unit`,
       },
     };
   }
