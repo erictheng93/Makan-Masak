@@ -1,12 +1,21 @@
 import { drizzle } from "drizzle-orm/d1";
 import { eq } from "drizzle-orm";
 import {
+  PAYMENT_AUDIT_EVENT_TYPES,
   creditAccounts,
   creditCards,
   creditTopupIntents,
 } from "@makanmasak/database";
+import { normalizeCurrencyCode } from "@makanmasak/utils";
 import type { Env } from "../../../types/env";
 import { badRequest, notFound } from "../../../shared/utils/api-error";
+import {
+  ISO_4217_EXPONENTS,
+  centsToIsoMinorUnits,
+  verifyProviderMoney,
+  type ProviderMoneyIssue,
+} from "../../../shared/utils/provider-money";
+import { PaymentAuditService } from "../../billing/services/PaymentAuditService";
 import { CreditService } from "./CreditService";
 
 const INTENT_TTL_MS = 30 * 60 * 1000; // intents expire after 30 minutes
@@ -18,10 +27,18 @@ export interface CreditTopupNextAction {
   clientSecret?: string;
 }
 
+/**
+ * `amountCents` is internal cents (major × 100 for every currency);
+ * `amountMinor` + `currencyExponent` is the same amount in ISO 4217 minor
+ * units — what a minor-unit gateway such as Stripe takes (VND: whole dong).
+ * See docs/runbooks/market-checkout-provider-adapter-handoff.md#money-units.
+ */
 export interface CreditTopupGatewayInput {
   intentId: string;
   publicId: string;
   amountCents: number;
+  amountMinor: number;
+  currencyExponent: number;
   currency: string;
   idempotencyKey: string;
 }
@@ -55,6 +72,9 @@ export interface ConfirmIntentInput {
   intentId?: string;
   providerTransactionId?: string;
   status: "paid" | "failed";
+  /** What the provider says it collected, in internal cents. */
+  paidAmountCents?: number;
+  paidCurrency?: string;
   providerPayload?: Record<string, unknown> | null;
   errorMessage?: string;
 }
@@ -64,6 +84,13 @@ export interface ConfirmIntentResult {
   credited: boolean;
   alreadyProcessed: boolean;
   balanceAfterCents?: number;
+  /**
+   * The provider reported a paid amount or currency that does not match the
+   * intent. Nothing was credited; the intent stays pending with the reason in
+   * `error_code`, and a failure row is in the payment audit log.
+   */
+  reviewRequired?: boolean;
+  reviewReason?: ProviderMoneyIssue["code"];
 }
 
 /**
@@ -88,6 +115,24 @@ export class CreditTopupService {
   async createIntent(input: CreateIntentInput): Promise<CreateIntentResult> {
     if (input.amountCents <= 0) {
       throw badRequest("Top-up amount must be positive");
+    }
+    const currency = normalizeCurrencyCode(input.currency);
+    if (!currency) {
+      throw badRequest(
+        "Top-up currency is not supported",
+        "CREDIT_CURRENCY_UNSUPPORTED",
+      );
+    }
+    let amountMinor: number;
+    try {
+      // NT$ and ₫ top-ups are whole units: refuse NT$100.50 up front rather
+      // than ask a gateway to charge a fraction it cannot.
+      amountMinor = centsToIsoMinorUnits(input.amountCents, currency);
+    } catch {
+      throw badRequest(
+        `Top-up amount must be a whole ${currency} amount`,
+        "CREDIT_TOPUP_AMOUNT_NOT_ALIGNED",
+      );
     }
 
     const account = await this.db
@@ -135,6 +180,8 @@ export class CreditTopupService {
         intentId: intent.id,
         publicId: input.publicId,
         amountCents: input.amountCents,
+        amountMinor,
+        currencyExponent: ISO_4217_EXPONENTS[currency],
         currency: input.currency,
         idempotencyKey: this.ledgerKey(intent.id),
       });
@@ -196,7 +243,19 @@ export class CreditTopupService {
       return { intent: failed, credited: false, alreadyProcessed: false };
     }
 
-    // status === "paid": credit the balance idempotently, then mark paid.
+    // status === "paid": the provider's amount and currency must match the
+    // intent before anything is credited.
+    const moneyIssue = verifyProviderMoney({
+      expectedCents: intent.amountCents,
+      expectedCurrency: intent.currency,
+      receivedCents: input.paidAmountCents,
+      receivedCurrency: input.paidCurrency,
+    });
+    if (moneyIssue) {
+      return this.holdForReview(intent, input, moneyIssue, now);
+    }
+
+    // Credit the balance idempotently, then mark paid.
     const credit = await this.creditService.topup({
       publicId: intent.publicId,
       amountCents: intent.amountCents,
@@ -223,6 +282,46 @@ export class CreditTopupService {
       credited: true,
       alreadyProcessed: false,
       balanceAfterCents: credit.balanceAfterCents,
+    };
+  }
+
+  private async holdForReview(
+    intent: CreditTopupIntentRow,
+    input: ConfirmIntentInput,
+    issue: ProviderMoneyIssue,
+    now: Date,
+  ): Promise<ConfirmIntentResult> {
+    await new PaymentAuditService(this.env.DB).append({
+      paymentTransactionId: intent.id,
+      eventType: PAYMENT_AUDIT_EVENT_TYPES.FAILURE,
+      provider: intent.provider,
+      amount: input.paidAmountCents ?? null,
+      currency: input.paidCurrency ?? null,
+      rawPayload: {
+        source: "credit_topup_webhook",
+        expectedAmountCents: intent.amountCents,
+        expectedCurrency: intent.currency,
+        providerPayload: input.providerPayload ?? null,
+      },
+      errorCode: `CREDIT_TOPUP_${issue.code}`,
+      errorMessage: issue.message,
+    });
+    const [held] = await this.db
+      .update(creditTopupIntents)
+      .set({
+        errorCode: issue.code,
+        errorMessage: issue.message,
+        providerPayload: input.providerPayload ?? null,
+        updatedAt: now,
+      })
+      .where(eq(creditTopupIntents.id, intent.id))
+      .returning();
+    return {
+      intent: held,
+      credited: false,
+      alreadyProcessed: false,
+      reviewRequired: true,
+      reviewReason: issue.code,
     };
   }
 

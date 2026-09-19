@@ -100,6 +100,50 @@ describe("CreditTopupWebhookService", () => {
     });
   });
 
+  it.each([
+    [{ amountCents: 150000 }, 150000],
+    [{ amount_cents: 150000 }, 150000],
+    [{ amountCents: "150000" }, undefined],
+  ])(
+    "passes the reported paid money (%o) through and surfaces a review hold",
+    async (amountField, expectedCents) => {
+      const body = JSON.stringify({
+        intentId: "intent-1",
+        status: "paid",
+        currency: "TWD",
+        ...amountField,
+      });
+      const topupService = fakeTopupService({
+        confirmIntent: vi.fn(async () => ({
+          alreadyProcessed: false,
+          credited: false,
+          intent: { id: "intent-1" },
+          reviewRequired: true,
+          reviewReason: "AMOUNT_MISMATCH",
+        })),
+      });
+
+      const result = await new CreditTopupWebhookService(
+        env(),
+        topupService as never,
+      ).handle(body, await signedHeaders(body));
+
+      expect(topupService.confirmIntent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          intentId: "intent-1",
+          status: "paid",
+          paidAmountCents: expectedCents,
+          paidCurrency: "TWD",
+        }),
+      );
+      expect(result).toMatchObject({
+        credited: false,
+        reviewRequired: true,
+        reviewReason: "AMOUNT_MISMATCH",
+      });
+    },
+  );
+
   it("uses header identifiers, maps failed statuses, and reports duplicate deliveries", async () => {
     const body = JSON.stringify({ status: "cancelled", errorMessage: "bank" });
     const headers = await signedHeaders(body, {
