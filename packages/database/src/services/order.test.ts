@@ -2447,6 +2447,38 @@ describe("OrderService currency precision", () => {
     return row;
   }
 
+  it("names the restaurant's currency on listed and fetched orders", async () => {
+    await configure({ currency: "MYR" }, 1250);
+    const order = await service().createOrder({
+      restaurantId,
+      items: [{ menuItemId, quantity: 1 }],
+    });
+
+    const listed = await service().getOrders({ restaurantId });
+    expect(listed.orders[0]).toMatchObject({
+      id: order.id,
+      totalAmount: 12.5,
+      currency: "MYR",
+      restaurant: { id: restaurantId, name: "Price Test Restaurant" },
+    });
+    // Settings are read to name the currency, not handed to the caller.
+    expect(listed.orders[0]?.restaurant).not.toHaveProperty("settings");
+    expect(await service().getOrder(order.id)).toMatchObject({
+      currency: "MYR",
+    });
+
+    // Unset is the platform default; an invalid value labels as the default
+    // rather than failing a history list that spans restaurants.
+    for (const settings of [{}, { currency: "USD" as never }]) {
+      await testDb.drizzle
+        .update(restaurants)
+        .set({ settings })
+        .where(eq(restaurants.id, restaurantId));
+      const relisted = await service().getOrders({ restaurantId });
+      expect(relisted.orders[0]?.currency).toBe("TWD");
+    }
+  });
+
   it("rounds a TWD service charge to whole dollars: NT$155 + 10% = NT$171", async () => {
     await configure({ currency: "TWD", serviceChargeRate: 0.1 }, 15500);
 

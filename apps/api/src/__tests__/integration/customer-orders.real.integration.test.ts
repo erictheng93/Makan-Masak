@@ -79,6 +79,47 @@ describe("Customer Orders API - real integration", () => {
     expect(orders[0].customerId).toBe(customer100.customer.id);
   });
 
+  // A customer's history spans restaurants, so one app-wide currency cannot
+  // format it: each order names the currency its amounts are in.
+  it("labels each order with its own restaurant's currency", async () => {
+    const twd = await seed.restaurant({ settings: {} });
+    const myr = await seed.restaurant({ settings: { currency: "MYR" } });
+    const customer = await loginCustomerSession("+886933333300");
+    const twdOrder = await seed.order(twd.id, {
+      customerId: customer.customer.id,
+    });
+    const myrOrder = await seed.order(myr.id, {
+      customerId: customer.customer.id,
+    });
+
+    const res = await testApp.app.fetch(
+      new Request(ENDPOINT, {
+        headers: { authorization: `Bearer ${customer.accessToken}` },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      data: Array<{
+        id: string;
+        currency?: string;
+        restaurant?: Record<string, unknown>;
+      }>;
+      pagination: { total: number };
+    };
+    expect(body.pagination.total).toBe(2);
+    const currencyById = Object.fromEntries(
+      body.data.map((order) => [order.id, order.currency]),
+    );
+    expect(currencyById).toEqual({
+      [twdOrder.id]: "TWD",
+      [myrOrder.id]: "MYR",
+    });
+    for (const order of body.data) {
+      expect(order.restaurant).not.toHaveProperty("settings");
+    }
+  });
+
   it("returns 401 for a staff/owner token because customers routes require canonical customer auth", async () => {
     const restaurant = await seed.restaurant();
 

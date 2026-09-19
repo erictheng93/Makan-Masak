@@ -1,5 +1,6 @@
 import { BaseEntity } from "./common";
 import { MenuItem } from "./menu";
+import type { CurrencyCode } from "./payment";
 
 // Platform source for orders
 export type PlatformSource =
@@ -81,6 +82,13 @@ export interface Order extends Omit<BaseEntity, "id"> {
   serviceCharge?: number; // in cents
   discountAmount?: number; // in cents
   totalAmount: number; // in cents
+  /**
+   * The restaurant's currency, present when the order was read together with
+   * its restaurant (order history, order detail). Lists that span restaurants
+   * must format each order's amounts with this, not with a single app-wide
+   * currency.
+   */
+  currency?: CurrencyCode;
   status: OrderStatus;
   version?: number;
   paymentStatus: OrderPaymentStatus;
