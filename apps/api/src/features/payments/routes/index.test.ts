@@ -199,6 +199,8 @@ describe("payments routes", () => {
         orderStatus: "paid",
         paymentStatus: "paid",
         authorizedTotal: 120,
+        currency: "TWD",
+        country: "TW",
       },
     });
     mocks.refundPaymentTransaction.mockResolvedValue({
@@ -288,6 +290,37 @@ describe("payments routes", () => {
           method: "cash",
         },
       },
+    });
+  });
+
+  it("reports the currency the service recorded, not one the client omitted", async () => {
+    mocks.paymentService.processPayment.mockResolvedValueOnce({
+      status: 200,
+      data: {
+        paymentId: "pay-myr",
+        orderId: orderId101,
+        orderStatus: "paid",
+        paymentStatus: "completed",
+        authorizedTotal: 45.5,
+        currency: "MYR",
+        country: "MY",
+      },
+    });
+
+    // What the admin cashier sends: no country, no currency.
+    const response = await postJson("/", {
+      orderId: orderId101,
+      amount: 45.5,
+      method: "cash",
+    });
+
+    expect(response.status).toBe(200);
+    expect(mocks.paymentService.processPayment).toHaveBeenCalledWith(
+      expect.objectContaining({ orderId: orderId101, amount: 45.5 }),
+      expect.objectContaining({ country: undefined, currency: undefined }),
+    );
+    expect((await json(response)).data).toMatchObject({
+      metadata: { country: "MY", currency: "MYR" },
     });
   });
 

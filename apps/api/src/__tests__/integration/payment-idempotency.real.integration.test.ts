@@ -141,3 +141,238 @@ describe("payment idempotency replay", () => {
     ).resolves.toEqual([]);
   });
 });
+
+/**
+ * The admin cashier posts a payment with no currency at all, so before the
+ * server resolved it every MYR restaurant's payment was recorded as TWD. These
+ * go through the HTTP route the cashier uses, not the service, because the
+ * TW/TWD default lived in the route schema.
+ */
+describe("payment currency authority", () => {
+  let testApp: RealIntegrationTestApp;
+  let seed: ReturnType<typeof buildSeedHelpers>;
+
+  const CSRF_HEADERS = {
+    host: "test",
+    origin: "https://test",
+    cookie: `csrf_token=${"a".repeat(64)}`,
+    "x-csrf-token": "a".repeat(64),
+  };
+
+  beforeAll(async () => {
+    testApp = await createRealIntegrationTestApp();
+    seed = buildSeedHelpers(testApp.testDb);
+  });
+
+  afterAll(async () => {
+    await testApp?.dispose();
+  });
+
+  beforeEach(async () => {
+    await testApp.testDb.truncateAll();
+  });
+
+  async function restaurantWithCashier(settings: Record<string, unknown>) {
+    const restaurant = await seed.restaurant({ settings });
+    // /payments sits behind the online_ordering module gate.
+    await testApp.env.DB.prepare(
+      `INSERT INTO shop_subscriptions
+        (id, restaurant_id, plan_tier, module_overrides,
+         is_active, trial_ends_at_ms, created_at_ms, updated_at_ms)
+       VALUES (?, ?, 'trial', ?, 1, ?, ?, ?)`,
+    )
+      .bind(
+        `sub-${restaurant.id}`,
+        restaurant.id,
+        JSON.stringify({ online_ordering: true }),
+        Date.now() + 24 * 60 * 60 * 1000,
+        Date.now(),
+        Date.now(),
+      )
+      .run();
+    const cashier = await seed.user({ role: 4, restaurantId: restaurant.id });
+    const token = await testApp.authHelper.staffToken(
+      cashier.id,
+      4,
+      restaurant.id,
+    );
+    return { restaurantId: restaurant.id, token };
+  }
+
+  function postPayment(
+    token: string,
+    body: Record<string, unknown>,
+    path = "/api/v1/payments",
+  ) {
+    return testApp.app.fetch(
+      new Request(`https://test${path}`, {
+        method: "POST",
+        headers: {
+          ...CSRF_HEADERS,
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+          "idempotency-key": `currency-${crypto.randomUUID()}`,
+        },
+        body: JSON.stringify(body),
+      }),
+    );
+  }
+
+  const rowsFor = (orderId: string) =>
+    testApp.testDb.drizzle
+      .select()
+      .from(paymentTransactions)
+      .where(eq(paymentTransactions.orderId, orderId));
+
+  it("records an MYR restaurant's cashier payment as MYR", async () => {
+    const { restaurantId, token } = await restaurantWithCashier({
+      currency: "MYR",
+    });
+    const order = await seed.order(restaurantId, {
+      totalAmount: 45.5,
+      totalAmountCents: 4550,
+    });
+
+    const response = await postPayment(token, {
+      orderId: order.id,
+      restaurantId,
+      amount: 45.5,
+      method: "cash",
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      data: { metadata: { currency: "MYR", country: "MY" } },
+    });
+    await expect(rowsFor(order.id)).resolves.toEqual([
+      expect.objectContaining({
+        amountCents: 4550,
+        currency: "MYR",
+        countryCode: "MY",
+        status: "paid",
+      }),
+    ]);
+  });
+
+  it("rejects a client currency that disagrees and records nothing", async () => {
+    const { restaurantId, token } = await restaurantWithCashier({
+      currency: "MYR",
+    });
+    const order = await seed.order(restaurantId);
+
+    const response = await postPayment(token, {
+      orderId: order.id,
+      restaurantId,
+      amount: 120,
+      method: "cash",
+      country: "TW",
+      currency: "TWD",
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: { code: "CURRENCY_MISMATCH" },
+    });
+    await expect(rowsFor(order.id)).resolves.toEqual([]);
+    const [row] = await testApp.testDb.drizzle
+      .select({ paymentStatus: orders.paymentStatus })
+      .from(orders)
+      .where(eq(orders.id, order.id));
+    expect(row?.paymentStatus).toBe("pending");
+  });
+
+  it("fails closed on a restaurant whose stored currency is unsupported", async () => {
+    const { restaurantId, token } = await restaurantWithCashier({
+      currency: "USD",
+    });
+    const order = await seed.order(restaurantId);
+
+    const response = await postPayment(token, {
+      orderId: order.id,
+      restaurantId,
+      amount: 120,
+      method: "cash",
+    });
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toMatchObject({
+      error: { code: "RESTAURANT_CURRENCY_INVALID" },
+    });
+    await expect(rowsFor(order.id)).resolves.toEqual([]);
+  });
+
+  it("refuses an unsupported restaurant currency setting and honours a supported one", async () => {
+    const { restaurantId, token } = await restaurantWithCashier({
+      allowGuestOrders: true,
+    });
+    const adminToken = await testApp.authHelper.adminToken(restaurantId);
+    const putSettings = (currency: string) =>
+      testApp.app.fetch(
+        new Request(`https://test/api/v1/restaurants/${restaurantId}`, {
+          method: "PUT",
+          headers: {
+            ...CSRF_HEADERS,
+            authorization: `Bearer ${adminToken}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ settings: { currency } }),
+        }),
+      );
+
+    const usd = await putSettings("USD");
+    expect(usd.status).toBe(400);
+    expect(await usd.json()).toMatchObject({
+      error: { code: "VALIDATION_ERROR" },
+    });
+
+    const myr = await putSettings("MYR");
+    expect(myr.status).toBe(200);
+
+    const order = await seed.order(restaurantId);
+    const pay = await postPayment(token, {
+      orderId: order.id,
+      restaurantId,
+      amount: 120,
+      method: "cash",
+    });
+    expect(pay.status).toBe(200);
+    await expect(rowsFor(order.id)).resolves.toEqual([
+      expect.objectContaining({ currency: "MYR", countryCode: "MY" }),
+    ]);
+  });
+
+  it("refuses a TWD split line with cents but accepts whole dollars", async () => {
+    const { restaurantId, token } = await restaurantWithCashier({
+      currency: "TWD",
+    });
+    const order = await seed.order(restaurantId);
+
+    const offStep = await postPayment(token, {
+      orderId: order.id,
+      restaurantId,
+      paymentMode: "partial",
+      payments: [
+        { method: "cash", amount: 60.5 },
+        { method: "card", amount: 59.5 },
+      ],
+    });
+    expect(offStep.status).toBe(400);
+    expect(await offStep.json()).toMatchObject({
+      error: { code: "AMOUNT_PRECISION_INVALID" },
+    });
+
+    const whole = await postPayment(token, {
+      orderId: order.id,
+      restaurantId,
+      paymentMode: "partial",
+      payments: [
+        { method: "cash", amount: 60 },
+        { method: "card", amount: 60 },
+      ],
+    });
+    expect(whole.status).toBe(200);
+    await expect(rowsFor(order.id)).resolves.toEqual([
+      expect.objectContaining({ amountCents: 12000, currency: "TWD" }),
+    ]);
+  });
+});

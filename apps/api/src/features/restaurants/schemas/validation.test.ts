@@ -34,6 +34,24 @@ describe("restaurant validation schemas", () => {
     ).toThrow("Phone number must be at least 8 characters");
   });
 
+  it("accepts only platform currencies in settings, and no currency at all", () => {
+    for (const currency of ["TWD", "MYR", "VND"]) {
+      expect(
+        restaurantSchemas.update.safeParse({ settings: { currency } }).success,
+      ).toBe(true);
+    }
+    expect(
+      restaurantSchemas.update.safeParse({
+        settings: { autoAcceptOrders: true },
+      }).success,
+    ).toBe(true);
+    for (const currency of ["USD", "twd", "NT$", ""]) {
+      expect(
+        restaurantSchemas.update.safeParse({ settings: { currency } }).success,
+      ).toBe(false);
+    }
+  });
+
   it("decodes contact URLs and sanitizes FAQs", () => {
     expect(
       restaurantSchemas.updateContactProfile.parse({

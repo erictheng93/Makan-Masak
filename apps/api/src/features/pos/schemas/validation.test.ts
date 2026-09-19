@@ -45,11 +45,10 @@ describe("POS validation schemas", () => {
       copies: 1,
     });
 
+    // No currency default: the checkout's vendors decide it server-side.
     expect(marketCheckoutPosPaymentSchema.parse({ registerId })).toEqual({
       registerId,
       paymentMethod: "cash",
-      country: "TW",
-      currency: "TWD",
     });
   });
 

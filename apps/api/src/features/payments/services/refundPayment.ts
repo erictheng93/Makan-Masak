@@ -18,6 +18,8 @@ import {
   isCentAlignedAmount,
   toRequiredCents,
 } from "../../../shared/utils/money";
+import { isCurrencyAlignedCents } from "@makanmasak/utils";
+import { resolveRestaurantCurrency } from "../../../shared/utils/restaurant-currency";
 
 export interface RefundPaymentInput {
   transactionId: string;
@@ -89,6 +91,22 @@ export async function refundPaymentTransaction(
   }
   const refundAmountCents = toRequiredCents(refundAmount);
   const nextRefundTotalCents = currentRefundTotalCents + refundAmountCents;
+
+  // A typed-in partial refund must be money the restaurant can hand back:
+  // whole dollars for TWD/VND, cents for MYR. Refunding exactly what is left
+  // is exempt, because a total priced before per-line rounding can itself be
+  // off-step (TWD 17050 cents), and that remainder must stay refundable.
+  if (refundAmountCents !== paymentTotalCents - currentRefundTotalCents) {
+    const currency = await resolveRestaurantCurrency(env.DB, row.restaurantId);
+    if (!isCurrencyAlignedCents(refundAmountCents, currency)) {
+      throw new ApiError(
+        "INVALID_REFUND_AMOUNT",
+        `Refund amount must match the precision of ${currency}`,
+        400,
+        { currency },
+      );
+    }
+  }
 
   if (nextRefundTotalCents > paymentTotalCents) {
     throw new ApiError(

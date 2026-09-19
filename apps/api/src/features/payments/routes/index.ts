@@ -33,8 +33,9 @@ const createPaymentRequestSchema = z.lazy(() =>
     .object({
       orderId: z.string().min(1),
       restaurantId: z.string().min(1),
-      country: z.enum(["TW", "MY", "VN"]),
-      currency: z.enum(["TWD", "MYR", "VND"]),
+      // Optional and only compared — the order's restaurant decides.
+      country: z.enum(["TW", "MY", "VN"]).optional(),
+      currency: z.enum(["TWD", "MYR", "VND"]).optional(),
       amount: centAlignedAmount(z.number().finite().positive()),
       method: z.string().min(1).max(50),
       customerInfo: z
@@ -56,8 +57,11 @@ const rootPaymentRequestSchema = z.lazy(() =>
     .object({
       orderId: z.string().min(1),
       restaurantId: z.string().min(1).optional(),
-      country: z.enum(["TW", "MY", "VN"]).optional().default("TW"),
-      currency: z.enum(["TWD", "MYR", "VND"]).optional().default("TWD"),
+      // Optional and only compared — the order's restaurant decides. These
+      // defaulted to TW/TWD, and the admin cashier sends neither, so every
+      // MYR restaurant's payment was recorded as TWD.
+      country: z.enum(["TW", "MY", "VN"]).optional(),
+      currency: z.enum(["TWD", "MYR", "VND"]).optional(),
       paymentMode: z.enum(["full", "partial"]).optional().default("full"),
       expectedTotal: centAlignedAmount(
         z.number().finite().nonnegative(),
@@ -193,8 +197,8 @@ async function handlePayment(c: PaymentContext) {
           orderStatus: result.data.orderStatus,
           paymentStatus: result.data.paymentStatus,
           authorizedTotal: result.data.authorizedTotal,
-          country: input.country,
-          currency: input.currency,
+          country: result.data.country,
+          currency: result.data.currency,
           method: input.method,
         },
       },

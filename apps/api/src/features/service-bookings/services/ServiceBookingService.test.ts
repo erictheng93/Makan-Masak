@@ -22,6 +22,13 @@ import {
 } from "@makanmasak/database/testing";
 import { CreditService } from "../../credits/services/CreditService";
 import { ServiceBookingService } from "./ServiceBookingService";
+
+// Reads `restaurants.settings` through drizzle on the raw D1 binding, which the
+// D1 mock here does not model; its own suite runs it against real D1.
+const resolveRestaurantCurrency = vi.hoisted(() => vi.fn());
+vi.mock("../../../shared/utils/restaurant-currency", () => ({
+  resolveRestaurantCurrency,
+}));
 import type { CreateServiceBookingSlotInput } from "./ServiceBookingService";
 
 type ServiceBookingRow = typeof serviceBookings.$inferSelect;
@@ -1749,15 +1756,16 @@ describe("ServiceBookingService orchestration helpers", () => {
   it("pays pending bookings with credits and claims voucher usage", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-07T00:00:00.000Z"));
-    vi.spyOn(CreditService.prototype, "getBalance").mockResolvedValue({
-      balanceCents: 3000,
-      currency: "TWD",
-    } as never);
+    // The restaurant's currency, not the card's, is what spend checks the
+    // card against — so a card in another currency is refused there.
+    resolveRestaurantCurrency.mockResolvedValueOnce("MYR");
+    const getBalance = vi.spyOn(CreditService.prototype, "getBalance");
     const spend = vi
       .spyOn(CreditService.prototype, "spend")
       .mockResolvedValue({ ledgerEntryId: "ledger-1" } as never);
     const booking = {
       id: "booking-1",
+      restaurantId: "restaurant-1",
       status: SERVICE_BOOKING_STATUS.PENDING,
       couponId: 99,
       paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.PREPAY,
@@ -1782,10 +1790,12 @@ describe("ServiceBookingService orchestration helpers", () => {
       }),
     ).resolves.toBe(confirmed);
 
+    expect(resolveRestaurantCurrency).toHaveBeenCalledWith(d1, "restaurant-1");
+    expect(getBalance).not.toHaveBeenCalled();
     expect(spend).toHaveBeenCalledWith({
       publicId: "card-public-1",
       amountCents: 2500,
-      currency: "TWD",
+      currency: "MYR",
       idempotencyKey: "service-booking:booking-1",
       sourceType: "service_booking",
       sourceId: "booking-1",

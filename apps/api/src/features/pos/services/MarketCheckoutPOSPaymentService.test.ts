@@ -2,6 +2,19 @@ import { describe, expect, it, vi } from "vitest";
 import type { Env } from "../../../types/env";
 import { MarketCheckoutPOSPaymentService } from "./MarketCheckoutPOSPaymentService";
 
+// The vendors' shared currency is a drizzle read the D1 stub below does not
+// model; the resolver's own suite runs it against real D1.
+const resolveSharedRestaurantCurrency = vi.hoisted(() =>
+  vi.fn(async () => "TWD"),
+);
+vi.mock(
+  "../../../shared/utils/restaurant-currency",
+  async (importOriginal) => ({
+    ...((await importOriginal()) as Record<string, unknown>),
+    resolveSharedRestaurantCurrency,
+  }),
+);
+
 function createEnv() {
   const kv = new Map<string, string>();
   kv.set(
@@ -113,17 +126,21 @@ describe("MarketCheckoutPOSPaymentService", () => {
       registerId: "22222222-2222-4222-8222-222222222222",
       shiftId: "11111111-1111-4111-8111-111111111111",
       paymentMethod: "cash",
-      country: "TW",
-      currency: "TWD",
       operatorId: "user-7",
       operatorRole: 4,
       operatorRestaurantId: "restaurant-1",
       idempotencyKey: "pos-checkout-1",
     });
 
+    expect(resolveSharedRestaurantCurrency).toHaveBeenCalledWith(env.DB, [
+      "restaurant-1",
+      "restaurant-2",
+    ]);
     expect(result.payment).toMatchObject({
       status: "paid",
       method: "pos_cash",
+      currency: "TWD",
+      country: "TW",
       totalAmountCents: 20000,
       paidAmountCents: 20000,
       parentPayment: {
@@ -174,5 +191,44 @@ describe("MarketCheckoutPOSPaymentService", () => {
       expect.stringContaining('"paymentStatus":"paid"'),
       { expirationTtl: 14400 },
     );
+  });
+
+  it("records the vendors' currency, not a default", async () => {
+    resolveSharedRestaurantCurrency.mockResolvedValueOnce("MYR");
+    const { env, preparedStatements } = createEnv();
+
+    const result = await new MarketCheckoutPOSPaymentService(env).process({
+      checkoutId: "checkout-1",
+      registerId: "22222222-2222-4222-8222-222222222222",
+      paymentMethod: "cash",
+      operatorId: "user-7",
+      operatorRole: 4,
+      operatorRestaurantId: "restaurant-1",
+    });
+
+    expect(result.payment).toMatchObject({ currency: "MYR", country: "MY" });
+    const boundParams = preparedStatements.flatMap((statement) =>
+      statement.bind.mock.calls.flat(),
+    );
+    expect(boundParams).toContain("MYR");
+    expect(boundParams).not.toContain("TWD");
+  });
+
+  it("rejects a POS currency claim that disagrees with the vendors", async () => {
+    resolveSharedRestaurantCurrency.mockResolvedValueOnce("MYR");
+    const { env } = createEnv();
+
+    await expect(
+      new MarketCheckoutPOSPaymentService(env).process({
+        checkoutId: "checkout-1",
+        registerId: "22222222-2222-4222-8222-222222222222",
+        paymentMethod: "cash",
+        currency: "TWD",
+        operatorId: "user-7",
+        operatorRole: 4,
+        operatorRestaurantId: "restaurant-1",
+      }),
+    ).rejects.toMatchObject({ code: "CURRENCY_MISMATCH", status: 400 });
+    expect(env.CACHE_KV.put).not.toHaveBeenCalled();
   });
 });

@@ -12,6 +12,7 @@ import {
   orders,
   paymentTransactions,
   restaurantMarketMemberships,
+  restaurants,
 } from "@makanmasak/database";
 import {
   createRealIntegrationTestApp,
@@ -152,9 +153,10 @@ async function seedVendorVoucher(
 async function issueCreditCard(
   testApp: RealIntegrationTestApp,
   balanceCents: number,
+  currency: "TWD" | "MYR" | "VND" = "TWD",
 ) {
   const card = await new CreditService(testApp.env as never).issueCard({
-    currency: "TWD",
+    currency,
     initialBalanceCents: balanceCents,
   });
   return card.publicId;
@@ -1162,6 +1164,9 @@ describe("Market checkouts API - real integration", () => {
       status: "paid",
       amountCents: 20000,
       paidAmountCents: 20000,
+      // Resolved from the vendors: the POS request sent no currency.
+      currency: "TWD",
+      countryCode: "TW",
     });
     expect(parentPayment?.providerPayload).toMatchObject({
       source: "pos_market_checkout",
@@ -1234,6 +1239,230 @@ describe("Market checkouts API - real integration", () => {
         }),
       ]),
     );
+  });
+
+  describe("currency authority", () => {
+    /**
+     * A checkout whose vendors price in the given currencies. Returns the
+     * creation response unparsed, so a mixed-currency request can assert its
+     * rejection, plus the vendor ids.
+     */
+    async function createCheckoutInCurrencies(
+      currencies: Array<string | undefined>,
+    ) {
+      const market = await seedMarket(testApp);
+      const vendors = await Promise.all(
+        currencies.map(async (currency, index) => {
+          const vendor = await seed.restaurant({
+            name: `幣別攤 ${index}`,
+            settings: {
+              allowOnlineOrdering: true,
+              allowGuestOrders: true,
+              ...(currency !== undefined && { currency }),
+            },
+          });
+          const item = await seed.menuItem(vendor.id, {
+            name: `幣別品項 ${index}`,
+            price: 100,
+            priceCents: 10000,
+          });
+          return { vendorId: String(vendor.id), itemId: item.id };
+        }),
+      );
+      await testApp.testDb.drizzle.insert(restaurantMarketMemberships).values(
+        vendors.map((vendor, index) => ({
+          restaurantId: vendor.vendorId,
+          marketId: market.id,
+          stallNumber: `C${index}`,
+          joinedAt: new Date(),
+        })),
+      );
+      const response = await testApp.app.fetch(
+        new Request("https://test/api/v1/market-checkouts", {
+          method: "POST",
+          headers: CUSTOMER_HEADERS,
+          body: JSON.stringify({
+            marketSlug: market.slug,
+            guestName: "Currency Guest",
+            phoneLastDigits: "321",
+            vendors: vendors.map((vendor) => ({
+              restaurantId: vendor.vendorId,
+              items: [{ menuItemId: vendor.itemId, quantity: 1 }],
+            })),
+          }),
+        }),
+      );
+      return { response, vendors };
+    }
+
+    // A market checkout needs at least two vendors.
+    async function createPayableCheckout(currency: string | undefined) {
+      const { response } = await createCheckoutInCurrencies([
+        currency,
+        currency,
+      ]);
+      expect(response.status).toBe(201);
+      return readData<CreatedCheckout>(response);
+    }
+
+    function payWithCredits(
+      created: CreatedCheckout,
+      creditCardPublicId: string,
+      claim: { currency?: string; country?: string } = {},
+    ) {
+      return testApp.app.fetch(
+        new Request(
+          `https://test/api/v1/market-checkouts/${created.checkout.id}/pay`,
+          {
+            method: "POST",
+            headers: {
+              ...CUSTOMER_HEADERS,
+              ...holderHeaders(created),
+              "idempotency-key": `currency-pay-${crypto.randomUUID()}`,
+            },
+            body: JSON.stringify({
+              method: "credits",
+              providerInput: { creditCardPublicId },
+              ...claim,
+            }),
+          },
+        ),
+      );
+    }
+
+    async function balanceOf(publicId: string) {
+      const balance = await new CreditService(testApp.env as never).getBalance(
+        publicId,
+      );
+      return balance.balanceCents;
+    }
+
+    it("does not let a TWD card pay an MYR checkout, whatever the client claims", async () => {
+      const created = await createPayableCheckout("MYR");
+      const twdCard = await issueCreditCard(testApp, 50000, "TWD");
+
+      // Omitted: the server resolves MYR and the TWD card is refused.
+      const omitted = await payWithCredits(created, twdCard);
+      expect(omitted.status).toBe(202);
+      expect(await readData<PaidCheckout>(omitted)).toMatchObject({
+        payment: { status: "failed", currency: "MYR", country: "MY" },
+      });
+
+      // Lying: claiming TWD is a mismatch, rejected before any provider call.
+      const lying = await payWithCredits(created, twdCard, {
+        currency: "TWD",
+        country: "TW",
+      });
+      expect(lying.status).toBe(400);
+      expect(await lying.json()).toMatchObject({
+        error: {
+          code: "CURRENCY_MISMATCH",
+          details: { expectedCurrency: "MYR", expectedCountry: "MY" },
+        },
+      });
+
+      expect(await balanceOf(twdCard)).toBe(50000);
+      const childOrderIds = created.checkout.childOrders.map((child) =>
+        String(child.orderId),
+      );
+      const childOrders = await testApp.testDb.drizzle
+        .select({ paymentStatus: orders.paymentStatus })
+        .from(orders)
+        .where(inArray(orders.id, childOrderIds))
+        .all();
+      expect(childOrders).toEqual([
+        { paymentStatus: "pending" },
+        { paymentStatus: "pending" },
+      ]);
+    });
+
+    it("settles an MYR checkout from an MYR card with no currency sent", async () => {
+      const created = await createPayableCheckout("MYR");
+      const myrCard = await issueCreditCard(testApp, 50000, "MYR");
+
+      const response = await payWithCredits(created, myrCard);
+
+      expect(response.status).toBe(200);
+      expect(await readData<PaidCheckout>(response)).toMatchObject({
+        payment: { status: "paid", currency: "MYR", country: "MY" },
+      });
+      expect(await balanceOf(myrCard)).toBe(30000);
+      const parentPayment = await testApp.testDb.drizzle
+        .select()
+        .from(marketCheckoutPayments)
+        .where(eq(marketCheckoutPayments.checkoutId, created.checkout.id))
+        .get();
+      expect(parentPayment).toMatchObject({
+        status: "paid",
+        currency: "MYR",
+        countryCode: "MY",
+      });
+    });
+
+    it("defaults a vendor with no currency setting to TWD", async () => {
+      const created = await createPayableCheckout(undefined);
+      const twdCard = await issueCreditCard(testApp, 50000, "TWD");
+
+      const response = await payWithCredits(created, twdCard, {
+        currency: "TWD",
+      });
+
+      expect(response.status).toBe(200);
+      expect(await readData<PaidCheckout>(response)).toMatchObject({
+        payment: { status: "paid", currency: "TWD", country: "TW" },
+      });
+    });
+
+    it("rejects a checkout across vendors in different currencies", async () => {
+      const { response, vendors } = await createCheckoutInCurrencies([
+        "TWD",
+        "MYR",
+      ]);
+
+      expect(response.status).toBe(409);
+      expect(await response.json()).toMatchObject({
+        error: { code: "MIXED_CURRENCY_CHECKOUT" },
+      });
+      const created = await testApp.testDb.drizzle
+        .select({ id: orders.id })
+        .from(orders)
+        .where(
+          inArray(
+            orders.restaurantId,
+            vendors.map((vendor) => vendor.vendorId),
+          ),
+        )
+        .all();
+      expect(created).toEqual([]);
+    });
+
+    it("rejects paying once a vendor's currency has diverged after creation", async () => {
+      const { response, vendors } = await createCheckoutInCurrencies([
+        "MYR",
+        "MYR",
+      ]);
+      expect(response.status).toBe(201);
+      const created = await readData<CreatedCheckout>(response);
+      await testApp.testDb.drizzle
+        .update(restaurants)
+        .set({
+          settings: {
+            allowOnlineOrdering: true,
+            allowGuestOrders: true,
+            currency: "TWD",
+          },
+        })
+        .where(eq(restaurants.id, vendors[1]!.vendorId));
+      const myrCard = await issueCreditCard(testApp, 50000, "MYR");
+
+      const pay = await payWithCredits(created, myrCard);
+
+      expect(pay.status).toBe(409);
+      expect(await pay.json()).toMatchObject({
+        error: { code: "MIXED_CURRENCY_CHECKOUT" },
+      });
+      expect(await balanceOf(myrCard)).toBe(50000);
+    });
   });
 
   async function putRestaurantPushSubscription(

@@ -24,6 +24,12 @@ import {
   OWNER_ALERTED_PAYMENT_FAILURE_CODES,
   raisePaymentFailedAlert,
 } from "../../alerts/producers";
+import { isCurrencyAlignedCents } from "@makanmasak/utils";
+import {
+  resolveCurrencyForRequest,
+  resolveRestaurantCurrency,
+  type CurrencyCode,
+} from "../../../shared/utils/restaurant-currency";
 
 export type PaymentActor =
   | { kind: "staff"; user: AuthUser }
@@ -35,6 +41,11 @@ export type PaymentActor =
 
 export interface ProcessPaymentOptions {
   actor: PaymentActor;
+  /**
+   * What the caller claims the order is priced in. Never recorded: the
+   * restaurant's own currency is, and a claim that disagrees with it is
+   * rejected with CURRENCY_MISMATCH.
+   */
   country?: string;
   currency?: string;
   idempotencyKey?: string;
@@ -50,7 +61,14 @@ export interface ProcessPaymentResult {
     orderStatus: string;
     paymentStatus: string;
     authorizedTotal: number;
+    currency: string | null;
+    country: string | null;
   };
+}
+
+/** What `runPayment` learned before it failed, for the failure record. */
+interface PaymentAttemptContext {
+  currency?: CurrencyCode;
 }
 
 function cents(value: number): number {
@@ -109,10 +127,11 @@ export class PaymentService {
       throw new ApiError("ORDER_NOT_FOUND", "Order not found", 404);
     }
 
+    const attempt: PaymentAttemptContext = {};
     try {
-      return await this.runPayment(input, options, existing);
+      return await this.runPayment(input, options, existing, attempt);
     } catch (error) {
-      await this.recordPaymentFailure(existing, input, options, error);
+      await this.recordPaymentFailure(existing, input, options, attempt, error);
       throw error;
     }
   }
@@ -127,6 +146,7 @@ export class PaymentService {
     input: PaymentRequestInput,
     options: ProcessPaymentOptions,
     existing: typeof orders.$inferSelect,
+    attempt: PaymentAttemptContext,
   ): Promise<ProcessPaymentResult> {
     if (
       options.actor.kind === "staff" &&
@@ -179,7 +199,22 @@ export class PaymentService {
       );
     }
 
+    // The restaurant decides the currency; the caller's claim is only checked.
+    // Before this, the cashier sent none and every payment was recorded TWD.
+    const { currency, country } = resolveCurrencyForRequest(
+      await resolveRestaurantCurrency(this.env.DB, existing.restaurantId),
+      options,
+    );
+    attempt.currency = currency;
+
     const serverTotal = amountFromCents(existing.totalAmountCents) ?? 0;
+    if (input.paymentMode === "partial") {
+      assertSplitPrecision(
+        input.payments ?? [],
+        existing.totalAmountCents ?? 0,
+        currency,
+      );
+    }
     if (input.expectedTotal !== undefined) {
       assertSameAmount(
         input.expectedTotal,
@@ -240,8 +275,8 @@ export class PaymentService {
           orderId: input.orderId,
           restaurantId: existing.restaurantId,
           amountCents: cents(serverTotal),
-          currency: options.currency ?? null,
-          countryCode: options.country ?? null,
+          currency,
+          countryCode: country,
           paymentMethod: method,
           gateway:
             options.actor.kind === "provider"
@@ -271,7 +306,7 @@ export class PaymentService {
             ? options.actor.provider
             : (input.gateway ?? input.method ?? "internal"),
         amount: cents(serverTotal),
-        currency: options.currency ?? null,
+        currency,
         rawPayload: {
           orderId: input.orderId,
           paymentMode: input.paymentMode,
@@ -297,7 +332,7 @@ export class PaymentService {
             ? options.actor.provider
             : (input.gateway ?? input.method ?? "internal"),
         amount: cents(serverTotal),
-        currency: options.currency ?? null,
+        currency,
         rawPayload: { status: "paid" },
         occurredAtMs: now,
       }),
@@ -348,6 +383,8 @@ export class PaymentService {
         orderStatus: shouldCloseOrder ? "paid" : existing.status,
         paymentStatus: "completed",
         authorizedTotal: serverTotal,
+        currency,
+        country,
       },
     };
   }
@@ -376,6 +413,7 @@ export class PaymentService {
     order: typeof orders.$inferSelect,
     input: PaymentRequestInput,
     options: ProcessPaymentOptions,
+    attempt: PaymentAttemptContext,
     error: unknown,
   ): Promise<void> {
     const apiError = error instanceof ApiError ? error : null;
@@ -394,7 +432,9 @@ export class PaymentService {
         eventType: PAYMENT_AUDIT_EVENT_TYPES.FAILURE,
         provider: input.gateway ?? input.method ?? "internal",
         amount: order.totalAmountCents ?? null,
-        currency: options.currency ?? null,
+        // Only a currency the server resolved. A rejection before that point
+        // (or of the claim itself) records none rather than the claim.
+        currency: attempt.currency ?? null,
         errorCode,
         errorMessage: apiError?.message ?? "Payment failed before completion",
         // Deliberately not `options.customerInfo` or `options.metadata`: this
@@ -428,7 +468,7 @@ export class PaymentService {
         // order screen shows rather than cents.
         submittedAmount: submittedAmount ?? undefined,
         serverTotal: amountFromCents(order.totalAmountCents) ?? undefined,
-        currency: options.currency,
+        currency: attempt.currency,
       });
     } catch (alertError) {
       // The producer swallows its own failures; this guard is here so a future
@@ -607,8 +647,43 @@ function processPaymentResultFromRow(
       paymentStatus:
         transactionStatus === "paid" ? "completed" : transactionStatus,
       authorizedTotal: amountFromCents(payment.amountCents) ?? 0,
+      currency: payment.currency ?? null,
+      country: payment.countryCode ?? null,
     },
   };
+}
+
+/**
+ * Split-payment lines are the one amount here a person types in: a full
+ * payment and `expectedTotal` must equal the server's order total to the cent,
+ * so they can never carry more precision than the total already has.
+ *
+ * Each line must sit on the currency's real step (whole dollars for TWD/VND,
+ * cents for MYR) — "NT$85.50 cash + NT$85.50 card" is not money anyone can
+ * hand over. The exception is an order total that is itself off-step: orders
+ * priced before per-line rounding existed can total 17050 cents in TWD, and
+ * refusing every split of those would leave them unpayable. Such a total
+ * leaves exactly one line to absorb the odd remainder, so one off-step line is
+ * allowed then and none otherwise; the sum check that follows pins that line's
+ * remainder to the total's.
+ */
+function assertSplitPrecision(
+  payments: ReadonlyArray<{ amount: number }>,
+  totalCents: number,
+  currency: CurrencyCode,
+): void {
+  const offStep = payments.filter(
+    (payment) => !isCurrencyAlignedCents(cents(payment.amount), currency),
+  ).length;
+  const allowed = isCurrencyAlignedCents(totalCents, currency) ? 0 : 1;
+  if (offStep > allowed) {
+    throw new ApiError(
+      "AMOUNT_PRECISION_INVALID",
+      `Payment amounts must match the precision of ${currency}`,
+      400,
+      { currency },
+    );
+  }
 }
 
 function canProcessPayment(role: number): boolean {

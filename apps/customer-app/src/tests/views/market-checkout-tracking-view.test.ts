@@ -439,10 +439,10 @@ describe("MarketCheckoutTrackingView", () => {
     await wrapper.get('[data-testid="market-checkout-pay"]').trigger("click");
     await flushPromises();
 
+    // The server resolves the currency from the vendors; the client must not
+    // assert one (a hard-coded TWD was a CURRENCY_MISMATCH at MYR markets).
     expect(payMarketCheckout).toHaveBeenCalledWith("checkout-1", {
       method: "market_online",
-      country: "TW",
-      currency: "TWD",
     });
     const paymentSummary = wrapper.get(
       '[data-testid="market-checkout-payment-summary"]',
@@ -1200,10 +1200,10 @@ describe("MarketCheckoutTrackingView", () => {
     await wrapper.get('[data-testid="market-checkout-pay"]').trigger("click");
     await flushPromises();
 
+    // The server resolves the currency from the vendors; the client must not
+    // assert one (a hard-coded TWD was a CURRENCY_MISMATCH at MYR markets).
     expect(payMarketCheckout).toHaveBeenCalledWith("checkout-1", {
       method: "market_online",
-      country: "TW",
-      currency: "TWD",
     });
     expect(
       localStorage.getItem("makanmakan_recent_market_checkouts"),

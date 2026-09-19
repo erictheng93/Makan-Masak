@@ -189,6 +189,20 @@ vi.mock("@makanmasak/database", async (importOriginal) => ({
   createDatabase: databaseMocks.createDatabase,
 }));
 
+// The route resolves the vendors' shared currency straight from D1, which the
+// fixture DB here does not model. Default every checkout to TWD vendors and let
+// individual tests override it; the real resolver has its own real-D1 suite.
+const resolveSharedRestaurantCurrency = vi.hoisted(() => vi.fn());
+vi.mock(
+  "../../../shared/utils/restaurant-currency",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("../../../shared/utils/restaurant-currency")
+    >()),
+    resolveSharedRestaurantCurrency,
+  }),
+);
+
 vi.mock("../../../middleware/quotaGate", () => ({
   enforceQuota,
 }));
@@ -705,6 +719,8 @@ describe("market checkout routes", () => {
     redeemVoucher.mockResolvedValue(undefined);
     tokenCounter.value = 0;
     globalThis.fetch = originalFetch;
+    resolveSharedRestaurantCurrency.mockReset();
+    resolveSharedRestaurantCurrency.mockResolvedValue("TWD");
   });
 
   it("routes select fixtures by table and rejects exhausted fixtures", async () => {
@@ -1260,6 +1276,46 @@ describe("market checkout routes", () => {
     );
 
     await expectApiError(response, 409, "MARKET_VENDOR_ACTIVE_ORDER_EXISTS");
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+
+  it("rejects a checkout whose vendors price in different currencies", async () => {
+    setTwoVendorCreateFixtures({
+      firstRestaurant: {
+        id: "restaurant-1",
+        name: "Nasi lemak",
+        isActive: true,
+        isAvailable: true,
+        settings: { allowGuestOrders: true, currency: "MYR" },
+      },
+    });
+    const env = createEnv();
+
+    const response = await withSilencedRouteError(() =>
+      routes.fetch(
+        new Request("https://test/", {
+          method: "POST",
+          body: JSON.stringify({
+            marketSlug: "fengjia",
+            guestName: "Guest",
+            phoneLastDigits: "789",
+            vendors: [
+              {
+                restaurantId: "restaurant-1",
+                items: [{ menuItemId: 101, quantity: 1 }],
+              },
+              {
+                restaurantId: "restaurant-2",
+                items: [{ menuItemId: 202, quantity: 1 }],
+              },
+            ],
+          }),
+        }),
+        env as never,
+      ),
+    );
+
+    await expectApiError(response, 409, "MIXED_CURRENCY_CHECKOUT");
     expect(createOrder).not.toHaveBeenCalled();
   });
 
@@ -2850,6 +2906,71 @@ describe("market checkout routes", () => {
     );
 
     await expectApiError(emptyResponse, 400, "BAD_REQUEST");
+    expect(processPayment).not.toHaveBeenCalled();
+  });
+
+  it("rejects a pay request whose currency disagrees with the vendors", async () => {
+    resolveSharedRestaurantCurrency.mockResolvedValue("MYR");
+    const env = {
+      ...createEnv(),
+      STORED_VALUE_CREDITS_ENABLED: "true",
+    };
+    await env.CACHE_KV.put(
+      "market_checkout:checkout-1",
+      JSON.stringify(unpaidCheckoutSessionFixture()),
+    );
+
+    for (const body of [
+      { method: "credits", currency: "TWD" },
+      { method: "credits", country: "TW" },
+    ]) {
+      const response = await withSilencedRouteError(() =>
+        routes.fetch(
+          new Request("https://test/checkout-1/pay", {
+            method: "POST",
+            headers: MARKET_HOLDER_HEADERS,
+            body: JSON.stringify(body),
+          }),
+          env as never,
+        ),
+      );
+      await expectApiError(response, 400, "CURRENCY_MISMATCH");
+    }
+    expect(resolveSharedRestaurantCurrency).toHaveBeenCalledWith(env.DB, [
+      "restaurant-1",
+      "restaurant-2",
+    ]);
+    expect(reserveVoucherUsage).not.toHaveBeenCalled();
+  });
+
+  it("rejects paying a checkout whose vendors no longer share a currency", async () => {
+    const { sharedCurrency } = await vi.importActual<
+      typeof import("../../../shared/utils/restaurant-currency")
+    >("../../../shared/utils/restaurant-currency");
+    resolveSharedRestaurantCurrency.mockImplementation(async () =>
+      sharedCurrency([
+        { restaurantId: "restaurant-1", currency: "TWD" },
+        { restaurantId: "restaurant-2", currency: "MYR" },
+      ]),
+    );
+    const env = createEnv();
+    await env.CACHE_KV.put(
+      "market_checkout:checkout-1",
+      JSON.stringify(unpaidCheckoutSessionFixture()),
+    );
+
+    const response = await withSilencedRouteError(() =>
+      routes.fetch(
+        new Request("https://test/checkout-1/pay", {
+          method: "POST",
+          headers: MARKET_HOLDER_HEADERS,
+          body: JSON.stringify({ method: "market_online" }),
+        }),
+        env as never,
+      ),
+    );
+
+    await expectApiError(response, 409, "MIXED_CURRENCY_CHECKOUT");
     expect(processPayment).not.toHaveBeenCalled();
   });
 
@@ -5822,6 +5943,65 @@ describe("market checkout routes", () => {
       paymentStatus: "completed",
       totalAmountCents: 12000,
     });
+  });
+
+  it("takes a legacy ledger row's missing currency from the vendors", async () => {
+    setNoPersistedCheckoutFixtures();
+    resolveSharedRestaurantCurrency.mockResolvedValue("MYR");
+    const env = createEnv([
+      {
+        payment_id: "market_pay_checkout-1",
+        provider: "credit_balance",
+        split_mode: "provider_split",
+        idempotency_key: null,
+        status: "paid",
+        amount_cents: 12000,
+        paid_amount_cents: 12000,
+        refunded_amount_cents: 0,
+        currency: null,
+        country_code: null,
+        child_payment_ids: null,
+        provider_payload: null,
+        created_at_ms: 1780308000000,
+        updated_at_ms: 1780308600000,
+      },
+    ]);
+    await env.CACHE_KV.put(
+      "market_checkout:checkout-1",
+      JSON.stringify({
+        id: "checkout-1",
+        market: { id: "market-1", slug: "fengjia", name: "逢甲夜市" },
+        status: "submitted",
+        childOrders: [
+          {
+            restaurantId: "restaurant-1",
+            restaurantName: "Nasi lemak",
+            orderId: 1001,
+            orderNumber: "A001",
+            totalAmount: 120,
+            tokenExpiresAt: "2026-06-01T12:00:00.000Z",
+          },
+        ],
+        subtotal: 12000,
+        createdAt: "2026-06-01T10:00:00.000Z",
+      }),
+    );
+    getOrder.mockResolvedValueOnce(null);
+
+    const response = await routes.fetch(
+      new Request("https://test/admin/checkout-1"),
+      env as never,
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      data: {
+        checkout: { payment: { currency: "MYR", country: "MY" } },
+      },
+    });
+    expect(resolveSharedRestaurantCurrency).toHaveBeenCalledWith(env.DB, [
+      "restaurant-1",
+    ]);
   });
 
   it("hydrates parent payment from the persisted checkout payment ledger", async () => {
