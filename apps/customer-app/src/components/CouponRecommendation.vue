@@ -58,12 +58,13 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { computeDiscountCents } from "@makanmasak/utils";
 import { useI18n } from "@/composables/useI18n";
 import { useCurrency } from "@/composables/useCurrency";
 import type { CustomerCoupon } from "@/types/coupon";
 
 const { t } = useI18n();
-const { formatPrice } = useCurrency();
+const { formatPrice, currencyCode } = useCurrency();
 
 const props = defineProps<{
   coupons: CustomerCoupon[];
@@ -74,17 +75,27 @@ defineEmits<{
   "select-coupon": [coupon: CustomerCoupon];
 }>();
 
+const toCents = (amount: number | null | undefined): number | null =>
+  amount == null || !Number.isFinite(Number(amount))
+    ? null
+    : Math.round(Number(amount) * 100);
+
+// Same rule as the server (computeDiscountCents): worked in cents, rounded to
+// the restaurant currency's precision, then capped. Working in major units
+// here used to show RM2.00 for 10% of RM23.50 while the server gave RM2.35.
 const computeSaving = (coupon: CustomerCoupon): number => {
-  let saving = 0;
-  if (coupon.discountType === "percentage") {
-    saving = Math.round(props.orderAmount * (coupon.discountValue / 100));
-    if (coupon.maxDiscountAmount && saving > coupon.maxDiscountAmount) {
-      saving = coupon.maxDiscountAmount;
-    }
-  } else {
-    saving = Number(coupon.discountValue);
-  }
-  return Math.min(saving, props.orderAmount);
+  const isPercentage = coupon.discountType === "percentage";
+  const savingCents = computeDiscountCents(
+    {
+      discountType: coupon.discountType,
+      percent: isPercentage ? Number(coupon.discountValue) : null,
+      fixedCents: isPercentage ? null : toCents(coupon.discountValue),
+      maxDiscountCents: toCents(coupon.maxDiscountAmount),
+    },
+    toCents(props.orderAmount) ?? 0,
+    currencyCode.value,
+  );
+  return savingCents / 100;
 };
 
 const recommendedCoupons = computed(() => {
