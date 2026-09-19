@@ -93,8 +93,9 @@ export const marketCheckoutPosPaymentSchema = z.lazy(() =>
     registerId: z.uuid(),
     shiftId: z.uuid().optional(),
     paymentMethod: z.enum(["cash", "card", "digital_wallet"]).default("cash"),
-    country: z.enum(["TW", "MY", "VN"]).optional().default("TW"),
-    currency: z.enum(["TWD", "MYR", "VND"]).optional().default("TWD"),
+    // Optional and only compared — the checkout's vendors decide.
+    country: z.enum(["TW", "MY", "VN"]).optional(),
+    currency: z.enum(["TWD", "MYR", "VND"]).optional(),
   }),
 );
 

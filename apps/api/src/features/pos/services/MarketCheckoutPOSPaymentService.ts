@@ -19,6 +19,10 @@ import {
 } from "../../../shared/utils/api-error";
 import { fromCents } from "../../../shared/utils/money";
 import { generateUUID } from "@makanmasak/utils";
+import {
+  resolveCurrencyForRequest,
+  resolveSharedRestaurantCurrency,
+} from "../../../shared/utils/restaurant-currency";
 
 type MarketCheckoutPaymentStatus =
   | "pending"
@@ -63,8 +67,9 @@ export interface ProcessMarketCheckoutPOSPaymentInput {
   registerId: string;
   shiftId?: string;
   paymentMethod: MarketCheckoutPaymentMethod;
-  country: "TW" | "MY" | "VN";
-  currency: "TWD" | "MYR" | "VND";
+  /** Optional claims, only compared against the vendors' currency. */
+  country?: "TW" | "MY" | "VN";
+  currency?: "TWD" | "MYR" | "VND";
   operatorId: string;
   operatorRole: number;
   operatorRestaurantId?: string | number | null;
@@ -106,6 +111,16 @@ export class MarketCheckoutPOSPaymentService {
       throw badRequest("Active POS shift not found for register");
     }
     this.assertCanUseRegister(input, shift, children);
+    // The vendors decide the currency; a POS client that still sends one is
+    // only checked. This defaulted to TWD, so an MYR market's cash sale was
+    // recorded as TWD.
+    const { currency, country } = resolveCurrencyForRequest(
+      await resolveSharedRestaurantCurrency(
+        this.env.DB,
+        children.map((child) => child.restaurant_id),
+      ),
+      input,
+    );
 
     const nowMs = Date.now();
     const nowIso = new Date(nowMs).toISOString();
@@ -131,8 +146,8 @@ export class MarketCheckoutPOSPaymentService {
     const payment = {
       status: "paid" as const,
       method: `pos_${input.paymentMethod}`,
-      currency: input.currency,
-      country: input.country,
+      currency,
+      country,
       totalAmount: totalAmountCents / 100,
       totalAmountCents,
       paidAmount: totalAmountCents / 100,
@@ -164,8 +179,8 @@ export class MarketCheckoutPOSPaymentService {
           paymentId: `pos_market_${input.checkoutId}_${child.order_id}`,
           paymentMethod: input.paymentMethod,
           amountCents: orderChildTotalCents(child),
-          currency: input.currency,
-          country: input.country,
+          currency,
+          country,
           checkoutId: input.checkoutId,
           registerId: input.registerId,
           shiftId: shift.shift_id,
