@@ -16,6 +16,7 @@ import type {
 import { ReceiptFormatterFactory } from "./ReceiptFormatterFactory";
 import { PrintFormattingError } from "../errors/PrintErrors";
 import { REGION_CONFIGS } from "../config/regions";
+import { formatCurrencyAmount } from "../utils/money";
 
 export class ReceiptFormattingService {
   private regions: Map<CountryCode, RegionConfig> = new Map();
@@ -429,7 +430,7 @@ export class ReceiptFormattingService {
       }
 
       const priceLine = this.rightAlign(
-        `$${item.totalPrice.toFixed(2)}`,
+        formatCurrencyAmount(item.totalPrice, content.summary.currency),
         width,
       );
       lines.push(priceLine);
@@ -437,17 +438,28 @@ export class ReceiptFormattingService {
     lines.push("-".repeat(width));
 
     // Summary
+    const money = (amount: number) =>
+      formatCurrencyAmount(amount, content.summary.currency);
     lines.push(
-      this.formatSummaryLine("Subtotal", content.summary.subtotal, width),
+      this.formatSummaryLine(
+        "Subtotal",
+        money(content.summary.subtotal),
+        width,
+      ),
     );
 
     for (const tax of content.summary.tax) {
-      lines.push(this.formatSummaryLine(tax.name, tax.amount, width));
+      lines.push(this.formatSummaryLine(tax.name, money(tax.amount), width));
     }
 
     lines.push("=".repeat(width));
     lines.push(
-      this.formatSummaryLine("TOTAL", content.summary.total, width, true),
+      this.formatSummaryLine(
+        "TOTAL",
+        money(content.summary.total),
+        width,
+        true,
+      ),
     );
 
     // Footer
@@ -472,11 +484,10 @@ export class ReceiptFormattingService {
 
   private formatSummaryLine(
     label: string,
-    amount: number,
+    amountStr: string,
     width: number,
     bold = false,
   ): string {
-    const amountStr = `$${amount.toFixed(2)}`;
     const maxLabelLength = width - amountStr.length - 1;
     const truncatedLabel = label.substring(0, maxLabelLength);
     const padding = width - truncatedLabel.length - amountStr.length;

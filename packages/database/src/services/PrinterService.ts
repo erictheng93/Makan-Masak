@@ -17,6 +17,7 @@ import type {
   PrintStatistics,
   RegionConfig,
 } from "@makanmasak/shared-types";
+import { formatCurrency as formatCurrencyAmount } from "@makanmasak/utils";
 
 type PrintJobMetricsMetadata = NonNullable<PrintJob["metadata"]> & {
   paperUsage?: unknown;
@@ -251,14 +252,9 @@ export class RegionManager {
   }
 
   formatCurrency(amount: number, country: CountryCode): string {
-    const region = this.getRegion(country);
-    const formatter = new Intl.NumberFormat(region.locale, {
-      style: "currency",
-      currency: region.currency,
-      minimumFractionDigits: this.getCurrencyDecimals(region.currency),
-    });
-
-    return formatter.format(amount);
+    // Intl style:"currency" renders TWD as "$350.00" in zh-TW. The shared
+    // formatter prints what the apps print: "NT$350", "RM 12.50", "350.000 ₫".
+    return formatCurrencyAmount(amount, this.getRegion(country).currency);
   }
 
   formatDate(date: Date, country: CountryCode): string {
@@ -268,12 +264,6 @@ export class RegionManager {
       timeStyle: "short",
       timeZone: region.timezone,
     }).format(date);
-  }
-
-  private getCurrencyDecimals(currency: string): number {
-    // 某些貨幣沒有小數點 (如日元、韓元、越南盾)
-    const noDecimalCurrencies = ["JPY", "KRW", "VND"];
-    return noDecimalCurrencies.includes(currency) ? 0 : 2;
   }
 
   private initializeDefaultRegions(): void {

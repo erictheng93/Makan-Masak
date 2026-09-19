@@ -5,6 +5,7 @@
 
 import type { CountryCode, RegionConfig } from "@makanmasak/shared-types";
 import { REGION_CONFIGS } from "../config/regions";
+import { formatRegionMoney, roundMoney } from "../utils/money";
 
 export class RegionManager {
   private regions: Map<CountryCode, RegionConfig>;
@@ -44,27 +45,16 @@ export class RegionManager {
   // =============================================
 
   formatCurrency(amount: number, country: CountryCode): string {
-    const region = this.getRegion(country);
-    const { currency } = region.numberFormat;
-
-    const formatter = new Intl.NumberFormat(region.locale, {
-      style: "currency",
-      currency: region.currency,
-      minimumFractionDigits: this.getCurrencyDecimals(currency.symbol),
-    });
-
-    return formatter.format(amount);
+    // The decimals used to be looked up by the *symbol* ("₫") in a list of
+    // currency *codes* ("VND"), so VND never matched and printed two
+    // decimals; and Intl renders TWD as "$350.00". formatRegionMoney keys the
+    // precision on the currency code and uses the region's own symbol.
+    return formatRegionMoney(amount, this.getRegion(country));
   }
 
   formatNumber(number: number, country: CountryCode): string {
     const region = this.getRegion(country);
     return new Intl.NumberFormat(region.locale).format(number);
-  }
-
-  private getCurrencyDecimals(currency: string): number {
-    // 某些貨幣沒有小數點 (如日元、韓元、越南盾)
-    const noDecimalCurrencies = ["JPY", "KRW", "VND"];
-    return noDecimalCurrencies.includes(currency) ? 0 : 2;
   }
 
   // =============================================
@@ -114,8 +104,12 @@ export class RegionManager {
 
     if (taxConfig.inclusive) {
       // 含稅價格計算稅額
-      const taxableAmount = subtotal / (1 + taxConfig.rate);
-      const taxAmount = subtotal - taxableAmount;
+      // Rounded to the currency so the two parts still sum to the subtotal.
+      const taxAmount = roundMoney(
+        subtotal - subtotal / (1 + taxConfig.rate),
+        region.currency,
+      );
+      const taxableAmount = subtotal - taxAmount;
       return {
         taxAmount,
         taxableAmount,
@@ -124,7 +118,7 @@ export class RegionManager {
       };
     } else {
       // 未稅價格計算稅額
-      const taxAmount = subtotal * taxConfig.rate;
+      const taxAmount = roundMoney(subtotal * taxConfig.rate, region.currency);
       return {
         taxAmount,
         taxableAmount: subtotal,

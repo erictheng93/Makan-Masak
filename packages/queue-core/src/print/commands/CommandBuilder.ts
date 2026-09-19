@@ -5,6 +5,7 @@
 
 import { ESCPOSCommands } from "./ESCPOSCommands";
 import type { PrintContent } from "@makanmasak/shared-types";
+import { formatCurrencyAmount } from "../utils/money";
 
 /**
  * One queued command, discriminated on `type`.
@@ -226,6 +227,10 @@ export class CommandBuilder {
   static fromPrintContent(content: PrintContent): CommandBuilder {
     const builder = new CommandBuilder();
     const width = 32;
+    // Every amount in the content is in summary.currency: "NT$350",
+    // "RM 12.50", "350.000 ₫" — not a symbol-less "350.00" for every shop.
+    const money = (amount: number) =>
+      formatCurrencyAmount(amount, content.summary.currency);
 
     const header = content.header;
     const restaurant = header.restaurantInfo;
@@ -326,7 +331,7 @@ export class CommandBuilder {
       builder.addRaw(
         ESCPOSCommands.textColumns(
           `${item.name} x${item.quantity}`,
-          CommandBuilder.formatPrice(item.totalPrice),
+          money(item.totalPrice),
           width,
         ),
       );
@@ -336,9 +341,7 @@ export class CommandBuilder {
           builder.addRaw(
             ESCPOSCommands.textColumns(
               `  + ${modifier.name}`,
-              modifier.price > 0
-                ? CommandBuilder.formatPrice(modifier.price)
-                : "",
+              modifier.price > 0 ? money(modifier.price) : "",
               width,
             ),
           );
@@ -350,18 +353,14 @@ export class CommandBuilder {
     builder.addRaw(
       ESCPOSCommands.textColumns(
         "Subtotal:",
-        CommandBuilder.formatPrice(content.summary.subtotal),
+        money(content.summary.subtotal),
         width,
       ),
     );
 
     for (const tax of content.summary.tax) {
       builder.addRaw(
-        ESCPOSCommands.textColumns(
-          `${tax.name}:`,
-          CommandBuilder.formatPrice(tax.amount),
-          width,
-        ),
+        ESCPOSCommands.textColumns(`${tax.name}:`, money(tax.amount), width),
       );
     }
 
@@ -369,7 +368,7 @@ export class CommandBuilder {
       builder.addRaw(
         ESCPOSCommands.textColumns(
           `${content.summary.serviceCharge.name}:`,
-          CommandBuilder.formatPrice(content.summary.serviceCharge.amount),
+          money(content.summary.serviceCharge.amount),
           width,
         ),
       );
@@ -381,7 +380,7 @@ export class CommandBuilder {
       builder.addRaw(
         ESCPOSCommands.textColumns(
           "Delivery Fee:",
-          CommandBuilder.formatPrice(content.summary.deliveryFee),
+          money(content.summary.deliveryFee),
           width,
         ),
       );
@@ -389,11 +388,7 @@ export class CommandBuilder {
 
     if (content.summary.tip && content.summary.tip > 0) {
       builder.addRaw(
-        ESCPOSCommands.textColumns(
-          "Tip:",
-          CommandBuilder.formatPrice(content.summary.tip),
-          width,
-        ),
+        ESCPOSCommands.textColumns("Tip:", money(content.summary.tip), width),
       );
     }
 
@@ -401,7 +396,7 @@ export class CommandBuilder {
       builder.addRaw(
         ESCPOSCommands.textColumns(
           `${content.summary.discount.name}:`,
-          `-${CommandBuilder.formatPrice(content.summary.discount.amount)}`,
+          `-${money(content.summary.discount.amount)}`,
           width,
         ),
       );
@@ -409,11 +404,7 @@ export class CommandBuilder {
 
     builder.addRaw(ESCPOSCommands.separator("-", width));
     builder.addRaw(
-      ESCPOSCommands.printTotal(
-        "TOTAL:",
-        CommandBuilder.formatPrice(content.summary.total),
-        width,
-      ),
+      ESCPOSCommands.printTotal("TOTAL:", money(content.summary.total), width),
     );
 
     builder.addRaw(ESCPOSCommands.lineFeed());
@@ -422,7 +413,7 @@ export class CommandBuilder {
       builder.addRaw(
         ESCPOSCommands.textColumns(
           `${payment.method}:`,
-          CommandBuilder.formatPrice(payment.amount),
+          money(payment.amount),
           width,
         ),
       );
@@ -436,7 +427,7 @@ export class CommandBuilder {
       builder.addRaw(
         ESCPOSCommands.textColumns(
           "Change:",
-          CommandBuilder.formatPrice(content.summary.change),
+          money(content.summary.change),
           width,
         ),
       );
@@ -538,9 +529,5 @@ export class CommandBuilder {
    */
   getCommandCount(): number {
     return this.commands.length;
-  }
-
-  private static formatPrice(amount: number): string {
-    return amount.toFixed(2);
   }
 }

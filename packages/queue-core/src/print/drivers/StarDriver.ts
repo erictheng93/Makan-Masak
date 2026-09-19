@@ -10,6 +10,7 @@ import type {
   PrinterStatus,
 } from "@makanmasak/shared-types";
 import { CommandBuilder } from "../commands/CommandBuilder";
+import { formatCurrencyAmount } from "../utils/money";
 import { PrinterDriver } from "./PrinterDriver";
 import type { PrinterDriverExecutionOptions } from "./PrinterDriver";
 
@@ -145,6 +146,8 @@ export class StarDriver extends PrinterDriver {
 
   private buildStarSpecificCommands(content: PrintContent): string {
     const commands: string[] = [];
+    const money = (amount: number) =>
+      formatCurrencyAmount(amount, content.summary.currency);
 
     // Add restaurant header with Star commands
     if (content.header?.restaurantInfo?.name) {
@@ -171,19 +174,17 @@ export class StarDriver extends PrinterDriver {
     // Add items
     for (const item of content.items) {
       commands.push(`${item.quantity}x ${item.name}\n`);
-      commands.push(`  $${item.totalPrice.toFixed(2)}\n`);
+      commands.push(`  ${money(item.totalPrice)}\n`);
     }
 
     commands.push("\n");
 
     // Add summary
-    commands.push(`Subtotal: $${content.summary.subtotal.toFixed(2)}\n`);
+    commands.push(`Subtotal: ${money(content.summary.subtotal)}\n`);
     for (const tax of content.summary.tax) {
-      commands.push(`${tax.name}: $${tax.amount.toFixed(2)}\n`);
+      commands.push(`${tax.name}: ${money(tax.amount)}\n`);
     }
-    commands.push(
-      `\x1B\x45Total: $${content.summary.total.toFixed(2)}\x1B\x46\n`,
-    ); // Bold
+    commands.push(`\x1B\x45Total: ${money(content.summary.total)}\x1B\x46\n`); // Bold
 
     commands.push("\n");
 
