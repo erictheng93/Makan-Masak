@@ -1611,6 +1611,7 @@ export class GroupOrdersService implements IGroupOrderService {
           orderTotalCents,
         },
         cartItems,
+        { amountsFrom: "order" },
       );
 
       if (!splitResult.success) {
@@ -1831,6 +1832,8 @@ export class GroupOrdersService implements IGroupOrderService {
             sharedTaxCents: failure.taxAmountCents,
             orderTotalCents: failure.orderTotalCents,
           },
+      undefined,
+      { amountsFrom: "order" },
     );
 
     if (!splitResult.success) {
@@ -1921,12 +1924,22 @@ export class GroupOrdersService implements IGroupOrderService {
   }
 
   /**
-   * Split bill among members
+   * Split bill among members.
+   *
+   * `amountsFrom` says where the money figures in `splitData` came from.
+   * `"client"` (the default, and what POST /split passes) means a caller typed
+   * them, so every one must sit on the restaurant currency's step — a TWD
+   * shared service charge of 1250 cents (NT$12.50) is a 400
+   * `CURRENCY_PRECISION`, not a bill. `"order"` is finalization and its
+   * recovery handing over the real order's own stored figures: those were
+   * already charged, and refusing to split a legacy order's off-step amount
+   * would strand the group in `finalizing`.
    */
   async splitBill(
     groupOrderId: string,
     splitData: SplitBillRequest,
     cartSnapshot?: Array<typeof groupCartItems.$inferSelect>,
+    options: { amountsFrom: "client" | "order" } = { amountsFrom: "client" },
   ): Promise<SplitBillResult> {
     const timer = this.performance.startTimer("splitBill");
 
@@ -2003,17 +2016,24 @@ export class GroupOrdersService implements IGroupOrderService {
           memberId: custom.memberId,
           amountCents: toRequiredCents(custom.amount),
         }));
-        // Finalization recovery hands over the real order's own figures
-        // (shared amounts present); only a caller-typed split is validated.
-        if (!hasSharedAmounts) {
-          assertCurrencyAlignedCents(
-            currency,
-            customAmounts.map((custom, index) => ({
-              field: `customAmounts[${index}].amount`,
-              cents: custom.amountCents,
-            })),
-          );
-        }
+      }
+      // Only a caller-typed split is validated; see `amountsFrom` above. The
+      // shared amounts used to be exempt outright, and their mere presence
+      // also switched off the custom-amount check, so a client could put any
+      // sub-unit figure into a TWD bill by sending `sharedTaxCents: 0`.
+      if (options.amountsFrom === "client") {
+        assertCurrencyAlignedCents(currency, [
+          {
+            field: "sharedServiceChargeCents",
+            cents: splitData.sharedServiceChargeCents,
+          },
+          { field: "sharedTaxCents", cents: splitData.sharedTaxCents },
+          { field: "orderTotalCents", cents: splitData.orderTotalCents },
+          ...customAmounts.map((custom, index) => ({
+            field: `customAmounts[${index}].amount`,
+            cents: custom.amountCents,
+          })),
+        ]);
       }
 
       /**

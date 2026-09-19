@@ -324,5 +324,83 @@ describe("currency precision — real integration", () => {
         bills.map((bill) => bill.totalAmountCents).sort((a, b) => b! - a!),
       ).toEqual([3400, 3300, 3300]);
     });
+
+    it("POST /split rejects an off-step TWD shared amount and leaves the bills alone", async () => {
+      const { restaurantId } = await restaurantWith({ currency: "TWD" });
+      const item = await seed.menuItem(restaurantId, {
+        isAvailable: true,
+        priceCents: 10000,
+      });
+      const service = () =>
+        new GroupOrdersService(testApp.env.DB, testApp.env.CACHE_KV);
+      const created = await service().createGroupOrder(
+        { restaurantId, hostName: "Host" } as never,
+        null,
+      );
+      if (!created.data) throw new Error(created.error);
+      const { groupOrderId, memberToken } = created.data;
+      await service().addCartItem(groupOrderId, {
+        memberId: created.data.host.id,
+        menuItemId: Number(item.id),
+        quantity: 1,
+      } as never);
+
+      const billTotals = async () =>
+        (
+          await testApp.testDb.drizzle
+            .select({ totalAmountCents: splitBills.totalAmountCents })
+            .from(splitBills)
+            .where(eq(splitBills.groupOrderId, groupOrderId))
+        ).map((bill) => bill.totalAmountCents);
+      // Adding to the cart already keeps a running bill per member.
+      const before = await billTotals();
+
+      const csrfToken = "a".repeat(64);
+      const split = (body: Record<string, unknown>) =>
+        testApp.app.fetch(
+          new Request(
+            `https://test/api/v1/orders/group/${groupOrderId}/split`,
+            {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+                host: "test",
+                origin: "https://test",
+                "x-csrf-token": csrfToken,
+                cookie: `csrf_token=${csrfToken}`,
+              },
+              body: JSON.stringify({
+                memberToken,
+                splitType: "equal",
+                ...body,
+              }),
+            },
+          ),
+        );
+
+      const rejected = await split({
+        sharedServiceChargeCents: 1250,
+        sharedTaxCents: 500,
+      });
+      expect(rejected.status).toBe(400);
+      expect(await rejected.json()).toMatchObject({
+        success: false,
+        error: {
+          code: "CURRENCY_PRECISION",
+          details: {
+            currency: "TWD",
+            fields: [{ field: "sharedServiceChargeCents", amount: 12.5 }],
+          },
+        },
+      });
+      expect(await billTotals()).toEqual(before);
+
+      const accepted = await split({
+        sharedServiceChargeCents: 1000,
+        sharedTaxCents: 500,
+      });
+      expect(accepted.status).toBe(200);
+      expect(await billTotals()).toEqual([11500]);
+    });
   });
 });
