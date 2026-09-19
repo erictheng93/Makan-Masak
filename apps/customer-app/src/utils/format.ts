@@ -9,36 +9,6 @@ dayjs.locale("zh-tw");
 dayjs.extend(relativeTime);
 dayjs.extend(localizedFormat);
 
-/**
- * 格式化價格 - 將分轉換為元並格式化
- * @param cents 以分為單位的價格
- * @returns 格式化後的價格字串
- */
-export const formatPrice = (cents: number): string => {
-  if (typeof cents !== "number" || isNaN(cents)) {
-    return "0.00";
-  }
-
-  const dollars = cents / 100;
-  return dollars.toLocaleString("zh-TW", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
-
-/**
- * 格式化貨幣 - 包含貨幣符號
- * @param cents 以分為單位的價格
- * @param currency 貨幣符號，預設為 $
- * @returns 格式化後的貨幣字串
- */
-export const formatCurrency = (
-  cents: number,
-  currency: string = "$",
-): string => {
-  return `${currency}${formatPrice(cents)}`;
-};
-
 // Accepts every shape dayjs accepts at runtime. `number` covers Unix-ms
 // integers from the Order wire contract; string covers ISO; Date covers
 // null/undefined short-circuit to "".

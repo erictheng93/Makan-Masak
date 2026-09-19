@@ -251,7 +251,7 @@ const zhCN: Messages = {
       sourceImagesAlt: "上传的菜单来源图片",
       emptySource: "上传图片后，在右侧输入校对结果。",
       row: "第 {number} 行",
-      priceCents: "价格（元）",
+      price: "价格（{symbol}）",
       publishing: "发布中…",
       publish: "发布结构化菜单",
       fixFields: "请修正标示的字段后再发布。",
@@ -260,7 +260,9 @@ const zhCN: Messages = {
       validation: {
         nameRequired: "名称必填。",
         priceRequired: "价格必填。",
-        priceInvalid: "价格必须是 0 以上整数元。",
+        priceInvalid: "价格必须是 0 以上的金额。",
+        priceWholeUnits: "{symbol} 没有小数单位，价格必须是整数。",
+        priceTooPrecise: "{symbol} 价格最多 {decimals} 位小数。",
         categoryRequired: "请选择分类。",
         sortOrderRequired: "排序必填。",
         sortOrderInvalid: "排序必须是 0 以上整数。",
@@ -2652,8 +2654,6 @@ const zhCN: Messages = {
     alerts: {
       paymentSuccess: "付款处理成功",
       paymentFailed: "付款失败，请重试",
-      refundSuccess:
-        "退款处理成功：\n订单: {orderNumber}\n金额: RM{amount}\n原因: {reason}",
       refundFailed: "退款失败，请重试",
       printInDev: "收据打印功能开发中...",
       printing: "正在打印 {orderNumber} 的收据...",
@@ -2678,6 +2678,8 @@ const zhCN: Messages = {
     cashMatch: "现金金额吻合",
     cashOver: "现金溢出 {amount}",
     cashShort: "现金短缺 {amount}",
+    cashInsufficient: "收到的现金不足，还差 {amount}",
+    cashNotEntered: "请输入收到的现金金额",
     cashierName: "收银员",
     confirmPayment: "确认付款",
     coupon: "优惠券",
@@ -2734,6 +2736,10 @@ const zhCN: Messages = {
     transactionDetails: "交易明细",
   },
   settings: {
+    serviceItems: {
+      price: "价格（{symbol}）",
+      noPrice: "未设置价格",
+    },
     title: "系统设置",
     subtitle: "管理餐厅系统偏好设置",
     resetDefaults: "重置为默认值",

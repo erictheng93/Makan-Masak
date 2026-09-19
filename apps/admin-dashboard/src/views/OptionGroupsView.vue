@@ -355,7 +355,7 @@
               v-model="choiceForm.priceAdjustment"
               data-testid="choice-price-input"
               type="number"
-              step="0.01"
+              :step="inputStep"
               class="mt-1.5 w-full rounded-xl bg-ios-bg px-4 py-2.5 text-[14px] font-normal outline-none focus:ring-2 focus:ring-ios-primary/30"
             />
           </label>
@@ -415,7 +415,7 @@ import {
 } from "@/composables/useOptionGroups";
 
 const { t } = useI18n();
-const { formatPrice } = useCurrency();
+const { formatPrice, inputStep } = useCurrency();
 const {
   groups,
   isLoading,

@@ -258,7 +258,7 @@ const idID: Messages = {
       emptySource:
         "Unggah gambar lalu masukkan hasil koreksi di sebelah kanan.",
       row: "Baris {number}",
-      priceCents: "Harga",
+      price: "Harga ({symbol})",
       publishing: "Menerbitkan…",
       publish: "Terbitkan menu terstruktur",
       fixFields: "Perbaiki bidang yang ditandai sebelum menerbitkan.",
@@ -267,7 +267,10 @@ const idID: Messages = {
       validation: {
         nameRequired: "Nama wajib diisi.",
         priceRequired: "Harga wajib diisi.",
-        priceInvalid: "Harga harus berupa bilangan bulat tidak negatif.",
+        priceInvalid: "Harga harus berupa jumlah tidak negatif.",
+        priceWholeUnits:
+          "{symbol} tidak memiliki satuan pecahan, jadi harga harus bilangan bulat.",
+        priceTooPrecise: "Harga {symbol} maksimal {decimals} angka desimal.",
         categoryRequired: "Pilih kategori.",
         sortOrderRequired: "Urutan wajib diisi.",
         sortOrderInvalid: "Urutan harus berupa bilangan bulat tidak negatif.",
@@ -2716,8 +2719,6 @@ const idID: Messages = {
     alerts: {
       paymentSuccess: "Pembayaran berhasil diproses",
       paymentFailed: "Pembayaran gagal, silakan coba lagi",
-      refundSuccess:
-        "Pengembalian berhasil diproses:\nPesanan: {orderNumber}\nJumlah: RM{amount}\nAlasan: {reason}",
       refundFailed: "Pengembalian gagal, silakan coba lagi",
       printInDev: "Pencetakan struk sedang dalam pengembangan...",
       printing: "Mencetak struk untuk {orderNumber}...",
@@ -2743,6 +2744,8 @@ const idID: Messages = {
     coupon: "Kupon",
     cashOver: "Pembayaran tunai paling lambat {amount}",
     cashShort: "Uang tunai berkurang pada {amount}",
+    cashInsufficient: "Uang tunai yang diterima kurang {amount}",
+    cashNotEntered: "Masukkan jumlah uang tunai yang diterima",
     allOrdersCompleted: "Semua pesanan telah selesai",
     customer: "Pelanggan",
     discount: "Diskon",
@@ -2800,6 +2803,10 @@ const idID: Messages = {
     transactionDetails: "Detail Transaksi",
   },
   settings: {
+    serviceItems: {
+      price: "Harga ({symbol})",
+      noPrice: "Harga belum diatur",
+    },
     title: "Pengaturan",
     subtitle: "Kelola preferensi sistem restoran",
     resetDefaults: "Kembalikan ke Default",

@@ -253,7 +253,7 @@ const zhTWCore = {
       sourceImagesAlt: "上傳的菜單來源圖片",
       emptySource: "上傳圖片後，在右側輸入校對結果。",
       row: "第 {number} 列",
-      priceCents: "價格（元）",
+      price: "價格（{symbol}）",
       publishing: "發布中…",
       publish: "發布結構化菜單",
       fixFields: "請修正標示的欄位後再發布。",
@@ -262,7 +262,9 @@ const zhTWCore = {
       validation: {
         nameRequired: "名稱必填。",
         priceRequired: "價格必填。",
-        priceInvalid: "價格必須是 0 以上整數元。",
+        priceInvalid: "價格必須是 0 以上的金額。",
+        priceWholeUnits: "{symbol} 沒有小數單位，價格必須是整數。",
+        priceTooPrecise: "{symbol} 價格最多 {decimals} 位小數。",
         categoryRequired: "請選擇分類。",
         sortOrderRequired: "排序必填。",
         sortOrderInvalid: "排序必須是 0 以上整數。",
@@ -2817,12 +2819,12 @@ const zhTWCore = {
     cashMatch: "現金金額吻合",
     cashOver: "現金溢出 {amount}",
     cashShort: "現金短缺 {amount}",
+    cashInsufficient: "收到的現金不足，還差 {amount}",
+    cashNotEntered: "請輸入收到的現金金額",
     endShift: "結束班次",
     alerts: {
       paymentSuccess: "付款處理成功",
       paymentFailed: "付款失敗，請重試",
-      refundSuccess:
-        "退款處理成功：\n訂單: {orderNumber}\n金額: RM{amount}\n原因: {reason}",
       refundFailed: "退款失敗，請重試",
       printInDev: "收據列印功能開發中...",
       printing: "正在列印 {orderNumber} 的收據...",
@@ -2847,6 +2849,10 @@ const zhTWCore = {
 
   // 系統設定
   settings: {
+    serviceItems: {
+      price: "價格（{symbol}）",
+      noPrice: "未設定價格",
+    },
     title: "系統設定",
     subtitle: "管理餐廳系統偏好設定",
     resetDefaults: "重置為預設值",

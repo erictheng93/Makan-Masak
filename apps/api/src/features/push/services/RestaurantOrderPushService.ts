@@ -1,5 +1,13 @@
 import type { Env } from "../../../types/env";
-import { isWebPushEnabled } from "@makanmasak/database";
+import { drizzle } from "drizzle-orm/d1";
+import { eq } from "drizzle-orm";
+import { isWebPushEnabled, restaurants } from "@makanmasak/database";
+import {
+  formatCurrency,
+  normalizeCurrencyCode,
+  DEFAULT_CURRENCY,
+  type CurrencyCode,
+} from "@makanmasak/utils";
 
 interface PushSubscriptionRecord {
   id: string;
@@ -18,7 +26,14 @@ export interface RestaurantOrderPushInput {
   orderId: string;
   orderNumber: string;
   orderSource?: string | null;
+  /** Major units, as on the Order wire contract. */
   totalAmount: number;
+  /**
+   * The restaurant's currency. When omitted it is read from
+   * `restaurants.settings.currency`, once, and only if there is a
+   * subscription to deliver to.
+   */
+  currency?: string | null;
   itemCount: number;
   customerName?: string;
   notes?: string | null;
@@ -37,6 +52,12 @@ export class RestaurantOrderPushService {
     const subscriptions = await this.listRestaurantSubscriptions(
       input.restaurantId,
     );
+    if (subscriptions.length === 0) return { attempted: 0, delivered: 0 };
+
+    const currency =
+      normalizeCurrencyCode(input.currency) ??
+      (await this.loadRestaurantCurrency(input.restaurantId));
+    const payload = buildNewOrderPayload(input, currency);
     let delivered = 0;
 
     await Promise.all(
@@ -48,7 +69,7 @@ export class RestaurantOrderPushService {
             p256dhKey: record.subscription.keys.p256dh,
             authKey: record.subscription.keys.auth,
           },
-          payload: buildNewOrderPayload(input),
+          payload,
         });
 
         if (result?.ok) {
@@ -62,6 +83,22 @@ export class RestaurantOrderPushService {
     );
 
     return { attempted: subscriptions.length, delivered };
+  }
+
+  private async loadRestaurantCurrency(
+    restaurantId: string,
+  ): Promise<CurrencyCode> {
+    try {
+      const row = await drizzle(this.env.DB)
+        .select({ settings: restaurants.settings })
+        .from(restaurants)
+        .where(eq(restaurants.id, restaurantId))
+        .get();
+      return normalizeCurrencyCode(row?.settings?.currency) ?? DEFAULT_CURRENCY;
+    } catch {
+      // A notification with the platform currency beats no notification.
+      return DEFAULT_CURRENCY;
+    }
   }
 
   private async listRestaurantSubscriptions(restaurantId: string) {
@@ -85,7 +122,10 @@ export class RestaurantOrderPushService {
   }
 }
 
-function buildNewOrderPayload(input: RestaurantOrderPushInput) {
+function buildNewOrderPayload(
+  input: RestaurantOrderPushInput,
+  currency: CurrencyCode,
+) {
   const isMarketCheckout = input.orderSource === "market_checkout";
 
   return {
@@ -94,8 +134,9 @@ function buildNewOrderPayload(input: RestaurantOrderPushInput) {
     orderNumber: input.orderNumber,
     orderSource: input.orderSource ?? "direct",
     title: isMarketCheckout ? "市場結帳新訂單" : "新訂單",
-    body: `${input.orderNumber} · ${input.itemCount} items · ${formatAmount(
-      input.totalAmount,
+    body: `${input.orderNumber} · ${input.itemCount} items · ${formatCurrency(
+      Number.isFinite(input.totalAmount) ? input.totalAmount : 0,
+      currency,
     )}`,
     tag: `order-${input.orderId}`,
     priority: isMarketCheckout ? "high" : "normal",
@@ -127,8 +168,4 @@ function isPushSubscriptionRecord(
 
 function keySegment(value: string) {
   return encodeURIComponent(value.trim());
-}
-
-function formatAmount(value: number) {
-  return Number.isFinite(value) ? value.toFixed(2) : "0.00";
 }

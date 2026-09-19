@@ -7,6 +7,10 @@ import MenuView from "./MenuView.vue";
 import ImageAssistedMenuImport from "@/components/menu/ImageAssistedMenuImport.vue";
 import type { ImageVariants } from "@/composables/useImageUpload";
 import type { MenuItemData } from "@/composables/useMenuManagement";
+import {
+  clearRestaurantCurrency,
+  setRestaurantCurrency,
+} from "@/composables/useCurrency";
 
 // MenuView is a `<script setup>` component, so none of the bindings this file
 // drives are on the public instance type. The repo idiom is to name them once
@@ -119,11 +123,17 @@ vi.mock("vue-router", () => ({
   useRouter: () => ({ push }),
 }));
 
-vi.mock("@/composables/useCurrency", () => ({
-  useCurrency: () => ({
-    formatPrice: (value: number) => `$${value}`,
-  }),
-}));
+vi.mock("@/composables/useCurrency", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/composables/useCurrency")>();
+  return {
+    ...actual,
+    useCurrency: () => ({
+      ...actual.useCurrency(),
+      formatPrice: (value: number) => `$${value}`,
+    }),
+  };
+});
 
 vi.mock("@/composables/useImageUpload", () => ({
   useImageUpload: () => ({
@@ -482,6 +492,28 @@ describe("MenuView", () => {
       wrapper.get('[data-testid="market-product-gap-next-step"]').text(),
     ).toContain("重建搜尋索引");
   });
+
+  it.each([
+    ["TWD", "1"],
+    ["VND", "1"],
+    ["MYR", "0.01"],
+  ] as const)(
+    "steps the item price input by the %s unit (%s)",
+    async (code, step) => {
+      setRestaurantCurrency(code);
+      const wrapper = mountMenuView();
+      await wrapper
+        .findAll("button")
+        .find((button) => button.text().includes("menu.addItem"))!
+        .trigger("click");
+
+      expect(
+        wrapper.get('[data-testid="menu-item-price-input"]').attributes("step"),
+      ).toBe(step);
+      wrapper.unmount();
+      clearRestaurantCurrency();
+    },
+  );
 
   it("writes uploaded image fields to the form and save payload", async () => {
     const wrapper = mountMenuView();

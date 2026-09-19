@@ -255,7 +255,7 @@ const jaJP: Messages = {
       sourceImagesAlt: "アップロードしたメニュー画像",
       emptySource: "画像をアップロードしてから右側で内容を入力します。",
       row: "{number} 行目",
-      priceCents: "価格（元）",
+      price: "価格（{symbol}）",
       publishing: "公開中…",
       publish: "構造化メニューを公開",
       fixFields: "強調表示された項目を修正してください。",
@@ -264,7 +264,10 @@ const jaJP: Messages = {
       validation: {
         nameRequired: "名前は必須です。",
         priceRequired: "価格は必須です。",
-        priceInvalid: "価格は 0 以上の整数（元）で指定してください。",
+        priceInvalid: "価格は 0 以上の金額で指定してください。",
+        priceWholeUnits:
+          "{symbol} には小数単位がないため、価格は整数で指定してください。",
+        priceTooPrecise: "{symbol} の価格は小数点以下 {decimals} 桁までです。",
         categoryRequired: "カテゴリを選択してください。",
         sortOrderRequired: "表示順は必須です。",
         sortOrderInvalid: "表示順は 0 以上の整数で指定してください。",
@@ -2703,8 +2706,6 @@ const jaJP: Messages = {
     alerts: {
       paymentSuccess: "支払い処理が完了しました",
       paymentFailed: "支払いに失敗しました。再試行してください",
-      refundSuccess:
-        "返金処理が完了しました:\n注文: {orderNumber}\n金額: RM{amount}\n理由: {reason}",
       refundFailed: "返金に失敗しました。再試行してください",
       printInDev: "レシート印刷は開発中です...",
       printing: "{orderNumber}のレシートを印刷中...",
@@ -2743,6 +2744,8 @@ const jaJP: Messages = {
     optionalNotes: "オプションのメモ...",
     orderDetails: "注文の詳細",
     cashShort: "{amount} による現金不足",
+    cashInsufficient: "受け取った現金が {amount} 不足しています",
+    cashNotEntered: "受け取った現金の金額を入力してください",
     paymentFailed: "支払いに失敗しました",
     amountMismatch:
       "サーバー上の注文合計と金額が一致しません。注文を再読み込みしてからもう一度お試しください。",
@@ -2787,6 +2790,10 @@ const jaJP: Messages = {
     totalOrders: "総注文数",
   },
   settings: {
+    serviceItems: {
+      price: "価格（{symbol}）",
+      noPrice: "価格未設定",
+    },
     title: "設定",
     subtitle: "レストランのシステム設定を管理",
     resetDefaults: "デフォルトに戻す",

@@ -7,7 +7,7 @@ import type {
   PrinterDriverConfig,
   PrinterDevice,
 } from "@makanmasak/shared-types";
-import { PrinterDriver, PrinterService } from "./PrinterService";
+import { PrinterDriver, PrinterService, RegionManager } from "./PrinterService";
 
 function createConfig(): PrintServiceConfig {
   return {
@@ -231,5 +231,15 @@ describe("PrinterService statistics", () => {
     expect(stats.deviceUptime).toBe(50);
     expect(stats.errorRate).toBe(0);
     expect(stats.busyHours).toEqual([{ hour: 9, jobCount: 2 }]);
+  });
+});
+
+describe("RegionManager.formatCurrency", () => {
+  it.each([
+    ["TW", 350, "NT$350"],
+    ["MY", 12.5, "RM 12.50"],
+    ["VN", 350000, "350.000 ₫"],
+  ] as const)("%s %s → %s", (country, amount, expected) => {
+    expect(new RegionManager().formatCurrency(amount, country)).toBe(expected);
   });
 });

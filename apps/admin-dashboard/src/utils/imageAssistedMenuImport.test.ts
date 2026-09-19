@@ -5,6 +5,47 @@ import {
 } from "./imageAssistedMenuImport";
 
 describe("validateImageAssistedMenuItems", () => {
+  const draft = (price: string) => ({
+    id: "item-1",
+    name: "椰漿飯",
+    price,
+    categoryKey: "category-1",
+    description: "",
+    isAvailable: true,
+    sortOrder: "0",
+  });
+  const categories = new Map([["category-1", 7]]);
+
+  it.each([
+    ["12.50", "MYR", null, 12.5],
+    ["12.1", "MYR", null, 12.1],
+    ["12.505", "MYR", "priceTooPrecise", undefined],
+    ["350", "TWD", null, 350],
+    ["12.5", "TWD", "priceWholeUnits", undefined],
+    ["350000", "VND", null, 350000],
+    ["0.5", "VND", "priceWholeUnits", undefined],
+    ["-1", "MYR", "priceInvalid", undefined],
+    ["abc", "TWD", "priceInvalid", undefined],
+  ] as const)(
+    "accepts %s in %s according to the currency's precision",
+    (price, currency, error, parsed) => {
+      const result = validateImageAssistedMenuItems(
+        [draft(price)],
+        categories,
+        currency,
+      );
+      if (error) {
+        expect(result.errors["item-1"]?.price).toBe(error);
+        expect(result.items).toEqual([]);
+      } else {
+        expect(result.errors).toEqual({});
+        expect(result.items[0]).toEqual(
+          expect.objectContaining({ price: parsed }),
+        );
+      }
+    },
+  );
+
   it("maps corrected rows to the existing bulk import contract with defaults", () => {
     const result = validateImageAssistedMenuItems(
       [
@@ -56,7 +97,7 @@ describe("validateImageAssistedMenuItems", () => {
     expect(result.errors).toEqual({
       "item-1": {
         name: "nameRequired",
-        price: "priceInvalid",
+        price: "priceWholeUnits",
         categoryKey: "categoryRequired",
         sortOrder: "sortOrderInvalid",
       },

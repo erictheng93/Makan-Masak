@@ -171,6 +171,12 @@ export interface ItemModifier {
 }
 
 export interface ReceiptSummary {
+  /**
+   * The currency every amount below is in. Set by the region formatter so a
+   * driver that only sees the PrintContent can print "NT$350" rather than a
+   * bare "350.00".
+   */
+  currency?: CurrencyCode;
   subtotal: number;
   tax: TaxBreakdown[];
   discount?: DiscountInfo;

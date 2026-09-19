@@ -13,6 +13,10 @@ import ServiceBookingView from "@/views/ServiceBookingView.vue";
 import { restaurantContactApi } from "@/services/restaurantContactApi";
 import { serviceBookingsApi } from "@/services/serviceBookingsApi";
 import { i18n } from "@/i18n";
+import { menuApi } from "@/services/menuApi";
+import { createPinia, setActivePinia } from "pinia";
+import { useAppStore } from "@/stores/app";
+import type { Restaurant } from "@makanmasak/shared-types";
 
 const routerPush = vi.hoisted(() => vi.fn());
 const storedValueCreditsDisabled = vi.hoisted(() => ({ value: false }));
@@ -43,6 +47,12 @@ vi.mock("@/composables/useFeatureAvailability", () => ({
 vi.mock("@/services/restaurantContactApi", () => ({
   restaurantContactApi: {
     listServiceItems: vi.fn(),
+  },
+}));
+
+vi.mock("@/services/menuApi", () => ({
+  menuApi: {
+    getRestaurant: vi.fn(),
   },
 }));
 
@@ -104,14 +114,22 @@ function mountView() {
       serviceItemId: 10,
     },
     global: {
-      plugins: [i18n],
+      plugins: [i18n, pinia],
     },
   });
 }
 
+let pinia = createPinia();
+
 describe("ServiceBookingView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    pinia = createPinia();
+    setActivePinia(pinia);
+    vi.mocked(menuApi.getRestaurant).mockResolvedValue({
+      id: "restaurant-1",
+      settings: { currency: "TWD" },
+    } as unknown as Restaurant);
     routerPush.mockReset();
     storedValueCreditsDisabled.value = false;
     vi.mocked(restaurantContactApi.listServiceItems).mockResolvedValue([
@@ -158,6 +176,49 @@ describe("ServiceBookingView", () => {
     expect(
       wrapper.findAll('[data-testid="service-booking-slot"]'),
     ).toHaveLength(2);
+  });
+
+  describe("price currency", () => {
+    it("formats the service price in this restaurant's currency when opened cold", async () => {
+      vi.mocked(menuApi.getRestaurant).mockResolvedValue({
+        id: "restaurant-1",
+        settings: { currency: "MYR" },
+      } as unknown as Restaurant);
+
+      const wrapper = mountView();
+      await flushPromises();
+
+      expect(menuApi.getRestaurant).toHaveBeenCalledWith("restaurant-1");
+      expect(wrapper.text()).toContain("RM 120.00");
+      expect(wrapper.text()).not.toContain("NT$");
+    });
+
+    it("does not borrow the currency of a different restaurant in the store", async () => {
+      useAppStore(pinia).currentRestaurant = {
+        id: "restaurant-2",
+        settings: { currency: "MYR" },
+      } as unknown as Restaurant;
+
+      const wrapper = mountView();
+      await flushPromises();
+
+      expect(menuApi.getRestaurant).toHaveBeenCalledWith("restaurant-1");
+      expect(wrapper.text()).toContain("NT$120");
+      expect(wrapper.text()).not.toContain("RM");
+    });
+
+    it("reuses the store's restaurant when it is this one", async () => {
+      useAppStore(pinia).currentRestaurant = {
+        id: "restaurant-1",
+        settings: { currency: "VND" },
+      } as unknown as Restaurant;
+
+      const wrapper = mountView();
+      await flushPromises();
+
+      expect(menuApi.getRestaurant).not.toHaveBeenCalled();
+      expect(wrapper.text()).toContain("120 ₫");
+    });
   });
 
   describe("default booking date", () => {

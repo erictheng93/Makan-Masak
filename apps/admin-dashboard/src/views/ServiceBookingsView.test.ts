@@ -4,6 +4,10 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import ServiceBookingsView from "./ServiceBookingsView.vue";
 import { serviceBookingsService } from "@/services/serviceBookingsService";
+import {
+  clearRestaurantCurrency,
+  setRestaurantCurrency,
+} from "@/composables/useCurrency";
 
 const i18nMock = vi.hoisted(() => {
   const locale = { value: "zh-TW" };
@@ -146,6 +150,22 @@ describe("ServiceBookingsView", () => {
     expect(wrapper.findAll('[data-testid="service-booking-row"]')).toHaveLength(
       2,
     );
+  });
+
+  it("shows the amount due in the restaurant's currency", async () => {
+    clearRestaurantCurrency();
+    const twd = mount(ServiceBookingsView);
+    await flushPromises();
+    expect(twd.text()).toContain("NT$120");
+    twd.unmount();
+
+    setRestaurantCurrency("MYR");
+    const myr = mount(ServiceBookingsView);
+    await flushPromises();
+    expect(myr.text()).toContain("RM 120.00");
+    expect(myr.text()).not.toContain("NT$");
+    myr.unmount();
+    clearRestaurantCurrency();
   });
 
   it("renders labels through i18n when locale changes", async () => {

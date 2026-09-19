@@ -9,6 +9,7 @@ import type {
   PrintContent,
   RegionConfig,
 } from "@makanmasak/shared-types";
+import { formatRegionMoney, roundMoney } from "../utils/money";
 
 /**
  * What the regional formatters actually read off a receipt payload.
@@ -164,18 +165,12 @@ export abstract class BaseReceiptFormatter implements IReceiptFormatter {
   }
 
   protected formatCurrency(amount: number): string {
-    const { currency } = this.region.numberFormat;
-    const formattedAmount = amount.toFixed(2);
+    return formatRegionMoney(amount, this.region);
+  }
 
-    if (currency.position === "before") {
-      return currency.space
-        ? `${currency.symbol} ${formattedAmount}`
-        : `${currency.symbol}${formattedAmount}`;
-    } else {
-      return currency.space
-        ? `${formattedAmount} ${currency.symbol}`
-        : `${formattedAmount}${currency.symbol}`;
-    }
+  /** A derived amount (tax from a rate) on the currency's precision. */
+  protected roundMoney(amount: number): number {
+    return roundMoney(amount, this.region.currency);
   }
 
   protected formatDate(date: Date): string {
@@ -202,7 +197,7 @@ export class TWReceiptFormatter extends BaseReceiptFormatter {
     const restaurant = data.restaurant;
     const payment = data.payment;
     const subtotal = order?.subtotal ?? 0;
-    const taxAmount = order?.tax ?? subtotal * 0.05;
+    const taxAmount = order?.tax ?? this.roundMoney(subtotal * 0.05);
 
     return {
       header: {
@@ -246,6 +241,7 @@ export class TWReceiptFormatter extends BaseReceiptFormatter {
           taxRate: 0.05, // Taiwan VAT rate
         })) || [],
       summary: {
+        currency: this.region.currency,
         subtotal,
         tax: [
           {
@@ -327,7 +323,7 @@ export class MYReceiptFormatter extends BaseReceiptFormatter {
     const restaurant = data.restaurant;
     const payment = data.payment;
     const subtotal = order?.subtotal ?? 0;
-    const taxAmount = order?.tax ?? subtotal * 0.06;
+    const taxAmount = order?.tax ?? this.roundMoney(subtotal * 0.06);
 
     return {
       header: {
@@ -362,6 +358,7 @@ export class MYReceiptFormatter extends BaseReceiptFormatter {
           taxRate: 0.06, // Malaysia SST rate
         })) || [],
       summary: {
+        currency: this.region.currency,
         subtotal,
         tax: [
           {
@@ -442,7 +439,7 @@ export class VNReceiptFormatter extends BaseReceiptFormatter {
     const restaurant = data.restaurant;
     const payment = data.payment;
     const total = order?.total ?? 0;
-    const subtotal = order?.subtotal ?? total / 1.1;
+    const subtotal = order?.subtotal ?? this.roundMoney(total / 1.1);
     const taxAmount = order?.tax ?? total - subtotal;
 
     return {
@@ -478,6 +475,7 @@ export class VNReceiptFormatter extends BaseReceiptFormatter {
           taxRate: 0.1, // Vietnam VAT rate
         })) || [],
       summary: {
+        currency: this.region.currency,
         subtotal,
         tax: [
           {

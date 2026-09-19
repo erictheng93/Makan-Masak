@@ -218,6 +218,7 @@
             </div>
             <select
               v-model="settings.system.currency"
+              data-testid="settings-currency"
               class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="MYR">
@@ -225,6 +226,9 @@
               </option>
               <option value="TWD">
                 {{ t("settings.general.currencies.twd") }}
+              </option>
+              <option value="VND">
+                {{ t("settings.general.currencies.vnd") }}
               </option>
             </select>
           </div>
@@ -876,20 +880,16 @@
                   <span
                     class="text-gray-500"
                     data-testid="settings-min-order-currency"
-                    >{{
-                      getCurrencySymbol(
-                        settings.system.currency as CurrencyCode,
-                      )
-                    }}</span
+                    >{{ formCurrencySymbol }}</span
                   >
                   <input
                     v-model.number="settings.orders.minimumOrderAmount"
+                    data-testid="settings-min-order-amount"
                     type="number"
                     min="0"
-                    step="0.50"
-                    max="500"
+                    :step="formCurrencyStep"
                     class="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="0.00"
+                    :placeholder="formCurrencyPlaceholder"
                   />
                 </div>
                 <p class="text-xs text-gray-500 mt-1">
@@ -1075,12 +1075,18 @@
             t("settings.delivery.deliveryFee")
           }}</label>
           <div class="flex items-center gap-2">
-            <span class="text-gray-500 text-sm">NT$</span>
+            <span
+              class="text-gray-500 text-sm"
+              data-testid="settings-delivery-fee-currency"
+              >{{ formCurrencySymbol }}</span
+            >
             <input
               v-model.number="deliverySettings.deliveryFee"
+              data-testid="settings-delivery-fee"
               type="number"
               min="0"
-              step="10"
+              :step="formCurrencyStep"
+              :placeholder="formCurrencyPlaceholder"
               class="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
@@ -1925,7 +1931,23 @@ import { formatMarketMembershipLocation } from "@/utils/marketMembershipDisplay"
 import { setRestaurantCurrency } from "@/composables/useCurrency";
 import { printQRCodeSheet, toPrintableDataUrl } from "@/utils/qrPrintSheet";
 import type { CurrencyCode } from "@makanmasak/shared-types";
-import { getCurrencySymbol } from "@makanmasak/utils";
+import {
+  getCurrencySymbol,
+  getCurrencyConfig,
+  normalizeCurrencyCode,
+  DEFAULT_CURRENCY,
+} from "@makanmasak/utils";
+
+/**
+ * The currency a shop with no saved `settings.currency` is shown in, from the
+ * restaurant's business timezone. Guessing a fixed code here is how a new
+ * Taichung shop got saved as MYR on its first settings save (#394).
+ */
+const CURRENCY_BY_TIMEZONE: Record<string, CurrencyCode> = {
+  "Asia/Taipei": "TWD",
+  "Asia/Kuala_Lumpur": "MYR",
+  "Asia/Ho_Chi_Minh": "VND",
+};
 
 const { t } = useI18n();
 const toast = useToast();
@@ -2092,7 +2114,7 @@ const settings = reactive({
   },
   system: {
     language: "zh-TW",
-    currency: "MYR",
+    currency: DEFAULT_CURRENCY as CurrencyCode,
     autoLogoutMinutes: 60,
   },
   orders: {
@@ -2141,6 +2163,28 @@ const settings = reactive({
     },
   },
 });
+
+// Money inputs on this screen follow the currency selected in the form, which
+// is what the amounts will be saved in — not the one the console last loaded.
+const formCurrencyDecimals = computed(
+  () =>
+    getCurrencyConfig(
+      normalizeCurrencyCode(settings.system.currency) ?? DEFAULT_CURRENCY,
+    )?.decimals ?? 0,
+);
+const formCurrencySymbol = computed(() =>
+  getCurrencySymbol(
+    normalizeCurrencyCode(settings.system.currency) ?? DEFAULT_CURRENCY,
+  ),
+);
+const formCurrencyStep = computed(() =>
+  formCurrencyDecimals.value > 0
+    ? (1 / 10 ** formCurrencyDecimals.value).toFixed(formCurrencyDecimals.value)
+    : "1",
+);
+const formCurrencyPlaceholder = computed(() =>
+  (0).toFixed(formCurrencyDecimals.value),
+);
 const hasTemporaryAddress = computed(
   () =>
     settings.restaurant.address.startsWith("Onboarding GPS ") ||
@@ -2528,6 +2572,11 @@ const loadSettings = async () => {
           settings.restaurant.longitude = data.longitude;
         }
         if (data.timezone) settings.restaurant.timezone = data.timezone;
+        if (!normalizeCurrencyCode(data.settings?.currency)) {
+          settings.system.currency =
+            CURRENCY_BY_TIMEZONE[settings.restaurant.timezone] ??
+            DEFAULT_CURRENCY;
+        }
         settings.orders.acceptGuestOrders =
           data.settings?.allowGuestOrders === true &&
           data.isAvailable !== false;
@@ -2553,9 +2602,10 @@ const loadSettings = async () => {
         loadedBusinessHours.closeTime = settings.restaurant.closeTime;
       }
       if (data?.settings) {
-        if (data.settings.currency) {
-          settings.system.currency = data.settings.currency;
-          setRestaurantCurrency(data.settings.currency as CurrencyCode);
+        const savedCurrency = normalizeCurrencyCode(data.settings.currency);
+        if (savedCurrency) {
+          settings.system.currency = savedCurrency;
+          setRestaurantCurrency(savedCurrency);
         }
         if (data.settings.enableDineIn !== undefined) {
           deliverySettings.enableDineIn = data.settings.enableDineIn;

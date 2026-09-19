@@ -255,7 +255,7 @@ const viVN: Messages = {
       sourceImagesAlt: "Ảnh nguồn thực đơn đã tải lên",
       emptySource: "Tải ảnh lên rồi nhập kết quả hiệu đính ở bên phải.",
       row: "Hàng {number}",
-      priceCents: "Giá (đồng)",
+      price: "Giá ({symbol})",
       publishing: "Đang xuất bản…",
       publish: "Xuất bản thực đơn có cấu trúc",
       fixFields: "Hãy sửa các trường được đánh dấu trước khi xuất bản.",
@@ -264,7 +264,9 @@ const viVN: Messages = {
       validation: {
         nameRequired: "Tên là bắt buộc.",
         priceRequired: "Giá là bắt buộc.",
-        priceInvalid: "Giá phải là số nguyên không âm tính theo đồng.",
+        priceInvalid: "Giá phải là số tiền không âm.",
+        priceWholeUnits: "{symbol} không có đơn vị lẻ, giá phải là số nguyên.",
+        priceTooPrecise: "Giá {symbol} tối đa {decimals} chữ số thập phân.",
         categoryRequired: "Chọn danh mục.",
         sortOrderRequired: "Thứ tự là bắt buộc.",
         sortOrderInvalid: "Thứ tự phải là số nguyên không âm.",
@@ -2702,8 +2704,6 @@ const viVN: Messages = {
     alerts: {
       paymentSuccess: "Thanh toán thành công",
       paymentFailed: "Thanh toán thất bại, vui lòng thử lại",
-      refundSuccess:
-        "Hoàn tiền thành công:\nĐơn hàng: {orderNumber}\nSố tiền: {amount} VND\nLý do: {reason}",
       refundFailed: "Hoàn tiền thất bại, vui lòng thử lại",
       printInDev: "Tính năng in hóa đơn đang phát triển...",
       printing: "Đang in hóa đơn cho {orderNumber}...",
@@ -2752,6 +2752,8 @@ const viVN: Messages = {
     paymentSuccess: "Thanh toán thành công!",
     orderCompleted: "Đơn hàng {orderNumber} đã hoàn thành",
     cashShort: "Thiếu tiền mặt {amount}",
+    cashInsufficient: "Tiền mặt nhận được còn thiếu {amount}",
+    cashNotEntered: "Nhập số tiền mặt đã nhận",
     printReport: "In báo cáo",
     noPendingOrders: "Không có lệnh chờ xử lý",
     received: "Đã nhận",
@@ -2786,6 +2788,10 @@ const viVN: Messages = {
     selectReason: "Chọn một lý do",
   },
   settings: {
+    serviceItems: {
+      price: "Giá ({symbol})",
+      noPrice: "Chưa đặt giá",
+    },
     title: "Cài đặt",
     subtitle: "Quản lý cài đặt hệ thống nhà hàng",
     resetDefaults: "Đặt lại mặc định",

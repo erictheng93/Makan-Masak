@@ -534,7 +534,7 @@
                   <input
                     v-model.number="menuItemForm.originalPrice"
                     type="number"
-                    step="0.01"
+                    :step="inputStep"
                     min="0"
                     class="w-full px-4 py-2.5 bg-ios-bg rounded-xl text-[14px] text-ios-text border-0 outline-none focus:ring-2 focus:ring-ios-primary/30 transition-all"
                   />
@@ -552,7 +552,7 @@
                     v-model.number="menuItemForm.price"
                     data-testid="menu-item-price-input"
                     type="number"
-                    step="0.01"
+                    :step="inputStep"
                     min="1"
                     required
                     class="w-full px-4 py-2.5 bg-ios-bg rounded-xl text-[14px] text-ios-text border-0 outline-none focus:ring-2 focus:ring-ios-primary/30 transition-all"
@@ -871,7 +871,7 @@
                         <input
                           v-model.number="size.priceAdjustment"
                           type="number"
-                          step="0.01"
+                          :step="inputStep"
                           class="rounded-xl bg-ios-bg px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
                         />
                         <label
@@ -944,7 +944,7 @@
                         <input
                           v-model.number="addOn.price"
                           type="number"
-                          step="0.01"
+                          :step="inputStep"
                           min="0"
                           class="rounded-xl bg-ios-bg px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
                         />
@@ -1112,7 +1112,7 @@
                             <input
                               v-model.number="choice.priceAdjustment"
                               type="number"
-                              step="0.01"
+                              :step="inputStep"
                               class="rounded-xl bg-white px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
                             />
                             <label
@@ -1295,6 +1295,7 @@
 import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "@/i18n";
+import { useCurrency } from "@/composables/useCurrency";
 import { useMenuManagement } from "@/composables/useMenuManagement";
 import { getAuthToken } from "@/utils/authTokenProvider";
 import {
@@ -1364,6 +1365,7 @@ type CustomizationGroupForm = {
 };
 
 const { t } = useI18n();
+const { inputStep, currencyCode } = useCurrency();
 const route = useRoute();
 const router = useRouter();
 const {
@@ -1730,7 +1732,11 @@ const menuItemImportPreview = computed(() => {
     return { items: [], errors: [] };
   }
 
-  return parseMenuItemImport(menuItemImportText.value, categories.value);
+  return parseMenuItemImport(
+    menuItemImportText.value,
+    categories.value,
+    currencyCode.value,
+  );
 });
 
 // ── Category Panel Handlers ──
@@ -2418,6 +2424,7 @@ const publishImageAssistedMenu = async (payload: {
   const beforeCreate = validateImageAssistedMenuItems(
     payload.items,
     categoryIds,
+    currencyCode.value,
   );
   if (Object.keys(beforeCreate.errors).length) {
     imageMenuErrors.value = beforeCreate.errors;
@@ -2437,7 +2444,11 @@ const publishImageAssistedMenu = async (payload: {
         )
       : imageMenuCreatedCategoryIds;
     createdCategoryIds.forEach((id, key) => categoryIds.set(key, id));
-    const ready = validateImageAssistedMenuItems(payload.items, categoryIds);
+    const ready = validateImageAssistedMenuItems(
+      payload.items,
+      categoryIds,
+      currencyCode.value,
+    );
     await importMenuItems(ready.items);
     await fetchMenu();
     imageMenuPublishError.value = "";

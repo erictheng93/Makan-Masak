@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { mount, flushPromises } from "@vue/test-utils";
+import { mount, flushPromises, type VueWrapper } from "@vue/test-utils";
 import { ref } from "vue";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import SettingsView from "./SettingsView.vue";
@@ -547,6 +547,100 @@ describe("SettingsView guest ordering availability", () => {
     expect(
       wrapper.get('[data-testid="settings-min-order-currency"]').text(),
     ).toBe("NT$");
+  });
+
+  describe("shop currency", () => {
+    function restaurantWith(overrides: Record<string, unknown>) {
+      const baseGet = vi.mocked(api.get).getMockImplementation()!;
+      vi.mocked(api.get).mockImplementation(async (url: string) => {
+        if (url === "/restaurants/restaurant-1") {
+          return apiGetResponse({
+            name: "新店",
+            address: "台中市西屯區文華路 12 號",
+            city: "台中市",
+            district: "西屯區",
+            isAvailable: true,
+            ...overrides,
+          });
+        }
+        return baseGet(url);
+      });
+    }
+
+    async function saveAndReadCurrency(wrapper: VueWrapper) {
+      await wrapper
+        .findAll("button")
+        .find((button) => button.text() === "settings.saveSettings")
+        ?.trigger("click");
+      await flushPromises();
+      const body = vi.mocked(api.put).mock.calls[0][1] as {
+        settings: { currency: string };
+      };
+      return body.settings.currency;
+    }
+
+    // #394: a shop created by onboarding has settings NULL, and the form's
+    // hardcoded MYR default was written back on the first save.
+    it("saves a Taipei shop with no currency as TWD, not MYR (#394)", async () => {
+      restaurantWith({ timezone: "Asia/Taipei", settings: null });
+      const wrapper = await mountSettings();
+      expect(await saveAndReadCurrency(wrapper)).toBe("TWD");
+    });
+
+    it("infers MYR for a Kuala Lumpur shop with no saved currency", async () => {
+      restaurantWith({ timezone: "Asia/Kuala_Lumpur", settings: {} });
+      const wrapper = await mountSettings();
+      expect(await saveAndReadCurrency(wrapper)).toBe("MYR");
+    });
+
+    it("keeps a saved currency over the timezone guess", async () => {
+      restaurantWith({
+        timezone: "Asia/Taipei",
+        settings: { currency: "VND" },
+      });
+      const wrapper = await mountSettings();
+      expect(await saveAndReadCurrency(wrapper)).toBe("VND");
+    });
+
+    it("offers VND alongside TWD and MYR", async () => {
+      const wrapper = await mountSettings();
+      const values = wrapper
+        .get('[data-testid="settings-currency"]')
+        .findAll("option")
+        .map((option) => option.attributes("value"));
+      expect(values).toEqual(expect.arrayContaining(["TWD", "MYR", "VND"]));
+    });
+
+    it.each([
+      ["TWD", "1", "0", "NT$"],
+      ["MYR", "0.01", "0.00", "RM"],
+      ["VND", "1", "0", "₫"],
+    ] as const)(
+      "steps the minimum spend and delivery fee by the %s unit",
+      async (currency, step, placeholder, symbol) => {
+        restaurantWith({
+          settings: { currency, minOrderAmount: 200, enableDelivery: true },
+        });
+        const wrapper = await mountSettings();
+
+        const minOrder = wrapper.get(
+          '[data-testid="settings-min-order-amount"]',
+        );
+        expect(minOrder.attributes("step")).toBe(step);
+        expect(minOrder.attributes("placeholder")).toBe(placeholder);
+        // RM500 was a ringgit-sized cap: NT$500 is a modest minimum spend.
+        expect(minOrder.attributes("max")).toBeUndefined();
+
+        expect(
+          wrapper
+            .get('[data-testid="settings-delivery-fee"]')
+            .attributes("step"),
+        ).toBe(step);
+        expect(
+          wrapper.get('[data-testid="settings-delivery-fee-currency"]').text(),
+        ).toBe(symbol);
+      },
+    );
   });
 
   // OrderService computes tax as `subtotalCents * taxRate`, so the server

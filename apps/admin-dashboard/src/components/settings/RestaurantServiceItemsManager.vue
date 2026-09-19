@@ -97,13 +97,20 @@
             />
           </div>
           <div>
-            <label class="mb-2 block text-sm font-medium text-gray-700">
-              價格（分）
+            <label
+              for="service-price-input"
+              class="mb-2 block text-sm font-medium text-gray-700"
+            >
+              {{ t("settings.serviceItems.price", { symbol: currencySymbol }) }}
             </label>
             <input
-              v-model.number="form.priceCents"
+              id="service-price-input"
+              v-model.number="form.price"
+              data-testid="service-price-input"
               type="number"
               min="0"
+              :step="inputStep"
+              :placeholder="inputPlaceholder"
               class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
@@ -349,7 +356,9 @@
               {{ service.description }}
             </p>
             <p class="mt-2 text-sm text-gray-700">
-              {{ servicePriceLabel(service) || "未設定價格" }}
+              {{
+                servicePriceLabel(service) || t("settings.serviceItems.noPrice")
+              }}
             </p>
           </div>
           <div class="flex shrink-0 gap-2">
@@ -384,6 +393,8 @@ import type {
   RestaurantServiceType,
 } from "@makanmasak/shared-types";
 import { restaurantServiceItemsService } from "@/services/restaurantServiceItemsService";
+import { useI18n } from "@/i18n";
+import { useCurrency } from "@/composables/useCurrency";
 import {
   buildRestaurantServiceItemImportTemplate,
   parseRestaurantServiceItemImport,
@@ -399,6 +410,15 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
+const { t } = useI18n();
+const {
+  currencySymbol,
+  inputStep,
+  inputPlaceholder,
+  formatCents,
+  majorToCents,
+  centsToMajor,
+} = useCurrency();
 const services = ref<RestaurantServiceItem[]>([]);
 const isLoading = ref(false);
 const isSaving = ref(false);
@@ -418,7 +438,8 @@ const defaultForm = () => ({
   name: "",
   description: "",
   serviceType: "general" as RestaurantServiceType,
-  priceCents: undefined as number | undefined,
+  /** Major units as typed (NT$350, RM 12.50); sent as cents. */
+  price: undefined as number | undefined,
   priceLabel: "",
   durationMinutes: undefined as number | undefined,
   requiresBooking: false,
@@ -477,7 +498,9 @@ function servicePayload() {
     description: form.description.trim() || null,
     serviceType: form.serviceType,
     priceCents:
-      typeof form.priceCents === "number" ? form.priceCents : undefined,
+      typeof form.price === "number" && Number.isFinite(form.price)
+        ? majorToCents(form.price)
+        : undefined,
     priceLabel: form.priceLabel.trim() || null,
     durationMinutes:
       typeof form.durationMinutes === "number"
@@ -577,7 +600,10 @@ function editService(service: RestaurantServiceItem) {
   form.name = service.name;
   form.description = service.description ?? "";
   form.serviceType = service.serviceType;
-  form.priceCents = service.priceCents ?? undefined;
+  form.price =
+    typeof service.priceCents === "number"
+      ? centsToMajor(service.priceCents)
+      : undefined;
   form.priceLabel = service.priceLabel ?? "";
   form.durationMinutes = service.durationMinutes ?? undefined;
   form.requiresBooking = service.requiresBooking;
@@ -620,7 +646,7 @@ function serviceTypeLabel(type: RestaurantServiceType) {
 function servicePriceLabel(service: RestaurantServiceItem) {
   if (service.priceLabel) return service.priceLabel;
   if (typeof service.priceCents === "number") {
-    return `NT$${Math.round(service.priceCents / 100)}`;
+    return formatCents(service.priceCents);
   }
   return "";
 }

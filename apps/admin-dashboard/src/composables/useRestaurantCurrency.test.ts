@@ -79,4 +79,58 @@ describe("admin restaurant currency context", () => {
       wrapper.unmount();
     },
   );
+
+  it("keeps the same shop's remembered currency while it is re-fetched", async () => {
+    setRestaurantCurrency("MYR", "shop-a");
+    let resolve!: (value: ReturnType<typeof response>) => void;
+    mocks.get.mockReturnValueOnce(
+      new Promise((r) => {
+        resolve = r;
+      }),
+    );
+    const wrapper = mount(Harness);
+    await nextTick();
+    // Before the request settles: still RM, not the TWD default.
+    expect(wrapper.text()).toBe("RM 1,234.56");
+    resolve(response("MYR"));
+    await flushPromises();
+    expect(wrapper.text()).toBe("RM 1,234.56");
+    wrapper.unmount();
+  });
+
+  it("does not show another shop's remembered currency on first render", async () => {
+    setRestaurantCurrency("MYR", "shop-other");
+    mocks.get.mockReturnValueOnce(new Promise(() => {}));
+    const wrapper = mount(Harness);
+    await nextTick();
+    expect(wrapper.text()).toBe("NT$1,235");
+    wrapper.unmount();
+  });
+});
+
+describe("money input helpers", () => {
+  const Inputs = defineComponent({
+    setup() {
+      return useCurrency();
+    },
+    template:
+      '<input data-testid="price" type="number" :step="inputStep" :placeholder="inputPlaceholder" :data-cents="majorToCents(12.5)" />',
+  });
+
+  it.each([
+    ["TWD", "1", "0", "1300"],
+    ["VND", "1", "0", "1300"],
+    ["MYR", "0.01", "0.00", "1250"],
+  ] as const)(
+    "%s: step %s, placeholder %s, 12.5 → %s cents",
+    async (code, step, placeholder, cents) => {
+      setRestaurantCurrency(code);
+      const wrapper = mount(Inputs);
+      const input = wrapper.get('[data-testid="price"]');
+      expect(input.attributes("step")).toBe(step);
+      expect(input.attributes("placeholder")).toBe(placeholder);
+      expect(input.attributes("data-cents")).toBe(cents);
+      wrapper.unmount();
+    },
+  );
 });

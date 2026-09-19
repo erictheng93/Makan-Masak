@@ -225,6 +225,7 @@
 import { onMounted, reactive, ref, watch } from "vue";
 import { useI18n } from "@/i18n";
 import { useAuthStore } from "@/stores/auth";
+import { useCurrency } from "@/composables/useCurrency";
 import {
   serviceBookingsService,
   type ServiceBooking,
@@ -232,7 +233,8 @@ import {
 } from "@/services/serviceBookingsService";
 
 const authStore = useAuthStore();
-const { locale, t } = useI18n();
+const { t } = useI18n();
+const { formatPrice } = useCurrency();
 const today = new Date().toISOString().slice(0, 10);
 
 const bookings = ref<ServiceBooking[]>([]);
@@ -317,11 +319,7 @@ async function cancelBooking(id: string): Promise<string> {
 }
 
 function formatCents(cents: number): string {
-  return new Intl.NumberFormat(locale.value, {
-    style: "currency",
-    currency: "TWD",
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
+  return formatPrice(cents / 100);
 }
 
 function statusLabel(status: ServiceBookingStatus): string {

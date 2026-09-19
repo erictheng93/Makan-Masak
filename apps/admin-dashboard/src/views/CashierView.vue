@@ -298,10 +298,10 @@
                   v-model.number="cashReceived"
                   data-testid="received-amount"
                   type="number"
-                  step="0.01"
+                  :step="inputStep"
                   min="0"
                   class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
-                  placeholder="0.00"
+                  :placeholder="inputPlaceholder"
                 />
               </div>
               <div
@@ -325,12 +325,21 @@
                 >
                   <span>{{ t("cashier.change") }}:</span>
                   <span
+                    data-testid="cash-change"
                     :class="change >= 0 ? 'text-green-600' : 'text-red-600'"
                   >
                     {{ formatPrice(change) }}
                   </span>
                 </div>
               </div>
+              <p
+                v-if="cashPaymentBlockedReason"
+                data-testid="cash-insufficient"
+                role="status"
+                class="mt-2 text-sm font-medium text-red-600"
+              >
+                {{ cashPaymentBlockedReason }}
+              </p>
             </div>
 
             <!-- 結帳按鈕 -->
@@ -495,9 +504,9 @@
                   <input
                     v-model.number="actualCashAmount"
                     type="number"
-                    step="0.01"
+                    :step="inputStep"
                     class="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                    placeholder="0.00"
+                    :placeholder="inputPlaceholder"
                   />
                 </div>
               </div>
@@ -604,10 +613,10 @@
                   v-model.number="refundData.amount"
                   data-testid="cashier-refund-amount"
                   type="number"
-                  step="0.01"
+                  :step="inputStep"
                   min="0"
                   class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="0.00"
+                  :placeholder="inputPlaceholder"
                 />
               </div>
             </div>
@@ -897,7 +906,13 @@ import type {
 } from "@makanmasak/shared-types";
 
 const { t } = useI18n();
-const { formatPrice, currencySymbol } = useCurrency();
+const {
+  formatPrice,
+  currencySymbol,
+  inputStep,
+  inputPlaceholder,
+  majorToCents,
+} = useCurrency();
 const { formatDateTime, formatTime } = useDateFormatter();
 const authStore = useAuthStore();
 
@@ -1084,19 +1099,44 @@ const filteredOrders = computed(() => {
   );
 });
 
-const change = computed(() => {
+// Money is compared in integer cents on the currency's step: 100.1 - 100 in
+// floats is 0.09999999999999432, and in TWD a shortfall below one dollar
+// formatted with no decimals as "NT$-0", reading as if nothing were owed.
+const toCents = (major: unknown): number => {
+  const amount = Number(major);
+  return Number.isFinite(amount) ? majorToCents(amount) : 0;
+};
+
+const changeCents = computed(() => {
   if (!selectedOrder.value || selectedPaymentMethod.value !== "cash") return 0;
-  return cashReceived.value - selectedOrder.value.totalAmount;
+  return toCents(cashReceived.value) - toCents(selectedOrder.value.totalAmount);
 });
+
+const change = computed(() => changeCents.value / 100);
 
 const canProcessPayment = computed(() => {
   if (!selectedOrder.value || !selectedPaymentMethod.value) return false;
 
   if (selectedPaymentMethod.value === "cash") {
-    return cashReceived.value >= selectedOrder.value.totalAmount;
+    return changeCents.value >= 0;
   }
 
   return true;
+});
+
+/** Why the confirm button is disabled for a cash payment, if it is. */
+const cashPaymentBlockedReason = computed(() => {
+  if (
+    !selectedOrder.value ||
+    selectedPaymentMethod.value !== "cash" ||
+    changeCents.value >= 0
+  ) {
+    return "";
+  }
+  if (toCents(cashReceived.value) <= 0) return t("cashier.cashNotEntered");
+  return t("cashier.cashInsufficient", {
+    amount: formatPrice(-changeCents.value / 100),
+  });
 });
 
 const canProcessRefund = computed(() => {

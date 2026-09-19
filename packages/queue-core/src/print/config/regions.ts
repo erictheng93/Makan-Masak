@@ -4,6 +4,7 @@
  */
 
 import type { CountryCode, RegionConfig } from "@makanmasak/shared-types";
+import { currencyDecimals, formatRegionMoney } from "../utils/money";
 
 export const REGION_CONFIGS: Record<CountryCode, RegionConfig> = {
   TW: {
@@ -150,7 +151,8 @@ export const getCurrencyConfig = (country: CountryCode) => {
     code: region.currency,
     symbol: region.numberFormat.currency.symbol,
     position: region.numberFormat.currency.position,
-    decimals: region.currency === "VND" ? 0 : 2, // 越南盾無小數
+    // TWD and VND have no fractional unit in circulation.
+    decimals: currencyDecimals(region.currency),
     thousandSeparator: region.numberFormat.thousand,
     decimalSeparator: region.numberFormat.decimal,
   };
@@ -164,13 +166,9 @@ export const formatCurrency = (
   const region = REGION_CONFIGS[country];
   if (!region) return amount.toString();
 
-  const formatter = new Intl.NumberFormat(region.locale, {
-    style: "currency",
-    currency: region.currency,
-    minimumFractionDigits: region.currency === "VND" ? 0 : 2,
-  });
-
-  return formatter.format(amount);
+  // Not Intl style:"currency": zh-TW renders TWD as "$350.00", with a bare
+  // dollar sign and ISO-4217's two decimals the currency does not use.
+  return formatRegionMoney(amount, region);
 };
 
 // 根據地區格式化日期時間
