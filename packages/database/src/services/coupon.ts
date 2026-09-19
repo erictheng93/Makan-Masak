@@ -29,7 +29,13 @@ import {
   toRequiredCents,
   toRequiredPercentageBps,
 } from "../utils/money";
-import { computeDiscountCents, type CurrencyCode } from "@makanmasak/utils";
+import {
+  assertCurrencyAlignedCents,
+  badRequest,
+  computeDiscountCents,
+  isAlignedInEveryCurrency,
+  type CurrencyCode,
+} from "@makanmasak/utils";
 import { BaseService } from "./base";
 
 /** 完整的 `coupons` 資料列，即 `insert`/`update` … `returning()` 回傳的形狀。 */
@@ -303,6 +309,47 @@ export class CouponService extends BaseService {
     }
 
     return normalized;
+  }
+
+  /**
+   * The rules a coupon's money settings must meet, whether created or edited:
+   * a percentage is at most 100, and a restaurant coupon's fixed amounts are
+   * on its currency's step (no NT$12.50 for TWD). A platform-wide coupon
+   * (no restaurant) has no single currency; redemption floors its amounts to
+   * whichever restaurant it lands on.
+   */
+  private async assertCouponMoney(input: {
+    restaurantId?: string | null;
+    discountType?: string;
+    discountValue?: number | null;
+    maxDiscountAmount?: number | null;
+    minOrderAmount?: number | null;
+  }): Promise<void> {
+    if (
+      input.discountType === "percentage" &&
+      input.discountValue != null &&
+      input.discountValue > 100
+    ) {
+      throw badRequest("百分比折扣不能超過 100%", "INVALID_DISCOUNT_VALUE");
+    }
+    if (!input.restaurantId) return;
+    const fields = [
+      {
+        field: "discountValue",
+        cents:
+          input.discountType === "percentage"
+            ? null
+            : toCents(input.discountValue),
+      },
+      { field: "maxDiscountAmount", cents: toCents(input.maxDiscountAmount) },
+      { field: "minOrderAmount", cents: toCents(input.minOrderAmount) },
+    ];
+    // Whole units are valid in every currency: no need to look one up.
+    if (isAlignedInEveryCurrency(fields)) return;
+    assertCurrencyAlignedCents(
+      await this.getRestaurantCurrency(input.restaurantId),
+      fields,
+    );
   }
 
   private toCouponUpdate(updates: Partial<CreateCouponData>) {
@@ -656,6 +703,8 @@ export class CouponService extends BaseService {
    * 創建優惠券
    */
   async createCoupon(data: CreateCouponData) {
+    await this.assertCouponMoney(data);
+
     // Scoped to match the unique indexes from 0013. A platform-wide lookup here
     // would reject a code purely because a different restaurant already uses
     // it, which is exactly what that migration removed. Soft-deleted rows are
@@ -889,18 +938,37 @@ export class CouponService extends BaseService {
    * 更新優惠券
    */
   async updateCoupon(id: number, updates: Partial<CreateCouponData>) {
+    const touchesMoney =
+      updates.discountValue !== undefined ||
+      updates.discountType !== undefined ||
+      updates.maxDiscountAmount !== undefined ||
+      updates.minOrderAmount !== undefined;
+    // Read once for validation (restaurant, effective type) and reuse below.
+    const current = touchesMoney
+      ? await this.db.query.coupons.findFirst({ where: eq(coupons.id, id) })
+      : undefined;
+    if (touchesMoney) {
+      const effectiveType = updates.discountType ?? current?.discountType;
+      await this.assertCouponMoney({
+        restaurantId: current?.restaurantId,
+        discountType: effectiveType,
+        // The same value the write below stores: changing only the type
+        // re-interprets the stored figure, so that is what gets checked.
+        discountValue:
+          updates.discountValue ??
+          (current?.discountType === "percentage"
+            ? percentageFromBps(current?.discountPercentageBps)
+            : amountFromCents(current?.discountValueCents)),
+        maxDiscountAmount: updates.maxDiscountAmount,
+        minOrderAmount: updates.minOrderAmount,
+      });
+    }
+
     const centsUpdates: Record<string, number | null | undefined> = {};
     if (
       updates.discountValue !== undefined ||
       updates.discountType !== undefined
     ) {
-      const current =
-        updates.discountType === undefined ||
-        updates.discountValue === undefined
-          ? await this.db.query.coupons.findFirst({
-              where: eq(coupons.id, id),
-            })
-          : undefined;
       const discountType = updates.discountType ?? current?.discountType;
       const discountValue =
         updates.discountValue ??

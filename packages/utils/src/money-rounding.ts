@@ -99,6 +99,19 @@ export const computeDiscountCents = (
   return Math.max(0, discount);
 };
 
+/**
+ * True when every amount is valid in every supported currency (a whole
+ * major unit), so a caller can skip looking up which currency applies.
+ */
+export const isAlignedInEveryCurrency = (
+  fields: readonly CurrencyPrecisionField[],
+): boolean =>
+  fields.every(
+    (entry) =>
+      entry.cents == null ||
+      (Number.isInteger(entry.cents) && entry.cents % 100 === 0),
+  );
+
 export interface CurrencyPrecisionField {
   field: string;
   /** Integer cents as it would be stored; null/undefined is skipped. */

@@ -136,6 +136,7 @@ export {
   percentOfCents,
   computeDiscountCents,
   assertCurrencyAlignedCents,
+  isAlignedInEveryCurrency,
   type DiscountRule,
   type CurrencyPrecisionField,
 } from "./money-rounding";

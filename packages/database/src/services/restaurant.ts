@@ -5,6 +5,9 @@ import { restaurants, categories, menuItems, tables, users } from "../schema";
 import type { Restaurant } from "@makanmasak/shared-types";
 import type { BusinessTimezone } from "../utils/business-timezone";
 import { PlanType } from "@makanmasak/shared-types";
+import { assertCurrencyAlignedCents } from "@makanmasak/utils";
+import { toCents } from "../utils/money";
+import { resolveRestaurantCurrency } from "../utils/order-totals";
 
 /** 只列出 mapToRestaurant 實際讀取的欄位，任何餵給它的查詢都必須選滿 */
 type RestaurantRow = Pick<
@@ -79,10 +82,43 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * `minOrderAmount` and `deliveryFee` are major-unit money in the settings
+ * JSON; both must sit on the currency's step (no NT$12.50 for TWD). Checked
+ * against the settings as they will be stored — the request's own currency
+ * if it names one, otherwise the stored currency — whenever the request
+ * touches either amount or the currency itself, so switching MYR → TWD with a
+ * RM2.50 delivery fee still on file is caught too.
+ */
+function assertSettingsMoneyPrecision(
+  incoming: Record<string, unknown>,
+  merged: Record<string, unknown>,
+): void {
+  const touched = ["minOrderAmount", "deliveryFee", "currency"].some(
+    (key) => key in incoming,
+  );
+  if (!touched) return;
+  const amountCents = (value: unknown) =>
+    typeof value === "number" && Number.isFinite(value) ? toCents(value) : null;
+  assertCurrencyAlignedCents(resolveRestaurantCurrency(merged.currency), [
+    {
+      field: "settings.minOrderAmount",
+      cents: amountCents(merged.minOrderAmount),
+    },
+    { field: "settings.deliveryFee", cents: amountCents(merged.deliveryFee) },
+  ]);
+}
+
 export class RestaurantService extends BaseService {
   // 創建餐廳
   async createRestaurant(data: CreateRestaurantData): Promise<Restaurant> {
     try {
+      // Not on CreateRestaurantData, but `...data` below writes whatever the
+      // caller passed, so a settings object here would be stored as is.
+      const initialSettings = (data as { settings?: unknown }).settings;
+      if (isPlainRecord(initialSettings)) {
+        assertSettingsMoneyPrecision(initialSettings, initialSettings);
+      }
       console.log("[RestaurantService] Creating restaurant with data:", data);
       const result = await this.db
         .insert(restaurants)
@@ -269,6 +305,7 @@ export class RestaurantService extends BaseService {
           ...existingSettings,
           ...incomingSettings,
         };
+        assertSettingsMoneyPrecision(incomingSettings, updateData.settings);
       }
 
       const [restaurant] = await this.db

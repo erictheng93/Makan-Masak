@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "./api-error";
 import {
   assertCurrencyAlignedCents,
+  isAlignedInEveryCurrency,
   computeDiscountCents,
   floorToCurrencyCents,
   percentOfCents,
@@ -163,5 +164,18 @@ describe("assertCurrencyAlignedCents", () => {
         { field: "options.addOns[0].price", amount: 10.05 },
       ],
     });
+  });
+});
+
+describe("isAlignedInEveryCurrency", () => {
+  it("is true only when every present amount is a whole major unit", () => {
+    expect(
+      isAlignedInEveryCurrency([
+        { field: "a", cents: 1200 },
+        { field: "b", cents: null },
+      ]),
+    ).toBe(true);
+    expect(isAlignedInEveryCurrency([{ field: "a", cents: 1250 }])).toBe(false);
+    expect(isAlignedInEveryCurrency([{ field: "a", cents: 12.5 }])).toBe(false);
   });
 });

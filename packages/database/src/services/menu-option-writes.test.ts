@@ -242,7 +242,7 @@ describe("option group writes", () => {
           {
             choiceId: "choice-hot",
             isHidden: true,
-            priceAdjustmentCents: 150,
+            priceAdjustmentCents: 1500,
           },
         ],
       },
@@ -261,7 +261,7 @@ describe("option group writes", () => {
             {
               choiceId: "choice-hot",
               isHidden: true,
-              priceAdjustmentCents: 150,
+              priceAdjustmentCents: 1500,
             },
           ],
         },
