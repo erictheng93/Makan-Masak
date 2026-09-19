@@ -234,11 +234,14 @@ describe("Menu batch endpoints — cross-tenant isolation", () => {
     const { attacker, attackerItem, token } = await twoRestaurants();
 
     const res = await patch(`/menu/${attacker.id}/items/prices`, token, {
-      updates: [{ id: attackerItem.id, price: 12.5 }],
+      // Whole dollars: these fixtures are TWD, which has no fractional unit,
+      // so 12.5 is now rejected as CURRENCY_PRECISION. This case is about
+      // tenant isolation, not precision.
+      updates: [{ id: attackerItem.id, price: 13 }],
     });
 
     expect(res.status).toBe(200);
-    expect((await readItem(attackerItem.id)).price_cents).toBe(1250);
+    expect((await readItem(attackerItem.id)).price_cents).toBe(1300);
   });
 
   it("still moves the caller's own item between their own categories", async () => {
