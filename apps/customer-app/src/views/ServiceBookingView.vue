@@ -353,7 +353,10 @@ import { useRouter } from "vue-router";
 import type { RestaurantServiceItem } from "@makanmasak/shared-types";
 import { useFeatureAvailability } from "@/composables/useFeatureAvailability";
 import { restaurantContactApi } from "@/services/restaurantContactApi";
+import { menuApi } from "@/services/menuApi";
 import { useI18n } from "@/composables/useI18n";
+import { useCurrency } from "@/composables/useCurrency";
+import { useAppStore } from "@/stores/app";
 import {
   serviceBookingsApi,
   type ServiceBooking,
@@ -367,7 +370,16 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
-const { t, tWithParams, currentLanguage, hasTranslation } = useI18n();
+const { t, tWithParams, hasTranslation } = useI18n();
+const appStore = useAppStore();
+// A booking link can be opened cold, or after browsing another restaurant, so
+// the store's current restaurant is only trusted when it is this one.
+const fetchedRestaurantCurrency = ref<unknown>(null);
+const { formatCents } = useCurrency(() =>
+  String(appStore.currentRestaurant?.id ?? "") === props.restaurantId
+    ? appStore.currentRestaurant?.settings?.currency
+    : fetchedRestaurantCurrency.value,
+);
 const { isDisabled } = useFeatureAvailability();
 const storedValueCreditsDisabled = computed(() =>
   isDisabled("storedValueCredits"),
@@ -418,6 +430,7 @@ const servicePriceLabel = computed(() => {
 });
 
 onMounted(async () => {
+  void loadRestaurantCurrency();
   await loadService();
   await loadAvailability();
 });
@@ -561,12 +574,16 @@ function goBack() {
   });
 }
 
-function formatCents(cents: number): string {
-  return new Intl.NumberFormat(currentLanguage.value, {
-    style: "currency",
-    currency: "TWD",
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
+async function loadRestaurantCurrency() {
+  if (String(appStore.currentRestaurant?.id ?? "") === props.restaurantId) {
+    return;
+  }
+  try {
+    const restaurant = await menuApi.getRestaurant(props.restaurantId);
+    fetchedRestaurantCurrency.value = restaurant?.settings?.currency ?? null;
+  } catch (error) {
+    console.warn("Load restaurant currency failed:", error);
+  }
 }
 
 function statusLabel(status: ServiceBookingStatus): string {
