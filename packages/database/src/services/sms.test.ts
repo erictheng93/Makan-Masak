@@ -403,3 +403,38 @@ describe("NoopSmsProvider", () => {
     expect(result.error).toContain("No SMS provider configured");
   });
 });
+
+describe("SMS providers call fetch unbound", () => {
+  // workerd's global fetch throws "Illegal invocation" when it is called as a
+  // method of another object; this stand-in does the same.
+  function strictFetch(this: unknown, ..._args: unknown[]) {
+    if (this !== undefined && this !== globalThis) {
+      return Promise.reject(new TypeError("Illegal invocation"));
+    }
+    return Promise.resolve(new Response("", { status: 599 }));
+  }
+  const fetchImpl = vi.fn(strictFetch) as unknown as typeof fetch;
+
+  it.each([
+    [
+      "mitake",
+      () => new MitakeSmsProvider("acct", "secret", undefined, fetchImpl),
+    ],
+    [
+      "every8d",
+      () => new Every8dSmsProvider("acct", "secret", undefined, fetchImpl),
+    ],
+    [
+      "twilio",
+      () => new TwilioSmsProvider("sid", "token", "+15550000000", fetchImpl),
+    ],
+  ])("%s reaches fetch without an Illegal invocation", async (_name, make) => {
+    const result = await make().sendSMS({
+      to: "+886912345678",
+      body: "驗證碼 123456",
+    });
+
+    expect(fetchImpl).toHaveBeenCalled();
+    expect(JSON.stringify(result)).not.toContain("Illegal invocation");
+  });
+});

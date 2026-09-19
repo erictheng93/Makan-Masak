@@ -109,11 +109,19 @@ export class TwilioSmsProvider implements SmsProvider {
     private fetchImpl: typeof fetch = fetch,
   ) {}
 
+  // Detach before calling: `this.fetchImpl(...)` would invoke the Workers
+  // global fetch with the provider as `this`, which workerd rejects with
+  // "Illegal invocation" — every real SMS send would fail.
+  private send(...args: Parameters<typeof fetch>): ReturnType<typeof fetch> {
+    const fetchImpl = this.fetchImpl;
+    return fetchImpl(...args);
+  }
+
   async sendSMS(params: { to: string; body: string }): Promise<SmsSendResult> {
     try {
       const auth = btoa(`${this.accountSid}:${this.authToken}`);
 
-      const response = await this.fetchImpl(
+      const response = await this.send(
         `https://api.twilio.com/2010-04-01/Accounts/${this.accountSid}/Messages.json`,
         {
           method: "POST",
@@ -197,6 +205,14 @@ export class MitakeSmsProvider implements SmsProvider {
     private fetchImpl: typeof fetch = fetch,
   ) {}
 
+  // Detach before calling: `this.fetchImpl(...)` would invoke the Workers
+  // global fetch with the provider as `this`, which workerd rejects with
+  // "Illegal invocation" — every real SMS send would fail.
+  private send(...args: Parameters<typeof fetch>): ReturnType<typeof fetch> {
+    const fetchImpl = this.fetchImpl;
+    return fetchImpl(...args);
+  }
+
   async sendSMS(params: { to: string; body: string }): Promise<SmsSendResult> {
     try {
       // Credentials go in the query string (Mitake's documented scheme); the
@@ -207,7 +223,7 @@ export class MitakeSmsProvider implements SmsProvider {
       url.searchParams.set("username", this.username);
       url.searchParams.set("password", this.password);
 
-      const response = await this.fetchImpl(url.toString(), {
+      const response = await this.send(url.toString(), {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
@@ -290,9 +306,17 @@ export class Every8dSmsProvider implements SmsProvider {
     private fetchImpl: typeof fetch = fetch,
   ) {}
 
+  // Detach before calling: `this.fetchImpl(...)` would invoke the Workers
+  // global fetch with the provider as `this`, which workerd rejects with
+  // "Illegal invocation" — every real SMS send would fail.
+  private send(...args: Parameters<typeof fetch>): ReturnType<typeof fetch> {
+    const fetchImpl = this.fetchImpl;
+    return fetchImpl(...args);
+  }
+
   async sendSMS(params: { to: string; body: string }): Promise<SmsSendResult> {
     try {
-      const response = await this.fetchImpl(
+      const response = await this.send(
         `${this.apiBase}/API21/HTTP/sendSMS.ashx`,
         {
           method: "POST",
