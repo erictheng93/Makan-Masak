@@ -1,11 +1,17 @@
 import { drizzle } from "drizzle-orm/d1";
 import { and, desc, eq, lte, or, sql } from "drizzle-orm";
 import {
+  PAYMENT_AUDIT_EVENT_TYPES,
   marketCheckoutPayments,
   marketCheckoutSessions,
 } from "@makanmasak/database";
 import type { Env } from "../../../types/env";
 import { ApiError } from "../../../shared/utils/api-error";
+import {
+  verifyProviderMoney,
+  type ProviderMoneyIssue,
+} from "../../../shared/utils/provider-money";
+import { PaymentAuditService } from "../../billing/services/PaymentAuditService";
 import type {
   MarketCheckoutProviderSplitStatusInput,
   MarketCheckoutProviderSplitStatusResult,
@@ -51,6 +57,13 @@ export interface MarketCheckoutPaymentReconciliationResult {
   providerTransactionId?: string;
   eventId?: string;
   eventType: string;
+  /**
+   * The provider's status came with money that does not match the payment
+   * (see MarketCheckoutPaymentWebhookService). Nothing was applied; `status`
+   * is the payment's unchanged status.
+   */
+  reviewRequired?: boolean;
+  reviewReason?: ProviderMoneyIssue["code"];
 }
 
 export class MarketCheckoutPaymentReconciliationService {
@@ -165,20 +178,11 @@ export class MarketCheckoutPaymentReconciliationService {
     }
 
     const now = Date.now();
-    const status = providerStatus.status;
-    const paidAmountCents =
-      status === "paid"
-        ? (providerStatus.amountReceivedCents ?? row.amount_cents)
-        : status === "refunded" || status === "partial_refunded"
-          ? Math.max(row.paid_amount_cents, row.amount_cents)
-          : row.paid_amount_cents;
-    const refundedAmountCents =
-      status === "refunded"
-        ? (providerStatus.amountRefundedCents ?? row.amount_cents)
-        : status === "partial_refunded"
-          ? (providerStatus.amountRefundedCents ??
-            Math.max(row.refunded_amount_cents, 0))
-          : row.refunded_amount_cents;
+    const settlement = settleReconciledMoney(row, providerStatus);
+    if (!settlement.ok) {
+      return this.holdForReview(row, providerStatus, settlement, now);
+    }
+    const { status, paidAmountCents, refundedAmountCents } = settlement;
     const providerTransactionId =
       providerStatus.providerTransactionId ?? row.provider_transaction_id;
     const eventType =
@@ -265,6 +269,77 @@ export class MarketCheckoutPaymentReconciliationService {
       providerTransactionId: providerTransactionId ?? undefined,
       eventId: providerStatus.eventId,
       eventType,
+    };
+  }
+
+  /**
+   * Record a status lookup whose money does not match the payment without
+   * applying it: `lastReconciliation.status = "review_required"` (raises the
+   * provider_amount_mismatch alert) plus a `failure` payment audit row.
+   */
+  private async holdForReview(
+    row: MarketCheckoutPaymentRow,
+    providerStatus: MarketCheckoutProviderSplitStatusResult,
+    rejection: ReconciledMoneyRejection,
+    now: number,
+  ): Promise<MarketCheckoutPaymentReconciliationResult> {
+    const eventType =
+      providerStatus.eventType ??
+      `market_checkout.payment_${providerStatus.status}`;
+    await new PaymentAuditService(this.env.DB).append({
+      paymentTransactionId: row.payment_id,
+      eventType: PAYMENT_AUDIT_EVENT_TYPES.FAILURE,
+      provider: providerStatus.provider,
+      providerEventId: providerStatus.eventId
+        ? `${providerStatus.eventId}:review`
+        : null,
+      providerEventType: eventType,
+      amount: rejection.reportedCents ?? null,
+      currency: providerStatus.currency ?? null,
+      rawPayload: {
+        checkoutId: row.checkout_id,
+        source: "status_lookup",
+        requestedStatus: providerStatus.status,
+        expectedAmountCents: rejection.expectedCents,
+        expectedCurrency: row.currency,
+        reportedAmountCents: rejection.reportedCents ?? null,
+        reportedCurrency: providerStatus.currency ?? null,
+      },
+      errorCode: `MARKET_CHECKOUT_RECONCILIATION_${rejection.issue.code}`,
+      errorMessage: rejection.issue.message,
+    });
+
+    await this.db
+      .update(marketCheckoutPayments)
+      .set({
+        providerPayload: mergeProviderPayload(row.provider_payload, {
+          lastReconciliation: {
+            provider: providerStatus.provider,
+            eventId: providerStatus.eventId,
+            eventType,
+            status: "review_required",
+            requestedStatus: providerStatus.status,
+            reviewReason: rejection.issue.code,
+            reviewMessage: rejection.issue.message,
+            receivedAt: new Date(now).toISOString(),
+            payload: providerStatus.providerPayload ?? providerStatus,
+          },
+        }),
+        updatedAt: new Date(now),
+      })
+      .where(eq(marketCheckoutPayments.paymentId, row.payment_id))
+      .run();
+
+    return {
+      provider: row.provider,
+      checkoutId: row.checkout_id,
+      paymentId: row.payment_id,
+      status: row.status as MarketCheckoutReconciliationStatus,
+      providerTransactionId: row.provider_transaction_id ?? undefined,
+      eventId: providerStatus.eventId,
+      eventType,
+      reviewRequired: true,
+      reviewReason: rejection.issue.code,
     };
   }
 
@@ -359,6 +434,98 @@ const marketCheckoutPaymentRowSelection = {
   >`${marketCheckoutSessions.paymentSummary}`,
 };
 
+interface ReconciledMoneySettlement {
+  ok: true;
+  status: MarketCheckoutReconciliationStatus;
+  paidAmountCents: number;
+  refundedAmountCents: number;
+}
+
+interface ReconciledMoneyRejection {
+  ok: false;
+  issue: ProviderMoneyIssue;
+  expectedCents: number;
+  reportedCents?: number;
+}
+
+/**
+ * Same rules as the webhook: a paid status must report exactly the row's
+ * amount in the row's currency (the adapter contract's `amountReceivedCents`
+ * is internal cents); a refund status must report a refunded amount no larger
+ * than what was paid, and the amount decides refunded vs partial_refunded.
+ */
+function settleReconciledMoney(
+  row: MarketCheckoutPaymentRow,
+  providerStatus: MarketCheckoutProviderSplitStatusResult,
+): ReconciledMoneySettlement | ReconciledMoneyRejection {
+  const status = providerStatus.status;
+  if (status === "pending" || status === "failed") {
+    return {
+      ok: true,
+      status,
+      paidAmountCents: row.paid_amount_cents,
+      refundedAmountCents: row.refunded_amount_cents,
+    };
+  }
+
+  if (status === "paid") {
+    const issue = verifyProviderMoney({
+      expectedCents: row.amount_cents,
+      expectedCurrency: row.currency,
+      receivedCents: providerStatus.amountReceivedCents,
+      receivedCurrency: providerStatus.currency,
+    });
+    return issue
+      ? {
+          ok: false,
+          issue,
+          expectedCents: row.amount_cents,
+          reportedCents: providerStatus.amountReceivedCents,
+        }
+      : {
+          ok: true,
+          status,
+          paidAmountCents: row.amount_cents,
+          refundedAmountCents: row.refunded_amount_cents,
+        };
+  }
+
+  const paidCents =
+    row.paid_amount_cents > 0 ? row.paid_amount_cents : row.amount_cents;
+  const refunded = providerStatus.amountRefundedCents;
+  const issue =
+    verifyProviderMoney({
+      expectedCents: paidCents,
+      expectedCurrency: row.currency,
+      receivedCents: refunded,
+      receivedCurrency: providerStatus.currency,
+      mode: "at_most",
+    }) ??
+    (refunded === undefined || refunded <= 0
+      ? {
+          code: "AMOUNT_MISMATCH" as const,
+          message: "Provider reported a refund of nothing",
+        }
+      : null);
+  if (issue || refunded === undefined) {
+    return {
+      ok: false,
+      issue: issue ?? {
+        code: "AMOUNT_MISSING",
+        message: "Provider did not report an amount",
+      },
+      expectedCents: paidCents,
+      reportedCents: refunded,
+    };
+  }
+  return {
+    ok: true,
+    status: refunded === paidCents ? "refunded" : "partial_refunded",
+    paidAmountCents: paidCents,
+    refundedAmountCents: refunded,
+  };
+}
+
 function updatePaymentSummary(
   row: MarketCheckoutPaymentRow,
   input: {
@@ -376,7 +543,9 @@ function updatePaymentSummary(
     ...existing,
     status: input.status,
     method: existing.method ?? row.provider,
-    currency: existing.currency ?? row.currency ?? "TWD",
+    // The payment row is the record of what was charged; a summary without
+    // one keeps whatever it had rather than inventing TWD.
+    currency: row.currency ?? existing.currency,
     country: existing.country ?? row.country_code ?? "TW",
     totalAmount: row.amount_cents / 100,
     totalAmountCents: row.amount_cents,

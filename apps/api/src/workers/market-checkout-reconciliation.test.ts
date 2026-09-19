@@ -192,6 +192,65 @@ describe("reconcilePendingMarketCheckoutPayments", () => {
     redeemSpy.mockRestore();
   });
 
+  it("counts a status lookup with mismatched money as failed, not reconciled", async () => {
+    const staleUpdatedAt = Date.parse("2026-06-01T10:00:00.000Z");
+    const env = createEnv([
+      {
+        payment_id: "market_pay_checkout-1",
+        checkout_id: "checkout-1",
+        market_id: "market-1",
+        provider: "mock_market_provider",
+        split_mode: "provider_split",
+        idempotency_key: "market-checkout:checkout-1",
+        status: "pending",
+        amount_cents: 24000,
+        paid_amount_cents: 0,
+        refunded_amount_cents: 0,
+        currency: "TWD",
+        country_code: "TW",
+        child_payment_ids: JSON.stringify([]),
+        provider_transaction_id: "intent-market-checkout-1",
+        provider_payload: null,
+        created_at_ms: staleUpdatedAt - 60_000,
+        updated_at_ms: staleUpdatedAt,
+        session_payment_summary: null,
+      },
+    ]);
+    const fetcher = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            ...mockMarketCheckoutProviderPaidStatusResponse,
+            amountReceivedCents: 240,
+          }),
+        ),
+    );
+
+    const result = await reconcilePendingMarketCheckoutPayments(env as never, {
+      nowMs: Date.parse("2026-06-01T10:45:00.000Z"),
+      pendingAfterMs: 30 * 60 * 1000,
+      limit: 10,
+      fetcher: fetcher as never,
+    });
+
+    expect(result).toMatchObject({
+      scanned: 1,
+      reconciled: 0,
+      failed: 1,
+      skipped: 0,
+      results: [
+        {
+          checkoutId: "checkout-1",
+          paymentId: "market_pay_checkout-1",
+          error: "Provider amount held for review: AMOUNT_MISMATCH",
+        },
+      ],
+    });
+    expect(preparedSqlIncludes(env, "update market_checkout_sessions")).toBe(
+      false,
+    );
+  });
+
   it("reconciles stale pending provider split refunds through provider status lookup", async () => {
     const staleUpdatedAt = Date.parse("2026-06-01T10:00:00.000Z");
     const env = createEnv([

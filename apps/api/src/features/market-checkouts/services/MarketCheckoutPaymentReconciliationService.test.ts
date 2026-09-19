@@ -330,6 +330,8 @@ describe("MarketCheckoutPaymentReconciliationService", () => {
     ).reconcile("checkout-1", {
       provider: "stripe",
       status: "paid",
+      amountReceivedCents: 12500,
+      currency: "TWD",
       eventId: "evt_reconcile_paid",
     });
 
@@ -422,13 +424,14 @@ describe("MarketCheckoutPaymentReconciliationService", () => {
       };
     };
     expect(paymentSummary).toMatchObject({
-      currency: "TWD",
       country: "TW",
       parentPayment: {
         providerTransactionId: "txn_failed",
         childPaymentIds: [],
       },
     });
+    // No currency anywhere: say nothing rather than invent TWD.
+    expect(paymentSummary.currency).toBeUndefined();
     expect(paymentSummary.failedAt).toEqual(expect.any(String));
     expect(env.CACHE_KV.put).not.toHaveBeenCalled();
   });
@@ -436,7 +439,7 @@ describe("MarketCheckoutPaymentReconciliationService", () => {
   it("reconciles refunds and preserves object-based summary details", async () => {
     const env = createEnv({
       paymentRow: paymentRow({
-        paid_amount_cents: 5000,
+        paid_amount_cents: 12500,
         provider_payload: "null",
         session_payment_summary: {
           method: "card",
@@ -455,7 +458,8 @@ describe("MarketCheckoutPaymentReconciliationService", () => {
       provider: "stripe",
       providerTransactionId: "refund-txn",
       status: "refunded",
-      amountRefundedCents: 8400,
+      amountRefundedCents: 12500,
+      currency: "TWD",
       providerPayload: { refundId: "refund-1" },
     });
 
@@ -468,7 +472,7 @@ describe("MarketCheckoutPaymentReconciliationService", () => {
       expect.arrayContaining([
         "refunded",
         12500,
-        8400,
+        12500,
         "refund-txn",
         expect.stringContaining('"refundId":"refund-1"'),
         "market_pay_checkout-1",
@@ -495,7 +499,7 @@ describe("MarketCheckoutPaymentReconciliationService", () => {
     );
   });
 
-  it("reconciles partial refunds with fallback amounts and mixed cache index rows", async () => {
+  it("reconciles partial refunds and mixed cache index rows", async () => {
     const env = createEnv({
       paymentRow: paymentRow({
         refunded_amount_cents: -50,
@@ -515,6 +519,8 @@ describe("MarketCheckoutPaymentReconciliationService", () => {
       {
         provider: "stripe",
         status: "partial_refunded",
+        amountRefundedCents: 5000,
+        currency: "TWD",
       },
     );
 
@@ -522,7 +528,7 @@ describe("MarketCheckoutPaymentReconciliationService", () => {
       expect.arrayContaining([
         "partial_refunded",
         12500,
-        0,
+        5000,
         "pi_1",
         expect.stringContaining('"status":"partial_refunded"'),
         "market_pay_checkout-1",
@@ -551,4 +557,120 @@ describe("MarketCheckoutPaymentReconciliationService", () => {
     expect(indexPut?.[1]).toContain('"id":"checkout-2"');
     expect(indexPut?.[1]).toContain('"paymentStatus":"partial_refunded"');
   });
+  it("settles a refund status by amount, not by the provider's label", async () => {
+    const env = createEnv({
+      paymentRow: paymentRow({ status: "paid", paid_amount_cents: 12500 }),
+    });
+
+    const result = await new MarketCheckoutPaymentReconciliationService(
+      env,
+    ).reconcile("checkout-1", {
+      provider: "stripe",
+      status: "refunded",
+      amountRefundedCents: 5000,
+      currency: "TWD",
+    });
+
+    expect(result).toMatchObject({ status: "partial_refunded" });
+    expect(result.reviewRequired).toBeUndefined();
+  });
+
+  it.each([
+    [
+      "an underpaid amount",
+      { status: "paid" as const, amountReceivedCents: 12400, currency: "TWD" },
+      "AMOUNT_MISMATCH",
+    ],
+    [
+      "a missing amount",
+      { status: "paid" as const, currency: "TWD" },
+      "AMOUNT_MISSING",
+    ],
+    [
+      "another currency",
+      { status: "paid" as const, amountReceivedCents: 12500, currency: "USD" },
+      "CURRENCY_MISMATCH",
+    ],
+    [
+      "no currency",
+      { status: "paid" as const, amountReceivedCents: 12500 },
+      "CURRENCY_MISSING",
+    ],
+    [
+      "a refund larger than the payment",
+      {
+        status: "refunded" as const,
+        amountRefundedCents: 13000,
+        currency: "TWD",
+      },
+      "AMOUNT_EXCEEDS_EXPECTED",
+    ],
+    [
+      "a refund with no amount",
+      { status: "partial_refunded" as const, currency: "TWD" },
+      "AMOUNT_MISSING",
+    ],
+    [
+      "a refund of nothing",
+      {
+        status: "partial_refunded" as const,
+        amountRefundedCents: 0,
+        currency: "TWD",
+      },
+      "AMOUNT_MISMATCH",
+    ],
+  ])(
+    "holds %s for review without applying it",
+    async (_label, patch, reason) => {
+      const env = createEnv({ paymentRow: paymentRow() });
+
+      const result = await new MarketCheckoutPaymentReconciliationService(
+        env,
+      ).reconcile("checkout-1", {
+        provider: "stripe",
+        eventId: "evt_lookup",
+        ...patch,
+      });
+
+      expect(result).toMatchObject({
+        checkoutId: "checkout-1",
+        paymentId: "market_pay_checkout-1",
+        status: "pending",
+        reviewRequired: true,
+        reviewReason: reason,
+      });
+      const paymentUpdate = bindParamsFor(
+        env,
+        "update market_checkout_payments",
+      );
+      expect(paymentUpdate).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('"status":"review_required"'),
+          "market_pay_checkout-1",
+        ]),
+      );
+      expect(paymentUpdate).not.toContain("paid");
+      const auditPrepare = vi
+        .mocked(env.DB.prepare)
+        .mock.calls.findIndex(([sql]) => sql.includes("payment_audit_log"));
+      expect(auditPrepare).toBeGreaterThanOrEqual(0);
+      const auditBind = vi.mocked(env.DB.prepare).mock.results[auditPrepare]
+        ?.value.bind;
+      expect(vi.mocked(auditBind).mock.calls[0]).toEqual(
+        expect.arrayContaining([
+          "failure",
+          "evt_lookup:review",
+          `MARKET_CHECKOUT_RECONCILIATION_${reason}`,
+        ]),
+      );
+      expect(
+        vi
+          .mocked(env.DB.prepare)
+          .mock.calls.some(([sql]) =>
+            sql.toLowerCase().includes('update "market_checkout_sessions"'),
+          ),
+      ).toBe(false);
+      expect(env.CACHE_KV.put).not.toHaveBeenCalled();
+    },
+  );
 });

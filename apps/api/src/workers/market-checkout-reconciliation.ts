@@ -73,6 +73,16 @@ export async function reconcilePendingMarketCheckoutPayments(
         input.checkoutId,
         providerStatus,
       );
+      if (reconciliation.reviewRequired) {
+        // Held, not applied: the provider's money did not match the payment.
+        failed += 1;
+        results.push({
+          checkoutId: input.checkoutId,
+          paymentId: input.paymentId,
+          error: `Provider amount held for review: ${reconciliation.reviewReason}`,
+        });
+        continue;
+      }
       if (reconciliation.status === "pending") {
         skipped += 1;
       } else {
