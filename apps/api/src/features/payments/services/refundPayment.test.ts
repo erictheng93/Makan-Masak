@@ -10,6 +10,14 @@ vi.mock("@makanmasak/utils", async (importOriginal) => ({
   generateUUID: vi.fn(() => "audit-id"),
 }));
 
+// Reads restaurants.settings through drizzle; its own suite covers real D1.
+const resolveRestaurantCurrency = vi.hoisted(() =>
+  vi.fn(async () => "TWD" as const),
+);
+vi.mock("../../../shared/utils/restaurant-currency", () => ({
+  resolveRestaurantCurrency,
+}));
+
 interface PreparedStatement {
   sql: string;
   values: unknown[];
@@ -381,6 +389,56 @@ describe("refundPaymentTransaction", () => {
       status: 400,
     });
     expect(setup.db.batch).not.toHaveBeenCalled();
+  });
+
+  it("rejects a partial TWD refund that is not whole dollars", async () => {
+    const setup = createD1(paidOrder());
+
+    await expect(
+      refundPaymentTransaction(
+        env(setup.db),
+        { transactionId: "txn-cents", amount: 19.5 },
+        { user: cashierUser },
+      ),
+    ).rejects.toMatchObject({
+      code: "INVALID_REFUND_AMOUNT",
+      status: 400,
+      details: { currency: "TWD" },
+    });
+    expect(resolveRestaurantCurrency).toHaveBeenCalledWith(
+      setup.db,
+      paidOrder().restaurantId,
+    );
+    expect(setup.db.batch).not.toHaveBeenCalled();
+  });
+
+  it("allows cent-level partial refunds in MYR", async () => {
+    resolveRestaurantCurrency.mockResolvedValueOnce("MYR" as never);
+    const setup = createD1(paidOrder());
+
+    await expect(
+      refundPaymentTransaction(
+        env(setup.db),
+        { transactionId: "txn-myr", amount: 19.5 },
+        { user: cashierUser },
+      ),
+    ).resolves.toMatchObject({ amount: 19.5 });
+  });
+
+  it("refunds an off-step remainder in full without asking for a currency", async () => {
+    resolveRestaurantCurrency.mockClear();
+    const setup = createD1(
+      paidOrder({ totalAmountCents: 17050, refundAmountCents: 5000 }),
+    );
+
+    await expect(
+      refundPaymentTransaction(
+        env(setup.db),
+        { transactionId: "txn-odd", amount: 120.5 },
+        { user: cashierUser },
+      ),
+    ).resolves.toMatchObject({ amount: 120.5, paymentStatus: "refunded" });
+    expect(resolveRestaurantCurrency).not.toHaveBeenCalled();
   });
 
   it("enforces role, tenant, and conditional refund caps", async () => {

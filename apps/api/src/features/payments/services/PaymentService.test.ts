@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
     batch: vi.fn(),
   },
   raisePaymentFailedAlert: vi.fn(),
+  resolveRestaurantCurrency: vi.fn(),
 }));
 
 let currentOrderUpdateChanges = 1;
@@ -34,6 +35,17 @@ vi.mock("../../alerts/producers", async (importOriginal) => ({
   ...((await importOriginal()) as Record<string, unknown>),
   raisePaymentFailedAlert: mocks.raisePaymentFailedAlert,
 }));
+
+// The restaurant's currency is read through drizzle, which is mocked wholesale
+// above; the resolver has its own real-D1 suite. Only the read is stubbed —
+// the client-claim comparison runs for real.
+vi.mock(
+  "../../../shared/utils/restaurant-currency",
+  async (importOriginal) => ({
+    ...((await importOriginal()) as Record<string, unknown>),
+    resolveRestaurantCurrency: mocks.resolveRestaurantCurrency,
+  }),
+);
 
 interface PreparedStatement {
   sql: string;
@@ -341,6 +353,7 @@ describe("PaymentService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(Date, "now").mockReturnValue(1780833600000);
+    mocks.resolveRestaurantCurrency.mockResolvedValue("TWD");
   });
 
   it("rejects payment attempts that do not identify a trusted actor", async () => {
@@ -466,8 +479,14 @@ describe("PaymentService", () => {
         orderStatus: "paid",
         paymentStatus: "completed",
         authorizedTotal: 120,
+        currency: "TWD",
+        country: "TW",
       },
     });
+    expect(mocks.resolveRestaurantCurrency).toHaveBeenCalledWith(
+      db,
+      "restaurant-1",
+    );
 
     expect(
       statementContaining(statements, "INSERT INTO payment_transactions")
@@ -522,6 +541,178 @@ describe("PaymentService", () => {
     ).toEqual(["attempt", "success"]);
   });
 
+  it("records the restaurant's currency when the cashier sends none", async () => {
+    mocks.resolveRestaurantCurrency.mockResolvedValue("MYR");
+    const { db, statements } = createD1();
+    queueOrderRows([[order({ totalAmount: 45.5, totalAmountCents: 4550 })]]);
+
+    await expect(
+      paymentService(env(db)).processPayment(
+        {
+          orderId: "order-101",
+          paymentMode: "full",
+          amount: 45.5,
+          method: "cash",
+        },
+        { idempotencyKey: "idem-myr" },
+      ),
+    ).resolves.toMatchObject({
+      data: { currency: "MYR", country: "MY", authorizedTotal: 45.5 },
+    });
+
+    expect(
+      statementContaining(statements, "INSERT INTO payment_transactions")
+        ?.payload,
+    ).toMatchObject({ amountCents: 4550, currency: "MYR", countryCode: "MY" });
+    expect(
+      statements
+        .filter((statement) =>
+          statement.sql.includes("INSERT OR IGNORE INTO payment_audit_log"),
+        )
+        .map(
+          (statement) => (statement.payload as { currency: string }).currency,
+        ),
+    ).toEqual(["MYR", "MYR"]);
+  });
+
+  it("rejects a client currency that disagrees with the restaurant's", async () => {
+    mocks.resolveRestaurantCurrency.mockResolvedValue("MYR");
+    const { db, statements } = createD1();
+    queueOrderRows([[order()]]);
+
+    await expect(
+      paymentService(env(db)).processPayment(
+        {
+          orderId: "order-101",
+          paymentMode: "full",
+          amount: 120,
+          method: "cash",
+        },
+        { country: "TW", currency: "TWD", idempotencyKey: "idem-lie" },
+      ),
+    ).rejects.toMatchObject({ code: "CURRENCY_MISMATCH", status: 400 });
+
+    expect(statementContaining(statements, "UPDATE orders")).toBeUndefined();
+    // The failure row names no currency: the claim was the thing refused, and
+    // the server's answer was never attached to a charge.
+    expect(preparedAuditEvents(statements)).toEqual([
+      expect.objectContaining({
+        errorCode: "CURRENCY_MISMATCH",
+        currency: null,
+      }),
+    ]);
+  });
+
+  it("requires whole-dollar split lines for a TWD order", async () => {
+    const { db, statements } = createD1();
+    queueOrderRows([[order({ totalAmount: 171, totalAmountCents: 17100 })]]);
+
+    await expect(
+      paymentService(env(db)).processPayment(
+        {
+          orderId: "order-101",
+          paymentMode: "partial",
+          payments: [
+            { method: "cash", amount: 85.5 },
+            { method: "card", amount: 85.5 },
+          ],
+        },
+        { idempotencyKey: "idem-split" },
+      ),
+    ).rejects.toMatchObject({
+      code: "AMOUNT_PRECISION_INVALID",
+      status: 400,
+      details: { currency: "TWD" },
+    });
+    expect(statementContaining(statements, "UPDATE orders")).toBeUndefined();
+    expect(preparedAuditEvents(statements)).toEqual([
+      expect.objectContaining({
+        errorCode: "AMOUNT_PRECISION_INVALID",
+        currency: "TWD",
+      }),
+    ]);
+  });
+
+  it("lets one split line carry the odd remainder of an off-step TWD total", async () => {
+    // Orders priced before per-line rounding can total NT$170.50. One line
+    // must be allowed to carry the .50, or the order can never be split.
+    const { db, statements } = createD1();
+    queueOrderRows([[order({ totalAmount: 170.5, totalAmountCents: 17050 })]]);
+
+    await expect(
+      paymentService(env(db)).processPayment(
+        {
+          orderId: "order-101",
+          paymentMode: "partial",
+          payments: [
+            { method: "cash", amount: 100 },
+            { method: "card", amount: 70.5 },
+          ],
+        },
+        { idempotencyKey: "idem-odd" },
+      ),
+    ).resolves.toMatchObject({ data: { authorizedTotal: 170.5 } });
+    expect(
+      statementContaining(statements, "INSERT INTO payment_transactions")
+        ?.payload,
+    ).toMatchObject({ amountCents: 17050, currency: "TWD" });
+
+    // …but only one: two off-step lines are still refused.
+    const second = createD1();
+    queueOrderRows([[order({ totalAmount: 170.5, totalAmountCents: 17050 })]]);
+    await expect(
+      paymentService(env(second.db)).processPayment(
+        {
+          orderId: "order-101",
+          paymentMode: "partial",
+          payments: [
+            { method: "cash", amount: 100.25 },
+            { method: "card", amount: 70.25 },
+          ],
+        },
+        { idempotencyKey: "idem-odd-2" },
+      ),
+    ).rejects.toMatchObject({ code: "AMOUNT_PRECISION_INVALID" });
+  });
+
+  it("pays an off-step TWD total in full", async () => {
+    const { db } = createD1();
+    queueOrderRows([[order({ totalAmount: 170.5, totalAmountCents: 17050 })]]);
+
+    await expect(
+      paymentService(env(db)).processPayment(
+        {
+          orderId: "order-101",
+          paymentMode: "full",
+          amount: 170.5,
+          expectedTotal: 170.5,
+          method: "cash",
+        },
+        { idempotencyKey: "idem-full-odd" },
+      ),
+    ).resolves.toMatchObject({ data: { authorizedTotal: 170.5 } });
+  });
+
+  it("allows cent-level split lines for MYR", async () => {
+    mocks.resolveRestaurantCurrency.mockResolvedValue("MYR");
+    const { db } = createD1();
+    queueOrderRows([[order({ totalAmount: 171, totalAmountCents: 17100 })]]);
+
+    await expect(
+      paymentService(env(db)).processPayment(
+        {
+          orderId: "order-101",
+          paymentMode: "partial",
+          payments: [
+            { method: "cash", amount: 85.55 },
+            { method: "card", amount: 85.45 },
+          ],
+        },
+        { idempotencyKey: "idem-myr-split" },
+      ),
+    ).resolves.toMatchObject({ data: { currency: "MYR" } });
+  });
+
   it("replays a recorded payment for the same idempotency key without new writes", async () => {
     const { db, committed, statements } = createD1();
     queueReplayRows([[order()]], [[paymentTransaction()]]);
@@ -548,6 +739,8 @@ describe("PaymentService", () => {
         // or it would contradict the live call it is replaying.
         paymentStatus: "completed",
         authorizedTotal: 120,
+        currency: null,
+        country: null,
       },
     });
 
