@@ -40,7 +40,11 @@ The endpoint receives the provider split gateway request documented in
 The adapter must:
 
 - Treat `idempotencyKey` as stable for retries.
-- Authorize exactly `amountCents`.
+- Authorize exactly the requested amount in `currency` — convert it with the
+  [money units](#money-units) table, never pass `amountCents` to a gateway
+  as-is.
+- Return `currency` and `authorizedAmountCents` (internal cents) on a `paid`
+  response; both are checked against the request.
 - Preserve `checkoutId`, `marketSlug`, and allocation metadata for later
   webhook or status lookup.
 - Return `status: "paid"` only when the provider has authorized or captured the
@@ -89,6 +93,54 @@ The health endpoint should return `2xx` plus optional:
   "capabilities": ["aggregate_authorization", "provider_allocations"]
 }
 ```
+
+## Money Units
+
+MakanMasak stores every amount as integer **cents = major units × 100**, for
+every currency. That is a storage convention, not any provider's unit, and it
+is where 100× errors come from. Every amount-bearing request the core sends
+therefore carries two forms:
+
+| field | meaning | NT$250 | RM12.50 | ₫100,000 |
+| --- | --- | --- | --- | --- |
+| `amountCents` | internal cents (major × 100) | 25000 | 1250 | 10000000 |
+| `amountMinor` | ISO 4217 minor units | 25000 | 1250 | 100000 |
+| `currencyExponent` | ISO 4217 exponent | 2 | 2 | 0 |
+
+Allocations carry `amountCents` and `amountMinor` too. The core refuses to send
+an amount that is not on the currency's step (TWD and VND are whole units), so
+the conversions below are always exact.
+
+What to hand each gateway, verified against the provider docs on 2026-09-19:
+
+| gateway | TWD | MYR | VND | source |
+| --- | --- | --- | --- | --- |
+| Stripe `amount` | `amountMinor` (two-decimal) | `amountMinor` | `amountMinor` (zero-decimal: whole dong) | <https://docs.stripe.com/currencies> — VND is in the zero-decimal list; TWD is charged as two-decimal, and TWD payouts must be divisible by 100 |
+| LINE Pay `amount` | `amountMinor / 100` (whole NT$) | not supported | not supported | <https://developers-pay.line.me/online-api-v3/request-payment> — currencies USD, TWD, THB; examples send `"amount": 100, "currency": "TWD"` |
+| ECPay `TotalAmount` | `amountMinor / 100` | not supported | not supported | ECPay AIO: "請帶整數，不可有小數點。僅限新台幣" |
+| NewebPay `Amt` | `amountMinor / 100` | not supported | not supported | NewebPay MPG manual (integer TWD) |
+
+Coming back, the core converts with the same table (see
+`apps/api/src/shared/utils/provider-money.ts`):
+
+- Responses from **your adapter** (create payment, status lookup, refund) and
+  generic `market_checkout.payment_*` webhooks are read as **internal cents**:
+  `authorizedAmountCents`, `amountReceivedCents`, `amountRefundedCents`,
+  `refundedAmountCents`, `amount_cents`, `amount_received`,
+  `amount_refunded`. Always include `currency`.
+- Raw **Stripe** events posted to `/market-checkouts/payment-webhooks/stripe`
+  are read in Stripe's unit for `data.object.currency`.
+- **LINE Pay** confirm results posted to `/market-checkouts/payment-webhooks/linepay`
+  are read in whole TWD. The confirm response has no currency, so add the
+  `currency` you confirmed at the top level.
+
+A paid amount must equal the payment exactly, in the same currency; a refund
+must not exceed what was paid. Anything else is **held for review**, not
+applied: the payment keeps its status, `review_required` is recorded with the
+reason, a `failure` row goes to `payment_audit_log`, and the admin sees the
+`provider_amount_mismatch` alert. Webhooks still get a 2xx so the provider stops
+redelivering; a refund response that fails the check makes the refund call
+answer `502 MARKET_CHECKOUT_PROVIDER_REFUND_MISMATCH`.
 
 ## Required Environment Values
 

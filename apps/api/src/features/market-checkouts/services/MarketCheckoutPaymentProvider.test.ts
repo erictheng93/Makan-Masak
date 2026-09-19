@@ -27,6 +27,7 @@ describe("MarketCheckoutPaymentProvider", () => {
         provider: "stripe_connect",
         providerTransactionId: "pi_market_1",
         authorizedAmountCents: 20000,
+        currency: "TWD",
         allocations: [
           { orderId: "1001", paymentId: "alloc-1001", amountCents: 12000 },
           { orderId: "1002", paymentId: "alloc-1002", amountCents: 8000 },
@@ -306,6 +307,7 @@ describe("MarketCheckoutPaymentProvider", () => {
           provider: "stripe_connect",
           providerTransactionId: "pi_market_1",
           authorizedAmountCents: 20000,
+          currency: "TWD",
           allocations: [
             { orderId: "1001", paymentId: "alloc-1001", amountCents: 12000 },
             { orderId: "1002", paymentId: "alloc-1002", amountCents: 8000 },
@@ -362,6 +364,7 @@ describe("MarketCheckoutPaymentProvider", () => {
       provider: "stripe_connect",
       providerTransactionId: "pi_market_1",
       authorizedAmountCents: 20000,
+      currency: "TWD",
       allocations: [
         { orderId: "1001", paymentId: "alloc-1001", amountCents: 12000 },
         { orderId: "1002", paymentId: "alloc-1002", amountCents: 8000 },
@@ -377,6 +380,7 @@ describe("MarketCheckoutPaymentProvider", () => {
             provider: "stripe_connect",
             providerTransactionId: "pi_market_1",
             authorizedAmountCents: 12000,
+            currency: "TWD",
             allocations: [
               { orderId: "1001", paymentId: "alloc-1001", amountCents: 12000 },
             ],
@@ -462,6 +466,7 @@ describe("MarketCheckoutPaymentProvider", () => {
         provider: "stripe_connect",
         providerTransactionId: "pi_market_1",
         authorizedAmountCents: 19999,
+        currency: "TWD",
         allocations: [{ orderId: "1001", amountCents: 12000 }],
       })),
     });
@@ -494,6 +499,7 @@ describe("MarketCheckoutPaymentProvider", () => {
         provider: "stripe_connect",
         providerTransactionId: "pi_market_1",
         authorizedAmountCents: 20000,
+        currency: "TWD",
         allocations: [{ orderId: "1001", amountCents: 12000 }],
       })),
     });
@@ -531,6 +537,7 @@ describe("MarketCheckoutPaymentProvider", () => {
         provider: "stripe_connect",
         providerTransactionId: "pi_market_1",
         authorizedAmountCents: 20000,
+        currency: "TWD",
         allocations: [
           { orderId: "1001", amountCents: 11900 },
           { orderId: "1002", amountCents: 8100 },
@@ -571,6 +578,7 @@ describe("MarketCheckoutPaymentProvider", () => {
         provider: "stripe_connect",
         providerTransactionId: "pi_market_1",
         authorizedAmountCents: 12000,
+        currency: "TWD",
         allocations: [
           { orderId: "1001", amountCents: 12000 },
           { orderId: "1001", amountCents: 12000 },

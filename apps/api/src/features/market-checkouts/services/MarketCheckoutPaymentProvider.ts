@@ -1,6 +1,14 @@
 import type { Env } from "../../../types/env";
 import { CreditService } from "../../credits/services/CreditService";
 import { isFeatureEnabled } from "../../../shared/feature-adoption";
+import { normalizeCurrencyCode } from "@makanmasak/utils";
+import {
+  ISO_4217_EXPONENTS,
+  assertCurrencyAlignedCents,
+  centsToIsoMinorUnits,
+  verifyProviderMoney,
+  type ProviderMoneyIssue,
+} from "../../../shared/utils/provider-money";
 
 export type MarketCheckoutChildPaymentStatus = "paid" | "failed" | "refunded";
 export type MarketCheckoutSplitMode = "child_transactions" | "provider_split";
@@ -27,6 +35,20 @@ export interface MarketCheckoutPaymentChildOrder {
   orderId: string;
   orderNumber: string;
   totalAmount: number;
+  /** Integer cents; preferred over `totalAmount` whenever present. */
+  totalAmountCents?: number | null;
+}
+
+/**
+ * A child order's amount in integer cents: the stored cents column when there
+ * is one, and only otherwise the legacy float `totalAmount`.
+ */
+export function childOrderAmountCents(child: {
+  totalAmount?: number | null;
+  totalAmountCents?: number | null;
+}): number {
+  if (child.totalAmountCents != null) return Number(child.totalAmountCents);
+  return Math.round(Number(child.totalAmount ?? 0) * 100);
 }
 
 export interface MarketCheckoutChildPayment {
@@ -123,6 +145,8 @@ export interface MarketCheckoutProviderSplitGatewayResult {
   providerTransactionId: string;
   status?: "paid" | "pending" | "requires_action";
   authorizedAmountCents: number;
+  /** Required on `paid`: the currency the provider actually authorized. */
+  currency?: string;
   allocations: Array<
     Pick<MarketCheckoutProviderSplitAllocation, "orderId"> & {
       paymentId?: string;
@@ -206,12 +230,18 @@ export class ProviderSplitMarketCheckoutPaymentProvider implements MarketCheckou
       restaurantName: child.restaurantName,
       orderId: child.orderId,
       orderNumber: child.orderNumber,
-      amountCents: Math.round(Number(child.totalAmount ?? 0) * 100),
+      amountCents: childOrderAmountCents(child),
     }));
     const amountCents = allocations.reduce(
       (sum, allocation) => sum + allocation.amountCents,
       0,
     );
+    // Refuse before anything leaves the Worker: an adapter must never be asked
+    // to authorize NT$15.50 or a fraction of a dong.
+    for (const allocation of allocations) {
+      assertCurrencyAlignedCents(allocation.amountCents, input.currency);
+    }
+    assertCurrencyAlignedCents(amountCents, input.currency);
 
     const result = await this.gateway.process({
       checkoutId: input.checkoutId,
@@ -237,9 +267,17 @@ export class ProviderSplitMarketCheckoutPaymentProvider implements MarketCheckou
       };
     }
 
-    if (result.authorizedAmountCents !== amountCents) {
+    const authorizationIssue = verifyProviderMoney({
+      expectedCents: amountCents,
+      expectedCurrency: input.currency,
+      receivedCents: result.authorizedAmountCents,
+      receivedCurrency: result.currency,
+    });
+    if (authorizationIssue) {
       throw new Error(
-        "Provider split authorized amount does not match checkout total",
+        authorizationIssue.code.startsWith("CURRENCY_")
+          ? `Provider split authorized currency does not match checkout currency (${authorizationIssue.code})`
+          : "Provider split authorized amount does not match checkout total",
       );
     }
 
@@ -368,7 +406,7 @@ export class HttpProviderSplitGateway implements MarketCheckoutProviderSplitGate
   async process(
     input: MarketCheckoutProviderSplitGatewayInput,
   ): Promise<MarketCheckoutProviderSplitGatewayResult> {
-    const body = JSON.stringify(input);
+    const body = JSON.stringify(withProviderWireMoney(input));
     const headers: Record<string, string> = {
       "content-type": "application/json",
       ...(this.bearerToken
@@ -726,7 +764,13 @@ export async function queryMarketCheckoutProviderSplitStatus(
     throw new Error("Market checkout provider status URL is not configured");
   }
 
-  const body = JSON.stringify(input);
+  // Read-only, so a legacy row without a currency is still looked up, just
+  // without the ISO minor-unit fields.
+  const body = JSON.stringify(
+    normalizeCurrencyCode(input.currency)
+      ? withProviderWireMoney(input)
+      : input,
+  );
   const headers = await buildProviderSplitHeaders(env, body);
 
   const response = await fetcher(env.MARKET_CHECKOUT_PROVIDER_STATUS_URL, {
@@ -759,7 +803,8 @@ export async function refundMarketCheckoutProviderSplitPayment(
     throw new Error("Market checkout provider refund URL is not configured");
   }
 
-  const body = JSON.stringify(input);
+  // Money leaves here: no currency, or an amount off its step, is refused.
+  const body = JSON.stringify(withProviderWireMoney(input));
   const headers = await buildProviderSplitHeaders(env, body);
   const response = await fetcher(env.MARKET_CHECKOUT_PROVIDER_REFUND_URL, {
     method: "POST",
@@ -819,6 +864,8 @@ function parseHttpGatewayResult(
       ? payload.status
       : undefined,
     authorizedAmountCents: payload.authorizedAmountCents,
+    currency:
+      typeof payload.currency === "string" ? payload.currency : undefined,
     allocations: payload.allocations.map((allocation) => {
       if (
         typeof allocation?.orderId !== "string" ||
@@ -861,14 +908,14 @@ function parseHttpStatusResult(
         ? payload.providerTransactionId
         : undefined,
     status: payload.status,
-    amountReceivedCents:
-      typeof payload.amountReceivedCents === "number"
-        ? Math.round(payload.amountReceivedCents)
-        : undefined,
-    amountRefundedCents:
-      typeof payload.amountRefundedCents === "number"
-        ? Math.round(payload.amountRefundedCents)
-        : undefined,
+    amountReceivedCents: integerCentsOrUndefined(
+      payload.amountReceivedCents,
+      "Invalid provider status lookup amount",
+    ),
+    amountRefundedCents: integerCentsOrUndefined(
+      payload.amountRefundedCents,
+      "Invalid provider status lookup amount",
+    ),
     currency:
       typeof payload.currency === "string" ? payload.currency : undefined,
     eventId: typeof payload.eventId === "string" ? payload.eventId : undefined,
@@ -908,7 +955,10 @@ function parseHttpRefundResult(
         : undefined,
     refundId: payload.refundId,
     status: payload.status,
-    refundedAmountCents: Math.round(payload.refundedAmountCents),
+    refundedAmountCents: integerCentsOrUndefined(
+      payload.refundedAmountCents,
+      "Invalid provider refund amount",
+    ) as number,
     currency:
       typeof payload.currency === "string" ? payload.currency : undefined,
     eventId: typeof payload.eventId === "string" ? payload.eventId : undefined,
@@ -919,6 +969,97 @@ function parseHttpRefundResult(
         ? payload.providerPayload
         : undefined,
   };
+}
+
+/**
+ * Wire form of an amount-bearing request to the provider adapter.
+ *
+ * `amountCents` stays in our internal convention (major × 100 for every
+ * currency). Next to it goes the ISO 4217 form an adapter can hand straight
+ * to a gateway that uses minor units: `amountMinor` with its
+ * `currencyExponent` (TWD 2, MYR 2, VND 0), on the total and on every
+ * allocation. For Stripe that is exactly its `amount`; for a whole-unit
+ * gateway (LINE Pay, ECPay, NewebPay) it is `amountMinor / 10^currencyExponent`.
+ */
+export interface MarketCheckoutProviderWireMoney {
+  amountMinor: number;
+  currencyExponent: number;
+}
+
+export function withProviderWireMoney<
+  T extends {
+    amountCents: number;
+    currency?: string;
+    allocations?: MarketCheckoutProviderSplitAllocation[];
+  },
+>(
+  input: T,
+): T &
+  MarketCheckoutProviderWireMoney & {
+    allocations?: Array<
+      MarketCheckoutProviderSplitAllocation & { amountMinor: number }
+    >;
+  } {
+  const currency = normalizeCurrencyCode(input.currency);
+  if (!currency) {
+    throw new Error(
+      `Market checkout provider request needs a supported currency, got ${String(input.currency)}`,
+    );
+  }
+  return {
+    ...input,
+    amountMinor: centsToIsoMinorUnits(input.amountCents, currency),
+    currencyExponent: ISO_4217_EXPONENTS[currency],
+    ...(input.allocations
+      ? {
+          allocations: input.allocations.map((allocation) => ({
+            ...allocation,
+            amountMinor: centsToIsoMinorUnits(allocation.amountCents, currency),
+          })),
+        }
+      : {}),
+  };
+}
+
+/**
+ * Check a provider refund response before it touches the ledger: a completed
+ * refund must name the currency that was refunded and an amount above zero
+ * and no larger than what was asked for. Pending and failed refunds move no
+ * money yet, so they pass.
+ */
+export function verifyProviderRefundResult(
+  request: Pick<
+    MarketCheckoutProviderSplitRefundInput,
+    "amountCents" | "currency"
+  >,
+  result: MarketCheckoutProviderSplitRefundResult,
+): ProviderMoneyIssue | null {
+  if (result.status !== "refunded" && result.status !== "partial_refunded") {
+    return null;
+  }
+  const issue = verifyProviderMoney({
+    expectedCents: request.amountCents,
+    expectedCurrency: request.currency,
+    receivedCents: result.refundedAmountCents,
+    receivedCurrency: result.currency,
+    mode: "at_most",
+  });
+  if (issue) return issue;
+  if (result.refundedAmountCents <= 0) {
+    return {
+      code: "AMOUNT_MISMATCH",
+      message: "Provider reported a completed refund of nothing",
+    };
+  }
+  return null;
+}
+
+function integerCentsOrUndefined(value: unknown, message: string) {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "number" || !Number.isSafeInteger(value)) {
+    throw new Error(message);
+  }
+  return value;
 }
 
 async function buildProviderSplitHeaders(env: Env, body: string) {

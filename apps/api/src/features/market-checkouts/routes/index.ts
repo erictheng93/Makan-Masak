@@ -1,6 +1,7 @@
 import { Hono, type Context } from "hono";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import {
+  PAYMENT_AUDIT_EVENT_TYPES,
   createDatabase,
   marketCheckoutChildOrders,
   marketCheckoutSessions,
@@ -45,9 +46,13 @@ import {
   queryMarketCheckoutProviderSplitStatus,
   refundCreditMarketCheckoutPayment,
   refundMarketCheckoutProviderSplitPayment,
+  verifyProviderRefundResult,
   type MarketCheckoutProviderNextAction,
+  type MarketCheckoutProviderSplitRefundResult,
   type MarketCheckoutSplitMode,
 } from "../services/MarketCheckoutPaymentProvider";
+import { PaymentAuditService } from "../../billing/services/PaymentAuditService";
+import type { ProviderMoneyIssue } from "../../../shared/utils/provider-money";
 import { MarketCheckoutPaymentReconciliationService } from "../services/MarketCheckoutPaymentReconciliationService";
 import { MarketCheckoutPaymentWebhookService } from "../services/MarketCheckoutPaymentWebhookService";
 import {
@@ -1445,6 +1450,27 @@ app.post("/:id/refund", authMiddleware, requireRole([0]), async (c) => {
             reason: parsed.data.reason,
             allocations,
           });
+    // The provider's word on money is checked before it reaches the ledger:
+    // the refunded currency must be the payment's and the amount must be
+    // above zero and no more than was requested.
+    const refundIssue = verifyProviderRefundResult(
+      { amountCents, currency: session.payment.currency },
+      providerRefund,
+    );
+    if (refundIssue) {
+      await holdMarketCheckoutRefundForReview(c.env, {
+        session,
+        checkoutId,
+        providerRefund,
+        requestedAmountCents: amountCents,
+        issue: refundIssue,
+      });
+      throw new ApiError(
+        "MARKET_CHECKOUT_PROVIDER_REFUND_MISMATCH",
+        `Provider refund response was held for review: ${refundIssue.message}`,
+        502,
+      );
+    }
     const now = new Date().toISOString();
     const lastRefund: MarketCheckoutProviderLastWebhook = {
       provider: providerRefund.provider,
@@ -1470,10 +1496,16 @@ app.post("/:id/refund", authMiddleware, requireRole([0]), async (c) => {
     const refundedAmountCents = refundCompleted
       ? providerRefund.refundedAmountCents
       : 0;
+    // The amount, not the provider's label, decides full vs partial; only a
+    // full refund marks the child payments refunded.
+    const refundStatus =
+      refundedAmountCents === amountCents ? "refunded" : "partial_refunded";
     const refundedAmount = refundedAmountCents / 100;
     const refundedOrderIds = new Set(allocations.map((item) => item.orderId));
     const childPayments = session.payment.childPayments.map((payment) =>
-      refundCompleted && refundedOrderIds.has(payment.orderId)
+      refundCompleted &&
+      refundStatus === "refunded" &&
+      refundedOrderIds.has(payment.orderId)
         ? {
             ...payment,
             status: "refunded" as const,
@@ -1483,7 +1515,7 @@ app.post("/:id/refund", authMiddleware, requireRole([0]), async (c) => {
     );
     const paymentBase: MarketCheckoutPaymentSummary = {
       ...session.payment,
-      status: refundCompleted ? providerRefund.status : session.payment.status,
+      status: refundCompleted ? refundStatus : session.payment.status,
       refundedAmount: (session.payment.refundedAmount ?? 0) + refundedAmount,
       refundedAmountCents:
         (session.payment.refundedAmountCents ?? 0) + refundedAmountCents,
@@ -2247,6 +2279,79 @@ function buildFailedMarketCheckoutPayment(input: {
     }),
     settlement: buildMarketCheckoutSettlement(input.session, paymentBase),
   };
+}
+
+/**
+ * Record a provider refund response that failed verification: lastRefund is
+ * persisted as review_required (raising provider_amount_mismatch) with the
+ * payment's status and amounts untouched, and a failure audit row keeps what
+ * the provider reported.
+ */
+async function holdMarketCheckoutRefundForReview(
+  env: Env,
+  input: {
+    session: MarketCheckoutSession;
+    checkoutId: string;
+    providerRefund: MarketCheckoutProviderSplitRefundResult;
+    requestedAmountCents: number;
+    issue: ProviderMoneyIssue;
+  },
+) {
+  const payment = input.session.payment!;
+  const parentPayment = payment.parentPayment!;
+  const now = new Date().toISOString();
+  const lastRefund: MarketCheckoutProviderLastWebhook = {
+    provider: input.providerRefund.provider,
+    eventId: input.providerRefund.eventId ?? input.providerRefund.refundId,
+    eventType:
+      input.providerRefund.eventType ??
+      `market_checkout.refund_${input.providerRefund.status}`,
+    status: "review_required",
+    reviewReason: input.issue.code,
+    receivedAt: now,
+    payloadSummary: summarizeProviderPayload({
+      providerTransactionId:
+        input.providerRefund.providerTransactionId ??
+        parentPayment.providerTransactionId,
+      status: input.providerRefund.status,
+      amountRefundedCents: input.providerRefund.refundedAmountCents,
+      currency: input.providerRefund.currency,
+      providerPayload: input.providerRefund.providerPayload,
+    }),
+  };
+  const updatedSession: MarketCheckoutSession = {
+    ...input.session,
+    payment: {
+      ...payment,
+      parentPayment: { ...parentPayment, lastRefund, updatedAt: now },
+    },
+  };
+
+  await new PaymentAuditService(env.DB).append({
+    paymentTransactionId: parentPayment.paymentId,
+    eventType: PAYMENT_AUDIT_EVENT_TYPES.FAILURE,
+    provider: input.providerRefund.provider,
+    providerEventId: `${input.providerRefund.refundId}:review`,
+    providerEventType: lastRefund.eventType,
+    amount: input.providerRefund.refundedAmountCents,
+    currency: input.providerRefund.currency ?? null,
+    rawPayload: {
+      checkoutId: input.checkoutId,
+      source: "refund",
+      requestedAmountCents: input.requestedAmountCents,
+      expectedCurrency: payment.currency,
+      providerRefund: input.providerRefund,
+    },
+    errorCode: `MARKET_CHECKOUT_REFUND_${input.issue.code}`,
+    errorMessage: input.issue.message,
+  });
+  await env.CACHE_KV.put(
+    `market_checkout:${input.checkoutId}`,
+    JSON.stringify(updatedSession),
+    { expirationTtl: 4 * 60 * 60 },
+  );
+  await updatePersistedMarketCheckoutPayment(env, updatedSession);
+  await upsertMarketCheckoutIndex(env.CACHE_KV, updatedSession);
 }
 
 function buildMarketCheckoutSettlement(

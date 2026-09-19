@@ -2891,6 +2891,7 @@ describe("market checkout routes", () => {
         provider: "line_pay",
         providerTransactionId: "provider-transaction-1",
         authorizedAmountCents: 18000,
+        currency: "TWD",
         allocations: [
           { orderId: "1001", amountCents: 10800, paymentId: "pay-1001" },
           { orderId: "1002", amountCents: 7200, paymentId: "pay-1002" },
@@ -3737,6 +3738,207 @@ describe("market checkout routes", () => {
       "market_checkout:index",
       expect.stringContaining('"paymentStatus":"refunded"'),
       { expirationTtl: 14400 },
+    );
+  });
+
+  describe("provider split refund responses are verified", () => {
+    function providerRefundEnv(refundResponse: Record<string, unknown>) {
+      const env = {
+        ...createEnv(),
+        MARKET_CHECKOUT_SPLIT_MODE: "provider_split",
+        MARKET_CHECKOUT_PROVIDER_REFUND_URL:
+          "https://payments.example.test/market-split/refunds",
+      };
+      const fetcher = vi.fn(
+        async () => new Response(JSON.stringify(refundResponse)),
+      );
+      globalThis.fetch = fetcher as never;
+      return { env, fetcher };
+    }
+
+    async function seedPaidCheckout(env: ReturnType<typeof createEnv>) {
+      await env.CACHE_KV.put(
+        "market_checkout:checkout-1",
+        JSON.stringify({
+          id: "checkout-1",
+          market: {
+            id: "market-1",
+            slug: "fengjia",
+            name: "逢甲夜市",
+            platformFeeRateBps: 350,
+          },
+          status: "submitted",
+          childOrders: [
+            {
+              restaurantId: "restaurant-1",
+              restaurantName: "雞排攤",
+              orderId: 101,
+              orderNumber: "A001",
+              totalAmount: 160,
+              totalAmountCents: 16000,
+              tokenExpiresAt: "2026-06-01T12:00:00.000Z",
+            },
+            {
+              restaurantId: "restaurant-2",
+              restaurantName: "甜點攤",
+              orderId: 102,
+              orderNumber: "A002",
+              totalAmount: 80,
+              totalAmountCents: 8000,
+              tokenExpiresAt: "2026-06-01T12:00:00.000Z",
+            },
+          ],
+          payment: {
+            status: "paid",
+            method: "market_online",
+            currency: "TWD",
+            country: "TW",
+            totalAmount: 240,
+            totalAmountCents: 24000,
+            paidAmount: 240,
+            paidAmountCents: 24000,
+            paidAt: "2026-06-01T10:10:00.000Z",
+            parentPayment: {
+              paymentId: "market_pay_checkout-1",
+              status: "paid",
+              provider: "mock_market_provider",
+              splitMode: "provider_split",
+              idempotencyKey: "market-checkout:checkout-1",
+              providerTransactionId: "intent-market-checkout-1",
+              amountCents: 24000,
+              paidAmountCents: 24000,
+              refundedAmountCents: 0,
+              childPaymentIds: ["mock-pay-101", "mock-pay-102"],
+              createdAt: "2026-06-01T10:10:00.000Z",
+              updatedAt: "2026-06-01T10:10:00.000Z",
+            },
+            childPayments: [
+              {
+                restaurantId: "restaurant-1",
+                restaurantName: "雞排攤",
+                orderId: 101,
+                orderNumber: "A001",
+                paymentId: "mock-pay-101",
+                status: "paid",
+                amount: 160,
+                amountCents: 16000,
+              },
+              {
+                restaurantId: "restaurant-2",
+                restaurantName: "甜點攤",
+                orderId: 102,
+                orderNumber: "A002",
+                paymentId: "mock-pay-102",
+                status: "paid",
+                amount: 80,
+                amountCents: 8000,
+              },
+            ],
+          },
+          subtotal: 24000,
+          createdAt: "2026-06-01T10:00:00.000Z",
+        }),
+      );
+    }
+
+    it("records a partial provider refund as partial and keeps child payments paid", async () => {
+      const { env, fetcher } = providerRefundEnv({
+        ...mockMarketCheckoutProviderRefundResponse,
+        status: "refunded",
+        refundedAmountCents: 8000,
+      });
+      await seedPaidCheckout(env);
+
+      const response = await routes.fetch(
+        new Request("https://test/checkout-1/refund", {
+          method: "POST",
+          body: JSON.stringify({}),
+        }),
+        env as never,
+      );
+
+      expect(response.status).toBe(200);
+      expect(fetcher).toHaveBeenCalledOnce();
+      const json = (await response.json()) as {
+        data: {
+          payment: {
+            status: string;
+            refundedAmountCents: number;
+            childPayments: Array<{ status: string }>;
+          };
+        };
+      };
+      expect(json.data.payment).toMatchObject({
+        status: "partial_refunded",
+        refundedAmountCents: 8000,
+      });
+      expect(
+        json.data.payment.childPayments.map((payment) => payment.status),
+      ).toEqual(["paid", "paid"]);
+    });
+
+    it.each([
+      [
+        "in another currency",
+        { currency: "USD" },
+        "MARKET_CHECKOUT_REFUND_CURRENCY_MISMATCH",
+      ],
+      [
+        "larger than requested",
+        { refundedAmountCents: 2400000 },
+        "MARKET_CHECKOUT_REFUND_AMOUNT_EXCEEDS_EXPECTED",
+      ],
+    ])(
+      "holds a provider refund %s for review",
+      async (_label, patch, auditCode) => {
+        const { env, fetcher } = providerRefundEnv({
+          ...mockMarketCheckoutProviderRefundResponse,
+          ...patch,
+        });
+        await seedPaidCheckout(env);
+
+        const response = await routes.fetch(
+          new Request("https://test/checkout-1/refund", {
+            method: "POST",
+            body: JSON.stringify({}),
+          }),
+          env as never,
+        );
+
+        expect(response.status).toBe(502);
+        expect(await response.json()).toMatchObject({
+          success: false,
+          error: { code: "MARKET_CHECKOUT_PROVIDER_REFUND_MISMATCH" },
+        });
+        expect(fetcher).toHaveBeenCalledOnce();
+        const stored = JSON.parse(
+          (await env.CACHE_KV.get("market_checkout:checkout-1")) ?? "{}",
+        ) as {
+          payment: {
+            status: string;
+            refundedAmountCents?: number;
+            parentPayment: {
+              lastRefund: { status: string; reviewReason: string };
+            };
+          };
+        };
+        expect(stored.payment.status).toBe("paid");
+        expect(stored.payment.refundedAmountCents ?? 0).toBe(0);
+        expect(stored.payment.parentPayment.lastRefund).toMatchObject({
+          status: "review_required",
+        });
+        const auditPrepare = vi
+          .mocked(env.DB.prepare)
+          .mock.calls.findIndex(([sql]) =>
+            String(sql).includes("payment_audit_log"),
+          );
+        expect(auditPrepare).toBeGreaterThanOrEqual(0);
+        const auditBind = vi.mocked(env.DB.prepare).mock.results[auditPrepare]
+          ?.value.bind;
+        expect(vi.mocked(auditBind).mock.calls[0]).toEqual(
+          expect.arrayContaining(["failure", auditCode]),
+        );
+      },
     );
   });
 

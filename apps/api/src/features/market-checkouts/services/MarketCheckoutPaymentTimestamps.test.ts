@@ -166,6 +166,7 @@ describe("market checkout payment settlement timestamps against real D1", () => 
         status: "paid",
         providerTransactionId: "intent-market-checkout-1",
         amountReceivedCents: 24_000,
+        currency: "TWD",
         eventId: "evt-reconcile-1",
       });
 
@@ -209,6 +210,7 @@ describe("market checkout payment settlement timestamps against real D1", () => 
         status: "paid" as const,
         providerTransactionId: "intent-market-checkout-1",
         amountReceivedCents: 24_000,
+        currency: "TWD",
       };
 
       await service.reconcile(CHECKOUT_ID, { ...paid, eventId: "evt-first" });
