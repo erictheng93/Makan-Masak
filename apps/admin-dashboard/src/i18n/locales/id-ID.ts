@@ -2716,8 +2716,6 @@ const idID: Messages = {
     alerts: {
       paymentSuccess: "Pembayaran berhasil diproses",
       paymentFailed: "Pembayaran gagal, silakan coba lagi",
-      refundSuccess:
-        "Pengembalian berhasil diproses:\nPesanan: {orderNumber}\nJumlah: RM{amount}\nAlasan: {reason}",
       refundFailed: "Pengembalian gagal, silakan coba lagi",
       printInDev: "Pencetakan struk sedang dalam pengembangan...",
       printing: "Mencetak struk untuk {orderNumber}...",

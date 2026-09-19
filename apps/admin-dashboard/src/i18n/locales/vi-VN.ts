@@ -2702,8 +2702,6 @@ const viVN: Messages = {
     alerts: {
       paymentSuccess: "Thanh toán thành công",
       paymentFailed: "Thanh toán thất bại, vui lòng thử lại",
-      refundSuccess:
-        "Hoàn tiền thành công:\nĐơn hàng: {orderNumber}\nSố tiền: {amount} VND\nLý do: {reason}",
       refundFailed: "Hoàn tiền thất bại, vui lòng thử lại",
       printInDev: "Tính năng in hóa đơn đang phát triển...",
       printing: "Đang in hóa đơn cho {orderNumber}...",

@@ -2703,8 +2703,6 @@ const jaJP: Messages = {
     alerts: {
       paymentSuccess: "支払い処理が完了しました",
       paymentFailed: "支払いに失敗しました。再試行してください",
-      refundSuccess:
-        "返金処理が完了しました:\n注文: {orderNumber}\n金額: RM{amount}\n理由: {reason}",
       refundFailed: "返金に失敗しました。再試行してください",
       printInDev: "レシート印刷は開発中です...",
       printing: "{orderNumber}のレシートを印刷中...",

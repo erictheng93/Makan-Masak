@@ -2751,8 +2751,6 @@ const enUS: Messages = {
     alerts: {
       paymentSuccess: "Payment processed successfully",
       paymentFailed: "Payment failed, please retry",
-      refundSuccess:
-        "Refund processed successfully:\nOrder: {orderNumber}\nAmount: RM{amount}\nReason: {reason}",
       refundFailed: "Refund failed, please retry",
       printInDev: "Receipt printing is under development...",
       printing: "Printing receipt for {orderNumber}...",

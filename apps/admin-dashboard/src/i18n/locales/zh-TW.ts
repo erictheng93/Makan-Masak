@@ -2821,8 +2821,6 @@ const zhTWCore = {
     alerts: {
       paymentSuccess: "付款處理成功",
       paymentFailed: "付款失敗，請重試",
-      refundSuccess:
-        "退款處理成功：\n訂單: {orderNumber}\n金額: RM{amount}\n原因: {reason}",
       refundFailed: "退款失敗，請重試",
       printInDev: "收據列印功能開發中...",
       printing: "正在列印 {orderNumber} 的收據...",
