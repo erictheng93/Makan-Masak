@@ -38,6 +38,7 @@ import {
 } from "../../../shared/utils/api-error";
 import { toCents } from "../../../shared/utils/money";
 import { CreditService } from "../../credits/services/CreditService";
+import { resolveRestaurantCurrency } from "../../../shared/utils/restaurant-currency";
 import { ServiceBookingNotificationService } from "./ServiceBookingNotificationService";
 import { generateUUID } from "@makanmasak/utils";
 
@@ -576,13 +577,17 @@ export class ServiceBookingService {
 
     let paymentRef: string | null = null;
     if (booking.amountDueCents > 0) {
-      const balance = await new CreditService(this.env).getBalance(
-        input.creditCardPublicId,
+      // The booking is priced in the restaurant's currency. Passing the card's
+      // own currency here made CreditService.spend's currency check compare
+      // the card with itself, so a TWD card settled an MYR booking.
+      const currency = await resolveRestaurantCurrency(
+        this.d1,
+        booking.restaurantId,
       );
       const result = await new CreditService(this.env).spend({
         publicId: input.creditCardPublicId,
         amountCents: booking.amountDueCents,
-        currency: balance.currency,
+        currency,
         idempotencyKey: `service-booking:${booking.id}`,
         sourceType: "service_booking",
         sourceId: booking.id,

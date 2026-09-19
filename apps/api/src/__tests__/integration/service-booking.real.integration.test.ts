@@ -52,9 +52,13 @@ function service(): ServiceBookingService {
   return new ServiceBookingService(env());
 }
 
-async function seedRestaurant(id: string = RESTAURANT_ID): Promise<void> {
+async function seedRestaurant(
+  id: string = RESTAURANT_ID,
+  settings?: { currency: string },
+): Promise<void> {
   await testDb.drizzle.insert(restaurants).values({
     id,
+    ...(settings && { settings }),
     name: "Test Stall",
     type: "street_food",
     category: "activity",
@@ -424,9 +428,12 @@ describe("ServiceBookingService — capacity", () => {
 });
 
 describe("ServiceBookingService — payment & lifecycle", () => {
-  async function issueCard(balanceCents: number): Promise<string> {
+  async function issueCard(
+    balanceCents: number,
+    currency: "TWD" | "MYR" | "VND" = "TWD",
+  ): Promise<string> {
     const card = await new CreditService(env()).issueCard({
-      currency: "TWD",
+      currency,
       initialBalanceCents: balanceCents,
     });
     return card.publicId;
@@ -463,6 +470,53 @@ describe("ServiceBookingService — payment & lifecycle", () => {
 
     const balance = await new CreditService(env()).getBalance(publicId);
     expect(balance.balanceCents).toBe(100000 - 13500);
+  });
+
+  it("refuses a card in another currency than the restaurant's", async () => {
+    const MYR_RESTAURANT_ID = "r-svc-myr";
+    await seedRestaurant(MYR_RESTAURANT_ID, { currency: "MYR" });
+    const serviceId = await seedService({
+      priceCents: 5000,
+      restaurantId: MYR_RESTAURANT_ID,
+    });
+    const twdCard = await issueCard(100000, "TWD");
+    const myrCard = await issueCard(100000, "MYR");
+
+    const booking = await service().createBooking({
+      restaurantId: MYR_RESTAURANT_ID,
+      serviceItemId: serviceId,
+      customerName: "Guest",
+      customerPhone: "0911222333",
+      bookingDate: "2026-06-05",
+      bookingTime: "14:00",
+    });
+
+    // Before the fix the card's own currency was passed as the booking's, so
+    // this TWD card paid RM50 as NT$50.
+    await expect(
+      service().payWithCredits({
+        bookingId: booking.id,
+        creditCardPublicId: twdCard,
+      }),
+    ).rejects.toMatchObject({ code: "CREDIT_CURRENCY_MISMATCH" });
+    expect(
+      (await new CreditService(env()).getBalance(twdCard)).balanceCents,
+    ).toBe(100000);
+    const [stillPending] = await testDb.drizzle
+      .select({ status: serviceBookings.status })
+      .from(serviceBookings)
+      .where(eq(serviceBookings.id, booking.id));
+    expect(stillPending?.status).toBe("pending");
+
+    await expect(
+      service().payWithCredits({
+        bookingId: booking.id,
+        creditCardPublicId: myrCard,
+      }),
+    ).resolves.toMatchObject({ status: "confirmed", amountPaidCents: 5000 });
+    expect(
+      (await new CreditService(env()).getBalance(myrCard)).balanceCents,
+    ).toBe(95000);
   });
 
   it("pays only the required deposit and leaves the venue balance due", async () => {
