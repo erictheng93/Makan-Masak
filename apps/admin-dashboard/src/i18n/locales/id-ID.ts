@@ -258,7 +258,7 @@ const idID: Messages = {
       emptySource:
         "Unggah gambar lalu masukkan hasil koreksi di sebelah kanan.",
       row: "Baris {number}",
-      priceCents: "Harga",
+      price: "Harga ({symbol})",
       publishing: "Menerbitkan…",
       publish: "Terbitkan menu terstruktur",
       fixFields: "Perbaiki bidang yang ditandai sebelum menerbitkan.",
@@ -267,7 +267,10 @@ const idID: Messages = {
       validation: {
         nameRequired: "Nama wajib diisi.",
         priceRequired: "Harga wajib diisi.",
-        priceInvalid: "Harga harus berupa bilangan bulat tidak negatif.",
+        priceInvalid: "Harga harus berupa jumlah tidak negatif.",
+        priceWholeUnits:
+          "{symbol} tidak memiliki satuan pecahan, jadi harga harus bilangan bulat.",
+        priceTooPrecise: "Harga {symbol} maksimal {decimals} angka desimal.",
         categoryRequired: "Pilih kategori.",
         sortOrderRequired: "Urutan wajib diisi.",
         sortOrderInvalid: "Urutan harus berupa bilangan bulat tidak negatif.",

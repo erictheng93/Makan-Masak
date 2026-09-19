@@ -1,5 +1,29 @@
 import Papa from "papaparse";
 import type { CategoryData } from "@/composables/useMenuManagement";
+import {
+  getCurrencyConfig,
+  DEFAULT_CURRENCY,
+  type CurrencyCode,
+} from "@makanmasak/utils";
+
+export type ImportPriceProblem = "invalid" | "wholeUnits" | "tooPrecise";
+
+/**
+ * Check a price typed in major units against the shop currency. TWD and VND
+ * have no fractional unit, so NT$12.5 is rejected; MYR takes up to two
+ * decimals, so RM12.50 is accepted. Returns null when the price is usable.
+ */
+export function importPriceProblem(
+  price: number,
+  currency: CurrencyCode = DEFAULT_CURRENCY,
+): ImportPriceProblem | null {
+  if (!Number.isFinite(price) || price < 0) return "invalid";
+  const decimals = getCurrencyConfig(currency)?.decimals ?? 0;
+  const scaled = price * 10 ** decimals;
+  // Tolerate float noise: 12.1 * 100 is 1209.9999999999998.
+  if (Math.abs(scaled - Math.round(scaled)) < 1e-6) return null;
+  return decimals === 0 ? "wholeUnits" : "tooPrecise";
+}
 
 export interface MenuItemImportInput {
   name: string;
@@ -76,6 +100,7 @@ export function buildMenuItemImportTemplate(
 export function parseMenuItemImport(
   text: string,
   categories: CategoryData[],
+  currency: CurrencyCode = DEFAULT_CURRENCY,
 ): MenuItemImportParseResult {
   if (!text.trim()) {
     return { items: [], errors: ["請貼上要匯入的商品資料。"] };
@@ -98,7 +123,13 @@ export function parseMenuItemImport(
   parsed.data.forEach((row, index) => {
     const line = index + 2;
     const item = csvRowToMenuItem(row, categories);
-    const rowErrors = validateMenuItemImportRow(item, row, categories, line);
+    const rowErrors = validateMenuItemImportRow(
+      item,
+      row,
+      categories,
+      line,
+      currency,
+    );
     errors.push(...rowErrors);
     if (rowErrors.length === 0 && item) {
       items.push(item);
@@ -127,10 +158,10 @@ function csvRowToMenuItem(
     name: normalizeCell(row.name) ?? "",
     categoryId,
     catalogType: parseCatalogType(row.catalogType) ?? "menu_item",
-    price: parseOptionalInteger(row.price) ?? 0,
+    price: parseOptionalNumber(row.price) ?? 0,
     isFeatured: parseBoolean(row.isFeatured, false),
     isAvailable: parseBoolean(row.isAvailable, true),
-    sortOrder: parseOptionalInteger(row.sortOrder) ?? 0,
+    sortOrder: parseOptionalNumber(row.sortOrder) ?? 0,
   };
   assignIfDefined(item, "description", normalizeCell(row.description));
   assignIfDefined(item, "imageUrl", normalizeCell(row.imageUrl));
@@ -178,7 +209,7 @@ function resolveCategoryId(
   );
 }
 
-function parseOptionalInteger(value: string | undefined) {
+function parseOptionalNumber(value: string | undefined) {
   const normalized = normalizeCell(value);
   if (normalized === undefined) return undefined;
   return Number(normalized);
@@ -204,6 +235,7 @@ function validateMenuItemImportRow(
   row: CsvRow,
   categories: CategoryData[],
   line: number,
+  currency: CurrencyCode,
 ) {
   const errors: string[] = [];
 
@@ -215,8 +247,15 @@ function validateMenuItemImportRow(
     errors.push(`第 ${line} 列：category 找不到對應分類。`);
   }
 
-  if (!isOptionalIntegerInRange(parseOptionalInteger(row.price), 0)) {
-    errors.push(`第 ${line} 列：price 必須是 0 以上整數元。`);
+  const price = parseOptionalNumber(row.price);
+  const priceProblem =
+    price === undefined ? null : importPriceProblem(price, currency);
+  if (priceProblem === "invalid") {
+    errors.push(`第 ${line} 列：price 必須是 0 以上的金額。`);
+  } else if (priceProblem === "wholeUnits") {
+    errors.push(`第 ${line} 列：price 在 ${currency} 必須是整數。`);
+  } else if (priceProblem === "tooPrecise") {
+    errors.push(`第 ${line} 列：price 在 ${currency} 最多兩位小數。`);
   }
 
   const imageUrl = normalizeCell(row.imageUrl);
@@ -224,7 +263,7 @@ function validateMenuItemImportRow(
     errors.push(`第 ${line} 列：imageUrl 必須是有效 URL。`);
   }
 
-  if (!isOptionalIntegerInRange(parseOptionalInteger(row.sortOrder), 0)) {
+  if (!isOptionalIntegerInRange(parseOptionalNumber(row.sortOrder), 0)) {
     errors.push(`第 ${line} 列：sortOrder 必須是 0 以上整數。`);
   }
 

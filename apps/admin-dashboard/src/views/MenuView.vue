@@ -1365,7 +1365,7 @@ type CustomizationGroupForm = {
 };
 
 const { t } = useI18n();
-const { inputStep } = useCurrency();
+const { inputStep, currencyCode } = useCurrency();
 const route = useRoute();
 const router = useRouter();
 const {
@@ -1732,7 +1732,11 @@ const menuItemImportPreview = computed(() => {
     return { items: [], errors: [] };
   }
 
-  return parseMenuItemImport(menuItemImportText.value, categories.value);
+  return parseMenuItemImport(
+    menuItemImportText.value,
+    categories.value,
+    currencyCode.value,
+  );
 });
 
 // ── Category Panel Handlers ──
@@ -2420,6 +2424,7 @@ const publishImageAssistedMenu = async (payload: {
   const beforeCreate = validateImageAssistedMenuItems(
     payload.items,
     categoryIds,
+    currencyCode.value,
   );
   if (Object.keys(beforeCreate.errors).length) {
     imageMenuErrors.value = beforeCreate.errors;
@@ -2439,7 +2444,11 @@ const publishImageAssistedMenu = async (payload: {
         )
       : imageMenuCreatedCategoryIds;
     createdCategoryIds.forEach((id, key) => categoryIds.set(key, id));
-    const ready = validateImageAssistedMenuItems(payload.items, categoryIds);
+    const ready = validateImageAssistedMenuItems(
+      payload.items,
+      categoryIds,
+      currencyCode.value,
+    );
     await importMenuItems(ready.items);
     await fetchMenu();
     imageMenuPublishError.value = "";

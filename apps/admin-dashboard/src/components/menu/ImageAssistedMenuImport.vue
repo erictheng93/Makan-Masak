@@ -134,13 +134,15 @@
                   }}</span></label
                 >
                 <label class="text-[12px] text-ios-text/70"
-                  >{{ t("menu.imageImport.priceCents")
+                  >{{ t("menu.imageImport.price", { symbol: currencySymbol })
                   }}<input
                     v-model="item.price"
-                    inputmode="numeric"
+                    :data-testid="`image-import-price-${item.id}`"
+                    :inputmode="decimals > 0 ? 'decimal' : 'numeric'"
                     class="mt-1 w-full rounded-lg bg-ios-bg px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
                   /><span
                     v-if="errors[item.id]?.price"
+                    :data-testid="`image-import-price-error-${item.id}`"
                     class="text-ios-error"
                     >{{ errorText(errors[item.id]?.price) }}</span
                   ></label
@@ -221,6 +223,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useI18n } from "@/i18n";
+import { useCurrency } from "@/composables/useCurrency";
 import type { CategoryData } from "@/composables/useMenuManagement";
 import type {
   ImageAssistedMenuItemDraft,
@@ -240,6 +243,7 @@ const props = defineProps<{
   categoryErrors: ImageMenuCategoryErrors;
 }>();
 const { t } = useI18n();
+const { currencySymbol, decimals } = useCurrency();
 const emit = defineEmits<{
   selectImages: [files: File[]];
   publish: [
@@ -261,7 +265,13 @@ const categoryOptions = computed(() => [
 ]);
 const errorText = (
   code?: ImageAssistedMenuErrorCode | "categoryNameRequired",
-) => (code ? t(`menu.imageImport.validation.${code}`) : "");
+) =>
+  code
+    ? t(`menu.imageImport.validation.${code}`, {
+        symbol: currencySymbol.value,
+        decimals: decimals.value,
+      })
+    : "";
 const selectImages = (event: Event) => {
   const input = event.target as HTMLInputElement;
   emit("selectImages", Array.from(input.files ?? []));

@@ -1,4 +1,5 @@
-import type { MenuItemImportInput } from "./menuItemImport";
+import { DEFAULT_CURRENCY, type CurrencyCode } from "@makanmasak/utils";
+import { importPriceProblem, type MenuItemImportInput } from "./menuItemImport";
 
 export interface ImageMenuCategoryDraft {
   key: string;
@@ -25,6 +26,8 @@ export type ImageAssistedMenuErrorCode =
   | "nameRequired"
   | "priceRequired"
   | "priceInvalid"
+  | "priceWholeUnits"
+  | "priceTooPrecise"
   | "categoryRequired"
   | "sortOrderRequired"
   | "sortOrderInvalid";
@@ -44,6 +47,7 @@ export function validateImageAssistedMenuCategories(
 export function validateImageAssistedMenuItems(
   drafts: ImageAssistedMenuItemDraft[],
   categoryIds: ReadonlyMap<string, number>,
+  currency: CurrencyCode = DEFAULT_CURRENCY,
 ): { items: MenuItemImportInput[]; errors: ImageAssistedMenuItemErrors } {
   const errors: ImageAssistedMenuItemErrors = {};
   const items: MenuItemImportInput[] = [];
@@ -59,8 +63,11 @@ export function validateImageAssistedMenuItems(
     if (!draft.name.trim()) rowErrors.name = "nameRequired";
     if (!draft.price.trim()) {
       rowErrors.price = "priceRequired";
-    } else if (!Number.isInteger(price) || price < 0) {
-      rowErrors.price = "priceInvalid";
+    } else {
+      const problem = importPriceProblem(price, currency);
+      if (problem === "invalid") rowErrors.price = "priceInvalid";
+      else if (problem === "wholeUnits") rowErrors.price = "priceWholeUnits";
+      else if (problem === "tooPrecise") rowErrors.price = "priceTooPrecise";
     }
     if (categoryId === undefined) rowErrors.categoryKey = "categoryRequired";
     if (!draft.sortOrder.trim()) {

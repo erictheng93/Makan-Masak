@@ -63,10 +63,22 @@ describe("menu item import parsing", () => {
     expect(result.errors).toEqual([
       "第 2 列：name 必填。",
       "第 2 列：category 找不到對應分類。",
-      "第 2 列：price 必須是 0 以上整數元。",
+      "第 2 列：price 必須是 0 以上的金額。",
       "第 2 列：imageUrl 必須是有效 URL。",
       "第 2 列：sortOrder 必須是 0 以上整數。",
     ]);
+  });
+
+  it("takes sen for an MYR shop but whole dollars for a TWD one", () => {
+    const csv = ["name,category,price", "椰漿飯,主食,12.50"].join("\n");
+
+    const myr = parseMenuItemImport(csv, categories, "MYR");
+    expect(myr.errors).toEqual([]);
+    expect(myr.items[0]).toEqual(expect.objectContaining({ price: 12.5 }));
+
+    const twd = parseMenuItemImport(csv, categories, "TWD");
+    expect(twd.items).toEqual([]);
+    expect(twd.errors).toEqual(["第 2 列：price 在 TWD 必須是整數。"]);
   });
 
   it("reports invalid catalog types before import", () => {

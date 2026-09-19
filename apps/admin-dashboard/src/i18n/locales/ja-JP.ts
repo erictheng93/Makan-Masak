@@ -255,7 +255,7 @@ const jaJP: Messages = {
       sourceImagesAlt: "アップロードしたメニュー画像",
       emptySource: "画像をアップロードしてから右側で内容を入力します。",
       row: "{number} 行目",
-      priceCents: "価格（元）",
+      price: "価格（{symbol}）",
       publishing: "公開中…",
       publish: "構造化メニューを公開",
       fixFields: "強調表示された項目を修正してください。",
@@ -264,7 +264,10 @@ const jaJP: Messages = {
       validation: {
         nameRequired: "名前は必須です。",
         priceRequired: "価格は必須です。",
-        priceInvalid: "価格は 0 以上の整数（元）で指定してください。",
+        priceInvalid: "価格は 0 以上の金額で指定してください。",
+        priceWholeUnits:
+          "{symbol} には小数単位がないため、価格は整数で指定してください。",
+        priceTooPrecise: "{symbol} の価格は小数点以下 {decimals} 桁までです。",
         categoryRequired: "カテゴリを選択してください。",
         sortOrderRequired: "表示順は必須です。",
         sortOrderInvalid: "表示順は 0 以上の整数で指定してください。",

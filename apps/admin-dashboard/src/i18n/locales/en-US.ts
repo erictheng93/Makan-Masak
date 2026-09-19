@@ -257,7 +257,7 @@ const enUS: Messages = {
       sourceImagesAlt: "Uploaded menu source image",
       emptySource: "Upload images, then enter the corrected menu on the right.",
       row: "Row {number}",
-      priceCents: "Price",
+      price: "Price ({symbol})",
       publishing: "Publishing…",
       publish: "Publish structured menu",
       fixFields: "Correct the highlighted fields before publishing.",
@@ -266,7 +266,11 @@ const enUS: Messages = {
       validation: {
         nameRequired: "Name is required.",
         priceRequired: "Price is required.",
-        priceInvalid: "Price must be a non-negative whole amount.",
+        priceInvalid: "Price must be a non-negative amount.",
+        priceWholeUnits:
+          "{symbol} has no fractional unit, so the price must be a whole number.",
+        priceTooPrecise:
+          "{symbol} prices take at most {decimals} decimal places.",
         categoryRequired: "Select a category.",
         sortOrderRequired: "Sort order is required.",
         sortOrderInvalid: "Sort order must be a non-negative integer.",

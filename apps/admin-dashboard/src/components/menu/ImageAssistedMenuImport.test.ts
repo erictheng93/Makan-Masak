@@ -3,6 +3,10 @@
 import { mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
 import ImageAssistedMenuImport from "./ImageAssistedMenuImport.vue";
+import {
+  clearRestaurantCurrency,
+  setRestaurantCurrency,
+} from "@/composables/useCurrency";
 
 describe("ImageAssistedMenuImport", () => {
   it("emits a corrected draft with a new category and item defaults", async () => {
@@ -49,5 +53,36 @@ describe("ImageAssistedMenuImport", () => {
         },
       ],
     ]);
+  });
+
+  it("labels the price with the shop currency and explains its precision", async () => {
+    setRestaurantCurrency("MYR");
+    const wrapper = mount(ImageAssistedMenuImport, {
+      props: {
+        categories: [],
+        sourceImages: [],
+        isPublishing: false,
+        errors: {},
+        categoryErrors: {},
+      },
+    });
+    await wrapper
+      .get('[data-testid="image-menu-import-add-item"]')
+      .trigger("click");
+    const price = wrapper.get('[data-testid^="image-import-price-"]');
+    const itemId = price
+      .attributes("data-testid")!
+      .replace("image-import-price-", "");
+
+    expect(price.element.closest("label")!.textContent).toContain("RM");
+    expect(price.attributes("inputmode")).toBe("decimal");
+
+    await wrapper.setProps({
+      errors: { [itemId]: { price: "priceTooPrecise" } },
+    });
+    expect(
+      wrapper.get(`[data-testid="image-import-price-error-${itemId}"]`).text(),
+    ).toBe("RM 價格最多 2 位小數。");
+    clearRestaurantCurrency();
   });
 });
