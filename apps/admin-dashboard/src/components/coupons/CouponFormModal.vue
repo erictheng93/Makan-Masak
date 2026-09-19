@@ -118,13 +118,17 @@
                     v-model.number="form.discountValue"
                     data-testid="coupon-discount-value"
                     type="number"
-                    step="0.01"
+                    :step="
+                      form.discountType === 'percentage' ? '0.01' : inputStep
+                    "
                     min="0"
                     :max="form.discountType === 'percentage' ? 100 : undefined"
                     required
                     class="w-full px-3 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     :placeholder="
-                      form.discountType === 'percentage' ? '10' : '5.00'
+                      form.discountType === 'percentage'
+                        ? '10'
+                        : amountPlaceholder(5)
                     "
                   />
                   <div class="absolute right-3 top-2 text-gray-500 text-sm">
@@ -144,10 +148,10 @@
                     v-model.number="form.maxDiscountAmount"
                     data-testid="coupon-max-discount"
                     type="number"
-                    step="0.01"
+                    :step="inputStep"
                     min="0"
                     class="w-full px-3 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                    placeholder="50.00"
+                    :placeholder="amountPlaceholder(50)"
                   />
                   <div class="absolute right-3 top-2 text-gray-500 text-sm">
                     {{ currencySymbol }}
@@ -167,10 +171,10 @@
                     v-model.number="form.minOrderAmount"
                     data-testid="coupon-min-order"
                     type="number"
-                    step="0.01"
+                    :step="inputStep"
                     min="0"
                     class="w-full px-3 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                    placeholder="0.00"
+                    :placeholder="inputPlaceholder"
                   />
                   <div class="absolute right-3 top-2 text-gray-500 text-sm">
                     {{ currencySymbol }}
@@ -413,7 +417,13 @@ import { XMarkIcon } from "@heroicons/vue/24/outline";
 import type { Coupon } from "@makanmasak/shared-types";
 
 const { t } = useI18n();
-const { formatPrice, currencySymbol } = useCurrency();
+const {
+  formatPrice,
+  currencySymbol,
+  inputStep,
+  inputPlaceholder,
+  amountPlaceholder,
+} = useCurrency();
 const { formatDate } = useDateFormatter();
 
 // Props

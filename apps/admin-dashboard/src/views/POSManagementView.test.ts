@@ -17,12 +17,23 @@ vi.mock("@/i18n", () => ({
   }),
 }));
 
-vi.mock("@/composables/useCurrency", () => ({
-  useCurrency: () => ({
-    currencySymbol: "$",
-    formatPrice: (value: number) => `$${value.toFixed(2)}`,
-  }),
-}));
+import {
+  clearRestaurantCurrency,
+  setRestaurantCurrency,
+} from "@/composables/useCurrency";
+
+vi.mock("@/composables/useCurrency", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/composables/useCurrency")>();
+  return {
+    ...actual,
+    useCurrency: () => ({
+      ...actual.useCurrency(),
+      currencySymbol: "$",
+      formatPrice: (value: number) => `$${value.toFixed(2)}`,
+    }),
+  };
+});
 
 vi.mock("@/stores/auth", () => ({
   useAuthStore: () => ({
@@ -136,4 +147,22 @@ describe("POSManagementView", () => {
       paymentMethod: "card",
     });
   });
+
+  it.each([
+    ["TWD", "1", "0"],
+    ["MYR", "0.01", "0.00"],
+  ] as const)(
+    "steps the quick-payment amount by the %s unit",
+    async (code, step, placeholder) => {
+      setRestaurantCurrency(code);
+      const wrapper = mount(POSManagementView);
+      await flushPromises();
+
+      const amount = wrapper.get('[data-testid="pos-quick-payment-amount"]');
+      expect(amount.attributes("step")).toBe(step);
+      expect(amount.attributes("placeholder")).toBe(placeholder);
+      wrapper.unmount();
+      clearRestaurantCurrency();
+    },
+  );
 });

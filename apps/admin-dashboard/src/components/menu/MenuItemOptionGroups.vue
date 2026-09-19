@@ -157,7 +157,7 @@
             :data-testid="`price-override-${choice.id}`"
             :placeholder="String(choice.priceAdjustment)"
             type="number"
-            step="0.01"
+            :step="inputStep"
             class="rounded-lg bg-white px-2 py-1.5 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
             @input="setPrice(index, choice.id, $event)"
           />
@@ -171,6 +171,7 @@
 import { computed, ref, watch } from "vue";
 import { RouterLink } from "vue-router";
 import { useI18n } from "@/i18n";
+import { useCurrency } from "@/composables/useCurrency";
 import type {
   MenuItemOptionGroupLink,
   OptionGroupData,
@@ -186,6 +187,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const { inputStep } = useCurrency();
 const groupToAdd = ref<string>("");
 
 /**

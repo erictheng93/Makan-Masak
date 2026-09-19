@@ -19,9 +19,22 @@ vi.mock("@/i18n", () => ({
   useI18n: () => ({ t: (key: string) => key, locale: ref("zh-TW") }),
 }));
 
-vi.mock("@/composables/useCurrency", () => ({
-  useCurrency: () => ({ formatPrice: (value: number) => `$${value}` }),
-}));
+import {
+  clearRestaurantCurrency,
+  setRestaurantCurrency,
+} from "@/composables/useCurrency";
+
+vi.mock("@/composables/useCurrency", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/composables/useCurrency")>();
+  return {
+    ...actual,
+    useCurrency: () => ({
+      ...actual.useCurrency(),
+      formatPrice: (value: number) => `$${value}`,
+    }),
+  };
+});
 
 vi.mock("@/services/api", () => ({
   api: {
@@ -241,4 +254,25 @@ describe("OptionGroupsView", () => {
       wrapper.find('[data-testid="choice-max-quantity-input"]').exists(),
     ).toBe(true);
   });
+
+  it.each([
+    ["TWD", "1"],
+    ["MYR", "0.01"],
+  ] as const)(
+    "steps a choice's price adjustment by the %s unit",
+    async (code, step) => {
+      setRestaurantCurrency(code);
+      respondWith([group({ kind: "addon", id: "group-addons" })]);
+      const wrapper = await mountView();
+
+      await wrapper
+        .get('[data-testid="add-choice-group-addons"]')
+        .trigger("click");
+
+      expect(
+        wrapper.get('[data-testid="choice-price-input"]').attributes("step"),
+      ).toBe(step);
+      clearRestaurantCurrency();
+    },
+  );
 });

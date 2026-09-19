@@ -82,8 +82,12 @@ export function useCurrency() {
       : "1",
   );
 
+  /** An example amount written the way the currency is typed: 50 → "50" / "50.00". */
+  const amountPlaceholder = (amount: number): string =>
+    amount.toFixed(decimals.value);
+
   /** Placeholder for a money input: "0" for TWD/VND, "0.00" for MYR. */
-  const inputPlaceholder = computed(() => (0).toFixed(decimals.value));
+  const inputPlaceholder = computed(() => amountPlaceholder(0));
 
   /**
    * Format an amount using the current restaurant's currency.
@@ -116,6 +120,7 @@ export function useCurrency() {
     decimals,
     inputStep,
     inputPlaceholder,
+    amountPlaceholder,
     stepCents: computed(() => currencyStepCents(currencyCode.value)),
     currencyCode: computed(() => currencyCode.value),
   };

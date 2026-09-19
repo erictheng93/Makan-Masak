@@ -347,11 +347,12 @@
                   }}</span>
                   <input
                     v-model.number="quickPayment.amount"
+                    data-testid="pos-quick-payment-amount"
                     type="number"
-                    step="0.01"
+                    :step="inputStep"
                     min="0"
                     class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="0.00"
+                    :placeholder="inputPlaceholder"
                   />
                 </div>
               </div>
@@ -604,10 +605,10 @@
                 <input
                   v-model.number="cashMovement.amount"
                   type="number"
-                  step="0.01"
+                  :step="inputStep"
                   min="0"
                   class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="0.00"
+                  :placeholder="inputPlaceholder"
                 />
               </div>
             </div>
@@ -822,10 +823,10 @@
               <input
                 v-model.number="startingCashAmount"
                 type="number"
-                step="0.01"
+                :step="inputStep"
                 min="0"
                 class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ios-blue focus:border-ios-blue"
-                placeholder="0.00"
+                :placeholder="inputPlaceholder"
                 @keyup.enter="confirmStartShift"
               />
             </div>
@@ -979,7 +980,8 @@ import {
 import { useAuthStore } from "@/stores/auth";
 
 const { t } = useI18n();
-const { formatPrice, currencySymbol } = useCurrency();
+const { formatPrice, currencySymbol, inputStep, inputPlaceholder } =
+  useCurrency();
 const { formatDateTime, formatTime } = useDateFormatter();
 const authStore = useAuthStore();
 

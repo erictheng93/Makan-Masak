@@ -8,6 +8,10 @@ import type {
   MenuItemOptionGroupLink,
   OptionGroupData,
 } from "@/composables/useOptionGroups";
+import {
+  clearRestaurantCurrency,
+  setRestaurantCurrency,
+} from "@/composables/useCurrency";
 
 vi.mock("@/i18n", () => ({
   useI18n: () => ({ t: (key: string) => key, locale: ref("zh-TW") }),
@@ -189,6 +193,23 @@ describe("MenuItemOptionGroups", () => {
     expect(lastEmit(wrapper)[0].choiceOverrides).toEqual([
       { choiceId: "choice-half", isHidden: false, priceAdjustment: 7.5 },
     ]);
+  });
+
+  it("steps a price override by the shop currency's unit", async () => {
+    clearRestaurantCurrency();
+    const twd = mountPicker([link()]);
+    expect(
+      twd.get('[data-testid="price-override-choice-half"]').attributes("step"),
+    ).toBe("1");
+    twd.unmount();
+
+    setRestaurantCurrency("MYR");
+    const myr = mountPicker([link()]);
+    expect(
+      myr.get('[data-testid="price-override-choice-half"]').attributes("step"),
+    ).toBe("0.01");
+    myr.unmount();
+    clearRestaurantCurrency();
   });
 
   it("renumbers sortOrder when groups are reordered", async () => {

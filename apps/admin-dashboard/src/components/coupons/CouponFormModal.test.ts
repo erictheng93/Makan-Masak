@@ -2,16 +2,26 @@
 
 import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import CouponFormModal from "./CouponFormModal.vue";
+import {
+  clearRestaurantCurrency,
+  setRestaurantCurrency,
+} from "@/composables/useCurrency";
 
 vi.mock("@/i18n", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
-vi.mock("@/composables/useCurrency", () => ({
-  useCurrency: () => ({
-    formatPrice: (value: number) => String(value),
-    currencySymbol: "$",
-  }),
-}));
+vi.mock("@/composables/useCurrency", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/composables/useCurrency")>();
+  return {
+    ...actual,
+    // Real step/placeholder helpers, which follow setRestaurantCurrency.
+    useCurrency: () => ({
+      ...actual.useCurrency(),
+      formatPrice: (value: number) => String(value),
+    }),
+  };
+});
 vi.mock("@/composables/useDateFormatter", () => ({
   useDateFormatter: () => ({ formatDate: (value: string) => value }),
 }));
@@ -63,6 +73,41 @@ describe("CouponFormModal", () => {
       maxDiscountAmount: null,
       usageLimit: null,
       usageLimitPerUser: null,
+    });
+  });
+
+  describe("money inputs follow the shop currency", () => {
+    afterEach(clearRestaurantCurrency);
+
+    it("TWD: whole-dollar steps and placeholders", async () => {
+      clearRestaurantCurrency();
+      const wrapper = mount(CouponFormModal, {
+        props: { coupon: { ...coupon(), discountType: "fixed" as const } },
+      });
+      await nextTick();
+      const value = wrapper.get('[data-testid="coupon-discount-value"]');
+      expect(value.attributes("step")).toBe("1");
+      expect(value.attributes("placeholder")).toBe("5");
+      const minOrder = wrapper.get('[data-testid="coupon-min-order"]');
+      expect(minOrder.attributes("step")).toBe("1");
+      expect(minOrder.attributes("placeholder")).toBe("0");
+    });
+
+    it("MYR: sen steps, and a percentage keeps its own step", async () => {
+      setRestaurantCurrency("MYR");
+      const wrapper = mount(CouponFormModal, { props: { coupon: coupon() } });
+      await nextTick();
+      const maxDiscount = wrapper.get('[data-testid="coupon-max-discount"]');
+      expect(maxDiscount.attributes("step")).toBe("0.01");
+      expect(maxDiscount.attributes("placeholder")).toBe("50.00");
+      expect(
+        wrapper.get('[data-testid="coupon-discount-value"]').attributes("step"),
+      ).toBe("0.01");
+      expect(
+        wrapper
+          .get('[data-testid="coupon-min-order"]')
+          .attributes("placeholder"),
+      ).toBe("0.00");
     });
   });
 });
