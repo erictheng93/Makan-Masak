@@ -392,18 +392,31 @@ function cartItem(
   };
 }
 
+/**
+ * The restaurant row splitBill reads its currency and rates from. MYR by
+ * default: most split fixtures assert sen-level amounts ($0.01 across two,
+ * 33.34/33.33/33.33), which only MYR has. Fresh arrays each call, because
+ * fixture queues are consumed.
+ */
+function restaurantFixture(settings: Record<string, unknown> = {}) {
+  return [[{ id: "restaurant-1", settings: { currency: "MYR", ...settings } }]];
+}
+
 function createSplitDb({
   groupOrder = baseGroupOrder,
   members,
   items = [],
   existingBills = [],
+  restaurantSettings = {},
 }: {
   groupOrder?: unknown;
   members: unknown[];
   items?: unknown[];
   existingBills?: unknown[][];
+  restaurantSettings?: Record<string, unknown>;
 }) {
   return createDb({
+    restaurants: restaurantFixture(restaurantSettings),
     groupOrders: [[groupOrder]],
     groupMembers: [members],
     groupCartItems: [items],
@@ -1501,7 +1514,11 @@ describe("GroupOrdersService formatting and cache behavior", () => {
           ],
         ],
         restaurants: [[{ settings: { taxRate: 0, serviceChargeRate: 0 } }]],
-        groupCartItems: [[{ total: 25 }], [{ total: 25 }], [cartItem]],
+        groupCartItems: [
+          [{ total: 25, totalCents: 2500 }],
+          [{ total: 25, totalCents: 2500 }],
+          [cartItem],
+        ],
         splitBills: [[]],
       }),
     );
@@ -1524,8 +1541,8 @@ describe("GroupOrdersService formatting and cache behavior", () => {
     const updateDb = createDb({
       groupCartItems: [
         [cartItem],
-        [{ total: 37.5 }],
-        [{ total: 37.5 }],
+        [{ total: 37.5, totalCents: 3750 }],
+        [{ total: 37.5, totalCents: 3750 }],
         [{ ...cartItem, quantity: 3, totalPriceCents: 3750 }],
       ],
       groupOrders: [[{ restaurantId: "restaurant-1" }]],
@@ -1652,7 +1669,11 @@ describe("GroupOrdersService formatting and cache behavior", () => {
         ],
       ],
       restaurants: [[{ settings: { taxRate: 0, serviceChargeRate: 0 } }]],
-      groupCartItems: [[{ total: 9 }], [{ total: 9 }], []],
+      groupCartItems: [
+        [{ total: 9, totalCents: 900 }],
+        [{ total: 9, totalCents: 900 }],
+        [],
+      ],
       splitBills: [[]],
     });
     useDb(fallbackService, fallbackDb);
@@ -1688,8 +1709,8 @@ describe("GroupOrdersService formatting and cache behavior", () => {
               unitPrice: 9,
             },
           ],
-          [{ total: 18 }],
-          [{ total: 18 }],
+          [{ total: 18, totalCents: 1800 }],
+          [{ total: 18, totalCents: 1800 }],
           [],
         ],
         splitBills: [[]],
@@ -1726,8 +1747,8 @@ describe("GroupOrdersService formatting and cache behavior", () => {
             memberId: "member-1",
           },
         ],
-        [{ total: 0 }],
-        [{ total: 0 }],
+        [{ total: 0, totalCents: 0 }],
+        [{ total: 0, totalCents: 0 }],
       ],
       groupOrders: [[{ restaurantId: "restaurant-1" }]],
       restaurants: [[{ settings: { taxRate: 0, serviceChargeRate: 0 } }]],
@@ -1861,8 +1882,8 @@ describe("GroupOrdersService formatting and cache behavior", () => {
             memberId: "member-1",
           },
         ],
-        [{ total: 0 }],
-        [{ total: 0 }],
+        [{ total: 0, totalCents: 0 }],
+        [{ total: 0, totalCents: 0 }],
       ],
       groupOrders: [[{ restaurantId: "restaurant-1" }]],
       restaurants: [[{ settings: { taxRate: 0, serviceChargeRate: 0 } }]],
@@ -1996,8 +2017,9 @@ describe("GroupOrdersService formatting and cache behavior", () => {
   });
 
   describe("who carries the service charge", () => {
-    function feeSplitDb() {
+    function feeSplitDb(restaurantSettings: Record<string, unknown> = {}) {
       return createSplitDb({
+        restaurantSettings,
         members: [hostMember, secondMember],
         items: [
           cartItem("cart-1", "member-1", 1000),
@@ -2008,12 +2030,11 @@ describe("GroupOrdersService formatting and cache behavior", () => {
 
     it("charges each member on their own items by default", async () => {
       const service = createService();
-      useDb(service, feeSplitDb());
+      useDb(service, feeSplitDb({ serviceChargeRate: 0.1 }));
 
       await expect(
         service.splitBill("group-1", {
           splitType: "by_item",
-          serviceChargeRate: 0.1,
         }),
       ).resolves.toMatchObject({
         success: true,
@@ -2026,12 +2047,11 @@ describe("GroupOrdersService formatting and cache behavior", () => {
 
     it("divides the fee by headcount when the host chose equal", async () => {
       const service = createService();
-      useDb(service, feeSplitDb());
+      useDb(service, feeSplitDb({ serviceChargeRate: 0.1 }));
 
       await expect(
         service.splitBill("group-1", {
           splitType: "by_item",
-          serviceChargeRate: 0.1,
           feeMode: "equal",
         }),
       ).resolves.toMatchObject({
@@ -2045,12 +2065,11 @@ describe("GroupOrdersService formatting and cache behavior", () => {
 
     it("puts the whole fee on the host when the host chose to absorb it", async () => {
       const service = createService();
-      useDb(service, feeSplitDb());
+      useDb(service, feeSplitDb({ serviceChargeRate: 0.1 }));
 
       await expect(
         service.splitBill("group-1", {
           splitType: "by_item",
-          serviceChargeRate: 0.1,
           feeMode: "host",
         }),
       ).resolves.toMatchObject({
@@ -2097,14 +2116,13 @@ describe("GroupOrdersService formatting and cache behavior", () => {
       createSplitDb({
         members: [hostMember],
         items: [cartItem("cart-1", "member-1", 10000)],
+        restaurantSettings: { serviceChargeRate: 0.1, taxRate: 0.05 },
       }),
     );
 
     await expect(
       service.splitBill("group-1", {
         splitType: "equal",
-        serviceChargeRate: 0.1,
-        taxRate: 0.05,
       }),
     ).resolves.toMatchObject({
       success: true,
@@ -2146,6 +2164,7 @@ describe("GroupOrdersService formatting and cache behavior", () => {
     const service = new GroupOrdersService({} as D1Database, kv);
     const secondMember = { ...hostMember, id: "member-2", role: "member" };
     const splitDb = createDb({
+      restaurants: restaurantFixture({ serviceChargeRate: 0.1, taxRate: 0.05 }),
       groupOrders: [[baseGroupOrder]],
       groupMembers: [[hostMember, secondMember]],
       groupCartItems: [
@@ -2179,8 +2198,6 @@ describe("GroupOrdersService formatting and cache behavior", () => {
     await expect(
       service.splitBill("group-1", {
         splitType: "equal",
-        serviceChargeRate: 0.1,
-        taxRate: 0.05,
       }),
     ).resolves.toMatchObject({
       success: true,
@@ -2253,6 +2270,7 @@ describe("GroupOrdersService formatting and cache behavior", () => {
   it("splits bills by item or custom amounts and validates split inputs", async () => {
     const byItemService = createService();
     const byItemDb = createDb({
+      restaurants: restaurantFixture({ serviceChargeRate: 0.1 }),
       groupOrders: [[baseGroupOrder]],
       groupMembers: [
         [hostMember, { ...hostMember, id: "member-2", role: "member" }],
@@ -2292,7 +2310,6 @@ describe("GroupOrdersService formatting and cache behavior", () => {
     await expect(
       byItemService.splitBill("group-1", {
         splitType: "by_item",
-        serviceChargeRate: 0.1,
       }),
     ).resolves.toMatchObject({
       success: true,
@@ -2314,6 +2331,7 @@ describe("GroupOrdersService formatting and cache behavior", () => {
 
     const customService = createService();
     const customDb = createDb({
+      restaurants: restaurantFixture(),
       groupOrders: [[baseGroupOrder]],
       groupMembers: [[hostMember]],
       groupCartItems: [[]],
@@ -2353,6 +2371,7 @@ describe("GroupOrdersService formatting and cache behavior", () => {
       },
       {
         db: createDb({
+          restaurants: restaurantFixture(),
           groupOrders: [[baseGroupOrder]],
           groupMembers: [[hostMember]],
           groupCartItems: [[]],
@@ -2362,6 +2381,7 @@ describe("GroupOrdersService formatting and cache behavior", () => {
       },
       {
         db: createDb({
+          restaurants: restaurantFixture(),
           groupOrders: [[baseGroupOrder]],
           groupMembers: [[hostMember]],
           groupCartItems: [[]],
@@ -2374,6 +2394,7 @@ describe("GroupOrdersService formatting and cache behavior", () => {
       },
       {
         db: createDb({
+          restaurants: restaurantFixture(),
           groupOrders: [[baseGroupOrder]],
           groupMembers: [[hostMember]],
           groupCartItems: [[]],
@@ -2603,6 +2624,7 @@ describe("GroupOrdersService formatting and cache behavior", () => {
     useDb(
       individualService,
       createSplitDb({
+        restaurantSettings: { serviceChargeRate: 0.1, taxRate: 0.05 },
         members: [hostMember, secondMember],
         items: [
           cartItem("cart-1", "member-1", 1000),
@@ -2612,14 +2634,13 @@ describe("GroupOrdersService formatting and cache behavior", () => {
     );
     const individual = await individualService.splitBill("group-1", {
       splitType: "individual",
-      serviceChargeRate: 0.1,
-      taxRate: 0.05,
     });
 
     const proportionalService = createService();
     useDb(
       proportionalService,
       createSplitDb({
+        restaurantSettings: { serviceChargeRate: 0.1, taxRate: 0.05 },
         members: [hostMember, secondMember],
         items: [
           cartItem("cart-1", "member-1", 1000),
@@ -2629,8 +2650,6 @@ describe("GroupOrdersService formatting and cache behavior", () => {
     );
     const proportional = await proportionalService.splitBill("group-1", {
       splitType: "proportional",
-      serviceChargeRate: 0.1,
-      taxRate: 0.05,
     });
 
     // This equivalence only holds while every shared fee is proportional to
@@ -2689,7 +2708,7 @@ describe("GroupOrdersService formatting and cache behavior", () => {
     ).toBe(scenario.expectedTotalCents);
   });
 
-  it("applies positive and negative rounding remainders to the creator member", async () => {
+  it("allocates uneven shares by largest remainder, earlier members first", async () => {
     const positiveService = createService();
     useDb(
       positiveService,
@@ -2706,6 +2725,9 @@ describe("GroupOrdersService formatting and cache behavior", () => {
       billsOf(positive).find((bill) => bill.memberId === "member-1"),
     ).toEqual(expect.objectContaining({ totalAmount: 33.34 }));
 
+    // One cent of tax across two: the old per-member float math gave each
+    // 0.5, rounded both up to 1 and clawed the extra back off the host (0).
+    // Largest-remainder allocation gives the cent to the earlier member.
     const negativeService = createService();
     useDb(
       negativeService,
@@ -2718,9 +2740,9 @@ describe("GroupOrdersService formatting and cache behavior", () => {
       sharedTaxCents: 1,
       orderTotalCents: 1,
     });
-    expect(
-      billsOf(negative).find((bill) => bill.memberId === "member-1"),
-    ).toEqual(expect.objectContaining({ totalAmount: 0 }));
+    expect(billsOf(negative).map((bill) => bill.totalAmount)).toEqual([
+      0.01, 0,
+    ]);
   });
 
   it("keeps every split bill internally consistent after absorbing a remainder", async () => {
@@ -2816,11 +2838,12 @@ describe("GroupOrdersService formatting and cache behavior", () => {
     );
   });
 
-  it("uses absolute shared cents instead of rates when both are provided", async () => {
+  it("uses absolute shared cents instead of the configured rates", async () => {
     const service = createService();
     useDb(
       service,
       createSplitDb({
+        restaurantSettings: { serviceChargeRate: 1, taxRate: 1 },
         members: [hostMember, secondMember],
         items: [
           cartItem("cart-1", "member-1", 1000),
@@ -2832,8 +2855,6 @@ describe("GroupOrdersService formatting and cache behavior", () => {
     await expect(
       service.splitBill("group-1", {
         splitType: "individual",
-        serviceChargeRate: 100,
-        taxRate: 100,
         sharedServiceChargeCents: 600,
         sharedTaxCents: 300,
         orderTotalCents: 3900,
@@ -3631,6 +3652,145 @@ describe("GroupOrdersService formatting and cache behavior", () => {
     });
   });
 
+  describe("currency precision", () => {
+    it("splits NT$100 three ways as 34/33/33 for a TWD restaurant", async () => {
+      const service = createService();
+      const db = createSplitDb({
+        restaurantSettings: { currency: "TWD" },
+        members: [hostMember, secondMember, thirdMember],
+        items: [cartItem("cart-1", "member-1", 10000)],
+      });
+      useDb(service, db);
+
+      const result = await service.splitBill("group-1", { splitType: "equal" });
+
+      expect(billsOf(result).map((bill) => bill.totalAmount)).toEqual([
+        34, 33, 33,
+      ]);
+      expect(
+        db.inserts.map(
+          (insert) =>
+            (insert.payload as { totalAmountCents?: number }).totalAmountCents,
+        ),
+      ).toEqual(expect.arrayContaining([3400, 3300, 3300]));
+    });
+
+    it("reads the service charge rate from the restaurant and rounds it whole", async () => {
+      const service = createService();
+      useDb(
+        service,
+        createSplitDb({
+          restaurantSettings: { currency: "TWD", serviceChargeRate: 0.1 },
+          members: [hostMember],
+          items: [cartItem("cart-1", "member-1", 15500)],
+        }),
+      );
+
+      await expect(
+        service.splitBill("group-1", { splitType: "by_item" }),
+      ).resolves.toMatchObject({
+        success: true,
+        data: [{ subtotal: 155, serviceCharge: 16, totalAmount: 171 }],
+      });
+    });
+
+    it("rejects a fractional custom amount for a TWD restaurant", async () => {
+      const service = createService();
+      useDb(
+        service,
+        createSplitDb({
+          restaurantSettings: { currency: "TWD" },
+          members: [hostMember],
+        }),
+      );
+
+      await expect(
+        service.splitBill("group-1", {
+          splitType: "custom",
+          customAmounts: [{ memberId: "member-1", amount: 12.5 }],
+        }),
+      ).rejects.toMatchObject({
+        code: "CURRENCY_PRECISION",
+        status: 400,
+        details: expect.objectContaining({
+          fields: [{ field: "customAmounts[0].amount", amount: 12.5 }],
+        }),
+      });
+    });
+
+    it("accepts the same custom amount for an MYR restaurant", async () => {
+      const service = createService();
+      useDb(
+        service,
+        createSplitDb({
+          restaurantSettings: { currency: "MYR" },
+          members: [hostMember],
+        }),
+      );
+
+      await expect(
+        service.splitBill("group-1", {
+          splitType: "custom",
+          customAmounts: [{ memberId: "member-1", amount: 12.5 }],
+        }),
+      ).resolves.toMatchObject({
+        success: true,
+        data: [{ totalAmount: 12.5 }],
+      });
+    });
+
+    it("rounds a member's running tax to whole dollars for TWD", async () => {
+      const service = createService();
+      const db = createDb({
+        groupOrders: [[{ restaurantId: "restaurant-1" }]],
+        restaurants: [[{ settings: { currency: "TWD", taxRate: 0.05 } }]],
+        groupCartItems: [[{ totalCents: 35500 }]],
+        splitBills: [[]],
+      });
+      useDb(service, db);
+
+      await service["updateMemberTotal"]("group-1", "member-1");
+
+      expect(db.inserts[0].payload).toMatchObject({
+        subtotalCents: 35500,
+        taxAmountCents: 1800,
+        totalAmountCents: 37300,
+      });
+    });
+
+    it("requires a payment to match the bill to the cent", async () => {
+      const service = createService();
+      useDb(
+        service,
+        createDb({
+          groupOrders: [[{ ...baseGroupOrder, status: "checkout" }]],
+          groupMembers: [[hostMember]],
+          splitBills: [
+            [
+              {
+                id: "split-1",
+                groupOrderId: "group-1",
+                memberId: "member-1",
+                totalAmountCents: 3300,
+                paymentStatus: "pending",
+              },
+            ],
+          ],
+        }),
+      );
+
+      // The old ±0.01 tolerance accepted 32.99 for a 33.00 bill.
+      await expect(
+        service.processPayment(
+          "group-1",
+          "member-1",
+          { paymentMethod: "cash", amount: 32.99 },
+          "staff",
+        ),
+      ).resolves.toMatchObject({ success: false });
+    });
+  });
+
   describe("processPayment — Plan A manual settlement", () => {
     it("marks a member's split bill paid with paymentMethod cash and no real gateway involved", async () => {
       const service = createService();
@@ -3864,7 +4024,11 @@ describe("GroupOrdersService formatting and cache behavior", () => {
     useDb(
       statsService,
       createDb({
-        groupOrders: [[{ total: 10 }], [{ active: 4 }], [{ avgValue: 31.678 }]],
+        groupOrders: [
+          [{ total: 10, totalCents: 1000 }],
+          [{ active: 4 }],
+          [{ avgValue: 31.678 }],
+        ],
         rawSqlSubquery: [[{ avgSize: 2.25 }]],
       }),
     );
@@ -3932,7 +4096,10 @@ describe("GroupOrdersService formatting and cache behavior", () => {
         [hostMember, { ...hostMember, id: "member-2", role: "member" }],
       ],
       restaurants: [[{ settings: { taxRate: 0, serviceChargeRate: 0 } }]],
-      groupCartItems: [[{ total: 0 }], [{ total: 0 }]],
+      groupCartItems: [
+        [{ total: 0, totalCents: 0 }],
+        [{ total: 0, totalCents: 0 }],
+      ],
       splitBills: [[]],
     });
     useDb(service, db);
@@ -4130,7 +4297,11 @@ describe("cart mutations return a renderable row", () => {
         groupMembers: [[hostMember]],
         menuItems: [[menuItemRow]],
         restaurants: [[{ settings: { taxRate: 0, serviceChargeRate: 0 } }]],
-        groupCartItems: [[{ total: 25 }], [{ total: 25 }], [storedCartItem]],
+        groupCartItems: [
+          [{ total: 25, totalCents: 2500 }],
+          [{ total: 25, totalCents: 2500 }],
+          [storedCartItem],
+        ],
         splitBills: [[]],
       }),
     );
@@ -4154,8 +4325,8 @@ describe("cart mutations return a renderable row", () => {
       createDb({
         groupCartItems: [
           [storedCartItem],
-          [{ total: 37.5 }],
-          [{ total: 37.5 }],
+          [{ total: 37.5, totalCents: 3750 }],
+          [{ total: 37.5, totalCents: 3750 }],
           [{ ...storedCartItem, quantity: 3, totalPriceCents: 3750 }],
         ],
         groupOrders: [[{ restaurantId: "restaurant-1" }]],
@@ -4186,8 +4357,8 @@ describe("cart mutations return a renderable row", () => {
         menuItems: [[menuItemRow]],
         restaurants: [[{ settings: { taxRate: 0, serviceChargeRate: 0 } }]],
         groupCartItems: [
-          [{ total: 25 }],
-          [{ total: 25 }],
+          [{ total: 25, totalCents: 2500 }],
+          [{ total: 25, totalCents: 2500 }],
           [], // re-query of the inserted row returns nothing
         ],
         splitBills: [[]],
@@ -4222,7 +4393,11 @@ describe("cart mutations return a renderable row", () => {
         groupMembers: [[hostMember]],
         menuItems: [[menuItemRow]],
         restaurants: [[{ settings: { taxRate: 0, serviceChargeRate: 0 } }]],
-        groupCartItems: [[{ total: 25 }], [{ total: 25 }], [storedCartItem]],
+        groupCartItems: [
+          [{ total: 25, totalCents: 2500 }],
+          [{ total: 25, totalCents: 2500 }],
+          [storedCartItem],
+        ],
         splitBills: [[]],
       }),
     );

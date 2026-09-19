@@ -199,10 +199,8 @@ export interface SplitBillRequest {
   splitType: "equal" | "proportional" | "individual" | "by_item" | "custom";
   /** Overrides the group's stored choice; finalize relies on the stored one. */
   feeMode?: GroupOrderFeeMode;
-  /** Fractional rate, for example 0.1 means 10%. */
-  serviceChargeRate?: number;
-  /** Fractional rate, for example 0.05 means 5%. */
-  taxRate?: number;
+  // No tax or service-charge rate: splitBill reads both from the
+  // restaurant's settings, the same place an ordinary order's come from.
   sharedServiceChargeCents?: number;
   sharedTaxCents?: number;
   orderTotalCents?: number;

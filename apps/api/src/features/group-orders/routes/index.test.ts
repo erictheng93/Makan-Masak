@@ -1195,10 +1195,10 @@ describe("group orders routes", () => {
       quantity: 3,
     });
     expect(removeCartItem).toHaveBeenCalledWith(groupOrderId, itemId, memberId);
+    // Rates are no longer part of the request; splitBill reads them from
+    // the restaurant's settings.
     expect(splitBill).toHaveBeenCalledWith(groupOrderId, {
       splitType: "equal",
-      serviceChargeRate: 0,
-      taxRate: 0,
     });
     expect(isHostSession).toHaveBeenCalledWith(groupOrderId, "host-session");
     // The trust level comes from who authenticated, not from the body: every

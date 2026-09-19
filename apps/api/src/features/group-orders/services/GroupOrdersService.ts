@@ -42,6 +42,12 @@ import type {
 } from "@makanmasak/shared-types";
 import { ApiError } from "../../../shared/utils/api-error";
 import { fromCents, toRequiredCents } from "../../../shared/utils/money";
+import {
+  assertCurrencyAlignedCents,
+  roundToCurrencyCents,
+} from "@makanmasak/utils";
+import { resolveRestaurantCurrency } from "@makanmasak/database";
+import { computeSplitBills } from "./split-allocation";
 
 class ConsoleLogger {
   constructor(
@@ -1975,45 +1981,45 @@ export class GroupOrdersService implements IGroupOrderService {
             ),
           ));
 
-      const totalCartAmount = cartItems.reduce(
-        (sum, item) => sum + cartItemTotalAmount(item),
-        0,
-      );
-
       const hasSharedAmounts =
         splitData.sharedServiceChargeCents !== undefined ||
         splitData.sharedTaxCents !== undefined;
-      const sharedServiceCharge = hasSharedAmounts
-        ? fromCents(splitData.sharedServiceChargeCents ?? 0)
-        : 0;
-      const sharedTax = hasSharedAmounts
-        ? fromCents(splitData.sharedTaxCents ?? 0)
-        : 0;
-      const serviceChargeRate = hasSharedAmounts
-        ? 0
-        : (splitData.serviceChargeRate ?? 0);
-      const taxRate = hasSharedAmounts ? 0 : (splitData.taxRate ?? 0);
 
-      const splitBillsData: SplitBillData[] = [];
-      // `recipientCount` is the number of bills this branch will actually
-      // produce, which is not always members.length — a custom split covers
-      // only the members named in customAmounts. Dividing the fallback by the
-      // wrong population under-distributes the shared cost.
-      const allocateSharedAmount = (
-        amount: number,
-        baseAmount: number,
-        totalBaseAmount: number,
-        recipientCount: number,
-      ) =>
-        totalBaseAmount > 0
-          ? (amount * baseAmount) / totalBaseAmount
-          : amount / recipientCount;
+      // Currency and rates come from the restaurant, never from the request:
+      // every share is rounded to this currency's precision (TWD: whole
+      // dollars), and a client-supplied rate would let the host price the
+      // bill themselves.
+      const [restaurant] = await this.db
+        .select({ settings: restaurants.settings })
+        .from(restaurants)
+        .where(eq(restaurants.id, groupOrder.restaurantId));
+      const currency = resolveRestaurantCurrency(
+        restaurant?.settings?.currency,
+      );
+
+      let customAmounts: Array<{ memberId: string; amountCents: number }> = [];
+      if (splitData.splitType === "custom") {
+        customAmounts = (splitData.customAmounts ?? []).map((custom) => ({
+          memberId: custom.memberId,
+          amountCents: toRequiredCents(custom.amount),
+        }));
+        // Finalization recovery hands over the real order's own figures
+        // (shared amounts present); only a caller-typed split is validated.
+        if (!hasSharedAmounts) {
+          assertCurrencyAlignedCents(
+            currency,
+            customAmounts.map((custom, index) => ({
+              field: `customAmounts[${index}].amount`,
+              cents: custom.amountCents,
+            })),
+          );
+        }
+      }
+
       /**
        * Who carries the shared fees, chosen by the host when the group was
-       * opened. Both branches below have to honour it: the rate branch runs
-       * while the table is still ordering, the shared-amount branch runs when
-       * finalize hands over the real order's charges. Applying it to only one
-       * would make the choice stop mattering at the moment it matters most.
+       * opened. Honoured both while the table is still ordering (rates) and
+       * when finalize hands over the real order's charges (shared amounts).
        */
       const storedSettings =
         groupOrder.settings && typeof groupOrder.settings === "object"
@@ -2021,279 +2027,61 @@ export class GroupOrdersService implements IGroupOrderService {
           : {};
       const feeMode: GroupOrderFeeMode =
         splitData.feeMode ?? storedSettings.feeMode ?? "proportional";
-      const hostMemberId = members.find(
-        (member) => member.role === "creator",
-      )?.id;
 
-      /**
-       * The whole fee, before deciding whose bill it lands on.
-       *
-       * `feeBaseTotal` is money — the amount a rate applies to. It is not
-       * `totalBaseAmount`, which is whatever unit the proportional allocation
-       * happens to divide by: the equal-split branch passes a head count
-       * there, so using it here would multiply the rate by the number of
-       * diners.
-       */
-      const wholeFee = (
-        sharedAmount: number,
-        rate: number,
-        feeBaseTotal: number,
-      ) => (hasSharedAmounts ? sharedAmount : feeBaseTotal * rate);
-
-      const allocateByMode = (
-        memberId: string,
-        sharedAmount: number,
-        rate: number,
-        subtotal: number,
-        baseAmount: number,
-        totalBaseAmount: number,
-        feeBaseTotal: number,
-        recipientCount: number,
-      ) => {
-        if (feeMode === "host") {
-          // Nobody but the host sees a fee; the host sees all of it.
-          return memberId === hostMemberId
-            ? wholeFee(sharedAmount, rate, feeBaseTotal)
-            : 0;
-        }
-
-        if (feeMode === "equal") {
-          return (
-            wholeFee(sharedAmount, rate, feeBaseTotal) /
-            Math.max(recipientCount, 1)
-          );
-        }
-
-        return hasSharedAmounts
-          ? allocateSharedAmount(
-              sharedAmount,
-              baseAmount,
-              totalBaseAmount,
-              recipientCount,
-            )
-          : subtotal * rate;
-      };
-
-      const calculateCharges = (
-        subtotal: number,
-        baseAmount: number,
-        totalBaseAmount: number,
-        recipientCount: number,
-        memberId: string,
-        feeBaseTotal: number,
-      ) => ({
-        serviceCharge: allocateByMode(
-          memberId,
-          sharedServiceCharge,
-          serviceChargeRate,
-          subtotal,
-          baseAmount,
-          totalBaseAmount,
-          feeBaseTotal,
-          recipientCount,
-        ),
-        taxAmount: allocateByMode(
-          memberId,
-          sharedTax,
-          taxRate,
-          subtotal,
-          baseAmount,
-          totalBaseAmount,
-          feeBaseTotal,
-          recipientCount,
-        ),
+      const computation = computeSplitBills({
+        currency,
+        splitType: splitData.splitType,
+        feeMode,
+        members,
+        cartItems,
+        customAmounts,
+        shared: hasSharedAmounts
+          ? {
+              serviceChargeCents: splitData.sharedServiceChargeCents ?? 0,
+              taxCents: splitData.sharedTaxCents ?? 0,
+            }
+          : undefined,
+        rates: {
+          serviceChargeRate: restaurant?.settings?.serviceChargeRate ?? 0,
+          taxRate: restaurant?.settings?.taxRate ?? 0,
+        },
+        orderTotalCents: splitData.orderTotalCents,
       });
 
-      // Calculate splits based on splitType.
-      //
-      // "proportional" shares this branch with "individual"/"by_item" on
-      // purpose: every shared cost the system can currently produce (tax,
-      // service charge) is itself proportional to subtotal, so distributing it
-      // by subtotal share and charging each member their own rate give the
-      // same number. Merging them keeps the two from drifting apart while they
-      // are genuinely the same calculation.
-      //
-      // IF YOU ADD A SHARED COST THAT IS NOT PROPORTIONAL TO SUBTOTAL — a flat
-      // delivery fee is the expected first one — the two stop being the same
-      // calculation and this branch must be split: "proportional" distributes
-      // it by each member's share of the total, "individual" does not. The
-      // equivalence test in GroupOrdersService.test.ts cannot warn you about
-      // this, because once merged it compares one code path against itself.
-      if (
-        splitData.splitType === "by_item" ||
-        splitData.splitType === "individual" ||
-        splitData.splitType === "proportional"
-      ) {
-        // Each member pays for their own items
-        for (const member of members) {
-          const memberItems = cartItems.filter(
-            (item) => item.memberId === member.id,
+      if (!computation.ok) {
+        if (computation.code === "SPLIT_TOTAL_MISMATCH") {
+          this.errorTracker.logError(
+            "splitBill",
+            new Error("SPLIT_TOTAL_MISMATCH"),
+            {
+              code: "SPLIT_TOTAL_MISMATCH",
+              groupOrderId,
+              expectedTotalCents: computation.expectedTotalCents,
+              roundedTotalCents: computation.roundedTotalCents,
+            },
           );
-          const subtotal = memberItems.reduce(
-            (sum, item) => sum + cartItemTotalAmount(item),
-            0,
-          );
-          const { serviceCharge, taxAmount } = calculateCharges(
-            subtotal,
-            subtotal,
-            totalCartAmount,
-            members.length,
-            member.id,
-            totalCartAmount,
-          );
-          const totalAmount = subtotal + serviceCharge + taxAmount;
-
-          splitBillsData.push({
-            memberId: member.id,
-            subtotal,
-            serviceCharge,
-            taxAmount,
-            totalAmount,
-            items: memberItems.map((item) => ({
-              cartItemId: item.id,
-              menuItemId: item.menuItemId,
-              name: "",
-              quantity: item.quantity,
-              unitPrice: cartItemUnitAmount(item),
-              totalPrice: cartItemTotalAmount(item),
-            })),
-          });
-        }
-      } else if (splitData.splitType === "equal") {
-        // Split equally among all members
-        const memberCount = members.length;
-        const subtotalPerMember = totalCartAmount / memberCount;
-
-        for (const member of members) {
-          // Computed per member: under the `host` fee mode these differ, so a
-          // single shared figure would hand everyone the host's bill.
-          const {
-            serviceCharge: serviceChargePerMember,
-            taxAmount: taxPerMember,
-          } = calculateCharges(
-            subtotalPerMember,
-            1,
-            memberCount,
-            memberCount,
-            member.id,
-            totalCartAmount,
-          );
-          const totalPerMember =
-            subtotalPerMember + serviceChargePerMember + taxPerMember;
-
-          splitBillsData.push({
-            memberId: member.id,
-            subtotal: subtotalPerMember,
-            serviceCharge: serviceChargePerMember,
-            taxAmount: taxPerMember,
-            totalAmount: totalPerMember,
-            items: [], // Equal split doesn't track individual items
-          });
-        }
-      } else if (splitData.splitType === "custom") {
-        // Use custom amounts
-        if (!splitData.customAmounts || splitData.customAmounts.length === 0) {
           return {
             success: false,
-            error: "Custom amounts are required for custom split type",
+            error: computation.error,
+            errorDetails: {
+              code: "SPLIT_TOTAL_MISMATCH",
+              expectedTotalCents: computation.expectedTotalCents,
+              roundedTotalCents: computation.roundedTotalCents,
+            },
           };
         }
-
-        for (const customAmount of splitData.customAmounts) {
-          const member = members.find((m) => m.id === customAmount.memberId);
-          if (!member) {
-            return {
-              success: false,
-              error: `Member ${customAmount.memberId} not found in group`,
-            };
-          }
-
-          const subtotal = customAmount.amount;
-          const totalCustomAmount = splitData.customAmounts.reduce(
-            (sum, amount) => sum + amount.amount,
-            0,
-          );
-          const { serviceCharge, taxAmount } = calculateCharges(
-            subtotal,
-            subtotal,
-            totalCustomAmount,
-            splitData.customAmounts.length,
-            member.id,
-            totalCustomAmount,
-          );
-          const totalAmount = subtotal + serviceCharge + taxAmount;
-
-          splitBillsData.push({
-            memberId: member.id,
-            subtotal,
-            serviceCharge,
-            taxAmount,
-            totalAmount,
-            items: [], // Custom split doesn't track individual items
-          });
-        }
-      } else {
-        return {
-          success: false,
-          error: `Unsupported split type: ${splitData.splitType}`,
-        };
+        return { success: false, error: computation.error };
       }
 
-      const targetTotalCents =
-        splitData.orderTotalCents ??
-        toRequiredCents(
-          splitBillsData.reduce((sum, bill) => sum + bill.totalAmount, 0),
-        );
-      const roundedTotalCents = splitBillsData.reduce(
-        (sum, bill) => sum + toRequiredCents(bill.totalAmount),
-        0,
-      );
-      const remainderCents = targetTotalCents - roundedTotalCents;
-
-      if (Math.abs(remainderCents) > splitBillsData.length) {
-        this.errorTracker.logError(
-          "splitBill",
-          new Error("SPLIT_TOTAL_MISMATCH"),
-          {
-            code: "SPLIT_TOTAL_MISMATCH",
-            groupOrderId,
-            expectedTotalCents: targetTotalCents,
-            roundedTotalCents,
-          },
-        );
-        return {
-          success: false,
-          error: "Split total does not match order total",
-          errorDetails: {
-            code: "SPLIT_TOTAL_MISMATCH",
-            expectedTotalCents: targetTotalCents,
-            roundedTotalCents,
-          },
-        };
-      }
-
-      if (remainderCents !== 0) {
-        const creatorId = members.find(
-          (member) => member.role === "creator",
-        )?.id;
-        const creatorBill =
-          splitBillsData.find((bill) => bill.memberId === creatorId) ??
-          splitBillsData[0];
-        // The remainder lands on the subtotal as well as the total. split_bills
-        // stores subtotal, service charge and tax as separate columns, so
-        // moving only the total would leave the creator holding a bill whose
-        // own line items do not add up to what they are asked to pay.
-        //
-        // Subtotal is the component that absorbs it: service charge and tax
-        // are the real order's absolute amounts, and adjusting either would
-        // make the split disagree with what the restaurant actually charged.
-        creatorBill.subtotal = fromCents(
-          toRequiredCents(creatorBill.subtotal) + remainderCents,
-        );
-        creatorBill.totalAmount = fromCents(
-          toRequiredCents(creatorBill.totalAmount) + remainderCents,
-        );
-      }
+      const totalCartAmount = fromCents(computation.cartTotalCents);
+      const splitBillsData: SplitBillData[] = computation.bills.map((bill) => ({
+        memberId: bill.memberId,
+        subtotal: fromCents(bill.subtotalCents),
+        serviceCharge: fromCents(bill.serviceChargeCents),
+        taxAmount: fromCents(bill.taxCents),
+        totalAmount: fromCents(bill.totalCents),
+        items: bill.items,
+      }));
 
       // Insert split bills into database
       const now = new Date();
@@ -2405,6 +2193,9 @@ export class GroupOrdersService implements IGroupOrderService {
         })),
       };
     } catch (error) {
+      // A rejected input (CURRENCY_PRECISION) is the caller's 400, not a
+      // failed split: let it reach the global handler with its code intact.
+      if (error instanceof ApiError) throw error;
       this.errorTracker.logError("splitBill", error as Error, {
         groupOrderId,
         splitData,
@@ -2512,8 +2303,9 @@ export class GroupOrdersService implements IGroupOrderService {
       const splitBillTotal = moneyAmount(splitBill.totalAmountCents);
       const amount = paymentData.amount || splitBillTotal;
 
-      // Validate amount matches split bill (with small tolerance for rounding)
-      if (Math.abs(amount - splitBillTotal) > 0.01) {
+      // Shares are exact integer cents on the currency's precision now, so
+      // there is no rounding left to tolerate: compare cents exactly.
+      if (toRequiredCents(amount) !== (splitBill.totalAmountCents ?? 0)) {
         return {
           success: false,
           error: `Payment amount (${amount}) does not match split bill amount (${splitBillTotal})`,
@@ -3223,9 +3015,12 @@ export class GroupOrdersService implements IGroupOrderService {
       : [];
     const taxRate = restaurant?.settings?.taxRate ?? 0;
     const serviceChargeRate = restaurant?.settings?.serviceChargeRate ?? 0;
+    const currency = resolveRestaurantCurrency(restaurant?.settings?.currency);
+    // Summed in integer cents: dividing by 100.0 in SQL and multiplying back
+    // reintroduced float noise into every member's running bill.
     const totalResult = await this.db
       .select({
-        total: sql<number>`COALESCE(SUM(COALESCE(${groupCartItems.totalPriceCents}, 0)), 0) / 100.0`,
+        totalCents: sql<number>`COALESCE(SUM(COALESCE(${groupCartItems.totalPriceCents}, 0)), 0)`,
       })
       .from(groupCartItems)
       .where(
@@ -3236,10 +3031,17 @@ export class GroupOrdersService implements IGroupOrderService {
         ),
       );
 
-    const total = totalResult[0]?.total || 0;
-    const subtotalCents = toRequiredCents(total);
-    const taxAmountCents = toRequiredCents(total * taxRate);
-    const serviceChargeCents = toRequiredCents(total * serviceChargeRate);
+    const subtotalCents = Number(totalResult[0]?.totalCents ?? 0);
+    // A running preview until finalization re-splits against the real order,
+    // but still on the currency's precision (TWD: whole dollars).
+    const taxAmountCents = roundToCurrencyCents(
+      subtotalCents * taxRate,
+      currency,
+    );
+    const serviceChargeCents = roundToCurrencyCents(
+      subtotalCents * serviceChargeRate,
+      currency,
+    );
     const now = new Date();
 
     // Update or create split_bill record for this member
