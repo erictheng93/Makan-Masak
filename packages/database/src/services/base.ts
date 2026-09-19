@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/d1";
 import type { D1Database, KVNamespace } from "@cloudflare/workers-types";
-import { ApiError } from "@makanmasak/utils";
+import { eq } from "drizzle-orm";
+import { ApiError, type CurrencyCode } from "@makanmasak/utils";
 import * as schema from "../schema";
 import {
   QueryCache,
@@ -12,7 +13,12 @@ import {
   type ConnectionManager,
 } from "../utils/connection-manager";
 import { SoftDeleteService } from "../utils/soft-delete";
-import { fromCents, toRequiredCents } from "../utils/money";
+import {
+  computeOrderTotals,
+  resolveRestaurantCurrency,
+  type OrderTotals,
+  type OrderTotalsInput,
+} from "../utils/order-totals";
 
 const ORDER_NUMBER_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 const ORDER_NUMBER_SEGMENT_SIZE = 4;
@@ -370,43 +376,24 @@ export class BaseService {
     };
   }
 
-  // 計算總金額
+  // 計算總金額 — 規則與註解見 utils/order-totals.ts 的 computeOrderTotals。
   //
   // `deliveryFee` 不參與稅金與服務費：兩者都是 `subtotal * rate`，外送費是
   // 運費而非餐點消費。它只加在最後的 totalAmountCents 上。呼叫端必須傳伺服器
-  // 端算出的金額 — 顧客請求裡的數字不可信（#295）。
-  protected calculateOrderTotal(
-    subtotal: number,
-    taxRate: number = 0,
-    serviceChargeRate: number = 0,
-    discountAmount: number = 0,
-    deliveryFee: number = 0,
-  ) {
-    const subtotalCents = toRequiredCents(subtotal);
-    const discountAmountCents = toRequiredCents(discountAmount);
-    const deliveryFeeCents = toRequiredCents(deliveryFee);
-    const taxAmountCents = Math.round(subtotalCents * taxRate);
-    const serviceChargeCents = Math.round(subtotalCents * serviceChargeRate);
-    const totalAmountCents =
-      subtotalCents +
-      taxAmountCents +
-      serviceChargeCents +
-      deliveryFeeCents -
-      discountAmountCents;
+  // 端算出的金額 — 顧客請求裡的數字不可信（#295）。每一行衍生金額都依幣別
+  // 精度進位（TWD/VND 整數元），所以餐廳幣別是必填。
+  protected calculateOrderTotal(input: OrderTotalsInput): OrderTotals {
+    return computeOrderTotals(input);
+  }
 
-    return {
-      subtotal: fromCents(subtotalCents),
-      taxAmount: fromCents(taxAmountCents),
-      serviceCharge: fromCents(serviceChargeCents),
-      discountAmount: fromCents(discountAmountCents),
-      deliveryFee: fromCents(deliveryFeeCents),
-      totalAmount: fromCents(totalAmountCents),
-      subtotalCents,
-      taxAmountCents,
-      serviceChargeCents,
-      discountAmountCents,
-      deliveryFeeCents,
-      totalAmountCents,
-    };
+  /** The restaurant's currency, defaulting like `resolveRestaurantCurrency`. */
+  protected async getRestaurantCurrency(
+    restaurantId: string,
+  ): Promise<CurrencyCode> {
+    const restaurant = await this.db.query.restaurants.findFirst({
+      where: eq(schema.restaurants.id, restaurantId),
+      columns: { settings: true },
+    });
+    return resolveRestaurantCurrency(restaurant?.settings?.currency);
   }
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  couponDiscountCents,
   CouponEligibilityError,
   CouponService,
   type CreateCouponData,
@@ -135,5 +136,107 @@ describe("CouponService.assertCouponRedeemable per-user limit", () => {
         mode: "validate",
       }),
     ).rejects.toBeInstanceOf(CouponEligibilityError);
+  });
+});
+
+describe("couponDiscountCents", () => {
+  const percentage = (bps: number, maxDiscountAmountCents: number | null) => ({
+    discountType: "percentage" as const,
+    discountPercentageBps: bps,
+    discountValueCents: null,
+    maxDiscountAmountCents,
+  });
+
+  it("rounds a 15% TWD discount on NT$155 to NT$23", () => {
+    expect(couponDiscountCents(percentage(1500, null), 15500, "TWD")).toBe(
+      2300,
+    );
+  });
+
+  it("keeps sen for MYR", () => {
+    expect(couponDiscountCents(percentage(1500, null), 15500, "MYR")).toBe(
+      2325,
+    );
+  });
+
+  it("rounds first, then caps", () => {
+    expect(couponDiscountCents(percentage(1500, 2000), 15500, "TWD")).toBe(
+      2000,
+    );
+  });
+});
+
+describe("CouponService.validateCoupon currency precision", () => {
+  function buildService(currency: string | undefined) {
+    const coupon = {
+      id: 7,
+      restaurantId: "restaurant-1",
+      code: "PCT15",
+      deletedAt: null,
+      isActive: true,
+      isVisible: true,
+      validFrom: new Date("2000-01-01T00:00:00.000Z"),
+      validTo: new Date("2999-12-31T00:00:00.000Z"),
+      usageLimit: null,
+      usedCount: 0,
+      usageLimitPerUser: null,
+      minOrderAmountCents: null,
+      applicableMenuItems: null,
+      applicableCategories: null,
+      discountType: "percentage",
+      discountPercentageBps: 1500,
+      discountValueCents: null,
+      maxDiscountAmountCents: null,
+    };
+    const restaurantsFindFirst = vi.fn(async () =>
+      currency === undefined ? undefined : { settings: { currency } },
+    );
+    const service = Object.create(CouponService.prototype) as CouponService;
+    Object.assign(service, {
+      db: {
+        query: {
+          coupons: { findFirst: vi.fn(async () => coupon) },
+          restaurants: { findFirst: restaurantsFindFirst },
+        },
+      },
+    });
+    return { service, restaurantsFindFirst };
+  }
+
+  it("reads the restaurant currency when the caller does not pass one", async () => {
+    const { service, restaurantsFindFirst } = buildService("TWD");
+
+    const result = await service.validateCoupon("pct15", "restaurant-1", 155);
+
+    expect(result).toMatchObject({
+      valid: true,
+      discountAmount: 23,
+      finalAmount: 132,
+    });
+    expect(restaurantsFindFirst).toHaveBeenCalledOnce();
+  });
+
+  it("uses the caller's currency without another lookup", async () => {
+    const { service, restaurantsFindFirst } = buildService("TWD");
+
+    const result = await service.validateCoupon(
+      "pct15",
+      "restaurant-1",
+      155,
+      undefined,
+      undefined,
+      { currency: "MYR" },
+    );
+
+    expect(result).toMatchObject({ discountAmount: 23.25 });
+    expect(restaurantsFindFirst).not.toHaveBeenCalled();
+  });
+
+  it("defaults an unknown restaurant to TWD precision", async () => {
+    const { service } = buildService(undefined);
+
+    const result = await service.validateCoupon("pct15", "restaurant-1", 155);
+
+    expect(result).toMatchObject({ discountAmount: 23 });
   });
 });

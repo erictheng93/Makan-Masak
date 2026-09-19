@@ -48,25 +48,17 @@ import {
   ApiError,
   badRequest,
   conflict,
+  computeDiscountCents,
   formatCurrency,
-  CURRENCY_CONFIGS,
-  DEFAULT_CURRENCY,
-  type CurrencyCode,
 } from "@makanmasak/utils";
 import { amountFromCents, fromCents, toRequiredCents } from "../utils/money";
+import {
+  recoverChargeRate,
+  resolveRestaurantCurrency,
+} from "../utils/order-totals";
 import { IngredientConsumptionService } from "./ingredient-consumption";
 import { loadAssembledMenuItemOptions } from "./menu-options";
 import { TenantMemberDirectoryService } from "./TenantMemberDirectoryService";
-
-// `restaurants.settings.currency` is a free-form string in the schema, so it
-// can hold anything an older admin build wrote. Narrow it here rather than
-// casting: an unknown code falls back to the platform default instead of
-// reaching `formatCurrency` and coming back as a bare number.
-function resolveCurrency(currency: string | undefined): CurrencyCode {
-  return currency && currency in CURRENCY_CONFIGS
-    ? (currency as CurrencyCode)
-    : DEFAULT_CURRENCY;
-}
 
 // Derived from the shared status machine rather than restated. These two used
 // to be separate hand-maintained lists and they disagreed; the gap was not
@@ -528,6 +520,24 @@ function toOrderItemStatus(value: string): OrderItemStatus {
 }
 
 export class OrderService extends BaseService {
+  /**
+   * What re-pricing an existing order needs from its restaurant: the currency
+   * every derived amount is rounded to, and the configured rates that
+   * `recoverChargeRate` prefers over the stored ratio.
+   */
+  private async loadRepricingContext(restaurantId: string) {
+    const restaurant = await this.db.query.restaurants.findFirst({
+      where: eq(restaurants.id, restaurantId),
+      columns: { settings: true },
+    });
+    const settings = restaurant?.settings ?? {};
+    return {
+      currency: resolveRestaurantCurrency(settings.currency),
+      taxRate: settings.taxRate,
+      serviceChargeRate: settings.serviceChargeRate,
+    };
+  }
+
   // 獲取餐廳最低消費設定
   async getMinimumOrderAmount(
     restaurantId: string,
@@ -590,6 +600,8 @@ export class OrderService extends BaseService {
       // 本來就等於關閉 —— 前端也是 `?? false` —— 所以這道門只會擋掉 UI 從未
       // 提供過的訂單。
       const settings = restaurant.settings || {};
+      // Every derived amount below is rounded to this currency's precision.
+      const currency = resolveRestaurantCurrency(settings.currency);
       if (data.deliveryInfo?.type === "delivery") {
         if (!settings.enableDelivery && !restaurant.supportsDelivery) {
           throw new Error("DELIVERY_NOT_ENABLED");
@@ -638,6 +650,7 @@ export class OrderService extends BaseService {
           subtotal,
           data.couponUserId,
           data.items,
+          { currency },
         );
 
         if (validationResult.valid) {
@@ -660,7 +673,6 @@ export class OrderService extends BaseService {
         // 幣別跟著店家設定走。這裡曾經硬寫 `RM`，所以一家 TWD 的店會告訴
         // 顧客「最低消費 RM300」（#352）。details 帶結構化數字，前端可以自己
         // 排版，不必去 parse 這句話。
-        const currency = resolveCurrency(settings.currency);
         throw badRequest(
           `訂單未達最低消費標準。最低消費：${formatCurrency(
             minOrderAmount,
@@ -693,20 +705,22 @@ export class OrderService extends BaseService {
         taxAmountCents,
         serviceChargeCents,
         discountAmountCents,
+        deliveryFeeCents,
         totalAmountCents,
-      } = this.calculateOrderTotal(
-        subtotal,
+      } = this.calculateOrderTotal({
+        currency,
+        subtotalCents,
         taxRate,
         serviceChargeRate,
-        discountAmount,
-        deliveryFee,
-      );
+        discountCents: toRequiredCents(discountAmount),
+        deliveryFeeCents: toRequiredCents(deliveryFee),
+      });
 
       // 寫回伺服器端算出的金額，覆蓋顧客送上來的。除了不信任來源之外，
       // `addItemsToOrder` 重算總額時也是從這裡把外送費讀回來的，兩者必須是
       // 同一個數字。非外送單一律寫 0，順便洗掉客戶端硬塞的運費。
       const deliveryInfo = data.deliveryInfo
-        ? { ...data.deliveryInfo, deliveryFee }
+        ? { ...data.deliveryInfo, deliveryFee: fromCents(deliveryFeeCents) }
         : undefined;
 
       // 生成訂單號碼
@@ -778,8 +792,8 @@ export class OrderService extends BaseService {
             couponId: validatedCoupon.id,
             orderId: orderIdRef as unknown as string,
             userId: data.couponUserId,
-            discountAmountCents: toRequiredCents(discountAmount),
-            originalAmountCents: toRequiredCents(subtotal),
+            discountAmountCents,
+            originalAmountCents: subtotalCents,
             finalAmountCents: totalAmountCents,
             status: "active",
           }),
@@ -1106,13 +1120,21 @@ export class OrderService extends BaseService {
         existingOrder.discountAmountCents,
         "Order discount amount",
       );
-      const taxRate =
-        currentSubtotalCents > 0 ? currentTaxCents / currentSubtotalCents : 0;
-      const serviceChargeRate =
-        currentSubtotalCents > 0
-          ? currentServiceChargeCents / currentSubtotalCents
-          : 0;
-      const nextSubtotal = fromCents(currentSubtotalCents + addedSubtotalCents);
+      const pricing = await this.loadRepricingContext(
+        existingOrder.restaurantId,
+      );
+      const taxRate = recoverChargeRate(
+        pricing.taxRate,
+        currentSubtotalCents,
+        currentTaxCents,
+        pricing.currency,
+      );
+      const serviceChargeRate = recoverChargeRate(
+        pricing.serviceChargeRate,
+        currentSubtotalCents,
+        currentServiceChargeCents,
+        pricing.currency,
+      );
       // 這裡是重算整張訂單的總額，不是加總差額 —— 沒有把外送費帶進來，加點
       // 就會把它從 total 裡抹掉。運費不隨品項變動，原封讀回原本存下的那筆。
       const deliveryFee =
@@ -1124,13 +1146,14 @@ export class OrderService extends BaseService {
         taxAmountCents,
         serviceChargeCents,
         totalAmountCents,
-      } = this.calculateOrderTotal(
-        nextSubtotal,
+      } = this.calculateOrderTotal({
+        currency: pricing.currency,
+        subtotalCents: currentSubtotalCents + addedSubtotalCents,
         taxRate,
         serviceChargeRate,
-        fromCents(currentDiscountCents),
-        deliveryFee,
-      );
+        discountCents: currentDiscountCents,
+        deliveryFeeCents: toRequiredCents(deliveryFee),
+      });
 
       // A version is not an attempt identity: a later writer can legitimately
       // reach the same version. The immediate assertion below converts a
@@ -1307,15 +1330,13 @@ export class OrderService extends BaseService {
         "Order service charge",
       );
 
-      // Rates are recovered from the stored cents rather than re-read from
-      // settings: a rate change after the order was placed must not silently
-      // reprice it.
-      const taxRate =
-        currentSubtotalCents > 0 ? currentTaxCents / currentSubtotalCents : 0;
-      const serviceChargeRate =
-        currentSubtotalCents > 0
-          ? currentServiceChargeCents / currentSubtotalCents
-          : 0;
+      // Tax and service charge are kept exactly as stored: a discount does not
+      // change what they were charged on, and re-deriving them from settings
+      // would let a rate change after the order was placed silently reprice
+      // it.
+      const { currency } = await this.loadRepricingContext(
+        existingOrder.restaurantId,
+      );
       const deliveryFee =
         existingOrder.deliveryInfo?.type === "delivery"
           ? (existingOrder.deliveryInfo.deliveryFee ?? 0)
@@ -1333,19 +1354,23 @@ export class OrderService extends BaseService {
       if (discountPercent < 0 || discountPercent > 100) {
         throw new Error("Discount percent must be between 0 and 100");
       }
-      const requestedDiscountCents = Math.min(
-        Math.round((discountCeilingCents * discountPercent) / 100),
+      // Rounded to the currency's precision (TWD: whole dollars) and still
+      // capped at the ceiling — the helper floors a legacy fractional ceiling.
+      const requestedDiscountCents = computeDiscountCents(
+        { discountType: "percentage", percent: discountPercent },
         discountCeilingCents,
+        currency,
       );
 
       const { discountAmountCents, totalAmountCents } =
-        this.calculateOrderTotal(
-          fromCents(currentSubtotalCents),
-          taxRate,
-          serviceChargeRate,
-          fromCents(requestedDiscountCents),
-          deliveryFee,
-        );
+        this.calculateOrderTotal({
+          currency,
+          subtotalCents: currentSubtotalCents,
+          taxAmountCents: currentTaxCents,
+          serviceChargeCents: currentServiceChargeCents,
+          discountCents: requestedDiscountCents,
+          deliveryFeeCents: toRequiredCents(deliveryFee),
+        });
 
       const observedVersion = existingOrder.version;
       const updated = await this.db
@@ -1481,22 +1506,32 @@ export class OrderService extends BaseService {
         existingOrder.discountAmountCents,
         "Order discount amount",
       );
-      const taxRate =
-        currentSubtotalCents > 0 ? currentTaxCents / currentSubtotalCents : 0;
-      const serviceChargeRate =
-        currentSubtotalCents > 0
-          ? currentServiceChargeCents / currentSubtotalCents
-          : 0;
+      const pricing = await this.loadRepricingContext(
+        existingOrder.restaurantId,
+      );
+      const taxRate = recoverChargeRate(
+        pricing.taxRate,
+        currentSubtotalCents,
+        currentTaxCents,
+        pricing.currency,
+      );
+      const serviceChargeRate = recoverChargeRate(
+        pricing.serviceChargeRate,
+        currentSubtotalCents,
+        currentServiceChargeCents,
+        pricing.currency,
+      );
       const nextSubtotalCents = Math.max(
         0,
         currentSubtotalCents + unitPriceCents * delta,
       );
-      const totals = this.calculateOrderTotal(
-        fromCents(nextSubtotalCents),
+      const totals = this.calculateOrderTotal({
+        currency: pricing.currency,
+        subtotalCents: nextSubtotalCents,
         taxRate,
         serviceChargeRate,
-        fromCents(currentDiscountCents),
-      );
+        discountCents: currentDiscountCents,
+      });
       // The discount carries across untouched, exactly as addItemsToOrder
       // carries it: a coupon is not re-validated against the new subtotal
       // here. Shrinking an order below the coupon's minimum spend can

@@ -29,10 +29,39 @@ import {
   toRequiredCents,
   toRequiredPercentageBps,
 } from "../utils/money";
+import { computeDiscountCents, type CurrencyCode } from "@makanmasak/utils";
 import { BaseService } from "./base";
 
 /** 完整的 `coupons` 資料列，即 `insert`/`update` … `returning()` 回傳的形狀。 */
 export type CouponRow = typeof coupons.$inferSelect;
+
+/**
+ * The discount a coupon row grants on `orderAmountCents`, on the currency's
+ * precision. Shared by /validate, order creation and cashier redemption so the
+ * three can no longer disagree.
+ */
+export function couponDiscountCents(
+  coupon: Pick<
+    CouponRow,
+    | "discountType"
+    | "discountPercentageBps"
+    | "discountValueCents"
+    | "maxDiscountAmountCents"
+  >,
+  orderAmountCents: number,
+  currency: CurrencyCode,
+): number {
+  return computeDiscountCents(
+    {
+      discountType: coupon.discountType,
+      percent: percentageFromBps(coupon.discountPercentageBps),
+      fixedCents: coupon.discountValueCents,
+      maxDiscountCents: coupon.maxDiscountAmountCents,
+    },
+    orderAmountCents,
+    currency,
+  );
+}
 
 /** mapCouponMoneyFields 會讀取的金額欄位子集（`_cents` / `_bps`）。 */
 type CouponMoneyColumns = Pick<
@@ -298,6 +327,7 @@ export class CouponService extends BaseService {
    * @param orderAmount 訂單金額
    * @param userId 用戶ID (可選)
    * @param menuItems 訂單商品 (用於檢查適用商品)
+   * @param options.currency 餐廳幣別；呼叫端已讀過餐廳時傳入，省一次查詢
    */
   async validateCoupon(
     code: string,
@@ -305,6 +335,7 @@ export class CouponService extends BaseService {
     orderAmount: number,
     userId?: string,
     menuItems?: Array<{ menuItemId: number; quantity: number }>,
+    options: { currency?: CurrencyCode } = {},
   ): Promise<CouponValidationResult> {
     try {
       // Codes are unique per tenant (0013), so a bare `code` lookup is no
@@ -346,29 +377,15 @@ export class CouponService extends BaseService {
         throw error;
       }
 
-      // 計算折扣金額
-      let discountAmountCents = 0;
-      if (coupon.discountType === "percentage") {
-        const discountPercentage =
-          percentageFromBps(coupon.discountPercentageBps) ?? 0;
-        discountAmountCents = Math.round(
-          orderAmountCents * (discountPercentage / 100),
-        );
-
-        // 應用最大折扣金額限制
-        const maxDiscountAmountCents = coupon.maxDiscountAmountCents;
-        if (
-          maxDiscountAmountCents &&
-          discountAmountCents > maxDiscountAmountCents
-        ) {
-          discountAmountCents = maxDiscountAmountCents;
-        }
-      } else {
-        discountAmountCents = coupon.discountValueCents ?? 0;
-      }
-
-      // 確保折扣金額不超過訂單金額
-      discountAmountCents = Math.min(discountAmountCents, orderAmountCents);
+      // 折扣依餐廳幣別精度計算（TWD/VND 整數元）：先進位、再套上限、
+      // 且不超過訂單金額 — 規則集中在 computeDiscountCents。
+      const currency =
+        options.currency ?? (await this.getRestaurantCurrency(restaurantId));
+      const discountAmountCents = couponDiscountCents(
+        coupon,
+        orderAmountCents,
+        currency,
+      );
       const finalAmountCents = Math.max(
         0,
         orderAmountCents - discountAmountCents,
