@@ -5024,6 +5024,7 @@ describe("market checkout routes", () => {
     };
     expect(json.data).toMatchObject({
       totalCheckouts: 3,
+      currency: "TWD",
       totalSubtotalCents: 40000,
       paidAmountCents: 32000,
       refundedAmountCents: 12000,
@@ -5037,11 +5038,70 @@ describe("market checkout routes", () => {
     });
     expect(json.data.topMarkets[0]).toMatchObject({
       slug: "fengjia",
+      currency: "TWD",
       checkoutCount: 2,
       subtotalCents: 32000,
       paidAmountCents: 32000,
       refundedAmountCents: 12000,
     });
+  });
+
+  it("does not label a sum across currencies with one currency", async () => {
+    const env = createEnv();
+    const checkout = (
+      id: string,
+      slug: string,
+      currency: string,
+      cents: number,
+    ) => ({
+      id,
+      marketId: `market-${slug}`,
+      marketSlug: slug,
+      marketName: slug,
+      status: "submitted",
+      paymentStatus: "paid",
+      subtotalCents: cents,
+      childOrderCount: 1,
+      paymentSummary: {
+        status: "paid",
+        method: "market_online",
+        currency,
+        country: currency === "MYR" ? "MY" : "TW",
+        totalAmount: cents / 100,
+        totalAmountCents: cents,
+        paidAmount: cents / 100,
+        paidAmountCents: cents,
+        childPayments: [],
+      },
+      createdAt: new Date("2026-06-01T10:00:00.000Z"),
+      updatedAt: new Date("2026-06-01T10:05:00.000Z"),
+    });
+    setMarketCheckoutSessionFixtures({
+      all: [
+        checkout("checkout-tw", "fengjia", "TWD", 20000),
+        checkout("checkout-my", "jalan-alor", "MYR", 1250),
+      ],
+    });
+
+    const response = await routes.fetch(
+      new Request("https://test/admin/summary"),
+      env as never,
+    );
+
+    expect(response.status).toBe(200);
+    const json = (await response.json()) as {
+      data: {
+        currency: string | null;
+        topMarkets: Array<{ slug: string; currency: string | null }>;
+      };
+    };
+    expect(json.data.currency).toBeNull();
+    expect(json.data.topMarkets).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ slug: "fengjia", currency: "TWD" }),
+        expect.objectContaining({ slug: "jalan-alor", currency: "MYR" }),
+      ]),
+    );
   });
 
   it("filters market checkout operation summaries by payment status", async () => {
@@ -5649,6 +5709,7 @@ describe("market checkout routes", () => {
       {
         restaurantId: "restaurant-1",
         restaurantName: "雞排攤",
+        currency: "TWD",
         checkoutCount: 2,
         childOrderCount: 2,
         subtotalCents: 24000,
@@ -5666,6 +5727,7 @@ describe("market checkout routes", () => {
       {
         restaurantId: "restaurant-2",
         restaurantName: "甜點攤",
+        currency: "TWD",
         checkoutCount: 1,
         childOrderCount: 1,
         subtotalCents: 8000,
@@ -6244,6 +6306,95 @@ describe("market checkout routes", () => {
       totalAmountCents: 12000,
     });
   });
+
+  it.each([
+    ["stripe", "vnd", 100000, 10000000],
+    ["stripe", "twd", 25000, 25000],
+    ["linepay", "TWD", 250, 25000],
+    ["stripe", "usd", 1000, undefined],
+  ])(
+    "summarizes a %s %s webhook amount in internal cents",
+    async (provider, currency, providerAmount, expectedCents) => {
+      setNoPersistedCheckoutFixtures();
+      const env = createEnv([
+        {
+          payment_id: "market_pay_checkout-1",
+          provider,
+          split_mode: "provider_split",
+          idempotency_key: "market-checkout:checkout-1",
+          status: "pending",
+          amount_cents: 10000000,
+          paid_amount_cents: 0,
+          refunded_amount_cents: 0,
+          currency: "VND",
+          country_code: "VN",
+          child_payment_ids: "[]",
+          provider_payload: JSON.stringify({
+            lastWebhook: {
+              provider,
+              eventId: "evt_1",
+              eventType: "payment_intent.succeeded",
+              status: "review_required",
+              reviewReason: "AMOUNT_MISMATCH",
+              receivedAt: "2026-06-01T10:09:00.000Z",
+              payload: {
+                data: {
+                  object: {
+                    id: "pi_1",
+                    amount_received: providerAmount,
+                    currency,
+                  },
+                },
+              },
+            },
+          }),
+          created_at_ms: 1780308000000,
+          updated_at_ms: 1780308600000,
+        },
+      ]);
+      await env.CACHE_KV.put(
+        "market_checkout:checkout-1",
+        JSON.stringify({
+          id: "checkout-1",
+          market: { id: "market-1", slug: "ben-thanh", name: "Ben Thanh" },
+          status: "submitted",
+          childOrders: [],
+          subtotal: 10000000,
+          createdAt: "2026-06-01T10:00:00.000Z",
+        }),
+      );
+
+      const response = await routes.fetch(
+        new Request("https://test/admin/checkout-1"),
+        env as never,
+      );
+
+      expect(response.status).toBe(200);
+      const json = (await response.json()) as {
+        data: {
+          checkout: {
+            payment: {
+              parentPayment: {
+                lastWebhook: {
+                  reviewReason?: string;
+                  payloadSummary: {
+                    amountReceivedCents?: number;
+                    currency?: string;
+                  };
+                };
+              };
+            };
+          };
+        };
+      };
+      const lastWebhook = json.data.checkout.payment.parentPayment.lastWebhook;
+      expect(lastWebhook.reviewReason).toBe("AMOUNT_MISMATCH");
+      expect(lastWebhook.payloadSummary.currency).toBe(currency);
+      expect(lastWebhook.payloadSummary.amountReceivedCents).toBe(
+        expectedCents,
+      );
+    },
+  );
 
   it("hydrates parent payment from the persisted checkout payment ledger", async () => {
     setNoPersistedCheckoutFixtures();

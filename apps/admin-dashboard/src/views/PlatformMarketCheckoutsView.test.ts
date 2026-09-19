@@ -564,7 +564,7 @@ describe("PlatformMarketCheckoutsView", () => {
       "A001",
     );
     expect(wrapper.get('[data-testid="checkout-detail"]').text()).toContain(
-      "已付款 160 / 240",
+      "已付款 NT$160 / NT$240",
     );
     expect(
       wrapper.get('[data-testid="checkout-parent-payment"]').text(),
@@ -663,6 +663,123 @@ describe("PlatformMarketCheckoutsView", () => {
     expect(
       wrapper.get('[data-testid="checkout-provider-alerts"]').text(),
     ).toContain("Provider 退款仍在處理中");
+  });
+
+  it("formats each checkout in its own currency and never labels a mixed total", async () => {
+    vi.mocked(marketCheckoutsService.list).mockResolvedValue({
+      checkouts: [
+        {
+          id: "checkout-1",
+          market: { id: "market-2", slug: "jalan-alor", name: "Jalan Alor" },
+          status: "submitted",
+          paymentStatus: "pending",
+          subtotal: 1250,
+          currency: "MYR",
+          childOrderCount: 1,
+          createdAt: "2026-06-01T10:00:00.000Z",
+          updatedAt: "2026-06-01T10:05:00.000Z",
+        },
+      ],
+      total: 1,
+      page: 1,
+      limit: 20,
+    });
+    vi.mocked(marketCheckoutsService.summary).mockResolvedValue({
+      totalCheckouts: 2,
+      currency: null,
+      totalSubtotalCents: 21250,
+      paidAmountCents: 21250,
+      refundedAmountCents: 0,
+      netPaidAmountCents: 21250,
+      averageCheckoutCents: 10625,
+      childOrderCount: 2,
+      paymentStatusCounts: { paid: 2 },
+      topMarkets: [
+        {
+          id: "market-2",
+          slug: "jalan-alor",
+          name: "Jalan Alor",
+          currency: "MYR",
+          checkoutCount: 1,
+          subtotalCents: 1250,
+          paidAmountCents: 1250,
+          refundedAmountCents: 0,
+        },
+      ],
+    });
+    vi.mocked(marketCheckoutsService.get).mockResolvedValue({
+      id: "checkout-1",
+      market: { id: "market-2", slug: "jalan-alor", name: "Jalan Alor" },
+      status: "submitted",
+      paymentStatus: "pending",
+      subtotal: 1250,
+      childOrderCount: 1,
+      createdAt: "2026-06-01T10:00:00.000Z",
+      updatedAt: "2026-06-01T10:05:00.000Z",
+      childOrders: [
+        {
+          restaurantId: "restaurant-9",
+          restaurantName: "Satay Stall",
+          orderId: 9001,
+          orderNumber: "M001",
+          totalAmount: 12.5,
+          totalAmountCents: 1250,
+          tokenExpiresAt: "2026-06-01T14:00:00.000Z",
+        },
+      ],
+      payment: {
+        status: "pending",
+        method: "market_online",
+        currency: "MYR",
+        country: "MY",
+        totalAmount: 12.5,
+        totalAmountCents: 1250,
+        paidAmount: 0,
+        paidAmountCents: 0,
+        childPayments: [],
+        parentPayment: {
+          paymentId: "market_pay_checkout-1",
+          status: "pending",
+          provider: "stripe",
+          splitMode: "provider_split",
+          idempotencyKey: "market-checkout:checkout-1",
+          lastWebhook: {
+            provider: "stripe",
+            eventId: "evt_underpaid",
+            eventType: "payment_intent.succeeded",
+            status: "review_required",
+            reviewReason: "AMOUNT_MISMATCH",
+            receivedAt: "2026-06-01T10:06:00.000Z",
+            payloadSummary: {
+              objectId: "pi_1",
+              amountReceivedCents: 1249,
+              currency: "MYR",
+            },
+          },
+          amountCents: 1250,
+          paidAmountCents: 0,
+          refundedAmountCents: 0,
+          childPaymentIds: [],
+          createdAt: "2026-06-01T10:00:00.000Z",
+          updatedAt: "2026-06-01T10:06:00.000Z",
+        },
+      },
+    });
+
+    const wrapper = await mountView();
+
+    // RM12.50 keeps its sen instead of the admin's TWD formatting.
+    expect(wrapper.text()).toContain("RM 12.50");
+    // TWD + MYR add up to nothing meaningful: no currency is claimed.
+    expect(wrapper.get('[data-testid="checkout-summary"]').text()).toContain(
+      "多幣別",
+    );
+
+    await openCheckoutDetail(wrapper);
+    const detail = wrapper.get('[data-testid="checkout-detail"]').text();
+    expect(detail).toContain("已付款 RM 0.00 / RM 12.50");
+    expect(detail).toContain("金額不符待審（AMOUNT_MISMATCH）");
+    expect(detail).toContain("pi_1 · MYR 12.49");
   });
 
   it("reconciles an open checkout and refreshes its settlement panel", async () => {
