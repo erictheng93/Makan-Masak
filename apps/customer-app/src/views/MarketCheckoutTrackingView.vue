@@ -542,10 +542,10 @@ async function payCheckout() {
   paymentActionMessage.value = null;
   isPaying.value = true;
   try {
+    // No currency/country: the vendors' restaurants decide it on the server,
+    // and a hard-coded TWD here was rejected for every MYR / VND market.
     const result = await orderApi.payMarketCheckout(props.checkoutId, {
       method: "market_online",
-      country: "TW",
-      currency: "TWD",
     });
     checkout.value = result.checkout;
     recordRecentMarketCheckout(result.checkout);

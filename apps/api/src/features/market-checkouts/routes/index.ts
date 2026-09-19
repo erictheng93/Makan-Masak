@@ -63,6 +63,13 @@ import { toCsv } from "../../../shared/utils/csv";
 import { createMarketCheckoutSchema } from "../schemas/validation";
 import { z } from "zod";
 import { generateUUID } from "@makanmasak/utils";
+import {
+  countryForCurrency,
+  currencyFromRestaurantSettings,
+  resolveCurrencyForRequest,
+  resolveSharedRestaurantCurrency,
+  sharedCurrency,
+} from "../../../shared/utils/restaurant-currency";
 
 const app = new Hono<{ Bindings: Env }>();
 const MARKET_CHECKOUT_INDEX_KEY = "market_checkout:index";
@@ -88,8 +95,11 @@ function hasOnlineMarketCheckoutPaymentProvider(
 const payMarketCheckoutSchema = z.lazy(() =>
   z.object({
     method: z.string().min(1).max(50).default("market_online"),
-    country: z.enum(["TW", "MY", "VN"]).optional().default("TW"),
-    currency: z.enum(["TWD", "MYR", "VND"]).optional().default("TWD"),
+    // Optional and only compared: the vendors' restaurants decide the
+    // currency. A client that still sends these gets CURRENCY_MISMATCH when
+    // they disagree, never a charge in the currency it named.
+    country: z.enum(["TW", "MY", "VN"]).optional(),
+    currency: z.enum(["TWD", "MYR", "VND"]).optional(),
     customerInfo: z
       .object({
         name: z.string().optional(),
@@ -527,6 +537,19 @@ app.post("/", optionalCanonicalCustomerAuthMiddleware, async (c) => {
 
       return { vendor, restaurant };
     }),
+  );
+
+  // One checkout is charged as one sum, so every vendor must price in the
+  // same currency. Checked before any child order exists, so a rejection
+  // leaves nothing to compensate.
+  sharedCurrency(
+    vendors.map(({ restaurant }) => ({
+      restaurantId: restaurant.id,
+      currency: currencyFromRestaurantSettings(
+        restaurant.settings,
+        restaurant.id,
+      ),
+    })),
   );
 
   const existingActiveOrders = await Promise.all(
@@ -968,6 +991,17 @@ app.post("/:id/pay", optionalCanonicalCustomerAuthMiddleware, async (c) => {
     });
   }
 
+  // The vendors' restaurants decide the currency — re-resolved here rather
+  // than trusted from creation, since a vendor's setting can change between
+  // the two. The client's currency/country, if sent, is only compared.
+  const { currency, country } = resolveCurrencyForRequest(
+    await resolveSharedRestaurantCurrency(
+      c.env.DB,
+      session.childOrders.map((child) => child.restaurantId),
+    ),
+    parsed.data,
+  );
+
   if (!hasOnlineMarketCheckoutPaymentProvider(c.env, parsed.data.method)) {
     throw new ApiError(
       "MARKET_CHECKOUT_PAYMENT_NOT_CONFIGURED",
@@ -1044,8 +1078,8 @@ app.post("/:id/pay", optionalCanonicalCustomerAuthMiddleware, async (c) => {
       childOrders: payableChildOrders,
       existingChildPayments: session.payment?.childPayments,
       method: parsed.data.method,
-      country: parsed.data.country,
-      currency: parsed.data.currency,
+      country,
+      currency,
       customerInfo: parsed.data.customerInfo,
       providerInput: parsed.data.providerInput,
       requestIdempotencyKey: requestIdempotencyKey ?? undefined,
@@ -1059,8 +1093,8 @@ app.post("/:id/pay", optionalCanonicalCustomerAuthMiddleware, async (c) => {
       checkoutId,
       session: paymentSession,
       method: parsed.data.method,
-      country: parsed.data.country,
-      currency: parsed.data.currency,
+      country,
+      currency,
       provider: parsed.data.method,
       splitMode: providerSplitMode,
       idempotencyKey: requestIdempotencyKey ?? `market-checkout:${checkoutId}`,
@@ -1120,8 +1154,8 @@ app.post("/:id/pay", optionalCanonicalCustomerAuthMiddleware, async (c) => {
   const paymentBase: MarketCheckoutPaymentSummary = {
     status: paymentStatus,
     method: parsed.data.method,
-    currency: parsed.data.currency,
-    country: parsed.data.country,
+    currency,
+    country,
     totalAmount: fromCents(totalAmountCents),
     totalAmountCents,
     paidAmount: fromCents(paidAmountCents),
@@ -2133,6 +2167,15 @@ async function hydrateMarketCheckoutParentPayment(
   };
 
   const existingPayment = session.payment;
+  // A parent row predating the currency column has none; the vendors'
+  // restaurants are the authority for it, not a hard-coded TWD.
+  const fallbackCurrency =
+    row.currency ??
+    existingPayment?.currency ??
+    (await resolveSharedRestaurantCurrency(
+      env.DB,
+      session.childOrders.map((child) => child.restaurantId),
+    ));
   const payment: MarketCheckoutPaymentSummary = existingPayment
     ? {
         ...existingPayment,
@@ -2150,8 +2193,8 @@ async function hydrateMarketCheckoutParentPayment(
     : {
         status: row.status,
         method: row.provider,
-        currency: row.currency ?? "TWD",
-        country: row.country_code ?? "TW",
+        currency: fallbackCurrency,
+        country: row.country_code ?? countryForCurrency(fallbackCurrency),
         totalAmount: row.amount_cents / 100,
         totalAmountCents: row.amount_cents,
         paidAmount: row.paid_amount_cents / 100,

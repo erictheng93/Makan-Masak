@@ -429,9 +429,10 @@ test.describe("夜市市集 (real API)", () => {
 
   test("完成付款: with no payment provider configured, paying must not mark the stall orders paid (#400)", async () => {
     // Sent from outside the browser, with exactly what the pay button sends:
-    // method "market_online", TW/TWD, and the guest token that proves this
-    // diner holds the checkout. Driving the button would assert the same
-    // request against a toast; the response body is the evidence wanted here.
+    // method "market_online" (no currency — the server resolves it from the
+    // vendors), and the guest token that proves this diner holds the
+    // checkout. Driving the button would assert the same request against a
+    // toast; the response body is the evidence wanted here.
     const pay = await apiRequest<{
       checkout?: CheckoutSession;
       payment?: {
@@ -446,7 +447,7 @@ test.describe("夜市市集 (real API)", () => {
     }>(`/api/v1/market-checkouts/${checkoutId}/pay`, {
       method: "POST",
       headers: { "X-Guest-Token": guestTokens[0]! },
-      body: { method: "market_online", country: "TW", currency: "TWD" },
+      body: { method: "market_online" },
     });
 
     const children = [];
