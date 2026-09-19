@@ -42,8 +42,10 @@ import {
 } from "chart.js";
 import { BarChart3 } from "lucide-vue-next";
 import { useI18n } from "@/i18n";
+import { useCurrency } from "@/composables/useCurrency";
 
 const { t } = useI18n();
+const { formatPrice, currencyCode } = useCurrency();
 
 ChartJS.register(
   CategoryScale,
@@ -164,7 +166,7 @@ const createChart = async () => {
               size: 11,
             },
             callback: function (value) {
-              return "$" + (value as number).toLocaleString();
+              return formatPrice(Number(value));
             },
           },
         },
@@ -183,7 +185,7 @@ const createChart = async () => {
               const dataPoint = props.data[context.dataIndex];
               return [
                 t("charts.revenueChart.revenueValue", {
-                  value: `$${value.toLocaleString()}`,
+                  value: formatPrice(value),
                 }),
                 t("charts.revenueChart.dateLabel", { date: dataPoint.date }),
               ];
@@ -216,7 +218,7 @@ const getPeriodLabel = () => {
 };
 
 watch(
-  () => [props.data, props.period],
+  () => [props.data, props.period, currencyCode.value],
   () => {
     if (!props.loading) {
       createChart();
