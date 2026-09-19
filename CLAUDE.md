@@ -586,6 +586,56 @@ app.get("/:id", async (c) => {
 });
 ```
 
+### Money and Currency (Enforced)
+
+Every money column stores **integer cents — major units × 100 — for every
+currency**, TWD included. That is storage, not precision. A currency's real
+precision is its `decimals` in `packages/utils/src/currency.ts`: TWD and VND
+have no fractional unit in circulation, MYR has the sen. So NT$155 is 15500,
+and 15500 is the *only* valid shape for it — 15550 is not a TWD amount.
+
+- **The server decides the currency, never the client.** It lives in
+  `restaurants.settings.currency`; resolve it with
+  `apps/api/src/shared/utils/restaurant-currency.ts`
+  (`resolveRestaurantCurrency`, `resolveSharedRestaurantCurrency`,
+  `displayCurrencyFromRestaurantSettings` for read-only listings). A currency
+  in a request body may only be *compared* (`CURRENCY_MISMATCH`, 400); a
+  `default("TWD")` on a payment schema is the bug this rule exists to stop —
+  it let a TWD stored-value card settle an MYR checkout. Unset means TWD; an
+  unsupported code fails closed with `RESTAURANT_CURRENCY_INVALID` on money
+  paths. All vendors in one market checkout must share a currency
+  (`MIXED_CURRENCY_CHECKOUT`, 409).
+- **Round every derived line as it is computed**, with
+  `roundToCurrencyCents` from `@makanmasak/utils` — tax, service charge,
+  percentage discounts, fees. Rounding only the grand total leaves printed
+  lines that do not add up. Configured amounts (fixed discounts, caps,
+  delivery fees) are *floored* (`floorToCurrencyCents`) so a legacy NT$12.50
+  cap never gives away NT$13. Split anything proportional with
+  `allocateCents` (largest remainder, whole units for TWD) — never
+  `Math.floor` plus "the remainder goes to the last one".
+- **Validate money input against the restaurant's currency**, not against two
+  decimals: `isCurrencyAlignedCents` / `assertCurrencyAlignedCents` →
+  400 `CURRENCY_PRECISION`. `isCentAlignedAmount` only proves "at most two
+  decimals" and accepts NT$12.50.
+- **Format with the amount's own currency.** `formatCurrency(major, currency)`
+  and the apps' `useCurrency` composables carry `decimals` and the symbol;
+  money inputs step by `currencyStepCents` (TWD/VND 1, MYR 0.01). A page that
+  lists several restaurants must format each row in *its* currency — the
+  discovery and order-list payloads carry a `currency` field for this.
+- **Convert at every external boundary, per provider and per currency.**
+  `apps/api/src/shared/utils/provider-money.ts` holds the table (Stripe: TWD
+  ×1, MYR ×1, VND ×100 because VND is zero-decimal there; LINE Pay / ECPay /
+  NewebPay: whole TWD, ×100). Outbound requests carry ISO-4217 `amountMinor` +
+  `currencyExponent` alongside `amountCents`; inbound webhooks and
+  reconciliation must verify **amount and currency** before marking anything
+  paid. Uber Eats units are still unverified (#408).
+- **Keep the Workers global `fetch` unbound.** `this.fetcher(...)` /
+  `this.fetchImpl(...)` throws `Illegal invocation` in workerd, so every real
+  provider or SMS call fails while unit tests that inject a mock stay green.
+  Detach first: `const f = this.fetcher; await f(url, init)`.
+- Open decisions live in issues: MYR 5-sen cash rounding (#405), per-currency
+  credit PIN threshold and caps (#406), cross-currency aggregates (#407).
+
 ### Database Query Strategy (Two Layers — Enforced)
 
 All database queries MUST use one of the two approved layers. Raw string SQL (Layer 3) is **banned** in new code.
