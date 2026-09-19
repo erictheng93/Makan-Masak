@@ -615,7 +615,12 @@
       },
       "GetPopularItemsResponse": {
         "$": "object",
-        "data": "unknown",
+        "data": "object+catchall",
+        "data.dishes": "array",
+        "data.dishes[]": "object+catchall",
+        "data.dishes[].currency": "enum(MYR|TWD|VND)",
+        "data.dishes[].priceCents": "number|null",
+        "data.dishes[].restaurantId": "string",
         "success": "literal(true)"
       },
       "GetRestaurantMenuResponse": {
@@ -652,7 +657,13 @@
       },
       "SearchResponse": {
         "$": "object",
-        "data": "unknown",
+        "data": "object+catchall",
+        "data.results": "array",
+        "data.results[]": "object+catchall",
+        "data.results[].currency": "enum(MYR|TWD|VND)",
+        "data.results[].priceCents": "number|null",
+        "data.results[].restaurantId": "string",
+        "data.total": "number",
         "success": "literal(true)"
       }
     },

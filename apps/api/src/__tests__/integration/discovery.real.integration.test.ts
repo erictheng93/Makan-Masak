@@ -567,6 +567,85 @@ describe("Discovery API — real integration", () => {
     });
   });
 
+  // Results span restaurants, so the one currency the customer app knows (the
+  // last-visited shop's) cannot label them. Each row carries its own.
+  it("labels every dish, service and popular row with its restaurant's currency", async () => {
+    const vendors = [
+      { name: "Currency Vendor Twd", settings: {}, currency: "TWD" },
+      {
+        name: "Currency Vendor Myr",
+        settings: { currency: "MYR" },
+        currency: "MYR",
+      },
+      // A broken setting is labelled as the default rather than failing the page.
+      {
+        name: "Currency Vendor Bad",
+        settings: { currency: "USD" },
+        currency: "TWD",
+      },
+    ];
+    const expected = new Map<string, string>();
+    for (const [index, vendor] of vendors.entries()) {
+      const restaurant = await seed.restaurant({
+        name: vendor.name,
+        settings: vendor.settings,
+      });
+      const restaurantId = String(restaurant.id);
+      expected.set(restaurantId, vendor.currency);
+      const dish = await seed.menuItem(restaurantId, {
+        isAvailable: true,
+        name: `Currency Bao ${index}`,
+        price: 12.5,
+        orderCount: 10 + index,
+      });
+      await seedSearchIndex(testApp, restaurantId, [
+        {
+          menuItemId: dish.id,
+          name: `Currency Bao ${index}`,
+          price: 12.5,
+        },
+      ]);
+      await testApp.testDb.drizzle.insert(restaurantServiceItems).values({
+        restaurantId,
+        name: `Currency Service ${index}`,
+        serviceType: "pickup",
+        priceCents: 1250,
+        isActive: true,
+        isPublic: true,
+        sortOrder: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    }
+
+    const [dishRes, serviceRes, popularRes] = await Promise.all([
+      testApp.app.fetch(
+        new Request("https://test/api/v1/discovery/search?q=Currency+Bao"),
+      ),
+      testApp.app.fetch(
+        new Request(
+          "https://test/api/v1/discovery/services?q=Currency+Service",
+        ),
+      ),
+      testApp.app.fetch(new Request("https://test/api/v1/discovery/popular")),
+    ]);
+    expect([dishRes.status, serviceRes.status, popularRes.status]).toEqual([
+      200, 200, 200,
+    ]);
+    const dishes = (await readData<DishSearch>(dishRes)).results;
+    const services = (await readData<ServiceSearch>(serviceRes)).results;
+    const popular = (
+      await readData<ServiceData<DiscoveryService["getPopular"]>>(popularRes)
+    ).dishes;
+
+    for (const rows of [dishes, services, popular]) {
+      expect(rows).toHaveLength(3);
+      for (const row of rows) {
+        expect(row.currency).toBe(expected.get(row.restaurantId));
+      }
+    }
+  });
+
   it("returns market context from global dish and service searches", async () => {
     const market = await seedMarket(testApp, {
       slug: "global-context-market",

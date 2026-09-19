@@ -1,3 +1,5 @@
+import type { CurrencyCode } from "@makanmasak/utils";
+
 export interface DishSearchResult {
   resultType: "menu_item" | "product";
   menuItemId: number;
@@ -5,6 +7,8 @@ export interface DishSearchResult {
   price: number;
   priceCents: number | null;
   priceLabel: string | null;
+  /** The listing restaurant's currency — results span restaurants. */
+  currency: CurrencyCode;
   categoryName: string | null;
   restaurantId: string;
   restaurantName: string;
@@ -51,6 +55,8 @@ export interface ServiceSearchResult {
   serviceType: string;
   priceCents: number | null;
   priceLabel: string | null;
+  /** The listing restaurant's currency — results span restaurants. */
+  currency: CurrencyCode;
   durationMinutes: number | null;
   requiresBooking: boolean;
   bookingUrl: string | null;

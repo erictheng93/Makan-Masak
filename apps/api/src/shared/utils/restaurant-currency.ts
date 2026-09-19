@@ -94,6 +94,27 @@ export function currencyFromRestaurantSettings(
   return currency;
 }
 
+/**
+ * Lenient twin of `currencyFromRestaurantSettings`, for read-only listings
+ * that label prices from many restaurants at once (discovery search, popular
+ * dishes, service search, a customer's order history).
+ *
+ * An invalid setting falls back to `DEFAULT_CURRENCY` instead of throwing.
+ * The strict variant fails closed because a payment would otherwise settle in
+ * the wrong currency; here nothing is charged, and a 500 would take down a
+ * whole cross-restaurant page over one merchant's broken JSON. The payment
+ * paths still refuse that restaurant, so the fallback label can never become
+ * a charge. Never use this where the result decides money.
+ */
+export function displayCurrencyFromRestaurantSettings(
+  settings: unknown,
+): CurrencyCode {
+  return (
+    normalizeCurrencyCode(readSettingsObject(settings)?.currency) ??
+    DEFAULT_CURRENCY
+  );
+}
+
 /** The currency a single restaurant is paid in. */
 export async function resolveRestaurantCurrency(
   d1: Env["DB"],

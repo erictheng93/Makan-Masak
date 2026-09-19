@@ -233,7 +233,7 @@ describe("DiscoveryService", () => {
     };
     const { service, kv } = createService({
       "search:query:version": "3",
-      "search:query:v:3:nasilemak:m:market-1:p:2:l:5": cached,
+      "search:query:cur1:v:3:nasilemak:m:market-1:p:2:l:5": cached,
     });
 
     await expect(
@@ -257,7 +257,7 @@ describe("DiscoveryService", () => {
   it("hydrates cached dish search scope when the cache entry is legacy", async () => {
     const { service } = createService({
       "search:query:version": "4",
-      "search:query:v:4:m:market-1:p:1:l:20": {
+      "search:query:cur1:v:4:m:market-1:p:1:l:20": {
         results: [],
         total: 0,
       },
@@ -635,6 +635,7 @@ describe("DiscoveryService", () => {
       categoryName: "Noodles",
       restaurantId: "restaurant-1",
       restaurantName: "Makan",
+      restaurantSettings: { currency: "MYR" },
       district: "Central",
       businessHours: null,
       supportsTakeaway: true,
@@ -653,7 +654,16 @@ describe("DiscoveryService", () => {
       dishSearchIndex: [
         [prefixRow],
         [{ count: 1 }],
-        [{ ...prefixRow, menuItemId: 2, dishName: "Curry Laksa" }],
+        [
+          {
+            ...prefixRow,
+            menuItemId: 2,
+            dishName: "Curry Laksa",
+            restaurantId: "restaurant-2",
+            // A broken setting labels as the default, never fails the page.
+            restaurantSettings: { currency: "USD" },
+          },
+        ],
       ],
     });
 
@@ -668,6 +678,7 @@ describe("DiscoveryService", () => {
           menuItemId: 1,
           dishName: "Laksa",
           price: 12.5,
+          currency: "MYR",
           detailUrl: "/api/v1/restaurants/restaurant-1",
           menuItemUrl: "/api/v1/menu/items/1",
         },
@@ -675,6 +686,7 @@ describe("DiscoveryService", () => {
           menuItemId: 2,
           dishName: "Curry Laksa",
           price: 12.5,
+          currency: "TWD",
         },
       ],
     });
@@ -683,7 +695,7 @@ describe("DiscoveryService", () => {
       expect.objectContaining({ namespace: "dishes" }),
     );
     expect(
-      JSON.parse(values.get("search:query:v:11:laksa:p:1:l:10") ?? "{}"),
+      JSON.parse(values.get("search:query:cur1:v:11:laksa:p:1:l:10") ?? "{}"),
     ).toMatchObject({ total: 2 });
   });
 
@@ -770,7 +782,7 @@ describe("DiscoveryService", () => {
     expect(
       JSON.parse(
         values.get(
-          "search:query:v:13:takeaway:c:Taipei:d:East:ct:product:" +
+          "search:query:cur1:v:13:takeaway:c:Taipei:d:East:ct:product:" +
             "cat:Drinks:pmin:1:pmax:99:m:market-1:p:2:l:5",
         ) ?? "{}",
       ),
@@ -853,6 +865,7 @@ describe("DiscoveryService", () => {
             tags: ["reservation"],
             restaurantId: "restaurant-1",
             restaurantName: "Makan",
+            restaurantSettings: { currency: "VND" },
             district: "Central",
             city: "Taipei",
             latitude: null,
@@ -908,6 +921,7 @@ describe("DiscoveryService", () => {
           resultType: "service",
           serviceItemId: 10,
           serviceType: "booking",
+          currency: "VND",
           detailUrl: "/api/v1/restaurants/restaurant-1",
           serviceItemsUrl: "/api/v1/restaurants/restaurant-1/service-items",
         },
@@ -1294,6 +1308,7 @@ describe("DiscoveryService", () => {
       categoryName: "Noodles",
       restaurantId: "restaurant-1",
       restaurantName: "Makan",
+      restaurantSettings: { currency: "MYR" },
       district: "Central",
       businessHours: null,
       supportsTakeaway: true,
@@ -1336,6 +1351,7 @@ describe("DiscoveryService", () => {
             price: null,
             priceCents: null,
             tags: null,
+            restaurantSettings: null,
           },
         ],
       ],
@@ -1403,8 +1419,8 @@ describe("DiscoveryService", () => {
     await expect(service.getPopular()).resolves.toMatchObject({
       keywords: ["laksa"],
       dishes: [
-        { menuItemId: 1, price: 9 },
-        { menuItemId: 2, price: 0, tags: [] },
+        { menuItemId: 1, price: 9, currency: "MYR" },
+        { menuItemId: 2, price: 0, tags: [], currency: "TWD" },
       ],
       restaurants: [],
     });
