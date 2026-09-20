@@ -339,11 +339,11 @@ export class RestaurantService extends BaseService {
                   .from(orders)
                   .where(eq(orders.restaurantId, id)),
               ),
-              sql`upper(trim(coalesce(
-                json_extract(${restaurants.settings}, '$.currency'),
-                json_extract(json_extract(${restaurants.settings}, '$'), '$.currency'),
+              sql`upper(coalesce(
+                nullif(trim(json_extract(${restaurants.settings}, '$.currency')), ''),
+                nullif(trim(json_extract(json_extract(${restaurants.settings}, '$'), '$.currency')), ''),
                 'TWD'
-              ))) = ${settingsWriteCurrency}`,
+              )) = ${settingsWriteCurrency}`,
             ),
           )
         : eq(restaurants.id, id);

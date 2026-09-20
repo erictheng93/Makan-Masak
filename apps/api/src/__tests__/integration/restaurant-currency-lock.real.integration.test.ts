@@ -155,4 +155,29 @@ describe("restaurant currency lock — real integration", () => {
     const [row] = await testApp.testDb.drizzle.select().from(restaurants);
     expect(row.settings).toMatchObject({ currency: "MYR" });
   });
+
+  it.each([
+    ["blank", "", { allowGuestOrders: false }],
+    ["blank", "", {}],
+    ["blank", "", { currency: "TWD" }],
+    ["whitespace", "   ", { allowGuestOrders: false }],
+    ["whitespace", "   ", {}],
+    ["whitespace", "   ", { currency: "TWD" }],
+  ])(
+    "treats %s legacy currency as TWD for an ordered shop update %#",
+    async (_label, legacyCurrency, settings) => {
+      const restaurant = await seed.restaurant({
+        settings: { currency: legacyCurrency },
+      });
+      await seed.order(restaurant.id);
+      const service = new DatabaseRestaurantService(
+        testApp.env.DB,
+        testApp.env,
+      );
+
+      await expect(
+        service.updateRestaurant(restaurant.id, { settings }),
+      ).resolves.toMatchObject({ id: restaurant.id });
+    },
+  );
 });
