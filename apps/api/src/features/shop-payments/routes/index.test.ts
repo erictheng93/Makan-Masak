@@ -161,13 +161,21 @@ describe("tenancy", () => {
   );
 
   it("refuses an owner with no restaurant of their own", async () => {
-    auth.user = { id: "user-9", role: 1, restaurantId: null } as AuthUser;
+    auth.user = {
+      id: "user-9",
+      role: 1,
+      restaurantId: null,
+    } as unknown as AuthUser;
     const { response } = await call("/rest-1");
     expect(response.status).toBe(403);
   });
 
   it("lets a platform admin act for any restaurant", async () => {
-    auth.user = { id: "1", role: 0, restaurantId: null } as AuthUser;
+    auth.user = {
+      id: "1",
+      role: 0,
+      restaurantId: null,
+    } as unknown as AuthUser;
     const { response } = await call("/rest-2");
 
     expect(response.status).toBe(200);

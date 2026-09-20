@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, type Mock } from "vitest";
+import type { ShopPaymentCredentialService } from "./ShopPaymentCredentialService";
 import { ApiError } from "../../../shared/utils/api-error";
 import type { Env } from "../../../types/env";
 import type { MarketCheckoutProviderSplitGatewayInput } from "../../market-checkouts/services/MarketCheckoutPaymentProvider";
@@ -23,7 +24,12 @@ const env = {} as Env;
  * Answers with one merchant account per restaurant. The default has every
  * restaurant on the same account, which is the case a shop wallet can settle.
  */
-function credentialsStub(byRestaurant: Record<string, string> = {}) {
+function credentialsStub(byRestaurant: Record<string, string> = {}): Pick<
+  ShopPaymentCredentialService,
+  "loadGatewayCredentials"
+> & {
+  loadGatewayCredentials: Mock;
+} {
   return {
     loadGatewayCredentials: vi.fn(async (restaurantId: string) => ({
       provider: "tng" as const,
@@ -31,7 +37,7 @@ function credentialsStub(byRestaurant: Record<string, string> = {}) {
       environment: "sandbox" as const,
       secret: { merchantKey: "never-on-the-wire" },
     })),
-  } as never;
+  };
 }
 
 function gatewayStub(response: Partial<ShopWalletGatewayResponse> = {}) {
