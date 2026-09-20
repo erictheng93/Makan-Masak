@@ -28,3 +28,14 @@ export * from "./coupon";
 export * from "./consents";
 export * from "./auth-providers";
 export * from "./broadcasts";
+
+// Onboarding locale: the country a shop trades in decides its currency,
+// timezone and phone format. See locale.ts for why it is the single source.
+export {
+  COUNTRY_PROFILES,
+  SUPPORTED_COUNTRIES,
+  citiesForCountry,
+  normalizeCountryCode,
+  type CountryProfile,
+  type SupportedCountryCode,
+} from "./locale";
