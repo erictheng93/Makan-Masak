@@ -223,6 +223,144 @@ describe("CashierView", () => {
     });
   });
 
+  // Malaysia's 1 and 2 sen coins are out of circulation, so a cash bill is
+  // collected to the nearest 5 sen (#405). The till has to show the figure it
+  // is asking for, and give change against it.
+  describe("MYR cash rounding", () => {
+    async function selectOrderTotalling(total: number) {
+      vi.mocked(api.get).mockImplementation(async (url: string) => {
+        if (url === "/orders") {
+          return {
+            data: {
+              success: true,
+              data: [
+                {
+                  id: "019fc320-c159-700c-a66c-39c9b98ed964",
+                  orderNumber: "ORD-405",
+                  status: "ready",
+                  paymentStatus: "pending",
+                  createdAt: Date.parse("2026-08-18T12:00:00.000Z"),
+                  subtotal: total,
+                  totalAmount: total,
+                  items: [],
+                },
+              ],
+            },
+          } as never;
+        }
+        return { data: { success: true, data: [] } } as never;
+      });
+      const wrapper = mount(CashierView);
+      await flushPromises();
+      await wrapper.find(".cursor-pointer").trigger("click");
+      return wrapper;
+    }
+
+    it("asks for the rounded figure and shows where the 2 sen came from", async () => {
+      setRestaurantCurrency("MYR");
+      const wrapper = await selectOrderTotalling(10.33);
+      await wrapper.get('[data-testid="received-amount"]').setValue(20);
+
+      expect(
+        wrapper.get('[data-testid="cash-rounding-adjustment"]').text(),
+      ).toBe("+0.02");
+      expect(wrapper.get('[data-testid="cash-amount-due"]').text()).toBe(
+        "10.35",
+      );
+      // Change is against what is collected, not against the order total.
+      expect(wrapper.get('[data-testid="cash-change"]').text()).toBe("9.65");
+      clearRestaurantCurrency();
+    });
+
+    it("rounds down and signs the adjustment when the total ends in 2 sen", async () => {
+      setRestaurantCurrency("MYR");
+      const wrapper = await selectOrderTotalling(10.32);
+      await wrapper.get('[data-testid="received-amount"]').setValue(20);
+
+      expect(
+        wrapper.get('[data-testid="cash-rounding-adjustment"]').text(),
+      ).toBe("-0.02");
+      expect(wrapper.get('[data-testid="cash-amount-due"]').text()).toBe(
+        "10.3",
+      );
+      clearRestaurantCurrency();
+    });
+
+    it("blocks a payment short of the rounded figure with the existing message", async () => {
+      setRestaurantCurrency("MYR");
+      const wrapper = await selectOrderTotalling(10.33);
+      await wrapper.get('[data-testid="received-amount"]').setValue(10.34);
+
+      expect(
+        wrapper.get('[data-testid="pay-btn"]').attributes("disabled"),
+      ).toBeDefined();
+      expect(wrapper.get('[data-testid="cash-insufficient"]').text()).toBe(
+        "cashier.cashInsufficient:0.01",
+      );
+      clearRestaurantCurrency();
+    });
+
+    it("shows no rounding line for a total already on the 5 sen step", async () => {
+      setRestaurantCurrency("MYR");
+      const wrapper = await selectOrderTotalling(10.35);
+      await wrapper.get('[data-testid="received-amount"]').setValue(20);
+
+      expect(
+        wrapper.find('[data-testid="cash-rounding-adjustment"]').exists(),
+      ).toBe(false);
+      expect(wrapper.get('[data-testid="cash-amount-due"]').text()).toBe(
+        "10.35",
+      );
+      clearRestaurantCurrency();
+    });
+
+    it("shows no rounding line once a card is selected", async () => {
+      setRestaurantCurrency("MYR");
+      const wrapper = await selectOrderTotalling(10.33);
+      await wrapper.get('[data-selected="false"]').trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(
+        wrapper.find('[data-testid="cash-rounding-adjustment"]').exists(),
+      ).toBe(false);
+      clearRestaurantCurrency();
+    });
+
+    it("leaves a TWD till untouched", async () => {
+      clearRestaurantCurrency();
+      const wrapper = await selectOrderTotalling(350);
+      await wrapper.get('[data-testid="received-amount"]').setValue(400);
+
+      expect(
+        wrapper.find('[data-testid="cash-rounding-adjustment"]').exists(),
+      ).toBe(false);
+      expect(wrapper.get('[data-testid="cash-amount-due"]').text()).toBe("350");
+      expect(wrapper.get('[data-testid="cash-change"]').text()).toBe("50");
+    });
+
+    it("sends the collected amount and the unrounded order total", async () => {
+      setRestaurantCurrency("MYR");
+      vi.mocked(api.post).mockResolvedValue({
+        data: { success: true, data: { transactionId: "txn-405" } },
+      } as never);
+      const wrapper = await selectOrderTotalling(10.33);
+      await wrapper.get('[data-testid="received-amount"]').setValue(20);
+      await wrapper.get('[data-testid="pay-btn"]').trigger("click");
+      await flushPromises();
+
+      expect(api.post).toHaveBeenCalledWith(
+        "/payments",
+        expect.objectContaining({ amount: 10.35, expectedTotal: 10.33 }),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            "Idempotency-Key": expect.any(String),
+          }),
+        }),
+      );
+      clearRestaurantCurrency();
+    });
+  });
+
   it("settles through the real payment endpoint, carrying an idempotency key", async () => {
     vi.mocked(api.post).mockResolvedValue({
       data: { success: true, data: { transactionId: "txn-9" } },
