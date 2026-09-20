@@ -26,7 +26,9 @@ describe("market join currency guard — real D1", () => {
   let app: RealIntegrationTestApp;
   let seed: SeedHelpers;
   beforeAll(async () => {
-    app = await createRealIntegrationTestApp();
+    app = await createRealIntegrationTestApp({
+      env: { DEV_CORS_ORIGINS: "https://test" },
+    });
     seed = buildSeedHelpers(app.testDb);
   });
   afterAll(async () => {
@@ -242,4 +244,44 @@ describe("market join currency guard — real D1", () => {
       service.updateRestaurant(vendor.id, { settings: { currency: "TWD" } }),
     ).rejects.toMatchObject({ code: "MARKET_VENDOR_CURRENCY_MISMATCH" });
   });
+  it.each([
+    { currency: "TWD", expectedStatus: 200 },
+    { currency: "MYR", expectedStatus: 409 },
+  ])(
+    "approves matching and refuses mismatched vendor 101 ($currency)",
+    async ({ currency, expectedStatus }) => {
+      const { market, peer, vendor, request, token } = await setup(currency);
+      const statements = Array.from({ length: 99 }, (_, index) => {
+        const id = `large-market-peer-${index}`;
+        return [
+          app.env.DB.prepare(
+            `INSERT INTO restaurants
+          (id, name, type, category, address, district, city, phone, settings, created_at_ms, updated_at_ms)
+          SELECT ?, name, type, category, address, district, city, phone, settings, created_at_ms, updated_at_ms
+          FROM restaurants WHERE id = ?`,
+          ).bind(id, peer.id),
+          app.env.DB.prepare(
+            "INSERT INTO restaurant_market_memberships (restaurant_id, market_id, joined_at_ms) VALUES (?, ?, ?)",
+          ).bind(id, market.id, Date.now()),
+        ];
+      }).flat();
+      await app.env.DB.batch(statements);
+      const response = await post(`join-requests/${request.id}/approve`, token);
+      expect(response.status).toBe(expectedStatus);
+      if (expectedStatus === 409) {
+        await expect(response.json()).resolves.toMatchObject({
+          error: { code: "MARKET_VENDOR_CURRENCY_MISMATCH" },
+        });
+        expect(
+          await app.testDb.drizzle.select().from(marketJoinRequests),
+        ).toMatchObject([{ status: "pending", resolvedAt: null }]);
+      }
+      expect(
+        await app.testDb.drizzle
+          .select()
+          .from(restaurantMarketMemberships)
+          .where(eq(restaurantMarketMemberships.restaurantId, vendor.id)),
+      ).toHaveLength(expectedStatus === 200 ? 1 : 0);
+    },
+  );
 });

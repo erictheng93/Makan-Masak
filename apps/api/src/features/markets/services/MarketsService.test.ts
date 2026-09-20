@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
+import type { SQL } from "drizzle-orm";
 
 const mocks = vi.hoisted(() => {
   const cache = {
@@ -1257,6 +1259,69 @@ describe("MarketsService", () => {
     expect(mocks.db.insert).not.toHaveBeenCalled();
     expect(mocks.db.update).not.toHaveBeenCalled();
   });
+
+  it.each(["TWD", "MYR"])(
+    "enforces D1's parameter budget and compares currencies across batches (%s)",
+    async (lastPeerCurrency) => {
+      const { service } = createService();
+      const peers = Array.from({ length: 100 }, (_, index) => ({
+        restaurantId: `peer-${index}`,
+      }));
+      const fixtureDb = createSelectFixtureDb(fixtureTables, {
+        markets: [[{ id: "market-1", deletedAt: null }]],
+        restaurantMarketMemberships: [[], peers],
+        restaurants: [
+          [
+            "candidate",
+            ...peers.slice(0, 99).map((peer) => peer.restaurantId),
+          ].map((id) => ({ id, settings: { currency: "TWD" } })),
+          [
+            {
+              id: peers[99].restaurantId,
+              settings: { currency: lastPeerCurrency },
+            },
+          ],
+        ],
+      });
+      // Model the production D1 binding limit, including when the local emulator
+      // accepts a larger SQLite limit. All queries still use the real resolver.
+      const dialect = new SQLiteSyncDialect();
+      mocks.db.select.mockImplementation((...args: unknown[]) => {
+        const builder = fixtureDb.select(...args);
+        const where = builder.where;
+        builder.where = (condition: SQL) => {
+          if (dialect.sqlToQuery(condition).params.length > 100) {
+            throw new Error("D1_ERROR: too many SQL variables");
+          }
+          return where(condition);
+        };
+        return builder;
+      });
+      mockMutationResults({
+        restaurantMarketMemberships: {
+          insert: [
+            [{ id: 101, restaurantId: "candidate", marketId: "market-1" }],
+          ],
+        },
+      });
+      const result = service.addVendor("market-1", {
+        restaurantId: "candidate",
+      });
+      if (lastPeerCurrency === "TWD") {
+        await expect(result).resolves.toMatchObject({
+          id: 101,
+          restaurantId: "candidate",
+        });
+      } else {
+        await expect(result).rejects.toMatchObject({
+          status: 409,
+          code: "MARKET_VENDOR_CURRENCY_MISMATCH",
+          details: { currencies: ["MYR", "TWD"] },
+        });
+        expect(mocks.db.insert).not.toHaveBeenCalled();
+      }
+    },
+  );
 
   it("propagates invalid vendor configuration instead of disguising it as a mismatch", async () => {
     const { service } = createService();

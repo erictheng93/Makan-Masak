@@ -41,10 +41,15 @@ import {
 import { evaluateMarketPublicReadiness } from "../utils/publicReadiness";
 import { generateUUID } from "@makanmasak/utils";
 import { ApiError } from "../../../shared/utils/api-error";
-import { resolveSharedRestaurantCurrency } from "../../../shared/utils/restaurant-currency";
+import {
+  resolveSharedRestaurantCurrency,
+  sharedCurrency,
+} from "../../../shared/utils/restaurant-currency";
 
 const MARKET_CACHE_VERSION_KEY = "markets:version";
 const OPEN_NOW_VENDOR_SCAN_LIMIT = 50000;
+// The shared resolver binds one parameter per restaurant; D1 allows 100.
+const CURRENCY_RESOLUTION_BATCH_SIZE = 100;
 
 export interface MarketFilters {
   q?: string;
@@ -1561,10 +1566,27 @@ export class MarketsService {
       );
     let currency;
     try {
-      currency = await resolveSharedRestaurantCurrency(this.d1, [
+      const vendorIds = [
         input.restaurantId,
         ...peers.map((peer) => peer.restaurantId),
-      ]);
+      ];
+      const batchCurrencies = [];
+      for (
+        let offset = 0;
+        offset < vendorIds.length;
+        offset += CURRENCY_RESOLUTION_BATCH_SIZE
+      ) {
+        const batch = vendorIds.slice(
+          offset,
+          offset + CURRENCY_RESOLUTION_BATCH_SIZE,
+        );
+        batchCurrencies.push({
+          restaurantId: batch[0],
+          currency: await resolveSharedRestaurantCurrency(this.d1, batch),
+        });
+      }
+      // Each batch may be internally consistent but differ from another one.
+      currency = sharedCurrency(batchCurrencies);
     } catch (error) {
       if (
         error instanceof ApiError &&
