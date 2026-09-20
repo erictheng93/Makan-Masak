@@ -81,6 +81,7 @@ function createPlatformDb() {
       address TEXT NOT NULL,
       district TEXT NOT NULL,
       city TEXT NOT NULL DEFAULT '台中市',
+      country_code TEXT,
       phone TEXT NOT NULL,
       email TEXT,
       website TEXT,
@@ -230,6 +231,7 @@ function createApplicationBody() {
     address: "12 Jalan Tun Sambanthan, Brickfields",
     district: "Brickfields",
     city: "Kuala Lumpur",
+    countryCode: "MY",
     planId: "standard",
     latitude: 24.147736,
     longitude: 120.673648,
@@ -252,11 +254,11 @@ async function managementToken() {
 }
 
 describe("Onboarding public API workflow — real integration", () => {
-  it("accepts a legacy application without address and provisions fallback location", async () => {
+  it("accepts an application without address and preserves its selected city", async () => {
     const db = createManagementDb();
     const platformDb = createPlatformDb();
     const env = createEnv(db, platformDb);
-    const { address, district, city, ...legacyBody } = createApplicationBody();
+    const { address, district, ...legacyBody } = createApplicationBody();
     const created = await app.fetch(
       new Request("https://management.test/api/v1/onboarding/applications", {
         method: "POST",
@@ -289,7 +291,7 @@ describe("Onboarding public API workflow — real integration", () => {
     };
     expect(row.address).toMatch(/^Onboarding GPS /);
     expect(row.district).toMatch(/^onboarding-/);
-    expect(row.city).toBe("台中市");
+    expect(row.city).toBe("Kuala Lumpur");
   });
 
   it("rotates an expired setup token and appends a credential delivery audit trail", async () => {

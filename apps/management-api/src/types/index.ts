@@ -9,6 +9,7 @@
  */
 
 import type { KVNamespace } from "@cloudflare/workers-types";
+import type { SupportedCountryCode } from "@makanmasak/shared-types";
 
 // ============================================================
 // Environment Types
@@ -413,7 +414,10 @@ export interface OnboardingApplication {
   contactPhone: string;
   address?: string;
   district?: string;
-  city?: string;
+  city: string;
+  countryCode: SupportedCountryCode;
+  marketId?: string;
+  stallNumber?: string;
   planId: OnboardingPlanId | null;
   latitude?: number;
   longitude?: number;
@@ -441,7 +445,10 @@ export interface CreateApplicationRequest {
   contactPhone: string;
   address?: string;
   district?: string;
-  city?: string;
+  city: string;
+  countryCode: SupportedCountryCode;
+  marketId?: string;
+  stallNumber?: string;
   planId?: OnboardingPlanId | null;
   latitude: number;
   longitude: number;

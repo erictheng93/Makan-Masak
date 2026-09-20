@@ -7,6 +7,14 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { z } from "zod";
+import { markets } from "@makanmasak/database";
+import {
+  citiesForCountry,
+  normalizeCountryCode,
+  type SupportedCountryCode,
+} from "@makanmasak/shared-types";
+import { and, eq, isNull } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/d1";
 import {
   ApiError,
   badRequest,
@@ -22,21 +30,43 @@ const router = new Hono<{ Bindings: ManagementEnv }>();
 // Validation Schemas
 // ============================================================
 
-const createApplicationSchema = z.object({
-  businessName: z.string().min(2).max(100),
-  contactName: z.string().min(2).max(100),
-  contactEmail: z.email(),
-  contactPhone: z.string().min(8).max(20),
-  address: z.string().trim().min(3).max(200).optional(),
-  district: z.string().trim().min(1).max(100).optional(),
-  city: z.string().trim().min(1).max(100).optional(),
-  planId: z
-    .enum(["standard", "professional", "enterprise", "trial"])
-    .nullable()
-    .optional(),
-  latitude: z.number().min(-90).max(90),
-  longitude: z.number().min(-180).max(180),
-});
+export const applicationSchema = z
+  .object({
+    businessName: z.string().min(2).max(100),
+    contactName: z.string().min(2).max(100),
+    contactEmail: z.email(),
+    contactPhone: z.string().min(8).max(20),
+    address: z.string().trim().min(3).max(200).optional(),
+    district: z.string().trim().min(1).max(100).optional(),
+    city: z.string().trim().min(1).max(100),
+    countryCode: z
+      .string()
+      .trim()
+      .transform((value) => normalizeCountryCode(value))
+      .refine((value): value is SupportedCountryCode => value !== null, {
+        message: "countryCode must be one of TW, MY",
+      }),
+    marketId: z.string().trim().min(1).max(64).optional(),
+    stallNumber: z.string().trim().min(1).max(32).optional(),
+    planId: z
+      .enum(["standard", "professional", "enterprise", "trial"])
+      .nullable()
+      .optional(),
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  })
+  .superRefine((value, ctx) => {
+    if (
+      value.countryCode &&
+      !citiesForCountry(value.countryCode).includes(value.city)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["city"],
+        message: `city ${value.city} is not in ${value.countryCode}`,
+      });
+    }
+  });
 
 async function requireApplicationSecret(
   c: Context<{ Bindings: ManagementEnv }>,
@@ -83,7 +113,51 @@ router.post("/applications", async (c) => {
     }
 
     const body = await c.req.json();
-    const validated = createApplicationSchema.parse(body);
+    const parsed = applicationSchema.safeParse(body);
+    if (!parsed.success) {
+      const cityMismatch = parsed.error.issues.some(
+        (issue) => issue.path[0] === "city" && issue.code === "custom",
+      );
+      throw badRequest(
+        cityMismatch
+          ? "City is not in the selected country"
+          : "Validation failed",
+        cityMismatch ? "CITY_NOT_IN_COUNTRY" : "VALIDATION_ERROR",
+        parsed.error.issues,
+      );
+    }
+    const validated = parsed.data;
+
+    if (validated.marketId) {
+      if (!c.env.PLATFORM_DB) {
+        throw new ApiError(
+          "PLATFORM_DB_UNAVAILABLE",
+          "Platform database is unavailable",
+          500,
+        );
+      }
+      const platformDb = drizzle(c.env.PLATFORM_DB);
+      const [market] = await platformDb
+        .select({ city: markets.city })
+        .from(markets)
+        .where(
+          and(
+            eq(markets.id, validated.marketId),
+            eq(markets.isActive, true),
+            isNull(markets.deletedAt),
+          ),
+        )
+        .limit(1);
+      if (!market) {
+        throw badRequest("Market not found", "MARKET_NOT_FOUND");
+      }
+      if (market.city !== validated.city) {
+        throw badRequest(
+          "Market is not in the selected city",
+          "MARKET_NOT_IN_CITY",
+        );
+      }
+    }
 
     // Get request metadata
     const userAgent = c.req.header("user-agent") || "unknown";
@@ -158,6 +232,9 @@ router.get("/applications/:id", async (c) => {
         address: application.address,
         district: application.district,
         city: application.city,
+        countryCode: application.countryCode,
+        marketId: application.marketId,
+        stallNumber: application.stallNumber,
         latitude: application.latitude,
         longitude: application.longitude,
         planId: application.planId,

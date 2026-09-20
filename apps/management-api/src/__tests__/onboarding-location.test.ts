@@ -50,6 +50,8 @@ describe("OnboardingService location capture", () => {
       contactName: "Lin Mei",
       contactEmail: "mei@example.com",
       contactPhone: "0912345678",
+      countryCode: "TW",
+      city: "台中市",
       planId: "standard",
       latitude: 24.147736,
       longitude: 120.673648,
@@ -64,6 +66,8 @@ describe("OnboardingService location capture", () => {
       contactName: "Chen Yu",
       contactEmail: "chen@example.com",
       contactPhone: "0987654321",
+      countryCode: "TW",
+      city: "台中市",
       planId: "standard",
       latitude: 24.147736,
       longitude: 120.673648,
@@ -83,6 +87,10 @@ describe("OnboardingService location capture", () => {
       contactName: "Lin Mei",
       contactEmail: "mei@example.com",
       contactPhone: "0912345678",
+      countryCode: "TW",
+      city: "台中市",
+      marketId: "market-fengchia",
+      stallNumber: "A-12",
       planId: "standard",
       latitude: 24.147736,
       longitude: 120.673648,
@@ -90,19 +98,34 @@ describe("OnboardingService location capture", () => {
 
     expect(application.latitude).toBe(24.147736);
     expect(application.longitude).toBe(120.673648);
+    expect(application.countryCode).toBe("TW");
+    expect(application.city).toBe("台中市");
+    expect(application.marketId).toBe("market-fengchia");
+    expect(application.stallNumber).toBe("A-12");
 
     const row = await db
       .prepare(
-        `SELECT latitude, longitude
+        `SELECT latitude, longitude, country_code, city, market_id, stall_number
          FROM onboarding_applications
          WHERE id = ?`,
       )
       .bind(application.id)
-      .first<{ latitude: number; longitude: number }>();
+      .first<{
+        latitude: number;
+        longitude: number;
+        country_code: string;
+        city: string;
+        market_id: string;
+        stall_number: string;
+      }>();
 
     expect(row).toEqual({
       latitude: 24.147736,
       longitude: 120.673648,
+      country_code: "TW",
+      city: "台中市",
+      market_id: "market-fengchia",
+      stall_number: "A-12",
     });
   });
 });

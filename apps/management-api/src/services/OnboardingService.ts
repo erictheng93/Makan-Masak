@@ -145,37 +145,32 @@ export class OnboardingService {
       throw new Error("Unable to generate an available subdomain");
     }
 
-    await this.env.MANAGEMENT_DB.prepare(
-      `INSERT INTO onboarding_applications (
-        id, business_name, contact_name, contact_email, contact_phone,
-        address, district, city, plan_id, latitude, longitude, requested_subdomain, assigned_subdomain, status,
-        application_secret_hash, ip_address, user_agent, created_at, submitted_at,
-        updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-      .bind(
-        id,
-        data.businessName,
-        data.contactName,
-        data.contactEmail,
-        data.contactPhone,
-        data.address ?? null,
-        data.district ?? null,
-        data.city ?? null,
-        data.planId ?? "trial",
-        data.latitude,
-        data.longitude,
-        null,
-        assignedSubdomain,
-        "submitted",
-        applicationSecretHash,
-        metadata?.ipAddress || null,
-        metadata?.userAgent || null,
-        now,
-        now,
-        now,
-      )
-      .run();
+    const managementDb = drizzle(this.env.MANAGEMENT_DB);
+    await managementDb.insert(onboardingApplications).values({
+      id,
+      businessName: data.businessName,
+      contactName: data.contactName,
+      contactEmail: data.contactEmail,
+      contactPhone: data.contactPhone,
+      address: data.address ?? null,
+      district: data.district ?? null,
+      city: data.city,
+      countryCode: data.countryCode,
+      marketId: data.marketId ?? null,
+      stallNumber: data.stallNumber ?? null,
+      planId: data.planId ?? "trial",
+      latitude: data.latitude,
+      longitude: data.longitude,
+      requestedSubdomain: null,
+      assignedSubdomain,
+      status: "submitted",
+      applicationSecretHash,
+      ipAddress: metadata?.ipAddress || null,
+      userAgent: metadata?.userAgent || null,
+      createdAt: now,
+      submittedAt: now,
+      updatedAt: now,
+    });
 
     return {
       ...(await this.getApplication(id))!,
@@ -1467,7 +1462,10 @@ export class OnboardingService {
       contactPhone: row.contact_phone as string,
       address: row.address as string | undefined,
       district: row.district as string | undefined,
-      city: row.city as string | undefined,
+      city: row.city as string,
+      countryCode: row.country_code as OnboardingApplication["countryCode"],
+      marketId: row.market_id as string | undefined,
+      stallNumber: row.stall_number as string | undefined,
       planId: row.plan_id as OnboardingPlanId | null,
       latitude: row.latitude as number | undefined,
       longitude: row.longitude as number | undefined,
