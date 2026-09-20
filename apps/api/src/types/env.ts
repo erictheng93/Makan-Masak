@@ -197,6 +197,14 @@ export interface Env {
   MARKET_CHECKOUT_PROVIDER_REFUND_URL?: string;
   MARKET_CHECKOUT_PROVIDER_SPLIT_TOKEN?: string;
   MARKET_CHECKOUT_PROVIDER_SPLIT_SIGNING_SECRET?: string;
+
+  /**
+   * Out-of-process adapter for a shop's own e-wallet (Touch 'n Go / GrabPay).
+   * Unset means no wallet gateway is wired up and every shop-wallet charge
+   * fails loudly — see features/shop-payments/services/ShopWalletGateway.ts.
+   */
+  SHOP_WALLET_GATEWAY_URL?: string;
+  SHOP_WALLET_GATEWAY_TOKEN?: string;
   NOTIFICATION_FROM_EMAIL?: string;
 
   // Stored-value credits (代幣): spends at or below this amount skip PIN ((b) 門檻式 PIN)
