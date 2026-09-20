@@ -250,6 +250,33 @@ describe("computeSplitBills", () => {
     ).toMatchObject({ ok: false, code: "SPLIT_TOTAL_MISMATCH" });
   });
 
+  it("tolerates nothing on a step-1 currency", () => {
+    // Every MYR share is an exact integer of sen and nothing rounds, so a
+    // remainder is a real cart/order disagreement — even a one-sen one, and
+    // even when it is smaller than the number of bills.
+    for (const orderTotalCents of [10001, 10003, 9999]) {
+      expect(
+        computeSplitBills(buildInput({ currency: "MYR", orderTotalCents })),
+      ).toMatchObject({
+        ok: false,
+        code: "SPLIT_TOTAL_MISMATCH",
+        expectedTotalCents: orderTotalCents,
+        roundedTotalCents: 10000,
+      });
+    }
+  });
+
+  it("still absorbs a legacy rounding residue on a step-100 currency", () => {
+    // The TWD branch is unchanged: half a step is the most a rounded grand
+    // total can differ from the sum of the shares.
+    const bills = expectOk(
+      computeSplitBills(
+        buildInput({ currency: "TWD", orderTotalCents: 10050 }),
+      ),
+    );
+    expect(bills.reduce((sum, bill) => sum + bill.totalCents, 0)).toBe(10050);
+  });
+
   it("treats missing cart prices as zero", () => {
     const bills = expectOk(
       computeSplitBills(

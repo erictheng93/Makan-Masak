@@ -115,11 +115,17 @@ describe("sharedCurrency", () => {
       ]);
       throw new Error("expected MIXED_CURRENCY_CHECKOUT");
     } catch (error) {
+      // The distinct codes, not a restaurantId -> code map: the caller needs
+      // to know the cart spans currencies, not a per-tenant readout of how
+      // each vendor is configured.
       expect(error).toMatchObject({
         code: "MIXED_CURRENCY_CHECKOUT",
         status: 409,
-        details: { currencies: { a: "TWD", b: "MYR" } },
+        details: { currencies: ["MYR", "TWD"] },
       });
+      expect(
+        JSON.stringify((error as { details: unknown }).details),
+      ).not.toContain('"a"');
     }
   });
 

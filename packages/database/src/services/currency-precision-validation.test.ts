@@ -11,6 +11,7 @@ import {
   menuItems,
   optionChoices,
   optionGroups,
+  orders,
   restaurants,
 } from "../schema";
 import {
@@ -20,6 +21,7 @@ import {
 } from "../testing/create-test-database";
 import { CouponService } from "./coupon";
 import { MenuService } from "./menu";
+import { OrderService } from "./order";
 import { RestaurantService } from "./restaurant";
 
 const twdId = "restaurant-twd";
@@ -428,6 +430,99 @@ describe("currency precision validation", () => {
       ).rejects.toEqual(
         precisionError([{ field: "settings.deliveryFee", amount: 15000.5 }]),
       );
+    });
+  });
+  /**
+   * `settings.currency` is a zod enum on write, so an unsupported value can
+   * only come from a legacy row. It used to default to TWD everywhere the
+   * database package read it, which is how a restaurant configured in ringgit
+   * ended up taking orders priced on the TWD step that the payment side —
+   * always strict — then refused. The two policies now differ on purpose:
+   * money refuses, display falls back.
+   */
+  describe("a legacy unsupported currency", () => {
+    const legacyId = "restaurant-legacy-currency";
+    let legacyMenuItemId: number;
+
+    beforeEach(async () => {
+      await testDb.drizzle.insert(restaurants).values({
+        id: legacyId,
+        name: "Legacy Restaurant",
+        type: "restaurant",
+        category: "casual",
+        address: "3 Test St",
+        district: "Test District",
+        city: "Test City",
+        phone: "0912345678",
+        isAvailable: true,
+        // "RM" is the ringgit's symbol, not its ISO code — exactly the kind of
+        // value an older admin build let through.
+        settings: { currency: "RM" },
+      });
+      const [category] = await testDb.drizzle
+        .insert(categories)
+        .values({ restaurantId: legacyId, name: "Meals", sortOrder: 1 })
+        .returning({ id: categories.id });
+      // Inserted directly: the menu service refuses this restaurant too.
+      const [item] = await testDb.drizzle
+        .insert(menuItems)
+        .values({
+          restaurantId: legacyId,
+          categoryId: category.id,
+          name: "Legacy Dish",
+          price: 100,
+          priceCents: 10000,
+          isAvailable: true,
+        } as never)
+        .returning({ id: menuItems.id });
+      legacyMenuItemId = item.id;
+    });
+
+    const currencyError = expect.objectContaining({
+      code: "RESTAURANT_CURRENCY_INVALID",
+      status: 500,
+    });
+
+    it("refuses to price an order instead of writing an uncollectable one", async () => {
+      await expect(
+        new OrderService(testDb.bindings.DB, env).createOrder({
+          restaurantId: legacyId,
+          items: [{ menuItemId: legacyMenuItemId, quantity: 1 }],
+        }),
+      ).rejects.toEqual(currencyError);
+      expect(await testDb.drizzle.select().from(orders)).toHaveLength(0);
+    });
+
+    it("refuses a menu price write that needs to know the currency", async () => {
+      // A whole-unit price is valid in every supported currency, so the write
+      // path never looks one up (`isAlignedInEveryCurrency`) and stays
+      // allowed. A fractional one does have to ask, and asking now refuses
+      // instead of answering TWD.
+      await expect(
+        menu().updateMenuItem(legacyMenuItemId, { price: 120 }),
+      ).resolves.toMatchObject({ price: 120 });
+      await expect(
+        menu().updateMenuItem(legacyMenuItemId, { price: 120.5 }),
+      ).rejects.toEqual(currencyError);
+    });
+
+    it("still labels a read-only order listing rather than failing it", async () => {
+      // A customer's order history spans restaurants; a 500 there would take
+      // the whole page down over one merchant's broken JSON, and a label
+      // cannot become a charge.
+      await testDb.drizzle.insert(orders).values({
+        id: "order-legacy-1",
+        restaurantId: legacyId,
+        orderNumber: "LEGACY-1",
+        totalAmountCents: 10000,
+        subtotalCents: 10000,
+      } as never);
+
+      const listed = await new OrderService(testDb.bindings.DB, env).getOrders({
+        restaurantId: legacyId,
+      });
+      expect(listed.orders).toHaveLength(1);
+      expect(listed.orders[0].currency).toBe("TWD");
     });
   });
 });

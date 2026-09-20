@@ -193,6 +193,10 @@ vi.mock("@makanmasak/database", async (importOriginal) => ({
 // fixture DB here does not model. Default every checkout to TWD vendors and let
 // individual tests override it; the real resolver has its own real-D1 suite.
 const resolveSharedRestaurantCurrency = vi.hoisted(() => vi.fn());
+// Its lenient twin, mocked alongside so a test can prove which of the two a
+// path reached: the strict one fails closed (money), the display one falls
+// back (reads).
+const resolveDisplaySharedRestaurantCurrency = vi.hoisted(() => vi.fn());
 vi.mock(
   "../../../shared/utils/restaurant-currency",
   async (importOriginal) => ({
@@ -200,6 +204,7 @@ vi.mock(
       typeof import("../../../shared/utils/restaurant-currency")
     >()),
     resolveSharedRestaurantCurrency,
+    resolveDisplaySharedRestaurantCurrency,
   }),
 );
 
@@ -721,6 +726,8 @@ describe("market checkout routes", () => {
     globalThis.fetch = originalFetch;
     resolveSharedRestaurantCurrency.mockReset();
     resolveSharedRestaurantCurrency.mockResolvedValue("TWD");
+    resolveDisplaySharedRestaurantCurrency.mockReset();
+    resolveDisplaySharedRestaurantCurrency.mockResolvedValue("TWD");
   });
 
   it("routes select fixtures by table and rejects exhausted fixtures", async () => {
@@ -3327,6 +3334,7 @@ describe("market checkout routes", () => {
             orderId: number;
             status: string;
             errorMessage?: string;
+            errorCode?: string;
           }>;
           parentPayment: {
             status: string;
@@ -3346,7 +3354,14 @@ describe("market checkout routes", () => {
         {
           orderId: 1001,
           status: "failed",
-          errorMessage: "Provider unavailable",
+          // Not "Provider unavailable". This is a `success: true` envelope, so
+          // it never reaches ErrorSanitizer, and whatever an internal failure
+          // put in `error.message` went straight to the customer — the shape
+          // that handed them "Amount 17050 cents is not aligned to the TWD
+          // step of 100 cents". A fixed safe message and a stable code.
+          errorMessage:
+            "Payment could not be completed. Please try again or pay at the stall.",
+          errorCode: "MARKET_CHECKOUT_PAYMENT_FAILED",
         },
       ],
       parentPayment: {
@@ -3387,6 +3402,69 @@ describe("market checkout routes", () => {
         paidAmountCents: 0,
       }),
     });
+  });
+
+  it("names an off-step legacy child total instead of failing the payment forever", async () => {
+    // The finding: one TWD child order stored at 17050 cents made the whole
+    // checkout permanently unpayable. The provider threw a bare Error, the
+    // route recorded a generic failed payment and answered 202, and every
+    // retry did the same with nothing saying why or who could fix it.
+    const env = {
+      ...createEnv(),
+      MARKET_CHECKOUT_SPLIT_MODE: "provider_split",
+      MARKET_CHECKOUT_PROVIDER_SPLIT_URL: "https://payments.example.test/split",
+    };
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    const fixture = unpaidCheckoutSessionFixture();
+    await env.CACHE_KV.put(
+      "market_checkout:checkout-1",
+      JSON.stringify({
+        ...fixture,
+        childOrders: [
+          {
+            ...fixture.childOrders[0],
+            totalAmount: 170.5,
+            totalAmountCents: 17050,
+          },
+          fixture.childOrders[1],
+        ],
+      }),
+    );
+
+    const response = await routes.fetch(
+      new Request("https://test/checkout-1/pay", {
+        method: "POST",
+        headers: MARKET_HOLDER_HEADERS,
+        body: JSON.stringify({ method: "stripe_connect" }),
+      }),
+      env as never,
+    );
+    vi.unstubAllGlobals();
+
+    // Answered, not swallowed: a stable code, an actionable message, and the
+    // order the merchant has to correct.
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      error: {
+        code: "MARKET_CHECKOUT_AMOUNT_NOT_ALIGNED",
+        message: expect.stringContaining("not a valid TWD amount"),
+        details: {
+          currency: "TWD",
+          stepCents: 100,
+          orders: [{ orderNumber: "A001", amount: 170.5 }],
+        },
+      },
+    });
+    // Nothing was asked of the gateway, and the attempt is still recorded on
+    // the checkout with the same code.
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+      "market_checkout:checkout-1",
+      expect.stringContaining("MARKET_CHECKOUT_AMOUNT_NOT_ALIGNED"),
+      { expirationTtl: 14400 },
+    );
   });
 
   it("replays an already paid market checkout without charging twice", async () => {
@@ -3578,6 +3656,139 @@ describe("market checkout routes", () => {
     );
 
     await expectApiError(nonRefundableResponse, 400, "BAD_REQUEST");
+  });
+
+  it("rounds a legacy payment's platform fee on the vendors' currency, not TWD", async () => {
+    // The settlement step used to come from `payment.currency ?? TWD`. A
+    // payment row written before that column existed therefore had its fees
+    // rounded on the TWD step: an RM5.60 fee on an MYR checkout became
+    // RM6.00, and the 40 sen came out of the vendor's payout.
+    resolveDisplaySharedRestaurantCurrency.mockResolvedValue("MYR");
+    const env = createEnv([
+      {
+        id: 1001,
+        restaurant_id: "restaurant-1",
+        totalAmountCents: 4000,
+        refundAmountCents: null,
+        payment_method: "line_pay",
+        payment_status: "paid",
+      },
+    ]);
+    await env.CACHE_KV.put(
+      "market_checkout:checkout-1",
+      JSON.stringify({
+        id: "checkout-1",
+        market: {
+          id: "market-1",
+          slug: "fengjia",
+          name: "Pasar Malam",
+          platformFeeRateBps: 350,
+        },
+        status: "submitted",
+        childOrders: [
+          {
+            restaurantId: "restaurant-1",
+            restaurantName: "Vendor 1",
+            orderId: 1001,
+            orderNumber: "A001",
+            totalAmount: 40,
+            totalAmountCents: 4000,
+            tokenExpiresAt: "2026-06-01T12:00:00.000Z",
+          },
+          {
+            restaurantId: "restaurant-2",
+            restaurantName: "Vendor 2",
+            orderId: 1002,
+            orderNumber: "A002",
+            totalAmount: 160,
+            totalAmountCents: 16000,
+            tokenExpiresAt: "2026-06-01T12:00:00.000Z",
+          },
+        ],
+        payment: {
+          // No `currency`: this is the legacy shape the fallback exists for.
+          status: "paid",
+          method: "line_pay",
+          country: "MY",
+          totalAmount: 200,
+          totalAmountCents: 20000,
+          paidAmount: 200,
+          paidAmountCents: 20000,
+          paidAt: "2026-06-01T10:10:00.000Z",
+          parentPayment: {
+            paymentId: "market_pay_checkout-1",
+            status: "paid",
+            provider: "line_pay",
+            splitMode: "child_transactions",
+            idempotencyKey: "market-pay-1",
+            amountCents: 20000,
+            paidAmountCents: 20000,
+            refundedAmountCents: 0,
+            childPaymentIds: ["pay-1001"],
+            createdAt: "2026-06-01T10:10:00.000Z",
+            updatedAt: "2026-06-01T10:10:00.000Z",
+          },
+          childPayments: [
+            {
+              restaurantId: "restaurant-1",
+              restaurantName: "Vendor 1",
+              orderId: 1001,
+              orderNumber: "A001",
+              paymentId: "pay-1001",
+              status: "paid",
+              amount: 40,
+              amountCents: 4000,
+            },
+            {
+              // No transaction to refund, so it stays paid and still earns a
+              // platform fee — the one branch where a settlement fee is
+              // computed on the refund path.
+              restaurantId: "restaurant-2",
+              restaurantName: "Vendor 2",
+              orderId: 1002,
+              orderNumber: "A002",
+              status: "paid",
+              amount: 160,
+              amountCents: 16000,
+            },
+          ],
+        },
+        subtotal: 20000,
+        createdAt: "2026-06-01T10:00:00.000Z",
+      }),
+    );
+
+    const response = await routes.fetch(
+      new Request("https://test/checkout-1/refund", {
+        method: "POST",
+        body: JSON.stringify({ reason: "customer_request" }),
+      }),
+      env as never,
+    );
+
+    expect(response.status).toBe(200);
+    const json = (await response.json()) as {
+      data: {
+        payment: {
+          settlement: {
+            vendorAllocations: Array<{
+              restaurantId: string;
+              platformFeeCents: number;
+            }>;
+          };
+        };
+      };
+    };
+    // RM160 x 3.5% = RM5.60. On the TWD step this came back as 600.
+    expect(
+      json.data.payment.settlement.vendorAllocations.find(
+        (allocation) => allocation.restaurantId === "restaurant-2",
+      ),
+    ).toMatchObject({ platformFeeCents: 560 });
+    expect(resolveDisplaySharedRestaurantCurrency).toHaveBeenCalledWith(
+      env.DB,
+      ["restaurant-1", "restaurant-2"],
+    );
   });
 
   it("refunds paid child payments for a market checkout", async () => {
@@ -6427,7 +6638,7 @@ describe("market checkout routes", () => {
 
   it("takes a legacy ledger row's missing currency from the vendors", async () => {
     setNoPersistedCheckoutFixtures();
-    resolveSharedRestaurantCurrency.mockResolvedValue("MYR");
+    resolveDisplaySharedRestaurantCurrency.mockResolvedValue("MYR");
     const env = createEnv([
       {
         payment_id: "market_pay_checkout-1",
@@ -6479,9 +6690,76 @@ describe("market checkout routes", () => {
         checkout: { payment: { currency: "MYR", country: "MY" } },
       },
     });
-    expect(resolveSharedRestaurantCurrency).toHaveBeenCalledWith(env.DB, [
-      "restaurant-1",
+    expect(resolveDisplaySharedRestaurantCurrency).toHaveBeenCalledWith(
+      env.DB,
+      ["restaurant-1"],
+    );
+  });
+
+  it("reads a legacy checkout whose vendors no longer share a currency", async () => {
+    // The strict resolver has three ways to refuse — MIXED_CURRENCY_CHECKOUT,
+    // RESTAURANT_CURRENCY_INVALID, RESTAURANT_NOT_FOUND — and this is a GET.
+    // Putting it on the read path turned looking at an old, fully paid
+    // checkout into an error page nobody reading it could clear.
+    setNoPersistedCheckoutFixtures();
+    resolveSharedRestaurantCurrency.mockRejectedValue(
+      new ApiError(
+        "MIXED_CURRENCY_CHECKOUT",
+        "All vendors in one checkout must use the same currency",
+        409,
+      ),
+    );
+    resolveDisplaySharedRestaurantCurrency.mockResolvedValue("TWD");
+    const env = createEnv([
+      {
+        payment_id: "market_pay_checkout-1",
+        provider: "credit_balance",
+        split_mode: "provider_split",
+        idempotency_key: null,
+        status: "paid",
+        amount_cents: 12000,
+        paid_amount_cents: 12000,
+        refunded_amount_cents: 0,
+        currency: null,
+        country_code: null,
+        child_payment_ids: null,
+        provider_payload: null,
+        created_at_ms: 1780308000000,
+        updated_at_ms: 1780308600000,
+      },
     ]);
+    await env.CACHE_KV.put(
+      "market_checkout:checkout-1",
+      JSON.stringify({
+        id: "checkout-1",
+        market: { id: "market-1", slug: "fengjia", name: "逢甲夜市" },
+        status: "submitted",
+        childOrders: [
+          {
+            restaurantId: "restaurant-1",
+            restaurantName: "雞排攤",
+            orderId: 1001,
+            orderNumber: "A001",
+            totalAmount: 120,
+            tokenExpiresAt: "2026-06-01T12:00:00.000Z",
+          },
+        ],
+        subtotal: 12000,
+        createdAt: "2026-06-01T10:00:00.000Z",
+      }),
+    );
+    getOrder.mockResolvedValueOnce(null);
+
+    const response = await routes.fetch(
+      new Request("https://test/admin/checkout-1"),
+      env as never,
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      data: { checkout: { payment: { currency: "TWD" } } },
+    });
+    expect(resolveSharedRestaurantCurrency).not.toHaveBeenCalled();
   });
 
   it.each([

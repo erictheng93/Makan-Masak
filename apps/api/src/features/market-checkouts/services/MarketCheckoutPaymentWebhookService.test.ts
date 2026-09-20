@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Env } from "../../../types/env";
 import { MarketCheckoutPaymentWebhookService } from "./MarketCheckoutPaymentWebhookService";
 import { MarketCheckoutVoucherService } from "./MarketCheckoutVoucherService";
@@ -6,6 +6,21 @@ import {
   mockMarketCheckoutProviderPaidWebhookPayload,
   signMockMarketCheckoutWebhook,
 } from "../testing/mockMarketCheckoutProviderContract";
+
+// A payment row written before the `currency` column has none, and neither
+// does its stored summary. The vendors decide what to label it — leniently,
+// because a webhook must not leave a paid checkout unreconciled over one
+// merchant's settings.
+const resolveDisplaySharedRestaurantCurrency = vi.hoisted(() => vi.fn());
+vi.mock(
+  "../../../shared/utils/restaurant-currency",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("../../../shared/utils/restaurant-currency")
+    >()),
+    resolveDisplaySharedRestaurantCurrency,
+  }),
+);
 
 function createEnv(options: {
   auditInserted?: boolean;
@@ -39,6 +54,9 @@ function createEnv(options: {
           }
           return null;
         }),
+        // Drizzle terminates a `.all()` select here; the child-order lookup
+        // behind the legacy currency fallback is the only one in this service.
+        all: vi.fn(async () => ({ results: [] })),
         run: vi.fn(async () => ({
           meta: {
             changes: sql.includes("INSERT OR IGNORE INTO payment_audit_log")
@@ -204,6 +222,11 @@ function normalizeSql(sql: string): string {
 }
 
 describe("MarketCheckoutPaymentWebhookService", () => {
+  beforeEach(() => {
+    resolveDisplaySharedRestaurantCurrency.mockReset();
+    resolveDisplaySharedRestaurantCurrency.mockResolvedValue("TWD");
+  });
+
   it("reconciles a signed provider payment event into parent ledger and session summary", async () => {
     const redeemSpy = vi
       .spyOn(MarketCheckoutVoucherService.prototype, "redeem")
@@ -960,6 +983,70 @@ describe("MarketCheckoutPaymentWebhookService", () => {
     });
     expect(paymentSummary.failedAt).toEqual(expect.any(String));
     expect(env.CACHE_KV.put).not.toHaveBeenCalled();
+  });
+
+  it("labels a legacy summary from the vendors, not a hard-coded TWD", async () => {
+    // Same fixture as the test above, with MYR vendors: the summary is what
+    // every later read of this checkout is labelled from, so a hard-coded
+    // "TWD" showed an MYR checkout's money in NT$ forever after.
+    resolveDisplaySharedRestaurantCurrency.mockResolvedValue("MYR");
+    const rawBody = JSON.stringify({
+      id: "evt_legacy_currency",
+      status: "failed",
+      metadata: {
+        market_checkout_payment_id: "market_pay_checkout-1",
+        market_checkout_id: "checkout-1",
+      },
+    });
+    const env = createEnv({
+      paymentRow: paymentRow({
+        currency: null,
+        country_code: null,
+        session_payment_summary: null,
+      }),
+    });
+
+    await new MarketCheckoutPaymentWebhookService(env).handle(
+      "mock_market_provider",
+      rawBody,
+      new Headers({
+        "x-webhook-signature": await signMockMarketCheckoutWebhook(
+          "market-secret",
+          rawBody,
+        ),
+      }),
+    );
+
+    const sessionParams = bindParamsFor(env, "UPDATE market_checkout_sessions");
+    expect(JSON.parse(String(sessionParams[1]))).toMatchObject({
+      currency: "MYR",
+    });
+    expect(resolveDisplaySharedRestaurantCurrency).toHaveBeenCalledOnce();
+  });
+
+  it("does not look up vendors when the row already names a currency", async () => {
+    const rawBody = JSON.stringify({
+      id: "evt_recorded_currency",
+      status: "failed",
+      metadata: {
+        market_checkout_payment_id: "market_pay_checkout-1",
+        market_checkout_id: "checkout-1",
+      },
+    });
+    const env = createEnv({ paymentRow: paymentRow() });
+
+    await new MarketCheckoutPaymentWebhookService(env).handle(
+      "mock_market_provider",
+      rawBody,
+      new Headers({
+        "x-webhook-signature": await signMockMarketCheckoutWebhook(
+          "market-secret",
+          rawBody,
+        ),
+      }),
+    );
+
+    expect(resolveDisplaySharedRestaurantCurrency).not.toHaveBeenCalled();
   });
 
   it("reconciles full refunds and preserves object-based summary details", async () => {

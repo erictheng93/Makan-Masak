@@ -377,6 +377,12 @@ export function createApp(
     const requestId = c.get("requestId");
 
     if (err instanceof ApiError) {
+      const status = toErrorResponseStatusCode(err.status);
+      // `details` on a 4xx tells the caller what to change (which field, which
+      // amount). On a 5xx there is nothing for them to change — the payload
+      // describes our side, and it has carried a restaurant's internal id and
+      // a per-tenant configuration readout. Logged above, never served.
+      const serveDetails = err.details !== undefined && status < 500;
       return c.json(
         {
           success: false,
@@ -384,12 +390,12 @@ export function createApp(
             code: err.code,
             message: ErrorSanitizer.sanitizeMessage(err.message),
             requestId,
-            ...(err.details !== undefined && {
+            ...(serveDetails && {
               details: sanitizeApiErrorDetails(err.details),
             }),
           },
         },
-        toErrorResponseStatusCode(err.status),
+        status,
       );
     }
 

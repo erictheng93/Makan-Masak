@@ -54,7 +54,8 @@ import {
 import { amountFromCents, fromCents, toRequiredCents } from "../utils/money";
 import {
   recoverChargeRate,
-  resolveRestaurantCurrency,
+  displayRestaurantCurrency,
+  requireRestaurantCurrency,
 } from "../utils/order-totals";
 import { IngredientConsumptionService } from "./ingredient-consumption";
 import { loadAssembledMenuItemOptions } from "./menu-options";
@@ -532,7 +533,7 @@ export class OrderService extends BaseService {
     });
     const settings = restaurant?.settings ?? {};
     return {
-      currency: resolveRestaurantCurrency(settings.currency),
+      currency: requireRestaurantCurrency(settings.currency, restaurantId),
       taxRate: settings.taxRate,
       serviceChargeRate: settings.serviceChargeRate,
     };
@@ -601,7 +602,10 @@ export class OrderService extends BaseService {
       // 提供過的訂單。
       const settings = restaurant.settings || {};
       // Every derived amount below is rounded to this currency's precision.
-      const currency = resolveRestaurantCurrency(settings.currency);
+      const currency = requireRestaurantCurrency(
+        settings.currency,
+        restaurantIdStr,
+      );
       if (data.deliveryInfo?.type === "delivery") {
         if (!settings.enableDelivery && !restaurant.supportsDelivery) {
           throw new Error("DELIVERY_NOT_ENABLED");
@@ -2403,12 +2407,12 @@ export class OrderService extends BaseService {
     }
     // Present whenever the query loaded the restaurant's settings. A customer's
     // order history spans restaurants, so each order has to say what currency
-    // its amounts are in. Display only — resolveRestaurantCurrency falls back
+    // its amounts are in. Display only — displayRestaurantCurrency falls back
     // to the default for an unset or invalid setting rather than failing the
     // whole list over one merchant's broken JSON.
     const currency =
       restaurantSettings !== undefined
-        ? resolveRestaurantCurrency(restaurantSettings?.currency)
+        ? displayRestaurantCurrency(restaurantSettings?.currency)
         : undefined;
     const mapOrderItem = (item: OrderItemWithRelations): OrderItem => {
       const snapshot = item.itemSnapshot ?? undefined;

@@ -1,4 +1,5 @@
 import {
+  ApiError,
   DEFAULT_CURRENCY,
   floorToCurrencyCents,
   normalizeCurrencyCode,
@@ -8,12 +9,54 @@ import {
 import { fromCents } from "./money";
 
 /**
- * `restaurants.settings.currency` is a free-form JSON string, so it can hold
- * anything an older admin build wrote. An unknown or missing code falls back
- * to the platform default rather than reaching the rounding helpers, which
- * throw on an unsupported code.
+ * Reading `restaurants.settings.currency`, which is a free-form JSON string
+ * and so can hold anything an older admin build wrote (`"RM"`, `"NTD"`, an
+ * empty string). There is **one** rule for what to do with an unsupported
+ * value, and it is the same rule the api-side authority
+ * (`apps/api/src/shared/utils/restaurant-currency.ts`) states:
+ *
+ * - **Money fails closed.** Anything that prices, charges, splits or discounts
+ *   uses `requireRestaurantCurrency` and throws `RESTAURANT_CURRENCY_INVALID`.
+ *   Defaulting to TWD there is what created the failure this pairs with: a
+ *   restaurant set to `"RM"` took orders priced on the TWD step, and the
+ *   payment side — which has always failed closed — then refused every one of
+ *   them, so the orders were uncollectable and nothing said why. Refusing to
+ *   write the order is strictly better than writing one nobody can pay.
+ * - **Display falls back.** Read-only labelling uses
+ *   `displayRestaurantCurrency`, because a 500 there would take down a
+ *   cross-restaurant listing over one merchant's broken JSON, and a label
+ *   cannot become a charge — the money paths above still refuse that
+ *   restaurant.
+ *
+ * Unset (absent, null, empty) is not "invalid": it is the platform default,
+ * TWD, which is the state of every restaurant created before the setting
+ * existed. `settings.currency` is a zod enum on write, so an unsupported value
+ * can only be a legacy row.
  */
-export function resolveRestaurantCurrency(value: unknown): CurrencyCode {
+export function requireRestaurantCurrency(
+  value: unknown,
+  restaurantId?: string,
+): CurrencyCode {
+  if (value === undefined || value === null) return DEFAULT_CURRENCY;
+  if (typeof value === "string" && value.trim() === "") return DEFAULT_CURRENCY;
+
+  const currency = normalizeCurrencyCode(value);
+  if (!currency) {
+    // The restaurant id goes in `details`, which the error handler logs but
+    // strips from a 5xx response body — it names a merchant's broken
+    // configuration, which the caller can neither read nor fix.
+    throw new ApiError(
+      "RESTAURANT_CURRENCY_INVALID",
+      "Restaurant currency is not configured correctly",
+      500,
+      restaurantId ? { restaurantId } : undefined,
+    );
+  }
+  return currency;
+}
+
+/** Lenient twin of {@link requireRestaurantCurrency}. Display only. */
+export function displayRestaurantCurrency(value: unknown): CurrencyCode {
   return normalizeCurrencyCode(value) ?? DEFAULT_CURRENCY;
 }
 

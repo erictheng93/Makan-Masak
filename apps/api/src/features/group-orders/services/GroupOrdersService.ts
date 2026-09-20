@@ -46,7 +46,7 @@ import {
   assertCurrencyAlignedCents,
   roundToCurrencyCents,
 } from "@makanmasak/utils";
-import { resolveRestaurantCurrency } from "@makanmasak/database";
+import { requireRestaurantCurrency } from "@makanmasak/database";
 import { computeSplitBills } from "./split-allocation";
 
 class ConsoleLogger {
@@ -2006,8 +2006,9 @@ export class GroupOrdersService implements IGroupOrderService {
         .select({ settings: restaurants.settings })
         .from(restaurants)
         .where(eq(restaurants.id, groupOrder.restaurantId));
-      const currency = resolveRestaurantCurrency(
+      const currency = requireRestaurantCurrency(
         restaurant?.settings?.currency,
+        groupOrder.restaurantId,
       );
 
       let customAmounts: Array<{ memberId: string; amountCents: number }> = [];
@@ -3035,7 +3036,10 @@ export class GroupOrdersService implements IGroupOrderService {
       : [];
     const taxRate = restaurant?.settings?.taxRate ?? 0;
     const serviceChargeRate = restaurant?.settings?.serviceChargeRate ?? 0;
-    const currency = resolveRestaurantCurrency(restaurant?.settings?.currency);
+    const currency = requireRestaurantCurrency(
+      restaurant?.settings?.currency,
+      groupOrder?.restaurantId,
+    );
     // Summed in integer cents: dividing by 100.0 in SQL and multiplying back
     // reintroduced float noise into every member's running bill.
     const totalResult = await this.db

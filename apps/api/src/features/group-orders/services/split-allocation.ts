@@ -235,7 +235,16 @@ export function computeSplitBills(
   const targetTotalCents = input.orderTotalCents ?? billsTotalCents;
   const remainderCents = targetTotalCents - billsTotalCents;
   const step = currencyStepCents(currency);
-  const toleranceCents = step > 1 ? step / 2 : bills.length;
+  // The tolerance exists only for the legacy case the comment above names, and
+  // that case needs a currency whose step is wider than the storage unit: a
+  // fractional TWD subtotal (NT$12.50) had its grand total rounded to the
+  // dollar, so the order can sit up to half a step away from the sum of the
+  // shares. MYR's step *is* the storage unit, every share is an exact integer
+  // number of sen, and nothing rounds — so any remainder there is the cart
+  // genuinely disagreeing with the order, and quietly moving it onto the
+  // host's subtotal would bill one diner for a discrepancy nobody has looked
+  // at. Tolerate nothing on a step-1 currency.
+  const toleranceCents = step > 1 ? step / 2 : 0;
 
   if (Math.abs(remainderCents) > toleranceCents) {
     return {

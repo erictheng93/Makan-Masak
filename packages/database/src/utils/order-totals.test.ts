@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   computeOrderTotals,
+  displayRestaurantCurrency,
   recoverChargeRate,
-  resolveRestaurantCurrency,
+  requireRestaurantCurrency,
 } from "./order-totals";
 
-describe("resolveRestaurantCurrency", () => {
+describe("displayRestaurantCurrency", () => {
   it.each([
     ["MYR", "MYR"],
     ["vnd", "VND"],
@@ -13,8 +14,39 @@ describe("resolveRestaurantCurrency", () => {
     [undefined, "TWD"],
     [42, "TWD"],
   ])("resolves %p to %p", (input, expected) => {
-    expect(resolveRestaurantCurrency(input)).toBe(expected);
+    expect(displayRestaurantCurrency(input)).toBe(expected);
   });
+});
+
+describe("requireRestaurantCurrency", () => {
+  it.each([
+    ["MYR", "MYR"],
+    ["vnd", "VND"],
+    [undefined, "TWD"],
+    [null, "TWD"],
+    ["", "TWD"],
+    ["  ", "TWD"],
+  ])("resolves %p to %p", (input, expected) => {
+    expect(requireRestaurantCurrency(input)).toBe(expected);
+  });
+
+  // The pair this exists for: the lenient twin answers TWD for "RM", so a
+  // restaurant configured in ringgit priced its orders on the TWD step while
+  // the payment side — which has always failed closed — refused every one of
+  // them. Money must refuse the order instead of writing an uncollectable one.
+  it.each(["USD", "RM", "NTD", 42, {}])(
+    "refuses %p rather than defaulting",
+    (input) => {
+      expect(displayRestaurantCurrency(input)).toBe("TWD");
+      expect(() => requireRestaurantCurrency(input, "restaurant-1")).toThrow(
+        expect.objectContaining({
+          code: "RESTAURANT_CURRENCY_INVALID",
+          status: 500,
+          details: { restaurantId: "restaurant-1" },
+        }),
+      );
+    },
+  );
 });
 
 describe("computeOrderTotals", () => {
