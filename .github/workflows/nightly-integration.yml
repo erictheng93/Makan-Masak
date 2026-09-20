@@ -111,12 +111,12 @@ jobs:
         # supported" (nothing under test calls it) and the Worker starts.
         run: |
           mkdir -p /tmp/integration-logs
-          (cd apps/api && pnpm exec wrangler dev --local \
+          (cd apps/api && pnpm exec wrangler dev --local --inspector-port 9229 \
              --persist-to ../../.wrangler/shared-state \
              > /tmp/integration-logs/api.log 2>&1 &)
           (cd apps/customer-app && pnpm exec vite --port 3000 --host 0.0.0.0 \
              > /tmp/integration-logs/customer.log 2>&1 &)
-          (cd apps/management-api && pnpm exec wrangler dev --local \
+          (cd apps/management-api && pnpm exec wrangler dev --local --inspector-port 9230 \
              --persist-to ../../.wrangler/shared-state \
              > /tmp/integration-logs/management-api.log 2>&1 &)
           (cd apps/onboarding-app && pnpm exec vite --port 3011 --host 0.0.0.0 \

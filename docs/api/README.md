@@ -39,7 +39,7 @@ Authorization: Bearer <your_jwt_token>
 > 自動生成，請勿手動編輯。執行 `node scripts/check-docs-drift.cjs --write` 重新生成。
 > Source of truth: `apps/api/src/app-factory.ts` 的 `apiV1.route(...)` 掛載點。
 
-共 **59** 個掛載點（全部相對於 `/api/v1`）。
+共 **60** 個掛載點（全部相對於 `/api/v1`）。
 
 | Prefix | Router | 說明 |
 | ------ | ------ | ---- |
@@ -58,6 +58,7 @@ Authorization: Bearer <your_jwt_token>
 | `/credits` | `creditsFeature.routes` | 代幣儲值卡 (查餘額公開限流, 管理端點 admin) |
 | `/restaurants` | `membersFeature.routes` |  |
 | `/integrations` | `integrationsFeature.routes` | 外送平台串接 (webhooks 公開 HMAC 驗證, 管理端點內部驗證) |
+| `/shop-payments` | `shopPaymentsFeature.routes` |  |
 | `/restaurants` | `restaurantsFeature.routes` |  |
 | `/restaurants` | `reviewsFeature.publicRoutes` |  |
 | `/restaurants` | `broadcastsFeature.restaurantRoutes` |  |
@@ -1045,6 +1046,18 @@ so a token can never be replayed against a different room.
 | PATCH | `/admin/subscriptions/:restaurantId/modules` | 更新模組覆寫（含快取失效） | Admin |
 | PATCH | `/admin/subscriptions/:restaurantId/plan` | 變更方案層級 | Admin |
 | PATCH | `/admin/subscriptions/:restaurantId/status` | 啟用/停用訂閱（kill switch） | Admin |
+
+### Shop Payments (`/shop-payments`) — 5 routes
+
+店家電子錢包連線管理。需要認證；平台管理員（role 0）可管理任意店家，店主（role 1）僅能管理自己的店家。支援 `tng` 與 `grabpay`；回應僅提供遮罩商戶識別碼，不回傳密鑰。
+
+| Method | Path | Description | Auth |
+| ------ | ---- | ----------- | ---- |
+| GET | `/shop-payments/:restaurantId` | 列出店家錢包連線與支援的供應商 | Admin / Owner |
+| GET | `/shop-payments/:restaurantId/:provider` | 取得指定供應商的連線 | Admin / Owner |
+| POST | `/shop-payments/:restaurantId/:provider/connect` | 建立商戶連線與加密儲存密鑰 | Admin / Owner |
+| PUT | `/shop-payments/:restaurantId/:provider` | 更新商戶連線、設定或密鑰 | Admin / Owner |
+| DELETE | `/shop-payments/:restaurantId/:provider` | 中斷商戶連線並移除密鑰 | Admin / Owner |
 
 ### SEO (mounted at `/`) — 2 routes
 

@@ -387,6 +387,13 @@ function createEnv(dbFirstRows: unknown[] = []) {
 
   function readPreparedFirstRow(sql: string, values: unknown[]) {
     const normalizedSql = sql.toLowerCase();
+    // Refunds read the collected payment separately from the order. Do not
+    // consume an order fixture for this one-column payment projection.
+    if (normalizedSql.includes('from "payment_transactions"')) {
+      if (values.includes("pay-1001")) return { amountCents: 12000 };
+      if (values.includes("pay-1002")) return { amountCents: 8000 };
+      return null;
+    }
     if (normalizedSql.includes('"orders"') && values.includes("pay-1001")) {
       return refundOrderRow({
         id: 1001,

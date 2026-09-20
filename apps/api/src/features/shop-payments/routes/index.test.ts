@@ -163,9 +163,10 @@ describe("tenancy", () => {
   it("refuses an owner with no restaurant of their own", async () => {
     auth.user = {
       id: "user-9",
+      username: "owner",
       role: 1,
-      restaurantId: null,
-    } as unknown as AuthUser;
+      restaurantId: undefined,
+    };
     const { response } = await call("/rest-1");
     expect(response.status).toBe(403);
   });
@@ -173,9 +174,10 @@ describe("tenancy", () => {
   it("lets a platform admin act for any restaurant", async () => {
     auth.user = {
       id: "1",
+      username: "admin",
       role: 0,
-      restaurantId: null,
-    } as unknown as AuthUser;
+      restaurantId: undefined,
+    };
     const { response } = await call("/rest-2");
 
     expect(response.status).toBe(200);
