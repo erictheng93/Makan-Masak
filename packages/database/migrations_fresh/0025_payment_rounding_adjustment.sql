@@ -1,0 +1,37 @@
+-- Record what a cash payment actually collected (#405).
+--
+-- Malaysia's Bank Negara rounding mechanism has been in force since 2008: the
+-- 1 sen and 2 sen coins are out of circulation, so a bill settled in physical
+-- cash is collected to the nearest 5 sen. A RM10.33 order is handed over as
+-- RM10.35. The system recorded RM10.33, so every cash order drifted by up to
+-- 2 sen against the drawer and the shift count reported it as an unexplained
+-- discrepancy.
+--
+-- The order total does not move. `orders.total_amount_cents` stays exactly as
+-- priced, revenue keeps reading it, and the rounding lives on the payment:
+-- `amount_cents` records what was collected and `rounding_adjustment_cents`
+-- records `collected - order total`, a value in -2..+2 sen. A shift report can
+-- then sum the adjustments into a "rounding gain/loss" line instead of leaving
+-- the difference to look like a till error. Rounding the order total instead
+-- was rejected: the payment method is not known when the order is priced, and
+-- a customer switching to an e-wallet would have to be re-quoted.
+--
+-- Only MYR cash rounds. Electronic settlement (card, e-wallet, online gateway,
+-- stored-value credit) collects the exact figure by regulation, and TWD and
+-- VND already settle in whole major units, so the adjustment stays 0 for all
+-- of those -- which is what the DEFAULT 0 says for every row already here.
+--
+-- ADD COLUMN rather than a recreate: `payment_transactions` is already STRICT
+-- in the baseline, `ALTER TABLE ... ADD COLUMN` leaves the table's options --
+-- including STRICT -- untouched, and INTEGER is a STRICT-legal column type. So
+-- this needs no `__new_payment_transactions` staging table and cannot silently
+-- rename a non-STRICT table over a STRICT one. NOT NULL is safe alongside a
+-- constant DEFAULT: SQLite fills existing rows with it.
+--
+-- `refund_transactions` deliberately gets no matching column. It records the
+-- cash actually handed back, which is already the right figure once a refund
+-- returns what the payment collected; the delta against the order total is the
+-- payment's own adjustment reversed. A second copy of it would be a second
+-- thing that has to agree.
+ALTER TABLE `payment_transactions`
+  ADD COLUMN `rounding_adjustment_cents` INTEGER NOT NULL DEFAULT 0;
