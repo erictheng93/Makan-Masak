@@ -12,7 +12,11 @@ import {
 import type { Restaurant } from "@makanmasak/shared-types";
 import type { BusinessTimezone } from "../utils/business-timezone";
 import { PlanType } from "@makanmasak/shared-types";
-import { assertCurrencyAlignedCents, badRequest } from "@makanmasak/utils";
+import {
+  assertCurrencyAlignedCents,
+  badRequest,
+  DEFAULT_CURRENCY,
+} from "@makanmasak/utils";
 import { toCents } from "../utils/money";
 import { requireRestaurantCurrency } from "../utils/order-totals";
 
@@ -99,6 +103,12 @@ function settingsRecord(value: unknown): Record<string, unknown> {
   }
   return isPlainRecord(value) ? value : {};
 }
+
+// SQLite's one-argument trim() removes only U+0020. Keep this aligned with
+// ECMAScript String.prototype.trim(), which the authoritative currency
+// normalizer uses, so the atomic SQL guard resolves legacy values identically.
+const ECMASCRIPT_WHITESPACE =
+  "\u0009\u000a\u000b\u000c\u000d\u0020\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff";
 
 /**
  * `minOrderAmount` and `deliveryFee` are major-unit money in the settings
@@ -340,9 +350,9 @@ export class RestaurantService extends BaseService {
                   .where(eq(orders.restaurantId, id)),
               ),
               sql`upper(coalesce(
-                nullif(trim(json_extract(${restaurants.settings}, '$.currency')), ''),
-                nullif(trim(json_extract(json_extract(${restaurants.settings}, '$'), '$.currency')), ''),
-                'TWD'
+                nullif(trim(json_extract(${restaurants.settings}, '$.currency'), ${ECMASCRIPT_WHITESPACE}), ''),
+                nullif(trim(json_extract(json_extract(${restaurants.settings}, '$'), '$.currency'), ${ECMASCRIPT_WHITESPACE}), ''),
+                ${DEFAULT_CURRENCY}
               )) = ${settingsWriteCurrency}`,
             ),
           )

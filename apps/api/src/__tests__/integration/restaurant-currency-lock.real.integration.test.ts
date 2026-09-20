@@ -180,4 +180,28 @@ describe("restaurant currency lock — real integration", () => {
       ).resolves.toMatchObject({ id: restaurant.id });
     },
   );
+
+  it.each([
+    ["tab", "\t"],
+    ["newline", "\n"],
+    ["non-breaking space", "\u00a0"],
+  ])(
+    "treats legacy currency containing only %s as TWD",
+    async (_label, legacyCurrency) => {
+      const restaurant = await seed.restaurant({
+        settings: { currency: legacyCurrency },
+      });
+      await seed.order(restaurant.id);
+      const service = new DatabaseRestaurantService(
+        testApp.env.DB,
+        testApp.env,
+      );
+
+      await expect(
+        service.updateRestaurant(restaurant.id, {
+          settings: { allowGuestOrders: false },
+        }),
+      ).resolves.toMatchObject({ id: restaurant.id });
+    },
+  );
 });
