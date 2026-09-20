@@ -10,6 +10,13 @@
 
 **Spec:** 本檔自足；背景決策見本節下方「決策紀錄」。
 
+## 實作交付（2026-09-21）
+
+Task 2–12 已實作並分別提交；Task 1 沿用已試跑版本。
+實測與差異詳見 [稽核紀錄](../reviews/2026-09-21-onboarding-locale-and-market.md)。
+下方 task 範例保留原規劃以供比對；實際平台 migration 使用 **0028**，
+因 `0027_guest_coupon_identity.sql` 已占用 0027。Production 回填仍屬部署步驟，尚未執行。
+
 ## 決策紀錄（已定案，實作時不要再翻案）
 
 1. **只開放台灣與馬來西亞**（`TW`、`MY`）。程式支援的幣別有 TWD／MYR／VND，但 VND 不在這次的下拉選單裡——列出沒有對應金流與發票支援的國家會給店主錯誤期待。
@@ -1579,11 +1586,11 @@ git commit -m "chore(data): backfill the country of shops created before 0027"
 
 ## 部署順序
 
-1. **平台 migration 0027 與控制面 migration 0014**（純新增欄位，舊程式不碰，可先套）
+1. **平台 migration 0028 與控制面 migration 0014**（純新增欄位，舊程式不碰，可先套）
 2. **`apps/api`**（幣別鎖、市集核准守門）
 3. **`apps/management-api`**（申請驗證、市集清單、開通寫入）
 4. **`apps/onboarding-app`** 與 **`apps/admin-dashboard`**（兩個表單）
-5. **跑 `scripts/backfill-restaurant-country.sql`**（要在 0027 之後）
+5. **跑 `scripts/backfill-restaurant-country.sql`**（要在 0028 之後）
 
 管理面與入駐前端要一起走：入駐表單開始送 `countryCode`，而舊的 management-api 會把它當未知欄位忽略，於是開出來的店仍然沒有國別——所以 **management-api 要先於 onboarding-app 部署**。
 
