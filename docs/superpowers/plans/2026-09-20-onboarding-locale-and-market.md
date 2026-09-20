@@ -30,6 +30,7 @@
 - 覆蓋率門檻在 `apps/api/src/features/**`：lines 90%／branches 78%，且 **real-integration 測試不計入**，新分支要有單元測試。
 - 單檔 real D1 測試跑法：`cd apps/api && pnpm exec vitest run --config vitest.real-integration.config.ts <substring>`（必須在 app 目錄內，根目錄找不到 config）。
 - 驗證指令不要接 `| tail` 或 `| grep` 收尾，退出碼會被吃掉。
+- 動到任何套件的測試設定後，跑 `pnpm check:single-test-runner`：多一份 vitest 實例會讓整個測試套件隨機在啟動時整批失敗（CLAUDE.md 有記）。Task 1 的試跑已確認新增設定後仍是單一實例。
 
 ---
 
@@ -52,9 +53,15 @@
 
 ### Task 1：國別事實來源（`packages/shared-types`）
 
+> **已由我試跑完成**（commit `a1aecec2`），作為這份規劃可執行性的驗證。實作時
+> 可直接跳過，或拿來比對。試跑發現兩件規劃原本漏掉的事，已補進下面的步驟：
+> `packages/shared-types` 完全沒有測試環境，而 `SUPPORTED_COUNTRIES` 是
+> readonly tuple，`toEqual` 前要展開成陣列。
+
 **Files:**
 - Create: `packages/shared-types/src/locale.ts`
-- Modify: `packages/shared-types/src/index.ts`
+- Create: `packages/shared-types/vitest.config.ts`
+- Modify: `packages/shared-types/src/index.ts`、`packages/shared-types/package.json`
 - Test: `packages/shared-types/src/locale.test.ts`
 
 **Interfaces:**
@@ -71,6 +78,42 @@
 `timezone` 的值**必須**落在 `packages/database/src/utils/business-timezone.ts` 的 `BUSINESS_TIMEZONE_OFFSET_MINUTES` 裡（目前含 `Asia/Taipei`、`Asia/Kuala_Lumpur`），否則營業日切分會炸。
 
 城市清單：台灣用 22 個縣市，馬來西亞用 13 州＋3 個聯邦直轄區。清單寫死在這支檔案，不查資料庫——城市是政策鎖定的維度，要能被型別檢查。
+
+- [ ] **Step 0：先給這個套件一個測試環境**
+
+`packages/shared-types` 目前沒有任何測試、沒有 `vitest.config.ts`、`package.json`
+也沒有 `test` script。缺了設定，vitest 會往上找到根設定並把 `projects` 解析到
+錯的目錄（CLAUDE.md 記載 `packages/database` 就是這樣壞過）。
+
+```ts
+// packages/shared-types/vitest.config.ts
+import { defineConfig } from "vitest/config";
+import path from "path";
+import { sharedTestConfig } from "../../vitest.shared";
+
+export default defineConfig({
+  test: {
+    ...sharedTestConfig,
+    globals: true,
+    environment: "node",
+    include: ["src/**/__tests__/**/*.test.ts", "src/**/*.test.ts"],
+    exclude: ["node_modules/", "dist/"],
+  },
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
+});
+```
+
+`sharedTestConfig` 的展開是必要的，`scripts/check-package-test-scripts.cjs`
+會檢查；`test` 必須是單發的 `vitest run`（`vitest` 是 watch 模式，會讓 turbo 永遠卡住）：
+
+```json
+    "test": "vitest run",
+    "test:watch": "vitest",
+```
 
 - [ ] **Step 1：先寫會失敗的測試**
 
@@ -101,7 +144,8 @@ describe("COUNTRY_PROFILES", () => {
   it("only offers countries the platform can actually settle", () => {
     // VND is a supported currency but no Vietnamese payment or invoice
     // support exists, so it must not appear in the onboarding dropdown.
-    expect(SUPPORTED_COUNTRIES).toEqual(["TW", "MY"]);
+    // readonly tuple 要展開，否則 toEqual 比不過
+    expect([...SUPPORTED_COUNTRIES]).toEqual(["TW", "MY"]);
   });
 
   it("gives every country a non-empty city list with no duplicates", () => {
@@ -151,8 +195,10 @@ Expected: FAIL，`Cannot find module './locale'`
  */
 export type SupportedCountryCode = "TW" | "MY";
 
-export const SUPPORTED_COUNTRIES = ["TW", "MY"] as const satisfies
-  readonly SupportedCountryCode[];
+export const SUPPORTED_COUNTRIES = [
+  "TW",
+  "MY",
+] as const satisfies readonly SupportedCountryCode[];
 
 export interface CountryProfile {
   countryCode: SupportedCountryCode;
@@ -234,9 +280,13 @@ export {
 ```
 
 ```bash
-git add packages/shared-types/src/locale.ts packages/shared-types/src/locale.test.ts packages/shared-types/src/index.ts
+git add packages/shared-types
 git commit -m "feat(shared-types): make the onboarding country the source of locale defaults"
 ```
+
+驗收（試跑實測值）：`pnpm exec vitest run src/locale.test.ts` → 11 passed；
+`pnpm run typecheck` → exit 0；`node scripts/check-package-test-scripts.cjs`、
+`pnpm check:single-test-runner` 皆 OK。
 
 ---
 
