@@ -9,6 +9,7 @@ export * from "./utils/timestamp";
 export * from "./utils/soft-delete";
 export * from "./utils/money";
 export * from "./utils/order-totals";
+export * from "./utils/market-currency";
 export * from "./utils/settlement";
 export * from "./utils/order-analytics";
 export * from "./utils/money-sql";

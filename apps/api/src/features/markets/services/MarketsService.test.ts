@@ -1181,7 +1181,8 @@ describe("MarketsService", () => {
         [{ id: "market-1", deletedAt: null }],
         [{ id: "market-1", deletedAt: null }],
       ],
-      restaurantMarketMemberships: [[]],
+      restaurantMarketMemberships: [[], []],
+      restaurants: [[{ id: "restaurant-1", settings: { currency: "TWD" } }]],
     });
 
     await expect(
@@ -1229,6 +1230,70 @@ describe("MarketsService", () => {
     ]);
     expect(values.get("markets:version")).toBe("15");
     vi.useRealTimers();
+  });
+
+  it("refuses mismatched vendor currencies before changing memberships", async () => {
+    const { service } = createService();
+    mockSelectResults({
+      markets: [[{ id: "market-1", deletedAt: null }]],
+      restaurantMarketMemberships: [[], [{ restaurantId: "peer" }]],
+      restaurants: [
+        [
+          { id: "restaurant-1", settings: { currency: "MYR" } },
+          { id: "peer", settings: { currency: "TWD" } },
+        ],
+      ],
+    });
+    await expect(
+      service.addVendor("market-1", {
+        restaurantId: "restaurant-1",
+        isPrimary: true,
+      }),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: "MARKET_VENDOR_CURRENCY_MISMATCH",
+      details: { currencies: ["MYR", "TWD"] },
+    });
+    expect(mocks.db.insert).not.toHaveBeenCalled();
+    expect(mocks.db.update).not.toHaveBeenCalled();
+  });
+
+  it("propagates invalid vendor configuration instead of disguising it as a mismatch", async () => {
+    const { service } = createService();
+    mockSelectResults({
+      markets: [[{ id: "market-1", deletedAt: null }]],
+      restaurantMarketMemberships: [[], []],
+      restaurants: [
+        [{ id: "restaurant-1", settings: { currency: "INVALID" } }],
+      ],
+    });
+    await expect(
+      service.addVendor("market-1", { restaurantId: "restaurant-1" }),
+    ).rejects.toMatchObject({
+      status: 500,
+      code: "RESTAURANT_CURRENCY_INVALID",
+    });
+    expect(mocks.db.insert).not.toHaveBeenCalled();
+  });
+
+  it("reports an atomic guard refusal without clearing a previous primary membership", async () => {
+    const { service } = createService();
+    mockSelectResults({
+      markets: [[{ id: "market-1", deletedAt: null }]],
+      restaurantMarketMemberships: [[], []],
+      restaurants: [[{ id: "restaurant-1", settings: { currency: "TWD" } }]],
+    });
+    mockMutationResults({ restaurantMarketMemberships: { insert: [[]] } });
+    await expect(
+      service.addVendor("market-1", {
+        restaurantId: "restaurant-1",
+        isPrimary: true,
+      }),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: "MARKET_VENDOR_CURRENCY_MISMATCH",
+    });
+    expect(mocks.db.update).not.toHaveBeenCalled();
   });
 
   it("updates existing vendor memberships with existing values as fallbacks", async () => {
@@ -1337,7 +1402,8 @@ describe("MarketsService", () => {
         [{ id: "deleted-market", deletedAt: new Date("2026-06-07T00:00:00Z") }],
         [{ id: "market-1", deletedAt: null }],
       ],
-      restaurantMarketMemberships: [[]],
+      restaurantMarketMemberships: [[], []],
+      restaurants: [[{ id: "restaurant-2", settings: { currency: "TWD" } }]],
     });
 
     await expect(
@@ -1363,17 +1429,6 @@ describe("MarketsService", () => {
       service.removeVendor("market-1", "restaurant-3"),
     ).resolves.toBe(false);
 
-    expect(mutations.inserted).toEqual([
-      expect.objectContaining({
-        marketId: "market-1",
-        restaurantId: "restaurant-2",
-        stallNumber: null,
-        locationLabel: null,
-        mapPosition: null,
-        marketHours: null,
-        isPrimary: false,
-      }),
-    ]);
     expect(mutations.updated).toEqual([
       expect.objectContaining({ leftAt: expect.any(Date) }),
     ]);
@@ -1701,7 +1756,8 @@ describe("MarketsService", () => {
         ],
       ],
       markets: [[market]],
-      restaurantMarketMemberships: [[]],
+      restaurantMarketMemberships: [[], []],
+      restaurants: [[{ id: "restaurant-1", settings: { currency: "TWD" } }]],
     });
     mockMutationResults({
       restaurantMarketMemberships: {

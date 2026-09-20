@@ -19,6 +19,9 @@ import {
   marketJoinRequests,
   menuItems,
   markets,
+  marketCurrencyMatches,
+  marketVendorCurrencyMismatch,
+  restaurantCurrencySql,
   restaurantMarketMemberships,
   restaurantServiceItems,
   restaurants,
@@ -37,6 +40,8 @@ import {
 } from "./geo";
 import { evaluateMarketPublicReadiness } from "../utils/publicReadiness";
 import { generateUUID } from "@makanmasak/utils";
+import { ApiError } from "../../../shared/utils/api-error";
+import { resolveSharedRestaurantCurrency } from "../../../shared/utils/restaurant-currency";
 
 const MARKET_CACHE_VERSION_KEY = "markets:version";
 const OPEN_NOW_VENDOR_SCAN_LIMIT = 50000;
@@ -1545,23 +1550,52 @@ export class MarketsService {
       return membership ?? existing;
     }
 
-    if (input.isPrimary) {
-      await this.clearPrimaryMembership(input.restaurantId);
+    const peers = await this.db
+      .select({ restaurantId: restaurantMarketMemberships.restaurantId })
+      .from(restaurantMarketMemberships)
+      .where(
+        and(
+          eq(restaurantMarketMemberships.marketId, marketId),
+          isNull(restaurantMarketMemberships.leftAt),
+        ),
+      );
+    let currency;
+    try {
+      currency = await resolveSharedRestaurantCurrency(this.d1, [
+        input.restaurantId,
+        ...peers.map((peer) => peer.restaurantId),
+      ]);
+    } catch (error) {
+      if (
+        error instanceof ApiError &&
+        error.code === "MIXED_CURRENCY_CHECKOUT"
+      ) {
+        throw marketVendorCurrencyMismatch(
+          (error.details as { currencies?: string[] } | undefined)?.currencies,
+        );
+      }
+      throw error;
     }
 
+    // The preflight explains invalid settings; the INSERT predicate closes the
+    // race with other approvals and order-free member currency changes.
     const [membership] = await this.db
       .insert(restaurantMarketMemberships)
-      .values({
-        marketId,
-        restaurantId: input.restaurantId,
-        stallNumber: input.stallNumber ?? null,
-        locationLabel: input.locationLabel ?? null,
-        mapPosition: input.mapPosition ?? null,
-        marketHours: input.marketHours ?? null,
-        isPrimary: input.isPrimary ?? false,
-        joinedAt: new Date(),
-      })
+      .select(
+        sql`SELECT NULL, ${input.restaurantId}, ${marketId},
+        ${input.stallNumber ?? null}, ${input.locationLabel ?? null},
+        ${input.mapPosition ? JSON.stringify(input.mapPosition) : null},
+        ${input.marketHours ? JSON.stringify(input.marketHours) : null},
+        ${input.isPrimary ? 1 : 0}, ${Date.now()}, NULL
+        FROM restaurants WHERE id = ${input.restaurantId}
+        AND ${restaurantCurrencySql(sql`settings`)} = ${currency}
+        AND ${marketCurrencyMatches(input.restaurantId, currency, marketId)}`,
+      )
       .returning();
+    if (!membership) throw marketVendorCurrencyMismatch();
+    if (input.isPrimary) {
+      await this.clearPrimaryMembership(input.restaurantId, membership.id);
+    }
     await this.bumpPublicCacheVersion();
     return membership;
   }
@@ -1582,7 +1616,10 @@ export class MarketsService {
     return membership ?? null;
   }
 
-  private async clearPrimaryMembership(restaurantId: string) {
+  private async clearPrimaryMembership(
+    restaurantId: string,
+    exceptId?: number,
+  ) {
     await this.db
       .update(restaurantMarketMemberships)
       .set({ isPrimary: false })
@@ -1590,6 +1627,9 @@ export class MarketsService {
         and(
           eq(restaurantMarketMemberships.restaurantId, restaurantId),
           isNull(restaurantMarketMemberships.leftAt),
+          exceptId === undefined
+            ? undefined
+            : sql`${restaurantMarketMemberships.id} <> ${exceptId}`,
         ),
       );
   }

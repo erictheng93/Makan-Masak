@@ -12,13 +12,14 @@ import {
 import type { Restaurant } from "@makanmasak/shared-types";
 import type { BusinessTimezone } from "../utils/business-timezone";
 import { PlanType } from "@makanmasak/shared-types";
-import {
-  assertCurrencyAlignedCents,
-  badRequest,
-  DEFAULT_CURRENCY,
-} from "@makanmasak/utils";
+import { assertCurrencyAlignedCents, badRequest } from "@makanmasak/utils";
 import { toCents } from "../utils/money";
 import { requireRestaurantCurrency } from "../utils/order-totals";
+import {
+  marketCurrencyMatches,
+  marketVendorCurrencyMismatch,
+  restaurantCurrencySql,
+} from "../utils/market-currency";
 
 /** 只列出 mapToRestaurant 實際讀取的欄位，任何餵給它的查詢都必須選滿 */
 type RestaurantRow = Pick<
@@ -103,12 +104,6 @@ function settingsRecord(value: unknown): Record<string, unknown> {
   }
   return isPlainRecord(value) ? value : {};
 }
-
-// SQLite's one-argument trim() removes only U+0020. Keep this aligned with
-// ECMAScript String.prototype.trim(), which the authoritative currency
-// normalizer uses, so the atomic SQL guard resolves legacy values identically.
-const ECMASCRIPT_WHITESPACE =
-  "\u0009\u000a\u000b\u000c\u000d\u0020\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff";
 
 /**
  * `minOrderAmount` and `deliveryFee` are major-unit money in the settings
@@ -342,6 +337,7 @@ export class RestaurantService extends BaseService {
       const updateWhere = settingsWriteCurrency
         ? and(
             eq(restaurants.id, id),
+            marketCurrencyMatches(id, settingsWriteCurrency),
             or(
               notExists(
                 this.db
@@ -349,11 +345,7 @@ export class RestaurantService extends BaseService {
                   .from(orders)
                   .where(eq(orders.restaurantId, id)),
               ),
-              sql`upper(coalesce(
-                nullif(trim(json_extract(${restaurants.settings}, '$.currency'), ${ECMASCRIPT_WHITESPACE}), ''),
-                nullif(trim(json_extract(json_extract(${restaurants.settings}, '$'), '$.currency'), ${ECMASCRIPT_WHITESPACE}), ''),
-                ${DEFAULT_CURRENCY}
-              )) = ${settingsWriteCurrency}`,
+              sql`${restaurantCurrencySql(restaurants.settings)} = ${settingsWriteCurrency}`,
             ),
           )
         : eq(restaurants.id, id);
@@ -369,6 +361,16 @@ export class RestaurantService extends BaseService {
 
       if (!restaurant) {
         if (settingsWriteCurrency) {
+          const [compatible] = await this.db
+            .select({ id: restaurants.id })
+            .from(restaurants)
+            .where(
+              and(
+                eq(restaurants.id, id),
+                marketCurrencyMatches(id, settingsWriteCurrency),
+              ),
+            );
+          if (!compatible) throw marketVendorCurrencyMismatch();
           throw badRequest(
             "Currency cannot change once the shop has orders",
             "CURRENCY_CHANGE_NOT_ALLOWED",

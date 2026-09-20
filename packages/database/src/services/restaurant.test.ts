@@ -142,37 +142,47 @@ describe("RestaurantService.updateRestaurant", () => {
     });
   });
 
-  it("rejects an atomic currency update when an order exists", async () => {
-    const selectBuilder = {
-      from: vi.fn(() => selectBuilder),
-      where: vi.fn(() => selectBuilder),
-    };
-    const updateBuilder = {
-      set: vi.fn(() => updateBuilder),
-      where: vi.fn(() => updateBuilder),
-      returning: vi.fn(async () => []),
-    };
-    const db = {
-      query: {
-        restaurants: {
-          findFirst: vi.fn(async () => ({
-            settings: { currency: "TWD" },
-          })),
+  it.each([
+    { compatible: true, status: 400, code: "CURRENCY_CHANGE_NOT_ALLOWED" },
+    { compatible: false, status: 409, code: "MARKET_VENDOR_CURRENCY_MISMATCH" },
+  ])(
+    "preserves $code when the atomic settings update is refused",
+    async ({ compatible, status, code }) => {
+      const selectBuilder = {
+        from: vi.fn(() => selectBuilder),
+        where: vi.fn(() => selectBuilder),
+        then: (resolve: (rows: Array<{ id: string }>) => unknown) =>
+          Promise.resolve(compatible ? [{ id: "restaurant-1" }] : []).then(
+            resolve,
+          ),
+      };
+      const updateBuilder = {
+        set: vi.fn(() => updateBuilder),
+        where: vi.fn(() => updateBuilder),
+        returning: vi.fn(async () => []),
+      };
+      const db = {
+        query: {
+          restaurants: {
+            findFirst: vi.fn(async () => ({
+              settings: { currency: "TWD" },
+            })),
+          },
         },
-      },
-      select: vi.fn(() => selectBuilder),
-      update: vi.fn(() => updateBuilder),
-    };
+        select: vi.fn(() => selectBuilder),
+        update: vi.fn(() => updateBuilder),
+      };
 
-    await expect(
-      createServiceWithDb(db).updateRestaurant("restaurant-1", {
-        settings: { currency: "MYR" },
-      }),
-    ).rejects.toMatchObject({
-      status: 400,
-      code: "CURRENCY_CHANGE_NOT_ALLOWED",
-    });
-  });
+      await expect(
+        createServiceWithDb(db).updateRestaurant("restaurant-1", {
+          settings: { currency: "MYR" },
+        }),
+      ).rejects.toMatchObject({
+        status,
+        code,
+      });
+    },
+  );
 });
 
 /**
