@@ -3,7 +3,7 @@
  */
 
 import { drizzle } from "drizzle-orm/d1";
-import { eq, and, gte, lte, sql, type SQL } from "drizzle-orm";
+import { eq, and, gte, inArray, lte, sql, type SQL } from "drizzle-orm";
 import {
   BusinessTimezoneResolver,
   cashShifts,
@@ -138,8 +138,14 @@ export class ReportService {
             eq(paymentTransactions.restaurantId, restaurantId),
             gte(paymentTransactions.createdAt, startedAt),
             lte(paymentTransactions.createdAt, endedAt),
-            // 只算真的收到的錢：pending / failed / cancelled 的紀錄沒有進抽屜。
-            eq(paymentTransactions.status, "paid"),
+            // 只算真的收到的錢：pending / failed / cancelled 沒有進抽屜。
+            // 後來退款的仍然算：收的當下那筆進位確實進了抽屜，退款本身是
+            // 另一筆現金流動，由 totalRefunds 那條線處理。
+            inArray(paymentTransactions.status, [
+              "paid",
+              "refunded",
+              "partial_refunded",
+            ]),
           ),
         );
 
