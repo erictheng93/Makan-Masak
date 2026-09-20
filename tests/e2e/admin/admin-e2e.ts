@@ -283,6 +283,9 @@ export async function installAdminSession(
       window.localStorage.setItem("auth_user", JSON.stringify(session.user));
     }
     if (session.csrfToken) {
+      // Seed the client side of double-submit too. A form can submit before
+      // /auth/me responds and populates the auth client's CSRF cache.
+      window.localStorage.setItem("mm_csrf_token_auth", session.csrfToken);
       window.document.cookie = `csrf_token=${session.csrfToken}; path=/; SameSite=Lax`;
     }
     // Pin i18n so role/label assertions are stable regardless of the machine.
