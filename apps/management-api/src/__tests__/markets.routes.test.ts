@@ -1,7 +1,26 @@
+import Database from "better-sqlite3";
 import { sign } from "hono/jwt";
 import { describe, expect, it } from "vitest";
+import { D1DatabaseAdapter } from "../../../../tests/helpers/d1-adapter";
 import app from "../index";
 import type { ManagementEnv } from "../types";
+
+function createPlatformDb() {
+  const sqlite = new Database(":memory:");
+  sqlite.exec(`
+    CREATE TABLE markets (
+      id TEXT PRIMARY KEY,
+      slug TEXT NOT NULL,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      city TEXT NOT NULL,
+      district TEXT NOT NULL,
+      is_active INTEGER NOT NULL,
+      deleted_at_ms INTEGER
+    );
+  `);
+  return new D1DatabaseAdapter(sqlite);
+}
 
 function createEnv(): ManagementEnv {
   return {
@@ -14,6 +33,7 @@ function createEnv(): ManagementEnv {
     CF_API_TOKEN: "test-token",
     CF_ACCOUNT_ID: "test-account",
     MANAGEMENT_DB: {} as D1Database,
+    PLATFORM_DB: createPlatformDb() as unknown as D1Database,
     CACHE_KV: {} as KVNamespace,
     DEPLOYMENT_STATUS_KV: {} as KVNamespace,
     BUNDLE_STORAGE: {} as R2Bucket,
@@ -90,9 +110,9 @@ describe("management market routes", () => {
     });
   });
 
-  it("keeps market management reads protected", async () => {
+  it("keeps market administration reads protected", async () => {
     const response = await app.fetch(
-      new Request("https://management.test/api/v1/markets"),
+      new Request("https://management.test/api/v1/admin/markets/join-requests"),
       createEnv(),
     );
 
@@ -123,9 +143,12 @@ describe("management market routes", () => {
     const token = await managementTokenWithoutRole();
 
     const response = await app.fetch(
-      new Request("https://management.test/api/v1/markets", {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
+      new Request(
+        "https://management.test/api/v1/admin/markets/join-requests",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      ),
       createEnv(),
     );
 

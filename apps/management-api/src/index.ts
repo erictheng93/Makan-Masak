@@ -195,6 +195,7 @@ app.get("/", (c) => c.redirect("/info"));
 const publicApi = new Hono<{ Bindings: ManagementEnv }>();
 publicApi.route("/auth", authRouter);
 publicApi.route("/onboarding", onboardingRouter);
+publicApi.route("/markets", marketsRouter);
 // POST /licenses/verify is designed for cross-service calls that authenticate
 // via the licenseKey payload itself. Mounting it on the public API (registered
 // before the Bearer-protected /licenses/* block below) keeps it reachable while
@@ -214,7 +215,6 @@ const PROTECTED_PREFIXES = [
   "/licenses",
   "/monitoring",
   "/updates",
-  "/markets",
   "/admin",
 ];
 for (const prefix of PROTECTED_PREFIXES) {
@@ -227,7 +227,6 @@ protectedApi.route("/deployments", deploymentsRouter);
 protectedApi.route("/licenses", licensesRouter);
 protectedApi.route("/monitoring", monitoringRouter);
 protectedApi.route("/updates", updatesRouter);
-protectedApi.route("/markets", marketsRouter);
 protectedApi.route("/admin/markets", adminMarketsRouter);
 protectedApi.route("/admin/onboarding", adminOnboardingRouter);
 
