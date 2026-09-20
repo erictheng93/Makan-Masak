@@ -517,6 +517,7 @@ function createPartnershipServiceTestDb(): D1DatabaseAdapter {
       shop_qr_version INTEGER NOT NULL DEFAULT 1,
       settings TEXT,
       timezone TEXT NOT NULL DEFAULT 'Asia/Taipei',
+      country_code TEXT,
       rating REAL DEFAULT 0,
       review_count INTEGER NOT NULL DEFAULT 0,
       total_orders INTEGER NOT NULL DEFAULT 0,
@@ -530,6 +531,9 @@ function createPartnershipServiceTestDb(): D1DatabaseAdapter {
       supports_takeaway INTEGER NOT NULL DEFAULT 0,
       supports_delivery INTEGER NOT NULL DEFAULT 0
     );
+
+    CREATE INDEX restaurants_country_code_idx
+      ON restaurants (country_code);
 
     CREATE TABLE verified_members (
       id TEXT PRIMARY KEY NOT NULL,
