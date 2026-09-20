@@ -10,7 +10,8 @@ describe("onboarding application payload", () => {
       contactPhone: "0912345678",
       address: "1 Fengjia Road",
       district: "Xitun District",
-      city: "Taichung City",
+      city: "台中市",
+      countryCode: "TW",
       planId: "standard",
       latitude: 24.147736,
       longitude: 120.673648,
@@ -20,6 +21,7 @@ describe("onboarding application payload", () => {
     expect(payload.longitude).toBe(120.673648);
     expect(payload.address).toBe("1 Fengjia Road");
     expect(payload.district).toBe("Xitun District");
-    expect(payload.city).toBe("Taichung City");
+    expect(payload.city).toBe("台中市");
+    expect(payload.countryCode).toBe("TW");
   });
 });

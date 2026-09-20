@@ -29,7 +29,21 @@ const zhCN: Messages = {
       },
       address: { label: "店铺地址", placeholder: "例如：中山路 1 号" },
       district: { label: "区", placeholder: "例如：西屯区" },
-      city: { label: "城市", placeholder: "例如：台中市" },
+      country: {
+        label: "国家",
+        placeholder: "请选择国家",
+        options: { TW: "台湾", MY: "马来西亚" },
+      },
+      city: { label: "城市", placeholder: "请选择城市" },
+      market: {
+        label: "夜市／商圈",
+        independent: "我是独立店面，不属于任何商圈",
+        fetchError: "无法载入这个城市的夜市／商圈，请稍后再试",
+      },
+      stallNumber: {
+        label: "摊位号码（选填）",
+        placeholder: "例如：A-12",
+      },
       location: {
         failure: "无法取得目前位置，请确认定位权限或手动输入座标",
         help: "用于夜市 / 商圈探索与附近搜寻。请使用店面或摊位的实际座标。",
@@ -68,6 +82,7 @@ const zhCN: Messages = {
       longitudeRequired: "请输入餐厅经度",
       phoneRequired: "请输入联络电话",
       addressRequired: "请输入店铺地址",
+      countryRequired: "请选择国家",
       districtRequired: "请输入区",
       cityRequired: "请输入城市",
       subdomainInvalidFormat: "只能包含小写字母、数字和连字符",

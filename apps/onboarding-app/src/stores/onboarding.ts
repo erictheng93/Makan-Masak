@@ -5,6 +5,7 @@
 
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
+import type { SupportedCountryCode } from "@makanmasak/shared-types";
 import {
   onboardingApi,
   ApiError,
@@ -19,6 +20,9 @@ export interface ApplicationData {
   address: string;
   district: string;
   city: string;
+  countryCode: SupportedCountryCode;
+  marketId?: string;
+  stallNumber?: string;
   latitude: number;
   longitude: number;
   planId: "trial" | "standard" | "professional" | "enterprise";

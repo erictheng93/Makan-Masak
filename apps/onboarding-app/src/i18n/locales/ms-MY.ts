@@ -29,7 +29,21 @@ const msMY: Messages = {
       },
       address: { label: "Alamat", placeholder: "cth. 1 Jalan Utama" },
       district: { label: "Daerah", placeholder: "cth. Daerah Tengah" },
-      city: { label: "Bandar", placeholder: "cth. Bandar Taichung" },
+      country: {
+        label: "Negara",
+        placeholder: "Pilih negara",
+        options: { TW: "Taiwan", MY: "Malaysia" },
+      },
+      city: { label: "Bandar", placeholder: "Pilih bandar" },
+      market: {
+        label: "Pasar atau kawasan perniagaan",
+        independent: "Saya kedai bebas di luar kawasan pasar",
+        fetchError: "Pasar untuk bandar ini tidak dapat dimuatkan. Cuba lagi.",
+      },
+      stallNumber: {
+        label: "Nombor gerai (pilihan)",
+        placeholder: "cth. A-12",
+      },
       location: {
         failure:
           "Tidak dapat mendapatkan lokasi semasa anda. Semak kebenaran lokasi atau masukkan koordinat secara manual.",
@@ -70,6 +84,7 @@ const msMY: Messages = {
       longitudeRequired: "Sila masukkan longitud restoran",
       phoneRequired: "Sila masukkan nombor telefon",
       addressRequired: "Sila masukkan alamat",
+      countryRequired: "Sila pilih negara",
       districtRequired: "Sila masukkan daerah",
       cityRequired: "Sila masukkan bandar",
       subdomainInvalidFormat:

@@ -73,7 +73,21 @@ const enUS: Messages = {
       },
       address: { label: "Street Address", placeholder: "e.g. 1 Main Street" },
       district: { label: "District", placeholder: "e.g. Central District" },
-      city: { label: "City", placeholder: "e.g. Taichung City" },
+      country: {
+        label: "Country",
+        placeholder: "Select a country",
+        options: { TW: "Taiwan", MY: "Malaysia" },
+      },
+      city: { label: "City", placeholder: "Select a city" },
+      market: {
+        label: "Market or business district",
+        independent: "I am an independent shop outside a market",
+        fetchError: "Unable to load markets for this city. Please try again.",
+      },
+      stallNumber: {
+        label: "Stall number (optional)",
+        placeholder: "e.g. A-12",
+      },
       location: {
         label: "Restaurant Location",
         help: "Used for night market / district discovery and nearby search. Use the actual storefront or stall coordinates.",
@@ -105,6 +119,7 @@ const enUS: Messages = {
       emailInvalid: "Please enter a valid email",
       phoneRequired: "Please enter a phone number",
       addressRequired: "Please enter the street address",
+      countryRequired: "Please select a country",
       districtRequired: "Please enter the district",
       cityRequired: "Please enter the city",
       latitudeRequired: "Please enter the restaurant latitude",

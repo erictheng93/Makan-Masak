@@ -68,7 +68,21 @@ const zhTW = {
       },
       address: { label: "店家地址", placeholder: "例如：中山路 1 號" },
       district: { label: "鄉鎮市區", placeholder: "例如：西屯區" },
-      city: { label: "縣市", placeholder: "例如：台中市" },
+      country: {
+        label: "國家",
+        placeholder: "請選擇國家",
+        options: { TW: "台灣", MY: "馬來西亞" },
+      },
+      city: { label: "縣市", placeholder: "請選擇縣市" },
+      market: {
+        label: "夜市／商圈",
+        independent: "我是獨立店面，不屬於任何商圈",
+        fetchError: "無法載入這個縣市的夜市／商圈，請稍後再試",
+      },
+      stallNumber: {
+        label: "攤位號碼（選填）",
+        placeholder: "例如：A-12",
+      },
       location: {
         label: "餐廳位置",
         help: "用於夜市 / 商圈探索與附近搜尋。請使用店面或攤位的實際座標。",
@@ -98,6 +112,7 @@ const zhTW = {
       emailInvalid: "請輸入有效的 Email",
       phoneRequired: "請輸入聯絡電話",
       addressRequired: "請輸入店家地址",
+      countryRequired: "請選擇國家",
       districtRequired: "請輸入鄉鎮市區",
       cityRequired: "請輸入縣市",
       latitudeRequired: "請輸入餐廳緯度",

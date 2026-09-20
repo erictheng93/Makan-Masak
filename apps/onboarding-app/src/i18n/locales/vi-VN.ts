@@ -29,7 +29,21 @@ const viVN: Messages = {
       },
       address: { label: "Địa chỉ", placeholder: "ví dụ: 1 Đường Chính" },
       district: { label: "Quận", placeholder: "ví dụ: Quận Trung Tâm" },
-      city: { label: "Thành phố", placeholder: "ví dụ: Thành phố Đài Trung" },
+      country: {
+        label: "Quốc gia",
+        placeholder: "Chọn quốc gia",
+        options: { TW: "Đài Loan", MY: "Malaysia" },
+      },
+      city: { label: "Thành phố", placeholder: "Chọn thành phố" },
+      market: {
+        label: "Chợ hoặc khu thương mại",
+        independent: "Tôi là cửa hàng độc lập ngoài khu chợ",
+        fetchError: "Không thể tải chợ cho thành phố này. Vui lòng thử lại.",
+      },
+      stallNumber: {
+        label: "Số gian hàng (không bắt buộc)",
+        placeholder: "ví dụ: A-12",
+      },
       location: {
         failure:
           "Không thể nhận được vị trí hiện tại của bạn. Kiểm tra quyền vị trí hoặc nhập tọa độ theo cách thủ công.",
@@ -70,6 +84,7 @@ const viVN: Messages = {
       longitudeRequired: "Vui lòng nhập kinh độ của nhà hàng",
       phoneRequired: "Vui lòng nhập số điện thoại",
       addressRequired: "Vui lòng nhập địa chỉ",
+      countryRequired: "Vui lòng chọn quốc gia",
       districtRequired: "Vui lòng nhập quận",
       cityRequired: "Vui lòng nhập thành phố",
       subdomainInvalidFormat:

@@ -19,6 +19,7 @@
     "@headlessui/vue": "^1.7.0",
     "@heroicons/vue": "^2.0.0",
     "@makanmasak/i18n": "workspace:*",
+    "@makanmasak/shared-types": "workspace:*",
     "@makanmasak/utils": "workspace:*",
     "@tailwindcss/forms": "^0.5.0",
     "axios": "^1.17.0",

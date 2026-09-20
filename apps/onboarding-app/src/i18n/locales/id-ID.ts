@@ -29,7 +29,21 @@ const idID: Messages = {
       },
       address: { label: "Alamat", placeholder: "misalnya Jalan Utama 1" },
       district: { label: "Distrik", placeholder: "misalnya Distrik Pusat" },
-      city: { label: "Kota", placeholder: "misalnya Kota Taichung" },
+      country: {
+        label: "Negara",
+        placeholder: "Pilih negara",
+        options: { TW: "Taiwan", MY: "Malaysia" },
+      },
+      city: { label: "Kota", placeholder: "Pilih kota" },
+      market: {
+        label: "Pasar atau kawasan bisnis",
+        independent: "Saya toko independen di luar kawasan pasar",
+        fetchError: "Pasar untuk kota ini tidak dapat dimuat. Coba lagi.",
+      },
+      stallNumber: {
+        label: "Nomor kios (opsional)",
+        placeholder: "misalnya A-12",
+      },
       location: {
         failure:
           "Tidak dapat memperoleh lokasi Anda saat ini. Periksa izin lokasi atau masukkan koordinat secara manual.",
@@ -71,6 +85,7 @@ const idID: Messages = {
       longitudeRequired: "Silakan masukkan garis bujur restoran",
       phoneRequired: "Silakan masukkan nomor telepon",
       addressRequired: "Silakan masukkan alamat",
+      countryRequired: "Silakan pilih negara",
       districtRequired: "Silakan masukkan distrik",
       cityRequired: "Silakan masukkan kota",
       subdomainInvalidFormat:

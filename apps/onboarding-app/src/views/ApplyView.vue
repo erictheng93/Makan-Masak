@@ -1,9 +1,16 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useOnboardingStore } from "@/stores/onboarding";
+import { onboardingApi, type MarketOption } from "@/services/api";
 import { ArrowPathIcon, MapPinIcon } from "@heroicons/vue/24/outline";
+import {
+  SUPPORTED_COUNTRIES,
+  citiesForCountry,
+  normalizeCountryCode,
+  type SupportedCountryCode,
+} from "@makanmasak/shared-types";
 import { useI18n } from "@/i18n";
 
 const { t } = useI18n();
@@ -11,16 +18,34 @@ const router = useRouter();
 const toast = useToast();
 const store = useOnboardingStore();
 
+const persistedApplication = store.application;
+const initialCountry = normalizeCountryCode(persistedApplication?.countryCode);
+const initialCity =
+  initialCountry &&
+  typeof persistedApplication?.city === "string" &&
+  citiesForCountry(initialCountry).includes(persistedApplication.city)
+    ? persistedApplication.city
+    : "";
+
 const form = ref({
-  businessName: "",
-  contactName: "",
-  contactEmail: "",
-  contactPhone: "",
-  address: "",
-  district: "",
-  city: "",
-  latitude: null as number | null,
-  longitude: null as number | null,
+  businessName: persistedApplication?.businessName ?? "",
+  contactName: persistedApplication?.contactName ?? "",
+  contactEmail: persistedApplication?.contactEmail ?? "",
+  contactPhone: persistedApplication?.contactPhone ?? "",
+  address: persistedApplication?.address ?? "",
+  district: persistedApplication?.district ?? "",
+  countryCode: (initialCountry ?? "") as SupportedCountryCode | "",
+  city: initialCity,
+  marketId:
+    initialCity && typeof persistedApplication?.marketId === "string"
+      ? persistedApplication.marketId
+      : "",
+  stallNumber:
+    initialCity && typeof persistedApplication?.stallNumber === "string"
+      ? persistedApplication.stallNumber
+      : "",
+  latitude: persistedApplication?.latitude ?? (null as number | null),
+  longitude: persistedApplication?.longitude ?? (null as number | null),
   // Self-service shops start on the trial; the page offers no plan choice, and
   // the platform moves a shop onto a paid tier after it has been activated.
   planId: "trial" as const,
@@ -28,6 +53,98 @@ const form = ref({
 
 const errors = ref<Record<string, string>>({});
 const isLocating = ref(false);
+const markets = ref<MarketOption[]>([]);
+const isLoadingMarkets = ref(false);
+const marketError = ref("");
+let marketRequestId = 0;
+
+const cityOptions = computed(() => {
+  const country = normalizeCountryCode(form.value.countryCode);
+  return country ? citiesForCountry(country) : [];
+});
+
+const loadMarkets = async (
+  country: SupportedCountryCode,
+  city: string,
+  preserveSelection = false,
+) => {
+  const requestId = ++marketRequestId;
+  markets.value = [];
+  marketError.value = "";
+  isLoadingMarkets.value = true;
+
+  try {
+    const result = await onboardingApi.getMarkets({ country, city });
+    if (
+      requestId !== marketRequestId ||
+      form.value.countryCode !== country ||
+      form.value.city !== city
+    ) {
+      return;
+    }
+
+    markets.value = result;
+    if (
+      preserveSelection &&
+      form.value.marketId &&
+      !result.some((market) => market.id === form.value.marketId)
+    ) {
+      form.value.marketId = "";
+      form.value.stallNumber = "";
+    }
+  } catch {
+    if (requestId === marketRequestId) {
+      marketError.value = t("apply.form.market.fetchError");
+    }
+  } finally {
+    if (requestId === marketRequestId) {
+      isLoadingMarkets.value = false;
+    }
+  }
+};
+
+watch(
+  () => form.value.countryCode,
+  () => {
+    marketRequestId += 1;
+    form.value.city = "";
+    form.value.marketId = "";
+    form.value.stallNumber = "";
+    markets.value = [];
+    marketError.value = "";
+    isLoadingMarkets.value = false;
+  },
+);
+
+watch(
+  () => form.value.city,
+  (city) => {
+    marketRequestId += 1;
+    form.value.marketId = "";
+    form.value.stallNumber = "";
+    markets.value = [];
+    marketError.value = "";
+    isLoadingMarkets.value = false;
+
+    const country = normalizeCountryCode(form.value.countryCode);
+    if (city && country) {
+      void loadMarkets(country, city);
+    }
+  },
+);
+
+watch(
+  () => form.value.marketId,
+  (marketId) => {
+    if (!marketId) {
+      form.value.stallNumber = "";
+    }
+  },
+);
+
+if (initialCountry && initialCity) {
+  void loadMarkets(initialCountry, initialCity, true);
+}
 
 const parseCoordinate = (value: number | string | null): number | null => {
   if (value === null || value === "") {
@@ -63,6 +180,10 @@ const validate = (): boolean => {
     errors.value.address = t("apply.validation.addressRequired");
   }
 
+  if (!normalizeCountryCode(form.value.countryCode)) {
+    errors.value.countryCode = t("apply.validation.countryRequired");
+  }
+
   if (!form.value.district.trim()) {
     errors.value.district = t("apply.validation.districtRequired");
   }
@@ -95,8 +216,12 @@ const handleSubmit = async () => {
   store.clearError();
   const latitude = parseCoordinate(form.value.latitude);
   const longitude = parseCoordinate(form.value.longitude);
+  const countryCode = normalizeCountryCode(form.value.countryCode);
 
-  if (latitude === null || longitude === null) return;
+  if (latitude === null || longitude === null || !countryCode) return;
+
+  const marketId = form.value.marketId.trim();
+  const stallNumber = form.value.stallNumber.trim();
 
   const success = await store.submitApplication({
     businessName: form.value.businessName,
@@ -106,6 +231,9 @@ const handleSubmit = async () => {
     address: form.value.address,
     district: form.value.district,
     city: form.value.city,
+    countryCode,
+    ...(marketId ? { marketId } : {}),
+    ...(marketId && stallNumber ? { stallNumber } : {}),
     latitude,
     longitude,
     planId: form.value.planId,
@@ -342,6 +470,58 @@ const useCurrentLocation = () => {
 
         <div class="grid gap-4 sm:grid-cols-2">
           <div>
+            <label for="onboarding-country" class="label"
+              >{{ t("apply.form.country.label") }} *</label
+            >
+            <select
+              id="onboarding-country"
+              v-model="form.countryCode"
+              data-testid="onboarding-country"
+              autocomplete="country"
+              class="input"
+              :class="{ 'input-error': errors.countryCode }"
+            >
+              <option value="">
+                {{ t("apply.form.country.placeholder") }}
+              </option>
+              <option
+                v-for="code in SUPPORTED_COUNTRIES"
+                :key="code"
+                :value="code"
+              >
+                {{ t(`apply.form.country.options.${code}`) }}
+              </option>
+            </select>
+            <p v-if="errors.countryCode" class="mt-1 text-sm text-red-600">
+              {{ errors.countryCode }}
+            </p>
+          </div>
+          <div>
+            <label for="onboarding-city" class="label"
+              >{{ t("apply.form.city.label") }} *</label
+            >
+            <select
+              id="onboarding-city"
+              v-model="form.city"
+              data-testid="onboarding-city"
+              autocomplete="address-level1"
+              class="input"
+              :class="{ 'input-error': errors.city }"
+              :disabled="!form.countryCode"
+            >
+              <option value="">{{ t("apply.form.city.placeholder") }}</option>
+              <option v-for="city in cityOptions" :key="city" :value="city">
+                {{ city }}
+              </option>
+            </select>
+            <p v-if="errors.city" class="mt-1 text-sm text-red-600">
+              {{ errors.city }}
+            </p>
+          </div>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
             <label for="onboarding-district" class="label"
               >{{ t("apply.form.district.label") }} *</label
             >
@@ -361,24 +541,53 @@ const useCurrentLocation = () => {
             </p>
           </div>
           <div>
-            <label for="onboarding-city" class="label"
-              >{{ t("apply.form.city.label") }} *</label
-            >
-            <input
-              id="onboarding-city"
-              v-model="form.city"
-              data-testid="onboarding-city"
-              type="text"
-              autocomplete="address-level1"
-              maxlength="100"
+            <label for="onboarding-market" class="label">
+              {{ t("apply.form.market.label") }}
+            </label>
+            <select
+              id="onboarding-market"
+              v-model="form.marketId"
+              data-testid="onboarding-market"
               class="input"
-              :class="{ 'input-error': errors.city }"
-              :placeholder="t('apply.form.city.placeholder')"
-            />
-            <p v-if="errors.city" class="mt-1 text-sm text-red-600">
-              {{ errors.city }}
+              :disabled="!form.city"
+              :aria-busy="isLoadingMarkets"
+              :aria-describedby="
+                marketError ? 'onboarding-market-error' : undefined
+              "
+            >
+              <option value="">{{ t("apply.form.market.independent") }}</option>
+              <option
+                v-for="market in markets"
+                :key="market.id"
+                :value="market.id"
+              >
+                {{ market.name }}
+              </option>
+            </select>
+            <p
+              v-if="marketError"
+              id="onboarding-market-error"
+              role="alert"
+              class="mt-1 text-sm text-red-600"
+            >
+              {{ marketError }}
             </p>
           </div>
+        </div>
+
+        <div v-if="form.marketId">
+          <label for="onboarding-stall-number" class="label">
+            {{ t("apply.form.stallNumber.label") }}
+          </label>
+          <input
+            id="onboarding-stall-number"
+            v-model="form.stallNumber"
+            data-testid="onboarding-stall-number"
+            type="text"
+            maxlength="32"
+            class="input"
+            :placeholder="t('apply.form.stallNumber.placeholder')"
+          />
         </div>
 
         <!-- 提交按鈕 -->

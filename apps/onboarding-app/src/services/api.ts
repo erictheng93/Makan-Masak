@@ -4,6 +4,7 @@
  */
 
 import axios, { AxiosError } from "axios";
+import type { SupportedCountryCode } from "@makanmasak/shared-types";
 
 function resolveApiBase(): string {
   const apiBase = import.meta.env.VITE_API_URL;
@@ -57,6 +58,9 @@ export interface CreateApplicationData {
   address: string;
   district: string;
   city: string;
+  countryCode: SupportedCountryCode;
+  marketId?: string;
+  stallNumber?: string;
   planId: "trial" | "standard" | "professional" | "enterprise";
   latitude: number;
   longitude: number;
@@ -77,6 +81,9 @@ export interface ApplicationDetails {
   address: string;
   district?: string;
   city?: string;
+  countryCode: SupportedCountryCode;
+  marketId?: string;
+  stallNumber?: string;
   latitude: number;
   longitude: number;
   planId: string;
@@ -86,6 +93,41 @@ export interface ApplicationDetails {
   createdAt: string;
   completedAt?: string;
   rejectionReason?: string;
+}
+
+export interface MarketOption {
+  id: string;
+  name: string;
+}
+
+interface MarketListResponse {
+  markets: MarketOption[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+const MARKET_PAGE_SIZE = 100;
+
+async function getMarketPage(
+  params: { country: SupportedCountryCode; city: string },
+  page: number,
+): Promise<MarketListResponse> {
+  const response = await apiClient.get<ApiResponse<MarketListResponse>>(
+    "/markets",
+    { params: { ...params, page, limit: MARKET_PAGE_SIZE } },
+  );
+
+  if (!response.data.success || !response.data.data) {
+    const extracted = extractApiError(response.data);
+    throw new ApiError(
+      extracted.message || "Failed to load markets",
+      extracted.code || "MARKET_LIST_FAILED",
+      extracted.details,
+    );
+  }
+
+  return response.data.data;
 }
 
 // ============================================================
@@ -170,6 +212,30 @@ function handleApiError(error: unknown): never {
 // ============================================================
 
 export const onboardingApi = {
+  /**
+   * List active markets available for a selected country and city.
+   */
+  async getMarkets(params: {
+    country: SupportedCountryCode;
+    city: string;
+  }): Promise<MarketOption[]> {
+    try {
+      const firstPage = await getMarketPage(params, 1);
+      const markets = [...firstPage.markets];
+      const totalPages = Math.ceil(firstPage.total / MARKET_PAGE_SIZE);
+
+      for (let page = 2; page <= totalPages; page += 1) {
+        const nextPage = await getMarketPage(params, page);
+        markets.push(...nextPage.markets);
+      }
+
+      return markets;
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      handleApiError(error);
+    }
+  },
+
   /**
    * Create a new onboarding application
    */
