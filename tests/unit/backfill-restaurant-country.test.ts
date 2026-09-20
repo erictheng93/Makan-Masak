@@ -53,6 +53,13 @@ describe("restaurant country backfill", () => {
       ],
       ["known-null-settings", "臺中市", null, null, null],
       [
+        "legacy-null-currency",
+        "台中市",
+        null,
+        null,
+        JSON.stringify({ currency: null, theme: "light" }),
+      ],
+      [
         "legacy-missing-currency",
         "台中市",
         null,
@@ -118,6 +125,11 @@ describe("restaurant country backfill", () => {
       countryCode: "TW",
       timezone: "Asia/Taipei",
       settings: { currency: "TWD" },
+    });
+    expect(eligibleState(byId["legacy-null-currency"])).toEqual({
+      countryCode: "TW",
+      timezone: "Asia/Taipei",
+      settings: { currency: "TWD", theme: "light" },
     });
     expect(eligibleState(byId["legacy-missing-currency"])).toEqual({
       countryCode: "TW",

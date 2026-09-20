@@ -13,6 +13,7 @@ UPDATE restaurants
          WHEN json_valid(settings) = 0 THEN 0
          WHEN json_type(settings) <> 'object' THEN 0
          WHEN json_type(settings, '$.currency') IS NULL THEN 1
+         WHEN json_type(settings, '$.currency') = 'null' THEN 1
          WHEN json_type(settings, '$.currency') = 'text'
            THEN UPPER(TRIM(json_extract(settings, '$.currency'))) IN ('', 'TWD')
          ELSE 0
