@@ -17,6 +17,11 @@ import {
 } from "../../../shared/utils/provider-money";
 import type { MarketCheckoutSplitMode } from "./MarketCheckoutPaymentProvider";
 import { redeemCachedMarketCheckoutVoucher } from "./MarketCheckoutVoucherService";
+import {
+  MARKET_CHECKOUT_ORDER_PAYMENT_METHOD,
+  settleMarketCheckoutChildOrdersPaid,
+  settleMarketCheckoutChildOrdersRefunded,
+} from "./MarketCheckoutChildOrderSettlement";
 import { normalizeCurrencyCode } from "@makanmasak/utils";
 import { resolveDisplaySharedRestaurantCurrency } from "../../../shared/utils/restaurant-currency";
 
@@ -285,8 +290,28 @@ export class MarketCheckoutPaymentWebhookService {
       this.updateCachedSession(row.checkout_id, paymentSummary),
       this.updateCachedIndex(row.checkout_id, status),
     ]);
+    // The vendors' own orders, not just the aggregate payment: without this a
+    // fully paid checkout still read `payment_status = 'pending'` on every
+    // kitchen display and vendor dashboard.
     if (status === "paid") {
+      await settleMarketCheckoutChildOrdersPaid(this.env, {
+        checkoutId: row.checkout_id,
+        marketCheckoutPaymentId: row.payment_id,
+        paymentMethod: MARKET_CHECKOUT_ORDER_PAYMENT_METHOD,
+        gateway: row.provider || provider,
+        currency: row.currency,
+        country: row.country_code,
+        chargedTotalCents: row.amount_cents,
+        providerTransactionId,
+        nowMs: now,
+      });
       await redeemCachedMarketCheckoutVoucher(this.env, row.checkout_id);
+    } else if (status === "refunded" || status === "partial_refunded") {
+      await settleMarketCheckoutChildOrdersRefunded(this.env, {
+        checkoutId: row.checkout_id,
+        status,
+        nowMs: now,
+      });
     }
 
     return {

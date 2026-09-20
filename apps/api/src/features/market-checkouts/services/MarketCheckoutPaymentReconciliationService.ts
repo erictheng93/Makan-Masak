@@ -18,6 +18,11 @@ import type {
   MarketCheckoutSplitMode,
 } from "./MarketCheckoutPaymentProvider";
 import { redeemCachedMarketCheckoutVoucher } from "./MarketCheckoutVoucherService";
+import {
+  MARKET_CHECKOUT_ORDER_PAYMENT_METHOD,
+  settleMarketCheckoutChildOrdersPaid,
+  settleMarketCheckoutChildOrdersRefunded,
+} from "./MarketCheckoutChildOrderSettlement";
 
 const MARKET_CHECKOUT_INDEX_KEY = "market_checkout:index";
 
@@ -257,8 +262,28 @@ export class MarketCheckoutPaymentReconciliationService {
       this.updateCachedSession(row.checkout_id, paymentSummary),
       this.updateCachedIndex(row.checkout_id, status),
     ]);
+    // Idempotent against a webhook that already settled these child orders,
+    // which is the ordinary case for a reconciliation run: the transaction id
+    // is derived from (checkout, order), so both paths write the same row.
     if (status === "paid") {
+      await settleMarketCheckoutChildOrdersPaid(this.env, {
+        checkoutId: row.checkout_id,
+        marketCheckoutPaymentId: row.payment_id,
+        paymentMethod: MARKET_CHECKOUT_ORDER_PAYMENT_METHOD,
+        gateway: row.provider,
+        currency: row.currency,
+        country: row.country_code,
+        chargedTotalCents: row.amount_cents,
+        providerTransactionId,
+        nowMs: now,
+      });
       await redeemCachedMarketCheckoutVoucher(this.env, row.checkout_id);
+    } else if (status === "refunded" || status === "partial_refunded") {
+      await settleMarketCheckoutChildOrdersRefunded(this.env, {
+        checkoutId: row.checkout_id,
+        status,
+        nowMs: now,
+      });
     }
 
     return {

@@ -72,6 +72,11 @@ import {
   totalAppliedVoucherDiscountCents,
   type AppliedMarketCheckoutVoucher,
 } from "../services/MarketCheckoutVoucherService";
+import {
+  MARKET_CHECKOUT_ORDER_PAYMENT_METHOD,
+  settleMarketCheckoutChildOrdersPaid,
+  settleMarketCheckoutChildOrdersRefunded,
+} from "../services/MarketCheckoutChildOrderSettlement";
 import { fromCents } from "../../../shared/utils/money";
 import { isFeatureEnabled } from "../../../shared/feature-adoption";
 import { toCsv } from "../../../shared/utils/csv";
@@ -1285,6 +1290,28 @@ app.post("/:id/pay", optionalCanonicalCustomerAuthMiddleware, async (c) => {
   await updatePersistedMarketCheckoutPayment(c.env, updatedSession);
   await upsertMarketCheckoutIndex(c.env.CACHE_KV, updatedSession);
 
+  // A provider that settles in-band (credits, a shop wallet, a gateway that
+  // authorizes on the create call) never sends a webhook, so this is the only
+  // place its child orders can be marked paid. The provider's own split is
+  // passed through rather than re-derived.
+  if (payment.status === "paid" && payment.parentPayment) {
+    await settleMarketCheckoutChildOrdersPaid(c.env, {
+      checkoutId,
+      marketCheckoutPaymentId: payment.parentPayment.paymentId,
+      paymentMethod: MARKET_CHECKOUT_ORDER_PAYMENT_METHOD,
+      gateway: providerResult.provider,
+      currency,
+      country,
+      chargedTotalCents: totalAmountCents,
+      providerTransactionId: providerResult.providerTransactionId,
+      allocations: paidPayments.map((child) => ({
+        orderId: child.orderId,
+        restaurantId: child.restaurantId,
+        amountCents: child.amountCents,
+      })),
+    });
+  }
+
   // Record voucher redemption only on verified full payment. Idempotent on
   // replay; a failure here must not fail the payment response (audit-only).
   if (appliedVouchers.length > 0 && updatedSession.payment?.status === "paid") {
@@ -1698,6 +1725,14 @@ app.post("/:id/refund", authMiddleware, requireRole([0]), async (c) => {
     await updatePersistedMarketCheckoutPayment(c.env, updatedSession);
     await upsertMarketCheckoutIndex(c.env.CACHE_KV, updatedSession);
     if (refundCompleted) {
+      // Same reason as the paid side: the vendors' own orders, not only the
+      // aggregate payment. Scoped to the child rows this checkout settled, so
+      // a POS-paid checkout (whose refunds go through refundPaymentTransaction
+      // below) is untouched.
+      await settleMarketCheckoutChildOrdersRefunded(c.env, {
+        checkoutId,
+        status: refundStatus,
+      });
       await markMarketCheckoutVoucherRefunded(c.env, session, [
         ...refundedOrderIds,
       ]);
