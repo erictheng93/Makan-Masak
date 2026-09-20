@@ -5,6 +5,7 @@ import {
   cashShifts,
   orderItems,
   orders,
+  paymentTransactions,
   receipts,
   refunds,
   restaurants,
@@ -39,6 +40,7 @@ const fixtureTables = {
   cashShifts,
   orderItems,
   orders,
+  paymentTransactions,
   receipts,
   refunds,
   restaurants,
@@ -156,6 +158,8 @@ describe("ReportService", () => {
           },
         ],
       ],
+      // 台幣店，沒有現金進位 (#405)。
+      paymentTransactions: [[{ adjustmentCents: 0, roundedPayments: 0 }]],
     });
 
     const result = await createService().generateShiftReport("shift-1");
@@ -172,8 +176,12 @@ describe("ReportService", () => {
           totalRefunds: 25,
           netSales: 400,
           expectedAmount: 450,
+          cashRoundingAdjustment: 0,
+          roundedCashPayments: 0,
+          expectedCashAmount: 450,
           actualAmount: 460,
           difference: 10,
+          recordedDifference: 10,
         },
         breakdown: {
           cashSales: 200,
@@ -209,6 +217,87 @@ describe("ReportService", () => {
       JSON.parse((inserted[0] as { summaryData: string }).summaryData),
     ).toMatchObject({ netSales: 400, actualAmount: 460 });
     vi.useRealTimers();
+  });
+
+  it("nets cash rounding out of the drawer difference and reports it on its own line", async () => {
+    // 馬幣現金班次 (#405)：三筆單分別進位 +2 / -1 / +1 sen，抽屜因此多 2 sen。
+    // 那 2 sen 有出處，所以要單獨列出來，短溢要是 0 而不是 +0.02。
+    uuidMocks.generateUUID.mockReturnValue("report-myr");
+    mockInsert();
+    mockSelectResults({
+      cashShifts: [
+        [
+          {
+            shift: shiftRow({
+              expectedAmountCents: 45000,
+              actualAmountCents: 45002,
+              differenceAmountCents: 2,
+            }),
+            restaurantId: "restaurant-1",
+          },
+        ],
+      ],
+      cashMovements: [[]],
+      receipts: [[{ totalReceipts: 3, printedReceipts: 3 }]],
+      orders: [[{ totalOrders: 3, totalSales: 350, avgOrderValue: 116.67 }]],
+      paymentTransactions: [[{ adjustmentCents: 2, roundedPayments: 3 }]],
+    });
+
+    const result = await createService().generateShiftReport("shift-myr");
+
+    expect(result.success).toBe(true);
+    expect(result.data).toMatchObject({
+      reportData: {
+        summary: {
+          expectedAmount: 450,
+          cashRoundingAdjustment: 0.02,
+          roundedCashPayments: 3,
+          expectedCashAmount: 450.02,
+          actualAmount: 450.02,
+          difference: 0,
+          // 班次列上那個沒扣進位的差額仍然留著，對得回資料庫。
+          recordedDifference: 0.02,
+        },
+      },
+    });
+  });
+
+  it("keeps the shift's recorded difference while the shift is still open", async () => {
+    // 還沒結班就沒有實點金額，不能拿 0 去減出一個假的短少。
+    uuidMocks.generateUUID.mockReturnValue("report-open");
+    mockInsert();
+    mockSelectResults({
+      cashShifts: [
+        [
+          {
+            shift: shiftRow({
+              actualAmountCents: null,
+              differenceAmountCents: null,
+              endedAt: null,
+              status: "active",
+            }),
+            restaurantId: "restaurant-1",
+          },
+        ],
+      ],
+      cashMovements: [[]],
+      receipts: [[{ totalReceipts: 0, printedReceipts: 0 }]],
+      orders: [[{ totalOrders: 0, totalSales: 0, avgOrderValue: 0 }]],
+      paymentTransactions: [[{ adjustmentCents: 2, roundedPayments: 1 }]],
+    });
+
+    const result = await createService().generateShiftReport("shift-open");
+
+    expect(result.success).toBe(true);
+    expect(result.data).toMatchObject({
+      reportData: {
+        summary: {
+          cashRoundingAdjustment: 0.02,
+          difference: 0,
+          recordedDifference: 0,
+        },
+      },
+    });
   });
 
   it("returns a service failure when a shift does not exist", async () => {

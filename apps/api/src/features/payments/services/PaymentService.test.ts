@@ -272,6 +272,7 @@ function paymentTransaction(overrides: Record<string, unknown> = {}) {
     transactionId: "pay_order-101_1780833600000",
     orderId: "order-101",
     amountCents: 12000,
+    roundingAdjustmentCents: 0,
     status: "paid",
     ...overrides,
   };
@@ -479,6 +480,8 @@ describe("PaymentService", () => {
         orderStatus: "paid",
         paymentStatus: "completed",
         authorizedTotal: 120,
+        collectedTotal: 120,
+        roundingAdjustment: 0,
         currency: "TWD",
         country: "TW",
       },
@@ -739,6 +742,8 @@ describe("PaymentService", () => {
         // or it would contradict the live call it is replaying.
         paymentStatus: "completed",
         authorizedTotal: 120,
+        collectedTotal: 120,
+        roundingAdjustment: 0,
         currency: null,
         country: null,
       },
@@ -1468,5 +1473,325 @@ describe("PaymentService", () => {
         { expected: 120, actual: 121 },
       ),
     );
+  });
+  // --- MYR cash rounding (#405) ---------------------------------------
+  //
+  // Malaysia's 1 and 2 sen coins are out of circulation, so a cash bill is
+  // collected to the nearest 5 sen. The order total never moves; the payment
+  // records what was collected and the difference beside it.
+
+  function myrOrder(totalCents: number) {
+    mocks.resolveRestaurantCurrency.mockResolvedValue("MYR");
+    queueOrderRows([
+      [order({ totalAmount: totalCents / 100, totalAmountCents: totalCents })],
+    ]);
+  }
+
+  function recordedPayment(statements: PreparedStatement[]) {
+    return statementContaining(statements, "INSERT INTO payment_transactions")
+      ?.payload as Record<string, unknown> | undefined;
+  }
+
+  it("collects the rounded figure for an MYR cash payment and records the 2 sen", async () => {
+    const { db, statements } = createD1();
+    myrOrder(1033);
+    mockOrderUpdate();
+
+    await expect(
+      paymentService(env(db)).processPayment({
+        orderId: "order-101",
+        paymentMode: "full",
+        amount: 10.35,
+        expectedTotal: 10.33,
+        method: "cash",
+      }),
+    ).resolves.toMatchObject({
+      data: {
+        authorizedTotal: 10.33,
+        collectedTotal: 10.35,
+        roundingAdjustment: 0.02,
+      },
+    });
+
+    expect(recordedPayment(statements)).toMatchObject({
+      amountCents: 1035,
+      roundingAdjustmentCents: 2,
+      paymentMethod: "cash",
+    });
+  });
+
+  it("rounds an MYR cash payment down when the total ends in 1 or 2 sen", async () => {
+    const { db, statements } = createD1();
+    myrOrder(1032);
+    mockOrderUpdate();
+
+    await expect(
+      paymentService(env(db)).processPayment({
+        orderId: "order-101",
+        paymentMode: "full",
+        amount: 10.3,
+        method: "cash",
+      }),
+    ).resolves.toMatchObject({
+      data: { collectedTotal: 10.3, roundingAdjustment: -0.02 },
+    });
+
+    expect(recordedPayment(statements)).toMatchObject({
+      amountCents: 1030,
+      roundingAdjustmentCents: -2,
+    });
+  });
+
+  it("accepts the unrounded total from a cashier and still records the rounded one", async () => {
+    // The server decides what is collectable; the submitted figure is only
+    // checked. A till that has not been updated must not be refused.
+    const { db, statements } = createD1();
+    myrOrder(1033);
+    mockOrderUpdate();
+
+    await expect(
+      paymentService(env(db)).processPayment({
+        orderId: "order-101",
+        paymentMode: "full",
+        amount: 10.33,
+        method: "cash",
+      }),
+    ).resolves.toMatchObject({ data: { collectedTotal: 10.35 } });
+
+    expect(recordedPayment(statements)).toMatchObject({
+      amountCents: 1035,
+      roundingAdjustmentCents: 2,
+    });
+  });
+
+  it("rejects a cash amount that is neither the total nor the rounded total", async () => {
+    const { db, statements } = createD1();
+    myrOrder(1033);
+    mockOrderUpdate();
+
+    await expect(
+      paymentService(env(db)).processPayment({
+        orderId: "order-101",
+        paymentMode: "full",
+        amount: 10.34,
+        method: "cash",
+      }),
+    ).rejects.toEqual(
+      new ApiError(
+        "PAYMENT_AMOUNT_MISMATCH",
+        "Payment amount does not match order total",
+        409,
+        { expected: 10.33, expectedCollected: 10.35, actual: 10.34 },
+      ),
+    );
+
+    expect(statementContaining(statements, "UPDATE orders")).toBeUndefined();
+  });
+
+  it("names only one expected figure when rounding did not move the total", async () => {
+    const { db } = createD1();
+    myrOrder(1035);
+    mockOrderUpdate();
+
+    await expect(
+      paymentService(env(db)).processPayment({
+        orderId: "order-101",
+        paymentMode: "full",
+        amount: 10.4,
+        method: "cash",
+      }),
+    ).rejects.toEqual(
+      new ApiError(
+        "PAYMENT_AMOUNT_MISMATCH",
+        "Payment amount does not match order total",
+        409,
+        { expected: 10.35, actual: 10.4 },
+      ),
+    );
+  });
+
+  it("collects the exact total for the same MYR order paid by card", async () => {
+    const { db, statements } = createD1();
+    myrOrder(1033);
+    mockOrderUpdate();
+
+    await expect(
+      paymentService(env(db)).processPayment({
+        orderId: "order-101",
+        paymentMode: "full",
+        amount: 10.33,
+        method: "card",
+      }),
+    ).resolves.toMatchObject({
+      data: {
+        authorizedTotal: 10.33,
+        collectedTotal: 10.33,
+        roundingAdjustment: 0,
+      },
+    });
+
+    expect(recordedPayment(statements)).toMatchObject({
+      amountCents: 1033,
+      roundingAdjustmentCents: 0,
+    });
+  });
+
+  it("collects the exact total for an MYR e-wallet payment", async () => {
+    const { db, statements } = createD1();
+    myrOrder(1033);
+    mockOrderUpdate();
+
+    await expect(
+      paymentService(env(db)).processPayment({
+        orderId: "order-101",
+        paymentMode: "full",
+        amount: 10.33,
+        method: "touch_n_go",
+      }),
+    ).resolves.toMatchObject({ data: { roundingAdjustment: 0 } });
+
+    expect(recordedPayment(statements)).toMatchObject({
+      amountCents: 1033,
+      roundingAdjustmentCents: 0,
+    });
+  });
+
+  it("leaves a TWD cash payment unrounded", async () => {
+    const { db, statements } = createD1();
+    mocks.resolveRestaurantCurrency.mockResolvedValue("TWD");
+    queueOrderRows([[order({ totalAmount: 350, totalAmountCents: 35000 })]]);
+    mockOrderUpdate();
+
+    await expect(
+      paymentService(env(db)).processPayment({
+        orderId: "order-101",
+        paymentMode: "full",
+        amount: 350,
+        method: "cash",
+      }),
+    ).resolves.toMatchObject({
+      data: {
+        authorizedTotal: 350,
+        collectedTotal: 350,
+        roundingAdjustment: 0,
+      },
+    });
+
+    expect(recordedPayment(statements)).toMatchObject({
+      amountCents: 35000,
+      roundingAdjustmentCents: 0,
+    });
+  });
+
+  it("audits the collected figure, not the priced one", async () => {
+    const { db, statements } = createD1();
+    myrOrder(1033);
+    mockOrderUpdate();
+
+    await paymentService(env(db)).processPayment({
+      orderId: "order-101",
+      paymentMode: "full",
+      amount: 10.35,
+      method: "cash",
+    });
+
+    expect(
+      statements
+        .filter((statement) =>
+          statement.sql.includes("INSERT OR IGNORE INTO payment_audit_log"),
+        )
+        .map((statement) => (statement.payload as { amount: number }).amount),
+    ).toEqual([1035, 1035]);
+  });
+
+  it("reports the same totals when an idempotent retry replays a rounded payment", async () => {
+    const { db } = createD1();
+    mocks.resolveRestaurantCurrency.mockResolvedValue("MYR");
+    queueReplayRows(
+      [[order({ totalAmount: 10.33, totalAmountCents: 1033 })]],
+      [[paymentTransaction({ amountCents: 1035, roundingAdjustmentCents: 2 })]],
+    );
+
+    await expect(
+      paymentService(env(db)).processPayment(
+        {
+          orderId: "order-101",
+          paymentMode: "full",
+          amount: 10.35,
+          method: "cash",
+        },
+        { idempotencyKey: "idem-rounded" },
+      ),
+    ).resolves.toMatchObject({
+      status: 200,
+      data: {
+        authorizedTotal: 10.33,
+        collectedTotal: 10.35,
+        roundingAdjustment: 0.02,
+      },
+    });
+  });
+
+  it("accepts the rounded figure as expectedTotal, which the route defaults to", async () => {
+    // POST /payments falls back to `expectedTotal = amount` when a caller
+    // sends only an amount, so refusing the rounded figure here would make a
+    // bare cash payment at the collectable amount unpayable.
+    const { db, statements } = createD1();
+    myrOrder(1033);
+    mockOrderUpdate();
+
+    await expect(
+      paymentService(env(db)).processPayment({
+        orderId: "order-101",
+        paymentMode: "full",
+        amount: 10.35,
+        expectedTotal: 10.35,
+        method: "cash",
+      }),
+    ).resolves.toMatchObject({ data: { collectedTotal: 10.35 } });
+
+    expect(recordedPayment(statements)).toMatchObject({ amountCents: 1035 });
+  });
+
+  it("still rejects an expectedTotal that is neither figure", async () => {
+    const { db } = createD1();
+    myrOrder(1033);
+    mockOrderUpdate();
+
+    await expect(
+      paymentService(env(db)).processPayment({
+        orderId: "order-101",
+        paymentMode: "full",
+        amount: 10.35,
+        expectedTotal: 10.5,
+        method: "cash",
+      }),
+    ).rejects.toMatchObject({
+      code: "PAYMENT_TOTAL_MISMATCH",
+      status: 409,
+    });
+  });
+
+  it("does not round a split payment, whose legs are priced individually", async () => {
+    const { db, statements } = createD1();
+    myrOrder(1033);
+    mockOrderUpdate();
+
+    await expect(
+      paymentService(env(db)).processPayment({
+        orderId: "order-101",
+        paymentMode: "partial",
+        payments: [
+          { method: "cash", amount: 5.33 },
+          { method: "card", amount: 5 },
+        ],
+      }),
+    ).resolves.toMatchObject({ data: { roundingAdjustment: 0 } });
+
+    expect(recordedPayment(statements)).toMatchObject({
+      amountCents: 1033,
+      roundingAdjustmentCents: 0,
+      paymentMethod: "split",
+    });
   });
 });

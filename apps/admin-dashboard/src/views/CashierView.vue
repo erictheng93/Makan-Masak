@@ -308,10 +308,32 @@
                 v-if="cashReceived > 0"
                 class="mt-2 p-3 bg-gray-50 rounded-lg"
               >
+                <!--
+                  現金進位（#405）。馬幣現金收到最接近的 5 sen，所以應付跟
+                  訂單總額差最多 2 sen；把訂單總額與調整值攤開，收銀員才看得出
+                  應付金額是怎麼來的。沒有調整時（台幣、越南盾、所有電子支付）
+                  只印原來那一行「應付金額」，畫面完全不變。
+                -->
+                <template v-if="cashRoundingAdjustmentCents !== 0">
+                  <div class="flex justify-between text-sm">
+                    <span>{{ t("cashier.orderTotal") }}:</span>
+                    <span class="font-medium">{{
+                      formatPrice(selectedOrder.totalAmount)
+                    }}</span>
+                  </div>
+                  <div class="flex justify-between text-sm">
+                    <span>{{ t("cashier.cashRounding") }}:</span>
+                    <span
+                      data-testid="cash-rounding-adjustment"
+                      class="font-medium text-ios-secondary"
+                      >{{ formattedCashRoundingAdjustment }}</span
+                    >
+                  </div>
+                </template>
                 <div class="flex justify-between text-sm">
                   <span>{{ t("cashier.amountDue") }}:</span>
-                  <span class="font-medium">{{
-                    formatPrice(selectedOrder.totalAmount)
+                  <span data-testid="cash-amount-due" class="font-medium">{{
+                    formatPrice(amountDueCents / 100)
                   }}</span>
                 </div>
                 <div class="flex justify-between text-sm">
@@ -891,6 +913,7 @@ import {
   DevicePhoneMobileIcon,
   BuildingLibraryIcon,
 } from "@heroicons/vue/24/solid";
+import { collectableAmount } from "@makanmasak/utils";
 import { useI18n } from "@/i18n";
 import { useCurrency } from "@/composables/useCurrency";
 import { useDateFormatter } from "@/composables/useDateFormatter";
@@ -909,6 +932,7 @@ const { t } = useI18n();
 const {
   formatPrice,
   currencySymbol,
+  currencyCode,
   inputStep,
   inputPlaceholder,
   majorToCents,
@@ -1107,9 +1131,39 @@ const toCents = (major: unknown): number => {
   return Number.isFinite(amount) ? majorToCents(amount) : 0;
 };
 
+/**
+ * What may actually be collected, and the 5 sen rounding that got it there
+ * (#405). For everything but an MYR cash payment this is the order total with
+ * a 0 adjustment, so the TWD and VND cashier screens are unchanged.
+ *
+ * The server recomputes both of these and is the authority; this is the
+ * cashier's view of the same rule, so the figure on screen is the figure the
+ * customer is asked for.
+ */
+const cashSettlement = computed(() => {
+  const totalCents = selectedOrder.value
+    ? toCents(selectedOrder.value.totalAmount)
+    : 0;
+  return collectableAmount(totalCents, {
+    currency: currencyCode.value,
+    paymentMethod: selectedPaymentMethod.value,
+  });
+});
+
+const amountDueCents = computed(() => cashSettlement.value.collectableCents);
+const cashRoundingAdjustmentCents = computed(
+  () => cashSettlement.value.roundingAdjustmentCents,
+);
+
+/** "+RM 0.02" / "-RM 0.02" — the sign is the point, so it is written out. */
+const formattedCashRoundingAdjustment = computed(() => {
+  const cents = cashRoundingAdjustmentCents.value;
+  return `${cents > 0 ? "+" : "-"}${formatPrice(Math.abs(cents) / 100)}`;
+});
+
 const changeCents = computed(() => {
   if (!selectedOrder.value || selectedPaymentMethod.value !== "cash") return 0;
-  return toCents(cashReceived.value) - toCents(selectedOrder.value.totalAmount);
+  return toCents(cashReceived.value) - amountDueCents.value;
 });
 
 const change = computed(() => changeCents.value / 100);
@@ -1319,7 +1373,11 @@ const processPayment = async () => {
       {
         orderId: String(selectedOrder.value.id),
         paymentMode: "full",
-        amount: selectedOrder.value.totalAmount,
+        // What is being handed over, which for an MYR cash payment is the
+        // 5-sen-rounded figure (#405). `expectedTotal` stays the order total:
+        // it is the "we are both looking at the same bill" check, and cash
+        // rounding never moves the bill.
+        amount: amountDueCents.value / 100,
         expectedTotal: selectedOrder.value.totalAmount,
         method: selectedPaymentMethod.value,
         closeOrder: true,

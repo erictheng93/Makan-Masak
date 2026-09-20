@@ -41,7 +41,21 @@ export const paymentTransactions = sqliteTable(
     restaurantId: text("restaurant_id")
       .notNull()
       .references(() => restaurants.id, { onDelete: "cascade" }),
+    /** What was actually collected — not necessarily the order total. */
     amountCents: integer("amount_cents").notNull(),
+    /**
+     * `amountCents - orders.total_amount_cents`, in -2..+2 sen (#405).
+     *
+     * Non-zero only for an MYR payment settled in physical cash, which Bank
+     * Negara's rounding mechanism collects to the nearest 5 sen. Every
+     * electronic method collects the exact total, and TWD/VND settle in whole
+     * major units, so both leave this 0. Revenue still comes from the order
+     * total; this column is what a shift report sums into its rounding
+     * gain/loss line so the drift stops reading as a drawer discrepancy.
+     */
+    roundingAdjustmentCents: integer("rounding_adjustment_cents")
+      .notNull()
+      .default(0),
     currency: text("currency"),
     countryCode: text("country_code"),
     paymentMethod: text("payment_method").notNull(),

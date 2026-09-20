@@ -130,6 +130,16 @@ export {
   type CurrencyCode,
 } from "./currency";
 
+// Cash rounding (Bank Negara Malaysia 5 sen rounding mechanism)
+export {
+  settlesInPhysicalCash,
+  cashStepCents,
+  cashRoundedCents,
+  cashRoundingAdjustmentCents,
+  collectableAmount,
+  type CollectableAmount,
+} from "./cash-rounding";
+
 // Currency-precision discount arithmetic and input validation
 export {
   floorToCurrencyCents,

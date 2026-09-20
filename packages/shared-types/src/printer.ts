@@ -189,6 +189,18 @@ export interface ReceiptSummary {
    */
   deliveryFee?: number;
   total: number;
+  /**
+   * 現金進位調整（#405）。馬幣現金付款實收到最接近的 5 sen，這個值是
+   * 「實收 − 訂單總額」，範圍 −0.02 ~ +0.02。非 0 時收據必須印出來：
+   * 總額 RM10.33 收了 RM10.35，那 2 sen 在紙上要有出處。
+   * 電子支付與台幣/越南盾恆為 0（或不帶），收據不變。
+   */
+  roundingAdjustment?: number;
+  /**
+   * 實收金額 = `total + roundingAdjustment`。只在有進位調整時才帶，
+   * 收據印成「應付」那一行。
+   */
+  amountDue?: number;
   payment: PaymentInfo[];
   change?: number;
 }

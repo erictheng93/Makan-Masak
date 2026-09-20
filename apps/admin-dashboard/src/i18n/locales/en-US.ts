@@ -2731,6 +2731,8 @@ const enUS: Messages = {
     receiveAmount: "Amount Received",
     amountReceived: "Amount Received",
     amountDue: "Amount Due",
+    orderTotal: "Order Total",
+    cashRounding: "Cash Rounding",
     received: "Received",
     change: "Change",
     applyDiscount: "Apply Discount",

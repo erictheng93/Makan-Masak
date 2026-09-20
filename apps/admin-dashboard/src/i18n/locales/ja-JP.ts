@@ -2720,6 +2720,8 @@ const jaJP: Messages = {
         "現在のシフトを終了してもよろしいですか？終了後は変更できません。",
     },
     amountDue: "未払い額",
+    orderTotal: "注文合計",
+    cashRounding: "現金端数調整",
     actualAmount: "実際の金額",
     applyDiscount: "割引を適用する",
     avgOrderValue: "平均注文金額",

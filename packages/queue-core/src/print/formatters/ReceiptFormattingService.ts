@@ -462,6 +462,29 @@ export class ReceiptFormattingService {
       ),
     );
 
+    // 現金進位調整（#405）：為 0 或未帶時不印，收據維持原樣。
+    const roundingAdjustment = content.summary.roundingAdjustment ?? 0;
+    if (roundingAdjustment !== 0) {
+      lines.push(
+        this.formatSummaryLine(
+          "Rounding Adj",
+          `${roundingAdjustment > 0 ? "+" : "-"}${money(Math.abs(roundingAdjustment))}`,
+          width,
+        ),
+      );
+      lines.push(
+        this.formatSummaryLine(
+          "AMOUNT DUE",
+          money(
+            content.summary.amountDue ??
+              content.summary.total + roundingAdjustment,
+          ),
+          width,
+          true,
+        ),
+      );
+    }
+
     // Footer
     if (content.footer.thankYouMessage) {
       lines.push("");

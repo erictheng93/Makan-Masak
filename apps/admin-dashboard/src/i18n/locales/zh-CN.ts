@@ -2670,6 +2670,8 @@ const zhCN: Messages = {
     allOrdersCompleted: "所有订单已完成处理",
     amountReceived: "收到金额",
     amountDue: "应付金额",
+    orderTotal: "订单总额",
+    cashRounding: "进位调整",
     applyDiscount: "套用折扣",
     card: "信用卡",
     cash: "现金",

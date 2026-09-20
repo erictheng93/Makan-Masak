@@ -12,6 +12,7 @@ import {
   receipts,
   orders,
   orderItems,
+  paymentTransactions,
   tables,
 } from "@makanmasak/database";
 
@@ -407,6 +408,25 @@ export class ReceiptService {
     const delivery =
       order.deliveryInfo?.type === "delivery" ? order.deliveryInfo : null;
 
+    // 實收金額與訂單總額不一定相同（#405），收據要印實際收的錢。
+    // 還沒結帳的單（出單票）沒有付款紀錄，回退成訂單總額、調整值 0。
+    const [payment] = order.paymentTransactionId
+      ? await this.db
+          .select({
+            amountCents: paymentTransactions.amountCents,
+            roundingAdjustmentCents:
+              paymentTransactions.roundingAdjustmentCents,
+          })
+          .from(paymentTransactions)
+          .where(
+            and(
+              eq(paymentTransactions.transactionId, order.paymentTransactionId),
+              eq(paymentTransactions.restaurantId, order.restaurantId),
+            ),
+          )
+          .limit(1)
+      : [];
+
     return {
       template: templateName,
       orderNumber: order.orderNumber,
@@ -431,6 +451,13 @@ export class ReceiptService {
       taxAmount: amountFromCents(order.taxAmountCents) ?? 0,
       discountAmount: amountFromCents(order.discountAmountCents) ?? 0,
       totalAmount: amountFromCents(order.totalAmountCents) ?? 0,
+      // 現金進位調整（#405）。馬幣現金實收會進位到 5 sen，收據上要看得到
+      // 「總額 / 進位調整 / 應付」三行，那筆差額才有出處。其他幣別與電子
+      // 支付恆為 0，格式化層看到 0 就完全不印。
+      roundingAdjustment:
+        amountFromCents(payment?.roundingAdjustmentCents ?? 0) ?? 0,
+      amountCollected:
+        amountFromCents(payment?.amountCents ?? order.totalAmountCents) ?? 0,
       paymentMethod: order.paymentMethod,
       timestamp: new Date().toISOString(),
       footer: "謝謝光臨 MakanMasak",

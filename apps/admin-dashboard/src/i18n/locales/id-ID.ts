@@ -2736,6 +2736,8 @@ const idID: Messages = {
     card: "Kartu",
     cash: "Uang tunai",
     amountDue: "Jumlah yang Harus Dibayar",
+    orderTotal: "Jumlah Pesanan",
+    cashRounding: "Pembulatan Tunai",
     amountReceived: "Jumlah yang Diterima",
     avgOrderValue: "Rata-rata Nilai Pesanan",
     applyDiscount: "Terapkan Diskon",

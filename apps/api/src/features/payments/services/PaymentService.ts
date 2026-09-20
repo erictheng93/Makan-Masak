@@ -24,7 +24,7 @@ import {
   OWNER_ALERTED_PAYMENT_FAILURE_CODES,
   raisePaymentFailedAlert,
 } from "../../alerts/producers";
-import { isCurrencyAlignedCents } from "@makanmasak/utils";
+import { collectableAmount, isCurrencyAlignedCents } from "@makanmasak/utils";
 import {
   resolveCurrencyForRequest,
   resolveRestaurantCurrency,
@@ -60,7 +60,16 @@ export interface ProcessPaymentResult {
     orderId: string;
     orderStatus: string;
     paymentStatus: string;
+    /** The order total. Never moved by cash rounding. */
     authorizedTotal: number;
+    /**
+     * What the payment actually collected. Differs from `authorizedTotal`
+     * only for an MYR cash payment, which Bank Negara's rounding mechanism
+     * settles to the nearest 5 sen (#405).
+     */
+    collectedTotal: number;
+    /** `collectedTotal - authorizedTotal`, in major units; 0 or ±0.01/±0.02. */
+    roundingAdjustment: number;
     currency: string | null;
     country: string | null;
   };
@@ -208,6 +217,26 @@ export class PaymentService {
     attempt.currency = currency;
 
     const serverTotal = amountFromCents(existing.totalAmountCents) ?? 0;
+
+    // What may actually be handed over (#405). The order total never moves;
+    // an MYR bill settled in physical cash is collected to the nearest 5 sen
+    // because the 1 and 2 sen coins are out of circulation, and the difference
+    // is recorded on the payment rather than re-pricing the order. Every other
+    // method and currency returns the total unchanged with a 0 adjustment, so
+    // nothing below needs to test the payment method itself.
+    //
+    // `method` is resolved here rather than further down because the
+    // collectable amount depends on it.
+    const method =
+      input.paymentMode === "partial"
+        ? "split"
+        : (input.method ?? input.gateway ?? "other");
+    const { collectableCents, roundingAdjustmentCents } = collectableAmount(
+      existing.totalAmountCents ?? 0,
+      { currency, paymentMethod: method },
+    );
+    const collectedTotal = amountFromCents(collectableCents) ?? 0;
+
     if (input.paymentMode === "partial") {
       assertSplitPrecision(
         input.payments ?? [],
@@ -216,9 +245,15 @@ export class PaymentService {
       );
     }
     if (input.expectedTotal !== undefined) {
-      assertSameAmount(
+      // The rounded figure is allowed here too, and has to be: the route
+      // defaults `expectedTotal` to `amount` when a caller sends only an
+      // amount, so refusing it would make a bare cash payment at the
+      // collectable amount unpayable (#405). For everything that does not
+      // round, the two figures are equal and this is the old exact check.
+      assertCollectableAmount(
         input.expectedTotal,
         serverTotal,
+        collectedTotal,
         "PAYMENT_TOTAL_MISMATCH",
         "Expected total does not match authoritative order total",
       );
@@ -236,19 +271,10 @@ export class PaymentService {
         "Partial payment amounts do not match order total",
       );
     } else {
-      assertSameAmount(
-        input.amount ?? 0,
-        serverTotal,
-        "PAYMENT_AMOUNT_MISMATCH",
-        "Payment amount does not match order total",
-      );
+      assertCollectableAmount(input.amount ?? 0, serverTotal, collectedTotal);
     }
 
     const paymentId = `pay_${input.orderId}_${Date.now()}`;
-    const method =
-      input.paymentMode === "partial"
-        ? "split"
-        : (input.method ?? input.gateway ?? "other");
     const shouldCloseOrder = input.closeOrder ?? true;
     const now = Date.now();
 
@@ -274,7 +300,8 @@ export class PaymentService {
           transactionId: paymentId,
           orderId: input.orderId,
           restaurantId: existing.restaurantId,
-          amountCents: cents(serverTotal),
+          amountCents: collectableCents,
+          roundingAdjustmentCents,
           currency,
           countryCode: country,
           paymentMethod: method,
@@ -305,7 +332,9 @@ export class PaymentService {
           options.actor.kind === "provider"
             ? options.actor.provider
             : (input.gateway ?? input.method ?? "internal"),
-        amount: cents(serverTotal),
+        // What moved, not what was priced: for an MYR cash payment the
+        // audit trail must show the rounded figure the drawer received (#405).
+        amount: collectableCents,
         currency,
         rawPayload: {
           orderId: input.orderId,
@@ -314,6 +343,8 @@ export class PaymentService {
           gateway: input.gateway ?? input.method ?? null,
           idempotencyKey: options.idempotencyKey ?? null,
           closeOrder: shouldCloseOrder,
+          orderTotalCents: existing.totalAmountCents ?? 0,
+          roundingAdjustmentCents,
         },
         occurredAtMs: now,
       }),
@@ -331,7 +362,9 @@ export class PaymentService {
           options.actor.kind === "provider"
             ? options.actor.provider
             : (input.gateway ?? input.method ?? "internal"),
-        amount: cents(serverTotal),
+        // What moved, not what was priced: for an MYR cash payment the
+        // audit trail must show the rounded figure the drawer received (#405).
+        amount: collectableCents,
         currency,
         rawPayload: { status: "paid" },
         occurredAtMs: now,
@@ -383,6 +416,8 @@ export class PaymentService {
         orderStatus: shouldCloseOrder ? "paid" : existing.status,
         paymentStatus: "completed",
         authorizedTotal: serverTotal,
+        collectedTotal,
+        roundingAdjustment: roundingAdjustmentCents / 100,
         currency,
         country,
       },
@@ -495,6 +530,7 @@ export class PaymentService {
       orderId: string;
       restaurantId: string;
       amountCents: number;
+      roundingAdjustmentCents: number;
       currency: string | null;
       countryCode: string | null;
       paymentMethod: string;
@@ -513,6 +549,7 @@ export class PaymentService {
       orderId: data.orderId,
       restaurantId: data.restaurantId,
       amountCents: data.amountCents,
+      roundingAdjustmentCents: data.roundingAdjustmentCents,
       currency: data.currency,
       countryCode: data.countryCode,
       paymentMethod: data.paymentMethod,
@@ -632,6 +669,9 @@ function processPaymentResultFromRow(
   // idempotent retry would contradict the call it is replaying.
   const transactionStatus = payment.status;
   const closedOrder = metadata?.closeOrder !== false;
+  // NOT NULL DEFAULT 0 in the schema, so this only guards a row read through
+  // a type that predates the column — never a live D1 row.
+  const roundingAdjustmentCents = payment.roundingAdjustmentCents ?? 0;
 
   return {
     status: transactionStatus === "pending" ? 202 : 200,
@@ -646,11 +686,54 @@ function processPaymentResultFromRow(
         closedOrder && transactionStatus === "paid" ? "paid" : order.status,
       paymentStatus:
         transactionStatus === "paid" ? "completed" : transactionStatus,
-      authorizedTotal: amountFromCents(payment.amountCents) ?? 0,
+      // `amount_cents` is what was collected, which for an MYR cash payment
+      // is the 5-sen-rounded figure rather than the order total. Back the
+      // adjustment out so a replay reports the same authorized total the live
+      // path did (#405).
+      authorizedTotal:
+        amountFromCents(payment.amountCents - roundingAdjustmentCents) ?? 0,
+      collectedTotal: amountFromCents(payment.amountCents) ?? 0,
+      roundingAdjustment: roundingAdjustmentCents / 100,
       currency: payment.currency ?? null,
       country: payment.countryCode ?? null,
     },
   };
+}
+
+/**
+ * A full payment must present either the order total or, when the method
+ * rounds, the amount that can actually be collected (#405). An MYR cash
+ * payment for a RM10.33 order may be submitted as 10.33 or 10.35 and nothing
+ * else — 10.34 is not money anyone can hand over, and 10.40 is a typo the
+ * customer would pay for. The two are the same figure for every electronic
+ * method and for TWD/VND, so this is the old exact check then.
+ *
+ * What gets recorded is the server's `collectableCents` either way; the
+ * submitted figure is only ever checked.
+ */
+function assertCollectableAmount(
+  actual: number,
+  orderTotal: number,
+  collectableTotal: number,
+  code = "PAYMENT_AMOUNT_MISMATCH",
+  message = "Payment amount does not match order total",
+): void {
+  const actualCents = cents(actual);
+  if (
+    actualCents === cents(orderTotal) ||
+    actualCents === cents(collectableTotal)
+  ) {
+    return;
+  }
+  throw new ApiError(code, message, 409, {
+    expected: Number(orderTotal.toFixed(2)),
+    // Only worth reporting when rounding actually moved the figure;
+    // repeating `expected` would read as two different requirements.
+    ...(collectableTotal !== orderTotal
+      ? { expectedCollected: Number(collectableTotal.toFixed(2)) }
+      : {}),
+    actual: Number(actual.toFixed(2)),
+  });
 }
 
 /**

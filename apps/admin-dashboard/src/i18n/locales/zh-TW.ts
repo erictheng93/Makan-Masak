@@ -2799,6 +2799,8 @@ const zhTWCore = {
     receiveAmount: "收到金額",
     amountReceived: "收到金額",
     amountDue: "應付金額",
+    orderTotal: "訂單總額",
+    cashRounding: "進位調整",
     received: "已收",
     change: "找零",
     applyDiscount: "套用折扣",

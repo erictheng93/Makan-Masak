@@ -2724,6 +2724,8 @@ const viVN: Messages = {
     actualAmount: "Số tiền thực tế",
     cashCount: "Đếm tiền mặt",
     amountDue: "Số tiền đến hạn",
+    orderTotal: "Tổng đơn hàng",
+    cashRounding: "Làm tròn tiền mặt",
     cashierName: "Thu ngân",
     confirmPayment: "Xác nhận thanh toán",
     coupon: "Phiếu giảm giá",

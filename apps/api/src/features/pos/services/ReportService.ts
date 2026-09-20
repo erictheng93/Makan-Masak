@@ -3,7 +3,7 @@
  */
 
 import { drizzle } from "drizzle-orm/d1";
-import { eq, and, gte, lte, sql, type SQL } from "drizzle-orm";
+import { eq, and, gte, inArray, lte, sql, type SQL } from "drizzle-orm";
 import {
   BusinessTimezoneResolver,
   cashShifts,
@@ -11,6 +11,7 @@ import {
   cashMovements,
   receipts,
   orders,
+  paymentTransactions,
   refunds,
   orderItems,
   menuItems,
@@ -121,6 +122,43 @@ export class ReportService {
           ),
         );
 
+      // 現金進位損益 (#405)。馬幣現金付款實收金額會進位到 5 sen，所以抽屜裡的
+      // 現金本來就跟訂單總額差最多 2 sen 一筆。那筆差額有出處，不是短溢，
+      // 所以這裡單獨加總 rounding_adjustment_cents 成一行，再把它算進應有現金；
+      // 否則整天累積下來會被讀成收銀員弄丟了錢 (#405)。
+      // 台幣與越南盾、以及所有電子支付的調整值恆為 0，這行就是 0。
+      const [roundingStats] = await this.db
+        .select({
+          adjustmentCents: sql<number>`COALESCE(SUM(${paymentTransactions.roundingAdjustmentCents}), 0)`,
+          roundedPayments: sql<number>`COUNT(CASE WHEN ${paymentTransactions.roundingAdjustmentCents} <> 0 THEN 1 END)`,
+        })
+        .from(paymentTransactions)
+        .where(
+          and(
+            eq(paymentTransactions.restaurantId, restaurantId),
+            gte(paymentTransactions.createdAt, startedAt),
+            lte(paymentTransactions.createdAt, endedAt),
+            // 只算真的收到的錢：pending / failed / cancelled 沒有進抽屜。
+            // 後來退款的仍然算：收的當下那筆進位確實進了抽屜，退款本身是
+            // 另一筆現金流動，由 totalRefunds 那條線處理。
+            inArray(paymentTransactions.status, [
+              "paid",
+              "refunded",
+              "partial_refunded",
+            ]),
+          ),
+        );
+
+      const cashRoundingAdjustment =
+        amountFromCents(roundingStats?.adjustmentCents ?? 0) ?? 0;
+      // 應有現金 = 訂單總額推出的預期金額 + 進位損益。
+      const expectedCashAmount = expectedAmount + cashRoundingAdjustment;
+      // 班次未結班時沒有實點金額可比，沿用班次列上的既有差額，不要拿 0 去減。
+      const cashDifference =
+        shift.actualAmountCents == null
+          ? differenceAmount
+          : actualAmount - expectedCashAmount;
+
       // 生成報表數據
       const reportData = {
         shift: {
@@ -140,8 +178,14 @@ export class ReportService {
           totalRefunds,
           netSales: (orderStats?.totalSales || 0) - totalRefunds,
           expectedAmount,
+          // 進位損益自成一行，金額與筆數都留著，對帳時看得出它從哪來 (#405)。
+          cashRoundingAdjustment,
+          roundedCashPayments: roundingStats?.roundedPayments ?? 0,
+          expectedCashAmount,
           actualAmount,
-          difference: differenceAmount,
+          // 扣掉進位損益之後才是真正的短溢；班次列上那個沒扣的值另外留著。
+          difference: cashDifference,
+          recordedDifference: differenceAmount,
         },
         breakdown: {
           cashSales,

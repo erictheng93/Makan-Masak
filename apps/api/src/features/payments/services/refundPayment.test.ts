@@ -37,11 +37,39 @@ interface RefundOrderRow {
   paymentStatus: string | null;
 }
 
-function createD1(orderRow: RefundOrderRow | null, updateChanges = 1) {
+/**
+ * What the refund reads off `payment_transactions`: the amount actually
+ * collected, which for a rounded MYR cash payment is up to 2 sen above the
+ * order total (#405). `null` means the order predates the payment ledger, so
+ * the refund falls back to the order total.
+ */
+interface RefundPaymentRow {
+  amountCents: number;
+}
+
+function createD1(
+  orderRow: RefundOrderRow | null,
+  updateChanges = 1,
+  paymentRow: RefundPaymentRow | null = null,
+) {
   const statements: PreparedStatement[] = [];
   const committed: PreparedStatement[] = [];
+  // Two different SELECTs run through this one mock. Drizzle maps a result
+  // row onto the projection positionally, so handing the order row back for
+  // the payment lookup would read `orders.id` as `amount_cents`.
+  const rowFor = (sql: string): Record<string, unknown> | null => {
+    const normalized = sql.toLowerCase().replaceAll('"', "");
+    if (
+      normalized.startsWith("select") &&
+      normalized.includes("payment_transactions")
+    ) {
+      return paymentRow as Record<string, unknown> | null;
+    }
+    return orderRow as Record<string, unknown> | null;
+  };
   const db = {
     prepare: vi.fn((sql: string) => {
+      const row = rowFor(sql);
       const statement: PreparedStatement = {
         sql,
         values: [],
@@ -49,10 +77,10 @@ function createD1(orderRow: RefundOrderRow | null, updateChanges = 1) {
           statement.values = values;
           return statement;
         }),
-        first: vi.fn(async () => orderRow),
-        raw: vi.fn(async () => (orderRow ? [Object.values(orderRow)] : [])),
+        first: vi.fn(async () => row),
+        raw: vi.fn(async () => (row ? [Object.values(row)] : [])),
         all: vi.fn(async () => ({
-          results: orderRow ? [orderRow] : [],
+          results: row ? [row] : [],
         })),
         run: vi.fn(async () => {
           committed.push(statement);
@@ -220,6 +248,9 @@ describe("refundPaymentTransaction", () => {
       "order-42",
       "restaurant-1",
       12000,
+      // rounding_adjustment_cents, filled from its schema default: the legacy
+      // backfill row reconstructs a payment that predates cash rounding (#405).
+      0,
       "unknown",
       "paid",
       JSON.stringify({ source: "refund_legacy_backfill" }),
@@ -336,8 +367,8 @@ describe("refundPaymentTransaction", () => {
       statementContaining(
         fullRefund.statements,
         "INSERT OR IGNORE INTO payment_transactions",
-      )?.values.slice(0, 6),
-    ).toEqual(["txn-2", "order-42", "restaurant-1", 4567, "card", "paid"]);
+      )?.values.slice(0, 7),
+    ).toEqual(["txn-2", "order-42", "restaurant-1", 4567, 0, "card", "paid"]);
     expect(
       statementContaining(fullRefund.statements, "UPDATE orders")?.values,
     ).toEqual(
@@ -509,5 +540,81 @@ describe("toExternalPaymentStatus", () => {
     ["unknown", "pending"],
   ])("maps %s to %s", (input, expected) => {
     expect(toExternalPaymentStatus(input)).toBe(expected);
+  });
+  // --- MYR cash rounding (#405) ---------------------------------------
+
+  it("refunds what the cash payment collected, not the order total", async () => {
+    // RM10.33 order, RM10.35 collected. Refunding 10.33 would keep 2 sen
+    // that never belonged to the restaurant.
+    resolveRestaurantCurrency.mockResolvedValue("MYR" as never);
+    const { db, statements } = createD1(
+      paidOrder({ totalAmountCents: 1033, paymentMethod: "cash" }),
+      1,
+      { amountCents: 1035 },
+    );
+
+    await expect(
+      refundPaymentTransaction(
+        env(db),
+        { transactionId: "txn-rounded" },
+        { user: cashierUser },
+      ),
+    ).resolves.toMatchObject({ amount: 10.35, paymentStatus: "refunded" });
+
+    expect(
+      statementContaining(statements, "insert into refund_transactions")
+        ?.values,
+    ).toEqual(expect.arrayContaining([1035]));
+  });
+
+  it("lets a rounded cash refund exceed the order total by its 2 sen", async () => {
+    resolveRestaurantCurrency.mockResolvedValue("MYR" as never);
+    const { db } = createD1(
+      paidOrder({ totalAmountCents: 1033, paymentMethod: "cash" }),
+      1,
+      { amountCents: 1035 },
+    );
+
+    await expect(
+      refundPaymentTransaction(
+        env(db),
+        { transactionId: "txn-rounded", amount: 10.35 },
+        { user: cashierUser },
+      ),
+    ).resolves.toMatchObject({ amount: 10.35 });
+  });
+
+  it("still refuses more than the payment collected", async () => {
+    resolveRestaurantCurrency.mockResolvedValue("MYR" as never);
+    const { db } = createD1(
+      paidOrder({ totalAmountCents: 1033, paymentMethod: "cash" }),
+      1,
+      { amountCents: 1035 },
+    );
+
+    await expect(
+      refundPaymentTransaction(
+        env(db),
+        { transactionId: "txn-rounded", amount: 10.4 },
+        { user: cashierUser },
+      ),
+    ).rejects.toMatchObject({
+      code: "REFUND_AMOUNT_EXCEEDS_PAYMENT",
+      status: 409,
+    });
+  });
+
+  it("falls back to the order total when no payment row exists", async () => {
+    // The legacy ledger-backfill path: an order marked paid before
+    // payment_transactions carried the row.
+    const { db } = createD1(paidOrder({ totalAmountCents: 12000 }), 1, null);
+
+    await expect(
+      refundPaymentTransaction(
+        env(db),
+        { transactionId: "txn-legacy" },
+        { user: cashierUser },
+      ),
+    ).resolves.toMatchObject({ amount: 120, paymentStatus: "refunded" });
   });
 });

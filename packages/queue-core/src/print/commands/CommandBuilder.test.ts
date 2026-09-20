@@ -121,4 +121,53 @@ describe("CommandBuilder.fromPrintContent", () => {
       CommandBuilder.fromPrintContent(content).buildESCPOS(),
     ).not.toContain("Delivery Fee:");
   });
+  it("prints the cash-rounding adjustment and the amount actually due", () => {
+    // 馬幣現金 RM10.33 收 RM10.35 (#405)：總額、調整、應付三行都要在紙上。
+    const content = createPrintContent();
+    content.summary.currency = "MYR";
+    content.summary.total = 10.33;
+    content.summary.roundingAdjustment = 0.02;
+    content.summary.amountDue = 10.35;
+
+    const commands = CommandBuilder.fromPrintContent(content).buildESCPOS();
+
+    expect(commands).toContain("TOTAL:");
+    expect(commands).toContain("RM 10.33");
+    expect(commands).toContain("Rounding Adj:");
+    expect(commands).toContain("+RM 0.02");
+    expect(commands).toContain("AMOUNT DUE:");
+    expect(commands).toContain("RM 10.35");
+  });
+
+  it("writes a downward adjustment with its own sign", () => {
+    const content = createPrintContent();
+    content.summary.currency = "MYR";
+    content.summary.total = 10.32;
+    content.summary.roundingAdjustment = -0.02;
+    content.summary.amountDue = 10.3;
+
+    const commands = CommandBuilder.fromPrintContent(content).buildESCPOS();
+
+    expect(commands).toContain("-RM 0.02");
+    expect(commands).toContain("RM 10.30");
+  });
+
+  it("derives the amount due when only the adjustment is supplied", () => {
+    const content = createPrintContent();
+    content.summary.currency = "MYR";
+    content.summary.total = 10.33;
+    content.summary.roundingAdjustment = 0.02;
+
+    expect(CommandBuilder.fromPrintContent(content).buildESCPOS()).toContain(
+      "RM 10.35",
+    );
+  });
+
+  it("prints no rounding lines when there is no adjustment", () => {
+    const commands =
+      CommandBuilder.fromPrintContent(createPrintContent()).buildESCPOS();
+
+    expect(commands).not.toContain("Rounding Adj:");
+    expect(commands).not.toContain("AMOUNT DUE:");
+  });
 });
