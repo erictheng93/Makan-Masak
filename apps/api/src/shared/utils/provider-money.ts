@@ -12,11 +12,37 @@
  * | linepay   | whole NT$ ×100 | unsupported  | unsupported    | developers-pay.line.me/online-api-v3 — `amount` is a plain number of TWD (`"amount": 100, "currency": "TWD"`); currencies USD/TWD/THB |
  * | ecpay     | whole NT$ ×100 | unsupported  | unsupported    | ECPay AIO `TotalAmount`: 請帶整數，不可有小數點。僅限新台幣 |
  * | newebpay  | whole NT$ ×100 | unsupported  | unsupported    | NewebPay MPG `Amt`: pure-number TWD (SDK docs; the official manual is a PDF download) |
+ * | tng       | unsupported    | sen (×1)     | unsupported    | **UNVERIFIED** — see below |
+ * | grabpay   | unsupported    | sen (×1)     | unsupported    | **UNVERIFIED** — see below |
  * | (adapter) | internal cents | internal cents | internal cents | our own provider-adapter contract (docs/runbooks/market-checkout-provider-adapter-handoff.md) |
  *
  * The factor is "internal cents per provider unit". Any provider name that is
  * not a native gateway above is one of our HTTP adapters, which speak internal
  * cents by contract.
+ *
+ * ## The two e-wallet rows are assumptions, not facts (2026-09-20)
+ *
+ * MYR is ISO 4217 exponent 2, so "sen" and our internal cents coincide and the
+ * factor is 1 either way. What could not be confirmed is whether Touch 'n Go's
+ * and Grab's *own* merchant APIs take sen or whole ringgit. Neither publishes
+ * an open developer reference:
+ *
+ * - Touch 'n Go eWallet merchant onboarding is a sales process
+ *   (https://www.touchngo.com.my/merchant/), and the only public TNG Digital
+ *   developer site is the Mini Program one
+ *   (https://miniprogram.tngdigital.com.my/docs/), which documents the
+ *   in-wallet app runtime rather than a merchant payment API.
+ * - GrabPay's partner reference (https://developer.grab.com/docs/grabpay/)
+ *   requires partner credentials to read past the overview.
+ *
+ * Every reachable third-party integration of both wallets (Stripe, Adyen,
+ * 2C2P, Nuvei, Checkout.com) takes MYR in the smallest unit — Stripe states
+ * the rule generally at https://docs.stripe.com/currencies — which is what
+ * these factors follow. That is corroboration from resellers, not the
+ * providers' own contract. **Before the first real charge, read the sandbox
+ * contract you are actually given and re-derive both rows.** A wrong factor
+ * here is a 100× under- or over-charge, and `verifyProviderMoney` will not
+ * catch it: it compares our own converted number against itself.
  */
 import {
   currencyStepCents,
@@ -24,7 +50,13 @@ import {
   type CurrencyCode,
 } from "@makanmasak/utils";
 
-export type NativePaymentProvider = "stripe" | "linepay" | "ecpay" | "newebpay";
+export type NativePaymentProvider =
+  | "stripe"
+  | "linepay"
+  | "ecpay"
+  | "newebpay"
+  | "tng"
+  | "grabpay";
 
 export const PROVIDER_AMOUNT_FACTORS: Record<
   NativePaymentProvider,
@@ -34,6 +66,11 @@ export const PROVIDER_AMOUNT_FACTORS: Record<
   linepay: { TWD: 100 },
   ecpay: { TWD: 100 },
   newebpay: { TWD: 100 },
+  // Malaysian e-wallets a shop connects with its own merchant account. Listing
+  // MYR alone is what makes a TWD shop connecting them a rejection rather than
+  // a silent conversion. See the UNVERIFIED note in this file's header.
+  tng: { MYR: 1 },
+  grabpay: { MYR: 1 },
 };
 
 /**
