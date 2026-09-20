@@ -56,6 +56,7 @@ describe("guest device identity header", () => {
     const deviceId = headersFor("/guest-orders")["X-Guest-Device-Id"];
     expect(deviceId).toMatch(/^[A-Za-z0-9_-]{16,64}$/);
     expect(headersFor("/market-checkouts")["X-Guest-Device-Id"]).toBe(deviceId);
+    expect(headersFor("/coupons/validate")["X-Guest-Device-Id"]).toBe(deviceId);
     expect(localStorage.getItem("guest_device_id")).toBe(deviceId);
   });
 
@@ -70,6 +71,13 @@ describe("guest device identity header", () => {
     const headers = headersFor("/market-checkouts");
     expect(headers.Authorization).toBe("Bearer customer-jwt");
     expect(headers["X-Guest-Device-Id"]).toBe(anonymousDeviceId);
+  });
+
+  it("does not change the identity of a signed-in coupon preview", () => {
+    vi.mocked(getCustomerAccessToken).mockReturnValue("customer-jwt");
+    const headers = headersFor("/coupons/validate");
+    expect(headers.Authorization).toBe("Bearer customer-jwt");
+    expect(headers).not.toHaveProperty("X-Guest-Device-Id");
   });
 
   it("does not attach it to unrelated requests", () => {

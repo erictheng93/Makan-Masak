@@ -1113,6 +1113,7 @@ const submitOrder = async () => {
           notes: item.notes,
         })),
         notes: orderNotes.value.trim() || undefined,
+        couponCode: appliedCoupon.value?.code,
         clientMutationId: pendingOrderMutationId.value ?? undefined,
       };
 
@@ -1131,9 +1132,7 @@ const submitOrder = async () => {
           notes: item.notes,
         })),
         notes: orderNotes.value.trim() || undefined,
-        couponCode: appliedCoupon.value
-          ? couponCode.value.trim().toUpperCase()
-          : undefined,
+        couponCode: appliedCoupon.value?.code,
         clientMutationId: pendingOrderMutationId.value ?? undefined,
       };
 

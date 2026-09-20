@@ -362,14 +362,7 @@ test.describe("訂單追蹤流程 (real API + realtime)", () => {
         { timeout: NAV_TIMEOUT },
       );
 
-      // Everything up to here works. Going back to the first order is the
-      // open bug: the customer app keeps ONE guest_auth_token, the second
-      // order overwrote it, and guestTokenAuth rejects a token minted for a
-      // different order with 403 ACCESS_DENIED.
-      test.fail(
-        true,
-        "#383: after a second order, the first order's tracking page answers 403",
-      );
+      // The second order must not replace the first order's credential.
       const reread = page.waitForResponse(
         (response) =>
           response

@@ -1,3 +1,4 @@
+import { getGuestOrderToken } from "@/utils/guest-order-tokens";
 import { createRouter, createWebHistory } from "vue-router";
 import type { RouteRecordRaw } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
@@ -391,7 +392,7 @@ router.beforeEach(async (to, from, next) => {
   if (requiresAuth) {
     // Allow guest token holders to access routes with allowGuestToken meta
     const allowGuestToken = to.meta.allowGuestToken as boolean;
-    const hasGuestToken = !!localStorage.getItem("guest_auth_token");
+    const hasGuestToken = !!getGuestOrderToken(String(to.params.orderId ?? ""));
 
     if (allowGuestToken && hasGuestToken) {
       // Guest token is sufficient for this route

@@ -106,6 +106,10 @@
     {
       "fresh": "0026_shop_payment_credentials.sql",
       "reason": "shop_payment_credentials holds each platform-API restaurant's own Touch 'n Go / GrabPay merchant account so customers pay that shop directly; the management-api database has no restaurants row to scope a merchant account against and never settles a customer payment."
+    },
+    {
+      "fresh": "0027_guest_coupon_identity.sql",
+      "reason": "Guest coupon usage belongs to platform orders; the management control-plane database has neither coupons nor coupon_usage."
     }
   ],
   "legacyOnly": [

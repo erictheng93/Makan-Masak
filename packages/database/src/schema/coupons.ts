@@ -151,6 +151,9 @@ export const couponUsage = sqliteTable(
       onDelete: "set null",
     }), // 使用者ID
 
+    // Guest identities are hashes, separate from the users foreign key.
+    guestIdentity: text("guest_identity"),
+
     // 使用詳情
     discountAmountCents: integer("discount_amount_cents"),
     originalAmountCents: integer("original_amount_cents"),
@@ -177,6 +180,11 @@ export const couponUsage = sqliteTable(
     couponIdIdx: index("idx_coupon_usage_coupon_id").on(table.couponId),
     orderIdIdx: index("idx_coupon_usage_order_id").on(table.orderId),
     userIdIdx: index("idx_coupon_usage_user_id").on(table.userId),
+    guestIdentityIdx: index("idx_coupon_usage_guest_identity")
+      .on(table.couponId, table.guestIdentity)
+      .where(
+        sql`${table.guestIdentity} IS NOT NULL AND ${table.status} = 'active'`,
+      ),
     usedAtIdx: index("idx_coupon_usage_used_at").on(table.usedAt),
     statusIdx: index("idx_coupon_usage_status").on(table.status),
     uniqueUsageIdx: index("idx_coupon_usage_unique").on(

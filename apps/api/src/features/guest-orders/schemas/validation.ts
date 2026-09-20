@@ -90,6 +90,7 @@ export const createGuestOrderSchema = z.lazy(() =>
       shopQrCode: z.string().max(100).optional(),
       waitingListId: z.string().min(1).max(100).optional(),
       customerPhone: z.string().max(20).optional(),
+      couponCode: z.string().trim().min(3).max(50).toUpperCase().optional(),
       tableId: z.number().int().positive().optional(),
       seatId: z.number().int().positive().optional(),
       items: z.array(guestOrderItemSchema).min(1).max(20),

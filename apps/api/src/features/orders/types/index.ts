@@ -75,6 +75,8 @@ export interface CreateOrderData {
   scheduledTime?: Date;
   couponCode?: string;
   couponUserId?: string;
+  /** Server-resolved guest identity; never accepted from an order body. */
+  couponGuestIdentity?: string;
   clientMutationId?: string;
   isGuestOrder?: boolean;
   deliveryInfo?: {

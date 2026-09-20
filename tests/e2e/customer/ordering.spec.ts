@@ -440,6 +440,7 @@ test.describe("點餐主流程 (real API)", () => {
             name: e2eName("訪客券"),
             discountType: "fixed",
             discountValue: 20,
+            usageLimitPerUser: 1,
             validFrom: new Date(Date.now() - 3_600_000).toISOString(),
             validTo: new Date(Date.now() + 86_400_000).toISOString(),
           },
@@ -481,14 +482,6 @@ test.describe("點餐主流程 (real API)", () => {
         .data.order.id;
 
       const order: OrderRow = await readOrder(orderId);
-      // Everything above is the working part of the flow. What follows is the
-      // open bug: the guest cart never sends couponCode and
-      // POST /guest-orders has no field for it, so the cart promised NT$60 and
-      // D1 stores NT$80 with no discount and no coupon.
-      test.fail(
-        true,
-        "#382: a guest's coupon discount is shown in the cart but dropped from the order",
-      );
       expect(
         { total: order.totalAmount, discount: order.discountAmount },
         "the order must be charged what the cart showed",
