@@ -13,6 +13,7 @@ import {
   restaurantMarketMemberships,
   restaurantServiceItems,
   restaurants,
+  orders,
 } from "@makanmasak/database";
 import { KVCacheService, type CacheService } from "../../../core/cache";
 import { ConsoleLogger } from "../../../core/monitoring";
@@ -30,6 +31,7 @@ import type {
   RestaurantEvent,
 } from "../types";
 import { distanceKm, pointInGeoJsonBoundary } from "../../markets/services/geo";
+import { currencyFromRestaurantSettings } from "../../../shared/utils/restaurant-currency";
 
 const MARKET_CACHE_VERSION_KEY = "markets:version";
 const AUTO_ATTACH_MARKET_RADIUS_KM = 2;
@@ -336,6 +338,46 @@ export class RestaurantsService {
   ): Promise<Restaurant | null> {
     try {
       this.logger.debug("Updating restaurant", { id, data });
+
+      const incomingSettings = settingsRecord(data.settings);
+      if (
+        data.settings !== undefined &&
+        Object.prototype.hasOwnProperty.call(incomingSettings, "currency")
+      ) {
+        const [current] = await this.db
+          .select({ settings: restaurants.settings })
+          .from(restaurants)
+          .where(eq(restaurants.id, id))
+          .limit(1);
+
+        if (current) {
+          const currentSettings = settingsRecord(current.settings);
+          const nextSettings = {
+            ...currentSettings,
+            ...incomingSettings,
+          };
+          const currentCurrency = currencyFromRestaurantSettings(
+            currentSettings,
+            id,
+          );
+          const nextCurrency = currencyFromRestaurantSettings(nextSettings, id);
+
+          if (nextCurrency !== currentCurrency) {
+            const [existingOrder] = await this.db
+              .select({ id: orders.id })
+              .from(orders)
+              .where(eq(orders.restaurantId, id))
+              .limit(1);
+
+            if (existingOrder) {
+              throw badRequest(
+                "Currency cannot change once the shop has orders",
+                "CURRENCY_CHANGE_NOT_ALLOWED",
+              );
+            }
+          }
+        }
+      }
 
       const restaurant = await this.dbService.updateRestaurant(id, data);
 
@@ -1139,6 +1181,20 @@ function removeEmptyChannels(channels: MessagingChannels): MessagingChannels {
       ([, value]) => typeof value === "string" && value.length > 0,
     ),
   ) as MessagingChannels;
+}
+
+function settingsRecord(settings: unknown): Record<string, unknown> {
+  if (typeof settings === "string") {
+    try {
+      return settingsRecord(JSON.parse(settings));
+    } catch {
+      return {};
+    }
+  }
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
+    return {};
+  }
+  return settings as Record<string, unknown>;
 }
 
 function hasEnabledFulfillmentMethod(restaurant: Restaurant): boolean {

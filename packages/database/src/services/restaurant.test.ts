@@ -58,6 +58,13 @@ describe("RestaurantService.updateRestaurant", () => {
           })),
         },
       },
+      select: vi.fn(() => {
+        const builder = {
+          from: vi.fn(() => builder),
+          where: vi.fn(() => builder),
+        };
+        return builder;
+      }),
       update: vi.fn(() => updateBuilder),
     };
     const service = createServiceWithDb(db);
@@ -76,6 +83,94 @@ describe("RestaurantService.updateRestaurant", () => {
       currency: "TWD",
       enableTakeaway: true,
       minOrderAmount: 300,
+    });
+  });
+
+  it("preserves currency from legacy double-encoded settings", async () => {
+    const capturedSet: Record<string, unknown>[] = [];
+    const updateBuilder = {
+      set: vi.fn((values: Record<string, unknown>) => {
+        capturedSet.push(values);
+        return updateBuilder;
+      }),
+      where: vi.fn(() => updateBuilder),
+      returning: vi.fn(async () => [
+        {
+          id: "restaurant-1",
+          name: "Makan",
+          type: "malaysian",
+          category: "casual",
+          address: "Main Street",
+          district: "Central",
+          city: "Taipei",
+          phone: "0912345678",
+          isActive: true,
+          settings: { currency: "MYR", allowGuestOrders: false },
+          createdAt: new Date("2026-01-01T00:00:00.000Z"),
+          updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+        },
+      ]),
+    };
+    const db = {
+      query: {
+        restaurants: {
+          findFirst: vi.fn(async () => ({
+            settings: JSON.stringify({
+              currency: "MYR",
+              allowGuestOrders: true,
+            }),
+          })),
+        },
+      },
+      select: vi.fn(() => {
+        const builder = {
+          from: vi.fn(() => builder),
+          where: vi.fn(() => builder),
+        };
+        return builder;
+      }),
+      update: vi.fn(() => updateBuilder),
+    };
+
+    await createServiceWithDb(db).updateRestaurant("restaurant-1", {
+      settings: { allowGuestOrders: false },
+    });
+
+    expect(capturedSet[0].settings).toEqual({
+      currency: "MYR",
+      allowGuestOrders: false,
+    });
+  });
+
+  it("rejects an atomic currency update when an order exists", async () => {
+    const selectBuilder = {
+      from: vi.fn(() => selectBuilder),
+      where: vi.fn(() => selectBuilder),
+    };
+    const updateBuilder = {
+      set: vi.fn(() => updateBuilder),
+      where: vi.fn(() => updateBuilder),
+      returning: vi.fn(async () => []),
+    };
+    const db = {
+      query: {
+        restaurants: {
+          findFirst: vi.fn(async () => ({
+            settings: { currency: "TWD" },
+          })),
+        },
+      },
+      select: vi.fn(() => selectBuilder),
+      update: vi.fn(() => updateBuilder),
+    };
+
+    await expect(
+      createServiceWithDb(db).updateRestaurant("restaurant-1", {
+        settings: { currency: "MYR" },
+      }),
+    ).rejects.toMatchObject({
+      status: 400,
+      code: "CURRENCY_CHANGE_NOT_ALLOWED",
     });
   });
 });

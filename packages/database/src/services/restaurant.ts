@@ -1,11 +1,18 @@
-import { eq, and, desc, asc, count, sql } from "drizzle-orm";
+import { eq, and, or, desc, asc, count, sql, notExists } from "drizzle-orm";
 import { BaseService } from "./base";
 import { resolveAppBaseUrl } from "./app-base-url";
-import { restaurants, categories, menuItems, tables, users } from "../schema";
+import {
+  restaurants,
+  categories,
+  menuItems,
+  tables,
+  users,
+  orders,
+} from "../schema";
 import type { Restaurant } from "@makanmasak/shared-types";
 import type { BusinessTimezone } from "../utils/business-timezone";
 import { PlanType } from "@makanmasak/shared-types";
-import { assertCurrencyAlignedCents } from "@makanmasak/utils";
+import { assertCurrencyAlignedCents, badRequest } from "@makanmasak/utils";
 import { toCents } from "../utils/money";
 import { requireRestaurantCurrency } from "../utils/order-totals";
 
@@ -80,6 +87,17 @@ export interface UpdateRestaurantData extends Partial<CreateRestaurantData> {
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function settingsRecord(value: unknown): Record<string, unknown> {
+  if (typeof value === "string") {
+    try {
+      return settingsRecord(JSON.parse(value));
+    } catch {
+      return {};
+    }
+  }
+  return isPlainRecord(value) ? value : {};
 }
 
 /**
@@ -288,25 +306,47 @@ export class RestaurantService extends BaseService {
   ): Promise<Restaurant> {
     try {
       const updateData: UpdateRestaurantData = { ...data };
+      let settingsWriteCurrency: string | undefined;
 
       if (data.settings !== undefined) {
         const existing = await this.db.query.restaurants.findFirst({
           columns: { settings: true },
           where: eq(restaurants.id, id),
         });
-        const existingSettings = isPlainRecord(existing?.settings)
-          ? existing.settings
-          : {};
-        const incomingSettings = isPlainRecord(data.settings)
-          ? data.settings
-          : {};
+        const existingSettings = settingsRecord(existing?.settings);
+        const incomingSettings = settingsRecord(data.settings);
 
         updateData.settings = {
           ...existingSettings,
           ...incomingSettings,
         };
+        if (existing !== undefined) {
+          settingsWriteCurrency = requireRestaurantCurrency(
+            updateData.settings.currency,
+            id,
+          );
+        }
         assertSettingsMoneyPrecision(incomingSettings, updateData.settings);
       }
+
+      const updateWhere = settingsWriteCurrency
+        ? and(
+            eq(restaurants.id, id),
+            or(
+              notExists(
+                this.db
+                  .select({ id: orders.id })
+                  .from(orders)
+                  .where(eq(orders.restaurantId, id)),
+              ),
+              sql`upper(trim(coalesce(
+                json_extract(${restaurants.settings}, '$.currency'),
+                json_extract(json_extract(${restaurants.settings}, '$'), '$.currency'),
+                'TWD'
+              ))) = ${settingsWriteCurrency}`,
+            ),
+          )
+        : eq(restaurants.id, id);
 
       const [restaurant] = await this.db
         .update(restaurants)
@@ -314,10 +354,16 @@ export class RestaurantService extends BaseService {
           ...updateData,
           updatedAt: new Date(),
         })
-        .where(eq(restaurants.id, id))
+        .where(updateWhere)
         .returning();
 
       if (!restaurant) {
+        if (settingsWriteCurrency) {
+          throw badRequest(
+            "Currency cannot change once the shop has orders",
+            "CURRENCY_CHANGE_NOT_ALLOWED",
+          );
+        }
         throw new Error("Restaurant not found");
       }
 

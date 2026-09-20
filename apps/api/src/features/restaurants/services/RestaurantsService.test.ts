@@ -254,6 +254,31 @@ describe("RestaurantsService", () => {
     );
   });
 
+  it("rejects a currency change when any order exists", async () => {
+    const queryResult = (rows: unknown[]) => {
+      const builder = {
+        from: vi.fn(() => builder),
+        where: vi.fn(() => builder),
+        limit: vi.fn(async () => rows),
+      };
+      return builder;
+    };
+    mocks.db.select
+      .mockReturnValueOnce(queryResult([{ settings: { currency: "TWD" } }]))
+      .mockReturnValueOnce(queryResult([{ id: "order-1" }]));
+
+    await expect(
+      createService().updateRestaurant("restaurant-1", {
+        settings: { currency: "MYR" },
+      }),
+    ).rejects.toMatchObject({
+      status: 400,
+      code: "CURRENCY_CHANGE_NOT_ALLOWED",
+    });
+
+    expect(mocks.dbService.updateRestaurant).not.toHaveBeenCalled();
+  });
+
   it("keeps a rejected settings update as the caller's 400", async () => {
     const rejection = badRequest(
       "Amounts in TWD must be multiples of 1",
