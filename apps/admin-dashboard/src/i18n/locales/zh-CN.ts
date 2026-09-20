@@ -2755,6 +2755,7 @@ const zhCN: Messages = {
       notifications: "通知设置",
       security: "安全设置",
       integrations: "外送平台对接",
+      payments: "收款方式",
       contact: "联络与 FAQ",
       markets: "市场 / 商圈",
     },
@@ -4328,6 +4329,64 @@ const zhCN: Messages = {
       lowRate: "使用率偏低，可考虑延长有效期或增加推广力度",
       highRate: "使用率很高，可考虑增加使用次数限制",
       lowDiscount: "平均折扣金额较低，可考虑提高折扣值以增加吸引力",
+    },
+  },
+  shopWallet: {
+    title: "电子钱包收款",
+    subtitle:
+      "绑定店家自己的 Touch 'n Go eWallet 或 GrabPay 商户账号，顾客付款直接进入您的账户。",
+    unavailableCurrency:
+      "本店以 {currency} 结算，而 Touch 'n Go eWallet 与 GrabPay 只结算马币（MYR），因此无法绑定。",
+    selectRestaurant: "请先选择要设置的店家。",
+    payoutNote:
+      "款项直接汇入您自己的商户账号，平台不经手。例如一笔 {example} 的订单，全额由钱包服务商结算给您。",
+    loading: "加载中…",
+    secretsNeverShown:
+      "密钥只会加密保存，保存后不会再显示。留空表示沿用当前密钥。",
+    providers: {
+      tng: {
+        name: "Touch 'n Go eWallet",
+        description:
+          "马来西亚最普及的电子钱包，需先向 Touch 'n Go 申请商户账号。",
+      },
+      grabpay: {
+        name: "GrabPay",
+        description: "Grab 生态的电子钱包，需先成为 Grab 合作商户。",
+      },
+    },
+    status: {
+      connected: "已绑定",
+      disabled: "已停用",
+      notConnected: "未绑定",
+    },
+    environments: {
+      sandbox: "测试环境",
+      production: "正式环境",
+    },
+    fields: {
+      merchantId: "商户编号",
+      displayName: "账号名称",
+      merchantKey: "商户密钥",
+      webhookSecret: "回调验证密钥",
+      environment: "环境",
+      secretUpdated: "密钥更新于",
+      secretKeepPlaceholder: "留空以沿用当前密钥",
+    },
+    actions: {
+      connect: "绑定账号",
+      update: "更新设置",
+      disconnect: "解除绑定",
+      save: "保存",
+      saving: "保存中…",
+      cancel: "取消",
+    },
+    alerts: {
+      saved: "电子钱包设置已保存",
+      saveFailed: "无法保存电子钱包设置",
+      disconnected: "已解除电子钱包绑定",
+      disconnectFailed: "无法解除电子钱包绑定",
+      loadFailed: "无法加载电子钱包设置",
+      secretRequired: "请至少填写一项密钥",
     },
   },
   integrations: {

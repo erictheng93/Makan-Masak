@@ -1880,6 +1880,11 @@
     <IntegrationsSettings />
   </div>
 
+  <!-- 店家自有電子錢包收款 (Touch 'n Go / GrabPay) -->
+  <div v-show="activeTab === 'payments'" class="space-y-8">
+    <ShopWalletSettings />
+  </div>
+
   <!-- 成功提示 -->
   <div
     v-if="showSuccessMessage"
@@ -1905,6 +1910,7 @@ import {
 import { useRoute } from "vue-router";
 import { CheckCircleIcon } from "@heroicons/vue/24/outline";
 import IntegrationsSettings from "@/components/settings/IntegrationsSettings.vue";
+import ShopWalletSettings from "@/components/settings/ShopWalletSettings.vue";
 import RestaurantServiceItemsManager from "@/components/settings/RestaurantServiceItemsManager.vue";
 import ServiceBookingSlotsManager from "@/components/settings/ServiceBookingSlotsManager.vue";
 import { useI18n } from "@/i18n";
@@ -1965,6 +1971,7 @@ const tabs = [
   { id: "notifications", name: t("settings.tabs.notifications") },
   { id: "security", name: t("settings.tabs.security") },
   { id: "integrations", name: t("settings.tabs.integrations") },
+  { id: "payments", name: t("settings.tabs.payments") },
 ];
 
 const tabIds = tabs.map((tab) => tab.id);

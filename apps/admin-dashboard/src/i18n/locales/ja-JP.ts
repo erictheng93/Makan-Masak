@@ -2809,6 +2809,7 @@ const jaJP: Messages = {
       notifications: "通知",
       security: "セキュリティ",
       integrations: "連携",
+      payments: "決済方法",
       contact: "接触",
       markets: "市場",
     },
@@ -4430,6 +4431,65 @@ const jaJP: Messages = {
       highRate: "使用率が高いです。使用制限の引き上げを検討してください",
       lowDiscount:
         "平均割引額が低いです。より魅力的にするために割引値の引き上げを検討してください",
+    },
+  },
+  shopWallet: {
+    title: "電子ウォレット決済",
+    subtitle:
+      "店舗ご自身の Touch 'n Go eWallet または GrabPay の加盟店アカウントを接続すると、お客様の支払いが直接店舗の口座に入金されます。",
+    unavailableCurrency:
+      "この店舗の決済通貨は {currency} です。Touch 'n Go eWallet と GrabPay はマレーシアリンギット（MYR）のみのため、接続できません。",
+    selectRestaurant: "先に設定する店舗を選択してください。",
+    payoutNote:
+      "入金は店舗ご自身の加盟店アカウントに直接行われ、プラットフォームは資金を預かりません。たとえば {example} の注文なら、全額がウォレット事業者から店舗に支払われます。",
+    loading: "読み込み中…",
+    secretsNeverShown:
+      "キーは暗号化して保存され、保存後に再表示されることはありません。空欄のままにすると現在のキーが維持されます。",
+    providers: {
+      tng: {
+        name: "Touch 'n Go eWallet",
+        description:
+          "マレーシアで最も普及している電子ウォレット。先に Touch 'n Go の加盟店アカウントを申請してください。",
+      },
+      grabpay: {
+        name: "GrabPay",
+        description:
+          "Grab アプリ内の電子ウォレット。先に Grab の加盟店パートナーになる必要があります。",
+      },
+    },
+    status: {
+      connected: "接続済み",
+      disabled: "停止中",
+      notConnected: "未接続",
+    },
+    environments: {
+      sandbox: "テスト環境",
+      production: "本番環境",
+    },
+    fields: {
+      merchantId: "加盟店ID",
+      displayName: "アカウント名",
+      merchantKey: "加盟店キー",
+      webhookSecret: "コールバック検証キー",
+      environment: "環境",
+      secretUpdated: "キー更新日",
+      secretKeepPlaceholder: "空欄で現在のキーを維持",
+    },
+    actions: {
+      connect: "アカウントを接続",
+      update: "設定を更新",
+      disconnect: "接続を解除",
+      save: "保存",
+      saving: "保存中…",
+      cancel: "キャンセル",
+    },
+    alerts: {
+      saved: "電子ウォレットの設定を保存しました",
+      saveFailed: "電子ウォレットの設定を保存できませんでした",
+      disconnected: "電子ウォレットの接続を解除しました",
+      disconnectFailed: "電子ウォレットの接続を解除できませんでした",
+      loadFailed: "電子ウォレットの設定を読み込めませんでした",
+      secretRequired: "キーを少なくとも1つ入力してください",
     },
   },
   integrations: {

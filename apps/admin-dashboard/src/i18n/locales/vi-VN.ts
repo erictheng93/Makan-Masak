@@ -2807,6 +2807,7 @@ const viVN: Messages = {
       notifications: "Thông báo",
       security: "Bảo mật",
       integrations: "Tích hợp",
+      payments: "Phương thức thanh toán",
       contact: "Liên hệ",
       markets: "Thị trường",
     },
@@ -4429,6 +4430,65 @@ const viVN: Messages = {
       highRate: "Tỷ lệ sử dụng cao. Cân nhắc tăng giới hạn sử dụng",
       lowDiscount:
         "Giảm giá trung bình thấp. Cân nhắc tăng giá trị giảm để hấp dẫn hơn",
+    },
+  },
+  shopWallet: {
+    title: "Thanh toán ví điện tử",
+    subtitle:
+      "Kết nối tài khoản merchant Touch 'n Go eWallet hoặc GrabPay của chính cửa hàng để khách trả tiền thẳng cho bạn.",
+    unavailableCurrency:
+      "Cửa hàng này quyết toán bằng {currency}. Touch 'n Go eWallet và GrabPay chỉ quyết toán ringgit Malaysia (MYR) nên không thể kết nối.",
+    selectRestaurant: "Vui lòng chọn cửa hàng cần thiết lập trước.",
+    payoutNote:
+      "Tiền vào thẳng tài khoản merchant của bạn, nền tảng không giữ tiền. Ví dụ với đơn {example}, ví điện tử quyết toán toàn bộ cho bạn.",
+    loading: "Đang tải…",
+    secretsNeverShown:
+      "Khóa được lưu ở dạng mã hóa và không bao giờ hiển thị lại sau khi lưu. Để trống nghĩa là giữ nguyên khóa hiện tại.",
+    providers: {
+      tng: {
+        name: "Touch 'n Go eWallet",
+        description:
+          "Ví điện tử phổ biến nhất Malaysia. Cần đăng ký tài khoản merchant với Touch 'n Go trước.",
+      },
+      grabpay: {
+        name: "GrabPay",
+        description:
+          "Ví điện tử trong ứng dụng Grab. Cần trở thành đối tác merchant của Grab trước.",
+      },
+    },
+    status: {
+      connected: "Đã kết nối",
+      disabled: "Đã tắt",
+      notConnected: "Chưa kết nối",
+    },
+    environments: {
+      sandbox: "Môi trường thử nghiệm",
+      production: "Môi trường chính thức",
+    },
+    fields: {
+      merchantId: "Mã merchant",
+      displayName: "Tên tài khoản",
+      merchantKey: "Khóa merchant",
+      webhookSecret: "Khóa xác thực callback",
+      environment: "Môi trường",
+      secretUpdated: "Khóa cập nhật lúc",
+      secretKeepPlaceholder: "Để trống để giữ khóa hiện tại",
+    },
+    actions: {
+      connect: "Kết nối tài khoản",
+      update: "Cập nhật thiết lập",
+      disconnect: "Ngắt kết nối",
+      save: "Lưu",
+      saving: "Đang lưu…",
+      cancel: "Hủy",
+    },
+    alerts: {
+      saved: "Đã lưu thiết lập ví điện tử",
+      saveFailed: "Không thể lưu thiết lập ví điện tử",
+      disconnected: "Đã ngắt kết nối ví điện tử",
+      disconnectFailed: "Không thể ngắt kết nối ví điện tử",
+      loadFailed: "Không thể tải thiết lập ví điện tử",
+      secretRequired: "Vui lòng nhập ít nhất một khóa",
     },
   },
   integrations: {
