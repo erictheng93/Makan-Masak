@@ -17,6 +17,7 @@ import { createSubdomainBase } from "../utils/subdomain";
 import {
   DEFAULT_BILLING_CYCLE_MS,
   marketJoinRequests,
+  markets,
   PLAN_TIERS,
   passwordResetTokens,
   planIdToTier,
@@ -32,7 +33,7 @@ import {
   normalizeCountryCode,
 } from "@makanmasak/shared-types";
 import bcrypt from "bcryptjs";
-import { and, desc, eq, isNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import {
   onboardingApplicationAuditEvents,
@@ -469,13 +470,13 @@ export class OnboardingService {
       ),
     ];
     if (marketIds.length && this.env.PLATFORM_DB) {
-      const markets = await this.env.PLATFORM_DB.prepare(
-        `SELECT id, name FROM markets WHERE id IN (${marketIds.map(() => "?").join(",")})`,
-      )
-        .bind(...marketIds)
-        .all<{ id: string; name: string }>();
+      const marketRows = await drizzle(this.env.PLATFORM_DB)
+        .select({ id: markets.id, name: markets.name })
+        .from(markets)
+        .where(inArray(markets.id, marketIds))
+        .all();
       const names = new Map(
-        (markets.results ?? []).map((market) => [market.id, market.name]),
+        marketRows.map((market) => [market.id, market.name]),
       );
       for (const application of applications) {
         application.marketName = application.marketId
@@ -660,15 +661,15 @@ export class OnboardingService {
       // Read the persistent restaurant link independently of the one-time setup
       // token: a market retry remains possible after the owner has signed in.
       const tenant = application.tenantId
-        ? await this.env.MANAGEMENT_DB.prepare(
-            "SELECT platform_restaurant_id FROM tenants WHERE id = ?",
-          )
-            .bind(application.tenantId)
-            .first<{ platform_restaurant_id: string | null }>()
+        ? await drizzle(this.env.MANAGEMENT_DB)
+            .select({ platformRestaurantId: tenants.platformRestaurantId })
+            .from(tenants)
+            .where(eq(tenants.id, application.tenantId))
+            .get()
         : null;
       return {
         success: true,
-        restaurantId: tenant?.platform_restaurant_id ?? undefined,
+        restaurantId: tenant?.platformRestaurantId ?? undefined,
         marketId: application.marketId,
         stallNumber: application.stallNumber,
         tenantId: application.tenantId,

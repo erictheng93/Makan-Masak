@@ -1609,8 +1609,8 @@ export class MarketsService {
         ${input.mapPosition ? JSON.stringify(input.mapPosition) : null},
         ${input.marketHours ? JSON.stringify(input.marketHours) : null},
         ${input.isPrimary ? 1 : 0}, ${Date.now()}, NULL
-        FROM restaurants WHERE id = ${input.restaurantId}
-        AND ${restaurantCurrencySql(sql`settings`)} = ${currency}
+        FROM ${restaurants} WHERE ${restaurants.id} = ${input.restaurantId}
+        AND ${restaurantCurrencySql(restaurants.settings)} = ${currency}
         AND ${marketCurrencyMatches(input.restaurantId, currency, marketId)}`,
       )
       .returning();

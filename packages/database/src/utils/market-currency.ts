@@ -1,4 +1,17 @@
-import { sql, type SQL, type SQLWrapper } from "drizzle-orm";
+import {
+  and,
+  eq,
+  inArray,
+  isNull,
+  ne,
+  notExists,
+  sql,
+  type SQL,
+  type SQLWrapper,
+} from "drizzle-orm";
+import { alias, QueryBuilder } from "drizzle-orm/sqlite-core";
+import { restaurantMarketMemberships } from "../schema/markets";
+import { restaurants } from "../schema/restaurants";
 import { ApiError, DEFAULT_CURRENCY } from "@makanmasak/utils";
 
 // Match the server currency resolver's String.trim(), including legacy blanks.
@@ -31,21 +44,41 @@ export function marketCurrencyMatches(
   currency: SQL | string,
   marketId?: string,
 ): SQL {
+  const peerMembership = alias(restaurantMarketMemberships, "peer_membership");
+  const ownMembership = alias(restaurantMarketMemberships, "own_membership");
+  const peerRestaurant = alias(restaurants, "peer_restaurant");
+  const queryBuilder = new QueryBuilder();
   const marketScope = marketId
-    ? sql`peer_membership.market_id = ${marketId}`
-    : sql`peer_membership.market_id IN (
-        SELECT own_membership.market_id FROM restaurant_market_memberships own_membership
-        WHERE own_membership.restaurant_id = ${restaurantId}
-          AND own_membership.left_at_ms IS NULL
-      )`;
-  return sql`NOT EXISTS (
-    SELECT 1 FROM restaurant_market_memberships peer_membership
-    JOIN restaurants peer_restaurant ON peer_restaurant.id = peer_membership.restaurant_id
-    WHERE ${marketScope}
-      AND peer_membership.left_at_ms IS NULL
-      AND peer_membership.restaurant_id <> ${restaurantId}
-      AND ${restaurantCurrencySql(sql`peer_restaurant.settings`)} IS NOT ${currency}
-  )`;
+    ? eq(peerMembership.marketId, marketId)
+    : inArray(
+        peerMembership.marketId,
+        queryBuilder
+          .select({ marketId: ownMembership.marketId })
+          .from(ownMembership)
+          .where(
+            and(
+              eq(ownMembership.restaurantId, restaurantId),
+              isNull(ownMembership.leftAt),
+            ),
+          ),
+      );
+  return notExists(
+    queryBuilder
+      .select({ id: peerMembership.id })
+      .from(peerMembership)
+      .innerJoin(
+        peerRestaurant,
+        eq(peerRestaurant.id, peerMembership.restaurantId),
+      )
+      .where(
+        and(
+          marketScope,
+          isNull(peerMembership.leftAt),
+          ne(peerMembership.restaurantId, restaurantId),
+          sql`${restaurantCurrencySql(peerRestaurant.settings)} IS NOT ${currency}`,
+        ),
+      ),
+  );
 }
 
 export function marketVendorCurrencyMismatch(currencies?: readonly string[]) {
