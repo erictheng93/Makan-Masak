@@ -26,6 +26,10 @@ import {
   ResendEmailProvider,
 } from "@makanmasak/database";
 import { generateUUID } from "@makanmasak/utils";
+import {
+  COUNTRY_PROFILES,
+  normalizeCountryCode,
+} from "@makanmasak/shared-types";
 import bcrypt from "bcryptjs";
 import { and, desc, eq, isNull, lt, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
@@ -67,6 +71,45 @@ interface ProvisionedOwnerAccount {
   setupPasswordToken: string;
   setupPasswordLink: string;
   setupPasswordExpiresAt: string;
+}
+
+interface ProvisionedRestaurantInput {
+  id: string;
+  businessName: string;
+  contactEmail: string;
+  phone: string;
+  address: string;
+  district: string;
+  countryCode: unknown;
+  city: string | null | undefined;
+}
+
+export function buildProvisionedRestaurantValues(
+  application: ProvisionedRestaurantInput,
+) {
+  const countryCode = normalizeCountryCode(application.countryCode);
+  if (!countryCode) {
+    throw new Error("Unsupported onboarding country");
+  }
+  const profile = COUNTRY_PROFILES[countryCode];
+
+  return {
+    id: application.id,
+    name: application.businessName,
+    type: "onboarding" as const,
+    category: "restaurant" as const,
+    description: null,
+    address: application.address,
+    district: application.district,
+    city: application.city ?? profile.cities[0],
+    countryCode: profile.countryCode,
+    timezone: profile.timezone,
+    settings: { currency: profile.currency },
+    phone: application.phone,
+    email: application.contactEmail,
+    isAvailable: false,
+    isActive: true,
+  };
 }
 
 export class OnboardingService {
@@ -447,6 +490,12 @@ export class OnboardingService {
         error: "Assigned subdomain is missing",
       };
     }
+
+    const countryCode = normalizeCountryCode(application.countryCode);
+    if (!countryCode) {
+      return { success: false, error: "Unsupported onboarding country" };
+    }
+    application.countryCode = countryCode;
 
     const now = new Date().toISOString();
     const previousStatus = application.status;
@@ -857,23 +906,22 @@ export class OnboardingService {
     try {
       await platformDb.batch([
         platformDb.insert(restaurants).values({
-          id: restaurantId,
-          name: application.businessName,
-          type: "onboarding",
-          category: "restaurant",
-          description: null,
-          address:
-            application.address?.trim() ||
-            this.initialRestaurantAddress(application),
-          district:
-            application.district ?? this.initialRestaurantDistrict(application),
-          city: application.city ?? "台中市",
-          phone: this.initialRestaurantPhone(application),
-          email: application.contactEmail,
+          ...buildProvisionedRestaurantValues({
+            id: restaurantId,
+            businessName: application.businessName,
+            contactEmail: application.contactEmail,
+            countryCode: application.countryCode,
+            city: application.city,
+            phone: this.initialRestaurantPhone(application),
+            address:
+              application.address?.trim() ||
+              this.initialRestaurantAddress(application),
+            district:
+              application.district ??
+              this.initialRestaurantDistrict(application),
+          }),
           latitude: application.latitude ?? null,
           longitude: application.longitude ?? null,
-          isAvailable: false,
-          isActive: true,
           createdAt: new Date(nowMs),
           updatedAt: new Date(nowMs),
         }),

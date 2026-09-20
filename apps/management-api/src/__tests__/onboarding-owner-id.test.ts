@@ -55,6 +55,8 @@ function buildApplication(
     contactName: "Lin Mei",
     contactEmail: "mei@example.test",
     contactPhone: "0912345678",
+    countryCode: "TW",
+    city: "台中市",
     latitude: 24.147736,
     longitude: 120.673648,
     planId: "trial",

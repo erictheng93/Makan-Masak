@@ -254,6 +254,100 @@ async function managementToken() {
 }
 
 describe("Onboarding public API workflow — real integration", () => {
+  it("persists Taiwanese locale fields when provisioning a restaurant", async () => {
+    const db = createManagementDb();
+    const platformDb = createPlatformDb();
+    const env = createEnv(db, platformDb);
+    const created = await app.fetch(
+      new Request("https://management.test/api/v1/onboarding/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...createApplicationBody(),
+          countryCode: "TW",
+          city: "台中市",
+        }),
+      }),
+      env,
+    );
+    const createdData = await readData<CreatedApplication>(created);
+
+    const approved = await app.fetch(
+      new Request(
+        `https://management.test/api/v1/admin/onboarding/applications/${createdData.applicationId}/approve`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${await managementToken()}` },
+        },
+      ),
+      env,
+    );
+    expect(approved.status).toBe(200);
+    const approvedData = await readData<ApproveResult>(approved);
+    const row = platformDb
+      .raw()
+      .prepare(
+        `SELECT country_code, timezone, settings, city
+         FROM restaurants WHERE id = ?`,
+      )
+      .get(approvedData.ownerAccount!.restaurantId);
+
+    expect(row).toMatchObject({
+      country_code: "TW",
+      timezone: "Asia/Taipei",
+      settings: JSON.stringify({ currency: "TWD" }),
+      city: "台中市",
+    });
+  });
+
+  it.each([null, "SG"])(
+    "rejects stored country %s before provisioning writes",
+    async (storedCountry) => {
+      const db = createManagementDb();
+      const platformDb = createPlatformDb();
+      const env = createEnv(db, platformDb);
+      const created = await app.fetch(
+        new Request("https://management.test/api/v1/onboarding/applications", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(createApplicationBody()),
+        }),
+        env,
+      );
+      const createdData = await readData<CreatedApplication>(created);
+      db.raw()
+        .prepare(
+          "UPDATE onboarding_applications SET country_code = ? WHERE id = ?",
+        )
+        .run(storedCountry, createdData.applicationId);
+
+      const approved = await app.fetch(
+        new Request(
+          `https://management.test/api/v1/admin/onboarding/applications/${createdData.applicationId}/approve`,
+          {
+            method: "POST",
+            headers: { Authorization: `Bearer ${await managementToken()}` },
+          },
+        ),
+        env,
+      );
+
+      expect(approved.status).toBe(400);
+      await expect(readError(approved)).resolves.toMatchObject({
+        message: "Unsupported onboarding country",
+      });
+      expect(
+        db.raw().prepare("SELECT COUNT(*) AS count FROM tenants").get(),
+      ).toMatchObject({ count: 0 });
+      expect(
+        platformDb
+          .raw()
+          .prepare("SELECT COUNT(*) AS count FROM restaurants")
+          .get(),
+      ).toMatchObject({ count: 0 });
+    },
+  );
+
   it("accepts an application without address and preserves its selected city", async () => {
     const db = createManagementDb();
     const platformDb = createPlatformDb();
@@ -705,13 +799,18 @@ describe("Onboarding public API workflow — real integration", () => {
     const restaurantRow = platformDb
       .raw()
       .prepare(
-        "SELECT id, name, email, is_available, is_active FROM restaurants WHERE id = ?",
+        `SELECT id, name, email, country_code, timezone, settings,
+                is_available, is_active
+         FROM restaurants WHERE id = ?`,
       )
       .get(ownerAccount.restaurantId);
     expect(restaurantRow).toMatchObject({
       id: ownerAccount.restaurantId,
       name: "Workflow Laksa",
       email: "tan.mei@example.com",
+      country_code: "MY",
+      timezone: "Asia/Kuala_Lumpur",
+      settings: JSON.stringify({ currency: "MYR" }),
       is_available: 0,
       is_active: 1,
     });
