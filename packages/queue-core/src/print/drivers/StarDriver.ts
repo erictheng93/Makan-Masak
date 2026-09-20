@@ -186,6 +186,21 @@ export class StarDriver extends PrinterDriver {
     }
     commands.push(`\x1B\x45Total: ${money(content.summary.total)}\x1B\x46\n`); // Bold
 
+    // 現金進位調整（#405）：為 0 或未帶時不印。
+    const roundingAdjustment = content.summary.roundingAdjustment ?? 0;
+    if (roundingAdjustment !== 0) {
+      const sign = roundingAdjustment > 0 ? "+" : "-";
+      commands.push(
+        `Rounding Adj: ${sign}${money(Math.abs(roundingAdjustment))}\n`,
+      );
+      commands.push(
+        `\x1B\x45Amount Due: ${money(
+          content.summary.amountDue ??
+            content.summary.total + roundingAdjustment,
+        )}\x1B\x46\n`,
+      ); // Bold
+    }
+
     commands.push("\n");
 
     // Add footer

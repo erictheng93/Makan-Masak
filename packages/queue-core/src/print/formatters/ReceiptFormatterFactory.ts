@@ -62,6 +62,12 @@ export interface ReceiptData {
     change?: number;
     cardLast4?: string;
     details?: string;
+    /**
+     * `collected - order total`, in major units (#405). Non-zero only for a
+     * MYR payment settled in physical cash, which is collected to the nearest
+     * 5 sen. Absent or 0 leaves the receipt exactly as it was.
+     */
+    roundingAdjustment?: number;
   };
   customer?: { name?: string };
   cashier?: string | { name?: string };
@@ -145,6 +151,32 @@ export abstract class BaseReceiptFormatter implements IReceiptFormatter {
     }
 
     return payment?.details;
+  }
+
+  /**
+   * The cash-rounding lines for a receipt summary (#405).
+   *
+   * A MYR bill settled in physical cash is collected to the nearest 5 sen, so
+   * the total on the receipt and the money that changed hands differ by up to
+   * 2 sen. Both figures have to be printed or the customer cannot reconcile
+   * the slip against their change.
+   *
+   * Returns an empty object when there is no adjustment, so a card payment,
+   * a TWD receipt and every receipt printed before this existed keep exactly
+   * the layout they had.
+   */
+  protected cashRoundingSummary(
+    payment: ReceiptData["payment"],
+    total: number,
+  ) {
+    const adjustment = payment?.roundingAdjustment ?? 0;
+    if (!Number.isFinite(adjustment) || adjustment === 0) return {};
+    const rounded = this.roundMoney(adjustment);
+    if (rounded === 0) return {};
+    return {
+      roundingAdjustment: rounded,
+      amountDue: this.roundMoney(total + rounded),
+    };
   }
 
   /**
@@ -253,6 +285,7 @@ export class TWReceiptFormatter extends BaseReceiptFormatter {
         ],
         deliveryFee: order?.deliveryFee,
         total: order?.total || 0,
+        ...this.cashRoundingSummary(payment, order?.total || 0),
         payment: payment
           ? [
               {
@@ -370,6 +403,7 @@ export class MYReceiptFormatter extends BaseReceiptFormatter {
         ],
         deliveryFee: order?.deliveryFee,
         total: order?.total || 0,
+        ...this.cashRoundingSummary(payment, order?.total || 0),
         payment: payment
           ? [
               {
@@ -487,6 +521,7 @@ export class VNReceiptFormatter extends BaseReceiptFormatter {
         ],
         deliveryFee: order?.deliveryFee,
         total,
+        ...this.cashRoundingSummary(payment, total),
         payment: payment
           ? [
               {

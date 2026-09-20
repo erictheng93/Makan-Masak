@@ -3,6 +3,7 @@ import {
   cashRegisters,
   orderItems,
   orders,
+  paymentTransactions,
   receipts,
   restaurants,
   tables,
@@ -36,6 +37,7 @@ const fixtureTables = {
   cashRegisters,
   orderItems,
   orders,
+  paymentTransactions,
   receipts,
   restaurants,
   tables,
@@ -178,6 +180,60 @@ describe("ReceiptService", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("snapshots what the cash payment collected and the 5 sen it rounded", async () => {
+    // RM10.33 收了 RM10.35 (#405)：收據要印得出那 2 sen 從哪來。
+    uuidMocks.generateUUID.mockReturnValueOnce("receipt-myr");
+    const mutations = mockMutations();
+    mockSelectResults({
+      orders: [
+        [
+          orderRow({
+            totalAmount: 10.33,
+            totalAmountCents: 1033,
+            paymentTransactionId: "pay-1",
+            restaurantId: "restaurant-1",
+          }),
+        ],
+      ],
+      orderItems: [[itemRow()]],
+      paymentTransactions: [
+        [{ amountCents: 1035, roundingAdjustmentCents: 2 }],
+      ],
+      receipts: [[receiptRow()]],
+    });
+
+    await createService().printReceipt({ orderId: "101" }, "register-1");
+
+    expect(
+      JSON.parse((mutations.inserted[0] as { content: string }).content),
+    ).toMatchObject({
+      totalAmount: 10.33,
+      roundingAdjustment: 0.02,
+      amountCollected: 10.35,
+    });
+  });
+
+  it("snapshots a zero adjustment when the order has no payment row yet", async () => {
+    // 出單票在結帳之前就印了，沒有付款紀錄可讀。
+    uuidMocks.generateUUID.mockReturnValueOnce("receipt-unpaid");
+    const mutations = mockMutations();
+    mockSelectResults({
+      orders: [[orderRow({ paymentTransactionId: null })]],
+      orderItems: [[itemRow()]],
+      receipts: [[receiptRow()]],
+    });
+
+    await createService().printReceipt({ orderId: "101" }, "register-1");
+
+    expect(
+      JSON.parse((mutations.inserted[0] as { content: string }).content),
+    ).toMatchObject({
+      totalAmount: 295,
+      roundingAdjustment: 0,
+      amountCollected: 295,
+    });
   });
 
   it("prints a receipt with generated content and queued print status", async () => {

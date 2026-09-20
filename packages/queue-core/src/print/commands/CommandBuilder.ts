@@ -407,6 +407,30 @@ export class CommandBuilder {
       ESCPOSCommands.printTotal("TOTAL:", money(content.summary.total), width),
     );
 
+    // 現金進位調整（#405）。馬幣現金實收到最接近的 5 sen，總額與實收之間那
+    // 最多 2 sen 必須在紙上有出處，否則客人看到的總額跟他付的錢對不起來。
+    // 為 0（或未帶）時完全不印，其他幣別與電子支付的收據因此完全不變。
+    const roundingAdjustment = content.summary.roundingAdjustment ?? 0;
+    if (roundingAdjustment !== 0) {
+      builder.addRaw(
+        ESCPOSCommands.textColumns(
+          "Rounding Adj:",
+          `${roundingAdjustment > 0 ? "+" : "-"}${money(Math.abs(roundingAdjustment))}`,
+          width,
+        ),
+      );
+      builder.addRaw(
+        ESCPOSCommands.printTotal(
+          "AMOUNT DUE:",
+          money(
+            content.summary.amountDue ??
+              content.summary.total + roundingAdjustment,
+          ),
+          width,
+        ),
+      );
+    }
+
     builder.addRaw(ESCPOSCommands.lineFeed());
 
     for (const payment of content.summary.payment) {
