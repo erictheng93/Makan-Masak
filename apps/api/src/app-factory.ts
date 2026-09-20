@@ -104,6 +104,7 @@ import verificationFeature from "./features/verification";
 import partnershipsRoutes from "./features/partnerships/routes";
 import guestOrdersRoutes from "./features/guest-orders";
 import integrationsFeature from "./features/integrations";
+import shopPaymentsFeature from "./features/shop-payments";
 import forecastFeature from "./features/forecast";
 import ingredientsFeature from "./features/ingredients";
 import discoveryFeature from "./features/discovery";
@@ -521,6 +522,7 @@ export function createApp(
         marketCheckouts: "/api/v1/market-checkouts",
         credits: "/api/v1/credits",
         integrations: "/api/v1/integrations",
+        shopPayments: "/api/v1/shop-payments",
         ingredients: "/api/v1/ingredients",
         discovery: "/api/v1/discovery",
         markets: "/api/v1/markets",
@@ -676,6 +678,8 @@ export function createApp(
   apiV1.route("/credits", creditsFeature.routes); // 代幣儲值卡 (查餘額公開限流, 管理端點 admin)
   apiV1.route("/restaurants", membersFeature.routes);
   apiV1.route("/integrations", integrationsFeature.routes); // 外送平台串接 (webhooks 公開 HMAC 驗證, 管理端點內部驗證)
+  // 店家自有電子錢包 (Touch 'n Go / GrabPay) 認證資料；auth 在 feature 內部處理
+  apiV1.route("/shop-payments", shopPaymentsFeature.routes);
 
   apiV1.use("*", async (c, next) => {
     if (
