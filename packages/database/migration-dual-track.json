@@ -98,6 +98,10 @@
     {
       "fresh": "0024_marketing_broadcasts.sql",
       "reason": "Marketing broadcasts fan out platform-API web push to customers who follow a restaurant or a market; the management-api database has no customers, customer_favorites, customer_push_subscriptions, restaurants or markets rows to resolve an audience or scope a send against."
+    },
+    {
+      "fresh": "0026_shop_payment_credentials.sql",
+      "reason": "shop_payment_credentials holds each platform-API restaurant's own Touch 'n Go / GrabPay merchant account so customers pay that shop directly; the management-api database has no restaurants row to scope a merchant account against and never settles a customer payment."
     }
   ],
   "legacyOnly": [
