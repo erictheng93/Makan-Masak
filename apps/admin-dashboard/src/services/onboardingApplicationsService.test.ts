@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ensureManagementAuthToken, managementApi } from "@/services/api";
+import { api, ensureManagementAuthToken, managementApi } from "@/services/api";
 import { onboardingApplicationsService } from "./onboardingApplicationsService";
 
 vi.mock("@/services/api", () => ({
@@ -148,5 +148,127 @@ describe("onboardingApplicationsService", () => {
       { reason: "Missing documents" },
     );
     expect(ensureManagementAuthToken).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("market placement approval", () => {
+  const provisioned = {
+    status: "completed",
+    restaurantId: "restaurant-1",
+    marketId: "market-selected",
+    stallNumber: "A12",
+    ownerAccount: { username: "existing-owner" },
+  };
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(managementApi.post).mockResolvedValue({
+      data: { data: provisioned },
+    } as never);
+    vi.mocked(api.get).mockResolvedValue({
+      data: {
+        data: {
+          requests: [
+            {
+              id: 1,
+              restaurantId: "restaurant-1",
+              marketId: "other-market",
+              status: "pending",
+            },
+            {
+              id: 2,
+              restaurantId: "other-restaurant",
+              marketId: "market-selected",
+              status: "pending",
+            },
+            {
+              id: 3,
+              restaurantId: "restaurant-1",
+              marketId: "market-selected",
+              status: "pending",
+            },
+          ],
+        },
+      },
+    } as never);
+    vi.mocked(api.post).mockResolvedValue({ data: {} } as never);
+  });
+  it("approves only the server-selected placement through the guarded API", async () => {
+    const result = await onboardingApplicationsService.approve("APP-1", {
+      approveMarketMembership: true,
+    });
+    expect(api.get).toHaveBeenCalledWith(
+      "/restaurants/restaurant-1/market-join-requests",
+    );
+    expect(api.post).toHaveBeenCalledExactlyOnceWith(
+      "/admin/markets/join-requests/3/approve",
+      { stallNumber: "A12" },
+    );
+    expect(result.marketApproval).toEqual({ status: "approved" });
+  });
+  it("preserves provisioning success and the currency refusal for a safe retry", async () => {
+    vi.mocked(api.post).mockRejectedValueOnce({
+      response: {
+        data: { error: { code: "MARKET_VENDOR_CURRENCY_MISMATCH" } },
+      },
+    });
+    const result = await onboardingApplicationsService.approve("APP-1", {
+      approveMarketMembership: true,
+    });
+    expect(result).toMatchObject({
+      ...provisioned,
+      marketApproval: {
+        status: "pending",
+        errorCode: "MARKET_VENDOR_CURRENCY_MISMATCH",
+      },
+    });
+    const retried = await onboardingApplicationsService.approve("APP-1", {
+      approveMarketMembership: true,
+    });
+    expect(retried.marketApproval).toEqual({ status: "approved" });
+    expect(
+      vi
+        .mocked(managementApi.post)
+        .mock.calls.every(
+          ([url]) => url === "/admin/onboarding/applications/APP-1/approve",
+        ),
+    ).toBe(true);
+  });
+  it("skips membership approval when unchecked", async () => {
+    await onboardingApplicationsService.approve("APP-1", {
+      approveMarketMembership: false,
+    });
+    expect(api.get).not.toHaveBeenCalled();
+    expect(api.post).not.toHaveBeenCalled();
+  });
+  it("does not approve unrelated requests if the selected placement is missing", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: { data: { requests: [] } },
+    } as never);
+    const result = await onboardingApplicationsService.approve("APP-1", {
+      approveMarketMembership: true,
+    });
+    expect(result.marketApproval).toMatchObject({ status: "pending" });
+    expect(api.post).not.toHaveBeenCalled();
+  });
+  it("accepts an already approved placement without a second approval write", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: {
+        data: {
+          requests: [
+            {
+              id: 3,
+              restaurantId: "restaurant-1",
+              marketId: "market-selected",
+              status: "approved",
+            },
+          ],
+        },
+      },
+    } as never);
+    const result = await onboardingApplicationsService.approve("APP-1", {
+      approveMarketMembership: true,
+    });
+    expect(result.marketApproval).toEqual({ status: "approved" });
+    expect(api.post).not.toHaveBeenCalled();
   });
 });

@@ -417,6 +417,7 @@ export interface OnboardingApplication {
   city: string;
   countryCode: SupportedCountryCode;
   marketId?: string;
+  marketName?: string;
   stallNumber?: string;
   planId: OnboardingPlanId | null;
   latitude?: number;

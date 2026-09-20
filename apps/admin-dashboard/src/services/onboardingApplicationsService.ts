@@ -1,3 +1,4 @@
+import { marketsService } from "@/services/marketsService";
 import {
   ensureManagementAuthToken,
   managementApi,
@@ -12,6 +13,11 @@ export type OnboardingApplicationStatus =
 
 export interface OnboardingApplication {
   id: string;
+  countryCode?: string | null;
+  city?: string | null;
+  marketId?: string | null;
+  marketName?: string | null;
+  stallNumber?: string | null;
   businessName: string;
   contactName: string;
   contactEmail: string;
@@ -62,6 +68,12 @@ export interface CredentialDelivery {
 }
 
 export interface ApproveOnboardingApplicationResult {
+  restaurantId?: string;
+  marketId?: string;
+  stallNumber?: string;
+  marketApproval?:
+    | { status: "approved" }
+    | { status: "pending"; errorCode: string };
   tenantId?: string;
   subdomain?: string;
   ownerAccount?: ProvisionedOwnerAccount;
@@ -92,6 +104,7 @@ export const onboardingApplicationsService = {
 
   async approve(
     applicationId: string,
+    options: { approveMarketMembership?: boolean } = {},
   ): Promise<ApproveOnboardingApplicationResult> {
     await ensureManagementAuthToken();
     const response =
@@ -99,7 +112,48 @@ export const onboardingApplicationsService = {
         `/admin/onboarding/applications/${applicationId}/approve`,
         {},
       );
-    return unwrapApiPayload<ApproveOnboardingApplicationResult>(response.data);
+    const result = unwrapApiPayload<ApproveOnboardingApplicationResult>(
+      response.data,
+    );
+    if (!options.approveMarketMembership || !result.marketId) return result;
+
+    // Both identifiers come from the authenticated management response. Currency
+    // remains exclusively the platform approval route's stored-data decision.
+    try {
+      if (!result.restaurantId)
+        throw new Error("Missing provisioned restaurant");
+      const requests = await marketsService.listJoinRequests(
+        result.restaurantId,
+      );
+      const request = requests.find(
+        (candidate) =>
+          candidate.restaurantId === result.restaurantId &&
+          candidate.marketId === result.marketId &&
+          candidate.status !== "rejected",
+      );
+      if (!request) throw new Error("Selected market request is unavailable");
+      if (request.status !== "approved") {
+        await marketsService.approveJoinRequest(request.id, {
+          stallNumber: result.stallNumber,
+        });
+      }
+      return { ...result, marketApproval: { status: "approved" } };
+    } catch (error) {
+      const apiError = error as {
+        response?: { data?: { error?: { code?: string } } };
+        code?: string;
+      };
+      return {
+        ...result,
+        marketApproval: {
+          status: "pending",
+          errorCode:
+            apiError?.response?.data?.error?.code ??
+            apiError?.code ??
+            "MARKET_APPROVAL_FAILED",
+        },
+      };
+    }
   },
 
   async regenerateSetupLink(

@@ -347,6 +347,25 @@ describe("Onboarding public API workflow — real integration", () => {
       env,
     );
     const createdData = await readData<CreatedApplication>(created);
+    const list = await app.fetch(
+      new Request(
+        "https://management.test/api/v1/admin/onboarding/applications",
+        {
+          headers: { Authorization: `Bearer ${await managementToken()}` },
+        },
+      ),
+      env,
+    );
+    expect(
+      (await readData<ApplicationList>(list)).applications[0],
+    ).toMatchObject({
+      countryCode: "MY",
+      city: "Kuala Lumpur",
+      marketId: "market-kl",
+      marketName: "KL Market",
+      stallNumber: "A12",
+    });
+
     const approved = await app.fetch(
       new Request(
         `https://management.test/api/v1/admin/onboarding/applications/${createdData.applicationId}/approve`,
@@ -360,6 +379,45 @@ describe("Onboarding public API workflow — real integration", () => {
 
     expect(approved.status).toBe(200);
     const approvedData = await readData<ApproveResult>(approved);
+    expect(approvedData).toMatchObject({
+      restaurantId: approvedData.ownerAccount!.restaurantId,
+      marketId: "market-kl",
+      stallNumber: "A12",
+    });
+    // Retrying placement approval must work even after the owner used the link.
+    platformDb
+      .raw()
+      .prepare("UPDATE password_reset_tokens SET used_at_ms = ?")
+      .run(Date.now());
+    const retried = await app.fetch(
+      new Request(
+        `https://management.test/api/v1/admin/onboarding/applications/${createdData.applicationId}/approve`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${await managementToken()}` },
+        },
+      ),
+      env,
+    );
+    expect(await readData<ApproveResult>(retried)).toMatchObject({
+      restaurantId: approvedData.ownerAccount!.restaurantId,
+      marketId: "market-kl",
+      stallNumber: "A12",
+      status: "completed",
+    });
+    expect(
+      platformDb
+        .raw()
+        .prepare("SELECT COUNT(*) AS count FROM password_reset_tokens")
+        .get(),
+    ).toEqual({ count: 1 });
+    expect(
+      platformDb
+        .raw()
+        .prepare("SELECT COUNT(*) AS count FROM restaurants")
+        .get(),
+    ).toEqual({ count: 1 });
+
     expect(
       platformDb
         .raw()

@@ -2143,6 +2143,18 @@ const enUS: Messages = {
     missingToken: "Missing reset token",
   },
   platformOnboarding: {
+    market: {
+      location: "Trading location",
+      stall: "Stall",
+      approveTogether: "Also approve market membership",
+      provisionedPending:
+        "{business}: shop provisioned; market membership is still pending.",
+      currencyMismatch:
+        "This shop uses a different currency from other vendors in the market. Approval would break combined market checkout.",
+      failed:
+        "Market membership could not be approved. The shop is already provisioned; retry without creating a new account.",
+      retry: "Approve / retry market membership",
+    },
     title: "Shop applications",
     subtitle:
       "Review self-service applications; approving provisions the tenant.",

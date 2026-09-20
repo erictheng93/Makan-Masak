@@ -2047,6 +2047,18 @@ const viVN: Messages = {
     missingToken: "Thiếu token đặt lại",
   },
   platformOnboarding: {
+    market: {
+      location: "Địa điểm kinh doanh",
+      stall: "Gian hàng",
+      approveTogether: "Đồng thời duyệt tham gia chợ",
+      provisionedPending:
+        "{business}: cửa hàng đã được tạo; việc tham gia chợ vẫn chờ duyệt.",
+      currencyMismatch:
+        "Tiền tệ của cửa hàng khác với các gian hàng khác trong chợ. Phê duyệt sẽ khiến thanh toán gộp của chợ không hoạt động.",
+      failed:
+        "Không thể duyệt tham gia chợ. Cửa hàng đã được tạo; hãy thử lại mà không tạo tài khoản mới.",
+      retry: "Duyệt / thử lại tham gia chợ",
+    },
     title: "Đơn đăng ký cửa hàng",
     subtitle: "Xét duyệt đơn tự đăng ký; sau khi duyệt sẽ kích hoạt tenant.",
     loading: "Đang tải...",

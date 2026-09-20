@@ -2163,6 +2163,18 @@ const idID: Messages = {
     missingToken: "Token atur ulang tidak ditemukan",
   },
   platformOnboarding: {
+    market: {
+      location: "Lokasi usaha",
+      stall: "Kios",
+      approveTogether: "Setujui juga keanggotaan pasar",
+      provisionedPending:
+        "{business}: toko sudah dibuat; keanggotaan pasar masih menunggu persetujuan.",
+      currencyMismatch:
+        "Mata uang toko ini berbeda dari pedagang lain di pasar. Persetujuan akan membuat pembayaran gabungan pasar tidak berfungsi.",
+      failed:
+        "Keanggotaan pasar gagal disetujui. Toko sudah dibuat; coba lagi tanpa membuat akun baru.",
+      retry: "Setujui / coba lagi keanggotaan pasar",
+    },
     title: "Pengajuan toko",
     subtitle: "Tinjau pengajuan mandiri; persetujuan akan mengaktifkan tenant.",
     loading: "Memuat...",

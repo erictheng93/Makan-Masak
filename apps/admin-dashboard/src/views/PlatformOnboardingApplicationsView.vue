@@ -88,10 +88,47 @@
     </p>
 
     <section
+      v-if="pendingMarket"
+      data-testid="market-approval-pending"
+      role="alert"
+      class="rounded-2xl bg-orange-50 p-4 text-sm text-orange-800"
+    >
+      <p>
+        {{
+          t("platformOnboarding.market.provisionedPending", {
+            business: pendingMarket.application.businessName,
+          })
+        }}
+      </p>
+      <p class="mt-2">
+        {{
+          t(
+            pendingMarket.errorCode === "MARKET_VENDOR_CURRENCY_MISMATCH"
+              ? "platformOnboarding.market.currencyMismatch"
+              : "platformOnboarding.market.failed",
+          )
+        }}
+      </p>
+      <button
+        type="button"
+        data-testid="retry-market-approval"
+        class="mt-3 min-h-11 rounded-full bg-white px-4 py-2 font-medium disabled:opacity-50"
+        :disabled="Boolean(actionId)"
+        @click="approveApplication(pendingMarket.application, true)"
+      >
+        {{ t("platformOnboarding.market.retry") }}
+      </button>
+    </section>
+
+    <section
       v-if="ownerHandoff"
       data-testid="approved-owner-account"
       class="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-950 shadow-ios-card"
     >
+      <p data-testid="handoff-location" class="mb-3">
+        {{ t("platformOnboarding.market.location") }}:
+        {{ locationLabel(ownerHandoff.application) }}
+      </p>
       <div
         class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
       >
@@ -283,6 +320,11 @@
             <th
               class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
             >
+              {{ t("platformOnboarding.market.location") }}
+            </th>
+            <th
+              class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
+            >
               {{ t("platformOnboarding.table.contact") }}
             </th>
             <th
@@ -324,6 +366,12 @@
                 {{ application.longitude.toFixed(5) }}
               </div>
             </td>
+            <td
+              data-testid="application-location"
+              class="px-4 py-4 text-sm text-gray-700"
+            >
+              {{ locationLabel(application) }}
+            </td>
             <td class="px-4 py-4 text-sm text-gray-700">
               <div>{{ application.contactName }}</div>
               <div class="mt-0.5 text-xs text-gray-500">
@@ -362,7 +410,37 @@
               {{ formatDate(application.createdAt) }}
             </td>
             <td class="px-4 py-4 text-right">
+              <label
+                v-if="
+                  application.marketId && isApprovableStatus(application.status)
+                "
+                class="mb-2 flex min-h-11 items-center justify-end gap-2 text-sm text-gray-700"
+              >
+                <input
+                  :data-testid="`approve-market-membership-${application.id}`"
+                  type="checkbox"
+                  :checked="marketChoices[application.id] !== false"
+                  @change="
+                    marketChoices[application.id] = (
+                      $event.target as HTMLInputElement
+                    ).checked
+                  "
+                />
+                {{ t("platformOnboarding.market.approveTogether") }}
+              </label>
               <div class="flex justify-end gap-2">
+                <button
+                  v-if="
+                    application.marketId && application.status === 'completed'
+                  "
+                  type="button"
+                  :data-testid="`approve-completed-market-${application.id}`"
+                  class="min-h-11 rounded-full bg-orange-50 px-4 py-2 text-sm font-medium text-orange-800 disabled:opacity-50"
+                  :disabled="Boolean(actionId)"
+                  @click="approveApplication(application, true)"
+                >
+                  {{ t("platformOnboarding.market.retry") }}
+                </button>
                 <button
                   v-if="application.status === 'completed'"
                   type="button"
@@ -519,6 +597,7 @@ const { formatDateTime } = useDateFormatter();
 
 interface OwnerHandoff {
   applicationId: string;
+  application: OnboardingApplication;
   businessName: string;
   /** null when the server has no unused setup link left for this owner. */
   account: ProvisionedOwnerAccount | null;
@@ -534,6 +613,24 @@ const total = ref(0);
 const isLoading = ref(false);
 const actionId = ref("");
 const error = ref("");
+const marketChoices = ref<Record<string, boolean>>({});
+const pendingMarket = ref<{
+  application: OnboardingApplication;
+  errorCode: string;
+} | null>(null);
+
+function locationLabel(application: OnboardingApplication) {
+  return [
+    application.countryCode ?? "—",
+    application.city ?? "—",
+    application.marketName || application.marketId,
+    application.stallNumber
+      ? `${t("platformOnboarding.market.stall")} ${application.stallNumber}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
 const ownerHandoff = ref<OwnerHandoff | null>(null);
 const copiedField = ref<"" | CopyableField>("");
 const rejectingApplicationId = ref("");
@@ -595,6 +692,7 @@ function openOwnerHandoff(
   copiedField.value = "";
   ownerHandoff.value = {
     applicationId: application.id,
+    application,
     businessName: application.businessName,
     account: account ?? null,
     delivery: delivery ?? null,
@@ -606,11 +704,26 @@ function closeOwnerHandoff() {
   copiedField.value = "";
 }
 
-async function approveApplication(application: OnboardingApplication) {
+async function approveApplication(
+  application: OnboardingApplication,
+  retryMarket = false,
+) {
   actionId.value = application.id;
   error.value = "";
   try {
-    const result = await onboardingApplicationsService.approve(application.id);
+    const result = application.marketId
+      ? await onboardingApplicationsService.approve(application.id, {
+          approveMarketMembership:
+            retryMarket || marketChoices.value[application.id] !== false,
+        })
+      : await onboardingApplicationsService.approve(application.id);
+    pendingMarket.value =
+      result.marketApproval?.status === "pending"
+        ? {
+            application: { ...application, status: "completed" },
+            errorCode: result.marketApproval.errorCode,
+          }
+        : null;
     openOwnerHandoff(
       application,
       result.ownerAccount,

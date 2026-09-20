@@ -421,4 +421,91 @@ describe("PlatformOnboardingApplicationsView", () => {
       wrapper.get('[data-testid="onboarding-rejection-reason"]').text(),
     ).toContain("platformOnboarding.rejectionReason");
   });
+  it("shows the trading location and defaults market approval on", async () => {
+    mockList([
+      buildApplication({
+        countryCode: "MY",
+        city: "Kuala Lumpur",
+        marketId: "market-1",
+        marketName: "Pasar Malam",
+        stallNumber: "A12",
+      }),
+    ]);
+    const wrapper = mount(PlatformOnboardingApplicationsView);
+    await flushPromises();
+    const location = wrapper.get('[data-testid="application-location"]');
+    for (const value of ["MY", "Kuala Lumpur", "Pasar Malam", "A12"])
+      expect(location.text()).toContain(value);
+    expect(
+      (
+        wrapper.get('[data-testid="approve-market-membership-APP-1"]')
+          .element as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+    await wrapper
+      .get('[data-testid="approve-onboarding-APP-1"]')
+      .trigger("click");
+    await flushPromises();
+    expect(onboardingApplicationsService.approve).toHaveBeenCalledWith(
+      "APP-1",
+      { approveMarketMembership: true },
+    );
+    expect(wrapper.get('[data-testid="handoff-location"]').text()).toContain(
+      "Pasar Malam",
+    );
+  });
+
+  it("allows opting out of market approval", async () => {
+    mockList([buildApplication({ marketId: "market-1", marketName: "Pasar" })]);
+    const wrapper = mount(PlatformOnboardingApplicationsView);
+    await flushPromises();
+    await wrapper
+      .get('[data-testid="approve-market-membership-APP-1"]')
+      .setValue(false);
+    await wrapper
+      .get('[data-testid="approve-onboarding-APP-1"]')
+      .trigger("click");
+    await flushPromises();
+    expect(onboardingApplicationsService.approve).toHaveBeenCalledWith(
+      "APP-1",
+      { approveMarketMembership: false },
+    );
+  });
+
+  it("keeps owner credentials visible with an explicit market failure and retry after refresh", async () => {
+    mockList([buildApplication({ marketId: "market-1", marketName: "Pasar" })]);
+    vi.mocked(onboardingApplicationsService.approve).mockResolvedValueOnce({
+      status: "completed",
+      ownerAccount: buildOwnerAccount(),
+      marketApproval: {
+        status: "pending",
+        errorCode: "MARKET_VENDOR_CURRENCY_MISMATCH",
+      },
+    });
+    const wrapper = mount(PlatformOnboardingApplicationsView);
+    await flushPromises();
+    mockList([]);
+    await wrapper
+      .get('[data-testid="approve-onboarding-APP-1"]')
+      .trigger("click");
+    await flushPromises();
+    expect(wrapper.text()).toContain(
+      "platformOnboarding.market.provisionedPending",
+    );
+    expect(wrapper.text()).toContain(
+      "platformOnboarding.market.currencyMismatch",
+    );
+    expect(wrapper.get('[data-testid="owner-handoff-setup-link"]').text()).toBe(
+      SETUP_LINK,
+    );
+    await wrapper.get('[data-testid="retry-market-approval"]').trigger("click");
+    await flushPromises();
+    expect(onboardingApplicationsService.approve).toHaveBeenLastCalledWith(
+      "APP-1",
+      { approveMarketMembership: true },
+    );
+    expect(
+      onboardingApplicationsService.regenerateSetupLink,
+    ).not.toHaveBeenCalled();
+  });
 });

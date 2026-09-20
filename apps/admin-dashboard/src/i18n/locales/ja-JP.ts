@@ -2045,6 +2045,18 @@ const jaJP: Messages = {
     missingToken: "リセットトークンがありません",
   },
   platformOnboarding: {
+    market: {
+      location: "営業場所",
+      stall: "区画",
+      approveTogether: "マーケットへの出店も承認する",
+      provisionedPending:
+        "{business}：店舗は開設済みですが、マーケットへの出店は承認待ちです。",
+      currencyMismatch:
+        "この店舗の通貨はマーケットの他店舗と異なります。承認すると、マーケットのまとめて会計が利用できなくなります。",
+      failed:
+        "出店を承認できませんでした。店舗は開設済みです。アカウントを再作成せずに再試行できます。",
+      retry: "出店を承認／再試行",
+    },
     title: "店舗申請",
     subtitle: "セルフ申請を審査します。承認するとテナントが有効になります。",
     loading: "読み込み中...",

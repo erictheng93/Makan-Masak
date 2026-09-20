@@ -2196,6 +2196,16 @@ const zhTWCore = {
 
   // 儀表板
   platformOnboarding: {
+    market: {
+      location: "營業地點",
+      stall: "攤位",
+      approveTogether: "同時核准市集入駐",
+      provisionedPending: "{business}：店家已開通，市集入駐仍待核准。",
+      currencyMismatch:
+        "這家店的幣別與該市集其他攤商不同，核准會讓整個市集的合併結帳失效。",
+      failed: "市集入駐核准失敗。店家已開通，可重試，不會重新建立帳號。",
+      retry: "核准／重試市集入駐",
+    },
     title: "店家加入申請",
     subtitle: "審核自助開店申請，核准後由平台資源啟用租戶。",
     loading: "讀取中...",

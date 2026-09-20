@@ -458,10 +458,34 @@ export class OnboardingService {
       .bind(...bindings, limit, offset)
       .all<Record<string, unknown>>();
 
-    return {
-      applications: (result.results ?? []).map((row) =>
-        this.mapRowToApplication(row),
+    const applications = (result.results ?? []).map((row) =>
+      this.mapRowToApplication(row),
+    );
+    const marketIds = [
+      ...new Set(
+        applications
+          .map((application) => application.marketId)
+          .filter((id): id is string => Boolean(id)),
       ),
+    ];
+    if (marketIds.length && this.env.PLATFORM_DB) {
+      const markets = await this.env.PLATFORM_DB.prepare(
+        `SELECT id, name FROM markets WHERE id IN (${marketIds.map(() => "?").join(",")})`,
+      )
+        .bind(...marketIds)
+        .all<{ id: string; name: string }>();
+      const names = new Map(
+        (markets.results ?? []).map((market) => [market.id, market.name]),
+      );
+      for (const application of applications) {
+        application.marketName = application.marketId
+          ? names.get(application.marketId)
+          : undefined;
+      }
+    }
+
+    return {
+      applications,
       total: Number(countResult?.count ?? 0),
       page,
       limit,
@@ -620,6 +644,9 @@ export class OnboardingService {
 
   async approveApplication(applicationId: string): Promise<{
     success: boolean;
+    restaurantId?: string;
+    marketId?: string;
+    stallNumber?: string;
     tenantId?: string;
     subdomain?: string;
     ownerAccount?: ProvisionedOwnerAccount;
@@ -630,8 +657,20 @@ export class OnboardingService {
     const application = await this.getApplication(applicationId);
     if (!application) return { success: false, error: "Application not found" };
     if (application.status === "completed") {
+      // Read the persistent restaurant link independently of the one-time setup
+      // token: a market retry remains possible after the owner has signed in.
+      const tenant = application.tenantId
+        ? await this.env.MANAGEMENT_DB.prepare(
+            "SELECT platform_restaurant_id FROM tenants WHERE id = ?",
+          )
+            .bind(application.tenantId)
+            .first<{ platform_restaurant_id: string | null }>()
+        : null;
       return {
         success: true,
+        restaurantId: tenant?.platform_restaurant_id ?? undefined,
+        marketId: application.marketId,
+        stallNumber: application.stallNumber,
         tenantId: application.tenantId,
         subdomain: application.assignedSubdomain,
         ownerAccount: await this.getProvisionedOwnerAccount(application),
@@ -649,6 +688,9 @@ export class OnboardingService {
     const result = await this.activateApplication(applicationId);
     return {
       ...result,
+      restaurantId: result.ownerAccount?.restaurantId,
+      marketId: application.marketId,
+      stallNumber: application.stallNumber,
       status: result.success ? "completed" : undefined,
     };
   }

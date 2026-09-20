@@ -2005,6 +2005,16 @@ const zhCN: Messages = {
     missingToken: "缺少重设 Token",
   },
   platformOnboarding: {
+    market: {
+      location: "营业地点",
+      stall: "摊位",
+      approveTogether: "同时批准入驻市集",
+      provisionedPending: "{business}：店铺已开通，市集入驻仍待批准。",
+      currencyMismatch:
+        "这家店的币种与该市集其他摊商不同，批准会导致整个市集的合并结账失效。",
+      failed: "市集入驻批准失败。店铺已开通，可重试，不会重新创建账号。",
+      retry: "批准／重试市集入驻",
+    },
     title: "店家加入申请",
     subtitle: "审核自助开店申请，核准后由平台资源启用租户。",
     loading: "读取中...",

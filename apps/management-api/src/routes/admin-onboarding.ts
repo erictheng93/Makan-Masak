@@ -32,6 +32,10 @@ function publicApplication(application: {
   address?: string;
   district?: string;
   city?: string;
+  countryCode?: string;
+  marketId?: string;
+  marketName?: string;
+  stallNumber?: string;
   planId: string | null;
   latitude?: number;
   longitude?: number;
@@ -57,6 +61,10 @@ function publicApplication(application: {
     address: application.address,
     district: application.district,
     city: application.city,
+    countryCode: application.countryCode,
+    marketId: application.marketId,
+    marketName: application.marketName,
+    stallNumber: application.stallNumber,
     planId: application.planId,
     latitude: application.latitude,
     longitude: application.longitude,
@@ -147,6 +155,9 @@ router.post("/applications/:id/approve", async (c) => {
     success: true,
     data: {
       tenantId: result.tenantId,
+      restaurantId: result.restaurantId,
+      marketId: result.marketId,
+      stallNumber: result.stallNumber,
       subdomain: result.subdomain,
       ownerAccount: publicOwnerAccount(result.ownerAccount),
       credentialDelivery: result.credentialDelivery,
