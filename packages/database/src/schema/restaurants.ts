@@ -50,6 +50,10 @@ export const restaurants = sqliteTable(
     // Constrained to the fixed-offset zones in utils/business-timezone.ts.
     timezone: text("timezone").notNull().default("Asia/Taipei"),
 
+    // 營業所在國（ISO 3166-1 alpha-2）。開通時由申請表寫入，是政策鎖定的
+    // 查詢維度；幣別與時區的權威仍分別是 settings.currency 與 timezone。
+    countryCode: text("country_code"),
+
     // 狀態和設定
     isAvailable: integer("is_available", { mode: "boolean" })
       .notNull()
@@ -127,6 +131,7 @@ export const restaurants = sqliteTable(
       table.isActive,
       table.deletedAt,
     ),
+    countryCodeIdx: index("restaurants_country_code_idx").on(table.countryCode),
   }),
 );
 

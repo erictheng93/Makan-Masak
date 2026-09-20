@@ -110,6 +110,10 @@
     {
       "fresh": "0027_guest_coupon_identity.sql",
       "reason": "Guest coupon usage belongs to platform orders; the management control-plane database has neither coupons nor coupon_usage."
+    },
+    {
+      "fresh": "0028_restaurant_country_code.sql",
+      "reason": "restaurants is a platform-API table; the management-api database has no restaurants row to carry a country on."
     }
   ],
   "legacyOnly": [

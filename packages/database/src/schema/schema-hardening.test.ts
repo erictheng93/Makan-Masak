@@ -13,6 +13,7 @@ import {
   marketCheckoutPayments,
   paymentTransactions,
   platformWebhookLogs,
+  restaurants,
   restoreOperations,
 } from "./index";
 
@@ -46,6 +47,22 @@ function migrationPath(path: string): string {
 }
 
 describe("schema hardening", () => {
+  it("carries a queryable country on restaurants", () => {
+    const config = getTableConfig(restaurants);
+    const column = config.columns.find((c) => c.name === "country_code");
+
+    expect(column).toBeDefined();
+    expect(column?.notNull).toBe(false);
+    expect(
+      config.indexes.some((index) =>
+        index.config.columns.some(
+          (candidate) =>
+            "name" in candidate && candidate.name === "country_code",
+        ),
+      ),
+    ).toBe(true);
+  });
+
   it("deduplicates provider webhook event IDs when present", () => {
     const indexes = getTableConfig(platformWebhookLogs).indexes;
     const migration = migrationPath(FRESH_WEBHOOK_DEDUP);
