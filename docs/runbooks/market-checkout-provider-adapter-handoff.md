@@ -304,3 +304,197 @@ Production enablement is allowed only when:
   final state.
 - Accounting export includes payment clearing, vendor payable, platform fee, and
   refund journal lines for provider split payments.
+
+## Per-Shop E-Wallets (Touch 'n Go eWallet, GrabPay)
+
+Everything above describes **one platform adapter** settling on the platform's
+behalf. A Malaysian shop can instead connect **its own** Touch 'n Go eWallet or
+GrabPay merchant account, so the customer pays that shop directly and the
+platform never holds the money. The settlement machinery is shared — a shop
+wallet is a provider-split gateway like any other — and only the credential
+resolution and the gateway call differ.
+
+### Where The Credentials Live
+
+`shop_payment_credentials` (migration
+`packages/database/migrations_fresh/0026_shop_payment_credentials.sql`,
+Drizzle schema `packages/database/src/schema/shop-payment-credentials.ts`).
+One row per `(restaurant_id, provider)`, `STRICT`, `ON DELETE CASCADE` from
+`restaurants` plus a guard trigger.
+
+| column | holds | secret? |
+| --- | --- | --- |
+| `provider` | `tng` \| `grabpay` (no CHECK — see the migration comment) | no |
+| `status` | `connected` \| `disabled` (CHECK) | no |
+| `merchant_id` | the provider's public id for the shop's account | no |
+| `display_name`, `environment` | owner-facing label; `sandbox` \| `production` (CHECK) | no |
+| `config` | non-secret JSON flags (`note`, `returnUrl`) | no |
+| `secret_payload_encrypted` | merchant key, client secret, webhook secret | **yes** |
+| `secret_updated_at_ms`, `connected_at_ms`, `disabled_at_ms`, `updated_by` | audit trail | no |
+
+Secrets are AES-256-GCM via `@makanmasak/utils`, under their own domain salt
+(`SHOP_PAYMENT_CREDENTIALS_ENCRYPTION_SALT` in
+`apps/api/src/shared/utils/encryption.ts`) so a bug in the delivery-integration
+path cannot decrypt them. `merchant_id` is plaintext on purpose, for the same
+reason `platform_integrations.store_id` is (#338): a callback has to resolve
+the account before anything has authenticated it.
+
+**Nothing decrypts on a read path.** `ShopPaymentCredentialService` returns a
+`ShopPaymentCredentialView` — `merchantIdMasked`, `secretConfigured`,
+`secretUpdatedAtMs` — and never a secret or the full merchant id. The single
+door out is `loadGatewayCredentials`, used only by the adapter, and it refuses a
+`disabled` row.
+
+### Owner API
+
+`/api/v1/shop-payments/:restaurantId` — platform admin (role 0) and shop owner
+(role 1) only, and an owner may only name their own restaurant (403 otherwise).
+
+- `GET /:restaurantId` — every connection, plus `supportedProviders`.
+- `GET /:restaurantId/:provider`
+- `POST /:restaurantId/:provider/connect` — connect or rotate. `secret` is
+  write-only and at least one field is required.
+- `PUT /:restaurantId/:provider` — non-secret edits, rotation, enable/disable.
+  Omitting `secret` keeps the stored one; supplying it **replaces** the whole
+  payload rather than merging.
+- `DELETE /:restaurantId/:provider` — disconnect, dropping the ciphertext.
+
+Connecting is refused with `SHOP_PAYMENT_PROVIDER_CURRENCY_UNSUPPORTED` (400)
+when the restaurant's currency is not one the wallet settles. The currency comes
+from `resolveRestaurantCurrency`, never from the request.
+
+### The Adapter Seam
+
+`apps/api/src/features/shop-payments/services/ShopWalletGateway.ts`.
+`ShopWalletPaymentAdapter` owns every money decision; the provider call itself
+is one injected function:
+
+```ts
+export type ShopWalletGateway = (
+  request: ShopWalletGatewayRequest,
+) => Promise<ShopWalletGatewayResponse>;
+```
+
+`charge` / `refund` / `status` each build the request (converting
+`amountCents` → `providerAmount` through `PROVIDER_AMOUNT_FACTORS`, plus
+`amountMinor` and `currencyExponent`), call the gateway once, convert the
+answer back with `providerAmountToCents`, and compare with
+`verifyProviderMoney` — exactly (`charge`, `status`) or at-most (`refund`).
+A mismatch is `SHOP_WALLET_AMOUNT_MISMATCH` / `SHOP_WALLET_CURRENCY_MISMATCH`
+(502) and never reaches a `paid` write.
+
+With no gateway wired up, `notImplementedShopWalletGateway` throws
+`SHOP_WALLET_GATEWAY_NOT_IMPLEMENTED` (501) naming the provider's docs. That is
+the state today: **there is no real Touch 'n Go or GrabPay HTTP call in this
+repository**, deliberately, because no sandbox credentials exist to verify one
+against.
+
+**A real integration still has to supply, per provider and per `environment`:**
+
+1. **Endpoint and authentication.** Credentials arrive decrypted in
+   `request.credentials`; they must not be logged, echoed into an error, or
+   attached to a trace.
+2. **Webhook signature verification.** `credentials.webhookSecret` is the
+   *shop's* callback secret, so verification is per-shop: resolve the credential
+   from the merchant id in the callback, then verify, then trust the body.
+3. **A confirmed amount unit.** See the warning below.
+4. **Idempotency.** `request.idempotencyKey` is stable per operation.
+
+### Money Units — UNVERIFIED
+
+`PROVIDER_AMOUNT_FACTORS` records both wallets as **sen-based for MYR**
+(factor 1 against internal cents, since MYR is ISO exponent 2). That row is an
+assumption:
+
+| gateway | MYR | TWD / VND | source |
+| --- | --- | --- | --- |
+| Touch 'n Go `amount` | `amountMinor` (sen) — **UNVERIFIED** | not supported | no open merchant reference; onboarding at <https://www.touchngo.com.my/merchant/>, and the only public TNG Digital developer site, <https://miniprogram.tngdigital.com.my/docs/>, documents the in-wallet Mini Program runtime |
+| GrabPay `amount` | `amountMinor` (sen) — **UNVERIFIED** | not supported | <https://developer.grab.com/docs/grabpay/> needs partner credentials to read past the overview |
+
+Every reachable third-party integration of both wallets (Stripe, Adyen, 2C2P,
+Nuvei, Checkout.com) takes MYR in the smallest unit — Stripe states the rule
+generally at <https://docs.stripe.com/currencies>. That is corroboration from
+resellers, not either provider's own contract. **Re-derive both factors from
+the sandbox contract you are issued before the first real charge.** A wrong
+factor is a 100× error and `verifyProviderMoney` cannot catch it: it compares
+our own converted number against itself.
+
+### Market Checkout Wiring
+
+`createMarketCheckoutPaymentProvider` gains one branch, keyed on the payment
+`method`: `shop_wallet:tng` / `shop_wallet:grabpay` returns the existing
+`ProviderSplitMarketCheckoutPaymentProvider` wrapped around a
+`ShopWalletMarketCheckoutGateway`. Refunds dispatch on the stored
+`payment.provider` through `refundShopWalletMarketCheckoutPayment`, so a
+shop-wallet charge is refunded from the shop's own account rather than the
+platform adapter.
+
+**One merchant account per charge.** A market checkout is multi-vendor by
+construction (`createMarketCheckoutSchema` requires at least two vendors) and a
+wallet charge settles into exactly one merchant account. Every vendor in the
+cart must therefore have connected the *same* account — one operator running
+several stalls, the ordinary night-market case. A cart whose stalls resolve to
+different merchant accounts would need two authorizations and two customer
+redirects against one payment row, which this contract cannot express, so it is
+refused with `SHOP_WALLET_MULTI_MERCHANT_UNSUPPORTED` (409) rather than settled
+into whichever account came first. A genuinely mixed-merchant cart needs the
+platform adapter.
+
+### Local End-To-End Run
+
+`SHOP_WALLET_GATEWAY_URL` points the seam at an out-of-process adapter, which
+is how the local fake provider and the integration tests drive it. The request
+posted there is the built `ShopWalletGatewayRequest` **with `credentials`
+stripped** — an adapter running elsewhere gets the merchant id and must hold
+its own keys.
+
+```bash
+# apps/api/.dev.vars
+SHOP_WALLET_GATEWAY_URL="http://127.0.0.1:8799/wallet"
+SHOP_WALLET_GATEWAY_TOKEN="fake-wallet-token"
+MARKET_CHECKOUT_WEBHOOK_SECRET="fake-market-webhook-secret"
+ENCRYPTION_KEY="a-local-encryption-key-at-least-32-chars"
+```
+
+1. `pnpm dev:api`, and start the fake provider with
+   `node scripts/dev/fake-payment-provider.mjs`.
+2. As the shop owner, connect a wallet:
+   `POST /api/v1/shop-payments/<restaurantId>/tng/connect` with
+   `{"merchantId":"TNG-MERCHANT-7788","environment":"sandbox","secret":{"merchantKey":"local-key"}}`.
+   The response must contain `merchantIdMasked` and no secret.
+3. Connect the **second** stall to the same `merchantId` — a market checkout
+   needs at least two vendors, and they must share one merchant account.
+4. Create an **MYR** market checkout across both stalls, then
+   `POST /api/v1/market-checkouts/<id>/pay` with
+   `{"method":"shop_wallet:tng","country":"MY","currency":"MYR"}`. The wallet
+   request should carry `providerAmount`, `amountMinor`, `currencyExponent: 2`
+   and no `credentials` key.
+5. Confirm with the generic style:
+   `curl "http://127.0.0.1:8799/confirm/<checkoutId>?style=generic"`, which
+   posts a signed `market_checkout.payment_paid` event. Try
+   `&amount=<cents-1>` first — it must be held for review, not paid.
+6. Refund as platform admin:
+   `POST /api/v1/market-checkouts/<id>/refund`. The refund request must reach
+   the same merchant account.
+7. Inspect:
+   `pnpm wrangler d1 execute makanmakan-local --local --persist-to ./.wrangler/shared-state --config=./apps/api/wrangler.toml --command "SELECT provider, status, merchant_id, length(secret_payload_encrypted) FROM shop_payment_credentials"`.
+
+### Acceptance Gates
+
+```bash
+pnpm exec vitest run --root apps/api --config vitest.config.ts src/features/shop-payments
+pnpm exec vitest run --root apps/admin-dashboard --config vitest.config.ts src/components/settings/ShopWalletSettings.test.ts
+cd apps/api && pnpm exec vitest run --config vitest.real-integration.config.ts shop-wallet-market-checkout
+```
+
+Enabling a shop wallet for real traffic is allowed only when:
+
+- A real `ShopWalletGateway` exists for that provider, and the not-implemented
+  default is no longer reachable for it.
+- The amount unit is confirmed against the provider's own sandbox contract and
+  `PROVIDER_AMOUNT_FACTORS` matches it.
+- Per-shop webhook signature verification is in place and rejects an unsigned
+  or mis-signed callback.
+- `ENCRYPTION_KEY` is set in the target environment — `encryptionSettings`
+  refuses a weak key in production, so a missing one fails the connect rather
+  than storing a guessable ciphertext.
