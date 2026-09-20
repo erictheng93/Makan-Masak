@@ -6,6 +6,7 @@ import {
   index,
 } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
+import type { SupportedCountryCode } from "@makanmasak/shared-types";
 import { v7 as uuidv7 } from "uuid";
 import { categories } from "./categories";
 import { menuItems } from "./menu-items";
@@ -52,7 +53,7 @@ export const restaurants = sqliteTable(
 
     // 營業所在國（ISO 3166-1 alpha-2）。開通時由申請表寫入，是政策鎖定的
     // 查詢維度；幣別與時區的權威仍分別是 settings.currency 與 timezone。
-    countryCode: text("country_code"),
+    countryCode: text("country_code").$type<SupportedCountryCode>(),
 
     // 狀態和設定
     isAvailable: integer("is_available", { mode: "boolean" })
