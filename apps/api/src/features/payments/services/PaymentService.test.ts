@@ -1732,6 +1732,46 @@ describe("PaymentService", () => {
     });
   });
 
+  it("accepts the rounded figure as expectedTotal, which the route defaults to", async () => {
+    // POST /payments falls back to `expectedTotal = amount` when a caller
+    // sends only an amount, so refusing the rounded figure here would make a
+    // bare cash payment at the collectable amount unpayable.
+    const { db, statements } = createD1();
+    myrOrder(1033);
+    mockOrderUpdate();
+
+    await expect(
+      paymentService(env(db)).processPayment({
+        orderId: "order-101",
+        paymentMode: "full",
+        amount: 10.35,
+        expectedTotal: 10.35,
+        method: "cash",
+      }),
+    ).resolves.toMatchObject({ data: { collectedTotal: 10.35 } });
+
+    expect(recordedPayment(statements)).toMatchObject({ amountCents: 1035 });
+  });
+
+  it("still rejects an expectedTotal that is neither figure", async () => {
+    const { db } = createD1();
+    myrOrder(1033);
+    mockOrderUpdate();
+
+    await expect(
+      paymentService(env(db)).processPayment({
+        orderId: "order-101",
+        paymentMode: "full",
+        amount: 10.35,
+        expectedTotal: 10.5,
+        method: "cash",
+      }),
+    ).rejects.toMatchObject({
+      code: "PAYMENT_TOTAL_MISMATCH",
+      status: 409,
+    });
+  });
+
   it("does not round a split payment, whose legs are priced individually", async () => {
     const { db, statements } = createD1();
     myrOrder(1033);

@@ -245,9 +245,15 @@ export class PaymentService {
       );
     }
     if (input.expectedTotal !== undefined) {
-      assertSameAmount(
+      // The rounded figure is allowed here too, and has to be: the route
+      // defaults `expectedTotal` to `amount` when a caller sends only an
+      // amount, so refusing it would make a bare cash payment at the
+      // collectable amount unpayable (#405). For everything that does not
+      // round, the two figures are equal and this is the old exact check.
+      assertCollectableAmount(
         input.expectedTotal,
         serverTotal,
+        collectedTotal,
         "PAYMENT_TOTAL_MISMATCH",
         "Expected total does not match authoritative order total",
       );
@@ -709,6 +715,8 @@ function assertCollectableAmount(
   actual: number,
   orderTotal: number,
   collectableTotal: number,
+  code = "PAYMENT_AMOUNT_MISMATCH",
+  message = "Payment amount does not match order total",
 ): void {
   const actualCents = cents(actual);
   if (
@@ -717,20 +725,15 @@ function assertCollectableAmount(
   ) {
     return;
   }
-  throw new ApiError(
-    "PAYMENT_AMOUNT_MISMATCH",
-    "Payment amount does not match order total",
-    409,
-    {
-      expected: Number(orderTotal.toFixed(2)),
-      // Only worth reporting when rounding actually moved the figure;
-      // repeating `expected` would read as two different requirements.
-      ...(collectableTotal !== orderTotal
-        ? { expectedCollected: Number(collectableTotal.toFixed(2)) }
-        : {}),
-      actual: Number(actual.toFixed(2)),
-    },
-  );
+  throw new ApiError(code, message, 409, {
+    expected: Number(orderTotal.toFixed(2)),
+    // Only worth reporting when rounding actually moved the figure;
+    // repeating `expected` would read as two different requirements.
+    ...(collectableTotal !== orderTotal
+      ? { expectedCollected: Number(collectableTotal.toFixed(2)) }
+      : {}),
+    actual: Number(actual.toFixed(2)),
+  });
 }
 
 /**

@@ -197,6 +197,11 @@ async function handlePayment(c: PaymentContext) {
           orderStatus: result.data.orderStatus,
           paymentStatus: result.data.paymentStatus,
           authorizedTotal: result.data.authorizedTotal,
+          // What the till actually took, and the 5 sen rounding that got it
+          // there (#405). Equal to `authorizedTotal` with a 0 adjustment for
+          // every electronic method and for TWD/VND.
+          collectedTotal: result.data.collectedTotal,
+          roundingAdjustment: result.data.roundingAdjustment,
           country: result.data.country,
           currency: result.data.currency,
           method: input.method,
