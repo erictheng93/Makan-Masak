@@ -165,8 +165,8 @@ describe("ProviderSplitMarketCheckoutPaymentProvider money checks", () => {
     const gateway = { process: vi.fn() };
     const provider = new ProviderSplitMarketCheckoutPaymentProvider(gateway);
 
-    await expect(
-      provider.process(
+    const refusal = await provider
+      .process(
         buildPaymentInput({
           currency: "TWD",
           country: "TW",
@@ -181,8 +181,25 @@ describe("ProviderSplitMarketCheckoutPaymentProvider money checks", () => {
             },
           ],
         }),
-      ),
-    ).rejects.toThrow("not aligned to the TWD step of 100 cents");
+      )
+      .catch((error: unknown) => error);
+
+    // A named, actionable refusal — not a bare Error. The pay route turns the
+    // bare kind into a 202 "payment failed" that the customer can only retry,
+    // and this one cannot succeed on a retry: the stored order total has to be
+    // corrected first.
+    expect(refusal).toMatchObject({
+      code: "MARKET_CHECKOUT_AMOUNT_NOT_ALIGNED",
+      status: 409,
+      details: {
+        currency: "TWD",
+        stepCents: 100,
+        orders: [{ orderNumber: "A001", amount: 15.5 }],
+      },
+    });
+    // And the internal phrasing stays internal: this message is written into
+    // a `success: true` envelope that never reaches ErrorSanitizer.
+    expect((refusal as Error).message).not.toContain("cents");
     expect(gateway.process).not.toHaveBeenCalled();
   });
 

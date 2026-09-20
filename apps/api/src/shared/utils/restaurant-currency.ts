@@ -84,6 +84,8 @@ export function currencyFromRestaurantSettings(
 
   const currency = normalizeCurrencyCode(raw);
   if (!currency) {
+    // `details` on a 5xx is logged, not served (see `app.onError`): the
+    // restaurant whose configuration is broken is not the caller's to read.
     throw new ApiError(
       "RESTAURANT_CURRENCY_INVALID",
       "Restaurant currency is not configured correctly",
@@ -163,6 +165,43 @@ export async function resolveSharedRestaurantCurrency(
 }
 
 /**
+ * Lenient twin of `resolveSharedRestaurantCurrency`, for **reads**: labelling
+ * a payment row written before the `currency` column existed, or deciding the
+ * step for a settlement figure that is being displayed rather than charged.
+ *
+ * A read must render. The strict resolver throws three different ways — a
+ * deleted vendor is `RESTAURANT_NOT_FOUND`, a broken `settings.currency` is
+ * `RESTAURANT_CURRENCY_INVALID`, vendors that no longer agree are
+ * `MIXED_CURRENCY_CHECKOUT` — and every one of those turned a GET of an old
+ * checkout into an error page for data that was fine when it was written.
+ * None of them can be fixed by the person reading, and the pay and refund
+ * paths still resolve strictly, so a label here can never become a charge.
+ *
+ * Falls back to `DEFAULT_CURRENCY` when there is nothing to read, and to the
+ * first vendor's currency when they disagree — the checkout was charged as
+ * one sum, so one of them is what it was charged in.
+ */
+export async function resolveDisplaySharedRestaurantCurrency(
+  d1: Env["DB"],
+  restaurantIds: readonly string[],
+): Promise<CurrencyCode> {
+  const ids = [...new Set(restaurantIds)].filter(
+    (id) => typeof id === "string" && id !== "",
+  );
+  if (ids.length === 0) return DEFAULT_CURRENCY;
+
+  const rows = await drizzle(d1)
+    .select({ id: restaurants.id, settings: restaurants.settings })
+    .from(restaurants)
+    .where(inArray(restaurants.id, ids))
+    .all();
+
+  const first = rows[0];
+  if (!first) return DEFAULT_CURRENCY;
+  return displayCurrencyFromRestaurantSettings(first.settings);
+}
+
+/**
  * Reduce per-restaurant currencies to the single one they share, or throw
  * `MIXED_CURRENCY_CHECKOUT`. Exposed for callers that already hold the
  * restaurant rows (market checkout creation).
@@ -175,14 +214,16 @@ export function sharedCurrency(
     throw badRequest("At least one restaurant is required");
   }
   if (entries.some((entry) => entry.currency !== first.currency)) {
+    // The distinct codes, not a restaurantId → code map. The caller needs to
+    // know the cart spans currencies so it can tell the customer to split it;
+    // it does not need a per-tenant readout of how each vendor is configured,
+    // which is what the map amounted to.
     throw new ApiError(
       "MIXED_CURRENCY_CHECKOUT",
       "All vendors in one checkout must use the same currency",
       409,
       {
-        currencies: Object.fromEntries(
-          entries.map((entry) => [entry.restaurantId, entry.currency]),
-        ),
+        currencies: [...new Set(entries.map((entry) => entry.currency))].sort(),
       },
     );
   }

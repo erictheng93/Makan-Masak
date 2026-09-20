@@ -122,4 +122,75 @@ describe("CreditBalanceMarketCheckoutPaymentProvider", () => {
     ).rejects.toThrow(/public id/i);
     expect(spend).not.toHaveBeenCalled();
   });
+
+  it("charges the stored cents column, not the float total", async () => {
+    // The two disagree exactly when a voucher has been applied: the pay route
+    // writes the net amount into totalAmountCents and leaves totalAmount as
+    // the pre-discount figure on older sessions. Re-deriving from the float
+    // charged the customer the undiscounted amount.
+    spend.mockResolvedValue({
+      ledgerEntryId: "ledger-3",
+      accountId: "acc-1",
+      balanceAfterCents: 0,
+    });
+    const provider = new CreditBalanceMarketCheckoutPaymentProvider(env);
+
+    const result = await provider.process({
+      ...baseInput,
+      childOrders: [
+        { ...baseInput.childOrders[0], totalAmountCents: 10000 },
+        { ...baseInput.childOrders[1], totalAmountCents: 8000 },
+      ],
+    });
+
+    expect(spend).toHaveBeenCalledWith(
+      expect.objectContaining({ amountCents: 18000 }),
+    );
+    expect(result.childPayments.map((child) => child.amountCents)).toEqual([
+      10000, 8000,
+    ]);
+  });
+
+  it("refuses an off-step stored total by name, like the split provider", async () => {
+    // The finding this pairs with: one provider refused a legacy NT$170.50
+    // child order and the other charged it, because only one of them checked
+    // the currency step.
+    const provider = new CreditBalanceMarketCheckoutPaymentProvider(env);
+
+    await expect(
+      provider.process({
+        ...baseInput,
+        childOrders: [{ ...baseInput.childOrders[0], totalAmountCents: 17050 }],
+      }),
+    ).rejects.toMatchObject({
+      code: "MARKET_CHECKOUT_AMOUNT_NOT_ALIGNED",
+      status: 409,
+      details: expect.objectContaining({
+        currency: "TWD",
+        stepCents: 100,
+        orders: [{ orderNumber: "A-1", amount: 170.5 }],
+      }),
+    });
+    expect(spend).not.toHaveBeenCalled();
+  });
+
+  it("accepts sen precision for an MYR checkout", async () => {
+    spend.mockResolvedValue({
+      ledgerEntryId: "ledger-4",
+      accountId: "acc-1",
+      balanceAfterCents: 0,
+    });
+    const provider = new CreditBalanceMarketCheckoutPaymentProvider(env);
+
+    await provider.process({
+      ...baseInput,
+      currency: "MYR",
+      country: "MY",
+      childOrders: [{ ...baseInput.childOrders[0], totalAmountCents: 17050 }],
+    });
+
+    expect(spend).toHaveBeenCalledWith(
+      expect.objectContaining({ amountCents: 17050, currency: "MYR" }),
+    );
+  });
 });

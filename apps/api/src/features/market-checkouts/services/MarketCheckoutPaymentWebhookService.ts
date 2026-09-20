@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { desc, eq, or, sql } from "drizzle-orm";
 import {
   PAYMENT_AUDIT_EVENT_TYPES,
+  marketCheckoutChildOrders,
   marketCheckoutPayments,
   marketCheckoutSessions,
 } from "@makanmasak/database";
@@ -16,6 +17,8 @@ import {
 } from "../../../shared/utils/provider-money";
 import type { MarketCheckoutSplitMode } from "./MarketCheckoutPaymentProvider";
 import { redeemCachedMarketCheckoutVoucher } from "./MarketCheckoutVoucherService";
+import { normalizeCurrencyCode } from "@makanmasak/utils";
+import { resolveDisplaySharedRestaurantCurrency } from "../../../shared/utils/restaurant-currency";
 
 const MARKET_CHECKOUT_INDEX_KEY = "market_checkout:index";
 
@@ -261,6 +264,11 @@ export class MarketCheckoutPaymentWebhookService {
       paidAmountCents: amounts.paidAmountCents,
       refundedAmountCents: amounts.refundedAmountCents,
       updatedAtMs: now,
+      // The summary is a display record, and a hard-coded "TWD" here labelled
+      // an MYR checkout in NT$ for anyone reading it afterwards. Rows written
+      // before the currency column are the only ones that need this, so the
+      // extra read is paid only by them.
+      fallbackCurrency: await this.displayCurrencyForRow(row),
     });
 
     await this.db
@@ -291,6 +299,35 @@ export class MarketCheckoutPaymentWebhookService {
       paymentId: row.payment_id,
       status,
     };
+  }
+
+  /**
+   * The currency to label a legacy payment summary with when neither the
+   * payment row nor the stored summary carries one: the vendors', read
+   * leniently. This is a webhook writing a display record, so it must not be
+   * able to fail the reconciliation — a deleted vendor or one broken
+   * `settings.currency` falls back to the platform default rather than
+   * leaving a paid checkout unreconciled.
+   */
+  private async displayCurrencyForRow(
+    row: MarketCheckoutPaymentRow,
+  ): Promise<string> {
+    const recorded =
+      normalizeCurrencyCode(row.currency) ??
+      normalizeCurrencyCode(
+        parsePaymentSummary(row.session_payment_summary).currency,
+      );
+    if (recorded) return recorded;
+
+    const children = await this.db
+      .select({ restaurantId: marketCheckoutChildOrders.restaurantId })
+      .from(marketCheckoutChildOrders)
+      .where(eq(marketCheckoutChildOrders.checkoutId, row.checkout_id))
+      .all();
+    return resolveDisplaySharedRestaurantCurrency(
+      this.env.DB,
+      children.map((child) => child.restaurantId),
+    );
   }
 
   /**
@@ -848,6 +885,8 @@ function updatePaymentSummary(
     paidAmountCents: number;
     refundedAmountCents: number;
     updatedAtMs: number;
+    /** Used only when neither the row nor the stored summary names one. */
+    fallbackCurrency: string;
   },
 ) {
   const existing = parsePaymentSummary(row.session_payment_summary);
@@ -857,7 +896,7 @@ function updatePaymentSummary(
     ...existing,
     status: input.status,
     method: existing.method ?? row.provider,
-    currency: row.currency ?? existing.currency ?? "TWD",
+    currency: row.currency ?? existing.currency ?? input.fallbackCurrency,
     country: existing.country ?? row.country_code ?? "TW",
     totalAmount: row.amount_cents / 100,
     totalAmountCents: row.amount_cents,

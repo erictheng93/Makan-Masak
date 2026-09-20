@@ -1,7 +1,13 @@
 import type { Env } from "../../../types/env";
 import { CreditService } from "../../credits/services/CreditService";
 import { isFeatureEnabled } from "../../../shared/feature-adoption";
-import { normalizeCurrencyCode } from "@makanmasak/utils";
+import {
+  currencyStepCents,
+  isCurrencyAlignedCents,
+  normalizeCurrencyCode,
+  type CurrencyCode,
+} from "@makanmasak/utils";
+import { ApiError } from "../../../shared/utils/api-error";
 import {
   ISO_4217_EXPONENTS,
   assertCurrencyAlignedCents,
@@ -49,6 +55,62 @@ export function childOrderAmountCents(child: {
 }): number {
   if (child.totalAmountCents != null) return Number(child.totalAmountCents);
   return Math.round(Number(child.totalAmount ?? 0) * 100);
+}
+
+/**
+ * A stored amount that cannot be charged in the checkout's currency, refused
+ * by name instead of as a generic payment failure.
+ */
+export const MARKET_CHECKOUT_AMOUNT_NOT_ALIGNED =
+  "MARKET_CHECKOUT_AMOUNT_NOT_ALIGNED";
+
+/**
+ * Refuse a charge or refund whose stored amounts are not valid in the
+ * checkout's currency, before anything leaves the Worker.
+ *
+ * Only an order written before currency precision was enforced can be
+ * off-step — `computeOrderTotals` now rounds every total to the currency step
+ * — but one TWD child order stored at 17050 cents is enough to make a whole
+ * market checkout unpayable, and it used to fail as a bare `Error` that the
+ * pay route turned into a 202 "payment failed" with no reason attached. The
+ * customer then retried forever, every retry failing identically.
+ *
+ * **Rounding it here would be wrong**, which is why this refuses rather than
+ * repairs: the amount is *stored* data the customer already agreed to, not
+ * something this request computed. Charging NT$171 for an order that says
+ * NT$170.50 takes money the order does not ask for, and rounding down gives
+ * the stall's food away — either way the receipt and the charge disagree, and
+ * the discrepancy is invisible afterwards. The only honest repair is to fix
+ * the order, which is a merchant action, so this names the orders that need
+ * it and stops.
+ *
+ * `ORDER`-scoped and actionable on purpose: a distinct code the client can
+ * branch on, a message the customer can act on, and the offending order
+ * numbers (their own) in `details`.
+ */
+export function assertPayableAmountsAligned(
+  currency: CurrencyCode,
+  entries: ReadonlyArray<{ orderNumber?: string; amountCents: number }>,
+): void {
+  const offending = entries.filter(
+    (entry) => !isCurrencyAlignedCents(entry.amountCents, currency),
+  );
+  if (offending.length === 0) return;
+
+  const stepCents = currencyStepCents(currency);
+  throw new ApiError(
+    MARKET_CHECKOUT_AMOUNT_NOT_ALIGNED,
+    `This order's total is not a valid ${currency} amount, so it cannot be charged. Ask the stall to correct the order before paying.`,
+    409,
+    {
+      currency,
+      stepCents,
+      orders: offending.map((entry) => ({
+        ...(entry.orderNumber != null && { orderNumber: entry.orderNumber }),
+        amount: entry.amountCents / 100,
+      })),
+    },
+  );
 }
 
 export interface MarketCheckoutChildPayment {
@@ -237,10 +299,11 @@ export class ProviderSplitMarketCheckoutPaymentProvider implements MarketCheckou
       0,
     );
     // Refuse before anything leaves the Worker: an adapter must never be asked
-    // to authorize NT$15.50 or a fraction of a dong.
-    for (const allocation of allocations) {
-      assertCurrencyAlignedCents(allocation.amountCents, input.currency);
-    }
+    // to authorize NT$15.50 or a fraction of a dong. A stored child total is
+    // refused by name so the customer is told which order to have fixed.
+    assertPayableAmountsAligned(input.currency, allocations);
+    // The sum of aligned parts is aligned, so this is an invariant rather than
+    // a reachable refusal — a bare Error is the right shape for it.
     assertCurrencyAlignedCents(amountCents, input.currency);
 
     const result = await this.gateway.process({
@@ -349,10 +412,20 @@ export class CreditBalanceMarketCheckoutPaymentProvider implements MarketCheckou
     }
     const pin = readProviderInputString(input.providerInput, "creditCardPin");
 
-    const amountCents = input.childOrders.reduce(
-      (sum, child) => sum + Math.round(Number(child.totalAmount ?? 0) * 100),
+    // The same amounts and the same refusal as the provider-split twin. These
+    // used to be re-derived from the float `totalAmount`, ignoring the stored
+    // cents column, and nothing checked the currency step — so the one
+    // off-step order the split provider refused was charged here instead.
+    const childAmountsCents = input.childOrders.map((child) => ({
+      orderNumber: child.orderNumber,
+      amountCents: childOrderAmountCents(child),
+    }));
+    assertPayableAmountsAligned(input.currency, childAmountsCents);
+    const amountCents = childAmountsCents.reduce(
+      (sum, child) => sum + child.amountCents,
       0,
     );
+    assertCurrencyAlignedCents(amountCents, input.currency);
 
     const result = await this.creditService.spend({
       publicId,
@@ -370,10 +443,8 @@ export class CreditBalanceMarketCheckoutPaymentProvider implements MarketCheckou
       idempotencyKey: parentIdempotencyKey,
       paymentStatus: "paid",
       providerTransactionId: result.ledgerEntryId,
-      childPayments: input.childOrders.map((child) => {
-        const childAmountCents = Math.round(
-          Number(child.totalAmount ?? 0) * 100,
-        );
+      childPayments: input.childOrders.map((child, index) => {
+        const childAmountCents = childAmountsCents[index].amountCents;
         return {
           restaurantId: child.restaurantId,
           restaurantName: child.restaurantName,

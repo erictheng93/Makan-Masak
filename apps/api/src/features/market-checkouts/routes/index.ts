@@ -40,6 +40,8 @@ import {
   type RefundPaymentResult,
 } from "../../payments/services/refundPayment";
 import {
+  MARKET_CHECKOUT_AMOUNT_NOT_ALIGNED,
+  assertPayableAmountsAligned,
   checkMarketCheckoutPaymentProviderConnectivity,
   createMarketCheckoutPaymentProvider,
   getMarketCheckoutPaymentProviderStatus,
@@ -81,12 +83,23 @@ import {
   countryForCurrency,
   currencyFromRestaurantSettings,
   resolveCurrencyForRequest,
+  resolveDisplaySharedRestaurantCurrency,
   resolveSharedRestaurantCurrency,
   sharedCurrency,
 } from "../../../shared/utils/restaurant-currency";
+import { ErrorSanitizer } from "../../../utils/errorSanitizer";
 
 const app = new Hono<{ Bindings: Env }>();
 const MARKET_CHECKOUT_INDEX_KEY = "market_checkout:index";
+/**
+ * Refusals that mean "this checkout cannot be paid", as opposed to "this
+ * payment attempt failed". They are answered as errors rather than recorded
+ * as a failed attempt, because retrying cannot help and only the merchant can
+ * clear them.
+ */
+const UNPAYABLE_MARKET_CHECKOUT_CODES = new Set<string>([
+  MARKET_CHECKOUT_AMOUNT_NOT_ALIGNED,
+]);
 const MARKET_CHECKOUT_INDEX_LIMIT = 200;
 
 function hasOnlineMarketCheckoutPaymentProvider(
@@ -409,6 +422,8 @@ interface MarketCheckoutPaymentSummary {
     amount: number;
     amountCents: number;
     errorMessage?: string;
+    /** Stable code for a failed child payment; safe to branch on. */
+    errorCode?: string;
   }>;
   parentPayment?: MarketCheckoutParentPaymentSummary;
   settlement?: MarketCheckoutSettlementSummary;
@@ -1111,6 +1126,36 @@ app.post("/:id/pay", optionalCanonicalCustomerAuthMiddleware, async (c) => {
       c.env,
       appliedVoucher,
     );
+    // Three cases, and the difference that matters is whether the customer
+    // can get anywhere by trying again.
+    //
+    // 1. The checkout cannot be paid at all — a child order's stored total is
+    //    not a valid amount in this currency. Recording that as a generic
+    //    failed payment and answering 202 is what made one legacy off-step
+    //    order a dead end: "payment failed", retry, fail identically, forever,
+    //    with nothing naming the problem or who can fix it. It is recorded on
+    //    the checkout *and* re-thrown, so the unified error handler answers
+    //    with the code and a message the customer can act on.
+    // 2. A payment attempt that failed for a reason the customer owns (the
+    //    balance is short, the PIN is wrong, the card is frozen). That is what
+    //    the 202 failed-payment envelope models, and its ApiError message is
+    //    written for the customer, so it is kept.
+    // 3. An internal fault (a gateway 500, a provider contract violation).
+    //    Its message is written for us — "Amount 17050 cents is not aligned to
+    //    the TWD step of 100 cents" is the shape this used to hand the
+    //    customer — and this is a `success: true` body that never reaches
+    //    `ErrorSanitizer`. So the stored message is a fixed, safe one and the
+    //    real error goes to the log.
+    const namedRefusal = error instanceof ApiError ? error : null;
+    const isUnpayable =
+      namedRefusal !== null &&
+      UNPAYABLE_MARKET_CHECKOUT_CODES.has(namedRefusal.code);
+    if (!namedRefusal) {
+      console.error(
+        `[market-checkout] pay failed for ${checkoutId}:`,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
     const failedPayment = buildFailedMarketCheckoutPayment({
       checkoutId,
       session: paymentSession,
@@ -1120,10 +1165,10 @@ app.post("/:id/pay", optionalCanonicalCustomerAuthMiddleware, async (c) => {
       provider: parsed.data.method,
       splitMode: providerSplitMode,
       idempotencyKey: requestIdempotencyKey ?? `market-checkout:${checkoutId}`,
-      errorMessage:
-        error instanceof Error
-          ? error.message
-          : "Market checkout payment failed",
+      errorMessage: namedRefusal
+        ? ErrorSanitizer.sanitizeMessage(namedRefusal.message)
+        : "Payment could not be completed. Please try again or pay at the stall.",
+      errorCode: namedRefusal?.code ?? "MARKET_CHECKOUT_PAYMENT_FAILED",
     });
     const failedSession: MarketCheckoutSession = {
       ...paymentSession,
@@ -1140,6 +1185,10 @@ app.post("/:id/pay", optionalCanonicalCustomerAuthMiddleware, async (c) => {
     );
     await updatePersistedMarketCheckoutPayment(c.env, failedSession);
     await upsertMarketCheckoutIndex(c.env.CACHE_KV, failedSession);
+
+    // Recorded above; now say why. `app.onError` formats it into the unified
+    // error envelope with the code and a sanitized message.
+    if (isUnpayable) throw namedRefusal;
 
     return c.json(
       {
@@ -1204,7 +1253,7 @@ app.post("/:id/pay", optionalCanonicalCustomerAuthMiddleware, async (c) => {
       nextAction: providerResult.nextAction,
       now,
     }),
-    settlement: buildMarketCheckoutSettlement(session, paymentBase),
+    settlement: buildMarketCheckoutSettlement(session, paymentBase, currency),
   };
 
   const updatedSession: MarketCheckoutSession = {
@@ -1436,6 +1485,17 @@ app.post("/:id/refund", authMiddleware, requireRole([0]), async (c) => {
     throw badRequest("Market checkout has no paid child payments to refund");
   }
 
+  // The step the settlement figures are rounded to. The recorded currency is
+  // the right answer whenever there is one; a payment row written before the
+  // currency column has none, and the vendors are then the authority — read
+  // leniently, because this is a figure being reported, not charged.
+  const settlementCurrency =
+    normalizeCurrencyCode(session.payment.currency) ??
+    (await resolveDisplaySharedRestaurantCurrency(
+      c.env.DB,
+      session.childOrders.map((child) => child.restaurantId),
+    ));
+
   const parentPayment = session.payment.parentPayment;
   if (parentPayment?.splitMode === "provider_split") {
     if (!parentPayment.providerTransactionId) {
@@ -1476,6 +1536,14 @@ app.post("/:id/refund", authMiddleware, requireRole([0]), async (c) => {
     if (amountCents <= 0) {
       throw badRequest("Market checkout provider payment is not refundable");
     }
+    // Same refusal as the charge, for the same reason and by the same name.
+    // Without it a legacy off-step allocation reached `withProviderWireMoney`,
+    // whose bare Error ("Amount 17050 cents is not aligned to the TWD step of
+    // 100 cents") is written for us, not for whoever asked for the refund.
+    // `settlementCurrency`, not `session.payment.currency`: the latter is
+    // typed as present but is absent on a pre-column row, and every currency
+    // helper throws on undefined.
+    assertPayableAmountsAligned(settlementCurrency, allocations);
 
     const providerRefund =
       parentPayment.provider === "credit_balance"
@@ -1585,7 +1653,11 @@ app.post("/:id/refund", authMiddleware, requireRole([0]), async (c) => {
         lastRefund,
         now,
       }),
-      settlement: buildMarketCheckoutSettlement(session, paymentBase),
+      settlement: buildMarketCheckoutSettlement(
+        session,
+        paymentBase,
+        settlementCurrency,
+      ),
     };
     const updatedSession: MarketCheckoutSession = {
       ...session,
@@ -1715,7 +1787,11 @@ app.post("/:id/refund", authMiddleware, requireRole([0]), async (c) => {
           now,
         })
       : undefined,
-    settlement: buildMarketCheckoutSettlement(session, paymentBase),
+    settlement: buildMarketCheckoutSettlement(
+      session,
+      paymentBase,
+      settlementCurrency,
+    ),
   };
 
   const updatedSession: MarketCheckoutSession = {
@@ -2217,11 +2293,16 @@ async function hydrateMarketCheckoutParentPayment(
 
   const existingPayment = session.payment;
   // A parent row predating the currency column has none; the vendors'
-  // restaurants are the authority for it, not a hard-coded TWD.
+  // restaurants are the authority for it, not a hard-coded TWD — but this is
+  // a GET, so it resolves leniently. The strict resolver would answer
+  // MIXED_CURRENCY_CHECKOUT, RESTAURANT_CURRENCY_INVALID or
+  // RESTAURANT_NOT_FOUND for a checkout that was paid perfectly well before
+  // one of its vendors changed or was removed, and nobody reading the page
+  // can clear any of those. Charging still resolves strictly.
   const fallbackCurrency =
     row.currency ??
     existingPayment?.currency ??
-    (await resolveSharedRestaurantCurrency(
+    (await resolveDisplaySharedRestaurantCurrency(
       env.DB,
       session.childOrders.map((child) => child.restaurantId),
     ));
@@ -2295,6 +2376,7 @@ function buildFailedMarketCheckoutPayment(input: {
   splitMode: MarketCheckoutSplitMode;
   idempotencyKey: string;
   errorMessage: string;
+  errorCode: string;
 }): MarketCheckoutPaymentSummary {
   const now = new Date().toISOString();
   const totalAmountCents = input.session.childOrders.reduce(
@@ -2320,6 +2402,7 @@ function buildFailedMarketCheckoutPayment(input: {
       amount: Number(child.totalAmount ?? 0),
       amountCents: orderChildTotalCents(child),
       errorMessage: input.errorMessage,
+      errorCode: input.errorCode,
     })),
   };
 
@@ -2334,7 +2417,11 @@ function buildFailedMarketCheckoutPayment(input: {
       idempotencyKey: input.idempotencyKey,
       now,
     }),
-    settlement: buildMarketCheckoutSettlement(input.session, paymentBase),
+    settlement: buildMarketCheckoutSettlement(
+      input.session,
+      paymentBase,
+      input.currency,
+    ),
   };
 }
 
@@ -2356,7 +2443,16 @@ async function resolveMarketCheckoutCurrency(
   const restaurantIds = session.childOrders
     .map((child) => child.restaurantId)
     .filter((id): id is string => typeof id === "string" && id !== "");
-  if (restaurantIds.length === 0) return DEFAULT_CURRENCY;
+  // A voucher discount is money, so this fails closed like the rest of the
+  // money paths. With no vendor there is no currency to round on and no
+  // subtotal to discount, and answering TWD would price the discount on a
+  // guess — refuse instead.
+  if (restaurantIds.length === 0) {
+    throw badRequest(
+      "Market checkout has no vendors to price a voucher against",
+      "MARKET_CHECKOUT_NO_VENDORS",
+    );
+  }
   return resolveSharedRestaurantCurrency(env.DB, restaurantIds);
 }
 
@@ -2433,9 +2529,18 @@ async function holdMarketCheckoutRefundForReview(
   await upsertMarketCheckoutIndex(env.CACHE_KV, updatedSession);
 }
 
+/**
+ * `currency` is passed in rather than read off `payment.currency` because a
+ * payment row written before the currency column has none, and this decides
+ * the step every `platformFeeCents` — and so every vendor payout — is rounded
+ * to. Falling back to TWD there rounded an RM1.60 fee on an MYR checkout up to
+ * RM2.00 and took the difference out of the vendor's payout. Callers resolve
+ * it from the payment when it has one and from the vendors when it does not.
+ */
 function buildMarketCheckoutSettlement(
   session: MarketCheckoutSession,
   payment: MarketCheckoutPaymentSummary,
+  currency: CurrencyCode,
 ): MarketCheckoutSettlementSummary {
   const paymentByOrderId = new Map(
     payment.childPayments.map((childPayment) => [
@@ -2448,7 +2553,6 @@ function buildMarketCheckoutSettlement(
   );
   // The fee is on the currency's step so each vendor's net payout is a real
   // amount (no NT$5.60 fee on a NT$160 order).
-  const currency = normalizeCurrencyCode(payment.currency) ?? DEFAULT_CURRENCY;
   const voucherDiscountsByOrderId = buildVoucherDiscountAttribution(session);
   const vendorAllocations = session.childOrders.map((child) => {
     const childPayment = paymentByOrderId.get(child.orderId);
