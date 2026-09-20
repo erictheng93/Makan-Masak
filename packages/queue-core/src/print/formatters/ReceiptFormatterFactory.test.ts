@@ -20,10 +20,7 @@ function format(country: CountryCode, data: ReceiptData) {
   ).formatReceipt(data);
 }
 
-function receipt(
-  payment: ReceiptData["payment"],
-  total = 10.33,
-): ReceiptData {
+function receipt(payment: ReceiptData["payment"], total = 10.33): ReceiptData {
   return {
     order: {
       id: "order-1",

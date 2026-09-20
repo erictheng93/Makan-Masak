@@ -420,7 +420,7 @@ createServer(async (req, res) => {
     }
   } catch (error) {
     log("error", error);
-    return send(res, 500, { error: String(error) });
+    return send(res, 500, { error: "Internal server error" });
   }
 }).listen(PORT, "127.0.0.1", () => {
   log(`fake payment provider on ${SELF}, webhooks -> ${API_BASE}`);

@@ -31,7 +31,7 @@ function credentialsStub(byRestaurant: Record<string, string> = {}) {
       environment: "sandbox" as const,
       secret: { merchantKey: "never-on-the-wire" },
     })),
-  } as never;
+  };
 }
 
 function gatewayStub(response: Partial<ShopWalletGatewayResponse> = {}) {

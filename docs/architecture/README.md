@@ -174,7 +174,7 @@ Data & State       D1（主庫＋管理庫）· KV ×6 · R2 ×3 · Durable Obje
 - **Testing**: Vitest, Playwright
 - **Print**: Local Node.js agent (Express + WebSocket)
 
-### 功能模組總覽 (<!-- gen:featureDirs -->53<!-- /gen --> 個 feature 目錄，其中 <!-- gen:moduleCount -->45<!-- /gen --> 個符合 `index.ts` 掛載模組規範)
+### 功能模組總覽 (<!-- gen:featureDirs -->54<!-- /gen --> 個 feature 目錄，其中 <!-- gen:moduleCount -->46<!-- /gen --> 個符合 `index.ts` 掛載模組規範)
 
 > 「目錄數」是 `apps/api/src/features/` 下的子目錄總數；「模組數」是其中匯出 `index.ts` 預設導出、可被 `app-factory.ts` 掛載的模組數。其餘目錄（如 `audit`、`customer`、`notifications`、`push`、`realtime` 等）改以直接 export router 的方式掛載。數字由 `scripts/check-docs-drift.cjs` 驗證。
 

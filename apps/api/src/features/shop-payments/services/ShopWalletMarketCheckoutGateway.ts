@@ -130,7 +130,10 @@ export class ShopWalletMarketCheckoutGateway implements MarketCheckoutProviderSp
     private readonly env: Env,
     private readonly provider: ShopPaymentProvider,
     private readonly gateway: ShopWalletGateway = notImplementedShopWalletGateway,
-    private readonly credentials = new ShopPaymentCredentialService(env),
+    private readonly credentials: Pick<
+      ShopPaymentCredentialService,
+      "loadGatewayCredentials"
+    > = new ShopPaymentCredentialService(env),
   ) {}
 
   async process(
@@ -203,7 +206,10 @@ export async function refundShopWalletMarketCheckoutPayment(
   env: Env,
   input: MarketCheckoutProviderSplitRefundInput,
   gateway: ShopWalletGateway = createShopWalletGateway(env),
-  credentials = new ShopPaymentCredentialService(env),
+  credentials: Pick<
+    ShopPaymentCredentialService,
+    "loadGatewayCredentials"
+  > = new ShopPaymentCredentialService(env),
 ): Promise<MarketCheckoutProviderSplitRefundResult> {
   const provider = shopWalletProviderFromMethod(input.provider);
   if (!provider) {
