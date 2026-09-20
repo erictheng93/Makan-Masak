@@ -33,6 +33,15 @@
  *   GET /topups/confirm/<intentId>[?amountCents=<n>][&currency=<ISO>]
  *
  * does the same for a credit top-up intent.
+ *
+ *   POST /wallet
+ *
+ * is the per-shop e-wallet seam (`SHOP_WALLET_GATEWAY_URL`). It speaks the
+ * `ShopWalletGatewayRequest` / `ShopWalletGatewayResponse` shapes from
+ * apps/api/src/features/shop-payments/services/ShopWalletGateway.ts — one
+ * endpoint for all three operations, keyed on `operation`. The request never
+ * carries the shop's secrets; it carries `merchantId`, and an adapter is
+ * expected to hold its own keys for that account.
  */
 import { createHmac } from "node:crypto";
 import { createServer } from "node:http";
@@ -289,6 +298,77 @@ async function confirmTopup(intentId, query) {
   return { status: response.status, answer };
 }
 
+// ---- per-shop e-wallet seam ----------------------------------------------
+
+/**
+ * One endpoint for charge / refund / status against a shop's own wallet.
+ *
+ * A charge answers with a redirect, so the same `/confirm/<checkoutId>` route
+ * that drives the platform adapter drives this one too — confirm with
+ * `?style=generic`, which posts a signed `market_checkout.payment_paid`.
+ */
+function walletOperation(body) {
+  const reference = String(body.reference ?? "");
+  log(
+    `wallet ${body.operation} ${body.provider} ${reference}:`,
+    `${body.currency} amountCents=${body.amountCents}`,
+    `providerAmount=${body.providerAmount} amountMinor=${body.amountMinor}`,
+    `exp=${body.currencyExponent} merchant=${body.merchantId}`,
+  );
+  if (body.credentials !== undefined) {
+    // Loud, because the whole point of the seam is that secrets stay inside
+    // the Worker: an adapter over HTTP must never be handed them.
+    log("WARNING: wallet request carried a `credentials` field");
+  }
+
+  const providerTransactionId = `tng_fake_${reference}`;
+  if (body.operation === "refund") {
+    const payment = payments.get(reference);
+    if (payment) {
+      payment.status = "refunded";
+      payment.refundedAmountCents = body.amountCents;
+    }
+    return {
+      providerTransactionId:
+        body.providerTransactionId ?? providerTransactionId,
+      status: "refunded",
+      refundId: `tng_re_${reference}`,
+      providerAmount: body.providerAmount,
+      currency: body.currency,
+    };
+  }
+
+  if (body.operation === "status") {
+    const payment = payments.get(reference);
+    return {
+      providerTransactionId:
+        body.providerTransactionId ?? providerTransactionId,
+      status: payment?.status === "paid" ? "paid" : "pending",
+      ...(payment?.status === "paid"
+        ? { providerAmount: body.providerAmount, currency: body.currency }
+        : {}),
+    };
+  }
+
+  payments.set(reference, {
+    checkoutId: reference,
+    amountCents: body.amountCents,
+    amountMinor: body.amountMinor,
+    currencyExponent: body.currencyExponent,
+    currency: body.currency,
+    providerTransactionId,
+    status: "pending",
+  });
+  return {
+    providerTransactionId,
+    status: "requires_action",
+    nextAction: {
+      type: "redirect",
+      redirectUrl: `${SELF}/confirm/${encodeURIComponent(reference)}`,
+    },
+  };
+}
+
 // ---- server ---------------------------------------------------------------
 
 createServer(async (req, res) => {
@@ -302,6 +382,7 @@ createServer(async (req, res) => {
           "status_lookup",
           "webhook_verification",
           "refund",
+          "shop_wallet",
         ],
       });
     }
@@ -332,6 +413,8 @@ createServer(async (req, res) => {
         return send(res, 200, refund(body));
       case "/topups":
         return send(res, 200, createTopupCharge(body));
+      case "/wallet":
+        return send(res, 200, walletOperation(body));
       default:
         return send(res, 404, { error: "not found" });
     }

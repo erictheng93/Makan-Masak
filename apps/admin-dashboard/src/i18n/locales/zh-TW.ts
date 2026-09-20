@@ -2872,6 +2872,7 @@ const zhTWCore = {
       notifications: "通知設定",
       security: "安全設定",
       integrations: "外送平台串接",
+      payments: "收款方式",
     },
     general: {
       restaurantInfo: "餐廳資訊",
@@ -4461,6 +4462,64 @@ const zhTWCore = {
   },
 
   // 外送平台串接
+  shopWallet: {
+    title: "電子錢包收款",
+    subtitle:
+      "連結店家自己的 Touch 'n Go eWallet 或 GrabPay 商戶帳號，顧客付款直接進入您的帳戶。",
+    unavailableCurrency:
+      "本店以 {currency} 結算，而 Touch 'n Go eWallet 與 GrabPay 只結算馬幣（MYR），因此無法連結。",
+    selectRestaurant: "請先選擇要設定的店家。",
+    payoutNote:
+      "款項直接匯入您自己的商戶帳號，平台不經手。例如一筆 {example} 的訂單，全額由錢包業者結算給您。",
+    loading: "載入中…",
+    secretsNeverShown:
+      "金鑰只會加密保存，儲存後不會再顯示。留空表示沿用目前的金鑰。",
+    providers: {
+      tng: {
+        name: "Touch 'n Go eWallet",
+        description:
+          "馬來西亞最普及的電子錢包，需先向 Touch 'n Go 申請商戶帳號。",
+      },
+      grabpay: {
+        name: "GrabPay",
+        description: "Grab 生態系的電子錢包，需先成為 Grab 合作商戶。",
+      },
+    },
+    status: {
+      connected: "已連結",
+      disabled: "已停用",
+      notConnected: "未連結",
+    },
+    environments: {
+      sandbox: "測試環境",
+      production: "正式環境",
+    },
+    fields: {
+      merchantId: "商戶編號",
+      displayName: "帳號名稱",
+      merchantKey: "商戶金鑰",
+      webhookSecret: "回呼驗證密鑰",
+      environment: "環境",
+      secretUpdated: "金鑰更新於",
+      secretKeepPlaceholder: "留空以沿用目前金鑰",
+    },
+    actions: {
+      connect: "連結帳號",
+      update: "更新設定",
+      disconnect: "解除連結",
+      save: "儲存",
+      saving: "儲存中…",
+      cancel: "取消",
+    },
+    alerts: {
+      saved: "電子錢包設定已儲存",
+      saveFailed: "無法儲存電子錢包設定",
+      disconnected: "已解除電子錢包連結",
+      disconnectFailed: "無法解除電子錢包連結",
+      loadFailed: "無法載入電子錢包設定",
+      secretRequired: "請至少填寫一項金鑰",
+    },
+  },
   integrations: {
     title: "外送平台串接",
     subtitle: "連接外送平台以統一管理來自不同平台的訂單和菜單",

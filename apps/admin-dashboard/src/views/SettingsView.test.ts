@@ -115,6 +115,7 @@ function apiGetResponse<T>(data: T): AxiosResponse<ApiResponse<T>> {
 // dropped again without re-deriving it.
 const settingsStubs = {
   IntegrationsSettings: true,
+  ShopWalletSettings: true,
   RestaurantServiceItemsManager: true,
   ServiceBookingSlotsManager: true,
 };

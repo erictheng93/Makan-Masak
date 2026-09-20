@@ -31,6 +31,7 @@ export * from "./group-orders";
 export * from "./partnerships";
 export * from "./verification";
 export * from "./platform-integrations";
+export * from "./shop-payment-credentials";
 export * from "./platform-orders";
 export * from "./platform-menu-mappings";
 export * from "./platform-webhook-logs";
@@ -128,6 +129,7 @@ export {
   passwordChangeLogRelations,
 } from "./verification";
 export { platformIntegrationsRelations } from "./platform-integrations";
+export { shopPaymentCredentialsRelations } from "./shop-payment-credentials";
 export { platformOrdersRelations } from "./platform-orders";
 export { platformMenuMappingsRelations } from "./platform-menu-mappings";
 export {
@@ -225,6 +227,17 @@ export {
   FEEDBACK_MODULES,
 } from "./feedback";
 export { PLATFORM_TYPES, MENU_SYNC_STATUS } from "./platform-integrations";
+export {
+  SHOP_PAYMENT_PROVIDERS,
+  SHOP_PAYMENT_CREDENTIAL_STATUS,
+  SHOP_PAYMENT_ENVIRONMENTS,
+} from "./shop-payment-credentials";
+export type {
+  ShopPaymentProvider,
+  ShopPaymentCredentialStatus,
+  ShopPaymentEnvironment,
+  ShopPaymentCredentialConfig,
+} from "./shop-payment-credentials";
 export { MODULES, PLAN_TIERS, PLAN_DEFAULT_MODULES } from "./subscriptions";
 export type { ModuleKey, ModuleMap, PlanTier } from "./subscriptions";
 export { METER_KEYS } from "./usage-events";

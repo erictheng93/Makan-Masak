@@ -9,6 +9,11 @@ import {
 } from "@makanmasak/utils";
 import { ApiError } from "../../../shared/utils/api-error";
 import {
+  ShopWalletMarketCheckoutGateway,
+  createShopWalletGateway,
+  shopWalletProviderFromMethod,
+} from "../../shop-payments/services/ShopWalletMarketCheckoutGateway";
+import {
   ISO_4217_EXPONENTS,
   assertCurrencyAlignedCents,
   centsToIsoMinorUnits,
@@ -534,6 +539,19 @@ export function createMarketCheckoutPaymentProvider(
     }
     return new CreditBalanceMarketCheckoutPaymentProvider(env);
   }
+  // A shop's own e-wallet: same provider-split settlement, but the gateway is
+  // that shop's merchant account rather than the platform's adapter.
+  const shopWalletProvider = shopWalletProviderFromMethod(method);
+  if (shopWalletProvider) {
+    return new ProviderSplitMarketCheckoutPaymentProvider(
+      new ShopWalletMarketCheckoutGateway(
+        env,
+        shopWalletProvider,
+        createShopWalletGateway(env),
+      ),
+    );
+  }
+
   const splitMode = env.MARKET_CHECKOUT_SPLIT_MODE;
   if (splitMode === "provider_split") {
     return new ProviderSplitMarketCheckoutPaymentProvider(

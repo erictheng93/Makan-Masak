@@ -2824,6 +2824,7 @@ const idID: Messages = {
       notifications: "Notifikasi",
       security: "Keamanan",
       integrations: "Integrasi",
+      payments: "Metode Pembayaran",
       contact: "Kontak",
       markets: "Pasar",
     },
@@ -4456,6 +4457,65 @@ const idID: Messages = {
         "Tingkat penggunaan tinggi. Pertimbangkan meningkatkan batas penggunaan",
       lowDiscount:
         "Rata-rata diskon rendah. Pertimbangkan meningkatkan nilai diskon agar lebih menarik",
+    },
+  },
+  shopWallet: {
+    title: "Pembayaran E-Wallet",
+    subtitle:
+      "Hubungkan akun merchant Touch 'n Go eWallet atau GrabPay milik toko Anda sendiri agar pelanggan membayar langsung ke Anda.",
+    unavailableCurrency:
+      "Toko ini menyelesaikan pembayaran dalam {currency}. Touch 'n Go eWallet dan GrabPay hanya menyelesaikan ringgit Malaysia (MYR), sehingga tidak dapat dihubungkan.",
+    selectRestaurant: "Pilih dulu restoran yang ingin diatur.",
+    payoutNote:
+      "Dana masuk langsung ke akun merchant Anda sendiri; platform tidak pernah menahan uangnya. Pada pesanan {example}, e-wallet menyelesaikan seluruh jumlahnya kepada Anda.",
+    loading: "Memuat…",
+    secretsNeverShown:
+      "Kunci disimpan terenkripsi dan tidak pernah ditampilkan lagi setelah disimpan. Biarkan kosong untuk mempertahankan kunci yang ada.",
+    providers: {
+      tng: {
+        name: "Touch 'n Go eWallet",
+        description:
+          "E-wallet paling banyak dipakai di Malaysia. Ajukan akun merchant ke Touch 'n Go terlebih dahulu.",
+      },
+      grabpay: {
+        name: "GrabPay",
+        description:
+          "E-wallet di dalam aplikasi Grab. Jadilah mitra merchant Grab terlebih dahulu.",
+      },
+    },
+    status: {
+      connected: "Terhubung",
+      disabled: "Dinonaktifkan",
+      notConnected: "Belum terhubung",
+    },
+    environments: {
+      sandbox: "Lingkungan uji",
+      production: "Lingkungan produksi",
+    },
+    fields: {
+      merchantId: "ID Merchant",
+      displayName: "Nama akun",
+      merchantKey: "Kunci merchant",
+      webhookSecret: "Kunci verifikasi callback",
+      environment: "Lingkungan",
+      secretUpdated: "Kunci diperbarui",
+      secretKeepPlaceholder: "Kosongkan untuk mempertahankan kunci saat ini",
+    },
+    actions: {
+      connect: "Hubungkan akun",
+      update: "Perbarui pengaturan",
+      disconnect: "Putuskan",
+      save: "Simpan",
+      saving: "Menyimpan…",
+      cancel: "Batal",
+    },
+    alerts: {
+      saved: "Pengaturan e-wallet tersimpan",
+      saveFailed: "Tidak dapat menyimpan pengaturan e-wallet",
+      disconnected: "E-wallet diputuskan",
+      disconnectFailed: "Tidak dapat memutuskan e-wallet",
+      loadFailed: "Tidak dapat memuat pengaturan e-wallet",
+      secretRequired: "Isi minimal satu kunci",
     },
   },
   integrations: {

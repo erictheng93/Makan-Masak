@@ -58,6 +58,11 @@ import {
   providerAmountToCents,
   type ProviderMoneyIssue,
 } from "../../../shared/utils/provider-money";
+import {
+  isShopWalletPaymentProvider,
+  refundShopWalletMarketCheckoutPayment,
+  shopWalletProviderFromMethod,
+} from "../../shop-payments/services/ShopWalletMarketCheckoutGateway";
 import { MarketCheckoutPaymentReconciliationService } from "../services/MarketCheckoutPaymentReconciliationService";
 import { MarketCheckoutPaymentWebhookService } from "../services/MarketCheckoutPaymentWebhookService";
 import {
@@ -112,6 +117,11 @@ function hasOnlineMarketCheckoutPaymentProvider(
       "storedValueCredits",
     );
   }
+
+  // A shop wallet is available when the shop itself has connected one — a
+  // per-restaurant fact, checked when the credential is loaded, so there is no
+  // platform-wide switch to consult here.
+  if (shopWalletProviderFromMethod(method)) return true;
 
   return (
     env.MARKET_CHECKOUT_SPLIT_MODE === "provider_split" &&
@@ -1052,8 +1062,12 @@ app.post("/:id/pay", optionalCanonicalCustomerAuthMiddleware, async (c) => {
     c.env,
     parsed.data.method,
   );
+  // A shop wallet settles one aggregate authorization against the shop's own
+  // merchant account, so it is provider-split regardless of the platform-wide
+  // switch — the same reason `credits` is.
   const providerSplitMode =
-    parsed.data.method === "credits"
+    parsed.data.method === "credits" ||
+    shopWalletProviderFromMethod(parsed.data.method)
       ? "provider_split"
       : c.env.MARKET_CHECKOUT_SPLIT_MODE === "provider_split"
         ? "provider_split"
@@ -1555,17 +1569,29 @@ app.post("/:id/refund", authMiddleware, requireRole([0]), async (c) => {
             checkoutId,
             providerTransactionId: parentPayment.providerTransactionId,
           })
-        : await refundMarketCheckoutProviderSplitPayment(c.env, {
-            checkoutId,
-            paymentId: parentPayment.paymentId,
-            provider: parentPayment.provider,
-            providerTransactionId: parentPayment.providerTransactionId,
-            idempotencyKey: `${parentPayment.idempotencyKey}:refund`,
-            amountCents,
-            currency: session.payment.currency,
-            reason: parsed.data.reason,
-            allocations,
-          });
+        : isShopWalletPaymentProvider(parentPayment.provider)
+          ? await refundShopWalletMarketCheckoutPayment(c.env, {
+              checkoutId,
+              paymentId: parentPayment.paymentId,
+              provider: parentPayment.provider,
+              providerTransactionId: parentPayment.providerTransactionId,
+              idempotencyKey: `${parentPayment.idempotencyKey}:refund`,
+              amountCents,
+              currency: session.payment.currency,
+              reason: parsed.data.reason,
+              allocations,
+            })
+          : await refundMarketCheckoutProviderSplitPayment(c.env, {
+              checkoutId,
+              paymentId: parentPayment.paymentId,
+              provider: parentPayment.provider,
+              providerTransactionId: parentPayment.providerTransactionId,
+              idempotencyKey: `${parentPayment.idempotencyKey}:refund`,
+              amountCents,
+              currency: session.payment.currency,
+              reason: parsed.data.reason,
+              allocations,
+            });
     // The provider's word on money is checked before it reaches the ledger:
     // the refunded currency must be the payment's and the amount must be
     // above zero and no more than was requested.

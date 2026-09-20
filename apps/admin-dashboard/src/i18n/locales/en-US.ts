@@ -2810,6 +2810,7 @@ const enUS: Messages = {
       notifications: "Notifications",
       security: "Security",
       integrations: "Integrations",
+      payments: "Payment Methods",
     },
     general: {
       restaurantInfo: "Restaurant Information",
@@ -4433,6 +4434,65 @@ const enUS: Messages = {
       highRate: "High usage rate. Consider increasing usage limit",
       lowDiscount:
         "Low average discount. Consider increasing discount value for better appeal",
+    },
+  },
+  shopWallet: {
+    title: "E-Wallet Payments",
+    subtitle:
+      "Connect your own Touch 'n Go eWallet or GrabPay merchant account so customers pay your shop directly.",
+    unavailableCurrency:
+      "This shop settles in {currency}. Touch 'n Go eWallet and GrabPay settle Malaysian ringgit (MYR) only, so they cannot be connected.",
+    selectRestaurant: "Choose a restaurant to configure first.",
+    payoutNote:
+      "Payouts go to your own merchant account; the platform never holds the money. On a {example} order, the wallet settles the full amount to you.",
+    loading: "Loading…",
+    secretsNeverShown:
+      "Keys are stored encrypted and are never shown again after saving. Leave a field blank to keep the key you already have.",
+    providers: {
+      tng: {
+        name: "Touch 'n Go eWallet",
+        description:
+          "Malaysia's most widely used e-wallet. Apply for a merchant account with Touch 'n Go first.",
+      },
+      grabpay: {
+        name: "GrabPay",
+        description:
+          "The wallet inside the Grab app. Become a Grab merchant partner first.",
+      },
+    },
+    status: {
+      connected: "Connected",
+      disabled: "Disabled",
+      notConnected: "Not connected",
+    },
+    environments: {
+      sandbox: "Sandbox",
+      production: "Production",
+    },
+    fields: {
+      merchantId: "Merchant ID",
+      displayName: "Account name",
+      merchantKey: "Merchant key",
+      webhookSecret: "Callback secret",
+      environment: "Environment",
+      secretUpdated: "Key updated",
+      secretKeepPlaceholder: "Leave blank to keep the current key",
+    },
+    actions: {
+      connect: "Connect account",
+      update: "Update settings",
+      disconnect: "Disconnect",
+      save: "Save",
+      saving: "Saving…",
+      cancel: "Cancel",
+    },
+    alerts: {
+      saved: "E-wallet settings saved",
+      saveFailed: "Could not save the e-wallet settings",
+      disconnected: "E-wallet disconnected",
+      disconnectFailed: "Could not disconnect the e-wallet",
+      loadFailed: "Could not load the e-wallet settings",
+      secretRequired: "Enter at least one key",
     },
   },
   integrations: {

@@ -102,6 +102,10 @@
     {
       "fresh": "0025_payment_rounding_adjustment.sql",
       "reason": "payment_transactions records what a restaurant's cashier collected against a platform-API order; the management-api database has no payment_transactions or orders rows, and the control plane never settles a bill in cash, so there is no 5 sen rounding to record there."
+    },
+    {
+      "fresh": "0026_shop_payment_credentials.sql",
+      "reason": "shop_payment_credentials holds each platform-API restaurant's own Touch 'n Go / GrabPay merchant account so customers pay that shop directly; the management-api database has no restaurants row to scope a merchant account against and never settles a customer payment."
     }
   ],
   "legacyOnly": [

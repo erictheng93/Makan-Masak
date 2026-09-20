@@ -37,6 +37,17 @@ export const PLATFORM_CREDENTIALS_ENCRYPTION_SALT =
   "makanmakan-platform-credentials-salt";
 
 /**
+ * A shop's own e-wallet merchant secrets in
+ * `shop_payment_credentials.secret_payload_encrypted`.
+ *
+ * Its own salt rather than the platform one: these secrets move a merchant's
+ * money, and sharing a salt would mean a bug in the delivery-integration code
+ * path could decrypt them.
+ */
+export const SHOP_PAYMENT_CREDENTIALS_ENCRYPTION_SALT =
+  "makanmasak-shop-payment-credentials-salt";
+
+/**
  * The key plus the weak-key policy, resolved together so a service can never
  * hold one without the other.
  */

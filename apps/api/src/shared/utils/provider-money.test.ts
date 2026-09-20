@@ -113,7 +113,46 @@ describe("isNativePaymentProvider", () => {
   it("recognises only the native gateways", () => {
     expect(isNativePaymentProvider("stripe")).toBe(true);
     expect(isNativePaymentProvider("LINEPAY")).toBe(true);
+    expect(isNativePaymentProvider("tng")).toBe(true);
+    expect(isNativePaymentProvider("grabpay")).toBe(true);
     expect(isNativePaymentProvider("mock_market_provider")).toBe(false);
+  });
+});
+
+/**
+ * The two Malaysian e-wallets a shop connects with its own merchant account.
+ * Their factors are recorded as sen-based and are UNVERIFIED against either
+ * provider's own contract — see the note in `provider-money.ts`. What these
+ * tests pin is the *consequence* of that entry, so a change to it is
+ * deliberate: MYR converts 1:1, and no other currency converts at all.
+ */
+describe.each(["tng", "grabpay"] as const)("%s", (provider) => {
+  it("treats MYR cents as the provider's own unit, both directions", () => {
+    expect(centsToProviderAmount(provider, "MYR", 1250)).toBe(1250);
+    expect(providerAmountToCents(provider, "MYR", 1250)).toEqual({
+      ok: true,
+      cents: 1250,
+      currency: "MYR",
+    });
+  });
+
+  it.each(["TWD", "VND"] as const)(
+    "refuses %s rather than converting it",
+    (currency) => {
+      expect(() => centsToProviderAmount(provider, currency, 25000)).toThrow(
+        `does not settle ${currency}`,
+      );
+      expect(providerAmountToCents(provider, currency, 25000)).toMatchObject({
+        ok: false,
+        issue: expect.objectContaining({ code: "CURRENCY_UNSUPPORTED" }),
+      });
+    },
+  );
+
+  it("refuses a fraction of a sen", () => {
+    expect(() => centsToProviderAmount(provider, "MYR", 12.5)).toThrow(
+      `not a whole ${provider} amount`,
+    );
   });
 });
 
