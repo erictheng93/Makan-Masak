@@ -70,7 +70,7 @@ function createManagementDb() {
 
 function createPlatformDb() {
   const sqlite = new Database(":memory:");
-  sqlite.pragma("foreign_keys = OFF");
+  sqlite.pragma("foreign_keys = ON");
   sqlite.exec(`
     CREATE TABLE restaurants (
       id TEXT PRIMARY KEY NOT NULL,
@@ -187,6 +187,60 @@ function createPlatformDb() {
       created_at_ms INTEGER NOT NULL,
       updated_at_ms INTEGER NOT NULL
     );
+
+    CREATE TABLE markets (
+      id TEXT PRIMARY KEY NOT NULL,
+      slug TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      description TEXT,
+      city TEXT NOT NULL,
+      district TEXT NOT NULL,
+      address TEXT NOT NULL,
+      latitude REAL NOT NULL,
+      longitude REAL NOT NULL,
+      boundary_geojson TEXT,
+      opening_hours TEXT,
+      map_layout TEXT,
+      banner_url TEXT,
+      logo_url TEXT,
+      image_urls TEXT,
+      tags TEXT,
+      platform_fee_rate_bps INTEGER NOT NULL DEFAULT 0,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at_ms INTEGER NOT NULL,
+      updated_at_ms INTEGER NOT NULL,
+      deleted_at_ms INTEGER
+    );
+
+    CREATE TABLE restaurant_market_memberships (
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+      restaurant_id TEXT NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+      market_id TEXT NOT NULL REFERENCES markets(id) ON DELETE CASCADE,
+      stall_number TEXT,
+      location_label TEXT,
+      map_position TEXT,
+      market_hours TEXT,
+      is_primary INTEGER NOT NULL DEFAULT 0,
+      joined_at_ms INTEGER NOT NULL,
+      left_at_ms INTEGER
+    );
+    CREATE UNIQUE INDEX restaurant_market_active_pair_idx
+      ON restaurant_market_memberships(restaurant_id, market_id)
+      WHERE left_at_ms IS NULL;
+
+    CREATE TABLE market_join_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+      restaurant_id TEXT NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+      market_id TEXT NOT NULL REFERENCES markets(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'pending',
+      message TEXT,
+      requested_at_ms INTEGER NOT NULL,
+      resolved_at_ms INTEGER
+    );
+    CREATE UNIQUE INDEX market_join_requests_pending_pair_idx
+      ON market_join_requests(restaurant_id, market_id)
+      WHERE status = 'pending';
   `);
 
   return new D1DatabaseAdapter(sqlite);
@@ -254,6 +308,122 @@ async function managementToken() {
 }
 
 describe("Onboarding public API workflow — real integration", () => {
+  it("creates a pending market request without granting membership", async () => {
+    const db = createManagementDb();
+    const platformDb = createPlatformDb();
+    const env = createEnv(db, platformDb);
+    platformDb
+      .raw()
+      .prepare(
+        `INSERT INTO markets (
+        id, slug, name, type, city, district, address, latitude, longitude,
+        created_at_ms, updated_at_ms
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "market-kl",
+        "market-kl",
+        "KL Market",
+        "night_market",
+        "Kuala Lumpur",
+        "Brickfields",
+        "Market Road",
+        3.1,
+        101.7,
+        Date.now(),
+        Date.now(),
+      );
+
+    const created = await app.fetch(
+      new Request("https://management.test/api/v1/onboarding/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...createApplicationBody(),
+          marketId: "market-kl",
+          stallNumber: "A12",
+        }),
+      }),
+      env,
+    );
+    const createdData = await readData<CreatedApplication>(created);
+    const approved = await app.fetch(
+      new Request(
+        `https://management.test/api/v1/admin/onboarding/applications/${createdData.applicationId}/approve`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${await managementToken()}` },
+        },
+      ),
+      env,
+    );
+
+    expect(approved.status).toBe(200);
+    const approvedData = await readData<ApproveResult>(approved);
+    expect(
+      platformDb
+        .raw()
+        .prepare(
+          `SELECT restaurant_id, market_id, status, message, requested_at_ms
+           FROM market_join_requests WHERE restaurant_id = ?`,
+        )
+        .get(approvedData.ownerAccount!.restaurantId),
+    ).toMatchObject({
+      restaurant_id: approvedData.ownerAccount!.restaurantId,
+      market_id: "market-kl",
+      status: "pending",
+      message: "攤位 A12",
+      requested_at_ms: expect.any(Number),
+    });
+    expect(
+      platformDb
+        .raw()
+        .prepare(
+          "SELECT COUNT(*) AS count FROM restaurant_market_memberships WHERE restaurant_id = ?",
+        )
+        .get(approvedData.ownerAccount!.restaurantId),
+    ).toMatchObject({ count: 0 });
+  });
+
+  it("creates no market request or membership for an independent shop", async () => {
+    const db = createManagementDb();
+    const platformDb = createPlatformDb();
+    const env = createEnv(db, platformDb);
+    const created = await app.fetch(
+      new Request("https://management.test/api/v1/onboarding/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(createApplicationBody()),
+      }),
+      env,
+    );
+    const createdData = await readData<CreatedApplication>(created);
+    const approved = await app.fetch(
+      new Request(
+        `https://management.test/api/v1/admin/onboarding/applications/${createdData.applicationId}/approve`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${await managementToken()}` },
+        },
+      ),
+      env,
+    );
+
+    expect(approved.status).toBe(200);
+    expect(
+      platformDb
+        .raw()
+        .prepare("SELECT COUNT(*) AS count FROM market_join_requests")
+        .get(),
+    ).toMatchObject({ count: 0 });
+    expect(
+      platformDb
+        .raw()
+        .prepare("SELECT COUNT(*) AS count FROM restaurant_market_memberships")
+        .get(),
+    ).toMatchObject({ count: 0 });
+  });
+
   it("persists Taiwanese locale fields when provisioning a restaurant", async () => {
     const db = createManagementDb();
     const platformDb = createPlatformDb();
@@ -1216,9 +1386,30 @@ describe("Onboarding public API workflow — real integration", () => {
     ).toMatchObject({ count: 1 });
   });
 
-  it("rolls back tenant and platform records when setup token provisioning fails", async () => {
+  it("rolls back a market request on failure and creates it once on retry", async () => {
     const db = createManagementDb();
     const platformDb = createPlatformDb();
+    platformDb
+      .raw()
+      .prepare(
+        `INSERT INTO markets (
+        id, slug, name, type, city, district, address, latitude, longitude,
+        created_at_ms, updated_at_ms
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "market-retry",
+        "market-retry",
+        "Retry Market",
+        "night_market",
+        "Kuala Lumpur",
+        "Brickfields",
+        "Retry Road",
+        3.1,
+        101.7,
+        Date.now(),
+        Date.now(),
+      );
     platformDb.raw().prepare("DROP TABLE password_reset_tokens").run();
     const env = createEnv(db, platformDb);
     const token = await managementToken();
@@ -1227,7 +1418,11 @@ describe("Onboarding public API workflow — real integration", () => {
       new Request("https://management.test/api/v1/onboarding/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(createApplicationBody()),
+        body: JSON.stringify({
+          ...createApplicationBody(),
+          marketId: "market-retry",
+          stallNumber: "R8",
+        }),
       }),
       env,
     );
@@ -1266,6 +1461,48 @@ describe("Onboarding public API workflow — real integration", () => {
         .prepare("SELECT COUNT(*) AS count FROM restaurants")
         .get(),
     ).toMatchObject({ count: 0 });
+    expect(
+      platformDb
+        .raw()
+        .prepare("SELECT COUNT(*) AS count FROM market_join_requests")
+        .get(),
+    ).toMatchObject({ count: 0 });
+
+    platformDb.raw().exec(`
+      CREATE TABLE password_reset_tokens (
+        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        user_id TEXT NOT NULL,
+        token TEXT NOT NULL UNIQUE,
+        token_type TEXT NOT NULL DEFAULT 'email',
+        otp_code TEXT,
+        expires_at_ms INTEGER NOT NULL,
+        used_at_ms INTEGER,
+        ip_address TEXT,
+        user_agent TEXT,
+        created_at_ms INTEGER NOT NULL
+      );
+    `);
+    const retryResponse = await app.fetch(
+      new Request(
+        `https://management.test/api/v1/admin/onboarding/applications/${createJson.applicationId}/approve`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      ),
+      env,
+    );
+
+    expect(retryResponse.status).toBe(200);
+    expect(
+      platformDb
+        .raw()
+        .prepare(
+          `SELECT COUNT(*) AS count FROM market_join_requests
+           WHERE market_id = 'market-retry' AND status = 'pending'`,
+        )
+        .get(),
+    ).toMatchObject({ count: 1 });
   });
 
   it("does not let applicants complete applications without platform approval", async () => {

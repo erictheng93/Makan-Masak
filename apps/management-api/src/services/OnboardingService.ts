@@ -16,6 +16,7 @@ import { randomBase36, randomBase36Upper } from "../utils/random";
 import { createSubdomainBase } from "../utils/subdomain";
 import {
   DEFAULT_BILLING_CYCLE_MS,
+  marketJoinRequests,
   PLAN_TIERS,
   passwordResetTokens,
   planIdToTier,
@@ -110,6 +111,34 @@ export function buildProvisionedRestaurantValues(
     isAvailable: false,
     isActive: true,
   };
+}
+
+/**
+ * A market selected during onboarding is only an application for membership.
+ * Membership changes the market fee applied to orders and exposes the shop in
+ * the market's shared checkout and discovery surfaces, so it requires a later
+ * approval by a platform or market administrator.
+ */
+export function buildMarketJoinRequestWrites(input: {
+  restaurantId: string;
+  marketId: string | null | undefined;
+  stallNumber: string | null | undefined;
+  requestedAt: Date;
+}) {
+  if (!input.marketId) return [];
+
+  return [
+    {
+      table: "market_join_requests" as const,
+      values: {
+        restaurantId: input.restaurantId,
+        marketId: input.marketId,
+        status: "pending" as const,
+        message: input.stallNumber ? `攤位 ${input.stallNumber}` : null,
+        requestedAt: input.requestedAt,
+      },
+    },
+  ];
 }
 
 export class OnboardingService {
@@ -902,6 +931,12 @@ export class OnboardingService {
     };
 
     const platformDb = drizzle(this.env.PLATFORM_DB);
+    const marketJoinRequestWrites = buildMarketJoinRequestWrites({
+      restaurantId,
+      marketId: application.marketId,
+      stallNumber: application.stallNumber,
+      requestedAt: new Date(nowMs),
+    });
 
     try {
       await platformDb.batch([
@@ -925,6 +960,9 @@ export class OnboardingService {
           createdAt: new Date(nowMs),
           updatedAt: new Date(nowMs),
         }),
+        ...marketJoinRequestWrites.map((write) =>
+          platformDb.insert(marketJoinRequests).values(write.values),
+        ),
         platformDb.insert(users).values({
           id: userId,
           username,
