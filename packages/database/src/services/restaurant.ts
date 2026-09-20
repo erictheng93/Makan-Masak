@@ -7,7 +7,7 @@ import type { BusinessTimezone } from "../utils/business-timezone";
 import { PlanType } from "@makanmasak/shared-types";
 import { assertCurrencyAlignedCents } from "@makanmasak/utils";
 import { toCents } from "../utils/money";
-import { resolveRestaurantCurrency } from "../utils/order-totals";
+import { requireRestaurantCurrency } from "../utils/order-totals";
 
 /** 只列出 mapToRestaurant 實際讀取的欄位，任何餵給它的查詢都必須選滿 */
 type RestaurantRow = Pick<
@@ -100,7 +100,7 @@ function assertSettingsMoneyPrecision(
   if (!touched) return;
   const amountCents = (value: unknown) =>
     typeof value === "number" && Number.isFinite(value) ? toCents(value) : null;
-  assertCurrencyAlignedCents(resolveRestaurantCurrency(merged.currency), [
+  assertCurrencyAlignedCents(requireRestaurantCurrency(merged.currency), [
     {
       field: "settings.minOrderAmount",
       cents: amountCents(merged.minOrderAmount),

@@ -15,7 +15,7 @@ import {
 import { SoftDeleteService } from "../utils/soft-delete";
 import {
   computeOrderTotals,
-  resolveRestaurantCurrency,
+  requireRestaurantCurrency,
   type OrderTotals,
   type OrderTotalsInput,
 } from "../utils/order-totals";
@@ -386,7 +386,12 @@ export class BaseService {
     return computeOrderTotals(input);
   }
 
-  /** The restaurant's currency, defaulting like `resolveRestaurantCurrency`. */
+  /**
+   * The restaurant's currency for a money decision — menu price writes, coupon
+   * redemption, partnership plan discounts. Strict on purpose: see the policy
+   * note on `requireRestaurantCurrency`. Read-only labelling uses
+   * `displayRestaurantCurrency` instead.
+   */
   protected async getRestaurantCurrency(
     restaurantId: string,
   ): Promise<CurrencyCode> {
@@ -394,6 +399,9 @@ export class BaseService {
       where: eq(schema.restaurants.id, restaurantId),
       columns: { settings: true },
     });
-    return resolveRestaurantCurrency(restaurant?.settings?.currency);
+    return requireRestaurantCurrency(
+      restaurant?.settings?.currency,
+      restaurantId,
+    );
   }
 }

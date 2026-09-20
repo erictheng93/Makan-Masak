@@ -1284,7 +1284,33 @@ describe("OrderService createOrder business-rule rejections", () => {
     );
   });
 
-  it("falls back to the platform default currency when the setting is missing or unknown", async () => {
+  it("falls back to the platform default currency when the setting is missing", async () => {
+    // Unset is not a misconfiguration: it is the state of every restaurant
+    // created before the setting existed.
+    await updateSettings({
+      taxRate: 0,
+      serviceChargeRate: 0,
+      minOrderAmount: 300,
+    });
+
+    const error = await rejectionOf(() =>
+      service().createOrder({
+        restaurantId,
+        items: [{ menuItemId, quantity: 2 }],
+      }),
+    );
+
+    expect(error.details).toEqual(
+      expect.objectContaining({ currency: DEFAULT_CURRENCY }),
+    );
+    expect(error.message).toContain(formatCurrency(300, DEFAULT_CURRENCY));
+  });
+
+  it("refuses to price an order against an unsupported currency setting", async () => {
+    // This used to answer TWD, which is how a restaurant configured in a code
+    // nobody supports took orders priced on the TWD step that the payment
+    // side — always strict — then refused. Writing no order beats writing one
+    // that can never be collected.
     await updateSettings({
       taxRate: 0,
       serviceChargeRate: 0,
@@ -1299,10 +1325,9 @@ describe("OrderService createOrder business-rule rejections", () => {
       }),
     );
 
-    expect(error.details).toEqual(
-      expect.objectContaining({ currency: DEFAULT_CURRENCY }),
-    );
-    expect(error.message).toContain(formatCurrency(300, DEFAULT_CURRENCY));
+    expect(error.code).toBe("RESTAURANT_CURRENCY_INVALID");
+    expect(error.status).toBe(500);
+    expect(await testDb.drizzle.select().from(orders)).toHaveLength(0);
   });
 
   it("rejects an unavailable restaurant as 409 RESTAURANT_UNAVAILABLE", async () => {
