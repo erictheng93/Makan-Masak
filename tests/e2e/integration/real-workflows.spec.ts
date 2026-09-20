@@ -2945,7 +2945,7 @@ test.describe("Real system workflows", () => {
     await page.locator("#username").fill(ownerAccount!.username);
     await page.locator("#password").fill(password);
     await page.getByRole("button", { name: /登入|Login/i }).click();
-    await expect(page).toHaveURL(/\/dashboard(?:\/)?$/);
+    await expect(page).toHaveURL(/\/dashboard\/owner-overview\/?$/);
     const me = await fetch(`${API_URL}/api/v1/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
