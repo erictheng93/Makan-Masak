@@ -395,6 +395,22 @@ function createEnv(dbFirstRows: unknown[] = []) {
         payment_transaction_id: "pay-1001",
       });
     }
+    // The refund reads the payment row to refund what was collected rather
+    // than what was priced (#405, MYR cash rounding). Without these branches
+    // the query falls through to `dbFirstRows` and a refund is priced from
+    // whatever happens to be queued next.
+    if (
+      normalizedSql.includes('"payment_transactions"') &&
+      values.includes("pay-1001")
+    ) {
+      return { amountCents: 12000, amount_cents: 12000 };
+    }
+    if (
+      normalizedSql.includes('"payment_transactions"') &&
+      values.includes("pay-1002")
+    ) {
+      return { amountCents: 8000, amount_cents: 8000 };
+    }
     if (normalizedSql.includes('"orders"') && values.includes("pay-1002")) {
       return refundOrderRow({
         id: 1002,
