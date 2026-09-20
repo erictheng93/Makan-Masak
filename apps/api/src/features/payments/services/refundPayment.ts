@@ -79,9 +79,21 @@ export async function refundPaymentTransaction(
     );
   }
 
-  const paymentTotalCents = row.totalAmountCents ?? 0;
+  // Refund what was collected, not what was priced (#405). An MYR cash
+  // payment for a RM10.33 order took RM10.35 off the customer, so refunding
+  // the order total would keep 2 sen that is not the restaurant's. The
+  // payment row is authoritative for that; orders predating it (and the
+  // legacy backfill path below) fall back to the order total, where the two
+  // figures are the same by construction.
+  const [paymentRow] = await db
+    .select({ amountCents: paymentTransactions.amountCents })
+    .from(paymentTransactions)
+    .where(eq(paymentTransactions.transactionId, input.transactionId))
+    .limit(1);
+
+  const collectedCents = paymentRow?.amountCents ?? row.totalAmountCents ?? 0;
   const currentRefundTotalCents = row.refundAmountCents ?? 0;
-  const refundAmount = input.amount ?? fromCents(paymentTotalCents);
+  const refundAmount = input.amount ?? fromCents(collectedCents);
   if (!isCentAlignedAmount(refundAmount)) {
     throw new ApiError(
       "INVALID_REFUND_AMOUNT",
@@ -96,7 +108,7 @@ export async function refundPaymentTransaction(
   // whole dollars for TWD/VND, cents for MYR. Refunding exactly what is left
   // is exempt, because a total priced before per-line rounding can itself be
   // off-step (TWD 17050 cents), and that remainder must stay refundable.
-  if (refundAmountCents !== paymentTotalCents - currentRefundTotalCents) {
+  if (refundAmountCents !== collectedCents - currentRefundTotalCents) {
     const currency = await resolveRestaurantCurrency(env.DB, row.restaurantId);
     if (!isCurrencyAlignedCents(refundAmountCents, currency)) {
       throw new ApiError(
@@ -108,7 +120,7 @@ export async function refundPaymentTransaction(
     }
   }
 
-  if (nextRefundTotalCents > paymentTotalCents) {
+  if (nextRefundTotalCents > collectedCents) {
     throw new ApiError(
       "REFUND_AMOUNT_EXCEEDS_PAYMENT",
       "Refund amount exceeds payment total",
@@ -116,14 +128,13 @@ export async function refundPaymentTransaction(
     );
   }
 
-  const isFullRefund = nextRefundTotalCents >= paymentTotalCents;
+  const isFullRefund = nextRefundTotalCents >= collectedCents;
   const paymentStatus = isFullRefund ? "refunded" : "partial_refunded";
   const refundId = `ref_${input.transactionId}_${Date.now()}`;
   const now = Date.now();
   const timestamp = new Date(now);
 
   const currentRefundCentsSql = sql<number>`COALESCE(${orders.refundAmountCents}, 0)`;
-  const totalAmountCentsSql = sql<number>`COALESCE(${orders.totalAmountCents}, 0)`;
   const updateResult = await db
     .update(orders)
     .set({
@@ -142,7 +153,11 @@ export async function refundPaymentTransaction(
           "cancelled",
           "refunded",
         ]),
-        sql`${currentRefundCentsSql} + ${refundAmountCents} <= ${totalAmountCentsSql}`,
+        // The ceiling is what the payment collected, which for a rounded MYR
+        // cash payment is up to 2 sen above the order total. Bounding the
+        // running total in SQL is what makes two concurrent refunds safe;
+        // only the bound itself moved (#405).
+        sql`${currentRefundCentsSql} + ${refundAmountCents} <= ${collectedCents}`,
       ),
     )
     .run();
@@ -161,7 +176,7 @@ export async function refundPaymentTransaction(
       transactionId: input.transactionId,
       orderId: row.id,
       restaurantId: row.restaurantId,
-      amountCents: paymentTotalCents,
+      amountCents: collectedCents,
       paymentMethod: row.paymentMethod ?? "unknown",
       status: toLedgerPaymentStatus(row.paymentStatus),
       now,
