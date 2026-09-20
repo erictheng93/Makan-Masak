@@ -16,7 +16,13 @@ import {
   notFound,
   unauthorized,
 } from "../../../shared/utils/api-error";
-import { generateUUID } from "@makanmasak/utils";
+import {
+  generateUUID,
+  currencyStepCents,
+  isCurrencyAlignedCents,
+  normalizeCurrencyCode,
+  type CurrencyCode,
+} from "@makanmasak/utils";
 
 // Spends strictly above this amount require a PIN ((b) 門檻式 PIN). Override via env.
 const DEFAULT_CREDIT_PIN_THRESHOLD_CENTS = 20000;
@@ -24,6 +30,39 @@ const MAX_PIN_RETRIES = 5;
 const PIN_LOCK_MS = 15 * 60 * 1000; // lock card for 15 min after repeated PIN failures
 const CREDIT_ROLLING_EXPIRY_MS = 365 * 24 * 60 * 60 * 1000; // activity extends expiry 1 year
 const BCRYPT_COST = 10; // matches repo convention (customer OTP hashing)
+
+/**
+ * Money entering a stored-value balance, on the currency's real precision.
+ *
+ * A balance can only leave the account in whole steps of its currency —
+ * `CreditBalanceMarketCheckoutPaymentProvider` refuses an off-step charge and
+ * no gateway will take NT$0.50 — so a TWD card holding NT$100.50 can never be
+ * spent to zero. `CreditTopupService.createIntent` already refuses an
+ * unaligned gateway top-up; a manual (cash/admin) top-up and the opening
+ * balance on a freshly issued card are the other two ways money is created,
+ * and they must not be a way around it. Refuse to create the stranded 50
+ * cents rather than discover later that it cannot be released.
+ */
+function assertAlignedCreditAmount(
+  amountCents: number,
+  currencyValue: string,
+  code: string,
+): CurrencyCode {
+  const currency = normalizeCurrencyCode(currencyValue);
+  if (!currency) {
+    throw badRequest(
+      "Credit currency is not supported",
+      "CREDIT_CURRENCY_UNSUPPORTED",
+    );
+  }
+  if (!isCurrencyAlignedCents(amountCents, currency)) {
+    throw badRequest(
+      `Amounts in ${currency} must be multiples of ${currencyStepCents(currency) / 100}`,
+      code,
+    );
+  }
+  return currency;
+}
 
 export interface IssueCardInput {
   currency: string;
@@ -121,6 +160,11 @@ export class CreditService {
     ) {
       throw badRequest("Initial balance cannot be negative");
     }
+    assertAlignedCreditAmount(
+      input.initialBalanceCents ?? 0,
+      input.currency,
+      "CREDIT_BALANCE_NOT_ALIGNED",
+    );
     const secretHash = input.pin
       ? await bcrypt.hash(input.pin, BCRYPT_COST)
       : null;
@@ -237,6 +281,11 @@ export class CreditService {
     if (input.amountCents <= 0) {
       throw badRequest("Top-up amount must be positive");
     }
+    assertAlignedCreditAmount(
+      input.amountCents,
+      input.currency,
+      "CREDIT_TOPUP_AMOUNT_NOT_ALIGNED",
+    );
     const existing = await this.findLedgerByIdempotencyKey(
       input.idempotencyKey,
     );

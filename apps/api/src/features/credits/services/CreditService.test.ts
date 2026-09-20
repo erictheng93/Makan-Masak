@@ -254,6 +254,54 @@ describe("CreditService", () => {
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
+  it("refuses an opening balance or manual top-up off the currency step", async () => {
+    // NT$100.50 can never be spent to zero: the payment providers refuse an
+    // off-step charge and no gateway takes the stray 50 cents. Both ways of
+    // creating a balance by hand have to refuse it the way
+    // CreditTopupService.createIntent already refuses a gateway top-up.
+    const { service, mockMutationResults, mockSelectResults } = createService();
+    const mutations = mockMutationResults({});
+    mockSelectResults({});
+
+    await expect(
+      service.issueCard({ currency: "TWD", initialBalanceCents: 10050 }),
+    ).rejects.toMatchObject({ code: "CREDIT_BALANCE_NOT_ALIGNED" });
+
+    await expect(
+      service.topup({
+        publicId: "public-1",
+        amountCents: 10050,
+        currency: "TWD",
+        idempotencyKey: "topup-1",
+        sourceType: "topup",
+      }),
+    ).rejects.toMatchObject({ code: "CREDIT_TOPUP_AMOUNT_NOT_ALIGNED" });
+
+    // Refused before anything is written or even looked up.
+    expect(mutations.inserted).toEqual([]);
+  });
+
+  it("accepts a sen-precision MYR opening balance", async () => {
+    // The rule is the currency's precision, not "whole hundreds": RM100.50 is
+    // a real MYR amount and must still be issuable.
+    const { service, mockMutationResults } = createService();
+    const mutations = mockMutationResults({
+      creditAccounts: {
+        insert: [[{ ...account, currency: "MYR", balanceCents: 10050 }]],
+      },
+      creditCards: { insert: [[{ ...card, publicId: "card-public-id" }]] },
+      creditLedgerEntries: { insert: [{ changes: 1 }] },
+    });
+
+    await expect(
+      service.issueCard({ currency: "MYR", initialBalanceCents: 10050 }),
+    ).resolves.toMatchObject({ currency: "MYR" });
+    expect(mutations.inserted[0]).toMatchObject({
+      currency: "MYR",
+      balanceCents: 10050,
+    });
+  });
+
   it("returns balances and validates card/account lookup failures", async () => {
     const { service, mockSelectResults } = createService();
     mockSelectResults({ creditCards: [[card]], creditAccounts: [[account]] });
