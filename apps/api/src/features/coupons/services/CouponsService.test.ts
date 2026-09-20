@@ -273,6 +273,7 @@ describe("CouponsService", () => {
       100,
       "user-42",
       [{ menuItemId: 1, quantity: 2 }],
+      { guestIdentity: undefined },
     );
     await expect(
       service.validateCouponWithBusinessRules("OLD", "restaurant-1", 100),

@@ -1,3 +1,7 @@
+import {
+  getGuestOrderToken,
+  storeGuestOrderToken,
+} from "@/utils/guest-order-tokens";
 import { apiClient } from "./api";
 import type { StoredMarketCheckout } from "@/utils/marketCheckouts";
 import {
@@ -146,6 +150,7 @@ export interface PublicReviewList {
 }
 
 export interface CreateGuestOrderRequest {
+  couponCode?: string;
   restaurantId: string;
   guestName: string;
   /**
@@ -371,7 +376,7 @@ export const orderApi = {
     );
     // Store guest token for subsequent requests (order tracking, etc.)
     if (response.guestToken) {
-      localStorage.setItem("guest_auth_token", response.guestToken);
+      storeGuestOrderToken(response.order.id, response.guestToken);
     }
     return response;
   },
@@ -386,8 +391,8 @@ export const orderApi = {
     recordRecentMarketCheckout(response.checkout, checkoutData.phoneLastDigits);
     recordMarketCheckoutGuestTokens(response);
     if (response.childOrders[0]?.guestToken) {
-      localStorage.setItem(
-        "guest_auth_token",
+      storeGuestOrderToken(
+        response.childOrders[0].order.id,
         response.childOrders[0].guestToken,
       );
     }
@@ -494,9 +499,12 @@ export const orderApi = {
    * 獲取訪客訂單詳情 (uses guest token from localStorage)
    */
   async getGuestOrder(orderId: string): Promise<Order> {
+    const token = getGuestOrderToken(orderId);
     const response = await apiClient.get<Order | GuestOrderEnvelope>(
       `/guest-orders/${orderId}`,
     );
+    // Promote a legacy credential only after the server proves it owns this order.
+    if (token) storeGuestOrderToken(orderId, token, false);
     // API wraps in { order }, unwrap it
     return "order" in response ? response.order : response;
   },

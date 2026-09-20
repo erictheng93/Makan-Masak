@@ -1,3 +1,4 @@
+import { getGuestOrderToken } from "@/utils/guest-order-tokens";
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import type {
   ApiResponse,
@@ -59,8 +60,12 @@ export class ApiException extends Error {
   }
 }
 
-/** Paths whose active-order lock is keyed on the guest device id. */
-const GUEST_DEVICE_IDENTITY_PATHS = ["/guest-orders", "/market-checkouts"];
+/** Paths using the guest device id for locks or coupon usage limits. */
+const GUEST_DEVICE_IDENTITY_PATHS = [
+  "/guest-orders",
+  "/market-checkouts",
+  "/coupons/validate",
+];
 
 function usesGuestDeviceIdentity(url: string | undefined): boolean {
   if (!url) return false;
@@ -93,30 +98,32 @@ class ApiClient {
     // 請求攔截器
     this.requestInterceptorId = this.instance.interceptors.request.use(
       (config) => {
-        // Customer access tokens are held only in module memory.
-        const token = getCustomerAccessToken();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        } else {
-          // Fallback to guest token for shop ordering
-          const guestToken = localStorage.getItem("guest_auth_token");
-          if (guestToken) {
-            config.headers.Authorization = `Bearer ${guestToken}`;
-          }
-        }
+        // Guest order reads and mutations require that order's credential,
+        // even after the diner signs in. Other endpoints retain customer auth.
+        const guestOrderId = config.url?.match(
+          /^\/guest-orders\/([^/?#]+)(?:[/?#]|$)/,
+        )?.[1];
+        const token = guestOrderId
+          ? getGuestOrderToken(guestOrderId)
+          : (getCustomerAccessToken() ??
+            localStorage.getItem("guest_auth_token"));
+        if (token) config.headers.Authorization = `Bearer ${token}`;
 
         // 添加請求 ID
         config.headers["X-Request-ID"] = crypto.randomUUID();
 
         // Guest ordering endpoints key their "one active order per vendor"
-        // lock on this device id. It goes out on those two paths only — not on
-        // every request, because a stable per-device id everywhere is a
+        // lock on this device id. Coupon preview uses the same identity.
+        // Limit the header to these paths: a per-device id everywhere is a
         // tracking identifier we have no use for. It is sent regardless of
         // sign-in state: `Authorization` carries the customer JWT once the
         // shopper has an account, and market checkout still runs through the
         // guest route, so the JWT would otherwise leave the server no identity
         // to lock on at all.
-        if (usesGuestDeviceIdentity(config.url)) {
+        if (
+          usesGuestDeviceIdentity(config.url) &&
+          (config.url !== "/coupons/validate" || !getCustomerAccessToken())
+        ) {
           const deviceId = getOrCreateGuestDeviceId();
           if (deviceId) {
             config.headers["X-Guest-Device-Id"] = deviceId;
@@ -193,7 +200,11 @@ class ApiClient {
 
         // 處理認證錯誤
         if (status === 401 && !error.config?.credentialCheck) {
-          await this.handleAuthError();
+          // An order-scoped guest session expiring says nothing about the
+          // independently authenticated customer who is viewing that order.
+          if (!error.config?.url?.startsWith("/guest-orders/")) {
+            await this.handleAuthError();
+          }
           throw new ApiException(
             "UNAUTHORIZED" as ApiErrorCodeValue,
             translate("messages.sessionExpired"),

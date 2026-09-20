@@ -337,6 +337,7 @@ describe("coupons routes", () => {
       300,
       "user-5",
       [{ menuItemId: 1, quantity: 2 }],
+      undefined,
     );
 
     const availableResponse = await app.fetch(

@@ -413,6 +413,7 @@
 </template>
 
 <script setup lang="ts">
+import { storeGuestOrderToken } from "@/utils/guest-order-tokens";
 import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
@@ -644,7 +645,7 @@ const handleCheckout = async () => {
       );
       // Store guest token for order tracking
       if (guestResult.guestToken) {
-        localStorage.setItem("guest_auth_token", guestResult.guestToken);
+        storeGuestOrderToken(guestResult.order.id, guestResult.guestToken);
       }
       orderResult = guestResult.order;
     }

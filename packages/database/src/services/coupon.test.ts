@@ -83,7 +83,7 @@ describe("CouponService.assertCouponRedeemable per-user limit", () => {
     expect(select).not.toHaveBeenCalled();
   });
 
-  it("still lets a guest redeem when a global cap bounds the damage", async () => {
+  it("rejects an unidentified guest even when a global cap exists", async () => {
     const { service, select } = buildService();
 
     await expect(
@@ -95,7 +95,7 @@ describe("CouponService.assertCouponRedeemable per-user limit", () => {
           mode: "redeem",
         },
       ),
-    ).resolves.toBeUndefined();
+    ).rejects.toMatchObject({ code: "COUPON_REQUIRES_IDENTITY" });
     expect(select).not.toHaveBeenCalled();
   });
 

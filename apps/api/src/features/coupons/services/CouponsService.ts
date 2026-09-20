@@ -175,6 +175,7 @@ export class CouponsService extends BaseCouponService {
     orderAmount: number,
     userId?: string,
     menuItems?: Array<{ menuItemId: number; quantity: number }>,
+    guestIdentity?: string,
   ): Promise<CouponValidationResult> {
     // Use base validation
     const baseResult = await this.validateCoupon(
@@ -183,6 +184,7 @@ export class CouponsService extends BaseCouponService {
       orderAmount,
       userId,
       menuItems,
+      { guestIdentity },
     );
 
     if (!baseResult.valid) {

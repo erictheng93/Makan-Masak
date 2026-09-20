@@ -1,3 +1,4 @@
+import { storeGuestOrderToken } from "./guest-order-tokens";
 import type { MarketCheckoutSummary } from "@/services/orderApi";
 import type { MarketCheckoutResponse } from "@/services/orderApi";
 
@@ -60,6 +61,9 @@ export function recordRecentMarketCheckout(
 export function recordMarketCheckoutGuestTokens(
   response: MarketCheckoutResponse,
 ) {
+  for (const child of response.childOrders) {
+    storeGuestOrderToken(child.order.id, child.guestToken, false);
+  }
   const tokenRecords = readGuestTokenRecords();
   tokenRecords[response.checkout.id] = Object.fromEntries(
     response.childOrders.map((child) => [
@@ -86,7 +90,7 @@ export function activateMarketCheckoutGuestToken(
   const tokenRecord = readGuestTokenRecords()[checkoutId]?.[String(orderId)];
   if (!tokenRecord) return false;
 
-  localStorage.setItem("guest_auth_token", tokenRecord.guestToken);
+  storeGuestOrderToken(orderId, tokenRecord.guestToken);
   return true;
 }
 
@@ -135,7 +139,7 @@ export function recordRecoveredMarketCheckoutGuestToken(input: {
   };
 
   localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(tokenRecords));
-  localStorage.setItem("guest_auth_token", input.guestToken);
+  storeGuestOrderToken(input.orderId, input.guestToken);
 }
 
 export function listRecentMarketCheckouts(): StoredMarketCheckout[] {

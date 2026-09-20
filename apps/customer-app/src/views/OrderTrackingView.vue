@@ -355,6 +355,7 @@
 </template>
 
 <script setup lang="ts">
+import { getGuestOrderToken } from "@/utils/guest-order-tokens";
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
@@ -402,8 +403,11 @@ const guestRealtimeCacheKey = `makanmakan_guest_realtime_token:${props.restauran
 const guestQrCacheKey = `makanmakan_table_qr:${props.restaurantId}:${props.tableId}`;
 const shouldUseGuestRealtime = computed(() => {
   const hasCustomerToken = hasCustomerAccessToken();
-  const hasGuestToken = !!localStorage.getItem("guest_auth_token");
-  return !hasCustomerToken && hasGuestToken;
+  const hasGuestToken = !!getGuestOrderToken(props.orderId);
+  return (
+    !!getGuestOrderToken(props.orderId, false) ||
+    (!hasCustomerToken && hasGuestToken)
+  );
 });
 
 const readGuestRealtimeCache = () => {
@@ -439,7 +443,7 @@ const getGuestRealtimeUrl = async () => {
     return cached.wsUrl;
   }
 
-  const guestToken = localStorage.getItem("guest_auth_token");
+  const guestToken = getGuestOrderToken(props.orderId);
   const response = props.isShopOrder
     ? await orderApi.getGuestRealtimeToken({
         restaurantId: props.restaurantId,
@@ -556,9 +560,12 @@ const {
   queryKey: ["order", props.orderId],
   queryFn: () => {
     const hasCustomerToken = hasCustomerAccessToken();
-    const hasGuestToken = !!localStorage.getItem("guest_auth_token");
+    const hasGuestToken = !!getGuestOrderToken(props.orderId);
 
-    if (!hasCustomerToken && hasGuestToken) {
+    if (
+      getGuestOrderToken(props.orderId, false) ||
+      (!hasCustomerToken && hasGuestToken)
+    ) {
       return orderApi.getGuestOrder(props.orderId);
     }
     return orderApi.getOrder(props.orderId);
@@ -572,9 +579,12 @@ const { mutate: cancelOrder, isPending: isCancelling } = useMutation({
   // cancelled, through /guest-orders. The staff route answered guests with 403.
   mutationFn: () => {
     const hasCustomerToken = hasCustomerAccessToken();
-    const hasGuestToken = !!localStorage.getItem("guest_auth_token");
+    const hasGuestToken = !!getGuestOrderToken(props.orderId);
 
-    if (!hasCustomerToken && hasGuestToken) {
+    if (
+      getGuestOrderToken(props.orderId, false) ||
+      (!hasCustomerToken && hasGuestToken)
+    ) {
       return orderApi.cancelGuestOrder(props.orderId);
     }
     return orderApi.cancelOrder(props.orderId);

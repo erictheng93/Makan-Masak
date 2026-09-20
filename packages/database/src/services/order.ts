@@ -94,6 +94,8 @@ export interface CreateOrderData {
   notes?: string;
   couponCode?: string;
   couponUserId?: string;
+  /** Server-resolved guest identity; never accepted from an order body. */
+  couponGuestIdentity?: string;
   clientMutationId?: string;
   orderSource?:
     | "direct"
@@ -654,7 +656,7 @@ export class OrderService extends BaseService {
           subtotal,
           data.couponUserId,
           data.items,
-          { currency },
+          { currency, guestIdentity: data.couponGuestIdentity },
         );
 
         if (validationResult.valid) {
@@ -796,6 +798,7 @@ export class OrderService extends BaseService {
             couponId: validatedCoupon.id,
             orderId: orderIdRef as unknown as string,
             userId: data.couponUserId,
+            guestIdentity: data.couponGuestIdentity,
             discountAmountCents,
             originalAmountCents: subtotalCents,
             finalAmountCents: totalAmountCents,
@@ -864,6 +867,12 @@ export class OrderService extends BaseService {
         );
       } catch (error) {
         await releaseClaimedCoupon();
+        if (
+          error instanceof Error &&
+          /COUPON_GUEST_LIMIT_REACHED/.test(error.message)
+        ) {
+          throw badRequest("您已達到此優惠券的使用次數上限", "COUPON_INVALID");
+        }
         if (
           error instanceof Error &&
           /NOT NULL constraint failed: restaurants\.id/i.test(error.message)

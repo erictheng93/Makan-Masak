@@ -17,6 +17,7 @@ const createOrder = vi.hoisted(() => vi.fn());
 const createGuestOrder = vi.hoisted(() => vi.fn());
 const initializeCart = vi.hoisted(() => vi.fn());
 const toastError = vi.hoisted(() => vi.fn());
+const validateCoupon = vi.hoisted(() => vi.fn());
 
 vi.mock("vue-router", () => ({
   useRoute: () => ({ query: routeQuery.current }),
@@ -79,7 +80,7 @@ vi.mock("@/services/orderApi", () => ({
 vi.mock("@/services/api", () => ({
   apiClient: {
     get: vi.fn(),
-    post: vi.fn(),
+    post: validateCoupon,
   },
 }));
 
@@ -163,6 +164,34 @@ describe("CartView seat orders", () => {
         seatId: 6,
       }),
     );
+  });
+
+  it("submits the applied coupon on the guest path (#382)", async () => {
+    validateCoupon.mockResolvedValue({
+      valid: true,
+      coupon: { code: "TWENTY", name: "Twenty off" },
+      discountAmount: 20,
+    });
+    const wrapper = mount(CartView, {
+      props: { restaurantId: "restaurant-1", tableId: 4 },
+      global: { stubs: { RouterLink: true } },
+    });
+    await flushPromises();
+    await wrapper.get('[data-testid="coupon-code"]').setValue(" twenty ");
+    await wrapper.get('[data-testid="coupon-apply"]').trigger("click");
+    await flushPromises();
+    expect(validateCoupon).toHaveBeenCalledWith(
+      "/coupons/validate",
+      expect.objectContaining({ code: "TWENTY", orderAmount: 100 }),
+    );
+    expect(wrapper.get('[data-testid="submit-order-btn"]').text()).toContain(
+      "80",
+    );
+    await wrapper.get('[data-testid="confirm"]').trigger("click");
+    expect(createGuestOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ couponCode: "TWENTY" }),
+    );
+    wrapper.unmount();
   });
 
   it("carries a mutation id, and reuses it when the guest retries the same cart", async () => {

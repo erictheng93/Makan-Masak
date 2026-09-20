@@ -1,3 +1,4 @@
+import { resolveGuestCouponIdentity } from "../../guest-orders/services/guest-coupon-identity";
 /**
  * Coupons Feature Routes
  *
@@ -97,6 +98,7 @@ routes.post("/validate", validateBody(validateCouponSchema), async (c) => {
     data.orderAmount,
     data.userId,
     data.menuItems,
+    data.userId ? undefined : await resolveGuestCouponIdentity(c.req),
   );
 
   return c.json({

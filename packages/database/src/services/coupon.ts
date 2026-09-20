@@ -217,6 +217,7 @@ export interface CouponEligibilityContext {
   restaurantId: string;
   orderAmountCents: number;
   userId?: string;
+  guestIdentity?: string;
   menuItems?: Array<{ menuItemId: number; quantity: number }>;
   /**
    * - "validate": 顧客探索/預覽路徑 — 額外強制 isVisible
@@ -382,7 +383,7 @@ export class CouponService extends BaseService {
     orderAmount: number,
     userId?: string,
     menuItems?: Array<{ menuItemId: number; quantity: number }>,
-    options: { currency?: CurrencyCode } = {},
+    options: { currency?: CurrencyCode; guestIdentity?: string } = {},
   ): Promise<CouponValidationResult> {
     try {
       // Codes are unique per tenant (0013), so a bare `code` lookup is no
@@ -414,6 +415,7 @@ export class CouponService extends BaseService {
           restaurantId,
           orderAmountCents,
           userId,
+          guestIdentity: options.guestIdentity,
           menuItems,
           mode: "validate",
         });
@@ -524,41 +526,36 @@ export class CouponService extends BaseService {
       );
     }
 
-    // 檢查每用戶使用上限。
-    // 注意：count-then-insert 存在小競態（兩個併發請求可能同時通過檢查），
-    // D1 沒有交易可用；總量上限仍由 claimUsageSlot 原子保證。
+    // The preview check provides a useful error. Guest writes are also guarded
+    // by coupon_usage_guest_limit in the order batch, so concurrent submissions
+    // cannot both consume the last per-device use.
     if (coupon.usageLimitPerUser) {
-      if (!context.userId) {
-        // 訪客訂單沒有可鍵的身分：coupon_usage.user_id 是 users.id 的外鍵，
-        // 訪客只帶電話而電話在這張表沒有欄位可放，所以無法逐人計數。
-        // 若同時連總量上限都沒有，「每人 N 次」就完全無界 —— 直接拒絕，
-        // 不要讓一張設了每人上限的券變成無限量券。
-        // 有 usageLimit 時仍放行：claimUsageSlot 的原子 UPDATE 是權威封頂，
-        // 損害有界，維持既有的訪客可用行為。
-        if (!coupon.usageLimit) {
-          throw new CouponEligibilityError(
-            "COUPON_REQUIRES_IDENTITY",
-            "此優惠券限定每人使用次數，請先登入再使用",
-          );
-        }
-      } else {
-        const userUsageCount = await this.db
-          .select({ count: sql<number>`count(*)` })
-          .from(couponUsage)
-          .where(
-            and(
-              eq(couponUsage.couponId, coupon.id),
-              eq(couponUsage.userId, context.userId),
-              eq(couponUsage.status, "active"),
-            ),
-          );
-
-        if ((userUsageCount[0]?.count ?? 0) >= coupon.usageLimitPerUser) {
-          throw new CouponEligibilityError(
-            "COUPON_USER_LIMIT_REACHED",
-            "您已達到此優惠券的使用次數上限",
-          );
-        }
+      const identityCondition = context.guestIdentity
+        ? eq(couponUsage.guestIdentity, context.guestIdentity)
+        : context.userId
+          ? eq(couponUsage.userId, context.userId)
+          : undefined;
+      if (!identityCondition) {
+        throw new CouponEligibilityError(
+          "COUPON_REQUIRES_IDENTITY",
+          "此優惠券限定每人使用次數，請先登入再使用",
+        );
+      }
+      const userUsageCount = await this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(couponUsage)
+        .where(
+          and(
+            eq(couponUsage.couponId, coupon.id),
+            identityCondition,
+            eq(couponUsage.status, "active"),
+          ),
+        );
+      if ((userUsageCount[0]?.count ?? 0) >= coupon.usageLimitPerUser) {
+        throw new CouponEligibilityError(
+          "COUPON_USER_LIMIT_REACHED",
+          "您已達到此優惠券的使用次數上限",
+        );
       }
     }
 
