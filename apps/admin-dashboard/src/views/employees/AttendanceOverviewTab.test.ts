@@ -86,6 +86,11 @@ function mountTab() {
         ClockInOutPanel: ClockInOutPanelStub,
         Clock: true,
         CalendarOff: true,
+        RouterLink: {
+          props: ["to"],
+          template:
+            '<a v-bind="$attrs" :data-route-name="to.name"><slot /></a>',
+        },
       },
     },
   });
@@ -126,6 +131,15 @@ describe("AttendanceOverviewTab clock-in mount", () => {
     expect(wrapper.find('[data-testid="clock-panel-stub"]').exists()).toBe(
       true,
     );
+  });
+
+  it("links attendance managers to scheduling analytics", async () => {
+    const wrapper = mountTab();
+    await flushPromises();
+
+    const analytics = wrapper.get('[data-testid="scheduling-analytics-link"]');
+    expect(analytics.text()).toBe("pages.schedulingAnalytics");
+    expect(analytics.attributes("data-route-name")).toBe("SchedulingAnalytics");
   });
 
   it("defaults the target to the signed-in user, not the first row", async () => {

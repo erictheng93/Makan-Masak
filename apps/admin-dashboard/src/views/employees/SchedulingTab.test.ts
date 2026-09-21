@@ -44,7 +44,7 @@ describe("SchedulingTab", () => {
           RouterLink: {
             props: ["to"],
             template:
-              '<a data-testid="advanced-scheduling-link" :data-route-name="to.name"><slot /></a>',
+              '<a v-bind="$attrs" :data-route-name="to.name"><slot /></a>',
           },
         },
       },
@@ -54,5 +54,9 @@ describe("SchedulingTab", () => {
     const link = wrapper.get('[data-testid="advanced-scheduling-link"]');
     expect(link.text()).toBe("employees.scheduling.advancedScheduling");
     expect(link.attributes("data-route-name")).toBe("AdvancedScheduling");
+
+    const analytics = wrapper.get('[data-testid="scheduling-analytics-link"]');
+    expect(analytics.text()).toBe("pages.schedulingAnalytics");
+    expect(analytics.attributes("data-route-name")).toBe("SchedulingAnalytics");
   });
 });

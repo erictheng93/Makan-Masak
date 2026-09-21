@@ -63,6 +63,18 @@ describe("admin dashboard router", () => {
     ]);
   });
 
+  it("registers scheduling analytics for admins and owners", () => {
+    const analytics = router.resolve(
+      "/dashboard/employees/scheduling/analytics",
+    );
+
+    expect(analytics.name).toBe("SchedulingAnalytics");
+    expect(analytics.matched.at(-1)?.meta).toMatchObject({
+      titleKey: "pages.schedulingAnalytics",
+      roles: [UserRole.ADMIN, UserRole.OWNER],
+    });
+  });
+
   it("keeps OwnerOverview, Orders, and GroupOrders role boundaries distinct", () => {
     const rolesFor = (name: string) =>
       router.getRoutes().find((route) => route.name === name)?.meta.roles;

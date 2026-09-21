@@ -168,7 +168,10 @@ const insights = ref<SchedulingInsight[]>([]);
 const fetchAnalyticsData = async () => {
   try {
     loading.value = true;
-    const restaurantId = authStore.user?.restaurantId || "";
+    // Platform administrators can choose a restaurant without being assigned
+    // to one themselves. Analytics must use that selected tenant, like the
+    // charts below, rather than the logged-in account's nullable restaurant.
+    const restaurantId = authStore.restaurantId;
     if (!restaurantId) return;
 
     // Fetch daily stats for today

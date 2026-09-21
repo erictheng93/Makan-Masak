@@ -6,8 +6,7 @@
       "unreachableViews": [
         "apps/admin-dashboard/src/views/UsersView.vue",
         "apps/admin-dashboard/src/views/backup/BackupDashboard.vue",
-        "apps/admin-dashboard/src/views/backup/BackupMonitoring.vue",
-        "apps/admin-dashboard/src/views/scheduling/SchedulingAnalyticsView.vue"
+        "apps/admin-dashboard/src/views/backup/BackupMonitoring.vue"
       ],
       "unreachableComponents": [
         "apps/admin-dashboard/src/components/PerformanceDashboard.vue",
@@ -18,10 +17,6 @@
         "apps/admin-dashboard/src/components/backup/BackupAlert.vue",
         "apps/admin-dashboard/src/components/backup/BackupListItem.vue",
         "apps/admin-dashboard/src/components/backup/RestoreBackupModal.vue",
-        "apps/admin-dashboard/src/components/charts/BaseChart.vue",
-        "apps/admin-dashboard/src/components/charts/ShiftDistributionChart.vue",
-        "apps/admin-dashboard/src/components/charts/TrendChart.vue",
-        "apps/admin-dashboard/src/components/charts/WorkHoursChart.vue",
         "apps/admin-dashboard/src/components/common/SkeletonLoader.vue",
         "apps/admin-dashboard/src/components/monitoring/AdvancedFilterPanel.vue",
         "apps/admin-dashboard/src/components/monitoring/DashboardLayoutEditor.vue",

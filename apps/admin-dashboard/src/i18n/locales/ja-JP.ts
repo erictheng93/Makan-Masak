@@ -1925,6 +1925,7 @@ const jaJP: Messages = {
     aiInsights: "AI インサイト",
     productAnalysis: "商品分析",
     scheduling: "シフト管理",
+    schedulingAnalytics: "シフト分析",
     leaves: "休暇管理",
     reservations: "予約管理",
     serviceBookings: "サービス予約管理",

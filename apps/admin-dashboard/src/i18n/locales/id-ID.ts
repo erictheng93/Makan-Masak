@@ -2044,6 +2044,7 @@ const idID: Messages = {
     aiInsights: "AI Insights",
     productAnalysis: "Analisis Produk",
     scheduling: "Jadwal Karyawan",
+    schedulingAnalytics: "Analisis Penjadwalan",
     leaves: "Manajemen Cuti",
     reservations: "Manajemen Reservasi",
     serviceBookings: "Manajemen Reservasi Layanan",

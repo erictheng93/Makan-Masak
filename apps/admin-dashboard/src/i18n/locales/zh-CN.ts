@@ -1890,6 +1890,7 @@ const zhCN: Messages = {
     aiInsights: "AI 洞察",
     productAnalysis: "产品分析",
     scheduling: "员工排班",
+    schedulingAnalytics: "排班分析",
     leaves: "请假管理",
     reservations: "预订管理",
     serviceBookings: "服务预约管理",

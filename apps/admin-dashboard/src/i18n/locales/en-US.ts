@@ -2025,6 +2025,7 @@ const enUS: Messages = {
     aiInsights: "AI Insights",
     productAnalysis: "Product Analysis",
     scheduling: "Scheduling",
+    schedulingAnalytics: "Scheduling Analytics",
     leaves: "Leave Management",
     reservations: "Reservations",
     serviceBookings: "Service Bookings",

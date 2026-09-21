@@ -2073,6 +2073,7 @@ const zhTWCore = {
     aiInsights: "AI 洞察",
     productAnalysis: "產品分析",
     scheduling: "員工排班",
+    schedulingAnalytics: "排班分析",
     leaves: "請假管理",
     reservations: "訂位管理",
     serviceBookings: "服務預約管理",

@@ -1926,6 +1926,7 @@ const viVN: Messages = {
     aiInsights: "AI Insights",
     productAnalysis: "Phân tích sản phẩm",
     scheduling: "Lịch làm việc",
+    schedulingAnalytics: "Phân tích lịch làm việc",
     leaves: "Quản lý nghỉ phép",
     reservations: "Quản lý đặt bàn",
     serviceBookings: "Quản lý đặt dịch vụ",

@@ -66,6 +66,14 @@
         {{ t("employees.scheduling.advancedScheduling") }}
       </RouterLink>
 
+      <RouterLink
+        :to="{ name: 'SchedulingAnalytics' }"
+        data-testid="scheduling-analytics-link"
+        class="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-white text-ios-blue border border-ios-blue/20 hover:bg-ios-blue/10 transition-colors"
+      >
+        {{ t("pages.schedulingAnalytics") }}
+      </RouterLink>
+
       <!-- Manage templates button -->
       <button
         class="ml-auto flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-ios-blue text-white hover:bg-blue-600 transition-colors shadow-sm"

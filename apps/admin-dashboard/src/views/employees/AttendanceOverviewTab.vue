@@ -1,5 +1,15 @@
 <template>
   <div class="space-y-6">
+    <div class="flex justify-end">
+      <RouterLink
+        :to="{ name: 'SchedulingAnalytics' }"
+        data-testid="scheduling-analytics-link"
+        class="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-white text-ios-blue border border-ios-blue/20 hover:bg-ios-blue/10 transition-colors"
+      >
+        {{ t("pages.schedulingAnalytics") }}
+      </RouterLink>
+    </div>
+
     <!-- Quick Stats -->
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
       <div
