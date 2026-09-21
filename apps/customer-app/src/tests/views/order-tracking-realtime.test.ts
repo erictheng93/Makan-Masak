@@ -140,6 +140,31 @@ describe("OrderTrackingView guest realtime URL", () => {
     wrapper.unmount();
   });
 
+  // A group member joins by invite link, never scans the table QR, and holds
+  // only the order-scoped guest token that /tracking-token handed out (#396).
+  it("uses the guest order token when a table order has no signed table QR", async () => {
+    localStorage.clear();
+    localStorage.setItem("guest_auth_token:1001", "member-guest-token");
+    vi.mocked(orderApi.getGuestRealtimeToken).mockResolvedValue({
+      token: "realtime-token",
+      expiresAt: "2099-01-01T00:00:00.000Z",
+      wsUrl:
+        "wss://realtime.example.test/customer/order:1001?token=realtime-token",
+    });
+    const wrapper = mountView();
+
+    await expect(websocketOptions.current?.getUrl()).resolves.toBe(
+      "wss://realtime.example.test/customer/order:1001?token=realtime-token",
+    );
+    expect(orderApi.getGuestRealtimeToken).toHaveBeenCalledOnce();
+    expect(orderApi.getGuestRealtimeToken).toHaveBeenCalledWith({
+      restaurantId: "restaurant-1",
+      orderId: "1001",
+      guestToken: "member-guest-token",
+    });
+    wrapper.unmount();
+  });
+
   it("hides the table row and returns shop orders to the shop menu", async () => {
     orderQueryData.value = {
       id: "1001",

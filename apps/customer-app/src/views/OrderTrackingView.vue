@@ -444,7 +444,12 @@ const getGuestRealtimeUrl = async () => {
   }
 
   const guestToken = getGuestOrderToken(props.orderId);
-  const response = props.isShopOrder
+  // A group member reaches a table order by invite link, never scans the
+  // table QR, and holds only the order's guest token (#396).
+  const useGuestToken =
+    props.isShopOrder ||
+    (!!guestToken && !localStorage.getItem(guestQrCacheKey));
+  const response = useGuestToken
     ? await orderApi.getGuestRealtimeToken({
         restaurantId: props.restaurantId,
         orderId: String(props.orderId),
