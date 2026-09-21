@@ -84,7 +84,7 @@ export const restaurants = sqliteTable(
       allowTableReservation?: boolean;
       allowGuestOrders?: boolean;
       requireCustomerInfo?: boolean;
-      autoConfirmOrders?: boolean;
+      autoAcceptOrders?: boolean;
       currency?: string;
       taxRate?: number;
       serviceChargeRate?: number;

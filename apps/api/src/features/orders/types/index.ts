@@ -518,7 +518,6 @@ export interface OrdersConfig {
   maxOrderItems: number;
   allowGuestOrders: boolean;
   requireCustomerInfo: boolean;
-  autoConfirmOrders: boolean;
   enableRealTimeUpdates: boolean;
   statusTransitionRules: OrderStatusTransition[];
   notificationSettings: {

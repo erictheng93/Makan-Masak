@@ -263,7 +263,33 @@ export class OrdersService implements IOrdersService {
       };
 
       // Create order using base service
-      const order = await this.baseOrderService.createOrder(baseOrderData);
+      let order = await this.baseOrderService.createOrder(baseOrderData);
+
+      // Do not write `confirmed` during the insert. Confirmation has its own
+      // state-machine path: it stamps `confirmedAt`, advances the version,
+      // emits realtime status updates, and queues the kitchen ticket. Keeping
+      // automatic confirmation on that path makes a customer order behave the
+      // same way as a staff member pressing Confirm.
+      if (
+        order.status === "pending" &&
+        (await this.baseOrderService.isAutoAcceptOrdersEnabled(
+          order.restaurantId,
+        ))
+      ) {
+        const confirmedOrder = await this.updateOrderStatus(
+          order.id,
+          { status: "confirmed" },
+          undefined,
+          undefined,
+          undefined,
+          order,
+        );
+
+        if (!confirmedOrder) {
+          throw new Error("Failed to auto-confirm newly created order");
+        }
+        order = confirmedOrder;
+      }
 
       // Cache the order
       await Promise.all([
