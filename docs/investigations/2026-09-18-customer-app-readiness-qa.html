@@ -249,11 +249,11 @@ footer{
         <tr>
           <td><b>揪團與夜市市集</b></td>
           <td><span class="tag blocker">不可上線</span></td>
-          <td><span class="tag blocker">不可上線</span></td>
+          <td>揪團 <span class="tag ok">可上線</span><br>市集 <span class="tag blocker">不可上線</span></td>
           <td>市集的程式碼已就緒且已部署：#401 三個訪客寫入端點不再 403（回 400／404），webhook 在沒有 secret 時回
             <code>MARKET_CHECKOUT_WEBHOOK_SIGNATURE_INVALID</code>（fail closed），#400 付款 fail closed 已部署；
-            擋住的是金流憑證與 0 筆市集。揪團的 #396／#397 修在 <code>a996367a</code>，<b>尚未部署</b>，
-            且修法本身有 R17（下方），已在 <code>bd11a49a</code> 修掉，同樣待部署。</td>
+            擋住的是金流憑證與 0 筆市集。揪團的 #396／#397（<code>a996367a</code>）與本輪的 R17、R19 修正
+            已於 09-22 部署，並在 production 以團主＋團員兩個身分實測送出 → 查看訂單進度（見下方「揪團實測」）。</td>
         </tr>
       </tbody>
     </table>
@@ -269,7 +269,7 @@ footer{
         <tr><td class="mono">R3</td><td>#395 closed</td><td><span class="tag fixed"><code>9e0ffe71</code></span></td><td><span class="tag ok">已部署</span>，見下方 R18</td></tr>
         <tr><td class="mono">R13</td><td>#401 closed</td><td><span class="tag fixed"><code>95c63754</code></span></td><td><span class="tag ok">已部署</span>（空 body 探測不再 403）</td></tr>
         <tr><td class="mono">#382 #383</td><td>closed</td><td><span class="tag fixed"><code>36f7bb6b</code></span></td><td><span class="tag ok">已部署</span></td></tr>
-        <tr><td class="mono">R5 R6</td><td>#396 #397 closed</td><td><span class="tag fixed"><code>a996367a</code></span></td><td><span class="tag blocker">未部署</span>：Pages 停在 <code>bf0a5b8</code>（09-20），bundle 無「查看訂單進度」；api Worker 最後部署 09-20 11:02Z</td></tr>
+        <tr><td class="mono">R5 R6</td><td>#396 #397 closed</td><td><span class="tag fixed"><code>a996367a</code></span></td><td><span class="tag ok">已部署</span>（09-22，api <code>8f6b82e6</code>、Pages <code>ebc78e43</code>）；複查當下 Pages 仍停在 <code>bf0a5b8</code>。production 實測見下方</td></tr>
         <tr><td class="mono">R8 R9 R12</td><td>#399 #398 #386 仍 open</td><td>—</td><td>無變化</td></tr>
         <tr><td class="mono">R10 R11 R16</td><td>記錄</td><td>—</td><td>未複查</td></tr>
       </tbody>
@@ -278,7 +278,7 @@ footer{
 
   <h3>複查新發現</h3>
   <div class="card">
-    <h4><span class="mono">R17</span> 揪團追蹤 token 端點不在 CSRF 排除清單 <span class="tag fixed">已修 <code>bd11a49a</code>・待部署</span></h4>
+    <h4><span class="mono">R17</span> 揪團追蹤 token 端點不在 CSRF 排除清單 <span class="tag fixed">已修 <code>bd11a49a</code>・已部署</span></h4>
     <p>
       #396 的修法新增 <code>POST /api/v1/orders/group/:id/tracking-token</code>（以 memberToken 換主訂單的 guest token），
       但沒有加進 <code>app-factory.ts</code> 的 <code>csrfProtection</code> 排除清單。customer-app 不送 CSRF token，
@@ -300,6 +300,55 @@ footer{
     </p>
   </div>
 
+  <div class="card">
+    <h4><span class="mono">R19</span> 以邀請連結加入的團員，追蹤頁連不上即時更新 <span class="tag fixed">已修 <code>7a359a0c</code>・已部署</span></h4>
+    <p>
+      團員從邀請連結加入、從沒掃過桌位 QR。按「查看訂單進度」後訂單內容正常，但畫面出現「Realtime connection error」，
+      console 是 <code>Failed to create WebSocket connection: Error: Missing signed table QR code</code>：
+      <code>OrderTrackingView</code> 的桌位訂單一律要求 localStorage 裡的簽章 QR。團主掃過 QR，所以不受影響。
+    </p>
+    <p>
+      團員手上已有 <code>tracking-token</code> 發的訂單 guest token，而 <code>/realtime/auth/guest-token</code>
+      本來就接受 <code>guestToken + orderId</code>，換到的 token 限定 <code>order:&lt;id&gt;</code> 房間（與 QR 路徑同一個房間）。
+      修法是沒有簽章 QR 時改用 guest token；有 QR 時行為不變。
+      回歸測試 <code>order-tracking-realtime.test.ts</code> 新增一案，修正前紅（<code>promise rejected "Error: Missing signed table QR code"</code>），
+      修正後 12/12 綠；customer-app typecheck 通過，87 檔／796 個測試綠。
+    </p>
+  </div>
+
+  <h3>揪團實測（production，09-22 部署後）</h3>
+  <p>
+    兩個獨立瀏覽器身分，掃桌位 A1 的簽章 QR。每一步看畫面也看 API 回應：
+  </p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>步驟</th><th>結果</th></tr></thead>
+      <tbody>
+        <tr><td>團主建立揪團 → 團員以邀請連結 <code>Y9IBK1S2</code> 加入</td><td><span class="tag ok">通過</span> 兩位成員</td></tr>
+        <tr><td>兩邊各加一道菜；團主從「繼續加菜」回菜單後立刻按加入（R4 情境）</td><td><span class="tag ok">通過</span> 兩道都進群組購物車，NT$180</td></tr>
+        <tr><td>團主送出</td><td><span class="tag ok">通過</span> <code>lock</code> 200；畫面「Your order has reached the restaurant」＋「View order progress」（R5／#396）</td></tr>
+        <tr><td>團主「查看訂單進度」</td><td><span class="tag ok">通過</span> <code>tracking-token</code> 200（R17 生效）→ 追蹤頁 5ATX-9106、兩個品項、Pending；即時連線正常</td></tr>
+        <tr><td>團員「查看訂單進度」</td><td><span class="tag ok">通過</span> 修正前即時連線失敗（R19）；部署 <code>7a359a0c</code> 後 <code>realtime/auth/guest-token</code> 200，無錯誤橫幅、console 無錯誤</td></tr>
+        <tr><td>即時 token 換發（R6／#397）</td><td><span class="tag ok">通過</span> 團主整段只換一次 <code>group-token</code>（09-18 是 12 次）</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    <b>沒測到的：</b>只證明即時連線建得起來，沒有由店家推狀態、確認團員頁不重整就跟著變（需要以 owner 寫入）。
+  </p>
+  <p>
+    <b>觀察，記錄：</b>團員停在菜單頁時，團主送出後那一頁仍顯示「2 items in the shared cart」、沒有已送出的提示，
+    要點進群組頁才看得到結果。另外 Pages 部署後，團員頁重新整理兩次仍跑舊版 <code>index-BMd-Msa5.js</code>，
+    手動 <code>registration.update()</code> 後再重新整理一次才載入 <code>index-CDTRkWcg.js</code>；
+    分不出是 Pages 邊緣尚未傳遞完成，還是 #395 的更新檢查仍有延遲，需另外重測。
+  </p>
+  <p>
+    <b>資料善後：</b>刪除揪團五表（<code>group_orders</code>、<code>group_members</code>、<code>group_cart_items</code>、
+    <code>split_bills</code>、<code>group_activity_logs</code>）、主訂單與 2 個品項、1 筆尚未彙總的 <code>usage_meter_buckets</code>；
+    <code>restaurants.total_orders</code> 10 → 9、<code>menu_items#2</code> <code>order_count</code> 16 → 14、<code>inventory_count</code> 8 → 10。
+    之後 127 張表（1,729 列）與開始前逐表比對<b>零差異</b>。KV 裡的 guest token 依 TTL 過期。
+  </p>
+
   <h3>上線前提（09-22 重查，無變化）</h3>
   <p>
     api secret 仍只有 <code>CLOUDFLARE_API_TOKEN</code>、<code>ENCRYPTION_KEY</code>、<code>INTERNAL_API_TOKEN</code>、
@@ -309,8 +358,8 @@ footer{
   </p>
 
   <p class="note warn">
-    <b>下一步：部署 api Worker 與 customer Pages（含 <code>a996367a</code> 與 <code>bd11a49a</code>），</b>
-    再在 production 走一次揪團送出 → 查看訂單進度。其餘依 09-18「下一步」的順序，已完成的 #395、#400、#401、#396、#382 可劃掉。
+    <b>下一步：</b>以 owner 推狀態，確認團員追蹤頁即時更新；重測 service worker 在部署後多快切到新版。
+    市集等金流憑證與市集資料；其餘依 09-18「下一步」的順序，已完成的 #395、#400、#401、#396、#397、#382、#383 可劃掉。
   </p>
 </section>
 
