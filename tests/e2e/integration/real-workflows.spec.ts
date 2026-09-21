@@ -828,12 +828,16 @@ function cartItemRow(page: Page, menuItemId: number) {
 
 async function installAdminSession(page: Page, loginData: SmokeLoginData) {
   await page.addInitScript((session) => {
-    window.localStorage.setItem("auth_token", session.token ?? "");
+    // The dashboard runs through Vite in this suite. Its development auth
+    // client deliberately keeps bearer tokens in sessionStorage, so injecting
+    // them into localStorage makes the route guard redirect to /login before
+    // the first protected-page request can be made.
+    window.sessionStorage.setItem("auth_token", session.token ?? "");
     if (session.csrfToken) {
       window.document.cookie = `csrf_token=${session.csrfToken}; path=/; SameSite=Lax`;
     }
     if (session.refreshToken) {
-      window.localStorage.setItem("auth_refresh_token", session.refreshToken);
+      window.sessionStorage.setItem("auth_refresh_token", session.refreshToken);
     }
     if (session.user) {
       window.localStorage.setItem("auth_user", JSON.stringify(session.user));
