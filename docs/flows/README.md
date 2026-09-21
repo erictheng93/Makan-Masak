@@ -23,6 +23,7 @@
 | L2 規格 | [specs/](../specs/)、[superpowers/specs/](../superpowers/specs/) | 某次改動的決策、資料模型、驗收條件 | 寫作當下的快照 |
 | 風險視角 | [testing/personas.md](../testing/personas.md) | 角色 × 模組的風險與應測行為 | 刻意超前於實作 |
 | 測試落點 | [testing/CORE_WORKFLOW_TEST_MATRIX.md](../testing/CORE_WORKFLOW_TEST_MATRIX.md) | 哪一種驗證放哪一層 | 對齊現況 |
+| QA 紀錄 | [investigations/](../investigations/) 的 `*-flow-qa.html`、`*-readiness-qa.html` | 某一輪在 production 逐頁走過的發現與處置 | 寫作當下的快照 |
 
 ---
 
