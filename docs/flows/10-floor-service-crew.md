@@ -85,12 +85,14 @@ DB 時間戳欄位、顧客追蹤頁文案與 i18n key，以及所有以 `ready`
   只含合法狀態值，且本地配送階段能跨重整與重載保留、送達後清除。這是 CI 實際會跑的那道守門。
 - `tests/e2e/integration/real-workflows.spec.ts` — 送菜流程（`ready` → 標記送達 → 桌位釋放）。
   屬於 `integration` project，需要 `WORKFLOW_ADMIN_URL`／`SMOKE_ADMIN_URL` 才會跑；
-  目前 CI 的兩條 E2E 路徑都不含這個 project，等同只在本機手動執行。
+  由 `.github/workflows/nightly-integration.yml` 每晚執行（`cron: "0 18 * * *"`，也可手動觸發），
+  不在 PR／push 的 `test.yml` 路徑上。
 
 ## 7. 已知缺口
 
 - **沒有指派機制**。`assignedTo` 只存在於本地階段，後端訂單沒有對應欄位，
   「誰負責這一單」無法跨裝置共享（見 §4 的代價）。
-- **`integration` project 不在任何 CI 路徑上**，送菜流程的 E2E 寫了但不會自動執行；
-  真正在 CI 擋住狀態合約回歸的是元件測試。
+- **送菜流程的 E2E 只在夜間跑**，push 與 PR 不會觸發；壞掉要到隔天才看得到。
+  在 push／PR 擋住狀態合約回歸的仍是元件測試。
+- **沒有做過手動探索 QA**。現場作業（09–12）至今沒有像顧客端、店家後台那樣在 production 逐頁走過一輪。
 - **沒有送達失敗的處理路徑**。送錯桌、客人已離開這些情境只能靠取消或人工協調。
