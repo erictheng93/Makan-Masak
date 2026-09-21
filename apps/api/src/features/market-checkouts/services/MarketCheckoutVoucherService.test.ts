@@ -417,7 +417,11 @@ describe("redeemCachedMarketCheckoutVoucher", () => {
             name: "Platform 10",
             discountCents: 1000,
             allocations: [
-              { orderId: 1001, amountCents: 10000, discountCents: 1000 },
+              {
+                orderId: "019d0000-0000-7000-8000-000000000001",
+                amountCents: 10000,
+                discountCents: 1000,
+              },
             ],
           },
           {
@@ -427,7 +431,11 @@ describe("redeemCachedMarketCheckoutVoucher", () => {
             restaurantId: "rest-1",
             discountCents: 500,
             allocations: [
-              { orderId: 1002, amountCents: 5000, discountCents: 500 },
+              {
+                orderId: "019d0000-0000-7000-8000-000000000002",
+                amountCents: 5000,
+                discountCents: 500,
+              },
             ],
           },
         ],
@@ -468,8 +476,16 @@ describe("redeemCachedMarketCheckoutVoucher", () => {
       name: "ASYNC10",
       discountCents: 2400,
       allocations: [
-        { orderId: 1001, amountCents: 16000, discountCents: 1600 },
-        { orderId: 1002, amountCents: 8000, discountCents: 800 },
+        {
+          orderId: "019d0000-0000-7000-8000-000000000001",
+          amountCents: 16000,
+          discountCents: 1600,
+        },
+        {
+          orderId: "019d0000-0000-7000-8000-000000000002",
+          amountCents: 8000,
+          discountCents: 800,
+        },
       ],
     };
     const env = {
@@ -548,7 +564,11 @@ describe("redeemCachedMarketCheckoutVoucher", () => {
               name: "Fail",
               discountCents: 100,
               allocations: [
-                { orderId: 1001, amountCents: 1000, discountCents: 100 },
+                {
+                  orderId: "019d0000-0000-7000-8000-000000000001",
+                  amountCents: 1000,
+                  discountCents: 100,
+                },
               ],
             },
           }),

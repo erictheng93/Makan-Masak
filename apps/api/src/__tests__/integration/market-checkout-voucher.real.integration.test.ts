@@ -25,15 +25,22 @@ import {
 } from "@makanmasak/database";
 import { eq } from "drizzle-orm";
 import type { Env } from "../../types/env";
-import { MarketCheckoutVoucherService } from "../../features/market-checkouts/services/MarketCheckoutVoucherService";
+import {
+  MarketCheckoutVoucherService,
+  redeemCachedMarketCheckoutVoucher,
+} from "../../features/market-checkouts/services/MarketCheckoutVoucherService";
 
 let testDb: TestDatabase;
 
-function makeService(): MarketCheckoutVoucherService {
-  return new MarketCheckoutVoucherService({
+function makeEnv(): Env {
+  return {
     DB: testDb.bindings.DB,
     CACHE_KV: testDb.bindings.CACHE_KV,
-  } as Env);
+  } as Env;
+}
+
+function makeService(): MarketCheckoutVoucherService {
+  return new MarketCheckoutVoucherService(makeEnv());
 }
 
 interface SeedCouponOptions {
@@ -274,6 +281,43 @@ describe("MarketCheckoutVoucherService — validateAndPrice", () => {
 });
 
 describe("MarketCheckoutVoucherService — redeem", () => {
+  it("redeems cached UUID allocations after asynchronous payment success", async () => {
+    const couponId = await seedCoupon({
+      code: "ASYNC10",
+      discountPercentageBps: 1000,
+    });
+    await seedRestaurant();
+    const orderIds = [
+      "019d0000-0000-7000-8000-000000000001",
+      "019d0000-0000-7000-8000-000000000002",
+    ];
+    await seedOrder(orderIds[0], 16000);
+    await seedOrder(orderIds[1], 8000);
+
+    const env = makeEnv();
+    await env.CACHE_KV.put(
+      "market_checkout:async-uuid-checkout",
+      JSON.stringify({
+        appliedVoucher: {
+          couponId,
+          code: "ASYNC10",
+          name: "ASYNC10",
+          discountCents: 2400,
+          allocations: [
+            { orderId: orderIds[0], amountCents: 16000, discountCents: 1600 },
+            { orderId: orderIds[1], amountCents: 8000, discountCents: 800 },
+          ],
+        },
+      }),
+    );
+
+    await redeemCachedMarketCheckoutVoucher(env, "async-uuid-checkout");
+
+    const usage = await usageFor(couponId);
+    expect(usage.map((row) => row.orderId).sort()).toEqual(orderIds);
+    expect(await usedCountFor(couponId)).toBe(1);
+  });
+
   it("writes one coupon_usage per child and increments used_count once", async () => {
     const couponId = await seedCoupon({
       code: "MARKET10",

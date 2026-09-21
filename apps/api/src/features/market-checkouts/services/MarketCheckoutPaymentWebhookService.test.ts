@@ -257,8 +257,16 @@ describe("MarketCheckoutPaymentWebhookService", () => {
           name: "ASYNC10",
           discountCents: 1250,
           allocations: [
-            { orderId: 1001, amountCents: 8000, discountCents: 800 },
-            { orderId: 1002, amountCents: 4500, discountCents: 450 },
+            {
+              orderId: "019d0000-0000-7000-8000-000000000001",
+              amountCents: 8000,
+              discountCents: 800,
+            },
+            {
+              orderId: "019d0000-0000-7000-8000-000000000002",
+              amountCents: 4500,
+              discountCents: 450,
+            },
           ],
         },
       },
@@ -346,8 +354,16 @@ describe("MarketCheckoutPaymentWebhookService", () => {
       fundedBy: "platform",
       restaurantId: undefined,
       allocations: [
-        { orderId: 1001, amountCents: 8000, discountCents: 800 },
-        { orderId: 1002, amountCents: 4500, discountCents: 450 },
+        {
+          orderId: "019d0000-0000-7000-8000-000000000001",
+          amountCents: 8000,
+          discountCents: 800,
+        },
+        {
+          orderId: "019d0000-0000-7000-8000-000000000002",
+          amountCents: 4500,
+          discountCents: 450,
+        },
       ],
     });
     redeemSpy.mockRestore();

@@ -761,7 +761,8 @@ function readAppliedVoucherObject(value: unknown): AppliedVoucher | null {
     (alloc): alloc is VoucherAllocation =>
       alloc != null &&
       typeof alloc === "object" &&
-      typeof (alloc as VoucherAllocation).orderId === "number" &&
+      typeof (alloc as VoucherAllocation).orderId === "string" &&
+      (alloc as VoucherAllocation).orderId.length > 0 &&
       typeof (alloc as VoucherAllocation).amountCents === "number" &&
       typeof (alloc as VoucherAllocation).discountCents === "number",
   );
