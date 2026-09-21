@@ -334,7 +334,7 @@ describe("CreditService", () => {
       mockMutationResults,
       mockBatchResults,
     } = createService({
-      CREDIT_PIN_THRESHOLD_CENTS: "1000",
+      CREDIT_PIN_THRESHOLD_CENTS_TWD: "1000",
     } as Partial<Env>);
     const mutations = mockMutationResults({
       creditCards: { update: [{ changes: 1 }] }, // failed PIN bumps the retry count

@@ -23,9 +23,11 @@ import {
   normalizeCurrencyCode,
   type CurrencyCode,
 } from "@makanmasak/utils";
+import {
+  assertCreditAmountWithinLimit,
+  creditPinThresholdCents,
+} from "./credit-limits";
 
-// Spends strictly above this amount require a PIN ((b) 門檻式 PIN). Override via env.
-const DEFAULT_CREDIT_PIN_THRESHOLD_CENTS = 20000;
 const MAX_PIN_RETRIES = 5;
 const PIN_LOCK_MS = 15 * 60 * 1000; // lock card for 15 min after repeated PIN failures
 const CREDIT_ROLLING_EXPIRY_MS = 365 * 24 * 60 * 60 * 1000; // activity extends expiry 1 year
@@ -142,15 +144,9 @@ type CreditCardRow = typeof creditCards.$inferSelect;
  */
 export class CreditService {
   private readonly db: ReturnType<typeof drizzle>;
-  private readonly pinThresholdCents: number;
 
   constructor(private readonly env: Env) {
     this.db = drizzle(env.DB);
-    const parsed = Number(env.CREDIT_PIN_THRESHOLD_CENTS);
-    this.pinThresholdCents =
-      Number.isFinite(parsed) && parsed >= 0
-        ? parsed
-        : DEFAULT_CREDIT_PIN_THRESHOLD_CENTS;
   }
 
   async issueCard(input: IssueCardInput): Promise<IssueCardResult> {
@@ -160,11 +156,12 @@ export class CreditService {
     ) {
       throw badRequest("Initial balance cannot be negative");
     }
-    assertAlignedCreditAmount(
+    const currency = assertAlignedCreditAmount(
       input.initialBalanceCents ?? 0,
       input.currency,
       "CREDIT_BALANCE_NOT_ALIGNED",
     );
+    assertCreditAmountWithinLimit(input.initialBalanceCents ?? 0, currency);
     const secretHash = input.pin
       ? await bcrypt.hash(input.pin, BCRYPT_COST)
       : null;
@@ -262,7 +259,16 @@ export class CreditService {
         "CREDIT_CURRENCY_MISMATCH",
       );
     }
-    await this.assertPinIfRequired(card, input.amountCents, input.pin);
+    const currency = assertCreditAmountWithinLimit(
+      input.amountCents,
+      account.currency,
+    );
+    await this.assertPinIfRequired(
+      card,
+      input.amountCents,
+      currency,
+      input.pin,
+    );
 
     return this.applyLedgerMovement({
       accountId: account.id,
@@ -304,6 +310,7 @@ export class CreditService {
         "CREDIT_CURRENCY_MISMATCH",
       );
     }
+    assertCreditAmountWithinLimit(input.amountCents, account.currency);
 
     return this.applyLedgerMovement({
       accountId: account.id,
@@ -621,12 +628,13 @@ export class CreditService {
   private async assertPinIfRequired(
     card: CreditCardRow,
     amountCents: number,
+    currency: CurrencyCode,
     pin: string | undefined,
   ): Promise<void> {
     if (card.status !== "active") {
       throw forbidden("Credit card is not active", "CREDIT_CARD_INACTIVE");
     }
-    if (amountCents <= this.pinThresholdCents) {
+    if (amountCents <= creditPinThresholdCents(this.env, currency)) {
       return; // small amount — PIN not required
     }
     if (!card.secretHash) {

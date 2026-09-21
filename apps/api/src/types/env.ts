@@ -207,8 +207,11 @@ export interface Env {
   SHOP_WALLET_GATEWAY_TOKEN?: string;
   NOTIFICATION_FROM_EMAIL?: string;
 
-  // Stored-value credits (代幣): spends at or below this amount skip PIN ((b) 門檻式 PIN)
-  CREDIT_PIN_THRESHOLD_CENTS?: string;
+  // Stored-value credits (代幣): per-currency overrides for the PIN threshold.
+  // Unset or invalid values use the product defaults in credit-limits.ts.
+  CREDIT_PIN_THRESHOLD_CENTS_TWD?: string;
+  CREDIT_PIN_THRESHOLD_CENTS_MYR?: string;
+  CREDIT_PIN_THRESHOLD_CENTS_VND?: string;
   // Online top-up (Phase 2) provider gateway + webhook verification
   CREDIT_TOPUP_PROVIDER_URL?: string;
   CREDIT_TOPUP_PROVIDER_TOKEN?: string;

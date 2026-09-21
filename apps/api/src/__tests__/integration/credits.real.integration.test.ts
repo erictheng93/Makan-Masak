@@ -443,7 +443,9 @@ describe("CreditService — movement atomicity", () => {
 });
 
 describe("CreditService — threshold PIN", () => {
-  const PIN_ENV = { CREDIT_PIN_THRESHOLD_CENTS: "1000" } as Partial<Env>;
+  const PIN_ENV = {
+    CREDIT_PIN_THRESHOLD_CENTS_TWD: "1000",
+  } as Partial<Env>;
 
   it("skips PIN at or below the threshold", async () => {
     const service = makeService(PIN_ENV);
@@ -537,6 +539,111 @@ describe("CreditService — threshold PIN", () => {
         pin: "1234",
       }),
     ).rejects.toMatchObject({ code: "CREDIT_CARD_LOCKED" });
+  });
+});
+
+describe("CreditService — currency-specific controls", () => {
+  it("uses each currency's default PIN threshold", async () => {
+    const service = makeService();
+    const vndCard = await service.issueCard({
+      currency: "VND",
+      initialBalanceCents: 40_000_000,
+      pin: "1234",
+    });
+    const twdCard = await service.issueCard({
+      currency: "TWD",
+      initialBalanceCents: 50_000,
+      pin: "1234",
+    });
+
+    await expect(
+      service.spend({
+        publicId: vndCard.publicId,
+        amountCents: 15_000_000, // ₫150,000 — below the ₫200,000 threshold
+        currency: "VND",
+        idempotencyKey: "vnd-without-pin",
+        sourceType: "market_checkout",
+      }),
+    ).resolves.toMatchObject({ balanceAfterCents: 25_000_000 });
+    await expect(
+      service.spend({
+        publicId: vndCard.publicId,
+        amountCents: 25_000_000, // ₫250,000 — above threshold
+        currency: "VND",
+        idempotencyKey: "vnd-pin-required",
+        sourceType: "market_checkout",
+      }),
+    ).rejects.toMatchObject({ code: "CREDIT_PIN_REQUIRED" });
+
+    await expect(
+      service.spend({
+        publicId: twdCard.publicId,
+        amountCents: 15_000, // NT$150 — below the NT$200 threshold
+        currency: "TWD",
+        idempotencyKey: "twd-without-pin",
+        sourceType: "market_checkout",
+      }),
+    ).resolves.toMatchObject({ balanceAfterCents: 35_000 });
+    await expect(
+      service.spend({
+        publicId: twdCard.publicId,
+        amountCents: 25_000, // NT$250 — above threshold
+        currency: "TWD",
+        idempotencyKey: "twd-pin-required",
+        sourceType: "market_checkout",
+      }),
+    ).rejects.toMatchObject({ code: "CREDIT_PIN_REQUIRED" });
+  });
+
+  it("allows a VND top-up above the former fixed Zod cap", async () => {
+    const service = makeService();
+    const card = await service.issueCard({ currency: "VND" });
+
+    await expect(
+      service.topup({
+        publicId: card.publicId,
+        amountCents: 500_000_000, // ₫5,000,000
+        currency: "VND",
+        idempotencyKey: "vnd-five-million-topup",
+        sourceType: "topup",
+      }),
+    ).resolves.toMatchObject({ balanceAfterCents: 500_000_000 });
+  });
+
+  it("enforces the currency cap for issuance, top-up, and spend", async () => {
+    const service = makeService();
+
+    await expect(
+      service.issueCard({
+        currency: "VND",
+        initialBalanceCents: 30_000_000_100,
+      }),
+    ).rejects.toMatchObject({ code: "CREDIT_AMOUNT_EXCEEDS_LIMIT" });
+
+    const vndCard = await service.issueCard({ currency: "VND" });
+    await expect(
+      service.topup({
+        publicId: vndCard.publicId,
+        amountCents: 30_000_000_100,
+        currency: "VND",
+        idempotencyKey: "vnd-over-cap-topup",
+        sourceType: "topup",
+      }),
+    ).rejects.toMatchObject({ code: "CREDIT_AMOUNT_EXCEEDS_LIMIT" });
+
+    const twdCard = await service.issueCard({
+      currency: "TWD",
+      initialBalanceCents: 100_000_000,
+    });
+    await expect(
+      service.spend({
+        publicId: twdCard.publicId,
+        amountCents: 100_000_100,
+        currency: "TWD",
+        idempotencyKey: "twd-over-cap-spend",
+        sourceType: "market_checkout",
+      }),
+    ).rejects.toMatchObject({ code: "CREDIT_AMOUNT_EXCEEDS_LIMIT" });
   });
 });
 
@@ -657,7 +764,7 @@ describe("CreditService — topup & refund", () => {
 
 describe("CreditService — card management", () => {
   it("sets a PIN that then authorises an above-threshold spend", async () => {
-    const service = makeService({ CREDIT_PIN_THRESHOLD_CENTS: "1000" });
+    const service = makeService({ CREDIT_PIN_THRESHOLD_CENTS_TWD: "1000" });
     const card = await service.issueCard({
       currency: "TWD",
       initialBalanceCents: 5000,

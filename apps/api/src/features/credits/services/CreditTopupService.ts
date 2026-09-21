@@ -17,6 +17,7 @@ import {
 } from "../../../shared/utils/provider-money";
 import { PaymentAuditService } from "../../billing/services/PaymentAuditService";
 import { CreditService } from "./CreditService";
+import { assertCreditAmountWithinLimit } from "./credit-limits";
 
 const INTENT_TTL_MS = 30 * 60 * 1000; // intents expire after 30 minutes
 const TOPUP_PROVIDER_NAME = "credit_topup";
@@ -134,7 +135,6 @@ export class CreditTopupService {
         "CREDIT_TOPUP_AMOUNT_NOT_ALIGNED",
       );
     }
-
     const account = await this.db
       .select({
         id: creditAccounts.id,
@@ -160,6 +160,7 @@ export class CreditTopupService {
         "CREDIT_CURRENCY_MISMATCH",
       );
     }
+    assertCreditAmountWithinLimit(input.amountCents, account.currency);
 
     const expiresAt = new Date(Date.now() + INTENT_TTL_MS);
     const [intent] = await this.db

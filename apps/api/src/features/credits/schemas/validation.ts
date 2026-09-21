@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+// Currency-specific caps live in CreditService, after it has loaded a card's
+// authoritative currency. This only prevents unsafe JavaScript/SQLite amounts.
+const maxSafeCreditAmountCents = Number.MAX_SAFE_INTEGER;
+
 /** Card currencies follow the market currencies (single-currency per card). */
 const currencySchema = z.lazy(() => z.enum(["TWD", "MYR", "VND"]));
 const pinSchema = z.lazy(() =>
@@ -22,7 +26,7 @@ export const issueCardSchema = z.lazy(() =>
       .number()
       .int()
       .nonnegative()
-      .max(100_000_000)
+      .max(maxSafeCreditAmountCents)
       .optional(),
   }),
 );
@@ -30,7 +34,7 @@ export type IssueCardBody = z.infer<typeof issueCardSchema>;
 
 export const topupSchema = z.lazy(() =>
   z.object({
-    amountCents: z.number().int().positive().max(100_000_000),
+    amountCents: z.number().int().positive().max(maxSafeCreditAmountCents),
     currency: currencySchema,
     // Phase 1 funds out-of-band (cash at the counter / manual adjustment).
     // Online-payment funding is Phase 2.
@@ -42,7 +46,7 @@ export type TopupBody = z.infer<typeof topupSchema>;
 
 export const onlineTopupSchema = z.lazy(() =>
   z.object({
-    amountCents: z.number().int().positive().max(100_000_000),
+    amountCents: z.number().int().positive().max(maxSafeCreditAmountCents),
     currency: currencySchema,
   }),
 );

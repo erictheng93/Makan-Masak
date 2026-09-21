@@ -4,6 +4,7 @@ import {
   freezeSchema,
   issueCardSchema,
   ledgerQuerySchema,
+  onlineTopupSchema,
   setPinSchema,
   topupSchema,
 } from "./validation";
@@ -40,6 +41,12 @@ describe("credits validation schemas", () => {
     });
 
     expect(freezeSchema.parse({})).toEqual({ status: "frozen" });
+    expect(
+      onlineTopupSchema.parse({
+        amountCents: 500_000_000,
+        currency: "VND",
+      }),
+    ).toMatchObject({ amountCents: 500_000_000, currency: "VND" });
   });
 
   it("validates PIN updates and coerces query numbers", () => {
