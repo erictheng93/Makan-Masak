@@ -79,6 +79,12 @@ const AUTH_PASSWORD =
   optionalEnv("WORKFLOW_AUTH_PASSWORD") ||
   optionalEnv("SMOKE_AUTH_PASSWORD") ||
   (IS_LOCAL_API ? "owner123" : undefined);
+const SERVICE_USERNAME =
+  optionalEnv("WORKFLOW_SERVICE_USERNAME") ||
+  (IS_LOCAL_API ? "service1" : undefined);
+const SERVICE_PASSWORD =
+  optionalEnv("WORKFLOW_SERVICE_PASSWORD") ||
+  (IS_LOCAL_API ? "service123" : undefined);
 const CHEF_USERNAME = optionalEnv("WORKFLOW_CHEF_USERNAME");
 const CHEF_PASSWORD = optionalEnv("WORKFLOW_CHEF_PASSWORD");
 const MANAGEMENT_TOKEN =
@@ -366,6 +372,7 @@ declare global {
 }
 
 let loginDataPromise: Promise<SmokeLoginData> | undefined;
+let serviceLoginDataPromise: Promise<SmokeLoginData> | undefined;
 let chefLoginDataPromise: Promise<LoginResponse["data"]> | undefined;
 
 function csrfHeaders() {
@@ -389,6 +396,22 @@ function getLoginData(): Promise<SmokeLoginData> | undefined {
   });
 
   return loginDataPromise;
+}
+
+function getServiceLoginData(): Promise<SmokeLoginData> | undefined {
+  if (!SERVICE_USERNAME || !SERVICE_PASSWORD) return undefined;
+
+  serviceLoginDataPromise ??= smokeLogin(
+    API_URL,
+    SERVICE_USERNAME,
+    SERVICE_PASSWORD,
+  );
+  serviceLoginDataPromise = serviceLoginDataPromise.catch((error) => {
+    serviceLoginDataPromise = undefined;
+    throw error;
+  });
+
+  return serviceLoginDataPromise;
 }
 
 async function resolveFixtureIds() {
@@ -1894,11 +1917,17 @@ test.describe("Real system workflows", () => {
 
     skipWhen(!ADMIN_URL, "WORKFLOW_ADMIN_URL/SMOKE_ADMIN_URL is required");
 
-    const loginData = await getLoginData();
+    const ownerLoginData = await getLoginData();
+    const serviceLoginData = await getServiceLoginData();
     assertLoginData(
-      loginData,
+      ownerLoginData,
       "WORKFLOW_AUTH_USERNAME/SMOKE_AUTH_USERNAME and password are required",
     );
+    assertLoginData(
+      serviceLoginData,
+      "WORKFLOW_SERVICE_USERNAME and WORKFLOW_SERVICE_PASSWORD are required",
+    );
+    expect(serviceLoginData.user?.role, "service login role").toBe(3);
 
     const fixtureIds = await resolveFixtureIds();
     skipWhen(
@@ -1933,13 +1962,13 @@ test.describe("Real system workflows", () => {
     expect(typeof orderNumber, "created service order number").toBe("string");
     expect(typeof guestToken, "service guest token").toBe("string");
 
-    await confirmOrder(orderId!, loginData.token!);
-    await updateOrderStatus(orderId!, loginData.token!, "preparing");
-    await updateOrderStatus(orderId!, loginData.token!, "ready");
-    const readyOrder = await fetchOrder(orderId!, loginData.token!);
+    await confirmOrder(orderId!, ownerLoginData.token!);
+    await updateOrderStatus(orderId!, ownerLoginData.token!, "preparing");
+    await updateOrderStatus(orderId!, ownerLoginData.token!, "ready");
+    const readyOrder = await fetchOrder(orderId!, ownerLoginData.token!);
     expect(readyOrder.data?.status).toBe("ready");
 
-    await installAdminSession(page, loginData);
+    await installAdminSession(page, serviceLoginData);
     const statusRequests: string[] = [];
     page.on("request", (request) => {
       if (
@@ -1987,12 +2016,12 @@ test.describe("Real system workflows", () => {
       await expect
         .poll(
           async () =>
-            (await fetchOrder(orderId!, loginData.token!)).data?.status,
+            (await fetchOrder(orderId!, ownerLoginData.token!)).data?.status,
         )
         .toBe("delivered");
       await expect(page.locator("vite-error-overlay")).toHaveCount(0);
     } finally {
-      await cancelOrderAsOwner(orderId!, loginData.token!);
+      await cancelOrderAsOwner(orderId!, ownerLoginData.token!);
       await fetch(`${API_URL}/api/v1/guest-orders/${orderId}/cancel`, {
         method: "POST",
         headers: { Authorization: `Bearer ${guestToken}` },

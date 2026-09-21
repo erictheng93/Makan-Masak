@@ -237,6 +237,8 @@ jobs:
           E2E_BASE_URL: http://localhost:3000
           WORKFLOW_AUTH_USERNAME: owner1
           WORKFLOW_AUTH_PASSWORD: owner123
+          WORKFLOW_SERVICE_USERNAME: service1
+          WORKFLOW_SERVICE_PASSWORD: service123
           # Fixed ids from scripts/seed-e2e-fixtures.sql.
           WORKFLOW_RESTAURANT_ID: 019469a0-0099-7000-8000-000000000099
           WORKFLOW_TABLE_ID: "9001"
