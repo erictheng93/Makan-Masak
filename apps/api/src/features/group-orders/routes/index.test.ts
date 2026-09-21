@@ -615,6 +615,89 @@ describe("group orders routes", () => {
     expect(finalizeGroupOrder).toHaveBeenCalledTimes(1);
   });
 
+  it("gives each completed-group member an order-scoped tracking token", async () => {
+    getGroupOrder.mockResolvedValue({
+      groupOrder: {
+        id: groupOrderId,
+        status: "completed",
+        masterOrderId: "order-1",
+        restaurantId: "restaurant-1",
+        tableId: 7,
+      },
+      members: [{ id: memberId, memberName: "Sam" }],
+    });
+    isMemberSession.mockResolvedValue(true);
+    const env = createRateLimitEnv();
+
+    const response = await routes.fetch(
+      new Request(`https://test/${groupOrderId}/tracking-token`, {
+        method: "POST",
+        body: JSON.stringify({ memberToken: "member-session" }),
+      }),
+      env as never,
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      data: { guestToken: string };
+    };
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        orderId: "order-1",
+        restaurantId: "restaurant-1",
+        tableId: 7,
+        guestToken: expect.stringMatching(/^gt_[0-9a-f]{64}$/),
+      },
+    });
+    expect(isMemberSession).toHaveBeenCalledWith(
+      groupOrderId,
+      memberId,
+      "member-session",
+    );
+    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+      `guest_token:${body.data.guestToken}`,
+      expect.stringContaining('"orderId":"order-1"'),
+      { expirationTtl: 4 * 60 * 60 },
+    );
+  });
+
+  it("refuses tracking credentials for non-members and unfinished groups", async () => {
+    getGroupOrder.mockResolvedValue({
+      groupOrder: {
+        id: groupOrderId,
+        status: "active",
+        restaurantId: "restaurant-1",
+      },
+      members: [{ id: memberId, memberName: "Sam" }],
+    });
+    isMemberSession.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const env = createRateLimitEnv();
+
+    const forbiddenResponse = await withSilencedRouteError(() =>
+      routes.fetch(
+        new Request(`https://test/${groupOrderId}/tracking-token`, {
+          method: "POST",
+          body: JSON.stringify({ memberToken: "not-a-member" }),
+        }),
+        env as never,
+      ),
+    );
+    expect(forbiddenResponse.status).toBe(403);
+
+    const unfinishedResponse = await withSilencedRouteError(() =>
+      routes.fetch(
+        new Request(`https://test/${groupOrderId}/tracking-token`, {
+          method: "POST",
+          body: JSON.stringify({ memberToken: "member-session" }),
+        }),
+        env as never,
+      ),
+    );
+    expect(unfinishedResponse.status).toBe(400);
+    expect(env.CACHE_KV.put).not.toHaveBeenCalled();
+  });
+
   /**
    * The host's cart is the one place these codes can be acted on — a name and
    * a remaining count tell them what to remove (#359).

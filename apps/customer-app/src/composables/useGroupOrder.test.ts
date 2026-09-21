@@ -45,7 +45,14 @@ import {
   readHostCredentials,
   saveHostCredentials,
 } from "@/utils/groupOrderSession";
-import { useGroupOrder } from "./useGroupOrder";
+import {
+  clearGroupRealtimeTokenCacheForTest,
+  useGroupOrder,
+} from "./useGroupOrder";
+
+beforeEach(() => {
+  clearGroupRealtimeTokenCacheForTest();
+});
 
 /**
  * `apiClient` already unwraps the `{ success, data }` envelope and resolves to
@@ -988,6 +995,26 @@ describe("useGroupOrder — submitting the order", () => {
     });
     expect(group.groupOrder.value?.status).toBe("active");
   });
+
+  it("exchanges a member credential for an order-scoped tracking token", async () => {
+    const group = await createHostedGroup();
+    vi.mocked(apiClient.post).mockResolvedValueOnce({
+      orderId: "order-1",
+      restaurantId: "rest-1",
+      tableId: 7,
+      guestToken: "gt_tracking-1",
+      tokenExpiresAt: "2026-06-07T04:00:00.000Z",
+    });
+
+    await expect(group.getOrderTrackingToken()).resolves.toMatchObject({
+      orderId: "order-1",
+      guestToken: "gt_tracking-1",
+    });
+    expect(apiClient.post).toHaveBeenLastCalledWith(
+      "/orders/group/go-1/tracking-token",
+      { memberToken: "session-1" },
+    );
+  });
 });
 
 /**
@@ -1129,5 +1156,51 @@ describe("useGroupOrder — a member's session outlives the instance", () => {
       "/realtime/auth/group-token",
       expect.objectContaining({ memberToken: "session-1" }),
     );
+  });
+
+  it("reuses one valid realtime token after a group cart remounts", async () => {
+    const first = await createHostedGroup();
+    vi.mocked(apiClient.post).mockResolvedValueOnce({
+      token: "rt-1",
+      expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
+    });
+    await first.connectToGroupOrder("go-1");
+    first.disconnectRealtime();
+
+    const returning = useGroupOrder({ restaurantId: "rest-1" });
+    vi.mocked(apiClient.get).mockResolvedValueOnce(summaryResponse());
+    await returning.loadGroupOrder("go-1");
+    await returning.connectToGroupOrder("go-1");
+
+    const realtimeRequests = vi
+      .mocked(apiClient.post)
+      .mock.calls.filter(([path]) => path === "/realtime/auth/group-token");
+    expect(realtimeRequests).toHaveLength(1);
+    expect(ws.connect).toHaveBeenCalledTimes(2);
+  });
+
+  it("coalesces simultaneous token requests from two fresh group views", async () => {
+    await createHostedGroup();
+    const first = useGroupOrder({ restaurantId: "rest-1" });
+    const second = useGroupOrder({ restaurantId: "rest-1" });
+    vi.mocked(apiClient.get).mockResolvedValue(summaryResponse());
+    await Promise.all([
+      first.loadGroupOrder("go-1"),
+      second.loadGroupOrder("go-1"),
+    ]);
+    vi.mocked(apiClient.post).mockResolvedValueOnce({
+      token: "rt-1",
+      expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
+    });
+
+    await Promise.all([
+      first.connectToGroupOrder("go-1"),
+      second.connectToGroupOrder("go-1"),
+    ]);
+
+    const realtimeRequests = vi
+      .mocked(apiClient.post)
+      .mock.calls.filter(([path]) => path === "/realtime/auth/group-token");
+    expect(realtimeRequests).toHaveLength(1);
   });
 });

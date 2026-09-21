@@ -24,6 +24,7 @@ const groupOrderMock = vi.hoisted(() => ({
   updateCartItem: vi.fn(),
   removeFromCart: vi.fn(),
   submitOrder: vi.fn(),
+  getOrderTrackingToken: vi.fn(),
   setSplitBillMode: vi.fn(),
   setAutoSubmitOnExpiry: vi.fn(),
   autoSubmitOnExpiry: { value: false },
@@ -545,6 +546,45 @@ describe("GroupOrderView", () => {
     expect(panel.exists()).toBe(true);
     // The cart is read-only by then: the order it belongs to is already placed.
     expect(panel.props("orderStatus")).toBe("completed");
+    expect(wrapper.find('[data-testid="group-order-completed"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.find('[data-testid="group-order-menu-link"]').exists()).toBe(
+      false,
+    );
+    expect(groupOrderMock.connectToGroupOrder).not.toHaveBeenCalled();
+  });
+
+  it("stores an order-scoped credential before opening completed order tracking", async () => {
+    groupOrderMock.groupOrder.value = {
+      ...loadedGroupOrder("completed"),
+      tableId: "7",
+    };
+    groupOrderMock.getOrderTrackingToken.mockResolvedValueOnce({
+      orderId: "order-1",
+      restaurantId: "rest-1",
+      tableId: 7,
+      guestToken: "gt_group-order-1",
+    });
+
+    const wrapper = mount(GroupOrderView, {
+      ...mountOptions,
+      props: { groupOrderId: "go-1" },
+    });
+    await flushPromises();
+    await wrapper.find('[data-testid="group-order-tracking"]').trigger("click");
+    await flushPromises();
+
+    expect(localStorage.getItem("guest_auth_token:order-1")).toBe(
+      "gt_group-order-1",
+    );
+    expect(localStorage.getItem("guest_auth_token")).not.toBe(
+      "gt_group-order-1",
+    );
+    expect(push).toHaveBeenCalledWith({
+      name: "OrderTracking",
+      params: { restaurantId: "rest-1", tableId: 7, orderId: "order-1" },
+    });
   });
 
   it("locks editing for any future non-active status", async () => {

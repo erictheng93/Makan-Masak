@@ -3243,6 +3243,7 @@ export class GroupOrdersService implements IGroupOrderService {
       totalAmount: moneyAmount(data.totalAmountCents),
       finalizedAt: lockedAt,
       paidAt: completedAt,
+      masterOrderId: data.masterOrderId ?? undefined,
       finalizeFailure: settings.finalizeFailure,
       createdAt,
       updatedAt,

@@ -1206,6 +1206,9 @@ describe("i18n Integration Tests", () => {
       "group.connectionError",
       "group.recoveryCodeRequired",
       "group.unknownError",
+      "group.orderPlacedTitle",
+      "group.orderPlacedDesc",
+      "group.viewOrderProgress",
     ];
 
     it("should have all group failure keys in all 6 locales", () => {

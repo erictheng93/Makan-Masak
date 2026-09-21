@@ -9,6 +9,7 @@ import { useGroupOrder } from "@/composables/useGroupOrder";
 import { useI18n } from "@/composables/useI18n";
 import { getGroupOrderErrorI18nKey } from "@/utils/group-order-error";
 import { getOrderSubmitErrorCodeI18nKey } from "@/utils/order-submit-error";
+import { storeGuestOrderToken } from "@/utils/guest-order-tokens";
 import type { SplitBillConfig } from "@/composables/useGroupOrder";
 import type { GroupOrderFeeMode } from "@makanmasak/shared-types";
 
@@ -36,6 +37,9 @@ const isLocked = computed(() => {
 
 const canSubmitOrder = computed(
   () => group.isHost.value && group.groupOrder.value?.status === "active",
+);
+const isCompleted = computed(
+  () => group.groupOrder.value?.status === "completed",
 );
 
 const currentUserId = computed(() => group.currentMemberId?.value ?? "");
@@ -96,9 +100,47 @@ async function loadGroupOrder(): Promise<void> {
   try {
     await group.loadGroupOrder(props.groupOrderId);
     void loadChargeRates(group.groupOrder.value?.restaurantId ?? "");
-    await group.connectToGroupOrder(props.groupOrderId);
+    // Completed groups intentionally cannot receive a group realtime token.
+    // They are no longer a mutable cart, so treating that expected 400 as a
+    // page-load failure hid the completed order from every diner (#396).
+    if (group.groupOrder.value?.status === "active") {
+      await group.connectToGroupOrder(props.groupOrderId);
+    }
   } catch (error) {
     viewError.value = t(getGroupOrderErrorI18nKey(error, "group.loadFailed"));
+  }
+}
+
+async function viewOrderTracking(): Promise<void> {
+  viewError.value = "";
+  try {
+    const tracking = await group.getOrderTrackingToken();
+    // Keep this scoped to its order and do not update the legacy "latest"
+    // token. A group tracker must not displace another order on this device.
+    storeGuestOrderToken(tracking.orderId, tracking.guestToken, false);
+    const tableId = tracking.tableId ?? group.groupOrder.value?.tableId;
+    await router.push(
+      tableId == null
+        ? {
+            name: "ShopOrderTracking",
+            params: {
+              restaurantId: tracking.restaurantId,
+              orderId: tracking.orderId,
+            },
+          }
+        : {
+            name: "OrderTracking",
+            params: {
+              restaurantId: tracking.restaurantId,
+              tableId: Number(tableId),
+              orderId: tracking.orderId,
+            },
+          },
+    );
+  } catch (error) {
+    viewError.value = t(
+      getGroupOrderErrorI18nKey(error, "group.connectionError"),
+    );
   }
 }
 
@@ -266,8 +308,29 @@ onUnmounted(() => {
           @settle-my-share="settleMyShare"
         />
 
+        <section
+          v-if="isCompleted"
+          data-testid="group-order-completed"
+          class="mt-4 rounded-2xl bg-ios-green/10 p-5 shadow-card-sm"
+        >
+          <h2 class="text-lg font-semibold text-ios-text">
+            {{ t("group.orderPlacedTitle") }}
+          </h2>
+          <p class="mt-1 text-sm text-ios-secondary">
+            {{ t("group.orderPlacedDesc") }}
+          </p>
+          <button
+            data-testid="group-order-tracking"
+            type="button"
+            class="mt-4 w-full rounded-full bg-ios-blue px-4 py-3.5 text-base font-semibold text-white transition-all duration-200 active:scale-[0.98]"
+            @click="viewOrderTracking"
+          >
+            {{ t("group.viewOrderProgress") }}
+          </button>
+        </section>
+
         <button
-          v-if="!isLocked && menuRoute"
+          v-if="!isLocked && !isCompleted && menuRoute"
           data-testid="group-order-menu-link"
           type="button"
           class="mt-4 w-full rounded-full border border-ios-blue/25 bg-ios-blue/10 px-4 py-3.5 text-base font-semibold text-ios-blue transition-all duration-200 active:scale-[0.98]"
@@ -322,7 +385,7 @@ onUnmounted(() => {
         so it sits with whoever owns the group.
       -->
       <div
-        v-if="group.isHost.value && !isLocked"
+        v-if="group.isHost.value && !isLocked && !isCompleted"
         class="mt-6 rounded-2xl bg-ios-card p-5 shadow-card-sm"
       >
         <div class="flex items-start justify-between gap-4">

@@ -35,6 +35,8 @@ export interface GroupOrder extends Omit<BaseEntity, "id"> {
   totalAmount: number;
   finalizedAt?: Date;
   paidAt?: Date;
+  /** The real order created when this group is completed, if one exists. */
+  masterOrderId?: string;
   finalizeFailure?: GroupOrderFinalizeFailure;
 }
 

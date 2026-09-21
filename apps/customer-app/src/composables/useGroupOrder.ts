@@ -94,6 +94,8 @@ export interface GroupOrder {
   feeMode: GroupOrderFeeMode;
   /** Empty while the table is still ordering. */
   splitBills: GroupSplitBill[];
+  /** Set once the group cart is finalized into a real order. */
+  masterOrderId?: string;
   createdAt: number;
   updatedAt: number;
   expiresAt?: number;
@@ -129,6 +131,7 @@ interface BackendGroupOrder {
   shareCode?: string;
   createdBy?: string | null;
   status: GroupOrderStatus;
+  masterOrderId?: string | null;
   splitType?: "equal" | "proportional" | "individual" | "by_item" | "custom";
   autoSubmitOnExpiry?: boolean;
   feeMode?: GroupOrderFeeMode;
@@ -160,6 +163,19 @@ interface RecoverHostResponse {
 interface SubmitGroupOrderResponse {
   masterOrderId?: string;
   status?: GroupOrderStatus;
+}
+
+interface GroupOrderTrackingTokenResponse {
+  orderId: string;
+  restaurantId: string;
+  tableId?: number | string;
+  guestToken: string;
+  tokenExpiresAt: string;
+}
+
+interface GroupOrderRealtimeTokenResponse {
+  token: string;
+  expiresAt?: string;
 }
 
 interface BackendGroupCartItem {
@@ -217,6 +233,49 @@ interface MemberSession {
 }
 
 const memberSessions = new Map<string, MemberSession>();
+
+interface CachedRealtimeToken {
+  token: string;
+  expiresAt: number;
+}
+
+const realtimeTokenCache = new Map<string, CachedRealtimeToken>();
+const realtimeTokenRequests = new Map<string, Promise<CachedRealtimeToken>>();
+
+function realtimeTokenCacheKey(
+  groupOrderId: string,
+  memberToken: string,
+): string {
+  // A token belongs to one member, not merely one cart. Sharing it between
+  // different member credentials would turn a page-local optimisation into an
+  // authorization bypass.
+  return `${groupOrderId}:${memberToken}`;
+}
+
+function jwtExpiryMs(token: string): number | null {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const decoded = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+    const exp = (JSON.parse(decoded) as { exp?: unknown }).exp;
+    return typeof exp === "number" && Number.isFinite(exp) ? exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+function realtimeTokenExpiryMs(
+  response: GroupOrderRealtimeTokenResponse,
+): number | null {
+  const expiresAt = response.expiresAt ? Date.parse(response.expiresAt) : NaN;
+  return Number.isFinite(expiresAt) ? expiresAt : jwtExpiryMs(response.token);
+}
+
+/** Test-only reset keeps independently mocked composables from sharing state. */
+export function clearGroupRealtimeTokenCacheForTest(): void {
+  realtimeTokenCache.clear();
+  realtimeTokenRequests.clear();
+}
 
 function saveMemberSession(session: MemberSession): void {
   memberSessions.set(session.groupOrderId, session);
@@ -334,6 +393,7 @@ function mapSummary(summary: GroupOrderSummary): GroupOrder {
       isSettled: bill.paymentStatus === "paid",
       settledBy: bill.settledBy ?? null,
     })),
+    masterOrderId: summary.groupOrder.masterOrderId ?? undefined,
     createdAt: timestamp(summary.groupOrder.createdAt),
     updatedAt: timestamp(summary.groupOrder.updatedAt),
     expiresAt: timestamp(summary.groupOrder.expiresAt),
@@ -382,6 +442,8 @@ export function useGroupOrder(options: {
    * host turns it on — see the toggle in GroupOrderView.
    */
   const autoSubmitOnExpiry = ref(false);
+  let realtimeGroupOrderId: string | null = null;
+  let realtimeUrl = "";
 
   function handleRealtimeMessage(message: GroupOrderRealtimeMessage): void {
     if (!groupOrder.value || typeof message.type !== "string") return;
@@ -438,7 +500,18 @@ export function useGroupOrder(options: {
     disconnect,
     connectionStatus: _connectionStatus,
   } = useWebSocket({
+    getUrl: async () => realtimeUrl,
     onMessage: handleRealtimeMessage,
+    onClose: () => {
+      isConnected.value = false;
+    },
+    onAuthFailure: async () => {
+      if (!realtimeGroupOrderId || !memberToken.value) return;
+      realtimeTokenCache.delete(
+        realtimeTokenCacheKey(realtimeGroupOrderId, memberToken.value),
+      );
+      realtimeUrl = await buildGroupRealtimeUrl(realtimeGroupOrderId);
+    },
   });
 
   // Computed
@@ -654,30 +727,14 @@ export function useGroupOrder(options: {
         throw groupOrderError("GROUP_NOT_A_MEMBER");
       }
 
-      const tokenResponse = await apiClient.post<{ token: string }>(
-        "/realtime/auth/group-token",
-        {
-          groupOrderId,
-          memberToken: memberToken.value,
-        },
-      );
+      // A single view can initialise twice while routing settles. More
+      // importantly, a restored cart should not exchange another credential
+      // just because Vue remounted it.
+      if (isConnected.value) return;
 
-      if (!tokenResponse) {
-        throw groupOrderError("GROUP_REALTIME_TOKEN_FAILED");
-      }
-
-      const token = tokenResponse.token;
-
-      // Connect to WebSocket using URL string
-      const realtimeUrl = import.meta.env.VITE_REALTIME_URL;
-      if (!realtimeUrl) {
-        throw new Error(
-          "[Config Error] VITE_REALTIME_URL is required for group order WebSocket. " +
-            "Please set this environment variable in your .env file.",
-        );
-      }
-      const wsUrl = `${realtimeUrl}/customer/${groupOrderId}?token=${token}`;
-      connect(wsUrl);
+      realtimeGroupOrderId = groupOrderId;
+      realtimeUrl = await buildGroupRealtimeUrl(groupOrderId);
+      connect(realtimeUrl);
 
       isConnected.value = true;
       sessionExpired.value = false;
@@ -694,6 +751,66 @@ export function useGroupOrder(options: {
       }
       throw err;
     }
+  }
+
+  async function buildGroupRealtimeUrl(groupOrderId: string): Promise<string> {
+    const realtimeBaseUrl = import.meta.env.VITE_REALTIME_URL;
+    if (!realtimeBaseUrl) {
+      throw new Error(
+        "[Config Error] VITE_REALTIME_URL is required for group order WebSocket. " +
+          "Please set this environment variable in your .env file.",
+      );
+    }
+    if (!memberToken.value) {
+      throw groupOrderError("GROUP_NOT_A_MEMBER");
+    }
+
+    const token = await getGroupRealtimeToken(groupOrderId, memberToken.value);
+    return `${realtimeBaseUrl}/customer/${groupOrderId}?token=${token}`;
+  }
+
+  async function getGroupRealtimeToken(
+    groupOrderId: string,
+    currentMemberToken: string,
+  ): Promise<string> {
+    const key = realtimeTokenCacheKey(groupOrderId, currentMemberToken);
+    const cached = realtimeTokenCache.get(key);
+    if (cached && cached.expiresAt - Date.now() > 60_000) {
+      return cached.token;
+    }
+
+    const pending = realtimeTokenRequests.get(key);
+    if (pending) {
+      return (await pending).token;
+    }
+
+    const request = apiClient
+      .post<GroupOrderRealtimeTokenResponse>("/realtime/auth/group-token", {
+        groupOrderId,
+        memberToken: currentMemberToken,
+      })
+      .then((response) => {
+        if (!response?.token) {
+          throw groupOrderError("GROUP_REALTIME_TOKEN_FAILED");
+        }
+
+        const cachedToken = {
+          token: response.token,
+          // The API supplies `expiresAt`. A malformed response remains usable
+          // once, but gets an immediately stale value and is never reused.
+          expiresAt: realtimeTokenExpiryMs(response) ?? 0,
+        };
+        if (cachedToken.expiresAt > Date.now()) {
+          realtimeTokenCache.set(key, cachedToken);
+        }
+        return cachedToken;
+      })
+      .finally(() => {
+        realtimeTokenRequests.delete(key);
+      });
+    realtimeTokenRequests.set(key, request);
+
+    return (await request).token;
   }
 
   function hydrateHostCredentials(groupOrderId: string): void {
@@ -927,6 +1044,8 @@ export function useGroupOrder(options: {
   function disconnectRealtime(): void {
     disconnect();
     isConnected.value = false;
+    realtimeGroupOrderId = null;
+    realtimeUrl = "";
   }
 
   /**
@@ -987,6 +1106,28 @@ export function useGroupOrder(options: {
 
       throw submitError;
     }
+  }
+
+  async function getOrderTrackingToken(): Promise<GroupOrderTrackingTokenResponse> {
+    if (!groupOrder.value) {
+      throw groupOrderError("GROUP_NOT_LOADED");
+    }
+
+    const groupOrderId = groupOrder.value.id;
+    hydrateMemberSession(groupOrderId);
+    hydrateHostCredentials(groupOrderId);
+    if (!memberToken.value) {
+      throw groupOrderError("GROUP_NOT_A_MEMBER");
+    }
+
+    const response = await apiClient.post<GroupOrderTrackingTokenResponse>(
+      `/orders/group/${groupOrderId}/tracking-token`,
+      { memberToken: memberToken.value },
+    );
+    if (!response?.orderId || !response.guestToken) {
+      throw groupOrderError("GROUP_UNKNOWN");
+    }
+    return response;
   }
 
   function isForbiddenError(err: unknown): boolean {
@@ -1110,6 +1251,7 @@ export function useGroupOrder(options: {
     mySplitBill,
     settledCount,
     submitOrder,
+    getOrderTrackingToken,
     setAutoSubmitOnExpiry,
     setChargeRates,
     recoverHost,

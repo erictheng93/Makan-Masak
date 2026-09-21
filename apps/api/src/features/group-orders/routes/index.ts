@@ -38,6 +38,10 @@ import {
   badRequest,
   conflict,
 } from "../../../shared/utils/api-error";
+import {
+  generateGuestToken,
+  type GuestTokenData,
+} from "../../../middleware/guestAuth";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -653,6 +657,81 @@ app.post(
     return c.json({
       success: true,
       data: result.data,
+    });
+  },
+);
+
+/**
+ * Exchange a group-member credential for a tracking credential after the
+ * group has become a real order. The group summary remains safe to render to
+ * every diner, while the guest token is minted only for a current member and
+ * is scoped to that one order.
+ */
+app.post(
+  "/:groupOrderId/tracking-token",
+  publicRateLimit,
+  validateParams(groupOrderSchemas.groupOrderIdParam),
+  validateBody(groupOrderSchemas.lockGroupOrder),
+  async (c) => {
+    const { groupOrderId } = c.get("validatedParams");
+    const { memberToken } = c.get("validatedBody");
+    const groupOrderService = new GroupOrdersService(c.env.DB, c.env.CACHE_KV);
+    const summary = await groupOrderService.getGroupOrder(groupOrderId);
+
+    if (!summary) {
+      throw notFound("Group order not found");
+    }
+
+    // The session id is deliberately not returned in the group summary, so
+    // validate it against each current member rather than trusting a client
+    // supplied member id. A host is a member too and follows this same path.
+    const member = (
+      await Promise.all(
+        summary.members.map(async (candidate) => ({
+          candidate,
+          isMember: await groupOrderService.isMemberSession(
+            groupOrderId,
+            candidate.id,
+            memberToken,
+          ),
+        })),
+      )
+    ).find(({ isMember }) => isMember)?.candidate;
+
+    if (!member) {
+      throw forbidden("Access denied");
+    }
+
+    const { groupOrder } = summary;
+    if (groupOrder.status !== "completed" || !groupOrder.masterOrderId) {
+      throw badRequest("Group order has not been completed");
+    }
+
+    const guestToken = generateGuestToken();
+    const tokenData: GuestTokenData = {
+      orderId: String(groupOrder.masterOrderId),
+      restaurantId: String(groupOrder.restaurantId),
+      guestName: member.memberName || "Guest",
+      createdAt: Date.now(),
+    };
+    const expirationTtl = 4 * 60 * 60;
+    await c.env.CACHE_KV.put(
+      `guest_token:${guestToken}`,
+      JSON.stringify(tokenData),
+      { expirationTtl },
+    );
+
+    return c.json({
+      success: true,
+      data: {
+        orderId: tokenData.orderId,
+        restaurantId: tokenData.restaurantId,
+        tableId: groupOrder.tableId,
+        guestToken,
+        tokenExpiresAt: new Date(
+          tokenData.createdAt + expirationTtl * 1000,
+        ).toISOString(),
+      },
     });
   },
 );
