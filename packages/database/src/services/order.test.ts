@@ -1770,14 +1770,15 @@ describe("OrderService changeOrderItemQuantity", () => {
       .select({ totalSpentCents: restaurantCustomers.totalSpentCents })
       .from(restaurantCustomers)
       .where(eq(restaurantCustomers.customerId, customerId));
-    expect(member?.totalSpentCents).toBe(30);
+    // The projection stores cents; the menu price above is 10 major units.
+    expect(member?.totalSpentCents).toBe(3000);
 
     await service().addItemsToOrder(order.id, [{ menuItemId, quantity: 1 }]);
     [member] = await testDb.drizzle
       .select({ totalSpentCents: restaurantCustomers.totalSpentCents })
       .from(restaurantCustomers)
       .where(eq(restaurantCustomers.customerId, customerId));
-    expect(member?.totalSpentCents).toBe(40);
+    expect(member?.totalSpentCents).toBe(4000);
   });
 
   it("removes a line entirely when the quantity is 0", async () => {
