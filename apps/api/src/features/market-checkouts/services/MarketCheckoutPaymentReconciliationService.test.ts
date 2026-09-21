@@ -318,7 +318,11 @@ describe("MarketCheckoutPaymentReconciliationService", () => {
           name: "ASYNC10",
           discountCents: 1250,
           allocations: [
-            { orderId: 1001, amountCents: 8000, discountCents: 800 },
+            {
+              orderId: "019d0000-0000-7000-8000-000000001001",
+              amountCents: 8000,
+              discountCents: 800,
+            },
           ],
         },
       },
@@ -371,7 +375,13 @@ describe("MarketCheckoutPaymentReconciliationService", () => {
       discountCents: 1250,
       fundedBy: "platform",
       restaurantId: undefined,
-      allocations: [{ orderId: 1001, amountCents: 8000, discountCents: 800 }],
+      allocations: [
+        {
+          orderId: "019d0000-0000-7000-8000-000000001001",
+          amountCents: 8000,
+          discountCents: 800,
+        },
+      ],
     });
     redeemSpy.mockRestore();
   });
