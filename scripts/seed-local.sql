@@ -96,7 +96,7 @@ INSERT OR IGNORE INTO users (
   (
     '019469a1-0003-7000-8000-000000000004',
     'service1',
-    '$2a$10$pwGLa32gXE37.opKIKyjkerJSjf3itraa4dYz7u3a002OyRH2uohy',
+    '$2a$10$aO4Gn7RUDvQPBmVYXEBMQeT1uPQ2uKK.pqUov/o6F5qqRgQCbiNce',
     'service1@makanmakan.local',
     'Demo Service Crew',
     3,
@@ -173,7 +173,7 @@ SET
     WHEN username = 'chef1'
       THEN '$2a$10$QhUvaTv8W79f9YWZFYcXR.GerC0AKNiq.lu1oFgOtxh4Nk0sKadM2'
     WHEN username = 'service1'
-      THEN '$2a$10$pwGLa32gXE37.opKIKyjkerJSjf3itraa4dYz7u3a002OyRH2uohy'
+      THEN '$2a$10$aO4Gn7RUDvQPBmVYXEBMQeT1uPQ2uKK.pqUov/o6F5qqRgQCbiNce'
     WHEN username = 'cashier1'
       THEN '$2a$10$GTrbGIj8V0ZAdeNz/4ZBNulVCsIYuvSSGnLQxoCqrWwIJ3wWSjrm2'
     ELSE password_hash
