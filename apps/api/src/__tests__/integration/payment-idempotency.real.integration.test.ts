@@ -254,6 +254,64 @@ describe("payment currency authority", () => {
     ]);
   });
 
+  it("records the MYR cash amount collected while card stays at the exact order total", async () => {
+    const { restaurantId, token } = await restaurantWithCashier({
+      currency: "MYR",
+    });
+    const cashOrder = await seed.order(restaurantId, {
+      totalAmount: 10.33,
+      totalAmountCents: 1033,
+    });
+
+    const cash = await postPayment(token, {
+      orderId: cashOrder.id,
+      restaurantId,
+      amount: 10.35,
+      expectedTotal: 10.33,
+      method: "cash",
+    });
+
+    expect(cash.status).toBe(200);
+    expect(await cash.json()).toMatchObject({
+      data: {
+        metadata: {
+          authorizedTotal: 10.33,
+          collectedTotal: 10.35,
+          roundingAdjustment: 0.02,
+        },
+      },
+    });
+    await expect(rowsFor(cashOrder.id)).resolves.toEqual([
+      expect.objectContaining({
+        amountCents: 1035,
+        roundingAdjustmentCents: 2,
+        currency: "MYR",
+        paymentMethod: "cash",
+      }),
+    ]);
+
+    const cardOrder = await seed.order(restaurantId, {
+      totalAmount: 10.33,
+      totalAmountCents: 1033,
+    });
+    const card = await postPayment(token, {
+      orderId: cardOrder.id,
+      restaurantId,
+      amount: 10.33,
+      method: "card",
+    });
+
+    expect(card.status).toBe(200);
+    await expect(rowsFor(cardOrder.id)).resolves.toEqual([
+      expect.objectContaining({
+        amountCents: 1033,
+        roundingAdjustmentCents: 0,
+        currency: "MYR",
+        paymentMethod: "card",
+      }),
+    ]);
+  });
+
   it("rejects a client currency that disagrees and records nothing", async () => {
     const { restaurantId, token } = await restaurantWithCashier({
       currency: "MYR",
