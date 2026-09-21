@@ -194,7 +194,7 @@ footer{
 <div class="wrap">
 
 <header class="mast">
-  <h1>顧客端上線 readiness QA — 2026-09-18</h1>
+  <h1>顧客端上線 readiness QA — 2026-09-18（09-22 複查）</h1>
   <p class="sub">
     依 <code>docs/architecture/master-user-flow.html</code> 的「1. 顧客端」四條子流程——
     點餐主流程、訂單追蹤、座位與預約、揪團與夜市市集——回答一個問題：<b>顧客端現在能不能上 production？</b>
@@ -209,11 +209,113 @@ footer{
     <span><b>身分</b> 兩個訪客瀏覽器身分 ＋ <code>owner1</code> 推狀態／收款</span>
     <span><b>餐廳</b> 麻吉 Demo 廣東粥 <code>019fa136-…31a1</code></span>
     <span><b>基準</b> 54 張表逐表比對，結束時零差異</span>
+    <span><b>複查</b> 2026-09-22，前端 <code>index-CL7q9_Yr.js</code>（Pages <code>bf0a5b8</code>）</span>
   </div>
 </header>
 
+<section id="recheck-0922">
+  <h2>09-22 複查：修正進度與目前判定</h2>
+  <p>
+    09-18 之後的修正逐項對照 production 重新確認。方法只用<b>不寫入</b>的手段：Pages／Worker 部署紀錄、
+    下載 production bundle 逐項找修正後的程式碼、對 API 發空 body 的探測請求、唯讀 D1 查詢。
+    這一節之後的內容是 09-18 當時的紀錄，保留原樣。
+  </p>
+  <div class="tablewrap">
+    <table class="verdict">
+      <thead><tr><th>流程</th><th>09-18</th><th>09-22</th><th>理由</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>點餐主流程</b></td>
+          <td><span class="tag ux">有條件</span></td>
+          <td><span class="tag ok">可上線</span></td>
+          <td>R1 已在 production：bundle 內為 <code>fulfillmentType==="dine-in"?"dine_in"</code>。
+            #382 訪客優惠券已修並部署（migration <code>0027_guest_coupon_identity</code> 已套用）；
+            production 沒有任何券，發券前以真資料重走一次。</td>
+        </tr>
+        <tr>
+          <td><b>訂單追蹤</b></td>
+          <td><span class="tag ok">可上線</span></td>
+          <td><span class="tag ok">可上線</span></td>
+          <td>#383（加點後前一筆 403）與 #395（service worker）皆已部署：入口改為 <code>registerSW({immediate:true})</code>，
+            <code>sw.js</code> 帶 <code>skipWaiting</code>／<code>clientsClaim</code>，不再快取 <code>/guest-orders</code>。</td>
+        </tr>
+        <tr>
+          <td><b>座位與預約</b></td>
+          <td><span class="tag ux">有條件</span></td>
+          <td><span class="tag ux">有條件</span></td>
+          <td>R7 已在 production：取號後先 <code>routeToTicket</code> 再非阻塞詢問通知；R15 預約日期改用本地日曆日。
+            剩 #398（預約付款途徑）、#399（推播）、#385（訂位公開寫入端點仍回 400 而非 401）。</td>
+        </tr>
+        <tr>
+          <td><b>揪團與夜市市集</b></td>
+          <td><span class="tag blocker">不可上線</span></td>
+          <td><span class="tag blocker">不可上線</span></td>
+          <td>市集的程式碼已就緒且已部署：#401 三個訪客寫入端點不再 403（回 400／404），webhook 在沒有 secret 時回
+            <code>MARKET_CHECKOUT_WEBHOOK_SIGNATURE_INVALID</code>（fail closed），#400 付款 fail closed 已部署；
+            擋住的是金流憑證與 0 筆市集。揪團的 #396／#397 修在 <code>a996367a</code>，<b>尚未部署</b>，
+            且修法本身有 R17（下方），已在 <code>bd11a49a</code> 修掉，同樣待部署。</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>09-18 發現的處置現況</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>#</th><th>處置</th><th>程式碼</th><th>production</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">R1 R4 R7 R14 R15</td><td>本輪已修</td><td><span class="tag fixed">main</span></td><td><span class="tag ok">已部署</span>（bundle 內逐項確認）</td></tr>
+        <tr><td class="mono">R2</td><td>#400 closed</td><td><span class="tag fixed"><code>adc049b8</code></span></td><td><span class="tag ok">已部署</span>（未實打付款：production 沒有市集）</td></tr>
+        <tr><td class="mono">R3</td><td>#395 closed</td><td><span class="tag fixed"><code>9e0ffe71</code></span></td><td><span class="tag ok">已部署</span>，見下方 R18</td></tr>
+        <tr><td class="mono">R13</td><td>#401 closed</td><td><span class="tag fixed"><code>95c63754</code></span></td><td><span class="tag ok">已部署</span>（空 body 探測不再 403）</td></tr>
+        <tr><td class="mono">#382 #383</td><td>closed</td><td><span class="tag fixed"><code>36f7bb6b</code></span></td><td><span class="tag ok">已部署</span></td></tr>
+        <tr><td class="mono">R5 R6</td><td>#396 #397 closed</td><td><span class="tag fixed"><code>a996367a</code></span></td><td><span class="tag blocker">未部署</span>：Pages 停在 <code>bf0a5b8</code>（09-20），bundle 無「查看訂單進度」；api Worker 最後部署 09-20 11:02Z</td></tr>
+        <tr><td class="mono">R8 R9 R12</td><td>#399 #398 #386 仍 open</td><td>—</td><td>無變化</td></tr>
+        <tr><td class="mono">R10 R11 R16</td><td>記錄</td><td>—</td><td>未複查</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>複查新發現</h3>
+  <div class="card">
+    <h4><span class="mono">R17</span> 揪團追蹤 token 端點不在 CSRF 排除清單 <span class="tag fixed">已修 <code>bd11a49a</code>・待部署</span></h4>
+    <p>
+      #396 的修法新增 <code>POST /api/v1/orders/group/:id/tracking-token</code>（以 memberToken 換主訂單的 guest token），
+      但沒有加進 <code>app-factory.ts</code> 的 <code>csrfProtection</code> 排除清單。customer-app 不送 CSRF token，
+      所以部署後「查看訂單進度」會 100% 回 403 <code>CSRF_TOKEN_MISSING</code>——與 R13 同一類錯。
+      路由單元測試直接掛 feature、不經全域中介層，所以沒抓到。
+    </p>
+    <p>
+      回歸測試：把路徑加進 <code>app-factory.group-ordering-csrf.test.ts</code> 的自助路徑清單，修正前紅
+      （<code>expected 'CSRF_TOKEN_MISSING' not to be 'CSRF_TOKEN_MISSING'</code>），加上排除後 13/13 綠。
+      這個端點與 <code>/lock</code> 一樣以持有 memberToken 授權，豁免 CSRF 不開新洞。
+    </p>
+  </div>
+  <div class="card">
+    <h4><span class="mono">R18</span> <code>sw.js</code> 的 <code>no-cache</code> 沒生效 <span class="tag ux">記錄</span></h4>
+    <p>
+      <code>_headers</code> 本身生效（CSP 等都在），但 <code>/sw.js</code> 實際回 <code>cache-control: max-age=14400</code>，
+      應是 Cloudflare zone 的 Browser Cache TTL 覆寫。瀏覽器檢查 service worker 更新預設略過 HTTP 快取，
+      實際影響小；要根治把 zone 設為 “Respect Existing Headers”。
+    </p>
+  </div>
+
+  <h3>上線前提（09-22 重查，無變化）</h3>
+  <p>
+    api secret 仍只有 <code>CLOUDFLARE_API_TOKEN</code>、<code>ENCRYPTION_KEY</code>、<code>INTERNAL_API_TOKEN</code>、
+    <code>JWT_SECRET</code>、<code>QR_SIGNING_KEY</code>；<code>markets</code>、<code>restaurant_market_memberships</code>、
+    <code>restaurant_service_items</code>、<code>coupons</code>、<code>customers</code> 皆 0；
+    「QA 部署驗證測試店 勿用 20260916」仍在 <code>restaurants</code>；<code>storedValueCredits</code> 仍關閉。
+  </p>
+
+  <p class="note warn">
+    <b>下一步：部署 api Worker 與 customer Pages（含 <code>a996367a</code> 與 <code>bd11a49a</code>），</b>
+    再在 production 走一次揪團送出 → 查看訂單進度。其餘依 09-18「下一步」的順序，已完成的 #395、#400、#401、#396、#382 可劃掉。
+  </p>
+</section>
+
 <section>
-  <h2>結論：各流程能不能上線</h2>
+  <h2>09-18 結論：各流程能不能上線</h2>
   <div class="tablewrap">
     <table class="verdict">
       <thead><tr><th>流程</th><th>判定</th><th>理由</th></tr></thead>
@@ -259,7 +361,8 @@ footer{
       </tbody>
     </table>
   </div>
-  <p class="note warn">
+  <p class="note">
+    <b>（09-22：以下為 09-18 當時狀態，五項已部署，見上方複查。）</b>
     <b>五個「本輪已修」都還在本機分支 <code>fix/customer-readiness-2026-09-18</code>，沒有推送也沒有部署。</b>
     在它們部署之前，上表的「有條件」要讀成「不可上線」：店家公開碼內用與候位取號是兩條完整走不下去的路。
   </p>
