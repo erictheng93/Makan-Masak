@@ -2080,7 +2080,15 @@ test.describe("Real system workflows", () => {
       await page.getByTestId("admin-menu-add-item").click();
       await expect(page.getByTestId("item-modal")).toBeVisible();
       await page.getByTestId("menu-item-name-input").fill(itemName);
-      await page.getByTestId("menu-item-price-input").fill("12.34");
+      const priceInput = page.getByTestId("menu-item-price-input");
+      // TWD fixtures require whole amounts while other currencies permit
+      // cents. An invalid native number input blocks form submission before
+      // Vue can issue a request, which used to leave this test waiting for a
+      // response that could never exist.
+      const priceStep = await priceInput.getAttribute("step");
+      const [itemPrice, updatedItemPrice] =
+        priceStep === "1" ? ["12", "13"] : ["12.34", "13.45"];
+      await priceInput.fill(itemPrice);
       await page
         .getByTestId("menu-item-category-select")
         .selectOption(String(categoryId));
@@ -2111,7 +2119,7 @@ test.describe("Real system workflows", () => {
       await page.getByTestId(`admin-menu-item-edit-${createdItemId}`).click();
       await expect(page.getByTestId("item-modal")).toBeVisible();
       await page.getByTestId("menu-item-name-input").fill(updatedName);
-      await page.getByTestId("menu-item-price-input").fill("13.45");
+      await priceInput.fill(updatedItemPrice);
 
       const updateResponsePromise = page.waitForResponse(
         (response) =>
@@ -2127,7 +2135,7 @@ test.describe("Real system workflows", () => {
 
       const updatedItem = await fetchMenuItem(createdItemId!, loginData.token!);
       expect(updatedItem.data?.name).toBe(updatedName);
-      expect(updatedItem.data?.price).toBe(13.45);
+      expect(updatedItem.data?.price).toBe(Number(updatedItemPrice));
       await expect(page.locator("vite-error-overlay")).toHaveCount(0);
     } finally {
       if (createdItemId) {
