@@ -259,6 +259,10 @@ export class AnalyticsService extends BaseService {
 
       // 查詢營收資料
       const currency = displayRestaurantCurrencySql(restaurants.settings);
+      // A restaurant has one currency, so retain the caller's exact bucket
+      // limit there. An unscoped platform query can produce up to three rows
+      // per date (TWD, MYR, VND), which are collapsed into one response bucket.
+      const queryLimit = restaurantId ? limit : limit * 3;
       const revenueData = await this.db
         .select({
           date: sql<string>`${dateGroupSql}`,
@@ -272,9 +276,7 @@ export class AnalyticsService extends BaseService {
         .where(conditions.length > 0 ? and(...conditions) : undefined)
         .groupBy(sql`${dateGroupSql}`, currency)
         .orderBy(sql`${dateGroupSql}`, currency)
-        // There are three supported currencies. Keep complete date buckets
-        // while preserving the endpoint's existing maximum number of dates.
-        .limit(limit * 3);
+        .limit(queryLimit);
 
       // 如果需要對比資料
       if (includeComparison) {
@@ -1308,6 +1310,7 @@ export class AnalyticsService extends BaseService {
       groupBy = "day",
       limit = 30,
     } = filters;
+    const queryLimit = restaurantId ? limit : limit * 3;
     const conditions = [];
     if (restaurantId) {
       conditions.push(eq(orders.restaurantId, restaurantId));
@@ -1338,7 +1341,7 @@ export class AnalyticsService extends BaseService {
           .where(and(...conditions))
           .groupBy(sql`${shiftedDateGroupSql}`, currency)
           .orderBy(sql`${shiftedDateGroupSql}`, currency)
-          .limit(limit * 3);
+          .limit(queryLimit);
 
         return this.moneyByDate(comparisonData);
       }
@@ -1365,7 +1368,7 @@ export class AnalyticsService extends BaseService {
       .where(and(...conditions))
       .groupBy(sql`${dateGroupSql}`, currency)
       .orderBy(sql`${dateGroupSql}`, currency)
-      .limit(limit * 3);
+      .limit(queryLimit);
 
     const priorRevenueByDate = this.moneyByDate(comparisonData);
 

@@ -83,6 +83,12 @@ export type MoneyByCurrency = Array<{
   amountCents: number;
 }>;
 
+const CURRENCY_SORT_ORDER: Record<CurrencyCode, number> = {
+  TWD: 0,
+  MYR: 1,
+  VND: 2,
+};
+
 type CustomerRollup = {
   customerId: string;
   displayName: string | null;
@@ -330,15 +336,26 @@ export class PlatformCustomerDirectoryService extends BaseService {
       .groupBy(restaurantCustomers.customerId, currency)
       .orderBy(restaurantCustomers.customerId, currency);
 
-    return rows.reduce<Map<string, MoneyByCurrency>>((amounts, row) => {
-      const customerAmounts = amounts.get(row.customerId) ?? [];
-      customerAmounts.push({
-        currency: row.currency,
-        amountCents: Number(row.amountCents) || 0,
-      });
-      amounts.set(row.customerId, customerAmounts);
-      return amounts;
-    }, new Map());
+    const amounts = rows.reduce<Map<string, MoneyByCurrency>>(
+      (byCustomer, row) => {
+        const customerAmounts = byCustomer.get(row.customerId) ?? [];
+        customerAmounts.push({
+          currency: row.currency,
+          amountCents: Number(row.amountCents) || 0,
+        });
+        byCustomer.set(row.customerId, customerAmounts);
+        return byCustomer;
+      },
+      new Map(),
+    );
+    for (const customerAmounts of amounts.values()) {
+      customerAmounts.sort(
+        (left, right) =>
+          CURRENCY_SORT_ORDER[left.currency] -
+          CURRENCY_SORT_ORDER[right.currency],
+      );
+    }
+    return amounts;
   }
 
   /**

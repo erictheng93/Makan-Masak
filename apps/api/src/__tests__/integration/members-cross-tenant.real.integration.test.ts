@@ -1433,7 +1433,7 @@ describe("Members API — tenant isolation", () => {
           "orderCount",
           "restaurantCount",
           "status",
-          "totalSpentCents",
+          "totalSpentByCurrency",
         ].sort(),
       );
       // Masked by default here too: the platform list is not a reveal either.
