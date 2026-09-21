@@ -46,17 +46,19 @@ export const createUserSchema = z.lazy(() =>
  * User update validation schema
  */
 export const updateUserSchema = z.lazy(() =>
-  z.object({
-    email: z.email().optional(),
-    phone: z.string().max(20).optional(),
-    fullName: z.string().min(1).max(100).optional(),
-    address: z.string().max(200).optional(),
-    dateOfBirth: z.string().optional(),
-    profileImageUrl: z.url().optional(),
-    preferences: z.any().optional(),
-    isActive: z.boolean().optional(),
-    isVerified: z.boolean().optional(),
-  }),
+  z
+    .object({
+      email: z.email().optional(),
+      phone: z.string().max(20).optional(),
+      fullName: z.string().min(1).max(100).optional(),
+      address: z.string().max(200).optional(),
+      dateOfBirth: z.string().optional(),
+      profileImageUrl: z.url().optional(),
+      preferences: z.any().optional(),
+      isActive: z.boolean().optional(),
+      isVerified: z.boolean().optional(),
+    })
+    .strict(),
 );
 
 /**
@@ -113,6 +115,13 @@ export const userStatusSchema = z.lazy(() =>
   }),
 );
 
+/** A role change is a privileged, separately-audited operation. */
+export const userRoleSchema = z.lazy(() =>
+  z.object({
+    role: z.number().int().min(0).max(4),
+  }),
+);
+
 /**
  * Reset password validation schema
  */
@@ -153,6 +162,7 @@ export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 export type UpdatePasswordInput = z.infer<typeof updatePasswordSchema>;
 export type UserFilterInput = z.infer<typeof userFilterSchema>;
 export type UserStatusInput = z.infer<typeof userStatusSchema>;
+export type UserRoleInput = z.infer<typeof userRoleSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type UserStatsInput = z.infer<typeof userStatsSchema>;
 export type UserSearchInput = z.infer<typeof userSearchSchema>;

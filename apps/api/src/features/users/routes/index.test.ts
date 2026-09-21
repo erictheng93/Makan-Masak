@@ -15,6 +15,7 @@ const serviceMethods = vi.hoisted(() => ({
   getUserById: vi.fn(),
   createUser: vi.fn(),
   updateUser: vi.fn(),
+  changeUserRole: vi.fn(),
   changePassword: vi.fn(),
   updateUserStatus: vi.fn(),
   verifyUser: vi.fn(),
@@ -280,6 +281,33 @@ describe("users routes", () => {
       currentUser,
       "42",
       strongPassword,
+    );
+  });
+
+  it("delegates a privileged role change to the service", async () => {
+    serviceMethods.changeUserRole.mockResolvedValue({
+      id: "42",
+      role: 4,
+      role_name: "Cashier",
+    });
+
+    const response = await routes.fetch(
+      new Request("https://test/42/role", {
+        method: "PATCH",
+        body: JSON.stringify({ role: 4 }),
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      success: true,
+      data: { id: "42", role: 4 },
+    });
+    expect(serviceMethods.changeUserRole).toHaveBeenCalledWith(
+      currentUser,
+      "42",
+      4,
     );
   });
 

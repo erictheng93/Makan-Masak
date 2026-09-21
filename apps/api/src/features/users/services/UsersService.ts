@@ -293,6 +293,53 @@ export class UsersService {
     return this.formatUser(updatedUser);
   }
 
+  /**
+   * Roles live in signed JWTs, so this is deliberately separate from the
+   * ordinary profile update path. A successful change increments tokenVersion
+   * atomically with its audit record; the target must authenticate again with
+   * a token that carries the new role.
+   */
+  async changeUserRole(
+    currentUser: CurrentUser,
+    userId: string,
+    role: number,
+  ): Promise<FormattedUser> {
+    if (currentUser.id === userId) {
+      throw badRequest("Cannot change your own role");
+    }
+
+    const targetUser = await this.requireUser(userId);
+
+    if (
+      !this.canManageUser(currentUser, targetUser.role, targetUser.restaurantId)
+    ) {
+      throw forbidden("Insufficient permissions");
+    }
+
+    if (!this.canManageUser(currentUser, role, targetUser.restaurantId)) {
+      throw forbidden("Insufficient permissions");
+    }
+
+    const isTargetPlatformRole = targetUser.role === USER_ROLES.ADMIN;
+    const isNextPlatformRole = role === USER_ROLES.ADMIN;
+    if (isTargetPlatformRole !== isNextPlatformRole) {
+      throw badRequest(
+        "Cannot change a user between platform and restaurant roles",
+      );
+    }
+
+    if (targetUser.role === role) {
+      return this.formatUser(targetUser);
+    }
+
+    const updatedUser = await this.userService.changeUserRole(userId, role, {
+      actorId: currentUser.id,
+      restaurantId: targetUser.restaurantId ?? null,
+      previousRole: targetUser.role,
+    });
+    return this.formatUser(updatedUser);
+  }
+
   async changePassword(
     currentUser: CurrentUser,
     userId: string,

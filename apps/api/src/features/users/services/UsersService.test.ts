@@ -9,6 +9,7 @@ const dbMocks = vi.hoisted(() => ({
     getRestaurantUsers: vi.fn(),
     createUser: vi.fn(),
     updateUser: vi.fn(),
+    changeUserRole: vi.fn(),
     verifyUser: vi.fn(),
     resetPassword: vi.fn(),
     getUserStats: vi.fn(),
@@ -471,13 +472,60 @@ describe("UsersService", () => {
     });
   });
 
+  it("changes managed restaurant roles, revokes old tokens, and rejects unsafe changes", async () => {
+    dbMocks.userServiceFns.getUserById
+      .mockResolvedValueOnce(user({ role: 2 }))
+      .mockResolvedValueOnce(user({ restaurantId: "restaurant-2" }))
+      .mockResolvedValueOnce(user({ role: 2 }))
+      .mockResolvedValueOnce(user({ role: 2 }));
+    dbMocks.userServiceFns.changeUserRole.mockResolvedValueOnce(
+      user({ role: 4 }),
+    );
+    const service = createService();
+
+    await expect(
+      service.changeUserRole(owner, "user-42", 4),
+    ).resolves.toMatchObject({
+      role: 4,
+      role_name: "Cashier",
+    });
+    expect(dbMocks.userServiceFns.changeUserRole).toHaveBeenCalledWith(
+      "user-42",
+      4,
+      {
+        actorId: "user-10",
+        restaurantId: "restaurant-1",
+        previousRole: 2,
+      },
+    );
+
+    await expect(
+      service.changeUserRole(owner, "user-43", 4),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      service.changeUserRole(owner, "user-42", 0),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      service.changeUserRole(admin, "user-42", 0),
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: "Cannot change a user between platform and restaurant roles",
+    });
+    await expect(
+      service.changeUserRole(owner, "user-10", 4),
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: "Cannot change your own role",
+    });
+  });
+
   it("updates status, verifies users, and resets passwords through managed-user checks", async () => {
     dbMocks.userServiceFns.getUserById
       .mockResolvedValueOnce(user())
       .mockResolvedValueOnce(user({ id: "user-10", role: 1 }))
       .mockResolvedValueOnce(user())
       .mockResolvedValueOnce(user())
-      .mockResolvedValueOnce(user({ restaurantId: "restaurant-2" }));
+      .mockResolvedValueOnce(user());
     dbMocks.userServiceFns.updateUser.mockResolvedValueOnce(user());
     dbMocks.userServiceFns.verifyUser
       .mockResolvedValueOnce(true)
@@ -502,8 +550,16 @@ describe("UsersService", () => {
       code: "INTERNAL_ERROR",
       message: "Failed to verify user",
     });
+  });
+
+  it("rejects password resets outside the manager's restaurant", async () => {
+    dbMocks.userServiceFns.getUserById.mockReset();
+    dbMocks.userServiceFns.getUserById.mockResolvedValueOnce(
+      user({ restaurantId: "restaurant-2" }),
+    );
+
     await expect(
-      service.resetPassword(owner, "user-42", "Newpass1!"),
+      createService().resetPassword(owner, "user-42", "Newpass1!"),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
       message: "Insufficient permissions",

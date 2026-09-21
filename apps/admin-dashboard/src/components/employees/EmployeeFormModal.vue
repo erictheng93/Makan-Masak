@@ -74,7 +74,9 @@
                   required
                   class="w-full px-3.5 py-2.5 bg-ios-bg border-none rounded-xl text-ios-text focus:shadow-[0_0_0_2px_rgba(0,122,255,0.25)] focus:bg-white transition-all"
                 >
-                  <option value="">{{ t("users.modal.selectRole") }}</option>
+                  <option :value="null" disabled>
+                    {{ t("users.modal.selectRole") }}
+                  </option>
                   <option value="1">{{ t("users.search.ownerRole") }}</option>
                   <option value="2">{{ t("users.search.chefRole") }}</option>
                   <option value="3">{{ t("users.search.serviceRole") }}</option>
@@ -93,9 +95,6 @@
                   <option value="active">{{ t("users.status.active") }}</option>
                   <option value="inactive">
                     {{ t("users.status.inactive") }}
-                  </option>
-                  <option value="suspended">
-                    {{ t("users.status.suspended") }}
                   </option>
                 </select>
               </div>
@@ -147,7 +146,7 @@ const form = ref<EmployeeFormData>({
   password: "",
   fullName: "",
   email: "",
-  role: 1,
+  role: null,
   status: "active",
 });
 
@@ -161,7 +160,7 @@ watch(
         fullName: props.employee.fullName || "",
         email: props.employee.email || "",
         role: props.employee.role,
-        status: props.employee.status || "active",
+        status: props.employee.status === "active" ? "active" : "inactive",
       };
     } else if (open) {
       form.value = {
@@ -169,7 +168,7 @@ watch(
         password: "",
         fullName: "",
         email: "",
-        role: 1,
+        role: null,
         status: "active",
       };
     }

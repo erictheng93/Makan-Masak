@@ -17,12 +17,15 @@ vi.mock("@/stores/auth", () => ({
 }));
 
 const apiGet = vi.fn();
+const apiPost = vi.fn();
+const apiPut = vi.fn();
+const apiPatch = vi.fn();
 vi.mock("@/services/api", () => ({
   api: {
     get: (...args: unknown[]) => apiGet(...args),
-    post: vi.fn(),
-    put: vi.fn(),
-    patch: vi.fn(),
+    post: (...args: unknown[]) => apiPost(...args),
+    put: (...args: unknown[]) => apiPut(...args),
+    patch: (...args: unknown[]) => apiPatch(...args),
   },
 }));
 
@@ -49,6 +52,9 @@ const apiUser = (id: string, username: string) => ({
 describe("useEmployeeList status lookup", () => {
   beforeEach(async () => {
     apiGet.mockReset();
+    apiPost.mockReset();
+    apiPut.mockReset();
+    apiPatch.mockReset();
     getClockedInEmployees.mockReset();
 
     // Module-level state is shared across callers, so every test reseeds it.
@@ -132,5 +138,32 @@ describe("useEmployeeList status lookup", () => {
 
   it("verifies the clocked-in fetch was scoped to the restaurant", () => {
     expect(getClockedInEmployees).toHaveBeenCalledWith("restaurant-1");
+  });
+
+  it("updates profile, role, and active state through their distinct endpoints", async () => {
+    const list = useEmployeeList();
+    const employee = list.users.value.find((user) => user.id === CHEF)!;
+
+    await list.updateUser(employee, {
+      username: employee.username,
+      password: "",
+      fullName: "Updated Chef",
+      email: "updated-chef@example.test",
+      role: 4,
+      status: "inactive",
+    });
+
+    expect(apiPut).toHaveBeenCalledWith(`/users/${CHEF}`, {
+      fullName: "Updated Chef",
+      email: "updated-chef@example.test",
+    });
+    expect(apiPut).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ role: expect.anything() }),
+    );
+    expect(apiPatch).toHaveBeenCalledWith(`/users/${CHEF}/role`, { role: 4 });
+    expect(apiPatch).toHaveBeenCalledWith(`/users/${CHEF}/status`, {
+      isActive: false,
+    });
   });
 });

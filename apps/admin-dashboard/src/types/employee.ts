@@ -36,8 +36,10 @@ export interface EmployeeFormData {
   password: string;
   fullName: string;
   email: string;
-  role: number;
-  status: string;
+  /** Null is the unselected creation-state; it must never reach the API. */
+  role: number | null;
+  /** The API has no suspended state; employee status is active or inactive. */
+  status: "active" | "inactive";
 }
 
 export interface LeaveBalance {

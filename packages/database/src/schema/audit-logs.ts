@@ -10,6 +10,7 @@ export const AUDIT_ACTIONS = {
   LOGOUT: "logout",
   REGISTER: "register",
   PASSWORD_CHANGE: "password_change",
+  USER_ROLE_CHANGE: "user_role_change",
 
   // 訂單相關
   ORDER_CREATE: "order_create",

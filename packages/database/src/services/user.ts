@@ -13,7 +13,14 @@ import {
   or,
   sql,
 } from "drizzle-orm";
-import { USER_ROLES, users, type UserRole } from "../schema";
+import type { BatchItem } from "drizzle-orm/batch";
+import {
+  AUDIT_ACTIONS,
+  auditLogs,
+  USER_ROLES,
+  users,
+  type UserRole,
+} from "../schema";
 import type { UserPreferences } from "@makanmasak/shared-types";
 import { BaseService } from "./base";
 
@@ -55,6 +62,12 @@ export interface UpdateUserData {
   preferences?: UserPreferences;
   isActive?: boolean;
   isVerified?: boolean;
+}
+
+export interface UserRoleChangeAudit {
+  actorId: string;
+  restaurantId: string | null;
+  previousRole: number;
 }
 
 export interface UserFilters {
@@ -328,6 +341,81 @@ export class UserService extends BaseService {
       return updatedUser;
     } catch (error) {
       this.handleError(error, "updateUser");
+    }
+  }
+
+  /**
+   * Change a staff member's role and invalidate every token that carries the
+   * previous role. The accompanying audit row is in the same D1 batch: a
+   * sensitive permission change is never committed without its audit trail.
+   */
+  async changeUserRole(id: string, role: number, audit: UserRoleChangeAudit) {
+    try {
+      const now = new Date();
+      const [updatedRows] = await this.db.batch([
+        this.db
+          .update(users)
+          .set({
+            role,
+            tokenVersion: sql`${users.tokenVersion} + 1`,
+            updatedAt: now,
+          })
+          .where(eq(users.id, id))
+          .returning({
+            id: users.id,
+            username: users.username,
+            email: users.email,
+            phone: users.phone,
+            fullName: users.fullName,
+            role: users.role,
+            restaurantId: users.restaurantId,
+            address: users.address,
+            dateOfBirth: users.dateOfBirth,
+            profileImageUrl: users.profileImageUrl,
+            isActive: users.isActive,
+            isVerified: users.isVerified,
+            preferences: users.preferences,
+            updatedAt: users.updatedAt,
+          }) as BatchItem<"sqlite">,
+        this.db.insert(auditLogs).values({
+          userId: audit.actorId,
+          restaurantId: audit.restaurantId,
+          action: AUDIT_ACTIONS.USER_ROLE_CHANGE,
+          resource: "users",
+          resourceId: id,
+          description: `Changed user role from ${audit.previousRole} to ${role}`,
+          changes: {
+            before: { role: audit.previousRole },
+            after: { role },
+          },
+          success: true,
+          createdAt: now,
+        }) as BatchItem<"sqlite">,
+      ]);
+
+      const [updatedUser] = updatedRows as Array<{
+        id: string;
+        username: string;
+        email: string | null;
+        phone: string | null;
+        fullName: string | null;
+        role: number;
+        restaurantId: string | null;
+        address: string | null;
+        dateOfBirth: string | null;
+        profileImageUrl: string | null;
+        isActive: boolean;
+        isVerified: boolean;
+        preferences: UserPreferences | string | null;
+        updatedAt: Date | null;
+      }>;
+      if (!updatedUser) {
+        throw new Error("User not found");
+      }
+
+      return updatedUser;
+    } catch (error) {
+      this.handleError(error, "changeUserRole");
     }
   }
 

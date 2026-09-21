@@ -252,7 +252,7 @@ const closeModal = () => {
 const handleSave = async (form: EmployeeFormData, isEdit: boolean) => {
   try {
     if (isEdit && editingEmployee.value) {
-      await employeeList.updateUser(editingEmployee.value.id, form);
+      await employeeList.updateUser(editingEmployee.value, form);
     } else {
       await employeeList.createUser(form);
     }

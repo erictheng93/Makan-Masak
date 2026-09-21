@@ -229,6 +229,9 @@ export function useEmployeeList() {
 
   // CRUD
   const createUser = async (form: EmployeeFormData) => {
+    if (form.role === null) {
+      throw new Error("A role must be selected before creating an employee");
+    }
     await api.post("/users", {
       username: form.username,
       password: form.password,
@@ -248,12 +251,25 @@ export function useEmployeeList() {
     }
   };
 
-  const updateUser = async (id: UserId, form: EmployeeFormData) => {
-    await api.put(`/users/${id}`, {
+  const updateUser = async (employee: Employee, form: EmployeeFormData) => {
+    if (form.role === null) {
+      throw new Error("A role must be selected before updating an employee");
+    }
+
+    await api.put(`/users/${employee.id}`, {
       fullName: form.fullName,
       email: form.email,
-      role: form.role,
     });
+
+    if (form.role !== employee.role) {
+      await api.patch(`/users/${employee.id}/role`, { role: form.role });
+    }
+
+    const isActive = form.status === "active";
+    if (isActive !== employee.isActive) {
+      await api.patch(`/users/${employee.id}/status`, { isActive });
+    }
+
     await fetchUsers();
   };
 

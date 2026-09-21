@@ -25,6 +25,8 @@ import {
   type UpdateUserInput,
   type UserFilterInput,
   type UserSearchInput,
+  userRoleSchema,
+  type UserRoleInput,
   type UserStatsInput,
   type UserStatusInput,
 } from "../schemas/validation";
@@ -230,6 +232,31 @@ app.put(
         updatedAt: now,
       },
     });
+  },
+);
+
+/**
+ * PATCH /api/v1/users/:id/role
+ *
+ * A role belongs to the JWT principal, unlike ordinary profile fields. Keep
+ * this endpoint privileged and explicit so the service can revoke old tokens
+ * and leave an audit record in the same database batch.
+ */
+app.patch(
+  "/:id/role",
+  authMiddleware,
+  requireRole([USER_ROLES.ADMIN, USER_ROLES.OWNER]),
+  validateParams(userIdParamSchema),
+  validateBody(userRoleSchema),
+  async (c) => {
+    const { id } = c.get("validatedParams") as IdParamInput;
+    const { role } = c.get("validatedBody") as UserRoleInput;
+    const currentUser = c.get("user");
+    const usersService = new UsersService(c.env);
+
+    const user = await usersService.changeUserRole(currentUser, id, role);
+
+    return c.json({ success: true, data: user });
   },
 );
 
