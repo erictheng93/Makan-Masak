@@ -639,7 +639,11 @@ export class AnalyticsService implements IAnalyticsService {
    */
   private buildRevenueBreakdown(
     groupBy: AnalyticsFilters["groupBy"],
-    buckets: Array<{ date: string; revenue: number; orderCount: number }>,
+    buckets: Array<{
+      date: string;
+      revenue: RevenueData["revenue"];
+      orderCount: number;
+    }>,
   ): FinancialReportData["breakdown"] {
     switch (groupBy) {
       case "week":

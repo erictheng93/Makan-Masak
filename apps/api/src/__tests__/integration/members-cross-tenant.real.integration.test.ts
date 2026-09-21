@@ -13,6 +13,7 @@ import {
   customers,
   eq,
   restaurantCustomers,
+  restaurants,
   TenantMemberDirectoryService,
 } from "@makanmasak/database";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -1372,6 +1373,11 @@ describe("Members API — tenant isolation", () => {
       const b = await shop("platform-list-b");
       const adminToken = await testApp.authHelper.adminToken();
 
+      await testApp.testDb.drizzle
+        .update(restaurants)
+        .set({ settings: { currency: "MYR" } })
+        .where(eq(restaurants.id, b.restaurantId));
+
       const person = await customer("Wanderer");
       await testApp.testDb.drizzle.insert(restaurantCustomers).values([
         {
@@ -1406,7 +1412,10 @@ describe("Members API — tenant isolation", () => {
         // The one figure no tenant-scoped endpoint may produce.
         restaurantCount: 2,
         orderCount: 5,
-        totalSpentCents: 4500,
+        totalSpentByCurrency: [
+          { currency: "TWD", amountCents: 3000 },
+          { currency: "MYR", amountCents: 1500 },
+        ],
       });
 
       // Response key allow-list. A column added to `customers` must be named

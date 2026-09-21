@@ -62,7 +62,7 @@
             </p>
             <p v-if="isLoading" class="text-2xl font-bold text-gray-300">--</p>
             <p v-else class="text-2xl font-bold text-gray-900">
-              {{ formatPrice(metrics.totalRevenue) }}
+              {{ formatMoneyByCurrency(revenueTotals) }}
             </p>
             <p
               v-if="!isLoading"
@@ -190,12 +190,12 @@
         <div v-else class="h-64 space-y-2 overflow-y-auto">
           <div
             v-for="item in revenueChartData"
-            :key="item.date"
+            :key="`${item.date}-${item.currency}`"
             class="flex items-center justify-between text-sm"
           >
-            <span class="text-gray-600 w-24 flex-shrink-0">{{
-              formatDate(item.date)
-            }}</span>
+            <span class="text-gray-600 w-24 flex-shrink-0">
+              {{ formatDate(item.date) }} · {{ item.currency }}
+            </span>
             <div class="flex-1 mx-3">
               <div class="bg-gray-200 rounded-full h-4">
                 <div
@@ -204,9 +204,9 @@
                 />
               </div>
             </div>
-            <span class="text-gray-900 font-medium w-24 text-right">{{
-              formatPrice(item.revenue)
-            }}</span>
+            <span class="text-gray-900 font-medium w-24 text-right">
+              {{ formatCents(item.amountCents, item.currency) }}
+            </span>
           </div>
         </div>
       </div>
@@ -404,10 +404,10 @@
                   {{ day.orders }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ formatPrice(day.revenue) }}
+                  {{ formatMoneyByCurrency(day.revenue) }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ formatPrice(day.averageOrder) }}
+                  {{ formatMoneyByCurrency(day.averageOrder) }}
                 </td>
               </tr>
             </tbody>
@@ -422,6 +422,8 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useI18n } from "@/i18n";
 import { useCurrency } from "@/composables/useCurrency";
+import { formatCurrency } from "@makanmasak/utils";
+import type { CurrencyCode } from "@makanmasak/shared-types";
 import {
   analyticsDateRange,
   type AnalyticsPeriod,
@@ -444,6 +446,11 @@ import {
 const { t } = useI18n();
 const { formatPrice } = useCurrency();
 const authStore = useAuthStore();
+
+type MoneyByCurrency = Array<{
+  currency: CurrencyCode;
+  amountCents: number;
+}>;
 
 // State
 const selectedPeriod = ref("today");
@@ -505,9 +512,9 @@ const productAnalytics = ref<{
 const revenueDataRaw = ref<
   Array<{
     date: string;
-    revenue: number;
+    revenue: MoneyByCurrency;
     orderCount: number;
-    averageOrderValue: number;
+    averageOrderValue: MoneyByCurrency;
   }>
 >([]);
 
@@ -550,7 +557,6 @@ function buildAnalyticsUrl(
 
 // Computed: metrics for summary cards
 const metrics = computed(() => ({
-  totalRevenue: performanceData.value.totalRevenue || 0,
   // These come from the same response as the figures they sit beside, so both
   // describe the selected period. They used to come from the dashboard
   // summary, whose growth rates are always month-over-month: picking 本年 put a
@@ -566,6 +572,10 @@ const metrics = computed(() => ({
       : 0,
   tableUtilization: currentTableUtilization.value,
 }));
+
+const revenueTotals = computed(() =>
+  sumMoneyByCurrency(revenueDataRaw.value.map((bucket) => bucket.revenue)),
+);
 
 // Computed: order status distribution
 const orderStatusData = computed(() => {
@@ -627,13 +637,27 @@ const revenueChartData = computed(() => {
   const data = revenueDataRaw.value || [];
   if (data.length === 0) return [];
 
-  const maxRevenue = Math.max(...data.map((d) => d.revenue), 1);
+  const values = data.flatMap((bucket) => bucket.revenue);
+  const maximumByCurrency = new Map<CurrencyCode, number>();
+  for (const value of values) {
+    maximumByCurrency.set(
+      value.currency,
+      Math.max(maximumByCurrency.get(value.currency) ?? 0, value.amountCents),
+    );
+  }
 
-  return data.map((d) => ({
-    date: d.date,
-    revenue: d.revenue,
-    percentage: Math.round((d.revenue / maxRevenue) * 100),
-  }));
+  return data.flatMap((bucket) =>
+    bucket.revenue.map((value) => ({
+      date: bucket.date,
+      currency: value.currency,
+      amountCents: value.amountCents,
+      percentage: Math.round(
+        (value.amountCents /
+          Math.max(maximumByCurrency.get(value.currency) ?? 0, 1)) *
+          100,
+      ),
+    })),
+  );
 });
 
 // Computed: daily data for detailed table
@@ -654,6 +678,33 @@ function formatDate(dateStr: string): string {
   } catch {
     return dateStr;
   }
+}
+
+function formatCents(cents: number, currency: CurrencyCode): string {
+  return formatCurrency(cents / 100, currency);
+}
+
+function formatMoneyByCurrency(amounts: MoneyByCurrency): string {
+  if (amounts.length === 0) return "—";
+  return amounts
+    .map((amount) => formatCents(amount.amountCents, amount.currency))
+    .join(" · ");
+}
+
+function sumMoneyByCurrency(buckets: MoneyByCurrency[]): MoneyByCurrency {
+  const totals = new Map<CurrencyCode, number>();
+  for (const bucket of buckets) {
+    for (const amount of bucket) {
+      totals.set(
+        amount.currency,
+        (totals.get(amount.currency) ?? 0) + amount.amountCents,
+      );
+    }
+  }
+  return Array.from(totals, ([currency, amountCents]) => ({
+    currency,
+    amountCents,
+  }));
 }
 
 // Business hour bar color
@@ -769,8 +820,8 @@ function generateLocalCSV() {
   const rows = dailyData.value.map((d) => [
     d.date,
     d.orders.toString(),
-    d.revenue.toString(),
-    d.averageOrder.toString(),
+    formatMoneyByCurrency(d.revenue),
+    formatMoneyByCurrency(d.averageOrder),
   ]);
 
   const csvContent = [headers, ...rows].map((row) => row.join(",")).join("\n");

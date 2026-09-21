@@ -5,9 +5,14 @@
 
 import { Hono } from "hono";
 import { validateQuery } from "../../../middleware/validation";
-import { authMiddleware, requireRole } from "../../../middleware/auth";
+import {
+  authMiddleware,
+  requireRole,
+  type AuthUser,
+} from "../../../middleware/auth";
 import { moduleGate } from "../../../middleware/moduleGate";
 import { AnalyticsService } from "../services/AnalyticsService";
+import { forbidden } from "../../../shared/utils/api-error";
 import {
   analyticsQuerySchema,
   dashboardQuerySchema,
@@ -203,13 +208,7 @@ routes.get(
       c.env.CACHE_KV,
     );
 
-    // For owners, only show their restaurant data
-    const targetRestaurantId =
-      user.role === 1
-        ? user.restaurantId == null
-          ? undefined
-          : String(user.restaurantId)
-        : restaurantId;
+    const targetRestaurantId = scopedAnalyticsRestaurantId(user, restaurantId);
 
     const dashboardData = await analyticsService.getDashboardData(
       targetRestaurantId,
@@ -243,15 +242,9 @@ routes.get(
       c.env.CACHE_KV,
     );
 
-    // For owners, only show their restaurant data
     const filters = {
       ...query,
-      restaurantId:
-        user.role === 1
-          ? user.restaurantId == null
-            ? undefined
-            : String(user.restaurantId)
-          : query.restaurantId,
+      restaurantId: scopedAnalyticsRestaurantId(user, query.restaurantId),
     };
 
     const revenueData = await analyticsService.getRevenueAnalytics(filters);
@@ -282,15 +275,9 @@ routes.get(
       c.env.CACHE_KV,
     );
 
-    // For owners, only show their restaurant data
     const filters = {
       ...query,
-      restaurantId:
-        user.role === 1
-          ? user.restaurantId == null
-            ? undefined
-            : String(user.restaurantId)
-          : query.restaurantId,
+      restaurantId: scopedAnalyticsRestaurantId(user, query.restaurantId),
     };
 
     const productData = await analyticsService.getProductAnalytics(filters);
@@ -321,15 +308,9 @@ routes.get(
       c.env.CACHE_KV,
     );
 
-    // For owners, only show their restaurant data
     const filters = {
       ...query,
-      restaurantId:
-        user.role === 1
-          ? user.restaurantId == null
-            ? undefined
-            : String(user.restaurantId)
-          : query.restaurantId,
+      restaurantId: scopedAnalyticsRestaurantId(user, query.restaurantId),
     };
 
     const customerData = await analyticsService.getCustomerAnalytics(filters);
@@ -360,15 +341,9 @@ routes.get(
       c.env.CACHE_KV,
     );
 
-    // For non-admin users, only show their restaurant data
     const filters = {
       ...query,
-      restaurantId:
-        user.role >= 1
-          ? user.restaurantId == null
-            ? undefined
-            : String(user.restaurantId)
-          : query.restaurantId,
+      restaurantId: scopedAnalyticsRestaurantId(user, query.restaurantId),
     };
 
     const performanceData =
@@ -400,15 +375,9 @@ routes.get(
       c.env.CACHE_KV,
     );
 
-    // For owners, only allow their restaurant data
     const exportRequest = {
       ...query,
-      restaurantId:
-        user.role === 1
-          ? user.restaurantId == null
-            ? undefined
-            : String(user.restaurantId)
-          : query.restaurantId,
+      restaurantId: scopedAnalyticsRestaurantId(user, query.restaurantId),
     };
 
     const exportResult = await analyticsService.generateExport(exportRequest);
@@ -436,13 +405,7 @@ routes.get(
       c.env.CACHE_KV,
     );
 
-    // For non-admin users, only show their restaurant data
-    const targetRestaurantId =
-      user.role >= 1
-        ? user.restaurantId == null
-          ? undefined
-          : String(user.restaurantId)
-        : restaurantId;
+    const targetRestaurantId = scopedAnalyticsRestaurantId(user, restaurantId);
 
     const realtimeData =
       await analyticsService.getRealtimeData(targetRestaurantId);
@@ -474,13 +437,7 @@ routes.get(
       c.env.CACHE_KV,
     );
 
-    // For owners, only show their restaurant data
-    const targetRestaurantId =
-      user.role === 1
-        ? user.restaurantId == null
-          ? undefined
-          : String(user.restaurantId)
-        : restaurantId;
+    const targetRestaurantId = scopedAnalyticsRestaurantId(user, restaurantId);
 
     const ownerDashboardData =
       await analyticsService.getDashboardData(targetRestaurantId);
@@ -512,15 +469,9 @@ routes.get(
       c.env.CACHE_KV,
     );
 
-    // For owners, only show their restaurant data
     const filters = {
       ...query,
-      restaurantId:
-        user.role === 1
-          ? user.restaurantId == null
-            ? undefined
-            : String(user.restaurantId)
-          : query.restaurantId,
+      restaurantId: scopedAnalyticsRestaurantId(user, query.restaurantId),
     };
 
     const financialReportData =
@@ -545,6 +496,7 @@ routes.get(
   async (c) => {
     const user = c.get("user");
     const { lastEventId: _lastEventId } = c.get("validatedQuery");
+    const targetRestaurantId = scopedAnalyticsRestaurantId(user);
 
     // Set SSE headers
     c.header("Content-Type", "text/event-stream");
@@ -595,12 +547,6 @@ routes.get(
         // Set up statistics push interval
         const statsInterval = setInterval(async () => {
           try {
-            // Get target restaurant ID based on user role
-            const targetRestaurantId =
-              user.role >= 1 && user.restaurantId != null
-                ? String(user.restaurantId)
-                : undefined;
-
             // Get real-time analytics data
             const realtimeData =
               await analyticsService.getRealtimeData(targetRestaurantId);
@@ -673,6 +619,26 @@ function createAnalyticsSyncId(payload: unknown): string {
   }
 
   return `${Date.now()}`;
+}
+
+/**
+ * Analytics is the one feature where an unscoped query intentionally means
+ * platform-wide data for administrators. For every other role, an absent
+ * restaurant is an authorization error — it must never silently turn into
+ * that platform-wide query.
+ */
+function scopedAnalyticsRestaurantId(
+  user: AuthUser,
+  requestedRestaurantId?: string,
+): string | undefined {
+  if (user.role === 0) return requestedRestaurantId;
+  if (user.restaurantId == null) {
+    throw forbidden(
+      "Restaurant context is required for analytics",
+      "ANALYTICS_RESTAURANT_CONTEXT_REQUIRED",
+    );
+  }
+  return String(user.restaurantId);
 }
 
 export default routes;

@@ -24,9 +24,6 @@ const confirmModal = vi.hoisted(() => vi.fn());
 // `@/i18n` is deliberately NOT mocked, for the reason MembersView.test.ts
 // gives: a `t: (key) => key` stub makes a missing translation key
 // indistinguishable from a present one (#113).
-vi.mock("@/composables/useCurrency", () => ({
-  useCurrency: () => ({ formatPrice: (value: number) => `$${value}` }),
-}));
 vi.mock("@/composables/useConfirmModal", () => ({
   useConfirmModal: () => ({ confirm: confirmModal }),
 }));
@@ -59,7 +56,10 @@ function customer(
     status: "active",
     restaurantCount: 2,
     orderCount: 5,
-    totalSpentCents: 4500,
+    totalSpentByCurrency: [
+      { currency: "TWD", amountCents: 3000 },
+      { currency: "MYR", amountCents: 1500 },
+    ],
     lastOrderAt: "2026-08-30T00:00:00.000Z",
     createdAt: "2026-01-02T00:00:00.000Z",
     ...overrides,
@@ -75,6 +75,7 @@ function slice(
     orderCount: 3,
     cancelledOrderCount: 1,
     totalSpentCents: 3000,
+    currency: "TWD",
     firstOrderAt: "2026-07-01T00:00:00.000Z",
     lastOrderAt: "2026-08-01T00:00:00.000Z",
     ...overrides,
@@ -138,6 +139,8 @@ describe("PlatformCustomersView", () => {
     expect(
       wrapper.get('[data-testid="platform-customer-restaurant-count"]').text(),
     ).toBe("2");
+    expect(row.text()).toContain("NT$30");
+    expect(row.text()).toContain("RM 15.00");
   });
 
   it("renders the localized placeholder for a deleted customer", async () => {

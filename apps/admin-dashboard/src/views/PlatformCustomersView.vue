@@ -197,7 +197,7 @@
                 {{ customer.orderCount }}
               </td>
               <td class="px-6 py-4 text-sm tabular-nums text-ios-text">
-                {{ formatCents(customer.totalSpentCents) }}
+                {{ formatMoneyByCurrency(customer.totalSpentByCurrency) }}
               </td>
               <td class="px-6 py-4 text-sm text-ios-secondary">
                 {{
@@ -492,7 +492,7 @@
                     </p>
                   </div>
                   <p class="text-sm font-medium tabular-nums text-ios-text">
-                    {{ formatCents(slice.totalSpentCents) }}
+                    {{ formatCents(slice.totalSpentCents, slice.currency) }}
                   </p>
                 </li>
               </ul>
@@ -526,7 +526,8 @@ import {
   XMarkIcon,
 } from "@heroicons/vue/24/outline";
 import { useI18n } from "@/i18n";
-import { useCurrency } from "@/composables/useCurrency";
+import { formatCurrency } from "@makanmasak/utils";
+import type { CurrencyCode } from "@makanmasak/shared-types";
 import { useConfirmModal } from "@/composables/useConfirmModal";
 import { useDateFormatter } from "@/composables/useDateFormatter";
 import {
@@ -549,7 +550,6 @@ const REVEAL_TTL_MINUTES = 5;
 const REVEAL_TTL_MS = REVEAL_TTL_MINUTES * 60 * 1000;
 
 const { t } = useI18n();
-const { formatPrice } = useCurrency();
 const { confirm: confirmModal } = useConfirmModal();
 const { formatRelativeTime } = useDateFormatter();
 
@@ -602,8 +602,17 @@ const visiblePages = computed(() => {
   return pages;
 });
 
-function formatCents(cents: number): string {
-  return formatPrice(cents / 100);
+function formatCents(cents: number, currency: CurrencyCode): string {
+  return formatCurrency(cents / 100, currency);
+}
+
+function formatMoneyByCurrency(
+  amounts: ReadonlyArray<{ currency: CurrencyCode; amountCents: number }>,
+): string {
+  if (amounts.length === 0) return "—";
+  return amounts
+    .map((amount) => formatCents(amount.amountCents, amount.currency))
+    .join(" · ");
 }
 
 /** The API sends null for a deleted customer; the copy is the client's. */

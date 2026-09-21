@@ -314,9 +314,9 @@ describe("AnalyticsService", () => {
         // RevenueData has no free-text column, so the quoting case rides on
         // `date`, the one string field the CSV writer emits.
         date: 'quoted, "value"',
-        revenue: 100,
+        revenue: [{ currency: "TWD", amountCents: 10000 }],
         orderCount: 2,
-        averageOrderValue: 50,
+        averageOrderValue: [{ currency: "TWD", amountCents: 5000 }],
       },
     ]);
 

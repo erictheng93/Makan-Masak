@@ -1,4 +1,5 @@
 import { api, unwrapApiPayload } from "./api";
+import type { CurrencyCode } from "@makanmasak/shared-types";
 
 /**
  * Platform-side (role 0) customer directory — spec §7.2, issue #299 A4.
@@ -27,7 +28,7 @@ export interface PlatformCustomerListItem {
   /** The figure no tenant-scoped endpoint may produce. */
   restaurantCount: number;
   orderCount: number;
-  totalSpentCents: number;
+  totalSpentByCurrency: Array<{ currency: CurrencyCode; amountCents: number }>;
   lastOrderAt: string | null;
   createdAt: string | null;
 }
@@ -39,6 +40,7 @@ export interface PlatformCustomerRestaurantSlice {
   orderCount: number;
   cancelledOrderCount: number;
   totalSpentCents: number;
+  currency: CurrencyCode;
   firstOrderAt: string | null;
   lastOrderAt: string | null;
 }

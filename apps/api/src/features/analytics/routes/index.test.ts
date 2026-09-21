@@ -53,6 +53,21 @@ vi.mock("../services/AnalyticsService", () => ({
 }));
 
 import routes from "./index";
+import { ApiError } from "../../../shared/utils/api-error";
+
+// The production app converts ApiError instances at its outer router. This
+// feature-route suite mounts the router directly, so retain that boundary here
+// when asserting authorization failures.
+routes.onError((err, c) => {
+  if (err instanceof ApiError) {
+    return c.json(
+      { success: false, error: { code: err.code, message: err.message } },
+      err.status as 400 | 401 | 403 | 404 | 409,
+    );
+  }
+
+  return c.json({ success: false, error: { message: String(err) } }, 500);
+});
 
 function createKv() {
   const values = new Map<string, string>();
@@ -240,6 +255,42 @@ describe("analytics routes", () => {
       "admin-rest",
       "today",
     );
+  });
+
+  it("rejects an owner token without a restaurant before querying revenue", async () => {
+    auth.user = {
+      id: "orphan-owner",
+      username: "orphan",
+      role: 1,
+      restaurantId: undefined,
+    };
+
+    const response = await request("/revenue?groupBy=day").res;
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      error: { code: "ANALYTICS_RESTAURANT_CONTEXT_REQUIRED" },
+    });
+    expect(serviceFns.getRevenueAnalytics).not.toHaveBeenCalled();
+  });
+
+  it("does not turn a context-less owner into a platform dashboard query", async () => {
+    auth.user = {
+      id: "orphan-owner",
+      username: "orphan",
+      role: 1,
+      restaurantId: undefined,
+    };
+
+    const response = await request("/dashboard?period=week").res;
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      error: { code: "ANALYTICS_RESTAURANT_CONTEXT_REQUIRED" },
+    });
+    expect(serviceFns.getDashboardData).not.toHaveBeenCalled();
   });
 
   it("returns product, customer, and performance analytics with scoped filters", async () => {

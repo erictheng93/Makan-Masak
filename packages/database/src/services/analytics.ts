@@ -23,6 +23,7 @@ import {
   menuItems,
   orderItems,
   orders,
+  restaurants,
   tables,
 } from "../schema";
 import {
@@ -30,6 +31,8 @@ import {
   moneyAmountExpression,
   sumMoneyAmount,
 } from "../utils/money-sql";
+import { displayRestaurantCurrencySql } from "../utils/market-currency";
+import type { CurrencyCode } from "@makanmasak/utils";
 import {
   FULFILLED_ORDER_STATUSES,
   revenueRecognisedOrder,
@@ -57,10 +60,26 @@ function recognisedRevenueCents(centsColumn: SQLWrapper): SQL<number> {
 
 type RevenueDataRow = {
   date: string;
-  revenue: number;
+  currency: CurrencyCode;
+  revenueCents: number;
   orderCount: number;
-  averageOrderValue: number;
+  averageOrderValueCents: number;
 };
+
+type RevenueComparisonRow = Pick<
+  RevenueDataRow,
+  "date" | "currency" | "revenueCents"
+>;
+
+export type MoneyByCurrency = Array<{
+  currency: CurrencyCode;
+  amountCents: number;
+}>;
+
+export type GrowthRateByCurrency = Array<{
+  currency: CurrencyCode;
+  percentage: number;
+}>;
 
 export interface DateRange {
   dateFrom?: string;
@@ -80,12 +99,13 @@ export interface AnalyticsFilters extends DateRange {
 
 export interface RevenueData {
   date: string;
-  revenue: number;
+  /** Revenue entries are independent currencies and must never be added. */
+  revenue: MoneyByCurrency;
   orderCount: number;
-  averageOrderValue: number;
+  averageOrderValue: MoneyByCurrency;
   comparison?: {
-    previousRevenue: number;
-    growthRate: number;
+    previousRevenue: MoneyByCurrency;
+    growthRate: GrowthRateByCurrency;
   };
 }
 
@@ -238,30 +258,30 @@ export class AnalyticsService extends BaseService {
       );
 
       // 查詢營收資料
+      const currency = displayRestaurantCurrencySql(restaurants.settings);
       const revenueData = await this.db
         .select({
           date: sql<string>`${dateGroupSql}`,
-          revenue: sumMoneyAmount(orders.totalAmountCents),
+          currency,
+          revenueCents: sql<number>`coalesce(sum(${orders.totalAmountCents}), 0)`,
           orderCount: count(orders.id),
-          averageOrderValue: avgMoneyAmount(orders.totalAmountCents),
+          averageOrderValueCents: sql<number>`coalesce(avg(${orders.totalAmountCents}), 0)`,
         })
         .from(orders)
+        .innerJoin(restaurants, eq(restaurants.id, orders.restaurantId))
         .where(conditions.length > 0 ? and(...conditions) : undefined)
-        .groupBy(sql`${dateGroupSql}`)
-        .orderBy(sql`${dateGroupSql}`)
-        .limit(limit);
+        .groupBy(sql`${dateGroupSql}`, currency)
+        .orderBy(sql`${dateGroupSql}`, currency)
+        // There are three supported currencies. Keep complete date buckets
+        // while preserving the endpoint's existing maximum number of dates.
+        .limit(limit * 3);
 
       // 如果需要對比資料
       if (includeComparison) {
         return await this.addComparisonData(revenueData, filters);
       }
 
-      return revenueData.map((item) => ({
-        date: item.date,
-        revenue: Number(item.revenue) || 0,
-        orderCount: item.orderCount,
-        averageOrderValue: Number(item.averageOrderValue) || 0,
-      }));
+      return this.toRevenueData(revenueData);
     } catch (error) {
       this.handleError(error, "getRevenueAnalytics");
     }
@@ -1139,6 +1159,65 @@ export class AnalyticsService extends BaseService {
     return Math.round(((current - previous) / previous) * 100 * 100) / 100;
   }
 
+  /** Collapses SQL's (date, currency) groups into one date response. */
+  private toRevenueData(rows: RevenueDataRow[]): RevenueData[] {
+    const byDate = new Map<
+      string,
+      {
+        revenue: MoneyByCurrency;
+        averageOrderValue: MoneyByCurrency;
+        orderCount: number;
+      }
+    >();
+
+    for (const row of rows) {
+      const bucket = byDate.get(row.date) ?? {
+        revenue: [],
+        averageOrderValue: [],
+        orderCount: 0,
+      };
+      bucket.revenue.push({
+        currency: row.currency,
+        amountCents: Number(row.revenueCents) || 0,
+      });
+      bucket.averageOrderValue.push({
+        currency: row.currency,
+        amountCents: Math.round(Number(row.averageOrderValueCents) || 0),
+      });
+      bucket.orderCount += Number(row.orderCount) || 0;
+      byDate.set(row.date, bucket);
+    }
+
+    return Array.from(byDate, ([date, bucket]) => ({
+      date,
+      revenue: this.sortMoneyByCurrency(bucket.revenue),
+      orderCount: bucket.orderCount,
+      averageOrderValue: this.sortMoneyByCurrency(bucket.averageOrderValue),
+    }));
+  }
+
+  private sortMoneyByCurrency(entries: MoneyByCurrency): MoneyByCurrency {
+    const sortOrder: Record<CurrencyCode, number> = { TWD: 0, MYR: 1, VND: 2 };
+    return entries.sort(
+      (left, right) => sortOrder[left.currency] - sortOrder[right.currency],
+    );
+  }
+
+  /**
+   * Legacy consumers of the richer report objects still use major-unit scalar
+   * fields. They are valid only for a restaurant-scoped query; fail rather
+   * than silently reintroducing a cross-currency cents sum.
+   */
+  private singleCurrencyMajor(entries: MoneyByCurrency): number {
+    if (entries.length === 0) return 0;
+    if (entries.length !== 1) {
+      throw new Error(
+        "A scalar money value cannot represent multiple currencies",
+      );
+    }
+    return entries[0].amountCents / 100;
+  }
+
   // 輔助函數：添加對比資料
   private async addComparisonData(
     revenueData: RevenueDataRow[],
@@ -1149,19 +1228,24 @@ export class AnalyticsService extends BaseService {
       revenueData,
     );
 
-    return revenueData.map((item) => ({
-      date: item.date,
-      revenue: Number(item.revenue) || 0,
-      orderCount: item.orderCount,
-      averageOrderValue: Number(item.averageOrderValue) || 0,
-      comparison: {
-        previousRevenue: comparisonByDate.get(item.date) ?? 0,
-        growthRate: this.calculateGrowthRate(
-          Number(item.revenue) || 0,
-          comparisonByDate.get(item.date) ?? 0,
-        ),
-      },
-    }));
+    return this.toRevenueData(revenueData).map((item) => {
+      const previousRevenue = comparisonByDate.get(item.date) ?? [];
+      return {
+        ...item,
+        comparison: {
+          previousRevenue,
+          growthRate: item.revenue.map((current) => ({
+            currency: current.currency,
+            percentage: this.calculateGrowthRate(
+              current.amountCents,
+              previousRevenue.find(
+                (previous) => previous.currency === current.currency,
+              )?.amountCents ?? 0,
+            ),
+          })),
+        },
+      };
+    });
   }
 
   /**
@@ -1214,7 +1298,7 @@ export class AnalyticsService extends BaseService {
   private async getComparisonRevenueByDate(
     filters: AnalyticsFilters,
     revenueData: RevenueDataRow[],
-  ): Promise<Map<string, number>> {
+  ): Promise<Map<string, MoneyByCurrency>> {
     if (revenueData.length === 0) return new Map();
 
     const {
@@ -1242,20 +1326,21 @@ export class AnalyticsService extends BaseService {
           await this.offsetMinutesFor(restaurantId),
         );
 
+        const currency = displayRestaurantCurrencySql(restaurants.settings);
         const comparisonData = await this.db
           .select({
             date: sql<string>`${shiftedDateGroupSql}`,
-            revenue: sumMoneyAmount(orders.totalAmountCents),
+            currency,
+            revenueCents: sql<number>`coalesce(sum(${orders.totalAmountCents}), 0)`,
           })
           .from(orders)
+          .innerJoin(restaurants, eq(restaurants.id, orders.restaurantId))
           .where(and(...conditions))
-          .groupBy(sql`${shiftedDateGroupSql}`)
-          .orderBy(sql`${shiftedDateGroupSql}`)
-          .limit(limit);
+          .groupBy(sql`${shiftedDateGroupSql}`, currency)
+          .orderBy(sql`${shiftedDateGroupSql}`, currency)
+          .limit(limit * 3);
 
-        return new Map(
-          comparisonData.map((item) => [item.date, Number(item.revenue) || 0]),
-        );
+        return this.moneyByDate(comparisonData);
       }
     }
 
@@ -1268,29 +1353,48 @@ export class AnalyticsService extends BaseService {
     );
     conditions.push(inArray(sql<string>`${dateGroupSql}`, priorBuckets));
 
+    const currency = displayRestaurantCurrencySql(restaurants.settings);
     const comparisonData = await this.db
       .select({
         date: sql<string>`${dateGroupSql}`,
-        revenue: sumMoneyAmount(orders.totalAmountCents),
+        currency,
+        revenueCents: sql<number>`coalesce(sum(${orders.totalAmountCents}), 0)`,
       })
       .from(orders)
+      .innerJoin(restaurants, eq(restaurants.id, orders.restaurantId))
       .where(and(...conditions))
-      .groupBy(sql`${dateGroupSql}`)
-      .orderBy(sql`${dateGroupSql}`)
-      .limit(limit);
+      .groupBy(sql`${dateGroupSql}`, currency)
+      .orderBy(sql`${dateGroupSql}`, currency)
+      .limit(limit * 3);
 
-    const priorRevenueByDate = new Map(
-      comparisonData.map((item) => [item.date, Number(item.revenue) || 0]),
-    );
+    const priorRevenueByDate = this.moneyByDate(comparisonData);
 
     return new Map(
       revenueData.map((item) => [
         item.date,
         priorRevenueByDate.get(
           this.getPreviousBucketDate(item.date, groupBy),
-        ) ?? 0,
+        ) ?? [],
       ]),
     );
+  }
+
+  private moneyByDate(
+    rows: RevenueComparisonRow[],
+  ): Map<string, MoneyByCurrency> {
+    const byDate = new Map<string, MoneyByCurrency>();
+    for (const row of rows) {
+      const entries = byDate.get(row.date) ?? [];
+      entries.push({
+        currency: row.currency,
+        amountCents: Number(row.revenueCents) || 0,
+      });
+      byDate.set(row.date, entries);
+    }
+    for (const [date, entries] of byDate) {
+      byDate.set(date, this.sortMoneyByCurrency(entries));
+    }
+    return byDate;
   }
 
   private getPreviousDateRange(
@@ -1362,9 +1466,9 @@ export class AnalyticsService extends BaseService {
     customerSatisfaction: number;
     trends: Array<{
       date: string;
-      revenue: number;
+      revenue: MoneyByCurrency;
       orderCount: number;
-      averageOrderValue: number;
+      averageOrderValue: MoneyByCurrency;
     }>;
   }> {
     try {
@@ -1618,7 +1722,9 @@ export class AnalyticsService extends BaseService {
           monthRevenue: dashboardData.summary.monthRevenue,
           todayRevenue: dashboardData.summary.todayRevenue,
           revenueGrowth: dashboardData.summary.growthRates.revenueGrowth,
-          averageOrderValue: revenueData[0]?.averageOrderValue || 0,
+          averageOrderValue: this.singleCurrencyMajor(
+            revenueData[0]?.averageOrderValue ?? [],
+          ),
         },
         operationalMetrics: {
           totalOrders: dashboardData.summary.monthOrders,
@@ -1679,7 +1785,7 @@ export class AnalyticsService extends BaseService {
       const menuAnalytics = await this.getMenuAnalytics(filters);
 
       const totalRevenue = revenueData.reduce(
-        (sum, item) => sum + item.revenue,
+        (sum, item) => sum + this.singleCurrencyMajor(item.revenue),
         0,
       );
       const totalOrders = revenueData.reduce(
@@ -1703,7 +1809,7 @@ export class AnalyticsService extends BaseService {
             dateTo: new Date(fromMs).toISOString(),
           });
           const priorTotal = priorRevenue.reduce(
-            (sum, item) => sum + item.revenue,
+            (sum, item) => sum + this.singleCurrencyMajor(item.revenue),
             0,
           );
           growthRate =
@@ -1758,7 +1864,10 @@ export class AnalyticsService extends BaseService {
     );
     const recent = ordered.slice(-7);
     const averageRevenue =
-      recent.reduce((sum, item) => sum + item.revenue, 0) / recent.length;
+      recent.reduce(
+        (sum, item) => sum + this.singleCurrencyMajor(item.revenue),
+        0,
+      ) / recent.length;
     const lastDate = this.parseAnalyticsDate(ordered[ordered.length - 1].date);
 
     return Array.from({ length: 7 }, (_, index) => {

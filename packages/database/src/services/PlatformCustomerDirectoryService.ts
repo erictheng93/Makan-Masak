@@ -1,5 +1,5 @@
-import { and, count, desc, eq, like, or, sql } from "drizzle-orm";
-import { normalizeE164Phone } from "@makanmasak/utils";
+import { and, count, desc, eq, inArray, like, or, sql } from "drizzle-orm";
+import { normalizeE164Phone, type CurrencyCode } from "@makanmasak/utils";
 import {
   AUDIT_ACTIONS,
   auditLogs,
@@ -10,6 +10,7 @@ import {
 import { BaseService } from "./base";
 import type { AuditActor } from "./TenantMemberDirectoryService";
 import { maskEmail, maskPhone } from "./pii-masking";
+import { displayRestaurantCurrencySql } from "../utils/market-currency";
 
 /**
  * Platform-side (role 0) customer directory — spec §7.2, stage A4.
@@ -42,7 +43,8 @@ export interface PlatformCustomerListItem {
   restaurantCount: number;
   /** Summed across every shop, so it is not any one tenant's figure. */
   orderCount: number;
-  totalSpentCents: number;
+  /** Never add entries in this array: they are distinct currencies. */
+  totalSpentByCurrency: MoneyByCurrency;
   lastOrderAt: Date | null;
   createdAt: Date | null;
 }
@@ -71,9 +73,28 @@ export interface PlatformCustomerRestaurantSlice {
   orderCount: number;
   cancelledOrderCount: number;
   totalSpentCents: number;
+  currency: CurrencyCode;
   firstOrderAt: Date | null;
   lastOrderAt: Date | null;
 }
+
+export type MoneyByCurrency = Array<{
+  currency: CurrencyCode;
+  amountCents: number;
+}>;
+
+type CustomerRollup = {
+  customerId: string;
+  displayName: string | null;
+  phone: string | null;
+  email: string | null;
+  locale: string | null;
+  customerStatus: string;
+  createdAt: Date | null;
+  restaurantCount: number;
+  orderCount: number;
+  lastOrderAt: number | null;
+};
 
 export interface PlatformCustomerContact {
   customerId: string;
@@ -118,7 +139,6 @@ export class PlatformCustomerDirectoryService extends BaseService {
       // still produces one LEFT JOIN row, and count(*) would call that 1.
       restaurantCount: sql<number>`count(${restaurantCustomers.restaurantId})`,
       orderCount: sql<number>`coalesce(sum(${restaurantCustomers.orderCount}), 0)`,
-      totalSpentCents: sql<number>`coalesce(sum(${restaurantCustomers.totalSpentCents}), 0)`,
       lastOrderAt: sql<number | null>`max(${restaurantCustomers.lastOrderAt})`,
     };
   }
@@ -157,7 +177,8 @@ export class PlatformCustomerDirectoryService extends BaseService {
    * so a future sensitive column cannot arrive by spread.
    */
   private toPublicCustomer(
-    row: Awaited<ReturnType<PlatformCustomerDirectoryService["resolve"]>>,
+    row: CustomerRollup | undefined,
+    totalSpentByCurrency: MoneyByCurrency,
   ): PlatformCustomerListItem | null {
     if (!row) return null;
     const deleted = row.customerStatus === "deleted";
@@ -170,7 +191,7 @@ export class PlatformCustomerDirectoryService extends BaseService {
       status: deleted ? "deleted" : "active",
       restaurantCount: row.restaurantCount,
       orderCount: row.orderCount,
-      totalSpentCents: row.totalSpentCents,
+      totalSpentByCurrency,
       lastOrderAt: row.lastOrderAt == null ? null : new Date(row.lastOrderAt),
       createdAt: row.createdAt,
     };
@@ -185,7 +206,10 @@ export class PlatformCustomerDirectoryService extends BaseService {
   }
 
   async get(customerId: string) {
-    return this.toPublicCustomer(await this.resolve(customerId));
+    const row = await this.resolve(customerId);
+    if (!row) return null;
+    const amounts = await this.totalSpentByCustomerIds([customerId]);
+    return this.toPublicCustomer(row, amounts.get(customerId) ?? []);
   }
 
   async list(
@@ -213,7 +237,10 @@ export class PlatformCustomerDirectoryService extends BaseService {
     const aggregates = this.aggregates();
     const orderBy =
       filters.sort === "spent"
-        ? desc(aggregates.totalSpentCents)
+        ? // A platform-wide "highest spend" ordering would require an exchange
+          // rate and a valuation date. Neither exists, so retain a useful,
+          // deterministic order instead of pretending cents are comparable.
+          desc(aggregates.lastOrderAt)
         : filters.sort === "orders"
           ? desc(aggregates.orderCount)
           : filters.sort === "restaurants"
@@ -234,8 +261,13 @@ export class PlatformCustomerDirectoryService extends BaseService {
       this.db.select({ total: count() }).from(customers).where(where),
     ]);
     const total = totalRows[0]?.total ?? 0;
+    const amounts = await this.totalSpentByCustomerIds(
+      rows.map((row) => row.customerId),
+    );
     return {
-      customers: rows.map((row) => this.toPublicCustomer(row)!),
+      customers: rows.map(
+        (row) => this.toPublicCustomer(row, amounts.get(row.customerId) ?? [])!,
+      ),
       total,
       page: filters.page,
       limit: filters.limit,
@@ -259,6 +291,7 @@ export class PlatformCustomerDirectoryService extends BaseService {
         orderCount: restaurantCustomers.orderCount,
         cancelledOrderCount: restaurantCustomers.cancelledOrderCount,
         totalSpentCents: restaurantCustomers.totalSpentCents,
+        currency: displayRestaurantCurrencySql(restaurants.settings),
         firstOrderAt: restaurantCustomers.firstOrderAt,
         lastOrderAt: restaurantCustomers.lastOrderAt,
       })
@@ -269,6 +302,43 @@ export class PlatformCustomerDirectoryService extends BaseService {
       )
       .where(eq(restaurantCustomers.customerId, customerId))
       .orderBy(desc(restaurantCustomers.totalSpentCents));
+  }
+
+  /**
+   * The sole cross-shop money aggregate in this service. Query it separately
+   * from the customer rollup so pagination remains per customer, not per
+   * (customer, currency) group.
+   */
+  private async totalSpentByCustomerIds(
+    customerIds: readonly string[],
+  ): Promise<Map<string, MoneyByCurrency>> {
+    if (customerIds.length === 0) return new Map();
+
+    const currency = displayRestaurantCurrencySql(restaurants.settings);
+    const rows = await this.db
+      .select({
+        customerId: restaurantCustomers.customerId,
+        currency,
+        amountCents: sql<number>`coalesce(sum(${restaurantCustomers.totalSpentCents}), 0)`,
+      })
+      .from(restaurantCustomers)
+      .innerJoin(
+        restaurants,
+        eq(restaurants.id, restaurantCustomers.restaurantId),
+      )
+      .where(inArray(restaurantCustomers.customerId, [...customerIds]))
+      .groupBy(restaurantCustomers.customerId, currency)
+      .orderBy(restaurantCustomers.customerId, currency);
+
+    return rows.reduce<Map<string, MoneyByCurrency>>((amounts, row) => {
+      const customerAmounts = amounts.get(row.customerId) ?? [];
+      customerAmounts.push({
+        currency: row.currency,
+        amountCents: Number(row.amountCents) || 0,
+      });
+      amounts.set(row.customerId, customerAmounts);
+      return amounts;
+    }, new Map());
   }
 
   /**

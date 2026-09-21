@@ -12,7 +12,11 @@ import {
 import { alias, QueryBuilder } from "drizzle-orm/sqlite-core";
 import { restaurantMarketMemberships } from "../schema/markets";
 import { restaurants } from "../schema/restaurants";
-import { ApiError, DEFAULT_CURRENCY } from "@makanmasak/utils";
+import {
+  ApiError,
+  DEFAULT_CURRENCY,
+  type CurrencyCode,
+} from "@makanmasak/utils";
 
 // Match the server currency resolver's String.trim(), including legacy blanks.
 const ECMASCRIPT_WHITESPACE =
@@ -32,6 +36,26 @@ export function restaurantCurrencySql(settings: SQLWrapper): SQL {
     nullif(trim(json_extract(json_extract(${settings}, '$'), '$.currency'), ${ECMASCRIPT_WHITESPACE}), ''),
     ${DEFAULT_CURRENCY}
   )) END`;
+}
+
+/**
+ * Currency for read-only, cross-restaurant views.
+ *
+ * The source JSON predates the currency enum and can contain an invalid
+ * legacy value. Money writes fail closed through `restaurantCurrencySql`'s
+ * callers, but a platform listing must not either return an unsupported code
+ * to its client or become unavailable because of one malformed row. This is
+ * the SQL twin of `displayRestaurantCurrency`: absent or invalid settings are
+ * labelled as the legacy default, TWD.
+ */
+export function displayRestaurantCurrencySql(
+  settings: SQLWrapper,
+): SQL<CurrencyCode> {
+  return sql<CurrencyCode>`CASE ${restaurantCurrencySql(settings)}
+    WHEN 'MYR' THEN 'MYR'
+    WHEN 'VND' THEN 'VND'
+    ELSE ${DEFAULT_CURRENCY}
+  END`;
 }
 
 /**

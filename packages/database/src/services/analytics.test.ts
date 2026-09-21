@@ -56,24 +56,62 @@ describe("AnalyticsService revenue analytics", () => {
     expect(result).toEqual([
       {
         date: "2026-01-08",
-        revenue: 150,
+        revenue: money(15000),
         orderCount: 1,
-        averageOrderValue: 150,
+        averageOrderValue: money(15000),
         comparison: {
-          previousRevenue: 100,
-          growthRate: 50,
+          previousRevenue: money(10000),
+          growthRate: growth(50),
         },
       },
       {
         date: "2026-01-09",
-        revenue: 300,
+        revenue: money(30000),
         orderCount: 1,
-        averageOrderValue: 300,
+        averageOrderValue: money(30000),
         comparison: {
-          previousRevenue: 200,
-          growthRate: 50,
+          previousRevenue: money(20000),
+          growthRate: growth(50),
         },
       },
+    ]);
+  });
+
+  it("keeps platform revenue in separate currency buckets", async () => {
+    await testDb.drizzle.insert(restaurants).values({
+      id: "analytics-myr-restaurant",
+      name: "MYR Analytics Test Restaurant",
+      type: "casual",
+      category: "testing",
+      address: "2 Test Road",
+      district: "Test District",
+      phone: "0912345679",
+      settings: { currency: "MYR" },
+    });
+    await testDb.drizzle.insert(orders).values([
+      order("twd-100", "TWD-001", "2026-01-08T12:00:00.000Z", 10000),
+      order("myr-100", "MYR-001", "2026-01-08T13:00:00.000Z", 10000, {
+        restaurantId: "analytics-myr-restaurant",
+      }),
+    ]);
+
+    const result = await new AnalyticsService(
+      testDb.bindings.DB,
+      {} as never,
+    ).getRevenueAnalytics({
+      dateFrom: "2026-01-08T00:00:00.000Z",
+      dateTo: "2026-01-09T00:00:00.000Z",
+      groupBy: "day",
+    });
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        date: "2026-01-08",
+        revenue: [
+          { currency: "TWD", amountCents: 10000 },
+          { currency: "MYR", amountCents: 10000 },
+        ],
+      }),
     ]);
   });
 
@@ -107,9 +145,9 @@ describe("AnalyticsService revenue analytics", () => {
 
     expect(revenue).toEqual([
       expect.objectContaining({
-        revenue: 300,
+        revenue: money(30000),
         orderCount: 1,
-        averageOrderValue: 300,
+        averageOrderValue: money(30000),
       }),
     ]);
     expect(operational).toMatchObject({
@@ -135,7 +173,7 @@ describe("AnalyticsService revenue analytics", () => {
         groupBy: "day",
       }),
     ).resolves.toContainEqual(
-      expect.objectContaining({ date: "2026-01-09", revenue: 150 }),
+      expect.objectContaining({ date: "2026-01-09", revenue: money(15000) }),
     );
   });
 
@@ -160,10 +198,10 @@ describe("AnalyticsService revenue analytics", () => {
     ).resolves.toContainEqual(
       expect.objectContaining({
         date: "2026-01-10",
-        revenue: 150,
+        revenue: money(15000),
         comparison: {
-          previousRevenue: 100,
-          growthRate: 50,
+          previousRevenue: money(10000),
+          growthRate: growth(50),
         },
       }),
     );
@@ -191,22 +229,22 @@ describe("AnalyticsService revenue analytics", () => {
     expect(result).toEqual([
       {
         date: "2026-01-08",
-        revenue: 150,
+        revenue: money(15000),
         orderCount: 1,
-        averageOrderValue: 150,
+        averageOrderValue: money(15000),
         comparison: {
-          previousRevenue: 100,
-          growthRate: 50,
+          previousRevenue: money(10000),
+          growthRate: growth(50),
         },
       },
       {
         date: "2026-01-10",
-        revenue: 500,
+        revenue: money(50000),
         orderCount: 1,
-        averageOrderValue: 500,
+        averageOrderValue: money(50000),
         comparison: {
-          previousRevenue: 0,
-          growthRate: 100,
+          previousRevenue: [],
+          growthRate: growth(100),
         },
       },
     ]);
@@ -233,22 +271,22 @@ describe("AnalyticsService revenue analytics", () => {
       expect.objectContaining({
         date: "2026-01-08",
         comparison: {
-          previousRevenue: 0,
-          growthRate: 100,
+          previousRevenue: [],
+          growthRate: growth(100),
         },
       }),
       expect.objectContaining({
         date: "2026-01-09",
         comparison: {
-          previousRevenue: 100,
-          growthRate: 100,
+          previousRevenue: money(10000),
+          growthRate: growth(100),
         },
       }),
       expect.objectContaining({
         date: "2026-01-10",
         comparison: {
-          previousRevenue: 200,
-          growthRate: 50,
+          previousRevenue: money(20000),
+          growthRate: growth(50),
         },
       }),
     ]);
@@ -294,10 +332,10 @@ describe("AnalyticsService revenue analytics", () => {
       expect(result).toContainEqual(
         expect.objectContaining({
           date: currentBucket,
-          revenue: 300,
+          revenue: money(30000),
           comparison: {
-            previousRevenue: 200,
-            growthRate: 50,
+            previousRevenue: money(20000),
+            growthRate: growth(50),
           },
         }),
       );
@@ -710,6 +748,14 @@ function order(
     updatedAt: new Date(createdAt),
     ...overrides,
   };
+}
+
+function money(amountCents: number) {
+  return [{ currency: "TWD" as const, amountCents }];
+}
+
+function growth(percentage: number) {
+  return [{ currency: "TWD" as const, percentage }];
 }
 
 function table(

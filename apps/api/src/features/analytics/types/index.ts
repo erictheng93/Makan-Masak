@@ -3,6 +3,8 @@
  * TypeScript type definitions for the analytics feature
  */
 
+import type { CurrencyCode } from "@makanmasak/utils";
+
 // Base analytics interfaces
 export interface AnalyticsFilters {
   restaurantId?: string;
@@ -79,14 +81,19 @@ export interface DashboardResponse {
 }
 
 // Revenue analytics interfaces
+export type MoneyByCurrency = Array<{
+  currency: CurrencyCode;
+  amountCents: number;
+}>;
+
 export interface RevenueData {
   date: string;
-  revenue: number;
+  revenue: MoneyByCurrency;
   orderCount: number;
-  averageOrderValue: number;
+  averageOrderValue: MoneyByCurrency;
   comparison?: {
-    previousRevenue: number;
-    growthRate: number;
+    previousRevenue: MoneyByCurrency;
+    growthRate: Array<{ currency: CurrencyCode; percentage: number }>;
   };
 }
 
@@ -222,10 +229,14 @@ export interface FinancialReportData {
     growthRate: number;
   };
   breakdown: {
-    daily?: Array<{ date: string; revenue: number; orders: number }>;
-    weekly?: Array<{ week: string; revenue: number; orders: number }>;
-    monthly?: Array<{ month: string; revenue: number; orders: number }>;
-    yearly?: Array<{ year: string; revenue: number; orders: number }>;
+    daily?: Array<{ date: string; revenue: MoneyByCurrency; orders: number }>;
+    weekly?: Array<{ week: string; revenue: MoneyByCurrency; orders: number }>;
+    monthly?: Array<{
+      month: string;
+      revenue: MoneyByCurrency;
+      orders: number;
+    }>;
+    yearly?: Array<{ year: string; revenue: MoneyByCurrency; orders: number }>;
   };
 }
 
