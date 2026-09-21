@@ -38,6 +38,14 @@ export interface ManagementEnv {
   PLATFORM_CF_API_TOKEN?: string;
   PLATFORM_CF_ACCOUNT_ID?: string;
   SLACK_WEBHOOK_URL?: string; // Optional: for alert notifications
+  /**
+   * Email Service fallback for platform-owned onboarding alerts. Both address
+   * variables are kept outside source control because the recipient is an
+   * operational contact, not application configuration.
+   */
+  PLATFORM_NOTIFICATION_EMAIL?: string;
+  PLATFORM_NOTIFICATION_EMAIL_FROM?: string;
+  ONBOARDING_NOTIFICATION_EMAIL?: SendEmail;
   ONBOARDING_EMAIL_ENABLED?: string;
   ONBOARDING_EMAIL_FROM?: string;
   /** Origin of the onboarding app; applicant status links point here. */

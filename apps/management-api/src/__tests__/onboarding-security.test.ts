@@ -105,6 +105,20 @@ describe("onboarding route authorization", () => {
     });
   });
 
+  it("keeps the successful submission response when notification work rejects", async () => {
+    onboardingMocks.notifyPlatformOfNewApplication.mockRejectedValueOnce(
+      new Error("webhook returned 500"),
+    );
+
+    const response = await app.fetch(
+      jsonRequest("/api/v1/onboarding/applications", createApplicationBody),
+      createEnv(),
+    );
+
+    expect(response.status).toBe(201);
+    expect(onboardingMocks.sendApplicationReceivedEmail).toHaveBeenCalled();
+  });
+
   it("requires the application secret before reading applications", async () => {
     const readResponse = await app.fetch(
       new Request(

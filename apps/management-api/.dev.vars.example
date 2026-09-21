@@ -24,3 +24,9 @@ INTERNAL_API_TOKEN=your-local-internal-api-token-min-32-chars-change-this-value
 # management auth middleware verifies with the same fallback, so setting this
 # is optional locally and does not affect the exchange-verify step above.
 # MANAGEMENT_JWT_SECRET=your-dedicated-management-secret-min-32-chars
+
+# Optional platform onboarding alert fallback. Cloudflare Email Service's local
+# binding logs mail by default; use a verified sender and destination only when
+# testing a real remote binding. Details: ONBOARDING_NOTIFICATIONS.md.
+# PLATFORM_NOTIFICATION_EMAIL=ops@example.com
+# PLATFORM_NOTIFICATION_EMAIL_FROM=alerts@your-verified-sender-domain.example

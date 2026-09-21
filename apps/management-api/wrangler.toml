@@ -57,6 +57,12 @@ binding = "BUNDLE_STORAGE"
 bucket_name = "makanmasak-management-bundles-dev"
 preview_bucket_name = "makanmasak-management-bundles-preview"
 
+# Cloudflare Email Service provides an independent platform-alert fallback.
+# The recipient and sender addresses are environment secrets because they are
+# operational contacts; see ONBOARDING_NOTIFICATIONS.md before enabling it.
+[[send_email]]
+name = "ONBOARDING_NOTIFICATION_EMAIL"
+
 # === PRODUCTION ENVIRONMENT ===
 [env.production]
 name = "makanmasak-management-api-prod"
@@ -104,6 +110,11 @@ id = "e8da1ab3a04740e48c53a710494c31df"
 binding = "BUNDLE_STORAGE"
 bucket_name = "makanmasak-management-bundles-prod"
 
+# Bindings do not inherit into named environments. This must be deployed before
+# PLATFORM_NOTIFICATION_EMAIL and PLATFORM_NOTIFICATION_EMAIL_FROM can work.
+[[env.production.send_email]]
+name = "ONBOARDING_NOTIFICATION_EMAIL"
+
 
 # Secrets (set via wrangler secret put):
 # - JWT_SECRET: JWT signing secret for management tokens
@@ -111,4 +122,8 @@ bucket_name = "makanmasak-management-bundles-prod"
 # - PLATFORM_CF_ACCOUNT_ID: Platform Cloudflare account ID
 # - RESEND_API_KEY: Resend API key used for onboarding credential delivery
 # - SLACK_WEBHOOK_URL: Slack webhook for new-application platform alerts
+# - PLATFORM_NOTIFICATION_EMAIL: Verified Email Routing destination for the
+#   Cloudflare Email Service onboarding-alert fallback
+# - PLATFORM_NOTIFICATION_EMAIL_FROM: Sender on a domain onboarded to
+#   Cloudflare Email Service
 # - CF_API_TOKEN / CF_ACCOUNT_ID: Legacy fallback names for platform provisioning

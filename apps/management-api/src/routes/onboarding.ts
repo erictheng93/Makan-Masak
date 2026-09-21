@@ -173,7 +173,12 @@ router.post("/applications", async (c) => {
         application,
         application.applicationSecret!,
       ),
-    ]);
+    ]).catch((error) => {
+      // Providers normally absorb their own failures, but a defensive final
+      // boundary keeps an unexpected notifier regression out of the public
+      // submission response in Worker and non-Worker test hosts alike.
+      console.error("[Onboarding] Post-submission notification failed:", error);
+    });
     try {
       c.executionCtx.waitUntil(notifications);
     } catch {

@@ -86,6 +86,12 @@ interface ProvisionedRestaurantInput {
   city: string | null | undefined;
 }
 
+interface PlatformEmailNotificationConfig {
+  binding: SendEmail;
+  recipient: string;
+  sender: string;
+}
+
 export function buildProvisionedRestaurantValues(
   application: ProvisionedRestaurantInput,
 ) {
@@ -299,21 +305,45 @@ export class OnboardingService {
     return admitted.length > 0;
   }
 
-  /** Notify platform operators without making applicant submission depend on Slack. */
+  /**
+   * Notify platform operators without making applicant submission depend on
+   * either external notification provider. Slack remains the primary channel;
+   * Cloudflare Email Service is an independent fallback for deployments where
+   * a webhook is deliberately not configured.
+   */
   async notifyPlatformOfNewApplication(
     application: OnboardingApplication,
   ): Promise<void> {
-    if (!this.env.SLACK_WEBHOOK_URL) {
+    const emailConfig = this.platformEmailNotificationConfig();
+    const notifications: Promise<void>[] = [];
+
+    if (this.env.SLACK_WEBHOOK_URL) {
+      notifications.push(this.notifyPlatformBySlack(application));
+    }
+    if (emailConfig) {
+      notifications.push(this.notifyPlatformByEmail(application, emailConfig));
+    }
+
+    if (notifications.length === 0) {
       if (this.env.NODE_ENV === "production") {
         console.error(
-          "[OnboardingService] SLACK_WEBHOOK_URL is not configured; platform notification skipped",
+          "[OnboardingService] No platform onboarding notification channel is configured; notification skipped",
         );
       }
       return;
     }
 
+    await Promise.all(notifications);
+  }
+
+  private async notifyPlatformBySlack(
+    application: OnboardingApplication,
+  ): Promise<void> {
+    // notifyPlatformOfNewApplication verifies this before calling the helper.
+    const webhookUrl = this.env.SLACK_WEBHOOK_URL!;
+
     try {
-      const response = await fetch(this.env.SLACK_WEBHOOK_URL, {
+      const response = await fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -339,6 +369,53 @@ export class OnboardingService {
         error,
       );
     }
+  }
+
+  /**
+   * Uses Cloudflare Email Service only when all of its account-specific
+   * settings are present. The body deliberately contains no applicant email,
+   * phone number, or contact name.
+   */
+  private async notifyPlatformByEmail(
+    application: OnboardingApplication,
+    config: PlatformEmailNotificationConfig,
+  ): Promise<void> {
+    const reviewUrl = this.buildAdminOnboardingLink();
+    const text = [
+      "New MakanMasak onboarding application",
+      `Business: ${application.businessName}`,
+      `Application ID: ${application.id}`,
+      `Review: ${reviewUrl}`,
+    ].join("\n");
+
+    try {
+      await config.binding.send({
+        to: config.recipient,
+        from: config.sender,
+        subject: "New MakanMasak onboarding application",
+        text,
+        html: [
+          "<h1>New MakanMasak onboarding application</h1>",
+          `<p><strong>Business:</strong> ${this.escapeHtml(application.businessName)}</p>`,
+          `<p><strong>Application ID:</strong> ${this.escapeHtml(application.id)}</p>`,
+          `<p><a href="${this.escapeHtml(reviewUrl)}">Review application</a></p>`,
+        ].join(""),
+      });
+    } catch (error) {
+      console.error(
+        "[OnboardingService] Application email notification failed:",
+        error,
+      );
+    }
+  }
+
+  private platformEmailNotificationConfig(): PlatformEmailNotificationConfig | null {
+    const recipient = this.env.PLATFORM_NOTIFICATION_EMAIL?.trim();
+    const sender = this.env.PLATFORM_NOTIFICATION_EMAIL_FROM?.trim();
+    const binding = this.env.ONBOARDING_NOTIFICATION_EMAIL;
+    if (!recipient || !sender || !binding) return null;
+
+    return { recipient, sender, binding };
   }
 
   /** Send the applicant a resumable status URL; the secret stays in its fragment. */
