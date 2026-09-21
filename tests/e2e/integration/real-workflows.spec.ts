@@ -2962,4 +2962,127 @@ test.describe("Real system workflows", () => {
       restaurantId: ownerAccount!.restaurantId,
     });
   });
+
+  test("account management creates a restaurant and its owner who can log in", async ({
+    page,
+  }) => {
+    skipWhen(!ADMIN_URL, "WORKFLOW_ADMIN_URL/SMOKE_ADMIN_URL is required");
+
+    const adminLogin = await smokeLogin(API_URL, "admin", "admin123");
+    assertLoginData(adminLogin, "seeded platform admin login is required");
+
+    const suffix = randomSuffix();
+    const username = `workflow-owner-${suffix}`;
+    const password = `Owner@${suffix}Setup1`;
+    let ownerId: string | undefined;
+    let restaurantId: string | undefined;
+
+    await installAdminSession(page, adminLogin);
+
+    try {
+      await page.goto(`${ADMIN_URL}/dashboard/account-management`, {
+        waitUntil: "domcontentloaded",
+      });
+      await expect(
+        page.getByTestId("account-management-owner-form"),
+      ).toBeVisible();
+
+      await page
+        .getByTestId("account-management-owner-username")
+        .fill(username);
+      await page
+        .getByTestId("account-management-owner-password")
+        .fill(password);
+      await page
+        .getByTestId("account-management-owner-full-name")
+        .fill("Workflow Owner");
+      await page
+        .getByTestId("account-management-owner-email")
+        .fill(`${username}@example.com`);
+      await page
+        .getByTestId("account-management-owner-phone")
+        .fill("0912345678");
+      await page
+        .getByTestId("account-management-owner-restaurant")
+        .selectOption("__new__");
+      await page
+        .getByTestId("account-management-new-restaurant-name")
+        .fill(`Workflow Restaurant ${suffix}`);
+      await page
+        .getByTestId("account-management-new-restaurant-type")
+        .fill("restaurant");
+      await page
+        .getByTestId("account-management-new-restaurant-address")
+        .fill("100 Workflow Street");
+      await page
+        .getByTestId("account-management-new-restaurant-district")
+        .fill("Workflow District");
+      await page
+        .getByTestId("account-management-new-restaurant-phone")
+        .fill("0912345678");
+
+      const restaurantCreated = page.waitForResponse(
+        (response) =>
+          response.url().includes("/api/v1/restaurants") &&
+          response.request().method() === "POST",
+      );
+      const ownerCreated = page.waitForResponse(
+        (response) =>
+          response.url().includes("/api/v1/users") &&
+          response.request().method() === "POST",
+      );
+      await page.getByTestId("account-management-owner-submit").click();
+
+      const restaurantResponse = await restaurantCreated;
+      expect(
+        restaurantResponse.ok(),
+        `account-management restaurant create ${restaurantResponse.status()}`,
+      ).toBe(true);
+      const restaurantBody = (await restaurantResponse.json()) as {
+        data?: { id?: string };
+      };
+      restaurantId = restaurantBody.data?.id;
+      expect(typeof restaurantId, "created restaurant id").toBe("string");
+
+      const ownerResponse = await ownerCreated;
+      expect(
+        ownerResponse.ok(),
+        `account-management owner create ${ownerResponse.status()}`,
+      ).toBe(true);
+      const ownerBody = (await ownerResponse.json()) as {
+        data?: { id?: string; restaurantId?: string };
+      };
+      ownerId = ownerBody.data?.id;
+      expect(typeof ownerId, "created owner id").toBe("string");
+      expect(ownerBody.data?.restaurantId).toBe(restaurantId);
+      await expect(page.getByText(`@${username}`)).toBeVisible();
+
+      const ownerLogin = await fetch(`${API_URL}/api/v1/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      expect(ownerLogin.status).toBe(200);
+      const ownerLoginBody = (await ownerLogin.json()) as {
+        data?: { user?: { role?: number; restaurantId?: string } };
+      };
+      expect(ownerLoginBody.data?.user).toMatchObject({
+        role: 1,
+        restaurantId,
+      });
+    } finally {
+      if (ownerId) {
+        await fetch(`${API_URL}/api/v1/users/${ownerId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${adminLogin.token}` },
+        });
+      }
+      if (restaurantId) {
+        await fetch(`${API_URL}/api/v1/restaurants/${restaurantId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${adminLogin.token}` },
+        });
+      }
+    }
+  });
 });

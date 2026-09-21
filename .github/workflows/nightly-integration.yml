@@ -76,6 +76,7 @@ jobs:
           EOF
           cat > apps/management-api/.dev.vars <<'EOF'
           JWT_SECRET=ci-integration-gate-jwt-secret-minimum-32-chars-long
+          INTERNAL_API_TOKEN=ci-integration-internal-token-minimum-32-chars-long
           NODE_ENV=test
           EOF
 
@@ -96,7 +97,7 @@ jobs:
           pnpm db:seed:local
           pnpm db:seed:local:e2e
 
-      - name: 🚀 啟動 API、management API 與前端
+      - name: 🚀 依序啟動 management API、API 與前端
         # `vite` (dev), not `vite preview`: dev applies server.proxy, which is
         # what puts the Worker behind the SPA's relative /api/v1 calls.
         # `preview` does not proxy, so the customer app had no API behind it.
@@ -109,16 +110,37 @@ jobs:
         # with it — the dev server never binds 8787 and every probe below times
         # out. `--local` disables remote bindings, so env.AI reports "not
         # supported" (nothing under test calls it) and the Worker starts.
+        #
+        # Management starts before the API because account management's direct
+        # restaurant + owner flow follows the API's MANAGEMENT_API binding twice
+        # (provision tenant, then link owner). The internal token above must be
+        # identical in both Workers. Bringing the Worker up first also avoids
+        # two concurrent wrangler processes fighting over an inspector port.
         run: |
           mkdir -p /tmp/integration-logs
-          (cd apps/api && pnpm exec wrangler dev --local --inspector-port 9229 \
-             --persist-to ../../.wrangler/shared-state \
-             > /tmp/integration-logs/api.log 2>&1 &)
-          (cd apps/customer-app && pnpm exec vite --port 3000 --host 0.0.0.0 \
-             > /tmp/integration-logs/customer.log 2>&1 &)
+          wait_for() {
+            elapsed=0
+            until curl -sf "$1" >/dev/null 2>&1; do
+              if [ "$elapsed" -ge 240 ]; then
+                echo "::error::$1 did not respond within 240s"
+                tail -n 100 /tmp/integration-logs/*.log || true
+                exit 1
+              fi
+              sleep 2
+              elapsed=$((elapsed + 2))
+            done
+            echo "$1 ready in ${elapsed}s"
+          }
           (cd apps/management-api && pnpm exec wrangler dev --local --inspector-port 9230 \
              --persist-to ../../.wrangler/shared-state \
              > /tmp/integration-logs/management-api.log 2>&1 &)
+          wait_for http://localhost:8789/info
+          (cd apps/api && pnpm exec wrangler dev --local --inspector-port 9229 \
+             --persist-to ../../.wrangler/shared-state \
+             > /tmp/integration-logs/api.log 2>&1 &)
+          wait_for http://localhost:8787/info
+          (cd apps/customer-app && pnpm exec vite --port 3000 --host 0.0.0.0 \
+             > /tmp/integration-logs/customer.log 2>&1 &)
           (cd apps/onboarding-app && pnpm exec vite --port 3011 --host 0.0.0.0 \
              > /tmp/integration-logs/onboarding.log 2>&1 &)
           (cd apps/admin-dashboard && pnpm exec vite --port 3001 --host 0.0.0.0 \
@@ -208,6 +230,7 @@ jobs:
         env:
           WORKFLOW_API_URL: http://localhost:8787
           WORKFLOW_CUSTOMER_URL: http://localhost:3000
+          WORKFLOW_ADMIN_URL: http://localhost:3001
           WORKFLOW_OWNER_ACTIVATION_ADMIN_URL: http://localhost:3001
           WORKFLOW_ONBOARDING_URL: http://localhost:3011
           WORKFLOW_MANAGEMENT_API_URL: http://localhost:8789/api/v1

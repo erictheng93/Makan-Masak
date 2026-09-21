@@ -399,6 +399,7 @@ function switchTab(tab: TabType) {
     <template v-if="activeTab === 'owners'">
       <!-- Owner Registration Form -->
       <form
+        data-testid="account-management-owner-form"
         class="bg-white rounded-lg shadow-sm border border-gray-200"
         @submit.prevent="handleOwnerSubmit"
       >
@@ -418,6 +419,7 @@ function switchTab(tab: TabType) {
               </label>
               <input
                 v-model="ownerForm.username"
+                data-testid="account-management-owner-username"
                 type="text"
                 class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                 :class="{ 'border-red-300': errors.username }"
@@ -434,6 +436,7 @@ function switchTab(tab: TabType) {
               </label>
               <input
                 v-model="ownerForm.password"
+                data-testid="account-management-owner-password"
                 type="password"
                 class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                 :class="{ 'border-red-300': errors.password }"
@@ -450,6 +453,7 @@ function switchTab(tab: TabType) {
               </label>
               <input
                 v-model="ownerForm.fullName"
+                data-testid="account-management-owner-full-name"
                 type="text"
                 class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                 :class="{ 'border-red-300': errors.fullName }"
@@ -466,6 +470,7 @@ function switchTab(tab: TabType) {
               </label>
               <input
                 v-model="ownerForm.email"
+                data-testid="account-management-owner-email"
                 type="email"
                 class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                 :class="{ 'border-red-300': errors.email }"
@@ -495,6 +500,7 @@ function switchTab(tab: TabType) {
               </label>
               <div class="relative">
                 <select
+                  data-testid="account-management-owner-restaurant"
                   class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm appearance-none pr-10"
                   :class="{ 'border-red-300': errors.restaurantId }"
                   :value="
@@ -532,6 +538,7 @@ function switchTab(tab: TabType) {
                 </label>
                 <input
                   v-model="ownerForm.newRestaurantName"
+                  data-testid="account-management-new-restaurant-name"
                   type="text"
                   class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                   :class="{ 'border-red-300': errors.newRestaurantName }"
@@ -552,6 +559,7 @@ function switchTab(tab: TabType) {
                 </label>
                 <input
                   v-model="ownerForm.newRestaurantType"
+                  data-testid="account-management-new-restaurant-type"
                   type="text"
                   class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                   :class="{ 'border-red-300': errors.newRestaurantType }"
@@ -572,6 +580,7 @@ function switchTab(tab: TabType) {
                 </label>
                 <input
                   v-model="ownerForm.newRestaurantAddress"
+                  data-testid="account-management-new-restaurant-address"
                   type="text"
                   class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                   :placeholder="
@@ -585,6 +594,7 @@ function switchTab(tab: TabType) {
                 </label>
                 <input
                   v-model="ownerForm.newRestaurantDistrict"
+                  data-testid="account-management-new-restaurant-district"
                   type="text"
                   class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                   :class="{ 'border-red-300': errors.newRestaurantDistrict }"
@@ -605,6 +615,7 @@ function switchTab(tab: TabType) {
                 </label>
                 <input
                   v-model="ownerForm.newRestaurantPhone"
+                  data-testid="account-management-new-restaurant-phone"
                   type="tel"
                   class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                   :class="{ 'border-red-300': errors.newRestaurantPhone }"
@@ -628,6 +639,7 @@ function switchTab(tab: TabType) {
               </label>
               <input
                 v-model="ownerForm.phone"
+                data-testid="account-management-owner-phone"
                 type="tel"
                 class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                 :placeholder="t('accountManagement.phonePlaceholder')"
@@ -677,6 +689,7 @@ function switchTab(tab: TabType) {
             {{ submitError }}
           </div>
           <button
+            data-testid="account-management-owner-submit"
             type="submit"
             class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
             :disabled="submitting"

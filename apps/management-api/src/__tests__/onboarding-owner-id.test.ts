@@ -323,6 +323,38 @@ describe("onboarding platform owner provisioning", () => {
     );
   });
 
+  it("writes the setup credential as the API's email-reset contract", async () => {
+    const createdBeforeMs = Date.now();
+    const account = await createPlatformOwnerAccount(buildEnv())(
+      buildApplication(),
+      "tenant-1",
+    );
+    const createdAfterMs = Date.now();
+
+    // The API accepts both email and SMS reset records. Onboarding is the
+    // email-link variant specifically, so pin the production writer here
+    // rather than duplicating these literals in the API acceptance test.
+    const resetTokenRow = insertedRows.find(
+      (row) => row.table === "password_reset_tokens",
+    );
+
+    expect(resetTokenRow).toMatchObject({
+      values: {
+        userId: account.userId,
+        token: account.setupPasswordToken,
+        tokenType: "email",
+        otpCode: null,
+        usedAt: null,
+        userAgent: "management-onboarding",
+      },
+    });
+    expect(resetTokenRow?.values.expiresAt).toBeInstanceOf(Date);
+    const expiresAtMs = (resetTokenRow?.values.expiresAt as Date).getTime();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    expect(expiresAtMs).toBeGreaterThanOrEqual(createdBeforeMs + oneDayMs);
+    expect(expiresAtMs).toBeLessThanOrEqual(createdAfterMs + oneDayMs);
+  });
+
   it("builds the setup link on ADMIN_APP_URL rather than the first CORS origin", async () => {
     // buildEnv lists http://localhost:5173 first in CORS_ORIGIN; the link must
     // still land on the admin app, which is the one with /reset-password.

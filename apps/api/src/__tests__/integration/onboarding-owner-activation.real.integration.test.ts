@@ -16,7 +16,9 @@ describe("management onboarding owner activation — real API contract", () => {
   let seed: ReturnType<typeof buildSeedHelpers>;
 
   beforeAll(async () => {
-    testApp = await createRealIntegrationTestApp();
+    testApp = await createRealIntegrationTestApp({
+      env: { DEV_CORS_ORIGINS: "https://test" },
+    });
     seed = buildSeedHelpers(testApp.testDb);
   });
 
