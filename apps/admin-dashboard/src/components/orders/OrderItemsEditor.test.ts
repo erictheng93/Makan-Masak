@@ -18,10 +18,6 @@ vi.mock("@/i18n", () => ({ t: (key: string) => key }));
 
 vi.mock("@/stores/order", () => ({ useOrderStore: () => storeMocks }));
 
-vi.mock("@/stores/auth", () => ({
-  useAuthStore: () => ({ restaurantId: "restaurant-1" }),
-}));
-
 vi.mock("@/services/api", () => ({ api: apiMocks }));
 
 function buildOrder(overrides: Partial<Order> = {}): Order {
@@ -179,6 +175,52 @@ describe("OrderItemsEditor", () => {
 
     expect(apiMocks.get).toHaveBeenCalledWith("/menu/restaurant-1");
     // An unavailable dish is not offerable, so it is not offered.
+    expect(wrapper.find('[data-testid="add-201"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="add-202"]').exists()).toBe(false);
+  });
+
+  it("loads the selected order's menu rather than the signed-in admin's menu", async () => {
+    apiMocks.get.mockResolvedValue({
+      data: { success: true, data: { menuItems: [] } },
+    });
+    const wrapper = mount(OrderItemsEditor, {
+      props: { order: buildOrder({ restaurantId: "restaurant-2" }) },
+    });
+
+    await wrapper.find('[data-testid="open-picker"]').trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(apiMocks.get).toHaveBeenCalledWith("/menu/restaurant-2");
+  });
+
+  it("does not offer items that need required customizations", async () => {
+    apiMocks.get.mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          menuItems: [
+            { id: 201, name: "Plain Rice", price: 2, isAvailable: true },
+            {
+              id: 202,
+              name: "Spicy Noodles",
+              price: 8,
+              isAvailable: true,
+              options: {
+                customizations: [{ required: true }],
+              },
+            },
+          ],
+        },
+      },
+    });
+    const wrapper = mount(OrderItemsEditor, {
+      props: { order: buildOrder() },
+    });
+
+    await wrapper.find('[data-testid="open-picker"]').trigger("click");
+    await wrapper.vm.$nextTick();
+    await wrapper.vm.$nextTick();
+
     expect(wrapper.find('[data-testid="add-201"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="add-202"]').exists()).toBe(false);
   });

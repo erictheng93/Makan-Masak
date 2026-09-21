@@ -87,6 +87,18 @@ function mapOrderItemMutationError(error: unknown): unknown {
   if (error instanceof ApiError) return error;
 
   const message = error.message;
+  if (message.includes("Cannot modify order total after payment")) {
+    return badRequest(
+      "This order has already been paid and cannot be repriced.",
+      "ORDER_PAYMENT_COMPLETED",
+    );
+  }
+  if (message.includes("Cannot modify order total for a")) {
+    return badRequest(
+      "Items and totals on platform orders can only be changed on the delivery platform.",
+      "PLATFORM_ORDER_NOT_MODIFIABLE",
+    );
+  }
   if (message.includes("Order version conflict")) {
     return conflict(
       "Order was updated by another actor. Reload before retrying.",
@@ -99,7 +111,10 @@ function mapOrderItemMutationError(error: unknown): unknown {
       "INSUFFICIENT_INVENTORY",
     );
   }
-  if (message.includes("Cannot modify items")) {
+  if (
+    message.includes("Cannot modify items") ||
+    message.includes("Cannot add items")
+  ) {
     return badRequest(message, "ORDER_NOT_MODIFIABLE");
   }
   if (message.includes("Cannot remove the last item")) {

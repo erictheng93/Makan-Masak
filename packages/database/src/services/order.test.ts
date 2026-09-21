@@ -24,8 +24,10 @@ import {
   orderItems,
   orders,
   restaurants,
+  restaurantCustomers,
   tables,
   users,
+  customers,
 } from "../schema";
 import { ApiError, DEFAULT_CURRENCY, formatCurrency } from "@makanmasak/utils";
 import {
@@ -866,6 +868,18 @@ describe("OrderService applyOrderDiscount", () => {
       /version conflict/i,
     );
   });
+
+  it("refuses to reprice an order whose payment completed without closing it", async () => {
+    const order = await seedOrder();
+    await testDb.drizzle
+      .update(orders)
+      .set({ paymentStatus: "completed" })
+      .where(eq(orders.id, order.id));
+
+    await expect(service().applyOrderDiscount(order.id, 10)).rejects.toThrow(
+      "Cannot modify order total after payment is completed",
+    );
+  });
 });
 
 describe("OrderService createOrder atomicity", () => {
@@ -1025,6 +1039,37 @@ describe("OrderService createOrder atomicity", () => {
       .where(eq(menuItems.id, menuItemId));
     expect(item.inventoryCount).toBe(7);
     expect(item.orderCount).toBe(3);
+  });
+
+  it("rejects added items after payment completes without closing the order", async () => {
+    const service = new OrderService(testDb.bindings.DB, {
+      JWT_SECRET: "test",
+    });
+    const order = await service.createOrder({
+      restaurantId,
+      items: [{ menuItemId, quantity: 1 }],
+    });
+    await testDb.drizzle
+      .update(orders)
+      .set({ paymentStatus: "completed" })
+      .where(eq(orders.id, order.id));
+
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    try {
+      await expect(
+        service.addItemsToOrder(order.id, [{ menuItemId, quantity: 1 }]),
+      ).rejects.toThrow("Cannot modify order total after payment is completed");
+    } finally {
+      consoleError.mockRestore();
+    }
+
+    const persistedItems = await testDb.drizzle
+      .select()
+      .from(orderItems)
+      .where(eq(orderItems.orderId, order.id));
+    expect(persistedItems).toHaveLength(1);
   });
 
   it("rejects adding items to non-open orders", async () => {
@@ -1663,6 +1708,76 @@ describe("OrderService changeOrderItemQuantity", () => {
     expect(updated.items![0]).toMatchObject({ quantity: 4, totalPrice: 40 });
     expect(updated.subtotal).toBe(40);
     expect((await menuItemRow()).inventoryCount).toBe(6);
+  });
+
+  it("rejects a quantity change after payment completes without closing the order", async () => {
+    const order = await service().createOrder({
+      restaurantId,
+      items: [{ menuItemId, quantity: 1 }],
+    });
+    await testDb.drizzle
+      .update(orders)
+      .set({ paymentStatus: "completed" })
+      .where(eq(orders.id, order.id));
+
+    const consoleError = silenceServiceErrors();
+    try {
+      await expect(
+        service().changeOrderItemQuantity(order.id, order.items![0].id, 2),
+      ).rejects.toThrow("Cannot modify order total after payment is completed");
+    } finally {
+      consoleError.mockRestore();
+    }
+
+    expect((await menuItemRow()).inventoryCount).toBe(9);
+  });
+
+  it("rejects quantity changes to platform-owned orders", async () => {
+    const order = await service().createOrder({
+      restaurantId,
+      orderSource: "uber_eats",
+      items: [{ menuItemId, quantity: 1 }],
+    });
+
+    const consoleError = silenceServiceErrors();
+    try {
+      await expect(
+        service().changeOrderItemQuantity(order.id, order.items![0].id, 2),
+      ).rejects.toThrow(
+        "Cannot modify order total for a uber_eats platform order",
+      );
+    } finally {
+      consoleError.mockRestore();
+    }
+
+    expect((await menuItemRow()).inventoryCount).toBe(9);
+  });
+
+  it("recomputes the member projection after each total-changing item edit", async () => {
+    const customerId = "customer-order-edit-projection";
+    await testDb.drizzle.insert(customers).values({
+      id: customerId,
+      displayName: "Order Editor",
+    });
+    const order = await service().createOrder({
+      restaurantId,
+      customerId,
+      items: [{ menuItemId, quantity: 1 }],
+    });
+
+    await service().changeOrderItemQuantity(order.id, order.items![0].id, 3);
+    let [member] = await testDb.drizzle
+      .select({ totalSpentCents: restaurantCustomers.totalSpentCents })
+      .from(restaurantCustomers)
+      .where(eq(restaurantCustomers.customerId, customerId));
+    expect(member?.totalSpentCents).toBe(30);
+
+    await service().addItemsToOrder(order.id, [{ menuItemId, quantity: 1 }]);
+    [member] = await testDb.drizzle
+      .select({ totalSpentCents: restaurantCustomers.totalSpentCents })
+      .from(restaurantCustomers)
+      .where(eq(restaurantCustomers.customerId, customerId));
+    expect(member?.totalSpentCents).toBe(40);
   });
 
   it("removes a line entirely when the quantity is 0", async () => {

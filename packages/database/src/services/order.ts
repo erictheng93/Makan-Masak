@@ -69,6 +69,48 @@ import { TenantMemberDirectoryService } from "./TenantMemberDirectoryService";
 // step" is not a mechanism — this is.
 const cancellableOrderStatuses = CANCELLABLE_ORDER_STATUSES;
 
+// `status` is a workflow state, not proof that no money has moved. The POS
+// intentionally supports collecting payment without closing the ticket, so a
+// pending/confirmed order may already have a completed payment transaction.
+// Repricing one of those orders would leave its receipt and payment ledger at
+// different totals. `paid` remains here for legacy rows written before
+// `completed` became the canonical payment status.
+const FINALIZED_PAYMENT_STATUSES: readonly string[] = [
+  "paid",
+  "completed",
+  "refunded",
+  "partial_refunded",
+] as const;
+
+function assertOrderTotalIsMutable(order: {
+  paymentStatus?: string | null;
+  orderSource?: string | null;
+}): void {
+  const paymentStatus = order.paymentStatus ?? "pending";
+  if (FINALIZED_PAYMENT_STATUSES.includes(paymentStatus)) {
+    throw new Error(
+      `Cannot modify order total after payment is ${paymentStatus}`,
+    );
+  }
+
+  // Platform adapters can acknowledge, cancel, and update status, but cannot
+  // synchronize an item or amount change. Keep the platform's checkout and
+  // the local ticket authoritative over the same total by rejecting every
+  // non-direct source (including market checkouts) before stock can move.
+  const orderSource = order.orderSource ?? "direct";
+  if (orderSource !== "direct") {
+    throw new Error(
+      `Cannot modify order total for a ${orderSource} platform order`,
+    );
+  }
+}
+
+// These predicates repeat the read-time checks in each CAS. A payment or
+// platform import arriving between the read and write must make the mutation
+// lose, rather than silently change the amount after it has been settled.
+const orderTotalPaymentGuard = sql`COALESCE(${orders.paymentStatus}, 'pending') NOT IN ('paid', 'completed', 'refunded', 'partial_refunded')`;
+const directOrderSourceGuard = sql`COALESCE(${orders.orderSource}, 'direct') = 'direct'`;
+
 export const orderMenuItemSummaryColumns = {
   id: true,
   name: true,
@@ -1103,6 +1145,7 @@ export class OrderService extends BaseService {
           `Cannot add items to an order with status: ${existingOrder.status}`,
         );
       }
+      assertOrderTotalIsMutable(existingOrder);
       // Compared here rather than at the route, and that placement is the
       // whole point: this read is the one that feeds the CAS below, so
       // "caller's version == this read" plus "this read == write-time version"
@@ -1198,6 +1241,8 @@ export class OrderService extends BaseService {
                 ORDER_STATUS.PENDING,
                 ORDER_STATUS.CONFIRMED,
               ]),
+              orderTotalPaymentGuard,
+              directOrderSourceGuard,
             ),
           )
           .returning({ id: orders.id }),
@@ -1277,6 +1322,7 @@ export class OrderService extends BaseService {
       if (!updatedOrder) {
         throw new Error("Order not found");
       }
+      await this.recomputeMemberProjection(updatedOrder);
       return updatedOrder;
     } catch (error) {
       this.handleError(error, "addItemsToOrder");
@@ -1316,6 +1362,7 @@ export class OrderService extends BaseService {
       if (!existingOrder) {
         throw new Error("Order not found");
       }
+      assertOrderTotalIsMutable(existingOrder);
       if (
         expectedVersion !== undefined &&
         existingOrder.version !== expectedVersion
@@ -1404,6 +1451,8 @@ export class OrderService extends BaseService {
               ORDER_STATUS.PAID,
               ORDER_STATUS.REFUNDED,
             ]),
+            orderTotalPaymentGuard,
+            directOrderSourceGuard,
           ),
         )
         .returning({ id: orders.id });
@@ -1463,6 +1512,7 @@ export class OrderService extends BaseService {
           `Cannot modify items on an order with status: ${existingOrder.status}`,
         );
       }
+      assertOrderTotalIsMutable(existingOrder);
       if (
         expectedVersion != null &&
         existingOrder.version !== expectedVersion
@@ -1612,6 +1662,8 @@ export class OrderService extends BaseService {
                 ORDER_STATUS.PENDING,
                 ORDER_STATUS.CONFIRMED,
               ]),
+              orderTotalPaymentGuard,
+              directOrderSourceGuard,
             ),
           )
           .returning({ id: orders.id }),
@@ -1700,6 +1752,7 @@ export class OrderService extends BaseService {
       if (!updatedOrder) {
         throw new Error("Order not found");
       }
+      await this.recomputeMemberProjection(updatedOrder);
       return updatedOrder;
     } catch (error) {
       this.handleError(error, "changeOrderItemQuantity");

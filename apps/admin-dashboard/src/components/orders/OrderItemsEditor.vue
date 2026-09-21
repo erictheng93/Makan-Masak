@@ -160,7 +160,6 @@
 import { computed, ref } from "vue";
 import { TrashIcon } from "@heroicons/vue/24/outline";
 import { useOrderStore } from "@/stores/order";
-import { useAuthStore } from "@/stores/auth";
 import { api } from "@/services/api";
 import { useCurrency } from "@/composables/useCurrency";
 import { t } from "@/i18n";
@@ -170,7 +169,6 @@ const props = defineProps<{ order: Order }>();
 const emit = defineEmits<{ (e: "updated", order: Order): void }>();
 
 const orderStore = useOrderStore();
-const authStore = useAuthStore();
 // The restaurant's own currency, not this component's guess at one. OrdersView
 // formats the same amounts through the same composable, so the editor and the
 // total it sits above cannot disagree.
@@ -186,14 +184,22 @@ interface PickableMenuItem {
   name: string;
   price: number;
   isAvailable?: boolean;
+  options?: {
+    customizations?: Array<{ required?: boolean }>;
+  };
 }
 const menuItems = ref<PickableMenuItem[]>([]);
 const menuLoading = ref(false);
+const loadedMenuRestaurantId = ref<string | null>(null);
+
+function canAddWithoutCustomization(item: PickableMenuItem): boolean {
+  return !item.options?.customizations?.some((group) => group.required);
+}
 
 const filteredMenu = computed(() => {
   const needle = search.value.trim().toLowerCase();
   const available = menuItems.value.filter(
-    (item) => item.isAvailable !== false,
+    (item) => item.isAvailable !== false && canAddWithoutCustomization(item),
   );
   if (!needle) return available.slice(0, 30);
   return available
@@ -211,16 +217,24 @@ function lineName(item: OrderItem): string {
  */
 async function openPicker() {
   pickerOpen.value = true;
-  if (menuItems.value.length || !authStore.restaurantId) return;
+  const restaurantId = props.order.restaurantId;
+  if (menuItems.value.length && loadedMenuRestaurantId.value === restaurantId) {
+    return;
+  }
 
   menuLoading.value = true;
+  // An editor instance may receive a different selected order without being
+  // remounted. Do not leave the previous restaurant's items visible while the
+  // correct catalogue is being fetched.
+  menuItems.value = [];
   try {
     const response = await api.get<{ menuItems: PickableMenuItem[] }>(
-      `/menu/${authStore.restaurantId}`,
+      `/menu/${restaurantId}`,
     );
     menuItems.value = response.data?.success
       ? (response.data.data?.menuItems ?? [])
       : [];
+    loadedMenuRestaurantId.value = restaurantId;
   } catch (error) {
     console.error("Failed to load menu for order editing:", error);
     errorMessage.value = t("orders.edit.menuLoadFailed");

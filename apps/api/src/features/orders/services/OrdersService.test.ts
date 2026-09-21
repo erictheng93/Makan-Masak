@@ -1895,6 +1895,33 @@ describe("OrdersService workflows", () => {
     ).rejects.toMatchObject({ status: 409, code: "ORDER_VERSION_CONFLICT" });
   });
 
+  it("maps settled-payment and platform item-edit guards to actionable 400s", async () => {
+    const before = createOrder({
+      id: "42",
+      status: "confirmed",
+      items: [buildOrderItem({ id: 7, menuItemId: 101, quantity: 2 })],
+    });
+    const service = new OrdersService(createEnv() as never);
+
+    getBaseOrder.mockResolvedValue(before);
+    changeBaseOrderItemQuantity.mockRejectedValue(
+      new Error("Cannot modify order total after payment is completed"),
+    );
+    await expect(
+      service.changeOrderItemQuantity("42", 7, 1),
+    ).rejects.toMatchObject({ status: 400, code: "ORDER_PAYMENT_COMPLETED" });
+
+    changeBaseOrderItemQuantity.mockRejectedValue(
+      new Error("Cannot modify order total for a uber_eats platform order"),
+    );
+    await expect(
+      service.changeOrderItemQuantity("42", 7, 1),
+    ).rejects.toMatchObject({
+      status: 400,
+      code: "PLATFORM_ORDER_NOT_MODIFIABLE",
+    });
+  });
+
   it("covers status update null, mismatch, version conflict, and failed update branches", async () => {
     const service = new OrdersService(createEnv() as never);
 
