@@ -28,6 +28,10 @@ export default defineConfig({
         __dirname,
         "../../packages/shared/src/i18n/src",
       ),
+      "@makanmasak/shared-types": resolve(
+        __dirname,
+        "../../packages/shared-types/src",
+      ),
     },
   },
   server: {

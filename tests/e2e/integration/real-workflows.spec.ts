@@ -2851,7 +2851,9 @@ test.describe("Real system workflows", () => {
       .getByTestId("onboarding-address")
       .fill("台中市西屯區文華路 100 號");
     await page.getByTestId("onboarding-district").fill("西屯區");
-    await page.getByTestId("onboarding-city").fill("台中市");
+    await page.getByTestId("onboarding-country").selectOption("TW");
+    await expect(page.getByTestId("onboarding-city")).toBeEnabled();
+    await page.getByTestId("onboarding-city").selectOption("台中市");
     await page.getByTestId("onboarding-latitude").fill("24.147736");
     await page.getByTestId("onboarding-longitude").fill("120.673648");
 

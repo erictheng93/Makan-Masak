@@ -87,8 +87,8 @@ describe("market checkout child order settlement - real integration", () => {
       input: RequestInfo | URL,
       init?: RequestInit,
     ) => {
-      const url = typeof input === "string" ? input : input.toString();
-      if (!url.startsWith(ADAPTER)) return originalFetch(input, init);
+      const url = input instanceof Request ? input.url : String(input);
+      if (new URL(url).origin !== ADAPTER) return originalFetch(input, init);
       const body = JSON.parse(String(init?.body ?? "{}")) as Record<
         string,
         unknown

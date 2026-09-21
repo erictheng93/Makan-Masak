@@ -25,4 +25,17 @@ describe("CodeQL regression checks", () => {
 
     expect(source).not.toContain("Math.random()");
   });
+
+  it("matches mocked payment adapters by parsed URL origin", () => {
+    const source = readFileSync(
+      join(
+        root,
+        "apps/api/src/__tests__/integration/market-checkout-child-order-settlement.real.integration.test.ts",
+      ),
+      "utf8",
+    );
+
+    expect(source).toContain("new URL(url).origin !== ADAPTER");
+    expect(source).not.toContain("url.startsWith(ADAPTER)");
+  });
 });
