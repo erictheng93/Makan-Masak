@@ -334,7 +334,24 @@ footer{
     </table>
   </div>
   <p>
-    <b>沒測到的：</b>只證明即時連線建得起來，沒有由店家推狀態、確認團員頁不重整就跟著變（需要以 owner 寫入）。
+    <b>店家推狀態（第二次實測）：</b>另建一團（VDS2-ZXX8，NT$180），團員以邀請連結加入並從「查看訂單進度」進入追蹤頁，
+    在頁面放一個標記（<code>window.__qaMarker</code>）。owner1 在後台「Orders → Update」逐步推進，團員頁全程不重整：
+  </p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>owner 動作</th><th>團員追蹤頁</th><th>時間軸</th></tr></thead>
+      <tbody>
+        <tr><td>—</td><td>Pending</td><td>Order Created 00:30</td></tr>
+        <tr><td>Update → Confirmed</td><td><span class="tag ok">即時</span> Confirmed</td><td>00:31</td></tr>
+        <tr><td>Update → Preparing</td><td><span class="tag ok">即時</span> Preparing</td><td>00:31</td></tr>
+        <tr><td>Update → Ready</td><td><span class="tag ok">即時</span> Ready</td><td>00:31</td></tr>
+        <tr><td>Update → Delivered</td><td><span class="tag ok">即時</span> Served</td><td>00:32</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    標記每一步都還在；追蹤頁的查詢沒有輪詢（<code>refetchInterval: false</code>），所以更新來自 R19 修正後以 guest token 建立的 WebSocket。
+    沒有收款，不動付款表。
   </p>
   <p>
     <b>觀察，記錄：</b>團員停在菜單頁時，團主送出後那一頁仍顯示「2 items in the shared cart」、沒有已送出的提示，
@@ -347,6 +364,8 @@ footer{
     <code>split_bills</code>、<code>group_activity_logs</code>）、主訂單與 2 個品項、1 筆尚未彙總的 <code>usage_meter_buckets</code>；
     <code>restaurants.total_orders</code> 10 → 9、<code>menu_items#2</code> <code>order_count</code> 16 → 14、<code>inventory_count</code> 8 → 10。
     之後 127 張表（1,729 列）與開始前逐表比對<b>零差異</b>。KV 裡的 guest token 依 TTL 過期。
+    第二次實測另外多刪確認時產生的 1 張 <code>receipts</code>，計數器同樣還原；以 owner 登入後的基準（1,731 列）比對零差異。
+    owner 登入產生的 session 與該時段的 <code>api.requests</code> 計量列保留（計量數含本輪後台操作，無法精確拆出）。
   </p>
 
   <h3>上線前提（09-22 重查，無變化）</h3>
@@ -358,7 +377,7 @@ footer{
   </p>
 
   <p class="note warn">
-    <b>下一步：</b>以 owner 推狀態，確認團員追蹤頁即時更新；重測 service worker 在部署後多快切到新版。
+    <b>下一步：</b>重測 service worker 在部署後多快切到新版；團員停在菜單頁時補上「已送出」提示。
     市集等金流憑證與市集資料；其餘依 09-18「下一步」的順序，已完成的 #395、#400、#401、#396、#397、#382、#383 可劃掉。
   </p>
 </section>
