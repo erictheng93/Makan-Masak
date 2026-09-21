@@ -631,6 +631,7 @@ export function createApp(
         "/api/v1/orders/group/join/*", // members join by possession of a share code
         "/api/v1/orders/group/*/cart", // cart root and /cart/:itemId
         "/api/v1/orders/group/*/lock", // host submits with memberToken
+        "/api/v1/orders/group/*/tracking-token", // member swaps memberToken for the order's guest token (#396)
         "/api/v1/orders/group/*/auto-submit", // host toggles expiry auto-submit
         "/api/v1/orders/group/*/fee-mode", // host chooses who carries the fees
         "/api/v1/orders/group/*/split-type", // host chooses the split method

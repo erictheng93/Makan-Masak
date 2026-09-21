@@ -62,6 +62,7 @@ const customerSelfService: Array<[string, string]> = [
   ["PUT", `/api/v1/orders/group/${GROUP_ORDER_ID}/cart/${ITEM_ID}`],
   ["DELETE", `/api/v1/orders/group/${GROUP_ORDER_ID}/cart/${ITEM_ID}`],
   ["POST", `/api/v1/orders/group/${GROUP_ORDER_ID}/lock`],
+  ["POST", `/api/v1/orders/group/${GROUP_ORDER_ID}/tracking-token`],
   ["POST", `/api/v1/orders/group/${GROUP_ORDER_ID}/recover`],
   ["POST", `/api/v1/orders/group/${GROUP_ORDER_ID}/split`],
   ["POST", `/api/v1/orders/group/${GROUP_ORDER_ID}/payment/${MEMBER_ID}`],
