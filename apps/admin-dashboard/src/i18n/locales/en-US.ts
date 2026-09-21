@@ -2243,6 +2243,7 @@ const enUS: Messages = {
       description: "Complete these essentials before opening.",
       dismiss: "Dismiss",
       check: "Check",
+      unableToVerify: "Unable to verify",
       complete: "Complete",
       done: "Done",
       profile: "Shop profile",

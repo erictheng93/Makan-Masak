@@ -2292,6 +2292,7 @@ const zhTWCore = {
       description: "開店前請完成這些基本項目。",
       dismiss: "關閉",
       check: "查看",
+      unableToVerify: "無法確認",
       complete: "完成",
       done: "已完成",
       profile: "店家資料",

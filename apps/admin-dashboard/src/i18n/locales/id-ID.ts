@@ -2261,6 +2261,7 @@ const idID: Messages = {
       description: "Selesaikan hal penting ini sebelum buka.",
       dismiss: "Tutup",
       check: "Periksa",
+      unableToVerify: "Tidak dapat memverifikasi",
       complete: "Selesaikan",
       done: "Selesai",
       profile: "Profil toko",

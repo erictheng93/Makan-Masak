@@ -2143,6 +2143,7 @@ const jaJP: Messages = {
       description: "営業開始前に基本項目を完了してください。",
       dismiss: "閉じる",
       check: "確認",
+      unableToVerify: "確認できません",
       complete: "設定",
       done: "完了",
       profile: "店舗プロフィール",

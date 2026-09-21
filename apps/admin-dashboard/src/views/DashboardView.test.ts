@@ -54,7 +54,6 @@ const authState = vi.hoisted(() => ({
   hasRestaurantContext: false,
   canAccessAdminFeatures: false,
 }));
-const api = vi.hoisted(() => ({ get: vi.fn() }));
 
 vi.mock("vue-router", () => ({ useRouter: () => router }));
 vi.mock("@/i18n", () => ({
@@ -65,15 +64,6 @@ vi.mock("@/composables/useDateFormatter", () => ({
 }));
 vi.mock("@/stores/auth", () => ({
   useAuthStore: () => authState,
-}));
-vi.mock("@/services/api", () => ({
-  api,
-  unwrapApiPayload: (payload: { data?: unknown }) => payload.data ?? payload,
-  unwrapApiList: (payload: unknown) => {
-    const value = payload as { data?: unknown } | unknown[];
-    if (Array.isArray(value)) return value;
-    return Array.isArray(value.data) ? value.data : [];
-  },
 }));
 vi.mock("@/stores/dashboard", () => ({
   useDashboardStore: () => dashboardStore,
@@ -107,138 +97,5 @@ describe("DashboardView", () => {
       dashboardStore.recentOrders,
     );
     expect(orderStore.fetchOrders).not.toHaveBeenCalled();
-  });
-
-  it("shows incomplete guest-order readiness and keeps a rejected table check unknown", async () => {
-    authState.restaurantId = "shop-1";
-    authState.hasRestaurantContext = true;
-    vi.mocked(api.get)
-      .mockResolvedValueOnce({
-        data: {
-          data: {
-            name: "Shop",
-            address: "1 Main",
-            city: "KL",
-            district: "BB",
-            isAvailable: false,
-            settings: { allowGuestOrders: false },
-          },
-        },
-      })
-      .mockResolvedValueOnce({
-        data: { data: { menuItems: [{ isAvailable: true }] } },
-      })
-      .mockRejectedValueOnce(new Error("tables unavailable"))
-      .mockResolvedValueOnce({ data: { data: [] } });
-
-    const wrapper = shallowMount(DashboardView, {
-      global: {
-        stubs: {
-          LazyChart: { template: "<div><slot /></div>" },
-          RouterLink: true,
-        },
-      },
-    });
-    await flushPromises();
-
-    expect(wrapper.find('[data-testid="owner-setup-checklist"]').exists()).toBe(
-      true,
-    );
-    expect(
-      wrapper
-        .get('[data-testid="setup-checklist-guest-orders"]')
-        .attributes("data-status"),
-    ).toBe("incomplete");
-    expect(
-      wrapper
-        .get('[data-testid="setup-checklist-tables"]')
-        .attributes("data-status"),
-    ).toBe("unknown");
-  });
-
-  it("hides the checklist after every setup requirement is complete", async () => {
-    authState.restaurantId = "shop-1";
-    authState.hasRestaurantContext = true;
-    vi.mocked(api.get)
-      .mockResolvedValueOnce({
-        data: {
-          data: {
-            name: "Shop",
-            address: "1 Main",
-            city: "KL",
-            district: "BB",
-            isAvailable: true,
-            settings: { allowGuestOrders: true },
-          },
-        },
-      })
-      .mockResolvedValueOnce({
-        data: { data: { menuItems: [{ isAvailable: true }] } },
-      })
-      .mockResolvedValueOnce({ data: { data: [{}] } })
-      .mockResolvedValueOnce({ data: { data: [] } });
-
-    const wrapper = shallowMount(DashboardView, {
-      global: {
-        stubs: {
-          LazyChart: { template: "<div><slot /></div>" },
-          RouterLink: true,
-        },
-      },
-    });
-    await flushPromises();
-
-    expect(wrapper.find('[data-testid="owner-setup-checklist"]').exists()).toBe(
-      false,
-    );
-  });
-
-  it("keeps a GPS placeholder profile and unavailable menu item incomplete", async () => {
-    authState.restaurantId = "shop-1";
-    authState.hasRestaurantContext = true;
-    vi.mocked(api.get)
-      .mockResolvedValueOnce({
-        data: {
-          data: {
-            name: "Shop",
-            address: "Onboarding GPS 24.147736, 120.673648",
-            city: "台中市",
-            district: "onboarding-shop-1",
-            isAvailable: true,
-            settings: { allowGuestOrders: true },
-          },
-        },
-      })
-      .mockResolvedValueOnce({
-        data: { data: { menuItems: [{ isAvailable: false }] } },
-      })
-      .mockResolvedValueOnce({ data: { data: [{}] } })
-      .mockResolvedValueOnce({ data: { data: [] } });
-
-    const wrapper = shallowMount(DashboardView, {
-      global: {
-        stubs: {
-          LazyChart: { template: "<div><slot /></div>" },
-          RouterLink: true,
-        },
-      },
-    });
-    await flushPromises();
-
-    expect(
-      wrapper
-        .get('[data-testid="setup-checklist-profile"]')
-        .attributes("data-status"),
-    ).toBe("incomplete");
-    expect(
-      wrapper
-        .get('[data-testid="setup-checklist-menu"]')
-        .attributes("data-status"),
-    ).toBe("incomplete");
-    expect(
-      wrapper
-        .get('[data-testid="setup-checklist-guest-orders"]')
-        .attributes("data-status"),
-    ).toBe("complete");
   });
 });

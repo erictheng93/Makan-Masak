@@ -2101,6 +2101,7 @@ const zhCN: Messages = {
       description: "开店前请完成这些基本项目。",
       dismiss: "关闭",
       check: "查看",
+      unableToVerify: "无法确认",
       complete: "完成",
       done: "已完成",
       profile: "店铺资料",

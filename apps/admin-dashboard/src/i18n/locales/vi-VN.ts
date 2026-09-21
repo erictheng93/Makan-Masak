@@ -2146,6 +2146,7 @@ const viVN: Messages = {
       description: "Hoàn thành các mục thiết yếu trước khi mở cửa.",
       dismiss: "Đóng",
       check: "Kiểm tra",
+      unableToVerify: "Không thể xác minh",
       complete: "Hoàn tất",
       done: "Đã xong",
       profile: "Hồ sơ cửa hàng",

@@ -1,5 +1,7 @@
 <template>
   <div class="space-y-6">
+    <SetupChecklistCard />
+
     <!-- 載入錯誤提示 -->
     <div
       v-if="error"
@@ -415,6 +417,7 @@ import { ownerService } from "@/services/ownerService";
 import type { EmergencyAlert } from "@/services/ownerService";
 import { createAlertPresenter } from "@/utils/alertPresentation";
 import { schedulingService } from "@/services/schedulingService";
+import SetupChecklistCard from "@/components/dashboard/SetupChecklistCard.vue";
 import {
   hasRequestFailure,
   staffPresence,
