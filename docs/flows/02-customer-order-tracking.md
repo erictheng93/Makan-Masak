@@ -122,11 +122,18 @@ pending ──→ confirmed ──→ preparing ──→ ready ──→ delive
 
 - `apps/api/src/features/orders/index.test.ts`
 - `packages/database/src/services/RealtimeBroadcastService.test.ts`
-- `tests/e2e/integration/real-workflows.spec.ts` — 瀏覽器觸發狀態更新
+- `tests/e2e/integration/real-workflows.spec.ts` — 瀏覽器觸發狀態更新（`integration` project，`nightly-integration.yml` 每晚跑）
+- `tests/e2e/customer/order-tracking.spec.ts` — pending → delivered 不重整逐步跟上（含時間軸時間）、店家改數量與取消、訪客自己取消、delivered → paid、繼續點餐後回前一筆（#383）。屬於 `customer-real` project，CI 由 `test.yml` 的 `customer-real-e2e` job 執行（真 api ＋ realtime ＋ 本機 D1，不攔截回應）
+
+**手動探索 QA（production）**
+
+- [顧客端流程 QA 2026-09-15](../investigations/2026-09-15-customer-app-flow-qa.html) — C3、C9、C11、C12
+- [顧客端上線 readiness QA 2026-09-18](../investigations/2026-09-18-customer-app-readiness-qa.html) — 狀態鏈與現金結帳重走
 
 ## 9. 已知缺口
 
 - **品項狀態與訂單狀態沒有連動**（見 §2）。「整單好了」目前完全靠人工再推一次訂單狀態。
 - **廣播失敗沒有重送或補償**，也沒有告警；只能靠各端重新拉清單自癒。
+- **「預估還需 N 分鐘」寫死 15 分鐘基數**（#388），不讀每道菜設定的準備時間。
 - **沒有狀態變更的稽核鏈**。`OrdersService.getOrderStatusHistory` 目前只回傳「當下狀態」單筆，不是歷史；
   `logOrderActivity` 也只寫 logger，沒有落任何稽核表。誰在什麼時候把訂單推到哪一狀態，事後查不到。

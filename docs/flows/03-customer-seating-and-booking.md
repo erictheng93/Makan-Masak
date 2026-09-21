@@ -114,7 +114,13 @@ waiting ──→ called ──→ confirmed ──→ seated
 
 - `apps/api/src/features/service-bookings/services/ServiceBookingService.test.ts`
 - `apps/api/src/__tests__/integration/service-booking.real.integration.test.ts`
-- `tests/e2e/integration/real-workflows.spec.ts` — 預約建立／查詢／取消
+- `tests/e2e/integration/real-workflows.spec.ts` — 預約建立／查詢／取消（`integration` project，`nightly-integration.yml` 每晚跑）
+- `tests/e2e/customer/seating-and-bookings.spec.ts` — 候位登記 → 叫號 → 確認抵達（不重整）、通知權限未回答時票號照樣顯示並保存（R7）、預約服務讀回與名額扣減。線上訂位沒有測試，因為顧客端沒有畫面。屬於 `customer-real` project，CI 由 `test.yml` 的 `customer-real-e2e` job 執行（真 api ＋ realtime ＋ 本機 D1，不攔截回應）
+
+**手動探索 QA（production）**
+
+- [顧客端流程 QA 2026-09-15](../investigations/2026-09-15-customer-app-flow-qa.html) — C6
+- [顧客端上線 readiness QA 2026-09-18](../investigations/2026-09-18-customer-app-readiness-qa.html) — R7、R8、R9、R15
 
 ## 8. 已知缺口
 
@@ -123,4 +129,7 @@ waiting ──→ called ──→ confirmed ──→ seated
 - **訂位入座不會自動開單**。`markSeated` 裡留著 `// TODO: 自動建立訂單記錄`。
 - **候位的取消與確認有電話二次驗證，查詢沒有**。`DELETE /:id`、`POST /:id/confirm` 都要比對 `customerPhone`，
   但 `GET /waiting-list/:id` 只要有 ticket id 就回完整記錄（含姓名與電話），也沒有掛限流。
+- **顧客端沒有線上訂位畫面，但給顧客用的公開端點已上線**（#385）。
+- **服務預約顯示「待付款」卻沒有付款途徑或說明**，金額幣別寫死 TWD（#398）。
+- **Web push 在 production 送不到任何人**（#399）：沒有 VAPID secret、前端用佔位公鑰、訪客不能訂閱，但取號時照樣詢問通知權限。叫號只靠頁面輪詢與即時連線。
 - 候位與訂位的容量是兩套獨立計算，同一張桌可能同時被候位叫號與訂位指派——沒有共用的桌位鎖。

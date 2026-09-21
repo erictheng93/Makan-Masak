@@ -112,10 +112,15 @@
 - `apps/api/src/features/authentication/services/AuthService.test.ts`
 - `packages/database/src/services/auth.test.ts`
 
+**手動探索 QA（production）**
+
+- [顧客端流程 QA 2026-09-15](../investigations/2026-09-15-customer-app-flow-qa.html) — C4、C14（會員入口）
+- [顧客端上線 readiness QA 2026-09-18](../investigations/2026-09-18-customer-app-readiness-qa.html) — 會員入口重測
+
 ## 8. 已知缺口
 
 - **顧客與員工兩套身分沒有互通**。同一個人既是店員又是顧客時，是兩筆資料、兩組 token，沒有任何關聯欄位。
 - **登入節流計數器不是原子的**（見 §6），只擋腳本、擋不住分散式嘗試。
 - **`TOKEN_BLACKLIST` 不可用時是 fail-open**。可用性優先於強制撤銷，這是刻意選擇，但沒有告警。
 - **顧客社群登入尚未實作**。`customer_auth_identities` 已有 `provider` / `provider_uid` 欄位，但 API 沒有任何 OAuth 端點；計畫見 [plans/2026-08-15-customer-social-login.md](../plans/2026-08-15-customer-social-login.md)。
-- 顧客 OTP 的實際可送達性取決於部署環境是否配置簡訊商憑證，程式碼本身已完備。
+- **production 的顧客會員線整條不可達**（#384）。production 沒有任何 email／簡訊供應商憑證，註冊實測回 503 `EMAIL_CHANNEL_UNAVAILABLE`，`customers` 表 0 筆（09-15、09-18 兩輪 QA 皆重測成立）。程式碼的 fail-closed 行為是對的，缺的是部署設定。

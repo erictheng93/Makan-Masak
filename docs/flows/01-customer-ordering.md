@@ -140,11 +140,18 @@
 - `apps/api/src/features/guest-orders/routes/index.test.ts`
 - `apps/api/src/features/orders/services/OrdersService.test.ts`
 - `packages/database/src/services/order.test.ts`
-- `tests/e2e/integration/real-workflows.spec.ts` — 真瀏覽器 + 真 API 的購物車與送單
+- `tests/e2e/integration/real-workflows.spec.ts` — 真瀏覽器 + 真 API 的購物車與送單（`integration` project，`nightly-integration.yml` 每晚跑）
+- `tests/e2e/customer/ordering.spec.ts` — 桌位 QR、座位 QR、店家公開碼 → 選擇取餐、分類捲動、選項／數量／備註／姓名／電話寫進訂單、訪客優惠券（#382）。屬於 `customer-real` project，CI 由 `test.yml` 的 `customer-real-e2e` job 執行（真 api ＋ realtime ＋ 本機 D1，不攔截回應）
+
+**手動探索 QA（production）**
+
+- [顧客端流程 QA 2026-09-15](../investigations/2026-09-15-customer-app-flow-qa.html) — C1、C5、C10、C13
+- [顧客端上線 readiness QA 2026-09-18](../investigations/2026-09-18-customer-app-readiness-qa.html) — R1、R11
 
 ## 8. 已知缺口
 
 - **購物車完全在前端**。關掉分頁即消失，跨裝置不同步，也沒有伺服器端的「未結帳購物車」概念。
 - **`POST /guest-orders` 沒有 module gate**。`POST /orders` 受 `online_ordering` 模組管制，訪客送單只受配額限制；停用模組不會停掉 QR 點餐。
 - **活躍鎖對全新裝置形同不存在**（見 §5）。這是為了避開共用 WiFi／CGNAT 造成的全店阻斷而刻意放寬的。
+- **掃 QR 的點餐路徑沒有語系切換入口**（#387）。`LanguageSwitcher` 只掛在 `HomeView`，QR 進來的顧客到不了。
 - **廣播失敗沒有補償**。訂單成立但廚房沒收到時，只能靠廚房端輪詢 `GET /kitchen/:restaurantId/orders` 補回來。

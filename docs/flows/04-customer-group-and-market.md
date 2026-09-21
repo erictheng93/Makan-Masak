@@ -146,6 +146,14 @@ active ──→ cancelled
 - `apps/api/src/features/market-checkouts/routes/index.test.ts`（近 6000 行，涵蓋大多數失敗分支）
 - `apps/api/src/features/market-checkouts/services/*.test.ts`
 - `apps/api/src/__tests__/integration/markets.real.integration.test.ts`
+- `tests/e2e/integration/real-workflows.spec.ts` — 從瀏覽器送出跨攤結帳並開啟追蹤（`integration` project，`nightly-integration.yml` 每晚跑）
+- `tests/e2e/customer/group-orders.spec.ts` — 建立揪團 → 邀請連結加入 → 兩人加菜 → 團主合單送出、回菜單立刻加菜仍進群組購物車（R4）。屬於 `customer-real` project，CI 由 `test.yml` 的 `customer-real-e2e` job 執行（真 api ＋ realtime ＋ 本機 D1，不攔截回應）
+- `tests/e2e/customer/markets.spec.ts` — 探索市集、從市集頁跨攤結帳（#401）、每攤一筆真訂單、優惠卷核銷（#401）、無金流時付款不得標記已付款（#400）。代幣儲值扣抵沒有測試：`STORED_VALUE_CREDITS_ENABLED` 在本機、CI、production 都關。
+
+**手動探索 QA（production）**
+
+- [顧客端流程 QA 2026-09-15](../investigations/2026-09-15-customer-app-flow-qa.html) — C2、C7
+- [顧客端上線 readiness QA 2026-09-18](../investigations/2026-09-18-customer-app-readiness-qa.html) — R2、R4、R5、R6、R10、R12、R13、R14
 
 **相關 spec**
 
@@ -157,4 +165,5 @@ active ──→ cancelled
 - **`finalizing_failed` 沒有自動修復路徑**。目前只有狀態標記，回收要靠人。
 - **市集 checkout session 主要活在 KV**（4 小時 TTL），D1 那份是為了後台查詢與對帳；KV 過期後顧客端追蹤頁會退化。
 - **揪團與市集不能混用**。同一次結帳不能既跨攤又多人共用購物車。
+- **新入駐的店在公開探索頁顯示 onboarding placeholder，且沒有營業時間而永遠「休息中」**（#386）。
 - 代幣目前是 admin 手動儲值為主，線上儲值（`/topup/online` + `topup-webhooks`）已有端點但仍依賴供應商設定。
