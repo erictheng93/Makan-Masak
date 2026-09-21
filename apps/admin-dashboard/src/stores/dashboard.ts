@@ -17,7 +17,8 @@ type RevenueAnalyticsPoint = {
   month?: string;
   year?: string;
   value?: number;
-  revenue?: number;
+  /** One entry per currency, in cents — never a scalar (#407). */
+  revenue?: Array<{ currency: string; amountCents: number }>;
   orderCount?: number;
   orders?: number;
 };
@@ -237,7 +238,12 @@ export const useDashboardStore = defineStore("dashboard", () => {
 
       if (response.data.success) {
         const data = response.data.data as RevenueAnalyticsPoint[];
-        const points = mapRevenuePoints(data, (point) => point.revenue);
+        // This request is always scoped to one restaurant, and a restaurant
+        // has one currency, so there is at most one entry. The chart plots
+        // major units.
+        const points = mapRevenuePoints(data, (point) =>
+          point.revenue?.[0] ? point.revenue[0].amountCents / 100 : undefined,
+        );
         revenueChartData.value = points;
         return points;
       }

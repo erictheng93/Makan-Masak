@@ -10,12 +10,7 @@ import type { CurrencyCode } from "@makanmasak/shared-types";
  * so nothing here belongs in a tenant-scoped view.
  */
 
-export type PlatformCustomerSort =
-  | "recent"
-  | "spent"
-  | "orders"
-  | "restaurants"
-  | "name";
+export type PlatformCustomerSort = "recent" | "orders" | "restaurants" | "name";
 
 export interface PlatformCustomerListItem {
   customerId: string;

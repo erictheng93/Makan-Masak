@@ -1368,6 +1368,44 @@ describe("Members API — tenant isolation", () => {
       },
     );
 
+    it("serves a full default page of 100 customers within D1's bound-parameter cap", async () => {
+      // The per-currency spend query binds every customer id on the page plus
+      // the currency expression's own parameters. 100 ids alone is already
+      // D1's whole budget, so the default page size used to answer 500 (#407).
+      const a = await shop("platform-full-page");
+      const adminToken = await testApp.authHelper.adminToken();
+      const first = await member(a.restaurantId, "FullPage0");
+      for (let i = 1; i < 99; i += 1) await customer(`FullPage${i}`);
+      const last = await member(a.restaurantId, "FullPage99");
+
+      const res = await get("/admin/customers", adminToken);
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        data: Array<{ customerId: string; totalSpentByCurrency: unknown }>;
+      };
+      expect(body.data).toHaveLength(100);
+      // One spender from each end of the page: whichever way the ids are
+      // split across queries, both halves must come back merged.
+      for (const spender of [first, last]) {
+        expect(
+          body.data.find((row) => row.customerId === spender.customerId)
+            ?.totalSpentByCurrency,
+        ).toEqual([{ currency: "TWD", amountCents: 1200 }]);
+      }
+    });
+
+    it("refuses to rank customers by spend across currencies", async () => {
+      // It used to be accepted and quietly ordered by last order instead,
+      // under a menu label that still said "total spent" (#407).
+      const adminToken = await testApp.authHelper.adminToken();
+      const res = await get("/admin/customers?sort=spent", adminToken);
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({
+        success: false,
+        error: { code: "VALIDATION_ERROR" },
+      });
+    });
+
     it("lists customers masked, with a cross-shop rollup and no raw contact keys", async () => {
       const a = await shop("platform-list-a");
       const b = await shop("platform-list-b");

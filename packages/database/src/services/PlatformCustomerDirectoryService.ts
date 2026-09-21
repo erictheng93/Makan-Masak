@@ -29,7 +29,7 @@ export interface PlatformCustomerListFilters {
   limit: number;
   search?: string;
   status?: "active" | "deleted";
-  sort?: "recent" | "spent" | "orders" | "restaurants" | "name";
+  sort?: "recent" | "orders" | "restaurants" | "name";
 }
 
 export interface PlatformCustomerListItem {
@@ -82,6 +82,11 @@ export type MoneyByCurrency = Array<{
   currency: CurrencyCode;
   amountCents: number;
 }>;
+
+// D1 caps a query at 100 bound parameters. The currency expression binds 4
+// each time it appears, and it appears three times in the spend query (select,
+// groupBy, orderBy), so a full page of 100 ids does not fit in one query.
+const CUSTOMER_IDS_PER_SPEND_QUERY = 80;
 
 const CURRENCY_SORT_ORDER: Record<CurrencyCode, number> = {
   TWD: 0,
@@ -242,18 +247,13 @@ export class PlatformCustomerDirectoryService extends BaseService {
     const where = conditions.length > 0 ? and(...conditions) : undefined;
     const aggregates = this.aggregates();
     const orderBy =
-      filters.sort === "spent"
-        ? // A platform-wide "highest spend" ordering would require an exchange
-          // rate and a valuation date. Neither exists, so retain a useful,
-          // deterministic order instead of pretending cents are comparable.
-          desc(aggregates.lastOrderAt)
-        : filters.sort === "orders"
-          ? desc(aggregates.orderCount)
-          : filters.sort === "restaurants"
-            ? desc(aggregates.restaurantCount)
-            : filters.sort === "name"
-              ? customers.displayName
-              : desc(customers.createdAt);
+      filters.sort === "orders"
+        ? desc(aggregates.orderCount)
+        : filters.sort === "restaurants"
+          ? desc(aggregates.restaurantCount)
+          : filters.sort === "name"
+            ? customers.displayName
+            : desc(customers.createdAt);
 
     const [rows, totalRows] = await Promise.all([
       this.rollupQuery()
@@ -321,20 +321,40 @@ export class PlatformCustomerDirectoryService extends BaseService {
     if (customerIds.length === 0) return new Map();
 
     const currency = displayRestaurantCurrencySql(restaurants.settings);
-    const rows = await this.db
-      .select({
-        customerId: restaurantCustomers.customerId,
-        currency,
-        amountCents: sql<number>`coalesce(sum(${restaurantCustomers.totalSpentCents}), 0)`,
-      })
-      .from(restaurantCustomers)
-      .innerJoin(
-        restaurants,
-        eq(restaurants.id, restaurantCustomers.restaurantId),
-      )
-      .where(inArray(restaurantCustomers.customerId, [...customerIds]))
-      .groupBy(restaurantCustomers.customerId, currency)
-      .orderBy(restaurantCustomers.customerId, currency);
+    const rows: Array<{
+      customerId: string;
+      currency: CurrencyCode;
+      amountCents: number;
+    }> = [];
+    // A customer id lands in exactly one slice, so no (customer, currency)
+    // group is ever split across two queries.
+    for (
+      let start = 0;
+      start < customerIds.length;
+      start += CUSTOMER_IDS_PER_SPEND_QUERY
+    ) {
+      rows.push(
+        ...(await this.db
+          .select({
+            customerId: restaurantCustomers.customerId,
+            currency,
+            amountCents: sql<number>`coalesce(sum(${restaurantCustomers.totalSpentCents}), 0)`,
+          })
+          .from(restaurantCustomers)
+          .innerJoin(
+            restaurants,
+            eq(restaurants.id, restaurantCustomers.restaurantId),
+          )
+          .where(
+            inArray(
+              restaurantCustomers.customerId,
+              customerIds.slice(start, start + CUSTOMER_IDS_PER_SPEND_QUERY),
+            ),
+          )
+          .groupBy(restaurantCustomers.customerId, currency)
+          .orderBy(restaurantCustomers.customerId, currency)),
+      );
+    }
 
     const amounts = rows.reduce<Map<string, MoneyByCurrency>>(
       (byCustomer, row) => {

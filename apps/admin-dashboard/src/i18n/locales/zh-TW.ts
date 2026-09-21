@@ -3830,7 +3830,6 @@ const zhTWCore = {
       sort: "排序方式",
       sortOptions: {
         recent: "最新加入",
-        spent: "累計消費",
         orders: "訂單數",
         restaurants: "消費店家數",
         name: "姓名",

@@ -3790,7 +3790,6 @@ const enUS: Messages = {
       sort: "Sort by",
       sortOptions: {
         recent: "Recently joined",
-        spent: "Total spent",
         orders: "Order count",
         restaurants: "Shops visited",
         name: "Name",

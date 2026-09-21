@@ -3710,7 +3710,6 @@ const zhCN: Messages = {
       sort: "排序方式",
       sortOptions: {
         recent: "最新加入",
-        spent: "累计消费",
         orders: "订单数",
         restaurants: "消费店家数",
         name: "姓名",

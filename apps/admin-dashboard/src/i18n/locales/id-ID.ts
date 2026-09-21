@@ -3813,7 +3813,6 @@ const idID: Messages = {
       sort: "Urutkan",
       sortOptions: {
         recent: "Terbaru bergabung",
-        spent: "Total belanja",
         orders: "Jumlah pesanan",
         restaurants: "Jumlah toko",
         name: "Nama",

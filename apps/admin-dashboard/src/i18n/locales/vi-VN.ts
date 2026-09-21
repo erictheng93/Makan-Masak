@@ -3795,7 +3795,6 @@ const viVN: Messages = {
       sort: "Sắp xếp theo",
       sortOptions: {
         recent: "Mới tham gia",
-        spent: "Tổng chi tiêu",
         orders: "Số đơn hàng",
         restaurants: "Số cửa hàng",
         name: "Tên",

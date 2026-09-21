@@ -43,6 +43,36 @@ function toDbFilters(filters: AnalyticsFilters): {
   };
 }
 
+/**
+ * `MoneyByCurrency` (and the matching per-currency growth rates) as one column
+ * per currency — `revenue.TWD`, `revenue.MYR` — in major units, which is what
+ * this export carried before money became per-currency. Returns null for any
+ * other array, which keeps the JSON fallback.
+ */
+function perCurrencyCsvColumns(
+  entries: unknown[],
+  prefix: string,
+): Record<string, number> | null {
+  if (entries.length === 0) return null;
+  const columns: Record<string, number> = {};
+  for (const entry of entries) {
+    const { currency, amountCents, percentage } = (entry ?? {}) as {
+      currency?: unknown;
+      amountCents?: unknown;
+      percentage?: unknown;
+    };
+    if (typeof currency !== "string") return null;
+    if (typeof amountCents === "number") {
+      columns[`${prefix}.${currency}`] = amountCents / 100;
+    } else if (typeof percentage === "number") {
+      columns[`${prefix}.${currency}`] = percentage;
+    } else {
+      return null;
+    }
+  }
+  return columns;
+}
+
 function flattenForCsv(
   value: unknown,
   prefix = "",
@@ -56,9 +86,11 @@ function flattenForCsv(
   }
 
   if (Array.isArray(value)) {
-    return {
-      [prefix]: JSON.stringify(value),
-    };
+    return (
+      perCurrencyCsvColumns(value, prefix) ?? {
+        [prefix]: JSON.stringify(value),
+      }
+    );
   }
 
   if (typeof value !== "object") {

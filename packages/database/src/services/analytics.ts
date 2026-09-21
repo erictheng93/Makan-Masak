@@ -263,7 +263,7 @@ export class AnalyticsService extends BaseService {
       // limit there. An unscoped platform query can produce up to three rows
       // per date (TWD, MYR, VND), which are collapsed into one response bucket.
       const queryLimit = restaurantId ? limit : limit * 3;
-      const revenueData = await this.db
+      const revenueRows = await this.db
         .select({
           date: sql<string>`${dateGroupSql}`,
           currency,
@@ -277,6 +277,16 @@ export class AnalyticsService extends BaseService {
         .groupBy(sql`${dateGroupSql}`, currency)
         .orderBy(sql`${dateGroupSql}`, currency)
         .limit(queryLimit);
+      // The widened SQL limit counts (date, currency) rows; the caller's limit
+      // counts dates. Rows arrive date-ordered and a date has at most three, so
+      // the first `limit` dates are always complete — drop whatever follows,
+      // which may be a date cut off part-way through its currencies.
+      const keptDates = new Set<string>();
+      const revenueData = revenueRows.filter((row) => {
+        if (!keptDates.has(row.date) && keptDates.size >= limit) return false;
+        keptDates.add(row.date);
+        return true;
+      });
 
       // 如果需要對比資料
       if (includeComparison) {

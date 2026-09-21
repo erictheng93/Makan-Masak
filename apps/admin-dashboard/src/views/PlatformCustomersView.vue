@@ -74,9 +74,6 @@
               <option value="recent">
                 {{ t("platformCustomers.filters.sortOptions.recent") }}
               </option>
-              <option value="spent">
-                {{ t("platformCustomers.filters.sortOptions.spent") }}
-              </option>
               <option value="orders">
                 {{ t("platformCustomers.filters.sortOptions.orders") }}
               </option>

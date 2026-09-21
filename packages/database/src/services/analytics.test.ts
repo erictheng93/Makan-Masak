@@ -115,6 +115,33 @@ describe("AnalyticsService revenue analytics", () => {
     ]);
   });
 
+  it("caps a platform query at `limit` date buckets, not `limit` currency rows", async () => {
+    // Unscoped, the SQL limit is widened to three rows per date. With a single
+    // currency that headroom must not leak out as extra dates (#407).
+    await testDb.drizzle
+      .insert(orders)
+      .values([
+        order("cap-1", "CAP-001", "2026-01-08T12:00:00.000Z", 10000),
+        order("cap-2", "CAP-002", "2026-01-09T12:00:00.000Z", 10000),
+        order("cap-3", "CAP-003", "2026-01-10T12:00:00.000Z", 10000),
+      ]);
+
+    const result = await new AnalyticsService(
+      testDb.bindings.DB,
+      {} as never,
+    ).getRevenueAnalytics({
+      dateFrom: "2026-01-08T00:00:00.000Z",
+      dateTo: "2026-01-11T00:00:00.000Z",
+      groupBy: "day",
+      limit: 2,
+    });
+
+    expect(result.map((bucket) => bucket.date)).toEqual([
+      "2026-01-08",
+      "2026-01-09",
+    ]);
+  });
+
   it("counts only collected orders as revenue while keeping delivery fulfilled", async () => {
     await testDb.drizzle.insert(orders).values([
       order("unpaid-delivery", "R-001", "2026-01-08T12:00:00.000Z", 90000, {

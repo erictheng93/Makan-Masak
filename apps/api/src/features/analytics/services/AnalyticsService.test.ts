@@ -360,8 +360,12 @@ describe("AnalyticsService", () => {
       },
     });
     expect(csvExport.data.content_type).toBe("text/csv");
-    expect(csvPayload).toContain("date,revenue,orderCount");
-    expect(csvPayload).toContain('"quoted, ""value"""');
+    // Money per currency is one major-unit column per currency: a number a
+    // spreadsheet can use, never a JSON blob and never a cross-currency sum.
+    expect(csvPayload.split("\n")).toEqual([
+      "date,revenue.TWD,orderCount,averageOrderValue.TWD",
+      '"quoted, ""value""",100,2,50',
+    ]);
   });
 
   it("normalizes financial reports and clears analytics cache patterns", async () => {

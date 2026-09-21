@@ -134,7 +134,9 @@ export const platformCustomerListQuerySchema = z.lazy(() =>
     search: z.string().trim().max(200).optional(),
     status: z.enum(["active", "deleted"]).optional(),
     sort: z
-      .enum(["recent", "spent", "orders", "restaurants", "name"])
+      // No "spent": ranking customers across shops would compare cents of
+      // different currencies, which needs an exchange rate nobody has (#407).
+      .enum(["recent", "orders", "restaurants", "name"])
       .optional(),
   }),
 );

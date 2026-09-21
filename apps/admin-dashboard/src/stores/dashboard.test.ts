@@ -77,18 +77,19 @@ describe("mapDashboardPayload", () => {
 
 describe("dashboard analytics charts", () => {
   it("writes each requested chart series into the state consumed by the charts", async () => {
+    // The shape /analytics/revenue really returns: money per currency, in
+    // cents. A scalar `revenue: 320` here is what hid the chart break (#407).
+    const revenuePoint = {
+      date: "2026-08-26",
+      revenue: [{ currency: "TWD", amountCents: 32000 }],
+      orderCount: 2,
+    };
     vi.mocked(api.get)
       .mockResolvedValueOnce(
-        axiosResponse({
-          success: true,
-          data: [{ date: "2026-08-26", revenue: 320, orderCount: 2 }],
-        }),
+        axiosResponse({ success: true, data: [revenuePoint] }),
       )
       .mockResolvedValueOnce(
-        axiosResponse({
-          success: true,
-          data: [{ date: "2026-08-26", revenue: 320, orderCount: 2 }],
-        }),
+        axiosResponse({ success: true, data: [revenuePoint] }),
       )
       .mockResolvedValueOnce(
         axiosResponse({

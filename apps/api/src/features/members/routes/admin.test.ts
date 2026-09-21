@@ -100,7 +100,7 @@ describe("platform customer directory", () => {
     });
 
     const response = await app.fetch(
-      new Request("https://test/?page=1&limit=100&sort=spent"),
+      new Request("https://test/?page=1&limit=100&sort=orders"),
       createEnv() as never,
     );
 
@@ -111,7 +111,7 @@ describe("platform customer directory", () => {
       pagination: { total: 1, page: 1, limit: 100, pages: 1 },
     });
     expect(mocks.list).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 1, limit: 100, sort: "spent" }),
+      expect.objectContaining({ page: 1, limit: 100, sort: "orders" }),
     );
   });
 

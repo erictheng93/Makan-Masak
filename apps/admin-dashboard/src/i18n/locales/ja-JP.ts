@@ -3795,7 +3795,6 @@ const jaJP: Messages = {
       sort: "並び替え",
       sortOptions: {
         recent: "登録が新しい順",
-        spent: "利用金額",
         orders: "注文数",
         restaurants: "利用店舗数",
         name: "名前",
