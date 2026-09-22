@@ -154,14 +154,10 @@
               {{ selectedRestaurant.name }}
             </div>
             <div
-              v-if="selectedRestaurant.district || selectedRestaurant.type"
+              v-if="publicDistrict(selectedRestaurant.district)"
               class="text-xs text-gray-500 truncate"
             >
-              {{
-                [selectedRestaurant.type, selectedRestaurant.district]
-                  .filter(Boolean)
-                  .join(" · ")
-              }}
+              {{ publicDistrict(selectedRestaurant.district) }}
             </div>
           </div>
           <button

@@ -37,5 +37,12 @@ describe("ManualInputModal", () => {
 
     expect(wrapper.text()).toContain("Demo Noodles");
     expect(wrapper.text()).not.toContain("onboarding");
+
+    await wrapper
+      .get('[data-testid="restaurant-search-result"]')
+      .trigger("click");
+
+    expect(wrapper.text()).toContain("Demo Noodles");
+    expect(wrapper.text()).not.toContain("onboarding");
   });
 });
