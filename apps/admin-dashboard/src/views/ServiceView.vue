@@ -457,7 +457,7 @@
                 >
                   <div class="w-2 h-2 bg-green-500 rounded-full mr-3" />
                   <span class="text-gray-600 text-xs">{{
-                    formatClockTime(record.completedAt)
+                    record.completedAt
                   }}</span>
                   <span class="ml-2 font-medium">{{ record.orderNumber }}</span>
                   <span class="ml-auto text-gray-500 text-xs"
