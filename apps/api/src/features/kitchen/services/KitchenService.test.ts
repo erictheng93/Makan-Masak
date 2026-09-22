@@ -50,6 +50,9 @@ function scopedKitchenItem(overrides: Record<string, unknown> = {}) {
     order_number: "A001",
     order_created_at: "2026-06-07T11:40:00.000Z",
     table_id: 7,
+    // The number printed on the table, which is what staff read. The id is a
+    // database key: on production table A1 is id 2 and showed as "Table 2".
+    table_number: "A1",
     item_id: 501,
     menu_item_id: 91,
     menu_item_name: "Laksa",
@@ -63,6 +66,7 @@ function order(overrides: Record<string, unknown> = {}) {
     id: 101,
     orderNumber: "A001",
     tableId: 7,
+    table: { id: 7, number: "A1" },
     status: "confirmed",
     orderSource: "direct",
     items: [
@@ -134,6 +138,7 @@ describe("KitchenService", () => {
           id: 102,
           orderNumber: "A002",
           tableId: null,
+          table: null,
           status: "preparing",
           orderSource: "market_checkout",
           items: [
@@ -185,7 +190,7 @@ describe("KitchenService", () => {
         id: 101,
         orderNumber: "A001",
         tableId: 7,
-        tableName: "Table 7",
+        tableName: "Table A1",
         status: "confirmed",
         customerName: "Aminah",
         totalItems: 2,
@@ -307,7 +312,7 @@ describe("KitchenService", () => {
         orderItemId: 501,
         menuItemName: "Laksa",
         status: "ready",
-        tableName: "Table 7",
+        tableName: "Table A1",
         priority: "high",
         waitingTime: 20,
       },
