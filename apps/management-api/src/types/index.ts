@@ -63,6 +63,8 @@ export interface ManagementEnv {
 
   // R2 bucket for worker bundles
   BUNDLE_STORAGE: R2Bucket;
+  /** Daily onboarding audit snapshots (#419). Bound in production only. */
+  AUDIT_ARCHIVE?: R2Bucket;
 }
 
 // ============================================================

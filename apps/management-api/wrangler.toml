@@ -110,6 +110,15 @@ id = "e8da1ab3a04740e48c53a710494c31df"
 binding = "BUNDLE_STORAGE"
 bucket_name = "makanmasak-management-bundles-prod"
 
+# Onboarding audit snapshots outlive D1 Time Travel's 30 days (#419).
+[[env.production.r2_buckets]]
+binding = "AUDIT_ARCHIVE"
+bucket_name = "makanmasak-backups-prod"
+
+# 18:30 UTC = 02:30 Asia/Taipei. Production only: nothing else has an archive.
+[env.production.triggers]
+crons = ["30 18 * * *"]
+
 # Bindings do not inherit into named environments. This must be deployed before
 # PLATFORM_NOTIFICATION_EMAIL and PLATFORM_NOTIFICATION_EMAIL_FROM can work.
 [[env.production.send_email]]

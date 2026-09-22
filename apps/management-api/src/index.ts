@@ -25,6 +25,7 @@ import authRouter from "./routes/auth";
 import adminOnboardingRouter from "./routes/admin-onboarding";
 import { adminMarketsRouter, marketsRouter } from "./routes/markets";
 import internalRouter from "./routes/internal";
+import { archiveOnboardingAudit } from "./services/onboardingAuditArchive";
 
 // Create main application
 const app = new Hono<{ Bindings: ManagementEnv }>();
@@ -239,4 +240,17 @@ app.route("/api/v1", protectedApi);
 // Export
 // ============================================================
 
-export default app;
+export default {
+  fetch: app.fetch,
+  // ponytail: one cron, one job; switch on controller.cron when a second
+  // schedule lands in wrangler.toml.
+  async scheduled(_controller, env) {
+    try {
+      console.log(`[AuditArchive] wrote ${await archiveOnboardingAudit(env)}`);
+    } catch (error) {
+      console.error("[AuditArchive] onboarding audit snapshot failed:", error);
+      // Rethrow so the run shows as failed in Cron Events instead of passing.
+      throw error;
+    }
+  },
+} satisfies ExportedHandler<ManagementEnv>;
