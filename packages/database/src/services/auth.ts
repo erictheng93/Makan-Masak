@@ -273,22 +273,15 @@ export class AuthService extends BaseService {
         { expiresIn: "7d" },
       );
 
-      // These four writes used to be four sequential D1 round trips (deactivate
-      // old sessions, sweep expired ones, insert the new session, stamp
-      // lastLoginAt), each awaited before the next began. D1 runs a batch as
-      // one atomic transaction in the order given, so this is both a single
-      // round trip and safer: previously a failure partway through could log a
-      // user out of everything without giving them a new session.
+      // Keep valid sessions on other devices: a successful login mints a new
+      // token pair, which prevents fixation for this login without disrupting
+      // an active POS, KDS, or mobile session for the same staff account.
       //
-      // Order matters — the deactivate and the sweep must precede the insert so
-      // they do not touch the session we are creating.
+      // D1 runs this three-write batch as one ordered transaction. The expired
+      // session sweep must precede the insert so it cannot touch the session we
+      // are creating.
       const now = new Date();
       const writes: [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]] = [
-        // Invalidate any existing sessions to prevent session fixation
-        this.db
-          .update(sessions)
-          .set({ isActive: false, updatedAt: now })
-          .where(eq(sessions.userId, user.id)) as BatchItem<"sqlite">,
         this.db
           .delete(sessions)
           .where(
@@ -795,7 +788,7 @@ export class AuthService extends BaseService {
         })
         .where(eq(users.id, userId));
 
-      // 使所有該用戶的 sessions 失效（除了當前操作的 session）
+      // Revoke every session, including the one that initiated the change.
       await this.db
         .update(sessions)
         .set({

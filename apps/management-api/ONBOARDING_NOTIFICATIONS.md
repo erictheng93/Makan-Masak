@@ -27,6 +27,13 @@ Create an incoming webhook for the platform-operations channel, then set `SLACK_
 
 Cloudflare requires the sender domain to be onboarded even though sends to verified Email Routing destinations are free. Do not treat destination verification alone as sufficient.
 
-## Closing #380
+## Closing #410
 
-Code verification is complete only after one production notification is received through Slack or the Email Service fallback, and the sidebar displays the submitted count to a platform administrator. Configuring providers and sending that production test require an operator with Cloudflare account access; they are intentionally outside the worker code change.
+Do not close #410 based on unit tests or a deployment alone. An operator with Cloudflare production access must record all of the following in #410:
+
+1. The UTC time and the enabled channel (Slack or Email Service fallback).
+2. A controlled production application submission and the received notification. Verify that it contains only the business name, application ID, and review URL — never the applicant's name, email address, or phone number.
+3. The platform administrator's sidebar shows the submitted application in its pending-review count, followed by normal rejection/removal of the test record.
+4. The deployed malformed-body contract: `POST` to the production application endpoint with body `{` returns `400` and error code `INVALID_JSON`.
+
+Provider configuration, production sending, and the evidence above require a Cloudflare account operator. They are deliberately outside the worker code change, so this document is a manual acceptance checklist rather than a claim that production notifications have been enabled.

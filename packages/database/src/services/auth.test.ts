@@ -278,11 +278,7 @@ describe("AuthService refresh token rotation", () => {
     });
   });
 
-  // The four session writes on the login path run as one ordered D1 batch.
-  // Order is the load-bearing part: the deactivate and the expired-session
-  // sweep have to land before the insert, or they would clobber the session
-  // being created.
-  it("deactivates old sessions and sweeps expired ones without touching the new session", async () => {
+  it("keeps an existing device session usable after a second login and sweeps expired sessions", async () => {
     await testDb.drizzle.insert(users).values({
       id: loginUserId,
       username: "owner-login",
@@ -294,22 +290,105 @@ describe("AuthService refresh token rotation", () => {
     });
 
     const hour = 60 * 60 * 1000;
+    await testDb.drizzle.insert(sessions).values({
+      id: "session-expired",
+      userId: loginUserId,
+      token: "expired-access",
+      refreshToken: "expired-refresh",
+      expiresAt: new Date(Date.now() - hour),
+      isActive: true,
+    });
+
+    const service = new AuthService(testDb.bindings.DB, {
+      JWT_SECRET: jwtSecret,
+      NODE_ENV: "test",
+    });
+
+    const firstLogin = await service.login({
+      username: "owner-login",
+      password: "CorrectHorse123!",
+    });
+    expect(firstLogin.success).toBe(true);
+
+    const secondLogin = await service.login({
+      username: "owner-login",
+      password: "CorrectHorse123!",
+    });
+    expect(secondLogin.success).toBe(true);
+
+    const rows = await testDb.drizzle
+      .select()
+      .from(sessions)
+      .where(eq(sessions.userId, loginUserId));
+
+    // The expired session is gone, while both device sessions remain active.
+    expect(rows.map((row) => row.id)).not.toContain("session-expired");
+    const active = rows.filter((row) => row.isActive);
+    expect(active).toHaveLength(2);
+    expect(active.map((row) => row.token)).toEqual(
+      expect.arrayContaining([
+        firstLogin.tokens!.accessToken,
+        secondLogin.tokens!.accessToken,
+      ]),
+    );
+
+    // The prior device can still use both kinds of credential after the second
+    // login. A regression here would reproduce the mid-shift forced logout.
+    await expect(
+      service.validateToken(firstLogin.tokens!.accessToken),
+    ).resolves.toMatchObject({ valid: true });
+    await expect(
+      service.refreshToken(firstLogin.tokens!.refreshToken),
+    ).resolves.toMatchObject({ success: true });
+
+    const [user] = await testDb.drizzle
+      .select({ lastLoginAt: users.lastLoginAt })
+      .from(users)
+      .where(eq(users.id, loginUserId));
+    expect(user.lastLoginAt).toBeInstanceOf(Date);
+  });
+
+  it("revokes every session when the password changes", async () => {
+    const accessToken = sign(
+      {
+        sub: loginUserId,
+        username: "owner-password-change",
+        role: 1,
+        tv: 3,
+      },
+      jwtSecret,
+      { expiresIn: "1h" },
+    );
+    const refreshToken = sign(
+      { sub: loginUserId, type: "refresh", tv: 3, jti: "refresh-password" },
+      jwtSecret,
+      { expiresIn: "7d" },
+    );
+    await testDb.drizzle.insert(users).values({
+      id: loginUserId,
+      username: "owner-password-change",
+      fullName: "Owner Password Change",
+      passwordHash: await bcrypt.hash("CorrectHorse123!", FIXTURE_BCRYPT_COST),
+      role: 1,
+      isActive: true,
+      tokenVersion: 3,
+    });
     await testDb.drizzle.insert(sessions).values([
       {
-        id: "session-still-valid",
+        id: "session-password-primary",
         userId: loginUserId,
-        token: "old-access",
-        refreshToken: "old-refresh",
-        expiresAt: new Date(Date.now() + hour),
+        token: accessToken,
+        refreshToken,
         isActive: true,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
       },
       {
-        id: "session-expired",
+        id: "session-password-secondary",
         userId: loginUserId,
-        token: "expired-access",
-        refreshToken: "expired-refresh",
-        expiresAt: new Date(Date.now() - hour),
+        token: "other-access",
+        refreshToken: "other-refresh",
         isActive: true,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
       },
     ]);
 
@@ -318,33 +397,100 @@ describe("AuthService refresh token rotation", () => {
       NODE_ENV: "test",
     });
 
-    const result = await service.login({
-      username: "owner-login",
-      password: "CorrectHorse123!",
-    });
-    expect(result.success).toBe(true);
+    await expect(
+      service.changePassword(
+        loginUserId,
+        "CorrectHorse123!",
+        "ReplacementHorse123!",
+      ),
+    ).resolves.toEqual({ success: true });
 
     const rows = await testDb.drizzle
-      .select()
+      .select({ isActive: sessions.isActive })
       .from(sessions)
       .where(eq(sessions.userId, loginUserId));
+    expect(rows).toHaveLength(2);
+    expect(rows.every((row) => row.isActive === false)).toBe(true);
 
-    // Expired one is gone, the previously valid one survives but deactivated,
-    // and the brand new session is the only active one.
-    expect(rows.map((row) => row.id)).not.toContain("session-expired");
-    expect(rows.find((row) => row.id === "session-still-valid")?.isActive).toBe(
-      false,
+    await expect(service.validateToken(accessToken)).resolves.toEqual({
+      valid: false,
+      error: "Session expired or invalid",
+    });
+    await expect(service.refreshToken(refreshToken)).resolves.toEqual({
+      success: false,
+      error: "Refresh token has been invalidated",
+    });
+  });
+
+  it("keeps credentials unusable when an account is disabled", async () => {
+    const accessToken = sign(
+      {
+        sub: loginUserId,
+        username: "owner-disabled",
+        role: 1,
+        tv: 3,
+      },
+      jwtSecret,
+      { expiresIn: "1h" },
     );
+    const refreshToken = sign(
+      { sub: loginUserId, type: "refresh", tv: 3, jti: "refresh-disabled" },
+      jwtSecret,
+      { expiresIn: "7d" },
+    );
+    await testDb.drizzle.insert(users).values({
+      id: loginUserId,
+      username: "owner-disabled",
+      fullName: "Owner Disabled",
+      passwordHash: "hash",
+      role: 1,
+      isActive: true,
+      tokenVersion: 3,
+    });
+    await testDb.drizzle.insert(sessions).values({
+      id: "session-disabled",
+      userId: loginUserId,
+      token: accessToken,
+      refreshToken,
+      isActive: true,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    });
 
-    const active = rows.filter((row) => row.isActive);
-    expect(active).toHaveLength(1);
-    expect(active[0].token).toBe(result.tokens!.accessToken);
+    const service = new AuthService(testDb.bindings.DB, {
+      JWT_SECRET: jwtSecret,
+      NODE_ENV: "test",
+    });
 
-    const [user] = await testDb.drizzle
-      .select({ lastLoginAt: users.lastLoginAt })
-      .from(users)
+    // This matches the account-disable transition: isActive prevents any use
+    // immediately, and tokenVersion keeps the old credentials dead if a
+    // disabled account is later re-enabled.
+    await testDb.drizzle
+      .update(users)
+      .set({ isActive: false, tokenVersion: 4 })
       .where(eq(users.id, loginUserId));
-    expect(user.lastLoginAt).toBeInstanceOf(Date);
+
+    await expect(service.validateToken(accessToken)).resolves.toEqual({
+      valid: false,
+      error: "User not found or inactive",
+    });
+    await expect(service.refreshToken(refreshToken)).resolves.toEqual({
+      success: false,
+      error: "User not found or inactive",
+    });
+
+    await testDb.drizzle
+      .update(users)
+      .set({ isActive: true })
+      .where(eq(users.id, loginUserId));
+
+    await expect(service.validateToken(accessToken)).resolves.toEqual({
+      valid: false,
+      error: "Token invalidated",
+    });
+    await expect(service.refreshToken(refreshToken)).resolves.toEqual({
+      success: false,
+      error: "Refresh token has been invalidated",
+    });
   });
 
   it("validates UUID-principal access tokens through the session user id", async () => {
