@@ -216,6 +216,32 @@ app.get("/jobs", async (c) => {
       ),
     );
 
+  // A kitchen ticket is an order to cook. Once its order is cancelled it must
+  // leave the queue, not print; cancel has several paths (guest, staff,
+  // platform), so this is enforced here, where every ticket passes.
+  await db
+    .update(receipts)
+    .set({ printStatus: "cancelled", claimedAt: null })
+    .where(
+      and(
+        servesThisAgent,
+        eq(receipts.receiptType, "kitchen"),
+        eq(receipts.printStatus, "pending"),
+        inArray(
+          receipts.orderId,
+          db
+            .select({ id: orders.id })
+            .from(orders)
+            .where(
+              and(
+                eq(orders.restaurantId, agent.restaurantId),
+                eq(orders.status, "cancelled"),
+              ),
+            ),
+        ),
+      ),
+    );
+
   const claimable = or(
     eq(receipts.printStatus, "pending"),
     and(abandoned, lt(receipts.printAttempts, MAX_DELIVERY_ATTEMPTS)),
