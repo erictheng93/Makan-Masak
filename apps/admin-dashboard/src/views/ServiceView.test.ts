@@ -17,7 +17,9 @@ vi.mock("@/i18n", () => ({
 
 vi.mock("@/composables/useDateFormatter", () => ({
   useDateFormatter: () => ({
-    formatTime: () => "12:00",
+    // Mirrors Intl: an unparseable date formats as "Invalid Date".
+    formatTime: (value: Date) =>
+      Number.isNaN(new Date(value).getTime()) ? "Invalid Date" : "12:00",
     formatTimeWithSeconds: () => "12:00:00",
   }),
 }));
@@ -305,6 +307,33 @@ describe("ServiceView", () => {
       wrapper.unmount();
       await vi.advanceTimersByTimeAsync(60_000);
       expect(readyCalls()).toBe(before + 1);
+    });
+
+    it("shows the delivery time on today's timeline, not Invalid Date", async () => {
+      vi.mocked(api.get).mockImplementation(
+        async (_url: string, paramsOrConfig?: unknown) => {
+          const options = paramsOrConfig as { status?: string } | undefined;
+          const orders =
+            options?.status === "delivered"
+              ? [
+                  {
+                    ...readyOrder,
+                    id: "order-9",
+                    orderNumber: "ORD-9",
+                    status: "delivered",
+                    deliveredAt: Date.parse("2026-08-21T12:05:00.000Z"),
+                  },
+                ]
+              : [];
+          return { data: { data: orders } } as never;
+        },
+      );
+      const wrapper = mount(ServiceView);
+      await flushPromises();
+
+      expect(wrapper.text()).toContain("ORD-9");
+      expect(wrapper.text()).not.toContain("Invalid Date");
+      wrapper.unmount();
     });
   });
 });
