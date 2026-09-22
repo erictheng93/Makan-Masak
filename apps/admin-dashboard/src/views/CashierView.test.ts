@@ -102,7 +102,19 @@ describe("CashierView", () => {
   });
 
   it("submits a string order number for a refund and displays a failure", async () => {
-    vi.mocked(api.post).mockRejectedValueOnce(new Error("Refund rejected"));
+    // The shape axios rejects with: its own message is the HTTP status line,
+    // and the reason the cashier needs is the API error underneath it.
+    vi.mocked(api.post).mockRejectedValueOnce(
+      Object.assign(new Error("Request failed with status code 400"), {
+        response: {
+          status: 400,
+          data: {
+            success: false,
+            error: { code: "BAD_REQUEST", message: "退款金額超過可退款額度" },
+          },
+        },
+      }),
+    );
     const wrapper = mount(CashierView);
     await flushPromises();
 
@@ -126,8 +138,8 @@ describe("CashierView", () => {
       }),
       expect.any(Object),
     );
-    expect(wrapper.get('[data-testid="refund-error"]').text()).toContain(
-      "Refund rejected",
+    expect(wrapper.get('[data-testid="refund-error"]').text()).toBe(
+      "退款金額超過可退款額度",
     );
   });
 
