@@ -213,7 +213,13 @@ Sources checked during the investigation:
 
 This establishes the production write/read path and probe label, not HiNet
 performance. First seven-day review is due no earlier than **2026-09-29 01:38 UTC**
-(09:38 Malaysia time). No recurring review has been scheduled. Authenticated
-business-endpoint baselines from the listed networks, organic coverage, a Tokyo
-experiment and acceptance evidence remain outstanding. Keep pre/post query windows
-disjoint; do not mix observation-only and placement-enabled samples in one cohort.
+(09:38 Malaysia time). No recurring review has been scheduled. The first
+[authenticated MY/SIN baseline](../investigations/2026-09-22-worker-placement-369-baseline.md)
+is now recorded. Taiwan network baselines, repeat windows, organic coverage, a
+Tokyo experiment and acceptance evidence remain outstanding. With no organic
+users, controlled synthetic comparisons need not wait an empty week; qualify
+their conclusions as scenario-specific rather than population-level evidence.
+Keep pre/post query windows disjoint; do not mix observation-only and
+placement-enabled samples in one cohort. For exact SQL windows use
+`timestamp >= toDateTime(unix_start) AND timestamp <= toDateTime(unix_end)`;
+the live API rejected direct string timestamp comparisons in the baseline check.
