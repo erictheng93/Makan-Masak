@@ -712,6 +712,18 @@ router.beforeEach(async (to, _, next) => {
     return next("/unauthorized");
   }
 
+  // The dashboard home is the owner's analytics page, and every call it makes
+  // is admin/owner only. Other staff reach it through the root URL's
+  // ?redirect=/dashboard; send them to their own start page instead.
+  if (
+    routeName === "DashboardHome" &&
+    !authStore.isAdminRole &&
+    authStore.userRole !== UserRole.OWNER
+  ) {
+    const home = authStore.getDefaultRoute();
+    if (home !== to.path) return next(home);
+  }
+
   const adminRestaurantId = firstQueryString(to.query.adminRestaurantId);
   const adminRestaurantName = firstQueryString(to.query.adminRestaurantName);
   if (authStore.isAdminRole && adminRestaurantId && adminRestaurantName) {
