@@ -1021,17 +1021,19 @@ export class LocalPrintService {
     // both from the credential. An agent that could name its own tenant
     // could claim another shop's receipts.
     //
-    // Printer counts ride along on the poll instead of a second heartbeat.
-    // Without them the cloud only knows the agent is alive, which reads the
-    // same whether the printer is working or unplugged. They are re-read on
-    // every claim so a printer that dies mid-drain is reported while the
-    // drain is still running.
-    const url = new URL("print/jobs", `${this.config.cloudEndpoint}/`);
+    // Never claim work that this agent cannot send to a physical printer. A
+    // claim moves a receipt to `printing` and spends one delivery attempt, so
+    // learning after the GET that every device is offline is already too late.
+    // Pending acknowledgements are drained before this method runs, so this
+    // guard cannot strand the outcome of a receipt claimed while hardware was
+    // still online.
     const devices = await this.printerCounts();
-    if (devices) {
-      url.searchParams.set("printersTotal", String(devices.total));
-      url.searchParams.set("printersOnline", String(devices.online));
-    }
+    if (!devices || devices.online < 1) return "empty";
+
+    // Printer counts ride along on every claim rather than a second heartbeat.
+    const url = new URL("print/jobs", `${this.config.cloudEndpoint}/`);
+    url.searchParams.set("printersTotal", String(devices.total));
+    url.searchParams.set("printersOnline", String(devices.online));
 
     const response = await fetch(url, {
       headers: { "X-Print-Agent-Key": cloudKey },
@@ -1082,8 +1084,9 @@ export class LocalPrintService {
   }
 
   /**
-   * 目前的印表機台數。健康檢查失敗時回 null —— 寧可讓雲端沿用上一筆讀數，
-   * 也不要把「我問不到」誤報成「零台在線」。
+   * Current printer count. A failed health probe returns null, which is a
+   * safety stop for claiming work: unknown hardware availability must not be
+   * treated as a working printer.
    */
   private async printerCounts(): Promise<{
     total: number;

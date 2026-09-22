@@ -38,27 +38,18 @@ export class EpsonDriver extends PrinterDriver {
 
   async connect(): Promise<boolean> {
     try {
-      // Implement Epson-specific connection logic
-      // This would typically involve opening a connection to the printer
-      // via USB, network, or serial port
-
-      // For now, simulate successful connection
       return await this.executeConnection(async () => {
-        this.connected = true;
-        this.device.status = "online";
-        this.device.lastSeen = new Date();
+        await this.connectTransport();
         return true;
       });
     } catch {
-      this.connected = false;
-      this.device.status = "error";
+      this.markTransportOffline();
       return false;
     }
   }
 
   async disconnect(): Promise<void> {
-    this.connected = false;
-    this.device.status = "offline";
+    await this.disconnectTransport();
   }
 
   getOptions(): EpsonDriverOptions {
@@ -66,12 +57,7 @@ export class EpsonDriver extends PrinterDriver {
   }
 
   async getStatus(): Promise<PrinterStatus> {
-    if (!this.connected) {
-      return "offline";
-    }
-
-    // Implement Epson-specific status checking. For now, simulate status check.
-    return "online";
+    return this.transportStatus();
   }
 
   async print(content: PrintContent): Promise<PrintResponse> {
@@ -110,14 +96,7 @@ export class EpsonDriver extends PrinterDriver {
   }
 
   protected async sendCommands(commands: string): Promise<void> {
-    // Implement Epson-specific command sending
-    // This would typically write the command string to the printer connection
-
-    // For now, simulate command sending (commands would be sent to printer)
-    await new Promise((resolve) => setTimeout(resolve, commands.length * 2)); // Simulate processing time based on command length
-
-    // Update device status
-    this.device.lastSeen = new Date();
+    await this.sendTransport(Buffer.from(commands, "utf8"));
   }
 
   /**

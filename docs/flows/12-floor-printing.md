@@ -7,8 +7,9 @@
 ## 1. 定位
 
 一張紙要吐出來，會經過三段：雲端把收據列排進待印佇列、店內的列印代理把它認領走、
-代理印完再回報結果。雲端派工這一段（認領、回報、回收、健康）接起來了；**店內代理那一段沒有**。
-印表機驅動是模擬的、代理不會執行列印工作，所以目前一張紙都印不出來，見 §8。
+代理把 ESC/POS 位元組成功交給印表機的 TCP socket 後再回報結果。三段都接起來了，收據狀態
+`pending → printing → printed/failed` 反映的是實際網路傳輸是否成功，不是資料庫寫入是否成功；
+TCP 寫入成功仍不是紙張、切刀或紙匣狀態的硬體回報。
 
 ## 2. 雲端這一端
 
@@ -44,6 +45,10 @@ drain 只會把整個佇列的重試預算一起燒掉。代價是「印表機�
 | --- | --- |
 | `GET /api/v1/print/jobs` | 認領一筆待印收據（`print_status → 'printing'`、`claimed_at_ms`、`print_attempts + 1`），回傳出單內容 |
 | `POST /api/v1/print/jobs/:receiptId/ack` | 回報 `printed` / `failed` / `indeterminate`，附 `printerName`、`response` |
+
+代理會在認領前先做本機健康檢查。當沒有任何在線印表機、或健康檢查本身失敗時，代理只保留／送出
+先前已認領工作的回報，**不會**呼叫 `GET /api/v1/print/jobs`；避免把收據移成 `printing` 並消耗
+一次投遞額度後才發現沒有硬體可用。
 
 **配對規則**：`代理.restaurant_id = 訂單.restaurant_id` **且**
 `收據.register_id IS 代理.register_id`（null-safe 相等）。
@@ -105,7 +110,7 @@ Referer 或 cookie，兩層 CSRF 都會在進入 handler 前拒絕它。豁免�
 | `never_seen` | 核發後從未連線 |
 
 `no_printer` 就是這一段存在的理由：只看 `last_seen_at_ms` 的話，它與完全正常無法分辨。
-探測失敗時代理**不送**台數，雲端沿用上一筆讀數——把「問不到」當成「零台在線」會製造假警報。
+探測失敗時代理不會認領新的工作；雲端的代理狀態會在下一個正常輪詢時更新。
 
 後台介面在 admin-dashboard `/dashboard/print-agents`（`PrintAgentsView.vue`）。
 
@@ -124,6 +129,11 @@ Referer 或 cookie，兩層 CSRF 都會在進入 handler 前拒絕它。豁免�
 - `PRINT_AGENT_CLOUD_KEY`（選填）— 雲端派工憑證，代理 → 雲端，由後台核發
 
 沒有設 `PRINT_AGENT_CLOUD_KEY` 就只當本機列印伺服器，不會去輪詢——這是合法設定，不是錯誤。
+
+目前正式支援的實體傳輸是網路印表機的 raw TCP（預設埠 `9100`）。連線、狀態與列印均使用真實
+socket：驅動會送出 raw ESC/POS bytes，TCP 被拒絕或連線中斷即離線。探索會實際連線並送出
+`GS I 1` 裝置資訊查詢；沒有回答的可連線裝置只能標示為 generic，絕不從 hostname 猜測品牌。
+USB、serial 與 Bluetooth 尚未有 transport 實作，會明確失敗而不是偽裝在線。
 
 **啟動不依賴雲端。** 開機時會先拉一次待印工作，但失敗只留 log：`index.ts` 對 `start()`
 失敗的處理是 `process.exit(1)`，讓對外連線斷掉就整個停擺，會連原本可用的本機列印一起沒了。
@@ -149,6 +159,9 @@ Referer 或 cookie，兩層 CSRF 都會在進入 handler 前拒絕它。豁免�
 - `apps/api/src/features/pos/routes/print-agents.test.ts`、`services/ReceiptService.test.ts`
 - `apps/admin-dashboard/src/views/PrintAgentsView.test.ts`
 - `apps/print-agent/src/LocalPrintService.test.ts`
+- `apps/print-agent/src/services/PrintAgentService.test.ts`、
+  `packages/queue-core/src/print/drivers/PrinterDriver.test.ts` — mock TCP 印表機：驗證 raw ESC/POS
+  bytes、拒絕連線時不認領雲端工作，以及成功傳輸後本機 job 完成
 
 **手動探索 QA（production）**
 
@@ -171,3 +184,5 @@ Referer 或 cookie，兩層 CSRF 都會在進入 handler 前拒絕它。豁免�
 3. **毒藥收據會擋住佇列數次心跳**，直到它用完投遞預算。見第 3 節的取捨說明。
 4. **廚房票的版型與顧客收據共用** `generateReceiptContent`，只是 `templateName` 不同。
    廚房票其實不需要價格，實際排版取決於代理端的 ESC/POS 樣板。
+5. **仍須以實體印表機驗收。** 自動測試只證明 mock TCP server 接收到 bytes；部署時要以可達的
+   TCP:9100 印表機確認實際收據、字元編碼、切紙、紙張／卡紙狀態及該型號的裝置資訊回應。

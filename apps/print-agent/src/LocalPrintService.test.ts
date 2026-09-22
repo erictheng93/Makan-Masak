@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WebSocket } from "ws";
 import type { PrintJob } from "@makanmasak/shared-types";
+import { PrintAgentService } from "./services/PrintAgentService";
 import {
   LocalPrintService,
   MAX_ACKNOWLEDGEMENT_ATTEMPTS,
@@ -372,6 +373,19 @@ describe("LocalPrintService HTTP API contract", () => {
 
 describe("LocalPrintService cloud job dispatch", () => {
   let service: LocalPrintService | undefined;
+
+  // Cloud-dispatch cases below focus on acknowledgement and drain behaviour,
+  // not printer discovery. Give their fake local printer a real online health
+  // reading; the dedicated offline case verifies that no such reading means
+  // no cloud receipt is claimed.
+  beforeEach(() => {
+    vi.spyOn(PrintAgentService.prototype, "healthCheck").mockResolvedValue({
+      status: "healthy",
+      services: { printerService: true, initialized: true },
+      devices: { total: 1, online: 1, errors: 0 },
+      queue: { pending: 0, processing: 0, failed: 0 },
+    });
+  });
 
   afterEach(async () => {
     // The printer-deadline tests install fake timers. Restore before stop(),
@@ -908,6 +922,24 @@ describe("LocalPrintService cloud job dispatch", () => {
     expect(createPrintJob).not.toHaveBeenCalled();
   });
 
+  it("does not claim a cloud receipt while every printer is offline", async () => {
+    service = new LocalPrintService(createConfig());
+    const agent = service.getPrintAgentService();
+    vi.spyOn(agent, "healthCheck").mockResolvedValue({
+      status: "degraded",
+      services: { printerService: true, initialized: true },
+      devices: { total: 1, online: 0, errors: 1 },
+      queue: { pending: 0, processing: 0, failed: 0 },
+    });
+    const createPrintJob = vi.spyOn(agent, "createPrintJob");
+    serveOneJob();
+
+    await pollCloudJobs(service);
+
+    expect(cloudCalls).toHaveLength(0);
+    expect(createPrintJob).not.toHaveBeenCalled();
+  });
+
   it("prints nothing and acknowledges nothing when the queue is empty", async () => {
     service = new LocalPrintService(createConfig());
     const agent = service.getPrintAgentService();
@@ -951,8 +983,8 @@ describe("LocalPrintService cloud job dispatch", () => {
     // claim would leave the cloud with a stale reading for a whole heartbeat.
     for (const call of jobPolls()) {
       const polled = new URL(call.url);
-      expect(polled.searchParams.get("printersTotal")).toBe("0");
-      expect(polled.searchParams.get("printersOnline")).toBe("0");
+      expect(polled.searchParams.get("printersTotal")).toBe("1");
+      expect(polled.searchParams.get("printersOnline")).toBe("1");
     }
   });
 

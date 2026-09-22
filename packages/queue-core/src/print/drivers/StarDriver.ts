@@ -41,49 +41,29 @@ export class StarDriver extends PrinterDriver {
 
   async connect(): Promise<boolean> {
     try {
-      // Implement Star-specific connection logic
-      // Star printers often require specific initialization sequences
-
-      // Initialize with Star commands
       return await this.executeConnection(async () => {
+        await this.connectTransport();
         await this.initializeStarPrinter();
-        this.connected = true;
-        this.device.status = "online";
-        this.device.lastSeen = new Date();
         return true;
       });
     } catch {
-      this.connected = false;
-      this.device.status = "error";
+      this.markTransportOffline();
       return false;
     }
   }
 
   async disconnect(): Promise<void> {
-    if (this.connected) {
-      // Send Star-specific disconnect commands
-      await this.sendStarCommands("\x1B\x08"); // Clear buffer
+    try {
+      if (this.connected) {
+        await this.sendStarCommands("\x1B\x08"); // Clear buffer
+      }
+    } finally {
+      await this.disconnectTransport();
     }
-
-    this.connected = false;
-    this.device.status = "offline";
   }
 
   async getStatus(): Promise<PrinterStatus> {
-    if (!this.connected) {
-      return "offline";
-    }
-
-    try {
-      // Send Star-specific status request
-      // Star printers use different status commands than ESC/POS
-      await this.sendStarCommands("\x1B\x06\x01"); // Real-time status request
-
-      // For now, simulate status response
-      return "online";
-    } catch {
-      return "error";
-    }
+    return this.transportStatus();
   }
 
   async print(content: PrintContent): Promise<PrintResponse> {
@@ -217,14 +197,7 @@ export class StarDriver extends PrinterDriver {
   }
 
   protected async sendStarCommands(commands: string): Promise<void> {
-    // Implement Star-specific command sending
-    // Star printers may require specific timing or handshaking
-
-    // For now, simulate command sending (commands would be sent to printer)
-    await new Promise((resolve) => setTimeout(resolve, commands.length * 3)); // Simulate processing time based on command length
-
-    // Update device status
-    this.device.lastSeen = new Date();
+    await this.sendTransport(Buffer.from(commands, "utf8"));
   }
 
   /**

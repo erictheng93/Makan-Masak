@@ -41,6 +41,7 @@ export class PrintJobManager {
   private jobs: Map<string, PrintJob> = new Map();
   private processing: Set<string> = new Set();
   private pausedDevices: Set<string> = new Set();
+  private jobExecutor?: (job: PrintJob) => Promise<void>;
   private eventHandlers = new Map<
     keyof PrintJobManagerEvents,
     ((payload: never) => void)[]
@@ -354,11 +355,12 @@ export class PrintJobManager {
   }
 
   private async executePrintJob(job: PrintJob): Promise<void> {
-    // 這個方法會被 PrinterService 注入實際的執行邏輯
-    // 目前作為佔位符，拋出錯誤以確保被正確覆寫
-    throw new PrintJobError(
-      `executePrintJob method must be implemented by PrinterService for job ${job.id}`,
-    );
+    if (!this.jobExecutor) {
+      throw new PrintJobError(
+        `No printer executor is configured for job ${job.id}`,
+      );
+    }
+    await this.jobExecutor(job);
   }
 
   private handleJobError(job: PrintJob, error: unknown): void {
@@ -498,6 +500,6 @@ export class PrintJobManager {
 
   // 設置作業執行器（由 PrinterService 注入）
   setJobExecutor(executor: (job: PrintJob) => Promise<void>): void {
-    this.executePrintJob = executor;
+    this.jobExecutor = executor;
   }
 }

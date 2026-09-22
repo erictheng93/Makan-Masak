@@ -9,11 +9,42 @@ import type {
   PrintResponse,
   PrinterStatus,
 } from "@makanmasak/shared-types";
+import { createConnection, type Socket } from "node:net";
 
 export interface PrinterDriverExecutionOptions {
   connectionTimeout?: number;
   commandTimeout?: number;
   retryAttempts?: number;
+}
+
+/** Parse the TCP endpoint stored on a network printer device. */
+export function parseNetworkPrinterAddress(address: string): {
+  host: string;
+  port: number;
+} {
+  const trimmed = address.trim();
+  if (!trimmed) {
+    throw new Error("Network printer address is required");
+  }
+
+  const bracketedIpv6 = /^\[([^\]]+)\](?::(\d+))?$/.exec(trimmed);
+  if (bracketedIpv6) {
+    const port = Number(bracketedIpv6[2] ?? "9100");
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      throw new Error("Network printer port must be between 1 and 65535");
+    }
+    return { host: bracketedIpv6[1], port };
+  }
+
+  const colon = trimmed.lastIndexOf(":");
+  const hasPort = colon > -1 && trimmed.indexOf(":") === colon;
+  const host = hasPort ? trimmed.slice(0, colon) : trimmed;
+  const port = Number(hasPort ? trimmed.slice(colon + 1) : "9100");
+  if (!host || !Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(`Invalid network printer address: ${address}`);
+  }
+
+  return { host, port };
 }
 
 export interface IPrinterDriver {
@@ -62,6 +93,7 @@ export abstract class PrinterDriver implements IPrinterDriver {
   protected device: PrinterDevice;
   protected connected = false;
   protected readonly executionOptions: Required<PrinterDriverExecutionOptions>;
+  private networkSocket?: Socket;
 
   constructor(
     device: PrinterDevice,
@@ -90,6 +122,135 @@ export abstract class PrinterDriver implements IPrinterDriver {
       operation,
       this.executionOptions.commandTimeout,
     );
+  }
+
+  /**
+   * Open the printer's real raw-TCP ESC/POS transport. Non-network transports
+   * deliberately fail rather than pretending that a USB, serial, or Bluetooth
+   * device exists when this Node agent has no implementation for it.
+   */
+  protected async connectTransport(): Promise<void> {
+    if (this.device.connection !== "network") {
+      throw new Error(
+        `Unsupported printer transport: ${this.device.connection}. Only network TCP is available.`,
+      );
+    }
+
+    if (
+      this.networkSocket &&
+      !this.networkSocket.destroyed &&
+      this.networkSocket.writable
+    ) {
+      this.markTransportOnline();
+      return;
+    }
+
+    const { host, port } = parseNetworkPrinterAddress(this.device.address);
+    const socket = createConnection({ host, port });
+    this.networkSocket = socket;
+
+    socket.on("error", () => this.markTransportOffline());
+    socket.on("close", () => this.markTransportOffline());
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          socket.destroy(
+            new Error(
+              `Printer connection timed out after ${this.executionOptions.connectionTimeout}ms`,
+            ),
+          );
+        }, this.executionOptions.connectionTimeout);
+        const onConnect = () => {
+          cleanup();
+          resolve();
+        };
+        const onError = (error: Error) => {
+          cleanup();
+          reject(error);
+        };
+        const cleanup = () => {
+          clearTimeout(timeout);
+          socket.off("connect", onConnect);
+          socket.off("error", onError);
+        };
+
+        socket.once("connect", onConnect);
+        socket.once("error", onError);
+      });
+    } catch (error) {
+      if (this.networkSocket === socket) this.networkSocket = undefined;
+      socket.destroy();
+      this.markTransportOffline();
+      throw error;
+    }
+
+    this.markTransportOnline();
+  }
+
+  protected async disconnectTransport(): Promise<void> {
+    const socket = this.networkSocket;
+    this.networkSocket = undefined;
+    this.markTransportOffline();
+
+    if (!socket || socket.destroyed) return;
+    socket.destroy();
+  }
+
+  /** Write bytes to the connected TCP socket and wait for Node to flush them. */
+  protected async sendTransport(data: Uint8Array): Promise<void> {
+    const socket = this.networkSocket;
+    if (!socket || socket.destroyed || !socket.writable) {
+      this.markTransportOffline();
+      throw new Error("Network printer is not connected");
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      const onError = (error: Error) => {
+        cleanup();
+        this.markTransportOffline();
+        reject(error);
+      };
+      const onWritten = (error?: Error | null) => {
+        cleanup();
+        if (error) {
+          this.markTransportOffline();
+          reject(error);
+          return;
+        }
+        this.markTransportOnline();
+        resolve();
+      };
+      const cleanup = () => socket.off("error", onError);
+
+      socket.once("error", onError);
+      socket.write(data, onWritten);
+    });
+  }
+
+  protected transportStatus(): PrinterStatus {
+    if (
+      this.networkSocket &&
+      !this.networkSocket.destroyed &&
+      this.networkSocket.writable
+    ) {
+      this.markTransportOnline();
+      return "online";
+    }
+
+    this.markTransportOffline();
+    return "offline";
+  }
+
+  protected markTransportOffline(): void {
+    this.connected = false;
+    this.device.status = "offline";
+  }
+
+  private markTransportOnline(): void {
+    this.connected = true;
+    this.device.status = "online";
+    this.device.lastSeen = new Date();
   }
 
   private async executeWithRetry<T>(

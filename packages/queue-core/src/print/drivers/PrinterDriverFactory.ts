@@ -9,12 +9,13 @@ import type {
   PrinterConnection,
   PrinterDevice,
 } from "@makanmasak/shared-types";
+import { createConnection } from "node:net";
 
 import { PRINTER_BRANDS } from "../config/brands";
 import { PrinterDriverError } from "../errors/PrintErrors";
 import { CitizenDriver, type CitizenPrinterOptions } from "./CitizenDriver";
 import { EpsonDriver, type EpsonDriverOptions } from "./EpsonDriver";
-import { PrinterDriver } from "./PrinterDriver";
+import { parseNetworkPrinterAddress, PrinterDriver } from "./PrinterDriver";
 import { StarDriver, type StarDriverOptions } from "./StarDriver";
 
 export interface DriverFactoryConfig {
@@ -336,21 +337,43 @@ export class PrinterDriverFactory {
   private async queryDeviceInfo(
     connectionInfo: PrinterConnectionParams,
   ): Promise<string | null> {
-    // 實際實作中會嘗試連接並發送設備查詢命令
-    // 這裡回傳根據連線位址推斷設備資訊
+    if (connectionInfo.type !== "network") return null;
 
     const address = this.formatConnectionAddress(connectionInfo);
+    const { host, port } = parseNetworkPrinterAddress(address);
 
-    // 根據地址模式猜測品牌
-    if (address.includes("epson") || address.includes("tm-")) {
-      return "EPSON TM-T88VI";
-    } else if (address.includes("star") || address.includes("tsp")) {
-      return "STAR TSP143III";
-    } else if (address.includes("citizen") || address.includes("ct-")) {
-      return "CITIZEN CT-S310II";
-    }
+    // GS I n is the ESC/POS printer-ID query. Its response is optional across
+    // vendors, so a successful TCP connection with no answer is still a
+    // discoverable *generic* ESC/POS printer. We never infer a brand from a
+    // host name: only bytes returned by the device may identify it.
+    return await new Promise<string | null>((resolve) => {
+      const socket = createConnection({ host, port });
+      const response: Buffer[] = [];
+      let settled = false;
+      const timeoutMs = Math.min(this.config.connectionTimeout, 250);
 
-    return null;
+      const finish = (deviceInfo: string | null) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        socket.destroy();
+        resolve(deviceInfo);
+      };
+      const timeout = setTimeout(() => {
+        const info = Buffer.concat(response)
+          .toString("utf8")
+          // eslint-disable-next-line no-control-regex
+          .replace(/[\x00-\x1f\x7f-\x9f]/g, "")
+          .trim();
+        finish(info || "Generic ESC/POS Network Printer");
+      }, timeoutMs);
+
+      socket.once("error", () => finish(null));
+      socket.on("data", (chunk: Buffer) => response.push(chunk));
+      socket.once("connect", () => {
+        socket.write(Buffer.from([0x1d, 0x49, 0x01]));
+      });
+    });
   }
 
   private identifyBrand(deviceInfo: string): PrinterBrand {

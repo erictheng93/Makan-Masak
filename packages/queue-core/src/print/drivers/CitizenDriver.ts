@@ -9,6 +9,7 @@ import type {
   PrinterDevice,
   PrinterStatus,
 } from "@makanmasak/shared-types";
+import { CommandBuilder } from "../commands/CommandBuilder";
 import { PrinterDriver } from "./PrinterDriver";
 import type { PrinterDriverExecutionOptions } from "./PrinterDriver";
 
@@ -38,13 +39,12 @@ export class CitizenDriver extends PrinterDriver {
    */
   async connect(): Promise<boolean> {
     try {
-      // Simulate connection logic
       return await this.executeConnection(async () => {
-        this.connected = true;
+        await this.connectTransport();
         return true;
       });
     } catch {
-      this.connected = false;
+      this.markTransportOffline();
       return false;
     }
   }
@@ -53,7 +53,7 @@ export class CitizenDriver extends PrinterDriver {
    * Disconnect from the printer
    */
   async disconnect(): Promise<void> {
-    this.connected = false;
+    await this.disconnectTransport();
   }
 
   /**
@@ -67,12 +67,7 @@ export class CitizenDriver extends PrinterDriver {
    * Get printer status
    */
   async getStatus(): Promise<PrinterStatus> {
-    if (!this.connected) {
-      return "offline";
-    }
-
-    // Simulate status check
-    return "online";
+    return this.transportStatus();
   }
 
   /**
@@ -109,33 +104,7 @@ export class CitizenDriver extends PrinterDriver {
   }
 
   protected async sendCommands(content: PrintContent): Promise<void> {
-    // Simulate sending printer commands for receipt content
-
-    // Print header
-    if (content.header?.restaurantInfo?.name) {
-      // Send restaurant name command
-    }
-
-    // Print items
-    for (const item of content.items) {
-      // Send item print commands
-      // Format: quantity x name = price
-      console.log(
-        `Printing: ${item.quantity}x ${item.name} = $${item.totalPrice}`,
-      );
-    }
-
-    // Print summary
-    if (content.summary) {
-      // Send total commands
-    }
-
-    // Print footer
-    if (content.footer?.thankYouMessage) {
-      // Send thank you message
-    }
-
-    // Simulate processing time
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    const commands = CommandBuilder.fromPrintContent(content).buildESCPOS();
+    await this.sendTransport(Buffer.from(commands, "utf8"));
   }
 }
