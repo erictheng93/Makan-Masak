@@ -380,9 +380,10 @@ index_name = "makanmasak-discovery-prod"
 # primary runs in APAC, so every query became a trans-Pacific round trip -- a
 # `SELECT 1` measured 115-169ms. It needs "consistent traffic from multiple
 # locations" to place well, and at ~1 request/minute it had nothing to work
-# with. Without the block the Worker runs at the client edge, which for this
-# product's Taiwan and Malaysia users is already beside the APAC database.
-# See #322 before re-adding it.
+# with. Without the block the Worker runs at the client edge. That edge is
+# not necessarily APAC: Taiwan HiNet requests have also entered at SJC (#369).
+# Collect country/colo/ASN baselines before testing an explicit Tokyo region
+# hint. See docs/runbooks/worker-placement-369.md and #322 before changing it.
 
 # Analytics for production
 [[env.production.analytics_engine_datasets]]

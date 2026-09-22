@@ -62,6 +62,13 @@ export class AdvancedAnalyticsService {
               dataPoint.dimensions.payment_method || "unknown",
               dataPoint.dimensions.campaign_source || "direct",
               dataPoint.dimensions.ab_test_variant || "control",
+              // Append only: monitoring SQL relies on the existing positions.
+              // #369: ingress metadata is not proof of Worker execution location.
+              dataPoint.dimensions.ingress_colo || "unknown",
+              dataPoint.dimensions.asn || "unknown",
+              dataPoint.dimensions.placement || "unknown",
+              dataPoint.dimensions.traffic_type || "unknown",
+              dataPoint.dimensions.cache_status || "unknown",
             ],
 
             // Numeric metrics (doubles) - up to 20
@@ -341,12 +348,37 @@ export function advancedAnalyticsMiddleware() {
       }>
     ).set("analytics", analytics);
 
+    // Prefer Cloudflare runtime metadata over optional geolocation headers.
+    // cf is absent in local requests. Placement is an advisory request header,
+    // not an authoritative execution location or an authorization signal.
+    const cf = c.req.raw.cf;
+    const placement = c.req.header("cf-placement");
     // Extract request metadata
     const metadata = {
       endpoint: c.req.path,
       method: c.req.method,
       user_agent: c.req.header("User-Agent") || "unknown",
-      country: c.req.header("CF-IPCountry") || "unknown",
+      country:
+        (typeof cf?.country === "string" && cf.country) ||
+        c.req.header("CF-IPCountry") ||
+        "unknown",
+      ingress_colo: (typeof cf?.colo === "string" && cf.colo) || "unknown",
+      asn:
+        typeof cf?.asn === "number" &&
+        Number.isSafeInteger(cf.asn) &&
+        cf.asn > 0
+          ? cf.asn.toString()
+          : "unknown",
+      placement:
+        placement && /^(local|remote)-[A-Z]{3}$/.test(placement)
+          ? placement
+          : "unknown",
+      // A sampling label only; clients can set User-Agent themselves.
+      traffic_type: c.req
+        .header("User-Agent")
+        ?.startsWith("MakanMasak-Placement-Probe/369")
+        ? "probe"
+        : "organic",
       city: c.req.header("CF-IPCity") || "unknown",
       device_type: "unknown",
       browser: "unknown",
@@ -376,6 +408,11 @@ export function advancedAnalyticsMiddleware() {
         method: metadata.method,
         user_agent: metadata.user_agent,
         country: metadata.country,
+        ingress_colo: metadata.ingress_colo,
+        asn: metadata.asn,
+        placement: metadata.placement,
+        traffic_type: metadata.traffic_type,
+        cache_status: c.res.headers.get("X-Cache") || "unknown",
         city: metadata.city,
         device_type: metadata.device_type,
         browser: metadata.browser,
