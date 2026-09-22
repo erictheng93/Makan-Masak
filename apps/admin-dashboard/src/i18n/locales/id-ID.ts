@@ -2734,6 +2734,7 @@ const idID: Messages = {
       paymentSuccess: "Pembayaran berhasil diproses",
       paymentFailed: "Pembayaran gagal, silakan coba lagi",
       refundFailed: "Pengembalian gagal, silakan coba lagi",
+      printFailed: "Struk tidak dapat dicetak",
       printInDev: "Pencetakan struk sedang dalam pengembangan...",
       printing: "Mencetak struk untuk {orderNumber}...",
       printingShiftReport: "Mencetak laporan shift...",

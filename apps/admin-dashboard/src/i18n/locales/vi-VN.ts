@@ -2719,6 +2719,7 @@ const viVN: Messages = {
       paymentSuccess: "Thanh toán thành công",
       paymentFailed: "Thanh toán thất bại, vui lòng thử lại",
       refundFailed: "Hoàn tiền thất bại, vui lòng thử lại",
+      printFailed: "Không thể in hóa đơn",
       printInDev: "Tính năng in hóa đơn đang phát triển...",
       printing: "Đang in hóa đơn cho {orderNumber}...",
       printingShiftReport: "Đang in báo cáo ca...",

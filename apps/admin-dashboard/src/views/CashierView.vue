@@ -770,9 +770,19 @@
               })
             }}
           </p>
+          <p
+            v-if="receiptError"
+            data-testid="receipt-error"
+            role="alert"
+            class="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700"
+          >
+            {{ receiptError }}
+          </p>
           <div class="space-y-3">
             <button
+              data-testid="print-final-receipt"
               class="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              :disabled="isProcessing"
               @click="printFinalReceipt"
             >
               {{ t("cashier.printReceipt") }}
@@ -1026,6 +1036,7 @@ const selectedPaymentMethod = ref("cash");
 const cashReceived = ref(0);
 const paymentError = ref("");
 const showPaymentSuccess = ref(false);
+const receiptError = ref("");
 const completedOrder = ref<CashierOrder | null>(null);
 
 // 新增的狀態
@@ -1503,19 +1514,33 @@ const confirmApplyDiscount = async () => {
   }
 };
 
+// The receipt route takes the till and shift from headers, like refunds do.
+const tillHeaders = () => ({
+  headers: {
+    "X-Register-Id": currentShift.value.registerId,
+    "X-Shift-Id": currentShift.value.id,
+  },
+});
+
 const printReceipt = async () => {
   if (!selectedOrder.value || !currentShift.value.registerId) return;
   isProcessing.value = true;
+  paymentError.value = "";
   try {
-    await api.post("/pos/receipts/print", {
-      orderId: String(selectedOrder.value.id),
-      registerId: currentShift.value.registerId,
-      items: selectedOrder.value.items,
-      totalAmount: selectedOrder.value.totalAmount,
-      paymentMethod: selectedPaymentMethod.value,
-    });
+    await api.post(
+      "/pos/receipts/print",
+      {
+        orderId: String(selectedOrder.value.id),
+        items: selectedOrder.value.items,
+        totalAmount: selectedOrder.value.totalAmount,
+        paymentMethod: selectedPaymentMethod.value,
+      },
+      tillHeaders(),
+    );
   } catch (error) {
     console.error("Failed to print receipt:", error);
+    paymentError.value =
+      apiErrorMessage(error) ?? t("cashier.alerts.printFailed");
   } finally {
     isProcessing.value = false;
   }
@@ -1527,25 +1552,33 @@ const printFinalReceipt = async () => {
     return;
   }
   isProcessing.value = true;
+  receiptError.value = "";
   try {
-    await api.post("/pos/receipts/print", {
-      orderId: String(completedOrder.value.id),
-      registerId: currentShift.value.registerId,
-      items: completedOrder.value.items,
-      totalAmount: completedOrder.value.totalAmount,
-      paymentMethod: completedOrder.value.paymentMethod || "cash",
-    });
+    await api.post(
+      "/pos/receipts/print",
+      {
+        orderId: String(completedOrder.value.id),
+        items: completedOrder.value.items,
+        totalAmount: completedOrder.value.totalAmount,
+        paymentMethod: completedOrder.value.paymentMethod || "cash",
+      },
+      tillHeaders(),
+    );
+    closePaymentSuccess();
   } catch (error) {
     console.error("Failed to print receipt:", error);
+    // Stay on the dialog: closing it would hide the failure and the retry.
+    receiptError.value =
+      apiErrorMessage(error) ?? t("cashier.alerts.printFailed");
   } finally {
     isProcessing.value = false;
-    closePaymentSuccess();
   }
 };
 
 const closePaymentSuccess = () => {
   showPaymentSuccess.value = false;
   completedOrder.value = null;
+  receiptError.value = "";
 };
 
 // 班次報告相關方法

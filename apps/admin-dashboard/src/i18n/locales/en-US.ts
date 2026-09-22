@@ -2774,6 +2774,7 @@ const enUS: Messages = {
       paymentSuccess: "Payment processed successfully",
       paymentFailed: "Payment failed, please retry",
       refundFailed: "Refund failed, please retry",
+      printFailed: "Receipt could not be printed",
       printInDev: "Receipt printing is under development...",
       printing: "Printing receipt for {orderNumber}...",
       printingShiftReport: "Printing shift report...",

@@ -2840,6 +2840,7 @@ const zhTWCore = {
       paymentSuccess: "付款處理成功",
       paymentFailed: "付款失敗，請重試",
       refundFailed: "退款失敗，請重試",
+      printFailed: "收據列印失敗",
       printInDev: "收據列印功能開發中...",
       printing: "正在列印 {orderNumber} 的收據...",
       printingShiftReport: "正在列印班次報告...",
