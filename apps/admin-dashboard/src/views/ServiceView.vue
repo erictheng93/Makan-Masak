@@ -706,6 +706,10 @@ const issueData = ref<{
 });
 
 let timeInterval: NodeJS.Timeout | null = null;
+// ponytail: polls every 15s because ServiceLayout opens no realtime socket;
+// subscribe to ORDER_STATUS_UPDATE instead once it does.
+const ORDER_POLL_MS = 15_000;
+let orderPoll: NodeJS.Timeout | null = null;
 
 // 訂單數據 - fetched from API
 const orders = ref<ServiceOrder[]>([]);
@@ -1212,10 +1216,12 @@ onMounted(async () => {
 
   // Fetch orders from API
   await refreshOrders();
+  orderPoll = setInterval(() => void refreshOrders(), ORDER_POLL_MS);
 });
 
 onUnmounted(() => {
   if (timeInterval) clearInterval(timeInterval);
+  if (orderPoll) clearInterval(orderPoll);
 });
 </script>
 
