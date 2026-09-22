@@ -582,4 +582,87 @@ describe("CashierView", () => {
       "cashier.amountMismatch",
     );
   });
+
+  // The receipt route reads the till from X-Register-Id (and the shift from
+  // X-Shift-Id), exactly like refunds. Both print buttons put registerId in
+  // the body instead, so every receipt came back 400 "需要指定收銀機ID" and
+  // the catch only logged it: on production the cashier saw nothing at all.
+  describe("receipt printing", () => {
+    function withOpenShift() {
+      const orders = vi.mocked(api.get).getMockImplementation()!;
+      vi.mocked(api.get).mockImplementation(async (url: string, ...rest) => {
+        if (url === "/pos/registers") {
+          return {
+            data: {
+              success: true,
+              data: [{ id: "register-1", isActive: true }],
+            },
+          } as never;
+        }
+        if (url === "/pos/shifts/current/register-1") {
+          return { data: { success: true, data: { id: "shift-1" } } } as never;
+        }
+        return orders(url, ...rest);
+      });
+    }
+
+    it("names the till and shift in headers, as the receipt route requires", async () => {
+      withOpenShift();
+      vi.mocked(api.post).mockResolvedValue({
+        data: { success: true, data: { transactionId: "txn-9" } },
+      } as never);
+      const wrapper = mount(CashierView);
+      await flushPromises();
+      await checkout(wrapper);
+
+      await wrapper.get('[data-testid="print-final-receipt"]').trigger("click");
+      await flushPromises();
+
+      expect(api.post).toHaveBeenCalledWith(
+        "/pos/receipts/print",
+        expect.objectContaining({
+          orderId: "019fc320-c159-700c-a66c-39c9b98ed964",
+        }),
+        expect.objectContaining({
+          headers: { "X-Register-Id": "register-1", "X-Shift-Id": "shift-1" },
+        }),
+      );
+      expect(wrapper.find('[data-testid="payment-success"]').exists()).toBe(
+        false,
+      );
+    });
+
+    it("keeps the success dialog open and says why when the receipt fails", async () => {
+      withOpenShift();
+      vi.mocked(api.post).mockImplementation(async (url: string) => {
+        if (url === "/pos/receipts/print") {
+          throw {
+            response: {
+              status: 400,
+              data: {
+                success: false,
+                error: { code: "BAD_REQUEST", message: "需要指定收銀機ID" },
+              },
+            },
+          };
+        }
+        return {
+          data: { success: true, data: { transactionId: "txn-9" } },
+        } as never;
+      });
+      const wrapper = mount(CashierView);
+      await flushPromises();
+      await checkout(wrapper);
+
+      await wrapper.get('[data-testid="print-final-receipt"]').trigger("click");
+      await flushPromises();
+
+      expect(wrapper.find('[data-testid="payment-success"]').exists()).toBe(
+        true,
+      );
+      expect(wrapper.get('[data-testid="receipt-error"]').text()).toContain(
+        "需要指定收銀機ID",
+      );
+    });
+  });
 });

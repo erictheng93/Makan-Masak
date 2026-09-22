@@ -2667,6 +2667,7 @@ const zhCN: Messages = {
       paymentSuccess: "付款处理成功",
       paymentFailed: "付款失败，请重试",
       refundFailed: "退款失败，请重试",
+      printFailed: "收据打印失败",
       printInDev: "收据打印功能开发中...",
       printing: "正在打印 {orderNumber} 的收据...",
       printingShiftReport: "正在打印班次报告...",
