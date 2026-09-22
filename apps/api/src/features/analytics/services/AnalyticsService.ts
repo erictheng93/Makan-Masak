@@ -630,11 +630,20 @@ export class AnalyticsService implements IAnalyticsService {
 
       // Transform the raw data to match our interface
       const financialData: FinancialReportData = {
-        totalRevenue: rawFinancialData.summary?.totalRevenue || 0,
+        totalRevenue: rawFinancialData.summary?.totalRevenue ?? [],
         totalOrders: rawFinancialData.summary?.totalOrders || 0,
-        averageOrderValue: rawFinancialData.summary?.averageOrderValue || 0,
-        taxAmount: rawFinancialData.summary?.taxAmount || 0,
-        netRevenue: rawFinancialData.summary?.netRevenue || 0,
+        averageOrderValue: rawFinancialData.summary?.averageOrderValue ?? [],
+        taxAmount: rawFinancialData.summary?.taxAmount ?? [],
+        netRevenue: rawFinancialData.summary?.netRevenue ?? [],
+        ...(filters.dateFrom && filters.dateTo
+          ? {
+              periodComparison: {
+                previousPeriodRevenue:
+                  rawFinancialData.summary?.previousPeriodRevenue ?? [],
+                growthRate: rawFinancialData.summary?.growthRate ?? [],
+              },
+            }
+          : {}),
         breakdown: this.buildRevenueBreakdown(
           filters.groupBy,
           rawFinancialData.revenueBreakdown?.byDay ?? [],

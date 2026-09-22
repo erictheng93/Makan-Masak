@@ -74,7 +74,9 @@ describe("Customer analytics — tenant isolation", () => {
     // 3 orders / 1 customer, and 3 × NT$120 of lifetime spend — both computed
     // from this restaurant's rows only.
     expect(result.averageOrdersPerCustomer).toBe(3);
-    expect(result.customerLifetimeValue).toBe(360);
+    expect(result.customerLifetimeValue).toEqual([
+      { currency: "TWD", amountCents: 36_000 },
+    ]);
     // One person, three orders. `totalCustomers` used to count order rows, so
     // this read 3 and `returningCustomers` read 2 for a single-customer shop.
     expect(result.totalCustomers).toBe(1);
@@ -116,7 +118,9 @@ describe("Customer analytics — tenant isolation", () => {
     });
 
     expect(result.averageOrdersPerCustomer).toBe(1);
-    expect(result.customerLifetimeValue).toBe(120);
+    expect(result.customerLifetimeValue).toEqual([
+      { currency: "TWD", amountCents: 12_000 },
+    ]);
   });
 
   it("excludes uncollected and cancelled orders from lifetime value but not from order count", async () => {
@@ -148,6 +152,8 @@ describe("Customer analytics — tenant isolation", () => {
 
     // Count every order, but recognise only collected, non-cancelled revenue.
     expect(result.averageOrdersPerCustomer).toBe(3);
-    expect(result.customerLifetimeValue).toBe(120);
+    expect(result.customerLifetimeValue).toEqual([
+      { currency: "TWD", amountCents: 12_000 },
+    ]);
   });
 });

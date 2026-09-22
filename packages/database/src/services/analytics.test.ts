@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { orders, restaurants, tables } from "../schema";
+import { customers, orders, restaurants, tables } from "../schema";
 import {
   createTestDatabase,
   REAL_D1_SETUP_TIMEOUT_MS,
@@ -178,8 +178,8 @@ describe("AnalyticsService revenue analytics", () => {
       }),
     ]);
     expect(operational).toMatchObject({
-      totalRevenue: 300,
-      averageOrderValue: 300,
+      totalRevenue: money(30000),
+      averageOrderValue: money(30000),
       completedOrders: 2,
       averagePreparationTime: 15,
     });
@@ -417,13 +417,261 @@ describe("AnalyticsService order analytics", () => {
       {} as never,
     ).getOrderAnalytics(window);
 
-    expect(result.totalRevenue).toBe(500);
-    expect(result.averageOrderValue).toBe(250);
+    expect(result.totalRevenue).toEqual(money(50000));
+    expect(result.averageOrderValue).toEqual(money(25000));
 
     // Order count deliberately keeps every order: it is the conversion rate's
     // denominator, and three of these were placed even though one was undone.
     expect(result.totalOrders).toBe(3);
     expect(result.cancelledOrders).toBe(1);
+  });
+
+  it("returns separate currency buckets for an unscoped performance query", async () => {
+    await testDb.drizzle.insert(restaurants).values({
+      id: "analytics-myr-restaurant",
+      name: "MYR Analytics Test Restaurant",
+      type: "casual",
+      category: "testing",
+      address: "2 Test Road",
+      district: "Test District",
+      phone: "0912345679",
+      settings: { currency: "MYR" },
+    });
+    await testDb.drizzle.insert(orders).values([
+      order("platform-twd", "P-TWD-001", "2026-01-08T12:00:00.000Z", 10000),
+      order("platform-myr", "P-MYR-001", "2026-01-08T12:00:00.000Z", 10000, {
+        restaurantId: "analytics-myr-restaurant",
+      }),
+    ]);
+
+    const result = await new AnalyticsService(
+      testDb.bindings.DB,
+      {} as never,
+    ).getOrderAnalytics({
+      dateFrom: "2026-01-08T00:00:00.000Z",
+      dateTo: "2026-01-09T00:00:00.000Z",
+    });
+
+    expect(result.totalRevenue).toEqual([
+      { currency: "TWD", amountCents: 10000 },
+      { currency: "MYR", amountCents: 10000 },
+    ]);
+    expect(result.averageOrderValue).toEqual(result.totalRevenue);
+  });
+
+  it("keeps platform customer spend and lifetime value in currency buckets", async () => {
+    await testDb.drizzle.insert(restaurants).values({
+      id: "analytics-myr-restaurant",
+      name: "MYR Analytics Test Restaurant",
+      type: "casual",
+      category: "testing",
+      address: "2 Test Road",
+      district: "Test District",
+      phone: "0912345679",
+      settings: { currency: "MYR" },
+    });
+    const [customer] = await testDb.drizzle
+      .insert(customers)
+      .values({ displayName: "Platform Customer", status: "active" })
+      .returning({ id: customers.id });
+    await testDb.drizzle.insert(orders).values([
+      order("customer-twd", "C-TWD-001", "2026-01-08T12:00:00.000Z", 10000, {
+        customerId: customer!.id,
+      }),
+      order("customer-myr", "C-MYR-001", "2026-01-08T12:00:00.000Z", 10000, {
+        restaurantId: "analytics-myr-restaurant",
+        customerId: customer!.id,
+      }),
+    ]);
+
+    const result = await new AnalyticsService(
+      testDb.bindings.DB,
+      {} as never,
+    ).getCustomerAnalytics({});
+
+    expect(result.customerLifetimeValue).toEqual([
+      { currency: "TWD", amountCents: 10000 },
+      { currency: "MYR", amountCents: 10000 },
+    ]);
+    expect(result.topCustomers).toEqual([
+      expect.objectContaining({
+        customerId: customer!.id,
+        totalSpent: [
+          { currency: "TWD", amountCents: 10000 },
+          { currency: "MYR", amountCents: 10000 },
+        ],
+      }),
+    ]);
+  });
+
+  it("averages customer lifetime value within each currency without mixing customers", async () => {
+    await testDb.drizzle.insert(restaurants).values({
+      id: "analytics-myr-restaurant",
+      name: "MYR Analytics Test Restaurant",
+      type: "casual",
+      category: "testing",
+      address: "2 Test Road",
+      district: "Test District",
+      phone: "0912345679",
+      settings: { currency: "MYR" },
+    });
+    const [firstCustomer] = await testDb.drizzle
+      .insert(customers)
+      .values({ displayName: "First Customer", status: "active" })
+      .returning({ id: customers.id });
+    const [secondCustomer] = await testDb.drizzle
+      .insert(customers)
+      .values({ displayName: "Second Customer", status: "active" })
+      .returning({ id: customers.id });
+
+    await testDb.drizzle.insert(orders).values([
+      order("first-twd", "MC-TWD-001", "2026-01-08T12:00:00.000Z", 10000, {
+        customerId: firstCustomer!.id,
+      }),
+      order("first-myr", "MC-MYR-001", "2026-01-08T12:30:00.000Z", 30000, {
+        restaurantId: "analytics-myr-restaurant",
+        customerId: firstCustomer!.id,
+      }),
+      order("second-twd", "MC-TWD-002", "2026-01-08T13:00:00.000Z", 50000, {
+        customerId: secondCustomer!.id,
+      }),
+    ]);
+
+    const result = await new AnalyticsService(
+      testDb.bindings.DB,
+      {} as never,
+    ).getCustomerAnalytics({ limit: 2 });
+
+    // TWD is the average of 100 and 500, while only the first customer has
+    // MYR spend. These figures must not be derived from their cross-currency
+    // cents totals.
+    expect(result.customerLifetimeValue).toEqual([
+      { currency: "TWD", amountCents: 30000 },
+      { currency: "MYR", amountCents: 30000 },
+    ]);
+    expect(result.topCustomers).toEqual([
+      {
+        customerId: firstCustomer!.id,
+        customerName: "First Customer",
+        totalOrders: 2,
+        totalSpent: [
+          { currency: "TWD", amountCents: 10000 },
+          { currency: "MYR", amountCents: 30000 },
+        ],
+      },
+      {
+        customerId: secondCustomer!.id,
+        customerName: "Second Customer",
+        totalOrders: 1,
+        totalSpent: [{ currency: "TWD", amountCents: 50000 }],
+      },
+    ]);
+  });
+
+  it("ranks top customers by all their currency buckets and returns every bucket", async () => {
+    await testDb.drizzle.insert(restaurants).values([
+      {
+        id: "analytics-myr-restaurant",
+        name: "MYR Analytics Test Restaurant",
+        type: "casual",
+        category: "testing",
+        address: "2 Test Road",
+        district: "Test District",
+        phone: "0912345679",
+        settings: { currency: "MYR" },
+      },
+      {
+        id: "analytics-vnd-restaurant",
+        name: "VND Analytics Test Restaurant",
+        type: "casual",
+        category: "testing",
+        address: "3 Test Road",
+        district: "Test District",
+        phone: "0912345680",
+        settings: { currency: "VND" },
+      },
+    ]);
+    const [multiCurrencyCustomer] = await testDb.drizzle
+      .insert(customers)
+      .values({ displayName: "Multi Currency", status: "active" })
+      .returning({ id: customers.id });
+    const [singleCurrencyCustomer] = await testDb.drizzle
+      .insert(customers)
+      .values({ displayName: "Single Currency", status: "active" })
+      .returning({ id: customers.id });
+
+    await testDb.drizzle.insert(orders).values([
+      order("multi-twd-1", "TOP-TWD-001", "2026-01-08T12:00:00.000Z", 10000, {
+        customerId: multiCurrencyCustomer!.id,
+      }),
+      order("multi-twd-2", "TOP-TWD-002", "2026-01-08T12:01:00.000Z", 10000, {
+        customerId: multiCurrencyCustomer!.id,
+      }),
+      order("multi-myr-1", "TOP-MYR-001", "2026-01-08T12:02:00.000Z", 10000, {
+        restaurantId: "analytics-myr-restaurant",
+        customerId: multiCurrencyCustomer!.id,
+      }),
+      order("multi-myr-2", "TOP-MYR-002", "2026-01-08T12:03:00.000Z", 10000, {
+        restaurantId: "analytics-myr-restaurant",
+        customerId: multiCurrencyCustomer!.id,
+      }),
+      order("multi-vnd-1", "TOP-VND-001", "2026-01-08T12:04:00.000Z", 10000, {
+        restaurantId: "analytics-vnd-restaurant",
+        customerId: multiCurrencyCustomer!.id,
+      }),
+      order("multi-vnd-2", "TOP-VND-002", "2026-01-08T12:05:00.000Z", 10000, {
+        restaurantId: "analytics-vnd-restaurant",
+        customerId: multiCurrencyCustomer!.id,
+      }),
+      order(
+        "single-twd-1",
+        "TOP-SINGLE-001",
+        "2026-01-08T12:06:00.000Z",
+        10000,
+        {
+          customerId: singleCurrencyCustomer!.id,
+        },
+      ),
+      order(
+        "single-twd-2",
+        "TOP-SINGLE-002",
+        "2026-01-08T12:07:00.000Z",
+        10000,
+        {
+          customerId: singleCurrencyCustomer!.id,
+        },
+      ),
+      order(
+        "single-twd-3",
+        "TOP-SINGLE-003",
+        "2026-01-08T12:08:00.000Z",
+        10000,
+        {
+          customerId: singleCurrencyCustomer!.id,
+        },
+      ),
+    ]);
+
+    await expect(
+      new AnalyticsService(
+        testDb.bindings.DB,
+        {} as never,
+      ).getCustomerAnalytics({
+        limit: 1,
+      }),
+    ).resolves.toMatchObject({
+      topCustomers: [
+        {
+          customerId: multiCurrencyCustomer!.id,
+          totalOrders: 6,
+          totalSpent: [
+            { currency: "TWD", amountCents: 20000 },
+            { currency: "MYR", amountCents: 20000 },
+            { currency: "VND", amountCents: 20000 },
+          ],
+        },
+      ],
+    });
   });
 
   it("buckets popular time slots at the shop's hour, not UTC", async () => {
@@ -507,7 +755,7 @@ describe("AnalyticsService order analytics", () => {
     ).getOrderAnalytics(window);
 
     // 600 against a prior 300, and 2 orders against a prior 1.
-    expect(result.revenueGrowth).toBe(100);
+    expect(result.revenueGrowth).toEqual(growth(100));
     expect(result.orderGrowth).toBe(100);
   });
 
@@ -521,7 +769,7 @@ describe("AnalyticsService order analytics", () => {
       {} as never,
     ).getOrderAnalytics(window);
 
-    expect(result.revenueGrowth).toBe(0);
+    expect(result.revenueGrowth).toEqual(growth(0));
     expect(result.orderGrowth).toBe(0);
   });
 });
@@ -574,17 +822,66 @@ describe("AnalyticsService financial report", () => {
     });
 
     expect(report.summary).toMatchObject({
-      totalRevenue: 315,
+      totalRevenue: money(31500),
       totalOrders: 2,
-      taxAmount: 15,
-      netRevenue: 300,
+      taxAmount: money(1500),
+      netRevenue: money(30000),
     });
   });
 
-  it("sums tax only over the buckets the revenue total kept", async () => {
-    // getRevenueAnalytics caps its bucket list at `limit`. A range-wide tax
-    // sum would subtract the dropped day's tax from a revenue total that never
-    // included that day's revenue, dragging netRevenue below the truth.
+  it("keeps every financial summary amount in its own currency", async () => {
+    await testDb.drizzle.insert(restaurants).values({
+      id: "analytics-myr-restaurant",
+      name: "MYR Analytics Test Restaurant",
+      type: "casual",
+      category: "testing",
+      address: "2 Test Road",
+      district: "Test District",
+      phone: "0912345679",
+      settings: { currency: "MYR" },
+    });
+    await testDb.drizzle.insert(orders).values([
+      order("fin-twd", "F-TWD-001", "2026-02-02T12:00:00.000Z", 10000, {
+        taxAmountCents: 1000,
+      }),
+      order("fin-myr", "F-MYR-001", "2026-02-02T12:00:00.000Z", 10000, {
+        restaurantId: "analytics-myr-restaurant",
+        taxAmountCents: 1000,
+      }),
+    ]);
+
+    const report = await new AnalyticsService(
+      testDb.bindings.DB,
+      {} as never,
+    ).getFinancialReport({
+      dateFrom: "2026-02-01T00:00:00.000Z",
+      dateTo: "2026-02-03T00:00:00.000Z",
+      groupBy: "day",
+    });
+
+    expect(report.summary).toMatchObject({
+      totalRevenue: [
+        { currency: "TWD", amountCents: 10000 },
+        { currency: "MYR", amountCents: 10000 },
+      ],
+      averageOrderValue: [
+        { currency: "TWD", amountCents: 10000 },
+        { currency: "MYR", amountCents: 10000 },
+      ],
+      taxAmount: [
+        { currency: "TWD", amountCents: 1000 },
+        { currency: "MYR", amountCents: 1000 },
+      ],
+      netRevenue: [
+        { currency: "TWD", amountCents: 9000 },
+        { currency: "MYR", amountCents: 9000 },
+      ],
+    });
+  });
+
+  it("keeps financial totals complete when the chart is limited", async () => {
+    // `limit` constrains the report's chart/breakdown, never its financial
+    // summary. A report for the selected range must not omit the third day.
     await testDb.drizzle.insert(orders).values([
       order("cap-1", "G-001", "2026-02-02T12:00:00.000Z", 21000, {
         taxAmountCents: 1000,
@@ -608,11 +905,12 @@ describe("AnalyticsService financial report", () => {
     });
 
     expect(report.summary).toMatchObject({
-      totalRevenue: 315,
-      taxAmount: 15,
-      netRevenue: 300,
+      totalRevenue: money(81500),
+      totalOrders: 3,
+      taxAmount: money(6500),
+      netRevenue: money(75000),
     });
-    expect(report.summary.netRevenue).toBeGreaterThan(0);
+    expect(report.revenueBreakdown.byDay).toHaveLength(2);
   });
 });
 
