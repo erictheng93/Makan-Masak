@@ -177,7 +177,8 @@ export interface OrderFilters {
     | "foodpanda"
     | "grabfood";
   search?: string;
-  dateRange?: [Date, Date];
+  /** Either end may be omitted for an open-ended range. */
+  dateRange?: [Date | undefined, Date | undefined];
   minAmount?: number;
   maxAmount?: number;
   sortBy?: "createdAt" | "totalAmount" | "status" | "updatedAt";
@@ -1880,9 +1881,8 @@ export class OrderService extends BaseService {
 
       if (filters.dateRange) {
         const [startDate, endDate] = filters.dateRange;
-        conditions.push(
-          and(gte(orders.createdAt, startDate), lte(orders.createdAt, endDate)),
-        );
+        if (startDate) conditions.push(gte(orders.createdAt, startDate));
+        if (endDate) conditions.push(lte(orders.createdAt, endDate));
       }
 
       if (filters.minAmount) {

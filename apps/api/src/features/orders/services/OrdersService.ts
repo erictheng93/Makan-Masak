@@ -1772,9 +1772,13 @@ export class OrdersService implements IOrdersService {
       orderSource: filters.orderSource,
       search: filters.search,
       tableId: filters.tableId,
+      // Either end may be open: "since midnight" is a dateFrom alone.
       dateRange:
-        filters.dateFrom && filters.dateTo
-          ? [new Date(filters.dateFrom), new Date(filters.dateTo)]
+        filters.dateFrom || filters.dateTo
+          ? [
+              filters.dateFrom ? new Date(filters.dateFrom) : undefined,
+              filters.dateTo ? new Date(filters.dateTo) : undefined,
+            ]
           : undefined,
       sortBy: filters.sortBy,
       sortOrder: filters.sortOrder,
