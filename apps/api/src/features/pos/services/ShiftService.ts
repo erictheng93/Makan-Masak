@@ -165,12 +165,36 @@ export class ShiftService {
         };
       }
 
+      // The drawer does not receive card or wallet sales. Its expected count
+      // is therefore intentionally independent of totalSales/totalRefunds:
+      // opening float + cash sales - cash refunds +/- manual drawer movement.
+      // `sale`, `opening`, `closing`, and `count` rows are source records or
+      // observations, not an additional movement to add here.
+      const [drawerTotals] = await this.db
+        .select({
+          cashRefundsCents: sql<number>`COALESCE(SUM(CASE WHEN ${cashMovements.type} = 'refund' THEN ABS(COALESCE(${cashMovements.amountCents}, 0)) ELSE 0 END), 0)`,
+          manualMovementCents: sql<number>`COALESCE(SUM(CASE
+            WHEN ${cashMovements.type} = 'cash_in' THEN ABS(COALESCE(${cashMovements.amountCents}, 0))
+            WHEN ${cashMovements.type} IN ('cash_out', 'payout', 'deposit') THEN -ABS(COALESCE(${cashMovements.amountCents}, 0))
+            WHEN ${cashMovements.type} = 'adjustment' THEN COALESCE(${cashMovements.amountCents}, 0)
+            ELSE 0
+          END), 0)`,
+        })
+        .from(cashMovements)
+        .where(
+          and(
+            eq(cashMovements.shiftId, shiftId),
+            eq(cashMovements.approvalStatus, "approved"),
+          ),
+        );
+
       // 計算預期金額
       const actualAmountCents = toRequiredCents(validatedData.actualAmount);
       const expectedAmountCents =
         (shift.startAmountCents ?? 0) +
-        (shift.totalSalesCents ?? 0) -
-        (shift.totalRefundsCents ?? 0);
+        (shift.cashSalesCents ?? 0) -
+        (drawerTotals?.cashRefundsCents ?? 0) +
+        (drawerTotals?.manualMovementCents ?? 0);
       const differenceAmountCents = actualAmountCents - expectedAmountCents;
       const actualAmount = fromCents(actualAmountCents);
       const expectedAmount = fromCents(expectedAmountCents);

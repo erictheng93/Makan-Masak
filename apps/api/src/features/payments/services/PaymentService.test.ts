@@ -971,6 +971,75 @@ describe("PaymentService", () => {
     });
   });
 
+  it("records every POS payment bucket while posting only cash into the drawer", async () => {
+    const { db, statements } = createD1();
+    queueOrderRows([[order()]]);
+
+    await expect(
+      paymentService(env(db)).processPayment(
+        {
+          orderId: "order-101",
+          paymentMode: "partial",
+          expectedTotal: 120,
+          payments: [
+            { method: "cash", amount: 50 },
+            { method: "credit_card", amount: 40 },
+            { method: "touch_n_go", amount: 30 },
+          ],
+          closeOrder: true,
+        },
+        {
+          pos: {
+            registerId: "register-1",
+            shiftId: "shift-1",
+            operatorId: "cashier-1",
+          },
+        },
+      ),
+    ).resolves.toMatchObject({ status: 200 });
+
+    const shiftUpdate = statements.find(
+      (statement) =>
+        statement.payload &&
+        "cashSalesCents" in (statement.payload as Record<string, unknown>),
+    );
+    expect(shiftUpdate?.payload).toEqual(
+      expect.objectContaining({
+        totalSalesCents: expect.anything(),
+        cashSalesCents: expect.anything(),
+        cardSalesCents: expect.anything(),
+        digitalSalesCents: expect.anything(),
+        totalTransactions: expect.anything(),
+      }),
+    );
+    expect(
+      statements
+        .filter(
+          (statement) =>
+            (statement.payload as { type?: string } | undefined)?.type ===
+            "sale",
+        )
+        .map((statement) => statement.payload),
+    ).toEqual([
+      expect.objectContaining({
+        shiftId: "shift-1",
+        registerId: "register-1",
+        amountCents: 5000,
+        paymentMethod: "cash",
+      }),
+    ]);
+    expect(
+      statementContaining(statements, "INSERT INTO payment_transactions")
+        ?.payload,
+    ).toMatchObject({
+      metadata: {
+        paymentMode: "partial",
+        closeOrder: true,
+        pos: { registerId: "register-1", shiftId: "shift-1" },
+      },
+    });
+  });
+
   it("releases occupied tables when a payment closes the order", async () => {
     const { db, statements } = createD1();
     queueOrderRows([[order({ tableId: 9 })]]);

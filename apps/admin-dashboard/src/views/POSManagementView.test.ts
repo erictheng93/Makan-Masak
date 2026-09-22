@@ -70,10 +70,11 @@ describe("POSManagementView", () => {
               {
                 id: "register-1",
                 name: "Main Register",
-                status: "active",
-                currentBalance: 1000,
-                todayTransactions: 3,
-                lastActivity: "2026-06-01T10:00:00.000Z",
+                // This is the actual API contract: a configured register
+                // has no fabricated currentBalance field.
+                isActive: true,
+                currentShiftId: "shift-1",
+                updatedAt: "2026-06-01T10:00:00.000Z",
                 location: "Front",
               },
             ],
@@ -87,12 +88,12 @@ describe("POSManagementView", () => {
             data: {
               id: "shift-1",
               name: "Morning",
-              startTime: "2026-06-01T08:00:00.000Z",
+              startedAt: "2026-06-01T08:00:00.000Z",
               registerId: "register-1",
               operatorId: 7,
-              startingCash: 500,
+              startAmount: 500,
               totalSales: 120,
-              processedOrders: 4,
+              totalTransactions: 4,
               status: "active",
             },
           },
@@ -146,6 +147,7 @@ describe("POSManagementView", () => {
       shiftId: "shift-1",
       paymentMethod: "card",
     });
+    expect(wrapper.text()).not.toContain("NaN");
   });
 
   it.each([
@@ -165,4 +167,24 @@ describe("POSManagementView", () => {
       clearRestaurantCurrency();
     },
   );
+
+  it("requires an entered drawer count before ending the active shift", async () => {
+    const wrapper = mount(POSManagementView);
+    await flushPromises();
+
+    await wrapper.get('[data-testid="pos-open-end-shift"]').trigger("click");
+    expect(
+      wrapper
+        .get('[data-testid="pos-confirm-end-shift"]')
+        .attributes("disabled"),
+    ).toBeDefined();
+
+    await wrapper.get('[data-testid="pos-ending-cash-amount"]').setValue(1130);
+    await wrapper.get('[data-testid="pos-confirm-end-shift"]').trigger("click");
+    await flushPromises();
+
+    expect(api.post).toHaveBeenCalledWith("/pos/shifts/shift-1/end", {
+      actualAmount: 1130,
+    });
+  });
 });

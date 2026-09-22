@@ -33,6 +33,7 @@
       <!-- 功能按鈕 -->
       <div class="flex items-center space-x-2">
         <button
+          data-testid="cashier-open-shift-report"
           class="px-3 py-2 bg-ios-blue text-white rounded-full hover:bg-blue-600 transition-colors text-sm"
           @click="openShiftReport"
         >
@@ -533,6 +534,7 @@
                 </div>
               </div>
               <div
+                v-if="cashDifference !== null"
                 class="mt-3 p-2 rounded"
                 :class="
                   cashDifference === 0
@@ -571,6 +573,7 @@
               {{ t("cashier.printReport") }}
             </button>
             <button
+              data-testid="cashier-open-end-shift"
               class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               @click="endShift"
             >
@@ -609,6 +612,14 @@
               class="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700"
             >
               {{ refundError }}
+            </div>
+            <div
+              v-if="refundNotice"
+              data-testid="refund-pending-notice"
+              role="status"
+              class="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800"
+            >
+              {{ refundNotice }}
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">{{
@@ -884,6 +895,20 @@
           <p class="text-gray-600 mb-6">
             {{ t("cashier.confirms.endShift") || "確定要結束當前班次嗎？" }}
           </p>
+          <label class="mb-6 block">
+            <span class="mb-2 block text-sm font-medium text-gray-700">
+              {{ t("cashier.actualAmount") || "實際清點現金" }}
+            </span>
+            <input
+              v-model.number="actualCashAmount"
+              data-testid="cashier-ending-cash-amount"
+              type="number"
+              min="0"
+              :step="inputStep"
+              :placeholder="inputPlaceholder"
+              class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+            />
+          </label>
           <div class="flex justify-end space-x-3">
             <button
               class="px-4 py-2 bg-gray-100 text-gray-800 rounded-full hover:bg-gray-200 transition-colors"
@@ -892,6 +917,8 @@
               {{ t("common.cancel") || "取消" }}
             </button>
             <button
+              :disabled="!hasValidActualCashAmount"
+              data-testid="cashier-confirm-end-shift"
               class="px-4 py-2 bg-ios-red text-white rounded-full hover:bg-red-600 transition-colors"
               @click="confirmEndShift"
             >
@@ -995,6 +1022,8 @@ interface ShiftPayload {
   name?: string;
   startTime?: string;
   endTime?: string;
+  startedAt?: string | Date;
+  endedAt?: string | Date;
   operatorName?: string;
 }
 
@@ -1042,7 +1071,10 @@ const completedOrder = ref<CashierOrder | null>(null);
 // 新增的狀態
 const showShiftReport = ref(false);
 const showRefundDialog = ref(false);
-const actualCashAmount = ref(0);
+const refundNotice = ref<string | null>(null);
+// A count has to be entered by the cashier; 0 is a valid count, but it must
+// never be the implicit default used to close a shift.
+const actualCashAmount = ref<number | null>(null);
 // `null` means the daily report is still untrusted (loading or unavailable),
 // while 0 is a confirmed day with no sales.
 const todayRevenue = ref<number | null>(null);
@@ -1180,7 +1212,14 @@ const changeCents = computed(() => {
 const change = computed(() => changeCents.value / 100);
 
 const canProcessPayment = computed(() => {
-  if (!selectedOrder.value || !selectedPaymentMethod.value) return false;
+  if (
+    !selectedOrder.value ||
+    !selectedPaymentMethod.value ||
+    !currentShift.value.id ||
+    !currentShift.value.registerId
+  ) {
+    return false;
+  }
 
   if (selectedPaymentMethod.value === "cash") {
     return changeCents.value >= 0;
@@ -1213,8 +1252,30 @@ const canProcessRefund = computed(() => {
 });
 
 const cashDifference = computed(() => {
+  if (
+    typeof actualCashAmount.value !== "number" ||
+    !Number.isFinite(actualCashAmount.value)
+  ) {
+    return null;
+  }
   return actualCashAmount.value - shiftReport.value.systemCashAmount;
 });
+
+const hasValidActualCashAmount = computed(
+  () =>
+    typeof actualCashAmount.value === "number" &&
+    Number.isFinite(actualCashAmount.value) &&
+    actualCashAmount.value >= 0,
+);
+
+const validIsoDate = (value: unknown): string | undefined => {
+  if (value instanceof Date) {
+    return Number.isFinite(value.getTime()) ? value.toISOString() : undefined;
+  }
+  if (typeof value !== "string" && typeof value !== "number") return undefined;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : undefined;
+};
 
 // --- Data loading functions ---
 const loadOrders = async () => {
@@ -1279,8 +1340,8 @@ const loadCurrentShift = async () => {
           currentShift.value = {
             id: shift.id || "",
             name: shift.name || "",
-            startTime: shift.startTime || "",
-            endTime: shift.endTime || "",
+            startTime: validIsoDate(shift.startedAt ?? shift.startTime) ?? "",
+            endTime: validIsoDate(shift.endedAt ?? shift.endTime) ?? "",
             cashierName: shift.operatorName || authStore.user?.username || "",
             registerId: activeRegister.id,
           };
@@ -1392,6 +1453,8 @@ const processPayment = async () => {
         expectedTotal: selectedOrder.value.totalAmount,
         method: selectedPaymentMethod.value,
         closeOrder: true,
+        registerId: currentShift.value.registerId,
+        shiftId: currentShift.value.id,
       },
       { headers: { "Idempotency-Key": pendingPaymentKey.value } },
     );
@@ -1585,7 +1648,7 @@ const closePaymentSuccess = () => {
 const openShiftReport = async () => {
   if (!currentShift.value.id) {
     showShiftReport.value = true;
-    actualCashAmount.value = shiftReport.value.systemCashAmount;
+    actualCashAmount.value = null;
     return;
   }
   isProcessing.value = true;
@@ -1622,7 +1685,7 @@ const openShiftReport = async () => {
     isProcessing.value = false;
   }
   showShiftReport.value = true;
-  actualCashAmount.value = shiftReport.value.systemCashAmount;
+  actualCashAmount.value = null;
 };
 
 const closeShiftReport = () => {
@@ -1636,11 +1699,12 @@ const printShiftReport = () => {
 
 const endShift = () => {
   if (!currentShift.value.id) return;
+  actualCashAmount.value = null;
   showEndShiftModal.value = true;
 };
 
 const confirmEndShift = async () => {
-  if (!currentShift.value.id) return;
+  if (!currentShift.value.id || !hasValidActualCashAmount.value) return;
   showEndShiftModal.value = false;
   isProcessing.value = true;
   try {
@@ -1666,6 +1730,7 @@ const confirmEndShift = async () => {
 // 退款相關方法
 const openRefundDialog = () => {
   refundError.value = null;
+  refundNotice.value = null;
   showRefundDialog.value = true;
   refundData.value = {
     orderNumber: "",
@@ -1686,7 +1751,7 @@ const processRefund = async () => {
 
   isProcessing.value = true;
   try {
-    await api.post(
+    const response = await api.post(
       "/pos/refunds/create",
       {
         originalOrderId: refundData.value.orderNumber.trim(),
@@ -1703,6 +1768,16 @@ const processRefund = async () => {
         },
       },
     );
+
+    const result = unwrapApiPayload<{ approvalRequired?: boolean }>(
+      response.data.data,
+    );
+    if (result.approvalRequired) {
+      // The cashier's record is deliberately not a completed refund. Do not
+      // make the local totals look settled before an Admin/Owner approves it.
+      refundNotice.value = "退款已送交管理者審核，尚未完成。";
+      return;
+    }
 
     // 更新統計數據
     shiftReport.value.refundCount++;

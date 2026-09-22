@@ -204,6 +204,7 @@ describe("POS refund routes", () => {
       registerId,
       "user-10",
       shiftId,
+      { requireApproval: false },
     );
     expect(mocks.resolveOrderIdentity).toHaveBeenCalledWith(
       { binding: "db" },
@@ -235,6 +236,7 @@ describe("POS refund routes", () => {
       headers: {
         "Content-Type": "application/json",
         "X-Register-Id": registerId,
+        "X-Shift-Id": shiftId,
       },
     });
 
@@ -243,7 +245,8 @@ describe("POS refund routes", () => {
       expect.any(Object),
       registerId,
       "cashier-10",
-      undefined,
+      shiftId,
+      { requireApproval: true },
     );
   });
 
@@ -257,6 +260,7 @@ describe("POS refund routes", () => {
       headers: {
         "Content-Type": "application/json",
         "X-Register-Id": registerId,
+        "X-Shift-Id": shiftId,
       },
     });
 
@@ -270,7 +274,8 @@ describe("POS refund routes", () => {
       expect.objectContaining({ originalOrderId: 101 }),
       registerId,
       "user-10",
-      undefined,
+      shiftId,
+      { requireApproval: false },
     );
   });
 
@@ -283,6 +288,7 @@ describe("POS refund routes", () => {
         headers: {
           "Content-Type": "application/json",
           "X-Register-Id": registerId,
+          "X-Shift-Id": shiftId,
         },
       },
       { SLACK_WEBHOOK_URL: "https://hooks.slack.test/services/refunds" },
@@ -306,6 +312,7 @@ describe("POS refund routes", () => {
       headers: {
         "Content-Type": "application/json",
         "X-Register-Id": "register-1",
+        "X-Shift-Id": shiftId,
       },
     });
     let body = await json(response);
@@ -354,6 +361,7 @@ describe("POS refund routes", () => {
       headers: {
         "Content-Type": "application/json",
         "X-Register-Id": registerId,
+        "X-Shift-Id": shiftId,
       },
     });
     body = await json(response);

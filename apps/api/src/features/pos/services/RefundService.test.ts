@@ -78,7 +78,13 @@ function mockMutations(
 ) {
   const inserted: unknown[] = [];
   const insertStatements: Array<{ payload: unknown }> = [];
-  const mutationDb = createMutationFixtureDb(fixtureTables, options.fixtures);
+  const mutationDb = createMutationFixtureDb(fixtureTables, {
+    // Successful order/shift reconciliation is the default completion path;
+    // individual tests override it when they exercise a write failure.
+    orders: { update: [{ changes: 1 }] },
+    cashShifts: { update: [{ changes: 1 }] },
+    ...options.fixtures,
+  });
 
   mocks.db.insert.mockImplementation(() => {
     const builder = {
@@ -237,9 +243,92 @@ describe("RefundService", () => {
       referenceId: null,
       referenceType: "refund",
     });
+    expect(mutations.updated).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          refundAmountCents: expect.anything(),
+          paymentStatus: expect.anything(),
+          updatedAt: expect.any(Date),
+        }),
+        expect.objectContaining({ totalRefundsCents: expect.anything() }),
+      ]),
+    );
     expect(randomSpy).not.toHaveBeenCalled();
     vi.clearAllTimers();
     vi.useRealTimers();
+  });
+
+  it("leaves a cashier refund pending until owner approval settles its order and cash ledger", async () => {
+    uuidMocks.generateUUID
+      .mockReturnValueOnce("refund-1")
+      .mockReturnValueOnce("movement-1");
+    const mutations = mockMutations({
+      fixtures: { refunds: { update: [{ changes: 1 }] } },
+    });
+    const pendingMetadata = JSON.stringify({ approvalRequired: true });
+    mockSelectResults({
+      orders: [
+        [
+          {
+            id: 101,
+            totalAmount: 100,
+            totalAmountCents: 10000,
+            paymentStatus: "completed",
+          },
+        ],
+      ],
+      refunds: [
+        [{ totalRefunded: 0 }],
+        [refundRow({ metadata: pendingMetadata, refundMethod: "cash" })],
+        [refundRow({ metadata: pendingMetadata, refundMethod: "cash" })],
+      ],
+      cashShifts: [[{ status: "active" }], [{ status: "active" }]],
+    });
+
+    const pending = await createService().processRefund(
+      refundRequest(),
+      "register-1",
+      "cashier-7",
+      "shift-1",
+      { requireApproval: true },
+    );
+
+    expect(pending).toMatchObject({
+      success: true,
+      data: {
+        refundId: "refund-1",
+        ledgerMutation: false,
+        approvalRequired: true,
+      },
+    });
+    expect(mutations.inserted).toHaveLength(1);
+    expect(mutations.inserted[0]).toMatchObject({
+      status: "processing",
+      metadata: pendingMetadata,
+    });
+    expect(mutations.updated).toEqual([]);
+
+    await expect(
+      createService().approveRefund("refund-1", "owner-1"),
+    ).resolves.toEqual({ success: true });
+
+    expect(mutations.updated).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ status: "completed", approvedBy: "owner-1" }),
+        expect.objectContaining({
+          refundAmountCents: expect.anything(),
+          paymentStatus: expect.anything(),
+        }),
+        expect.objectContaining({ totalRefundsCents: expect.anything() }),
+      ]),
+    );
+    expect(mutations.inserted[1]).toMatchObject({
+      id: "movement-1",
+      shiftId: "shift-1",
+      type: "refund",
+      amountCents: -2500,
+      recordedBy: "owner-1",
+    });
   });
 
   it("records post-close refunds without mutating the live cash ledger", async () => {
@@ -428,9 +517,9 @@ describe("RefundService", () => {
     expect(result).toMatchObject({ success: true });
     // The terminal "completed" write happened during the awaited call — the
     // row does not linger in "processing".
-    expect(mutations.updated).toEqual([
+    expect(mutations.updated[0]).toEqual(
       expect.objectContaining({ status: "completed" }),
-    ]);
+    );
   });
 
   it("allows cent-exact cumulative refunds that reach the order total", async () => {
@@ -651,7 +740,7 @@ describe("RefundService", () => {
         refunds: { update: [{ changes: 1 }, { changes: 1 }, { changes: 1 }] },
       },
     });
-    mockSelectResults({ refunds: [[refundRow()], []] });
+    mockSelectResults({ refunds: [[refundRow()], [], [refundRow()]] });
 
     await expect(
       createService().getRefundDetail("refund-1"),
@@ -677,22 +766,30 @@ describe("RefundService", () => {
       createService().rejectRefund("refund-1", "user-9", "not eligible"),
     ).resolves.toEqual({ success: true });
 
-    expect(mutations.updated).toEqual([
+    expect(mutations.updated).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          status: "cancelled",
+          approvedBy: "user-7",
+          metadata: JSON.stringify({ cancellation_reason: "duplicate" }),
+        }),
+        expect.objectContaining({
+          status: "completed",
+          approvedBy: "user-8",
+          completedAt: expect.any(Date),
+        }),
+        expect.objectContaining({
+          status: "failed",
+          approvedBy: "user-9",
+          metadata: JSON.stringify({ rejection_reason: "not eligible" }),
+        }),
+      ]),
+    );
+    expect(mutations.updated).toContainEqual(
       expect.objectContaining({
-        status: "cancelled",
-        approvedBy: "user-7",
-        metadata: JSON.stringify({ cancellation_reason: "duplicate" }),
+        refundAmountCents: expect.anything(),
+        paymentStatus: expect.anything(),
       }),
-      expect.objectContaining({
-        status: "completed",
-        approvedBy: "user-8",
-        completedAt: expect.any(Date),
-      }),
-      expect.objectContaining({
-        status: "failed",
-        approvedBy: "user-9",
-        metadata: JSON.stringify({ rejection_reason: "not eligible" }),
-      }),
-    ]);
+    );
   });
 });

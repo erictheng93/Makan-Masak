@@ -37,13 +37,20 @@ export interface CashShift {
   id: string;
   registerId: string;
   operatorId: UserId;
-  startTime: string;
-  endTime?: string;
-  startingCash: number;
-  endingCash?: number;
+  startedAt: string;
+  endedAt?: string;
+  startAmount: number;
+  endAmount?: number;
+  expectedAmount: number;
+  actualAmount?: number;
+  differenceAmount: number;
   totalSales: number;
   totalRefunds: number;
-  status: "active" | "ended";
+  cashSales: number;
+  cardSales: number;
+  digitalSales: number;
+  totalTransactions: number;
+  status: "active" | "closed" | "suspended";
 }
 
 export interface CashMovement {
@@ -128,8 +135,9 @@ export const posService = {
   // 班次管理
   async startShift(data: {
     registerId: string;
-    startingCash: number;
+    startAmount: number;
     operatorId: UserId;
+    notes?: string;
   }): Promise<CashShift> {
     const response = await apiClient.post("/pos/shifts/start", data);
     return unwrapApiData<CashShift>(response);
@@ -138,8 +146,8 @@ export const posService = {
   async endShift(
     shiftId: string,
     data: {
-      endingCash: number;
-      notes?: string;
+      actualAmount: number;
+      closingNotes?: string;
     },
   ): Promise<CashShift> {
     const response = await apiClient.post(`/pos/shifts/${shiftId}/end`, data);
@@ -148,9 +156,7 @@ export const posService = {
 
   async getCurrentShift(registerId: string): Promise<CashShift | null> {
     try {
-      const response = await apiClient.get(
-        `/pos/registers/${registerId}/current-shift`,
-      );
+      const response = await apiClient.get(`/pos/shifts/current/${registerId}`);
       return unwrapApiData<CashShift | null>(response);
     } catch {
       return null;

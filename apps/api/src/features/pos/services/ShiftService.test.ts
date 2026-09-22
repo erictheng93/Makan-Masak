@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { cashShifts } from "@makanmasak/database";
+import { cashMovements, cashShifts } from "@makanmasak/database";
 import {
   createSelectFixtureDb,
   type SelectFixtures,
@@ -25,11 +25,17 @@ vi.mock("drizzle-orm/d1", () => ({
   drizzle: vi.fn(() => mocks.db),
 }));
 
-const fixtureTables = { cashShifts };
+const fixtureTables = { cashShifts, cashMovements };
 type SelectFixtureName = keyof typeof fixtureTables;
 
 function mockSelectResults(fixtures: SelectFixtures<SelectFixtureName>) {
-  Object.assign(mocks.db, createSelectFixtureDb(fixtureTables, fixtures));
+  Object.assign(
+    mocks.db,
+    createSelectFixtureDb(fixtureTables, {
+      cashMovements: [[{ cashRefundsCents: 0, manualMovementCents: 0 }]],
+      ...fixtures,
+    }),
+  );
 }
 
 function mockMutations() {
@@ -217,12 +223,14 @@ describe("ShiftService", () => {
           shiftRow({
             registerId,
             startAmountCents: 10000,
-            totalSalesCents: 50000,
+            totalSalesCents: 80000,
             totalRefundsCents: 5000,
+            cashSalesCents: 50000,
           }),
         ],
         [{ registerId }],
       ],
+      cashMovements: [[{ cashRefundsCents: 5000, manualMovementCents: 0 }]],
     });
 
     const result = await createService().endShift(
@@ -270,6 +278,43 @@ describe("ShiftService", () => {
     vi.useRealTimers();
   });
 
+  it("keeps card sales out of a RM 1,130 drawer expectation after a RM 500 cash refund", async () => {
+    uuidMocks.generateUUID.mockReturnValue("movement-1");
+    const mutations = mockMutations();
+    mockSelectResults({
+      cashShifts: [
+        [
+          shiftRow({
+            registerId,
+            // RM 180 was taken in cash; card sales are deliberately
+            // reported but never put into the drawer expectation.
+            startAmountCents: 100000,
+            totalSalesCents: 21000,
+            cashSalesCents: 18000,
+            cardSalesCents: 3000,
+          }),
+        ],
+        [{ registerId }],
+      ],
+      cashMovements: [[{ cashRefundsCents: 5000, manualMovementCents: 0 }]],
+    });
+
+    const result = await createService().endShift(
+      "shift-1",
+      { actualAmount: 1130 },
+      "operator-1",
+    );
+
+    expect(result).toMatchObject({
+      success: true,
+      data: { shift: { expectedAmount: 1130, differenceAmount: 0 } },
+    });
+    expect(mutations.updated[0]).toMatchObject({
+      expectedAmountCents: 113000,
+      differenceAmountCents: 0,
+    });
+  });
+
   it("uses cents for closing reconciliation to avoid float noise", async () => {
     uuidMocks.generateUUID.mockReturnValue("movement-1");
     const mutations = mockMutations();
@@ -281,10 +326,12 @@ describe("ShiftService", () => {
             startAmountCents: 10000,
             totalSalesCents: 4287733,
             totalRefundsCents: 123456,
+            cashSalesCents: 4287733,
           }),
         ],
         [{ registerId }],
       ],
+      cashMovements: [[{ cashRefundsCents: 123456, manualMovementCents: 0 }]],
     });
 
     const result = await createService().endShift(

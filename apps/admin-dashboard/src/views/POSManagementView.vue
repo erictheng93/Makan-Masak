@@ -11,7 +11,7 @@
           </p>
           <p class="text-xs text-green-600">
             {{ t("pos.balance") }}:
-            {{ formatPrice(currentRegister?.currentBalance || 0) }}
+            {{ formatDrawerBalance(currentRegister) }}
           </p>
         </div>
 
@@ -42,6 +42,7 @@
         </button>
         <button
           v-else
+          data-testid="pos-open-end-shift"
           class="px-4 py-2 bg-ios-red text-white rounded-full hover:bg-red-600 transition-colors text-sm"
           @click="endShift"
         >
@@ -180,7 +181,7 @@
                       >{{ t("pos.currentBalance") }}:</span
                     >
                     <span class="font-semibold">{{
-                      formatPrice(register.currentBalance)
+                      formatDrawerBalance(register)
                     }}</span>
                   </div>
                   <div class="flex justify-between">
@@ -877,6 +878,20 @@
               "確定要結束當前班次嗎？結束後將無法繼續記錄交易。"
             }}
           </p>
+          <label class="mb-6 block">
+            <span class="mb-2 block text-sm font-medium text-gray-700">
+              {{ t("cashier.actualAmount") || "實際清點現金" }}
+            </span>
+            <input
+              v-model.number="endingCashAmount"
+              data-testid="pos-ending-cash-amount"
+              type="number"
+              min="0"
+              :step="inputStep"
+              :placeholder="inputPlaceholder"
+              class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+            />
+          </label>
           <div class="flex justify-end space-x-3">
             <button
               class="px-4 py-2 bg-gray-100 text-gray-800 rounded-full hover:bg-gray-200 transition-colors"
@@ -885,6 +900,8 @@
               {{ t("common.cancel") || "取消" }}
             </button>
             <button
+              :disabled="!hasValidEndingCash"
+              data-testid="pos-confirm-end-shift"
               class="px-4 py-2 bg-ios-red text-white rounded-full hover:bg-red-600 transition-colors"
               @click="confirmEndShift"
             >
@@ -1007,7 +1024,9 @@ interface CashRegister {
   id: string;
   name: string;
   status: "active" | "inactive" | "maintenance";
-  currentBalance: number;
+  // cash_registers has no currentBalance column.  A drawer balance belongs
+  // to an open shift's reconciliation, not to the register configuration.
+  currentBalance?: number;
   todayTransactions: number;
   lastActivity: string;
   location: string;
@@ -1023,7 +1042,12 @@ interface CashShift {
   startingCash: number;
   totalRevenue: number;
   processedOrders: number;
-  status: "active" | "ended";
+  status: "active" | "ended" | "closed";
+  /** Actual API fields retained while mapping the display model below. */
+  startedAt?: string | Date;
+  endedAt?: string | Date;
+  startAmount?: number;
+  totalTransactions?: number;
 }
 
 interface DailyStatsPayload {
@@ -1106,6 +1130,8 @@ const newRegisterName = ref("");
 const showStartShiftModal = ref(false);
 const startingCashAmount = ref(0);
 const showEndShiftModal = ref(false);
+// `null`, not 0, means the cashier has not performed a physical count yet.
+const endingCashAmount = ref<number | null>(null);
 const showCreatePromotionModal = ref(false);
 const newPromotionName = ref("");
 
@@ -1136,10 +1162,65 @@ const canProcessCashMovement = computed(() => {
   );
 });
 
+const hasValidEndingCash = computed(
+  () =>
+    typeof endingCashAmount.value === "number" &&
+    Number.isFinite(endingCashAmount.value) &&
+    endingCashAmount.value >= 0,
+);
+
 // 輔助函數
 // formatTime treats a bare string as an "HH:mm" time-of-day, so ISO datetimes
-// must be converted to a Date first.
-const formatClockTime = (dateTime: string) => formatTime(new Date(dateTime));
+// must be converted to a Date first. A missing end time is normal for an open
+// shift; never leak "Invalid Date" into the cashier UI.
+const formatClockTime = (dateTime?: string) => {
+  const date = new Date(dateTime ?? "");
+  return Number.isFinite(date.getTime()) ? formatTime(date) : "—";
+};
+
+const validIsoDate = (value: unknown): string | undefined => {
+  if (value instanceof Date) {
+    return Number.isFinite(value.getTime()) ? value.toISOString() : undefined;
+  }
+  if (typeof value !== "string" && typeof value !== "number") return undefined;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : undefined;
+};
+
+const formatDrawerBalance = (register: CashRegister | null | undefined) =>
+  typeof register?.currentBalance === "number" &&
+  Number.isFinite(register.currentBalance)
+    ? formatPrice(register.currentBalance)
+    : "—";
+
+const normalizeRegister = (value: unknown): CashRegister => {
+  const register = (value ?? {}) as Record<string, unknown>;
+  const status =
+    register.status === "active" ||
+    register.status === "inactive" ||
+    register.status === "maintenance"
+      ? register.status
+      : register.isActive === false
+        ? "inactive"
+        : "active";
+  const todayTransactions = register.todayTransactions;
+
+  return {
+    id: typeof register.id === "string" ? register.id : "",
+    name: typeof register.name === "string" ? register.name : "",
+    status,
+    // Deliberately do not copy a non-contract `currentBalance` property.
+    // The dashboard cannot safely infer a drawer total from register config.
+    todayTransactions:
+      typeof todayTransactions === "number" &&
+      Number.isFinite(todayTransactions)
+        ? todayTransactions
+        : 0,
+    lastActivity:
+      validIsoDate(register.lastActivity ?? register.updatedAt) ?? "",
+    location: typeof register.location === "string" ? register.location : "",
+  };
+};
 
 const getRegisterStatusClass = (status: string) => {
   const classes: Record<string, string> = {
@@ -1279,10 +1360,12 @@ const confirmStartShift = async () => {
       currentShift.value = {
         id: shiftData.id || "",
         name: shiftData.name || t("pos.defaults.morningShift"),
-        startTime: shiftData.startTime || new Date().toISOString(),
+        startTime:
+          validIsoDate(shiftData.startedAt ?? shiftData.startTime) ??
+          new Date().toISOString(),
         registerId: currentRegister.value.id,
         operatorId: authStore.user?.id ?? "",
-        startingCash: amount,
+        startingCash: shiftData.startAmount ?? amount,
         totalRevenue: 0,
         processedOrders: 0,
         status: "active",
@@ -1297,16 +1380,17 @@ const confirmStartShift = async () => {
 
 const endShift = () => {
   if (!currentShift.value) return;
+  endingCashAmount.value = null;
   showEndShiftModal.value = true;
 };
 
 const confirmEndShift = async () => {
-  if (!currentShift.value) return;
+  if (!currentShift.value || !hasValidEndingCash.value) return;
   showEndShiftModal.value = false;
   isProcessing.value = true;
   try {
     await api.post(`/pos/shifts/${currentShift.value.id}/end`, {
-      actualAmount: currentRegister.value?.currentBalance ?? 0,
+      actualAmount: endingCashAmount.value,
     });
     currentShift.value = null;
   } catch (error) {
@@ -1319,6 +1403,7 @@ const confirmEndShift = async () => {
 const getShiftDuration = () => {
   if (!currentShift.value) return "0";
   const start = new Date(currentShift.value.startTime);
+  if (!Number.isFinite(start.getTime())) return "0";
   const now = new Date();
   const hours = Math.floor(
     (now.getTime() - start.getTime()) / (1000 * 60 * 60),
@@ -1340,9 +1425,10 @@ const processQuickPayment = async () => {
     });
 
     if (response.data.success) {
-      // 更新收銀櫃餘額和統計
+      // The server's register record has no running drawer balance. Do not
+      // invent one client-side (and especially do not add card/digital sales
+      // to cash); closing reconciliation is authoritative.
       if (currentRegister.value) {
-        currentRegister.value.currentBalance += quickPayment.value.amount;
         currentRegister.value.todayTransactions++;
         currentRegister.value.lastActivity = new Date().toISOString();
       }
@@ -1385,7 +1471,6 @@ const processMarketCheckoutPayment = async () => {
       (result.payment.paidAmountCents ?? result.payment.totalAmountCents) / 100;
 
     if (currentRegister.value) {
-      currentRegister.value.currentBalance += paidAmount;
       currentRegister.value.todayTransactions++;
       currentRegister.value.lastActivity = new Date().toISOString();
     }
@@ -1434,13 +1519,6 @@ const processCashMovement = async () => {
     );
 
     if (response.data.success) {
-      const isIncoming = ["cash_in", "drawer_count"].includes(
-        cashMovement.value.type,
-      );
-      const balanceChange = isIncoming
-        ? cashMovement.value.amount
-        : -cashMovement.value.amount;
-      currentRegister.value.currentBalance += balanceChange;
       currentRegister.value.lastActivity = new Date().toISOString();
 
       await refreshTransactions();
@@ -1585,7 +1663,9 @@ const loadRegisters = async () => {
     }
     const response = await api.get("/pos/registers", params);
     if (response.data.success && response.data.data) {
-      registers.value = unwrapApiList<CashRegister>(response.data.data);
+      registers.value = unwrapApiList<unknown>(response.data.data).map(
+        normalizeRegister,
+      );
     }
   } catch (error) {
     console.error("Failed to load registers:", error);
@@ -1599,19 +1679,30 @@ const loadCurrentShift = async (registerId: string) => {
     const response = await api.get(`/pos/shifts/current/${registerId}`);
     if (response.data.success && response.data.data) {
       const shiftData = unwrapApiPayload<
-        Partial<CashShift> & { totalSales?: number }
+        Partial<CashShift> & {
+          totalSales?: number;
+          startedAt?: string | Date;
+          endedAt?: string | Date;
+          startAmount?: number;
+          totalTransactions?: number;
+        }
       >(response.data.data);
       currentShift.value = {
         id: shiftData.id || "",
         name: shiftData.name || "",
-        startTime: shiftData.startTime || "",
-        endTime: shiftData.endTime,
+        startTime:
+          validIsoDate(shiftData.startedAt ?? shiftData.startTime) ?? "",
+        endTime: validIsoDate(shiftData.endedAt ?? shiftData.endTime),
         registerId: shiftData.registerId || registerId,
         operatorId: shiftData.operatorId || "",
-        startingCash: shiftData.startingCash || 0,
+        startingCash: shiftData.startAmount ?? shiftData.startingCash ?? 0,
         totalRevenue: shiftData.totalSales || 0,
-        processedOrders: shiftData.processedOrders || 0,
-        status: shiftData.status === "ended" ? "ended" : "active",
+        processedOrders:
+          shiftData.totalTransactions ?? shiftData.processedOrders ?? 0,
+        status:
+          shiftData.status === "ended" || shiftData.status === "closed"
+            ? "ended"
+            : "active",
       };
     } else {
       currentShift.value = null;

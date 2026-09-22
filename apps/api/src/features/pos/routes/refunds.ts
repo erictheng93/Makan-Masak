@@ -90,13 +90,16 @@ app.post(
     if (!registerId) {
       throw badRequest("需要指定收銀機ID");
     }
+    if (!shiftId) {
+      // A POS refund can physically remove cash from the drawer.  Without a
+      // shift there is no ledger to reconcile it against, so reject it rather
+      // than creating an unassigned refund record.
+      throw badRequest("需要指定班次ID");
+    }
     if (!posLedgerIdSchema.safeParse(registerId).success) {
       throw badRequest("收銀機ID格式錯誤");
     }
-    if (
-      shiftId !== undefined &&
-      !posLedgerIdSchema.safeParse(shiftId).success
-    ) {
+    if (!posLedgerIdSchema.safeParse(shiftId).success) {
       throw badRequest("班次ID格式錯誤");
     }
 
@@ -117,11 +120,17 @@ app.post(
       },
     );
     const refundService = createRefundService(c.env);
+    // Cashiers may initiate a refund but cannot settle money movement by
+    // themselves.  The persisted processing record is finalised only by the
+    // existing Admin/Owner approval endpoint.  Admin/Owner initiated refunds
+    // retain the synchronous completion flow.
+    const requireApproval = ![0, 1].includes(user.role);
     const result = await refundService.processRefund(
       { ...data, originalOrderId: orderIdentity.id },
       registerId,
       user.id,
       shiftId,
+      { requireApproval },
     );
 
     if (!result.success) {

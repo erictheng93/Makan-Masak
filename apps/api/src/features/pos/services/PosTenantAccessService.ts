@@ -9,7 +9,11 @@ import {
   refunds,
 } from "@makanmasak/database";
 import type { AuthUser } from "../../../middleware/auth";
-import { forbidden, notFound } from "../../../shared/utils/api-error";
+import {
+  badRequest,
+  forbidden,
+  notFound,
+} from "../../../shared/utils/api-error";
 
 type PosResource = "收銀機" | "班次" | "收據" | "退款" | "現金異動";
 
@@ -78,6 +82,29 @@ export class PosTenantAccessService {
     this.assertOwner(user, shift?.restaurantId, "班次", "SHIFT_NOT_FOUND");
     if (shift?.registerId !== registerId) {
       throw forbidden("班次與收銀機不相符");
+    }
+  }
+
+  /**
+   * A counter payment is only meaningful while the named till is open.  The
+   * regular payment endpoint accepts non-POS payments too, so this check is
+   * deliberately opt-in for callers that supplied a register/shift pair.
+   */
+  async requireActiveRegisterAndShift(
+    user: AuthUser,
+    registerId: string,
+    shiftId: string,
+  ): Promise<void> {
+    await this.requireRegisterAndShift(user, registerId, shiftId);
+
+    const [shift] = await this.db
+      .select({ status: cashShifts.status })
+      .from(cashShifts)
+      .where(eq(cashShifts.id, shiftId))
+      .limit(1);
+
+    if (shift?.status !== "active") {
+      throw badRequest("班次不存在或已結束", "SHIFT_NOT_ACTIVE");
     }
   }
 

@@ -475,7 +475,7 @@ export class MarketCheckoutPOSPaymentService {
     nowMs: number;
   }) {
     const methodColumn = posShiftMethodColumn(input.paymentMethod);
-    await this.db.batch([
+    const statements: BatchItem<"sqlite">[] = [
       this.db
         .update(cashShifts)
         .set({
@@ -484,23 +484,35 @@ export class MarketCheckoutPOSPaymentService {
           totalTransactions: sql`${cashShifts.totalTransactions} + 1`,
         })
         .where(eq(cashShifts.id, input.shiftId)),
-      this.db.insert(cashMovements).values({
-        id: generateUUID(),
-        shiftId: input.shiftId,
-        registerId: input.registerId,
-        type: "sale",
-        amountCents: input.amountCents,
-        description: `Market checkout ${input.checkoutId} POS payment`,
-        referenceId: null,
-        referenceType: "market_checkout",
-        paymentMethod: input.paymentMethod,
-        denominationBreakdown: "{}",
-        recordedBy: input.operatorId,
-        approvalStatus: "approved",
-        metadata: JSON.stringify({ marketCheckoutId: input.checkoutId }),
-        createdAt: sql`${input.nowMs}`,
-      }),
-    ] as [BatchItem<"sqlite">, BatchItem<"sqlite">]);
+    ];
+
+    // Card and wallet payments are sales, but they never enter the drawer.
+    // Recording them as cash movements made a closing count look as though the
+    // till had received money it did not hold.
+    if (input.paymentMethod === "cash") {
+      statements.push(
+        this.db.insert(cashMovements).values({
+          id: generateUUID(),
+          shiftId: input.shiftId,
+          registerId: input.registerId,
+          type: "sale",
+          amountCents: input.amountCents,
+          description: `Market checkout ${input.checkoutId} POS payment`,
+          referenceId: null,
+          referenceType: "market_checkout",
+          paymentMethod: input.paymentMethod,
+          denominationBreakdown: "{}",
+          recordedBy: input.operatorId,
+          approvalStatus: "approved",
+          metadata: JSON.stringify({ marketCheckoutId: input.checkoutId }),
+          createdAt: sql`${input.nowMs}`,
+        }),
+      );
+    }
+
+    await this.db.batch(
+      statements as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]],
+    );
   }
 
   private buildResponseCheckout(

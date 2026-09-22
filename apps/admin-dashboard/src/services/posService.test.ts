@@ -54,6 +54,57 @@ describe("posService", () => {
     });
   });
 
+  it("uses the shift API's startedAt/startAmount contract and requires an entered closing count", async () => {
+    vi.mocked(apiClient.post)
+      .mockResolvedValueOnce({ data: { id: "shift-1" } } as never)
+      .mockResolvedValueOnce({
+        data: { id: "shift-1", status: "closed" },
+      } as never);
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      data: {
+        id: "shift-1",
+        registerId: "register-1",
+        startedAt: "2026-09-22T08:00:00.000Z",
+        startAmount: 1000,
+        totalTransactions: 3,
+        status: "active",
+      },
+    } as never);
+
+    await posService.startShift({
+      registerId: "register-1",
+      operatorId: "cashier-1" as never,
+      startAmount: 1000,
+    });
+    await posService.endShift("shift-1", {
+      actualAmount: 1130,
+      closingNotes: "counted",
+    });
+    const shift = await posService.getCurrentShift("register-1");
+
+    expect(apiClient.post).toHaveBeenNthCalledWith(1, "/pos/shifts/start", {
+      registerId: "register-1",
+      operatorId: "cashier-1",
+      startAmount: 1000,
+    });
+    expect(apiClient.post).toHaveBeenNthCalledWith(
+      2,
+      "/pos/shifts/shift-1/end",
+      {
+        actualAmount: 1130,
+        closingNotes: "counted",
+      },
+    );
+    expect(apiClient.get).toHaveBeenCalledWith(
+      "/pos/shifts/current/register-1",
+    );
+    expect(shift).toMatchObject({
+      startedAt: "2026-09-22T08:00:00.000Z",
+      startAmount: 1000,
+      totalTransactions: 3,
+    });
+  });
+
   it("forwards the selected restaurant to every print-agent request", async () => {
     vi.mocked(apiClient.get).mockResolvedValueOnce({ data: [] } as never);
     vi.mocked(apiClient.post).mockResolvedValueOnce({ data: {} } as never);

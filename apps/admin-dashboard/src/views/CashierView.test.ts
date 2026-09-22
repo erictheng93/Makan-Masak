@@ -80,6 +80,25 @@ describe("CashierView", () => {
           },
         } as never;
       }
+      if (url === "/pos/registers") {
+        return {
+          data: {
+            success: true,
+            data: [{ id: "register-1", isActive: true }],
+          },
+        } as never;
+      }
+      if (url === "/pos/shifts/current/register-1") {
+        return {
+          data: {
+            success: true,
+            data: {
+              id: "shift-1",
+              startedAt: "2026-08-18T08:00:00.000Z",
+            },
+          },
+        } as never;
+      }
       return { data: { success: true, data: [] } } as never;
     });
   });
@@ -260,6 +279,25 @@ describe("CashierView", () => {
             },
           } as never;
         }
+        if (url === "/pos/registers") {
+          return {
+            data: {
+              success: true,
+              data: [{ id: "register-1", isActive: true }],
+            },
+          } as never;
+        }
+        if (url === "/pos/shifts/current/register-1") {
+          return {
+            data: {
+              success: true,
+              data: {
+                id: "shift-1",
+                startedAt: "2026-08-18T08:00:00.000Z",
+              },
+            },
+          } as never;
+        }
         return { data: { success: true, data: [] } } as never;
       });
       const wrapper = mount(CashierView);
@@ -390,6 +428,8 @@ describe("CashierView", () => {
         amount: 100,
         expectedTotal: 100,
         closeOrder: true,
+        registerId: "register-1",
+        shiftId: "shift-1",
       }),
       expect.objectContaining({
         headers: expect.objectContaining({
@@ -407,6 +447,36 @@ describe("CashierView", () => {
       expect.anything(),
       expect.anything(),
     );
+  });
+
+  it("requires a physical count before ending a shift and never defaults it to zero", async () => {
+    const wrapper = mount(CashierView);
+    await flushPromises();
+
+    await wrapper
+      .get('[data-testid="cashier-open-shift-report"]')
+      .trigger("click");
+    await flushPromises();
+    await wrapper
+      .get('[data-testid="cashier-open-end-shift"]')
+      .trigger("click");
+    expect(
+      wrapper
+        .get('[data-testid="cashier-confirm-end-shift"]')
+        .attributes("disabled"),
+    ).toBeDefined();
+
+    await wrapper
+      .get('[data-testid="cashier-ending-cash-amount"]')
+      .setValue(250);
+    await wrapper
+      .get('[data-testid="cashier-confirm-end-shift"]')
+      .trigger("click");
+    await flushPromises();
+
+    expect(api.post).toHaveBeenCalledWith("/pos/shifts/shift-1/end", {
+      actualAmount: 250,
+    });
   });
 
   it("reuses one idempotency key across a retry, and mints a new one after success", async () => {

@@ -23,7 +23,7 @@
 | --- | --- |
 | 進入點 | Admin Dashboard 的 POS 畫面（`CashierView.vue`、`POSManagementView.vue`） |
 | 角色 | 付款端點需登入；退款端點 `requireRole([0, 1, 4])` |
-| 標頭 | 收據與現金流動需要 `X-Register-Id`（收據還可帶 `X-Shift-Id`） |
+| 標頭 | POS 收款必須同時帶 `registerId`、`shiftId`；POS 退款必須同時帶 `X-Register-Id`、`X-Shift-Id`。兩者都會驗證同店且綁定同一班次。 |
 | 冪等 | `POST /payments` 與 `/payments/create` **強制**要求 `Idempotency-Key`（`requireKey: true`） |
 
 ## 3. Happy path
@@ -44,30 +44,42 @@
 | --- | --- | --- | --- |
 | 1 | 帶出訂單 | `GET /api/v1/orders/:id`（可用 UUID、`order_number` 或 `client_mutation_id`） | `resolveOrderIdentity` |
 | 2 | 選付款方式 | `GET /payments/methods/:country` | TW／MY／VN 各自的清單 |
-| 3 | 送出收款 | `POST /payments`（必帶 `Idempotency-Key`） | `paymentMode: full` 或 `partial` |
+| 3 | 送出收款 | `POST /payments`（必帶 `Idempotency-Key`） | POS 必帶 `registerId`、`shiftId`；`paymentMode: full` 或 `partial` |
 | 4 | 核對金額 | `assertSameAmount(...)` | 以 `orders.total_amount_cents` 為準；client 送來的每一個金額都要對得上 |
 | 5 | 訂單結清 | `closeOrder`（預設 true） | `payment_status = paid`、訂單 → `paid` |
 | 6 | 開立收據 | `POST /pos/receipts/print` | 需 `receipt_printing` 模組與 `print.jobs` 配額 |
+
+POS 收款與班次的記帳規則如下：`totalSales` 累加全部付款方式，`cashSales`、
+`cardSales`、`digitalSales` 依方式分桶（未知的電子方式歸 digital，避免漏計）；只有
+現金銷售會寫入錢櫃的 `cash_movements(type=sale)`。因此刷卡與電子錢包會出現在營收，
+但不會增加錢櫃預期現金。
 
 ### 3.3 退款
 
 | # | 動作 | 端點 |
 | --- | --- | --- |
-| 1 | 建立退款 | `POST /api/v1/pos/refunds/create` |
-| 2 | 審核 | `POST /pos/refunds/:refundId/approve` ／ `/reject` ／ `/cancel` |
+| 1 | 建立退款 | `POST /api/v1/pos/refunds/create`（必帶收銀機／班次標頭） |
+| 2 | 審核 | 收銀員（role 4）建立後維持 `processing`；Admin/Owner 用 `POST /pos/refunds/:refundId/approve` 結清，或 `/reject` ／ `/cancel` |
 | — | 針對金流交易的退款 | `POST /api/v1/payments/refund`（role 0/1/4） |
+
+Admin/Owner 自己建立的 POS 退款會同步結清；收銀員不能自行完成退款。核准端點沿用
+既有的 Admin/Owner 權限，並以同一個 finalizer 寫入 `orders.refund_amount_cents`、
+`orders.payment_status`、班次退款統計，以及（若為 active 班次的現金退款）錢櫃流動。
+目前沒有可靠的退款金額門檻設定可套用，因此不另行發明門檻或 schema。
 
 ### 3.4 結班
 
 `POST /pos/shifts/:shiftId/end` 會算出：
 
 ```
-預期金額 = 開班現金 + 期間銷售 - 期間退款
+預期金額 = 開班現金 + 現金銷售 - 已核准的現金退款 ± 人工現金異動
 差額     = 實際清點 - 預期金額
 ```
 
 三個數字都存進 `cash_shifts`，並寫一筆 `type: "closing"` 的現金流動，然後把收銀機的
-`currentShiftId` 清空。班次另有 `suspend` / `resume`。
+`currentShiftId` 清空。card/digital 銷售不會放進錢櫃預期；`sale`、`opening`、`closing`、
+`count` 是來源／觀察記錄，也不會重複計算。結班畫面必須由操作員輸入實際清點金額（輸入
+0 合法，但不會自動以 0 或系統金額代填）。班次另有 `suspend` / `resume`。
 
 ## 4. Edge cases 與失敗模式
 
@@ -80,6 +92,7 @@
 | `paymentMode: partial` 沒帶 `payments[]` | 400（schema `superRefine`） | `VALIDATION_ERROR` | 🟡 P2 |
 | 金額有超過兩位小數 | 400（`isCentAlignedAmount`） | `VALIDATION_ERROR` | 🟠 P1 |
 | 退款金額超過可退額度 | 拒絕「退款金額超過可退款額度」（已 `completed` + `processing` 的都算進去） | — | 🔴 P0（已防） |
+| 收銀員建立 POS 退款 | 只建立 `processing` 退款，不更動訂單、班次或錢櫃；需 Admin/Owner 核准 | — | 🔴 P0（已防） |
 | 對**已結班**的班次退款 | 仍可建立退款，但**不寫現金流動**，改在 `metadata` 標 `postCloseAdjustment` | — | 🔴 P0（已防） |
 | 重複開班 | 「此收銀機已有活躍班次」 | — | 🟡 P2 |
 | 對非 active 班次結班 | 「找不到活躍班次」 | — | 🟡 P2 |
@@ -95,8 +108,10 @@
 - **訂單結清**用條件式 UPDATE：`payment_status NOT IN ('paid','completed','refunded','partial_refunded')`，
   所以兩個收銀台同時結清只有一個生效。
 - **退款額度**在同一次查詢裡把 `completed` 與 `processing` 都算進已退金額，避免兩筆同時審核造成超退。
-- **退款完成是同步的**。以前用 `setTimeout` 模擬 PSP 回調，但 Workers 不保證回應送出後的計時器會執行，
-  退款會卡在 `processing`——現在在回傳前就把終態寫完。不要改回非同步。
+- **Owner/Admin 發起的 POS 退款完成是同步的**。收銀員建立的退款刻意保留在
+  `processing`，讓既有 Admin/Owner 核准端點完成；這不是 fire-and-forget callback。
+  以前用 `setTimeout` 模擬 PSP 回調，但 Workers 不保證回應送出後的計時器會執行，
+  退款會卡在 `processing`——不要改回非同步。
 
 ## 6. 對應程式碼與測試
 

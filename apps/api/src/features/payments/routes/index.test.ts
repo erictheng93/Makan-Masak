@@ -9,6 +9,10 @@ const mocks = vi.hoisted(() => ({
   paymentServiceCtor: vi.fn(),
   refundPaymentTransaction: vi.fn(),
   idempotencyOptions: [] as Array<Record<string, unknown>>,
+  tenantAccess: {
+    requireActiveRegisterAndShift: vi.fn(),
+  },
+  tenantAccessCtor: vi.fn(),
 }));
 
 const orderId101 = "018f0000-0000-7000-8000-000000000101";
@@ -77,6 +81,15 @@ vi.mock("../services/refundPayment", () => ({
     if (status === "refunded") return "refunded";
     if (status === "partially_refunded") return "partially_refunded";
     return "pending";
+  }),
+}));
+
+vi.mock("../../pos/services/PosTenantAccessService", () => ({
+  PosTenantAccessService: vi.fn(function PosTenantAccessService(
+    ...args: unknown[]
+  ) {
+    mocks.tenantAccessCtor(...args);
+    return mocks.tenantAccess;
   }),
 }));
 
@@ -210,6 +223,9 @@ describe("payments routes", () => {
       status: "succeeded",
       paymentStatus: "partially_refunded",
     });
+    mocks.tenantAccess.requireActiveRegisterAndShift.mockResolvedValue(
+      undefined,
+    );
   });
 
   it("requires idempotency keys on both payment creation routes", () => {
@@ -291,6 +307,44 @@ describe("payments routes", () => {
         },
       },
     });
+  });
+
+  it("binds a POS payment to an active register and shift", async () => {
+    const registerId = "018f0000-0000-7000-8000-000000000801";
+    const shiftId = "018f0000-0000-7000-8000-000000000802";
+    const response = await postJson("/", {
+      orderId: orderId101,
+      amount: 120,
+      method: "cash",
+      registerId,
+      shiftId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(
+      mocks.tenantAccess.requireActiveRegisterAndShift,
+    ).toHaveBeenCalledWith(authState.user, registerId, shiftId);
+    expect(mocks.paymentService.processPayment).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        pos: { registerId, shiftId, operatorId: authState.user.id },
+      }),
+    );
+  });
+
+  it("rejects an incomplete POS register/shift binding", async () => {
+    const response = await postJson("/", {
+      orderId: orderId101,
+      amount: 120,
+      method: "cash",
+      registerId: "018f0000-0000-7000-8000-000000000801",
+    });
+
+    expect(response.status).toBe(400);
+    expect(
+      mocks.tenantAccess.requireActiveRegisterAndShift,
+    ).not.toHaveBeenCalled();
+    expect(mocks.paymentService.processPayment).not.toHaveBeenCalled();
   });
 
   it("reports the currency the service recorded, not one the client omitted", async () => {

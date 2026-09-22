@@ -20,6 +20,25 @@ import {
   type OrderIdentity,
 } from "../../../shared/services/order-identity";
 import { isCentAlignedAmount } from "../../../shared/utils/money";
+import { PosTenantAccessService } from "../../pos/services/PosTenantAccessService";
+
+const posLedgerFields = {
+  registerId: z.uuid().optional(),
+  shiftId: z.uuid().optional(),
+};
+
+function requireCompletePosLedgerBinding(
+  value: { registerId?: string; shiftId?: string },
+  ctx: z.RefinementCtx,
+) {
+  if (Boolean(value.registerId) !== Boolean(value.shiftId)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: value.registerId ? ["shiftId"] : ["registerId"],
+      message: "registerId and shiftId must be provided together",
+    });
+  }
+}
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -48,8 +67,10 @@ const createPaymentRequestSchema = z.lazy(() =>
       metadata: z.record(z.string(), z.unknown()).optional(),
       returnUrl: z.url().optional(),
       cancelUrl: z.url().optional(),
+      ...posLedgerFields,
     })
-    .loose(),
+    .loose()
+    .superRefine(requireCompletePosLedgerBinding),
 );
 
 const rootPaymentRequestSchema = z.lazy(() =>
@@ -88,6 +109,7 @@ const rootPaymentRequestSchema = z.lazy(() =>
         })
         .optional(),
       metadata: z.record(z.string(), z.unknown()).optional(),
+      ...posLedgerFields,
     })
     .loose()
     .superRefine((value, ctx) => {
@@ -106,6 +128,8 @@ const rootPaymentRequestSchema = z.lazy(() =>
           message: "amount is required for full payment mode",
         });
       }
+
+      requireCompletePosLedgerBinding(value, ctx);
     }),
 );
 
@@ -146,6 +170,8 @@ interface PaymentRouteInput {
   gateway?: string;
   customerInfo?: unknown;
   metadata?: unknown;
+  registerId?: string;
+  shiftId?: string;
 }
 
 type PaymentContext = Context<{
@@ -161,6 +187,22 @@ async function handlePayment(c: PaymentContext) {
   const user: AuthUser | undefined = c.get("user");
   if (!user) {
     throw new ApiError("UNAUTHORIZED", "Authentication required", 401);
+  }
+  const pos =
+    input.registerId && input.shiftId
+      ? {
+          registerId: input.registerId,
+          shiftId: input.shiftId,
+          operatorId: user.id,
+        }
+      : undefined;
+
+  if (pos) {
+    await new PosTenantAccessService(c.env.DB).requireActiveRegisterAndShift(
+      user,
+      pos.registerId,
+      pos.shiftId,
+    );
   }
   const result = await service.processPayment(
     {
@@ -180,6 +222,7 @@ async function handlePayment(c: PaymentContext) {
       idempotencyKey: c.req.header("Idempotency-Key") ?? undefined,
       customerInfo: input.customerInfo,
       metadata: input.metadata,
+      ...(pos ? { pos } : {}),
     },
   );
 
