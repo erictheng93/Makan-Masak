@@ -112,7 +112,11 @@ router.post("/applications", async (c) => {
       );
     }
 
-    const body = await c.req.json();
+    // An unparseable body is the client's fault; without this the SyntaxError
+    // falls through to the generic 500 below and reads as a server outage.
+    const body = await c.req.json().catch(() => {
+      throw badRequest("Invalid JSON body", "INVALID_JSON");
+    });
     const parsed = applicationSchema.safeParse(body);
     if (!parsed.success) {
       const cityMismatch = parsed.error.issues.some(

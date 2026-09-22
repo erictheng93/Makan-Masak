@@ -119,6 +119,24 @@ describe("onboarding route authorization", () => {
     expect(onboardingMocks.sendApplicationReceivedEmail).toHaveBeenCalled();
   });
 
+  it("rejects a malformed JSON body as a client error instead of a 500", async () => {
+    const response = await app.fetch(
+      new Request("https://management.test/api/v1/onboarding/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{",
+      }),
+      createEnv(),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      error: { code: "INVALID_JSON" },
+    });
+    expect(onboardingMocks.createApplication).not.toHaveBeenCalled();
+  });
+
   it("requires the application secret before reading applications", async () => {
     const readResponse = await app.fetch(
       new Request(
