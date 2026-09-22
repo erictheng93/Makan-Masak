@@ -149,6 +149,20 @@ describe("ServiceView", () => {
     wrapper.unmount();
   });
 
+  it("does not present a report action that has no server delivery channel", async () => {
+    const wrapper = mount(ServiceView);
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain("serviceView.reportIssue");
+    expect(
+      wrapper
+        .findAll("button")
+        .some((button) => button.text() === "serviceView.reportIssue"),
+    ).toBe(false);
+
+    wrapper.unmount();
+  });
+
   // The list is rebuilt from the server on every refresh. Delivery phase lives
   // only on this device, so it has to be re-applied or the crew's in-progress
   // order silently reverts to「開始配送」and loses its start time.

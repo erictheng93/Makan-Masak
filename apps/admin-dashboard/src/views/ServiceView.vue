@@ -298,12 +298,6 @@
                   >
                     {{ t("serviceView.contactCustomer") }}
                   </button>
-                  <button
-                    class="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors text-xs"
-                    @click="reportIssue(order)"
-                  >
-                    {{ t("serviceView.reportIssue") }}
-                  </button>
                 </div>
               </div>
             </div>
@@ -518,89 +512,6 @@
         </div>
       </div>
     </div>
-
-    <!-- 問題回報模態框 -->
-    <div v-if="showIssueDialog" class="fixed inset-0 z-50 overflow-y-auto">
-      <div class="flex items-center justify-center min-h-screen px-4">
-        <div
-          class="fixed inset-0 bg-black opacity-30"
-          @click="closeIssueDialog"
-        />
-        <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold text-gray-900">
-              {{ t("serviceView.reportIssue") }}
-            </h3>
-            <button
-              class="text-gray-400 hover:text-gray-600"
-              @click="closeIssueDialog"
-            >
-              <XMarkIcon class="w-5 h-5" />
-            </button>
-          </div>
-
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">{{
-                t("serviceView.issueType")
-              }}</label>
-              <select
-                v-model="issueData.type"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">{{ t("serviceView.selectIssueType") }}</option>
-                <option value="wrong_order">
-                  {{ t("serviceView.issues.wrongOrder") }}
-                </option>
-                <option value="missing_items">
-                  {{ t("serviceView.issues.missingItems") }}
-                </option>
-                <option value="quality_issue">
-                  {{ t("serviceView.issues.qualityIssue") }}
-                </option>
-                <option value="customer_unavailable">
-                  {{ t("serviceView.issues.customerUnavailable") }}
-                </option>
-                <option value="access_issue">
-                  {{ t("serviceView.issues.accessIssue") }}
-                </option>
-                <option value="other">
-                  {{ t("serviceView.issues.other") }}
-                </option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">{{
-                t("serviceView.issueDescription")
-              }}</label>
-              <textarea
-                v-model="issueData.description"
-                rows="3"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                :placeholder="t('serviceView.issueDescPlaceholder')"
-              />
-            </div>
-
-            <div class="flex justify-end space-x-3">
-              <button
-                class="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors"
-                @click="closeIssueDialog"
-              >
-                {{ t("serviceView.cancel") }}
-              </button>
-              <button
-                :disabled="!issueData.type || !issueData.description"
-                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                @click="submitIssue"
-              >
-                {{ t("serviceView.submitIssue") }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -622,7 +533,6 @@ import {
   ExclamationTriangleIcon,
   ExclamationCircleIcon,
   UserIcon,
-  XMarkIcon,
 } from "@heroicons/vue/24/outline";
 import { useI18n } from "@/i18n";
 import { useDateFormatter } from "@/composables/useDateFormatter";
@@ -675,19 +585,7 @@ const avgDeliveryTime = ref(0);
 
 // 模態框狀態
 const showContactDialog = ref(false);
-const showIssueDialog = ref(false);
 const selectedOrderForContact = ref<ServiceOrder | null>(null);
-
-// 問題回報數據
-const issueData = ref<{
-  orderId: string | null;
-  type: string;
-  description: string;
-}>({
-  orderId: null,
-  type: "",
-  description: "",
-});
 
 let timeInterval: NodeJS.Timeout | null = null;
 // ponytail: polls every 15s because ServiceLayout opens no realtime socket;
@@ -1062,23 +960,9 @@ const contactCustomer = (order: ServiceOrder) => {
   showContactDialog.value = true;
 };
 
-const reportIssue = (order: ServiceOrder) => {
-  issueData.value.orderId = order.id;
-  showIssueDialog.value = true;
-};
-
 const closeContactDialog = () => {
   showContactDialog.value = false;
   selectedOrderForContact.value = null;
-};
-
-const closeIssueDialog = () => {
-  showIssueDialog.value = false;
-  issueData.value = {
-    orderId: null,
-    type: "",
-    description: "",
-  };
 };
 
 const makePhoneCall = () => {
@@ -1095,22 +979,6 @@ const sendMessage = () => {
     window.open(`sms:${phone}`);
   }
   closeContactDialog();
-};
-
-const submitIssue = async () => {
-  if (!issueData.value.type || !issueData.value.description) return;
-
-  try {
-    // Report issue via API if endpoint exists, otherwise log
-    console.log("Issue reported:", {
-      orderId: issueData.value.orderId,
-      type: issueData.value.type,
-      description: issueData.value.description,
-    });
-  } catch (err) {
-    console.error("Failed to submit issue:", err);
-  }
-  closeIssueDialog();
 };
 
 // 輔助方法
@@ -1176,19 +1044,6 @@ const formatClockTime = (
   if (!dateTime) return "-";
   const date = typeof dateTime === "string" ? new Date(dateTime) : dateTime;
   return formatTime(date);
-};
-
-// getIssueTypeText is available for future use in issue display
-void function getIssueTypeText(type: string) {
-  const types: Record<string, string> = {
-    wrong_order: t("serviceView.issues.wrongOrder"),
-    missing_items: t("serviceView.issues.missingItems"),
-    quality_issue: t("serviceView.issues.qualityIssue"),
-    customer_unavailable: t("serviceView.issues.customerUnavailable"),
-    access_issue: t("serviceView.issues.accessIssue"),
-    other: t("serviceView.issues.other"),
-  };
-  return types[type] || type;
 };
 
 // 生命週期
