@@ -282,4 +282,29 @@ describe("ServiceView", () => {
 
     otherRestaurant.unmount();
   });
+
+  describe("found on production, 2026-09-22", () => {
+    it("picks up newly ready orders without the crew pressing refresh", async () => {
+      // Nothing on the service station listened for updates: an order the
+      // kitchen finished stayed invisible until someone tapped Refresh.
+      vi.useFakeTimers();
+      const wrapper = mount(ServiceView);
+      await flushPromises();
+      const readyCalls = () =>
+        vi
+          .mocked(api.get)
+          .mock.calls.filter(
+            ([, options]) =>
+              (options as { status?: string })?.status === "ready",
+          ).length;
+      const before = readyCalls();
+
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(readyCalls()).toBe(before + 1);
+
+      wrapper.unmount();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(readyCalls()).toBe(before + 1);
+    });
+  });
 });
