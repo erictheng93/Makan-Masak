@@ -2126,7 +2126,7 @@ const settings = reactive({
   },
   orders: {
     acceptGuestOrders: false,
-    autoConfirm: true,
+    autoConfirm: false,
     preparationTimeAlert: true,
     defaultPreparationTime: 15,
     retentionDays: 90,

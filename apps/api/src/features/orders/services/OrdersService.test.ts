@@ -5,6 +5,7 @@ import { ApiError } from "../../../shared/utils/api-error";
 import { OrdersService } from "./OrdersService";
 
 const createBaseOrder = vi.hoisted(() => vi.fn());
+const isAutoAcceptOrdersEnabled = vi.hoisted(() => vi.fn());
 const getBaseOrder = vi.hoisted(() => vi.fn());
 const getBaseOrders = vi.hoisted(() => vi.fn());
 const updateBaseOrderStatus = vi.hoisted(() => vi.fn());
@@ -54,6 +55,7 @@ vi.mock("@makanmasak/database", () => ({
   OrderService: function OrderService() {
     return {
       createOrder: createBaseOrder,
+      isAutoAcceptOrdersEnabled,
       getOrder: getBaseOrder,
       getOrders: getBaseOrders,
       updateOrderStatus: updateBaseOrderStatus,
@@ -133,6 +135,8 @@ function createEnv(
 describe("OrdersService realtime broadcasts", () => {
   beforeEach(() => {
     createBaseOrder.mockReset();
+    isAutoAcceptOrdersEnabled.mockReset();
+    isAutoAcceptOrdersEnabled.mockResolvedValue(false);
     getBaseOrder.mockReset();
     getBaseOrders.mockReset();
     updateBaseOrderStatus.mockReset();
@@ -512,6 +516,8 @@ async function expectSilencedRejection(
 describe("OrdersService workflows", () => {
   beforeEach(() => {
     createBaseOrder.mockReset();
+    isAutoAcceptOrdersEnabled.mockReset();
+    isAutoAcceptOrdersEnabled.mockResolvedValue(false);
     getBaseOrder.mockReset();
     getBaseOrders.mockReset();
     updateBaseOrderStatus.mockReset();
@@ -550,6 +556,70 @@ describe("OrdersService workflows", () => {
       eventId: "evt-cancel",
       recipientCount: 2,
     });
+    createKitchenTicket.mockReset();
+    createKitchenTicket.mockResolvedValue({ success: true });
+  });
+
+  it("auto-confirms a pending order through the regular confirmation workflow", async () => {
+    const service = new OrdersService(createEnv() as never);
+    const pending = createOrder({
+      id: "auto-42",
+      status: "pending",
+      version: 3,
+      confirmedAt: null,
+    });
+    const confirmed = createOrder({
+      id: "auto-42",
+      status: "confirmed",
+      version: 4,
+      confirmedAt: Date.now(),
+    });
+    createBaseOrder.mockResolvedValue(pending);
+    isAutoAcceptOrdersEnabled.mockResolvedValue(true);
+    updateBaseOrderStatus.mockResolvedValue(confirmed);
+
+    await expect(
+      service.createOrder({
+        restaurantId: "restaurant-1",
+        orderType: "shop",
+        items: [{ menuItemId: 101, quantity: 1 }],
+      }),
+    ).resolves.toMatchObject({ id: "auto-42", status: "confirmed" });
+
+    expect(isAutoAcceptOrdersEnabled).toHaveBeenCalledWith("restaurant-1");
+    expect(updateBaseOrderStatus).toHaveBeenCalledWith("auto-42", {
+      status: "confirmed",
+      notes: undefined,
+      expectedVersion: 3,
+    });
+    expect(createKitchenTicket).toHaveBeenCalledWith("auto-42");
+    expect(broadcastOrderStatusUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: "confirmed",
+          previousStatus: "pending",
+        }),
+      }),
+    );
+  });
+
+  it("keeps a pending order pending when automatic confirmation is absent or off", async () => {
+    const service = new OrdersService(createEnv() as never);
+    createBaseOrder.mockResolvedValue(
+      createOrder({ id: "manual-42", status: "pending", confirmedAt: null }),
+    );
+    isAutoAcceptOrdersEnabled.mockResolvedValue(false);
+
+    await expect(
+      service.createOrder({
+        restaurantId: "restaurant-1",
+        orderType: "shop",
+        items: [{ menuItemId: 101, quantity: 1 }],
+      }),
+    ).resolves.toMatchObject({ id: "manual-42", status: "pending" });
+
+    expect(updateBaseOrderStatus).not.toHaveBeenCalled();
+    expect(createKitchenTicket).not.toHaveBeenCalled();
   });
 
   it("validates direct create order inputs before delegating to the base service", async () => {

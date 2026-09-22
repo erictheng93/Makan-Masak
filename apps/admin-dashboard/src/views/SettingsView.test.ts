@@ -349,6 +349,32 @@ describe("SettingsView guest ordering availability", () => {
     return wrapper;
   }
 
+  it("defaults automatic confirmation off when the restaurant has not saved it", async () => {
+    const wrapper = await mountSettings();
+    const autoConfirmCheckbox = wrapper
+      .findAll<HTMLInputElement>('input[type="checkbox"]')
+      .find((input) =>
+        input.element.parentElement?.parentElement?.textContent?.includes(
+          "settings.orders.autoConfirm",
+        ),
+      );
+
+    expect(autoConfirmCheckbox?.element.checked).toBe(false);
+
+    await wrapper
+      .findAll("button")
+      .find((button) => button.text() === "settings.saveSettings")
+      ?.trigger("click");
+    await flushPromises();
+
+    expect(api.put).toHaveBeenCalledWith(
+      "/restaurants/restaurant-1",
+      expect.objectContaining({
+        settings: expect.objectContaining({ autoAcceptOrders: false }),
+      }),
+    );
+  });
+
   it.each([true, false])(
     "preserves authoritative fulfillment columns over stale JSON (%s)",
     async (enabled) => {

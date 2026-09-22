@@ -583,6 +583,20 @@ export class OrderService extends BaseService {
     };
   }
 
+  /**
+   * Restaurant settings are optional JSON, so absence must be an explicit
+   * opt-out rather than a truthy UI default. The API service calls this after
+   * creating a pending order, then drives the ordinary confirmation workflow.
+   */
+  async isAutoAcceptOrdersEnabled(restaurantId: string): Promise<boolean> {
+    const restaurant = await this.db.query.restaurants.findFirst({
+      where: eq(restaurants.id, restaurantId),
+      columns: { settings: true },
+    });
+
+    return restaurant?.settings?.autoAcceptOrders === true;
+  }
+
   // 獲取餐廳最低消費設定
   async getMinimumOrderAmount(
     restaurantId: string,
