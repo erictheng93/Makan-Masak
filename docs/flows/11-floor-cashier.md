@@ -116,9 +116,22 @@
 - `apps/api/src/features/pos/services/*.test.ts`
 - `apps/admin-dashboard/src/views/CashierView.test.ts`、`POSManagementView.test.ts`
 
+**手動探索 QA（production）**
+
+- [現場作業流程 QA 2026-09-22](../investigations/2026-09-22-floor-operations-flow-qa.html) — P1–P6
+
 ## 7. 已知缺口
 
+- **結班對帳在現行介面上不能用**（2026-09-22 production 實測，見 [現場作業流程 QA 2026-09-22](../investigations/2026-09-22-floor-operations-flow-qa.html)）：
+  一般訂單走 `POST /payments` 收款**不會**寫進班次（只有市集 POS 收款會累加
+  `total_sales_cents`）；退款寫了 `-` 的現金流動，但不更新班次的 `total_refunds_cents`；
+  結班對話框沒有清點欄位，前端永遠送 `actualAmount: 0`；預期金額用
+  `totalSales`（含刷卡）算抽屜現金。結果是每一班都記成短少整筆開班現金。
+- **退款不回寫訂單**。`refunds` 有列、也有現金流動，但 `orders.refund_amount_cents`
+  仍為空、`payment_status` 仍是 `completed`；退款建立即 `completed`，`approved_by` 為空。
+- **收銀機沒有伺服器端餘額**。管理頁的「目前餘額」是前端自己加減的數字，
+  新收銀機顯示 NaN；班次回的是 `startedAt`，前端讀 `startTime`，所以顯示 Invalid Date。
 - **結班差額沒有審核流程**。差額只是被記下來，沒有覆核、沒有告警門檻。
 - **現金流動的核准流程與退款核准是兩套**（`/pos/cash-movements/:id/approve` 與 `/pos/refunds/:id/approve`），
   兩邊的權限與門檻各自定義。
-- **收據不會真的印出來**（見 [12](./12-floor-printing.md)）。
+- **收據不會真的印出來**（見 [12](./12-floor-printing.md) 的已知缺口）。
