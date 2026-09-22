@@ -1,7 +1,7 @@
 # Worker placement investigation (#369)
 
-Status: instrumentation and measurement procedure prepared; no placement change
-or production acceptance is implied by this document.
+Status: observation-only instrumentation deployed on 2026-09-22; baseline
+collection has started. Placement is unchanged and #369 is not yet accepted.
 
 Issue: <https://github.com/erictheng93/Makan-Masak/issues/369>.
 
@@ -175,3 +175,45 @@ Sources checked during the investigation:
 
 - <https://developers.cloudflare.com/workers/configuration/placement/>
 - <https://developers.cloudflare.com/changelog/post/2025-10-10-increased-startup-time/>
+
+## Observation deployment: 2026-09-22
+
+- Code commit: `b019eb97` (local commit; not pushed).
+- Previous API version: `8f6b82e6-8176-4629-b312-f53f686a260d`.
+- Observation API version: `e12ebc5c-3b79-47b7-8ffe-1806ebac8d74`.
+- Upload: 2419.92 KiB / gzip 600.06 KiB. Worker Startup Time: **143 ms**.
+- Verification: `pnpm lint:fix`; `pnpm verify` (all checks passed, API 3240 tests);
+  `pnpm --filter @makanmasak/api exec vitest run src/middleware/analytics.test.ts`
+  (7 tests); `pnpm --filter @makanmasak/api run build:prod`;
+  `CHECK_PRODUCTION_CONFIG_REQUIRE_DEPLOYMENT_SECRETS=false pnpm run check:prod-config`;
+  Prettier check, `git diff --check`, and Bash syntax check of the probe procedure.
+- The first sandboxed full suite stalled and was stopped; the unrestricted rerun
+  passed in 59 seconds. Lint retains one unrelated pre-existing unused-import
+  warning in `features/market-checkouts/routes/index.ts`.
+- Both SQL statements above returned HTTP 200 from the real Analytics Engine
+  SQL API using the existing Wrangler login. The initial queries preceded smoke
+  ingestion and returned zero rows; that was not interpreted as healthy routing.
+- Marked `/info` smoke: HTTP 200, curl TTFB 651.874 ms, X-Response-Time 0 ms,
+  cf-ray `a3ed97582c12fe01-SIN`. This is one connection, not a latency baseline.
+- Subsequent SQL readback confirmed the new fields were persisted:
+
+```json
+{
+  "timestamp": "2026-09-22 01:38:37",
+  "country": "MY",
+  "endpoint": "/info",
+  "ingress_colo": "SIN",
+  "asn": "4788",
+  "placement_header": "unknown",
+  "traffic_type": "probe",
+  "cache_status": "unknown",
+  "elapsed_ms": 0
+}
+```
+
+This establishes the production write/read path and probe label, not HiNet
+performance. First seven-day review is due no earlier than **2026-09-29 01:38 UTC**
+(09:38 Malaysia time). No recurring review has been scheduled. Authenticated
+business-endpoint baselines from the listed networks, organic coverage, a Tokyo
+experiment and acceptance evidence remain outstanding. Keep pre/post query windows
+disjoint; do not mix observation-only and placement-enabled samples in one cohort.
