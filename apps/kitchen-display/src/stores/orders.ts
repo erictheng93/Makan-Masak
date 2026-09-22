@@ -23,6 +23,19 @@ const isKitchenOrder = (value: unknown): value is KitchenOrder =>
   typeof value.orderNumber === "string" &&
   Array.isArray(value.items);
 
+const isOrderStatus = (value: unknown): value is OrderStatus =>
+  typeof value === "string" &&
+  [
+    "pending",
+    "confirmed",
+    "preparing",
+    "ready",
+    "delivered",
+    "paid",
+    "cancelled",
+    "refunded",
+  ].includes(value);
+
 const normalizeEventType = (type: KitchenSSEEvent["type"]) => {
   switch (type) {
     case "new_order":
@@ -320,8 +333,13 @@ export const useOrdersStore = defineStore("orders", () => {
           }
         }
 
-        // 檢查是否需要更新訂單整體狀態
-        updateOrderStatusFromOrder(order);
+        // Item events deliberately do not infer a parent status. The server
+        // emits a separate ORDER_STATUS_UPDATE after applying its versioned
+        // transition; treating an item event as authoritative was what moved
+        // cards into a column that reverted after a refresh (#412).
+        if (!itemId && isOrderStatus(status)) {
+          order.status = status;
+        }
 
         // 觸發響應式更新
         orders.value[orderIndex] = { ...order };
@@ -364,25 +382,6 @@ export const useOrdersStore = defineStore("orders", () => {
           console.log(`Order ${orderId} priority updated to ${priority}`);
         }
       }
-    }
-  };
-
-  /**
-   * 內部方法：根據 items 狀態更新訂單整體狀態
-   */
-  const updateOrderStatusFromOrder = (order: KitchenOrder) => {
-    const itemStatuses = order.items.map((item) => item.status);
-
-    if (
-      itemStatuses.every(
-        (status) => status === "ready" || status === "completed",
-      )
-    ) {
-      order.status = "ready"; // READY
-    } else if (itemStatuses.some((status) => status === "preparing")) {
-      order.status = "preparing"; // PREPARING
-    } else {
-      order.status = "confirmed"; // CONFIRMED
     }
   };
 
@@ -450,10 +449,11 @@ export const useOrdersStore = defineStore("orders", () => {
     return Math.round(totalWaitingTime / waitingOrders.length);
   };
 
-  const applyLocalItemStatus = (
+  const applyItemStatus = (
     orderId: number,
     itemId: number,
     status: ItemStatus,
+    orderStatus?: OrderStatus,
   ) => {
     const orderIndex = orders.value.findIndex((o) => o.id === orderId);
     if (orderIndex === -1) return;
@@ -471,7 +471,13 @@ export const useOrdersStore = defineStore("orders", () => {
       order.items[itemIndex].completedAt = now;
     }
 
-    updateOrderStatusFromOrder(order);
+    // Only the server response (or its realtime order event) may move a card
+    // between columns. Offline actions intentionally remain a local item
+    // preview until their queued request is accepted and the next refresh
+    // supplies the canonical parent status.
+    if (orderStatus) {
+      order.status = orderStatus;
+    }
     orders.value[orderIndex] = { ...order };
     updateStats();
   };
@@ -495,7 +501,7 @@ export const useOrdersStore = defineStore("orders", () => {
           { restaurantId, status: "preparing" },
           itemId,
         );
-        applyLocalItemStatus(orderId, itemId, "preparing");
+        applyItemStatus(orderId, itemId, "preparing");
         return;
       }
 
@@ -505,8 +511,13 @@ export const useOrdersStore = defineStore("orders", () => {
         itemId,
       );
 
-      if (response.success) {
-        applyLocalItemStatus(orderId, itemId, "preparing");
+      if (response.success && response.data) {
+        applyItemStatus(
+          orderId,
+          itemId,
+          "preparing",
+          response.data.orderStatus,
+        );
       } else {
         throw new Error(response.error || "開始製作失敗");
       }
@@ -532,7 +543,7 @@ export const useOrdersStore = defineStore("orders", () => {
           { restaurantId, status: "ready" },
           itemId,
         );
-        applyLocalItemStatus(orderId, itemId, "ready");
+        applyItemStatus(orderId, itemId, "ready");
         return;
       }
 
@@ -542,8 +553,8 @@ export const useOrdersStore = defineStore("orders", () => {
         itemId,
       );
 
-      if (response.success) {
-        applyLocalItemStatus(orderId, itemId, "ready");
+      if (response.success && response.data) {
+        applyItemStatus(orderId, itemId, "ready", response.data.orderStatus);
       } else {
         throw new Error(response.error || "標記完成失敗");
       }
@@ -578,7 +589,7 @@ export const useOrdersStore = defineStore("orders", () => {
             { restaurantId, status: "preparing" },
             itemId,
           );
-          applyLocalItemStatus(orderId, itemId, "preparing");
+          applyItemStatus(orderId, itemId, "preparing");
         });
         return;
       }
@@ -592,6 +603,7 @@ export const useOrdersStore = defineStore("orders", () => {
       if (!response.success) {
         throw new Error(response.error || "批量開始製作失敗");
       }
+      await fetchOrders(restaurantId);
     } catch (error: unknown) {
       console.error("Failed to start all items:", error);
       throw error;
@@ -623,7 +635,7 @@ export const useOrdersStore = defineStore("orders", () => {
             { restaurantId, status: "ready" },
             itemId,
           );
-          applyLocalItemStatus(orderId, itemId, "ready");
+          applyItemStatus(orderId, itemId, "ready");
         });
         return;
       }
@@ -637,6 +649,7 @@ export const useOrdersStore = defineStore("orders", () => {
       if (!response.success) {
         throw new Error(response.error || "批量標記完成失敗");
       }
+      await fetchOrders(restaurantId);
     } catch (error: unknown) {
       console.error("Failed to mark all ready:", error);
       throw error;
@@ -711,9 +724,6 @@ export const useOrdersStore = defineStore("orders", () => {
         ) {
           order.items[itemIndex].completedAt = now;
         }
-
-        // 更新訂單整體狀態
-        updateOrderStatusFromOrder(order);
 
         // 觸發響應式更新
         orders.value[orderIndex] = { ...order };

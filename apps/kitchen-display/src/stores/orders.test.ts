@@ -92,12 +92,21 @@ describe("orders store realtime events", () => {
       },
     } as unknown as KitchenSSEEvent);
 
-    expect(store.orders[0].status).toBe("preparing");
+    expect(store.orders[0].status).toBe("confirmed");
     expect(store.orders[0].items[0]).toMatchObject({
       id: 501,
       status: "preparing",
       startedAt: "2026-06-01T10:05:00.000Z",
     });
+
+    store.handleSSEEvent({
+      type: "order_status_update",
+      timestamp: 1780308301000,
+      restaurantId: "restaurant-1",
+      data: { orderId: 1001, status: "preparing" },
+    } as unknown as KitchenSSEEvent);
+
+    expect(store.orders[0].status).toBe("preparing");
 
     store.handleSSEEvent({
       type: "order_cancelled",

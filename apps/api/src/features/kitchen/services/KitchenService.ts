@@ -202,6 +202,7 @@ export class KitchenService implements IKitchenService {
     orderId: string;
     itemId: number;
     status: string;
+    orderStatus: string;
     updatedAt: string;
   }> {
     try {
@@ -225,22 +226,41 @@ export class KitchenService implements IKitchenService {
         );
       }
 
-      await this.ordersService.updateItemStatus(
-        itemId,
-        statusUpdate.status,
-        statusUpdate.notes,
+      // The database item's CAS intentionally rejects a same-status write.
+      // Treat that case as a replay instead: an offline client can lose the
+      // successful response and resend exactly the same action. We still run
+      // the parent-order reconciliation below, which also heals a request that
+      // committed the item before a transient failure interrupted its parent
+      // status update.
+      if (scopedItem.previous_status !== statusUpdate.status) {
+        await this.ordersService.updateItemStatus(
+          itemId,
+          statusUpdate.status,
+          statusUpdate.notes,
+        );
+      }
+
+      const orderStatus = await this.syncOrderStatusAfterItemUpdate(
+        orderId,
+        userId,
       );
 
-      await this.broadcastItemStatusUpdate(
-        restaurantId,
-        scopedItem,
-        statusUpdate.status,
-      );
+      // A same-status replay has already emitted this event when it first
+      // succeeded. Avoid a duplicate notification while still returning the
+      // authoritative parent status to the replaying display.
+      if (scopedItem.previous_status !== statusUpdate.status) {
+        await this.broadcastItemStatusUpdate(
+          restaurantId,
+          scopedItem,
+          statusUpdate.status,
+        );
+      }
 
       return {
         orderId,
         itemId,
         status: statusUpdate.status,
+        orderStatus,
         updatedAt: new Date().toISOString(),
       };
     } catch (error) {
@@ -309,6 +329,83 @@ export class KitchenService implements IKitchenService {
       .first<KitchenScopedItemRow>();
 
     return row ?? null;
+  }
+
+  /**
+   * Keep the two state machines connected on the server. The kitchen client
+   * can safely render `orderStatus` from this result instead of guessing from
+   * the items it happened to receive.
+   *
+   * Status writes deliberately go through OrdersService.updateOrderStatus:
+   * that is where version-CAS, timestamps, cache invalidation and realtime
+   * notifications are owned. A concurrent chef can win the CAS between our
+   * fresh read and write; rereading once then makes that winner a successful,
+   * idempotent outcome rather than reporting an error after this request has
+   * already changed its item.
+   */
+  private async syncOrderStatusAfterItemUpdate(
+    orderId: string,
+    userId: string,
+  ): Promise<string> {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const order = await this.ordersService.getOrder(
+        orderId,
+        true,
+        undefined,
+        { bypassCache: true },
+      );
+      if (!order) {
+        throw new Error("Order disappeared while updating a kitchen item");
+      }
+
+      const items = order.items ?? [];
+      const shouldStartPreparing =
+        order.status === "confirmed" &&
+        items.some((item) => item.status === "preparing");
+      const shouldMarkReady =
+        order.status === "preparing" &&
+        items.length > 0 &&
+        items.every((item) => item.status === "ready");
+      const nextStatus = shouldStartPreparing
+        ? "preparing"
+        : shouldMarkReady
+          ? "ready"
+          : undefined;
+
+      if (!nextStatus) return order.status;
+
+      try {
+        const updatedOrder = await this.ordersService.updateOrderStatus(
+          orderId,
+          { status: nextStatus },
+          userId,
+          undefined,
+          undefined,
+          order,
+        );
+        if (!updatedOrder) {
+          throw new Error("Order disappeared while updating kitchen status");
+        }
+        return updatedOrder.status;
+      } catch (error) {
+        // A competing item update may already have advanced the parent. The
+        // next fresh read verifies that state and makes this replay-safe.
+        if (
+          attempt === 0 &&
+          typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          error.code === "ORDER_VERSION_CONFLICT"
+        ) {
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    // The loop either returns the fresh canonical status or rethrows. This is
+    // defensive for future edits that alter the retry control flow.
+    throw new Error("Unable to reconcile kitchen order status");
   }
 
   private async broadcastItemStatusUpdate(

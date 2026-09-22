@@ -75,6 +75,8 @@ export interface IKitchenService {
     orderId: string;
     itemId: number;
     status: string;
+    /** Canonical parent-order state after the item update has been reconciled. */
+    orderStatus: string;
     updatedAt: string;
   }>;
 

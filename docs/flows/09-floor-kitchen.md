@@ -2,12 +2,12 @@
 
 > **對應 master board**：現場作業 → 廚房流程（廚師 role 2）
 > **主要角色**：廚師（role 2）；role 0/1/3 也讀得到廚房資料
-> **最後對照原始碼**：2026-08-21
+> **最後對照原始碼**：2026-09-22
 
 ## 1. 定位
 
 廚房顯示系統（`:3002`）從接單到出餐。它同時在動**兩條狀態階梯**——訂單狀態與品項狀態——
-而系統不會幫你把兩者連起來，見 [02](./02-customer-order-tracking.md) §2。
+並由伺服器在品項更新後連動訂單狀態，見 [02](./02-customer-order-tracking.md) §2。
 
 ## 2. 觸發與前置條件
 
@@ -25,16 +25,11 @@
 | 1 | 取得工作佇列 | `GET /api/v1/kitchen/:restaurantId/orders` | — |
 | 2 | 連線狀態指示 | `POST /kitchen/:restaurantId/events/token` → `GET /kitchen/:restaurantId/events`（SSE） | — |
 | 3 | 訂單事件 | Durable Object WebSocket，房間 `kitchen:{restaurantId}` | — |
-| 4 | 開始製作（整單） | **廚房看板沒有送這一步**，見下方說明 | — |
-| 5 | 逐項開始／完成 | `PUT /kitchen/:restaurantId/orders/:orderId/items/:itemId` | `order_items.status` |
-| 6 | 整單出餐 | **廚房看板沒有送這一步**，見下方說明 | — |
+| 4 | 開始製作（逐項或整單） | `PUT /kitchen/:restaurantId/orders/:orderId/items/:itemId` | 首個品項進 `preparing` 後，伺服器經 `OrdersService.updateOrderStatus` 把 `orders.status` 從 `confirmed` 推到 `preparing`，並寫 `preparing_at_ms` |
+| 5 | 逐項完成 | 同上 | `order_items.status` → `ready` |
+| 6 | 最後一項完成 | 同上 | 所有品項 `ready` 後，伺服器經同一條訂單狀態路徑把 `orders.status` 推到 `ready`，並寫 `ready_at_ms`；送菜站因而可見 |
 
-> **廚房看板只會寫品項狀態。** 「Start Preparing」「Mark Complete」都只是對每個品項
-> 送第 5 步；看板再用 `updateOrderStatusFromOrder` 在前端**自己推算**整單狀態，
-> 從不呼叫 `PUT /orders/:id/status`。伺服器上的訂單因此停在 `confirmed`：顧客追蹤頁
-> 停在「已確認」，送菜站（`status=ready`）永遠看不到這張單。重新整理後卡片跳回
-> 「待製作」欄，而且「Start Preparing」只處理 `pending` 的品項，此時按了沒有反應。
-> 目前只能由店主在後台手動推 `preparing` → `ready`。2026-09-22 在 production 實測成立，
+> 這段行為是 #412 的修正：修正前廚房看板只寫品項狀態、伺服器訂單停在 `confirmed`，
 > 見 [現場作業流程 QA 2026-09-22](../investigations/2026-09-22-floor-operations-flow-qa.html)。
 
 > **SSE 那條串流只送 `connected` 與心跳。** 真正的訂單事件走 WebSocket。
@@ -53,9 +48,9 @@
 | --- | --- | --- | --- |
 | 廚師存取他店訂單 | 403 | `ACCESS_DENIED` | 🔴 P0 |
 | 對已 `paid` 的訂單改品項 | 403（SQL 條件擋下） | `KITCHEN_ITEM_SCOPE_DENIED` | 🟠 P1 |
-| 重複標記同一個品項狀態 | 409（`WHERE status != 新值` 落空） | `ORDER_ITEM_STATUS_CONFLICT` | 🟡 P2 |
+| 重複標記同一個品項狀態 | 視為安全重放；不重寫品項，回傳目前伺服器訂單狀態 | — | 🟢 已防 |
 | 廚師想把訂單標成 `delivered` | 403（role 2 只有 preparing／ready） | `FORBIDDEN` | 🟠 P1 |
-| 所有品項都 ready 但沒推訂單狀態 | **訂單停在 `preparing`**，送菜端看不到 | — | 🟠 P1 |
+| 所有品項都 ready | 訂單自動進 `ready`，送菜端可見 | — | 🟢 已防 |
 | 廚房斷網 | 前端 `offlineService` 把動作排進佇列，恢復連線後重放 | — | 🟡 P2 |
 | 離線期間該訂單已被別人推進 | 重放時可能撞上 409；佇列有重試上限 `offline_sync_retry_limit` | — | 🟠 P1 |
 | 切換餐廳（同一台機器） | `offlineService` 會丟掉前一個租戶的快取訂單與待送動作 | — | 🔴 P0（已防） |
@@ -64,16 +59,16 @@
 
 ## 6. 併發與競態
 
-- **品項狀態**用 `WHERE status != 新值` 當防重，兩台機器同時點同一個品項只有一台成功。
-- **訂單狀態**用 `orders.version` 樂觀鎖，衝突回 409 要求重新載入。
-- **離線重放沒有 idempotency key**：靠的是上面兩個「同值即衝突」的性質，所以重放安全但會看到 409。
+- **品項狀態**底層仍用 `WHERE status != 新值` 防止重複寫；KitchenService 在同值時把它當作成功重放，並重新核對父訂單狀態。
+- **訂單狀態**一律走 `OrdersService.updateOrderStatus`，由 `orders.version` 樂觀鎖、時間戳、快取失效與 realtime 廣播共同處理。
+- **同時操作不同品項**時，若其中一台先推進父訂單，另一台遇到版本衝突會重新讀取最新狀態；已由對方完成的轉換會視為成功，不會在品項已寫入後回 409。
 
 ## 7. 對應程式碼與測試
 
 **程式碼**
 
 - `apps/api/src/features/kitchen/routes/index.ts` — SSE token（`:203`）、佇列（`:365`）、品項狀態（`:399`）
-- `apps/api/src/features/kitchen/services/KitchenService.ts:185` — 更新與廣播；`:270` scope SQL
+- `apps/api/src/features/kitchen/services/KitchenService.ts` — 品項更新、訂單狀態連動與廣播
 - `apps/kitchen-display/src/services/offlineService.ts` — 離線佇列與租戶切換清理
 - `apps/kitchen-display/src/services/realtimeService.ts`、`kitchenApi.ts`
 
@@ -90,7 +85,5 @@
 
 ## 8. 已知缺口
 
-- **廚房看板完全不推訂單狀態**（見 §3 說明）。不只是「品項全部完成不會自動推」，
-  整單的兩顆按鈕也只寫品項。廚房到送菜這一段在現行介面上走不通（#412）。
 - **淘汰路由仍在**。`/start`、`/ready` 兩個 shim 原訂 2026-07-01 移除，尚未清掉。
 - **SSE 與 WebSocket 兩條連線各自斷線重連**，UI 的「已連線」指示只反映 SSE 那條。
