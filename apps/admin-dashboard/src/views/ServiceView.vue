@@ -402,22 +402,6 @@
                     {{ todayStats.avgTime }}{{ t("serviceView.minutes") }}
                   </p>
                 </div>
-                <div class="text-center p-3 bg-teal-50 rounded">
-                  <p class="text-sm text-teal-600">
-                    {{ t("serviceView.onTimeRate") }}
-                  </p>
-                  <p class="text-2xl font-bold text-teal-800">
-                    {{ todayStats.onTimeRate }}%
-                  </p>
-                </div>
-                <div class="text-center p-3 bg-yellow-50 rounded">
-                  <p class="text-sm text-yellow-600">
-                    {{ t("serviceView.customerRating") }}
-                  </p>
-                  <p class="text-2xl font-bold text-yellow-800">
-                    {{ todayStats.rating }}/5
-                  </p>
-                </div>
               </div>
 
               <!-- 效率進度條 -->
@@ -878,8 +862,6 @@ const myActiveDeliveries = computed(() => {
 const todayStats = computed(() => ({
   completed: todayDelivered.value,
   avgTime: avgDeliveryTime.value,
-  onTimeRate: 92,
-  rating: 4.8,
 }));
 
 // 方法

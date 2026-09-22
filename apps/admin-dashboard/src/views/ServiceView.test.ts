@@ -335,5 +335,15 @@ describe("ServiceView", () => {
       expect(wrapper.text()).not.toContain("Invalid Date");
       wrapper.unmount();
     });
+
+    it("does not show an on-time rate or rating that nothing measures", async () => {
+      // Both were constants (92% and 4.8/5), shown as if they were today's.
+      const wrapper = mount(ServiceView);
+      await flushPromises();
+
+      expect(wrapper.text()).not.toContain("serviceView.onTimeRate");
+      expect(wrapper.text()).not.toContain("serviceView.customerRating");
+      wrapper.unmount();
+    });
   });
 });
