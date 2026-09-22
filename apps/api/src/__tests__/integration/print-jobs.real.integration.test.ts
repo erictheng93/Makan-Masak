@@ -33,6 +33,7 @@ import {
   CommandBuilder,
 } from "@makanmasak/queue-core/print";
 import routes from "../../features/print/routes";
+import { PrintAgentCredentialService } from "../../features/pos/services/PrintAgentCredentialService";
 import { hashPrintAgentKey } from "../../shared/utils/print-agent-key";
 
 const SHOP_A = "print-shop-a";
@@ -361,6 +362,33 @@ describe("cloud print dispatch — real D1", () => {
       .from(printAgents)
       .where(eq(printAgents.registerId, REGISTER_A));
     expect(agent?.lastSeenAt).toBeInstanceOf(Date);
+  });
+
+  it("keeps a zero-printer agent visible as no_printer without claiming work", async () => {
+    await seedReceipt("receipt-no-printer", REGISTER_A, ORDER_A);
+
+    const body = await claimedJob(
+      await poll(KEY_A, "?printersTotal=1&printersOnline=0"),
+    );
+
+    expect(body.data).toBeNull();
+    expect(await receiptRow("receipt-no-printer")).toMatchObject({
+      printStatus: "pending",
+      printAttempts: 0,
+    });
+
+    const agents = await new PrintAgentCredentialService(
+      testDb.bindings.DB,
+    ).listAgents(SHOP_A);
+    expect(agents).toEqual([
+      expect.objectContaining({
+        registerId: REGISTER_A,
+        printersTotal: 1,
+        printersOnline: 0,
+        status: "no_printer",
+        lastSeenAt: expect.any(Date),
+      }),
+    ]);
   });
 
   it("re-queues a claim whose agent died before acknowledging", async () => {

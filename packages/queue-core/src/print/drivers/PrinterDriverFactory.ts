@@ -44,6 +44,20 @@ export interface PrinterScanOptions {
   serialPorts?: string[];
 }
 
+/** Resolve a discovery probe without mistaking a TCP blackhole for a printer. */
+export function deviceInfoFromProbe(
+  connected: boolean,
+  response: Buffer[],
+): string | null {
+  if (!connected) return null;
+  const info = Buffer.concat(response)
+    .toString("utf8")
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\x00-\x1f\x7f-\x9f]/g, "")
+    .trim();
+  return info || "Generic ESC/POS Network Printer";
+}
+
 /** Whatever the concrete drivers accept; each brand narrows it further. */
 export type PrinterDriverOptions = EpsonDriverOptions &
   StarDriverOptions &
@@ -350,6 +364,7 @@ export class PrinterDriverFactory {
       const socket = createConnection({ host, port });
       const response: Buffer[] = [];
       let settled = false;
+      let connected = false;
       const timeoutMs = Math.min(this.config.connectionTimeout, 250);
 
       const finish = (deviceInfo: string | null) => {
@@ -360,17 +375,17 @@ export class PrinterDriverFactory {
         resolve(deviceInfo);
       };
       const timeout = setTimeout(() => {
-        const info = Buffer.concat(response)
-          .toString("utf8")
-          // eslint-disable-next-line no-control-regex
-          .replace(/[\x00-\x1f\x7f-\x9f]/g, "")
-          .trim();
-        finish(info || "Generic ESC/POS Network Printer");
+        // A silent but connected printer can still be a generic ESC/POS
+        // device. A connection that never completed is a blackhole, not a
+        // discovered printer — treating it as generic produced phantom devices
+        // for every unresponsive address in a subnet scan.
+        finish(deviceInfoFromProbe(connected, response));
       }, timeoutMs);
 
       socket.once("error", () => finish(null));
       socket.on("data", (chunk: Buffer) => response.push(chunk));
       socket.once("connect", () => {
+        connected = true;
         socket.write(Buffer.from([0x1d, 0x49, 0x01]));
       });
     });

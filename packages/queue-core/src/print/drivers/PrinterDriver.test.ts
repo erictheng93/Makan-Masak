@@ -3,7 +3,10 @@ import type { AddressInfo, Server } from "node:net";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PrintContent, PrinterDevice } from "@makanmasak/shared-types";
 import { EpsonDriver } from "./EpsonDriver";
-import { PrinterDriverFactory } from "./PrinterDriverFactory";
+import {
+  deviceInfoFromProbe,
+  PrinterDriverFactory,
+} from "./PrinterDriverFactory";
 import { PrinterService } from "../services/PrinterService";
 
 let tcpServer: Server | undefined;
@@ -185,6 +188,7 @@ describe("PrinterDriver execution options", () => {
     const bytes = await waitForWrite();
     expect(bytes.subarray(0, 2)).toEqual(Buffer.from([0x1b, 0x40]));
     expect(bytes.toString("utf8")).toContain("order-123");
+    expect(bytes.subarray(-3)).toEqual(Buffer.from([0x1d, 0x56, 0x00]));
     await expect(driver.getStatus()).resolves.toBe("online");
 
     await driver.disconnect();
@@ -249,6 +253,13 @@ describe("PrinterDriver execution options", () => {
     });
     await expect(waitForWrite()).resolves.toEqual(
       Buffer.from([0x1d, 0x49, 0x01]),
+    );
+  });
+
+  it("does not turn a connection timeout into a generic printer", () => {
+    expect(deviceInfoFromProbe(false, [])).toBeNull();
+    expect(deviceInfoFromProbe(true, [])).toBe(
+      "Generic ESC/POS Network Printer",
     );
   });
 });

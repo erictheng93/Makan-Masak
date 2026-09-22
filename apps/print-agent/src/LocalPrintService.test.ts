@@ -922,7 +922,7 @@ describe("LocalPrintService cloud job dispatch", () => {
     expect(createPrintJob).not.toHaveBeenCalled();
   });
 
-  it("does not claim a cloud receipt while every printer is offline", async () => {
+  it("heartbeats but does not claim a cloud receipt while every printer is offline", async () => {
     service = new LocalPrintService(createConfig());
     const agent = service.getPrintAgentService();
     vi.spyOn(agent, "healthCheck").mockResolvedValue({
@@ -932,11 +932,16 @@ describe("LocalPrintService cloud job dispatch", () => {
       queue: { pending: 0, processing: 0, failed: 0 },
     });
     const createPrintJob = vi.spyOn(agent, "createPrintJob");
-    serveOneJob();
 
     await pollCloudJobs(service);
 
-    expect(cloudCalls).toHaveLength(0);
+    // The heartbeat must reach the cloud with zero online printers, otherwise
+    // the dashboard eventually reports the agent as offline instead of
+    // accurately surfacing a live agent with no usable printer.
+    expect(jobPolls()).toHaveLength(1);
+    const polled = new URL(jobPolls()[0]!.url);
+    expect(polled.searchParams.get("printersTotal")).toBe("1");
+    expect(polled.searchParams.get("printersOnline")).toBe("0");
     expect(createPrintJob).not.toHaveBeenCalled();
   });
 

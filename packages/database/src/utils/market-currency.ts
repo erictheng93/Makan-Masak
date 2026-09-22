@@ -51,7 +51,10 @@ export function restaurantCurrencySql(settings: SQLWrapper): SQL {
 export function displayRestaurantCurrencySql(
   settings: SQLWrapper,
 ): SQL<CurrencyCode> {
-  return sql<CurrencyCode>`CASE ${restaurantCurrencySql(settings)}
+  // The inner resolver is itself a searched CASE expression. Parenthesize it
+  // before using it as this simple CASE's selector; otherwise SQLite receives
+  // the invalid token sequence `CASE CASE ...` (#411).
+  return sql<CurrencyCode>`CASE (${restaurantCurrencySql(settings)})
     WHEN 'MYR' THEN 'MYR'
     WHEN 'VND' THEN 'VND'
     ELSE ${DEFAULT_CURRENCY}

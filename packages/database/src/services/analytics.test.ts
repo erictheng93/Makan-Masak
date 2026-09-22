@@ -185,6 +185,76 @@ describe("AnalyticsService revenue analytics", () => {
     });
   });
 
+  it("reports a partial refund as the order's net collected revenue", async () => {
+    await testDb.drizzle.insert(orders).values([
+      order("partially-refunded", "R-003", "2026-01-08T12:00:00.000Z", 18000, {
+        paymentStatus: "partial_refunded",
+        refundAmountCents: 5000,
+      }),
+    ]);
+
+    const service = new AnalyticsService(testDb.bindings.DB, {} as never);
+    const revenue = await service.getRevenueAnalytics({
+      restaurantId: "analytics-restaurant",
+      dateFrom: "2026-01-08T00:00:00.000Z",
+      dateTo: "2026-01-09T00:00:00.000Z",
+      groupBy: "day",
+    });
+    const operational = await service.getOrderAnalytics({
+      restaurantId: "analytics-restaurant",
+      dateFrom: "2026-01-08T00:00:00.000Z",
+      dateTo: "2026-01-09T00:00:00.000Z",
+    });
+
+    expect(revenue).toEqual([
+      expect.objectContaining({
+        revenue: money(13000),
+        orderCount: 1,
+        averageOrderValue: money(13000),
+      }),
+    ]);
+    expect(operational).toMatchObject({
+      totalRevenue: money(13000),
+      averageOrderValue: money(13000),
+    });
+  });
+
+  it("rounds a TWD average order value to a valid hundred-cent amount", async () => {
+    await testDb.drizzle
+      .insert(orders)
+      .values([
+        order(
+          "twd-average-1",
+          "TWD-AVG-001",
+          "2026-01-08T12:00:00.000Z",
+          15000,
+        ),
+        order(
+          "twd-average-2",
+          "TWD-AVG-002",
+          "2026-01-08T12:01:00.000Z",
+          16100,
+        ),
+      ]);
+
+    const result = await new AnalyticsService(
+      testDb.bindings.DB,
+      {} as never,
+    ).getRevenueAnalytics({
+      restaurantId: "analytics-restaurant",
+      dateFrom: "2026-01-08T00:00:00.000Z",
+      dateTo: "2026-01-09T00:00:00.000Z",
+      groupBy: "day",
+    });
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        revenue: money(31100),
+        averageOrderValue: money(15600),
+      }),
+    ]);
+  });
+
   it("buckets a UTC evening order into the following Taipei business day", async () => {
     await testDb.drizzle
       .insert(orders)
@@ -568,6 +638,45 @@ describe("AnalyticsService order analytics", () => {
     ]);
   });
 
+  it("keeps a restaurant's top-customer ordering based on net spend", async () => {
+    const [higherSpendCustomer] = await testDb.drizzle
+      .insert(customers)
+      .values({ displayName: "Higher Spend", status: "active" })
+      .returning({ id: customers.id });
+    const [moreOrdersCustomer] = await testDb.drizzle
+      .insert(customers)
+      .values({ displayName: "More Orders", status: "active" })
+      .returning({ id: customers.id });
+
+    await testDb.drizzle.insert(orders).values([
+      order("spent-high", "TOP-SPEND-001", "2026-01-08T12:00:00.000Z", 30000, {
+        customerId: higherSpendCustomer!.id,
+      }),
+      order("count-1", "TOP-COUNT-001", "2026-01-08T12:01:00.000Z", 10000, {
+        customerId: moreOrdersCustomer!.id,
+      }),
+      order("count-2", "TOP-COUNT-002", "2026-01-08T12:02:00.000Z", 10000, {
+        customerId: moreOrdersCustomer!.id,
+      }),
+    ]);
+
+    const result = await new AnalyticsService(
+      testDb.bindings.DB,
+      {} as never,
+    ).getCustomerAnalytics({
+      restaurantId: "analytics-restaurant",
+      limit: 1,
+    });
+
+    expect(result.topCustomers).toEqual([
+      expect.objectContaining({
+        customerId: higherSpendCustomer!.id,
+        totalOrders: 1,
+        totalSpent: money(30000),
+      }),
+    ]);
+  });
+
   it("ranks top customers by all their currency buckets and returns every bucket", async () => {
     await testDb.drizzle.insert(restaurants).values([
       {
@@ -600,7 +709,7 @@ describe("AnalyticsService order analytics", () => {
       .values({ displayName: "Single Currency", status: "active" })
       .returning({ id: customers.id });
 
-    await testDb.drizzle.insert(orders).values([
+    const rankedOrders = [
       order("multi-twd-1", "TOP-TWD-001", "2026-01-08T12:00:00.000Z", 10000, {
         customerId: multiCurrencyCustomer!.id,
       }),
@@ -650,7 +759,13 @@ describe("AnalyticsService order analytics", () => {
           customerId: singleCurrencyCustomer!.id,
         },
       ),
-    ]);
+    ];
+    // D1 permits no more than 100 bound parameters per statement. Keep this
+    // fixture deliberately larger than one batch: it validates that platform
+    // customer ranking preserves all currency buckets without relying on an
+    // insert SQLite accepts but production D1 rejects.
+    await testDb.drizzle.insert(orders).values(rankedOrders.slice(0, 4));
+    await testDb.drizzle.insert(orders).values(rankedOrders.slice(4));
 
     await expect(
       new AnalyticsService(
@@ -826,6 +941,39 @@ describe("AnalyticsService financial report", () => {
       totalOrders: 2,
       taxAmount: money(1500),
       netRevenue: money(30000),
+    });
+  });
+
+  it("keeps a partially refunded order in financial revenue at its net amount", async () => {
+    await testDb.drizzle.insert(orders).values([
+      order(
+        "fin-partial-refund",
+        "F-REFUND-001",
+        "2026-02-02T12:00:00.000Z",
+        18000,
+        {
+          paymentStatus: "partial_refunded",
+          refundAmountCents: 5000,
+        },
+      ),
+    ]);
+
+    const report = await new AnalyticsService(
+      testDb.bindings.DB,
+      {} as never,
+    ).getFinancialReport({
+      restaurantId: "analytics-restaurant",
+      dateFrom: "2026-02-01T00:00:00.000Z",
+      dateTo: "2026-02-05T00:00:00.000Z",
+      groupBy: "day",
+    });
+
+    expect(report.summary).toMatchObject({
+      totalRevenue: money(13000),
+      totalOrders: 1,
+      averageOrderValue: money(13000),
+      taxAmount: [],
+      netRevenue: money(13000),
     });
   });
 

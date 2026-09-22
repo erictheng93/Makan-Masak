@@ -22,6 +22,7 @@ import { badRequest, notFound } from "../../../shared/utils/api-error";
 import { AlertService } from "../../../services/AlertService";
 import { resolveOrderIdentity } from "../../../shared/services/order-identity";
 import { PosTenantAccessService } from "../services/PosTenantAccessService";
+import { USER_ROLES } from "../../../shared/constants";
 
 const app = new Hono<{ Bindings: Env }>();
 const processRefundRouteSchema = processRefundSchema.extend({
@@ -124,7 +125,8 @@ app.post(
     // themselves.  The persisted processing record is finalised only by the
     // existing Admin/Owner approval endpoint.  Admin/Owner initiated refunds
     // retain the synchronous completion flow.
-    const requireApproval = ![0, 1].includes(user.role);
+    const requireApproval =
+      user.role !== USER_ROLES.ADMIN && user.role !== USER_ROLES.OWNER;
     const result = await refundService.processRefund(
       { ...data, originalOrderId: orderIdentity.id },
       registerId,

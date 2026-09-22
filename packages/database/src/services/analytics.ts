@@ -28,10 +28,11 @@ import {
 } from "../schema";
 import { moneyAmountExpression, sumMoneyAmount } from "../utils/money-sql";
 import { displayRestaurantCurrencySql } from "../utils/market-currency";
-import type { CurrencyCode } from "@makanmasak/utils";
+import { roundToCurrencyCents, type CurrencyCode } from "@makanmasak/utils";
 import {
   FULFILLED_ORDER_STATUSES,
   revenueRecognisedOrder,
+  revenueReportableOrder,
 } from "../utils/order-analytics";
 import {
   businessDateNow,
@@ -52,6 +53,23 @@ function recognisedRevenueCents(centsColumn: SQLWrapper): SQL<number> {
     THEN ${centsColumn}
     ELSE 0
   END`;
+}
+
+/** Net amount for an order-level revenue report, including partial refunds. */
+function recognisedOrderRevenueCents(): SQL<number> {
+  return sql<number>`CASE
+    WHEN ${revenueReportableOrder()}
+    THEN CASE
+      WHEN COALESCE(${orders.refundAmountCents}, 0) >= ${orders.totalAmountCents} THEN 0
+      ELSE ${orders.totalAmountCents} - COALESCE(${orders.refundAmountCents}, 0)
+    END
+    ELSE 0
+  END`;
+}
+
+/** Aggregates the stored integer-cent revenue without converting to major units. */
+function sumOrderRevenueCents(): SQL<number> {
+  return sql<number>`coalesce(sum(${recognisedOrderRevenueCents()}), 0)`;
 }
 
 type RevenueDataRow = {
@@ -251,7 +269,7 @@ export class AnalyticsService extends BaseService {
         conditions.push(lte(orders.createdAt, new Date(dateTo)));
       }
 
-      conditions.push(revenueRecognisedOrder());
+      conditions.push(revenueReportableOrder());
 
       // 生成日期分組 SQL
       const dateGroupSql = this.getDateGroupSQL(
@@ -269,9 +287,9 @@ export class AnalyticsService extends BaseService {
         .select({
           date: sql<string>`${dateGroupSql}`,
           currency,
-          revenueCents: sql<number>`coalesce(sum(${orders.totalAmountCents}), 0)`,
+          revenueCents: sumOrderRevenueCents(),
           orderCount: count(orders.id),
-          averageOrderValueCents: sql<number>`coalesce(avg(${orders.totalAmountCents}), 0)`,
+          averageOrderValueCents: sql<number>`coalesce(avg(${recognisedOrderRevenueCents()}), 0)`,
         })
         .from(orders)
         .innerJoin(restaurants, eq(restaurants.id, orders.restaurantId))
@@ -342,19 +360,22 @@ export class AnalyticsService extends BaseService {
       const revenueStats = await this.db
         .select({
           currency,
-          totalRevenueCents: sql<number>`coalesce(sum(${orders.totalAmountCents}), 0)`,
-          averageOrderValueCents: sql<number>`coalesce(avg(${orders.totalAmountCents}), 0)`,
+          totalRevenueCents: sumOrderRevenueCents(),
+          averageOrderValueCents: sql<number>`coalesce(avg(${recognisedOrderRevenueCents()}), 0)`,
         })
         .from(orders)
         .innerJoin(restaurants, eq(restaurants.id, orders.restaurantId))
-        .where(and(...conditions, revenueRecognisedOrder()))
+        .where(and(...conditions, revenueReportableOrder()))
         .groupBy(currency);
       const totalRevenue = this.toMoneyByCurrency(
         revenueStats,
         (row) => Number(row.totalRevenueCents) || 0,
       );
       const averageOrderValue = this.toMoneyByCurrency(revenueStats, (row) =>
-        Math.round(Number(row.averageOrderValueCents) || 0),
+        roundToCurrencyCents(
+          Number(row.averageOrderValueCents) || 0,
+          row.currency,
+        ),
       );
 
       // 已完成訂單數
@@ -506,12 +527,12 @@ export class AnalyticsService extends BaseService {
     const priorRevenue = await this.db
       .select({
         currency,
-        totalCents: sql<number>`coalesce(sum(${orders.totalAmountCents}), 0)`,
-        averageOrderValueCents: sql<number>`coalesce(avg(${orders.totalAmountCents}), 0)`,
+        totalCents: sumOrderRevenueCents(),
+        averageOrderValueCents: sql<number>`coalesce(avg(${recognisedOrderRevenueCents()}), 0)`,
       })
       .from(orders)
       .innerJoin(restaurants, eq(restaurants.id, orders.restaurantId))
-      .where(and(...priorConditions, revenueRecognisedOrder()))
+      .where(and(...priorConditions, revenueReportableOrder()))
       .groupBy(currency);
 
     const priorRevenueByCurrency = this.toMoneyByCurrency(
@@ -520,7 +541,11 @@ export class AnalyticsService extends BaseService {
     );
     const priorAverageOrderValueByCurrency = this.toMoneyByCurrency(
       priorRevenue,
-      (row) => Math.round(Number(row.averageOrderValueCents) || 0),
+      (row) =>
+        roundToCurrencyCents(
+          Number(row.averageOrderValueCents) || 0,
+          row.currency,
+        ),
     );
     const priorOrderTotal = priorOrders.total;
 
@@ -775,10 +800,7 @@ export class AnalyticsService extends BaseService {
         .select({
           customerId: orders.customerId,
           currency: currency.as("currency"),
-          totalSpentCents:
-            sql<number>`coalesce(sum(${orders.totalAmountCents}), 0)`.as(
-              "total_spent_cents",
-            ),
+          totalSpentCents: sumOrderRevenueCents().as("total_spent_cents"),
         })
         .from(orders)
         .innerJoin(restaurants, eq(restaurants.id, orders.restaurantId))
@@ -786,7 +808,7 @@ export class AnalyticsService extends BaseService {
           and(
             ...conditions,
             sql`${orders.customerId} IS NOT NULL`,
-            revenueRecognisedOrder(),
+            revenueReportableOrder(),
           ),
         )
         .groupBy(orders.customerId, currency)
@@ -805,17 +827,27 @@ export class AnalyticsService extends BaseService {
       // orders across three currencies lose to a customer with three orders in
       // one currency, and can also cut a selected customer's currencies off at
       // the SQL limit.
+      // At the platform scope, money across currencies is incomparable, so
+      // order count is the only sound rank. Within one restaurant there is one
+      // currency, and preserving spend rank avoids changing the established
+      // merchant-facing ordering.
+      const topCustomerRank = restaurantId
+        ? desc(sumOrderRevenueCents())
+        : desc(count());
       const topCustomerTotals = this.db
         .select({
           customerId: orders.customerId,
           customerName: customers.displayName,
-          totalOrders: count(),
+          // `restaurants` also has a `total_orders` column. Drizzle expands a
+          // subquery field by its alias in this outer select, so a distinct
+          // alias is required to keep the join unambiguous on real D1.
+          totalOrders: count().as("top_customer_order_count"),
         })
         .from(orders)
         .innerJoin(customers, eq(orders.customerId, customers.id))
-        .where(and(...conditions, revenueRecognisedOrder()))
+        .where(and(...conditions, revenueReportableOrder()))
         .groupBy(orders.customerId, customers.displayName)
-        .orderBy(desc(count()), asc(customers.displayName))
+        .orderBy(topCustomerRank, asc(customers.displayName))
         .limit(limit)
         .as("top_customer_totals");
 
@@ -825,16 +857,16 @@ export class AnalyticsService extends BaseService {
           customerName: topCustomerTotals.customerName,
           totalOrders: topCustomerTotals.totalOrders,
           currency,
-          totalSpentCents: sql<number>`coalesce(sum(${orders.totalAmountCents}), 0)`,
+          totalSpentCents: sumOrderRevenueCents(),
         })
         .from(topCustomerTotals)
         .innerJoin(orders, eq(orders.customerId, topCustomerTotals.customerId))
         .innerJoin(restaurants, eq(restaurants.id, orders.restaurantId))
-        .where(and(...conditions, revenueRecognisedOrder()))
+        .where(and(...conditions, revenueReportableOrder()))
         .groupBy(
           topCustomerTotals.customerId,
           topCustomerTotals.customerName,
-          topCustomerTotals.totalOrders,
+          sql`${topCustomerTotals.totalOrders}`,
           currency,
         )
         .orderBy(
@@ -875,18 +907,30 @@ export class AnalyticsService extends BaseService {
         averageOrdersPerCustomer: Number(averageOrdersPerCustomer) || 0,
         customerLifetimeValue: this.toMoneyByCurrency(
           customerLifetimeValue,
-          (row) => Math.round(Number(row.customerLifetimeValueCents) || 0),
+          (row) =>
+            roundToCurrencyCents(
+              Number(row.customerLifetimeValueCents) || 0,
+              row.currency,
+            ),
         ),
         topCustomers: Array.from(topCustomersById.values())
           .map((customer) => ({
             ...customer,
             totalSpent: this.sortMoneyByCurrency(customer.totalSpent),
           }))
-          .sort(
-            (left, right) =>
+          .sort((left, right) => {
+            if (restaurantId) {
+              return (
+                (right.totalSpent[0]?.amountCents ?? 0) -
+                  (left.totalSpent[0]?.amountCents ?? 0) ||
+                left.customerName.localeCompare(right.customerName)
+              );
+            }
+            return (
               right.totalOrders - left.totalOrders ||
-              left.customerName.localeCompare(right.customerName),
-          )
+              left.customerName.localeCompare(right.customerName)
+            );
+          })
           .slice(0, limit),
       };
     } catch (error) {
@@ -1057,16 +1101,14 @@ export class AnalyticsService extends BaseService {
         "-1 month",
       );
 
-      // 訂單數計非取消訂單；營收則依 payment_status = completed 判斷已收款。
+      // 訂單數計非取消訂單；營收則依收款狀態（含已部分退款）判斷。
       // 履約狀態與收款狀態刻意分開，delivered 但尚未結帳的訂單仍算訂單，
       // 不算營收。
 
       // 今日營收和訂單數
       const todayStatsQuery = this.db
         .select({
-          revenue: sumMoneyAmount(
-            recognisedRevenueCents(orders.totalAmountCents),
-          ),
+          revenue: sumMoneyAmount(recognisedOrderRevenueCents()),
           orderCount: count(),
         })
         .from(orders)
@@ -1080,23 +1122,21 @@ export class AnalyticsService extends BaseService {
 
       const todayRevenueQuery = this.db
         .select({
-          revenue: sumMoneyAmount(orders.totalAmountCents),
+          revenue: sumMoneyAmount(recognisedOrderRevenueCents()),
         })
         .from(orders)
         .where(
           and(
             eq(orders.restaurantId, restaurantId),
             eq(orderBusinessDate, businessDateNow(offsetMinutes)),
-            revenueRecognisedOrder(),
+            revenueReportableOrder(),
           ),
         );
 
       // 本月營收和訂單數
       const monthStatsQuery = this.db
         .select({
-          revenue: sumMoneyAmount(
-            recognisedRevenueCents(orders.totalAmountCents),
-          ),
+          revenue: sumMoneyAmount(recognisedOrderRevenueCents()),
           orderCount: count(),
         })
         .from(orders)
@@ -1110,23 +1150,21 @@ export class AnalyticsService extends BaseService {
 
       const monthRevenueQuery = this.db
         .select({
-          revenue: sumMoneyAmount(orders.totalAmountCents),
+          revenue: sumMoneyAmount(recognisedOrderRevenueCents()),
         })
         .from(orders)
         .where(
           and(
             eq(orders.restaurantId, restaurantId),
             eq(orderBusinessMonth, currentBusinessMonth),
-            revenueRecognisedOrder(),
+            revenueReportableOrder(),
           ),
         );
 
       // 上月資料（用於計算成長率）
       const lastMonthStatsQuery = this.db
         .select({
-          revenue: sumMoneyAmount(
-            recognisedRevenueCents(orders.totalAmountCents),
-          ),
+          revenue: sumMoneyAmount(recognisedOrderRevenueCents()),
           orderCount: count(),
         })
         .from(orders)
@@ -1140,14 +1178,14 @@ export class AnalyticsService extends BaseService {
 
       const lastMonthRevenueQuery = this.db
         .select({
-          revenue: sumMoneyAmount(orders.totalAmountCents),
+          revenue: sumMoneyAmount(recognisedOrderRevenueCents()),
         })
         .from(orders)
         .where(
           and(
             eq(orders.restaurantId, restaurantId),
             eq(orderBusinessMonth, previousBusinessMonth),
-            revenueRecognisedOrder(),
+            revenueReportableOrder(),
           ),
         );
 
@@ -1338,7 +1376,10 @@ export class AnalyticsService extends BaseService {
       });
       bucket.averageOrderValue.push({
         currency: row.currency,
-        amountCents: Math.round(Number(row.averageOrderValueCents) || 0),
+        amountCents: roundToCurrencyCents(
+          Number(row.averageOrderValueCents) || 0,
+          row.currency,
+        ),
       });
       bucket.orderCount += Number(row.orderCount) || 0;
       byDate.set(row.date, bucket);
@@ -1471,13 +1512,13 @@ export class AnalyticsService extends BaseService {
     if (dateFrom)
       baseConditions.push(gte(orders.createdAt, new Date(dateFrom)));
     if (dateTo) baseConditions.push(lte(orders.createdAt, new Date(dateTo)));
-    baseConditions.push(revenueRecognisedOrder());
+    baseConditions.push(revenueReportableOrder());
 
     const currency = displayRestaurantCurrencySql(restaurants.settings);
     const rows = await this.db
       .select({
         currency,
-        revenueCents: sql<number>`coalesce(sum(${orders.totalAmountCents}), 0)`,
+        revenueCents: sumOrderRevenueCents(),
         orderCount: count(),
       })
       .from(orders)
@@ -1498,7 +1539,10 @@ export class AnalyticsService extends BaseService {
           currency: row.currency,
           amountCents:
             row.orderCount > 0
-              ? Math.round((Number(row.revenueCents) || 0) / row.orderCount)
+              ? roundToCurrencyCents(
+                  (Number(row.revenueCents) || 0) / row.orderCount,
+                  row.currency,
+                )
               : 0,
         })),
       ),
@@ -1518,6 +1562,9 @@ export class AnalyticsService extends BaseService {
     if (restaurantId) conditions.push(eq(orders.restaurantId, restaurantId));
     if (dateFrom) conditions.push(gte(orders.createdAt, new Date(dateFrom)));
     if (dateTo) conditions.push(lte(orders.createdAt, new Date(dateTo)));
+    // A partial refund does not record the tax portion that was reversed, so
+    // this aggregate intentionally stays on fully-settled orders until that
+    // information is persisted instead of overstating tax with the full value.
     conditions.push(revenueRecognisedOrder());
 
     const currency = displayRestaurantCurrencySql(restaurants.settings);
@@ -1556,7 +1603,7 @@ export class AnalyticsService extends BaseService {
     if (restaurantId) {
       conditions.push(eq(orders.restaurantId, restaurantId));
     }
-    conditions.push(revenueRecognisedOrder());
+    conditions.push(revenueReportableOrder());
 
     if (dateFrom && dateTo) {
       const dateRange = this.getPreviousDateRange(dateFrom, dateTo);
@@ -1575,7 +1622,7 @@ export class AnalyticsService extends BaseService {
           .select({
             date: sql<string>`${shiftedDateGroupSql}`,
             currency,
-            revenueCents: sql<number>`coalesce(sum(${orders.totalAmountCents}), 0)`,
+            revenueCents: sumOrderRevenueCents(),
           })
           .from(orders)
           .innerJoin(restaurants, eq(restaurants.id, orders.restaurantId))
@@ -1602,7 +1649,7 @@ export class AnalyticsService extends BaseService {
       .select({
         date: sql<string>`${dateGroupSql}`,
         currency,
-        revenueCents: sql<number>`coalesce(sum(${orders.totalAmountCents}), 0)`,
+        revenueCents: sumOrderRevenueCents(),
       })
       .from(orders)
       .innerJoin(restaurants, eq(restaurants.id, orders.restaurantId))
@@ -2121,7 +2168,7 @@ export class AnalyticsService extends BaseService {
       recent.map((item) => item.revenue),
     ).map(({ currency, amountCents }) => ({
       currency,
-      amountCents: Math.round(amountCents / recent.length),
+      amountCents: roundToCurrencyCents(amountCents / recent.length, currency),
     }));
     const lastDate = this.parseAnalyticsDate(ordered[ordered.length - 1].date);
 

@@ -91,6 +91,7 @@ describe("POS shift report — tenancy and D1 binding", () => {
 
   interface PosTenant {
     restaurantId: string;
+    ownerId: string;
     ownerToken: string;
     registerId: string;
     shiftId: string;
@@ -133,6 +134,7 @@ describe("POS shift report — tenancy and D1 binding", () => {
 
     return {
       restaurantId,
+      ownerId: owner.id,
       ownerToken,
       registerId: register.id,
       shiftId: shift.id,
@@ -205,6 +207,56 @@ describe("POS shift report — tenancy and D1 binding", () => {
     });
     expect(summary.totalSales).toBe(300);
     expect(orderStats.avgOrderValue).toBe(150);
+  });
+
+  it("calculates the RM 1,130 drawer count from the real movement CASE expression", async () => {
+    const mine = await tenantWithOpenShift("drawer-count");
+    const now = Date.now();
+
+    // RM1,000 opening float + RM180 cash sale - RM50 cash refund. Card sales
+    // must not enter the drawer, so this remains RM1,130 rather than RM1,160.
+    await testApp.env.DB.prepare(
+      `UPDATE cash_shifts
+         SET start_amount_cents = 100000,
+             total_sales_cents = 21000,
+             cash_sales_cents = 18000,
+             card_sales_cents = 3000
+       WHERE id = ?`,
+    )
+      .bind(mine.shiftId)
+      .run();
+    await testApp.env.DB.prepare(
+      `INSERT INTO cash_movements
+         (id, shift_id, register_id, type, amount_cents, description,
+          denomination_breakdown, recorded_by, approval_status, metadata,
+          created_at_ms)
+       VALUES (?, ?, ?, 'refund', ?, 'cash refund', '{}', ?, 'approved', '{}', ?)`,
+    )
+      .bind(
+        `refund-${mine.shiftId}`,
+        mine.shiftId,
+        mine.registerId,
+        -5000,
+        mine.ownerId,
+        now,
+      )
+      .run();
+
+    const response = await call(
+      `/pos/shifts/${mine.shiftId}/end`,
+      mine.ownerToken,
+      "POST",
+      { actualAmount: 1130 },
+    );
+
+    expect(response.status).toBe(200);
+    const result = await readData<{
+      shift: { expectedAmount: number; differenceAmount: number };
+    }>(response);
+    expect(result.shift).toMatchObject({
+      expectedAmount: 1130,
+      differenceAmount: 0,
+    });
   });
 
   it("does not leak another restaurant's orders through the shift export branch", async () => {

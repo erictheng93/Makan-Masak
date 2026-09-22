@@ -981,7 +981,12 @@ export class LocalPrintService {
         // A throw propagates out of the drain on purpose: an unreachable or
         // erroring cloud must cost one call per heartbeat, not a tight loop
         // of MAX_CLOUD_JOBS_PER_DRAIN of them.
-        const outcome = await this.claimAndPrintOneJob(cloudKey);
+        const devices = await this.printerCounts();
+        if (!devices) return;
+        const outcome = await this.claimAndPrintOneJob(cloudKey, devices);
+        // A zero-printer heartbeat is deliberately sent once so the cloud can
+        // publish `no_printer`, but its route refuses to claim a receipt.
+        if (devices.online < 1) return;
         if (outcome !== "printed") return;
         claimed += 1;
       }
@@ -1016,21 +1021,14 @@ export class LocalPrintService {
    */
   private async claimAndPrintOneJob(
     cloudKey: string,
+    devices: { total: number; online: number },
   ): Promise<"empty" | "printed" | "failed"> {
     // Neither the register nor the restaurant is sent: the cloud derives
     // both from the credential. An agent that could name its own tenant
     // could claim another shop's receipts.
     //
-    // Never claim work that this agent cannot send to a physical printer. A
-    // claim moves a receipt to `printing` and spends one delivery attempt, so
-    // learning after the GET that every device is offline is already too late.
-    // Pending acknowledgements are drained before this method runs, so this
-    // guard cannot strand the outcome of a receipt claimed while hardware was
-    // still online.
-    const devices = await this.printerCounts();
-    if (!devices || devices.online < 1) return "empty";
-
-    // Printer counts ride along on every claim rather than a second heartbeat.
+    // Printer counts ride along on every claim/heartbeat rather than a second
+    // endpoint. The cloud refuses to claim when `online` is zero.
     const url = new URL("print/jobs", `${this.config.cloudEndpoint}/`);
     url.searchParams.set("printersTotal", String(devices.total));
     url.searchParams.set("printersOnline", String(devices.online));

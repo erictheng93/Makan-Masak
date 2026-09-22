@@ -103,6 +103,14 @@ describe("CashierView", () => {
     });
   });
 
+  it("shows the active shift id returned by the POS API", async () => {
+    const wrapper = mount(CashierView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("cashier.shift: shift-1");
+    wrapper.unmount();
+  });
+
   it("loads pending orders with their API table and customer fields", async () => {
     const wrapper = mount(CashierView);
     await flushPromises();

@@ -219,7 +219,7 @@ export class RefundService {
         writeStatements.push(
           this.buildCashMovementInsert(shiftId, registerId, {
             type: "refund",
-            amount: -validatedData.refundAmount, // 負數表示流出
+            amountCents: -refundAmountCents, // 負數表示流出
             description: `退款 - ${refundNumber}`,
             recordedBy: processedBy,
             referenceId: undefined,
@@ -536,7 +536,7 @@ export class RefundService {
     registerId: string,
     movement: {
       type: string;
-      amount: number;
+      amountCents: number;
       description: string;
       recordedBy: string;
       referenceId?: number;
@@ -551,7 +551,7 @@ export class RefundService {
       shiftId,
       registerId,
       type: movement.type,
-      amountCents: toRequiredCents(movement.amount),
+      amountCents: movement.amountCents,
       description: movement.description,
       referenceId: movement.referenceId || null,
       referenceType: movement.referenceType || null,
@@ -679,7 +679,7 @@ export class RefundService {
             refund.registerId,
             {
               type: "refund",
-              amount: -(amountFromCents(refundAmountCents) ?? 0),
+              amountCents: -refundAmountCents,
               description: `退款 - 待審核 ${refundId}`,
               recordedBy: approvedBy ?? "system",
               referenceId: undefined,

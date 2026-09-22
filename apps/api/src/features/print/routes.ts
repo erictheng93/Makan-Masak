@@ -174,6 +174,26 @@ app.get("/jobs", async (c) => {
   const db = drizzle(c.env.DB);
   const now = new Date();
   const staleBefore = new Date(now.getTime() - CLAIM_TIMEOUT_MS);
+  // A poll is also the agent heartbeat. Persist the observation before any
+  // claim decision so an alive agent with no reachable printers is visible as
+  // `no_printer`, not silently aged into `offline`.
+  const printersTotal = optionalCount(c.req.query("printersTotal"));
+  const printersOnline = optionalCount(c.req.query("printersOnline"));
+  await db
+    .update(printAgents)
+    .set({
+      lastSeenAt: now,
+      updatedAt: now,
+      ...(printersTotal === undefined ? {} : { printersTotal }),
+      ...(printersOnline === undefined ? {} : { printersOnline }),
+    })
+    .where(eq(printAgents.id, agent.agentId));
+
+  // Never claim a receipt for an agent that explicitly says it has no online
+  // printer. The heartbeat above is still essential: it makes the state
+  // observable and lets the dashboard distinguish a hardware outage from a
+  // stopped process.
+  if (printersOnline === 0) return c.json({ success: true, data: null });
 
   // A till agent takes that till's receipts; a shop agent (register_id NULL)
   // takes the register-less ones, which is what an order-triggered kitchen
@@ -279,22 +299,6 @@ app.get("/jobs", async (c) => {
       content: receipts.content,
       createdAt: receipts.createdAt,
     });
-
-  // Reported on the poll rather than through a second endpoint: the agent
-  // already calls this every heartbeat, and a separate health beat would be
-  // one more thing that can silently stop while printing still works.
-  const printersTotal = optionalCount(c.req.query("printersTotal"));
-  const printersOnline = optionalCount(c.req.query("printersOnline"));
-
-  await db
-    .update(printAgents)
-    .set({
-      lastSeenAt: now,
-      updatedAt: now,
-      ...(printersTotal === undefined ? {} : { printersTotal }),
-      ...(printersOnline === undefined ? {} : { printersOnline }),
-    })
-    .where(eq(printAgents.id, agent.agentId));
 
   if (!claimed) return c.json({ success: true, data: null });
   return c.json({
