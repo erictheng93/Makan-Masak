@@ -1,8 +1,8 @@
 # Worker placement investigation (#369)
 
-Status: observation-only instrumentation deployed on 2026-09-22; authenticated
-MY/SIN and TW/SJC baselines are recorded. Placement is unchanged and #369 is not
-yet accepted.
+Status: Tokyo targeted placement deployed on 2026-09-22. Two authenticated
+TW/SJC after-windows pass the affected-cohort latency and functional checks.
+Second-Taiwan-ISP and MY/SIN regression checks remain before #369 can close.
 
 Issue: <https://github.com/erictheng93/Makan-Masak/issues/369>.
 
@@ -242,3 +242,23 @@ evidence. Keep pre/post query windows disjoint; do not mix observation-only and
 placement-enabled samples in one cohort. For exact SQL windows use
 `timestamp >= toDateTime(unix_start) AND timestamp <= toDateTime(unix_end)`;
 the live API rejected direct string timestamp comparisons in the baseline check.
+
+## Targeted placement deployment: 2026-09-22
+
+- Config commit: `d3d4d795` (local only; not pushed).
+- Previous/rollback version: `638784db-88f8-4311-b745-d91984cc3ec5`.
+- Targeted-placement version: `37a3769e-b379-4942-992c-8b25ad9e2f9f`, deployed
+  at 100% with target `aws:ap-northeast-1`.
+- Upload: 2420.32 KiB / gzip 603.17 KiB. Worker Startup Time: **126 ms**.
+- Immediate `/info` and system-health smoke checks returned HTTP 200; D1 and KV
+  were healthy and D1 reported the APAC primary.
+- Two TW/HiNet/SJC after-windows produced 60 measured HTTP 200 responses per
+  endpoint with no transport failure. Combined orders TTFB p50/p95 was
+  612.270/801.800 ms and dashboard was 656.690/805.220 ms. Orders Worker p50
+  was 52 ms. See the [after report](../investigations/2026-09-22-worker-placement-369-hinet-sjc-after.md).
+- Deployed-version metadata confirms targeted placement; 115/180 measured
+  response headers reported `remote-NRT` and 65/180 reported incomplete
+  `remote-`. Analytics Engine confirmed TW/SJC/ASN 3462/HTTP 200 but the
+  request-side placement value remained unknown.
+- Keep the placement. Do not close #369 until a second Taiwan ISP and the prior
+  MY/SIN cohort show no greater than 10% TTFB p50/p95 regression.

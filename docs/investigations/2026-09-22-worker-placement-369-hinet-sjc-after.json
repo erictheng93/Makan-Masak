@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "issue": 369,
+  "deployment": {
+    "version": "37a3769e-b379-4942-992c-8b25ad9e2f9f",
+    "created_utc": "2026-09-22T10:26:04.148096Z",
+    "traffic_percentage": 100,
+    "placement_mode": "targeted",
+    "placement_target": "aws:ap-northeast-1",
+    "rollback_version": "638784db-88f8-4311-b745-d91984cc3ec5"
+  },
+  "client_context": {
+    "country": "TW",
+    "ingress_colo": "SJC",
+    "asn": "3462",
+    "account_role": 1,
+    "identifiers_redacted": true
+  },
+  "windows": [
+    {
+      "start_utc": "2026-09-22T10:27:09Z",
+      "end_utc": "2026-09-22T10:30:16Z",
+      "measured_http_200": 90,
+      "measured_transport_failures": 0,
+      "placement_response_headers": {
+        "remote-NRT": 58,
+        "remote-": 32
+      },
+      "summary": [
+        { "endpoint": "info", "n": 30, "ttfb_p50_ms": 539.117, "ttfb_p95_ms": 551.990, "worker_p50_ms": 0, "worker_p95_ms": 0 },
+        { "endpoint": "orders", "n": 30, "ttfb_p50_ms": 622.758, "ttfb_p95_ms": 1000.749, "worker_p50_ms": 54, "worker_p95_ms": 207 },
+        { "endpoint": "dashboard", "n": 30, "ttfb_p50_ms": 679.391, "ttfb_p95_ms": 817.844, "worker_p50_ms": 89, "worker_p95_ms": 170 }
+      ]
+    },
+    {
+      "start_utc": "2026-09-22T10:35:32Z",
+      "end_utc": "2026-09-22T10:39:20Z",
+      "measured_http_200": 90,
+      "measured_transport_failures": 0,
+      "placement_response_headers": {
+        "remote-NRT": 57,
+        "remote-": 33
+      },
+      "summary": [
+        { "endpoint": "info", "n": 30, "ttfb_p50_ms": 538.458, "ttfb_p95_ms": 605.331, "worker_p50_ms": 0, "worker_p95_ms": 0 },
+        { "endpoint": "orders", "n": 30, "ttfb_p50_ms": 609.543, "ttfb_p95_ms": 740.568, "worker_p50_ms": 52, "worker_p95_ms": 102 },
+        { "endpoint": "dashboard", "n": 30, "ttfb_p50_ms": 647.798, "ttfb_p95_ms": 796.938, "worker_p50_ms": 83, "worker_p95_ms": 155 }
+      ]
+    }
+  ],
+  "combined": [
+    { "endpoint": "info", "n": 60, "ttfb_p50_ms": 539.120, "ttfb_p95_ms": 566.100, "worker_p50_ms": 0, "worker_p95_ms": 0 },
+    { "endpoint": "orders", "n": 60, "ttfb_p50_ms": 612.270, "ttfb_p95_ms": 801.800, "worker_p50_ms": 52, "worker_p95_ms": 123 },
+    { "endpoint": "dashboard", "n": 60, "ttfb_p50_ms": 656.690, "ttfb_p95_ms": 805.220, "worker_p50_ms": 88, "worker_p95_ms": 170 }
+  ],
+  "health": {
+    "samples": 10,
+    "http_200": 10,
+    "d1_primary_all": true,
+    "d1_regions": ["APAC"],
+    "d1_p50_ms": 14,
+    "d1_p95_ms": 57,
+    "kv_p50_ms": 4,
+    "kv_p95_ms": 260
+  },
+  "provider_evidence": {
+    "deployed_version_reports_targeted_placement": true,
+    "target": "aws:ap-northeast-1",
+    "analytics_engine_country": "TW",
+    "analytics_engine_ingress_colo": "SJC",
+    "analytics_engine_asn": "3462",
+    "analytics_engine_status": "200",
+    "request_side_placement_header": "unknown",
+    "note": "Cloudflare added remote-NRT or remote- to the response after Worker execution; the request-side header was not exposed to middleware."
+  }
+}

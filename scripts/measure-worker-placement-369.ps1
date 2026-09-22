@@ -2,6 +2,7 @@
 param(
   [string]$Origin = "https://api.makanmasak.com",
   [string]$RunLabel = "hinet-sjc-authenticated-before-placement",
+  [string]$Placement = "disabled",
   [ValidateRange(1, 20)]
   [int]$WarmupCount = 5,
   [ValidateRange(1, 100)]
@@ -282,7 +283,7 @@ try {
         $measured | Group-Object status | ForEach-Object {
           $statusGroup = $_
           [ordered]@{
-            status = [int]$statusGroup.Name
+            status = [int]$statusGroup.Group[0].status
             count = $statusGroup.Count
           }
         }
@@ -306,7 +307,7 @@ try {
     schema_version = 1
     issue = 369
     run_label = $RunLabel
-    placement = "disabled"
+    placement = $Placement
     account = @{
       role = 1
       restaurant_assigned = $true
