@@ -147,4 +147,37 @@ describe("new application platform notification", () => {
 
     expect(send).not.toHaveBeenCalled();
   });
+
+  // #410 tells operators to look for this log in `wrangler tail` to learn that
+  // production has no channel, so it is part of the contract, not noise.
+  it("sends nothing and logs the gap when no channel is configured", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const send = vi.fn();
+    const service = new OnboardingService(
+      notificationEnv({
+        NODE_ENV: "production",
+        ONBOARDING_NOTIFICATION_EMAIL: { send } as unknown as SendEmail,
+      }),
+    );
+
+    await expect(
+      service.notifyPlatformOfNewApplication({
+        id: "APP-6",
+        businessName: "Laksa Shop",
+      } as OnboardingApplication),
+    ).resolves.toBeUndefined();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "No platform onboarding notification channel is configured",
+      ),
+    );
+    consoleError.mockRestore();
+  });
 });
