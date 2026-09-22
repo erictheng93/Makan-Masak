@@ -23,8 +23,8 @@
 
 | # | 動作 | 端點 | 狀態變化 |
 | --- | --- | --- | --- |
-| 1 | 待送清單 | `GET /orders?status=ready&restaurantId=...` | — |
-| 2 | 取餐核對 | 前端 | — |
+| 1 | 待送清單 | `GET /orders?status=ready&restaurantId=...`，每 15 秒輪詢 | — |
+| 2 | 開始配送（領單） | `POST /orders/:id/delivery-claim`（role 0／3） | `delivery_assigned_to`、`delivery_start_time_ms` |
 | 3 | 送達桌位 | 前端 | — |
 | 4 | 標記送達 | `PUT /orders/:id/status` → `delivered` | `orders.status = delivered`；有桌號則**釋放桌位** |
 
@@ -38,7 +38,9 @@
 `updateOrderStatusSchema` 都逐項比對這份清單，送第九個值一律 400。
 
 送菜員領走餐點不是訂單本身的狀態變化，而是「這台裝置上的這個人正在處理」，
-所以它被留在前端當本地標記（#224 採 A 案）：
+所以它不是第九個訂單狀態（#224 採 A 案）。領單在 2026-08-23（`eb858802`）起寫進
+伺服器的 `delivery_assigned_to` / `delivery_start_time_ms`，重複領同一張單回 409
+`DELIVERY_ALREADY_CLAIMED`；以下是前端當時的本地做法，`localPhase` 現在由伺服器欄位重建：
 
 | 前端行為 | 送出什麼 |
 | --- | --- |
@@ -83,6 +85,7 @@ DB 時間戳欄位、顧客追蹤頁文案與 i18n key，以及所有以 `ready`
 
 - `apps/admin-dashboard/src/views/ServiceView.test.ts` — 驗證送出的 query 與 body
   只含合法狀態值，且本地配送階段能跨重整與重載保留、送達後清除。這是 CI 實際會跑的那道守門。
+- 手動探索 QA：[現場作業流程 QA 2026-09-22](../investigations/2026-09-22-floor-operations-flow-qa.html) — S1–S6
 - `tests/e2e/integration/real-workflows.spec.ts` — 送菜流程（`ready` → 標記送達 → 桌位釋放）。
   屬於 `integration` project，需要 `WORKFLOW_ADMIN_URL`／`SMOKE_ADMIN_URL` 才會跑；
   由 `.github/workflows/nightly-integration.yml` 每晚執行（`cron: "0 18 * * *"`，也可手動觸發），
@@ -90,9 +93,10 @@ DB 時間戳欄位、顧客追蹤頁文案與 i18n key，以及所有以 `ready`
 
 ## 7. 已知缺口
 
-- **沒有指派機制**。`assignedTo` 只存在於本地階段，後端訂單沒有對應欄位，
-  「誰負責這一單」無法跨裝置共享（見 §4 的代價）。
+- **店主進得了 `/service`，卻不能領單**。路由開放 role 0／1／3，
+  `delivery-claim` 只收 `requireRole([0, 3])`（依程式碼判讀，未實測）。
+- **「回報問題」不會送出任何東西**。`submitIssue` 只 `console.log` 後關閉對話框。
 - **送菜流程的 E2E 只在夜間跑**，push 與 PR 不會觸發；壞掉要到隔天才看得到。
   在 push／PR 擋住狀態合約回歸的仍是元件測試。
-- **沒有做過手動探索 QA**。現場作業（09–12）至今沒有像顧客端、店家後台那樣在 production 逐頁走過一輪。
+- **待送清單靠輪詢**。`ServiceLayout` 沒有即時連線，新單最多晚 15 秒出現。
 - **沒有送達失敗的處理路徑**。送錯桌、客人已離開這些情境只能靠取消或人工協調。

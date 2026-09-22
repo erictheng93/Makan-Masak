@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>現場作業流程 QA</title>
+<style>
+:root{
+  --ground:#F2F2F7; --surface:#FFFFFF; --surface-2:#F8F8FB;
+  --ink:#1C1C1E; --ink-2:#55555C; --ink-3:#8A8A92;
+  --hair:rgba(28,28,30,.10); --hair-2:rgba(28,28,30,.06);
+  --shadow:0 1px 1.5px rgba(24,24,45,.05), 0 5px 16px rgba(24,24,45,.05);
+  --shadow-sm:0 1px 1px rgba(24,24,45,.05), 0 3px 10px rgba(24,24,45,.05);
+  --blue:#007AFF; --blue-ink:#0A5FC2;
+  --green:#34C759; --green-ink:#17803D;
+  --orange:#FF9500; --orange-ink:#A85F04;
+  --red:#FF3B30; --red-ink:#C1271D;
+  --purple:#AF52DE; --purple-ink:#7B2FB5;
+  --teal:#30B0C7; --teal-ink:#0D7C8F;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F0F13; --surface:#1B1B21; --surface-2:#212128;
+    --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#7E7E8A;
+    --hair:rgba(255,255,255,.14); --hair-2:rgba(255,255,255,.07);
+    --shadow:0 1px 1.5px rgba(0,0,0,.4), 0 5px 16px rgba(0,0,0,.35);
+    --shadow-sm:0 1px 1px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
+    --blue:#3B9BFF; --blue-ink:#7CBEFF;
+    --green:#4CD97A; --green-ink:#84E5A3;
+    --orange:#FFB03D; --orange-ink:#FFC978;
+    --red:#FF6961; --red-ink:#FF9A94;
+    --purple:#C77BEB; --purple-ink:#DBA9F4;
+    --teal:#4ECBE0; --teal-ink:#8CE0EE;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F0F13; --surface:#1B1B21; --surface-2:#212128;
+  --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#7E7E8A;
+  --hair:rgba(255,255,255,.14); --hair-2:rgba(255,255,255,.07);
+  --shadow:0 1px 1.5px rgba(0,0,0,.4), 0 5px 16px rgba(0,0,0,.35);
+  --shadow-sm:0 1px 1px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
+  --blue:#3B9BFF; --blue-ink:#7CBEFF;
+  --green:#4CD97A; --green-ink:#84E5A3;
+  --orange:#FFB03D; --orange-ink:#FFC978;
+  --red:#FF6961; --red-ink:#FF9A94;
+  --purple:#C77BEB; --purple-ink:#DBA9F4;
+  --teal:#4ECBE0; --teal-ink:#8CE0EE;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans","Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.7; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:960px; margin:0 auto; padding:36px 22px 80px}
+code{
+  font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:.87em; background:var(--surface-2); padding:1.5px 6px;
+  border-radius:6px; overflow-wrap:anywhere;
+}
+pre{
+  background:var(--surface-2); border-radius:14px; padding:13px 16px;
+  overflow-x:auto; font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  font-size:12.5px; line-height:1.65; margin:12px 0;
+}
+pre code{background:none; padding:0}
+a{color:var(--blue-ink); font-weight:600; text-decoration:none}
+a:hover{text-decoration:underline}
+
+header.mast{margin-bottom:26px}
+header.mast h1{
+  margin:0; font-size:31px; font-weight:900; letter-spacing:-.025em;
+  line-height:1.2; text-wrap:balance;
+}
+header.mast .sub{margin:8px 0 0; font-size:14.5px; color:var(--ink-2)}
+.meta{
+  display:flex; flex-wrap:wrap; gap:10px 26px; margin-top:16px;
+  background:var(--surface); border-radius:16px; padding:13px 18px;
+  box-shadow:var(--shadow); font-size:12.5px; color:var(--ink-2);
+}
+.meta b{color:var(--ink); font-weight:600}
+
+section{margin-top:34px}
+h2{
+  margin:0 0 14px; font-size:20px; font-weight:800; letter-spacing:-.015em;
+}
+h3{
+  margin:26px 0 10px; font-size:16px; font-weight:700; letter-spacing:-.01em;
+}
+.card h4{
+  margin:18px 0 6px; font-size:13px; font-weight:700; letter-spacing:.02em;
+  text-transform:uppercase; color:var(--ink-3);
+}
+p{margin:10px 0}
+
+.card{
+  background:var(--surface); border-radius:20px; padding:18px 22px 20px;
+  box-shadow:var(--shadow); margin:14px 0;
+}
+.card > :first-child{margin-top:0}
+.card > :last-child{margin-bottom:0}
+
+.finding{
+  --ac:var(--ink-3); --ac-ink:var(--ink-2);
+  background:var(--surface); border-radius:20px; box-shadow:var(--shadow);
+  margin:14px 0; overflow:hidden;
+}
+.finding.blocker{--ac:var(--red); --ac-ink:var(--red-ink)}
+.finding.data{--ac:var(--purple); --ac-ink:var(--purple-ink)}
+.finding.ux{--ac:var(--orange); --ac-ink:var(--orange-ink)}
+.finding.ok{--ac:var(--green); --ac-ink:var(--green-ink)}
+.finding-h{
+  display:flex; align-items:baseline; gap:11px; flex-wrap:wrap;
+  padding:14px 22px 12px;
+  background:color-mix(in srgb, var(--ac) 11%, var(--surface));
+  border-bottom:1px solid color-mix(in srgb, var(--ac) 20%, transparent);
+}
+.finding-h .id{
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  font-size:12px; font-weight:700; color:var(--ac-ink);
+  background:color-mix(in srgb, var(--ac) 18%, var(--surface));
+  padding:2px 10px; border-radius:999px; flex:none;
+}
+.finding-h h4{
+  margin:0; font-size:15.5px; font-weight:700; letter-spacing:-.01em;
+  flex:1; min-width:220px;
+}
+.finding-b{padding:14px 22px 18px}
+.finding-b > :first-child{margin-top:0}
+.finding-b > :last-child{margin-bottom:0}
+
+.tag{
+  display:inline-block; font-size:11px; font-weight:700; letter-spacing:.04em;
+  padding:2.5px 11px; border-radius:999px; white-space:nowrap;
+}
+.tag.blocker{background:color-mix(in srgb, var(--red) 16%, var(--surface)); color:var(--red-ink)}
+.tag.data{background:color-mix(in srgb, var(--purple) 16%, var(--surface)); color:var(--purple-ink)}
+.tag.ux{background:color-mix(in srgb, var(--orange) 18%, var(--surface)); color:var(--orange-ink)}
+.tag.ok{background:color-mix(in srgb, var(--green) 18%, var(--surface)); color:var(--green-ink)}
+.tag.fixed{background:color-mix(in srgb, var(--blue) 16%, var(--surface)); color:var(--blue-ink)}
+.tag.issue{background:color-mix(in srgb, var(--teal) 18%, var(--surface)); color:var(--teal-ink)}
+
+.evidence{
+  margin:12px 0; padding:11px 15px; border-radius:14px;
+  background:var(--surface-2); font-size:13.5px; line-height:1.65;
+}
+.evidence b{font-weight:600}
+.evidence .lbl{
+  display:block; font-size:10.5px; font-weight:700; letter-spacing:.12em;
+  color:var(--ink-3); margin-bottom:5px;
+}
+
+.tablewrap{overflow-x:auto; margin:14px 0; border-radius:18px; box-shadow:var(--shadow)}
+table{border-collapse:collapse; width:100%; background:var(--surface); font-size:13.5px}
+th,td{padding:10px 15px; text-align:left; vertical-align:top}
+th{
+  font-size:11px; font-weight:700; letter-spacing:.08em; color:var(--ink-3);
+  background:var(--surface-2); white-space:nowrap;
+}
+td{border-top:1px solid var(--hair-2)}
+table.verdict td:nth-child(-n+2){white-space:nowrap}
+td.mono, th.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:12px; white-space:nowrap}
+
+ul,ol{margin:10px 0; padding-left:22px}
+li{margin:5px 0}
+ul.plain{list-style:none; padding-left:0}
+ul.plain li{
+  position:relative; padding-left:16px;
+}
+ul.plain li::before{
+  content:""; position:absolute; left:0; top:11px;
+  width:5px; height:5px; border-radius:50%; background:var(--ink-3);
+}
+
+.note{
+  border-radius:14px; padding:12px 16px; margin:14px 0; font-size:13.5px;
+  background:color-mix(in srgb, var(--blue) 9%, transparent);
+}
+.note b{color:var(--blue-ink)}
+.warn{background:color-mix(in srgb, var(--orange) 12%, transparent)}
+.warn b{color:var(--orange-ink)}
+
+footer{
+  margin-top:44px; padding-top:18px; border-top:1px solid var(--hair-2);
+  font-size:12.5px; color:var(--ink-3);
+}
+@media (max-width:640px){
+  .wrap{padding:24px 14px 60px}
+  header.mast h1{font-size:24px}
+  .finding-h,.finding-b,.card{padding-left:16px; padding-right:16px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="mast">
+  <h1>現場作業流程 QA — 2026-09-22</h1>
+  <p class="sub">
+    依 <code>docs/architecture/master-user-flow.html</code> 的「現場作業」四條子流程——
+    廚房（09）、送菜（10）、收銀（11）、出單與列印（12）——用真瀏覽器在 production 走一整張單：
+    訪客掃桌位 QR 下單 → 收銀確認 → 廚房製作 → 送菜送達 → 收銀收現金、列印收據、部分退款、結班，
+    並在本機啟動 print agent 連 production 驗雲端派工。這是這四條流程第一次做手動探索 QA。
+  </p>
+  <div class="meta">
+    <span><b>環境</b> production ＋ 本機 print agent（指向 production API）</span>
+    <span><b>前端</b> admin.makanmasak.com <code>index-fMuB0ueN.js</code>、kitchen.makanmasak.com、makanmasak.com</span>
+    <span><b>身分</b> 訪客 ＋ <code>cashier1</code>（4）、<code>chef1</code>（2）、<code>service1</code>（3）、<code>owner1</code>（1）</span>
+    <span><b>餐廳</b> 麻吉 Demo 廣東粥 <code>019fa136-…31a1</code>，桌位 A1</span>
+    <span><b>基準</b> 127 張表逐表比對，結束時只剩 <code>sessions</code>（見善後）</span>
+  </div>
+</header>
+
+<section>
+  <h2>結論：各流程現況</h2>
+  <div class="tablewrap">
+    <table class="verdict">
+      <thead><tr><th>流程</th><th>判定</th><th>理由</th></tr></thead>
+      <tbody>
+        <tr><td><b>09 廚房</b></td><td><span class="tag blocker">走不通</span></td>
+          <td>看板看得到單、即時也正常，但它<b>只寫品項狀態</b>，從不推訂單狀態（K1）。伺服器上的單停在 <code>confirmed</code>，
+            顧客停在「已確認」，送菜站永遠看不到。必須由店主在後台手動推 <code>preparing</code>／<code>ready</code>。</td></tr>
+        <tr><td><b>10 送菜</b></td><td><span class="tag ux">可用</span></td>
+          <td>單子到 <code>ready</code> 之後，領單 → 送達、伺服器記下送菜員與時間、顧客頁即時變「已送達」都成立。
+            待送清單不會自己更新、統計數字有假資料與 Invalid Date（S1–S4，本輪已修）。</td></tr>
+        <tr><td><b>11 收銀</b></td><td><span class="tag blocker">收款可用，對帳不可用</span></td>
+          <td>確認訂單、現金收款（找零、冪等、重複收款 409）、退款額度守門都正確。
+            但收據列印 100% 失敗（P1，本輪已修），而結班對帳整條不能用：銷售與退款不進班次、結班永遠送實際金額 0（P2）。</td></tr>
+        <tr><td><b>12 出單與列印</b></td><td><span class="tag blocker">印不出任何東西</span></td>
+          <td>雲端派工（認領、回報、撤銷、跨店隔離）是真的；店內代理不是：驅動全是模擬、代理沒有實作列印工作，
+            後台卻顯示「Healthy · 1/1 printers online」（D1）。</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">守門都成立的部分：重送 <code>POST /payments</code> 對已結清訂單回 <code>ORDER_NOT_PAYABLE</code>；
+    廚師推 <code>delivered</code>、送菜員取消都回 <code>FORBIDDEN</code>；對已付款訂單改品項回 <code>KITCHEN_ITEM_SCOPE_DENIED</code>；
+    廚師讀他店廚房 <code>ACCESS_DENIED</code>、收銀讀他店收銀機 <code>FORBIDDEN</code>；退款 NT$150（原單 NT$180、已退 NT$50）回「退款金額超過可退款額度」。</p>
+</section>
+
+<section>
+  <h2>發現總表</h2>
+  <p>共 <b>19 項</b>。<b>9 項本輪直接修</b>（分支 <code>fix/floor-qa-2026-09-22</code>，每項先紅後綠），
+    <b>6 項建議開 issue</b>（草稿在文末，尚未建立），4 項只記錄。
+    分界線沿用前幾輪：修法唯一、範圍收斂、能在本機用測試證明的直接修；需要產品決定、動到金流語意或狀態機、或需要硬體的開 issue。</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>#</th><th>發現</th><th>流程</th><th>類型</th><th>處置</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">K1</td><td>廚房看板只寫品項狀態，從不推訂單狀態；「Start Preparing」重整後按了沒反應</td><td>09</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue">開 issue</span></td></tr>
+        <tr><td class="mono">P2</td><td>結班對帳不可用：一般收款與退款不進班次、結班永遠送實際金額 0、預期金額含刷卡；管理頁餘額 NaN</td><td>11</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue">開 issue</span></td></tr>
+        <tr><td class="mono">D1</td><td>print agent 印不出任何東西：驅動模擬、偵測看字串、<code>executePrintJob</code> 未實作；健康狀態謊報在線；沒印表機時照樣燒光重試額度</td><td>12</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue">開 issue</span></td></tr>
+        <tr><td class="mono">P1</td><td>收據列印 100% 回 400「需要指定收銀機ID」，畫面無提示</td><td>11</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">X2</td><td>員工登入會讓同帳號其他所有 session 失效：第二台裝置登入，第一台班中被登出</td><td>全部</td><td><span class="tag data">資料</span></td><td><span class="tag issue">開 issue</span></td></tr>
+        <tr><td class="mono">P3</td><td>退款不回寫訂單（<code>refund_amount_cents</code> 空、仍 <code>completed</code>）；收銀自建即完成、無核准人</td><td>11</td><td><span class="tag data">資料</span></td><td><span class="tag issue">開 issue</span></td></tr>
+        <tr><td class="mono">S5</td><td>「回報問題」只 <code>console.log</code>，送菜員以為已送出</td><td>10</td><td><span class="tag data">資料</span></td><td><span class="tag issue">開 issue</span></td></tr>
+        <tr><td class="mono">D3</td><td>已取消訂單的廚房票仍留在待印佇列，會被派給出單機</td><td>12</td><td><span class="tag data">資料</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">S2</td><td>「今日送達」算進 8/28 的單：訂單列表只帶 <code>dateFrom</code> 時日期篩選被整個丟掉</td><td>10</td><td><span class="tag data">資料</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">S4</td><td>送菜站「準時率 92%」「顧客評分 4.8/5」是寫死的常數</td><td>10</td><td><span class="tag data">資料</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">K2</td><td>廚房卡片顯示「Table 2」（桌子的 id），後台寫 A1</td><td>09</td><td><span class="tag data">資料</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">X1</td><td>收銀員開後台根網址落在店主首頁：權限警告、9 個 console 錯誤、KPI 顯示 NT$0</td><td>11</td><td><span class="tag ux">體驗</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">S1</td><td>送菜站沒有即時更新也不輪詢，新的待送單要手動按 Refresh</td><td>10</td><td><span class="tag ux">體驗</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">S3</td><td>今日時間軸每一列都是「Invalid Date」</td><td>10</td><td><span class="tag ux">體驗</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">P5</td><td>退款失敗只顯示「Request failed with status code 400」</td><td>11</td><td><span class="tag ux">體驗</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
+        <tr><td class="mono">S6</td><td>店主進得了 <code>/service</code> 但 <code>delivery-claim</code> 只收 role 0／3（程式碼判讀，未實測）</td><td>10</td><td><span class="tag ux">體驗</span></td><td>記錄</td></tr>
+        <tr><td class="mono">P6</td><td>收銀員看得到「Add Register」卻 403（錯誤訊息未在地化）；<code>GET /pos/promotions</code> 404</td><td>11</td><td><span class="tag ux">體驗</span></td><td>記錄</td></tr>
+        <tr><td class="mono">X3</td><td><code>CLAUDE.md</code> 的 STRICT 計數查詢用 <code>'%_fts%'</code>，<code>_</code> 是萬用字元，把 <code>cash_shifts</code> 也排除了</td><td>—</td><td><span class="tag data">文件</span></td><td>記錄</td></tr>
+        <tr><td class="mono">X4</td><td>production 有兩張出單票掛在仍為 <code>pending</code> 的訂單上（出單票應在確認時才產生），來源未追</td><td>12</td><td><span class="tag data">資料</span></td><td>記錄</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>09 廚房</h2>
+  <div class="finding blocker">
+    <div class="finding-h"><span class="id">K1</span><h4>廚房看板只寫品項狀態，從不推訂單狀態</h4><span class="tag issue">開 issue</span></div>
+    <div class="finding-b">
+      <p>收銀員確認訂單 A（<code>MG4S-1G15</code>，NT$180）後，廚房看板與訪客追蹤頁都即時更新——這段正常。然後廚師操作：</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>廚師動作</th><th>看板</th><th>D1 <code>orders</code></th><th>D1 <code>order_items</code></th></tr></thead>
+        <tbody>
+          <tr><td>品項「Start」</td><td>卡片移到「製作中」</td><td><code>confirmed</code>，<code>preparing_at_ms</code> NULL</td><td><code>preparing</code></td></tr>
+          <tr><td>重新整理</td><td>卡片<b>跳回「待製作」</b></td><td><code>confirmed</code></td><td><code>preparing</code></td></tr>
+          <tr><td>「Start Preparing」</td><td>沒有反應、沒有請求、沒有錯誤</td><td><code>confirmed</code></td><td><code>preparing</code></td></tr>
+          <tr><td>品項「Done」</td><td>卡片到「Ready」，顯示「Served」</td><td><code>confirmed</code>，<code>ready_at_ms</code> NULL</td><td><code>ready</code></td></tr>
+        </tbody>
+      </table></div>
+      <p>同一時間訪客頁一直是「已確認」，送菜站（<code>GET /orders?status=ready</code>）是空的。</p>
+      <p><b>根因</b>：<code>OrderCard.vue</code> 的 <code>handleStartAll</code>／<code>handleMarkAllReady</code> 只對每個品項 emit，
+        <code>kitchenApi.ts</code> 只有 <code>PUT /kitchen/:rid/orders/:oid/items/:iid</code>；整單狀態由
+        <code>stores/orders.ts</code> 的 <code>updateOrderStatusFromOrder</code> 在前端推算。伺服器 <code>KitchenService.updateItemStatus</code> 也只寫品項。
+        卡片所在欄位卻讀伺服器的 <code>order.status</code>，所以重整後回到「待製作」，而「Start Preparing」只處理 <code>pending</code> 品項，按了是 no-op。</p>
+      <p><b>為何開 issue</b>：要決定在哪一層連動（伺服器在品項更新後推進訂單，或看板另外呼叫 <code>PUT /orders/:id/status</code>），
+        牽涉狀態機、樂觀鎖、廣播與離線重放。建議伺服器端：品項第一次進 <code>preparing</code> 時把 <code>confirmed</code> 推到 <code>preparing</code>、
+        全部品項 <code>ready</code> 時推到 <code>ready</code>，都走 <code>OrdersService.updateOrderStatus</code>，以涵蓋多台看板與離線重放。</p>
+    </div>
+  </div>
+  <div class="finding">
+    <div class="finding-h"><span class="id">K2</span><h4>廚房卡片顯示桌子的 id，不是桌號</h4><span class="tag fixed">本輪已修</span></div>
+    <div class="finding-b"><p>A1 在 production 的 id 是 2，看板寫「Table 2」。<code>KitchenService</code> 的佇列與品項廣播都用 <code>table_id</code> 組標籤。
+      改讀 <code>tables.number</code>，桌子不存在時才退回 id（<code>c2330446</code>）；與 #389 修收據桌號同一類。</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>10 送菜</h2>
+  <p>店主手動推到 <code>ready</code> 後：送菜員按 Refresh 才看到單（S1）→「Start Delivery」打 <code>POST /orders/:id/delivery-claim</code>，
+    伺服器寫入 <code>delivery_assigned_to</code>／<code>delivery_start_time_ms</code> →「Delivered」→ <code>delivered</code>，訪客頁即時變「已送達」。
+    流程文件 10 還寫著「配送中只存在本機」，那是 08-23 <code>eb858802</code> 之前的行為，本輪一併更新。</p>
+  <div class="finding">
+    <div class="finding-h"><span class="id">S1</span><h4>待送清單不會自己更新</h4><span class="tag fixed">本輪已修</span></div>
+    <div class="finding-b"><p>等了 30 秒沒有任何新請求——<code>ServiceView</code> 只有每秒更新時鐘的 interval，<code>ServiceLayout</code> 也沒有即時連線。
+      改為掛載期間每 15 秒 <code>refreshOrders</code>（<code>3e180167</code>，標 <code>ponytail:</code>：Layout 有 socket 後改訂閱 <code>ORDER_STATUS_UPDATE</code>）。</p></div>
+  </div>
+  <div class="finding">
+    <div class="finding-h"><span class="id">S2</span><h4>「今日送達」算進三週前的單</h4><span class="tag fixed">本輪已修</span></div>
+    <div class="finding-b"><p>畫面寫 1 單，那是 2026-08-28 送達的 <code>019fc053…</code>。送菜站只帶 <code>dateFrom</code>，
+      而 <code>OrdersService.convertToBaseFilters</code> 要兩端都有才設定 <code>dateRange</code>，否則整個丟掉。改成兩端皆可留空（<code>e901abc9</code>）。</p></div>
+  </div>
+  <div class="finding">
+    <div class="finding-h"><span class="id">S3</span><h4>今日時間軸全是 Invalid Date</h4><span class="tag fixed">本輪已修</span></div>
+    <div class="finding-b"><p><code>completedAt</code> 已存成「11:21」，模板又做一次 <code>formatClockTime</code>，<code>new Date("11:21")</code> 無效（<code>a7fc09fc</code>）。</p></div>
+  </div>
+  <div class="finding">
+    <div class="finding-h"><span class="id">S4</span><h4>準時率與顧客評分是常數</h4><span class="tag fixed">本輪已修</span></div>
+    <div class="finding-b"><p><code>todayStats</code> 內寫死 <code>onTimeRate: 92</code>、<code>rating: 4.8</code>。沒有任何評分資料來源；準時比例已由「服務效率」計算顯示。移除這兩格（<code>5ff41fcc</code>）。</p></div>
+  </div>
+  <div class="finding">
+    <div class="finding-h"><span class="id">S5</span><h4>「回報問題」不會送出任何東西</h4><span class="tag issue">開 issue</span></div>
+    <div class="finding-b"><p><code>submitIssue</code> 只 <code>console.log</code> 後關閉對話框。要不要有回報端點（寫到哪、誰看）或先拿掉按鈕，是產品決定。</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>11 收銀</h2>
+  <p>店主建收銀機 → 收銀員開班（NT$1,000）→ 收 NT$200 找 NT$20（不足時擋下並說明差額）→ 列印收據 → 部分退款 NT$50 → 結班。</p>
+  <div class="finding blocker">
+    <div class="finding-h"><span class="id">P1</span><h4>收據列印每次都 400，畫面沒有任何提示</h4><span class="tag fixed">本輪已修</span></div>
+    <div class="finding-b"><pre><code>POST /api/v1/pos/receipts/print
+{"orderId":"01a0c71a-…","registerId":"01a0c722-…","items":[…],"totalAmount":180,"paymentMethod":"cash"}
+→ 400 {"code":"BAD_REQUEST","message":"需要指定收銀機ID"}</code></pre>
+      <p>路由讀 <code>X-Register-Id</code>／<code>X-Shift-Id</code> 標頭（退款也是），兩個列印按鈕卻把 id 放在 body，失敗只 <code>console.error</code>，成功對話框照樣關閉。
+        改帶標頭、失敗時對話框保留並顯示伺服器訊息（<code>67b10c90</code>）。</p></div>
+  </div>
+  <div class="finding blocker">
+    <div class="finding-h"><span class="id">P2</span><h4>結班對帳在現行介面上不能用</h4><span class="tag issue">開 issue</span></div>
+    <div class="finding-b">
+      <div class="tablewrap"><table>
+        <thead><tr><th>時點</th><th><code>cash_shifts</code></th><th><code>cash_movements</code></th></tr></thead>
+        <tbody>
+          <tr><td>開班</td><td>start 100000、expected 100000</td><td>opening +100000</td></tr>
+          <tr><td>收現金 NT$180 後</td><td><b>total_sales 0、cash_sales 0、transactions 0</b></td><td>（無）</td></tr>
+          <tr><td>退款 NT$50 後</td><td><b>total_refunds 0</b></td><td>refund −5000</td></tr>
+          <tr><td>結班</td><td>expected 100000、<b>actual 0、difference −100000</b></td><td>closing 0</td></tr>
+        </tbody>
+      </table></div>
+      <p>抽屜實際應有 NT$1,130，系統記成短少 NT$1,000。四個獨立缺口：</p>
+      <ol>
+        <li>只有 <code>MarketCheckoutPOSPaymentService</code> 會累加班次；一般訂單的 <code>POST /payments</code> 不寫班次（前端也沒帶 <code>X-Shift-Id</code>）。</li>
+        <li>POS 退款寫了現金流動，但不更新 <code>total_refunds_cents</code>。</li>
+        <li>結班對話框沒有清點欄位，送出 <code>actualAmount: currentRegister.currentBalance ?? 0</code>，而收銀機在伺服器上沒有餘額欄位——永遠 0。</li>
+        <li><code>ShiftService.endShift</code> 的預期金額 = 開班 + <code>totalSales</code> − 退款，<code>totalSales</code> 含刷卡，抽屜現金會被高估。</li>
+      </ol>
+      <p>另外管理頁新收銀機「目前餘額 NT$非數值」、班次時間「Invalid Date」、重整後「班次：尚未開始」（API 回 <code>startedAt</code>，前端讀 <code>startTime</code>）。
+        修法牽涉班次該記哪些付款方式、預期現金怎麼算、差額由誰覆核，所以開 issue 一起處理。</p>
+    </div>
+  </div>
+  <div class="finding">
+    <div class="finding-h"><span class="id">P3</span><h4>退款不回寫訂單，也沒有核准人</h4><span class="tag issue">開 issue</span></div>
+    <div class="finding-b"><p><code>refunds</code> 一列 <code>completed</code>、<code>approved_by</code> NULL；訂單的 <code>refund_amount_cents</code> 仍 NULL、<code>payment_status</code> 仍 <code>completed</code>（不是 <code>partial_refunded</code>）。
+      累計額度守門是對的（查的是 <code>refunds</code>），但訂單本身看不出退過款，後台營收也不會扣。收銀員能否自行核准退款是政策問題。</p></div>
+  </div>
+  <div class="finding">
+    <div class="finding-h"><span class="id">P5</span><h4>退款失敗只顯示 HTTP 狀態行</h4><span class="tag fixed">本輪已修</span></div>
+    <div class="finding-b"><p>伺服器回「退款金額超過可退款額度」，畫面寫「Request failed with status code 400」。改讀 API 錯誤訊息（<code>98ce85b8</code>）。</p></div>
+  </div>
+  <div class="finding">
+    <div class="finding-h"><span class="id">X1</span><h4>收銀員落在店主首頁</h4><span class="tag fixed">本輪已修</span></div>
+    <div class="finding-b"><p>開 <code>admin.makanmasak.com</code> → <code>/login?redirect=/dashboard</code> → 登入後進 <code>DashboardHome</code>，
+      其 <code>/analytics/dashboard</code>、<code>/analytics/revenue</code> 都是 <code>requireRole([0, 1])</code>：3 個 403、權限警告、今日訂單 0。
+      非 admin／owner 進首頁時改導向 <code>getDefaultRoute()</code>（<code>e51e0fec</code>）。</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>12 出單與列印</h2>
+  <p>店主在 <code>/dashboard/print-agents</code> 核發全店憑證 → 本機 <code>apps/print-agent</code> 以 <code>CLOUD_API_ENDPOINT=https://api.makanmasak.com/api/v1</code> 啟動（心跳調成 15 秒）→ 觀察 → 撤銷。</p>
+  <div class="finding blocker">
+    <div class="finding-h"><span class="id">D1</span><h4>print agent 印不出任何東西，後台卻顯示健康</h4><span class="tag issue">開 issue</span></div>
+    <div class="finding-b">
+      <div class="tablewrap"><table>
+        <thead><tr><th>階段</th><th>代理</th><th>雲端</th></tr></thead>
+        <tbody>
+          <tr><td>沒有印表機</td><td>掃 192.168.1/0.100–110、10.0.0.100–110 的 9100，全數「找不到」</td><td>照樣認領，最舊一張約一分鐘內 5 次投遞 → <code>failed</code>（No available printer found）</td></tr>
+          <tr><td>加一台不存在的 <code>epson-qa-nonexistent.invalid:9100</code></td><td>「偵測成功」EPSON TM-T88VI</td><td><code>printers_online 1</code>，後台「Healthy · 1/1 printers online」</td></tr>
+          <tr><td>派工</td><td>每張都失敗</td><td><code>executePrintJob method must be implemented by PrinterService</code> → 用完額度 <code>failed</code></td></tr>
+        </tbody>
+      </table></div>
+      <p><code>queue-core</code> 三個驅動的 <code>connect()</code> 永遠成功、<code>sendCommands()</code> 只 <code>setTimeout</code>、<code>getStatus()</code> 永遠 online；
+        <code>queryDeviceInfo</code> 不連線，只看位址字串含不含 <code>epson</code>／<code>star</code>／<code>citizen</code>。整個 repo 沒有 TCP／USB／serial 傳輸。
+        需要實作真正的傳輸層（至少網路 ESC/POS 9100），並讓健康判定來自實際連線、0 台在線時不認領——需要硬體驗證，開 issue。</p>
+    </div>
+  </div>
+  <div class="finding">
+    <div class="finding-h"><span class="id">D3</span><h4>已取消訂單的廚房票仍會被派工</h4><span class="tag fixed">本輪已修</span></div>
+    <div class="finding-b"><p>取消訂單不作廢廚房票，認領也只看餐廳。production 有一張已取消訂單的待印票。
+      認領前把「訂單已取消的待印廚房票」標成 <code>cancelled</code>；顧客收據不受影響（<code>51f7fd82</code>，真 D1 測試）。</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>跨流程</h2>
+  <div class="finding">
+    <div class="finding-h"><span class="id">X2</span><h4>員工登入會讓同帳號其他 session 全部失效</h4><span class="tag issue">開 issue</span></div>
+    <div class="finding-b"><p>本輪用 API 替 <code>cashier1</code>／<code>service1</code> 另外登入後，兩個瀏覽器下次 <code>POST /auth/refresh</code> 都 401、被踢回登入頁。
+      <code>AuthService.login</code> 的 batch 第一句是 <code>UPDATE sessions SET is_active=false WHERE user_id=?</code>（註解「prevent session fixation」）。
+      現場常見一個角色帳號多台裝置（兩台 POS、廚房兩面螢幕），第二台一登入第一台就在班中登出。要不要允許多裝置是產品決定。</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>本輪的修正</h2>
+  <p>分支 <code>fix/floor-qa-2026-09-22</code>（worktree <code>../Makan-Masak-fix-floor-qa-2026-09-22</code>），<b>未推送、未部署</b>。每個 commit 先寫會紅的測試。</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>commit</th><th>內容</th><th>發現</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">67b10c90</td><td>fix(pos): send the till and shift headers when printing a receipt</td><td>P1</td></tr>
+      <tr><td class="mono">98ce85b8</td><td>fix(pos): show the API's refund rejection instead of the HTTP status line</td><td>P5</td></tr>
+      <tr><td class="mono">e901abc9</td><td>fix(orders): honour a one-sided date range on the order list</td><td>S2</td></tr>
+      <tr><td class="mono">c2330446</td><td>fix(kitchen): label kitchen orders with the table's number, not its id</td><td>K2</td></tr>
+      <tr><td class="mono">51f7fd82</td><td>fix(print): void a kitchen ticket once its order is cancelled</td><td>D3</td></tr>
+      <tr><td class="mono">e51e0fec</td><td>fix(admin): send floor staff to their own start page, not the owner dashboard</td><td>X1</td></tr>
+      <tr><td class="mono">3e180167</td><td>fix(service): refresh the service station's orders every 15 seconds</td><td>S1</td></tr>
+      <tr><td class="mono">a7fc09fc</td><td>fix(service): stop formatting the delivery timeline's time twice</td><td>S3</td></tr>
+      <tr><td class="mono">5ff41fcc</td><td>fix(service): remove the on-time rate and rating that were constants</td><td>S4</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>建議開的 issue（草稿，尚未建立）</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>#</th><th>標題</th><th>建議修法</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">K1</td><td>廚房看板只寫品項狀態，訂單永遠停在 confirmed，廚房 → 送菜走不通</td><td>伺服器在品項更新後推進訂單（第一個 preparing → preparing；全部 ready → ready），走 <code>OrdersService.updateOrderStatus</code>；看板移除本地推算，以伺服器 status 為準</td></tr>
+      <tr><td class="mono">P2</td><td>結班對帳不可用：一般收款與退款不進班次、結班永遠 actualAmount 0</td><td>收款與 POS 退款帶班次寫入 <code>cash_shifts</code>；預期現金只算現金；結班對話框加必填清點欄位；管理頁改讀伺服器班次欄位（<code>startedAt</code>）</td></tr>
+      <tr><td class="mono">D1</td><td>print agent 沒有真正的印表機傳輸，所有工作失敗，健康狀態謊報</td><td>實作網路 ESC/POS（9100）傳輸與真偵測；健康來自實際連線；0 台在線時不認領；以實機驗證</td></tr>
+      <tr><td class="mono">X2</td><td>員工登入讓同帳號其他 session 失效，多裝置現場班中被登出</td><td>決定政策：保留多 session（fixation 由換發新 token 防），或提供「在其他裝置登出」的明確操作</td></tr>
+      <tr><td class="mono">P3</td><td>POS 退款不回寫訂單，且收銀可自行核准</td><td>退款完成時更新 <code>refund_amount_cents</code>／<code>payment_status</code>；決定核准門檻</td></tr>
+      <tr><td class="mono">S5</td><td>送菜站「回報問題」只寫 console</td><td>接到既有的通知／稽核管道，或先移除按鈕</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>production 資料善後</h2>
+  <p>開始前量 127 張表的列數與相關計數器；結束後逐列刪除本輪建立的資料、還原計數器與 3 張被代理動過的舊出單票，再比對一次：</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>表</th><th>本輪新增／變動</th><th>處理</th></tr></thead>
+    <tbody>
+      <tr><td>orders / order_items / audit_logs</td><td>1 / 1 / 1</td><td>刪除</td></tr>
+      <tr><td>payment_transactions / payment_audit_log / idempotency_keys</td><td>1 / 3 / 2</td><td>刪除</td></tr>
+      <tr><td>cash_registers / cash_shifts / cash_movements / refunds</td><td>1 / 1 / 3 / 1</td><td>刪除</td></tr>
+      <tr><td>print_agents / receipts</td><td>1（已撤銷）/ 1 新增 ＋ 3 張舊票被認領</td><td>刪除；舊票還原為 pending、0 次</td></tr>
+      <tr><td>usage_meter_buckets</td><td>2（本小時 orders.created、api.requests）</td><td>刪除</td></tr>
+      <tr><td>restaurants.total_orders / menu_items(2)</td><td>9→10 / 庫存 10→8、次數 14→16</td><td>還原</td></tr>
+      <tr><td>sessions</td><td>18 筆本輪登入；6 筆既有的過期 session 被登入流程順手刪除</td><td>刪除本輪 18 筆；過期列不還原（7 → 1）</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">基準查詢一開始用 <code>NOT LIKE '%_fts%'</code> 排除 fts 影子表，漏掉了 <code>cash_shifts</code>（X3）；開班前該表為 0 筆，結束時也是 0。
+    本輪的登入也讓這五個帳號在其他地方的既有登入失效（X2 的行為本身）。</p>
+</section>
+
+</div>
+</body>
+</html>

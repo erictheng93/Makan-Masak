@@ -7,8 +7,8 @@
 ## 1. 定位
 
 一張紙要吐出來，會經過三段：雲端把收據列排進待印佇列、店內的列印代理把它認領走、
-代理印完再回報結果。三段都接起來了，收據狀態 `pending → printing → printed/failed`
-反映的是實體印表機的結果，不是資料庫寫入是否成功。
+代理印完再回報結果。雲端派工這一段（認領、回報、回收、健康）接起來了；**店內代理那一段沒有**。
+印表機驅動是模擬的、代理不會執行列印工作，所以目前一張紙都印不出來，見 §8。
 
 ## 2. 雲端這一端
 
@@ -20,6 +20,8 @@
 | 訂單收據 | `GET /api/v1/orders/:id/receipt` | 產生收據資料（計 `print.jobs` 配額） |
 
 閘門：`moduleGate("receipt_printing")` + `quotaGate("print.jobs")` + `requireRole([0, 1, 4])`。
+
+**已取消訂單的廚房票會在認領時作廢**（`print_status = 'cancelled'`），不會交給代理。
 
 **廚房出單票是自動的。** 訂單轉 `confirmed` 時，`OrdersService.updateOrderStatus` 會呼叫
 `ReceiptService.createKitchenTicket`，寫入一張 `receipt_type = 'kitchen'`、
@@ -148,8 +150,20 @@ Referer 或 cookie，兩層 CSRF 都會在進入 handler 前拒絕它。豁免�
 - `apps/admin-dashboard/src/views/PrintAgentsView.test.ts`
 - `apps/print-agent/src/LocalPrintService.test.ts`
 
+**手動探索 QA（production）**
+
+- [現場作業流程 QA 2026-09-22](../investigations/2026-09-22-floor-operations-flow-qa.html) — D1–D3
+
 ## 8. 已知缺口
 
+0. **代理印不出任何東西**（2026-09-22 實測，見 [現場作業流程 QA 2026-09-22](../investigations/2026-09-22-floor-operations-flow-qa.html)）。
+   `queue-core` 的 Epson／Star／Citizen 驅動 `connect()` 永遠成功、`sendCommands()` 只按指令長度
+   `setTimeout`、`getStatus()` 永遠回 `online`；`detectPrinter` 不連線，只看位址字串是否含
+   `epson`／`star`／`citizen`，所以自動掃描找不到任何真印表機；加了印表機之後，每張工作都失敗在
+   `executePrintJob method must be implemented by PrinterService`。後台同時顯示
+   「Healthy · 1/1 printers online」。repo 裡沒有任何 TCP／USB／serial 傳輸程式碼。
+0. **沒有印表機時代理照樣認領**，每張票回 `failed`（No available printer found），
+   幾輪心跳就燒完投遞額度——雖然雲端已經知道這台回報 0 台在線。
 1. **重試沒有退避。** 節奏完全來自代理的輪詢間隔（預設 60 秒）與「印失敗就停 drain」
    這條規則。要真正的指數退避需要一個 `next_attempt_at_ms` 欄位。
 2. **`processWebhook` 沒有對 `platformOrderId` 去重**，平台重送 webhook 會建出**新的**

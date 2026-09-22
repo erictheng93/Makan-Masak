@@ -25,9 +25,17 @@
 | 1 | 取得工作佇列 | `GET /api/v1/kitchen/:restaurantId/orders` | — |
 | 2 | 連線狀態指示 | `POST /kitchen/:restaurantId/events/token` → `GET /kitchen/:restaurantId/events`（SSE） | — |
 | 3 | 訂單事件 | Durable Object WebSocket，房間 `kitchen:{restaurantId}` | — |
-| 4 | 開始製作（整單） | `PUT /api/v1/orders/:id/status` → `preparing` | `orders.status` |
-| 5 | 逐項完成 | `PUT /kitchen/:restaurantId/orders/:orderId/items/:itemId` | `order_items.status` |
-| 6 | 整單出餐 | `PUT /api/v1/orders/:id/status` → `ready` | `orders.status` |
+| 4 | 開始製作（整單） | **廚房看板沒有送這一步**，見下方說明 | — |
+| 5 | 逐項開始／完成 | `PUT /kitchen/:restaurantId/orders/:orderId/items/:itemId` | `order_items.status` |
+| 6 | 整單出餐 | **廚房看板沒有送這一步**，見下方說明 | — |
+
+> **廚房看板只會寫品項狀態。** 「Start Preparing」「Mark Complete」都只是對每個品項
+> 送第 5 步；看板再用 `updateOrderStatusFromOrder` 在前端**自己推算**整單狀態，
+> 從不呼叫 `PUT /orders/:id/status`。伺服器上的訂單因此停在 `confirmed`：顧客追蹤頁
+> 停在「已確認」，送菜站（`status=ready`）永遠看不到這張單。重新整理後卡片跳回
+> 「待製作」欄，而且「Start Preparing」只處理 `pending` 的品項，此時按了沒有反應。
+> 目前只能由店主在後台手動推 `preparing` → `ready`。2026-09-22 在 production 實測成立，
+> 見 [現場作業流程 QA 2026-09-22](../investigations/2026-09-22-floor-operations-flow-qa.html)。
 
 > **SSE 那條串流只送 `connected` 與心跳。** 真正的訂單事件走 WebSocket。
 > 會分成兩條，是因為 `EventSource` 不能帶 Authorization header，所以另外簽了一把
@@ -76,8 +84,13 @@
 - `apps/api/src/__tests__/integration/kitchen.real.integration.test.ts`
 - `tests/e2e/kitchen-display/kitchen-display.spec.ts`
 
+**手動探索 QA（production）**
+
+- [現場作業流程 QA 2026-09-22](../investigations/2026-09-22-floor-operations-flow-qa.html) — K1–K3
+
 ## 8. 已知缺口
 
-- **品項全部完成不會自動推訂單狀態**（見 §5）。這是廚房最常見的「單子卡住」原因。
+- **廚房看板完全不推訂單狀態**（見 §3 說明）。不只是「品項全部完成不會自動推」，
+  整單的兩顆按鈕也只寫品項。廚房到送菜這一段在現行介面上走不通。
 - **淘汰路由仍在**。`/start`、`/ready` 兩個 shim 原訂 2026-07-01 移除，尚未清掉。
 - **SSE 與 WebSocket 兩條連線各自斷線重連**，UI 的「已連線」指示只反映 SSE 那條。
