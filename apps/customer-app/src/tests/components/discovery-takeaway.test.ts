@@ -322,6 +322,31 @@ describe("discovery takeaway buttons", () => {
     ).toBe(false);
   });
 
+  it("emits a table-reservation action for a restaurant", async () => {
+    const restaurant = {
+      restaurantId: "r1",
+      name: "雞排攤",
+      type: "snack",
+      district: "西屯區",
+      priceRange: 1,
+      rating: 4.5,
+      isOpen: true,
+      supportsTakeaway: false,
+      supportsDelivery: false,
+      imageUrl: null,
+    };
+    const wrapper = mount(RestaurantCard, {
+      props: { restaurant },
+      global: { plugins: [createPinia()] },
+    });
+
+    await wrapper
+      .get('[data-testid="restaurant-reservation-button"]')
+      .trigger("click");
+
+    expect(wrapper.emitted("reserve")).toEqual([[restaurant]]);
+  });
+
   it("does not expose onboarding placeholders and distinguishes missing hours", () => {
     const wrapper = mount(RestaurantCard, {
       props: {

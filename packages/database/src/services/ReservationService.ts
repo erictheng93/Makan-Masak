@@ -16,10 +16,12 @@ import type {
   TimeSlotAvailability,
   UpdateReservationRequest,
 } from "@makanmasak/shared-types";
-import { eq, sql, type SQL } from "drizzle-orm";
+import { normalizeE164Phone } from "@makanmasak/utils";
+import { and, eq, isNull, sql, type SQL } from "drizzle-orm";
 import { orders } from "../schema/orders";
 import type { NewReservation } from "../schema/reservations";
 import { reservations } from "../schema/reservations";
+import { restaurants } from "../schema/restaurants";
 import { tables } from "../schema/tables";
 import { BaseService, type CloudflareEnv } from "./base";
 import {
@@ -116,6 +118,10 @@ export class ReservationService extends BaseService {
   ): Promise<ReservationResponse> {
     try {
       const now = Date.now();
+      data = {
+        ...data,
+        customerPhone: normalizeE164Phone(data.customerPhone),
+      };
 
       // 1. 驗證輸入
       this.validateReservationData(data);
@@ -1095,10 +1101,7 @@ export class ReservationService extends BaseService {
       throw new Error("顧客姓名為必填");
     }
 
-    if (
-      !data.customerPhone ||
-      !/^09\d{8}$/.test(data.customerPhone.replace(/[-\s]/g, ""))
-    ) {
+    if (!data.customerPhone || !/^\+[1-9]\d{6,14}$/.test(data.customerPhone)) {
       throw new Error("請提供有效的手機號碼");
     }
 
@@ -1123,6 +1126,31 @@ export class ReservationService extends BaseService {
     if (reservationDateTime.getTime() < Date.now()) {
       throw new Error("無法訂位過去的時間");
     }
+  }
+
+  /**
+   * Resolve the minimum public-facing restaurant record before creating a
+   * reservation. This intentionally returns no details for inactive,
+   * unavailable, or deleted restaurants so guest callers cannot enumerate
+   * their operational state.
+   */
+  async getPublicReservationRestaurant(
+    restaurantId: string,
+  ): Promise<{ id: string } | null> {
+    const [restaurant] = await this.db
+      .select({ id: restaurants.id })
+      .from(restaurants)
+      .where(
+        and(
+          eq(restaurants.id, restaurantId),
+          eq(restaurants.isActive, true),
+          eq(restaurants.isAvailable, true),
+          isNull(restaurants.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    return restaurant ?? null;
   }
 
   /**

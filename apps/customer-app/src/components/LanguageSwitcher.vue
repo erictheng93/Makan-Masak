@@ -2,8 +2,8 @@
   <div class="language-switcher">
     <div class="relative">
       <button
-        class="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-        :class="{ 'h-10 w-10 justify-center px-0': compact }"
+        class="flex min-h-11 items-center gap-2 rounded-full bg-ios-card px-3 py-2 text-sm text-ios-text shadow-card-sm transition-colors hover:bg-ios-bg focus:outline-none focus:ring-2 focus:ring-ios-blue focus:ring-offset-2"
+        :class="{ 'h-11 w-11 justify-center px-0': compact }"
         @click="toggleDropdown"
       >
         <span class="text-lg">{{ currentLanguageInfo?.flag }}</span>
@@ -28,16 +28,17 @@
 
       <div
         v-show="isOpen"
-        class="absolute top-full mt-1 w-full min-w-max bg-white border border-gray-300 rounded-lg shadow-lg z-50"
+        class="absolute top-full z-50 mt-2 w-full min-w-max rounded-2xl bg-ios-card shadow-card-lg"
         :class="compact ? 'right-0' : 'left-0'"
       >
         <div class="py-1">
           <button
             v-for="language in supportedLanguages"
             :key="language.code"
-            class="w-full flex items-center gap-2 px-4 py-2 text-sm text-left hover:bg-gray-50 focus:outline-none focus:bg-gray-50"
+            class="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-ios-text hover:bg-ios-bg focus:outline-none focus:bg-ios-bg"
             :class="{
-              'bg-orange-50 text-orange-700': currentLanguage === language.code,
+              'bg-ios-blue-soft text-ios-blue-deep':
+                currentLanguage === language.code,
             }"
             @click="selectLanguage(language.code)"
           >
@@ -45,7 +46,7 @@
             <span class="font-medium">{{ language.name }}</span>
             <svg
               v-if="currentLanguage === language.code"
-              class="w-4 h-4 ml-auto text-orange-600"
+              class="ml-auto h-4 w-4 text-ios-blue"
               fill="currentColor"
               viewBox="0 0 20 20"
             >

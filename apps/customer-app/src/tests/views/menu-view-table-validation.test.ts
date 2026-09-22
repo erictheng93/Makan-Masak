@@ -290,6 +290,12 @@ describe("MenuView table validation", () => {
         .attributes("data-compact"),
     ).toBe("true");
 
+    await wrapper.get('[data-testid="menu-reservation"]').trigger("click");
+    expect(routerPush).toHaveBeenCalledWith({
+      name: "Reservation",
+      params: { restaurantId: "restaurant-1" },
+    });
+
     await wrapper.find("input[type='text']").setValue("teh");
 
     expect(wrapper.text()).not.toContain("Part 1 Test Nasi Lemak");

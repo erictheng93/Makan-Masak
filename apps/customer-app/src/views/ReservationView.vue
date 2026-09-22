@@ -1,10 +1,10 @@
 <template>
   <div class="min-h-screen bg-ios-bg">
-    <nav class="sticky top-0 z-10 border-b border-gray-100 bg-white shadow-sm">
+    <nav class="sticky top-0 z-10 bg-white/80 shadow-card-sm backdrop-blur-xl">
       <div class="mx-auto flex max-w-md items-center gap-3 px-4 py-3">
         <button
           type="button"
-          class="text-gray-500 hover:text-gray-700"
+          class="flex h-11 w-11 items-center justify-center rounded-full bg-ios-bg text-ios-text transition-colors hover:bg-ios-separator"
           :aria-label="t('reservationBooking.back')"
           @click="goBack"
         >
@@ -23,10 +23,10 @@
           </svg>
         </button>
         <div class="min-w-0">
-          <h1 class="truncate text-lg font-semibold text-gray-900">
+          <h1 class="truncate text-lg font-semibold text-ios-text">
             {{ t("reservationBooking.title") }}
           </h1>
-          <p class="truncate text-xs text-gray-500">
+          <p class="truncate text-xs text-ios-secondary">
             {{ restaurant?.name || t("serviceBooking.loading") }}
           </p>
         </div>
@@ -36,34 +36,34 @@
     <main class="mx-auto max-w-md px-4 py-5">
       <p
         v-if="isLoadingRestaurant"
-        class="py-12 text-center text-sm text-gray-500"
+        class="py-12 text-center text-sm text-ios-secondary"
       >
         {{ t("serviceBooking.loading") }}
       </p>
       <section
         v-else-if="loadError"
-        class="rounded-xl border border-red-100 bg-white p-4 text-sm text-red-700"
+        class="rounded-2xl bg-ios-red-soft p-4 text-sm text-ios-red-deep shadow-card-sm"
       >
         {{ loadError }}
       </section>
 
       <template v-else-if="restaurant">
         <section
-          class="rounded-xl border border-gray-200 bg-white p-4"
+          class="rounded-2xl bg-ios-card p-4 shadow-card-sm"
           data-testid="reservation-restaurant-summary"
         >
-          <h2 class="text-xl font-semibold text-gray-900">
+          <h2 class="text-xl font-semibold text-ios-text">
             {{ restaurant.name }}
           </h2>
-          <p v-if="restaurant.address" class="mt-1 text-sm text-gray-500">
+          <p v-if="restaurant.address" class="mt-1 text-sm text-ios-secondary">
             {{ restaurant.address }}
           </p>
         </section>
 
-        <section class="mt-4 rounded-xl border border-gray-200 bg-white p-4">
+        <section class="mt-4 rounded-2xl bg-ios-card p-4 shadow-card-sm">
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="mb-2 block text-sm font-medium text-gray-700">
+              <label class="mb-2 block text-sm font-medium text-ios-text/70">
                 {{ t("serviceBooking.bookingDate") }}
               </label>
               <input
@@ -71,12 +71,12 @@
                 data-testid="reservation-date"
                 :min="today"
                 type="date"
-                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ios-blue focus:ring-2 focus:ring-blue-500/20"
+                class="min-h-11 w-full rounded-xl border border-ios-separator px-3 py-2 text-sm text-ios-text focus:border-ios-blue focus:ring-2 focus:ring-ios-blue/20"
                 @change="loadAvailability"
               />
             </div>
             <div>
-              <label class="mb-2 block text-sm font-medium text-gray-700">
+              <label class="mb-2 block text-sm font-medium text-ios-text/70">
                 {{ t("serviceBooking.partySize") }}
               </label>
               <input
@@ -85,7 +85,7 @@
                 type="number"
                 min="1"
                 max="20"
-                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ios-blue focus:ring-2 focus:ring-blue-500/20"
+                class="min-h-11 w-full rounded-xl border border-ios-separator px-3 py-2 text-sm text-ios-text focus:border-ios-blue focus:ring-2 focus:ring-ios-blue/20"
                 @change="loadAvailability"
               />
             </div>
@@ -93,7 +93,7 @@
           <button
             type="button"
             data-testid="reservation-load-slots"
-            class="mt-3 w-full rounded-lg border border-ios-blue px-3 py-2 text-sm font-semibold text-ios-blue disabled:opacity-50"
+            class="mt-3 min-h-11 w-full rounded-full bg-ios-blue-soft px-3 py-2 text-sm font-semibold text-ios-blue-deep transition-colors hover:bg-ios-bg disabled:opacity-50"
             :disabled="isLoadingSlots"
             @click="loadAvailability"
           >
@@ -106,13 +106,13 @@
               :key="slot.time"
               type="button"
               data-testid="reservation-slot"
-              class="rounded-lg border px-3 py-2 text-sm font-medium"
+              class="min-h-11 rounded-full px-3 py-2 text-sm font-medium shadow-card-sm"
               :class="
                 selectedTime === slot.time
-                  ? 'border-ios-blue bg-blue-50 text-ios-blue'
+                  ? 'bg-ios-blue text-white'
                   : slot.available
-                    ? 'border-gray-200 text-gray-700'
-                    : 'border-gray-100 bg-gray-50 text-gray-400'
+                    ? 'bg-ios-bg text-ios-text'
+                    : 'bg-ios-bg text-ios-tertiary'
               "
               :disabled="!slot.available"
               @click="selectedTime = slot.time"
@@ -132,18 +132,18 @@
           <p
             v-if="slots.length === 0 && !isLoadingSlots"
             data-testid="reservation-empty-slots"
-            class="mt-3 text-sm text-gray-500"
+            class="mt-3 text-sm text-ios-secondary"
           >
             {{ t("serviceBooking.noSlots") }}
           </p>
         </section>
 
         <form
-          class="mt-4 space-y-3 rounded-xl border border-gray-200 bg-white p-4"
+          class="mt-4 space-y-3 rounded-2xl bg-ios-card p-4 shadow-card-sm"
           @submit.prevent="createReservation"
         >
           <div>
-            <label class="mb-2 block text-sm font-medium text-gray-700">
+            <label class="mb-2 block text-sm font-medium text-ios-text/70">
               {{ t("serviceBooking.name") }}
             </label>
             <input
@@ -152,11 +152,11 @@
               type="text"
               required
               maxlength="100"
-              class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ios-blue focus:ring-2 focus:ring-blue-500/20"
+              class="min-h-11 w-full rounded-xl border border-ios-separator px-3 py-2 text-sm text-ios-text focus:border-ios-blue focus:ring-2 focus:ring-ios-blue/20"
             />
           </div>
           <div>
-            <label class="mb-2 block text-sm font-medium text-gray-700">
+            <label class="mb-2 block text-sm font-medium text-ios-text/70">
               {{ t("serviceBooking.phone") }}
             </label>
             <input
@@ -165,11 +165,11 @@
               type="tel"
               required
               maxlength="30"
-              class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ios-blue focus:ring-2 focus:ring-blue-500/20"
+              class="min-h-11 w-full rounded-xl border border-ios-separator px-3 py-2 text-sm text-ios-text focus:border-ios-blue focus:ring-2 focus:ring-ios-blue/20"
             />
           </div>
           <div>
-            <label class="mb-2 block text-sm font-medium text-gray-700">
+            <label class="mb-2 block text-sm font-medium text-ios-text/70">
               {{ t("serviceBooking.email") }}
             </label>
             <input
@@ -177,11 +177,11 @@
               data-testid="reservation-email"
               type="email"
               maxlength="254"
-              class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ios-blue focus:ring-2 focus:ring-blue-500/20"
+              class="min-h-11 w-full rounded-xl border border-ios-separator px-3 py-2 text-sm text-ios-text focus:border-ios-blue focus:ring-2 focus:ring-ios-blue/20"
             />
           </div>
           <div>
-            <label class="mb-2 block text-sm font-medium text-gray-700">
+            <label class="mb-2 block text-sm font-medium text-ios-text/70">
               {{ t("serviceBooking.notes") }}
             </label>
             <textarea
@@ -189,13 +189,13 @@
               data-testid="reservation-requests"
               rows="2"
               maxlength="500"
-              class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ios-blue focus:ring-2 focus:ring-blue-500/20"
+              class="w-full rounded-xl border border-ios-separator px-3 py-2 text-sm text-ios-text focus:border-ios-blue focus:ring-2 focus:ring-ios-blue/20"
             />
           </div>
           <button
             type="submit"
             data-testid="reservation-create"
-            class="w-full rounded-lg bg-ios-blue px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+            class="min-h-11 w-full rounded-full bg-ios-blue px-4 py-3 text-sm font-semibold text-white shadow-card-sm transition-transform active:scale-[0.98] disabled:opacity-50"
             :disabled="isCreating || !selectedTime"
           >
             {{ t("serviceBooking.create") }}
@@ -204,27 +204,27 @@
 
         <section
           v-if="createdReservation"
-          class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4"
+          class="mt-4 rounded-2xl bg-ios-green-soft p-4 shadow-card-sm"
           data-testid="reservation-confirmation"
         >
-          <h2 class="text-base font-semibold text-emerald-900">
+          <h2 class="text-base font-semibold text-ios-green-deep">
             {{ t("serviceBooking.created") }}
           </h2>
-          <p class="mt-1 text-sm text-emerald-800">
+          <p class="mt-1 text-sm text-ios-green-deep">
             {{ t("serviceBooking.confirmationCode") }}
             <span class="font-mono font-semibold">{{
               createdReservation.confirmationCode
             }}</span>
           </p>
-          <p class="mt-2 text-sm text-emerald-800">
+          <p class="mt-2 text-sm text-ios-green-deep">
             {{ createdReservation.reservationDate }}
             {{ createdReservation.reservationTime }} ·
             {{ reservationStatusLabel(createdReservation.status) }}
           </p>
         </section>
 
-        <section class="mt-4 rounded-xl border border-gray-200 bg-white p-4">
-          <h2 class="text-base font-semibold text-gray-900">
+        <section class="mt-4 rounded-2xl bg-ios-card p-4 shadow-card-sm">
+          <h2 class="text-base font-semibold text-ios-text">
             {{ t("serviceBooking.lookupTitle") }}
           </h2>
           <div class="mt-3 flex gap-2">
@@ -232,13 +232,13 @@
               v-model="verifyCode"
               data-testid="reservation-verify-code"
               type="text"
-              class="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              class="min-h-11 min-w-0 flex-1 rounded-xl border border-ios-separator px-3 py-2 text-sm text-ios-text focus:border-ios-blue focus:ring-2 focus:ring-ios-blue/20"
               :placeholder="t('serviceBooking.confirmationCodePlaceholder')"
             />
             <button
               type="button"
               data-testid="reservation-verify"
-              class="rounded-lg border border-ios-blue px-3 py-2 text-sm font-semibold text-ios-blue"
+              class="min-h-11 rounded-full bg-ios-blue-soft px-3 py-2 text-sm font-semibold text-ios-blue-deep transition-colors hover:bg-ios-bg"
               @click="verifyReservation"
             >
               {{ t("serviceBooking.lookup") }}
@@ -247,7 +247,7 @@
           <div
             v-if="verifiedReservation"
             data-testid="reservation-verified"
-            class="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700"
+            class="mt-3 rounded-xl bg-ios-bg px-3 py-2 text-sm text-ios-text/70"
           >
             {{ verifiedReservation.reservationDate }}
             {{ verifiedReservation.reservationTime }} ·
@@ -258,7 +258,7 @@
               v-if="canCancel(verifiedReservation.status)"
               type="button"
               data-testid="reservation-cancel"
-              class="mt-2 block rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-600"
+              class="mt-2 block min-h-11 rounded-full bg-ios-red-soft px-3 py-2 text-sm font-semibold text-ios-red-deep transition-colors hover:bg-ios-bg"
               :disabled="isCancelling"
               @click="cancelVerifiedReservation"
             >
@@ -267,10 +267,10 @@
           </div>
         </section>
 
-        <p v-if="errorMessage" class="mt-3 text-sm text-red-600">
+        <p v-if="errorMessage" class="mt-3 text-sm text-ios-red-deep">
           {{ errorMessage }}
         </p>
-        <p v-if="successMessage" class="mt-3 text-sm text-emerald-700">
+        <p v-if="successMessage" class="mt-3 text-sm text-ios-green-deep">
           {{ successMessage }}
         </p>
       </template>

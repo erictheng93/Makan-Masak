@@ -39,6 +39,29 @@
             <LanguageSwitcher compact />
 
             <button
+              type="button"
+              data-testid="menu-reservation"
+              :aria-label="t('reservationBooking.title')"
+              class="flex h-11 w-11 items-center justify-center rounded-full bg-ios-bg text-ios-text transition-transform duration-150 active:scale-95"
+              @click="openReservation"
+            >
+              <svg
+                class="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 7V3m8 4V3M5 11h14M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z"
+                />
+              </svg>
+            </button>
+
+            <button
               data-testid="cart-btn"
               class="relative w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-ios-text active:scale-95 transition-transform duration-150"
               @click="router.push(activeCartRoute)"
@@ -603,6 +626,13 @@ const cartRoute = computed(() => ({
   },
   query: seatQuery.value,
 }));
+
+function openReservation() {
+  router.push({
+    name: "Reservation",
+    params: { restaurantId: props.restaurantId },
+  });
+}
 
 const groupCartRoute = computed(() => ({
   name: "GroupOrder",

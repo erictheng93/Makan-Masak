@@ -5,10 +5,16 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
+import { normalizeE164Phone } from "@makanmasak/utils";
 import { authMiddleware, requireRole } from "../../../middleware/auth";
 import { idempotencyMiddleware } from "../../../middleware/idempotency";
 import { moduleGate } from "../../../middleware/moduleGate";
 import { rateLimitMiddleware } from "../../../middleware/rateLimiter";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "../../../middleware/validation";
 import { ReservationService } from "@makanmasak/database";
 import type { Env } from "../../../types/env";
 import type { AuthUser } from "../../../middleware/auth";
@@ -56,11 +62,19 @@ const publicReservationAvailabilityRateLimit = rateLimitMiddleware({
   message: "查詢可用時段過於頻繁，請稍後再試。",
 });
 
+const reservationPhoneSchema = z
+  .string()
+  .trim()
+  .min(7)
+  .max(30)
+  .transform(normalizeE164Phone)
+  .pipe(z.string().regex(/^\+[1-9]\d{6,14}$/));
+
 const publicReservationSchema = z
   .object({
     restaurantId: z.string().trim().min(1).max(128),
     customerName: z.string().trim().min(1).max(100),
-    customerPhone: z.string().trim().min(3).max(30),
+    customerPhone: reservationPhoneSchema,
     customerEmail: z.email().max(254).optional(),
     partySize: z.number().int().min(1).max(20),
     reservationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -88,11 +102,13 @@ const publicReservationAvailabilitySchema = z.object({
   duration: z.coerce.number().int().min(15).max(480).optional(),
 });
 
-const publicReservationConfirmationCodeSchema = z
-  .string()
-  .trim()
-  .min(1)
-  .max(128);
+const reservationIdParamSchema = z.object({
+  id: z.string().trim().min(1).max(128),
+});
+
+const publicReservationConfirmationCodeParamSchema = z.object({
+  code: z.string().trim().min(1).max(128),
+});
 
 const staffReservationCancelSchema = z
   .object({ reason: z.string().trim().max(500).optional() })
@@ -130,25 +146,17 @@ async function requireReservationAccess(
 app.post(
   "/",
   publicReservationCreateRateLimit,
+  validateBody(publicReservationSchema),
   idempotencyMiddleware({ scope: "public-reservation-create" }),
   async (c) => {
-    const parsed = publicReservationSchema.safeParse(await c.req.json());
-    if (!parsed.success) {
-      throw badRequest("訂位資料格式不正確");
-    }
-    const body: CreateReservationRequest = parsed.data;
+    const body = c.get("validatedBody") as CreateReservationRequest;
     const service = new ReservationService(c.env.DB, c.env);
 
-    // 驗證必填欄位
-    if (
-      !body.restaurantId ||
-      !body.customerName ||
-      !body.customerPhone ||
-      !body.partySize ||
-      !body.reservationDate ||
-      !body.reservationTime
-    ) {
-      throw badRequest("缺少必填欄位");
+    // A missing or retired restaurant used to fall through to slot allocation
+    // and become a sanitised 500. Keep the anonymous API's response explicit
+    // without exposing a disabled restaurant's details.
+    if (!(await service.getPublicReservationRestaurant(body.restaurantId))) {
+      throw notFound("Restaurant not found", "RESTAURANT_NOT_FOUND");
     }
 
     const reservation = await service.createReservation(body);
@@ -168,54 +176,52 @@ app.post(
  * GET /reservations/verify/:code
  * 驗證確認碼並查詢訂位
  */
-app.get("/verify/:code", publicReservationLookupRateLimit, async (c) => {
-  const code = publicReservationConfirmationCodeSchema.safeParse(
-    c.req.param("code"),
-  );
-  if (!code.success) {
-    throw badRequest("確認碼格式不正確");
-  }
-  const service = new ReservationService(c.env.DB, c.env);
+app.get(
+  "/verify/:code",
+  publicReservationLookupRateLimit,
+  validateParams(publicReservationConfirmationCodeParamSchema),
+  async (c) => {
+    const { code } = c.get("validatedParams") as { code: string };
+    const service = new ReservationService(c.env.DB, c.env);
 
-  const reservation = await service.getReservationByCode(code.data);
+    const reservation = await service.getReservationByCode(code);
 
-  if (!reservation) {
-    throw notFound("找不到此訂位");
-  }
+    if (!reservation) {
+      throw notFound("找不到此訂位");
+    }
 
-  return c.json({
-    success: true,
-    data: reservation,
-  });
-});
+    return c.json({
+      success: true,
+      data: reservation,
+    });
+  },
+);
 
 /**
  * GET /reservations/availability
  * 查詢可用時段
  */
-app.get("/availability", publicReservationAvailabilityRateLimit, async (c) => {
-  const parsed = publicReservationAvailabilitySchema.safeParse({
-    restaurantId: c.req.query("restaurantId"),
-    date: c.req.query("date"),
-    partySize: c.req.query("partySize"),
-    duration: c.req.query("duration"),
-  });
-  if (!parsed.success) {
-    throw badRequest("缺少必填參數");
-  }
+app.get(
+  "/availability",
+  publicReservationAvailabilityRateLimit,
+  validateQuery(publicReservationAvailabilitySchema),
+  async (c) => {
+    const query = c.get("validatedQuery") as z.infer<
+      typeof publicReservationAvailabilitySchema
+    >;
+    const service = new ReservationService(c.env.DB, c.env);
 
-  const service = new ReservationService(c.env.DB, c.env);
+    const availability = await service.getAvailableSlots({
+      ...query,
+      duration: query.duration ?? 90,
+    });
 
-  const availability = await service.getAvailableSlots({
-    ...parsed.data,
-    duration: parsed.data.duration ?? 90,
-  });
-
-  return c.json({
-    success: true,
-    data: availability,
-  });
-});
+    return c.json({
+      success: true,
+      data: availability,
+    });
+  },
+);
 
 /**
  * DELETE /reservations/:id/cancel
@@ -224,17 +230,14 @@ app.get("/availability", publicReservationAvailabilityRateLimit, async (c) => {
 app.delete(
   "/:id/cancel",
   publicReservationCancelRateLimit,
+  validateParams(reservationIdParamSchema),
+  validateBody(publicReservationCancelSchema),
   idempotencyMiddleware({ scope: "public-reservation-cancel" }),
   async (c) => {
-    const id = c.req.param("id");
-    if (!id || id.length > 128) {
-      throw badRequest("Missing id parameter", "MISSING_PARAM");
-    }
-    const parsed = publicReservationCancelSchema.safeParse(await c.req.json());
-    if (!parsed.success) {
-      throw badRequest("取消訂位資料格式不正確");
-    }
-    const { confirmationCode, reason } = parsed.data;
+    const { id } = c.get("validatedParams") as { id: string };
+    const { confirmationCode, reason } = c.get("validatedBody") as z.infer<
+      typeof publicReservationCancelSchema
+    >;
 
     const service = new ReservationService(c.env.DB, c.env);
 
@@ -276,23 +279,21 @@ app.use("/*", moduleGate("reservations"));
 app.post(
   "/staff",
   requireRole([0, 1, 4]),
+  validateBody(staffReservationSchema),
   idempotencyMiddleware({ scope: "staff-reservation-create" }),
   async (c) => {
-    const parsed = staffReservationSchema.safeParse(await c.req.json());
-    if (!parsed.success) {
-      throw badRequest("訂位資料格式不正確");
-    }
+    const body = c.get("validatedBody") as CreateReservationRequest;
 
     const user = c.get("user");
     if (user.role !== 0) {
       const restaurantId = user.restaurantId?.toString();
-      if (!restaurantId || parsed.data.restaurantId !== restaurantId) {
+      if (!restaurantId || body.restaurantId !== restaurantId) {
         throw forbidden("無權為其他餐廳建立訂位");
       }
     }
 
     const service = new ReservationService(c.env.DB, c.env);
-    const reservation = await service.createReservation(parsed.data);
+    const reservation = await service.createReservation(body);
     return c.json(
       {
         success: true,
@@ -413,30 +414,32 @@ app.put("/:id", requireRole([0, 1, 4]), async (c) => {
  * Staff cancellation remains authenticated and CSRF-protected. The public
  * counterpart uses DELETE plus a confirmation code above.
  */
-app.post("/:id/cancel", requireRole([0, 1, 4]), async (c) => {
-  const id = c.req.param("id");
-  if (!id) throw badRequest("Missing id parameter", "MISSING_PARAM");
-  const parsed = staffReservationCancelSchema.safeParse(
-    await c.req.json().catch(() => ({})),
-  );
-  if (!parsed.success) {
-    throw badRequest("取消訂位資料格式不正確");
-  }
+app.post(
+  "/:id/cancel",
+  requireRole([0, 1, 4]),
+  validateParams(reservationIdParamSchema),
+  validateBody(staffReservationCancelSchema),
+  async (c) => {
+    const { id } = c.get("validatedParams") as { id: string };
+    const { reason } = c.get("validatedBody") as z.infer<
+      typeof staffReservationCancelSchema
+    >;
 
-  const service = new ReservationService(c.env.DB, c.env);
-  const reservation = await requireReservationAccess(c, service, id);
-  const cancelled = await service.cancelReservation(
-    id,
-    parsed.data.reason,
-    reservation.restaurantId,
-  );
+    const service = new ReservationService(c.env.DB, c.env);
+    const reservation = await requireReservationAccess(c, service, id);
+    const cancelled = await service.cancelReservation(
+      id,
+      reason,
+      reservation.restaurantId,
+    );
 
-  return c.json({
-    success: true,
-    data: cancelled,
-    message: "訂位已取消",
-  });
-});
+    return c.json({
+      success: true,
+      data: cancelled,
+      message: "訂位已取消",
+    });
+  },
+);
 
 /**
  * POST /reservations/:id/confirm

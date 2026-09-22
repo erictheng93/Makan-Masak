@@ -720,6 +720,33 @@ describe("ReservationService capacity accounting — real D1", () => {
     });
   });
 
+  it("normalizes an international customer phone before persisting a reservation", async () => {
+    await seedTable(testDb, 11, { capacity: 4 });
+    await seedSlot(testDb, "slot-international-phone", {
+      date: FUTURE_RESERVATION_DATE,
+      maxCapacity: 4,
+      maxTables: 1,
+    });
+
+    const result = await service.createReservation({
+      restaurantId: RESTAURANT_ID,
+      customerName: "Nur",
+      customerPhone: "+60 12-345 6789",
+      partySize: 2,
+      reservationDate: FUTURE_RESERVATION_DATE,
+      reservationTime: "18:30",
+      durationMinutes: 90,
+    });
+
+    expect(result.customerPhone).toBe("+60123456789");
+    await expect(
+      testDb.db
+        .prepare("SELECT customer_phone FROM reservations WHERE id = ?")
+        .bind(result.id)
+        .first<{ customer_phone: string }>(),
+    ).resolves.toEqual({ customer_phone: "+60123456789" });
+  });
+
   it("does not assign the same table to overlapping reservations", async () => {
     await seedTable(testDb, 90, { capacity: 2 });
     await seedTable(testDb, 91, { capacity: 2 });

@@ -121,6 +121,14 @@
       >
         立即外帶
       </button>
+      <button
+        type="button"
+        data-testid="restaurant-reservation-button"
+        class="rounded-full bg-ios-blue-soft px-3 py-2 text-sm font-medium text-ios-blue-deep transition-colors hover:bg-ios-bg"
+        @click="$emit('reserve', restaurant)"
+      >
+        {{ t("reservationBooking.title") }}
+      </button>
     </div>
   </article>
 </template>
@@ -141,6 +149,7 @@ const props = defineProps<{
 defineEmits<{
   select: [restaurant: RestaurantListItem];
   takeaway: [restaurant: RestaurantListItem];
+  reserve: [restaurant: RestaurantListItem];
 }>();
 
 const canTakeaway = computed(

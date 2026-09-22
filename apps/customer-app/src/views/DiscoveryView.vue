@@ -250,6 +250,7 @@
                 :restaurant="r"
                 @select="onRestaurantSelect"
                 @takeaway="onRestaurantTakeaway"
+                @reserve="onRestaurantReservation"
               />
             </div>
           </div>
@@ -268,6 +269,7 @@
                 :restaurant="r"
                 @select="onRestaurantSelect"
                 @takeaway="onRestaurantTakeaway"
+                @reserve="onRestaurantReservation"
               />
             </div>
           </div>
@@ -371,6 +373,13 @@ function onRestaurantSelect(restaurant: RestaurantListItem) {
       path: route.fullPath,
       label: discoveryReturnLabel.value,
     }),
+  });
+}
+
+function onRestaurantReservation(restaurant: RestaurantListItem) {
+  router.push({
+    name: "Reservation",
+    params: { restaurantId: restaurant.restaurantId },
   });
 }
 

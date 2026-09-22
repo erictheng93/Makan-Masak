@@ -11,6 +11,7 @@ const currentUser = vi.hoisted(() => ({
   } as AuthUser,
 }));
 const createReservation = vi.hoisted(() => vi.fn());
+const getPublicReservationRestaurant = vi.hoisted(() => vi.fn());
 const getReservationByCode = vi.hoisted(() => vi.fn());
 const getAvailableSlots = vi.hoisted(() => vi.fn());
 const getReservationById = vi.hoisted(() => vi.fn());
@@ -63,6 +64,7 @@ vi.mock("../../../middleware/rateLimiter", () => ({
 vi.mock("@makanmasak/database", () => ({
   ReservationService: class {
     createReservation = createReservation;
+    getPublicReservationRestaurant = getPublicReservationRestaurant;
     getReservationByCode = getReservationByCode;
     getAvailableSlots = getAvailableSlots;
     getReservationById = getReservationById;
@@ -124,6 +126,8 @@ describe("reservations routes", () => {
       restaurantId: "restaurant-1",
     };
     createReservation.mockReset();
+    getPublicReservationRestaurant.mockReset();
+    getPublicReservationRestaurant.mockResolvedValue({ id: "restaurant-1" });
     getReservationByCode.mockReset();
     getAvailableSlots.mockReset();
     getReservationById.mockReset();
@@ -168,6 +172,7 @@ describe("reservations routes", () => {
       expect.objectContaining({
         restaurantId: "restaurant-1",
         customerName: "Ada",
+        customerPhone: "+886912345678",
       }),
     );
 
@@ -313,7 +318,10 @@ describe("reservations routes", () => {
     );
 
     expect(response.status).toBe(201);
-    expect(createReservation).toHaveBeenCalledWith(input);
+    expect(createReservation).toHaveBeenCalledWith({
+      ...input,
+      customerPhone: "+886912345678",
+    });
 
     createReservation.mockClear();
     const crossTenant = await withSilencedRouteError(() =>
@@ -364,6 +372,60 @@ describe("reservations routes", () => {
     );
     expect(invalid.status).toBe(500);
     expect(createReservation).not.toHaveBeenCalled();
+  });
+
+  it("normalizes international phone numbers before public reservation creation", async () => {
+    createReservation.mockResolvedValue(reservation());
+
+    const response = await app.fetch(
+      new Request("https://test/", {
+        method: "POST",
+        body: JSON.stringify({
+          restaurantId: "restaurant-1",
+          customerName: "Mai",
+          customerPhone: "+60 12-345 6789",
+          partySize: 2,
+          reservationDate: "2026-06-08",
+          reservationTime: "18:30",
+        }),
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(201);
+    expect(createReservation).toHaveBeenCalledWith(
+      expect.objectContaining({ customerPhone: "+60123456789" }),
+    );
+  });
+
+  it("checks restaurant visibility before anonymous reservation creation", async () => {
+    getPublicReservationRestaurant.mockResolvedValue(null);
+
+    const response = await withSilencedRouteError(() =>
+      app.fetch(
+        new Request("https://test/", {
+          method: "POST",
+          body: JSON.stringify({
+            restaurantId: "missing-restaurant",
+            customerName: "Ada",
+            customerPhone: "0912345678",
+            partySize: 4,
+            reservationDate: "2026-06-08",
+            reservationTime: "18:30",
+          }),
+        }),
+        createEnv() as never,
+      ),
+    );
+
+    // This bare route test does not install app-factory's ApiError handler;
+    // the assertion below verifies that no write path is reached. The full API
+    // handler turns the thrown RESTAURANT_NOT_FOUND error into a 404 response.
+    expect(response.status).toBe(500);
+    expect(createReservation).not.toHaveBeenCalled();
+    expect(getPublicReservationRestaurant).toHaveBeenCalledWith(
+      "missing-restaurant",
+    );
   });
 
   it("cancels public reservations only with the matching confirmation code", async () => {

@@ -135,7 +135,12 @@ function mountView() {
             </article>
           `,
         },
-        RestaurantCard: true,
+        RestaurantCard: {
+          props: ["restaurant"],
+          emits: ["select", "takeaway", "reserve"],
+          template:
+            '<button data-testid="reserve-restaurant" @click="$emit(\'reserve\', restaurant)">reserve</button>',
+        },
         RouterLink: RouterLinkStub,
       },
     },
@@ -322,6 +327,37 @@ describe("DiscoveryView", () => {
       name: "OrderTypeLanding",
       params: { restaurantId: "restaurant-1" },
       query: { qr: "SHOP-restaurant-1", itemId: "42", categoryName: "小吃" },
+    });
+  });
+
+  it("opens a restaurant reservation from a discovery result", async () => {
+    const store = discoveryStore({
+      isSearchMode: false,
+      searchQuery: "",
+      dishResults: [],
+      restaurantResults: [
+        {
+          restaurantId: "restaurant-1",
+          name: "章魚燒攤",
+          type: "snack",
+          district: "西屯區",
+          priceRange: 1,
+          rating: 4.5,
+          isOpen: true,
+          supportsTakeaway: true,
+          supportsDelivery: false,
+          imageUrl: null,
+        },
+      ],
+    });
+    vi.mocked(useDiscoveryStore).mockReturnValue(store as never);
+    const wrapper = mountView();
+
+    await wrapper.get('[data-testid="reserve-restaurant"]').trigger("click");
+
+    expect(routerPush).toHaveBeenCalledWith({
+      name: "Reservation",
+      params: { restaurantId: "restaurant-1" },
     });
   });
 
