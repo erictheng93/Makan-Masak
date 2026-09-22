@@ -495,6 +495,7 @@ describe("ServiceBookingService — payment & lifecycle", () => {
       customerPhone: "0911222333",
       bookingDate: "2026-06-05",
       bookingTime: "14:00",
+      paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.PREPAY,
     });
 
     // Before the fix the card's own currency was passed as the booking's, so
@@ -579,6 +580,7 @@ describe("ServiceBookingService — payment & lifecycle", () => {
       bookingDate: "2026-06-05",
       bookingTime: "14:00",
       voucherCode: "SVC10",
+      paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.PREPAY,
     });
     await service().payWithCredits({
       bookingId: booking.id,
