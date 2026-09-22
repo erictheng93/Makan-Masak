@@ -36,11 +36,21 @@ type KitchenScopedItemRow = {
   order_number: string | null;
   order_created_at: string | number | null;
   table_id: number | null;
+  table_number: string | null;
   item_id: number;
   menu_item_id: number;
   menu_item_name: string | null;
   previous_status: KitchenOrderItemStatus;
 };
+
+// Staff read the number on the table, not its row id (A1 is id 2 in prod).
+function tableLabel(
+  number: string | null | undefined,
+  tableId: number | null | undefined,
+): string {
+  if (number) return `Table ${number}`;
+  return tableId ? `Table ${tableId}` : "No Table";
+}
 
 export class KitchenService implements IKitchenService {
   private logger: ConsoleLogger;
@@ -88,7 +98,7 @@ export class KitchenService implements IKitchenService {
           id: order.id,
           orderNumber: order.orderNumber,
           tableId: order.tableId || 0, // Default to 0 if no table
-          tableName: order.tableId ? `Table ${order.tableId}` : "No Table",
+          tableName: tableLabel(order.table?.number, order.tableId),
           status: order.status,
           orderSource: order.orderSource,
           items: (order.items || []).map((item) => {
@@ -279,6 +289,7 @@ export class KitchenService implements IKitchenService {
           o.order_number,
           o.created_at_ms AS order_created_at,
           o.table_id,
+          t.number AS table_number,
           oi.id AS item_id,
           oi.menu_item_id,
           oi.status AS previous_status,
@@ -286,6 +297,7 @@ export class KitchenService implements IKitchenService {
         FROM order_items oi
         JOIN orders o ON o.id = oi.order_id
         LEFT JOIN menu_items mi ON mi.id = oi.menu_item_id
+        LEFT JOIN tables t ON t.id = o.table_id
         WHERE oi.id = ?
           AND o.id = ?
           AND o.restaurant_id = ?
@@ -336,7 +348,7 @@ export class KitchenService implements IKitchenService {
           orderItemId: item.item_id,
           menuItemName,
           status: this.toKitchenItemStatus(status),
-          tableName: item.table_id ? `Table ${item.table_id}` : "No Table",
+          tableName: tableLabel(item.table_number, item.table_id),
           priority: this.getKitchenPriority(item.order_created_at),
           waitingTime: this.getWaitingMinutes(item.order_created_at),
         },
