@@ -154,10 +154,12 @@ async function issueCreditCard(
   testApp: RealIntegrationTestApp,
   balanceCents: number,
   currency: "TWD" | "MYR" | "VND" = "TWD",
+  pin?: string,
 ) {
   const card = await new CreditService(testApp.env as never).issueCard({
     currency,
     initialBalanceCents: balanceCents,
+    pin,
   });
   return card.publicId;
 }
@@ -1310,6 +1312,7 @@ describe("Market checkouts API - real integration", () => {
       created: CreatedCheckout,
       creditCardPublicId: string,
       claim: { currency?: string; country?: string } = {},
+      creditCardPin?: string,
     ) {
       return testApp.app.fetch(
         new Request(
@@ -1323,7 +1326,7 @@ describe("Market checkouts API - real integration", () => {
             },
             body: JSON.stringify({
               method: "credits",
-              providerInput: { creditCardPublicId },
+              providerInput: { creditCardPublicId, creditCardPin },
               ...claim,
             }),
           },
@@ -1379,9 +1382,11 @@ describe("Market checkouts API - real integration", () => {
 
     it("settles an MYR checkout from an MYR card with no currency sent", async () => {
       const created = await createPayableCheckout("MYR");
-      const myrCard = await issueCreditCard(testApp, 50000, "MYR");
+      // RM200 is above the MYR PIN threshold of RM50 (#406), so the card needs
+      // a PIN; without one the spend fails as CREDIT_PIN_NOT_SET (202).
+      const myrCard = await issueCreditCard(testApp, 50000, "MYR", "1234");
 
-      const response = await payWithCredits(created, myrCard);
+      const response = await payWithCredits(created, myrCard, {}, "1234");
 
       expect(response.status).toBe(200);
       expect(await readData<PaidCheckout>(response)).toMatchObject({
