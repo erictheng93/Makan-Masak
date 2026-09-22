@@ -1,7 +1,8 @@
 # Worker placement investigation (#369)
 
-Status: observation-only instrumentation deployed on 2026-09-22; baseline
-collection has started. Placement is unchanged and #369 is not yet accepted.
+Status: observation-only instrumentation deployed on 2026-09-22; authenticated
+MY/SIN and TW/SJC baselines are recorded. Placement is unchanged and #369 is not
+yet accepted.
 
 Issue: <https://github.com/erictheng93/Makan-Masak/issues/369>.
 
@@ -70,6 +71,20 @@ the following authenticated endpoints (substitute the same RID each time):
 
 - `/api/v1/orders?restaurantId=RID&limit=20`
 - `/api/v1/analytics/realtime-dashboard?restaurantId=RID`
+
+On Windows, the repository script runs all three endpoints plus trace and health
+probes, prompting securely for the dedicated role-1 owner credentials:
+
+```powershell
+./scripts/measure-worker-placement-369.ps1 `
+  -RunLabel "hinet-sjc-authenticated-before-placement" `
+  -OutputPath "$env:TEMP/worker-placement-369.json"
+```
+
+The script sends the bearer header to curl over standard input, removes temporary
+headers, and saves a redacted JSON artifact. Logging in invalidates existing
+sessions for that QA account. Keep credentials out of command history and never
+publish the unsanitized temporary files if the procedure is modified.
 
 The following Bash procedure samples **one endpoint per run**, with five warmup
 requests and 30 measured requests. Change ENDPOINT and RUN_LABEL for each run.
@@ -178,7 +193,7 @@ Sources checked during the investigation:
 
 ## Observation deployment: 2026-09-22
 
-- Code commit: `b019eb97` (local commit; not pushed).
+- Telemetry code commit: `a7284ebc` (present on `origin/main`).
 - Previous API version: `8f6b82e6-8176-4629-b312-f53f686a260d`.
 - Observation API version: `e12ebc5c-3b79-47b7-8ffe-1806ebac8d74`.
 - Upload: 2419.92 KiB / gzip 600.06 KiB. Worker Startup Time: **143 ms**.
@@ -215,11 +230,15 @@ This establishes the production write/read path and probe label, not HiNet
 performance. First seven-day review is due no earlier than **2026-09-29 01:38 UTC**
 (09:38 Malaysia time). No recurring review has been scheduled. The first
 [authenticated MY/SIN baseline](../investigations/2026-09-22-worker-placement-369-baseline.md)
-is now recorded. Taiwan network baselines, repeat windows, organic coverage, a
-Tokyo experiment and acceptance evidence remain outstanding. With no organic
-users, controlled synthetic comparisons need not wait an empty week; qualify
-their conclusions as scenario-specific rather than population-level evidence.
-Keep pre/post query windows disjoint; do not mix observation-only and
+and an [authenticated TW/SJC baseline](../investigations/2026-09-22-worker-placement-369-hinet-sjc-before.md)
+are now recorded. The Taiwan run reproduced SJC ingress for all 90 measured
+requests. A second Taiwan ISP, repeat windows, organic coverage, the Tokyo
+experiment, provider-side execution placement, and acceptance evidence remain
+outstanding. Local Wrangler is currently authenticated to a different Cloudflare
+account, so production deploy/query work requires the production account context.
+With no organic users, controlled synthetic comparisons need not wait an empty
+week; qualify their conclusions as scenario-specific rather than population-level
+evidence. Keep pre/post query windows disjoint; do not mix observation-only and
 placement-enabled samples in one cohort. For exact SQL windows use
 `timestamp >= toDateTime(unix_start) AND timestamp <= toDateTime(unix_end)`;
 the live API rejected direct string timestamp comparisons in the baseline check.
