@@ -1,8 +1,60 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { createPinia, setActivePinia } from "pinia";
 import { adminRestaurantOptionalRoutes, router } from "./index";
 import { UserRole } from "@/types";
+import { setAuthTokenProvider } from "@/utils/authTokenProvider";
+
+// A structurally valid JWT that expires in 2100, so the guard does not try a
+// refresh. Only the payload's exp is read client-side.
+const LIVE_TOKEN = [
+  btoa(JSON.stringify({ alg: "HS256", typ: "JWT" })),
+  btoa(JSON.stringify({ exp: 4102444800 })),
+  "sig",
+].join(".");
+
+function signInAs(role: UserRole) {
+  localStorage.setItem(
+    "auth_user",
+    JSON.stringify({ id: "u-1", username: "staff", role, restaurantId: "r-1" }),
+  );
+  setAuthTokenProvider(() => LIVE_TOKEN);
+  setActivePinia(createPinia());
+}
+
+// The dashboard home is the owner's analytics page; every endpoint it calls
+// is admin/owner only. A cashier who opened the admin root was sent through
+// /login?redirect=/dashboard and landed there, on a permission error and
+// KPI tiles reading NT$0 (production, 2026-09-22).
+describe("dashboard home by role", () => {
+  beforeEach(async () => {
+    setActivePinia(createPinia());
+    await router.push("/login");
+  });
+  afterEach(() => {
+    localStorage.clear();
+    setAuthTokenProvider(() => null);
+  });
+
+  it("sends a cashier to the checkout instead", async () => {
+    signInAs(UserRole.CASHIER);
+    await router.push("/dashboard");
+    expect(router.currentRoute.value.path).toBe("/dashboard/pos/checkout");
+  }, 30_000);
+
+  it("sends service crew to the service station instead", async () => {
+    signInAs(UserRole.SERVICE);
+    await router.push("/dashboard");
+    expect(router.currentRoute.value.path).toBe("/service");
+  }, 30_000);
+
+  it("keeps the owner on the dashboard home", async () => {
+    signInAs(UserRole.OWNER);
+    await router.push("/dashboard");
+    expect(router.currentRoute.value.path).toBe("/dashboard");
+  }, 30_000);
+});
 
 describe("admin dashboard router", () => {
   it("allows platform market checkouts without a selected restaurant", () => {
