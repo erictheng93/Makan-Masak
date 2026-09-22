@@ -114,6 +114,10 @@
     {
       "fresh": "0028_restaurant_country_code.sql",
       "reason": "restaurants is a platform-API table; the management-api database has no restaurants row to carry a country on."
+    },
+    {
+      "fresh": "0029_service_bookings_pay_at_venue_default.sql",
+      "reason": "service_bookings and its waitlist are platform-API booking tables; the management API has neither tenant booking records nor a corresponding payment workflow."
     }
   ],
   "legacyOnly": [

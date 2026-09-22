@@ -946,6 +946,7 @@
     "confirmationCode": "Kode konfirmasi:",
     "amountDue": "Jumlah tagihan",
     "status": "Status",
+    "paymentStatusLabel": "Status pembayaran",
     "creditCardPlaceholder": "Public id kartu kredit toko",
     "creditPinPlaceholder": "PIN (opsional)",
     "payWithCredits": "Bayar dengan kredit",
@@ -967,6 +968,12 @@
     "lookupFailed": "Tidak dapat mencari pemesanan ini.",
     "cancelSuccess": "Pemesanan dibatalkan.",
     "cancelFailed": "Tidak dapat membatalkan pemesanan ini.",
+    "paymentStatus": {
+      "not_required": "Tidak perlu pembayaran",
+      "unpaid": "Belum dibayar",
+      "deposit_paid": "Deposit sudah dibayar",
+      "paid": "Sudah dibayar"
+    },
     "bookingStatus": {
       "pending": "Menunggu pembayaran",
       "confirmed": "Dikonfirmasi",

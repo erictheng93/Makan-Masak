@@ -946,6 +946,7 @@
     "confirmationCode": "確認碼：",
     "amountDue": "應付",
     "status": "狀態",
+    "paymentStatusLabel": "付款狀態",
     "creditCardPlaceholder": "代幣卡 public id",
     "creditPinPlaceholder": "PIN（可選）",
     "payWithCredits": "代幣付款",
@@ -967,6 +968,12 @@
     "lookupFailed": "查詢預約失敗。",
     "cancelSuccess": "預約已取消。",
     "cancelFailed": "取消預約失敗。",
+    "paymentStatus": {
+      "not_required": "無須付款",
+      "unpaid": "未付款",
+      "deposit_paid": "訂金已付",
+      "paid": "已付款"
+    },
     "bookingStatus": {
       "pending": "待付款",
       "confirmed": "已確認",

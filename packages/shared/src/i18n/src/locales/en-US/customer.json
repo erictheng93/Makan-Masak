@@ -946,6 +946,7 @@
     "confirmationCode": "Confirmation code:",
     "amountDue": "Amount due",
     "status": "Status",
+    "paymentStatusLabel": "Payment",
     "creditCardPlaceholder": "Credit card public id",
     "creditPinPlaceholder": "PIN (optional)",
     "payWithCredits": "Pay with credits",
@@ -967,6 +968,12 @@
     "lookupFailed": "Unable to look up this booking.",
     "cancelSuccess": "Booking cancelled.",
     "cancelFailed": "Unable to cancel this booking.",
+    "paymentStatus": {
+      "not_required": "No payment required",
+      "unpaid": "Unpaid",
+      "deposit_paid": "Deposit paid",
+      "paid": "Paid"
+    },
     "bookingStatus": {
       "pending": "Awaiting payment",
       "confirmed": "Confirmed",

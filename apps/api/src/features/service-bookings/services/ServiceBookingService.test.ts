@@ -1941,7 +1941,7 @@ describe("ServiceBookingService orchestration helpers", () => {
     });
     expect(markConfirmed).toHaveBeenCalledWith(booking, {
       method: SERVICE_BOOKING_PAYMENT_METHOD.CASH,
-      amountPaidCents: 0,
+      amountPaidCents: 1200,
       paymentRef: null,
     });
   });

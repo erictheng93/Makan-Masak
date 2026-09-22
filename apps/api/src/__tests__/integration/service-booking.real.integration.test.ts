@@ -310,6 +310,7 @@ describe("ServiceBookingService — create", () => {
       bookingDate: "2026-06-05",
       bookingTime: "14:00",
       voucherCode: "SVC10",
+      paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.PREPAY,
     });
     expect(booking.voucherDiscountCents).toBe(1500);
     expect(booking.amountDueCents).toBe(13500);
@@ -357,6 +358,7 @@ describe("ServiceBookingService — capacity", () => {
       customerPhone: "0911000001",
       bookingDate: "2026-06-05",
       bookingTime: "14:00",
+      paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.PREPAY,
     });
     expect(
       await service().getAvailability({
@@ -455,6 +457,7 @@ describe("ServiceBookingService — payment & lifecycle", () => {
       bookingDate: "2026-06-05",
       bookingTime: "14:00",
       voucherCode: "SVC10",
+      paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.PREPAY,
     });
 
     const paid = await service().payWithCredits({
@@ -609,6 +612,7 @@ describe("ServiceBookingService — payment & lifecycle", () => {
       bookingDate: "2026-06-05",
       bookingTime: "14:00",
       voucherCode: "SVC20",
+      paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.PREPAY,
     });
     const secondBooking = await service().createBooking({
       restaurantId: RESTAURANT_ID,
@@ -618,6 +622,7 @@ describe("ServiceBookingService — payment & lifecycle", () => {
       bookingDate: "2026-06-05",
       bookingTime: "14:00",
       voucherCode: "SVC20",
+      paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.PREPAY,
     });
     await service().payWithCredits({
       bookingId: firstBooking.id,
@@ -668,6 +673,28 @@ describe("ServiceBookingService — payment & lifecycle", () => {
     await service().confirmCash(booking.id);
     const done = await service().transition(booking.id, "completed");
     expect(done.status).toBe("completed");
+  });
+
+  it("records the full venue cash collection when staff confirms a booking", async () => {
+    const serviceId = await seedService({ priceCents: 15000 });
+    const booking = await service().createBooking({
+      restaurantId: RESTAURANT_ID,
+      serviceItemId: serviceId,
+      customerName: "Guest",
+      customerPhone: "0911222333",
+      bookingDate: "2026-06-05",
+      bookingTime: "14:00",
+    });
+
+    const confirmed = await service().confirmCash(booking.id);
+
+    expect(confirmed).toMatchObject({
+      status: "confirmed",
+      paymentRequirement: "pay_at_venue",
+      paymentStatus: "paid",
+      paymentMethod: "cash",
+      amountPaidCents: 15000,
+    });
   });
 });
 

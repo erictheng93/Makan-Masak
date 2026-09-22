@@ -265,6 +265,12 @@
                 {{ bookingStatusLabel(booking) }}
               </dd>
             </div>
+            <div>
+              <dt>{{ t("serviceBooking.paymentStatusLabel") }}</dt>
+              <dd class="font-semibold">
+                {{ paymentStatusLabel(booking) }}
+              </dd>
+            </div>
           </dl>
           <div v-if="canPayWithCredits" class="mt-4 space-y-2">
             <input
@@ -329,7 +335,8 @@
             {{ verifiedBooking.serviceNameSnapshot }} ·
             {{ verifiedBooking.bookingDate }}
             {{ verifiedBooking.bookingTime }} ·
-            {{ bookingStatusLabel(verifiedBooking) }}
+            {{ bookingStatusLabel(verifiedBooking) }} ·
+            {{ paymentStatusLabel(verifiedBooking) }}
             <button
               v-if="
                 verifiedBooking.status === 'pending' ||
@@ -625,6 +632,13 @@ function bookingStatusLabel(booking: ServiceBooking): string {
   }
 
   return statusLabel(booking.status);
+}
+
+function paymentStatusLabel(booking: ServiceBooking): string {
+  if (booking.paymentRequirement === "none") {
+    return t("serviceBooking.paymentStatus.not_required");
+  }
+  return t(`serviceBooking.paymentStatus.${booking.paymentStatus}`);
 }
 
 function contactProofFromInput() {

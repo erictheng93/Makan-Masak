@@ -946,6 +946,7 @@
     "confirmationCode": "Kod pengesahan:",
     "amountDue": "Jumlah perlu dibayar",
     "status": "Status",
+    "paymentStatusLabel": "Status bayaran",
     "creditCardPlaceholder": "Public id kad kredit kedai",
     "creditPinPlaceholder": "PIN (pilihan)",
     "payWithCredits": "Bayar dengan kredit",
@@ -967,6 +968,12 @@
     "lookupFailed": "Tidak dapat mencari tempahan ini.",
     "cancelSuccess": "Tempahan dibatalkan.",
     "cancelFailed": "Tidak dapat membatalkan tempahan ini.",
+    "paymentStatus": {
+      "not_required": "Tiada bayaran diperlukan",
+      "unpaid": "Belum dibayar",
+      "deposit_paid": "Deposit telah dibayar",
+      "paid": "Dibayar"
+    },
     "bookingStatus": {
       "pending": "Menunggu bayaran",
       "confirmed": "Disahkan",

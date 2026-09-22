@@ -433,6 +433,9 @@ describe("ServiceBookingView", () => {
     expect(confirmation.text()).toContain(
       "serviceBooking.bookingStatus.confirmed",
     );
+    expect(confirmation.text()).toContain(
+      "serviceBooking.paymentStatus.not_required",
+    );
   });
 
   it("keeps a paid booking on its confirmed status when credits are disabled", async () => {
@@ -464,7 +467,33 @@ describe("ServiceBookingView", () => {
     expect(confirmation.text()).toContain(
       "serviceBooking.bookingStatus.confirmed",
     );
+    expect(confirmation.text()).toContain("serviceBooking.paymentStatus.paid");
     expect(confirmation.text()).not.toContain("serviceBooking.payAtCounter");
+  });
+
+  it("shows a paid state after staff records an on-site cash payment", async () => {
+    vi.mocked(serviceBookingsApi.verify).mockResolvedValue({
+      ...pendingBooking,
+      paymentRequirement: "pay_at_venue",
+      status: "confirmed",
+      paymentStatus: "paid",
+      paymentMethod: "cash",
+      amountPaidCents: 12000,
+    });
+    const wrapper = mountView();
+    await flushPromises();
+
+    await wrapper
+      .get('[data-testid="service-booking-verify-code"]')
+      .setValue("ABC123");
+    await wrapper
+      .get('[data-testid="service-booking-verify"]')
+      .trigger("click");
+    await flushPromises();
+
+    expect(
+      wrapper.get('[data-testid="service-booking-verified"]').text(),
+    ).toContain("serviceBooking.paymentStatus.paid");
   });
 
   it("does not offer credits for an unpaid pay-at-venue booking", async () => {

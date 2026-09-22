@@ -946,6 +946,7 @@
     "confirmationCode": "Mã xác nhận:",
     "amountDue": "Số tiền phải trả",
     "status": "Trạng thái",
+    "paymentStatusLabel": "Trạng thái thanh toán",
     "creditCardPlaceholder": "Public id thẻ tín dụng nội bộ",
     "creditPinPlaceholder": "Mã PIN (tuỳ chọn)",
     "payWithCredits": "Thanh toán bằng điểm",
@@ -967,6 +968,12 @@
     "lookupFailed": "Không thể tra cứu đặt chỗ này.",
     "cancelSuccess": "Đã huỷ đặt chỗ.",
     "cancelFailed": "Không thể huỷ đặt chỗ này.",
+    "paymentStatus": {
+      "not_required": "Không cần thanh toán",
+      "unpaid": "Chưa thanh toán",
+      "deposit_paid": "Đã thanh toán tiền cọc",
+      "paid": "Đã thanh toán"
+    },
     "bookingStatus": {
       "pending": "Chờ thanh toán",
       "confirmed": "Đã xác nhận",

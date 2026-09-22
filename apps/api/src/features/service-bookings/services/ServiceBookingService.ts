@@ -617,7 +617,11 @@ export class ServiceBookingService {
     const booking = await this.loadPayableBooking(bookingId);
     return this.markConfirmed(booking, {
       method: SERVICE_BOOKING_PAYMENT_METHOD.CASH,
-      amountPaidCents: 0, // collected at venue
+      // amountDueCents is the amount this confirmation settles: the full
+      // charge for pay-at-venue/prepay, or the required deposit for deposit.
+      // Recording zero made a confirmed cash booking look unpaid in revenue
+      // and cash-drawer reports.
+      amountPaidCents: booking.amountDueCents,
       paymentRef: null,
     });
   }
