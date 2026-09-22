@@ -95,7 +95,7 @@ DB 時間戳欄位、顧客追蹤頁文案與 i18n key，以及所有以 `ready`
 
 - **店主進得了 `/service`，卻不能領單**。路由開放 role 0／1／3，
   `delivery-claim` 只收 `requireRole([0, 3])`（依程式碼判讀，未實測）。
-- **「回報問題」不會送出任何東西**。`submitIssue` 只 `console.log` 後關閉對話框。
+- **「回報問題」不會送出任何東西**。`submitIssue` 只 `console.log` 後關閉對話框（#417）。
 - **送菜流程的 E2E 只在夜間跑**，push 與 PR 不會觸發；壞掉要到隔天才看得到。
   在 push／PR 擋住狀態合約回歸的仍是元件測試。
 - **待送清單靠輪詢**。`ServiceLayout` 沒有即時連線，新單最多晚 15 秒出現。

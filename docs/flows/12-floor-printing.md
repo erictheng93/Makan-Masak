@@ -161,7 +161,7 @@ Referer 或 cookie，兩層 CSRF 都會在進入 handler 前拒絕它。豁免�
    `setTimeout`、`getStatus()` 永遠回 `online`；`detectPrinter` 不連線，只看位址字串是否含
    `epson`／`star`／`citizen`，所以自動掃描找不到任何真印表機；加了印表機之後，每張工作都失敗在
    `executePrintJob method must be implemented by PrinterService`。後台同時顯示
-   「Healthy · 1/1 printers online」。repo 裡沒有任何 TCP／USB／serial 傳輸程式碼。
+   「Healthy · 1/1 printers online」。repo 裡沒有任何 TCP／USB／serial 傳輸程式碼（#414）。
 0. **沒有印表機時代理照樣認領**，每張票回 `failed`（No available printer found），
    幾輪心跳就燒完投遞額度——雖然雲端已經知道這台回報 0 台在線。
 1. **重試沒有退避。** 節奏完全來自代理的輪詢間隔（預設 60 秒）與「印失敗就停 drain」

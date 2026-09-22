@@ -240,19 +240,19 @@ footer{
 <section>
   <h2>發現總表</h2>
   <p>共 <b>19 項</b>。<b>9 項本輪直接修</b>（分支 <code>fix/floor-qa-2026-09-22</code>，每項先紅後綠），
-    <b>6 項建議開 issue</b>（草稿在文末，尚未建立），4 項只記錄。
+    <b>6 項開 issue</b>（#412–#417），4 項只記錄。
     分界線沿用前幾輪：修法唯一、範圍收斂、能在本機用測試證明的直接修；需要產品決定、動到金流語意或狀態機、或需要硬體的開 issue。</p>
   <div class="tablewrap">
     <table>
       <thead><tr><th>#</th><th>發現</th><th>流程</th><th>類型</th><th>處置</th></tr></thead>
       <tbody>
-        <tr><td class="mono">K1</td><td>廚房看板只寫品項狀態，從不推訂單狀態；「Start Preparing」重整後按了沒反應</td><td>09</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue">開 issue</span></td></tr>
-        <tr><td class="mono">P2</td><td>結班對帳不可用：一般收款與退款不進班次、結班永遠送實際金額 0、預期金額含刷卡；管理頁餘額 NaN</td><td>11</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue">開 issue</span></td></tr>
-        <tr><td class="mono">D1</td><td>print agent 印不出任何東西：驅動模擬、偵測看字串、<code>executePrintJob</code> 未實作；健康狀態謊報在線；沒印表機時照樣燒光重試額度</td><td>12</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue">開 issue</span></td></tr>
+        <tr><td class="mono">K1 <a href="https://github.com/erictheng93/Makan-Masak/issues/412">#412</a></td><td>廚房看板只寫品項狀態，從不推訂單狀態；「Start Preparing」重整後按了沒反應</td><td>09</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue"><a href="https://github.com/erictheng93/Makan-Masak/issues/412">#412</a></span></td></tr>
+        <tr><td class="mono">P2 <a href="https://github.com/erictheng93/Makan-Masak/issues/413">#413</a></td><td>結班對帳不可用：一般收款與退款不進班次、結班永遠送實際金額 0、預期金額含刷卡；管理頁餘額 NaN</td><td>11</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue"><a href="https://github.com/erictheng93/Makan-Masak/issues/413">#413</a></span></td></tr>
+        <tr><td class="mono">D1 <a href="https://github.com/erictheng93/Makan-Masak/issues/414">#414</a></td><td>print agent 印不出任何東西：驅動模擬、偵測看字串、<code>executePrintJob</code> 未實作；健康狀態謊報在線；沒印表機時照樣燒光重試額度</td><td>12</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag issue"><a href="https://github.com/erictheng93/Makan-Masak/issues/414">#414</a></span></td></tr>
         <tr><td class="mono">P1</td><td>收據列印 100% 回 400「需要指定收銀機ID」，畫面無提示</td><td>11</td><td><span class="tag blocker">阻斷</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
-        <tr><td class="mono">X2</td><td>員工登入會讓同帳號其他所有 session 失效：第二台裝置登入，第一台班中被登出</td><td>全部</td><td><span class="tag data">資料</span></td><td><span class="tag issue">開 issue</span></td></tr>
-        <tr><td class="mono">P3</td><td>退款不回寫訂單（<code>refund_amount_cents</code> 空、仍 <code>completed</code>）；收銀自建即完成、無核准人</td><td>11</td><td><span class="tag data">資料</span></td><td><span class="tag issue">開 issue</span></td></tr>
-        <tr><td class="mono">S5</td><td>「回報問題」只 <code>console.log</code>，送菜員以為已送出</td><td>10</td><td><span class="tag data">資料</span></td><td><span class="tag issue">開 issue</span></td></tr>
+        <tr><td class="mono">X2 <a href="https://github.com/erictheng93/Makan-Masak/issues/415">#415</a></td><td>員工登入會讓同帳號其他所有 session 失效：第二台裝置登入，第一台班中被登出</td><td>全部</td><td><span class="tag data">資料</span></td><td><span class="tag issue"><a href="https://github.com/erictheng93/Makan-Masak/issues/415">#415</a></span></td></tr>
+        <tr><td class="mono">P3 <a href="https://github.com/erictheng93/Makan-Masak/issues/416">#416</a></td><td>退款不回寫訂單（<code>refund_amount_cents</code> 空、仍 <code>completed</code>）；收銀自建即完成、無核准人</td><td>11</td><td><span class="tag data">資料</span></td><td><span class="tag issue"><a href="https://github.com/erictheng93/Makan-Masak/issues/416">#416</a></span></td></tr>
+        <tr><td class="mono">S5 <a href="https://github.com/erictheng93/Makan-Masak/issues/417">#417</a></td><td>「回報問題」只 <code>console.log</code>，送菜員以為已送出</td><td>10</td><td><span class="tag data">資料</span></td><td><span class="tag issue"><a href="https://github.com/erictheng93/Makan-Masak/issues/417">#417</a></span></td></tr>
         <tr><td class="mono">D3</td><td>已取消訂單的廚房票仍留在待印佇列，會被派給出單機</td><td>12</td><td><span class="tag data">資料</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
         <tr><td class="mono">S2</td><td>「今日送達」算進 8/28 的單：訂單列表只帶 <code>dateFrom</code> 時日期篩選被整個丟掉</td><td>10</td><td><span class="tag data">資料</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
         <tr><td class="mono">S4</td><td>送菜站「準時率 92%」「顧客評分 4.8/5」是寫死的常數</td><td>10</td><td><span class="tag data">資料</span></td><td><span class="tag fixed">本輪已修</span></td></tr>
@@ -273,7 +273,7 @@ footer{
 <section>
   <h2>09 廚房</h2>
   <div class="finding blocker">
-    <div class="finding-h"><span class="id">K1</span><h4>廚房看板只寫品項狀態，從不推訂單狀態</h4><span class="tag issue">開 issue</span></div>
+    <div class="finding-h"><span class="id">K1</span><h4>廚房看板只寫品項狀態，從不推訂單狀態</h4><span class="tag issue"><a href="https://github.com/erictheng93/Makan-Masak/issues/412">#412</a></span></div>
     <div class="finding-b">
       <p>收銀員確認訂單 A（<code>MG4S-1G15</code>，NT$180）後，廚房看板與訪客追蹤頁都即時更新——這段正常。然後廚師操作：</p>
       <div class="tablewrap"><table>
@@ -326,7 +326,7 @@ footer{
     <div class="finding-b"><p><code>todayStats</code> 內寫死 <code>onTimeRate: 92</code>、<code>rating: 4.8</code>。沒有任何評分資料來源；準時比例已由「服務效率」計算顯示。移除這兩格（<code>5ff41fcc</code>）。</p></div>
   </div>
   <div class="finding">
-    <div class="finding-h"><span class="id">S5</span><h4>「回報問題」不會送出任何東西</h4><span class="tag issue">開 issue</span></div>
+    <div class="finding-h"><span class="id">S5</span><h4>「回報問題」不會送出任何東西</h4><span class="tag issue"><a href="https://github.com/erictheng93/Makan-Masak/issues/417">#417</a></span></div>
     <div class="finding-b"><p><code>submitIssue</code> 只 <code>console.log</code> 後關閉對話框。要不要有回報端點（寫到哪、誰看）或先拿掉按鈕，是產品決定。</p></div>
   </div>
 </section>
@@ -343,7 +343,7 @@ footer{
         改帶標頭、失敗時對話框保留並顯示伺服器訊息（<code>67b10c90</code>）。</p></div>
   </div>
   <div class="finding blocker">
-    <div class="finding-h"><span class="id">P2</span><h4>結班對帳在現行介面上不能用</h4><span class="tag issue">開 issue</span></div>
+    <div class="finding-h"><span class="id">P2</span><h4>結班對帳在現行介面上不能用</h4><span class="tag issue"><a href="https://github.com/erictheng93/Makan-Masak/issues/413">#413</a></span></div>
     <div class="finding-b">
       <div class="tablewrap"><table>
         <thead><tr><th>時點</th><th><code>cash_shifts</code></th><th><code>cash_movements</code></th></tr></thead>
@@ -366,7 +366,7 @@ footer{
     </div>
   </div>
   <div class="finding">
-    <div class="finding-h"><span class="id">P3</span><h4>退款不回寫訂單，也沒有核准人</h4><span class="tag issue">開 issue</span></div>
+    <div class="finding-h"><span class="id">P3</span><h4>退款不回寫訂單，也沒有核准人</h4><span class="tag issue"><a href="https://github.com/erictheng93/Makan-Masak/issues/416">#416</a></span></div>
     <div class="finding-b"><p><code>refunds</code> 一列 <code>completed</code>、<code>approved_by</code> NULL；訂單的 <code>refund_amount_cents</code> 仍 NULL、<code>payment_status</code> 仍 <code>completed</code>（不是 <code>partial_refunded</code>）。
       累計額度守門是對的（查的是 <code>refunds</code>），但訂單本身看不出退過款，後台營收也不會扣。收銀員能否自行核准退款是政策問題。</p></div>
   </div>
@@ -386,7 +386,7 @@ footer{
   <h2>12 出單與列印</h2>
   <p>店主在 <code>/dashboard/print-agents</code> 核發全店憑證 → 本機 <code>apps/print-agent</code> 以 <code>CLOUD_API_ENDPOINT=https://api.makanmasak.com/api/v1</code> 啟動（心跳調成 15 秒）→ 觀察 → 撤銷。</p>
   <div class="finding blocker">
-    <div class="finding-h"><span class="id">D1</span><h4>print agent 印不出任何東西，後台卻顯示健康</h4><span class="tag issue">開 issue</span></div>
+    <div class="finding-h"><span class="id">D1</span><h4>print agent 印不出任何東西，後台卻顯示健康</h4><span class="tag issue"><a href="https://github.com/erictheng93/Makan-Masak/issues/414">#414</a></span></div>
     <div class="finding-b">
       <div class="tablewrap"><table>
         <thead><tr><th>階段</th><th>代理</th><th>雲端</th></tr></thead>
@@ -411,7 +411,7 @@ footer{
 <section>
   <h2>跨流程</h2>
   <div class="finding">
-    <div class="finding-h"><span class="id">X2</span><h4>員工登入會讓同帳號其他 session 全部失效</h4><span class="tag issue">開 issue</span></div>
+    <div class="finding-h"><span class="id">X2</span><h4>員工登入會讓同帳號其他 session 全部失效</h4><span class="tag issue"><a href="https://github.com/erictheng93/Makan-Masak/issues/415">#415</a></span></div>
     <div class="finding-b"><p>本輪用 API 替 <code>cashier1</code>／<code>service1</code> 另外登入後，兩個瀏覽器下次 <code>POST /auth/refresh</code> 都 401、被踢回登入頁。
       <code>AuthService.login</code> 的 batch 第一句是 <code>UPDATE sessions SET is_active=false WHERE user_id=?</code>（註解「prevent session fixation」）。
       現場常見一個角色帳號多台裝置（兩台 POS、廚房兩面螢幕），第二台一登入第一台就在班中登出。要不要允許多裝置是產品決定。</p></div>
@@ -438,7 +438,7 @@ footer{
 </section>
 
 <section>
-  <h2>建議開的 issue（草稿，尚未建立）</h2>
+  <h2>已開的 issue（2026-09-22）</h2>
   <div class="tablewrap"><table>
     <thead><tr><th>#</th><th>標題</th><th>建議修法</th></tr></thead>
     <tbody>

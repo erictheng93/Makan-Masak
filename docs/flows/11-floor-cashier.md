@@ -126,9 +126,9 @@
   一般訂單走 `POST /payments` 收款**不會**寫進班次（只有市集 POS 收款會累加
   `total_sales_cents`）；退款寫了 `-` 的現金流動，但不更新班次的 `total_refunds_cents`；
   結班對話框沒有清點欄位，前端永遠送 `actualAmount: 0`；預期金額用
-  `totalSales`（含刷卡）算抽屜現金。結果是每一班都記成短少整筆開班現金。
+  `totalSales`（含刷卡）算抽屜現金。結果是每一班都記成短少整筆開班現金（#413）。
 - **退款不回寫訂單**。`refunds` 有列、也有現金流動，但 `orders.refund_amount_cents`
-  仍為空、`payment_status` 仍是 `completed`；退款建立即 `completed`，`approved_by` 為空。
+  仍為空、`payment_status` 仍是 `completed`；退款建立即 `completed`，`approved_by` 為空（#416）。
 - **收銀機沒有伺服器端餘額**。管理頁的「目前餘額」是前端自己加減的數字，
   新收銀機顯示 NaN；班次回的是 `startedAt`，前端讀 `startTime`，所以顯示 Invalid Date。
 - **結班差額沒有審核流程**。差額只是被記下來，沒有覆核、沒有告警門檻。
