@@ -824,6 +824,41 @@ describe("OrdersService workflows", () => {
     );
   });
 
+  // The service station asks for today's deliveries with dateFrom alone.
+  // Requiring both ends dropped the filter entirely, so "today" counted an
+  // order delivered weeks earlier.
+  it("keeps a one-sided date range instead of dropping it", async () => {
+    const service = new OrdersService(createEnv() as never);
+    getBaseOrders.mockResolvedValue({
+      orders: [],
+      pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+    });
+
+    await service.getOrders({
+      customerId: "customer-77",
+      dateFrom: new Date("2026-09-21T16:00:00.000Z"),
+    });
+    expect(getBaseOrders).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        dateRange: [new Date("2026-09-21T16:00:00.000Z"), undefined],
+      }),
+      1,
+      20,
+    );
+
+    await service.getOrders({
+      customerId: "customer-77",
+      dateTo: new Date("2026-09-22T16:00:00.000Z"),
+    });
+    expect(getBaseOrders).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        dateRange: [undefined, new Date("2026-09-22T16:00:00.000Z")],
+      }),
+      1,
+      20,
+    );
+  });
+
   it("refuses list queries from the retired legacy customer role", async () => {
     const service = new OrdersService(createEnv() as never);
     getBaseOrders.mockResolvedValue({
