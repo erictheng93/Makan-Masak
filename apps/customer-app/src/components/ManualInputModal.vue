@@ -90,14 +90,10 @@
                   {{ restaurant.name }}
                 </div>
                 <div
-                  v-if="restaurant.district || restaurant.type"
+                  v-if="publicDistrict(restaurant.district)"
                   class="text-xs text-gray-500 truncate"
                 >
-                  {{
-                    [restaurant.type, restaurant.district]
-                      .filter(Boolean)
-                      .join(" · ")
-                  }}
+                  {{ publicDistrict(restaurant.district) }}
                 </div>
               </div>
             </button>
@@ -265,6 +261,11 @@ const emits = defineEmits<{
   "update:show": [value: boolean];
   "restaurant-selected": [data: { restaurantId: string }];
 }>();
+
+function publicDistrict(district: string | null): string | null {
+  const value = district?.trim();
+  return value && !value.toLowerCase().startsWith("onboarding-") ? value : null;
+}
 
 // State
 const searchQuery = ref("");

@@ -1010,9 +1010,8 @@ describe("DiscoveryService", () => {
             ...nearOpen,
             menuItemId: 3,
             restaurantId: "restaurant-3",
-            restaurantName: "Missing Geo",
-            latitude: null,
-            longitude: null,
+            restaurantName: "Hours Not Provided",
+            businessHours: null,
           },
         ],
         [{ count: 3 }],
@@ -1030,12 +1029,17 @@ describe("DiscoveryService", () => {
         limit: 10,
       }),
     ).resolves.toMatchObject({
-      total: 1,
+      total: 2,
       results: [
         {
           menuItemId: 1,
           restaurantName: "Open Near",
           distanceKm: 0,
+        },
+        {
+          menuItemId: 3,
+          restaurantName: "Hours Not Provided",
+          openingHoursStatus: "unavailable",
         },
       ],
     });
@@ -1072,9 +1076,8 @@ describe("DiscoveryService", () => {
           {
             ...row,
             id: "restaurant-3",
-            name: "Missing Geo",
-            latitude: null,
-            longitude: null,
+            name: "Hours Not Provided",
+            businessHours: null,
           },
         ],
         [{ count: 3 }],
@@ -1101,8 +1104,15 @@ describe("DiscoveryService", () => {
         sortBy: "open_now",
       }),
     ).resolves.toMatchObject({
-      total: 1,
-      results: [{ restaurantId: "restaurant-1", distanceKm: 0 }],
+      total: 2,
+      results: [
+        { restaurantId: "restaurant-1", distanceKm: 0 },
+        {
+          restaurantId: "restaurant-3",
+          name: "Hours Not Provided",
+          openingHoursStatus: "unavailable",
+        },
+      ],
     });
   });
 
@@ -1148,9 +1158,8 @@ describe("DiscoveryService", () => {
             ...serviceRow,
             serviceItemId: 12,
             restaurantId: "restaurant-3",
-            restaurantName: "Missing Geo",
-            latitude: null,
-            longitude: null,
+            restaurantName: "Hours Not Provided",
+            businessHours: null,
           },
         ],
         [{ count: 3 }],
@@ -1177,12 +1186,17 @@ describe("DiscoveryService", () => {
         limit: 10,
       }),
     ).resolves.toMatchObject({
-      total: 1,
+      total: 2,
       results: [
         {
           serviceItemId: 10,
           distanceKm: 0,
           marketVendor: { marketId: "market-1", stallNumber: "A1" },
+        },
+        {
+          serviceItemId: 12,
+          restaurantName: "Hours Not Provided",
+          openingHoursStatus: "unavailable",
         },
       ],
       scope: {

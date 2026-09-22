@@ -432,7 +432,10 @@ export class DiscoveryService {
     }
 
     if (filters.openNow) {
-      results = results.filter((r) => r.isOpen);
+      // Missing hours are not proof the restaurant is closed. Keep those
+      // results visible with the explicit "unavailable" label instead of
+      // silently making an incomplete profile disappear from discovery.
+      results = results.filter((r) => r.openingHoursStatus !== "closed");
     }
     if (filters.sortBy === "distance") {
       results = this.sortDistanceResultsFirst(results);
@@ -764,7 +767,7 @@ export class DiscoveryService {
         .filter(Boolean);
     }
     if (filters.openNow) {
-      filtered = filtered.filter((r) => r.isOpen);
+      filtered = filtered.filter((r) => r.openingHoursStatus !== "closed");
     }
     if (filters.sortBy === "distance") {
       filtered = this.sortDistanceResultsFirst(filtered);
@@ -979,7 +982,9 @@ export class DiscoveryService {
     }
 
     if (filters.openNow) {
-      results = results.filter((result) => result.isOpen);
+      results = results.filter(
+        (result) => result.openingHoursStatus !== "closed",
+      );
     }
     if (filters.sortBy === "distance") {
       results = this.sortDistanceResultsFirst(results);
