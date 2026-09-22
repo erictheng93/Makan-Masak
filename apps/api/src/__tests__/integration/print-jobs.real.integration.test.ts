@@ -543,6 +543,38 @@ describe("cloud print dispatch — real D1", () => {
     expect((await receiptRow("kitchen-1"))?.printStatus).toBe("printing");
   });
 
+  // A kitchen ticket is raised when the order is confirmed; cancelling the
+  // order afterwards left it pending, so the kitchen would be handed a ticket
+  // for food nobody wants. Production had one such ticket queued (2026-09-22).
+  it("voids a kitchen ticket whose order was cancelled instead of printing it", async () => {
+    await seedShopAgent(SHOP_A, KITCHEN_KEY_A);
+    await testDb.drizzle
+      .update(orders)
+      .set({ status: "cancelled" })
+      .where(eq(orders.id, ORDER_A));
+    await seedReceipt("kitchen-1", null, ORDER_A, { receiptType: "kitchen" });
+
+    expect((await claimedJob(await poll(KITCHEN_KEY_A))).data).toBeNull();
+    expect(await receiptRow("kitchen-1")).toMatchObject({
+      printStatus: "cancelled",
+      printAttempts: 0,
+    });
+  });
+
+  it("still prints a till receipt for a cancelled order", async () => {
+    // Only kitchen tickets are orders to cook. A customer receipt for a
+    // cancelled order (e.g. a void slip) is the till's business.
+    await testDb.drizzle
+      .update(orders)
+      .set({ status: "cancelled" })
+      .where(eq(orders.id, ORDER_A));
+    await seedReceipt("receipt-1", REGISTER_A, ORDER_A);
+
+    expect((await claimedJob(await poll(KEY_A))).data?.receiptId).toBe(
+      "receipt-1",
+    );
+  });
+
   it("keeps a shop agent away from a till's receipts", async () => {
     await seedShopAgent(SHOP_A, KITCHEN_KEY_A);
     await seedReceipt("receipt-a", REGISTER_A, ORDER_A);
