@@ -2,6 +2,7 @@
 # Updated to use latest wrangler 4.35.0
 
 name = "makanmasak-api"
+account_id = "bdddc08c066a9abc285d75fe5947a468"
 main = "src/index.ts"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
@@ -375,15 +376,12 @@ binding = "DISCOVERY_VECTORIZE"
 index_name = "makanmasak-discovery-prod"
 
 
-# Deliberately no [placement] block. Smart Placement was enabled here and put
-# the Worker in North America (observed PDX and ATL) while this Worker's D1
-# primary runs in APAC, so every query became a trans-Pacific round trip -- a
-# `SELECT 1` measured 115-169ms. It needs "consistent traffic from multiple
-# locations" to place well, and at ~1 request/minute it had nothing to work
-# with. Without the block the Worker runs at the client edge. That edge is
-# not necessarily APAC: Taiwan HiNet requests have also entered at SJC (#369).
-# Collect country/colo/ASN baselines before testing an explicit Tokyo region
-# hint. See docs/runbooks/worker-placement-369.md and #322 before changing it.
+# Explicit placement experiment for #369. This is a fixed region hint, not
+# Smart Placement: Cloudflare selects the data center with the lowest latency
+# to the AWS Tokyo region. Keep the authenticated TW/SJC and MY/SIN baselines
+# in docs/investigations for comparison and remove only this block to roll back.
+[env.production.placement]
+region = "aws:ap-northeast-1"
 
 # Analytics for production
 [[env.production.analytics_engine_datasets]]
