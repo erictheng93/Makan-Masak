@@ -1714,8 +1714,9 @@ const processRefund = async () => {
     closeRefundDialog();
   } catch (error) {
     console.error("Refund processing error:", error);
+    // axios's own message is only the HTTP status line; the reason is below.
     refundError.value =
-      error instanceof Error ? error.message : t("cashier.alerts.refundFailed");
+      apiErrorMessage(error) ?? t("cashier.alerts.refundFailed");
   } finally {
     isProcessing.value = false;
   }
