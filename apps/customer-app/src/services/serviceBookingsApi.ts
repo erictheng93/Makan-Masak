@@ -7,6 +7,12 @@ export type ServiceBookingStatus =
   | "cancelled"
   | "no_show";
 
+export type ServiceBookingPaymentRequirement =
+  | "none"
+  | "deposit"
+  | "prepay"
+  | "pay_at_venue";
+
 export interface ServiceBookingAvailabilitySlot {
   timeSlot: string;
   remaining: number | null;
@@ -30,7 +36,7 @@ export interface ServiceBooking {
   confirmationCode: string;
   specialRequests?: string | null;
   voucherDiscountCents: number;
-  paymentRequirement: "none" | "deposit" | "prepay";
+  paymentRequirement: ServiceBookingPaymentRequirement;
   depositRequiredCents: number;
   balanceDueCents: number;
   amountDueCents: number;
@@ -59,7 +65,7 @@ export interface CreateServiceBookingInput {
   employeeId?: number;
   specialRequests?: string;
   voucherCode?: string;
-  paymentRequirement?: "none" | "deposit" | "prepay";
+  paymentRequirement?: ServiceBookingPaymentRequirement;
   depositAmountCents?: number;
   reminderOptIn?: boolean;
   reminderMinutesBefore?: number;

@@ -388,13 +388,13 @@ describe("SearchIndexSyncService fan-out queue", () => {
       },
     ]);
     expect(kv.delete).toHaveBeenCalledWith(
-      "search:restaurants:district:Old Town",
+      "search:restaurants:hours2:district:Old Town",
     );
     expect(kv.delete).toHaveBeenCalledWith(
-      "search:restaurants:district:Previous",
+      "search:restaurants:hours2:district:Previous",
     );
     expect(kv.delete).toHaveBeenCalledWith(
-      "search:restaurants:district:Central",
+      "search:restaurants:hours2:district:Central",
     );
     expect(kv.put).toHaveBeenCalledWith(
       "search:query:version",

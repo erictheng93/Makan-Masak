@@ -621,7 +621,8 @@ export function createApp(
         "/api/v1/waiting-list/*$",
         "/api/v1/waiting-list/*/confirm",
         "/api/v1/reservations$", // exact: POST / (create)
-        "/api/v1/reservations/*/cancel",
+        // Exact one-segment public DELETE. The staff POST /:id/cancel shares
+        // this path, so it is scoped by method instead of path-only exempted.
         "/api/v1/service-bookings$", // exact: POST / (create)
         "/api/v1/service-bookings/recurring",
         "/api/v1/service-bookings/waitlist",
@@ -661,6 +662,12 @@ export function createApp(
         "/api/v1/billing/webhooks", // Billing provider webhooks (HMAC/idempotency verified)
         "/api/v1/payments", // Payment requests are protected by auth + idempotency
         // SECURITY: Removed testing exclusions for shop QR endpoints - all state-changing operations now require CSRF tokens
+      ],
+      excludeRoutes: [
+        {
+          path: "/api/v1/reservations/*/cancel$",
+          methods: ["DELETE"],
+        },
       ],
     }),
   );

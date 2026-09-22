@@ -1,6 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { api } from "@/services/api";
-import { serviceBookingsService } from "./serviceBookingsService";
+import {
+  serviceBookingsService,
+  type ServiceBooking,
+} from "./serviceBookingsService";
 
 vi.mock("@/services/api", () => ({
   api: {
@@ -102,8 +105,30 @@ describe("serviceBookingsService", () => {
   });
 
   it("lists bookings and runs lifecycle actions", async () => {
+    const payAtVenueBooking = {
+      id: "booking-1",
+      restaurantId: "restaurant-1",
+      serviceItemId: 10,
+      serviceNameSnapshot: "Table reservation",
+      customerName: "Guest",
+      customerPhone: "0911222333",
+      bookingDate: "2026-06-10",
+      bookingTime: "10:00",
+      partySize: 2,
+      status: "pending",
+      confirmationCode: "ABC123",
+      paymentRequirement: "pay_at_venue",
+      depositRequiredCents: 0,
+      balanceDueCents: 0,
+      amountDueCents: 2500,
+      amountPaidCents: 0,
+      paymentStatus: "unpaid",
+      paymentMethod: "none",
+      reminderOptIn: 0,
+      calendarUid: "booking-1@makanmasak.service-bookings",
+    } satisfies ServiceBooking;
     vi.mocked(api.get).mockResolvedValueOnce({
-      data: { data: { bookings: [{ id: "booking-1" }] } },
+      data: { data: { bookings: [payAtVenueBooking] } },
     } as never);
     vi.mocked(api.post)
       .mockResolvedValueOnce({
@@ -125,7 +150,7 @@ describe("serviceBookingsService", () => {
         date: "2026-06-10",
         status: "pending",
       }),
-    ).resolves.toEqual([{ id: "booking-1" }]);
+    ).resolves.toEqual([payAtVenueBooking]);
     expect(api.get).toHaveBeenCalledWith("/service-bookings", {
       restaurantId: "restaurant-1",
       date: "2026-06-10",

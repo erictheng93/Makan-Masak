@@ -156,6 +156,13 @@ vi.mock("@/components/CustomizationModal.vue", () => ({
 vi.mock("@/components/DesktopCartPanel.vue", () => ({
   default: { template: "<div />" },
 }));
+vi.mock("@/components/LanguageSwitcher.vue", () => ({
+  default: {
+    props: { compact: Boolean },
+    template:
+      "<div data-testid=\"menu-language-switcher\" :data-compact=\"compact ? 'true' : 'false'\" />",
+  },
+}));
 
 vi.mock("@tanstack/vue-query", () => ({
   useQuery: (options: { queryKey: unknown[] }) => {
@@ -277,6 +284,11 @@ describe("MenuView table validation", () => {
     expect(wrapper.text()).toContain("Part 1 Test Nasi Lemak");
     expect(wrapper.text()).toContain("Part 1 Test Teh Tarik");
     expect(initializeCart).toHaveBeenCalledWith("restaurant-1", 1, null);
+    expect(
+      wrapper
+        .get('[data-testid="menu-language-switcher"]')
+        .attributes("data-compact"),
+    ).toBe("true");
 
     await wrapper.find("input[type='text']").setValue("teh");
 

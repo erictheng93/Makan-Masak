@@ -878,6 +878,7 @@
     "noResults": "Tidak ada hasil. Coba pencarian lain.",
     "open": "Buka",
     "closed": "Tutup",
+    "hoursUnavailable": "Jam operasional belum tersedia",
     "filters": "Filter",
     "openNow": "Buka Sekarang",
     "takeaway": "Bawa Pulang",
@@ -919,6 +920,10 @@
   "footer": {
     "copyright": "© {year} MakanMasak. Hak cipta dilindungi."
   },
+  "reservationBooking": {
+    "back": "Kembali ke toko",
+    "title": "Reservasi meja"
+  },
   "serviceBooking": {
     "back": "Kembali ke layanan",
     "title": "Pemesanan layanan",
@@ -944,6 +949,7 @@
     "creditCardPlaceholder": "Public id kartu kredit toko",
     "creditPinPlaceholder": "PIN (opsional)",
     "payWithCredits": "Bayar dengan kredit",
+    "payAtCounter": "Silakan bayar kepada staf di tempat ({amount} harus dibayar). Kode konfirmasi: {code}",
     "lookupTitle": "Cari atau batalkan pemesanan",
     "confirmationCodePlaceholder": "Masukkan kode konfirmasi",
     "contactPlaceholder": "Telepon atau email pemesanan (opsional)",

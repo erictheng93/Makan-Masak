@@ -25,7 +25,9 @@ vi.mock("@/composables/useI18n", () => ({
   useI18n: () => ({
     t: (key: string) => key,
     tWithParams: (key: string, params: Record<string, unknown>) =>
-      `${key}:${Object.values(params).join(",")}`,
+      key === "serviceBooking.payAtCounter"
+        ? `Please pay the staff at the venue (${params.amount} due). Confirmation code: ${params.code}`
+        : `${key}:${Object.values(params).join(",")}`,
     currentLanguage: ref("zh-TW"),
     hasTranslation: () => true,
   }),
@@ -338,5 +340,157 @@ describe("ServiceBookingView", () => {
     expect(
       wrapper.find('[data-testid="service-booking-credit-id"]').exists(),
     ).toBe(false);
+  });
+
+  it.each([
+    ["prepay", "TWD", "NT$120"],
+    ["deposit", "MYR", "RM 120.00"],
+    ["pay_at_venue", "TWD", "NT$120"],
+  ] as const)(
+    "explains how to pay an unpaid %s booking at the counter in %s",
+    async (paymentRequirement, currency, amount) => {
+      storedValueCreditsDisabled.value = true;
+      vi.mocked(menuApi.getRestaurant).mockResolvedValue({
+        id: "restaurant-1",
+        settings: { currency },
+      } as unknown as Restaurant);
+      vi.mocked(serviceBookingsApi.createBooking).mockResolvedValue({
+        ...pendingBooking,
+        paymentRequirement,
+      });
+      const wrapper = mountView();
+      await flushPromises();
+
+      await wrapper
+        .get('[data-testid="service-booking-name"]')
+        .setValue("王小明");
+      await wrapper
+        .get('[data-testid="service-booking-phone"]')
+        .setValue("0911222333");
+      await wrapper
+        .get('[data-testid="service-booking-create"]')
+        .trigger("submit");
+      await flushPromises();
+
+      const confirmation = wrapper.get(
+        '[data-testid="service-booking-confirmation"]',
+      );
+      expect(confirmation.text()).toContain(
+        `Please pay the staff at the venue (${amount} due). Confirmation code: ABC123`,
+      );
+      expect(confirmation.text()).not.toContain(
+        "serviceBooking.bookingStatus.pending",
+      );
+      expect(wrapper.find('[data-testid="service-booking-pay"]').exists()).toBe(
+        false,
+      );
+
+      vi.mocked(serviceBookingsApi.verify).mockResolvedValue({
+        ...pendingBooking,
+        paymentRequirement,
+      });
+      await wrapper
+        .get('[data-testid="service-booking-verify-code"]')
+        .setValue("ABC123");
+      await wrapper
+        .get('[data-testid="service-booking-verify"]')
+        .trigger("click");
+      await flushPromises();
+
+      expect(
+        wrapper.get('[data-testid="service-booking-verified"]').text(),
+      ).toContain(
+        `Please pay the staff at the venue (${amount} due). Confirmation code: ABC123`,
+      );
+    },
+  );
+
+  it("does not show an amount for a booking with no payment requirement", async () => {
+    vi.mocked(serviceBookingsApi.createBooking).mockResolvedValue({
+      ...pendingBooking,
+      paymentRequirement: "none",
+      status: "confirmed",
+    });
+    const wrapper = mountView();
+    await flushPromises();
+
+    await wrapper
+      .get('[data-testid="service-booking-name"]')
+      .setValue("王小明");
+    await wrapper
+      .get('[data-testid="service-booking-phone"]')
+      .setValue("0911222333");
+    await wrapper
+      .get('[data-testid="service-booking-create"]')
+      .trigger("submit");
+    await flushPromises();
+
+    const confirmation = wrapper.get(
+      '[data-testid="service-booking-confirmation"]',
+    );
+    expect(confirmation.text()).not.toContain("serviceBooking.amountDue");
+    expect(confirmation.text()).not.toContain("serviceBooking.payAtCounter");
+    expect(confirmation.text()).toContain(
+      "serviceBooking.bookingStatus.confirmed",
+    );
+  });
+
+  it("keeps a paid booking on its confirmed status when credits are disabled", async () => {
+    storedValueCreditsDisabled.value = true;
+    vi.mocked(serviceBookingsApi.createBooking).mockResolvedValue({
+      ...pendingBooking,
+      status: "confirmed",
+      paymentStatus: "paid",
+      paymentMethod: "cash",
+      amountPaidCents: 12000,
+    });
+    const wrapper = mountView();
+    await flushPromises();
+
+    await wrapper
+      .get('[data-testid="service-booking-name"]')
+      .setValue("王小明");
+    await wrapper
+      .get('[data-testid="service-booking-phone"]')
+      .setValue("0911222333");
+    await wrapper
+      .get('[data-testid="service-booking-create"]')
+      .trigger("submit");
+    await flushPromises();
+
+    const confirmation = wrapper.get(
+      '[data-testid="service-booking-confirmation"]',
+    );
+    expect(confirmation.text()).toContain(
+      "serviceBooking.bookingStatus.confirmed",
+    );
+    expect(confirmation.text()).not.toContain("serviceBooking.payAtCounter");
+  });
+
+  it("does not offer credits for an unpaid pay-at-venue booking", async () => {
+    vi.mocked(serviceBookingsApi.createBooking).mockResolvedValue({
+      ...pendingBooking,
+      paymentRequirement: "pay_at_venue",
+    });
+    const wrapper = mountView();
+    await flushPromises();
+
+    await wrapper
+      .get('[data-testid="service-booking-name"]')
+      .setValue("王小明");
+    await wrapper
+      .get('[data-testid="service-booking-phone"]')
+      .setValue("0911222333");
+    await wrapper
+      .get('[data-testid="service-booking-create"]')
+      .trigger("submit");
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="service-booking-pay"]').exists()).toBe(
+      false,
+    );
+    expect(wrapper.text()).toContain(
+      "Please pay the staff at the venue (NT$120 due). Confirmation code: ABC123",
+    );
   });
 });

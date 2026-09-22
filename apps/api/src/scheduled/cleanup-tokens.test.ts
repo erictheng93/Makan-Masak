@@ -21,7 +21,13 @@ vi.mock("drizzle-orm", async (importOriginal) => ({
 vi.mock("@makanmasak/database", () => ({
   VerificationService: vi.fn(),
   idempotencyKeys: { scope: "scope", expiresAt: "expiresAt" },
-  IDEMPOTENCY_SCOPES: { PAYMENT: "payment", WEBHOOK: "webhook" },
+  IDEMPOTENCY_SCOPES: {
+    PAYMENT: "payment",
+    WEBHOOK: "webhook",
+    PUBLIC_RESERVATION_CREATE: "public-reservation-create",
+    PUBLIC_RESERVATION_CANCEL: "public-reservation-cancel",
+    STAFF_RESERVATION_CREATE: "staff-reservation-create",
+  },
 }));
 
 vi.mock("../services/AlertService", () => ({ AlertService: vi.fn() }));
@@ -80,7 +86,13 @@ describe("cleanupExpiredIdempotencyKeys", () => {
 
     expect(inArray).toHaveBeenCalledWith(
       idempotencyKeys.scope,
-      expect.arrayContaining(["payment", "webhook"]),
+      expect.arrayContaining([
+        "payment",
+        "webhook",
+        "public-reservation-create",
+        "public-reservation-cancel",
+        "staff-reservation-create",
+      ]),
     );
   });
 

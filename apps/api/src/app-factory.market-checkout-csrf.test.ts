@@ -65,7 +65,7 @@ const customerWrites: Array<[string, string]> = [
   ["POST", "/api/v1/waiting-list"],
   ["POST", `/api/v1/waiting-list/${CHECKOUT_ID}/confirm`],
   ["POST", "/api/v1/reservations"],
-  ["POST", `/api/v1/reservations/${CHECKOUT_ID}/cancel`],
+  ["DELETE", `/api/v1/reservations/${CHECKOUT_ID}/cancel`],
   ["POST", "/api/v1/service-bookings"],
   ["POST", "/api/v1/orders/group/create"],
   ["POST", "/api/v1/orders/group/join/ABC12345"],
@@ -102,6 +102,10 @@ describe("customer self-service CSRF boundaries", () => {
     // No bare-prefix exemption: future staff routes must remain protected.
     `${root}/future-staff-action`,
     `${root}/nested/${CHECKOUT_ID}/pay`,
+    // The public cancellation exemption is DELETE-only. The staff POST route
+    // must continue through CSRF protection.
+    `/api/v1/reservations/${CHECKOUT_ID}/cancel`,
+    "/api/v1/reservations/staff",
   ])("keeps CSRF protection on %s", async (path) => {
     expect(await requestWithoutCsrf("POST", path)).toEqual({
       status: 403,

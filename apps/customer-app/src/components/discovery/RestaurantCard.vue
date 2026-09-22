@@ -37,17 +37,21 @@
             {{ restaurant.name }}
           </h4>
           <p class="truncate text-sm text-gray-500">
-            {{ restaurant.type }}
-            <span v-if="restaurant.district" class="text-gray-400">
-              · {{ restaurant.district }}
-            </span>
+            <span v-if="locationLabel">{{ locationLabel }}</span>
             <span v-if="distanceLabel" class="text-gray-400">
-              · {{ distanceLabel }}
+              {{ locationLabel ? " · " : "" }}{{ distanceLabel }}
             </span>
           </p>
           <div class="mt-1 flex items-center gap-2">
             <span
-              v-if="restaurant.isOpen"
+              v-if="openingHoursStatus === 'unavailable'"
+              data-testid="restaurant-hours-unavailable"
+              class="rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-700"
+            >
+              {{ t("discovery.hoursUnavailable") }}
+            </span>
+            <span
+              v-else-if="restaurant.isOpen"
               class="rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-700"
             >
               {{ t("discovery.open") }}
@@ -143,6 +147,12 @@ const canTakeaway = computed(
   () => props.restaurant.isOpen && props.restaurant.supportsTakeaway,
 );
 
+const openingHoursStatus = computed(
+  () =>
+    props.restaurant.openingHoursStatus ??
+    (props.restaurant.isOpen ? "open" : "closed"),
+);
+
 const serviceLabels = computed(() => {
   const labels: string[] = [];
   if (props.restaurant.supportsTakeaway) labels.push("可外帶");
@@ -155,6 +165,18 @@ const distanceLabel = computed(() =>
     ? `${props.restaurant.distanceKm.toFixed(1)} km`
     : "",
 );
+
+const locationLabel = computed(() => {
+  const district = props.restaurant.district?.trim();
+  // Defend the rendering boundary too: a stale cache or third-party payload
+  // must not turn the onboarding subdomain into a customer-facing location.
+  const publicDistrict = district?.toLowerCase().startsWith("onboarding-")
+    ? undefined
+    : district;
+  return [props.restaurant.city?.trim(), publicDistrict]
+    .filter((part): part is string => Boolean(part))
+    .join(" · ");
+});
 
 const marketContextUrl = computed(() => {
   const marketVendor = props.restaurant.marketVendor;

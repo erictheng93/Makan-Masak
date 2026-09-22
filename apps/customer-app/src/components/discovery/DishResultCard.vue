@@ -23,8 +23,8 @@
           </div>
           <p class="mt-0.5 truncate text-sm text-gray-500">
             {{ dish.restaurantName }}
-            <span v-if="dish.district" class="text-gray-400">
-              · {{ dish.district }}
+            <span v-if="publicDistrict" class="text-gray-400">
+              · {{ publicDistrict }}
             </span>
             <span v-if="dish.marketVendor?.stallNumber" class="text-gray-400">
               · 攤位 {{ dish.marketVendor.stallNumber }}
@@ -41,7 +41,14 @@
               {{ productPriceLabel }}
             </span>
             <span
-              v-if="dish.isOpen"
+              v-if="openingHoursStatus === 'unavailable'"
+              data-testid="dish-hours-unavailable"
+              class="rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-700"
+            >
+              {{ t("discovery.hoursUnavailable") }}
+            </span>
+            <span
+              v-else-if="dish.isOpen"
               class="rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-700"
             >
               {{ t("discovery.open") }}
@@ -140,6 +147,11 @@ const canTakeaway = computed(
   () => props.dish.isOpen && props.dish.supportsTakeaway,
 );
 
+const openingHoursStatus = computed(
+  () =>
+    props.dish.openingHoursStatus ?? (props.dish.isOpen ? "open" : "closed"),
+);
+
 const serviceLabels = computed(() => {
   const labels: string[] = [];
   if (props.dish.supportsTakeaway) labels.push("可外帶");
@@ -167,6 +179,13 @@ const distanceLabel = computed(() =>
     ? `${props.dish.distanceKm.toFixed(1)} km`
     : "",
 );
+
+const publicDistrict = computed(() => {
+  const district = props.dish.district?.trim();
+  return district?.toLowerCase().startsWith("onboarding-")
+    ? undefined
+    : district;
+});
 
 const marketContextUrl = computed(() => {
   const marketVendor = props.dish.marketVendor;

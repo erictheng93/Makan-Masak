@@ -209,6 +209,7 @@ type SelectedAddOn = NonNullable<SelectedCustomizations["addOns"]>[number];
 type PreparedOrderItem = {
   menuItemId: number;
   quantity: number;
+  preparationTime: number | null;
   unitPrice: number;
   totalPrice: number;
   unitPriceCents: number;
@@ -228,6 +229,7 @@ type PreparedOrderItem = {
 
 type PrepTimeOrderItem = {
   quantity: number;
+  preparationTime?: number | null;
   customizations?: {
     options?: unknown[];
     addOns?: unknown[];
@@ -2090,6 +2092,10 @@ export class OrderService extends BaseService {
             .update(menuItems)
             .set({
               inventoryCount: sql`CASE WHEN ${menuItems.inventoryCount} IS NULL THEN NULL ELSE ${menuItems.inventoryCount} + ${item.quantity} END`,
+              // Keep the sold-count reversal with the inventory reversal in
+              // this CAS-authorized batch. A duplicate cancellation aborts
+              // before either change can run.
+              orderCount: sql`MAX(0, ${menuItems.orderCount} - ${item.quantity})`,
             })
             .where(
               and(
@@ -2416,6 +2422,7 @@ export class OrderService extends BaseService {
       orderItemsData.push({
         menuItemId: item.menuItemId,
         quantity: item.quantity,
+        preparationTime: menuItem.preparationTime,
         unitPrice,
         totalPrice,
         unitPriceCents,
@@ -2444,7 +2451,7 @@ export class OrderService extends BaseService {
 
     for (const item of orderItems) {
       // 基礎準備時間（預設 15 分鐘）
-      const basePrepTime = 15;
+      const basePrepTime = item.preparationTime ?? 15;
 
       // 根據客製化增加時間
       let itemComplexity = 1;
@@ -2466,9 +2473,10 @@ export class OrderService extends BaseService {
   }
 
   private toOrderItemInsert(item: PreparedOrderItem) {
-    const { unitPrice, totalPrice, ...insertItem } = item;
+    const { unitPrice, totalPrice, preparationTime, ...insertItem } = item;
     void unitPrice;
     void totalPrice;
+    void preparationTime;
     return insertItem;
   }
 

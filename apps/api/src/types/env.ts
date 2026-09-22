@@ -100,6 +100,8 @@ export interface Env {
   GLOBAL_RATE_LIMITER?: RateLimit;
   /** Tighter native bucket for the public WebSocket token exchange (#341). */
   AUTH_TOKEN_RATE_LIMITER?: RateLimit;
+  /** Atomic hard floor for anonymous reservation creates and cancellations. */
+  PUBLIC_RESERVATION_MUTATION_RATE_LIMITER?: RateLimit;
   RATE_LIMIT_KV: KVNamespace; // Geographic rate limiting storage
   PRELOAD_QUEUE?: Queue; // Cache preloading queue
   REVALIDATION_QUEUE?: Queue; // Cache revalidation queue

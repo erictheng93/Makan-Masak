@@ -602,7 +602,7 @@ describe("ServiceBookingService orchestration helpers", () => {
     ).toEqual(new Date("2026-06-10T02:00:00.000Z"));
   });
 
-  it("creates prepaid voucher bookings with default reminders", async () => {
+  it("creates pay-at-venue voucher bookings with default reminders", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-07T00:00:00.000Z"));
     vi.spyOn(CouponService.prototype, "validateCoupon").mockResolvedValue({
@@ -662,7 +662,7 @@ describe("ServiceBookingService orchestration helpers", () => {
       couponId: 99,
       voucherDiscountCents: 1200,
       amountDueCents: 3800,
-      paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.PREPAY,
+      paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.PAY_AT_VENUE,
       reminderOptIn: 1,
       reminderMinutesBefore: 60,
       recurrenceGroupId: "series-1",
@@ -1846,6 +1846,26 @@ describe("ServiceBookingService orchestration helpers", () => {
     );
   });
 
+  it("does not allow credits for bookings payable at the venue", async () => {
+    const booking = buildBookingRow({
+      status: SERVICE_BOOKING_STATUS.PENDING,
+      paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.PAY_AT_VENUE,
+      amountDueCents: 2500,
+    });
+    const service = createService();
+    const spend = vi.spyOn(CreditService.prototype, "spend");
+    spyOnPrivate(service, "loadPayableBooking").mockResolvedValue(booking);
+
+    await expect(
+      service.payWithCredits({
+        bookingId: "booking-1",
+        creditCardPublicId: "card-public-1",
+      }),
+    ).rejects.toThrow("This booking must be paid at the venue");
+
+    expect(spend).not.toHaveBeenCalled();
+  });
+
   it("rejects payment for non-pending bookings", async () => {
     const { db } = createDbMock({
       selectFixtures: {
@@ -1900,10 +1920,11 @@ describe("ServiceBookingService orchestration helpers", () => {
     });
   });
 
-  it("confirms cash bookings through the shared confirmation path", async () => {
+  it("confirms pay-at-venue cash bookings through the shared confirmation path", async () => {
     const service = createService();
     const booking = buildBookingRow({
       status: SERVICE_BOOKING_STATUS.PENDING,
+      paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.PAY_AT_VENUE,
       amountDueCents: 1200,
     });
     spyOnPrivate(service, "loadPayableBooking").mockResolvedValue(booking);

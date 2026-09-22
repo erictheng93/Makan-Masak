@@ -245,19 +245,28 @@
               booking.confirmationCode
             }}</span>
           </p>
-          <dl class="mt-3 grid grid-cols-2 gap-2 text-sm text-emerald-900">
-            <div>
+          <dl
+            class="mt-3 grid gap-2 text-sm text-emerald-900"
+            :class="
+              booking.paymentRequirement === 'none'
+                ? 'grid-cols-1'
+                : 'grid-cols-2'
+            "
+          >
+            <div v-if="booking.paymentRequirement !== 'none'">
               <dt>{{ t("serviceBooking.amountDue") }}</dt>
               <dd class="font-semibold">
-                {{ formatCents(booking.amountDueCents) }}
+                {{ formatPrice(booking.amountDueCents / 100) }}
               </dd>
             </div>
             <div>
               <dt>{{ t("serviceBooking.status") }}</dt>
-              <dd class="font-semibold">{{ statusLabel(booking.status) }}</dd>
+              <dd class="font-semibold">
+                {{ bookingStatusLabel(booking) }}
+              </dd>
             </div>
           </dl>
-          <div v-if="!storedValueCreditsDisabled" class="mt-4 space-y-2">
+          <div v-if="canPayWithCredits" class="mt-4 space-y-2">
             <input
               v-model="creditCardPublicId"
               data-testid="service-booking-credit-id"
@@ -320,7 +329,7 @@
             {{ verifiedBooking.serviceNameSnapshot }} ·
             {{ verifiedBooking.bookingDate }}
             {{ verifiedBooking.bookingTime }} ·
-            {{ statusLabel(verifiedBooking.status) }}
+            {{ bookingStatusLabel(verifiedBooking) }}
             <button
               v-if="
                 verifiedBooking.status === 'pending' ||
@@ -375,7 +384,7 @@ const appStore = useAppStore();
 // A booking link can be opened cold, or after browsing another restaurant, so
 // the store's current restaurant is only trusted when it is this one.
 const fetchedRestaurantCurrency = ref<unknown>(null);
-const { formatCents } = useCurrency(() =>
+const { formatPrice } = useCurrency(() =>
   String(appStore.currentRestaurant?.id ?? "") === props.restaurantId
     ? appStore.currentRestaurant?.settings?.currency
     : fetchedRestaurantCurrency.value,
@@ -383,6 +392,11 @@ const { formatCents } = useCurrency(() =>
 const { isDisabled } = useFeatureAvailability();
 const storedValueCreditsDisabled = computed(() =>
   isDisabled("storedValueCredits"),
+);
+const canPayWithCredits = computed(
+  () =>
+    !storedValueCreditsDisabled.value &&
+    booking.value?.paymentRequirement !== "pay_at_venue",
 );
 // The diner's calendar day. toISOString() gives the UTC one, which in Taiwan
 // defaulted the date picker to yesterday from midnight until 08:00.
@@ -424,7 +438,7 @@ const servicePriceLabel = computed(() => {
   if (!serviceItem.value) return "";
   if (serviceItem.value.priceLabel) return serviceItem.value.priceLabel;
   if (serviceItem.value.priceCents != null) {
-    return formatCents(serviceItem.value.priceCents);
+    return formatPrice(serviceItem.value.priceCents / 100);
   }
   return t("serviceBooking.quoteOnSite");
 });
@@ -509,7 +523,13 @@ async function createBooking() {
 }
 
 async function payBooking() {
-  if (storedValueCreditsDisabled.value || !booking.value) return;
+  if (
+    storedValueCreditsDisabled.value ||
+    booking.value?.paymentRequirement === "pay_at_venue" ||
+    !booking.value
+  ) {
+    return;
+  }
   isPaying.value = true;
   errorMessage.value = "";
   successMessage.value = "";
@@ -588,6 +608,23 @@ async function loadRestaurantCurrency() {
 
 function statusLabel(status: ServiceBookingStatus): string {
   return t(`serviceBooking.bookingStatus.${status}`);
+}
+
+function bookingStatusLabel(booking: ServiceBooking): string {
+  if (
+    booking.paymentStatus === "unpaid" &&
+    (booking.paymentRequirement === "pay_at_venue" ||
+      (storedValueCreditsDisabled.value &&
+        (booking.paymentRequirement === "prepay" ||
+          booking.paymentRequirement === "deposit")))
+  ) {
+    return tWithParams("serviceBooking.payAtCounter", {
+      amount: formatPrice(booking.amountDueCents / 100),
+      code: booking.confirmationCode,
+    });
+  }
+
+  return statusLabel(booking.status);
 }
 
 function contactProofFromInput() {

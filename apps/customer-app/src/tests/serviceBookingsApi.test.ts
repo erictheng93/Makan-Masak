@@ -36,7 +36,7 @@ describe("serviceBookingsApi", () => {
     );
   });
 
-  it("creates and pays a service booking with credits", async () => {
+  it("creates a pay-at-venue booking and pays compatible bookings with credits", async () => {
     vi.mocked(apiClient.post)
       .mockResolvedValueOnce({
         booking: { id: "booking-1", confirmationCode: "ABC123" },
@@ -53,6 +53,7 @@ describe("serviceBookingsApi", () => {
         customerPhone: "0911222333",
         bookingDate: "2026-06-10",
         bookingTime: "10:00",
+        paymentRequirement: "pay_at_venue",
       }),
     ).resolves.toMatchObject({ id: "booking-1" });
     expect(apiClient.post).toHaveBeenNthCalledWith(1, "/service-bookings", {
@@ -62,6 +63,7 @@ describe("serviceBookingsApi", () => {
       customerPhone: "0911222333",
       bookingDate: "2026-06-10",
       bookingTime: "10:00",
+      paymentRequirement: "pay_at_venue",
     });
 
     await expect(

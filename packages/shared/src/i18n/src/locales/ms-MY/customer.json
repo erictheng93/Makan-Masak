@@ -878,6 +878,7 @@
     "noResults": "Tiada hasil ditemui. Cuba carian lain.",
     "open": "Buka",
     "closed": "Tutup",
+    "hoursUnavailable": "Waktu operasi belum disediakan",
     "filters": "Penapis",
     "openNow": "Buka Sekarang",
     "takeaway": "Bungkus",
@@ -919,6 +920,10 @@
   "footer": {
     "copyright": "© {year} MakanMasak. Hak cipta terpelihara."
   },
+  "reservationBooking": {
+    "back": "Kembali ke kedai",
+    "title": "Tempahan meja"
+  },
   "serviceBooking": {
     "back": "Kembali ke perkhidmatan",
     "title": "Tempahan perkhidmatan",
@@ -944,6 +949,7 @@
     "creditCardPlaceholder": "Public id kad kredit kedai",
     "creditPinPlaceholder": "PIN (pilihan)",
     "payWithCredits": "Bayar dengan kredit",
+    "payAtCounter": "Sila bayar kepada staf di kedai (perlu dibayar: {amount}). Kod pengesahan: {code}",
     "lookupTitle": "Cari atau batalkan tempahan",
     "confirmationCodePlaceholder": "Masukkan kod pengesahan",
     "contactPlaceholder": "Telefon atau e-mel tempahan (pilihan)",

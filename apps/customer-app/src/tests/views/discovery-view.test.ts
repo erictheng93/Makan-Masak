@@ -376,6 +376,39 @@ describe("DiscoveryView", () => {
     });
   });
 
+  it("does not describe services without business hours as closed", () => {
+    const store = discoveryStore({
+      dishResults: [],
+      serviceResults: [
+        {
+          serviceItemId: 7,
+          name: "代客切水果",
+          description: null,
+          serviceType: "general",
+          priceCents: 3000,
+          priceLabel: null,
+          durationMinutes: null,
+          requiresBooking: false,
+          bookingUrl: null,
+          tags: [],
+          restaurantId: "service-restaurant-1",
+          restaurantName: "水果攤",
+          district: null,
+          city: "台中市",
+          isOpen: false,
+          openingHoursStatus: "unavailable",
+        },
+      ],
+      total: 1,
+    });
+    vi.mocked(useDiscoveryStore).mockReturnValue(store as never);
+
+    const wrapper = mountView();
+
+    expect(wrapper.text()).toContain("discovery.hoursUnavailable");
+    expect(wrapper.text()).not.toContain("discovery.closed");
+  });
+
   // A service list spans restaurants, so each row is priced in its own
   // restaurant's currency rather than in one currency for the whole page.
   it("prices each service result in its own restaurant's currency", async () => {

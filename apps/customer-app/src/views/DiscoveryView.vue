@@ -185,7 +185,7 @@
             </div>
             <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
               <p class="text-xs text-gray-500">
-                {{ service.isOpen ? "目前營業中" : "目前未營業" }}
+                {{ serviceOpeningHoursLabel(service) }}
               </p>
               <div class="flex flex-wrap justify-end gap-2">
                 <button
@@ -409,6 +409,13 @@ function servicePriceLabel(service: ServiceSearchResult) {
     return formatPriceIn(service.priceCents / 100, service.currency);
   }
   return "";
+}
+
+function serviceOpeningHoursLabel(service: ServiceSearchResult) {
+  if (service.openingHoursStatus === "unavailable") {
+    return t("discovery.hoursUnavailable");
+  }
+  return service.isOpen ? t("discovery.open") : t("discovery.closed");
 }
 
 function serviceMarketContextUrl(service: ServiceSearchResult) {

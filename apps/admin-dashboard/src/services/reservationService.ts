@@ -63,7 +63,9 @@ export class ReservationService {
    * 建立新訂位
    */
   static async createReservation(data: CreateReservationRequest) {
-    const response = await api.post<Reservation>(`/reservations`, data);
+    const response = await api.post<Reservation>(`/reservations/staff`, data, {
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+    });
     return response.data;
   }
 

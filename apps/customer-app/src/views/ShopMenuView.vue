@@ -28,9 +28,9 @@
               </svg>
             </button>
 
-            <div class="flex-1 text-center">
-              <div class="flex items-center justify-center">
-                <h1 class="font-semibold text-ios-text">
+            <div class="min-w-0 flex-1 text-center">
+              <div class="flex min-w-0 items-center justify-center">
+                <h1 class="truncate font-semibold text-ios-text">
                   {{ restaurant?.name || t("common.loading") }}
                 </h1>
                 <span
@@ -43,10 +43,35 @@
                   {{ fulfillmentBadgeLabel }}
                 </span>
               </div>
-              <p class="text-sm text-ios-secondary">
+              <p class="truncate text-sm text-ios-secondary">
                 {{ t("shopMenu.shopOrdering") }}
               </p>
             </div>
+
+            <LanguageSwitcher compact />
+
+            <button
+              type="button"
+              data-testid="shop-menu-reservation"
+              :aria-label="t('reservationBooking.title')"
+              class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-ios-text active:scale-95 transition-transform duration-150"
+              @click="openReservation"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 7V3m8 4V3M5 11h14M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z"
+                />
+              </svg>
+            </button>
 
             <button
               data-testid="cart-btn"
@@ -648,6 +673,7 @@ import MenuItemModal from "@/components/MenuItemModal.vue";
 import CustomizationModal from "@/components/CustomizationModal.vue";
 import ShopCartModal from "@/components/ShopCartModal.vue";
 import DesktopCartPanel from "@/components/DesktopCartPanel.vue";
+import LanguageSwitcher from "@/components/LanguageSwitcher.vue";
 import { useIsDesktop } from "@/composables/useBreakpoint";
 import ShopReviewsSection from "@/components/reviews/ShopReviewsSection.vue";
 import { menuApi } from "@/services/menuApi";
@@ -1054,6 +1080,13 @@ const openServiceBooking = (service: RestaurantServiceItem) => {
       restaurantId: props.restaurantId,
       serviceItemId: String(service.id),
     },
+  });
+};
+
+const openReservation = () => {
+  router.push({
+    name: "Reservation",
+    params: { restaurantId: props.restaurantId },
   });
 };
 

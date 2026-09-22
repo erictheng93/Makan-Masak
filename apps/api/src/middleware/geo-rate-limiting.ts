@@ -97,7 +97,7 @@ const SENSITIVE_KV_RATE_LIMIT_PATHS = [
 const NATIVE_RATE_LIMIT_WINDOW_SECONDS = 60;
 
 /**
- * Paths that get their own, tighter native bucket instead of sharing
+ * Routes that get their own, tighter native bucket instead of sharing
  * `GLOBAL_RATE_LIMITER`.
  *
  * `/realtime/auth/token` is a public token-issuing endpoint: unauthenticated,
@@ -109,6 +109,14 @@ const NATIVE_RATE_LIMIT_WINDOW_SECONDS = 60;
  */
 const STRICT_NATIVE_RATE_LIMIT_PATHS = ["/api/v1/realtime/auth/token"];
 
+function isPublicReservationMutation(method: string, path: string): boolean {
+  return (
+    (method === "POST" && path === "/api/v1/reservations") ||
+    (method === "DELETE" &&
+      /^\/api\/v1\/reservations\/[^/]+\/cancel$/.test(path))
+  );
+}
+
 /**
  * Pick the native bucket for a path, falling back to the global one whenever
  * the tighter binding is absent — only production declares it, and preview must
@@ -117,7 +125,14 @@ const STRICT_NATIVE_RATE_LIMIT_PATHS = ["/api/v1/realtime/auth/token"];
 function selectNativeRateLimiter(
   env: Env,
   path: string,
+  method: string,
 ): RateLimit | undefined {
+  if (
+    isPublicReservationMutation(method, path) &&
+    env.PUBLIC_RESERVATION_MUTATION_RATE_LIMITER
+  ) {
+    return env.PUBLIC_RESERVATION_MUTATION_RATE_LIMITER;
+  }
   const wantsStrict = STRICT_NATIVE_RATE_LIMIT_PATHS.some(
     (strictPath) => path === strictPath,
   );
@@ -925,7 +940,7 @@ export function geoIntelligentRateLimitMiddleware(
         ? `user:${user.id}`
         : (tokenIdentity?.identifier ?? `ip:${ip}`);
 
-    const nativeLimiter = selectNativeRateLimiter(c.env, path);
+    const nativeLimiter = selectNativeRateLimiter(c.env, path, c.req.method);
     const useKvRateLimiter = !nativeLimiter || shouldUseKvRateLimiter(path);
 
     if (useKvRateLimiter) {

@@ -878,6 +878,7 @@
     "noResults": "找不到結果，請嘗試其他搜尋。",
     "open": "營業中",
     "closed": "休息中",
+    "hoursUnavailable": "未提供營業時間",
     "filters": "篩選",
     "openNow": "營業中",
     "takeaway": "外帶",
@@ -919,6 +920,10 @@
   "footer": {
     "copyright": "© {year} MakanMasak. 版權所有。"
   },
+  "reservationBooking": {
+    "back": "返回店家",
+    "title": "線上訂位"
+  },
   "serviceBooking": {
     "back": "返回服務",
     "title": "服務預約",
@@ -944,6 +949,7 @@
     "creditCardPlaceholder": "代幣卡 public id",
     "creditPinPlaceholder": "PIN（可選）",
     "payWithCredits": "代幣付款",
+    "payAtCounter": "請於到店時向店員付款（應付 {amount}），確認碼：{code}",
     "lookupTitle": "查詢/取消預約",
     "confirmationCodePlaceholder": "輸入確認碼",
     "contactPlaceholder": "預約電話或 Email（可選）",

@@ -941,6 +941,57 @@ describe("OrderService createOrder atomicity", () => {
     expect(restaurant.totalOrders).toBe(1);
   });
 
+  it("uses the menu item's preparation time when creating an order", async () => {
+    const service = new OrderService(testDb.bindings.DB, {
+      JWT_SECRET: "test",
+    });
+    await testDb.drizzle
+      .update(menuItems)
+      .set({ preparationTime: 12 })
+      .where(eq(menuItems.id, menuItemId));
+
+    const order = await service.createOrder({
+      restaurantId,
+      items: [{ menuItemId, quantity: 1 }],
+    });
+
+    expect(order.estimatedPrepTime).toBe(12);
+    const [persisted] = await testDb.drizzle
+      .select({ estimatedPrepTime: orders.estimatedPrepTime })
+      .from(orders)
+      .where(eq(orders.id, order.id));
+    expect(persisted.estimatedPrepTime).toBe(12);
+  });
+
+  it("uses the added menu item's preparation time and keeps the longest estimate", async () => {
+    const service = new OrderService(testDb.bindings.DB, {
+      JWT_SECRET: "test",
+    });
+    await testDb.drizzle
+      .update(menuItems)
+      .set({ preparationTime: 12 })
+      .where(eq(menuItems.id, menuItemId));
+    const order = await service.createOrder({
+      restaurantId,
+      items: [{ menuItemId, quantity: 1 }],
+    });
+
+    await testDb.drizzle
+      .update(menuItems)
+      .set({ preparationTime: 30 })
+      .where(eq(menuItems.id, menuItemId));
+    const updated = await service.addItemsToOrder(order.id, [
+      { menuItemId, quantity: 1 },
+    ]);
+
+    expect(updated.estimatedPrepTime).toBe(30);
+    const [persisted] = await testDb.drizzle
+      .select({ estimatedPrepTime: orders.estimatedPrepTime })
+      .from(orders)
+      .where(eq(orders.id, order.id));
+    expect(persisted.estimatedPrepTime).toBe(30);
+  });
+
   it("creates human-readable order numbers without embedding restaurant ids", async () => {
     const service = new OrderService(testDb.bindings.DB, {
       JWT_SECRET: "test",
@@ -1539,7 +1590,7 @@ describe("OrderService cancelOrder atomicity", () => {
     await seedMenuItem(testDb);
   });
 
-  it("restores inventory only for the cancellation that changes order status", async () => {
+  it("restores inventory and sold count only for the cancellation that changes order status", async () => {
     const service = new OrderService(testDb.bindings.DB, {
       JWT_SECRET: "test",
     });
@@ -1552,7 +1603,7 @@ describe("OrderService cancelOrder atomicity", () => {
       .select()
       .from(menuItems)
       .where(eq(menuItems.id, menuItemId));
-    expect(afterCreate.inventoryCount).toBe(8);
+    expect(afterCreate).toMatchObject({ inventoryCount: 8, orderCount: 2 });
 
     await expect(service.cancelOrder(order.id, "customer")).resolves.toEqual(
       expect.objectContaining({ status: "cancelled" }),
@@ -1573,10 +1624,13 @@ describe("OrderService cancelOrder atomicity", () => {
       .select()
       .from(menuItems)
       .where(eq(menuItems.id, menuItemId));
-    expect(afterDuplicateCancel.inventoryCount).toBe(10);
+    expect(afterDuplicateCancel).toMatchObject({
+      inventoryCount: 10,
+      orderCount: 0,
+    });
   });
 
-  it("does not double-restore inventory for concurrent duplicate cancellations", async () => {
+  it("does not double-restore inventory or sold count for concurrent duplicate cancellations", async () => {
     const service = new OrderService(testDb.bindings.DB, {
       JWT_SECRET: "test",
     });
@@ -1613,7 +1667,10 @@ describe("OrderService cancelOrder atomicity", () => {
       .select()
       .from(menuItems)
       .where(eq(menuItems.id, menuItemId));
-    expect(afterConcurrentCancel.inventoryCount).toBe(10);
+    expect(afterConcurrentCancel).toMatchObject({
+      inventoryCount: 10,
+      orderCount: 0,
+    });
 
     const [persistedOrder] = await testDb.drizzle
       .select()

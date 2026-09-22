@@ -234,6 +234,12 @@ describe("csrfProtection excludePaths", () => {
           "/api/v1/waiting-list/*$",
           "/api/v1/waiting-list/*/confirm",
         ],
+        excludeRoutes: [
+          {
+            path: "/api/v1/reservations/*/cancel$",
+            methods: ["DELETE"],
+          },
+        ],
       }),
     );
     app.post("/api/v1/waiting-list", (c) => c.json({ ok: "join" }));
@@ -243,6 +249,12 @@ describe("csrfProtection excludePaths", () => {
     );
     app.post("/api/v1/waiting-list/:id/call", (c) => c.json({ ok: "call" }));
     app.post("/api/v1/waiting-list/:id/seat", (c) => c.json({ ok: "seat" }));
+    app.delete("/api/v1/reservations/:id/cancel", (c) =>
+      c.json({ ok: "customer-cancel" }),
+    );
+    app.post("/api/v1/reservations/:id/cancel", (c) =>
+      c.json({ ok: "staff-cancel" }),
+    );
     installApiErrorHandler(app);
     return app;
   }
@@ -287,5 +299,16 @@ describe("csrfProtection excludePaths", () => {
     // No CSRF token: an exact-match exclusion must not cascade to children.
     expect((await post(app, "/api/v1/waiting-list/42/call")).status).toBe(403);
     expect((await post(app, "/api/v1/waiting-list/42/seat")).status).toBe(403);
+  });
+
+  it("only exempts the public reservation cancellation method", async () => {
+    const app = appWithExclusions();
+
+    expect(
+      (await post(app, "/api/v1/reservations/42/cancel", "DELETE")).status,
+    ).toBe(200);
+    expect(
+      (await post(app, "/api/v1/reservations/42/cancel", "POST")).status,
+    ).toBe(403);
   });
 });

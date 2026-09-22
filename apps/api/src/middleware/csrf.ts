@@ -60,6 +60,13 @@ interface CSRFOptions {
   excludePaths?: string[];
 
   /**
+   * Method-scoped exclusions for public writes that share a path with a staff
+   * route using another method. A path-only exemption would remove CSRF from
+   * both routes.
+   */
+  excludeRoutes?: Array<{ path: string; methods: string[] }>;
+
+  /**
    * Enable double-submit cookie pattern
    * @default true
    */
@@ -69,6 +76,7 @@ interface CSRFOptions {
 const defaultOptions: Required<CSRFOptions> = {
   protectedMethods: ["POST", "PUT", "DELETE", "PATCH"],
   excludePaths: ["/api/v1/auth/login", "/api/v1/auth/register"],
+  excludeRoutes: [],
   useDoubleSubmit: true,
 };
 
@@ -187,10 +195,16 @@ export function csrfProtection(options: CSRFOptions = {}) {
       const method = c.req.method.toUpperCase();
       const path = c.req.path;
 
-      // Skip CSRF check for excluded paths (supports * wildcard for path segments)
+      // Skip CSRF check for excluded paths (supports * wildcard for path
+      // segments), including deliberately method-scoped public endpoints.
       if (
         opts.excludePaths.some((excludePath) =>
           isExcludedPath(path, excludePath),
+        ) ||
+        opts.excludeRoutes.some(
+          (excludeRoute) =>
+            excludeRoute.methods.includes(method) &&
+            isExcludedPath(path, excludeRoute.path),
         )
       ) {
         return next();

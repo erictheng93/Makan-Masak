@@ -31,7 +31,7 @@ import type {
   SearchResponse,
   ServiceSearchResult,
 } from "../types";
-import { isOpenNow } from "../utils/isOpenNow";
+import { getOpeningHoursStatus, isOpenNow } from "../utils/isOpenNow";
 import { catalogResultTypeFromTags } from "../utils/catalog-result-type";
 import { normalizeSearchTags } from "../utils/search-normalization";
 import { fromCents, toRequiredCents } from "../../../shared/utils/money";
@@ -45,7 +45,7 @@ const KV_SEARCH_TTL = 15 * 60; // 15 minutes
 // The prefix names the cached payload's shape. Entries written before results
 // carried `currency` must not be served as if they had one, so a shape change
 // moves the key rather than waiting out the TTL.
-const DISH_SEARCH_CACHE_PREFIX = "search:query:cur1";
+const DISH_SEARCH_CACHE_PREFIX = "search:query:cur2";
 const KV_RESTAURANT_TTL = 30 * 60; // 30 minutes
 const KV_SEARCH_VERSION_KEY = "search:query:version";
 const KV_SEARCH_REINDEXED_AT_KEY = "search:last_reindexed_at";
@@ -95,7 +95,12 @@ export class DiscoveryService {
     if (cached) {
       const parsed = JSON.parse(cached);
       return {
-        results: parsed.results,
+        results: parsed.results.map((result: DishSearchResult) => ({
+          ...result,
+          district: this.publicDiscoveryDistrict(result.district),
+          openingHoursStatus:
+            result.openingHoursStatus ?? (result.isOpen ? "open" : "closed"),
+        })),
         total: parsed.total,
         page,
         limit,
@@ -134,6 +139,7 @@ export class DiscoveryService {
 
     const baseConditions: SQL[] = [
       eq(dishSearchIndex.isAvailable, true),
+      eq(restaurants.isAvailable, true),
       eq(restaurants.isActive, true),
       isNull(restaurants.deletedAt),
     ];
@@ -374,36 +380,43 @@ export class DiscoveryService {
     }
 
     // 5. Map results + openNow filter
-    let results: DishSearchResult[] = allRows.map((row) => ({
-      resultType: catalogResultTypeFromTags(row.tags, row.catalogType),
-      menuItemId: row.menuItemId,
-      dishName: row.dishName,
-      price: row.priceCents != null ? fromCents(row.priceCents) : 0,
-      priceCents: row.priceCents,
-      priceLabel: null,
-      currency: displayCurrencyFromRestaurantSettings(row.restaurantSettings),
-      categoryName: row.categoryName,
-      restaurantId: row.restaurantId,
-      restaurantName: row.restaurantName,
-      district: row.district,
-      isOpen: isOpenNow(row.businessHours ?? null, row.timezone),
-      supportsTakeaway: row.supportsTakeaway,
-      supportsDelivery: row.supportsDelivery,
-      tags: row.tags ?? [],
-      detailUrl: this.restaurantDetailUrl(row.restaurantId),
-      menuUrl: this.restaurantMenuUrl(row.restaurantId),
-      menuItemUrl: this.menuItemUrl(row.menuItemId),
-      serviceItemsUrl: this.restaurantServiceItemsUrl(row.restaurantId),
-      ...(geoFilter && row.latitude != null && row.longitude != null
-        ? {
-            distanceKm: this.resultDistanceKm(geoFilter, {
-              latitude: row.latitude,
-              longitude: row.longitude,
-            }),
-          }
-        : {}),
-      marketVendor: this.marketVendorContext(row),
-    }));
+    let results: DishSearchResult[] = allRows.map((row) => {
+      const openingHoursStatus = getOpeningHoursStatus(
+        row.businessHours ?? null,
+        row.timezone,
+      );
+      return {
+        resultType: catalogResultTypeFromTags(row.tags, row.catalogType),
+        menuItemId: row.menuItemId,
+        dishName: row.dishName,
+        price: row.priceCents != null ? fromCents(row.priceCents) : 0,
+        priceCents: row.priceCents,
+        priceLabel: null,
+        currency: displayCurrencyFromRestaurantSettings(row.restaurantSettings),
+        categoryName: row.categoryName,
+        restaurantId: row.restaurantId,
+        restaurantName: row.restaurantName,
+        district: this.publicDiscoveryDistrict(row.district),
+        isOpen: openingHoursStatus === "open",
+        openingHoursStatus,
+        supportsTakeaway: row.supportsTakeaway,
+        supportsDelivery: row.supportsDelivery,
+        tags: row.tags ?? [],
+        detailUrl: this.restaurantDetailUrl(row.restaurantId),
+        menuUrl: this.restaurantMenuUrl(row.restaurantId),
+        menuItemUrl: this.menuItemUrl(row.menuItemId),
+        serviceItemsUrl: this.restaurantServiceItemsUrl(row.restaurantId),
+        ...(geoFilter && row.latitude != null && row.longitude != null
+          ? {
+              distanceKm: this.resultDistanceKm(geoFilter, {
+                latitude: row.latitude,
+                longitude: row.longitude,
+              }),
+            }
+          : {}),
+        marketVendor: this.marketVendorContext(row),
+      };
+    });
 
     if (geoFilter) {
       results = results.filter((result) => {
@@ -474,6 +487,7 @@ export class DiscoveryService {
 
     const conditions: SQL[] = [
       eq(dishSearchIndex.isAvailable, true),
+      eq(restaurants.isAvailable, true),
       eq(restaurants.isActive, true),
       isNull(restaurants.deletedAt),
       sql`${dishSearchIndex.categoryName} IS NOT NULL`,
@@ -540,10 +554,19 @@ export class DiscoveryService {
 
     // Check KV cache for district-based browse
     if (canUseDistrictCache) {
-      const kvKey = `search:restaurants:district:${filters.district}`;
+      const kvKey = `search:restaurants:hours2:district:${filters.district}`;
       const cached = await this.kv.get(kvKey);
       if (cached) {
-        let restaurantList: RestaurantListItem[] = JSON.parse(cached);
+        let restaurantList: RestaurantListItem[] = JSON.parse(cached).map(
+          (restaurant: RestaurantListItem) => ({
+            ...restaurant,
+            type: this.publicDiscoveryType(restaurant.type),
+            district: this.publicDiscoveryDistrict(restaurant.district),
+            openingHoursStatus:
+              restaurant.openingHoursStatus ??
+              (restaurant.isOpen ? "open" : "closed"),
+          }),
+        );
         if (filters.takeaway)
           restaurantList = restaurantList.filter((r) => r.supportsTakeaway);
         if (filters.delivery)
@@ -575,6 +598,7 @@ export class DiscoveryService {
     const queryOffset = requiresPostFilterPagination ? 0 : offset;
 
     const conditions: SQL[] = [
+      eq(restaurants.isAvailable, true),
       eq(restaurants.isActive, true),
       isNull(restaurants.deletedAt),
     ];
@@ -672,6 +696,10 @@ export class DiscoveryService {
 
     const restaurantList: RestaurantListItem[] = result.map((row) => {
       const marketVendor = marketVendorByRestaurant.get(row.id);
+      const openingHoursStatus = getOpeningHoursStatus(
+        row.businessHours ?? null,
+        row.timezone,
+      );
       const accessCounts = accessCountsByRestaurant.get(row.id) ?? {
         availableMenuItemCount: 0,
         publicServiceItemCount: 0,
@@ -679,13 +707,14 @@ export class DiscoveryService {
       return {
         restaurantId: row.id,
         name: row.name,
-        type: row.type,
+        type: this.publicDiscoveryType(row.type),
         category: row.category,
-        district: row.district,
+        district: this.publicDiscoveryDistrict(row.district),
         city: row.city,
         priceRange: row.priceRange,
         rating: row.rating,
-        isOpen: isOpenNow(row.businessHours ?? null, row.timezone),
+        isOpen: openingHoursStatus === "open",
+        openingHoursStatus,
         supportsTakeaway: row.supportsTakeaway,
         supportsDelivery: row.supportsDelivery,
         imageUrl: row.logoUrl,
@@ -713,7 +742,7 @@ export class DiscoveryService {
       !filters.priceRange &&
       page === 1
     ) {
-      const kvKey = `search:restaurants:district:${filters.district}`;
+      const kvKey = `search:restaurants:hours2:district:${filters.district}`;
       await this.kv.put(kvKey, JSON.stringify(restaurantList), {
         expirationTtl: KV_RESTAURANT_TTL,
       });
@@ -779,6 +808,7 @@ export class DiscoveryService {
       eq(restaurantServiceItems.isActive, true),
       eq(restaurantServiceItems.isPublic, true),
       isNull(restaurantServiceItems.deletedAt),
+      eq(restaurants.isAvailable, true),
       eq(restaurants.isActive, true),
       isNull(restaurants.deletedAt),
     ];
@@ -905,37 +935,44 @@ export class DiscoveryService {
         .where(whereClause),
     ]);
 
-    let results: ServiceSearchResult[] = rows.map((row) => ({
-      resultType: "service",
-      serviceItemId: row.serviceItemId,
-      name: row.name,
-      description: row.description,
-      serviceType: row.serviceType,
-      priceCents: row.priceCents,
-      priceLabel: row.priceLabel,
-      currency: displayCurrencyFromRestaurantSettings(row.restaurantSettings),
-      durationMinutes: row.durationMinutes,
-      requiresBooking: row.requiresBooking,
-      bookingUrl: row.bookingUrl,
-      tags: row.tags ?? [],
-      restaurantId: row.restaurantId,
-      restaurantName: row.restaurantName,
-      district: row.district,
-      city: row.city,
-      isOpen: isOpenNow(row.businessHours ?? null, row.timezone),
-      detailUrl: this.restaurantDetailUrl(row.restaurantId),
-      menuUrl: this.restaurantMenuUrl(row.restaurantId),
-      serviceItemsUrl: this.restaurantServiceItemsUrl(row.restaurantId),
-      ...(geoFilter && row.latitude != null && row.longitude != null
-        ? {
-            distanceKm: this.resultDistanceKm(geoFilter, {
-              latitude: row.latitude,
-              longitude: row.longitude,
-            }),
-          }
-        : {}),
-      marketVendor: this.marketVendorContext(row),
-    }));
+    let results: ServiceSearchResult[] = rows.map((row) => {
+      const openingHoursStatus = getOpeningHoursStatus(
+        row.businessHours ?? null,
+        row.timezone,
+      );
+      return {
+        resultType: "service",
+        serviceItemId: row.serviceItemId,
+        name: row.name,
+        description: row.description,
+        serviceType: row.serviceType,
+        priceCents: row.priceCents,
+        priceLabel: row.priceLabel,
+        currency: displayCurrencyFromRestaurantSettings(row.restaurantSettings),
+        durationMinutes: row.durationMinutes,
+        requiresBooking: row.requiresBooking,
+        bookingUrl: row.bookingUrl,
+        tags: row.tags ?? [],
+        restaurantId: row.restaurantId,
+        restaurantName: row.restaurantName,
+        district: this.publicDiscoveryDistrict(row.district),
+        city: row.city,
+        isOpen: openingHoursStatus === "open",
+        openingHoursStatus,
+        detailUrl: this.restaurantDetailUrl(row.restaurantId),
+        menuUrl: this.restaurantMenuUrl(row.restaurantId),
+        serviceItemsUrl: this.restaurantServiceItemsUrl(row.restaurantId),
+        ...(geoFilter && row.latitude != null && row.longitude != null
+          ? {
+              distanceKm: this.resultDistanceKm(geoFilter, {
+                latitude: row.latitude,
+                longitude: row.longitude,
+              }),
+            }
+          : {}),
+        marketVendor: this.marketVendorContext(row),
+      };
+    });
 
     if (geoFilter) {
       results = results.filter((result) => result.distanceKm != null);
@@ -982,6 +1019,7 @@ export class DiscoveryService {
       eq(restaurantServiceItems.isActive, true),
       eq(restaurantServiceItems.isPublic, true),
       isNull(restaurantServiceItems.deletedAt),
+      eq(restaurants.isAvailable, true),
       eq(restaurants.isActive, true),
       isNull(restaurants.deletedAt),
     ];
@@ -1101,6 +1139,7 @@ export class DiscoveryService {
       .where(
         and(
           eq(dishSearchIndex.isAvailable, true),
+          eq(restaurants.isAvailable, true),
           eq(restaurants.isActive, true),
           isNull(restaurants.deletedAt),
         ),
@@ -1108,27 +1147,34 @@ export class DiscoveryService {
       .orderBy(desc(menuItems.orderCount))
       .limit(10);
 
-    const dishes: DishSearchResult[] = topDishes.map((row) => ({
-      resultType: catalogResultTypeFromTags(row.tags, row.catalogType),
-      menuItemId: row.menuItemId,
-      dishName: row.dishName,
-      price: row.priceCents != null ? fromCents(row.priceCents) : 0,
-      priceCents: row.priceCents,
-      priceLabel: null,
-      currency: displayCurrencyFromRestaurantSettings(row.restaurantSettings),
-      categoryName: row.categoryName,
-      restaurantId: row.restaurantId,
-      restaurantName: row.restaurantName,
-      district: row.district,
-      isOpen: isOpenNow(row.businessHours ?? null, row.timezone),
-      supportsTakeaway: row.supportsTakeaway,
-      supportsDelivery: row.supportsDelivery,
-      tags: row.tags ?? [],
-      detailUrl: this.restaurantDetailUrl(row.restaurantId),
-      menuUrl: this.restaurantMenuUrl(row.restaurantId),
-      menuItemUrl: this.menuItemUrl(row.menuItemId),
-      serviceItemsUrl: this.restaurantServiceItemsUrl(row.restaurantId),
-    }));
+    const dishes: DishSearchResult[] = topDishes.map((row) => {
+      const openingHoursStatus = getOpeningHoursStatus(
+        row.businessHours ?? null,
+        row.timezone,
+      );
+      return {
+        resultType: catalogResultTypeFromTags(row.tags, row.catalogType),
+        menuItemId: row.menuItemId,
+        dishName: row.dishName,
+        price: row.priceCents != null ? fromCents(row.priceCents) : 0,
+        priceCents: row.priceCents,
+        priceLabel: null,
+        currency: displayCurrencyFromRestaurantSettings(row.restaurantSettings),
+        categoryName: row.categoryName,
+        restaurantId: row.restaurantId,
+        restaurantName: row.restaurantName,
+        district: this.publicDiscoveryDistrict(row.district),
+        isOpen: openingHoursStatus === "open",
+        openingHoursStatus,
+        supportsTakeaway: row.supportsTakeaway,
+        supportsDelivery: row.supportsDelivery,
+        tags: row.tags ?? [],
+        detailUrl: this.restaurantDetailUrl(row.restaurantId),
+        menuUrl: this.restaurantMenuUrl(row.restaurantId),
+        menuItemUrl: this.menuItemUrl(row.menuItemId),
+        serviceItemsUrl: this.restaurantServiceItemsUrl(row.restaurantId),
+      };
+    });
 
     const topRestaurants = await this.browseRestaurants({
       sortBy: "popular",
@@ -1660,6 +1706,7 @@ export class DiscoveryService {
           and(
             eq(dishSearchIndex.isAvailable, true),
             eq(restaurants.isActive, true),
+            eq(restaurants.isAvailable, true),
             isNull(restaurants.deletedAt),
             or(
               eq(dishSearchIndex.primaryMarketId, filters.marketId),
@@ -1682,6 +1729,7 @@ export class DiscoveryService {
             eq(restaurantServiceItems.isPublic, true),
             isNull(restaurantServiceItems.deletedAt),
             eq(restaurants.isActive, true),
+            eq(restaurants.isAvailable, true),
             isNull(restaurants.deletedAt),
             sql`EXISTS (
               SELECT 1
@@ -2281,6 +2329,28 @@ export class DiscoveryService {
 
   private sortOpenResultsFirst<T extends { isOpen: boolean }>(results: T[]) {
     return [...results].sort((a, b) => Number(b.isOpen) - Number(a.isOpen));
+  }
+
+  /**
+   * `onboarding` is an internal provisioning sentinel, not a customer-facing
+   * cuisine or venue type. Existing rows can retain it until the owner fills
+   * out their profile, but public discovery must never disclose it.
+   */
+  private publicDiscoveryType(type: string | null): string | null {
+    const value = type?.trim();
+    return value && value.toLowerCase() !== "onboarding" ? value : null;
+  }
+
+  /**
+   * A provisional district is derived from an onboarding subdomain. It is an
+   * implementation identifier, not a geographic location, so omit it from
+   * every public discovery payload rather than exposing it as an address.
+   */
+  private publicDiscoveryDistrict(district: string | null): string | null {
+    const value = district?.trim();
+    return value && !value.toLowerCase().startsWith("onboarding-")
+      ? value
+      : null;
   }
 
   private semanticDishText(row: {

@@ -64,6 +64,7 @@ export const SERVICE_BOOKING_PAYMENT_REQUIREMENT = {
   NONE: "none",
   DEPOSIT: "deposit",
   PREPAY: "prepay",
+  PAY_AT_VENUE: "pay_at_venue",
 } as const;
 export type ServiceBookingPaymentRequirement =
   (typeof SERVICE_BOOKING_PAYMENT_REQUIREMENT)[keyof typeof SERVICE_BOOKING_PAYMENT_REQUIREMENT];
@@ -135,7 +136,7 @@ export const serviceBookings = sqliteTable(
     paymentRequirement: text("payment_requirement")
       .$type<ServiceBookingPaymentRequirement>()
       .notNull()
-      .default(SERVICE_BOOKING_PAYMENT_REQUIREMENT.PREPAY),
+      .default(SERVICE_BOOKING_PAYMENT_REQUIREMENT.PAY_AT_VENUE),
     depositRequiredCents: integer("deposit_required_cents")
       .notNull()
       .default(0),

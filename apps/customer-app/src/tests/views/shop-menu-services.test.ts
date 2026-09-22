@@ -124,6 +124,14 @@ vi.mock("@/components/DesktopCartPanel.vue", () => ({
   default: { template: "<div />" },
 }));
 
+vi.mock("@/components/LanguageSwitcher.vue", () => ({
+  default: {
+    props: { compact: Boolean },
+    template:
+      "<div data-testid=\"shop-menu-language-switcher\" :data-compact=\"compact ? 'true' : 'false'\" />",
+  },
+}));
+
 vi.mock("@tanstack/vue-query", () => ({
   useQuery: (options: { queryKey: string[]; queryFn: () => unknown }) => {
     if (options.queryKey[0] === "restaurant") {
@@ -309,6 +317,11 @@ describe("ShopMenuView service items", () => {
 
     expect(menuApi.getRestaurant).toBeDefined();
     expect(restaurantContactApi.listServiceItems).toBeDefined();
+    expect(
+      wrapper
+        .get('[data-testid="shop-menu-language-switcher"]')
+        .attributes("data-compact"),
+    ).toBe("true");
     expect(wrapper.get('[data-testid="shop-service-items"]').text()).toContain(
       "預約外送",
     );
@@ -395,6 +408,33 @@ describe("ShopMenuView service items", () => {
         restaurantId: "restaurant-1",
         serviceItemId: "1",
       },
+    });
+    wrapper.unmount();
+  });
+
+  it("offers an accessible reservation entry for the current restaurant", async () => {
+    const wrapper = mount(ShopMenuView, {
+      props: { restaurantId: "restaurant-1" },
+      global: {
+        stubs: {
+          MenuItemModal: true,
+          CustomizationModal: true,
+          ShopCartModal: true,
+          DesktopCartPanel: true,
+        },
+      },
+    });
+
+    const reservation = wrapper.get('[data-testid="shop-menu-reservation"]');
+    expect(reservation.attributes("aria-label")).toBe(
+      "reservationBooking.title",
+    );
+
+    await reservation.trigger("click");
+
+    expect(routerPush).toHaveBeenCalledWith({
+      name: "Reservation",
+      params: { restaurantId: "restaurant-1" },
     });
     wrapper.unmount();
   });

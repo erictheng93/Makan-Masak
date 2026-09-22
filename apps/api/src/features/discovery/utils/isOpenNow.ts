@@ -2,6 +2,27 @@ import { resolveBusinessTimezone } from "@makanmasak/database";
 import type { BusinessHours } from "../types";
 
 /**
+ * The public status deliberately distinguishes a shop that is configured as
+ * closed from one that has not published its hours yet.  `isOpenNow` remains
+ * fail-closed for operational decisions (for example, takeaway eligibility),
+ * while discovery can be honest with diners instead of labelling new shops as
+ * closed.
+ */
+export type OpeningHoursStatus = "open" | "closed" | "unavailable";
+
+export function getOpeningHoursStatus(
+  businessHours: BusinessHours | null | undefined,
+  timezone?: string | null,
+  now?: Date,
+): OpeningHoursStatus {
+  if (!businessHours || Object.keys(businessHours).length === 0) {
+    return "unavailable";
+  }
+
+  return isOpenNow(businessHours, timezone, now) ? "open" : "closed";
+}
+
+/**
  * Check if a restaurant is currently open.
  * Workers run in UTC, so we must convert to the restaurant's timezone.
  *

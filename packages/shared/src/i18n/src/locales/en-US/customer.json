@@ -878,6 +878,7 @@
     "noResults": "No results found. Try a different search.",
     "open": "Open",
     "closed": "Closed",
+    "hoursUnavailable": "Hours not provided",
     "filters": "Filters",
     "openNow": "Open Now",
     "takeaway": "Takeaway",
@@ -919,6 +920,10 @@
   "footer": {
     "copyright": "© {year} MakanMasak. All rights reserved."
   },
+  "reservationBooking": {
+    "back": "Back to shop",
+    "title": "Table reservation"
+  },
   "serviceBooking": {
     "back": "Back to services",
     "title": "Service booking",
@@ -944,6 +949,7 @@
     "creditCardPlaceholder": "Credit card public id",
     "creditPinPlaceholder": "PIN (optional)",
     "payWithCredits": "Pay with credits",
+    "payAtCounter": "Please pay the staff at the venue ({amount} due). Confirmation code: {code}",
     "lookupTitle": "Find or cancel a booking",
     "confirmationCodePlaceholder": "Enter confirmation code",
     "contactPlaceholder": "Booking phone or email (optional)",

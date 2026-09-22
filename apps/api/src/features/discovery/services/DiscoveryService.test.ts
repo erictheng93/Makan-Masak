@@ -233,7 +233,7 @@ describe("DiscoveryService", () => {
     };
     const { service, kv } = createService({
       "search:query:version": "3",
-      "search:query:cur1:v:3:nasilemak:m:market-1:p:2:l:5": cached,
+      "search:query:cur2:v:3:nasilemak:m:market-1:p:2:l:5": cached,
     });
 
     await expect(
@@ -244,7 +244,13 @@ describe("DiscoveryService", () => {
         limit: 5,
       }),
     ).resolves.toEqual({
-      results: cached.results,
+      results: [
+        {
+          ...cached.results[0],
+          district: null,
+          openingHoursStatus: "closed",
+        },
+      ],
       total: 1,
       page: 2,
       limit: 5,
@@ -257,7 +263,7 @@ describe("DiscoveryService", () => {
   it("hydrates cached dish search scope when the cache entry is legacy", async () => {
     const { service } = createService({
       "search:query:version": "4",
-      "search:query:cur1:v:4:m:market-1:p:1:l:20": {
+      "search:query:cur2:v:4:m:market-1:p:1:l:20": {
         results: [],
         total: 0,
       },
@@ -286,9 +292,9 @@ describe("DiscoveryService", () => {
     const restaurant = {
       restaurantId: "restaurant-1",
       name: "Makan",
-      type: "malaysian",
+      type: "onboarding",
       category: "casual",
-      district: "Central",
+      district: "onboarding-demo-noodles",
       city: "Taipei",
       priceRange: 2,
       rating: 4.5,
@@ -307,7 +313,7 @@ describe("DiscoveryService", () => {
       "search:categories:v:7:d:Central:ta:p:1:l:20": {
         categories: ["Rice", "Noodles"],
       },
-      "search:restaurants:district:Central": [
+      "search:restaurants:hours2:district:Central": [
         restaurant,
         {
           ...restaurant,
@@ -328,13 +334,22 @@ describe("DiscoveryService", () => {
         limit: 1,
       }),
     ).resolves.toEqual({
-      results: [restaurant],
+      results: [
+        {
+          ...restaurant,
+          type: null,
+          district: null,
+          openingHoursStatus: "open",
+        },
+      ],
       total: 1,
       page: 1,
       limit: 1,
     });
 
-    expect(kv.get).toHaveBeenCalledWith("search:restaurants:district:Central");
+    expect(kv.get).toHaveBeenCalledWith(
+      "search:restaurants:hours2:district:Central",
+    );
     expect(mocks.db.select).not.toHaveBeenCalled();
   });
 
@@ -359,7 +374,7 @@ describe("DiscoveryService", () => {
       publicServiceItemCount: 1,
     };
     const { service } = createService({
-      "search:restaurants:district:Central": [
+      "search:restaurants:hours2:district:Central": [
         restaurant,
         {
           ...restaurant,
@@ -695,7 +710,7 @@ describe("DiscoveryService", () => {
       expect.objectContaining({ namespace: "dishes" }),
     );
     expect(
-      JSON.parse(values.get("search:query:cur1:v:11:laksa:p:1:l:10") ?? "{}"),
+      JSON.parse(values.get("search:query:cur2:v:11:laksa:p:1:l:10") ?? "{}"),
     ).toMatchObject({ total: 2 });
   });
 
@@ -782,7 +797,7 @@ describe("DiscoveryService", () => {
     expect(
       JSON.parse(
         values.get(
-          "search:query:cur1:v:13:takeaway:c:Taipei:d:East:ct:product:" +
+          "search:query:cur2:v:13:takeaway:c:Taipei:d:East:ct:product:" +
             "cat:Drinks:pmin:1:pmax:99:m:market-1:p:2:l:5",
         ) ?? "{}",
       ),
@@ -819,9 +834,9 @@ describe("DiscoveryService", () => {
     const restaurantRow = {
       id: "restaurant-1",
       name: "Makan",
-      type: "malaysian",
+      type: "onboarding",
       category: "casual",
-      district: "Central",
+      district: "onboarding-demo-noodles",
       city: "Taipei",
       priceRange: 2,
       rating: 4.5,
@@ -901,6 +916,10 @@ describe("DiscoveryService", () => {
       results: [
         {
           restaurantId: "restaurant-1",
+          type: null,
+          district: null,
+          openingHoursStatus: "unavailable",
+          isOpen: false,
           imageUrl: "logo.png",
           availableMenuItemCount: 3,
           publicServiceItemCount: 2,
@@ -909,7 +928,9 @@ describe("DiscoveryService", () => {
       ],
     });
     expect(
-      JSON.parse(values.get("search:restaurants:district:Central") ?? "[]")[0],
+      JSON.parse(
+        values.get("search:restaurants:hours2:district:Central") ?? "[]",
+      )[0],
     ).toMatchObject({ restaurantId: "restaurant-1" });
 
     await expect(
@@ -922,6 +943,7 @@ describe("DiscoveryService", () => {
           serviceItemId: 10,
           serviceType: "booking",
           currency: "VND",
+          openingHoursStatus: "unavailable",
           detailUrl: "/api/v1/restaurants/restaurant-1",
           serviceItemsUrl: "/api/v1/restaurants/restaurant-1/service-items",
         },

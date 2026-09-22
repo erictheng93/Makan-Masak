@@ -65,7 +65,9 @@ const createSchema = z.object({
   employeeId: idString.optional(),
   specialRequests: z.string().max(500).optional(),
   voucherCode: z.string().min(1).max(64).optional(),
-  paymentRequirement: z.enum(["none", "deposit", "prepay"]).optional(),
+  paymentRequirement: z
+    .enum(["none", "deposit", "prepay", "pay_at_venue"])
+    .optional(),
   depositAmountCents: z.number().int().min(1).optional(),
   reminderOptIn: z.boolean().optional(),
   reminderMinutesBefore: z.number().int().min(5).max(10080).optional(),

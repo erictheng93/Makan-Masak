@@ -211,6 +211,17 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: "/restaurant/:restaurantId/reserve",
+    name: "Reservation",
+    component: () => import("@/views/ReservationView.vue"),
+    props: (route) => ({
+      restaurantId: String(route.params.restaurantId),
+    }),
+    meta: {
+      titleKey: "reservationBooking.title",
+    },
+  },
+  {
     path: "/restaurant/:restaurantId/table/:tableId/cart",
     name: "Cart",
     component: () => import("@/views/CartView.vue"),

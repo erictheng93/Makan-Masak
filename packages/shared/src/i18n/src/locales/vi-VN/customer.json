@@ -878,6 +878,7 @@
     "noResults": "Không tìm thấy kết quả. Hãy thử tìm kiếm khác.",
     "open": "Đang mở",
     "closed": "Đã đóng",
+    "hoursUnavailable": "Chưa cung cấp giờ hoạt động",
     "filters": "Bộ lọc",
     "openNow": "Đang mở",
     "takeaway": "Mang đi",
@@ -919,6 +920,10 @@
   "footer": {
     "copyright": "© {year} MakanMasak. Bảo lưu mọi quyền."
   },
+  "reservationBooking": {
+    "back": "Quay lại cửa hàng",
+    "title": "Đặt bàn"
+  },
   "serviceBooking": {
     "back": "Quay lại dịch vụ",
     "title": "Đặt dịch vụ",
@@ -944,6 +949,7 @@
     "creditCardPlaceholder": "Public id thẻ tín dụng nội bộ",
     "creditPinPlaceholder": "Mã PIN (tuỳ chọn)",
     "payWithCredits": "Thanh toán bằng điểm",
+    "payAtCounter": "Vui lòng thanh toán cho nhân viên tại quán (cần thanh toán {amount}). Mã xác nhận: {code}",
     "lookupTitle": "Tra cứu hoặc huỷ đặt chỗ",
     "confirmationCodePlaceholder": "Nhập mã xác nhận",
     "contactPlaceholder": "Điện thoại hoặc email đặt chỗ (tuỳ chọn)",

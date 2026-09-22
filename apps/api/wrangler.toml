@@ -338,6 +338,17 @@ namespace_id = "1002"
   limit = 20
   period = 60
 
+# Atomic short-window floor for anonymous reservation mutations. The feature
+# route's KV limiter retains a longer 15-minute window, but KV's read-modify-
+# write counter cannot be the only enforcement boundary under concurrency.
+[[env.production.ratelimits]]
+name = "PUBLIC_RESERVATION_MUTATION_RATE_LIMITER"
+namespace_id = "1003"
+
+  [env.production.ratelimits.simple]
+  limit = 5
+  period = 60
+
 [[env.production.kv_namespaces]]
 binding = "BACKUP_KV"
 id = "0f091e2ecc254832b824794e6d6912dc"

@@ -28,6 +28,7 @@ import {
   coupons,
   employeeAvailability,
   SERVICE_BOOKING_STATUS,
+  SERVICE_BOOKING_PAYMENT_REQUIREMENT,
   type ServiceBookingStatus,
   users,
 } from "@makanmasak/database";
@@ -207,6 +208,7 @@ async function insertAssignedServiceBooking(input: {
     bookingTime: input.bookingTime,
     employeeId: input.employeeId,
     status: input.status ?? SERVICE_BOOKING_STATUS.PENDING,
+    paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.PAY_AT_VENUE,
     confirmationCode: crypto.randomUUID().replace(/-/g, ""),
     calendarUid: `${crypto.randomUUID()}@makanmakan.service-bookings`,
   });
@@ -242,6 +244,7 @@ describe("ServiceBookingService — create", () => {
     expect(booking).toMatchObject({
       status: "pending",
       paymentStatus: "unpaid",
+      paymentRequirement: "pay_at_venue",
       priceCentsSnapshot: 15000,
       amountDueCents: 15000,
       serviceNameSnapshot: "Lantern Painting",

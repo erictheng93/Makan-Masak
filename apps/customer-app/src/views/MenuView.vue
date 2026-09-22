@@ -27,14 +27,16 @@
               </svg>
             </button>
 
-            <div class="flex-1 text-center">
-              <h1 class="font-semibold text-ios-text">
+            <div class="min-w-0 flex-1 text-center">
+              <h1 class="truncate font-semibold text-ios-text">
                 {{ restaurant?.name || t("common.loading") }}
               </h1>
-              <p class="text-sm text-ios-secondary">
+              <p class="truncate text-sm text-ios-secondary">
                 {{ t("orderTracking.tableNumber") }} {{ orderContextLabel }}
               </p>
             </div>
+
+            <LanguageSwitcher compact />
 
             <button
               data-testid="cart-btn"
@@ -480,6 +482,7 @@ import MenuItemCard from "@/components/MenuItemCard.vue";
 import MenuItemModal from "@/components/MenuItemModal.vue";
 import CustomizationModal from "@/components/CustomizationModal.vue";
 import DesktopCartPanel from "@/components/DesktopCartPanel.vue";
+import LanguageSwitcher from "@/components/LanguageSwitcher.vue";
 import { useIsDesktop } from "@/composables/useBreakpoint";
 import { menuApi } from "@/services/menuApi";
 import { useCurrency } from "@/composables/useCurrency";

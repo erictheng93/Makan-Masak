@@ -1257,6 +1257,7 @@ describe("i18n Integration Tests", () => {
       "serviceBooking.creditCardPlaceholder",
       "serviceBooking.creditPinPlaceholder",
       "serviceBooking.payWithCredits",
+      "serviceBooking.payAtCounter",
       "serviceBooking.lookupTitle",
       "serviceBooking.confirmationCodePlaceholder",
       "serviceBooking.contactPlaceholder",

@@ -574,6 +574,15 @@ export class ServiceBookingService {
     pin?: string;
   }): Promise<ServiceBookingRow> {
     const booking = await this.loadPayableBooking(input.bookingId);
+    if (
+      booking.paymentRequirement ===
+      SERVICE_BOOKING_PAYMENT_REQUIREMENT.PAY_AT_VENUE
+    ) {
+      throw badRequest(
+        "This booking must be paid at the venue",
+        "SERVICE_PAYMENT_AT_VENUE",
+      );
+    }
 
     let paymentRef: string | null = null;
     if (booking.amountDueCents > 0) {
@@ -1410,7 +1419,7 @@ function resolvePaymentTerms(input: {
   amountDueCents: number;
 } {
   const requirement =
-    input.requirement ?? SERVICE_BOOKING_PAYMENT_REQUIREMENT.PREPAY;
+    input.requirement ?? SERVICE_BOOKING_PAYMENT_REQUIREMENT.PAY_AT_VENUE;
   if (requirement === SERVICE_BOOKING_PAYMENT_REQUIREMENT.NONE) {
     return {
       requirement,
@@ -1441,7 +1450,7 @@ function resolvePaymentTerms(input: {
     };
   }
   return {
-    requirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.PREPAY,
+    requirement,
     depositRequiredCents: 0,
     balanceDueCents: 0,
     amountDueCents: input.amountDueCents,

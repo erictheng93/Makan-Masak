@@ -3,10 +3,13 @@
     <div class="relative">
       <button
         class="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+        :class="{ 'h-10 w-10 justify-center px-0': compact }"
         @click="toggleDropdown"
       >
         <span class="text-lg">{{ currentLanguageInfo?.flag }}</span>
-        <span class="font-medium">{{ currentLanguageInfo?.name }}</span>
+        <span v-if="!compact" class="font-medium">{{
+          currentLanguageInfo?.name
+        }}</span>
         <svg
           class="w-4 h-4 transition-transform duration-200"
           :class="{ 'rotate-180': isOpen }"
@@ -25,7 +28,8 @@
 
       <div
         v-show="isOpen"
-        class="absolute top-full left-0 mt-1 w-full min-w-max bg-white border border-gray-300 rounded-lg shadow-lg z-50"
+        class="absolute top-full mt-1 w-full min-w-max bg-white border border-gray-300 rounded-lg shadow-lg z-50"
+        :class="compact ? 'right-0' : 'left-0'"
       >
         <div class="py-1">
           <button
@@ -62,6 +66,15 @@
 import { ref, onMounted, onUnmounted } from "vue";
 import { useI18n } from "@/composables/useI18n";
 import type { SupportedLanguage } from "@/i18n";
+
+withDefaults(
+  defineProps<{
+    compact?: boolean;
+  }>(),
+  {
+    compact: false,
+  },
+);
 
 const {
   currentLanguage,
