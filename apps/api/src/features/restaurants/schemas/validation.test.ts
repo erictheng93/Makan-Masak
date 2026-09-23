@@ -165,4 +165,22 @@ describe("restaurant validation schemas", () => {
       qrCode: "SHOP-019fa136-cfe3-709f-a2ab-f8a3ebcd31a1-1785563580",
     });
   });
+
+  it("takes a country on create but never on update", () => {
+    const create = restaurantSchemas.create.safeParse({
+      name: "Shop",
+      type: "restaurant",
+      category: "casual",
+      address: "1 Road",
+      district: "Central",
+      city: "Taipei",
+      countryCode: "TW",
+      phone: "0912345678",
+    });
+    expect(create.success && create.data.countryCode).toBe("TW");
+
+    const update = restaurantSchemas.update.safeParse({ countryCode: "MY" });
+    expect(update.success).toBe(true);
+    expect(update.success && "countryCode" in update.data).toBe(false);
+  });
 });

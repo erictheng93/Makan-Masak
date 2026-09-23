@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { SUPPORTED_COUNTRIES } from "@makanmasak/shared-types";
 import {
   RESTAURANT_SERVICE_TYPES,
   SERVICE_ITEM_PAYMENT_REQUIREMENTS,
@@ -297,6 +298,8 @@ const createRestaurantSchema = z.object({
     .min(1, "District is required")
     .max(50, "District must be less than 50 characters"),
   city: z.string().max(50, "City must be less than 50 characters").optional(),
+  // Needed only when the city is not on a country's list; otherwise derived.
+  countryCode: z.enum(SUPPORTED_COUNTRIES).optional(),
   phone: z
     .string()
     .min(8, "Phone number must be at least 8 characters")
@@ -322,22 +325,27 @@ const createRestaurantSchema = z.object({
 
 // Restaurant update schema (all fields optional except validation rules still apply)
 const updateRestaurantSchema = z.lazy(() =>
-  createRestaurantSchema.partial().extend({
-    isAvailable: z.boolean().optional(),
-    isActive: z.boolean().optional(),
-    latitude: z.number().min(-90).max(90).nullable().optional(),
-    longitude: z.number().min(-180).max(180).nullable().optional(),
-    supportsTakeaway: z.boolean().optional(),
-    supportsDelivery: z.boolean().optional(),
-    settings: restaurantSettingsSchema.optional(),
+  // The country is fixed at creation: changing it would leave currency,
+  // timezone and cached region policy lookups out of step.
+  createRestaurantSchema
+    .omit({ countryCode: true })
+    .partial()
+    .extend({
+      isAvailable: z.boolean().optional(),
+      isActive: z.boolean().optional(),
+      latitude: z.number().min(-90).max(90).nullable().optional(),
+      longitude: z.number().min(-180).max(180).nullable().optional(),
+      supportsTakeaway: z.boolean().optional(),
+      supportsDelivery: z.boolean().optional(),
+      settings: restaurantSettingsSchema.optional(),
 
-    // A column of its own, not a `settings` key (#329): every business-day
-    // bucket derives its SQL offset from it. An enum rather than a free string
-    // because only fixed-offset zones can be expressed as a SQLite modifier --
-    // accepting `America/New_York` here would store a boundary the report layer
-    // then silently ignores, which is the shape of the bug this replaces.
-    timezone: z.enum(SUPPORTED_BUSINESS_TIMEZONES).optional(),
-  }),
+      // A column of its own, not a `settings` key (#329): every business-day
+      // bucket derives its SQL offset from it. An enum rather than a free string
+      // because only fixed-offset zones can be expressed as a SQLite modifier --
+      // accepting `America/New_York` here would store a boundary the report layer
+      // then silently ignores, which is the shape of the bug this replaces.
+      timezone: z.enum(SUPPORTED_BUSINESS_TIMEZONES).optional(),
+    }),
 );
 
 // Restaurant list query parameters

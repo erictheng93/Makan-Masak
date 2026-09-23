@@ -583,10 +583,47 @@ describe("markets admin routes", () => {
     );
   });
 
+  it("gives new vendors the market's country", async () => {
+    const res = await request("/market-1/vendor-imports", "POST", {
+      vendors: [{ name: "New Vendor", address: "Road 1", district: "Datong" }],
+    });
+    expect(res.status).toBe(200);
+    expect(restaurantFns.createRestaurant).toHaveBeenCalledWith(
+      expect.objectContaining({ city: "Taipei", countryCode: "TW" }),
+    );
+  });
+
+  it("rejects the whole import before creating anyone when a vendor has no country", async () => {
+    marketsFns.getMarketById.mockResolvedValue({
+      id: "market-1",
+      city: "Taipei",
+      countryCode: null,
+      openingHours: {},
+      deletedAt: null,
+    });
+    const res = await request("/market-1/vendor-imports", "POST", {
+      vendors: [
+        {
+          name: "Known",
+          address: "Road 1",
+          district: "Datong",
+          city: "台中市",
+        },
+        { name: "Unknown", address: "Road 2", district: "Datong" },
+      ],
+    });
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toMatchObject({
+      error: { code: "RESTAURANT_COUNTRY_REQUIRED" },
+    });
+    expect(restaurantFns.createRestaurant).not.toHaveBeenCalled();
+  });
+
   it("normalizes short market weekdays before creating a vendor", async () => {
     marketsFns.getMarketById.mockResolvedValue({
       id: "market-1",
       city: "Taipei",
+      countryCode: "TW",
       deletedAt: null,
       openingHours: {
         mon: { open: "10:00", close: "22:00" },

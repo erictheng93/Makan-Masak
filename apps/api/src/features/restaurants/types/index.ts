@@ -12,6 +12,7 @@ import type {
   BusinessHours as SharedBusinessHours,
   Status,
   PlanType,
+  SupportedCountryCode,
 } from "@makanmasak/shared-types";
 
 export type Restaurant = SharedRestaurant;
@@ -29,6 +30,8 @@ export interface CreateRestaurantData {
   address: string;
   district: string;
   city?: string;
+  /** Required only when `city` is not on a country's city list. */
+  countryCode?: SupportedCountryCode;
   phone: string;
   email?: string;
   website?: string;
@@ -39,7 +42,9 @@ export interface CreateRestaurantData {
   bannerUrl?: string;
 }
 
-export interface UpdateRestaurantData extends Partial<CreateRestaurantData> {
+export interface UpdateRestaurantData extends Partial<
+  Omit<CreateRestaurantData, "countryCode">
+> {
   isAvailable?: boolean;
   isActive?: boolean;
   latitude?: number | null;

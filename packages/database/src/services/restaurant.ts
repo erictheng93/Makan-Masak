@@ -11,7 +11,12 @@ import {
 } from "../schema";
 import type { Restaurant } from "@makanmasak/shared-types";
 import type { BusinessTimezone } from "../utils/business-timezone";
-import { PlanType } from "@makanmasak/shared-types";
+import {
+  COUNTRY_PROFILES,
+  PlanType,
+  countryForCity,
+  type SupportedCountryCode,
+} from "@makanmasak/shared-types";
 import { assertCurrencyAlignedCents, badRequest } from "@makanmasak/utils";
 import { toCents } from "../utils/money";
 import { requireRestaurantCurrency } from "../utils/order-totals";
@@ -68,6 +73,8 @@ export interface CreateRestaurantData {
   address: string;
   district: string;
   city?: string;
+  /** Required only when `city` is not on a country's city list. */
+  countryCode?: SupportedCountryCode;
   phone: string;
   email?: string;
   website?: string;
@@ -78,7 +85,9 @@ export interface CreateRestaurantData {
   bannerUrl?: string;
 }
 
-export interface UpdateRestaurantData extends Partial<CreateRestaurantData> {
+export interface UpdateRestaurantData extends Partial<
+  Omit<CreateRestaurantData, "countryCode">
+> {
   isAvailable?: boolean;
   isActive?: boolean;
   settings?: RestaurantInsert["settings"];
@@ -103,6 +112,49 @@ function settingsRecord(value: unknown): Record<string, unknown> {
     }
   }
   return isPlainRecord(value) ? value : {};
+}
+
+/**
+ * The country a new restaurant trades in, plus the currency and timezone that
+ * follow from it — the same derivation onboarding provisioning does. Without
+ * it a restaurant created here would have a NULL country and silently skip
+ * every country ceiling policy (region policies spec §4.4).
+ */
+function regionForNewRestaurant(
+  city: string,
+  explicit: SupportedCountryCode | undefined,
+  settings: Record<string, unknown> | null,
+) {
+  const fromCity = countryForCity(city);
+  if (explicit && fromCity && explicit !== fromCity) {
+    throw badRequest(
+      "The restaurant's country does not match its city",
+      "RESTAURANT_COUNTRY_CITY_MISMATCH",
+      { countryCode: explicit, city },
+    );
+  }
+  const countryCode = explicit ?? fromCity;
+  if (!countryCode) {
+    throw badRequest(
+      "Cannot tell which country this city is in; pass countryCode",
+      "RESTAURANT_COUNTRY_REQUIRED",
+      { city },
+    );
+  }
+  const profile = COUNTRY_PROFILES[countryCode];
+  const currency = settings?.currency;
+  if (currency !== undefined && currency !== profile.currency) {
+    throw badRequest(
+      `A ${countryCode} restaurant must use ${profile.currency}`,
+      "RESTAURANT_COUNTRY_CURRENCY_MISMATCH",
+      { countryCode, currency },
+    );
+  }
+  return {
+    countryCode,
+    timezone: profile.timezone,
+    settings: { ...settings, currency: profile.currency },
+  };
 }
 
 /**
@@ -142,12 +194,19 @@ export class RestaurantService extends BaseService {
       if (isPlainRecord(initialSettings)) {
         assertSettingsMoneyPrecision(initialSettings, initialSettings);
       }
+      const city = data.city || "台中市";
+      const region = regionForNewRestaurant(
+        city,
+        data.countryCode,
+        isPlainRecord(initialSettings) ? initialSettings : null,
+      );
       console.log("[RestaurantService] Creating restaurant with data:", data);
       const result = await this.db
         .insert(restaurants)
         .values({
           ...data,
-          city: data.city || "台中市",
+          ...region,
+          city,
           isAvailable: true, // Default: restaurant is available
           isActive: true, // Default: restaurant is active
         })
