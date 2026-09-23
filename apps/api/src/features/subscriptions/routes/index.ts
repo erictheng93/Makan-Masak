@@ -13,6 +13,7 @@ import type { Env } from "../../../types/env";
 import { authMiddleware, requireRole } from "../../../middleware/auth";
 import { invalidateSubscriptionCache } from "../../../middleware/moduleGate";
 import { badRequest } from "../../../shared/utils/api-error";
+import { assertPlanTierAllowed } from "../../../shared/policy/regionPolicyGuards";
 import { UsageService } from "../../billing/services/UsageService";
 import { SubscriptionService } from "../services/SubscriptionService";
 import {
@@ -170,6 +171,10 @@ router.post(
   zValidator("json", createSubscriptionSchema, unifiedValidationHook),
   async (c) => {
     const body = c.req.valid("json");
+    await assertPlanTierAllowed(c.env, {
+      restaurantId: body.restaurantId,
+      planTier: body.planTier,
+    });
     const service = new SubscriptionService(c.env.DB);
 
     const sub = await service.create({
@@ -220,6 +225,7 @@ router.patch(
   async (c) => {
     const restaurantId = requirePathParam(c, "restaurantId");
     const { planTier } = c.req.valid("json");
+    await assertPlanTierAllowed(c.env, { restaurantId, planTier });
     const service = new SubscriptionService(c.env.DB);
 
     const updated = await service.changePlan(restaurantId, planTier);
