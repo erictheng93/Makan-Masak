@@ -982,6 +982,27 @@ describe("Onboarding public API workflow — real integration", () => {
         username: "tan-mei",
       },
     });
+    expect(
+      db
+        .raw()
+        .prepare(
+          `SELECT event_type, actor_id, actor_email
+           FROM onboarding_application_audit_events
+           WHERE application_id = ? ORDER BY created_at_ms, id`,
+        )
+        .all(approvedCandidateId),
+    ).toEqual([
+      {
+        event_type: "submitted",
+        actor_id: null,
+        actor_email: null,
+      },
+      {
+        event_type: "approved",
+        actor_id: "workflow-admin",
+        actor_email: "workflow-admin@example.test",
+      },
+    ]);
     // The owner logs in through apps/api, whose login schema only accepts this
     // pattern (USERNAME_REGEX in features/authentication/schemas/validation.ts).
     // A contact email of "tan.mei@…" used to yield "tan.mei", which login

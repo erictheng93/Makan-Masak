@@ -2222,6 +2222,8 @@ const enUS: Messages = {
       empty: "No audit events recorded.",
       system: "System",
       reason: "Reason: {reason}",
+      submitted: "Application submitted",
+      approved: "Application approved",
       rejected: "Application rejected",
       setupLinkRegenerated: "Owner setup link regenerated",
     },

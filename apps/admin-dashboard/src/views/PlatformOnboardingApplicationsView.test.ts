@@ -139,6 +139,22 @@ describe("PlatformOnboardingApplicationsView", () => {
   it("shows a chronological application audit trail with actor and reason", async () => {
     vi.mocked(onboardingApplicationsService.auditEvents).mockResolvedValue([
       {
+        id: "evt-0",
+        eventType: "submitted",
+        actorId: null,
+        actorEmail: null,
+        metadata: null,
+        createdAtMs: Date.parse("2026-06-01T12:00:00.000Z"),
+      },
+      {
+        id: "evt-1a",
+        eventType: "approved",
+        actorId: "admin-1",
+        actorEmail: "admin@example.test",
+        metadata: null,
+        createdAtMs: Date.parse("2026-06-02T11:00:00.000Z"),
+      },
+      {
         id: "evt-1",
         eventType: "rejected",
         actorId: "admin-1",
@@ -159,6 +175,12 @@ describe("PlatformOnboardingApplicationsView", () => {
     expect(
       wrapper.get('[data-testid="onboarding-audit-dialog"]').text(),
     ).toContain("admin@example.test");
+    expect(
+      wrapper.get('[data-testid="onboarding-audit-dialog"]').text(),
+    ).toContain("platformOnboarding.audit.submitted");
+    expect(
+      wrapper.get('[data-testid="onboarding-audit-dialog"]').text(),
+    ).toContain("platformOnboarding.audit.approved");
     expect(
       wrapper.get('[data-testid="onboarding-audit-reason"]').text(),
     ).toContain("Duplicate application");

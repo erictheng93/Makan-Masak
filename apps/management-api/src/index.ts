@@ -25,7 +25,10 @@ import authRouter from "./routes/auth";
 import adminOnboardingRouter from "./routes/admin-onboarding";
 import { adminMarketsRouter, marketsRouter } from "./routes/markets";
 import internalRouter from "./routes/internal";
-import { archiveOnboardingAudit } from "./services/onboardingAuditArchive";
+import {
+  archiveOnboardingAudit,
+  redactExpiredRejectedApplications,
+} from "./services/onboardingAuditArchive";
 
 // Create main application
 const app = new Hono<{ Bindings: ManagementEnv }>();
@@ -246,6 +249,10 @@ export default {
   // schedule lands in wrangler.toml.
   async scheduled(_controller, env) {
     try {
+      const redacted = await redactExpiredRejectedApplications(env);
+      if (redacted > 0) {
+        console.log(`[AuditArchive] redacted ${redacted} expired applications`);
+      }
       console.log(`[AuditArchive] wrote ${await archiveOnboardingAudit(env)}`);
     } catch (error) {
       console.error("[AuditArchive] onboarding audit snapshot failed:", error);

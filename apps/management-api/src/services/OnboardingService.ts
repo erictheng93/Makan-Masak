@@ -250,6 +250,7 @@ export class OnboardingService {
       submittedAt: now,
       updatedAt: now,
     });
+    await this.writeApplicationAuditEvent(id, "submitted", undefined, {});
 
     return {
       ...(await this.getApplication(id))!,
@@ -642,7 +643,10 @@ export class OnboardingService {
   /**
    * Activate an approved application and create the tenant.
    */
-  private async activateApplication(applicationId: string): Promise<{
+  private async activateApplication(
+    applicationId: string,
+    actor?: { id: string; email: string },
+  ): Promise<{
     success: boolean;
     tenantId?: string;
     subdomain?: string;
@@ -706,6 +710,9 @@ export class OnboardingService {
       )
         .bind("completed", tenant.id, now, now, applicationId)
         .run();
+      await this.writeApplicationAuditEvent(applicationId, "approved", actor, {
+        tenantId: tenant.id,
+      });
       try {
         credentialDelivery = await this.dispatchCredentialDelivery(
           application,
@@ -768,7 +775,10 @@ export class OnboardingService {
     }
   }
 
-  async approveApplication(applicationId: string): Promise<{
+  async approveApplication(
+    applicationId: string,
+    actor?: { id: string; email: string },
+  ): Promise<{
     success: boolean;
     restaurantId?: string;
     marketId?: string;
@@ -811,7 +821,7 @@ export class OnboardingService {
       };
     }
 
-    const result = await this.activateApplication(applicationId);
+    const result = await this.activateApplication(applicationId, actor);
     return {
       ...result,
       restaurantId: result.ownerAccount?.restaurantId,

@@ -2081,6 +2081,8 @@ const zhCN: Messages = {
       empty: "暂无审核事件记录。",
       system: "系统",
       reason: "原因：{reason}",
+      submitted: "已提交申请",
+      approved: "已批准申请",
       rejected: "拒绝申请",
       setupLinkRegenerated: "重新生成店主设置链接",
     },

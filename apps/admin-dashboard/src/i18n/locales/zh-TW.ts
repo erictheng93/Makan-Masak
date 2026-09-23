@@ -2272,6 +2272,8 @@ const zhTWCore = {
       empty: "目前沒有稽核事件。",
       system: "系統",
       reason: "原因：{reason}",
+      submitted: "已送出申請",
+      approved: "已核准申請",
       rejected: "拒絕申請",
       setupLinkRegenerated: "重新產生店主設定連結",
     },

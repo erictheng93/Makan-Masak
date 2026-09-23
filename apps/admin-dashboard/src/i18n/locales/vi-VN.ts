@@ -2125,6 +2125,8 @@ const viVN: Messages = {
       empty: "Chưa có sự kiện kiểm toán.",
       system: "Hệ thống",
       reason: "Lý do: {reason}",
+      submitted: "Đơn đăng ký đã được gửi",
+      approved: "Đơn đăng ký được phê duyệt",
       rejected: "Đơn đăng ký bị từ chối",
       setupLinkRegenerated: "Đã tạo lại liên kết kích hoạt chủ cửa hàng",
     },

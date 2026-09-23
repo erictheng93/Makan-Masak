@@ -2241,6 +2241,8 @@ const idID: Messages = {
       empty: "Belum ada peristiwa audit.",
       system: "Sistem",
       reason: "Alasan: {reason}",
+      submitted: "Pengajuan dikirim",
+      approved: "Pengajuan disetujui",
       rejected: "Pengajuan ditolak",
       setupLinkRegenerated: "Tautan aktivasi pemilik dibuat ulang",
     },

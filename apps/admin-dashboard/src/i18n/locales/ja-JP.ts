@@ -2123,6 +2123,8 @@ const jaJP: Messages = {
       empty: "監査イベントはありません。",
       system: "システム",
       reason: "理由：{reason}",
+      submitted: "申請を受理",
+      approved: "申請を承認",
       rejected: "申請を却下",
       setupLinkRegenerated: "オーナー設定リンクを再生成",
     },

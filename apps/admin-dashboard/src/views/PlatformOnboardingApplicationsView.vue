@@ -805,6 +805,8 @@ async function showAuditEvents(application: OnboardingApplication) {
 }
 
 function auditEventLabel(eventType: string) {
+  if (eventType === "submitted") return t("platformOnboarding.audit.submitted");
+  if (eventType === "approved") return t("platformOnboarding.audit.approved");
   if (eventType === "rejected") return t("platformOnboarding.audit.rejected");
   if (eventType === "setup_link_regenerated")
     return t("platformOnboarding.audit.setupLinkRegenerated");

@@ -150,7 +150,10 @@ router.get("/applications/:id/audit-events", async (c) => {
 
 router.post("/applications/:id/approve", async (c) => {
   const service = new OnboardingService(c.env);
-  const result = await service.approveApplication(c.req.param("id"));
+  const result = await service.approveApplication(
+    c.req.param("id"),
+    c.get("managementUser"),
+  );
 
   if (!result.success) {
     if (result.error === "Application not found") {
