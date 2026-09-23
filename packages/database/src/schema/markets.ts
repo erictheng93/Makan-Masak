@@ -8,6 +8,7 @@ import {
 } from "drizzle-orm/sqlite-core";
 import { relations, sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
+import type { SupportedCountryCode } from "@makanmasak/shared-types";
 import { customers } from "./customers";
 import { restaurants } from "./restaurants";
 
@@ -40,6 +41,9 @@ export const markets = sqliteTable(
     type: text("type").notNull(),
     description: text("description"),
     city: text("city").notNull(),
+    // 市集所在國。收平台費（platform_fee_rate_bps > 0）的市集必須有值，
+    // 國家層的費率上限依它套用；NULL = 未知，不可當成任何國家。
+    countryCode: text("country_code").$type<SupportedCountryCode>(),
     district: text("district").notNull(),
     address: text("address").notNull(),
     latitude: real("latitude").notNull(),
@@ -74,6 +78,7 @@ export const markets = sqliteTable(
       table.district,
       table.isActive,
     ),
+    countryCodeIdx: index("markets_country_code_idx").on(table.countryCode),
   }),
 );
 
