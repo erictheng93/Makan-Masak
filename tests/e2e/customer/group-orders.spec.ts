@@ -22,12 +22,17 @@ import {
   createMenuFixture,
   createTable,
   e2eName,
+  expectNoReload,
   LIVE_TIMEOUT,
+  markDocument,
   NAV_TIMEOUT,
   newDinerContext,
   qrPath,
   readOrder,
+  recordRealtimeEvents,
   requireStack,
+  staffSetStatus,
+  waitForRealtimeAck,
   type MenuFixture,
 } from "./customer-e2e";
 
@@ -108,8 +113,61 @@ async function addDishInGroupMode(
   await expect(page).toHaveURL(new RegExp(`/group/order/${groupOrderId}$`));
 }
 
+/** Counts the group realtime tokens a page asks for over its whole life. */
+function countGroupTokenRequests(page: Page): () => number {
+  let count = 0;
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      request.url().endsWith("/api/v1/realtime/auth/group-token")
+    ) {
+      count += 1;
+    }
+  });
+  return () => count;
+}
+
+/**
+ * From the submitted group page to the master order's tracking page, through
+ * the tracking-token exchange (#396). R17: that exchange must clear the global
+ * CSRF check, which route-level unit tests never run. The realtime recorder is
+ * attached here, so the ack it waits for is the tracking socket's own (R19).
+ */
+async function openTrackingFromGroup(
+  page: Page,
+  groupOrderId: string,
+  masterOrderId: string,
+): Promise<string[]> {
+  await expect(page.getByTestId("group-order-completed")).toBeVisible({
+    timeout: LIVE_TIMEOUT,
+  });
+  const events = recordRealtimeEvents(page);
+  const exchanged = page.waitForResponse(
+    (response) =>
+      response
+        .url()
+        .endsWith(`/api/v1/orders/group/${groupOrderId}/tracking-token`) &&
+      response.request().method() === "POST",
+  );
+  await page.getByTestId("group-order-tracking").click();
+  const exchange = await exchanged;
+  expect(
+    exchange.status(),
+    `tracking-token exchange: ${await exchange.text()}`,
+  ).toBe(200);
+  await expect(page).toHaveURL(new RegExp(`/order/${masterOrderId}$`), {
+    timeout: NAV_TIMEOUT,
+  });
+  await expect(page.getByTestId("order-status-title")).toHaveText("待確認", {
+    timeout: NAV_TIMEOUT,
+  });
+  await waitForRealtimeAck(events);
+  await markDocument(page);
+  return events;
+}
+
 test.describe("揪團 (real API + realtime)", () => {
-  test("host starts a group from the menu, a second diner joins by the invite link, both order, host submits one order", async ({
+  test("host starts a group from the menu, a second diner joins by the invite link, both order, host submits one order, and both follow it live", async ({
     browser,
   }) => {
     const localCleanup = new Cleanup();
@@ -117,6 +175,8 @@ test.describe("揪團 (real API + realtime)", () => {
     cancelOnCleanup(localCleanup, () => masterOrderId);
     const host = await newDinerContext(browser);
     const guest = await newDinerContext(browser);
+    const hostGroupTokens = countGroupTokenRequests(host.page);
+    const guestGroupTokens = countGroupTokenRequests(guest.page);
     try {
       const table = await createTable(localCleanup);
 
@@ -213,6 +273,37 @@ test.describe("揪團 (real API + realtime)", () => {
       expect(order.totalAmount).toBe(
         menu.plainItem.price + menu.sideItem.price,
       );
+
+      // #397: each diner trades for a group realtime token once, not on every
+      // page change. 09-18 counted 12 for one host and hit the 10/min limit.
+      expect(hostGroupTokens(), "host group-token requests").toBe(1);
+      expect(guestGroupTokens(), "guest group-token requests").toBe(1);
+
+      // --- 查看訂單進度 (#396): both diners reach the master order ----------
+      // The guest joined by link and never scanned the table QR, which is the
+      // case R19 broke: its tracking socket must come from the guest token.
+      const hostEvents = await openTrackingFromGroup(
+        host.page,
+        group.groupOrderId,
+        masterOrderId!,
+      );
+      const guestEvents = await openTrackingFromGroup(
+        guest.page,
+        group.groupOrderId,
+        masterOrderId!,
+      );
+
+      await staffSetStatus(masterOrderId!, "confirmed");
+      for (const [page, events] of [
+        [host.page, hostEvents],
+        [guest.page, guestEvents],
+      ] as const) {
+        await expect(
+          page.getByTestId("order-status-title"),
+          `after staff confirmed; realtime events: ${events.join(", ")}`,
+        ).toHaveText("已確認", { timeout: LIVE_TIMEOUT });
+        await expectNoReload(page);
+      }
 
       await assertNoOverlayError(host.page);
       await assertNoOverlayError(guest.page);

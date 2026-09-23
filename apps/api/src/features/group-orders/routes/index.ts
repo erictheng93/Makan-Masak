@@ -27,12 +27,11 @@ import {
 import { GroupOrdersService } from "../services/GroupOrdersService";
 import { groupOrderSchemas } from "../schemas/validation";
 import type { Env } from "../../../types/env";
-import { RealtimeBroadcastService } from "@makanmasak/database";
+import { RealtimeEventType } from "@makanmasak/shared-types";
 import {
-  isValidRealtimeEvent,
-  RealtimeEventType,
-} from "@makanmasak/shared-types";
-import type { GroupOrderEvent } from "@makanmasak/shared-types";
+  broadcastGroupOrderEvent,
+  requireNonEmptyString,
+} from "../services/group-order-broadcast";
 import {
   notFound,
   forbidden,
@@ -45,55 +44,6 @@ import {
 } from "../../../middleware/guestAuth";
 
 const app = new Hono<{ Bindings: Env }>();
-
-type GroupOrderRealtimePayload = Record<string, unknown> & {
-  groupOrderId?: string;
-  restaurantId?: string;
-};
-
-async function broadcastGroupOrderEvent(
-  env: Env,
-  eventType: GroupOrderEvent["type"],
-  payload: GroupOrderRealtimePayload,
-): Promise<void> {
-  const groupOrderId = requireNonEmptyString(
-    payload.groupOrderId,
-    "groupOrderId",
-  );
-  const restaurantId = requireNonEmptyString(
-    payload.restaurantId,
-    "restaurantId",
-  );
-
-  const broadcaster = new RealtimeBroadcastService(env);
-  const event: GroupOrderEvent = {
-    type: eventType,
-    eventId: broadcaster.generateEventId(),
-    timestamp: Date.now(),
-    restaurantId,
-    data: { ...payload, groupOrderId, restaurantId },
-  };
-
-  if (!isValidRealtimeEvent(event)) {
-    throw new Error(`Invalid realtime event produced for ${eventType}`);
-  }
-
-  // Clients join a group order through the `customer:{groupOrderId}` room
-  // (see apps/customer-app useGroupOrder). Broadcasting to a `group_order`
-  // room nobody connects to dropped every event (bug-inventory #2).
-  try {
-    await broadcaster.broadcastEvent("customer", groupOrderId, event);
-  } catch (broadcastError) {
-    console.warn(`Failed to broadcast ${eventType}:`, broadcastError);
-  }
-}
-
-function requireNonEmptyString(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new Error(`Cannot broadcast group order event without ${field}`);
-  }
-  return value;
-}
 
 async function resolveGroupOrderRestaurantId(
   groupOrderService: GroupOrdersService,
@@ -639,6 +589,21 @@ app.post(
       throw badRequest(result.error ?? "Failed to finalize group order");
     }
 
+    // The lock response tells only the host. Every other diner's open page
+    // learns the group became a real order from this event.
+    const summary = await groupOrderService.getGroupOrder(groupOrderId);
+    if (summary) {
+      await broadcastGroupOrderEvent(
+        c.env,
+        RealtimeEventType.GROUP_ORDER_COMPLETED,
+        {
+          groupOrderId,
+          restaurantId: String(summary.groupOrder.restaurantId),
+          masterOrderId: result.data?.masterOrderId,
+        },
+      );
+    }
+
     return c.json({
       success: true,
       data: result.data,
@@ -754,6 +719,15 @@ app.post(
     if (!result.success) {
       throw badRequest(result.error ?? "Failed to finalize group order");
     }
+    await broadcastGroupOrderEvent(
+      c.env,
+      RealtimeEventType.GROUP_ORDER_COMPLETED,
+      {
+        groupOrderId,
+        restaurantId: String(summary.groupOrder.restaurantId),
+        masterOrderId: result.data?.masterOrderId,
+      },
+    );
     return c.json({ success: true, data: result.data });
   },
 );
