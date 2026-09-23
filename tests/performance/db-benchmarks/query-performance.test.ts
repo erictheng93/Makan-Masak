@@ -387,9 +387,9 @@ describe("Database Query Performance Benchmarks", () => {
         LIMIT 20
       `;
 
-      const result = await tester.stressTest(query, [testRestaurantId], 5000); // 5 seconds
+      const result = await tester.stressTest(query, [testRestaurantId], 2000);
 
-      console.log(`📊 Stress Test (5 seconds):`);
+      console.log(`📊 Stress Test (2 seconds):`);
       console.log(`   Total Queries: ${result.totalQueries}`);
       console.log(`   QPS: ${result.queriesPerSecond.toFixed(2)}`);
       console.log(`   Avg Time: ${result.avgTime.toFixed(2)}ms`);
@@ -403,7 +403,8 @@ describe("Database Query Performance Benchmarks", () => {
         0.95,
       ); // 95% success
       expect(result.avgTime).toBeLessThan(PERFORMANCE_THRESHOLD_MS);
-    });
+      // The load window alone must not consume the default 5s test timeout.
+    }, 10_000);
   });
 });
 

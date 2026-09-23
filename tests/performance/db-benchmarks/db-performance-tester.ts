@@ -364,12 +364,17 @@ export class DatabasePerformanceTester {
     let totalQueries = 0;
     let successfulQueries = 0;
     let failedQueries = 0;
-    const times: number[] = [];
+    // Running totals, not a samples array: a fast machine completes a few
+    // hundred thousand queries per window, and Math.max(...samples) at that
+    // size throws "Maximum call stack size exceeded".
+    let totalTime = 0;
+    let maxTime = 0;
 
     while (Date.now() < endTime) {
       try {
         const result = await this.measureQuery(query, params);
-        times.push(result.executionTime);
+        totalTime += result.executionTime;
+        maxTime = Math.max(maxTime, result.executionTime);
         successfulQueries++;
       } catch (error) {
         failedQueries++;
@@ -378,9 +383,7 @@ export class DatabasePerformanceTester {
     }
 
     const actualDuration = Date.now() - startTime;
-    const avgTime =
-      times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : 0;
-    const maxTime = times.length > 0 ? Math.max(...times) : 0;
+    const avgTime = successfulQueries > 0 ? totalTime / successfulQueries : 0;
     const queriesPerSecond = (totalQueries / actualDuration) * 1000;
 
     return {
