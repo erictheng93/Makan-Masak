@@ -901,6 +901,7 @@ describe("subscription cache", () => {
       planTier: "pro",
       moduleOverrides: {},
       trialEndsAt: null,
+      countryCode: null,
     });
   });
 
