@@ -116,7 +116,18 @@ test.describe("會員入口 (real API)", () => {
     const { context, page } = await newDinerContext(browser);
     try {
       await loginWithOtp(page, freshMobile());
+      // A full load of an account route restores the session through the
+      // refresh cookie, and that refresh rotates the cookie. The URL reads
+      // /orders before the router's refresh has answered, so wait for the
+      // refresh itself: saving the session earlier keeps the spent cookie,
+      // and the next member test is signed out (seen on CI, 2026-09-23).
+      const restored = page.waitForResponse(
+        (response) =>
+          response.url().endsWith("/api/v1/customer/auth/refresh") &&
+          response.request().method() === "POST",
+      );
       await page.goto("/orders");
+      expect((await restored).status(), "session restore on /orders").toBe(200);
       await expect(page).toHaveURL(/\/orders$/, { timeout: NAV_TIMEOUT });
       await expect(page).not.toHaveURL(/\/login/);
       await assertNoOverlayError(page);
