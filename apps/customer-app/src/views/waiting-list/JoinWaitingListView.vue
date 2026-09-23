@@ -174,6 +174,7 @@ import {
   type LastWaitingTicket,
 } from "@/composables/useWaitingTicket";
 import { waitingListApi } from "@/services/waitingListApi";
+import { hasCustomerAccessToken } from "@/services/customerAccessToken";
 import customerPushService from "@/utils/push-notifications";
 import { useFeatureAvailability } from "@/composables/useFeatureAvailability";
 import type {
@@ -199,7 +200,7 @@ const { isDisabled } = useFeatureAvailability();
 const PUSH_UNAVAILABLE_NOTE =
   "推播通知尚未開放，請留在本頁或用手機號碼查詢候位";
 
-const pushUnavailable = computed(() => isDisabled("webPush"));
+const pushUnavailable = computed(() => isDisabled("customerWebPush"));
 
 const customerName = ref("");
 const customerPhone = ref("");
@@ -242,7 +243,7 @@ const enrollWaitingListPush = async () => {
   // Web push is built but unlaunched. Joining must not raise a permission
   // prompt or send a subscribe request for notifications the API cannot
   // deliver; the note above the buttons is what tells the customer instead.
-  if (pushUnavailable.value) {
+  if (pushUnavailable.value || !hasCustomerAccessToken()) {
     return;
   }
 

@@ -17,6 +17,7 @@ import ProfileView from "@/views/ProfileView.vue";
 import JoinWaitingListView from "@/views/waiting-list/JoinWaitingListView.vue";
 import { waitingListApi } from "@/services/waitingListApi";
 import { customerIdentityApi } from "@/services/customerIdentityApi";
+import { hasCustomerAccessToken } from "@/services/customerAccessToken";
 import { resetFollowing } from "@/composables/useFollowing";
 import { customerOrderApi } from "@/services/customerOrderApi";
 import customerPushService from "@/utils/push-notifications";
@@ -84,6 +85,10 @@ vi.mock("@/services/customerIdentityApi", () => ({
     addFavorite: vi.fn(),
     removeFavorite: vi.fn(),
   },
+}));
+
+vi.mock("@/services/customerAccessToken", () => ({
+  hasCustomerAccessToken: vi.fn(() => true),
 }));
 
 vi.mock("@/services/marketsApi", () => ({
@@ -198,6 +203,7 @@ async function submitJoinForm(wrapper: Awaited<ReturnType<typeof mountJoin>>) {
 describe("web push shown as unavailable", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(hasCustomerAccessToken).mockReturnValue(true);
     disabledFeatures.value = new Set();
     localStorage.clear();
 
@@ -245,7 +251,7 @@ describe("web push shown as unavailable", () => {
 
   describe("ProfileView enable-push button", () => {
     it("renders the button inert and labelled when web push is disabled", async () => {
-      disabledFeatures.value = new Set(["webPush"]);
+      disabledFeatures.value = new Set(["customerWebPush"]);
 
       const wrapper = await mountProfile();
       const button = wrapper.find('[data-testid="enable-push-button"]');
@@ -259,7 +265,7 @@ describe("web push shown as unavailable", () => {
     });
 
     it("sends no subscribe request when the disabled button is clicked", async () => {
-      disabledFeatures.value = new Set(["webPush"]);
+      disabledFeatures.value = new Set(["customerWebPush"]);
 
       const wrapper = await mountProfile();
       // dispatchEvent rather than trigger(): it reaches the handler even on a
@@ -294,7 +300,7 @@ describe("web push shown as unavailable", () => {
 
   describe("JoinWaitingListView push enrollment", () => {
     it("skips enrollment and explains why when web push is disabled", async () => {
-      disabledFeatures.value = new Set(["webPush"]);
+      disabledFeatures.value = new Set(["customerWebPush"]);
 
       const wrapper = await mountJoin();
       const note = wrapper.find(
@@ -330,6 +336,19 @@ describe("web push shown as unavailable", () => {
         expect(customerPushService.requestPermission).toHaveBeenCalledOnce();
         expect(customerPushService.subscribe).toHaveBeenCalledOnce();
       });
+    });
+
+    it("does not ask guests for notification permission", async () => {
+      vi.mocked(hasCustomerAccessToken).mockReturnValue(false);
+
+      const wrapper = await mountJoin();
+      await submitJoinForm(wrapper);
+
+      expect(customerPushService.requestPermission).not.toHaveBeenCalled();
+      expect(customerPushService.subscribe).not.toHaveBeenCalled();
+      expect(routerMocks.push).toHaveBeenCalledWith(
+        "/r/restaurant-1/wait-list/ticket-1",
+      );
     });
   });
 });

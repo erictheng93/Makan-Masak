@@ -287,7 +287,7 @@ describe("NotificationSettingsCard", () => {
   });
 
   it("asks for no subscription list while web push is unlaunched, and still explains the dependency", async () => {
-    disabledFeatures.value = new Set(["webPush"]);
+    disabledFeatures.value = new Set(["customerWebPush"]);
 
     const wrapper = await mountCard();
 

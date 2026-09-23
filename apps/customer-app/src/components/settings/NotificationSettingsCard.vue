@@ -206,7 +206,7 @@ const statusIsError = ref(false);
 /** `null` until asked; never asked while web push is unlaunched. */
 const pushSubscribed = ref<boolean | null>(null);
 
-const pushUnavailable = computed(() => isDisabled("webPush"));
+const pushUnavailable = computed(() => isDisabled("customerWebPush"));
 
 const marketingOn = computed(
   () => marketingConsented.value && preferences.value.marketingEnabled,

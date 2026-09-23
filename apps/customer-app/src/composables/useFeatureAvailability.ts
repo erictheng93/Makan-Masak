@@ -18,7 +18,8 @@ export type UnlaunchedFeature =
   | "storedValueCredits"
   | "tenantBackups"
   | "marketCheckouts"
-  | "webPush";
+  | "webPush"
+  | "customerWebPush";
 
 interface DisabledFeatureEntry {
   feature: string;

@@ -573,7 +573,7 @@ export function createApp(
     // Not a prefix of its own feature: customer-app subscribes through the
     // customer router, so gating only /push would let a customer opt into
     // notifications that /push then refuses to deliver.
-    ["/customer/push-subscriptions", "webPush"],
+    ["/customer/push-subscriptions", "customerWebPush"],
   ] as const) {
     apiV1.use(`${prefix}/*`, featureGate(key));
   }

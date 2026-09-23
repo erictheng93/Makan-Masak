@@ -33,9 +33,7 @@ export interface PushNotificationOptions {
 }
 
 class CustomerPushNotificationService {
-  private vapidPublicKey =
-    import.meta.env.VITE_VAPID_PUBLIC_KEY ||
-    "BNxvNnqyJgFWG6z6Fh5c8hGv-Z8O7s2r9Lm5JnG3p8Z7fK9A2c6H8n1B5dE3gT7qR9mP4yX8nL1oD6vR3zJ2hS9a";
+  private vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY ?? "";
   private subscription: PushSubscription | null = null;
   private isSupported = false;
 
@@ -44,7 +42,10 @@ class CustomerPushNotificationService {
   }
 
   private checkSupport(): void {
-    this.isSupported = "serviceWorker" in navigator && "PushManager" in window;
+    this.isSupported =
+      Boolean(this.vapidPublicKey) &&
+      "serviceWorker" in navigator &&
+      "PushManager" in window;
   }
 
   async initialize(): Promise<boolean> {

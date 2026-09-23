@@ -23,7 +23,8 @@ describe("feature adoption registry", () => {
 
     // Registered from one table, so assert the entry rather than a call site.
     expect(appFactory).toContain(`["${prefix}", "${key}"]`);
-    expect(appFactory).toContain(`apiV1.route("${prefix}"`);
+    const mountedPrefix = key === "customerWebPush" ? "/customer" : prefix;
+    expect(appFactory).toContain(`apiV1.route("${mountedPrefix}"`);
   });
 
   it("has a distinct flag and prefix per feature", () => {
@@ -81,7 +82,7 @@ describe("isFeatureEnabled", () => {
   // The service-booking credit control reads the same availability signal, and
   // the backup UI is orphaned -- BackupDashboard.vue has no router entry or
   // referrer. Both can therefore remain off unless explicitly enabled.
-  it.each(["storedValueCredits", "tenantBackups"] as const)(
+  it.each(["storedValueCredits", "tenantBackups", "customerWebPush"] as const)(
     "keeps %s off unless asked for",
     (key) => {
       expect(UNLAUNCHED_FEATURES[key].enabledByDefault).toBe(false);
@@ -93,7 +94,7 @@ describe("isFeatureEnabled", () => {
     expect(isFeatureEnabled({}, "storedValueCredits")).toBe(false);
   });
 
-  // These two still have reachable UI behind them, so they stay answering until
+  // These features have reachable UI behind them, so they stay answering until
   // that UI shows them as unavailable.
   it.each(["marketCheckouts", "webPush"] as const)(
     "leaves %s answering until someone turns it off",
@@ -117,6 +118,11 @@ describe("disabledFeatures", () => {
         flag: "TENANT_BACKUPS_ENABLED",
         prefix: "/backup",
       },
+      {
+        feature: "customerWebPush",
+        flag: "CUSTOMER_WEB_PUSH_ENABLED",
+        prefix: "/customer/push-subscriptions",
+      },
     ]);
   });
 
@@ -126,7 +132,7 @@ describe("disabledFeatures", () => {
       WEB_PUSH_ENABLED: "false",
     });
 
-    // tenantBackups stays in the list: it defaults off and was not flipped.
+    // tenantBackups and customerWebPush stay in the list: both default off.
     expect(reported).toEqual([
       {
         feature: "tenantBackups",
@@ -134,6 +140,11 @@ describe("disabledFeatures", () => {
         prefix: "/backup",
       },
       { feature: "webPush", flag: "WEB_PUSH_ENABLED", prefix: "/push" },
+      {
+        feature: "customerWebPush",
+        flag: "CUSTOMER_WEB_PUSH_ENABLED",
+        prefix: "/customer/push-subscriptions",
+      },
     ]);
   });
 });

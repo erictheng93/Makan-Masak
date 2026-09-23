@@ -58,6 +58,13 @@ export const UNLAUNCHED_FEATURES = {
       "0 customer_push_subscriptions as of 2026-07-30. admin-dashboard/src/utils/push-notifications.ts posts to /push/subscribe, so the default stays on.",
     enabledByDefault: true,
   },
+  customerWebPush: {
+    flag: "CUSTOMER_WEB_PUSH_ENABLED",
+    prefix: "/customer/push-subscriptions",
+    adoption:
+      "0 customer_push_subscriptions as of 2026-07-30, no production VAPID keys, and customer-app has no production VITE_VAPID_PUBLIC_KEY. Customer subscriptions cannot be delivered, so the customer opt-in stays off until delivery is configured.",
+    enabledByDefault: false,
+  },
 } as const satisfies Record<string, UnlaunchedFeature>;
 
 export type UnlaunchedFeatureKey = keyof typeof UNLAUNCHED_FEATURES;
