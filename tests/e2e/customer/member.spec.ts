@@ -126,152 +126,148 @@ test.describe("會員入口 (real API)", () => {
     }
   });
 
-  // #422, asserted as the correct behaviour. Today the scan's full page load
-  // drops the in-memory member token, so the cart orders as a guest; with
-  // that restored, POST /api/v1/orders is refused by CSRF.
-  test.fail(
-    "a signed-in member scans a table QR, orders as a member, and finds the order in 訂單歷史 (#422)",
-    async ({ browser }) => {
-      const localCleanup = new Cleanup();
-      let orderId: string | undefined;
-      cancelOnCleanup(localCleanup, () => orderId);
-      const { context, page } = await memberContext(browser);
-      try {
-        // Scanning is a full page load, and the member's access token lives in
-        // memory only; the cart must still know this diner is a member.
-        const table = await createTable(localCleanup);
-        await page.goto(qrPath(table.qrCode));
-        await addTwoPlainDishes(page);
+  // #422: the scan's full page load used to drop the in-memory member token
+  // (the cart then ordered as a guest), and POST /api/v1/orders then refused
+  // members by CSRF and by a module gate that found no restaurant.
+  test("a signed-in member scans a table QR, orders as a member, and finds the order in 訂單歷史 (#422)", async ({
+    browser,
+  }) => {
+    const localCleanup = new Cleanup();
+    let orderId: string | undefined;
+    cancelOnCleanup(localCleanup, () => orderId);
+    const { context, page } = await memberContext(browser);
+    try {
+      // Scanning is a full page load, and the member's access token lives in
+      // memory only; the cart must still know this diner is a member.
+      const table = await createTable(localCleanup);
+      await page.goto(qrPath(table.qrCode));
+      await addTwoPlainDishes(page);
 
-        const created = page.waitForResponse(
-          (response) =>
-            /\/api\/v1\/(guest-)?orders$/.test(
-              new URL(response.url()).pathname,
-            ) && response.request().method() === "POST",
-        );
-        await page.getByTestId("submit-order-btn").click();
-        await page.getByTestId("confirmation-confirm").click();
-        const response = await created;
-        const createdBody = (await response.json()) as {
-          data?: { order?: { id: string }; id?: string };
-          error?: unknown;
-        };
-        expect(
-          response.status(),
-          `create member order: ${JSON.stringify(createdBody.error)}`,
-        ).toBe(201);
-        expect(
-          new URL(response.url()).pathname,
-          "a signed-in member orders through the member path",
-        ).toBe("/api/v1/orders");
-        orderId = createdBody.data?.order?.id ?? createdBody.data?.id;
-        expect(orderId, "the member order has an id").toBeTruthy();
+      const created = page.waitForResponse(
+        (response) =>
+          /\/api\/v1\/(guest-)?orders$/.test(
+            new URL(response.url()).pathname,
+          ) && response.request().method() === "POST",
+      );
+      await page.getByTestId("submit-order-btn").click();
+      await page.getByTestId("confirmation-confirm").click();
+      const response = await created;
+      const createdBody = (await response.json()) as {
+        data?: { order?: { id: string }; id?: string };
+        error?: unknown;
+      };
+      expect(
+        response.status(),
+        `create member order: ${JSON.stringify(createdBody.error)}`,
+      ).toBe(201);
+      expect(
+        new URL(response.url()).pathname,
+        "a signed-in member orders through the member path",
+      ).toBe("/api/v1/orders");
+      orderId = createdBody.data?.order?.id ?? createdBody.data?.id;
+      expect(orderId, "the member order has an id").toBeTruthy();
 
-        const order = await readOrder(orderId!);
-        expect(order.totalAmount).toBe(menu.plainItem.price * 2);
-        expect(order.tableId).toBe(table.id);
+      const order = await readOrder(orderId!);
+      expect(order.totalAmount).toBe(menu.plainItem.price * 2);
+      expect(order.tableId).toBe(table.id);
 
-        // 訂單歷史 is requiresAuth; in production nobody has reached it (#384).
-        await page.goto("/orders");
-        await expect(page.getByText(order.orderNumber)).toBeVisible({
-          timeout: NAV_TIMEOUT,
-        });
-        await assertNoOverlayError(page);
-      } finally {
-        memberState = await context.storageState();
-        await context.close();
-        await localCleanup.run();
-      }
-    },
-  );
+      // 訂單歷史 is requiresAuth; in production nobody has reached it (#384).
+      await page.goto("/orders");
+      await expect(page.getByText(order.orderNumber)).toBeVisible({
+        timeout: NAV_TIMEOUT,
+      });
+      await assertNoOverlayError(page);
+    } finally {
+      memberState = await context.storageState();
+      await context.close();
+      await localCleanup.run();
+    }
+  });
 
-  // #422, asserted as the correct behaviour: POST /coupons/validate reads
-  // userId from the body and ignores the member's JWT, while the client
-  // (rightly) drops the guest device id once signed in — so the server sees
-  // no identity and refuses every per-user-limited coupon. Member order
-  // creation records coupon_usage.user_id, a foreign key to staff users.
-  test.fail(
-    "a member applies a per-user-limited coupon, and the order gets the discount the cart showed (#422)",
-    async ({ browser }) => {
-      const localCleanup = new Cleanup();
-      let orderId: string | undefined;
-      cancelOnCleanup(localCleanup, () => orderId);
-      const { context, page } = await memberContext(browser);
-      try {
-        const owner = await getOwner();
-        const code = `E2EMEMBER${suffix().toUpperCase()}`;
-        const coupon = await apiData<{ id: number }>(
-          "create coupon",
-          "/api/v1/coupons",
-          {
-            token: owner.token,
-            method: "POST",
-            body: {
-              restaurantId: owner.restaurantId,
-              code,
-              name: e2eName("會員券"),
-              discountType: "fixed",
-              discountValue: 20,
-              usageLimitPerUser: 1,
-              validFrom: new Date(Date.now() - 3_600_000).toISOString(),
-              validTo: new Date(Date.now() + 86_400_000).toISOString(),
-            },
+  // #422: POST /coupons/validate used to read userId from the body and
+  // ignore the member's JWT, so every per-user-limited coupon was refused to
+  // members. Preview and redemption now share one server-derived identity.
+  test("a member applies a per-user-limited coupon, and the order gets the discount the cart showed (#422)", async ({
+    browser,
+  }) => {
+    const localCleanup = new Cleanup();
+    let orderId: string | undefined;
+    cancelOnCleanup(localCleanup, () => orderId);
+    const { context, page } = await memberContext(browser);
+    try {
+      const owner = await getOwner();
+      const code = `E2EMEMBER${suffix().toUpperCase()}`;
+      const coupon = await apiData<{ id: number }>(
+        "create coupon",
+        "/api/v1/coupons",
+        {
+          token: owner.token,
+          method: "POST",
+          body: {
+            restaurantId: owner.restaurantId,
+            code,
+            name: e2eName("會員券"),
+            discountType: "fixed",
+            discountValue: 20,
+            usageLimitPerUser: 1,
+            validFrom: new Date(Date.now() - 3_600_000).toISOString(),
+            validTo: new Date(Date.now() + 86_400_000).toISOString(),
           },
-        );
-        localCleanup.add(`deactivate coupon ${coupon.id}`, () =>
-          apiRequest(`/api/v1/coupons/${coupon.id}/deactivate`, {
-            token: owner.token,
-            method: "POST",
-            body: {},
-          }),
-        );
+        },
+      );
+      localCleanup.add(`deactivate coupon ${coupon.id}`, () =>
+        apiRequest(`/api/v1/coupons/${coupon.id}/deactivate`, {
+          token: owner.token,
+          method: "POST",
+          body: {},
+        }),
+      );
 
-        const table = await createTable(localCleanup);
-        await page.goto(qrPath(table.qrCode));
-        await addTwoPlainDishes(page);
+      const table = await createTable(localCleanup);
+      await page.goto(qrPath(table.qrCode));
+      await addTwoPlainDishes(page);
 
-        const validations: string[] = [];
-        page.on("response", (response) => {
-          if (response.url().endsWith("/api/v1/coupons/validate")) {
-            void response.text().then((text) => validations.push(text));
-          }
-        });
-        await page.getByTestId("coupon-code").fill(code);
-        await page.getByTestId("coupon-apply").click();
-        const discounted = menu.plainItem.price * 2 - 20;
-        await expect(
-          page.getByTestId("submit-order-btn"),
-          `the cart applies the coupon: ${validations.join(" | ")}`,
-        ).toHaveText(`送出訂單 · NT$${discounted}`);
+      const validations: string[] = [];
+      page.on("response", (response) => {
+        if (response.url().endsWith("/api/v1/coupons/validate")) {
+          void response.text().then((text) => validations.push(text));
+        }
+      });
+      await page.getByTestId("coupon-code").fill(code);
+      await page.getByTestId("coupon-apply").click();
+      const discounted = menu.plainItem.price * 2 - 20;
+      await expect(
+        page.getByTestId("submit-order-btn"),
+        `the cart applies the coupon: ${validations.join(" | ")}`,
+      ).toHaveText(`送出訂單 · NT$${discounted}`);
 
-        const created = page.waitForResponse(
-          (response) =>
-            /\/api\/v1\/(guest-)?orders$/.test(
-              new URL(response.url()).pathname,
-            ) && response.request().method() === "POST",
-        );
-        await page.getByTestId("submit-order-btn").click();
-        await page.getByTestId("confirmation-confirm").click();
-        const response = await created;
-        expect(
-          new URL(response.url()).pathname,
-          "a signed-in member orders through the member path",
-        ).toBe("/api/v1/orders");
-        expect(response.status(), await response.text()).toBe(201);
-        const orderBody = (await response.json()) as {
-          data?: { order?: { id: string }; id?: string };
-        };
-        orderId = orderBody.data?.order?.id ?? orderBody.data?.id;
-        const order = await readOrder(orderId!);
-        expect({
-          total: order.totalAmount,
-          discount: order.discountAmount,
-        }).toEqual({ total: discounted, discount: 20 });
-      } finally {
-        memberState = await context.storageState();
-        await context.close();
-        await localCleanup.run();
-      }
-    },
-  );
+      const created = page.waitForResponse(
+        (response) =>
+          /\/api\/v1\/(guest-)?orders$/.test(
+            new URL(response.url()).pathname,
+          ) && response.request().method() === "POST",
+      );
+      await page.getByTestId("submit-order-btn").click();
+      await page.getByTestId("confirmation-confirm").click();
+      const response = await created;
+      expect(
+        new URL(response.url()).pathname,
+        "a signed-in member orders through the member path",
+      ).toBe("/api/v1/orders");
+      expect(response.status(), await response.text()).toBe(201);
+      const orderBody = (await response.json()) as {
+        data?: { order?: { id: string }; id?: string };
+      };
+      orderId = orderBody.data?.order?.id ?? orderBody.data?.id;
+      const order = await readOrder(orderId!);
+      expect({
+        total: order.totalAmount,
+        discount: order.discountAmount,
+      }).toEqual({ total: discounted, discount: 20 });
+    } finally {
+      memberState = await context.storageState();
+      await context.close();
+      await localCleanup.run();
+    }
+  });
 });
