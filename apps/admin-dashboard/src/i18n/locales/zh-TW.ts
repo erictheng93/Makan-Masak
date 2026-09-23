@@ -2236,6 +2236,7 @@ const zhTWCore = {
     },
     actions: {
       handoff: "開通資訊",
+      auditTrail: "稽核紀錄",
       approve: "核准",
       reject: "拒絕",
     },
@@ -2265,6 +2266,15 @@ const zhTWCore = {
       pending: "待處理",
       failed: "寄送失敗",
     },
+    audit: {
+      title: "申請稽核紀錄",
+      close: "關閉",
+      empty: "目前沒有稽核事件。",
+      system: "系統",
+      reason: "原因：{reason}",
+      rejected: "拒絕申請",
+      setupLinkRegenerated: "重新產生店主設定連結",
+    },
     reject: {
       title: "確認拒絕申請",
       description: "請說明拒絕原因，申請者將可看見這項說明。",
@@ -2279,6 +2289,7 @@ const zhTWCore = {
     },
     errors: {
       load: "店家加入申請暫時無法載入。",
+      audit: "無法載入稽核紀錄，請重試。",
       approve: "核准失敗。請確認申請狀態仍可核准。",
       handoff: "無法取得開通資訊，請稍後再試。",
       copy: "無法複製到剪貼簿，請手動選取文字複製。",

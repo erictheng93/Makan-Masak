@@ -137,6 +137,17 @@ router.get("/applications", async (c) => {
   });
 });
 
+router.get("/applications/:id/audit-events", async (c) => {
+  const service = new OnboardingService(c.env);
+  const result = await service.listApplicationAuditEvents(c.req.param("id"));
+  if (!result.found) throw notFound("Application not found", "NOT_FOUND");
+
+  return c.json({
+    success: true,
+    data: { events: result.events },
+  });
+});
+
 router.post("/applications/:id/approve", async (c) => {
   const service = new OnboardingService(c.env);
   const result = await service.approveApplication(c.req.param("id"));

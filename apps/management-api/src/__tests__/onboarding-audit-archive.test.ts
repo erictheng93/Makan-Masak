@@ -11,6 +11,7 @@ import {
   onboardingApplications,
 } from "../db/onboarding-tables";
 import { archiveOnboardingAudit } from "../services/onboardingAuditArchive";
+import { OnboardingService } from "../services/OnboardingService";
 import type { ManagementEnv } from "../types";
 
 const migrationsDir = path.resolve(
@@ -150,5 +151,56 @@ describe("onboarding audit archive", () => {
       "[AuditArchive] onboarding audit snapshot failed:",
       expect.any(Error),
     );
+  });
+
+  it("returns selected audit events in stable chronological order", async () => {
+    const db = createManagementDb();
+    await seed(db);
+    const service = new OnboardingService({
+      MANAGEMENT_DB: db,
+    } as ManagementEnv);
+
+    const result = await service.listApplicationAuditEvents("APP-2");
+    expect(result.found).toBe(true);
+    expect(result.events).toEqual([
+      expect.objectContaining({
+        id: "evt-1",
+        eventType: "submitted",
+        createdAtMs: 1_789_000_000_000,
+      }),
+      expect.objectContaining({
+        id: "evt-2",
+        eventType: "rejected",
+        actorEmail: "ops@example.test",
+        metadata: { reason: "Duplicate stall" },
+        createdAtMs: 1_790_000_000_000,
+      }),
+    ]);
+    await expect(
+      service.listApplicationAuditEvents("missing"),
+    ).resolves.toEqual({
+      found: false,
+      events: [],
+    });
+  });
+
+  it("prevents audit event updates and deletions at the database layer", async () => {
+    const db = createManagementDb();
+    await seed(db);
+    const sqlite = (db as unknown as D1DatabaseAdapter).raw();
+
+    expect(() =>
+      sqlite
+        .prepare(
+          `UPDATE onboarding_application_audit_events
+           SET event_type = 'edited' WHERE id = ?`,
+        )
+        .run("evt-2"),
+    ).toThrow("onboarding audit events are append-only");
+    expect(() =>
+      sqlite
+        .prepare("DELETE FROM onboarding_application_audit_events WHERE id = ?")
+        .run("evt-2"),
+    ).toThrow("onboarding audit events are append-only");
   });
 });

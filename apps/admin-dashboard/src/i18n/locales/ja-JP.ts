@@ -2087,6 +2087,7 @@ const jaJP: Messages = {
     },
     actions: {
       handoff: "開通情報",
+      auditTrail: "監査履歴",
       approve: "承認",
       reject: "却下",
     },
@@ -2116,6 +2117,15 @@ const jaJP: Messages = {
       pending: "保留中",
       failed: "送信失敗",
     },
+    audit: {
+      title: "申請の監査履歴",
+      close: "閉じる",
+      empty: "監査イベントはありません。",
+      system: "システム",
+      reason: "理由：{reason}",
+      rejected: "申請を却下",
+      setupLinkRegenerated: "オーナー設定リンクを再生成",
+    },
     reject: {
       title: "申請を却下しますか",
       description: "理由を入力してください。申請者に表示されます。",
@@ -2130,6 +2140,7 @@ const jaJP: Messages = {
     },
     errors: {
       load: "店舗申請を読み込めませんでした。",
+      audit: "監査履歴を読み込めませんでした。もう一度お試しください。",
       approve: "承認に失敗しました。申請の状態を確認してください。",
       handoff: "開通情報を取得できませんでした。もう一度お試しください。",
       copy: "クリップボードにコピーできませんでした。テキストを選択してコピーしてください。",

@@ -45,6 +45,15 @@ export interface OnboardingApplicationsResult {
   limit: number;
 }
 
+export interface OnboardingApplicationAuditEvent {
+  id: string;
+  eventType: string;
+  actorId: string | null;
+  actorEmail: string | null;
+  metadata: Record<string, string> | null;
+  createdAtMs: number;
+}
+
 /**
  * The raw setup token is deliberately absent: the one-time link already carries
  * it, and the server stops handing the bare token to clients that never use it.
@@ -100,6 +109,20 @@ export const onboardingApplicationsService = {
       input,
     );
     return unwrapApiPayload<OnboardingApplicationsResult>(response.data);
+  },
+
+  async auditEvents(
+    applicationId: string,
+  ): Promise<OnboardingApplicationAuditEvent[]> {
+    await ensureManagementAuthToken();
+    const response = await managementApi.get<{
+      events: OnboardingApplicationAuditEvent[];
+    }>(
+      `/admin/onboarding/applications/${encodeURIComponent(applicationId)}/audit-events`,
+    );
+    return unwrapApiPayload<{ events: OnboardingApplicationAuditEvent[] }>(
+      response.data,
+    ).events;
   },
 
   async approve(

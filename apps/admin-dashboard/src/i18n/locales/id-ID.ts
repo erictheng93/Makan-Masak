@@ -2205,6 +2205,7 @@ const idID: Messages = {
     },
     actions: {
       handoff: "Detail aktivasi",
+      auditTrail: "Riwayat audit",
       approve: "Setujui",
       reject: "Tolak",
     },
@@ -2234,6 +2235,15 @@ const idID: Messages = {
       pending: "Menunggu",
       failed: "Gagal terkirim",
     },
+    audit: {
+      title: "Riwayat audit pengajuan",
+      close: "Tutup",
+      empty: "Belum ada peristiwa audit.",
+      system: "Sistem",
+      reason: "Alasan: {reason}",
+      rejected: "Pengajuan ditolak",
+      setupLinkRegenerated: "Tautan aktivasi pemilik dibuat ulang",
+    },
     reject: {
       title: "Konfirmasi penolakan",
       description: "Jelaskan alasannya. Pemohon akan melihat teks ini.",
@@ -2248,6 +2258,7 @@ const idID: Messages = {
     },
     errors: {
       load: "Pengajuan toko tidak dapat dimuat.",
+      audit: "Riwayat audit tidak dapat dimuat. Coba lagi.",
       approve: "Persetujuan gagal. Periksa status pengajuan.",
       handoff: "Detail aktivasi tidak dapat dimuat. Coba lagi.",
       copy: "Tidak dapat menyalin ke papan klip. Pilih teksnya dan salin manual.",

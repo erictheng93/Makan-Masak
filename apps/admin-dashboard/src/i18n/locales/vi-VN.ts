@@ -2089,6 +2089,7 @@ const viVN: Messages = {
     },
     actions: {
       handoff: "Thông tin kích hoạt",
+      auditTrail: "Lịch sử kiểm toán",
       approve: "Duyệt",
       reject: "Từ chối",
     },
@@ -2118,6 +2119,15 @@ const viVN: Messages = {
       pending: "Chờ xử lý",
       failed: "Gửi thất bại",
     },
+    audit: {
+      title: "Lịch sử kiểm toán đơn đăng ký",
+      close: "Đóng",
+      empty: "Chưa có sự kiện kiểm toán.",
+      system: "Hệ thống",
+      reason: "Lý do: {reason}",
+      rejected: "Đơn đăng ký bị từ chối",
+      setupLinkRegenerated: "Đã tạo lại liên kết kích hoạt chủ cửa hàng",
+    },
     reject: {
       title: "Xác nhận từ chối đơn",
       description:
@@ -2133,6 +2143,7 @@ const viVN: Messages = {
     },
     errors: {
       load: "Không tải được danh sách đơn đăng ký.",
+      audit: "Không tải được lịch sử kiểm toán. Vui lòng thử lại.",
       approve: "Duyệt thất bại. Hãy kiểm tra trạng thái đơn.",
       handoff: "Không lấy được thông tin kích hoạt. Vui lòng thử lại.",
       copy: "Không sao chép được. Hãy chọn văn bản và sao chép thủ công.",

@@ -430,6 +430,15 @@
               </label>
               <div class="flex justify-end gap-2">
                 <button
+                  type="button"
+                  :data-testid="`audit-events-${application.id}`"
+                  class="rounded-full bg-gray-100 px-4 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+                  :disabled="isLoadingAuditEvents"
+                  @click="showAuditEvents(application)"
+                >
+                  {{ t("platformOnboarding.actions.auditTrail") }}
+                </button>
+                <button
                   v-if="
                     application.marketId && application.status === 'completed'
                   "
@@ -482,6 +491,95 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <div
+      v-if="auditApplication"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="onboarding-audit-title"
+      data-testid="onboarding-audit-dialog"
+    >
+      <section
+        class="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-ios-card"
+      >
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h2
+              id="onboarding-audit-title"
+              class="text-lg font-semibold text-gray-900"
+            >
+              {{ t("platformOnboarding.audit.title") }}
+            </h2>
+            <p class="mt-1 text-sm text-gray-600">
+              {{ auditApplication.businessName }} · {{ auditApplication.id }}
+            </p>
+          </div>
+          <button
+            type="button"
+            data-testid="close-onboarding-audit"
+            class="rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            @click="auditApplication = null"
+          >
+            {{ t("platformOnboarding.audit.close") }}
+          </button>
+        </div>
+
+        <p
+          v-if="isLoadingAuditEvents"
+          class="py-8 text-center text-sm text-gray-500"
+        >
+          {{ t("platformOnboarding.loading") }}
+        </p>
+        <p
+          v-else-if="auditEventsError"
+          role="alert"
+          class="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700"
+        >
+          {{ t("platformOnboarding.errors.audit") }}
+        </p>
+        <p
+          v-else-if="auditEvents.length === 0"
+          class="py-8 text-center text-sm text-gray-500"
+        >
+          {{ t("platformOnboarding.audit.empty") }}
+        </p>
+        <ol v-else class="mt-6 space-y-4 border-l border-gray-200 pl-5">
+          <li
+            v-for="event in auditEvents"
+            :key="event.id"
+            data-testid="onboarding-audit-event"
+            class="relative"
+          >
+            <span
+              class="absolute -left-[25px] top-1.5 h-2.5 w-2.5 rounded-full bg-primary-600"
+            />
+            <p class="font-medium text-gray-900">
+              {{ auditEventLabel(event.eventType) }}
+            </p>
+            <p class="mt-1 text-sm text-gray-600">
+              {{ formatDate(new Date(event.createdAtMs).toISOString()) }} ·
+              {{
+                event.actorEmail ||
+                event.actorId ||
+                t("platformOnboarding.audit.system")
+              }}
+            </p>
+            <p
+              v-if="event.metadata?.reason"
+              data-testid="onboarding-audit-reason"
+              class="mt-1 text-sm text-gray-700"
+            >
+              {{
+                t("platformOnboarding.audit.reason", {
+                  reason: event.metadata.reason,
+                })
+              }}
+            </p>
+          </li>
+        </ol>
+      </section>
     </div>
 
     <div
@@ -585,6 +683,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import {
   onboardingApplicationsService,
   type CredentialDelivery,
+  type OnboardingApplicationAuditEvent,
   type OnboardingApplication,
   type OnboardingApplicationStatus,
   type ProvisionedOwnerAccount,
@@ -635,6 +734,10 @@ const ownerHandoff = ref<OwnerHandoff | null>(null);
 const copiedField = ref<"" | CopyableField>("");
 const rejectingApplicationId = ref("");
 const rejectionReason = ref("");
+const auditApplication = ref<OnboardingApplication | null>(null);
+const auditEvents = ref<OnboardingApplicationAuditEvent[]>([]);
+const isLoadingAuditEvents = ref(false);
+const auditEventsError = ref(false);
 const isRegenerateDialogOpen = ref(false);
 let copiedResetTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -682,6 +785,30 @@ async function loadApplications() {
   } finally {
     isLoading.value = false;
   }
+}
+
+async function showAuditEvents(application: OnboardingApplication) {
+  auditApplication.value = application;
+  auditEvents.value = [];
+  isLoadingAuditEvents.value = true;
+  auditEventsError.value = false;
+  try {
+    auditEvents.value = await onboardingApplicationsService.auditEvents(
+      application.id,
+    );
+  } catch (loadError) {
+    console.error("Failed to load onboarding audit events:", loadError);
+    auditEventsError.value = true;
+  } finally {
+    isLoadingAuditEvents.value = false;
+  }
+}
+
+function auditEventLabel(eventType: string) {
+  if (eventType === "rejected") return t("platformOnboarding.audit.rejected");
+  if (eventType === "setup_link_regenerated")
+    return t("platformOnboarding.audit.setupLinkRegenerated");
+  return eventType;
 }
 
 function openOwnerHandoff(

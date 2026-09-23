@@ -11,7 +11,11 @@ import {
 vi.mock("@/i18n", () => ({
   // useDateFormatter reads `locale` as well as `t`; a mock without it throws
   // inside every row's formatDate and the render silently aborts.
-  useI18n: () => ({ t: (key: string) => key, locale: { value: "zh-TW" } }),
+  useI18n: () => ({
+    t: (key: string, params?: Record<string, string>) =>
+      params ? `${key} ${Object.values(params).join(" ")}` : key,
+    locale: { value: "zh-TW" },
+  }),
 }));
 
 vi.mock("@/composables/useDateFormatter", () => ({
@@ -23,6 +27,7 @@ vi.mock("@/composables/useDateFormatter", () => ({
 vi.mock("@/services/onboardingApplicationsService", () => ({
   onboardingApplicationsService: {
     list: vi.fn(),
+    auditEvents: vi.fn(),
     approve: vi.fn(),
     regenerateSetupLink: vi.fn(),
     reject: vi.fn(),
@@ -98,6 +103,7 @@ describe("PlatformOnboardingApplicationsView", () => {
     });
 
     mockList([buildApplication()]);
+    vi.mocked(onboardingApplicationsService.auditEvents).mockResolvedValue([]);
     vi.mocked(onboardingApplicationsService.approve).mockResolvedValue({
       tenantId: "T-1",
       subdomain: "laksa",
@@ -128,6 +134,34 @@ describe("PlatformOnboardingApplicationsView", () => {
       limit: 50,
     });
     expect(wrapper.text()).toContain("Laksa Shop");
+  });
+
+  it("shows a chronological application audit trail with actor and reason", async () => {
+    vi.mocked(onboardingApplicationsService.auditEvents).mockResolvedValue([
+      {
+        id: "evt-1",
+        eventType: "rejected",
+        actorId: "admin-1",
+        actorEmail: "admin@example.test",
+        metadata: { reason: "Duplicate application" },
+        createdAtMs: Date.parse("2026-06-02T12:00:00.000Z"),
+      },
+    ]);
+    const wrapper = mount(PlatformOnboardingApplicationsView);
+    await flushPromises();
+
+    await wrapper.get('[data-testid="audit-events-APP-1"]').trigger("click");
+    await flushPromises();
+
+    expect(onboardingApplicationsService.auditEvents).toHaveBeenCalledWith(
+      "APP-1",
+    );
+    expect(
+      wrapper.get('[data-testid="onboarding-audit-dialog"]').text(),
+    ).toContain("admin@example.test");
+    expect(
+      wrapper.get('[data-testid="onboarding-audit-reason"]').text(),
+    ).toContain("Duplicate application");
   });
 
   it("approves an application and shows the handoff", async () => {

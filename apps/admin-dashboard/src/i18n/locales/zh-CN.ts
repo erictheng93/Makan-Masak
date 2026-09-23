@@ -2045,6 +2045,7 @@ const zhCN: Messages = {
     },
     actions: {
       handoff: "开通资讯",
+      auditTrail: "审核记录",
       approve: "核准",
       reject: "拒绝",
     },
@@ -2074,6 +2075,15 @@ const zhCN: Messages = {
       pending: "待处理",
       failed: "寄送失败",
     },
+    audit: {
+      title: "申请审核记录",
+      close: "关闭",
+      empty: "暂无审核事件记录。",
+      system: "系统",
+      reason: "原因：{reason}",
+      rejected: "拒绝申请",
+      setupLinkRegenerated: "重新生成店主设置链接",
+    },
     reject: {
       title: "确认拒绝申请",
       description: "请说明拒绝原因，申请者将可看见这项说明。",
@@ -2088,6 +2098,7 @@ const zhCN: Messages = {
     },
     errors: {
       load: "店家加入申请暂时无法载入。",
+      audit: "无法载入审核记录，请重试。",
       approve: "核准失败。请确认申请状态仍可核准。",
       handoff: "无法取得开通资讯，请稍后再试。",
       copy: "无法复制到剪贴簿，请手动选取文字复制。",

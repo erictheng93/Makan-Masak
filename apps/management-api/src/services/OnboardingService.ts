@@ -33,7 +33,7 @@ import {
   normalizeCountryCode,
 } from "@makanmasak/shared-types";
 import bcrypt from "bcryptjs";
-import { and, desc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import {
   onboardingApplicationAuditEvents,
@@ -567,6 +567,54 @@ export class OnboardingService {
       total: Number(countResult?.count ?? 0),
       page,
       limit,
+    };
+  }
+
+  async listApplicationAuditEvents(applicationId: string): Promise<{
+    found: boolean;
+    events: Array<{
+      id: string;
+      eventType: string;
+      actorId: string | null;
+      actorEmail: string | null;
+      metadata: Record<string, string> | null;
+      createdAtMs: number;
+    }>;
+  }> {
+    const application = await this.getApplication(applicationId);
+    if (!application) return { found: false, events: [] };
+
+    const rows = await drizzle(this.env.MANAGEMENT_DB)
+      .select()
+      .from(onboardingApplicationAuditEvents)
+      .where(eq(onboardingApplicationAuditEvents.applicationId, applicationId))
+      .orderBy(
+        asc(onboardingApplicationAuditEvents.createdAtMs),
+        asc(onboardingApplicationAuditEvents.id),
+      )
+      .all();
+
+    return {
+      found: true,
+      events: rows.map((row) => {
+        let metadata: Record<string, string> | null = null;
+        if (row.metadata) {
+          try {
+            const value: unknown = JSON.parse(row.metadata);
+            if (
+              value &&
+              typeof value === "object" &&
+              !Array.isArray(value) &&
+              Object.values(value).every((item) => typeof item === "string")
+            ) {
+              metadata = value as Record<string, string>;
+            }
+          } catch {
+            // Older/malformed metadata should not hide the rest of the audit.
+          }
+        }
+        return { ...row, metadata };
+      }),
     };
   }
 

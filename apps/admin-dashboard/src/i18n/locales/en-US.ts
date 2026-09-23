@@ -2186,6 +2186,7 @@ const enUS: Messages = {
     },
     actions: {
       handoff: "Activation details",
+      auditTrail: "Audit trail",
       approve: "Approve",
       reject: "Reject",
     },
@@ -2215,6 +2216,15 @@ const enUS: Messages = {
       pending: "Pending",
       failed: "Failed",
     },
+    audit: {
+      title: "Application audit trail",
+      close: "Close",
+      empty: "No audit events recorded.",
+      system: "System",
+      reason: "Reason: {reason}",
+      rejected: "Application rejected",
+      setupLinkRegenerated: "Owner setup link regenerated",
+    },
     reject: {
       title: "Reject this application",
       description: "Explain why. The applicant will see this text.",
@@ -2229,6 +2239,7 @@ const enUS: Messages = {
     },
     errors: {
       load: "Shop applications could not be loaded.",
+      audit: "The audit trail could not be loaded. Try again.",
       approve:
         "Approval failed. Check that the application can still be approved.",
       handoff: "Could not load the activation details. Try again.",
