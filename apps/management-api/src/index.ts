@@ -24,6 +24,7 @@ import onboardingRouter from "./routes/onboarding";
 import authRouter from "./routes/auth";
 import adminOnboardingRouter from "./routes/admin-onboarding";
 import { adminMarketsRouter, marketsRouter } from "./routes/markets";
+import adminPoliciesRouter from "./routes/policies";
 import internalRouter from "./routes/internal";
 import {
   archiveOnboardingAudit,
@@ -232,6 +233,7 @@ protectedApi.route("/licenses", licensesRouter);
 protectedApi.route("/monitoring", monitoringRouter);
 protectedApi.route("/updates", updatesRouter);
 protectedApi.route("/admin/markets", adminMarketsRouter);
+protectedApi.route("/admin/policies", adminPoliciesRouter);
 protectedApi.route("/admin/onboarding", adminOnboardingRouter);
 
 // Mount API versions
