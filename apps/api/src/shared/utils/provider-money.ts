@@ -49,14 +49,8 @@ import {
   normalizeCurrencyCode,
   type CurrencyCode,
 } from "@makanmasak/utils";
-
-export type NativePaymentProvider =
-  | "stripe"
-  | "linepay"
-  | "ecpay"
-  | "newebpay"
-  | "tng"
-  | "grabpay";
+import type { NativePaymentProvider } from "@makanmasak/database";
+export type { NativePaymentProvider };
 
 export const PROVIDER_AMOUNT_FACTORS: Record<
   NativePaymentProvider,
