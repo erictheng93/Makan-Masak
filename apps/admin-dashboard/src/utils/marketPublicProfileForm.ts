@@ -2,6 +2,10 @@ import type {
   MarketListItem,
   UpdateMarketPublicProfileInput,
 } from "@/services/marketsService";
+import {
+  validateMarketOpeningHours,
+  type MarketOpeningHoursIssue,
+} from "@makanmasak/shared/utils/market-opening-hours";
 
 export interface MarketPublicProfileForm {
   description: string;
@@ -110,8 +114,15 @@ function parseOpeningHours(value: string | number | null | undefined) {
 
   try {
     const parsed = JSON.parse(trimmed);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new Error("Opening hours must be an object");
+    if (parsed === null) return null;
+    if (typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error(openingHoursIssueMessage({ kind: "not_object" }));
+    }
+    const issues = validateMarketOpeningHours(parsed);
+    if (issues.length > 0) {
+      throw new Error(
+        `營業時間格式不正確：${issues.map(openingHoursIssueMessage).join("；")}`,
+      );
     }
     return parsed as Record<string, unknown>;
   } catch (error) {
@@ -120,6 +131,37 @@ function parseOpeningHours(value: string | number | null | undefined) {
     }
     throw error;
   }
+}
+
+function openingHoursIssueMessage(issue: MarketOpeningHoursIssue): string {
+  switch (issue.kind) {
+    case "not_object":
+      return '營業時間必須是物件，例如 {"mon":{"open":"10:00","close":"22:00"}}';
+    case "invalid_day_hours":
+      return `星期 ${issue.day} 的營業時間必須是物件`;
+    case "unknown_day":
+      return `未知的星期「${issue.day}」`;
+    case "invalid_time":
+      return `星期 ${issue.day} 的 ${issue.field} 需為 HH:MM（00:00–23:59），收到 ${formatInvalidValue(issue.value)}`;
+    case "missing_time":
+      return `星期 ${issue.day} 缺少 ${issue.field} 時間，需填入 HH:MM`;
+    case "invalid_closed":
+      return `星期 ${issue.day} 的 closed 必須是 true 或 false，收到 ${formatInvalidValue(issue.value)}`;
+    case "unknown_field":
+      return `星期 ${issue.day} 含有不支援的欄位「${issue.field}」`;
+  }
+}
+
+function formatInvalidValue(value: unknown): string {
+  if (typeof value === "string") return JSON.stringify(value);
+  if (
+    value === null ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return String(value);
+  }
+  return "非純量值";
 }
 
 function parseOptionalPositiveInteger(

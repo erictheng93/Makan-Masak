@@ -469,6 +469,35 @@ describe("PlatformMarketsView", () => {
     );
   });
 
+  it("shows opening-hours errors before sending the profile update", async () => {
+    const wrapper = mount(PlatformMarketsView);
+    await flushPromises();
+
+    const editButton = wrapper
+      .findAll("button")
+      .find((button) => button.text() === "編輯");
+    expect(editButton).toBeDefined();
+    await editButton!.trigger("click");
+
+    const openingHoursInput = wrapper
+      .findAll("textarea")
+      .find((textarea) =>
+        textarea.attributes("placeholder")?.includes("friday"),
+      );
+    expect(openingHoursInput).toBeDefined();
+    await openingHoursInput!.setValue(
+      '{"mon":[{"open":"10:00","close":"22:00"}]}',
+    );
+    await wrapper
+      .findAll("button")
+      .find((button) => button.text() === "儲存公開資料")!
+      .trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("星期 mon 的營業時間必須是物件");
+    expect(marketsService.updateMarketPublicProfile).not.toHaveBeenCalled();
+  });
+
   it("shows stall number and search entrypoint gaps for operators", async () => {
     const wrapper = mount(PlatformMarketsView);
     await flushPromises();

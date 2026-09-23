@@ -76,4 +76,13 @@ describe("market opening hours contract", () => {
       ).toContainEqual({ key: "openingHours", severity: "required" });
     },
   );
+
+  it("keeps closed-day defaults while parsing the shared contract", () => {
+    expect(
+      createMarketSchema.parse({
+        ...market,
+        openingHours: { mon: { closed: true } },
+      }).openingHours,
+    ).toEqual({ mon: { closed: true, open: "00:00", close: "00:00" } });
+  });
 });

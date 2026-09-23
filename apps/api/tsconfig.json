@@ -22,6 +22,8 @@
       "@makanmasak/ai-analytics/*": ["../../packages/ai-analytics/src/*"],
       "@makanmasak/shared-types": ["../../packages/shared-types/src"],
       "@makanmasak/shared-types/*": ["../../packages/shared-types/src/*"],
+      "@makanmasak/shared": ["../../packages/shared"],
+      "@makanmasak/shared/*": ["../../packages/shared/*"],
       "@makanmasak/utils": ["../../packages/utils/src"],
       "@makanmasak/utils/*": ["../../packages/utils/src/*"],
       "@makanmasak/queue-core": ["../../packages/queue-core/src"]
@@ -30,7 +32,8 @@
   "include": [
     "src/**/*",
     "../../packages/database/src/**/*",
-    "../../packages/shared-types/src/**/*"
+    "../../packages/shared-types/src/**/*",
+    "../../packages/shared/utils/market-opening-hours.ts"
   ],
   "exclude": [
     "node_modules",

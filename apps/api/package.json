@@ -23,6 +23,7 @@
     "@makanmasak/ai-analytics": "workspace:*",
     "@makanmasak/database": "workspace:*",
     "@makanmasak/queue-core": "workspace:*",
+    "@makanmasak/shared": "workspace:*",
     "@makanmasak/shared-types": "workspace:*",
     "@makanmasak/utils": "workspace:*",
     "bcryptjs": "^2.4.3",

@@ -1,43 +1,57 @@
 import { z } from "zod";
+import {
+  validateMarketOpeningHours,
+  type MarketOpeningHours,
+} from "@makanmasak/shared/utils/market-opening-hours";
 
-const clockTime = z
-  .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use HH:MM (00:00–23:59)");
-const dayHours = z.union([
-  z
-    .object({
-      closed: z.literal(true),
-      open: clockTime.default("00:00"),
-      close: clockTime.default("00:00"),
-    })
-    .strict(),
-  z
-    .object({
-      open: clockTime,
-      close: clockTime,
-      closed: z.literal(false).optional(),
-    })
-    .strict(),
-]);
+// Both spellings are already used by market clients. Keep the API's Zod
+// boundary while sharing the actual contract with browser-side validation.
+export const marketOpeningHoursSchema = z
+  .unknown()
+  .superRefine((value, ctx) => {
+    // Nullish values are accepted by the optional/nullable wrapper at the
+    // write sites, but the shared contract itself requires an object.
+    if (value == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [],
+        message: "not_object",
+      });
+      return;
+    }
+    for (const issue of validateMarketOpeningHours(value)) {
+      const path =
+        issue.kind === "unknown_day"
+          ? [issue.day]
+          : issue.kind === "not_object"
+            ? []
+            : issue.kind === "invalid_day_hours"
+              ? [issue.day]
+              : issue.kind === "invalid_time" || issue.kind === "missing_time"
+                ? [issue.day, issue.field]
+                : issue.kind === "invalid_closed"
+                  ? [issue.day, "closed"]
+                  : [issue.day, issue.field];
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path,
+        message: issue.kind,
+      });
+    }
+  })
+  .transform((value) => normalizeClosedDays(value as MarketOpeningHours));
 
-// Both spellings are already used by market clients. An enum-backed record
-// would require every weekday in Zod 4; partialRecord also permits draft hours.
-export const marketOpeningHoursSchema = z.partialRecord(
-  z.enum([
-    "mon",
-    "tue",
-    "wed",
-    "thu",
-    "fri",
-    "sat",
-    "sun",
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-    "sunday",
-  ]),
-  dayHours,
-);
+function normalizeClosedDays(value: MarketOpeningHours): MarketOpeningHours {
+  return Object.fromEntries(
+    Object.entries(value).map(([day, hours]) => [
+      day,
+      hours?.closed === true
+        ? {
+            ...hours,
+            open: hours.open ?? "00:00",
+            close: hours.close ?? "00:00",
+          }
+        : hours,
+    ]),
+  ) as MarketOpeningHours;
+}

@@ -120,4 +120,55 @@ describe("market public profile form", () => {
       }),
     ).toThrow("Map width must be a positive integer");
   });
+
+  it.each([
+    ["陣列", '[{"open":"10:00","close":"22:00"}]', "營業時間必須是物件"],
+    [
+      "未知星期",
+      '{"nonsense":{"open":"10:00","close":"22:00"}}',
+      "未知的星期「nonsense」",
+    ],
+    [
+      "無效時間",
+      '{"mon":{"open":"25:00","close":"22:00"}}',
+      "星期 mon 的 open 需為 HH:MM",
+    ],
+    ["缺少 close", '{"mon":{"open":"10:00"}}', "星期 mon 缺少 close 時間"],
+    ["星期值非物件", '{"mon":"10:00-22:00"}', "星期 mon 的營業時間必須是物件"],
+    [
+      "closed 型別錯誤",
+      '{"mon":{"closed":"false"}}',
+      "星期 mon 的 closed 必須是 true 或 false",
+    ],
+    [
+      "多餘欄位",
+      '{"mon":{"open":"10:00","close":"22:00","note":"晚市"}}',
+      "星期 mon 含有不支援的欄位「note」",
+    ],
+  ])(
+    "reports a localized reason for %s",
+    (_label, openingHoursText, message) => {
+      expect(() =>
+        buildMarketPublicProfilePayload({
+          ...marketPublicProfileFormFromMarket(market()),
+          openingHoursText,
+        }),
+      ).toThrow(message);
+    },
+  );
+
+  it.each([
+    '{"mon":{"open":"10:00","close":"22:00"}}',
+    '{"monday":{"open":"18:00","close":"02:00"}}',
+    '{"tue":{"closed":true}}',
+    "{}",
+    "null",
+  ])("accepts valid opening hours %s", (openingHoursText) => {
+    expect(() =>
+      buildMarketPublicProfilePayload({
+        ...marketPublicProfileFormFromMarket(market()),
+        openingHoursText,
+      }),
+    ).not.toThrow();
+  });
 });

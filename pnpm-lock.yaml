@@ -425,6 +425,9 @@ importers:
       '@makanmasak/queue-core':
         specifier: workspace:*
         version: link:../../packages/queue-core
+      '@makanmasak/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@makanmasak/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types

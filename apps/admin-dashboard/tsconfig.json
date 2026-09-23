@@ -53,6 +53,7 @@
     "../../packages/shared/stores/moduleAccess.ts",
     "../../packages/shared/types/module-access.ts",
     "../../packages/shared/utils/chart-palette.ts",
+    "../../packages/shared/utils/market-opening-hours.ts",
     "../../packages/shared/utils/unknown.ts",
     "../../packages/shared/utils/user-facing-error.ts",
     "../../packages/shared-types/src/**/*",
