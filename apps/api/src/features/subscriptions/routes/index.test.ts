@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthUser } from "../../../middleware/auth";
 import { ApiError } from "../../../shared/utils/api-error";
+import { assertPlanTierAllowed } from "../../../shared/policy/regionPolicyGuards";
 
 const mocks = vi.hoisted(() => ({
   user: {
@@ -42,6 +43,10 @@ vi.mock("../../../middleware/moduleGate", () => ({
   invalidateSubscriptionCache: vi.fn((...args: unknown[]) =>
     mocks.invalidateSubscriptionCache(...args),
   ),
+}));
+
+vi.mock("../../../shared/policy/regionPolicyGuards", () => ({
+  assertPlanTierAllowed: vi.fn(async () => {}),
 }));
 
 vi.mock("../../billing/services/UsageService", () => ({
@@ -286,6 +291,20 @@ describe("subscription admin routes", () => {
     });
   });
 
+  it("checks the region when creating a subscription", async () => {
+    const response = await request("/", {
+      method: "POST",
+      body: JSON.stringify({ restaurantId: "rest-1", planTier: "basic" }),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    expect(response.status).toBe(201);
+    expect(assertPlanTierAllowed).toHaveBeenCalledWith(expect.anything(), {
+      restaurantId: "rest-1",
+      planTier: "basic",
+    });
+  });
+
   it("returns the unified error shape for invalid onboarding payloads", async () => {
     const response = await request("/", {
       method: "POST",
@@ -393,5 +412,39 @@ describe("subscription admin routes", () => {
       success: true,
       data: subscription({ isActive: false }),
     });
+  });
+
+  it("checks the region before changing plan", async () => {
+    const response = await request("/rest-1/plan", {
+      method: "PATCH",
+      body: JSON.stringify({ planTier: "pro" }),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(assertPlanTierAllowed).toHaveBeenCalledWith(
+      expect.objectContaining({ DB: expect.anything() }),
+      { restaurantId: "rest-1", planTier: "pro" },
+    );
+  });
+
+  it("does not change the plan when the region refuses it", async () => {
+    vi.mocked(assertPlanTierAllowed).mockRejectedValueOnce(
+      new ApiError("PLAN_NOT_AVAILABLE_IN_REGION", "no", 400),
+    );
+
+    const response = await request("/rest-1/plan", {
+      method: "PATCH",
+      body: JSON.stringify({ planTier: "pro" }),
+      headers: { "Content-Type": "application/json" },
+    });
+    const body = await json(response);
+
+    expect(response.status).toBe(400);
+    expect(body.error).toMatchObject({
+      code: "PLAN_NOT_AVAILABLE_IN_REGION",
+      message: "no",
+    });
+    expect(mocks.subscriptionService.changePlan).not.toHaveBeenCalled();
   });
 });
