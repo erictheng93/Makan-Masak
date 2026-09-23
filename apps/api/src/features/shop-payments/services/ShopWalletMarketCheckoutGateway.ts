@@ -132,7 +132,7 @@ export class ShopWalletMarketCheckoutGateway implements MarketCheckoutProviderSp
     private readonly gateway: ShopWalletGateway = notImplementedShopWalletGateway,
     private readonly credentials: Pick<
       ShopPaymentCredentialService,
-      "loadGatewayCredentials"
+      "loadGatewayCredentials" | "assertChargeAllowed"
     > = new ShopPaymentCredentialService(env),
   ) {}
 
@@ -145,6 +145,16 @@ export class ShopWalletMarketCheckoutGateway implements MarketCheckoutProviderSp
       this.provider,
       input.allocations,
     );
+    // Check every unique shop before a new charge. Refunds use a separate path.
+    for (const restaurantId of new Set(
+      input.allocations.map((allocation) => allocation.restaurantId),
+    )) {
+      await this.credentials.assertChargeAllowed(
+        restaurantId,
+        this.provider,
+        input.marketSlug,
+      );
+    }
     const adapter = new ShopWalletPaymentAdapter(connection, this.gateway);
 
     const settlement = await adapter.charge({
