@@ -12,7 +12,11 @@
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { shopPaymentCredentials } from "@makanmasak/database";
+import {
+  markets,
+  regionPolicies,
+  shopPaymentCredentials,
+} from "@makanmasak/database";
 import {
   createTestDatabase,
   REAL_D1_SETUP_TIMEOUT_MS,
@@ -179,6 +183,95 @@ describe("ShopPaymentCredentialService against real D1", () => {
         "grabpay",
       ]);
       expect(await service().get(shopA.id, "grabpay")).toBeNull();
+    });
+  });
+
+  describe("region payment policy", () => {
+    async function allowOnly(
+      scopeType: "country" | "market",
+      scopeId: string,
+      providers: string[],
+    ) {
+      await testDb.drizzle.insert(regionPolicies).values({
+        scopeType,
+        scopeId,
+        policyKey: "payments.allowed_providers",
+        value: JSON.stringify(providers),
+      });
+    }
+
+    const myShopInMy = () =>
+      seed.restaurant({
+        countryCode: "MY",
+        settings: {
+          allowOnlineOrdering: true,
+          allowGuestOrders: true,
+          currency: "MYR",
+        },
+      });
+
+    async function seedMarket() {
+      const now = new Date();
+      await testDb.drizzle.insert(markets).values({
+        id: "m-policy",
+        slug: "policy-market",
+        name: "Policy Market",
+        type: "night_market",
+        city: "Kuala Lumpur",
+        countryCode: "MY",
+        district: "Bukit Bintang",
+        address: "Jalan Alor",
+        latitude: 3.14,
+        longitude: 101.7,
+        createdAt: now,
+        updatedAt: now,
+      } as never);
+    }
+
+    it("refuses to connect a provider the country does not allow", async () => {
+      const shop = await myShopInMy();
+      await allowOnly("country", "MY", ["tng"]);
+
+      await expect(
+        service().connect(shop.id, "grabpay", connectInput()),
+      ).rejects.toMatchObject({
+        code: "PAYMENT_PROVIDER_NOT_ALLOWED",
+        status: 403,
+      });
+    });
+
+    it("refuses to re-enable a connection the country no longer allows", async () => {
+      const shop = await myShopInMy();
+      await service().connect(shop.id, "grabpay", connectInput());
+      await service().update(shop.id, "grabpay", { status: "disabled" });
+      await allowOnly("country", "MY", ["tng"]);
+
+      await expect(
+        service().update(shop.id, "grabpay", { status: "connected" }),
+      ).rejects.toMatchObject({ code: "PAYMENT_PROVIDER_NOT_ALLOWED" });
+    });
+
+    it("blocks a new charge the market excludes", async () => {
+      const shop = await myShopInMy();
+      await seedMarket();
+      await allowOnly("market", "m-policy", ["tng"]);
+
+      await expect(
+        service().assertChargeAllowed(shop.id, "grabpay", "policy-market"),
+      ).rejects.toMatchObject({ code: "PAYMENT_PROVIDER_NOT_ALLOWED" });
+      await expect(
+        service().assertChargeAllowed(shop.id, "tng", "policy-market"),
+      ).resolves.toBeUndefined();
+    });
+
+    it("keeps loading credentials for refunds after the policy tightens", async () => {
+      const shop = await myShopInMy();
+      await service().connect(shop.id, "grabpay", connectInput());
+      await allowOnly("country", "MY", ["tng"]);
+
+      await expect(
+        service().loadGatewayCredentials(shop.id, "grabpay"),
+      ).resolves.toMatchObject({ provider: "grabpay" });
     });
   });
 
