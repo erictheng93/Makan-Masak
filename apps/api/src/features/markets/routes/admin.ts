@@ -28,7 +28,10 @@ import {
   MarketsService,
   type UpdateMarketInput,
 } from "../services/MarketsService";
-import { resolveMarketCountry } from "../services/market-country";
+import {
+  resolveMarketCountry,
+  vendorCountry,
+} from "../services/market-country";
 import { RestaurantsService } from "../../restaurants/services/RestaurantsService";
 
 const routes = new Hono<{ Bindings: Env }>();
@@ -772,6 +775,24 @@ routes.post(
       );
     }
 
+    // Resolve every new vendor's country before creating anything: a row that
+    // failed inside the loop would leave the market half-imported.
+    const newVendorCountries = new Map(
+      vendors.flatMap((vendor, index) =>
+        vendor.restaurantId
+          ? []
+          : [
+              [
+                index,
+                vendorCountry(
+                  market.countryCode ?? null,
+                  vendor.city ?? market.city,
+                ),
+              ] as const,
+            ],
+      ),
+    );
+
     if (dryRun) {
       const data = await dryRunVendorImport({
         vendors,
@@ -843,6 +864,7 @@ routes.post(
           address: vendor.address!,
           district: vendor.district!,
           city: vendor.city ?? market.city,
+          countryCode: newVendorCountries.get(index),
           phone: vendor.phone ?? "00000000",
           email: vendor.email,
           website: vendor.website,

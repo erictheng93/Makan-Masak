@@ -98,6 +98,19 @@ Drizzle schema 放在 `packages/database/src/schema/policies.ts`（匯出名稱 
 - 比率一律用 bps 整數；`restaurants.settings.taxRate`／`serviceChargeRate` 是小數，兩者以 `bps / 10000` 換算。
 - **營運規則**：從程式碼移除某個模組、金流商或方案之前，要先把它從所有已儲存的政策中移除。否則舊值會變成不合法，上限類政策會依 D7 讓相關操作回 503。
 
+### 4.4 新建店家的國別
+
+D10 的門檻只在寫入政策時檢查。政策設定之後才建立、而且沒有國別的店，會靜默地繞過所有國家層上限政策。所以每一條建立店家的路徑都必須給出國別：
+
+| 路徑 | 國別來源 | 推不出來時 |
+|---|---|---|
+| 入駐開通（`OnboardingService`） | 申請表的國別 | 開通前就已擋下 |
+| `POST /restaurants`（`RestaurantService.createRestaurant`） | 明確指定的 `countryCode`，否則由城市推導（沒填城市時預設台中市，也就是 TW） | 400 `RESTAURANT_COUNTRY_REQUIRED` |
+| 市集店家匯入 | 市集的 `country_code`，並與店家城市核對 | 400，**在建立任何一家店之前**整批拒絕，不留下匯入一半的市集 |
+
+- 有國別時，幣別與時區由國別推導（和入駐開通一樣）。明確給的幣別和國別不一致 → 400 `RESTAURANT_COUNTRY_CURRENCY_MISMATCH`；城市和國別不一致 → 400 `RESTAURANT_COUNTRY_CITY_MISMATCH`。
+- 國別建立後就不能再改：`PATCH /restaurants/:id` 的 schema 不接受 `countryCode`。改國別會讓幣別、時區與快取的政策查詢脫節。
+
 ## 5. 解析器
 
 ### 5.1 介面
@@ -142,7 +155,7 @@ interface EffectiveRegionPolicies {
 | `payments.allowed_providers` | 國家、市集 | 連接時：店家國別。扣款時：店家國別 + 市集結帳 session 的 `marketSlug` → `markets.id` | ① `ShopPaymentCredentialService.connect`，以及把 `update` 改回 connected／換 merchantId（只套國家層）；② `ShopWalletMarketCheckoutGateway.process`（新扣款；套國家與市集層） | 退款（`refundShopWalletMarketCheckoutPayment`）、狀態查詢、webhook、對帳、中斷連接、`loadGatewayCredentials` 本身 | 503；`marketSlug` 對不到市集時也回 503 |
 | `pricing.default_tax_rate_bps`、`pricing.default_service_charge_rate_bps` | 國家 | 店家的 `country_code` | `GroupOrdersService` 的拆帳與成員小計；店家自己的設定優先 | — | 當作沒設定 → 0（現狀） |
 | `plans.allowed_tiers` | 國家 | 店家的 `country_code` | `POST /subscriptions`、`PATCH /subscriptions/:id/plan` | 開通給 trial、試用到期自動降級到 basic | 503 |
-| `platform.max_fee_rate_bps` | 國家 | 市集的 `country_code` | `apps/api` 市集的建立、批次匯入、更新；management-api 設定上限時反向檢查既有市集 | — | 503（市集寫入被擋） |
+| `platform.max_fee_rate_bps` | 國家 | 市集的 `country_code` | `apps/api` 市集的建立、批次匯入、更新（**直接讀 D1、不經 KV**：結帳不會 clamp，用過期快取存下的超額費率會一直留著）；management-api 設定上限時反向檢查既有市集 | — | 503（市集寫入被擋） |
 
 **政策收緊時，既有資料怎麼辦**：只擋新動作，不動既有資料。已經連接、但現在不被允許的金流帳號會保留，已成立的付款照常退款與對帳；已經在不被允許方案上的店家維持原方案。費率上限不會出現既有資料違規：設定上限時如果已有市集超過，會直接拒絕（§7）。
 
