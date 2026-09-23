@@ -165,7 +165,37 @@ const viVN: Messages = {
     health: "sức khỏe",
     licenses: "Giấy phép",
     markets: "Thị trường",
+    policies: "Chính sách khu vực",
     tenants: "Người thuê nhà",
+  },
+  policies: {
+    title: "Chính sách khu vực",
+    subtitle:
+      "Thiết lập mô-đun, thanh toán, gói và phí theo quốc gia hoặc chợ. Mục chưa thiết lập sẽ kế thừa từ cấp trên.",
+    countries: { TW: "Đài Loan", MY: "Malaysia" },
+    scope: { market: "Chợ", marketPlaceholder: "Chọn chợ…" },
+    unknownCountryWarning:
+      "{count} cửa hàng chưa có quốc gia nên chính sách quốc gia không áp dụng. Hãy chạy bổ sung quốc gia trước.",
+    confirmUnknownCountry:
+      "{count} cửa hàng chưa có quốc gia và sẽ không tuân theo chính sách này. Vẫn lưu?",
+    inherited: "Chưa thiết lập — kế thừa từ cấp trên",
+    merge: {
+      ceiling_deny: "Giới hạn: tắt nếu bất kỳ cấp nào tắt",
+      ceiling_allow: "Giới hạn: chỉ cho phép các mục trong danh sách",
+      default: "Mặc định: cửa hàng có thể ghi đè",
+      platform_cap: "Chỉ nền tảng: cửa hàng không thể thay đổi",
+    },
+    keys: {
+      modules_disabled: "Mô-đun bị tắt",
+      payments_allowed_providers:
+        "Nhà cung cấp thanh toán trực tuyến được phép",
+      pricing_default_tax_rate_bps: "Thuế suất mặc định",
+      pricing_default_service_charge_rate_bps: "Phí dịch vụ mặc định",
+      plans_allowed_tiers: "Gói trả phí được bán",
+      platform_max_fee_rate_bps: "Mức trần phí nền tảng của chợ",
+    },
+    actions: { save: "Lưu", clear: "Xóa" },
+    toast: { saved: "Đã lưu chính sách", cleared: "Đã xóa chính sách" },
   },
   notFound: {
     backHome: "Quay lại trang chủ",

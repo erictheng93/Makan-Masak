@@ -8,6 +8,7 @@ import {
   HeartIcon,
   KeyIcon,
   MapIcon,
+  GlobeAltIcon,
   Bars3Icon,
   XMarkIcon,
   LanguageIcon,
@@ -39,6 +40,7 @@ const navigation = computed(() => [
   { name: t("nav.health"), href: "/health", icon: HeartIcon },
   { name: t("nav.licenses"), href: "/licenses", icon: KeyIcon },
   { name: t("nav.markets"), href: "/markets", icon: MapIcon },
+  { name: t("nav.policies"), href: "/policies", icon: GlobeAltIcon },
 ]);
 
 const isCurrentRoute = (href: string) => {

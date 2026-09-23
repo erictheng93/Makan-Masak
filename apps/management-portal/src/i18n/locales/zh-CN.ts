@@ -165,7 +165,36 @@ const zhCN: Messages = {
     health: "健康监控",
     licenses: "授权管理",
     markets: "市场管理",
+    policies: "地区政策",
     tenants: "租户管理",
+  },
+  policies: {
+    title: "地区政策",
+    subtitle:
+      "按国家或市集设置功能、支付、方案与费率。未设置的项目沿用上一层。",
+    countries: { TW: "台湾", MY: "马来西亚" },
+    scope: { market: "市集", marketPlaceholder: "选择市集…" },
+    unknownCountryWarning:
+      "有 {count} 家店尚未设置国别，国家政策不会应用到它们。请先执行国别回填。",
+    confirmUnknownCountry:
+      "有 {count} 家店尚未设置国别，这项政策不会应用到它们。确定仍要保存吗？",
+    inherited: "未设置，沿用上一层",
+    merge: {
+      ceiling_deny: "上限：任一层关闭即关闭",
+      ceiling_allow: "上限：只允许清单内的项目",
+      default: "默认：店家可自行覆盖",
+      platform_cap: "平台限定：店家无法修改",
+    },
+    keys: {
+      modules_disabled: "关闭的功能模块",
+      payments_allowed_providers: "允许的在线支付商",
+      pricing_default_tax_rate_bps: "默认税率",
+      pricing_default_service_charge_rate_bps: "默认服务费率",
+      plans_allowed_tiers: "可销售的付费方案",
+      platform_max_fee_rate_bps: "市集平台费率上限",
+    },
+    actions: { save: "保存", clear: "清除" },
+    toast: { saved: "已保存政策", cleared: "已清除政策" },
   },
   notFound: {
     backHome: "返回首页",

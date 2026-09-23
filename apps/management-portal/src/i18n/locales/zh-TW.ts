@@ -22,6 +22,7 @@ const zhTW = {
     health: "健康監控",
     licenses: "授權管理",
     markets: "市場管理",
+    policies: "地區政策",
   },
 
   layout: {
@@ -329,6 +330,35 @@ const zhTW = {
       storage: "儲存",
       checkedAt: "檢查時間",
     },
+  },
+
+  policies: {
+    title: "地區政策",
+    subtitle:
+      "依國家或市集設定功能、金流、方案與費率。沒有設定的項目沿用上一層。",
+    countries: { TW: "台灣", MY: "馬來西亞" },
+    scope: { market: "市集", marketPlaceholder: "選擇市集…" },
+    unknownCountryWarning:
+      "有 {count} 家店尚未設定國別，國家政策不會套用到它們。請先執行國別回填。",
+    confirmUnknownCountry:
+      "有 {count} 家店尚未設定國別，這項政策不會套用到它們。確定仍要儲存嗎？",
+    inherited: "未設定，沿用上一層",
+    merge: {
+      ceiling_deny: "上限：任一層關閉即關閉",
+      ceiling_allow: "上限：只允許清單內的項目",
+      default: "預設：店家可自行覆寫",
+      platform_cap: "平台限定：店家無法修改",
+    },
+    keys: {
+      modules_disabled: "關閉的功能模組",
+      payments_allowed_providers: "允許的線上金流商",
+      pricing_default_tax_rate_bps: "預設稅率",
+      pricing_default_service_charge_rate_bps: "預設服務費率",
+      plans_allowed_tiers: "可販售的付費方案",
+      platform_max_fee_rate_bps: "市集平台費率上限",
+    },
+    actions: { save: "儲存", clear: "清除" },
+    toast: { saved: "已儲存政策", cleared: "已清除政策" },
   },
 
   notFound: {

@@ -165,7 +165,36 @@ const idID: Messages = {
     health: "Kesehatan",
     licenses: "Lisensi",
     markets: "Pasar",
+    policies: "Kebijakan wilayah",
     tenants: "Penyewa",
+  },
+  policies: {
+    title: "Kebijakan wilayah",
+    subtitle:
+      "Atur modul, pembayaran, paket, dan biaya per negara atau pasar. Item yang belum diatur mewarisi tingkat di atasnya.",
+    countries: { TW: "Taiwan", MY: "Malaysia" },
+    scope: { market: "Pasar", marketPlaceholder: "Pilih pasar…" },
+    unknownCountryWarning:
+      "{count} toko belum memiliki negara, sehingga kebijakan negara tidak berlaku bagi mereka. Jalankan pengisian negara terlebih dahulu.",
+    confirmUnknownCountry:
+      "{count} toko tidak memiliki negara dan tidak akan mengikuti kebijakan ini. Tetap simpan?",
+    inherited: "Belum diatur — mewarisi tingkat di atasnya",
+    merge: {
+      ceiling_deny: "Batas: mati jika tingkat mana pun mematikannya",
+      ceiling_allow: "Batas: hanya item dalam daftar yang diizinkan",
+      default: "Bawaan: toko dapat menimpa",
+      platform_cap: "Khusus platform: toko tidak dapat mengubah",
+    },
+    keys: {
+      modules_disabled: "Modul yang dinonaktifkan",
+      payments_allowed_providers: "Penyedia pembayaran online yang diizinkan",
+      pricing_default_tax_rate_bps: "Tarif pajak bawaan",
+      pricing_default_service_charge_rate_bps: "Tarif biaya layanan bawaan",
+      plans_allowed_tiers: "Paket berbayar yang dijual",
+      platform_max_fee_rate_bps: "Batas biaya platform pasar",
+    },
+    actions: { save: "Simpan", clear: "Hapus" },
+    toast: { saved: "Kebijakan disimpan", cleared: "Kebijakan dihapus" },
   },
   notFound: {
     backHome: "Kembali ke Rumah",
