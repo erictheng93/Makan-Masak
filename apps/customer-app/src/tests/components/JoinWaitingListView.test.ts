@@ -27,6 +27,11 @@ vi.mock("@/services/waitingListApi", () => ({
   },
 }));
 
+// Enrollment is member-only; guests are covered in web-push-unavailable.test.ts.
+vi.mock("@/services/customerAccessToken", () => ({
+  hasCustomerAccessToken: () => true,
+}));
+
 vi.mock("@/utils/push-notifications", () => ({
   default: {
     requestPermission: vi.fn(),
