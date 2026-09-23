@@ -66,6 +66,18 @@ async function selectMarket(event: Event) {
 
 const isSet = (key: string) => state.value?.policies[key] !== undefined;
 
+/**
+ * A percentage the API will accept: present and within 0–100. Without this an
+ * emptied field saved as Number("") = 0, silently setting a 0% cap or rate.
+ */
+function canSave(definition: PolicyDefinition): boolean {
+  if (definition.ui.kind !== "bps") return true;
+  const draft = String(drafts.value[definition.key] ?? "").trim();
+  if (draft === "") return false;
+  const bps = Number(draft) * 100;
+  return Number.isFinite(bps) && bps >= 0 && bps <= 10000;
+}
+
 function draftValue(definition: PolicyDefinition): unknown {
   const draft = drafts.value[definition.key];
   if (definition.ui.kind === "list") return draft as string[];
@@ -88,6 +100,7 @@ function unknownCountryCount(error: unknown): number | null {
 }
 
 async function save(definition: PolicyDefinition) {
+  if (!canSave(definition)) return;
   saving.value = definition.key;
   const value = draftValue(definition);
   try {
@@ -129,13 +142,23 @@ async function clear(definition: PolicyDefinition) {
   }
 }
 
+/** The markets endpoint caps a page at 100; walk every page. */
+async function loadAllMarkets(): Promise<Market[]> {
+  const all: Market[] = [];
+  for (let page = 1; ; page += 1) {
+    const result = await marketsApi.list({ limit: 100, page });
+    all.push(...result.markets);
+    if (result.markets.length === 0 || all.length >= result.total) return all;
+  }
+}
+
 onMounted(async () => {
-  const [registry, marketList] = await Promise.all([
+  const [registry, markets] = await Promise.all([
     policiesApi.registry(),
-    marketsApi.list({ limit: 100 }),
+    loadAllMarkets(),
   ]);
   definitions.value = registry;
-  marketOptions.value = marketList.markets;
+  marketOptions.value = markets;
   await loadScope();
 });
 </script>
@@ -257,7 +280,7 @@ onMounted(async () => {
           <button
             type="button"
             class="btn btn-primary rounded-full"
-            :disabled="saving === definition.key"
+            :disabled="saving === definition.key || !canSave(definition)"
             :data-testid="`policy-save-${definition.key}`"
             @click="save(definition)"
           >
