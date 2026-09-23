@@ -1,10 +1,8 @@
 /**
  * master-user-flow 1. 顧客端 → 座位與預約流程, against a real API and a real D1.
  *
- * 候位登記 → 叫號通知 → 入座確認, and 預約服務. The third node on the chart,
- * 線上訂位 (時段 · 人數 → 訂位確認), has no customer UI at all — no view, no
- * route, no API client (#385) — so there is nothing here to drive and it is
- * deliberately not faked through the public reservation endpoints.
+ * 候位登記 → 叫號通知 → 入座確認, 線上訂位 (時段 · 人數 → 訂位確認, the
+ * /restaurant/:id/reserve page #385 added), and 預約服務.
  */
 import { expect, test } from "@playwright/test";
 import {
@@ -275,6 +273,139 @@ test.describe("座位與預約流程 (real API)", () => {
     }
   });
 
+  test("線上訂位: pick a slot the owner opened, book it, then look it up and cancel it by its code", async ({
+    browser,
+  }) => {
+    const localCleanup = new Cleanup();
+    const { context, page } = await newDinerContext(browser);
+    try {
+      const owner = await getOwner();
+      const rid = owner.restaurantId;
+      const auth = { token: owner.token };
+
+      // Slots have no delete route, so each run takes a date of its own; a
+      // re-run on the same database would otherwise hit the unique slot.
+      const date = shopDate(30 + Math.floor(Math.random() * 300));
+      await apiData(
+        "open reservation slots",
+        "/api/v1/reservations/slots/batch",
+        {
+          ...auth,
+          method: "POST",
+          body: {
+            restaurantId: rid,
+            startDate: date,
+            endDate: date,
+            timeSlots: ["18:00", "19:30"],
+            maxCapacity: 8,
+            maxTables: 2,
+          },
+        },
+      );
+
+      await page.goto(`/restaurant/${rid}/reserve`);
+      await expect(
+        page.getByTestId("reservation-restaurant-summary"),
+      ).toBeVisible({ timeout: NAV_TIMEOUT });
+
+      await page.getByTestId("reservation-date").fill(date);
+      await page.getByTestId("reservation-party-size").fill("3");
+      const slotsLoaded = page.waitForResponse(
+        (response) =>
+          response.url().includes("/api/v1/reservations/availability") &&
+          response.url().includes(`date=${date}`),
+      );
+      await page.getByTestId("reservation-load-slots").click();
+      expect((await slotsLoaded).status(), "availability").toBe(200);
+      const slots = page.getByTestId("reservation-slot");
+      await expect(slots).toHaveCount(2);
+      await slots.filter({ hasText: "19:30" }).click();
+
+      const customerName = e2eName("訂位人");
+      const phone = mobileNumber();
+      await page.getByTestId("reservation-name").fill(customerName);
+      await page.getByTestId("reservation-phone").fill(phone);
+      await page.getByTestId("reservation-requests").fill("靠窗");
+
+      const created = page.waitForResponse(
+        (response) =>
+          response.url().endsWith("/api/v1/reservations") &&
+          response.request().method() === "POST",
+      );
+      await page.getByTestId("reservation-create").click();
+      const response = await created;
+      const createdBody = (await response.json()) as {
+        data?: { id: string; confirmationCode: string };
+        error?: unknown;
+      };
+      expect(
+        response.status(),
+        `create reservation: ${JSON.stringify(createdBody.error)}`,
+      ).toBe(201);
+      const reservation = createdBody.data!;
+      localCleanup.add(`cancel reservation ${reservation.id}`, () =>
+        apiRequest(`/api/v1/reservations/${reservation.id}/cancel`, {
+          method: "DELETE",
+          body: { confirmationCode: reservation.confirmationCode },
+        }),
+      );
+
+      await expect(page.getByTestId("reservation-confirmation")).toContainText(
+        reservation.confirmationCode,
+      );
+
+      const stored = await apiData<Record<string, unknown>>(
+        "read reservation",
+        `/api/v1/reservations/${reservation.id}`,
+        auth,
+      );
+      expect(stored).toEqual(
+        expect.objectContaining({
+          restaurantId: rid,
+          customerName,
+          partySize: 3,
+          reservationTime: "19:30",
+          confirmationCode: reservation.confirmationCode,
+        }),
+      );
+
+      // 訂位確認: the code alone finds it again, and cancels it.
+      await page
+        .getByTestId("reservation-verify-code")
+        .fill(reservation.confirmationCode);
+      await page.getByTestId("reservation-verify").click();
+      const verified = page.getByTestId("reservation-verified");
+      await expect(verified).toContainText(`${date} 19:30`, {
+        timeout: LIVE_TIMEOUT,
+      });
+      await expect(verified).toContainText("已確認");
+      const cancelled = page.waitForResponse(
+        (r) =>
+          r.url().endsWith(`/api/v1/reservations/${reservation.id}/cancel`) &&
+          r.request().method() === "DELETE",
+      );
+      await page.getByTestId("reservation-cancel").click();
+      expect((await cancelled).status(), "cancel reservation").toBe(200);
+      await expect
+        .poll(
+          async () =>
+            (
+              await apiData<{ status: string }>(
+                "reread reservation",
+                `/api/v1/reservations/${reservation.id}`,
+                auth,
+              )
+            ).status,
+          { timeout: LIVE_TIMEOUT },
+        )
+        .toBe("cancelled");
+      await assertNoOverlayError(page);
+    } finally {
+      await context.close();
+      await localCleanup.run();
+    }
+  });
+
   test("預約服務: book a slot the owner opened and read the booking back", async ({
     browser,
   }) => {
@@ -374,6 +505,11 @@ test.describe("座位與預約流程 (real API)", () => {
       const confirmation = page.getByTestId("service-booking-confirmation");
       await expect(confirmation).toContainText("預約已建立");
       await expect(confirmation).toContainText(booking.confirmationCode);
+      // #398: with no online payment the booking is paid at the venue, and the
+      // page says so, in the shop's own currency (TWD here: NT$300, not $300).
+      await expect(confirmation).toContainText(
+        `請於到店時向店員付款（應付 NT$300），確認碼：${booking.confirmationCode}`,
+      );
 
       const stored = await apiData<{
         booking: Record<string, unknown>;
@@ -388,6 +524,9 @@ test.describe("座位與預約流程 (real API)", () => {
           partySize: 2,
           specialRequests: "怕癢",
           confirmationCode: booking.confirmationCode,
+          paymentRequirement: "pay_at_venue",
+          paymentStatus: "unpaid",
+          amountDueCents: 30_000,
         }),
       );
 
