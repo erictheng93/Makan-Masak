@@ -36,7 +36,9 @@ let menu: MenuFixture;
 /**
  * The member the first test signs in, reused by the rest: OTP requests are
  * limited to 10 per IP, and a member who signed in earlier and then scans a
- * QR is the realistic case anyway.
+ * QR is the realistic case anyway. Refresh tokens rotate, so each test saves
+ * the session back when it closes; replaying a spent refresh cookie would
+ * sign the next test out.
  */
 let memberState:
   | Awaited<
@@ -176,6 +178,7 @@ test.describe("會員入口 (real API)", () => {
         });
         await assertNoOverlayError(page);
       } finally {
+        memberState = await context.storageState();
         await context.close();
         await localCleanup.run();
       }
@@ -255,15 +258,17 @@ test.describe("會員入口 (real API)", () => {
           "a signed-in member orders through the member path",
         ).toBe("/api/v1/orders");
         expect(response.status(), await response.text()).toBe(201);
-        orderId = (
-          (await response.json()) as { data: { order?: { id: string } } }
-        ).data.order?.id;
+        const orderBody = (await response.json()) as {
+          data?: { order?: { id: string }; id?: string };
+        };
+        orderId = orderBody.data?.order?.id ?? orderBody.data?.id;
         const order = await readOrder(orderId!);
         expect({
           total: order.totalAmount,
           discount: order.discountAmount,
         }).toEqual({ total: discounted, discount: 20 });
       } finally {
+        memberState = await context.storageState();
         await context.close();
         await localCleanup.run();
       }
