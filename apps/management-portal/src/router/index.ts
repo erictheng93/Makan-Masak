@@ -59,6 +59,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: "市場管理" },
   },
   {
+    path: "/policies",
+    name: "Policies",
+    component: () => import("@/views/PoliciesView.vue"),
+    meta: { title: "地區政策" },
+  },
+  {
     path: "/:pathMatch(.*)*",
     name: "NotFound",
     component: () => import("@/views/NotFoundView.vue"),

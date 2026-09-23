@@ -165,7 +165,37 @@ const msMY: Messages = {
     health: "Kesihatan",
     licenses: "Lesen",
     markets: "Pasaran",
+    policies: "Dasar wilayah",
     tenants: "Penyewa",
+  },
+  policies: {
+    title: "Dasar wilayah",
+    subtitle:
+      "Tetapkan modul, pembayaran, pelan dan yuran mengikut negara atau pasar. Item yang tidak ditetapkan mewarisi tahap di atas.",
+    countries: { TW: "Taiwan", MY: "Malaysia" },
+    scope: { market: "Pasar", marketPlaceholder: "Pilih pasar…" },
+    unknownCountryWarning:
+      "{count} kedai belum mempunyai negara, jadi dasar negara tidak terpakai kepada mereka. Jalankan pengisian negara dahulu.",
+    confirmUnknownCountry:
+      "{count} kedai tiada negara dan tidak akan mengikut dasar ini. Simpan juga?",
+    inherited: "Tidak ditetapkan — mewarisi tahap di atas",
+    merge: {
+      ceiling_deny: "Siling: dimatikan jika mana-mana tahap mematikannya",
+      ceiling_allow: "Siling: hanya item dalam senarai dibenarkan",
+      default: "Lalai: kedai boleh mengatasi",
+      platform_cap: "Platform sahaja: kedai tidak boleh mengubah",
+    },
+    keys: {
+      modules_disabled: "Modul yang dimatikan",
+      payments_allowed_providers:
+        "Penyedia pembayaran dalam talian yang dibenarkan",
+      pricing_default_tax_rate_bps: "Kadar cukai lalai",
+      pricing_default_service_charge_rate_bps: "Kadar caj perkhidmatan lalai",
+      plans_allowed_tiers: "Pelan berbayar yang dijual",
+      platform_max_fee_rate_bps: "Had yuran platform pasar",
+    },
+    actions: { save: "Simpan", clear: "Kosongkan" },
+    toast: { saved: "Dasar disimpan", cleared: "Dasar dikosongkan" },
   },
   notFound: {
     backHome: "Kembali ke Rumah",

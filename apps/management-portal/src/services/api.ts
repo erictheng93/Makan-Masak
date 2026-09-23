@@ -449,6 +449,72 @@ export const marketsApi = {
   },
 };
 
+export type PolicyScopeType = "country" | "market";
+
+export interface PolicyDefinition {
+  key: string;
+  merge: "ceiling_deny" | "ceiling_allow" | "default" | "platform_cap";
+  scopes: PolicyScopeType[];
+  ui: { kind: "list"; options: string[] } | { kind: "bps" };
+}
+
+export interface PolicyScopeState {
+  scopeType: PolicyScopeType;
+  scopeId: string;
+  policies: Record<
+    string,
+    { value: unknown; updatedBy: string | null; updatedAt: number }
+  >;
+  restaurantsWithoutCountry?: number;
+}
+
+const policyPath = (scopeType: PolicyScopeType, scopeId: string, key: string) =>
+  `/admin/policies/${scopeType}/${encodeURIComponent(scopeId)}/${key}`;
+
+export const policiesApi = {
+  async registry(): Promise<PolicyDefinition[]> {
+    const { data } = await apiClient.get<
+      ApiResponse<{ definitions: PolicyDefinition[] }>
+    >("/admin/policies/registry");
+    return data.data!.definitions;
+  },
+
+  async list(
+    scopeType: PolicyScopeType,
+    scopeId: string,
+  ): Promise<PolicyScopeState> {
+    const { data } = await apiClient.get<ApiResponse<PolicyScopeState>>(
+      "/admin/policies",
+      { params: { scope_type: scopeType, scope_id: scopeId } },
+    );
+    return data.data!;
+  },
+
+  /** acknowledge：管理員已確認的「國別未知店家數」，見 spec D10。 */
+  async set(
+    scopeType: PolicyScopeType,
+    scopeId: string,
+    key: string,
+    value: unknown,
+    acknowledge?: number,
+  ): Promise<void> {
+    await apiClient.put(policyPath(scopeType, scopeId, key), {
+      value,
+      ...(acknowledge === undefined
+        ? {}
+        : { acknowledgeRestaurantsWithoutCountry: acknowledge }),
+    });
+  },
+
+  async clear(
+    scopeType: PolicyScopeType,
+    scopeId: string,
+    key: string,
+  ): Promise<void> {
+    await apiClient.delete(policyPath(scopeType, scopeId, key));
+  },
+};
+
 export default {
   auth: authApi,
   tenants: tenantsApi,
@@ -456,4 +522,5 @@ export default {
   health: healthApi,
   licenses: licensesApi,
   markets: marketsApi,
+  policies: policiesApi,
 };
