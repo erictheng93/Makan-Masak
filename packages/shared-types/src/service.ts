@@ -9,12 +9,20 @@ export type RestaurantServiceType =
   | "rental"
   | "activity";
 
+export type ServiceItemPaymentRequirement =
+  | "none"
+  | "deposit"
+  | "prepay"
+  | "pay_at_venue";
+
 export interface RestaurantServiceItem extends BaseEntity {
   restaurantId: string;
   name: string;
   description?: string | null;
   serviceType: RestaurantServiceType;
   priceCents?: number | null;
+  paymentRequirement?: ServiceItemPaymentRequirement;
+  depositAmountCents?: number;
   priceLabel?: string | null;
   durationMinutes?: number | null;
   requiresBooking: boolean;
@@ -38,6 +46,8 @@ export interface CreateRestaurantServiceItemRequest {
   description?: string | null;
   serviceType?: RestaurantServiceType;
   priceCents?: number | null;
+  paymentRequirement?: ServiceItemPaymentRequirement;
+  depositAmountCents?: number;
   priceLabel?: string | null;
   durationMinutes?: number | null;
   requiresBooking?: boolean;

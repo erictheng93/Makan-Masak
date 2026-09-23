@@ -539,6 +539,8 @@ describe("ServiceBookingService orchestration helpers", () => {
               name: "Spa Session",
               durationMinutes: 90,
               priceCents: 5000,
+              paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.DEPOSIT,
+              depositAmountCents: 1200,
               availableHours: { start: "09:00", end: "18:00", days: [3] },
               requiresBooking: true,
               isActive: true,
@@ -564,8 +566,6 @@ describe("ServiceBookingService orchestration helpers", () => {
         bookingDate: "2026-06-10",
         bookingTime: "10:30",
         partySize: 2,
-        paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.DEPOSIT,
-        depositAmountCents: 1200,
         reminderOptIn: true,
         reminderMinutesBefore: 30,
         specialRequests: "Window seat",
@@ -780,6 +780,8 @@ describe("ServiceBookingService orchestration helpers", () => {
       name: "Spa Session",
       durationMinutes: 60,
       priceCents: 1000,
+      paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.DEPOSIT,
+      depositAmountCents: 0,
       availableHours: { start: "09:00", end: "18:00", days: [3] },
       requiresBooking: true,
       isActive: true,
@@ -840,7 +842,6 @@ describe("ServiceBookingService orchestration helpers", () => {
         }).db,
       }).createBooking({
         ...book,
-        paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.DEPOSIT,
       }),
     ).rejects.toThrow("depositAmountCents is required");
     await expect(
@@ -848,14 +849,14 @@ describe("ServiceBookingService orchestration helpers", () => {
         d1: createD1Mock([{ changes: 0 }]).d1 as never,
         db: createDbMock({
           selectFixtures: {
-            restaurantServiceItems: [[baseService]],
+            restaurantServiceItems: [
+              [{ ...baseService, depositAmountCents: 2000 }],
+            ],
             serviceBookingSlots: [[]],
           },
         }).db,
       }).createBooking({
         ...book,
-        paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.DEPOSIT,
-        depositAmountCents: 2000,
       }),
     ).rejects.toThrow("depositAmountCents cannot exceed");
     await expect(
@@ -863,7 +864,9 @@ describe("ServiceBookingService orchestration helpers", () => {
         d1: createD1Mock([{ changes: 0 }]).d1 as never,
         db: createDbMock({
           selectFixtures: {
-            restaurantServiceItems: [[baseService]],
+            restaurantServiceItems: [
+              [{ ...baseService, depositAmountCents: 100 }],
+            ],
             serviceBookingSlots: [[]],
           },
         }).db,
@@ -887,6 +890,7 @@ describe("ServiceBookingService orchestration helpers", () => {
               name: "Spa Session",
               durationMinutes: 60,
               priceCents: 5000,
+              paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.NONE,
               availableHours: null,
               requiresBooking: true,
               isActive: true,
@@ -909,7 +913,6 @@ describe("ServiceBookingService orchestration helpers", () => {
       customerPhone: "+886900000000",
       bookingDate: "2026-06-10",
       bookingTime: "10:00",
-      paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.NONE,
     });
 
     expect(insertValues[0]).toMatchObject({

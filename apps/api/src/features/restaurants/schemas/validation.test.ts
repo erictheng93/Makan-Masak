@@ -89,11 +89,44 @@ describe("restaurant validation schemas", () => {
       name: "Private dining",
       serviceType: "general",
       requiresBooking: false,
+      paymentRequirement: "pay_at_venue",
+      depositAmountCents: 0,
     });
 
     expect(() => restaurantSchemas.updateServiceItem.parse({})).toThrow(
       "At least one field is required",
     );
+  });
+
+  it("validates merchant-configured service booking payment terms", () => {
+    expect(
+      restaurantSchemas.createServiceItem.parse({
+        name: "Facial",
+        priceCents: 5000,
+        paymentRequirement: "deposit",
+        depositAmountCents: 1200,
+      }),
+    ).toMatchObject({
+      paymentRequirement: "deposit",
+      depositAmountCents: 1200,
+    });
+
+    expect(() =>
+      restaurantSchemas.createServiceItem.parse({
+        name: "Facial",
+        priceCents: 5000,
+        paymentRequirement: "deposit",
+        depositAmountCents: 0,
+      }),
+    ).toThrow("positive deposit");
+    expect(() =>
+      restaurantSchemas.createServiceItem.parse({
+        name: "Facial",
+        priceCents: 5000,
+        paymentRequirement: "deposit",
+        depositAmountCents: 5001,
+      }),
+    ).toThrow("no greater than the service price");
   });
 
   it("rejects non-http service booking URLs", () => {

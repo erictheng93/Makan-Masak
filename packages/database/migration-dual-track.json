@@ -118,6 +118,10 @@
     {
       "fresh": "0029_service_bookings_pay_at_venue_default.sql",
       "reason": "service_bookings and its waitlist are platform-API booking tables; the management API has neither tenant booking records nor a corresponding payment workflow."
+    },
+    {
+      "fresh": "0030_service_item_payment_requirements.sql",
+      "reason": "restaurant_service_items is a platform-API table; the management API has no restaurants or service catalog to configure booking payment terms for."
     }
   ],
   "legacyOnly": [

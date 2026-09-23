@@ -75,8 +75,6 @@ export interface CreateServiceBookingInput {
   specialRequests?: string;
   /** 卷 code applied as a pricing-layer discount. */
   voucherCode?: string;
-  paymentRequirement?: ServiceBookingPaymentRequirement;
-  depositAmountCents?: number;
   reminderOptIn?: boolean;
   reminderMinutesBefore?: number;
   recurrenceGroupId?: string;
@@ -242,9 +240,9 @@ export class ServiceBookingService {
       }
       const amountDueCents = Math.max(0, priceCents - voucherDiscountCents);
       const payment = resolvePaymentTerms({
-        requirement: input.paymentRequirement,
+        requirement: service.paymentRequirement,
         amountDueCents,
-        depositAmountCents: input.depositAmountCents,
+        depositAmountCents: service.depositAmountCents,
       });
       const reminder = resolveReminder({
         optIn: input.reminderOptIn,

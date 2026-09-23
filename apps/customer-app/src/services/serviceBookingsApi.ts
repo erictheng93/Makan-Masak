@@ -65,8 +65,6 @@ export interface CreateServiceBookingInput {
   employeeId?: number;
   specialRequests?: string;
   voucherCode?: string;
-  paymentRequirement?: ServiceBookingPaymentRequirement;
-  depositAmountCents?: number;
   reminderOptIn?: boolean;
   reminderMinutesBefore?: number;
 }
@@ -82,11 +80,7 @@ export interface CreateRecurringServiceBookingInput extends Omit<
 
 export interface JoinServiceBookingWaitlistInput extends Omit<
   CreateServiceBookingInput,
-  | "voucherCode"
-  | "paymentRequirement"
-  | "depositAmountCents"
-  | "reminderOptIn"
-  | "reminderMinutesBefore"
+  "voucherCode" | "reminderOptIn" | "reminderMinutesBefore"
 > {
   notes?: string;
 }

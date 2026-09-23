@@ -6,6 +6,7 @@
 import { z } from "zod";
 import {
   RESTAURANT_SERVICE_TYPES,
+  SERVICE_ITEM_PAYMENT_REQUIREMENTS,
   SUPPORTED_BUSINESS_TIMEZONES,
 } from "@makanmasak/database";
 import { VALIDATION_LIMITS } from "../../../shared/constants";
@@ -145,6 +146,8 @@ const restaurantServiceItemShapeSchema = z.object({
     .optional(),
   serviceType: z.enum(RESTAURANT_SERVICE_TYPES).optional(),
   priceCents: z.number().int().min(0).nullable().optional(),
+  paymentRequirement: z.enum(SERVICE_ITEM_PAYMENT_REQUIREMENTS).optional(),
+  depositAmountCents: z.number().int().min(0).optional(),
   priceLabel: z
     .string()
     .max(80)
@@ -177,19 +180,65 @@ const restaurantServiceItemShapeSchema = z.object({
   isPublic: z.boolean().optional(),
 });
 
+const servicePaymentTermsSchema = <T extends z.ZodType>(schema: T) =>
+  schema.refine(
+    (rawValue) => {
+      const value = rawValue as Record<string, unknown>;
+      const paymentRequirement = value.paymentRequirement;
+      const depositAmountCents = value.depositAmountCents;
+      const priceCents = value.priceCents;
+
+      if (paymentRequirement === undefined) return true;
+
+      if (paymentRequirement === "deposit") {
+        return (
+          typeof depositAmountCents === "number" &&
+          depositAmountCents > 0 &&
+          typeof priceCents === "number" &&
+          priceCents > 0 &&
+          depositAmountCents <= priceCents
+        );
+      }
+      return depositAmountCents === undefined || depositAmountCents === 0;
+    },
+    {
+      message:
+        "Deposit services require a positive deposit no greater than the service price",
+      path: ["depositAmountCents"],
+    },
+  );
+
 const restaurantServiceItemInputSchema = z.lazy(() =>
-  restaurantServiceItemShapeSchema.extend({
-    serviceType: z.enum(RESTAURANT_SERVICE_TYPES).optional().default("general"),
-    requiresBooking: z.boolean().optional().default(false),
-  }),
+  servicePaymentTermsSchema(
+    restaurantServiceItemShapeSchema.extend({
+      serviceType: z
+        .enum(RESTAURANT_SERVICE_TYPES)
+        .optional()
+        .default("general"),
+      requiresBooking: z.boolean().optional().default(false),
+      paymentRequirement: z
+        .enum(SERVICE_ITEM_PAYMENT_REQUIREMENTS)
+        .optional()
+        .default("pay_at_venue"),
+      depositAmountCents: z.number().int().min(0).optional().default(0),
+    }),
+  ),
 );
 
 const updateRestaurantServiceItemSchema = z.lazy(() =>
-  restaurantServiceItemShapeSchema
-    .partial()
-    .refine((value) => Object.keys(value).length > 0, {
-      message: "At least one field is required",
-    }),
+  servicePaymentTermsSchema(
+    restaurantServiceItemShapeSchema
+      .extend({
+        paymentRequirement: z
+          .enum(SERVICE_ITEM_PAYMENT_REQUIREMENTS)
+          .optional(),
+        depositAmountCents: z.number().int().min(0).optional(),
+      })
+      .partial()
+      .refine((value) => Object.keys(value).length > 0, {
+        message: "At least one field is required",
+      }),
+  ),
 );
 
 // Common parameter schemas

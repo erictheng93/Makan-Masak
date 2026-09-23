@@ -8,6 +8,7 @@ import { asc, eq, isNull, and } from "drizzle-orm";
 import {
   RestaurantService as DatabaseRestaurantService,
   type RestaurantServiceType,
+  type ServiceItemPaymentRequirement,
   markets,
   restaurantFaqs,
   restaurantMarketMemberships,
@@ -99,6 +100,8 @@ export interface PublicRestaurantServiceItem {
   description: string | null;
   serviceType: string;
   priceCents: number | null;
+  paymentRequirement: ServiceItemPaymentRequirement;
+  depositAmountCents: number;
   priceLabel: string | null;
   durationMinutes: number | null;
   requiresBooking: boolean;
@@ -120,6 +123,8 @@ export interface RestaurantServiceItemInput {
   description?: string | null;
   serviceType?: RestaurantServiceType;
   priceCents?: number | null;
+  paymentRequirement?: ServiceItemPaymentRequirement;
+  depositAmountCents?: number;
   priceLabel?: string | null;
   durationMinutes?: number | null;
   requiresBooking?: boolean;
@@ -580,6 +585,8 @@ export class RestaurantsService {
         description: input.description,
         serviceType: input.serviceType ?? "general",
         priceCents: input.priceCents,
+        paymentRequirement: input.paymentRequirement ?? "pay_at_venue",
+        depositAmountCents: input.depositAmountCents ?? 0,
         priceLabel: input.priceLabel,
         durationMinutes: input.durationMinutes,
         requiresBooking: input.requiresBooking ?? false,
@@ -613,6 +620,15 @@ export class RestaurantsService {
       if (typeof value !== "undefined") {
         updateData[key] = value;
       }
+    }
+
+    if (input.paymentRequirement !== undefined) {
+      updateData.depositAmountCents =
+        input.paymentRequirement === "deposit"
+          ? (input.depositAmountCents ?? 0)
+          : 0;
+    } else if (input.depositAmountCents !== undefined) {
+      updateData.depositAmountCents = input.depositAmountCents;
     }
 
     const [row] = await this.db
@@ -762,6 +778,8 @@ export class RestaurantsService {
       description: item.description,
       serviceType: item.serviceType,
       priceCents: item.priceCents,
+      paymentRequirement: item.paymentRequirement,
+      depositAmountCents: item.depositAmountCents,
       priceLabel: item.priceLabel,
       durationMinutes: item.durationMinutes,
       requiresBooking: item.requiresBooking,

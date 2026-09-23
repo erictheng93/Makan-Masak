@@ -58,17 +58,14 @@ const createSchema = z.object({
   customerName: z.string().min(1).max(100),
   customerPhone: z.string().min(3).max(30),
   customerEmail: z.email().optional(),
-  customerId: z.string().optional(),
   bookingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   bookingTime: z.string().regex(/^\d{2}:\d{2}$/),
   partySize: z.number().int().positive().max(100).optional(),
   employeeId: idString.optional(),
   specialRequests: z.string().max(500).optional(),
   voucherCode: z.string().min(1).max(64).optional(),
-  paymentRequirement: z
-    .enum(["none", "deposit", "prepay", "pay_at_venue"])
-    .optional(),
-  depositAmountCents: z.number().int().min(1).optional(),
+  // Payment terms and customer identity come from trusted server-side state.
+  // Public callers cannot set them; Zod strips unknown properties.
   reminderOptIn: z.boolean().optional(),
   reminderMinutesBefore: z.number().int().min(5).max(10080).optional(),
 });
@@ -85,8 +82,6 @@ const waitlistSchema = z.lazy(() =>
   createSchema
     .omit({
       voucherCode: true,
-      paymentRequirement: true,
-      depositAmountCents: true,
       reminderOptIn: true,
       reminderMinutesBefore: true,
     })
