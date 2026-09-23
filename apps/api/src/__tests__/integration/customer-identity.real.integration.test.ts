@@ -62,7 +62,11 @@ describe("Customer Identity API - real integration", () => {
   let seed: SeedHelpers;
 
   beforeAll(async () => {
-    testApp = await createRealIntegrationTestApp();
+    // Customer web push ships switched off (#399); these cases exercise the
+    // customer subscription route, so the suite turns it on for itself.
+    testApp = await createRealIntegrationTestApp({
+      env: { CUSTOMER_WEB_PUSH_ENABLED: "true" } as never,
+    });
     seed = buildSeedHelpers(testApp.testDb);
   });
 
