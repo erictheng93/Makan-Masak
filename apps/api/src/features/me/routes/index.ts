@@ -2,9 +2,8 @@ import { Hono } from "hono";
 import type { Env } from "../../../types/env";
 import { staffOrUserCustomerAuthMiddleware } from "../../../middleware/auth";
 import {
-  CACHE_TTL_SECONDS,
-  subscriptionCacheKey,
-  type CachedSubscription,
+  loadCachedSubscription,
+  regionDisabledModules,
 } from "../../../middleware/moduleGate";
 import { SubscriptionService } from "../../subscriptions/services/SubscriptionService";
 import { UsageService } from "../../billing/services/UsageService";
@@ -40,25 +39,7 @@ router.get("/modules", async (c) => {
   }
 
   const service = new SubscriptionService(c.env.DB);
-  const cached = await readCachedSubscription(c.env.CACHE_KV, restaurantId);
-
-  if (cached) {
-    return c.json({
-      success: true,
-      data: {
-        restaurantId,
-        planTier: cached.planTier,
-        isActive: cached.isActive,
-        trialEndsAt: cached.trialEndsAt,
-        effectiveModules: service.getEffectiveModules({
-          planTier: cached.planTier,
-          moduleOverrides: cached.moduleOverrides,
-        } as Parameters<typeof service.getEffectiveModules>[0]),
-      },
-    });
-  }
-
-  const sub = await service.getByRestaurantId(restaurantId);
+  const sub = await loadCachedSubscription(c.env, restaurantId);
 
   if (!sub) {
     return c.json({
@@ -67,18 +48,13 @@ router.get("/modules", async (c) => {
     });
   }
 
-  const trialEndsAt = sub.trialEndsAt ? sub.trialEndsAt.getTime() : null;
-
-  await c.env.CACHE_KV.put(
-    subscriptionCacheKey(restaurantId),
-    JSON.stringify({
-      isActive: sub.isActive,
-      planTier: sub.planTier,
-      moduleOverrides: sub.moduleOverrides ?? {},
-      trialEndsAt,
-    } satisfies CachedSubscription),
-    { expirationTtl: CACHE_TTL_SECONDS },
-  );
+  const effectiveModules = service.getEffectiveModules({
+    planTier: sub.planTier,
+    moduleOverrides: sub.moduleOverrides,
+  } as Parameters<typeof service.getEffectiveModules>[0]);
+  for (const module of await regionDisabledModules(c.env, sub)) {
+    effectiveModules[module] = false;
+  }
 
   return c.json({
     success: true,
@@ -86,8 +62,8 @@ router.get("/modules", async (c) => {
       restaurantId,
       planTier: sub.planTier,
       isActive: sub.isActive,
-      trialEndsAt,
-      effectiveModules: service.getEffectiveModules(sub),
+      trialEndsAt: sub.trialEndsAt,
+      effectiveModules,
     },
   });
 });
@@ -113,16 +89,6 @@ router.get("/usage", async (c) => {
   const usage = await new UsageService(c.env.DB).getCurrentUsage(restaurantId);
   return c.json({ success: true, data: usage });
 });
-
-async function readCachedSubscription(
-  cache: KVNamespace,
-  restaurantId: string,
-): Promise<CachedSubscription | null> {
-  return cache.get<CachedSubscription>(
-    subscriptionCacheKey(restaurantId),
-    "json",
-  );
-}
 
 function emptyModuleAccess(restaurantId: string | null) {
   return {

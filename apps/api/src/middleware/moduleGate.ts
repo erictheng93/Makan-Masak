@@ -17,11 +17,20 @@ import type { Env } from "../types/env";
 import { forbidden } from "../shared/utils/api-error";
 import {
   shopSubscriptions,
+  restaurants,
   PLAN_DEFAULT_MODULES,
   type ModuleKey,
   type ModuleMap,
   type PlanTier,
 } from "@makanmasak/database";
+import {
+  normalizeCountryCode,
+  type SupportedCountryCode,
+} from "@makanmasak/shared-types";
+import {
+  requirePolicy,
+  resolveRegionPolicies,
+} from "../shared/policy/regionPolicies";
 
 // KV cache TTL: 5 minutes.  Short enough to make kill-switch effective quickly.
 export const CACHE_TTL_SECONDS = 300;
@@ -31,6 +40,8 @@ export interface CachedSubscription {
   planTier: PlanTier;
   moduleOverrides: ModuleMap;
   trialEndsAt: number | null;
+  /** Older KV entries omit this field and are treated as country unknown. */
+  countryCode?: SupportedCountryCode | null;
 }
 
 /** Single definition of the KV cache key shape shared by every reader/writer. */
@@ -59,18 +70,16 @@ function resolveModule(sub: CachedSubscription, module: ModuleKey): boolean {
  * Fetch subscription from KV cache, falling back to DB.
  * Writes through to KV on a cache miss.
  */
-async function getSubscription(
-  c: Context<{ Bindings: Env }>,
+export async function loadCachedSubscription(
+  env: Pick<Env, "DB" | "CACHE_KV">,
   restaurantId: string,
 ): Promise<CachedSubscription | null> {
   const cacheKey = subscriptionCacheKey(restaurantId);
 
-  // Cache read
-  const cached = await c.env.CACHE_KV.get<CachedSubscription>(cacheKey, "json");
+  const cached = await env.CACHE_KV.get<CachedSubscription>(cacheKey, "json");
   if (cached) return cached;
 
-  // DB read
-  const db = drizzle(c.env.DB);
+  const db = drizzle(env.DB);
   const [row] = await db
     .select({
       isActive: shopSubscriptions.isActive,
@@ -84,19 +93,37 @@ async function getSubscription(
 
   if (!row) return null;
 
+  const [restaurant] = await db
+    .select({ countryCode: restaurants.countryCode })
+    .from(restaurants)
+    .where(eq(restaurants.id, restaurantId))
+    .limit(1);
+
   const sub: CachedSubscription = {
     isActive: row.isActive,
     planTier: row.planTier as PlanTier,
     moduleOverrides: (row.moduleOverrides ?? {}) as ModuleMap,
     trialEndsAt: row.trialEndsAt ? row.trialEndsAt.getTime() : null,
+    countryCode: normalizeCountryCode(restaurant?.countryCode),
   };
 
-  // Cache write-through
-  await c.env.CACHE_KV.put(cacheKey, JSON.stringify(sub), {
+  await env.CACHE_KV.put(cacheKey, JSON.stringify(sub), {
     expirationTtl: CACHE_TTL_SECONDS,
   });
 
   return sub;
+}
+
+/** 國家層關閉的模組；國別不明時是空集合。資料無效或讀取失敗丟 503。 */
+export async function regionDisabledModules(
+  env: Pick<Env, "DB" | "CACHE_KV">,
+  sub: CachedSubscription,
+): Promise<ReadonlySet<ModuleKey>> {
+  const effective = await resolveRegionPolicies(env, {
+    countryCode: sub.countryCode ?? null,
+  });
+  requirePolicy(effective, "modules.disabled");
+  return effective.modulesDisabled;
 }
 
 /**
@@ -163,7 +190,7 @@ export function moduleGate(
       );
     }
 
-    const sub = await getSubscription(c, restaurantId);
+    const sub = await loadCachedSubscription(c.env, restaurantId);
 
     if (!sub) {
       // No subscription record means the restaurant hasn't been onboarded yet
@@ -184,6 +211,14 @@ export function moduleGate(
           ? "Trial period has ended. Please upgrade your plan."
           : "This feature is not included in your current plan.",
         isTrialExpired ? "TRIAL_EXPIRED" : "MODULE_NOT_ENABLED",
+      );
+    }
+
+    // 地區政策是上限：國家關掉的模組，方案與單店覆寫都開不起來。
+    if ((await regionDisabledModules(c.env, sub)).has(module)) {
+      throw forbidden(
+        "This feature is not available in your region.",
+        "MODULE_NOT_AVAILABLE_IN_REGION",
       );
     }
 
