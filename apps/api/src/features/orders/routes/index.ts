@@ -7,6 +7,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import {
   customerAuthMiddleware,
+  customerOrderAuthMiddleware,
   requireRole,
 } from "../../../shared/middleware";
 import {
@@ -15,6 +16,7 @@ import {
   validateParams,
 } from "../../../shared/middleware";
 import { OrdersService } from "../services/OrdersService";
+import { resolveCouponCustomerIdentity } from "../../guest-orders/services/guest-coupon-identity";
 import { assertShopOrderingEnabled } from "../services/shop-mode-gate";
 import { ConsoleLogger } from "../../../core/monitoring";
 import type { Env } from "../../../shared/types";
@@ -326,7 +328,7 @@ app.post(
  */
 app.post(
   "/",
-  customerAuthMiddleware,
+  customerOrderAuthMiddleware,
   moduleGate("online_ordering"),
   quotaGate("orders.created"),
   validateBody(orderSchemas.createOrder),
@@ -388,6 +390,10 @@ app.post(
         ? new Date(data.scheduledTime)
         : undefined,
       couponCode: data.couponCode,
+      couponGuestIdentity:
+        data.couponCode && customer?.id
+          ? await resolveCouponCustomerIdentity(customer.id)
+          : undefined,
       clientMutationId: data.clientMutationId,
     };
 

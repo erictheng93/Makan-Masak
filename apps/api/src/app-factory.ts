@@ -595,6 +595,9 @@ export function createApp(
         "/api/v1/partnerships/members/verify", // Public member verification application
         "/api/v1/partnerships/plans/validate", // Public plan validation for cashiers
         "/api/v1/guest-orders", // Guest ordering (no session, uses KV tokens)
+        // Member order creation is authorized by an explicit Bearer token; the
+        // customer app does not use ambient cookies for this request.
+        "/api/v1/orders$",
         // Customer self-service flows on features mounted before this
         // middleware used to bypass CSRF entirely; once the ordering was
         // fixed they started 403ing. None of them use a session cookie —

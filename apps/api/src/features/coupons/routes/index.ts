@@ -1,4 +1,7 @@
-import { resolveGuestCouponIdentity } from "../../guest-orders/services/guest-coupon-identity";
+import {
+  resolveCouponCustomerIdentity,
+  resolveGuestCouponIdentity,
+} from "../../guest-orders/services/guest-coupon-identity";
 /**
  * Coupons Feature Routes
  *
@@ -6,7 +9,11 @@ import { resolveGuestCouponIdentity } from "../../guest-orders/services/guest-co
  */
 
 import { Hono } from "hono";
-import { authMiddleware, requireRole } from "../../../middleware/auth";
+import {
+  authMiddleware,
+  optionalCanonicalCustomerAuthMiddleware,
+  requireRole,
+} from "../../../middleware/auth";
 import { moduleGate } from "../../../middleware/moduleGate";
 import {
   validateBody,
@@ -88,24 +95,33 @@ function toUpdateCouponData(
  * POST /api/v1/coupons/validate
  * 公開端點，用於前端驗證優惠券
  */
-routes.post("/validate", validateBody(validateCouponSchema), async (c) => {
-  const data = c.get("validatedBody") as ValidateCouponInput;
-  const couponsService = createCouponsService(c.env);
+routes.post(
+  "/validate",
+  optionalCanonicalCustomerAuthMiddleware,
+  validateBody(validateCouponSchema),
+  async (c) => {
+    const data = c.get("validatedBody") as ValidateCouponInput;
+    const customer = c.get("customer");
+    const couponsService = createCouponsService(c.env);
+    const guestIdentity = customer
+      ? await resolveCouponCustomerIdentity(customer.id)
+      : await resolveGuestCouponIdentity(c.req);
 
-  const result = await couponsService.validateCouponWithBusinessRules(
-    data.code,
-    data.restaurantId,
-    data.orderAmount,
-    data.userId,
-    data.menuItems,
-    data.userId ? undefined : await resolveGuestCouponIdentity(c.req),
-  );
+    const result = await couponsService.validateCouponWithBusinessRules(
+      data.code,
+      data.restaurantId,
+      data.orderAmount,
+      undefined,
+      data.menuItems,
+      guestIdentity,
+    );
 
-  return c.json({
-    success: true,
-    data: result,
-  });
-});
+    return c.json({
+      success: true,
+      data: result,
+    });
+  },
+);
 
 /**
  * 獲取可用優惠券列表 (供客戶使用)

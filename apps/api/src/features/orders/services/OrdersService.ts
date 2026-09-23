@@ -270,7 +270,9 @@ export class OrdersService implements IOrdersService {
         })),
         notes: data.notes,
         couponCode: data.couponCode,
-        couponUserId: userId,
+        // Canonical customers live outside the staff `users` table. Their
+        // coupon limit is keyed by the server-derived customer hash below.
+        couponUserId: data.customerId ? undefined : userId,
         couponGuestIdentity: data.couponGuestIdentity,
         clientMutationId: data.clientMutationId,
         orderSource: data.orderSource,

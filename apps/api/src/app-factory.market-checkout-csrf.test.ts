@@ -61,6 +61,7 @@ const customerWrites: Array<[string, string]> = [
   ["POST", `${root}/${CHECKOUT_ID}/pay`],
   ["POST", `${root}/${CHECKOUT_ID}/guest-token`],
   ["POST", "/api/v1/guest-orders"],
+  ["POST", "/api/v1/orders"],
   ["POST", "/api/v1/realtime/auth/guest-token"],
   ["POST", "/api/v1/waiting-list"],
   ["POST", `/api/v1/waiting-list/${CHECKOUT_ID}/confirm`],
@@ -102,6 +103,8 @@ describe("customer self-service CSRF boundaries", () => {
     // No bare-prefix exemption: future staff routes must remain protected.
     `${root}/future-staff-action`,
     `${root}/nested/${CHECKOUT_ID}/pay`,
+    // Only customer order creation is exempt; staff order mutations remain protected.
+    `/api/v1/orders/${CHECKOUT_ID}/status`,
     // The public cancellation exemption is DELETE-only. The staff POST route
     // must continue through CSRF protection.
     `/api/v1/reservations/${CHECKOUT_ID}/cancel`,

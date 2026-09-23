@@ -23,7 +23,6 @@ export const validateCouponSchema = z.lazy(() =>
     code: z.string().min(1).max(50),
     restaurantId: z.string().min(1),
     orderAmount: z.number().positive(),
-    userId: idString.optional(),
     menuItems: z
       .array(
         z.object({

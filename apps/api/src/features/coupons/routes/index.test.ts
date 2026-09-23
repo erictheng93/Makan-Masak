@@ -32,11 +32,16 @@ const mocks = vi.hoisted(() => ({
   getCouponDistributions: vi.fn(),
   getCouponUsageTrends: vi.fn(),
   formatCouponMoneyFields: vi.fn((coupon: unknown) => coupon),
+  customer: null as { id: string } | null,
 }));
 
 vi.mock("../../../middleware/auth", () => ({
   authMiddleware: async (c: Context, next: Next) => {
     c.set("user", mocks.currentUser);
+    await next();
+  },
+  optionalCanonicalCustomerAuthMiddleware: async (c: Context, next: Next) => {
+    if (mocks.customer) c.set("customer", mocks.customer as never);
     await next();
   },
   requireRole: () => async (_c: Context, next: Next) => {
@@ -152,6 +157,7 @@ beforeEach(() => {
   mocks.currentUser.id = "user-42";
   mocks.currentUser.role = 1;
   mocks.currentUser.restaurantId = "restaurant-1";
+  mocks.customer = null;
   mocks.formatCouponMoneyFields.mockImplementation((value) => value);
 });
 
@@ -335,7 +341,7 @@ describe("coupons routes", () => {
       "SAVE10",
       "restaurant-1",
       300,
-      "user-5",
+      undefined,
       [{ menuItemId: 1, quantity: 2 }],
       undefined,
     );
@@ -350,6 +356,34 @@ describe("coupons routes", () => {
     });
     expect(mocks.getAvailableCouponsForUser).toHaveBeenCalledWith(
       "restaurant-1",
+    );
+  });
+
+  it("uses the authenticated member identity and ignores body user ids", async () => {
+    mocks.customer = { id: "customer-42" };
+    mocks.validateCouponWithBusinessRules.mockResolvedValue({
+      valid: true,
+      discountAmount: 30,
+    });
+
+    const response = await app.fetch(
+      jsonRequest("https://test/validate", "POST", {
+        code: "SAVE10",
+        restaurantId: "restaurant-1",
+        orderAmount: 300,
+        userId: "somebody-else",
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.validateCouponWithBusinessRules).toHaveBeenCalledWith(
+      "SAVE10",
+      "restaurant-1",
+      300,
+      undefined,
+      undefined,
+      expect.stringMatching(/^[a-f0-9]{64}$/),
     );
   });
 

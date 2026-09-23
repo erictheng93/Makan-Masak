@@ -9,6 +9,7 @@ import {
   authMiddleware,
   canonicalCustomerAuthMiddleware,
   customerAuthMiddleware,
+  customerOrderAuthMiddleware,
   optionalAuth,
   optionalCanonicalCustomerAuthMiddleware,
   requireRole,
@@ -599,6 +600,68 @@ describe("canonicalCustomerAuthMiddleware", () => {
       error: { code: "TOKEN_INVALID" },
     });
     expect(response.status).toBe(401);
+  });
+});
+
+describe("customerOrderAuthMiddleware", () => {
+  it("accepts canonical customer sessions on the member order path", async () => {
+    const db = createCustomerDb({
+      id: "customer-1",
+      display_name: "Ada",
+      primary_phone: "0912345678",
+      primary_email: null,
+      status: "active",
+    });
+    const app = new Hono();
+    app.onError(apiErrorHandler);
+    app.use("/orders", customerOrderAuthMiddleware);
+    app.post("/orders", (c) =>
+      c.json({ user: c.get("user"), customer: c.get("customer") }),
+    );
+
+    const response = await app.fetch(
+      new Request("https://api.test/orders", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${await customerToken()}` },
+      }),
+      { JWT_SECRET, DB: db } as never,
+    );
+
+    await expect(response.json()).resolves.toMatchObject({
+      user: { id: "customer-1", role: 5 },
+      customer: { id: "customer-1", displayName: "Ada" },
+    });
+    expect(response.status).toBe(200);
+  });
+
+  it("continues accepting legacy role-5 sessions on the member order path", async () => {
+    const app = new Hono();
+    app.onError(apiErrorHandler);
+    app.use("/orders", customerOrderAuthMiddleware);
+    app.post("/orders", (c) => c.json({ user: c.get("user") }));
+
+    const response = await app.fetch(
+      new Request("https://api.test/orders", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${await staffToken(5)}` },
+      }),
+      {
+        JWT_SECRET,
+        DB: createStaffDb({
+          id: staffUserId,
+          username: "role-5",
+          role: 5,
+          restaurant_id: null,
+          is_active: 1,
+          token_version: 1,
+        }),
+      } as never,
+    );
+
+    await expect(response.json()).resolves.toMatchObject({
+      user: { id: staffUserId, role: 5 },
+    });
+    expect(response.status).toBe(200);
   });
 });
 

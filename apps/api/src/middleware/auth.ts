@@ -432,6 +432,44 @@ export const canonicalCustomerAuthMiddleware = async (
   }
 };
 
+/**
+ * Order creation serves both legacy role-5 accounts and canonical customers.
+ * Keep other order management routes on their existing staff/user auth; only
+ * the customer order-creation endpoint needs this dual credential boundary.
+ */
+export const customerOrderAuthMiddleware = async (
+  c: Context<{ Bindings: Env }>,
+  next: Next,
+) => {
+  const authHeader = c.req.header("Authorization");
+  let decoded: unknown;
+  try {
+    if (authHeader?.startsWith("Bearer ")) {
+      decoded = verifyJwtToken(
+        authHeader.slice(7),
+        c.env.JWT_SECRET,
+        DEFER_TIME_CLAIM_VALIDATION,
+      );
+    }
+  } catch {
+    // The legacy middleware below maps its own invalid token errors.
+  }
+
+  if (isCustomerAuthTokenPayload(decoded)) {
+    await canonicalCustomerAuthMiddleware(c, async () => undefined);
+    const customer = c.get("customer");
+    c.set("user", {
+      id: customer.id,
+      username: customer.primaryPhone || customer.primaryEmail || customer.id,
+      role: 5,
+    });
+    await next();
+    return;
+  }
+
+  await customerAuthMiddleware(c, next);
+};
+
 export const optionalCanonicalCustomerAuthMiddleware = async (
   c: Context<{ Bindings: Env }>,
   next: Next,

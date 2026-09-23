@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import routes from "./index";
 import { ApiError } from "../../../shared/utils/api-error";
+import { resolveCouponCustomerIdentity } from "../../guest-orders/services/guest-coupon-identity";
 
 const serviceMocks = vi.hoisted(() => ({
   createOrder: vi.fn(),
@@ -58,6 +59,11 @@ vi.mock("../../../shared/middleware", async (importOriginal) => {
   return {
     ...actual,
     customerAuthMiddleware: vi.fn(async (c, next) => {
+      c.set("user", authState.user);
+      c.set("customer", authState.customer);
+      await next();
+    }),
+    customerOrderAuthMiddleware: vi.fn(async (c, next) => {
       c.set("user", authState.user);
       c.set("customer", authState.customer);
       await next();
@@ -302,6 +308,7 @@ describe("orders routes", () => {
         ],
         orderType: "table",
         tableId: 3,
+        couponCode: "SAVE10",
       }),
       env as never,
     );
@@ -320,6 +327,7 @@ describe("orders routes", () => {
         restaurantId: "restaurant-1",
         tableId: 3,
         customerId: "customer-42",
+        couponGuestIdentity: await resolveCouponCustomerIdentity("customer-42"),
         customerInfo: expect.objectContaining({
           name: "Dana",
           phone: "0912345678",
