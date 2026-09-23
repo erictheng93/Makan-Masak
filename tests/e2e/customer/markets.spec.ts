@@ -27,6 +27,7 @@ import {
   ensureMarketStall,
   getAdmin,
   getOwner,
+  LIVE_TIMEOUT,
   NAV_TIMEOUT,
   newDinerContext,
   requireStack,
@@ -211,6 +212,31 @@ async function addFromStall(
 }
 
 test.describe("夜市市集 (real API)", () => {
+  test("探索: a shop with no business hours reads 未提供營業時間, not 休息中, and 營業中 does not hide it (#386)", async () => {
+    const { page } = diner;
+    await page.goto("/discover");
+
+    // The stall is provisioned without business hours, like every shop
+    // onboarding creates. 09-15 C7: those read 休息中 forever and vanished
+    // under the 營業中 filter while taking orders.
+    const card = page
+      .locator("article")
+      .filter({ has: page.getByRole("heading", { name: stall.name }) });
+    await expect(card).toBeVisible({ timeout: NAV_TIMEOUT });
+    await expect(card.getByTestId("restaurant-hours-unavailable")).toHaveText(
+      "未提供營業時間",
+    );
+    await expect(card).not.toContainText("休息中");
+    await expect(card).not.toContainText("onboarding");
+
+    await page.getByTestId("discovery-filter-toggle").click();
+    const openNow = page.getByRole("button", { name: "營業中", exact: true });
+    await openNow.click();
+    await expect(openNow).toHaveAttribute("aria-pressed", "true");
+    await expect(card).toBeVisible({ timeout: LIVE_TIMEOUT });
+    await assertNoOverlayError(page);
+  });
+
   test("探索市集: the directory lists the market and its page shows both stalls", async () => {
     const { page } = diner;
     await page.goto("/markets");

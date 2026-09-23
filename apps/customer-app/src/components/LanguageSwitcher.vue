@@ -4,6 +4,9 @@
       <button
         class="flex min-h-11 items-center gap-2 rounded-full bg-ios-card px-3 py-2 text-sm text-ios-text shadow-card-sm transition-colors hover:bg-ios-bg focus:outline-none focus:ring-2 focus:ring-ios-blue focus:ring-offset-2"
         :class="{ 'h-11 w-11 justify-center px-0': compact }"
+        :aria-label="`${t('profile.language')}: ${currentLanguageInfo?.name ?? ''}`"
+        :aria-expanded="isOpen"
+        aria-haspopup="true"
         @click="toggleDropdown"
       >
         <span class="text-lg">{{ currentLanguageInfo?.flag }}</span>
@@ -78,6 +81,7 @@ withDefaults(
 );
 
 const {
+  t,
   currentLanguage,
   currentLanguageInfo,
   supportedLanguages,

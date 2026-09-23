@@ -35,6 +35,7 @@
               ? 'bg-ios-green/15 text-ios-green font-semibold'
               : 'bg-ios-bg text-ios-secondary hover:bg-ios-separator'
           "
+          :aria-pressed="filters.openNow"
           @click="toggle('openNow')"
         >
           {{ t("discovery.openNow") }}
@@ -46,6 +47,7 @@
               ? 'bg-ios-blue/15 text-ios-blue font-semibold'
               : 'bg-ios-bg text-ios-secondary hover:bg-ios-separator'
           "
+          :aria-pressed="filters.takeaway"
           @click="toggle('takeaway')"
         >
           {{ t("discovery.takeaway") }}
@@ -57,6 +59,7 @@
               ? 'bg-ios-orange/15 text-ios-orange font-semibold'
               : 'bg-ios-bg text-ios-secondary hover:bg-ios-separator'
           "
+          :aria-pressed="filters.delivery"
           @click="toggle('delivery')"
         >
           {{ t("discovery.delivery") }}

@@ -82,6 +82,45 @@ test.describe("點餐主流程 (real API)", () => {
     }
   });
 
+  test("語言切換 on the scanned menu: a QR diner can change language, and it sticks (#387)", async ({
+    browser,
+  }) => {
+    const tableCleanup = new Cleanup();
+    const { context, page } = await newDinerContext(browser);
+    try {
+      const table = await createTable(tableCleanup);
+      await page.goto(qrPath(table.qrCode));
+      await expectMenuLoaded(page, menu.customItem.id);
+      await expect(page.getByText(`桌號 ${table.number}`)).toBeVisible();
+
+      // 09-15 C8: the switcher lived only on HomeView, which a QR diner never
+      // reaches. It is found here by its accessible name, as a screen reader
+      // would find it.
+      const switcher = page.getByRole("button", { name: /^語言/ });
+      await switcher.click();
+      await expect(switcher).toHaveAttribute("aria-expanded", "true");
+      await page.getByRole("button", { name: /English/ }).click();
+
+      await expect(
+        page.getByText(`Table Number ${table.number}`),
+      ).toBeVisible();
+      await expect(page.getByText(`桌號 ${table.number}`)).toHaveCount(0);
+
+      await page.reload();
+      await expectMenuLoaded(page, menu.customItem.id);
+      await expect(
+        page.getByText(`Table Number ${table.number}`),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: /^Language/ }),
+      ).toBeVisible();
+      await assertNoOverlayError(page);
+    } finally {
+      await context.close();
+      await tableCleanup.run();
+    }
+  });
+
   test("掃描 QR: a seat QR on a seat-mode table opens the menu for that seat", async ({
     browser,
   }) => {
