@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SUPPORTED_COUNTRIES } from "@makanmasak/shared-types";
 import { marketOpeningHoursSchema } from "./opening-hours";
 
 const decodeHtmlEntities = (value: string): string =>
@@ -146,6 +147,7 @@ export const createMarketSchema = z.object({
   ]),
   description: z.string().max(5000).nullable().optional(),
   city: z.string().min(1).max(80),
+  countryCode: z.enum(SUPPORTED_COUNTRIES).optional(),
   district: z.string().min(1).max(80),
   address: z.string().min(1).max(255),
   latitude: z.number().min(-90).max(90),

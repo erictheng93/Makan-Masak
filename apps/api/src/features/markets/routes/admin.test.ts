@@ -23,11 +23,13 @@ const marketsFns = vi.hoisted(() => ({
   approveJoinRequest: vi.fn(),
   rejectJoinRequest: vi.fn(),
   createMarket: vi.fn(),
+  createMarketsBulk: vi.fn(),
   updateMarket: vi.fn(),
   softDeleteMarket: vi.fn(),
   getActiveVendorMembership: vi.fn(),
   addVendor: vi.fn(),
   getMarketById: vi.fn(),
+  listMarketsBySlugs: vi.fn(),
   listRestaurantMemberships: vi.fn(),
   getPublicReadiness: vi.fn(),
   getCatalogReadiness: vi.fn(),
@@ -43,16 +45,22 @@ vi.mock("../services/MarketsService", () => ({
     approveJoinRequest = marketsFns.approveJoinRequest;
     rejectJoinRequest = marketsFns.rejectJoinRequest;
     createMarket = marketsFns.createMarket;
+    createMarketsBulk = marketsFns.createMarketsBulk;
     updateMarket = marketsFns.updateMarket;
     softDeleteMarket = marketsFns.softDeleteMarket;
     getActiveVendorMembership = marketsFns.getActiveVendorMembership;
     addVendor = marketsFns.addVendor;
     getMarketById = marketsFns.getMarketById;
+    listMarketsBySlugs = marketsFns.listMarketsBySlugs;
     listRestaurantMemberships = marketsFns.listRestaurantMemberships;
     getPublicReadiness = marketsFns.getPublicReadiness;
     getCatalogReadiness = marketsFns.getCatalogReadiness;
     removeVendor = marketsFns.removeVendor;
   },
+}));
+
+vi.mock("../../../shared/policy/regionPolicyGuards", () => ({
+  assertMarketFeeWithinRegionCap: vi.fn(async () => {}),
 }));
 
 const restaurantFns = vi.hoisted(() => ({
@@ -70,6 +78,7 @@ vi.mock("../../restaurants/services/RestaurantsService", () => ({
 import routes from "./admin";
 import { isOpenNow } from "../../discovery/utils/isOpenNow";
 import { ApiError } from "../../../shared/utils/api-error";
+import { assertMarketFeeWithinRegionCap } from "../../../shared/policy/regionPolicyGuards";
 
 routes.onError((err, c) => {
   if (err instanceof ApiError) {
@@ -98,7 +107,7 @@ const marketBody = {
   slug: "central-market",
   name: "Central Market",
   type: "night_market",
-  city: "Taipei",
+  city: "台中市",
   district: "Datong",
   address: "Main Street",
   latitude: 25.05,
@@ -121,6 +130,7 @@ beforeEach(() => {
     request: { id: 10 },
   });
   marketsFns.createMarket.mockResolvedValue({ id: "market-1" });
+  marketsFns.createMarketsBulk.mockResolvedValue([]);
   marketsFns.updateMarket.mockResolvedValue({
     id: "market-1",
     name: "Updated",
@@ -135,9 +145,11 @@ beforeEach(() => {
   marketsFns.getMarketById.mockResolvedValue({
     id: "market-1",
     city: "Taipei",
+    countryCode: "TW",
     openingHours: { friday: { open: "17:00", close: "23:00" } },
     deletedAt: null,
   });
+  marketsFns.listMarketsBySlugs.mockResolvedValue([]);
   marketsFns.listRestaurantMemberships.mockResolvedValue({ memberships: [] });
   marketsFns.getPublicReadiness.mockResolvedValue({ ready: true, score: 90 });
   marketsFns.getCatalogReadiness.mockResolvedValue({
@@ -210,9 +222,23 @@ describe("markets admin routes", () => {
   });
 
   it("creates, updates, and deletes markets and syncs changed markets", async () => {
-    let res = await request("/", "POST", marketBody);
+    let res = await request("/", "POST", {
+      ...marketBody,
+      platformFeeRateBps: 500,
+    });
     expect(res.status).toBe(201);
-    expect(marketsFns.createMarket).toHaveBeenCalledWith(marketBody);
+    expect(assertMarketFeeWithinRegionCap).toHaveBeenCalledWith(
+      expect.anything(),
+      {
+        countryCode: "TW",
+        platformFeeRateBps: 500,
+      },
+    );
+    expect(marketsFns.createMarket).toHaveBeenCalledWith({
+      ...marketBody,
+      platformFeeRateBps: 500,
+      countryCode: "TW",
+    });
 
     res = await request("/market-1", "PUT", { name: "Updated" });
     expect(res.status).toBe(200);
@@ -229,6 +255,130 @@ describe("markets admin routes", () => {
     expect(res.status).toBe(200);
     expect(marketsFns.softDeleteMarket).toHaveBeenCalledWith("market-1");
     expect(syncFns.onMarketChanged).toHaveBeenCalledWith("market-1");
+  });
+
+  it("does not create a market the country guard refuses", async () => {
+    vi.mocked(assertMarketFeeWithinRegionCap).mockRejectedValueOnce(
+      new ApiError("MARKET_COUNTRY_REQUIRED", "country", 400),
+    );
+
+    const res = await request("/", "POST", {
+      ...marketBody,
+      city: "Taichung",
+      platformFeeRateBps: 500,
+    });
+
+    expect(res.status).toBe(400);
+    expect(assertMarketFeeWithinRegionCap).toHaveBeenCalledWith(
+      expect.anything(),
+      { countryCode: null, platformFeeRateBps: 500 },
+    );
+    expect(marketsFns.createMarket).not.toHaveBeenCalled();
+  });
+
+  it("rejects a country that contradicts the city", async () => {
+    const res = await request("/", "POST", {
+      ...marketBody,
+      city: "台中市",
+      countryCode: "MY",
+    });
+
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toMatchObject({
+      error: { code: "MARKET_COUNTRY_CITY_MISMATCH" },
+    });
+    expect(marketsFns.createMarket).not.toHaveBeenCalled();
+  });
+
+  it("re-derives the country when the city changes", async () => {
+    marketsFns.getMarketById.mockResolvedValueOnce({
+      id: "market-1",
+      city: "台中市",
+      countryCode: "TW",
+      platformFeeRateBps: 300,
+    });
+
+    const res = await request("/market-1", "PUT", { city: "Penang" });
+
+    expect(res.status).toBe(200);
+    expect(assertMarketFeeWithinRegionCap).toHaveBeenCalledWith(
+      expect.anything(),
+      {
+        countryCode: "MY",
+        platformFeeRateBps: 300,
+      },
+    );
+    expect(marketsFns.updateMarket).toHaveBeenCalledWith(
+      "market-1",
+      expect.objectContaining({ city: "Penang", countryCode: "MY" }),
+    );
+  });
+
+  it("keeps an explicit country when only the fee changes", async () => {
+    marketsFns.getMarketById.mockResolvedValueOnce({
+      id: "market-1",
+      city: "Taichung",
+      countryCode: "TW",
+      platformFeeRateBps: 300,
+    });
+
+    const res = await request("/market-1", "PUT", {
+      platformFeeRateBps: 900,
+    });
+
+    expect(res.status).toBe(200);
+    expect(assertMarketFeeWithinRegionCap).toHaveBeenCalledWith(
+      expect.anything(),
+      {
+        countryCode: "TW",
+        platformFeeRateBps: 900,
+      },
+    );
+    expect(marketsFns.updateMarket).toHaveBeenCalledWith(
+      "market-1",
+      expect.objectContaining({ platformFeeRateBps: 900, countryCode: "TW" }),
+    );
+  });
+
+  it("checks every bulk row before creating any market", async () => {
+    vi.mocked(assertMarketFeeWithinRegionCap)
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(
+        new ApiError("PLATFORM_FEE_ABOVE_REGION_CAP", "cap", 400),
+      );
+
+    const res = await request("/bulk", "POST", {
+      markets: [
+        { ...marketBody, slug: "first-market", platformFeeRateBps: 300 },
+        { ...marketBody, slug: "second-market", platformFeeRateBps: 900 },
+      ],
+    });
+
+    expect(res.status).toBe(400);
+    expect(assertMarketFeeWithinRegionCap).toHaveBeenCalledTimes(2);
+    expect(marketsFns.createMarketsBulk).not.toHaveBeenCalled();
+  });
+
+  it("passes derived countries into bulk market creation", async () => {
+    marketsFns.createMarketsBulk.mockResolvedValueOnce([
+      { id: "market-1", slug: marketBody.slug, countryCode: "TW" },
+    ]);
+
+    const res = await request("/bulk", "POST", {
+      markets: [{ ...marketBody, platformFeeRateBps: 300 }],
+    });
+
+    expect(res.status).toBe(201);
+    expect(assertMarketFeeWithinRegionCap).toHaveBeenCalledWith(
+      expect.anything(),
+      {
+        countryCode: "TW",
+        platformFeeRateBps: 300,
+      },
+    );
+    expect(marketsFns.createMarketsBulk).toHaveBeenCalledWith([
+      expect.objectContaining({ city: "台中市", countryCode: "TW" }),
+    ]);
   });
 
   it("adds vendors only when not already attached and syncs membership changes", async () => {

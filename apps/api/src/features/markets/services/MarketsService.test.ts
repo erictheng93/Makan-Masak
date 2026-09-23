@@ -169,6 +169,7 @@ function buildMarketRow(
   } = buildQueriedMarket();
   return {
     ...columns,
+    countryCode: null,
     platformFeeRateBps: 0,
     isActive: true,
     createdAt: new Date(0),
@@ -1232,6 +1233,42 @@ describe("MarketsService", () => {
     ]);
     expect(values.get("markets:version")).toBe("15");
     vi.useRealTimers();
+  });
+
+  it("persists the country code in bulk market SQL", async () => {
+    const { service } = createService("5");
+    const statements: Array<{ sql: string; values: unknown[] }> = [];
+    const d1 = {
+      prepare: (sql: string) => ({
+        bind: (...values: unknown[]) => ({ sql, values }),
+      }),
+      batch: vi.fn(
+        async (batchStatements: Array<{ sql: string; values: unknown[] }>) => {
+          statements.push(...batchStatements);
+          return [];
+        },
+      ),
+    };
+    service["d1"] = d1 as unknown as D1Database;
+
+    await service.createMarketsBulk([
+      {
+        slug: "penang-market",
+        name: "Penang Market",
+        type: "night_market",
+        city: "Penang",
+        countryCode: "MY",
+        district: "Central",
+        address: "Main Road",
+        latitude: 5.4,
+        longitude: 100.3,
+      },
+    ]);
+
+    expect(d1.batch).toHaveBeenCalledOnce();
+    expect(statements).toHaveLength(1);
+    expect(statements[0]!.sql).toContain("country_code");
+    expect(statements[0]!.values).toContain("MY");
   });
 
   it("refuses mismatched vendor currencies before changing memberships", async () => {
