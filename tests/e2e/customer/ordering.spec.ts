@@ -17,6 +17,8 @@ import {
   cancelOnCleanup,
   createMenuFixture,
   createTable,
+  getAdmin,
+  ensureE2EShop,
   e2eName,
   getOwner,
   NAV_TIMEOUT,
@@ -280,6 +282,198 @@ test.describe("點餐主流程 (real API)", () => {
           deliveryInfo: expect.objectContaining({ type: "dine_in" }),
         }),
       );
+    } finally {
+      await context.close();
+      await localCleanup.run();
+    }
+  });
+
+  test("掃描店家公開碼 → 外送: a takeaway-and-delivery shop offers exactly those, and a delivery order keeps its address", async ({
+    browser,
+  }) => {
+    const localCleanup = new Cleanup();
+    let orderId: string | undefined;
+    cancelOnCleanup(localCleanup, () => orderId);
+    const { context, page } = await newDinerContext(browser);
+    try {
+      const owner = await getOwner();
+      const rid = owner.restaurantId;
+      const before = await apiData<{
+        settings?: Record<string, unknown>;
+        shopQrCode?: string | null;
+      }>("read restaurant", `/api/v1/restaurants/${rid}`);
+      localCleanup.add("restore fulfilment settings", () =>
+        apiRequest(`/api/v1/restaurants/${rid}`, {
+          token: owner.token,
+          method: "PUT",
+          body: {
+            settings: {
+              enableDineIn: before.settings?.enableDineIn === true,
+              enableTakeaway: before.settings?.enableTakeaway === true,
+              enableDelivery: before.settings?.enableDelivery === true,
+            },
+          },
+        }),
+      );
+      // The mirror of the dine-in case: R1 (09-18) was the one fulfilment
+      // the earlier walk never submitted, so this one submits too.
+      await apiData(
+        "takeaway and delivery only",
+        `/api/v1/restaurants/${rid}`,
+        {
+          token: owner.token,
+          method: "PUT",
+          body: {
+            settings: {
+              enableDineIn: false,
+              enableTakeaway: true,
+              enableDelivery: true,
+            },
+          },
+        },
+      );
+      let shopQrCode = before.shopQrCode ?? undefined;
+      if (!shopQrCode) {
+        shopQrCode = (
+          await apiData<{ qrCode: string }>(
+            "generate shop QR",
+            `/api/v1/restaurants/${rid}/qr/shop/generate`,
+            { token: owner.token, method: "POST" },
+          )
+        ).qrCode;
+      }
+
+      await page.goto(
+        `/restaurant/${rid}/shop/order-type?qr=${encodeURIComponent(shopQrCode)}`,
+      );
+      const delivery = page.getByRole("button", { name: /外送 Delivery/ });
+      await expect(delivery).toBeVisible({ timeout: NAV_TIMEOUT });
+      await expect(
+        page.getByRole("button", { name: /外帶 Takeaway/ }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: /內用 Dine-in/ }),
+      ).toHaveCount(0);
+
+      await delivery.click();
+      await page.getByTestId("continue-btn").click();
+      await expect(page).toHaveURL(/\/shop\/menu\?.*fulfillmentType=delivery/);
+
+      await page.getByTestId(`menu-item-add-${menu.plainItem.id}`).click();
+      await page.getByTestId("cart-btn").click();
+      const cart = page.getByTestId("shop-cart-modal");
+      await expect(cart.getByRole("button", { name: "🛵 外送" })).toBeVisible();
+      await expect(cart.getByRole("button", { name: "🛍️ 外帶" })).toBeVisible();
+      await expect(
+        cart.getByRole("button", { name: "內用 Dine-in" }),
+      ).toHaveCount(0);
+
+      const address = `E2E 路 ${suffix()} 號`;
+      await cart.getByLabel("外送地址").fill(address);
+      await cart.getByLabel("聯絡電話").fill("0912345678");
+
+      const submitted = page.waitForResponse(
+        (response) =>
+          response.url().endsWith("/api/v1/guest-orders") &&
+          response.request().method() === "POST",
+      );
+      await cart.getByTestId("submit-order-btn").click();
+      const response = await submitted;
+      const body = (await response.json()) as {
+        data?: { order?: { id: string } };
+        error?: unknown;
+      };
+      orderId = body.data?.order?.id;
+      expect(
+        { status: response.status(), error: body.error },
+        "a delivery shop order should be accepted",
+      ).toEqual({ status: 201, error: undefined });
+
+      const order = await readOrder(orderId!);
+      expect(order).toEqual(
+        expect.objectContaining({
+          orderType: "shop",
+          deliveryInfo: expect.objectContaining({
+            type: "delivery",
+            address,
+          }),
+        }),
+      );
+    } finally {
+      await context.close();
+      await localCleanup.run();
+    }
+  });
+
+  test("非台幣店家: a MYR shop prices the menu, the cart and the order in RM with sen", async ({
+    browser,
+  }) => {
+    const localCleanup = new Cleanup();
+    let orderId: string | undefined;
+    cancelOnCleanup(localCleanup, () => orderId);
+    const { context, page } = await newDinerContext(browser);
+    try {
+      // Production has only TWD shops, so no non-TWD page has ever been
+      // walked. A shop's currency is fixed once it has orders, so this one is
+      // created MYR. RM 12.50 exercises the sen a TWD price never has.
+      const shop = await ensureE2EShop({
+        type: "e2e_myr_shop",
+        name: "E2E 馬幣小吃",
+        dish: { name: "E2E Nasi Lemak", price: 12.5 },
+        currency: "MYR",
+      });
+      const admin = await getAdmin();
+      const shopQr = await apiData<{ qrCode: string }>(
+        "generate MYR shop QR",
+        `/api/v1/restaurants/${shop.restaurantId}/qr/shop/generate`,
+        { token: admin.token, method: "POST" },
+      );
+
+      await page.goto(
+        `/restaurant/${shop.restaurantId}/shop/order-type?qr=${encodeURIComponent(shopQr.qrCode)}`,
+      );
+      await page
+        .getByRole("button", { name: /外帶 Takeaway/ })
+        .click({ timeout: NAV_TIMEOUT });
+      await page.getByTestId("continue-btn").click();
+
+      const card = page.getByTestId(`menu-item-card-${shop.dish.id}`);
+      await expect(card).toContainText("RM 12.50", { timeout: NAV_TIMEOUT });
+      await page.getByTestId(`menu-item-add-${shop.dish.id}`).click();
+      await page.getByTestId(`menu-item-add-${shop.dish.id}`).click();
+      await page.getByTestId("cart-btn").click();
+      const cart = page.getByTestId("shop-cart-modal");
+      await expect(cart).toContainText("RM 25.00");
+      await expect(cart).not.toContainText("NT$");
+
+      const created = page.waitForResponse(
+        (response) =>
+          response.url().endsWith("/api/v1/guest-orders") &&
+          response.request().method() === "POST",
+      );
+      await cart.getByTestId("submit-order-btn").click();
+      const response = await created;
+      const body = (await response.json()) as {
+        data?: { order?: { id: string } };
+        error?: unknown;
+      };
+      expect(
+        { status: response.status(), error: body.error },
+        "a MYR shop order should be accepted",
+      ).toEqual({ status: 201, error: undefined });
+      orderId = body.data!.order!.id;
+
+      const order = await apiData<{ totalAmount: number }>(
+        "read MYR order",
+        `/api/v1/orders/${orderId}`,
+        { token: admin.token },
+      );
+      expect(order.totalAmount).toBe(25);
+      await expect(page.locator("body")).toContainText("RM 25.00", {
+        timeout: NAV_TIMEOUT,
+      });
+      await expect(page.locator("body")).not.toContainText("NT$");
+      await assertNoOverlayError(page);
     } finally {
       await context.close();
       await localCleanup.run();

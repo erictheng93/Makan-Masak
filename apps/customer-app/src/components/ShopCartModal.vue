@@ -128,10 +128,13 @@
                   class="mb-4 space-y-3"
                 >
                   <div>
-                    <label class="block text-xs text-ios-secondary mb-1">{{
-                      t("shopCart.deliveryAddress")
-                    }}</label>
+                    <label
+                      for="shop-delivery-address"
+                      class="block text-xs text-ios-secondary mb-1"
+                      >{{ t("shopCart.deliveryAddress") }}</label
+                    >
                     <input
+                      id="shop-delivery-address"
                       v-model="deliveryAddress"
                       type="text"
                       :placeholder="t('shopCart.deliveryAddressPlaceholder')"
@@ -139,10 +142,13 @@
                     />
                   </div>
                   <div>
-                    <label class="block text-xs text-ios-secondary mb-1">{{
-                      t("shopCart.contactPhone")
-                    }}</label>
+                    <label
+                      for="shop-delivery-phone"
+                      class="block text-xs text-ios-secondary mb-1"
+                      >{{ t("shopCart.contactPhone") }}</label
+                    >
                     <input
+                      id="shop-delivery-phone"
                       v-model="deliveryPhone"
                       type="tel"
                       :placeholder="t('shopCart.contactPhonePlaceholder')"
@@ -150,10 +156,13 @@
                     />
                   </div>
                   <div>
-                    <label class="block text-xs text-ios-secondary mb-1">{{
-                      t("shopCart.deliveryNotes")
-                    }}</label>
+                    <label
+                      for="shop-delivery-notes"
+                      class="block text-xs text-ios-secondary mb-1"
+                      >{{ t("shopCart.deliveryNotes") }}</label
+                    >
                     <input
+                      id="shop-delivery-notes"
                       v-model="deliveryInstructions"
                       type="text"
                       :placeholder="t('shopCart.deliveryNotesPlaceholder')"

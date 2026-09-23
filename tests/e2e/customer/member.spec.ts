@@ -33,6 +33,24 @@ test.describe.configure({ mode: "serial" });
 
 const cleanup = new Cleanup();
 let menu: MenuFixture;
+/**
+ * The member the first test signs in, reused by the rest: OTP requests are
+ * limited to 10 per IP, and a member who signed in earlier and then scans a
+ * QR is the realistic case anyway.
+ */
+let memberState:
+  | Awaited<
+      ReturnType<import("@playwright/test").BrowserContext["storageState"]>
+    >
+  | undefined;
+
+async function memberContext(browser: import("@playwright/test").Browser) {
+  expect(
+    memberState,
+    "the OTP login test signs the member in first",
+  ).toBeTruthy();
+  return newDinerContext(browser, { storageState: memberState });
+}
 
 test.beforeAll(async () => {
   await requireStack();
@@ -100,6 +118,7 @@ test.describe("會員入口 (real API)", () => {
       await expect(page).toHaveURL(/\/orders$/, { timeout: NAV_TIMEOUT });
       await expect(page).not.toHaveURL(/\/login/);
       await assertNoOverlayError(page);
+      memberState = await context.storageState();
     } finally {
       await context.close();
     }
@@ -109,15 +128,13 @@ test.describe("會員入口 (real API)", () => {
   // drops the in-memory member token, so the cart orders as a guest; with
   // that restored, POST /api/v1/orders is refused by CSRF.
   test.fail(
-    "a member logs in by OTP, scans a table QR, orders as a member, and finds the order in 訂單歷史 (#422)",
+    "a signed-in member scans a table QR, orders as a member, and finds the order in 訂單歷史 (#422)",
     async ({ browser }) => {
       const localCleanup = new Cleanup();
       let orderId: string | undefined;
       cancelOnCleanup(localCleanup, () => orderId);
-      const { context, page } = await newDinerContext(browser);
+      const { context, page } = await memberContext(browser);
       try {
-        await loginWithOtp(page, freshMobile());
-
         // Scanning is a full page load, and the member's access token lives in
         // memory only; the cart must still know this diner is a member.
         const table = await createTable(localCleanup);
@@ -176,7 +193,7 @@ test.describe("會員入口 (real API)", () => {
       const localCleanup = new Cleanup();
       let orderId: string | undefined;
       cancelOnCleanup(localCleanup, () => orderId);
-      const { context, page } = await newDinerContext(browser);
+      const { context, page } = await memberContext(browser);
       try {
         const owner = await getOwner();
         const code = `E2EMEMBER${suffix().toUpperCase()}`;
@@ -206,33 +223,37 @@ test.describe("會員入口 (real API)", () => {
           }),
         );
 
-        await loginWithOtp(page, freshMobile());
         const table = await createTable(localCleanup);
         await page.goto(qrPath(table.qrCode));
         await addTwoPlainDishes(page);
 
+        const validations: string[] = [];
+        page.on("response", (response) => {
+          if (response.url().endsWith("/api/v1/coupons/validate")) {
+            void response.text().then((text) => validations.push(text));
+          }
+        });
         await page.getByTestId("coupon-code").fill(code);
-        const validated = page.waitForResponse(
-          (response) =>
-            response.url().endsWith("/api/v1/coupons/validate") &&
-            response.request().method() === "POST",
-        );
         await page.getByTestId("coupon-apply").click();
-        const validationBody = await (await validated).text();
         const discounted = menu.plainItem.price * 2 - 20;
         await expect(
           page.getByTestId("submit-order-btn"),
-          `the cart applies the coupon: ${validationBody}`,
+          `the cart applies the coupon: ${validations.join(" | ")}`,
         ).toHaveText(`送出訂單 · NT$${discounted}`);
 
         const created = page.waitForResponse(
           (response) =>
-            new URL(response.url()).pathname === "/api/v1/orders" &&
-            response.request().method() === "POST",
+            /\/api\/v1\/(guest-)?orders$/.test(
+              new URL(response.url()).pathname,
+            ) && response.request().method() === "POST",
         );
         await page.getByTestId("submit-order-btn").click();
         await page.getByTestId("confirmation-confirm").click();
         const response = await created;
+        expect(
+          new URL(response.url()).pathname,
+          "a signed-in member orders through the member path",
+        ).toBe("/api/v1/orders");
         expect(response.status(), await response.text()).toBe(201);
         orderId = (
           (await response.json()) as { data: { order?: { id: string } } }
