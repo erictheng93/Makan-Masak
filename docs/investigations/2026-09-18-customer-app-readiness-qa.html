@@ -7,7 +7,7 @@
 <style>
 :root{
   --ground:#F2F2F7; --surface:#FFFFFF; --surface-2:#F8F8FB;
-  --ink:#1C1C1E; --ink-2:#55555C; --ink-3:#8A8A92;
+  --ink:#1C1C1E; --ink-2:#55555C; --ink-3:#6C6C74;
   --hair:rgba(28,28,30,.10); --hair-2:rgba(28,28,30,.06);
   --shadow:0 1px 1.5px rgba(24,24,45,.05), 0 5px 16px rgba(24,24,45,.05);
   --shadow-sm:0 1px 1px rgba(24,24,45,.05), 0 3px 10px rgba(24,24,45,.05);
@@ -21,7 +21,7 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --ground:#0F0F13; --surface:#1B1B21; --surface-2:#212128;
-    --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#7E7E8A;
+    --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#9A9AA6;
     --hair:rgba(255,255,255,.14); --hair-2:rgba(255,255,255,.07);
     --shadow:0 1px 1.5px rgba(0,0,0,.4), 0 5px 16px rgba(0,0,0,.35);
     --shadow-sm:0 1px 1px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
@@ -35,7 +35,7 @@
 }
 :root[data-theme="dark"]{
   --ground:#0F0F13; --surface:#1B1B21; --surface-2:#212128;
-  --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#7E7E8A;
+  --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#9A9AA6;
   --hair:rgba(255,255,255,.14); --hair-2:rgba(255,255,255,.07);
   --shadow:0 1px 1.5px rgba(0,0,0,.4), 0 5px 16px rgba(0,0,0,.35);
   --shadow-sm:0 1px 1px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
@@ -87,7 +87,7 @@ h2{
 h3{
   margin:26px 0 10px; font-size:16px; font-weight:700; letter-spacing:-.01em;
 }
-.card h4{
+.card h4, .card h3.lvl4{
   margin:18px 0 6px; font-size:13px; font-weight:700; letter-spacing:.02em;
   text-transform:uppercase; color:var(--ink-3);
 }
@@ -121,7 +121,7 @@ p{margin:10px 0}
   background:color-mix(in srgb, var(--ac) 18%, var(--surface));
   padding:2px 10px; border-radius:999px; flex:none;
 }
-.finding-h h4{
+.finding-h h4, .finding-h h3{
   margin:0; font-size:15.5px; font-weight:700; letter-spacing:-.01em;
   flex:1; min-width:220px;
 }
@@ -130,7 +130,7 @@ p{margin:10px 0}
 .finding-b > :last-child{margin-bottom:0}
 
 .tag{
-  display:inline-block; font-size:11px; font-weight:700; letter-spacing:.04em;
+  display:inline-block; font-size:12px; font-weight:700; letter-spacing:.02em;
   padding:2.5px 11px; border-radius:999px; white-space:nowrap;
 }
 .tag.blocker{background:color-mix(in srgb, var(--red) 16%, var(--surface)); color:var(--red-ink)}
@@ -146,7 +146,7 @@ p{margin:10px 0}
 }
 .evidence b{font-weight:600}
 .evidence .lbl{
-  display:block; font-size:10.5px; font-weight:700; letter-spacing:.12em;
+  display:block; font-size:12px; font-weight:700; letter-spacing:.04em;
   color:var(--ink-3); margin-bottom:5px;
 }
 
@@ -154,7 +154,7 @@ p{margin:10px 0}
 table{border-collapse:collapse; width:100%; background:var(--surface); font-size:13.5px}
 th,td{padding:10px 15px; text-align:left; vertical-align:top}
 th{
-  font-size:11px; font-weight:700; letter-spacing:.08em; color:var(--ink-3);
+  font-size:12px; font-weight:700; letter-spacing:.04em; color:var(--ink-3);
   background:var(--surface-2); white-space:nowrap;
 }
 td{border-top:1px solid var(--hair-2)}
@@ -179,6 +179,14 @@ ul.plain li::before{
 .note b{color:var(--blue-ink)}
 .warn{background:color-mix(in srgb, var(--orange) 12%, transparent)}
 .warn b{color:var(--orange-ink)}
+
+/* Inside a card, a callout or table is a section of that card, not a card
+   of its own. Callouts already open with a bold lead-in, so they drop the box. */
+.card .note, .card .evidence, .finding .note, .finding .evidence{
+  border-radius:0; background:none; padding:0;
+}
+.card .tablewrap, .finding .tablewrap{border-radius:0; box-shadow:none}
+.card table, .finding table{background:transparent}
 
 footer{
   margin-top:44px; padding-top:18px; border-top:1px solid var(--hair-2);
@@ -483,7 +491,7 @@ footer{
 <section>
   <h2>做了什麼</h2>
   <div class="card">
-    <h4>production 手動探索</h4>
+    <h3 class="lvl4">production 手動探索</h3>
     <ul class="plain">
       <li><b>開始前量基準</b>：顧客端會寫到的 54 張表逐表計數，加上 <code>restaurants.total_orders</code>、<code>menu_items.inventory_count / order_count</code>、桌位與座位狀態。</li>
       <li><b>點餐</b>：掃桌位 A1 的簽章 QR；購物車改數量、品項備註、訂單備註、姓名、電話後送出；另走店家公開碼 → 選內用 → 購物車 → 送出。</li>
@@ -548,7 +556,7 @@ footer{
   <div class="finding blocker">
     <div class="finding-h">
       <span class="id">R1</span>
-      <h4>店家公開碼選「內用」送出，100% 回 400</h4>
+      <h3 class="lvl4">店家公開碼選「內用」送出，100% 回 400</h3>
       <span class="tag fixed">本輪已修</span>
     </div>
     <div class="finding-b">
@@ -630,7 +638,7 @@ footer{
   <div class="finding blocker">
     <div class="finding-h">
       <span class="id">R3</span>
-      <h4>service worker 讓回訪顧客整趟跑上一版前端</h4>
+      <h3 class="lvl4">service worker 讓回訪顧客整趟跑上一版前端</h3>
       <span class="tag issue">#395</span>
     </div>
     <div class="finding-b">
@@ -697,7 +705,7 @@ Cache Storage precache    → index-D9Tvorwj.js、CartView-fGSKBdOb.js（已在�
   <div class="finding blocker">
     <div class="finding-h">
       <span class="id">R7</span>
-      <h4>候位取號成功，畫面卻卡在停用的表單</h4>
+      <h3 class="lvl4">候位取號成功，畫面卻卡在停用的表單</h3>
       <span class="tag fixed">本輪已修</span>
     </div>
     <div class="finding-b">
@@ -815,7 +823,7 @@ void enrollWaitingListPush();   // 詢問不再擋路</code></pre>
   <div class="finding blocker">
     <div class="finding-h">
       <span class="id">R4</span>
-      <h4>回到菜單立刻加菜，菜進了被隱藏的個人購物車</h4>
+      <h3 class="lvl4">回到菜單立刻加菜，菜進了被隱藏的個人購物車</h3>
       <span class="tag fixed">本輪已修</span>
     </div>
     <div class="finding-b">
@@ -1020,7 +1028,7 @@ POST /api/v1/market-checkouts/payment-webhooks/stripe（無 Origin）   → 403 
   <div class="finding ux">
     <div class="finding-h">
       <span class="id">R16</span>
-      <h4>後台新增員工用重複的 username 回 500</h4>
+      <h3 class="lvl4">後台新增員工用重複的 username 回 500</h3>
       <span>記錄</span>
     </div>
     <div class="finding-b">
@@ -1047,7 +1055,7 @@ POST /api/v1/market-checkouts/payment-webhooks/stripe（無 Origin）   → 403 
       <li>fixtures 全部透過真 API 建立（桌位與簽章 QR、座位桌、選項群組、優惠券、服務與時段、市集與兩個攤位、收銀員帳號），<code>locale: zh-TW</code>、<code>timezoneId: Asia/Taipei</code>。</li>
     </ul>
 
-    <h4>節點覆蓋（master-user-flow「1. 顧客端」）</h4>
+    <h3 class="lvl4">節點覆蓋（master-user-flow「1. 顧客端」）</h3>
     <div class="tablewrap">
       <table>
         <thead><tr><th>節點</th><th>測試</th><th>結果</th></tr></thead>
