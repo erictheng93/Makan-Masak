@@ -41,6 +41,7 @@ import type {
   SplitBillItem,
 } from "@makanmasak/shared-types";
 import { ApiError } from "../../../shared/utils/api-error";
+import { resolvePricingRates } from "../../../shared/policy/regionPolicyGuards";
 import { fromCents, toRequiredCents } from "../../../shared/utils/money";
 import {
   assertCurrencyAlignedCents,
@@ -2003,9 +2004,19 @@ export class GroupOrdersService implements IGroupOrderService {
       // dollars), and a client-supplied rate would let the host price the
       // bill themselves.
       const [restaurant] = await this.db
-        .select({ settings: restaurants.settings })
+        .select({
+          settings: restaurants.settings,
+          countryCode: restaurants.countryCode,
+        })
         .from(restaurants)
         .where(eq(restaurants.id, groupOrder.restaurantId));
+      const rates = await resolvePricingRates(
+        { DB: this.rawDb, CACHE_KV: this.rawCacheKV },
+        {
+          countryCode: restaurant?.countryCode,
+          settings: restaurant?.settings,
+        },
+      );
       const currency = requireRestaurantCurrency(
         restaurant?.settings?.currency,
         groupOrder.restaurantId,
@@ -2062,10 +2073,7 @@ export class GroupOrdersService implements IGroupOrderService {
               taxCents: splitData.sharedTaxCents ?? 0,
             }
           : undefined,
-        rates: {
-          serviceChargeRate: restaurant?.settings?.serviceChargeRate ?? 0,
-          taxRate: restaurant?.settings?.taxRate ?? 0,
-        },
+        rates,
         orderTotalCents: splitData.orderTotalCents,
       });
 
@@ -3030,12 +3038,17 @@ export class GroupOrdersService implements IGroupOrderService {
       .where(eq(groupOrders.id, groupOrderId));
     const [restaurant] = groupOrder
       ? await this.db
-          .select({ settings: restaurants.settings })
+          .select({
+            settings: restaurants.settings,
+            countryCode: restaurants.countryCode,
+          })
           .from(restaurants)
           .where(eq(restaurants.id, groupOrder.restaurantId))
       : [];
-    const taxRate = restaurant?.settings?.taxRate ?? 0;
-    const serviceChargeRate = restaurant?.settings?.serviceChargeRate ?? 0;
+    const { taxRate, serviceChargeRate } = await resolvePricingRates(
+      { DB: this.rawDb, CACHE_KV: this.rawCacheKV },
+      { countryCode: restaurant?.countryCode, settings: restaurant?.settings },
+    );
     const currency = requireRestaurantCurrency(
       restaurant?.settings?.currency,
       groupOrder?.restaurantId,
