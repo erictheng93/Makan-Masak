@@ -122,6 +122,14 @@
     {
       "fresh": "0030_service_item_payment_requirements.sql",
       "reason": "restaurant_service_items is a platform-API table; the management API has no restaurants or service catalog to configure booking payment terms for."
+    },
+    {
+      "fresh": "0031_policies.sql",
+      "reason": "Region policies scope platform-API restaurants by country and market; the management-api database has no restaurants or markets rows to scope a policy against. management-api edits them through its PLATFORM_DB binding instead."
+    },
+    {
+      "fresh": "0032_market_country_code.sql",
+      "reason": "markets is a platform-API table; the management-api database has no markets row to carry a country on."
     }
   ],
   "legacyOnly": [
