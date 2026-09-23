@@ -180,6 +180,58 @@ describe("PoliciesView", () => {
     expect(policiesApi.set).toHaveBeenCalledTimes(1);
   });
 
+  it.each(["", "abc", "-1", "100.01"])(
+    "will not save the percentage %j",
+    async (input) => {
+      const wrapper = mount(PoliciesView);
+      await flushPromises();
+      await wrapper
+        .get('[data-testid="policy-input-pricing.default_tax_rate_bps"]')
+        .setValue(input);
+      const save = wrapper.get(
+        '[data-testid="policy-save-pricing.default_tax_rate_bps"]',
+      );
+      expect(save.attributes("disabled")).toBeDefined();
+      await save.trigger("click");
+      await flushPromises();
+      expect(policiesApi.set).not.toHaveBeenCalled();
+    },
+  );
+
+  it("offers markets beyond the first page", async () => {
+    const market = (id: string) =>
+      ({
+        id,
+        slug: id,
+        name: id,
+        type: "night_market",
+        city: "台中市",
+        district: "西屯區",
+      }) as never;
+    vi.mocked(marketsApi.list)
+      .mockResolvedValueOnce({
+        markets: [market("m-1")],
+        total: 2,
+        page: 1,
+        limit: 100,
+      })
+      .mockResolvedValueOnce({
+        markets: [market("m-101")],
+        total: 2,
+        page: 2,
+        limit: 100,
+      });
+    const wrapper = mount(PoliciesView);
+    await flushPromises();
+
+    expect(marketsApi.list).toHaveBeenLastCalledWith({ limit: 100, page: 2 });
+    expect(
+      wrapper
+        .findAll('[data-testid="policies-market-select"] option')
+        .map((o) => o.attributes("value")),
+    ).toEqual(["", "m-1", "m-101"]);
+  });
+
   it("clears a key", async () => {
     const wrapper = mount(PoliciesView);
     await flushPromises();

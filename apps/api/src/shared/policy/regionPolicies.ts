@@ -2,8 +2,9 @@
  * Reads and merges country and market regional policies.
  * Spec: docs/superpowers/specs/2026-09-23-region-policies-design.md §5
  *
- * The cache is scoped by policy key (policy:v1:country:MY). management-api
- * deletes the same key after a write. A read can race with invalidation and
+ * Each KV entry holds one whole scope (policy:v1:country:MY holds every
+ * policy set for MY), not one policy key. management-api deletes that scope's
+ * entry after a write. A read can race with invalidation and
  * write an old value back, so the effective guarantee is about six minutes
  * (TTL plus KV edge caching), as described in spec §5.2.
  *

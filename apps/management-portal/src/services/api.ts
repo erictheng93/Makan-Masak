@@ -30,6 +30,27 @@ import type {
   UpdateMarketRequest,
 } from "@/types";
 
+declare module "axios" {
+  interface AxiosRequestConfig {
+    /**
+     * Error codes the caller handles itself (for example by asking the admin
+     * to confirm and retrying). The global error toast skips them, so the
+     * admin does not see an error for a step that is part of the flow.
+     */
+    expectedErrorCodes?: readonly string[];
+  }
+}
+
+/** True when the failed request declared this error code as one it handles. */
+export function isExpectedApiError(
+  error: Pick<AxiosError<ApiResponse<unknown>>, "config" | "response">,
+): boolean {
+  const apiError = error.response?.data?.error;
+  const code =
+    typeof apiError === "object" && apiError !== null ? apiError.code : null;
+  return code !== null && !!error.config?.expectedErrorCodes?.includes(code);
+}
+
 function resolveApiBase(): string {
   const apiBase = import.meta.env.VITE_MANAGEMENT_API_URL;
   if (apiBase) {
@@ -118,7 +139,7 @@ apiClient.interceptors.response.use(
         : apiError) ||
       error.message ||
       "請求失敗";
-    toast.error(message);
+    if (!isExpectedApiError(error)) toast.error(message);
     if (
       error.response?.status === 401 &&
       typeof window !== "undefined" &&
@@ -498,12 +519,17 @@ export const policiesApi = {
     value: unknown,
     acknowledge?: number,
   ): Promise<void> {
-    await apiClient.put(policyPath(scopeType, scopeId, key), {
-      value,
-      ...(acknowledge === undefined
-        ? {}
-        : { acknowledgeRestaurantsWithoutCountry: acknowledge }),
-    });
+    await apiClient.put(
+      policyPath(scopeType, scopeId, key),
+      {
+        value,
+        ...(acknowledge === undefined
+          ? {}
+          : { acknowledgeRestaurantsWithoutCountry: acknowledge }),
+      },
+      // The view answers this 409 with a confirm dialog, not an error.
+      { expectedErrorCodes: ["POLICY_BLOCKED_BY_UNKNOWN_COUNTRY"] },
+    );
   },
 
   async clear(
