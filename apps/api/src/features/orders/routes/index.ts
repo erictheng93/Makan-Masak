@@ -18,6 +18,7 @@ import {
 import { OrdersService } from "../services/OrdersService";
 import { resolveCouponCustomerIdentity } from "../../guest-orders/services/guest-coupon-identity";
 import { assertShopOrderingEnabled } from "../services/shop-mode-gate";
+import { resolveRestaurantIdFromJsonBody } from "../../../shared/utils/request-restaurant";
 import { ConsoleLogger } from "../../../core/monitoring";
 import type { Env } from "../../../shared/types";
 import type { AuthUser } from "../../../middleware/auth";
@@ -329,8 +330,10 @@ app.post(
 app.post(
   "/",
   customerOrderAuthMiddleware,
-  moduleGate("online_ordering"),
-  quotaGate("orders.created"),
+  // A canonical customer's user has no restaurantId; gate on the restaurant
+  // being ordered from, or every member order is refused with NO_RESTAURANT.
+  moduleGate("online_ordering", resolveRestaurantIdFromJsonBody),
+  quotaGate("orders.created", resolveRestaurantIdFromJsonBody),
   validateBody(orderSchemas.createOrder),
   async (c) => {
     const data: CreateOrderInput = c.get("validatedBody");

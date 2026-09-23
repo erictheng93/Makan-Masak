@@ -11,6 +11,7 @@ import {
 } from "../../../middleware/auth";
 import { moduleGate } from "../../../middleware/moduleGate";
 import { quotaGate } from "../../../middleware/quotaGate";
+import { resolveRestaurantIdFromJsonBody } from "../../../shared/utils/request-restaurant";
 import {
   publicRateLimit,
   strictRateLimit,
@@ -92,22 +93,6 @@ function requireNonEmptyString(value: unknown, field: string): string {
     throw new Error(`Cannot broadcast group order event without ${field}`);
   }
   return value;
-}
-
-async function resolveRestaurantIdFromJsonBody(c: {
-  req: { raw: Request };
-}): Promise<string | undefined> {
-  const body = await c.req.raw
-    .clone()
-    .json()
-    .catch(() => {
-      throw badRequest("Invalid JSON body", "INVALID_JSON");
-    });
-  if (!body || typeof body !== "object") return undefined;
-  const restaurantId = (body as Record<string, unknown>).restaurantId;
-  return typeof restaurantId === "string" || typeof restaurantId === "number"
-    ? String(restaurantId)
-    : undefined;
 }
 
 async function resolveGroupOrderRestaurantId(
