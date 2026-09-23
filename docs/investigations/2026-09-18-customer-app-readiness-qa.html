@@ -202,7 +202,7 @@ footer{
 <div class="wrap">
 
 <header class="mast">
-  <h1>顧客端上線 readiness QA — 2026-09-18（09-22 複查）</h1>
+  <h1>顧客端上線 readiness QA — 2026-09-18（09-22 複查、09-23 審視）</h1>
   <p class="sub">
     依 <code>docs/architecture/master-user-flow.html</code> 的「1. 顧客端」四條子流程——
     點餐主流程、訂單追蹤、座位與預約、揪團與夜市市集——回答一個問題：<b>顧客端現在能不能上 production？</b>
@@ -218,8 +218,205 @@ footer{
     <span><b>餐廳</b> 麻吉 Demo 廣東粥 <code>019fa136-…31a1</code></span>
     <span><b>基準</b> 54 張表逐表比對，結束時零差異</span>
     <span><b>複查</b> 2026-09-22，前端 <code>index-CL7q9_Yr.js</code>（Pages <code>bf0a5b8</code>）</span>
+    <span><b>審視</b> 2026-09-23，Pages <code>8cd498e</code>、api Worker <code>731713aa</code></span>
   </div>
 </header>
+
+<section id="review-0923">
+  <h2>09-23 審視：做了什麼、還缺什麼</h2>
+  <p>
+    把兩份報告（09-15 C1–C16、09-18 R1–R19）的每一項，對照 09-23 的 issue 狀態、部署紀錄、CI 結果和
+    <code>tests/e2e/customer/</code> 目前的內容重看一遍。方法仍然只用<b>不寫入</b>的手段；
+    這一輪沒有在 production 重走流程，所以下面的「未走過」就是字面意思。
+  </p>
+
+  <h3>09-22 之後的變化</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>#</th><th>09-22</th><th>09-23</th><th>證據</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">R8</td><td>#399 open</td><td><span class="tag ok">closed・已部署</span></td><td><code>18dcd71d</code>：沒有 VAPID 時停用推播。09-23 以全新瀏覽器 profile 在 production 取號：顯示「推播通知尚未開放」、票號立即出現、<code>requestPermission</code> 呼叫 0 次</td></tr>
+        <tr><td class="mono">R9</td><td>#398 open</td><td><span class="tag ok">closed・已部署</span></td><td><code>35c428d3</code> <code>027ffed6</code>：新增 <code>pay_at_venue</code>，顧客頁寫明到店付款，金額依餐廳幣別。<b>但 migration <code>0029</code> 尚未套用到 production</b>，見下方</td></tr>
+        <tr><td class="mono">R12</td><td>#386 open</td><td><span class="tag ok">closed・已部署</span></td><td>公開探索只回 1 家，測試租戶不再列出；<code>type</code>／<code>district</code> 為 <code>null</code>、<code>openingHoursStatus: "unavailable"</code>（唯讀請求確認）。測試租戶的資料列仍在 <code>restaurants</code></td></tr>
+        <tr><td class="mono">#385</td><td>公開寫入仍開</td><td><span class="tag ok">closed・已部署</span></td><td>走「產品缺一頁」：顧客端新增 <code>/restaurant/:id/reserve</code>，公開端點縮成 4 條並加驗證、冪等、限流。production 沒走過，E2E 沒有測試</td></tr>
+        <tr><td class="mono">#387 #388 #393</td><td>open</td><td><span class="tag ok">closed・已部署</span></td><td><code>4a4b4d6a</code>；只有單元／real-D1 測試證據</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>新的問題</h3>
+  <div class="card">
+    <h4><span class="mono">R20</span> customer-real E2E 在 main 上變紅：R7 的回歸測試與 #399 的修法互相矛盾 <span class="tag fixed">已修 <code>1c697c00</code>・未推送</span></h4>
+    <p>
+      CI run <code>35805943096</code>（<code>8cd498e8</code>）的顧客端 E2E：19 passed、1 failed。失敗的是
+      <code>seating-and-bookings.spec.ts:174</code>「候位登記 with the notification prompt still unanswered」，
+      斷在 <code>joining should have asked for notification permission</code>。
+      那條檢查是 09-18 刻意加的（避免「根本沒走推播註冊」造成假通過），而 #399 的修法正是讓沒有 VAPID 的環境<b>不再詢問</b>——
+      CI 沒有 VAPID，所以前提消失了。不是產品回歸，是測試的前提過期。之後的 run <code>35826214200</code> 也是紅的。
+    </p>
+    <p>
+      修法要二選一：在這個測試裡提供假的 VAPID 公鑰讓推播可用，繼續守 R7 的競態；
+      或改寫成「推播不可用時：票號立即出現、<code>requestPermission</code> 0 次」，那就是 #399 的回歸測試，R7 的競態改由單元測試守。
+      同一批 run 的店家後台 E2E 也是紅的，不在本報告範圍。
+    </p>
+  </div>
+  <div class="card">
+    <h4><span class="mono">R21</span> production 的 migration ledger 缺 <code>0029</code> <span class="tag ux">記錄</span></h4>
+    <p>
+      <code>wrangler d1 migrations list --remote</code> 列出 <code>0029_service_bookings_pay_at_venue_default.sql</code> 待套用；
+      production 的 <code>service_bookings.payment_requirement</code> 預設仍是 <code>'prepay'</code>。
+      目前不擋路：<code>ServiceBookingService</code> 建單時一律明寫 <code>paymentRequirement</code>（預設 <code>pay_at_venue</code>），不靠資料庫預設。
+      但它是 recreate-table migration，照 CLAUDE.md 的流程先查列數、在 schema 副本重放，再套用。
+    </p>
+  </div>
+  <div class="card">
+    <h4><span class="mono">R22</span> 公開建立服務預約時，付款條件由客戶端決定 <span class="tag fixed">已修 <code>ca6ff067</code>・未推送</span></h4>
+    <p>
+      <code>service-bookings/routes/index.ts:199</code> 的 <code>POST /</code> 在 <code>authMiddleware</code>（<code>:356</code>）之前，
+      用 <code>createSchema</code>（<code>:55</code>）解析 body，其中 <code>paymentRequirement</code> 收
+      <code>"none" | "deposit" | "prepay" | "pay_at_venue"</code>、<code>depositAmountCents</code> 最小 1；
+      <code>ServiceBookingService.createBooking</code>（<code>:244</code>）把兩者原樣交給 <code>resolvePaymentTerms</code>，
+      沒有依服務或店家設定覆寫。所以訪客送 <code>"none"</code> 就能建一張「不需付款」的預約，或送 <code>deposit</code> + 1 分。
+    </p>
+    <p>
+      這與「幣別由伺服器決定、不由客戶端決定」是同一條原則。付款條件應該來自服務設定，客戶端最多只能比對。
+      只讀了程式碼、沒有對 production 實打（會寫入）；建議本機 E2E 或 real-D1 測試先證明再開 issue。
+    </p>
+  </div>
+
+  <h3>09-23 後續：處理結果</h3>
+  <p>
+    同日接著處理。程式碼都在分支 <code>fix/customer-e2e-gaps-2026-09-23</code>（worktree <code>Makan-Masak-fix-customer-e2e-gaps-2026-09-23</code>），
+    <b>尚未推送、尚未部署</b>。每個修正都有先紅後綠的測試；分支上 <code>pnpm verify</code>（13 個 package）全綠；
+    customer-real 在全新 migrate＋seed 的本機堆疊上連續兩次 29/29（其中 2 個是 #422 的預期失敗）。
+  </p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>項目</th><th>處置</th><th>commit／issue</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">R20</td><td>測試改為斷言 #399 的訪客行為：顯示「推播尚未開放」、<code>requestPermission</code> 0 次、無訂閱請求、票號顯示並保存。R7 的競態由單元測試守。<br>
+          追查時發現根因之外的一個洞：customer-app 的 Vite dev server 只代理 <code>/api</code>，<code>/info</code> 拿到 SPA 的 index.html、解析失敗、<b>fail open</b>，
+          所以本機與 CI 的 E2E 一直把所有未上線功能當成開啟，和 production 不同。已代理 <code>/info</code>。</td><td><code>1c697c00</code></td></tr>
+        <tr><td class="mono">R22</td><td>公開 schema 拿掉 <code>paymentRequirement</code>、<code>depositAmountCents</code>、<code>customerId</code>；一律套用伺服器預設 <code>pay_at_venue</code>。修正前 5 個案例全紅。副作用：prepay／deposit 沒有來源可選，開 #424</td><td><code>ca6ff067</code>、#424</td></tr>
+        <tr><td class="mono">R23</td><td><b>新發現</b>：揪團送出後，只有團主知道。<code>/lock</code>、店家 finalize、到期自動送單三條路都沒有廣播，團員開著的群組頁永遠是可編輯的購物車。
+          由新的 E2E 找到（團主送出 30 秒後團員頁沒有任何變化）。新增 <code>group_order_completed</code> 事件，三條路都廣播，客戶端收到後重抓群組</td><td><code>9ca87884</code></td></tr>
+        <tr><td class="mono">R24</td><td><b>新發現</b>：會員點餐整條不通，三個各自足以擋路：掃 QR（整頁載入）後會員 token 消失、被當訪客下單；會員 <code>POST /api/v1/orders</code> 一律 403 CSRF；
+          <code>/coupons/validate</code> 從 body 讀 <code>userId</code>、不看 JWT，會員用不了限每人次數的券，而 <code>coupon_usage.user_id</code> 是指向員工 <code>users</code> 的外鍵。
+          要先決定 CSRF 與會員身分的做法，開 issue；只修第一個會讓會員從「當訪客下單（能用）」變成「完全無法下單」，所以沒有單獨修</td><td>#422</td></tr>
+        <tr><td class="mono">R25</td><td>無障礙：菜單頁的語系切換鈕只有國旗、沒有可讀名稱；外送表單三個 label 沒有綁定輸入框；探索頁三個篩選切換鈕沒有 <code>aria-pressed</code>。都已補上，E2E 以這些名稱定位</td><td><code>41a644a8</code>、<code>30cf8398</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>E2E 新增覆蓋（21 → 29 個測試）</h4>
+  <ul>
+    <li><b>揪團送出之後</b>：兩人都經 tracking-token（#396、R17）進追蹤頁；以邀請連結加入、沒掃過 QR 的團員拿到即時連線（R19）；店家推狀態兩頁都不重整跟上；每人只換一次 group-token（#397）。<code>9ca87884</code></li>
+    <li><b>線上訂位</b>（#385）：店家開時段 → 顧客頁訂位 → 讀回 → 以確認碼查詢 → 從頁面取消。<code>2a6c1759</code></li>
+    <li><b>服務預約到店付款</b>（#398）：<code>pay_at_venue</code>／未付款，確認頁「請於到店時向店員付款（應付 NT$300）」。<code>2a6c1759</code></li>
+    <li><b>候位不詢問推播</b>（#399）：即 R20 的修法。<code>1c697c00</code></li>
+    <li><b>語系切換</b>（#387）與<b>探索頁未提供營業時間</b>（#386）。<code>41a644a8</code></li>
+    <li><b>店家公開碼外送</b>：只給店家開的方式，外送單保存地址；<b>馬幣店</b>：RM 12.50 的菜、RM 25.00 的購物車與訂單，全程不出現 NT$。<code>30cf8398</code></li>
+    <li><b>會員</b>：OTP 登入（讀本機 <code>devOtp</code>）→ 訂單歷史；會員從桌位下單、會員套券兩案為 <code>test.fail</code>（#422）。<code>64f576ef</code>、<code>30cf8398</code></li>
+  </ul>
+
+  <h4>production 手動探索（09-23）</h4>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>節點</th><th>結果</th></tr></thead>
+      <tbody>
+        <tr><td>語系切換（#387）</td><td><span class="tag ok">通過</span> 桌位 A1 菜單切到 English，「Table Number A1」，重新整理後仍是英文。production 的切換鈕仍沒有可讀名稱（R25 未部署）</td></tr>
+        <tr><td>預估時間（#388）</td><td><span class="tag ok">通過</span> 訪客下一份招牌廣東粥：「預估還需 12 分鐘」（該菜設定 12 分；修正前是 15）</td></tr>
+        <tr><td>取消回沖（#393）</td><td><span class="tag ok">通過</span> 訪客從頁面取消（200）後 <code>order_count</code> 回到 14、<code>inventory_count</code> 回到 10</td></tr>
+        <tr><td>線上訂位頁（#385）</td><td><span class="tag ux">部分</span> 頁面與空狀態正確、availability 200；production 沒有時段，訂位本身沒走</td></tr>
+        <tr><td>訪客優惠券（#382）、訂位建立、服務預約到店付款（#398）</td><td><span class="tag ux">未走</span> 都要店家先建券／時段／服務，需要 owner 的 production 登入；不以手寫 SQL 代替</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    <b>資料善後：</b>唯一的寫入是一張訪客單（<code>06WR-SSYN</code>，建立後由訪客取消）。刪除 2 筆 <code>audit_logs</code>、1 筆 <code>order_items</code>、1 筆 <code>orders</code>、
+    1 筆尚未彙總的 <code>usage_meter_buckets</code>，<code>restaurants.total_orders</code> 10 → 9；127 張表（1,737 列）與開始前逐表比對<b>零差異</b>。自增序號前進了，無法也不需要還原。
+  </p>
+
+  <h4>開的 issue</h4>
+  <ul>
+    <li><b>#422</b> 會員點餐整條不通（R24）</li>
+    <li><b>#423</b> service worker 部署後多快切版，下一次部署時量（含 R18）</li>
+    <li><b>#424</b> 服務預約付款條件改由服務設定決定（R22 的後續）</li>
+    <li><b>#425</b> 上線前提追蹤：金流憑證、VAPID、儲值旗標、市集／服務／座位資料、測試租戶</li>
+  </ul>
+
+  <h3>手動探索（production）還沒走過的（審視當時；處理結果見上一節）</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>節點</th><th>為什麼沒走</th><th>要什麼才能走</th></tr></thead>
+      <tbody>
+        <tr><td>會員線：註冊、登入、<code>/orders</code>、<code>/profile</code>、會員優惠券、會員推播訂閱</td><td>#384 仍 open，<code>customers</code> 0 筆</td><td>寄信或簡訊憑證</td></tr>
+        <tr><td>訪客優惠券（#382 修正後）</td><td><code>coupons</code> 0 筆</td><td>臨時建一張券，走完後刪除</td></tr>
+        <tr><td>線上訂位（#385 新畫面）</td><td>09-22 才上線，<code>reservations</code> 0 筆</td><td>店家開放時段即可</td></tr>
+        <tr><td>服務預約「到店付款」（#398 修正後）</td><td><code>restaurant_service_items</code> 0 筆</td><td>臨時建服務與時段（09-18 的做法）</td></tr>
+        <tr><td>語系切換（#387）、預估時間（#388）</td><td>修正後沒有重看</td><td>不用新資料，下次走點餐時順便看</td></tr>
+        <tr><td>市集、跨攤結帳、優惠卷、付款回調、逐攤分帳</td><td><code>markets</code> 0 筆、沒有金流憑證</td><td>金流憑證＋市集資料</td></tr>
+        <tr><td>儲值代幣扣抵</td><td><code>storedValueCredits</code> 旗標關閉</td><td>產品決定開旗標</td></tr>
+        <tr><td>座位 QR 點餐</td><td>production 的座位桌全部停用</td><td>啟用一張座位桌</td></tr>
+        <tr><td>店家公開碼的外帶／外送</td><td>唯一的店只開內用</td><td>臨時開外帶</td></tr>
+        <tr><td>非 TWD 的店（MYR／VND）</td><td>production 只有一家 TWD 店</td><td>測試租戶改幣別；#385 的電話正規化只認 <code>09…</code>，MYR／VND 顧客要打國碼</td></tr>
+        <tr><td>service worker 部署後切版速度（R18 與 09-22 觀察）</td><td>09-22 分不出是 Pages 傳遞還是 #395 延遲</td><td>部署後用同一個回訪瀏覽器計時</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>自動化 E2E 還沒蓋到的（審視當時；處理結果見上一節）</h3>
+  <p>
+    <code>tests/e2e/customer/</code> 仍是 5 個 spec、21 個測試。09-18 的 5 個 <code>test.fail</code> 已全部移除，
+    #382、#383、#400、#401 現在都是一般的回歸測試。之後修的東西沒有一項補上 E2E：
+  </p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>缺的測試</th><th>為什麼值得補</th></tr></thead>
+      <tbody>
+        <tr><td>揪團送出後「查看訂單進度」（團主與以邀請連結加入的團員）＋ 即時更新</td><td>R17 與 R19 都是單元測試抓不到的形狀：路由測試不經全域 CSRF 中介層、元件測試不經真 WebSocket。現有揪團測試停在送出</td></tr>
+        <tr><td>線上訂位（#385）</td><td>spec 開頭的註解還寫「顧客端沒有訂位畫面」，已過期</td></tr>
+        <tr><td>候位：推播不可用時不詢問（#399）</td><td>就是 R20 的修法之一</td></tr>
+        <tr><td>服務預約到店付款與幣別（#398）</td><td>現有測試只讀回預約與名額</td></tr>
+        <tr><td>揪團即時 token 只換一次（#397）、團員成員數（R10）</td><td>09-22 production 實測過，沒有自動化</td></tr>
+        <tr><td>語系切換（#387）、探索頁顯示（#386）</td><td>純前端，成本低</td></tr>
+        <tr><td>會員路徑（登入後下單、訂單歷史）</td><td>E2E 環境可以不靠真寄信，但目前沒有任何測試</td></tr>
+        <tr><td>店家公開碼外帶／外送、非 TWD 餐廳</td><td>R1 就是只測了一種取餐方式時漏掉的</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>09-18 只記錄、還沒處理的</h3>
+  <ul>
+    <li><b>R10</b> 團員頁成員數停在 1：原本說 #397 驗收時一併確認，09-22 的揪團實測沒有記錄這一項。</li>
+    <li><b>R11</b> 停用座位的 QR 顯示「驗證失敗／重試」：沒有 issue、沒有變更。</li>
+    <li><b>R16</b> 重複 username 建員工回 500：沒有 issue；<code>UsersService</code> 裡沒看到對應的 409。</li>
+    <li><b>R18</b> <code>/sw.js</code> 被 zone 快取覆寫：Cloudflare 設定，沒有變更紀錄。</li>
+    <li><b>09-22 觀察</b> 團員停在菜單頁時看不到「已送出」：沒有 issue。</li>
+  </ul>
+
+  <h3>09-23 判定</h3>
+  <div class="tablewrap">
+    <table class="verdict">
+      <thead><tr><th>流程</th><th>09-22</th><th>09-23</th><th>理由</th></tr></thead>
+      <tbody>
+        <tr><td><b>點餐主流程</b></td><td><span class="tag ok">可上線</span></td><td><span class="tag ok">可上線</span></td><td>發券前以真券走一次 #382</td></tr>
+        <tr><td><b>訂單追蹤</b></td><td><span class="tag ok">可上線</span></td><td><span class="tag ok">可上線</span></td><td>—</td></tr>
+        <tr><td><b>座位與預約</b></td><td><span class="tag ux">有條件</span></td><td><span class="tag ux">有條件</span></td><td>#398、#399 已部署；線上訂位與到店付款都還沒在 production 走過，<code>0029</code> 未套用，R22 已修但未部署</td></tr>
+        <tr><td><b>揪團與夜市市集</b></td><td>揪團 <span class="tag ok">可上線</span><br>市集 <span class="tag blocker">不可上線</span></td><td>揪團 <span class="tag ok">可上線</span><br>市集 <span class="tag blocker">不可上線</span></td><td>市集仍缺金流憑證與資料</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note warn">
+    <b>下一步（依序）：</b>
+    ① 推送並部署分支 <code>fix/customer-e2e-gaps-2026-09-23</code>（api、realtime、customer Pages；shared-types 要先 build），CI 的 customer-real 回到綠燈；
+    ② #422 會員點餐（先決定 CSRF 與會員身分）；
+    ③ 照流程把 <code>0029</code> 套到 production；
+    ④ 用 owner 登入在 production 走訪客優惠券、訂位、到店付款；
+    ⑤ 下一次部署時量 #423；
+    ⑥ #424、#425 與 #384 等待決定與憑證。
+  </p>
+</section>
 
 <section id="recheck-0922">
   <h2>09-22 複查：修正進度與目前判定</h2>

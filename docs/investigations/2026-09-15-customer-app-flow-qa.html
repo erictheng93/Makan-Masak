@@ -201,7 +201,7 @@ footer{
 <div class="wrap">
 
 <header class="mast">
-  <h1>顧客端流程 QA — 2026-09-15</h1>
+  <h1>顧客端流程 QA — 2026-09-15（09-23 更新）</h1>
   <p class="sub">
     依 <code>docs/architecture/master-user-flow.html</code> 的「1. 顧客端」四條子流程，
     用真瀏覽器在 production 逐頁走過一遍：點餐主流程 → 訂單追蹤 → 座位與預約 → 揪團與市集。
@@ -214,8 +214,41 @@ footer{
     <span><b>身分</b> 訪客（免登入）＋ <code>owner1</code> 推狀態</span>
     <span><b>餐廳</b> 麻吉 Demo 廣東粥 <code>019fa136-…31a1</code></span>
     <span><b>入口</b> 桌位 A1 的簽章 QR</span>
+    <span><b>現況</b> 2026-09-23 更新（見下一節）</span>
   </div>
 </header>
+
+<section id="status-0923">
+  <h2>09-23 現況：C1–C16 各自到哪了</h2>
+  <p>
+    只用不寫入的手段確認：GitHub issue 狀態、Pages／Worker 部署紀錄（customer Pages 目前是 <code>8cd498e</code>，
+    api Worker 最後部署 2026-09-23 01:19 UTC）、公開 API 的唯讀請求、唯讀 D1 查詢。
+    後續的 production 重走記在 <a href="./2026-09-18-customer-app-readiness-qa.html">09-18 readiness QA</a>。
+    這一節之後是 09-15 當時的紀錄，保留原樣。
+  </p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>#</th><th>處置</th><th>production</th><th>驗證狀態</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">C2 C5 C10 C11 C12 C14</td><td>09-15 已修</td><td><span class="tag ok">已部署</span></td><td>09-18 在 production 逐項重走通過（C2 邀請面板、C5 取餐方式、C10 電話、C11／C12 時間軸、C14 註冊文案）</td></tr>
+        <tr><td class="mono">C13</td><td>09-15 已修</td><td><span class="tag ok">已部署</span></td><td>production 沒有任何券，沒有重走；由 customer-real E2E 的優惠券測試間接覆蓋</td></tr>
+        <tr><td class="mono">C1</td><td>#382 closed <code>36f7bb6b</code></td><td><span class="tag ok">已部署</span>（migration <code>0027</code> 已套用）</td><td>E2E 由 <code>test.fail</code> 轉為一般測試；<b>production 尚未以真券走過</b>（<code>coupons</code> 0 筆）</td></tr>
+        <tr><td class="mono">C3</td><td>#383 closed <code>36f7bb6b</code></td><td><span class="tag ok">已部署</span></td><td>E2E 由 <code>test.fail</code> 轉為一般測試</td></tr>
+        <tr><td class="mono">C4</td><td><span class="tag blocker">#384 仍 open</span></td><td>—</td><td>api secret 仍只有 5 個、無寄信／簡訊憑證；<code>customers</code> 仍 0 筆。09-23 本機 E2E 第一次走會員線：OTP 登入與訂單歷史可用，但會員點餐整條不通（#422）</td></tr>
+        <tr><td class="mono">C6</td><td>#385 closed <code>4a4b4d6a</code> <code>ac39d9c5</code></td><td><span class="tag ok">已部署</span></td><td>顧客端新增 <code>/restaurant/:id/reserve</code>；production 09-23 只走到頁面與空狀態（沒有時段）；E2E 已覆蓋訂位 → 查詢 → 取消（<code>2a6c1759</code>）。issue 留下三項殘留：公開建立在 <code>moduleGate</code> 之前、電話正規化只認台灣、原子限流器只在 production</td></tr>
+        <tr><td class="mono">C7</td><td>#386 closed <code>4a4b4d6a</code> <code>7d744983</code> <code>b36ca79f</code></td><td><span class="tag ok">已部署</span></td><td>09-23 唯讀確認：公開探索回 <code>type: null</code>、<code>district: null</code>、<code>openingHoursStatus: "unavailable"</code>，測試租戶不再出現在列表（只剩 1 家）。市集商家清單仍不篩 <code>is_available</code>（issue 留白的決定）</td></tr>
+        <tr><td class="mono">C8</td><td>#387 closed <code>4a4b4d6a</code></td><td><span class="tag ok">已部署</span></td><td>09-23 在 production 走過：桌位 A1 菜單切到 English，重新整理後保留。E2E 已覆蓋（<code>41a644a8</code>）。切換鈕缺可讀名稱，已在分支補上、未部署</td></tr>
+        <tr><td class="mono">C9</td><td>#388 closed <code>4a4b4d6a</code></td><td><span class="tag ok">已部署</span></td><td>09-23 在 production 走過：該菜設定 12 分，追蹤頁「預估還需 12 分鐘」（修正前 15）。「預估時間不隨時間遞減」未處理</td></tr>
+        <tr><td class="mono">C15</td><td>#389 closed</td><td><span class="tag ok">已部署</span></td><td>print-agent 的 ESC/POS 輸出仍沒有人實測過</td></tr>
+        <tr><td class="mono">C16</td><td>#390 closed</td><td><span class="tag ok">已部署</span></td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">
+    <b>剩下的：</b>C4（#384，需要持有憑證的人）是 16 項裡唯一還開著的。其餘都已關閉並部署，
+    C8、C9 已於 09-23 在 production 走過；C1、C6 的建立流程需要 owner 登入建券／時段，仍只有測試證據。
+  </p>
+</section>
 
 <section>
   <h2>做了什麼</h2>
