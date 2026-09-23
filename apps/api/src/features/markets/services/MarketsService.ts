@@ -1416,6 +1416,7 @@ export class MarketsService {
                 type,
                 description,
                 city,
+                country_code,
                 district,
                 address,
                 latitude,
@@ -1433,7 +1434,7 @@ export class MarketsService {
                 updated_at_ms,
                 deleted_at_ms
               )
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `,
           )
           .bind(
@@ -1443,6 +1444,7 @@ export class MarketsService {
             market.type,
             market.description ?? null,
             market.city,
+            market.countryCode ?? null,
             market.district,
             market.address,
             market.latitude,

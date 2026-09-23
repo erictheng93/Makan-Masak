@@ -86,3 +86,26 @@ describe("market opening hours contract", () => {
     ).toEqual({ mon: { closed: true, open: "00:00", close: "00:00" } });
   });
 });
+
+describe("market country code contract", () => {
+  it("accepts supported country codes in create, update, and bulk inputs", () => {
+    expect(
+      createMarketSchema.parse({ ...market, countryCode: "MY" }),
+    ).toHaveProperty("countryCode", "MY");
+    expect(updateMarketSchema.parse({ countryCode: "TW" })).toHaveProperty(
+      "countryCode",
+      "TW",
+    );
+    expect(
+      bulkCreateMarketsSchema.parse({
+        markets: [{ ...market, countryCode: "TW" }],
+      }).markets[0],
+    ).toHaveProperty("countryCode", "TW");
+  });
+
+  it("rejects unsupported country codes", () => {
+    expect(
+      createMarketSchema.safeParse({ ...market, countryCode: "US" }).success,
+    ).toBe(false);
+  });
+});
