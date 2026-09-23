@@ -4,6 +4,20 @@ import vue from "@vitejs/plugin-vue";
 import { VitePWA } from "vite-plugin-pwa";
 import { fileURLToPath, URL } from "node:url";
 import { visualizer } from "rollup-plugin-visualizer";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+
+// Scripts pulled in by importScripts() are fetched through the HTTP cache
+// (updateViaCache defaults to "imports"), and makanmasak.com's zone serves
+// them with max-age=14400. A content-versioned URL makes a new worker fetch
+// the copy from its own deploy instead of running a stale one for 4h (#403).
+const versionedPublicScript = (name: string) =>
+  `/${name}?v=${createHash("sha256")
+    .update(
+      readFileSync(fileURLToPath(new URL(`./public/${name}`, import.meta.url))),
+    )
+    .digest("hex")
+    .slice(0, 12)}`;
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -26,7 +40,10 @@ export default defineConfig({
       // updated worker takes control of this client.
       injectRegister: false,
       workbox: {
-        importScripts: ["/sw-push.js", "/sw-cache-cleanup.js"],
+        importScripts: [
+          versionedPublicScript("sw-push.js"),
+          versionedPublicScript("sw-cache-cleanup.js"),
+        ],
         skipWaiting: true,
         clientsClaim: true,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,woff2}"],

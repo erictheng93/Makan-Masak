@@ -74,7 +74,19 @@ describe("customer-app PWA dead code regression", () => {
     const headers = readFileSync(resolve(appRoot, "public/_headers"), "utf8");
 
     expect(headers).toMatch(/\/sw\.js\s+Cache-Control: no-cache/s);
-    expect(headers).toMatch(/\/registerSW\.js\s+Cache-Control: no-cache/s);
+  });
+
+  // The zone rewrites every script to max-age=14400 (#403). sw.js itself is
+  // fetched past the HTTP cache, but its importScripts are not, so each
+  // imported URL must change whenever its content does.
+  it("versions imported worker scripts by content", () => {
+    const viteConfig = readFileSync(resolve(appRoot, "vite.config.ts"), "utf8");
+
+    expect(viteConfig).toContain('versionedPublicScript("sw-push.js")');
+    expect(viteConfig).toContain(
+      'versionedPublicScript("sw-cache-cleanup.js")',
+    );
+    expect(viteConfig).not.toMatch(/importScripts:\s*\[\s*"\//);
   });
 
   it("reloads old clients after a replacement worker activates", async () => {
