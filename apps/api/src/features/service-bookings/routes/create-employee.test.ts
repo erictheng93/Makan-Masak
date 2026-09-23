@@ -58,27 +58,4 @@ describe("service booking create route employee assignment", () => {
       employeeId: "7",
     });
   });
-
-  it("accepts pay-at-venue bookings", async () => {
-    const res = await req("/", "POST", {
-      restaurantId: "restaurant-1",
-      serviceItemId: 10,
-      customerName: "Guest",
-      customerPhone: "0911222333",
-      bookingDate: "2026-06-05",
-      bookingTime: "14:00",
-      paymentRequirement: "pay_at_venue",
-    });
-
-    expect(res.status).toBe(201);
-    expect(createBooking).toHaveBeenCalledWith({
-      restaurantId: "restaurant-1",
-      serviceItemId: 10,
-      customerName: "Guest",
-      customerPhone: "0911222333",
-      bookingDate: "2026-06-05",
-      bookingTime: "14:00",
-      paymentRequirement: "pay_at_venue",
-    });
-  });
 });

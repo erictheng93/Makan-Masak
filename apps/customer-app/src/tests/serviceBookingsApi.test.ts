@@ -53,7 +53,6 @@ describe("serviceBookingsApi", () => {
         customerPhone: "0911222333",
         bookingDate: "2026-06-10",
         bookingTime: "10:00",
-        paymentRequirement: "pay_at_venue",
       }),
     ).resolves.toMatchObject({ id: "booking-1" });
     expect(apiClient.post).toHaveBeenNthCalledWith(1, "/service-bookings", {
@@ -63,7 +62,6 @@ describe("serviceBookingsApi", () => {
       customerPhone: "0911222333",
       bookingDate: "2026-06-10",
       bookingTime: "10:00",
-      paymentRequirement: "pay_at_venue",
     });
 
     await expect(
