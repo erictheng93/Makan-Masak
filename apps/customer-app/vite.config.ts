@@ -251,6 +251,15 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      // useFeatureAvailability derives /info from the relative /api/v1 base.
+      // Unproxied, it gets the SPA's index.html, fails to parse, and fails
+      // open — so dev and the customer-real E2E saw every unlaunched feature
+      // as enabled. Exact match: a regex key keeps it off any /info* route.
+      "^/info$": {
+        target: "http://localhost:8787",
+        changeOrigin: true,
+        secure: false,
+      },
       "/ws": {
         target: process.env.VITE_WS_BASE_URL || "ws://localhost:8787",
         ws: true,

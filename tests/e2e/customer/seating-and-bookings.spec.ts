@@ -171,7 +171,7 @@ test.describe("座位與預約流程 (real API)", () => {
     }
   });
 
-  test("候位登記 with the notification prompt still unanswered: the ticket shows, is saved, and survives a reload", async ({
+  test("候位登記 as a guest while web push is off: no permission prompt, and the ticket shows, is saved, and survives a reload (#399)", async ({
     browser,
   }) => {
     const localCleanup = new Cleanup();
@@ -180,25 +180,39 @@ test.describe("座位與預約流程 (real API)", () => {
       const owner = await getOwner();
       const rid = owner.restaurantId;
 
-      // Joining asks for notification permission. Headless Chromium settles
-      // Notification.requestPermission() at once, so here the join flow never
-      // waits on it; on a phone the promise stays pending until the diner taps
-      // Allow or Block, and many never do. Recreate that: permission reads
-      // "default" and requestPermission never settles. No request is touched —
-      // this only changes what the browser's own API answers.
+      // #399: customer web push is off until VAPID keys exist, and a guest
+      // has no member session to subscribe with, so joining must not ask for
+      // notification permission at all. The stub keeps the phone's behaviour
+      // anyway — permission reads "default" and requestPermission never
+      // settles — so if the app ever asks again, the count below catches it
+      // and the R7 race (ticket held behind an unanswered prompt) would
+      // reappear here. R7 itself, for a member with push on, is guarded in
+      // JoinWaitingListView.test.ts. No request is touched.
       await page.addInitScript(() => {
-        const marker = window as unknown as { __e2ePermissionAsked?: boolean };
+        const marker = window as unknown as { __e2ePermissionAsks?: number };
+        marker.__e2ePermissionAsks = 0;
         Object.defineProperty(Notification, "permission", {
           configurable: true,
           get: () => "default",
         });
         Notification.requestPermission = () => {
-          marker.__e2ePermissionAsked = true;
+          marker.__e2ePermissionAsks = (marker.__e2ePermissionAsks ?? 0) + 1;
           return new Promise<NotificationPermission>(() => undefined);
         };
       });
 
+      const pushRequests: string[] = [];
+      page.on("request", (request) => {
+        if (request.url().includes("push-subscriptions")) {
+          pushRequests.push(request.url());
+        }
+      });
+
       await page.goto(`/r/${rid}/wait-list`);
+      await expect(
+        page.getByTestId("waiting-list-push-unavailable"),
+        "the page says push is not available instead of prompting",
+      ).toBeVisible();
       const phone = mobileNumber();
       await page.getByTestId("customer-name-input").fill(e2eName("未回應通知"));
       await page.getByTestId("customer-phone-input").fill(phone);
@@ -220,7 +234,7 @@ test.describe("座位與預約流程 (real API)", () => {
         }),
       );
 
-      // The ticket is on screen while the prompt is still pending.
+      // The ticket is on screen at once.
       await expect(
         page,
         "the diner must land on their ticket without answering the prompt",
@@ -228,19 +242,15 @@ test.describe("座位與預約流程 (real API)", () => {
       await expect(page.getByTestId("queue-number")).toHaveText(
         ticket.queueDisplay,
       );
-      // Precondition: the prompt really was asked for and left pending. If
-      // push enrolment were skipped, this test would exercise nothing.
-      await expect
-        .poll(
+      expect(
+        await page.evaluate(
           () =>
-            page.evaluate(
-              () =>
-                (window as unknown as { __e2ePermissionAsked?: boolean })
-                  .__e2ePermissionAsked === true,
-            ),
-          { message: "joining should have asked for notification permission" },
-        )
-        .toBe(true);
+            (window as unknown as { __e2ePermissionAsks?: number })
+              .__e2ePermissionAsks,
+        ),
+        "a guest must not be asked for notification permission",
+      ).toBe(0);
+      expect(pushRequests, "no push subscription request").toEqual([]);
 
       // Saved: the number survives a reload, and the join page hands it back.
       const saved = await page.evaluate(() =>
