@@ -330,6 +330,25 @@ describe("region policies against real D1", () => {
       ).resolves.toBeUndefined();
     });
 
+    it("reads the cap from D1 even when KV still holds the old layer", async () => {
+      // A reader cached TW before any cap existed; the cap then lands in D1
+      // while that cache entry is still alive (the race in spec §5.2).
+      await resolveRegionPolicies(deps(), { countryCode: "TW" });
+      await testDb.drizzle.insert(regionPolicies).values({
+        scopeType: "country",
+        scopeId: "TW",
+        policyKey: "platform.max_fee_rate_bps",
+        value: "800",
+      });
+
+      await expect(
+        assertMarketFeeWithinRegionCap(deps(), {
+          countryCode: "TW",
+          platformFeeRateBps: 900,
+        }),
+      ).rejects.toMatchObject({ code: "PLATFORM_FEE_ABOVE_REGION_CAP" });
+    });
+
     it("blocks the write when the cap is corrupt", async () => {
       await setPolicy("country", "TW", "platform.max_fee_rate_bps", '"high"');
       await expect(

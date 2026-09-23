@@ -105,9 +105,13 @@ export async function assertMarketFeeWithinRegionCap(
       400,
     );
   }
-  const effective = await resolveRegionPolicies(deps, {
-    countryCode: input.countryCode,
-  });
+  // Read D1 directly, not KV. Checkout never clamps to the cap, so a fee saved
+  // against a stale cached layer (spec §5.2) would stay above it for good.
+  // Market writes are rare admin actions; the uncached read costs nothing.
+  const effective = await resolveRegionPolicies(
+    { DB: deps.DB },
+    { countryCode: input.countryCode },
+  );
   requirePolicy(effective, "platform.max_fee_rate_bps");
   const cap = effective.maxFeeRateBps;
   if (cap !== null && input.platformFeeRateBps > cap) {
