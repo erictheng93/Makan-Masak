@@ -168,9 +168,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "@/i18n";
 import { posService } from "@/services/posService";
+import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import { useAuthStore } from "@/stores/auth";
 import { UserRole } from "@/types";
 import type {
@@ -236,20 +237,40 @@ function lastSeenLabel(agent: PrintAgent): string {
     : t("printAgents.status.never_seen");
 }
 
-async function load(): Promise<void> {
-  isLoading.value = true;
-  error.value = null;
+/**
+ * A background refresh keeps the rows on screen: it does not swap in the
+ * loading card, and a failed tick does not replace the list with an error.
+ */
+async function load({ background = false } = {}): Promise<void> {
+  if (!background) {
+    isLoading.value = true;
+    error.value = null;
+  }
   try {
     agents.value = await posService.getPrintAgents(
       authStore.restaurantId ?? undefined,
     );
   } catch (cause) {
+    if (background) {
+      console.error("Background print agent refresh failed:", cause);
+      return;
+    }
     error.value =
       cause instanceof Error ? cause.message : t("printAgents.loadFailed");
   } finally {
-    isLoading.value = false;
+    if (!background) isLoading.value = false;
   }
 }
+
+// Online / no-printer / offline and last-seen move with each agent's
+// heartbeat, not with anything done on this page.
+const agentsPoller = createVisibilityAwarePoller({
+  intervalMs: 30_000,
+  onTick: () => {
+    if (isLoading.value) return;
+    return load({ background: true });
+  },
+});
 
 async function issue(): Promise<void> {
   if (!canManagePrintAgents.value) return;
@@ -291,7 +312,9 @@ async function revoke(agent: PrintAgent): Promise<void> {
   }
 }
 
+onBeforeUnmount(() => agentsPoller.stop());
 onMounted(async () => {
+  agentsPoller.start();
   await load();
   try {
     registers.value = await posService.getRegisters();

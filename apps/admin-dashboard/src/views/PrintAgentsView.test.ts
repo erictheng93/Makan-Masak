@@ -88,6 +88,41 @@ describe("PrintAgentsView", () => {
     expect(rows[1].attributes("data-status")).toBe("offline");
   });
 
+  it("follows agent heartbeats in the background, keeping rows on a failed tick", async () => {
+    vi.useFakeTimers();
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    try {
+      getPrintAgents.mockResolvedValue([agent({ id: "a", status: "online" })]);
+      const wrapper = mount(PrintAgentsView);
+      await flushPromises();
+      const status = () =>
+        wrapper
+          .get('[data-testid="print-agent-row"]')
+          .attributes("data-status");
+      expect(status()).toBe("online");
+
+      getPrintAgents.mockResolvedValue([agent({ id: "a", status: "offline" })]);
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(status()).toBe("offline");
+
+      getPrintAgents.mockRejectedValueOnce(new Error("network"));
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(wrapper.find('[data-testid="print-agents-error"]').exists()).toBe(
+        false,
+      );
+      expect(status()).toBe("offline");
+
+      wrapper.unmount();
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(getPrintAgents).toHaveBeenCalledTimes(3);
+    } finally {
+      consoleError.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
   it("issues a shop-wide agent when no till is chosen", async () => {
     issuePrintAgent.mockResolvedValue({ ...agent(), key: "mmpa_secret" });
 
