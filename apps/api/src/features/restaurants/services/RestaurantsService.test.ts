@@ -732,6 +732,25 @@ describe("RestaurantsService", () => {
     expect(mocks.db.update).not.toHaveBeenCalled();
   });
 
+  it("reports a conflict when the service terms change after they are read", async () => {
+    mockSelectRows([
+      {
+        id: 1,
+        restaurantId: "restaurant-1",
+        priceCents: 5000,
+        paymentRequirement: "deposit",
+        depositAmountCents: 1200,
+      },
+    ]);
+    mockUpdateReturning([]);
+
+    await expect(
+      createService().updateServiceItem("restaurant-1", 1, {
+        priceCents: 2000,
+      }),
+    ).rejects.toMatchObject({ status: 409, code: "CONFLICT" });
+  });
+
   it("transforms and caches basic restaurant statistics", async () => {
     mocks.cache.get.mockResolvedValue(null);
     mocks.dbService.getRestaurantStats.mockResolvedValue({

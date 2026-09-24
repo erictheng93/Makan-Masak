@@ -11,7 +11,7 @@ import {
 } from "./helpers/real-test-app";
 import { buildSeedHelpers } from "./helpers/seed-helper";
 import { readData, type ServiceData } from "../helpers/read-json";
-import type { RestaurantsService } from "../../features/restaurants/services/RestaurantsService";
+import { RestaurantsService } from "../../features/restaurants/services/RestaurantsService";
 import type { DiscoveryService } from "../../features/discovery/services/DiscoveryService";
 
 type ServiceItemList = ServiceData<
@@ -397,6 +397,101 @@ describe("Restaurant service items API — real integration", () => {
         depositAmountCents: 1500,
       }),
     ]);
+  });
+
+  it("does not overwrite newer deposit terms using a stale price snapshot", async () => {
+    const restaurant = await seed.restaurant({ name: "Concurrent Deposits" });
+    const [serviceItem] = await testApp.testDb.drizzle
+      .insert(restaurantServiceItems)
+      .values({
+        restaurantId: String(restaurant.id),
+        name: "Private table",
+        priceCents: 5000,
+        paymentRequirement: "deposit",
+        depositAmountCents: 1200,
+      })
+      .returning();
+
+    // Change the row after RestaurantsService reads it, immediately before its
+    // UPDATE executes. The intercepted statement still runs against real D1.
+    let intercepted = false;
+    const db = testApp.env.DB;
+    const delayedDb = new Proxy(db, {
+      get(target, property) {
+        if (property !== "prepare") return Reflect.get(target, property);
+        return (query: string) => {
+          const statement = target.prepare(query);
+          if (!/^update "restaurant_service_items"/i.test(query)) {
+            return statement;
+          }
+          return new Proxy(statement, {
+            get(stmt, stmtProperty) {
+              if (stmtProperty !== "bind")
+                return Reflect.get(stmt, stmtProperty);
+              return (...params: Parameters<typeof stmt.bind>) => {
+                const bound = stmt.bind(...params);
+                return new Proxy(bound, {
+                  get(prepared, preparedProperty) {
+                    if (preparedProperty !== "raw") {
+                      return Reflect.get(prepared, preparedProperty);
+                    }
+                    return async () => {
+                      if (!intercepted) {
+                        intercepted = true;
+                        await testApp.testDb.drizzle
+                          .update(restaurantServiceItems)
+                          .set({ depositAmountCents: 3000 })
+                          .where(eq(restaurantServiceItems.id, serviceItem.id));
+                      }
+                      return prepared.raw();
+                    };
+                  },
+                });
+              };
+            },
+          });
+        };
+      },
+    });
+    const service = new RestaurantsService(delayedDb, {
+      ...testApp.env,
+      DB: delayedDb,
+    });
+
+    await expect(
+      service.updateServiceItem(String(restaurant.id), serviceItem.id, {
+        priceCents: 2000,
+      }),
+    ).rejects.toMatchObject({ status: 409, code: "CONFLICT" });
+    expect(intercepted).toBe(true);
+    const [saved] = await testApp.testDb.drizzle
+      .select()
+      .from(restaurantServiceItems)
+      .where(eq(restaurantServiceItems.id, serviceItem.id));
+    expect(saved).toMatchObject({
+      priceCents: 5000,
+      paymentRequirement: "deposit",
+      depositAmountCents: 3000,
+    });
+  });
+
+  it("updates a service with no stored price", async () => {
+    const restaurant = await seed.restaurant({ name: "Unpriced Services" });
+    const [serviceItem] = await testApp.testDb.drizzle
+      .insert(restaurantServiceItems)
+      .values({
+        restaurantId: String(restaurant.id),
+        name: "Price on request",
+        priceCents: null,
+      })
+      .returning();
+    const service = new RestaurantsService(testApp.env.DB, testApp.env);
+
+    await expect(
+      service.updateServiceItem(String(restaurant.id), serviceItem.id, {
+        priceCents: 5000,
+      }),
+    ).resolves.toMatchObject({ priceCents: 5000 });
   });
 
   it("makes owner-created public services searchable within their market", async () => {

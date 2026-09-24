@@ -20,7 +20,11 @@ import { KVCacheService, type CacheService } from "../../../core/cache";
 import { ConsoleLogger } from "../../../core/monitoring";
 import { CACHE_TTL } from "../../../shared/constants";
 import type { Env } from "../../../shared/types";
-import { ApiError, badRequest } from "../../../shared/utils/api-error";
+import {
+  ApiError,
+  badRequest,
+  conflict,
+} from "../../../shared/utils/api-error";
 import { SubscriptionService } from "../../subscriptions/services/SubscriptionService";
 import { ManagementTenantClient } from "../../../services/managementTenantClient";
 import type {
@@ -672,11 +676,23 @@ export class RestaurantsService {
           eq(restaurantServiceItems.id, serviceItemId),
           eq(restaurantServiceItems.restaurantId, restaurantId),
           isNull(restaurantServiceItems.deletedAt),
+          existing.priceCents === null
+            ? isNull(restaurantServiceItems.priceCents)
+            : eq(restaurantServiceItems.priceCents, existing.priceCents),
+          eq(
+            restaurantServiceItems.paymentRequirement,
+            existing.paymentRequirement,
+          ),
+          eq(
+            restaurantServiceItems.depositAmountCents,
+            existing.depositAmountCents,
+          ),
         ),
       )
       .returning();
 
-    if (!row) return null;
+    if (!row)
+      throw conflict("Service item changed during update; please retry");
 
     await this.cache.delete(`restaurant:${restaurantId}:service-items`);
     await this.bumpMarketPublicCacheVersion();
