@@ -105,29 +105,30 @@ export interface ParsedPlatformOrderItem {
   platformItemId: string;
   name: string;
   quantity: number;
-  unitPrice: number;
-  totalPrice: number;
+  unitPriceCents: number;
+  totalPriceCents: number;
   notes?: string;
   customizations?: {
     name: string;
     value: string;
-    priceAdjustment?: number;
+    priceAdjustmentCents?: number;
   }[];
 }
 
 export interface ParsedPlatformOrder {
   platformOrderId: string;
   platformStoreId: string;
+  currencyCode: string;
   customerName?: string;
   customerPhone?: string;
   deliveryAddress?: string;
   deliveryInstructions?: string;
-  deliveryFee?: number;
+  deliveryFeeCents?: number;
   estimatedDeliveryTime?: number;
   items: ParsedPlatformOrderItem[];
-  subtotal: number;
-  taxAmount: number;
-  totalAmount: number;
+  subtotalCents: number;
+  taxAmountCents: number;
+  totalAmountCents: number;
   notes?: string;
   platformStatus: string;
   rawPayload: unknown;
@@ -139,6 +140,11 @@ export interface ParsedPlatformOrder {
 
 export interface MenuSyncPayload {
   restaurantId: string;
+  currencyCode: string;
+  serviceAvailability?: Array<{
+    day_of_week: string;
+    time_periods: Array<{ start_time: string; end_time: string }>;
+  }>;
   categories: MenuSyncCategory[];
 }
 
@@ -152,13 +158,14 @@ export interface MenuSyncItem {
   id: number;
   name: string;
   description?: string;
-  price: number;
+  priceCents: number;
   imageUrl?: string;
   available: boolean;
   modifierGroups?: MenuSyncModifierGroup[];
 }
 
 export interface MenuSyncModifierGroup {
+  id?: string;
   name: string;
   required: boolean;
   minSelections: number;
@@ -167,8 +174,10 @@ export interface MenuSyncModifierGroup {
 }
 
 export interface MenuSyncModifier {
+  id?: string;
   name: string;
-  price: number;
+  priceCents: number;
+  available?: boolean;
 }
 
 export interface MenuSyncResult {

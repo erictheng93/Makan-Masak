@@ -20,7 +20,7 @@ import { getAdapter } from "../adapters/PlatformAdapter";
 import { PlatformIntegrationService } from "./PlatformIntegrationService";
 import { ReceiptService } from "../../pos/services/ReceiptService";
 import { OrdersService } from "../../orders/services/OrdersService";
-import { toRequiredCents } from "../../../shared/utils/money";
+import { currencyFromRestaurantSettings } from "../../../shared/utils/restaurant-currency";
 
 export class PlatformOrderService {
   private db;
@@ -63,6 +63,25 @@ export class PlatformOrderService {
   ): Promise<string> {
     const adapter = getAdapter(platform);
     const parsedOrder = await adapter.parseOrder(payload);
+    if (platform === "uber_eats" && !parsedOrder.currencyCode) {
+      throw new Error("Uber Eats order currency is missing");
+    }
+    if (parsedOrder.currencyCode) {
+      const [restaurant] = await this.db
+        .select({ settings: restaurants.settings })
+        .from(restaurants)
+        .where(eq(restaurants.id, restaurantId))
+        .limit(1);
+      if (!restaurant)
+        throw new Error("Restaurant not found for platform order");
+      const currency = currencyFromRestaurantSettings(
+        restaurant.settings,
+        restaurantId,
+      );
+      if (parsedOrder.currencyCode !== currency) {
+        throw new Error("Platform order currency mismatch with restaurant");
+      }
+    }
 
     const mappedOrder = await this.findMappedOrder(
       platform,
@@ -107,11 +126,11 @@ export class PlatformOrderService {
 
     // Create internal order
     const now = new Date();
-    const subtotalCents = toRequiredCents(parsedOrder.subtotal);
-    const taxAmountCents = toRequiredCents(parsedOrder.taxAmount);
+    const subtotalCents = parsedOrder.subtotalCents;
+    const taxAmountCents = parsedOrder.taxAmountCents;
     const serviceChargeCents = 0;
     const discountAmountCents = 0;
-    const totalAmountCents = toRequiredCents(parsedOrder.totalAmount);
+    const totalAmountCents = parsedOrder.totalAmountCents;
 
     const orderId = generateUUID();
     const consumedItems = parsedOrder.items.flatMap((item) => {
@@ -133,6 +152,7 @@ export class PlatformOrderService {
           type: "delivery" as const,
           address: parsedOrder.deliveryAddress,
         },
+        notes: parsedOrder.notes,
         totalAmountCents,
         subtotalCents,
         taxAmountCents,
@@ -145,7 +165,7 @@ export class PlatformOrderService {
 
     // Create order items
     for (const { item, menuItemId } of consumedItems) {
-      const unitPriceCents = toRequiredCents(item.unitPrice);
+      const unitPriceCents = item.unitPriceCents;
       const totalPriceCents = unitPriceCents * item.quantity;
 
       writes.push(
@@ -156,6 +176,20 @@ export class PlatformOrderService {
           unitPriceCents,
           totalPriceCents,
           itemSnapshot: { name: item.name },
+          notes: item.notes,
+          customizations: item.customizations?.length
+            ? {
+                options: item.customizations.map((option, index) => ({
+                  id: String(index),
+                  optionName: option.name,
+                  choiceId: String(index),
+                  choiceName: option.value,
+                  ...(option.priceAdjustmentCents !== undefined && {
+                    priceAdjustment: option.priceAdjustmentCents / 100,
+                  }),
+                })),
+              }
+            : undefined,
           createdAt: now,
         }),
       );

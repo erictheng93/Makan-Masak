@@ -105,15 +105,18 @@ webhookRoutes.post(
       );
     }
 
-    const storePayload = payload as { store?: { id?: string } };
-    const storeId = storePayload.store?.id;
+    const storePayload = payload as {
+      store?: { id?: string };
+      meta?: { user_id?: string; resource_id?: string };
+    };
+    const storeId = storePayload.meta?.user_id ?? storePayload.store?.id;
     if (!storeId) {
       return c.json(
         {
           success: false,
           error: {
             code: "MISSING_PARAM",
-            message: "Missing store.id in payload",
+            message: "Missing store id in payload",
           },
         },
         400,
@@ -315,10 +318,33 @@ webhookRoutes.post(
 
     // Process the order — keep internal try/catch to record failure in the log
     try {
+      let orderPayload: unknown = payload;
+      if (
+        eventType === "orders.notification" ||
+        eventType === "orders.scheduled.notification"
+      ) {
+        const platformOrderId = storePayload.meta?.resource_id;
+        if (!platformOrderId || !adapter.fetchOrder) {
+          throw new Error(
+            "Uber Eats order notification is missing an order id",
+          );
+        }
+        orderPayload = await adapter.fetchOrder(
+          platformOrderId,
+          matchedCredentials,
+        );
+        const fetched = orderPayload as {
+          id?: string;
+          store?: { id?: string };
+        };
+        if (fetched.id !== platformOrderId || fetched.store?.id !== storeId) {
+          throw new Error("Uber Eats order details do not match notification");
+        }
+      }
       const orderService = new PlatformOrderService(c.env);
       const orderId = await orderService.processWebhook(
         "uber_eats",
-        payload,
+        orderPayload,
         integration.restaurantId,
       );
 

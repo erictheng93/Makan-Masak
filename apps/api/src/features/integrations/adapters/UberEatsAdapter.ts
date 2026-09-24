@@ -6,6 +6,12 @@ import type {
   MenuSyncResult,
 } from "@makanmasak/shared-types";
 import type { PlatformAdapter } from "./PlatformAdapter";
+import { normalizeCurrencyCode } from "@makanmasak/utils";
+import {
+  ISO_4217_EXPONENTS,
+  assertCurrencyAlignedCents,
+  centsToIsoMinorUnits,
+} from "../../../shared/utils/provider-money";
 
 const UBER_API_BASE = "https://api.uber.com";
 const UBER_AUTH_URL = "https://login.uber.com/oauth/v2/token";
@@ -76,21 +82,63 @@ export class UberEatsAdapter implements PlatformAdapter {
 
   async parseOrder(payload: unknown): Promise<ParsedPlatformOrder> {
     const order = payload as UberEatsOrderPayload;
+    if (!order?.id || !order.cart?.items || !order.payment?.charges?.total) {
+      throw new Error("Uber Eats order is missing id, items, or total");
+    }
+    const currencyCode = normalizeCurrencyCode(
+      order.payment?.charges?.total?.currency_code,
+    );
+    if (!currencyCode || currencyCode === "VND") {
+      throw new Error("Uber Eats order currency is missing or unsupported");
+    }
+    // The public docs do not establish whether TWD order amounts arrive as
+    // whole NT$ or hundredths. Even an amount divisible by 100 is ambiguous.
+    // Keep this closed until a TWD sandbox order confirms the raw unit.
+    if (currencyCode === "TWD") {
+      throw new Error("Uber Eats TWD amount unit is unverified");
+    }
+    const money = (value: UberMoney): number => {
+      if (value.currency_code !== currencyCode) {
+        throw new Error("Uber Eats order currency mismatch");
+      }
+      if (!Number.isSafeInteger(value.amount)) {
+        throw new Error("Uber Eats amount must be a safe integer");
+      }
+      const cents = value.amount * 10 ** (2 - ISO_4217_EXPONENTS[currencyCode]);
+      if (!Number.isSafeInteger(cents)) {
+        throw new Error("Uber Eats amount exceeds safe integer cents");
+      }
+      assertCurrencyAlignedCents(cents, currencyCode);
+      return cents;
+    };
 
     const items = (order.cart?.items ?? []).map((item) => {
       const quantity = item.quantity ?? 1;
-      const unitPrice = item.price?.unit_price?.amount ?? 0;
+      if (!Number.isSafeInteger(quantity) || quantity <= 0) {
+        throw new Error("Uber Eats item quantity must be a positive integer");
+      }
+      if (!item.price?.unit_price) {
+        throw new Error("Uber Eats item unit price is missing");
+      }
+      const unitPriceCents = money(item.price.unit_price);
+      const totalPriceCents = unitPriceCents * quantity;
+      if (!Number.isSafeInteger(totalPriceCents)) {
+        throw new Error("Uber Eats item total exceeds safe integer cents");
+      }
       return {
         platformItemId: item.id ?? "",
         name: item.title ?? "",
         quantity,
-        unitPrice,
-        totalPrice: unitPrice * quantity,
+        unitPriceCents,
+        totalPriceCents,
+        ...(item.special_instructions && { notes: item.special_instructions }),
         customizations: (item.selected_modifier_groups ?? []).flatMap((group) =>
-          (group.items ?? []).map((mod) => ({
-            name: mod.title ?? "",
+          (group.selected_items ?? []).map((mod) => ({
+            name: group.title ?? group.id ?? "Options",
             value: mod.title ?? "",
-            priceAdjustment: mod.price?.unit_price?.amount ?? 0,
+            priceAdjustmentCents: mod.price?.unit_price
+              ? money(mod.price.unit_price)
+              : 0,
           })),
         ),
       };
@@ -99,13 +147,21 @@ export class UberEatsAdapter implements PlatformAdapter {
     return {
       platformOrderId: order.id,
       platformStoreId: order.store?.id ?? "",
+      currencyCode,
       customerName: order.eater?.first_name ?? "Unknown",
       customerPhone: order.eater?.phone ?? "",
       deliveryAddress: order.delivery_info?.location?.address ?? "",
       items,
-      totalAmount: order.payment?.charges?.total?.amount ?? 0,
-      subtotal: order.payment?.charges?.sub_total?.amount ?? 0,
-      taxAmount: order.payment?.charges?.tax?.amount ?? 0,
+      totalAmountCents: money(order.payment.charges.total),
+      subtotalCents: order.payment.charges.sub_total
+        ? money(order.payment.charges.sub_total)
+        : 0,
+      taxAmountCents: order.payment.charges.tax
+        ? money(order.payment.charges.tax)
+        : 0,
+      ...(order.cart.special_instructions && {
+        notes: order.cart.special_instructions,
+      }),
       platformStatus: "received",
       rawPayload: payload,
     };
@@ -131,6 +187,24 @@ export class UberEatsAdapter implements PlatformAdapter {
       platformOrderId,
       reason: notification.reason ?? notification.cancellation_reason,
     };
+  }
+
+  async fetchOrder(
+    platformOrderId: string,
+    creds: PlatformCredentials,
+  ): Promise<unknown> {
+    if (!/^[a-zA-Z0-9-]+$/.test(platformOrderId)) {
+      throw new Error("Invalid Uber Eats order id");
+    }
+    const activeCreds = await this.ensureValidToken(creds);
+    const response = await fetch(
+      `${UBER_API_BASE}/v2/eats/order/${platformOrderId}`,
+      { headers: { Authorization: `Bearer ${activeCreds.accessToken}` } },
+    );
+    if (!response.ok) {
+      throw new Error(`Uber Eats order fetch failed (${response.status})`);
+    }
+    return response.json();
   }
 
   async acceptOrder(
@@ -219,11 +293,111 @@ export class UberEatsAdapter implements PlatformAdapter {
     menuData: MenuSyncPayload,
     creds: PlatformCredentials,
   ): Promise<MenuSyncResult> {
-    const activeCreds = await this.ensureValidToken(creds);
     const storeId = creds.storeId;
     if (!storeId) {
       throw new Error("storeId is required for menu sync");
     }
+    const currency = normalizeCurrencyCode(menuData.currencyCode);
+    if (currency !== "TWD" && currency !== "MYR") {
+      throw new Error("Uber Eats menu currency must be TWD or MYR");
+    }
+    const locale = currency === "TWD" ? "zh_tw" : "en_my";
+    if (currency === "TWD") {
+      throw new Error("Uber Eats TWD amount unit is unverified");
+    }
+    if (!menuData.serviceAvailability?.length) {
+      throw new Error("Uber Eats menu requires service availability");
+    }
+    const translated = (value: string) => ({
+      translations: { [locale]: value },
+    });
+    const price = (cents: number) => centsToIsoMinorUnits(cents, currency);
+    const safeModifierId = (value: string | number) => {
+      const id = String(value);
+      if (!/^[A-Za-z0-9_-]+$/.test(id)) {
+        throw new Error("Uber Eats menu has an unsafe modifier id");
+      }
+      return id;
+    };
+    const items: Array<Record<string, unknown>> = [];
+    const modifierItems: Array<Record<string, unknown>> = [];
+    const modifierGroups: Array<Record<string, unknown>> = [];
+    for (const category of menuData.categories) {
+      for (const item of category.items) {
+        const groupIds: string[] = [];
+        for (const [groupIndex, group] of (
+          item.modifierGroups ?? []
+        ).entries()) {
+          const options = group.modifiers.filter(
+            (mod) => mod.available !== false,
+          );
+          if (group.required && options.length === 0) {
+            throw new Error(
+              `Uber Eats modifier group ${group.name} has no available options`,
+            );
+          }
+          if (options.length === 0) continue;
+          const groupId = `${item.id}-${safeModifierId(group.id ?? groupIndex)}`;
+          groupIds.push(groupId);
+          const modifierOptions = options.map((mod, modIndex) => {
+            const id = `${groupId}-${safeModifierId(mod.id ?? modIndex)}`;
+            modifierItems.push({
+              id,
+              title: translated(mod.name),
+              price_info: { price: price(mod.priceCents) },
+              tax_info: {},
+            });
+            return { id, type: "ITEM" };
+          });
+          modifierGroups.push({
+            id: groupId,
+            title: translated(group.name),
+            quantity_info: {
+              quantity: {
+                min_permitted: group.minSelections,
+                max_permitted: group.maxSelections,
+              },
+            },
+            modifier_options: modifierOptions,
+          });
+        }
+        items.push({
+          id: String(item.id),
+          external_data: String(item.id),
+          title: translated(item.name),
+          ...(item.description && {
+            description: translated(item.description),
+          }),
+          ...(item.imageUrl && { image_url: item.imageUrl }),
+          price_info: { price: price(item.priceCents) },
+          tax_info: {},
+          ...(groupIds.length && { modifier_group_ids: { ids: groupIds } }),
+        });
+      }
+    }
+    const uberMenu = {
+      menus: [
+        {
+          id: String(menuData.restaurantId),
+          title: translated("Menu"),
+          service_availability: menuData.serviceAvailability,
+          category_ids: menuData.categories.map((category) =>
+            String(category.id),
+          ),
+        },
+      ],
+      categories: menuData.categories.map((category) => ({
+        id: String(category.id),
+        title: translated(category.name),
+        entities: category.items.map((item) => ({
+          id: String(item.id),
+          type: "ITEM",
+        })),
+      })),
+      items: [...items, ...modifierItems],
+      modifier_groups: modifierGroups,
+    };
+    const activeCreds = await this.ensureValidToken(creds);
 
     const response = await fetch(
       `${UBER_API_BASE}/v2/eats/stores/${storeId}/menus`,
@@ -233,7 +407,7 @@ export class UberEatsAdapter implements PlatformAdapter {
           Authorization: `Bearer ${activeCreds.accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(menuData),
+        body: JSON.stringify(uberMenu),
       },
     );
 
@@ -244,27 +418,12 @@ export class UberEatsAdapter implements PlatformAdapter {
       );
     }
 
-    const result = (await response.json()) as {
-      menus?: Array<{
-        categories?: Array<{
-          items?: Array<{
-            id: string;
-            external_id?: string;
-          }>;
-        }>;
-      }>;
-    };
-
-    const platformItemIds: Record<number, string> = {};
-    for (const menu of result.menus ?? []) {
-      for (const category of menu.categories ?? []) {
-        for (const item of category.items ?? []) {
-          if (item.external_id) {
-            platformItemIds[Number(item.external_id)] = item.id;
-          }
-        }
-      }
-    }
+    // Upload returns 204 No Content; Uber uses our item IDs as its IDs.
+    const platformItemIds = Object.fromEntries(
+      menuData.categories.flatMap((category) =>
+        category.items.map((item) => [item.id, String(item.id)]),
+      ),
+    ) as Record<number, string>;
 
     return {
       success: true,
@@ -285,30 +444,39 @@ export class UberEatsAdapter implements PlatformAdapter {
 
 // --- Internal type for Uber Eats raw order payload ---
 
+interface UberMoney {
+  amount: number;
+  currency_code?: string;
+}
+
 interface UberEatsOrderPayload {
   id: string;
   store?: { id: string };
   eater?: { first_name: string; phone: string };
   delivery_info?: { location?: { address: string } };
   cart?: {
+    special_instructions?: string;
     items: Array<{
       id?: string;
       title?: string;
+      special_instructions?: string;
       quantity?: number;
-      price?: { unit_price?: { amount: number } };
+      price?: { unit_price?: UberMoney };
       selected_modifier_groups?: Array<{
-        items?: Array<{
+        id?: string;
+        title?: string;
+        selected_items?: Array<{
           title?: string;
-          price?: { unit_price?: { amount: number } };
+          price?: { unit_price?: UberMoney };
         }>;
       }>;
     }>;
   };
   payment?: {
     charges?: {
-      total?: { amount: number };
-      sub_total?: { amount: number };
-      tax?: { amount: number };
+      total?: UberMoney;
+      sub_total?: UberMoney;
+      tax?: UberMoney;
     };
   };
 }

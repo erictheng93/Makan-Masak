@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   adapter: {
     verifyWebhook: vi.fn(),
     parseCancellation: vi.fn(),
+    fetchOrder: vi.fn(),
   },
   integrationService: {
     getDecryptedCredentials: vi.fn(),
@@ -186,6 +187,12 @@ describe("platform webhook routes", () => {
     vi.clearAllMocks();
     mocks.drizzle.mockReturnValue(mocks.db);
     mocks.adapter.verifyWebhook.mockResolvedValue(true);
+    mocks.adapter.fetchOrder.mockResolvedValue({
+      id: "uber-order-1",
+      store: { id: "store-1" },
+      cart: { items: [] },
+      payment: { charges: { total: { amount: 1399, currency_code: "MYR" } } },
+    });
     mocks.integrationService.getDecryptedCredentials.mockResolvedValue({
       clientSecret: "decrypted-secret",
     });
@@ -226,7 +233,7 @@ describe("platform webhook routes", () => {
     expect(response.status).toBe(400);
     expect(body).toEqual({
       success: false,
-      error: { code: "MISSING_PARAM", message: "Missing store.id in payload" },
+      error: { code: "MISSING_PARAM", message: "Missing store id in payload" },
     });
     expect(mocks.db.select).not.toHaveBeenCalled();
   });
@@ -392,6 +399,59 @@ describe("platform webhook routes", () => {
       status: "received",
     });
     expect(mutations.updated[0]).toMatchObject({ status: "processed" });
+  });
+
+  it("fetches full order details for a signed Uber notification", async () => {
+    mockMutations();
+    mockSelectResults({ platformIntegrations: [[integration()]] });
+    const notification = {
+      event_id: "event-notification",
+      event_type: "orders.notification",
+      meta: { resource_id: "uber-order-1", user_id: "store-1", status: "pos" },
+      resource_href: "https://attacker.example.test/ignore-this-url",
+    };
+    const response = await request("/uber-eats", {
+      method: "POST",
+      body: JSON.stringify(notification),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(mocks.adapter.fetchOrder).toHaveBeenCalledWith(
+      "uber-order-1",
+      expect.objectContaining({ storeId: "store-1" }),
+    );
+    expect(mocks.orderService.processWebhook).toHaveBeenCalledWith(
+      "uber_eats",
+      expect.objectContaining({ id: "uber-order-1", store: { id: "store-1" } }),
+      "restaurant-1",
+    );
+  });
+
+  it("refuses fetched order details from another Uber store", async () => {
+    const mutations = mockMutations();
+    mockSelectResults({ platformIntegrations: [[integration()]] });
+    mocks.adapter.fetchOrder.mockResolvedValueOnce({
+      id: "uber-order-1",
+      store: { id: "other-store" },
+      cart: { items: [] },
+    });
+    const response = await request("/uber-eats", {
+      method: "POST",
+      body: JSON.stringify({
+        event_type: "orders.notification",
+        event_id: "event-other-store",
+        meta: { user_id: "store-1", resource_id: "uber-order-1" },
+      }),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    expect(response.status).toBe(500);
+    expect(mocks.orderService.processWebhook).not.toHaveBeenCalled();
+    expect(mutations.updated[0]).toMatchObject({
+      status: "failed",
+      platformEventId: null,
+    });
   });
 
   it("acknowledges a duplicate event before creating another order", async () => {

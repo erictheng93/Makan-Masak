@@ -12,6 +12,10 @@ export interface PlatformAdapter {
   verifyWebhook(request: Request, secret: string): Promise<boolean>;
   refreshToken(credentials: PlatformCredentials): Promise<PlatformCredentials>;
   parseOrder(payload: unknown): Promise<ParsedPlatformOrder>;
+  fetchOrder?(
+    platformOrderId: string,
+    creds: PlatformCredentials,
+  ): Promise<unknown>;
   parseCancellation(
     payload: unknown,
   ): Promise<{ platformOrderId: string; reason?: string }>;
