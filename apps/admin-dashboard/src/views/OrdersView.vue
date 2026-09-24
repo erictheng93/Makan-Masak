@@ -659,7 +659,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onBeforeUnmount, onMounted, watch } from "vue";
 import { api } from "@/services/api";
 import { useRouter } from "vue-router";
 import { useI18n } from "@/i18n";
@@ -673,6 +673,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useCurrency } from "@/composables/useCurrency";
 import { useDateFormatter } from "@/composables/useDateFormatter";
 import { useOrderStore } from "@/stores/order";
+import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import { useVirtualScroll } from "@/composables/useVirtualScroll";
 import { useConfirmModal } from "@/composables/useConfirmModal";
 import OrderItemsEditor from "@/components/orders/OrderItemsEditor.vue";
@@ -1073,10 +1074,22 @@ const getTypeText = (type: string) => {
   return texts[type] || type;
 };
 
+// Realtime keeps the list current while the socket is up; this covers a
+// dropped socket and the stat cards, which no realtime event updates.
+const ordersPoller = createVisibilityAwarePoller({
+  intervalMs: 30_000,
+  onTick: async () => {
+    if (isLoading.value) return;
+    await Promise.all([orderStore.refetchOrders(), refreshOrderStats()]);
+  },
+});
+
 // 生命周期
 onMounted(() => {
   refreshOrders();
+  ordersPoller.start();
 });
+onBeforeUnmount(() => ordersPoller.stop());
 </script>
 
 <style scoped>

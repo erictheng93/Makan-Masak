@@ -5,12 +5,27 @@ import { api, unwrapApiList } from "@/services/api";
 import { t } from "@/i18n";
 import { resolveUserFacingError } from "@makanmasak/shared/utils/user-facing-error";
 
+interface FetchOrdersParams {
+  status?: OrderStatus[];
+  page?: number;
+  limit?: number;
+  date?: string;
+  orderType?: "shop" | "table" | "seat";
+  fulfillmentType?: "dine_in" | "takeaway" | "delivery";
+  orderSource?: string;
+  search?: string;
+}
+
 export const useOrderStore = defineStore("order", () => {
   const orders = ref<Order[]>([]);
   const isLoading = ref(false);
   const error = ref<string | null>(null);
   const pagination = ref({ page: 1, limit: 20, total: 0, totalPages: 1 });
   let latestFetchRequest = 0;
+  // What the list on screen was fetched with, so a background refresh (a
+  // realtime NEW_ORDER, a poll) reloads the same filters and page instead of
+  // resetting them.
+  let lastFetchParams: FetchOrdersParams | undefined;
 
   // Computed properties
   const pendingOrders = computed(() =>
@@ -46,16 +61,8 @@ export const useOrderStore = defineStore("order", () => {
   );
 
   // Actions
-  const fetchOrders = async (params?: {
-    status?: OrderStatus[];
-    page?: number;
-    limit?: number;
-    date?: string;
-    orderType?: "shop" | "table" | "seat";
-    fulfillmentType?: "dine_in" | "takeaway" | "delivery";
-    orderSource?: string;
-    search?: string;
-  }) => {
+  const fetchOrders = async (params?: FetchOrdersParams) => {
+    lastFetchParams = params;
     const requestId = ++latestFetchRequest;
     isLoading.value = true;
     error.value = null;
@@ -115,6 +122,8 @@ export const useOrderStore = defineStore("order", () => {
       }
     }
   };
+
+  const refetchOrders = () => fetchOrders(lastFetchParams);
 
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
     try {
@@ -342,6 +351,7 @@ export const useOrderStore = defineStore("order", () => {
     pendingOrdersCount,
     activeOrdersCount,
     fetchOrders,
+    refetchOrders,
     updateOrderStatus,
     updateOrder,
     applyOrderStatusEvent,

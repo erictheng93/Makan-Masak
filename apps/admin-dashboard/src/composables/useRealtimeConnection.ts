@@ -157,7 +157,7 @@ export function useRealtimeConnection() {
       // else that misses is an order outside the current page -- leave it be
       // rather than refetching on every event the shop isn't looking at.
       if (!merged && event.type === RealtimeEventType.NEW_ORDER) {
-        void orderStore.fetchOrders();
+        void orderStore.refetchOrders();
       }
     }
 
