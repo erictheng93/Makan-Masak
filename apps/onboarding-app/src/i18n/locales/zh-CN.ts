@@ -103,6 +103,8 @@ const zhCN: Messages = {
     tour: {
       title: "从点餐到出餐，一次看懂",
       subtitle: "以下都是系统的实际画面，店家与订单是示范数据。",
+      tryDemo: "亲自试试示范店 →",
+      tryDemoHint: "用手机打开，就像客人扫码一样。订单不会真的送出。",
       steps: {
         order: {
           title: "客人扫码点餐",

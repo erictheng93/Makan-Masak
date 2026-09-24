@@ -1364,5 +1364,13 @@
     "saved": "设置已保存",
     "saveFailed": "设置保存失败，请稍后再试",
     "loadFailed": "设置加载失败，请稍后再试"
+  },
+  "demoShop": {
+    "bannerTitle": "这是示范店",
+    "bannerBody": "欢迎随意点餐体验，订单不会真的送出。",
+    "noticeTitle": "这是示范店，订单不会送出",
+    "noticeBody": "您刚刚走完了客人点餐的流程。在真实店家，这笔订单会立刻出现在厨房平板上。",
+    "applyCta": "我也要开店",
+    "keepBrowsing": "继续逛逛"
   }
 }

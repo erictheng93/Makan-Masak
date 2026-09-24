@@ -78,6 +78,9 @@ export const restaurants = sqliteTable(
     }>(),
     shopQrVersion: integer("shop_qr_version").notNull().default(1),
 
+    // 示範店：訂單與預約一律拒絕，探索與搜尋不列出（0033）。只由平台設定。
+    isDemo: integer("is_demo", { mode: "boolean" }).notNull().default(false),
+
     // 設定
     settings: text("settings", { mode: "json" }).$type<{
       allowOnlineOrdering?: boolean;

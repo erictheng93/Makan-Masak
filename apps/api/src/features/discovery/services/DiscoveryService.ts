@@ -141,6 +141,7 @@ export class DiscoveryService {
       eq(dishSearchIndex.isAvailable, true),
       eq(restaurants.isAvailable, true),
       eq(restaurants.isActive, true),
+      eq(restaurants.isDemo, false),
       isNull(restaurants.deletedAt),
     ];
 
@@ -492,6 +493,7 @@ export class DiscoveryService {
       eq(dishSearchIndex.isAvailable, true),
       eq(restaurants.isAvailable, true),
       eq(restaurants.isActive, true),
+      eq(restaurants.isDemo, false),
       isNull(restaurants.deletedAt),
       sql`${dishSearchIndex.categoryName} IS NOT NULL`,
       sql`${dishSearchIndex.categoryName} != ''`,
@@ -603,6 +605,7 @@ export class DiscoveryService {
     const conditions: SQL[] = [
       eq(restaurants.isAvailable, true),
       eq(restaurants.isActive, true),
+      eq(restaurants.isDemo, false),
       isNull(restaurants.deletedAt),
     ];
 
@@ -813,6 +816,7 @@ export class DiscoveryService {
       isNull(restaurantServiceItems.deletedAt),
       eq(restaurants.isAvailable, true),
       eq(restaurants.isActive, true),
+      eq(restaurants.isDemo, false),
       isNull(restaurants.deletedAt),
     ];
 
@@ -1026,6 +1030,7 @@ export class DiscoveryService {
       isNull(restaurantServiceItems.deletedAt),
       eq(restaurants.isAvailable, true),
       eq(restaurants.isActive, true),
+      eq(restaurants.isDemo, false),
       isNull(restaurants.deletedAt),
     ];
 
@@ -1146,6 +1151,7 @@ export class DiscoveryService {
           eq(dishSearchIndex.isAvailable, true),
           eq(restaurants.isAvailable, true),
           eq(restaurants.isActive, true),
+          eq(restaurants.isDemo, false),
           isNull(restaurants.deletedAt),
         ),
       )
@@ -1427,7 +1433,11 @@ export class DiscoveryService {
       .leftJoin(categories, eq(menuItems.categoryId, categories.id))
       .innerJoin(restaurants, eq(menuItems.restaurantId, restaurants.id))
       .where(
-        and(eq(restaurants.isActive, true), isNull(restaurants.deletedAt)),
+        and(
+          eq(restaurants.isActive, true),
+          eq(restaurants.isDemo, false),
+          isNull(restaurants.deletedAt),
+        ),
       );
 
     // Build batch statements (D1 supports up to 100 per batch)
@@ -1711,6 +1721,7 @@ export class DiscoveryService {
           and(
             eq(dishSearchIndex.isAvailable, true),
             eq(restaurants.isActive, true),
+            eq(restaurants.isDemo, false),
             eq(restaurants.isAvailable, true),
             isNull(restaurants.deletedAt),
             or(
@@ -1734,6 +1745,7 @@ export class DiscoveryService {
             eq(restaurantServiceItems.isPublic, true),
             isNull(restaurantServiceItems.deletedAt),
             eq(restaurants.isActive, true),
+            eq(restaurants.isDemo, false),
             eq(restaurants.isAvailable, true),
             isNull(restaurants.deletedAt),
             sql`EXISTS (

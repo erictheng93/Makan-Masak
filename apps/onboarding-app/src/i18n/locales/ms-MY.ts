@@ -107,6 +107,9 @@ const msMY: Messages = {
       title: "Dari pesanan ke meja, sekali pandang",
       subtitle:
         "Ini ialah skrin sebenar sistem, dengan kedai dan pesanan contoh.",
+      tryDemo: "Cuba restoran demo →",
+      tryDemoHint:
+        "Buka di telefon anda, sama seperti pelanggan mengimbas kod. Tiada pesanan yang benar-benar dihantar.",
       steps: {
         order: {
           title: "Pelanggan imbas untuk memesan",

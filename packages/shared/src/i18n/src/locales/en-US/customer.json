@@ -1364,5 +1364,13 @@
     "saved": "Settings saved",
     "saveFailed": "Settings could not be saved. Please try again.",
     "loadFailed": "Settings could not be loaded. Please try again."
+  },
+  "demoShop": {
+    "bannerTitle": "This is a demo restaurant",
+    "bannerBody": "Order anything you like to try it out. Nothing is actually sent.",
+    "noticeTitle": "Demo restaurant: this order won't be sent",
+    "noticeBody": "You've just walked through ordering as a guest. At a real restaurant, this order would appear on the kitchen tablet right away.",
+    "applyCta": "Open my own shop",
+    "keepBrowsing": "Keep browsing"
   }
 }

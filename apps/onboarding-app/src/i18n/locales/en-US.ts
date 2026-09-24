@@ -50,6 +50,9 @@ const enUS: Messages = {
       title: "From order to table, at a glance",
       subtitle:
         "These are real screens from the system, shown with a sample restaurant and sample orders.",
+      tryDemo: "Try the demo restaurant →",
+      tryDemoHint:
+        "Open it on your phone, just like a guest scanning the code. No order is actually sent.",
       steps: {
         order: {
           title: "Guests order by scanning",

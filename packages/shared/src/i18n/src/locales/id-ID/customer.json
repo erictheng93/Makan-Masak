@@ -1364,5 +1364,13 @@
     "saved": "Pengaturan disimpan",
     "saveFailed": "Pengaturan gagal disimpan. Silakan coba lagi.",
     "loadFailed": "Pengaturan gagal dimuat. Silakan coba lagi."
+  },
+  "demoShop": {
+    "bannerTitle": "Ini adalah restoran demo",
+    "bannerBody": "Silakan coba memesan apa saja. Tidak ada pesanan yang benar-benar dikirim.",
+    "noticeTitle": "Restoran demo: pesanan ini tidak akan dikirim",
+    "noticeBody": "Anda baru saja mencoba alur pemesanan sebagai tamu. Di restoran sungguhan, pesanan ini langsung muncul di tablet dapur.",
+    "applyCta": "Buka toko saya sendiri",
+    "keepBrowsing": "Lanjut melihat-lihat"
   }
 }

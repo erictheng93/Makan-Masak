@@ -155,8 +155,18 @@ app.post(
     // A missing or retired restaurant used to fall through to slot allocation
     // and become a sanitised 500. Keep the anonymous API's response explicit
     // without exposing a disabled restaurant's details.
-    if (!(await service.getPublicReservationRestaurant(body.restaurantId))) {
+    const restaurant = await service.getPublicReservationRestaurant(
+      body.restaurantId,
+    );
+    if (!restaurant) {
       throw notFound("Restaurant not found", "RESTAURANT_NOT_FOUND");
+    }
+    // The onboarding showcase shop (restaurants.is_demo) takes no bookings.
+    if (restaurant.isDemo) {
+      throw forbidden(
+        "This is a demo restaurant. Orders and bookings are not accepted.",
+        "DEMO_RESTAURANT",
+      );
     }
 
     const reservation = await service.createReservation(body);

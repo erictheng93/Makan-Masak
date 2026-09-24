@@ -49,6 +49,7 @@ import {
   badRequest,
   conflict,
   computeDiscountCents,
+  forbidden,
   formatCurrency,
 } from "@makanmasak/utils";
 import { amountFromCents, fromCents, toRequiredCents } from "../utils/money";
@@ -645,6 +646,15 @@ export class OrderService extends BaseService {
       // 而不是掉進 ErrorSanitizer 變成 500 GENERIC_ERROR（#352）。
       if (!restaurant || !restaurant.isAvailable) {
         throw conflict("Restaurant is not available", "RESTAURANT_UNAVAILABLE");
+      }
+
+      // 平台示範店（0033）：onboarding 首頁讓潛在店家親手走一次點餐，
+      // 但任何訂單路徑（訪客、會員、揪團、市集結帳）都不能真的成立。
+      if (restaurant.isDemo) {
+        throw forbidden(
+          "This is a demo restaurant. Orders and bookings are not accepted.",
+          "DEMO_RESTAURANT",
+        );
       }
 
       // 外送必須由店家開啟才收單。前端只是不顯示外送選項，直接打 API 帶

@@ -1136,9 +1136,9 @@ export class ReservationService extends BaseService {
    */
   async getPublicReservationRestaurant(
     restaurantId: string,
-  ): Promise<{ id: string } | null> {
+  ): Promise<{ id: string; isDemo: boolean } | null> {
     const [restaurant] = await this.db
-      .select({ id: restaurants.id })
+      .select({ id: restaurants.id, isDemo: restaurants.isDemo })
       .from(restaurants)
       .where(
         and(

@@ -107,6 +107,9 @@ const viVN: Messages = {
       title: "Từ lúc gọi món đến khi lên bàn, nhìn là hiểu",
       subtitle:
         "Đây là màn hình thật của hệ thống, dùng cửa hàng và đơn hàng mẫu.",
+      tryDemo: "Thử nhà hàng mẫu →",
+      tryDemoHint:
+        "Mở trên điện thoại của bạn, giống như khách quét mã. Đơn hàng sẽ không thật sự được gửi đi.",
       steps: {
         order: {
           title: "Khách quét mã để gọi món",

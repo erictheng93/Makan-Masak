@@ -130,6 +130,10 @@
     {
       "fresh": "0032_market_country_code.sql",
       "reason": "markets is a platform-API table; the management-api database has no markets row to carry a country on."
+    },
+    {
+      "fresh": "0033_restaurant_is_demo.sql",
+      "reason": "restaurants is a platform-API table; the management-api database has no restaurants row to flag as a demo."
     }
   ],
   "legacyOnly": [

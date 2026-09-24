@@ -43,6 +43,8 @@ const zhTW = {
     tour: {
       title: "從點餐到出餐，一次看懂",
       subtitle: "以下都是系統的實際畫面，店家與訂單是示範資料。",
+      tryDemo: "親自試試示範店 →",
+      tryDemoHint: "用手機打開，就像客人掃碼一樣。訂單不會真的送出。",
       steps: {
         order: {
           title: "客人掃碼點餐",

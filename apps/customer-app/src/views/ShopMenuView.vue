@@ -51,6 +51,7 @@
             <LanguageSwitcher compact />
 
             <button
+              v-if="!isDemo"
               type="button"
               data-testid="shop-menu-reservation"
               :aria-label="t('reservationBooking.title')"
@@ -236,6 +237,20 @@
             </p>
             <p class="mt-1 text-sm text-ios-secondary">
               {{ t(BLOCKED_COPY[orderingBlockedReason].description) }}
+            </p>
+          </section>
+
+          <!-- Platform showcase shop: browsable end to end, never ordered from. -->
+          <section
+            v-if="isDemo"
+            data-testid="shop-demo-banner"
+            class="bg-ios-orange-soft rounded-2xl px-4 py-3"
+          >
+            <p class="text-sm font-semibold text-ios-orange-deep">
+              {{ t("demoShop.bannerTitle") }}
+            </p>
+            <p class="mt-1 text-sm text-ios-orange-deep">
+              {{ t("demoShop.bannerBody") }}
             </p>
           </section>
 
@@ -654,6 +669,7 @@
       :waiting-ticket-id="waitingTicketId"
       :ordering-disabled="orderingBlocked"
       :fulfillment="shopFulfillment"
+      :is-demo="isDemo"
       @close="showCart = false"
     />
   </div>
@@ -752,6 +768,10 @@ const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery({
   queryFn: () => menuApi.getRestaurant(props.restaurantId),
   staleTime: 5 * 60 * 1000, // 5分鐘
 });
+
+// The onboarding page's showcase shop: the server refuses its orders
+// (DEMO_RESTAURANT), so say so up front instead of at checkout.
+const isDemo = computed(() => restaurant.value?.isDemo === true);
 
 // The badge used to be a two-way ternary (`delivery ? 外送 : 外帶`) over a
 // three-valued store, so a diner who picked 內用 on the order-type landing page

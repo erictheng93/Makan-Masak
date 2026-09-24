@@ -43,6 +43,7 @@ type RestaurantRow = Pick<
   | "imageUrls"
   | "isActive"
   | "isAvailable"
+  | "isDemo"
   | "latitude"
   | "logoUrl"
   | "longitude"
@@ -331,6 +332,7 @@ export class RestaurantService extends BaseService {
           shopQrCodeImageUrl: restaurants.shopQrCodeImageUrl,
           shopQrSettings: restaurants.shopQrSettings,
           shopQrVersion: restaurants.shopQrVersion,
+          isDemo: restaurants.isDemo,
           supportsDelivery: restaurants.supportsDelivery,
           supportsTakeaway: restaurants.supportsTakeaway,
           shopQrCode: restaurants.shopQrCode,
@@ -904,6 +906,7 @@ export class RestaurantService extends BaseService {
       enableShopMode: restaurant.enableShopMode,
       shopQrSettings: restaurant.shopQrSettings ?? undefined,
       shopQrVersion: restaurant.shopQrVersion,
+      isDemo: restaurant.isDemo,
       createdAt: restaurant.createdAt.toISOString(),
       updatedAt: restaurant.updatedAt.toISOString(),
     };

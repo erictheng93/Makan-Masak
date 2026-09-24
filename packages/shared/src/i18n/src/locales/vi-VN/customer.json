@@ -1364,5 +1364,13 @@
     "saved": "Đã lưu cài đặt",
     "saveFailed": "Không lưu được cài đặt. Vui lòng thử lại.",
     "loadFailed": "Không tải được cài đặt. Vui lòng thử lại."
+  },
+  "demoShop": {
+    "bannerTitle": "Đây là nhà hàng mẫu",
+    "bannerBody": "Cứ thoải mái gọi món để trải nghiệm. Đơn hàng sẽ không thật sự được gửi đi.",
+    "noticeTitle": "Nhà hàng mẫu: đơn này sẽ không được gửi",
+    "noticeBody": "Bạn vừa trải qua quy trình gọi món của khách. Ở nhà hàng thật, đơn này sẽ hiện ngay trên máy tính bảng của bếp.",
+    "applyCta": "Mở cửa hàng của tôi",
+    "keepBrowsing": "Tiếp tục xem"
   }
 }

@@ -1364,5 +1364,13 @@
     "saved": "設定已儲存",
     "saveFailed": "設定儲存失敗，請稍後再試",
     "loadFailed": "設定載入失敗，請稍後再試"
+  },
+  "demoShop": {
+    "bannerTitle": "這是示範店",
+    "bannerBody": "歡迎隨意點餐體驗，訂單不會真的送出。",
+    "noticeTitle": "這是示範店，訂單不會送出",
+    "noticeBody": "您剛剛走完了客人點餐的流程。在真實店家，這筆訂單會立刻出現在廚房平板上。",
+    "applyCta": "我也要開店",
+    "keepBrowsing": "繼續逛逛"
   }
 }

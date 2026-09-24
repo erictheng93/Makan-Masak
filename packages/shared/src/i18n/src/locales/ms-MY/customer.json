@@ -1364,5 +1364,13 @@
     "saved": "Tetapan disimpan",
     "saveFailed": "Tetapan gagal disimpan. Sila cuba lagi.",
     "loadFailed": "Tetapan gagal dimuatkan. Sila cuba lagi."
+  },
+  "demoShop": {
+    "bannerTitle": "Ini ialah restoran demo",
+    "bannerBody": "Cubalah memesan apa sahaja. Tiada pesanan yang benar-benar dihantar.",
+    "noticeTitle": "Restoran demo: pesanan ini tidak akan dihantar",
+    "noticeBody": "Anda baru sahaja melalui proses pesanan sebagai pelanggan. Di restoran sebenar, pesanan ini akan terus muncul pada tablet dapur.",
+    "applyCta": "Buka kedai saya sendiri",
+    "keepBrowsing": "Teruskan melihat"
   }
 }

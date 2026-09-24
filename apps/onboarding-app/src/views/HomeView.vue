@@ -54,6 +54,16 @@ const tourSteps = computed(() =>
   })),
 );
 
+// The live showcase shop (restaurants.is_demo). Unset until the platform has
+// created one, and then the button stays hidden rather than 404ing.
+const demoShopUrl = (() => {
+  const id = import.meta.env.VITE_DEMO_RESTAURANT_ID;
+  const base = import.meta.env.VITE_CUSTOMER_APP_URL;
+  return id && base
+    ? `${base.replace(/\/+$/, "")}/restaurant/${id}/shop/order-type`
+    : null;
+})();
+
 const features = computed(() => [
   {
     icon: CloudIcon,
@@ -190,6 +200,21 @@ const features = computed(() => [
           />
         </li>
       </ol>
+
+      <div v-if="demoShopUrl" class="mt-8 text-center">
+        <a
+          :href="demoShopUrl"
+          target="_blank"
+          rel="noopener"
+          data-testid="try-demo-shop"
+          class="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-primary-700 shadow-card transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+        >
+          {{ t("home.tour.tryDemo") }}
+        </a>
+        <p class="mt-2 text-xs text-gray-500">
+          {{ t("home.tour.tryDemoHint") }}
+        </p>
+      </div>
     </section>
 
     <!-- Subtle CTA -->

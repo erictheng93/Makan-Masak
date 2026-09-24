@@ -108,6 +108,9 @@ const idID: Messages = {
       title: "Dari pesanan sampai ke meja, sekilas",
       subtitle:
         "Ini adalah tampilan asli sistem, dengan toko dan pesanan contoh.",
+      tryDemo: "Coba restoran demo →",
+      tryDemoHint:
+        "Buka di ponsel Anda, seperti tamu yang memindai kode. Tidak ada pesanan yang benar-benar dikirim.",
       steps: {
         order: {
           title: "Tamu memesan dengan memindai",
