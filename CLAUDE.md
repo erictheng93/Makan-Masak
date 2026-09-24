@@ -892,26 +892,3 @@ Key references: `docs/UIUX-design-system.md` and `DESIGN.md` — mandatory for a
 - Always use context7 when I need code generation, setup or configuration steps, or
   library/API documentation. This means you should automatically use the Context7 MCP
   tools to resolve library id and get library docs without me having to explicitly ask.
-
-## gstack
-
-gstack is installed **user-level only** (`~/.claude/skills/gstack`). This repo
-used to vendor its own copy under `.claude/skills/`; that copy was removed on
-2026-09-01 because project-scope skills shadow user-scope ones, so the repo was
-pinning everyone to a stale gstack (runtime v0.15.16.0, skill prompts from a
-~1.5x build) while the binaries resolved to the newer user-level install. Do not
-re-vendor it here — install per-developer instead:
-
-```bash
-git clone --single-branch --depth 1 https://github.com/garrytan/gstack.git ~/.claude/skills/gstack
-cd ~/.claude/skills/gstack && ./setup
-```
-
-- Planning/review: `/office-hours`, `/autoplan`, `/spec`, `/plan-ceo-review`, `/plan-eng-review`, `/plan-design-review`, `/plan-devex-review`, `/review`, `/devex-review`, `/cso`, `/codex`.
-- Ship/ops: `/ship`, `/land-and-deploy`, `/canary`, `/benchmark`, `/health`, `/retro`, `/investigate`, `/document-release`, `/document-generate`, `/landing-report`.
-- Browser/QA: `/browse`, `/qa`, `/qa-only`, `/scrape`, `/skillify`, `/setup-browser-cookies`, `/connect-chrome`, `/pair-agent`.
-- Design: `/design-consultation`, `/design-shotgun`, `/design-html`, `/design-review`, `/diagram`, `/make-pdf`.
-- Session/safety: `/context-save`, `/context-restore`, `/learn`, `/careful`, `/freeze`, `/guard`, `/unfreeze`, `/setup-deploy`, `/gstack-upgrade`.
-- `/checkpoint` is gone — gstack replaced it with `/context-save` + `/context-restore`.
-- If gstack skills aren't working, run `cd ~/.claude/skills/gstack && ./setup` to rebuild the browse binary and re-register skills.
-- Use `/browse` for AI-driven QA testing; `mcp__chrome-devtools__*` and Playwright MCP tools are still permitted when explicitly requested.

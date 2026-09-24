@@ -233,7 +233,6 @@ tmpclaude-*
 # so an `add -A` from any session would commit one into the repo.
 .claude/worktrees/
 .superpowers/
-.gstack/
 .impeccable/
 
 # E2E integration test auth cache
