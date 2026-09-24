@@ -37,7 +37,7 @@ There are **4** plan tiers in `PLAN_TIERS`: `trial`, `basic`, `pro`,
 - `enterprise` (all 14): `pro` plus `ai_analytics`, `platform_integration`, `loyalty`, `inventory`, `staff_management`.
 - `trial` (all 14): the same set as `enterprise`, but only until `trial_ends_at_ms`. The gate itself starts returning `403 TRIAL_EXPIRED` the moment `trial_ends_at_ms` passes; `TrialReaperService.downgradeExpiredTrials`, run by the daily `15 2 * * *` billing-lifecycle cron, then rewrites the row to `plan_tier = 'basic'`, resets `module_overrides` to `{}`, and rolls a fresh `DEFAULT_BILLING_CYCLE_MS` (30-day) cycle. Enforcement does not wait for the cron.
 
-Trial length is **30 days** on every path, from `TRIAL_DURATION_MS` /
+Trial length is **180 days (six months)** on every path, from `TRIAL_DURATION_MS` /
 `TRIAL_DURATION_DAYS` in `packages/database/src/utils/plan-mapping.ts`. Both
 Management-API onboarding (`OnboardingService`, `TenantService`) and
 `SubscriptionService.provisionDefaultForRestaurant` read that constant; they

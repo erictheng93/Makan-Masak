@@ -536,7 +536,7 @@ All paths relative to `/api/v1/admin/subscriptions`, `authMiddleware` + `require
 
 - `billing` feature (`UsageService`) — usage-read routes construct it directly.
 - `middleware/moduleGate.ts` and `middleware/quotaGate.ts` (core, not a feature) read `shop_subscriptions` directly (their own Drizzle queries, not via `SubscriptionService`) and are the actual runtime enforcement point for every module-gated/quota-gated route across the API, including `payments` and `coupons` in this doc.
-- `restaurants` feature (implied, not traced in this audit): `SubscriptionService.provisionDefaultForRestaurant` exists as a public method (auto-provisions a 30-day trial subscription) but is not called from any route in this feature — it is presumably invoked from restaurant-onboarding code elsewhere (not confirmed in this pass; flag for verification before assuming dead code).
+- `restaurants` feature (implied, not traced in this audit): `SubscriptionService.provisionDefaultForRestaurant` exists as a public method (auto-provisions a 180-day trial subscription) but is not called from any route in this feature — it is presumably invoked from restaurant-onboarding code elsewhere (not confirmed in this pass; flag for verification before assuming dead code).
 
 ### 7.6 Rust rewrite notes
 
