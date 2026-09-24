@@ -127,6 +127,16 @@ describe("admin dashboard router", () => {
     });
   });
 
+  it("gives platform pages their own breadcrumb title, not the overview's", () => {
+    const titleKeyFor = (name: string) =>
+      router.getRoutes().find((route) => route.name === name)?.meta.titleKey;
+
+    expect(titleKeyFor("PlatformMarkets")).toBe("pages.platformMarkets");
+    expect(titleKeyFor("PlatformOnboardingApplications")).toBe(
+      "pages.platformOnboarding",
+    );
+  });
+
   it("keeps OwnerOverview, Orders, and GroupOrders role boundaries distinct", () => {
     const rolesFor = (name: string) =>
       router.getRoutes().find((route) => route.name === name)?.meta.roles;

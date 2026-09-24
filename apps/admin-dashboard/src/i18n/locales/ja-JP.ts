@@ -1949,6 +1949,8 @@ const jaJP: Messages = {
     subscriptions: "定期購入",
     waitingManagement: "待機管理",
     platformMarketCheckouts: "マーケットチェックアウト",
+    platformMarkets: "マーケット品質",
+    platformOnboarding: "出店申請",
     platformCustomers: "プラットフォーム顧客",
   },
   platform: {

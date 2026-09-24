@@ -32,6 +32,8 @@ vi.mock("@/services/onboardingApplicationsService", () => ({
     regenerateSetupLink: vi.fn(),
     reject: vi.fn(),
   },
+  ONBOARDING_APPLICATIONS_CHANGED: "onboarding-applications:changed",
+  ONBOARDING_POLL_INTERVAL_MS: 60_000,
 }));
 
 const SETUP_LINK =
@@ -184,6 +186,44 @@ describe("PlatformOnboardingApplicationsView", () => {
     expect(
       wrapper.get('[data-testid="onboarding-audit-reason"]').text(),
     ).toContain("Duplicate application");
+  });
+
+  it("refreshes the list in the background while the page stays open", async () => {
+    vi.useFakeTimers();
+    try {
+      const wrapper = mount(PlatformOnboardingApplicationsView);
+      await flushPromises();
+      expect(onboardingApplicationsService.list).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(onboardingApplicationsService.list).toHaveBeenCalledTimes(2);
+
+      wrapper.unmount();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(onboardingApplicationsService.list).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("tells the sidebar badge to recount after approving", async () => {
+    const onChanged = vi.fn();
+    window.addEventListener("onboarding-applications:changed", onChanged);
+    try {
+      const wrapper = mount(PlatformOnboardingApplicationsView);
+      await flushPromises();
+      expect(onChanged).not.toHaveBeenCalled();
+
+      await wrapper
+        .get('[data-testid="approve-onboarding-APP-1"]')
+        .trigger("click");
+      await flushPromises();
+
+      expect(onChanged).toHaveBeenCalledOnce();
+      wrapper.unmount();
+    } finally {
+      window.removeEventListener("onboarding-applications:changed", onChanged);
+    }
   });
 
   it("approves an application and shows the handoff", async () => {

@@ -1913,6 +1913,8 @@ const zhCN: Messages = {
     feedbackDetail: "反馈详情",
     accountManagement: "帐号管理",
     platformMarketCheckouts: "市场结帐纪录",
+    platformMarkets: "市场品质",
+    platformOnboarding: "开店申请",
     platformCustomers: "平台顾客",
     subscriptions: "订阅管理",
   },

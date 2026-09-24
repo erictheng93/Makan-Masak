@@ -682,12 +682,15 @@
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import {
   onboardingApplicationsService,
+  ONBOARDING_APPLICATIONS_CHANGED,
+  ONBOARDING_POLL_INTERVAL_MS,
   type CredentialDelivery,
   type OnboardingApplicationAuditEvent,
   type OnboardingApplication,
   type OnboardingApplicationStatus,
   type ProvisionedOwnerAccount,
 } from "@/services/onboardingApplicationsService";
+import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import { useDateFormatter } from "@/composables/useDateFormatter";
 import { useI18n } from "@/i18n";
 
@@ -787,6 +790,20 @@ async function loadApplications() {
   }
 }
 
+function notifyApplicationsChanged() {
+  window.dispatchEvent(new Event(ONBOARDING_APPLICATIONS_CHANGED));
+}
+
+// New applications arrive from the onboarding app, so the list goes stale
+// while this page sits open. Skip a tick while a load or an action is running.
+const applicationsPoller = createVisibilityAwarePoller({
+  intervalMs: ONBOARDING_POLL_INTERVAL_MS,
+  onTick: () => {
+    if (isLoading.value || actionId.value) return;
+    return loadApplications();
+  },
+});
+
 async function showAuditEvents(application: OnboardingApplication) {
   auditApplication.value = application;
   auditEvents.value = [];
@@ -858,6 +875,7 @@ async function approveApplication(
       result.ownerAccount,
       result.credentialDelivery,
     );
+    notifyApplicationsChanged();
     await loadApplications();
   } catch (approveError) {
     console.error("Failed to approve onboarding application:", approveError);
@@ -926,6 +944,7 @@ async function rejectApplication() {
   try {
     await onboardingApplicationsService.reject(applicationId, reason);
     closeRejectDialog();
+    notifyApplicationsChanged();
     await loadApplications();
   } catch (rejectError) {
     console.error("Failed to reject onboarding application:", rejectError);
@@ -1015,6 +1034,12 @@ function formatDate(value?: string | null) {
   return formatDateTime(date);
 }
 
-onMounted(loadApplications);
-onBeforeUnmount(() => clearTimeout(copiedResetTimer));
+onMounted(() => {
+  void loadApplications();
+  applicationsPoller.start();
+});
+onBeforeUnmount(() => {
+  applicationsPoller.stop();
+  clearTimeout(copiedResetTimer);
+});
 </script>

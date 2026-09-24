@@ -87,7 +87,7 @@ const routes: RouteRecordRaw[] = [
         name: "PlatformMarkets",
         component: () => import("@/views/PlatformMarketsView.vue"),
         meta: {
-          titleKey: "pages.platformOverview",
+          titleKey: "pages.platformMarkets",
           roles: [UserRole.ADMIN],
         },
       },
@@ -118,7 +118,7 @@ const routes: RouteRecordRaw[] = [
         component: () =>
           import("@/views/PlatformOnboardingApplicationsView.vue"),
         meta: {
-          titleKey: "pages.platformOverview",
+          titleKey: "pages.platformOnboarding",
           roles: [UserRole.ADMIN],
         },
       },

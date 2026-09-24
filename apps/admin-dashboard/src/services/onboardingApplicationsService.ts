@@ -95,6 +95,13 @@ export interface SetupPasswordLinkResult {
   credentialDelivery?: CredentialDelivery;
 }
 
+/** Fired after an approve/reject so the sidebar badge recounts right away. */
+export const ONBOARDING_APPLICATIONS_CHANGED =
+  "onboarding-applications:changed";
+
+/** Background refresh for the list and the sidebar badge. */
+export const ONBOARDING_POLL_INTERVAL_MS = 60_000;
+
 export const onboardingApplicationsService = {
   async list(
     input: {

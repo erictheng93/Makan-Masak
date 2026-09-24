@@ -2091,6 +2091,8 @@ const zhTWCore = {
     notFound: "頁面不存在",
     platformOverview: "平台總覽",
     platformMarketCheckouts: "市場結帳紀錄",
+    platformMarkets: "市場品質",
+    platformOnboarding: "開店申請",
     platformCustomers: "平台顧客",
     adminSuffix: "管理後台",
     forecast: "需求預測",

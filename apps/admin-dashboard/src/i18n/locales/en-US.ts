@@ -2043,6 +2043,8 @@ const enUS: Messages = {
     notFound: "Page Not Found",
     platformOverview: "Platform Overview",
     platformMarketCheckouts: "Market Checkouts",
+    platformMarkets: "Market Quality",
+    platformOnboarding: "Shop Applications",
     platformCustomers: "Platform Customers",
     adminSuffix: "Admin Dashboard",
     forecast: "Demand Forecast",

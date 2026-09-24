@@ -2068,6 +2068,8 @@ const idID: Messages = {
     waitingManagement: "Manajemen Menunggu",
     subscriptions: "Langganan",
     platformMarketCheckouts: "Pembayaran Pasar",
+    platformMarkets: "Kualitas Pasar",
+    platformOnboarding: "Pengajuan Toko",
     platformCustomers: "Pelanggan Platform",
   },
   platform: {

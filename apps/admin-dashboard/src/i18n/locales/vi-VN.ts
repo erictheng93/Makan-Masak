@@ -1950,6 +1950,8 @@ const viVN: Messages = {
     subscriptions: "Đăng ký",
     waitingManagement: "Quản lý chờ đợi",
     platformMarketCheckouts: "Kiểm tra thị trường",
+    platformMarkets: "Chất lượng chợ",
+    platformOnboarding: "Đơn đăng ký cửa hàng",
     platformCustomers: "Khách hàng nền tảng",
   },
   platform: {
