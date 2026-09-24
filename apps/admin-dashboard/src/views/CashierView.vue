@@ -932,7 +932,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onBeforeUnmount, onMounted } from "vue";
 import {
   MagnifyingGlassIcon,
   ArrowPathIcon,
@@ -958,6 +958,7 @@ import { api, unwrapApiList, unwrapApiPayload } from "@/services/api";
 import { extractApiErrorCode } from "@/utils/errorHandler";
 import { toLocalDateStr } from "@/utils/dateUtils";
 import { useAuthStore } from "@/stores/auth";
+import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import type {
   Order as ApiOrder,
   OrderItem as ApiOrderItem,
@@ -1798,9 +1799,22 @@ const processRefund = async () => {
 };
 
 // 生命週期
+// Orders become payable when the kitchen and floor staff move them along, not
+// from anything done here, so the list has to refresh on its own. Skip a tick
+// mid-load or mid-payment so a settled order does not flicker back in.
+const ordersPoller = createVisibilityAwarePoller({
+  intervalMs: 15_000,
+  onTick: () => {
+    if (isLoadingOrders.value || isProcessing.value) return;
+    return loadOrders();
+  },
+});
+
 onMounted(async () => {
+  ordersPoller.start();
   await Promise.all([loadOrders(), loadCurrentShift(), loadTodayRevenue()]);
 });
+onBeforeUnmount(() => ordersPoller.stop());
 </script>
 
 <style scoped>

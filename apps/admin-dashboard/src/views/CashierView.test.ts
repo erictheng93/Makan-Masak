@@ -128,6 +128,27 @@ describe("CashierView", () => {
     expect(wrapper.text()).toContain("Ada");
   });
 
+  it("picks up newly payable orders without a reload, and stops when left", async () => {
+    vi.useFakeTimers();
+    try {
+      const wrapper = mount(CashierView);
+      await flushPromises();
+      const orderLoads = () =>
+        vi.mocked(api.get).mock.calls.filter(([url]) => url === "/orders")
+          .length;
+      expect(orderLoads()).toBe(1);
+
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(orderLoads()).toBe(2);
+
+      wrapper.unmount();
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(orderLoads()).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("submits a string order number for a refund and displays a failure", async () => {
     // The shape axios rejects with: its own message is the HTTP status line,
     // and the reason the cashier needs is the API error underneath it.
