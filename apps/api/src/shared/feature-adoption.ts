@@ -41,7 +41,7 @@ export const UNLAUNCHED_FEATURES = {
     flag: "TENANT_BACKUPS_ENABLED",
     prefix: "/backup",
     adoption:
-      "0 backup_configurations and an empty makanmasak-backups-prod bucket as of 2026-07-30, and the scheduler's cron triggers are stopped, so a tenant configuring a schedule here would get a silent no-op. Its admin UI is unreachable: views/backup/BackupDashboard.vue has no router entry and no referrer, and the backup modals are only opened from it. Nothing a user can reach calls this.",
+      "0 backup_configurations and an empty makanmasak-backups-prod bucket as of 2026-07-30, and the scheduler's cron triggers are stopped, so a tenant configuring a schedule here would get a silent no-op. It has no admin UI: the backup views were never routed and were deleted on 2026-09-25. Nothing a user can reach calls this.",
     enabledByDefault: false,
   },
   marketCheckouts: {

@@ -813,11 +813,12 @@ read as reachable in both trees and at HEAD.
 are decisions; the children die or live with their parent.
 
 - `views/UsersView.vue` — no route, no importer. Standalone.
-- `views/backup/BackupDashboard.vue` and `views/backup/BackupMonitoring.vue` —
-  neither is routed. The dashboard pulls in `components/backup/BackupAlert.vue`,
-  `BackupListItem.vue` and `RestoreBackupModal.vue`, so the backup UI is five
-  files with no way in. Note `components/backup/CreateBackupModal.vue` is *not*
-  here: it is alive through `useAsyncModals()`.
+- ~~`views/backup/BackupDashboard.vue` and `views/backup/BackupMonitoring.vue`~~
+  — **deleted 2026-09-25**, with `components/backup/*`, `stores/backup.ts` and
+  the `CreateBackupModal` entry in `useAsyncModals()` (registered there but
+  never opened by anything). Neither view had ever been routed. The `/backup`
+  API behind `TENANT_BACKUPS_ENABLED` is untouched; a future backup UI starts
+  from scratch against it.
 - `views/scheduling/SchedulingAnalyticsView.vue` — not routed, and it is the
   only consumer of `components/charts/ShiftDistributionChart.vue`,
   `TrendChart.vue` and `WorkHoursChart.vue`, which in turn are the only
@@ -934,19 +935,18 @@ show as a stale entry until someone runs
 
 ## admin-dashboard
 
-### Seven unimplemented TODOs across scheduling, POS, queue and backup
+### Six unimplemented TODOs across scheduling, POS and queue
 
 **Priority:** P3 **Status:** Open (absorbed 2026-09-05; per-file counts verified today)
 
 **Files and counts:** `components/scheduling/SchedulingConflicts.vue` (2),
 `views/POSManagementView.vue` (2), `views/scheduling/SchedulingView.vue` (1),
-`services/queueService.ts` (1), `components/backup/CreateBackupModal.vue` (1).
-`components/backup/BackupListItem.vue` is now clean.
+`services/queueService.ts` (1). The backup component TODO went with the
+backup UI when it was deleted (2026-09-25).
 
 **Scope:** scheduling conflict ignore/details behaviour; schedule date
-filtering / create modal; promotion edit dialog; shift report dialog; backup
-component local types replaced with shared types; queue capacity forecast once
-an API exists.
+filtering / create modal; promotion edit dialog; shift report dialog; queue
+capacity forecast once an API exists.
 
 **Related:** several of these overlap issues already filed from the admin QA
 runs (#307, #308, #320). Check those before starting — the panel may be dead
