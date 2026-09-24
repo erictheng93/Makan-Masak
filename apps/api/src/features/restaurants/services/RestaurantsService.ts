@@ -33,6 +33,10 @@ import type {
 } from "../types";
 import { distanceKm, pointInGeoJsonBoundary } from "../../markets/services/geo";
 import { currencyFromRestaurantSettings } from "../../../shared/utils/restaurant-currency";
+import {
+  isValidServicePaymentTerms,
+  SERVICE_PAYMENT_TERMS_ERROR,
+} from "../schemas/validation";
 
 const MARKET_CACHE_VERSION_KEY = "markets:version";
 const AUTO_ATTACH_MARKET_RADIUS_KM = 2;
@@ -612,6 +616,37 @@ export class RestaurantsService {
     serviceItemId: number,
     input: Partial<RestaurantServiceItemInput>,
   ): Promise<PublicRestaurantServiceItem | null> {
+    const [existing] = await this.db
+      .select()
+      .from(restaurantServiceItems)
+      .where(
+        and(
+          eq(restaurantServiceItems.id, serviceItemId),
+          eq(restaurantServiceItems.restaurantId, restaurantId),
+          isNull(restaurantServiceItems.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (!existing) return null;
+
+    const paymentRequirement =
+      input.paymentRequirement ?? existing.paymentRequirement;
+    const depositAmountCents =
+      input.depositAmountCents ??
+      (paymentRequirement === "deposit" ? existing.depositAmountCents : 0);
+    if (
+      !isValidServicePaymentTerms({
+        paymentRequirement,
+        depositAmountCents,
+        priceCents:
+          input.priceCents !== undefined
+            ? input.priceCents
+            : existing.priceCents,
+      })
+    ) {
+      throw badRequest(SERVICE_PAYMENT_TERMS_ERROR);
+    }
+
     const updateData: Record<string, unknown> = {
       updatedAt: new Date(),
     };
@@ -622,13 +657,11 @@ export class RestaurantsService {
       }
     }
 
-    if (input.paymentRequirement !== undefined) {
-      updateData.depositAmountCents =
-        input.paymentRequirement === "deposit"
-          ? (input.depositAmountCents ?? 0)
-          : 0;
-    } else if (input.depositAmountCents !== undefined) {
-      updateData.depositAmountCents = input.depositAmountCents;
+    if (
+      input.paymentRequirement !== undefined ||
+      input.depositAmountCents !== undefined
+    ) {
+      updateData.depositAmountCents = depositAmountCents;
     }
 
     const [row] = await this.db

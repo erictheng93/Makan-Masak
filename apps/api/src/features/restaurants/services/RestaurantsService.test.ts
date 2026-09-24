@@ -562,6 +562,7 @@ describe("RestaurantsService", () => {
       }),
     ).resolves.toMatchObject({ id: 1, name: "Private table" });
 
+    mockSelectRows([row]);
     mockUpdateReturning([{ ...row, name: "Updated table" }]);
     await expect(
       createService().updateServiceItem("restaurant-1", 1, {
@@ -582,6 +583,153 @@ describe("RestaurantsService", () => {
     expect(mocks.cache.delete).toHaveBeenCalledWith(
       "restaurant:restaurant-1:service-items",
     );
+  });
+
+  it("rejects a price below the stored deposit before writing", async () => {
+    mockSelectRows([
+      {
+        id: 1,
+        restaurantId: "restaurant-1",
+        priceCents: 5000,
+        paymentRequirement: "deposit",
+        depositAmountCents: 1200,
+      },
+    ]);
+
+    await expect(
+      createService().updateServiceItem("restaurant-1", 1, {
+        priceCents: 1000,
+      }),
+    ).rejects.toMatchObject({ status: 400, code: "BAD_REQUEST" });
+    expect(mocks.db.update).not.toHaveBeenCalled();
+  });
+
+  it("uses the stored price for a deposit-only update", async () => {
+    const row = {
+      id: 1,
+      restaurantId: "restaurant-1",
+      name: "Private table",
+      description: null,
+      serviceType: "booking",
+      priceCents: 5000,
+      paymentRequirement: "deposit",
+      depositAmountCents: 1200,
+      priceLabel: null,
+      durationMinutes: null,
+      requiresBooking: true,
+      bookingUrl: null,
+      availableHours: null,
+      tags: [],
+      keywords: null,
+      sortOrder: 0,
+      isActive: true,
+      isPublic: true,
+    };
+    mockSelectRows([row]);
+    const update = mockUpdateReturning([{ ...row, depositAmountCents: 1500 }]);
+
+    await expect(
+      createService().updateServiceItem("restaurant-1", 1, {
+        depositAmountCents: 1500,
+      }),
+    ).resolves.toMatchObject({
+      priceCents: 5000,
+      paymentRequirement: "deposit",
+      depositAmountCents: 1500,
+    });
+    expect(update.set).toHaveBeenCalledWith(
+      expect.objectContaining({ depositAmountCents: 1500 }),
+    );
+  });
+
+  it("switches a service to a deposit using its stored price", async () => {
+    const row = {
+      id: 1,
+      restaurantId: "restaurant-1",
+      priceCents: 5000,
+      paymentRequirement: "pay_at_venue",
+      depositAmountCents: 0,
+    };
+    mockSelectRows([row]);
+    const update = mockUpdateReturning([
+      { ...row, paymentRequirement: "deposit", depositAmountCents: 2500 },
+    ]);
+
+    await expect(
+      createService().updateServiceItem("restaurant-1", 1, {
+        paymentRequirement: "deposit",
+        depositAmountCents: 2500,
+      }),
+    ).resolves.toMatchObject({
+      priceCents: 5000,
+      paymentRequirement: "deposit",
+      depositAmountCents: 2500,
+    });
+    expect(update.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        paymentRequirement: "deposit",
+        depositAmountCents: 2500,
+      }),
+    );
+  });
+
+  it("rejects a deposit-only update above the stored price", async () => {
+    mockSelectRows([
+      {
+        id: 1,
+        restaurantId: "restaurant-1",
+        priceCents: 5000,
+        paymentRequirement: "deposit",
+        depositAmountCents: 1200,
+      },
+    ]);
+
+    await expect(
+      createService().updateServiceItem("restaurant-1", 1, {
+        depositAmountCents: 5001,
+      }),
+    ).rejects.toMatchObject({ status: 400, code: "BAD_REQUEST" });
+    expect(mocks.db.update).not.toHaveBeenCalled();
+  });
+
+  it("keeps an existing deposit when its requirement is reiterated", async () => {
+    const row = {
+      id: 1,
+      restaurantId: "restaurant-1",
+      priceCents: 5000,
+      paymentRequirement: "deposit",
+      depositAmountCents: 1200,
+    };
+    mockSelectRows([row]);
+    const update = mockUpdateReturning([row]);
+
+    await expect(
+      createService().updateServiceItem("restaurant-1", 1, {
+        paymentRequirement: "deposit",
+      }),
+    ).resolves.toMatchObject({ depositAmountCents: 1200 });
+    expect(update.set).toHaveBeenCalledWith(
+      expect.objectContaining({ depositAmountCents: 1200 }),
+    );
+  });
+
+  it("rejects removal of price from a deposit service", async () => {
+    mockSelectRows([
+      {
+        id: 1,
+        restaurantId: "restaurant-1",
+        priceCents: 5000,
+        paymentRequirement: "deposit",
+        depositAmountCents: 1200,
+      },
+    ]);
+
+    await expect(
+      createService().updateServiceItem("restaurant-1", 1, {
+        priceCents: null,
+      }),
+    ).rejects.toMatchObject({ status: 400, code: "BAD_REQUEST" });
+    expect(mocks.db.update).not.toHaveBeenCalled();
   });
 
   it("transforms and caches basic restaurant statistics", async () => {

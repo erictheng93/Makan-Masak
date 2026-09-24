@@ -129,6 +129,26 @@ describe("restaurant validation schemas", () => {
     ).toThrow("no greater than the service price");
   });
 
+  it("accepts partial payment terms for row-aware service updates", () => {
+    expect(
+      restaurantSchemas.updateServiceItem.parse({ depositAmountCents: 1500 }),
+    ).toEqual({ depositAmountCents: 1500 });
+    expect(
+      restaurantSchemas.updateServiceItem.parse({
+        paymentRequirement: "deposit",
+      }),
+    ).toEqual({ paymentRequirement: "deposit" });
+    expect(
+      restaurantSchemas.updateServiceItem.parse({
+        paymentRequirement: "deposit",
+        depositAmountCents: 2500,
+      }),
+    ).toEqual({
+      paymentRequirement: "deposit",
+      depositAmountCents: 2500,
+    });
+  });
+
   it("rejects non-http service booking URLs", () => {
     expect(() =>
       restaurantSchemas.createServiceItem.parse({

@@ -4,6 +4,7 @@ import {
   restaurantMarketMemberships,
   restaurantServiceItems,
 } from "@makanmasak/database";
+import { eq } from "drizzle-orm";
 import {
   createRealIntegrationTestApp,
   type RealIntegrationTestApp,
@@ -305,6 +306,97 @@ describe("Restaurant service items API — real integration", () => {
     await expect(
       testApp.testDb.bindings.CACHE_KV.get("markets:version"),
     ).resolves.toBe("3");
+  });
+
+  it("validates partial payment updates against stored service terms", async () => {
+    const restaurant = await seed.restaurant({ name: "Deposit Services" });
+    await insertActiveSubscription(String(restaurant.id));
+    const owner = await seed.user({
+      role: 1,
+      restaurantId: String(restaurant.id),
+    });
+    const token = await testApp.authHelper.ownerToken(
+      owner.id,
+      String(restaurant.id),
+    );
+    const [serviceItem] = await testApp.testDb.drizzle
+      .insert(restaurantServiceItems)
+      .values({
+        restaurantId: String(restaurant.id),
+        name: "Private table",
+        priceCents: 5000,
+        paymentRequirement: "pay_at_venue",
+        depositAmountCents: 0,
+      })
+      .returning();
+    const url = `https://test/api/v1/restaurants/${restaurant.id}/service-items/${serviceItem.id}`;
+    const headers = withCsrf({
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+    });
+
+    const transitionRes = await testApp.app.fetch(
+      new Request(url, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({
+          paymentRequirement: "deposit",
+          depositAmountCents: 2500,
+        }),
+      }),
+    );
+    expect(transitionRes.status).toBe(200);
+    await expect(readData<ServiceItem>(transitionRes)).resolves.toMatchObject({
+      priceCents: 5000,
+      paymentRequirement: "deposit",
+      depositAmountCents: 2500,
+    });
+
+    const invalidRes = await testApp.app.fetch(
+      new Request(url, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ priceCents: 1000 }),
+      }),
+    );
+    expect(invalidRes.status).toBe(400);
+    const [unchanged] = await testApp.testDb.drizzle
+      .select()
+      .from(restaurantServiceItems)
+      .where(eq(restaurantServiceItems.id, serviceItem.id));
+    expect(unchanged).toMatchObject({
+      priceCents: 5000,
+      depositAmountCents: 2500,
+    });
+
+    const updateRes = await testApp.app.fetch(
+      new Request(url, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ depositAmountCents: 1500 }),
+      }),
+    );
+    expect(updateRes.status).toBe(200);
+    await expect(readData<ServiceItem>(updateRes)).resolves.toMatchObject({
+      priceCents: 5000,
+      paymentRequirement: "deposit",
+      depositAmountCents: 1500,
+    });
+
+    const readRes = await testApp.app.fetch(
+      new Request(
+        `https://test/api/v1/restaurants/${restaurant.id}/service-items`,
+      ),
+    );
+    expect(readRes.status).toBe(200);
+    await expect(readData<ServiceItemList>(readRes)).resolves.toEqual([
+      expect.objectContaining({
+        id: serviceItem.id,
+        priceCents: 5000,
+        paymentRequirement: "deposit",
+        depositAmountCents: 1500,
+      }),
+    ]);
   });
 
   it("makes owner-created public services searchable within their market", async () => {

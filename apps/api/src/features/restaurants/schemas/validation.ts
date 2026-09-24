@@ -181,30 +181,33 @@ const restaurantServiceItemShapeSchema = z.object({
   isPublic: z.boolean().optional(),
 });
 
+export const SERVICE_PAYMENT_TERMS_ERROR =
+  "Deposit services require a positive deposit no greater than the service price";
+
+export function isValidServicePaymentTerms(value: {
+  paymentRequirement?: unknown;
+  depositAmountCents?: unknown;
+  priceCents?: unknown;
+}): boolean {
+  if (value.paymentRequirement === "deposit") {
+    return (
+      typeof value.depositAmountCents === "number" &&
+      value.depositAmountCents > 0 &&
+      typeof value.priceCents === "number" &&
+      value.priceCents > 0 &&
+      value.depositAmountCents <= value.priceCents
+    );
+  }
+  return (
+    value.depositAmountCents === undefined || value.depositAmountCents === 0
+  );
+}
+
 const servicePaymentTermsSchema = <T extends z.ZodType>(schema: T) =>
   schema.refine(
-    (rawValue) => {
-      const value = rawValue as Record<string, unknown>;
-      const paymentRequirement = value.paymentRequirement;
-      const depositAmountCents = value.depositAmountCents;
-      const priceCents = value.priceCents;
-
-      if (paymentRequirement === undefined) return true;
-
-      if (paymentRequirement === "deposit") {
-        return (
-          typeof depositAmountCents === "number" &&
-          depositAmountCents > 0 &&
-          typeof priceCents === "number" &&
-          priceCents > 0 &&
-          depositAmountCents <= priceCents
-        );
-      }
-      return depositAmountCents === undefined || depositAmountCents === 0;
-    },
+    (value) => isValidServicePaymentTerms(value as Record<string, unknown>),
     {
-      message:
-        "Deposit services require a positive deposit no greater than the service price",
+      message: SERVICE_PAYMENT_TERMS_ERROR,
       path: ["depositAmountCents"],
     },
   );
@@ -227,19 +230,11 @@ const restaurantServiceItemInputSchema = z.lazy(() =>
 );
 
 const updateRestaurantServiceItemSchema = z.lazy(() =>
-  servicePaymentTermsSchema(
-    restaurantServiceItemShapeSchema
-      .extend({
-        paymentRequirement: z
-          .enum(SERVICE_ITEM_PAYMENT_REQUIREMENTS)
-          .optional(),
-        depositAmountCents: z.number().int().min(0).optional(),
-      })
-      .partial()
-      .refine((value) => Object.keys(value).length > 0, {
-        message: "At least one field is required",
-      }),
-  ),
+  restaurantServiceItemShapeSchema
+    .partial()
+    .refine((value) => Object.keys(value).length > 0, {
+      message: "At least one field is required",
+    }),
 );
 
 // Common parameter schemas
