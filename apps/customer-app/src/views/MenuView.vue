@@ -316,15 +316,21 @@
             <h2 class="text-xl font-semibold text-ios-text mb-4">
               {{ t("menu.featured") }}
             </h2>
+            <!--
+              Phone and iPad: a swipeable row whose first card snaps in line
+              with the column (scroll-px matches the -mx/px bleed). PC: the
+              same grid as the dish list below, since a mouse cannot swipe.
+            -->
             <div
-              class="flex gap-3 md:gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide -mx-5 px-5"
+              data-testid="featured-items"
+              class="flex gap-3 md:gap-4 overflow-x-auto snap-x snap-mandatory scroll-px-5 scrollbar-hide -mx-5 px-5 lg:grid lg:grid-cols-3 lg:overflow-visible lg:mx-0 lg:px-0"
             >
               <MenuItemCard
                 v-for="(item, index) in featuredItems"
                 :key="item.id"
                 :item="item"
                 :is-featured="true"
-                class="animate-slide-up min-w-[280px] md:min-w-[260px] snap-start flex-shrink-0"
+                class="animate-slide-up w-[80%] max-w-[300px] md:w-[42%] md:max-w-none snap-start flex-shrink-0 lg:w-auto"
                 :style="{
                   animationDelay: `${index * 50}ms`,
                   animationFillMode: 'both',
