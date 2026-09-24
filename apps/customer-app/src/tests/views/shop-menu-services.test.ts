@@ -7,6 +7,8 @@ import { discoveryApi } from "@/services/discoveryApi";
 import { restaurantContactApi } from "@/services/restaurantContactApi";
 
 const routerPush = vi.hoisted(() => vi.fn());
+const routeQuery = vi.hoisted(() => ({ value: {} as Record<string, string> }));
+const setFulfillmentType = vi.hoisted(() => vi.fn());
 const marketCartAddItem = vi.hoisted(() => vi.fn());
 const menuItemsFixture = vi.hoisted(() => ({
   items: null as Array<Record<string, unknown>> | null,
@@ -23,6 +25,7 @@ vi.mock("vue-router", () => ({
     path: "/restaurant/restaurant-1/shop/menu",
     fullPath:
       "/restaurant/restaurant-1/shop/menu?services=true&returnPath=/markets/fengjia",
+    query: routeQuery.value,
   }),
   useRouter: () => ({ back: vi.fn(), push: routerPush }),
 }));
@@ -67,6 +70,7 @@ vi.mock("@/stores/shopCart", () => ({
     subtotal: 0,
     fulfillmentType: "takeaway",
     initializeCart: vi.fn(),
+    setFulfillmentType,
     addItem: vi.fn(),
     removeItem: vi.fn(),
     updateQuantity: vi.fn(),
@@ -294,6 +298,8 @@ describe("ShopMenuView service items", () => {
   beforeEach(() => {
     routerPush.mockReset();
     marketCartAddItem.mockReset();
+    setFulfillmentType.mockReset();
+    routeQuery.value = {};
     menuItemsFixture.items = null;
     serviceItemsFixture.items = null;
     marketMembershipsFixture.memberships = null;
@@ -820,5 +826,29 @@ describe("ShopMenuView service items", () => {
     expect(
       wrapper.find('[data-testid="shop-menu-return-context"]').exists(),
     ).toBe(false);
+  });
+
+  // The order-type page puts the diner's choice in the URL; a cart restored
+  // from an earlier visit (fulfillmentType "takeaway" in this mock) used to
+  // win, so the badge said 外帶 on a 內用 link.
+  it("lets the URL's fulfillment type override the restored cart", () => {
+    routeQuery.value = { fulfillmentType: "dine-in" };
+    mount(ShopMenuView, {
+      props: { restaurantId: "restaurant-1" },
+      global: { stubs: { ShopCartModal: true, DesktopCartPanel: true } },
+    });
+
+    expect(setFulfillmentType).toHaveBeenCalledOnce();
+    expect(setFulfillmentType).toHaveBeenCalledWith("dine-in");
+  });
+
+  it("ignores an unknown fulfillment type in the URL", () => {
+    routeQuery.value = { fulfillmentType: "drive-thru" };
+    mount(ShopMenuView, {
+      props: { restaurantId: "restaurant-1" },
+      global: { stubs: { ShopCartModal: true, DesktopCartPanel: true } },
+    });
+
+    expect(setFulfillmentType).not.toHaveBeenCalled();
   });
 });

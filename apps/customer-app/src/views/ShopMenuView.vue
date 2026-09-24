@@ -774,8 +774,23 @@ const openedLinkedServiceItemId = ref<number | null>(null);
 const openedServicesSection = ref(false);
 
 // 初始化店家購物車
+const FULFILLMENT_TYPES = ["dine-in", "takeaway", "delivery"] as const;
+
 onMounted(() => {
   shopCartStore.initializeCart(props.restaurantId);
+  // The order-type page puts the diner's choice in the URL. A restored cart
+  // from an earlier visit must not override it, or a diner who just picked
+  // 外帶 sees 內用 on the badge (and the cart) instead.
+  const requested = route.query?.fulfillmentType;
+  if (
+    typeof requested === "string" &&
+    (FULFILLMENT_TYPES as readonly string[]).includes(requested) &&
+    requested !== shopCartStore.fulfillmentType
+  ) {
+    shopCartStore.setFulfillmentType(
+      requested as (typeof FULFILLMENT_TYPES)[number],
+    );
+  }
 });
 
 // API Queries
