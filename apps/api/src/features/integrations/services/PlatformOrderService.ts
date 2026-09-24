@@ -17,6 +17,7 @@ import type {
 } from "@makanmasak/shared-types";
 import type { Env } from "../../../types/env";
 import { getAdapter } from "../adapters/PlatformAdapter";
+import { PlatformOrderRejectedError } from "../adapters/PlatformOrderRejectedError";
 import { PlatformIntegrationService } from "./PlatformIntegrationService";
 import { ReceiptService } from "../../pos/services/ReceiptService";
 import { OrdersService } from "../../orders/services/OrdersService";
@@ -64,7 +65,9 @@ export class PlatformOrderService {
     const adapter = getAdapter(platform);
     const parsedOrder = await adapter.parseOrder(payload);
     if (platform === "uber_eats" && !parsedOrder.currencyCode) {
-      throw new Error("Uber Eats order currency is missing");
+      throw new PlatformOrderRejectedError(
+        "Uber Eats order currency is missing",
+      );
     }
     if (parsedOrder.currencyCode) {
       const [restaurant] = await this.db
@@ -79,7 +82,9 @@ export class PlatformOrderService {
         restaurantId,
       );
       if (parsedOrder.currencyCode !== currency) {
-        throw new Error("Platform order currency mismatch with restaurant");
+        throw new PlatformOrderRejectedError(
+          "Platform order currency mismatch with restaurant",
+        );
       }
     }
 

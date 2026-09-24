@@ -6,6 +6,7 @@ import type {
   MenuSyncResult,
 } from "@makanmasak/shared-types";
 import type { PlatformAdapter } from "./PlatformAdapter";
+import { PlatformOrderRejectedError } from "./PlatformOrderRejectedError";
 import { normalizeCurrencyCode } from "@makanmasak/utils";
 import {
   ISO_4217_EXPONENTS,
@@ -83,30 +84,42 @@ export class UberEatsAdapter implements PlatformAdapter {
   async parseOrder(payload: unknown): Promise<ParsedPlatformOrder> {
     const order = payload as UberEatsOrderPayload;
     if (!order?.id || !order.cart?.items || !order.payment?.charges?.total) {
-      throw new Error("Uber Eats order is missing id, items, or total");
+      throw new PlatformOrderRejectedError(
+        "Uber Eats order is missing id, items, or total",
+      );
     }
     const currencyCode = normalizeCurrencyCode(
       order.payment?.charges?.total?.currency_code,
     );
     if (!currencyCode || currencyCode === "VND") {
-      throw new Error("Uber Eats order currency is missing or unsupported");
+      throw new PlatformOrderRejectedError(
+        "Uber Eats order currency is missing or unsupported",
+      );
     }
     // The public docs do not establish whether TWD order amounts arrive as
     // whole NT$ or hundredths. Even an amount divisible by 100 is ambiguous.
     // Keep this closed until a TWD sandbox order confirms the raw unit.
     if (currencyCode === "TWD") {
-      throw new Error("Uber Eats TWD amount unit is unverified");
+      throw new PlatformOrderRejectedError(
+        "Uber Eats TWD amount unit is unverified",
+      );
     }
     const money = (value: UberMoney): number => {
       if (value.currency_code !== currencyCode) {
-        throw new Error("Uber Eats order currency mismatch");
+        throw new PlatformOrderRejectedError(
+          "Uber Eats order currency mismatch",
+        );
       }
       if (!Number.isSafeInteger(value.amount)) {
-        throw new Error("Uber Eats amount must be a safe integer");
+        throw new PlatformOrderRejectedError(
+          "Uber Eats amount must be a safe integer",
+        );
       }
       const cents = value.amount * 10 ** (2 - ISO_4217_EXPONENTS[currencyCode]);
       if (!Number.isSafeInteger(cents)) {
-        throw new Error("Uber Eats amount exceeds safe integer cents");
+        throw new PlatformOrderRejectedError(
+          "Uber Eats amount exceeds safe integer cents",
+        );
       }
       assertCurrencyAlignedCents(cents, currencyCode);
       return cents;
@@ -115,15 +128,21 @@ export class UberEatsAdapter implements PlatformAdapter {
     const items = (order.cart?.items ?? []).map((item) => {
       const quantity = item.quantity ?? 1;
       if (!Number.isSafeInteger(quantity) || quantity <= 0) {
-        throw new Error("Uber Eats item quantity must be a positive integer");
+        throw new PlatformOrderRejectedError(
+          "Uber Eats item quantity must be a positive integer",
+        );
       }
       if (!item.price?.unit_price) {
-        throw new Error("Uber Eats item unit price is missing");
+        throw new PlatformOrderRejectedError(
+          "Uber Eats item unit price is missing",
+        );
       }
       const unitPriceCents = money(item.price.unit_price);
       const totalPriceCents = unitPriceCents * quantity;
       if (!Number.isSafeInteger(totalPriceCents)) {
-        throw new Error("Uber Eats item total exceeds safe integer cents");
+        throw new PlatformOrderRejectedError(
+          "Uber Eats item total exceeds safe integer cents",
+        );
       }
       return {
         platformItemId: item.id ?? "",
@@ -171,7 +190,9 @@ export class UberEatsAdapter implements PlatformAdapter {
     payload: unknown,
   ): Promise<{ platformOrderId: string; reason?: string }> {
     const notification = payload as UberEatsCancellationPayload;
+    // Real `orders.cancel` webhooks carry the order id only in meta.resource_id.
     const platformOrderId =
+      notification.meta?.resource_id ??
       notification.order?.id ??
       notification.platform_order_id ??
       notification.order_id ??
@@ -483,6 +504,7 @@ interface UberEatsOrderPayload {
 
 interface UberEatsCancellationPayload {
   id?: string;
+  meta?: { resource_id?: string };
   order?: { id?: string };
   order_id?: string;
   platform_order_id?: string;

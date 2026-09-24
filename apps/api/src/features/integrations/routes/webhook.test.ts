@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
     verifyWebhook: vi.fn(),
     parseCancellation: vi.fn(),
     fetchOrder: vi.fn(),
+    denyOrder: vi.fn(),
   },
   integrationService: {
     getDecryptedCredentials: vi.fn(),
@@ -87,6 +88,7 @@ vi.mock("../services/PlatformOrderService", () => ({
 }));
 
 import routes from "./webhook";
+import { PlatformOrderRejectedError } from "../adapters/PlatformOrderRejectedError";
 import { eq } from "drizzle-orm";
 import { platformIntegrations } from "@makanmasak/database";
 import { idempotencyMiddleware } from "../../../middleware/idempotency";
@@ -448,6 +450,68 @@ describe("platform webhook routes", () => {
 
     expect(response.status).toBe(500);
     expect(mocks.orderService.processWebhook).not.toHaveBeenCalled();
+    expect(mutations.updated[0]).toMatchObject({
+      status: "failed",
+      platformEventId: null,
+    });
+  });
+
+  it("denies an order Uber can never redeliver successfully and keeps its event id", async () => {
+    const mutations = mockMutations();
+    mockSelectResults({ platformIntegrations: [[integration()]] });
+    mocks.adapter.denyOrder.mockResolvedValueOnce(undefined);
+    mocks.orderService.processWebhook.mockRejectedValueOnce(
+      new PlatformOrderRejectedError("Uber Eats TWD amount unit is unverified"),
+    );
+
+    const response = await request("/uber-eats", {
+      method: "POST",
+      body: JSON.stringify({
+        event_type: "orders.notification",
+        event_id: "event-twd",
+        meta: { user_id: "store-1", resource_id: "uber-order-1" },
+      }),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(await json(response)).toEqual({
+      success: true,
+      data: { acknowledged: true, rejected: true },
+    });
+    expect(mocks.adapter.denyOrder).toHaveBeenCalledOnce();
+    expect(mocks.adapter.denyOrder).toHaveBeenCalledWith(
+      "uber-order-1",
+      "Uber Eats TWD amount unit is unverified",
+      expect.objectContaining({ storeId: "store-1" }),
+    );
+    expect(mutations.updated[0]).toMatchObject({
+      status: "failed",
+      error: "Uber Eats TWD amount unit is unverified",
+    });
+    expect(mutations.updated[0]).not.toHaveProperty("platformEventId");
+  });
+
+  it("returns 500 for redelivery when denying a rejected order fails", async () => {
+    const mutations = mockMutations();
+    mockSelectResults({ platformIntegrations: [[integration()]] });
+    mocks.adapter.denyOrder.mockRejectedValueOnce(new Error("Uber 503"));
+    mocks.orderService.processWebhook.mockRejectedValueOnce(
+      new PlatformOrderRejectedError("Platform order currency mismatch"),
+    );
+
+    const response = await request("/uber-eats", {
+      method: "POST",
+      body: JSON.stringify(webhookPayload()),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    expect(response.status).toBe(500);
+    expect(mocks.adapter.denyOrder).toHaveBeenCalledWith(
+      "uber-order-1",
+      "Platform order currency mismatch",
+      expect.any(Object),
+    );
     expect(mutations.updated[0]).toMatchObject({
       status: "failed",
       platformEventId: null,

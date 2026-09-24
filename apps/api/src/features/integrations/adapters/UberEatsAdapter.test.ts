@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UberEatsAdapter } from "./UberEatsAdapter";
+import { PlatformOrderRejectedError } from "./PlatformOrderRejectedError";
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body), {
@@ -200,6 +201,16 @@ describe("UberEatsAdapter", () => {
     ).rejects.toThrow("currency mismatch");
   });
 
+  it("marks invalid order data as non-retryable so the webhook denies it", async () => {
+    await expect(
+      createAdapter().parseOrder({
+        id: "vnd-order",
+        cart: { items: [] },
+        payment: { charges: { total: { amount: 100, currency_code: "VND" } } },
+      }),
+    ).rejects.toBeInstanceOf(PlatformOrderRejectedError);
+  });
+
   it("rejects missing or fractional Uber amounts before creating an order", async () => {
     const payload = {
       id: "bad-order",
@@ -266,6 +277,16 @@ describe("UberEatsAdapter", () => {
       platformOrderId: "uber-order-cancelled",
       reason: "customer_cancelled",
     });
+  });
+
+  it("reads the order id from a real orders.cancel notification's meta", async () => {
+    await expect(
+      createAdapter().parseCancellation({
+        event_id: "event-cancel",
+        event_type: "orders.cancel",
+        meta: { resource_id: "uber-order-9", user_id: "store-1" },
+      }),
+    ).resolves.toEqual({ platformOrderId: "uber-order-9", reason: undefined });
   });
 
   it("rejects cancellation notifications without a string order id", async () => {

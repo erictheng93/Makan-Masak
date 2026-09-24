@@ -9,6 +9,7 @@ import {
 import type { Env } from "../../../types/env";
 import { getAdapter } from "../adapters/PlatformAdapter";
 import { PlatformOrderService } from "../services/PlatformOrderService";
+import { PlatformOrderRejectedError } from "../adapters/PlatformOrderRejectedError";
 import { PlatformIntegrationService } from "../services/PlatformIntegrationService";
 import { idempotencyMiddleware } from "../../../middleware/idempotency";
 
@@ -316,6 +317,10 @@ webhookRoutes.post(
       );
     }
 
+    const inlineOrder = payload as { id?: string; order?: { id?: string } };
+    const platformOrderId =
+      storePayload.meta?.resource_id ?? inlineOrder.id ?? inlineOrder.order?.id;
+
     // Process the order — keep internal try/catch to record failure in the log
     try {
       let orderPayload: unknown = payload;
@@ -323,21 +328,23 @@ webhookRoutes.post(
         eventType === "orders.notification" ||
         eventType === "orders.scheduled.notification"
       ) {
-        const platformOrderId = storePayload.meta?.resource_id;
-        if (!platformOrderId || !adapter.fetchOrder) {
+        if (!storePayload.meta?.resource_id || !adapter.fetchOrder) {
           throw new Error(
             "Uber Eats order notification is missing an order id",
           );
         }
         orderPayload = await adapter.fetchOrder(
-          platformOrderId,
+          storePayload.meta.resource_id,
           matchedCredentials,
         );
         const fetched = orderPayload as {
           id?: string;
           store?: { id?: string };
         };
-        if (fetched.id !== platformOrderId || fetched.store?.id !== storeId) {
+        if (
+          fetched.id !== storePayload.meta.resource_id ||
+          fetched.store?.id !== storeId
+        ) {
           throw new Error("Uber Eats order details do not match notification");
         }
       }
@@ -360,6 +367,33 @@ webhookRoutes.post(
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
+
+      // A redelivery of this order would fail the same way, so deny it on
+      // Uber and keep the event id reserved: a 500 here only buys a retry
+      // loop. If the deny itself fails, fall through and let Uber retry.
+      const denied =
+        error instanceof PlatformOrderRejectedError &&
+        !!platformOrderId &&
+        (await adapter
+          .denyOrder(platformOrderId, errorMessage, matchedCredentials)
+          .then(
+            () => true,
+            () => false,
+          ));
+      if (denied) {
+        await db
+          .update(platformWebhookLogs)
+          .set({
+            status: WEBHOOK_LOG_STATUS.FAILED,
+            error: errorMessage,
+            processedAt: new Date(),
+          })
+          .where(eq(platformWebhookLogs.id, logId));
+        return c.json(
+          { success: true, data: { acknowledged: true, rejected: true } },
+          200,
+        );
+      }
 
       await db
         .update(platformWebhookLogs)
