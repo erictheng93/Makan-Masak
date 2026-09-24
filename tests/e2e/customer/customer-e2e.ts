@@ -878,11 +878,12 @@ export async function ensureMarketStall(): Promise<MarketStall> {
 
 /**
  * Every new restaurant needs a country, and the country fixes its currency.
- * "Taichung" is not on the TW city list, so the country is passed explicitly.
+ * Both cities are on their country's list (COUNTRY_PROFILES), so the API
+ * derives TW/TWD and MY/MYR from the city alone.
  */
-const E2E_SHOP_REGION = {
-  TWD: { city: "Taichung", countryCode: "TW" },
-  MYR: { city: "Kuala Lumpur", countryCode: "MY" },
+const E2E_SHOP_CITY = {
+  TWD: "台中市",
+  MYR: "Penang",
 } as const;
 
 /**
@@ -896,7 +897,7 @@ export async function ensureE2EShop(options: {
   type: string;
   name: string;
   dish: { name: string; price: number };
-  currency?: keyof typeof E2E_SHOP_REGION;
+  currency?: keyof typeof E2E_SHOP_CITY;
 }): Promise<MarketStall> {
   const admin = await getAdmin();
   const auth = { token: admin.token };
@@ -920,7 +921,7 @@ export async function ensureE2EShop(options: {
           category: "snack",
           address: "E2E Night Market Road 2",
           district: "E2E District",
-          ...E2E_SHOP_REGION[options.currency ?? "TWD"],
+          city: E2E_SHOP_CITY[options.currency ?? "TWD"],
           phone: "0422000002",
         },
       },

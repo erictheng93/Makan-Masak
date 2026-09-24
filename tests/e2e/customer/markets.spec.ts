@@ -117,7 +117,7 @@ test.beforeAll(async ({ browser }) => {
       name: `E2E 夜市 ${s}`,
       type: "night_market",
       description: "E2E 顧客端市集流程用的夜市",
-      city: "Taichung",
+      city: "台中市",
       district: "E2E District",
       address: "E2E Night Market Road",
       latitude: 24.16,
