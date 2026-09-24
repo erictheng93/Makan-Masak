@@ -25,7 +25,7 @@ const handleLocaleChange = async (code: string) => {
           <div class="flex items-center">
             <span class="text-2xl font-bold text-primary-600">MakanMasak</span>
             <span class="ml-2 text-sm text-gray-500">{{
-              t("app.tagline.selfHosted")
+              t("app.tagline.platformHosted")
             }}</span>
           </div>
 

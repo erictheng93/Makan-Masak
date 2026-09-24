@@ -135,23 +135,7 @@ const handleStartNew = () => {
           <div class="flex justify-between">
             <dt class="text-gray-500">{{ t("success.summary.plan") }}</dt>
             <dd class="text-gray-900">
-              {{ getPlanLabel(store.application?.planId || "standard") }}
-            </dd>
-          </div>
-          <div class="flex justify-between items-center">
-            <dt class="text-gray-500">{{ t("success.summary.subdomain") }}</dt>
-            <dd class="text-gray-900 font-medium flex items-center">
-              {{ store.assignedSubdomain || "-" }}.makanmasak.com
-              <button
-                v-if="store.assignedSubdomain"
-                type="button"
-                class="ml-2 text-gray-400 hover:text-gray-600"
-                @click="
-                  copyToClipboard(`${store.assignedSubdomain}.makanmasak.com`)
-                "
-              >
-                <DocumentDuplicateIcon class="h-4 w-4" />
-              </button>
+              {{ getPlanLabel(store.application?.planId || "trial") }}
             </dd>
           </div>
           <div class="flex justify-between">

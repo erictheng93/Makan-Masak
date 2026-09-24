@@ -6,7 +6,7 @@ const idID: Messages = {
       copyright: "© 2026 MakanMasak. Semua hak dilindungi undang-undang.",
     },
     tagline: {
-      selfHosted: "Dihosting Sendiri",
+      platformHosted: "Dikelola Platform",
     },
   },
   apply: {
@@ -107,18 +107,19 @@ const idID: Messages = {
     cta: {
       button: "Mulai Aplikasi",
       subtitle:
-        "Isi aplikasi dan kami akan menghubungi Anda dalam waktu 24 jam.",
+        "Isi formulir pengajuan dan tim kami akan menghubungi Anda setelah ditinjau.",
       title: "Siap Memulai?",
     },
     features: {
-      fast: {
-        description: "Alur penerapan otomatis. Hidup dalam 24 jam.",
-        title: "Penerapan Cepat",
-      },
-      isolated: {
+      assisted: {
         description:
-          "Lingkungan cloud yang sepenuhnya terisolasi. Data Anda 100% milik Anda.",
-        title: "Lingkungan Terisolasi",
+          "Tim kami meninjau pengajuan Anda, mengaktifkan akun, dan memandu penyiapan toko",
+        title: "Aktivasi Dibantu",
+      },
+      hosted: {
+        description:
+          "Kami menjalankan sistem untuk Anda — tanpa server yang perlu disiapkan atau dirawat",
+        title: "Dikelola Platform",
       },
       secure: {
         description:
@@ -129,7 +130,8 @@ const idID: Messages = {
     hero: {
       ctaApply: "Lamar Sekarang",
       ctaDemo: "Lihat Demo →",
-      subtitle: "Dihosting Sendiri · Data Aman · Peluncuran dalam 24 Jam",
+      subtitle:
+        "Dikelola Platform · Data Aman · Ditinjau dan Diaktifkan oleh Tim Kami",
       titleLine1: "Bangun Restoran Anda",
       titleLine2: "Sistem Manajemen Khusus",
     },
@@ -161,10 +163,9 @@ const idID: Messages = {
         title: "Penerapan Sistem",
       },
       email: {
-        prefix: "Kami telah mengirimkan email konfirmasi ke",
-        suffix: ". Silakan periksa kotak masuk Anda.",
-        description: "Kami akan mengirim email saat aplikasi Anda diperbarui.",
-        title: "Email Konfirmasi",
+        description:
+          "Setelah disetujui, platform akan memberikan akun pemilik dan tautan untuk mengatur kata sandi. Gunakan tautan status untuk memantau pengajuan Anda.",
+        title: "Informasi Login",
       },
       start: {
         description:
@@ -179,11 +180,8 @@ const idID: Messages = {
     summary: {
       applicationId: "ID Aplikasi",
       businessName: "Nama Restoran",
-      cloudflare: "Hosting Platform",
-      connected: "Aktif",
       contactEmail: "Hubungi Email",
       plan: "Paket yang Dipilih",
-      subdomain: "URL khusus",
       tenantId: "ID Penyewa",
       status: "Status Aplikasi",
       pendingReview: "Menunggu Tinjauan Platform",

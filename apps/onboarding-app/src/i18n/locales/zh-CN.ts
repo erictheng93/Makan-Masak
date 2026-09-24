@@ -6,7 +6,7 @@ const zhCN: Messages = {
       copyright: "© 2026 MakanMasak. All rights reserved.",
     },
     tagline: {
-      selfHosted: "独立部署",
+      platformHosted: "平台代管",
     },
   },
   apply: {
@@ -102,17 +102,17 @@ const zhCN: Messages = {
   home: {
     cta: {
       button: "开始申请",
-      subtitle: "填写申请表单，我们将在 24 小时内与您联系",
+      subtitle: "填写申请表单，平台团队审核后会与您联系",
       title: "准备好开始了吗？",
     },
     features: {
-      fast: {
-        description: "自动化部署流程，最快 24 小时内完成上线",
-        title: "快速部署",
+      assisted: {
+        description: "平台团队审核后为您开通账号，并引导完成开店设置",
+        title: "专人开通",
       },
-      isolated: {
-        description: "完全隔离的云端环境，数据 100% 归您所有",
-        title: "独立环境",
+      hosted: {
+        description: "系统由平台运维，无需自行架设主机或管理服务器",
+        title: "平台代管",
       },
       secure: {
         description: "基于 Cloudflare 全球边缘网络，企业级安全防护",
@@ -122,7 +122,7 @@ const zhCN: Messages = {
     hero: {
       ctaApply: "立即申请",
       ctaDemo: "查看演示 →",
-      subtitle: "独立部署 · 数据安全 · 24 小时内完成上线",
+      subtitle: "平台代管 · 数据安全 · 专人审核开通",
       titleLine1: "为您的餐厅打造",
       titleLine2: "专属管理系统",
     },
@@ -153,10 +153,9 @@ const zhCN: Messages = {
         title: "系统部署",
       },
       email: {
-        prefix: "我们已发送确认邮件至",
-        suffix: "，请查收。",
-        description: "申请状态有更新时，我们会发送 Email 通知您。",
-        title: "确认邮件",
+        description:
+          "核准后，平台会提供店主账号与设置密码链接。申请进度请通过查询链接查看。",
+        title: "登录信息",
       },
       start: {
         description: "收到登入资讯后，您可以立即登入管理后台开始设定您的餐厅。",
@@ -169,11 +168,8 @@ const zhCN: Messages = {
     summary: {
       applicationId: "申请编号",
       businessName: "餐厅名称",
-      cloudflare: "平台代管",
-      connected: "已启用",
       contactEmail: "联络 Email",
       plan: "选择方案",
-      subdomain: "专属网址",
       tenantId: "租户编号",
       status: "申请状态",
       pendingReview: "等待平台审核",

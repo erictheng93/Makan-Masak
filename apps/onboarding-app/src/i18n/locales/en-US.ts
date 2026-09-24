@@ -13,7 +13,7 @@ const enUS: Messages = {
 
   app: {
     tagline: {
-      selfHosted: "Self-Hosted",
+      platformHosted: "Platform-Hosted",
     },
     footer: {
       copyright: "© 2026 MakanMasak. All rights reserved.",
@@ -24,30 +24,32 @@ const enUS: Messages = {
     hero: {
       titleLine1: "Build Your Restaurant's",
       titleLine2: "Dedicated Management System",
-      subtitle: "Self-Hosted · Secure Data · Launch in 24 Hours",
+      subtitle:
+        "Platform-Hosted · Secure Data · Reviewed and Activated by Our Team",
       ctaApply: "Apply Now",
       ctaDemo: "View Demo →",
     },
     features: {
-      isolated: {
-        title: "Isolated Environment",
+      hosted: {
+        title: "Platform-Hosted",
         description:
-          "Fully isolated cloud environment. Your data is 100% yours.",
+          "We run the system for you — no servers to set up or maintain",
       },
       secure: {
         title: "Secure & Reliable",
         description:
           "Built on Cloudflare's global edge network with enterprise-grade security.",
       },
-      fast: {
-        title: "Fast Deployment",
-        description: "Automated deployment pipeline. Live within 24 hours.",
+      assisted: {
+        title: "Assisted Activation",
+        description:
+          "Our team reviews your application, activates your account, and guides your shop setup",
       },
     },
     cta: {
       title: "Ready to Get Started?",
       subtitle:
-        "Fill out the application and we'll contact you within 24 hours.",
+        "Fill out the application and our team will contact you after review.",
       button: "Start Application",
     },
   },
@@ -149,20 +151,15 @@ const enUS: Messages = {
       businessName: "Restaurant Name",
       contactEmail: "Contact Email",
       plan: "Selected Plan",
-      subdomain: "Dedicated URL",
-      cloudflare: "Platform Hosting",
-      connected: "Enabled",
       status: "Application Status",
       pendingReview: "Pending Platform Review",
     },
     nextSteps: {
       title: "What Happens Next?",
       email: {
-        title: "Confirmation Email",
-        prefix: "We've sent a confirmation email to",
-        suffix: ". Please check your inbox.",
+        title: "Login Details",
         description:
-          "We will email you when there is an update on your application.",
+          "Once approved, the platform will give you your owner account and a set-password link. Use the status link to follow your application.",
       },
       deploy: {
         title: "Platform Review",

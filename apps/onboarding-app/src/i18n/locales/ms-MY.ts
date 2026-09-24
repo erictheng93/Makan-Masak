@@ -6,7 +6,7 @@ const msMY: Messages = {
       copyright: "© 2026 MakanMasak. Semua hak terpelihara.",
     },
     tagline: {
-      selfHosted: "Dihoskan Sendiri",
+      platformHosted: "Dihoskan Platform",
     },
   },
   apply: {
@@ -106,19 +106,19 @@ const msMY: Messages = {
     cta: {
       button: "Mulakan Permohonan",
       subtitle:
-        "Isi permohonan dan kami akan menghubungi anda dalam masa 24 jam.",
+        "Isi borang permohonan dan pasukan kami akan menghubungi anda selepas semakan.",
       title: "Bersedia untuk Bermula?",
     },
     features: {
-      fast: {
+      assisted: {
         description:
-          "Saluran paip penggunaan automatik. Hidup dalam masa 24 jam.",
-        title: "Deployment Cepat",
+          "Pasukan kami menyemak permohonan anda, mengaktifkan akaun dan membimbing persediaan kedai",
+        title: "Pengaktifan Berbantu",
       },
-      isolated: {
+      hosted: {
         description:
-          "Persekitaran awan terpencil sepenuhnya. Data anda adalah 100% milik anda.",
-        title: "Persekitaran Terpencil",
+          "Kami mengendalikan sistem untuk anda — tiada pelayan untuk dipasang atau diselenggara",
+        title: "Dihoskan Platform",
       },
       secure: {
         description:
@@ -129,7 +129,8 @@ const msMY: Messages = {
     hero: {
       ctaApply: "Mohon Sekarang",
       ctaDemo: "Lihat Demo →",
-      subtitle: "Dihoskan Sendiri · Data Selamat · Pelancaran dalam 24 Jam",
+      subtitle:
+        "Dihoskan Platform · Data Selamat · Disemak dan Diaktifkan oleh Pasukan Kami",
       titleLine1: "Bina Restoran Anda",
       titleLine2: "Sistem Pengurusan Berdedikasi",
     },
@@ -161,11 +162,9 @@ const msMY: Messages = {
         title: "Penerapan Sistem",
       },
       email: {
-        prefix: "Kami telah menghantar e-mel pengesahan kepada",
-        suffix: ". Sila semak peti masuk anda.",
         description:
-          "Kami akan menghantar e-mel apabila permohonan anda dikemas kini.",
-        title: "E-mel Pengesahan",
+          "Selepas diluluskan, platform akan memberikan akaun pemilik dan pautan untuk menetapkan kata laluan. Gunakan pautan status untuk menjejak permohonan anda.",
+        title: "Maklumat Log Masuk",
       },
       start: {
         description:
@@ -180,11 +179,8 @@ const msMY: Messages = {
     summary: {
       applicationId: "ID Permohonan",
       businessName: "Nama Restoran",
-      cloudflare: "Pengehosan Platform",
-      connected: "Aktif",
       contactEmail: "E-mel Hubungi",
       plan: "Rancangan Terpilih",
-      subdomain: "URL khusus",
       tenantId: "ID penyewa",
       status: "Status Permohonan",
       pendingReview: "Menunggu Semakan Platform",

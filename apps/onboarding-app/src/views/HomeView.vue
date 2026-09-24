@@ -31,8 +31,8 @@ const demoUrl = `${CUSTOMER_APP_URL}/restaurant/${DEMO_RESTAURANT_ID}/shop/order
 const features = computed(() => [
   {
     icon: CloudIcon,
-    title: t("home.features.isolated.title"),
-    description: t("home.features.isolated.description"),
+    title: t("home.features.hosted.title"),
+    description: t("home.features.hosted.description"),
   },
   {
     icon: ShieldCheckIcon,
@@ -41,8 +41,8 @@ const features = computed(() => [
   },
   {
     icon: RocketLaunchIcon,
-    title: t("home.features.fast.title"),
-    description: t("home.features.fast.description"),
+    title: t("home.features.assisted.title"),
+    description: t("home.features.assisted.description"),
   },
 ]);
 </script>

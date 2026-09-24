@@ -11,7 +11,7 @@ const zhTW = {
 
   app: {
     tagline: {
-      selfHosted: "獨立部署",
+      platformHosted: "平台代管",
     },
     footer: {
       copyright: "© 2026 MakanMasak. All rights reserved.",
@@ -22,27 +22,27 @@ const zhTW = {
     hero: {
       titleLine1: "為您的餐廳打造",
       titleLine2: "專屬管理系統",
-      subtitle: "獨立部署 · 數據安全 · 24 小時內完成上線",
+      subtitle: "平台代管 · 資料安全 · 專人審核開通",
       ctaApply: "立即申請",
       ctaDemo: "查看演示 →",
     },
     features: {
-      isolated: {
-        title: "獨立環境",
-        description: "完全隔離的雲端環境，數據 100% 歸您所有",
+      hosted: {
+        title: "平台代管",
+        description: "系統由平台維運，不需要自己架設主機或管理伺服器",
       },
       secure: {
         title: "安全可靠",
         description: "基於 Cloudflare 全球邊緣網絡，企業級安全防護",
       },
-      fast: {
-        title: "快速部署",
-        description: "自動化部署流程，最快 24 小時內完成上線",
+      assisted: {
+        title: "專人開通",
+        description: "平台團隊審核後為您開通帳號，並引導完成開店設定",
       },
     },
     cta: {
       title: "準備好開始了嗎？",
-      subtitle: "填寫申請表單，我們將在 24 小時內與您聯繫",
+      subtitle: "填寫申請表單，平台團隊審核後會與您聯繫",
       button: "開始申請",
     },
   },
@@ -140,19 +140,15 @@ const zhTW = {
       businessName: "餐廳名稱",
       contactEmail: "聯絡 Email",
       plan: "選擇方案",
-      subdomain: "專屬網址",
-      cloudflare: "平台代管",
-      connected: "已啟用",
       status: "申請狀態",
       pendingReview: "等待平台審核",
     },
     nextSteps: {
       title: "接下來會發生什麼？",
       email: {
-        title: "確認郵件",
-        prefix: "我們已發送確認郵件至",
-        suffix: "，請查收。",
-        description: "申請狀態有更新時，我們會寄送 Email 通知您。",
+        title: "登入資訊",
+        description:
+          "核准後，平台會提供店主帳號與設定密碼連結。申請進度請以查詢連結查看。",
       },
       deploy: {
         title: "平台審核",

@@ -2,12 +2,13 @@
 
 > **對應 master board**：平台管理 → 入駐流程；店家後台 → 開通與首次設定
 > **主要角色**：申請人（無帳號）、平台管理者（role 0）、新店主（role 1）
-> **最後對照原始碼**：2026-09-15
+> **最後對照原始碼**：2026-09-22
 
 ## 1. 定位
 
 一家新店從「平台決定收它」到「店主能登入後台」為止。目前唯一走得通的營運方式是
-**平台人員陪同、一家一家手動開通**：憑證不寄信，全靠平台人員轉交。
+**平台人員陪同、一家一家手動開通**：寄信的程式已寫好（Resend），但 production 沒開
+（`ONBOARDING_EMAIL_ENABLED = "false"`、沒有 `RESEND_API_KEY`，#374），憑證仍靠平台人員轉交。
 
 有兩個入口，寫入的東西相同，差在誰設定店主密碼：
 
@@ -33,21 +34,26 @@
 
 | # | 動作 | 端點／程式 | 狀態 |
 | --- | --- | --- | --- |
-| 1 | 送出申請（店名、聯絡人、Email、電話、座標） | `POST /onboarding/applications` | → `submitted` |
-| 2 | 自動配發 subdomain | `generateSubdomain` + 最多 5 次重試 | — |
-| 3 | 發出 application secret | 只回給申請人一次，DB 存 hash | — |
-| 4 | 平台審核清單 | `GET /admin/onboarding/applications` | — |
-| 5 | 核准 | `POST /admin/onboarding/applications/:id/approve` | → `provisioning` |
-| 6 | 建立租戶與訂閱 | `createTenantWithSubscription` | 寫 `MANAGEMENT_DB` |
-| 7 | 建立平台餐廳與店主帳號 | `createPlatformOwnerAccount` | 寫 `PLATFORM DB`：`restaurants`、`users`、`shop_subscriptions`、`password_reset_tokens` |
-| 8 | 產生設定密碼連結 | `createCredentialDelivery` | — |
-| 9 | 標記完成 | `UPDATE onboarding_applications SET status='completed'` | → `completed` |
-| 10 | 寄出憑證 | `dispatchCredentialDelivery` | 線上為 `manual`，不寄 |
-| 11 | 管理者從核准橫幅取得帳號與連結，轉交店主 | `PlatformOnboardingApplicationsView` | — |
-| 12 | 店主開連結設定密碼 | `https://admin.makanmasak.com/reset-password?token=…` → `POST /auth/reset-password` | token 作廢、`tokenVersion + 1` |
-| 13 | 店主以該帳號登入 | `POST /auth/login` | — |
+| 1 | 送出申請（店名、聯絡人、Email、電話、地址、國家／縣市、可選市集、座標） | `POST /onboarding/applications`；每個 IP 每小時 5 筆（D1 條件 upsert） | → `submitted` |
+| 2 | 自動配發 subdomain（內部識別用，不再對申請人顯示網址） | `generateSubdomain` + 最多 5 次重試 | — |
+| 3 | 發出 application secret | 只回給申請人一次，DB 存 hash；成功頁給出 `/status/:id#secret` 查詢連結 | — |
+| 4 | 通知平台、寄「已收到申請」信 | `notifyPlatformOfNewApplication`（Slack 或 Email Service，見 `apps/management-api/ONBOARDING_NOTIFICATIONS.md`），`waitUntil` 執行，失敗不影響 201 | — |
+| 5 | 平台審核清單（側欄顯示待審數量） | `GET /admin/onboarding/applications` | — |
+| 6 | 核准 | `POST /admin/onboarding/applications/:id/approve` | → `provisioning` |
+| 7 | 建立租戶與訂閱 | `createTenantWithSubscription` | 寫 `MANAGEMENT_DB` |
+| 8 | 建立平台餐廳與店主帳號 | `createPlatformOwnerAccount` | 寫 `PLATFORM DB`：`restaurants`（`isAvailable: false`，幣別／時區依國別）、`users`、`shop_subscriptions`、`password_reset_tokens`，有選市集時加一筆 `market_join_requests`（待核准，不直接入市集） |
+| 9 | 產生設定密碼連結 | `createCredentialDelivery` | — |
+| 10 | 標記完成 | `UPDATE onboarding_applications SET status='completed'` | → `completed` |
+| 11 | 寄出憑證 | `dispatchCredentialDelivery` → Resend | 線上為 `manual`，不寄 |
+| 12 | 管理者從核准橫幅取得帳號與連結，轉交店主 | `PlatformOnboardingApplicationsView` | — |
+| 13 | 店主開連結設定密碼 | `https://admin.makanmasak.com/reset-password?token=…` → `POST /auth/reset-password` | token 作廢、`tokenVersion + 1` |
+| 14 | 店主以該帳號登入 | `POST /auth/login` | — |
 
-駁回：`POST /admin/onboarding/applications/:id/reject` → `rejected`。不填原因、不通知申請人。
+駁回：`POST /admin/onboarding/applications/:id/reject` → `rejected`。原因必填（2–500 字），
+寫入 `rejection_reason` 並記稽核事件；申請人查詢頁會顯示原因。駁回信已實作，線上同樣不寄。
+
+重新產生設定連結：`POST /admin/onboarding/applications/:id/setup-link`，只接受 `completed`
+申請；同一個 batch 作廢舊 token、發新的 24h token，並記稽核事件。後台開通資訊面板有按鈕。
 
 > **店主的初始密碼是「不可用密碼」。** `createPlatformOwnerAccount` 用
 > `generateUnusablePassword()` 產生隨機字串再 bcrypt，真正的入口是設定密碼連結。
@@ -66,9 +72,14 @@
 
 > **餐廳 id 必須是 UUID v7。** 註解寫得很明白：v4 的 owner id 會讓這個租戶的菜單圖片上傳直接壞掉。
 
-> **是否寄信只看 `ONBOARDING_EMAIL_ENABLED`。** 未設定就是 `manual`，送達紀錄停在
-> `pending`、不會再變。2026-09-15 查 production：management-api 只有 `JWT_SECRET` 一把
-> secret，這個變數也沒設，唯一一筆送達紀錄是 `manual / pending`。
+> **是否寄信看 `ONBOARDING_EMAIL_ENABLED`。** 不是 `"true"` 就是 `manual`，送達紀錄停在
+> `pending`；打開後還要 `ONBOARDING_EMAIL_FROM` 與 `RESEND_API_KEY`，缺一個就記 `failed`。
+> production 的 `wrangler.toml` 明寫 `"false"`，2026-09-15 查到唯一一筆送達紀錄是
+> `manual / pending`。
+
+> **國別、市集與幣別（9/20–9/21 那批）尚未部署。** 程式與測試在 main 上，但平台 `0028`、
+> 控制面 `0014` 與回填都還沒套到 production；順序見
+> `docs/superpowers/reviews/2026-09-21-onboarding-locale-and-market.md`。
 
 ### 入口 B：平台直接建店
 
@@ -105,9 +116,11 @@
 | 沒帶 `X-Onboarding-Secret` 查申請 | 401 | `APPLICATION_SECRET_REQUIRED` | 🟠 P1 |
 | 建立店主帳號失敗 | 反序補償（見 §4），申請退回 `submitted` | — | 🔴 P0（已防） |
 | 憑證寄送失敗 | **不回滾**，`credentialDelivery.status = failed` 並附錯誤訊息 | — | 🟠 P1 |
-| 管理者關掉核准橫幅 | 連結從畫面消失；已完成的申請核准鈕停用，**UI 取不回連結** | — | 🟠 P1 |
-| 設定連結過期（24h） | 忘記密碼要寄信，線上沒有寄信憑證；只能由管理者在員工列表代設密碼 | `PASSWORD_RESET_FAILED` 類 | 🟠 P1 |
-| 缺 `INTERNAL_API_TOKEN`（入口 B） | 建店或建店主都失敗，剛建的列被停用。2026-09-15 查 production：api 與 management-api 都沒有這把 secret，線上唯一的餐廳來自入口 A，入口 B 從未在線上跑過 | — | 🔴 P0 |
+| 設定連結過期或遺失（24h） | 管理者在開通資訊面板「重新產生連結」，舊 token 一併作廢 | — | 🟡 P2（已防） |
+| 同一 IP 一小時內超過 5 筆申請 | 429 | `RATE_LIMITED` | 🟡 P2（已防） |
+| 申請 body 不是合法 JSON | 400（`f8f5ef29`，截至 2026-09-21 尚未部署，線上仍回 500） | `INVALID_JSON` | ⚪ P3 |
+| 沒設任何通知管道 | 每筆申請 log `notification skipped`；平台只能靠側欄待審數量發現。production 是否已設見 #410 | — | 🟠 P1 |
+| 缺 `INTERNAL_API_TOKEN`（入口 B） | 建店或建店主都失敗，剛建的列被停用。2026-09-15 查 production：api 與 management-api 都沒有這把 secret，入口 B 從未在線上跑過；之後有沒有補上未再確認 | — | 🔴 P0 |
 | 平台 DB binding 沒設定 | 「Platform DB binding is not configured」 | — | 🔴 P0 |
 | 本機開發沒有套齊兩套 migration | 核准會失敗——management 的 0010–0012 與平台 `migrations_fresh` 都要套進同一個 local D1 | — | 🟡 P2 |
 
@@ -121,21 +134,27 @@
 - `apps/management-api/src/services/TenantService.ts`
 - `apps/admin-dashboard/src/views/PlatformOnboardingApplicationsView.vue` — 審核頁與核准橫幅
 - `apps/admin-dashboard/src/views/AccountManagementView.vue` — 入口 B
+- `apps/admin-dashboard/src/components/dashboard/SetupChecklistCard.vue` — 店主首次登入的開店清單
+- `apps/onboarding-app/src/views/ApplicationStatusView.vue` — 申請人查詢進度
 - `apps/api/src/services/managementTenantClient.ts` — 入口 B 的 internal API 呼叫
 
 **測試**
 
 - `apps/management-api/src/__tests__/integration/onboarding-workflow.real.integration.test.ts`
 - `apps/admin-dashboard/src/views/PlatformOnboardingApplicationsView.test.ts`
-- `tests/e2e/integration/real-workflows.spec.ts` — 只涵蓋「送出申請」這一步
+- `apps/management-api/src/__tests__/onboarding-*.test.ts` — 限流、通知、寄信、國別與市集
+- `tests/e2e/integration/real-workflows.spec.ts` — nightly 走完兩個入口：申請 → 核准 → 設密碼 → 店主登入，以及後台建店 → 店主登入（#379）
 
 ## 7. 已知缺口
 
-- **沒有任何測試走完「設定連結 → 設密碼 → 以店主登入」**；整合測試只斷言連結的格式。
-- **憑證不寄信，也沒有重送或重新產生連結的機制。** 過期或遺失只能人工處理。
-- **申請頁文案與現況不符**：成功頁說「已發送確認郵件」，但送出申請不寄任何信；首頁仍寫「獨立部署、完全隔離環境、24 小時內上線」，並顯示從未生效的 `*.makanmasak.com` 專屬網址。
-- **申請頁寫死 `planId: "standard"`**（`ApplyView.vue`），自助申請開成付費 BASIC、帳期立即起算；入口 B 則是 30 天試用。
-- **新餐廳預設值要店主自己改**：地址是「Onboarding GPS 緯度, 經度」、`city` 寫死「台中市」，而設定頁沒有 `city` 欄位。
-- **沒有首次登入的開店引導**，店主要自己知道去補資料、建菜單、產生桌位 QR、開放點餐。
+- **寄不出信**（#374）：開通信、駁回信、「已收到申請」信都寫好了，production 沒開。
+- **平台通知管道未確認**（#410）：Slack 或 Email Service 都需要營運者設定。
+- **入口 B 在 production 從未跑過**：缺 `INTERNAL_API_TOKEN`（見 §5）。
+- **新店在探索頁的呈現**（#386）：`type: "onboarding"` 會印在店家卡片上；入駐不問營業時間，
+  `isOpenNow` 在 `business_hours` 為 NULL 時回 false，新店永遠「休息中」。
 - **跨兩個 D1 沒有交易**（D1 本來也沒有跨庫交易），一致性完全靠 §4 的補償。
 - 舊的 Cloudflare 驗證／完成流程已退役，只保留在歷史文件裡。
+
+已補上（原列於此）：申請人查詢頁（#375）、重新產生設定連結（#376）、新店佔位地址（#377）、
+首次登入開店清單（#378）、全流程整合測試（#379）、平台通知與限流（#380，程式面）、
+駁回原因（#381）、自助申請改走試用方案、申請頁不再宣稱獨立部署、24 小時上線、專屬網址與已寄確認信。

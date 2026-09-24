@@ -6,7 +6,7 @@ const viVN: Messages = {
       copyright: "© 2026 MakanMasak. Mọi quyền được bảo lưu.",
     },
     tagline: {
-      selfHosted: "Tự lưu trữ",
+      platformHosted: "Nền tảng vận hành",
     },
   },
   apply: {
@@ -106,18 +106,19 @@ const viVN: Messages = {
     cta: {
       button: "Bắt đầu ứng dụng",
       subtitle:
-        "Điền vào đơn đăng ký và chúng tôi sẽ liên hệ với bạn trong vòng 24 giờ.",
+        "Điền đơn đăng ký, đội ngũ của chúng tôi sẽ liên hệ sau khi xét duyệt.",
       title: "Sẵn sàng để bắt đầu?",
     },
     features: {
-      fast: {
-        description: "Đường ống triển khai tự động. Sống trong vòng 24 giờ.",
-        title: "Triển khai nhanh",
-      },
-      isolated: {
+      assisted: {
         description:
-          "Môi trường đám mây bị cô lập hoàn toàn. Dữ liệu của bạn là của bạn 100%.",
-        title: "Môi trường biệt lập",
+          "Đội ngũ của chúng tôi xét duyệt đơn, kích hoạt tài khoản và hướng dẫn bạn thiết lập cửa hàng",
+        title: "Kích hoạt có hỗ trợ",
+      },
+      hosted: {
+        description:
+          "Chúng tôi vận hành hệ thống cho bạn — không cần tự dựng hay bảo trì máy chủ",
+        title: "Nền tảng vận hành",
       },
       secure: {
         description:
@@ -128,7 +129,8 @@ const viVN: Messages = {
     hero: {
       ctaApply: "Đăng ký ngay",
       ctaDemo: "Xem bản trình diễn →",
-      subtitle: "Tự lưu trữ · Dữ liệu an toàn · Khởi chạy sau 24 giờ",
+      subtitle:
+        "Nền tảng vận hành · Dữ liệu an toàn · Được đội ngũ xét duyệt và kích hoạt",
       titleLine1: "Xây dựng nhà hàng của bạn",
       titleLine2: "Hệ thống quản lý chuyên dụng",
     },
@@ -160,11 +162,9 @@ const viVN: Messages = {
         title: "Triển khai hệ thống",
       },
       email: {
-        prefix: "Chúng tôi đã gửi email xác nhận tới",
-        suffix: ". Vui lòng kiểm tra hộp thư đến của bạn.",
         description:
-          "Chúng tôi sẽ gửi email khi đơn đăng ký của bạn có cập nhật.",
-        title: "Email xác nhận",
+          "Sau khi được duyệt, nền tảng sẽ cung cấp tài khoản chủ quán và liên kết đặt mật khẩu. Dùng liên kết trạng thái để theo dõi đơn của bạn.",
+        title: "Thông tin đăng nhập",
       },
       start: {
         description:
@@ -179,11 +179,8 @@ const viVN: Messages = {
     summary: {
       applicationId: "ID ứng dụng",
       businessName: "Tên nhà hàng",
-      cloudflare: "Lưu trữ nền tảng",
-      connected: "Đã bật",
       contactEmail: "Email liên hệ",
       plan: "Kế hoạch đã chọn",
-      subdomain: "URL chuyên dụng",
       tenantId: "ID người thuê",
       status: "Trạng thái ứng dụng",
       pendingReview: "Đang chờ nền tảng xét duyệt",
