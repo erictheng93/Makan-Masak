@@ -274,6 +274,7 @@ import { useRouter } from "vue-router";
 import { useI18n } from "@/i18n";
 import { useAuthStore } from "@/stores/auth";
 import { useDashboardStore } from "@/stores/dashboard";
+import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import type { ChartData, TopMenuItem } from "@/types";
 import { useDateFormatter } from "@/composables/useDateFormatter";
 import {
@@ -415,14 +416,25 @@ const navigateToOrder = () => {
   router.push("/dashboard/orders");
 };
 
+// The refresh used to live in the dashboard store and reloaded only the stat
+// cards, leaving both charts as first loaded; it also kept running in a
+// background tab. Poll the same refreshData the button uses instead.
+const dashboardPoller = createVisibilityAwarePoller({
+  intervalMs: 30_000,
+  onTick: () => {
+    if (isLoading.value) return;
+    return refreshData();
+  },
+});
+
 onMounted(async () => {
   // Initial data load
   await refreshData();
 
-  dashboardStore.startAutoRefresh(30000);
+  dashboardPoller.start();
 });
 
 onUnmounted(() => {
-  dashboardStore.stopAutoRefresh();
+  dashboardPoller.stop();
 });
 </script>

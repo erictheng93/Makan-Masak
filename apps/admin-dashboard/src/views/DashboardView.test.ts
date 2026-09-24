@@ -38,8 +38,6 @@ const dashboardStore = vi.hoisted(() => ({
   fetchDashboardStats: vi.fn(),
   fetchRevenueAnalytics: vi.fn(),
   fetchOrderAnalytics: vi.fn(),
-  startAutoRefresh: vi.fn(),
-  stopAutoRefresh: vi.fn(),
   formatCurrency: vi.fn((amount: number) => `$${amount}`),
   formatPercentage: vi.fn((value: number) => `${value}%`),
 }));
@@ -97,5 +95,34 @@ describe("DashboardView", () => {
       dashboardStore.recentOrders,
     );
     expect(orderStore.fetchOrders).not.toHaveBeenCalled();
+  });
+
+  it("refreshes the charts as well as the stat cards on its timer, until left", async () => {
+    vi.useFakeTimers();
+    try {
+      const wrapper = shallowMount(DashboardView, {
+        global: {
+          stubs: {
+            LazyChart: { template: "<div><slot /></div>" },
+            RouterLink: true,
+          },
+        },
+      });
+      await flushPromises();
+      expect(dashboardStore.fetchDashboardStats).toHaveBeenCalledOnce();
+      expect(dashboardStore.fetchRevenueAnalytics).toHaveBeenCalledOnce();
+      expect(dashboardStore.fetchOrderAnalytics).toHaveBeenCalledOnce();
+
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(dashboardStore.fetchDashboardStats).toHaveBeenCalledTimes(2);
+      expect(dashboardStore.fetchRevenueAnalytics).toHaveBeenCalledTimes(2);
+      expect(dashboardStore.fetchOrderAnalytics).toHaveBeenCalledTimes(2);
+
+      wrapper.unmount();
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(dashboardStore.fetchDashboardStats).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
