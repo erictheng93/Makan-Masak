@@ -66,7 +66,7 @@ const features = computed(() => [
       <div class="mt-10 flex flex-col items-center gap-4">
         <RouterLink
           to="/apply"
-          class="inline-flex items-center justify-center rounded-full bg-primary-700 px-8 py-3.5 text-base font-semibold text-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-primary-800 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+          class="inline-flex items-center justify-center rounded-full bg-primary-500 px-8 py-3.5 text-base font-semibold text-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-primary-600 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
         >
           {{ t("home.hero.ctaApply") }}
           <ArrowRightIcon class="ml-2 h-4 w-4" />
@@ -120,7 +120,7 @@ const features = computed(() => [
       </div>
       <RouterLink
         to="/apply"
-        class="inline-flex shrink-0 items-center justify-center rounded-full bg-primary-700 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-primary-800 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+        class="inline-flex shrink-0 items-center justify-center rounded-full bg-primary-500 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-primary-600 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
       >
         {{ t("home.cta.button") }}
         <ArrowRightIcon class="ml-2 h-4 w-4" />

@@ -10,7 +10,8 @@
     --card: #FFFFFF;
     --text: #1C1C1E;
     --muted: #6E6E73;
-    --primary-strong: #B7440A; /* admin accent (DESIGN.md); 5.5:1 on white */
+    --primary-strong: #B04F09; /* onboarding primary-700, text on white (5.3:1) */
+    --brand: #F38020; /* Cloudflare orange, onboarding primary-500: fills only */
     --success: #34C759;
     --warning: #FF9500;
     --error: #FF3B30;
@@ -44,13 +45,13 @@
     flex: none;
     width: 36px; height: 36px;
     border-radius: 999px;
-    background: var(--primary-strong);
+    background: var(--brand);
     color: #FFFFFF;
     display: inline-flex; align-items: center; justify-content: center;
     font-size: 17px;
   }
   .flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
-  .flow span.pill { background: #FEF7EE; color: var(--primary-strong); border-radius: 999px; padding: 6px 14px; font-weight: 600; }
+  .flow span.pill { background: #FEF4EA; color: var(--primary-strong); border-radius: 999px; padding: 6px 14px; font-weight: 600; }
   .flow span.arrow { color: var(--muted); }
   .tip, .warn, .ok {
     border-radius: 16px;
@@ -63,7 +64,7 @@
   .tip strong, .warn strong, .ok strong { display: block; margin-bottom: 2px; }
   .btn-label {
     display: inline-block;
-    background: var(--primary-strong);
+    background: var(--brand);
     color: #FFFFFF;
     border-radius: 999px;
     padding: 0 12px;

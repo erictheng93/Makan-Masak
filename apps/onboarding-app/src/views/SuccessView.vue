@@ -65,13 +65,13 @@ const handleStartNew = () => {
     <div class="flex items-center justify-center mb-8">
       <div class="flex items-center">
         <div
-          class="w-8 h-8 rounded-full bg-primary-700 text-white flex items-center justify-center font-medium"
+          class="w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center font-medium"
         >
           ✓
         </div>
-        <div class="w-24 h-1 bg-primary-700" />
+        <div class="w-24 h-1 bg-primary-500" />
         <div
-          class="w-8 h-8 rounded-full bg-primary-700 text-white flex items-center justify-center font-medium"
+          class="w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center font-medium"
         >
           ✓
         </div>

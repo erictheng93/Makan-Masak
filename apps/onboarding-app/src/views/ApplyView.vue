@@ -280,12 +280,12 @@ const useCurrentLocation = () => {
     <div class="flex items-center justify-center mb-8">
       <div class="flex items-center">
         <div
-          class="w-8 h-8 rounded-full bg-primary-700 text-white flex items-center justify-center font-medium"
+          class="w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center font-medium"
         >
           1
         </div>
         <div class="w-24 h-1 bg-gray-200">
-          <div class="w-0 h-full bg-primary-700" />
+          <div class="w-0 h-full bg-primary-500" />
         </div>
         <div
           class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-medium"

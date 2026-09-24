@@ -205,7 +205,7 @@ components:
 
 MakanMakan follows an **Apple-Native Soft Minimalism** design language (the system mandated in `docs/UIUX-design-system.md`). It should feel calm, fast, operational, and trustworthy across several related environments: guests ordering from phones, restaurant staff managing tables and menus, onboarding flows for new restaurants, and kitchen displays that need high visibility under time pressure.
 
-The foundation is shared and neutral — iOS system gray surfaces, soft shadows instead of borders, rounded cards, and pill controls. On top of that foundation each workflow carries a context accent: the customer flow leans blue, admin/management and the onboarding app lean warm orange (a new shop signs up in the same colours it will manage it in), the management portal leans green, and kitchen execution uses the pure iOS semantic palette (blue to start, green when ready, red when urgent).
+The foundation is shared and neutral — iOS system gray surfaces, soft shadows instead of borders, rounded cards, and pill controls. On top of that foundation each workflow carries a context accent: the customer flow leans blue, admin/management leans warm orange, the onboarding app uses Cloudflare orange, the management portal leans green, and kitchen execution uses the pure iOS semantic palette (blue to start, green when ready, red when urgent).
 
 ## Colors
 
@@ -217,7 +217,8 @@ The base interface is built from white cards floating on a soft iOS-gray backgro
 - **iOS Red (#FF3B30):** Errors, urgent timing, destructive actions, and disconnected states.
 - **iOS Teal (#30B0C7):** Data visualization accents (rings, charts).
 - **Customer accent (#2563EB):** Deeper blue used by the customer app's primary CTA. (Called an "indigo override" in earlier revisions; it is a blue, and naming it indigo is what licensed a drift into actual indigo elsewhere.)
-- **Admin accent (#B7440A):** Warm management accent for owner/admin dashboards and the onboarding app. Use step 700 or darker for text and for fills behind white text; 600 is 3.7:1 on white and fails AA.
+- **Admin accent (#B7440A):** Warm management accent for owner/admin dashboards.
+- **Onboarding accent (#F38020):** Cloudflare orange, the onboarding app's `primary-500`, used for button and brand fills. It is 2.65:1 on white, so text on white uses `primary-700` (#B04F09, 5.3:1) or darker, never 500.
 - **Portal accent (#15803D):** Green theme for the management portal.
 - **Secondary text (#8E8E93) / Tertiary text (#AEAEB2):** Captions, metadata, and disabled states.
 
