@@ -155,7 +155,7 @@ const handleStartNew = () => {
         <div class="space-y-4">
           <div class="flex items-start">
             <div class="flex-shrink-0 p-2 bg-primary-100 rounded-lg">
-              <EnvelopeIcon class="h-5 w-5 text-primary-700" />
+              <EnvelopeIcon class="h-5 w-5 text-primary-500" />
             </div>
             <div class="ml-4">
               <p class="font-medium text-gray-900">
@@ -168,7 +168,7 @@ const handleStartNew = () => {
           </div>
           <div class="flex items-start">
             <div class="flex-shrink-0 p-2 bg-primary-100 rounded-lg">
-              <ClockIcon class="h-5 w-5 text-primary-700" />
+              <ClockIcon class="h-5 w-5 text-primary-500" />
             </div>
             <div class="ml-4">
               <p class="font-medium text-gray-900">

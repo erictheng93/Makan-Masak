@@ -23,7 +23,7 @@ const handleLocaleChange = async (code: string) => {
       <div class="max-w-4xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between">
           <div class="flex items-center">
-            <span class="text-2xl font-bold text-primary-700">MakanMasak</span>
+            <span class="text-2xl font-bold text-primary-500">MakanMasak</span>
             <span class="ml-2 text-sm text-gray-500">{{
               t("app.tagline.platformHosted")
             }}</span>
@@ -63,7 +63,7 @@ const handleLocaleChange = async (code: string) => {
                   <span class="flex-1 text-left">{{ loc.nativeName }}</span>
                   <CheckIcon
                     v-if="loc.code === locale"
-                    class="h-4 w-4 text-primary-700"
+                    class="h-4 w-4 text-primary-500"
                   />
                 </button>
               </div>

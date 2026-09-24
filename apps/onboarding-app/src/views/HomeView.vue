@@ -55,7 +55,7 @@ const features = computed(() => [
         class="text-4xl font-semibold tracking-tight text-ios-text sm:text-5xl"
       >
         {{ t("home.hero.titleLine1") }}<br />
-        <span class="text-primary-700">{{ t("home.hero.titleLine2") }}</span>
+        <span class="text-primary-500">{{ t("home.hero.titleLine2") }}</span>
       </h1>
       <p
         class="mx-auto mt-5 max-w-xl text-base leading-relaxed text-gray-500 sm:text-lg"
@@ -93,7 +93,7 @@ const features = computed(() => [
         >
           <component
             :is="feature.icon"
-            class="h-6 w-6 text-primary-700"
+            class="h-6 w-6 text-primary-500"
             aria-hidden="true"
           />
         </div>

@@ -14,7 +14,9 @@ export default {
       colors: {
         ...iosColors,
         // Cloudflare orange (#F38020) at 500. Fills sit on 500/600; text on
-        // white uses 700+, since #F38020 is only 2.65:1 against white.
+        // white uses 700+, since #F38020 is only 2.65:1 against white. Large
+        // display text (wordmark, hero line) and icons use 500 to match the
+        // buttons; small text and links stay on 700.
         primary: {
           50: "#fef4ea",
           100: "#fde4cc",

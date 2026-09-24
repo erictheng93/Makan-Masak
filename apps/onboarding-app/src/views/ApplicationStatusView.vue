@@ -59,7 +59,7 @@ onMounted(refresh);
       <div
         class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary-100"
       >
-        <CheckCircleIcon class="h-10 w-10 text-primary-700" />
+        <CheckCircleIcon class="h-10 w-10 text-primary-500" />
       </div>
       <h1 class="mb-2 text-2xl font-bold text-gray-900">
         {{ t("status.title") }}
