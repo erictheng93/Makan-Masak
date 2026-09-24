@@ -569,7 +569,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onBeforeUnmount, onMounted, watch } from "vue";
+import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "@/i18n";
 import { useToast } from "vue-toastification";
@@ -1251,7 +1252,7 @@ const printAllTableQRCodes = async () => {
   await printTableQRCodes(tables.value);
 };
 
-const fetchTables = async () => {
+const fetchTables = async ({ background = false } = {}) => {
   const restaurantId = authStore.restaurantId;
   if (!restaurantId) return;
 
@@ -1289,11 +1290,23 @@ const fetchTables = async () => {
     }
   } catch (error) {
     console.error("Failed to fetch tables:", error);
-    toast.error(t("tables.alert.loadFailed"));
+    if (!background) toast.error(t("tables.alert.loadFailed"));
   }
 };
 
+// Occupied / available follows orders and seating, not this page. Hold the
+// poll while a table or QR modal is open so the list does not shift under it.
+const tablesPoller = createVisibilityAwarePoller({
+  intervalMs: 30_000,
+  onTick: () => {
+    if (showTableModal.value || showQRModal.value) return;
+    return fetchTables({ background: true });
+  },
+});
+
 onMounted(() => {
   fetchTables();
+  tablesPoller.start();
 });
+onBeforeUnmount(() => tablesPoller.stop());
 </script>

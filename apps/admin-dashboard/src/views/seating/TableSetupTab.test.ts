@@ -107,6 +107,32 @@ describe("TableSetupTab", () => {
     confirmMock.mockResolvedValue(true);
   });
 
+  it("follows table occupancy in the background, quietly, until it is left", async () => {
+    vi.useFakeTimers();
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    try {
+      const wrapper = await mountTab([buildTable()]);
+      const tableLoads = () =>
+        vi.mocked(api.get).mock.calls.filter(([url]) => url === "/tables")
+          .length;
+      expect(tableLoads()).toBe(1);
+
+      vi.mocked(api.get).mockRejectedValueOnce(new Error("network"));
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(tableLoads()).toBe(2);
+      expect(toastMock.error).not.toHaveBeenCalled();
+
+      wrapper.unmount();
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(tableLoads()).toBe(2);
+    } finally {
+      consoleError.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
   it("sends restaurantId as a string when creating a table", async () => {
     const wrapper = await mountTab();
     vi.mocked(api.post).mockResolvedValue({ data: { success: true } } as never);
