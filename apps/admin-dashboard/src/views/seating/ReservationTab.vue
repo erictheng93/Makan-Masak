@@ -22,7 +22,7 @@
             v-model="filters.date"
             type="date"
             class="form-input"
-            @change="loadReservations"
+            @change="loadReservations()"
           />
         </div>
 
@@ -33,7 +33,7 @@
           <select
             v-model="filters.status"
             class="form-input"
-            @change="loadReservations"
+            @change="loadReservations()"
           >
             <option value="">{{ t("reservation.filter.allStatus") }}</option>
             <option value="pending">
@@ -69,12 +69,12 @@
             type="tel"
             class="form-input"
             :placeholder="t('reservation.filter.enterPhone')"
-            @keyup.enter="loadReservations"
+            @keyup.enter="loadReservations()"
           />
         </div>
 
         <div class="flex items-end space-x-2">
-          <button class="btn-primary flex-1" @click="loadReservations">
+          <button class="btn-primary flex-1" @click="loadReservations()">
             <Search class="w-4 h-4 mr-2" />
             {{ t("common.search") }}
           </button>
@@ -659,7 +659,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from "vue";
+import { ref, reactive, onBeforeUnmount, onMounted, computed } from "vue";
+import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import {
   Dialog,
   DialogPanel,
@@ -747,8 +748,10 @@ const restaurantId = computed(() => authStore.restaurantId || "");
 /**
  * Load reservations list
  */
-async function loadReservations() {
-  loading.value = true;
+async function loadReservations({ background = false } = {}) {
+  // A background tick keeps the rows on screen and stays quiet on failure;
+  // the placeholder and the toast are for loads the user asked for.
+  if (!background) loading.value = true;
   try {
     const response = await ReservationService.listReservations({
       restaurantId: restaurantId.value,
@@ -769,11 +772,20 @@ async function loadReservations() {
     }
   } catch (error) {
     console.error("Load reservations error:", error);
-    toast.error(t("reservation.loadError"));
+    if (!background) toast.error(t("reservation.loadError"));
   } finally {
-    loading.value = false;
+    if (!background) loading.value = false;
   }
 }
+
+// Customers book online while this tab is open.
+const reservationsPoller = createVisibilityAwarePoller({
+  intervalMs: 30_000,
+  onTick: () => {
+    if (loading.value || submitting.value) return;
+    return loadReservations({ background: true });
+  },
+});
 
 /**
  * Create reservation
@@ -1008,6 +1020,8 @@ function getPaginationPages(): number[] {
 
 // Initialize
 onMounted(async () => {
+  reservationsPoller.start();
   await loadReservations();
 });
+onBeforeUnmount(() => reservationsPoller.stop());
 </script>
