@@ -1,5 +1,5 @@
 /**
- * Resolver and guards against real D1 (migrations_fresh, including 0030/0031)
+ * Resolver and guards against real D1 (migrations_fresh, including 0031/0032)
  * and real KV. Kept in the unit project like ShopPaymentCredentialService.test.ts.
  */
 import {
