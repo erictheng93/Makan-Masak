@@ -468,6 +468,34 @@ describe("PlatformMarketCheckoutsView", () => {
     );
   });
 
+  it("refreshes in the background without blanking the table, and stops when left", async () => {
+    vi.useFakeTimers();
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    try {
+      const wrapper = mount(PlatformMarketCheckoutsView);
+      await flushPromises();
+      expect(marketCheckoutsService.list).toHaveBeenCalledOnce();
+
+      vi.mocked(marketCheckoutsService.list).mockRejectedValueOnce(
+        new Error("network"),
+      );
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(marketCheckoutsService.list).toHaveBeenCalledTimes(2);
+      // A failed background tick keeps the rows already on screen.
+      expect(wrapper.text()).toContain("逢甲夜市");
+      expect(wrapper.text()).not.toContain("network");
+
+      wrapper.unmount();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(marketCheckoutsService.list).toHaveBeenCalledTimes(2);
+    } finally {
+      consoleError.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
   it("checks provider connectivity on demand", async () => {
     const wrapper = await mountView();
 
