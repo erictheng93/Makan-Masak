@@ -661,6 +661,7 @@
 <script setup lang="ts">
 import { ref, reactive, onBeforeUnmount, onMounted, computed } from "vue";
 import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
+import { notifySeatingChanged } from "./seatingEvents";
 import {
   Dialog,
   DialogPanel,
@@ -770,6 +771,8 @@ async function loadReservations({ background = false } = {}) {
     } else {
       pagination.total = reservations.value.length;
     }
+    // Every create/confirm/arrive/seat/cancel ends in this reload.
+    if (!background) notifySeatingChanged();
   } catch (error) {
     console.error("Load reservations error:", error);
     if (!background) toast.error(t("reservation.loadError"));
