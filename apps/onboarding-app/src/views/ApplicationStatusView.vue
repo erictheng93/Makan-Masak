@@ -59,7 +59,7 @@ onMounted(refresh);
       <div
         class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary-100"
       >
-        <CheckCircleIcon class="h-10 w-10 text-primary-600" />
+        <CheckCircleIcon class="h-10 w-10 text-primary-700" />
       </div>
       <h1 class="mb-2 text-2xl font-bold text-gray-900">
         {{ t("status.title") }}
@@ -88,7 +88,7 @@ onMounted(refresh);
           </div>
           <div class="flex justify-between gap-4">
             <dt class="text-gray-500">{{ t("status.currentStatus") }}</dt>
-            <dd class="font-medium text-primary-700">{{ statusLabel }}</dd>
+            <dd class="font-medium text-primary-800">{{ statusLabel }}</dd>
           </div>
           <div
             v-if="

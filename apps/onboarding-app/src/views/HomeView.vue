@@ -55,7 +55,7 @@ const features = computed(() => [
         class="text-4xl font-semibold tracking-tight text-ios-text sm:text-5xl"
       >
         {{ t("home.hero.titleLine1") }}<br />
-        <span class="text-primary-600">{{ t("home.hero.titleLine2") }}</span>
+        <span class="text-primary-700">{{ t("home.hero.titleLine2") }}</span>
       </h1>
       <p
         class="mx-auto mt-5 max-w-xl text-base leading-relaxed text-gray-500 sm:text-lg"
@@ -66,7 +66,7 @@ const features = computed(() => [
       <div class="mt-10 flex flex-col items-center gap-4">
         <RouterLink
           to="/apply"
-          class="inline-flex items-center justify-center rounded-full bg-primary-600 px-8 py-3.5 text-base font-semibold text-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-primary-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+          class="inline-flex items-center justify-center rounded-full bg-primary-700 px-8 py-3.5 text-base font-semibold text-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-primary-800 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
         >
           {{ t("home.hero.ctaApply") }}
           <ArrowRightIcon class="ml-2 h-4 w-4" />
@@ -74,7 +74,7 @@ const features = computed(() => [
         <a
           :href="demoUrl"
           target="_blank"
-          class="text-sm font-medium text-primary-600 transition-colors duration-200 hover:text-primary-700"
+          class="text-sm font-medium text-primary-700 transition-colors duration-200 hover:text-primary-800"
         >
           {{ t("home.hero.ctaDemo") }}
         </a>
@@ -93,7 +93,7 @@ const features = computed(() => [
         >
           <component
             :is="feature.icon"
-            class="h-6 w-6 text-primary-600"
+            class="h-6 w-6 text-primary-700"
             aria-hidden="true"
           />
         </div>
@@ -120,7 +120,7 @@ const features = computed(() => [
       </div>
       <RouterLink
         to="/apply"
-        class="inline-flex shrink-0 items-center justify-center rounded-full bg-primary-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-primary-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+        class="inline-flex shrink-0 items-center justify-center rounded-full bg-primary-700 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-primary-800 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
       >
         {{ t("home.cta.button") }}
         <ArrowRightIcon class="ml-2 h-4 w-4" />

@@ -65,13 +65,13 @@ const handleStartNew = () => {
     <div class="flex items-center justify-center mb-8">
       <div class="flex items-center">
         <div
-          class="w-8 h-8 rounded-full bg-primary-600 text-white flex items-center justify-center font-medium"
+          class="w-8 h-8 rounded-full bg-primary-700 text-white flex items-center justify-center font-medium"
         >
           ✓
         </div>
-        <div class="w-24 h-1 bg-primary-600" />
+        <div class="w-24 h-1 bg-primary-700" />
         <div
-          class="w-8 h-8 rounded-full bg-primary-600 text-white flex items-center justify-center font-medium"
+          class="w-8 h-8 rounded-full bg-primary-700 text-white flex items-center justify-center font-medium"
         >
           ✓
         </div>
@@ -155,7 +155,7 @@ const handleStartNew = () => {
         <div class="space-y-4">
           <div class="flex items-start">
             <div class="flex-shrink-0 p-2 bg-primary-100 rounded-lg">
-              <EnvelopeIcon class="h-5 w-5 text-primary-600" />
+              <EnvelopeIcon class="h-5 w-5 text-primary-700" />
             </div>
             <div class="ml-4">
               <p class="font-medium text-gray-900">
@@ -168,7 +168,7 @@ const handleStartNew = () => {
           </div>
           <div class="flex items-start">
             <div class="flex-shrink-0 p-2 bg-primary-100 rounded-lg">
-              <ClockIcon class="h-5 w-5 text-primary-600" />
+              <ClockIcon class="h-5 w-5 text-primary-700" />
             </div>
             <div class="ml-4">
               <p class="font-medium text-gray-900">
@@ -220,7 +220,7 @@ const handleStartNew = () => {
       {{ t("success.contact.prompt") }}
       <a
         href="mailto:support@makanmasak.com"
-        class="text-primary-600 hover:underline"
+        class="text-primary-700 hover:underline"
       >
         support@makanmasak.com
       </a>
