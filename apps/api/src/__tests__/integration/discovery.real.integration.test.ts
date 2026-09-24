@@ -206,7 +206,9 @@ async function seedRealisticMarketSearchFixture(
   );
 
   const insertedRestaurants: { id: string }[] = [];
-  for (const chunk of chunkRows(restaurantValues, 4)) {
+  // D1 caps a statement at 100 bound parameters. A restaurant row binds 26
+  // since is_demo landed, so 4 rows (104) fail with "too many SQL variables".
+  for (const chunk of chunkRows(restaurantValues, 3)) {
     const rows = await testApp.testDb.drizzle
       .insert(restaurants)
       .values(chunk)
