@@ -198,5 +198,12 @@ class LeavesService {
 }
 
 // Export singleton instance
+/** Fired after a leave request is approved, rejected or filed, so the pending badge recounts. */
+export const LEAVE_REQUESTS_CHANGED = "leave-requests:changed";
+
+export function notifyLeaveRequestsChanged() {
+  window.dispatchEvent(new Event(LEAVE_REQUESTS_CHANGED));
+}
+
 export const leavesService = new LeavesService();
 export default leavesService;

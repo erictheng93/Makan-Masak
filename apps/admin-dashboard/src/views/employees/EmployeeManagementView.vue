@@ -66,6 +66,7 @@
           {{ tab.label }}
           <span
             v-if="tab.badge !== undefined && tab.badge > 0"
+            :data-testid="`tab-badge-${tab.name}`"
             class="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-ios-red text-white"
           >
             {{ tab.badge }}
@@ -102,13 +103,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onBeforeUnmount, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "@/i18n";
 import { useToast } from "vue-toastification";
 import { useEmployeeList } from "@/composables/useEmployeeList";
 import { useAuthStore } from "@/stores/auth";
-import { leavesService } from "@/services/leavesService";
+import {
+  leavesService,
+  LEAVE_REQUESTS_CHANGED,
+} from "@/services/leavesService";
+import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import EmployeeFormModal from "@/components/employees/EmployeeFormModal.vue";
 import type { Employee, EmployeeFormData } from "@/types/employee";
 import type { UserId } from "@/types/api-user";
@@ -336,8 +341,7 @@ const handleToggleStatus = async (user: Employee) => {
   }
 };
 
-onMounted(async () => {
-  employeeList.fetchAll();
+async function loadPendingLeaveCount() {
   try {
     const restaurantId = authStore.restaurantId;
     if (restaurantId) {
@@ -349,5 +353,23 @@ onMounted(async () => {
   } catch {
     // silently ignore errors fetching leave count
   }
+}
+
+// Employees file requests from their own screen while this page is open, and
+// the leaves tab below approves them, so the badge cannot be counted once.
+const pendingLeavePoller = createVisibilityAwarePoller({
+  intervalMs: 60_000,
+  onTick: loadPendingLeaveCount,
+});
+
+onMounted(() => {
+  employeeList.fetchAll();
+  void loadPendingLeaveCount();
+  pendingLeavePoller.start();
+  window.addEventListener(LEAVE_REQUESTS_CHANGED, loadPendingLeaveCount);
+});
+onBeforeUnmount(() => {
+  pendingLeavePoller.stop();
+  window.removeEventListener(LEAVE_REQUESTS_CHANGED, loadPendingLeaveCount);
 });
 </script>

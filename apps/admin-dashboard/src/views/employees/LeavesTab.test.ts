@@ -5,7 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import LeavesTab from "./LeavesTab.vue";
 import LeaveRequestDialog from "@/components/leaves/LeaveRequestDialog.vue";
 import type { LeaveRequestFormData } from "@/components/leaves/LeaveRequestDialog.vue";
-import { leavesService } from "@/services/leavesService";
+import {
+  leavesService,
+  notifyLeaveRequestsChanged,
+} from "@/services/leavesService";
 import type { LeaveBalance, LeaveType } from "@makanmasak/shared-types";
 
 vi.mock("@/i18n", () => ({
@@ -40,6 +43,7 @@ vi.mock("@/services/leavesService", () => ({
     deleteLeaveType: vi.fn(),
     createRequest: vi.fn(),
   },
+  notifyLeaveRequestsChanged: vi.fn(),
 }));
 
 // A whole leave_types row, because that is what the endpoint returns
@@ -262,6 +266,8 @@ describe("LeavesTab request payload", () => {
         attachmentUrl: "https://drive.example.com/cert.pdf",
       }),
     );
+    // The pending-leave badge on the parent page recounts.
+    expect(notifyLeaveRequestsChanged).toHaveBeenCalledOnce();
   });
 
   it("sends no attachmentUrl when there is none", async () => {

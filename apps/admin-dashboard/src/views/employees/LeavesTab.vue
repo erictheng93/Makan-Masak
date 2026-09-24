@@ -249,7 +249,10 @@ import { Plus } from "lucide-vue-next";
 import { useAuthStore } from "@/stores/auth";
 import { t } from "@/i18n";
 import { resolveUserFacingError } from "@makanmasak/shared/utils/user-facing-error";
-import { leavesService } from "@/services/leavesService";
+import {
+  leavesService,
+  notifyLeaveRequestsChanged,
+} from "@/services/leavesService";
 import { api as apiClient } from "@/services/api";
 import { useEmployeeList } from "@/composables/useEmployeeList";
 import LeaveApprovalQueue from "@/components/leaves/LeaveApprovalQueue.vue";
@@ -403,6 +406,7 @@ const loadData = async () => {
 const handleApprove = async (requestId: number) => {
   try {
     await leavesService.approveRequest(requestId);
+    notifyLeaveRequestsChanged();
     // Optimistically update status
     const req = allRequests.value.find((r) => r.id === requestId);
     if (req) req.status = "approved";
@@ -418,6 +422,7 @@ const handleApprove = async (requestId: number) => {
 const handleReject = async (requestId: number, reason?: string) => {
   try {
     await leavesService.rejectRequest(requestId, reason);
+    notifyLeaveRequestsChanged();
     // Optimistically update status
     const req = allRequests.value.find((r) => r.id === requestId);
     if (req) {
@@ -462,6 +467,7 @@ const handleLeaveRequest = async (formData: LeaveRequestFormData) => {
       // column is a single URL; pass it through, omitted when blank.
       attachmentUrl: formData.attachmentUrl,
     });
+    notifyLeaveRequestsChanged();
     showRequestDialog.value = false;
     await loadData();
   } catch (e) {
