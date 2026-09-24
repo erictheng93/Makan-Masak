@@ -126,6 +126,8 @@ public
 !apps/*/public/
 apps/*/public/*
 !apps/*/public/_headers
+# Onboarding tour screenshots (scripts/onboarding-tour/capture.sh)
+!apps/onboarding-app/public/tour/
 
 # Build outputs
 .out

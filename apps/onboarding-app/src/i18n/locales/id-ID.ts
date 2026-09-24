@@ -104,6 +104,37 @@ const idID: Messages = {
     },
   },
   home: {
+    tour: {
+      title: "Dari pesanan sampai ke meja, sekilas",
+      subtitle:
+        "Ini adalah tampilan asli sistem, dengan toko dan pesanan contoh.",
+      steps: {
+        order: {
+          title: "Tamu memesan dengan memindai",
+          description:
+            "Tamu memindai kode QR di meja dan memesan dari menu bergambar. Tanpa perlu mengunduh aplikasi.",
+          alt: "Layar pemesanan di ponsel tamu",
+        },
+        kitchen: {
+          title: "Dapur langsung menerima",
+          description:
+            "Pesanan langsung muncul di tablet dapur, diurutkan menjadi menunggu, dimasak, dan siap.",
+          alt: "Papan pesanan di tablet dapur",
+        },
+        tracking: {
+          title: "Tamu bisa memantau",
+          description:
+            "Setiap langkah langsung diperbarui di ponsel tamu, jadi tidak perlu bertanya apakah sudah siap.",
+          alt: "Progres pesanan di ponsel tamu",
+        },
+        dashboard: {
+          title: "Pemilik melihat pendapatan",
+          description:
+            "Penjualan hari ini, jumlah pesanan, dan meja yang masih menunggu, semuanya dalam satu layar.",
+          alt: "Ringkasan pemilik di dasbor admin",
+        },
+      },
+    },
     cta: {
       button: "Mulai Aplikasi",
       subtitle:
@@ -129,7 +160,7 @@ const idID: Messages = {
     },
     hero: {
       ctaApply: "Lamar Sekarang",
-      ctaDemo: "Lihat Demo →",
+      ctaTour: "Lihat cara kerjanya ↓",
       subtitle:
         "Dikelola Platform · Data Aman · Ditinjau dan Diaktifkan oleh Tim Kami",
       titleLine1: "Bangun Restoran Anda",

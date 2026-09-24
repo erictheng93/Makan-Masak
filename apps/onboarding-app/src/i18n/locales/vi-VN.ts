@@ -103,6 +103,37 @@ const viVN: Messages = {
     },
   },
   home: {
+    tour: {
+      title: "Từ lúc gọi món đến khi lên bàn, nhìn là hiểu",
+      subtitle:
+        "Đây là màn hình thật của hệ thống, dùng cửa hàng và đơn hàng mẫu.",
+      steps: {
+        order: {
+          title: "Khách quét mã để gọi món",
+          description:
+            "Khách quét mã QR trên bàn và gọi món từ thực đơn có hình ảnh. Không cần tải ứng dụng.",
+          alt: "Màn hình gọi món trên điện thoại của khách",
+        },
+        kitchen: {
+          title: "Bếp nhận đơn ngay lập tức",
+          description:
+            "Đơn hàng hiện ngay trên máy tính bảng của bếp, xếp theo chờ xử lý, đang nấu và đã xong.",
+          alt: "Bảng đơn hàng trên máy tính bảng của bếp",
+        },
+        tracking: {
+          title: "Khách theo dõi được tiến độ",
+          description:
+            "Mỗi bước được cập nhật ngay trên điện thoại của khách, không cần hỏi món đã xong chưa.",
+          alt: "Tiến độ đơn hàng trên điện thoại của khách",
+        },
+        dashboard: {
+          title: "Chủ quán nắm doanh thu",
+          description:
+            "Doanh thu hôm nay, số đơn và bàn nào còn đang chờ, tất cả trên một màn hình.",
+          alt: "Tổng quan của chủ quán trong trang quản trị",
+        },
+      },
+    },
     cta: {
       button: "Bắt đầu ứng dụng",
       subtitle:
@@ -128,7 +159,7 @@ const viVN: Messages = {
     },
     hero: {
       ctaApply: "Đăng ký ngay",
-      ctaDemo: "Xem bản trình diễn →",
+      ctaTour: "Xem cách hoạt động ↓",
       subtitle:
         "Nền tảng vận hành · Dữ liệu an toàn · Được đội ngũ xét duyệt và kích hoạt",
       titleLine1: "Xây dựng nhà hàng của bạn",

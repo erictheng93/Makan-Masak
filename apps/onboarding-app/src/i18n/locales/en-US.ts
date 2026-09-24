@@ -27,7 +27,7 @@ const enUS: Messages = {
       subtitle:
         "Platform-Hosted · Secure Data · Reviewed and Activated by Our Team",
       ctaApply: "Apply Now",
-      ctaDemo: "View Demo →",
+      ctaTour: "See how it works ↓",
     },
     features: {
       hosted: {
@@ -44,6 +44,37 @@ const enUS: Messages = {
         title: "Assisted Activation",
         description:
           "Our team reviews your application, activates your account, and guides your shop setup",
+      },
+    },
+    tour: {
+      title: "From order to table, at a glance",
+      subtitle:
+        "These are real screens from the system, shown with a sample restaurant and sample orders.",
+      steps: {
+        order: {
+          title: "Guests order by scanning",
+          description:
+            "Guests scan the QR code on the table and order from a menu with photos. No app to download.",
+          alt: "The ordering screen on a guest's phone",
+        },
+        kitchen: {
+          title: "The kitchen gets it instantly",
+          description:
+            "Orders appear on the kitchen tablet right away, sorted into waiting, cooking and ready.",
+          alt: "The order board on the kitchen tablet",
+        },
+        tracking: {
+          title: "Guests can follow along",
+          description:
+            "Guests see each step on their phone as it happens, so nobody has to ask if it's ready.",
+          alt: "Order progress on a guest's phone",
+        },
+        dashboard: {
+          title: "Owners see the takings",
+          description:
+            "Today's sales, order count and which tables are still waiting, all on one screen.",
+          alt: "The owner overview in the admin dashboard",
+        },
       },
     },
     cta: {

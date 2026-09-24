@@ -24,7 +24,7 @@ const zhTW = {
       titleLine2: "專屬管理系統",
       subtitle: "平台代管 · 資料安全 · 專人審核開通",
       ctaApply: "立即申請",
-      ctaDemo: "查看演示 →",
+      ctaTour: "看看怎麼運作 ↓",
     },
     features: {
       hosted: {
@@ -38,6 +38,35 @@ const zhTW = {
       assisted: {
         title: "專人開通",
         description: "平台團隊審核後為您開通帳號，並引導完成開店設定",
+      },
+    },
+    tour: {
+      title: "從點餐到出餐，一次看懂",
+      subtitle: "以下都是系統的實際畫面，店家與訂單是示範資料。",
+      steps: {
+        order: {
+          title: "客人掃碼點餐",
+          description:
+            "客人用手機掃桌上的 QR Code，看著照片點餐，不用下載 App。",
+          alt: "客人手機上的點餐畫面",
+        },
+        kitchen: {
+          title: "廚房即時收單",
+          description:
+            "訂單立刻出現在廚房平板，依待處理、製作中、準備完成排好。",
+          alt: "廚房平板上的訂單看板",
+        },
+        tracking: {
+          title: "客人看得到進度",
+          description:
+            "餐點做到哪一步，客人手機上即時更新，不用再問「好了沒」。",
+          alt: "客人手機上的訂單進度",
+        },
+        dashboard: {
+          title: "老闆隨時掌握營收",
+          description: "今天賣了多少、幾張訂單、哪桌還在等，後台一眼看完。",
+          alt: "老闆後台的店主總覽",
+        },
       },
     },
     cta: {

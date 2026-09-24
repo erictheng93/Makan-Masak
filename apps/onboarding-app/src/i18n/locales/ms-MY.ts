@@ -103,6 +103,37 @@ const msMY: Messages = {
     },
   },
   home: {
+    tour: {
+      title: "Dari pesanan ke meja, sekali pandang",
+      subtitle:
+        "Ini ialah skrin sebenar sistem, dengan kedai dan pesanan contoh.",
+      steps: {
+        order: {
+          title: "Pelanggan imbas untuk memesan",
+          description:
+            "Pelanggan imbas kod QR di meja dan memesan daripada menu bergambar. Tiada aplikasi perlu dimuat turun.",
+          alt: "Skrin pesanan pada telefon pelanggan",
+        },
+        kitchen: {
+          title: "Dapur terima serta-merta",
+          description:
+            "Pesanan terus muncul pada tablet dapur, disusun mengikut menunggu, sedang dimasak dan siap.",
+          alt: "Papan pesanan pada tablet dapur",
+        },
+        tracking: {
+          title: "Pelanggan boleh ikuti kemajuan",
+          description:
+            "Setiap langkah dikemas kini pada telefon pelanggan, jadi tiada siapa perlu bertanya sama ada sudah siap.",
+          alt: "Kemajuan pesanan pada telefon pelanggan",
+        },
+        dashboard: {
+          title: "Pemilik nampak jualan",
+          description:
+            "Jualan hari ini, bilangan pesanan dan meja yang masih menunggu, semuanya dalam satu skrin.",
+          alt: "Gambaran keseluruhan pemilik dalam papan pemuka",
+        },
+      },
+    },
     cta: {
       button: "Mulakan Permohonan",
       subtitle:
@@ -128,7 +159,7 @@ const msMY: Messages = {
     },
     hero: {
       ctaApply: "Mohon Sekarang",
-      ctaDemo: "Lihat Demo →",
+      ctaTour: "Lihat cara ia berfungsi ↓",
       subtitle:
         "Dihoskan Platform · Data Selamat · Disemak dan Diaktifkan oleh Pasukan Kami",
       titleLine1: "Bina Restoran Anda",

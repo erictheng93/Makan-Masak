@@ -100,6 +100,34 @@ const zhCN: Messages = {
     },
   },
   home: {
+    tour: {
+      title: "从点餐到出餐，一次看懂",
+      subtitle: "以下都是系统的实际画面，店家与订单是示范数据。",
+      steps: {
+        order: {
+          title: "客人扫码点餐",
+          description: "客人用手机扫桌上的二维码，看着照片点餐，不用下载 App。",
+          alt: "客人手机上的点餐画面",
+        },
+        kitchen: {
+          title: "厨房实时收单",
+          description:
+            "订单立刻出现在厨房平板，按待处理、制作中、准备完成排好。",
+          alt: "厨房平板上的订单看板",
+        },
+        tracking: {
+          title: "客人看得到进度",
+          description:
+            "餐点做到哪一步，客人手机上实时更新，不用再问「好了没」。",
+          alt: "客人手机上的订单进度",
+        },
+        dashboard: {
+          title: "老板随时掌握营收",
+          description: "今天卖了多少、几张订单、哪桌还在等，后台一眼看完。",
+          alt: "老板后台的店主总览",
+        },
+      },
+    },
     cta: {
       button: "开始申请",
       subtitle: "填写申请表单，平台团队审核后会与您联系",
@@ -121,7 +149,7 @@ const zhCN: Messages = {
     },
     hero: {
       ctaApply: "立即申请",
-      ctaDemo: "查看演示 →",
+      ctaTour: "看看怎么运作 ↓",
       subtitle: "平台代管 · 数据安全 · 专人审核开通",
       titleLine1: "为您的餐厅打造",
       titleLine2: "专属管理系统",
