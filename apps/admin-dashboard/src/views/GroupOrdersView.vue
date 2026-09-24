@@ -941,7 +941,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onBeforeUnmount, onMounted } from "vue";
+import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import {
   UserGroupIcon,
   UsersIcon,
@@ -1441,8 +1442,20 @@ const exportGroupOrderReport = async () => {
   }
 };
 
+// Customers join, add items and finalize from their phones while this page
+// is open. Skip a tick while staff finalize or recover an order.
+const groupOrdersPoller = createVisibilityAwarePoller({
+  intervalMs: 15_000,
+  onTick: () => {
+    if (isFinalizingAsStaff.value || isRecoveringFinalization.value) return;
+    return refreshGroupOrders({ silent: true });
+  },
+});
+
 // 生命週期
+onBeforeUnmount(() => groupOrdersPoller.stop());
 onMounted(async () => {
+  groupOrdersPoller.start();
   await refreshGroupOrders();
 
   // 預選第一個團體訂單

@@ -263,6 +263,40 @@ describe("GroupOrdersView finalization recovery", () => {
     await flushPromises();
   });
 
+  it("picks up what customers did in the background, quietly, and updates the open order", async () => {
+    vi.useFakeTimers();
+    try {
+      const wrapper = await mountSelectedOrder(
+        failedGroupOrder({ status: "active", finalizeFailure: undefined }),
+      );
+      expect(groupOrdersService.getGroupOrders).toHaveBeenCalledOnce();
+      expect(
+        wrapper.find('[data-testid="staff-finalize-group-1"]').exists(),
+      ).toBe(true);
+
+      vi.mocked(groupOrdersService.getGroupOrders).mockResolvedValueOnce([
+        failedGroupOrder({ status: "checkout", finalizeFailure: undefined }),
+      ]);
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(groupOrdersService.getGroupOrders).toHaveBeenCalledTimes(2);
+      expect(
+        wrapper.find('[data-testid="staff-finalize-group-1"]').exists(),
+      ).toBe(false);
+
+      vi.mocked(groupOrdersService.getGroupOrders).mockRejectedValueOnce(
+        new Error("offline"),
+      );
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(toast.error).not.toHaveBeenCalled();
+
+      wrapper.unmount();
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(groupOrdersService.getGroupOrders).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("shows a toast when loading group orders fails", async () => {
     vi.mocked(groupOrdersService.getGroupOrders).mockRejectedValueOnce(
       new Error("offline"),
