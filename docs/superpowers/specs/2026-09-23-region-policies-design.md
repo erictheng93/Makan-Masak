@@ -50,7 +50,7 @@
 
 ## 4. 資料模型
 
-### 4.1 `policies` 表（platform 軌 migration `0030_policies.sql`）
+### 4.1 `policies` 表（platform 軌 migration `0031_policies.sql`）
 
 ```sql
 CREATE TABLE `policies` (
@@ -69,7 +69,7 @@ CREATE UNIQUE INDEX `policies_scope_key_idx`
 
 Drizzle schema 放在 `packages/database/src/schema/policies.ts`（匯出名稱 `regionPolicies`）。修改歷史不存在這張表，改寫進 platform 的 `audit_logs`（§7）。
 
-### 4.2 `markets.country_code`（platform 軌 migration `0031_market_country_code.sql`）
+### 4.2 `markets.country_code`（platform 軌 migration `0032_market_country_code.sql`）
 
 - `ALTER TABLE markets ADD COLUMN country_code TEXT`，加上索引。允許 NULL。
 - 同一個 migration 依 `COUNTRY_PROFILES` 的城市清單回填：城市名稱完全符合的，填入 TW 或 MY；對不到的維持 NULL，交給人工處理。
@@ -213,7 +213,7 @@ interface EffectiveRegionPolicies {
 
 ## 10. 上線順序
 
-1. 正式環境依 CLAUDE.md 的手動程序套用 `0030`、`0031`。套用 `0031` 之前，先在 schema 副本上確認回填結果，並列出國別仍為 NULL 的市集。
+1. 正式環境依 CLAUDE.md 的手動程序套用 `0031`、`0032`。套用 `0032` 之前，先在 schema 副本上確認回填結果，並列出國別仍為 NULL 的市集。
 2. 部署 `apps/api`。政策表是空的，行為不變；唯一的新限制是「費率大於 0 的市集必須有國別」，只在市集被寫入時才檢查。
 3. 部署 `management-api` 與 `management-portal`。
 4. 在正式環境執行 `scripts/backfill-restaurant-country.sql`。之後國家層上限類政策的寫入，會被 D10 的門檻擋到國別未知的店都處理完，或由管理員明確確認為止。

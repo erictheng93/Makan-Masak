@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-23-region-policies-design.md`（第二版）。§6 的對照表是每個執行點的依據。
 
+> **Migration 改號（2026-09-24）**：本計畫寫成 `0030_policies.sql`／`0031_market_country_code.sql`，但合併前 main 已用掉 0030（`0030_service_item_payment_requirements.sql`），實際檔名為 **`0031_policies.sql`** 與 **`0032_market_country_code.sql`**。下文保留原樣作為紀錄。
+
 ## 實作注意事項（spec 沒寫、但執行時要知道的）
 
 - `moduleGate` 在快取未命中時，才多讀一次 `restaurants.country_code`，結果存進 `CachedSubscription.countryCode`。22 個既有的 module-gate 測試用的 FakeKv 裝的訂閱資料沒有這個欄位，所以視為 NULL，會跳過政策，這些測試不必修改。

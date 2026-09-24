@@ -31,7 +31,7 @@ describe("policies schema", () => {
     );
   });
 
-  it("backfills every profile city in 0031", () => {
+  it("backfills every profile city in 0032", () => {
     const sql = readFileSync(
       fileURLToPath(
         new URL(
