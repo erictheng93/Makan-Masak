@@ -110,13 +110,6 @@ export default defineConfig({
             url: "/scan",
             icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }],
           },
-          {
-            name: "手動輸入",
-            short_name: "輸入",
-            description: "手動輸入餐廳和桌號",
-            url: "/manual",
-            icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }],
-          },
         ],
       },
     }),

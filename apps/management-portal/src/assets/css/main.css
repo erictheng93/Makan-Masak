@@ -89,7 +89,7 @@
 
   /* 表格樣式 */
   .table {
-    @apply min-w-full divide-y divide-gray-200;
+    @apply block min-w-full max-w-full overflow-x-auto divide-y divide-gray-200;
   }
 
   .table th {
