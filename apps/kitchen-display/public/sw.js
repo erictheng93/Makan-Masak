@@ -114,9 +114,9 @@ function notificationTag(data) {
 function shouldRequireInteraction(payload, data) {
   return Boolean(
     payload.requireInteraction ||
-      payload.priority === "high" ||
-      payload.priority === "urgent" ||
-      data.orderSource === "market_checkout",
+    payload.priority === "high" ||
+    payload.priority === "urgent" ||
+    data.orderSource === "market_checkout",
   );
 }
 
