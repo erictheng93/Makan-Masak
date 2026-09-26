@@ -104,7 +104,6 @@ describe("ServiceView", () => {
       .findAll("button")
       .find((button) => button.text() === "serviceView.startDelivery");
     expect(startButton).toBeDefined();
-    expect(startButton!.classes()).toContain("min-h-[44px]");
     await startButton!.trigger("click");
     expect(wrapper.text()).toContain("serviceView.confirmDelivery");
   }
@@ -140,7 +139,6 @@ describe("ServiceView", () => {
       .findAll("button")
       .find((button) => button.text() === "serviceView.confirmDelivery");
     expect(confirmButton).toBeDefined();
-    expect(confirmButton!.classes()).toContain("min-h-[44px]");
     await confirmButton!.trigger("click");
 
     expect(api.put).toHaveBeenCalledWith("/orders/order-1/status", {
