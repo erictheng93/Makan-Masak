@@ -7,7 +7,7 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(title, {
       body: payload.body || "您有新的通知。",
       icon: "/pwa-192x192.png",
-      badge: "/pwa-192x192.png",
+      badge: "/badge-72x72.png",
       tag: payload.tag || payload.type || "makanmakan-notification",
       data: {
         ...payload,
@@ -27,8 +27,9 @@ self.addEventListener("notificationclick", (event) => {
   const url = event.notification.data?.url || "/";
 
   event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(
-      (clients) => {
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clients) => {
         const targetUrl = new URL(url, self.location.origin).href;
         const sameOriginClient = clients.find((client) =>
           client.url.startsWith(self.location.origin),
@@ -44,8 +45,7 @@ self.addEventListener("notificationclick", (event) => {
         }
 
         return self.clients.openWindow(targetUrl);
-      },
-    ),
+      }),
   );
 });
 

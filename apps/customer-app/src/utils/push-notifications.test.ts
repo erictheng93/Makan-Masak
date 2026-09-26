@@ -44,4 +44,34 @@ describe("customer push notification service", () => {
     );
     expect(requestPermission).not.toHaveBeenCalled();
   });
+
+  it("uses a monochrome badge for local notifications", async () => {
+    vi.stubEnv("VITE_VAPID_PUBLIC_KEY", "test-vapid-key");
+    vi.stubGlobal("Notification", { permission: "granted" });
+    vi.stubGlobal("PushManager", class PushManager {});
+
+    const showNotification = vi.fn();
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: {
+        ready: Promise.resolve({
+          pushManager: { getSubscription: vi.fn().mockResolvedValue(null) },
+          showNotification,
+        }),
+      },
+    });
+
+    const { default: customerPushService } =
+      await import("./push-notifications");
+
+    await customerPushService.showLocalNotification({
+      title: "Order update",
+      body: "Your order is ready",
+    });
+
+    expect(showNotification).toHaveBeenCalledWith(
+      "Order update",
+      expect.objectContaining({ badge: "/badge-72x72.png" }),
+    );
+  });
 });
