@@ -1,0 +1,16 @@
+{
+  "name": "MakanMasak 管理後台",
+  "short_name": "MM 後台",
+  "description": "餐廳店主、收銀與送菜員的管理後台",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#F2F2F7",
+  "background_color": "#F2F2F7",
+  "lang": "zh-TW",
+  "icons": [
+    { "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/pwa-512x512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

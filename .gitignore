@@ -124,8 +124,6 @@ dist
 .cache/
 public
 !apps/*/public/
-apps/*/public/*
-!apps/*/public/_headers
 # Onboarding tour screenshots (scripts/onboarding-tour/capture.sh)
 !apps/onboarding-app/public/tour/
 
@@ -163,11 +161,8 @@ test-*.txt
 *-test-*.txt
 *-debug.txt
 test-output*.txt
-# App assets required by the PWA and browser metadata.
-!apps/customer-app/public/og-image.png
-!apps/kitchen-display/public/icons/
-!apps/kitchen-display/public/icons/kitchen-badge-72.png
-!apps/admin-dashboard/public/favicon.svg
+# Vite public/ is shipped verbatim; never let *.png above hide an app asset.
+!apps/*/public/**
 test-verification*.txt
 test-fixes*.txt
 perf-test.txt
