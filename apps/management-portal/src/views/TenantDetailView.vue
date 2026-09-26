@@ -394,45 +394,47 @@ const tabs = computed(() => [
             {{ t("tenantDetail.resources.empty") }}
           </p>
         </div>
-        <table v-else class="table">
-          <thead>
-            <tr>
-              <th>{{ t("tenantDetail.resources.column.type") }}</th>
-              <th>{{ t("tenantDetail.resources.column.name") }}</th>
-              <th>{{ t("tenantDetail.resources.column.id") }}</th>
-              <th>{{ t("tenantDetail.resources.column.status") }}</th>
-              <th>{{ t("tenantDetail.resources.column.createdAt") }}</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200">
-            <tr v-for="resource in resources" :key="resource.id">
-              <td>{{ getResourceTypeLabel(resource.resourceType) }}</td>
-              <td class="font-mono text-sm">{{ resource.resourceName }}</td>
-              <td class="font-mono text-sm">
-                {{ resource.resourceId || "-" }}
-              </td>
-              <td>
-                <span
-                  class="badge"
-                  :class="{
-                    'badge-success': resource.status === 'provisioned',
-                    'badge-warning': resource.status === 'pending',
-                    'badge-danger': resource.status === 'failed',
-                  }"
-                >
-                  {{
-                    resource.status === "provisioned"
-                      ? t("tenantDetail.resources.status.provisioned")
-                      : resource.status === "pending"
-                        ? t("tenantDetail.resources.status.pending")
-                        : t("tenantDetail.resources.status.failed")
-                  }}
-                </span>
-              </td>
-              <td>{{ new Date(resource.createdAt).toLocaleString() }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div v-else class="overflow-x-auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>{{ t("tenantDetail.resources.column.type") }}</th>
+                <th>{{ t("tenantDetail.resources.column.name") }}</th>
+                <th>{{ t("tenantDetail.resources.column.id") }}</th>
+                <th>{{ t("tenantDetail.resources.column.status") }}</th>
+                <th>{{ t("tenantDetail.resources.column.createdAt") }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <tr v-for="resource in resources" :key="resource.id">
+                <td>{{ getResourceTypeLabel(resource.resourceType) }}</td>
+                <td class="font-mono text-sm">{{ resource.resourceName }}</td>
+                <td class="font-mono text-sm">
+                  {{ resource.resourceId || "-" }}
+                </td>
+                <td>
+                  <span
+                    class="badge"
+                    :class="{
+                      'badge-success': resource.status === 'provisioned',
+                      'badge-warning': resource.status === 'pending',
+                      'badge-danger': resource.status === 'failed',
+                    }"
+                  >
+                    {{
+                      resource.status === "provisioned"
+                        ? t("tenantDetail.resources.status.provisioned")
+                        : resource.status === "pending"
+                          ? t("tenantDetail.resources.status.pending")
+                          : t("tenantDetail.resources.status.failed")
+                    }}
+                  </span>
+                </td>
+                <td>{{ new Date(resource.createdAt).toLocaleString() }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- 部署標籤 -->

@@ -468,42 +468,46 @@ onMounted(loadDashboard);
             <MapIcon class="mx-auto mb-3 h-10 w-10 text-gray-400" />
             No markets match the current filters.
           </div>
-          <table v-else class="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Area</th>
-                <th>Type</th>
-                <th class="text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 bg-white">
-              <tr v-for="market in markets" :key="market.id">
-                <td>
-                  <div class="font-medium text-gray-900">{{ market.name }}</div>
-                  <div class="text-xs text-gray-500">/{{ market.slug }}</div>
-                </td>
-                <td>{{ market.city }} · {{ market.district }}</td>
-                <td>{{ market.type }}</td>
-                <td class="space-x-3 text-right">
-                  <button
-                    type="button"
-                    class="font-medium text-primary-600 hover:text-primary-700"
-                    @click="editMarket(market)"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    class="font-medium text-red-600 hover:text-red-700"
-                    @click="deleteMarket(market)"
-                  >
-                    <TrashIcon class="inline h-4 w-4" />
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div v-else class="overflow-x-auto">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Area</th>
+                  <th>Type</th>
+                  <th class="text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 bg-white">
+                <tr v-for="market in markets" :key="market.id">
+                  <td>
+                    <div class="font-medium text-gray-900">
+                      {{ market.name }}
+                    </div>
+                    <div class="text-xs text-gray-500">/{{ market.slug }}</div>
+                  </td>
+                  <td>{{ market.city }} · {{ market.district }}</td>
+                  <td>{{ market.type }}</td>
+                  <td class="space-x-3 text-right">
+                    <button
+                      type="button"
+                      class="font-medium text-primary-600 hover:text-primary-700"
+                      @click="editMarket(market)"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      class="font-medium text-red-600 hover:text-red-700"
+                      @click="deleteMarket(market)"
+                    >
+                      <TrashIcon class="inline h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <section class="card space-y-4">

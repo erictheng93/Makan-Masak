@@ -18,7 +18,7 @@
     />
 
     <!-- Main Content (offset for fixed header) -->
-    <main class="pt-20 px-5 pb-6">
+    <main class="px-5 pb-6 pt-32 lg:pt-20">
       <OfflineStatus class="mb-4" />
 
       <!-- Stats Bar -->

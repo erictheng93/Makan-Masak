@@ -163,6 +163,11 @@ test-*.txt
 *-test-*.txt
 *-debug.txt
 test-output*.txt
+# App assets required by the PWA and browser metadata.
+!apps/customer-app/public/og-image.png
+!apps/kitchen-display/public/icons/
+!apps/kitchen-display/public/icons/kitchen-badge-72.png
+!apps/admin-dashboard/public/favicon.svg
 test-verification*.txt
 test-fixes*.txt
 perf-test.txt

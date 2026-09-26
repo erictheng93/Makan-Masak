@@ -266,107 +266,109 @@ const getTenantName = (tenantId: string) => {
         <p class="text-sm text-gray-500">{{ t("health.all.empty") }}</p>
       </div>
 
-      <table v-else class="table">
-        <thead>
-          <tr>
-            <th>{{ t("health.column.tenant") }}</th>
-            <th>{{ t("health.column.status") }}</th>
-            <th>{{ t("health.column.responseTime") }}</th>
-            <th>{{ t("health.column.api") }}</th>
-            <th>{{ t("health.column.database") }}</th>
-            <th>{{ t("health.column.cache") }}</th>
-            <th>{{ t("health.column.storage") }}</th>
-            <th>{{ t("health.column.checkedAt") }}</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200">
-          <tr v-for="check in healthStore.healthChecks" :key="check.id">
-            <td>
-              <RouterLink
-                :to="`/tenants/${check.tenantId}`"
-                class="font-medium text-primary-600 hover:text-primary-700"
-              >
-                {{ getTenantName(check.tenantId) }}
-              </RouterLink>
-            </td>
-            <td>
-              <span
-                class="badge"
-                :class="{
-                  'badge-success': check.status === 'healthy',
-                  'badge-warning': check.status === 'degraded',
-                  'badge-danger': check.status === 'down',
-                  'badge-gray': check.status === 'unknown',
-                }"
-              >
-                {{ getHealthStatusLabel(check.status) }}
-              </span>
-            </td>
-            <td>
-              {{ check.responseTimeMs ? `${check.responseTimeMs}ms` : "-" }}
-            </td>
-            <td>
-              <span
-                v-if="check.details?.api"
-                class="badge"
-                :class="{
-                  'badge-success': check.details.api === 'healthy',
-                  'badge-warning': check.details.api === 'degraded',
-                  'badge-danger': check.details.api === 'down',
-                }"
-              >
-                {{ getHealthStatusLabel(check.details.api) }}
-              </span>
-              <span v-else class="text-gray-400">-</span>
-            </td>
-            <td>
-              <span
-                v-if="check.details?.database"
-                class="badge"
-                :class="{
-                  'badge-success': check.details.database === 'healthy',
-                  'badge-warning': check.details.database === 'degraded',
-                  'badge-danger': check.details.database === 'down',
-                }"
-              >
-                {{ getHealthStatusLabel(check.details.database) }}
-              </span>
-              <span v-else class="text-gray-400">-</span>
-            </td>
-            <td>
-              <span
-                v-if="check.details?.cache"
-                class="badge"
-                :class="{
-                  'badge-success': check.details.cache === 'healthy',
-                  'badge-warning': check.details.cache === 'degraded',
-                  'badge-danger': check.details.cache === 'down',
-                }"
-              >
-                {{ getHealthStatusLabel(check.details.cache) }}
-              </span>
-              <span v-else class="text-gray-400">-</span>
-            </td>
-            <td>
-              <span
-                v-if="check.details?.storage"
-                class="badge"
-                :class="{
-                  'badge-success': check.details.storage === 'healthy',
-                  'badge-warning': check.details.storage === 'degraded',
-                  'badge-danger': check.details.storage === 'down',
-                }"
-              >
-                {{ getHealthStatusLabel(check.details.storage) }}
-              </span>
-              <span v-else class="text-gray-400">-</span>
-            </td>
-            <td class="text-gray-500">
-              {{ new Date(check.checkedAt).toLocaleString() }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div v-else class="overflow-x-auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>{{ t("health.column.tenant") }}</th>
+              <th>{{ t("health.column.status") }}</th>
+              <th>{{ t("health.column.responseTime") }}</th>
+              <th>{{ t("health.column.api") }}</th>
+              <th>{{ t("health.column.database") }}</th>
+              <th>{{ t("health.column.cache") }}</th>
+              <th>{{ t("health.column.storage") }}</th>
+              <th>{{ t("health.column.checkedAt") }}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            <tr v-for="check in healthStore.healthChecks" :key="check.id">
+              <td>
+                <RouterLink
+                  :to="`/tenants/${check.tenantId}`"
+                  class="font-medium text-primary-600 hover:text-primary-700"
+                >
+                  {{ getTenantName(check.tenantId) }}
+                </RouterLink>
+              </td>
+              <td>
+                <span
+                  class="badge"
+                  :class="{
+                    'badge-success': check.status === 'healthy',
+                    'badge-warning': check.status === 'degraded',
+                    'badge-danger': check.status === 'down',
+                    'badge-gray': check.status === 'unknown',
+                  }"
+                >
+                  {{ getHealthStatusLabel(check.status) }}
+                </span>
+              </td>
+              <td>
+                {{ check.responseTimeMs ? `${check.responseTimeMs}ms` : "-" }}
+              </td>
+              <td>
+                <span
+                  v-if="check.details?.api"
+                  class="badge"
+                  :class="{
+                    'badge-success': check.details.api === 'healthy',
+                    'badge-warning': check.details.api === 'degraded',
+                    'badge-danger': check.details.api === 'down',
+                  }"
+                >
+                  {{ getHealthStatusLabel(check.details.api) }}
+                </span>
+                <span v-else class="text-gray-400">-</span>
+              </td>
+              <td>
+                <span
+                  v-if="check.details?.database"
+                  class="badge"
+                  :class="{
+                    'badge-success': check.details.database === 'healthy',
+                    'badge-warning': check.details.database === 'degraded',
+                    'badge-danger': check.details.database === 'down',
+                  }"
+                >
+                  {{ getHealthStatusLabel(check.details.database) }}
+                </span>
+                <span v-else class="text-gray-400">-</span>
+              </td>
+              <td>
+                <span
+                  v-if="check.details?.cache"
+                  class="badge"
+                  :class="{
+                    'badge-success': check.details.cache === 'healthy',
+                    'badge-warning': check.details.cache === 'degraded',
+                    'badge-danger': check.details.cache === 'down',
+                  }"
+                >
+                  {{ getHealthStatusLabel(check.details.cache) }}
+                </span>
+                <span v-else class="text-gray-400">-</span>
+              </td>
+              <td>
+                <span
+                  v-if="check.details?.storage"
+                  class="badge"
+                  :class="{
+                    'badge-success': check.details.storage === 'healthy',
+                    'badge-warning': check.details.storage === 'degraded',
+                    'badge-danger': check.details.storage === 'down',
+                  }"
+                >
+                  {{ getHealthStatusLabel(check.details.storage) }}
+                </span>
+                <span v-else class="text-gray-400">-</span>
+              </td>
+              <td class="text-gray-500">
+                {{ new Date(check.checkedAt).toLocaleString() }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>

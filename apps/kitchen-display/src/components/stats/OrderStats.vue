@@ -1,5 +1,5 @@
 <template>
-  <div class="grid grid-cols-4 gap-3">
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
     <!-- Pending -->
     <div
       class="bg-gradient-to-br from-ios-orange-soft to-orange-200 rounded-2xl p-3 text-center shadow-card-sm"

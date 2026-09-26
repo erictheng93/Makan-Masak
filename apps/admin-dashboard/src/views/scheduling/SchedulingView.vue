@@ -1,7 +1,9 @@
 <template>
   <div class="users-view">
     <!-- 頁面標題和操作 -->
-    <div class="flex justify-between items-center mb-8">
+    <div
+      class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"
+    >
       <div>
         <h1 class="text-2xl font-bold text-gray-900">
           {{ t("scheduling.managementTitle") }}
@@ -10,9 +12,9 @@
           {{ t("scheduling.managementSubtitle") }}
         </p>
       </div>
-      <div class="flex space-x-4">
+      <div class="flex flex-wrap gap-2">
         <button
-          class="flex items-center px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          class="flex items-center whitespace-nowrap px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           :disabled="isRefreshing"
           @click="refreshData"
         >
@@ -20,14 +22,14 @@
           {{ t("common.refresh") }}
         </button>
         <button
-          class="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          class="flex items-center whitespace-nowrap px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
           @click="showCreateTemplateModal"
         >
           <PlusIcon class="h-4 w-4 mr-2" />
           {{ t("scheduling.addTemplate") }}
         </button>
         <button
-          class="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          class="flex items-center whitespace-nowrap px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           @click="showCreateScheduleModal"
         >
           <PlusIcon class="h-4 w-4 mr-2" />
@@ -182,7 +184,11 @@
     <!-- Tab Navigation -->
     <div class="bg-white rounded-lg shadow mb-6">
       <div class="border-b border-gray-200">
-        <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+        <nav
+          class="-mb-px flex overflow-x-auto space-x-8 px-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
+          aria-label="Tabs"
+          tabindex="0"
+        >
           <button
             v-for="tab in tabs"
             :key="tab.id"

@@ -189,69 +189,71 @@ const getTierClass = (tier: LicenseTier) => {
         <p class="mt-2 text-sm text-gray-500">{{ t("licenses.empty") }}</p>
       </div>
 
-      <table v-else class="table">
-        <thead>
-          <tr>
-            <th>{{ t("licenses.column.tenant") }}</th>
-            <th>{{ t("licenses.column.licenseKey") }}</th>
-            <th>{{ t("licenses.column.tier") }}</th>
-            <th>{{ t("licenses.column.status") }}</th>
-            <th>{{ t("licenses.column.validity") }}</th>
-            <th>{{ t("licenses.column.createdAt") }}</th>
-            <th class="text-right">{{ t("common.actions") }}</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200 bg-white">
-          <tr v-for="license in licenses" :key="license.id">
-            <td>
-              <RouterLink
-                :to="`/tenants/${license.tenantId}`"
-                class="font-medium text-primary-600 hover:text-primary-700"
-              >
-                {{ license.tenantName }}
-              </RouterLink>
-            </td>
-            <td class="font-mono text-sm">{{ license.licenseKey }}</td>
-            <td>
-              <span class="badge" :class="getTierClass(license.tier)">
-                {{ getTierLabel(license.tier) }}
-              </span>
-            </td>
-            <td>
-              <span
-                class="badge"
-                :class="license.revokedAt ? 'badge-danger' : 'badge-success'"
-              >
+      <div v-else class="overflow-x-auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>{{ t("licenses.column.tenant") }}</th>
+              <th>{{ t("licenses.column.licenseKey") }}</th>
+              <th>{{ t("licenses.column.tier") }}</th>
+              <th>{{ t("licenses.column.status") }}</th>
+              <th>{{ t("licenses.column.validity") }}</th>
+              <th>{{ t("licenses.column.createdAt") }}</th>
+              <th class="text-right">{{ t("common.actions") }}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 bg-white">
+            <tr v-for="license in licenses" :key="license.id">
+              <td>
+                <RouterLink
+                  :to="`/tenants/${license.tenantId}`"
+                  class="font-medium text-primary-600 hover:text-primary-700"
+                >
+                  {{ license.tenantName }}
+                </RouterLink>
+              </td>
+              <td class="font-mono text-sm">{{ license.licenseKey }}</td>
+              <td>
+                <span class="badge" :class="getTierClass(license.tier)">
+                  {{ getTierLabel(license.tier) }}
+                </span>
+              </td>
+              <td>
+                <span
+                  class="badge"
+                  :class="license.revokedAt ? 'badge-danger' : 'badge-success'"
+                >
+                  {{
+                    license.revokedAt
+                      ? t("licenses.revoked")
+                      : t("licenses.valid")
+                  }}
+                </span>
+              </td>
+              <td>
                 {{
-                  license.revokedAt
-                    ? t("licenses.revoked")
-                    : t("licenses.valid")
+                  license.expiresAt
+                    ? new Date(license.expiresAt).toLocaleDateString()
+                    : t("licenses.permanent")
                 }}
-              </span>
-            </td>
-            <td>
-              {{
-                license.expiresAt
-                  ? new Date(license.expiresAt).toLocaleDateString()
-                  : t("licenses.permanent")
-              }}
-            </td>
-            <td class="text-gray-500">
-              {{ new Date(license.createdAt).toLocaleDateString() }}
-            </td>
-            <td class="text-right">
-              <button
-                v-if="!license.revokedAt && license.tier !== 'enterprise'"
-                type="button"
-                class="text-primary-600 hover:text-primary-700 font-medium text-sm"
-              >
-                <ArrowUpIcon class="h-4 w-4 inline mr-1" />
-                {{ t("licenses.upgrade") }}
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              </td>
+              <td class="text-gray-500">
+                {{ new Date(license.createdAt).toLocaleDateString() }}
+              </td>
+              <td class="text-right">
+                <button
+                  v-if="!license.revokedAt && license.tier !== 'enterprise'"
+                  type="button"
+                  class="text-primary-600 hover:text-primary-700 font-medium text-sm"
+                >
+                  <ArrowUpIcon class="h-4 w-4 inline mr-1" />
+                  {{ t("licenses.upgrade") }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- 生成授權 Modal -->

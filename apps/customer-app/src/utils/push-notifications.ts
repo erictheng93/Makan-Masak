@@ -193,8 +193,8 @@ class CustomerPushNotificationService {
 
       const notificationOptions: NotificationOptions = {
         body: options.body,
-        icon: options.icon || "/icons/icon-192x192.png",
-        badge: options.badge || "/icons/badge-72x72.png",
+        icon: options.icon || "/pwa-192x192.png",
+        badge: options.badge || "/pwa-192x192.png",
         ...(options.image && { image: options.image }),
         tag: options.tag || "customer-notification",
         data: options.data,

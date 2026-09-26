@@ -166,79 +166,84 @@ const getStatusClass = (status: TenantStatus) => {
         </p>
       </div>
 
-      <table v-else class="table">
-        <thead>
-          <tr>
-            <th>{{ t("tenants.column.businessName") }}</th>
-            <th>{{ t("tenants.column.contactEmail") }}</th>
-            <th>{{ t("tenants.column.subdomain") }}</th>
-            <th>{{ t("tenants.column.status") }}</th>
-            <th>{{ t("tenants.column.deployedVersion") }}</th>
-            <th>{{ t("tenants.column.createdAt") }}</th>
-            <th class="text-right">{{ t("common.actions") }}</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200 bg-white">
-          <tr
-            v-for="tenant in filteredTenants"
-            :key="tenant.id"
-            data-testid="management-tenant-row"
-            :data-tenant-id="tenant.id"
-          >
-            <td>
-              <div class="flex items-center">
-                <div
-                  class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center"
+      <div v-else class="overflow-x-auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>{{ t("tenants.column.businessName") }}</th>
+              <th>{{ t("tenants.column.contactEmail") }}</th>
+              <th>{{ t("tenants.column.subdomain") }}</th>
+              <th>{{ t("tenants.column.status") }}</th>
+              <th>{{ t("tenants.column.deployedVersion") }}</th>
+              <th>{{ t("tenants.column.createdAt") }}</th>
+              <th class="text-right">{{ t("common.actions") }}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 bg-white">
+            <tr
+              v-for="tenant in filteredTenants"
+              :key="tenant.id"
+              data-testid="management-tenant-row"
+              :data-tenant-id="tenant.id"
+            >
+              <td>
+                <div class="flex items-center">
+                  <div
+                    class="flex-shrink-0 h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center"
+                  >
+                    <span class="text-primary-700 font-medium">
+                      {{ tenant.businessName.charAt(0) }}
+                    </span>
+                  </div>
+                  <div class="ml-4">
+                    <div class="font-medium text-gray-900">
+                      {{ tenant.businessName }}
+                    </div>
+                    <div
+                      v-if="tenant.customDomain"
+                      class="text-sm text-gray-500"
+                    >
+                      {{ tenant.customDomain }}
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td>{{ tenant.contactEmail }}</td>
+              <td>
+                <code
+                  v-if="tenant.subdomain"
+                  class="text-sm bg-gray-100 px-2 py-1 rounded"
                 >
-                  <span class="text-primary-700 font-medium">
-                    {{ tenant.businessName.charAt(0) }}
-                  </span>
-                </div>
-                <div class="ml-4">
-                  <div class="font-medium text-gray-900">
-                    {{ tenant.businessName }}
-                  </div>
-                  <div v-if="tenant.customDomain" class="text-sm text-gray-500">
-                    {{ tenant.customDomain }}
-                  </div>
-                </div>
-              </div>
-            </td>
-            <td>{{ tenant.contactEmail }}</td>
-            <td>
-              <code
-                v-if="tenant.subdomain"
-                class="text-sm bg-gray-100 px-2 py-1 rounded"
-              >
-                {{ tenant.subdomain }}.makanmasak.com
-              </code>
-              <span v-else class="text-gray-400">-</span>
-            </td>
-            <td>
-              <span class="badge" :class="getStatusClass(tenant.status)">
-                {{ getStatusLabel(tenant.status) }}
-              </span>
-            </td>
-            <td>
-              <code v-if="tenant.deployedVersion" class="text-sm">
-                v{{ tenant.deployedVersion }}
-              </code>
-              <span v-else class="text-gray-400">-</span>
-            </td>
-            <td class="text-gray-500">
-              {{ new Date(tenant.createdAt).toLocaleDateString() }}
-            </td>
-            <td class="text-right">
-              <RouterLink
-                :to="`/tenants/${tenant.id}`"
-                class="text-primary-600 hover:text-primary-700 font-medium"
-              >
-                {{ t("common.manage") }}
-              </RouterLink>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+                  {{ tenant.subdomain }}.makanmasak.com
+                </code>
+                <span v-else class="text-gray-400">-</span>
+              </td>
+              <td>
+                <span class="badge" :class="getStatusClass(tenant.status)">
+                  {{ getStatusLabel(tenant.status) }}
+                </span>
+              </td>
+              <td>
+                <code v-if="tenant.deployedVersion" class="text-sm">
+                  v{{ tenant.deployedVersion }}
+                </code>
+                <span v-else class="text-gray-400">-</span>
+              </td>
+              <td class="text-gray-500">
+                {{ new Date(tenant.createdAt).toLocaleDateString() }}
+              </td>
+              <td class="text-right">
+                <RouterLink
+                  :to="`/tenants/${tenant.id}`"
+                  class="text-primary-600 hover:text-primary-700 font-medium"
+                >
+                  {{ t("common.manage") }}
+                </RouterLink>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- 創建租戶 Modal -->

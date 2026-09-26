@@ -3,10 +3,14 @@
     class="fixed top-0 w-full z-50 bg-white/85 backdrop-blur-xl border-b border-black/5"
   >
     <div class="px-4 py-3">
-      <div class="flex items-center justify-between gap-4">
+      <div
+        class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 lg:flex-nowrap lg:gap-4"
+      >
         <!-- Left Section: Title + Connection Status -->
         <div class="flex items-center gap-3 min-w-0">
-          <h1 class="text-2xl font-extrabold text-ios-text whitespace-nowrap">
+          <h1
+            class="shrink-0 whitespace-nowrap text-lg font-extrabold text-ios-text lg:text-2xl"
+          >
             {{ t("header.title") }}
           </h1>
           <!-- Connection Status -->
@@ -31,7 +35,7 @@
         </div>
 
         <!-- Center Section: iOS Segmented Control for Kanban/Grid -->
-        <div class="flex-1 flex justify-center">
+        <div class="flex flex-1 justify-end lg:justify-center">
           <div class="bg-ios-bg rounded-full p-0.5 inline-flex">
             <button
               :class="[
@@ -59,11 +63,13 @@
         </div>
 
         <!-- Right Section: Action Buttons -->
-        <div class="flex items-center gap-2">
+        <div
+          class="flex w-full min-w-0 items-center gap-2 overflow-x-auto pb-1 lg:w-auto lg:flex-none lg:overflow-visible lg:pb-0"
+        >
           <!-- Reconnect Button (when disconnected) -->
           <button
             v-if="!isConnected"
-            class="w-11 h-11 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95"
+            class="h-11 w-11 shrink-0 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95"
             :title="t('header.reconnect')"
             @click="$emit('reconnect')"
           >
@@ -72,8 +78,9 @@
 
           <!-- Refresh Button -->
           <button
+            v-if="isConnected"
             :disabled="isRefreshing"
-            class="w-11 h-11 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95 disabled:opacity-50"
+            class="h-11 w-11 shrink-0 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95 disabled:opacity-50"
             :title="t('header.refreshOrders')"
             @click="$emit('refresh')"
           >
@@ -87,7 +94,7 @@
 
           <!-- Fullscreen Toggle -->
           <button
-            class="w-11 h-11 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95"
+            class="h-11 w-11 shrink-0 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95"
             :title="t('header.fullscreen')"
             @click="$emit('toggle-fullscreen')"
           >
@@ -97,7 +104,7 @@
 
           <!-- Notification Button -->
           <button
-            class="w-11 h-11 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95"
+            class="h-11 w-11 shrink-0 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95"
             :title="t('header.notifications')"
           >
             <Bell class="w-5 h-5 text-ios-secondary" />
@@ -106,7 +113,7 @@
           <!-- Language Switcher -->
           <div class="relative">
             <button
-              class="h-11 px-3 rounded-full bg-ios-bg flex items-center gap-1.5 transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95"
+              class="h-11 shrink-0 px-3 rounded-full bg-ios-bg flex items-center gap-1.5 transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95"
               @click="showLanguageMenu = !showLanguageMenu"
             >
               <Globe class="w-5 h-5 text-ios-secondary" />
@@ -148,7 +155,7 @@
           <!-- My Shifts Button — the employee swap entry (#320) -->
           <button
             data-testid="open-my-shifts"
-            class="w-11 h-11 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95"
+            class="h-11 w-11 shrink-0 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95"
             :title="t('header.myShifts')"
             @click="$emit('open-my-shifts')"
           >
@@ -157,7 +164,7 @@
 
           <!-- Settings Button -->
           <button
-            class="w-11 h-11 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95"
+            class="h-11 w-11 shrink-0 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95"
             :title="t('header.settings')"
             @click="$emit('open-settings')"
           >
@@ -166,7 +173,7 @@
 
           <!-- Logout Button -->
           <button
-            class="w-11 h-11 rounded-full bg-ios-red/10 flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-red/20 active:scale-95"
+            class="h-11 w-11 shrink-0 rounded-full bg-ios-red/10 flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-red/20 active:scale-95"
             :title="t('header.logout')"
             @click="handleLogoutClick"
           >

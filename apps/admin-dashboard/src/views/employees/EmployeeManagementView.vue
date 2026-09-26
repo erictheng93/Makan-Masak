@@ -49,7 +49,7 @@
 
     <!-- Tab Navigation -->
     <div class="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-      <nav class="flex border-b border-ios-bg px-6">
+      <nav class="flex flex-wrap border-b border-ios-bg px-3 sm:px-6">
         <router-link
           v-for="tab in tabs"
           :key="tab.name"

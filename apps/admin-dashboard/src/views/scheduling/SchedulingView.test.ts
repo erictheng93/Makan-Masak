@@ -137,6 +137,21 @@ describe("SchedulingView", () => {
     expect(tabLabels.join(" ")).toContain("swapRequests.title");
   });
 
+  it("keeps scheduling actions and tabs reachable at narrow widths", async () => {
+    const wrapper = mount(SchedulingView);
+    await flushPromises();
+
+    const actions = wrapper
+      .findAll(".users-view > div > div")
+      .find((element) => element.findAll("button").length === 3);
+    const tabs = wrapper.get('nav[aria-label="Tabs"]');
+
+    expect(actions).toBeDefined();
+    expect(actions!.classes()).toContain("flex-wrap");
+    expect(tabs.classes()).toContain("overflow-x-auto");
+    expect(tabs.attributes("tabindex")).toBe("0");
+  });
+
   it("renders the swap-request tab, whose component this view is the only importer of", async () => {
     const wrapper = mount(SchedulingView);
     await flushPromises();

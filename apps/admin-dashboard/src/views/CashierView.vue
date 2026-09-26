@@ -1,8 +1,10 @@
 <template>
   <div class="cashier-checkout">
     <!-- 結帳操作列 -->
-    <div class="flex justify-between items-center mb-6">
-      <div class="flex items-center space-x-4">
+    <div
+      class="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+    >
+      <div class="flex flex-wrap items-center gap-3">
         <!-- 班次資訊 -->
         <div class="bg-blue-50 px-4 py-2 rounded-2xl">
           <p class="text-sm text-blue-800 font-medium">
@@ -31,7 +33,7 @@
       </div>
 
       <!-- 功能按鈕 -->
-      <div class="flex items-center space-x-2">
+      <div class="flex flex-wrap items-center gap-2">
         <button
           data-testid="cashier-open-shift-report"
           class="px-3 py-2 bg-ios-blue text-white rounded-full hover:bg-blue-600 transition-colors text-sm"
@@ -54,12 +56,14 @@
       <div class="lg:col-span-2">
         <div class="bg-white rounded-lg shadow">
           <div class="p-6 border-b border-gray-200">
-            <div class="flex items-center justify-between">
+            <div
+              class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
               <h2 class="text-xl font-semibold text-gray-900">
                 {{ t("cashier.pendingOrders") }}
               </h2>
-              <div class="flex items-center space-x-4">
-                <div class="relative">
+              <div class="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+                <div class="relative min-w-0 flex-1 sm:flex-none">
                   <MagnifyingGlassIcon
                     class="absolute left-3 top-3 h-4 w-4 text-gray-400"
                   />
@@ -67,7 +71,7 @@
                     v-model="searchQuery"
                     type="text"
                     :placeholder="t('cashier.searchPlaceholder')"
-                    class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    class="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 sm:w-56"
                   />
                 </div>
                 <button

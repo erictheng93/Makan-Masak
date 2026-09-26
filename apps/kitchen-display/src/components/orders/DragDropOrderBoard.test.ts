@@ -151,6 +151,22 @@ describe("DragDropOrderBoard", () => {
     expect(wrapper.text()).toContain("目前沒有準備完成的訂單");
   });
 
+  it("switches the active order lane from the mobile status controls", async () => {
+    const wrapper = mountBoard();
+    const statusButtons = wrapper.findAll("button[aria-pressed]");
+
+    expect(statusButtons).toHaveLength(3);
+    expect(
+      statusButtons.map((button) => button.attributes("aria-pressed")),
+    ).toEqual(["true", "false", "false"]);
+
+    await statusButtons[1].trigger("click");
+
+    expect(
+      statusButtons.map((button) => button.attributes("aria-pressed")),
+    ).toEqual(["false", "true", "false"]);
+  });
+
   it("forwards card action events and records selected state in the store", async () => {
     const wrapper = mountBoard();
 

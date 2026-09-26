@@ -293,7 +293,7 @@ const getTenantName = (tenantId: string) => {
         </RouterLink>
       </div>
 
-      <div v-else class="overflow-hidden">
+      <div v-else class="overflow-x-auto">
         <table class="table">
           <thead>
             <tr>

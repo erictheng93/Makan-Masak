@@ -1,8 +1,10 @@
 <template>
   <div class="pos-management">
     <!-- 收銀櫃管理操作列 -->
-    <div class="flex justify-between items-center mb-6">
-      <div class="flex items-center space-x-4">
+    <div
+      class="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+    >
+      <div class="flex flex-wrap items-center gap-3">
         <!-- 收銀櫃狀態 -->
         <div class="bg-green-50 px-4 py-2 rounded-2xl">
           <p class="text-sm text-green-800 font-medium">
@@ -32,7 +34,7 @@
       </div>
 
       <!-- 功能按鈕 -->
-      <div class="flex items-center space-x-2">
+      <div class="flex flex-wrap items-center gap-2">
         <button
           v-if="!currentShift"
           class="px-4 py-2 bg-ios-green text-white rounded-full hover:bg-green-600 transition-colors text-sm"
