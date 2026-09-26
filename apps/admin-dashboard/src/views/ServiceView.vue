@@ -275,7 +275,7 @@
                 <div class="ml-6 flex flex-col space-y-2">
                   <button
                     v-if="order.status === 'ready' && !order.localPhase"
-                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm whitespace-nowrap"
+                    class="min-h-[44px] px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm whitespace-nowrap"
                     @click="startDelivery(order)"
                   >
                     {{ t("serviceView.startDelivery") }}
@@ -285,7 +285,7 @@
                       order.localPhase === 'delivering' &&
                       order.assignedTo === String(authStore.user?.id)
                     "
-                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm whitespace-nowrap"
+                    class="min-h-[44px] px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm whitespace-nowrap"
                     @click="completeDelivery(order)"
                   >
                     {{ t("serviceView.confirmDelivery") }}
