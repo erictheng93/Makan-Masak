@@ -55,7 +55,7 @@ export const UNLAUNCHED_FEATURES = {
     flag: "WEB_PUSH_ENABLED",
     prefix: "/push",
     adoption:
-      "0 customer_push_subscriptions as of 2026-07-30. admin-dashboard/src/utils/push-notifications.ts posts to /push/subscribe, so the default stays on.",
+      "0 customer_push_subscriptions as of 2026-07-30. As of 2026-09-26 no UI calls /push: the admin-dashboard push util was deleted as unreferenced, and the kitchen-display opt-in was removed because its VAPID key was 66 bytes (every subscribe threw) and WEB_PUSH_DELIVERER is never bound, so nothing is delivered. The default is still on only because isWebPushEnabled in packages/database reads the same flag with a default-on meaning; turning it off is a separate change.",
     enabledByDefault: true,
   },
   customerWebPush: {

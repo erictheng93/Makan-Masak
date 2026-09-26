@@ -177,53 +177,6 @@
         </div>
       </div>
 
-      <!-- Section: 背景通知 -->
-      <div
-        class="text-xs font-semibold text-ios-secondary uppercase px-4 mb-1.5 mt-6 tracking-wide"
-      >
-        {{ t("settings.backgroundNotifications") }}
-      </div>
-      <div class="bg-white rounded-2xl shadow-card-sm overflow-hidden">
-        <div
-          class="flex items-center justify-between gap-3 py-3.5 px-4 border-b border-ios-bg"
-        >
-          <div class="min-w-0">
-            <span class="block text-[15px] font-medium text-ios-text">{{
-              t("settings.orderPushNotifications")
-            }}</span>
-            <span
-              class="mt-0.5 block text-[13px] font-medium"
-              :class="pushStatusClass"
-            >
-              {{ pushStatusLabel }}
-            </span>
-          </div>
-          <button
-            class="min-h-[36px] inline-flex items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-colors disabled:opacity-50"
-            :class="
-              canEnablePush
-                ? 'bg-ios-blue text-white'
-                : 'bg-ios-bg text-ios-secondary'
-            "
-            :disabled="pushBusy || !canEnablePush"
-            @click="enableBackgroundPush"
-          >
-            <Bell class="w-4 h-4" />
-            {{ pushBusy ? t("common.processing") : t("settings.enablePush") }}
-          </button>
-        </div>
-        <button
-          class="flex w-full items-center justify-between py-3.5 px-4 text-left active:bg-ios-bg transition-colors disabled:opacity-50"
-          :disabled="pushBusy || pushStatus !== 'enabled'"
-          @click="testBackgroundPush"
-        >
-          <span class="text-[15px] font-medium text-ios-text">{{
-            t("settings.testPush")
-          }}</span>
-          <BellRing class="w-5 h-5 text-ios-blue" />
-        </button>
-      </div>
-
       <!-- Section: 時間門檻 -->
       <div
         class="text-xs font-semibold text-ios-secondary uppercase px-4 mb-1.5 mt-6 tracking-wide"
@@ -406,20 +359,13 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed, onMounted } from "vue";
-import {
-  ArrowLeft,
-  Bell,
-  BellRing,
-  ChevronRight,
-  Check,
-} from "lucide-vue-next";
+import { reactive, ref, computed } from "vue";
+import { ArrowLeft, ChevronRight, Check } from "lucide-vue-next";
 import { useSettingsStore } from "@/stores/settings";
 import { useToast } from "vue-toastification";
 import { useConfirmModal } from "@/composables/useConfirmModal";
 import { useI18n } from "@/i18n";
 import { storeToRefs } from "pinia";
-import kitchenPushService from "@/utils/push-notifications";
 
 const settingsStore = useSettingsStore();
 const toast = useToast();
@@ -435,10 +381,6 @@ const showUrgentPicker = ref(false);
 const showRefreshPicker = ref(false);
 const showSoundPicker = ref(false);
 const selectedSound = ref("default");
-const pushBusy = ref(false);
-const pushStatus = ref<"unsupported" | "denied" | "enabled" | "disabled">(
-  "disabled",
-);
 
 // Options
 const fontSizeOptions = computed(() => [
@@ -457,25 +399,6 @@ const soundOptions = computed(() => [
   { value: "ping", label: t("settings.soundChime") },
 ]);
 
-const pushStatusLabel = computed(() =>
-  t(`settings.pushStatus.${pushStatus.value}`),
-);
-
-const pushStatusClass = computed(() => ({
-  "text-ios-green": pushStatus.value === "enabled",
-  "text-ios-red": pushStatus.value === "denied",
-  "text-ios-secondary":
-    pushStatus.value === "disabled" || pushStatus.value === "unsupported",
-}));
-
-const canEnablePush = computed(
-  () =>
-    pushStatus.value !== "enabled" &&
-    pushStatus.value !== "unsupported" &&
-    pushStatus.value !== "denied",
-);
-
-// Actions
 const toggleAudio = () => {
   settings.audioEnabled = !settings.audioEnabled;
   settingsStore.toggleAudio();
@@ -512,59 +435,6 @@ const setRefreshInterval = (val: number) => {
   showRefreshPicker.value = false;
 };
 
-const refreshPushStatus = async () => {
-  if (!kitchenPushService.isNotificationSupported) {
-    pushStatus.value = "unsupported";
-    return;
-  }
-
-  await kitchenPushService.initialize();
-  if (kitchenPushService.permissionStatus === "denied") {
-    pushStatus.value = "denied";
-    return;
-  }
-
-  pushStatus.value = kitchenPushService.isSubscribed ? "enabled" : "disabled";
-};
-
-const enableBackgroundPush = async () => {
-  pushBusy.value = true;
-  try {
-    const permission = await kitchenPushService.requestPermission();
-    if (permission !== "granted") {
-      await refreshPushStatus();
-      toast.error(t("settings.pushEnableFailed"));
-      return;
-    }
-
-    const subscription = await kitchenPushService.subscribe();
-    await refreshPushStatus();
-
-    if (!subscription) {
-      toast.error(t("settings.pushEnableFailed"));
-      return;
-    }
-
-    toast.success(t("settings.pushEnabledSuccess"));
-  } catch {
-    toast.error(t("settings.pushEnableFailed"));
-  } finally {
-    pushBusy.value = false;
-  }
-};
-
-const testBackgroundPush = async () => {
-  pushBusy.value = true;
-  try {
-    await kitchenPushService.testNotification("high");
-    toast.success(t("settings.pushTestSent"));
-  } catch {
-    toast.error(t("settings.pushTestFailed"));
-  } finally {
-    pushBusy.value = false;
-  }
-};
-
 const resetToDefaults = async () => {
   const confirmed = await confirmModal({
     type: "danger",
@@ -578,10 +448,6 @@ const resetToDefaults = async () => {
   Object.assign(settings, storeSettings.value);
   toast.success(t("settings.restoredSuccess"));
 };
-
-onMounted(() => {
-  refreshPushStatus();
-});
 </script>
 
 <style scoped>
