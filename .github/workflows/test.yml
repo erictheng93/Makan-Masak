@@ -242,10 +242,8 @@ jobs:
       # and docs/architecture/README.md are derived from apps/api/src, so drift
       # means the docs describe an API that is not the one that ships. This ran
       # from no gate at all until #367, and sat red on main with eight findings.
-      # It catches the direction that actually caused #367 -- a mount added
-      # under apps/api/ without its docs -- because that sets app=true. A
-      # docs-only edit classifies as neither app nor tooling and skips this job;
-      # verify.sh's push tier is the backstop there.
+      # A mount added under apps/api/ sets app=true; edits to the three guarded
+      # documentation files set tooling=true, so either change runs this check.
       - name: 📚 Docs drift guard
         run: pnpm run check:docs-drift
 

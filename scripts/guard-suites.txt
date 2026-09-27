@@ -30,6 +30,7 @@ scripts/check-migration-dual-track.cjs               tests/unit/migration-dual-t
 scripts/check-no-automated-destructive-wrangler.cjs  tests/unit/check-no-automated-destructive-wrangler.test.ts
 scripts/check-package-test-scripts.cjs               tests/unit/package-test-scripts.test.ts
 scripts/check-production-config.cjs                  tests/unit/check-production-config.test.ts
+scripts/check-single-test-runner.cjs                 tests/unit/check-single-test-runner.test.ts
 scripts/check-strict-tables.cjs                      tests/unit/check-strict-tables.test.ts
 scripts/check-vitest-results.cjs                     tests/unit/check-vitest-results.test.ts
 scripts/generate-strict-baseline.cjs                 tests/unit/generate-strict-baseline.test.ts
