@@ -730,6 +730,7 @@ describe("Onboarding public API workflow — real integration", () => {
     const env = createEnv(db, platformDb, {
       ONBOARDING_EMAIL_ENABLED: "true",
       ONBOARDING_EMAIL_FROM: "onboarding@makanmasak.com",
+      ONBOARDING_EMAIL_PROVIDER: "resend",
       RESEND_API_KEY: "test-key",
     });
     const token = await managementToken();

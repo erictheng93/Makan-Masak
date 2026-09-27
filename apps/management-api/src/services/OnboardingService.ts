@@ -424,18 +424,7 @@ export class OnboardingService {
     application: OnboardingApplication,
     applicationSecret: string,
   ): Promise<void> {
-    if (
-      this.env.ONBOARDING_EMAIL_ENABLED !== "true" ||
-      !this.env.ONBOARDING_EMAIL_FROM ||
-      !this.env.RESEND_API_KEY
-    ) {
-      if (this.env.ONBOARDING_EMAIL_ENABLED === "true") {
-        console.error(
-          "[OnboardingService] Applicant receipt email is enabled but sender or Resend key is missing",
-        );
-      }
-      return;
-    }
+    if (this.env.ONBOARDING_EMAIL_ENABLED !== "true") return;
 
     const statusLink = this.buildApplicationStatusLink(
       application.id,
@@ -448,27 +437,64 @@ export class OnboardingService {
       `您可隨時在此查看申請狀態：${statusLink}`,
     ].join("\n");
 
-    try {
-      const result = await new ResendEmailProvider(
-        this.env.RESEND_API_KEY,
-        this.env.ONBOARDING_EMAIL_FROM,
-      ).sendEmail({
-        to: application.contactEmail,
-        subject: `MakanMasak 已收到「${application.businessName}」的申請`,
-        html: `<pre>${this.escapeHtml(text)}</pre>`,
-        text,
-      });
-      if (!result.success) {
-        console.error(
-          "[OnboardingService] Application received email failed:",
-          result.error,
-        );
-      }
-    } catch (error) {
+    const result = await this.sendApplicantEmail({
+      to: application.contactEmail,
+      subject: `MakanMasak 已收到「${application.businessName}」的申請`,
+      text,
+    });
+    if (!result.success) {
       console.error(
         "[OnboardingService] Application received email failed:",
-        error,
+        result.error,
       );
+    }
+  }
+
+  /**
+   * Applicant-facing mail goes through Cloudflare Email Service by default.
+   * Resend stays available behind ONBOARDING_EMAIL_PROVIDER="resend". Never
+   * throws: callers record or log the failure instead.
+   */
+  private async sendApplicantEmail(message: {
+    to: string;
+    subject: string;
+    text: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    const from = this.env.ONBOARDING_EMAIL_FROM?.trim();
+    if (!from) {
+      return {
+        success: false,
+        error: "ONBOARDING_EMAIL_FROM is not configured",
+      };
+    }
+    const html = `<pre>${this.escapeHtml(message.text)}</pre>`;
+
+    if (this.env.ONBOARDING_EMAIL_PROVIDER === "resend") {
+      if (!this.env.RESEND_API_KEY) {
+        return { success: false, error: "RESEND_API_KEY is not configured" };
+      }
+      return new ResendEmailProvider(this.env.RESEND_API_KEY, from).sendEmail({
+        ...message,
+        html,
+      });
+    }
+
+    const binding = this.env.ONBOARDING_NOTIFICATION_EMAIL;
+    if (!binding) {
+      return {
+        success: false,
+        error: "ONBOARDING_NOTIFICATION_EMAIL binding is not configured",
+      };
+    }
+    try {
+      await binding.send({ ...message, from, html });
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Cloudflare email failed",
+      };
     }
   }
 
@@ -1539,13 +1565,7 @@ export class OnboardingService {
     application: OnboardingApplication,
     reason: string,
   ): Promise<void> {
-    if (
-      this.env.ONBOARDING_EMAIL_ENABLED !== "true" ||
-      !this.env.ONBOARDING_EMAIL_FROM ||
-      !this.env.RESEND_API_KEY
-    ) {
-      return;
-    }
+    if (this.env.ONBOARDING_EMAIL_ENABLED !== "true") return;
 
     const text = [
       `${application.contactName} 您好：`,
@@ -1553,26 +1573,15 @@ export class OnboardingService {
       `很抱歉，「${application.businessName}」的申請未能通過。`,
       `原因：${reason}`,
     ].join("\n");
-    try {
-      const result = await new ResendEmailProvider(
-        this.env.RESEND_API_KEY,
-        this.env.ONBOARDING_EMAIL_FROM,
-      ).sendEmail({
-        to: application.contactEmail,
-        subject: `MakanMasak「${application.businessName}」申請結果`,
-        html: `<pre>${this.escapeHtml(text)}</pre>`,
-        text,
-      });
-      if (!result.success) {
-        console.error(
-          "[OnboardingService] Application rejection email failed:",
-          result.error,
-        );
-      }
-    } catch (error) {
+    const result = await this.sendApplicantEmail({
+      to: application.contactEmail,
+      subject: `MakanMasak「${application.businessName}」申請結果`,
+      text,
+    });
+    if (!result.success) {
       console.error(
         "[OnboardingService] Application rejection email failed:",
-        error,
+        result.error,
       );
     }
   }
@@ -1589,61 +1598,29 @@ export class OnboardingService {
       return { attempted: false, status: "pending" };
     }
 
-    const fromEmail = this.env.ONBOARDING_EMAIL_FROM;
-    if (!fromEmail) {
+    const text = [
+      `${application.contactName} 您好：`,
+      "",
+      `您的店家「${application.businessName}」已開通。`,
+      `店主帳號：${ownerAccount.username}`,
+      `請在此設定密碼：${ownerAccount.setupPasswordLink}`,
+      `此連結將於 ${ownerAccount.setupPasswordExpiresAt} 到期。`,
+    ].join("\n");
+    const result = await this.sendApplicantEmail({
+      to: application.contactEmail,
+      subject: `MakanMasak「${application.businessName}」店主帳號開通`,
+      text,
+    });
+
+    if (!result.success) {
       return {
         attempted: true,
         status: "failed",
-        errorMessage: "ONBOARDING_EMAIL_FROM is not configured",
+        errorMessage: result.error ?? "Failed to send onboarding email",
       };
     }
 
-    if (!this.env.RESEND_API_KEY) {
-      return {
-        attempted: true,
-        status: "failed",
-        errorMessage: "RESEND_API_KEY is not configured",
-      };
-    }
-
-    try {
-      const text = [
-        `${application.contactName} 您好：`,
-        "",
-        `您的店家「${application.businessName}」已開通。`,
-        `店主帳號：${ownerAccount.username}`,
-        `請在此設定密碼：${ownerAccount.setupPasswordLink}`,
-        `此連結將於 ${ownerAccount.setupPasswordExpiresAt} 到期。`,
-      ].join("\n");
-      const result = await new ResendEmailProvider(
-        this.env.RESEND_API_KEY,
-        fromEmail,
-      ).sendEmail({
-        to: application.contactEmail,
-        subject: `MakanMasak「${application.businessName}」店主帳號開通`,
-        html: `<pre>${text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")}</pre>`,
-        text,
-      });
-
-      if (!result.success) {
-        return {
-          attempted: true,
-          status: "failed",
-          errorMessage: result.error ?? "Failed to send onboarding email",
-        };
-      }
-
-      return { attempted: true, status: "sent" };
-    } catch (error) {
-      return {
-        attempted: true,
-        status: "failed",
-        errorMessage:
-          error instanceof Error
-            ? error.message
-            : "Failed to send onboarding email",
-      };
-    }
+    return { attempted: true, status: "sent" };
   }
 
   /**

@@ -74,11 +74,15 @@ CORS_ORIGIN = "https://admin.makanmasak.com,https://management.makanmasak.com,ht
 LOG_LEVEL = "warn"
 ONBOARDING_APP_URL = "https://onboarding.makanmasak.com"
 ADMIN_APP_URL = "https://admin.makanmasak.com"
-# Credential delivery stays manual until a verified Resend sender domain and the
-# RESEND_API_KEY secret both exist. Turning this on without them makes every
-# approval record a failed delivery instead of the handoff staff actually use.
+# Applicant email (receipt, rejection, setup-password link) goes through
+# Cloudflare Email Service via the ONBOARDING_NOTIFICATION_EMAIL binding.
+# Credential delivery stays manual until makanmasak.com is onboarded to Email
+# Service (SPF + DKIM). Turning this on before that makes every approval record
+# a failed delivery instead of the handoff staff actually use.
 ONBOARDING_EMAIL_ENABLED = "false"
 ONBOARDING_EMAIL_FROM = "onboarding@makanmasak.com"
+# "cloudflare" (default) or "resend"; resend also needs the RESEND_API_KEY secret.
+ONBOARDING_EMAIL_PROVIDER = "cloudflare"
 
 # Custom domain — wrangler provisions DNS + SSL automatically on deploy
 # since the makanmasak.com zone is already on this Cloudflare account.
@@ -129,7 +133,7 @@ name = "ONBOARDING_NOTIFICATION_EMAIL"
 # - JWT_SECRET: JWT signing secret for management tokens
 # - PLATFORM_CF_API_TOKEN: Platform Cloudflare API token for managed provisioning
 # - PLATFORM_CF_ACCOUNT_ID: Platform Cloudflare account ID
-# - RESEND_API_KEY: Resend API key used for onboarding credential delivery
+# - RESEND_API_KEY: Resend API key, only read when ONBOARDING_EMAIL_PROVIDER = "resend"
 # - SLACK_WEBHOOK_URL: Slack webhook for new-application platform alerts
 # - PLATFORM_NOTIFICATION_EMAIL: Verified Email Routing destination for the
 #   Cloudflare Email Service onboarding-alert fallback

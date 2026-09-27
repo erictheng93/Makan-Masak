@@ -22,6 +22,7 @@ function service(overrides: Partial<ManagementEnv> = {}) {
   return new OnboardingService({
     ONBOARDING_EMAIL_ENABLED: "true",
     ONBOARDING_EMAIL_FROM: "onboarding@makanmasak.com",
+    ONBOARDING_EMAIL_PROVIDER: "resend",
     RESEND_API_KEY: "test-key",
     ...overrides,
   } as ManagementEnv);
@@ -93,5 +94,64 @@ describe("onboarding setup email", () => {
     expect(body.text).toContain(
       "https://onboarding.example.com/status/APP-20260915-EMAIL#onb_secret",
     );
+  });
+});
+
+describe("onboarding email via Cloudflare Email Service", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function cloudflareService(send: SendEmail["send"] | undefined) {
+    return service({
+      ONBOARDING_EMAIL_PROVIDER: undefined,
+      ONBOARDING_NOTIFICATION_EMAIL: send ? ({ send } as SendEmail) : undefined,
+    });
+  }
+
+  it("is the default provider and never calls Resend", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const send = vi.fn(async () => ({ messageId: "cf-1" }));
+
+    const result = await cloudflareService(send)["sendSetupPasswordEmail"](
+      application,
+      owner,
+    );
+
+    expect(result).toMatchObject({ attempted: true, status: "sent" });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(send).toHaveBeenCalledOnce();
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: application.contactEmail,
+        from: "onboarding@makanmasak.com",
+        text: expect.stringContaining(owner.setupPasswordLink),
+        html: expect.stringContaining("<pre>"),
+      }),
+    );
+  });
+
+  it("records a failed delivery when the binding throws", async () => {
+    const send = vi.fn(async () => {
+      throw new Error("sender domain not verified");
+    });
+    const result = await cloudflareService(send)["sendSetupPasswordEmail"](
+      application,
+      owner,
+    );
+    expect(send).toHaveBeenCalledOnce();
+    expect(result).toMatchObject({
+      attempted: true,
+      status: "failed",
+      errorMessage: "sender domain not verified",
+    });
+  });
+
+  it("records a failed delivery when the binding is missing", async () => {
+    const result = await cloudflareService(undefined)["sendSetupPasswordEmail"](
+      application,
+      owner,
+    );
+    expect(result).toMatchObject({ attempted: true, status: "failed" });
+    expect(result.errorMessage).toContain("ONBOARDING_NOTIFICATION_EMAIL");
   });
 });

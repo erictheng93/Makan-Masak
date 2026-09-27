@@ -1,6 +1,6 @@
 # Cloudflare Email Service、Email Routing 與 Resend
 
-查核日期：2026-09-27。以下對照官方文件與目前儲存庫；未讀取 Cloudflare／Resend 帳戶設定或正式環境 DNS。
+查核日期：2026-09-27。以下對照官方文件與目前儲存庫；Cloudflare 帳戶與 DNS 的實測見文末。
 
 ## 先分清收信與寄信
 
@@ -29,5 +29,11 @@ Cloudflare 把 Email Sending 和 Email Routing 合稱 **Email Service**；Routin
 ## MakanMasak 現況
 
 - API 的共用通知服務有 `RESEND_API_KEY` 才透過 Resend 寄送；沒有金鑰則不寄。MailChannels 已停用。帳務通知與系統警報亦使用 Resend。[NotificationService](../../packages/database/src/services/NotificationService.ts) · [BillingNotificationService](../../apps/api/src/features/billing/services/BillingNotificationService.ts) · [AlertService](../../apps/api/src/services/AlertService.ts)
-- Management API 對申請人的收件確認、駁回及設定密碼信使用 Resend；正式環境的 `ONBOARDING_EMAIL_ENABLED` 目前設為 `false`，所以這些信預設為人工轉交。平台內部的新申請通知另備有 Cloudflare Email Service `send_email` binding，但須設定收件人及寄件人，程式才會使用；是否已設定正式環境 secrets 無法由儲存庫證實。[OnboardingService](../../apps/management-api/src/services/OnboardingService.ts) · [wrangler.toml](../../apps/management-api/wrangler.toml) · [營運說明](../../apps/management-api/ONBOARDING_NOTIFICATIONS.md)
-- 儲存庫的應用程式與 Worker 設定沒有實作入站郵件 `email()` handler 或 Resend inbound webhook。這只能說應用程式沒有程式化收信流程；目前網域 MX、信箱和 Cloudflare 控制台規則仍須在實際帳戶確認。
+- Management API 對申請人的收件確認、駁回及設定密碼信，預設改走 Cloudflare Email Service（沿用 `ONBOARDING_NOTIFICATION_EMAIL` binding）；Resend 仍保留，只有 `ONBOARDING_EMAIL_PROVIDER="resend"` 且設有 `RESEND_API_KEY` 時才會使用。正式環境的 `ONBOARDING_EMAIL_ENABLED` 仍為 `false`，所以這些信目前依舊由人工轉交；寄送失敗只會把開通信紀錄標為 `failed`，不影響審核。平台內部的新申請通知使用同一個 binding，收件人與寄件人放在正式環境 secrets（`PLATFORM_NOTIFICATION_EMAIL`、`PLATFORM_NOTIFICATION_EMAIL_FROM`），不寫進儲存庫。[OnboardingService](../../apps/management-api/src/services/OnboardingService.ts) · [wrangler.toml](../../apps/management-api/wrangler.toml) · [營運說明](../../apps/management-api/ONBOARDING_NOTIFICATIONS.md)
+- 儲存庫的應用程式與 Worker 設定沒有實作入站郵件 `email()` handler 或 Resend inbound webhook，應用程式沒有程式化收信流程。
+
+### 帳戶實測（2026-09-27，`wrangler email` 與 `dig`）
+
+- **Email Sending：** `makanmasak.com` 已啟用，DKIM selector `cf-bounce`，return-path 為 `cf-bounce.makanmasak.com`。寄件網域已完成 onboarding，可從任何 `@makanmasak.com` 地址寄給任意收件人。
+- **Email Routing：** `makanmasak.com` 未啟用（`unconfigured`），沒有自訂規則，catch-all 為停用。帳戶內只有一個已驗證的目的地址。
+- **DNS：** 根網域沒有 MX，也沒有 SPF TXT；DMARC 為 `p=reject`。因為沒有既有收信服務，啟用 Routing 不會和其他 MX 衝突。

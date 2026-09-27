@@ -27,6 +27,15 @@ Create an incoming webhook for the platform-operations channel, then set `SLACK_
 
 Cloudflare requires the sender domain to be onboarded even though sends to verified Email Routing destinations are free. Do not treat destination verification alone as sufficient.
 
+## Applicant email
+
+Receipt, rejection, and setup-password emails to the applicant are gated by `ONBOARDING_EMAIL_ENABLED` and sent from `ONBOARDING_EMAIL_FROM`. `ONBOARDING_EMAIL_PROVIDER` picks the provider:
+
+- `cloudflare` (default): the same `ONBOARDING_NOTIFICATION_EMAIL` binding. Sending to arbitrary applicant addresses needs Workers Paid and a sender domain onboarded to Email Service (SPF + DKIM); verified Email Routing destinations alone are not enough.
+- `resend`: kept as a fallback; also requires the `RESEND_API_KEY` secret.
+
+A provider failure never blocks approval: the setup-password delivery row is marked `failed` and staff hand the link over manually.
+
 ## Closing #410
 
 Do not close #410 based on unit tests or a deployment alone. An operator with Cloudflare production access must record all of the following in #410:
