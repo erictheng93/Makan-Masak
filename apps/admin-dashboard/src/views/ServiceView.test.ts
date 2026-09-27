@@ -300,6 +300,27 @@ describe("ServiceView", () => {
   });
 
   describe("found on production, 2026-09-22", () => {
+    it("does not poll after unmount while the initial refresh is pending", async () => {
+      vi.useFakeTimers();
+      let finishInitialRequest!: (response: never) => void;
+      vi.mocked(api.get).mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishInitialRequest = resolve;
+          }),
+      );
+
+      const wrapper = mount(ServiceView);
+      expect(api.get).toHaveBeenCalledTimes(1);
+      wrapper.unmount();
+      finishInitialRequest({ data: { data: [] } } as never);
+      await flushPromises();
+      const callsAfterUnmount = vi.mocked(api.get).mock.calls.length;
+
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(api.get).toHaveBeenCalledTimes(callsAfterUnmount);
+    });
+
     it("picks up newly ready orders without the crew pressing refresh", async () => {
       // Nothing on the service station listened for updates: an order the
       // kitchen finished stayed invisible until someone tapped Refresh.

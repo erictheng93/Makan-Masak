@@ -1047,13 +1047,13 @@ const formatClockTime = (
 };
 
 // 生命週期
-onMounted(async () => {
+onMounted(() => {
   updateCurrentTime();
   timeInterval = setInterval(updateCurrentTime, 1000);
 
   // Fetch orders from API
-  await refreshOrders();
   orderPoll = setInterval(() => void refreshOrders(), ORDER_POLL_MS);
+  void refreshOrders();
 });
 
 onUnmounted(() => {
