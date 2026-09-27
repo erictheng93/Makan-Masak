@@ -21,13 +21,16 @@ import {
   PLAN_TIERS,
   passwordResetTokens,
   planIdToTier,
+  parseRegionPolicyLayer,
+  regionPolicies,
   restaurants,
   shopSubscriptions,
   TRIAL_DURATION_MS,
   users,
   ResendEmailProvider,
+  type PaidPlanTier,
 } from "@makanmasak/database";
-import { generateUUID } from "@makanmasak/utils";
+import { ApiError, generateUUID } from "@makanmasak/utils";
 import {
   COUNTRY_PROFILES,
   normalizeCountryCode,
@@ -705,6 +708,45 @@ export class OnboardingService {
       return { success: false, error: "Unsupported onboarding country" };
     }
     application.countryCode = countryCode;
+
+    const planTier = planIdToTier(application.planId);
+    if (planTier !== PLAN_TIERS.TRIAL) {
+      let allowedPaidTiers: readonly PaidPlanTier[] | undefined;
+      try {
+        if (!this.env.PLATFORM_DB) throw new Error("Platform DB unavailable");
+        // Approval has the country before a restaurant exists; read its policy directly.
+        const rows = await drizzle(this.env.PLATFORM_DB)
+          .select({
+            policyKey: regionPolicies.policyKey,
+            value: regionPolicies.value,
+          })
+          .from(regionPolicies)
+          .where(
+            and(
+              eq(regionPolicies.scopeType, "country"),
+              eq(regionPolicies.scopeId, countryCode),
+              eq(regionPolicies.policyKey, "plans.allowed_tiers"),
+            ),
+          );
+        const layer = parseRegionPolicyLayer("country", rows);
+        if (layer.invalidKeys.length) throw new Error("Invalid plan policy");
+        allowedPaidTiers = layer.values["plans.allowed_tiers"];
+      } catch {
+        throw new ApiError(
+          "POLICY_UNAVAILABLE",
+          "Regional policy is temporarily unavailable",
+          503,
+        );
+      }
+      if (allowedPaidTiers && !allowedPaidTiers.includes(planTier)) {
+        throw new ApiError(
+          "PLAN_NOT_AVAILABLE_IN_REGION",
+          `The ${planTier} plan is not offered in this region`,
+          400,
+          { planTier },
+        );
+      }
+    }
 
     const now = new Date().toISOString();
     const previousStatus = application.status;

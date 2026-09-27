@@ -172,6 +172,17 @@ function createPlatformDb() {
       FOREIGN KEY (restaurant_id) REFERENCES restaurants(id)
     );
 
+    CREATE TABLE policies (
+      id TEXT PRIMARY KEY NOT NULL,
+      scope_type TEXT NOT NULL,
+      scope_id TEXT NOT NULL,
+      policy_key TEXT NOT NULL,
+      value TEXT NOT NULL,
+      updated_by TEXT,
+      created_at_ms INTEGER NOT NULL,
+      updated_at_ms INTEGER NOT NULL
+    );
+
     CREATE TABLE onboarding_credential_deliveries (
       id TEXT PRIMARY KEY NOT NULL,
       application_id TEXT NOT NULL,
@@ -309,6 +320,88 @@ async function managementToken() {
 }
 
 describe("Onboarding public API workflow — real integration", () => {
+  it("blocks a paid tier disabled for the application country before provisioning", async () => {
+    const db = createManagementDb();
+    const platformDb = createPlatformDb();
+    const env = createEnv(db, platformDb);
+    platformDb
+      .raw()
+      .prepare(
+        `INSERT INTO policies
+         (id, scope_type, scope_id, policy_key, value, created_at_ms, updated_at_ms)
+         VALUES (?, 'country', 'MY', 'plans.allowed_tiers', ?, ?, ?)`,
+      )
+      .run("my-plans", '["pro"]', Date.now(), Date.now());
+
+    const created = await app.fetch(
+      new Request("https://management.test/api/v1/onboarding/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(createApplicationBody()),
+      }),
+      env,
+    );
+    const { applicationId } = await readData<CreatedApplication>(created);
+    const approvalUrl = `https://management.test/api/v1/admin/onboarding/applications/${applicationId}/approve`;
+    const token = await managementToken();
+    const approve = () =>
+      app.fetch(
+        new Request(approvalUrl, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        env,
+      );
+
+    const blocked = await approve();
+    expect(blocked.status).toBe(400);
+    await expect(readError(blocked)).resolves.toMatchObject({
+      code: "PLAN_NOT_AVAILABLE_IN_REGION",
+    });
+    expect(
+      db.raw().prepare("SELECT COUNT(*) AS count FROM tenants").get(),
+    ).toEqual({
+      count: 0,
+    });
+    expect(
+      platformDb
+        .raw()
+        .prepare("SELECT COUNT(*) AS count FROM restaurants")
+        .get(),
+    ).toEqual({ count: 0 });
+
+    platformDb
+      .raw()
+      .prepare("UPDATE policies SET value = ? WHERE id = ?")
+      .run("not-json", "my-plans");
+    const unavailable = await approve();
+    expect(unavailable.status).toBe(503);
+    await expect(readError(unavailable)).resolves.toMatchObject({
+      code: "POLICY_UNAVAILABLE",
+    });
+    expect(
+      db.raw().prepare("SELECT COUNT(*) AS count FROM tenants").get(),
+    ).toEqual({
+      count: 0,
+    });
+
+    platformDb
+      .raw()
+      .prepare("UPDATE policies SET value = ? WHERE id = ?")
+      .run('["basic","pro"]', "my-plans");
+    const allowed = await approve();
+    expect(allowed.status).toBe(200);
+    const result = await readData<ApproveResult>(allowed);
+    expect(
+      platformDb
+        .raw()
+        .prepare(
+          "SELECT plan_tier FROM shop_subscriptions WHERE restaurant_id = ?",
+        )
+        .get(result.restaurantId),
+    ).toEqual({ plan_tier: "basic" });
+  });
+
   it("creates a pending market request without granting membership", async () => {
     const db = createManagementDb();
     const platformDb = createPlatformDb();
