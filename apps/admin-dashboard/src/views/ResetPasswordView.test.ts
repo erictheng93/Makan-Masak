@@ -68,17 +68,38 @@ describe("ResetPasswordView", () => {
     expect(wrapper.text()).not.toContain(SERVER_MESSAGE);
   });
 
-  // The API requires one of @$!%*?& for 8+ characters; these used to pass
-  // the page's hints and then fail with a generic "check your input".
-  it.each(["Aming2026Rice", "Aming#2026Rice", "Ab1@x"])(
-    "blocks %s before it reaches the server",
-    async (password) => {
-      const wrapper = await submitNewPassword(password);
+  // The API requires 8+ characters with upper, lower, a digit and one of
+  // @$!%*?&. Each of these used to pass the page's hints and then fail on
+  // the server with a generic message; the page now names what is missing.
+  it.each([
+    ["Aming2026Rice", "symbol"],
+    ["Aming#2026Rice", "symbol"],
+    ["Ab1@x", "length"],
+    ["abcde@12345", "uppercase"],
+    ["#Abcdef1!", "start"],
+  ])("blocks %s and flags the %s requirement", async (password, missing) => {
+    const wrapper = await submitNewPassword(password);
 
-      expect(api.instance.post).not.toHaveBeenCalled();
-      expect(wrapper.text()).toContain("auth.passwordRequirementsNotMet");
-    },
-  );
+    expect(api.instance.post).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain("auth.passwordMissing");
+    const missingKeys = wrapper
+      .findAll('[data-status="missing"]')
+      .map((li) => li.attributes("data-requirement"));
+    expect(missingKeys).toEqual([missing]);
+  });
+
+  it("lists the rule before anything is typed", async () => {
+    const wrapper = mount(ResetPasswordView, {
+      global: { stubs: { RouterLink: true, "router-link": true } },
+    });
+    await flushPromises();
+
+    expect(
+      wrapper
+        .findAll("[data-requirement]")
+        .map((li) => li.attributes("data-requirement")),
+    ).toEqual(["length", "uppercase", "lowercase", "number", "symbol"]);
+  });
 
   it("explains the password rule when the server rejects it", async () => {
     vi.mocked(api.instance.post).mockResolvedValue({

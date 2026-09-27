@@ -2119,7 +2119,10 @@ const enUS: Messages = {
     newPasswordPlaceholder: "Enter new password (at least 6 characters)",
     passwordStrength: "Password strength:",
     atLeast8Chars: "At least 8 characters",
-    upperLowerCase: "Contains upper and lower case letters",
+    containsUppercase: "Contains an uppercase letter (A-Z)",
+    containsLowercase: "Contains a lowercase letter (a-z)",
+    startsWithAllowedChar:
+      "Starts with a letter, a number or one of @ $ ! % * ? &",
     containsNumber: "Contains numbers",
     containsSpecialChar: "Contains one of these symbols: @ $ ! % * ? &",
     confirmPassword: "Confirm Password",
@@ -2142,6 +2145,7 @@ const enUS: Messages = {
       "Password is too weak. Use at least 8 characters with upper and lower case letters, a number and one of @ $ ! % * ? &.",
     passwordRequirementsNotMet:
       "Password does not meet the rules: at least 8 characters with upper and lower case letters, a number and one of @ $ ! % * ? & (other symbols do not count).",
+    passwordMissing: "Password still needs: {items}",
     tokenInvalid: "Token is invalid or expired",
     tokenVerifyError: "Error verifying token",
     missingToken: "Missing reset token",

@@ -2170,7 +2170,9 @@ const zhTWCore = {
     newPasswordPlaceholder: "請輸入新密碼（至少6個字符）",
     passwordStrength: "密碼強度：",
     atLeast8Chars: "至少8個字元",
-    upperLowerCase: "包含大小寫字母",
+    containsUppercase: "包含大寫字母（A-Z）",
+    containsLowercase: "包含小寫字母（a-z）",
+    startsWithAllowedChar: "開頭須為字母、數字或 @ $ ! % * ? & 其中一個",
     containsNumber: "包含數字",
     containsSpecialChar: "包含特殊符號（@ $ ! % * ? & 其中一個）",
     confirmPassword: "確認密碼",
@@ -2193,6 +2195,7 @@ const zhTWCore = {
       "密碼強度不足：至少 8 個字元，並包含大寫、小寫、數字和 @ $ ! % * ? & 其中一個符號。",
     passwordRequirementsNotMet:
       "密碼不符合規定：至少 8 個字元，並包含大寫、小寫、數字和 @ $ ! % * ? & 其中一個符號（其他符號不算）。",
+    passwordMissing: "密碼還缺少：{items}",
     tokenInvalid: "Token 無效或已過期",
     tokenVerifyError: "驗證 Token 時發生錯誤",
     missingToken: "缺少重設 Token",

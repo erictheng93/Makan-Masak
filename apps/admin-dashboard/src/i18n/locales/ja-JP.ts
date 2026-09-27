@@ -2020,7 +2020,9 @@ const jaJP: Messages = {
     newPasswordPlaceholder: "新しいパスワードを入力（6文字以上）",
     passwordStrength: "パスワード強度：",
     atLeast8Chars: "8文字以上",
-    upperLowerCase: "大文字と小文字を含む",
+    containsUppercase: "大文字（A-Z）を含む",
+    containsLowercase: "小文字（a-z）を含む",
+    startsWithAllowedChar: "先頭は英字・数字・@ $ ! % * ? & のいずれか",
     containsNumber: "数字を含む",
     containsSpecialChar: "記号を含む（@ $ ! % * ? & のいずれか）",
     confirmPassword: "パスワード確認",
@@ -2044,6 +2046,7 @@ const jaJP: Messages = {
       "パスワードが弱すぎます。8文字以上で、大文字・小文字・数字と @ $ ! % * ? & のいずれかを含めてください。",
     passwordRequirementsNotMet:
       "パスワードが条件を満たしていません：8文字以上で、大文字・小文字・数字と @ $ ! % * ? & のいずれかを含めてください（その他の記号は対象外です）。",
+    passwordMissing: "パスワードに足りない条件：{items}",
     tokenInvalid: "トークンが無効または期限切れです",
     tokenVerifyError: "トークンの検証中にエラーが発生しました",
     missingToken: "リセットトークンがありません",

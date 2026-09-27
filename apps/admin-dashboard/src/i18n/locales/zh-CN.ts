@@ -1981,7 +1981,9 @@ const zhCN: Messages = {
     newPasswordPlaceholder: "请输入新密码（至少6个字符）",
     passwordStrength: "密码强度：",
     atLeast8Chars: "至少8个字符",
-    upperLowerCase: "包含大小写字母",
+    containsUppercase: "包含大写字母（A-Z）",
+    containsLowercase: "包含小写字母（a-z）",
+    startsWithAllowedChar: "开头须为字母、数字或 @ $ ! % * ? & 其中一个",
     containsNumber: "包含数字",
     containsSpecialChar: "包含特殊符号（@ $ ! % * ? & 其中一个）",
     confirmPassword: "确认密码",
@@ -2004,6 +2006,7 @@ const zhCN: Messages = {
       "密码强度不足：至少 8 个字符，并包含大写、小写、数字和 @ $ ! % * ? & 其中一个符号。",
     passwordRequirementsNotMet:
       "密码不符合规定：至少 8 个字符，并包含大写、小写、数字和 @ $ ! % * ? & 其中一个符号（其他符号不算）。",
+    passwordMissing: "密码还缺少：{items}",
     tokenInvalid: "Token 无效或已过期",
     tokenVerifyError: "验证 Token 时发生错误",
     missingToken: "缺少重设 Token",

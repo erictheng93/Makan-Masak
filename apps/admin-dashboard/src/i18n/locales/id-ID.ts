@@ -2138,7 +2138,10 @@ const idID: Messages = {
     newPasswordPlaceholder: "Masukkan kata sandi baru (minimal 6 karakter)",
     passwordStrength: "Kekuatan kata sandi:",
     atLeast8Chars: "Minimal 8 karakter",
-    upperLowerCase: "Mengandung huruf besar dan kecil",
+    containsUppercase: "Mengandung huruf besar (A-Z)",
+    containsLowercase: "Mengandung huruf kecil (a-z)",
+    startsWithAllowedChar:
+      "Diawali huruf, angka, atau salah satu dari @ $ ! % * ? &",
     containsNumber: "Mengandung angka",
     containsSpecialChar: "Mengandung salah satu simbol: @ $ ! % * ? &",
     confirmPassword: "Konfirmasi Kata Sandi",
@@ -2162,6 +2165,7 @@ const idID: Messages = {
       "Kata sandi terlalu lemah. Gunakan minimal 8 karakter dengan huruf besar, huruf kecil, angka, dan salah satu dari @ $ ! % * ? &.",
     passwordRequirementsNotMet:
       "Kata sandi tidak memenuhi syarat: minimal 8 karakter dengan huruf besar, huruf kecil, angka, dan salah satu dari @ $ ! % * ? & (simbol lain tidak dihitung).",
+    passwordMissing: "Kata sandi masih kurang: {items}",
     tokenInvalid: "Token tidak valid atau sudah kedaluwarsa",
     tokenVerifyError: "Kesalahan saat memverifikasi token",
     missingToken: "Token atur ulang tidak ditemukan",

@@ -2021,7 +2021,9 @@ const viVN: Messages = {
     newPasswordPlaceholder: "Nhập mật khẩu mới (ít nhất 6 ký tự)",
     passwordStrength: "Độ mạnh mật khẩu:",
     atLeast8Chars: "Ít nhất 8 ký tự",
-    upperLowerCase: "Chứa chữ hoa và chữ thường",
+    containsUppercase: "Chứa chữ hoa (A-Z)",
+    containsLowercase: "Chứa chữ thường (a-z)",
+    startsWithAllowedChar: "Bắt đầu bằng chữ, số hoặc một trong @ $ ! % * ? &",
     containsNumber: "Chứa số",
     containsSpecialChar: "Chứa một trong các ký hiệu: @ $ ! % * ? &",
     confirmPassword: "Xác nhận mật khẩu",
@@ -2046,6 +2048,7 @@ const viVN: Messages = {
       "Mật khẩu quá yếu. Hãy dùng ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và một trong @ $ ! % * ? &.",
     passwordRequirementsNotMet:
       "Mật khẩu chưa đạt yêu cầu: ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và một trong @ $ ! % * ? & (ký hiệu khác không được tính).",
+    passwordMissing: "Mật khẩu còn thiếu: {items}",
     tokenInvalid: "Token không hợp lệ hoặc đã hết hạn",
     tokenVerifyError: "Lỗi khi xác minh token",
     missingToken: "Thiếu token đặt lại",
