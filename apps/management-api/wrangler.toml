@@ -76,10 +76,10 @@ ONBOARDING_APP_URL = "https://onboarding.makanmasak.com"
 ADMIN_APP_URL = "https://admin.makanmasak.com"
 # Applicant email (receipt, rejection, setup-password link) goes through
 # Cloudflare Email Service via the ONBOARDING_NOTIFICATION_EMAIL binding.
-# Credential delivery stays manual until makanmasak.com is onboarded to Email
-# Service (SPF + DKIM). Turning this on before that makes every approval record
-# a failed delivery instead of the handoff staff actually use.
-ONBOARDING_EMAIL_ENABLED = "false"
+# makanmasak.com is onboarded to Email Service (DKIM selector cf-bounce), so this
+# is on. Turning it off falls back to manual delivery: approval still succeeds
+# and staff hand the setup link over themselves.
+ONBOARDING_EMAIL_ENABLED = "true"
 ONBOARDING_EMAIL_FROM = "onboarding@makanmasak.com"
 # "cloudflare" (default) or "resend"; resend also needs the RESEND_API_KEY secret.
 ONBOARDING_EMAIL_PROVIDER = "cloudflare"
