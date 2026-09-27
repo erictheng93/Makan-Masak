@@ -147,11 +147,12 @@
 
 ## 7. 已知缺口
 
-- **寄不出信**（#374）：開通信、駁回信、「已收到申請」信都寫好了，production 沒開。
+- **申請者信件**（#374）：開通信、駁回信、「已收到申請」信在 2026-09-27 起於 production 開啟（`c0f92c6b`，走 Cloudflare Email Service）。
 - **平台通知管道未確認**（#410）：Slack 或 Email Service 都需要營運者設定。
 - **入口 B 在 production 從未跑過**：缺 `INTERNAL_API_TOKEN`（見 §5）。
-- **新店在探索頁的呈現**（#386）：`type: "onboarding"` 會印在店家卡片上；入駐不問營業時間，
-  `isOpenNow` 在 `business_hours` 為 NULL 時回 false，新店永遠「休息中」。
+- **新店在探索頁的呈現**（#386，已修）：入駐不問營業時間，`business_hours` 為 NULL 時
+  `getOpeningHoursStatus` 回 `unavailable`，卡片顯示「未提供營業時間」，不再是「休息中」；
+  `type: "onboarding"` 與 `onboarding-*` 的 district 不再出現在公開探索 payload。
 - **跨兩個 D1 沒有交易**（D1 本來也沒有跨庫交易），一致性完全靠 §4 的補償。
 - 舊的 Cloudflare 驗證／完成流程已退役，只保留在歷史文件裡。
 
