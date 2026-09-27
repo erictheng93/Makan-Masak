@@ -909,6 +909,11 @@ describe("customer identity routes", () => {
       refuses: false,
     },
     {
+      description: "production with only a Cloudflare email binding",
+      env: { NODE_ENV: "production", NOTIFICATION_EMAIL: { send: vi.fn() } },
+      refuses: false,
+    },
+    {
       description: "development with no usable email provider",
       env: { NODE_ENV: "development" },
       refuses: false,
@@ -941,6 +946,10 @@ describe("customer identity routes", () => {
 
         const { response } = request(path, "POST", body, { DB: db, ...env });
         const raw = await response;
+
+        if ("NOTIFICATION_EMAIL" in env && env.NOTIFICATION_EMAIL) {
+          expect(env.NOTIFICATION_EMAIL.send).not.toHaveBeenCalled();
+        }
 
         if (refuses) {
           expect(raw.status).toBe(503);

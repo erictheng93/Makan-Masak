@@ -191,9 +191,10 @@ const forgotPasswordSchema = z.lazy(() =>
     .object({
       email: emailSchema.optional(),
       username: usernameSchema.optional(),
+      identifier: z.string().trim().min(1).max(320).optional(),
     })
-    .refine((data) => data.email || data.username, {
-      message: "Either email or username is required",
+    .refine((data) => data.email || data.username || data.identifier, {
+      message: "Either email, username, or identifier is required",
       path: ["email"],
     }),
 );

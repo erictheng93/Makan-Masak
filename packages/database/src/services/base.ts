@@ -1,5 +1,9 @@
 import { drizzle } from "drizzle-orm/d1";
-import type { D1Database, KVNamespace } from "@cloudflare/workers-types";
+import type {
+  D1Database,
+  KVNamespace,
+  SendEmail,
+} from "@cloudflare/workers-types";
 import { eq } from "drizzle-orm";
 import { ApiError, type CurrencyCode } from "@makanmasak/utils";
 import * as schema from "../schema";
@@ -92,6 +96,8 @@ export interface CloudflareEnv {
   }) => Promise<{ ok: boolean; status: number }>;
   // Notification providers
   RESEND_API_KEY?: string;
+  NOTIFICATION_EMAIL?: SendEmail;
+  EMAIL_PROVIDER?: string;
   NOTIFICATION_FROM_EMAIL?: string;
   USE_MAILCHANNELS?: string;
   // SMS vendor selection — see ./sms (SmsProviderEnv)

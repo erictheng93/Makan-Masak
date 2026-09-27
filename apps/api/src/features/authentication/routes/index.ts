@@ -613,7 +613,10 @@ export function createAuthRoutes(
 
       const authService = AuthService(c.env);
       const result = await authService.requestPasswordReset(
-        requestData.email || requestData.username || "",
+        requestData.email ||
+          requestData.username ||
+          requestData.identifier ||
+          "",
       );
 
       if (!result.success) {

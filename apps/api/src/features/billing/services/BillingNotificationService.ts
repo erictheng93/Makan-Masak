@@ -2,6 +2,7 @@ import {
   BILLING_NOTIFICATION_KINDS,
   NOTIFICATION_CHANNELS,
   NOTIFICATION_DISPATCH_STATUSES,
+  createEmailProvider,
   type BillingNotificationKind,
   type NotificationChannel,
   type NotificationDispatchStatus,
@@ -109,8 +110,11 @@ export class BillingNotificationService {
 
   private async sendEmail(input: DispatchInput): Promise<DispatchResult> {
     const from =
-      this.env.BILLING_EMAIL_FROM ?? this.env.NOTIFICATION_FROM_EMAIL;
-    if (!this.env.RESEND_API_KEY || !from || !input.recipient) {
+      this.env.BILLING_EMAIL_FROM ??
+      this.env.NOTIFICATION_FROM_EMAIL ??
+      "notifications@makanmasak.com";
+    const provider = createEmailProvider(this.env, from);
+    if (!provider || !input.recipient) {
       await this.record(
         input,
         NOTIFICATION_DISPATCH_STATUSES.SKIPPED_PROVIDER_UNCONFIGURED,
@@ -122,33 +126,25 @@ export class BillingNotificationService {
     }
 
     try {
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.env.RESEND_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from,
-          to: [input.recipient],
-          subject: input.subject ?? "MakanMasak billing notification",
-          text: input.text,
-        }),
+      const result = await provider.sendEmail({
+        to: input.recipient,
+        subject: input.subject ?? "MakanMasak billing notification",
+        text: input.text,
+        html: `<pre>${input.text
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;")}</pre>`,
       });
-
-      const body = (await response.json().catch(() => null)) as {
-        id?: string;
-      } | null;
-
-      if (!response.ok) {
-        throw new Error(`Resend email failed: ${response.status}`);
-      }
+      if (!result.success)
+        throw new Error(result.error ?? "Email delivery failed");
 
       await this.record(
         input,
         NOTIFICATION_DISPATCH_STATUSES.SENT,
         null,
-        body?.id ?? null,
+        result.messageId ?? null,
       );
       return { status: NOTIFICATION_DISPATCH_STATUSES.SENT, duplicate: false };
     } catch (error) {

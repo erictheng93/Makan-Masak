@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { D1Database } from "@cloudflare/workers-types";
+import type { D1Database, SendEmail } from "@cloudflare/workers-types";
 import type { CloudflareEnv } from "./base";
 import {
   NotificationService,
+  CloudflareEmailProvider,
   resolveEmailProviderName,
   type EmailProviderEnv,
 } from "./NotificationService";
@@ -12,34 +13,104 @@ function buildEnv(overrides: Partial<EmailProviderEnv> = {}): EmailProviderEnv {
 }
 
 describe("resolveEmailProviderName", () => {
+  const binding = {} as SendEmail;
   it.each([
-    ["uses noop without a Resend key", {}, "noop"],
+    [
+      "uses Cloudflare when its binding exists",
+      { NOTIFICATION_EMAIL: binding },
+      "cloudflare",
+    ],
+    [
+      "prefers Cloudflare when both providers are configured",
+      { NOTIFICATION_EMAIL: binding, RESEND_API_KEY: "resend-key" },
+      "cloudflare",
+    ],
+    ["uses noop without any provider", {}, "noop"],
     [
       "defaults to Resend when its key is configured",
       { RESEND_API_KEY: "resend-key" },
       "resend",
     ],
     [
-      "does not use the retired relay when an old opt-in remains",
-      { USE_MAILCHANNELS: "true", RESEND_API_KEY: "resend-key" },
+      "uses Resend when explicitly requested with a key",
+      {
+        EMAIL_PROVIDER: "resend",
+        NOTIFICATION_EMAIL: binding,
+        RESEND_API_KEY: "resend-key",
+      },
       "resend",
     ],
     [
-      "does not use the retired relay without a Resend key",
-      { USE_MAILCHANNELS: "true" },
+      "does not fall back to Cloudflare when Resend is requested without a key",
+      { EMAIL_PROVIDER: "resend", NOTIFICATION_EMAIL: binding },
       "noop",
     ],
   ] as const)("%s", (_description, env, expected) => {
     expect(resolveEmailProviderName(buildEnv(env))).toBe(expected);
   });
 
-  it("exposes Resend as the production-default provider", () => {
+  it("falls back to Resend when no Cloudflare binding exists", () => {
     const service = new NotificationService(
       {} as D1Database,
       { RESEND_API_KEY: "resend-key" } as CloudflareEnv,
     );
 
     expect(service.emailProviderName).toBe("resend");
+  });
+});
+
+describe("CloudflareEmailProvider", () => {
+  it("sends through the binding and returns its message id", async () => {
+    const send = vi.fn(function (this: SendEmail) {
+      if (this !== binding) throw new Error("binding context lost");
+      return Promise.resolve({ messageId: "cf-1" });
+    });
+    const binding = { send } as unknown as SendEmail;
+    const provider = new CloudflareEmailProvider(
+      binding,
+      "notifications@makanmasak.com",
+    );
+
+    await expect(
+      provider.sendEmail({
+        to: "staff@example.test",
+        subject: "Welcome",
+        html: "<b>Hello</b>",
+      }),
+    ).resolves.toEqual({ success: true, messageId: "cf-1" });
+    expect(send).toHaveBeenCalledOnce();
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "staff@example.test",
+        from: "notifications@makanmasak.com",
+        subject: "Welcome",
+        text: "Hello",
+      }),
+    );
+  });
+
+  it("returns binding failures without throwing", async () => {
+    const send = vi.fn().mockRejectedValue(new Error("send failed"));
+    const provider = new CloudflareEmailProvider(
+      { send } as unknown as SendEmail,
+      "notifications@makanmasak.com",
+    );
+
+    await expect(
+      provider.sendEmail({
+        to: "staff@example.test",
+        subject: "Welcome",
+        html: "Hello",
+      }),
+    ).resolves.toEqual({ success: false, error: "send failed" });
+    expect(send).toHaveBeenCalledOnce();
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "staff@example.test",
+        from: "notifications@makanmasak.com",
+        subject: "Welcome",
+      }),
+    );
   });
 });
 
@@ -74,6 +145,7 @@ describe("NotificationService template rendering", () => {
       },
     });
 
+    expect(fetchMock).toHaveBeenCalledOnce();
     const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
     expect(request.headers).toMatchObject({
       Authorization: "Bearer resend-key",

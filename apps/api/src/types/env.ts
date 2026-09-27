@@ -3,6 +3,7 @@ import type {
   KVNamespace,
   R2Bucket,
   Queue,
+  SendEmail,
 } from "@cloudflare/workers-types";
 import type { DeploymentMode } from "./deployment";
 
@@ -184,6 +185,8 @@ export interface Env {
   }) => Promise<{ ok: boolean; status: number }>;
   SENDGRID_API_KEY?: string;
   RESEND_API_KEY?: string;
+  NOTIFICATION_EMAIL?: SendEmail;
+  EMAIL_PROVIDER?: string;
   // Opt-in flag read by NotificationService's resolveEmailProviderName. Only
   // "true" selects MailChannels; anything else falls back to Resend (or to the
   // noop provider when RESEND_API_KEY is absent).

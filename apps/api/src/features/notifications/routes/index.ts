@@ -13,7 +13,10 @@ import { createSuccessResponse } from "../../../shared/utils";
 import { z } from "zod";
 
 // Import service
-import { NotificationService } from "@makanmasak/database";
+import {
+  NotificationService,
+  resolveEmailProviderName,
+} from "@makanmasak/database";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -302,7 +305,7 @@ app.get(
         totalCount: templates.length,
         supportedChannels: ["email", "sms"],
         configuredProviders: {
-          email: !!c.env.RESEND_API_KEY,
+          email: resolveEmailProviderName(c.env) !== "noop",
           sms: !!(c.env.TWILIO_ACCOUNT_SID && c.env.TWILIO_AUTH_TOKEN),
         },
       }),

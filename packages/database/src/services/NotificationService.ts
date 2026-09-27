@@ -5,7 +5,7 @@
 
 import { BaseService, type CloudflareEnv } from "./base";
 import { createSmsProvider, TwilioSmsProvider, type SmsProvider } from "./sms";
-import type { D1Database } from "@cloudflare/workers-types";
+import type { D1Database, SendEmail } from "@cloudflare/workers-types";
 
 /**
  * Strip all HTML tags from a string, in one left-to-right scan.
@@ -145,22 +145,39 @@ export interface EmailProvider {
   }): Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
 
-export type EmailProviderName = "resend" | "noop";
+export type EmailProviderName = "cloudflare" | "resend" | "noop";
 
 export type EmailProviderEnv = Pick<
   CloudflareEnv,
-  "RESEND_API_KEY" | "USE_MAILCHANNELS"
+  "RESEND_API_KEY" | "NOTIFICATION_EMAIL" | "EMAIL_PROVIDER"
 >;
 
 /**
  * Select the email provider without constructing it so deployment defaults are
- * directly testable. The retired unauthenticated MailChannels relay is never
- * selected, even if an old deployment still has its opt-in flag.
+ * directly testable.
  */
 export function resolveEmailProviderName(
   env: EmailProviderEnv,
 ): EmailProviderName {
+  if (env.EMAIL_PROVIDER === "resend") {
+    return env.RESEND_API_KEY ? "resend" : "noop";
+  }
+  if (env.NOTIFICATION_EMAIL) return "cloudflare";
   return env.RESEND_API_KEY ? "resend" : "noop";
+}
+
+export function createEmailProvider(
+  env: EmailProviderEnv,
+  fromEmail: string,
+): EmailProvider | null {
+  switch (resolveEmailProviderName(env)) {
+    case "cloudflare":
+      return new CloudflareEmailProvider(env.NOTIFICATION_EMAIL!, fromEmail);
+    case "resend":
+      return new ResendEmailProvider(env.RESEND_API_KEY!, fromEmail);
+    case "noop":
+      return null;
+  }
 }
 
 // ========================================
@@ -226,6 +243,37 @@ export class ResendEmailProvider implements EmailProvider {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+}
+
+export class CloudflareEmailProvider implements EmailProvider {
+  constructor(
+    private binding: SendEmail,
+    private fromEmail: string,
+  ) {}
+
+  async sendEmail(params: {
+    to: string;
+    subject: string;
+    html: string;
+    text?: string;
+  }) {
+    try {
+      const result = await this.binding.send({
+        to: params.to,
+        from: this.fromEmail,
+        subject: params.subject,
+        html: params.html,
+        text: params.text || stripHtmlTags(params.html),
+      });
+      return { success: true, messageId: result?.messageId };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Cloudflare email failed",
       };
     }
   }
@@ -856,17 +904,10 @@ export class NotificationService extends BaseService {
   }
 
   private initializeProviders(env: CloudflareEnv) {
-    switch (this.emailProviderName) {
-      case "resend":
-        this.emailProvider = new ResendEmailProvider(
-          env.RESEND_API_KEY!,
-          env.NOTIFICATION_FROM_EMAIL || "notifications@makanmasak.com",
-        );
-        break;
-      case "noop":
-        this.emailProvider = null;
-        break;
-    }
+    this.emailProvider = createEmailProvider(
+      env,
+      env.NOTIFICATION_FROM_EMAIL || "notifications@makanmasak.com",
+    );
 
     // Initialize SMS provider. The vendor is chosen by SMS_PROVIDER (or
     // auto-detected from whichever credentials are present) — see ./sms.

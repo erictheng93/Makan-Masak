@@ -73,6 +73,7 @@ function createEnv(
   overrides: Partial<{
     DB: ReturnType<typeof createDb>;
     RESEND_API_KEY: string;
+    NOTIFICATION_EMAIL: { send: ReturnType<typeof vi.fn> };
     TWILIO_ACCOUNT_SID: string;
     TWILIO_AUTH_TOKEN: string;
   }> = {},
@@ -273,6 +274,22 @@ describe("notification routes", () => {
         configuredProviders: { email: true, sms: true },
       },
     });
+  });
+
+  it("reports email configured with only the Cloudflare binding", async () => {
+    const send = vi.fn();
+    const response = await request(
+      "/templates",
+      "GET",
+      undefined,
+      createEnv({ NOTIFICATION_EMAIL: { send } }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      data: { configuredProviders: { email: true } },
+    });
+    expect(send).not.toHaveBeenCalled();
   });
 
   it("sends manual notifications for owners in their restaurant", async () => {

@@ -586,6 +586,7 @@ export function createApp(
       excludePaths: [
         "/api/v1/auth/login",
         "/api/v1/auth/register",
+        "/api/v1/auth/forgot-password$", // Public reset request uses no session cookie.
         "/api/v1/customer/auth",
         "/api/v1/monitoring/health",
         "/api/v1/sse", // SSE connections should not be CSRF protected

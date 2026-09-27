@@ -56,6 +56,31 @@ describe("createApp API middleware registration", () => {
     );
   });
 
+  it("lets a fresh admin request a password reset while keeping reset protected", async () => {
+    const app = createApp(undefined, {
+      disableEdgeCache: true,
+      disableObservability: true,
+    });
+    const env = { NODE_ENV: "test" } as never;
+    const request = (path: string) =>
+      new Request(`https://api.test/api/v1/auth/${path}`, {
+        method: "POST",
+        headers: { Host: "api.test", "Content-Type": "application/json" },
+        body: "{}",
+      });
+
+    const forgot = await app.fetch(request("forgot-password"), env);
+    expect(forgot.status).toBe(400);
+    await expect(forgot.json()).resolves.toMatchObject({
+      error: { code: "VALIDATION_ERROR" },
+    });
+    const reset = await app.fetch(request("reset-password"), env);
+    expect(reset.status).toBe(403);
+    await expect(reset.json()).resolves.toMatchObject({
+      error: { code: "INVALID_REQUEST_ORIGIN" },
+    });
+  });
+
   it("keeps CORS headers on global rate limit 429 responses", async () => {
     const app = createApp(undefined, {
       disableEdgeCache: true,

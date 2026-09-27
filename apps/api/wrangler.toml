@@ -68,12 +68,10 @@ DEPLOYMENT_MODE = "saas"
 
 # Notification Provider Configuration
 # SECURITY: API keys should be set via `wrangler secret put` command
-# Email provider (Resend)
+# Cloudflare Email Service is the default. Set EMAIL_PROVIDER = "resend" and
+# RESEND_API_KEY to use Resend instead.
 NOTIFICATION_FROM_EMAIL = "notifications@makanmasak.com"
 # RESEND_API_KEY - Set via: wrangler secret put RESEND_API_KEY
-#
-# The retired unauthenticated MailChannels relay is not supported. Without a
-# RESEND_API_KEY secret the notification provider is disabled.
 #
 # SMS provider — switching vendors is config only, never code.
 # SMS_PROVIDER selects the vendor: "mitake" | "every8d" | "twilio" | "noop".
@@ -105,6 +103,9 @@ NOTIFICATION_FROM_EMAIL = "notifications@makanmasak.com"
 
 # Brand prefix on outbound OTP messages (TW carriers require an identifiable sender)
 OTP_SMS_BRAND = "MakanMasak"
+
+[[send_email]]
+name = "NOTIFICATION_EMAIL"
 
 # D1 Database binding
 [[d1_databases]]
@@ -198,6 +199,9 @@ NOTIFICATION_FROM_EMAIL = "dev-notifications@makanmasak.com"
 # the "MakanMasak" default hardcoded in buildOtpSmsBody().
 OTP_SMS_BRAND = "MakanMasak"
 
+[[env.development.send_email]]
+name = "NOTIFICATION_EMAIL"
+
 [[env.development.d1_databases]]
 binding = "DB"
 database_name = "makanmakan-local"
@@ -285,6 +289,9 @@ NOTIFICATION_FROM_EMAIL = "notifications@makanmasak.com"
 # named environments, so this has to be repeated here or the env falls back to
 # the "MakanMasak" default hardcoded in buildOtpSmsBody().
 OTP_SMS_BRAND = "MakanMasak"
+
+[[env.production.send_email]]
+name = "NOTIFICATION_EMAIL"
 
 # Custom domain — wrangler provisions DNS + SSL automatically on deploy
 # since the makanmasak.com zone is already on this Cloudflare account.
