@@ -158,6 +158,41 @@ describe("PoliciesView", () => {
     );
   });
 
+  it("asks again when the unknown-country count changes during retry", async () => {
+    const blocked = (count: number) => ({
+      response: {
+        data: {
+          error: {
+            code: "POLICY_BLOCKED_BY_UNKNOWN_COUNTRY",
+            details: { count },
+          },
+        },
+      },
+    });
+    vi.mocked(policiesApi.set)
+      .mockRejectedValueOnce(blocked(3))
+      .mockRejectedValueOnce(blocked(4));
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const wrapper = mount(PoliciesView);
+    await flushPromises();
+    await wrapper
+      .get('[data-testid="policy-save-modules.disabled"]')
+      .trigger("click");
+    await flushPromises();
+
+    expect(confirm).toHaveBeenCalledTimes(2);
+    expect(confirm).toHaveBeenNthCalledWith(1, expect.stringContaining("3"));
+    expect(confirm).toHaveBeenNthCalledWith(2, expect.stringContaining("4"));
+    expect(policiesApi.set).toHaveBeenNthCalledWith(
+      3,
+      "country",
+      "TW",
+      "modules.disabled",
+      [],
+      4,
+    );
+  });
+
   it("does not resend when the admin declines", async () => {
     vi.mocked(policiesApi.set).mockRejectedValueOnce({
       response: {

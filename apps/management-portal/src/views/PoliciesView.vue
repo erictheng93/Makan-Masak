@@ -104,25 +104,33 @@ async function save(definition: PolicyDefinition) {
   saving.value = definition.key;
   const value = draftValue(definition);
   try {
-    try {
-      await policiesApi.set(
-        scopeType.value,
-        scopeId.value,
-        definition.key,
-        value,
-      );
-    } catch (error) {
-      const count = unknownCountryCount(error);
-      if (count === null) throw error;
-      if (!window.confirm(t("policies.confirmUnknownCountry", { count })))
-        return;
-      await policiesApi.set(
-        scopeType.value,
-        scopeId.value,
-        definition.key,
-        value,
-        count,
-      );
+    let acknowledgedCount: number | undefined;
+    for (;;) {
+      try {
+        if (acknowledgedCount === undefined) {
+          await policiesApi.set(
+            scopeType.value,
+            scopeId.value,
+            definition.key,
+            value,
+          );
+        } else {
+          await policiesApi.set(
+            scopeType.value,
+            scopeId.value,
+            definition.key,
+            value,
+            acknowledgedCount,
+          );
+        }
+        break;
+      } catch (error) {
+        const count = unknownCountryCount(error);
+        if (count === null) throw error;
+        if (!window.confirm(t("policies.confirmUnknownCountry", { count })))
+          return;
+        acknowledgedCount = count;
+      }
     }
     toast.success(t("policies.toast.saved"));
     await loadScope();
