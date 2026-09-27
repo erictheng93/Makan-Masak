@@ -29,12 +29,14 @@ Cloudflare 把 Email Sending 和 Email Routing 合稱 **Email Service**；Routin
 ## MakanMasak 現況
 
 - API 的共用通知服務有 `RESEND_API_KEY` 才透過 Resend 寄送；沒有金鑰則不寄。MailChannels 已停用。帳務通知與系統警報亦使用 Resend。[NotificationService](../../packages/database/src/services/NotificationService.ts) · [BillingNotificationService](../../apps/api/src/features/billing/services/BillingNotificationService.ts) · [AlertService](../../apps/api/src/services/AlertService.ts)
-- Management API 對申請人的收件確認、駁回及設定密碼信，預設改走 Cloudflare Email Service（沿用 `ONBOARDING_NOTIFICATION_EMAIL` binding）；Resend 仍保留，只有 `ONBOARDING_EMAIL_PROVIDER="resend"` 且設有 `RESEND_API_KEY` 時才會使用。正式環境的 `ONBOARDING_EMAIL_ENABLED` 仍為 `false`，所以這些信目前依舊由人工轉交；寄送失敗只會把開通信紀錄標為 `failed`，不影響審核。平台內部的新申請通知使用同一個 binding，收件人與寄件人放在正式環境 secrets（`PLATFORM_NOTIFICATION_EMAIL`、`PLATFORM_NOTIFICATION_EMAIL_FROM`），不寫進儲存庫。[OnboardingService](../../apps/management-api/src/services/OnboardingService.ts) · [wrangler.toml](../../apps/management-api/wrangler.toml) · [營運說明](../../apps/management-api/ONBOARDING_NOTIFICATIONS.md)
+- Management API 對申請人的收件確認、駁回及設定密碼信走 Cloudflare Email Service（沿用 `ONBOARDING_NOTIFICATION_EMAIL` binding）；Resend 仍保留，只有 `ONBOARDING_EMAIL_PROVIDER="resend"` 且設有 `RESEND_API_KEY` 時才會使用。正式環境自 2026-09-27 起 `ONBOARDING_EMAIL_ENABLED="true"`；寄送失敗只會把開通信紀錄標為 `failed` 並退回人工轉交，不影響審核。平台內部的新申請通知使用同一個 binding，收件人與寄件人放在正式環境 secrets（`PLATFORM_NOTIFICATION_EMAIL`、`PLATFORM_NOTIFICATION_EMAIL_FROM`），不寫進儲存庫。[OnboardingService](../../apps/management-api/src/services/OnboardingService.ts) · [wrangler.toml](../../apps/management-api/wrangler.toml) · [營運說明](../../apps/management-api/ONBOARDING_NOTIFICATIONS.md)
+- API（`apps/api`）的忘記密碼、Email 驗證、帳務與警報信仍只支援 Resend，正式環境沒有金鑰，所以仍寄不出；改走 Cloudflare 的工作在 #374 追蹤。
 - 儲存庫的應用程式與 Worker 設定沒有實作入站郵件 `email()` handler 或 Resend inbound webhook，應用程式沒有程式化收信流程。
 
 ### 帳戶實測（2026-09-27，`wrangler email` 與 `dig`）
 
 - **Email Sending：** `makanmasak.com` 已啟用，DKIM selector `cf-bounce`，return-path 為 `cf-bounce.makanmasak.com`。寄件網域已完成 onboarding，可從任何 `@makanmasak.com` 地址寄給任意收件人。
-- **Email Routing：** 查核當天稍早為未啟用；之後已啟用（狀態 `ready`），建立兩條規則：`onboarding@makanmasak.com` 與 `support@makanmasak.com` 都轉寄到已驗證的營運信箱，catch-all 維持停用（丟棄）。目的地址清單只放在 Cloudflare，不寫進儲存庫。
+- **Email Routing：** 查核當天稍早為未啟用；之後已啟用（狀態 `ready`），建立兩條規則：`onboarding@makanmasak.com` 與 `support@makanmasak.com` 分別轉寄到兩個已驗證的營運信箱（實測皆送達），catch-all 維持停用（丟棄）。目的地址清單只放在 Cloudflare，不寫進儲存庫。
 - **DNS：** 啟用 Routing 前根網域沒有 MX，也沒有 SPF TXT，所以沒有衝突；啟用後 Cloudflare 加上 `route1`–`route3.mx.cloudflare.net` 三筆 MX 與 `v=spf1 include:_spf.mx.cloudflare.net ~all`。DMARC 為 `p=reject`，因此不能在 Gmail 以 `support@` 等地址經 Gmail 伺服器回信。
-- **未驗證收件人實測：** 以 `wrangler email sending send` 從 `onboarding@makanmasak.com` 寄往一個不在目的地址清單內的地址，API 接受並回 `Queued`；實際送達由收件人確認。依官方說明，這類寄送計入每月額度，寄往已驗證目的地址則不計。
+- **未驗證收件人實測：** 以 `wrangler email sending send` 從 `onboarding@makanmasak.com` 寄往一個不在目的地址清單內的地址（Gmail `+` 別名），API 回 `Queued`，收件人確認**已送達**。所以寄件網域完成 onboarding 後，確實可以寄給任意地址；依官方說明這類寄送計入每月額度，寄往已驗證目的地址則不計（額度計算本身未能由 CLI 驗證）。
+- **正式環境端到端實測（2026-09-27）：** 一筆受控測試申請依序收到收件確認信、平台新申請通知，核准後收到店主開通信，設定密碼連結可成功設定密碼。測試租戶已停用，平台端資料已刪除；申請與審計事件依只增不刪的設計保留。

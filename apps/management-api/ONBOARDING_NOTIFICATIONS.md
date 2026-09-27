@@ -36,6 +36,8 @@ Receipt, rejection, and setup-password emails to the applicant are gated by `ONB
 
 A provider failure never blocks approval: the setup-password delivery row is marked `failed` and staff hand the link over manually.
 
+Production runs with `ONBOARDING_EMAIL_ENABLED = "true"` and the `cloudflare` provider since 2026-09-27. That day a controlled application received the receipt email, the platform alert, and — after approval — the setup-password email, whose link set the owner password; the test tenant was then terminated and its platform rows removed. Replies to `onboarding@makanmasak.com` reach an operator inbox through Email Routing.
+
 ## Closing #410
 
 Do not close #410 based on unit tests or a deployment alone. An operator with Cloudflare production access must record all of the following in #410:
