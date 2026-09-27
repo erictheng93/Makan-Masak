@@ -889,8 +889,8 @@ P3-c 上線時實作至少一個（取決於 §5 #1 決策後）。本 SPEC 寫�
 
 **Slack**：直接重用 `c.env.SLACK_WEBHOOK_URL`（既有 monitoring 模式，見 `MonitoringService.sendSlackAlert`）。`notification_dispatch_log.channel='slack'`。
 
-**Email**：選 **Resend** 為 provider（HTTP API、Cloudflare Workers 友善、有 zh-TW 模板支援）。
-- env 加 `RESEND_API_KEY`、`BILLING_EMAIL_FROM`（如 `billing@makanmakan.app`）
+**Email**：原規劃選 Resend；2026-09-28 起改為 **Cloudflare Email Service**（`NOTIFICATION_EMAIL` send_email binding），Resend 已從程式移除。
+- env 加 `BILLING_EMAIL_FROM`（如 `billing@makanmasak.com`，須在已 onboarding 的網域）
 - 若 env 未配置 → `notification_dispatch_log.status='skipped_provider_unconfigured'`，**不報錯**（讓 P3 在 email 設定就緒前可先上 Slack 通道）
 - 模板放 `packages/shared/src/email-templates/billing/`，採 MJML→HTML，i18n key 走既有 `apps/onboarding-app/src/i18n` 同套（zh-TW / zh-CN / en-US 三語版）
 
@@ -1048,7 +1048,7 @@ P2/P3 新增：
 | 變數 | 用途 | 預設 |
 |---|---|---|
 | `QUOTA_ENFORCEMENT_MODE` | `disabled` / `warn` / `enforce` | runtime 預設 `disabled`；production 設定 `enforce` |
-| `RESEND_API_KEY` | Email 寄送 | 未設定時降級為 skip + audit log |
+| `NOTIFICATION_EMAIL`（send_email binding） | Email 寄送 | 未綁定時降級為 skip + audit log |
 | `BILLING_EMAIL_FROM` | Email From 地址 | 未設定時降級為 skip + audit log |
 | `STRIPE_WEBHOOK_SECRET`（或對應 provider） | Webhook 驗簽 | P3-c 啟動前設定 |
 

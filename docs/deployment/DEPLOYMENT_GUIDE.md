@@ -145,7 +145,6 @@ pnpm run lint
 JWT_SECRET=your-local-jwt-secret-min-32-characters
 INTERNAL_API_TOKEN=your-local-internal-api-token-min-32-characters
 CLOUDFLARE_API_TOKEN=your_api_token
-RESEND_API_KEY=your_resend_api_key
 TWILIO_ACCOUNT_SID=your_twilio_sid
 TWILIO_AUTH_TOKEN=your_twilio_token
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
@@ -217,8 +216,7 @@ scripts/verify-internal-api-token-secrets.sh production
 # Cloudflare API Token
 wrangler secret put CLOUDFLARE_API_TOKEN --env production
 
-# Email Service (Resend)
-wrangler secret put RESEND_API_KEY --env production
+# Email：Cloudflare Email Service，由 wrangler.toml 的 send_email binding 提供，不需 secret
 
 # SMS Service (Twilio)
 wrangler secret put TWILIO_ACCOUNT_SID --env production

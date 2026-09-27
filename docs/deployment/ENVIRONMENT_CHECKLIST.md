@@ -103,7 +103,6 @@
 - [ ] 🔸 可選服務 API Keys
 
   ```bash
-  RESEND_API_KEY=re_xxxxxxxxxxxx              □
   TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxx       □
   TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxx        □
   SLACK_WEBHOOK_URL=https://hooks.slack.com/  □
@@ -305,7 +304,6 @@
 - [ ] 🚀 通知服務 Secrets
 
   ```bash
-  wrangler secret put RESEND_API_KEY --env production           □
   wrangler secret put TWILIO_ACCOUNT_SID --env production       □
   wrangler secret put TWILIO_AUTH_TOKEN --env production        □
   wrangler secret put SLACK_WEBHOOK_URL --env production        □

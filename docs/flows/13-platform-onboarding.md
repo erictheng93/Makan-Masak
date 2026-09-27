@@ -6,9 +6,9 @@
 
 ## 1. 定位
 
-一家新店從「平台決定收它」到「店主能登入後台」為止。目前唯一走得通的營運方式是
-**平台人員陪同、一家一家手動開通**：寄信的程式已寫好（Resend），但 production 沒開
-（`ONBOARDING_EMAIL_ENABLED = "false"`、沒有 `RESEND_API_KEY`，#374），憑證仍靠平台人員轉交。
+一家新店從「平台決定收它」到「店主能登入後台」為止。自 2026-09-27 起 production 會自動寄信：
+申請人收到收件確認，核准後收到店主帳號與設定密碼連結（Cloudflare Email Service，
+`ONBOARDING_EMAIL_ENABLED = "true"`）。寄送失敗時核准照樣成功，送達紀錄記 `failed`，由平台人員轉交。
 
 有兩個入口，寫入的東西相同，差在誰設定店主密碼：
 
@@ -73,9 +73,9 @@
 > **餐廳 id 必須是 UUID v7。** 註解寫得很明白：v4 的 owner id 會讓這個租戶的菜單圖片上傳直接壞掉。
 
 > **是否寄信看 `ONBOARDING_EMAIL_ENABLED`。** 不是 `"true"` 就是 `manual`，送達紀錄停在
-> `pending`；打開後還要 `ONBOARDING_EMAIL_FROM` 與 `RESEND_API_KEY`，缺一個就記 `failed`。
-> production 的 `wrangler.toml` 明寫 `"false"`，2026-09-15 查到唯一一筆送達紀錄是
-> `manual / pending`。
+> `pending`；打開後還要 `ONBOARDING_EMAIL_FROM` 與 `ONBOARDING_NOTIFICATION_EMAIL`
+> send_email binding，缺一個就記 `failed`。production 自 2026-09-27 起為 `"true"`，
+> 當天實測送達紀錄為 `email / sent`。
 
 > **國別、市集與幣別（9/20–9/21 那批）尚未部署。** 程式與測試在 main 上，但平台 `0028`、
 > 控制面 `0014` 與回填都還沒套到 production；順序見

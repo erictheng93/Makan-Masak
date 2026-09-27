@@ -28,9 +28,9 @@ Cloudflare 把 Email Sending 和 Email Routing 合稱 **Email Service**；Routin
 
 ## MakanMasak 現況
 
-- API 的共用通知服務有 `RESEND_API_KEY` 才透過 Resend 寄送；沒有金鑰則不寄。MailChannels 已停用。帳務通知與系統警報亦使用 Resend。[NotificationService](../../packages/database/src/services/NotificationService.ts) · [BillingNotificationService](../../apps/api/src/features/billing/services/BillingNotificationService.ts) · [AlertService](../../apps/api/src/services/AlertService.ts)
-- Management API 對申請人的收件確認、駁回及設定密碼信走 Cloudflare Email Service（沿用 `ONBOARDING_NOTIFICATION_EMAIL` binding）；Resend 仍保留，只有 `ONBOARDING_EMAIL_PROVIDER="resend"` 且設有 `RESEND_API_KEY` 時才會使用。正式環境自 2026-09-27 起 `ONBOARDING_EMAIL_ENABLED="true"`；寄送失敗只會把開通信紀錄標為 `failed` 並退回人工轉交，不影響審核。平台內部的新申請通知使用同一個 binding，收件人與寄件人放在正式環境 secrets（`PLATFORM_NOTIFICATION_EMAIL`、`PLATFORM_NOTIFICATION_EMAIL_FROM`），不寫進儲存庫。[OnboardingService](../../apps/management-api/src/services/OnboardingService.ts) · [wrangler.toml](../../apps/management-api/wrangler.toml) · [營運說明](../../apps/management-api/ONBOARDING_NOTIFICATIONS.md)
-- API（`apps/api`）的忘記密碼、Email 驗證、帳務與警報信仍只支援 Resend，正式環境沒有金鑰，所以仍寄不出；改走 Cloudflare 的工作在 #374 追蹤。
+- **2026-09-28 決定：棄用 Resend。** 程式只剩 Cloudflare Email Service 一條寄信路徑，`ResendEmailProvider`、`RESEND_API_KEY`、`EMAIL_PROVIDER`／`ONBOARDING_EMAIL_PROVIDER` 都已移除；上面的 Resend 比較保留作為當時的選型紀錄。
+- API（`apps/api`）的忘記密碼、Email 驗證、顧客註冊、帳務與警報信，走 `NOTIFICATION_EMAIL` send_email binding，寄件人 `notifications@makanmasak.com`；2026-09-27 起在 production 實測送達（#374）。
+- Management API 對申請人的收件確認、駁回及設定密碼信走 `ONBOARDING_NOTIFICATION_EMAIL` binding；正式環境自 2026-09-27 起 `ONBOARDING_EMAIL_ENABLED="true"`，寄送失敗只會把開通信紀錄標為 `failed` 並退回人工轉交，不影響審核。平台內部的新申請通知使用同一個 binding，收件人與寄件人放在正式環境 secrets。[OnboardingService](../../apps/management-api/src/services/OnboardingService.ts) · [wrangler.toml](../../apps/management-api/wrangler.toml) · [營運說明](../../apps/management-api/ONBOARDING_NOTIFICATIONS.md)
 - 儲存庫的應用程式與 Worker 設定沒有實作入站郵件 `email()` handler 或 Resend inbound webhook，應用程式沒有程式化收信流程。
 
 ### 帳戶實測（2026-09-27，`wrangler email` 與 `dig`）

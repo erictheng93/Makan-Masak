@@ -28,9 +28,9 @@ The MakanMakan Notification System provides automated employee notifications via
 │         ┌────────────────────────┴──────────────┐         │
 │         │                                        │         │
 │    ┌────▼────┐                            ┌─────▼────┐    │
-│    │ Resend  │                            │  Twilio  │    │
+│    │Cloudflare                            │  Twilio  │    │
 │    │  Email  │                            │   SMS    │    │
-│    │ Provider│                            │ Provider │    │
+│    │ Service │                            │ Provider │    │
 │    └─────────┘                            └──────────┘    │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
@@ -42,7 +42,7 @@ The MakanMakan Notification System provides automated employee notifications via
 
 1. **通知服務核心 (Core Service)**
    - NotificationService（現行 1081 行，2026-07-05 核實；已隨候位、預約服務、驗證等通知類別擴充）
-   - 多供應商支持 (Resend、Twilio)
+   - Email：Cloudflare Email Service（`send_email` binding）；SMS：三竹、Every8d、Twilio（`SMS_PROVIDER`）
    - 模板渲染引擎
    - 錯誤處理機制
 
@@ -97,51 +97,36 @@ The MakanMakan Notification System provides automated employee notifications via
 
 ### 環境變量 (Environment Variables)
 
-```bash
-# Email Provider (Resend)
-NOTIFICATION_FROM_EMAIL="notifications@makanmakan.com"
-RESEND_API_KEY="re_xxxxxxxxxxxxx"  # 使用 wrangler secret 設置
+### Email：Cloudflare Email Service
 
+Email 走 **Cloudflare Email Service**：`apps/api/wrangler.toml` 在三個環境各宣告一次 `send_email` binding（named environment 不會繼承 binding），不需要任何 API key。
+
+```toml
+NOTIFICATION_FROM_EMAIL = "notifications@makanmasak.com"
+
+[[env.production.send_email]]
+name = "NOTIFICATION_EMAIL"
+```
+
+寄件網域 `makanmasak.com` 已在 Cloudflare Email Sending 完成 onboarding（DKIM selector `cf-bounce`，return-path `cf-bounce.makanmasak.com`），SPF／DKIM 由 Cloudflare 管理，不需手動加 DNS 記錄。沒有 binding 時 email 功能關閉，production 的註冊與忘記密碼會直接回 `503 EMAIL_CHANNEL_UNAVAILABLE`，不會假裝寄出。
+
+### SMS
+
+```bash
 # SMS Provider (Twilio)
 TWILIO_ACCOUNT_SID="ACxxxxxxxxxxxxx"  # 使用 wrangler secret 設置
 TWILIO_AUTH_TOKEN="xxxxxxxxxxxxx"    # 使用 wrangler secret 設置
 TWILIO_PHONE_NUMBER="+1234567890"
 ```
 
-### 設置 API 密鑰 (Setting API Keys)
-
-**使用 Wrangler CLI 設置密鑰（推薦方式）：**
+**使用 Wrangler CLI 設置密鑰：**
 
 ```bash
-# Development
-wrangler secret put RESEND_API_KEY --env development
-wrangler secret put TWILIO_ACCOUNT_SID --env development
-wrangler secret put TWILIO_AUTH_TOKEN --env development
-
-# Production
-wrangler secret put RESEND_API_KEY --env production
 wrangler secret put TWILIO_ACCOUNT_SID --env production
 wrangler secret put TWILIO_AUTH_TOKEN --env production
 ```
 
-**本地開發環境：**
-
-創建 `.dev.vars` 文件（不要提交到版本控制）：
-
-```env
-RESEND_API_KEY=re_xxxxxxxxxxxxx
-TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxx
-TWILIO_AUTH_TOKEN=xxxxxxxxxxxxx
-```
-
 ### 獲取 API 密鑰 (Getting API Keys)
-
-#### Resend (Email)
-
-1. 註冊賬號：https://resend.com/
-2. 進入 API Keys 頁面
-3. 創建新的 API Key
-4. 驗證域名並配置 DNS 記錄
 
 #### Twilio (SMS)
 
@@ -180,7 +165,7 @@ Content-Type: application/json
     "details": {
       "success": true,
       "notificationId": "notif_abc123",
-      "provider": "resend"
+      "provider": "cloudflare"
     }
   }
 }
@@ -506,11 +491,11 @@ curl -X GET http://localhost:8787/api/v1/notifications/templates \
 
 **檢查清單：**
 
-1. ✅ 確認 RESEND_API_KEY 已設置
-2. ✅ 確認 NOTIFICATION_FROM_EMAIL 已配置
-3. ✅ 檢查 Resend 域名驗證狀態
-4. ✅ 查看控制台錯誤日誌
-5. ✅ 測試 Resend API 連接
+1. ✅ 確認部署版本帶有 `NOTIFICATION_EMAIL` send_email binding
+2. ✅ 確認 NOTIFICATION_FROM_EMAIL 在已 onboarding 的網域（makanmasak.com）
+3. ✅ 檢查 Cloudflare Email Sending 的網域狀態（`wrangler email sending settings makanmasak.com`）
+4. ✅ 查看控制台錯誤日誌（`wrangler tail`）
+5. ✅ 用 `wrangler email sending send` 寄一封測試信
 
 ```bash
 # 檢查密鑰是否已設置

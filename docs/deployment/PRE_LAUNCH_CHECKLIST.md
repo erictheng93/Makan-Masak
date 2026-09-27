@@ -80,7 +80,6 @@
   - [ ] `QR_SIGNING_KEY`（≥ 32 字元）—— 缺少時建立桌位、重新產生 QR、批次建立座位全部拋錯
   - [ ] `ENCRYPTION_KEY`（≥ 32 字元）—— 加密第三方憑證（ai-analytics、平台外送整合、forecast provider、加密備份）。#300 之後在 production 缺少時這些路徑直接失敗，不再靜默用空字串推導出一把公開可重現的金鑰
   - [ ] `SLACK_WEBHOOK_URL`（如有啟用 error 通知）
-  - [ ] `RESEND_API_KEY`（如有啟用 email）
   - [ ] `STRIPE_SECRET_KEY`（如有啟用 payment）
 - [ ] `pnpm check:prod-config` 通過（`pnpm deploy:prod` 會自動先跑）。它讀的是**線上** Worker 的 secret 清單（`wrangler secret list --env production`），不是你 shell 裡的環境變數——`wrangler deploy` 從不上傳操作者的環境變數，所以本機 export 過從來不算數
 - [ ] 每一把 secret 的原值都已存進團隊密碼管理器（見下方「金鑰保管」）
