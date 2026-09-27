@@ -171,10 +171,12 @@ const getStatusClass = (status: TenantStatus) => {
           <thead>
             <tr>
               <th>{{ t("tenants.column.businessName") }}</th>
+              <th>{{ t("tenants.column.status") }}</th>
               <th>{{ t("tenants.column.contactEmail") }}</th>
               <th>{{ t("tenants.column.subdomain") }}</th>
-              <th>{{ t("tenants.column.status") }}</th>
-              <th>{{ t("tenants.column.deployedVersion") }}</th>
+              <th class="hidden 2xl:table-cell">
+                {{ t("tenants.column.deployedVersion") }}
+              </th>
               <th>{{ t("tenants.column.createdAt") }}</th>
               <th class="text-right">{{ t("common.actions") }}</th>
             </tr>
@@ -208,22 +210,34 @@ const getStatusClass = (status: TenantStatus) => {
                   </div>
                 </div>
               </td>
-              <td>{{ tenant.contactEmail }}</td>
-              <td>
-                <code
-                  v-if="tenant.subdomain"
-                  class="text-sm bg-gray-100 px-2 py-1 rounded"
-                >
-                  {{ tenant.subdomain }}.makanmasak.com
-                </code>
-                <span v-else class="text-gray-400">-</span>
-              </td>
               <td>
                 <span class="badge" :class="getStatusClass(tenant.status)">
                   {{ getStatusLabel(tenant.status) }}
                 </span>
               </td>
+              <!-- Capped so every column fits a 1440px screen; the full
+                   value is in the tooltip. -->
               <td>
+                <span
+                  class="block max-w-[12rem] truncate"
+                  :title="tenant.contactEmail"
+                >
+                  {{ tenant.contactEmail }}
+                </span>
+              </td>
+              <td>
+                <code
+                  v-if="tenant.subdomain"
+                  class="block max-w-[12rem] truncate text-sm bg-gray-100 px-2 py-1 rounded"
+                  :title="`${tenant.subdomain}.makanmasak.com`"
+                >
+                  {{ tenant.subdomain }}.makanmasak.com
+                </code>
+                <span v-else class="text-gray-400">-</span>
+              </td>
+              <!-- Also on the tenant detail page; dropped below 2xl so status
+                   and actions fit a 1440px screen. -->
+              <td class="hidden 2xl:table-cell">
                 <code v-if="tenant.deployedVersion" class="text-sm">
                   v{{ tenant.deployedVersion }}
                 </code>
