@@ -99,7 +99,6 @@ export interface CloudflareEnv {
   NOTIFICATION_EMAIL?: SendEmail;
   EMAIL_PROVIDER?: string;
   NOTIFICATION_FROM_EMAIL?: string;
-  USE_MAILCHANNELS?: string;
   // SMS vendor selection — see ./sms (SmsProviderEnv)
   SMS_PROVIDER?: string;
   TWILIO_ACCOUNT_SID?: string;

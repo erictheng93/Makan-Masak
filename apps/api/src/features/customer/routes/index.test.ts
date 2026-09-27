@@ -585,7 +585,7 @@ describe("customer identity routes", () => {
         password: "long-password",
         displayName: "Ada",
       },
-      { DB: registerDb, USE_MAILCHANNELS: "false" },
+      { DB: registerDb },
     ).response;
     expect(response.status).toBe(201);
     expect(
@@ -622,7 +622,6 @@ describe("customer identity routes", () => {
         DB: createDb({
           first: [passwordIdentityRow({ provider_uid: "a@x.com" })],
         }),
-        USE_MAILCHANNELS: "false",
       },
     ).response;
     expect(response.status).toBe(409);
@@ -1077,7 +1076,7 @@ describe("customer identity routes", () => {
         password: "long-password",
         displayName: "Ada",
       },
-      { DB: db, USE_MAILCHANNELS: "false" },
+      { DB: db },
     ).response;
 
     expect(response.status).toBe(409);
@@ -1381,7 +1380,7 @@ describe("customer identity routes", () => {
       "/auth/forgot-password",
       "POST",
       { identifier: "missing@example.com" },
-      { DB: createDb({ first: [null] }), USE_MAILCHANNELS: "false" },
+      { DB: createDb({ first: [null] }) },
     ).response;
 
     expect(response.status).toBe(200);

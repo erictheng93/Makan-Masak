@@ -187,10 +187,6 @@ export interface Env {
   RESEND_API_KEY?: string;
   NOTIFICATION_EMAIL?: SendEmail;
   EMAIL_PROVIDER?: string;
-  // Opt-in flag read by NotificationService's resolveEmailProviderName. Only
-  // "true" selects MailChannels; anything else falls back to Resend (or to the
-  // noop provider when RESEND_API_KEY is absent).
-  USE_MAILCHANNELS?: string;
   BILLING_EMAIL_FROM?: string;
   STRIPE_WEBHOOK_SECRET?: string;
   LINEPAY_WEBHOOK_SECRET?: string;
