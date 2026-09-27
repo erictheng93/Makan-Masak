@@ -35,5 +35,6 @@ Cloudflare 把 Email Sending 和 Email Routing 合稱 **Email Service**；Routin
 ### 帳戶實測（2026-09-27，`wrangler email` 與 `dig`）
 
 - **Email Sending：** `makanmasak.com` 已啟用，DKIM selector `cf-bounce`，return-path 為 `cf-bounce.makanmasak.com`。寄件網域已完成 onboarding，可從任何 `@makanmasak.com` 地址寄給任意收件人。
-- **Email Routing：** `makanmasak.com` 未啟用（`unconfigured`），沒有自訂規則，catch-all 為停用。帳戶內只有一個已驗證的目的地址。
-- **DNS：** 根網域沒有 MX，也沒有 SPF TXT；DMARC 為 `p=reject`。因為沒有既有收信服務，啟用 Routing 不會和其他 MX 衝突。
+- **Email Routing：** 查核當天稍早為未啟用；之後已啟用（狀態 `ready`），建立兩條規則：`onboarding@makanmasak.com` 與 `support@makanmasak.com` 都轉寄到已驗證的營運信箱，catch-all 維持停用（丟棄）。目的地址清單只放在 Cloudflare，不寫進儲存庫。
+- **DNS：** 啟用 Routing 前根網域沒有 MX，也沒有 SPF TXT，所以沒有衝突；啟用後 Cloudflare 加上 `route1`–`route3.mx.cloudflare.net` 三筆 MX 與 `v=spf1 include:_spf.mx.cloudflare.net ~all`。DMARC 為 `p=reject`，因此不能在 Gmail 以 `support@` 等地址經 Gmail 伺服器回信。
+- **未驗證收件人實測：** 以 `wrangler email sending send` 從 `onboarding@makanmasak.com` 寄往一個不在目的地址清單內的地址，API 接受並回 `Queued`；實際送達由收件人確認。依官方說明，這類寄送計入每月額度，寄往已驗證目的地址則不計。
