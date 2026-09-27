@@ -246,7 +246,7 @@ app.get("/jobs", async (c) => {
       and(
         servesThisAgent,
         eq(receipts.receiptType, "kitchen"),
-        eq(receipts.printStatus, "pending"),
+        or(eq(receipts.printStatus, "pending"), abandoned),
         inArray(
           receipts.orderId,
           db
