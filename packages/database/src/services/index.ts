@@ -42,7 +42,6 @@ export {
 export { isWebPushEnabled } from "./base";
 export {
   NotificationService,
-  ResendEmailProvider,
   CloudflareEmailProvider,
   createEmailProvider,
   type EmailProvider,

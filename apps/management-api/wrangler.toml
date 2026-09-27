@@ -81,8 +81,6 @@ ADMIN_APP_URL = "https://admin.makanmasak.com"
 # and staff hand the setup link over themselves.
 ONBOARDING_EMAIL_ENABLED = "true"
 ONBOARDING_EMAIL_FROM = "onboarding@makanmasak.com"
-# "cloudflare" (default) or "resend"; resend also needs the RESEND_API_KEY secret.
-ONBOARDING_EMAIL_PROVIDER = "cloudflare"
 
 # Custom domain — wrangler provisions DNS + SSL automatically on deploy
 # since the makanmasak.com zone is already on this Cloudflare account.
@@ -133,7 +131,6 @@ name = "ONBOARDING_NOTIFICATION_EMAIL"
 # - JWT_SECRET: JWT signing secret for management tokens
 # - PLATFORM_CF_API_TOKEN: Platform Cloudflare API token for managed provisioning
 # - PLATFORM_CF_ACCOUNT_ID: Platform Cloudflare account ID
-# - RESEND_API_KEY: Resend API key, only read when ONBOARDING_EMAIL_PROVIDER = "resend"
 # - SLACK_WEBHOOK_URL: Slack webhook for new-application platform alerts
 # - PLATFORM_NOTIFICATION_EMAIL: Verified Email Routing destination for the
 #   Cloudflare Email Service onboarding-alert fallback

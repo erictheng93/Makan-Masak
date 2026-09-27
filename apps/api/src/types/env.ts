@@ -183,10 +183,7 @@ export interface Env {
     };
     payload: Record<string, unknown>;
   }) => Promise<{ ok: boolean; status: number }>;
-  SENDGRID_API_KEY?: string;
-  RESEND_API_KEY?: string;
   NOTIFICATION_EMAIL?: SendEmail;
-  EMAIL_PROVIDER?: string;
   BILLING_EMAIL_FROM?: string;
   STRIPE_WEBHOOK_SECRET?: string;
   LINEPAY_WEBHOOK_SECRET?: string;

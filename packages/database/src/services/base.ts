@@ -95,9 +95,7 @@ export interface CloudflareEnv {
     payload: Record<string, unknown>;
   }) => Promise<{ ok: boolean; status: number }>;
   // Notification providers
-  RESEND_API_KEY?: string;
   NOTIFICATION_EMAIL?: SendEmail;
-  EMAIL_PROVIDER?: string;
   NOTIFICATION_FROM_EMAIL?: string;
   // SMS vendor selection — see ./sms (SmsProviderEnv)
   SMS_PROVIDER?: string;

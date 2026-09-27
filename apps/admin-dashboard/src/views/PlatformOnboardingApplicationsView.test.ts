@@ -317,7 +317,7 @@ describe("PlatformOnboardingApplicationsView", () => {
       credentialDelivery: buildDelivery({
         channel: "email",
         status: "failed",
-        errorMessage: "RESEND_API_KEY is not configured",
+        errorMessage: "ONBOARDING_NOTIFICATION_EMAIL binding is not configured",
       }),
       status: "completed",
     });
@@ -330,7 +330,9 @@ describe("PlatformOnboardingApplicationsView", () => {
     await flushPromises();
 
     const delivery = wrapper.get('[data-testid="owner-handoff-delivery"]');
-    expect(delivery.text()).toContain("RESEND_API_KEY is not configured");
+    expect(delivery.text()).toContain(
+      "ONBOARDING_NOTIFICATION_EMAIL binding is not configured",
+    );
   });
 
   it("reopens the handoff for a completed application without provisioning again", async () => {

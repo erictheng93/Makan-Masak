@@ -813,18 +813,16 @@ describe("Onboarding public API workflow — real integration", () => {
     });
   });
 
-  it("completes approval and records failed setup-link delivery when Resend fails", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response("denied", { status: 500 })),
-    );
+  it("completes approval and records failed setup-link delivery when the email binding fails", async () => {
+    const send = vi.fn(async () => {
+      throw new Error("Cloudflare email send failed");
+    });
     const db = createManagementDb();
     const platformDb = createPlatformDb();
     const env = createEnv(db, platformDb, {
       ONBOARDING_EMAIL_ENABLED: "true",
       ONBOARDING_EMAIL_FROM: "onboarding@makanmasak.com",
-      ONBOARDING_EMAIL_PROVIDER: "resend",
-      RESEND_API_KEY: "test-key",
+      ONBOARDING_NOTIFICATION_EMAIL: { send } as unknown as SendEmail,
     });
     const token = await managementToken();
     const created = await app.fetch(
@@ -854,8 +852,14 @@ describe("Onboarding public API workflow — real integration", () => {
         .get(createdData.applicationId),
     ).toMatchObject({
       status: "failed",
-      error_message: expect.stringContaining("500"),
+      error_message: "Cloudflare email send failed",
     });
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: createApplicationBody().contactEmail,
+        from: "onboarding@makanmasak.com",
+      }),
+    );
   });
 
   it("rate limits concurrent application submissions from one Cloudflare IP", async () => {

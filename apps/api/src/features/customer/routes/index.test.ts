@@ -903,11 +903,6 @@ describe("customer identity routes", () => {
       refuses: true,
     },
     {
-      description: "production with Resend configured",
-      env: { NODE_ENV: "production", RESEND_API_KEY: "resend-key" },
-      refuses: false,
-    },
-    {
       description: "production with only a Cloudflare email binding",
       env: { NODE_ENV: "production", NOTIFICATION_EMAIL: { send: vi.fn() } },
       refuses: false,

@@ -145,39 +145,28 @@ export interface EmailProvider {
   }): Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
 
-export type EmailProviderName = "cloudflare" | "resend" | "noop";
+export type EmailProviderName = "cloudflare" | "noop";
 
-export type EmailProviderEnv = Pick<
-  CloudflareEnv,
-  "RESEND_API_KEY" | "NOTIFICATION_EMAIL" | "EMAIL_PROVIDER"
->;
+export type EmailProviderEnv = Pick<CloudflareEnv, "NOTIFICATION_EMAIL">;
 
 /**
  * Select the email provider without constructing it so deployment defaults are
- * directly testable.
+ * directly testable. Cloudflare Email Service is the only provider; without its
+ * binding, email is off and production email flows refuse up front.
  */
 export function resolveEmailProviderName(
   env: EmailProviderEnv,
 ): EmailProviderName {
-  if (env.EMAIL_PROVIDER === "resend") {
-    return env.RESEND_API_KEY ? "resend" : "noop";
-  }
-  if (env.NOTIFICATION_EMAIL) return "cloudflare";
-  return env.RESEND_API_KEY ? "resend" : "noop";
+  return env.NOTIFICATION_EMAIL ? "cloudflare" : "noop";
 }
 
 export function createEmailProvider(
   env: EmailProviderEnv,
   fromEmail: string,
 ): EmailProvider | null {
-  switch (resolveEmailProviderName(env)) {
-    case "cloudflare":
-      return new CloudflareEmailProvider(env.NOTIFICATION_EMAIL!, fromEmail);
-    case "resend":
-      return new ResendEmailProvider(env.RESEND_API_KEY!, fromEmail);
-    case "noop":
-      return null;
-  }
+  return env.NOTIFICATION_EMAIL
+    ? new CloudflareEmailProvider(env.NOTIFICATION_EMAIL, fromEmail)
+    : null;
 }
 
 // ========================================
@@ -189,64 +178,6 @@ export function createEmailProvider(
  * imports of this package keep compiling.
  */
 export type SMSProvider = SmsProvider;
-
-// ========================================
-// Resend Email Provider
-// ========================================
-
-export class ResendEmailProvider implements EmailProvider {
-  constructor(
-    private apiKey: string,
-    private fromEmail: string = "notifications@makanmasak.com",
-  ) {}
-
-  async sendEmail(params: {
-    to: string;
-    subject: string;
-    html: string;
-    text?: string;
-  }) {
-    try {
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          "Content-Type": "application/json",
-          "User-Agent": "MakanMasak-Worker/1.0",
-        },
-        body: JSON.stringify({
-          from: this.fromEmail,
-          to: params.to,
-          subject: params.subject,
-          html: params.html,
-          text: params.text || stripHtmlTags(params.html),
-        }),
-      });
-
-      const responseText = await response.text();
-      let data: { message?: string; id?: string } = {};
-      try {
-        data = JSON.parse(responseText) as typeof data;
-      } catch {
-        // A gateway or proxy can return plain text or HTML on failure.
-      }
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: `Resend returned ${response.status}${data.message ? `: ${data.message}` : ""}`,
-        };
-      }
-
-      return { success: true, messageId: data.id };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  }
-}
 
 export class CloudflareEmailProvider implements EmailProvider {
   constructor(

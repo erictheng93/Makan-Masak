@@ -123,7 +123,7 @@ describe("check-production-config", () => {
     expect(textOf(result.warnings)).not.toContain("JWT_SECRET");
   });
 
-  it("does not require a Resend key when Cloudflare email is bound", () => {
+  it("reproduces the real production state: three secrets, no blockers", () => {
     // makanmasak-api-prod as of the incident.
     const result = checkProductionConfig({
       root: process.cwd(),
@@ -138,7 +138,6 @@ describe("check-production-config", () => {
     expect(textOf(result.warnings)).toContain(
       "missing production secret: ENCRYPTION_KEY",
     );
-    expect(textOf(result.warnings)).not.toContain("RESEND_API_KEY");
     expect(textOf(result.warnings)).toContain("SMS vendor credentials");
     // Every gap here disables one capability while the rest of the system keeps
     // serving, so none of them blocks a deploy. Only a secret whose absence

@@ -29,10 +29,7 @@ Cloudflare requires the sender domain to be onboarded even though sends to verif
 
 ## Applicant email
 
-Receipt, rejection, and setup-password emails to the applicant are gated by `ONBOARDING_EMAIL_ENABLED` and sent from `ONBOARDING_EMAIL_FROM`. `ONBOARDING_EMAIL_PROVIDER` picks the provider:
-
-- `cloudflare` (default): the same `ONBOARDING_NOTIFICATION_EMAIL` binding. Sending to arbitrary applicant addresses needs Workers Paid and a sender domain onboarded to Email Service (SPF + DKIM); verified Email Routing destinations alone are not enough.
-- `resend`: kept as a fallback; also requires the `RESEND_API_KEY` secret.
+Receipt, rejection, and setup-password emails to the applicant are gated by `ONBOARDING_EMAIL_ENABLED` and sent from `ONBOARDING_EMAIL_FROM`. They go through Cloudflare Email Service over the same `ONBOARDING_NOTIFICATION_EMAIL` binding; there is no other provider (Resend was removed on 2026-09-28). Sending to arbitrary applicant addresses needs Workers Paid and a sender domain onboarded to Email Service (SPF + DKIM); verified Email Routing destinations alone are not enough.
 
 A provider failure never blocks approval: the setup-password delivery row is marked `failed` and staff hand the link over manually.
 

@@ -27,7 +27,7 @@ import {
   shopSubscriptions,
   TRIAL_DURATION_MS,
   users,
-  ResendEmailProvider,
+  CloudflareEmailProvider,
   type PaidPlanTier,
 } from "@makanmasak/database";
 import { ApiError, generateUUID } from "@makanmasak/utils";
@@ -454,9 +454,8 @@ export class OnboardingService {
   }
 
   /**
-   * Applicant-facing mail goes through Cloudflare Email Service by default.
-   * Resend stays available behind ONBOARDING_EMAIL_PROVIDER="resend". Never
-   * throws: callers record or log the failure instead.
+   * Applicant-facing mail goes through Cloudflare Email Service. Never throws:
+   * callers record or log the failure instead.
    */
   private async sendApplicantEmail(message: {
     to: string;
@@ -470,18 +469,6 @@ export class OnboardingService {
         error: "ONBOARDING_EMAIL_FROM is not configured",
       };
     }
-    const html = `<pre>${this.escapeHtml(message.text)}</pre>`;
-
-    if (this.env.ONBOARDING_EMAIL_PROVIDER === "resend") {
-      if (!this.env.RESEND_API_KEY) {
-        return { success: false, error: "RESEND_API_KEY is not configured" };
-      }
-      return new ResendEmailProvider(this.env.RESEND_API_KEY, from).sendEmail({
-        ...message,
-        html,
-      });
-    }
-
     const binding = this.env.ONBOARDING_NOTIFICATION_EMAIL;
     if (!binding) {
       return {
@@ -489,16 +476,11 @@ export class OnboardingService {
         error: "ONBOARDING_NOTIFICATION_EMAIL binding is not configured",
       };
     }
-    try {
-      await binding.send({ ...message, from, html });
-      return { success: true };
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error instanceof Error ? error.message : "Cloudflare email failed",
-      };
-    }
+
+    return new CloudflareEmailProvider(binding, from).sendEmail({
+      ...message,
+      html: `<pre>${this.escapeHtml(message.text)}</pre>`,
+    });
   }
 
   /**

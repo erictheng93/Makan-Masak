@@ -48,11 +48,8 @@ export interface ManagementEnv {
   ONBOARDING_NOTIFICATION_EMAIL?: SendEmail;
   ONBOARDING_EMAIL_ENABLED?: string;
   ONBOARDING_EMAIL_FROM?: string;
-  /** Applicant email provider: Cloudflare Email Service unless "resend". */
-  ONBOARDING_EMAIL_PROVIDER?: string;
   /** Origin of the onboarding app; applicant status links point here. */
   ONBOARDING_APP_URL?: string;
-  RESEND_API_KEY?: string;
   INTERNAL_API_TOKEN?: string;
 
   // D1 Database binding

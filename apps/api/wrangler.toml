@@ -68,10 +68,9 @@ DEPLOYMENT_MODE = "saas"
 
 # Notification Provider Configuration
 # SECURITY: API keys should be set via `wrangler secret put` command
-# Cloudflare Email Service is the default. Set EMAIL_PROVIDER = "resend" and
-# RESEND_API_KEY to use Resend instead.
+# Email goes through Cloudflare Email Service via the NOTIFICATION_EMAIL
+# send_email binding declared below; without it every email flow is off.
 NOTIFICATION_FROM_EMAIL = "notifications@makanmasak.com"
-# RESEND_API_KEY - Set via: wrangler secret put RESEND_API_KEY
 #
 # SMS provider — switching vendors is config only, never code.
 # SMS_PROVIDER selects the vendor: "mitake" | "every8d" | "twilio" | "noop".

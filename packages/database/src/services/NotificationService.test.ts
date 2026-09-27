@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { D1Database, SendEmail } from "@cloudflare/workers-types";
 import type { CloudflareEnv } from "./base";
 import {
@@ -13,49 +13,26 @@ function buildEnv(overrides: Partial<EmailProviderEnv> = {}): EmailProviderEnv {
 }
 
 describe("resolveEmailProviderName", () => {
-  const binding = {} as SendEmail;
   it.each([
     [
       "uses Cloudflare when its binding exists",
-      { NOTIFICATION_EMAIL: binding },
+      { NOTIFICATION_EMAIL: {} as SendEmail },
       "cloudflare",
     ],
-    [
-      "prefers Cloudflare when both providers are configured",
-      { NOTIFICATION_EMAIL: binding, RESEND_API_KEY: "resend-key" },
-      "cloudflare",
-    ],
-    ["uses noop without any provider", {}, "noop"],
-    [
-      "defaults to Resend when its key is configured",
-      { RESEND_API_KEY: "resend-key" },
-      "resend",
-    ],
-    [
-      "uses Resend when explicitly requested with a key",
-      {
-        EMAIL_PROVIDER: "resend",
-        NOTIFICATION_EMAIL: binding,
-        RESEND_API_KEY: "resend-key",
-      },
-      "resend",
-    ],
-    [
-      "does not fall back to Cloudflare when Resend is requested without a key",
-      { EMAIL_PROVIDER: "resend", NOTIFICATION_EMAIL: binding },
-      "noop",
-    ],
+    ["turns email off without the binding", {}, "noop"],
   ] as const)("%s", (_description, env, expected) => {
     expect(resolveEmailProviderName(buildEnv(env))).toBe(expected);
   });
 
-  it("falls back to Resend when no Cloudflare binding exists", () => {
+  it("builds the service on the Cloudflare binding", () => {
     const service = new NotificationService(
       {} as D1Database,
-      { RESEND_API_KEY: "resend-key" } as CloudflareEnv,
+      {
+        NOTIFICATION_EMAIL: {} as SendEmail,
+      } as CloudflareEnv,
     );
 
-    expect(service.emailProviderName).toBe("resend");
+    expect(service.emailProviderName).toBe("cloudflare");
   });
 });
 
@@ -115,18 +92,13 @@ describe("CloudflareEmailProvider", () => {
 });
 
 describe("NotificationService template rendering", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
   it("preserves template markup while HTML-escaping untrusted values", async () => {
-    const fetchMock = vi.fn(async () =>
-      Response.json({ id: "email-1" }, { status: 200 }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    const send = vi.fn().mockResolvedValue({ messageId: "cf-1" });
     const service = new NotificationService(
       {} as D1Database,
-      { RESEND_API_KEY: "resend-key" } as CloudflareEnv,
+      {
+        NOTIFICATION_EMAIL: { send } as unknown as SendEmail,
+      } as CloudflareEnv,
     );
 
     await service.sendNotification({
@@ -145,13 +117,14 @@ describe("NotificationService template rendering", () => {
       },
     });
 
-    expect(fetchMock).toHaveBeenCalledOnce();
-    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
-    expect(request.headers).toMatchObject({
-      Authorization: "Bearer resend-key",
-      "User-Agent": "MakanMasak-Worker/1.0",
-    });
-    const payload = JSON.parse(String(request.body)) as {
+    expect(send).toHaveBeenCalledOnce();
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "staff@test.dev",
+        from: "notifications@makanmasak.com",
+      }),
+    );
+    const payload = send.mock.calls[0]?.[0] as {
       subject: string;
       html: string;
     };
