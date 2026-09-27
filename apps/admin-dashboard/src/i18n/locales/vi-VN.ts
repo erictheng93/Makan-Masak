@@ -2020,11 +2020,10 @@ const viVN: Messages = {
     newPassword: "Mật khẩu mới",
     newPasswordPlaceholder: "Nhập mật khẩu mới (ít nhất 6 ký tự)",
     passwordStrength: "Độ mạnh mật khẩu:",
-    atLeast6Chars: "Ít nhất 6 ký tự",
-    atLeast8Chars: "Ít nhất 8 ký tự (khuyến nghị)",
+    atLeast8Chars: "Ít nhất 8 ký tự",
     upperLowerCase: "Chứa chữ hoa và chữ thường",
     containsNumber: "Chứa số",
-    containsSpecialChar: "Chứa ký tự đặc biệt (khuyến nghị)",
+    containsSpecialChar: "Chứa một trong các ký hiệu: @ $ ! % * ? &",
     confirmPassword: "Xác nhận mật khẩu",
     confirmPasswordPlaceholder: "Nhập lại mật khẩu mới",
     resetting: "Đang đặt lại...",
@@ -2035,7 +2034,6 @@ const viVN: Messages = {
     strengthStrong: "Mạnh",
     strengthVeryStrong: "Rất mạnh",
     newPasswordRequired: "Vui lòng nhập mật khẩu mới",
-    passwordMin6: "Mật khẩu phải có ít nhất 6 ký tự",
     confirmPasswordRequired: "Vui lòng xác nhận mật khẩu",
     passwordMismatch: "Mật khẩu không khớp",
     passwordResetSuccess: "Mật khẩu đã được đặt lại thành công",
@@ -2044,7 +2042,10 @@ const viVN: Messages = {
       "Liên kết đặt lại đã hết hạn. Vui lòng yêu cầu liên kết mới.",
     resetTokenInvalid:
       "Liên kết đặt lại không hợp lệ. Vui lòng yêu cầu liên kết mới.",
-    weakPassword: "Mật khẩu quá yếu. Hãy dùng ít nhất 6 ký tự.",
+    weakPassword:
+      "Mật khẩu quá yếu. Hãy dùng ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và một trong @ $ ! % * ? &.",
+    passwordRequirementsNotMet:
+      "Mật khẩu chưa đạt yêu cầu: ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và một trong @ $ ! % * ? & (ký hiệu khác không được tính).",
     tokenInvalid: "Token không hợp lệ hoặc đã hết hạn",
     tokenVerifyError: "Lỗi khi xác minh token",
     missingToken: "Thiếu token đặt lại",

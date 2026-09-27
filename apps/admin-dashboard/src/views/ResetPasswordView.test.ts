@@ -36,7 +36,7 @@ describe("ResetPasswordView", () => {
     });
   });
 
-  async function submitNewPassword() {
+  async function submitNewPassword(password = "Owner@2026x") {
     const wrapper = mount(ResetPasswordView, {
       global: { stubs: { RouterLink: true, "router-link": true } },
     });
@@ -44,8 +44,8 @@ describe("ResetPasswordView", () => {
 
     const inputs = wrapper.findAll('input[type="password"]');
     expect(inputs).toHaveLength(2);
-    await inputs[0].setValue("Owner@2026x");
-    await inputs[1].setValue("Owner@2026x");
+    await inputs[0].setValue(password);
+    await inputs[1].setValue(password);
     await wrapper.get("form").trigger("submit");
     await flushPromises();
     return wrapper;
@@ -66,5 +66,33 @@ describe("ResetPasswordView", () => {
     expect(wrapper.text()).toContain("auth.resetSuccess");
     expect(wrapper.text()).toContain("auth.resetSuccessMessage");
     expect(wrapper.text()).not.toContain(SERVER_MESSAGE);
+  });
+
+  // The API requires one of @$!%*?& for 8+ characters; these used to pass
+  // the page's hints and then fail with a generic "check your input".
+  it.each(["Aming2026Rice", "Aming#2026Rice", "Ab1@x"])(
+    "blocks %s before it reaches the server",
+    async (password) => {
+      const wrapper = await submitNewPassword(password);
+
+      expect(api.instance.post).not.toHaveBeenCalled();
+      expect(wrapper.text()).toContain("auth.passwordRequirementsNotMet");
+    },
+  );
+
+  it("explains the password rule when the server rejects it", async () => {
+    vi.mocked(api.instance.post).mockResolvedValue({
+      status: 400,
+      data: {
+        success: false,
+        error: { code: "VALIDATION_ERROR", message: "Validation failed" },
+      },
+    });
+
+    const wrapper = await submitNewPassword();
+
+    expect(api.instance.post).toHaveBeenCalledOnce();
+    expect(wrapper.text()).toContain("auth.passwordRequirementsNotMet");
+    expect(wrapper.text()).not.toContain("Validation failed");
   });
 });

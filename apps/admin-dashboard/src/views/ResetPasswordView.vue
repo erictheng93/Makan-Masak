@@ -172,21 +172,6 @@
                 <li
                   class="text-xs flex items-center"
                   :class="
-                    form.newPassword.length >= 6
-                      ? 'text-green-600'
-                      : 'text-gray-500'
-                  "
-                >
-                  <Check
-                    v-if="form.newPassword.length >= 6"
-                    class="w-3 h-3 mr-1"
-                  />
-                  <X v-else class="w-3 h-3 mr-1" />
-                  {{ t("auth.atLeast6Chars") }}
-                </li>
-                <li
-                  class="text-xs flex items-center"
-                  :class="
                     form.newPassword.length >= 8
                       ? 'text-green-600'
                       : 'text-gray-500'
@@ -236,13 +221,13 @@
                 <li
                   class="text-xs flex items-center"
                   :class="
-                    /[^a-zA-Z0-9]/.test(form.newPassword)
+                    PASSWORD_SYMBOL.test(form.newPassword)
                       ? 'text-green-600'
                       : 'text-gray-500'
                   "
                 >
                   <Check
-                    v-if="/[^a-zA-Z0-9]/.test(form.newPassword)"
+                    v-if="PASSWORD_SYMBOL.test(form.newPassword)"
                     class="w-3 h-3 mr-1"
                   />
                   <X v-else class="w-3 h-3 mr-1" />
@@ -362,7 +347,17 @@ type ResetPasswordResponse = {
   error?: { code?: string; message?: string };
 };
 
+// Mirrors passwordSchema in apps/api/src/features/authentication/schemas/
+// validation.ts. The API accepts 6-7 characters without these rules, but a
+// setup password is always held to the full rule so the hints never mark a
+// password as fine that the server then rejects.
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_SYMBOL = /[@$!%*?&]/;
+const PASSWORD_RULE =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
+
 const passwordResetCodeKeys = {
+  VALIDATION_ERROR: "auth.passwordRequirementsNotMet",
   RESET_TOKEN_EXPIRED: "auth.resetTokenExpired",
   RESET_TOKEN_INVALID: "auth.resetTokenInvalid",
   WEAK_PASSWORD: "auth.weakPassword",
@@ -473,8 +468,11 @@ const validateForm = () => {
     return false;
   }
 
-  if (form.newPassword.length < 6) {
-    errors.newPassword = t("auth.passwordMin6");
+  if (
+    form.newPassword.length < PASSWORD_MIN_LENGTH ||
+    !PASSWORD_RULE.test(form.newPassword)
+  ) {
+    errors.newPassword = t("auth.passwordRequirementsNotMet");
     return false;
   }
 

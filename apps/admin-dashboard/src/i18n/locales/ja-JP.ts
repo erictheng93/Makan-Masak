@@ -2019,11 +2019,10 @@ const jaJP: Messages = {
     newPassword: "新しいパスワード",
     newPasswordPlaceholder: "新しいパスワードを入力（6文字以上）",
     passwordStrength: "パスワード強度：",
-    atLeast6Chars: "6文字以上",
-    atLeast8Chars: "8文字以上（推奨）",
+    atLeast8Chars: "8文字以上",
     upperLowerCase: "大文字と小文字を含む",
     containsNumber: "数字を含む",
-    containsSpecialChar: "特殊文字を含む（推奨）",
+    containsSpecialChar: "記号を含む（@ $ ! % * ? & のいずれか）",
     confirmPassword: "パスワード確認",
     confirmPasswordPlaceholder: "新しいパスワードを再入力",
     resetting: "リセット中...",
@@ -2034,7 +2033,6 @@ const jaJP: Messages = {
     strengthStrong: "強",
     strengthVeryStrong: "非常に強い",
     newPasswordRequired: "新しいパスワードを入力してください",
-    passwordMin6: "パスワードは6文字以上必要です",
     confirmPasswordRequired: "パスワードを確認してください",
     passwordMismatch: "パスワードが一致しません",
     passwordResetSuccess: "パスワードが正常にリセットされました",
@@ -2042,7 +2040,10 @@ const jaJP: Messages = {
     resetTokenExpired:
       "リセットリンクの有効期限が切れています。もう一度申請してください。",
     resetTokenInvalid: "リセットリンクが無効です。もう一度申請してください。",
-    weakPassword: "パスワードが弱すぎます。6文字以上で設定してください。",
+    weakPassword:
+      "パスワードが弱すぎます。8文字以上で、大文字・小文字・数字と @ $ ! % * ? & のいずれかを含めてください。",
+    passwordRequirementsNotMet:
+      "パスワードが条件を満たしていません：8文字以上で、大文字・小文字・数字と @ $ ! % * ? & のいずれかを含めてください（その他の記号は対象外です）。",
     tokenInvalid: "トークンが無効または期限切れです",
     tokenVerifyError: "トークンの検証中にエラーが発生しました",
     missingToken: "リセットトークンがありません",
