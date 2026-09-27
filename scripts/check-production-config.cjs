@@ -14,6 +14,7 @@ const BINDING_TABLES = new Map([
   ["r2_buckets", "binding"],
   ["analytics_engine_datasets", "binding"],
   ["durable_objects.bindings", "name"],
+  ["send_email", "name"],
 ]);
 
 const REQUIRED_PRODUCTION_RUNTIME_VARS = new Map([
@@ -88,9 +89,9 @@ const REQUIRED_DEPLOYMENT_SECRETS = new Map([
         // (true when measured 2026-08-30, but a fact that expires the first
         // time someone connects an integration). It is that the failure is now
         // fail-fast and confined: the crypto-touching routes 500, every other
-        // route serves. That is the same shape as RESEND_API_KEY below —
-        // absent, one feature refuses up front and the rest of the system is
-        // untouched — and it must carry the same level, or "required" stops
+        // route serves. That is the same shape as an unconfigured SMS vendor —
+        // one feature refuses up front and the rest of the system is untouched
+        // — and it must carry the same level, or "required" stops
         // meaning "the Worker is broken for everyone".
         //
         // The missing key is still reported loudly on every production deploy;
@@ -99,11 +100,6 @@ const REQUIRED_DEPLOYMENT_SECRETS = new Map([
         name: "ENCRYPTION_KEY",
         level: "recommended",
         why: "encrypts stored third-party credentials (ai-analytics, platform integrations, forecast providers, encrypted backups); absent, those routes fail closed in production while the rest of the Worker serves",
-      },
-      {
-        name: "RESEND_API_KEY",
-        level: "recommended",
-        why: 'the only working email provider (USE_MAILCHANNELS="false" in production); without it every email flow -- registration, forgot-password, resend-verification -- refuses up front with 503 EMAIL_CHANNEL_UNAVAILABLE rather than accepting mail it cannot deliver',
       },
       {
         anyOf: [

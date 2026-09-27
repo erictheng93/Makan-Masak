@@ -123,7 +123,7 @@ describe("check-production-config", () => {
     expect(textOf(result.warnings)).not.toContain("JWT_SECRET");
   });
 
-  it("reproduces the real production state: three secrets, no blockers, three warnings", () => {
+  it("does not require a Resend key when Cloudflare email is bound", () => {
     // makanmasak-api-prod as of the incident.
     const result = checkProductionConfig({
       root: process.cwd(),
@@ -138,9 +138,7 @@ describe("check-production-config", () => {
     expect(textOf(result.warnings)).toContain(
       "missing production secret: ENCRYPTION_KEY",
     );
-    expect(textOf(result.warnings)).toContain(
-      "missing production secret: RESEND_API_KEY",
-    );
+    expect(textOf(result.warnings)).not.toContain("RESEND_API_KEY");
     expect(textOf(result.warnings)).toContain("SMS vendor credentials");
     // Every gap here disables one capability while the rest of the system keeps
     // serving, so none of them blocks a deploy. Only a secret whose absence
@@ -148,11 +146,38 @@ describe("check-production-config", () => {
     expect(result.violations).toEqual([]);
   });
 
+  it("requires the Cloudflare email binding in the production environment", () => {
+    const root = mkdtempSync(join(tmpdir(), "prod-config-email-"));
+    mkdirSync(join(root, "apps", "api"), { recursive: true });
+    writeFileSync(
+      join(root, "apps", "api", "wrangler.toml"),
+      [
+        "[[send_email]]",
+        'name = "NOTIFICATION_EMAIL"',
+        "[env.production]",
+        'name = "makanmasak-api-prod"',
+        "[env.production.vars]",
+        'API_BASE_URL = "https://api.makanmasak.com"',
+        'CORS_ORIGIN = "https://makanmasak.com"',
+      ].join("\n"),
+    );
+
+    const result = checkProductionConfig({
+      root,
+      env: {},
+      requireDeploymentSecrets: false,
+    });
+
+    expect(textOf(result.violations)).toContain(
+      "missing production binding: send_email:NOTIFICATION_EMAIL",
+    );
+  });
+
   it("keeps ENCRYPTION_KEY at warning level now that #300 made its absence fail closed", () => {
     // Pinned deliberately, not inherited. Before #300 an absent key silently
     // derived a reproducible AES key from the empty string; the crypto helpers
     // now throw in production instead. That turns the gap into a fail-fast,
-    // feature-confined failure — the same shape as RESEND_API_KEY — so it stays
+    // feature-confined failure — the same shape as an unconfigured SMS vendor — so it stays
     // a warning. "required" is reserved for secrets whose absence breaks the
     // Worker for everyone. Flipping this to "required" should be a conscious
     // edit to both the entry and this test, not a drive-by.
@@ -199,7 +224,6 @@ describe("check-production-config", () => {
         "JWT_SECRET",
         "QR_SIGNING_KEY",
         "ENCRYPTION_KEY",
-        "RESEND_API_KEY",
         // A username without its password is not a usable vendor.
         "MITAKE_USERNAME",
       ]),
