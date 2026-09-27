@@ -99,4 +99,29 @@ describe("authentication validation schemas", () => {
       /Either 2FA token or backup code/,
     );
   });
+
+  // Short passwords used to skip the strength rule entirely ("abcdef" passed
+  // while "Aming2026Rice" failed). Every path that sets a password now applies
+  // the full rule; login keeps accepting whatever was set before.
+  it.each(["abcdef", "Abc1@x", "Aming2026Rice", "Aming#2026Rice"])(
+    "rejects %s wherever a password is set",
+    (password) => {
+      expect(authSchemas.password.safeParse(password).success).toBe(false);
+      expect(
+        authSchemas.resetPassword.safeParse({
+          token: "t",
+          newPassword: password,
+          confirmPassword: password,
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it("accepts a password that meets the full rule, and login still accepts a legacy one", () => {
+    expect(authSchemas.password.safeParse("Aming@2026Rice").success).toBe(true);
+    expect(
+      authSchemas.login.safeParse({ username: "owner1", password: "abcdef" })
+        .success,
+    ).toBe(true);
+  });
 });

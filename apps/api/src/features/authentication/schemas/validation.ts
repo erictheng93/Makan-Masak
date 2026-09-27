@@ -41,21 +41,22 @@ const locationInfoSchema = z.lazy(() =>
     .optional(),
 );
 
-// Password validation schema
+// Password validation schema, for every path that sets a password (register,
+// change, reset). It used to skip the strength rule below 8 characters, so a
+// 6-character "abcdef" passed while "Aming2026Rice" failed. Login does not use
+// this schema: accounts that set a password under the old minimum can still
+// sign in, and meet this rule the next time they change it.
+const PASSWORD_MIN_LENGTH = 8;
 const passwordSchema = z
   .string()
   .min(
-    VALIDATION_LIMITS.MIN_PASSWORD_LENGTH,
-    `Password must be at least ${VALIDATION_LIMITS.MIN_PASSWORD_LENGTH} characters`,
+    PASSWORD_MIN_LENGTH,
+    `Password must be at least ${PASSWORD_MIN_LENGTH} characters`,
   )
   .max(100, "Password must be less than 100 characters")
-  .refine(
-    (password) =>
-      password.length >= 8 ? PASSWORD_STRENGTH_REGEX.test(password) : true,
-    {
-      message:
-        "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character when 8+ characters",
-    },
+  .regex(
+    PASSWORD_STRENGTH_REGEX,
+    "Password must contain at least one uppercase letter, one lowercase letter, one number, and one of @$!%*?&",
   );
 
 // Username validation schema
