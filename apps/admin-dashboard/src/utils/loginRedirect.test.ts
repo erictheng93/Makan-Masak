@@ -1,10 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   loginRouteFor,
   loginUrlFor,
   readLoginRedirect,
+  redirectToKitchenDisplay,
   sanitizeLoginRedirect,
 } from "./loginRedirect";
+
+it("replaces the admin page with the kitchen display URL", () => {
+  const location = { replace: vi.fn() };
+  redirectToKitchenDisplay("https://kitchen.example.test", location);
+  expect(location.replace).toHaveBeenCalledExactlyOnceWith(
+    "https://kitchen.example.test",
+  );
+});
 
 describe("sanitizeLoginRedirect", () => {
   it("keeps an in-app absolute path with its query string", () => {

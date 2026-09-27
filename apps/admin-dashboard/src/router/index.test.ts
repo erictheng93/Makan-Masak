@@ -1,10 +1,19 @@
 // @vitest-environment jsdom
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { adminRestaurantOptionalRoutes, router } from "./index";
 import { UserRole } from "@/types";
 import { setAuthTokenProvider } from "@/utils/authTokenProvider";
+import { useAuthStore } from "@/stores/auth";
+import { api } from "@/services/api";
+
+const redirectToKitchenDisplay = vi.hoisted(() => vi.fn());
+
+vi.mock("@/utils/loginRedirect", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/utils/loginRedirect")>()),
+  redirectToKitchenDisplay,
+}));
 
 // A structurally valid JWT that expires in 2100, so the guard does not try a
 // refresh. Only the payload's exp is read client-side.
@@ -35,7 +44,33 @@ describe("dashboard home by role", () => {
   afterEach(() => {
     localStorage.clear();
     setAuthTokenProvider(() => null);
+    vi.restoreAllMocks();
+    redirectToKitchenDisplay.mockClear();
   });
+
+  it("logs out an authenticated chef and opens the kitchen display", async () => {
+    signInAs(UserRole.CHEF);
+    vi.spyOn(api, "post").mockResolvedValue({} as never);
+    const authStore = useAuthStore();
+
+    await router.push("/dashboard");
+
+    expect(authStore.isAuthenticated).toBe(false);
+    expect(router.currentRoute.value.path).not.toBe("/dashboard");
+    expect(redirectToKitchenDisplay).toHaveBeenCalledExactlyOnceWith(
+      "http://localhost:3002",
+    );
+  }, 30_000);
+
+  it("keeps an authenticated chef on an allowed kitchen page", async () => {
+    signInAs(UserRole.CHEF);
+
+    await router.push("/dashboard/kitchen");
+
+    expect(router.currentRoute.value.path).toBe("/dashboard/kitchen");
+    expect(useAuthStore().isAuthenticated).toBe(true);
+    expect(redirectToKitchenDisplay).not.toHaveBeenCalled();
+  }, 30_000);
 
   it("sends a cashier to the checkout instead", async () => {
     signInAs(UserRole.CASHIER);

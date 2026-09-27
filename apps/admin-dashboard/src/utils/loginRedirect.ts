@@ -9,6 +9,15 @@
  */
 export const LOGIN_PATH = "/login";
 export const LOGIN_REDIRECT_QUERY = "redirect";
+export const KITCHEN_DISPLAY_URL =
+  import.meta.env.VITE_KITCHEN_DISPLAY_URL || "http://localhost:3002";
+
+export function redirectToKitchenDisplay(
+  url: string,
+  location: Pick<Location, "replace"> = window.location,
+): void {
+  location.replace(url);
+}
 
 /**
  * Keep only same-origin, absolute-path targets.

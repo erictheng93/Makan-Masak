@@ -9,9 +9,11 @@ import {
   createChunkRecovery,
 } from "@makanmasak/utils/chunk-recovery";
 import {
+  KITCHEN_DISPLAY_URL,
   LOGIN_REDIRECT_QUERY,
   loginRouteFor,
   readLoginRedirect,
+  redirectToKitchenDisplay,
 } from "@/utils/loginRedirect";
 
 const FALLBACK_DOCUMENT_TITLE = "MakanMasak";
@@ -720,6 +722,11 @@ router.beforeEach(async (to, _, next) => {
     !authStore.isAdminRole &&
     authStore.userRole !== UserRole.OWNER
   ) {
+    if (authStore.userRole === UserRole.CHEF) {
+      await authStore.logout();
+      redirectToKitchenDisplay(KITCHEN_DISPLAY_URL);
+      return next(false);
+    }
     const home = authStore.getDefaultRoute();
     if (home !== to.path) return next(home);
   }
