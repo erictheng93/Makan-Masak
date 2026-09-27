@@ -70,6 +70,17 @@ const idID: Messages = {
       submitting: "Mengirimkan...",
     },
     title: "Formulir Aplikasi",
+    submitErrors: {
+      rateLimited:
+        "Terlalu banyak pengiriman. Setiap jaringan dapat mengirim 5 kali per jam (percobaan gagal ikut dihitung). Silakan coba lagi setelah jam berikutnya, atau gunakan data seluler.",
+      validation:
+        "Beberapa data tidak valid. Periksa setiap kolom lalu kirim lagi.",
+      cityNotInCountry:
+        "Kota yang dipilih tidak berada di negara ini. Silakan pilih negara dan kota lagi.",
+      marketNotInCity:
+        "Pasar yang dipilih tidak berada di kota ini. Silakan pilih lagi.",
+      network: "Masalah koneksi. Periksa jaringan Anda lalu coba lagi.",
+    },
     toast: {
       submitFailureFallback: "Pengiriman gagal. Silakan coba lagi nanti.",
       submitSuccess: "Permohonan diajukan",
@@ -91,6 +102,8 @@ const idID: Messages = {
       subdomainInvalidFormat:
         "Hanya huruf kecil, angka, dan tanda hubung yang diperbolehkan",
       subdomainTaken: "URL ini sudah dipakai",
+      tooShort: "Minimal 2 karakter",
+      phoneInvalid: "Nomor telepon harus 8 sampai 20 karakter",
       subdomainTooShort: "Minimal harus 3 karakter",
     },
   },

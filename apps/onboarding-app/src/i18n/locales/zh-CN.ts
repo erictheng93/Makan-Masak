@@ -67,6 +67,14 @@ const zhCN: Messages = {
       submitting: "提交中...",
     },
     title: "填写申请资料",
+    submitErrors: {
+      rateLimited:
+        "提交次数太多了。同一个网络每小时最多提交 5 次（提交失败也会计算），请等到下一个整点再试，或改用手机网络。",
+      validation: "有资料不符合规定，请检查每一栏后再提交一次。",
+      cityNotInCountry: "选择的城市不属于这个国家，请重新选择国家和城市。",
+      marketNotInCity: "选择的夜市／商圈不属于这个城市，请重新选择。",
+      network: "网络连接有问题，请确认网络后再试一次。",
+    },
     toast: {
       submitFailureFallback: "提交失败，请稍后再试",
       submitSuccess: "申请资料已提交",
@@ -87,6 +95,8 @@ const zhCN: Messages = {
       cityRequired: "请输入城市",
       subdomainInvalidFormat: "只能包含小写字母、数字和连字符",
       subdomainTaken: "此网址已被使用",
+      tooShort: "至少需要 2 个字",
+      phoneInvalid: "电话需为 8 到 20 个字符",
       subdomainTooShort: "至少需要 3 个字元",
     },
   },

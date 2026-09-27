@@ -69,6 +69,17 @@ const msMY: Messages = {
       submitting: "Menyerahkan...",
     },
     title: "Borang Permohonan",
+    submitErrors: {
+      rateLimited:
+        "Terlalu banyak penyerahan. Setiap rangkaian boleh menyerah 5 kali sejam (percubaan gagal turut dikira). Sila cuba selepas jam berikutnya, atau tukar ke data mudah alih.",
+      validation:
+        "Sesetengah maklumat tidak sah. Sila semak setiap ruangan dan serah semula.",
+      cityNotInCountry:
+        "Bandar yang dipilih bukan dalam negara ini. Sila pilih negara dan bandar semula.",
+      marketNotInCity:
+        "Pasar yang dipilih bukan dalam bandar ini. Sila pilih semula.",
+      network: "Masalah sambungan. Sila semak rangkaian anda dan cuba lagi.",
+    },
     toast: {
       submitFailureFallback: "Penyerahan gagal. Sila cuba lagi kemudian.",
       submitSuccess: "Permohonan diserahkan",
@@ -90,6 +101,8 @@ const msMY: Messages = {
       subdomainInvalidFormat:
         "Hanya huruf kecil, nombor dan sempang dibenarkan",
       subdomainTaken: "URL ini sudah diambil",
+      tooShort: "Mestilah sekurang-kurangnya 2 aksara",
+      phoneInvalid: "Nombor telefon mestilah 8 hingga 20 aksara",
       subdomainTooShort: "Mestilah sekurang-kurangnya 3 aksara",
     },
   },

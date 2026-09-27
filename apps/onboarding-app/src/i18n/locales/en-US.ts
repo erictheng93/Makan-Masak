@@ -166,6 +166,19 @@ const enUS: Messages = {
         "Only lowercase letters, numbers, and hyphens allowed",
       subdomainTooShort: "Must be at least 3 characters",
       subdomainTaken: "This URL is already taken",
+      tooShort: "Must be at least 2 characters",
+      phoneInvalid: "Phone number must be 8 to 20 characters",
+    },
+    submitErrors: {
+      rateLimited:
+        "Too many submissions. Each network can submit 5 times per clock hour (failed attempts count too). Please try again after the next hour, or switch to mobile data.",
+      validation:
+        "Some details are not valid. Please check each field and submit again.",
+      cityNotInCountry:
+        "The selected city is not in this country. Please choose the country and city again.",
+      marketNotInCity:
+        "The selected market is not in this city. Please choose again.",
+      network: "Connection problem. Please check your network and try again.",
     },
     toast: {
       submitSuccess: "Application submitted",

@@ -69,6 +69,17 @@ const viVN: Messages = {
       submitting: "Đang gửi...",
     },
     title: "Đơn đăng ký",
+    submitErrors: {
+      rateLimited:
+        "Gửi quá nhiều lần. Mỗi mạng chỉ được gửi 5 lần mỗi giờ (lần gửi thất bại cũng được tính). Vui lòng thử lại sau giờ tiếp theo hoặc chuyển sang dữ liệu di động.",
+      validation:
+        "Một số thông tin không hợp lệ. Vui lòng kiểm tra từng ô và gửi lại.",
+      cityNotInCountry:
+        "Thành phố đã chọn không thuộc quốc gia này. Vui lòng chọn lại quốc gia và thành phố.",
+      marketNotInCity:
+        "Chợ đã chọn không thuộc thành phố này. Vui lòng chọn lại.",
+      network: "Lỗi kết nối. Vui lòng kiểm tra mạng và thử lại.",
+    },
     toast: {
       submitFailureFallback: "Gửi không thành công. Vui lòng thử lại sau.",
       submitSuccess: "Đơn đăng ký đã được gửi",
@@ -90,6 +101,8 @@ const viVN: Messages = {
       subdomainInvalidFormat:
         "Chỉ cho phép chữ cái viết thường, số và dấu gạch nối",
       subdomainTaken: "URL này đã được sử dụng",
+      tooShort: "Phải có ít nhất 2 ký tự",
+      phoneInvalid: "Số điện thoại phải từ 8 đến 20 ký tự",
       subdomainTooShort: "Phải có ít nhất 3 ký tự",
     },
   },

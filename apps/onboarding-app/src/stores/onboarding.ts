@@ -43,8 +43,9 @@ export const useOnboardingStore = defineStore("onboarding", () => {
   // Loading states
   const isLoading = ref(false);
 
-  // Error state
-  const apiError = ref<string | null>(null);
+  // Error state: the server's error code. The page translates it; the
+  // server message itself is English and never shown to applicants.
+  const apiErrorCode = ref<string | null>(null);
 
   // ============================================================
   // Computed
@@ -65,7 +66,7 @@ export const useOnboardingStore = defineStore("onboarding", () => {
     data: CreateApplicationData,
   ): Promise<boolean> {
     isLoading.value = true;
-    apiError.value = null;
+    apiErrorCode.value = null;
 
     try {
       const result = await onboardingApi.createApplication(data);
@@ -82,11 +83,8 @@ export const useOnboardingStore = defineStore("onboarding", () => {
 
       return true;
     } catch (error) {
-      if (error instanceof ApiError) {
-        apiError.value = error.message;
-      } else {
-        apiError.value = "Failed to submit application";
-      }
+      apiErrorCode.value =
+        error instanceof ApiError ? error.code : "UNKNOWN_ERROR";
       return false;
     } finally {
       isLoading.value = false;
@@ -139,7 +137,7 @@ export const useOnboardingStore = defineStore("onboarding", () => {
     applicationId.value = null;
     applicationSecret.value = null;
     assignedSubdomain.value = null;
-    apiError.value = null;
+    apiErrorCode.value = null;
     sessionStorage.removeItem("onboarding_application");
   }
 
@@ -147,7 +145,7 @@ export const useOnboardingStore = defineStore("onboarding", () => {
    * Clear error
    */
   function clearError() {
-    apiError.value = null;
+    apiErrorCode.value = null;
   }
 
   // Initialize from session
@@ -161,7 +159,7 @@ export const useOnboardingStore = defineStore("onboarding", () => {
     assignedSubdomain,
     completionResult,
     isLoading,
-    apiError,
+    apiErrorCode,
 
     // Computed
     isCompleted,

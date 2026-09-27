@@ -153,6 +153,16 @@ const zhTW = {
       subdomainInvalidFormat: "只能包含小寫字母、數字和連字符",
       subdomainTooShort: "至少需要 3 個字元",
       subdomainTaken: "此網址已被使用",
+      tooShort: "至少需要 2 個字",
+      phoneInvalid: "電話需為 8 到 20 個字元",
+    },
+    submitErrors: {
+      rateLimited:
+        "送出次數太多了。同一個網路每小時最多送出 5 次（送出失敗也會算），請等到下一個整點再試，或改用手機網路。",
+      validation: "有資料不符合規定，請檢查每一格後再送出一次。",
+      cityNotInCountry: "選擇的縣市不屬於這個國家，請重新選擇國家和縣市。",
+      marketNotInCity: "選擇的夜市／商圈不屬於這個縣市，請重新選擇。",
+      network: "網路連線有問題，請確認網路後再試一次。",
     },
     toast: {
       submitSuccess: "申請資料已提交",
