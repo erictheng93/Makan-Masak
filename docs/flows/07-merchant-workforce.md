@@ -100,6 +100,11 @@
 
 - `packages/database/src/services/LeaveService.test.ts`
 - `apps/api/src/features/scheduling/*`（見 feature 內 `*.test.ts`）
+- `tests/e2e/admin/`（`admin-real`）：`attendance`、`leaves`
+
+**手動探索 QA（production）**
+
+- [店家後台流程 QA 2026-09-01](../investigations/2026-09-01-admin-dashboard-flow-qa.html) — F7–F10（打卡、假別、餘額初始化）
 
 ## 8. 已知缺口
 
