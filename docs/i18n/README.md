@@ -4,6 +4,7 @@ The current CSV is a 2026-09-29 review draft copied from the app locale files.
 It is not approved for import. `locale-approval-manifest.json` records the
 2026-05-26 approval of the CSV at commit `a2ece23b`; its hash does not approve
 this draft. Review the current translations before recording a new approval.
+`REVIEW-CHECKLIST.md` lists the cells that need a human verdict first.
 
 `locale-translator-handoff.csv` is the source handoff for completing the app
 locales that were previously stubbed:

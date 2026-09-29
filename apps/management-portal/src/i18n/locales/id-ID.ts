@@ -216,7 +216,7 @@ const idID: Messages = {
     deployInfo: {
       connected: "Terhubung",
       currentVersion: "Versi Saat Ini",
-      itemSuffix: "個",
+      itemSuffix: "",
       lastDeploy: "Penerapan Terakhir",
       notConnected: "Tidak terhubung",
       notDeployed: "Tidak dikerahkan",

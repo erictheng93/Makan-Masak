@@ -217,7 +217,7 @@ const viVN: Messages = {
     deployInfo: {
       connected: "Đã kết nối",
       currentVersion: "Phiên bản hiện tại",
-      itemSuffix: "個",
+      itemSuffix: "",
       lastDeploy: "Triển khai lần cuối",
       notConnected: "Không được kết nối",
       notDeployed: "Chưa triển khai",

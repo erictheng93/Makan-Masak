@@ -217,7 +217,7 @@ const msMY: Messages = {
     deployInfo: {
       connected: "Bersambung",
       currentVersion: "Versi Semasa",
-      itemSuffix: "個",
+      itemSuffix: "",
       lastDeploy: "Deploy Terakhir",
       notConnected: "Tidak bersambung",
       notDeployed: "Tidak dikerahkan",
