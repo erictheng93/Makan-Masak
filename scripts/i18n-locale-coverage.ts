@@ -232,6 +232,7 @@ interface HandoffLocaleOutput {
   localeFile: string;
   constantName: string;
   messages: Record<string, unknown>;
+  unchanged: boolean;
 }
 
 interface HandoffValidationResult {
@@ -314,20 +315,40 @@ async function validateApprovedHandoff(
       const messages: Record<string, unknown> = {};
       const localeIndex = localeIndexes.get(locale) ?? -1;
 
+      // Emptiness is judged on the trimmed cell, but the value is kept
+      // verbatim: " min" and "note: " lean on their edge spaces (#429).
+      const translations = new Map<string, string>();
       for (const row of appRows) {
         const key = row[keyIndex];
-        const translation = row[localeIndex]?.trim();
+        const translation = row[localeIndex];
 
-        if (expectedKeys.has(key) && translation) {
-          setNestedValue(messages, key, translation);
+        if (expectedKeys.has(key) && translation?.trim()) {
+          translations.set(key, translation);
         }
+      }
+
+      // Keep the existing file's key order so an import only touches the
+      // lines that changed; keys new to the file follow in CSV order.
+      const existingKeys = flattenMessages(await loadMessages(app, locale)).map(
+        (entry) => entry.key,
+      );
+      const existingKeySet = new Set(existingKeys);
+      const orderedKeys = [
+        ...existingKeys.filter((key) => translations.has(key)),
+        ...[...translations.keys()].filter((key) => !existingKeySet.has(key)),
+      ];
+      for (const key of orderedKeys) {
+        setNestedValue(messages, key, translations.get(key) as string);
       }
 
       const localeFile = path.join(app.localeDir, `${locale}.ts`);
       const constantName = locale
         .replace("-", "")
         .replace(/^([a-z])/, (match) => match.toLowerCase());
-      localeOutputs.push({ localeFile, constantName, messages });
+      const unchanged =
+        JSON.stringify(messages) ===
+        JSON.stringify(await loadMessages(app, locale));
+      localeOutputs.push({ localeFile, constantName, messages, unchanged });
     }
   }
 
@@ -435,7 +456,14 @@ async function importApprovedHandoff(csvPath: string): Promise<void> {
   assertNoMissingTranslations(missingTranslations);
   await validateApprovalManifest(csvPath);
 
-  for (const { localeFile, constantName, messages } of localeOutputs) {
+  for (const {
+    localeFile,
+    constantName,
+    messages,
+    unchanged,
+  } of localeOutputs) {
+    if (unchanged) continue;
+
     const file = [
       'import type { Messages } from "../types";',
       "",
