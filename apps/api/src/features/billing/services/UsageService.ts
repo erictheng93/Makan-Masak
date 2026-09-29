@@ -3,6 +3,7 @@ import { unionAll } from "drizzle-orm/sqlite-core";
 import {
   METER_KEYS,
   PLAN_QUOTAS,
+  TRIAL_DURATION_DAYS,
   drizzle,
   usageEvents,
   usageMeterBuckets,
@@ -378,12 +379,12 @@ export class UsageService {
     }
 
     if (subscription.plan_tier === "trial") {
-      return {
-        startAt: subscription.created_at_ms,
-        endAt:
-          subscription.trial_ends_at_ms ??
-          subscription.created_at_ms + 14 * DAY_MS,
-      };
+      const endAt =
+        subscription.trial_ends_at_ms ??
+        subscription.created_at_ms + TRIAL_DURATION_DAYS * DAY_MS;
+      // An expired trial keeps its tier (nag-only), so once the trial window
+      // is over usage goes to monthly cycles like any other plan.
+      if (now < endAt) return { startAt: subscription.created_at_ms, endAt };
     }
 
     return this.fallbackMonthlyCycle(now);

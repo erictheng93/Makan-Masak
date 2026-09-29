@@ -380,6 +380,37 @@ describe("aggregateUsageMeters bucket folding", () => {
       }),
     ]);
   });
+
+  it("puts usage after an expired trial on a monthly cycle, not the closed trial window", async () => {
+    await seedRestaurant(OTHER_RESTAURANT_ID, "Expired Trial Restaurant");
+    await testDb.drizzle.insert(shopSubscriptions).values({
+      restaurantId: OTHER_RESTAURANT_ID,
+      planTier: "trial",
+      isActive: true,
+      createdAt: new Date(HOUR_A - 40 * DAY_MS),
+      trialEndsAt: new Date(HOUR_A - 1 * DAY_MS),
+    });
+    await recordUsageBucketDelta(testDb.bindings.DB, {
+      restaurantId: OTHER_RESTAURANT_ID,
+      meterKey: "api.requests",
+      quantity: 4,
+      occurredAtMs: HOUR_A + 1_000,
+    });
+
+    await aggregateUsageMeters(buildEnv());
+
+    const month = new Date(HOUR_A + 1_000);
+    expect(await readMeters(OTHER_RESTAURANT_ID)).toEqual([
+      expect.objectContaining({
+        cycle_start_at_ms: Date.UTC(
+          month.getUTCFullYear(),
+          month.getUTCMonth(),
+          1,
+        ),
+        total_quantity: 4,
+      }),
+    ]);
+  });
 });
 
 describe("usage TTL sweep", () => {

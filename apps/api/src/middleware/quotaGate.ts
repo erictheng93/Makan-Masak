@@ -3,6 +3,7 @@ import { ApiError } from "../shared/utils/api-error";
 import type { Env } from "../types/env";
 import {
   PLAN_QUOTAS,
+  TRIAL_DURATION_DAYS,
   type MeterKey,
   type MeterQuota,
   type PlanTier,
@@ -78,12 +79,11 @@ function resolveCycle(subscription: SubscriptionRow, now: number) {
   }
 
   if (subscription.plan_tier === "trial") {
-    return {
-      startAt: subscription.created_at_ms,
-      endAt:
-        subscription.trial_ends_at_ms ??
-        subscription.created_at_ms + 14 * DAY_MS,
-    };
+    const endAt =
+      subscription.trial_ends_at_ms ??
+      subscription.created_at_ms + TRIAL_DURATION_DAYS * DAY_MS;
+    // Expired trials keep their tier (nag-only): monthly cycles from here on.
+    if (now < endAt) return { startAt: subscription.created_at_ms, endAt };
   }
 
   return fallbackMonthlyCycle(now);

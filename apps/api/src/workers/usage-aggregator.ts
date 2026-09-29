@@ -6,6 +6,7 @@ import {
   usageEvents,
   usageMeterBuckets,
   usageMeters,
+  TRIAL_DURATION_DAYS,
   type D1Database,
   type MeterKey,
 } from "@makanmasak/database";
@@ -69,10 +70,12 @@ function resolveUsageCycle(
 
   if (subscription.planTier === "trial") {
     const createdAt = subscription.createdAt.getTime();
-    return {
-      startAt: createdAt,
-      endAt: subscription.trialEndsAt?.getTime() ?? createdAt + 14 * DAY_MS,
-    };
+    const endAt =
+      subscription.trialEndsAt?.getTime() ??
+      createdAt + TRIAL_DURATION_DAYS * DAY_MS;
+    // Events after the trial window belong to a monthly cycle: the tier stays
+    // "trial" (nag-only), so the readers use the same fallback.
+    if (occurredAt < endAt) return { startAt: createdAt, endAt };
   }
 
   return fallbackMonthlyCycle(occurredAt);
