@@ -228,6 +228,13 @@ const features = computed(() => [
         <p class="mt-1 text-sm text-gray-500">
           {{ t("home.cta.subtitle") }}
         </p>
+        <a
+          href="/guide/onboarding-self-apply-guide.html"
+          data-testid="apply-guide-link"
+          class="mt-2 inline-block text-sm text-primary-700 hover:underline"
+        >
+          {{ t("guide.link") }}
+        </a>
       </div>
       <RouterLink
         to="/apply"

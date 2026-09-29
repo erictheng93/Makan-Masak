@@ -189,6 +189,9 @@ const idID: Messages = {
     standard: "Standar",
     trial: "Uji coba gratis",
   },
+  guide: {
+    link: "Panduan pendaftaran langkah demi langkah (Mandarin Tradisional)",
+  },
   success: {
     button: {
       backHome: "Kembali ke Rumah",

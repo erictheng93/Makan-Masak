@@ -170,6 +170,9 @@ const zhTW = {
     },
   },
 
+  guide: {
+    link: "開店申請使用手冊",
+  },
   success: {
     title: "申請已送出！",
     subtitleLine1: "我們已收到您的店家加入申請。",

@@ -188,6 +188,9 @@ const msMY: Messages = {
     standard: "Standard",
     trial: "Percubaan percuma",
   },
+  guide: {
+    link: "Panduan permohonan langkah demi langkah (Cina Tradisional)",
+  },
   success: {
     button: {
       backHome: "Kembali ke Rumah",
