@@ -319,13 +319,11 @@ one are correct, because short UI labels legitimately match their key
 (`retry` → "Retry", `save` → "Save"). Separating them needs a human reading
 source and target side by side.
 
-**Do not regenerate the handoff CSV to "fix" this.**
-`docs/i18n/locale-translator-handoff.csv` is a 2026-05-26 snapshot and the
-manifest pins its sha256 as the thing the maintainer approved. Re-exporting it
-changes that hash and invalidates the signed approval, in exchange for nothing:
-`pnpm check:i18n-locales` — the only i18n check in CI and in `verify:push` —
-never reads it. It is expected to be stale with respect to the 51 keys #344
-removed.
+The 2026-05-26 approved handoff remains available at commit `a2ece23b`, and
+the manifest still pins its SHA-256. The current handoff CSV was refreshed on
+2026-09-29 from the app locale files as a review draft; it needs new maintainer
+approval before import. `pnpm check:i18n-locales` checks locale key coverage,
+not handoff approval or translation quality.
 
 ## database / money schema
 

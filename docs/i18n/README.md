@@ -1,14 +1,21 @@
 # i18n Locale Handoff
 
+The current CSV is a 2026-09-29 review draft copied from the app locale files.
+It is not approved for import. `locale-approval-manifest.json` records the
+2026-05-26 approval of the CSV at commit `a2ece23b`; its hash does not approve
+this draft. Review the current translations before recording a new approval.
+
 `locale-translator-handoff.csv` is the source handoff for completing the app
 locales that were previously stubbed:
 
+- `apps/admin-dashboard`: `en-US`, `zh-CN`, `ja-JP`, `vi-VN`, `id-ID`
 - `apps/kitchen-display`: `zh-CN`, `vi-VN`, `ms-MY`, `id-ID`
 - `apps/onboarding-app`: `zh-CN`, `vi-VN`, `ms-MY`, `id-ID`
 - `apps/management-portal`: `zh-CN`, `vi-VN`, `ms-MY`, `id-ID`
 
 Each row contains the app name, dot-path key, Traditional Chinese source text,
-English source text, and one column for each target locale.
+an English secondary source (empty for admin, where `en-US` is a target), and
+one column for each target locale.
 
 To regenerate the handoff after source copy changes:
 
@@ -17,7 +24,8 @@ pnpm exec tsx scripts/i18n-locale-coverage.ts --export-handoff
 ```
 
 The export preserves any already-filled target cells for matching `app` + `key`
-rows, so it is safe to rerun after source copy changes.
+rows. After source copy changes, review those preserved cells against the new
+source text before seeking approval.
 
 After the target columns have been reviewed and accepted by the project
 maintainer, import the approved CSV:
