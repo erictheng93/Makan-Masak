@@ -86,7 +86,6 @@ import { toCsv } from "../../../shared/utils/csv";
 import { createMarketCheckoutSchema } from "../schemas/validation";
 import { z } from "zod";
 import {
-  DEFAULT_CURRENCY,
   generateUUID,
   normalizeCurrencyCode,
   roundToCurrencyCents,
