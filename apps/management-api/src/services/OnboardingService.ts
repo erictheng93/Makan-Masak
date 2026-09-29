@@ -916,9 +916,9 @@ export class OnboardingService {
         updatedAt: new Date(rejectedAtMs).toISOString(),
       })
       .where(eq(onboardingApplications.id, applicationId));
-    await this.writeApplicationAuditEvent(applicationId, "rejected", actor, {
-      reason,
-    });
+    // The free-text reason stays on the application row (redacted with it).
+    // Events are append-only, so anything written here outlives retention.
+    await this.writeApplicationAuditEvent(applicationId, "rejected", actor, {});
     await this.sendApplicationRejectionEmail(application, reason);
     return {
       success: true,

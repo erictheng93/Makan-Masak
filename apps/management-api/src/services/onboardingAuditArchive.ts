@@ -6,10 +6,15 @@ import {
 } from "../db/onboarding-tables";
 import type { ManagementEnv } from "../types";
 
-/** Rejected applications retain contact and request data for one year. */
-export const REJECTED_APPLICATION_RETENTION_MS = 365 * 24 * 60 * 60 * 1000;
+/**
+ * Rejected applications retain contact and request data for 90 days: enough
+ * for appeals and duplicate/abuse checks, and short enough to defend under
+ * TW PDPA art. 11 and MY PDPA s.10. Keep the R2 lock/lifecycle in
+ * docs/runbooks/onboarding-pii-retention.md in step with this.
+ */
+export const REJECTED_APPLICATION_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
 
-const REDACTED_VALUE = "[redacted after 12-month retention]";
+const REDACTED_VALUE = "[redacted after retention period]";
 
 /**
  * Keep the application row and its append-only audit events for traceability,
@@ -40,6 +45,7 @@ export async function redactExpiredRejectedApplications(
          application_secret_hash = NULL,
          ip_address = NULL,
          user_agent = NULL,
+         rejection_reason = NULL,
          updated_at = ?
      WHERE status = 'rejected'
        AND rejected_at_ms IS NOT NULL
@@ -68,6 +74,16 @@ export async function redactExpiredRejectedApplications(
  * ponytail: full-table reads, fine at hundreds of rows; page through both
  * tables once they reach tens of thousands.
  */
+function stripReason(metadata: string | null): string | null {
+  if (!metadata) return metadata;
+  try {
+    const { reason: _reason, ...rest } = JSON.parse(metadata);
+    return Object.keys(rest).length ? JSON.stringify(rest) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function onboardingAuditArchiveKey(now: Date): string {
   return `management-audit/onboarding/${now.toISOString().slice(0, 10)}.json`;
 }
@@ -103,7 +119,7 @@ export async function archiveOnboardingAudit(
   ]);
 
   // Do not copy rejected applicants' contact or request metadata into new
-  // archives. Older daily objects are covered by the R2 365-day lifecycle.
+  // archives. Older daily objects are covered by the R2 90-day lifecycle.
   const redactedApplications = applications.map((application) =>
     application.status === "rejected"
       ? {
@@ -123,16 +139,23 @@ export async function archiveOnboardingAudit(
           assignedSubdomain: null,
           ipAddress: null,
           userAgent: null,
+          rejectionReason: null,
         }
       : application,
   );
+  // Reasons are free text and may name people; events written before they
+  // were dropped from the event stream still carry one.
+  const archivedEvents = auditEvents.map(({ metadata, ...event }) => ({
+    ...event,
+    metadata: stripReason(metadata),
+  }));
 
   const archived = await env.AUDIT_ARCHIVE.put(
     key,
     JSON.stringify({
       exportedAt: now.toISOString(),
       applications: redactedApplications,
-      auditEvents,
+      auditEvents: archivedEvents,
     }),
     {
       onlyIf: { etagDoesNotMatch: "*" },

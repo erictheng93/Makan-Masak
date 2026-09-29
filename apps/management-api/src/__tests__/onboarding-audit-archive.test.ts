@@ -141,10 +141,10 @@ describe("onboarding audit archive", () => {
     ]);
     expect(body.applications[1]).toMatchObject({
       status: "rejected",
-      rejectionReason: "Duplicate stall",
+      rejectionReason: null,
       rejectedAtMs: 1_790_000_000_000,
-      contactEmail: "[redacted after 12-month retention]",
-      contactPhone: "[redacted after 12-month retention]",
+      contactEmail: "[redacted after retention period]",
+      contactPhone: "[redacted after retention period]",
       address: null,
       city: null,
       latitude: null,
@@ -161,8 +161,9 @@ describe("onboarding audit archive", () => {
     ).toEqual(["submitted", "rejected"]);
     expect(body.auditEvents[1]).toMatchObject({
       actorEmail: "ops@example.test",
-      metadata: JSON.stringify({ reason: "Duplicate stall" }),
+      metadata: null,
     });
+    expect(JSON.stringify(body)).not.toContain("Duplicate stall");
   });
 
   it("keeps the first snapshot when the same UTC day is archived again", async () => {
@@ -186,12 +187,13 @@ describe("onboarding audit archive", () => {
   it("redacts expired rejected applicants once while preserving audit rows", async () => {
     const db = createManagementDb();
     const orm = drizzle(db);
-    const cutoff = Date.parse("2025-09-23T00:00:00.000Z");
+    const cutoff = Date.parse("2026-06-25T00:00:00.000Z");
     await orm.insert(onboardingApplications).values([
       buildApplication({
         id: "APP-EXPIRED",
         status: "rejected",
         rejectedAtMs: cutoff - 1,
+        rejectionReason: "Duplicate stall",
         address: "12 Test Street",
         district: "Bukit Bintang",
         city: "Kuala Lumpur",
@@ -229,7 +231,7 @@ describe("onboarding audit archive", () => {
       .prepare(
         `SELECT id, business_name, contact_name, contact_email, contact_phone,
                 address, district, city, country_code, stall_number,
-                requested_subdomain, ip_address, user_agent, status,
+                requested_subdomain, ip_address, user_agent, rejection_reason, status,
                 application_secret_hash
          FROM onboarding_applications ORDER BY id`,
       )
@@ -238,9 +240,9 @@ describe("onboarding audit archive", () => {
     expect(changed).toBe(1);
     expect(rows[0]).toMatchObject({
       id: "APP-EXPIRED",
-      business_name: "[redacted after 12-month retention]",
-      contact_email: "[redacted after 12-month retention]",
-      contact_phone: "[redacted after 12-month retention]",
+      business_name: "[redacted after retention period]",
+      contact_email: "[redacted after retention period]",
+      contact_phone: "[redacted after retention period]",
       address: null,
       district: null,
       city: null,
@@ -249,6 +251,7 @@ describe("onboarding audit archive", () => {
       requested_subdomain: null,
       ip_address: null,
       user_agent: null,
+      rejection_reason: null,
       status: "rejected",
       application_secret_hash: null,
     });
