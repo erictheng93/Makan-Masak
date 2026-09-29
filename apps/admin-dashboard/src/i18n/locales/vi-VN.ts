@@ -6021,6 +6021,11 @@ const viVN: Messages = {
     trialExpiredAction: "Chọn gói",
     trialExpiredTitle: "Thời gian dùng thử đã kết thúc",
     trialExpiredContinue: "Tiếp tục",
+    upgradeTitle: "Nâng cấp gói",
+    upgradeBody:
+      "Chưa có thanh toán trực tuyến. Hãy gửi email cho chúng tôi để được thiết lập gói. Trong thời gian này mọi tính năng vẫn hoạt động bình thường.",
+    upgradeAction: "Gửi email để nâng cấp",
+    upgradeMailSubject: "Nâng cấp gói MakanMasak",
     usageTitle: "Mức dùng kỳ này",
     usageEmpty: "Chưa có dữ liệu sử dụng trong kỳ này.",
     modulesTitle: "Tính năng đi kèm",

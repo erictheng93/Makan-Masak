@@ -5870,6 +5870,11 @@ const zhCN: Messages = {
     trialExpiredAction: "选择方案",
     trialExpiredTitle: "试用期已结束",
     trialExpiredContinue: "继续使用",
+    upgradeTitle: "升级方案",
+    upgradeBody:
+      "目前尚未提供在线自助升级。请来信联系我们，我们会协助您开通方案，在此之前所有功能仍可正常使用。",
+    upgradeAction: "来信升级方案",
+    upgradeMailSubject: "升级 MakanMasak 方案",
     usageTitle: "本期用量",
     usageEmpty: "本期暂无用量记录。",
     modulesTitle: "方案包含的功能",

@@ -6053,6 +6053,11 @@ const idID: Messages = {
     trialExpiredAction: "Pilih paket",
     trialExpiredTitle: "Masa uji coba telah berakhir",
     trialExpiredContinue: "Lanjutkan",
+    upgradeTitle: "Tingkatkan paket",
+    upgradeBody:
+      "Pembayaran online belum tersedia. Kirim email kepada kami dan kami akan menyiapkan paket Anda. Sementara itu semua fitur tetap berfungsi.",
+    upgradeAction: "Kirim email untuk upgrade",
+    upgradeMailSubject: "Upgrade paket MakanMasak",
     usageTitle: "Pemakaian siklus ini",
     usageEmpty: "Belum ada pemakaian tercatat pada siklus ini.",
     modulesTitle: "Fitur yang termasuk",

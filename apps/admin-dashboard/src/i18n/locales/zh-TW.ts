@@ -6156,6 +6156,11 @@ const zhTWRuntimeKeys = {
     trialExpiredAction: "選擇方案",
     trialExpiredTitle: "試用期已結束",
     trialExpiredContinue: "繼續使用",
+    upgradeTitle: "升級方案",
+    upgradeBody:
+      "目前尚未提供線上自助升級。請來信聯絡我們，我們會協助您開通方案，在此之前所有功能仍可正常使用。",
+    upgradeAction: "來信升級方案",
+    upgradeMailSubject: "升級 MakanMasak 方案",
     usageTitle: "本期用量",
     usageEmpty: "本期尚無用量紀錄。",
     modulesTitle: "方案包含的功能",

@@ -6015,6 +6015,11 @@ const jaJP: Messages = {
     trialExpiredAction: "プランを選ぶ",
     trialExpiredTitle: "無料トライアルは終了しました",
     trialExpiredContinue: "続ける",
+    upgradeTitle: "プランのアップグレード",
+    upgradeBody:
+      "オンラインでのお申し込みはまだご利用いただけません。メールでご連絡ください。プランを設定いたします。それまでの間もすべての機能をご利用いただけます。",
+    upgradeAction: "メールでアップグレードを依頼",
+    upgradeMailSubject: "MakanMasak プランのアップグレード",
     usageTitle: "今期の使用量",
     usageEmpty: "今期の使用記録はまだありません。",
     modulesTitle: "含まれる機能",

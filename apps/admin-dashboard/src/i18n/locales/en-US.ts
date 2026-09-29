@@ -6023,6 +6023,11 @@ const enUS: Messages = {
     trialExpiredAction: "Choose a plan",
     trialExpiredTitle: "Your free trial has ended",
     trialExpiredContinue: "Continue",
+    upgradeTitle: "Upgrade your plan",
+    upgradeBody:
+      "Online checkout isn't available yet. Email us and we'll set up your plan. Everything keeps working in the meantime.",
+    upgradeAction: "Email us to upgrade",
+    upgradeMailSubject: "Upgrade my MakanMasak plan",
     usageTitle: "Usage this cycle",
     usageEmpty: "No usage recorded this cycle yet.",
     modulesTitle: "Included features",

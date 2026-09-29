@@ -61,6 +61,27 @@
             : t("billing.trialExpiredBanner")
         }}
       </p>
+
+      <!-- No self-serve checkout yet: upgrades are arranged by email. -->
+      <div
+        v-if="subscription?.planTier === 'trial'"
+        class="mt-4 rounded-2xl bg-ios-orange-soft p-4"
+        data-testid="billing-upgrade"
+      >
+        <p class="text-sm font-semibold text-ios-orange-deep">
+          {{ t("billing.upgradeTitle") }}
+        </p>
+        <p class="mt-1 text-sm text-ios-orange-deep">
+          {{ t("billing.upgradeBody") }}
+        </p>
+        <a
+          :href="upgradeMailto"
+          class="mt-3 inline-block rounded-full bg-ios-blue px-5 py-2 text-sm font-semibold text-white"
+          data-testid="billing-upgrade-action"
+        >
+          {{ t("billing.upgradeAction") }}
+        </a>
+      </div>
     </section>
 
     <!-- Usage -->
@@ -171,6 +192,7 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import { useI18n } from "@/i18n";
+import { useAuthStore } from "@/stores/auth";
 import { api } from "@/services/api";
 import { meterMessagePath, moduleMessagePath } from "@/utils/billingLabels";
 
@@ -196,6 +218,7 @@ interface UsageSummary {
 }
 
 const { t, locale } = useI18n();
+const authStore = useAuthStore();
 
 /**
  * The app's i18n runtime has no `te`. A missing key resolves to the key itself,
@@ -224,6 +247,14 @@ const planLabel = computed(() => {
   const tier = subscription.value?.planTier;
   if (!tier) return "—";
   return translateOr(`billing.tier.${tier}`, tier);
+});
+
+const upgradeMailto = computed(() => {
+  const subject = encodeURIComponent(t("billing.upgradeMailSubject"));
+  const body = encodeURIComponent(
+    `Restaurant ID: ${authStore.restaurantId ?? ""}`,
+  );
+  return `mailto:support@makanmasak.com?subject=${subject}&body=${body}`;
 });
 
 const trialDaysLeft = computed(() => {
