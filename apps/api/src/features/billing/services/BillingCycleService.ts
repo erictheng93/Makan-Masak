@@ -7,12 +7,6 @@ import {
 } from "@makanmasak/database";
 import { generateUUID } from "@makanmasak/utils";
 import type { Env } from "../../../types/env";
-import { invalidateSubscriptionCacheForEnv } from "../../../middleware/moduleGate";
-import {
-  BILLING_NOTIFICATION_KINDS,
-  BillingNotificationService,
-  NOTIFICATION_CHANNELS,
-} from "./BillingNotificationService";
 
 export const DEFAULT_BILLING_CYCLE_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -23,14 +17,6 @@ interface DueSubscriptionRow {
   module_overrides: string | ModuleMap | null;
   billing_cycle_start_at_ms: number;
   billing_cycle_end_at_ms: number;
-}
-
-interface TrialSubscriptionRow {
-  id: string;
-  restaurant_id: string;
-  restaurant_name: string;
-  email: string | null;
-  trial_ends_at_ms: number;
 }
 
 interface UsageMeterRow {
@@ -172,70 +158,5 @@ export class BillingCycleService {
         now,
       ),
     ]);
-  }
-}
-
-export class TrialReaperService {
-  constructor(private readonly env: Env) {}
-
-  async downgradeExpiredTrials(now = Date.now()) {
-    const rows = await this.env.DB.prepare(
-      `SELECT s.id, s.restaurant_id, r.name AS restaurant_name, r.email,
-              s.trial_ends_at_ms
-         FROM shop_subscriptions s
-         JOIN restaurants r ON r.id = s.restaurant_id
-        WHERE s.is_active = 1
-          AND s.plan_tier = 'trial'
-          AND s.trial_ends_at_ms IS NOT NULL
-          AND s.trial_ends_at_ms <= ?
-        LIMIT 250`,
-    )
-      .bind(now)
-      .all<TrialSubscriptionRow>();
-
-    let downgraded = 0;
-    for (const row of rows.results ?? []) {
-      await this.env.DB.batch([
-        this.env.DB.prepare(
-          `UPDATE shop_subscriptions
-              SET plan_tier = 'basic',
-                  module_overrides = '{}',
-                  billing_cycle_start_at_ms = ?,
-                  billing_cycle_end_at_ms = ?,
-                  updated_at_ms = ?
-            WHERE id = ?`,
-        ).bind(now, now + DEFAULT_BILLING_CYCLE_MS, now, row.id),
-        this.env.DB.prepare(
-          `INSERT INTO payment_audit_log (
-              id, restaurant_id, subscription_id, event_type, raw_payload,
-              occurred_at_ms
-            ) VALUES (?, ?, ?, ?, ?, ?)`,
-        ).bind(
-          generateUUID(),
-          row.restaurant_id,
-          row.id,
-          PAYMENT_AUDIT_EVENT_TYPES.TRIAL_DOWNGRADE,
-          JSON.stringify({ trialEndsAt: row.trial_ends_at_ms }),
-          now,
-        ),
-      ]);
-      await new BillingNotificationService(this.env).send({
-        restaurantId: row.restaurant_id,
-        kind: BILLING_NOTIFICATION_KINDS.TRIAL_0D,
-        dedupKey: `trial_0d:${row.restaurant_id}:${row.trial_ends_at_ms}`,
-        channel: NOTIFICATION_CHANNELS.EMAIL,
-        recipient: row.email,
-        subject: "Your MakanMasak trial has ended",
-        text: `The MakanMasak trial for ${row.restaurant_name} has ended. The subscription has moved to the basic plan.`,
-        payload: { trialEndsAt: row.trial_ends_at_ms },
-      });
-      // The DB write above (plan_tier -> basic, module_overrides -> {}) must
-      // take effect immediately: this runs from a cron job, not a request,
-      // so it cannot reach the Context-based invalidateSubscriptionCache.
-      await invalidateSubscriptionCacheForEnv(this.env, row.restaurant_id);
-      downgraded++;
-    }
-
-    return { downgraded };
   }
 }

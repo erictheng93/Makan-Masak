@@ -55,7 +55,11 @@
         class="text-sm text-ios-secondary mt-3"
         data-testid="billing-trial-remaining"
       >
-        {{ t("billing.trialRemaining", { days: trialDaysLeft }) }}
+        {{
+          trialDaysLeft > 0
+            ? t("billing.trialRemaining", { days: trialDaysLeft })
+            : t("billing.trialExpiredBanner")
+        }}
       </p>
     </section>
 

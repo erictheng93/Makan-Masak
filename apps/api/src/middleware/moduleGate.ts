@@ -53,10 +53,8 @@ export function subscriptionCacheKey(restaurantId: string): string {
 function resolveModule(sub: CachedSubscription, module: ModuleKey): boolean {
   if (!sub.isActive) return false;
 
-  // Check trial expiry
-  if (sub.planTier === "trial" && sub.trialEndsAt !== null) {
-    if (Date.now() > sub.trialEndsAt) return false;
-  }
+  // An expired trial is nag-only (WinRAR-style): access is unchanged, the
+  // clients show a reminder from trialEndsAt. Do not gate on it here.
 
   // Override takes priority over plan default
   const override = sub.moduleOverrides[module];
@@ -201,16 +199,9 @@ export function moduleGate(
     }
 
     if (!resolveModule(sub, module)) {
-      const isTrialExpired =
-        sub.planTier === "trial" &&
-        sub.trialEndsAt !== null &&
-        Date.now() > sub.trialEndsAt;
-
       throw forbidden(
-        isTrialExpired
-          ? "Trial period has ended. Please upgrade your plan."
-          : "This feature is not included in your current plan.",
-        isTrialExpired ? "TRIAL_EXPIRED" : "MODULE_NOT_ENABLED",
+        "This feature is not included in your current plan.",
+        "MODULE_NOT_ENABLED",
       );
     }
 

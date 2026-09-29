@@ -934,8 +934,6 @@ const enUS: Messages = {
     subscription: {
       subscriptionNotFound:
         "No subscription was found for this restaurant, so its features are not activated yet. Your sign-in is fine — please contact support to get it set up.",
-      trialExpired:
-        "Your trial period has ended. Upgrade your plan to keep using this feature.",
       moduleNotEnabled:
         "This feature is not included in your current plan. Upgrade your plan or contact support to enable it.",
       noRestaurant:
@@ -6020,6 +6018,9 @@ const enUS: Messages = {
     statusActive: "Active",
     statusInactive: "Inactive",
     trialRemaining: "{days} days left in your trial",
+    trialExpiredBanner:
+      "Your free trial has ended. Everything keeps working, but please choose a plan to support MakanMasak.",
+    trialExpiredAction: "Choose a plan",
     usageTitle: "Usage this cycle",
     usageEmpty: "No usage recorded this cycle yet.",
     modulesTitle: "Included features",

@@ -4,8 +4,8 @@
  * Regression coverage for the bug where this route had no
  * moduleGate("online_ordering"), unlike POST / (real order creation) in the
  * same router. /batch-sync only writes an offline-sync mirror to CACHE_KV,
- * but it's still part of the online-ordering surface — a deactivated or
- * trial-expired restaurant should not be able to keep writing through it
+ * but it's still part of the online-ordering surface — a deactivated
+ * restaurant should not be able to keep writing through it
  * after real order creation is cut off.
  *
  * Unlike index.test.ts, this file does NOT mock "../../../middleware/moduleGate"

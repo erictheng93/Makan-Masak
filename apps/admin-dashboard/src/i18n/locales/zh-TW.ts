@@ -958,7 +958,6 @@ const zhTWCore = {
     subscription: {
       subscriptionNotFound:
         "找不到此餐廳的訂閱方案，功能尚未開通。您的登入沒有問題，請聯絡客服協助開通。",
-      trialExpired: "試用期已結束。請升級方案以繼續使用此功能。",
       moduleNotEnabled:
         "目前的方案未包含此功能。請升級方案或聯絡客服為您開通。",
       noRestaurant:
@@ -6152,6 +6151,9 @@ const zhTWRuntimeKeys = {
     statusActive: "使用中",
     statusInactive: "已停用",
     trialRemaining: "試用期剩餘 {days} 天",
+    trialExpiredBanner:
+      "試用期已結束。所有功能仍可繼續使用，但請選擇方案以支持 MakanMasak。",
+    trialExpiredAction: "選擇方案",
     usageTitle: "本期用量",
     usageEmpty: "本期尚無用量紀錄。",
     modulesTitle: "方案包含的功能",

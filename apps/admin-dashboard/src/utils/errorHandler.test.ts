@@ -71,14 +71,12 @@ const GENERIC_PERMISSION_MESSAGE = "權限不足或登入已過期";
 // prove we do not simply echo the (English-only) server message back.
 const SERVER_MESSAGES: Record<SubscriptionErrorCode, string> = {
   SUBSCRIPTION_NOT_FOUND: "Subscription not found. Please contact support.",
-  TRIAL_EXPIRED: "Trial period has ended. Please upgrade your plan.",
   MODULE_NOT_ENABLED: "This feature is not included in your current plan.",
   NO_RESTAURANT: "No restaurant associated with this account",
 };
 
 const EXPECTED_I18N_KEYS: Record<SubscriptionErrorCode, string> = {
   SUBSCRIPTION_NOT_FOUND: "errors.subscription.subscriptionNotFound",
-  TRIAL_EXPIRED: "errors.subscription.trialExpired",
   MODULE_NOT_ENABLED: "errors.subscription.moduleNotEnabled",
   NO_RESTAURANT: "errors.subscription.noRestaurant",
 };
@@ -213,13 +211,13 @@ describe("KitchenErrorHandler.handleAPIError — subscription vs permission 403s
     const handler = new KitchenErrorHandler();
 
     await expect(
-      handler.handleAPIRequest(buildApiError({ code: "TRIAL_EXPIRED" }), {
+      handler.handleAPIRequest(buildApiError({ code: "MODULE_NOT_ENABLED" }), {
         url: "/tables",
       }),
     ).rejects.toEqual(
       expect.objectContaining({
         type: ErrorType.SUBSCRIPTION,
-        message: t("errors.subscription.trialExpired"),
+        message: t("errors.subscription.moduleNotEnabled"),
       }),
     );
 

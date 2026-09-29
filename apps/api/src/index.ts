@@ -184,21 +184,18 @@ export default {
 
       if (cronMatches(event.cron, "15 2 * * *")) {
         console.log("[Cron] Running billing cycle closer...");
-        const { BillingCycleService, TrialReaperService } =
+        const { BillingCycleService } =
           await import("./features/billing/services/BillingCycleService");
         const { BillingReminderService } =
           await import("./features/billing/services/BillingNotificationService");
         const cycleCloser = new BillingCycleService(env);
-        const trialReaper = new TrialReaperService(env);
         const reminderService = new BillingReminderService(env);
-        const [cycleResult, trialResult, reminderResult] = await Promise.all([
+        const [cycleResult, reminderResult] = await Promise.all([
           cycleCloser.closeDueCycles(),
-          trialReaper.downgradeExpiredTrials(),
           reminderService.sendTrialEndingReminders(),
         ]);
         console.log("[Cron] Billing lifecycle result:", {
           ...cycleResult,
-          ...trialResult,
           ...reminderResult,
         });
       }

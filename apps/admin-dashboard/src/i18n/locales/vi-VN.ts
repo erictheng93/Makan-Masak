@@ -832,8 +832,6 @@ const viVN: Messages = {
         "Tính năng này không có trong gói hiện tại của bạn. Hãy nâng cấp gói của bạn hoặc liên hệ với bộ phận hỗ trợ để kích hoạt gói đó.",
       subscriptionNotFound:
         "Không tìm thấy đăng ký nào cho nhà hàng này nên các tính năng của nó chưa được kích hoạt. Đăng nhập của bạn vẫn ổn — vui lòng liên hệ với bộ phận hỗ trợ để thiết lập.",
-      trialExpired:
-        "Thời gian dùng thử của bạn đã kết thúc. Hãy nâng cấp gói của bạn để tiếp tục sử dụng tính năng này.",
     },
   },
   success: {
@@ -6018,6 +6016,9 @@ const viVN: Messages = {
     statusActive: "Đang hoạt động",
     statusInactive: "Ngừng hoạt động",
     trialRemaining: "Còn {days} ngày dùng thử",
+    trialExpiredBanner:
+      "Thời gian dùng thử đã kết thúc. Mọi tính năng vẫn hoạt động bình thường, nhưng vui lòng chọn một gói để ủng hộ MakanMasak.",
+    trialExpiredAction: "Chọn gói",
     usageTitle: "Mức dùng kỳ này",
     usageEmpty: "Chưa có dữ liệu sử dụng trong kỳ này.",
     modulesTitle: "Tính năng đi kèm",

@@ -35,7 +35,7 @@ There are **4** plan tiers in `PLAN_TIERS`: `trial`, `basic`, `pro`,
 - `basic` (3 modules): `menu_management`, `table_management`, `online_ordering` (the 3 core modules; no POS, kitchen display, coupons, analytics, reservations, etc.).
 - `pro` (9 modules): `basic` modules plus `pos`, `kitchen_display`, `receipt_printing`, `coupons`, `reservations`, `analytics`. Waiting-list shares the `reservations` module.
 - `enterprise` (all 14): `pro` plus `ai_analytics`, `platform_integration`, `loyalty`, `inventory`, `staff_management`.
-- `trial` (all 14): the same set as `enterprise`, but only until `trial_ends_at_ms`. The gate itself starts returning `403 TRIAL_EXPIRED` the moment `trial_ends_at_ms` passes; `TrialReaperService.downgradeExpiredTrials`, run by the daily `15 2 * * *` billing-lifecycle cron, then rewrites the row to `plan_tier = 'basic'`, resets `module_overrides` to `{}`, and rolls a fresh `DEFAULT_BILLING_CYCLE_MS` (30-day) cycle. Enforcement does not wait for the cron.
+- `trial` (all 14): the same set as `enterprise`, but only until `trial_ends_at_ms`. An expired trial is nag-only: the gate does not check `trial_ends_at_ms`, the row stays `trial`, and the admin dashboard shows a reminder banner.
 
 Trial length is **180 days (six months)** on every path, from `TRIAL_DURATION_MS` /
 `TRIAL_DURATION_DAYS` in `packages/database/src/utils/plan-mapping.ts`. Both
@@ -154,7 +154,6 @@ Blocked requests get one of four `403` codes:
 | --- | --- |
 | `NO_RESTAURANT` | The authenticated user has no `restaurantId` (thrown before any subscription lookup) |
 | `SUBSCRIPTION_NOT_FOUND` | No `shop_subscriptions` row for the restaurant — it was never onboarded |
-| `TRIAL_EXPIRED` | Trial tier past `trial_ends_at_ms` |
 | `MODULE_NOT_ENABLED` | Everything else — plan default or override says no, or the kill switch is off |
 
 Current protected prefixes live in `apps/api/src/app-factory.ts`. Coverage is

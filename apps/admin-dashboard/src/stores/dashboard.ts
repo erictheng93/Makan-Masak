@@ -212,7 +212,6 @@ export const useDashboardStore = defineStore("dashboard", () => {
         fallbackKey: "dashboardStore.fetchDashboardFailed",
         codeKeys: {
           MODULE_NOT_ENABLED: "errors.subscription.moduleNotEnabled",
-          TRIAL_EXPIRED: "errors.subscription.trialExpired",
           SUBSCRIPTION_NOT_FOUND: "errors.subscription.subscriptionNotFound",
           NO_RESTAURANT: "errors.subscription.noRestaurant",
         },

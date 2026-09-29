@@ -817,7 +817,6 @@ const zhCN: Messages = {
     subscription: {
       subscriptionNotFound:
         "找不到此餐厅的订阅方案，功能尚未开通。您的登录没有问题，请联系客服协助开通。",
-      trialExpired: "试用期已结束。请升级方案以继续使用此功能。",
       moduleNotEnabled: "当前方案未包含此功能。请升级方案或联系客服为您开通。",
       noRestaurant:
         "您的账号尚未绑定任何餐厅，请联系系统管理员为您指派餐厅后再试。",
@@ -5866,6 +5865,9 @@ const zhCN: Messages = {
     statusActive: "使用中",
     statusInactive: "已停用",
     trialRemaining: "试用期剩余 {days} 天",
+    trialExpiredBanner:
+      "试用期已结束。所有功能仍可继续使用，但请选择方案以支持 MakanMasak。",
+    trialExpiredAction: "选择方案",
     usageTitle: "本期用量",
     usageEmpty: "本期暂无用量记录。",
     modulesTitle: "方案包含的功能",

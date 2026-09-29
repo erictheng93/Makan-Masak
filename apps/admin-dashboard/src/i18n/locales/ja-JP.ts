@@ -834,8 +834,6 @@ const jaJP: Messages = {
         "あなたのアカウントはまだどのレストランにもリンクされていません。管理者に割り当てを依頼してから、再試行してください。",
       subscriptionNotFound:
         "このレストランのサブスクリプションが見つからなかったため、その機能はまだ有効化されていません。サインインは問題ありません。セットアップするにはサポートにお問い合わせください。",
-      trialExpired:
-        "試用期間は終了しました。この機能を引き続き使用するには、プランをアップグレードしてください。",
     },
   },
   success: {
@@ -6012,6 +6010,9 @@ const jaJP: Messages = {
     statusActive: "有効",
     statusInactive: "無効",
     trialRemaining: "試用期間はあと {days} 日です",
+    trialExpiredBanner:
+      "無料トライアルは終了しました。引き続きすべての機能をご利用いただけますが、MakanMasak を支援するためプランをご選択ください。",
+    trialExpiredAction: "プランを選ぶ",
     usageTitle: "今期の使用量",
     usageEmpty: "今期の使用記録はまだありません。",
     modulesTitle: "含まれる機能",

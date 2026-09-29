@@ -469,7 +469,7 @@ describe("error code contract", () => {
     });
   });
 
-  it("returns TRIAL_EXPIRED for an expired trial", async () => {
+  it("keeps an expired trial working (nag-only, no lockout)", async () => {
     const restaurantId = await seedSubscription({
       planTier: "trial",
       trialEndsAt: new Date(Date.now() - 60_000),
@@ -480,11 +480,7 @@ describe("error code contract", () => {
       role: 1,
       restaurantId,
     });
-    expect(result).toMatchObject({
-      allowed: false,
-      code: "TRIAL_EXPIRED",
-      status: 403,
-    });
+    expect(result.allowed).toBe(true);
   });
 
   it("returns MODULE_NOT_ENABLED for an in-plan-but-not-included module", async () => {
@@ -499,11 +495,10 @@ describe("error code contract", () => {
     });
   });
 
-  it("the four codes are mutually distinct", () => {
+  it("the denial codes are mutually distinct", () => {
     const codes = [
       "NO_RESTAURANT",
       "SUBSCRIPTION_NOT_FOUND",
-      "TRIAL_EXPIRED",
       "MODULE_NOT_ENABLED",
     ];
     expect(new Set(codes).size).toBe(codes.length);
@@ -618,33 +613,7 @@ describe("trial expiry boundary", () => {
     };
   }
 
-  it("is NOT expired at trialEndsAt - 1ms", async () => {
-    const restaurantId = "mg-boundary-before";
-    const env = seedCache(restaurantId, trialSub(TRIAL_END_MS));
-    vi.spyOn(Date, "now").mockReturnValue(TRIAL_END_MS - 1);
-
-    const result = await attemptGate(
-      "ai_analytics",
-      { role: 1, restaurantId },
-      env,
-    );
-    expect(result.allowed).toBe(true);
-  });
-
-  it("is NOT expired exactly at trialEndsAt (comparison is strict >)", async () => {
-    const restaurantId = "mg-boundary-exact";
-    const env = seedCache(restaurantId, trialSub(TRIAL_END_MS));
-    vi.spyOn(Date, "now").mockReturnValue(TRIAL_END_MS);
-
-    const result = await attemptGate(
-      "ai_analytics",
-      { role: 1, restaurantId },
-      env,
-    );
-    expect(result.allowed).toBe(true);
-  });
-
-  it("IS expired at trialEndsAt + 1ms", async () => {
+  it("still allows a module after trialEndsAt", async () => {
     const restaurantId = "mg-boundary-after";
     const env = seedCache(restaurantId, trialSub(TRIAL_END_MS));
     vi.spyOn(Date, "now").mockReturnValue(TRIAL_END_MS + 1);
@@ -654,10 +623,10 @@ describe("trial expiry boundary", () => {
       { role: 1, restaurantId },
       env,
     );
-    expect(result).toMatchObject({ allowed: false, code: "TRIAL_EXPIRED" });
+    expect(result.allowed).toBe(true);
   });
 
-  it("expiry applies to core modules too, not just paid ones", async () => {
+  it("still allows core modules after trialEndsAt", async () => {
     const restaurantId = "mg-boundary-core";
     const env = seedCache(restaurantId, trialSub(TRIAL_END_MS));
     vi.spyOn(Date, "now").mockReturnValue(TRIAL_END_MS + 1);
@@ -667,7 +636,7 @@ describe("trial expiry boundary", () => {
       { role: 1, restaurantId },
       env,
     );
-    expect(result).toMatchObject({ allowed: false, code: "TRIAL_EXPIRED" });
+    expect(result.allowed).toBe(true);
   });
 
   it("trialEndsAt: null is never treated as expired", async () => {
@@ -810,7 +779,7 @@ describe("moduleOverrides", () => {
     ).resolves.toMatchObject({ allowed: false, code: "MODULE_NOT_ENABLED" });
   });
 
-  it("trial expiry beats an enabling override (expiry is checked first)", async () => {
+  it("an expired trial still honours an enabling override", async () => {
     const restaurantId = await seedSubscription({
       planTier: "trial",
       trialEndsAt: new Date(Date.now() - 60_000),
@@ -822,7 +791,7 @@ describe("moduleOverrides", () => {
       role: 1,
       restaurantId,
     });
-    expect(result).toMatchObject({ allowed: false, code: "TRIAL_EXPIRED" });
+    expect(result.allowed).toBe(true);
   });
 });
 

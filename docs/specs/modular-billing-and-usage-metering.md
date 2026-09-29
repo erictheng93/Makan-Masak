@@ -38,7 +38,7 @@
 | § | Acceptance | 狀態 | 證據 / 偏離 |
 |---|---|---|---|
 | 2.5#1 | A.2 ⚠️ 路由全部掛 `moduleGate` | ✅ | `apps/api/src/app-factory.ts:483/485/500/504/506/508` 等掛點全在 |
-| 2.5#2 | `module-gating-coverage.test.ts` 對所有 PROTECTED_PREFIXES 通過 | ✅ | `apps/api/src/__tests__/module-gate-coverage.test.ts` 雙層覆蓋：(a) 21 個 static wiring 斷言（grep app-factory + feature routers）、(b) 22 個 runtime 斷言（對每個 prefix 真的 `app.request()` 並驗 basic plan→403 `MODULE_NOT_ENABLED` / kill switch→403 / trial expired→403 `TRIAL_EXPIRED`）|
+| 2.5#2 | `module-gating-coverage.test.ts` 對所有 PROTECTED_PREFIXES 通過 | ⚠️ | 原 `apps/api/src/__tests__/module-gate-coverage.test.ts`（21 static + 22 runtime 斷言）已在 `b936600f`（remove mock-based test doubles）刪除，沒有等價替代。目前的覆蓋：static wiring 由 `scripts/audit-module-gates.cjs`（見 2.5#3）負責；gate 行為由 `apps/api/src/__tests__/integration/module-gate.real.integration.test.ts` 與各 feature 的 `module-gate.test.ts` 驗證。**缺口**：不再對每個 PROTECTED_PREFIXES 逐一 `app.request()` 驗 403 |
 | 2.5#3 | `scripts/audit-module-gates.cjs` + pre-commit | ✅ | `scripts/audit-module-gates.cjs` 已加入，`.husky/pre-commit` 會執行 |
 | 2.5#4 | `GET /me/modules` 形狀正確 | ✅ | `apps/api/src/features/me/routes/index.ts:24-98`（customer 回 `restaurantId: null`）|
 | 2.5#5 | `useModuleAccess` + `<ModuleGate>` | ✅ | `packages/shared/composables/useModuleAccess.ts`、`packages/shared/components/ModuleGate.vue` |
@@ -804,18 +804,13 @@ export const notificationDispatchLog = sqliteTable("notification_dispatch_log", 
   4. **不重置** `usage_meters`——新 cycle 自動 INSERT 新 row（透過 unique index）
 - `cycle_snapshots` 的 `uniqueCycleIdx` 確保同 cycle 重複跑不會 double-write
 
-### 4.3 Trial 自動降級
+### 4.3 Trial 到期：只提醒、不限制（WinRAR 模式）
 
-**新增** `apps/api/src/workers/trial-reaper.ts`（既有 backup-scheduler worker 加 schedule `0 * * * *`）：
-- 每小時跑
-- 找 `planTier = 'trial' AND trialEndsAt < now AND isActive = true`
-- 對每個用 `db.batch([...])` 原子執行：
-  1. `UPDATE shopSubscriptions SET planTier='basic', billingCycleStartAt=now, billingCycleEndAt=now+30d, trialEndsAt=null WHERE restaurantId=R`
-  2. **不清** `moduleOverrides`——保留 admin 手動設定的 override（與初版 SPEC 改動：清 overrides 會把 admin 補的權限吞掉，反直覺）。客戶看到的「降級」效果由 plan 預設變化驅動
-  3. 寫 `payment_audit_log`（eventType: `trial_downgrade`）
-- batch 完成後（不在 batch 內）：
-  4. invalidate KV cache（`subscription:${restaurantId}` + `usage_quota:${restaurantId}:*`）
-  5. 觸發 §4.5 通知（kind=`trial_0d`）
+試用期結束後**不降級、不鎖功能**：`planTier` 維持 `trial`，`moduleGate` 不再檢查 `trialEndsAt`，也不再有 `TRIAL_EXPIRED` 錯誤。原本的 `TrialReaperService`（每日降級為 basic 並清空 `moduleOverrides`）已移除。
+
+- 提醒來源：`/me/modules` 仍回傳 `trialEndsAt`；admin-dashboard 的 `TrialExpiredBanner`（店主限定，可關閉，重新載入後再出現）與 `BillingView` 顯示到期文案。
+- 到期前的 email 提醒（`trial_3d` / `trial_1d`）不變；到期後不再寄 `trial_0d`。
+- 到期 trial 的用量 cycle 邊界仍是 `trialEndsAt`，見 `usage-aggregator.ts`（到期後的事件不會落在該 cycle 內，尚未處理）。
 
 ### 4.4 外部金流 Webhook
 

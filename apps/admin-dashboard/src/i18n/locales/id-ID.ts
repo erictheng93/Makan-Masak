@@ -939,8 +939,6 @@ const idID: Messages = {
     saveFailed: "Gagal menyimpan",
     deleteFailed: "Gagal menghapus",
     subscription: {
-      trialExpired:
-        "Masa uji coba Anda telah berakhir. Tingkatkan paket Anda untuk terus menggunakan fitur ini.",
       moduleNotEnabled:
         "Fitur ini tidak termasuk dalam paket Anda saat ini. Tingkatkan paket Anda atau hubungi dukungan untuk mengaktifkannya.",
       subscriptionNotFound:
@@ -6050,6 +6048,9 @@ const idID: Messages = {
     statusActive: "Aktif",
     statusInactive: "Nonaktif",
     trialRemaining: "Sisa {days} hari masa uji coba",
+    trialExpiredBanner:
+      "Masa uji coba Anda telah berakhir. Semua fitur tetap berfungsi, tetapi mohon pilih paket untuk mendukung MakanMasak.",
+    trialExpiredAction: "Pilih paket",
     usageTitle: "Pemakaian siklus ini",
     usageEmpty: "Belum ada pemakaian tercatat pada siklus ini.",
     modulesTitle: "Fitur yang termasuk",
