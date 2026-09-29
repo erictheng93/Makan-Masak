@@ -124,7 +124,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
 import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
@@ -241,6 +241,19 @@ const realtimeConnectionStatus = computed<RealtimeDisplayStatus>(() => {
 });
 
 const isRealtimeConnected = computed(() => kitchenRealtime.isConnected.value);
+
+// Events sent while the socket was down are gone, so catch up the moment it
+// comes back instead of waiting for the next auto-refresh (or forever, when
+// auto-refresh is off). The first connect is skipped: onMounted just fetched.
+let hasConnected = false;
+watch(
+  () => kitchenRealtime.status.value,
+  (status) => {
+    if (status !== "connected") return;
+    if (hasConnected) void fetchOrders();
+    hasConnected = true;
+  },
+);
 
 // Helpers
 const getOrderStatusType = (
