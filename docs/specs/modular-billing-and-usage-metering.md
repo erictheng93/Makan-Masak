@@ -809,8 +809,8 @@ export const notificationDispatchLog = sqliteTable("notification_dispatch_log", 
 試用期結束後**不降級、不鎖功能**：`planTier` 維持 `trial`，`moduleGate` 不再檢查 `trialEndsAt`，也不再有 `TRIAL_EXPIRED` 錯誤。原本的 `TrialReaperService`（每日降級為 basic 並清空 `moduleOverrides`）已移除。
 
 - 提醒來源：`/me/modules` 仍回傳 `trialEndsAt`；admin-dashboard 的 `TrialExpiredBanner`（店主限定，可關閉，重新載入後再出現）與 `BillingView` 顯示到期文案。
-- 到期前的 email 提醒（`trial_3d` / `trial_1d`）不變；到期後不再寄 `trial_0d`。
-- 到期 trial 的用量 cycle 邊界仍是 `trialEndsAt`，見 `usage-aggregator.ts`（到期後的事件不會落在該 cycle 內，尚未處理）。
+- Email：`BillingReminderService` 每日 cron 寄 `trial_3d`（剩 2～4 天）、`trial_1d`（剩 0～2 天）、`trial_0d`（7 天內剛到期，「功能照常使用，請選擇方案」）。窗口是「剩餘時間範圍」而非 24h 定點，cron 漏跑後下一次仍會補寄；只寄一次靠 SQL `NOT EXISTS notification_dispatch_log` 過濾（不靠 `send()` 去重，否則同一批 250 列會佔滿 `LIMIT`）。只讀不寫 `shop_subscriptions`。寄送失敗（`FAILED`）目前與 `send()` 一致，視為已處理、不重試。
+- 用量 cycle：trial 仍在期內用 `[createdAt, trialEndsAt)`；到期後 tier 仍是 `trial`，所以 `usage-aggregator.ts`、`quotaGate.ts`、`UsageService.ts` 三處一致改為退回自然月 cycle，避免寫入與讀取落在不同 cycle。`trialEndsAt` 為 null 時預設長度用 `TRIAL_DURATION_DAYS`（原本寫死 14 天）。
 
 ### 4.4 外部金流 Webhook
 

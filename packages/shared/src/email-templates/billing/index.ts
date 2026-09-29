@@ -50,14 +50,14 @@ export function renderBillingEmail(
   if (kind === "trial_0d") {
     return {
       subject: SUBJECTS[kind],
-      text: `The MakanMasak trial for ${restaurantName} has ended. The subscription has moved to the basic plan.${action}`,
+      text: `The MakanMasak trial for ${restaurantName} has ended. Everything keeps working, but please choose a plan to support MakanMasak.${action}`,
     };
   }
 
   if (kind === "trial_1d") {
     return {
       subject: SUBJECTS[kind],
-      text: `The MakanMasak trial for ${restaurantName} ends tomorrow. Pick a plan to keep all modules active.${action}`,
+      text: `The MakanMasak trial for ${restaurantName} ends tomorrow. Everything keeps working after that, but please choose a plan to support MakanMasak.${action}`,
     };
   }
 
