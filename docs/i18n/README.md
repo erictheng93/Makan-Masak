@@ -43,6 +43,9 @@ commands also validate `locale-approval-manifest.json`, which records the
 approved handoff SHA-256, approval date, reviewer or maintainer acceptance,
 covered apps, and covered locales.
 
+Changed locale files are rewritten in full, which removes comments; review
+`git diff` after importing. Unchanged files are not written.
+
 To check whether target locales still have fewer leaf keys than `zh-TW`:
 
 ```sh
