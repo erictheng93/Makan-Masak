@@ -1,7 +1,7 @@
 {
   "handoff": "docs/i18n/locale-translator-handoff.csv",
-  "sha256": "e8dbcc3b28a56f21fb8862c6ca9be5c1da998727b4b9309dbee32b2e56899010",
-  "approvedAt": "2026-09-29T06:00:00Z",
+  "sha256": "aeb046a044926d5f3d3beef6eb058527a7be116b368bac422ec55dd167652da3",
+  "approvedAt": "2026-09-29T09:00:00Z",
   "approvedBy": [
     {
       "name": "Claude (Sonnet 5.5)",
@@ -30,5 +30,5 @@
     "ms-MY",
     "id-ID"
   ],
-  "notes": "2026-09-29 re-approval of the current handoff CSV (commit 02326a3b content). Target copy is machine translation. Reviewed: the 60 cells identical to source (docs/i18n/REVIEW-CHECKLIST.md), all ok. Not reviewed by a native speaker; known tone issues remain, e.g. admin accountManagement.createdAtCol ja-JP. Supersedes the 2026-05-26 approval (csv at a2ece23b)."
+  "notes": "2026-09-29 re-approval of the current handoff CSV (commit 02326a3b content). Target copy is machine translation. Reviewed: the 60 cells identical to source (docs/i18n/REVIEW-CHECKLIST.md), all ok. Not reviewed by a native speaker; known tone issues remain, e.g. admin accountManagement.createdAtCol ja-JP. Addendum 2026-09-29: added 3 keys committed after the first sign-off (admin billing.trialExpiredBanner/Action, onboarding guide.link), read by Claude and judged accurate; removed errors.subscription.trialExpired. Supersedes the 2026-05-26 approval (csv at a2ece23b)."
 }
