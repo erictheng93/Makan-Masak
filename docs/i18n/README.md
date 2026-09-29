@@ -1,10 +1,13 @@
 # i18n Locale Handoff
 
-The current CSV is the 2026-09-29 machine-translated handoff copied from the app
-locale files. `locale-approval-manifest.json` re-approves it (sha256-pinned) after
-a review of the 60 cells in `REVIEW-CHECKLIST.md`, signed by Claude at the
-maintainer's instruction. No native speaker has read it; known tone issues
-remain. The 2026-05-26 approval covers the CSV at commit `a2ece23b`.
+The current CSV is the 2026-09-30 handoff copied from the app locale files.
+`locale-approval-manifest.json` pins its SHA-256 and records the review history.
+The latest addendum includes 30 billing cells reviewed by Codex and re-approved
+at the maintainer's explicit instruction; earlier translations remain unchanged.
+The previous review covered the 60 cells in `REVIEW-CHECKLIST.md`, signed by
+Claude at the maintainer's instruction. No native speaker has read the machine
+translations; known tone issues remain. The 2026-05-26 approval covers the CSV at
+commit `a2ece23b`.
 
 `locale-translator-handoff.csv` is the source handoff for completing the app
 locales that were previously stubbed:
@@ -44,7 +47,8 @@ approved handoff SHA-256, approval date, reviewer or maintainer acceptance,
 covered apps, and covered locales.
 
 Changed locale files are rewritten in full, which removes comments; review
-`git diff` after importing. Unchanged files are not written.
+`git diff` after importing. Unchanged files are not written. Preserving comments
+and formatting is tracked in [#430](https://github.com/erictheng93/Makan-Masak/issues/430).
 
 To check whether target locales still have fewer leaf keys than `zh-TW`:
 
