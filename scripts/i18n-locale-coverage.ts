@@ -334,6 +334,12 @@ async function validateApprovedHandoff(
     const expectedKeys = new Set(sourceEntries.map((entry) => entry.key));
     const appRows = body.filter((row) => row[appIndex] === app.name);
 
+    for (const key of expectedKeys) {
+      if (!appRows.some((row) => row[keyIndex] === key)) {
+        warning(`${app.name}/${key} is missing from the handoff CSV`);
+      }
+    }
+
     for (const locale of targetLocales) {
       const { messages, unchanged, missingKeys } = buildHandoffMessages(
         appRows,

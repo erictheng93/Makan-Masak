@@ -1,3 +1,8 @@
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   buildHandoffMessages,
@@ -22,6 +27,51 @@ function roundTrip(input: string[][]) {
 }
 
 describe("handoff import (#429)", () => {
+  it("warns and rejects import when an entire CSV row is missing", () => {
+    const root = fileURLToPath(new URL("../../../", import.meta.url));
+    const directory = mkdtempSync(path.join(tmpdir(), "handoff-missing-row-"));
+    try {
+      const csv = parseCsv(
+        readFileSync(
+          path.join(root, "docs/i18n/locale-translator-handoff.csv"),
+          "utf8",
+        ),
+      );
+      const incomplete = csv.filter(
+        (row) =>
+          !(
+            row[0] === "admin-dashboard" &&
+            row[1] === "statisticsDashboard.minutes"
+          ),
+      );
+      const csvPath = path.join(directory, "handoff.csv");
+      writeFileSync(
+        csvPath,
+        incomplete.map((row) => row.map(csvCell).join(",")).join("\n"),
+      );
+      const result = spawnSync(
+        process.execPath,
+        [
+          "--import",
+          "tsx",
+          path.join(root, "scripts/i18n-locale-coverage.ts"),
+          "--import-handoff",
+          csvPath,
+        ],
+        { cwd: root, encoding: "utf8" },
+      );
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(
+        "admin-dashboard/statisticsDashboard.minutes is missing from the handoff CSV",
+      );
+      expect(result.stderr).toContain(
+        "Handoff CSV has missing approved translations",
+      );
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
   it("preserves leading and trailing spaces through CSV export/import", () => {
     const result = buildHandoffMessages(
       roundTrip(rows),
