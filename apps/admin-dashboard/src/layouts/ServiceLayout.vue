@@ -15,22 +15,6 @@
                 {{ t("serviceLayout.roleBadge") }}
               </span>
             </div>
-
-            <!-- 快速狀態指示 -->
-            <div class="hidden sm:flex ml-8 items-center space-x-4">
-              <div class="flex items-center text-sm">
-                <div class="w-2 h-2 bg-orange-500 rounded-full mr-2" />
-                <span class="text-gray-600">{{
-                  t("serviceLayout.pendingDelivery", { count: pendingCount })
-                }}</span>
-              </div>
-              <div class="flex items-center text-sm">
-                <div class="w-2 h-2 bg-blue-500 rounded-full mr-2" />
-                <span class="text-gray-600">{{
-                  t("serviceLayout.delivering", { count: deliveringCount })
-                }}</span>
-              </div>
-            </div>
           </div>
 
           <!-- 右側用戶信息和操作 -->
@@ -48,16 +32,6 @@
                 {{ unreadNotifications }}
               </span>
             </button>
-
-            <!-- 今日績效快顯 -->
-            <div
-              class="hidden sm:flex items-center bg-green-50 px-3 py-1 rounded-full"
-            >
-              <StarIcon class="h-4 w-4 text-green-600 mr-1" />
-              <span class="text-sm font-medium text-green-800">{{
-                t("serviceLayout.todayDelivered", { count: todayDelivered })
-              }}</span>
-            </div>
 
             <!-- 用戶下拉選單 -->
             <div class="relative">
@@ -314,9 +288,6 @@ const currentUser = computed(() => ({
       : "staff",
 }));
 
-const pendingCount = ref(0);
-const deliveringCount = ref(0);
-const todayDelivered = ref(0);
 const unreadNotifications = ref(0);
 
 const notifications = ref<SystemNotification[]>([]);
