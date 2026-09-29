@@ -321,8 +321,9 @@ source and target side by side.
 
 The 2026-05-26 approved handoff remains available at commit `a2ece23b`, and
 the manifest still pins its SHA-256. The current handoff CSV was refreshed on
-2026-09-29 from the app locale files as a review draft; it needs new maintainer
-approval before import. `pnpm check:i18n-locales` checks locale key coverage,
+2026-09-29 from the app locale files and re-approved the same day (manifest
+sha256-pinned; reviewed by Claude at the maintainer's instruction, no native
+speaker). Native review of admin-dashboard copy is still open. `pnpm check:i18n-locales` checks locale key coverage,
 not handoff approval or translation quality.
 
 ## database / money schema

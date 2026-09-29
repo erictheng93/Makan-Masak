@@ -1,10 +1,10 @@
 # i18n Locale Handoff
 
-The current CSV is a 2026-09-29 review draft copied from the app locale files.
-It is not approved for import. `locale-approval-manifest.json` records the
-2026-05-26 approval of the CSV at commit `a2ece23b`; its hash does not approve
-this draft. Review the current translations before recording a new approval.
-`REVIEW-CHECKLIST.md` lists the cells that need a human verdict first.
+The current CSV is the 2026-09-29 machine-translated handoff copied from the app
+locale files. `locale-approval-manifest.json` re-approves it (sha256-pinned) after
+a review of the 60 cells in `REVIEW-CHECKLIST.md`, signed by Claude at the
+maintainer's instruction. No native speaker has read it; known tone issues
+remain. The 2026-05-26 approval covers the CSV at commit `a2ece23b`.
 
 `locale-translator-handoff.csv` is the source handoff for completing the app
 locales that were previously stubbed:

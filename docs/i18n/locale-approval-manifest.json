@@ -1,15 +1,34 @@
 {
   "handoff": "docs/i18n/locale-translator-handoff.csv",
-  "sha256": "19221da6fc14d8b6b4e9e038b5f023aa2c88dc4c8c3a3fa370a51e311ece1c73",
-  "approvedAt": "2026-05-26T00:51:57Z",
+  "sha256": "e8dbcc3b28a56f21fb8862c6ca9be5c1da998727b4b9309dbee32b2e56899010",
+  "approvedAt": "2026-09-29T06:00:00Z",
   "approvedBy": [
     {
-      "name": "Project maintainer",
-      "role": "Maintainer acceptance of AI-assisted machine localization after external translator constraint was removed",
-      "locales": ["zh-CN", "vi-VN", "ms-MY", "id-ID"]
+      "name": "Claude (Sonnet 5.5)",
+      "role": "AI-assisted review of the 60 flagged cells, signed at the project maintainer's explicit in-session instruction; the maintainer did not personally read the machine translations",
+      "locales": [
+        "en-US",
+        "zh-CN",
+        "ja-JP",
+        "vi-VN",
+        "ms-MY",
+        "id-ID"
+      ]
     }
   ],
-  "apps": ["kitchen-display", "onboarding-app", "management-portal"],
-  "locales": ["zh-CN", "vi-VN", "ms-MY", "id-ID"],
-  "notes": "External translation was explicitly waived because of resource constraints. Target copy was generated with machine translation from the existing zh-TW/en-US sources and accepted under maintainer approval."
+  "apps": [
+    "admin-dashboard",
+    "kitchen-display",
+    "onboarding-app",
+    "management-portal"
+  ],
+  "locales": [
+    "en-US",
+    "zh-CN",
+    "ja-JP",
+    "vi-VN",
+    "ms-MY",
+    "id-ID"
+  ],
+  "notes": "2026-09-29 re-approval of the current handoff CSV (commit 02326a3b content). Target copy is machine translation. Reviewed: the 60 cells identical to source (docs/i18n/REVIEW-CHECKLIST.md), all ok. Not reviewed by a native speaker; known tone issues remain, e.g. admin accountManagement.createdAtCol ja-JP. Supersedes the 2026-05-26 approval (csv at a2ece23b)."
 }
