@@ -129,8 +129,8 @@ function createD1WithBatchFailure(
   return setup;
 }
 
-function env(db: unknown) {
-  return { DB: db } as Env;
+function env(db: unknown, cache = { delete: vi.fn(async () => undefined) }) {
+  return { DB: db, CACHE_KV: cache } as unknown as Env;
 }
 
 function paidOrder(overrides: Partial<RefundOrderRow> = {}): RefundOrderRow {
@@ -309,6 +309,20 @@ describe("refundPaymentTransaction", () => {
       null,
       1780833600000,
     ]);
+  });
+
+  it("drops the cached order once the refund is written", async () => {
+    const { db } = createD1(paidOrder());
+    const cache = { delete: vi.fn(async () => undefined) };
+
+    await refundPaymentTransaction(
+      env(db, cache),
+      { transactionId: "txn-1", amount: 30 },
+      { user: cashierUser },
+    );
+
+    expect(cache.delete).toHaveBeenCalledWith("order:order-42:full");
+    expect(cache.delete).toHaveBeenCalledWith("order:order-42:basic");
   });
 
   it("does not commit refund ledger writes when a middle write fails", async () => {

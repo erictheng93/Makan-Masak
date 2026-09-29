@@ -62,6 +62,12 @@ export interface RefundCompletionAlert {
 
 export interface RefundServiceOptions {
   alertSink?: (alert: RefundCompletionAlert) => Promise<void> | void;
+  /**
+   * Called once a completed refund has been written onto its order, so the
+   * caller can drop whatever it cached for that order. A failure is logged and
+   * swallowed: the money has already moved.
+   */
+  onOrderRefunded?: (orderId: string) => Promise<void> | void;
 }
 
 /**
@@ -88,11 +94,13 @@ export class RefundService {
   private db;
   private businessTimezone;
   private readonly alertSink?: RefundServiceOptions["alertSink"];
+  private readonly onOrderRefunded?: RefundServiceOptions["onOrderRefunded"];
 
   constructor(d1: D1Database, options: RefundServiceOptions = {}) {
     this.db = drizzle(d1);
     this.businessTimezone = new BusinessTimezoneResolver(this.db);
     this.alertSink = options.alertSink;
+    this.onOrderRefunded = options.onOrderRefunded;
   }
 
   /**
@@ -640,6 +648,12 @@ export class RefundService {
           updatedAt: completedAt,
         })
         .where(eq(orders.id, refund.originalOrderId));
+
+      try {
+        await this.onOrderRefunded?.(refund.originalOrderId);
+      } catch (hookError) {
+        console.error("Refund order-changed hook failed:", hookError);
+      }
 
       if (refund.shiftId && (knownRefund?.mutateShift ?? true)) {
         await this.db

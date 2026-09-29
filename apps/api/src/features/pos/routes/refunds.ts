@@ -22,6 +22,7 @@ import { badRequest, notFound } from "../../../shared/utils/api-error";
 import { AlertService } from "../../../services/AlertService";
 import { resolveOrderIdentity } from "../../../shared/services/order-identity";
 import { PosTenantAccessService } from "../services/PosTenantAccessService";
+import { invalidateOrderCache } from "../../orders/services/order-finalization";
 import { USER_ROLES } from "../../../shared/constants";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -70,7 +71,12 @@ function createRefundService(env: Env): RefundService {
       alertService.sendAlert(alert);
   }
 
-  return new RefundService(env.DB, { alertSink });
+  return new RefundService(env.DB, {
+    alertSink,
+    // GET /orders/:id is cached for five minutes; without this the order keeps
+    // reading as fully paid after the money has gone back.
+    onOrderRefunded: (orderId) => invalidateOrderCache(env.CACHE_KV, orderId),
+  });
 }
 
 /**

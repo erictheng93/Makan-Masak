@@ -331,6 +331,23 @@ describe("RefundService", () => {
     });
   });
 
+  it("tells its caller which order a completed refund changed, and survives the caller failing", async () => {
+    mockMutations({ fixtures: { refunds: { update: [{ changes: 1 }] } } });
+    mockSelectResults({
+      refunds: [[refundRow({ refundMethod: "card" })]],
+    });
+    const onOrderRefunded = vi.fn().mockRejectedValue(new Error("kv down"));
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(
+      createService({ onOrderRefunded }).approveRefund("refund-1", "owner-1"),
+    ).resolves.toEqual({ success: true });
+
+    expect(onOrderRefunded).toHaveBeenCalledOnce();
+    expect(onOrderRefunded).toHaveBeenCalledWith("101");
+    errors.mockRestore();
+  });
+
   it("records post-close refunds without mutating the live cash ledger", async () => {
     vi.useFakeTimers();
     const mutations = mockMutations({
