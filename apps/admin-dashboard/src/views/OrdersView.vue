@@ -1,7 +1,11 @@
 <template>
   <div class="orders-view" data-testid="admin-orders-page">
-    <!-- 訂單統計卡片 -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <!-- 訂單統計卡片：GET /orders/stats 只開給 role 0/1，其他角色只會看到假的 0 -->
+    <div
+      v-if="canViewStats"
+      class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
+      data-testid="admin-orders-stats"
+    >
       <div class="bg-white rounded-lg shadow p-4 lg:p-6">
         <div class="flex items-center">
           <div class="p-2 bg-yellow-100 rounded-lg">
@@ -818,6 +822,9 @@ const {
 });
 
 const STATS_ROLES = [0, 1];
+const canViewStats = computed(() =>
+  STATS_ROLES.includes(authStore.user?.role ?? -1),
+);
 
 const refreshOrderStats = async () => {
   const role = authStore.user?.role;

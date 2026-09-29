@@ -143,6 +143,25 @@ describe("OrdersView", () => {
     );
   });
 
+  it("shows the stat cards to the roles that may read them, and not a wall of zeros to the others", async () => {
+    const asOwner = mount(OrdersView);
+    await flushPromises();
+    expect(asOwner.find('[data-testid="admin-orders-stats"]').exists()).toBe(
+      true,
+    );
+
+    authStore.user.role = 4;
+    try {
+      const asCashier = mount(OrdersView);
+      await flushPromises();
+      expect(
+        asCashier.find('[data-testid="admin-orders-stats"]').exists(),
+      ).toBe(false);
+    } finally {
+      authStore.user.role = 1;
+    }
+  });
+
   it("sends the selected delivery type to the server", async () => {
     const wrapper = mount(OrdersView);
 
