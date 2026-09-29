@@ -237,6 +237,7 @@ export class KitchenService implements IKitchenService {
           itemId,
           statusUpdate.status,
           statusUpdate.notes,
+          orderId,
         );
       }
 

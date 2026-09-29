@@ -1135,6 +1135,22 @@ describe("OrdersService workflows", () => {
     });
   });
 
+  it("drops the cached order when an item moves, so the detail read is not stale", async () => {
+    const env = createEnv();
+    const service = new OrdersService(env as never);
+    updateBaseOrderItemStatus.mockResolvedValueOnce(undefined);
+
+    await service.updateItemStatus(501, "ready", undefined, "42");
+
+    expect(updateBaseOrderItemStatus).toHaveBeenCalledWith(
+      501,
+      "ready",
+      undefined,
+    );
+    expect(env.CACHE_KV.delete).toHaveBeenCalledWith("order:42:full");
+    expect(env.CACHE_KV.delete).toHaveBeenCalledWith("order:42:basic");
+  });
+
   it("covers status history and search fallback paths", async () => {
     const env = createEnv();
     const service = new OrdersService(env as never);

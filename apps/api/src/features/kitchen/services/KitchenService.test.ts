@@ -288,6 +288,7 @@ describe("KitchenService", () => {
       501,
       "ready",
       "plated",
+      "order-101",
     );
     expect(serviceMocks.prepare).toHaveBeenCalledWith(
       expect.stringContaining("JOIN orders o ON o.id = oi.order_id"),

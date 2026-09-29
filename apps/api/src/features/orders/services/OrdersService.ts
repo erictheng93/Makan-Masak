@@ -768,9 +768,14 @@ export class OrdersService implements IOrdersService {
     itemId: number,
     status: string,
     notes?: string,
+    orderId?: string,
   ): Promise<void> {
     try {
       await this.baseOrderService.updateOrderItemStatus(itemId, status, notes);
+      // GET /orders/:id serves items from a five-minute cache, and an item
+      // moving does not always move the order (only the first and the last do),
+      // so without this the detail page keeps showing the old item statuses.
+      if (orderId) await this.invalidateOrderCache(orderId);
     } catch (error) {
       if (
         error instanceof Error &&
