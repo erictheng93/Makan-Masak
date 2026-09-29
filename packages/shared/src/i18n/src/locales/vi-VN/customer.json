@@ -1124,6 +1124,7 @@
       "marketHours": "Giờ chợ · {hours}",
       "primaryVendor": "Quầy chính",
       "contactVendor": "Liên hệ quầy",
+      "notOpenToday": "Not open today",
       "loadMoreVendors": "Tải thêm quầy"
     },
     "search": {
@@ -1216,6 +1217,7 @@
       "previousPage": "Trang trước",
       "favoriteSyncFailed": "Không thể đồng bộ trạng thái theo dõi chợ. Vui lòng thử lại.",
       "checkoutSuccess": "Đã gửi đơn chợ",
+      "vendorNotOpenToday": "A stall in your cart is not open today and was removed. Please review and check out again.",
       "checkoutFailed": "Không thể gửi đơn chợ"
     },
     "checkout": {

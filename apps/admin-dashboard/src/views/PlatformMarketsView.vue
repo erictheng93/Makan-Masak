@@ -1134,6 +1134,18 @@
           />
         </label>
         <label class="block">
+          <span class="text-sm font-medium text-ios-text">營業日換日時間</span>
+          <input
+            v-model="editForm.businessDayCutoffTime"
+            type="time"
+            data-testid="market-business-day-cutoff"
+            class="mt-1 w-full rounded-lg border border-ios-separator px-3 py-2 text-sm focus:border-ios-blue focus:ring-2 focus:ring-ios-blue/20"
+          />
+          <span class="mt-1 block text-xs text-ios-secondary">
+            攤位在這個時間之後才算進入新的一天（夜市建議 05:00）
+          </span>
+        </label>
+        <label class="block">
           <span class="text-sm font-medium text-gray-700">地圖標題</span>
           <input
             v-model="editForm.mapTitle"
@@ -1864,6 +1876,9 @@
           沒有可加入的既有店鋪。
         </p>
       </section>
+      <MarketOpenReportPanel
+        :scope="{ kind: 'platform', marketId: editingMarket.id }"
+      />
     </div>
   </div>
 </template>
@@ -1871,6 +1886,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import MarketOpenReportPanel from "@/components/markets/MarketOpenReportPanel.vue";
 import {
   marketsService,
   type AdminMarketJoinRequest,
@@ -2028,6 +2044,7 @@ const editForm = reactive<MarketPublicProfileForm>({
   latitude: "",
   longitude: "",
   openingHoursText: "",
+  businessDayCutoffTime: "05:00",
   mapTitle: "",
   mapDescription: "",
   mapImageUrl: "",

@@ -109,3 +109,23 @@ describe("market country code contract", () => {
     ).toBe(false);
   });
 });
+
+describe("market business-day cutoff contract", () => {
+  it("accepts whole minutes within a day on create and update", () => {
+    expect(
+      createMarketSchema.parse({ ...market, businessDayCutoffMinutes: 1439 }),
+    ).toHaveProperty("businessDayCutoffMinutes", 1439);
+    expect(
+      updateMarketSchema.parse({ businessDayCutoffMinutes: 0 }),
+    ).toHaveProperty("businessDayCutoffMinutes", 0);
+  });
+
+  it.each([-1, 1440, 1.5, "300"])("rejects invalid cutoff %s", (value) => {
+    expect(
+      createMarketSchema.safeParse({
+        ...market,
+        businessDayCutoffMinutes: value,
+      }).success,
+    ).toBe(false);
+  });
+});

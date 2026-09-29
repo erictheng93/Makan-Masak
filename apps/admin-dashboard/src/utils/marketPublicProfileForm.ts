@@ -13,6 +13,7 @@ export interface MarketPublicProfileForm {
   latitude: string;
   longitude: string;
   openingHoursText: string;
+  businessDayCutoffTime: string;
   mapTitle: string;
   mapDescription: string;
   mapImageUrl: string;
@@ -35,6 +36,9 @@ export function marketPublicProfileFormFromMarket(
     openingHoursText: market.openingHours
       ? JSON.stringify(market.openingHours, null, 2)
       : "",
+    businessDayCutoffTime: minutesToTime(
+      market.businessDayCutoffMinutes ?? 300,
+    ),
     mapTitle: market.mapLayout?.title ?? "",
     mapDescription: market.mapLayout?.description ?? "",
     mapImageUrl: market.mapLayout?.imageUrl ?? "",
@@ -58,12 +62,27 @@ export function buildMarketPublicProfilePayload(
     latitude: parseCoordinate(form.latitude, "Latitude"),
     longitude: parseCoordinate(form.longitude, "Longitude"),
     openingHours: parseOpeningHours(form.openingHoursText),
+    businessDayCutoffMinutes: timeToMinutes(form.businessDayCutoffTime),
     mapLayout: buildMapLayout(form),
     bannerUrl: trimmedOrNull(form.bannerUrl),
     logoUrl: trimmedOrNull(form.logoUrl),
     imageUrls: splitLines(form.imageUrlsText),
     tags: splitCommaValues(form.tagsText),
   };
+}
+
+function minutesToTime(minutes: number) {
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+}
+
+function timeToMinutes(value: string) {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value.trim());
+  if (!match) {
+    throw new Error(
+      "Business day cutoff must be a time between 00:00 and 23:59",
+    );
+  }
+  return Number(match[1]) * 60 + Number(match[2]);
 }
 
 function buildMapLayout(form: MarketPublicProfileForm) {

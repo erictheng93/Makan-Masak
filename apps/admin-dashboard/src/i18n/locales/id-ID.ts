@@ -2016,6 +2016,7 @@ const idID: Messages = {
     waitingManagement: "Manajemen Menunggu",
   },
   pages: {
+    marketOpenReport: "Open-day report",
     reviews: "Ulasan pelanggan",
     broadcasts: "Pesan dorong",
     billing: "Paket & Pemakaian",
@@ -2275,8 +2276,50 @@ const idID: Messages = {
       regenerate: "Gagal membuat ulang tautan. Coba lagi.",
     },
   },
+  marketOpenReport: {
+    pageTitle: "Open-day report",
+    title: "Stall open-day report",
+    market: "Market",
+    from: "From",
+    to: "To",
+    view: {
+      daily: "Daily",
+      summary: "Summary",
+    },
+    export: "Export CSV",
+    exportFailed: "Could not export CSV. Please try again.",
+    loadFailed:
+      "Could not load the report. Check the date range (92 days max).",
+    noMarkets: "Your shop is not in any market yet",
+    autoClosed: "Ended at day rollover",
+    col: {
+      date: "Business day",
+      vendor: "Stall",
+      opened: "Opened",
+      closed: "Closed",
+      hours: "Hours open",
+      openedBy: "Opened by",
+      orders: "Orders",
+      revenue: "Revenue",
+      openDays: "Days open",
+      attendance: "Attendance",
+      avgHours: "Avg hours open",
+    },
+  },
   dashboard: {
     title: "Dasbor",
+    marketOpenToday: {
+      title: "Open today",
+      description:
+        "Tap when you start trading so customers see your stall on the market QR",
+      open: "Open today",
+      close: "Close early",
+      closed: "Not open yet today",
+      openSince: "Open since {time}",
+      confirmClose: "Close now? Customers will not be able to order from you.",
+      error: "Could not update your status. Please try again.",
+      report: "Open-day report",
+    },
     setupChecklist: {
       title: "Selesaikan pengaturan toko",
       description: "Selesaikan hal penting ini sebelum buka.",

@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => {
     insert: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    batch: vi.fn(),
   };
 
   return { cache, db };
@@ -171,6 +172,7 @@ function buildMarketRow(
     ...columns,
     countryCode: null,
     platformFeeRateBps: 0,
+    businessDayCutoffMinutes: 300,
     isActive: true,
     createdAt: new Date(0),
     deletedAt: null,
@@ -320,6 +322,7 @@ describe("MarketsService", () => {
     mocks.db.insert.mockReset();
     mocks.db.update.mockReset();
     mocks.db.delete.mockReset();
+    mocks.db.batch.mockReset();
   });
 
   it("returns cached public list data and skips market queries", async () => {
@@ -402,6 +405,9 @@ describe("MarketsService", () => {
       .mockResolvedValueOnce(cachedAreas)
       .mockResolvedValueOnce(cachedVendors);
     const { service } = createService("7");
+    vi.spyOn(service, "getMarketBySlug").mockResolvedValue(
+      buildMarketBySlug({ market: buildMarketRow({ id: "market-1" }) }),
+    );
     const queryAreasSpy = spyOnPrivate(service, "queryAreas");
     const queryVendorsSpy = spyOnPrivate(service, "queryVendors");
 
@@ -412,7 +418,7 @@ describe("MarketsService", () => {
 
     expect(mocks.cache.get).toHaveBeenCalledWith("markets:v7:areas:all");
     expect(mocks.cache.get).toHaveBeenCalledWith(
-      'markets:v7:vendors:{"q":"vendor","slug":"night-market"}',
+      expect.stringContaining('markets:v7:vendors:{"businessDay":'),
     );
     expect(queryAreasSpy).not.toHaveBeenCalled();
     expect(queryVendorsSpy).not.toHaveBeenCalled();
@@ -738,6 +744,13 @@ describe("MarketsService", () => {
     const { service } = createService();
     vi.spyOn(service, "getMarketBySlug")
       .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(
+        buildMarketBySlug({
+          market: buildMarketRow({ id: "market-1" }),
+          publicReadiness: buildReadiness({ ready: false }),
+        }),
+      )
       .mockResolvedValueOnce(
         buildMarketBySlug({
           market: buildMarketRow({ id: "market-1" }),
@@ -1037,6 +1050,8 @@ describe("MarketsService", () => {
               friday: { open: "00:00", close: "23:59", closed: false },
               saturday: { open: "00:00", close: "23:59", closed: false },
             },
+            openedAt: new Date(),
+            timezone: "Asia/Taipei",
             marketHours: null,
             supportsTakeaway: true,
             supportsDelivery: false,
@@ -1080,6 +1095,62 @@ describe("MarketsService", () => {
       expect.stringContaining("markets:v5:vendors:"),
       expect.objectContaining({ total: 1 }),
       expect.any(Number),
+    );
+  });
+
+  it("uses the default cutoff for an older cached market", async () => {
+    mocks.cache.get.mockResolvedValue(null);
+    const { service } = createService("12");
+    vi.spyOn(service, "getMarketBySlug").mockResolvedValue(
+      buildMarketBySlug({
+        market: buildMarketRow({
+          id: "market-1",
+          businessDayCutoffMinutes: undefined,
+        }),
+      }),
+    );
+    mockSelectResults({
+      restaurantMarketMemberships: [
+        [
+          {
+            restaurantId: "restaurant-1",
+            openedAt: new Date(),
+            timezone: "Asia/Taipei",
+          },
+        ],
+        [{ count: 1 }],
+      ],
+      menuItems: [[]],
+      restaurantServiceItems: [[]],
+    });
+    expect(
+      (await service.listVendors("night-market", {}))?.vendors[0]?.isOpen,
+    ).toBe(true);
+  });
+
+  it("rolls the vendor cache key at a supported timezone cutoff", async () => {
+    const { service } = createService("13");
+    vi.spyOn(service, "getMarketBySlug").mockResolvedValue(
+      buildMarketBySlug({ market: buildMarketRow({ id: "market-1" }) }),
+    );
+    mocks.cache.get.mockResolvedValue({
+      vendors: [],
+      total: 0,
+      page: 1,
+      limit: 20,
+    });
+    await service.listVendors(
+      "night-market",
+      {},
+      new Date("2026-09-28T19:59:00Z"),
+    );
+    await service.listVendors(
+      "night-market",
+      {},
+      new Date("2026-09-28T20:00:00Z"),
+    );
+    expect(mocks.cache.get.mock.calls[0][0]).not.toBe(
+      mocks.cache.get.mock.calls[1][0],
     );
   });
 
@@ -1235,41 +1306,58 @@ describe("MarketsService", () => {
     vi.useRealTimers();
   });
 
-  it("persists the country code in bulk market SQL", async () => {
-    const { service } = createService("5");
-    const statements: Array<{ sql: string; values: unknown[] }> = [];
-    const d1 = {
-      prepare: (sql: string) => ({
-        bind: (...values: unknown[]) => ({ sql, values }),
-      }),
-      batch: vi.fn(
-        async (batchStatements: Array<{ sql: string; values: unknown[] }>) => {
-          statements.push(...batchStatements);
-          return [];
+  it.each([undefined, 0, 255])(
+    "persists and returns bulk market cutoff %s",
+    async (cutoff) => {
+      const { service } = createService("5");
+      const inserted: Array<Record<string, unknown>> = [];
+      mocks.db.insert.mockImplementation((table) => {
+        expect(table).toBe(markets);
+        return {
+          values: (row: Record<string, unknown>) => {
+            inserted.push(row);
+            return row;
+          },
+        };
+      });
+      mocks.db.batch.mockResolvedValue([]);
+
+      const rows = await service.createMarketsBulk([
+        {
+          slug: "penang-market",
+          name: "Penang Market",
+          type: "night_market",
+          city: "Penang",
+          countryCode: "MY",
+          ...(cutoff === undefined ? {} : { businessDayCutoffMinutes: cutoff }),
+          district: "Central",
+          address: "Main Road",
+          latitude: 5.4,
+          longitude: 100.3,
         },
-      ),
-    };
-    service["d1"] = d1 as unknown as D1Database;
+        {
+          slug: "johor-market",
+          name: "Johor Market",
+          type: "night_market",
+          city: "Johor Bahru",
+          district: "Central",
+          address: "Market Road",
+          latitude: 1.5,
+          longitude: 103.7,
+        },
+      ]);
 
-    await service.createMarketsBulk([
-      {
-        slug: "penang-market",
-        name: "Penang Market",
-        type: "night_market",
-        city: "Penang",
+      expect(mocks.db.batch).toHaveBeenCalledOnce();
+      expect(mocks.db.batch).toHaveBeenCalledWith(inserted);
+      expect(mocks.db.insert).toHaveBeenCalledTimes(2);
+      expect(inserted).toHaveLength(2);
+      expect(inserted[0]).toMatchObject({
         countryCode: "MY",
-        district: "Central",
-        address: "Main Road",
-        latitude: 5.4,
-        longitude: 100.3,
-      },
-    ]);
-
-    expect(d1.batch).toHaveBeenCalledOnce();
-    expect(statements).toHaveLength(1);
-    expect(statements[0]!.sql).toContain("country_code");
-    expect(statements[0]!.values).toContain("MY");
-  });
+        businessDayCutoffMinutes: cutoff ?? 300,
+      });
+      expect(rows[0]!.businessDayCutoffMinutes).toBe(cutoff ?? 300);
+    },
+  );
 
   it("refuses mismatched vendor currencies before changing memberships", async () => {
     const { service } = createService();
@@ -1616,6 +1704,9 @@ describe("MarketsService", () => {
             marketHours: { monday: { open: "10:00", close: "18:00" } },
             isPrimary: true,
             joinedAt: new Date("2026-06-07T00:00:00.000Z"),
+            openedAt: null,
+            cutoffMinutes: 300,
+            timezone: "Asia/Taipei",
             marketSlug: "night-market",
             marketName: "Night Market",
             marketType: "night_market",
@@ -1680,11 +1771,18 @@ describe("MarketsService", () => {
     });
 
     await expect(
-      service.listRestaurantMemberships("restaurant-1"),
+      service.listRestaurantMemberships(
+        "restaurant-1",
+        new Date("2026-09-28T18:00:00.000Z"),
+      ),
     ).resolves.toEqual({
       memberships: [
         expect.objectContaining({
           id: 1,
+          isOpenToday: false,
+          timezone: "Asia/Taipei",
+          businessDate: "2026-09-28",
+          nextBusinessDayStartMs: Date.parse("2026-09-28T21:00:00.000Z"),
           market: expect.objectContaining({
             id: "market-1",
             slug: "night-market",

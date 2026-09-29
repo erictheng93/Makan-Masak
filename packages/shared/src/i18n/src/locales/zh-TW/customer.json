@@ -1124,6 +1124,7 @@
       "marketHours": "夜市時段 · {hours}",
       "primaryVendor": "主要店鋪",
       "contactVendor": "聯絡店家",
+      "notOpenToday": "今日未營業",
       "loadMoreVendors": "載入更多店鋪"
     },
     "search": {
@@ -1216,6 +1217,7 @@
       "previousPage": "上一頁",
       "favoriteSyncFailed": "無法同步市場追蹤狀態，請稍後再試。",
       "checkoutSuccess": "市場訂單已送出",
+      "vendorNotOpenToday": "有攤位今天還沒開店，已從購物車移除，請確認後再結帳",
       "checkoutFailed": "市場訂單送出失敗"
     },
     "checkout": {

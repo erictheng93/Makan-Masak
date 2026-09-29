@@ -21,10 +21,18 @@ import {
   markets,
   marketCurrencyMatches,
   marketVendorCurrencyMismatch,
+  marketVendorOpenEvents,
   restaurantCurrencySql,
   restaurantMarketMemberships,
   restaurantServiceItems,
   restaurants,
+  businessTimezoneOffsetMinutes,
+  DEFAULT_MARKET_BUSINESS_DAY_CUTOFF_MINUTES,
+  getMarketBusinessDate,
+  marketBusinessDayEndMs,
+  resolveBusinessTimezone,
+  isMarketVendorOpenToday,
+  marketBusinessDateCacheKey,
 } from "@makanmasak/database";
 import {
   KVCacheService,
@@ -32,7 +40,6 @@ import {
   type CacheService,
 } from "../../../core/cache";
 import { CACHE_TTL } from "../../../shared/constants";
-import { isOpenNow } from "../../discovery/utils/isOpenNow";
 import {
   boundingBoxFromCircle,
   distanceKm,
@@ -50,6 +57,12 @@ const MARKET_CACHE_VERSION_KEY = "markets:version";
 const OPEN_NOW_VENDOR_SCAN_LIMIT = 50000;
 // The shared resolver binds one parameter per restaurant; D1 allows 100.
 const CURRENCY_RESOLUTION_BATCH_SIZE = 100;
+
+export type MarketVendorOpenState = {
+  isOpenToday: boolean;
+  openedAt: Date | null;
+  businessDate: string;
+};
 
 export interface MarketFilters {
   q?: string;
@@ -161,10 +174,6 @@ export interface MarketExplorationSummary {
 
 export type CreateMarketInput = typeof markets.$inferInsert;
 export type UpdateMarketInput = Partial<typeof markets.$inferInsert>;
-
-function jsonBindValue(value: unknown) {
-  return value === undefined || value === null ? null : JSON.stringify(value);
-}
 
 export class MarketsService {
   private db;
@@ -1001,10 +1010,15 @@ export class MarketsService {
     return result.results ?? [];
   }
 
-  async listVendors(slug: string, filters: VendorFilters) {
+  async listVendors(slug: string, filters: VendorFilters, now = new Date()) {
+    const detail = await this.getMarketBySlug(slug);
+    const cutoffMinutes =
+      detail?.market.businessDayCutoffMinutes ??
+      DEFAULT_MARKET_BUSINESS_DAY_CUTOFF_MINUTES;
     const cacheKey = await this.publicCacheKey("vendors", {
       slug,
       ...filters,
+      businessDay: marketBusinessDateCacheKey(cutoffMinutes, now),
     });
     const cached =
       await this.cache.get<Awaited<ReturnType<MarketsService["queryVendors"]>>>(
@@ -1012,12 +1026,16 @@ export class MarketsService {
       );
     if (cached) return cached;
 
-    const data = await this.queryVendors(slug, filters);
+    const data = await this.queryVendors(slug, filters, now);
     if (data) await this.cache.set(cacheKey, data, CACHE_TTL.SHORT);
     return data;
   }
 
-  private async queryVendors(slug: string, filters: VendorFilters) {
+  private async queryVendors(
+    slug: string,
+    filters: VendorFilters,
+    now = new Date(),
+  ) {
     const marketDetail = await this.getMarketBySlug(slug);
     if (!marketDetail) return null;
     if (!marketDetail.publicReadiness.ready) return null;
@@ -1093,6 +1111,7 @@ export class MarketsService {
         rating: restaurants.rating,
         businessHours: restaurants.businessHours,
         timezone: restaurants.timezone,
+        openedAt: restaurantMarketMemberships.openedAt,
         marketHours: restaurantMarketMemberships.marketHours,
         supportsTakeaway: restaurants.supportsTakeaway,
         supportsDelivery: restaurants.supportsDelivery,
@@ -1112,13 +1131,18 @@ export class MarketsService {
       .limit(queryLimit)
       .offset(queryOffset);
 
-    // `timezone` is destructured off rather than spread: it is only here to
-    // cut `isOpen` at the stall's own clock (#329), and the vendor payload
-    // does not otherwise carry it.
-    let vendors = rows.map(({ timezone, ...row }) => ({
+    const cutoffMinutes =
+      marketDetail.market.businessDayCutoffMinutes ??
+      DEFAULT_MARKET_BUSINESS_DAY_CUTOFF_MINUTES;
+    let vendors = rows.map(({ timezone, openedAt, ...row }) => ({
       ...row,
       effectiveBusinessHours: row.marketHours ?? row.businessHours ?? null,
-      isOpen: isOpenNow(row.marketHours ?? row.businessHours ?? null, timezone),
+      isOpen: isMarketVendorOpenToday(
+        openedAt,
+        businessTimezoneOffsetMinutes(timezone),
+        cutoffMinutes,
+        now,
+      ),
       ...(geoFilter
         ? {
             distanceKm: Number(
@@ -1398,72 +1422,20 @@ export class MarketsService {
       ...input,
       id: input.id ?? generateUUID(),
       platformFeeRateBps: input.platformFeeRateBps ?? 0,
+      businessDayCutoffMinutes:
+        input.businessDayCutoffMinutes ??
+        DEFAULT_MARKET_BUSINESS_DAY_CUTOFF_MINUTES,
       isActive: input.isActive ?? true,
       createdAt: now,
       updatedAt: now,
       deletedAt: null,
     }));
 
-    await this.d1.batch(
-      rows.map((market) =>
-        this.d1
-          .prepare(
-            `
-              INSERT INTO markets (
-                id,
-                slug,
-                name,
-                type,
-                description,
-                city,
-                country_code,
-                district,
-                address,
-                latitude,
-                longitude,
-                boundary_geojson,
-                opening_hours,
-                map_layout,
-                banner_url,
-                logo_url,
-                image_urls,
-                tags,
-                platform_fee_rate_bps,
-                is_active,
-                created_at_ms,
-                updated_at_ms,
-                deleted_at_ms
-              )
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `,
-          )
-          .bind(
-            market.id,
-            market.slug,
-            market.name,
-            market.type,
-            market.description ?? null,
-            market.city,
-            market.countryCode ?? null,
-            market.district,
-            market.address,
-            market.latitude,
-            market.longitude,
-            jsonBindValue(market.boundaryGeojson),
-            jsonBindValue(market.openingHours),
-            jsonBindValue(market.mapLayout),
-            market.bannerUrl ?? null,
-            market.logoUrl ?? null,
-            jsonBindValue(market.imageUrls),
-            jsonBindValue(market.tags),
-            market.platformFeeRateBps,
-            market.isActive ? 1 : 0,
-            now.getTime(),
-            now.getTime(),
-            null,
-          ),
-      ),
-    );
+    const [first, ...rest] = rows;
+    await this.db.batch([
+      this.db.insert(markets).values(first!),
+      ...rest.map((market) => this.db.insert(markets).values(market)),
+    ]);
 
     await this.bumpPublicCacheVersion();
     return rows;
@@ -1610,7 +1582,7 @@ export class MarketsService {
         ${input.stallNumber ?? null}, ${input.locationLabel ?? null},
         ${input.mapPosition ? JSON.stringify(input.mapPosition) : null},
         ${input.marketHours ? JSON.stringify(input.marketHours) : null},
-        ${input.isPrimary ? 1 : 0}, ${Date.now()}, NULL
+        ${input.isPrimary ? 1 : 0}, ${Date.now()}, NULL, NULL
         FROM ${restaurants} WHERE ${restaurants.id} = ${input.restaurantId}
         AND ${restaurantCurrencySql(restaurants.settings)} = ${currency}
         AND ${marketCurrencyMatches(input.restaurantId, currency, marketId)}`,
@@ -1638,6 +1610,140 @@ export class MarketsService {
       .limit(1);
 
     return membership ?? null;
+  }
+
+  async setVendorOpenToday(input: {
+    marketId: string;
+    restaurantId: string;
+    open: boolean;
+    actorUserId: string | null;
+    now?: Date;
+  }): Promise<
+    | { status: "not_member" }
+    | { status: "restaurant_inactive" }
+    | { status: "ok"; state: MarketVendorOpenState }
+  > {
+    const now = input.now ?? new Date();
+    const [row] = await this.db
+      .select({
+        membershipId: restaurantMarketMemberships.id,
+        openedAt: restaurantMarketMemberships.openedAt,
+        timezone: restaurants.timezone,
+        isActive: restaurants.isActive,
+        cutoffMinutes: markets.businessDayCutoffMinutes,
+      })
+      .from(restaurantMarketMemberships)
+      .innerJoin(
+        restaurants,
+        eq(restaurantMarketMemberships.restaurantId, restaurants.id),
+      )
+      .innerJoin(markets, eq(restaurantMarketMemberships.marketId, markets.id))
+      .where(
+        and(
+          eq(restaurantMarketMemberships.marketId, input.marketId),
+          eq(restaurantMarketMemberships.restaurantId, input.restaurantId),
+          isNull(restaurantMarketMemberships.leftAt),
+          isNull(markets.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    if (!row) return { status: "not_member" };
+    if (input.open && !row.isActive) return { status: "restaurant_inactive" };
+
+    const offset = businessTimezoneOffsetMinutes(row.timezone);
+    const cutoffMinutes =
+      row.cutoffMinutes ?? DEFAULT_MARKET_BUSINESS_DAY_CUTOFF_MINUTES;
+    const businessDate = getMarketBusinessDate(offset, cutoffMinutes, now);
+    const openNow = isMarketVendorOpenToday(
+      row.openedAt,
+      offset,
+      cutoffMinutes,
+      now,
+    );
+
+    if (openNow === input.open) {
+      return {
+        status: "ok",
+        state: {
+          isOpenToday: openNow,
+          openedAt: openNow ? row.openedAt : null,
+          businessDate,
+        },
+      };
+    }
+
+    // D1 batches are atomic; changes() inserts an event only for the winning update.
+    const [update] = await this.db.batch([
+      this.db
+        .update(restaurantMarketMemberships)
+        .set({ openedAt: input.open ? now : null })
+        .where(
+          and(
+            eq(restaurantMarketMemberships.id, row.membershipId),
+            isNull(restaurantMarketMemberships.leftAt),
+            row.openedAt === null
+              ? isNull(restaurantMarketMemberships.openedAt)
+              : eq(restaurantMarketMemberships.openedAt, row.openedAt),
+          ),
+        ),
+      this.db.insert(marketVendorOpenEvents).select(
+        this.db
+          .select({
+            id: sql<string>`${generateUUID()}`.as("id"),
+            marketId: sql<string>`${input.marketId}`.as("market_id"),
+            restaurantId: sql<string>`${input.restaurantId}`.as(
+              "restaurant_id",
+            ),
+            action: sql<"open" | "close">`${input.open ? "open" : "close"}`.as(
+              "action",
+            ),
+            businessDate: sql<string>`${businessDate}`.as("business_date"),
+            occurredAt: sql<Date>`${now.getTime()}`.as("occurred_at_ms"),
+            actorUserId: sql<string | null>`${input.actorUserId}`.as(
+              "actor_user_id",
+            ),
+          })
+          .from(restaurantMarketMemberships)
+          .where(
+            and(
+              eq(restaurantMarketMemberships.id, row.membershipId),
+              sql`changes() = 1`,
+            ),
+          ),
+      ),
+    ]);
+    if ((update.meta?.changes ?? 0) === 0) {
+      const current = await this.getActiveVendorMembership(
+        input.marketId,
+        input.restaurantId,
+      );
+      if (!current) return { status: "not_member" };
+      const isOpenToday = isMarketVendorOpenToday(
+        current.openedAt,
+        offset,
+        cutoffMinutes,
+        now,
+      );
+      return {
+        status: "ok",
+        state: {
+          isOpenToday,
+          openedAt: isOpenToday ? current.openedAt : null,
+          businessDate,
+        },
+      };
+    }
+    await this.bumpPublicCacheVersion();
+
+    return {
+      status: "ok",
+      state: {
+        isOpenToday: input.open,
+        openedAt: input.open ? now : null,
+        businessDate,
+      },
+    };
   }
 
   private async clearPrimaryMembership(
@@ -1675,7 +1781,7 @@ export class MarketsService {
     return removed;
   }
 
-  async listRestaurantMemberships(restaurantId: string) {
+  async listRestaurantMemberships(restaurantId: string, now = new Date()) {
     const rows = await this.db
       .select({
         id: restaurantMarketMemberships.id,
@@ -1687,6 +1793,9 @@ export class MarketsService {
         marketHours: restaurantMarketMemberships.marketHours,
         isPrimary: restaurantMarketMemberships.isPrimary,
         joinedAt: restaurantMarketMemberships.joinedAt,
+        openedAt: restaurantMarketMemberships.openedAt,
+        cutoffMinutes: markets.businessDayCutoffMinutes,
+        timezone: restaurants.timezone,
         marketSlug: markets.slug,
         marketName: markets.name,
         marketType: markets.type,
@@ -1695,6 +1804,10 @@ export class MarketsService {
       })
       .from(restaurantMarketMemberships)
       .innerJoin(markets, eq(restaurantMarketMemberships.marketId, markets.id))
+      .innerJoin(
+        restaurants,
+        eq(restaurantMarketMemberships.restaurantId, restaurants.id),
+      )
       .where(
         and(
           eq(restaurantMarketMemberships.restaurantId, restaurantId),
@@ -1706,25 +1819,48 @@ export class MarketsService {
       .orderBy(desc(restaurantMarketMemberships.isPrimary), asc(markets.name));
 
     return {
-      memberships: rows.map((row) => ({
-        id: row.id,
-        restaurantId: row.restaurantId,
-        marketId: row.marketId,
-        stallNumber: row.stallNumber,
-        locationLabel: row.locationLabel,
-        mapPosition: row.mapPosition,
-        marketHours: row.marketHours,
-        isPrimary: row.isPrimary,
-        joinedAt: row.joinedAt,
-        market: {
-          id: row.marketId,
-          slug: row.marketSlug,
-          name: row.marketName,
-          type: row.marketType,
-          city: row.city,
-          district: row.district,
-        },
-      })),
+      memberships: rows.map((row) => {
+        const timezone = resolveBusinessTimezone(row.timezone);
+        const offset = businessTimezoneOffsetMinutes(timezone);
+        const cutoffMinutes =
+          row.cutoffMinutes ?? DEFAULT_MARKET_BUSINESS_DAY_CUTOFF_MINUTES;
+        const businessDate = getMarketBusinessDate(offset, cutoffMinutes, now);
+        const isOpenToday = isMarketVendorOpenToday(
+          row.openedAt,
+          offset,
+          cutoffMinutes,
+          now,
+        );
+        return {
+          id: row.id,
+          restaurantId: row.restaurantId,
+          marketId: row.marketId,
+          stallNumber: row.stallNumber,
+          locationLabel: row.locationLabel,
+          mapPosition: row.mapPosition,
+          marketHours: row.marketHours,
+          isPrimary: row.isPrimary,
+          joinedAt: row.joinedAt,
+          isOpenToday,
+          openedAt: isOpenToday ? row.openedAt : null,
+          businessDate,
+          timezone,
+          nextBusinessDayStartMs: marketBusinessDayEndMs(
+            businessDate,
+            offset,
+            cutoffMinutes,
+          ),
+          market: {
+            id: row.marketId,
+            slug: row.marketSlug,
+            name: row.marketName,
+            type: row.marketType,
+            city: row.city,
+            district: row.district,
+            businessDayCutoffMinutes: cutoffMinutes,
+          },
+        };
+      }),
     };
   }
 

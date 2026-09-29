@@ -134,6 +134,10 @@
     {
       "fresh": "0033_restaurant_is_demo.sql",
       "reason": "restaurants is a platform-API table; the management-api database has no restaurants row to flag as a demo."
+    },
+    {
+      "fresh": "0034_market_vendor_daily_open.sql",
+      "reason": "markets, restaurant_market_memberships and the new open-event log are platform-API tables; the management-api database has no markets to pair against."
     }
   ],
   "legacyOnly": [

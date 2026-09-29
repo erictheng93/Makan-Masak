@@ -164,6 +164,16 @@ export const useMarketCartStore = defineStore("marketCart", () => {
     saveCarts();
   }
 
+  function removeVendor(marketSlug: string, restaurantId: string) {
+    const cart = carts.value[marketSlug];
+    if (!cart) return;
+    cart.vendors = cart.vendors.filter(
+      (entry) => entry.restaurantId !== restaurantId,
+    );
+    cart.updatedAt = Date.now();
+    saveCarts();
+  }
+
   function clearMarket(marketSlug: string) {
     delete carts.value[marketSlug];
     if (activeMarketSlug.value === marketSlug) {
@@ -328,6 +338,7 @@ export const useMarketCartStore = defineStore("marketCart", () => {
     addItem,
     updateQuantity,
     removeItem,
+    removeVendor,
     clearMarket,
     cartForMarket,
     itemCountForCart,

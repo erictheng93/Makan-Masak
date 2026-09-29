@@ -3,7 +3,7 @@
  * HTTP route handlers for restaurant operations
  */
 
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import {
   validateBody,
   validateQuery,
@@ -18,12 +18,22 @@ import { moduleGate } from "../../../middleware/moduleGate";
 import { ConsoleLogger } from "../../../core/monitoring";
 import { HTTP_STATUS, USER_ROLES } from "../../../shared/constants";
 import type { Env } from "../../../shared/types";
-import { notFound, forbidden } from "../../../shared/utils/api-error";
+import {
+  badRequest,
+  notFound,
+  forbidden,
+} from "../../../shared/utils/api-error";
 
 import { RestaurantsService } from "../services/RestaurantsService";
 import { restaurantSchemas } from "../schemas/validation";
 import { MarketsService } from "../../markets/services/MarketsService";
-import { createMarketJoinRequestSchema } from "../../markets/schemas/validation";
+import {
+  createMarketJoinRequestSchema,
+  marketOpenReportQuerySchema,
+  restaurantMarketParamSchema,
+} from "../../markets/schemas/validation";
+import { MarketOpenReportService } from "../../markets/services/MarketOpenReportService";
+import { openReportResponse } from "../../markets/routes/open-report-response";
 import { createSearchIndexSync } from "../../discovery/services/SearchIndexSyncService";
 import { TablesService } from "../../tables/services/TablesService";
 
@@ -527,6 +537,81 @@ app.get(
     const data = await service.listRestaurantMemberships(id);
 
     return c.json({ success: true, data }, HTTP_STATUS.OK);
+  },
+);
+
+function marketOpenTodayHandler(open: boolean) {
+  return async (
+    c: Context<{
+      Bindings: Env;
+      Variables: { validatedParams: { id: string; marketId: string } };
+    }>,
+  ) => {
+    const { id, marketId } = c.get("validatedParams");
+    const user = c.get("user");
+    assertCanManageRestaurant(user, id);
+
+    const service = new MarketsService(c.env.DB, c.env.CACHE_KV);
+    const result = await service.setVendorOpenToday({
+      marketId,
+      restaurantId: id,
+      open,
+      actorUserId: user.id ?? null,
+    });
+
+    if (result.status === "not_member") {
+      throw notFound(
+        "Market membership not found",
+        "MARKET_MEMBERSHIP_NOT_FOUND",
+      );
+    }
+    if (result.status === "restaurant_inactive") {
+      throw badRequest("Restaurant is not active", "RESTAURANT_INACTIVE");
+    }
+
+    return c.json({ success: true, data: result.state }, HTTP_STATUS.OK);
+  };
+}
+
+app.post(
+  "/:id/markets/:marketId/open",
+  authMiddleware,
+  requireRole([USER_ROLES.ADMIN, USER_ROLES.OWNER]),
+  validateParams(restaurantMarketParamSchema),
+  marketOpenTodayHandler(true),
+);
+
+app.post(
+  "/:id/markets/:marketId/close",
+  authMiddleware,
+  requireRole([USER_ROLES.ADMIN, USER_ROLES.OWNER]),
+  validateParams(restaurantMarketParamSchema),
+  marketOpenTodayHandler(false),
+);
+
+app.get(
+  "/:id/markets/:marketId/open-report",
+  authMiddleware,
+  requireRole([USER_ROLES.ADMIN, USER_ROLES.OWNER]),
+  validateParams(restaurantMarketParamSchema),
+  validateQuery(marketOpenReportQuerySchema),
+  async (c) => {
+    const { id, marketId } = c.get("validatedParams");
+    const query = c.get("validatedQuery");
+    assertCanManageRestaurant(c.get("user"), id);
+    const report = await new MarketOpenReportService(c.env.DB).getReport({
+      marketId,
+      restaurantId: id,
+      from: query.from,
+      to: query.to,
+    });
+    if (!report || report.summary.length === 0) {
+      throw notFound(
+        "Market membership not found",
+        "MARKET_MEMBERSHIP_NOT_FOUND",
+      );
+    }
+    return openReportResponse(c, report, query);
   },
 );
 

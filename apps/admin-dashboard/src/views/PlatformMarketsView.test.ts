@@ -469,6 +469,29 @@ describe("PlatformMarketsView", () => {
     );
   });
 
+  it("saves the market business-day cutoff from the public profile form", async () => {
+    const wrapper = mount(PlatformMarketsView);
+    await flushPromises();
+
+    await wrapper
+      .findAll("button")
+      .find((button) => button.text() === "編輯")!
+      .trigger("click");
+    const cutoff = wrapper.get('[data-testid="market-business-day-cutoff"]');
+    expect((cutoff.element as HTMLInputElement).value).toBe("05:00");
+    await cutoff.setValue("04:15");
+    await wrapper
+      .findAll("button")
+      .find((button) => button.text() === "儲存公開資料")!
+      .trigger("click");
+    await flushPromises();
+
+    expect(marketsService.updateMarketPublicProfile).toHaveBeenCalledWith(
+      "market-1",
+      expect.objectContaining({ businessDayCutoffMinutes: 255 }),
+    );
+  });
+
   it("shows opening-hours errors before sending the profile update", async () => {
     const wrapper = mount(PlatformMarketsView);
     await flushPromises();
@@ -1778,6 +1801,11 @@ describe("PlatformMarketsView", () => {
       stallNumber: "D-08",
       isPrimary: false,
       joinedAt: new Date(),
+      isOpenToday: false,
+      openedAt: null,
+      businessDate: "2026-09-28",
+      timezone: "Asia/Taipei",
+      nextBusinessDayStartMs: Date.parse("2026-09-28T21:00:00.000Z"),
       market: {
         id: "market-1",
         slug: "fengjia",
@@ -1860,6 +1888,11 @@ describe("PlatformMarketsView", () => {
       stallNumber: "A-02",
       isPrimary: true,
       joinedAt: new Date(),
+      isOpenToday: false,
+      openedAt: null,
+      businessDate: "2026-09-28",
+      timezone: "Asia/Taipei",
+      nextBusinessDayStartMs: Date.parse("2026-09-28T21:00:00.000Z"),
       market: {
         id: "market-1",
         slug: "fengjia",
@@ -1980,6 +2013,11 @@ describe("PlatformMarketsView", () => {
       stallNumber: "A-02",
       isPrimary: true,
       joinedAt: new Date(),
+      isOpenToday: false,
+      openedAt: null,
+      businessDate: "2026-09-28",
+      timezone: "Asia/Taipei",
+      nextBusinessDayStartMs: Date.parse("2026-09-28T21:00:00.000Z"),
       market: {
         id: "market-1",
         slug: "fengjia",

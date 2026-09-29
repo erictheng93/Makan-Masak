@@ -20,6 +20,7 @@ import {
   importMarketVendorsSchema,
   marketJoinRequestIdParamSchema,
   marketIdParamSchema,
+  marketOpenReportQuerySchema,
   marketVendorParamSchema,
   updateMarketVendorSchema,
   updateMarketSchema,
@@ -33,6 +34,9 @@ import {
   vendorCountry,
 } from "../services/market-country";
 import { RestaurantsService } from "../../restaurants/services/RestaurantsService";
+import { notFound } from "../../../shared/utils/api-error";
+import { MarketOpenReportService } from "../services/MarketOpenReportService";
+import { openReportResponse } from "./open-report-response";
 
 const routes = new Hono<{ Bindings: Env }>();
 
@@ -369,6 +373,23 @@ async function dryRunVendorImport(input: {
 }
 
 routes.use("*", requireRole([0]));
+
+routes.get(
+  "/:id/open-report",
+  validateParams(marketIdParamSchema),
+  validateQuery(marketOpenReportQuerySchema),
+  async (c) => {
+    const { id } = c.get("validatedParams");
+    const query = c.get("validatedQuery");
+    const report = await new MarketOpenReportService(c.env.DB).getReport({
+      marketId: id,
+      from: query.from,
+      to: query.to,
+    });
+    if (!report) throw notFound("Market not found", "MARKET_NOT_FOUND");
+    return openReportResponse(c, report, query);
+  },
+);
 
 routes.get("/readiness", async (c) => {
   const service = new MarketsService(c.env.DB, c.env.CACHE_KV);

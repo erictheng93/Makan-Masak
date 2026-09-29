@@ -1124,6 +1124,7 @@
       "marketHours": "Market hours · {hours}",
       "primaryVendor": "Main stall",
       "contactVendor": "Contact stall",
+      "notOpenToday": "Not open today",
       "loadMoreVendors": "Load more stalls"
     },
     "search": {
@@ -1216,6 +1217,7 @@
       "previousPage": "Back",
       "favoriteSyncFailed": "Unable to sync whether you follow this market. Please try again.",
       "checkoutSuccess": "Market order sent",
+      "vendorNotOpenToday": "A stall in your cart is not open today and was removed. Please review and check out again.",
       "checkoutFailed": "Unable to send the market order"
     },
     "checkout": {

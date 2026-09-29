@@ -132,6 +132,51 @@ export const marketVendorParamSchema = z.lazy(() =>
   }),
 );
 
+export const restaurantMarketParamSchema = z.lazy(() =>
+  z.object({
+    id: z.string().min(1).max(120),
+    marketId: z.string().min(1).max(120),
+  }),
+);
+
+const MAX_OPEN_REPORT_DAYS = 92;
+const reportDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine(
+    (value) =>
+      !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) &&
+      new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value,
+    { message: "Invalid date" },
+  );
+
+export const marketOpenReportQuerySchema = z.lazy(() =>
+  z
+    .object({
+      from: reportDateSchema,
+      to: reportDateSchema,
+      view: z.enum(["daily", "summary"]).optional(),
+      format: z.enum(["json", "csv"]).optional(),
+    })
+    .refine((query) => query.from <= query.to, {
+      message: "from must not be after to",
+      path: ["from"],
+    })
+    .refine(
+      (query) =>
+        (Date.parse(`${query.to}T00:00:00Z`) -
+          Date.parse(`${query.from}T00:00:00Z`)) /
+          86_400_000 <
+        MAX_OPEN_REPORT_DAYS,
+      {
+        message: `Range must be at most ${MAX_OPEN_REPORT_DAYS} days`,
+        path: ["to"],
+      },
+    ),
+);
+
+export type MarketOpenReportQuery = z.infer<typeof marketOpenReportQuerySchema>;
+
 export const createMarketSchema = z.object({
   slug: z
     .string()
@@ -160,6 +205,7 @@ export const createMarketSchema = z.object({
   imageUrls: z.array(urlSchema).nullable().optional(),
   tags: z.array(z.string().min(1).max(40)).nullable().optional(),
   platformFeeRateBps: z.number().int().min(0).max(10000).optional(),
+  businessDayCutoffMinutes: z.number().int().min(0).max(1439).optional(),
   isActive: z.boolean().optional(),
 });
 

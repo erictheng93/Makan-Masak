@@ -38,6 +38,7 @@
     </div>
 
     <SetupChecklistCard />
+    <MarketOpenTodayCard />
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -294,6 +295,7 @@ import OrdersChart from "@/components/dashboard/OrdersChart.vue";
 import TopMenuItems from "@/components/dashboard/TopMenuItems.vue";
 import RecentOrders from "@/components/dashboard/RecentOrders.vue";
 import SetupChecklistCard from "@/components/dashboard/SetupChecklistCard.vue";
+import MarketOpenTodayCard from "@/components/dashboard/MarketOpenTodayCard.vue";
 import RealtimeNotificationPanel from "@/components/RealtimeNotificationPanel.vue";
 
 // 🚀 懶加載優化：只加載可見的圖表

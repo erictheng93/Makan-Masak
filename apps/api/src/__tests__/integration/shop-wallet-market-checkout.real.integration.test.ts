@@ -170,12 +170,14 @@ describe("shop wallet market checkout - real integration", () => {
         marketId: market.id,
         stallNumber: "A01",
         joinedAt: now,
+        openedAt: new Date(),
       },
       {
         restaurantId: String(vendorB.id),
         marketId: market.id,
         stallNumber: "A02",
         joinedAt: now,
+        openedAt: new Date(),
       },
     ]);
 

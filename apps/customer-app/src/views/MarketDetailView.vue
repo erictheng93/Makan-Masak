@@ -479,6 +479,7 @@ import { useI18n } from "@/composables/useI18n";
 import { getLocalizedMenuName } from "@/utils/localized-menu-content";
 import { useFeatureAvailability } from "@/composables/useFeatureAvailability";
 import { orderApi, type MarketCheckoutResponse } from "@/services/orderApi";
+import { parseUserFacingError } from "@makanmasak/shared/utils/user-facing-error";
 
 const route = useRoute();
 const router = useRouter();
@@ -844,6 +845,10 @@ function currentMarketQuery() {
 }
 
 function openVendor(vendor: { restaurantId: string }) {
+  if (vendorIsClosedToday(vendor)) {
+    toast.error(t("markets.vendors.notOpenToday"));
+    return;
+  }
   router.push({
     name: "ShopMenu",
     params: { restaurantId: vendor.restaurantId },
@@ -852,6 +857,10 @@ function openVendor(vendor: { restaurantId: string }) {
 }
 
 function openVendorServices(vendor: { restaurantId: string }) {
+  if (vendorIsClosedToday(vendor)) {
+    toast.error(t("markets.vendors.notOpenToday"));
+    return;
+  }
   router.push({
     name: "ShopMenu",
     params: { restaurantId: vendor.restaurantId },
@@ -862,7 +871,21 @@ function openVendorServices(vendor: { restaurantId: string }) {
   });
 }
 
+function vendorIsClosedToday(vendor: {
+  restaurantId: string;
+  isOpen?: boolean;
+}) {
+  const listed = store.vendors.find(
+    (entry) => entry.restaurantId === vendor.restaurantId,
+  );
+  return vendor.isOpen === false || listed?.isOpen === false;
+}
+
 async function startTakeaway(vendor: MarketVendor) {
+  if (vendorIsClosedToday(vendor)) {
+    toast.error(t("markets.vendors.notOpenToday"));
+    return;
+  }
   await startTakeawayForRestaurant(vendor.restaurantId, marketReturnQuery());
 }
 
@@ -1077,10 +1100,31 @@ async function submitMarketCheckout() {
     });
   } catch (error) {
     console.error("Market checkout failed:", error);
+    const { code } = parseUserFacingError(error);
+    if (code === "VENDOR_NOT_OPEN_TODAY" && marketCart.value) {
+      for (const restaurantId of closedVendorIdsFrom(error)) {
+        marketCartStore.removeVendor(marketCart.value.marketSlug, restaurantId);
+      }
+      toast.error(t("markets.detail.vendorNotOpenToday"));
+      return;
+    }
     toast.error(t("markets.detail.checkoutFailed"));
   } finally {
     isSubmittingMarketCheckout.value = false;
   }
+}
+
+function closedVendorIdsFrom(error: unknown): string[] {
+  const apiError = error as {
+    details?: { restaurantIds?: unknown };
+    response?: {
+      data?: { error?: { details?: { restaurantIds?: unknown } } };
+    };
+  } | null;
+  const details = apiError?.details ?? apiError?.response?.data?.error?.details;
+  return Array.isArray(details?.restaurantIds)
+    ? details.restaurantIds.filter((id): id is string => typeof id === "string")
+    : [];
 }
 
 async function openContactProfile(vendor: MarketVendor) {

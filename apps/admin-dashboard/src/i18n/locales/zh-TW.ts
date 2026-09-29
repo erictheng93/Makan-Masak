@@ -2045,6 +2045,7 @@ const zhTWCore = {
 
   // 頁面標題
   pages: {
+    marketOpenReport: "開店紀錄",
     reviews: "顧客評價",
     broadcasts: "推播訊息",
     billing: "訂閱與用量",
@@ -2305,8 +2306,48 @@ const zhTWCore = {
       regenerate: "重新產生設定連結失敗，請稍後再試。",
     },
   },
+  marketOpenReport: {
+    pageTitle: "開店紀錄",
+    title: "開店紀錄報表",
+    market: "商圈",
+    from: "開始日期",
+    to: "結束日期",
+    view: {
+      daily: "每日明細",
+      summary: "期間彙總",
+    },
+    export: "匯出 CSV",
+    exportFailed: "無法匯出 CSV，請稍後再試",
+    loadFailed: "無法載入報表，請確認日期區間（最多 92 天）",
+    noMarkets: "你的店尚未加入任何商圈",
+    autoClosed: "換日自動結束",
+    col: {
+      date: "營業日",
+      vendor: "攤位",
+      opened: "開店",
+      closed: "收攤",
+      hours: "營業時長",
+      openedBy: "操作者",
+      orders: "訂單數",
+      revenue: "營業額",
+      openDays: "開店天數",
+      attendance: "出勤率",
+      avgHours: "平均營業時長",
+    },
+  },
   dashboard: {
     title: "儀表板",
+    marketOpenToday: {
+      title: "今日營業",
+      description: "每天開始營業時按一下，客人才會在商圈 QR 看到你的攤位",
+      open: "今日開店",
+      close: "提早收攤",
+      closed: "今日尚未開店",
+      openSince: "營業中 · 自 {time}",
+      confirmClose: "確定要收攤嗎？客人將無法再向你下單。",
+      error: "更新營業狀態失敗，請再試一次",
+      report: "開店紀錄",
+    },
     setupChecklist: {
       title: "完成店家設定",
       description: "開店前請完成這些基本項目。",

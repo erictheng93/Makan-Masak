@@ -162,6 +162,15 @@ describe("admin dashboard router", () => {
     });
   });
 
+  it("limits the market open report route to admins and owners", () => {
+    const report = router.resolve("/dashboard/market-open-report");
+    expect(report.name).toBe("MarketOpenReport");
+    expect(report.matched.at(-1)?.meta).toMatchObject({
+      titleKey: "pages.marketOpenReport",
+      roles: [UserRole.ADMIN, UserRole.OWNER],
+    });
+  });
+
   it("gives platform pages their own breadcrumb title, not the overview's", () => {
     const titleKeyFor = (name: string) =>
       router.getRoutes().find((route) => route.name === name)?.meta.titleKey;

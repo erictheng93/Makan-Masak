@@ -2,6 +2,7 @@ import { ref } from "vue";
 import { mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 import VendorListInMarket from "@/components/markets/VendorListInMarket.vue";
+import RestaurantCard from "@/components/discovery/RestaurantCard.vue";
 import type { MarketVendor } from "@/services/marketsApi";
 
 vi.mock("@/composables/useI18n", () => ({
@@ -54,6 +55,39 @@ function vendor(overrides: Partial<MarketVendor> = {}): MarketVendor {
 }
 
 describe("VendorListInMarket", () => {
+  it("shows an unopened stall but blocks its menu and services", async () => {
+    const wrapper = mount(VendorListInMarket, {
+      props: {
+        vendors: [vendor({ isOpen: false })],
+        loading: false,
+        query: "",
+        takeawayOnly: false,
+        deliveryOnly: false,
+      },
+    });
+
+    const card = wrapper.get('[data-testid="market-vendor-restaurant-1"]');
+    expect(card.attributes("data-status")).toBe("closed-today");
+    expect(card.text()).toContain("markets.vendors.notOpenToday");
+    for (const action of ["menu", "services"]) {
+      const button = wrapper.get(
+        `[data-testid="open-vendor-${action}-restaurant-1"]`,
+      );
+      expect(button.attributes("disabled")).toBeDefined();
+      await button.trigger("click");
+    }
+    await wrapper.get("article button").trigger("click");
+    expect(
+      wrapper.find('[data-testid="restaurant-takeaway-button"]').exists(),
+    ).toBe(false);
+    wrapper
+      .findComponent(RestaurantCard)
+      .vm.$emit("takeaway", vendor({ isOpen: false }));
+    expect(wrapper.emitted("selectVendor")).toBeUndefined();
+    expect(wrapper.emitted("selectServices")).toBeUndefined();
+    expect(wrapper.emitted("takeaway")).toBeUndefined();
+  });
+
   it("emits loadMore when more market vendors are available", async () => {
     const wrapper = mount(VendorListInMarket, {
       props: {

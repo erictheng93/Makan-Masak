@@ -1897,6 +1897,7 @@ const jaJP: Messages = {
     waitingManagement: "待機管理",
   },
   pages: {
+    marketOpenReport: "Open-day report",
     reviews: "お客様レビュー",
     broadcasts: "プッシュ通知",
     billing: "プランと使用量",
@@ -2156,8 +2157,50 @@ const jaJP: Messages = {
       regenerate: "設定リンクの再生成に失敗しました。もう一度お試しください。",
     },
   },
+  marketOpenReport: {
+    pageTitle: "Open-day report",
+    title: "Stall open-day report",
+    market: "Market",
+    from: "From",
+    to: "To",
+    view: {
+      daily: "Daily",
+      summary: "Summary",
+    },
+    export: "Export CSV",
+    exportFailed: "Could not export CSV. Please try again.",
+    loadFailed:
+      "Could not load the report. Check the date range (92 days max).",
+    noMarkets: "Your shop is not in any market yet",
+    autoClosed: "Ended at day rollover",
+    col: {
+      date: "Business day",
+      vendor: "Stall",
+      opened: "Opened",
+      closed: "Closed",
+      hours: "Hours open",
+      openedBy: "Opened by",
+      orders: "Orders",
+      revenue: "Revenue",
+      openDays: "Days open",
+      attendance: "Attendance",
+      avgHours: "Avg hours open",
+    },
+  },
   dashboard: {
     title: "ダッシュボード",
+    marketOpenToday: {
+      title: "Open today",
+      description:
+        "Tap when you start trading so customers see your stall on the market QR",
+      open: "Open today",
+      close: "Close early",
+      closed: "Not open yet today",
+      openSince: "Open since {time}",
+      confirmClose: "Close now? Customers will not be able to order from you.",
+      error: "Could not update your status. Please try again.",
+      report: "Open-day report",
+    },
     setupChecklist: {
       title: "店舗設定を完了",
       description: "営業開始前に基本項目を完了してください。",

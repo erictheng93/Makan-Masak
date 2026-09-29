@@ -5,6 +5,7 @@ import { marketsService } from "./marketsService";
 vi.mock("@/services/api", () => ({
   api: {
     get: vi.fn(),
+    instance: { get: vi.fn() },
     post: vi.fn(),
     put: vi.fn(),
     delete: vi.fn(),
@@ -15,6 +16,54 @@ vi.mock("@/services/api", () => ({
 describe("marketsService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("loads the scoped report for platform and owner", async () => {
+    const report = { market: { id: "market-1" }, daily: [], summary: [] };
+    vi.mocked(api.get).mockResolvedValue({ data: { data: report } } as never);
+    const range = { from: "2026-09-01", to: "2026-09-07" };
+
+    await expect(
+      marketsService.getMarketOpenReport(
+        { kind: "platform", marketId: "market-1" },
+        range,
+      ),
+    ).resolves.toEqual(report);
+    await expect(
+      marketsService.getMarketOpenReport(
+        { kind: "owner", restaurantId: "shop-1", marketId: "market-1" },
+        range,
+      ),
+    ).resolves.toEqual(report);
+    expect(api.get).toHaveBeenCalledWith(
+      "/admin/markets/market-1/open-report",
+      range,
+    );
+    expect(api.get).toHaveBeenCalledWith(
+      "/restaurants/shop-1/markets/market-1/open-report",
+      range,
+    );
+  });
+
+  it("requests CSV as a blob for the selected view", async () => {
+    const blob = new Blob(["header"]);
+    vi.mocked(api.instance.get).mockResolvedValueOnce({ data: blob } as never);
+    const range = { from: "2026-09-01", to: "2026-09-07" };
+
+    await expect(
+      marketsService.exportMarketOpenReportCsv(
+        { kind: "platform", marketId: "market-1" },
+        range,
+        "summary",
+      ),
+    ).resolves.toBe(blob);
+    expect(api.instance.get).toHaveBeenCalledWith(
+      "/admin/markets/market-1/open-report",
+      {
+        params: { ...range, view: "summary", format: "csv" },
+        responseType: "blob",
+      },
+    );
   });
 
   it("lists markets within the API page-size cap", async () => {

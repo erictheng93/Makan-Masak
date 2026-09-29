@@ -74,6 +74,8 @@
           top: `${mapAxis(vendor, 'y')}%`,
         }"
         :data-testid="`stall-position-vendor-${vendor.restaurantId}`"
+        :data-status="vendor.isOpen ? 'open' : 'closed-today'"
+        :disabled="!vendor.isOpen"
         @click="$emit('selectVendor', vendor)"
       >
         <span class="block text-[11px] font-semibold text-ios-blue">
@@ -88,6 +90,12 @@
         </span>
         <span class="mt-1 block text-[11px] text-gray-500">
           {{ vendor.locationLabel || t("markets.common.unzoned") }}
+        </span>
+        <span
+          v-if="!vendor.isOpen"
+          class="mt-1 block text-[11px] font-medium text-ios-secondary"
+        >
+          {{ t("markets.vendors.notOpenToday") }}
         </span>
       </button>
     </div>
@@ -137,6 +145,8 @@
                   : 'border-gray-200 opacity-80'
               "
               :data-testid="`stall-map-vendor-${vendor.restaurantId}`"
+              :data-status="vendor.isOpen ? 'open' : 'closed-today'"
+              :disabled="!vendor.isOpen"
               @click="$emit('selectVendor', vendor)"
             >
               <span class="flex items-center justify-between gap-2">
@@ -158,7 +168,7 @@
                   {{
                     vendor.isOpen
                       ? t("markets.common.openShort")
-                      : t("markets.common.closedShort")
+                      : t("markets.vendors.notOpenToday")
                   }}
                 </span>
               </span>

@@ -67,12 +67,15 @@
         v-for="vendor in vendors"
         :key="vendor.restaurantId"
         class="rounded-xl border border-gray-200 bg-white"
+        :class="{ 'opacity-60': !vendor.isOpen }"
+        :data-testid="`market-vendor-${vendor.restaurantId}`"
+        :data-status="vendor.isOpen ? 'open' : 'closed-today'"
       >
         <RestaurantCard
           :restaurant="vendor"
           class="border-0"
           @select="selectPrimaryVendorEntry(vendor)"
-          @takeaway="$emit('takeaway', vendor)"
+          @takeaway="vendor.isOpen && $emit('takeaway', vendor)"
         />
         <div
           class="flex items-center justify-between gap-3 border-t border-gray-100 px-4 py-3 text-sm"
@@ -86,6 +89,12 @@
               }}
             </span>
             <span v-else>{{ t("markets.vendors.noStallNumber") }}</span>
+            <span
+              v-if="!vendor.isOpen"
+              class="mt-1 inline-block rounded-full bg-ios-bg px-2 py-0.5 text-xs font-medium text-ios-secondary"
+            >
+              {{ t("markets.vendors.notOpenToday") }}
+            </span>
             <span v-if="vendor.locationLabel">
               · {{ vendor.locationLabel }}
             </span>
@@ -150,7 +159,7 @@
             type="button"
             class="rounded-lg bg-ios-blue px-3 py-2 text-sm font-medium text-white disabled:bg-gray-200 disabled:text-gray-400"
             :data-testid="`open-vendor-menu-${vendor.restaurantId}`"
-            :disabled="vendor.availableMenuItemCount <= 0"
+            :disabled="!vendor.isOpen || vendor.availableMenuItemCount <= 0"
             @click="$emit('selectVendor', vendor)"
           >
             {{ t("markets.common.viewMenu") }}
@@ -159,7 +168,7 @@
             type="button"
             class="rounded-lg border border-emerald-500 px-3 py-2 text-sm font-medium text-emerald-700 disabled:border-gray-200 disabled:text-gray-400"
             :data-testid="`open-vendor-services-${vendor.restaurantId}`"
-            :disabled="vendor.publicServiceItemCount <= 0"
+            :disabled="!vendor.isOpen || vendor.publicServiceItemCount <= 0"
             @click="$emit('selectServices', vendor)"
           >
             {{ t("markets.common.viewServices") }}
@@ -233,6 +242,7 @@ function vendorMarketHoursLabel(vendor: MarketVendor) {
 }
 
 function selectPrimaryVendorEntry(vendor: MarketVendor) {
+  if (!vendor.isOpen) return;
   if (vendor.availableMenuItemCount > 0) {
     emit("selectVendor", vendor);
     return;

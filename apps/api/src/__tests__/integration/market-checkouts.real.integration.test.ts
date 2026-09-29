@@ -220,12 +220,14 @@ describe("Market checkouts API - real integration", () => {
         marketId: market.id,
         stallNumber: "A01",
         joinedAt: new Date(),
+        openedAt: new Date(),
       },
       {
         restaurantId: String(vendorB.id),
         marketId: market.id,
         stallNumber: "B02",
         joinedAt: new Date(),
+        openedAt: new Date(),
       },
     ]);
     await Promise.all([
@@ -568,12 +570,14 @@ describe("Market checkouts API - real integration", () => {
         marketId: market.id,
         stallNumber: "R01",
         joinedAt: new Date(),
+        openedAt: new Date(),
       },
       {
         restaurantId: String(vendorB.id),
         marketId: market.id,
         stallNumber: "R02",
         joinedAt: new Date(),
+        openedAt: new Date(),
       },
     ]);
 
@@ -693,12 +697,14 @@ describe("Market checkouts API - real integration", () => {
         marketId: market.id,
         stallNumber: "V01",
         joinedAt: new Date(),
+        openedAt: new Date(),
       },
       {
         restaurantId: String(vendorB.id),
         marketId: market.id,
         stallNumber: "V02",
         joinedAt: new Date(),
+        openedAt: new Date(),
       },
     ]);
 
@@ -826,12 +832,14 @@ describe("Market checkouts API - real integration", () => {
         marketId: market.id,
         stallNumber: "S01",
         joinedAt: new Date(),
+        openedAt: new Date(),
       },
       {
         restaurantId: String(vendorB.id),
         marketId: market.id,
         stallNumber: "S02",
         joinedAt: new Date(),
+        openedAt: new Date(),
       },
     ]);
 
@@ -1022,12 +1030,14 @@ describe("Market checkouts API - real integration", () => {
         marketId: market.id,
         stallNumber: "P01",
         joinedAt: new Date(),
+        openedAt: new Date(),
       },
       {
         restaurantId: String(vendorB.id),
         marketId: market.id,
         stallNumber: "P02",
         joinedAt: new Date(),
+        openedAt: new Date(),
       },
     ]);
     await insertSubscription(String(vendorA.id));
@@ -1278,6 +1288,7 @@ describe("Market checkouts API - real integration", () => {
           marketId: market.id,
           stallNumber: `C${index}`,
           joinedAt: new Date(),
+          openedAt: new Date(),
         })),
       );
       const response = await testApp.app.fetch(

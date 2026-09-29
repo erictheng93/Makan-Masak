@@ -160,8 +160,27 @@ describe("StallMapInMarket", () => {
     });
 
     expect(wrapper.text()).toContain("markets.stallMap.openCount:0");
-    expect(wrapper.text()).toContain("markets.common.closedShort");
+    expect(wrapper.text()).toContain("markets.vendors.notOpenToday");
     expect(wrapper.text()).toContain("markets.common.dataPending");
+    const stall = wrapper.get('[data-testid="stall-map-vendor-r1"]');
+    expect(stall.attributes("data-status")).toBe("closed-today");
+    expect(stall.attributes("disabled")).toBeDefined();
+  });
+
+  it("blocks positioned stalls that have not opened today", async () => {
+    const wrapper = mount(StallMapInMarket, {
+      props: {
+        vendors: [vendor({ isOpen: false, mapPosition: { x: 25, y: 40 } })],
+      },
+    });
+    const stall = wrapper.get(
+      '[data-testid="stall-position-vendor-restaurant-1"]',
+    );
+    expect(stall.attributes("data-status")).toBe("closed-today");
+    expect(stall.attributes("disabled")).toBeDefined();
+    expect(stall.text()).toContain("markets.vendors.notOpenToday");
+    await stall.trigger("click");
+    expect(wrapper.emitted("selectVendor")).toBeUndefined();
   });
 
   it("opens a vendor from the stall map", async () => {

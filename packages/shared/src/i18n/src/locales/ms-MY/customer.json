@@ -1124,6 +1124,7 @@
       "marketHours": "Waktu pasar · {hours}",
       "primaryVendor": "Gerai utama",
       "contactVendor": "Hubungi gerai",
+      "notOpenToday": "Not open today",
       "loadMoreVendors": "Muat lebih banyak gerai"
     },
     "search": {
@@ -1216,6 +1217,7 @@
       "previousPage": "Halaman sebelumnya",
       "favoriteSyncFailed": "Tidak dapat menyegerakkan status ikutan pasar. Sila cuba lagi.",
       "checkoutSuccess": "Pesanan pasar dihantar",
+      "vendorNotOpenToday": "A stall in your cart is not open today and was removed. Please review and check out again.",
       "checkoutFailed": "Tidak dapat menghantar pesanan pasar"
     },
     "checkout": {

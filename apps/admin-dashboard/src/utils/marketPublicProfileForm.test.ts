@@ -53,6 +53,32 @@ describe("market public profile form", () => {
     });
   });
 
+  it("round-trips the business-day cutoff as HH:mm", () => {
+    const form = marketPublicProfileFormFromMarket(
+      market({ businessDayCutoffMinutes: 330 }),
+    );
+    expect(form.businessDayCutoffTime).toBe("05:30");
+
+    expect(
+      buildMarketPublicProfilePayload({
+        ...form,
+        businessDayCutoffTime: "04:15",
+      }),
+    ).toEqual(expect.objectContaining({ businessDayCutoffMinutes: 255 }));
+  });
+
+  it("defaults the cutoff to 05:00 and rejects a malformed time", () => {
+    expect(
+      marketPublicProfileFormFromMarket(market()).businessDayCutoffTime,
+    ).toBe("05:00");
+    expect(() =>
+      buildMarketPublicProfilePayload({
+        ...marketPublicProfileFormFromMarket(market()),
+        businessDayCutoffTime: "25:00",
+      }),
+    ).toThrow("Business day cutoff");
+  });
+
   it("builds an API payload from edited form values", () => {
     const payload = buildMarketPublicProfilePayload({
       description: " 新描述 ",
@@ -60,6 +86,7 @@ describe("market public profile form", () => {
       latitude: "24.15",
       longitude: "120.65",
       openingHoursText: '{"monday":{"open":"17:00","close":"23:00"}}',
+      businessDayCutoffTime: "05:00",
       mapTitle: " 入口地圖 ",
       mapDescription: " 主入口在左側 ",
       mapImageUrl: "https://example.com/map.png",
@@ -77,6 +104,7 @@ describe("market public profile form", () => {
       latitude: 24.15,
       longitude: 120.65,
       openingHours: { monday: { open: "17:00", close: "23:00" } },
+      businessDayCutoffMinutes: 300,
       mapLayout: {
         title: "入口地圖",
         description: "主入口在左側",

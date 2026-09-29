@@ -682,28 +682,36 @@ function setTwoVendorCreateFixtures(options?: {
     name: "逢甲夜市",
     platformFeeRateBps: 350,
     isActive: true,
+    businessDayCutoffMinutes: 300,
   };
   const firstRestaurant = options?.firstRestaurant ?? {
     id: "restaurant-1",
     name: "雞排攤",
     isActive: true,
     isAvailable: true,
+    timezone: "Asia/Taipei",
     settings: { allowGuestOrders: true },
   };
   const firstMembership =
     options && "firstMembership" in options
       ? options.firstMembership
-      : { restaurantId: "restaurant-1", marketId: "market-1" };
+      : {
+          restaurantId: "restaurant-1",
+          marketId: "market-1",
+          openedAt: new Date(),
+        };
   const secondRestaurant = {
     id: "restaurant-2",
     name: "甜點攤",
     isActive: true,
     isAvailable: true,
+    timezone: "Asia/Taipei",
     settings: { allowGuestOrders: true },
   };
   const secondMembership = {
     restaurantId: "restaurant-2",
     marketId: "market-1",
+    openedAt: new Date(),
   };
   const repeat = options?.repeat ?? 1;
   setSelectFixtures({

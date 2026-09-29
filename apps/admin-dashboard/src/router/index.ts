@@ -76,6 +76,15 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: "market-open-report",
+        name: "MarketOpenReport",
+        component: () => import("@/views/MarketOpenReportView.vue"),
+        meta: {
+          titleKey: "pages.marketOpenReport",
+          roles: [UserRole.ADMIN, UserRole.OWNER],
+        },
+      },
+      {
         path: "platform",
         name: "PlatformOverview",
         component: () => import("@/views/PlatformOverview.vue"),

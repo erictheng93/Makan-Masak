@@ -29,6 +29,33 @@ describe("useMarketCartStore", () => {
     setActivePinia(createPinia());
   });
 
+  it("removes only the closed vendor and persists the remaining basket", () => {
+    const store = useMarketCartStore();
+    for (const [restaurantId, id] of [
+      ["vendor-a", 42],
+      ["vendor-b", 43],
+    ] as const) {
+      store.addItem({
+        marketSlug: "fengjia",
+        marketName: "逢甲夜市",
+        restaurantId,
+        restaurantName: restaurantId,
+        item: menuItem({ id, restaurantId }),
+        quantity: 1,
+      });
+    }
+
+    store.removeVendor("fengjia", "vendor-a");
+
+    expect(
+      store.cartForMarket("fengjia")?.vendors.map((v) => v.restaurantId),
+    ).toEqual(["vendor-b"]);
+    expect(
+      JSON.parse(localStorage.getItem("makanmakan_market_carts_v1")!).fengjia
+        .vendors,
+    ).toHaveLength(1);
+  });
+
   it("groups market cart items by vendor and merges matching items", () => {
     const store = useMarketCartStore();
 

@@ -154,6 +154,11 @@ test.beforeAll(async ({ browser }) => {
         body: { restaurantId, stallNumber },
       },
     );
+    await apiData(
+      `open vendor ${stallNumber}`,
+      `/api/v1/restaurants/${restaurantId}/markets/${market.id}/open`,
+      { token: admin.token, method: "POST" },
+    );
   }
 
   // A market is only public once a member stall has a searchable dish, and
