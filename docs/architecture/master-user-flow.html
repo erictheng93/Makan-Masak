@@ -471,8 +471,8 @@ body{
         <span class="lg"><svg width="30" height="10" viewBox="0 0 30 10" fill="none" stroke="var(--flow-ext)" stroke-width="1.7" stroke-linecap="round"><path d="M1 5h22" stroke-dasharray="2 3"/><path d="m20 2 3.5 3-3.5 3"/></svg>外部系統互動</span>
       </div>
       <div class="stamp">
-        版本：<b class="mono">v1.1</b><br>
-        日期：<b class="mono">2026/09/15</b>
+        版本：<b class="mono">v1.2</b><br>
+        日期：<b class="mono">2026/09/30</b>
       </div>
     </div>
   </header>
@@ -570,10 +570,19 @@ body{
           </div>
 
           <div class="grp">
-            <span class="grp-h">揪團與夜市市集流程</span>
+            <span class="grp-h">揪團與拆帳流程</span>
             <div class="flow">
               <div class="node"><svg class="node-ico"><use href="#i-users"/></svg><span class="node-t">建立揪團</span><span class="node-s">分享碼邀請<br>同桌合單</span></div>
               <svg class="arr tight"><use href="#i-arrow"/></svg>
+              <div class="node"><svg class="node-ico"><use href="#i-cart"/></svg><span class="node-t">加菜與鎖單</span><span class="node-s">共用購物車<br>團主鎖單</span></div>
+              <svg class="arr tight"><use href="#i-arrow"/></svg>
+              <div class="node"><svg class="node-ico"><use href="#i-card"/></svg><span class="node-t">拆帳與付款</span><span class="node-s">均分 · 各付各<br>按比例</span></div>
+            </div>
+          </div>
+
+          <div class="grp">
+            <span class="grp-h">夜市市集跨攤結帳流程</span>
+            <div class="flow">
               <div class="node"><svg class="node-ico"><use href="#i-store"/></svg><span class="node-t">探索市集</span><span class="node-s">夜市頁面<br>攤位總覽</span></div>
               <svg class="arr tight"><use href="#i-arrow"/></svg>
               <div class="node"><svg class="node-ico"><use href="#i-cart"/></svg><span class="node-t">跨攤結帳</span><span class="node-s">多攤合併<br>一次付款</span></div>
@@ -886,7 +895,7 @@ body{
         <li>訪客可瀏覽公開資訊；掃描桌位／座位 QR 亦可<b>免登入下單</b>，登入僅用於歷史訂單、優惠與會員權益。</li>
         <li>六個角色（<b>0</b> 管理者／<b>1</b> 店主／<b>2</b> 廚師／<b>3</b> 送菜／<b>4</b> 收銀／<b>5</b> 顧客）共用同一組 JWT，前端依 <code>role</code> 分流到不同門戶與路由。</li>
         <li>訂單事件經 Durable Object 廣播，同時到達廚房顯示、送菜清單、收銀台與顧客追蹤頁，四端看到的是同一份狀態。</li>
-        <li>金流結果由金流商 webhook 回寫；夜市跨攤結帳另走 market-checkouts，付款一次、分帳逐攤。</li>
+        <li>金流結果由金流商 webhook 回寫；夜市跨攤結帳另走 market-checkouts，付款一次、逐攤分帳；揪團的「拆帳」是同一攤內多人分攤，與它無關。</li>
         <li>租戶／授權／部署屬控制平面，由獨立的 Management API 承接，與各店營運 API 分開部署。</li>
         <li><b>店主帳號不能自行註冊</b>：由平台核准開店申請，或在後台「帳號管理」直接建立。核准只產生一次性的設定密碼連結，<b>目前不寄信</b>，由平台人員轉交店主；逐步細節見 <a href="../flows/13-platform-onboarding.md">入駐流程</a>。</li>
         <li>系統由哪些東西組成、每個 Worker 綁了什麼資源，見 <a href="./system-architecture.html">系統架構圖</a>。</li>

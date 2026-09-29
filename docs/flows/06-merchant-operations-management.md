@@ -104,6 +104,11 @@
 
 - `apps/api/src/features/coupons/services/CouponsService.test.ts`
 - `apps/api/src/features/feedback/*`（見 `FeedbackService.test.ts`）
+- `tests/e2e/admin/`（`admin-real`）：`ingredients`、`coupons`、`support-and-insights`、`group-orders`
+
+**手動探索 QA（production）**
+
+- [店家後台流程 QA 2026-09-01](../investigations/2026-09-01-admin-dashboard-flow-qa.html)
 
 ## 9. 已知缺口
 

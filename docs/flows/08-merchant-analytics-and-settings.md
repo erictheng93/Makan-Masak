@@ -134,6 +134,11 @@ role 0 完全繞過閘門。
 - `apps/api/src/app-factory.feature-gate.test.ts`
 - `apps/api/src/features/billing/routes/index.test.ts`
 - `apps/api/src/features/ai-analytics/routes/index.test.ts`
+- `tests/e2e/admin/`（`admin-real`）：`settings`、`billing`、`support-and-insights`（營運分析）
+
+**手動探索 QA（production）**
+
+- [店家後台流程 QA 2026-09-01](../investigations/2026-09-01-admin-dashboard-flow-qa.html) — F11–F20（本輪首次走這兩條）
 
 **相關文件**
 
