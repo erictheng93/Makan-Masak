@@ -11,7 +11,7 @@
             {{ t("cashier.shift") }}: {{ currentShift.id || "—" }}
           </p>
           <p class="text-xs text-blue-600">
-            {{ currentShift.startTime }} - {{ currentShift.endTime }}
+            <span data-testid="cashier-shift-times">{{ shiftTimeRange }}</span>
           </p>
         </div>
 
@@ -1100,6 +1100,14 @@ const currentShift = ref({
   endTime: "",
   cashierName: "",
   registerId: "",
+});
+
+// currentShift keeps the API's ISO strings (other code compares them); the
+// badge shows the shop-local time a cashier can read, not "…T18:14:56.405Z".
+const shiftTimeRange = computed(() => {
+  const { startTime, endTime } = currentShift.value;
+  if (!startTime) return "";
+  return `${formatDateTime(startTime)} - ${endTime ? formatDateTime(endTime) : ""}`;
 });
 
 // 班次報告數據

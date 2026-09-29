@@ -111,6 +111,17 @@ describe("CashierView", () => {
     wrapper.unmount();
   });
 
+  it("shows the shift's start as a readable local time, not the raw ISO string", async () => {
+    const wrapper = mount(CashierView);
+    await flushPromises();
+
+    const times = wrapper.get('[data-testid="cashier-shift-times"]').text();
+    expect(times).not.toContain("T08:00:00");
+    expect(times).not.toContain("Z");
+    expect(times).toMatch(/2026/);
+    wrapper.unmount();
+  });
+
   it("loads pending orders with their API table and customer fields", async () => {
     const wrapper = mount(CashierView);
     await flushPromises();
