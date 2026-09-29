@@ -6019,6 +6019,8 @@ const viVN: Messages = {
     trialExpiredBanner:
       "Thời gian dùng thử đã kết thúc. Mọi tính năng vẫn hoạt động bình thường, nhưng vui lòng chọn một gói để ủng hộ MakanMasak.",
     trialExpiredAction: "Chọn gói",
+    trialExpiredTitle: "Thời gian dùng thử đã kết thúc",
+    trialExpiredContinue: "Tiếp tục",
     usageTitle: "Mức dùng kỳ này",
     usageEmpty: "Chưa có dữ liệu sử dụng trong kỳ này.",
     modulesTitle: "Tính năng đi kèm",

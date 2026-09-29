@@ -6154,6 +6154,8 @@ const zhTWRuntimeKeys = {
     trialExpiredBanner:
       "試用期已結束。所有功能仍可繼續使用，但請選擇方案以支持 MakanMasak。",
     trialExpiredAction: "選擇方案",
+    trialExpiredTitle: "試用期已結束",
+    trialExpiredContinue: "繼續使用",
     usageTitle: "本期用量",
     usageEmpty: "本期尚無用量紀錄。",
     modulesTitle: "方案包含的功能",

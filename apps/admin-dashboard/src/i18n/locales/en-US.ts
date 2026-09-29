@@ -6021,6 +6021,8 @@ const enUS: Messages = {
     trialExpiredBanner:
       "Your free trial has ended. Everything keeps working, but please choose a plan to support MakanMasak.",
     trialExpiredAction: "Choose a plan",
+    trialExpiredTitle: "Your free trial has ended",
+    trialExpiredContinue: "Continue",
     usageTitle: "Usage this cycle",
     usageEmpty: "No usage recorded this cycle yet.",
     modulesTitle: "Included features",

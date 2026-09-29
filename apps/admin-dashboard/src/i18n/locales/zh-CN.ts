@@ -5868,6 +5868,8 @@ const zhCN: Messages = {
     trialExpiredBanner:
       "试用期已结束。所有功能仍可继续使用，但请选择方案以支持 MakanMasak。",
     trialExpiredAction: "选择方案",
+    trialExpiredTitle: "试用期已结束",
+    trialExpiredContinue: "继续使用",
     usageTitle: "本期用量",
     usageEmpty: "本期暂无用量记录。",
     modulesTitle: "方案包含的功能",

@@ -6013,6 +6013,8 @@ const jaJP: Messages = {
     trialExpiredBanner:
       "無料トライアルは終了しました。引き続きすべての機能をご利用いただけますが、MakanMasak を支援するためプランをご選択ください。",
     trialExpiredAction: "プランを選ぶ",
+    trialExpiredTitle: "無料トライアルは終了しました",
+    trialExpiredContinue: "続ける",
     usageTitle: "今期の使用量",
     usageEmpty: "今期の使用記録はまだありません。",
     modulesTitle: "含まれる機能",

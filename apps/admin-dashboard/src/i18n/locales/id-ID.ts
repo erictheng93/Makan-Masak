@@ -6051,6 +6051,8 @@ const idID: Messages = {
     trialExpiredBanner:
       "Masa uji coba Anda telah berakhir. Semua fitur tetap berfungsi, tetapi mohon pilih paket untuk mendukung MakanMasak.",
     trialExpiredAction: "Pilih paket",
+    trialExpiredTitle: "Masa uji coba telah berakhir",
+    trialExpiredContinue: "Lanjutkan",
     usageTitle: "Pemakaian siklus ini",
     usageEmpty: "Belum ada pemakaian tercatat pada siklus ini.",
     modulesTitle: "Fitur yang termasuk",
