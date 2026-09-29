@@ -2,7 +2,7 @@
 
 > **對應 master board**：現場作業 → 送菜流程（送菜員 role 3）
 > **主要角色**：送菜員（role 3）；role 0/1 也能進同一個畫面
-> **最後對照原始碼**：2026-08-21
+> **最後對照原始碼**：2026-09-30
 
 ## 1. 定位
 
@@ -86,6 +86,7 @@ DB 時間戳欄位、顧客追蹤頁文案與 i18n key，以及所有以 `ready`
 - `apps/admin-dashboard/src/views/ServiceView.test.ts` — 驗證送出的 query 與 body
   只含合法狀態值，且本地配送階段能跨重整與重載保留、送達後清除。這是 CI 實際會跑的那道守門。
 - 手動探索 QA：[現場作業流程 QA 2026-09-22](../investigations/2026-09-22-floor-operations-flow-qa.html) — S1–S6
+- 手動探索 QA：[現場作業流程本機實走 2026-09-30](../investigations/2026-09-30-floor-operations-local-walk.html) — 領單 → 確認送達成立；順手移除了頁首三個從未被賦值的計數（永遠 0）
 - `tests/e2e/integration/real-workflows.spec.ts` — 送菜流程（`ready` → 標記送達 → 桌位釋放）。
   屬於 `integration` project，需要 `WORKFLOW_ADMIN_URL`／`SMOKE_ADMIN_URL` 才會跑；
   由 `.github/workflows/nightly-integration.yml` 每晚執行（`cron: "0 18 * * *"`，也可手動觸發），

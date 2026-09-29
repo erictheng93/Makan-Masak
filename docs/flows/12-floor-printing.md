@@ -2,7 +2,7 @@
 
 > **對應 master board**：現場作業 → 出單與列印流程
 > **主要角色**：收銀（role 4）、店主（role 1）；列印代理是店內常駐服務
-> **最後對照原始碼**：2026-08-21
+> **最後對照原始碼**：2026-09-30
 
 ## 1. 定位
 
@@ -166,17 +166,17 @@ USB、serial 與 Bluetooth 尚未有 transport 實作，會明確失敗而不是
 **手動探索 QA（production）**
 
 - [現場作業流程 QA 2026-09-22](../investigations/2026-09-22-floor-operations-flow-qa.html) — D1–D3
+- [現場作業流程本機實走 2026-09-30](../investigations/2026-09-30-floor-operations-local-walk.html) — 兩台代理對兩個 TCP 假印表機，雲端派工到位元組落地
 
 ## 8. 已知缺口
 
-0. **代理印不出任何東西**（2026-09-22 實測，見 [現場作業流程 QA 2026-09-22](../investigations/2026-09-22-floor-operations-flow-qa.html)）。
-   `queue-core` 的 Epson／Star／Citizen 驅動 `connect()` 永遠成功、`sendCommands()` 只按指令長度
-   `setTimeout`、`getStatus()` 永遠回 `online`；`detectPrinter` 不連線，只看位址字串是否含
-   `epson`／`star`／`citizen`，所以自動掃描找不到任何真印表機；加了印表機之後，每張工作都失敗在
-   `executePrintJob method must be implemented by PrinterService`。後台同時顯示
-   「Healthy · 1/1 printers online」。repo 裡沒有任何 TCP／USB／serial 傳輸程式碼（#414）。
-0. **沒有印表機時代理照樣認領**，每張票回 `failed`（No available printer found），
-   幾輪心跳就燒完投遞額度——雖然雲端已經知道這台回報 0 台在線。
+0. **列印內容有三處與實際店家不符**（2026-09-30 本機以 TCP:9100 假印表機擷取位元組，[現場作業流程本機實走 2026-09-30](../investigations/2026-09-30-floor-operations-local-walk.html)）：
+   - 每張出單都印「本收據為電子發票證明聯」，但系統不開立電子發票（#432）。
+   - 廚房票沿用顧客收據版型（有價格、TOTAL、「謝謝光臨」、數位收據 QR），「Cashier:」永遠是 `System`（#432）。
+   - 中文以 UTF-8 送出；熱感式印表機常見預設字碼頁是 GBK／Big5，需實體機驗證。
+   （店名、地址、電話原本印成「餐廳名稱／餐廳地址／電話號碼」佔位字，單號印成 UUID，已於 2026-09-30 修掉。）
+   #414 的傳輸層已修：兩台代理（櫃檯、廚房）各連一個假 TCP 印表機，票據位元組（含切紙指令）實際送達，
+   健康檢查回報 1 台在線、佇列 `completed`。
 1. **重試沒有退避。** 節奏完全來自代理的輪詢間隔（預設 60 秒）與「印失敗就停 drain」
    這條規則。要真正的指數退避需要一個 `next_attempt_at_ms` 欄位。
 2. **`processWebhook` 沒有對 `platformOrderId` 去重**，平台重送 webhook 會建出**新的**

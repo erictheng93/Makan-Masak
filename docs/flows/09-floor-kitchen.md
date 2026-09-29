@@ -2,7 +2,7 @@
 
 > **對應 master board**：現場作業 → 廚房流程（廚師 role 2）
 > **主要角色**：廚師（role 2）；role 0/1/3 也讀得到廚房資料
-> **最後對照原始碼**：2026-09-22
+> **最後對照原始碼**：2026-09-30
 
 ## 1. 定位
 
@@ -82,6 +82,7 @@
 **手動探索 QA（production）**
 
 - [現場作業流程 QA 2026-09-22](../investigations/2026-09-22-floor-operations-flow-qa.html) — K1–K3
+- [現場作業流程本機實走 2026-09-30](../investigations/2026-09-30-floor-operations-local-walk.html) — 本機真後端重走：K1 的修正成立（第一個品項開始 → 訂單 `preparing`，最後一個完成 → `ready` 並寫 `ready_at_ms`）；找到並修掉「品項狀態變了但訂單詳情讀到舊快取」
 
 ## 8. 已知缺口
 

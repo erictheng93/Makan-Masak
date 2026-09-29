@@ -2,7 +2,7 @@
 
 > **對應 master board**：現場作業 → 收銀流程（收銀 role 4）
 > **主要角色**：收銀（role 4）、店主（role 1）、管理者（role 0）
-> **最後對照原始碼**：2026-08-21
+> **最後對照原始碼**：2026-09-30
 > **細節圖**：[boards/payment-and-refund.html](./boards/payment-and-refund.html)
 
 ## 1. 定位
@@ -134,19 +134,17 @@ Admin/Owner 自己建立的 POS 退款會同步結清；收銀員不能自行完
 **手動探索 QA（production）**
 
 - [現場作業流程 QA 2026-09-22](../investigations/2026-09-22-floor-operations-flow-qa.html) — P1–P6
+- [現場作業流程本機實走 2026-09-30](../investigations/2026-09-30-floor-operations-local-walk.html) — 開班、現金收款與找零、列印收據、退款送審與核准、結班對帳都成立；找到並修掉「退款後訂單詳情仍讀到已付款」的快取
 
 ## 7. 已知缺口
 
-- **結班對帳在現行介面上不能用**（2026-09-22 production 實測，見 [現場作業流程 QA 2026-09-22](../investigations/2026-09-22-floor-operations-flow-qa.html)）：
-  一般訂單走 `POST /payments` 收款**不會**寫進班次（只有市集 POS 收款會累加
-  `total_sales_cents`）；退款寫了 `-` 的現金流動，但不更新班次的 `total_refunds_cents`；
-  結班對話框沒有清點欄位，前端永遠送 `actualAmount: 0`；預期金額用
-  `totalSales`（含刷卡）算抽屜現金。結果是每一班都記成短少整筆開班現金（#413）。
-- **退款不回寫訂單**。`refunds` 有列、也有現金流動，但 `orders.refund_amount_cents`
-  仍為空、`payment_status` 仍是 `completed`；退款建立即 `completed`，`approved_by` 為空（#416）。
-- **收銀機沒有伺服器端餘額**。管理頁的「目前餘額」是前端自己加減的數字，
-  新收銀機顯示 NaN；班次回的是 `startedAt`，前端讀 `startTime`，所以顯示 Invalid Date。
+- **POS「收銀櫃管理」頁打三支不存在的端點**（`/pos/promotions`、`/pos/registers/:id/cash-movements`、`/pos/registers/:id/stats/daily`）：
+  進頁就三個 404 toast，促銷、最近交易、今日營收永遠是空的（#431，[現場作業流程本機實走 2026-09-30](../investigations/2026-09-30-floor-operations-local-walk.html)）。
+- 結班對帳與退款回寫訂單（#413、#416）已修並在 2026-09-30 本機重走確認：開班 1000、現金收 510、退 50，結班預期 1460、差額 0；
+  退款核准後 `orders.payment_status = partial_refunded`、`refund_amount_cents = 5000`。
+  收銀員建立的退款維持 `processing`，須店主核准。
+- **收銀機沒有伺服器端餘額**。管理頁的「目前餘額」是前端自己加減的數字，開班後仍顯示「—」（與 #431 的資料來源同源）。
 - **結班差額沒有審核流程**。差額只是被記下來，沒有覆核、沒有告警門檻。
 - **現金流動的核准流程與退款核准是兩套**（`/pos/cash-movements/:id/approve` 與 `/pos/refunds/:id/approve`），
   兩邊的權限與門檻各自定義。
-- **收據不會真的印出來**（見 [12](./12-floor-printing.md) 的已知缺口）。
+- **收據經雲端派工由代理列印**（見 [12](./12-floor-printing.md)）；實體印表機仍未驗收。
