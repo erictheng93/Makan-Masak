@@ -15,6 +15,13 @@ the privacy owner before production rollout.
 The audit archive bucket is `makanmasak-backups-prod`; these rules apply only to
 the onboarding audit prefix. Configure both rules after reviewing the policy:
 
+Before enabling the lock, review existing objects under this prefix. A
+2026-09-29 read-only check found one unredacted rejected application in each
+of the 2026-09-22 and 2026-09-23 daily objects; the 2026-09-24 through
+2026-09-28 daily objects had none. Bucket locks also cover existing objects,
+so resolve the two older snapshots under the approved retention policy first.
+The lifecycle clock starts at object upload, not at application rejection.
+
 ```sh
 pnpm exec wrangler r2 bucket lock add makanmasak-backups-prod \
   --name onboarding-audit-365d \

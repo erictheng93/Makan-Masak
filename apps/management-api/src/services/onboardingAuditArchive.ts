@@ -43,7 +43,8 @@ export async function redactExpiredRejectedApplications(
          updated_at = ?
      WHERE status = 'rejected'
        AND rejected_at_ms IS NOT NULL
-       AND rejected_at_ms <= ?`,
+       AND rejected_at_ms <= ?
+       AND contact_email != ?`,
   )
     .bind(
       REDACTED_VALUE,
@@ -52,6 +53,7 @@ export async function redactExpiredRejectedApplications(
       REDACTED_VALUE,
       now.toISOString(),
       cutoff,
+      REDACTED_VALUE,
     )
     .run();
   return Number(result.meta.changes ?? 0);

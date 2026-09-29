@@ -183,7 +183,7 @@ describe("onboarding audit archive", () => {
     expect(archive.objects.values().next().value).toBe(archivedContent);
   });
 
-  it("redacts expired rejected applicants while preserving audit rows", async () => {
+  it("redacts expired rejected applicants once while preserving audit rows", async () => {
     const db = createManagementDb();
     const orm = drizzle(db);
     const cutoff = Date.parse("2025-09-23T00:00:00.000Z");
@@ -204,7 +204,7 @@ describe("onboarding audit archive", () => {
       buildApplication({
         id: "APP-RECENT",
         status: "rejected",
-        rejectedAtMs: cutoff + 1,
+        rejectedAtMs: cutoff + 2 * 24 * 60 * 60 * 1000,
         contactEmail: "recent@example.test",
       }),
       buildApplication({
@@ -270,6 +270,19 @@ describe("onboarding audit archive", () => {
         )
         .get(),
     ).toMatchObject({ count: 1 });
+
+    expect(
+      await redactExpiredRejectedApplications(
+        { MANAGEMENT_DB: db } as ManagementEnv,
+        new Date("2026-09-24T00:00:00.000Z"),
+      ),
+    ).toBe(0);
+    expect(
+      (db as unknown as D1DatabaseAdapter)
+        .raw()
+        .prepare("SELECT updated_at FROM onboarding_applications WHERE id = ?")
+        .get("APP-EXPIRED"),
+    ).toEqual({ updated_at: "2026-09-23T00:00:00.000Z" });
   });
 
   it("fails the scheduled run when the archive bucket is not bound", async () => {
