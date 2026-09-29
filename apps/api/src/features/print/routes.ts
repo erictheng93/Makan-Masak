@@ -12,7 +12,12 @@ import {
   or,
   sql,
 } from "drizzle-orm";
-import { orders, printAgents, receipts } from "@makanmasak/database";
+import {
+  orders,
+  printAgents,
+  receipts,
+  restaurants,
+} from "@makanmasak/database";
 import { z } from "zod";
 import type { Env } from "../../types/env";
 import { hashPrintAgentKey } from "../../shared/utils/print-agent-key";
@@ -113,6 +118,7 @@ function requestForReceipt(
     createdAt: Date | null;
   },
   restaurantId: string,
+  shop?: { name: string; address: string; phone: string },
 ) {
   let content: Record<string, unknown> = {};
   try {
@@ -126,8 +132,17 @@ function requestForReceipt(
     type: "receipt",
     restaurantId,
     data: {
+      // Without this the formatter prints its own "餐廳名稱 / 餐廳地址 /
+      // 電話號碼" placeholders at the top of every receipt and kitchen ticket.
+      restaurant: shop,
       order: {
+        // The formatter also builds the receipt QR link from this, so it stays
+        // the row id; `orderNumber` is what a person reads off the paper.
         id: receipt.orderId,
+        orderNumber:
+          typeof content.orderNumber === "string"
+            ? content.orderNumber
+            : undefined,
         tableNumber:
           typeof content.tableNumber === "string"
             ? content.tableNumber
@@ -301,11 +316,20 @@ app.get("/jobs", async (c) => {
     });
 
   if (!claimed) return c.json({ success: true, data: null });
+  const [shop] = await db
+    .select({
+      name: restaurants.name,
+      address: restaurants.address,
+      phone: restaurants.phone,
+    })
+    .from(restaurants)
+    .where(eq(restaurants.id, agent.restaurantId))
+    .limit(1);
   return c.json({
     success: true,
     data: {
       receiptId: claimed.id,
-      request: requestForReceipt(claimed, agent.restaurantId),
+      request: requestForReceipt(claimed, agent.restaurantId, shop),
     },
   });
 });

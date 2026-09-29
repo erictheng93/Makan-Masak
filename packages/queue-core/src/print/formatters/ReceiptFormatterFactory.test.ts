@@ -99,3 +99,23 @@ describe("regional receipt formatters — cash rounding", () => {
     expect(content.summary.roundingAdjustment).toBeUndefined();
   });
 });
+
+describe("regional receipt formatters — what the header says", () => {
+  it.each(["TW", "MY", "VN"] as const)(
+    "prints the order number a person reads, not the row id (%s)",
+    (country) => {
+      const data = receipt(undefined);
+      data.order!.orderNumber = "A-1001";
+
+      expect(format(country, data).header.transactionInfo.orderId).toBe(
+        "A-1001",
+      );
+    },
+  );
+
+  it("falls back to the row id when the order has no number", () => {
+    expect(
+      format("TW", receipt(undefined)).header.transactionInfo.orderId,
+    ).toBe("order-1");
+  });
+});

@@ -32,6 +32,8 @@ export interface ReceiptOrderItem {
 export interface ReceiptData {
   order?: {
     id?: string;
+    /** What a person reads off the paper; `id` stays the row id (QR link). */
+    orderNumber?: string;
     tableNumber?: string;
     deliveryAddress?: string;
     deliveryPhone?: string;
@@ -243,7 +245,7 @@ export class TWReceiptFormatter extends BaseReceiptFormatter {
           licenseNumber: restaurant?.licenseNumber,
         },
         transactionInfo: {
-          orderId: order?.id || "N/A",
+          orderId: order?.orderNumber || order?.id || "N/A",
           tableNumber: order?.tableNumber,
           deliveryAddress: order?.deliveryAddress,
           deliveryPhone: order?.deliveryPhone,
@@ -369,7 +371,7 @@ export class MYReceiptFormatter extends BaseReceiptFormatter {
           licenseNumber: restaurant?.licenseNumber, // Business license
         },
         transactionInfo: {
-          orderId: order?.id || "N/A",
+          orderId: order?.orderNumber || order?.id || "N/A",
           tableNumber: order?.tableNumber,
           deliveryAddress: order?.deliveryAddress,
           deliveryPhone: order?.deliveryPhone,
@@ -487,7 +489,7 @@ export class VNReceiptFormatter extends BaseReceiptFormatter {
           taxNumber: restaurant?.taxNumber, // Mã số thuế
         },
         transactionInfo: {
-          orderId: order?.id || "N/A",
+          orderId: order?.orderNumber || order?.id || "N/A",
           tableNumber: order?.tableNumber,
           deliveryAddress: order?.deliveryAddress,
           deliveryPhone: order?.deliveryPhone,

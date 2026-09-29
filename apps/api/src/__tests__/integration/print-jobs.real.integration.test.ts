@@ -323,6 +323,28 @@ describe("cloud print dispatch — real D1", () => {
     expect(row?.claimedAt).toBeInstanceOf(Date);
   });
 
+  it("tells the agent whose receipt it is: the shop's name, address and phone, and the order number", async () => {
+    await seedReceipt("receipt-a", REGISTER_A, ORDER_A, {
+      content: JSON.stringify({
+        orderNumber: "A-1001",
+        items: [],
+        subtotal: 12,
+        totalAmount: 12,
+      }),
+    });
+
+    const body = await claimedJob(await poll(KEY_A));
+
+    expect(body.data?.request.data).toMatchObject({
+      restaurant: {
+        name: `Shop ${SHOP_A}`,
+        address: "1 Test Rd",
+        phone: "0900000000",
+      },
+      order: { id: ORDER_A, orderNumber: "A-1001" },
+    });
+  });
+
   it("never hands one shop's receipt to another shop's agent", async () => {
     await seedReceipt("receipt-a", REGISTER_A, ORDER_A);
 
