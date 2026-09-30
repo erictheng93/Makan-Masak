@@ -144,6 +144,8 @@ describe("#408 synthetic Uber money boundaries (not sandbox evidence)", () => {
       totalPriceCents: 2400,
       notes: "No ice",
     });
+    // customizations JSON stores major units (as MenuService does); the
+    // surrounding *Cents columns above are integer cents. 200 sen -> 2.
     expect(line.customizations?.options?.[0]).toMatchObject({
       choiceName: "Oat",
       priceAdjustment: 2,
@@ -157,43 +159,53 @@ describe("#408 synthetic Uber money boundaries (not sandbox evidence)", () => {
     expect(log.status).toBe("processed");
   });
 
+  type Payload = ReturnType<typeof syntheticUberOrder>;
+  const fractionalTotal = (payload: Payload) => {
+    payload.payment.charges.total.amount = 24.01;
+  };
   it.each([
-    [
-      "TWD whole units",
-      "TWD",
-      "whole",
-      "TWD",
-      "Uber Eats TWD amount unit is unverified",
-    ],
-    [
-      "TWD hundredths",
-      "TWD",
-      "hundredths",
-      "TWD",
-      "Uber Eats TWD amount unit is unverified",
-    ],
-    [
-      "fractional MYR amount",
-      "MYR",
-      "hundredths",
-      "MYR",
-      "Uber Eats amount must be a safe integer",
-    ],
-    [
-      "restaurant currency mismatch",
-      "MYR",
-      "hundredths",
-      "TWD",
-      "Platform order currency mismatch with restaurant",
-    ],
-  ] as const)(
-    "denies %s without creating orders and preserves the rejection log",
-    async (_name, currency, encoding, restaurantCurrency, reason) => {
+    {
+      name: "TWD whole units",
+      currency: "TWD",
+      encoding: "whole",
+      restaurantCurrency: "TWD",
+      reason: "Uber Eats TWD amount unit is unverified",
+    },
+    {
+      name: "TWD hundredths",
+      currency: "TWD",
+      encoding: "hundredths",
+      restaurantCurrency: "TWD",
+      reason: "Uber Eats TWD amount unit is unverified",
+    },
+    {
+      name: "fractional MYR amount",
+      currency: "MYR",
+      encoding: "hundredths",
+      restaurantCurrency: "MYR",
+      reason: "Uber Eats amount must be a safe integer",
+      mutate: fractionalTotal,
+    },
+    {
+      name: "restaurant currency mismatch",
+      currency: "MYR",
+      encoding: "hundredths",
+      restaurantCurrency: "TWD",
+      reason: "Platform order currency mismatch with restaurant",
+    },
+  ] as const satisfies ReadonlyArray<{
+    name: string;
+    currency: "MYR" | "TWD";
+    encoding: "whole" | "hundredths";
+    restaurantCurrency: "MYR" | "TWD";
+    reason: string;
+    mutate?: (payload: Payload) => void;
+  }>)(
+    "denies $name without creating orders and preserves the rejection log",
+    async ({ currency, encoding, restaurantCurrency, reason, ...rest }) => {
       const menuItemId = await setup(restaurantCurrency);
       const payload = syntheticUberOrder(currency, encoding);
-      if (_name === "fractional MYR amount") {
-        payload.payment.charges.total.amount = 24.01;
-      }
+      if ("mutate" in rest) rest.mutate(payload);
       const { response, send, denied } = await deliver(payload);
       expect(response.status).toBe(200);
       expect(await response.json()).toEqual({
@@ -223,6 +235,10 @@ describe("#408 synthetic Uber money boundaries (not sandbox evidence)", () => {
       expect(item.inventoryCount).toBe(5);
     },
   );
+
+  // TWD is blocked, so a wrong TWD conversion factor is unreachable above.
+  // Add a TWD persistence case here when #408 unblocks it with real payloads.
+  it.todo("persists verified TWD amounts once the raw Uber unit is confirmed");
 
   it("keeps a failed Uber denial retryable without writing an order", async () => {
     await setup("TWD");
