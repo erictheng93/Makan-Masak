@@ -294,7 +294,12 @@ export const useOrderStore = defineStore("order", () => {
       return applyServerOrder(response.data.data);
     } catch (err: unknown) {
       console.error(fallbackKey, err);
-      error.value = resolveUserFacingError(err, t, { fallbackKey }).message;
+      error.value = resolveUserFacingError(err, t, {
+        fallbackKey,
+        // A coupon order's items are frozen; "invalid request" would not tell
+        // the owner the way out (cancel and reorder).
+        codeKeys: { COUPON_ORDER_IMMUTABLE: "orderStore.couponOrderImmutable" },
+      }).message;
       return null;
     }
   };

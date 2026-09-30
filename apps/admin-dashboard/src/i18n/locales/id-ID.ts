@@ -5096,6 +5096,8 @@ const idID: Messages = {
   },
   orderStore: {
     addItemsFailed: "Gagal menambah item",
+    couponOrderImmutable:
+      "Pesanan ini memakai kupon sehingga itemnya tidak bisa diubah. Batalkan lalu buat pesanan baru",
     changeItemFailed: "Gagal mengubah jumlah",
     removeItemFailed: "Gagal menghapus item",
     fetchFailed: "Gagal mengambil pesanan",

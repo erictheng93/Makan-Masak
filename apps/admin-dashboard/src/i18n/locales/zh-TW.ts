@@ -5077,6 +5077,8 @@ const zhTWCore = {
   // 訂單 Store
   orderStore: {
     addItemsFailed: "加點失敗",
+    couponOrderImmutable:
+      "這張訂單已使用優惠券，無法修改品項。請取消後重新下單",
     changeItemFailed: "數量修改失敗",
     removeItemFailed: "移除品項失敗",
     fetchFailed: "獲取訂單失敗",

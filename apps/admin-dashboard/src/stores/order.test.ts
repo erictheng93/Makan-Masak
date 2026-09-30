@@ -255,6 +255,20 @@ describe("admin order store — the server's prose never reaches the banner", ()
     expect(store.error).toBe("orderStore.updateStatusFailed");
   });
 
+  it("tells the owner a coupon order's items are frozen, instead of 'invalid request'", async () => {
+    vi.mocked(api.post).mockRejectedValue(
+      rejectWith(400, "COUPON_ORDER_IMMUTABLE"),
+    );
+    const store = useOrderStore();
+
+    await expect(
+      store.addOrderItems("order-1", [{ menuItemId: 1, quantity: 1 }]),
+    ).resolves.toBeNull();
+
+    expect(store.error).toBe("orderStore.couponOrderImmutable");
+    expect(store.error).not.toContain(SERVER_PROSE);
+  });
+
   it("keeps the server's sentence out of every failure path", async () => {
     vi.mocked(api.get).mockResolvedValue(
       axiosResponse({

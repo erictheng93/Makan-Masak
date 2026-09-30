@@ -5071,6 +5071,8 @@ const viVN: Messages = {
   },
   orderStore: {
     addItemsFailed: "Không thể thêm món",
+    couponOrderImmutable:
+      "Đơn này đã dùng phiếu giảm giá nên không thể đổi món. Hãy hủy và đặt đơn mới",
     changeItemFailed: "Không thể đổi số lượng",
     removeItemFailed: "Không thể xoá món",
     fetchFailed: "Tải đơn hàng thất bại",

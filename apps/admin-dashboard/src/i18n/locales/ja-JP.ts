@@ -5066,6 +5066,8 @@ const jaJP: Messages = {
   },
   orderStore: {
     addItemsFailed: "商品の追加に失敗しました",
+    couponOrderImmutable:
+      "この注文はクーポンを使用しているため、商品を変更できません。キャンセルして注文し直してください",
     changeItemFailed: "数量の変更に失敗しました",
     removeItemFailed: "商品の削除に失敗しました",
     fetchFailed: "注文の取得に失敗しました",

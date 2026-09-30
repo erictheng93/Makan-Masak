@@ -4939,6 +4939,8 @@ const zhCN: Messages = {
   },
   orderStore: {
     addItemsFailed: "加点失败",
+    couponOrderImmutable:
+      "这张订单已使用优惠券，无法修改品项。请取消后重新下单",
     changeItemFailed: "数量修改失败",
     removeItemFailed: "移除品项失败",
     fetchFailed: "获取订单失败",

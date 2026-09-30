@@ -5072,6 +5072,8 @@ const enUS: Messages = {
   },
   orderStore: {
     addItemsFailed: "Could not add the items",
+    couponOrderImmutable:
+      "This order used a coupon, so its items can’t be changed. Cancel it and place a new order",
     changeItemFailed: "Could not change the quantity",
     removeItemFailed: "Could not remove the item",
     fetchFailed: "Failed to fetch orders",
