@@ -34,10 +34,20 @@ import {
   assertCurrencyAlignedCents,
   badRequest,
   computeDiscountCents,
+  formatCurrency,
   isAlignedInEveryCurrency,
   type CurrencyCode,
 } from "@makanmasak/utils";
 import { BaseService } from "./base";
+
+/** The minimum-spend error, in the shop's currency when it is known. */
+function minOrderMessage(
+  minOrderAmountCents: number,
+  currency?: CurrencyCode,
+): string {
+  const amount = amountFromCents(minOrderAmountCents) ?? 0;
+  return `訂單金額需滿 ${currency ? formatCurrency(amount, currency) : amount} 才可使用此優惠券`;
+}
 
 /** 完整的 `coupons` 資料列，即 `insert`/`update` … `returning()` 回傳的形狀。 */
 export type CouponRow = typeof coupons.$inferSelect;
@@ -220,6 +230,8 @@ export interface CouponEligibilityContext {
   userId?: string;
   guestIdentity?: string;
   menuItems?: Array<{ menuItemId: number; quantity: number }>;
+  /** Shop currency, when the caller already has it; only used to word errors. */
+  currency?: CurrencyCode;
   /**
    * - "validate": 顧客探索/預覽路徑 — 額外強制 isVisible
    * - "redeem":   兌換路徑 — 隱藏但仍啟用中的代碼視為合法，可兌換
@@ -419,10 +431,22 @@ export class CouponService extends BaseService {
           userId,
           guestIdentity: options.guestIdentity,
           menuItems,
+          currency: options.currency,
           mode: "validate",
         });
       } catch (error) {
         if (error instanceof CouponEligibilityError) {
+          // The shop's currency is only looked up for the one message that
+          // quotes an amount, not on every rejected code.
+          if (error.code === "COUPON_MIN_ORDER_NOT_MET" && !options.currency) {
+            return {
+              valid: false,
+              error: minOrderMessage(
+                coupon.minOrderAmountCents ?? 0,
+                await this.getRestaurantCurrency(restaurantId),
+              ),
+            };
+          }
           return { valid: false, error: error.message };
         }
         throw error;
@@ -629,7 +653,7 @@ export class CouponService extends BaseService {
     ) {
       throw new CouponEligibilityError(
         "COUPON_MIN_ORDER_NOT_MET",
-        `訂單金額需滿 $${amountFromCents(minOrderAmountCents)} 才可使用此優惠券`,
+        minOrderMessage(minOrderAmountCents, context.currency),
       );
     }
 
