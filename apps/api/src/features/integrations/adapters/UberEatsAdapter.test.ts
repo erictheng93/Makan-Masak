@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UberEatsAdapter } from "./UberEatsAdapter";
 import { PlatformOrderRejectedError } from "./PlatformOrderRejectedError";
+import { syntheticUberOrder } from "../__fixtures__/synthetic-uber-order";
 
 function jsonResponse(body: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body), {
@@ -155,33 +156,88 @@ describe("UberEatsAdapter", () => {
     });
   });
 
-  it("rejects TWD until its Uber sandbox amount unit is verified", async () => {
-    const payload = {
-      id: "twd-order",
-      cart: {
-        items: [
+  it.each(["whole", "hundredths"] as const)(
+    "rejects synthetic TWD %s encoding until its raw unit is verified",
+    async (encoding) => {
+      await expect(
+        createAdapter().parseOrder(syntheticUberOrder("TWD", encoding)),
+      ).rejects.toThrow("TWD amount unit is unverified");
+    },
+  );
+
+  it("uploads synthetic MYR base and modifier prices without scaling or double counting", async () => {
+    const payload = syntheticUberOrder();
+    const parsed = await createAdapter().parseOrder(payload);
+    let uploaded: Record<string, unknown> | undefined;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      uploaded = JSON.parse(init?.body as string);
+      return new Response(null, { status: 204 });
+    });
+    await createAdapter().syncMenu(
+      {
+        restaurantId: "synthetic-restaurant",
+        currencyCode: "MYR",
+        serviceAvailability: [
           {
-            id: "tea",
-            price: { unit_price: { amount: 18000, currency_code: "TWD" } },
+            day_of_week: "monday",
+            time_periods: [{ start_time: "09:00", end_time: "17:00" }],
+          },
+        ],
+        categories: [
+          {
+            id: 1,
+            name: "Drinks",
+            items: [
+              {
+                id: 101,
+                name: "Tea",
+                priceCents: 1000,
+                available: true,
+                modifierGroups: [
+                  {
+                    id: "milk",
+                    name: "Milk",
+                    required: false,
+                    minSelections: 0,
+                    maxSelections: 1,
+                    modifiers: [{ id: "oat", name: "Oat", priceCents: 200 }],
+                  },
+                ],
+              },
+            ],
           },
         ],
       },
-      payment: {
-        charges: {
-          total: { amount: 18000, currency_code: "TWD" },
-          sub_total: { amount: 18000, currency_code: "TWD" },
-        },
+      {
+        storeId: payload.store.id,
+        accessToken: "synthetic-token",
+        tokenExpiresAt: Date.now() + 3600000,
       },
-    };
-    await expect(createAdapter().parseOrder(payload)).rejects.toThrow(
-      "TWD amount unit is unverified",
     );
-    payload.cart.items[0].price.unit_price.amount = 100;
-    payload.payment.charges.total.amount = 100;
-    payload.payment.charges.sub_total.amount = 100;
-    await expect(createAdapter().parseOrder(payload)).rejects.toThrow(
-      "TWD amount unit is unverified",
-    );
+    expect(uploaded).toMatchObject({
+      menus: [{ category_ids: ["1"] }],
+      categories: [{ entities: [{ id: "101", type: "ITEM" }] }],
+      items: [
+        {
+          id: "101",
+          price_info: { price: 1000 },
+          modifier_group_ids: { ids: ["101-milk"] },
+        },
+        { id: "101-milk-oat", price_info: { price: 200 } },
+      ],
+      modifier_groups: [
+        {
+          id: "101-milk",
+          modifier_options: [{ id: "101-milk-oat", type: "ITEM" }],
+        },
+      ],
+    });
+    expect(parsed.items[0]).toMatchObject({
+      unitPriceCents: 1200,
+      totalPriceCents: 2400,
+      customizations: [{ priceAdjustmentCents: 200 }],
+    });
+    expect(parsed.totalAmountCents).toBe(2400);
   });
 
   it("rejects mixed MYR currencies within one Uber order", async () => {
