@@ -119,3 +119,42 @@ describe("regional receipt formatters — what the header says", () => {
     ).toBe("order-1");
   });
 });
+
+describe("regional receipt formatters — legal notice", () => {
+  it("does not call a TW receipt an invoice when none was issued", () => {
+    expect(format("TW", receipt(undefined)).footer.legalNotice).toBeUndefined();
+  });
+
+  it("prints the provider's invoice when one is attached, its own wording first", () => {
+    const withNumber = receipt(undefined);
+    withNumber.invoice = { provider: "acme", number: "AB-12345678" };
+    expect(format("TW", withNumber).footer.legalNotice).toBe(
+      "電子發票 AB-12345678",
+    );
+
+    const withNotice = receipt(undefined);
+    withNotice.invoice = {
+      provider: "acme",
+      number: "AB-12345678",
+      notice: "電子發票證明聯 AB-12345678",
+    };
+    expect(format("TW", withNotice).footer.legalNotice).toBe(
+      "電子發票證明聯 AB-12345678",
+    );
+  });
+
+  it.each([
+    ["MY", "GST/SST No: T-99"],
+    ["VN", "Mã số thuế: T-99"],
+  ] as const)(
+    "prints only the shop's own tax number (%s)",
+    (country, expected) => {
+      const data = receipt(undefined);
+      data.restaurant = { ...data.restaurant, taxNumber: "T-99" };
+      expect(format(country, data).footer.legalNotice).toBe(expected);
+      expect(
+        format(country, receipt(undefined)).footer.legalNotice,
+      ).toBeUndefined();
+    },
+  );
+});

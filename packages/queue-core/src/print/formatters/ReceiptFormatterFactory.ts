@@ -71,6 +71,13 @@ export interface ReceiptData {
      */
     roundingAdjustment?: number;
   };
+  /**
+   * An electronic invoice already issued for this order by the shop's provider.
+   * Absent until a provider adapter exists for the shop: a receipt is not an
+   * invoice, so nothing on the paper may say it is. The adapter supplies the
+   * number and, where the provider's rules require fixed wording, the notice.
+   */
+  invoice?: { provider: string; number: string; notice?: string };
   customer?: { name?: string };
   cashier?: string | { name?: string };
   receiptNumber?: string;
@@ -309,7 +316,9 @@ export class TWReceiptFormatter extends BaseReceiptFormatter {
           size: "medium",
           label: "數位收據",
         },
-        legalNotice: "本收據為電子發票證明聯",
+        legalNotice: data.invoice
+          ? (data.invoice.notice ?? `電子發票 ${data.invoice.number}`)
+          : undefined,
         contactInfo: {
           supportPhone: restaurant?.supportPhone,
           supportEmail: restaurant?.supportEmail,
@@ -426,7 +435,10 @@ export class MYReceiptFormatter extends BaseReceiptFormatter {
           size: "medium",
           label: "Digital Receipt / Resit Digital",
         },
-        legalNotice: "GST/SST No: 000123456789 | Company No: 123456-A",
+        // The shop's own number, or nothing: a made-up one on paper is worse.
+        legalNotice: restaurant?.taxNumber
+          ? `GST/SST No: ${restaurant.taxNumber}`
+          : undefined,
         contactInfo: {
           supportPhone: restaurant?.supportPhone,
           supportEmail: restaurant?.supportEmail,
@@ -544,7 +556,9 @@ export class VNReceiptFormatter extends BaseReceiptFormatter {
           size: "medium",
           label: "Hóa đơn điện tử / Digital Receipt",
         },
-        legalNotice: "Mã số thuế: 0123456789",
+        legalNotice: restaurant?.taxNumber
+          ? `Mã số thuế: ${restaurant.taxNumber}`
+          : undefined,
         contactInfo: {
           supportPhone: restaurant?.supportPhone,
           supportEmail: restaurant?.supportEmail,
