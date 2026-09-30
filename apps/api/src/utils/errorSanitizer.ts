@@ -81,6 +81,12 @@ export class ErrorSanitizer {
       sanitized = sanitized.replace(pattern, "[REDACTED]");
     });
 
+    // Drizzle/D1 put the whole statement and its bound values in the message
+    // ("Failed query: delete from ... params: <id>"). Never hand that out.
+    if (/Failed query:|D1_ERROR/.test(sanitized)) {
+      return this.GENERIC_MESSAGES.database;
+    }
+
     // Remove common database error prefixes that might reveal structure
     const dbPrefixes = [
       "SQLITE_CONSTRAINT",
