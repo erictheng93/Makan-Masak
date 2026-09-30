@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import type { Messages } from "../apps/kitchen-display/src/i18n/types";
 
@@ -101,7 +102,7 @@ function toEntryMap(entries: LeafEntry[]): Map<string, string> {
   return new Map(entries.map((entry) => [entry.key, entry.value]));
 }
 
-function parseCsv(text: string): string[][] {
+export function parseCsv(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = "";
@@ -256,6 +257,47 @@ interface ApprovalManifest {
   notes?: string;
 }
 
+export function buildHandoffMessages(
+  rows: string[][],
+  keyIndex: number,
+  localeIndex: number,
+  expectedKeys: Set<string>,
+  existingMessages: Messages,
+) {
+  const messages: Record<string, unknown> = {};
+
+  // Emptiness is judged on the trimmed cell, but the value is kept
+  // verbatim: " min" and "note: " lean on their edge spaces (#429).
+  const translations = new Map<string, string>();
+  for (const row of rows) {
+    const key = row[keyIndex];
+    const translation = row[localeIndex];
+
+    if (expectedKeys.has(key) && translation?.trim()) {
+      translations.set(key, translation);
+    }
+  }
+
+  // Preserve existing key order; new keys follow in CSV order.
+  const existingKeys = flattenMessages(existingMessages).map(
+    (entry) => entry.key,
+  );
+  const existingKeySet = new Set(existingKeys);
+  const orderedKeys = [
+    ...existingKeys.filter((key) => translations.has(key)),
+    ...[...translations.keys()].filter((key) => !existingKeySet.has(key)),
+  ];
+  for (const key of orderedKeys) {
+    setNestedValue(messages, key, translations.get(key) as string);
+  }
+
+  return {
+    messages,
+    unchanged: JSON.stringify(messages) === JSON.stringify(existingMessages),
+    missingKeys: [...expectedKeys].filter((key) => !translations.has(key)),
+  };
+}
+
 async function validateApprovedHandoff(
   csvPath: string,
 ): Promise<HandoffValidationResult> {
@@ -293,61 +335,27 @@ async function validateApprovedHandoff(
     const appRows = body.filter((row) => row[appIndex] === app.name);
 
     for (const key of expectedKeys) {
-      const row = appRows.find((candidate) => candidate[keyIndex] === key);
-
-      if (!row) {
+      if (!appRows.some((row) => row[keyIndex] === key)) {
         warning(`${app.name}/${key} is missing from the handoff CSV`);
-        for (const locale of TARGET_LOCALES) {
-          missingTranslations.push(`${app.name}/${locale}/${key}`);
-        }
-        continue;
-      }
-
-      for (const locale of targetLocales) {
-        const localeIndex = localeIndexes.get(locale) ?? -1;
-        if (!row[localeIndex]?.trim()) {
-          missingTranslations.push(`${app.name}/${locale}/${key}`);
-        }
       }
     }
 
     for (const locale of targetLocales) {
-      const messages: Record<string, unknown> = {};
-      const localeIndex = localeIndexes.get(locale) ?? -1;
-
-      // Emptiness is judged on the trimmed cell, but the value is kept
-      // verbatim: " min" and "note: " lean on their edge spaces (#429).
-      const translations = new Map<string, string>();
-      for (const row of appRows) {
-        const key = row[keyIndex];
-        const translation = row[localeIndex];
-
-        if (expectedKeys.has(key) && translation?.trim()) {
-          translations.set(key, translation);
-        }
-      }
-
-      // Keep the existing file's key order so an import only touches the
-      // lines that changed; keys new to the file follow in CSV order.
-      const existingKeys = flattenMessages(await loadMessages(app, locale)).map(
-        (entry) => entry.key,
+      const { messages, unchanged, missingKeys } = buildHandoffMessages(
+        appRows,
+        keyIndex,
+        localeIndexes.get(locale) ?? -1,
+        expectedKeys,
+        await loadMessages(app, locale),
       );
-      const existingKeySet = new Set(existingKeys);
-      const orderedKeys = [
-        ...existingKeys.filter((key) => translations.has(key)),
-        ...[...translations.keys()].filter((key) => !existingKeySet.has(key)),
-      ];
-      for (const key of orderedKeys) {
-        setNestedValue(messages, key, translations.get(key) as string);
-      }
+      missingTranslations.push(
+        ...missingKeys.map((key) => `${app.name}/${locale}/${key}`),
+      );
 
       const localeFile = path.join(app.localeDir, `${locale}.ts`);
       const constantName = locale
         .replace("-", "")
         .replace(/^([a-z])/, (match) => match.toLowerCase());
-      const unchanged =
-        JSON.stringify(messages) ===
-        JSON.stringify(await loadMessages(app, locale));
       localeOutputs.push({ localeFile, constantName, messages, unchanged });
     }
   }
@@ -477,7 +485,7 @@ async function importApprovedHandoff(csvPath: string): Promise<void> {
   }
 }
 
-function csvCell(value: string | number): string {
+export function csvCell(value: string | number): string {
   const text = String(value);
   return `"${text.replaceAll('"', '""')}"`;
 }
@@ -581,4 +589,9 @@ async function main(): Promise<void> {
   }
 }
 
-await main();
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
+  await main();
+}
