@@ -218,6 +218,95 @@ describe("CashierView", () => {
     await flushPromises();
   }
 
+  it("shows the electronic coupon already applied to the server-priced order", async () => {
+    const get = vi.mocked(api.get).getMockImplementation()!;
+    vi.mocked(api.get).mockImplementation(async (...args) => {
+      const response = await get(...args);
+      if (args[0] === "/orders")
+        Object.assign((response.data.data as unknown[])[0] as object, {
+          couponCode: "LUNCH10",
+          discountAmount: 10,
+          totalAmount: 90,
+        });
+      return response;
+    });
+    const wrapper = mount(CashierView);
+    await flushPromises();
+    await wrapper.find(".cursor-pointer").trigger("click");
+    expect(wrapper.text()).toContain("LUNCH10");
+    expect(wrapper.text()).toContain("-10");
+    expect(wrapper.text()).toContain("90");
+    wrapper.unmount();
+  });
+
+  it("shows each persisted coupon and the final payable without recalculating", async () => {
+    const get = vi.mocked(api.get).getMockImplementation()!;
+    vi.mocked(api.get).mockImplementation(async (...args) => {
+      const response = await get(...args);
+      if (args[0] === "/orders")
+        Object.assign((response.data.data as unknown[])[0] as object, {
+          appliedCoupons: [
+            {
+              couponId: 1,
+              code: "TEN",
+              name: "Ten percent",
+              discountAmount: 10,
+            },
+            {
+              couponId: 2,
+              code: "TWENTY",
+              name: "Twenty percent",
+              discountAmount: 18,
+            },
+            { couponId: 3, code: "FIVE", name: "Five off", discountAmount: 5 },
+          ],
+          discountAmount: 33,
+          totalAmount: 67,
+        });
+      return response;
+    });
+    const wrapper = mount(CashierView);
+    await flushPromises();
+    await wrapper.find(".cursor-pointer").trigger("click");
+    const rows = wrapper.findAll('[data-testid="applied-coupon"]');
+    expect(rows.map((row) => row.text())).toEqual([
+      expect.stringContaining("Ten percent (TEN)"),
+      expect.stringContaining("Twenty percent (TWENTY)"),
+      expect.stringContaining("Five off (FIVE)"),
+    ]);
+    expect(rows[1].text()).toContain("-18");
+    expect(wrapper.text()).toContain("67");
+    wrapper.unmount();
+  });
+
+  it("still identifies a redeemed coupon when currency rounding makes its discount zero", async () => {
+    const get = vi.mocked(api.get).getMockImplementation()!;
+    vi.mocked(api.get).mockImplementation(async (...args) => {
+      const response = await get(...args);
+      if (args[0] === "/orders")
+        Object.assign((response.data.data as unknown[])[0] as object, {
+          appliedCoupons: [
+            {
+              couponId: 1,
+              code: "TEN",
+              name: "Ten percent",
+              discountAmount: 0,
+            },
+          ],
+          discountAmount: 0,
+          totalAmount: 1,
+        });
+      return response;
+    });
+    const wrapper = mount(CashierView);
+    await flushPromises();
+    await wrapper.find(".cursor-pointer").trigger("click");
+    expect(wrapper.get('[data-testid="applied-coupon"]').text()).toContain(
+      "Ten percent (TEN)",
+    );
+    wrapper.unmount();
+  });
+
   describe("cash tendered", () => {
     async function selectOrder() {
       const wrapper = mount(CashierView);

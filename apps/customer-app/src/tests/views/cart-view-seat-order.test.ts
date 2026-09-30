@@ -166,31 +166,78 @@ describe("CartView seat orders", () => {
     );
   });
 
-  it("submits the applied coupon on the guest path (#382)", async () => {
-    validateCoupon.mockResolvedValue({
-      valid: true,
-      coupon: { code: "TWENTY", name: "Twenty off" },
-      discountAmount: 20,
+  it.each([false, true])(
+    "submits selected coupons (authenticated: %s)",
+    async (authenticated) => {
+      if (authenticated) setCustomerAccessToken("test-token");
+      validateCoupon.mockResolvedValue({
+        valid: true,
+        appliedCoupons: [
+          {
+            couponId: 1,
+            code: "TWENTY",
+            name: "Twenty off",
+            discountAmount: 20,
+          },
+        ],
+        discountAmount: 20,
+      });
+      const wrapper = mount(CartView, {
+        props: { restaurantId: "restaurant-1", tableId: 4 },
+        global: { stubs: { RouterLink: true } },
+      });
+      await flushPromises();
+      await wrapper.get('[data-testid="coupon-code"]').setValue(" twenty ");
+      await wrapper.get('[data-testid="coupon-apply"]').trigger("click");
+      await flushPromises();
+      expect(validateCoupon).toHaveBeenCalledWith(
+        "/coupons/validate",
+        expect.objectContaining({ codes: ["TWENTY"], orderAmount: 100 }),
+      );
+      expect(wrapper.get('[data-testid="submit-order-btn"]').text()).toContain(
+        "80",
+      );
+      validateCoupon.mockResolvedValueOnce({
+        valid: true,
+        appliedCoupons: [
+          {
+            couponId: 1,
+            code: "TWENTY",
+            name: "Twenty off",
+            discountAmount: 20,
+          },
+          { couponId: 2, code: "FIVE", name: "Five off", discountAmount: 5 },
+        ],
+        discountAmount: 25,
+      });
+      await wrapper.get('[data-testid="coupon-code"]').setValue("FIVE");
+      await wrapper.get('[data-testid="coupon-apply"]').trigger("click");
+      await flushPromises();
+      await wrapper.get('[data-testid="confirm"]').trigger("click");
+      expect(
+        authenticated ? createOrder : createGuestOrder,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ couponCodes: ["TWENTY", "FIVE"] }),
+      );
+      wrapper.unmount();
+    },
+  );
+
+  it("rejects confirmation while a selected coupon is invalid", async () => {
+    validateCoupon.mockResolvedValueOnce({
+      valid: false,
+      error: "Incompatible coupons",
     });
     const wrapper = mount(CartView, {
       props: { restaurantId: "restaurant-1", tableId: 4 },
       global: { stubs: { RouterLink: true } },
     });
-    await flushPromises();
-    await wrapper.get('[data-testid="coupon-code"]').setValue(" twenty ");
+    await wrapper.get('[data-testid="coupon-code"]').setValue("INVALID");
     await wrapper.get('[data-testid="coupon-apply"]').trigger("click");
     await flushPromises();
-    expect(validateCoupon).toHaveBeenCalledWith(
-      "/coupons/validate",
-      expect.objectContaining({ code: "TWENTY", orderAmount: 100 }),
-    );
-    expect(wrapper.get('[data-testid="submit-order-btn"]').text()).toContain(
-      "80",
-    );
     await wrapper.get('[data-testid="confirm"]').trigger("click");
-    expect(createGuestOrder).toHaveBeenCalledWith(
-      expect.objectContaining({ couponCode: "TWENTY" }),
-    );
+    expect(createGuestOrder).not.toHaveBeenCalled();
+    expect(createOrder).not.toHaveBeenCalled();
     wrapper.unmount();
   });
 

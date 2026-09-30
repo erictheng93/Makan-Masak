@@ -74,17 +74,23 @@ export interface Receipt {
   createdAt: string;
 }
 
-export interface Promotion {
-  id: string;
-  title: string;
-  description: string;
-  discountType: "percentage" | "fixed_amount";
-  discountValue: number;
-  minOrderAmount?: number;
-  isActive: boolean;
-  startDate: string;
-  endDate: string;
-}
+export type Promotion = import("@makanmasak/shared-types").Coupon;
+export type PromotionInput = Omit<
+  Promotion,
+  | "id"
+  | "createdAt"
+  | "usedCount"
+  | "maxDiscountAmount"
+  | "usageLimit"
+  | "usageLimitPerUser"
+  | "discountType"
+> & {
+  restaurantId?: string;
+  discountType: "percentage" | "fixed" | "";
+  maxDiscountAmount?: number | null;
+  usageLimit?: number | null;
+  usageLimitPerUser?: number | null;
+};
 
 export type MarketCheckoutPosPaymentMethod = "cash" | "card" | "digital_wallet";
 
@@ -164,30 +170,31 @@ export const posService = {
   },
 
   // 現金異動
-  async createCashMovement(data: {
-    registerId: string;
-    type: CashMovement["type"];
-    amount: number;
-    description: string;
-    operatorId: UserId;
-  }): Promise<CashMovement> {
-    const response = await apiClient.post("/pos/cash-movements", data);
-    return unwrapApiData<CashMovement>(response);
-  },
-
   async getCashMovements(
-    registerId: string,
-    params?: {
-      startDate?: string;
-      endDate?: string;
-      type?: CashMovement["type"];
-    },
+    shiftId: string,
+    params?: { page?: number; limit?: number; type?: CashMovement["type"] },
   ): Promise<CashMovement[]> {
     const response = await apiClient.get(
-      `/pos/registers/${registerId}/cash-movements`,
+      `/pos/shifts/${shiftId}/cash-movements`,
       { params },
     );
-    return unwrapApiData<CashMovement[]>(response);
+    const { movements } = unwrapApiData<{
+      movements: Array<
+        Omit<CashMovement, "amount" | "operatorId"> & {
+          amountCents: number;
+          recordedBy: UserId;
+        }
+      >;
+    }>(response);
+    return movements.map(({ amountCents, recordedBy, ...movement }) => ({
+      ...movement,
+      amount: ["refund", "cash_out", "payout", "deposit"].includes(
+        movement.type,
+      )
+        ? -Math.abs(amountCents) / 100
+        : amountCents / 100,
+      operatorId: recordedBy,
+    }));
   },
 
   // 列印代理
@@ -260,19 +267,30 @@ export const posService = {
   },
 
   // 促銷管理
-  async getPromotions(): Promise<Promotion[]> {
-    const response = await apiClient.get("/pos/promotions");
-    return unwrapApiData<Promotion[]>(response);
+  async getPromotions(
+    page = 1,
+    restaurantId?: string,
+  ): Promise<{
+    promotions: Promotion[];
+    pagination: { page: number; pages: number };
+  }> {
+    const response = await apiClient.get("/pos/promotions", {
+      params: { page, restaurantId },
+    });
+    return unwrapApiData<{
+      promotions: Promotion[];
+      pagination: { page: number; pages: number };
+    }>(response);
   },
 
-  async createPromotion(data: Omit<Promotion, "id">): Promise<Promotion> {
+  async createPromotion(data: PromotionInput): Promise<Promotion> {
     const response = await apiClient.post("/pos/promotions", data);
     return unwrapApiData<Promotion>(response);
   },
 
   async updatePromotion(
     id: string,
-    data: Partial<Promotion>,
+    data: Partial<PromotionInput>,
   ): Promise<Promotion> {
     const response = await apiClient.put(`/pos/promotions/${id}`, data);
     return unwrapApiData<Promotion>(response);
@@ -286,26 +304,25 @@ export const posService = {
   async getDailyStats(
     registerId: string,
     date?: string,
-  ): Promise<{
-    totalSales: number;
-    totalOrders: number;
-    totalRefunds: number;
-    cashBalance: number;
-    avgOrderValue: number;
-  }> {
-    const response = await apiClient.get(
-      `/pos/registers/${registerId}/stats/daily`,
-      {
-        params: { date },
-      },
-    );
-    return unwrapApiData<{
-      totalSales: number;
-      totalOrders: number;
-      totalRefunds: number;
-      cashBalance: number;
-      avgOrderValue: number;
+    restaurantId?: string,
+  ) {
+    const response = await apiClient.get("/pos/reports/daily", {
+      params: { date, restaurantId, registerId },
+    });
+    const report = unwrapApiData<{
+      shifts: Array<{ id: string }>;
+      summary: {
+        totalSales: number;
+        totalOrders: number;
+        totalRefundAmount: number;
+        avgOrderValue: number;
+      };
     }>(response);
+    return {
+      ...report.summary,
+      totalRefunds: report.summary.totalRefundAmount,
+      latestShiftId: report.shifts.at(-1)?.id,
+    };
   },
 
   async getShiftReport(shiftId: string): Promise<{

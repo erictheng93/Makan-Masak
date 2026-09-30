@@ -6,6 +6,7 @@ import {
   orderItems,
   orders,
   paymentTransactions,
+  marketCheckoutPayments,
   receipts,
   refunds,
   restaurants,
@@ -41,6 +42,7 @@ const fixtureTables = {
   orderItems,
   orders,
   paymentTransactions,
+  marketCheckoutPayments,
   receipts,
   refunds,
   restaurants,
@@ -122,6 +124,25 @@ describe("ReportService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
+  });
+
+  it("defaults daily reports to the restaurant day after local midnight, not UTC", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-09-29T18:30:00Z"));
+    mockSelectResults({
+      cashShifts: [[]],
+      orders: [[]],
+      refunds: [[]],
+      orderItems: [[]],
+    });
+    try {
+      const result = await createService().getDailyReport("restaurant-1");
+      expect(result).toMatchObject({
+        success: true,
+        data: { date: "2026-09-30" },
+      });
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 
   it("generates shift reports with normalized money, JSON fields, and persisted summaries", async () => {
@@ -308,6 +329,46 @@ describe("ReportService", () => {
       createService().generateShiftReport("missing-shift"),
     ).resolves.toMatchObject({ success: false });
     expect(inserted).toHaveLength(0);
+  });
+
+  it("uses payment-day register totals, including one count per market checkout", async () => {
+    mockSelectResults({
+      cashShifts: [[{ cash_shifts: shiftRow({ totalSalesCents: 999900 }) }]],
+      paymentTransactions: [[{ totalSalesCents: 51000, totalOrders: 2 }]],
+      marketCheckoutPayments: [[{ totalSalesCents: 9000, totalOrders: 1 }]],
+      refunds: [[{ totalRefunds: 1, totalRefundAmount: 20 }]],
+    });
+    const result = await createService().getDailyReport(
+      "restaurant-1",
+      "2026-09-30",
+      "register-1",
+    );
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        summary: {
+          totalSales: 600,
+          totalOrders: 3,
+          avgOrderValue: 200,
+          totalRefundAmount: 20,
+        },
+      },
+    });
+  });
+
+  it("adds register totals in cents before converting currency", async () => {
+    mockSelectResults({
+      cashShifts: [[]],
+      paymentTransactions: [[{ totalSalesCents: 10, totalOrders: 1 }]],
+      marketCheckoutPayments: [[{ totalSalesCents: 20, totalOrders: 1 }]],
+      refunds: [[]],
+    });
+    const result = await createService().getDailyReport(
+      "restaurant-1",
+      "2026-09-30",
+      "register-1",
+    );
+    expect(result.data).toMatchObject({ summary: { totalSales: 0.3 } });
   });
 
   it("builds daily reports from shift, order, refund, and top item stats", async () => {

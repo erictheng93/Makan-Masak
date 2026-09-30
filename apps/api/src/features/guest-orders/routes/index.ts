@@ -32,7 +32,10 @@ import {
   assertShopModeEnabled,
   assertShopQrCurrent,
 } from "../../orders/services/shop-mode-gate";
-import { resolveGuestCouponIdentity } from "../services/guest-coupon-identity";
+import {
+  resolveCouponCustomerIdentity,
+  resolveGuestCouponIdentity,
+} from "../services/guest-coupon-identity";
 import { enforceGuestOrderThrottle } from "../services/guest-order-throttle";
 import {
   ApiError,
@@ -188,9 +191,13 @@ app.post(
         })),
         notes: data.notes,
         couponCode: data.couponCode,
-        couponGuestIdentity: data.couponCode
-          ? await resolveGuestCouponIdentity(c.req)
-          : undefined,
+        couponCodes: data.couponCodes,
+        couponGuestIdentity:
+          data.couponCode || data.couponCodes?.length
+            ? customer?.id
+              ? await resolveCouponCustomerIdentity(customer.id)
+              : await resolveGuestCouponIdentity(c.req)
+            : undefined,
         clientMutationId: data.clientMutationId,
         orderType: data.orderType,
         deliveryInfo: {

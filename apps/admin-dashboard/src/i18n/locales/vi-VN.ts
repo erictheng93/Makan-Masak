@@ -4372,6 +4372,10 @@ const viVN: Messages = {
     availableSeats: "Ghế trống",
   },
   couponForm: {
+    clearIncompatible: "Xóa hạn chế",
+    incompatibleCoupons: "Không được kết hợp với",
+    incompatibleHint:
+      "Chọn phiếu giảm giá không thể dùng cùng phiếu này. Hạn chế từ một trong hai phiếu đều có hiệu lực.",
     editTitle: "Chỉnh sửa phiếu giảm giá",
     createTitle: "Tạo phiếu giảm giá",
     basicInfo: "Thông tin cơ bản",

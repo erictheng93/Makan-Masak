@@ -4,6 +4,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { ref } from "vue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import POSManagementView from "./POSManagementView.vue";
+import CouponFormModal from "@/components/coupons/CouponFormModal.vue";
 import { api } from "@/services/api";
 import { posService } from "@/services/posService";
 
@@ -35,32 +36,49 @@ vi.mock("@/composables/useCurrency", async (importOriginal) => {
   };
 });
 
+const access = vi.hoisted(() => ({ role: 1, coupons: true }));
+vi.mock("@makanmasak/shared/stores/moduleAccess", () => ({
+  useModuleAccessStore: () => ({
+    isLoaded: true,
+    effectiveModules: { coupons: access.coupons },
+  }),
+}));
+
 vi.mock("@/stores/auth", () => ({
   useAuthStore: () => ({
     restaurantId: "restaurant-1",
-    user: { id: 7 },
+    user: { id: 7, role: access.role },
   }),
 }));
 
 vi.mock("@/services/api", () => ({
+  apiClient: {
+    get: (...args: unknown[]) => api.get(...(args as [string])),
+    post: (...args: unknown[]) => api.post(...(args as [string, unknown])),
+    put: (...args: unknown[]) => api.put(...(args as [string, unknown])),
+    delete: (...args: unknown[]) => api.delete(...(args as [string])),
+  },
+  unwrapApiData: (response: { data: { data: unknown } }) => response.data.data,
   api: {
     get: vi.fn(),
     post: vi.fn(),
     put: vi.fn(),
+    delete: vi.fn(),
   },
   unwrapApiList: (payload: unknown) => payload,
   unwrapApiPayload: (payload: unknown) => payload,
 }));
 
-vi.mock("@/services/posService", () => ({
-  posService: {
-    payMarketCheckout: vi.fn(),
-  },
-}));
+vi.mock("@/services/posService", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/services/posService")>();
+  return { posService: { ...actual.posService, payMarketCheckout: vi.fn() } };
+});
 
 describe("POSManagementView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    access.role = 1;
+    access.coupons = true;
     vi.mocked(api.get).mockImplementation(async (url: string) => {
       if (url === "/pos/registers") {
         return {
@@ -92,6 +110,7 @@ describe("POSManagementView", () => {
               registerId: "register-1",
               operatorId: 7,
               startAmount: 500,
+              expectedAmount: 550,
               totalSales: 120,
               totalTransactions: 4,
               status: "active",
@@ -99,19 +118,80 @@ describe("POSManagementView", () => {
           },
         } as never;
       }
-      if (url === "/pos/registers/register-1/stats/daily") {
+      if (url === "/pos/promotions")
         return {
           data: {
             success: true,
-            data: { totalSales: 120, totalOrders: 4, avgOrderValue: 30 },
+            data: {
+              promotions: [
+                {
+                  id: 1,
+                  code: "LUNCH10",
+                  name: "Lunch discount",
+                  description: "Electronic coupon",
+                  discountType: "percentage",
+                  discountValue: 10,
+                  minOrderAmount: 0,
+                  usedCount: 0,
+                  validFrom: "2020-01-01T00:00:00Z",
+                  validTo: "2099-01-01T00:00:00Z",
+                  isActive: true,
+                  isVisible: true,
+                },
+              ],
+              pagination: { page: 1, pages: 1 },
+            },
+          },
+        } as never;
+      if (url === "/pos/reports/daily") {
+        return {
+          data: {
+            success: true,
+            data: {
+              summary: {
+                totalSales: 120,
+                totalOrders: 4,
+                totalRefundAmount: 0,
+                avgOrderValue: 30,
+              },
+              shifts: [
+                {
+                  id: "shift-1",
+                  registerId: "register-1",
+                  totalSalesCents: 12000,
+                  totalTransactions: 4,
+                },
+                {
+                  id: "other",
+                  registerId: "register-2",
+                  totalSalesCents: 987900,
+                  totalTransactions: 95,
+                },
+              ],
+            },
           },
         } as never;
       }
-      if (url === "/pos/registers/register-1/cash-movements") {
-        return { data: { success: true, data: [] } } as never;
-      }
-      if (url === "/pos/promotions") {
-        return { data: { success: true, data: [] } } as never;
+      if (url === "/pos/shifts/shift-1/cash-movements") {
+        return {
+          data: {
+            success: true,
+            data: {
+              movements: [
+                {
+                  id: "movement-1",
+                  registerId: "register-1",
+                  type: "cash_out",
+                  amountCents: 1250,
+                  description: "Drawer withdrawal",
+                  recordedBy: "7",
+                  createdAt: "2026-06-01T09:00:00Z",
+                },
+              ],
+              pagination: { page: 1, limit: 20, hasMore: false },
+            },
+          },
+        } as never;
       }
       return { data: { success: true, data: null } } as never;
     });
@@ -124,6 +204,190 @@ describe("POSManagementView", () => {
         paidAmountCents: 20000,
       },
     });
+  });
+
+  it("loads the selected register totals, drawer balance and real cash movement envelope without unsupported requests", async () => {
+    const wrapper = mount(POSManagementView);
+    await flushPromises();
+    const paths = vi.mocked(api.get).mock.calls.map(([url]) => url);
+    expect(paths).not.toContain("/pos/registers/register-1/stats/daily");
+    expect(paths).toContain("/pos/reports/daily");
+    expect(paths).toContain("/pos/shifts/shift-1/cash-movements");
+    expect(wrapper.text()).toContain("$120.00");
+    expect(wrapper.text()).toContain("$550.00");
+    expect(wrapper.text()).toContain("Drawer withdrawal");
+    expect(wrapper.text()).toContain("-$12.50");
+    expect(wrapper.text()).not.toContain("$9999.00");
+
+    wrapper.unmount();
+  });
+
+  it("clears the previous register's shift, transactions and totals when selecting an idle register", async () => {
+    const get = vi.mocked(api.get).getMockImplementation()!;
+    vi.mocked(api.get).mockImplementation(async (...args) => {
+      const response = await get(...args);
+      if (args[0] === "/pos/registers") {
+        (response.data.data as unknown[]).push({
+          id: "register-2",
+          name: "Idle Register",
+          isActive: true,
+        });
+      }
+      if (args[0] === "/pos/reports/daily") {
+        if (
+          (args[1] as { params?: { registerId?: string } })?.params
+            ?.registerId === "register-2"
+        )
+          Object.assign(response.data.data as object, {
+            summary: { totalSales: 0, totalOrders: 0, avgOrderValue: 0 },
+            shifts: [],
+          });
+        else
+          (response.data.data as { shifts: unknown[] }).shifts = [
+            {
+              id: "shift-1",
+              registerId: "register-1",
+              totalSalesCents: 12000,
+              totalTransactions: 4,
+            },
+          ];
+      }
+      return response;
+    });
+    const wrapper = mount(POSManagementView);
+    await flushPromises();
+    await wrapper
+      .findAll("h3")
+      .find((h) => h.text() === "Idle Register")!
+      .trigger("click");
+    await flushPromises();
+    expect(wrapper.text()).not.toContain("Drawer withdrawal");
+    expect(wrapper.text()).not.toContain("$120.00");
+    expect(wrapper.find('[data-testid="pos-open-end-shift"]').exists()).toBe(
+      false,
+    );
+    expect(api.get).toHaveBeenCalledWith("/pos/shifts/current/register-2");
+    wrapper.unmount();
+  });
+
+  it("shows usable electronic coupon codes to cashiers without management controls", async () => {
+    access.role = 4;
+    const wrapper = mount(POSManagementView);
+    await flushPromises();
+    expect(wrapper.text()).toContain("LUNCH10");
+    expect(wrapper.text()).not.toContain("pos.promotionManagement");
+    wrapper.unmount();
+  });
+
+  it("does not request promotions when the coupon module is unavailable", async () => {
+    access.coupons = false;
+    const wrapper = mount(POSManagementView);
+    await flushPromises();
+    expect(vi.mocked(api.get).mock.calls.map(([url]) => url)).not.toContain(
+      "/pos/promotions",
+    );
+    wrapper.unmount();
+  });
+
+  it("edits, creates and deletes electronic promotions with the shared coupon form", async () => {
+    vi.mocked(api.put).mockResolvedValue({
+      data: { success: true, data: {} },
+    } as never);
+    vi.mocked(api.post).mockResolvedValue({
+      data: { success: true, data: {} },
+    } as never);
+    vi.mocked(api.delete).mockResolvedValue({
+      data: { success: true },
+    } as never);
+    const wrapper = mount(POSManagementView);
+    await flushPromises();
+    await wrapper
+      .findAll("button")
+      .find((b) => b.text() === "pos.promotionManagement")!
+      .trigger("click");
+    await wrapper
+      .findAll("button")
+      .find((b) => b.text() === "pos.edit")!
+      .trigger("click");
+    const form = wrapper.getComponent(CouponFormModal);
+    expect(form.props("coupon")?.code).toBe("LUNCH10");
+    const input = {
+      code: "LUNCH20",
+      name: "Updated lunch",
+      description: "Electronic",
+      discountType: "fixed" as const,
+      discountValue: 20,
+      minOrderAmount: 100,
+      validFrom: "2026-09-01T00:00:00Z",
+      validTo: "2026-10-31T00:00:00Z",
+      isActive: true,
+      isVisible: true,
+    };
+    form.vm.$emit("save", input);
+    await flushPromises();
+    expect(api.put).toHaveBeenCalledWith("/pos/promotions/1", input);
+    expect(wrapper.findComponent(CouponFormModal).exists()).toBe(false);
+    await wrapper
+      .findAll("button")
+      .find((b) => b.text() === "pos.addPromotion")!
+      .trigger("click");
+    wrapper.getComponent(CouponFormModal).vm.$emit("save", input);
+    await flushPromises();
+    expect(api.post).toHaveBeenCalledWith("/pos/promotions", {
+      ...input,
+      restaurantId: "restaurant-1",
+    });
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    await wrapper
+      .findAll("button")
+      .find((b) => b.text() === "common.delete")!
+      .trigger("click");
+    await flushPromises();
+    expect(api.delete).toHaveBeenCalledWith("/pos/promotions/1");
+    confirm.mockRestore();
+    wrapper.unmount();
+  });
+
+  it("returns to the valid promotion page after deleting the last item", async () => {
+    const get = vi.mocked(api.get).getMockImplementation()!;
+    let deleted = false;
+    vi.mocked(api.get).mockImplementation(async (...args) => {
+      const response = await get(...args);
+      if (args[0] === "/pos/promotions") {
+        const page = (args[1] as { params: { page: number } }).params.page;
+        const data = response.data.data as {
+          promotions: unknown[];
+          pagination: { page: number; pages: number };
+        };
+        data.pagination = { page, pages: deleted ? 1 : 2 };
+        if (page === 2 && deleted) data.promotions = [];
+      }
+      return response;
+    });
+    vi.mocked(api.delete).mockImplementation(async () => {
+      deleted = true;
+      return { data: { success: true } } as never;
+    });
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const wrapper = mount(POSManagementView);
+    await flushPromises();
+    await wrapper
+      .findAll("button")
+      .find((b) => b.text() === "pos.promotionManagement")!
+      .trigger("click");
+    await wrapper.get('[data-testid="pos-promotions-next"]').trigger("click");
+    await flushPromises();
+    await wrapper
+      .findAll("button")
+      .find((b) => b.text() === "common.delete")!
+      .trigger("click");
+    await flushPromises();
+    expect(api.get).toHaveBeenLastCalledWith("/pos/promotions", {
+      params: { page: 1, restaurantId: "restaurant-1" },
+    });
+    expect(wrapper.text()).toContain("LUNCH10");
+    confirm.mockRestore();
+    wrapper.unmount();
   });
 
   it("pays a market checkout through the selected register and active shift", async () => {

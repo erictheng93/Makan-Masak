@@ -416,6 +416,11 @@
       <template #default>
         <CouponFormModal
           :coupon="editingCoupon || undefined"
+          :restaurant-id="
+            editingCoupon?.restaurantId ||
+            authStore.user?.restaurantId ||
+            undefined
+          "
           @close="closeModal"
           @save="handleSaveCoupon"
         />

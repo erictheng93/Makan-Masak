@@ -120,6 +120,57 @@ describe("OrderTrackingView guest realtime URL", () => {
     localStorage.setItem("makanmakan_table_qr:restaurant-1:7", "signed-qr");
   });
 
+  it("shows persisted per-coupon discounts alongside the order total", () => {
+    orderQueryData.value = {
+      id: 1001,
+      orderNumber: "ORDER-1",
+      status: "pending",
+      items: [],
+      subtotal: 100,
+      totalAmount: 67,
+      discountAmount: 33,
+      appliedCoupons: [
+        { couponId: 1, code: "TEN", name: "Ten percent", discountAmount: 10 },
+        {
+          couponId: 2,
+          code: "TWENTY",
+          name: "Twenty percent",
+          discountAmount: 18,
+        },
+        { couponId: 3, code: "FIVE", name: "Five off", discountAmount: 5 },
+      ],
+    };
+    const wrapper = mountView();
+    expect(wrapper.text()).toContain("Ten percent (TEN)");
+    expect(wrapper.text()).toContain("Twenty percent (TWENTY)");
+    expect(wrapper.text()).toContain("Five off (FIVE)");
+    expect(wrapper.text()).toContain("-18");
+    expect(wrapper.text()).not.toContain("cart.discount");
+    expect(wrapper.text()).not.toContain("-33");
+    expect(wrapper.get('[data-testid="order-total"]').text()).toBe("67");
+    wrapper.unmount();
+  });
+
+  it.each([undefined, []])(
+    "retains the aggregate discount for legacy orders (%s)",
+    (appliedCoupons) => {
+      orderQueryData.value = {
+        id: 1001,
+        orderNumber: "ORDER-1",
+        status: "pending",
+        items: [],
+        subtotal: 100,
+        totalAmount: 80,
+        discountAmount: 20,
+        appliedCoupons,
+      };
+      const wrapper = mountView();
+      expect(wrapper.text()).toContain("cart.discount");
+      expect(wrapper.text()).toContain("-20");
+      wrapper.unmount();
+    },
+  );
+
   it("uses the guest order token when a shop order has no signed table QR", async () => {
     vi.mocked(orderApi.getGuestRealtimeToken).mockResolvedValue({
       token: "realtime-token",

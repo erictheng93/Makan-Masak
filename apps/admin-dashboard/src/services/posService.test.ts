@@ -18,6 +18,71 @@ describe("posService", () => {
     vi.mocked(apiClient.delete).mockReset();
   });
 
+  it("requests register-scoped daily totals instead of summing whole shifts", async () => {
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      data: {
+        summary: {
+          totalSales: 200,
+          totalOrders: 5,
+          totalRefundAmount: 5,
+          avgOrderValue: 40,
+        },
+        shifts: [
+          {
+            registerId: "register-1",
+            totalSalesCents: 12000,
+            totalTransactions: 4,
+            totalRefundsCents: 500,
+          },
+          {
+            registerId: "register-1",
+            totalSalesCents: 8000,
+            totalTransactions: 1,
+            totalRefundsCents: 0,
+          },
+          {
+            registerId: "register-2",
+            totalSalesCents: 979900,
+            totalTransactions: 94,
+          },
+        ],
+      },
+    } as never);
+    const result = await posService.getDailyStats("register-1");
+    expect(apiClient.get).toHaveBeenCalledWith("/pos/reports/daily", {
+      params: {
+        date: undefined,
+        restaurantId: undefined,
+        registerId: "register-1",
+      },
+    });
+    expect(result).toMatchObject({
+      totalSales: 200,
+      totalOrders: 5,
+      totalRefunds: 5,
+      avgOrderValue: 40,
+    });
+  });
+
+  it("reads the movement page and converts cents and cash-out direction", async () => {
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      data: {
+        movements: [
+          { id: "m-1", type: "cash_out", amountCents: 1250, recordedBy: "7" },
+        ],
+        pagination: { hasMore: false },
+      },
+    } as never);
+    const result = await posService.getCashMovements("shift-1");
+    expect(apiClient.get).toHaveBeenCalledWith(
+      "/pos/shifts/shift-1/cash-movements",
+      { params: undefined },
+    );
+    expect(result).toMatchObject([
+      { id: "m-1", amount: -12.5, operatorId: "7" },
+    ]);
+  });
+
   it("pays a market checkout through the active POS shift", async () => {
     vi.mocked(apiClient.post).mockResolvedValueOnce({
       data: {

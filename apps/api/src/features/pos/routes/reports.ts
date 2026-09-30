@@ -56,13 +56,17 @@ app.get(
     z.lazy(() =>
       z.object({
         restaurantId: z.string().optional(),
-        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        registerId: z.uuid().optional(),
+        date: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .optional(),
       }),
     ),
   ),
   async (c) => {
     const user = c.get("user");
-    const { restaurantId, date } = c.get("validatedQuery");
+    const { restaurantId, date, registerId } = c.get("validatedQuery");
 
     const finalRestaurantId = resolveReportRestaurantId(
       user,
@@ -71,7 +75,14 @@ app.get(
     );
 
     const reportService = new ReportService(c.env.DB);
-    const result = await reportService.getDailyReport(finalRestaurantId, date);
+    if (registerId)
+      await new PosTenantAccessService(c.env.DB).requireRegister(
+        user,
+        registerId,
+      );
+    const result = registerId
+      ? await reportService.getDailyReport(finalRestaurantId, date, registerId)
+      : await reportService.getDailyReport(finalRestaurantId, date);
 
     if (!result.success) {
       throw badRequest(result.error || "獲取日營業報表失敗");

@@ -138,6 +138,10 @@
     {
       "fresh": "0034_market_vendor_daily_open.sql",
       "reason": "markets, restaurant_market_memberships and the new open-event log are platform-API tables; the management-api database has no markets to pair against."
+    },
+    {
+      "fresh": "0035_multiple_coupons.sql",
+      "reason": "Coupons and order discount snapshots belong to the platform database; control-plane database contains neither table."
     }
   ],
   "legacyOnly": [
@@ -146,5 +150,5 @@
       "reason": "Legacy operational performance-index migration predates this guard and is reviewed as legacy-only."
     }
   ],
-  "note": "The fresh track was squashed into 0000_baseline_strict.sql, so per-file pairings against it no longer exist. Note that no wrangler.toml points at legacyDir — see AGENTS.md/CLAUDE.md."
+  "note": "The fresh track was squashed into 0000_baseline_strict.sql, so per-file pairings against it no longer exist. Note that no wrangler.toml points at legacyDir \u2014 see AGENTS.md/CLAUDE.md."
 }

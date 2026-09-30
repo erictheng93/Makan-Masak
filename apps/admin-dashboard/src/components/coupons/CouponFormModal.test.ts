@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { mount } from "@vue/test-utils";
+import { mount, flushPromises } from "@vue/test-utils";
 import { nextTick } from "vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import CouponFormModal from "./CouponFormModal.vue";
@@ -26,6 +26,10 @@ vi.mock("@/composables/useDateFormatter", () => ({
   useDateFormatter: () => ({ formatDate: (value: string) => value }),
 }));
 
+const apiGet = vi.hoisted(() => vi.fn());
+vi.mock("@/services/api", () => ({ api: { get: apiGet } }));
+apiGet.mockResolvedValue({ data: { data: [], pagination: { total: 0 } } });
+
 function coupon() {
   return {
     id: 1,
@@ -46,6 +50,45 @@ function coupon() {
 }
 
 describe("CouponFormModal", () => {
+  it("preserves exclusions across pages and lets the merchant remove them", async () => {
+    apiGet.mockResolvedValueOnce({
+      data: {
+        data: [coupon(), { ...coupon(), id: 2, code: "OTHER" }],
+        pagination: { total: 2 },
+      },
+    });
+    const wrapper = mount(CouponFormModal, {
+      props: {
+        coupon: { ...coupon(), incompatibleCouponIds: [2, 99] },
+        restaurantId: "shop",
+      },
+    });
+    await flushPromises();
+    expect(apiGet).toHaveBeenCalledWith(
+      "/coupons",
+      expect.objectContaining({ restaurantId: "shop" }),
+    );
+    expect(wrapper.find('[data-testid="incompatible-1"]').exists()).toBe(false);
+    await wrapper.get('[data-testid="incompatible-2"]').setValue(false);
+    await wrapper.find("form").trigger("submit");
+    expect(wrapper.emitted("save")![0][0]).toMatchObject({
+      incompatibleCouponIds: [99],
+    });
+  });
+  it("can clear exclusions even when a referenced coupon is no longer listed", async () => {
+    const wrapper = mount(CouponFormModal, {
+      props: { coupon: { ...coupon(), incompatibleCouponIds: [99] } },
+    });
+    await flushPromises();
+    await wrapper
+      .get('[data-testid="clear-incompatible-coupons"]')
+      .trigger("click");
+    await wrapper.find("form").trigger("submit");
+    expect(wrapper.emitted("save")![0][0]).toMatchObject({
+      incompatibleCouponIds: [],
+    });
+  });
+
   it("defaults a new coupon start time to now, not tomorrow", async () => {
     const before = Date.now() - 60_000;
     const wrapper = mount(CouponFormModal);

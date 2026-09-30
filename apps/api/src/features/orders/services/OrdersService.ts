@@ -244,7 +244,10 @@ export class OrdersService implements IOrdersService {
       }
 
       // Validate coupon code format
-      if (data.couponCode && data.couponCode.length < 3) {
+      if (
+        (data.couponCode && data.couponCode.length < 3) ||
+        data.couponCodes?.some((code) => code.length < 3)
+      ) {
         throw badRequest(
           "Invalid coupon code format",
           "INVALID_COUPON_CODE_FORMAT",
@@ -270,6 +273,7 @@ export class OrdersService implements IOrdersService {
         })),
         notes: data.notes,
         couponCode: data.couponCode,
+        couponCodes: data.couponCodes,
         // Canonical customers live outside the staff `users` table. Their
         // coupon limit is keyed by the server-derived customer hash below.
         couponUserId: data.customerId ? undefined : userId,

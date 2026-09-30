@@ -1,3 +1,4 @@
+import type { AppliedCoupon } from "./coupon";
 import { BaseEntity } from "./common";
 import { MenuItem } from "./menu";
 import type { CurrencyCode } from "./payment";
@@ -81,6 +82,8 @@ export interface Order extends Omit<BaseEntity, "id"> {
   taxAmount?: number; // in cents
   serviceCharge?: number; // in cents
   discountAmount?: number; // in cents
+  appliedCoupons?: AppliedCoupon[];
+  couponCode?: string;
   totalAmount: number; // in cents
   /**
    * The restaurant's currency, present when the order was read together with
@@ -332,6 +335,7 @@ export interface CreateOrderRequest {
   customerPhone?: string;
   items: CreateOrderItemRequest[];
   notes?: string;
+  couponCodes?: string[];
   couponCode?: string; // 優惠券代碼
   /**
    * Idempotency key for this submission, enforced by the unique index on

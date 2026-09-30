@@ -116,6 +116,15 @@ describe("POS report routes", () => {
     mocks.tenantAccess.requireShift.mockResolvedValue(undefined);
   });
 
+  it("lets the service choose the restaurant business day when date is omitted", async () => {
+    const response = await request("/daily");
+    expect(response.status).toBe(200);
+    expect(mocks.reportService.getDailyReport).toHaveBeenCalledWith(
+      "restaurant-1",
+      undefined,
+    );
+  });
+
   it("returns daily reports for the owner restaurant or explicit admin restaurant", async () => {
     let response = await request("/daily?date=2026-06-07");
     let body = await json(response);

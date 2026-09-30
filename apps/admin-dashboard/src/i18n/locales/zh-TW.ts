@@ -4395,6 +4395,10 @@ const zhTWCore = {
 
   // 優惠券表單
   couponForm: {
+    clearIncompatible: "清除互斥設定",
+    incompatibleCoupons: "不可併用的優惠券",
+    incompatibleHint:
+      "勾選不可與此券一起使用的優惠券。任一張券設定互斥，即無法併用。",
     editTitle: "編輯優惠券",
     createTitle: "建立優惠券",
     basicInfo: "基本資訊",

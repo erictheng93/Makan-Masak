@@ -17,21 +17,36 @@ const idString = z.preprocess((value) => {
   return value;
 }, z.string().trim().min(1));
 
+export const couponCodesSchema = z
+  .array(z.string().trim().min(1).max(50).toUpperCase())
+  .max(50)
+  .refine((codes) => new Set(codes).size === codes.length, {
+    message: "Duplicate coupon codes are not allowed",
+  });
+
 // 驗證 schemas
 export const validateCouponSchema = z.lazy(() =>
-  z.object({
-    code: z.string().min(1).max(50),
-    restaurantId: z.string().min(1),
-    orderAmount: z.number().positive(),
-    menuItems: z
-      .array(
-        z.object({
-          menuItemId: z.number().int().positive(),
-          quantity: z.number().int().positive(),
-        }),
-      )
-      .optional(),
-  }),
+  z
+    .object({
+      code: z.string().min(1).max(50).optional(),
+      codes: couponCodesSchema.refine((codes) => codes.length > 0).optional(),
+      restaurantId: z.string().min(1),
+      orderAmount: z.number().positive(),
+      menuItems: z
+        .array(
+          z.object({
+            menuItemId: z.number().int().positive(),
+            quantity: z.number().int().positive(),
+          }),
+        )
+        .optional(),
+    })
+    .refine(
+      (data) => (data.code !== undefined) !== (data.codes !== undefined),
+      {
+        message: "Provide either code or codes",
+      },
+    ),
 );
 
 export const createCouponSchema = z.object({
@@ -45,6 +60,10 @@ export const createCouponSchema = z.object({
   minOrderAmount: z.number().min(0).optional(),
   applicableMenuItems: z.array(z.number().int().positive()).optional(),
   applicableCategories: z.array(z.number().int().positive()).optional(),
+  incompatibleCouponIds: z
+    .array(z.number().int().positive())
+    .max(50)
+    .optional(),
   usageLimit: z.number().int().positive().nullable().optional(),
   usageLimitPerUser: z.number().int().positive().nullable().optional(),
   validFrom: z.iso.datetime(),

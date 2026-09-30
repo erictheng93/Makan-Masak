@@ -151,6 +151,7 @@ export interface PublicReviewList {
 
 export interface CreateGuestOrderRequest {
   couponCode?: string;
+  couponCodes?: string[];
   restaurantId: string;
   guestName: string;
   /**

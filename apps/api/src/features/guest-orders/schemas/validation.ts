@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { couponCodesSchema } from "../../coupons/schemas/validation";
 
 // Sanitize free-text user input by removing HTML metacharacters instead of
 // trying to strip whole tags/attributes, which can be bypassed by overlap.
@@ -91,6 +92,7 @@ export const createGuestOrderSchema = z.lazy(() =>
       waitingListId: z.string().min(1).max(100).optional(),
       customerPhone: z.string().max(20).optional(),
       couponCode: z.string().trim().min(3).max(50).toUpperCase().optional(),
+      couponCodes: couponCodesSchema.optional(),
       tableId: z.number().int().positive().optional(),
       seatId: z.number().int().positive().optional(),
       items: z.array(guestOrderItemSchema).min(1).max(20),
@@ -98,6 +100,13 @@ export const createGuestOrderSchema = z.lazy(() =>
       notes: notesSchema(500).optional(),
       deliveryInfo: deliveryInfoSchema.optional(),
     })
+    .refine(
+      (data) => data.couponCode === undefined || data.couponCodes === undefined,
+      {
+        message: "Provide either couponCode or couponCodes",
+        path: ["couponCodes"],
+      },
+    )
     .refine(
       (data) => {
         if (data.orderType === "table" || data.orderType === "seat") {

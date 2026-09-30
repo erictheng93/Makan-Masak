@@ -7,7 +7,16 @@
 export type DiscountType = "percentage" | "fixed";
 
 /** Coupon entity as returned by the API list/detail endpoints */
+export interface AppliedCoupon {
+  couponId: number;
+  code: string;
+  name: string;
+  discountAmount: number;
+}
+
 export interface Coupon {
+  restaurantId?: string | null;
+  incompatibleCouponIds?: number[];
   id: number;
   code: string;
   name: string;

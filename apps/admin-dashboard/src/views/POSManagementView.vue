@@ -59,6 +59,7 @@
         </button>
 
         <button
+          v-if="canManagePromotions"
           class="px-3 py-2 bg-ios-orange text-white rounded-full hover:bg-orange-600 transition-colors text-sm"
           @click="openPromotionsDialog"
         >
@@ -124,10 +125,10 @@
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-500">
-              {{ t("pos.avgServiceTime") }}
+              {{ t("dashboard.averageOrderValue") }}
             </p>
             <p class="text-2xl font-semibold text-gray-900">
-              {{ todayStats.avgServiceTime }}{{ t("pos.minutes") }}
+              {{ formatPrice(todayStats.avgOrderValue) }}
             </p>
           </div>
         </div>
@@ -450,13 +451,14 @@
         </div>
 
         <!-- 促銷活動 -->
-        <div class="bg-white rounded-lg shadow">
+        <div v-if="hasPromotions" class="bg-white rounded-lg shadow">
           <div class="p-6">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-lg font-semibold text-gray-900">
                 {{ t("pos.activePromotions") }}
               </h3>
               <button
+                v-if="canManagePromotions"
                 class="text-blue-600 hover:text-blue-700 text-sm font-medium"
                 @click="openPromotionsDialog"
               >
@@ -473,10 +475,10 @@
                 <div class="flex items-center justify-between">
                   <div>
                     <p class="text-sm font-medium text-teal-900">
-                      {{ promotion.title }}
+                      {{ promotion.name }}
                     </p>
                     <p class="text-xs text-teal-600">
-                      {{ promotion.description }}
+                      {{ promotion.description }} · {{ promotion.code }}
                     </p>
                   </div>
                   <span class="text-sm font-bold text-teal-900">
@@ -494,6 +496,23 @@
                 class="text-center py-4"
               >
                 <p class="text-sm text-gray-500">{{ t("pos.noPromotions") }}</p>
+              </div>
+              <div v-if="promotionPages > 1" class="flex justify-between gap-2">
+                <button
+                  :disabled="promotionPage <= 1 || isLoadingPromotions"
+                  @click="changePromotionPage(promotionPage - 1)"
+                >
+                  {{ t("coupons.pagination.previous") }}
+                </button>
+                <span>{{ promotionPage }} / {{ promotionPages }}</span>
+                <button
+                  :disabled="
+                    promotionPage >= promotionPages || isLoadingPromotions
+                  "
+                  @click="changePromotionPage(promotionPage + 1)"
+                >
+                  {{ t("coupons.pagination.next") }}
+                </button>
               </div>
             </div>
           </div>
@@ -592,7 +611,7 @@
                 <option value="">{{ t("pos.selectMethod") }}</option>
                 <option value="cash_in">{{ t("pos.cashIn") }}</option>
                 <option value="cash_out">{{ t("pos.cashOut") }}</option>
-                <option value="drawer_count">{{ t("pos.drawerCount") }}</option>
+                <option value="count">{{ t("pos.drawerCount") }}</option>
                 <option value="refund">{{ t("pos.refund") }}</option>
               </select>
             </div>
@@ -649,7 +668,10 @@
     </div>
 
     <!-- 促銷管理模態框 -->
-    <div v-if="showPromotionsDialog" class="fixed inset-0 z-50 overflow-y-auto">
+    <div
+      v-if="showPromotionsDialog && canManagePromotions"
+      class="fixed inset-0 z-50 overflow-y-auto"
+    >
       <div class="flex items-center justify-center min-h-screen px-4">
         <div
           class="fixed inset-0 bg-black opacity-30"
@@ -686,7 +708,7 @@
               class="border rounded-lg p-4"
             >
               <div class="flex items-center justify-between mb-2">
-                <h4 class="font-medium text-gray-900">{{ promotion.title }}</h4>
+                <h4 class="font-medium text-gray-900">{{ promotion.name }}</h4>
                 <span
                   :class="[
                     'px-2 py-1 text-xs font-medium rounded-full',
@@ -699,7 +721,7 @@
                 </span>
               </div>
               <p class="text-sm text-gray-600 mb-3">
-                {{ promotion.description }}
+                {{ promotion.description }} · {{ promotion.code }}
               </p>
 
               <div class="flex items-center justify-between">
@@ -729,9 +751,36 @@
                   >
                     {{ promotion.isActive ? t("pos.pause") : t("pos.enable") }}
                   </button>
+                  <button
+                    class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm"
+                    :disabled="isProcessing"
+                    @click="deletePromotion(promotion)"
+                  >
+                    {{ t("common.delete") }}
+                  </button>
                 </div>
               </div>
             </div>
+          </div>
+          <div
+            v-if="promotionPages > 1"
+            class="mt-4 flex justify-between gap-2"
+          >
+            <button
+              data-testid="pos-promotions-prev"
+              :disabled="promotionPage <= 1 || isLoadingPromotions"
+              @click="changePromotionPage(promotionPage - 1)"
+            >
+              {{ t("coupons.pagination.previous") }}
+            </button>
+            <span>{{ promotionPage }} / {{ promotionPages }}</span>
+            <button
+              data-testid="pos-promotions-next"
+              :disabled="promotionPage >= promotionPages || isLoadingPromotions"
+              @click="changePromotionPage(promotionPage + 1)"
+            >
+              {{ t("coupons.pagination.next") }}
+            </button>
           </div>
         </div>
       </div>
@@ -914,67 +963,22 @@
       </div>
     </div>
 
-    <!-- 新增促銷活動 Modal -->
-    <div
-      v-if="showCreatePromotionModal"
-      class="fixed inset-0 z-50 overflow-y-auto"
-    >
-      <div class="flex items-center justify-center min-h-screen px-4">
-        <div
-          class="fixed inset-0 bg-black opacity-30"
-          @click="showCreatePromotionModal = false"
-        />
-        <div
-          class="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
-        >
-          <div class="flex items-center justify-between mb-6">
-            <h3 class="text-xl font-semibold text-ios-text">
-              {{ t("pos.createPromotion") || "新增促銷活動" }}
-            </h3>
-            <button
-              class="text-gray-400 hover:text-gray-600"
-              @click="showCreatePromotionModal = false"
-            >
-              <XMarkIcon class="w-6 h-6" />
-            </button>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              {{ t("pos.prompts.promotionName") || "活動名稱" }}
-            </label>
-            <input
-              v-model="newPromotionName"
-              type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ios-blue focus:border-ios-blue"
-              :placeholder="
-                t('pos.prompts.promotionNamePlaceholder') || '例如: 週末特惠'
-              "
-              @keyup.enter="confirmCreatePromotion"
-            />
-          </div>
-          <div class="flex justify-end space-x-3 mt-6">
-            <button
-              class="px-4 py-2 bg-gray-100 text-gray-800 rounded-full hover:bg-gray-200 transition-colors"
-              @click="showCreatePromotionModal = false"
-            >
-              {{ t("common.cancel") || "取消" }}
-            </button>
-            <button
-              :disabled="!newPromotionName.trim()"
-              class="px-4 py-2 bg-ios-orange text-white rounded-full hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              @click="confirmCreatePromotion"
-            >
-              {{ t("common.confirm") || "確認" }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <CouponFormModal
+      v-if="showCreatePromotionModal && canManagePromotions"
+      :coupon="editingPromotion"
+      :restaurant-id="
+        editingPromotion?.restaurantId ||
+        authStore.user?.restaurantId ||
+        undefined
+      "
+      @close="showCreatePromotionModal = false"
+      @save="savePromotion"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, type Component } from "vue";
+import { ref, computed, onMounted, watch, type Component } from "vue";
 import type { UserId } from "@/types/api-user";
 import {
   BanknotesIcon,
@@ -995,7 +999,13 @@ import { api, unwrapApiList, unwrapApiPayload } from "@/services/api";
 import {
   posService,
   type MarketCheckoutPosPaymentMethod,
+  type CashMovement,
+  type Promotion,
+  type PromotionInput,
 } from "@/services/posService";
+import CouponFormModal from "@/components/coupons/CouponFormModal.vue";
+import { getCouponStatus } from "@/utils/couponStatus";
+import { useModuleAccessStore } from "@makanmasak/shared/stores/moduleAccess";
 import { useAuthStore } from "@/stores/auth";
 
 const { t } = useI18n();
@@ -1003,6 +1013,14 @@ const { formatPrice, currencySymbol, inputStep, inputPlaceholder } =
   useCurrency();
 const { formatDateTime, formatTime } = useDateFormatter();
 const authStore = useAuthStore();
+const moduleAccess = useModuleAccessStore();
+const hasPromotions = computed(
+  () =>
+    moduleAccess.isLoaded && moduleAccess.effectiveModules?.coupons === true,
+);
+const canManagePromotions = computed(
+  () => hasPromotions.value && [0, 1].includes(authStore.user?.role ?? -1),
+);
 
 // Loading states — assigned in async operations, read via template bindings
 const isLoadingRegisters = ref(false);
@@ -1042,6 +1060,7 @@ interface CashShift {
   registerId: string;
   operatorId: UserId;
   startingCash: number;
+  expectedAmount?: number;
   totalRevenue: number;
   processedOrders: number;
   status: "active" | "ended" | "closed";
@@ -1050,34 +1069,6 @@ interface CashShift {
   endedAt?: string | Date;
   startAmount?: number;
   totalTransactions?: number;
-}
-
-interface DailyStatsPayload {
-  totalSales?: number;
-  totalOrders?: number;
-  avgOrderValue?: number;
-}
-
-interface Transaction {
-  id: string;
-  registerId: string;
-  type: "sale" | "refund" | "cash_in" | "cash_out" | "drawer_count";
-  amount: number;
-  description: string;
-  createdAt: string;
-  operatorId: UserId;
-}
-
-interface Promotion {
-  id: string;
-  title: string;
-  description: string;
-  discountType: "percentage" | "fixed_amount";
-  discountValue: number;
-  isActive: boolean;
-  startDate: string;
-  endDate: string;
-  conditions: string;
 }
 
 // 響應式狀態
@@ -1090,19 +1081,25 @@ const showPromotionsDialog = ref(false);
 const todayStats = ref({
   revenue: 0,
   orders: 0,
-  avgServiceTime: 0,
+  avgOrderValue: 0,
 });
 
 // 收銀櫃列表
 const registers = ref<CashRegister[]>([]);
 
 // 最近交易
-const recentTransactions = ref<Transaction[]>([]);
+const recentTransactions = ref<CashMovement[]>([]);
+const latestShiftId = ref<string>();
 
 // 促銷活動
-const activePromotions = ref<Promotion[]>([]);
+const activePromotions = computed(() =>
+  allPromotions.value.filter((p) => getCouponStatus(p) === "active"),
+);
 
 const allPromotions = ref<Promotion[]>([]);
+const promotionPage = ref(1);
+const promotionPages = ref(1);
+const editingPromotion = ref<Promotion>();
 
 // 快速收款
 const quickPayment = ref({
@@ -1135,7 +1132,6 @@ const showEndShiftModal = ref(false);
 // `null`, not 0, means the cashier has not performed a physical count yet.
 const endingCashAmount = ref<number | null>(null);
 const showCreatePromotionModal = ref(false);
-const newPromotionName = ref("");
 
 // 計算屬性
 const canProcessQuickPayment = computed(() => {
@@ -1248,7 +1244,7 @@ const getTransactionTypeColor = (type: string) => {
     refund: "bg-red-100",
     cash_in: "bg-blue-100",
     cash_out: "bg-orange-100",
-    drawer_count: "bg-teal-100",
+    count: "bg-teal-100",
   };
   return colors[type] || "bg-gray-100";
 };
@@ -1259,7 +1255,7 @@ const getTransactionIcon = (type: string) => {
     refund: MinusIcon,
     cash_in: PlusIcon,
     cash_out: MinusIcon,
-    drawer_count: AdjustmentsHorizontalIcon,
+    count: AdjustmentsHorizontalIcon,
   };
   return icons[type] || DocumentTextIcon;
 };
@@ -1270,15 +1266,24 @@ const getTransactionTypeText = (type: string) => {
     refund: t("pos.transactionType.refund"),
     cash_in: t("pos.transactionType.cashIn"),
     cash_out: t("pos.transactionType.cashOut"),
-    drawer_count: t("pos.transactionType.drawerCount"),
+    count: t("pos.transactionType.drawerCount"),
   };
   return texts[type] || type;
 };
 
 const selectRegister = async (register: CashRegister) => {
   currentRegister.value = register;
-  // Load current shift for the selected register
-  await loadCurrentShift(register.id);
+  currentShift.value = null;
+  recentTransactions.value = [];
+  latestShiftId.value = undefined;
+  register.currentBalance = undefined;
+  todayStats.value = { revenue: 0, orders: 0, avgOrderValue: 0 };
+  await Promise.all([loadCurrentShift(register.id), loadDailyStats()]);
+  if (currentRegister.value?.id === register.id) await refreshTransactions();
+};
+
+const refreshRegister = async () => {
+  if (currentRegister.value) await selectRegister(currentRegister.value);
 };
 
 const createRegister = () => {
@@ -1356,22 +1361,7 @@ const confirmStartShift = async () => {
       operatorId: authStore.user?.id ?? "",
     });
     if (response.data.success && response.data.data) {
-      const shiftData = unwrapApiPayload<Partial<CashShift>>(
-        response.data.data,
-      );
-      currentShift.value = {
-        id: shiftData.id || "",
-        name: shiftData.name || t("pos.defaults.morningShift"),
-        startTime:
-          validIsoDate(shiftData.startedAt ?? shiftData.startTime) ??
-          new Date().toISOString(),
-        registerId: currentRegister.value.id,
-        operatorId: authStore.user?.id ?? "",
-        startingCash: shiftData.startAmount ?? amount,
-        totalRevenue: 0,
-        processedOrders: 0,
-        status: "active",
-      };
+      await refreshRegister();
     }
   } catch (error) {
     console.error("Failed to start shift:", error);
@@ -1394,7 +1384,7 @@ const confirmEndShift = async () => {
     await api.post(`/pos/shifts/${currentShift.value.id}/end`, {
       actualAmount: endingCashAmount.value,
     });
-    currentShift.value = null;
+    await refreshRegister();
   } catch (error) {
     console.error("Failed to end shift:", error);
   } finally {
@@ -1427,22 +1417,7 @@ const processQuickPayment = async () => {
     });
 
     if (response.data.success) {
-      // The server's register record has no running drawer balance. Do not
-      // invent one client-side (and especially do not add card/digital sales
-      // to cash); closing reconciliation is authoritative.
-      if (currentRegister.value) {
-        currentRegister.value.todayTransactions++;
-        currentRegister.value.lastActivity = new Date().toISOString();
-      }
-
-      // 更新班次統計
-      if (currentShift.value) {
-        currentShift.value.totalRevenue += quickPayment.value.amount;
-        currentShift.value.processedOrders++;
-      }
-
-      // Refresh transactions to show the new one
-      await refreshTransactions();
+      await refreshRegister();
 
       // 重置表單
       quickPayment.value = {
@@ -1463,26 +1438,13 @@ const processMarketCheckoutPayment = async () => {
 
   isProcessing.value = true;
   try {
-    const result = await posService.payMarketCheckout({
+    await posService.payMarketCheckout({
       checkoutId: marketCheckoutPayment.value.checkoutId.trim(),
       registerId: currentRegister.value!.id,
       shiftId: currentShift.value!.id,
       paymentMethod: marketCheckoutPayment.value.paymentMethod,
     });
-    const paidAmount =
-      (result.payment.paidAmountCents ?? result.payment.totalAmountCents) / 100;
-
-    if (currentRegister.value) {
-      currentRegister.value.todayTransactions++;
-      currentRegister.value.lastActivity = new Date().toISOString();
-    }
-
-    if (currentShift.value) {
-      currentShift.value.totalRevenue += paidAmount;
-      currentShift.value.processedOrders++;
-    }
-
-    await refreshTransactions();
+    await refreshRegister();
 
     marketCheckoutPayment.value = {
       checkoutId: "",
@@ -1495,8 +1457,9 @@ const processMarketCheckoutPayment = async () => {
   }
 };
 
-const openCashMovement = (register: CashRegister) => {
-  currentRegister.value = register;
+const openCashMovement = async (register: CashRegister) => {
+  await selectRegister(register);
+  if (!currentShift.value) return;
   showCashMovementDialog.value = true;
   cashMovement.value = { type: "", amount: 0, description: "" };
 };
@@ -1523,7 +1486,7 @@ const processCashMovement = async () => {
     if (response.data.success) {
       currentRegister.value.lastActivity = new Date().toISOString();
 
-      await refreshTransactions();
+      await refreshRegister();
       closeCashMovementDialog();
     }
   } catch (error) {
@@ -1542,51 +1505,43 @@ const closePromotionsDialog = () => {
 };
 
 const createPromotion = () => {
-  newPromotionName.value = "";
+  editingPromotion.value = undefined;
   showCreatePromotionModal.value = true;
 };
 
-const confirmCreatePromotion = async () => {
-  const title = newPromotionName.value.trim();
-  if (!title) return;
-  showCreatePromotionModal.value = false;
+const editPromotion = (promotion: Promotion) => {
+  editingPromotion.value = promotion;
+  showCreatePromotionModal.value = true;
+};
+
+const savePromotion = async (data: PromotionInput) => {
+  if (isProcessing.value || !canManagePromotions.value) return;
   isProcessing.value = true;
   try {
-    const response = await api.post("/pos/promotions", {
-      title,
-      description: t("pos.defaults.newPromotion"),
-      discountType: "percentage",
-      discountValue: 10,
-      isActive: false,
-      startDate: new Date().toISOString().split("T")[0],
-      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0],
-    });
-    if (response.data.success) {
-      await loadPromotions();
-    }
+    if (editingPromotion.value)
+      await posService.updatePromotion(String(editingPromotion.value.id), data);
+    else
+      await posService.createPromotion({
+        ...data,
+        restaurantId: authStore.restaurantId ?? undefined,
+      });
+    showCreatePromotionModal.value = false;
+    await loadPromotions();
   } catch (error) {
-    console.error("Failed to create promotion:", error);
+    console.error("Failed to save promotion:", error);
   } finally {
     isProcessing.value = false;
   }
 };
 
-const editPromotion = (promotion: Promotion) => {
-  // TODO: Open promotion edit dialog
-  console.log("Edit promotion:", promotion.id);
-};
-
 const togglePromotion = async (promotion: Promotion) => {
+  if (isProcessing.value) return;
   isProcessing.value = true;
   try {
-    await api.put(`/pos/promotions/${promotion.id}`, {
+    await posService.updatePromotion(String(promotion.id), {
       isActive: !promotion.isActive,
     });
-    promotion.isActive = !promotion.isActive;
-    // Update active promotions list
-    activePromotions.value = allPromotions.value.filter((p) => p.isActive);
+    await loadPromotions();
   } catch (error) {
     console.error("Failed to toggle promotion:", error);
   } finally {
@@ -1594,19 +1549,49 @@ const togglePromotion = async (promotion: Promotion) => {
   }
 };
 
+const deletePromotion = async (promotion: Promotion) => {
+  if (
+    isProcessing.value ||
+    !window.confirm(
+      t("coupons.messages.deleteConfirm", { name: promotion.name }),
+    )
+  )
+    return;
+  isProcessing.value = true;
+  try {
+    await posService.deletePromotion(String(promotion.id));
+    await loadPromotions();
+  } catch (error) {
+    console.error("Failed to delete promotion:", error);
+  } finally {
+    isProcessing.value = false;
+  }
+};
+
+const changePromotionPage = async (page: number) => {
+  promotionPage.value = page;
+  await loadPromotions();
+};
+
 const openRegisterManagement = () => {
   loadRegisters();
 };
 
 const refreshTransactions = async () => {
-  if (!currentRegister.value) return;
+  const registerId = currentRegister.value?.id;
+  const shiftId = currentShift.value?.id ?? latestShiftId.value;
+  if (!registerId || !shiftId) {
+    recentTransactions.value = [];
+    return;
+  }
   isLoadingTransactions.value = true;
   try {
-    const response = await api.get(
-      `/pos/registers/${currentRegister.value.id}/cash-movements`,
-    );
-    if (response.data.success && response.data.data) {
-      recentTransactions.value = response.data.data as Transaction[];
+    const movements = await posService.getCashMovements(shiftId);
+    if (
+      currentRegister.value?.id === registerId &&
+      (currentShift.value?.id ?? latestShiftId.value) === shiftId
+    ) {
+      recentTransactions.value = movements;
     }
   } catch (error) {
     console.error("Failed to load transactions:", error);
@@ -1679,6 +1664,7 @@ const loadRegisters = async () => {
 const loadCurrentShift = async (registerId: string) => {
   try {
     const response = await api.get(`/pos/shifts/current/${registerId}`);
+    if (currentRegister.value?.id !== registerId) return;
     if (response.data.success && response.data.data) {
       const shiftData = unwrapApiPayload<
         Partial<CashShift> & {
@@ -1698,6 +1684,7 @@ const loadCurrentShift = async (registerId: string) => {
         registerId: shiftData.registerId || registerId,
         operatorId: shiftData.operatorId || "",
         startingCash: shiftData.startAmount ?? shiftData.startingCash ?? 0,
+        expectedAmount: shiftData.expectedAmount,
         totalRevenue: shiftData.totalSales || 0,
         processedOrders:
           shiftData.totalTransactions ?? shiftData.processedOrders ?? 0,
@@ -1706,49 +1693,55 @@ const loadCurrentShift = async (registerId: string) => {
             ? "ended"
             : "active",
       };
+      currentRegister.value.currentBalance = shiftData.expectedAmount;
     } else {
       currentShift.value = null;
     }
   } catch {
-    currentShift.value = null;
+    if (currentRegister.value?.id === registerId) currentShift.value = null;
   }
 };
 
 const loadDailyStats = async () => {
-  if (!currentRegister.value) return;
+  const register = currentRegister.value;
+  if (!register) return;
   isLoadingStats.value = true;
   try {
-    const today = new Date().toISOString().split("T")[0];
-    const response = await api.get(
-      `/pos/registers/${currentRegister.value.id}/stats/daily`,
-      { date: today },
+    const stats = await posService.getDailyStats(
+      register.id,
+      undefined,
+      authStore.restaurantId ?? undefined,
     );
-    if (response.data.success && response.data.data) {
-      const stats = unwrapApiPayload<DailyStatsPayload>(response.data.data);
-      todayStats.value = {
-        revenue: stats.totalSales ?? 0,
-        orders: stats.totalOrders ?? 0,
-        avgServiceTime: stats.avgOrderValue
-          ? Math.round(stats.avgOrderValue * 10) / 10
-          : 0,
-      };
-    }
+    if (currentRegister.value?.id !== register.id) return;
+    todayStats.value = {
+      revenue: stats.totalSales,
+      orders: stats.totalOrders,
+      avgOrderValue: stats.avgOrderValue,
+    };
+    register.todayTransactions = stats.totalOrders;
+    latestShiftId.value = stats.latestShiftId;
   } catch (error) {
     console.error("Failed to load daily stats:", error);
-    // Keep defaults (zeros) on error
   } finally {
     isLoadingStats.value = false;
   }
 };
 
 const loadPromotions = async () => {
+  if (!hasPromotions.value) return;
   isLoadingPromotions.value = true;
   try {
-    const response = await api.get("/pos/promotions");
-    if (response.data.success && response.data.data) {
-      allPromotions.value = response.data.data as Promotion[];
-      activePromotions.value = allPromotions.value.filter((p) => p.isActive);
+    const result = await posService.getPromotions(
+      promotionPage.value,
+      authStore.restaurantId ?? undefined,
+    );
+    promotionPages.value = result.pagination.pages;
+    if (promotionPage.value > Math.max(1, promotionPages.value)) {
+      promotionPage.value = Math.max(1, promotionPages.value);
+      await loadPromotions();
+      return;
     }
+    allPromotions.value = result.promotions;
   } catch (error) {
     console.error("Failed to load promotions:", error);
   } finally {
@@ -1761,19 +1754,15 @@ onMounted(async () => {
   // Load registers from API
   await loadRegisters();
 
-  // 自動選擇第一個現金櫃
-  if (registers.value.length > 0) {
-    currentRegister.value = registers.value[0];
-    // Load shift for the first register
-    await loadCurrentShift(registers.value[0].id);
-  }
-
-  // Load daily stats, transactions, and promotions in parallel
-  await Promise.all([
-    loadDailyStats(),
-    refreshTransactions(),
-    loadPromotions(),
-  ]);
+  if (registers.value.length > 0) await selectRegister(registers.value[0]);
+  watch(
+    hasPromotions,
+    (ready) => {
+      if (ready) void loadPromotions();
+      else allPromotions.value = [];
+    },
+    { immediate: true },
+  );
 });
 </script>
 

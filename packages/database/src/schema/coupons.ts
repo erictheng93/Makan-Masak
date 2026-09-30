@@ -77,6 +77,11 @@ export const coupons = sqliteTable(
       number[]
     >(), // 適用分類
 
+    incompatibleCouponIds: text("incompatible_coupon_ids", { mode: "json" })
+      .$type<number[]>()
+      .notNull()
+      .default(sql`'[]'`),
+
     // 使用限制
     usageLimit: integer("usage_limit"), // 總使用次數限制
     usageLimitPerUser: integer("usage_limit_per_user"), // 每用戶使用次數限制

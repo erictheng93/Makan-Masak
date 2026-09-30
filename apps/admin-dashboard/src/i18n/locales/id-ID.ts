@@ -4394,6 +4394,10 @@ const idID: Messages = {
     availableSeats: "Kursi Tersedia",
   },
   couponForm: {
+    clearIncompatible: "Hapus pembatasan",
+    incompatibleCoupons: "Tidak dapat digabung dengan",
+    incompatibleHint:
+      "Pilih kupon yang tidak dapat digunakan bersama kupon ini. Pembatasan dari salah satu kupon berlaku.",
     editTitle: "Edit Kupon",
     createTitle: "Buat Kupon",
     basicInfo: "Informasi Dasar",

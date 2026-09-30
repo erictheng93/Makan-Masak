@@ -422,7 +422,7 @@ describe("ShiftService", () => {
         registerId,
         status: "active",
         startAmount: 250.5,
-        expectedAmount: 250.5,
+        expectedAmount: 350.5,
         differenceAmount: 0,
         totalSales: 123.45,
         totalRefunds: 5,
@@ -439,6 +439,26 @@ describe("ShiftService", () => {
 
     result = await createService().getCurrentShift(registerId);
     expect(result).toEqual({ success: true, data: null });
+  });
+
+  it("returns the live drawer expectation using the same cash-only reconciliation as closing", async () => {
+    mockSelectResults({
+      cashShifts: [
+        [
+          shiftRow({
+            startAmountCents: 100000,
+            cashSalesCents: 60000,
+            cardSalesCents: 90000,
+          }),
+        ],
+      ],
+      cashMovements: [[{ cashRefundsCents: 50000, manualMovementCents: 3000 }]],
+    });
+    const result = await createService().getCurrentShift("register-1");
+    expect(result).toMatchObject({
+      success: true,
+      data: { expectedAmount: 1130 },
+    });
   });
 
   it("suspends and resumes shifts with status updates", async () => {

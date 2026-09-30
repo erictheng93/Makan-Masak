@@ -237,11 +237,31 @@
                   <span>{{ formatPrice(selectedOrder.taxAmount) }}</span>
                 </div>
                 <div
-                  v-if="selectedOrder.discountAmount > 0"
+                  v-if="
+                    selectedOrder.discountAmount > 0 ||
+                    selectedOrder.appliedCoupons?.length
+                  "
                   class="text-sm text-green-600"
                 >
-                  <div class="flex justify-between">
-                    <span>{{ t("cashier.discount") }}:</span>
+                  <div
+                    v-for="coupon in selectedOrder.appliedCoupons"
+                    :key="coupon.couponId"
+                    data-testid="applied-coupon"
+                    class="flex justify-between"
+                  >
+                    <span>{{ coupon.name }} ({{ coupon.code }})</span>
+                    <span>-{{ formatPrice(coupon.discountAmount) }}</span>
+                  </div>
+                  <div
+                    v-if="!selectedOrder.appliedCoupons?.length"
+                    class="flex justify-between"
+                  >
+                    <span
+                      >{{ t("cashier.discount")
+                      }}<template v-if="selectedOrder.couponCode">
+                        ({{ selectedOrder.couponCode }})</template
+                      >:</span
+                    >
                     <span
                       >-{{ formatPrice(selectedOrder.discountAmount) }}</span
                     >
@@ -1008,6 +1028,8 @@ interface CashierOrder {
   serviceCharge: number;
   taxAmount: number;
   discountAmount: number;
+  couponCode?: string;
+  appliedCoupons?: ApiOrder["appliedCoupons"];
   totalAmount: number;
   paymentMethod?: string;
   // Set by a real payment. `canRefund` on the orders screen requires it, which
@@ -1315,6 +1337,8 @@ const loadOrders = async () => {
         serviceCharge: order.serviceCharge ?? 0,
         taxAmount: order.taxAmount ?? 0,
         discountAmount: order.discountAmount ?? 0,
+        couponCode: order.couponCode,
+        appliedCoupons: order.appliedCoupons,
         totalAmount: order.totalAmount,
         paymentMethod: order.paymentMethod,
         items: (order.items ?? []).map((item: ApiOrderItem) => ({

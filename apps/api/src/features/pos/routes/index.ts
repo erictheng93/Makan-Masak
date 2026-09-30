@@ -3,6 +3,7 @@
  */
 
 import { Hono } from "hono";
+import promotionsRouter from "./promotions";
 import registersRouter from "./registers";
 import printAgentsRouter from "./print-agents";
 import shiftsRouter from "./shifts";
@@ -16,6 +17,7 @@ import type { Env } from "../../../types/env";
 const app = new Hono<{ Bindings: Env }>();
 
 // 掛載子路由
+app.route("/promotions", promotionsRouter);
 app.route("/registers", registersRouter);
 app.route("/print-agents", printAgentsRouter);
 app.route("/shifts", shiftsRouter);

@@ -4373,6 +4373,10 @@ const enUS: Messages = {
     availableSeats: "Available Seats",
   },
   couponForm: {
+    clearIncompatible: "Clear restrictions",
+    incompatibleCoupons: "Cannot combine with",
+    incompatibleHint:
+      "Select coupons that cannot be used with this coupon. A restriction in either direction blocks the combination.",
     editTitle: "Edit Coupon",
     createTitle: "Create Coupon",
     basicInfo: "Basic Information",

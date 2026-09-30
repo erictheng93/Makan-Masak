@@ -3,6 +3,9 @@
  */
 
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
+import { drizzle } from "drizzle-orm/d1";
+import { eq } from "drizzle-orm";
+import { cashShifts, paymentTransactions } from "@makanmasak/database";
 import {
   createRealIntegrationTestApp,
   type RealIntegrationTestApp,
@@ -209,6 +212,373 @@ describe("POS and customer role coverage", () => {
     const movementsJson = await readEnvelope<CashMovements>(movementsRes);
     expect(movementsJson.success).toBe(true);
     expect(Array.isArray(movementsJson.data?.movements)).toBe(true);
+  });
+
+  it("shares POS promotions with electronic customer coupons and enforces cashier read-only access (#431)", async () => {
+    const restaurant = await seed.restaurant();
+    const { cashierToken } = await setupCashierAndRegister(
+      restaurant,
+      "cashier-promo-431",
+    );
+    const owner = await seed.user({
+      username: "promo-owner-431",
+      role: 1,
+      restaurantId: String(restaurant.id),
+    });
+    const token = await testApp.authHelper.ownerToken(
+      owner.id,
+      String(restaurant.id),
+    );
+    const headers = {
+      ...CSRF_HEADERS,
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+    };
+    const input = {
+      code: "LUNCH10",
+      name: "Lunch discount",
+      discountType: "percentage",
+      discountValue: 10,
+      minOrderAmount: 0,
+      validFrom: new Date(Date.now() - 86400000).toISOString(),
+      validTo: new Date(Date.now() + 86400000).toISOString(),
+      isActive: true,
+      isVisible: true,
+    };
+    const created = await testApp.app.fetch(
+      new Request(`${POS_BASE}/promotions`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(input),
+      }),
+    );
+    expect(created.status).toBe(201);
+    const { data: coupon } = await readEnvelope<{ id: number; code: string }>(
+      created,
+    );
+    expect(coupon?.code).toBe("LUNCH10");
+    const available = await testApp.app.fetch(
+      new Request(`https://test/api/v1/coupons/available/${restaurant.id}`),
+    );
+    expect(available.status).toBe(200);
+    expect(
+      (await readEnvelope<Array<{ code: string }>>(available)).data,
+    ).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "LUNCH10" })]),
+    );
+    const validation = await testApp.app.fetch(
+      new Request("https://test/api/v1/coupons/validate", {
+        method: "POST",
+        headers: { ...CSRF_HEADERS, "content-type": "application/json" },
+        body: JSON.stringify({
+          code: "LUNCH10",
+          restaurantId: String(restaurant.id),
+          orderAmount: 100,
+        }),
+      }),
+    );
+    expect(validation.status).toBe(200);
+    expect(
+      (
+        await readEnvelope<{ valid: boolean; discountAmount: number }>(
+          validation,
+        )
+      ).data,
+    ).toMatchObject({ valid: true, discountAmount: 10 });
+    const cashierHeaders = {
+      ...headers,
+      authorization: `Bearer ${cashierToken}`,
+    };
+    const list = await testApp.app.fetch(
+      new Request(`${POS_BASE}/promotions`, { headers: cashierHeaders }),
+    );
+    expect(list.status).toBe(200);
+    expect(
+      (await readEnvelope<{ promotions: Array<{ code: string }> }>(list)).data
+        ?.promotions,
+    ).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "LUNCH10" })]),
+    );
+    expect(
+      (
+        await testApp.app.fetch(
+          new Request(`${POS_BASE}/promotions/${coupon!.id}`, {
+            method: "PUT",
+            headers: cashierHeaders,
+            body: JSON.stringify({ discountValue: 100 }),
+          }),
+        )
+      ).status,
+    ).toBe(403);
+    const updated = await testApp.app.fetch(
+      new Request(`${POS_BASE}/promotions/${coupon!.id}`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ discountType: "fixed", discountValue: 20 }),
+      }),
+    );
+    expect(updated.status).toBe(200);
+    expect(
+      (
+        await readEnvelope<{ discountType: string; discountValue: number }>(
+          updated,
+        )
+      ).data,
+    ).toMatchObject({ discountType: "fixed", discountValue: 20 });
+    expect(
+      (
+        await testApp.app.fetch(
+          new Request(`${POS_BASE}/promotions/${coupon!.id}`, {
+            method: "DELETE",
+            headers,
+          }),
+        )
+      ).status,
+    ).toBe(200);
+    const afterDelete = await testApp.app.fetch(
+      new Request(`https://test/api/v1/coupons/available/${restaurant.id}`),
+    );
+    expect((await readEnvelope<unknown[]>(afterDelete)).data).toEqual([]);
+  });
+
+  it("carries merchant-created coupon stacks through guest checkout to the cashier (#431)", async () => {
+    const restaurant = await seed.restaurant({ enableShopMode: true });
+    const item = await seed.menuItem(restaurant.id, { priceCents: 10000 });
+    const { cashierToken } = await setupCashierAndRegister(
+      restaurant,
+      "stack-cashier",
+    );
+    const owner = await seed.user({
+      username: "stack-owner",
+      role: 1,
+      restaurantId: restaurant.id,
+    });
+    const token = await testApp.authHelper.ownerToken(owner.id, restaurant.id);
+    const headers = {
+      ...CSRF_HEADERS,
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+    };
+    const ids: number[] = [];
+    for (const [code, discountType, discountValue] of [
+      ["TEN", "percentage", 10],
+      ["TWENTY", "percentage", 20],
+      ["FIVE", "fixed", 5],
+    ] as const) {
+      const response = await testApp.app.fetch(
+        new Request(`${POS_BASE}/promotions`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            code,
+            name: code,
+            discountType,
+            discountValue,
+            usageLimit: 1,
+            validFrom: new Date(Date.now() - 60000).toISOString(),
+            validTo: new Date(Date.now() + 86400000).toISOString(),
+          }),
+        }),
+      );
+      expect(response.status).toBe(201);
+      ids.push((await readData<{ id: number }>(response)).id);
+    }
+    const customerHeaders = {
+      ...CSRF_HEADERS,
+      "content-type": "application/json",
+      "X-Guest-Device-Id": "11111111-1111-4111-8111-111111111111",
+    };
+    const couponCodes = ["FIVE", "TEN", "TWENTY"];
+    const preview = await testApp.app.fetch(
+      new Request("https://test/api/v1/coupons/validate", {
+        method: "POST",
+        headers: customerHeaders,
+        body: JSON.stringify({
+          codes: couponCodes,
+          restaurantId: restaurant.id,
+          orderAmount: 100,
+        }),
+      }),
+    );
+    expect(preview.status).toBe(200);
+    expect(await readData(preview)).toMatchObject({
+      valid: true,
+      discountAmount: 33,
+      finalAmount: 67,
+    });
+    const created = await testApp.app.fetch(
+      new Request("https://test/api/v1/guest-orders", {
+        method: "POST",
+        headers: customerHeaders,
+        body: JSON.stringify({
+          restaurantId: restaurant.id,
+          guestName: "Coupon Guest",
+          orderType: "shop",
+          items: [{ menuItemId: item.id, quantity: 1 }],
+          deliveryInfo: { type: "takeaway" },
+          couponCodes,
+        }),
+      }),
+    );
+    expect(created.status).toBe(201);
+    const { order } = await readData<{
+      order: {
+        id: string;
+        appliedCoupons: unknown[];
+        discountAmount: number;
+        totalAmount: number;
+      };
+    }>(created);
+    expect(order).toMatchObject({
+      discountAmount: 33,
+      totalAmount: 67,
+      appliedCoupons: [
+        { couponId: ids[0], code: "TEN", discountAmount: 10 },
+        { couponId: ids[1], code: "TWENTY", discountAmount: 18 },
+        { couponId: ids[2], code: "FIVE", discountAmount: 5 },
+      ],
+    });
+    const cashierOrder = await testApp.app.fetch(
+      new Request(`https://test/api/v1/orders/${order.id}`, {
+        headers: { authorization: `Bearer ${cashierToken}` },
+      }),
+    );
+    expect(cashierOrder.status).toBe(200);
+    expect(await readData(cashierOrder)).toMatchObject({
+      totalAmount: 67,
+      appliedCoupons: order.appliedCoupons,
+    });
+    const exhausted = await testApp.app.fetch(
+      new Request("https://test/api/v1/coupons/validate", {
+        method: "POST",
+        headers: customerHeaders,
+        body: JSON.stringify({
+          codes: couponCodes,
+          restaurantId: restaurant.id,
+          orderAmount: 100,
+        }),
+      }),
+    );
+    expect(await readData(exhausted)).toMatchObject({ valid: false });
+  });
+
+  it("serves the POS dashboard's daily totals, movements and live cash balance (#431)", async () => {
+    const restaurant = await seed.restaurant();
+    const { restaurantRegister, cashierToken, cashierId } =
+      await setupCashierAndRegister(restaurant, "cashier-431");
+    const headers = {
+      ...CSRF_HEADERS,
+      authorization: `Bearer ${cashierToken}`,
+      "content-type": "application/json",
+    };
+    const start = await testApp.app.fetch(
+      new Request(`${POS_BASE}/shifts/start`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          registerId: restaurantRegister.id,
+          operatorId: cashierId,
+          startAmount: 1000,
+        }),
+      }),
+    );
+    expect(start.status).toBe(200);
+    const { data: shift } = await readEnvelope<StartedShift>(start);
+    expect(shift?.expectedAmount).toBe(1000);
+    for (const [index, amount] of [20000, 31000, 90000].entries()) {
+      const order = await seed.order(restaurant.id);
+      const paidAt = new Date(Date.now() - (index === 2 ? 86400000 : 0));
+      await drizzle(testApp.env.DB)
+        .insert(paymentTransactions)
+        .values({
+          transactionId: `payment-431-${index}`,
+          orderId: order.id,
+          restaurantId: String(restaurant.id),
+          amountCents: amount,
+          paymentMethod: index === 0 ? "cash" : "card",
+          status: "paid",
+          metadata: {
+            pos: { registerId: restaurantRegister.id, shiftId: shift!.id },
+          },
+          createdAt: paidAt,
+          updatedAt: paidAt,
+          completedAt: paidAt,
+        });
+    }
+    await drizzle(testApp.env.DB)
+      .update(cashShifts)
+      .set({
+        startedAt: new Date(Date.now() - 86400000),
+        totalSalesCents: 51000,
+        cashSalesCents: 20000,
+        cardSalesCents: 31000,
+        totalTransactions: 2,
+      })
+      .where(eq(cashShifts.id, shift!.id));
+    const movement = await testApp.app.fetch(
+      new Request(`${POS_BASE}/shifts/${shift!.id}/cash-movements`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          type: "cash_out",
+          amount: 50,
+          description: "Drawer withdrawal",
+        }),
+      }),
+    );
+    expect(movement.status).toBe(200);
+    const current = await testApp.app.fetch(
+      new Request(`${POS_BASE}/shifts/current/${restaurantRegister.id}`, {
+        headers,
+      }),
+    );
+    expect(current.status).toBe(200);
+    expect((await readEnvelope<CurrentShift>(current)).data).toMatchObject({
+      totalSales: 510,
+      totalTransactions: 2,
+      expectedAmount: 1150,
+    });
+    const movements = await testApp.app.fetch(
+      new Request(`${POS_BASE}/shifts/${shift!.id}/cash-movements`, {
+        headers,
+      }),
+    );
+    expect(movements.status).toBe(200);
+    expect(
+      (await readEnvelope<CashMovements>(movements)).data?.movements,
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "cash_out", amountCents: 5000 }),
+      ]),
+    );
+    const daily = await testApp.app.fetch(
+      new Request(
+        `${POS_BASE}/reports/daily?registerId=${restaurantRegister.id}`,
+        { headers },
+      ),
+    );
+    expect(daily.status).toBe(200);
+    const report = await readEnvelope<{
+      shifts: Array<{
+        registerId: string;
+        totalSalesCents: number;
+        totalTransactions: number;
+      }>;
+      summary: { totalSales: number; totalOrders: number };
+    }>(daily);
+    expect(report.data?.summary).toMatchObject({
+      totalSales: 510,
+      totalOrders: 2,
+    });
+    expect(report.data?.shifts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          registerId: restaurantRegister.id,
+          totalSalesCents: 51000,
+          totalTransactions: 2,
+        }),
+      ]),
+    );
   });
 
   it("allows role 4 (cashier) to read refunds and receipts", async () => {

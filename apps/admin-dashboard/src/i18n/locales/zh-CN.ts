@@ -4270,6 +4270,10 @@ const zhCN: Messages = {
     availableSeats: "可用座位",
   },
   couponForm: {
+    clearIncompatible: "清除互斥设置",
+    incompatibleCoupons: "不可叠加的优惠券",
+    incompatibleHint:
+      "勾选不可与此券一起使用的优惠券。任一张券设置互斥，即无法叠加。",
     editTitle: "编辑优惠券",
     createTitle: "创建优惠券",
     basicInfo: "基本信息",

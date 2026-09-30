@@ -4370,6 +4370,10 @@ const jaJP: Messages = {
     availableSeats: "空席数",
   },
   couponForm: {
+    clearIncompatible: "併用制限を解除",
+    incompatibleCoupons: "併用できないクーポン",
+    incompatibleHint:
+      "このクーポンと併用できないクーポンを選択してください。どちらか一方の設定で併用が禁止されます。",
     editTitle: "クーポン編集",
     createTitle: "クーポン作成",
     basicInfo: "基本情報",

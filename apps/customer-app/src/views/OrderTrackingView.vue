@@ -269,7 +269,18 @@
                 <span>{{ formatPrice(order.taxAmount ?? 0) }}</span>
               </div>
               <div
-                v-if="(order.discountAmount ?? 0) > 0"
+                v-for="coupon in order.appliedCoupons ?? []"
+                :key="coupon.couponId"
+                class="flex justify-between text-sm text-ios-green-deep"
+              >
+                <span>{{ coupon.name }} ({{ coupon.code }})</span>
+                <span>-{{ formatPrice(coupon.discountAmount) }}</span>
+              </div>
+              <div
+                v-if="
+                  !order.appliedCoupons?.length &&
+                  (order.discountAmount ?? 0) > 0
+                "
                 class="flex justify-between text-sm text-ios-green"
               >
                 <span>{{ t("cart.discount") }}</span>

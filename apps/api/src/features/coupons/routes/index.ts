@@ -107,14 +107,22 @@ routes.post(
       ? await resolveCouponCustomerIdentity(customer.id)
       : await resolveGuestCouponIdentity(c.req);
 
-    const result = await couponsService.validateCouponWithBusinessRules(
-      data.code,
-      data.restaurantId,
-      data.orderAmount,
-      undefined,
-      data.menuItems,
-      guestIdentity,
-    );
+    const result = data.codes
+      ? await couponsService.validateCoupons({
+          codes: data.codes,
+          restaurantId: data.restaurantId,
+          orderAmount: data.orderAmount,
+          menuItems: data.menuItems,
+          guestIdentity,
+        })
+      : await couponsService.validateCouponWithBusinessRules(
+          data.code!,
+          data.restaurantId,
+          data.orderAmount,
+          undefined,
+          data.menuItems,
+          guestIdentity,
+        );
 
     return c.json({
       success: true,

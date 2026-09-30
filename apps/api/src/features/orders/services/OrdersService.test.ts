@@ -213,6 +213,8 @@ describe("OrdersService realtime broadcasts", () => {
       items: [{ menuItemId: 101, quantity: 2, notes: "不要辣" }],
       notes: "市場結帳：逢甲夜市 / fengjia / checkout-1",
       orderSource: "market_checkout",
+      couponCodes: ["SAVE10", "SAVE20"],
+      couponGuestIdentity: "guest-hash",
       orderType: "shop",
       deliveryInfo: { type: "takeaway" },
       isGuestOrder: true,
@@ -222,6 +224,8 @@ describe("OrdersService realtime broadcasts", () => {
       expect.objectContaining({
         restaurantId: "restaurant-1",
         orderSource: "market_checkout",
+        couponCodes: ["SAVE10", "SAVE20"],
+        couponGuestIdentity: "guest-hash",
         deliveryInfo: { type: "takeaway" },
       }),
     );
@@ -665,6 +669,7 @@ describe("OrdersService workflows", () => {
       ],
       [{ ...validOrder, notes: "x".repeat(1001) }, "NOTES_TOO_LONG"],
       [{ ...validOrder, couponCode: "AB" }, "INVALID_COUPON_CODE_FORMAT"],
+      [{ ...validOrder, couponCodes: ["AB"] }, "INVALID_COUPON_CODE_FORMAT"],
     ];
 
     for (const [input, code] of cases) {

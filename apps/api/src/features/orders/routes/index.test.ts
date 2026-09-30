@@ -284,70 +284,75 @@ describe("orders routes", () => {
     }
   });
 
-  it("creates authenticated orders and serializes timestamps for the wire", async () => {
-    const env = createEnv();
-    serviceMocks.createOrder.mockResolvedValue({
-      id: 1001,
-      restaurantId: "restaurant-1",
-      createdAt: new Date("2026-06-07T00:00:00.000Z"),
-      updatedAt: "2026-06-07T00:01:00.000Z",
-    });
-
-    const response = await routes.fetch(
-      jsonRequest("/", {
-        restaurantId: "restaurant-1",
-        customerName: "Dana",
-        customerPhone: "0912345678",
-        items: [
-          {
-            menuItemId: 7,
-            quantity: 2,
-            price: 120,
-            notes: "No <b>peanuts</b>",
-          },
-        ],
-        orderType: "table",
-        tableId: 3,
-        couponCode: "SAVE10",
-      }),
-      env as never,
-    );
-
-    expect(response.status).toBe(201);
-    await expect(response.json()).resolves.toMatchObject({
-      success: true,
-      data: {
+  it.each([{ couponCode: "SAVE10" }, { couponCodes: ["SAVE10", "SAVE20"] }])(
+    "creates authenticated orders with %j and serializes timestamps for the wire",
+    async (selection) => {
+      const env = createEnv();
+      serviceMocks.createOrder.mockResolvedValue({
         id: 1001,
-        createdAt: Date.parse("2026-06-07T00:00:00.000Z"),
-        updatedAt: Date.parse("2026-06-07T00:01:00.000Z"),
-      },
-    });
-    expect(serviceMocks.createOrder).toHaveBeenCalledWith(
-      expect.objectContaining({
         restaurantId: "restaurant-1",
-        tableId: 3,
-        customerId: "customer-42",
-        couponGuestIdentity: await resolveCouponCustomerIdentity("customer-42"),
-        customerInfo: expect.objectContaining({
-          name: "Dana",
-          phone: "0912345678",
+        createdAt: new Date("2026-06-07T00:00:00.000Z"),
+        updatedAt: "2026-06-07T00:01:00.000Z",
+      });
+
+      const response = await routes.fetch(
+        jsonRequest("/", {
+          restaurantId: "restaurant-1",
+          customerName: "Dana",
+          customerPhone: "0912345678",
+          items: [
+            {
+              menuItemId: 7,
+              quantity: 2,
+              price: 120,
+              notes: "No <b>peanuts</b>",
+            },
+          ],
+          orderType: "table",
+          tableId: 3,
+          ...selection,
         }),
-        items: [
-          expect.objectContaining({
-            menuItemId: 7,
-            quantity: 2,
-            notes: "No bpeanuts/b",
+        env as never,
+      );
+
+      expect(response.status).toBe(201);
+      await expect(response.json()).resolves.toMatchObject({
+        success: true,
+        data: {
+          id: 1001,
+          createdAt: Date.parse("2026-06-07T00:00:00.000Z"),
+          updatedAt: Date.parse("2026-06-07T00:01:00.000Z"),
+        },
+      });
+      expect(serviceMocks.createOrder).toHaveBeenCalledWith(
+        expect.objectContaining({
+          restaurantId: "restaurant-1",
+          tableId: 3,
+          customerId: "customer-42",
+          ...selection,
+          couponGuestIdentity:
+            await resolveCouponCustomerIdentity("customer-42"),
+          customerInfo: expect.objectContaining({
+            name: "Dana",
+            phone: "0912345678",
           }),
-        ],
-      }),
-      "user-42",
-    );
-    expect(gateMocks.meterEmit).toHaveBeenCalledWith(
-      expect.anything(),
-      "orders.created",
-      { restaurantId: "restaurant-1" },
-    );
-  });
+          items: [
+            expect.objectContaining({
+              menuItemId: 7,
+              quantity: 2,
+              notes: "No bpeanuts/b",
+            }),
+          ],
+        }),
+        "user-42",
+      );
+      expect(gateMocks.meterEmit).toHaveBeenCalledWith(
+        expect.anything(),
+        "orders.created",
+        { restaurantId: "restaurant-1" },
+      );
+    },
+  );
 
   it("carries the idempotency key all the way to the service", async () => {
     // Two layers have to hold for this to pass, and each fails silently on its

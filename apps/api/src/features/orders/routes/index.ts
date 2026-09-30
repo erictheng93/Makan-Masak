@@ -393,8 +393,9 @@ app.post(
         ? new Date(data.scheduledTime)
         : undefined,
       couponCode: data.couponCode,
+      couponCodes: data.couponCodes,
       couponGuestIdentity:
-        data.couponCode && customer?.id
+        (data.couponCode || data.couponCodes?.length) && customer?.id
           ? await resolveCouponCustomerIdentity(customer.id)
           : undefined,
       clientMutationId: data.clientMutationId,
