@@ -59,7 +59,7 @@ export type PrintJobStatus =
   | "failed"
   | "cancelled"
   | "paused";
-export type PrintJobType = "receipt" | "order" | "report" | "test";
+export type PrintJobType = "receipt" | "kitchen" | "order" | "report" | "test";
 export type PrintJobPriority = "low" | "normal" | "high" | "urgent";
 
 export interface PrintJob {
@@ -106,6 +106,7 @@ export interface PrintError {
 // =============================================
 
 export interface PrintContent {
+  type?: PrintJobType;
   header: ReceiptHeader;
   items: ReceiptItem[];
   summary: ReceiptSummary;
@@ -136,6 +137,7 @@ export interface PrinterRestaurantInfo {
 }
 
 export interface TransactionInfo {
+  notes?: string;
   orderId: string;
   tableNumber?: string;
   customerName?: string;
@@ -152,6 +154,7 @@ export interface TransactionInfo {
 }
 
 export interface ReceiptItem {
+  notes?: string;
   name: string;
   nameLocal?: string;
   quantity: number;
@@ -447,6 +450,7 @@ export interface PrintRequest {
   userId?: string;
   data: {
     order: OrderData;
+    cashier?: string;
     customer?: CustomerData;
     payment?: PaymentData;
   };
@@ -466,6 +470,7 @@ export interface OrderData {
   deliveryFee?: number;
   items: {
     name: string;
+    notes?: string;
     quantity: number;
     price: number;
     modifiers?: {

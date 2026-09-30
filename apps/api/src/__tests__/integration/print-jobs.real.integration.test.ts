@@ -232,11 +232,35 @@ describe("cloud print dispatch — real D1", () => {
             unitPriceCents: 1200,
             totalPriceCents: 1200,
             itemSnapshot: { name: "Nasi Lemak" },
+            notes: "不要辣",
+            kitchenNotes: "分開裝",
+            customizations: {
+              size: { id: "large", name: "大份" },
+              options: [
+                {
+                  id: "spice",
+                  optionName: "辣度",
+                  choiceId: "none",
+                  choiceName: "不辣",
+                },
+              ],
+              addOns: [
+                {
+                  id: "egg",
+                  name: "蛋",
+                  quantity: 2,
+                  unitPrice: 1,
+                  totalPrice: 2,
+                },
+              ],
+            },
           });
           await testDb.drizzle
             .update(orders)
             .set({
               tableId,
+              notes: "先上飲料",
+              internalNotes: "急單",
               orderType:
                 name === "seat order"
                   ? "seat"
@@ -261,7 +285,12 @@ describe("cloud print dispatch — real D1", () => {
           const result =
             kind === "kitchen"
               ? await service.createKitchenTicket(ORDER_A)
-              : await service.printReceipt({ orderId: ORDER_A }, REGISTER_A);
+              : await service.printReceipt(
+                  { orderId: ORDER_A },
+                  REGISTER_A,
+                  undefined,
+                  "林收銀",
+                );
           expect(result.success).toBe(true);
           const stored = await receiptRow(result.data!.id);
           expect(JSON.parse(stored!.content).tableNumber).toBe(expected);
@@ -293,6 +322,39 @@ describe("cloud print dispatch — real D1", () => {
             expect(commands).not.toContain("Table:");
           }
           if (name === "delivery") expect(commands).toContain("1 Test Rd");
+          if (kind === "kitchen") {
+            expect(request.type).toBe("kitchen");
+            for (const text of [
+              "Nasi Lemak x1",
+              "不要辣",
+              "分開裝",
+              "先上飲料",
+              "急單",
+              "大份",
+              "不辣",
+              "蛋 x2",
+            ]) {
+              expect(commands).toContain(text);
+            }
+            for (const text of [
+              "Cashier:",
+              "Subtotal:",
+              "TOTAL:",
+              "NT$",
+              "謝謝光臨",
+              "Thank you",
+              "/receipt/",
+              "電子發票",
+            ]) {
+              expect(commands).not.toContain(text);
+            }
+          } else {
+            expect(commands).toMatch(/Cashier:\s+林收銀/);
+            expect(commands).toContain("TOTAL:");
+            expect(commands).not.toContain("電子發票證明聯");
+            expect(commands).not.toContain("急單");
+            expect(commands).not.toContain("分開裝");
+          }
         },
       );
     },

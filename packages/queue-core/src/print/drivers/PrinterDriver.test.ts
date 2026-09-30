@@ -3,6 +3,9 @@ import type { AddressInfo, Server } from "node:net";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PrintContent, PrinterDevice } from "@makanmasak/shared-types";
 import { EpsonDriver } from "./EpsonDriver";
+import { CitizenDriver } from "./CitizenDriver";
+import { StarDriver } from "./StarDriver";
+import { ReceiptFormattingService } from "../formatters/ReceiptFormattingService";
 import {
   deviceInfoFromProbe,
   PrinterDriverFactory,
@@ -110,6 +113,81 @@ class SlowEpsonDriver extends EpsonDriver {
 }
 
 describe("PrinterDriver execution options", () => {
+  it.each(["epson", "citizen", "star", "star-esc-pos"])(
+    "sends a kitchen ticket without customer receipt content (%s)",
+    async (brand) => {
+      const device = buildDevice();
+      const driver =
+        brand === "epson"
+          ? new EpsonDriver(device)
+          : brand === "citizen"
+            ? new CitizenDriver(device)
+            : new StarDriver(device, {
+                emulation: brand === "star" ? "star-prnt" : "esc-pos",
+              });
+      try {
+        expect(await driver.connect()).toBe(true);
+        const formatted = await new ReceiptFormattingService().formatReceipt({
+          country: "TW",
+          type: "kitchen",
+          data: {
+            order: {
+              id: "A-432",
+              tableNumber: "A1",
+              notes: "先上飲料",
+              items: [
+                {
+                  name: "炒飯",
+                  quantity: 2,
+                  price: 120,
+                  notes: "不要辣",
+                  modifiers: [{ name: "加蛋", price: 10 }],
+                },
+              ],
+              subtotal: 240,
+              tax: 12,
+              total: 252,
+              createdAt: new Date(),
+            },
+          },
+        });
+        expect(await driver.print(formatted)).toMatchObject({ success: true });
+        const cut = Buffer.from(
+          brand === "star" ? [0x1b, 0x64, 0x03] : [0x1d, 0x56, 0x00],
+        );
+        await vi.waitFor(() =>
+          expect(Buffer.concat(received).includes(cut)).toBe(true),
+        );
+        const bytes = Buffer.concat(received);
+        const text = bytes.toString("utf8");
+        for (const expected of [
+          "A-432",
+          "A1",
+          "炒飯 x2",
+          "先上飲料",
+          "不要辣",
+          "加蛋",
+        ])
+          expect(text).toContain(expected);
+        for (const forbidden of [
+          "Cashier:",
+          "Subtotal:",
+          "TOTAL:",
+          "Total:",
+          "NT$",
+          "Thank you",
+          "謝謝光臨",
+          "/receipt/",
+          "電子發票",
+        ])
+          expect(text).not.toContain(forbidden);
+        expect(bytes.subarray(-3)).toEqual(cut);
+      } finally {
+        await driver.disconnect();
+      }
+    },
+  );
+
   it("retries a failed printer command the configured number of times", async () => {
     const driver = new RetryingEpsonDriver(buildDevice(), {
       retryAttempts: 2,

@@ -125,6 +125,9 @@ export class StarDriver extends PrinterDriver {
   }
 
   private buildStarSpecificCommands(content: PrintContent): string {
+    if (content.type === "kitchen") {
+      return CommandBuilder.kitchenLines(content).join("\n") + "\n\x1B\x64\x03";
+    }
     const commands: string[] = [];
     const money = (amount: number) =>
       formatCurrencyAmount(amount, content.summary.currency);

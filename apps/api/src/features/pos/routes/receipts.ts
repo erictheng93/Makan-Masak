@@ -84,6 +84,7 @@ app.post(
       { ...data, orderId: orderIdentity.id },
       registerId,
       shiftId,
+      user.fullName || user.username,
     );
 
     if (!result.success) {

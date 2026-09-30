@@ -46,6 +46,7 @@ export class ReceiptFormattingService {
 
       // 執行格式化
       const content = formatter.formatReceipt(request);
+      content.type = request.type;
 
       // 驗證輸出內容
       this.validatePrintContent(content);

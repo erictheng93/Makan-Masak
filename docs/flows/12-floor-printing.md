@@ -2,7 +2,7 @@
 
 > **對應 master board**：現場作業 → 出單與列印流程
 > **主要角色**：收銀（role 4）、店主（role 1）；列印代理是店內常駐服務
-> **最後對照原始碼**：2026-09-30
+> **最後對照原始碼**：2026-10-01
 
 ## 1. 定位
 
@@ -29,6 +29,16 @@ TCP 寫入成功仍不是紙張、切刀或紙匣狀態的硬體回報。
 **`register_id = NULL`** 的待印收據。同一張訂單已經有未取消的廚房票就不再開（冪等，
 因為外送平台那條路徑是直接寫狀態的）。產生失敗只留 log：訂單狀態已經寫進資料庫，
 不能因為排不進出單佇列就回滾。
+
+**廚房票有獨立版型。** 派工把 `receipts.receipt_type = 'kitchen'` 保留為
+`PrintRequest.type = 'kitchen'`，格式化後的 `PrintContent.type` 讓 ESC/POS 與 Star 原生
+驅動選擇相同的備餐內容：單號、桌號、品項、數量、尺寸／選項／加購、訂單及品項備註。
+外送地址與電話仍保留，不印價格、小計、總額、收銀員、致謝、數位收據 QR 或發票字樣。
+內部／廚房備註只進廚房票快照，不送到顧客收據。
+
+**收銀員取自登入者。** `/receipts/print` 以 `user.fullName || user.username` 寫進收據
+`content.cashier`，派工再帶到格式器；重印沿用快照，不會改成重印者的名字。舊收據沒有
+姓名快照時仍使用原本的預設值，不從現任收銀員或可變的班次資料猜測歷史姓名。
 
 ## 3. 派工協定
 
@@ -168,12 +178,23 @@ USB、serial 與 Bluetooth 尚未有 transport 實作，會明確失敗而不是
 - [現場作業流程 QA 2026-09-22](../investigations/2026-09-22-floor-operations-flow-qa.html) — D1–D3
 - [現場作業流程本機實走 2026-09-30](../investigations/2026-09-30-floor-operations-local-walk.html) — 兩台代理對兩個 TCP 假印表機，雲端派工到位元組落地
 
+**#432 回歸驗證命令**
+
+```sh
+pnpm exec turbo run test lint typecheck --filter=@makanmasak/api --filter=@makanmasak/queue-core --filter=@makanmasak/print-agent --filter=@makanmasak/shared-types --concurrency=2
+pnpm --filter @makanmasak/api exec vitest run --config vitest.real-integration.config.ts src/__tests__/integration/print-jobs.real.integration.test.ts
+pnpm test
+pnpm typecheck
+```
+
 ## 8. 已知缺口
 
 0. **列印內容有三處與實際店家不符**（2026-09-30 本機以 TCP:9100 假印表機擷取位元組，[現場作業流程本機實走 2026-09-30](../investigations/2026-09-30-floor-operations-local-walk.html)）：
    - ~~每張出單都印「本收據為電子發票證明聯」~~：已移除。收據只在 `ReceiptData.invoice`（提供商開立後附上的發票號碼與選填字樣）存在時才印發票行；
      各店之後接不同提供商時，只需在組出列印請求處填入 `invoice`，格式器不必再改。馬來西亞、越南的稅號也改為只印該店自己的 `taxNumber`，不再印寫死的假號碼（#432）。
-   - 廚房票沿用顧客收據版型（有價格、TOTAL、「謝謝光臨」、數位收據 QR），「Cashier:」永遠是 `System`（#432）。
+   - ~~廚房票沿用顧客收據版型、「Cashier:」永遠是 `System`~~：已修正（#432）。根因是
+     派工固定送 `type: "receipt"`，且沒有傳收據類型、收銀員姓名及備餐備註；格式化與驅動
+     也沒有廚房分支。現在類型保留到驅動，收銀員在建立收據時快照，備註跟著票走。
    - 中文以 UTF-8 送出；熱感式印表機常見預設字碼頁是 GBK／Big5，需實體機驗證。
    （店名、地址、電話原本印成「餐廳名稱／餐廳地址／電話號碼」佔位字，單號印成 UUID，已於 2026-09-30 修掉。）
    #414 的傳輸層已修：兩台代理（櫃檯、廚房）各連一個假 TCP 印表機，票據位元組（含切紙指令）實際送達，
@@ -183,7 +204,12 @@ USB、serial 與 Bluetooth 尚未有 transport 實作，會明確失敗而不是
 2. **`processWebhook` 沒有對 `platformOrderId` 去重**，平台重送 webhook 會建出**新的**
    訂單列（連帶一張新的廚房票）。這是既有問題，不是廚房票帶來的。
 3. **毒藥收據會擋住佇列數次心跳**，直到它用完投遞預算。見第 3 節的取捨說明。
-4. **廚房票的版型與顧客收據共用** `generateReceiptContent`，只是 `templateName` 不同。
-   廚房票其實不需要價格，實際排版取決於代理端的 ESC/POS 樣板。
+4. **廚房票版型已分流**（#432）。真 D1 測試涵蓋建立票 → 重印 → 認領 → 格式化 → ESC/POS
+   的桌／座位、外帶、外送及跨店桌號案例，確認備註保留、廚房沒有顧客收據內容、顧客沒有
+   內部備註；TCP 測試涵蓋 Epson、Citizen、Star 原生及 Star ESC/POS，確認輸出與切紙位元組。
 5. **仍須以實體印表機驗收。** 自動測試只證明 mock TCP server 接收到 bytes；部署時要以可達的
    TCP:9100 印表機確認實際收據、字元編碼、切紙、紙張／卡紙狀態及該型號的裝置資訊回應。
+   2026-10-01 使用者確認目前沒有實體機，#432 的程式修正與本項硬體驗證分開驗收。
+   驅動仍以 UTF-8 傳送，不能據此宣稱 GBK／Big5 機型可正確顯示中文。取得硬體後需記錄品牌、
+   型號、韌體及字碼頁，以「炒飯、不要辣、加蛋、林收銀」分別印顧客收據與廚房票，檢查
+   中文、數量／桌號、折行及切紙；若亂碼，再依該型號手冊選擇編碼與字碼頁指令。

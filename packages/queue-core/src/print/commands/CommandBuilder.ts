@@ -226,6 +226,12 @@ export class CommandBuilder {
    */
   static fromPrintContent(content: PrintContent): CommandBuilder {
     const builder = new CommandBuilder();
+    if (content.type === "kitchen") {
+      for (const line of CommandBuilder.kitchenLines(content)) {
+        builder.addText(line);
+      }
+      return builder.addFeed(3).addCut();
+    }
     const width = 32;
     // Every amount in the content is in summary.currency: "NT$350",
     // "RM 12.50", "350.000 ₫" — not a symbol-less "350.00" for every shop.
@@ -538,6 +544,32 @@ export class CommandBuilder {
     builder.addRaw(ESCPOSCommands.cutPaper());
 
     return builder;
+  }
+
+  /** Preparation instructions shared by ESC/POS and Star's native renderer. */
+  static kitchenLines(content: PrintContent): string[] {
+    const transaction = content.header.transactionInfo;
+    return [
+      content.header.restaurantInfo.name,
+      "KITCHEN",
+      `Order: ${transaction.orderId}`,
+      ...(transaction.tableNumber ? [`Table: ${transaction.tableNumber}`] : []),
+      transaction.timestamp.toLocaleString(),
+      ...(transaction.deliveryAddress
+        ? [`Delivery: ${transaction.deliveryAddress}`]
+        : []),
+      ...(transaction.deliveryPhone
+        ? [`Delivery Tel: ${transaction.deliveryPhone}`]
+        : []),
+      ...(transaction.notes ? [transaction.notes] : []),
+      "--------------------------------",
+      ...content.items.flatMap((item) => [
+        `${item.name} x${item.quantity}`,
+        ...(item.nameLocal ? [item.nameLocal] : []),
+        ...(item.modifiers?.map((modifier) => `  + ${modifier.name}`) ?? []),
+        ...(item.notes ? [item.notes] : []),
+      ]),
+    ];
   }
 
   /**

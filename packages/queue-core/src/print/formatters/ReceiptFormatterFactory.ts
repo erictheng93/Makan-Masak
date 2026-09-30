@@ -21,6 +21,7 @@ import { formatRegionMoney, roundMoney } from "../utils/money";
  * receipt.
  */
 export interface ReceiptOrderItem {
+  notes?: string;
   name: string;
   quantity: number;
   price: number;
@@ -31,6 +32,7 @@ export interface ReceiptOrderItem {
 
 export interface ReceiptData {
   order?: {
+    notes?: string;
     id?: string;
     /** What a person reads off the paper; `id` stays the row id (QR link). */
     orderNumber?: string;
@@ -254,6 +256,7 @@ export class TWReceiptFormatter extends BaseReceiptFormatter {
         transactionInfo: {
           orderId: order?.orderNumber || order?.id || "N/A",
           tableNumber: order?.tableNumber,
+          notes: order?.notes,
           deliveryAddress: order?.deliveryAddress,
           deliveryPhone: order?.deliveryPhone,
           customerName: data.customer?.name,
@@ -273,6 +276,7 @@ export class TWReceiptFormatter extends BaseReceiptFormatter {
       items:
         order?.items?.map((item: ReceiptOrderItem) => ({
           name: item.name,
+          notes: item.notes,
           nameLocal: item.nameLocal,
           quantity: item.quantity,
           unitPrice: item.price,
@@ -382,6 +386,7 @@ export class MYReceiptFormatter extends BaseReceiptFormatter {
         transactionInfo: {
           orderId: order?.orderNumber || order?.id || "N/A",
           tableNumber: order?.tableNumber,
+          notes: order?.notes,
           deliveryAddress: order?.deliveryAddress,
           deliveryPhone: order?.deliveryPhone,
           customerName: data.customer?.name,
@@ -393,6 +398,7 @@ export class MYReceiptFormatter extends BaseReceiptFormatter {
       items:
         order?.items?.map((item: ReceiptOrderItem) => ({
           name: item.name,
+          notes: item.notes,
           nameLocal: item.nameLocal,
           quantity: item.quantity,
           unitPrice: item.price,
@@ -503,6 +509,7 @@ export class VNReceiptFormatter extends BaseReceiptFormatter {
         transactionInfo: {
           orderId: order?.orderNumber || order?.id || "N/A",
           tableNumber: order?.tableNumber,
+          notes: order?.notes,
           deliveryAddress: order?.deliveryAddress,
           deliveryPhone: order?.deliveryPhone,
           customerName: data.customer?.name,
@@ -514,6 +521,7 @@ export class VNReceiptFormatter extends BaseReceiptFormatter {
       items:
         order?.items?.map((item: ReceiptOrderItem) => ({
           name: item.name,
+          notes: item.notes,
           nameLocal: item.nameLocal,
           quantity: item.quantity,
           unitPrice: item.price,

@@ -115,6 +115,7 @@ function requestForReceipt(
     id: string;
     orderId: string;
     content: string;
+    receiptType: string;
     createdAt: Date | null;
   },
   restaurantId: string,
@@ -129,12 +130,14 @@ function requestForReceipt(
   }
   return {
     country: "TW",
-    type: "receipt",
+    type: receipt.receiptType === "kitchen" ? "kitchen" : "receipt",
     restaurantId,
     data: {
       // Without this the formatter prints its own "餐廳名稱 / 餐廳地址 /
       // 電話號碼" placeholders at the top of every receipt and kitchen ticket.
       restaurant: shop,
+      cashier:
+        typeof content.cashier === "string" ? content.cashier : undefined,
       order: {
         // The formatter also builds the receipt QR link from this, so it stays
         // the row id; `orderNumber` is what a person reads off the paper.
@@ -156,11 +159,13 @@ function requestForReceipt(
             ? content.deliveryPhone
             : undefined,
         deliveryFee: Number(content.deliveryFee ?? 0),
+        notes: typeof content.notes === "string" ? content.notes : undefined,
         items: Array.isArray(content.items)
           ? content.items.map((item: Record<string, unknown>) => ({
               name: String(item.name ?? "Item"),
               quantity: Number(item.quantity ?? 1),
               price: Number(item.price ?? 0),
+              notes: typeof item.notes === "string" ? item.notes : undefined,
             }))
           : [],
         subtotal: Number(content.subtotal ?? 0),
@@ -312,6 +317,7 @@ app.get("/jobs", async (c) => {
       id: receipts.id,
       orderId: receipts.orderId,
       content: receipts.content,
+      receiptType: receipts.receiptType,
       createdAt: receipts.createdAt,
     });
 
