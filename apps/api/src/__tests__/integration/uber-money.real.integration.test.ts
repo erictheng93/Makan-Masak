@@ -205,7 +205,7 @@ describe("#408 synthetic Uber money boundaries (not sandbox evidence)", () => {
     async ({ currency, encoding, restaurantCurrency, reason, ...rest }) => {
       const menuItemId = await setup(restaurantCurrency);
       const payload = syntheticUberOrder(currency, encoding);
-      if ("mutate" in rest) rest.mutate(payload);
+      rest.mutate?.(payload);
       const { response, send, denied } = await deliver(payload);
       expect(response.status).toBe(200);
       expect(await response.json()).toEqual({
