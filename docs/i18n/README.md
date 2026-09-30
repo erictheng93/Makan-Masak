@@ -46,9 +46,13 @@ commands also validate `locale-approval-manifest.json`, which records the
 approved handoff SHA-256, approval date, reviewer or maintainer acceptance,
 covered apps, and covered locales.
 
-Changed locale files are rewritten in full, which removes comments; review
-`git diff` after importing. Unchanged files are not written. Preserving comments
-and formatting is tracked in [#430](https://github.com/erictheng93/Makan-Masak/issues/430).
+Import updates changed string literals in place, preserving surrounding
+comments, key order, quotes, and formatting. Unchanged locale files are not
+written. Keys added to the source are appended to their target object; obsolete
+keys (including empty branches) are removed, keeping adjacent comments. Locale
+files must default-export a literal object, directly or through a variable;
+unsupported property syntax is rejected before any file is written. Review
+`git diff` after importing, especially when adding or deleting keys.
 
 To check whether target locales still have fewer leaf keys than `zh-TW`:
 

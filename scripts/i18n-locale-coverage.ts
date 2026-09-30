@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import ts from "typescript";
 
 import type { Messages } from "../apps/kitchen-display/src/i18n/types";
 
@@ -231,7 +232,6 @@ function setNestedValue(
 
 interface HandoffLocaleOutput {
   localeFile: string;
-  constantName: string;
   messages: Record<string, unknown>;
   unchanged: boolean;
 }
@@ -353,10 +353,7 @@ async function validateApprovedHandoff(
       );
 
       const localeFile = path.join(app.localeDir, `${locale}.ts`);
-      const constantName = locale
-        .replace("-", "")
-        .replace(/^([a-z])/, (match) => match.toLowerCase());
-      localeOutputs.push({ localeFile, constantName, messages, unchanged });
+      localeOutputs.push({ localeFile, messages, unchanged });
     }
   }
 
@@ -464,25 +461,164 @@ async function importApprovedHandoff(csvPath: string): Promise<void> {
   assertNoMissingTranslations(missingTranslations);
   await validateApprovalManifest(csvPath);
 
-  for (const {
-    localeFile,
-    constantName,
-    messages,
-    unchanged,
-  } of localeOutputs) {
+  // Prepare every edit before writing, so unsupported source syntax cannot
+  // leave an import half-applied.
+  const files = [];
+  for (const { localeFile, messages, unchanged } of localeOutputs) {
     if (unchanged) continue;
-
-    const file = [
-      'import type { Messages } from "../types";',
-      "",
-      `const ${constantName}: Messages = ${JSON.stringify(messages, null, 2)};`,
-      "",
-      `export default ${constantName};`,
-      "",
-    ].join("\n");
-
+    const source = await readFile(localeFile, "utf8");
+    files.push({ localeFile, file: updateLocaleSource(source, messages) });
+  }
+  for (const { localeFile, file } of files) {
     await writeFile(localeFile, file, "utf8");
   }
+}
+
+function updateLocaleSource(
+  source: string,
+  messages: Record<string, unknown>,
+): string {
+  const ast = ts.createSourceFile(
+    "locale.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  const exported = ast.statements.find(ts.isExportAssignment)?.expression;
+  const initializer =
+    exported && ts.isIdentifier(exported)
+      ? ast.statements
+          .filter(ts.isVariableStatement)
+          .flatMap((statement) => [...statement.declarationList.declarations])
+          .find(
+            (declaration) =>
+              ts.isIdentifier(declaration.name) &&
+              declaration.name.text === exported.text,
+          )?.initializer
+      : exported;
+  if (!initializer || !ts.isObjectLiteralExpression(initializer)) {
+    throw new Error("Locale default export must be a literal object");
+  }
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+
+  function patchObject(
+    node: ts.ObjectLiteralExpression,
+    values: Record<string, unknown>,
+  ): string {
+    const edits: { start: number; end: number; text: string }[] = [];
+    const keys = new Set<string>();
+    const kept: ts.PropertyAssignment[] = [];
+    const commaAfter = (property: ts.PropertyAssignment) => {
+      const scanner = ts.createScanner(
+        ts.ScriptTarget.Latest,
+        true,
+        ts.LanguageVariant.Standard,
+        source,
+      );
+      scanner.setTextPos(property.end);
+      return scanner.scan() === ts.SyntaxKind.CommaToken
+        ? scanner.getTokenPos()
+        : undefined;
+    };
+    for (const property of node.properties) {
+      if (
+        !ts.isPropertyAssignment(property) ||
+        !(ts.isIdentifier(property.name) || ts.isStringLiteral(property.name))
+      ) {
+        throw new Error("Locale properties must have literal names and values");
+      }
+      const key = property.name.text;
+      keys.add(key);
+      if (!Object.hasOwn(values, key)) {
+        // Remove syntax only: adjacent translator comments stay intact.
+        edits.push({
+          start: property.getStart(ast),
+          end: property.end,
+          text: "",
+        });
+        const comma = commaAfter(property);
+        if (comma !== undefined)
+          edits.push({ start: comma, end: comma + 1, text: "" });
+        continue;
+      }
+      kept.push(property);
+      const value = values[key];
+      const old = property.initializer;
+      let text: string;
+      if (
+        ts.isObjectLiteralExpression(old) &&
+        typeof value === "object" &&
+        value !== null
+      ) {
+        text = patchObject(old, value as Record<string, unknown>);
+      } else if (
+        (ts.isStringLiteral(old) || ts.isNoSubstitutionTemplateLiteral(old)) &&
+        old.text === value
+      ) {
+        continue;
+      } else {
+        text = JSON.stringify(value);
+        if (typeof value === "string" && source[old.getStart(ast)] === "'") {
+          text = `'${text.slice(1, -1).replaceAll('\\"', '"').replaceAll("'", "\\'")}'`;
+        } else if (
+          typeof value === "string" &&
+          ts.isNoSubstitutionTemplateLiteral(old)
+        ) {
+          text = `\`${text.slice(1, -1).replaceAll('\\"', '"').replaceAll("`", "\\`").replaceAll("${", "\\${")}\``;
+        }
+      }
+      edits.push({ start: old.getStart(ast), end: old.end, text });
+    }
+
+    const added = Object.entries(values).filter(([key]) => !keys.has(key));
+    if (added.length) {
+      const last = kept.at(-1);
+      if (last && commaAfter(last) === undefined) {
+        edits.push({ start: last.end, end: last.end, text: "," });
+      }
+      const close = node.end - 1;
+      const lineStart = source.lastIndexOf("\n", close - 1) + 1;
+      const closingIndent = source.slice(lineStart, close);
+      const multiline = /^\s*$/.test(closingIndent);
+      const objectLine = source.lastIndexOf("\n", node.getStart(ast)) + 1;
+      const parentIndent = source.slice(objectLine).match(/^[\t ]*/)?.[0] ?? "";
+      const first = node.properties[0];
+      const firstLine = first
+        ? source.lastIndexOf("\n", first.getStart(ast)) + 1
+        : 0;
+      const firstIndent = first
+        ? source.slice(firstLine, first.getStart(ast))
+        : "";
+      const indent =
+        first && /^[\t ]+$/.test(firstIndent)
+          ? firstIndent
+          : `${parentIndent}  `;
+      const text = added
+        .map(
+          ([key, value]) =>
+            `${indent}${JSON.stringify(key)}: ${JSON.stringify(value, null, 2).replaceAll("\n", `${eol}${indent}`)},`,
+        )
+        .join(eol);
+      const start = multiline ? lineStart : close;
+      edits.push({
+        start,
+        end: start,
+        text: `${source[start - 1] === "\n" ? "" : eol}${text}${eol}${multiline ? "" : parentIndent}`,
+      });
+    }
+    let result = source.slice(node.getStart(ast), node.end);
+    for (const edit of edits.sort((a, b) => b.start - a.start)) {
+      const start = edit.start - node.getStart(ast);
+      const end = edit.end - node.getStart(ast);
+      result = result.slice(0, start) + edit.text + result.slice(end);
+    }
+    return result;
+  }
+  return (
+    source.slice(0, initializer.getStart(ast)) +
+    patchObject(initializer, messages) +
+    source.slice(initializer.end)
+  );
 }
 
 export function csvCell(value: string | number): string {
