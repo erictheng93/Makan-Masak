@@ -108,6 +108,6 @@ export class CitizenDriver extends PrinterDriver {
       content,
       this.device.capabilities.maxWidth,
     ).buildESCPOS();
-    await this.sendTransport(Buffer.from(commands, "utf8"));
+    await this.sendTransport(this.encode(commands));
   }
 }

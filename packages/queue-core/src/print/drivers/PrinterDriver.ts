@@ -10,6 +10,7 @@ import type {
   PrinterStatus,
 } from "@makanmasak/shared-types";
 import { createConnection, type Socket } from "node:net";
+import { encodeForPrinter } from "../utils/encoding";
 
 export interface PrinterDriverExecutionOptions {
   connectionTimeout?: number;
@@ -195,6 +196,10 @@ export abstract class PrinterDriver implements IPrinterDriver {
 
     if (!socket || socket.destroyed) return;
     socket.destroy();
+  }
+
+  protected encode(commands: string): Buffer {
+    return encodeForPrinter(commands, this.device.capabilities.encoding);
   }
 
   /** Write bytes to the connected TCP socket and wait for Node to flush them. */

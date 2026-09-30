@@ -99,7 +99,7 @@ export class EpsonDriver extends PrinterDriver {
   }
 
   protected async sendCommands(commands: string): Promise<void> {
-    await this.sendTransport(Buffer.from(commands, "utf8"));
+    await this.sendTransport(this.encode(commands));
   }
 
   /**

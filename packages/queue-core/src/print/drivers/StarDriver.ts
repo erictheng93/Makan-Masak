@@ -208,7 +208,12 @@ export class StarDriver extends PrinterDriver {
   }
 
   protected async sendStarCommands(commands: string): Promise<void> {
-    await this.sendTransport(Buffer.from(commands, "utf8"));
+    // Star's native command set has no FS &; only ESC/POS emulation re-encodes.
+    await this.sendTransport(
+      this.options.emulation === "esc-pos"
+        ? this.encode(commands)
+        : Buffer.from(commands, "utf8"),
+    );
   }
 
   /**

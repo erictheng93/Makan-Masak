@@ -39,6 +39,8 @@ export interface PrinterCapabilities {
   supportsQRCode: boolean;
   supportsBarcode: boolean;
   supportedEncodings: string[];
+  /** Byte encoding for ESC/POS text; default UTF-8. Set per printer after a physical test. */
+  encoding?: "utf8" | "big5" | "gbk";
   paperSizes: PaperSize[];
 }
 
