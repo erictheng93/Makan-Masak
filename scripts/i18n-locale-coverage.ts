@@ -501,11 +501,32 @@ function updateLocaleSource(
   }
   const eol = source.includes("\r\n") ? "\r\n" : "\n";
 
+  const lineIndent = (pos: number) =>
+    source.slice(source.lastIndexOf("\n", pos - 1) + 1).match(/^[\t ]*/)![0];
+  const renderKey = (key: string, bare: boolean) =>
+    bare && /^[A-Za-z_$][\w$]*$/.test(key) ? key : JSON.stringify(key);
+  // Render a new value in the style of its siblings: bare identifier keys
+  // unless the object already quotes them, nested by two spaces.
+  const render = (value: unknown, indent: string, bare: boolean): string => {
+    if (typeof value !== "object" || value === null) {
+      return JSON.stringify(value);
+    }
+    const entries = Object.entries(value);
+    if (!entries.length) return "{}";
+    const inner = `${indent}  `;
+    const body = entries.map(
+      ([k, v]) => `${inner}${renderKey(k, bare)}: ${render(v, inner, bare)},`,
+    );
+    return `{${eol}${body.join(eol)}${eol}${indent}}`;
+  };
+
   function patchObject(
     node: ts.ObjectLiteralExpression,
     values: Record<string, unknown>,
   ): string {
     const edits: { start: number; end: number; text: string }[] = [];
+    const firstName = node.properties[0]?.name;
+    const bare = !firstName || !ts.isStringLiteral(firstName);
     const keys = new Set<string>();
     const kept: ts.PropertyAssignment[] = [];
     const commaAfter = (property: ts.PropertyAssignment) => {
@@ -531,19 +552,35 @@ function updateLocaleSource(
       keys.add(key);
       if (!Object.hasOwn(values, key)) {
         // Remove syntax only: adjacent translator comments stay intact.
-        edits.push({
-          start: property.getStart(ast),
-          end: property.end,
-          text: "",
-        });
         const comma = commaAfter(property);
-        if (comma !== undefined)
-          edits.push({ start: comma, end: comma + 1, text: "" });
+        const start = property.getStart(ast);
+        const end = comma === undefined ? property.end : comma + 1;
+        const lineStart = source.lastIndexOf("\n", start - 1) + 1;
+        const lineEnd = source.indexOf("\n", end);
+        // A property alone on its lines goes away with them, leaving no blank.
+        if (
+          /^[\t ]*$/.test(source.slice(lineStart, start)) &&
+          lineEnd !== -1 &&
+          /^[\t\r ]*(\/\/.*)?$/.test(source.slice(end, lineEnd))
+        ) {
+          edits.push({ start: lineStart, end: lineEnd + 1, text: "" });
+        } else {
+          edits.push({ start, end: property.end, text: "" });
+          if (comma !== undefined)
+            edits.push({ start: comma, end: comma + 1, text: "" });
+        }
         continue;
       }
       kept.push(property);
       const value = values[key];
       const old = property.initializer;
+      if (
+        !ts.isObjectLiteralExpression(old) &&
+        !ts.isStringLiteral(old) &&
+        !ts.isNoSubstitutionTemplateLiteral(old)
+      ) {
+        throw new Error("Locale properties must have literal names and values");
+      }
       let text: string;
       if (
         ts.isObjectLiteralExpression(old) &&
@@ -557,7 +594,7 @@ function updateLocaleSource(
       ) {
         continue;
       } else {
-        text = JSON.stringify(value);
+        text = render(value, lineIndent(property.getStart(ast)), bare);
         if (typeof value === "string" && source[old.getStart(ast)] === "'") {
           text = `'${text.slice(1, -1).replaceAll('\\"', '"').replaceAll("'", "\\'")}'`;
         } else if (
@@ -573,38 +610,37 @@ function updateLocaleSource(
     const added = Object.entries(values).filter(([key]) => !keys.has(key));
     if (added.length) {
       const last = kept.at(-1);
-      if (last && commaAfter(last) === undefined) {
-        edits.push({ start: last.end, end: last.end, text: "," });
-      }
+      const needComma = last && commaAfter(last) === undefined;
       const close = node.end - 1;
       const lineStart = source.lastIndexOf("\n", close - 1) + 1;
-      const closingIndent = source.slice(lineStart, close);
-      const multiline = /^\s*$/.test(closingIndent);
-      const objectLine = source.lastIndexOf("\n", node.getStart(ast)) + 1;
-      const parentIndent = source.slice(objectLine).match(/^[\t ]*/)?.[0] ?? "";
+      const multiline = /^\s*$/.test(source.slice(lineStart, close));
+      const parentIndent = lineIndent(node.getStart(ast));
       const first = node.properties[0];
-      const firstLine = first
-        ? source.lastIndexOf("\n", first.getStart(ast)) + 1
-        : 0;
-      const firstIndent = first
-        ? source.slice(firstLine, first.getStart(ast))
-        : "";
-      const indent =
-        first && /^[\t ]+$/.test(firstIndent)
-          ? firstIndent
-          : `${parentIndent}  `;
+      const firstIndent = first ? lineIndent(first.getStart(ast)) : "";
+      const indent = firstIndent || `${parentIndent}  `;
       const text = added
         .map(
           ([key, value]) =>
-            `${indent}${JSON.stringify(key)}: ${JSON.stringify(value, null, 2).replaceAll("\n", `${eol}${indent}`)},`,
+            `${indent}${renderKey(key, bare)}: ${render(value, indent, bare)},`,
         )
         .join(eol);
-      const start = multiline ? lineStart : close;
-      edits.push({
-        start,
-        end: start,
-        text: `${source[start - 1] === "\n" ? "" : eol}${text}${eol}${multiline ? "" : parentIndent}`,
-      });
+      if (multiline) {
+        if (needComma)
+          edits.push({ start: last.end, end: last.end, text: "," });
+        edits.push({
+          start: lineStart,
+          end: lineStart,
+          text: `${text}${eol}`,
+        });
+      } else {
+        // `{ a: "A" }` has no line to insert before; open the braces instead.
+        const start = source.slice(0, close).trimEnd().length;
+        edits.push({
+          start,
+          end: close,
+          text: `${needComma ? "," : ""}${eol}${text}${eol}${parentIndent}`,
+        });
+      }
     }
     let result = source.slice(node.getStart(ast), node.end);
     for (const edit of edits.sort((a, b) => b.start - a.start)) {

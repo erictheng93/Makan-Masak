@@ -181,8 +181,8 @@ it("adds nested keys and deletes obsolete keys without losing surviving comments
   run();
   expect(statSync(target).mtimeMs).toBe(mtime);
   expect(text).not.toMatch(/a\s*:/);
-  expect(text).toContain('"added": "NEW"');
-  expect(text).toContain('"key": "FRESH"');
+  expect(text).toContain('added: "NEW"');
+  expect(text).toContain('key: "FRESH"');
 });
 
 it.each([
@@ -250,4 +250,71 @@ it("preserves backticks and escapes interpolation in changed template values", (
   const mtime = statSync(target).mtimeMs;
   run();
   expect(statSync(target).mtimeMs).toBe(mtime);
+});
+
+it("rejects non-literal values instead of overwriting them", () => {
+  writeFileSync(target, 'export default { section: { z: "Z" + "", a: "A" } };');
+  handoff([
+    ["section.z", "CHANGED"],
+    ["section.a", "A"],
+  ]);
+  expect(run).toThrow(/literal names and values/);
+  expect(readFileSync(target, "utf8")).toContain('"Z" + ""');
+});
+
+it("deletes whole lines and adds keys in the sibling key style", () => {
+  writeFileSync(
+    target,
+    'export default {\n  keep: "K",\n  // gone\n  old: { x: "X" },\n  stale: "S",\n};\n',
+  );
+  for (const app of apps) {
+    writeFileSync(
+      path.join(root, `apps/${app}/src/i18n/locales/zh-TW.ts`),
+      'export default { keep: "K", fresh: { deep: "D" } };',
+    );
+  }
+  handoff([
+    ["keep", "K"],
+    ["fresh.deep", "D"],
+  ]);
+  run();
+  expect(readFileSync(target, "utf8")).toBe(
+    'export default {\n  keep: "K",\n  // gone\n  fresh: {\n    deep: "D",\n  },\n};\n',
+  );
+});
+
+it("opens a single-line object without stray whitespace when adding a key", () => {
+  writeFileSync(target, 'export default { keep: "K" };\n');
+  for (const app of apps) {
+    writeFileSync(
+      path.join(root, `apps/${app}/src/i18n/locales/zh-TW.ts`),
+      'export default { keep: "K", more: "M" };',
+    );
+  }
+  handoff([
+    ["keep", "K"],
+    ["more", "M"],
+  ]);
+  run();
+  expect(readFileSync(target, "utf8")).toBe(
+    'export default { keep: "K",\n  more: "M",\n};\n',
+  );
+});
+
+it("removes a trailing line comment together with its deleted property", () => {
+  writeFileSync(
+    target,
+    'export default {\n  keep: "K", // keep note\n  old: "O", // old note\n};\n',
+  );
+  for (const app of apps) {
+    writeFileSync(
+      path.join(root, `apps/${app}/src/i18n/locales/zh-TW.ts`),
+      'export default { keep: "K" };',
+    );
+  }
+  handoff([["keep", "K"]]);
+  run();
+  expect(readFileSync(target, "utf8")).toBe(
+    'export default {\n  keep: "K", // keep note\n};\n',
+  );
 });
