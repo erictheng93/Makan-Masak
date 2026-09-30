@@ -3362,6 +3362,7 @@ const viVN: Messages = {
     balance: "Số dư",
     shift: "Ca làm",
     notStarted: "Chưa bắt đầu",
+    shiftActive: "Đang diễn ra",
     pleaseStartShift: "Vui lòng bắt đầu ca",
     startShift: "Bắt đầu ca",
     endShift: "Kết thúc ca",

@@ -3283,6 +3283,7 @@ const zhCN: Messages = {
     balance: "余额",
     shift: "班次",
     notStarted: "未开始",
+    shiftActive: "进行中",
     pleaseStartShift: "请开始班次",
     startShift: "开始班次",
     endShift: "结束班次",

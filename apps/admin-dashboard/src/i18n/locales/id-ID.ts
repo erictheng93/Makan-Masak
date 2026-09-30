@@ -3379,6 +3379,7 @@ const idID: Messages = {
     balance: "Saldo",
     shift: "Shift",
     notStarted: "Belum Dimulai",
+    shiftActive: "Sedang Berjalan",
     pleaseStartShift: "Silakan mulai shift",
     startShift: "Mulai Shift",
     endShift: "Akhiri Shift",

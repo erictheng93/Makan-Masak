@@ -3356,6 +3356,7 @@ const enUS: Messages = {
     balance: "Balance",
     shift: "Shift",
     notStarted: "Not Started",
+    shiftActive: "In Progress",
     pleaseStartShift: "Please start a shift",
     startShift: "Start Shift",
     endShift: "End Shift",

@@ -222,6 +222,28 @@ describe("POSManagementView", () => {
     wrapper.unmount();
   });
 
+  it("calls a running shift in progress even when it has no name, and only an absent one not started", async () => {
+    const get = vi.mocked(api.get).getMockImplementation()!;
+    vi.mocked(api.get).mockImplementation(async (...args) => {
+      const response = (await get(...args)) as {
+        data: { data: Record<string, unknown> | null };
+      };
+      if (args[0] === "/pos/shifts/current/register-1" && response.data.data) {
+        return {
+          data: { success: true, data: { ...response.data.data, name: "" } },
+        } as never;
+      }
+      return response as never;
+    });
+    const wrapper = mount(POSManagementView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("pos.shift: pos.shiftActive");
+    expect(wrapper.text()).not.toContain("pos.notStarted");
+
+    wrapper.unmount();
+  });
+
   it("clears the previous register's shift, transactions and totals when selecting an idle register", async () => {
     const get = vi.mocked(api.get).getMockImplementation()!;
     vi.mocked(api.get).mockImplementation(async (...args) => {

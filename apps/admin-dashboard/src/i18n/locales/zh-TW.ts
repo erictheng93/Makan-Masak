@@ -3398,6 +3398,7 @@ const zhTWCore = {
     balance: "餘額",
     shift: "班次",
     notStarted: "未開始",
+    shiftActive: "進行中",
     pleaseStartShift: "請開始班次",
     startShift: "開始班次",
     endShift: "結束班次",

@@ -21,7 +21,10 @@
         <div class="bg-blue-50 px-4 py-2 rounded-2xl">
           <p class="text-sm text-blue-800 font-medium">
             {{ t("pos.shift") }}:
-            {{ currentShift?.name || t("pos.notStarted") }}
+            {{
+              currentShift?.name ||
+              (currentShift ? t("pos.shiftActive") : t("pos.notStarted"))
+            }}
           </p>
           <p class="text-xs text-blue-600">
             {{

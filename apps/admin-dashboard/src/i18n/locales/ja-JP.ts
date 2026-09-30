@@ -3363,6 +3363,7 @@ const jaJP: Messages = {
     balance: "残高",
     shift: "シフト",
     notStarted: "未開始",
+    shiftActive: "進行中",
     pleaseStartShift: "シフトを開始してください",
     startShift: "シフト開始",
     endShift: "シフト終了",
