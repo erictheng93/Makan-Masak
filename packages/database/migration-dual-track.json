@@ -150,5 +150,5 @@
       "reason": "Legacy operational performance-index migration predates this guard and is reviewed as legacy-only."
     }
   ],
-  "note": "The fresh track was squashed into 0000_baseline_strict.sql, so per-file pairings against it no longer exist. Note that no wrangler.toml points at legacyDir \u2014 see AGENTS.md/CLAUDE.md."
+  "note": "The fresh track was squashed into 0000_baseline_strict.sql, so per-file pairings against it no longer exist. Note that no wrangler.toml points at legacyDir — see AGENTS.md/CLAUDE.md."
 }
