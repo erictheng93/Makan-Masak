@@ -104,7 +104,10 @@ export class CitizenDriver extends PrinterDriver {
   }
 
   protected async sendCommands(content: PrintContent): Promise<void> {
-    const commands = CommandBuilder.fromPrintContent(content).buildESCPOS();
+    const commands = CommandBuilder.fromPrintContent(
+      content,
+      this.device.capabilities.maxWidth,
+    ).buildESCPOS();
     await this.sendTransport(Buffer.from(commands, "utf8"));
   }
 }

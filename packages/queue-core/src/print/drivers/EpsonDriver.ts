@@ -73,7 +73,10 @@ export class EpsonDriver extends PrinterDriver {
 
     try {
       // Build ESC/POS commands for the content
-      const commandBuilder = CommandBuilder.fromPrintContent(content);
+      const commandBuilder = CommandBuilder.fromPrintContent(
+        content,
+        this.device.capabilities.maxWidth,
+      );
       const commands = commandBuilder.buildESCPOS();
 
       // Send commands to printer

@@ -137,6 +137,8 @@ export interface PrinterRestaurantInfo {
 }
 
 export interface TransactionInfo {
+  /** Kitchen time formatted with the region's explicit locale and timezone. */
+  timestampText?: string;
   notes?: string;
   orderId: string;
   tableNumber?: string;

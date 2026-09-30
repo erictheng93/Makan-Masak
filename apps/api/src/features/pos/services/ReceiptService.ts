@@ -469,12 +469,16 @@ export class ReceiptService {
           price: amountFromCents(item.unitPriceCents) ?? 0,
           subtotal: amountFromCents(item.totalPriceCents) ?? 0,
           customizations: customizations ?? [],
+          modifiers: kitchen
+            ? preparation
+                .filter(
+                  (name): name is string =>
+                    typeof name === "string" && name.length > 0,
+                )
+                .map((name) => ({ name, price: 0 }))
+            : undefined,
           notes:
-            [
-              ...(kitchen ? preparation : []),
-              item.notes,
-              kitchen ? item.kitchenNotes : null,
-            ]
+            [item.notes, kitchen ? item.kitchenNotes : null]
               .filter(Boolean)
               .join("\n") || undefined,
         };

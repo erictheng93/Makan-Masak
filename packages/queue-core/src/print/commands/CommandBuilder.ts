@@ -224,10 +224,13 @@ export class CommandBuilder {
   /**
    * Build from print content
    */
-  static fromPrintContent(content: PrintContent): CommandBuilder {
+  static fromPrintContent(
+    content: PrintContent,
+    kitchenWidth = 32,
+  ): CommandBuilder {
     const builder = new CommandBuilder();
     if (content.type === "kitchen") {
-      for (const line of CommandBuilder.kitchenLines(content)) {
+      for (const line of CommandBuilder.kitchenLines(content, kitchenWidth)) {
         builder.addText(line);
       }
       return builder.addFeed(3).addCut();
@@ -547,14 +550,15 @@ export class CommandBuilder {
   }
 
   /** Preparation instructions shared by ESC/POS and Star's native renderer. */
-  static kitchenLines(content: PrintContent): string[] {
+  static kitchenLines(content: PrintContent, width = 32): string[] {
+    width = Number.isFinite(width) && width >= 2 ? Math.floor(width) : 32;
     const transaction = content.header.transactionInfo;
     return [
       content.header.restaurantInfo.name,
       "KITCHEN",
       `Order: ${transaction.orderId}`,
       ...(transaction.tableNumber ? [`Table: ${transaction.tableNumber}`] : []),
-      transaction.timestamp.toLocaleString(),
+      transaction.timestampText ?? transaction.timestamp.toISOString(),
       ...(transaction.deliveryAddress
         ? [`Delivery: ${transaction.deliveryAddress}`]
         : []),
@@ -562,14 +566,46 @@ export class CommandBuilder {
         ? [`Delivery Tel: ${transaction.deliveryPhone}`]
         : []),
       ...(transaction.notes ? [transaction.notes] : []),
-      "--------------------------------",
+      "-".repeat(width),
       ...content.items.flatMap((item) => [
         `${item.name} x${item.quantity}`,
         ...(item.nameLocal ? [item.nameLocal] : []),
         ...(item.modifiers?.map((modifier) => `  + ${modifier.name}`) ?? []),
         ...(item.notes ? [item.notes] : []),
       ]),
-    ];
+    ].flatMap((line) => CommandBuilder.wrapKitchenText(line, width));
+  }
+
+  private static wrapKitchenText(text: string, width: number): string[] {
+    const segmenter = new Intl.Segmenter("en", { granularity: "grapheme" });
+    // ponytail: ambiguous-width glyphs use one column; use a printer-specific
+    // width table if its font requires two. CJK/fullwidth and emoji use two.
+    const wide =
+      /[\u1100-\u115f\u2329\u232a\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\ufe10-\ufe19\ufe30-\ufe6f\uff01-\uff60\uffe0-\uffe6\u{20000}-\u{3ffff}]|\u20e3|\p{Extended_Pictographic}|\p{Regional_Indicator}/u;
+    const lines: string[] = [];
+    for (const paragraph of text
+      .replace(/\r\n?/g, "\n")
+      .replace(/\t/g, "    ")
+      .split("\n")) {
+      let line = "";
+      let columns = 0;
+      for (const { segment } of segmenter.segment(paragraph)) {
+        const size = /^\p{Mark}+$/u.test(segment)
+          ? 0
+          : wide.test(segment)
+            ? 2
+            : 1;
+        if (columns + size > width && line) {
+          lines.push(line);
+          line = "";
+          columns = 0;
+        }
+        line += segment;
+        columns += size;
+      }
+      lines.push(line);
+    }
+    return lines;
   }
 
   /**

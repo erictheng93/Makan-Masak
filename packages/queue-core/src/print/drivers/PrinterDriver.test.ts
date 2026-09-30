@@ -6,6 +6,7 @@ import { EpsonDriver } from "./EpsonDriver";
 import { CitizenDriver } from "./CitizenDriver";
 import { StarDriver } from "./StarDriver";
 import { ReceiptFormattingService } from "../formatters/ReceiptFormattingService";
+import { CommandBuilder } from "../commands/CommandBuilder";
 import {
   deviceInfoFromProbe,
   PrinterDriverFactory,
@@ -117,6 +118,7 @@ describe("PrinterDriver execution options", () => {
     "sends a kitchen ticket without customer receipt content (%s)",
     async (brand) => {
       const device = buildDevice();
+      device.capabilities.maxWidth = 48;
       const driver =
         brand === "epson"
           ? new EpsonDriver(device)
@@ -137,10 +139,10 @@ describe("PrinterDriver execution options", () => {
               notes: "先上飲料",
               items: [
                 {
-                  name: "炒飯",
+                  name: "炒飯".repeat(14),
                   quantity: 2,
                   price: 120,
-                  notes: "不要辣",
+                  notes: "不要辣".repeat(9),
                   modifiers: [{ name: "加蛋", price: 10 }],
                 },
               ],
@@ -160,15 +162,11 @@ describe("PrinterDriver execution options", () => {
         );
         const bytes = Buffer.concat(received);
         const text = bytes.toString("utf8");
-        for (const expected of [
-          "A-432",
-          "A1",
-          "炒飯 x2",
-          "先上飲料",
-          "不要辣",
-          "加蛋",
-        ])
+        for (const expected of ["A-432", "A1", "先上飲料", "不要辣", "加蛋"])
           expect(text).toContain(expected);
+        expect(text).toContain("炒飯".repeat(12) + "\n炒飯炒飯 x2\n");
+        expect(text).toContain("不要辣".repeat(8) + "\n不要辣\n");
+        expect(text).toContain("-".repeat(48) + "\n");
         for (const forbidden of [
           "Cashier:",
           "Subtotal:",
@@ -187,6 +185,29 @@ describe("PrinterDriver execution options", () => {
       }
     },
   );
+
+  it("wraps fullwidth characters without splitting emoji or combining accents", () => {
+    const lines = CommandBuilder.kitchenLines(
+      {
+        ...content,
+        type: "kitchen",
+        header: {
+          ...content.header,
+          transactionInfo: {
+            ...content.header.transactionInfo,
+            notes: "中文ab🙂e\u0301XYZ\n全形ＡＢ\nabcd1️⃣2️⃣X",
+          },
+        },
+      },
+      8,
+    );
+    expect(lines).toContain("中文ab🙂");
+    expect(lines).toContain("e\u0301XYZ");
+    expect(lines).toContain("全形ＡＢ");
+    expect(lines).toContain("abcd1️⃣2️⃣");
+    expect(lines).toContain("X");
+    expect(lines).toContain("--------");
+  });
 
   it("retries a failed printer command the configured number of times", async () => {
     const driver = new RetryingEpsonDriver(buildDevice(), {

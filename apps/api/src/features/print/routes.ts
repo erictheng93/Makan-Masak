@@ -166,6 +166,21 @@ function requestForReceipt(
               quantity: Number(item.quantity ?? 1),
               price: Number(item.price ?? 0),
               notes: typeof item.notes === "string" ? item.notes : undefined,
+              modifiers: Array.isArray(item.modifiers)
+                ? item.modifiers
+                    .filter(
+                      (
+                        modifier,
+                      ): modifier is { name: string; price?: number } =>
+                        modifier != null &&
+                        typeof modifier === "object" &&
+                        typeof modifier.name === "string",
+                    )
+                    .map((modifier) => ({
+                      name: modifier.name,
+                      price: Number(modifier.price ?? 0),
+                    }))
+                : undefined,
             }))
           : [],
         subtotal: Number(content.subtotal ?? 0),

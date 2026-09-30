@@ -324,6 +324,15 @@ describe("cloud print dispatch — real D1", () => {
           if (name === "delivery") expect(commands).toContain("1 Test Rd");
           if (kind === "kitchen") {
             expect(request.type).toBe("kitchen");
+            expect(request.data.order.items[0].modifiers).toEqual([
+              { name: "大份", price: 0 },
+              { name: "辣度: 不辣", price: 0 },
+              { name: "蛋 x2", price: 0 },
+            ]);
+            expect(request.data.order.items[0].notes).toBe("不要辣\n分開裝");
+            for (const option of ["大份", "不辣", "蛋 x2"]) {
+              expect(commands.split(option)).toHaveLength(2);
+            }
             for (const text of [
               "Nasi Lemak x1",
               "不要辣",

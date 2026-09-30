@@ -116,7 +116,10 @@ export class StarDriver extends PrinterDriver {
     // Star printers can use ESC/POS or their proprietary commands
     if (this.options.emulation === "esc-pos") {
       // Use standard ESC/POS commands
-      const commandBuilder = CommandBuilder.fromPrintContent(content);
+      const commandBuilder = CommandBuilder.fromPrintContent(
+        content,
+        this.device.capabilities.maxWidth,
+      );
       return commandBuilder.buildESCPOS();
     } else {
       // Use Star-specific commands
@@ -126,7 +129,12 @@ export class StarDriver extends PrinterDriver {
 
   private buildStarSpecificCommands(content: PrintContent): string {
     if (content.type === "kitchen") {
-      return CommandBuilder.kitchenLines(content).join("\n") + "\n\x1B\x64\x03";
+      return (
+        CommandBuilder.kitchenLines(
+          content,
+          this.device.capabilities.maxWidth,
+        ).join("\n") + "\n\x1B\x64\x03"
+      );
     }
     const commands: string[] = [];
     const money = (amount: number) =>

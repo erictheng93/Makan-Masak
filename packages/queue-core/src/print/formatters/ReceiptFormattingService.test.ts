@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PrintRequest } from "@makanmasak/shared-types";
 import { ReceiptFormattingService } from "./ReceiptFormattingService";
+import { ReceiptFormatterFactory } from "./ReceiptFormatterFactory";
+import { CommandBuilder } from "../commands/CommandBuilder";
 
 const createReceiptRequest = (): PrintRequest => ({
   country: "TW",
@@ -37,6 +39,52 @@ const createReceiptRequest = (): PrintRequest => ({
 });
 
 describe("ReceiptFormattingService", () => {
+  it("formats kitchen time in the configured region regardless of agent defaults", async () => {
+    const request = createReceiptRequest();
+    request.type = "kitchen";
+    vi.spyOn(Date.prototype, "toLocaleString").mockImplementation(() => {
+      throw new Error("Ambient locale/timezone must not format kitchen time");
+    });
+    const service = new ReceiptFormattingService();
+    const content = await service.formatReceipt(request);
+    expect(CommandBuilder.kitchenLines(content).join("\n")).toMatch(
+      /2026\/6\/7\s08:00:00/,
+    );
+    service.updateRegion("TW", { timezone: "Asia/Ho_Chi_Minh" });
+    expect(
+      CommandBuilder.kitchenLines(await service.formatReceipt(request)).join(
+        "\n",
+      ),
+    ).toMatch(/2026\/6\/7\s07:00:00/);
+  });
+
+  it("leaves a shared frozen formatter result unchanged between requests", async () => {
+    const request = createReceiptRequest();
+    const service = new ReceiptFormattingService();
+    const shared = await service.formatReceipt(request);
+    Object.freeze(shared.header.transactionInfo);
+    Object.freeze(shared.header);
+    Object.freeze(shared);
+    const formatter = ReceiptFormatterFactory.createFormatter(
+      "TW",
+      service.getRegionConfig("TW"),
+    );
+    const format = vi.spyOn(formatter, "formatReceipt").mockReturnValue(shared);
+    const create = vi
+      .spyOn(ReceiptFormatterFactory, "createFormatter")
+      .mockReturnValue(formatter);
+    request.type = "kitchen";
+    const kitchen = await service.formatReceipt(request);
+    request.type = "receipt";
+    const receipt = await service.formatReceipt(request);
+    expect(kitchen.type).toBe("kitchen");
+    expect(receipt.type).toBe("receipt");
+    expect(shared.type).toBe("receipt");
+    expect(shared.header.transactionInfo).not.toHaveProperty("timestampText");
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(format).toHaveBeenCalledTimes(2);
+  });
+
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
