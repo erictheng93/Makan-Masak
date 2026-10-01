@@ -71,7 +71,6 @@ export const defaultPrinterSettings = {
   printSettings: {
     paperWidth: 80, // mm
     fontSize: 12,
-    encoding: "utf8",
     timeout: 10000, // ms
   },
 
