@@ -1,5 +1,9 @@
 export type PrinterEncoding = "utf8" | "big5" | "gbk";
 
+// Built from a code, not written as an escape: lint-fix rewrites an escape into
+// the literal character, which tests/unit/source-encoding.test.ts forbids.
+const REPLACEMENT = String.fromCharCode(0xfffd);
+
 const tables = new Map<string, Map<string, number[]>>();
 
 // Node only encodes UTF-8, so invert the decoder once per encoding.
@@ -12,7 +16,7 @@ function table(encoding: "big5" | "gbk"): Map<string, number[]> {
     for (let lo = 0x40; lo <= 0xfe; lo++) {
       if (lo === 0x7f) continue;
       const ch = decoder.decode(Uint8Array.of(hi, lo));
-      if (ch.length && !ch.includes("�") && !map.has(ch)) {
+      if (ch.length && !ch.includes(REPLACEMENT) && !map.has(ch)) {
         map.set(ch, [hi, lo]);
       }
     }
