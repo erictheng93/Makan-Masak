@@ -50,7 +50,7 @@ jobs:
         # Not corepack — inside this container it exits 0 having fetched
         # nothing and the shim then dies. See the e2e-tests job in test.yml.
         # No version input: the action reads `packageManager`.
-        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: 📥 安裝依賴
         run: pnpm install --frozen-lockfile
