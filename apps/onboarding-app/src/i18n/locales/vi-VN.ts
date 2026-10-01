@@ -188,9 +188,6 @@ const viVN: Messages = {
     standard: "Tiêu chuẩn",
     trial: "Dùng thử miễn phí",
   },
-  guide: {
-    link: "Hướng dẫn đăng ký từng bước (tiếng Trung phồn thể)",
-  },
   success: {
     button: {
       backHome: "Quay lại trang chủ",

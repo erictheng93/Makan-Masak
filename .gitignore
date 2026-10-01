@@ -259,4 +259,3 @@ docs/security/*-audit-*.md
 .prod.secrets.env
 .staging.secrets.generated.json
 .prod.secrets.generated.json
-apps/onboarding-app/public/guide/

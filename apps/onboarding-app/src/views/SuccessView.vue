@@ -215,16 +215,6 @@ const handleStartNew = () => {
       </div>
     </div>
 
-    <div class="mt-6 text-sm">
-      <a
-        href="/guide/onboarding-self-apply-guide.html"
-        data-testid="apply-guide-link"
-        class="text-primary-700 hover:underline"
-      >
-        {{ t("guide.link") }}
-      </a>
-    </div>
-
     <!-- 聯絡資訊 -->
     <div class="mt-6 text-sm text-gray-500">
       {{ t("success.contact.prompt") }}

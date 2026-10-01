@@ -186,9 +186,6 @@ const enUS: Messages = {
     },
   },
 
-  guide: {
-    link: "Step-by-step application guide (Traditional Chinese)",
-  },
   success: {
     title: "Application Submitted!",
     subtitleLine1: "We've received your restaurant application.",

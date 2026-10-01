@@ -4,9 +4,7 @@
   "description": "MakanMasak 獨立部署申請入口 - 新客戶開通流程",
   "type": "module",
   "scripts": {
-    "predev": "node scripts/copy-guide.mjs",
     "dev": "vite --host",
-    "prebuild": "node scripts/copy-guide.mjs",
     "build": "vue-tsc && vite build",
     "preview": "vite preview --host",
     "typecheck": "vue-tsc --noEmit",

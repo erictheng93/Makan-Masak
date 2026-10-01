@@ -173,9 +173,6 @@ const zhCN: Messages = {
     standard: "标准版",
     trial: "免费试用",
   },
-  guide: {
-    link: "开店申请使用手册（繁体中文）",
-  },
   success: {
     button: {
       backHome: "返回首页",
