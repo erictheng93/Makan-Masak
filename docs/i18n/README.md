@@ -1,9 +1,10 @@
 # i18n Locale Handoff
 
-The current CSV is the 2026-09-30 handoff copied from the app locale files.
+The current CSV is the 2026-10-01 handoff copied from the app locale files.
 `locale-approval-manifest.json` pins its SHA-256 and records the review history.
-The latest addendum includes 30 billing cells reviewed by Codex and re-approved
-at the maintainer's explicit instruction; earlier translations remain unchanged.
+The latest addendum includes 25 admin-dashboard cells for #434 reviewed by Codex
+and re-approved at the maintainer's explicit instruction; earlier translations
+remain unchanged.
 The previous review covered the 60 cells in `REVIEW-CHECKLIST.md`, signed by
 Claude at the maintainer's instruction. No native speaker has read the machine
 translations; known tone issues remain. The 2026-05-26 approval covers the CSV at
@@ -30,6 +31,11 @@ pnpm exec tsx scripts/i18n-locale-coverage.ts --export-handoff
 The export preserves any already-filled target cells for matching `app` + `key`
 rows. After source copy changes, review those preserved cells against the new
 source text before seeking approval.
+
+Every new source key also needs a CSV row with all applicable target cells filled
+and a renewed manifest SHA-256 and review record. A passing
+`check:i18n-locales:strict` alone does not verify handoff completeness; run
+`i18n:check-handoff` after adding copy.
 
 After the target columns have been reviewed and accepted by the project
 maintainer, import the approved CSV:

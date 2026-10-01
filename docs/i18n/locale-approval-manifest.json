@@ -1,7 +1,7 @@
 {
   "handoff": "docs/i18n/locale-translator-handoff.csv",
-  "sha256": "7f47be889806873120eb77ecda7d462dce8514893a4be612357e84d3e857cb8d",
-  "approvedAt": "2026-09-29T17:47:46Z",
+  "sha256": "c31f7ba3fc6480db69a58d77f2b14adf3555a43ee7688bab59632a4ea6c401d0",
+  "approvedAt": "2026-10-01T00:56:36.202Z",
   "approvedBy": [
     {
       "name": "Claude (Sonnet 5.5)",
@@ -25,6 +25,17 @@
         "vi-VN",
         "id-ID"
       ]
+    },
+    {
+      "name": "Codex",
+      "role": "AI-assisted review of the 25 added admin-dashboard cells against zh-TW and existing target locale files; re-approved at the maintainer's explicit in-session instruction for #434 on 2026-10-01; not a native-speaker review",
+      "locales": [
+        "en-US",
+        "zh-CN",
+        "ja-JP",
+        "vi-VN",
+        "id-ID"
+      ]
     }
   ],
   "apps": [
@@ -41,5 +52,5 @@
     "ms-MY",
     "id-ID"
   ],
-  "notes": "2026-09-29 re-approval of the current handoff CSV (commit 02326a3b content). Target copy is machine translation. Reviewed: the 60 cells identical to source (docs/i18n/REVIEW-CHECKLIST.md), all ok. Not reviewed by a native speaker; known tone issues remain, e.g. admin accountManagement.createdAtCol ja-JP. Addendum 2026-09-29: added 3 keys committed after the first sign-off (admin billing.trialExpiredBanner/Action, onboarding guide.link), read by Claude and judged accurate; removed errors.subscription.trialExpired. Supersedes the 2026-05-26 approval (csv at a2ece23b). Addendum 2026-09-30: Codex reviewed and accepted billing.trialExpiredTitle, trialExpiredContinue, upgradeTitle, upgradeBody, upgradeAction, and upgradeMailSubject for the five admin target locales (30 cells), copied verbatim from existing locale files. The maintainer explicitly requested re-export and re-approval for #429. Prior cells and approvals are retained; no native-speaker review is claimed."
+  "notes": "2026-09-29 re-approval of the current handoff CSV (commit 02326a3b content). Target copy is machine translation. Reviewed: the 60 cells identical to source (docs/i18n/REVIEW-CHECKLIST.md), all ok. Not reviewed by a native speaker; known tone issues remain, e.g. admin accountManagement.createdAtCol ja-JP. Addendum 2026-09-29: added 3 keys committed after the first sign-off (admin billing.trialExpiredBanner/Action, onboarding guide.link), read by Claude and judged accurate; removed errors.subscription.trialExpired. Supersedes the 2026-05-26 approval (csv at a2ece23b). Addendum 2026-09-30: Codex reviewed and accepted billing.trialExpiredTitle, trialExpiredContinue, upgradeTitle, upgradeBody, upgradeAction, and upgradeMailSubject for the five admin target locales (30 cells), copied verbatim from existing locale files. The maintainer explicitly requested re-export and re-approval for #429. Prior cells and approvals are retained; no native-speaker review is claimed. Addendum 2026-10-01 (#434): Codex reviewed and accepted couponForm.clearIncompatible, couponForm.incompatibleCoupons, couponForm.incompatibleHint, orderStore.couponOrderImmutable, pos.shiftActive for the five admin target locales (25 cells), copied verbatim from existing locale files. The maintainer explicitly instructed Codex to update the SHA-256 and reviewer record. Prior cells and approvals are retained; no native-speaker review is claimed."
 }
