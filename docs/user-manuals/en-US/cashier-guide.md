@@ -13,7 +13,7 @@
 3. [Cashier System Interface](#cashier-system-interface)
 4. [Order Checkout Process](#order-checkout-process)
 5. [Payment Methods](#payment-methods)
-6. [Invoice Management](#invoice-management)
+6. [Receipt Handling](#receipt-handling)
 7. [Refunds & Cancellations](#refunds--cancellations)
 8. [Daily Reconciliation](#daily-reconciliation)
 9. [Report Queries](#report-queries)
@@ -81,7 +81,7 @@
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
 │  ✅ Order Checkout      ✅ Payment Processing          │
-│  ✅ Invoice Printing    ✅ Refund Requests             │
+│  ✅ Receipt Printing    ✅ Refund Requests             │
 │  ✅ Daily Settlement    ✅ Report Queries              │
 │  ✅ Amount Verification ✅ Exception Reporting         │
 │                                                         │
@@ -108,9 +108,9 @@
 │       ↓                                                │
 │  Collect Payment ────→ Verify Amount Correct          │
 │       ↓                                                │
-│  Complete Checkout ────→ Print Invoice/Receipt        │
+│  Complete Checkout ────→ Print Receipt                │
 │       ↓                                                │
-│  Hand Over Invoice ────→ Give Change (if needed)      │
+│  Hand Over Receipt ────→ Give Change (if needed)      │
 │       ↓                                                │
 │  Thank Customer ────→ Welcome Back                     │
 │                                                        │
@@ -155,7 +155,7 @@
 | 🔍 **Quick Search**    | Search Orders    | Search by table, order number, or phone |
 | 📋 **Order Details**   | View Details     | Display complete order content          |
 | 💳 **Checkout**        | Process Payment  | Enter payment flow                      |
-| 🧾 **Reprint Invoice** | Reprint          | Reprint lost or damaged invoices        |
+| 🧾 **Reprint Receipt** | Reprint          | Reprint lost or damaged receipts        |
 | 🔄 **Refund**          | Process Refund   | Apply for order refund                  |
 | 📊 **Reports**         | Query Reports    | View business data                      |
 | 🔐 **Settlement**      | Daily Settlement | Execute end-of-day reconciliation       |
@@ -316,7 +316,7 @@
 
 ---
 
-#### Step 5: Print Invoice/Receipt
+#### Step 5: Print Receipt
 
 ```
 ┌────────────────────────────────────────┐
@@ -365,17 +365,17 @@
 ```
 ✅ Final Confirmation Checklist
 
-1. [ ] Invoice/receipt printed
+1. [ ] Receipt printed
 2. [ ] Change amount correct
 3. [ ] Credit card receipt signed (if applicable)
-4. [ ] Hand invoice to customer
+4. [ ] Hand receipt to customer
 5. [ ] Thank customer politely
 ```
 
 **Standard Greeting:**
 
 ```
-"Here's your invoice and $439 change,
+"Here's your receipt and $439 change,
  please keep them safe. Thank you for dining with us,
  welcome back!"
 ```
@@ -510,7 +510,7 @@
 5️⃣ Customer confirms amount and completes payment
 6️⃣ System receives payment notification (3-5 sec)
 7️⃣ Display "Payment Successful" ✅
-8️⃣ Automatically print e-invoice
+8️⃣ Automatically print receipt
 ```
 
 ---
@@ -543,139 +543,9 @@ Procedure:
 
 ---
 
-## 🧾 Invoice Management
+## Receipt Handling
 
-### E-Invoice System
-
-```
-┌─────────────────────────────────────────────┐
-│ E-Invoice Flow                              │
-├─────────────────────────────────────────────┤
-│                                             │
-│  Customer Checkout                          │
-│       ↓                                     │
-│  Ask if Tax ID needed                       │
-│       ↓                                     │
-│  ┌──────────┐  ┌──────────┐               │
-│  │Need Tax ID│  │No Tax ID │               │
-│  └──────────┘  └──────────┘               │
-│       ↓              ↓                      │
-│  Enter Tax ID   Generate E-Invoice         │
-│       ↓              ↓                      │
-│  Print Company   Ask for Carrier           │
-│  Invoice              ↓                     │
-│                  ┌──────────┐              │
-│                  │Mobile Code│              │
-│                  │Member Car.│              │
-│                  │Citizen Dig│              │
-│                  │Print Paper│              │
-│                  └──────────┘              │
-│                       ↓                     │
-│                  Issue Complete ✅          │
-│                                             │
-└─────────────────────────────────────────────┘
-```
-
-### Invoice Issuance Steps
-
-#### Case 1: Personal Consumption (No Tax ID)
-
-```
-1. Ask customer: "Do you need a Tax ID?"
-2. Customer replies: "No"
-3. Ask: "Would you like to store invoice in carrier?"
-
-Option A: Use mobile barcode
-  → Customer shows mobile barcode
-  → Scan barcode
-  → Invoice automatically saved
-
-Option B: Use member carrier
-  → Enter member phone number
-  → System auto-links to member carrier
-
-Option C: Print paper
-  → Print invoice directly
-  → Hand to customer
-```
-
-#### Case 2: Company Reimbursement (Tax ID Required)
-
-```
-1. Ask customer: "Do you need a Tax ID?"
-2. Customer replies: "Yes, Tax ID is 12345678"
-3. Enter Tax ID: 12345678
-4. Ask: "Company name?"
-5. Enter company name: OOO Technology Co., Ltd.
-6. Print company invoice
-7. Check invoice information correct
-8. Hand to customer
-```
-
----
-
-### Invoice Reprint
-
-**When is reprint needed?**
-
-- Invoice machine paper jam
-- Invoice print unclear
-- Customer lost invoice
-- Invoice information incorrect (void first)
-
-**Reprint Process:**
-
-```
-1️⃣ Confirm order number
-2️⃣ Enter "Invoice Management"
-3️⃣ Search for transaction
-4️⃣ Click "Reprint Invoice"
-5️⃣ Verify invoice information
-6️⃣ Print and mark "REPRINT"
-7️⃣ Record reprint reason in system
-```
-
-⚠️ **Notes:**
-
-- Same invoice can be reprinted max 3 times
-- Reprinted invoice must note "REPRINT"
-- Record reprint time and reason
-- Customer signature required for receipt
-
----
-
-### Invoice Void
-
-**When to void invoice?**
-
-- Order canceled
-- Invoice information incorrect (Tax ID, name)
-- Amount issued incorrectly
-- Customer requests refund
-
-**Void Process:**
-
-```
-1️⃣ Confirm void conditions met
-   - Same day as issuance
-   - Not yet filed
-
-2️⃣ Retrieve original invoice (if paper)
-
-3️⃣ Execute void in system
-   - Enter order number
-   - Select "Void Invoice"
-   - Select void reason
-   - Enter remarks
-
-4️⃣ System confirms void ✅
-
-5️⃣ Stamp "VOID" on paper invoice
-
-6️⃣ File voided invoice for records
-
-7️⃣ If need to re-issue, execute new issuance process
-```
+The system currently prints receipts and does not issue electronic invoices. Each store handles invoices through its existing process.
 
 ---
 
@@ -737,8 +607,6 @@ Option C: Print paper
 │  Print Refund Receipt                       │
 │       ↓                                     │
 │  Customer Signs Confirmation                │
-│       ↓                                     │
-│  Void Original Invoice                      │
 │       ↓                                     │
 │  Refund Complete ✅                        │
 │                                             │
@@ -1636,27 +1504,9 @@ A: Standard response
 
 ---
 
-### Q3: What if invoice issued incorrectly?
+### Q3: What if a receipt is lost or unclear?
 
-```
-A: Invoice error handling
-
-If discovered same day:
-1️⃣ Void incorrect invoice
-2️⃣ Re-issue correct invoice
-3️⃣ Contact customer to exchange (if already left)
-
-If discovered next day:
-1️⃣ Contact tax personnel
-2️⃣ Evaluate if can void
-3️⃣ May need to issue credit note
-
-Prevention:
-✅ Verify before issuing
-✅ Check Tax ID digit by digit
-✅ Customer confirms company name
-✅ Check invoice before handing over
-```
+Confirm the order number and payment record, then reprint the receipt and give it to the customer. Ask a manager for help if reprinting is unavailable.
 
 ---
 
@@ -1894,7 +1744,7 @@ If truly urgent matter:
 │  📊 Accounting Department               │
 │     Extension: 102                      │
 │     Email: accounting@makanmakan.com    │
-│     Handle: Accounting, invoice issues  │
+│     Handle: Accounting, receipt issues  │
 │                                         │
 └─────────────────────────────────────────┘
 ```
@@ -1952,18 +1802,10 @@ If truly urgent matter:
 "Your change is $XXX, please check"
 ```
 
-**Invoice Issuance:**
+**Handing Receipt:**
 
 ```
-"Do you need a Tax ID?"
-"What's the company name?"
-"Would you like to store invoice in carrier?"
-```
-
-**Handing Invoice:**
-
-```
-"Here's your invoice, please keep it"
+"Here's your receipt, please keep it"
 "Thank you for dining, welcome back!"
 ```
 
@@ -1984,7 +1826,7 @@ If truly urgent matter:
 | Quick Search  | F1         |
 | Checkout      | F2         |
 | Cancel        | ESC        |
-| Print Invoice | Ctrl+P     |
+| Print Receipt | Ctrl+P     |
 | Reprint       | Ctrl+R     |
 | Refund        | Ctrl+Alt+R |
 | Lock Screen   | Ctrl+L     |
@@ -2003,7 +1845,7 @@ If truly urgent matter:
 │ 📊 Transaction Accuracy (30%)         │
 │    • Cash variance frequency          │
 │    • Error count                      │
-│    • Invoice error frequency          │
+│    • Receipt error frequency          │
 │                                        │
 │ ⚡ Service Efficiency (25%)           │
 │    • Average checkout time            │
