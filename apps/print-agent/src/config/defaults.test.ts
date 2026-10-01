@@ -1,7 +1,11 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createDefaultConfig } from "./defaults";
 
 const ORIGINAL_ENV = { ...process.env };
+
+beforeEach(() => {
+  delete process.env.PRINTER_ENCODING;
+});
 
 afterEach(() => {
   process.env = { ...ORIGINAL_ENV };
@@ -31,6 +35,7 @@ describe("createDefaultConfig", () => {
       serviceName: "Print Agent - Restaurant restaurant-42",
       restaurantId: "restaurant-42",
       cloudKey: undefined,
+      printerEncoding: undefined,
       autoDiscovery: false,
       discoveryInterval: 45000,
       heartbeatInterval: 90000,
@@ -38,6 +43,38 @@ describe("createDefaultConfig", () => {
       maxRetries: 5,
       retryDelay: 3000,
     });
+  });
+
+  it.each(["utf8", "big5", "gbk", " BIG5 "])(
+    "accepts and normalizes PRINTER_ENCODING=%s",
+    (value) => {
+      process.env.PRINT_AGENT_API_KEY = "explicit-api-key";
+      process.env.PRINTER_ENCODING = value;
+
+      expect(createDefaultConfig().printerEncoding).toBe(
+        value.trim().toLowerCase(),
+      );
+    },
+  );
+
+  it.each([undefined, "", "   "])(
+    "leaves encoding unset for PRINTER_ENCODING=%s",
+    (value) => {
+      process.env.PRINT_AGENT_API_KEY = "explicit-api-key";
+      if (value === undefined) delete process.env.PRINTER_ENCODING;
+      else process.env.PRINTER_ENCODING = value;
+
+      expect(createDefaultConfig().printerEncoding).toBeUndefined();
+    },
+  );
+
+  it("rejects unsupported printer encodings", () => {
+    process.env.PRINT_AGENT_API_KEY = "explicit-api-key";
+    process.env.PRINTER_ENCODING = "latin1";
+
+    expect(() => createDefaultConfig()).toThrow(
+      "PRINTER_ENCODING must be utf8, big5 or gbk",
+    );
   });
 
   it("refuses to create a config without an explicit API key", () => {

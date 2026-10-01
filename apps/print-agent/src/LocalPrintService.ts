@@ -29,6 +29,7 @@ import type {
   PrintRequest,
   PrintResponse,
   PrinterEvent,
+  PrinterCapabilities,
 } from "@makanmasak/shared-types";
 
 type WebSocketClientInfo = {
@@ -156,6 +157,7 @@ export interface LocalPrintServiceConfig {
   restaurantId: string;
 
   // 打印機設定
+  printerEncoding?: PrinterCapabilities["encoding"];
   autoDiscovery: boolean;
   discoveryInterval: number; // ms
   heartbeatInterval: number; // ms

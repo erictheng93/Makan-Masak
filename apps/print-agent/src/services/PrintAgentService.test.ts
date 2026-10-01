@@ -1,9 +1,10 @@
 import { createServer } from "node:net";
 import type { AddressInfo, Server } from "node:net";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { PrinterService } from "@makanmasak/queue-core/print";
 import { PrintAgentService } from "./PrintAgentService";
 import type { LocalPrintServiceConfig } from "../LocalPrintService";
-import type { PrintRequest } from "@makanmasak/shared-types";
+import type { PrinterDevice, PrintRequest } from "@makanmasak/shared-types";
 
 const buildConfig = (
   overrides: Partial<LocalPrintServiceConfig> = {},
@@ -41,6 +42,74 @@ const buildPrintRequest = (overrides: Record<string, unknown> = {}) =>
     },
     ...overrides,
   }) as PrintRequest;
+
+describe("PrintAgentService printer encoding", () => {
+  const device: PrinterDevice = {
+    id: "test-printer",
+    name: "Test printer",
+    brand: "generic",
+    model: "Generic",
+    connection: "network",
+    address: "127.0.0.1:9100",
+    status: "offline",
+    capabilities: {
+      maxWidth: 32,
+      supportsGraphics: false,
+      supportsCutter: true,
+      supportsDrawer: true,
+      supportsQRCode: false,
+      supportsBarcode: true,
+      supportedEncodings: ["utf8"],
+      paperSizes: [],
+    },
+    lastSeen: new Date(),
+    isDefault: false,
+  };
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it("overrides encoding and preserves other capabilities when registering", async () => {
+    vi.spyOn(PrinterService.prototype, "getDevice").mockReturnValue(null);
+    const registerPrinter = vi
+      .spyOn(PrinterService.prototype, "registerPrinter")
+      .mockResolvedValue(undefined);
+    const agent = new PrintAgentService(
+      buildConfig({ printerEncoding: "big5" }),
+    );
+
+    await agent.registerPrinter({
+      ...device,
+      capabilities: { ...device.capabilities, encoding: "utf8" },
+    });
+
+    expect(registerPrinter).toHaveBeenCalledWith(
+      expect.objectContaining({
+        capabilities: expect.objectContaining({
+          ...device.capabilities,
+          encoding: "big5",
+        }),
+      }),
+    );
+    expect(device.capabilities).not.toHaveProperty("encoding");
+  });
+
+  it("does not add encoding when the agent has no override", async () => {
+    vi.spyOn(PrinterService.prototype, "getDevice").mockReturnValue(null);
+    const registerPrinter = vi
+      .spyOn(PrinterService.prototype, "registerPrinter")
+      .mockResolvedValue(undefined);
+    const agent = new PrintAgentService(buildConfig());
+
+    await agent.registerPrinter(device);
+
+    expect(registerPrinter).toHaveBeenCalledWith(
+      expect.objectContaining({ capabilities: device.capabilities }),
+    );
+    expect(registerPrinter.mock.calls[0][0].capabilities).not.toHaveProperty(
+      "encoding",
+    );
+  });
+});
 
 describe("PrintAgentService health semantics", () => {
   let agent: PrintAgentService | undefined;

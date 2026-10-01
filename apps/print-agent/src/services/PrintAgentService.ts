@@ -207,7 +207,12 @@ export class PrintAgentService {
         model: device.model,
         connectionType: device.connection,
         connectionParams: { address: device.address },
-        capabilities: device.capabilities,
+        capabilities: {
+          ...device.capabilities,
+          ...(this.config.printerEncoding && {
+            encoding: this.config.printerEncoding,
+          }),
+        },
         isDefault: false,
       });
 
