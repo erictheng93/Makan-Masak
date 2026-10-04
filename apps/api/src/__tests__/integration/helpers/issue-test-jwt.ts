@@ -141,7 +141,7 @@ async function issueDbBackedJwt(
   const userId = claims.userId ?? 1;
   const row = await ensureTokenUser(db, role, claims);
 
-  return issueTestJwt(role, {
+  const token = await issueTestJwt(role, {
     ...claims,
     userId,
     username: claims.username ?? row?.username,
@@ -149,6 +149,36 @@ async function issueDbBackedJwt(
       claims.restaurantId ?? row?.restaurant_id ?? claims.restaurantId,
     tokenVersion: Number(row?.token_version ?? claims.tokenVersion ?? 1),
   });
+  await recordTestSession(db, userId, token, claims.expiresInSeconds ?? 3600);
+  return token;
+}
+
+/** Staff auth requires an active sessions row matching the access token. */
+async function recordTestSession(
+  db: D1Database | undefined,
+  userId: TestUserId,
+  token: string,
+  expiresInSeconds: number,
+): Promise<void> {
+  if (!db) return;
+  const now = Date.now();
+  await db
+    .prepare(
+      `INSERT INTO sessions (
+         id, user_id, token, is_active,
+         last_accessed_at_ms, expires_at_ms, created_at_ms, updated_at_ms
+       ) VALUES (?, ?, ?, 1, ?, ?, ?, ?)`,
+    )
+    .bind(
+      crypto.randomUUID(),
+      normalizeTestUserId(userId),
+      token,
+      now,
+      now + expiresInSeconds * 1000,
+      now,
+      now,
+    )
+    .run();
 }
 
 export function buildAuthHelper(db?: D1Database): AuthHelper {
