@@ -301,6 +301,17 @@ const handleLookup = async () => {
     return;
   }
 
+  if (!hasCustomerAccessToken()) {
+    void router.push({
+      path: "/login",
+      query: {
+        redirect: `/r/${props.restaurantId}/wait-list`,
+        phone: normalizedPhone.value,
+        mode: "otp",
+      },
+    });
+    return;
+  }
   isSubmitting.value = true;
   formMessage.value = "";
 
@@ -310,7 +321,22 @@ const handleLookup = async () => {
       normalizedPhone.value,
     );
     routeToTicket(ticket);
-  } catch {
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "status" in error &&
+      error.status === 403
+    ) {
+      void router.push({
+        path: "/login",
+        query: {
+          redirect: `/r/${props.restaurantId}/wait-list`,
+          phone: normalizedPhone.value,
+          mode: "otp",
+        },
+      });
+    }
     formMessage.value = t("waitingList.errors.lookupFailed");
   } finally {
     isSubmitting.value = false;

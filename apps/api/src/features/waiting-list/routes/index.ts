@@ -6,9 +6,16 @@
 import { Hono } from "hono";
 import {
   authMiddleware,
+  optionalAuth,
   optionalCanonicalCustomerAuthMiddleware,
   requireRole,
 } from "../../../middleware/auth";
+import {
+  issueWaitingTicketToken,
+  requireWaitingTicketAccess,
+  requireVerifiedWaitingPhone,
+  requireWaitingRestaurantScope,
+} from "../../../shared/services/waiting-ticket-access";
 import { moduleGate } from "../../../middleware/moduleGate";
 import { WaitingListService } from "@makanmasak/database";
 import type { Env } from "../../../types/env";
@@ -75,16 +82,18 @@ app.post("/", optionalCanonicalCustomerAuthMiddleware, async (c) => {
     throw badRequest("缺少必填欄位");
   }
 
+  requireWaitingRestaurantScope(c.env, body.restaurantId);
   const entry = await service.joinWaitingList({
     ...body,
     customerId: customer?.id,
   });
+  if (entry.alreadyJoined) await requireWaitingTicketAccess(c, entry);
   await waitUntilBackgroundTasks(c, service);
 
   return c.json(
     {
       success: true,
-      data: entry,
+      data: { ...entry, waitingToken: issueWaitingTicketToken(c.env, entry) },
       message: `已加入候位，號碼 ${entry.queueDisplay}`,
     },
     201,
@@ -93,97 +102,120 @@ app.post("/", optionalCanonicalCustomerAuthMiddleware, async (c) => {
 
 /**
  * GET /waiting-list/lookup?restaurantId=&phone=
- * G3: 顧客遺失 ticketId 後依手機找回當日 active 票（公開）。
+ * Recover an active ticket after canonical customer phone verification.
  *     僅回 status in (waiting | called | confirmed) 的票；終態票一律
  *     視為「無 active 票」回 404，避免洩漏歷史。
  *
  * IMPORTANT: must be registered BEFORE GET /:id, otherwise Hono routes
  * `/lookup` to the parametric handler with id="lookup".
  */
-app.get("/lookup", async (c) => {
-  const restaurantId = c.req.query("restaurantId");
-  const phoneRaw = c.req.query("phone");
+app.get(
+  "/lookup",
+  optionalCanonicalCustomerAuthMiddleware,
+  strictRateLimit,
+  async (c) => {
+    const restaurantId = c.req.query("restaurantId");
+    const phoneRaw = c.req.query("phone");
 
-  if (!restaurantId) {
-    throw badRequest("缺少 restaurantId 參數", "MISSING_RESTAURANT_ID");
-  }
-  if (!phoneRaw) {
-    throw badRequest("缺少 phone 參數", "MISSING_PHONE");
-  }
+    if (!restaurantId) {
+      throw badRequest("缺少 restaurantId 參數", "MISSING_RESTAURANT_ID");
+    }
+    if (!phoneRaw) {
+      throw badRequest("缺少 phone 參數", "MISSING_PHONE");
+    }
 
-  // 與 service 層 validateWaitingListData 一致的台灣手機格式
-  const phone = phoneRaw.replace(/[-\s]/g, "");
-  if (!/^09\d{8}$/.test(phone)) {
-    throw badRequest("電話格式錯誤", "INVALID_PHONE_FORMAT");
-  }
+    // 與 service 層 validateWaitingListData 一致的台灣手機格式
+    const phone = phoneRaw.replace(/[-\s]/g, "");
+    if (!/^09\d{8}$/.test(phone)) {
+      throw badRequest("電話格式錯誤", "INVALID_PHONE_FORMAT");
+    }
 
-  const service = new WaitingListService(c.env.DB, c.env);
-  const entry = await service.findActiveTicketByPhone(restaurantId, phone);
+    requireWaitingRestaurantScope(c.env, restaurantId);
+    await requireVerifiedWaitingPhone(c, phone);
+    const service = new WaitingListService(c.env.DB, c.env);
+    const entry = await service.findActiveTicketByPhone(restaurantId, phone);
 
-  if (!entry) {
-    throw notFound("當日無 active 候位記錄", "NO_ACTIVE_TICKET");
-  }
+    if (!entry) {
+      throw notFound("當日無 active 候位記錄", "NO_ACTIVE_TICKET");
+    }
 
-  return c.json({
-    success: true,
-    data: entry,
-  });
-});
+    return c.json({
+      success: true,
+      data: { ...entry, waitingToken: issueWaitingTicketToken(c.env, entry) },
+    });
+  },
+);
 
 /**
  * GET /waiting-list/history?restaurantId=&phone=&limit=
- * 顧客依手機查詢候位歷史。公開端點必須限流，避免手機號碼枚舉。
+ * History requires a canonical customer with verified ownership of the phone.
  */
-app.get("/history", strictRateLimit, async (c) => {
-  const restaurantId = c.req.query("restaurantId");
-  const phoneRaw = c.req.query("phone");
-  const limit = Number.parseInt(c.req.query("limit") || "20", 10);
+app.get(
+  "/history",
+  optionalCanonicalCustomerAuthMiddleware,
+  strictRateLimit,
+  async (c) => {
+    const restaurantId = c.req.query("restaurantId");
+    const phoneRaw = c.req.query("phone");
+    const limit = Number.parseInt(c.req.query("limit") || "20", 10);
 
-  if (!restaurantId) {
-    throw badRequest("缺少 restaurantId 參數", "MISSING_RESTAURANT_ID");
-  }
-  if (!phoneRaw) {
-    throw badRequest("缺少 phone 參數", "MISSING_PHONE");
-  }
+    if (!restaurantId) {
+      throw badRequest("缺少 restaurantId 參數", "MISSING_RESTAURANT_ID");
+    }
+    if (!phoneRaw) {
+      throw badRequest("缺少 phone 參數", "MISSING_PHONE");
+    }
 
-  const phone = phoneRaw.replace(/[-\s]/g, "");
-  if (!/^09\d{8}$/.test(phone)) {
-    throw badRequest("電話格式錯誤", "INVALID_PHONE_FORMAT");
-  }
+    const phone = phoneRaw.replace(/[-\s]/g, "");
+    if (!/^09\d{8}$/.test(phone)) {
+      throw badRequest("電話格式錯誤", "INVALID_PHONE_FORMAT");
+    }
 
-  const service = new WaitingListService(c.env.DB, c.env);
-  const history = await service.listWaitingListHistoryByPhone(
-    restaurantId,
-    phone,
-    Number.isFinite(limit) ? limit : 20,
-  );
+    requireWaitingRestaurantScope(c.env, restaurantId);
+    await requireVerifiedWaitingPhone(c, phone);
+    const service = new WaitingListService(c.env.DB, c.env);
+    const history = await service.listWaitingListHistoryByPhone(
+      restaurantId,
+      phone,
+      Number.isFinite(limit) ? limit : 20,
+    );
 
-  return c.json({
-    success: true,
-    data: history,
-  });
-});
+    return c.json({
+      success: true,
+      data: history.map((entry) => ({
+        ...entry,
+        waitingToken: issueWaitingTicketToken(c.env, entry),
+      })),
+    });
+  },
+);
 
 /**
  * GET /waiting-list/:id
  * 查詢候位記錄詳情
  */
-app.get("/:id", async (c) => {
-  const id = c.req.param("id");
-  if (!id) throw badRequest("Missing id parameter", "MISSING_PARAM");
-  const service = new WaitingListService(c.env.DB, c.env);
+app.get(
+  "/:id",
+  optionalCanonicalCustomerAuthMiddleware,
+  optionalAuth,
+  async (c) => {
+    const id = c.req.param("id");
+    if (!id) throw badRequest("Missing id parameter", "MISSING_PARAM");
+    const service = new WaitingListService(c.env.DB, c.env);
 
-  const entry = await service.getWaitingListEntryById(id);
+    const entry = await service.getWaitingListEntryById(id);
 
-  if (!entry) {
-    throw notFound("找不到此候位記錄");
-  }
+    if (!entry) {
+      throw notFound("找不到此候位記錄");
+    }
 
-  return c.json({
-    success: true,
-    data: entry,
-  });
-});
+    await requireWaitingTicketAccess(c, entry);
+    return c.json({
+      success: true,
+      data: entry,
+    });
+  },
+);
 
 /**
  * GET /waiting-list/queue-status/:restaurantId
@@ -223,70 +255,63 @@ app.get("/estimate-wait/:restaurantId", async (c) => {
 
 /**
  * DELETE /waiting-list/:id
- * 取消候位（公開，使用電話驗證）
+ * Cancel with the guest capability, canonical ownership, or scoped staff auth.
  */
-app.delete("/:id", async (c) => {
-  const id = c.req.param("id");
-  if (!id) throw badRequest("Missing id parameter", "MISSING_PARAM");
-  const { customerPhone } = await c.req.json();
+app.delete(
+  "/:id",
+  optionalCanonicalCustomerAuthMiddleware,
+  optionalAuth,
+  async (c) => {
+    const id = c.req.param("id");
+    if (!id) throw badRequest("Missing id parameter", "MISSING_PARAM");
+    const service = new WaitingListService(c.env.DB, c.env);
 
-  if (!customerPhone) {
-    throw badRequest("需要提供電話號碼");
-  }
+    // Establish ownership before mutating the ticket.
+    const entry = await service.getWaitingListEntryById(id);
+    if (!entry) throw notFound("找不到此候位記錄");
+    await requireWaitingTicketAccess(c, entry);
 
-  const service = new WaitingListService(c.env.DB, c.env);
+    const cancelled = await service.cancelWaiting(id);
+    await waitUntilBackgroundTasks(c, service);
 
-  // 驗證電話號碼
-  const entry = await service.getWaitingListEntryById(id);
-  if (!entry || entry.customerPhone !== customerPhone) {
-    throw forbidden("電話號碼不符");
-  }
-
-  const cancelled = await service.cancelWaiting(id);
-  await waitUntilBackgroundTasks(c, service);
-
-  return c.json({
-    success: true,
-    data: cancelled,
-    message: "候位已取消",
-  });
-});
+    return c.json({
+      success: true,
+      data: cancelled,
+      message: "候位已取消",
+    });
+  },
+);
 
 /**
  * POST /waiting-list/:id/confirm
- * G5: 顧客確認候位（公開）—— 必須帶 customerPhone 做主驗證，
- *     防止任何拿到 ticketId 的人替顧客「代為確認」。比對策略與
- *     DELETE /:id 取消端點一致：直接 string equality，不做 phone
- *     normalize（避免引入新歧義）。
+ * Confirm with the same ownership proof used for reads and cancellation.
  */
-app.post("/:id/confirm", async (c) => {
-  const id = c.req.param("id");
-  if (!id) throw badRequest("Missing id parameter", "MISSING_PARAM");
+app.post(
+  "/:id/confirm",
+  optionalCanonicalCustomerAuthMiddleware,
+  optionalAuth,
+  async (c) => {
+    const id = c.req.param("id");
+    if (!id) throw badRequest("Missing id parameter", "MISSING_PARAM");
 
-  const { customerPhone } = await c.req.json<{ customerPhone?: string }>();
-  if (!customerPhone) {
-    throw badRequest("需要提供電話號碼", "MISSING_PHONE");
-  }
+    const service = new WaitingListService(c.env.DB, c.env);
 
-  const service = new WaitingListService(c.env.DB, c.env);
+    const entry = await service.getWaitingListEntryById(id);
+    if (!entry) {
+      throw notFound("找不到此候位記錄", "ENTRY_NOT_FOUND");
+    }
+    await requireWaitingTicketAccess(c, entry);
 
-  const entry = await service.getWaitingListEntryById(id);
-  if (!entry) {
-    throw notFound("找不到此候位記錄", "ENTRY_NOT_FOUND");
-  }
-  if (entry.customerPhone !== customerPhone) {
-    throw forbidden("電話號碼不符", "PHONE_MISMATCH");
-  }
+    const confirmed = await service.confirmWaiting(id);
+    await waitUntilBackgroundTasks(c, service);
 
-  const confirmed = await service.confirmWaiting(id);
-  await waitUntilBackgroundTasks(c, service);
-
-  return c.json({
-    success: true,
-    data: confirmed,
-    message: "已確認，請盡快入座",
-  });
-});
+    return c.json({
+      success: true,
+      data: confirmed,
+      message: "已確認，請盡快入座",
+    });
+  },
+);
 
 app.use("/*", authMiddleware);
 app.use("/*", moduleGate("reservations"));

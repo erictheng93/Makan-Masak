@@ -1,3 +1,4 @@
+import { staffAuthDatabase } from "../__tests__/staff-auth-fixture";
 import { describe, expect, it } from "vitest";
 import { sign } from "hono/jwt";
 import { Hono } from "hono";
@@ -37,7 +38,7 @@ describe("GET /analytics/export", () => {
       new Request("https://images.test/analytics/export?format=json", {
         headers: { Authorization: `Bearer ${token}` },
       }),
-      { JWT_SECRET } as Env,
+      { JWT_SECRET, DB: staffAuthDatabase() } as unknown as Env,
     );
 
     expect(response.status).toBe(501);

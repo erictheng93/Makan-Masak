@@ -5,6 +5,7 @@
  * order with its customer without changing anonymous ordering.
  */
 
+import { requireWaitingPreorderAccess } from "../../../shared/services/waiting-ticket-access";
 import { Hono } from "hono";
 import { and, eq } from "drizzle-orm";
 import {
@@ -158,6 +159,14 @@ app.post(
       if (!seat || seat.tableId !== data.tableId) {
         throw badRequest("Seat not found or does not belong to this table");
       }
+    }
+
+    if (data.waitingListId) {
+      await requireWaitingPreorderAccess(
+        c,
+        data.waitingListId,
+        data.restaurantId,
+      );
     }
 
     // 4. Create order via OrdersService

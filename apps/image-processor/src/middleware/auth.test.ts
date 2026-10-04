@@ -1,7 +1,15 @@
+import Database from "better-sqlite3";
 import { describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
 import { sign } from "hono/jwt";
-import { apiKeyAuth, authMiddleware, corsMiddleware } from "./auth";
+import {
+  apiKeyAuth,
+  authMiddleware,
+  optionalAuth,
+  corsMiddleware,
+} from "./auth";
+
+import { staffAuthDatabase } from "../__tests__/staff-auth-fixture";
 
 function createApp(env: Record<string, unknown>) {
   const app = new Hono();
@@ -44,7 +52,12 @@ describe("image processor JWT auth (UUID token shape)", () => {
   const userUuid = "01890a5d-ac96-774b-bcce-b302099a8057";
   const restaurantUuid = "01890a5d-ac96-774b-bcce-b302099a8058";
 
-  async function requestWith(claims: Record<string, unknown>) {
+  async function requestWith(
+    claims: Record<string, unknown>,
+    current?: Record<string, unknown> | null,
+    optional = false,
+    sessionActive = true,
+  ) {
     const now = Math.floor(Date.now() / 1000);
     const token = await sign(
       { iat: now, exp: now + 3600, ...claims },
@@ -52,14 +65,31 @@ describe("image processor JWT auth (UUID token shape)", () => {
     );
 
     const app = new Hono();
-    app.use("*", (c, next) => authMiddleware(c as never, next));
+    app.use("*", (c, next) =>
+      (optional ? optionalAuth : authMiddleware)(c as never, next),
+    );
     app.get("/protected", (c) => c.json({ user: c.get("user") }));
 
     return app.fetch(
       new Request("https://images.test/protected", {
         headers: { Authorization: `Bearer ${token}` },
       }),
-      { JWT_SECRET: jwtSecret },
+      {
+        JWT_SECRET: jwtSecret,
+        DB: staffAuthDatabase(
+          current === undefined
+            ? {
+                id: userUuid,
+                username: claims.username,
+                role: claims.role,
+                restaurant_id: claims.restaurantId ?? null,
+                is_active: 1,
+                token_version: 1,
+              }
+            : current,
+          sessionActive,
+        ),
+      },
     );
   }
 
@@ -98,6 +128,79 @@ describe("image processor JWT auth (UUID token shape)", () => {
     };
     expect(body.user.id).toBe(userUuid);
     expect(body.user).not.toHaveProperty("restaurantId");
+  });
+
+  it.each([
+    ["inactive", { is_active: 0 }],
+    ["renamed", { username: "renamed" }],
+    ["demoted", { role: 4 }],
+    ["revoked version", { token_version: 2 }],
+  ])(
+    "rejects %s staff tokens on required and optional auth",
+    async (_name, drift) => {
+      const claims = {
+        sub: userUuid,
+        username: "owner1",
+        role: 1,
+        restaurantId: restaurantUuid,
+        tv: 1,
+      };
+      const current = {
+        id: userUuid,
+        username: "owner1",
+        role: 1,
+        restaurant_id: restaurantUuid,
+        is_active: 1,
+        token_version: 1,
+        ...drift,
+      };
+      expect((await requestWith(claims, current)).status).toBe(401);
+      const optional = await requestWith(claims, current, true);
+      expect(optional.status).toBe(200);
+      expect(await optional.json()).toEqual({});
+    },
+  );
+
+  it("uses the staff member's current restaurant instead of the stale token claim", async () => {
+    const currentRestaurant = "01890a5d-ac96-774b-bcce-b302099a8059";
+    const claims = {
+      sub: userUuid,
+      username: "owner1",
+      role: 1,
+      restaurantId: restaurantUuid,
+      tv: 1,
+    };
+    const current = {
+      id: userUuid,
+      username: "owner1",
+      role: 1,
+      restaurant_id: currentRestaurant,
+      is_active: 1,
+      token_version: 1,
+    };
+    for (const optional of [false, true]) {
+      const response = await requestWith(claims, current, optional);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        user: { restaurantId: currentRestaurant },
+      });
+    }
+  });
+
+  it("rejects terminated or rotated sessions on required and optional auth", async () => {
+    const claims = {
+      sub: userUuid,
+      username: "owner1",
+      role: 1,
+      restaurantId: restaurantUuid,
+      tv: 1,
+    };
+    expect((await requestWith(claims, undefined, false, false)).status).toBe(
+      401,
+    );
+    expect(
+      await (await requestWith(claims, undefined, true, false)).json(),
+    ).toEqual({});
   });
 
   it("rejects the legacy integer-id payload shape", async () => {
@@ -218,5 +321,69 @@ describe("image processor CORS", () => {
     expect(response.headers.get("access-control-allow-origin")).toBe(
       "https://makanmasak.com",
     );
+  });
+});
+
+describe("image auth session SQL", () => {
+  it("requires the current stored access token and an unexpired active session", async () => {
+    const sqlite = new Database(":memory:");
+    sqlite.exec(`
+      CREATE TABLE users (id TEXT, username TEXT, role INTEGER, restaurant_id TEXT, is_active INTEGER, token_version INTEGER);
+      CREATE TABLE sessions (id TEXT, user_id TEXT, token TEXT, is_active INTEGER, expires_at_ms INTEGER);
+      INSERT INTO users VALUES ('01890a5d-ac96-774b-bcce-b302099a8057', 'admin', 0, NULL, 1, 1);
+    `);
+    const secret = "test-jwt-secret-with-at-least-32-chars";
+    const now = Math.floor(Date.now() / 1000);
+    const token = await sign(
+      {
+        sub: "01890a5d-ac96-774b-bcce-b302099a8057",
+        username: "admin",
+        role: 0,
+        tv: 1,
+        iat: now,
+        exp: now + 3600,
+      },
+      secret,
+    );
+    const insert = sqlite.prepare(
+      "INSERT INTO sessions VALUES (?, ?, ?, ?, ?)",
+    );
+    const app = new Hono();
+    app.use("*", (c, next) => authMiddleware(c as never, next));
+    app.get("/protected", (c) => c.json({ user: c.get("user") }));
+    const db = {
+      prepare: (query: string) => ({
+        bind: (...params: (string | number)[]) => ({
+          first: async () => sqlite.prepare(query).get(...params) ?? null,
+        }),
+      }),
+    };
+    const request = () =>
+      app.fetch(
+        new Request("https://images.test/protected", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        { JWT_SECRET: secret, DB: db },
+      );
+    try {
+      for (const [storedToken, active, expires, expectedStatus] of [
+        [token, 1, Date.now() + 3600_000, 200],
+        [token, 0, Date.now() + 3600_000, 401],
+        ["rotated-token", 1, Date.now() + 3600_000, 401],
+        [token, 1, Date.now() - 1000, 401],
+      ] as const) {
+        sqlite.exec("DELETE FROM sessions");
+        insert.run(
+          "session-1",
+          "01890a5d-ac96-774b-bcce-b302099a8057",
+          storedToken,
+          active,
+          expires,
+        );
+        expect((await request()).status).toBe(expectedStatus);
+      }
+    } finally {
+      sqlite.close();
+    }
   });
 });

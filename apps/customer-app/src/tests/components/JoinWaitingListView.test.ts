@@ -1,9 +1,13 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import JoinWaitingListView from "@/views/waiting-list/JoinWaitingListView.vue";
 import { waitingListApi } from "@/services/waitingListApi";
 import customerPushService from "@/utils/push-notifications";
-import { WAITING_LIST_LAST_TICKET_KEY } from "@/composables/useWaitingTicket";
+import { defineComponent, h } from "vue";
+import {
+  useWaitingTicket,
+  WAITING_LIST_LAST_TICKET_KEY,
+} from "@/composables/useWaitingTicket";
 import { WaitingStatus } from "@makanmasak/shared-types";
 
 vi.mock("@/composables/useI18n", () => ({
@@ -92,6 +96,39 @@ describe("JoinWaitingListView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+  });
+
+  it("shows ownership denial without an unhandled background polling rejection", async () => {
+    vi.mocked(waitingListApi.getById).mockRejectedValue(
+      new Error("Ticket ownership required"),
+    );
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          const { error } = useWaitingTicket("ticket-1");
+          return () => h("p", error.value?.message);
+        },
+      }),
+    );
+    await flushPromises();
+    expect(wrapper.text()).toBe("Ticket ownership required");
+    wrapper.unmount();
+  });
+
+  it("keeps a verified no-ticket response on the lookup form", async () => {
+    vi.mocked(waitingListApi.lookup).mockRejectedValue({ status: 404 });
+    const wrapper = mount(JoinWaitingListView, {
+      props: { restaurantId: "restaurant-1" },
+      global: { stubs: { QueueListIcon: true } },
+    });
+    await wrapper
+      .find('[data-testid="customer-phone-input"]')
+      .setValue("0912345678");
+    await wrapper.find('[data-testid="lookup-button"]').trigger("click");
+    await vi.waitFor(() =>
+      expect(wrapper.text()).toContain("waitingList.errors.lookupFailed"),
+    );
+    expect(routerMocks.push).not.toHaveBeenCalled();
   });
 
   /**

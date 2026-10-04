@@ -123,15 +123,26 @@ interface D1MockRows {
 function createDb(rows: D1MockRows = {}) {
   return {
     prepare: vi.fn((sql: string) => ({
-      bind: vi.fn(() => {
+      bind: vi.fn((...bindings: unknown[]) => {
+        const scopedRow = (row: Record<string, unknown> | null | undefined) => {
+          if (!row) return null;
+          const { tenant, ...columns } = row;
+          if (
+            tenant &&
+            sql.includes('"restaurant_id" = ?') &&
+            !bindings.includes(tenant)
+          )
+            return null;
+          return columns;
+        };
         const takeRow = () => {
           const normalizedSql = sql.toLowerCase();
           if (normalizedSql.includes('from "payment_transactions"')) {
-            return rows.transaction?.shift() ?? null;
+            return scopedRow(rows.transaction?.shift());
           }
 
           if (normalizedSql.includes("payment_transaction_id")) {
-            return rows.orderStatus?.shift() ?? null;
+            return scopedRow(rows.orderStatus?.shift());
           }
 
           if (
@@ -161,14 +172,19 @@ function createDb(rows: D1MockRows = {}) {
 
 let authenticated = true;
 
-function request(path: string, init: RequestInit = {}, db = createDb()) {
+function request(
+  path: string,
+  init: RequestInit = {},
+  db = createDb(),
+  env: Record<string, unknown> = {},
+) {
   const app = new Hono<{ Variables: { user: typeof authState.user } }>();
   app.use("*", async (c, next) => {
     if (authenticated) c.set("user", authState.user);
     await next();
   });
   app.route("/", routes);
-  return app.request(path, init, { DB: db } as never);
+  return app.request(path, init, { DB: db, ...env } as never);
 }
 
 async function json(response: Response) {
@@ -557,10 +573,91 @@ describe("payments routes", () => {
     expect(mocks.paymentService.processPayment).not.toHaveBeenCalled();
   });
 
+  it("requires a staff identity for payment status", async () => {
+    authenticated = false;
+    expect((await request("/status/txn-1")).status).toBe(401);
+  });
+
+  it.each(["transaction", "legacy"])(
+    "hides foreign %s payment status",
+    async (kind) => {
+      const db = createDb({
+        transaction:
+          kind === "transaction"
+            ? [
+                {
+                  transaction_id: "foreign",
+                  order_id: orderId404,
+                  status: "paid",
+                  tenant: "restaurant-2",
+                },
+              ]
+            : [null],
+        orderStatus:
+          kind === "legacy"
+            ? [
+                {
+                  id: orderId505,
+                  payment_status: "paid",
+                  tenant: "restaurant-2",
+                },
+              ]
+            : [null],
+      });
+      expect((await request("/status/foreign", undefined, db)).status).toBe(
+        404,
+      );
+    },
+  );
+
+  it("allows platform admins across tenants only in SaaS deployments", async () => {
+    authState.user.role = 0;
+    const makeDb = () =>
+      createDb({
+        transaction: [
+          {
+            transaction_id: "foreign",
+            order_id: orderId404,
+            status: "paid",
+            tenant: "restaurant-2",
+          },
+        ],
+      });
+    expect((await request("/status/foreign", undefined, makeDb())).status).toBe(
+      200,
+    );
+    expect(
+      (
+        await request("/status/foreign", undefined, makeDb(), {
+          DEPLOYMENT_MODE: "independent",
+          TENANT_ID: "restaurant-1",
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await request("/status/foreign", undefined, makeDb(), {
+          DEPLOYMENT_MODE: "independent",
+        })
+      ).status,
+    ).toBe(403);
+  });
+
+  it("rejects customer identities for staff payment status", async () => {
+    authState.user.role = 5;
+    expect((await request("/status/txn-1")).status).toBe(403);
+  });
+
+  it("rejects scoped staff without a restaurant", async () => {
+    authState.user.restaurantId = "";
+    expect((await request("/status/txn-1")).status).toBe(403);
+  });
+
   it("returns payment transaction status rows before order fallbacks", async () => {
     const db = createDb({
       transaction: [
         {
+          tenant: "restaurant-1",
           transaction_id: "txn-1",
           order_id: orderId404,
           status: "paid",
@@ -589,6 +686,7 @@ describe("payments routes", () => {
       transaction: [null],
       orderStatus: [
         {
+          tenant: "restaurant-1",
           id: orderId505,
           payment_status: "paid",
         },

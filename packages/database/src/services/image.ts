@@ -1,4 +1,12 @@
-import { eq, desc, count, and, sql, inArray } from "drizzle-orm";
+import {
+  eq,
+  desc,
+  count,
+  and,
+  sql,
+  inArray,
+  type SQLWrapper,
+} from "drizzle-orm";
 import { BaseService } from "./base";
 import {
   images,
@@ -711,15 +719,37 @@ export class ImageService extends BaseService {
     return result[0] || null;
   }
 
+  private analyticsConditions(
+    options: ImageAnalyticsOptions,
+    timestamp: SQLWrapper = images.uploadedAt,
+  ) {
+    const conditions = [eq(images.isActive, true)];
+    if (options.restaurantId !== undefined) {
+      conditions.push(eq(images.restaurantId, options.restaurantId));
+    }
+    if (options.dateFrom) {
+      conditions.push(
+        sql`${timestamp} >= ${new Date(options.dateFrom).getTime()}`,
+      );
+    }
+    if (options.dateTo) {
+      conditions.push(
+        sql`${timestamp} <= ${new Date(options.dateTo).getTime()}`,
+      );
+    }
+    return conditions;
+  }
+
   /**
    * Get image analytics summary
    */
-  async getImageAnalyticsSummary(): Promise<{
+  async getImageAnalyticsSummary(options: ImageAnalyticsOptions = {}): Promise<{
     total_images: number;
     total_storage: number;
     avg_file_size: number;
     processed_today: number;
   }> {
+    const conditions = this.analyticsConditions(options);
     const basicStats = await this.db
       .select({
         total_images: count(),
@@ -727,11 +757,12 @@ export class ImageService extends BaseService {
         avg_file_size: sql<number>`AVG(${images.size})`,
       })
       .from(images)
-      .where(eq(images.isActive, true));
+      .where(and(...conditions));
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayStartUnix = Math.floor(todayStart.getTime() / 1000);
+    const offsetMinutes = await this.offsetMinutesFor(options.restaurantId);
+    const today = new Date(Date.now() + offsetMinutes * 60_000)
+      .toISOString()
+      .slice(0, 10);
 
     const todayStats = await this.db
       .select({
@@ -740,8 +771,8 @@ export class ImageService extends BaseService {
       .from(images)
       .where(
         and(
-          eq(images.isActive, true),
-          sql`${images.uploadedAt} >= ${todayStartUnix}`,
+          ...conditions,
+          sql`${dateFromUnixMs(images.uploadedAt, offsetMinutes)} = ${today}`,
         ),
       );
 
@@ -756,7 +787,7 @@ export class ImageService extends BaseService {
   /**
    * Get category statistics
    */
-  async getCategoryStats(): Promise<
+  async getCategoryStats(options: ImageAnalyticsOptions = {}): Promise<
     Array<{
       category: string;
       count: number;
@@ -768,7 +799,7 @@ export class ImageService extends BaseService {
         count: count(),
       })
       .from(images)
-      .where(eq(images.isActive, true))
+      .where(and(...this.analyticsConditions(options)))
       .groupBy(images.category)
       .orderBy(desc(count()));
   }
@@ -776,7 +807,7 @@ export class ImageService extends BaseService {
   /**
    * Get processing job statistics
    */
-  async getJobStats(): Promise<
+  async getJobStats(options: ImageAnalyticsOptions = {}): Promise<
     Array<{
       status: string;
       count: number;
@@ -801,6 +832,12 @@ export class ImageService extends BaseService {
         `,
       })
       .from(imageProcessingJobs)
+      .innerJoin(images, eq(imageProcessingJobs.imageId, images.id))
+      .where(
+        and(
+          ...this.analyticsConditions(options, imageProcessingJobs.createdAt),
+        ),
+      )
       .groupBy(imageProcessingJobs.status)
       .orderBy(desc(count()));
   }

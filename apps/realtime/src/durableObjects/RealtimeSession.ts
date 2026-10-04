@@ -887,11 +887,12 @@ export class RealtimeSession implements DurableObject {
     try {
       // 查詢數據庫驗證用戶的 restaurantId
       const stmt = this.env.DB.prepare(
-        "SELECT restaurant_id, role FROM users WHERE id = ? AND is_active = 1",
+        "SELECT restaurant_id, role, token_version FROM users WHERE id = ? AND is_active = 1 AND deleted_at_ms IS NULL",
       );
       const result = (await stmt.bind(authPayload.userId).first()) as {
         restaurant_id: string | null;
         role: number;
+        token_version: number | null;
       } | null;
 
       if (!result) {
@@ -901,9 +902,24 @@ export class RealtimeSession implements DurableObject {
         };
       }
 
+      if (
+        typeof authPayload.sid !== "string" ||
+        authPayload.tv !== (result.token_version ?? 1) ||
+        authPayload.appRole !== Number(result.role)
+      ) {
+        return { valid: false, error: "Staff token has been invalidated" };
+      }
+      const session = await this.env.DB.prepare(
+        "SELECT id FROM sessions WHERE id = ? AND user_id = ? AND is_active = 1 AND expires_at_ms > ? LIMIT 1",
+      )
+        .bind(authPayload.sid, authPayload.userId, Date.now())
+        .first();
+      if (!session)
+        return { valid: false, error: "Session has been invalidated" };
+
       // Platform admins can select and monitor any restaurant from the admin
       // dashboard. Other staff must be bound to the requested restaurant.
-      if (Number(result.role) === 0 || authPayload.appRole === 0) {
+      if (Number(result.role) === 0) {
         return { valid: true };
       }
 

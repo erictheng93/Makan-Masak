@@ -7,6 +7,7 @@ import { createApp } from "./app-factory";
 
 const CHECKOUT_ID = "018ffb9a-7b8a-7c3d-9f23-123456789abc";
 const root = "/api/v1/market-checkouts";
+const waitingConfirmPath = `/api/v1/waiting-list/${CHECKOUT_ID}/confirm`;
 const app = createApp(undefined, {
   disableEdgeCache: true,
   disableObservability: true,
@@ -26,6 +27,11 @@ async function requestWithoutCsrf(
       childOrders: [{ orderId: "1" }],
     }),
   );
+  const db = {
+    prepare: vi.fn(() => ({
+      bind: () => ({ all: async () => ({ results: [] }) }),
+    })),
+  };
   const response = await app.fetch(
     new Request(`https://api.makanmasak.com${path}`, {
       method,
@@ -40,6 +46,7 @@ async function requestWithoutCsrf(
       NODE_ENV: "test",
       DEV_CORS_ORIGINS: "https://makanmasak.com",
       ...(readsCheckout ? { CACHE_KV: { get: getCheckout } } : {}),
+      ...(path === waitingConfirmPath ? { DB: db } : {}),
     } as never,
   );
   const body = (await response.json()) as { error?: { code?: string } };
@@ -47,6 +54,11 @@ async function requestWithoutCsrf(
     expect(getCheckout).toHaveBeenCalledWith(`market_checkout:${CHECKOUT_ID}`);
     // Exempting CSRF must still leave the checkout's ownership gate intact.
     expect(body.error?.code).toBe("MARKET_CHECKOUT_ACCESS_DENIED");
+  }
+  if (path === waitingConfirmPath) {
+    expect(response.status).toBe(404);
+    expect(body.error?.code).toBe("ENTRY_NOT_FOUND");
+    expect(db.prepare).toHaveBeenCalled();
   }
   return { status: response.status, code: body.error?.code };
 }
@@ -64,7 +76,7 @@ const customerWrites: Array<[string, string]> = [
   ["POST", "/api/v1/orders"],
   ["POST", "/api/v1/realtime/auth/guest-token"],
   ["POST", "/api/v1/waiting-list"],
-  ["POST", `/api/v1/waiting-list/${CHECKOUT_ID}/confirm`],
+  ["POST", waitingConfirmPath],
   ["POST", "/api/v1/reservations"],
   ["DELETE", `/api/v1/reservations/${CHECKOUT_ID}/cancel`],
   ["POST", "/api/v1/service-bookings"],

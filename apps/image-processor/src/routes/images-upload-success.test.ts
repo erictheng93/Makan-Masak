@@ -1,3 +1,4 @@
+import { staffAuthDatabase } from "../__tests__/staff-auth-fixture";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sign } from "hono/jwt";
 import { Hono } from "hono";
@@ -53,7 +54,7 @@ function buildApp() {
   return app;
 }
 
-function buildEnv() {
+function buildEnv(role = 0) {
   return {
     JWT_SECRET,
     IMAGE_API_BASE_URL: "https://images.test",
@@ -69,7 +70,14 @@ function buildEnv() {
       put: vi.fn().mockResolvedValue({}),
       delete: vi.fn().mockResolvedValue(undefined),
     },
-    DB: {},
+    DB: staffAuthDatabase({
+      id: ADMIN_UUID,
+      username: "admin",
+      role,
+      restaurant_id: role === 0 ? null : RESTAURANT_UUID,
+      is_active: 1,
+      token_version: 1,
+    }),
   } as unknown as Env;
 }
 
@@ -210,7 +218,7 @@ describe("POST /images/upload success", () => {
       vi.clearAllMocks();
       mocks.uuidv7.mockReturnValue(IMAGE_UUID);
       mocks.createImage.mockResolvedValue({ id: IMAGE_UUID });
-      const env = buildEnv();
+      const env = buildEnv(role);
       const formData = new FormData();
       formData.set(
         "file",
@@ -242,9 +250,8 @@ describe("POST /images/upload success", () => {
   });
 
   it("rejects service crew and cashier uploads", async () => {
-    const env = buildEnv();
-
     for (const role of [3, 4]) {
+      const env = buildEnv(role);
       const formData = new FormData();
       formData.set(
         "file",
@@ -276,9 +283,8 @@ describe("POST /images/upload success", () => {
         success: false,
         error: "Insufficient permissions",
       });
+      expect(env.IMAGES_BUCKET.put).not.toHaveBeenCalled();
     }
-
-    expect(env.IMAGES_BUCKET.put).not.toHaveBeenCalled();
     expect(mocks.createImage).not.toHaveBeenCalled();
   });
 });

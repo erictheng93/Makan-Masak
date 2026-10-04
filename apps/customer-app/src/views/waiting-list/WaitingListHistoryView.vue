@@ -117,6 +117,7 @@
 </template>
 
 <script setup lang="ts">
+import { hasCustomerAccessToken } from "@/services/customerAccessToken";
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { ArrowLeftIcon, ClockIcon } from "@heroicons/vue/24/outline";
@@ -150,13 +151,39 @@ const loadHistory = async () => {
     return;
   }
 
+  if (!hasCustomerAccessToken()) {
+    void router.push({
+      path: "/login",
+      query: {
+        redirect: `/r/${props.restaurantId}/wait-list/history`,
+        phone,
+        mode: "otp",
+      },
+    });
+    return;
+  }
   isLoading.value = true;
   hasSearched.value = true;
   message.value = "";
 
   try {
     history.value = await waitingListApi.history(props.restaurantId, phone);
-  } catch {
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "status" in error &&
+      error.status === 403
+    ) {
+      void router.push({
+        path: "/login",
+        query: {
+          redirect: `/r/${props.restaurantId}/wait-list/history`,
+          phone,
+          mode: "otp",
+        },
+      });
+    }
     history.value = [];
     message.value = t("waitingList.history.loadFailed");
   } finally {

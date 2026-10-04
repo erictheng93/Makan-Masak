@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { z } from "zod";
 import { drizzle } from "drizzle-orm/d1";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { orders, paymentTransactions } from "@makanmasak/database";
 import type { Env } from "../../../types/env";
 import type { AuthUser } from "../../../middleware/auth";
@@ -287,6 +287,22 @@ app.post(
 );
 
 app.get("/status/:transactionId", async (c) => {
+  const user = c.get("user") as AuthUser | undefined;
+  if (!user) {
+    throw new ApiError("UNAUTHORIZED", "Authentication required", 401);
+  }
+  const independent = c.env.DEPLOYMENT_MODE === "independent";
+  const restaurantId = independent ? c.env.TENANT_ID : user.restaurantId;
+  if ((independent || user.role !== 0) && !restaurantId) {
+    throw new ApiError("FORBIDDEN", "Restaurant scope required", 403);
+  }
+  if (user.role < 0 || user.role > 4) {
+    throw new ApiError("FORBIDDEN", "Staff access required", 403);
+  }
+  const tenantFilter =
+    independent || user.role !== 0
+      ? eq(orders.restaurantId, String(restaurantId))
+      : undefined;
   const transactionId = c.req.param("transactionId");
   const db = drizzle(c.env.DB);
   const [transaction] = await db
@@ -296,7 +312,10 @@ app.get("/status/:transactionId", async (c) => {
       status: paymentTransactions.status,
     })
     .from(paymentTransactions)
-    .where(eq(paymentTransactions.transactionId, transactionId))
+    .innerJoin(orders, eq(paymentTransactions.orderId, orders.id))
+    .where(
+      and(eq(paymentTransactions.transactionId, transactionId), tenantFilter),
+    )
     .limit(1);
 
   if (transaction) {
@@ -317,7 +336,7 @@ app.get("/status/:transactionId", async (c) => {
       paymentStatus: orders.paymentStatus,
     })
     .from(orders)
-    .where(eq(orders.paymentTransactionId, transactionId))
+    .where(and(eq(orders.paymentTransactionId, transactionId), tenantFilter))
     .limit(1);
 
   if (!row) {

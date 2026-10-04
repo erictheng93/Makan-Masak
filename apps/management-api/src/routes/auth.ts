@@ -5,14 +5,12 @@ import type { ManagementEnv } from "../types";
 import {
   MANAGEMENT_JWT_AUDIENCE,
   MANAGEMENT_JWT_ISSUER,
-  hasPlatformAdminClaim,
+  requireCurrentAdmin,
+  UUID_V7_PATTERN,
   managementJwtSecret,
 } from "../middleware/auth";
 
 const MANAGEMENT_TOKEN_TTL_SECONDS = 60 * 60;
-const UUID_V7_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-
 const authRouter = new Hono<{ Bindings: ManagementEnv }>();
 
 function getRequiredApiToken(body: unknown): string {
@@ -28,42 +26,6 @@ function getRequiredApiToken(body: unknown): string {
   return (body as { token: string }).token.trim();
 }
 
-function getManagementSubject(payload: Record<string, unknown>): {
-  id: string;
-  email: string;
-} {
-  if (!hasPlatformAdminClaim(payload)) {
-    throw unauthorized("Admin API token required");
-  }
-
-  const subject =
-    typeof payload.id === "string" || typeof payload.id === "number"
-      ? String(payload.id)
-      : typeof payload.sub === "string" && UUID_V7_PATTERN.test(payload.sub)
-        ? payload.sub
-        : null;
-
-  if (!subject) {
-    throw unauthorized("Invalid API token subject");
-  }
-
-  const email =
-    typeof payload.email === "string" && payload.email.trim()
-      ? payload.email.trim()
-      : typeof payload.username === "string" && payload.username.trim()
-        ? payload.username.trim()
-        : null;
-
-  if (!email) {
-    throw unauthorized("Invalid API token identity");
-  }
-
-  return {
-    id: subject,
-    email,
-  };
-}
-
 authRouter.post("/exchange", async (c) => {
   const body = await c.req.json().catch(() => null);
   const apiToken = getRequiredApiToken(body);
@@ -75,13 +37,41 @@ authRouter.post("/exchange", async (c) => {
     throw unauthorized("Invalid or expired API token");
   }
 
-  const subject = getManagementSubject(apiPayload);
+  if (
+    apiPayload.role !== 0 ||
+    typeof apiPayload.sub !== "string" ||
+    !UUID_V7_PATTERN.test(apiPayload.sub) ||
+    typeof apiPayload.username !== "string" ||
+    apiPayload.aud !== undefined ||
+    apiPayload.iss !== undefined ||
+    apiPayload.type !== undefined ||
+    typeof apiPayload.exp !== "number"
+  ) {
+    throw unauthorized("Admin API token required");
+  }
+  const principal = await requireCurrentAdmin(
+    c.env,
+    apiPayload.sub,
+    apiPayload.tv,
+  );
+  if (principal.username !== apiPayload.username)
+    throw unauthorized("Invalid API token identity");
+  if (!c.env.PLATFORM_DB)
+    throw unauthorized("Platform user lookup unavailable");
+  const session = await c.env.PLATFORM_DB.prepare(
+    "SELECT id FROM sessions WHERE user_id = ? AND token = ? AND is_active = 1 AND expires_at_ms > ? LIMIT 1",
+  )
+    .bind(principal.id, apiToken, Date.now())
+    .first<{ id: string }>();
+  if (!session) throw unauthorized("Session has been invalidated");
   const now = Math.floor(Date.now() / 1000);
   const expiresAt = now + MANAGEMENT_TOKEN_TTL_SECONDS;
   const token = await sign(
     {
-      id: subject.id,
-      email: subject.email,
+      id: principal.id,
+      tv: apiPayload.tv,
+      sid: session.id,
+      email: principal.username,
       role: "admin",
       aud: MANAGEMENT_JWT_AUDIENCE,
       iss: MANAGEMENT_JWT_ISSUER,
