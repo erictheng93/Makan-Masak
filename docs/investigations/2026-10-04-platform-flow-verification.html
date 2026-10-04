@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026-10-04 平台與共通服務驗證</title>
+<style>
+:root{
+  --ground:#F2F2F7; --surface:#FFFFFF; --surface-2:#F8F8FB;
+  --ink:#1C1C1E; --ink-2:#55555C; --ink-3:#8A8A92;
+  --hair:rgba(28,28,30,.10); --hair-2:rgba(28,28,30,.06);
+  --shadow:0 1px 1.5px rgba(24,24,45,.05), 0 5px 16px rgba(24,24,45,.05);
+  --shadow-sm:0 1px 1px rgba(24,24,45,.05), 0 3px 10px rgba(24,24,45,.05);
+  --blue:#007AFF; --blue-ink:#0A5FC2;
+  --green:#34C759; --green-ink:#17803D;
+  --orange:#FF9500; --orange-ink:#A85F04;
+  --red:#FF3B30; --red-ink:#C1271D;
+  --purple:#AF52DE; --purple-ink:#7B2FB5;
+  --teal:#30B0C7; --teal-ink:#0D7C8F;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F0F13; --surface:#1B1B21; --surface-2:#212128;
+    --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#7E7E8A;
+    --hair:rgba(255,255,255,.14); --hair-2:rgba(255,255,255,.07);
+    --shadow:0 1px 1.5px rgba(0,0,0,.4), 0 5px 16px rgba(0,0,0,.35);
+    --shadow-sm:0 1px 1px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
+    --blue:#3B9BFF; --blue-ink:#7CBEFF;
+    --green:#4CD97A; --green-ink:#84E5A3;
+    --orange:#FFB03D; --orange-ink:#FFC978;
+    --red:#FF6961; --red-ink:#FF9A94;
+    --purple:#C77BEB; --purple-ink:#DBA9F4;
+    --teal:#4ECBE0; --teal-ink:#8CE0EE;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F0F13; --surface:#1B1B21; --surface-2:#212128;
+  --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#7E7E8A;
+  --hair:rgba(255,255,255,.14); --hair-2:rgba(255,255,255,.07);
+  --shadow:0 1px 1.5px rgba(0,0,0,.4), 0 5px 16px rgba(0,0,0,.35);
+  --shadow-sm:0 1px 1px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
+  --blue:#3B9BFF; --blue-ink:#7CBEFF;
+  --green:#4CD97A; --green-ink:#84E5A3;
+  --orange:#FFB03D; --orange-ink:#FFC978;
+  --red:#FF6961; --red-ink:#FF9A94;
+  --purple:#C77BEB; --purple-ink:#DBA9F4;
+  --teal:#4ECBE0; --teal-ink:#8CE0EE;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans","Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.7; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:960px; margin:0 auto; padding:36px 22px 80px}
+code{
+  font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:.87em; background:var(--surface-2); padding:1.5px 6px;
+  border-radius:6px; overflow-wrap:anywhere;
+}
+pre{
+  background:var(--surface-2); border-radius:14px; padding:13px 16px;
+  overflow-x:auto; font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  font-size:12.5px; line-height:1.65; margin:12px 0;
+}
+pre code{background:none; padding:0}
+a{color:var(--blue-ink); font-weight:600; text-decoration:none}
+a:hover{text-decoration:underline}
+
+header.mast{margin-bottom:26px}
+header.mast h1{
+  margin:0; font-size:31px; font-weight:900; letter-spacing:-.025em;
+  line-height:1.2; text-wrap:balance;
+}
+header.mast .sub{margin:8px 0 0; font-size:14.5px; color:var(--ink-2)}
+.meta{
+  display:flex; flex-wrap:wrap; gap:10px 26px; margin-top:16px;
+  background:var(--surface); border-radius:16px; padding:13px 18px;
+  box-shadow:var(--shadow); font-size:12.5px; color:var(--ink-2);
+}
+.meta b{color:var(--ink); font-weight:600}
+
+section{margin-top:34px}
+h2{
+  margin:0 0 14px; font-size:20px; font-weight:800; letter-spacing:-.015em;
+}
+h3{
+  margin:26px 0 10px; font-size:16px; font-weight:700; letter-spacing:-.01em;
+}
+.card h4{
+  margin:18px 0 6px; font-size:13px; font-weight:700; letter-spacing:.02em;
+  text-transform:uppercase; color:var(--ink-3);
+}
+p{margin:10px 0}
+
+.card{
+  background:var(--surface); border-radius:20px; padding:18px 22px 20px;
+  box-shadow:var(--shadow); margin:14px 0;
+}
+.card > :first-child{margin-top:0}
+.card > :last-child{margin-bottom:0}
+
+.finding{
+  --ac:var(--ink-3); --ac-ink:var(--ink-2);
+  background:var(--surface); border-radius:20px; box-shadow:var(--shadow);
+  margin:14px 0; overflow:hidden;
+}
+.finding.blocker{--ac:var(--red); --ac-ink:var(--red-ink)}
+.finding.data{--ac:var(--purple); --ac-ink:var(--purple-ink)}
+.finding.ux{--ac:var(--orange); --ac-ink:var(--orange-ink)}
+.finding.ok{--ac:var(--green); --ac-ink:var(--green-ink)}
+.finding-h{
+  display:flex; align-items:baseline; gap:11px; flex-wrap:wrap;
+  padding:14px 22px 12px;
+  background:color-mix(in srgb, var(--ac) 11%, var(--surface));
+  border-bottom:1px solid color-mix(in srgb, var(--ac) 20%, transparent);
+}
+.finding-h .id{
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  font-size:12px; font-weight:700; color:var(--ac-ink);
+  background:color-mix(in srgb, var(--ac) 18%, var(--surface));
+  padding:2px 10px; border-radius:999px; flex:none;
+}
+.finding-h h4{
+  margin:0; font-size:15.5px; font-weight:700; letter-spacing:-.01em;
+  flex:1; min-width:220px;
+}
+.finding-b{padding:14px 22px 18px}
+.finding-b > :first-child{margin-top:0}
+.finding-b > :last-child{margin-bottom:0}
+
+.tag{
+  display:inline-block; font-size:11px; font-weight:700; letter-spacing:.04em;
+  padding:2.5px 11px; border-radius:999px; white-space:nowrap;
+}
+.tag.blocker{background:color-mix(in srgb, var(--red) 16%, var(--surface)); color:var(--red-ink)}
+.tag.data{background:color-mix(in srgb, var(--purple) 16%, var(--surface)); color:var(--purple-ink)}
+.tag.ux{background:color-mix(in srgb, var(--orange) 18%, var(--surface)); color:var(--orange-ink)}
+.tag.ok{background:color-mix(in srgb, var(--green) 18%, var(--surface)); color:var(--green-ink)}
+.tag.fixed{background:color-mix(in srgb, var(--blue) 16%, var(--surface)); color:var(--blue-ink)}
+.tag.issue{background:color-mix(in srgb, var(--teal) 18%, var(--surface)); color:var(--teal-ink)}
+
+.evidence{
+  margin:12px 0; padding:11px 15px; border-radius:14px;
+  background:var(--surface-2); font-size:13.5px; line-height:1.65;
+}
+.evidence b{font-weight:600}
+.evidence .lbl{
+  display:block; font-size:10.5px; font-weight:700; letter-spacing:.12em;
+  color:var(--ink-3); margin-bottom:5px;
+}
+
+.tablewrap{overflow-x:auto; margin:14px 0; border-radius:18px; box-shadow:var(--shadow)}
+table{border-collapse:collapse; width:100%; background:var(--surface); font-size:13.5px}
+th,td{padding:10px 15px; text-align:left; vertical-align:top}
+th{
+  font-size:11px; font-weight:700; letter-spacing:.08em; color:var(--ink-3);
+  background:var(--surface-2); white-space:nowrap;
+}
+td{border-top:1px solid var(--hair-2)}
+table.verdict td:nth-child(-n+2){white-space:nowrap}
+td.mono, th.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:12px; white-space:nowrap}
+
+ul,ol{margin:10px 0; padding-left:22px}
+li{margin:5px 0}
+ul.plain{list-style:none; padding-left:0}
+ul.plain li{
+  position:relative; padding-left:16px;
+}
+ul.plain li::before{
+  content:""; position:absolute; left:0; top:11px;
+  width:5px; height:5px; border-radius:50%; background:var(--ink-3);
+}
+
+.note{
+  border-radius:14px; padding:12px 16px; margin:14px 0; font-size:13.5px;
+  background:color-mix(in srgb, var(--blue) 9%, transparent);
+}
+.note b{color:var(--blue-ink)}
+.warn{background:color-mix(in srgb, var(--orange) 12%, transparent)}
+.warn b{color:var(--orange-ink)}
+
+footer{
+  margin-top:44px; padding-top:18px; border-top:1px solid var(--hair-2);
+  font-size:12.5px; color:var(--ink-3);
+}
+@media (max-width:640px){
+  .wrap{padding:24px 14px 60px}
+  header.mast h1{font-size:24px}
+  .finding-h,.finding-b,.card{padding-left:16px; padding-right:16px}
+}
+
+td{overflow-wrap:anywhere}
+blockquote{margin:14px 0; padding:4px 16px; border-left:3px solid var(--blue); color:var(--ink-2)}
+</style>
+</head>
+<body>
+<main class="wrap">
+<header class="mast">
+<h1>2026-10-04 平台與共通服務驗證</h1>
+<div class="sub"><p>基準：<code>docs/architecture/master-user-flow.html</code> 原 v1.2 第 4 節及共通服務；本輪總圖已更新為 v1.3（2026-10-04），寄信、部分退款與停用 Cron 的敘述同步修正。核對的是目前工作樹，包含使用者尚未提交的驗證／session 變更；不是正式環境驗收。本輪沒有部署、寄信、向付款商交易或修改正式資料。</p>
+</div>
+<nav class="meta" aria-label="調查報告導覽"><a href="2026-10-04-master-flow-audit.html">稽核總覽</a> · <a href="2026-10-04-customer-flow-verification.html">顧客流程</a> · <a href="2026-10-04-operations-flow-verification.html">店務與現場</a> · <a href="2026-10-04-platform-flow-verification.html">平台與共通服務</a></nav>
+</header>
+<section>
+<h2>判斷</h2>
+<p>既有 investigations 的顧客、店家與現場作業 QA 不能涵蓋整个平台流程。補查入駐、市集、跨攤付款、授權、部署、監控與備份後，發現 <strong>master flow 本身也有過時敘述</strong>，不能只把調查文件強行改成與圖一致。</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>圖中流程</th>
+<th>本輪證據</th>
+<th>結論與剩餘驗證</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>申請→審核→租戶／餐廳／店主→設定密碼</td>
+<td>Management API 實際 Hono 路由＋SQLite workflow：19/19；包含重複核准、失敗回滾、重試、禁止申請人自行完成、地區與市集申請</td>
+<td>本機流程成立。正式收信、瀏覽器設定密碼後首次登入仍需完整驗收</td>
+</tr>
+<tr>
+<td>人工轉交／目前不寄信</td>
+<td><code>OnboardingService.createCredentialDelivery</code>、<code>sendSetupPasswordEmail</code>；management production config 的 <code>ONBOARDING_EMAIL_ENABLED=&quot;true&quot;</code> 與 <code>ONBOARDING_NOTIFICATION_EMAIL</code> binding</td>
+<td>「目前不寄信」與目前程式／配置不符；有自動寄送與失敗記錄，關閉開關則人工交付。provider accepted／<code>sent</code> 不等於收件匣送達；本輪未重新驗證 production</td>
+</tr>
+<tr>
+<td>租戶與授權</td>
+<td>TenantService 與 licenses 邊界測試通過；licenses 測試只驗證公開 verify 可達與受保護路由拒絕匿名</td>
+<td>不能據此宣稱授權到期、續約、方案升級、停用後各產品拒絕存取、用量配額 enforcement 都已驗證</td>
+</tr>
+<tr>
+<td>部署／灰度／回滾</td>
+<td>既有 VersionSyncService 3 個 mock 測試通過；新測試重現 returned failure 被誤記完成；portal 部署參數與後端契約不同</td>
+<td>確定有部署 UI／批次進度缺口，不能標為可用。真 Cloudflare 部署、canary 故障停止、rolling 與回滾仍未驗證；詳見下節</td>
+</tr>
+<tr>
+<td>市集編排／跨攤分帳／退款／CSV 報表</td>
+<td>API scoped suite 535/535；修正 session fixture 後，4 個 real-integration 檔案 61/61 通過</td>
+<td>初跑 30 通過／31 失敗（401 <code>TOKEN_INVALIDATED</code>）是 helper 未建立 active session；補齊後重跑通過。本機 Hono／D1 路徑成立，外部金流 adapter 被控制，仍未驗真金流商或完整平台瀏覽器流程</td>
+</tr>
+<tr>
+<td>D1／KV 健康探針／告警</td>
+<td>MonitoringService 使用 <code>probeDatabase</code>／<code>probeCache</code> 與短期快取；既有測試涵蓋正常、D1 失敗、缺 binding、Slack 設定邊界</td>
+<td>有真正相依探針的程式路徑，不是僅讀計數器。缺真環境斷線／復原演練、告警實際送達、多 isolate 聚合與 threshold 實際效果</td>
+</tr>
+<tr>
+<td>稽核</td>
+<td>audit 路由測試包含於 scoped suite；備份 feature 有 audit 寫入；scheduler 舊服務 audit writer 只 log</td>
+<td>不能把圖中「完整操作軌跡」當成所有後端 mutation 已逐筆記錄；需要各關鍵權限／訂單／退款異動的 durable audit matrix</td>
+</tr>
+<tr>
+<td>Cron→D1→R2→還原</td>
+<td><code>apps/backup-scheduler/wrangler.toml</code> 的 <code>crons=[]</code>；scheduler 匯入另一個 legacy BackupService，見下節</td>
+<td>圖中每日排程匯出不代表目前啟用／可用；本輪新增真 D1 regression 重現未持久化。定期還原與 RPO／RTO 未完成</td>
+</tr>
+</tbody></table></div>
+
+</section>
+<section>
+<h2>部署的具體缺口</h2>
+<ol>
+<li>Management Portal 的 <code>stores/tenants.ts:262</code> 傳 <code>{tenantId, version}</code>，<code>services/api.ts:247</code> 原樣送到 <code>/deployments/deploy</code>；Management API 的 <code>routes/deployments.ts:23</code> 要求 <code>targetVersion</code>。因此目前 portal 請求缺必填欄位，依路由 validation 回 400，不會開始部署。既有 tenants store 測試把 API mock 成成功，沒有測到前後端契約。</li>
+<li><code>/deployments/provision</code> 回傳 <code>{tenantId, resources, status}</code>，portal <code>deploymentsApi.provision</code> 卻把 <code>data</code> 當 <code>TenantResource[]</code>；部署成功回傳的是簡短 acknowledgment，portal 亦型別宣告為完整 DeploymentLog。需要實際 Hono／portal contract 測試，不能只看 store mock 綠燈。</li>
+<li><code>ProvisioningService.deployToTenant</code> 以 <code>{success:false,error,...}</code> 回傳無 credentials、bundle 缺失、migration 或 worker deployment 失敗；<code>VersionSyncService.updateTenant</code> 忽略 <code>success</code>，只要 promise resolve 就累加 completedTenants。這會讓灰度批次把實際失敗當成功，canary failure gate 也無法辨識這類失敗。</li>
+<li>新增 <code>apps/management-api/src/services/version-sync-platform-flow.test.ts</code>，注入返回 <code>{success:false,error:&quot;Bundle not found&quot;}</code> 的 provisioning 邊界，要求 completed=0／failed=1。去掉 <code>.fails</code> 的暫時診斷測試實際得到 completed=1／failed=0，且已驗證 deploy 被呼叫一次、參數正確；診斷副本已刪除。保留 <strong>1 expected fail</strong> 追蹤尚未修復的失敗語意，沒有修改 production 程式。</li>
+</ol>
+<p>以上部署缺口是本機 source／focused regression 證據，沒有呼叫 Cloudflare 部署 API。租戶 CRUD、授權與用量仍需補真 SQLite／Hono 邊界驗證；本輪 licenses 3 個測試只涵蓋公開 verify、匿名 get／generate，TenantService 1 個測試只涵蓋 subdomain，不等於完整租戶生命周期驗收。</p>
+
+</section>
+<section>
+<h2>備份的具體缺口</h2>
+<ol>
+<li><code>apps/backup-scheduler/wrangler.toml</code> 明確關閉 cron；註解將 tenant backup 與平台 D1 Time Travel 分開。這是儲存庫配置證據，沒有查詢部署中的 trigger 或 Time Travel retention。</li>
+<li><code>apps/api/src/workers/backup-scheduler.ts</code> 匯入 <code>../services/BackupService</code>，不是 <code>features/backup/services/BackupService</code>。排程傳 <code>force_immediate:false</code>。</li>
+<li>舊服務的 <code>saveBackupRecord</code>、<code>updateBackupRecord</code>、<code>createAuditLog</code>、<code>saveRestoreOperation</code>、<code>executeRestore</code> 只有 log。<code>createBackup</code> 回傳 pending backup id，實際 <code>backup_records</code> 沒有該筆；<code>getBackupRecord</code>／<code>updateBackupStatus</code> 還查名為 <code>backups</code> 的表，與目前 schema 的 <code>backup_records</code> 不符。</li>
+<li>feature BackupService 有實際寫入、checksum、加解密、還原與 safety backup；它的 unit suite 通過不能證明 scheduler 走相同路徑。</li>
+<li>工作區現有的 <code>apps/api/src/__tests__/integration/backup-scheduler-platform-flow.real.integration.test.ts</code>，使用既有 real-test-app 的 Miniflare D1／R2／KV，直接呼叫 scheduler 匯入的 service，要求 pending acknowledgment 前已 durable 寫入。移除 <code>.fails</code> 的診斷執行確實在 DB 查詢後得到 <code>null</code>，而非初始化錯誤。保留 <code>it.fails</code> 明確追蹤這個尚未修復的契約：<strong>1 expected fail 不是備份成功</strong>；修復後要移除 <code>.fails</code>，否則測試會提醒預期失敗已不成立。</li>
+</ol>
+<p>應先統一 scheduler 與 feature 的服務與資料表，再啟用定時匯出；接著用隔離本機資料庫做備份／完整還原／selective restore／跨店隔離／損壞檔案拒絕與中途失敗恢复。正式 Time Travel/R2 演練需明確隔離目標與營運窗口，不能用一張指令計畫當作已執行還原證據。</p>
+
+</section>
+<section>
+<h2>可重現命令與實際结果</h2>
+<p>在 repository root：</p>
+<pre><code class="language-sh">pnpm exec vitest run --project=api src/features/backup src/workers/backup-scheduler.test.ts src/features/monitoring src/features/audit src/features/markets src/features/market-checkouts src/workers/market-checkout-reconciliation.test.ts src/features/pos/routes/market-checkouts.test.ts
+# 33 files / 535 tests passed
+</code></pre>
+<p>在 <code>apps/management-api</code>：</p>
+<pre><code class="language-sh">pnpm exec vitest run --config vitest.config.ts src/services/TenantService.test.ts src/services/VersionSyncService.test.ts src/routes/licenses.test.ts src/__tests__/markets-list.test.ts src/__tests__/markets.routes.test.ts src/__tests__/onboarding-audit-archive.test.ts src/__tests__/onboarding-email.test.ts src/__tests__/onboarding-notifications.test.ts src/__tests__/onboarding-market-request.test.ts src/__tests__/onboarding-security.test.ts
+# 10 files / 46 tests passed
+pnpm exec vitest run --config vitest.real-integration.config.ts src/__tests__/integration/onboarding-workflow.real.integration.test.ts
+# 1 file / 19 tests passed
+</code></pre>
+<p>在 <code>apps/api</code>：</p>
+<pre><code class="language-sh">pnpm exec vitest run --config vitest.real-integration.config.ts src/__tests__/integration/markets.real.integration.test.ts src/__tests__/integration/market-checkouts.real.integration.test.ts src/__tests__/integration/market-checkout-child-order-settlement.real.integration.test.ts src/__tests__/integration/market-checkout-provider-money.real.integration.test.ts
+# Initial run: 4 files, 30 passed / 31 failed (TOKEN_INVALIDATED)
+# Re-run after issue-test-jwt session fixture alignment: 4 files / 61 tests passed (73.75s)
+pnpm exec vitest run --config vitest.real-integration.config.ts src/__tests__/integration/backup-scheduler-platform-flow.real.integration.test.ts
+# 1 expected fail: pending acknowledgment is not persisted
+</code></pre>
+<p>重跑命令等價使用 <code>pnpm --dir apps/api test:real-integration</code> 加上相同四個測試路徑；fixture 由本輪平行稽核更新，為簽發的 employee JWT 建立 active sessions。原失敗結果保留作歷程，現行結果以上述 61/61 為準。</p>
+<p>以上數字是 2026-10-04 本輪執行結果，不代表總覆蓋率、正式部署版本或外部供應商驗收。</p>
+
+</section>
+<section>
+<h2>查證邊界</h2>
+<p>使用 codebase-memory Tier 2 的 symbol search、雙向 depth-1 trace、source snippet 與直接 source/config/test 讀取。兩個 BackupService 的 trace 都分別查證；相關 runtime、test helper 與整合測試 exact-path coverage 回 <code>no_recorded_issue/metadata_match</code>。graph generation 從 <code>2026-10-04T05:56:53Z</code> 自動更新到 <code>2026-10-04T06:09:11Z</code>；excluded runtime cache、node_modules 與 ignored declaration 不作證據。這是 bounded audit，不是整個 repository 的完整 security／coverage audit。</p>
+
+</section>
+<section>
+<h2>現場與平台追加覆核命令</h2>
+<p>以下命令從 repository root 執行（2026-10-04）；測試對象是 HEAD <code>8b9c7a571</code> 加当時未提交工作樹。現場歷史問題對應見兩份 floor HTML 的新增日期節。</p>
+<pre><code class="language-sh">pnpm --dir apps/api exec vitest run src/features/kitchen src/features/orders src/features/payments src/features/pos src/features/print src/features/backup --maxWorkers=2
+# 41 files / 528 tests passed
+pnpm --dir apps/kitchen-display exec vitest run --maxWorkers=2
+# 28 files / 152 tests passed
+pnpm --dir apps/admin-dashboard exec vitest run src/views/ServiceView.test.ts src/views/CashierView.test.ts src/views/POSManagementView.test.ts src/services/posService.test.ts src/views/OrdersView.test.ts src/views/PrintAgentsView.test.ts --maxWorkers=2
+# 6 files / 79 tests passed
+pnpm exec vitest run --project=@makanmasak/print-agent --project=@makanmasak/kitchen-display --project=@makanmasak/onboarding-app --maxWorkers=2
+# Actual selected project: print-agent only, 4 files / 57 tests passed; Vue suites separately run below/above
+pnpm --dir packages/queue-core exec vitest run src/print/drivers/PrinterDriver.test.ts src/print/formatters/ReceiptFormattingService.test.ts --maxWorkers=2
+# 2 files / 17 tests passed, including localhost TCP bytes; no physical printer
+pnpm --dir apps/onboarding-app exec vitest run --maxWorkers=2
+# 10 files / 35 tests passed
+pnpm --dir apps/management-portal exec vitest run --maxWorkers=2
+# 12 files / 46 tests passed; mocked UI/service tests do not prove real deployment
+pnpm --dir apps/management-api exec vitest run src/services/TenantService.test.ts src/services/BundleService.test.ts src/services/VersionSyncService.test.ts src/services/CloudflareApiClient.test.ts src/routes/licenses.test.ts src/__tests__/onboarding-email.test.ts src/__tests__/onboarding-security.test.ts src/__tests__/onboarding-owner-id.test.ts src/__tests__/onboarding-provisioning-locale.test.ts src/__tests__/onboarding-notifications.test.ts --maxWorkers=2
+# 10 files / 50 tests passed
+pnpm --dir apps/api exec vitest run src/workers/backup-scheduler.test.ts src/__tests__/cron-schedule-wiring.test.ts src/utils/cron.test.ts --maxWorkers=2
+# 3 files / 21 tests passed, scheduler service mocked
+pnpm --dir apps/api test:real-integration src/__tests__/integration/kitchen.real.integration.test.ts src/__tests__/integration/print-jobs.real.integration.test.ts src/__tests__/integration/backup-scheduler-platform-flow.real.integration.test.ts
+# 3 files / 37 passed + 1 expected fail; REALTIME_SESSION absent, broadcast skipped
+pnpm --dir apps/management-api exec vitest run src/services/version-sync-platform-flow.test.ts
+# 1 expected fail, zero successful deployment behavior checks
+pnpm exec prettier --write apps/management-api/src/services/version-sync-platform-flow.test.ts
+pnpm --dir apps/management-api exec eslint src/services/version-sync-platform-flow.test.ts
+# Both passed
+</code></pre>
+<p>codebase-memory Tier 2 再覆核相關 runtime／test paths；generation 自动刷新至 <code>2026-10-04T06:11:38Z</code>。orders 測試兩處 parse_partial、EnhancedKitchenDashboard 測試一處 parse_partial 及 Vue declaration ignored 範圍均直接讀 source 補查；不把 graph clean 當全面覆蓋證明。<code>syncOrderStatusAfterItemUpdate</code> 與 <code>deployToTenant</code> 查了雙向 trace／完整 snippet；onboarding approval 與 legacy backup 亦分别追到 delivery 與只 log 的 writer。</p>
+
+
+</section>
+<footer>2026-10-04 · <a href="../architecture/master-user-flow.html">Master user flow</a> · 本機驗證與歷史證據的界線詳見各節。</footer>
+</main>
+</body>
+</html>

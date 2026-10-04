@@ -198,7 +198,7 @@ footer{
     <b>2026-10-04 現況覆核（本機原始碼與測試）</b>
     <p>以下正文與「已上線」是各次走查當日的歷史證據，不代表今天重新驗證 production。以 master-user-flow v1.2 覆核：09-15 卡片的 #368「建單路徑零引用」已過期；<code>packages/database/src/services/order.ts</code> 現在讀取 <code>settings.autoAcceptOrders</code>，並有真 D1 的自動確認／不確認測試。F20 的店主帳務入口仍在；帳單明細仍不能當成已實作。</p>
     <p>本次管理端與 order／coupon 測試 140 檔、1111 項通過。原有 41 項 E2E 是歷史執行結果；本次沒有重跑瀏覽器 E2E、量測 production P99 或查詢 GitHub issue 現況。「所有節點都有 spec」也不等於每個分支均驗證，尤其設定跨裝置生效、分析日期邊界、缺料與合併桌單仍需獨立驗收。</p>
-    <p>本次證據、失敗的 POS 整合測試與未驗證項目見 <a href="2026-10-04-operations-flow-verification.md">2026-10-04 現場與店家後台驗證</a>；今日狀態以該報告為準。</p>
+    <p>本次證據、失敗的 POS 整合測試與未驗證項目見 <a href="2026-10-04-operations-flow-verification.html">2026-10-04 現場與店家後台驗證</a>；今日狀態以該報告為準。</p>
   </div>
   <h1>店家後台流程 QA — 2026-09-01</h1>
   <p class="sub">

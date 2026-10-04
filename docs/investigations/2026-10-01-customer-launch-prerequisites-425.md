@@ -6,7 +6,7 @@
 
 對照 master user flow v1.2，成功付款回調、逐攤分帳與退款、啟用儲值後扣抵、Web Push／Email／SMS 真送達仍待實際驗收。HEAD 已有會員 #422 修正、服務付款條件設定（#424）與 Cloudflare Email Service，不能把舊顧客 QA 的「會員不能點餐／無寄信配置／付款條件無來源」當今日阻塞。
 
-本次設定／provider／推播與顧客回歸合計 17 檔 209 案通過，市集／服務 route 2 檔 108 案通過；新增 canonical customer OTP → 下單 → 歷史隔離 1 案通過。舊 customer real integration 為 10 通過、3 失敗：staff JWT fixture 未建立目前未提交認證強化要求的 session。完整明細見 [10-04 顧客流程驗證](./2026-10-04-customer-flow-verification.md)。以下保留 10-01 原始證據。
+本次設定／provider／推播與顧客回歸合計 17 檔 209 案通過，市集／服務 route 2 檔 108 案通過；新增 canonical customer OTP → 下單 → 歷史隔離 1 案通過。舊 customer real integration 為 10 通過、3 失敗：staff JWT fixture 未建立目前未提交認證強化要求的 session。完整明細見 [10-04 顧客流程驗證](./2026-10-04-customer-flow-verification.html)。以下保留 10-01 原始證據。
 
 2026-10-01（Asia/Kuala_Lumpur）重查 [issue 425](https://github.com/erictheng93/Makan-Masak/issues/425)。本次只讀取 production、執行既有測試並記錄結果，沒有部署、寫入 D1、調整旗標、產生憑證或更新 GitHub issue。
 

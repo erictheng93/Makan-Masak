@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>顧客流程現況與驗證缺口 — 2026-10-04</title>
+<style>
+:root{
+  --ground:#F2F2F7; --surface:#FFFFFF; --surface-2:#F8F8FB;
+  --ink:#1C1C1E; --ink-2:#55555C; --ink-3:#8A8A92;
+  --hair:rgba(28,28,30,.10); --hair-2:rgba(28,28,30,.06);
+  --shadow:0 1px 1.5px rgba(24,24,45,.05), 0 5px 16px rgba(24,24,45,.05);
+  --shadow-sm:0 1px 1px rgba(24,24,45,.05), 0 3px 10px rgba(24,24,45,.05);
+  --blue:#007AFF; --blue-ink:#0A5FC2;
+  --green:#34C759; --green-ink:#17803D;
+  --orange:#FF9500; --orange-ink:#A85F04;
+  --red:#FF3B30; --red-ink:#C1271D;
+  --purple:#AF52DE; --purple-ink:#7B2FB5;
+  --teal:#30B0C7; --teal-ink:#0D7C8F;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F0F13; --surface:#1B1B21; --surface-2:#212128;
+    --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#7E7E8A;
+    --hair:rgba(255,255,255,.14); --hair-2:rgba(255,255,255,.07);
+    --shadow:0 1px 1.5px rgba(0,0,0,.4), 0 5px 16px rgba(0,0,0,.35);
+    --shadow-sm:0 1px 1px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
+    --blue:#3B9BFF; --blue-ink:#7CBEFF;
+    --green:#4CD97A; --green-ink:#84E5A3;
+    --orange:#FFB03D; --orange-ink:#FFC978;
+    --red:#FF6961; --red-ink:#FF9A94;
+    --purple:#C77BEB; --purple-ink:#DBA9F4;
+    --teal:#4ECBE0; --teal-ink:#8CE0EE;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F0F13; --surface:#1B1B21; --surface-2:#212128;
+  --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#7E7E8A;
+  --hair:rgba(255,255,255,.14); --hair-2:rgba(255,255,255,.07);
+  --shadow:0 1px 1.5px rgba(0,0,0,.4), 0 5px 16px rgba(0,0,0,.35);
+  --shadow-sm:0 1px 1px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
+  --blue:#3B9BFF; --blue-ink:#7CBEFF;
+  --green:#4CD97A; --green-ink:#84E5A3;
+  --orange:#FFB03D; --orange-ink:#FFC978;
+  --red:#FF6961; --red-ink:#FF9A94;
+  --purple:#C77BEB; --purple-ink:#DBA9F4;
+  --teal:#4ECBE0; --teal-ink:#8CE0EE;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans","Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.7; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:960px; margin:0 auto; padding:36px 22px 80px}
+code{
+  font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:.87em; background:var(--surface-2); padding:1.5px 6px;
+  border-radius:6px; overflow-wrap:anywhere;
+}
+pre{
+  background:var(--surface-2); border-radius:14px; padding:13px 16px;
+  overflow-x:auto; font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  font-size:12.5px; line-height:1.65; margin:12px 0;
+}
+pre code{background:none; padding:0}
+a{color:var(--blue-ink); font-weight:600; text-decoration:none}
+a:hover{text-decoration:underline}
+
+header.mast{margin-bottom:26px}
+header.mast h1{
+  margin:0; font-size:31px; font-weight:900; letter-spacing:-.025em;
+  line-height:1.2; text-wrap:balance;
+}
+header.mast .sub{margin:8px 0 0; font-size:14.5px; color:var(--ink-2)}
+.meta{
+  display:flex; flex-wrap:wrap; gap:10px 26px; margin-top:16px;
+  background:var(--surface); border-radius:16px; padding:13px 18px;
+  box-shadow:var(--shadow); font-size:12.5px; color:var(--ink-2);
+}
+.meta b{color:var(--ink); font-weight:600}
+
+section{margin-top:34px}
+h2{
+  margin:0 0 14px; font-size:20px; font-weight:800; letter-spacing:-.015em;
+}
+h3{
+  margin:26px 0 10px; font-size:16px; font-weight:700; letter-spacing:-.01em;
+}
+.card h4{
+  margin:18px 0 6px; font-size:13px; font-weight:700; letter-spacing:.02em;
+  text-transform:uppercase; color:var(--ink-3);
+}
+p{margin:10px 0}
+
+.card{
+  background:var(--surface); border-radius:20px; padding:18px 22px 20px;
+  box-shadow:var(--shadow); margin:14px 0;
+}
+.card > :first-child{margin-top:0}
+.card > :last-child{margin-bottom:0}
+
+.finding{
+  --ac:var(--ink-3); --ac-ink:var(--ink-2);
+  background:var(--surface); border-radius:20px; box-shadow:var(--shadow);
+  margin:14px 0; overflow:hidden;
+}
+.finding.blocker{--ac:var(--red); --ac-ink:var(--red-ink)}
+.finding.data{--ac:var(--purple); --ac-ink:var(--purple-ink)}
+.finding.ux{--ac:var(--orange); --ac-ink:var(--orange-ink)}
+.finding.ok{--ac:var(--green); --ac-ink:var(--green-ink)}
+.finding-h{
+  display:flex; align-items:baseline; gap:11px; flex-wrap:wrap;
+  padding:14px 22px 12px;
+  background:color-mix(in srgb, var(--ac) 11%, var(--surface));
+  border-bottom:1px solid color-mix(in srgb, var(--ac) 20%, transparent);
+}
+.finding-h .id{
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  font-size:12px; font-weight:700; color:var(--ac-ink);
+  background:color-mix(in srgb, var(--ac) 18%, var(--surface));
+  padding:2px 10px; border-radius:999px; flex:none;
+}
+.finding-h h4{
+  margin:0; font-size:15.5px; font-weight:700; letter-spacing:-.01em;
+  flex:1; min-width:220px;
+}
+.finding-b{padding:14px 22px 18px}
+.finding-b > :first-child{margin-top:0}
+.finding-b > :last-child{margin-bottom:0}
+
+.tag{
+  display:inline-block; font-size:11px; font-weight:700; letter-spacing:.04em;
+  padding:2.5px 11px; border-radius:999px; white-space:nowrap;
+}
+.tag.blocker{background:color-mix(in srgb, var(--red) 16%, var(--surface)); color:var(--red-ink)}
+.tag.data{background:color-mix(in srgb, var(--purple) 16%, var(--surface)); color:var(--purple-ink)}
+.tag.ux{background:color-mix(in srgb, var(--orange) 18%, var(--surface)); color:var(--orange-ink)}
+.tag.ok{background:color-mix(in srgb, var(--green) 18%, var(--surface)); color:var(--green-ink)}
+.tag.fixed{background:color-mix(in srgb, var(--blue) 16%, var(--surface)); color:var(--blue-ink)}
+.tag.issue{background:color-mix(in srgb, var(--teal) 18%, var(--surface)); color:var(--teal-ink)}
+
+.evidence{
+  margin:12px 0; padding:11px 15px; border-radius:14px;
+  background:var(--surface-2); font-size:13.5px; line-height:1.65;
+}
+.evidence b{font-weight:600}
+.evidence .lbl{
+  display:block; font-size:10.5px; font-weight:700; letter-spacing:.12em;
+  color:var(--ink-3); margin-bottom:5px;
+}
+
+.tablewrap{overflow-x:auto; margin:14px 0; border-radius:18px; box-shadow:var(--shadow)}
+table{border-collapse:collapse; width:100%; background:var(--surface); font-size:13.5px}
+th,td{padding:10px 15px; text-align:left; vertical-align:top}
+th{
+  font-size:11px; font-weight:700; letter-spacing:.08em; color:var(--ink-3);
+  background:var(--surface-2); white-space:nowrap;
+}
+td{border-top:1px solid var(--hair-2)}
+table.verdict td:nth-child(-n+2){white-space:nowrap}
+td.mono, th.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:12px; white-space:nowrap}
+
+ul,ol{margin:10px 0; padding-left:22px}
+li{margin:5px 0}
+ul.plain{list-style:none; padding-left:0}
+ul.plain li{
+  position:relative; padding-left:16px;
+}
+ul.plain li::before{
+  content:""; position:absolute; left:0; top:11px;
+  width:5px; height:5px; border-radius:50%; background:var(--ink-3);
+}
+
+.note{
+  border-radius:14px; padding:12px 16px; margin:14px 0; font-size:13.5px;
+  background:color-mix(in srgb, var(--blue) 9%, transparent);
+}
+.note b{color:var(--blue-ink)}
+.warn{background:color-mix(in srgb, var(--orange) 12%, transparent)}
+.warn b{color:var(--orange-ink)}
+
+footer{
+  margin-top:44px; padding-top:18px; border-top:1px solid var(--hair-2);
+  font-size:12.5px; color:var(--ink-3);
+}
+@media (max-width:640px){
+  .wrap{padding:24px 14px 60px}
+  header.mast h1{font-size:24px}
+  .finding-h,.finding-b,.card{padding-left:16px; padding-right:16px}
+}
+
+td{overflow-wrap:anywhere}
+blockquote{margin:14px 0; padding:4px 16px; border-left:3px solid var(--blue); color:var(--ink-2)}
+</style>
+</head>
+<body>
+<main class="wrap">
+<header class="mast">
+<h1>顧客流程現況與驗證缺口 — 2026-10-04</h1>
+<div class="sub"></div>
+<nav class="meta" aria-label="調查報告導覽"><a href="2026-10-04-master-flow-audit.html">稽核總覽</a> · <a href="2026-10-04-customer-flow-verification.html">顧客流程</a> · <a href="2026-10-04-operations-flow-verification.html">店務與現場</a> · <a href="2026-10-04-platform-flow-verification.html">平台與共通服務</a></nav>
+</header>
+<section>
+<h2>最新補充（2026-10-04，本機瀏覽器重跑後）</h2>
+<p>本文件下文「未啟動／跑 29 案」與 fixture 阻擋是較早階段快照，已由後續驗證補上：
+候位測試改用票券 capability、加入匿名／跨票拒絕斷言後，customer-real <strong>29/29 通過</strong>，
+retries=0，沒有 skipped 或 expected failure。精確命令、隔離埠與邊界見
+<a href="2026-09-18-customer-app-readiness-qa.html#recheck-1004">readiness 重新核對</a>。
+共享 employee JWT fixture 亦已建立有效 sessions；後續 POS 及市集真 D1 重跑成功，
+見 <a href="2026-09-30-issue-431.md">Issue 431 最新驗證</a> 及 <a href="2026-10-04-platform-flow-verification.html">平台報告</a>。
+這不自動證明下文那組舊 customer smoke 已重跑。下方原始命令／失敗結果仍保留。
+目前 master 圖為 v1.3，新增寄信、會員身份、退款、停用 Cron 與輪詢／部署限制。</p>
+<p>依據 <code>docs/architecture/master-user-flow.html</code> v1.2（2026/09/30），核對目前 HEAD <code>8b9c7a571</code>、工作目錄與既有測試。舊 QA 的當日觀察不能重建為今日 production 證据；本次保留歷史，另加目前更正。沒有部署、正式寫入、發通知或更新 GitHub。</p>
+
+</section>
+<section>
+<h2>判定</h2>
+<p>09-15／09-18 QA 的歷史實測仍有參考價值，09-23 的「未推送、無會員下單、無寄信設定、付款條件無來源、E2E 缺」已部分過期。10-01 上線前提報告較新，但 binding／資料數／issue 狀態是 dated snapshot。本次 production GET <code>/info</code> 重確認 <code>storedValueCredits</code>、<code>customerWebPush</code>、<code>tenantBackups</code> 停用，其他 production 前提不推定未變。</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Master 節點</th>
+<th>目前來源／驗證</th>
+<th>仍未證明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>桌位／座位／店家公開 QR、內用／外帶／外送</td>
+<td>ordering E2E 定義、seat-order 與 menu/table validation 回歸</td>
+<td>正式座位 QR、停用／汰換碼的真瀏覽器提示；本次未跑整套 E2E</td>
+</tr>
+<tr>
+<td>客製／備註／電話／優惠券</td>
+<td>cart、seat、coupon 回歸；#382 已是一般 E2E</td>
+<td>production 真券、併發庫存與重送下單跨端驗收</td>
+</tr>
+<tr>
+<td>pending → confirmed → preparing → ready → delivered → paid</td>
+<td>order-tracking realtime 回歸；現有 E2E 完整鏈</td>
+<td>本次實際四端同步、掉線重連、後台退款到顧客頁未跑</td>
+</tr>
+<tr>
+<td>登入／註冊／重設、會員下單／歷史</td>
+<td>#422 修正已進 HEAD，member E2E 的兩案已移除 test.fail；新增真 OTP → 下單 → 歷史隔離通過</td>
+<td>Email 驗證／密碼重設／SMS 正式送達、production 會員套券</td>
+</tr>
+<tr>
+<td>候位 → 叫號 → 入座</td>
+<td>guest credential 前端測試通過；候位 E2E 已有不用 push 的降級</td>
+<td>ticket 權限強化在工作目錄、未提交；本次不是部署證據；真正背景 Web Push 送達</td>
+</tr>
+<tr>
+<td>線上訂位、預約服務</td>
+<td>reservation/view 及服務 route 回歸通過；server-side terms 已由服務設定控制（65c443181）</td>
+<td>正式時段／資料、migration 0029 ledger、到店收款；候位與訂位競爭同桌驗收</td>
+</tr>
+<tr>
+<td>開團／邀請／合單／拆帳／追蹤</td>
+<td>group-order views 與 reload 競態回歸通過；group E2E 已含兩人追蹤與 token 次數</td>
+<td>本次整套群組瀏覽器未重跑；均分／各付各／比例在多幣別下實際收款、群組過期／中途失敗復原</td>
+</tr>
+<tr>
+<td>市集探索／跨攤結帳／券</td>
+<td>route/provider 回歸通過；現有 E2E 是一般測試，已非預期失敗</td>
+<td>正式市場與攤位資料、market open-day 狀態到顧客 UI</td>
+</tr>
+<tr>
+<td>一次付款／回調／逐攤分帳</td>
+<td>adc049b82 fail closed；95c63754f 訪客 CSRF；完整 market routes 99 案通過</td>
+<td>實際 provider 成功付款、外部 webhook 驗簽、重送／乱序、逐攤 reconciliation 與退款；fail closed 不等於成功收款</td>
+</tr>
+<tr>
+<td>儲值扣抵／退款</td>
+<td>旗標關，相關 provider route 邏輯有測試</td>
+<td>啟用後完整購物／扣抵／退款 E2E；本次不擅自開旗標</td>
+</tr>
+<tr>
+<td>回訪 installed app 切版</td>
+<td>9e0ffe71f 接管重載，a2bf6019d importScripts 內容版本，PWA 回歸通過</td>
+<td>Cloudflare zone cache 與真回訪裝置部署後耗時</td>
+</tr>
+</tbody></table></div>
+<p>29 個 customer-real 測試由 6 個 spec 定義（ordering 9、tracking 5、seating/bookings 4、group 2、markets 6、member 3）。搜尋這個 bounded scope 未見 <code>test.fail</code>／<code>test.fixme</code>；共用 requireStack 仍可能 skip，必須用 <code>E2E_STRICT=1</code>，不能將 stack 未啟動當通過。本次沒有啟動／跑這 29 案。</p>
+
+</section>
+<section>
+<h2>本次補上的驗證</h2>
+<p>新增 <code>apps/customer-app/src/__tests__/integration/2026-10-04-customer-flow-verification.real.integration.test.ts</code>，用真 Miniflare/D1 與 application routes，透過 development OTP 發 canonical customer token，完全不使用 staff JWT helper。</p>
+<p>它驗證會員不帶 CSRF cookie 也能建立會員訂單、<code>customerId</code> 正確保存、讀自己的歷史，且同店其他無會員訂單不混入。這補上舊 customer-app smoke 用平台管理員代替顧客的驗證缺口，沒有變更 runtime 行為。development OTP 不代表 production SMS 可送達。</p>
+
+</section>
+<section>
+<h2>可重跑結果</h2>
+<pre><code class="language-bash"># 17 files, 209 passed
+pnpm exec vitest run \
+  apps/customer-app/src/tests/guest-order-token.test.ts \
+  apps/customer-app/src/tests/waiting-ticket-flow.test.ts \
+  apps/customer-app/src/tests/views/group-order-views.test.ts \
+  apps/customer-app/src/tests/views/menu-view-table-validation.test.ts \
+  apps/customer-app/src/tests/views/order-tracking-realtime.test.ts \
+  apps/customer-app/src/tests/views/cart-view-coupon-discount.test.ts \
+  apps/customer-app/src/tests/views/cart-view-seat-order.test.ts \
+  apps/customer-app/src/tests/views/service-booking-view.test.ts \
+  apps/customer-app/src/tests/views/reservation-view.test.ts \
+  apps/customer-app/src/tests/views/market-checkout-tracking-view.test.ts \
+  apps/customer-app/src/tests/views/market-checkout-availability.test.ts \
+  apps/customer-app/src/tests/stores/auth.test.ts \
+  apps/customer-app/src/tests/router-member-session.test.ts \
+  apps/customer-app/src/tests/pwa-dead-code-regression.test.ts \
+  apps/customer-app/src/utils/push-notifications.test.ts \
+  apps/api/src/shared/feature-adoption.test.ts \
+  apps/api/src/features/market-checkouts/services/MarketCheckoutPaymentProvider.test.ts
+
+# 2 files, 108 passed (market 99 + service bookings 9)
+pnpm exec vitest run apps/api/src/features/market-checkouts/routes/index.test.ts apps/api/src/features/service-bookings/routes/index.test.ts
+
+# New real integration: 1 passed
+pnpm exec vitest run --config apps/customer-app/vitest.real-integration.config.ts apps/customer-app/src/__tests__/integration/2026-10-04-customer-flow-verification.real.integration.test.ts
+
+# Existing canonical-customer history: 1 passed, 4 intentionally unselected
+pnpm exec vitest run --config apps/api/vitest.real-integration.config.ts apps/api/src/__tests__/integration/role-gaps-04-customer-orders.real.integration.test.ts -t &#39;binds /customers/me/orders&#39;
+
+# Old customer smoke: 10 passed, 3 failed (before adding new file)
+pnpm exec vitest run --config apps/customer-app/vitest.real-integration.config.ts
+
+# Read only; still lists storedValueCredits/customerWebPush/tenantBackups off
+curl -fsS --max-time 15 https://api.makanmasak.com/info
+</code></pre>
+<p>舊 smoke 三個失敗都不是 assertion 寫錯付款金額：<code>Customer Orders API</code> 的建立、讀回、nonexistent 查詢收到 401 <code>TOKEN_INVALIDATED</code>，message 是 <code>Session has been invalidated</code>。工作目錄 <code>apps/api/src/middleware/auth.ts</code> 要求 active <code>sessions</code> row；<code>apps/api/src/__tests__/integration/helpers/issue-test-jwt.ts</code> 只發 token／建 users，不建 session。根因是共享 fixture 與尚未提交的 auth 契約不相容，需要在共享 fixture 或真登入處修正，不能弱化 production auth 或把 401 加入成功斷言。本次不越權修改其他代理／使用者負責的認證檔案。</p>
+
+</section>
+<section>
+<h2>優先未驗事項與完成條件</h2>
+<ol>
+<li>正式 provider sandbox 或測試 merchant：付款成功後驗簽回調、逐攤金額一致、重送不重扣、部分／全额退款、對帳查詢；需要 provider 設定及測試帳戶，不能以 mock adapter 通過代替。</li>
+<li>有正式資料的座位、訂位、服務、市集；用 UI 建立與讀回，驗證停用／過期 QR、容量競爭、服務付款政策与逐攤可用性。</li>
+<li>真 Email／SMS／Web Push 送達與 refresh／logout 撤銷；push 在會員授權後測背景裝置叫號，保留 off 時立即取號降級。</li>
+<li>本機 <code>E2E_STRICT=1</code> 跑目前 29 案与四端狀態／掉線恢復；下一次 authorized deployment 量同一 installed app 更新耗時，重驗 zone cache。</li>
+</ol>
+<p>這些設定與正式資料操作沒有在本次執行；master 圖描述產品契約，不能直接當作功能已上線、已配置或已驗證的清單。</p>
+
+</section>
+<section>
+<h2>證據品質</h2>
+<p>結構探索使用 codebase-memory search_graph → trace_path → get_code_snippet，對每個引用程式路徑檢查 coverage；<code>member.spec.ts</code> line 45、<code>group-order-views.test.ts</code> lines 50／82、market checkout route test lines 188／205／220／243 的 partial ranges 已直接讀取（best effort 不是完整性保證）。graph generation 由 05:56:53Z 更新到 06:13:16Z。docs 與 configs 直接讀取；未提交變更以 git status 區分。<code>git log --all</code> 因既有 <code>refs/heads/cto-followups 2</code> bad ref 失敗，改讀 <code>git log HEAD</code>，本次未修 Git refs。</p>
+
+
+</section>
+<footer>2026-10-04 · <a href="../architecture/master-user-flow.html">Master user flow</a> · 本機驗證與歷史證據的界線詳見各節。</footer>
+</main>
+</body>
+</html>

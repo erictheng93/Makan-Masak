@@ -220,7 +220,7 @@ footer{
 
 <section id="alignment-1004">
   <h2>2026-10-04 對齊：歷史發現與目前狀態分開閱讀</h2>
-  <p>依 master user flow v1.2（2026/09/30）、目前工作目錄、HEAD 與本機測試核對。下方 09-15／09-23 production 證據保留原樣；「仍 open」「沒有畫面」「未推送」與資料列數只描述當日。最新逐項判定見 <a href="./2026-10-04-customer-flow-verification.md">顧客流程驗證</a>。</p>
+  <p>依 master user flow v1.2（2026/09/30）、目前工作目錄、HEAD 與本機測試核對。下方 09-15／09-23 production 證據保留原樣；「仍 open」「沒有畫面」「未推送」與資料列數只描述當日。最新逐項判定見 <a href="./2026-10-04-customer-flow-verification.html">顧客流程驗證</a>。</p>
   <ul>
     <li><b>C1–C3、C5、C10–C14：</b>訪客折扣、各訂單 token、群組送出追蹤、電話與時間軸修正已在 HEAD；目前相關回歸通過。未重做 production 真券驗收。</li>
     <li><b>C4／#384：</b>「無寄信設定、會員整條不通」已過期。HEAD 已採 Cloudflare Email Service；10-01 部署查核記錄 send_email binding。#422 會員下單與套券是一般 E2E。未重驗 production Email／SMS 送達。</li>

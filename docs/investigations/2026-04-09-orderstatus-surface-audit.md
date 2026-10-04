@@ -13,7 +13,7 @@
 包含 enum 值、lazy 的 optional／nullable 保留；舊文所稱契約只記欄位的缺口已補。
 下文 §8 的 advanced session 已刪除，舊數字型別與持久化遷移策略不得再當目前待辦。
 此複核不證明四端瀏覽器同步或 production 部署；本輪整體證據與殘留缺口見
-[master flow 稽核](2026-10-04-master-flow-audit.md)。
+[master flow 稽核](2026-10-04-master-flow-audit.html)。
 
 
 **Date:** 2026-04-09
@@ -32,7 +32,7 @@
 > and 60-day cleanup must not be treated as current required work.
 > Existing historic statements that there are no external consumers describe
 > repository evidence only, not proof about unknown deployed API clients.
-> Current checks and limitations: [operations verification](2026-10-04-operations-flow-verification.md).
+> Current checks and limitations: [operations verification](2026-10-04-operations-flow-verification.html).
 
 > Current note (2026-04-29): the major migration described here has already
 > landed. `@makanmasak/shared-types` now exports `OrderStatus` as a canonical
