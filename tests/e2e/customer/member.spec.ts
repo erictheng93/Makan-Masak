@@ -1,9 +1,7 @@
 /**
  * master-user-flow 1. 顧客端 → 會員入口, against a real API and a real D1.
  *
- * Production cannot reach any of this yet: it has no email or SMS
- * credentials, so registration and OTP login fail with 503 and `customers`
- * holds no rows (#384). Locally the API runs with NODE_ENV=test, where
+ * Locally the API runs with NODE_ENV=test, where
  * /customer/auth/request-otp echoes the code as `devOtp`. The test reads that
  * code from the page's own request-otp response, so the diner still logs in
  * through the real login form.
@@ -182,7 +180,7 @@ test.describe("會員入口 (real API)", () => {
       expect(order.totalAmount).toBe(menu.plainItem.price * 2);
       expect(order.tableId).toBe(table.id);
 
-      // 訂單歷史 is requiresAuth; in production nobody has reached it (#384).
+      // 訂單歷史 requires the restored member session.
       await page.goto("/orders");
       await expect(page.getByText(order.orderNumber)).toBeVisible({
         timeout: NAV_TIMEOUT,

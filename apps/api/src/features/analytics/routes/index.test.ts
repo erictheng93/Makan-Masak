@@ -385,4 +385,21 @@ describe("analytics routes", () => {
     expect(text).toContain("event: heartbeat");
     expect(text).toContain("SSE connected");
   });
+
+  // Known master-flow gap: cancelling the body leaves polling/cleanup timers.
+  // Remove .fails when the route releases them on reader cancellation.
+  it.fails(
+    "releases SSE timers when the client cancels its reader",
+    async () => {
+      const response = await request("/sse").res;
+      expect(response.status).toBe(200);
+      const reader = response.body!.getReader();
+      await reader.read();
+      expect(vi.getTimerCount()).toBe(3);
+
+      await reader.cancel();
+
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
 });

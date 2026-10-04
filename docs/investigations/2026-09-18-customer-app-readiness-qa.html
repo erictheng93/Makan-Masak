@@ -222,6 +222,56 @@ footer{
   </div>
 </header>
 
+<section id="alignment-1004">
+  <h2>2026-10-04 對齊 master user flow（原 v1.2，本輪 v1.3）</h2>
+  <p>核對 HEAD、未提交工作目錄、測試原始碼與本機結果；production 只以 GET /info 重查旗標，沒有部署或寫入正式資料。下方是歷史紀錄，本節覆蓋過期現況／下一步。完整證據見 <a href="./2026-10-04-customer-flow-verification.md">10-04 顧客流程驗證</a>。</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>原發現</th><th>10-04 更正與驗證界線</th></tr></thead>
+    <tbody>
+      <tr><td>R1／R4／R7／R14／R15 未推送</td><td>修正已在 HEAD；取餐、群組還原、非阻塞取號、分單位、本地日期回歸存在。歷史分支部署指示不再是今天待辦。</td></tr>
+      <tr><td>R2／R13 未收款 paid、CSRF 全擋</td><td>HEAD 先 fail closed（adc049b82）再精確排除訪客市集 CSRF（95c63754f）；route／provider 回歸通過。無 provider 不得 paid 已是一般 E2E，仍非正式收款成功證據。</td></tr>
+      <tr><td>R3／R18 service worker 不切版</td><td>HEAD 接管重載与 importScripts 內容版本（9e0ffe71f、a2bf6019d）已有 PWA 回歸。zone 快取與實際更新耗時未於本次量測。</td></tr>
+      <tr><td>R5／R6／R10／R17／R19／R23 揪團結果與 token</td><td>group-orders.spec.ts 已涵蓋兩人送單／追蹤、真 WebSocket 與每人一次 group-token；完成事件已進 HEAD。不再是 E2E 缺，後續隔離本機 customer-real 已 29/29 通過；真通知／金流送達仍未驗證。</td></tr>
+      <tr><td>R8／#399 推播</td><td>production /info 仍停用 customerWebPush；不詢問權限／立即取號是降級驗證，並非背景叫號送達。</td></tr>
+      <tr><td>R9／R22／#424 付款條件</td><td>65c443181 已讓服務設定決定條件；公開 schema 不接受付款條件／customerId。到店付款與收銀後 paid 有測試。prepay／deposit 無設定來源的說法已過期。</td></tr>
+      <tr><td>R11／R12／R16 只記錄</td><td>停用座位提示、正式探索租戶處置與重複 username 錯誤需單獨驗收；未以其他綠燈宣稱已修。正式資料列未重查。</td></tr>
+      <tr><td>R20／R24／R25 測試、會員、a11y</td><td>推播 off 前提已修；#422 两案移除 test.fail（0e7dd4358），會員恢复已進 HEAD（eeee4f04e）；a11y 修正已進 HEAD。後續隔離本機實跑 29 案／6 spec 全通過，無 skip／expected failure。</td></tr>
+      <tr><td>R21／#425 migration 與前提</td><td>0029 ledger 本次未驗，不能沿用仍未套用；金流／正式資料以 10-01 報告為最後具日期證據。10-04 /info 只重確認儲值／顧客推播仍關。</td></tr>
+    </tbody>
+  </table></div>
+  <p><b>本次結果：</b>17 檔 209 案及市集／服務 route 2 檔 108 案通過；新增真 customer OTP → 無 CSRF cookie 下單 → 歷史隔離 1 案通過。舊 customer real integration 10 通過、3 失敗（staff fixture 無 session）；不能判為全綠或 production ready。</p>
+  <p><b>優先補驗：</b>正式 provider 成功付款／驗簽回調／逐攤分帳／退款重送、啟用儲值後扣抵退款、Email／SMS／背景 Web Push 真送達、正式座位與時段、斷線重連及 service worker 切版。</p>
+</section>
+
+<section id="recheck-1004">
+  <h2>2026-10-04 重查：master-user-flow、HEAD 與工作樹</h2>
+  <p class="note"><b>較晚取得的瀏覽器證據：</b>上方對齊節的「未啟動整套堆疊、29 案只是定義數」由本節 customer-real 實跑 29/29 更新。上方獨立 Vitest／real-integration 結果仍保留；其 fixture 失敗不是本次 Playwright 的結果，也不能合併成全套 integration 通過。</p>
+  <p>HEAD <code>8b9c7a571</code>；本次跑的是目前工作樹，包含原有未提交的 auth、付款、候位及顧客端變更。沒有連 production、沒有部署或送外部通知。09-18／09-22／09-23 的「已部署、尚未推送、issue open、資料列數」全部是當日事實，不是本次重確認的線上現況。最新 production 前提證據來源仍是 <a href="./2026-10-01-customer-launch-prerequisites-425.md">10-01 #425 查核</a>。</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>主流程節點</th><th>目前程式／可重跑證據</th><th>判讀與剩餘缺口</th></tr></thead>
+    <tbody>
+      <tr><td>入口、QR、菜單、購物車、送單、優惠券</td><td><code>tests/e2e/customer/ordering.spec.ts</code>：桌位／座位簽章 QR、店家內用／外送、MYR 金額、分類、客製與備註、姓名電話、訪客券。<code>member.spec.ts</code>：OTP 登入、完整 QR 載入後會員下單、歷史及限每人次數的會員券。</td><td>C1、C3、R1、R24／#422 已有一般回歸測試；會員兩案已移除 <code>test.fail</code>。會員入口實際走 canonical customer 身分／HttpOnly refresh cookie，不能只以共用 visitor lane 的 bcrypt／員工 role 0–5 描述驗收。email 註冊、找回／重設密碼有元件與 API 測試，真實 email／SMS 送達未驗。</td></tr>
+      <tr><td>訂單追蹤、即時更新、取消、付款完成</td><td><code>order-tracking.spec.ts</code>：pending → delivered 的無重整時間軸、員工改數量／取消、訪客取消、收銀現金結帳、加點後前一筆仍可開啟。</td><td>現金完成不等於線上金流完成；付款 provider 回調、退款與結算仍需外部環境驗收。service worker 的跨部署切版與 Cloudflare zone 快取也不是 Vite dev E2E 能證明。</td></tr>
+      <tr><td>候位、叫號、抵達</td><td><code>seating-and-bookings.spec.ts</code> 及 <code>waiting-ticket-flow.test.ts</code>：票號憑證保存／傳送、叫號到頁、抵達、推播停用時不詢問且重整保留票號。</td><td>本輪第一跑 25 passed、1 failed、3 did not run：舊 E2E 匿名讀票號被目前工作樹的權限 guard 正確拒絕 403。測試改以取號回傳的 <code>X-Waiting-Ticket-Token</code> 讀回、owner 授權清理，並新增匿名讀與另一張票的 token 均 403 斷言。沒有削弱正式授權。真實背景 Web Push 未驗。</td></tr>
+      <tr><td>線上訂位、服務預約</td><td><code>ReservationView.vue</code> 已存在；<code>seating-and-bookings.spec.ts</code> 開時段 → 訂位 → 確認碼查詢 → 取消，及服務預約讀回／到店付款說明。<code>ServiceBookingService.ts</code> 建立時從服務讀 <code>paymentRequirement</code> 與 <code>depositAmountCents</code>；公開 schema 去除客戶端付款條件。</td><td>「沒有訂位畫面」與 R22／#424「prepay／deposit 無來源」已過期。<code>payment-terms.test.ts</code> 驗 caller override 被移除、服務測試驗訂金。訂位電話已 E.164；四條公開端點仍在 <code>moduleGate</code> 前。production ledger／可預約資料沒有重查。</td></tr>
+      <tr><td>揪團、邀請、合單、拆帳、共同追蹤</td><td><code>group-orders.spec.ts</code>：邀請連結加入、雙人加菜、送單及兩人即時追蹤、每人只換一次即時 token，另有延後真回應的加菜競態回歸；<code>group-order-views.test.ts</code> 驗邀請與結算 UI。</td><td>揪團拆帳是同一攤內多人分攤；不能當成跨攤金流結算驗證。團員停在菜單頁時的送單提示、R10 成員數與 R11 停用座位 UX 仍不以本次正向案例宣告全面解決。</td></tr>
+      <tr><td>市集探索、跨攤結帳、券碼、儲值、付款回調與逐攤分帳</td><td><code>markets.spec.ts</code>：探索營業時間第三態、兩攤目錄／結帳／逐攤訂單、券碼，以及 provider 未配置時付款 409、child orders 保持未付款。<code>MarketCheckoutPaymentProvider.test.ts</code> 與 route／app-factory 測試驗 provider readiness、訪客寫入及簽章防護。</td><td>沒有 provider 的 fail closed 是保護通過，不是完成收款。10-01 資料仍記錄市集 0 筆、金流／VAPID 缺配置、儲值停用。儲值啟用、真 provider 付款／回調／退款／逐攤結算、正式資料與營運決定仍待完成。</td></tr>
+    </tbody>
+  </table></div>
+  <h3>本次命令與結果</h3>
+  <p>沿用既有測試，新增的驗證只放在候位 E2E 中。三批 Vitest 共 <b>30 files、490 tests passed</b>（16／191、8／228、6／71）。詳列命令如下；這不是全 repo <code>pnpm verify:push</code>。</p>
+  <pre><code>pnpm exec vitest run apps/customer-app/src/tests/stores/auth.test.ts apps/customer-app/src/tests/router-member-session.test.ts apps/customer-app/src/tests/views/cart-view-coupon-discount.test.ts apps/customer-app/src/tests/views/cart-view-seat-order.test.ts apps/customer-app/src/tests/guest-order-token.test.ts apps/customer-app/src/tests/views/order-tracking-realtime.test.ts apps/customer-app/src/tests/views/reservation-view.test.ts apps/customer-app/src/tests/views/service-booking-view.test.ts apps/customer-app/src/tests/components/JoinWaitingListView.test.ts apps/customer-app/src/tests/waiting-ticket-flow.test.ts apps/customer-app/src/tests/views/group-order-views.test.ts apps/customer-app/src/tests/views/market-checkout-availability.test.ts apps/customer-app/src/tests/views/market-checkout-tracking-view.test.ts apps/customer-app/src/utils/push-notifications.test.ts apps/api/src/shared/feature-adoption.test.ts apps/api/src/features/market-checkouts/services/MarketCheckoutPaymentProvider.test.ts</code></pre>
+<pre><code>pnpm exec vitest run apps/api/src/features/customer/routes/index.test.ts apps/api/src/features/coupons/routes/index.test.ts apps/api/src/features/reservations/routes/index.test.ts apps/api/src/features/reservations/routes/module-gate.test.ts apps/api/src/features/waiting-list/routes/index.test.ts apps/api/src/features/market-checkouts/routes/index.test.ts apps/api/src/app-factory.market-checkout-csrf.test.ts apps/api/src/shared/services/waiting-ticket-access.test.ts</code></pre>
+<pre><code>pnpm exec vitest run apps/api/src/features/service-bookings/routes/payment-terms.test.ts apps/api/src/features/service-bookings/services/ServiceBookingService.test.ts apps/api/src/features/service-bookings/routes/index.test.ts apps/customer-app/src/tests/views/forgot-password-view.test.ts apps/customer-app/src/tests/views/register-view.test.ts apps/customer-app/src/tests/views/login-view.test.ts</code></pre>
+  <pre><code>E2E_API_URL=http://localhost:18887 E2E_CUSTOMER_URL=http://localhost:13000 E2E_REALTIME_URL=http://localhost:18888 E2E_STRICT=1 pnpm exec playwright test --project=customer-real --reporter=line --output=/tmp/makanmasak-customer-audit-20261004/test-results-rerun
+# 29 passed (52.2s), retries 0; no skipped / expected-failure cases
+pnpm exec eslint tests/e2e/customer/member.spec.ts tests/e2e/customer/seating-and-bookings.spec.ts
+pnpm run typecheck:tests</code></pre>
+  <p>本機使用全新 <code>/tmp/makanmasak-customer-audit-20261004/state</code>，只套用兩條已生效的 migration track（platform <code>migrations_fresh</code>、management <code>migrations</code>），再執行 <code>scripts/seed-local.sql</code> 與 <code>scripts/seed-e2e-fixtures.sql</code>。realtime 18888、management 18889、API 18887、Vite 13000；JWT／internal／QR 僅使用 CI 測試值。Vite 的臨時 config 只把 /api、/info proxy 導到本次本機 API，沒有變更 repository dev config 或任何 production 設定。準備套件使用 <code>pnpm --filter @makanmasak/api^... build</code>。</p>
+  <p>結構探索使用 codebase-memory Tier 2、<code>restoreAuthOnce</code> 與 <code>resolvePaymentTerms</code> 雙向 trace。對所有使用的程式與測試路徑檢查 index coverage；<code>member.spec.ts</code> 的型別與兩個 mock 測試檔的 partial 行直接讀原始碼。best-effort index 不等於完整性證明。</p>
+  <p class="note warn"><b>下一步依據：</b>本機通過只填補上述回歸驗證。仍需 #425 每項負責人與開／不開／延後決定，以及所選範圍的 production 交易、通知、資料、座位 QR、SW 與實體印表機驗收。下方「下一步」保留為 09-23／09-18 當日待辦，不能重新當成未實作清單。</p>
+</section>
+
 <section id="review-0923">
   <h2>09-23 審視：做了什麼、還缺什麼</h2>
   <p>

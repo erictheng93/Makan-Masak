@@ -214,12 +214,38 @@ footer{
     <span><b>身分</b> 訪客（免登入）＋ <code>owner1</code> 推狀態</span>
     <span><b>餐廳</b> 麻吉 Demo 廣東粥 <code>019fa136-…31a1</code></span>
     <span><b>入口</b> 桌位 A1 的簽章 QR</span>
-    <span><b>現況</b> 2026-09-23 更新（見下一節）</span>
+    <span><b>最新對齊</b> 2026-10-04（見下一節）；production 基準仍按各節日期</span>
   </div>
 </header>
 
+<section id="alignment-1004">
+  <h2>2026-10-04 對齊：歷史發現與目前狀態分開閱讀</h2>
+  <p>依 master user flow v1.2（2026/09/30）、目前工作目錄、HEAD 與本機測試核對。下方 09-15／09-23 production 證據保留原樣；「仍 open」「沒有畫面」「未推送」與資料列數只描述當日。最新逐項判定見 <a href="./2026-10-04-customer-flow-verification.md">顧客流程驗證</a>。</p>
+  <ul>
+    <li><b>C1–C3、C5、C10–C14：</b>訪客折扣、各訂單 token、群組送出追蹤、電話與時間軸修正已在 HEAD；目前相關回歸通過。未重做 production 真券驗收。</li>
+    <li><b>C4／#384：</b>「無寄信設定、會員整條不通」已過期。HEAD 已採 Cloudflare Email Service；10-01 部署查核記錄 send_email binding。#422 會員下單與套券是一般 E2E。未重驗 production Email／SMS 送達。</li>
+    <li><b>C6–C9：</b>訂位建立／查詢／取消、探索空營業時間、語系保存及準備時間已有程式和測試。剩餘時間是否遞減、正式時段與非台灣電話需另驗。</li>
+    <li><b>C15／C16：</b>列印與幣別後續修正已進 HEAD，不能把原缺陷當未修；實體 ESC/POS 印表機仍需硬體證據。</li>
+  </ul>
+  <p><b>本次不是全面通過：</b>17 檔 209 案回歸與 2 檔 108 案市集／服務 route 通過，但舊 customer real integration 為 10 通過、3 失敗：staff JWT fixture 未建立工作目錄新認證要求的 session。新增真 customer OTP → 下單 → 歷史隔離測試通過。未提交的認證／候位改動不能當已部署。</p>
+</section>
+
+<section id="recheck-1004">
+  <h2>2026-10-04 對齊：目前程式與歷史紀錄分開判讀</h2>
+  <div class="card">
+    <p>依 <a href="../architecture/master-user-flow.html">master-user-flow</a> 的四條顧客流程重查。基準 HEAD <code>8b9c7a571</code>，實際驗證包含現有未提交的 auth、付款、候位與顧客端修改；不能把工作樹測試結果當成 HEAD 或 production 已部署。以下 09-15／09-23 的發現、計數、部署與 issue 狀態保留為當日紀錄。</p>
+    <ul>
+      <li><b>C4／#384：</b><a href="./2026-10-01-customer-launch-prerequisites-425.md">10-01 查核</a>已記錄 #384 關閉及 Cloudflare Email send_email binding；「仍 open、無 email 配置、會員整條不可用」不再是最新判定。本次未查 live production、未送 email／SMS，不能推論真實送達。會員下單與限每人次數的優惠券已是一般 E2E 回歸案例（#422），不再是預期失敗。</li>
+      <li><b>C6：</b><code>ReservationView.vue</code> 與 <code>/restaurant/:id/reserve</code> 已存在；建立、確認碼查詢、取消由現有 E2E 覆蓋。API 電話已正規化為 E.164；舊「只認台灣電話」不適用。四個公開訂位端點仍在 <code>moduleGate</code> 前，不能說這項殘留已消失。</li>
+      <li><b>C15：</b><a href="./2026-09-30-floor-operations-local-walk.html">09-30 現場走查</a>已擷取 print-agent 送到 TCP 假印表機的 ESC/POS 位元組。「沒有人實測輸出」已過期；實體設備、中文字碼、切刀及卡紙仍未驗證。</li>
+      <li><b>R22／#424：</b>付款條件已從服務設定取得，不再一律只能 <code>pay_at_venue</code>；公開 request 不能指定付款條件或顧客 ID。實際金流與部署狀態仍需分開驗收。</li>
+      <li><b>目前驗證：</b>四條流程逐節點、測試命令與剩餘缺口見 <a href="./2026-09-18-customer-app-readiness-qa.html#recheck-1004">readiness 的 10-04 重查</a>。上線條件仍依 #425 的負責人、範圍決定與 production 證據；本次沒有替使用者關 issue 或作上線決定。</li>
+    </ul>
+  </div>
+</section>
+
 <section id="status-0923">
-  <h2>09-23 現況：C1–C16 各自到哪了</h2>
+  <h2>09-23 歷史現況：C1–C16 各自到哪了</h2>
   <p>
     只用不寫入的手段確認：GitHub issue 狀態、Pages／Worker 部署紀錄（customer Pages 目前是 <code>8cd498e</code>，
     api Worker 最後部署 2026-09-23 01:19 UTC）、公開 API 的唯讀請求、唯讀 D1 查詢。

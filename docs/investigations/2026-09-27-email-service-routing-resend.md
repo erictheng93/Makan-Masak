@@ -1,5 +1,21 @@
 # Cloudflare Email Service、Email Routing 與 Resend
 
+## 2026-10-04 複核
+
+**判定：程式與設定仍支持 Cloudflare 寄信路徑；09-27 帳戶／DNS／送達結果是歷史證據。**
+本輪沒有重新登入 Cloudflare、查 DNS、讀 secret 或寄送真信，因此不能把當時的送達與帳戶狀態
+當作今日保證。`packages/database/src/services/NotificationService.ts` 依 binding 選擇
+Cloudflare／noop；Management 的 `OnboardingService` 在開通信啟用時核准後自動寄送，
+失敗記錄為 failed 並保留人工交付。這與 master flow 舊版「目前不寄信」不符，流程圖已對齊。
+
+`pnpm --filter @makanmasak/database exec vitest run src/services/NotificationService.test.ts`：
+1 檔、6 測試通過（binding、錯誤回傳、模板跳脫），並非真實收件匣測試。
+本輪重新讀取 [Cloudflare 定價](https://developers.cloudflare.com/email-service/platform/pricing/)、
+[限制](https://developers.cloudflare.com/email-service/platform/limits/) 與
+[Resend 定價](https://resend.com/pricing)，本文列出的寄信費率／配額仍符合頁面；
+一般郵件 5 MiB，已驗證目的地址另有 25 MiB 上限。產品帳戶每日額度仍須帳戶端確認。
+
+
 查核日期：2026-09-27。以下對照官方文件與目前儲存庫；Cloudflare 帳戶與 DNS 的實測見文末。
 
 ## 先分清收信與寄信

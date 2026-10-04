@@ -1,9 +1,38 @@
 # OrderStatus Surface Audit
 
+## 2026-10-04 現況複核
+
+**判定：歷史盤點可保留，114 檔／11 定義與遷移待辦不是目前 inventory。**
+本輪依 master user flow 對照工作區（基底 HEAD `8b9c7a571`），未重算全倉庫引用數。
+`packages/shared-types/src/order.ts` 的 `ORDER_STATUSES` 已有八個字串狀態；API
+`features/orders/schemas/validation.ts`、`contracts/schemas/orders.ts` 直接使用同一 tuple。
+付款欄位另有 `partial_refunded`，不可把訂單狀態與付款狀態混成一組。
+目前 `ORDER_STATUS_TRANSITIONS.delivered` 不允許一般狀態端點推進 `paid`；付訖由付款服務承接。
+
+`pnpm exec vitest run tests/unit/check-api-contracts.test.ts --project=root`：1 檔、19 測試通過，
+包含 enum 值、lazy 的 optional／nullable 保留；舊文所稱契約只記欄位的缺口已補。
+下文 §8 的 advanced session 已刪除，舊數字型別與持久化遷移策略不得再當目前待辦。
+此複核不證明四端瀏覽器同步或 production 部署；本輪整體證據與殘留缺口見
+[master flow 稽核](2026-10-04-master-flow-audit.md)。
+
+
 **Date:** 2026-04-09
 **Last updated:** 2026-04-10
 **Related issue:** #9
 **Status:** Historical audit — implementation mostly complete as of 2026-04-29
+
+> **2026-10-04 current verification:** This is a historical migration inventory,
+> not a current count of definitions/files or an open migration checklist.
+> `ORDER_STATUSES` still contains the canonical eight strings. However,
+> `delivered → paid` is no longer a manual status transition: settled payment
+> writes `status = paid` together with `payment_status = completed`.
+> `paid: []` is terminal for the manual status API; the refund service separately
+> writes `partial_refunded`/`refunded` payment state and fully refunded order
+> state. The deleted advanced realtime session means its proposed lazy migration
+> and 60-day cleanup must not be treated as current required work.
+> Existing historic statements that there are no external consumers describe
+> repository evidence only, not proof about unknown deployed API clients.
+> Current checks and limitations: [operations verification](2026-10-04-operations-flow-verification.md).
 
 > Current note (2026-04-29): the major migration described here has already
 > landed. `@makanmasak/shared-types` now exports `OrderStatus` as a canonical
