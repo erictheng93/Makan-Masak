@@ -3231,13 +3231,6 @@ Authorization: Bearer &lt;交換得到的management token&gt;</code></pre>
               </thead>
               <tbody>
                 <tr>
-                  <td>restaurant:{restaurantId}（無法連線）</td>
-                  <td>無</td>
-                  <td>
-                    realtime Worker沒有對應路由，只開放/customer/:tableId、/admin/:restaurantId、/kitchen/:restaurantId與/health。已知問題：主API（features/realtime/schemas/validation.ts的roomType含restaurant、RealtimeAuthService組URL）仍可簽出roomType為restaurant的token與URL，連線會404，不要使用。
-                  </td>
-                </tr>
-                <tr>
                   <td>admin:{restaurantId}</td>
                   <td>Admin Dashboard</td>
                   <td>新訂單、狀態、菜單變化等。</td>
@@ -3267,6 +3260,9 @@ Authorization: Bearer &lt;交換得到的management token&gt;</code></pre>
               </tbody>
             </table>
           </div>
+          <p class="note">
+            realtime Worker只開放/customer/:tableId、/admin/:restaurantId、/kitchen/:restaurantId與/health。API的token請求只接受roomType為admin或kitchen；restaurant房間已移除（舊版會簽出連線必404的token與URL）。
+          </p>
           <h3>連線流程</h3>
           <ol>
             <li>先持有效staff／customer／guest訂單身份。</li>
@@ -16347,7 +16343,7 @@ pnpm --filter @makanmasak/realtime dev</code></pre>
             builder的primaryKey／notNull／unique，並非全部約束。
           </p>
           <p class="note">
-            已知Drizzle與migration SQL差異：qr_codes的restaurant_id、created_by只存在於Drizzle，baseline SQL與舊軌道migration都沒有（production很可能同樣缺少，待以PRAGMA table_info確認），qr_templates同樣缺restaurant_id、usage_count；在缺欄的資料庫上建立／下載QR與QR統計會失敗，屬已知問題；backup_alerts（triggered_at、resolved_at）、backup_audit_logs（timestamp）、backup_configurations（created_at、updated_at）、backup_records（started_at、completed_at、updated_at）、backup_schedules（last_run_at、next_run_at、created_at、updated_at）、restore_operations（started_at、completed_at）共14個timestamp欄位只存在於SQL，Drizzle未宣告（它們是舊版TEXT時間欄位，Drizzle只對應其整數_ms孿生欄位；備份排程worker的原生SQL仍讀寫TEXT欄位）；重播後的SQL另含輔助表_migration_expected_discount_percentage_bps、_migration_assert_discount_percentage_bps與FTS shadow tables，本字典均未列。
+            已知Drizzle與migration SQL差異：qr_codes的restaurant_id、created_by原本只存在於Drizzle，baseline SQL與舊軌道migration都沒有（2026-10-05 實測production的qr_codes只有7欄、0筆資料），在缺欄的資料庫上建立／下載QR與QR統計會失敗；migrations_fresh/0037_qr_tenancy_columns.sql補上這兩欄，套用到production前仍是缺欄狀態（qr_templates不加欄，以created_by區隔）；backup_alerts（triggered_at、resolved_at）、backup_audit_logs（timestamp）、backup_configurations（created_at、updated_at）、backup_records（started_at、completed_at、updated_at）、backup_schedules（last_run_at、next_run_at、created_at、updated_at）、restore_operations（started_at、completed_at）共14個timestamp欄位只存在於SQL，Drizzle未宣告（它們是舊版TEXT時間欄位，Drizzle只對應其整數_ms孿生欄位；備份排程worker的原生SQL仍讀寫TEXT欄位）；重播後的SQL另含輔助表_migration_expected_discount_percentage_bps、_migration_assert_discount_percentage_bps與FTS shadow tables，本字典均未列。
           </p>
           <details id="schema-ai_configurations">
             <summary>
