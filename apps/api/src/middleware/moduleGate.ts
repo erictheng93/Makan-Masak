@@ -156,13 +156,15 @@ export async function invalidateSubscriptionCache(
 /**
  * Module gate middleware factory.
  *
- * @param module - The ModuleKey that the route requires
+ * @param module - The ModuleKey the route requires. An array means any-of:
+ *   the request passes when at least one listed module is enabled (and not
+ *   region-disabled). Used where one route serves several products.
  *
  * @example
  *   router.get('/display', authMiddleware, moduleGate('kitchen_display'), handler)
  */
 export function moduleGate(
-  module: ModuleKey,
+  module: ModuleKey | readonly ModuleKey[],
   resolveGuestRestaurantId?: (
     c: Context<{ Bindings: Env }>,
   ) => string | undefined | Promise<string | undefined>,
@@ -198,7 +200,9 @@ export function moduleGate(
       );
     }
 
-    if (!resolveModule(sub, module)) {
+    const modules = Array.isArray(module) ? module : [module as ModuleKey];
+    const enabled = modules.filter((m) => resolveModule(sub, m));
+    if (enabled.length === 0) {
       throw forbidden(
         "This feature is not included in your current plan.",
         "MODULE_NOT_ENABLED",
@@ -206,7 +210,8 @@ export function moduleGate(
     }
 
     // 地區政策是上限：國家關掉的模組，方案與單店覆寫都開不起來。
-    if ((await regionDisabledModules(c.env, sub)).has(module)) {
+    const regionOff = await regionDisabledModules(c.env, sub);
+    if (enabled.every((m) => regionOff.has(m))) {
       throw forbidden(
         "This feature is not available in your region.",
         "MODULE_NOT_AVAILABLE_IN_REGION",

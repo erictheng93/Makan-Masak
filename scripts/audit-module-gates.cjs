@@ -88,7 +88,9 @@ const failures = [];
 for (const [prefix, module, relPath] of PROTECTED) {
   const file = path.join(ROOT, relPath);
   const source = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
-  const pattern = new RegExp(`moduleGate\\(\\s*["']${module}["']\\s*\\)`);
+  const pattern = new RegExp(
+    `moduleGate\\(\\s*(?:\\[[^\\]]*)?["']${module}["']`,
+  );
   if (!pattern.test(source)) {
     failures.push(`${prefix} (${relPath}): missing moduleGate("${module}")`);
   }
