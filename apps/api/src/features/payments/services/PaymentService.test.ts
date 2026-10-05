@@ -151,9 +151,11 @@ function createD1(orderUpdateChanges = 1) {
         statement.sql =
           "paymentStatus" in payload && "paymentTransactionId" in payload
             ? "UPDATE orders"
-            : "isOccupied" in payload
+            : "isOccupied" in payload || "currentOrderId" in payload
               ? "UPDATE tables"
-              : "UPDATE payment_transactions";
+              : "completedAt" in payload
+                ? "UPDATE payment_transactions"
+                : "UPDATE orders assert";
         statements.push(statement);
         return builder;
       }),
@@ -874,7 +876,7 @@ describe("PaymentService", () => {
     const { db, committed, statements } = createD1WithBatchFailure(
       (statement) => statement.sql.includes("UPDATE payment_transactions"),
     );
-    queueOrderRows([[order()]]);
+    queueOrderRows([[order()], [order()]]);
     mockOrderUpdate([{ status: "paid", paymentStatus: "paid" }]);
 
     await expect(
@@ -892,8 +894,9 @@ describe("PaymentService", () => {
     // flipped to paid, the ledger never landed, and before #350 the only trace
     // was a console line. The thrown value is a plain Error, not an ApiError,
     // so it is recorded under UNEXPECTED_ERROR.
+    // The order update lives inside the batch now, so a failed batch leaves
+    // the order unpaid: only the failure audit row is committed.
     expect(committed.map((statement) => statement.sql)).toEqual([
-      expect.stringContaining("UPDATE orders"),
       expect.stringContaining("payment_audit_log"),
     ]);
     expect(preparedAuditEvents(statements)).toEqual([
@@ -906,9 +909,18 @@ describe("PaymentService", () => {
   });
 
   it("rejects payment finalization when the payable-state guard loses the race", async () => {
-    const { db } = createD1(0);
-    queueOrderRows([[order()]]);
-    mockOrderUpdate([{ status: "paid", paymentStatus: "paid" }]);
+    // The in-batch assert statement aborts the batch when another payer won.
+    const { db } = createD1WithBatchFailure(() => true);
+    queueOrderRows([
+      [order()],
+      [
+        order({
+          status: "paid",
+          paymentStatus: "completed",
+          paymentTransactionId: "pay_other",
+        }),
+      ],
+    ]);
 
     await expect(
       paymentService(env(db)).processPayment({
@@ -923,7 +935,7 @@ describe("PaymentService", () => {
       status: 409,
     });
 
-    expect(db.batch).not.toHaveBeenCalled();
+    expect(db.batch).toHaveBeenCalledOnce();
   });
 
   it("processes partial payments without closing the order when requested", async () => {
@@ -1053,7 +1065,9 @@ describe("PaymentService", () => {
       method: "cash",
     });
 
-    expect(statementContaining(statements, "UPDATE tables")?.payload).toEqual({
+    expect(
+      statements.filter((s) => s.sql === "UPDATE tables").map((s) => s.payload),
+    ).toContainEqual({
       isOccupied: false,
       currentOrderId: null,
       occupiedAt: null,
@@ -1448,7 +1462,7 @@ describe("PaymentService", () => {
     const { db } = createD1WithBatchFailure((statement) =>
       statement.sql.includes("UPDATE payment_transactions"),
     );
-    queueOrderRows([[order()]]);
+    queueOrderRows([[order()], [order()]]);
     mockOrderUpdate([{ status: "paid", paymentStatus: "paid" }]);
 
     await expect(
