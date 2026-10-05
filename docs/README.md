@@ -1,6 +1,6 @@
 # MakanMakan Documentation Hub
 
-> **New here?** Start with [CLAUDE.md](../CLAUDE.md) for a complete project overview and development guide.
+> **New here?** Start with the [繁體中文系統完整手冊](./user-manuals/system-handbook.html) for operations and development across all 11 apps. Use [CLAUDE.md](../CLAUDE.md) for repository rules and authoritative development procedures.
 
 ---
 
