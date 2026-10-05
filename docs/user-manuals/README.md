@@ -6,6 +6,8 @@
 
 [開啟繁體中文 HTML 系統完整手冊](./system-handbook.html)
 
+其他語言版本（頁面右上角下拉選單也能切換；附錄 A、B 維持繁體中文原文）：[English](./en-US/system-handbook.html) · [日本語](./ja-JP/system-handbook.html) · [Bahasa Indonesia](./id-ID/system-handbook.html) · [Tiếng Việt](./vi-VN/system-handbook.html) · [Filipino](./fil-PH/system-handbook.html)。頁面另提供深色／淺色模式切換。
+
 涵蓋營運人員與開發者：21 個 Part 串起 11 個 App、角色權限、點餐到收款退款與列印、入駐與租戶管理、API、即時通訊、資料模型、開發部署及維運排錯。另附路由宣告、Drizzle 資料表欄位與來源索引。可直接以瀏覽器開啟，支援離線閱讀、章節搜尋與列印。
 
 此手冊以 2026-10-05 的 repository 程式碼與設定核對，並明列尚待驗證的功能及已知限制；不代表當日 production 已完成所有驗收。下方多語言角色指南保留原版本，部分內容早於目前實作，請以新手冊及對應來源為準。
