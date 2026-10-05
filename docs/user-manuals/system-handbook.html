@@ -1139,7 +1139,9 @@
                 </tr>
                 <tr>
                   <td>Room／SSE token</td>
-                  <td>主 API realtime／kitchen token exchange</td>
+                  <td>
+                    主 API <code>/realtime/auth/token</code>（員工）、<code>/auth/guest-token</code>（訪客／顧客）、<code>/auth/group-token</code>（揪團成員）
+                  </td>
                   <td>指定房間或串流；不能當作一般 REST Bearer token。</td>
                 </tr>
               </tbody>
@@ -1152,14 +1154,17 @@
             </li>
             <li>
               登入呼叫 <code>POST /api/v1/auth/login</code>。access token
-              的有效期為 1 小時，refresh token 由 HttpOnly cookie 管理。
+              的有效期為 1 小時，refresh token 由 HttpOnly cookie 管理。登入失敗有限流：以 15
+              分鐘為窗口，同一 IP 失敗 10 次、同一 username 失敗 5 次就暫時鎖定。
             </li>
             <li>
               前端依角色與店家 context 導向。role 0
               沒有選定店家時，應先進平台頁或選店。
             </li>
             <li>
-              access token 接近過期時由既有 client 換發；換發 cookie
+              access token 剩餘不到 3600 秒時，API 回應會帶
+              <code>X-Token-Refresh-Recommended: true</code> 與
+              <code>X-Token-Expires-In</code>，由既有 client 換發；換發 cookie
               必須隨請求送出。
             </li>
             <li>
@@ -1171,8 +1176,8 @@
           </ol>
           <h3>顧客登入與帳號恢復</h3>
           <p>
-            Customer App 有登入、註冊、忘記密碼、設定密碼、email
-            驗證與個人中心。顧客資料使用 <code>customers</code> 與
+            Customer App 有登入、註冊、忘記密碼／重設密碼（/forgot-password、/reset-password）、email
+            驗證（/verify-email）與個人中心；沒有另一個獨立的「設定密碼」頁，首次設定與忘記後重設走同一個 /reset-password 流程。顧客 API 分兩個掛載：<code>/api/v1/customer</code>（auth、OTP、OAuth、資料與偏好）與 <code>/api/v1/customers</code>（<code>/me</code>、<code>/me/orders</code>、<code>/me/market-checkouts</code> 等顧客自己的資源），兩者是不同的 router，不是同一組路由的別名。顧客資料使用 <code>customers</code> 與
             <code>customer_auth_identities</code>，與員工
             <code>users</code>
             分開。同一人同時當店員與顧客時，須分別使用各自的登入流程。
@@ -1295,7 +1300,10 @@
                 <tr>
                   <td>delivered</td>
                   <td>交付完成</td>
-                  <td>refunded；收款結清走付款服務。</td>
+                  <td>
+                    refunded 在 ORDER_STATUS_TRANSITIONS 內合法，但沒有任何角色在 ROLE_STATUS_PERMISSIONS
+                    可設 refunded，PUT /orders/:id/status 會回 403；退款一律走退款端點。收款結清走付款服務。
+                  </td>
                 </tr>
                 <tr>
                   <td>paid</td>
@@ -1384,7 +1392,8 @@
             <li>
               <strong>兩人同改訂單：</strong>可能回 409
               <code>ORDER_VERSION_CONFLICT</code
-              >；重新讀現況後再決定，不用無條件覆蓋。
+              >；重新讀現況後再決定，不用無條件覆蓋。客戶端只在更新帶
+              <code>expectedVersion</code>（如追加品項、移除品項、折扣）時才會被比對版本；狀態端點由 server 讀取當下版本，只有讀取到寫入之間被別人改過才會衝突。
             </li>
             <li>
               <strong>同一訪客重送：</strong>沿用
@@ -1410,6 +1419,28 @@
             cents 直接放進 amount。跨店分析按幣別分組；TWD、MYR、VND
             不可直接相加。
           </p>
+          <ul>
+            <li>
+              每個金額欄位存整數 cents（主幣單位 ×100），所有幣別皆然，TWD 也不例外：NT$155 存
+              15500，且只有 15500 合法（15550 不是合法的 TWD 金額）。
+            </li>
+            <li>
+              幣別由 server 依餐廳設定決定。請求內帶的幣別只拿來比對，不一致回 400
+              <code>CURRENCY_MISMATCH</code>；金額精度不符該幣別（如 TWD 帶角）回 400
+              <code>CURRENCY_PRECISION</code>。
+            </li>
+            <li>
+              付款的 registerId 與 shiftId 必須同時送；同一把 Idempotency-Key 用在另一張訂單回 422
+              <code>IDEMPOTENCY_ORDER_MISMATCH</code>。
+            </li>
+            <li>
+              取消訂單（DELETE /api/v1/orders/:id）僅 role 0／1，可帶選填 reason（超過 500
+              字會被截斷，不是拒絕）；收銀員 role 4 不能取消。
+            </li>
+            <li>
+              廚房票（receipts 表 receiptType=kitchen，供 Print Agent 出紙本單）在狀態變為 confirmed 時建立，建立失敗只記 log（不回滾訂單、無告警、無自動補單），所以已 confirmed 的訂單可能沒有廚房票。廚房顯示依訂單狀態列單、不讀票據，廚師畫面不受影響；受影響的只有使用紙本出單的店家，需到訂單詳情核對。已知缺口：候位預點單確認（confirmWaitingListPreOrders）直接批次改為 confirmed，不會建立廚房票。
+            </li>
+          </ul>
           <p class="sources">
             核對來源：<a href="../../packages/shared-types/src/order.ts"
               >packages/shared-types/src/order.ts</a
@@ -1547,7 +1578,7 @@
           </p>
           <h3>修改、追加與取消</h3>
           <p>
-            訪客追加品項只在允許的早期狀態執行，並受整單項目上限限制。餐點開始製作後不要反覆從本地購物車「修改」已送出的訂單；購物車與已成立的訂單是不同資料。取消是否允許由
+            訪客單筆下單與追加都是 1–20 個品項行，每行數量最多 99；追加只在訂單 pending 或 confirmed 時允許，整張訪客單合計不得超過 20 個品項行（超過回 400）。餐點開始製作後不要反覆從本地購物車「修改」已送出的訂單；購物車與已成立的訂單是不同資料。取消是否允許由
             server
             狀態規則與訂單憑證決定。已付款若需退款，應由有權員工走退款流程。
           </p>
@@ -1568,7 +1599,7 @@
             </li>
             <li>
               <strong>叫號：</strong
-              >店家叫號後有確認期限；顧客依畫面確認抵達。過期時應按店家規則重新登記。
+              >店家叫號後有 5 分鐘確認期限；顧客依畫面確認抵達，逾時才確認會被視為過期。過期時應按店家規則重新登記。
             </li>
             <li>
               <strong>候位預點：</strong
@@ -1588,7 +1619,7 @@
             同一店家的多人點餐：團主開團 → 分享連結 → 成員加入 → 各自加菜 →
             團主檢查並送出／鎖單 → 收斂成一筆 master order → 追蹤。成員使用
             member token，不是員工 JWT。鎖單後不能當作 active
-            購物車繼續改。分帳可有均分、按品項、自訂等策略，但「算出分攤金額」與「實際收到各成員的錢」必須分開核對。遇
+            購物車繼續改。分帳有兩份不同的清單：分帳操作（splitBillSchema）接受 equal、proportional、individual、by_item、custom；團主儲存的分帳偏好（splitTypePreferenceSchema）只接受 equal、by_item、proportional，因為 custom 與 single_payer 需要逐成員金額而團單沒有欄位保存。但「算出分攤金額」與「實際收到各成員的錢」必須分開核對。遇
             <code>finalizing_failed</code
             >，可能真實訂單已成立，先交平台查明再重建。
           </p>
@@ -1756,9 +1787,14 @@
                   <td>訂單</td>
                   <td>/dashboard/orders</td>
                   <td>
-                    篩選、明細、確認、合法取消、匯出；以回應的 version／status
+                    僅 role 0／1／3／4 可進。篩選、明細、確認、合法取消、匯出；以回應的 version／status
                     為準。
                   </td>
+                </tr>
+                <tr>
+                  <td>後台廚房檢視</td>
+                  <td>/dashboard/kitchen</td>
+                  <td>role 0／1／2；與 Kitchen Display App 是不同入口。</td>
                 </tr>
                 <tr>
                   <td>菜單與選項</td>
@@ -1768,7 +1804,9 @@
                 <tr>
                   <td>桌位／座位</td>
                   <td>/dashboard/seating/table-setup</td>
-                  <td>真實桌號、容量、QR 模式；不要把手動釋放視為已收款。</td>
+                  <td>
+                    真實桌號、容量、QR 模式；不要把手動釋放視為已收款。單桌詳情為 /dashboard/seating/tables/:id（role 0／1）。
+                  </td>
                 </tr>
                 <tr>
                   <td>訂位／候位</td>
@@ -1783,13 +1821,17 @@
                   <td>
                     /dashboard/employees、其 attendance／scheduling／leaves 子頁
                   </td>
-                  <td>員工、排班、出勤、請假；詳細見 Part 9。</td>
+                  <td>
+                    員工、排班、出勤、請假；詳細見 Part 9。另有
+                    /dashboard/employees/scheduling/advanced 與 /scheduling/analytics（role 0／1）。
+                  </td>
                 </tr>
                 <tr>
                   <td>員工自助</td>
                   <td>/dashboard/my-shifts、my-leaves、my-attendance</td>
                   <td>
-                    查自己的班表、請假與出勤；廚師使用 kitchen 的 /my-shifts。
+                    role 0–4 皆可進，查自己的班表、請假與出勤；廚師（無法使用 admin
+                    dashboard）使用 kitchen 的 /my-shifts。
                   </td>
                 </tr>
                 <tr>
@@ -1919,6 +1961,21 @@
             <code>/dashboard/subscriptions</code>。這些與 Management Portal 的
             tenants／licenses 頁不是同一個資源。
           </p>
+          <h3>未列於地圖的入口與 redirect</h3>
+          <ul>
+            <li>
+              <code>/forgot-password</code>、<code>/reset-password</code>：Admin Dashboard 自己的忘記／重設密碼頁（核准後的店主設密碼也走這裡）。
+            </li>
+            <li>
+              <code>/owner</code> → <code>/dashboard/owner-overview</code>；<code>/cashier</code> →
+              <code>/dashboard/pos/checkout</code>；<code>/dashboard/queue</code> →
+              SeatingQueueDashboard。
+            </li>
+            <li>
+              role 2（廚師）不能使用 admin dashboard：進入 dashboard 首頁會被登出並導向 Kitchen
+              Display。
+            </li>
+          </ul>
           <h3>權限與空頁排錯</h3>
           <p>
             依序確認：帳號 role、登入者餐廳、role 0 選店
@@ -1959,7 +2016,10 @@
             入口為 <code>/login</code>，主要看板
             <code>/kitchen/:restaurantId</code>；另有
             <code>/my-shifts</code>、<code>/settings</code> 與
-            <code>/history</code>。廚師角色是
+            <code>/history</code>。<code>/kitchen/:restaurantId</code> 與
+            <code>/my-shifts</code> 路由要求 requiredRole 2；<code>/settings</code> 與
+            <code>/history</code> 在路由層只要求登入，但 auth store 在登入時就拒絕非 role 2
+            的帳號，所以實際上仍只有廚師進得來。廚師角色是
             2；必須屬於正確餐廳，且該店有效啟用
             <code>kitchen_display</code>。server 的部分廚房資料允許 role
             0／1／2／3，但這不等於廚房 App 對所有角色都有相同入口。
@@ -2001,7 +2061,7 @@
           <p>
             廚房 offlineService
             可快取訂單及排隊動作，連線恢復後重放。離線期間他人可能已取消、結清或推進訂單；server
-            的餐廳、狀態與版本檢查仍有效。佇列有重試上限，重放被拒絕時要查明並人工核對餐點，不應無限重試。切換餐廳會清掉前一租戶的離線資料，避免跨店重送。
+            的餐廳、狀態與版本檢查仍有效。每個排隊動作最多重試 5 次（MAX_RETRY_ATTEMPTS），重放被拒絕時要查明並人工核對餐點，不應無限重試。切換餐廳會清掉前一租戶的離線資料，避免跨店重送。
           </p>
           <h3>重複完成與多台看板</h3>
           <p>
@@ -2088,8 +2148,8 @@
             使用 Admin Dashboard 的
             <code>/dashboard/pos/checkout</code> 收銀頁與
             <code>/dashboard/pos/management</code> 管理頁。role 0／1／4
-            依端點權限操作。收銀機與班次要屬於同店，並正確綁定；付款不能只填一個
-            registerId 或只填 shiftId。
+            依端點權限操作；其中 GET /pos/shifts/stats 只開放 role 0／1。收銀機與班次要屬於同店，並正確綁定；付款不能只填一個
+            registerId 或只填 shiftId（registerId 與 shiftId 必須同時送，否則 400，見 payments/routes/index.ts）。
           </p>
           <h3>開班</h3>
           <ol>
@@ -2136,11 +2196,12 @@
               <code>X-Shift-Id</code>，由 server 核對同店與班次。
             </li>
             <li>
-              收銀員 role 4 建立後停在 processing，等待 Admin／Owner
-              核准；送審本身不代表金額已退還。
+              只有收銀員 role 4 建立的退款會停在 processing，等待 Admin／Owner
+              核准；role 0／1 自己發起的退款則立即完成，不經審核。送審本身不代表金額已退還。
             </li>
             <li>
-              Admin／Owner 核准會由 finalizer
+              核准、拒絕、取消（POST /pos/refunds/:id/approve|reject|cancel）僅 role
+              0／1 可用，收銀員不能自行核准。Admin／Owner 核准會由 finalizer
               更新原訂單、退款統計及符合條件的現金流；也可按規則拒絕／取消。
             </li>
             <li>
@@ -2170,7 +2231,9 @@
                 <tr>
                   <td>/pos/refunds/create + approve／reject／cancel</td>
                   <td>POS 審核與班次帳</td>
-                  <td>role 0／1／4；收銀員須送審。</td>
+                  <td>
+                    create role 0／1／4，收銀員（role 4）須送審、role 0／1 立即完成；approve／reject／cancel 僅 role 0／1。
+                  </td>
                 </tr>
                 <tr>
                   <td>/payments/refund</td>
@@ -2190,13 +2253,20 @@
             停止新的收銀操作，核對待處理退款，再實際清點。結班必須由操作員輸入實際金額；輸入
             0 合法，但不能自動代填 0 或系統預期數。
           </p>
-          <pre><code>預期現金 = 開班現金 + 現金銷售 − 已核准現金退款 ± 人工現金異動
+          <pre><code>預期現金 = 開班現金 + 現金銷售 − 已核准現金退款 ± 人工現金異動 ± 現金進位調整
 差額     = 實際清點現金 − 預期現金</code></pre>
           <p>
             例：開班 1,000，現金收款 510，核准現金退款 50，沒有其他異動，預期是
             1,460；實際 1,450，差額 −10。卡／wallet
             銷售不加入此公式。closing／opening／sale
             等來源記錄不可再次全部相加，否則重複計算。
+          </p>
+          <p class="note">
+            現金進位調整只發生在 MYR：以實體現金收款時，實收金額進位到最接近的 5
+            sen（PaymentService collectableAmount）。訂單總額不變，差額存在付款的
+            roundingAdjustmentCents；ReportService 把
+            cashRoundingAdjustment 加進預期現金。例：MYR 10.33 現金收 10.35，進位調整
+            +0.02，預期現金多 0.02。TWD 等其他幣別與卡／wallet 的調整為 0，上例不受影響。
           </p>
           <h3>常見錯誤與驗收</h3>
           <div
@@ -2218,12 +2288,25 @@
                   <td>原單已結清、不可支付或不在合法付款狀態；讀回再判斷。</td>
                 </tr>
                 <tr>
-                  <td>PAYMENT_TOTAL_MISMATCH／AMOUNT_MISMATCH</td>
-                  <td>停止付款，核對 server 總額、單位與部分付款分配。</td>
+                  <td>
+                    PAYMENT_TOTAL_MISMATCH（expectedTotal 與 server
+                    可收金額不符，409）／PARTIAL_PAYMENT_TOTAL_MISMATCH（部分付款各筆加總不等於訂單總額）／PAYMENT_AMOUNT_MISMATCH（amount
+                    不符，409）
+                  </td>
+                  <td>
+                    停止付款，核對 server 總額、單位與部分付款分配。AMOUNT_MISMATCH
+                    屬於市集結帳與 webhook／對帳路徑，不是 POS 付款的錯誤碼。
+                  </td>
                 </tr>
                 <tr>
                   <td>缺 Idempotency-Key</td>
                   <td>補齊同一次付款的唯一鍵，不讓每次網路重試生成不同鍵。</td>
+                </tr>
+                <tr>
+                  <td>IDEMPOTENCY_ORDER_MISMATCH（422）</td>
+                  <td>
+                    同一把 Idempotency-Key 已用在另一張訂單；每張訂單、每次付款意圖各用自己的鍵。
+                  </td>
                 </tr>
                 <tr>
                   <td>退款超額</td>
@@ -2276,19 +2359,21 @@
           <h3>送菜工作站</h3>
           <p>
             入口為 Admin Dashboard <code>/service</code>，不是一個獨立 Service
-            App。role 0／1／3 可進畫面；服務端使用訂單 feature，沒有第九個
+            App。role 0／1／3 可進畫面（但領單端點只有 0／3）；服務端使用訂單 feature，沒有第九個
             <code>delivering</code> 訂單狀態。
           </p>
           <ol>
             <li>讀取 ready 清單，確認優先順序、桌號／座位、品項與等待時間。</li>
             <li>
-              開始配送呼叫 <code>POST /orders/:id/delivery-claim</code>；server
+              開始配送呼叫 <code>POST /orders/:id/delivery-claim</code>（僅 role
+              0／3；店主 role 1 不能領單）；server
               保存 deliveryAssignedTo 與 deliveryStartTime。
             </li>
             <li>核對餐點再送到正確桌位／取餐位置。</li>
             <li>
               確認送達時送 <code>PUT /orders/:id/status</code> 的
-              delivered。一般送菜員必須是領單者；店主有代送例外，仍受本店與狀態限制。
+              delivered。領單者才能完成送達；店主（role 1）免領單，可直接代送，仍受本店與狀態限制。管理員（role 0）不在此例外內，必須先領單，否則回
+              <code>DELIVERY_CLAIM_REQUIRED</code>。
             </li>
             <li>
               若領單衝突或單已更動，重新讀回。不能僅改瀏覽器 localPhase 就認定
@@ -2302,7 +2387,11 @@
           <h3>候位叫號與入座</h3>
           <ol>
             <li>客人取號後，店家查看 active 候位與人數。</li>
-            <li>選可用且足夠容量的桌位叫號，票進 called；系統有確認期限。</li>
+            <li>
+              選可用且足夠容量的桌位叫號，票進 called；確認期限為 5
+              分鐘，逾時後才確認會觸發 expireWaiting 並回「叫號已超時」，需重新排隊。員工操作（查詢、叫號、入座、過期、批次叫號）限 role
+              0／1／3／4；統計限 role 0／1。
+            </li>
             <li>顧客確認／直接抵達，店員依允許路徑標入座。</li>
             <li>
               入座會處理候位預點單並通知廚房；不重復把同一筆預點當新單輸入。
@@ -2313,7 +2402,10 @@
           <p>
             訂位預留餐桌時段；服務預約預留 service item
             的時段容量與付款條件；候位是現場排隊。<code>/queue</code>
-            是候位服務的相容入口，不是另一套資料。這三類不應共用一個「完成」按鈕解釋全部行為。訂位入座不代表已建立餐點單，候位與訂位的桌位容量也需要現場協調。
+            是候位服務的相容入口，不是另一套資料：Admin Dashboard 的
+            <code>/queue</code> 只是 redirect 到 SeatingQueueDashboard；API 的
+            <code>/api/v1/queue</code> 經 UnifiedQueueService 委派給 WaitingListService。訂位的 confirm／no-show 限 role
+            0／1／4，arrive／seat／complete 另開放 role 3。這三類不應共用一個「完成」按鈕解釋全部行為。訂位入座不代表已建立餐點單，候位與訂位的桌位容量也需要現場協調。
           </p>
           <h3>員工帳號</h3>
           <p>
@@ -2330,7 +2422,9 @@
               等衝突。
             </li>
             <li>
-              員工透過 my-shifts 查看自己的安排，換班依畫面與審核流程提交。
+              員工透過 my-shifts 查看自己的安排；my-shifts、my-leaves、my-attendance 三個自助頁開放 role
+              0–4。換班流程為：對方員工先 accept（POST /swap-requests/:id/accept），再由 role
+              0／1 approve 或 reject；申請人另有獨立的 cancel。
             </li>
             <li>主管處理衝突及換班後，重新確認實際人員與時間。</li>
           </ol>
@@ -2390,7 +2484,8 @@
             代理主動輪詢並認領；驅動把 ESC/POS 或支持的 Star
             指令送到網絡印表機，再回報。NAT／防火牆下無需雲端主動連店內設備。當前正式傳輸為
             raw TCP，通常使用 9100；USB、serial、Bluetooth
-            不能因配置中列出名稱就視為已實作。
+            不能因配置中列出名稱就視為已實作：LocalPrintService 的探索預設
+            connectionTypes 為 <code>["usb","network"]</code>，但 PrinterDriverFactory 的 USB 掃描是空實作（回傳空陣列）；serial 掃描只試探預設埠，而 detectPrinter 對非 network 連線一律不回傳裝置；Bluetooth 沒有掃描實作。實際只有 network 能被找到並列印。
           </p>
           <h3>兩種代理</h3>
           <div
@@ -2437,9 +2532,10 @@
             </li>
             <li>
               在本機 <code>apps/print-agent/.env</code> 配
-              <code>PRINT_AGENT_API_KEY</code>、需要時的
+              <code>PRINT_AGENT_API_KEY</code>（至少 10 字元，否則啟動驗證失敗）、需要時的
               <code>PRINT_AGENT_CLOUD_KEY</code
-              >、<code>CLOUD_API_ENDPOINT</code>；其餘值由 .env.example 起步。
+              >、<code>CLOUD_API_ENDPOINT</code>（預設
+              <code>http://localhost:8787/api/v1</code>，正式環境必須明確設定）；其餘值由 .env.example 起步。
             </li>
             <li>
               用 <code>pnpm dev:print-agent</code> 單獨啓動。全局 pnpm dev
@@ -2455,13 +2551,13 @@
             </li>
             <li>
               <code>PRINT_AGENT_CLOUD_KEY</code>：本機代理 →
-              雲端派工，後台核發。未設定時是合法的本機-only模式，不輪詢雲端。
+              雲端派工，後台核發；代理以 <code>X-Print-Agent-Key</code> header 送給雲端，雲端把它做雜湊後比對 print_agents（未撤銷者），店家與收銀機由該憑證決定。它只是代理自己的環境變數名，不是瀏覽器或員工 token。未設定時是合法的本機-only模式，不輪詢雲端。
             </li>
           </ul>
           <h3>狀態、重試與不確定結果</h3>
           <p>
             票據狀態為 pending → printing → printed／failed，另有
-            cancelled。認領次數有上限，過久未回報的認領可回收。真正failed可在預算內重排；indeterminate表示可能已經印出，避免自動再印造成重復，交人決定。單輪認領會逐筆
+            cancelled。認領次數上限 MAX_DELIVERY_ATTEMPTS = 5；認領後超過 5 分鐘未回報視為放棄，下一輪可回收，達到 5 次仍未結清的票據被標為 failed。真正 failed 在 5 次預算內自動回 pending 重排，用盡後為終態 failed；indeterminate 表示可能已經印出，雲端直接結為 failed 且不自動重印（避免重復），交人決定是否手動補印。單輪認領會逐筆
             drain、上限 20 張；若列印失敗即停止當輪，避免燒光全隊列重試。
           </p>
           <div
@@ -2491,7 +2587,7 @@
                 </tr>
                 <tr>
                   <td>offline</td>
-                  <td>超過健康窗口未輪詢</td>
+                  <td>超過健康窗口（5 分鐘，OFFLINE_AFTER_MS）未輪詢</td>
                   <td>查Node進程、網路、cloud URL/key。</td>
                 </tr>
                 <tr>
@@ -2563,7 +2659,8 @@
             </li>
             <li>
               檢查資料與申請條件後送出。公開申請有 IP
-              限流，錯誤時依提示修正，不反覆送重複資料。
+              限流：每個 IP 每小時最多 5 筆申請（OnboardingService
+              APPLICATION_RATE_LIMIT），錯誤時依提示修正，不反覆送重複資料。
             </li>
             <li>
               成功後保存 applicationId 與查詢連結。連結片段／secret
@@ -2574,7 +2671,7 @@
               等狀態；若駁回，閱讀原因。
             </li>
             <li>
-              核准後收到設定密碼連結，或由平台人工交付。開到 Admin Dashboard 的
+              核准後收到設定密碼連結（有效 24 小時），或由平台人工交付。開到 Admin Dashboard 的
               reset-password 頁自行設定，再登入。
             </li>
           </ol>
@@ -2592,7 +2689,9 @@
             ><span>一次性設定密碼連結</span><span>completed + 送達紀錄</span>
           </div>
           <p>
-            兩個 D1 之間沒有跨庫交易；核准失敗靠反序補償恢復，而非單個SQL
+            核准與駁回都只能從 submitted 狀態進行：駁回會寫入
+            rejectionReason 與 rejectedAtMs；已 completed 的申請再核准是冪等的，直接回傳既有結果，其他狀態回「Cannot
+            approve application with status」。兩個 D1 之間沒有跨庫交易；核准失敗靠反序補償恢復，而非單個SQL
             transaction。新店可能先
             <code>isAvailable=false</code
             >，讓店主完成菜單、營業與桌位後再接單。若選市集，建立的是待審 market
@@ -2600,7 +2699,7 @@
           </p>
           <h3>憑證與信件</h3>
           <p>
-            初始密碼是不可用的隨機密碼；店主必須用一次性連結設密碼。連結過期／遺失由管理者重新產生，新連結會使舊token失效。production配置有
+            初始密碼是不可用的隨機密碼；店主必須用一次性連結設密碼。連結有效期 24 小時，過期／遺失由管理者重新產生，新連結會使舊token失效。production配置有
             <code>ONBOARDING_EMAIL_ENABLED="true"</code> 與Cloudflare Email
             binding；關閉或寄送失敗時須人工交付。sent代表provider接受，不保證已到收件匣。
           </p>
@@ -2632,13 +2731,21 @@
                   <td>申請查詢401</td>
                   <td>
                     application secret／X-Onboarding-Secret
-                    是否完整；連結片段未送到server時由前端轉header。
+                    是否完整；連結片段未送到server時由前端轉header。沒帶 secret 查狀態會回 401
+                    <code>APPLICATION_SECRET_REQUIRED</code>。
                   </td>
                 </tr>
                 <tr>
                   <td>核准後店主不能登入</td>
                   <td>
                     先設密碼；username不是必然等於Email；user／sessions與店家狀態。
+                  </td>
+                </tr>
+                <tr>
+                  <td>核准失敗：Unsupported onboarding country／PLAN_NOT_AVAILABLE_IN_REGION</td>
+                  <td>
+                    申請的國家不在支援清單，或付費方案層級不被該國家的 plans.allowed_tiers 政策允許（trial 不受此限）；改申請資料或調整地區政策後重試。區域政策讀不到時回 503
+                    POLICY_UNAVAILABLE。
                   </td>
                 </tr>
                 <tr>
@@ -2726,7 +2833,7 @@
                   <td>/tenants、/tenants/:id</td>
                   <td>租戶與資源</td>
                   <td>
-                    tenantId不是restaurantId；建立、修改、刪除有不同影響。
+                    tenantId不是restaurantId；建立、修改、終止（軟刪除）有不同影響。
                   </td>
                 </tr>
                 <tr>
@@ -2774,7 +2881,7 @@
           </ol>
           <p>
             management token
-            使用獨立issuer／audience，默認1小時；portal放在sessionStorage，並在過期後清除。當前管理API還會核對最新平台Admin身份與關聯session，不能沿用舊文件「只靠TTL收回權杖」的說法。
+            使用獨立issuer／audience，TTL是routes/auth.ts內寫死的1小時常數，不能以設定調整；portal放在sessionStorage，並在過期後清除。當前管理API還會核對最新平台Admin身份與關聯session，不能沿用舊文件「只靠TTL收回權杖」的說法。
           </p>
           <h3>授權與店家訂閱不同</h3>
           <p>
@@ -2784,9 +2891,9 @@
             verify是payload自證的公開入口，其他管理操作需management
             Bearer。授權表與租戶欄位有冗餘資訊，變更後應讀回兩側並核對。
           </p>
-          <h3>刪除租戶的範圍</h3>
+          <h3>終止租戶（軟刪除）的範圍</h3>
           <p>
-            控制面刪除並不等於清掉平台餐廳、訂單、收款與檔案。處理停業或資料刪除前先確定關聯數據、保留政策與帳號停用流程；不要把一個DELETE當作全系統清理。
+            租戶的DELETE實為軟刪除：<code>TenantService.deleteTenant</code>只在MANAGEMENT_DB把<code>tenants.status</code>設為<code>terminated</code>，不碰PLATFORM_DB，不停用餐廳或店主帳號，也不撤銷任何session。它並不清掉平台餐廳、訂單、收款與檔案。處理停業或資料刪除前先確定關聯數據、保留政策與帳號停用流程；不要把一個DELETE當作全系統清理。
           </p>
           <h3>部署UI目前的已知限制</h3>
           <p>
@@ -2802,6 +2909,12 @@
             平台控制面可維護政策與市集。國家層禁用模塊是上限，單店方案與override不能重新啓用。主API通過策略resolver讀取有效配置；資料無效／讀取失敗可能503，不應默默放行。調政策需驗同國家多店、快取失效、不同付款模式與既有交易行為。
           </p>
           <h3>平台營運的其他工作</h3>
+          <p>
+            management-api的公開掛載只有/auth、/onboarding、/markets與/licenses/verify，其餘受management
+            Bearer保護；Portal的/markets頁是市集控制面的操作介面。management-api production有一條cron
+            <code>30 18 * * *</code>，執行onboarding稽核封存（audit
+            archive）；backup-scheduler另有ANALYTICS binding。
+          </p>
           <p>
             主API的Admin頁負責市集攤位審核、跨攤對帳／退款、平台顧客目錄、shop訂閱與公告；Management
             Portal只覆蓋控制面。provider_split對帳和child_transactions對帳能力不相同；正式對帳還需供應商交易與結算證據。
@@ -3019,7 +3132,7 @@ Authorization: Bearer &lt;交換得到的management token&gt;</code></pre>
                 <tr>
                   <td>雲端列印</td>
                   <td>GET /api/v1/print/jobs、POST /jobs/:receiptId/ack</td>
-                  <td>PRINT_AGENT_CLOUD_KEY；非瀏覽器staff token。</td>
+                  <td>header X-Print-Agent-Key（雲端以雜湊比對print_agents）；不是瀏覽器staff token。PRINT_AGENT_CLOUD_KEY只是print-agent端存放此金鑰的環境變數名。</td>
                 </tr>
                 <tr>
                   <td>候位</td>
@@ -3118,9 +3231,11 @@ Authorization: Bearer &lt;交換得到的management token&gt;</code></pre>
               </thead>
               <tbody>
                 <tr>
-                  <td>restaurant:{restaurantId}</td>
-                  <td>店家範圍</td>
-                  <td>訂單／品項等營運更新。</td>
+                  <td>restaurant:{restaurantId}（無法連線）</td>
+                  <td>無</td>
+                  <td>
+                    realtime Worker沒有對應路由，只開放/customer/:tableId、/admin/:restaurantId、/kitchen/:restaurantId與/health。已知問題：主API（features/realtime/schemas/validation.ts的roomType含restaurant、RealtimeAuthService組URL）仍可簽出roomType為restaurant的token與URL，連線會404，不要使用。
+                  </td>
                 </tr>
                 <tr>
                   <td>admin:{restaurantId}</td>
@@ -3133,9 +3248,21 @@ Authorization: Bearer &lt;交換得到的management token&gt;</code></pre>
                   <td>新單／品項／履約狀態。</td>
                 </tr>
                 <tr>
+                  <td>customer:{tableId}</td>
+                  <td>顧客桌位（路徑/customer/:tableId）</td>
+                  <td>該桌顧客的訂單更新。</td>
+                </tr>
+                <tr>
                   <td>customer:order:{orderId}</td>
-                  <td>顧客單筆追蹤</td>
+                  <td>顧客單筆追蹤（路徑/customer/order:{orderId}）</td>
                   <td>該單狀態更新，不廣播整店私人訂單。</td>
+                </tr>
+                <tr>
+                  <td>customer:{groupOrderId}</td>
+                  <td>揪團成員（路徑/customer/{groupOrderId}）</td>
+                  <td>
+                    房間以groupOrderId隔離；成員token scope為group-order-realtime，roomId必須等於groupOrderId，由/realtime/auth/group-token簽發。
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -3149,7 +3276,8 @@ Authorization: Bearer &lt;交換得到的management token&gt;</code></pre>
             </li>
             <li>
               對realtime的正確房間路徑發WebSocket
-              Upgrade，並按現行client傳送連接token。
+              Upgrade。路徑為/{roomType}/{roomId}，token只從query string
+              <code>?token=</code>讀取（jwtVerifier.extractTokenFromUrl），不讀header；訂單範圍的訪客roomId為<code>order:{orderId}</code>，顧客房間token來自/realtime/auth/guest-token，員工用/realtime/auth/token，揪團用/realtime/auth/group-token。
             </li>
             <li>DO驗證token有效期、scope與權限，再接收消息。</li>
             <li>
@@ -3242,27 +3370,31 @@ Authorization: Bearer &lt;交換得到的management token&gt;</code></pre>
               <tbody>
                 <tr>
                   <td>POST /images/upload</td>
-                  <td>驗證並上傳圖像。</td>
+                  <td>驗證並上傳圖像；role 0／1／2。</td>
                 </tr>
                 <tr>
                   <td>GET／PUT／DELETE /images/:id</td>
-                  <td>metadata讀取、修改、刪除，按實際路由權限。</td>
+                  <td>
+                    GET 為 optional auth（未登入也可讀可公開的圖）；PUT／DELETE role 0／1／2。
+                  </td>
                 </tr>
                 <tr>
                   <td>GET /images</td>
-                  <td>列表與篩選。</td>
+                  <td>列表與篩選；需登入。</td>
                 </tr>
                 <tr>
                   <td>GET /images/:id/view、/:imageId/:variant</td>
-                  <td>依路由提供圖片查看／變體。</td>
+                  <td>
+                    依路由提供圖片查看／變體；/:id/view 為 optional auth，/:imageId/:variant 不要求登入。
+                  </td>
                 </tr>
                 <tr>
                   <td>POST /images/:id/process、GET /images/jobs/:jobId</td>
-                  <td>處理請求與任務狀態。</td>
+                  <td>處理請求 role 0／1／2；任務狀態需登入。</td>
                 </tr>
                 <tr>
                   <td>POST /images/bulk</td>
-                  <td>批次操作。</td>
+                  <td>批次操作；僅 role 0／1。</td>
                 </tr>
                 <tr>
                   <td>/analytics/*</td>
@@ -3278,7 +3410,7 @@ Authorization: Bearer &lt;交換得到的management token&gt;</code></pre>
           <h3>設定與排錯</h3>
           <p>
             確認Admin的VITE_IMAGE_API_URL、服務CORS、員工驗證密鑰、圖片DB、IMAGE_CACHE、IMAGES_BUCKET與Images
-            provider。MAX_IMAGE_SIZE_MB、ALLOWED_MIME_TYPES等限制依環境設定。restaurant／owner
+            provider。限制值（wrangler.toml）：production網址為images.makanmasak.com；MAX_IMAGE_SIZE_MB 10（單檔）、MAX_UPLOAD_REQUEST_SIZE_MB 12（整個上傳請求）、MAX_UPLOADS_PER_MINUTE 20、MAX_TRANSFORMS_PER_MINUTE 100；ALLOWED_MIME_TYPES 為 image/jpeg、image/png、image/webp、image/gif，其餘MIME會被拒。restaurant／owner
             UUID規範必須與生成策略一致。圖片健康探針會有KV寫操作，與主API的廉價只讀health不同，不盲目高頻調用。
           </p>
           <h3>驗收</h3>
@@ -3564,7 +3696,7 @@ Authorization: Bearer &lt;交換得到的management token&gt;</code></pre>
                 <tr>
                   <td>人事</td>
                   <td>
-                    employee_schedules、shift_templates、leave_*、swap_requests等
+                    employee_schedules、shift_templates、leave_*、schedule_swap_requests等
                   </td>
                   <td>班次、可用時間、假與申請；不是customers。</td>
                 </tr>
@@ -4438,7 +4570,7 @@ pnpm --filter @makanmasak/realtime dev</code></pre>
           <h3>手冊維護流程</h3>
           <ol>
             <li>
-              改App路由、權限、狀態、feature、provider或migration時，更新對應主章；附錄的sourceinventory亦須重建。
+              改App路由、權限、狀態、feature、provider或migration時，更新對應主章；附錄的sourceinventory亦須重建。路由literal索引以上述掃描規則重掃各App原始碼後逐檔案比對（筆數與檔數須與標題、本段一致）。
             </li>
             <li>
               記錄核對日期、SHA與環境，標明「源碼」「配置」「production量測」三類證據。
@@ -5225,7 +5357,7 @@ pnpm --filter @makanmasak/realtime dev</code></pre>
               </tbody>
             </table>
           </div>
-          <h3>逐檔案路由literal索引：682筆</h3>
+          <h3>逐檔案路由literal索引：757筆</h3>
           <p>
             下表列的是「檔案內的路由路徑」，<strong>不是自動組合完成的對外URL</strong>。組完整URL時需向上核對本檔router如何被掛載：例如orders/routes的
             <code>/:id/status</code> 配主掛載 <code>/orders</code> 得到
@@ -5233,8 +5365,14 @@ pnpm --filter @makanmasak/realtime dev</code></pre>
             >。POS子router、auth、同prefix多router要再查其內部route掛載；是否public、deprecated、flag或module關閉則由middleware與handler決定。
           </p>
           <p>
-            此索引包含符合範圍的literal
-            HTTP註冊，略過測試與非literal／動態建路徑；同一路徑不同method分列。一般GET、DELETE等字串不等於完整contract，務必閱讀其validation/schema。
+            此索引共92個檔案、757筆，掃描範圍為
+            <code>apps/api/src</code>、<code>apps/management-api/src</code>、<code>apps/realtime/src</code>、<code>apps/image-processor/src</code>、<code>apps/print-agent/src</code>
+            內所有非測試<code>.ts</code>，收錄任何Hono／Express receiver（<code>app</code>、<code>authRoutes</code>、<code>adminRoutes</code>、print-agent的<code>router</code>等）上以字串／template
+            literal寫成、且以 <code>/</code> 開頭的 <code>get</code>／<code>post</code>／<code>put</code>／<code>patch</code>／<code>delete</code>
+            註冊（含跨行寫法）；略過測試檔、註解、非literal／動態建路徑，以及<code>use</code>／<code>all</code>／<code>route</code>
+            等非HTTP-method註冊。同一路徑不同method分列。<code>apps/api/src/openapi/integration.ts</code>
+            的 <code>/docs</code>、<code>/openapi.json</code> 因
+            <code>integrateOpenAPI</code> 目前沒有被任何程式掛載，未列入；<code>apps/print-agent</code> 的11筆為Express路由，檔內路徑為<code>express.Router()</code>相對路徑，由 <code>LocalPrintService.ts</code> 以 <code>expressApp.use("/api/v1", router)</code> 掛載，完整本機URL為 <code>http://localhost:3003/api/v1</code> 加上檔內路徑，且全部先經 <code>X-API-Key</code>（<code>PRINT_AGENT_API_KEY</code>）驗證；WebSocket（:3004）不是HTTP路由，未列入。行號為撰寫當時的快照，工作樹已有未提交變更的檔案（如orders、guest-orders、app-factory）行號可能漂移。一般GET、DELETE等字串不等於完整contract，務必閱讀其validation/schema。
           </p>
           <details id="route-file-15636">
             <summary>
@@ -5749,6 +5887,363 @@ pnpm --filter @makanmasak/realtime dev</code></pre>
                         ><code
                           >apps/api/src/features/audit/routes/index.ts:22</code
                         ></a
+                      >
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </details>
+          <details id="route-file-200007">
+            <summary>
+              apps/api/src/features/authentication/index.ts <span class="muted">1筆</span>
+            </summary>
+            <div
+              class="table-scroll"
+              role="region"
+              aria-label="Method／檔案內路徑／原始碼"
+              tabindex="0"
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Method</th>
+                    <th scope="col">檔案內路徑</th>
+                    <th scope="col">原始碼</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/health</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/authentication/index.ts"
+                        ><code>apps/api/src/features/authentication/index.ts:90</code></a
+                      >
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </details>
+          <details id="route-file-200014">
+            <summary>
+              apps/api/src/features/authentication/routes/index.ts <span class="muted">17筆</span>
+            </summary>
+            <div
+              class="table-scroll"
+              role="region"
+              aria-label="Method／檔案內路徑／原始碼"
+              tabindex="0"
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Method</th>
+                    <th scope="col">檔案內路徑</th>
+                    <th scope="col">原始碼</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/login</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/authentication/routes/index.ts"
+                        ><code>apps/api/src/features/authentication/routes/index.ts:194</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/register</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/authentication/routes/index.ts"
+                        ><code>apps/api/src/features/authentication/routes/index.ts:240</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/register-staff</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/authentication/routes/index.ts"
+                        ><code>apps/api/src/features/authentication/routes/index.ts:259</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/refresh</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/authentication/routes/index.ts"
+                        ><code>apps/api/src/features/authentication/routes/index.ts:346</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/logout</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/authentication/routes/index.ts"
+                        ><code>apps/api/src/features/authentication/routes/index.ts:384</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/me</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/authentication/routes/index.ts"
+                        ><code>apps/api/src/features/authentication/routes/index.ts:419</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/profile/:id</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/authentication/routes/index.ts"
+                        ><code>apps/api/src/features/authentication/routes/index.ts:437</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>PUT</td>
+                    <td><code>/profile/:id</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/authentication/routes/index.ts"
+                        ><code>apps/api/src/features/authentication/routes/index.ts:468</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/change-password</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/authentication/routes/index.ts"
+                        ><code>apps/api/src/features/authentication/routes/index.ts:504</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/sessions</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/authentication/routes/index.ts"
+                        ><code>apps/api/src/features/authentication/routes/index.ts:537</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>DELETE</td>
+                    <td><code>/sessions/:sessionId</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/authentication/routes/index.ts"
+                        ><code>apps/api/src/features/authentication/routes/index.ts:553</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>DELETE</td>
+                    <td><code>/sessions</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/authentication/routes/index.ts"
+                        ><code>apps/api/src/features/authentication/routes/index.ts:582</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/forgot-password</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/authentication/routes/index.ts"
+                        ><code>apps/api/src/features/authentication/routes/index.ts:608</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/reset-password</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/authentication/routes/index.ts"
+                        ><code>apps/api/src/features/authentication/routes/index.ts:644</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/verify-email</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/authentication/routes/index.ts"
+                        ><code>apps/api/src/features/authentication/routes/index.ts:675</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/stats</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/authentication/routes/index.ts"
+                        ><code>apps/api/src/features/authentication/routes/index.ts:697</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/security-events</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/authentication/routes/index.ts"
+                        ><code>apps/api/src/features/authentication/routes/index.ts:719</code></a
+                      >
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </details>
+          <details id="route-file-200021">
+            <summary>
+              apps/api/src/features/backup/routes/index.ts <span class="muted">14筆</span>
+            </summary>
+            <div
+              class="table-scroll"
+              role="region"
+              aria-label="Method／檔案內路徑／原始碼"
+              tabindex="0"
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Method</th>
+                    <th scope="col">檔案內路徑</th>
+                    <th scope="col">原始碼</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/create</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/backup/routes/index.ts"
+                        ><code>apps/api/src/features/backup/routes/index.ts:152</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/upload</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/backup/routes/index.ts"
+                        ><code>apps/api/src/features/backup/routes/index.ts:161</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/list</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/backup/routes/index.ts"
+                        ><code>apps/api/src/features/backup/routes/index.ts:232</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/:id</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/backup/routes/index.ts"
+                        ><code>apps/api/src/features/backup/routes/index.ts:241</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/:id/download</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/backup/routes/index.ts"
+                        ><code>apps/api/src/features/backup/routes/index.ts:250</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/:id/restore</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/backup/routes/index.ts"
+                        ><code>apps/api/src/features/backup/routes/index.ts:259</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>DELETE</td>
+                    <td><code>/:id</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/backup/routes/index.ts"
+                        ><code>apps/api/src/features/backup/routes/index.ts:268</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/configurations/:restaurant_id</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/backup/routes/index.ts"
+                        ><code>apps/api/src/features/backup/routes/index.ts:281</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/configurations</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/backup/routes/index.ts"
+                        ><code>apps/api/src/features/backup/routes/index.ts:290</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/system/health</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/backup/routes/index.ts"
+                        ><code>apps/api/src/features/backup/routes/index.ts:307</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/restaurants/:restaurant_id/metrics</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/backup/routes/index.ts"
+                        ><code>apps/api/src/features/backup/routes/index.ts:316</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/alerts/:restaurant_id</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/backup/routes/index.ts"
+                        ><code>apps/api/src/features/backup/routes/index.ts:325</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>PATCH</td>
+                    <td><code>/alerts/:id/acknowledge</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/backup/routes/index.ts"
+                        ><code>apps/api/src/features/backup/routes/index.ts:334</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>PATCH</td>
+                    <td><code>/alerts/:id/resolve</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/backup/routes/index.ts"
+                        ><code>apps/api/src/features/backup/routes/index.ts:343</code></a
                       >
                     </td>
                   </tr>
@@ -7875,6 +8370,142 @@ pnpm --filter @makanmasak/realtime dev</code></pre>
                         ><code
                           >apps/api/src/features/ingredients/routes/index.ts:323</code
                         ></a
+                      >
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </details>
+          <details id="route-file-200028">
+            <summary>
+              apps/api/src/features/integrations/routes/admin.ts <span class="muted">8筆</span>
+            </summary>
+            <div
+              class="table-scroll"
+              role="region"
+              aria-label="Method／檔案內路徑／原始碼"
+              tabindex="0"
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Method</th>
+                    <th scope="col">檔案內路徑</th>
+                    <th scope="col">原始碼</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/:restaurantId</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/integrations/routes/admin.ts"
+                        ><code>apps/api/src/features/integrations/routes/admin.ts:64</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/:restaurantId/webhook-logs</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/integrations/routes/admin.ts"
+                        ><code>apps/api/src/features/integrations/routes/admin.ts:73</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/:restaurantId/:platform</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/integrations/routes/admin.ts"
+                        ><code>apps/api/src/features/integrations/routes/admin.ts:98</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/:restaurantId/:platform/connect</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/integrations/routes/admin.ts"
+                        ><code>apps/api/src/features/integrations/routes/admin.ts:130</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>PUT</td>
+                    <td><code>/:restaurantId/:platform</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/integrations/routes/admin.ts"
+                        ><code>apps/api/src/features/integrations/routes/admin.ts:154</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>DELETE</td>
+                    <td><code>/:restaurantId/:platform</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/integrations/routes/admin.ts"
+                        ><code>apps/api/src/features/integrations/routes/admin.ts:174</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/:restaurantId/:platform/menu-sync</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/integrations/routes/admin.ts"
+                        ><code>apps/api/src/features/integrations/routes/admin.ts:185</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/:restaurantId/:platform/orders</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/integrations/routes/admin.ts"
+                        ><code>apps/api/src/features/integrations/routes/admin.ts:203</code></a
+                      >
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </details>
+          <details id="route-file-200035">
+            <summary>
+              apps/api/src/features/integrations/routes/webhook.ts <span class="muted">2筆</span>
+            </summary>
+            <div
+              class="table-scroll"
+              role="region"
+              aria-label="Method／檔案內路徑／原始碼"
+              tabindex="0"
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Method</th>
+                    <th scope="col">檔案內路徑</th>
+                    <th scope="col">原始碼</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/uber-eats</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/integrations/routes/webhook.ts"
+                        ><code>apps/api/src/features/integrations/routes/webhook.ts:53</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/foodpanda</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/integrations/routes/webhook.ts"
+                        ><code>apps/api/src/features/integrations/routes/webhook.ts:427</code></a
                       >
                     </td>
                   </tr>
@@ -11430,6 +12061,119 @@ pnpm --filter @makanmasak/realtime dev</code></pre>
                         ><code
                           >apps/api/src/features/queue/routes/index.ts:256</code
                         ></a
+                      >
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </details>
+          <details id="route-file-200042">
+            <summary>
+              apps/api/src/features/realtime/routes/index.ts <span class="muted">10筆</span>
+            </summary>
+            <div
+              class="table-scroll"
+              role="region"
+              aria-label="Method／檔案內路徑／原始碼"
+              tabindex="0"
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Method</th>
+                    <th scope="col">檔案內路徑</th>
+                    <th scope="col">原始碼</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/auth/token</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/realtime/routes/index.ts"
+                        ><code>apps/api/src/features/realtime/routes/index.ts:91</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/auth/guest-token</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/realtime/routes/index.ts"
+                        ><code>apps/api/src/features/realtime/routes/index.ts:129</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/auth/group-token</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/realtime/routes/index.ts"
+                        ><code>apps/api/src/features/realtime/routes/index.ts:169</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/auth/verify</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/realtime/routes/index.ts"
+                        ><code>apps/api/src/features/realtime/routes/index.ts:205</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/auth/revoke</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/realtime/routes/index.ts"
+                        ><code>apps/api/src/features/realtime/routes/index.ts:257</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/auth/revoke-user</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/realtime/routes/index.ts"
+                        ><code>apps/api/src/features/realtime/routes/index.ts:317</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/auth/blacklist/stats</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/realtime/routes/index.ts"
+                        ><code>apps/api/src/features/realtime/routes/index.ts:384</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/stats/:roomType/:roomId</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/realtime/routes/index.ts"
+                        ><code>apps/api/src/features/realtime/routes/index.ts:406</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/stats/overview</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/realtime/routes/index.ts"
+                        ><code>apps/api/src/features/realtime/routes/index.ts:458</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/health</code></td>
+                    <td>
+                      <a href="../../apps/api/src/features/realtime/routes/index.ts"
+                        ><code>apps/api/src/features/realtime/routes/index.ts:525</code></a
                       >
                     </td>
                   </tr>
@@ -15037,6 +15781,74 @@ pnpm --filter @makanmasak/realtime dev</code></pre>
               </table>
             </div>
           </details>
+          <details id="route-file-200049">
+            <summary>
+              apps/management-api/src/routes/monitoring.ts <span class="muted">5筆</span>
+            </summary>
+            <div
+              class="table-scroll"
+              role="region"
+              aria-label="Method／檔案內路徑／原始碼"
+              tabindex="0"
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Method</th>
+                    <th scope="col">檔案內路徑</th>
+                    <th scope="col">原始碼</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/overview</code></td>
+                    <td>
+                      <a href="../../apps/management-api/src/routes/monitoring.ts"
+                        ><code>apps/management-api/src/routes/monitoring.ts:23</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/health/timeline</code></td>
+                    <td>
+                      <a href="../../apps/management-api/src/routes/monitoring.ts"
+                        ><code>apps/management-api/src/routes/monitoring.ts:124</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/performance</code></td>
+                    <td>
+                      <a href="../../apps/management-api/src/routes/monitoring.ts"
+                        ><code>apps/management-api/src/routes/monitoring.ts:211</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/alerts</code></td>
+                    <td>
+                      <a href="../../apps/management-api/src/routes/monitoring.ts"
+                        ><code>apps/management-api/src/routes/monitoring.ts:279</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/versions</code></td>
+                    <td>
+                      <a href="../../apps/management-api/src/routes/monitoring.ts"
+                        ><code>apps/management-api/src/routes/monitoring.ts:367</code></a
+                      >
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </details>
           <details id="route-file-175981">
             <summary>
               apps/management-api/src/routes/onboarding.ts
@@ -15243,6 +16055,214 @@ pnpm --filter @makanmasak/realtime dev</code></pre>
               </table>
             </div>
           </details>
+          <details id="route-file-200056">
+            <summary>
+              apps/management-api/src/routes/updates.ts <span class="muted">7筆</span>
+            </summary>
+            <div
+              class="table-scroll"
+              role="region"
+              aria-label="Method／檔案內路徑／原始碼"
+              tabindex="0"
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Method</th>
+                    <th scope="col">檔案內路徑</th>
+                    <th scope="col">原始碼</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/releases</code></td>
+                    <td>
+                      <a href="../../apps/management-api/src/routes/updates.ts"
+                        ><code>apps/management-api/src/routes/updates.ts:19</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/pending</code></td>
+                    <td>
+                      <a href="../../apps/management-api/src/routes/updates.ts"
+                        ><code>apps/management-api/src/routes/updates.ts:36</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/plans</code></td>
+                    <td>
+                      <a href="../../apps/management-api/src/routes/updates.ts"
+                        ><code>apps/management-api/src/routes/updates.ts:80</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/plans/:planId/execute</code></td>
+                    <td>
+                      <a href="../../apps/management-api/src/routes/updates.ts"
+                        ><code>apps/management-api/src/routes/updates.ts:117</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/plans/:planId/progress</code></td>
+                    <td>
+                      <a href="../../apps/management-api/src/routes/updates.ts"
+                        ><code>apps/management-api/src/routes/updates.ts:143</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/plans/:planId/cancel</code></td>
+                    <td>
+                      <a href="../../apps/management-api/src/routes/updates.ts"
+                        ><code>apps/management-api/src/routes/updates.ts:163</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/update-all</code></td>
+                    <td>
+                      <a href="../../apps/management-api/src/routes/updates.ts"
+                        ><code>apps/management-api/src/routes/updates.ts:189</code></a
+                      >
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </details>
+          <details id="route-file-300007">
+            <summary>
+              apps/print-agent/src/LocalPrintService.ts <span class="muted">11筆</span>
+            </summary>
+            <div
+              class="table-scroll"
+              role="region"
+              aria-label="Method／檔案內路徑／原始碼"
+              tabindex="0"
+            >
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Method</th>
+                    <th scope="col">檔案內路徑</th>
+                    <th scope="col">原始碼</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/print</code></td>
+                    <td>
+                      <a href="../../apps/print-agent/src/LocalPrintService.ts"
+                        ><code>apps/print-agent/src/LocalPrintService.ts:343</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/print/:jobId</code></td>
+                    <td>
+                      <a href="../../apps/print-agent/src/LocalPrintService.ts"
+                        ><code>apps/print-agent/src/LocalPrintService.ts:361</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>DELETE</td>
+                    <td><code>/print/:jobId</code></td>
+                    <td>
+                      <a href="../../apps/print-agent/src/LocalPrintService.ts"
+                        ><code>apps/print-agent/src/LocalPrintService.ts:392</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/devices</code></td>
+                    <td>
+                      <a href="../../apps/print-agent/src/LocalPrintService.ts"
+                        ><code>apps/print-agent/src/LocalPrintService.ts:427</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/devices/:deviceId</code></td>
+                    <td>
+                      <a href="../../apps/print-agent/src/LocalPrintService.ts"
+                        ><code>apps/print-agent/src/LocalPrintService.ts:446</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/devices</code></td>
+                    <td>
+                      <a href="../../apps/print-agent/src/LocalPrintService.ts"
+                        ><code>apps/print-agent/src/LocalPrintService.ts:477</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>DELETE</td>
+                    <td><code>/devices/:deviceId</code></td>
+                    <td>
+                      <a href="../../apps/print-agent/src/LocalPrintService.ts"
+                        ><code>apps/print-agent/src/LocalPrintService.ts:529</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/devices/:deviceId/test</code></td>
+                    <td>
+                      <a href="../../apps/print-agent/src/LocalPrintService.ts"
+                        ><code>apps/print-agent/src/LocalPrintService.ts:550</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/health</code></td>
+                    <td>
+                      <a href="../../apps/print-agent/src/LocalPrintService.ts"
+                        ><code>apps/print-agent/src/LocalPrintService.ts:608</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GET</td>
+                    <td><code>/statistics</code></td>
+                    <td>
+                      <a href="../../apps/print-agent/src/LocalPrintService.ts"
+                        ><code>apps/print-agent/src/LocalPrintService.ts:634</code></a
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>POST</td>
+                    <td><code>/discover</code></td>
+                    <td>
+                      <a href="../../apps/print-agent/src/LocalPrintService.ts"
+                        ><code>apps/print-agent/src/LocalPrintService.ts:653</code></a
+                      >
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </details>
           <details id="route-file-179263">
             <summary>
               apps/realtime/src/index.ts <span class="muted">4筆</span>
@@ -15325,6 +16345,9 @@ pnpm --filter @makanmasak/realtime dev</code></pre>
             constraint。INTEGER可能是boolean、cents、毫秒或id，須看欄位的Drizzle
             mode與validation。此處的flags只列直接出現在column
             builder的primaryKey／notNull／unique，並非全部約束。
+          </p>
+          <p class="note">
+            已知Drizzle與migration SQL差異：qr_codes的restaurant_id、created_by只存在於Drizzle，baseline SQL與舊軌道migration都沒有（production很可能同樣缺少，待以PRAGMA table_info確認），qr_templates同樣缺restaurant_id、usage_count；在缺欄的資料庫上建立／下載QR與QR統計會失敗，屬已知問題；backup_alerts（triggered_at、resolved_at）、backup_audit_logs（timestamp）、backup_configurations（created_at、updated_at）、backup_records（started_at、completed_at、updated_at）、backup_schedules（last_run_at、next_run_at、created_at、updated_at）、restore_operations（started_at、completed_at）共14個timestamp欄位只存在於SQL，Drizzle未宣告（它們是舊版TEXT時間欄位，Drizzle只對應其整數_ms孿生欄位；備份排程worker的原生SQL仍讀寫TEXT欄位）；重播後的SQL另含輔助表_migration_expected_discount_percentage_bps、_migration_assert_discount_percentage_bps與FTS shadow tables，本字典均未列。
           </p>
           <details id="schema-ai_configurations">
             <summary>
