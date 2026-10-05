@@ -1379,7 +1379,7 @@ describe("RealtimeSession message, routing, and validation behavior", () => {
       },
     );
     expect(
-      internals(session).validateRoleRoomAccess("admin", "restaurant"),
+      internals(session).validateRoleRoomAccess("admin", "kitchen"),
     ).toEqual({ valid: true });
     expect(
       internals(session).validateRoleRoomAccess("manager", "customer"),

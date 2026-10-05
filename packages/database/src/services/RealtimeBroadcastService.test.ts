@@ -96,7 +96,7 @@ function orderCancelledEvent(): OrderCancelledEvent {
 }
 
 describe("RealtimeBroadcastService", () => {
-  it("fans out new order events to restaurant, kitchen, and admin rooms", async () => {
+  it("fans out new order events to kitchen and admin rooms", async () => {
     const { env, idFromName, fetch } = createRealtimeEnv();
     const service = new RealtimeBroadcastService(env);
 
@@ -105,14 +105,14 @@ describe("RealtimeBroadcastService", () => {
     expect(result).toMatchObject({
       success: true,
       eventId: "evt-market-1",
-      recipientCount: 6,
+      recipientCount: 4,
     });
-    expect(idFromName).toHaveBeenCalledWith("restaurant:restaurant-1");
+    expect(idFromName).not.toHaveBeenCalledWith("restaurant:restaurant-1");
     expect(idFromName).toHaveBeenCalledWith("kitchen:restaurant-1");
     // The admin dashboard connects to `admin:{restaurantId}`; without this room
     // it never receives order events (bug-inventory #1).
     expect(idFromName).toHaveBeenCalledWith("admin:restaurant-1");
-    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(fetch).toHaveBeenCalledTimes(2);
     expect(fetch).toHaveBeenCalledWith(
       "https://realtime-internal/broadcast",
       expect.objectContaining({
@@ -133,10 +133,10 @@ describe("RealtimeBroadcastService", () => {
     expect(result).toMatchObject({
       success: true,
       eventId: "evt-market-1",
-      recipientCount: 8,
+      recipientCount: 6,
     });
     expect(idFromName).toHaveBeenCalledWith("customer:order:1001");
-    expect(fetch).toHaveBeenCalledTimes(4);
+    expect(fetch).toHaveBeenCalledTimes(3);
   });
 
   // The diner's tracking page is connected to `customer:order:{orderId}` and
@@ -149,11 +149,11 @@ describe("RealtimeBroadcastService", () => {
 
     const result = await service.broadcastOrderCancelled(orderCancelledEvent());
 
-    expect(result).toMatchObject({ success: true, recipientCount: 8 });
+    expect(result).toMatchObject({ success: true, recipientCount: 6 });
     expect(idFromName).toHaveBeenCalledWith("admin:restaurant-1");
     expect(idFromName).toHaveBeenCalledWith("kitchen:restaurant-1");
     expect(idFromName).toHaveBeenCalledWith("customer:order:order-1001");
-    expect(fetch).toHaveBeenCalledTimes(4);
+    expect(fetch).toHaveBeenCalledTimes(3);
   });
 
   // Staff adding items, changing a quantity or applying a discount republish
@@ -165,11 +165,11 @@ describe("RealtimeBroadcastService", () => {
 
     const result = await service.broadcastOrderModified(newOrderEvent());
 
-    expect(result).toMatchObject({ success: true, recipientCount: 8 });
+    expect(result).toMatchObject({ success: true, recipientCount: 6 });
     expect(idFromName).toHaveBeenCalledWith("kitchen:restaurant-1");
     expect(idFromName).toHaveBeenCalledWith("admin:restaurant-1");
     expect(idFromName).toHaveBeenCalledWith("customer:order:1001");
-    expect(fetch).toHaveBeenCalledTimes(4);
+    expect(fetch).toHaveBeenCalledTimes(3);
   });
 
   it("keeps a first-time order out of the customer room", async () => {

@@ -7,7 +7,7 @@
 // Connection Types
 // ============================================================================
 
-export type RoomType = "customer" | "kitchen" | "admin" | "restaurant";
+export type RoomType = "customer" | "kitchen" | "admin";
 
 export interface ConnectionInfo {
   id: string;

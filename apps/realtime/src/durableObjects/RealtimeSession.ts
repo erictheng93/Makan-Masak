@@ -855,7 +855,7 @@ export class RealtimeSession implements DurableObject {
     const roleRoomMap: Record<string, string[]> = {
       customer: ["customer"],
       staff: ["kitchen"],
-      admin: ["admin", "kitchen", "restaurant"],
+      admin: ["admin", "kitchen"],
     };
 
     const allowedRooms = roleRoomMap[role] || [];

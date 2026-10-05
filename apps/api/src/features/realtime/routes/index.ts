@@ -415,7 +415,7 @@ realtimeRoutes.get("/stats/:roomType/:roomId", authMiddleware, async (c) => {
   assertRealtimeStatsAccess(user, roomId);
 
   // 驗證 roomType
-  const validRoomTypes = ["customer", "kitchen", "admin", "restaurant"];
+  const validRoomTypes = ["customer", "kitchen", "admin"];
   if (!validRoomTypes.includes(roomType)) {
     throw badRequest(
       `Invalid room type. Must be one of: ${validRoomTypes.join(", ")}`,

@@ -31,6 +31,17 @@ describe("realtime validation schemas", () => {
     ).toThrow(/Invalid room type|Room ID is required/);
   });
 
+  it("rejects the `restaurant` room: the realtime Worker has no route for it", () => {
+    expect(() =>
+      webSocketTokenRequestSchema.parse({
+        roomType: "restaurant",
+        roomId: "restaurant-1",
+        restaurantId: "restaurant-1",
+        sessionId: "session-1",
+      }),
+    ).toThrow(/Invalid room type/);
+  });
+
   it("rejects customer room requests so they cannot bypass guest verification", () => {
     expect(() =>
       webSocketTokenRequestSchema.parse({

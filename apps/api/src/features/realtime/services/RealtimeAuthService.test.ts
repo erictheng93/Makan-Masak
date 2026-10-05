@@ -682,7 +682,7 @@ describe("RealtimeAuthService", () => {
     });
 
     const response = await service.generateWebSocketToken({
-      roomType: "restaurant",
+      roomType: "admin",
       roomId: "restaurant-2",
       restaurantId: "restaurant-2",
       sessionId,
@@ -709,7 +709,7 @@ describe("RealtimeAuthService", () => {
     });
 
     const response = await service.generateWebSocketToken({
-      roomType: "restaurant",
+      roomType: "admin",
       roomId: "restaurant-2",
       restaurantId: "restaurant-2",
       sessionId,
@@ -810,7 +810,7 @@ describe("RealtimeAuthService", () => {
     });
     await expect(
       service.generateWebSocketToken({
-        roomType: "restaurant",
+        roomType: "admin",
         roomId: "restaurant-1",
         restaurantId: "restaurant-1",
         sessionId: createSessionToken({ role: 2 }),
@@ -890,7 +890,7 @@ describe("RealtimeAuthService", () => {
       appRole?: number | string,
     ) => service.determineRole(roomType, appRole);
 
-    for (const roomType of ["admin", "restaurant", "kitchen"] as const) {
+    for (const roomType of ["admin", "kitchen"] as const) {
       expect(determineRole(roomType, 2)).toBe("staff");
       expect(determineRole(roomType, 4)).toBe("staff");
       expect(determineRole(roomType, 0)).toBe("admin");
@@ -924,7 +924,7 @@ describe("RealtimeAuthService", () => {
 
     db.first.mockResolvedValue(activeStaffRow(0));
     const platformAdmin = await service.generateWebSocketToken({
-      roomType: "restaurant",
+      roomType: "admin",
       roomId: "restaurant-1",
       restaurantId: "restaurant-1",
       sessionId: createSessionToken({ role: 0 }),
@@ -1546,7 +1546,7 @@ describe("RealtimeAuthService", () => {
     expect(
       service.verifyChannelAccess(
         {
-          roomType: "restaurant",
+          roomType: "admin",
           roomId: "restaurant-1",
           restaurantId: "restaurant-1",
           role: "admin",

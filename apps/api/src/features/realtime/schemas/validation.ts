@@ -14,7 +14,7 @@ import { z } from "zod";
  */
 export const webSocketTokenRequestSchema = z.lazy(() =>
   z.object({
-    roomType: z.enum(["kitchen", "admin", "restaurant"], {
+    roomType: z.enum(["kitchen", "admin"], {
       error: "Invalid room type",
     }),
     roomId: z.string().min(1, "Room ID is required"),

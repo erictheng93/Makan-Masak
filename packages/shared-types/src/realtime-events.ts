@@ -18,15 +18,13 @@ import type { MenuItem } from "./menu";
 export type RoomType =
   | "customer" // 顧客房間（桌號或店鋪）
   | "kitchen" // 廚房顯示系統
-  | "admin" // 管理後台
-  | "restaurant"; // 餐廳級別（所有訂單）
+  | "admin"; // 管理後台
 
 /**
  * 房間 ID 格式
  * - customer: tableId (e.g., "T1") 或 restaurantId (e.g., "R123")
  * - kitchen: restaurantId (e.g., "R123")
  * - admin: restaurantId (e.g., "R123")
- * - restaurant: restaurantId (e.g., "R123")
  */
 export type RoomId = string;
 

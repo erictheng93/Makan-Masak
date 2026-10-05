@@ -1109,10 +1109,10 @@ describe("PaymentService", () => {
 
     expect(setup.cacheKV.delete).toHaveBeenCalledWith("order:order-101:full");
     expect(setup.cacheKV.delete).toHaveBeenCalledWith("order:order-101:basic");
-    // restaurant + kitchen + admin rooms (admin added in bug-inventory fix #1),
-    // plus the per-order customer room that 2b894649 added so the diner's order
+    // kitchen + admin rooms (admin added in bug-inventory fix #1), plus the
+    // per-order customer room that 2b894649 added so the diner's order
     // tracking page updates on payment.
-    expect(setup.fetch).toHaveBeenCalledTimes(4);
+    expect(setup.fetch).toHaveBeenCalledTimes(3);
 
     const event = JSON.parse(
       String(setup.fetch.mock.calls[0]?.[1]?.body),

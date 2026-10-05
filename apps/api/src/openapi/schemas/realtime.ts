@@ -12,7 +12,7 @@ const RoomType = z.enum(["customer", "admin", "kitchen"]);
 
 // /auth/token mints staff rooms only — customer rooms come from
 // /auth/guest-token, which verifies a signed QR or a guest token.
-const StaffRoomType = z.enum(["admin", "kitchen", "restaurant"]);
+const StaffRoomType = z.enum(["admin", "kitchen"]);
 
 /**
  * Realtime API Schemas
@@ -61,9 +61,7 @@ export const RealtimeSchemas = {
     success: z.boolean(),
     data: z.object({
       valid: z.boolean(),
-      roomType: z
-        .enum(["customer", "admin", "kitchen", "restaurant"])
-        .optional(),
+      roomType: z.enum(["customer", "admin", "kitchen"]).optional(),
       expiresAt: z.iso.datetime().optional(),
       channelAccess: z
         .object({
