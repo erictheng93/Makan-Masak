@@ -257,6 +257,7 @@ export class OrdersService implements IOrdersService {
       // Convert feature-specific data to base service format
       const baseOrderData = {
         restaurantId: String(data.restaurantId),
+        seatId: data.seatId,
         tableId: data.tableId ?? undefined, // undefined for shop/takeaway orders (no table needed)
         customerId: data.customerId, // Keep as number
         waitingListId: data.waitingListId,

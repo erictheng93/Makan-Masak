@@ -124,6 +124,7 @@ export const orderMenuItemSummaryColumns = {
 export interface CreateOrderData {
   restaurantId: string;
   tableId?: number;
+  seatId?: number;
   customerId?: string;
   customerInfo?: { name?: string; phone?: string; email?: string };
   waitingListId?: string;
@@ -823,6 +824,7 @@ export class OrderService extends BaseService {
           .values({
             restaurantId: data.restaurantId,
             tableId: data.tableId,
+            seatId: data.seatId,
             customerId: data.customerId,
             waitingListId: data.waitingListId,
             orderNumber,
@@ -2576,6 +2578,7 @@ export class OrderService extends BaseService {
       id: order.id,
       restaurantId: order.restaurantId,
       tableId: order.tableId ?? undefined,
+      seatId: order.seatId ?? undefined,
       customerId: order.customerId ?? undefined,
       waitingListId: order.waitingListId ?? undefined,
       orderNumber: order.orderNumber,

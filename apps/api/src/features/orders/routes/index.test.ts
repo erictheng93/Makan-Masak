@@ -75,6 +75,11 @@ vi.mock("../../../shared/middleware", async (importOriginal) => {
   };
 });
 
+const assertDineInQr = vi.hoisted(() => vi.fn());
+vi.mock("../../qr-codes/services/assert-dine-in-qr", () => ({
+  assertDineInQr,
+}));
+
 vi.mock("../../../middleware/moduleGate", () => ({
   moduleGate: gateMocks.moduleGate,
 }));
@@ -180,6 +185,7 @@ describe("orders routes", () => {
       restaurantId: "restaurant-1",
     };
     authState.customer = { id: "customer-42" };
+    assertDineInQr.mockReset();
   });
 
   it("previews coupon discounts for the authenticated user", async () => {
@@ -520,6 +526,55 @@ describe("orders routes", () => {
       expect.objectContaining({ tableId: 3, orderType: "shop" }),
       "user-42",
     );
+  });
+
+  it("verifies the scanned QR and persists seatId for customer table orders", async () => {
+    serviceMocks.createOrder.mockResolvedValue({ id: 1003 });
+
+    const response = await routes.fetch(
+      jsonRequest("/", {
+        restaurantId: "restaurant-1",
+        items: [{ menuItemId: 7, quantity: 1, price: 120 }],
+        orderType: "seat",
+        tableId: 3,
+        seatId: 11,
+        qrCode: "https://x.test/order?sig=abc",
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(201);
+    expect(assertDineInQr).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        restaurantId: "restaurant-1",
+        tableId: 3,
+        seatId: 11,
+        qrCode: "https://x.test/order?sig=abc",
+      }),
+    );
+    expect(serviceMocks.createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ tableId: 3, seatId: 11 }),
+      "user-42",
+    );
+  });
+
+  it("refuses a customer table order when QR verification fails", async () => {
+    assertDineInQr.mockRejectedValue(new Error("QR_VERIFICATION_FAILED"));
+
+    const response = await withSilencedRouteError(() =>
+      routes.fetch(
+        jsonRequest("/", {
+          restaurantId: "restaurant-1",
+          items: [{ menuItemId: 7, quantity: 1, price: 120 }],
+          tableId: 3,
+        }),
+        createEnv() as never,
+      ),
+    );
+
+    expect(response.status).toBeGreaterThanOrEqual(400);
+    expect(serviceMocks.createOrder).not.toHaveBeenCalled();
   });
 
   it("rejects authenticated orders for another restaurant", async () => {

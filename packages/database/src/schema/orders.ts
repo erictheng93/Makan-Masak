@@ -9,6 +9,7 @@ import { relations, sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import { restaurants } from "./restaurants";
 import { tables } from "./tables";
+import { seats } from "./seats";
 import { customers } from "./customers";
 import { orderItems } from "./order-items";
 import { waitingList } from "./waiting-list";
@@ -51,6 +52,9 @@ export const orders = sqliteTable(
     tableId: integer("table_id").references(() => tables.id, {
       onDelete: "restrict",
     }), // 可空：支援店家級別訂單
+    seatId: integer("seat_id").references(() => seats.id, {
+      onDelete: "set null",
+    }), // 可空：座位 QR 點餐時記錄座位
     customerId: text("customer_id").references(() => customers.id, {
       onDelete: "set null",
     }), // 可選：註冊顧客

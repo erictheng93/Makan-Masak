@@ -95,6 +95,8 @@ export const createGuestOrderSchema = z.lazy(() =>
       couponCodes: couponCodesSchema.optional(),
       tableId: z.number().int().positive().optional(),
       seatId: z.number().int().positive().optional(),
+      // Signed table/seat QR the diner scanned; verified server-side.
+      qrCode: z.string().max(2000).optional(),
       items: z.array(guestOrderItemSchema).min(1).max(20),
       clientMutationId: z.string().max(100).optional(),
       notes: notesSchema(500).optional(),
