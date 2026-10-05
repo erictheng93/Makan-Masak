@@ -10,6 +10,7 @@ import type {
   Tenant,
   TenantResource,
   DeploymentLog,
+  DeploymentStatus,
   HealthCheck,
   License,
   ApiResponse,
@@ -216,6 +217,9 @@ export const tenantsApi = {
 /**
  * 部署 API
  */
+/** management-api accepts only strict x.y.z versions (no "v", "latest", ranges). */
+export const isSemver = (v: string) => /^\d+\.\d+\.\d+$/.test(v);
+
 export const deploymentsApi = {
   // 獲取部署狀態
   async getStatus(
@@ -246,11 +250,24 @@ export const deploymentsApi = {
 
   // 部署
   async deploy(request: DeployRequest): Promise<DeploymentLog> {
-    const { data } = await apiClient.post<ApiResponse<DeploymentLog>>(
-      "/deployments/deploy",
-      request,
-    );
-    return data.data!;
+    // The endpoint answers {deploymentId, tenantId, version, status}, not a log row.
+    const { data } = await apiClient.post<
+      ApiResponse<{
+        deploymentId: string;
+        tenantId: string;
+        version: string;
+        status: DeploymentStatus;
+      }>
+    >("/deployments/deploy", request);
+    const r = data.data!;
+    return {
+      id: r.deploymentId,
+      tenantId: r.tenantId,
+      deploymentType: request.deploymentType ?? "update",
+      toVersion: r.version,
+      status: r.status,
+      startedAt: new Date().toISOString(),
+    };
   },
 
   // 回滾
@@ -269,10 +286,18 @@ export const deploymentsApi = {
   async batchDeploy(
     request: BatchDeployRequest,
   ): Promise<{ queued: number; failed: string[] }> {
+    // The endpoint answers {targetVersion, results[], summary}.
     const { data } = await apiClient.post<
-      ApiResponse<{ queued: number; failed: string[] }>
+      ApiResponse<{
+        results: { tenantId: string; success: boolean }[];
+        summary: { succeeded: number };
+      }>
     >("/deployments/batch", request);
-    return data.data!;
+    const { results, summary } = data.data!;
+    return {
+      queued: summary.succeeded,
+      failed: results.filter((r) => !r.success).map((r) => r.tenantId),
+    };
   },
 };
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
 import { useTenantsStore } from "@/stores/tenants";
-import { deploymentsApi } from "@/services/api";
+import { deploymentsApi, isSemver } from "@/services/api";
 import { useToast } from "vue-toastification";
 import { RouterLink } from "vue-router";
 import {
@@ -71,7 +71,8 @@ const handleBatchDeploy = async () => {
     toast.warning(t("deployments.validation.selectTenant"));
     return;
   }
-  if (!targetVersion.value) {
+  const version = targetVersion.value.trim();
+  if (!isSemver(version)) {
     toast.warning(t("deployments.validation.enterVersion"));
     return;
   }
@@ -80,7 +81,7 @@ const handleBatchDeploy = async () => {
   try {
     const result = await deploymentsApi.batchDeploy({
       tenantIds: selectedTenants.value,
-      version: targetVersion.value,
+      targetVersion: version,
     });
     toast.success(t("deployments.toast.queuedCount", { count: result.queued }));
     if (result.failed.length > 0) {
