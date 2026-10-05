@@ -1507,9 +1507,16 @@
                   <td>店家 mode 與可售設定。</td>
                 </tr>
                 <tr>
-                  <td>/orders/:id、桌位／shop 的 order 路徑</td>
-                  <td>追蹤單筆訂單</td>
-                  <td>會員自己的身分或相應 guest token。</td>
+                  <td>
+                    /orders/:id、/restaurant/:restaurantId/table/:tableId/order/:orderId、/restaurant/:restaurantId/shop/order/:orderId
+                  </td>
+                  <td>追蹤單筆訂單（會員歷史、內用桌位、外帶／外送三個入口）</td>
+                  <td>會員自己的身分或相應 guest token。桌位與 shop 兩條路徑共用同一個訂單追蹤畫面。</td>
+                </tr>
+                <tr>
+                  <td>/restaurant/:restaurantId/table/:tableId/cart</td>
+                  <td>內用購物車檢視與送出</td>
+                  <td>桌位屬於該餐廳；購物車是本機資料，送出成功並取得訂單號前不算訂單。</td>
                 </tr>
                 <tr>
                   <td>/login、/register、/profile、/orders</td>
@@ -1517,9 +1524,34 @@
                   <td>真正的 customer 身分；通知供應商依設定。</td>
                 </tr>
                 <tr>
-                  <td>/r/:restaurantId/wait-list 與票號路徑</td>
-                  <td>登記候位、查看票號</td>
-                  <td>票號與存取憑證；不要公開轉貼。</td>
+                  <td>/r/:restaurantId/wait-list</td>
+                  <td>登記候位</td>
+                  <td>店家已啟用候位；填姓名、人數、電話。</td>
+                </tr>
+                <tr>
+                  <td>/r/:restaurantId/wait-list/:ticketId</td>
+                  <td>查看自己的票號：狀態、預估等候分鐘、姓名與人數</td>
+                  <td>票號與存取憑證；不要公開轉貼。頁面會自動重新整理，直到票進入結束狀態；分頁在背景時不會刷新，切回來再看。</td>
+                </tr>
+                <tr>
+                  <td>/r/:restaurantId/wait-list/history</td>
+                  <td>以電話查詢自己在該店的候位歷史，點選可回到該張票</td>
+                  <td>需輸入電話；該電話需要驗證時（含伺服器回 403），頁面會帶著電話導向 /login 的簡訊 OTP 模式，驗證後回到本頁，這是流程而不是候位系統壞掉。</td>
+                </tr>
+                <tr>
+                  <td>/markets/:slug/checkout/:checkoutId</td>
+                  <td>市集跨攤結帳追蹤：處理中／已送出、各攤子單、合計、折抵與應付金額、付款</td>
+                  <td>開啟各攤子單需要對應 guest token，頁面會嘗試復原，失敗時顯示子單無法存取而不是整頁失敗；付款狀態可為 paid、failed、partial_paid，市集結帳功能被停用或線上付款不可用時付款按鈕會停用並顯示提示。</td>
+                </tr>
+                <tr>
+                  <td>/about、/privacy、/terms</td>
+                  <td>關於、隱私權政策、服務條款</td>
+                  <td>公開靜態頁，不需登入；內容隨 i18n 語系。</td>
+                </tr>
+                <tr>
+                  <td>其他任何路徑（/:pathMatch(.*)*）</td>
+                  <td>顯示「找不到頁面」</td>
+                  <td>網址打錯、舊貼紙或過期連結都會落在這裡；它是前端兜底，不代表 API 回了 404。</td>
                 </tr>
                 <tr>
                   <td>/restaurant/:restaurantId/reserve</td>
@@ -1859,7 +1891,7 @@
                 <tr>
                   <td>營運分析與 AI</td>
                   <td>
-                    /dashboard/analytics、ai-analytics/config、insights、products
+                    /dashboard/analytics、/dashboard/ai-analytics/config、/dashboard/ai-analytics/insights、/dashboard/ai-analytics/products（僅 role 0、1）
                   </td>
                   <td>日期、幣別、資料品質與 provider 配置。</td>
                 </tr>
@@ -1972,6 +2004,16 @@
               SeatingQueueDashboard。
             </li>
             <li>
+              <code>/dashboard/waiting/dashboard</code> → SeatingQueueDashboard；<code>/dashboard/waiting</code>、<code>/dashboard/waiting/list</code>、<code>/dashboard/waiting-list</code>
+              → SeatingWaitingList；<code>/dashboard/reservations</code> → SeatingReservations。舊書籤與舊文件提到的候位路徑都落在這幾條，現行畫面在 Seating 底下。
+            </li>
+            <li>
+              <code>/unauthorized</code>：登入有效但角色或模組不允許進入該頁時，router 會導到這個「權限不足」頁，這是 403 的前端對應，不是登入失效；請改用有權限的帳號，或請店主／平台管理員開通。尚未登入的人會被導到 /login，並記住要回去的頁面。
+            </li>
+            <li>
+              其他不存在的網址顯示「找不到頁面」（NotFound 兜底），與 /unauthorized 是兩種不同狀況。
+            </li>
+            <li>
               role 2（廚師）不能使用 admin dashboard：進入 dashboard 首頁會被登出並導向 Kitchen
               Display。
             </li>
@@ -2023,6 +2065,11 @@
             2；必須屬於正確餐廳，且該店有效啟用
             <code>kitchen_display</code>。server 的部分廚房資料允許 role
             0／1／2／3，但這不等於廚房 App 對所有角色都有相同入口。
+          </p>
+          <p>
+            <code>/unauthorized</code>（權限不足頁，附「重新登入」按鈕，回 /login）：已登入，但路由要求的角色不是 2，或網址中的
+            <code>:restaurantId</code> 與登入帳號所屬餐廳不同（看板載入時也會再檢查一次）時出現。處理方式是確認帳號的餐廳，改用正確店家的網址，或重新登入；未登入則一律先到
+            <code>/login</code> 並記住原頁面。其他不存在的網址顯示「頁面不存在」（兜底）。兩者都是前端畫面，與 API 是否正常無關。
           </p>
           <h3>接單到出餐</h3>
           <ol>
@@ -4343,6 +4390,80 @@ pnpm --filter @makanmasak/realtime dev</code></pre>
             consumer處理search fan-out，失敗retry。management
             production另有入駐稽核archive任務。backup-scheduler是另一份Worker配置，目前crons=[]，不能說全套租戶備份每天自動執行。
           </p>
+          <h3>backup-scheduler App 速查</h3>
+          <div
+            class="table-scroll"
+            role="region"
+            aria-label="項目／內容"
+            tabindex="0"
+          >
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">項目</th>
+                  <th scope="col">內容</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>是什麼</td>
+                  <td>
+                    只有 <code>wrangler.toml</code>、<code>package.json</code>、<code>turbo.json</code> 的 Worker 殼。<code>main</code> 指向
+                    <code>apps/api/src/workers/backup-scheduler.ts</code>，所以改備份排程邏輯要去 api 目錄，不是這個資料夾。
+                  </td>
+                </tr>
+                <tr>
+                  <td>入口形式</td>
+                  <td>
+                    只處理 <code>scheduled</code> 事件，沒有 HTTP 路由、沒有 UI、沒有本機 port，也沒有 <code>/info</code>，不能用健康端點確認它是否在跑。
+                    要看執行情況只能看 Worker log 與 Analytics。
+                  </td>
+                </tr>
+                <tr>
+                  <td>目前排程</td>
+                  <td>
+                    <code>[triggers] crons = []</code>，刻意留空。原因記在 wrangler.toml：備份是每店各自的功能，排程只處理
+                    <code>backup_configurations</code> 中 <code>schedule_enabled = true</code> 的設定，production 目前沒有任何一筆，
+                    原本每 5 分鐘的健康檢查等於一個月空跑 8,640 次。要恢復時，空陣列才會在部署時清掉舊 trigger；刪掉整個區塊則舊 trigger 會繼續跑。
+                  </td>
+                </tr>
+                <tr>
+                  <td>四個保留的排程意圖</td>
+                  <td>
+                    <code>*/5 * * * *</code> 健康檢查與監控；<code>0 */6 * * *</code> 處理各店排程備份；<code>0 2 * * *</code> 每日清理與維護；<code>0 0 * * SUN</code> 每週報表與告警。以 <code>cronMatches</code>
+                    比對 trigger，不認得的 cron 只記 log 不做事。這四條現在都是註解，不會執行。
+                  </td>
+                </tr>
+                <tr>
+                  <td>Binding</td>
+                  <td>
+                    <code>DB</code>（D1；dev 為 makanmakan-local，production 為 makanmasak-prod）、<code>BACKUP_KV</code>、<code>BACKUP_STORAGE</code>（R2；production 為 makanmasak-backups-prod）、<code>ANALYTICS</code>。
+                    環境名稱：預設、<code>development</code>、<code>production</code>（Worker 名 makanmasak-backup-scheduler-prod）。
+                  </td>
+                </tr>
+                <tr>
+                  <td>指令</td>
+                  <td>
+                    <code>pnpm --filter @makanmasak/backup-scheduler build</code> 與 <code>build:prod</code> 只做 <code>wrangler deploy --dry-run</code>；它的 <code>test</code> 就是這個 dry-run build，
+                    <code>typecheck</code>／<code>lint</code> 則是轉去 api 套件。<code>deploy:prod</code> 才會真的部署。<code>pnpm check:workers</code> 會一併建置它。
+                  </td>
+                </tr>
+                <tr>
+                  <td>它不是什麼</td>
+                  <td>
+                    不是平台的災難復原。平台恢復靠 D1 Time Travel（見下方「平台恢復流程」），與這個 Worker 無關，它是否有排程都不影響 Time Travel。
+                  </td>
+                </tr>
+                <tr>
+                  <td>啟用前提</td>
+                  <td>
+                    至少有一個租戶實際開啟備份設定；<code>TENANT_BACKUPS_ENABLED</code> 已決定；下一節列的 scheduler 與 BackupService 不一致已修；在隔離環境跑過 backup → restore；再把需要的 cron 從註解移回
+                    <code>crons</code> 並部署。
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
           <h3>租戶備份目前的限制</h3>
           <p>
             <code>TENANT_BACKUPS_ENABLED</code>預設關閉。scheduler入口位於
