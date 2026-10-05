@@ -146,6 +146,10 @@
     {
       "fresh": "0036_orders_seat_id.sql",
       "reason": "orders and seats are platform-API tables; the management-api database has neither."
+    },
+    {
+      "fresh": "0037_qr_tenancy_columns.sql",
+      "reason": "qr_codes is a platform-API table; the management-api database has no qr_codes to add tenancy columns to."
     }
   ],
   "legacyOnly": [

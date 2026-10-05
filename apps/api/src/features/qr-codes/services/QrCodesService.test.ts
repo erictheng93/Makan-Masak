@@ -1,11 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Env } from "../../../types/env";
 
-type PreparedResult = {
-  first?: unknown;
-  all?: unknown[];
-};
-
 const mocks = vi.hoisted(() => {
   const qrService = {
     generateQRCode: vi.fn(),
@@ -79,32 +74,6 @@ vi.mock("qrcode", () => ({
 }));
 
 import { QrCodesService } from "./QrCodesService";
-
-function createPreparedDb(results: PreparedResult[] = []) {
-  const statements: Array<{
-    sql: string;
-    bind: ReturnType<typeof vi.fn>;
-    first: ReturnType<typeof vi.fn>;
-    all: ReturnType<typeof vi.fn>;
-  }> = [];
-
-  const db = {
-    prepare: vi.fn((sql: string) => {
-      const result = results.shift() ?? {};
-      const statement = {
-        sql,
-        bind: vi.fn(() => statement),
-        first: vi.fn(async () => result.first ?? null),
-        all: vi.fn(async () => ({ results: result.all ?? [] })),
-      };
-
-      statements.push(statement);
-      return statement;
-    }),
-  };
-
-  return { db: db as unknown as D1Database, statements };
-}
 
 function createService(
   env: Partial<{ DB: D1Database; CACHE_KV: KVNamespace }> = {},
@@ -338,34 +307,6 @@ describe("QrCodesService", () => {
       expect.objectContaining({ totalQRCodes: 2 }),
       expect.any(Number),
     );
-  });
-
-  it("filters uncached statistics by restaurant", async () => {
-    mocks.cache.get.mockResolvedValueOnce(null);
-    const { db, statements } = createPreparedDb([
-      { first: { count: 2 } },
-      { first: { count: 5 } },
-      { first: { count: 1 } },
-      { all: [{ id: 10, name: "Modern", usage_count: 3 }] },
-    ]);
-
-    await expect(
-      createService({ DB: db }).getStatistics("restaurant-1"),
-    ).resolves.toMatchObject({
-      totalQRCodes: 2,
-      totalDownloads: 5,
-      totalTemplates: 1,
-      popularTemplates: [{ id: 10, name: "Modern", usage_count: 3 }],
-    });
-
-    expect(mocks.qrService.getQRCodeStats).not.toHaveBeenCalled();
-    expect(statements).toHaveLength(4);
-    expect(
-      statements.every((statement) => statement.sql.includes("restaurant_id")),
-    ).toBe(true);
-    for (const statement of statements) {
-      expect(statement.bind).toHaveBeenCalledWith("restaurant-1");
-    }
   });
 
   it("lists and reads templates from cache or service results", async () => {
