@@ -736,7 +736,9 @@ export function createApp(
   apiV1.use("/pos/*", authMiddleware);
   apiV1.use("/pos/*", moduleGate("pos"));
   apiV1.use("/payments/*", authMiddleware);
-  apiV1.use("/payments/*", moduleGate("online_ordering"));
+  // /payments serves both POS checkout and online checkout; either module
+  // suffices (an override can enable `pos` while `online_ordering` is off).
+  apiV1.use("/payments/*", moduleGate(["pos", "online_ordering"]));
   // apiV1.use('/print/*', authMiddleware) // Disabled - incomplete feature
   // Tables routes handle auth at the route level so public QR lookups
   // (`GET /tables/qr/:qrCode`) remain reachable without a bearer token.
