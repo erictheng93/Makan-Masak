@@ -71,6 +71,7 @@ export interface Order extends Omit<BaseEntity, "id"> {
   id: string;
   restaurantId: string;
   tableId?: number;
+  seatId?: number;
   customerId?: string;
   waitingListId?: string;
   orderNumber: string;
@@ -330,6 +331,9 @@ export interface SelectedCustomizations {
 export interface CreateOrderRequest {
   restaurantId: string;
   tableId?: number;
+  seatId?: number;
+  /** Signed table/seat QR the customer scanned; the server verifies it. */
+  qrCode?: string;
   waitingListId?: string;
   customerName?: string;
   customerPhone?: string;

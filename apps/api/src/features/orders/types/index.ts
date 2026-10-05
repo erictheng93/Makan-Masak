@@ -55,6 +55,7 @@ export type OrderItem = SharedOrderItem;
 export interface CreateOrderData {
   restaurantId: string;
   tableId?: number;
+  seatId?: number;
   customerId?: string;
   waitingListId?: string;
   waitingListCustomerPhone?: string;

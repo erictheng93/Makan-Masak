@@ -142,6 +142,10 @@
     {
       "fresh": "0035_multiple_coupons.sql",
       "reason": "Coupons and order discount snapshots belong to the platform database; control-plane database contains neither table."
+    },
+    {
+      "fresh": "0036_orders_seat_id.sql",
+      "reason": "orders and seats are platform-API tables; the management-api database has neither."
     }
   ],
   "legacyOnly": [

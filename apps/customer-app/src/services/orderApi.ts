@@ -172,6 +172,8 @@ export interface CreateGuestOrderRequest {
   customerPhone?: string;
   tableId?: number;
   seatId?: number;
+  /** Signed table/seat QR from SignedOrderEntryView; verified by the server. */
+  qrCode?: string;
   items: Array<{
     menuItemId: number;
     quantity: number;

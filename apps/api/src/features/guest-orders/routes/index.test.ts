@@ -18,10 +18,15 @@ const addItemsToOrder = vi.hoisted(() => vi.fn());
 const cancelOrder = vi.hoisted(() => vi.fn());
 const enforceQuota = vi.hoisted(() => vi.fn());
 const meterEmit = vi.hoisted(() => vi.fn());
+const assertDineInQr = vi.hoisted(() => vi.fn());
 
 vi.mock("@makanmasak/database", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@makanmasak/database")>()),
   createDatabase: databaseMocks.createDatabase,
+}));
+
+vi.mock("../../qr-codes/services/assert-dine-in-qr", () => ({
+  assertDineInQr,
 }));
 
 vi.mock("../../../middleware/quotaGate", () => ({
@@ -262,6 +267,7 @@ describe("guest order routes", () => {
     cancelOrder.mockReset();
     enforceQuota.mockReset();
     meterEmit.mockReset();
+    assertDineInQr.mockReset();
   });
 
   it("routes select fixtures by table and reports missing fixtures", async () => {
@@ -583,6 +589,70 @@ describe("guest order routes", () => {
     expect(createOrder).toHaveBeenCalledWith(
       expect.objectContaining({ orderType: "table", tableId: 3 }),
     );
+  });
+
+  it("verifies the signed QR and persists seatId for a seat order", async () => {
+    setSelectFixtures({
+      restaurants: [[activeGuestRestaurant()]],
+      tables: [[{ id: 3, restaurantId: "restaurant-1" }]],
+      seats: [[{ id: 11, tableId: 3 }]],
+    });
+    createOrder.mockResolvedValue({ id: 503, orderNumber: "G003" });
+
+    const response = await routes.fetch(
+      new Request("https://test/", {
+        method: "POST",
+        body: JSON.stringify(
+          validGuestOrderBody({
+            orderType: "seat",
+            tableId: 3,
+            seatId: 11,
+            qrCode: "https://x.test/order?sig=abc",
+          }),
+        ),
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(201);
+    expect(assertDineInQr).toHaveBeenCalledOnce();
+    expect(assertDineInQr).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        restaurantId: "restaurant-1",
+        tableId: 3,
+        seatId: 11,
+        qrCode: "https://x.test/order?sig=abc",
+      }),
+    );
+    expect(createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ tableId: 3, seatId: 11 }),
+    );
+  });
+
+  it("returns 403 and creates nothing when QR verification fails", async () => {
+    setSelectFixtures({
+      restaurants: [[activeGuestRestaurant()]],
+      tables: [[{ id: 3, restaurantId: "restaurant-1" }]],
+    });
+    assertDineInQr.mockRejectedValue(
+      new ApiError("QR_VERIFICATION_FAILED", "QR required", 403),
+    );
+
+    const response = await withSilencedRouteError(() =>
+      createRoutesWithApiErrorHandler().fetch(
+        new Request("https://test/", {
+          method: "POST",
+          body: JSON.stringify(
+            validGuestOrderBody({ orderType: "table", tableId: 3 }),
+          ),
+        }),
+        createEnv() as never,
+      ),
+    );
+
+    expect(response.status).toBe(403);
+    expect(createOrder).not.toHaveBeenCalled();
   });
 
   it("rejects invalid create requests and active duplicate guest orders", async () => {

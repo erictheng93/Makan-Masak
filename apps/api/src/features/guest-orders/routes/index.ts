@@ -37,6 +37,7 @@ import {
   resolveCouponCustomerIdentity,
   resolveGuestCouponIdentity,
 } from "../services/guest-coupon-identity";
+import { assertDineInQr } from "../../qr-codes/services/assert-dine-in-qr";
 import { enforceGuestOrderThrottle } from "../services/guest-order-throttle";
 import {
   ApiError,
@@ -147,6 +148,15 @@ app.post(
           "Table not found or does not belong to this restaurant",
         );
       }
+
+      // A bare tableId proves nothing: require the signed QR (also rejects
+      // inactive/deleted tables and seats and superseded stickers).
+      await assertDineInQr(c.env, {
+        restaurantId: data.restaurantId,
+        tableId: data.tableId!,
+        seatId: data.orderType === "seat" ? data.seatId : undefined,
+        qrCode: data.qrCode,
+      });
     }
 
     if (data.orderType === "seat") {
@@ -182,6 +192,7 @@ app.post(
         customerId: customer?.id,
         // Only pass tableId for table/seat orders — shop orders don't need a table
         tableId: data.orderType === "shop" ? undefined : data.tableId,
+        seatId: data.orderType === "seat" ? data.seatId : undefined,
         waitingListId: data.waitingListId,
         waitingListCustomerPhone: data.customerPhone,
         // `customerPhone` used to feed the waiting-list lookup and nothing
