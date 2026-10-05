@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useTenantsStore } from "@/stores/tenants";
+import { isSemver } from "@/services/api";
 import { useToast } from "vue-toastification";
 import {
   ArrowLeftIcon,
@@ -143,9 +144,24 @@ const handleProvision = async () => {
 // 部署
 const deploying = ref(false);
 const handleDeploy = async () => {
+  // Redeploy the running version; a never-deployed tenant needs one typed in.
+  const deployed = tenant.value?.deployedVersion;
+  const version = (
+    deployed ??
+    window.prompt(t("deployments.batch.versionPlaceholder")) ??
+    ""
+  ).trim();
+  if (!isSemver(version)) {
+    toast.warning(t("deployments.validation.enterVersion"));
+    return;
+  }
   deploying.value = true;
   try {
-    await tenantsStore.deployTenant(tenantId.value);
+    await tenantsStore.deployTenant(
+      tenantId.value,
+      version,
+      deployed ? "update" : "initial",
+    );
     toast.success(t("tenantDetail.toast.deployStarted"));
     await tenantsStore.fetchTenant(tenantId.value);
   } catch (e) {
