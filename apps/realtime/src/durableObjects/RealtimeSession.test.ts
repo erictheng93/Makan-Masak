@@ -269,6 +269,9 @@ function tokenFor(payload: Record<string, unknown>) {
       roomId: "restaurant-1",
       restaurantId: "restaurant-1",
       role: "admin",
+      sid: "session-1",
+      tv: 1,
+      appRole: 0,
       ...payload,
     },
     jwtSecret,
@@ -509,6 +512,7 @@ describe("RealtimeSession message, routing, and validation behavior", () => {
         new Request(
           `https://do.test/admin/restaurant-1?token=${tokenFor({
             role: "staff",
+            appRole: 2,
           })}`,
           { headers: { Upgrade: "websocket" } },
         ),
@@ -549,7 +553,10 @@ describe("RealtimeSession message, routing, and validation behavior", () => {
   it("rejects websocket upgrades when restaurant or table access fails", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     try {
-      const staffDb = createDb([{ restaurant_id: "restaurant-2", role: 2 }]);
+      const staffDb = createDb([
+        { restaurant_id: "restaurant-2", role: 2 },
+        { id: "session-1" },
+      ]);
       const staffDenied = await createSession(
         createAuthEnv({ DB: staffDb.DB }),
       ).fetch(
@@ -558,6 +565,9 @@ describe("RealtimeSession message, routing, and validation behavior", () => {
             roomType: "kitchen",
             role: "staff",
             userId: "10",
+            sid: "session-1",
+            tv: 1,
+            appRole: 2,
           })}`,
           { headers: { Upgrade: "websocket" } },
         ),
@@ -639,6 +649,27 @@ describe("RealtimeSession message, routing, and validation behavior", () => {
     }
   });
 
+  it("rejects a derived staff token after its source session is terminated", async () => {
+    const db = createDb([
+      { restaurant_id: "restaurant-1", role: 1, token_version: 1 },
+      null,
+    ]);
+    const response = await internals(
+      createSession(createAuthEnv({ DB: db.DB })),
+    ).validateRestaurantAccess({
+      userId: "1",
+      appRole: 1,
+      sid: "session-1",
+      tv: 1,
+      restaurantId: "restaurant-1",
+      role: "admin",
+    });
+    expect(response).toEqual({
+      valid: false,
+      error: "Session has been invalidated",
+    });
+  });
+
   it("sets up authenticated websocket connections before 101 responses fail in node", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const client = createSocket();
@@ -650,7 +681,10 @@ describe("RealtimeSession message, routing, and validation behavior", () => {
       return { 0: client, 1: server };
     });
     try {
-      const db = createDb([{ restaurant_id: null, role: 0 }]);
+      const db = createDb([
+        { restaurant_id: null, role: 0 },
+        { id: "session-1" },
+      ]);
       const state = createState();
       const session = createSession(createAuthEnv({ DB: db.DB }), state);
 
@@ -1356,7 +1390,10 @@ describe("RealtimeSession message, routing, and validation behavior", () => {
   });
 
   it("validates restaurant access for active users, platform admins, and failures", async () => {
-    const regularDb = createDb([{ restaurant_id: "restaurant-1", role: 2 }]);
+    const regularDb = createDb([
+      { restaurant_id: "restaurant-1", role: 2 },
+      { id: "session-1" },
+    ]);
     const regularSession = createSession({
       ...createEnv(),
       DB: regularDb.DB,
@@ -1364,12 +1401,18 @@ describe("RealtimeSession message, routing, and validation behavior", () => {
     await expect(
       internals(regularSession).validateRestaurantAccess({
         userId: "10",
+        sid: "session-1",
+        tv: 1,
+        appRole: 2,
         restaurantId: "restaurant-1",
         role: "staff",
       }),
     ).resolves.toEqual({ valid: true });
 
-    const mismatchDb = createDb([{ restaurant_id: "restaurant-2", role: 2 }]);
+    const mismatchDb = createDb([
+      { restaurant_id: "restaurant-2", role: 2 },
+      { id: "session-1" },
+    ]);
     const mismatchSession = createSession({
       ...createEnv(),
       DB: mismatchDb.DB,
@@ -1377,6 +1420,9 @@ describe("RealtimeSession message, routing, and validation behavior", () => {
     await expect(
       internals(mismatchSession).validateRestaurantAccess({
         userId: "10",
+        sid: "session-1",
+        tv: 1,
+        appRole: 2,
         restaurantId: "restaurant-1",
         role: "staff",
       }),
@@ -1385,7 +1431,10 @@ describe("RealtimeSession message, routing, and validation behavior", () => {
       error: "User does not belong to this restaurant",
     });
 
-    const adminDb = createDb([{ restaurant_id: null, role: 0 }]);
+    const adminDb = createDb([
+      { restaurant_id: null, role: 0 },
+      { id: "session-1" },
+    ]);
     const adminSession = createSession({
       ...createEnv(),
       DB: adminDb.DB,
@@ -1393,6 +1442,9 @@ describe("RealtimeSession message, routing, and validation behavior", () => {
     await expect(
       internals(adminSession).validateRestaurantAccess({
         userId: "1",
+        sid: "session-1",
+        tv: 1,
+        appRole: 0,
         restaurantId: "restaurant-any",
         role: "admin",
       }),

@@ -24,6 +24,7 @@ export const CORS_ALLOWED_REQUEST_HEADERS: readonly string[] = [
   "X-Table-ID",
   "X-Guest-Device-Id",
   "X-Guest-Token",
+  "X-Waiting-Ticket-Token",
   // POST /payments refuses a request without one (#310).
   "Idempotency-Key",
   // CashierView names the till on refunds and receipts.

@@ -16,6 +16,12 @@
           <p class="font-medium text-ios-text">
             {{ t("waitingList.errors.ticketLoadFailed") }}
           </p>
+          <RouterLink
+            :to="`/r/${props.restaurantId}/wait-list`"
+            class="mt-4 inline-block text-ios-blue"
+          >
+            {{ t("waitingList.join.lookup") }}
+          </RouterLink>
         </div>
 
         <div v-else-if="ticket" class="space-y-6">

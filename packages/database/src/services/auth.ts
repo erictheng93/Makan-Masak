@@ -593,13 +593,25 @@ export class AuthService extends BaseService {
         conditions.push(eq(sessions.token, token));
       }
 
-      await this.db
+      const deactivate = this.db
         .update(sessions)
-        .set({
-          isActive: false,
-          updatedAt: new Date(),
-        })
+        .set({ isActive: false, updatedAt: new Date() })
         .where(and(...conditions));
+      if (token) {
+        await deactivate;
+      } else {
+        // Revoke derived service tokens as well as stored access/refresh tokens.
+        await this.db.batch([
+          deactivate,
+          this.db
+            .update(users)
+            .set({
+              tokenVersion: sql`${users.tokenVersion} + 1`,
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, userId)),
+        ]);
+      }
 
       return true;
     } catch (error) {

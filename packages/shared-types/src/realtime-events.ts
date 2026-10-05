@@ -48,6 +48,9 @@ export interface RealtimeAuthPayload {
   role: "customer" | "staff" | "admin";
   /** 原始應用角色代碼（0=ADMIN, 1=OWNER, ...） */
   appRole?: number;
+  /** Source staff session and live account token version. */
+  sid?: string;
+  tv?: number;
   scope?: "guest-realtime" | "group-order-realtime";
   guestFlag?: boolean;
   /** 桌號 ID（顧客連線時使用） */

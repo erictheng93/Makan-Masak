@@ -1,3 +1,8 @@
+import {
+  MANAGEMENT_ADMIN_ID,
+  MANAGEMENT_SESSION_ID,
+  seedManagementAdmin,
+} from "./management-auth-fixture";
 import Database from "better-sqlite3";
 import { sign } from "hono/jwt";
 import { describe, expect, it, vi } from "vitest";
@@ -50,6 +55,7 @@ function createEnv(
              ('m-my', 'Jalan Alor', 'Kuala Lumpur', 'MY', 0);
     INSERT INTO restaurants (id, name, country_code) VALUES ('r1', 'Known', 'TW');
   `);
+  seedManagementAdmin(sqlite);
   for (let i = 0; i < (options.unknownRestaurants ?? 0); i += 1) {
     sqlite
       .prepare(
@@ -81,9 +87,11 @@ function createEnv(
 async function token() {
   return sign(
     {
-      id: "admin-1",
+      id: MANAGEMENT_ADMIN_ID,
       email: "admin@example.test",
       role: "admin",
+      tv: 1,
+      sid: MANAGEMENT_SESSION_ID,
       aud: "management",
       iss: "makanmakan-management",
       exp: Math.floor(Date.now() / 1000) + 3600,
@@ -163,7 +171,10 @@ describe("admin policy routes", () => {
       action: "system_config",
       resource: "policies",
       resource_id: "country:MY:modules.disabled",
-      changes: { after: { value: ["pos"] }, metadata: { adminId: "admin-1" } },
+      changes: {
+        after: { value: ["pos"] },
+        metadata: { adminId: MANAGEMENT_ADMIN_ID },
+      },
     });
     expect(kv.delete).toHaveBeenCalledWith("policy:v1:country:MY");
   });

@@ -271,6 +271,15 @@ async function authenticateStaffToken(
     throw unauthorized("Invalid token claims", "TOKEN_INVALID");
   }
 
+  const session = await c.env.DB.prepare(
+    "SELECT id FROM sessions WHERE user_id = ? AND token = ? AND is_active = 1 AND expires_at_ms > ? LIMIT 1",
+  )
+    .bind(userRecord.id, token, Date.now())
+    .first();
+  if (!session) {
+    throw unauthorized("Session has been invalidated", "TOKEN_INVALIDATED");
+  }
+
   return {
     user: {
       id: userRecord.id,

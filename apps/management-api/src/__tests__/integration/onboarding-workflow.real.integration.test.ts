@@ -1,3 +1,8 @@
+import {
+  MANAGEMENT_ADMIN_ID,
+  MANAGEMENT_SESSION_ID,
+  seedManagementAdmin,
+} from "../management-auth-fixture";
 import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
@@ -255,6 +260,7 @@ function createPlatformDb() {
       WHERE status = 'pending';
   `);
 
+  seedManagementAdmin(sqlite);
   return new D1DatabaseAdapter(sqlite);
 }
 
@@ -307,9 +313,11 @@ function createApplicationBody() {
 async function managementToken() {
   return sign(
     {
-      id: "workflow-admin",
+      id: MANAGEMENT_ADMIN_ID,
       email: "workflow-admin@example.test",
       role: "admin",
+      tv: 1,
+      sid: MANAGEMENT_SESSION_ID,
       aud: "management",
       iss: "makanmakan-management",
       exp: Math.floor(Date.now() / 1000) + 3600,
@@ -808,7 +816,7 @@ describe("Onboarding public API workflow — real integration", () => {
         )
         .get(createdData.applicationId),
     ).toMatchObject({
-      actor_id: "workflow-admin",
+      actor_id: MANAGEMENT_ADMIN_ID,
       created_at_ms: expect.any(Number),
     });
   });
@@ -1098,7 +1106,7 @@ describe("Onboarding public API workflow — real integration", () => {
       },
       {
         event_type: "approved",
-        actor_id: "workflow-admin",
+        actor_id: MANAGEMENT_ADMIN_ID,
         actor_email: "workflow-admin@example.test",
       },
     ]);
@@ -1339,7 +1347,10 @@ describe("Onboarding public API workflow — real integration", () => {
       rejectionReason: "Service area is not supported yet",
     });
     expect(
-      platformDb.raw().prepare("SELECT COUNT(*) AS count FROM users").get(),
+      platformDb
+        .raw()
+        .prepare("SELECT COUNT(*) AS count FROM users WHERE id <> ?")
+        .get(MANAGEMENT_ADMIN_ID),
     ).toMatchObject({ count: 1 });
     expect(
       platformDb
@@ -1543,7 +1554,10 @@ describe("Onboarding public API workflow — real integration", () => {
       },
     });
     expect(
-      platformDb.raw().prepare("SELECT COUNT(*) AS count FROM users").get(),
+      platformDb
+        .raw()
+        .prepare("SELECT COUNT(*) AS count FROM users WHERE id <> ?")
+        .get(MANAGEMENT_ADMIN_ID),
     ).toMatchObject({ count: 1 });
     expect(
       platformDb
@@ -1631,7 +1645,10 @@ describe("Onboarding public API workflow — real integration", () => {
         .get(),
     ).toMatchObject({ count: 0 });
     expect(
-      platformDb.raw().prepare("SELECT COUNT(*) AS count FROM users").get(),
+      platformDb
+        .raw()
+        .prepare("SELECT COUNT(*) AS count FROM users WHERE id <> ?")
+        .get(MANAGEMENT_ADMIN_ID),
     ).toMatchObject({ count: 0 });
     expect(
       platformDb

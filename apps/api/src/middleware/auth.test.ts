@@ -142,6 +142,36 @@ function strictAtob(encoded: string): string {
 }
 
 describe("authMiddleware", () => {
+  it("rejects a terminated or previously rotated staff access token", async () => {
+    const app = new Hono();
+    app.onError(apiErrorHandler);
+    app.use("/protected", authMiddleware);
+    app.get("/protected", (c) => c.json({ ok: true }));
+    const db = {
+      prepare: vi.fn((sql: string) => ({
+        bind: vi.fn(() => ({
+          first: vi.fn(async () =>
+            sql.includes("FROM sessions")
+              ? null
+              : {
+                  id: staffUserId,
+                  username: "role-1",
+                  role: 1,
+                  is_active: 1,
+                  token_version: 1,
+                },
+          ),
+        })),
+      })),
+    };
+    const response = await app.fetch(
+      new Request("https://api.test/protected", {
+        headers: { Authorization: `Bearer ${await staffToken(1)}` },
+      }),
+      { JWT_SECRET, DB: db } as never,
+    );
+    expect(response.status).toBe(401);
+  });
   it("accepts active staff tokens and attaches the user", async () => {
     const app = new Hono();
     app.onError(apiErrorHandler);

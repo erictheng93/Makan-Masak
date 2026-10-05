@@ -1,3 +1,8 @@
+import {
+  MANAGEMENT_ADMIN_ID,
+  MANAGEMENT_SESSION_ID,
+  seedManagementAdmin,
+} from "./management-auth-fixture";
 import Database from "better-sqlite3";
 import { sign } from "hono/jwt";
 import { describe, expect, it } from "vitest";
@@ -19,6 +24,7 @@ function createPlatformDb() {
       deleted_at_ms INTEGER
     );
   `);
+  seedManagementAdmin(sqlite);
   return new D1DatabaseAdapter(sqlite);
 }
 
@@ -43,9 +49,11 @@ function createEnv(): ManagementEnv {
 async function managementToken() {
   return sign(
     {
-      id: "workflow-admin",
+      id: MANAGEMENT_ADMIN_ID,
       email: "workflow-admin@example.test",
       role: "admin",
+      tv: 1,
+      sid: MANAGEMENT_SESSION_ID,
       aud: "management",
       iss: "makanmakan-management",
       exp: Math.floor(Date.now() / 1000) + 3600,
@@ -58,7 +66,7 @@ async function managementToken() {
 async function managementTokenWithoutRole() {
   return sign(
     {
-      id: "workflow-admin",
+      id: MANAGEMENT_ADMIN_ID,
       email: "workflow-admin@example.test",
       exp: Math.floor(Date.now() / 1000) + 3600,
     },

@@ -708,7 +708,7 @@ app.get(
       const { jobId } = c.get("validatedParams") as { jobId: string };
       const imageService = new ImageService(c.env);
 
-      const result = await imageService.getJobStatus(jobId);
+      const result = await imageService.getJobStatus(jobId, c.get("user"));
 
       if (!result.success) {
         return c.json(

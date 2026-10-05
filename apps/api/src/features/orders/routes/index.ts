@@ -3,6 +3,7 @@
  * HTTP routes for order management matching existing orders.ts functionality
  */
 
+import { requireWaitingPreorderAccess } from "../../../shared/services/waiting-ticket-access";
 import { Hono } from "hono";
 import { z } from "zod";
 import {
@@ -363,6 +364,14 @@ app.post(
         c.env,
         data.restaurantId,
         data.shopQrCode,
+      );
+    }
+
+    if (data.waitingListId && user.role === 5) {
+      await requireWaitingPreorderAccess(
+        c,
+        data.waitingListId,
+        data.restaurantId,
       );
     }
 

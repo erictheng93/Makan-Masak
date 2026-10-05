@@ -1,3 +1,4 @@
+import { getWaitingTicketToken } from "@/utils/waiting-ticket-tokens";
 import { getGuestOrderToken } from "@/utils/guest-order-tokens";
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import type {
@@ -108,6 +109,19 @@ class ApiClient {
           : (getCustomerAccessToken() ??
             localStorage.getItem("guest_auth_token"));
         if (token) config.headers.Authorization = `Bearer ${token}`;
+
+        const waitingTicketId =
+          config.url?.match(/^\/waiting-list\/([^/?#]+)(?:[/?#]|$)/)?.[1] ??
+          ((config.url === "/orders" || config.url === "/guest-orders") &&
+          typeof config.data === "object"
+            ? config.data?.waitingListId
+            : undefined);
+        const waitingToken =
+          typeof waitingTicketId === "string"
+            ? getWaitingTicketToken(waitingTicketId)
+            : null;
+        if (waitingToken)
+          config.headers["X-Waiting-Ticket-Token"] = waitingToken;
 
         // 添加請求 ID
         config.headers["X-Request-ID"] = crypto.randomUUID();
