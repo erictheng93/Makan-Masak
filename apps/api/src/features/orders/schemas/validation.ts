@@ -182,6 +182,15 @@ export const createOrderSchema = z
     clientMutationId: z.string().max(100).optional(),
   })
   .refine(
+    (data) =>
+      data.seatId === undefined ||
+      (data.tableId !== undefined && data.orderType !== "shop"),
+    {
+      message: "seatId requires a tableId and a table/seat order type",
+      path: ["seatId"],
+    },
+  )
+  .refine(
     (data) => data.couponCode === undefined || data.couponCodes === undefined,
     {
       message: "Provide either couponCode or couponCodes",

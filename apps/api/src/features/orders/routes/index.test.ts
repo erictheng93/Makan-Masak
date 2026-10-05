@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import routes from "./index";
-import { ApiError } from "../../../shared/utils/api-error";
+import { ApiError, forbidden } from "../../../shared/utils/api-error";
 import { resolveCouponCustomerIdentity } from "../../guest-orders/services/guest-coupon-identity";
 
 const serviceMocks = vi.hoisted(() => ({
@@ -42,7 +42,7 @@ const gateMocks = vi.hoisted(() => ({
 const authState = vi.hoisted(
   (): {
     user: { id: string; role: number; restaurantId: string | null };
-    customer: { id: string };
+    customer: { id: string } | undefined;
   } => ({
     user: {
       id: "user-42",
@@ -574,6 +574,69 @@ describe("orders routes", () => {
     );
 
     expect(response.status).toBeGreaterThanOrEqual(400);
+    expect(serviceMocks.createOrder).not.toHaveBeenCalled();
+  });
+
+  it("requires QR proof for legacy role-5 table orders", async () => {
+    authState.user.role = 5;
+    authState.customer = undefined;
+    assertDineInQr.mockRejectedValue(
+      forbidden("QR required", "QR_VERIFICATION_FAILED"),
+    );
+
+    const response = await routes.fetch(
+      jsonRequest("/", {
+        restaurantId: "restaurant-1",
+        tableId: 3,
+        items: [{ menuItemId: 7, quantity: 1 }],
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "QR_VERIFICATION_FAILED" },
+    });
+    expect(assertDineInQr).toHaveBeenCalledOnce();
+    expect(serviceMocks.createOrder).not.toHaveBeenCalled();
+  });
+
+  it.each([0, 1, 2, 3, 4])(
+    "allows staff role %i to create table orders without QR proof",
+    async (role) => {
+      authState.user.role = role;
+      authState.customer = undefined;
+      serviceMocks.createOrder.mockResolvedValue({ id: 1004 });
+
+      const response = await routes.fetch(
+        jsonRequest("/", {
+          restaurantId: "restaurant-1",
+          tableId: 3,
+          items: [{ menuItemId: 7, quantity: 1 }],
+        }),
+        createEnv() as never,
+      );
+
+      expect(response.status).toBe(201);
+      expect(assertDineInQr).not.toHaveBeenCalled();
+      expect(serviceMocks.createOrder).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("rejects a customer seatId without tableId before creating an order", async () => {
+    authState.user.role = 5;
+    serviceMocks.createOrder.mockResolvedValue({ id: 1005 });
+
+    const response = await routes.fetch(
+      jsonRequest("/", {
+        restaurantId: "restaurant-1",
+        seatId: 11,
+        items: [{ menuItemId: 7, quantity: 1 }],
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(400);
     expect(serviceMocks.createOrder).not.toHaveBeenCalled();
   });
 

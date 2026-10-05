@@ -370,7 +370,7 @@ app.post(
 
     // Customers ordering to a table must present the signed QR they scanned;
     // staff creating orders for a table are authenticated by role instead.
-    if (customer && data.tableId) {
+    if ((customer || user.role === 5) && data.tableId) {
       await assertDineInQr(c.env, {
         restaurantId: data.restaurantId,
         tableId: data.tableId,
