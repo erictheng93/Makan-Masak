@@ -113,6 +113,20 @@ test.describe("座位與預約流程 (real API)", () => {
       ).data;
       const ticketId = joinedTicket.id;
       cancelTicket(ticketId);
+      expect(joinedTicket.waitingToken).toBeTruthy();
+      expect(
+        (await apiRequest(`/api/v1/waiting-list/${ticketId}`)).status,
+        "an anonymous reader cannot inspect the ticket",
+      ).toBe(403);
+      expect(
+        (
+          await apiRequest(
+            `/api/v1/waiting-list/${earlier.id}`,
+            ticketAccess(joinedTicket),
+          )
+        ).status,
+        "a ticket credential cannot inspect another diner's ticket",
+      ).toBe(403);
 
       await expect(page).toHaveURL(new RegExp(`/wait-list/${ticketId}$`));
 

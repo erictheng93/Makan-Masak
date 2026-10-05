@@ -1,5 +1,32 @@
 # Intermittent `ERR_CONNECTION_CLOSED` against the production API
 
+## 2026-10-04 reassessment
+
+**Verdict: historical non-reproduction, not a current proof of connectivity or a
+universal exclusion of Worker failures.** The zero-exception observation applies
+only to the sampled endpoints, version and window. It cannot disprove the proposed
+causes at other times. A fast Worker response paired with a client timeout points
+to work outside the handler, but does not by itself identify which network/edge
+segment lost the response. The original raw samples are described as session
+scratch data and are not supplied here, so this review cannot independently
+recompute those measurements.
+
+Current `features/menu/routes/index.ts` still catches view-count rejection before
+`waitUntil`; its route suite passed in the four-file / 104-test API check listed
+in the [cold-start reassessment](2026-09-12-worker-cold-start-323.md).
+The two SSE routes still exist: analytics `ReadableStream.cancel()` has no cleanup,
+and kitchen heartbeat writes are not awaited/caught as promises. These are
+source-backed residual concerns, not a reproduction of #325. Do not describe
+publicly mounted API handlers as globally unreachable just because no known
+shipped browser uses them. Current master flow lists SSE as a common service;
+reader cancellation is now covered by a new `it.fails` regression in
+`features/analytics/routes/index.test.ts`: after HTTP 200 and the welcome chunk,
+reader cancellation leaves three timers instead of zero. The suite reports 10
+passing tests plus 1 expected failure; this is a reproduced defect, not successful
+SSE lifecycle verification. Kitchen rejected-write behavior still needs a check.
+No new production traffic or current Cloudflare invocation data was collected.
+
+
 **Date:** 2026-09-12
 **Related issue:** #325 (filed 2026-09-03)
 **Live version measured:** `efe1eb7b-f1a2-4ba8-8d2e-d756687c6bc4`, deployed 2026-09-10T04:12Z

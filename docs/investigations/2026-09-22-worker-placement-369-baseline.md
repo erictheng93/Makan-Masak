@@ -1,5 +1,19 @@
 # #369: authenticated MY/SIN baseline, 2026-09-22
 
+## 2026-10-04 evidence recheck
+
+**Verdict: the saved September baseline is internally consistent, but is not a
+current latency/placement reading.** `2026-09-22-worker-placement-369-baseline.json`
+remains unchanged as the original evidence. Independently recomputed: 105 HTTP
+200 / curl-exit-0 samples, 30 measured samples per endpoint, all twelve nearest-rank
+p50/p95 values matching the stored summary, and all 90 measured cf-ray suffixes
+SIN. The runnable regression is `tests/unit/worker-placement-baseline.test.ts`:
+`pnpm exec vitest run tests/unit/worker-placement-baseline.test.ts --project=root`.
+It checks arithmetic and evidence consistency, not endpoint reachability today.
+`apps/api/wrangler.toml` still has no placement block. No HiNet/Taiwan measurement,
+Tokyo A/B, new production-volume test or current issue-state query was performed.
+
+
 The authenticated endpoints work, but remain slow from this Malaysia connection.
 This run did not reproduce HiNet/SJC routing and does not close #369.
 

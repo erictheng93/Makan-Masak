@@ -1,8 +1,24 @@
 # 顧客端上線前提查核與關閉條件
 
+## 2026-10-04 對齊說明
+
+以下 production binding、部署 ID、D1 數量與 issue 狀態是 **10-01 快照**。10-04 本次僅以唯讀 `GET https://api.makanmasak.com/info` 重確認 `storedValueCredits`、`customerWebPush`（另有 `tenantBackups`）仍停用；未重查 secret／版本 metadata／D1／GitHub，也未變更正式設定。
+
+對照 master user flow v1.2，成功付款回調、逐攤分帳與退款、啟用儲值後扣抵、Web Push／Email／SMS 真送達仍待實際驗收。HEAD 已有會員 #422 修正、服務付款條件設定（#424）與 Cloudflare Email Service，不能把舊顧客 QA 的「會員不能點餐／無寄信配置／付款條件無來源」當今日阻塞。
+
+本次設定／provider／推播與顧客回歸合計 17 檔 209 案通過，市集／服務 route 2 檔 108 案通過；新增 canonical customer OTP → 下單 → 歷史隔離 1 案通過。舊 customer real integration 為 10 通過、3 失敗：staff JWT fixture 未建立目前未提交認證強化要求的 session。完整明細見 [10-04 顧客流程驗證](./2026-10-04-customer-flow-verification.html)。以下保留 10-01 原始證據。
+
 2026-10-01（Asia/Kuala_Lumpur）重查 [issue 425](https://github.com/erictheng93/Makan-Masak/issues/425)。本次只讀取 production、執行既有測試並記錄結果，沒有部署、寫入 D1、調整旗標、產生憑證或更新 GitHub issue。
 
 **目前不能關閉。** issue 的完成條件是每列有負責人與「開、不開、延後」決定；目前尚未取得這些決定。已確認的阻塞是缺少金流與推播配置、儲值未啟用、正式市集與服務資料未建立，以及座位與測試租戶的營運處置未定。這次沒有找到需要修改既有程式才能排除上述阻塞的證據。
+
+## 2026-10-04 本機重驗與證據時效
+
+本文件的 production bindings、資料列數、部署版本與 issue 狀態是 **10-01 快照**。10-04 沒有重新連線查 production 或 GitHub，不能把這些值當成 10-04 已量到；「目前不能關閉」沿用尚缺負責人與範圍決定的記錄，本次没有代填或更新 issue。
+
+對照 `master-user-flow.html` 後，以 HEAD `8b9c7a571` 加上現有未提交工作樹變更重跑顧客路徑。30 個 Vitest 檔、490 個測試通過；涵蓋會員登入／session、會員與訪客券、guest token、追蹤、訂位／服務、候位票號授權、揪團、市集 provider readiness 及 global CSRF。真 API／realtime／本機 D1 的 customer-real 結果、完整命令與各節點範圍見 [10-04 readiness 重查](./2026-09-18-customer-app-readiness-qa.html#recheck-1004)。工作樹結果不是 production 或純 HEAD 驗證。
+
+舊報告的「會員點餐 #422 仍預期失敗」「服務預約預付／訂金沒有設定來源」已與現有程式不符；目前會員 E2E 是一般回歸，服務付款條件由服務設定取得。這些更正不補上外部金流、Web Push、email／SMS 送達、正式資料、座位 QR 或營運決策，故不構成 #425 的關閉依據。
 
 ## Production 現況
 

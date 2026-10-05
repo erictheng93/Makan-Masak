@@ -1,5 +1,27 @@
 # The Worker cold-start floor on `api.makanmasak.com`
 
+## 2026-10-04 reassessment
+
+**Verdict: retain as a dated experiment, not a current startup benchmark.** The
+route counts, bundle sizes, Node timings and production measurements below belong
+to the named September versions; they were not remeasured on current HEAD
+`8b9c7a571` or on production in this review. The attribution of residual
+TTFB-after-TLS time to isolate startup is an inference, not a directly measured
+startup span; other edge/forwarding work is not isolated by that subtraction.
+
+The source still creates a normal Hono app in `apps/api/src/app-factory.ts` and
+uses lazy validators in `features/menu/schemas/validation.ts`. The contract
+extractor limitation described under #362 has since been fixed:
+`scripts/check-api-contracts.cjs` preserves wrappers through lazy schemas, and
+`pnpm exec vitest run tests/unit/check-api-contracts.test.ts --project=root`
+passes all 19 tests, including lazy optional/nullable cases. Thus that limitation
+is historical, not an outstanding prerequisite. API menu validators, menu routes,
+health probes and middleware order: four files / 104 tests passed via
+`pnpm --dir apps/api exec vitest run src/features/menu/routes/index.test.ts src/features/menu/schemas/validation.test.ts src/core/health/probe.test.ts src/app-factory.middleware-order.test.ts`.
+These checks cover behavior, not today's cold-start latency. A fresh deployed
+startup measurement and matched client/Worker traces remain necessary for that.
+
+
 **Date:** 2026-09-12
 **Related issue:** #323 (filed 2026-09-03, before #322 moved the Worker to APAC)
 **Live version measured:** `efe1eb7b-f1a2-4ba8-8d2e-d756687c6bc4`, deployed 2026-09-10T04:12Z
