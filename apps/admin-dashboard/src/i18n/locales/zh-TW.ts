@@ -2359,7 +2359,9 @@ const zhTWCore = {
       menu: "新增菜單品項",
       tables: "設定桌台",
       staff: "新增員工",
-      guestOrders: "啟用訪客訂單",
+      guestOrders: "開放顧客掃碼點餐",
+      guestOrdersHint:
+        "尚未開放前，顧客掃描桌上的 QR Code 無法下單，店家也不會顯示為營業中。",
     },
     welcome: "歡迎回來，{username}",
     lastUpdated: "最後更新: {time}",

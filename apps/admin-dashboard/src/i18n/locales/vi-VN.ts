@@ -2214,7 +2214,9 @@ const viVN: Messages = {
       menu: "Thêm món",
       tables: "Thiết lập bàn",
       staff: "Thêm nhân viên",
-      guestOrders: "Bật đơn hàng khách",
+      guestOrders: "Mở đặt món bằng QR cho khách",
+      guestOrdersHint:
+        "Khi chưa bật, khách quét mã QR trên bàn sẽ không đặt món được và cửa hàng cũng không hiển thị là đang mở.",
     },
     welcome: "Chào mừng trở lại, {username}",
     lastUpdated: "Cập nhật lần cuối: {time}",

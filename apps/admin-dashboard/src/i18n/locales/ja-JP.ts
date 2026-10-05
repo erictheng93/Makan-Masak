@@ -2211,7 +2211,9 @@ const jaJP: Messages = {
       menu: "メニューを追加",
       tables: "テーブルを設定",
       staff: "スタッフを追加",
-      guestOrders: "ゲスト注文を有効化",
+      guestOrders: "顧客のQR注文を受け付ける",
+      guestOrdersHint:
+        "有効にするまで、テーブルのQRコードを読み取ったお客様は注文できず、店舗も営業中として表示されません。",
     },
     welcome: "おかえりなさい、{username}",
     lastUpdated: "最終更新: {time}",

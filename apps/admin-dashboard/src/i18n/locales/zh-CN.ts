@@ -2168,7 +2168,9 @@ const zhCN: Messages = {
       menu: "添加菜单项目",
       tables: "设置餐桌",
       staff: "添加员工",
-      guestOrders: "启用访客订单",
+      guestOrders: "开放顾客扫码点餐",
+      guestOrdersHint:
+        "尚未开放前，顾客扫描桌上的 QR Code 无法下单，店家也不会显示为营业中。",
     },
     welcome: "欢迎回来，{username}",
     lastUpdated: "最后更新: {time}",
