@@ -30,6 +30,32 @@ const baseOrder = {
 };
 
 describe("order validation", () => {
+  it.each([
+    { seatId: 11 },
+    { seatId: 11, orderType: "seat" },
+    { seatId: 11, orderType: "table" },
+    { seatId: 11, tableId: 3 },
+    { seatId: 11, tableId: 3, orderType: "shop" },
+  ])("rejects a seat outside a table/seat order: %j", (selection) => {
+    expect(
+      createOrderSchema.safeParse({ ...baseOrder, ...selection }).success,
+    ).toBe(false);
+  });
+
+  it.each(["table", "seat"])(
+    "accepts a seat with a tableId in a %s order",
+    (orderType) => {
+      expect(
+        createOrderSchema.parse({
+          ...baseOrder,
+          tableId: 3,
+          seatId: 11,
+          orderType,
+        }),
+      ).toMatchObject({ tableId: 3, seatId: 11, orderType });
+    },
+  );
+
   it("normalizes multiple coupon codes and rejects duplicates and mixed request forms", () => {
     expect(
       createOrderSchema.parse({
