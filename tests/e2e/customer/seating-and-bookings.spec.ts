@@ -38,6 +38,12 @@ interface WaitingTicket {
   partiesAhead: number;
   status: string;
   customerPhone: string;
+  waitingToken?: string;
+}
+
+/** A diner reads or cancels only their own ticket, via the token issued at join. */
+function ticketAccess(ticket: WaitingTicket) {
+  return { headers: { "X-Waiting-Ticket-Token": ticket.waitingToken ?? "" } };
 }
 
 /** The shop's calendar date `days` from now, as the booking form writes it. */
@@ -58,11 +64,11 @@ test.describe("座位與預約流程 (real API)", () => {
       const rid = owner.restaurantId;
       const table = await createTable(localCleanup);
 
-      const cancelTicket = (id: string, phone: string) =>
+      const cancelTicket = (id: string) =>
         localCleanup.add(`cancel waiting ticket ${id}`, () =>
           apiRequest(`/api/v1/waiting-list/${id}`, {
             method: "DELETE",
-            body: { customerPhone: phone },
+            token: owner.token,
           }),
         );
 
@@ -81,7 +87,7 @@ test.describe("座位與預約流程 (real API)", () => {
           },
         },
       );
-      cancelTicket(earlier.id, earlierPhone);
+      cancelTicket(earlier.id);
 
       // --- 候位登記 through the page ------------------------------------------
       await page.goto(`/r/${rid}/wait-list`);
@@ -100,15 +106,20 @@ test.describe("座位與預約流程 (real API)", () => {
       await page.getByTestId("join-button").click();
       const joinResponse = await joined;
       expect(joinResponse.status(), "join waiting list").toBe(201);
-      const ticketId = ((await joinResponse.json()) as { data: WaitingTicket })
-        .data.id;
-      cancelTicket(ticketId, phone);
+      const joinedTicket = (
+        (await joinResponse.json()) as {
+          data: WaitingTicket;
+        }
+      ).data;
+      const ticketId = joinedTicket.id;
+      cancelTicket(ticketId);
 
       await expect(page).toHaveURL(new RegExp(`/wait-list/${ticketId}$`));
 
       const server = await apiData<WaitingTicket & { partySize: number }>(
         "read ticket",
         `/api/v1/waiting-list/${ticketId}`,
+        ticketAccess(joinedTicket),
       );
       expect(server).toEqual(
         expect.objectContaining({
@@ -160,6 +171,7 @@ test.describe("座位與預約流程 (real API)", () => {
       const after = await apiData<WaitingTicket>(
         "read ticket after confirm",
         `/api/v1/waiting-list/${ticketId}`,
+        ticketAccess(joinedTicket),
       );
       expect(after.status).toBe("confirmed");
       await assertNoOverlayError(page);
@@ -228,7 +240,7 @@ test.describe("座位與預約流程 (real API)", () => {
       localCleanup.add(`cancel waiting ticket ${ticket.id}`, () =>
         apiRequest(`/api/v1/waiting-list/${ticket.id}`, {
           method: "DELETE",
-          body: { customerPhone: phone },
+          token: owner.token,
         }),
       );
 
