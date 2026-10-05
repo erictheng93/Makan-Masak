@@ -46,6 +46,13 @@
           <div class="min-w-0">
             <p class="text-sm font-medium text-ios-text">{{ item.label }}</p>
             <p
+              v-if="item.hint && item.state === 'incomplete'"
+              :data-testid="`setup-checklist-${item.key}-hint`"
+              class="mt-0.5 text-xs text-ios-secondary"
+            >
+              {{ item.hint }}
+            </p>
+            <p
               v-if="item.state === 'unknown'"
               class="mt-0.5 text-xs text-ios-secondary"
             >
@@ -127,6 +134,7 @@ const checklist = computed(() => [
   {
     key: "guest-orders",
     label: t("dashboard.setupChecklist.guestOrders"),
+    hint: t("dashboard.setupChecklist.guestOrdersHint"),
     to: "/dashboard/settings?tab=orders",
     state: setupChecks.value.guestOrders ?? "unknown",
   },

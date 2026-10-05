@@ -2312,7 +2312,9 @@ const enUS: Messages = {
       menu: "Add menu items",
       tables: "Set up tables",
       staff: "Add staff",
-      guestOrders: "Enable guest orders",
+      guestOrders: "Open QR ordering to customers",
+      guestOrdersHint:
+        "Until this is on, customers who scan a table QR code can't place orders and the shop won't show as open.",
     },
     welcome: "Welcome back, {username}",
     lastUpdated: "Last updated: {time}",
