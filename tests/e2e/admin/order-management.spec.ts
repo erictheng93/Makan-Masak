@@ -43,6 +43,7 @@ interface GuestOrderPayload {
 
 interface TableRow {
   id?: number;
+  qrCode?: string;
 }
 
 interface MenuPayload {
@@ -75,7 +76,20 @@ async function resolveOrderFixtures(restaurantId: string, token: string) {
     { token },
   );
   expect(tables.ok, `tables lookup returned ${tables.status}`).toBe(true);
-  const tableId = tables.body.data?.[0]?.id;
+  // Dine-in orders must carry the table's signed QR; a table created through
+  // the API always has one, a seeded row may not.
+  const created = await apiRequest<TableRow>("/api/v1/tables", {
+    token,
+    method: "POST",
+    body: {
+      restaurantId,
+      number: `OM-${suffix().slice(0, 6)}`,
+      capacity: 4,
+    },
+  });
+  expect(created.ok, `table create returned ${created.status}`).toBe(true);
+  const tableId = created.body.data?.id ?? tables.body.data?.[0]?.id;
+  const qrCode = created.body.data?.qrCode;
 
   const menu = await apiRequest<MenuPayload>(`/api/v1/menu/${restaurantId}`);
   const items = [
@@ -96,13 +110,14 @@ async function resolveOrderFixtures(restaurantId: string, token: string) {
     "an available menu item is required to place an order",
   ).toBeTruthy();
 
-  return { tableId: tableId!, menuItemId: menuItemId! };
+  return { tableId: tableId!, qrCode, menuItemId: menuItemId! };
 }
 
 /** Places a real order through the public guest endpoint. */
 async function createOrder(
   restaurantId: string,
   tableId: number,
+  qrCode: string | undefined,
   menuItemId: number,
 ) {
   const result = await apiRequest<GuestOrderPayload>("/api/v1/guest-orders", {
@@ -111,6 +126,7 @@ async function createOrder(
       restaurantId,
       orderType: "table",
       tableId,
+      qrCode,
       items: [{ menuItemId, quantity: 1 }],
       guestName: `E2E ${suffix()}`,
       phoneLastDigits: fourDigits(),
@@ -132,11 +148,11 @@ test.describe("訂單管理 (real API)", () => {
     await requireStack();
 
     const { login, token, restaurantId } = await getOwnerContext();
-    const { tableId, menuItemId } = await resolveOrderFixtures(
+    const { tableId, qrCode, menuItemId } = await resolveOrderFixtures(
       restaurantId,
       token,
     );
-    const order = await createOrder(restaurantId, tableId, menuItemId);
+    const order = await createOrder(restaurantId, tableId, qrCode, menuItemId);
 
     await installAdminSession(page, login);
 
@@ -184,11 +200,11 @@ test.describe("訂單管理 (real API)", () => {
     await requireStack();
 
     const { login, token, restaurantId } = await getOwnerContext();
-    const { tableId, menuItemId } = await resolveOrderFixtures(
+    const { tableId, qrCode, menuItemId } = await resolveOrderFixtures(
       restaurantId,
       token,
     );
-    const order = await createOrder(restaurantId, tableId, menuItemId);
+    const order = await createOrder(restaurantId, tableId, qrCode, menuItemId);
 
     await installAdminSession(page, login);
 
@@ -243,11 +259,11 @@ test.describe("訂單管理 (real API)", () => {
     await requireStack();
 
     const { login, token, restaurantId } = await getOwnerContext();
-    const { tableId, menuItemId } = await resolveOrderFixtures(
+    const { tableId, qrCode, menuItemId } = await resolveOrderFixtures(
       restaurantId,
       token,
     );
-    const order = await createOrder(restaurantId, tableId, menuItemId);
+    const order = await createOrder(restaurantId, tableId, qrCode, menuItemId);
 
     try {
       const fresh = await apiRequest<OrderPayload>(

@@ -803,6 +803,7 @@ export async function createGuestTableOrder(options: {
         restaurantId: owner.restaurantId,
         orderType: "table",
         tableId: options.table.id,
+        qrCode: options.table.qrCode,
         guestName: options.guestName ?? e2eName("Guest"),
         items: options.items,
         clientMutationId: randomUUID(),

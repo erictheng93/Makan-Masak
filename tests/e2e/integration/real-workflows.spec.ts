@@ -426,6 +426,41 @@ async function resolveFixtureIds() {
   });
 }
 
+/**
+ * Dine-in guest orders must carry the table's signed QR. A table created
+ * through the API always has one; a seeded row may not.
+ */
+async function createSignedTable(restaurantId: string) {
+  const loginData = await getLoginData();
+  const response = await fetch(`${API_URL}/api/v1/tables`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${loginData?.token}`,
+      "Content-Type": "application/json",
+      ...(loginData?.csrfToken
+        ? {
+            "X-CSRF-Token": loginData.csrfToken,
+            cookie: `csrf_token=${loginData.csrfToken}`,
+          }
+        : csrfHeaders()),
+      origin: new URL(API_URL).origin,
+    },
+    body: JSON.stringify({
+      restaurantId,
+      number: `WF-${randomSuffix().slice(0, 6)}`,
+      capacity: 4,
+    }),
+  });
+  expect(response.ok, `workflow table create status ${response.status}`).toBe(
+    true,
+  );
+  const body = (await response.json()) as {
+    data?: { id?: number; qrCode?: string };
+  };
+  expect(body.data?.qrCode, "table QR is a signed URL").toMatch(/[?&]sig=/);
+  return { id: body.data!.id!, qrCode: body.data!.qrCode! };
+}
+
 async function fetchMenu(restaurantId: string): Promise<MenuBody> {
   const response = await fetch(`${API_URL}/api/v1/menu/${restaurantId}`);
   expect(response.ok, `menu API status ${response.status}`).toBe(true);
@@ -1835,13 +1870,15 @@ test.describe("Real system workflows", () => {
       "WORKFLOW_RESTAURANT_ID, WORKFLOW_MENU_ITEM_ID, and WORKFLOW_TABLE_ID are required for admin workflow",
     );
 
+    const signedTable = await createSignedTable(fixtureIds.restaurantId!);
     const createResponse = await fetch(`${API_URL}/api/v1/guest-orders`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         restaurantId: fixtureIds.restaurantId,
         orderType: "table",
-        tableId: fixtureIds.tableId,
+        tableId: signedTable.id,
+        qrCode: signedTable.qrCode,
         items: [{ menuItemId: fixtureIds.menuItemId, quantity: 1 }],
         guestName: "workflow-admin",
         phoneLastDigits: randomPhoneLastDigits(),
@@ -1937,13 +1974,15 @@ test.describe("Real system workflows", () => {
       "WORKFLOW_RESTAURANT_ID, WORKFLOW_MENU_ITEM_ID, and WORKFLOW_TABLE_ID are required for service workflow",
     );
 
+    const signedTable = await createSignedTable(fixtureIds.restaurantId!);
     const createResponse = await fetch(`${API_URL}/api/v1/guest-orders`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         restaurantId: fixtureIds.restaurantId,
         orderType: "table",
-        tableId: fixtureIds.tableId,
+        tableId: signedTable.id,
+        qrCode: signedTable.qrCode,
         items: [{ menuItemId: fixtureIds.menuItemId, quantity: 1 }],
         guestName: "workflow-service",
         phoneLastDigits: randomPhoneLastDigits(),
@@ -2316,13 +2355,15 @@ test.describe("Real system workflows", () => {
       "WORKFLOW_RESTAURANT_ID, WORKFLOW_MENU_ITEM_ID, and WORKFLOW_TABLE_ID are required for kitchen workflow",
     );
 
+    const signedTable = await createSignedTable(fixtureIds.restaurantId!);
     const createResponse = await fetch(`${API_URL}/api/v1/guest-orders`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         restaurantId: fixtureIds.restaurantId,
         orderType: "table",
-        tableId: fixtureIds.tableId,
+        tableId: signedTable.id,
+        qrCode: signedTable.qrCode,
         items: [{ menuItemId: fixtureIds.menuItemId, quantity: 1 }],
         guestName: "workflow-kitchen",
         phoneLastDigits: randomPhoneLastDigits(),
