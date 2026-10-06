@@ -77,6 +77,7 @@
     "check:design-palette": "node scripts/check-design-palette.cjs",
     "check:ui-reachability": "node scripts/check-ui-reachability.cjs",
     "check:docs-drift": "node scripts/check-docs-drift.cjs",
+    "check:handbook-locales": "node scripts/check-handbook-locales.cjs",
     "docs:sync": "node scripts/check-docs-drift.cjs --write",
     "check:i18n-locales": "tsx scripts/i18n-locale-coverage.ts",
     "check:i18n-locales:strict": "tsx scripts/i18n-locale-coverage.ts --fail-on-missing",

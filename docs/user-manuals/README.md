@@ -8,6 +8,12 @@
 
 其他語言版本（頁面右上角下拉選單也能切換；附錄 A、B 維持繁體中文原文）：[English](./en-US/system-handbook.html) · [日本語](./ja-JP/system-handbook.html) · [Bahasa Indonesia](./id-ID/system-handbook.html) · [Tiếng Việt](./vi-VN/system-handbook.html) · [Filipino](./fil-PH/system-handbook.html)。頁面另提供深色／淺色模式切換。
 
+**維護**：繁體中文的 `system-handbook.html` 是母版，其餘五份是翻譯副本，`apps/onboarding-app/public/guide/` 放的是六份的上線複本。改了母版的章節後：
+
+1. 在各語系檔重新翻譯有變動的章節（`pnpm check:handbook-locales` 會指出是哪一章、哪一個語系結構已偏離；它檢查標籤結構，不檢查翻譯品質）。
+2. 把六份檔案複製到 `apps/onboarding-app/public/guide/`（母版放根目錄，其餘放各自的語系資料夾）。
+3. `pnpm --filter makanmasak-onboarding-app deploy:prod`。附錄 A、B 不翻譯，各語系檔必須與母版一致。
+
 涵蓋營運人員與開發者：21 個 Part 串起 11 個 App、角色權限、點餐到收款退款與列印、入駐與租戶管理、API、即時通訊、資料模型、開發部署及維運排錯。另附路由宣告、Drizzle 資料表欄位與來源索引。可直接以瀏覽器開啟，支援離線閱讀、章節搜尋與列印。
 
 此手冊以 2026-10-05 的 repository 程式碼與設定核對，並明列尚待驗證的功能及已知限制；不代表當日 production 已完成所有驗收。下方多語言角色指南保留原版本，部分內容早於目前實作，請以新手冊及對應來源為準。
