@@ -259,3 +259,6 @@ docs/security/*-audit-*.md
 .prod.secrets.env
 .staging.secrets.generated.json
 .prod.secrets.generated.json
+
+# macOS Finder/iCloud conflict copies ("name 2.ext")
+* 2.*
