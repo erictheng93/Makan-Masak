@@ -64,7 +64,10 @@ describe("resolveVerificationAppBaseUrl", () => {
 });
 
 /**
- * A password reset used to bump `token_version` and stop there. The `sessions`
+ * Real-D1 coverage for session revocation on password reset and for the
+ * expired-token cleanup the daily cron runs.
+ *
+ * Session revocation: a password reset used to bump `token_version` and stop there. The `sessions`
  * rows stayed active, and refreshToken() finds a session by refresh token +
  * isActive — so whoever had stolen a refresh token could trade it for a fresh
  * access token stamped with the *new* version, indefinitely. changePassword()
