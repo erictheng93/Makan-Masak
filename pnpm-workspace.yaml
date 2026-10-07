@@ -87,3 +87,6 @@ overrides:
   "vitest": "^4.1.0"
   "ws": "^8.21.0"
   "yaml@^2": "^2.8.3"
+minimumReleaseAgeExclude:
+  - miniflare@5.20261006.0-alpha
+  - wrangler@4.148.0

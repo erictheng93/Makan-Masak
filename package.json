@@ -176,7 +176,7 @@
     "typescript-eslint": "^8.52.0",
     "vitest": "^4.1.0",
     "vue-eslint-parser": "^10.2.0",
-    "wrangler": "^4.141.0",
+    "wrangler": "^4.148.0",
     "zod": "^4.4.3"
   }
 }
