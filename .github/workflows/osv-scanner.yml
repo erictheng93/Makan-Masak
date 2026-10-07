@@ -15,6 +15,7 @@ on:
   pull_request:
     branches: ["main"]
     paths:
+      - ".github/workflows/osv-scanner.yml"
       - "pnpm-lock.yaml"
       - "package.json"
       - "apps/**/package.json"
@@ -26,6 +27,7 @@ on:
   push:
     branches: ["main"]
     paths:
+      - ".github/workflows/osv-scanner.yml"
       - "pnpm-lock.yaml"
       - "package.json"
       - "apps/**/package.json"
@@ -52,7 +54,6 @@ jobs:
     with:
       scan-args: |-
         -r
-        --skip-git
         ./
 
   scan-pr:
@@ -61,5 +62,4 @@ jobs:
     with:
       scan-args: |-
         -r
-        --skip-git
         ./
