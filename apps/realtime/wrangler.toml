@@ -31,10 +31,9 @@ bindings = [
 # entry is history — wrangler sends no migration for it — and rewriting it does
 # not move the backend, it only makes the file disagree with production.
 #
-# The cost argument for SQLite is real (4 KB request units vs whole rows, and a
-# free tier 50x larger for writes) but it is not reachable from here. Revisit
-# when Cloudflare ships the key-value → SQLite migration path they have
-# promised; until then the lever is addToEventHistory's full-array rewrite.
+# The cost argument for SQLite was mostly about event-history writes, and the
+# DO no longer persists event history, so it now writes only `roomInfo` once
+# per room. Revisit if per-broadcast storage ever comes back.
 [[migrations]]
 tag = "v1"
 new_classes = ["RealtimeSession"]

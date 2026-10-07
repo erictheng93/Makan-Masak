@@ -697,13 +697,15 @@ const result = await db
 
 ### Durable Object alarms
 
-Nothing in this repo calls `setAlarm`, so `RealtimeSession.alarm()`
-(`apps/realtime/src/durableObjects/RealtimeSession.ts`) never fires. That is
+`RealtimeSession` (`apps/realtime/src/durableObjects/RealtimeSession.ts`) has
+no alarm handler and nothing in this repo calls `setAlarm`. That is
 deliberate: waking a hibernating object on a timer is the cost hibernation
-exists to avoid, and the event-log caps are enforced on append instead (see the
-comments on `addToEventHistory` and `isAuthExpired`). An alarm fires with no
-traffic, every invocation is billed (automatic retries after a throw included),
-and Workers Paid has no account-level spending cap. If you add one:
+exists to avoid. Token expiry is re-checked only where the object is already
+awake (see `isAuthExpired`), and the DO persists no event history — there was
+no replay consumer, so it was removed rather than given a cleanup timer. An
+alarm fires with no traffic, every invocation is billed (automatic retries
+after a throw included), and Workers Paid has no account-level spending cap.
+If you add one:
 
 - No unconditional `setAlarm` in the constructor — it runs on every wake,
   including the alarm's own, so the chain renews itself.

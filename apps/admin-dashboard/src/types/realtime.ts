@@ -15,14 +15,12 @@ export interface ConnectionInfo {
   role?: "customer" | "staff" | "admin";
   connectedAt: string;
   lastActivity: string;
-  lastEventId?: string;
 }
 
 export interface RoomStats {
   roomType: RoomType;
   connectionCount: number;
   connections?: ConnectionInfo[];
-  eventHistorySize?: number;
   status: "active" | "inactive" | "error";
   uptime?: number;
 }

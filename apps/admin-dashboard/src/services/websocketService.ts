@@ -69,7 +69,6 @@ class WebSocketService {
   private reconnectTimer: number | null = null;
   private heartbeatTimer: number | null = null;
   private heartbeatTimeoutTimer: number | null = null;
-  private lastEventId: string | null = null;
   private subscriptions = new Map<string, EventSubscription>();
   private subscriptionCounter = 0;
   private config: Required<WebSocketConfig>;
@@ -202,11 +201,6 @@ class WebSocketService {
       this.connectionStatus.value = "connected";
       this.reconnectAttempts = 0;
       this.startHeartbeat();
-
-      // 如果有 lastEventId，請求遺漏的事件
-      if (this.lastEventId) {
-        this.requestMissedEvents();
-      }
     };
 
     this.ws.onmessage = (event) => {
@@ -244,11 +238,6 @@ class WebSocketService {
    * 處理接收到的訊息
    */
   private handleMessage(event: RealtimeEvent): void {
-    // 更新 lastEventId
-    if (event.eventId) {
-      this.lastEventId = event.eventId;
-    }
-
     // 心跳響應
     if (event.type === RealtimeEventType.HEARTBEAT) {
       this.resetHeartbeatTimeout();
@@ -279,18 +268,6 @@ class WebSocketService {
           }
         }
       }
-    });
-  }
-
-  /**
-   * 請求遺漏的事件
-   */
-  private requestMissedEvents(): void {
-    if (!this.ws || !this.lastEventId) return;
-
-    this.send({
-      type: "REQUEST_MISSED_EVENTS",
-      sinceEventId: this.lastEventId,
     });
   }
 
