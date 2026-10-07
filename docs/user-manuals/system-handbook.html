@@ -31950,9 +31950,19 @@ pnpm exec node scripts/check-system-handbook.cjs</code></pre>
       const langSwitch = document.querySelector("#lang-switch");
       const pageLocale = document.documentElement.dataset.locale;
       langSwitch.value = pageLocale;
+      const localeDirectories = new Map([
+        ["zh-TW", ""],
+        ["en-US", "en-US/"],
+        ["ja-JP", "ja-JP/"],
+        ["id-ID", "id-ID/"],
+        ["vi-VN", "vi-VN/"],
+        ["fil-PH", "fil-PH/"],
+      ]);
       langSwitch.addEventListener("change", () => {
-        const dir = langSwitch.value === "zh-TW" ? "" : `${langSwitch.value}/`;
-        location.href = `${document.documentElement.dataset.root}${dir}system-handbook.html${location.hash}`;
+        const dir = localeDirectories.get(langSwitch.value);
+        if (dir === undefined) return;
+        const root = pageLocale === "zh-TW" ? "./" : "../";
+        location.href = `${root}${dir}system-handbook.html${location.hash}`;
       });
       const themeToggle = document.querySelector("#theme-toggle");
       const darkQuery = window.matchMedia?.("(prefers-color-scheme: dark)");
