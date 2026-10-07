@@ -25,6 +25,8 @@ The codebase is TypeScript-first with Vue 3 and Cloudflare Workers. Prettier enf
 
 For user-facing work, follow `DESIGN.md` and use the shared palette tokens in `design-tokens.js`; `pnpm run check:design-palette` enforces this across the Vue apps.
 
+Before adding a Durable Object alarm (`setAlarm`), read `CLAUDE.md`, "Durable Object alarms": none is scheduled today on purpose, and a self-renewing alarm bills per invocation with no account cap.
+
 ## Testing Guidelines
 
 Vitest is the primary test runner; Playwright covers end-to-end and visual flows. Name tests `*.test.ts` and keep them near the owning app/package or under `tests/`. Global coverage thresholds are 85%; `apps/api/src/features/**/*.ts` requires 90% functions, lines, and statements, with an interim 78% branch threshold. Add or update tests with every behavior change, especially for API routes, realtime flows, and database logic.

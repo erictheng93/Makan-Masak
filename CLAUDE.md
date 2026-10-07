@@ -695,6 +695,26 @@ const result = await db
 - Layer 1: `apps/api/src/features/integrations/services/PlatformIntegrationService.ts`
 - Layer 2: `packages/ai-analytics/src/services/ProductAnalysisService.ts`
 
+### Durable Object alarms
+
+Nothing in this repo calls `setAlarm`, so `RealtimeSession.alarm()`
+(`apps/realtime/src/durableObjects/RealtimeSession.ts`) never fires. That is
+deliberate: waking a hibernating object on a timer is the cost hibernation
+exists to avoid, and the event-log caps are enforced on append instead (see the
+comments on `addToEventHistory` and `isAuthExpired`). An alarm fires with no
+traffic, every invocation is billed (automatic retries after a throw included),
+and Workers Paid has no account-level spending cap. If you add one:
+
+- No unconditional `setAlarm` in the constructor — it runs on every wake,
+  including the alarm's own, so the chain renews itself.
+- Reschedule only while a stored termination condition holds (count, deadline,
+  or an `active` flag); with no work left, return without rescheduling.
+  "Refresh when close to expiry" is not a termination condition.
+- One alarm per object and `setAlarm` overwrites it: `deleteAlarm()` on every
+  path where the work ends (e.g. the last socket closing), not only in `alarm()`.
+- Self-renewing intervals under 60s need explicit sign-off and a stated cap.
+- A test must show that an idle object schedules nothing further.
+
 ### Testing Standards (Enforced)
 
 All new tests MUST follow these conventions. Existing tests are being migrated progressively.

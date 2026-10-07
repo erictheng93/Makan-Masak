@@ -808,9 +808,9 @@ export class RealtimeSession implements DurableObject {
    * into a disconnection.
    *
    * Deliberately evaluated only where the object is already awake — an inbound
-   * message, a broadcast fan-out, the cleanup alarm. No timer is scheduled,
-   * because waking a hibernating object on a schedule is exactly the cost
-   * hibernation was enabled to avoid.
+   * message or a broadcast fan-out. No timer is scheduled (`alarm()` never
+   * fires), because waking a hibernating object on a schedule is exactly the
+   * cost hibernation was enabled to avoid.
    */
   private isAuthExpired(
     connectionInfo: ConnectionInfo,
@@ -1062,7 +1062,9 @@ export class RealtimeSession implements DurableObject {
     }
   }
 
-  // Periodic cleanup
+  // Never fires: nothing calls setAlarm, deliberately — a timer would wake a
+  // hibernating object and bill for it. Do not add a self-renewing alarm
+  // without a termination condition; see CLAUDE.md, "Durable Object alarms".
   async alarm(): Promise<void> {
     await this.cleanupConnections();
   }
