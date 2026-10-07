@@ -153,6 +153,7 @@ const enUS: Messages = {
     soldOut: "Sold Out",
     metrics: {
       sold: "sold",
+      saved: "saved",
     },
     featured: "Featured",
     unknownCategory: "Unknown Category",
