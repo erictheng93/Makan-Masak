@@ -1,0 +1,131 @@
+diff --git a/lib/compile.js b/lib/compile.js
+index dce69beb9..840640dc8 100644
+--- a/lib/compile.js
++++ b/lib/compile.js
+@@ -4,6 +4,7 @@ const fill = require('fill-range');
+ const utils = require('./utils');
+ 
+ const compile = (ast, options = {}) => {
++  utils.assertDepth(ast);
+   const walk = (node, parent = {}) => {
+     const invalidBlock = utils.isInvalidBrace(parent);
+     const invalidNode = node.invalid === true && options.escapeInvalid === true;
+diff --git a/lib/constants.js b/lib/constants.js
+index 2bb3b8840..de35512fa 100644
+--- a/lib/constants.js
++++ b/lib/constants.js
+@@ -2,6 +2,7 @@
+ 
+ module.exports = {
+   MAX_LENGTH: 10000,
++  MAX_DEPTH: 100,
+ 
+   // Digits
+   CHAR_0: '0', /* 0 */
+diff --git a/lib/expand.js b/lib/expand.js
+index 35b2c41d6..487b449c9 100644
+--- a/lib/expand.js
++++ b/lib/expand.js
+@@ -31,6 +31,7 @@ const append = (queue = '', stash = '', enclose = false) => {
+ };
+ 
+ const expand = (ast, options = {}) => {
++  utils.assertDepth(ast, true);
+   const rangeLimit = options.rangeLimit === undefined ? 1000 : options.rangeLimit;
+ 
+   const walk = (node, parent = {}) => {
+diff --git a/lib/parse.js b/lib/parse.js
+index 3a6988e62..673a623b0 100644
+--- a/lib/parse.js
++++ b/lib/parse.js
+@@ -8,6 +8,7 @@ const stringify = require('./stringify');
+ 
+ const {
+   MAX_LENGTH,
++  MAX_DEPTH,
+   CHAR_BACKSLASH, /* \ */
+   CHAR_BACKTICK, /* ` */
+   CHAR_COMMA, /* , */
+@@ -143,6 +144,9 @@ const parse = (input, options = {}) => {
+      */
+ 
+     if (value === CHAR_LEFT_PARENTHESES) {
++      if (stack.length > MAX_DEPTH) {
++        throw new RangeError(`AST nesting depth exceeds maximum of ${MAX_DEPTH}`);
++      }
+       block = push({ type: 'paren', nodes: [] });
+       stack.push(block);
+       push({ type: 'text', value });
+@@ -195,6 +199,9 @@ const parse = (input, options = {}) => {
+      */
+ 
+     if (value === CHAR_LEFT_CURLY_BRACE) {
++      if (stack.length > MAX_DEPTH) {
++        throw new RangeError(`AST nesting depth exceeds maximum of ${MAX_DEPTH}`);
++      }
+       depth++;
+ 
+       const dollar = prev.value && prev.value.slice(-1) === '$' || block.dollar === true;
+diff --git a/lib/stringify.js b/lib/stringify.js
+index 8bcf872c3..dfa14c1e3 100644
+--- a/lib/stringify.js
++++ b/lib/stringify.js
+@@ -3,6 +3,7 @@
+ const utils = require('./utils');
+ 
+ module.exports = (ast, options = {}) => {
++  utils.assertDepth(ast);
+   const stringify = (node, parent = {}) => {
+     const invalidBlock = options.escapeInvalid && utils.isInvalidBrace(parent);
+     const invalidNode = node.invalid === true && options.escapeInvalid === true;
+diff --git a/lib/utils.js b/lib/utils.js
+index d19311fe0..b9fccf24d 100644
+--- a/lib/utils.js
++++ b/lib/utils.js
+@@ -1,5 +1,46 @@
+ 'use strict';
+ 
++const { MAX_DEPTH } = require('./constants');
++
++// Bound every public AST traversal, including ASTs supplied without parse().
++exports.assertDepth = (ast, checkParents = false) => {
++  const stack = [{ node: ast, depth: 0 }];
++  const ancestors = new Set();
++
++  while (stack.length) {
++    const { node, depth, exit } = stack.pop();
++    if (exit) {
++      ancestors.delete(node);
++      continue;
++    }
++    // The parser root and leaf tokens add one level to pattern nesting.
++    if (depth > MAX_DEPTH + 1) {
++      throw new RangeError(`AST nesting depth exceeds maximum of ${MAX_DEPTH}`);
++    }
++    if (ancestors.has(node)) {
++      throw new TypeError('Cannot traverse a cyclic AST');
++    }
++
++    // expand() also follows parent links on non-brace nodes.
++    let parent = node;
++    let parentDepth = 0;
++    while (checkParents && parent.type !== 'brace' && parent.type !== 'root' && parent.parent) {
++      if (++parentDepth > MAX_DEPTH + 1) {
++        throw new RangeError(`AST parent nesting depth exceeds maximum of ${MAX_DEPTH}`);
++      }
++      parent = parent.parent;
++    }
++
++    if (node.nodes) {
++      ancestors.add(node);
++      stack.push({ node, exit: true });
++      for (const child of node.nodes) {
++        stack.push({ node: child, depth: depth + 1 });
++      }
++    }
++  }
++};
++
+ exports.isInteger = num => {
+   if (typeof num === 'number') {
+     return Number.isInteger(num);

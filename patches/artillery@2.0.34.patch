@@ -1,0 +1,50 @@
+diff --git a/dist/lib/cmds/run.js b/dist/lib/cmds/run.js
+index cfd733b0d..ff2f6d694 100644
+--- a/dist/lib/cmds/run.js
++++ b/dist/lib/cmds/run.js
+@@ -9,7 +9,6 @@ var __rewriteRelativeImportExtension = (this && this.__rewriteRelativeImportExte
+ import { createRequire } from 'node:module';
+ import { promisify as p } from 'node:util';
+ import { Args, Command, Flags } from '@oclif/core';
+-import _csv from 'csv-parse';
+ import createDebug from 'debug';
+ import { CommonRunFlags } from "../cli/common-flags.js";
+ const debug = createDebug('commands:run');
+diff --git a/lib/cmds/run.ts b/lib/cmds/run.ts
+index 1d7eb6fa9..9a08625da 100644
+--- a/lib/cmds/run.ts
++++ b/lib/cmds/run.ts
+@@ -1,7 +1,6 @@
+ import { createRequire } from 'node:module';
+ import { promisify as p } from 'node:util';
+ import { Args, Command, Flags } from '@oclif/core';
+-import _csv from 'csv-parse';
+ import createDebug from 'debug';
+ import { CommonRunFlags } from '../cli/common-flags.ts';
+ 
+diff --git a/dist/lib/util/prepare-test-execution-plan.js b/dist/lib/util/prepare-test-execution-plan.js
+index 52236a66d..9649c0d98 100644
+--- a/dist/lib/util/prepare-test-execution-plan.js
++++ b/dist/lib/util/prepare-test-execution-plan.js
+@@ -2,7 +2,7 @@ import fs from 'node:fs';
+ import { createRequire } from 'node:module';
+ import path from 'node:path';
+ import { promisify as p } from 'node:util';
+-import csv from 'csv-parse';
++import { parse as csv } from 'csv-parse';
+ import createDebug from 'debug';
+ const debug = createDebug('artillery');
+ // Used for: loading user-provided .js scripts and esbuild-generated
+diff --git a/lib/util/prepare-test-execution-plan.ts b/lib/util/prepare-test-execution-plan.ts
+index f8ea361d5..706c1b504 100644
+--- a/lib/util/prepare-test-execution-plan.ts
++++ b/lib/util/prepare-test-execution-plan.ts
+@@ -2,7 +2,7 @@ import fs from 'node:fs';
+ import { createRequire } from 'node:module';
+ import path from 'node:path';
+ import { promisify as p } from 'node:util';
+-import csv from 'csv-parse';
++import { parse as csv } from 'csv-parse';
+ import createDebug from 'debug';
+ 
+ const debug = createDebug('artillery');

@@ -1,0 +1,87 @@
+diff --git a/index.js b/index.js
+index f01e9a16b..22d492f2a 100644
+--- a/index.js
++++ b/index.js
+@@ -395,7 +395,7 @@ module.exports = class CachePolicy {
+         this._assertRequestHasHeaders(req);
+ 
+         // In all circumstances, a cache MUST NOT ignore the must-revalidate directive
+-        if (this._rescc['must-revalidate']) {
++        if (this._rescc['must-revalidate'] || this._requiresRevalidation()) {
+             return this._evaluateRequestMissResult(req);
+         }
+ 
+@@ -587,6 +587,20 @@ module.exports = class CachePolicy {
+         return toNumberOrZero(this._resHeaders.age);
+     }
+ 
++    /** @returns {boolean} Whether cache reuse requires synchronous validation. */
++    _requiresRevalidation() {
++        return !!(
++            !this.storable() ||
++            this._rescc['no-cache'] ||
++            this._resHeaders.vary === '*' ||
++            (this._isShared &&
++                (this._rescc['proxy-revalidate'] ||
++                    (this._resHeaders['set-cookie'] &&
++                        !this._rescc.public &&
++                        !this._rescc.immutable)))
++        );
++    }
++
+     /**
+      * Possibly outdated value of applicable max-age (or heuristic equivalent) in seconds.
+      * This counts since response's `Date`.
+@@ -597,29 +611,11 @@ module.exports = class CachePolicy {
+      * @returns {number} The max-age value in seconds.
+      */
+     maxAge() {
+-        if (!this.storable() || this._rescc['no-cache']) {
+-            return 0;
+-        }
+-
+-        // Shared responses with cookies are cacheable according to the RFC, but IMHO it'd be unwise to do so by default
+-        // so this implementation requires explicit opt-in via public header
+-        if (
+-            this._isShared &&
+-            (this._resHeaders['set-cookie'] &&
+-                !this._rescc.public &&
+-                !this._rescc.immutable)
+-        ) {
+-            return 0;
+-        }
+-
+-        if (this._resHeaders.vary === '*') {
++        if (this._requiresRevalidation()) {
+             return 0;
+         }
+ 
+         if (this._isShared) {
+-            if (this._rescc['proxy-revalidate']) {
+-                return 0;
+-            }
+             // if a response includes the s-maxage directive, a shared cache recipient MUST ignore the Expires field.
+             if (this._rescc['s-maxage']) {
+                 return toNumberOrZero(this._rescc['s-maxage']);
+@@ -683,7 +679,9 @@ module.exports = class CachePolicy {
+      * @returns {boolean} `true` if `stale-if-error` condition allows use of a stale response.
+      */
+     _useStaleIfError() {
+-        return this.maxAge() + toNumberOrZero(this._rescc['stale-if-error']) > this.age();
++        return !this._requiresRevalidation() &&
++            !this._rescc['must-revalidate'] &&
++            this.maxAge() + toNumberOrZero(this._rescc['stale-if-error']) > this.age();
+     }
+ 
+     /** See `evaluateRequest()` for a more complete solution
+@@ -691,7 +689,9 @@ module.exports = class CachePolicy {
+      */
+     useStaleWhileRevalidate() {
+         const swr = toNumberOrZero(this._rescc['stale-while-revalidate']);
+-        return swr > 0 && this.maxAge() + swr > this.age();
++        return !this._requiresRevalidation() &&
++            !this._rescc['must-revalidate'] &&
++            swr > 0 && this.maxAge() + swr > this.age();
+     }
+ 
+     /**
