@@ -23,6 +23,12 @@ interface UseWebSocketOptions<TMessage = WebSocketMessage> {
 
 type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 
+// A connection has to stay up this long before the retry budget is restored.
+// Resetting on open let "connect, drop at once" loop forever, and since a
+// failed handshake reads as an auth failure here, every lap re-minted a token.
+const STABLE_CONNECTION_MS = 30_000;
+const MAX_RECONNECT_DELAY_MS = 30_000;
+
 export function useWebSocket<TMessage = WebSocketMessage>(
   options: UseWebSocketOptions<TMessage> = {},
 ) {
@@ -48,6 +54,7 @@ export function useWebSocket<TMessage = WebSocketMessage>(
   const connectionStatus = ref<ConnectionStatus>("disconnected");
 
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let stableTimer: ReturnType<typeof setTimeout> | null = null;
   let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   let manualDisconnect = false;
   let attemptedUrl = "";
@@ -66,6 +73,13 @@ export function useWebSocket<TMessage = WebSocketMessage>(
         send("ping");
       }
     }, heartbeatInterval);
+  };
+
+  const clearStableTimer = () => {
+    if (stableTimer) {
+      clearTimeout(stableTimer);
+      stableTimer = null;
+    }
   };
 
   const clearReconnectTimer = () => {
@@ -95,7 +109,13 @@ export function useWebSocket<TMessage = WebSocketMessage>(
     reconnectCount.value += 1;
 
     const attempt = reconnectCount.value;
-    const delay = reconnectInterval * 2 ** (attempt - 1);
+    // Jittered, so a whole dining room dropped by one deploy does not
+    // reconnect in lockstep: half the step is fixed, half is random.
+    const step = Math.min(
+      reconnectInterval * 2 ** (attempt - 1),
+      MAX_RECONNECT_DELAY_MS,
+    );
+    const delay = Math.round(step / 2 + (Math.random() * step) / 2);
 
     reconnectTimer = setTimeout(async () => {
       if (reason === "auth" && onAuthFailure) {
@@ -130,8 +150,12 @@ export function useWebSocket<TMessage = WebSocketMessage>(
       ws.value.onopen = (event) => {
         isConnected.value = true;
         isConnecting.value = false;
-        reconnectCount.value = 0;
         connectionStatus.value = "connected";
+        clearStableTimer();
+        stableTimer = setTimeout(() => {
+          reconnectCount.value = 0;
+          stableTimer = null;
+        }, STABLE_CONNECTION_MS);
         startHeartbeat();
         onOpen?.(event);
       };
@@ -159,6 +183,7 @@ export function useWebSocket<TMessage = WebSocketMessage>(
         isConnected.value = false;
         isConnecting.value = false;
         stopHeartbeat();
+        clearStableTimer();
         connectionStatus.value = event.wasClean ? "disconnected" : "error";
         onClose?.(event);
 
@@ -183,6 +208,7 @@ export function useWebSocket<TMessage = WebSocketMessage>(
   const disconnect = () => {
     manualDisconnect = true;
     clearReconnectTimer();
+    clearStableTimer();
     stopHeartbeat();
 
     if (ws.value) {
