@@ -129,6 +129,8 @@ type DbQueues = {
   first: unknown[];
   all: unknown[];
   run: unknown[];
+  /** Drizzle selects read positional rows through `raw()`. */
+  raw: unknown[][][];
   statements: Array<{ sql: string; args: unknown[] }>;
 };
 
@@ -137,6 +139,7 @@ function createDb(queues: Partial<DbQueues> = {}) {
     first: queues.first ?? [],
     all: queues.all ?? [],
     run: queues.run ?? [],
+    raw: queues.raw ?? [],
     statements: queues.statements ?? [],
   };
   const db = {
@@ -149,6 +152,7 @@ function createDb(queues: Partial<DbQueues> = {}) {
         }),
         first: vi.fn(async () => state.first.shift() ?? null),
         all: vi.fn(async () => state.all.shift() ?? { results: [] }),
+        raw: vi.fn(async () => state.raw.shift() ?? []),
         run: vi.fn(async () => {
           const result = state.run.shift();
           if (result instanceof Error) {
@@ -1799,6 +1803,50 @@ describe("customer identity routes", () => {
     await expect(response.json()).resolves.toMatchObject({
       data: { deleted: true },
     });
+  });
+
+  it("names favorited dishes and keeps deleted ones removable", async () => {
+    const db = createDb({
+      all: [
+        {
+          results: [
+            { id: 8, target_type: "dish", target_id: "42", created_at_ms: 2 },
+            { id: 9, target_type: "dish", target_id: "43", created_at_ms: 1 },
+            {
+              id: 7,
+              target_type: "restaurant",
+              target_id: "restaurant-1",
+              created_at_ms: 0,
+            },
+          ],
+        },
+      ],
+      raw: [[[42, "滷肉飯", "Braised Pork Rice", "restaurant-1"]]],
+    });
+
+    const response = await request("/favorites", "GET", undefined, {
+      DB: db,
+    }).response;
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { data: unknown[] };
+    expect(body.data).toEqual([
+      expect.objectContaining({
+        id: 8,
+        targetType: "dish",
+        dish: {
+          name: "滷肉飯",
+          nameEn: "Braised Pork Rice",
+          restaurantId: "restaurant-1",
+        },
+      }),
+      expect.objectContaining({ id: 9, targetType: "dish", dish: null }),
+      expect.not.objectContaining({ dish: expect.anything() }),
+    ]);
+    const dishLookup = db.state.statements.find((statement) =>
+      statement.sql.includes('from "menu_items"'),
+    );
+    expect(dishLookup?.args).toEqual(expect.arrayContaining([42, 43]));
   });
 
   it("tracks recent markets and rejects missing market support", async () => {
