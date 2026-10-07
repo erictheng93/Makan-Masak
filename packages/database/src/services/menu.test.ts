@@ -837,7 +837,11 @@ describe("MenuService soft delete", () => {
       }),
       returning: vi.fn(async () => returnedRows),
     };
-    const db = { update: vi.fn(() => updateBuilder) };
+    const db = {
+      update: vi.fn(() => updateBuilder),
+      delete: vi.fn(() => ({ where: vi.fn(() => []) })),
+      batch: vi.fn(async (statements: unknown[]) => Promise.all(statements)),
+    };
     const service = createServiceWithDb(db);
     const invalidateCache = vi
       .spyOn(
