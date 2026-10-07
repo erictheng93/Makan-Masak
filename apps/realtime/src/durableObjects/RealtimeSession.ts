@@ -13,6 +13,7 @@ import {
 import {
   verifyWebSocketToken,
   extractTokenFromUrl,
+  tokenRoomIdMatches,
 } from "../utils/jwtVerifier";
 import {
   formatValidationError,
@@ -146,12 +147,7 @@ export class RealtimeSession implements DurableObject {
     // ========== ROOM ACCESS VALIDATION ==========
 
     // 1. 驗證 roomId 與 token 是否匹配
-    const roomMatchesToken = authPayload.guestFlag
-      ? authPayload.roomId === roomId ||
-        (!authPayload.scope && authPayload.roomId === `customer:${roomId}`)
-      : authPayload.roomId === roomId;
-
-    if (!roomMatchesToken) {
+    if (!tokenRoomIdMatches(authPayload, roomId)) {
       console.warn("WebSocket connection rejected: Room ID mismatch", {
         tokenRoomId: authPayload.roomId,
         requestedRoomId: roomId,

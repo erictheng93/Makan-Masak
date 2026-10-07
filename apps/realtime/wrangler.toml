@@ -15,7 +15,6 @@ local_protocol = "http"
 ENVIRONMENT = "development"
 API_VERSION = "v1"
 CORS_ORIGIN = "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost:5173,http://localhost:8000,http://localhost:8787"
-RATE_LIMIT_ENABLED = "false"
 
 [durable_objects]
 bindings = [
@@ -61,11 +60,6 @@ binding = "TOKEN_BLACKLIST"
 id = "makanmasak-token-blacklist-dev"
 preview_id = "makanmasak-token-blacklist-preview"
 
-[[kv_namespaces]]
-binding = "RATE_LIMIT_KV"
-id = "makanmasak-ratelimit-dev"
-preview_id = "makanmasak-ratelimit-preview"
-
 # === PRODUCTION ENVIRONMENT ===
 [env.production]
 name = "makanmasak-realtime-prod"
@@ -74,7 +68,6 @@ name = "makanmasak-realtime-prod"
 ENVIRONMENT = "production"
 API_VERSION = "v1"
 CORS_ORIGIN = "https://makanmasak.com,https://customer.makanmasak.com,https://admin.makanmasak.com,https://kitchen.makanmasak.com"
-RATE_LIMIT_ENABLED = "true"
 
 # Custom domain — wrangler provisions DNS + SSL automatically on deploy
 # since the makanmasak.com zone is already on this Cloudflare account.
@@ -105,8 +98,18 @@ id = "5850dad46b684f2d8b69b3344d146a1d"
 binding = "TOKEN_BLACKLIST"
 id = "30ba7daf1e4c41438233542de10dd02f"
 
-# Rate Limit KV - for WebSocket connection rate limiting
-[[env.production.kv_namespaces]]
-binding = "RATE_LIMIT_KV"
-id = "e442a551aa3f484db44fcdfa1084ff81"
+# WebSocket connect attempts, keyed by room type + client IP (rateLimiter.ts).
+# Replaces a KV counter that was read-then-write (concurrent attempts all read
+# the same count) and keyed by room id (each guessed id was a fresh budget).
+# Production only, like the API's native limiters; unbound means unlimited.
+# The limit is per IP, so it has to cover a restaurant's customers behind one
+# NAT reconnecting together after a deploy. namespace_id 2001 stays clear of
+# the API's 1001-1003. Keep `period` in step with WINDOW_SECONDS.
+[[env.production.ratelimits]]
+name = "WS_CONNECT_RATE_LIMITER"
+namespace_id = "2001"
+
+  [env.production.ratelimits.simple]
+  limit = 120
+  period = 60
 

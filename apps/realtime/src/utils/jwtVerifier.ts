@@ -180,6 +180,22 @@ export async function verifyWebSocketToken(
 }
 
 /**
+ * Whether a verified token addresses `roomId`. Legacy table guests carry
+ * `customer:{tableId}` while the URL names the bare table id.
+ */
+export function tokenRoomIdMatches(
+  payload: RealtimeAuthPayload,
+  roomId: string,
+): boolean {
+  if (payload.roomId === roomId) return true;
+  return (
+    !!payload.guestFlag &&
+    !payload.scope &&
+    payload.roomId === `customer:${roomId}`
+  );
+}
+
+/**
  * 從 URL 查詢參數中提取 token
  */
 export function extractTokenFromUrl(url: URL): string | null {
