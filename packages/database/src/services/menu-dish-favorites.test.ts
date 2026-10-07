@@ -15,7 +15,7 @@ import { MenuService } from "./menu";
 
 const restaurantId = "restaurant-delete-favorites";
 
-describe("softDeleteMenuItem and saved dishes", () => {
+describe("MenuService and saved dishes", () => {
   let testDb: TestDatabase;
   let deletedId: number;
   let keptId: number;
@@ -95,5 +95,28 @@ describe("softDeleteMenuItem and saved dishes", () => {
         { targetType: "market", targetId: `${deletedId}` },
       ]),
     );
+  });
+
+  it("counts saves per dish for that restaurant only", async () => {
+    await testDb.drizzle
+      .insert(customers)
+      .values({ id: "customer-2", displayName: "Second" });
+    await testDb.drizzle.insert(customerFavorites).values({
+      customerId: "customer-2",
+      targetType: "dish",
+      targetId: `${deletedId}`,
+    });
+    const service = new MenuService(testDb.bindings.DB, { JWT_SECRET: "test" });
+
+    // The market row with the same id string is not a dish save.
+    await expect(service.countDishFavorites(restaurantId)).resolves.toEqual(
+      new Map([
+        [deletedId, 2],
+        [keptId, 1],
+      ]),
+    );
+    await expect(
+      service.countDishFavorites("other-restaurant"),
+    ).resolves.toEqual(new Map());
   });
 });

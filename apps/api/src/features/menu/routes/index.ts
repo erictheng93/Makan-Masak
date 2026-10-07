@@ -171,7 +171,23 @@ app.get(
       throw notFound("Menu not found for restaurant", "MENU_NOT_FOUND");
     }
 
-    return c.json(createSuccessResponse(menu), HTTP_STATUS.OK);
+    if (!includeAll) {
+      return c.json(createSuccessResponse(menu), HTTP_STATUS.OK);
+    }
+
+    // How many diners saved each dish is the owner's business, not the
+    // public's, so it rides only on the privileged read.
+    const favoriteCounts = await service.getDishFavoriteCounts(restaurantId);
+    return c.json(
+      createSuccessResponse({
+        ...menu,
+        menuItems: menu.menuItems.map((item) => ({
+          ...item,
+          favoriteCount: favoriteCounts.get(Number(item.id)) ?? 0,
+        })),
+      }),
+      HTTP_STATUS.OK,
+    );
   },
 );
 

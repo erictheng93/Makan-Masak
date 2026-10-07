@@ -974,6 +974,34 @@ export class MenuService extends BaseService {
     }
   }
 
+  /**
+   * How many diners have saved each of a restaurant's dishes, keyed by menu
+   * item id. Dishes nobody saved are absent. Joined rather than bound as an id
+   * list: a menu can exceed D1's 100-parameter cap.
+   */
+  async countDishFavorites(restaurantId: string): Promise<Map<number, number>> {
+    try {
+      const rows = await this.db
+        .select({
+          menuItemId: menuItems.id,
+          favoriteCount: count(customerFavorites.id),
+        })
+        .from(menuItems)
+        .innerJoin(
+          customerFavorites,
+          and(
+            eq(customerFavorites.targetType, "dish"),
+            eq(customerFavorites.targetId, sql`CAST(${menuItems.id} AS TEXT)`),
+          ),
+        )
+        .where(and(eq(menuItems.restaurantId, restaurantId), notDeletedItem))
+        .groupBy(menuItems.id);
+      return new Map(rows.map((row) => [row.menuItemId, row.favoriteCount]));
+    } catch (error) {
+      this.handleError(error, "countDishFavorites");
+    }
+  }
+
   // 批量更新菜品可用性
   async batchUpdateAvailability(
     restaurantId: string,
