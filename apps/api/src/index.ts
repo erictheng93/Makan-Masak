@@ -58,37 +58,67 @@ export default {
       cleanupExpiredIdempotencyKeys,
     } = await import("./scheduled/cleanup-tokens");
 
-    try {
-      // Daily cleanup at 2 AM UTC: Clean expired verification tokens
-      if (cronMatches(event.cron, "0 2 * * *")) {
+    // Each job gets its own try/catch. They used to share one, so a single
+    // failure (usually a transient D1 error) silently skipped every job after
+    // it in the same tick — the */5 group-order sweep failing also skipped the
+    // overdue order alert sweep.
+    const runJob = async (name: string, job: () => Promise<void>) => {
+      try {
+        await job();
+      } catch (error) {
+        console.error(`[Cron] ${name} failed:`, error);
+        try {
+          const { AlertService } = await import("./services/AlertService");
+          await new AlertService(env).systemError(
+            error instanceof Error ? error : new Error(String(error)),
+            `Cron Job Execution: ${name}`,
+          );
+        } catch (alertError) {
+          // A failed alert must not take the remaining jobs down with it.
+          console.error("[Cron] Failed to send cron alert:", alertError);
+        }
+      }
+    };
+
+    // Daily cleanup at 2 AM UTC: Clean expired verification tokens
+    if (cronMatches(event.cron, "0 2 * * *")) {
+      await runJob("token cleanup", async () => {
         console.log("[Cron] Running daily token cleanup...");
         const result = await cleanupExpiredTokens(env);
         console.log("[Cron] Token cleanup result:", result);
+      });
 
-        // Same tick: idempotency reservations. The platform webhook route
-        // takes no authentication, so anyone can make these rows and nothing
-        // else deletes them (#338).
+      // Same tick: idempotency reservations. The platform webhook route
+      // takes no authentication, so anyone can make these rows and nothing
+      // else deletes them (#338).
+      await runJob("idempotency key cleanup", async () => {
         console.log("[Cron] Running idempotency key cleanup...");
         const idempotency = await cleanupExpiredIdempotencyKeys(env);
         console.log("[Cron] Idempotency cleanup result:", idempotency);
-      }
+      });
+    }
 
-      // Weekly cleanup on Sunday at 3 AM UTC: Clean old logs
-      if (cronMatches(event.cron, "0 3 * * SUN")) {
+    // Weekly cleanup on Sunday at 3 AM UTC: Clean old logs
+    if (cronMatches(event.cron, "0 3 * * SUN")) {
+      await runJob("weekly log cleanup", async () => {
         console.log("[Cron] Running weekly log cleanup...");
         await cleanupOldLogs(env);
-      }
+      });
+    }
 
-      if (cronMatches(event.cron, "0 3 * * *")) {
+    if (cronMatches(event.cron, "0 3 * * *")) {
+      await runJob("usage events TTL cleanup", async () => {
         console.log("[Cron] Running usage events TTL cleanup...");
         const { cleanupExpiredUsageEvents } =
           await import("./workers/usage-events-ttl");
         const result = await cleanupExpiredUsageEvents(env);
         console.log("[Cron] Usage events TTL result:", result);
-      }
+      });
+    }
 
-      // Daily forecast warmup at 2:30 AM UTC
-      if (cronMatches(event.cron, "30 2 * * *")) {
+    // Daily forecast warmup at 2:30 AM UTC
+    if (cronMatches(event.cron, "30 2 * * *")) {
+      await runJob("forecast warmup", async () => {
         console.log("[Cron] Running daily forecast warmup...");
         const { ForecastService } =
           await import("./features/forecast/services/ForecastService");
@@ -121,68 +151,84 @@ export default {
         console.log(
           `[Cron] Forecast warmup complete: ${successCount}/${restaurants.results.length} restaurants`,
         );
-      }
+      });
+    }
 
-      // Hourly, not */5: aggregation over a handful of meters gains nothing
-      // from running 288 times a day, and it used to share the reconciliation
-      // tick, which meant neither could be tuned without moving the other.
-      if (cronMatches(event.cron, "0 * * * *")) {
+    // Hourly, not */5: aggregation over a handful of meters gains nothing
+    // from running 288 times a day, and it used to share the reconciliation
+    // tick, which meant neither could be tuned without moving the other.
+    if (cronMatches(event.cron, "0 * * * *")) {
+      await runJob("usage aggregation", async () => {
         console.log("[Cron] Running usage aggregation...");
         const { aggregateUsageMeters } =
           await import("./workers/usage-aggregator");
         await aggregateUsageMeters(env);
-      }
+      });
+    }
 
-      // Stays on */5: this settles money, so latency here is worth more than
-      // the invocations it costs.
-      if (cronMatches(event.cron, "*/5 * * * *")) {
+    // Stays on */5: this settles money, so latency here is worth more than
+    // the invocations it costs.
+    if (cronMatches(event.cron, "*/5 * * * *")) {
+      await runJob("market checkout reconciliation", async () => {
         console.log("[Cron] Running market checkout payment reconciliation...");
         const { reconcilePendingMarketCheckoutPayments } =
           await import("./workers/market-checkout-reconciliation");
         const result = await reconcilePendingMarketCheckoutPayments(env);
         console.log("[Cron] Market checkout reconciliation result:", result);
-      }
+      });
+    }
 
-      if (cronMatches(event.cron, GROUP_ORDER_EXPIRY_CRON)) {
+    if (cronMatches(event.cron, GROUP_ORDER_EXPIRY_CRON)) {
+      await runJob("group order expiry sweep", async () => {
         console.log("[Cron] Running group order expiry sweep...");
         const { sweepExpiringGroupOrders } =
           await import("./workers/group-order-expiry");
         const result = await sweepExpiringGroupOrders(env);
         console.log("[Cron] Group order expiry sweep result:", result);
-      }
+      });
+    }
 
-      // Rides the shared */5 tick rather than adding a cron entry (#285).
-      if (cronMatches(event.cron, "*/5 * * * *")) {
+    // Rides the shared */5 tick rather than adding a cron entry (#285).
+    if (cronMatches(event.cron, "*/5 * * * *")) {
+      await runJob("overdue order alert sweep", async () => {
         console.log("[Cron] Running overdue order alert sweep...");
         const { raiseOverdueOrderAlerts } =
           await import("./workers/overdue-order-alerts");
         const result = await raiseOverdueOrderAlerts(env);
         console.log("[Cron] Overdue order alert sweep result:", result);
-      }
+      });
+    }
 
-      if (cronMatches(event.cron, "0 2 * * *")) {
+    if (cronMatches(event.cron, "0 2 * * *")) {
+      await runJob("storage usage snapshot", async () => {
         console.log("[Cron] Running storage usage snapshot...");
         const { snapshotStorageUsage } =
           await import("./workers/storage-snapshot");
         await snapshotStorageUsage(env);
-      }
+      });
+    }
 
-      if (cronMatches(event.cron, "0 2 * * *")) {
+    if (cronMatches(event.cron, "0 2 * * *")) {
+      await runJob("customer push subscription pruning", async () => {
         console.log("[Cron] Running customer push subscription pruning...");
         const { pruneStaleCustomerPushSubscriptions } =
           await import("./features/customer/routes");
         const result = await pruneStaleCustomerPushSubscriptions(env);
         console.log("[Cron] Customer push pruning result:", result);
-      }
+      });
+    }
 
-      if (cronMatches(event.cron, "0 4 * * *")) {
+    if (cronMatches(event.cron, "0 4 * * *")) {
+      await runJob("stored-value credit expiry", async () => {
         console.log("[Cron] Running stored-value credit expiry...");
         const { expireStaleCredits } = await import("./workers/credit-expiry");
         const result = await expireStaleCredits(env);
         console.log("[Cron] Credit expiry result:", result);
-      }
+      });
+    }
 
-      if (cronMatches(event.cron, "15 2 * * *")) {
+    if (cronMatches(event.cron, "15 2 * * *")) {
+      await runJob("billing lifecycle", async () => {
         console.log("[Cron] Running billing cycle closer...");
         const { BillingCycleService } =
           await import("./features/billing/services/BillingCycleService");
@@ -198,17 +244,7 @@ export default {
           ...cycleResult,
           ...reminderResult,
         });
-      }
-    } catch (error) {
-      console.error("[Cron] Scheduled task error:", error);
-
-      // Send alert for cron job failures
-      const { AlertService } = await import("./services/AlertService");
-      const alertService = new AlertService(env);
-      await alertService.systemError(
-        error instanceof Error ? error : new Error(String(error)),
-        "Cron Job Execution",
-      );
+      });
     }
   },
 };
