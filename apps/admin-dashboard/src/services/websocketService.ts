@@ -55,6 +55,12 @@ export interface EventSubscription {
   filter?: (event: RealtimeEvent) => boolean;
 }
 
+// A connection has to stay up this long before the retry budget is restored.
+// Resetting on open let "connect, drop at once" loop forever, re-minting a
+// token and waking the room's Durable Object every few seconds.
+const STABLE_CONNECTION_MS = 30_000;
+const MAX_RECONNECT_DELAY_MS = 30_000;
+
 const DEFAULT_CONFIG: Required<WebSocketConfig> = {
   maxReconnectAttempts: 5,
   reconnectDelay: 3000,
@@ -67,6 +73,7 @@ class WebSocketService {
   private connectionStatus = ref<ConnectionStatus>("disconnected");
   private reconnectAttempts = 0;
   private reconnectTimer: number | null = null;
+  private stableTimer: number | null = null;
   private heartbeatTimer: number | null = null;
   private heartbeatTimeoutTimer: number | null = null;
   private subscriptions = new Map<string, EventSubscription>();
@@ -199,7 +206,11 @@ class WebSocketService {
     this.ws.onopen = () => {
       console.log("✅ WebSocket connected");
       this.connectionStatus.value = "connected";
-      this.reconnectAttempts = 0;
+      this.clearStableTimer();
+      this.stableTimer = window.setTimeout(() => {
+        this.reconnectAttempts = 0;
+        this.stableTimer = null;
+      }, STABLE_CONNECTION_MS);
       this.startHeartbeat();
     };
 
@@ -226,6 +237,7 @@ class WebSocketService {
       console.log("🔌 WebSocket closed:", event.code, event.reason);
       this.connectionStatus.value = "disconnected";
       this.stopHeartbeat();
+      this.clearStableTimer();
 
       // 非正常關閉，嘗試重連
       if (event.code !== 1000 && event.code !== 1001) {
@@ -363,7 +375,13 @@ class WebSocketService {
     this.connectionStatus.value = "reconnecting";
     this.reconnectAttempts++;
 
-    const delay = this.config.reconnectDelay * this.reconnectAttempts;
+    // Exponential with jitter, so a fleet dropped together by a deploy does not
+    // reconnect in lockstep: half the step is fixed, half is random.
+    const step = Math.min(
+      this.config.reconnectDelay * 2 ** (this.reconnectAttempts - 1),
+      MAX_RECONNECT_DELAY_MS,
+    );
+    const delay = Math.round(step / 2 + (Math.random() * step) / 2);
 
     console.log(
       `🔄 Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.config.maxReconnectAttempts})`,
@@ -376,11 +394,19 @@ class WebSocketService {
     }, delay);
   }
 
+  private clearStableTimer(): void {
+    if (this.stableTimer) {
+      clearTimeout(this.stableTimer);
+      this.stableTimer = null;
+    }
+  }
+
   /**
    * 斷開連接
    */
   disconnect(): void {
     this.stopHeartbeat();
+    this.clearStableTimer();
 
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);

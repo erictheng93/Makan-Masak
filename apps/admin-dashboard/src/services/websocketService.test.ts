@@ -126,4 +126,60 @@ describe("WebSocketService", () => {
 
     expect(ws.close).not.toHaveBeenCalled();
   });
+
+  it("does not restore the retry budget for connections that drop at once", async () => {
+    const service = new WebSocketService({ maxReconnectAttempts: 2 });
+
+    await service.connect("restaurant-1");
+    for (let round = 0; round < 3; round++) {
+      const ws = MockWebSocket.instances.at(-1)!;
+      ws.onopen?.();
+      ws.readyState = 3; // CLOSED, as the browser sets it before onclose
+      ws.onclose?.({ code: 1006, reason: "" } as CloseEvent);
+      await vi.runOnlyPendingTimersAsync();
+    }
+
+    // Initial connect plus the two allowed retries, then it gives up.
+    expect(apiPost).toHaveBeenCalledTimes(3);
+    expect(MockWebSocket.instances).toHaveLength(3);
+    expect(service.status.value).toBe("error");
+  });
+
+  it("restores the retry budget once a connection has stayed up", async () => {
+    const service = new WebSocketService({ maxReconnectAttempts: 1 });
+
+    await service.connect("restaurant-1");
+    for (let round = 0; round < 3; round++) {
+      const ws = MockWebSocket.instances.at(-1)!;
+      ws.onopen?.();
+      vi.advanceTimersByTime(30_000);
+      ws.onmessage?.({ data: "pong" } as MessageEvent);
+      ws.readyState = 3; // CLOSED, as the browser sets it before onclose
+      ws.onclose?.({ code: 1006, reason: "" } as CloseEvent);
+      await vi.runOnlyPendingTimersAsync();
+    }
+
+    expect(apiPost).toHaveBeenCalledTimes(4);
+    expect(MockWebSocket.instances).toHaveLength(4);
+  });
+
+  it("backs off exponentially with jitter", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(1);
+    const setTimeoutSpy = vi.spyOn(window, "setTimeout");
+    const service = new WebSocketService({
+      reconnectDelay: 1_000,
+      maxReconnectAttempts: 3,
+    });
+
+    await service.connect("restaurant-1");
+    for (let round = 0; round < 3; round++) {
+      const ws = MockWebSocket.instances.at(-1)!;
+      ws.readyState = 3; // CLOSED, as the browser sets it before onclose
+      ws.onclose?.({ code: 1006, reason: "" } as CloseEvent);
+      await vi.runOnlyPendingTimersAsync();
+    }
+
+    const delays = setTimeoutSpy.mock.calls.map(([, ms]) => ms);
+    expect(delays).toEqual([1_000, 2_000, 4_000]);
+  });
 });
