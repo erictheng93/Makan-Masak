@@ -1849,6 +1849,29 @@ describe("customer identity routes", () => {
     expect(dishLookup?.args).toEqual(expect.arrayContaining([42, 43]));
   });
 
+  it("looks up saved dishes in chunks that stay under D1's 100-parameter cap", async () => {
+    const rows = Array.from({ length: 120 }, (_, index) => ({
+      id: index + 1,
+      target_type: "dish",
+      target_id: String(index + 1),
+      created_at_ms: index,
+    }));
+    const db = createDb({ all: [{ results: rows }] });
+
+    const response = await request("/favorites", "GET", undefined, {
+      DB: db,
+    }).response;
+
+    expect(response.status).toBe(200);
+    const lookups = db.state.statements.filter((statement) =>
+      statement.sql.includes('from "menu_items"'),
+    );
+    expect(lookups).toHaveLength(3);
+    for (const lookup of lookups) {
+      expect(lookup.args.length).toBeLessThanOrEqual(100);
+    }
+  });
+
   it("tracks recent markets and rejects missing market support", async () => {
     const db = createDb({
       first: [

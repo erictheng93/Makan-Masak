@@ -1770,15 +1770,28 @@ async function attachDishSummaries(
     .filter((id) => Number.isInteger(id) && id > 0);
   if (dishIds.length === 0) return favorites;
 
-  const dishes = await drizzle(env.DB)
-    .select({
-      id: menuItems.id,
-      name: menuItems.name,
-      nameEn: menuItems.nameEn,
-      restaurantId: menuItems.restaurantId,
-    })
-    .from(menuItems)
-    .where(and(inArray(menuItems.id, dishIds), isNull(menuItems.deletedAt)));
+  // D1 caps a statement at 100 bound parameters; a diner can save more dishes
+  // than that, so look them up 50 at a time.
+  const db = drizzle(env.DB);
+  const dishes = [];
+  for (let i = 0; i < dishIds.length; i += 50) {
+    dishes.push(
+      ...(await db
+        .select({
+          id: menuItems.id,
+          name: menuItems.name,
+          nameEn: menuItems.nameEn,
+          restaurantId: menuItems.restaurantId,
+        })
+        .from(menuItems)
+        .where(
+          and(
+            inArray(menuItems.id, dishIds.slice(i, i + 50)),
+            isNull(menuItems.deletedAt),
+          ),
+        )),
+    );
+  }
   const byId = new Map(dishes.map(({ id, ...dish }) => [String(id), dish]));
 
   return favorites.map((row) =>
