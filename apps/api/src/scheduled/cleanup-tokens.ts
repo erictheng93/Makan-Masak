@@ -37,31 +37,16 @@ export async function cleanupExpiredTokens(env: Env): Promise<CleanupResult> {
 
     const verificationService = new VerificationService(env.DB, env);
 
-    // Clean up all expired tokens
-    await verificationService.cleanupExpiredTokens();
-
-    // Query to count deleted tokens (optional, for reporting)
-    const stats = await getCleanupStats(env.DB);
+    const result = await verificationService.cleanupExpiredTokens();
+    const stats = {
+      passwordReset: result.deletedPasswordResetTokens,
+      emailVerification: result.deletedEmailVerificationTokens,
+      phoneVerification: result.deletedPhoneVerificationTokens,
+    };
 
     const duration = Date.now() - startTime;
 
     console.log(`[Cron] Token cleanup completed in ${duration}ms`, stats);
-
-    // Send success notification (info level)
-    if (env.SLACK_WEBHOOK_URL || env.ALERT_EMAIL_TO) {
-      const alertService = new AlertService(env);
-      await alertService.sendAlert({
-        title: "Token Cleanup Completed",
-        message: "Scheduled cleanup of expired tokens completed successfully",
-        severity: "info",
-        metadata: {
-          Duration: `${duration}ms`,
-          "Password Reset Tokens": stats.passwordReset || "N/A",
-          "Email Verification Tokens": stats.emailVerification || "N/A",
-          "Phone Verification Tokens": stats.phoneVerification || "N/A",
-        },
-      });
-    }
 
     return {
       success: true,
@@ -71,68 +56,15 @@ export async function cleanupExpiredTokens(env: Env): Promise<CleanupResult> {
   } catch (error) {
     console.error("[Cron] Token cleanup error:", error);
 
-    // Send error alert
+    const cleanupError =
+      error instanceof Error ? error : new Error(String(error));
     const alertService = new AlertService(env);
-    await alertService.systemError(
-      error instanceof Error ? error : new Error(String(error)),
-      "Token Cleanup Cron Job",
-    );
+    await alertService.systemError(cleanupError, "Token Cleanup Cron Job");
 
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: cleanupError.message,
       timestamp: new Date(),
-    };
-  }
-}
-
-/**
- * Get cleanup statistics (count of expired tokens before cleanup)
- */
-async function getCleanupStats(db: D1Database): Promise<{
-  passwordReset: number;
-  emailVerification: number;
-  phoneVerification: number;
-}> {
-  try {
-    const now = Math.floor(Date.now() / 1000);
-
-    const [
-      passwordResetResult,
-      emailVerificationResult,
-      phoneVerificationResult,
-    ] = await Promise.all([
-      db
-        .prepare(
-          "SELECT COUNT(*) as count FROM password_reset_tokens WHERE expires_at < ?",
-        )
-        .bind(now)
-        .first<{ count: number }>(),
-      db
-        .prepare(
-          "SELECT COUNT(*) as count FROM email_verification_tokens WHERE expires_at < ?",
-        )
-        .bind(now)
-        .first<{ count: number }>(),
-      db
-        .prepare(
-          "SELECT COUNT(*) as count FROM phone_verification_tokens WHERE expires_at < ?",
-        )
-        .bind(now)
-        .first<{ count: number }>(),
-    ]);
-
-    return {
-      passwordReset: passwordResetResult?.count || 0,
-      emailVerification: emailVerificationResult?.count || 0,
-      phoneVerification: phoneVerificationResult?.count || 0,
-    };
-  } catch (error) {
-    console.error("Error getting cleanup stats:", error);
-    return {
-      passwordReset: 0,
-      emailVerification: 0,
-      phoneVerification: 0,
     };
   }
 }

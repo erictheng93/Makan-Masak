@@ -3,6 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   db: { delete: vi.fn() },
   drizzle: vi.fn(),
+  cleanupTokens: vi.fn(),
+  sendAlert: vi.fn(),
+  systemError: vi.fn(),
 }));
 
 vi.mock("drizzle-orm/d1", () => ({ drizzle: mocks.drizzle }));
@@ -32,9 +35,91 @@ vi.mock("@makanmasak/database", () => ({
 
 vi.mock("../services/AlertService", () => ({ AlertService: vi.fn() }));
 
-import { cleanupExpiredIdempotencyKeys } from "./cleanup-tokens";
+import {
+  cleanupExpiredIdempotencyKeys,
+  cleanupExpiredTokens,
+} from "./cleanup-tokens";
 import { inArray, lt } from "drizzle-orm";
-import { idempotencyKeys } from "@makanmasak/database";
+import { idempotencyKeys, VerificationService } from "@makanmasak/database";
+import { AlertService } from "../services/AlertService";
+import type { Env } from "../types/env";
+
+describe("cleanupExpiredTokens", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(VerificationService).mockImplementation(function () {
+      return {
+        cleanupExpiredTokens: mocks.cleanupTokens,
+      } as unknown as VerificationService;
+    });
+    vi.mocked(AlertService).mockImplementation(function () {
+      return {
+        sendAlert: mocks.sendAlert,
+        systemError: mocks.systemError,
+      } as unknown as AlertService;
+    });
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const env = {
+    DB: { prepare: vi.fn() },
+    ALERT_EMAIL_TO: "ops@example.com",
+    SLACK_WEBHOOK_URL: "https://example.com/webhook",
+  } as unknown as Env;
+
+  it.each([
+    [4, 2, 1],
+    [0, 0, 0],
+  ])(
+    "logs actual deletion counts (%i, %i, %i) without notifications",
+    async (passwordReset, emailVerification, phoneVerification) => {
+      mocks.cleanupTokens.mockResolvedValue({
+        deletedPasswordResetTokens: passwordReset,
+        deletedEmailVerificationTokens: emailVerification,
+        deletedPhoneVerificationTokens: phoneVerification,
+      });
+
+      const counts = { passwordReset, emailVerification, phoneVerification };
+      await expect(cleanupExpiredTokens(env)).resolves.toMatchObject({
+        success: true,
+        deletedTokens: counts,
+      });
+      expect(console.log).toHaveBeenCalledWith(
+        expect.stringContaining("Token cleanup completed"),
+        counts,
+      );
+      expect(env.DB.prepare).not.toHaveBeenCalled();
+      expect(mocks.sendAlert).not.toHaveBeenCalled();
+      expect(mocks.systemError).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([new Error("D1 unavailable"), "D1 unavailable"])(
+    "reports a cleanup failure and alerts once: %s",
+    async (error) => {
+      mocks.cleanupTokens.mockRejectedValue(error);
+
+      await expect(cleanupExpiredTokens(env)).resolves.toMatchObject({
+        success: false,
+        error: "D1 unavailable",
+      });
+      expect(mocks.systemError).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ message: "D1 unavailable" }),
+        "Token Cleanup Cron Job",
+      );
+      expect(mocks.sendAlert).not.toHaveBeenCalled();
+      expect(console.log).not.toHaveBeenCalledWith(
+        expect.stringContaining("Token cleanup completed"),
+        expect.anything(),
+      );
+    },
+  );
+});
 
 /** The cron only ever gets the D1 binding; nothing else is read. */
 function buildEnv() {
