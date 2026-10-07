@@ -13,6 +13,14 @@ export type KitchenRealtimeConnectionStatus =
   | "reconnecting"
   | "error";
 
+// A connection has to stay up this long before the retry budget is restored.
+// Resetting on open let "connect, drop at once" loop forever, re-minting a
+// token and waking the room's Durable Object on every lap.
+const STABLE_CONNECTION_MS = 30_000;
+const RECONNECT_DELAY_MS = 3_000;
+const MAX_RECONNECT_DELAY_MS = 30_000;
+const MAX_RECONNECT_ATTEMPTS = 5;
+
 export interface KitchenRealtimeSubscription {
   id: string;
   eventTypes: RealtimeEventType[];
@@ -26,6 +34,7 @@ class KitchenRealtimeService {
   private subscriptionCounter = 0;
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private stableTimer: ReturnType<typeof setTimeout> | null = null;
   private restaurantId: string | null = null;
 
   get status() {
@@ -48,7 +57,11 @@ class KitchenRealtimeService {
       this.ws = new WebSocket(auth.wsUrl);
       this.ws.onopen = () => {
         this.statusValue.value = "connected";
-        this.reconnectAttempts = 0;
+        this.clearStableTimer();
+        this.stableTimer = setTimeout(() => {
+          this.reconnectAttempts = 0;
+          this.stableTimer = null;
+        }, STABLE_CONNECTION_MS);
       };
       this.ws.onmessage = (message) => {
         try {
@@ -64,6 +77,7 @@ class KitchenRealtimeService {
       this.ws.onclose = (event) => {
         this.ws = null;
         this.statusValue.value = "disconnected";
+        this.clearStableTimer();
         if (event.code !== 1000 && event.code !== 1001) {
           this.scheduleReconnect();
         }
@@ -76,6 +90,7 @@ class KitchenRealtimeService {
   }
 
   disconnect(): void {
+    this.clearStableTimer();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -140,20 +155,38 @@ class KitchenRealtimeService {
     });
   }
 
+  private clearStableTimer(): void {
+    if (this.stableTimer) {
+      clearTimeout(this.stableTimer);
+      this.stableTimer = null;
+    }
+  }
+
   private scheduleReconnect(): void {
-    if (!this.restaurantId || this.reconnectAttempts >= 5) {
+    if (
+      !this.restaurantId ||
+      this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS
+    ) {
       this.statusValue.value = "error";
       return;
     }
 
     this.statusValue.value = "reconnecting";
     this.reconnectAttempts += 1;
-    const delay = Math.min(3000 * this.reconnectAttempts, 30000);
+    // Exponential with jitter, so every kitchen screen dropped by one deploy
+    // does not reconnect in lockstep: half the step is fixed, half is random.
+    const step = Math.min(
+      RECONNECT_DELAY_MS * 2 ** (this.reconnectAttempts - 1),
+      MAX_RECONNECT_DELAY_MS,
+    );
+    const delay = Math.round(step / 2 + (Math.random() * step) / 2);
     this.reconnectTimer = setTimeout(() => {
       if (this.restaurantId) void this.connect(this.restaurantId);
     }, delay);
   }
 }
+
+export { KitchenRealtimeService };
 
 let instance: KitchenRealtimeService | null = null;
 
