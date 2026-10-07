@@ -161,13 +161,14 @@ describe("useFollowing", () => {
         targetId: "m-new",
         createdAtMs: 2_000,
       }),
-      // Dish favorites are a different feature and must not leak into the
-      // follow lists the broadcast audience is built from.
+      // Dish favorites must not leak into the follow lists the broadcast
+      // audience is built from; they have their own list.
       buildFavorite({
         id: 4,
         targetType: "dish",
         targetId: "12",
         createdAtMs: 4_000,
+        dish: { name: "滷肉飯", nameEn: null, restaurantId: "r-1" },
       }),
     ]);
 
@@ -181,5 +182,39 @@ describe("useFollowing", () => {
     expect(
       following.followedRestaurants.value.map((row) => row.targetId),
     ).toEqual(["r-1"]);
+    expect(following.favoriteDishes.value).toEqual([
+      expect.objectContaining({
+        targetId: "12",
+        favoriteId: 4,
+        dish: expect.objectContaining({ name: "滷肉飯", restaurantId: "r-1" }),
+      }),
+    ]);
+  });
+
+  it("keeps the dish summary from the POST so the profile list can name it", async () => {
+    vi.mocked(customerIdentityApi.addFavorite).mockResolvedValue(
+      buildFavorite({
+        id: 9,
+        targetType: "dish",
+        targetId: "12",
+        dish: { name: "滷肉飯", nameEn: null, restaurantId: "r-1" },
+      }),
+    );
+
+    const following = useFollowing();
+    await following.ensureLoaded();
+    await expect(following.toggle("dish", "12")).resolves.toBe(true);
+
+    expect(customerIdentityApi.addFavorite).toHaveBeenCalledWith({
+      targetType: "dish",
+      targetId: "12",
+    });
+    expect(following.favoriteDishes.value).toEqual([
+      expect.objectContaining({
+        favoriteId: 9,
+        dish: expect.objectContaining({ name: "滷肉飯" }),
+      }),
+    ]);
+    expect(following.followedRestaurants.value).toEqual([]);
   });
 });

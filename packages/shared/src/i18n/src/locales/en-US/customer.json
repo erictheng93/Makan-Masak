@@ -1342,7 +1342,14 @@
     "loading": "Loading your follows…",
     "loadFailed": "Your follows could not be loaded",
     "empty": "You are not following any market or shop yet",
-    "unknownTarget": "Name unavailable"
+    "unknownTarget": "Name unavailable",
+    "favorite": "Save",
+    "favorited": "Saved",
+    "favoriteFailed": "Could not save. Please try again.",
+    "unfavoriteFailed": "Could not remove. Please try again.",
+    "dishesTitle": "Saved dishes",
+    "dishesEmpty": "You have not saved any dishes yet",
+    "removeFavorite": "Remove"
   },
   "notifications": {
     "title": "Marketing notifications",

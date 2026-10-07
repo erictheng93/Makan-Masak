@@ -1342,7 +1342,14 @@
     "loading": "Đang tải danh sách theo dõi…",
     "loadFailed": "Không tải được danh sách theo dõi",
     "empty": "Bạn chưa theo dõi khu chợ hay quán nào",
-    "unknownTarget": "Chưa lấy được tên"
+    "unknownTarget": "Chưa lấy được tên",
+    "favorite": "Lưu",
+    "favorited": "Đã lưu",
+    "favoriteFailed": "Không thể lưu. Vui lòng thử lại.",
+    "unfavoriteFailed": "Không thể xóa. Vui lòng thử lại.",
+    "dishesTitle": "Món đã lưu",
+    "dishesEmpty": "Bạn chưa lưu món nào",
+    "removeFavorite": "Xóa"
   },
   "notifications": {
     "title": "Thông báo tiếp thị",

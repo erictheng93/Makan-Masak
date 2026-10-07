@@ -123,4 +123,20 @@ describe("FollowButton", () => {
 
     expect(toastMocks.error).toHaveBeenCalledWith("follow.followFailed");
   });
+
+  it("labels a dish as saved rather than followed, and says so on failure", async () => {
+    followingMocks.followed = new Set(["dish:42"]);
+    followingMocks.toggle.mockRejectedValueOnce(new Error("offline"));
+
+    const wrapper = mountButton({ targetType: "dish", targetId: "42" });
+    const button = wrapper.get('[data-testid="follow-button"]');
+    expect(button.text()).toContain("follow.favorited");
+
+    await button.trigger("click");
+    await vi.waitFor(() => {
+      expect(toastMocks.error).toHaveBeenCalledOnce();
+    });
+    expect(followingMocks.toggle).toHaveBeenCalledWith("dish", "42");
+    expect(toastMocks.error).toHaveBeenCalledWith("follow.unfavoriteFailed");
+  });
 });
