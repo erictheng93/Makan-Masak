@@ -1,8 +1,10 @@
+import type { RealtimeAuthPayload } from "@makanmasak/shared-types";
 import type { Env } from "../types/env";
 
 export type RealtimeRoomType = "customer" | "admin" | "kitchen";
+export type RateLimitLayer = "ip" | "client";
 
-// Mirrors `period` on WS_CONNECT_RATE_LIMITER in wrangler.toml; the binding
+// Mirrors `period` on both ratelimits bindings in wrangler.toml; the binding
 // does not report how long until the window resets.
 const WINDOW_SECONDS = 60;
 
@@ -15,30 +17,53 @@ function getClientAddress(request: Request): string {
 }
 
 /**
- * Keyed by client address and room type, never by room id: a key the caller
- * can vary is a fresh budget per value. The previous KV counter included the
- * room id and was a read-then-write, so concurrent attempts and rotating ids
- * both walked past it.
+ * Layer A, before the token is read: a flood ceiling per client address.
  *
- * ponytail: per-IP, so a restaurant's customers behind one NAT share a bucket;
- * the limit is sized for that. Key on the token subject if it ever bites.
- *
- * Returns true when the attempt is allowed. Unbound (dev, tests) means allowed,
- * the same way the API treats its own native limiters outside production.
+ * Deliberately loose. One address can front a whole food court on shared
+ * Wi-Fi, or unrelated phones behind carrier-grade NAT, so the tight per-client
+ * limit lives in layer B where the token says who is connecting.
  */
-export async function checkRealtimeRateLimit(
+export async function checkIpRateLimit(
   request: Request,
-  env: Pick<Env, "WS_CONNECT_RATE_LIMITER">,
-  roomType: RealtimeRoomType,
+  env: Pick<Env, "WS_IP_RATE_LIMITER">,
 ): Promise<boolean> {
-  if (!env.WS_CONNECT_RATE_LIMITER) return true;
-  const { success } = await env.WS_CONNECT_RATE_LIMITER.limit({
-    key: `${roomType}:${getClientAddress(request)}`,
+  if (!env.WS_IP_RATE_LIMITER) return true;
+  const { success } = await env.WS_IP_RATE_LIMITER.limit({
+    key: getClientAddress(request),
   });
   return success;
 }
 
-export function rateLimitResponse(): Response {
+/**
+ * Who a verified token speaks for. Never the token itself: clients re-mint a
+ * token after a failed connect, so a per-token key would reset on every retry.
+ * Legacy table guests carry no per-person id and share their table's bucket.
+ */
+export function clientRateLimitKey(payload: RealtimeAuthPayload): string {
+  const who =
+    payload.sid ??
+    payload.memberId ??
+    payload.seatId ??
+    payload.userId ??
+    "guest";
+  return `${payload.roomType}:${payload.roomId}:${who}`;
+}
+
+/** Layer B, after verification: the tight limit, per client. */
+export async function checkClientRateLimit(
+  payload: RealtimeAuthPayload,
+  env: Pick<Env, "WS_CLIENT_RATE_LIMITER">,
+): Promise<boolean> {
+  if (!env.WS_CLIENT_RATE_LIMITER) return true;
+  const { success } = await env.WS_CLIENT_RATE_LIMITER.limit({
+    key: clientRateLimitKey(payload),
+  });
+  return success;
+}
+
+export function rateLimitResponse(layer: RateLimitLayer): Response {
+  // One line per rejection so `wrangler tail` shows which layer is biting.
+  console.warn("Realtime connect rate limited", { layer });
   return Response.json(
     {
       error: "Too many realtime connection attempts",

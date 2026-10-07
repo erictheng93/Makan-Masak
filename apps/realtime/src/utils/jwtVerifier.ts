@@ -90,19 +90,6 @@ export async function verifyWebSocketToken(
       };
     }
 
-    // 🔒 首先檢查 token 是否在黑名單中
-    if (kv) {
-      const revoked = await isTokenRevoked(token, kv);
-      if (revoked) {
-        console.warn("WebSocket token has been revoked");
-        return {
-          valid: false,
-          error: "Token has been revoked",
-          revoked: true,
-        };
-      }
-    }
-
     // 驗證 JWT token
     const payload = verify(token, jwtSecret, {
       algorithms: ["HS256"],
@@ -140,6 +127,20 @@ export async function verifyWebSocketToken(
         return {
           valid: false,
           error: "Invalid guest token payload",
+        };
+      }
+    }
+
+    // Signature first, blacklist second: a forged or garbage token is
+    // rejected for free instead of costing a KV read each.
+    if (kv) {
+      const revoked = await isTokenRevoked(token, kv);
+      if (revoked) {
+        console.warn("WebSocket token has been revoked");
+        return {
+          valid: false,
+          error: "Token has been revoked",
+          revoked: true,
         };
       }
     }

@@ -37,7 +37,8 @@ function upgradeRequest(path: string, token?: string) {
 function createEnv(input?: {
   corsOrigin?: string;
   durableFetch?: (request: Request) => Response | Promise<Response>;
-  rateLimiter?: Env["WS_CONNECT_RATE_LIMITER"];
+  ipLimiter?: Env["WS_IP_RATE_LIMITER"];
+  clientLimiter?: Env["WS_CLIENT_RATE_LIMITER"];
 }): Env {
   const durableObject = {
     fetch: vi.fn(
@@ -52,7 +53,8 @@ function createEnv(input?: {
     CORS_ORIGIN: input?.corsOrigin,
     JWT_SECRET: "secret",
     REALTIME_JWT_SECRET: jwtSecret,
-    WS_CONNECT_RATE_LIMITER: input?.rateLimiter,
+    WS_IP_RATE_LIMITER: input?.ipLimiter,
+    WS_CLIENT_RATE_LIMITER: input?.clientLimiter,
     REALTIME_SESSION: {
       idFromName: vi.fn((name: string) => ({ name })),
       get: vi.fn(() => durableObject),
@@ -217,9 +219,10 @@ describe("realtime worker routes", () => {
     expect(env.REALTIME_SESSION.get).not.toHaveBeenCalled();
   });
 
-  it("enforces websocket rate limits before verifying or opening anything", async () => {
-    const rateLimiter = { limit: vi.fn(async () => ({ success: false })) };
-    const env = createEnv({ rateLimiter });
+  it("applies the IP ceiling before reading the token", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const ipLimiter = { limit: vi.fn(async () => ({ success: false })) };
+    const env = createEnv({ ipLimiter });
     const response = await worker.fetch(
       upgradeRequest("/customer/table-1"),
       env,
@@ -227,9 +230,7 @@ describe("realtime worker routes", () => {
 
     expect(response.status).toBe(429);
     expect(response.headers.get("Retry-After")).toBe("60");
-    expect(rateLimiter.limit).toHaveBeenCalledWith({
-      key: "customer:203.0.113.10",
-    });
+    expect(ipLimiter.limit).toHaveBeenCalledWith({ key: "203.0.113.10" });
     expect(env.TOKEN_BLACKLIST.get).not.toHaveBeenCalled();
     expect(env.REALTIME_SESSION.get).not.toHaveBeenCalled();
     await expect(response.json()).resolves.toMatchObject({
@@ -237,13 +238,43 @@ describe("realtime worker routes", () => {
     });
   });
 
+  it("applies the per-client limit after verification, keyed by who connects", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const ipLimiter = { limit: vi.fn(async () => ({ success: true })) };
+    const clientLimiter = { limit: vi.fn(async () => ({ success: false })) };
+    const env = createEnv({ ipLimiter, clientLimiter });
+    const response = await worker.fetch(
+      upgradeRequest("/admin/restaurant-1", buildToken({ sid: "session-1" })),
+      env,
+    );
+
+    expect(response.status).toBe(429);
+    expect(ipLimiter.limit).toHaveBeenCalledOnce();
+    expect(clientLimiter.limit).toHaveBeenCalledWith({
+      key: "admin:restaurant-1:session-1",
+    });
+    expect(env.REALTIME_SESSION.get).not.toHaveBeenCalled();
+  });
+
+  it("never spends the per-client budget on an unverified request", async () => {
+    const clientLimiter = { limit: vi.fn(async () => ({ success: true })) };
+    const env = createEnv({ clientLimiter });
+    const response = await worker.fetch(
+      upgradeRequest("/admin/restaurant-1"),
+      env,
+    );
+
+    expect(response.status).toBe(401);
+    expect(clientLimiter.limit).not.toHaveBeenCalled();
+  });
+
   it("returns a 503 when the rate limiter is unavailable", async () => {
-    const rateLimiter = {
+    const ipLimiter = {
       limit: vi.fn(async () => {
         throw new Error("limiter unavailable");
       }),
     };
-    const env = createEnv({ rateLimiter });
+    const env = createEnv({ ipLimiter });
 
     const response = await worker.fetch(
       upgradeRequest("/kitchen/restaurant-1"),
@@ -251,7 +282,7 @@ describe("realtime worker routes", () => {
     );
 
     expect(response.status).toBe(503);
-    expect(rateLimiter.limit).toHaveBeenCalledOnce();
+    expect(ipLimiter.limit).toHaveBeenCalledOnce();
     expect(env.REALTIME_SESSION.get).not.toHaveBeenCalled();
     await expect(response.json()).resolves.toEqual({
       error: "Realtime rate limit unavailable",

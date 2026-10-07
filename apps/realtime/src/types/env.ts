@@ -26,8 +26,10 @@ export interface Env {
   API_VERSION: string;
   CORS_ORIGIN?: string;
 
-  /** WebSocket 連線限流（native binding，僅 production 綁定） */
-  WS_CONNECT_RATE_LIMITER?: RateLimit;
+  /** WebSocket 連線限流 A 層：每個 IP 的寬鬆上限（僅 production 綁定） */
+  WS_IP_RATE_LIMITER?: RateLimit;
+  /** WebSocket 連線限流 B 層：驗證後每個客戶端的上限（僅 production 綁定） */
+  WS_CLIENT_RATE_LIMITER?: RateLimit;
 
   // Logging
   SLACK_WEBHOOK_URL?: string;

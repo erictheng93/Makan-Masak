@@ -97,18 +97,29 @@ id = "5850dad46b684f2d8b69b3344d146a1d"
 binding = "TOKEN_BLACKLIST"
 id = "30ba7daf1e4c41438233542de10dd02f"
 
-# WebSocket connect attempts, keyed by room type + client IP (rateLimiter.ts).
-# Replaces a KV counter that was read-then-write (concurrent attempts all read
-# the same count) and keyed by room id (each guessed id was a fresh budget).
-# Production only, like the API's native limiters; unbound means unlimited.
-# The limit is per IP, so it has to cover a restaurant's customers behind one
-# NAT reconnecting together after a deploy. namespace_id 2001 stays clear of
-# the API's 1001-1003. Keep `period` in step with WINDOW_SECONDS.
+# WebSocket connect limits, two layers (rateLimiter.ts). Production only, like
+# the API's native limiters; unbound means unlimited. Keep both `period`s in
+# step with WINDOW_SECONDS. 2001/2002 stay clear of the API's 1001-1003.
+#
+# A, before the token is read: per client IP, loose on purpose. One IP can be a
+# food court's shared Wi-Fi or many phones behind carrier-grade NAT, so this
+# only caps floods.
 [[env.production.ratelimits]]
-name = "WS_CONNECT_RATE_LIMITER"
+name = "WS_IP_RATE_LIMITER"
 namespace_id = "2001"
 
   [env.production.ratelimits.simple]
-  limit = 120
+  limit = 600
+  period = 60
+
+# B, after verification: per client the token names (staff session, group
+# member, seat, user; legacy table guests share their table), so neighbours
+# on one IP never share a budget.
+[[env.production.ratelimits]]
+name = "WS_CLIENT_RATE_LIMITER"
+namespace_id = "2002"
+
+  [env.production.ratelimits.simple]
+  limit = 30
   period = 60
 

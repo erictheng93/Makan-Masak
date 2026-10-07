@@ -2,8 +2,10 @@ import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import type { Env } from "./types/env";
 import {
-  checkRealtimeRateLimit,
+  checkClientRateLimit,
+  checkIpRateLimit,
   rateLimitResponse,
+  type RateLimitLayer,
   type RealtimeRoomType,
 } from "./utils/rateLimiter";
 import {
@@ -24,6 +26,25 @@ export function buildAllowedOrigins(env: Pick<Env, "CORS_ORIGIN">): string[] {
     .filter(Boolean);
 }
 
+async function enforceRateLimit(
+  c: Context<{ Bindings: Env }>,
+  layer: RateLimitLayer,
+  check: () => Promise<boolean>,
+): Promise<Response | null> {
+  try {
+    return (await check()) ? null : rateLimitResponse(layer);
+  } catch (error) {
+    console.error("Realtime rate limit check failed:", error);
+    return c.json(
+      {
+        error: "Realtime rate limit unavailable",
+        code: "REALTIME_RATE_LIMIT_UNAVAILABLE",
+      },
+      503,
+    );
+  }
+}
+
 /**
  * Everything a request must clear before it may touch a Durable Object.
  *
@@ -41,20 +62,10 @@ async function connectToRoom(
     return c.json({ error: "Expected WebSocket upgrade" }, 426);
   }
 
-  try {
-    if (!(await checkRealtimeRateLimit(c.req.raw, c.env, roomType))) {
-      return rateLimitResponse();
-    }
-  } catch (error) {
-    console.error("Realtime rate limit check failed:", error);
-    return c.json(
-      {
-        error: "Realtime rate limit unavailable",
-        code: "REALTIME_RATE_LIMIT_UNAVAILABLE",
-      },
-      503,
-    );
-  }
+  const ipLimited = await enforceRateLimit(c, "ip", () =>
+    checkIpRateLimit(c.req.raw, c.env),
+  );
+  if (ipLimited) return ipLimited;
 
   const token = extractTokenFromUrl(new URL(c.req.url));
   if (!token) {
@@ -74,6 +85,12 @@ async function connectToRoom(
   ) {
     return c.json({ error: "Forbidden: Token does not match room" }, 403);
   }
+
+  const payload = verification.payload;
+  const clientLimited = await enforceRateLimit(c, "client", () =>
+    checkClientRateLimit(payload, c.env),
+  );
+  if (clientLimited) return clientLimited;
 
   const id = c.env.REALTIME_SESSION.idFromName(`${roomType}:${roomId}`);
   return c.env.REALTIME_SESSION.get(id).fetch(c.req.raw);
