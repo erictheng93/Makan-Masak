@@ -12,7 +12,12 @@ import {
   or,
   sql,
 } from "drizzle-orm";
-import { orders, printAgents, receipts } from "@makanmasak/database";
+import {
+  orders,
+  printAgents,
+  receipts,
+  restaurants,
+} from "@makanmasak/database";
 import { z } from "zod";
 import type { Env } from "../../types/env";
 import { hashPrintAgentKey } from "../../shared/utils/print-agent-key";
@@ -110,9 +115,11 @@ function requestForReceipt(
     id: string;
     orderId: string;
     content: string;
+    receiptType: string;
     createdAt: Date | null;
   },
   restaurantId: string,
+  shop?: { name: string; address: string; phone: string },
 ) {
   let content: Record<string, unknown> = {};
   try {
@@ -123,11 +130,22 @@ function requestForReceipt(
   }
   return {
     country: "TW",
-    type: "receipt",
+    type: receipt.receiptType === "kitchen" ? "kitchen" : "receipt",
     restaurantId,
     data: {
+      // Without this the formatter prints its own "餐廳名稱 / 餐廳地址 /
+      // 電話號碼" placeholders at the top of every receipt and kitchen ticket.
+      restaurant: shop,
+      cashier:
+        typeof content.cashier === "string" ? content.cashier : undefined,
       order: {
+        // The formatter also builds the receipt QR link from this, so it stays
+        // the row id; `orderNumber` is what a person reads off the paper.
         id: receipt.orderId,
+        orderNumber:
+          typeof content.orderNumber === "string"
+            ? content.orderNumber
+            : undefined,
         tableNumber:
           typeof content.tableNumber === "string"
             ? content.tableNumber
@@ -141,11 +159,28 @@ function requestForReceipt(
             ? content.deliveryPhone
             : undefined,
         deliveryFee: Number(content.deliveryFee ?? 0),
+        notes: typeof content.notes === "string" ? content.notes : undefined,
         items: Array.isArray(content.items)
           ? content.items.map((item: Record<string, unknown>) => ({
               name: String(item.name ?? "Item"),
               quantity: Number(item.quantity ?? 1),
               price: Number(item.price ?? 0),
+              notes: typeof item.notes === "string" ? item.notes : undefined,
+              modifiers: Array.isArray(item.modifiers)
+                ? item.modifiers
+                    .filter(
+                      (
+                        modifier,
+                      ): modifier is { name: string; price?: number } =>
+                        modifier != null &&
+                        typeof modifier === "object" &&
+                        typeof modifier.name === "string",
+                    )
+                    .map((modifier) => ({
+                      name: modifier.name,
+                      price: Number(modifier.price ?? 0),
+                    }))
+                : undefined,
             }))
           : [],
         subtotal: Number(content.subtotal ?? 0),
@@ -174,6 +209,26 @@ app.get("/jobs", async (c) => {
   const db = drizzle(c.env.DB);
   const now = new Date();
   const staleBefore = new Date(now.getTime() - CLAIM_TIMEOUT_MS);
+  // A poll is also the agent heartbeat. Persist the observation before any
+  // claim decision so an alive agent with no reachable printers is visible as
+  // `no_printer`, not silently aged into `offline`.
+  const printersTotal = optionalCount(c.req.query("printersTotal"));
+  const printersOnline = optionalCount(c.req.query("printersOnline"));
+  await db
+    .update(printAgents)
+    .set({
+      lastSeenAt: now,
+      updatedAt: now,
+      ...(printersTotal === undefined ? {} : { printersTotal }),
+      ...(printersOnline === undefined ? {} : { printersOnline }),
+    })
+    .where(eq(printAgents.id, agent.agentId));
+
+  // Never claim a receipt for an agent that explicitly says it has no online
+  // printer. The heartbeat above is still essential: it makes the state
+  // observable and lets the dashboard distinguish a hardware outage from a
+  // stopped process.
+  if (printersOnline === 0) return c.json({ success: true, data: null });
 
   // A till agent takes that till's receipts; a shop agent (register_id NULL)
   // takes the register-less ones, which is what an order-triggered kitchen
@@ -216,6 +271,32 @@ app.get("/jobs", async (c) => {
       ),
     );
 
+  // A kitchen ticket is an order to cook. Once its order is cancelled it must
+  // leave the queue, not print; cancel has several paths (guest, staff,
+  // platform), so this is enforced here, where every ticket passes.
+  await db
+    .update(receipts)
+    .set({ printStatus: "cancelled", claimedAt: null })
+    .where(
+      and(
+        servesThisAgent,
+        eq(receipts.receiptType, "kitchen"),
+        or(eq(receipts.printStatus, "pending"), abandoned),
+        inArray(
+          receipts.orderId,
+          db
+            .select({ id: orders.id })
+            .from(orders)
+            .where(
+              and(
+                eq(orders.restaurantId, agent.restaurantId),
+                eq(orders.status, "cancelled"),
+              ),
+            ),
+        ),
+      ),
+    );
+
   const claimable = or(
     eq(receipts.printStatus, "pending"),
     and(abandoned, lt(receipts.printAttempts, MAX_DELIVERY_ATTEMPTS)),
@@ -251,31 +332,25 @@ app.get("/jobs", async (c) => {
       id: receipts.id,
       orderId: receipts.orderId,
       content: receipts.content,
+      receiptType: receipts.receiptType,
       createdAt: receipts.createdAt,
     });
 
-  // Reported on the poll rather than through a second endpoint: the agent
-  // already calls this every heartbeat, and a separate health beat would be
-  // one more thing that can silently stop while printing still works.
-  const printersTotal = optionalCount(c.req.query("printersTotal"));
-  const printersOnline = optionalCount(c.req.query("printersOnline"));
-
-  await db
-    .update(printAgents)
-    .set({
-      lastSeenAt: now,
-      updatedAt: now,
-      ...(printersTotal === undefined ? {} : { printersTotal }),
-      ...(printersOnline === undefined ? {} : { printersOnline }),
-    })
-    .where(eq(printAgents.id, agent.agentId));
-
   if (!claimed) return c.json({ success: true, data: null });
+  const [shop] = await db
+    .select({
+      name: restaurants.name,
+      address: restaurants.address,
+      phone: restaurants.phone,
+    })
+    .from(restaurants)
+    .where(eq(restaurants.id, agent.restaurantId))
+    .limit(1);
   return c.json({
     success: true,
     data: {
       receiptId: claimed.id,
-      request: requestForReceipt(claimed, agent.restaurantId),
+      request: requestForReceipt(claimed, agent.restaurantId, shop),
     },
   });
 });

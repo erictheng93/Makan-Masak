@@ -29,6 +29,7 @@ import type {
   PrintRequest,
   PrintResponse,
   PrinterEvent,
+  PrinterCapabilities,
 } from "@makanmasak/shared-types";
 
 type WebSocketClientInfo = {
@@ -156,6 +157,7 @@ export interface LocalPrintServiceConfig {
   restaurantId: string;
 
   // 打印機設定
+  printerEncoding?: PrinterCapabilities["encoding"];
   autoDiscovery: boolean;
   discoveryInterval: number; // ms
   heartbeatInterval: number; // ms
@@ -981,7 +983,12 @@ export class LocalPrintService {
         // A throw propagates out of the drain on purpose: an unreachable or
         // erroring cloud must cost one call per heartbeat, not a tight loop
         // of MAX_CLOUD_JOBS_PER_DRAIN of them.
-        const outcome = await this.claimAndPrintOneJob(cloudKey);
+        const devices = await this.printerCounts();
+        if (!devices) return;
+        const outcome = await this.claimAndPrintOneJob(cloudKey, devices);
+        // A zero-printer heartbeat is deliberately sent once so the cloud can
+        // publish `no_printer`, but its route refuses to claim a receipt.
+        if (devices.online < 1) return;
         if (outcome !== "printed") return;
         claimed += 1;
       }
@@ -1016,22 +1023,17 @@ export class LocalPrintService {
    */
   private async claimAndPrintOneJob(
     cloudKey: string,
+    devices: { total: number; online: number },
   ): Promise<"empty" | "printed" | "failed"> {
     // Neither the register nor the restaurant is sent: the cloud derives
     // both from the credential. An agent that could name its own tenant
     // could claim another shop's receipts.
     //
-    // Printer counts ride along on the poll instead of a second heartbeat.
-    // Without them the cloud only knows the agent is alive, which reads the
-    // same whether the printer is working or unplugged. They are re-read on
-    // every claim so a printer that dies mid-drain is reported while the
-    // drain is still running.
+    // Printer counts ride along on every claim/heartbeat rather than a second
+    // endpoint. The cloud refuses to claim when `online` is zero.
     const url = new URL("print/jobs", `${this.config.cloudEndpoint}/`);
-    const devices = await this.printerCounts();
-    if (devices) {
-      url.searchParams.set("printersTotal", String(devices.total));
-      url.searchParams.set("printersOnline", String(devices.online));
-    }
+    url.searchParams.set("printersTotal", String(devices.total));
+    url.searchParams.set("printersOnline", String(devices.online));
 
     const response = await fetch(url, {
       headers: { "X-Print-Agent-Key": cloudKey },
@@ -1082,8 +1084,9 @@ export class LocalPrintService {
   }
 
   /**
-   * 目前的印表機台數。健康檢查失敗時回 null —— 寧可讓雲端沿用上一筆讀數，
-   * 也不要把「我問不到」誤報成「零台在線」。
+   * Current printer count. A failed health probe returns null, which is a
+   * safety stop for claiming work: unknown hardware availability must not be
+   * treated as a working printer.
    */
   private async printerCounts(): Promise<{
     total: number;

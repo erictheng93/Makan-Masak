@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
     restaurantId: "restaurant-1",
   } as AuthUser,
   validateCouponWithBusinessRules: vi.fn(),
+  validateCoupons: vi.fn(),
   getAvailableCouponsForUser: vi.fn(),
   createCouponWithValidation: vi.fn(),
   getCouponsWithEnhancedFilters: vi.fn(),
@@ -32,11 +33,16 @@ const mocks = vi.hoisted(() => ({
   getCouponDistributions: vi.fn(),
   getCouponUsageTrends: vi.fn(),
   formatCouponMoneyFields: vi.fn((coupon: unknown) => coupon),
+  customer: null as { id: string } | null,
 }));
 
 vi.mock("../../../middleware/auth", () => ({
   authMiddleware: async (c: Context, next: Next) => {
     c.set("user", mocks.currentUser);
+    await next();
+  },
+  optionalCanonicalCustomerAuthMiddleware: async (c: Context, next: Next) => {
+    if (mocks.customer) c.set("customer", mocks.customer as never);
     await next();
   },
   requireRole: () => async (_c: Context, next: Next) => {
@@ -54,6 +60,7 @@ vi.mock("../services/CouponsService", () => ({
   CouponsService: vi.fn(function CouponsService() {
     return {
       validateCouponWithBusinessRules: mocks.validateCouponWithBusinessRules,
+      validateCoupons: mocks.validateCoupons,
       getAvailableCouponsForUser: mocks.getAvailableCouponsForUser,
       createCouponWithValidation: mocks.createCouponWithValidation,
       getCouponsWithEnhancedFilters: mocks.getCouponsWithEnhancedFilters,
@@ -152,6 +159,7 @@ beforeEach(() => {
   mocks.currentUser.id = "user-42";
   mocks.currentUser.role = 1;
   mocks.currentUser.restaurantId = "restaurant-1";
+  mocks.customer = null;
   mocks.formatCouponMoneyFields.mockImplementation((value) => value);
 });
 
@@ -308,6 +316,58 @@ describe("coupons routes", () => {
     expect(mocks.getCouponDistributions).toHaveBeenCalledWith(10);
   });
 
+  it("previews multiple coupons with an authoritative breakdown", async () => {
+    const appliedCoupons = [
+      { couponId: 10, code: "SAVE10", name: "Save ten", discountAmount: 10 },
+    ];
+    mocks.validateCoupons.mockResolvedValue({
+      valid: true,
+      appliedCoupons,
+      discountAmount: 10,
+      finalAmount: 90,
+    });
+    const response = await app.fetch(
+      jsonRequest("https://test/validate", "POST", {
+        codes: ["SAVE10", "SAVE20"],
+        restaurantId: "restaurant-1",
+        orderAmount: 100,
+        userId: "forged-user",
+      }),
+      createEnv() as never,
+    );
+    expect(response.status).toBe(200);
+    expect(mocks.validateCoupons).toHaveBeenCalledWith({
+      codes: ["SAVE10", "SAVE20"],
+      restaurantId: "restaurant-1",
+      orderAmount: 100,
+      menuItems: undefined,
+      guestIdentity: undefined,
+    });
+    await expect(response.json()).resolves.toMatchObject({
+      data: { appliedCoupons, discountAmount: 10, finalAmount: 90 },
+    });
+  });
+
+  it.each([
+    { code: "SAVE10", codes: ["SAVE20"] },
+    { codes: ["save10", " SAVE10 "] },
+    { codes: [] },
+  ])(
+    "rejects ambiguous or duplicate coupon selection %j",
+    async (selection) => {
+      const response = await createAppWithErrorEnvelope().fetch(
+        jsonRequest("https://test/validate", "POST", {
+          ...selection,
+          restaurantId: "restaurant-1",
+          orderAmount: 100,
+        }),
+        createEnv() as never,
+      );
+      expect(response.status).toBe(400);
+      expect(mocks.validateCoupons).not.toHaveBeenCalled();
+    },
+  );
+
   it("validates coupon codes and lists public available coupons", async () => {
     mocks.validateCouponWithBusinessRules.mockResolvedValue({
       valid: true,
@@ -335,7 +395,7 @@ describe("coupons routes", () => {
       "SAVE10",
       "restaurant-1",
       300,
-      "user-5",
+      undefined,
       [{ menuItemId: 1, quantity: 2 }],
       undefined,
     );
@@ -353,6 +413,34 @@ describe("coupons routes", () => {
     );
   });
 
+  it("uses the authenticated member identity and ignores body user ids", async () => {
+    mocks.customer = { id: "customer-42" };
+    mocks.validateCouponWithBusinessRules.mockResolvedValue({
+      valid: true,
+      discountAmount: 30,
+    });
+
+    const response = await app.fetch(
+      jsonRequest("https://test/validate", "POST", {
+        code: "SAVE10",
+        restaurantId: "restaurant-1",
+        orderAmount: 300,
+        userId: "somebody-else",
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.validateCouponWithBusinessRules).toHaveBeenCalledWith(
+      "SAVE10",
+      "restaurant-1",
+      300,
+      undefined,
+      undefined,
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+    );
+  });
+
   it("creates, lists, and summarizes owner-scoped coupons", async () => {
     mocks.createCouponWithValidation.mockResolvedValue(coupon());
     mocks.getCouponsWithEnhancedFilters.mockResolvedValue({
@@ -366,7 +454,11 @@ describe("coupons routes", () => {
     const env = createEnv();
 
     const createResponse = await app.fetch(
-      jsonRequest("https://test/", "POST", createCouponBody()),
+      jsonRequest(
+        "https://test/",
+        "POST",
+        createCouponBody({ incompatibleCouponIds: [20, 30] }),
+      ),
       env as never,
     );
     expect(createResponse.status).toBe(201);
@@ -374,6 +466,7 @@ describe("coupons routes", () => {
       expect.objectContaining({
         restaurantId: "restaurant-1",
         createdBy: "user-42",
+        incompatibleCouponIds: [20, 30],
       }),
     );
 

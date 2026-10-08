@@ -9,6 +9,9 @@ import {
   markets,
   restaurantMarketMemberships,
   restaurants,
+  businessTimezoneOffsetMinutes,
+  DEFAULT_MARKET_BUSINESS_DAY_CUTOFF_MINUTES,
+  isMarketVendorOpenToday,
 } from "@makanmasak/database";
 import type { Env } from "../../../types/env";
 import {
@@ -83,7 +86,6 @@ import { toCsv } from "../../../shared/utils/csv";
 import { createMarketCheckoutSchema } from "../schemas/validation";
 import { z } from "zod";
 import {
-  DEFAULT_CURRENCY,
   generateUUID,
   normalizeCurrencyCode,
   roundToCurrencyCents,
@@ -586,9 +588,33 @@ app.post("/", optionalCanonicalCustomerAuthMiddleware, async (c) => {
         );
       }
 
-      return { vendor, restaurant };
+      return { vendor, restaurant, membership };
     }),
   );
+
+  const now = new Date();
+  const cutoffMinutes =
+    market.businessDayCutoffMinutes ??
+    DEFAULT_MARKET_BUSINESS_DAY_CUTOFF_MINUTES;
+  const closedRestaurantIds = vendors
+    .filter(
+      ({ restaurant, membership }) =>
+        !isMarketVendorOpenToday(
+          membership.openedAt,
+          businessTimezoneOffsetMinutes(restaurant.timezone),
+          cutoffMinutes,
+          now,
+        ),
+    )
+    .map(({ restaurant }) => restaurant.id);
+  if (closedRestaurantIds.length > 0) {
+    throw new ApiError(
+      "VENDOR_NOT_OPEN_TODAY",
+      "Some vendors are not open today",
+      409,
+      { restaurantIds: closedRestaurantIds },
+    );
+  }
 
   // One checkout is charged as one sum, so every vendor must price in the
   // same currency. Checked before any child order exists, so a rejection

@@ -24,7 +24,12 @@ import onboardingRouter from "./routes/onboarding";
 import authRouter from "./routes/auth";
 import adminOnboardingRouter from "./routes/admin-onboarding";
 import { adminMarketsRouter, marketsRouter } from "./routes/markets";
+import adminPoliciesRouter from "./routes/policies";
 import internalRouter from "./routes/internal";
+import {
+  archiveOnboardingAudit,
+  redactExpiredRejectedApplications,
+} from "./services/onboardingAuditArchive";
 
 // Create main application
 const app = new Hono<{ Bindings: ManagementEnv }>();
@@ -228,6 +233,7 @@ protectedApi.route("/licenses", licensesRouter);
 protectedApi.route("/monitoring", monitoringRouter);
 protectedApi.route("/updates", updatesRouter);
 protectedApi.route("/admin/markets", adminMarketsRouter);
+protectedApi.route("/admin/policies", adminPoliciesRouter);
 protectedApi.route("/admin/onboarding", adminOnboardingRouter);
 
 // Mount API versions
@@ -239,4 +245,21 @@ app.route("/api/v1", protectedApi);
 // Export
 // ============================================================
 
-export default app;
+export default {
+  fetch: app.fetch,
+  // ponytail: one cron, one job; switch on controller.cron when a second
+  // schedule lands in wrangler.toml.
+  async scheduled(_controller, env) {
+    try {
+      const redacted = await redactExpiredRejectedApplications(env);
+      if (redacted > 0) {
+        console.log(`[AuditArchive] redacted ${redacted} expired applications`);
+      }
+      console.log(`[AuditArchive] wrote ${await archiveOnboardingAudit(env)}`);
+    } catch (error) {
+      console.error("[AuditArchive] onboarding audit snapshot failed:", error);
+      // Rethrow so the run shows as failed in Cron Events instead of passing.
+      throw error;
+    }
+  },
+} satisfies ExportedHandler<ManagementEnv>;

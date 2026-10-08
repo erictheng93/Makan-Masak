@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { z } from "zod";
 import { drizzle } from "drizzle-orm/d1";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { orders, paymentTransactions } from "@makanmasak/database";
 import type { Env } from "../../../types/env";
 import type { AuthUser } from "../../../middleware/auth";
@@ -20,6 +20,25 @@ import {
   type OrderIdentity,
 } from "../../../shared/services/order-identity";
 import { isCentAlignedAmount } from "../../../shared/utils/money";
+import { PosTenantAccessService } from "../../pos/services/PosTenantAccessService";
+
+const posLedgerFields = {
+  registerId: z.uuid().optional(),
+  shiftId: z.uuid().optional(),
+};
+
+function requireCompletePosLedgerBinding(
+  value: { registerId?: string; shiftId?: string },
+  ctx: z.RefinementCtx,
+) {
+  if (Boolean(value.registerId) !== Boolean(value.shiftId)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: value.registerId ? ["shiftId"] : ["registerId"],
+      message: "registerId and shiftId must be provided together",
+    });
+  }
+}
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -48,8 +67,10 @@ const createPaymentRequestSchema = z.lazy(() =>
       metadata: z.record(z.string(), z.unknown()).optional(),
       returnUrl: z.url().optional(),
       cancelUrl: z.url().optional(),
+      ...posLedgerFields,
     })
-    .loose(),
+    .loose()
+    .superRefine(requireCompletePosLedgerBinding),
 );
 
 const rootPaymentRequestSchema = z.lazy(() =>
@@ -88,6 +109,7 @@ const rootPaymentRequestSchema = z.lazy(() =>
         })
         .optional(),
       metadata: z.record(z.string(), z.unknown()).optional(),
+      ...posLedgerFields,
     })
     .loose()
     .superRefine((value, ctx) => {
@@ -106,6 +128,8 @@ const rootPaymentRequestSchema = z.lazy(() =>
           message: "amount is required for full payment mode",
         });
       }
+
+      requireCompletePosLedgerBinding(value, ctx);
     }),
 );
 
@@ -146,6 +170,8 @@ interface PaymentRouteInput {
   gateway?: string;
   customerInfo?: unknown;
   metadata?: unknown;
+  registerId?: string;
+  shiftId?: string;
 }
 
 type PaymentContext = Context<{
@@ -161,6 +187,22 @@ async function handlePayment(c: PaymentContext) {
   const user: AuthUser | undefined = c.get("user");
   if (!user) {
     throw new ApiError("UNAUTHORIZED", "Authentication required", 401);
+  }
+  const pos =
+    input.registerId && input.shiftId
+      ? {
+          registerId: input.registerId,
+          shiftId: input.shiftId,
+          operatorId: user.id,
+        }
+      : undefined;
+
+  if (pos) {
+    await new PosTenantAccessService(c.env.DB).requireActiveRegisterAndShift(
+      user,
+      pos.registerId,
+      pos.shiftId,
+    );
   }
   const result = await service.processPayment(
     {
@@ -180,6 +222,7 @@ async function handlePayment(c: PaymentContext) {
       idempotencyKey: c.req.header("Idempotency-Key") ?? undefined,
       customerInfo: input.customerInfo,
       metadata: input.metadata,
+      ...(pos ? { pos } : {}),
     },
   );
 
@@ -244,6 +287,22 @@ app.post(
 );
 
 app.get("/status/:transactionId", async (c) => {
+  const user = c.get("user") as AuthUser | undefined;
+  if (!user) {
+    throw new ApiError("UNAUTHORIZED", "Authentication required", 401);
+  }
+  const independent = c.env.DEPLOYMENT_MODE === "independent";
+  const restaurantId = independent ? c.env.TENANT_ID : user.restaurantId;
+  if ((independent || user.role !== 0) && !restaurantId) {
+    throw new ApiError("FORBIDDEN", "Restaurant scope required", 403);
+  }
+  if (user.role < 0 || user.role > 4) {
+    throw new ApiError("FORBIDDEN", "Staff access required", 403);
+  }
+  const tenantFilter =
+    independent || user.role !== 0
+      ? eq(orders.restaurantId, String(restaurantId))
+      : undefined;
   const transactionId = c.req.param("transactionId");
   const db = drizzle(c.env.DB);
   const [transaction] = await db
@@ -253,7 +312,10 @@ app.get("/status/:transactionId", async (c) => {
       status: paymentTransactions.status,
     })
     .from(paymentTransactions)
-    .where(eq(paymentTransactions.transactionId, transactionId))
+    .innerJoin(orders, eq(paymentTransactions.orderId, orders.id))
+    .where(
+      and(eq(paymentTransactions.transactionId, transactionId), tenantFilter),
+    )
     .limit(1);
 
   if (transaction) {
@@ -274,7 +336,7 @@ app.get("/status/:transactionId", async (c) => {
       paymentStatus: orders.paymentStatus,
     })
     .from(orders)
-    .where(eq(orders.paymentTransactionId, transactionId))
+    .where(and(eq(orders.paymentTransactionId, transactionId), tenantFilter))
     .limit(1);
 
   if (!row) {

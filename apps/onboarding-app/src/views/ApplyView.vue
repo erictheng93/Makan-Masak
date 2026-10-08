@@ -155,15 +155,37 @@ const parseCoordinate = (value: number | string | null): number | null => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+// Server error codes an applicant can act on. Anything else falls back to
+// the generic message: the server's own text is English.
+const submitErrorKeys: Record<string, string> = {
+  RATE_LIMITED: "apply.submitErrors.rateLimited",
+  VALIDATION_ERROR: "apply.submitErrors.validation",
+  CITY_NOT_IN_COUNTRY: "apply.submitErrors.cityNotInCountry",
+  MARKET_NOT_FOUND: "apply.submitErrors.marketNotInCity",
+  MARKET_NOT_IN_CITY: "apply.submitErrors.marketNotInCity",
+  TIMEOUT: "apply.submitErrors.network",
+  NETWORK_ERROR: "apply.submitErrors.network",
+};
+
+const submitErrorMessage = computed(() => {
+  const code = store.apiErrorCode;
+  if (!code) return "";
+  return t(submitErrorKeys[code] ?? "apply.toast.submitFailureFallback");
+});
+
 const validate = (): boolean => {
   errors.value = {};
 
   if (!form.value.businessName.trim()) {
     errors.value.businessName = t("apply.validation.businessNameRequired");
+  } else if (form.value.businessName.trim().length < 2) {
+    errors.value.businessName = t("apply.validation.tooShort");
   }
 
   if (!form.value.contactName.trim()) {
     errors.value.contactName = t("apply.validation.contactNameRequired");
+  } else if (form.value.contactName.trim().length < 2) {
+    errors.value.contactName = t("apply.validation.tooShort");
   }
 
   if (!form.value.contactEmail.trim()) {
@@ -172,8 +194,11 @@ const validate = (): boolean => {
     errors.value.contactEmail = t("apply.validation.emailInvalid");
   }
 
-  if (!form.value.contactPhone.trim()) {
+  const phone = form.value.contactPhone.trim();
+  if (!phone) {
     errors.value.contactPhone = t("apply.validation.phoneRequired");
+  } else if (phone.length < 8 || phone.length > 20) {
+    errors.value.contactPhone = t("apply.validation.phoneInvalid");
   }
 
   if (form.value.address.trim().length < 3) {
@@ -246,7 +271,7 @@ const handleSubmit = async () => {
       hash: `#${encodeURIComponent(store.applicationSecret!)}`,
     });
   } else {
-    toast.error(store.apiError || t("apply.toast.submitFailureFallback"));
+    toast.error(submitErrorMessage.value);
   }
 };
 
@@ -280,12 +305,12 @@ const useCurrentLocation = () => {
     <div class="flex items-center justify-center mb-8">
       <div class="flex items-center">
         <div
-          class="w-8 h-8 rounded-full bg-primary-600 text-white flex items-center justify-center font-medium"
+          class="w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center font-medium"
         >
           1
         </div>
         <div class="w-24 h-1 bg-gray-200">
-          <div class="w-0 h-full bg-primary-600" />
+          <div class="w-0 h-full bg-primary-500" />
         </div>
         <div
           class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-medium"
@@ -302,10 +327,10 @@ const useCurrentLocation = () => {
 
       <!-- API Error Alert -->
       <div
-        v-if="store.apiError"
+        v-if="submitErrorMessage"
         class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg"
       >
-        <p class="text-sm text-red-700">{{ store.apiError }}</p>
+        <p class="text-sm text-red-700">{{ submitErrorMessage }}</p>
       </div>
 
       <form @submit.prevent="handleSubmit" class="space-y-6">

@@ -11,6 +11,7 @@ const currentUser = vi.hoisted(() => ({
   } as AuthUser,
 }));
 const createReservation = vi.hoisted(() => vi.fn());
+const getPublicReservationRestaurant = vi.hoisted(() => vi.fn());
 const getReservationByCode = vi.hoisted(() => vi.fn());
 const getAvailableSlots = vi.hoisted(() => vi.fn());
 const getReservationById = vi.hoisted(() => vi.fn());
@@ -25,6 +26,16 @@ const markNoShow = vi.hoisted(() => vi.fn());
 const getReservationStats = vi.hoisted(() => vi.fn());
 const createSlot = vi.hoisted(() => vi.fn());
 const batchCreateSlots = vi.hoisted(() => vi.fn());
+const idempotencyMiddleware = vi.hoisted(() =>
+  vi.fn(() => async (_c: unknown, next: () => Promise<void>) => {
+    await next();
+  }),
+);
+const rateLimitMiddleware = vi.hoisted(() =>
+  vi.fn(() => async (_c: unknown, next: () => Promise<void>) => {
+    await next();
+  }),
+);
 
 vi.mock("../../../middleware/auth", () => ({
   authMiddleware: vi.fn(async (c, next) => {
@@ -42,9 +53,18 @@ vi.mock("../../../middleware/moduleGate", () => ({
   }),
 }));
 
+vi.mock("../../../middleware/idempotency", () => ({
+  idempotencyMiddleware,
+}));
+
+vi.mock("../../../middleware/rateLimiter", () => ({
+  rateLimitMiddleware,
+}));
+
 vi.mock("@makanmasak/database", () => ({
   ReservationService: class {
     createReservation = createReservation;
+    getPublicReservationRestaurant = getPublicReservationRestaurant;
     getReservationByCode = getReservationByCode;
     getAvailableSlots = getAvailableSlots;
     getReservationById = getReservationById;
@@ -106,6 +126,8 @@ describe("reservations routes", () => {
       restaurantId: "restaurant-1",
     };
     createReservation.mockReset();
+    getPublicReservationRestaurant.mockReset();
+    getPublicReservationRestaurant.mockResolvedValue({ id: "restaurant-1" });
     getReservationByCode.mockReset();
     getAvailableSlots.mockReset();
     getReservationById.mockReset();
@@ -150,6 +172,7 @@ describe("reservations routes", () => {
       expect.objectContaining({
         restaurantId: "restaurant-1",
         customerName: "Ada",
+        customerPhone: "+886912345678",
       }),
     );
 
@@ -168,10 +191,14 @@ describe("reservations routes", () => {
 
   it("verifies reservation codes and returns availability slots", async () => {
     getReservationByCode.mockResolvedValue(reservation());
-    getAvailableSlots.mockResolvedValue([
-      { time: "18:00", available: true },
-      { time: "18:30", available: false },
-    ]);
+    getAvailableSlots.mockResolvedValue({
+      date: "2026-06-08",
+      partySize: 4,
+      slots: [
+        { time: "18:00", available: true },
+        { time: "18:30", available: false },
+      ],
+    });
     const env = createEnv();
 
     const verifyResponse = await app.fetch(
@@ -191,10 +218,14 @@ describe("reservations routes", () => {
     );
     expect(availabilityResponse.status).toBe(200);
     await expect(availabilityResponse.json()).resolves.toMatchObject({
-      data: [
-        { time: "18:00", available: true },
-        { time: "18:30", available: false },
-      ],
+      data: {
+        date: "2026-06-08",
+        partySize: 4,
+        slots: [
+          { time: "18:00", available: true },
+          { time: "18:30", available: false },
+        ],
+      },
     });
     expect(getAvailableSlots).toHaveBeenCalledWith({
       restaurantId: "restaurant-1",
@@ -202,6 +233,199 @@ describe("reservations routes", () => {
       partySize: 4,
       duration: 120,
     });
+  });
+
+  it("hardens public mutations against replay and anonymous mass assignment", async () => {
+    const env = createEnv();
+    const rejected = await withSilencedRouteError(() =>
+      app.fetch(
+        new Request("https://test/", {
+          method: "POST",
+          headers: { "Idempotency-Key": "reservation-create-1" },
+          body: JSON.stringify({
+            restaurantId: "restaurant-1",
+            customerId: "another-customer",
+            customerName: "Ada",
+            customerPhone: "0912345678",
+            partySize: 4,
+            reservationDate: "2026-06-08",
+            reservationTime: "18:30",
+          }),
+        }),
+        env as never,
+      ),
+    );
+
+    expect(rejected.status).toBe(500);
+    expect(createReservation).not.toHaveBeenCalled();
+    expect(rateLimitMiddleware).toHaveBeenCalledWith(
+      expect.objectContaining({
+        keyPrefix: "public_reservation_create",
+        maxRequests: 5,
+        windowMs: 15 * 60 * 1000,
+      }),
+    );
+    expect(rateLimitMiddleware).toHaveBeenCalledWith(
+      expect.objectContaining({
+        keyPrefix: "public_reservation_lookup",
+        maxRequests: 20,
+        windowMs: 15 * 60 * 1000,
+      }),
+    );
+    expect(rateLimitMiddleware).toHaveBeenCalledWith(
+      expect.objectContaining({
+        keyPrefix: "public_reservation_availability",
+        maxRequests: 30,
+        windowMs: 60 * 1000,
+      }),
+    );
+    expect(rateLimitMiddleware).toHaveBeenCalledWith(
+      expect.objectContaining({
+        keyPrefix: "public_reservation_cancel",
+        maxRequests: 10,
+        windowMs: 15 * 60 * 1000,
+      }),
+    );
+    expect(idempotencyMiddleware).toHaveBeenCalledWith({
+      scope: "public-reservation-create",
+    });
+    expect(idempotencyMiddleware).toHaveBeenCalledWith({
+      scope: "public-reservation-cancel",
+    });
+    expect(idempotencyMiddleware).toHaveBeenCalledWith({
+      scope: "staff-reservation-create",
+    });
+  });
+
+  it("creates staff reservations only in the caller's restaurant", async () => {
+    createReservation.mockResolvedValue(reservation());
+    const input = {
+      restaurantId: "restaurant-1",
+      customerName: "Ada",
+      customerPhone: "0912345678",
+      partySize: 4,
+      reservationDate: "2026-06-08",
+      reservationTime: "18:30",
+    };
+
+    const response = await app.fetch(
+      new Request("https://test/staff", {
+        method: "POST",
+        headers: { "Idempotency-Key": "staff-create-1" },
+        body: JSON.stringify(input),
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(201);
+    expect(createReservation).toHaveBeenCalledWith({
+      ...input,
+      customerPhone: "+886912345678",
+    });
+
+    createReservation.mockClear();
+    const crossTenant = await withSilencedRouteError(() =>
+      app.fetch(
+        new Request("https://test/staff", {
+          method: "POST",
+          headers: { "Idempotency-Key": "staff-create-2" },
+          body: JSON.stringify({ ...input, restaurantId: "restaurant-2" }),
+        }),
+        createEnv() as never,
+      ),
+    );
+    expect(crossTenant.status).toBe(500);
+    expect(createReservation).not.toHaveBeenCalled();
+
+    currentUser.value = {
+      id: "admin-1",
+      username: "admin",
+      role: 0,
+      restaurantId: "restaurant-1",
+    };
+    createReservation.mockResolvedValueOnce(
+      reservation({ restaurantId: "restaurant-2" }),
+    );
+    const adminResponse = await app.fetch(
+      new Request("https://test/staff", {
+        method: "POST",
+        headers: { "Idempotency-Key": "staff-create-3" },
+        body: JSON.stringify({ ...input, restaurantId: "restaurant-2" }),
+      }),
+      createEnv() as never,
+    );
+    expect(adminResponse.status).toBe(201);
+    expect(createReservation).toHaveBeenCalledWith(
+      expect.objectContaining({ restaurantId: "restaurant-2" }),
+    );
+
+    createReservation.mockClear();
+    const invalid = await withSilencedRouteError(() =>
+      app.fetch(
+        new Request("https://test/staff", {
+          method: "POST",
+          headers: { "Idempotency-Key": "staff-create-4" },
+          body: JSON.stringify({ ...input, unexpected: true }),
+        }),
+        createEnv() as never,
+      ),
+    );
+    expect(invalid.status).toBe(500);
+    expect(createReservation).not.toHaveBeenCalled();
+  });
+
+  it("normalizes international phone numbers before public reservation creation", async () => {
+    createReservation.mockResolvedValue(reservation());
+
+    const response = await app.fetch(
+      new Request("https://test/", {
+        method: "POST",
+        body: JSON.stringify({
+          restaurantId: "restaurant-1",
+          customerName: "Mai",
+          customerPhone: "+60 12-345 6789",
+          partySize: 2,
+          reservationDate: "2026-06-08",
+          reservationTime: "18:30",
+        }),
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(201);
+    expect(createReservation).toHaveBeenCalledWith(
+      expect.objectContaining({ customerPhone: "+60123456789" }),
+    );
+  });
+
+  it("checks restaurant visibility before anonymous reservation creation", async () => {
+    getPublicReservationRestaurant.mockResolvedValue(null);
+
+    const response = await withSilencedRouteError(() =>
+      app.fetch(
+        new Request("https://test/", {
+          method: "POST",
+          body: JSON.stringify({
+            restaurantId: "missing-restaurant",
+            customerName: "Ada",
+            customerPhone: "0912345678",
+            partySize: 4,
+            reservationDate: "2026-06-08",
+            reservationTime: "18:30",
+          }),
+        }),
+        createEnv() as never,
+      ),
+    );
+
+    // This bare route test does not install app-factory's ApiError handler;
+    // the assertion below verifies that no write path is reached. The full API
+    // handler turns the thrown RESTAURANT_NOT_FOUND error into a 404 response.
+    expect(response.status).toBe(500);
+    expect(createReservation).not.toHaveBeenCalled();
+    expect(getPublicReservationRestaurant).toHaveBeenCalledWith(
+      "missing-restaurant",
+    );
   });
 
   it("cancels public reservations only with the matching confirmation code", async () => {
@@ -248,6 +472,49 @@ describe("reservations routes", () => {
     await expect(forbiddenResponse.text()).resolves.toBe(
       "Internal Server Error",
     );
+  });
+
+  it("cancels staff reservations through the authenticated tenant-scoped route", async () => {
+    getReservationById.mockResolvedValue(reservation());
+    cancelReservation.mockResolvedValue(reservation({ status: "cancelled" }));
+
+    const response = await app.fetch(
+      new Request("https://test/reservation-1/cancel", {
+        method: "POST",
+        body: JSON.stringify({ reason: "Changed plans" }),
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      data: { id: "reservation-1", status: "cancelled" },
+    });
+    expect(cancelReservation).toHaveBeenCalledWith(
+      "reservation-1",
+      "Changed plans",
+      "restaurant-1",
+    );
+
+    currentUser.value = {
+      id: "user-20",
+      username: "other-owner",
+      role: 1,
+      restaurantId: "restaurant-2",
+    };
+    cancelReservation.mockClear();
+    const denied = await withSilencedRouteError(() =>
+      app.fetch(
+        new Request("https://test/reservation-1/cancel", {
+          method: "POST",
+          body: JSON.stringify({}),
+        }),
+        createEnv() as never,
+      ),
+    );
+
+    expect(denied.status).toBe(500);
+    expect(cancelReservation).not.toHaveBeenCalled();
   });
 
   it("lists protected reservations with role-scoped filters", async () => {

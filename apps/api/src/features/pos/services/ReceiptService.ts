@@ -65,6 +65,7 @@ export class ReceiptService {
     data: PrintReceiptRequest,
     registerId: string,
     shiftId?: string,
+    cashier?: string,
   ): Promise<{ success: boolean; data?: Receipt; error?: string }> {
     try {
       const validatedData = printReceiptSchema.parse(data);
@@ -90,7 +91,9 @@ export class ReceiptService {
       const receiptContent = await this.generateReceiptContent(
         order,
         validatedData.templateName,
+        validatedData.receiptType === "kitchen",
       );
+      receiptContent.cashier = cashier;
 
       const now = new Date();
       await this.db.insert(receipts).values({
@@ -179,7 +182,7 @@ export class ReceiptService {
         receiptType: "kitchen",
         templateName: "kitchen",
         content: JSON.stringify(
-          await this.generateReceiptContent(order, "kitchen"),
+          await this.generateReceiptContent(order, "kitchen", true),
         ),
         printStatus: "pending",
         printAttempts: 0,
@@ -372,6 +375,7 @@ export class ReceiptService {
   private async generateReceiptContent(
     order: OrderRow,
     templateName: string,
+    kitchen = false,
   ): Promise<Record<string, unknown>> {
     // 獲取訂單項目
     const items = await this.db
@@ -431,22 +435,54 @@ export class ReceiptService {
       template: templateName,
       orderNumber: order.orderNumber,
       customerName: customerSnapshot?.name ?? null,
+      notes:
+        [order.notes, kitchen ? order.internalNotes : null]
+          .filter(Boolean)
+          .join("\n") || undefined,
       tableNumber,
       deliveryAddress: delivery?.address ?? null,
       deliveryPhone: delivery?.phone ?? null,
       // `delivery_info.deliveryFee` 自 #295 起是伺服器端寫入的權威金額，且已
       // 計入 totalAmount。收據要印得出來，總額才有交代（#348）。
       deliveryFee: delivery?.deliveryFee ?? 0,
-      items: items.map((item: OrderItemRow) => ({
-        name: item.itemSnapshot?.name ?? null,
-        quantity: item.quantity,
-        price: amountFromCents(item.unitPriceCents) ?? 0,
-        subtotal: amountFromCents(item.totalPriceCents) ?? 0,
-        customizations:
+      items: items.map((item: OrderItemRow) => {
+        const customizations:
+          | OrderItemRow["customizations"]
+          | { name?: string }[] =
           typeof item.customizations === "string"
             ? JSON.parse(item.customizations || "[]")
-            : (item.customizations ?? []),
-      })),
+            : item.customizations;
+        const preparation = Array.isArray(customizations)
+          ? customizations.map((choice) => choice.name)
+          : [
+              customizations?.size?.name,
+              ...(customizations?.options?.map(
+                (choice) => `${choice.optionName}: ${choice.choiceName}`,
+              ) ?? []),
+              ...(customizations?.addOns?.map(
+                (addOn) => `${addOn.name} x${addOn.quantity}`,
+              ) ?? []),
+            ];
+        return {
+          name: item.itemSnapshot?.name ?? null,
+          quantity: item.quantity,
+          price: amountFromCents(item.unitPriceCents) ?? 0,
+          subtotal: amountFromCents(item.totalPriceCents) ?? 0,
+          customizations: customizations ?? [],
+          modifiers: kitchen
+            ? preparation
+                .filter(
+                  (name): name is string =>
+                    typeof name === "string" && name.length > 0,
+                )
+                .map((name) => ({ name, price: 0 }))
+            : undefined,
+          notes:
+            [item.notes, kitchen ? item.kitchenNotes : null]
+              .filter(Boolean)
+              .join("\n") || undefined,
+        };
+      }),
       subtotal: amountFromCents(order.subtotalCents) ?? 0,
       taxAmount: amountFromCents(order.taxAmountCents) ?? 0,
       discountAmount: amountFromCents(order.discountAmountCents) ?? 0,

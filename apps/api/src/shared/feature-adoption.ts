@@ -41,7 +41,7 @@ export const UNLAUNCHED_FEATURES = {
     flag: "TENANT_BACKUPS_ENABLED",
     prefix: "/backup",
     adoption:
-      "0 backup_configurations and an empty makanmasak-backups-prod bucket as of 2026-07-30, and the scheduler's cron triggers are stopped, so a tenant configuring a schedule here would get a silent no-op. Its admin UI is unreachable: views/backup/BackupDashboard.vue has no router entry and no referrer, and the backup modals are only opened from it. Nothing a user can reach calls this.",
+      "0 backup_configurations and an empty makanmasak-backups-prod bucket as of 2026-07-30, and the scheduler's cron triggers are stopped, so a tenant configuring a schedule here would get a silent no-op. It has no admin UI: the backup views were never routed and were deleted on 2026-09-25. Nothing a user can reach calls this.",
     enabledByDefault: false,
   },
   marketCheckouts: {
@@ -55,8 +55,15 @@ export const UNLAUNCHED_FEATURES = {
     flag: "WEB_PUSH_ENABLED",
     prefix: "/push",
     adoption:
-      "0 customer_push_subscriptions as of 2026-07-30. admin-dashboard/src/utils/push-notifications.ts posts to /push/subscribe, so the default stays on.",
+      "0 customer_push_subscriptions as of 2026-07-30. As of 2026-09-26 no UI calls /push: the admin-dashboard push util was deleted as unreferenced, and the kitchen-display opt-in was removed because its VAPID key was 66 bytes (every subscribe threw) and WEB_PUSH_DELIVERER is never bound, so nothing is delivered. The default is still on only because isWebPushEnabled in packages/database reads the same flag with a default-on meaning; turning it off is a separate change.",
     enabledByDefault: true,
+  },
+  customerWebPush: {
+    flag: "CUSTOMER_WEB_PUSH_ENABLED",
+    prefix: "/customer/push-subscriptions",
+    adoption:
+      "0 customer_push_subscriptions as of 2026-07-30, no production VAPID keys, and customer-app has no production VITE_VAPID_PUBLIC_KEY. Customer subscriptions cannot be delivered, so the customer opt-in stays off until delivery is configured.",
+    enabledByDefault: false,
   },
 } as const satisfies Record<string, UnlaunchedFeature>;
 

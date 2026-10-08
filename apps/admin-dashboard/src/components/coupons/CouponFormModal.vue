@@ -218,6 +218,73 @@
                 />
               </div>
 
+              <fieldset class="md:col-span-2">
+                <legend class="text-sm font-medium text-gray-900 mb-2">
+                  {{ t("couponForm.incompatibleCoupons") }}
+                </legend>
+                <p class="text-xs text-gray-500 mb-2">
+                  {{ t("couponForm.incompatibleHint") }}
+                </p>
+                <button
+                  v-if="form.incompatibleCouponIds.length"
+                  type="button"
+                  class="text-sm text-teal-700 underline mb-2"
+                  data-testid="clear-incompatible-coupons"
+                  @click="form.incompatibleCouponIds = []"
+                >
+                  {{ t("couponForm.clearIncompatible") }}
+                </button>
+                <p
+                  v-if="optionsError"
+                  role="alert"
+                  class="text-sm text-red-600"
+                >
+                  {{ t("coupons.messages.fetchFailed") }}
+                  <button
+                    type="button"
+                    class="underline"
+                    @click="loadCouponOptions(optionsPage)"
+                  >
+                    {{ t("common.retry") }}
+                  </button>
+                </p>
+                <label
+                  v-for="option in couponOptions"
+                  :key="option.id"
+                  class="flex items-center gap-2 py-1 text-sm text-gray-700"
+                >
+                  <input
+                    v-model="form.incompatibleCouponIds"
+                    type="checkbox"
+                    :value="option.id"
+                    :data-testid="`incompatible-${option.id}`"
+                  />
+                  {{ option.name }} ({{ option.code }})
+                </label>
+                <div v-if="optionsTotal > 20" class="flex justify-between mt-2">
+                  <button
+                    type="button"
+                    :disabled="optionsLoading || optionsPage <= 1"
+                    @click="loadCouponOptions(optionsPage - 1)"
+                  >
+                    {{ t("common.previous") }}
+                  </button>
+                  <span
+                    >{{ optionsPage }} /
+                    {{ Math.ceil(optionsTotal / 20) }}</span
+                  >
+                  <button
+                    type="button"
+                    :disabled="
+                      optionsLoading || optionsPage * 20 >= optionsTotal
+                    "
+                    @click="loadCouponOptions(optionsPage + 1)"
+                  >
+                    {{ t("common.next") }}
+                  </button>
+                </div>
+              </fieldset>
+
               <!-- 有效期設定 -->
               <div class="md:col-span-2">
                 <h4 class="text-sm font-medium text-gray-900 mb-4 mt-6">
@@ -414,6 +481,7 @@ import { useI18n } from "@/i18n";
 import { useCurrency } from "@/composables/useCurrency";
 import { useDateFormatter } from "@/composables/useDateFormatter";
 import { XMarkIcon } from "@heroicons/vue/24/outline";
+import { api } from "@/services/api";
 import type { Coupon } from "@makanmasak/shared-types";
 
 const { t } = useI18n();
@@ -428,6 +496,7 @@ const { formatDate } = useDateFormatter();
 
 // Props
 interface Props {
+  restaurantId?: string;
   coupon?: Pick<
     Coupon,
     | "id"
@@ -440,6 +509,7 @@ interface Props {
     | "minOrderAmount"
     | "usageLimit"
     | "usageLimitPerUser"
+    | "incompatibleCouponIds"
     | "validFrom"
     | "validTo"
     | "isActive"
@@ -461,6 +531,7 @@ interface CouponSavePayload {
   minOrderAmount: number;
   usageLimit?: number | null;
   usageLimitPerUser?: number | null;
+  incompatibleCouponIds: number[];
   validFrom: string;
   validTo: string;
   isActive: boolean;
@@ -485,11 +556,41 @@ const form = ref({
   minOrderAmount: 0,
   usageLimit: null as number | null,
   usageLimitPerUser: null as number | null,
+  incompatibleCouponIds: [] as number[],
   validFrom: "",
   validTo: "",
   isActive: true,
   isVisible: true,
 });
+
+const couponOptions = ref<Coupon[]>([]);
+const optionsPage = ref(1);
+const optionsTotal = ref(0);
+const optionsLoading = ref(false);
+const optionsError = ref(false);
+const loadCouponOptions = async (page = 1) => {
+  optionsLoading.value = true;
+  optionsError.value = false;
+  try {
+    const response = await api.get<Coupon[]>("/coupons", {
+      page: String(page),
+      limit: "20",
+      ...(props.restaurantId ? { restaurantId: props.restaurantId } : {}),
+    });
+    if (!Array.isArray(response.data.data) || !response.data.pagination) {
+      throw new Error("Invalid coupon list response");
+    }
+    couponOptions.value = response.data.data.filter(
+      (coupon) => coupon.id !== props.coupon?.id,
+    );
+    optionsTotal.value = response.data.pagination.total;
+    optionsPage.value = page;
+  } catch {
+    optionsError.value = true;
+  } finally {
+    optionsLoading.value = false;
+  }
+};
 
 // Computed
 const isEditing = computed(() => !!props.coupon);
@@ -531,6 +632,7 @@ const resetForm = () => {
       minOrderAmount: props.coupon.minOrderAmount || 0,
       usageLimit: props.coupon.usageLimit ?? null,
       usageLimitPerUser: props.coupon.usageLimitPerUser ?? null,
+      incompatibleCouponIds: [...(props.coupon.incompatibleCouponIds ?? [])],
       validFrom: toLocalDatetimeString(new Date(props.coupon.validFrom)),
       validTo: toLocalDatetimeString(new Date(props.coupon.validTo)),
       isActive: props.coupon.isActive,
@@ -551,6 +653,7 @@ const resetForm = () => {
       minOrderAmount: 0,
       usageLimit: null,
       usageLimitPerUser: null,
+      incompatibleCouponIds: [],
       validFrom: toLocalDatetimeString(now),
       validTo: toLocalDatetimeString(nextMonth),
       isActive: true,
@@ -605,6 +708,7 @@ watch(
 // Initialize
 onMounted(() => {
   resetForm();
+  void loadCouponOptions();
 });
 </script>
 

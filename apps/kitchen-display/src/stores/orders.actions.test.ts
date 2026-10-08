@@ -104,10 +104,24 @@ describe("orders store actions", () => {
     store.orders = [order("pending")];
     vi.mocked(kitchenApi.startCooking).mockResolvedValue({
       success: true,
+      data: {
+        orderId: 1001,
+        itemId: 501,
+        status: "preparing",
+        orderStatus: "preparing",
+        updatedAt: "2026-06-08T01:00:00.000Z",
+      },
       timestamp: "2026-06-08T01:00:00.000Z",
     });
     vi.mocked(kitchenApi.markItemReady).mockResolvedValue({
       success: true,
+      data: {
+        orderId: 1001,
+        itemId: 501,
+        status: "ready",
+        orderStatus: "ready",
+        updatedAt: "2026-06-08T01:00:00.000Z",
+      },
       timestamp: "2026-06-08T01:00:00.000Z",
     });
 
@@ -161,15 +175,15 @@ describe("orders store actions", () => {
     expect(kitchenApi.markAllItemsReady).not.toHaveBeenCalled();
   });
 
-  it("updates direct order state helpers and reset state", () => {
+  it("keeps direct item helpers from inferring a parent order status", () => {
     const store = useOrdersStore();
     store.orders = [order("pending")];
     store.error = "old error";
 
     expect(store.getOrderById(1001)?.orderNumber).toBe("A001");
     store.updateItemStatus(1001, 501, "preparing");
-    expect(store.orders[0].status).toBe("preparing");
-    expect(store.stats.preparingCount).toBe(1);
+    expect(store.orders[0].status).toBe("confirmed");
+    expect(store.stats.pendingCount).toBe(1);
 
     store.updateOrderStatus("1001", "ready");
     expect(store.orders[0].status).toBe("ready");
@@ -187,7 +201,7 @@ describe("orders store actions", () => {
     expect(store.lastUpdated).toBeNull();
   });
 
-  it("applies realtime order item status updates", () => {
+  it("waits for the realtime parent event instead of deriving it from an item", () => {
     const store = useOrdersStore();
     store.orders = [order("pending")];
 
@@ -207,11 +221,24 @@ describe("orders store actions", () => {
       },
     });
 
-    expect(store.orders[0].status).toBe("preparing");
+    expect(store.orders[0].status).toBe("confirmed");
     expect(store.orders[0].items[0]).toMatchObject({
       id: 501,
       status: "preparing",
       startedAt: "2026-06-08T01:02:00.000Z",
     });
+
+    store.handleSSEEvent({
+      type: "order_status_update",
+      eventId: "evt-order-status",
+      timestamp: "2026-06-08T01:02:01.000Z",
+      restaurantId: "restaurant-1",
+      data: {
+        orderId: 1001,
+        status: "preparing",
+      },
+    });
+
+    expect(store.orders[0].status).toBe("preparing");
   });
 });

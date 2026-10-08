@@ -5,6 +5,7 @@
  * order with its customer without changing anonymous ordering.
  */
 
+import { requireWaitingPreorderAccess } from "../../../shared/services/waiting-ticket-access";
 import { Hono } from "hono";
 import { and, eq } from "drizzle-orm";
 import {
@@ -32,7 +33,10 @@ import {
   assertShopModeEnabled,
   assertShopQrCurrent,
 } from "../../orders/services/shop-mode-gate";
-import { resolveGuestCouponIdentity } from "../services/guest-coupon-identity";
+import {
+  resolveCouponCustomerIdentity,
+  resolveGuestCouponIdentity,
+} from "../services/guest-coupon-identity";
 import { enforceGuestOrderThrottle } from "../services/guest-order-throttle";
 import {
   ApiError,
@@ -157,6 +161,14 @@ app.post(
       }
     }
 
+    if (data.waitingListId) {
+      await requireWaitingPreorderAccess(
+        c,
+        data.waitingListId,
+        data.restaurantId,
+      );
+    }
+
     // 4. Create order via OrdersService
     const fulfillmentType =
       data.deliveryInfo?.type ??
@@ -188,9 +200,13 @@ app.post(
         })),
         notes: data.notes,
         couponCode: data.couponCode,
-        couponGuestIdentity: data.couponCode
-          ? await resolveGuestCouponIdentity(c.req)
-          : undefined,
+        couponCodes: data.couponCodes,
+        couponGuestIdentity:
+          data.couponCode || data.couponCodes?.length
+            ? customer?.id
+              ? await resolveCouponCustomerIdentity(customer.id)
+              : await resolveGuestCouponIdentity(c.req)
+            : undefined,
         clientMutationId: data.clientMutationId,
         orderType: data.orderType,
         deliveryInfo: {

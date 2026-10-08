@@ -8,6 +8,7 @@ import {
   ORDER_STATUSES,
 } from "@makanmasak/shared-types";
 import { z } from "zod";
+import { couponCodesSchema } from "../../coupons/schemas/validation";
 import {
   boundedLimitQuery,
   boundedPageQuery,
@@ -167,6 +168,7 @@ export const createOrderSchema = z
     deliveryInfo: deliveryInfoSchema.optional(),
     scheduledTime: dateStringSchema,
     couponCode: z.string().max(50).optional(),
+    couponCodes: couponCodesSchema.optional(),
     // Idempotency key for this submission. `orders` carries a unique index on
     // (restaurant_id, client_mutation_id), and the database service maps the
     // violation to CLIENT_MUTATION_DUPLICATE — but zod strips whatever it does
@@ -176,6 +178,13 @@ export const createOrderSchema = z
     // retry after a dropped connection creating a second order.
     clientMutationId: z.string().max(100).optional(),
   })
+  .refine(
+    (data) => data.couponCode === undefined || data.couponCodes === undefined,
+    {
+      message: "Provide either couponCode or couponCodes",
+      path: ["couponCodes"],
+    },
+  )
   .refine((data) => !data.waitingListId || !!data.customerPhone, {
     message: "customerPhone is required for waiting-list pre-orders",
     path: ["customerPhone"],

@@ -373,7 +373,7 @@ Owns `tenants` CRUD plus platform-restaurant provisioning glue.
   `shop_subscriptions` row in a single `MANAGEMENT_DB.batch([...])` (atomic
   multi-statement D1 batch). Computes plan tier via `planIdToTier()` from
   `@makanmasak/database`; if the resulting tier is `"trial"`,
-  `trial_ends_at_ms = now + TRIAL_DURATION_MS` (14 days) and billing-cycle
+  `trial_ends_at_ms = now + TRIAL_DURATION_MS` (180 days) and billing-cycle
   columns are left `null`; otherwise `billing_cycle_start_at_ms = now`,
   `billing_cycle_end_at_ms = now + DEFAULT_BILLING_CYCLE_MS` (30 days).
 - `linkPlatformRestaurantOwner(data)` — throws a plain `Error` (message

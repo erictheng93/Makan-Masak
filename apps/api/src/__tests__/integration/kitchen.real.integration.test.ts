@@ -36,7 +36,7 @@ function buildEnv(): Env {
 }
 
 describe("KitchenService real D1 integration", () => {
-  it("updates an in-scope order item using the migrated orders schema", async () => {
+  it("links kitchen item progress to canonical order timestamps", async () => {
     const now = new Date("2026-06-07T12:00:00.000Z");
     const restaurantId = "kitchen-real-restaurant";
 
@@ -126,8 +126,38 @@ describe("KitchenService real D1 integration", () => {
       } as never)
       .returning();
 
+    const kitchenService = new KitchenService(buildEnv());
+
     await expect(
-      new KitchenService(buildEnv()).updateOrderItemStatus(
+      kitchenService.updateOrderItemStatus(
+        restaurantId,
+        order.id,
+        orderItem.id,
+        { status: "preparing", notes: "fire" },
+        "kitchen-real-chef",
+      ),
+    ).resolves.toMatchObject({
+      orderId: order.id,
+      itemId: orderItem.id,
+      status: "preparing",
+      orderStatus: "preparing",
+    });
+
+    const [preparingItem] = await testDb.drizzle
+      .select()
+      .from(orderItems)
+      .where(eq(orderItems.id, orderItem.id));
+    const [preparingOrder] = await testDb.drizzle
+      .select()
+      .from(orders)
+      .where(eq(orders.id, order.id));
+    expect(preparingItem.status).toBe("preparing");
+    expect(preparingOrder.status).toBe("preparing");
+    expect(preparingOrder.preparingAt).toBeInstanceOf(Date);
+    expect(preparingOrder.readyAt).toBeNull();
+
+    await expect(
+      kitchenService.updateOrderItemStatus(
         restaurantId,
         order.id,
         orderItem.id,
@@ -138,12 +168,20 @@ describe("KitchenService real D1 integration", () => {
       orderId: order.id,
       itemId: orderItem.id,
       status: "ready",
+      orderStatus: "ready",
     });
 
-    const [updatedItem] = await testDb.drizzle
+    const [readyItem] = await testDb.drizzle
       .select()
       .from(orderItems)
       .where(eq(orderItems.id, orderItem.id));
-    expect(updatedItem.status).toBe("ready");
+    const [readyOrder] = await testDb.drizzle
+      .select()
+      .from(orders)
+      .where(eq(orders.id, order.id));
+    expect(readyItem.status).toBe("ready");
+    expect(readyOrder.status).toBe("ready");
+    expect(readyOrder.preparingAt).toBeInstanceOf(Date);
+    expect(readyOrder.readyAt).toBeInstanceOf(Date);
   });
 });

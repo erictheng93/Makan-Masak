@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { SendEmail } from "@cloudflare/workers-types";
 import type { Env } from "../../../types/env";
 import {
   BILLING_NOTIFICATION_KINDS,
@@ -110,73 +111,85 @@ describe("BillingNotificationService", () => {
     ]);
   });
 
-  it("sends email notifications and records provider message ids", async () => {
+  it("sends escaped billing email through Cloudflare and records its message id", async () => {
     const { db, statements } = createDb();
+    const send = vi.fn().mockResolvedValue({ messageId: "cf-billing-1" });
 
     await expect(
       new BillingNotificationService(
         env({
           DB: db as never,
-          RESEND_API_KEY: "resend-key",
-          BILLING_EMAIL_FROM: "billing@example.test",
+          NOTIFICATION_EMAIL: { send } as unknown as SendEmail,
+          BILLING_EMAIL_FROM: "billing@makanmasak.com",
         }),
-      ).send(input()),
+      ).send(input({ text: "Trial <ends> & renews" })),
     ).resolves.toEqual({
       status: NOTIFICATION_DISPATCH_STATUSES.SENT,
       duplicate: false,
     });
 
-    expect(fetch).toHaveBeenCalledWith(
-      "https://api.resend.com/emails",
+    expect(send).toHaveBeenCalledOnce();
+    expect(send).toHaveBeenCalledWith(
       expect.objectContaining({
-        method: "POST",
-        headers: {
-          Authorization: "Bearer resend-key",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: "billing@example.test",
-          to: ["owner@example.test"],
-          subject: "Trial ending",
-          text: "Your trial ends soon.",
-        }),
+        to: "owner@example.test",
+        from: "billing@makanmasak.com",
+        subject: "Trial ending",
+        text: "Trial <ends> & renews",
+        html: "<pre>Trial &lt;ends&gt; &amp; renews</pre>",
       }),
     );
-    expect(insertValues(statements)).toEqual([
-      "notification-id",
-      "restaurant-1",
-      "trial_1d",
-      "trial_1d:restaurant-1:1780848000000",
-      "email",
-      "sent",
-      "owner@example.test",
-      "provider-1",
-      null,
-      JSON.stringify({ trialEndsAt: 1780848000000 }),
-      Date.parse("2026-06-07T12:00:00.000Z"),
-    ]);
+    expect(insertValues(statements)?.[5]).toBe("sent");
+    expect(insertValues(statements)?.[7]).toBe("cf-billing-1");
+  });
+
+  it("records Cloudflare send errors as failed", async () => {
+    const { db, statements } = createDb();
+    const send = vi.fn().mockRejectedValue(new Error("binding unavailable"));
+
+    await expect(
+      new BillingNotificationService(
+        env({
+          DB: db as never,
+          NOTIFICATION_EMAIL: { send } as unknown as SendEmail,
+          BILLING_EMAIL_FROM: "billing@makanmasak.com",
+        }),
+      ).send(input()),
+    ).resolves.toEqual({
+      status: NOTIFICATION_DISPATCH_STATUSES.FAILED,
+      duplicate: false,
+    });
+
+    expect(send).toHaveBeenCalledOnce();
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "owner@example.test",
+        from: "billing@makanmasak.com",
+        subject: "Trial ending",
+      }),
+    );
+    expect(insertValues(statements)?.[5]).toBe("failed");
+    expect(insertValues(statements)?.[8]).toBe("binding unavailable");
   });
 
   it("falls back to NOTIFICATION_FROM_EMAIL and default email subject", async () => {
     const { db, statements } = createDb();
+    const send = vi.fn().mockResolvedValue({ messageId: "cf-billing-2" });
 
     await new BillingNotificationService(
       env({
         DB: db as never,
-        RESEND_API_KEY: "resend-key",
+        NOTIFICATION_EMAIL: { send } as unknown as SendEmail,
         NOTIFICATION_FROM_EMAIL: "notify@example.test",
       }),
     ).send(input({ subject: undefined }));
 
-    expect(fetch).toHaveBeenCalledWith(
-      "https://api.resend.com/emails",
+    expect(send).toHaveBeenCalledOnce();
+    expect(send).toHaveBeenCalledWith(
       expect.objectContaining({
-        body: JSON.stringify({
-          from: "notify@example.test",
-          to: ["owner@example.test"],
-          subject: "MakanMasak billing notification",
-          text: "Your trial ends soon.",
-        }),
+        from: "notify@example.test",
+        to: "owner@example.test",
+        subject: "MakanMasak billing notification",
+        text: "Your trial ends soon.",
       }),
     );
     expect(insertValues(statements)?.[5]).toBe("sent");
@@ -201,40 +214,6 @@ describe("BillingNotificationService", () => {
       "trial_1d:restaurant-1:1780848000000",
       "email",
       "skipped_provider_unconfigured",
-    ]);
-    expect(values?.[9]).toBe(JSON.stringify({ trialEndsAt: 1780848000000 }));
-  });
-
-  it("records failed email sends with provider errors", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify({ message: "no" }), { status: 503 }),
-    );
-    const { db, statements } = createDb();
-
-    await expect(
-      new BillingNotificationService(
-        env({
-          DB: db as never,
-          RESEND_API_KEY: "resend-key",
-          BILLING_EMAIL_FROM: "billing@example.test",
-        }),
-      ).send(input()),
-    ).resolves.toEqual({
-      status: NOTIFICATION_DISPATCH_STATUSES.FAILED,
-      duplicate: false,
-    });
-
-    const values = insertValues(statements);
-    expect(values?.slice(0, 9)).toEqual([
-      "notification-id",
-      "restaurant-1",
-      "trial_1d",
-      "trial_1d:restaurant-1:1780848000000",
-      "email",
-      "failed",
-      "owner@example.test",
-      null,
-      "Resend email failed: 503",
     ]);
     expect(values?.[9]).toBe(JSON.stringify({ trialEndsAt: 1780848000000 }));
   });

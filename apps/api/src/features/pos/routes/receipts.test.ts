@@ -150,6 +150,7 @@ describe("POS receipt routes", () => {
     mocks.user = {
       id: "user-10",
       username: "cashier",
+      fullName: "林收銀",
       role: 4,
       restaurantId: "restaurant-1",
     };
@@ -218,6 +219,7 @@ describe("POS receipt routes", () => {
       payload,
       registerId,
       shiftId,
+      "林收銀",
     );
     expect(mocks.resolveOrderIdentity).toHaveBeenCalledWith(
       { binding: "db" },
@@ -251,7 +253,8 @@ describe("POS receipt routes", () => {
     expect(quotaGateRegistrationKeys).toContain("print.jobs");
   });
 
-  it("prints receipts for public order ids after route-level resolution", async () => {
+  it("prints public order ids with the authenticated username when no full name is available", async () => {
+    mocks.user.fullName = undefined;
     const response = await request("/print", {
       method: "POST",
       body: JSON.stringify({
@@ -274,6 +277,7 @@ describe("POS receipt routes", () => {
       expect.objectContaining({ orderId: 101 }),
       registerId,
       undefined,
+      "cashier",
     );
   });
 

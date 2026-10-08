@@ -67,8 +67,11 @@ describe("kitchen API service", () => {
 
   it("updates one kitchen item with the restaurant, order, and item scope", async () => {
     const updateData = {
+      orderId: 101,
       itemId: 44,
       status: "preparing",
+      orderStatus: "preparing",
+      updatedAt: "2026-06-08T10:01:00.000Z",
     };
     mockApi.put.mockResolvedValueOnce({
       data: {

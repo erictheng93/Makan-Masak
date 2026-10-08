@@ -3,10 +3,12 @@
  * HTTP routes for order management matching existing orders.ts functionality
  */
 
+import { requireWaitingPreorderAccess } from "../../../shared/services/waiting-ticket-access";
 import { Hono } from "hono";
 import { z } from "zod";
 import {
   customerAuthMiddleware,
+  customerOrderAuthMiddleware,
   requireRole,
 } from "../../../shared/middleware";
 import {
@@ -15,7 +17,9 @@ import {
   validateParams,
 } from "../../../shared/middleware";
 import { OrdersService } from "../services/OrdersService";
+import { resolveCouponCustomerIdentity } from "../../guest-orders/services/guest-coupon-identity";
 import { assertShopOrderingEnabled } from "../services/shop-mode-gate";
+import { resolveRestaurantIdFromJsonBody } from "../../../shared/utils/request-restaurant";
 import { ConsoleLogger } from "../../../core/monitoring";
 import type { Env } from "../../../shared/types";
 import type { AuthUser } from "../../../middleware/auth";
@@ -326,9 +330,11 @@ app.post(
  */
 app.post(
   "/",
-  customerAuthMiddleware,
-  moduleGate("online_ordering"),
-  quotaGate("orders.created"),
+  customerOrderAuthMiddleware,
+  // A canonical customer's user has no restaurantId; gate on the restaurant
+  // being ordered from, or every member order is refused with NO_RESTAURANT.
+  moduleGate("online_ordering", resolveRestaurantIdFromJsonBody),
+  quotaGate("orders.created", resolveRestaurantIdFromJsonBody),
   validateBody(orderSchemas.createOrder),
   async (c) => {
     const data: CreateOrderInput = c.get("validatedBody");
@@ -361,6 +367,14 @@ app.post(
       );
     }
 
+    if (data.waitingListId && user.role === 5) {
+      await requireWaitingPreorderAccess(
+        c,
+        data.waitingListId,
+        data.restaurantId,
+      );
+    }
+
     // Transform data for service
     const createOrderData = {
       restaurantId: data.restaurantId,
@@ -388,6 +402,11 @@ app.post(
         ? new Date(data.scheduledTime)
         : undefined,
       couponCode: data.couponCode,
+      couponCodes: data.couponCodes,
+      couponGuestIdentity:
+        (data.couponCode || data.couponCodes?.length) && customer?.id
+          ? await resolveCouponCustomerIdentity(customer.id)
+          : undefined,
       clientMutationId: data.clientMutationId,
     };
 

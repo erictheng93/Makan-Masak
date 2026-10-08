@@ -1,10 +1,24 @@
 import api from "./authApi";
-import type { ApiResponse, KitchenOrdersResponse, ItemStatus } from "@/types";
+import type {
+  ApiResponse,
+  KitchenOrdersResponse,
+  ItemStatus,
+  OrderStatus,
+} from "@/types";
 import { describeErrorForLog } from "@/utils/unknown";
 
 export interface UpdateItemStatusRequest {
   status: ItemStatus;
   notes?: string;
+}
+
+/** The canonical state returned by the kitchen item-status endpoint. */
+export interface UpdateItemStatusResponse {
+  orderId: string | number;
+  itemId: number;
+  status: ItemStatus;
+  orderStatus: OrderStatus;
+  updatedAt: string;
 }
 
 export const kitchenApi = {
@@ -42,7 +56,7 @@ export const kitchenApi = {
     orderId: number,
     itemId: number,
     request: UpdateItemStatusRequest,
-  ): Promise<ApiResponse> {
+  ): Promise<ApiResponse<UpdateItemStatusResponse>> {
     try {
       const response = await api.put(
         `/kitchen/${restaurantId}/orders/${orderId}/items/${itemId}`,
@@ -77,7 +91,7 @@ export const kitchenApi = {
       status: ItemStatus;
       notes?: string;
     }>,
-  ): Promise<ApiResponse> {
+  ): Promise<ApiResponse<{ updatedCount: number }>> {
     try {
       const promises = updates.map((update) =>
         this.updateItemStatus(restaurantId, update.orderId, update.itemId, {
@@ -120,7 +134,7 @@ export const kitchenApi = {
     restaurantId: number | string,
     orderId: number,
     itemId: number,
-  ): Promise<ApiResponse> {
+  ): Promise<ApiResponse<UpdateItemStatusResponse>> {
     return this.updateItemStatus(restaurantId, orderId, itemId, {
       status: "preparing",
     });
@@ -133,7 +147,7 @@ export const kitchenApi = {
     restaurantId: number | string,
     orderId: number,
     itemId: number,
-  ): Promise<ApiResponse> {
+  ): Promise<ApiResponse<UpdateItemStatusResponse>> {
     return this.updateItemStatus(restaurantId, orderId, itemId, {
       status: "ready",
     });
@@ -146,7 +160,7 @@ export const kitchenApi = {
     restaurantId: number | string,
     orderId: number,
     itemIds: number[],
-  ): Promise<ApiResponse> {
+  ): Promise<ApiResponse<{ updatedCount: number }>> {
     const updates = itemIds.map((itemId) => ({
       orderId,
       itemId,
@@ -163,7 +177,7 @@ export const kitchenApi = {
     restaurantId: number | string,
     orderId: number,
     itemIds: number[],
-  ): Promise<ApiResponse> {
+  ): Promise<ApiResponse<{ updatedCount: number }>> {
     const updates = itemIds.map((itemId) => ({
       orderId,
       itemId,

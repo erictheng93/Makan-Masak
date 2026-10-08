@@ -33,7 +33,6 @@ export enum ErrorType {
  */
 export const SUBSCRIPTION_ERROR_CODES = [
   "SUBSCRIPTION_NOT_FOUND",
-  "TRIAL_EXPIRED",
   "MODULE_NOT_ENABLED",
   "NO_RESTAURANT",
 ] as const;
@@ -110,8 +109,6 @@ function subscriptionErrorMessage(code: SubscriptionErrorCode): string {
   switch (code) {
     case "SUBSCRIPTION_NOT_FOUND":
       return t("errors.subscription.subscriptionNotFound");
-    case "TRIAL_EXPIRED":
-      return t("errors.subscription.trialExpired");
     case "MODULE_NOT_ENABLED":
       return t("errors.subscription.moduleNotEnabled");
     case "NO_RESTAURANT":

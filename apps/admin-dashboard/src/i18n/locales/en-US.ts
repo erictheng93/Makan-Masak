@@ -934,8 +934,6 @@ const enUS: Messages = {
     subscription: {
       subscriptionNotFound:
         "No subscription was found for this restaurant, so its features are not activated yet. Your sign-in is fine — please contact support to get it set up.",
-      trialExpired:
-        "Your trial period has ended. Upgrade your plan to keep using this feature.",
       moduleNotEnabled:
         "This feature is not included in your current plan. Upgrade your plan or contact support to enable it.",
       noRestaurant:
@@ -1997,6 +1995,7 @@ const enUS: Messages = {
     platformCustomers: "Platform Customers",
   },
   pages: {
+    marketOpenReport: "Open-day report",
     reviews: "Customer reviews",
     broadcasts: "Push messages",
     billing: "Plan & Usage",
@@ -2043,6 +2042,8 @@ const enUS: Messages = {
     notFound: "Page Not Found",
     platformOverview: "Platform Overview",
     platformMarketCheckouts: "Market Checkouts",
+    platformMarkets: "Market Quality",
+    platformOnboarding: "Shop Applications",
     platformCustomers: "Platform Customers",
     adminSuffix: "Admin Dashboard",
     forecast: "Demand Forecast",
@@ -2116,11 +2117,13 @@ const enUS: Messages = {
     newPassword: "New Password",
     newPasswordPlaceholder: "Enter new password (at least 6 characters)",
     passwordStrength: "Password strength:",
-    atLeast6Chars: "At least 6 characters",
-    atLeast8Chars: "At least 8 characters (recommended)",
-    upperLowerCase: "Contains upper and lower case letters",
+    atLeast8Chars: "At least 8 characters",
+    containsUppercase: "Contains an uppercase letter (A-Z)",
+    containsLowercase: "Contains a lowercase letter (a-z)",
+    startsWithAllowedChar:
+      "Starts with a letter, a number or one of @ $ ! % * ? &",
     containsNumber: "Contains numbers",
-    containsSpecialChar: "Contains special characters (recommended)",
+    containsSpecialChar: "Contains one of these symbols: @ $ ! % * ? &",
     confirmPassword: "Confirm Password",
     confirmPasswordPlaceholder: "Re-enter new password",
     resetting: "Resetting...",
@@ -2131,14 +2134,17 @@ const enUS: Messages = {
     strengthStrong: "Strong",
     strengthVeryStrong: "Very Strong",
     newPasswordRequired: "Please enter new password",
-    passwordMin6: "Password must be at least 6 characters",
     confirmPasswordRequired: "Please confirm password",
     passwordMismatch: "Passwords do not match",
     passwordResetSuccess: "Password has been reset successfully",
     resetFailed: "Password reset failed, please try again",
     resetTokenExpired: "This reset link has expired. Please request a new one.",
     resetTokenInvalid: "This reset link is invalid. Please request a new one.",
-    weakPassword: "Password is too weak. Use at least 6 characters.",
+    weakPassword:
+      "Password is too weak. Use at least 8 characters with upper and lower case letters, a number and one of @ $ ! % * ? &.",
+    passwordRequirementsNotMet:
+      "Password does not meet the rules: at least 8 characters with upper and lower case letters, a number and one of @ $ ! % * ? & (other symbols do not count).",
+    passwordMissing: "Password still needs: {items}",
     tokenInvalid: "Token is invalid or expired",
     tokenVerifyError: "Error verifying token",
     missingToken: "Missing reset token",
@@ -2186,6 +2192,7 @@ const enUS: Messages = {
     },
     actions: {
       handoff: "Activation details",
+      auditTrail: "Audit trail",
       approve: "Approve",
       reject: "Reject",
     },
@@ -2215,6 +2222,17 @@ const enUS: Messages = {
       pending: "Pending",
       failed: "Failed",
     },
+    audit: {
+      title: "Application audit trail",
+      close: "Close",
+      empty: "No audit events recorded.",
+      system: "System",
+      reason: "Reason: {reason}",
+      submitted: "Application submitted",
+      approved: "Application approved",
+      rejected: "Application rejected",
+      setupLinkRegenerated: "Owner setup link regenerated",
+    },
     reject: {
       title: "Reject this application",
       description: "Explain why. The applicant will see this text.",
@@ -2229,6 +2247,7 @@ const enUS: Messages = {
     },
     errors: {
       load: "Shop applications could not be loaded.",
+      audit: "The audit trail could not be loaded. Try again.",
       approve:
         "Approval failed. Check that the application can still be approved.",
       handoff: "Could not load the activation details. Try again.",
@@ -2237,8 +2256,50 @@ const enUS: Messages = {
       regenerate: "Regenerating the setup link failed. Try again.",
     },
   },
+  marketOpenReport: {
+    pageTitle: "Open-day report",
+    title: "Stall open-day report",
+    market: "Market",
+    from: "From",
+    to: "To",
+    view: {
+      daily: "Daily",
+      summary: "Summary",
+    },
+    export: "Export CSV",
+    exportFailed: "Could not export CSV. Please try again.",
+    loadFailed:
+      "Could not load the report. Check the date range (92 days max).",
+    noMarkets: "Your shop is not in any market yet",
+    autoClosed: "Ended at day rollover",
+    col: {
+      date: "Business day",
+      vendor: "Stall",
+      opened: "Opened",
+      closed: "Closed",
+      hours: "Hours open",
+      openedBy: "Opened by",
+      orders: "Orders",
+      revenue: "Revenue",
+      openDays: "Days open",
+      attendance: "Attendance",
+      avgHours: "Avg hours open",
+    },
+  },
   dashboard: {
     title: "Dashboard",
+    marketOpenToday: {
+      title: "Open today",
+      description:
+        "Tap when you start trading so customers see your stall on the market QR",
+      open: "Open today",
+      close: "Close early",
+      closed: "Not open yet today",
+      openSince: "Open since {time}",
+      confirmClose: "Close now? Customers will not be able to order from you.",
+      error: "Could not update your status. Please try again.",
+      report: "Open-day report",
+    },
     setupChecklist: {
       title: "Finish setting up your shop",
       description: "Complete these essentials before opening.",
@@ -2774,6 +2835,7 @@ const enUS: Messages = {
       paymentSuccess: "Payment processed successfully",
       paymentFailed: "Payment failed, please retry",
       refundFailed: "Refund failed, please retry",
+      printFailed: "Receipt could not be printed",
       printInDev: "Receipt printing is under development...",
       printing: "Printing receipt for {orderNumber}...",
       printingShiftReport: "Printing shift report...",
@@ -3255,7 +3317,6 @@ const enUS: Messages = {
     startDelivery: "Start Delivery",
     confirmDelivery: "Confirm Delivered",
     contactCustomer: "Contact Customer",
-    reportIssue: "Report Issue",
     noOrders: "No orders awaiting delivery",
     allDelivered: "All dishes have been delivered!",
     myDeliveries: "My Active Deliveries",
@@ -3272,28 +3333,13 @@ const enUS: Messages = {
     customerInfo: "Customer Info",
     makeCall: "Make Call",
     sendMessage: "Send Message",
-    issueType: "Issue Type",
-    selectIssueType: "Select issue type",
-    issues: {
-      wrongOrder: "Wrong Order",
-      missingItems: "Missing Items",
-      qualityIssue: "Quality Issue",
-      customerUnavailable: "Customer Unavailable",
-      accessIssue: "Cannot Access Table",
-      other: "Other Issue",
-    },
-    issueDescription: "Issue Description",
-    issueDescPlaceholder: "Describe the issue in detail...",
     cancel: "Cancel",
-    submitIssue: "Report Issue",
     justReady: "Just ready",
     minutesAgo: "{minutes} min ago",
     hoursAgo: "{hours} hours ago",
     alerts: {
       calling: "Calling {name}: {phone}",
       messaging: "Messaging {name}",
-      issueReported:
-        "Issue reported:\nType: {type}\nDescription: {description}",
     },
   },
   pos: {
@@ -3310,6 +3356,7 @@ const enUS: Messages = {
     balance: "Balance",
     shift: "Shift",
     notStarted: "Not Started",
+    shiftActive: "In Progress",
     pleaseStartShift: "Please start a shift",
     startShift: "Start Shift",
     endShift: "End Shift",
@@ -4327,6 +4374,10 @@ const enUS: Messages = {
     availableSeats: "Available Seats",
   },
   couponForm: {
+    clearIncompatible: "Clear restrictions",
+    incompatibleCoupons: "Cannot combine with",
+    incompatibleHint:
+      "Select coupons that cannot be used with this coupon. A restriction in either direction blocks the combination.",
     editTitle: "Edit Coupon",
     createTitle: "Create Coupon",
     basicInfo: "Basic Information",
@@ -5021,6 +5072,8 @@ const enUS: Messages = {
   },
   orderStore: {
     addItemsFailed: "Could not add the items",
+    couponOrderImmutable:
+      "This order used a coupon, so its items can’t be changed. Cancel it and place a new order",
     changeItemFailed: "Could not change the quantity",
     removeItemFailed: "Could not remove the item",
     fetchFailed: "Failed to fetch orders",
@@ -5972,6 +6025,16 @@ const enUS: Messages = {
     statusActive: "Active",
     statusInactive: "Inactive",
     trialRemaining: "{days} days left in your trial",
+    trialExpiredBanner:
+      "Your free trial has ended. Everything keeps working, but please choose a plan to support MakanMasak.",
+    trialExpiredAction: "Choose a plan",
+    trialExpiredTitle: "Your free trial has ended",
+    trialExpiredContinue: "Continue",
+    upgradeTitle: "Upgrade your plan",
+    upgradeBody:
+      "Online checkout isn't available yet. Email us and we'll set up your plan. Everything keeps working in the meantime.",
+    upgradeAction: "Email us to upgrade",
+    upgradeMailSubject: "Upgrade my MakanMasak plan",
     usageTitle: "Usage this cycle",
     usageEmpty: "No usage recorded this cycle yet.",
     modulesTitle: "Included features",

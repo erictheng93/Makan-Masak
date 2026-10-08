@@ -1,7 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { isOpenNow } from "./isOpenNow";
+import { getOpeningHoursStatus, isOpenNow } from "./isOpenNow";
 
 describe("isOpenNow", () => {
+  it("keeps missing hours distinct from an explicitly closed day", () => {
+    expect(getOpeningHoursStatus(null)).toBe("unavailable");
+    expect(getOpeningHoursStatus({})).toBe("unavailable");
+    expect(
+      getOpeningHoursStatus(
+        { monday: { open: "09:00", close: "21:00", isOpen: false } },
+        "Asia/Taipei",
+        new Date("2026-08-10T04:00:00.000Z"),
+      ),
+    ).toBe("closed");
+  });
+
   it("returns false during configured hours when the current day is closed", () => {
     const businessHours = {
       monday: { open: "09:00", close: "21:00", isOpen: false },

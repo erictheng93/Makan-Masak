@@ -115,6 +115,14 @@ export const orders = sqliteTable(
 
     // 優惠券和促銷
     couponCode: text("coupon_code"),
+    appliedCoupons: text("applied_coupons", { mode: "json" }).$type<
+      Array<{
+        couponId: number;
+        code: string;
+        name: string;
+        discountAmountCents: number;
+      }>
+    >(),
     promotionIds: text("promotion_ids", { mode: "json" }).$type<string[]>(),
 
     // 評價資訊

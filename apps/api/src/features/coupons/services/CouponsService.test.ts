@@ -77,6 +77,7 @@ function buildStoredCoupon(
     minOrderAmountCents: null,
     applicableMenuItems: null,
     applicableCategories: null,
+    incompatibleCouponIds: [],
     usageLimit: null,
     usageLimitPerUser: null,
     usedCount: 0,

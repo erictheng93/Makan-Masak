@@ -28,9 +28,9 @@
               </svg>
             </button>
 
-            <div class="flex-1 text-center">
-              <div class="flex items-center justify-center">
-                <h1 class="font-semibold text-ios-text">
+            <div class="min-w-0 flex-1 text-center">
+              <div class="flex min-w-0 items-center justify-center">
+                <h1 class="truncate font-semibold text-ios-text">
                   {{ restaurant?.name || t("common.loading") }}
                 </h1>
                 <span
@@ -43,10 +43,36 @@
                   {{ fulfillmentBadgeLabel }}
                 </span>
               </div>
-              <p class="text-sm text-ios-secondary">
+              <p class="truncate text-sm text-ios-secondary">
                 {{ t("shopMenu.shopOrdering") }}
               </p>
             </div>
+
+            <LanguageSwitcher compact />
+
+            <button
+              v-if="!isDemo"
+              type="button"
+              data-testid="shop-menu-reservation"
+              :aria-label="t('reservationBooking.title')"
+              class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-ios-text active:scale-95 transition-transform duration-150"
+              @click="openReservation"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 7V3m8 4V3M5 11h14M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z"
+                />
+              </svg>
+            </button>
 
             <button
               data-testid="cart-btn"
@@ -211,6 +237,20 @@
             </p>
             <p class="mt-1 text-sm text-ios-secondary">
               {{ t(BLOCKED_COPY[orderingBlockedReason].description) }}
+            </p>
+          </section>
+
+          <!-- Platform showcase shop: browsable end to end, never ordered from. -->
+          <section
+            v-if="isDemo"
+            data-testid="shop-demo-banner"
+            class="bg-ios-orange-soft rounded-2xl px-4 py-3"
+          >
+            <p class="text-sm font-semibold text-ios-orange-deep">
+              {{ t("demoShop.bannerTitle") }}
+            </p>
+            <p class="mt-1 text-sm text-ios-orange-deep">
+              {{ t("demoShop.bannerBody") }}
             </p>
           </section>
 
@@ -399,8 +439,14 @@
             <h2 class="text-xl font-semibold text-ios-text mb-4">
               {{ t("shopMenu.recommended") }}
             </h2>
+            <!--
+              Phone and iPad: a swipeable row whose first card snaps in line
+              with the column (scroll-px matches the -mx/px bleed). PC: the
+              same grid as the dish list below, since a mouse cannot swipe.
+            -->
             <div
-              class="flex gap-3 md:gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide -mx-5 px-5"
+              data-testid="featured-items"
+              class="flex gap-3 md:gap-4 overflow-x-auto snap-x snap-mandatory scroll-px-5 scrollbar-hide -mx-5 px-5 lg:grid lg:grid-cols-3 lg:overflow-visible lg:mx-0 lg:px-0"
             >
               <MenuItemCard
                 v-for="(item, index) in featuredItems"
@@ -409,7 +455,7 @@
                 :item="item"
                 :is-featured="true"
                 :anchor-id="null"
-                class="animate-slide-up min-w-[280px] md:min-w-[260px] snap-start flex-shrink-0"
+                class="animate-slide-up w-[80%] max-w-[300px] md:w-[42%] md:max-w-none snap-start flex-shrink-0 lg:w-auto"
                 :style="{
                   animationDelay: `${index * 50}ms`,
                   animationFillMode: 'both',
@@ -455,7 +501,8 @@
               </div>
 
               <div
-                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4"
+                class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4"
+                :class="dishGridColumns"
               >
                 <MenuItemCard
                   v-for="(item, index) in getItemsByCategory(category.id)"
@@ -496,7 +543,8 @@
               </p>
             </div>
             <div
-              class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4"
+              class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4"
+              :class="dishGridColumns"
             >
               <MenuItemCard
                 v-for="(item, index) in filteredProductItems"
@@ -629,6 +677,7 @@
       :waiting-ticket-id="waitingTicketId"
       :ordering-disabled="orderingBlocked"
       :fulfillment="shopFulfillment"
+      :is-demo="isDemo"
       @close="showCart = false"
     />
   </div>
@@ -648,6 +697,7 @@ import MenuItemModal from "@/components/MenuItemModal.vue";
 import CustomizationModal from "@/components/CustomizationModal.vue";
 import ShopCartModal from "@/components/ShopCartModal.vue";
 import DesktopCartPanel from "@/components/DesktopCartPanel.vue";
+import LanguageSwitcher from "@/components/LanguageSwitcher.vue";
 import { useIsDesktop } from "@/composables/useBreakpoint";
 import ShopReviewsSection from "@/components/reviews/ShopReviewsSection.vue";
 import { menuApi } from "@/services/menuApi";
@@ -700,6 +750,14 @@ const appStore = useAppStore();
 const marketCartStore = useMarketCartStore();
 const shopCartStore = useShopCartStore();
 const isDesktop = useIsDesktop();
+// List cards put the photo beside the text and need ~320px a column. The
+// desktop cart panel takes ~320px of the row, so three columns next to it
+// wrap dish names mid-word; drop to two while it is open.
+const dishGridColumns = computed(() =>
+  isDesktop.value && shopCartStore.itemCount > 0
+    ? "lg:grid-cols-2"
+    : "lg:grid-cols-3",
+);
 const { formatPrice } = useCurrency();
 
 // State
@@ -716,8 +774,23 @@ const openedLinkedServiceItemId = ref<number | null>(null);
 const openedServicesSection = ref(false);
 
 // 初始化店家購物車
+const FULFILLMENT_TYPES = ["dine-in", "takeaway", "delivery"] as const;
+
 onMounted(() => {
   shopCartStore.initializeCart(props.restaurantId);
+  // The order-type page puts the diner's choice in the URL. A restored cart
+  // from an earlier visit must not override it, or a diner who just picked
+  // 外帶 sees 內用 on the badge (and the cart) instead.
+  const requested = route.query?.fulfillmentType;
+  if (
+    typeof requested === "string" &&
+    (FULFILLMENT_TYPES as readonly string[]).includes(requested) &&
+    requested !== shopCartStore.fulfillmentType
+  ) {
+    shopCartStore.setFulfillmentType(
+      requested as (typeof FULFILLMENT_TYPES)[number],
+    );
+  }
 });
 
 // API Queries
@@ -726,6 +799,10 @@ const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery({
   queryFn: () => menuApi.getRestaurant(props.restaurantId),
   staleTime: 5 * 60 * 1000, // 5分鐘
 });
+
+// The onboarding page's showcase shop: the server refuses its orders
+// (DEMO_RESTAURANT), so say so up front instead of at checkout.
+const isDemo = computed(() => restaurant.value?.isDemo === true);
 
 // The badge used to be a two-way ternary (`delivery ? 外送 : 外帶`) over a
 // three-valued store, so a diner who picked 內用 on the order-type landing page
@@ -1054,6 +1131,13 @@ const openServiceBooking = (service: RestaurantServiceItem) => {
       restaurantId: props.restaurantId,
       serviceItemId: String(service.id),
     },
+  });
+};
+
+const openReservation = () => {
+  router.push({
+    name: "Reservation",
+    params: { restaurantId: props.restaurantId },
   });
 };
 

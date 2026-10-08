@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { OnboardingService } from "../services/OnboardingService";
 import type { ManagementEnv, OnboardingApplication } from "../types";
 
@@ -18,80 +18,83 @@ const owner = {
   setupPasswordToken: "setup-token",
 };
 
-function service(overrides: Partial<ManagementEnv> = {}) {
+function service(
+  send: SendEmail["send"] | undefined,
+  overrides: Partial<ManagementEnv> = {},
+) {
   return new OnboardingService({
     ONBOARDING_EMAIL_ENABLED: "true",
     ONBOARDING_EMAIL_FROM: "onboarding@makanmasak.com",
-    RESEND_API_KEY: "test-key",
+    ONBOARDING_NOTIFICATION_EMAIL: send ? ({ send } as SendEmail) : undefined,
     ...overrides,
   } as ManagementEnv);
 }
 
-describe("onboarding setup email", () => {
-  afterEach(() => vi.unstubAllGlobals());
+describe("onboarding email via Cloudflare Email Service", () => {
+  it("sends Chinese setup details through the binding", async () => {
+    const send = vi.fn(async () => ({ messageId: "cf-1" }));
 
-  it("sends Chinese setup details through authenticated Resend", async () => {
-    const fetchMock = vi.fn(async () => Response.json({ id: "email-1" }));
-    vi.stubGlobal("fetch", fetchMock);
-
-    const result = await service()["sendSetupPasswordEmail"](
+    const result = await service(send)["sendSetupPasswordEmail"](
       application,
       owner,
     );
 
-    expect(result.status).toBe("sent");
-    expect(fetchMock).toHaveBeenCalledOnce();
-    const [url, init] = fetchMock.mock.calls[0] as unknown as [
-      string,
-      RequestInit,
-    ];
-    expect(url).toBe("https://api.resend.com/emails");
-    expect(init.headers).toMatchObject({ Authorization: "Bearer test-key" });
-    const body = JSON.parse(String(init.body));
-    expect(body.text).toContain("小明餐館");
-    expect(body.text).toContain(owner.username);
-    expect(body.text).toContain(owner.setupPasswordLink);
-    expect(body.text).toContain(owner.setupPasswordExpiresAt);
-  });
-
-  it("reports provider failure without throwing", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response("denied", { status: 403 })),
+    expect(result).toMatchObject({ attempted: true, status: "sent" });
+    expect(send).toHaveBeenCalledOnce();
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: application.contactEmail,
+        from: "onboarding@makanmasak.com",
+        html: expect.stringContaining("<pre>"),
+      }),
     );
-    const result = await service()["sendSetupPasswordEmail"](
-      application,
-      owner,
-    );
-    expect(result).toMatchObject({ attempted: true, status: "failed" });
-    expect(result.errorMessage).toContain("403");
-  });
-
-  it("does not fetch when the key is missing", async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-    const result = await service({ RESEND_API_KEY: undefined })[
-      "sendSetupPasswordEmail"
-    ](application, owner);
-    expect(result).toMatchObject({ attempted: true, status: "failed" });
-    expect(fetchMock).not.toHaveBeenCalled();
+    const { text } = (send.mock.calls[0] as unknown as [{ text: string }])[0];
+    expect(text).toContain("小明餐館");
+    expect(text).toContain(owner.username);
+    expect(text).toContain(owner.setupPasswordLink);
+    expect(text).toContain(owner.setupPasswordExpiresAt);
   });
 
   it("sends a status URL with the one-time secret in the fragment", async () => {
-    const fetchMock = vi.fn(async () => Response.json({ id: "email-2" }));
-    vi.stubGlobal("fetch", fetchMock);
+    const send = vi.fn(async () => ({ messageId: "cf-2" }));
 
-    await service({ ONBOARDING_APP_URL: "https://onboarding.example.com" })[
-      "sendApplicationReceivedEmail"
-    ](application, "onb_secret");
+    await service(send, {
+      ONBOARDING_APP_URL: "https://onboarding.example.com",
+    })["sendApplicationReceivedEmail"](application, "onb_secret");
 
-    const [, init] = fetchMock.mock.calls[0] as unknown as [
-      string,
-      RequestInit,
-    ];
-    const body = JSON.parse(String(init.body));
-    expect(body.text).toContain(
-      "https://onboarding.example.com/status/APP-20260915-EMAIL#onb_secret",
+    expect(send).toHaveBeenCalledOnce();
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: application.contactEmail,
+        text: expect.stringContaining(
+          "https://onboarding.example.com/status/APP-20260915-EMAIL#onb_secret",
+        ),
+      }),
     );
+  });
+
+  it("records a failed delivery when the binding throws", async () => {
+    const send = vi.fn(async () => {
+      throw new Error("sender domain not verified");
+    });
+    const result = await service(send)["sendSetupPasswordEmail"](
+      application,
+      owner,
+    );
+    expect(send).toHaveBeenCalledOnce();
+    expect(result).toMatchObject({
+      attempted: true,
+      status: "failed",
+      errorMessage: "sender domain not verified",
+    });
+  });
+
+  it("records a failed delivery when the binding is missing", async () => {
+    const result = await service(undefined)["sendSetupPasswordEmail"](
+      application,
+      owner,
+    );
+    expect(result).toMatchObject({ attempted: true, status: "failed" });
+    expect(result.errorMessage).toContain("ONBOARDING_NOTIFICATION_EMAIL");
   });
 });

@@ -322,6 +322,87 @@ describe("discovery takeaway buttons", () => {
     ).toBe(false);
   });
 
+  it("emits a table-reservation action for a restaurant", async () => {
+    const restaurant = {
+      restaurantId: "r1",
+      name: "雞排攤",
+      type: "snack",
+      district: "西屯區",
+      priceRange: 1,
+      rating: 4.5,
+      isOpen: true,
+      supportsTakeaway: false,
+      supportsDelivery: false,
+      imageUrl: null,
+    };
+    const wrapper = mount(RestaurantCard, {
+      props: { restaurant },
+      global: { plugins: [createPinia()] },
+    });
+
+    await wrapper
+      .get('[data-testid="restaurant-reservation-button"]')
+      .trigger("click");
+
+    expect(wrapper.emitted("reserve")).toEqual([[restaurant]]);
+  });
+
+  it("does not expose onboarding placeholders and distinguishes missing hours", () => {
+    const wrapper = mount(RestaurantCard, {
+      props: {
+        restaurant: {
+          restaurantId: "r1",
+          name: "Demo Noodles",
+          type: "onboarding",
+          city: "台中市",
+          district: "onboarding-demo-noodles",
+          priceRange: null,
+          rating: null,
+          isOpen: false,
+          openingHoursStatus: "unavailable",
+          supportsTakeaway: false,
+          supportsDelivery: false,
+          imageUrl: null,
+        },
+      },
+      global: { plugins: [createPinia()] },
+    });
+
+    expect(wrapper.text()).toContain("台中市");
+    expect(wrapper.text()).not.toContain("onboarding");
+    expect(
+      wrapper.get('[data-testid="restaurant-hours-unavailable"]').text(),
+    ).toBe("discovery.hoursUnavailable");
+    expect(wrapper.text()).not.toContain("discovery.closed");
+  });
+
+  it("hides placeholder districts and labels missing hours on dish results", () => {
+    const wrapper = mount(DishResultCard, {
+      props: {
+        dish: {
+          menuItemId: 1,
+          dishName: "Demo Bao",
+          price: 60,
+          categoryName: null,
+          restaurantId: "r1",
+          restaurantName: "Demo Stall",
+          district: "onboarding-demo-stall",
+          isOpen: false,
+          openingHoursStatus: "unavailable",
+          supportsTakeaway: false,
+          supportsDelivery: false,
+          tags: [],
+        },
+      },
+      global: { plugins: [createPinia()] },
+    });
+
+    expect(wrapper.text()).not.toContain("onboarding");
+    expect(wrapper.get('[data-testid="dish-hours-unavailable"]').text()).toBe(
+      "discovery.hoursUnavailable",
+    );
+  });
+
   it("shows available service labels on restaurant results", () => {
     const wrapper = mount(RestaurantCard, {
       props: {

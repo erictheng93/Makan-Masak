@@ -6,7 +6,7 @@ const zhCN: Messages = {
       copyright: "© 2026 MakanMasak. All rights reserved.",
     },
     tagline: {
-      selfHosted: "独立部署",
+      platformHosted: "平台代管",
     },
   },
   apply: {
@@ -67,6 +67,14 @@ const zhCN: Messages = {
       submitting: "提交中...",
     },
     title: "填写申请资料",
+    submitErrors: {
+      rateLimited:
+        "提交次数太多了。同一个网络每小时最多提交 5 次（提交失败也会计算），请等到下一个整点再试，或改用手机网络。",
+      validation: "有资料不符合规定，请检查每一栏后再提交一次。",
+      cityNotInCountry: "选择的城市不属于这个国家，请重新选择国家和城市。",
+      marketNotInCity: "选择的夜市／商圈不属于这个城市，请重新选择。",
+      network: "网络连接有问题，请确认网络后再试一次。",
+    },
     toast: {
       submitFailureFallback: "提交失败，请稍后再试",
       submitSuccess: "申请资料已提交",
@@ -87,6 +95,8 @@ const zhCN: Messages = {
       cityRequired: "请输入城市",
       subdomainInvalidFormat: "只能包含小写字母、数字和连字符",
       subdomainTaken: "此网址已被使用",
+      tooShort: "至少需要 2 个字",
+      phoneInvalid: "电话需为 8 到 20 个字符",
       subdomainTooShort: "至少需要 3 个字元",
     },
   },
@@ -100,19 +110,49 @@ const zhCN: Messages = {
     },
   },
   home: {
+    tour: {
+      title: "从点餐到出餐，一次看懂",
+      subtitle: "以下都是系统的实际画面，店家与订单是示范数据。",
+      tryDemo: "亲自试试示范店 →",
+      tryDemoHint: "用手机打开，就像客人扫码一样。订单不会真的送出。",
+      steps: {
+        order: {
+          title: "客人扫码点餐",
+          description: "客人用手机扫桌上的二维码，看着照片点餐，不用下载 App。",
+          alt: "客人手机上的点餐画面",
+        },
+        kitchen: {
+          title: "厨房实时收单",
+          description:
+            "订单立刻出现在厨房平板，按待处理、制作中、准备完成排好。",
+          alt: "厨房平板上的订单看板",
+        },
+        tracking: {
+          title: "客人看得到进度",
+          description:
+            "餐点做到哪一步，客人手机上实时更新，不用再问「好了没」。",
+          alt: "客人手机上的订单进度",
+        },
+        dashboard: {
+          title: "老板随时掌握营收",
+          description: "今天卖了多少、几张订单、哪桌还在等，后台一眼看完。",
+          alt: "老板后台的店主总览",
+        },
+      },
+    },
     cta: {
       button: "开始申请",
-      subtitle: "填写申请表单，我们将在 24 小时内与您联系",
+      subtitle: "填写申请表单，平台团队审核后会与您联系",
       title: "准备好开始了吗？",
     },
     features: {
-      fast: {
-        description: "自动化部署流程，最快 24 小时内完成上线",
-        title: "快速部署",
+      assisted: {
+        description: "平台团队审核后为您开通账号，并引导完成开店设置",
+        title: "专人开通",
       },
-      isolated: {
-        description: "完全隔离的云端环境，数据 100% 归您所有",
-        title: "独立环境",
+      hosted: {
+        description: "系统由平台运维，无需自行架设主机或管理服务器",
+        title: "平台代管",
       },
       secure: {
         description: "基于 Cloudflare 全球边缘网络，企业级安全防护",
@@ -121,8 +161,8 @@ const zhCN: Messages = {
     },
     hero: {
       ctaApply: "立即申请",
-      ctaDemo: "查看演示 →",
-      subtitle: "独立部署 · 数据安全 · 24 小时内完成上线",
+      ctaTour: "看看怎么运作 ↓",
+      subtitle: "平台代管 · 数据安全 · 专人审核开通",
       titleLine1: "为您的餐厅打造",
       titleLine2: "专属管理系统",
     },
@@ -153,10 +193,9 @@ const zhCN: Messages = {
         title: "系统部署",
       },
       email: {
-        prefix: "我们已发送确认邮件至",
-        suffix: "，请查收。",
-        description: "申请状态有更新时，我们会发送 Email 通知您。",
-        title: "确认邮件",
+        description:
+          "核准后，平台会提供店主账号与设置密码链接。申请进度请通过查询链接查看。",
+        title: "登录信息",
       },
       start: {
         description: "收到登入资讯后，您可以立即登入管理后台开始设定您的餐厅。",
@@ -169,11 +208,8 @@ const zhCN: Messages = {
     summary: {
       applicationId: "申请编号",
       businessName: "餐厅名称",
-      cloudflare: "平台代管",
-      connected: "已启用",
       contactEmail: "联络 Email",
       plan: "选择方案",
-      subdomain: "专属网址",
       tenantId: "租户编号",
       status: "申请状态",
       pendingReview: "等待平台审核",

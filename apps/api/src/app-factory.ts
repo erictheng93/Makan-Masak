@@ -573,7 +573,7 @@ export function createApp(
     // Not a prefix of its own feature: customer-app subscribes through the
     // customer router, so gating only /push would let a customer opt into
     // notifications that /push then refuses to deliver.
-    ["/customer/push-subscriptions", "webPush"],
+    ["/customer/push-subscriptions", "customerWebPush"],
   ] as const) {
     apiV1.use(`${prefix}/*`, featureGate(key));
   }
@@ -586,6 +586,7 @@ export function createApp(
       excludePaths: [
         "/api/v1/auth/login",
         "/api/v1/auth/register",
+        "/api/v1/auth/forgot-password$", // Public reset request uses no session cookie.
         "/api/v1/customer/auth",
         "/api/v1/monitoring/health",
         "/api/v1/sse", // SSE connections should not be CSRF protected
@@ -595,6 +596,9 @@ export function createApp(
         "/api/v1/partnerships/members/verify", // Public member verification application
         "/api/v1/partnerships/plans/validate", // Public plan validation for cashiers
         "/api/v1/guest-orders", // Guest ordering (no session, uses KV tokens)
+        // Member order creation is authorized by an explicit Bearer token; the
+        // customer app does not use ambient cookies for this request.
+        "/api/v1/orders$",
         // Customer self-service flows on features mounted before this
         // middleware used to bypass CSRF entirely; once the ordering was
         // fixed they started 403ing. None of them use a session cookie —
@@ -621,7 +625,8 @@ export function createApp(
         "/api/v1/waiting-list/*$",
         "/api/v1/waiting-list/*/confirm",
         "/api/v1/reservations$", // exact: POST / (create)
-        "/api/v1/reservations/*/cancel",
+        // Exact one-segment public DELETE. The staff POST /:id/cancel shares
+        // this path, so it is scoped by method instead of path-only exempted.
         "/api/v1/service-bookings$", // exact: POST / (create)
         "/api/v1/service-bookings/recurring",
         "/api/v1/service-bookings/waitlist",
@@ -661,6 +666,12 @@ export function createApp(
         "/api/v1/billing/webhooks", // Billing provider webhooks (HMAC/idempotency verified)
         "/api/v1/payments", // Payment requests are protected by auth + idempotency
         // SECURITY: Removed testing exclusions for shop QR endpoints - all state-changing operations now require CSRF tokens
+      ],
+      excludeRoutes: [
+        {
+          path: "/api/v1/reservations/*/cancel$",
+          methods: ["DELETE"],
+        },
       ],
     }),
   );

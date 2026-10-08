@@ -211,6 +211,17 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: "/restaurant/:restaurantId/reserve",
+    name: "Reservation",
+    component: () => import("@/views/ReservationView.vue"),
+    props: (route) => ({
+      restaurantId: String(route.params.restaurantId),
+    }),
+    meta: {
+      titleKey: "reservationBooking.title",
+    },
+  },
+  {
     path: "/restaurant/:restaurantId/table/:tableId/cart",
     name: "Cart",
     component: () => import("@/views/CartView.vue"),
@@ -374,6 +385,13 @@ const router = createRouter({
 });
 
 // 路由守衛
+let authRestorePromise: Promise<boolean> | null = null;
+
+function restoreAuthOnce(authStore: ReturnType<typeof useAuthStore>) {
+  authRestorePromise ??= authStore.checkAuth();
+  return authRestorePromise;
+}
+
 router.beforeEach(async (to, from, next) => {
   // 設置頁面標題
   // Cosmetic, and it runs before everything else in the guard — it must never
@@ -387,6 +405,14 @@ router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
   const requiresAuth = to.meta.requiresAuth as boolean;
   const requiresGuest = to.meta.requiresGuest as boolean;
+  let restoredSession: boolean | undefined;
+
+  // The access token is memory-only. A customer who already has a hydrated
+  // user can arrive here after a full-page QR navigation with no token; restore
+  // that session once so menu/cart routes keep the member identity too.
+  if (authStore.user && !authStore.token) {
+    restoredSession = await restoreAuthOnce(authStore);
+  }
 
   // 檢查需要認證的路由
   if (requiresAuth) {
@@ -402,7 +428,10 @@ router.beforeEach(async (to, from, next) => {
 
     // Restore an access token from the HttpOnly refresh cookie when this is a
     // fresh page load. Access tokens are intentionally never persisted.
-    const isValid = await authStore.checkAuth();
+    // Reuse only this navigation's restore. The once-per-load promise is
+    // stale after a logout, and replaying its `true` let a signed-out
+    // diner back into account routes.
+    const isValid = restoredSession ?? (await authStore.checkAuth());
     if (!isValid) {
       next({
         name: "Login",
@@ -415,7 +444,8 @@ router.beforeEach(async (to, from, next) => {
   // 檢查需要訪客身份的路由（如登入、註冊頁）
   if (
     requiresGuest &&
-    (authStore.isAuthenticated || (await authStore.checkAuth()))
+    (authStore.isAuthenticated ||
+      (restoredSession ?? (await authStore.checkAuth())))
   ) {
     // 已登入用戶訪問登入/註冊頁，重定向到訂單頁
     next({ name: "Orders" });

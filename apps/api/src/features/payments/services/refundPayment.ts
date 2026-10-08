@@ -20,6 +20,7 @@ import {
 } from "../../../shared/utils/money";
 import { isCurrencyAlignedCents } from "@makanmasak/utils";
 import { resolveRestaurantCurrency } from "../../../shared/utils/restaurant-currency";
+import { invalidateOrderCache } from "../../orders/services/order-finalization";
 
 export interface RefundPaymentInput {
   transactionId: string;
@@ -212,6 +213,17 @@ export async function refundPaymentTransaction(
       occurredAtMs: now,
     }),
   ] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+
+  // The order detail is cached for five minutes; the money has already moved,
+  // so a failed invalidation must not turn the refund into an error.
+  try {
+    await invalidateOrderCache(env.CACHE_KV, row.id);
+  } catch (error) {
+    console.error("Refund succeeded but order cache invalidation failed", {
+      orderId: row.id,
+      error,
+    });
+  }
 
   return {
     refundId,

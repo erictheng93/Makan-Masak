@@ -35,6 +35,7 @@ export {
   COUNTRY_PROFILES,
   SUPPORTED_COUNTRIES,
   citiesForCountry,
+  countryForCity,
   normalizeCountryCode,
   type CountryProfile,
   type SupportedCountryCode,

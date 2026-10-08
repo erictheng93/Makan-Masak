@@ -42,6 +42,9 @@ export interface Restaurant extends UUIDEntity {
   enableShopMode?: boolean;
   shopQrSettings?: ShopQrSettings;
   shopQrVersion?: number;
+
+  /** A platform showcase shop: browsable, but every order is refused. */
+  isDemo?: boolean;
 }
 
 export interface ShopQrSettings {

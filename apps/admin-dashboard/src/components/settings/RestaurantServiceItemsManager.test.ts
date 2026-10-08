@@ -30,6 +30,7 @@ vi.mock("vue-router", () => ({
 describe("RestaurantServiceItemsManager", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearRestaurantCurrency();
     vi.mocked(restaurantServiceItemsService.list).mockResolvedValue([]);
   });
 
@@ -87,6 +88,32 @@ describe("RestaurantServiceItemsManager", () => {
         serviceType: "general",
         isPublic: true,
         isActive: true,
+      }),
+    );
+  });
+
+  it("saves a merchant-selected deposit in minor currency units", async () => {
+    setRestaurantCurrency("MYR");
+    const wrapper = mount(RestaurantServiceItemsManager, {
+      props: { restaurantId: "restaurant-1" },
+    });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="service-name-input"]').setValue("Facial");
+    await wrapper.get('[data-testid="service-price-input"]').setValue("50");
+    await wrapper
+      .get('[data-testid="service-payment-requirement"]')
+      .setValue("deposit");
+    await wrapper
+      .get('[data-testid="service-deposit-amount"]')
+      .setValue("12.5");
+    await wrapper.get("form").trigger("submit.prevent");
+
+    expect(restaurantServiceItemsService.create).toHaveBeenCalledWith(
+      "restaurant-1",
+      expect.objectContaining({
+        paymentRequirement: "deposit",
+        depositAmountCents: 1250,
       }),
     );
   });

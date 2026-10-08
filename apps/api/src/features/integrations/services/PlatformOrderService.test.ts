@@ -3,6 +3,7 @@ import {
   IngredientConsumptionService,
   platformMenuMappings,
   platformOrders,
+  restaurants,
 } from "@makanmasak/database";
 import {
   createSelectFixtureDb,
@@ -91,11 +92,17 @@ function createQuery(result: unknown) {
   return builder;
 }
 
-const fixtureTables = { platformMenuMappings, platformOrders };
+const fixtureTables = { platformMenuMappings, platformOrders, restaurants };
 type SelectFixtureName = keyof typeof fixtureTables;
 
 function mockSelectResults(fixtures: SelectFixtures<SelectFixtureName>) {
-  Object.assign(mocks.db, createSelectFixtureDb(fixtureTables, fixtures));
+  Object.assign(
+    mocks.db,
+    createSelectFixtureDb(fixtureTables, {
+      restaurants: [[{ settings: { currency: "TWD" } }]],
+      ...fixtures,
+    }),
+  );
 }
 
 function mockMutations() {
@@ -153,12 +160,13 @@ function parsedOrder() {
   return {
     platformOrderId: "uber-order-1",
     platformStoreId: "store-1",
+    currencyCode: "TWD",
     customerName: "Ari",
     customerPhone: "0912345678",
     deliveryAddress: "1 Main Street",
-    subtotal: 12.5,
-    taxAmount: 0.75,
-    totalAmount: 13.25,
+    subtotalCents: 1250,
+    taxAmountCents: 75,
+    totalAmountCents: 1325,
     platformStatus: "received" as const,
     rawPayload: { id: "uber-order-1" },
     items: [
@@ -166,16 +174,16 @@ function parsedOrder() {
         platformItemId: "platform-item-1",
         name: "Laksa",
         quantity: 2,
-        unitPrice: 5.5,
-        totalPrice: 11,
+        unitPriceCents: 550,
+        totalPriceCents: 1100,
         customizations: [],
       },
       {
         platformItemId: "unmapped-item",
         name: "Unknown",
         quantity: 1,
-        unitPrice: 2,
-        totalPrice: 2,
+        unitPriceCents: 200,
+        totalPriceCents: 200,
         customizations: [],
       },
     ],
@@ -210,6 +218,24 @@ describe("PlatformOrderService", () => {
 
   it("creates internal platform orders and skips unmapped items", async () => {
     const mutations = mockMutations();
+    mocks.adapter.parseOrder.mockResolvedValueOnce({
+      ...parsedOrder(),
+      notes: "Keep sauce separate",
+      items: [
+        {
+          ...parsedOrder().items[0],
+          notes: "No peanuts",
+          customizations: [
+            {
+              name: "Extras",
+              value: "Egg",
+              priceAdjustmentCents: 150,
+            },
+          ],
+        },
+        parsedOrder().items[1],
+      ],
+    });
     mockSelectResults({
       platformOrders: [[]],
       platformMenuMappings: [
@@ -241,6 +267,7 @@ describe("PlatformOrderService", () => {
       totalAmountCents: 1325,
       serviceChargeCents: 0,
       discountAmountCents: 0,
+      notes: "Keep sauce separate",
     });
     expect(mutations.inserted[1]).toMatchObject({
       orderId: "order-101",
@@ -249,6 +276,18 @@ describe("PlatformOrderService", () => {
       unitPriceCents: 550,
       totalPriceCents: 1100,
       itemSnapshot: { name: "Laksa" },
+      notes: "No peanuts",
+      customizations: {
+        options: [
+          {
+            id: "0",
+            optionName: "Extras",
+            choiceId: "0",
+            choiceName: "Egg",
+            priceAdjustment: 1.5,
+          },
+        ],
+      },
     });
     expect(mutations.inserted[2]).toMatchObject({
       orderId: "order-101",
@@ -263,6 +302,23 @@ describe("PlatformOrderService", () => {
     // so neither a duplicate nor a failed write can leave inventory drift.
     expect(mocks.db.batch).toHaveBeenCalledOnce();
     expect(mutations.batches[0]).toHaveLength(7);
+  });
+
+  it("rejects an Uber order whose currency differs from the restaurant", async () => {
+    mockMutations();
+    mocks.adapter.parseOrder.mockResolvedValue({
+      ...parsedOrder(),
+      currencyCode: "MYR",
+    });
+    mockSelectResults({
+      restaurants: [[{ settings: { currency: "TWD" } }]],
+      platformOrders: [[]],
+      platformMenuMappings: [[]],
+    });
+    await expect(
+      createService().processWebhook("uber_eats", {}, "restaurant-1"),
+    ).rejects.toThrow("currency mismatch");
+    expect(mocks.db.batch).not.toHaveBeenCalled();
   });
 
   it("includes mapped items' inventory, ingredient, and counter writes in the order batch", async () => {

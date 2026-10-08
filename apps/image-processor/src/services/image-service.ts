@@ -7,6 +7,7 @@ import type {
   StoredImageObject,
 } from "../types/env";
 import { ImageService as DatabaseImageService } from "@makanmasak/database";
+import type { AuthUser } from "../middleware/auth";
 import type { D1Database } from "@cloudflare/workers-types";
 
 type DatabaseImageServiceInstance = InstanceType<typeof DatabaseImageService>;
@@ -615,15 +616,17 @@ export class ImageService {
    */
   async getJobStatus(
     jobId: string,
+    user: AuthUser,
   ): Promise<{ success: boolean; job?: ImageProcessingJob; error?: string }> {
     try {
       // Try cache first
       const cached = await this.cache.get(`job:${jobId}`);
       if (cached) {
-        return {
-          success: true,
-          job: JSON.parse(cached),
-        };
+        const job = JSON.parse(cached) as ImageProcessingJob;
+        if (!(await this.canReadJob(job.imageId, user))) {
+          return { success: false, error: "Job not found" };
+        }
+        return { success: true, job };
       }
 
       // Fetch from database
@@ -638,11 +641,8 @@ export class ImageService {
 
       const result = await this.dbImageService.getProcessingJob(dbJobId);
 
-      if (!result) {
-        return {
-          success: false,
-          error: "Job not found",
-        };
+      if (!result || !(await this.canReadJob(result.imageId, user))) {
+        return { success: false, error: "Job not found" };
       }
 
       const job: ImageProcessingJob = {
@@ -685,6 +685,18 @@ export class ImageService {
     }
   }
 
+  private async canReadJob(imageId: string, user: AuthUser): Promise<boolean> {
+    // Read current ownership from D1 even when the job itself came from cache.
+    const image = await this.dbImageService.getImage(imageId);
+    return (
+      !!image &&
+      (user.role === 0 ||
+        image.uploadedBy === user.id ||
+        (user.restaurantId !== undefined &&
+          image.restaurantId === user.restaurantId))
+    );
+  }
+
   /**
    * Get image analytics
    */
@@ -696,42 +708,18 @@ export class ImageService {
     } = {},
   ): Promise<{ success: boolean; analytics?: ImageAnalytics; error?: string }> {
     try {
-      const { restaurantId, dateFrom, dateTo } = options;
-
-      const whereConditions: string[] = [];
-      const params: unknown[] = [];
-
-      if (restaurantId !== undefined) {
-        whereConditions.push("restaurant_id = ?");
-        params.push(restaurantId);
-      }
-
-      if (dateFrom) {
-        whereConditions.push("uploaded_at >= ?");
-        params.push(dateFrom);
-      }
-
-      if (dateTo) {
-        whereConditions.push("uploaded_at <= ?");
-        params.push(dateTo);
-      }
-
-      const _whereClause =
-        whereConditions.length > 0
-          ? `WHERE ${whereConditions.join(" AND ")}`
-          : "";
-
       // Basic statistics
       // Use database service for analytics summary
-      const basicStats = await this.dbImageService.getImageAnalyticsSummary();
+      const basicStats =
+        await this.dbImageService.getImageAnalyticsSummary(options);
 
       // Category breakdown
       // Use database service for category stats
-      const categoryStats = await this.dbImageService.getCategoryStats();
+      const categoryStats = await this.dbImageService.getCategoryStats(options);
 
       // Processing job statistics
       // Use database service for job stats
-      const jobStats = await this.dbImageService.getJobStats();
+      const jobStats = await this.dbImageService.getJobStats(options);
 
       const analytics: ImageAnalytics = {
         totalImages: (basicStats?.total_images as number) || 0,

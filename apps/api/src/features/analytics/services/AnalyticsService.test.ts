@@ -372,11 +372,31 @@ describe("AnalyticsService", () => {
     mocks.cache.get.mockResolvedValue(null);
     mocks.databaseService.getFinancialReport.mockResolvedValue({
       summary: {
-        totalRevenue: 500,
+        totalRevenue: [
+          { currency: "TWD", amountCents: 50000 },
+          { currency: "MYR", amountCents: 12500 },
+        ],
         totalOrders: 10,
-        averageOrderValue: 50,
-        taxAmount: 25,
-        netRevenue: 475,
+        averageOrderValue: [
+          { currency: "TWD", amountCents: 5000 },
+          { currency: "MYR", amountCents: 2500 },
+        ],
+        taxAmount: [
+          { currency: "TWD", amountCents: 2500 },
+          { currency: "MYR", amountCents: 625 },
+        ],
+        netRevenue: [
+          { currency: "TWD", amountCents: 47500 },
+          { currency: "MYR", amountCents: 11875 },
+        ],
+        previousPeriodRevenue: [
+          { currency: "TWD", amountCents: 25000 },
+          { currency: "MYR", amountCents: 12500 },
+        ],
+        growthRate: [
+          { currency: "TWD", percentage: 100 },
+          { currency: "MYR", percentage: 0 },
+        ],
       },
       // The database layer returns one `byDay` bucket list at the grain the
       // filters asked for, labelled `date` and counting `orderCount`. This
@@ -385,9 +405,9 @@ describe("AnalyticsService", () => {
         byDay: [
           {
             date: "2026-06-07",
-            revenue: 500,
+            revenue: [{ currency: "TWD", amountCents: 50000 }],
             orderCount: 10,
-            averageOrderValue: 50,
+            averageOrderValue: [{ currency: "TWD", amountCents: 5000 }],
           },
         ],
         byCategory: [],
@@ -397,15 +417,48 @@ describe("AnalyticsService", () => {
 
     const service = createService();
     await expect(
-      service.getFinancialReport({ restaurantId: "7", period: "daily" }),
+      service.getFinancialReport({
+        restaurantId: "7",
+        period: "daily",
+        dateFrom: "2026-06-01T00:00:00.000Z",
+        dateTo: "2026-06-08T00:00:00.000Z",
+      }),
     ).resolves.toEqual({
-      totalRevenue: 500,
+      totalRevenue: [
+        { currency: "TWD", amountCents: 50000 },
+        { currency: "MYR", amountCents: 12500 },
+      ],
       totalOrders: 10,
-      averageOrderValue: 50,
-      taxAmount: 25,
-      netRevenue: 475,
+      averageOrderValue: [
+        { currency: "TWD", amountCents: 5000 },
+        { currency: "MYR", amountCents: 2500 },
+      ],
+      taxAmount: [
+        { currency: "TWD", amountCents: 2500 },
+        { currency: "MYR", amountCents: 625 },
+      ],
+      netRevenue: [
+        { currency: "TWD", amountCents: 47500 },
+        { currency: "MYR", amountCents: 11875 },
+      ],
+      periodComparison: {
+        previousPeriodRevenue: [
+          { currency: "TWD", amountCents: 25000 },
+          { currency: "MYR", amountCents: 12500 },
+        ],
+        growthRate: [
+          { currency: "TWD", percentage: 100 },
+          { currency: "MYR", percentage: 0 },
+        ],
+      },
       breakdown: {
-        daily: [{ date: "2026-06-07", revenue: 500, orders: 10 }],
+        daily: [
+          {
+            date: "2026-06-07",
+            revenue: [{ currency: "TWD", amountCents: 50000 }],
+            orders: 10,
+          },
+        ],
       },
     });
 
@@ -413,7 +466,12 @@ describe("AnalyticsService", () => {
     await service.clearCache();
 
     expect(mocks.databaseService.getFinancialReport).toHaveBeenCalledWith(
-      expect.objectContaining({ restaurantId: "7", period: "daily" }),
+      expect.objectContaining({
+        restaurantId: "7",
+        period: "daily",
+        dateFrom: "2026-06-01T00:00:00.000Z",
+        dateTo: "2026-06-08T00:00:00.000Z",
+      }),
     );
     expect(mocks.cache.clear).toHaveBeenNthCalledWith(1, "analytics:*:7:*");
     expect(mocks.cache.clear).toHaveBeenNthCalledWith(2, "analytics:*");

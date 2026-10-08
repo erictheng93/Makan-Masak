@@ -45,7 +45,24 @@ export class ReceiptFormattingService {
       );
 
       // 執行格式化
-      const content = formatter.formatReceipt(request);
+      const content = {
+        ...formatter.formatReceipt(request),
+        type: request.type,
+      };
+      if (request.type === "kitchen") {
+        content.header = {
+          ...content.header,
+          transactionInfo: {
+            ...content.header.transactionInfo,
+            timestampText: new Intl.DateTimeFormat(region.locale, {
+              dateStyle: "short",
+              timeStyle: "medium",
+              timeZone: region.timezone,
+              hourCycle: "h23",
+            }).format(content.header.transactionInfo.timestamp),
+          },
+        };
+      }
 
       // 驗證輸出內容
       this.validatePrintContent(content);

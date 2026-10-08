@@ -3,6 +3,7 @@ import type {
   KVNamespace,
   R2Bucket,
   Queue,
+  SendEmail,
 } from "@cloudflare/workers-types";
 import type { DeploymentMode } from "./deployment";
 
@@ -100,6 +101,8 @@ export interface Env {
   GLOBAL_RATE_LIMITER?: RateLimit;
   /** Tighter native bucket for the public WebSocket token exchange (#341). */
   AUTH_TOKEN_RATE_LIMITER?: RateLimit;
+  /** Atomic hard floor for anonymous reservation creates and cancellations. */
+  PUBLIC_RESERVATION_MUTATION_RATE_LIMITER?: RateLimit;
   RATE_LIMIT_KV: KVNamespace; // Geographic rate limiting storage
   PRELOAD_QUEUE?: Queue; // Cache preloading queue
   REVALIDATION_QUEUE?: Queue; // Cache revalidation queue
@@ -180,12 +183,7 @@ export interface Env {
     };
     payload: Record<string, unknown>;
   }) => Promise<{ ok: boolean; status: number }>;
-  SENDGRID_API_KEY?: string;
-  RESEND_API_KEY?: string;
-  // Opt-in flag read by NotificationService's resolveEmailProviderName. Only
-  // "true" selects MailChannels; anything else falls back to Resend (or to the
-  // noop provider when RESEND_API_KEY is absent).
-  USE_MAILCHANNELS?: string;
+  NOTIFICATION_EMAIL?: SendEmail;
   BILLING_EMAIL_FROM?: string;
   STRIPE_WEBHOOK_SECRET?: string;
   LINEPAY_WEBHOOK_SECRET?: string;

@@ -13,7 +13,7 @@ const enUS: Messages = {
 
   app: {
     tagline: {
-      selfHosted: "Self-Hosted",
+      platformHosted: "Platform-Hosted",
     },
     footer: {
       copyright: "© 2026 MakanMasak. All rights reserved.",
@@ -24,30 +24,66 @@ const enUS: Messages = {
     hero: {
       titleLine1: "Build Your Restaurant's",
       titleLine2: "Dedicated Management System",
-      subtitle: "Self-Hosted · Secure Data · Launch in 24 Hours",
+      subtitle:
+        "Platform-Hosted · Secure Data · Reviewed and Activated by Our Team",
       ctaApply: "Apply Now",
-      ctaDemo: "View Demo →",
+      ctaTour: "See how it works ↓",
     },
     features: {
-      isolated: {
-        title: "Isolated Environment",
+      hosted: {
+        title: "Platform-Hosted",
         description:
-          "Fully isolated cloud environment. Your data is 100% yours.",
+          "We run the system for you — no servers to set up or maintain",
       },
       secure: {
         title: "Secure & Reliable",
         description:
           "Built on Cloudflare's global edge network with enterprise-grade security.",
       },
-      fast: {
-        title: "Fast Deployment",
-        description: "Automated deployment pipeline. Live within 24 hours.",
+      assisted: {
+        title: "Assisted Activation",
+        description:
+          "Our team reviews your application, activates your account, and guides your shop setup",
+      },
+    },
+    tour: {
+      title: "From order to table, at a glance",
+      subtitle:
+        "These are real screens from the system, shown with a sample restaurant and sample orders.",
+      tryDemo: "Try the demo restaurant →",
+      tryDemoHint:
+        "Open it on your phone, just like a guest scanning the code. No order is actually sent.",
+      steps: {
+        order: {
+          title: "Guests order by scanning",
+          description:
+            "Guests scan the QR code on the table and order from a menu with photos. No app to download.",
+          alt: "The ordering screen on a guest's phone",
+        },
+        kitchen: {
+          title: "The kitchen gets it instantly",
+          description:
+            "Orders appear on the kitchen tablet right away, sorted into waiting, cooking and ready.",
+          alt: "The order board on the kitchen tablet",
+        },
+        tracking: {
+          title: "Guests can follow along",
+          description:
+            "Guests see each step on their phone as it happens, so nobody has to ask if it's ready.",
+          alt: "Order progress on a guest's phone",
+        },
+        dashboard: {
+          title: "Owners see the takings",
+          description:
+            "Today's sales, order count and which tables are still waiting, all on one screen.",
+          alt: "The owner overview in the admin dashboard",
+        },
       },
     },
     cta: {
       title: "Ready to Get Started?",
       subtitle:
-        "Fill out the application and we'll contact you within 24 hours.",
+        "Fill out the application and our team will contact you after review.",
       button: "Start Application",
     },
   },
@@ -130,6 +166,19 @@ const enUS: Messages = {
         "Only lowercase letters, numbers, and hyphens allowed",
       subdomainTooShort: "Must be at least 3 characters",
       subdomainTaken: "This URL is already taken",
+      tooShort: "Must be at least 2 characters",
+      phoneInvalid: "Phone number must be 8 to 20 characters",
+    },
+    submitErrors: {
+      rateLimited:
+        "Too many submissions. Each network can submit 5 times per clock hour (failed attempts count too). Please try again after the next hour, or switch to mobile data.",
+      validation:
+        "Some details are not valid. Please check each field and submit again.",
+      cityNotInCountry:
+        "The selected city is not in this country. Please choose the country and city again.",
+      marketNotInCity:
+        "The selected market is not in this city. Please choose again.",
+      network: "Connection problem. Please check your network and try again.",
     },
     toast: {
       submitSuccess: "Application submitted",
@@ -149,20 +198,15 @@ const enUS: Messages = {
       businessName: "Restaurant Name",
       contactEmail: "Contact Email",
       plan: "Selected Plan",
-      subdomain: "Dedicated URL",
-      cloudflare: "Platform Hosting",
-      connected: "Enabled",
       status: "Application Status",
       pendingReview: "Pending Platform Review",
     },
     nextSteps: {
       title: "What Happens Next?",
       email: {
-        title: "Confirmation Email",
-        prefix: "We've sent a confirmation email to",
-        suffix: ". Please check your inbox.",
+        title: "Login Details",
         description:
-          "We will email you when there is an update on your application.",
+          "Once approved, the platform will give you your owner account and a set-password link. Use the status link to follow your application.",
       },
       deploy: {
         title: "Platform Review",

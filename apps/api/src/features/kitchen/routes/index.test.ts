@@ -125,6 +125,7 @@ describe("kitchen routes", () => {
       orderId: 44,
       itemId: 9,
       status: "ready",
+      orderStatus: "ready",
       updatedAt: "2026-06-07T00:00:00.000Z",
     });
     mocks.resolveOrderIdentity.mockResolvedValue({
@@ -317,6 +318,7 @@ describe("kitchen routes", () => {
         orderPublicId: "018f0000-0000-7000-8000-000000000044",
         itemId: 9,
         status: "ready",
+        orderStatus: "ready",
       },
       message: "Order item status updated successfully",
     });

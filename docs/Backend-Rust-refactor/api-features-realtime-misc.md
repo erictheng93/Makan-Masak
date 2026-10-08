@@ -191,10 +191,10 @@ Thin admin-only HTTP surface over the shared `NotificationService` (`packages/da
 
 ### Business logic
 
-- `/test` and `/templates` are role-gated to Admin/Owner only; `/templates` additionally reports `configuredProviders.email = !!RESEND_API_KEY` and `.sms = !!(TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN)` — note this checks for the Resend key specifically even though `NotificationService`'s default email provider is MailChannels (see below), so this diagnostic can under-report a working email provider when `USE_MAILCHANNELS !== "false"` and no Resend key is set.
+- `/test` and `/templates` are role-gated to Admin/Owner only; `/templates` additionally reports `configuredProviders.email = resolveEmailProviderName(env) !== "noop"` (true exactly when the `NOTIFICATION_EMAIL` binding exists) and `.sms = !!(TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN)`.
 - `/send` additionally runs `validateNotificationRecipientScope`: Admin (`role===0`) bypasses; everyone else must have a `restaurantId` matching the recipient's `users.restaurant_id` (raw `DB.prepare` lookup, not Drizzle) **and** the caller-supplied `recipientEmail` must case-insensitively match the recipient's stored email, else `403`/`400`/`404` respectively.
 - `NotificationService` (`packages/database/src/services/NotificationService.ts`) is the actual dispatch engine, constructed fresh per request from `env`:
-  - **Email provider selection**: MailChannels (`env.USE_MAILCHANNELS !== "false"`, the default — no API key needed, POSTs to `https://api.mailchannels.net/tx/v1/send`) takes priority; falls back to Resend only if MailChannels is explicitly disabled and `RESEND_API_KEY` is set.
+  - **Email provider selection**: Cloudflare Email Service only — `createEmailProvider(env, from)` returns a `CloudflareEmailProvider` over the `NOTIFICATION_EMAIL` send_email binding, or `null` (email off) without it. MailChannels and Resend were both removed.
   - **SMS provider**: Twilio, only if all three of `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`/`TWILIO_PHONE_NUMBER` are set (Basic-Auth POST to the Twilio Messages REST endpoint).
   - **Templates**: a static `notificationTemplates` map keyed by `NotificationCategory` (28 categories spanning leave/schedule/swap/reservation/service-booking/waiting-list/verification flows — the route module only exposes 11 of these via `/templates`' hardcoded list, the rest are used internally by other features), each with an HTML `body` (or plain SMS text for the waiting-list/OTP categories) using `{{variable}}` placeholders and a minimal `{{#if var}}...{{/if}}` conditional-block renderer (regex-based, not a real template engine).
   - `sendNotification` renders subject+body, dispatches to the matching provider based on `payload.type`, and returns `{success, errors[]}` — errors are collected, not thrown, so a missing provider degrades to a soft failure rather than a 500 from inside the service (the route layer still surfaces it as HTTP 500 when `success:false`).
@@ -205,12 +205,12 @@ Thin admin-only HTTP surface over the shared `NotificationService` (`packages/da
 
 - **D1**: only a raw `users` lookup (`restaurant_id, email`) inside `validateNotificationRecipientScope` — no writes.
 - **No DB persistence of notifications themselves** (see above).
-- **External calls**: MailChannels HTTP API, Resend HTTP API, Twilio HTTP API — all plain `fetch()`, no queue/retry layer; a failed provider call is a one-shot failure surfaced to the caller.
+- **External calls**: Cloudflare Email Service (binding call, not `fetch`) and the SMS vendor's HTTP API — no queue/retry layer; a failed provider call is a one-shot failure surfaced to the caller.
 
 ### Cross-module dependencies
 
 - `NotificationService` is the same class instantiated directly (bypassing this HTTP module) by `LeaveService` and `SchedulingService` (see §7/§8) to send `leave_request_*`/`schedule_*`/`swap_request_*` emails as side effects of their own mutations — this module's `/send` endpoint is a manual/admin escape hatch into the same engine, not the primary trigger path.
-- Shares env vars (`RESEND_API_KEY`, `TWILIO_*`, `NOTIFICATION_FROM_EMAIL`) with the billing feature's separate notification path.
+- Shares the `NOTIFICATION_EMAIL` binding and `NOTIFICATION_FROM_EMAIL` (and `TWILIO_*`) with the billing feature's separate notification path; both build their email provider through `createEmailProvider`.
 
 ### Rust rewrite notes
 

@@ -46,6 +46,7 @@
           </button>
           <button
             class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+            data-testid="table-detail-switch-mode"
             @click="showModeSwitchModal = true"
           >
             {{ t("tableDetail.switchMode") }}
@@ -229,12 +230,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from "vue";
+import { computed, ref, onBeforeUnmount, onMounted } from "vue";
 import { useI18n } from "@/i18n";
 import { useToast } from "vue-toastification";
 import { useConfirmModal } from "@/composables/useConfirmModal";
 import { useRouter, useRoute } from "vue-router";
 import { api, unwrapApiList, unwrapApiPayload } from "@/services/api";
+import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import type { Seat } from "@makanmasak/shared-types";
 import { ArrowLeftIcon, XMarkIcon } from "@heroicons/vue/24/outline";
 import SeatManagement from "../components/tables/SeatManagement.vue";
@@ -487,9 +489,21 @@ const loadTableData = async () => {
   }
 };
 
+// Occupancy changes with orders. Hold the poll while the mode-switch modal is
+// open: a reload resets the QR mode and seat config being edited there.
+const tablePoller = createVisibilityAwarePoller({
+  intervalMs: 30_000,
+  onTick: () => {
+    if (isLoading.value || showModeSwitchModal.value) return;
+    return loadTableData();
+  },
+});
+
 onMounted(() => {
   loadTableData();
+  tablePoller.start();
 });
+onBeforeUnmount(() => tablePoller.stop());
 </script>
 
 <style scoped>

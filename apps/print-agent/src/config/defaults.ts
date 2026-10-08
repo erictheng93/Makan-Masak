@@ -29,6 +29,7 @@ export function createDefaultConfig(): LocalPrintServiceConfig {
     restaurantId,
 
     // Printer settings
+    printerEncoding: readPrinterEncoding(),
     autoDiscovery: process.env.AUTO_DISCOVERY !== "false",
     discoveryInterval: parseInt(process.env.DISCOVERY_INTERVAL || "30000"), // 30 seconds
     heartbeatInterval: parseInt(process.env.HEARTBEAT_INTERVAL || "60000"), // 1 minute
@@ -38,6 +39,15 @@ export function createDefaultConfig(): LocalPrintServiceConfig {
     maxRetries: parseInt(process.env.MAX_RETRIES || "3"),
     retryDelay: parseInt(process.env.RETRY_DELAY || "5000"), // 5 seconds
   };
+}
+
+function readPrinterEncoding() {
+  const value = process.env.PRINTER_ENCODING?.trim().toLowerCase();
+  if (!value) return undefined;
+  if (value !== "utf8" && value !== "big5" && value !== "gbk") {
+    throw new Error("PRINTER_ENCODING must be utf8, big5 or gbk");
+  }
+  return value;
 }
 
 function readRequiredEnv(name: string): string {
@@ -61,7 +71,6 @@ export const defaultPrinterSettings = {
   printSettings: {
     paperWidth: 80, // mm
     fontSize: 12,
-    encoding: "utf8",
     timeout: 10000, // ms
   },
 

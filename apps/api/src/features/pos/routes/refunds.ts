@@ -22,6 +22,8 @@ import { badRequest, notFound } from "../../../shared/utils/api-error";
 import { AlertService } from "../../../services/AlertService";
 import { resolveOrderIdentity } from "../../../shared/services/order-identity";
 import { PosTenantAccessService } from "../services/PosTenantAccessService";
+import { invalidateOrderCache } from "../../orders/services/order-finalization";
+import { USER_ROLES } from "../../../shared/constants";
 
 const app = new Hono<{ Bindings: Env }>();
 const processRefundRouteSchema = processRefundSchema.extend({
@@ -69,7 +71,12 @@ function createRefundService(env: Env): RefundService {
       alertService.sendAlert(alert);
   }
 
-  return new RefundService(env.DB, { alertSink });
+  return new RefundService(env.DB, {
+    alertSink,
+    // GET /orders/:id is cached for five minutes; without this the order keeps
+    // reading as fully paid after the money has gone back.
+    onOrderRefunded: (orderId) => invalidateOrderCache(env.CACHE_KV, orderId),
+  });
 }
 
 /**
@@ -90,13 +97,16 @@ app.post(
     if (!registerId) {
       throw badRequest("需要指定收銀機ID");
     }
+    if (!shiftId) {
+      // A POS refund can physically remove cash from the drawer.  Without a
+      // shift there is no ledger to reconcile it against, so reject it rather
+      // than creating an unassigned refund record.
+      throw badRequest("需要指定班次ID");
+    }
     if (!posLedgerIdSchema.safeParse(registerId).success) {
       throw badRequest("收銀機ID格式錯誤");
     }
-    if (
-      shiftId !== undefined &&
-      !posLedgerIdSchema.safeParse(shiftId).success
-    ) {
+    if (!posLedgerIdSchema.safeParse(shiftId).success) {
       throw badRequest("班次ID格式錯誤");
     }
 
@@ -117,11 +127,18 @@ app.post(
       },
     );
     const refundService = createRefundService(c.env);
+    // Cashiers may initiate a refund but cannot settle money movement by
+    // themselves.  The persisted processing record is finalised only by the
+    // existing Admin/Owner approval endpoint.  Admin/Owner initiated refunds
+    // retain the synchronous completion flow.
+    const requireApproval =
+      user.role !== USER_ROLES.ADMIN && user.role !== USER_ROLES.OWNER;
     const result = await refundService.processRefund(
       { ...data, originalOrderId: orderIdentity.id },
       registerId,
       user.id,
       shiftId,
+      { requireApproval },
     );
 
     if (!result.success) {

@@ -13,17 +13,21 @@ export default {
       },
       colors: {
         ...iosColors,
+        // Cloudflare orange (#F38020) at 500. Fills sit on 500/600; text on
+        // white uses 700+, since #F38020 is only 2.65:1 against white. Large
+        // display text (wordmark, hero line) and icons use 500 to match the
+        // buttons; small text and links stay on 700.
         primary: {
-          50: "#f0fdf4",
-          100: "#dcfce7",
-          200: "#bbf7d0",
-          300: "#86efac",
-          400: "#4ade80",
-          500: "#22c55e",
-          600: "#16a34a",
-          700: "#15803d",
-          800: "#166534",
-          900: "#14532d",
+          50: "#fef4ea",
+          100: "#fde4cc",
+          200: "#fac999",
+          300: "#f7ac66",
+          400: "#f5963f",
+          500: "#f38020",
+          600: "#e06d10",
+          700: "#b04f09",
+          800: "#8f430c",
+          900: "#6e350d",
         },
       },
     },

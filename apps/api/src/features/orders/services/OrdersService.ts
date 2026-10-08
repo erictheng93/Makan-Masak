@@ -244,7 +244,10 @@ export class OrdersService implements IOrdersService {
       }
 
       // Validate coupon code format
-      if (data.couponCode && data.couponCode.length < 3) {
+      if (
+        (data.couponCode && data.couponCode.length < 3) ||
+        data.couponCodes?.some((code) => code.length < 3)
+      ) {
         throw badRequest(
           "Invalid coupon code format",
           "INVALID_COUPON_CODE_FORMAT",
@@ -270,7 +273,10 @@ export class OrdersService implements IOrdersService {
         })),
         notes: data.notes,
         couponCode: data.couponCode,
-        couponUserId: userId,
+        couponCodes: data.couponCodes,
+        // Canonical customers live outside the staff `users` table. Their
+        // coupon limit is keyed by the server-derived customer hash below.
+        couponUserId: data.customerId ? undefined : userId,
         couponGuestIdentity: data.couponGuestIdentity,
         clientMutationId: data.clientMutationId,
         orderSource: data.orderSource,
@@ -766,9 +772,14 @@ export class OrdersService implements IOrdersService {
     itemId: number,
     status: string,
     notes?: string,
+    orderId?: string,
   ): Promise<void> {
     try {
       await this.baseOrderService.updateOrderItemStatus(itemId, status, notes);
+      // GET /orders/:id serves items from a five-minute cache, and an item
+      // moving does not always move the order (only the first and the last do),
+      // so without this the detail page keeps showing the old item statuses.
+      if (orderId) await this.invalidateOrderCache(orderId);
     } catch (error) {
       if (
         error instanceof Error &&
@@ -1772,9 +1783,13 @@ export class OrdersService implements IOrdersService {
       orderSource: filters.orderSource,
       search: filters.search,
       tableId: filters.tableId,
+      // Either end may be open: "since midnight" is a dateFrom alone.
       dateRange:
-        filters.dateFrom && filters.dateTo
-          ? [new Date(filters.dateFrom), new Date(filters.dateTo)]
+        filters.dateFrom || filters.dateTo
+          ? [
+              filters.dateFrom ? new Date(filters.dateFrom) : undefined,
+              filters.dateTo ? new Date(filters.dateTo) : undefined,
+            ]
           : undefined,
       sortBy: filters.sortBy,
       sortOrder: filters.sortOrder,

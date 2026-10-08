@@ -1756,6 +1756,7 @@ describe("Markets API — real integration", () => {
         marketId: market.id,
         stallNumber: "A-02",
         joinedAt: new Date(),
+        openedAt: new Date(),
       },
     ]);
     const openVendorItem = await seed.menuItem(String(openVendor.id), {
@@ -1796,7 +1797,7 @@ describe("Markets API — real integration", () => {
     });
   });
 
-  it("uses market-specific vendor hours before restaurant business hours", async () => {
+  it("retains market-specific hours while showing today's open state", async () => {
     const market = await seedMarket(testApp, {
       slug: "market-hours-override-market",
     });
@@ -1813,6 +1814,7 @@ describe("Markets API — real integration", () => {
       mapPosition: { x: 33, y: 44 },
       marketHours,
       joinedAt: new Date(),
+      openedAt: new Date(),
     });
     const item = await seed.menuItem(String(vendor.id), {
       name: "Override Hours Searchable Item",

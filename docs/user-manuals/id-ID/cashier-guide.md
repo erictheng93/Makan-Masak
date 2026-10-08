@@ -13,7 +13,7 @@
 3. [Antarmuka Sistem Kasir](#antarmuka-sistem-kasir)
 4. [Proses Pembayaran Pesanan](#proses-pembayaran-pesanan)
 5. [Metode Pembayaran](#metode-pembayaran)
-6. [Manajemen Faktur](#manajemen-faktur)
+6. [Penanganan Struk](#penanganan-struk)
 7. [Pengembalian Dana & Pembatalan](#pengembalian-dana--pembatalan)
 8. [Rekonsiliasi Harian](#rekonsiliasi-harian)
 9. [Query Laporan](#query-laporan)
@@ -81,7 +81,7 @@
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
 │  ✅ Pembayaran Pesanan  ✅ Proses Pembayaran           │
-│  ✅ Cetak Faktur        ✅ Permintaan Pengembalian     │
+│  ✅ Cetak Struk        ✅ Permintaan Pengembalian      │
 │  ✅ Penutupan Harian    ✅ Query Laporan               │
 │  ✅ Verifikasi Jumlah   ✅ Laporan Pengecualian        │
 │                                                         │
@@ -108,9 +108,9 @@
 │       ↓                                                │
 │  Terima Pembayaran ────→ Verifikasi Jumlah Benar      │
 │       ↓                                                │
-│  Selesaikan Pembayaran ────→ Cetak Faktur/Struk       │
+│  Selesaikan Pembayaran ────→ Cetak Struk              │
 │       ↓                                                │
-│  Serahkan Faktur ────→ Berikan Kembalian (jika perlu) │
+│  Serahkan Struk ────→ Berikan Kembalian (jika perlu)  │
 │       ↓                                                │
 │  Ucapkan Terima Kasih ────→ Sampai Jumpa Lagi         │
 │                                                        │
@@ -155,7 +155,7 @@
 | 🔍 **Cari Cepat**         | Cari Pesanan        | Cari berdasarkan meja, nomor pesanan, atau telepon |
 | 📋 **Detail Pesanan**     | Lihat Detail        | Tampilkan konten pesanan lengkap                   |
 | 💳 **Bayar**              | Proses Pembayaran   | Masuk ke alur pembayaran                           |
-| 🧾 **Cetak Ulang Faktur** | Cetak Ulang         | Cetak ulang faktur yang hilang atau rusak          |
+| 🧾 **Cetak Ulang Struk** | Cetak Ulang         | Cetak ulang struk yang hilang atau rusak          |
 | 🔄 **Pengembalian Dana**  | Proses Pengembalian | Ajukan pengembalian dana pesanan                   |
 | 📊 **Laporan**            | Query Laporan       | Lihat data bisnis                                  |
 | 🔐 **Penutupan**          | Penutupan Harian    | Lakukan rekonsiliasi akhir hari                    |
@@ -316,7 +316,7 @@
 
 ---
 
-#### Langkah 5: Cetak Faktur/Struk
+#### Langkah 5: Cetak Struk
 
 ```
 ┌────────────────────────────────────────┐
@@ -365,17 +365,17 @@
 ```
 ✅ Daftar Periksa Konfirmasi Akhir
 
-1. [ ] Faktur/struk dicetak
+1. [ ] Struk dicetak
 2. [ ] Jumlah kembalian benar
 3. [ ] Struk kartu kredit ditandatangani (jika berlaku)
-4. [ ] Serahkan faktur ke pelanggan
+4. [ ] Serahkan struk ke pelanggan
 5. [ ] Ucapkan terima kasih dengan sopan
 ```
 
 **Ucapan Standar:**
 
 ```
-"Ini faktur dan kembalian Anda $439,
+"Ini struk dan kembalian Anda $439,
  mohon disimpan dengan baik. Terima kasih telah makan di tempat kami,
  sampai jumpa lagi!"
 ```
@@ -510,7 +510,7 @@
 5️⃣ Pelanggan konfirmasi jumlah dan selesaikan pembayaran
 6️⃣ Sistem menerima notifikasi pembayaran (3-5 detik)
 7️⃣ Tampilkan "Pembayaran Berhasil" ✅
-8️⃣ Otomatis cetak e-faktur
+8️⃣ Otomatis cetak struk
 ```
 
 ---
@@ -543,139 +543,9 @@ Prosedur:
 
 ---
 
-## 🧾 Manajemen Faktur
+## Penanganan Struk
 
-### Sistem E-Faktur
-
-```
-┌─────────────────────────────────────────────┐
-│ Alur E-Faktur                               │
-├─────────────────────────────────────────────┤
-│                                             │
-│  Pembayaran Pelanggan                       │
-│       ↓                                     │
-│  Tanyakan apakah perlu NPWP                 │
-│       ↓                                     │
-│  ┌──────────┐  ┌──────────┐               │
-│  │Perlu NPWP│  │Tanpa NPWP│               │
-│  └──────────┘  └──────────┘               │
-│       ↓              ↓                      │
-│  Masukkan NPWP  Hasilkan E-Faktur          │
-│       ↓              ↓                      │
-│  Cetak Faktur    Tanyakan Carrier          │
-│  Perusahaan           ↓                     │
-│                  ┌──────────┐              │
-│                  │Kode Mobile│             │
-│                  │Carrier Anggota│         │
-│                  │Kode Digital│            │
-│                  │Cetak Kertas│            │
-│                  └──────────┘              │
-│                       ↓                     │
-│                  Penerbitan Selesai ✅      │
-│                                             │
-└─────────────────────────────────────────────┘
-```
-
-### Langkah Penerbitan Faktur
-
-#### Kasus 1: Konsumsi Pribadi (Tanpa NPWP)
-
-```
-1. Tanyakan pelanggan: "Apakah perlu NPWP?"
-2. Pelanggan menjawab: "Tidak"
-3. Tanyakan: "Apakah ingin menyimpan faktur di carrier?"
-
-Opsi A: Gunakan barcode mobile
-  → Pelanggan menunjukkan barcode mobile
-  → Scan barcode
-  → Faktur otomatis tersimpan
-
-Opsi B: Gunakan carrier anggota
-  → Masukkan nomor telepon anggota
-  → Sistem otomatis terhubung ke carrier anggota
-
-Opsi C: Cetak kertas
-  → Cetak faktur langsung
-  → Serahkan ke pelanggan
-```
-
-#### Kasus 2: Penggantian Perusahaan (Perlu NPWP)
-
-```
-1. Tanyakan pelanggan: "Apakah perlu NPWP?"
-2. Pelanggan menjawab: "Ya, NPWP adalah 12345678"
-3. Masukkan NPWP: 12345678
-4. Tanyakan: "Nama perusahaan?"
-5. Masukkan nama perusahaan: PT. Teknologi OOO
-6. Cetak faktur perusahaan
-7. Periksa informasi faktur benar
-8. Serahkan ke pelanggan
-```
-
----
-
-### Cetak Ulang Faktur
-
-**Kapan perlu cetak ulang?**
-
-- Mesin faktur macet kertas
-- Cetakan faktur tidak jelas
-- Pelanggan kehilangan faktur
-- Informasi faktur salah (batalkan dulu)
-
-**Proses Cetak Ulang:**
-
-```
-1️⃣ Konfirmasi nomor pesanan
-2️⃣ Masuk "Manajemen Faktur"
-3️⃣ Cari transaksi
-4️⃣ Klik "Cetak Ulang Faktur"
-5️⃣ Verifikasi informasi faktur
-6️⃣ Cetak dan tandai "CETAK ULANG"
-7️⃣ Catat alasan cetak ulang di sistem
-```
-
-⚠️ **Catatan:**
-
-- Faktur yang sama dapat dicetak ulang maksimal 3 kali
-- Faktur cetak ulang harus mencatat "CETAK ULANG"
-- Catat waktu dan alasan cetak ulang
-- Perlu tanda tangan pelanggan untuk tanda terima
-
----
-
-### Pembatalan Faktur
-
-**Kapan membatalkan faktur?**
-
-- Pesanan dibatalkan
-- Informasi faktur salah (NPWP, nama)
-- Jumlah yang diterbitkan salah
-- Pelanggan meminta pengembalian dana
-
-**Proses Pembatalan:**
-
-```
-1️⃣ Konfirmasi kondisi pembatalan terpenuhi
-   - Hari yang sama dengan penerbitan
-   - Belum diarsipkan
-
-2️⃣ Ambil faktur asli (jika kertas)
-
-3️⃣ Lakukan pembatalan di sistem
-   - Masukkan nomor pesanan
-   - Pilih "Batalkan Faktur"
-   - Pilih alasan pembatalan
-   - Masukkan keterangan
-
-4️⃣ Sistem konfirmasi pembatalan ✅
-
-5️⃣ Cap "BATAL" pada faktur kertas
-
-6️⃣ Simpan faktur yang dibatalkan untuk catatan
-
-7️⃣ Jika perlu menerbitkan ulang, lakukan proses penerbitan baru
-```
+Sistem saat ini mencetak struk dan tidak menerbitkan faktur elektronik. Setiap toko menangani faktur melalui prosedur yang sudah berlaku.
 
 ---
 
@@ -737,8 +607,6 @@ Opsi C: Cetak kertas
 │  Cetak Struk Pengembalian                   │
 │       ↓                                     │
 │  Pelanggan Tanda Tangan Konfirmasi          │
-│       ↓                                     │
-│  Batalkan Faktur Asli                       │
 │       ↓                                     │
 │  Pengembalian Dana Selesai ✅              │
 │                                             │
@@ -1636,27 +1504,9 @@ A: Respon standar
 
 ---
 
-### Q3: Bagaimana jika faktur diterbitkan salah?
+### Q3: Bagaimana jika struk hilang atau tidak jelas?
 
-```
-A: Penanganan kesalahan faktur
-
-Jika ditemukan hari yang sama:
-1️⃣ Batalkan faktur yang salah
-2️⃣ Terbitkan ulang faktur yang benar
-3️⃣ Hubungi pelanggan untuk tukar (jika sudah pergi)
-
-Jika ditemukan hari berikutnya:
-1️⃣ Hubungi personel pajak
-2️⃣ Evaluasi apakah bisa dibatalkan
-3️⃣ Mungkin perlu menerbitkan nota kredit
-
-Pencegahan:
-✅ Verifikasi sebelum menerbitkan
-✅ Periksa NPWP digit per digit
-✅ Pelanggan konfirmasi nama perusahaan
-✅ Periksa faktur sebelum diserahkan
-```
+Konfirmasikan nomor pesanan dan catatan pembayaran, lalu cetak ulang struk dan serahkan kepada pelanggan. Minta bantuan manajer jika cetak ulang tidak tersedia.
 
 ---
 
@@ -1894,7 +1744,7 @@ Jika benar-benar ada urusan mendesak:
 │  📊 Departemen Akuntansi                │
 │     Ekstensi: 102                       │
 │     Email: accounting@makanmakan.com    │
-│     Tangani: Akuntansi, masalah faktur  │
+│     Tangani: Akuntansi, masalah struk   │
 │                                         │
 └─────────────────────────────────────────┘
 ```
@@ -1952,18 +1802,10 @@ Jika benar-benar ada urusan mendesak:
 "Kembalian Anda adalah $XXX, mohon periksa"
 ```
 
-**Penerbitan Faktur:**
+**Menyerahkan Struk:**
 
 ```
-"Apakah perlu NPWP?"
-"Apa nama perusahaannya?"
-"Apakah ingin menyimpan faktur di carrier?"
-```
-
-**Menyerahkan Faktur:**
-
-```
-"Ini faktur Anda, mohon disimpan"
+"Ini struk Anda, mohon disimpan"
 "Terima kasih telah makan, sampai jumpa lagi!"
 ```
 
@@ -1984,7 +1826,7 @@ Jika benar-benar ada urusan mendesak:
 | Cari Cepat        | F1         |
 | Bayar             | F2         |
 | Batal             | ESC        |
-| Cetak Faktur      | Ctrl+P     |
+| Cetak Struk      | Ctrl+P     |
 | Cetak Ulang       | Ctrl+R     |
 | Pengembalian Dana | Ctrl+Alt+R |
 | Kunci Layar       | Ctrl+L     |
@@ -2003,7 +1845,7 @@ Jika benar-benar ada urusan mendesak:
 │ 📊 Akurasi Transaksi (30%)            │
 │    • Frekuensi varians kas            │
 │    • Jumlah kesalahan                 │
-│    • Frekuensi kesalahan faktur       │
+│    • Frekuensi kesalahan struk        │
 │                                        │
 │ ⚡ Efisiensi Layanan (25%)            │
 │    • Waktu pembayaran rata-rata       │

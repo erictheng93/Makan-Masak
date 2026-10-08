@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
+import ts from "typescript";
 
 import type { Messages } from "../apps/kitchen-display/src/i18n/types";
 
@@ -101,7 +103,7 @@ function toEntryMap(entries: LeafEntry[]): Map<string, string> {
   return new Map(entries.map((entry) => [entry.key, entry.value]));
 }
 
-function parseCsv(text: string): string[][] {
+export function parseCsv(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = "";
@@ -230,8 +232,8 @@ function setNestedValue(
 
 interface HandoffLocaleOutput {
   localeFile: string;
-  constantName: string;
   messages: Record<string, unknown>;
+  unchanged: boolean;
 }
 
 interface HandoffValidationResult {
@@ -253,6 +255,47 @@ interface ApprovalManifest {
   apps?: string[];
   locales?: Locale[];
   notes?: string;
+}
+
+export function buildHandoffMessages(
+  rows: string[][],
+  keyIndex: number,
+  localeIndex: number,
+  expectedKeys: Set<string>,
+  existingMessages: Messages,
+) {
+  const messages: Record<string, unknown> = {};
+
+  // Emptiness is judged on the trimmed cell, but the value is kept
+  // verbatim: " min" and "note: " lean on their edge spaces (#429).
+  const translations = new Map<string, string>();
+  for (const row of rows) {
+    const key = row[keyIndex];
+    const translation = row[localeIndex];
+
+    if (expectedKeys.has(key) && translation?.trim()) {
+      translations.set(key, translation);
+    }
+  }
+
+  // Preserve existing key order; new keys follow in CSV order.
+  const existingKeys = flattenMessages(existingMessages).map(
+    (entry) => entry.key,
+  );
+  const existingKeySet = new Set(existingKeys);
+  const orderedKeys = [
+    ...existingKeys.filter((key) => translations.has(key)),
+    ...[...translations.keys()].filter((key) => !existingKeySet.has(key)),
+  ];
+  for (const key of orderedKeys) {
+    setNestedValue(messages, key, translations.get(key) as string);
+  }
+
+  return {
+    messages,
+    unchanged: JSON.stringify(messages) === JSON.stringify(existingMessages),
+    missingKeys: [...expectedKeys].filter((key) => !translations.has(key)),
+  };
 }
 
 async function validateApprovedHandoff(
@@ -292,42 +335,25 @@ async function validateApprovedHandoff(
     const appRows = body.filter((row) => row[appIndex] === app.name);
 
     for (const key of expectedKeys) {
-      const row = appRows.find((candidate) => candidate[keyIndex] === key);
-
-      if (!row) {
+      if (!appRows.some((row) => row[keyIndex] === key)) {
         warning(`${app.name}/${key} is missing from the handoff CSV`);
-        for (const locale of TARGET_LOCALES) {
-          missingTranslations.push(`${app.name}/${locale}/${key}`);
-        }
-        continue;
-      }
-
-      for (const locale of targetLocales) {
-        const localeIndex = localeIndexes.get(locale) ?? -1;
-        if (!row[localeIndex]?.trim()) {
-          missingTranslations.push(`${app.name}/${locale}/${key}`);
-        }
       }
     }
 
     for (const locale of targetLocales) {
-      const messages: Record<string, unknown> = {};
-      const localeIndex = localeIndexes.get(locale) ?? -1;
-
-      for (const row of appRows) {
-        const key = row[keyIndex];
-        const translation = row[localeIndex]?.trim();
-
-        if (expectedKeys.has(key) && translation) {
-          setNestedValue(messages, key, translation);
-        }
-      }
+      const { messages, unchanged, missingKeys } = buildHandoffMessages(
+        appRows,
+        keyIndex,
+        localeIndexes.get(locale) ?? -1,
+        expectedKeys,
+        await loadMessages(app, locale),
+      );
+      missingTranslations.push(
+        ...missingKeys.map((key) => `${app.name}/${locale}/${key}`),
+      );
 
       const localeFile = path.join(app.localeDir, `${locale}.ts`);
-      const constantName = locale
-        .replace("-", "")
-        .replace(/^([a-z])/, (match) => match.toLowerCase());
-      localeOutputs.push({ localeFile, constantName, messages });
+      localeOutputs.push({ localeFile, messages, unchanged });
     }
   }
 
@@ -435,21 +461,203 @@ async function importApprovedHandoff(csvPath: string): Promise<void> {
   assertNoMissingTranslations(missingTranslations);
   await validateApprovalManifest(csvPath);
 
-  for (const { localeFile, constantName, messages } of localeOutputs) {
-    const file = [
-      'import type { Messages } from "../types";',
-      "",
-      `const ${constantName}: Messages = ${JSON.stringify(messages, null, 2)};`,
-      "",
-      `export default ${constantName};`,
-      "",
-    ].join("\n");
-
+  // Prepare every edit before writing, so unsupported source syntax cannot
+  // leave an import half-applied.
+  const files = [];
+  for (const { localeFile, messages, unchanged } of localeOutputs) {
+    if (unchanged) continue;
+    const source = await readFile(localeFile, "utf8");
+    files.push({ localeFile, file: updateLocaleSource(source, messages) });
+  }
+  for (const { localeFile, file } of files) {
     await writeFile(localeFile, file, "utf8");
   }
 }
 
-function csvCell(value: string | number): string {
+function updateLocaleSource(
+  source: string,
+  messages: Record<string, unknown>,
+): string {
+  const ast = ts.createSourceFile(
+    "locale.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  const exported = ast.statements.find(ts.isExportAssignment)?.expression;
+  const initializer =
+    exported && ts.isIdentifier(exported)
+      ? ast.statements
+          .filter(ts.isVariableStatement)
+          .flatMap((statement) => [...statement.declarationList.declarations])
+          .find(
+            (declaration) =>
+              ts.isIdentifier(declaration.name) &&
+              declaration.name.text === exported.text,
+          )?.initializer
+      : exported;
+  if (!initializer || !ts.isObjectLiteralExpression(initializer)) {
+    throw new Error("Locale default export must be a literal object");
+  }
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+
+  const lineIndent = (pos: number) =>
+    source.slice(source.lastIndexOf("\n", pos - 1) + 1).match(/^[\t ]*/)![0];
+  const renderKey = (key: string, bare: boolean) =>
+    bare && /^[A-Za-z_$][\w$]*$/.test(key) ? key : JSON.stringify(key);
+  // Render a new value in the style of its siblings: bare identifier keys
+  // unless the object already quotes them, nested by two spaces.
+  const render = (value: unknown, indent: string, bare: boolean): string => {
+    if (typeof value !== "object" || value === null) {
+      return JSON.stringify(value);
+    }
+    const entries = Object.entries(value);
+    if (!entries.length) return "{}";
+    const inner = `${indent}  `;
+    const body = entries.map(
+      ([k, v]) => `${inner}${renderKey(k, bare)}: ${render(v, inner, bare)},`,
+    );
+    return `{${eol}${body.join(eol)}${eol}${indent}}`;
+  };
+
+  function patchObject(
+    node: ts.ObjectLiteralExpression,
+    values: Record<string, unknown>,
+  ): string {
+    const edits: { start: number; end: number; text: string }[] = [];
+    const firstName = node.properties[0]?.name;
+    const bare = !firstName || !ts.isStringLiteral(firstName);
+    const keys = new Set<string>();
+    const kept: ts.PropertyAssignment[] = [];
+    const commaAfter = (property: ts.PropertyAssignment) => {
+      const scanner = ts.createScanner(
+        ts.ScriptTarget.Latest,
+        true,
+        ts.LanguageVariant.Standard,
+        source,
+      );
+      scanner.setTextPos(property.end);
+      return scanner.scan() === ts.SyntaxKind.CommaToken
+        ? scanner.getTokenPos()
+        : undefined;
+    };
+    for (const property of node.properties) {
+      if (
+        !ts.isPropertyAssignment(property) ||
+        !(ts.isIdentifier(property.name) || ts.isStringLiteral(property.name))
+      ) {
+        throw new Error("Locale properties must have literal names and values");
+      }
+      const key = property.name.text;
+      keys.add(key);
+      if (!Object.hasOwn(values, key)) {
+        // Remove syntax only: adjacent translator comments stay intact.
+        const comma = commaAfter(property);
+        const start = property.getStart(ast);
+        const end = comma === undefined ? property.end : comma + 1;
+        const lineStart = source.lastIndexOf("\n", start - 1) + 1;
+        const lineEnd = source.indexOf("\n", end);
+        // A property alone on its lines goes away with them, leaving no blank.
+        if (
+          /^[\t ]*$/.test(source.slice(lineStart, start)) &&
+          lineEnd !== -1 &&
+          /^[\t\r ]*(\/\/.*)?$/.test(source.slice(end, lineEnd))
+        ) {
+          edits.push({ start: lineStart, end: lineEnd + 1, text: "" });
+        } else {
+          edits.push({ start, end: property.end, text: "" });
+          if (comma !== undefined)
+            edits.push({ start: comma, end: comma + 1, text: "" });
+        }
+        continue;
+      }
+      kept.push(property);
+      const value = values[key];
+      const old = property.initializer;
+      if (
+        !ts.isObjectLiteralExpression(old) &&
+        !ts.isStringLiteral(old) &&
+        !ts.isNoSubstitutionTemplateLiteral(old)
+      ) {
+        throw new Error("Locale properties must have literal names and values");
+      }
+      let text: string;
+      if (
+        ts.isObjectLiteralExpression(old) &&
+        typeof value === "object" &&
+        value !== null
+      ) {
+        text = patchObject(old, value as Record<string, unknown>);
+      } else if (
+        (ts.isStringLiteral(old) || ts.isNoSubstitutionTemplateLiteral(old)) &&
+        old.text === value
+      ) {
+        continue;
+      } else {
+        text = render(value, lineIndent(property.getStart(ast)), bare);
+        if (typeof value === "string" && source[old.getStart(ast)] === "'") {
+          text = `'${text.slice(1, -1).replaceAll('\\"', '"').replaceAll("'", "\\'")}'`;
+        } else if (
+          typeof value === "string" &&
+          ts.isNoSubstitutionTemplateLiteral(old)
+        ) {
+          text = `\`${text.slice(1, -1).replaceAll('\\"', '"').replaceAll("`", "\\`").replaceAll("${", "\\${")}\``;
+        }
+      }
+      edits.push({ start: old.getStart(ast), end: old.end, text });
+    }
+
+    const added = Object.entries(values).filter(([key]) => !keys.has(key));
+    if (added.length) {
+      const last = kept.at(-1);
+      const needComma = last && commaAfter(last) === undefined;
+      const close = node.end - 1;
+      const lineStart = source.lastIndexOf("\n", close - 1) + 1;
+      const multiline = /^\s*$/.test(source.slice(lineStart, close));
+      const parentIndent = lineIndent(node.getStart(ast));
+      const first = node.properties[0];
+      const firstIndent = first ? lineIndent(first.getStart(ast)) : "";
+      const indent = firstIndent || `${parentIndent}  `;
+      const text = added
+        .map(
+          ([key, value]) =>
+            `${indent}${renderKey(key, bare)}: ${render(value, indent, bare)},`,
+        )
+        .join(eol);
+      if (multiline) {
+        if (needComma)
+          edits.push({ start: last.end, end: last.end, text: "," });
+        edits.push({
+          start: lineStart,
+          end: lineStart,
+          text: `${text}${eol}`,
+        });
+      } else {
+        // `{ a: "A" }` has no line to insert before; open the braces instead.
+        const start = source.slice(0, close).trimEnd().length;
+        edits.push({
+          start,
+          end: close,
+          text: `${needComma ? "," : ""}${eol}${text}${eol}${parentIndent}`,
+        });
+      }
+    }
+    let result = source.slice(node.getStart(ast), node.end);
+    for (const edit of edits.sort((a, b) => b.start - a.start)) {
+      const start = edit.start - node.getStart(ast);
+      const end = edit.end - node.getStart(ast);
+      result = result.slice(0, start) + edit.text + result.slice(end);
+    }
+    return result;
+  }
+  return (
+    source.slice(0, initializer.getStart(ast)) +
+    patchObject(initializer, messages) +
+    source.slice(initializer.end)
+  );
+}
+
+export function csvCell(value: string | number): string {
   const text = String(value);
   return `"${text.replaceAll('"', '""')}"`;
 }
@@ -553,4 +761,9 @@ async function main(): Promise<void> {
   }
 }
 
-await main();
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
+  await main();
+}

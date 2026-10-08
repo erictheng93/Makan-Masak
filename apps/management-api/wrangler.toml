@@ -74,10 +74,12 @@ CORS_ORIGIN = "https://admin.makanmasak.com,https://management.makanmasak.com,ht
 LOG_LEVEL = "warn"
 ONBOARDING_APP_URL = "https://onboarding.makanmasak.com"
 ADMIN_APP_URL = "https://admin.makanmasak.com"
-# Credential delivery stays manual until a verified Resend sender domain and the
-# RESEND_API_KEY secret both exist. Turning this on without them makes every
-# approval record a failed delivery instead of the handoff staff actually use.
-ONBOARDING_EMAIL_ENABLED = "false"
+# Applicant email (receipt, rejection, setup-password link) goes through
+# Cloudflare Email Service via the ONBOARDING_NOTIFICATION_EMAIL binding.
+# makanmasak.com is onboarded to Email Service (DKIM selector cf-bounce), so this
+# is on. Turning it off falls back to manual delivery: approval still succeeds
+# and staff hand the setup link over themselves.
+ONBOARDING_EMAIL_ENABLED = "true"
 ONBOARDING_EMAIL_FROM = "onboarding@makanmasak.com"
 
 # Custom domain — wrangler provisions DNS + SSL automatically on deploy
@@ -110,6 +112,15 @@ id = "e8da1ab3a04740e48c53a710494c31df"
 binding = "BUNDLE_STORAGE"
 bucket_name = "makanmasak-management-bundles-prod"
 
+# Onboarding audit snapshots outlive D1 Time Travel's 30 days (#419).
+[[env.production.r2_buckets]]
+binding = "AUDIT_ARCHIVE"
+bucket_name = "makanmasak-backups-prod"
+
+# 18:30 UTC = 02:30 Asia/Taipei. Production only: nothing else has an archive.
+[env.production.triggers]
+crons = ["30 18 * * *"]
+
 # Bindings do not inherit into named environments. This must be deployed before
 # PLATFORM_NOTIFICATION_EMAIL and PLATFORM_NOTIFICATION_EMAIL_FROM can work.
 [[env.production.send_email]]
@@ -120,7 +131,6 @@ name = "ONBOARDING_NOTIFICATION_EMAIL"
 # - JWT_SECRET: JWT signing secret for management tokens
 # - PLATFORM_CF_API_TOKEN: Platform Cloudflare API token for managed provisioning
 # - PLATFORM_CF_ACCOUNT_ID: Platform Cloudflare account ID
-# - RESEND_API_KEY: Resend API key used for onboarding credential delivery
 # - SLACK_WEBHOOK_URL: Slack webhook for new-application platform alerts
 # - PLATFORM_NOTIFICATION_EMAIL: Verified Email Routing destination for the
 #   Cloudflare Email Service onboarding-alert fallback

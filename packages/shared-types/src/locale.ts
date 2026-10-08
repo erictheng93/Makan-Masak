@@ -99,3 +99,12 @@ export const normalizeCountryCode = (
 export const citiesForCountry = (
   country: SupportedCountryCode,
 ): readonly string[] => COUNTRY_PROFILES[country].cities;
+
+/**
+ * 城市屬於哪一國（名稱完全符合才算）。兩國城市清單不重疊，最多對到一國；
+ * 對不到回 null，呼叫端必須把 null 當「未知」，不可當成任何國家。
+ */
+export const countryForCity = (city: string): SupportedCountryCode | null =>
+  SUPPORTED_COUNTRIES.find((code) =>
+    COUNTRY_PROFILES[code].cities.includes(city),
+  ) ?? null;

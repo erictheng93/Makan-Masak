@@ -4,8 +4,8 @@
  * Regression coverage for the bug where this route had no
  * moduleGate("online_ordering"), unlike POST / (real order creation) in the
  * same router. /batch-sync only writes an offline-sync mirror to CACHE_KV,
- * but it's still part of the online-ordering surface — a deactivated or
- * trial-expired restaurant should not be able to keep writing through it
+ * but it's still part of the online-ordering surface — a deactivated
+ * restaurant should not be able to keep writing through it
  * after real order creation is cut off.
  *
  * Unlike index.test.ts, this file does NOT mock "../../../middleware/moduleGate"
@@ -33,6 +33,10 @@ vi.mock("../../../shared/middleware", async (importOriginal) => {
   return {
     ...actual,
     customerAuthMiddleware: vi.fn(async (c: Context, next: Next) => {
+      c.set("user", currentUser.value);
+      await next();
+    }),
+    customerOrderAuthMiddleware: vi.fn(async (c: Context, next: Next) => {
       c.set("user", currentUser.value);
       await next();
     }),
@@ -144,5 +148,51 @@ describe("orders POST /batch-sync is gated on online_ordering", () => {
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toMatchObject({ success: true });
+  });
+});
+
+describe("orders POST / gates a customer member on the restaurant they order from", () => {
+  // A canonical customer's user carries no restaurantId: the gate has to take
+  // the restaurant from the order itself, as guest and group orders do, or
+  // every member order answers 403 NO_RESTAURANT (#422).
+  function memberOrderRequest(restaurantId: string) {
+    return new Request("https://orders.test/", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        restaurantId,
+        orderType: "table",
+        tableId: 7,
+        items: [{ menuItemId: 1, quantity: 1 }],
+      }),
+    });
+  }
+
+  beforeEach(() => {
+    currentUser.value = { id: "customer-1", username: "0912000000", role: 5 };
+  });
+
+  it("applies the ordered restaurant's module switch", async () => {
+    const res = await routes.fetch(
+      memberOrderRequest("rest-basic"),
+      envWithSubscription("rest-basic", "basic", {
+        online_ordering: false,
+      }) as never,
+    );
+    const json = (await res.json()) as { error?: { code?: string } };
+
+    expect(res.status).toBe(403);
+    expect(json.error?.code).toBe("MODULE_NOT_ENABLED");
+  });
+
+  it("lets the member past the gate when the restaurant has online ordering", async () => {
+    const res = await routes.fetch(
+      memberOrderRequest("rest-basic"),
+      envWithSubscription("rest-basic", "basic") as never,
+    );
+    const json = (await res.json()) as { error?: { code?: string } };
+
+    expect(json.error?.code).not.toBe("NO_RESTAURANT");
+    expect(json.error?.code).not.toBe("MODULE_NOT_ENABLED");
   });
 });

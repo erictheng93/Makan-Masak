@@ -585,7 +585,7 @@ describe("customer identity routes", () => {
         password: "long-password",
         displayName: "Ada",
       },
-      { DB: registerDb, USE_MAILCHANNELS: "false" },
+      { DB: registerDb },
     ).response;
     expect(response.status).toBe(201);
     expect(
@@ -622,7 +622,6 @@ describe("customer identity routes", () => {
         DB: createDb({
           first: [passwordIdentityRow({ provider_uid: "a@x.com" })],
         }),
-        USE_MAILCHANNELS: "false",
       },
     ).response;
     expect(response.status).toBe(409);
@@ -904,8 +903,8 @@ describe("customer identity routes", () => {
       refuses: true,
     },
     {
-      description: "production with Resend configured",
-      env: { NODE_ENV: "production", RESEND_API_KEY: "resend-key" },
+      description: "production with only a Cloudflare email binding",
+      env: { NODE_ENV: "production", NOTIFICATION_EMAIL: { send: vi.fn() } },
       refuses: false,
     },
     {
@@ -941,6 +940,10 @@ describe("customer identity routes", () => {
 
         const { response } = request(path, "POST", body, { DB: db, ...env });
         const raw = await response;
+
+        if ("NOTIFICATION_EMAIL" in env && env.NOTIFICATION_EMAIL) {
+          expect(env.NOTIFICATION_EMAIL.send).not.toHaveBeenCalled();
+        }
 
         if (refuses) {
           expect(raw.status).toBe(503);
@@ -1068,7 +1071,7 @@ describe("customer identity routes", () => {
         password: "long-password",
         displayName: "Ada",
       },
-      { DB: db, USE_MAILCHANNELS: "false" },
+      { DB: db },
     ).response;
 
     expect(response.status).toBe(409);
@@ -1372,7 +1375,7 @@ describe("customer identity routes", () => {
       "/auth/forgot-password",
       "POST",
       { identifier: "missing@example.com" },
-      { DB: createDb({ first: [null] }), USE_MAILCHANNELS: "false" },
+      { DB: createDb({ first: [null] }) },
     ).response;
 
     expect(response.status).toBe(200);

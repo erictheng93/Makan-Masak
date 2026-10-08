@@ -4,6 +4,7 @@ export * from "./users";
 export * from "./customers";
 export * from "./restaurant-customers";
 export * from "./restaurant-alerts";
+export * from "./policies";
 export * from "./categories";
 export * from "./menu-items";
 export * from "./option-groups";

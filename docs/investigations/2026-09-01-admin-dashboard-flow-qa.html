@@ -194,6 +194,12 @@ footer{
 <div class="wrap">
 
 <header class="mast">
+  <div class="note">
+    <b>2026-10-04 現況覆核（本機原始碼與測試）</b>
+    <p>以下正文與「已上線」是各次走查當日的歷史證據，不代表今天重新驗證 production。以 master-user-flow v1.2 覆核：09-15 卡片的 #368「建單路徑零引用」已過期；<code>packages/database/src/services/order.ts</code> 現在讀取 <code>settings.autoAcceptOrders</code>，並有真 D1 的自動確認／不確認測試。F20 的店主帳務入口仍在；帳單明細仍不能當成已實作。</p>
+    <p>本次管理端與 order／coupon 測試 140 檔、1111 項通過。原有 41 項 E2E 是歷史執行結果；本次沒有重跑瀏覽器 E2E、量測 production P99 或查詢 GitHub issue 現況。「所有節點都有 spec」也不等於每個分支均驗證，尤其設定跨裝置生效、分析日期邊界、缺料與合併桌單仍需獨立驗收。</p>
+    <p>本次證據、失敗的 POS 整合測試與未驗證項目見 <a href="2026-10-04-operations-flow-verification.html">2026-10-04 現場與店家後台驗證</a>；今日狀態以該報告為準。</p>
+  </div>
   <h1>店家後台流程 QA — 2026-09-01</h1>
   <p class="sub">
     依 <code>docs/architecture/master-user-flow.html</code> 的「2. 店家後台」四條子流程，
@@ -208,6 +214,28 @@ footer{
     <span><b>最後追蹤</b> 2026-09-15（21 列全數收掉，見結論摘要下方的四張後續進展卡）</span>
   </div>
 </header>
+
+
+<section id="reassessment-2026-10-04">
+  <h2>2026-10-04 本機重新核對（先讀這段）</h2>
+  <div class="card">
+    <p><b>本頁原文、21 列處置及部署／issue 狀態是歷史紀錄。</b>本輪只核對目前工作樹與本機真實 D1；未重測 production、未查目前部署或 GitHub 狀態。原文的「全部 18 個節點」指當時四組既有流程；目前 <a href="../architecture/master-user-flow.html">master-user-flow</a> 另有五個「開通與首次設定」節點，不能沿用舊覆蓋率。</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>目前流程</th><th>本輪證據與判定</th><th>仍需驗證</th></tr></thead>
+      <tbody>
+        <tr><td>開通與首次設定</td><td><code>onboarding-owner-activation.real.integration.test.ts</code> 驗證管理端格式的密碼 token 設密、一次性消耗、登入與到期拒絕。<code>SetupChecklistCard.test.ts</code> 與 <code>SettingsView.test.ts</code> 驗證預設地址、營業時間與點餐開關。</td><td>activation 測試自行 seed token，不代表平台核准真的產生並人工轉交了連結；尚未重跑「核准 → 設密 → 首登 → 補資料 → 菜單／桌位 QR → 訪客下單」完整瀏覽器鏈。</td></tr>
+        <tr><td>店務／庫存／優惠券</td><td>庫存實際 D1 進出料、並行異動與低量邊界；多券訪客配額／取消釋放；POS 店主建立券 → 訪客併券 → 收銀員讀單與角色／租戶邊界均有真路由測試。本輪未將 UI 單元測試視為真實付款證據。</td><td>菜單圖片上傳、上下架、售罄、選項加價、QR 掃描後實際下單的瀏覽器回歸未重跑。</td></tr>
+        <tr><td>工單／預測／揪團</td><td><code>tests/e2e/admin/support-and-insights.spec.ts</code> 有工單開單、平台回覆與結案案例；本輪重跑 forecast 商業日界與跨店拒絕／無副作用的真實 D1 測試。</td><td>既有工單及揪團 browser specs 本輪未執行；預測頁可載入不等於備料建議／尖峰數值已驗證準確。</td></tr>
+        <tr><td>人事</td><td>出勤分母、下班後仍算出席、店主管理打卡入口、建立假別與員工換班頁的 Vue 測試通過；既有 <code>attendance.spec.ts</code>／<code>leaves.spec.ts</code> 有寫入後 API 讀回。</td><td>本輪未重跑排班 → 上下班 → 工時 → 請假餘額／批准完整 browser 寫讀鏈，也未驗證員工換班 → 店主審核全鏈。</td></tr>
+        <tr><td>分析／AI／帳務／設定</td><td>設定欄位、稅率百分比轉分數、店家時區與點餐開關的 Vue 測試通過。帳務仍是方案／用量／模組；master 的帳單明細仍標規劃中。</td><td>本輪未重跑帳務／AI browser specs、未呼叫真實付費 AI。營收、品項及熱度需與確定的付款／退款樣本對帳，端點回 200 不足以證明數字正確。</td></tr>
+      </tbody>
+    </table></div>
+    <p><b>舊結論更正：</b>09-15 的 #368「建單零引用」不適用目前原始碼。<code>packages/database/src/services/order.ts</code> 的 <code>isAutoAcceptOrdersEnabled</code> 現在讀 <code>settings.autoAcceptOrders === true</code>，真 D1 測試驗證開啟後為 confirmed 並產生廚房 ticket，未設定／false 保持 pending。這是本機行為證據，不是 issue 已關閉或 production 已部署的證據。</p>
+    <p><b>F12 要保留語義限制：</b><code>AnalyticsView.vue</code> 仍把 quarter 映成 month，但 API <code>AnalyticsService.getDashboardData</code> 只把 restaurantId 傳給資料庫，period 僅區分快取；資料庫回的是固定今日／本月 summary。這不能證明期間選單會改變 dashboard KPI，亦不能把「所有窗口已對齊」當作已驗證。</p>
+    <p><b>本輪補上的測試接線：</b>目前 auth 會驗證 active session，舊 <code>helpers/issue-test-jwt.ts</code> 只簽 JWT，讓 POS／forecast 實測停在 401。已讓 DB-backed fixture 建立 sessions，保留原始認證；新增 <code>fixture-session.real.integration.test.ts</code> 斷言同一 JWT 初次讀 profile 為 200、撤銷 session 後為 401。<code>admin-dashboard.real.integration.test.ts</code> 仍容許若干預期成功路徑回 400／404，其綠燈不能充當路由存在或可操作的證據。</p>
+    <p><b>本輪結果：</b>Vue 9 檔 86 測試通過；資料庫 order／coupon 2 檔 105 測試通過；補 fixture 後 API 10 檔 55 測試通過（POS、forecast、庫存、優惠券、自動確認、開通與 session 撤銷）。完整命令與後續併跑結果見 <a href="./2026-09-30-issue-431.md">#431 本機重驗紀錄</a>。graph 路徑覆蓋採 Tier 2 best-effort，變更／新測試直接讀 source；不代表所有分支或所有 master 節點都已驗證。</p>
+  </div>
+</section>
 
 <section>
   <h2>做了什麼</h2>

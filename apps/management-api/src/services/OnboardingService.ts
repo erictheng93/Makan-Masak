@@ -21,19 +21,22 @@ import {
   PLAN_TIERS,
   passwordResetTokens,
   planIdToTier,
+  parseRegionPolicyLayer,
+  regionPolicies,
   restaurants,
   shopSubscriptions,
   TRIAL_DURATION_MS,
   users,
-  ResendEmailProvider,
+  CloudflareEmailProvider,
+  type PaidPlanTier,
 } from "@makanmasak/database";
-import { generateUUID } from "@makanmasak/utils";
+import { ApiError, generateUUID } from "@makanmasak/utils";
 import {
   COUNTRY_PROFILES,
   normalizeCountryCode,
 } from "@makanmasak/shared-types";
 import bcrypt from "bcryptjs";
-import { and, desc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import {
   onboardingApplicationAuditEvents,
@@ -250,6 +253,7 @@ export class OnboardingService {
       submittedAt: now,
       updatedAt: now,
     });
+    await this.writeApplicationAuditEvent(id, "submitted", undefined, {});
 
     return {
       ...(await this.getApplication(id))!,
@@ -423,18 +427,7 @@ export class OnboardingService {
     application: OnboardingApplication,
     applicationSecret: string,
   ): Promise<void> {
-    if (
-      this.env.ONBOARDING_EMAIL_ENABLED !== "true" ||
-      !this.env.ONBOARDING_EMAIL_FROM ||
-      !this.env.RESEND_API_KEY
-    ) {
-      if (this.env.ONBOARDING_EMAIL_ENABLED === "true") {
-        console.error(
-          "[OnboardingService] Applicant receipt email is enabled but sender or Resend key is missing",
-        );
-      }
-      return;
-    }
+    if (this.env.ONBOARDING_EMAIL_ENABLED !== "true") return;
 
     const statusLink = this.buildApplicationStatusLink(
       application.id,
@@ -447,28 +440,47 @@ export class OnboardingService {
       `您可隨時在此查看申請狀態：${statusLink}`,
     ].join("\n");
 
-    try {
-      const result = await new ResendEmailProvider(
-        this.env.RESEND_API_KEY,
-        this.env.ONBOARDING_EMAIL_FROM,
-      ).sendEmail({
-        to: application.contactEmail,
-        subject: `MakanMasak 已收到「${application.businessName}」的申請`,
-        html: `<pre>${this.escapeHtml(text)}</pre>`,
-        text,
-      });
-      if (!result.success) {
-        console.error(
-          "[OnboardingService] Application received email failed:",
-          result.error,
-        );
-      }
-    } catch (error) {
+    const result = await this.sendApplicantEmail({
+      to: application.contactEmail,
+      subject: `MakanMasak 已收到「${application.businessName}」的申請`,
+      text,
+    });
+    if (!result.success) {
       console.error(
         "[OnboardingService] Application received email failed:",
-        error,
+        result.error,
       );
     }
+  }
+
+  /**
+   * Applicant-facing mail goes through Cloudflare Email Service. Never throws:
+   * callers record or log the failure instead.
+   */
+  private async sendApplicantEmail(message: {
+    to: string;
+    subject: string;
+    text: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    const from = this.env.ONBOARDING_EMAIL_FROM?.trim();
+    if (!from) {
+      return {
+        success: false,
+        error: "ONBOARDING_EMAIL_FROM is not configured",
+      };
+    }
+    const binding = this.env.ONBOARDING_NOTIFICATION_EMAIL;
+    if (!binding) {
+      return {
+        success: false,
+        error: "ONBOARDING_NOTIFICATION_EMAIL binding is not configured",
+      };
+    }
+
+    return new CloudflareEmailProvider(binding, from).sendEmail({
+      ...message,
+      html: `<pre>${this.escapeHtml(message.text)}</pre>`,
+    });
   }
 
   /**
@@ -570,6 +582,54 @@ export class OnboardingService {
     };
   }
 
+  async listApplicationAuditEvents(applicationId: string): Promise<{
+    found: boolean;
+    events: Array<{
+      id: string;
+      eventType: string;
+      actorId: string | null;
+      actorEmail: string | null;
+      metadata: Record<string, string> | null;
+      createdAtMs: number;
+    }>;
+  }> {
+    const application = await this.getApplication(applicationId);
+    if (!application) return { found: false, events: [] };
+
+    const rows = await drizzle(this.env.MANAGEMENT_DB)
+      .select()
+      .from(onboardingApplicationAuditEvents)
+      .where(eq(onboardingApplicationAuditEvents.applicationId, applicationId))
+      .orderBy(
+        asc(onboardingApplicationAuditEvents.createdAtMs),
+        asc(onboardingApplicationAuditEvents.id),
+      )
+      .all();
+
+    return {
+      found: true,
+      events: rows.map((row) => {
+        let metadata: Record<string, string> | null = null;
+        if (row.metadata) {
+          try {
+            const value: unknown = JSON.parse(row.metadata);
+            if (
+              value &&
+              typeof value === "object" &&
+              !Array.isArray(value) &&
+              Object.values(value).every((item) => typeof item === "string")
+            ) {
+              metadata = value as Record<string, string>;
+            }
+          } catch {
+            // Older/malformed metadata should not hide the rest of the audit.
+          }
+        }
+        return { ...row, metadata };
+      }),
+    };
+  }
+
   /**
    * Verify the one-time secret returned when an application is created.
    */
@@ -594,7 +654,10 @@ export class OnboardingService {
   /**
    * Activate an approved application and create the tenant.
    */
-  private async activateApplication(applicationId: string): Promise<{
+  private async activateApplication(
+    applicationId: string,
+    actor?: { id: string; email: string },
+  ): Promise<{
     success: boolean;
     tenantId?: string;
     subdomain?: string;
@@ -628,6 +691,45 @@ export class OnboardingService {
     }
     application.countryCode = countryCode;
 
+    const planTier = planIdToTier(application.planId);
+    if (planTier !== PLAN_TIERS.TRIAL) {
+      let allowedPaidTiers: readonly PaidPlanTier[] | undefined;
+      try {
+        if (!this.env.PLATFORM_DB) throw new Error("Platform DB unavailable");
+        // Approval has the country before a restaurant exists; read its policy directly.
+        const rows = await drizzle(this.env.PLATFORM_DB)
+          .select({
+            policyKey: regionPolicies.policyKey,
+            value: regionPolicies.value,
+          })
+          .from(regionPolicies)
+          .where(
+            and(
+              eq(regionPolicies.scopeType, "country"),
+              eq(regionPolicies.scopeId, countryCode),
+              eq(regionPolicies.policyKey, "plans.allowed_tiers"),
+            ),
+          );
+        const layer = parseRegionPolicyLayer("country", rows);
+        if (layer.invalidKeys.length) throw new Error("Invalid plan policy");
+        allowedPaidTiers = layer.values["plans.allowed_tiers"];
+      } catch {
+        throw new ApiError(
+          "POLICY_UNAVAILABLE",
+          "Regional policy is temporarily unavailable",
+          503,
+        );
+      }
+      if (allowedPaidTiers && !allowedPaidTiers.includes(planTier)) {
+        throw new ApiError(
+          "PLAN_NOT_AVAILABLE_IN_REGION",
+          `The ${planTier} plan is not offered in this region`,
+          400,
+          { planTier },
+        );
+      }
+    }
+
     const now = new Date().toISOString();
     const previousStatus = application.status;
     let tenantId: string | undefined;
@@ -658,6 +760,9 @@ export class OnboardingService {
       )
         .bind("completed", tenant.id, now, now, applicationId)
         .run();
+      await this.writeApplicationAuditEvent(applicationId, "approved", actor, {
+        tenantId: tenant.id,
+      });
       try {
         credentialDelivery = await this.dispatchCredentialDelivery(
           application,
@@ -720,7 +825,10 @@ export class OnboardingService {
     }
   }
 
-  async approveApplication(applicationId: string): Promise<{
+  async approveApplication(
+    applicationId: string,
+    actor?: { id: string; email: string },
+  ): Promise<{
     success: boolean;
     restaurantId?: string;
     marketId?: string;
@@ -763,7 +871,7 @@ export class OnboardingService {
       };
     }
 
-    const result = await this.activateApplication(applicationId);
+    const result = await this.activateApplication(applicationId, actor);
     return {
       ...result,
       restaurantId: result.ownerAccount?.restaurantId,
@@ -808,9 +916,9 @@ export class OnboardingService {
         updatedAt: new Date(rejectedAtMs).toISOString(),
       })
       .where(eq(onboardingApplications.id, applicationId));
-    await this.writeApplicationAuditEvent(applicationId, "rejected", actor, {
-      reason,
-    });
+    // The free-text reason stays on the application row (redacted with it).
+    // Events are append-only, so anything written here outlives retention.
+    await this.writeApplicationAuditEvent(applicationId, "rejected", actor, {});
     await this.sendApplicationRejectionEmail(application, reason);
     return {
       success: true,
@@ -1481,13 +1589,7 @@ export class OnboardingService {
     application: OnboardingApplication,
     reason: string,
   ): Promise<void> {
-    if (
-      this.env.ONBOARDING_EMAIL_ENABLED !== "true" ||
-      !this.env.ONBOARDING_EMAIL_FROM ||
-      !this.env.RESEND_API_KEY
-    ) {
-      return;
-    }
+    if (this.env.ONBOARDING_EMAIL_ENABLED !== "true") return;
 
     const text = [
       `${application.contactName} 您好：`,
@@ -1495,26 +1597,15 @@ export class OnboardingService {
       `很抱歉，「${application.businessName}」的申請未能通過。`,
       `原因：${reason}`,
     ].join("\n");
-    try {
-      const result = await new ResendEmailProvider(
-        this.env.RESEND_API_KEY,
-        this.env.ONBOARDING_EMAIL_FROM,
-      ).sendEmail({
-        to: application.contactEmail,
-        subject: `MakanMasak「${application.businessName}」申請結果`,
-        html: `<pre>${this.escapeHtml(text)}</pre>`,
-        text,
-      });
-      if (!result.success) {
-        console.error(
-          "[OnboardingService] Application rejection email failed:",
-          result.error,
-        );
-      }
-    } catch (error) {
+    const result = await this.sendApplicantEmail({
+      to: application.contactEmail,
+      subject: `MakanMasak「${application.businessName}」申請結果`,
+      text,
+    });
+    if (!result.success) {
       console.error(
         "[OnboardingService] Application rejection email failed:",
-        error,
+        result.error,
       );
     }
   }
@@ -1531,61 +1622,29 @@ export class OnboardingService {
       return { attempted: false, status: "pending" };
     }
 
-    const fromEmail = this.env.ONBOARDING_EMAIL_FROM;
-    if (!fromEmail) {
+    const text = [
+      `${application.contactName} 您好：`,
+      "",
+      `您的店家「${application.businessName}」已開通。`,
+      `店主帳號：${ownerAccount.username}`,
+      `請在此設定密碼：${ownerAccount.setupPasswordLink}`,
+      `此連結將於 ${ownerAccount.setupPasswordExpiresAt} 到期。`,
+    ].join("\n");
+    const result = await this.sendApplicantEmail({
+      to: application.contactEmail,
+      subject: `MakanMasak「${application.businessName}」店主帳號開通`,
+      text,
+    });
+
+    if (!result.success) {
       return {
         attempted: true,
         status: "failed",
-        errorMessage: "ONBOARDING_EMAIL_FROM is not configured",
+        errorMessage: result.error ?? "Failed to send onboarding email",
       };
     }
 
-    if (!this.env.RESEND_API_KEY) {
-      return {
-        attempted: true,
-        status: "failed",
-        errorMessage: "RESEND_API_KEY is not configured",
-      };
-    }
-
-    try {
-      const text = [
-        `${application.contactName} 您好：`,
-        "",
-        `您的店家「${application.businessName}」已開通。`,
-        `店主帳號：${ownerAccount.username}`,
-        `請在此設定密碼：${ownerAccount.setupPasswordLink}`,
-        `此連結將於 ${ownerAccount.setupPasswordExpiresAt} 到期。`,
-      ].join("\n");
-      const result = await new ResendEmailProvider(
-        this.env.RESEND_API_KEY,
-        fromEmail,
-      ).sendEmail({
-        to: application.contactEmail,
-        subject: `MakanMasak「${application.businessName}」店主帳號開通`,
-        html: `<pre>${text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")}</pre>`,
-        text,
-      });
-
-      if (!result.success) {
-        return {
-          attempted: true,
-          status: "failed",
-          errorMessage: result.error ?? "Failed to send onboarding email",
-        };
-      }
-
-      return { attempted: true, status: "sent" };
-    } catch (error) {
-      return {
-        attempted: true,
-        status: "failed",
-        errorMessage:
-          error instanceof Error
-            ? error.message
-            : "Failed to send onboarding email",
-      };
-    }
+    return { attempted: true, status: "sent" };
   }
 
   /**

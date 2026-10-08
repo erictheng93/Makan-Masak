@@ -36,7 +36,7 @@ describe("serviceBookingsApi", () => {
     );
   });
 
-  it("creates and pays a service booking with credits", async () => {
+  it("creates a pay-at-venue booking and pays compatible bookings with credits", async () => {
     vi.mocked(apiClient.post)
       .mockResolvedValueOnce({
         booking: { id: "booking-1", confirmationCode: "ABC123" },

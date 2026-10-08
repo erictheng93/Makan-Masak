@@ -6,7 +6,7 @@ const msMY: Messages = {
       copyright: "© 2026 MakanMasak. Semua hak terpelihara.",
     },
     tagline: {
-      selfHosted: "Dihoskan Sendiri",
+      platformHosted: "Dihoskan Platform",
     },
   },
   apply: {
@@ -69,6 +69,17 @@ const msMY: Messages = {
       submitting: "Menyerahkan...",
     },
     title: "Borang Permohonan",
+    submitErrors: {
+      rateLimited:
+        "Terlalu banyak penyerahan. Setiap rangkaian boleh menyerah 5 kali sejam (percubaan gagal turut dikira). Sila cuba selepas jam berikutnya, atau tukar ke data mudah alih.",
+      validation:
+        "Sesetengah maklumat tidak sah. Sila semak setiap ruangan dan serah semula.",
+      cityNotInCountry:
+        "Bandar yang dipilih bukan dalam negara ini. Sila pilih negara dan bandar semula.",
+      marketNotInCity:
+        "Pasar yang dipilih bukan dalam bandar ini. Sila pilih semula.",
+      network: "Masalah sambungan. Sila semak rangkaian anda dan cuba lagi.",
+    },
     toast: {
       submitFailureFallback: "Penyerahan gagal. Sila cuba lagi kemudian.",
       submitSuccess: "Permohonan diserahkan",
@@ -90,6 +101,8 @@ const msMY: Messages = {
       subdomainInvalidFormat:
         "Hanya huruf kecil, nombor dan sempang dibenarkan",
       subdomainTaken: "URL ini sudah diambil",
+      tooShort: "Mestilah sekurang-kurangnya 2 aksara",
+      phoneInvalid: "Nombor telefon mestilah 8 hingga 20 aksara",
       subdomainTooShort: "Mestilah sekurang-kurangnya 3 aksara",
     },
   },
@@ -103,22 +116,56 @@ const msMY: Messages = {
     },
   },
   home: {
+    tour: {
+      title: "Dari pesanan ke meja, sekali pandang",
+      subtitle:
+        "Ini ialah skrin sebenar sistem, dengan kedai dan pesanan contoh.",
+      tryDemo: "Cuba restoran demo →",
+      tryDemoHint:
+        "Buka di telefon anda, sama seperti pelanggan mengimbas kod. Tiada pesanan yang benar-benar dihantar.",
+      steps: {
+        order: {
+          title: "Pelanggan imbas untuk memesan",
+          description:
+            "Pelanggan imbas kod QR di meja dan memesan daripada menu bergambar. Tiada aplikasi perlu dimuat turun.",
+          alt: "Skrin pesanan pada telefon pelanggan",
+        },
+        kitchen: {
+          title: "Dapur terima serta-merta",
+          description:
+            "Pesanan terus muncul pada tablet dapur, disusun mengikut menunggu, sedang dimasak dan siap.",
+          alt: "Papan pesanan pada tablet dapur",
+        },
+        tracking: {
+          title: "Pelanggan boleh ikuti kemajuan",
+          description:
+            "Setiap langkah dikemas kini pada telefon pelanggan, jadi tiada siapa perlu bertanya sama ada sudah siap.",
+          alt: "Kemajuan pesanan pada telefon pelanggan",
+        },
+        dashboard: {
+          title: "Pemilik nampak jualan",
+          description:
+            "Jualan hari ini, bilangan pesanan dan meja yang masih menunggu, semuanya dalam satu skrin.",
+          alt: "Gambaran keseluruhan pemilik dalam papan pemuka",
+        },
+      },
+    },
     cta: {
       button: "Mulakan Permohonan",
       subtitle:
-        "Isi permohonan dan kami akan menghubungi anda dalam masa 24 jam.",
+        "Isi borang permohonan dan pasukan kami akan menghubungi anda selepas semakan.",
       title: "Bersedia untuk Bermula?",
     },
     features: {
-      fast: {
+      assisted: {
         description:
-          "Saluran paip penggunaan automatik. Hidup dalam masa 24 jam.",
-        title: "Deployment Cepat",
+          "Pasukan kami menyemak permohonan anda, mengaktifkan akaun dan membimbing persediaan kedai",
+        title: "Pengaktifan Berbantu",
       },
-      isolated: {
+      hosted: {
         description:
-          "Persekitaran awan terpencil sepenuhnya. Data anda adalah 100% milik anda.",
-        title: "Persekitaran Terpencil",
+          "Kami mengendalikan sistem untuk anda — tiada pelayan untuk dipasang atau diselenggara",
+        title: "Dihoskan Platform",
       },
       secure: {
         description:
@@ -128,8 +175,9 @@ const msMY: Messages = {
     },
     hero: {
       ctaApply: "Mohon Sekarang",
-      ctaDemo: "Lihat Demo →",
-      subtitle: "Dihoskan Sendiri · Data Selamat · Pelancaran dalam 24 Jam",
+      ctaTour: "Lihat cara ia berfungsi ↓",
+      subtitle:
+        "Dihoskan Platform · Data Selamat · Disemak dan Diaktifkan oleh Pasukan Kami",
       titleLine1: "Bina Restoran Anda",
       titleLine2: "Sistem Pengurusan Berdedikasi",
     },
@@ -161,11 +209,9 @@ const msMY: Messages = {
         title: "Penerapan Sistem",
       },
       email: {
-        prefix: "Kami telah menghantar e-mel pengesahan kepada",
-        suffix: ". Sila semak peti masuk anda.",
         description:
-          "Kami akan menghantar e-mel apabila permohonan anda dikemas kini.",
-        title: "E-mel Pengesahan",
+          "Selepas diluluskan, platform akan memberikan akaun pemilik dan pautan untuk menetapkan kata laluan. Gunakan pautan status untuk menjejak permohonan anda.",
+        title: "Maklumat Log Masuk",
       },
       start: {
         description:
@@ -180,11 +226,8 @@ const msMY: Messages = {
     summary: {
       applicationId: "ID Permohonan",
       businessName: "Nama Restoran",
-      cloudflare: "Pengehosan Platform",
-      connected: "Aktif",
       contactEmail: "E-mel Hubungi",
       plan: "Rancangan Terpilih",
-      subdomain: "URL khusus",
       tenantId: "ID penyewa",
       status: "Status Permohonan",
       pendingReview: "Menunggu Semakan Platform",

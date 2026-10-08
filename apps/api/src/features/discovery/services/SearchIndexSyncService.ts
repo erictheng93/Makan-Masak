@@ -252,7 +252,7 @@ export class SearchIndexSyncService {
 
     await Promise.all(
       Array.from(affectedDistricts).map((district) =>
-        this.kv.delete(`search:restaurants:district:${district}`),
+        this.kv.delete(`search:restaurants:hours2:district:${district}`),
       ),
     );
     await this.bumpSearchVersion();

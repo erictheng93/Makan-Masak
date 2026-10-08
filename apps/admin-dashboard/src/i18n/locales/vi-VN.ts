@@ -832,8 +832,6 @@ const viVN: Messages = {
         "Tính năng này không có trong gói hiện tại của bạn. Hãy nâng cấp gói của bạn hoặc liên hệ với bộ phận hỗ trợ để kích hoạt gói đó.",
       subscriptionNotFound:
         "Không tìm thấy đăng ký nào cho nhà hàng này nên các tính năng của nó chưa được kích hoạt. Đăng nhập của bạn vẫn ổn — vui lòng liên hệ với bộ phận hỗ trợ để thiết lập.",
-      trialExpired:
-        "Thời gian dùng thử của bạn đã kết thúc. Hãy nâng cấp gói của bạn để tiếp tục sử dụng tính năng này.",
     },
   },
   success: {
@@ -1898,6 +1896,7 @@ const viVN: Messages = {
     },
   },
   pages: {
+    marketOpenReport: "Open-day report",
     reviews: "Đánh giá của khách",
     broadcasts: "Tin đẩy",
     billing: "Gói & Mức dùng",
@@ -1950,6 +1949,8 @@ const viVN: Messages = {
     subscriptions: "Đăng ký",
     waitingManagement: "Quản lý chờ đợi",
     platformMarketCheckouts: "Kiểm tra thị trường",
+    platformMarkets: "Chất lượng chợ",
+    platformOnboarding: "Đơn đăng ký cửa hàng",
     platformCustomers: "Khách hàng nền tảng",
   },
   platform: {
@@ -2018,11 +2019,12 @@ const viVN: Messages = {
     newPassword: "Mật khẩu mới",
     newPasswordPlaceholder: "Nhập mật khẩu mới (ít nhất 6 ký tự)",
     passwordStrength: "Độ mạnh mật khẩu:",
-    atLeast6Chars: "Ít nhất 6 ký tự",
-    atLeast8Chars: "Ít nhất 8 ký tự (khuyến nghị)",
-    upperLowerCase: "Chứa chữ hoa và chữ thường",
+    atLeast8Chars: "Ít nhất 8 ký tự",
+    containsUppercase: "Chứa chữ hoa (A-Z)",
+    containsLowercase: "Chứa chữ thường (a-z)",
+    startsWithAllowedChar: "Bắt đầu bằng chữ, số hoặc một trong @ $ ! % * ? &",
     containsNumber: "Chứa số",
-    containsSpecialChar: "Chứa ký tự đặc biệt (khuyến nghị)",
+    containsSpecialChar: "Chứa một trong các ký hiệu: @ $ ! % * ? &",
     confirmPassword: "Xác nhận mật khẩu",
     confirmPasswordPlaceholder: "Nhập lại mật khẩu mới",
     resetting: "Đang đặt lại...",
@@ -2033,7 +2035,6 @@ const viVN: Messages = {
     strengthStrong: "Mạnh",
     strengthVeryStrong: "Rất mạnh",
     newPasswordRequired: "Vui lòng nhập mật khẩu mới",
-    passwordMin6: "Mật khẩu phải có ít nhất 6 ký tự",
     confirmPasswordRequired: "Vui lòng xác nhận mật khẩu",
     passwordMismatch: "Mật khẩu không khớp",
     passwordResetSuccess: "Mật khẩu đã được đặt lại thành công",
@@ -2042,7 +2043,11 @@ const viVN: Messages = {
       "Liên kết đặt lại đã hết hạn. Vui lòng yêu cầu liên kết mới.",
     resetTokenInvalid:
       "Liên kết đặt lại không hợp lệ. Vui lòng yêu cầu liên kết mới.",
-    weakPassword: "Mật khẩu quá yếu. Hãy dùng ít nhất 6 ký tự.",
+    weakPassword:
+      "Mật khẩu quá yếu. Hãy dùng ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và một trong @ $ ! % * ? &.",
+    passwordRequirementsNotMet:
+      "Mật khẩu chưa đạt yêu cầu: ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và một trong @ $ ! % * ? & (ký hiệu khác không được tính).",
+    passwordMissing: "Mật khẩu còn thiếu: {items}",
     tokenInvalid: "Token không hợp lệ hoặc đã hết hạn",
     tokenVerifyError: "Lỗi khi xác minh token",
     missingToken: "Thiếu token đặt lại",
@@ -2089,6 +2094,7 @@ const viVN: Messages = {
     },
     actions: {
       handoff: "Thông tin kích hoạt",
+      auditTrail: "Lịch sử kiểm toán",
       approve: "Duyệt",
       reject: "Từ chối",
     },
@@ -2118,6 +2124,17 @@ const viVN: Messages = {
       pending: "Chờ xử lý",
       failed: "Gửi thất bại",
     },
+    audit: {
+      title: "Lịch sử kiểm toán đơn đăng ký",
+      close: "Đóng",
+      empty: "Chưa có sự kiện kiểm toán.",
+      system: "Hệ thống",
+      reason: "Lý do: {reason}",
+      submitted: "Đơn đăng ký đã được gửi",
+      approved: "Đơn đăng ký được phê duyệt",
+      rejected: "Đơn đăng ký bị từ chối",
+      setupLinkRegenerated: "Đã tạo lại liên kết kích hoạt chủ cửa hàng",
+    },
     reject: {
       title: "Xác nhận từ chối đơn",
       description:
@@ -2133,6 +2150,7 @@ const viVN: Messages = {
     },
     errors: {
       load: "Không tải được danh sách đơn đăng ký.",
+      audit: "Không tải được lịch sử kiểm toán. Vui lòng thử lại.",
       approve: "Duyệt thất bại. Hãy kiểm tra trạng thái đơn.",
       handoff: "Không lấy được thông tin kích hoạt. Vui lòng thử lại.",
       copy: "Không sao chép được. Hãy chọn văn bản và sao chép thủ công.",
@@ -2140,8 +2158,50 @@ const viVN: Messages = {
       regenerate: "Tạo lại liên kết thất bại. Vui lòng thử lại.",
     },
   },
+  marketOpenReport: {
+    pageTitle: "Open-day report",
+    title: "Stall open-day report",
+    market: "Market",
+    from: "From",
+    to: "To",
+    view: {
+      daily: "Daily",
+      summary: "Summary",
+    },
+    export: "Export CSV",
+    exportFailed: "Could not export CSV. Please try again.",
+    loadFailed:
+      "Could not load the report. Check the date range (92 days max).",
+    noMarkets: "Your shop is not in any market yet",
+    autoClosed: "Ended at day rollover",
+    col: {
+      date: "Business day",
+      vendor: "Stall",
+      opened: "Opened",
+      closed: "Closed",
+      hours: "Hours open",
+      openedBy: "Opened by",
+      orders: "Orders",
+      revenue: "Revenue",
+      openDays: "Days open",
+      attendance: "Attendance",
+      avgHours: "Avg hours open",
+    },
+  },
   dashboard: {
     title: "Bảng điều khiển",
+    marketOpenToday: {
+      title: "Open today",
+      description:
+        "Tap when you start trading so customers see your stall on the market QR",
+      open: "Open today",
+      close: "Close early",
+      closed: "Not open yet today",
+      openSince: "Open since {time}",
+      confirmClose: "Close now? Customers will not be able to order from you.",
+      error: "Could not update your status. Please try again.",
+      report: "Open-day report",
+    },
     setupChecklist: {
       title: "Hoàn tất thiết lập cửa hàng",
       description: "Hoàn thành các mục thiết yếu trước khi mở cửa.",
@@ -2719,6 +2779,7 @@ const viVN: Messages = {
       paymentSuccess: "Thanh toán thành công",
       paymentFailed: "Thanh toán thất bại, vui lòng thử lại",
       refundFailed: "Hoàn tiền thất bại, vui lòng thử lại",
+      printFailed: "Không thể in hóa đơn",
       printInDev: "Tính năng in hóa đơn đang phát triển...",
       printing: "Đang in hóa đơn cho {orderNumber}...",
       printingShiftReport: "Đang in báo cáo ca...",
@@ -3262,7 +3323,6 @@ const viVN: Messages = {
     startDelivery: "Bắt đầu phục vụ",
     confirmDelivery: "Xác nhận đã phục vụ",
     contactCustomer: "Liên hệ khách",
-    reportIssue: "Báo cáo sự cố",
     noOrders: "Không có đơn hàng chờ phục vụ",
     allDelivered: "Tất cả món đã được phục vụ!",
     myDeliveries: "Đơn hàng đang phục vụ",
@@ -3279,27 +3339,13 @@ const viVN: Messages = {
     customerInfo: "Thông tin khách",
     makeCall: "Gọi điện",
     sendMessage: "Gửi tin nhắn",
-    issueType: "Loại sự cố",
-    selectIssueType: "Chọn loại sự cố",
-    issues: {
-      wrongOrder: "Sai đơn hàng",
-      missingItems: "Thiếu món",
-      qualityIssue: "Vấn đề chất lượng",
-      customerUnavailable: "Không liên lạc được khách",
-      accessIssue: "Không thể tiếp cận bàn",
-      other: "Sự cố khác",
-    },
-    issueDescription: "Mô tả sự cố",
-    issueDescPlaceholder: "Mô tả chi tiết sự cố...",
     cancel: "Hủy",
-    submitIssue: "Báo cáo sự cố",
     justReady: "Vừa sẵn sàng",
     minutesAgo: "{minutes} phút trước",
     hoursAgo: "{hours} giờ trước",
     alerts: {
       calling: "Đang gọi {name}: {phone}",
       messaging: "Đang nhắn tin cho {name}",
-      issueReported: "Đã báo cáo sự cố:\nLoại: {type}\nMô tả: {description}",
     },
   },
   pos: {
@@ -3316,6 +3362,7 @@ const viVN: Messages = {
     balance: "Số dư",
     shift: "Ca làm",
     notStarted: "Chưa bắt đầu",
+    shiftActive: "Đang diễn ra",
     pleaseStartShift: "Vui lòng bắt đầu ca",
     startShift: "Bắt đầu ca",
     endShift: "Kết thúc ca",
@@ -4326,6 +4373,10 @@ const viVN: Messages = {
     availableSeats: "Ghế trống",
   },
   couponForm: {
+    clearIncompatible: "Xóa hạn chế",
+    incompatibleCoupons: "Không được kết hợp với",
+    incompatibleHint:
+      "Chọn phiếu giảm giá không thể dùng cùng phiếu này. Hạn chế từ một trong hai phiếu đều có hiệu lực.",
     editTitle: "Chỉnh sửa phiếu giảm giá",
     createTitle: "Tạo phiếu giảm giá",
     basicInfo: "Thông tin cơ bản",
@@ -5020,6 +5071,8 @@ const viVN: Messages = {
   },
   orderStore: {
     addItemsFailed: "Không thể thêm món",
+    couponOrderImmutable:
+      "Đơn này đã dùng phiếu giảm giá nên không thể đổi món. Hãy hủy và đặt đơn mới",
     changeItemFailed: "Không thể đổi số lượng",
     removeItemFailed: "Không thể xoá món",
     fetchFailed: "Tải đơn hàng thất bại",
@@ -5970,6 +6023,16 @@ const viVN: Messages = {
     statusActive: "Đang hoạt động",
     statusInactive: "Ngừng hoạt động",
     trialRemaining: "Còn {days} ngày dùng thử",
+    trialExpiredBanner:
+      "Thời gian dùng thử đã kết thúc. Mọi tính năng vẫn hoạt động bình thường, nhưng vui lòng chọn một gói để ủng hộ MakanMasak.",
+    trialExpiredAction: "Chọn gói",
+    trialExpiredTitle: "Thời gian dùng thử đã kết thúc",
+    trialExpiredContinue: "Tiếp tục",
+    upgradeTitle: "Nâng cấp gói",
+    upgradeBody:
+      "Chưa có thanh toán trực tuyến. Hãy gửi email cho chúng tôi để được thiết lập gói. Trong thời gian này mọi tính năng vẫn hoạt động bình thường.",
+    upgradeAction: "Gửi email để nâng cấp",
+    upgradeMailSubject: "Nâng cấp gói MakanMasak",
     usageTitle: "Mức dùng kỳ này",
     usageEmpty: "Chưa có dữ liệu sử dụng trong kỳ này.",
     modulesTitle: "Tính năng đi kèm",

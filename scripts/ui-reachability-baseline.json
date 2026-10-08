@@ -3,20 +3,13 @@
   "generatedBy": "node scripts/check-ui-reachability.cjs --update-baseline",
   "apps": {
     "apps/admin-dashboard": {
-      "unreachableViews": [
-        "apps/admin-dashboard/src/views/UsersView.vue",
-        "apps/admin-dashboard/src/views/backup/BackupDashboard.vue",
-        "apps/admin-dashboard/src/views/backup/BackupMonitoring.vue"
-      ],
+      "unreachableViews": ["apps/admin-dashboard/src/views/UsersView.vue"],
       "unreachableComponents": [
         "apps/admin-dashboard/src/components/PerformanceDashboard.vue",
         "apps/admin-dashboard/src/components/PerformanceTrendChart.vue",
         "apps/admin-dashboard/src/components/RoleBasedNavigation.vue",
         "apps/admin-dashboard/src/components/StatCard.vue",
         "apps/admin-dashboard/src/components/StatisticsDashboard.vue",
-        "apps/admin-dashboard/src/components/backup/BackupAlert.vue",
-        "apps/admin-dashboard/src/components/backup/BackupListItem.vue",
-        "apps/admin-dashboard/src/components/backup/RestoreBackupModal.vue",
         "apps/admin-dashboard/src/components/common/SkeletonLoader.vue",
         "apps/admin-dashboard/src/components/monitoring/AdvancedFilterPanel.vue",
         "apps/admin-dashboard/src/components/monitoring/DashboardLayoutEditor.vue",

@@ -24,6 +24,7 @@ const enUS: Messages = {
     health: "Health",
     licenses: "Licenses",
     markets: "Markets",
+    policies: "Region policies",
   },
 
   layout: {
@@ -332,6 +333,35 @@ const enUS: Messages = {
       storage: "Storage",
       checkedAt: "Checked At",
     },
+  },
+
+  policies: {
+    title: "Region policies",
+    subtitle:
+      "Set modules, payments, plans and fees per country or market. Unset items inherit from the level above.",
+    countries: { TW: "Taiwan", MY: "Malaysia" },
+    scope: { market: "Market", marketPlaceholder: "Choose a market…" },
+    unknownCountryWarning:
+      "{count} shops have no country yet, so country policies do not apply to them. Run the country backfill first.",
+    confirmUnknownCountry:
+      "{count} shops have no country and will not follow this policy. Save anyway?",
+    inherited: "Not set — inherits from the level above",
+    merge: {
+      ceiling_deny: "Ceiling: off if any level turns it off",
+      ceiling_allow: "Ceiling: only listed items are allowed",
+      default: "Default: shops can override",
+      platform_cap: "Platform only: shops cannot change",
+    },
+    keys: {
+      modules_disabled: "Disabled modules",
+      payments_allowed_providers: "Allowed online payment providers",
+      pricing_default_tax_rate_bps: "Default tax rate",
+      pricing_default_service_charge_rate_bps: "Default service charge rate",
+      plans_allowed_tiers: "Paid plans on sale",
+      platform_max_fee_rate_bps: "Market platform fee cap",
+    },
+    actions: { save: "Save", clear: "Clear" },
+    toast: { saved: "Policy saved", cleared: "Policy cleared" },
   },
 
   notFound: {

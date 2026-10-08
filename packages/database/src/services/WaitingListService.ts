@@ -17,6 +17,8 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { RealtimeEventType, WaitingStatus } from "@makanmasak/shared-types";
 import { sql, type SQL } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
+import { forbidden } from "@makanmasak/utils";
+import { restaurants } from "../schema/restaurants";
 import { tables as restaurantTables } from "../schema/tables";
 import { waitingList } from "../schema/waiting-list";
 import {
@@ -287,6 +289,18 @@ export class WaitingListService extends BaseService {
 
       // 1. 驗證輸入
       this.validateWaitingListData(data);
+
+      // 平台示範店（0033）不收候位：潛在店家可以逛，但不能真的排進隊伍。
+      const demo = await this.db.get<{ isDemo: number }>(sql`
+        SELECT ${restaurants.isDemo} AS isDemo FROM ${restaurants}
+        WHERE ${restaurants.id} = ${data.restaurantId}
+      `);
+      if (demo?.isDemo) {
+        throw forbidden(
+          "This is a demo restaurant. Orders and bookings are not accepted.",
+          "DEMO_RESTAURANT",
+        );
+      }
 
       const offsetMinutes = await this.businessTimezone.offsetMinutes(
         data.restaurantId,

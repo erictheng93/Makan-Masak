@@ -118,6 +118,9 @@ else
         app=true
         frontend=true
         ;;
+      README.md | docs/api/README.md | docs/architecture/README.md)
+        tooling=true
+        ;;
       apps/* | packages/*)
         # Unknown workspaces get the widest scope. Missing a new suite is more
         # expensive than temporarily over-running CI.

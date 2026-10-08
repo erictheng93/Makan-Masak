@@ -26,9 +26,10 @@ const env = {} as Env;
  */
 function credentialsStub(byRestaurant: Record<string, string> = {}): Pick<
   ShopPaymentCredentialService,
-  "loadGatewayCredentials"
+  "loadGatewayCredentials" | "assertChargeAllowed"
 > & {
   loadGatewayCredentials: Mock;
+  assertChargeAllowed: Mock;
 } {
   return {
     loadGatewayCredentials: vi.fn(async (restaurantId: string) => ({
@@ -37,6 +38,7 @@ function credentialsStub(byRestaurant: Record<string, string> = {}): Pick<
       environment: "sandbox" as const,
       secret: { merchantKey: "never-on-the-wire" },
     })),
+    assertChargeAllowed: vi.fn(async () => {}),
   };
 }
 
@@ -98,6 +100,61 @@ describe("shopWalletProviderFromMethod", () => {
 });
 
 describe("ShopWalletMarketCheckoutGateway", () => {
+  it("checks the region policy for every vendor before charging", async () => {
+    const credentials = credentialsStub();
+    const { gateway, calls } = gatewayStub();
+    const input = splitInput({
+      allocations: [
+        ...splitInput().allocations,
+        {
+          restaurantId: "rest-2",
+          restaurantName: "Stall B",
+          orderId: "order-2",
+          orderNumber: "ORD-2",
+          amountCents: 1000,
+        },
+      ],
+    });
+
+    await new ShopWalletMarketCheckoutGateway(
+      env,
+      "tng",
+      gateway,
+      credentials,
+    ).process(input);
+
+    expect(credentials.assertChargeAllowed).toHaveBeenCalledWith(
+      "rest-1",
+      "tng",
+      "jalan-alor",
+    );
+    expect(credentials.assertChargeAllowed).toHaveBeenCalledWith(
+      "rest-2",
+      "tng",
+      "jalan-alor",
+    );
+    expect(credentials.assertChargeAllowed).toHaveBeenCalledTimes(2);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("does not charge when the region refuses the provider", async () => {
+    const credentials = credentialsStub();
+    credentials.assertChargeAllowed.mockRejectedValueOnce(
+      new ApiError("PAYMENT_PROVIDER_NOT_ALLOWED", "no", 403),
+    );
+    const { gateway, calls } = gatewayStub();
+
+    await expect(
+      new ShopWalletMarketCheckoutGateway(
+        env,
+        "tng",
+        gateway,
+        credentials,
+      ).process(splitInput()),
+    ).rejects.toMatchObject({ code: "PAYMENT_PROVIDER_NOT_ALLOWED" });
+    expect(calls).toHaveLength(0);
+  });
+
   it("charges the shop's own wallet with its own credentials", async () => {
     const credentials = credentialsStub();
     const { gateway, calls } = gatewayStub();
@@ -295,12 +352,16 @@ describe("refundShopWalletMarketCheckoutPayment", () => {
       status: "refunded",
       refundId: "tng-refund-1",
     });
+    const credentials = credentialsStub();
+    credentials.assertChargeAllowed.mockRejectedValue(
+      new ApiError("PAYMENT_PROVIDER_NOT_ALLOWED", "no", 403),
+    );
 
     const result = await refundShopWalletMarketCheckoutPayment(
       env,
       refundInput,
       gateway,
-      credentialsStub(),
+      credentials,
     );
 
     expect(calls[0]).toEqual(
@@ -320,6 +381,7 @@ describe("refundShopWalletMarketCheckoutPayment", () => {
         currency: "MYR",
       }),
     );
+    expect(credentials.assertChargeAllowed).not.toHaveBeenCalled();
   });
 
   it("refuses to refund a payment that was not taken through a shop wallet", async () => {

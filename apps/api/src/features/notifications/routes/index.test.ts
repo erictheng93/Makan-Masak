@@ -72,7 +72,7 @@ function createDb(recipient?: {
 function createEnv(
   overrides: Partial<{
     DB: ReturnType<typeof createDb>;
-    RESEND_API_KEY: string;
+    NOTIFICATION_EMAIL: { send: ReturnType<typeof vi.fn> };
     TWILIO_ACCOUNT_SID: string;
     TWILIO_AUTH_TOKEN: string;
   }> = {},
@@ -130,7 +130,7 @@ describe("notification routes", () => {
 
   it("sends test notifications and reports provider errors", async () => {
     notificationFns.sendTestNotification
-      .mockResolvedValueOnce({ success: true, provider: "resend" })
+      .mockResolvedValueOnce({ success: true, provider: "cloudflare" })
       .mockResolvedValueOnce({ success: false, error: "provider offline" })
       .mockResolvedValueOnce({ success: false });
 
@@ -153,7 +153,7 @@ describe("notification routes", () => {
       success: true,
       data: {
         message: "Test notification sent successfully",
-        details: { success: true, provider: "resend" },
+        details: { success: true, provider: "cloudflare" },
       },
     });
     expect(notificationFns.sendTestNotification).toHaveBeenNthCalledWith(
@@ -232,7 +232,7 @@ describe("notification routes", () => {
   it("defaults the test recipient to the caller when recipientId is omitted", async () => {
     notificationFns.sendTestNotification.mockResolvedValueOnce({
       success: true,
-      provider: "resend",
+      provider: "cloudflare",
     });
     const env = createEnv();
 
@@ -258,7 +258,7 @@ describe("notification routes", () => {
       "GET",
       undefined,
       createEnv({
-        RESEND_API_KEY: "resend-key",
+        NOTIFICATION_EMAIL: { send: vi.fn() },
         TWILIO_ACCOUNT_SID: "twilio-sid",
         TWILIO_AUTH_TOKEN: "twilio-token",
       }),
@@ -273,6 +273,22 @@ describe("notification routes", () => {
         configuredProviders: { email: true, sms: true },
       },
     });
+  });
+
+  it("reports email configured with only the Cloudflare binding", async () => {
+    const send = vi.fn();
+    const response = await request(
+      "/templates",
+      "GET",
+      undefined,
+      createEnv({ NOTIFICATION_EMAIL: { send } }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      data: { configuredProviders: { email: true } },
+    });
+    expect(send).not.toHaveBeenCalled();
   });
 
   it("sends manual notifications for owners in their restaurant", async () => {

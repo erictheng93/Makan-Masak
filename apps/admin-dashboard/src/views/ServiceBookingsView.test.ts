@@ -135,6 +135,35 @@ describe("ServiceBookingsView", () => {
     warmup.unmount();
   }, 30_000);
 
+  it("refreshes bookings in the background without clearing a notice", async () => {
+    vi.useFakeTimers();
+    try {
+      const wrapper = mount(ServiceBookingsView);
+      await flushPromises();
+      expect(serviceBookingsService.listBookings).toHaveBeenCalledOnce();
+
+      vi.mocked(serviceBookingsService.listBookings).mockRejectedValueOnce(
+        new Error("network"),
+      );
+      const consoleError = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+      await vi.advanceTimersByTimeAsync(30_000);
+      consoleError.mockRestore();
+      expect(serviceBookingsService.listBookings).toHaveBeenCalledTimes(2);
+      expect(wrapper.text()).toContain("王小明");
+      expect(wrapper.text()).not.toContain(
+        "serviceBookings.messages.loadFailed",
+      );
+
+      wrapper.unmount();
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(serviceBookingsService.listBookings).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("lists bookings scoped to the current restaurant", async () => {
     const wrapper = mount(ServiceBookingsView);
     await flushPromises();

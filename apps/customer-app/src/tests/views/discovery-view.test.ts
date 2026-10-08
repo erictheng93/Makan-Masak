@@ -135,7 +135,12 @@ function mountView() {
             </article>
           `,
         },
-        RestaurantCard: true,
+        RestaurantCard: {
+          props: ["restaurant"],
+          emits: ["select", "takeaway", "reserve"],
+          template:
+            '<button data-testid="reserve-restaurant" @click="$emit(\'reserve\', restaurant)">reserve</button>',
+        },
         RouterLink: RouterLinkStub,
       },
     },
@@ -325,6 +330,37 @@ describe("DiscoveryView", () => {
     });
   });
 
+  it("opens a restaurant reservation from a discovery result", async () => {
+    const store = discoveryStore({
+      isSearchMode: false,
+      searchQuery: "",
+      dishResults: [],
+      restaurantResults: [
+        {
+          restaurantId: "restaurant-1",
+          name: "章魚燒攤",
+          type: "snack",
+          district: "西屯區",
+          priceRange: 1,
+          rating: 4.5,
+          isOpen: true,
+          supportsTakeaway: true,
+          supportsDelivery: false,
+          imageUrl: null,
+        },
+      ],
+    });
+    vi.mocked(useDiscoveryStore).mockReturnValue(store as never);
+    const wrapper = mountView();
+
+    await wrapper.get('[data-testid="reserve-restaurant"]').trigger("click");
+
+    expect(routerPush).toHaveBeenCalledWith({
+      name: "Reservation",
+      params: { restaurantId: "restaurant-1" },
+    });
+  });
+
   it("opens a service result in the shop menu with a stable service deep link", async () => {
     const store = discoveryStore({
       dishResults: [],
@@ -374,6 +410,39 @@ describe("DiscoveryView", () => {
         returnLabel: "搜尋結果",
       },
     });
+  });
+
+  it("does not describe services without business hours as closed", () => {
+    const store = discoveryStore({
+      dishResults: [],
+      serviceResults: [
+        {
+          serviceItemId: 7,
+          name: "代客切水果",
+          description: null,
+          serviceType: "general",
+          priceCents: 3000,
+          priceLabel: null,
+          durationMinutes: null,
+          requiresBooking: false,
+          bookingUrl: null,
+          tags: [],
+          restaurantId: "service-restaurant-1",
+          restaurantName: "水果攤",
+          district: null,
+          city: "台中市",
+          isOpen: false,
+          openingHoursStatus: "unavailable",
+        },
+      ],
+      total: 1,
+    });
+    vi.mocked(useDiscoveryStore).mockReturnValue(store as never);
+
+    const wrapper = mountView();
+
+    expect(wrapper.text()).toContain("discovery.hoursUnavailable");
+    expect(wrapper.text()).not.toContain("discovery.closed");
   });
 
   // A service list spans restaurants, so each row is priced in its own

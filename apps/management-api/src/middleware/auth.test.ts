@@ -1,11 +1,41 @@
 import { Hono } from "hono";
 import { sign } from "hono/jwt";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "@makanmasak/utils";
 import { managementAuthMiddleware, type ManagementUser } from "./auth";
 import type { ManagementEnv } from "../types";
 
 const JWT_SECRET = "test-jwt-secret-with-at-least-32-chars";
+const PRINCIPAL = "018f0000-0000-7000-8000-000000000001";
+function envFor(
+  state: Record<string, unknown> | null = {
+    role: 0,
+    is_active: 1,
+    token_version: 1,
+  },
+  activeSession = true,
+) {
+  return {
+    JWT_SECRET,
+    PLATFORM_DB: {
+      prepare: vi.fn((sql: string) => ({
+        bind: vi.fn(() => ({
+          first: vi.fn(async () =>
+            sql.includes("FROM sessions")
+              ? activeSession
+                ? { id: "session-1" }
+                : null
+              : state && {
+                  id: PRINCIPAL,
+                  username: "admin@example.com",
+                  ...state,
+                },
+          ),
+        })),
+      })),
+    },
+  } as unknown as ManagementEnv;
+}
 const MANAGEMENT_JWT_SECRET = "management-jwt-secret-with-at-least-32-chars";
 
 type TestEnv = {
@@ -32,8 +62,10 @@ function createApp() {
 async function token(payload: Record<string, unknown>) {
   return sign(
     {
-      id: "admin-1",
+      id: "018f0000-0000-7000-8000-000000000001",
       email: "admin@example.com",
+      tv: 1,
+      sid: "session-1",
       aud: "management",
       iss: "makanmakan-management",
       exp: Math.floor(Date.now() / 1000) + 3600,
@@ -44,6 +76,29 @@ async function token(payload: Record<string, unknown>) {
 }
 
 describe("managementAuthMiddleware", () => {
+  it.each([
+    { role: 1, is_active: 1, token_version: 1 },
+    { role: 0, is_active: 0, token_version: 1 },
+    { role: 0, is_active: 1, token_version: 2 },
+    null,
+  ])("rejects revoked management principals (%j)", async (state) => {
+    const response = await createApp().fetch(
+      new Request("https://management.test/admin", {
+        headers: { Authorization: `Bearer ${await token({ role: "admin" })}` },
+      }),
+      envFor(state),
+    );
+    expect(response.status).toBe(401);
+  });
+  it("rejects management tokens from a terminated source session", async () => {
+    const response = await createApp().fetch(
+      new Request("https://management.test/admin", {
+        headers: { Authorization: `Bearer ${await token({ role: "admin" })}` },
+      }),
+      envFor(undefined, false),
+    );
+    expect(response.status).toBe(401);
+  });
   it("accepts platform admin JWTs", async () => {
     const app = createApp();
 
@@ -51,11 +106,15 @@ describe("managementAuthMiddleware", () => {
       new Request("https://management.test/admin", {
         headers: { Authorization: `Bearer ${await token({ role: "admin" })}` },
       }),
-      { JWT_SECRET } as never,
+      envFor(),
     );
 
     await expect(response.json()).resolves.toMatchObject({
-      user: { id: "admin-1", email: "admin@example.com", role: "admin" },
+      user: {
+        id: "018f0000-0000-7000-8000-000000000001",
+        email: "admin@example.com",
+        role: "admin",
+      },
     });
     expect(response.status).toBe(200);
   });
@@ -65,8 +124,10 @@ describe("managementAuthMiddleware", () => {
 
     const signed = await sign(
       {
-        id: "admin-1",
+        id: "018f0000-0000-7000-8000-000000000001",
         email: "admin@example.com",
+        tv: 1,
+        sid: "session-1",
         role: "admin",
         aud: "management",
         iss: "makanmakan-management",
@@ -79,7 +140,7 @@ describe("managementAuthMiddleware", () => {
       new Request("https://management.test/admin", {
         headers: { Authorization: `Bearer ${signed}` },
       }),
-      { JWT_SECRET, MANAGEMENT_JWT_SECRET } as never,
+      { ...envFor(), MANAGEMENT_JWT_SECRET } as never,
     );
 
     expect(response.status).toBe(200);
@@ -89,8 +150,10 @@ describe("managementAuthMiddleware", () => {
     const app = createApp();
     const apiAdminToken = await sign(
       {
-        id: "admin-1",
+        id: "018f0000-0000-7000-8000-000000000001",
         email: "admin@example.com",
+        tv: 1,
+        sid: "session-1",
         role: "admin",
         exp: Math.floor(Date.now() / 1000) + 3600,
       },
@@ -101,7 +164,7 @@ describe("managementAuthMiddleware", () => {
       new Request("https://management.test/admin", {
         headers: { Authorization: `Bearer ${apiAdminToken}` },
       }),
-      { JWT_SECRET } as never,
+      envFor(),
     );
 
     await expect(response.json()).resolves.toMatchObject({
@@ -117,7 +180,7 @@ describe("managementAuthMiddleware", () => {
       new Request("https://management.test/admin", {
         headers: { Authorization: `Bearer ${await token({ role: "owner" })}` },
       }),
-      { JWT_SECRET } as never,
+      envFor(),
     );
 
     await expect(response.json()).resolves.toMatchObject({

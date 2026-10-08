@@ -347,14 +347,22 @@
               {{ t("settings.markets.subtitle") }}
             </p>
           </div>
-          <button
-            type="button"
-            class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
-            :disabled="isLoadingMarkets"
-            @click="loadMarketSettings"
-          >
-            {{ t("settings.markets.refresh") }}
-          </button>
+          <div class="flex flex-wrap items-center gap-2">
+            <RouterLink
+              :to="{ name: 'MarketOpenReport' }"
+              class="rounded-full px-3 py-2 text-sm font-medium text-ios-blue-deep hover:bg-ios-bg"
+            >
+              {{ t("dashboard.marketOpenToday.report") }}
+            </RouterLink>
+            <button
+              type="button"
+              class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+              :disabled="isLoadingMarkets"
+              @click="loadMarketSettings"
+            >
+              {{ t("settings.markets.refresh") }}
+            </button>
+          </div>
         </div>
 
         <div class="mt-6">

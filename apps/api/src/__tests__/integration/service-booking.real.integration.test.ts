@@ -28,6 +28,7 @@ import {
   coupons,
   employeeAvailability,
   SERVICE_BOOKING_STATUS,
+  SERVICE_BOOKING_PAYMENT_REQUIREMENT,
   type ServiceBookingStatus,
   users,
 } from "@makanmasak/database";
@@ -70,6 +71,8 @@ async function seedRestaurant(
 
 async function seedService(options: {
   priceCents?: number;
+  paymentRequirement?: "none" | "deposit" | "prepay" | "pay_at_venue";
+  depositAmountCents?: number;
   requiresBooking?: boolean;
   durationMinutes?: number;
   availableHours?: { start?: string; end?: string; days?: number[] } | null;
@@ -83,6 +86,8 @@ async function seedService(options: {
       serviceType: "activity",
       requiresBooking: options.requiresBooking ?? true,
       priceCents: options.priceCents ?? 15000,
+      paymentRequirement: options.paymentRequirement ?? "pay_at_venue",
+      depositAmountCents: options.depositAmountCents ?? 0,
       durationMinutes: options.durationMinutes ?? 60,
       availableHours: options.availableHours ?? null,
     })
@@ -207,6 +212,7 @@ async function insertAssignedServiceBooking(input: {
     bookingTime: input.bookingTime,
     employeeId: input.employeeId,
     status: input.status ?? SERVICE_BOOKING_STATUS.PENDING,
+    paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.PAY_AT_VENUE,
     confirmationCode: crypto.randomUUID().replace(/-/g, ""),
     calendarUid: `${crypto.randomUUID()}@makanmakan.service-bookings`,
   });
@@ -242,6 +248,7 @@ describe("ServiceBookingService — create", () => {
     expect(booking).toMatchObject({
       status: "pending",
       paymentStatus: "unpaid",
+      paymentRequirement: "pay_at_venue",
       priceCentsSnapshot: 15000,
       amountDueCents: 15000,
       serviceNameSnapshot: "Lantern Painting",
@@ -440,7 +447,10 @@ describe("ServiceBookingService — payment & lifecycle", () => {
   }
 
   it("pays with credits, confirms, and counts the voucher", async () => {
-    const serviceId = await seedService({ priceCents: 15000 });
+    const serviceId = await seedService({
+      priceCents: 15000,
+      paymentRequirement: "prepay",
+    });
     const couponId = await seedPlatformCoupon("SVC10", 10);
     const publicId = await issueCard(100000);
 
@@ -477,6 +487,7 @@ describe("ServiceBookingService — payment & lifecycle", () => {
     await seedRestaurant(MYR_RESTAURANT_ID, { currency: "MYR" });
     const serviceId = await seedService({
       priceCents: 5000,
+      paymentRequirement: "prepay",
       restaurantId: MYR_RESTAURANT_ID,
     });
     const twdCard = await issueCard(100000, "TWD");
@@ -520,7 +531,11 @@ describe("ServiceBookingService — payment & lifecycle", () => {
   });
 
   it("pays only the required deposit and leaves the venue balance due", async () => {
-    const serviceId = await seedService({ priceCents: 10000 });
+    const serviceId = await seedService({
+      priceCents: 10000,
+      paymentRequirement: "deposit",
+      depositAmountCents: 2500,
+    });
     const publicId = await issueCard(100000);
 
     const booking = await service().createBooking({
@@ -530,8 +545,6 @@ describe("ServiceBookingService — payment & lifecycle", () => {
       customerPhone: "0911222333",
       bookingDate: "2026-06-05",
       bookingTime: "14:00",
-      paymentRequirement: "deposit",
-      depositAmountCents: 2500,
     });
 
     expect(booking).toMatchObject({
@@ -560,7 +573,10 @@ describe("ServiceBookingService — payment & lifecycle", () => {
   });
 
   it("cancels a confirmed booking, restoring capacity and voucher count", async () => {
-    const serviceId = await seedService({ priceCents: 15000 });
+    const serviceId = await seedService({
+      priceCents: 15000,
+      paymentRequirement: "prepay",
+    });
     const couponId = await seedPlatformCoupon("SVC10", 10);
     await seedSlot(serviceId, "2026-06-05", "14:00", 2);
     const publicId = await issueCard(100000);
@@ -592,7 +608,10 @@ describe("ServiceBookingService — payment & lifecycle", () => {
       ServiceBookingNotificationService.prototype,
       "send",
     ).mockResolvedValue();
-    const serviceId = await seedService({ priceCents: 15000 });
+    const serviceId = await seedService({
+      priceCents: 15000,
+      paymentRequirement: "prepay",
+    });
     const couponId = await seedPlatformCoupon("SVC20", 20);
     await seedSlot(serviceId, "2026-06-05", "14:00", 2);
     const firstPublicId = await issueCard(100000);
@@ -665,6 +684,28 @@ describe("ServiceBookingService — payment & lifecycle", () => {
     await service().confirmCash(booking.id);
     const done = await service().transition(booking.id, "completed");
     expect(done.status).toBe("completed");
+  });
+
+  it("records the full venue cash collection when staff confirms a booking", async () => {
+    const serviceId = await seedService({ priceCents: 15000 });
+    const booking = await service().createBooking({
+      restaurantId: RESTAURANT_ID,
+      serviceItemId: serviceId,
+      customerName: "Guest",
+      customerPhone: "0911222333",
+      bookingDate: "2026-06-05",
+      bookingTime: "14:00",
+    });
+
+    const confirmed = await service().confirmCash(booking.id);
+
+    expect(confirmed).toMatchObject({
+      status: "confirmed",
+      paymentRequirement: "pay_at_venue",
+      paymentStatus: "paid",
+      paymentMethod: "cash",
+      amountPaidCents: 15000,
+    });
   });
 });
 

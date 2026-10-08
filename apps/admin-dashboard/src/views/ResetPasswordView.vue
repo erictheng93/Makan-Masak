@@ -168,88 +168,30 @@
                   :style="{ width: `${(passwordStrength / 5) * 100}%` }"
                 />
               </div>
-              <ul class="mt-2 space-y-1">
-                <li
-                  class="text-xs flex items-center"
-                  :class="
-                    form.newPassword.length >= 6
-                      ? 'text-green-600'
-                      : 'text-gray-500'
-                  "
-                >
-                  <Check
-                    v-if="form.newPassword.length >= 6"
-                    class="w-3 h-3 mr-1"
-                  />
-                  <X v-else class="w-3 h-3 mr-1" />
-                  {{ t("auth.atLeast6Chars") }}
-                </li>
-                <li
-                  class="text-xs flex items-center"
-                  :class="
-                    form.newPassword.length >= 8
-                      ? 'text-green-600'
-                      : 'text-gray-500'
-                  "
-                >
-                  <Check
-                    v-if="form.newPassword.length >= 8"
-                    class="w-3 h-3 mr-1"
-                  />
-                  <X v-else class="w-3 h-3 mr-1" />
-                  {{ t("auth.atLeast8Chars") }}
-                </li>
-                <li
-                  class="text-xs flex items-center"
-                  :class="
-                    /[a-z]/.test(form.newPassword) &&
-                    /[A-Z]/.test(form.newPassword)
-                      ? 'text-green-600'
-                      : 'text-gray-500'
-                  "
-                >
-                  <Check
-                    v-if="
-                      /[a-z]/.test(form.newPassword) &&
-                      /[A-Z]/.test(form.newPassword)
-                    "
-                    class="w-3 h-3 mr-1"
-                  />
-                  <X v-else class="w-3 h-3 mr-1" />
-                  {{ t("auth.upperLowerCase") }}
-                </li>
-                <li
-                  class="text-xs flex items-center"
-                  :class="
-                    /\d/.test(form.newPassword)
-                      ? 'text-green-600'
-                      : 'text-gray-500'
-                  "
-                >
-                  <Check
-                    v-if="/\d/.test(form.newPassword)"
-                    class="w-3 h-3 mr-1"
-                  />
-                  <X v-else class="w-3 h-3 mr-1" />
-                  {{ t("auth.containsNumber") }}
-                </li>
-                <li
-                  class="text-xs flex items-center"
-                  :class="
-                    /[^a-zA-Z0-9]/.test(form.newPassword)
-                      ? 'text-green-600'
-                      : 'text-gray-500'
-                  "
-                >
-                  <Check
-                    v-if="/[^a-zA-Z0-9]/.test(form.newPassword)"
-                    class="w-3 h-3 mr-1"
-                  />
-                  <X v-else class="w-3 h-3 mr-1" />
-                  {{ t("auth.containsSpecialChar") }}
-                </li>
-              </ul>
             </div>
+
+            <!-- Shown before typing, so the rule is known up front. After a
+                 rejected submit, whatever is still missing turns red. -->
+            <ul class="mt-2 space-y-1">
+              <li
+                v-for="req in visibleRequirements"
+                :key="req.key"
+                class="text-xs flex items-center"
+                :data-requirement="req.key"
+                :data-status="req.met ? 'met' : 'missing'"
+                :class="
+                  req.met
+                    ? 'text-green-600'
+                    : submitAttempted
+                      ? 'text-red-600'
+                      : 'text-gray-500'
+                "
+              >
+                <Check v-if="req.met" class="w-3 h-3 mr-1" />
+                <X v-else class="w-3 h-3 mr-1" />
+                {{ req.label }}
+              </li>
+            </ul>
           </div>
 
           <!-- Confirm Password -->
@@ -362,7 +304,17 @@ type ResetPasswordResponse = {
   error?: { code?: string; message?: string };
 };
 
+// Mirrors passwordSchema in apps/api/src/features/authentication/schemas/
+// validation.ts. The API accepts 6-7 characters without these rules, but a
+// setup password is always held to the full rule so the hints never mark a
+// password as fine that the server then rejects.
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_SYMBOL = /[@$!%*?&]/;
+// The API's regex also requires the first character to come from this set.
+const PASSWORD_START = /^[A-Za-z\d@$!%*?&]/;
+
 const passwordResetCodeKeys = {
+  VALIDATION_ERROR: "auth.passwordRequirementsNotMet",
   RESET_TOKEN_EXPIRED: "auth.resetTokenExpired",
   RESET_TOKEN_INVALID: "auth.resetTokenInvalid",
   WEAK_PASSWORD: "auth.weakPassword",
@@ -374,6 +326,7 @@ const tokenError = ref("");
 const showPassword = ref(false);
 const showConfirmPassword = ref(false);
 const isLoading = ref(false);
+const submitAttempted = ref(false);
 const success = ref(false);
 const error = ref("");
 const maskedEmail = ref("");
@@ -389,19 +342,60 @@ const errors = reactive({
   confirmPassword: "",
 });
 
-// Password strength calculation
-const passwordStrength = computed(() => {
+// One entry per condition the API checks, so the hint can name exactly what
+// is missing. Upper and lower case are separate on purpose: "abcde@12345"
+// failed on the uppercase alone while a combined item did not say which.
+const passwordRequirements = computed(() => {
   const password = form.newPassword;
-  let strength = 0;
-
-  if (password.length >= 6) strength++;
-  if (password.length >= 8) strength++;
-  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
-  if (/\d/.test(password)) strength++;
-  if (/[^a-zA-Z0-9]/.test(password)) strength++;
-
-  return strength;
+  return [
+    {
+      key: "length",
+      label: t("auth.atLeast8Chars"),
+      met: password.length >= PASSWORD_MIN_LENGTH,
+    },
+    {
+      key: "uppercase",
+      label: t("auth.containsUppercase"),
+      met: /[A-Z]/.test(password),
+    },
+    {
+      key: "lowercase",
+      label: t("auth.containsLowercase"),
+      met: /[a-z]/.test(password),
+    },
+    {
+      key: "number",
+      label: t("auth.containsNumber"),
+      met: /\d/.test(password),
+    },
+    {
+      key: "symbol",
+      label: t("auth.containsSpecialChar"),
+      met: PASSWORD_SYMBOL.test(password),
+    },
+    {
+      key: "start",
+      label: t("auth.startsWithAllowedChar"),
+      met: password === "" || PASSWORD_START.test(password),
+      onlyWhenMissing: true,
+    },
+  ];
 });
+
+const visibleRequirements = computed(() =>
+  passwordRequirements.value.filter((req) => !req.onlyWhenMissing || !req.met),
+);
+
+const missingRequirements = computed(() =>
+  passwordRequirements.value.filter((req) => !req.met),
+);
+
+// Counts the five listed conditions, so "Very Strong" means the API accepts it.
+const passwordStrength = computed(
+  () =>
+    passwordRequirements.value.filter((req) => req.met && !req.onlyWhenMissing)
+      .length,
+);
 
 const passwordStrengthText = computed(() => {
   const strength = passwordStrength.value;
@@ -473,8 +467,10 @@ const validateForm = () => {
     return false;
   }
 
-  if (form.newPassword.length < 6) {
-    errors.newPassword = t("auth.passwordMin6");
+  if (missingRequirements.value.length > 0) {
+    errors.newPassword = t("auth.passwordMissing", {
+      items: missingRequirements.value.map((req) => req.label).join(" · "),
+    });
     return false;
   }
 
@@ -493,6 +489,7 @@ const validateForm = () => {
 
 const handleSubmit = async () => {
   error.value = "";
+  submitAttempted.value = true;
 
   if (!validateForm()) {
     return;

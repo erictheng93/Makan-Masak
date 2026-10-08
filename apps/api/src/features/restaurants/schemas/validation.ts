@@ -4,8 +4,10 @@
  */
 
 import { z } from "zod";
+import { SUPPORTED_COUNTRIES } from "@makanmasak/shared-types";
 import {
   RESTAURANT_SERVICE_TYPES,
+  SERVICE_ITEM_PAYMENT_REQUIREMENTS,
   SUPPORTED_BUSINESS_TIMEZONES,
 } from "@makanmasak/database";
 import { VALIDATION_LIMITS } from "../../../shared/constants";
@@ -145,6 +147,8 @@ const restaurantServiceItemShapeSchema = z.object({
     .optional(),
   serviceType: z.enum(RESTAURANT_SERVICE_TYPES).optional(),
   priceCents: z.number().int().min(0).nullable().optional(),
+  paymentRequirement: z.enum(SERVICE_ITEM_PAYMENT_REQUIREMENTS).optional(),
+  depositAmountCents: z.number().int().min(0).optional(),
   priceLabel: z
     .string()
     .max(80)
@@ -177,11 +181,52 @@ const restaurantServiceItemShapeSchema = z.object({
   isPublic: z.boolean().optional(),
 });
 
+export const SERVICE_PAYMENT_TERMS_ERROR =
+  "Deposit services require a positive deposit no greater than the service price";
+
+export function isValidServicePaymentTerms(value: {
+  paymentRequirement?: unknown;
+  depositAmountCents?: unknown;
+  priceCents?: unknown;
+}): boolean {
+  if (value.paymentRequirement === "deposit") {
+    return (
+      typeof value.depositAmountCents === "number" &&
+      value.depositAmountCents > 0 &&
+      typeof value.priceCents === "number" &&
+      value.priceCents > 0 &&
+      value.depositAmountCents <= value.priceCents
+    );
+  }
+  return (
+    value.depositAmountCents === undefined || value.depositAmountCents === 0
+  );
+}
+
+const servicePaymentTermsSchema = <T extends z.ZodType>(schema: T) =>
+  schema.refine(
+    (value) => isValidServicePaymentTerms(value as Record<string, unknown>),
+    {
+      message: SERVICE_PAYMENT_TERMS_ERROR,
+      path: ["depositAmountCents"],
+    },
+  );
+
 const restaurantServiceItemInputSchema = z.lazy(() =>
-  restaurantServiceItemShapeSchema.extend({
-    serviceType: z.enum(RESTAURANT_SERVICE_TYPES).optional().default("general"),
-    requiresBooking: z.boolean().optional().default(false),
-  }),
+  servicePaymentTermsSchema(
+    restaurantServiceItemShapeSchema.extend({
+      serviceType: z
+        .enum(RESTAURANT_SERVICE_TYPES)
+        .optional()
+        .default("general"),
+      requiresBooking: z.boolean().optional().default(false),
+      paymentRequirement: z
+        .enum(SERVICE_ITEM_PAYMENT_REQUIREMENTS)
+        .optional()
+        .default("pay_at_venue"),
+      depositAmountCents: z.number().int().min(0).optional().default(0),
+    }),
+  ),
 );
 
 const updateRestaurantServiceItemSchema = z.lazy(() =>
@@ -248,6 +293,8 @@ const createRestaurantSchema = z.object({
     .min(1, "District is required")
     .max(50, "District must be less than 50 characters"),
   city: z.string().max(50, "City must be less than 50 characters").optional(),
+  // Needed only when the city is not on a country's list; otherwise derived.
+  countryCode: z.enum(SUPPORTED_COUNTRIES).optional(),
   phone: z
     .string()
     .min(8, "Phone number must be at least 8 characters")
@@ -273,22 +320,27 @@ const createRestaurantSchema = z.object({
 
 // Restaurant update schema (all fields optional except validation rules still apply)
 const updateRestaurantSchema = z.lazy(() =>
-  createRestaurantSchema.partial().extend({
-    isAvailable: z.boolean().optional(),
-    isActive: z.boolean().optional(),
-    latitude: z.number().min(-90).max(90).nullable().optional(),
-    longitude: z.number().min(-180).max(180).nullable().optional(),
-    supportsTakeaway: z.boolean().optional(),
-    supportsDelivery: z.boolean().optional(),
-    settings: restaurantSettingsSchema.optional(),
+  // The country is fixed at creation: changing it would leave currency,
+  // timezone and cached region policy lookups out of step.
+  createRestaurantSchema
+    .omit({ countryCode: true })
+    .partial()
+    .extend({
+      isAvailable: z.boolean().optional(),
+      isActive: z.boolean().optional(),
+      latitude: z.number().min(-90).max(90).nullable().optional(),
+      longitude: z.number().min(-180).max(180).nullable().optional(),
+      supportsTakeaway: z.boolean().optional(),
+      supportsDelivery: z.boolean().optional(),
+      settings: restaurantSettingsSchema.optional(),
 
-    // A column of its own, not a `settings` key (#329): every business-day
-    // bucket derives its SQL offset from it. An enum rather than a free string
-    // because only fixed-offset zones can be expressed as a SQLite modifier --
-    // accepting `America/New_York` here would store a boundary the report layer
-    // then silently ignores, which is the shape of the bug this replaces.
-    timezone: z.enum(SUPPORTED_BUSINESS_TIMEZONES).optional(),
-  }),
+      // A column of its own, not a `settings` key (#329): every business-day
+      // bucket derives its SQL offset from it. An enum rather than a free string
+      // because only fixed-offset zones can be expressed as a SQLite modifier --
+      // accepting `America/New_York` here would store a boundary the report layer
+      // then silently ignores, which is the shape of the bug this replaces.
+      timezone: z.enum(SUPPORTED_BUSINESS_TIMEZONES).optional(),
+    }),
 );
 
 // Restaurant list query parameters

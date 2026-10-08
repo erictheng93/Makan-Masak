@@ -265,6 +265,12 @@ function mountView() {
                 open vendor services
               </button>
               <button
+                data-testid="takeaway-market-vendor"
+                @click="$emit('takeaway', { restaurantId: 'restaurant-1', isOpen: true })"
+              >
+                takeaway vendor
+              </button>
+              <button
                 data-testid="vendor-list-load-more"
                 @click="$emit('loadMore')"
               >
@@ -528,6 +534,31 @@ describe("MarketDetailView", () => {
     });
   });
 
+  it("blocks entry when a listed stall has not opened today", async () => {
+    vi.mocked(discoveryApi.getTakeawayEligibility).mockResolvedValueOnce({
+      eligible: true,
+      shopQrCode: "SHOP-restaurant-1",
+    });
+    vi.mocked(useMarketsStore).mockReturnValue(
+      marketStore({
+        vendors: [{ restaurantId: "restaurant-1", isOpen: false }],
+      }) as never,
+    );
+    const wrapper = mountView();
+
+    await wrapper.get('[data-testid="open-market-vendor"]').trigger("click");
+    await wrapper
+      .get('[data-testid="open-market-vendor-services"]')
+      .trigger("click");
+    await wrapper
+      .get('[data-testid="takeaway-market-vendor"]')
+      .trigger("click");
+
+    expect(routerPush).not.toHaveBeenCalled();
+    expect(discoveryApi.getTakeawayEligibility).not.toHaveBeenCalled();
+    expect(toastError).toHaveBeenCalledWith("markets.vendors.notOpenToday");
+  });
+
   it("renders external market location map alongside the stall map", () => {
     vi.mocked(useMarketsStore).mockReturnValue(
       marketStore({
@@ -728,6 +759,64 @@ describe("MarketDetailView", () => {
     });
     expect(toastSuccess).toHaveBeenCalledWith("markets.detail.checkoutSuccess");
     expect(cartStore.cartForMarket("fengjia")).toBeNull();
+  });
+
+  it("removes only stalls named by a not-open-today checkout error", async () => {
+    vi.stubEnv("VITE_API_BASE_URL", "http://localhost");
+    const { ApiException } = await import("@/services/api");
+    vi.unstubAllEnvs();
+    const cartStore = useMarketCartStore();
+    for (const [restaurantId, id] of [
+      ["restaurant-1", 42],
+      ["restaurant-2", 43],
+    ] as const) {
+      cartStore.addItem({
+        marketSlug: "fengjia",
+        marketName: "逢甲夜市",
+        restaurantId,
+        restaurantName: restaurantId,
+        item: {
+          id,
+          restaurantId,
+          categoryId: 10,
+          catalogType: "menu_item",
+          name: "章魚燒",
+          price: 80,
+          spiceLevel: 0,
+          sortOrder: 1,
+          isAvailable: true,
+          isFeatured: false,
+          inventoryCount: null,
+          orderCount: 0,
+          createdAt: 1786_000_000_000,
+          updatedAt: 1786_000_000_000,
+        },
+        quantity: 1,
+      });
+    }
+    createMarketCheckout.mockRejectedValueOnce(
+      new ApiException(
+        "VENDOR_NOT_OPEN_TODAY",
+        "Some vendors are not open today",
+        { restaurantIds: ["restaurant-1"] },
+        409,
+      ),
+    );
+    const wrapper = mountView();
+    await wrapper.get('[data-testid="market-checkout-phone"]').setValue("789");
+    await wrapper
+      .get('[data-testid="market-checkout-submit"]')
+      .trigger("click");
+
+    await vi.waitFor(() => {
+      expect(toastError).toHaveBeenCalledWith(
+        "markets.detail.vendorNotOpenToday",
+      );
+    });
+    expect(
+      cartStore.cartForMarket("fengjia")?.vendors.map((v) => v.restaurantId),
+    ).toEqual(["restaurant-2"]);
+    expect(routerPush).not.toHaveBeenCalled();
   });
 
   it("passes shareable query state into market product search", () => {

@@ -7,7 +7,7 @@
 <style>
 :root{
   --ground:#F2F2F7; --surface:#FFFFFF; --surface-2:#F8F8FB;
-  --ink:#1C1C1E; --ink-2:#55555C; --ink-3:#8A8A92;
+  --ink:#1C1C1E; --ink-2:#55555C; --ink-3:#6C6C74;
   --hair:rgba(28,28,30,.10); --hair-2:rgba(28,28,30,.06);
   --shadow:0 1px 1.5px rgba(24,24,45,.05), 0 5px 16px rgba(24,24,45,.05);
   --shadow-sm:0 1px 1px rgba(24,24,45,.05), 0 3px 10px rgba(24,24,45,.05);
@@ -21,7 +21,7 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --ground:#0F0F13; --surface:#1B1B21; --surface-2:#212128;
-    --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#7E7E8A;
+    --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#9A9AA6;
     --hair:rgba(255,255,255,.14); --hair-2:rgba(255,255,255,.07);
     --shadow:0 1px 1.5px rgba(0,0,0,.4), 0 5px 16px rgba(0,0,0,.35);
     --shadow-sm:0 1px 1px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
@@ -35,7 +35,7 @@
 }
 :root[data-theme="dark"]{
   --ground:#0F0F13; --surface:#1B1B21; --surface-2:#212128;
-  --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#7E7E8A;
+  --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#9A9AA6;
   --hair:rgba(255,255,255,.14); --hair-2:rgba(255,255,255,.07);
   --shadow:0 1px 1.5px rgba(0,0,0,.4), 0 5px 16px rgba(0,0,0,.35);
   --shadow-sm:0 1px 1px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
@@ -87,7 +87,7 @@ h2{
 h3{
   margin:26px 0 10px; font-size:16px; font-weight:700; letter-spacing:-.01em;
 }
-.card h4{
+.card h4, .card h3.lvl4{
   margin:18px 0 6px; font-size:13px; font-weight:700; letter-spacing:.02em;
   text-transform:uppercase; color:var(--ink-3);
 }
@@ -121,7 +121,7 @@ p{margin:10px 0}
   background:color-mix(in srgb, var(--ac) 18%, var(--surface));
   padding:2px 10px; border-radius:999px; flex:none;
 }
-.finding-h h4{
+.finding-h h4, .finding-h h3{
   margin:0; font-size:15.5px; font-weight:700; letter-spacing:-.01em;
   flex:1; min-width:220px;
 }
@@ -130,7 +130,7 @@ p{margin:10px 0}
 .finding-b > :last-child{margin-bottom:0}
 
 .tag{
-  display:inline-block; font-size:11px; font-weight:700; letter-spacing:.04em;
+  display:inline-block; font-size:12px; font-weight:700; letter-spacing:.02em;
   padding:2.5px 11px; border-radius:999px; white-space:nowrap;
 }
 .tag.blocker{background:color-mix(in srgb, var(--red) 16%, var(--surface)); color:var(--red-ink)}
@@ -146,7 +146,7 @@ p{margin:10px 0}
 }
 .evidence b{font-weight:600}
 .evidence .lbl{
-  display:block; font-size:10.5px; font-weight:700; letter-spacing:.12em;
+  display:block; font-size:12px; font-weight:700; letter-spacing:.04em;
   color:var(--ink-3); margin-bottom:5px;
 }
 
@@ -154,7 +154,7 @@ p{margin:10px 0}
 table{border-collapse:collapse; width:100%; background:var(--surface); font-size:13.5px}
 th,td{padding:10px 15px; text-align:left; vertical-align:top}
 th{
-  font-size:11px; font-weight:700; letter-spacing:.08em; color:var(--ink-3);
+  font-size:12px; font-weight:700; letter-spacing:.04em; color:var(--ink-3);
   background:var(--surface-2); white-space:nowrap;
 }
 td{border-top:1px solid var(--hair-2)}
@@ -179,6 +179,14 @@ ul.plain li::before{
 .warn{background:color-mix(in srgb, var(--orange) 12%, transparent)}
 .warn b{color:var(--orange-ink)}
 
+/* Inside a card, a callout or table is a section of that card, not a card
+   of its own. Callouts already open with a bold lead-in, so they drop the box. */
+.card .note, .card .evidence, .finding .note, .finding .evidence{
+  border-radius:0; background:none; padding:0;
+}
+.card .tablewrap, .finding .tablewrap{border-radius:0; box-shadow:none}
+.card table, .finding table{background:transparent}
+
 footer{
   margin-top:44px; padding-top:18px; border-top:1px solid var(--hair-2);
   font-size:12.5px; color:var(--ink-3);
@@ -193,7 +201,7 @@ footer{
 <div class="wrap">
 
 <header class="mast">
-  <h1>顧客端流程 QA — 2026-09-15</h1>
+  <h1>顧客端流程 QA — 2026-09-15（09-23 更新）</h1>
   <p class="sub">
     依 <code>docs/architecture/master-user-flow.html</code> 的「1. 顧客端」四條子流程，
     用真瀏覽器在 production 逐頁走過一遍：點餐主流程 → 訂單追蹤 → 座位與預約 → 揪團與市集。
@@ -206,8 +214,67 @@ footer{
     <span><b>身分</b> 訪客（免登入）＋ <code>owner1</code> 推狀態</span>
     <span><b>餐廳</b> 麻吉 Demo 廣東粥 <code>019fa136-…31a1</code></span>
     <span><b>入口</b> 桌位 A1 的簽章 QR</span>
+    <span><b>最新對齊</b> 2026-10-04（見下一節）；production 基準仍按各節日期</span>
   </div>
 </header>
+
+<section id="alignment-1004">
+  <h2>2026-10-04 對齊：歷史發現與目前狀態分開閱讀</h2>
+  <p>依 master user flow v1.2（2026/09/30）、目前工作目錄、HEAD 與本機測試核對。下方 09-15／09-23 production 證據保留原樣；「仍 open」「沒有畫面」「未推送」與資料列數只描述當日。最新逐項判定見 <a href="./2026-10-04-customer-flow-verification.html">顧客流程驗證</a>。</p>
+  <ul>
+    <li><b>C1–C3、C5、C10–C14：</b>訪客折扣、各訂單 token、群組送出追蹤、電話與時間軸修正已在 HEAD；目前相關回歸通過。未重做 production 真券驗收。</li>
+    <li><b>C4／#384：</b>「無寄信設定、會員整條不通」已過期。HEAD 已採 Cloudflare Email Service；10-01 部署查核記錄 send_email binding。#422 會員下單與套券是一般 E2E。未重驗 production Email／SMS 送達。</li>
+    <li><b>C6–C9：</b>訂位建立／查詢／取消、探索空營業時間、語系保存及準備時間已有程式和測試。剩餘時間是否遞減、正式時段與非台灣電話需另驗。</li>
+    <li><b>C15／C16：</b>列印與幣別後續修正已進 HEAD，不能把原缺陷當未修；實體 ESC/POS 印表機仍需硬體證據。</li>
+  </ul>
+  <p><b>本次不是全面通過：</b>17 檔 209 案回歸與 2 檔 108 案市集／服務 route 通過，但舊 customer real integration 為 10 通過、3 失敗：staff JWT fixture 未建立工作目錄新認證要求的 session。新增真 customer OTP → 下單 → 歷史隔離測試通過。未提交的認證／候位改動不能當已部署。</p>
+</section>
+
+<section id="recheck-1004">
+  <h2>2026-10-04 對齊：目前程式與歷史紀錄分開判讀</h2>
+  <div class="card">
+    <p>依 <a href="../architecture/master-user-flow.html">master-user-flow</a> 的四條顧客流程重查。基準 HEAD <code>8b9c7a571</code>，實際驗證包含現有未提交的 auth、付款、候位與顧客端修改；不能把工作樹測試結果當成 HEAD 或 production 已部署。以下 09-15／09-23 的發現、計數、部署與 issue 狀態保留為當日紀錄。</p>
+    <ul>
+      <li><b>C4／#384：</b><a href="./2026-10-01-customer-launch-prerequisites-425.md">10-01 查核</a>已記錄 #384 關閉及 Cloudflare Email send_email binding；「仍 open、無 email 配置、會員整條不可用」不再是最新判定。本次未查 live production、未送 email／SMS，不能推論真實送達。會員下單與限每人次數的優惠券已是一般 E2E 回歸案例（#422），不再是預期失敗。</li>
+      <li><b>C6：</b><code>ReservationView.vue</code> 與 <code>/restaurant/:id/reserve</code> 已存在；建立、確認碼查詢、取消由現有 E2E 覆蓋。API 電話已正規化為 E.164；舊「只認台灣電話」不適用。四個公開訂位端點仍在 <code>moduleGate</code> 前，不能說這項殘留已消失。</li>
+      <li><b>C15：</b><a href="./2026-09-30-floor-operations-local-walk.html">09-30 現場走查</a>已擷取 print-agent 送到 TCP 假印表機的 ESC/POS 位元組。「沒有人實測輸出」已過期；實體設備、中文字碼、切刀及卡紙仍未驗證。</li>
+      <li><b>R22／#424：</b>付款條件已從服務設定取得，不再一律只能 <code>pay_at_venue</code>；公開 request 不能指定付款條件或顧客 ID。實際金流與部署狀態仍需分開驗收。</li>
+      <li><b>目前驗證：</b>四條流程逐節點、測試命令與剩餘缺口見 <a href="./2026-09-18-customer-app-readiness-qa.html#recheck-1004">readiness 的 10-04 重查</a>。上線條件仍依 #425 的負責人、範圍決定與 production 證據；本次沒有替使用者關 issue 或作上線決定。</li>
+    </ul>
+  </div>
+</section>
+
+<section id="status-0923">
+  <h2>09-23 歷史現況：C1–C16 各自到哪了</h2>
+  <p>
+    只用不寫入的手段確認：GitHub issue 狀態、Pages／Worker 部署紀錄（customer Pages 目前是 <code>8cd498e</code>，
+    api Worker 最後部署 2026-09-23 01:19 UTC）、公開 API 的唯讀請求、唯讀 D1 查詢。
+    後續的 production 重走記在 <a href="./2026-09-18-customer-app-readiness-qa.html">09-18 readiness QA</a>。
+    這一節之後是 09-15 當時的紀錄，保留原樣。
+  </p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>#</th><th>處置</th><th>production</th><th>驗證狀態</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">C2 C5 C10 C11 C12 C14</td><td>09-15 已修</td><td><span class="tag ok">已部署</span></td><td>09-18 在 production 逐項重走通過（C2 邀請面板、C5 取餐方式、C10 電話、C11／C12 時間軸、C14 註冊文案）</td></tr>
+        <tr><td class="mono">C13</td><td>09-15 已修</td><td><span class="tag ok">已部署</span></td><td>production 沒有任何券，沒有重走；由 customer-real E2E 的優惠券測試間接覆蓋</td></tr>
+        <tr><td class="mono">C1</td><td>#382 closed <code>36f7bb6b</code></td><td><span class="tag ok">已部署</span>（migration <code>0027</code> 已套用）</td><td>E2E 由 <code>test.fail</code> 轉為一般測試；<b>production 尚未以真券走過</b>（<code>coupons</code> 0 筆）</td></tr>
+        <tr><td class="mono">C3</td><td>#383 closed <code>36f7bb6b</code></td><td><span class="tag ok">已部署</span></td><td>E2E 由 <code>test.fail</code> 轉為一般測試</td></tr>
+        <tr><td class="mono">C4</td><td><span class="tag blocker">#384 仍 open</span></td><td>—</td><td>api secret 仍只有 5 個、無寄信／簡訊憑證；<code>customers</code> 仍 0 筆。09-23 本機 E2E 第一次走會員線：OTP 登入與訂單歷史可用，但會員點餐整條不通（#422）</td></tr>
+        <tr><td class="mono">C6</td><td>#385 closed <code>4a4b4d6a</code> <code>ac39d9c5</code></td><td><span class="tag ok">已部署</span></td><td>顧客端新增 <code>/restaurant/:id/reserve</code>；production 09-23 只走到頁面與空狀態（沒有時段）；E2E 已覆蓋訂位 → 查詢 → 取消（<code>2a6c1759</code>）。issue 留下三項殘留：公開建立在 <code>moduleGate</code> 之前、電話正規化只認台灣、原子限流器只在 production</td></tr>
+        <tr><td class="mono">C7</td><td>#386 closed <code>4a4b4d6a</code> <code>7d744983</code> <code>b36ca79f</code></td><td><span class="tag ok">已部署</span></td><td>09-23 唯讀確認：公開探索回 <code>type: null</code>、<code>district: null</code>、<code>openingHoursStatus: "unavailable"</code>，測試租戶不再出現在列表（只剩 1 家）。市集商家清單仍不篩 <code>is_available</code>（issue 留白的決定）</td></tr>
+        <tr><td class="mono">C8</td><td>#387 closed <code>4a4b4d6a</code></td><td><span class="tag ok">已部署</span></td><td>09-23 在 production 走過：桌位 A1 菜單切到 English，重新整理後保留。E2E 已覆蓋（<code>41a644a8</code>）。切換鈕缺可讀名稱，已在分支補上、未部署</td></tr>
+        <tr><td class="mono">C9</td><td>#388 closed <code>4a4b4d6a</code></td><td><span class="tag ok">已部署</span></td><td>09-23 在 production 走過：該菜設定 12 分，追蹤頁「預估還需 12 分鐘」（修正前 15）。「預估時間不隨時間遞減」未處理</td></tr>
+        <tr><td class="mono">C15</td><td>#389 closed</td><td><span class="tag ok">已部署</span></td><td>print-agent 的 ESC/POS 輸出仍沒有人實測過</td></tr>
+        <tr><td class="mono">C16</td><td>#390 closed</td><td><span class="tag ok">已部署</span></td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">
+    <b>剩下的：</b>C4（#384，需要持有憑證的人）是 16 項裡唯一還開著的。其餘都已關閉並部署，
+    C8、C9 已於 09-23 在 production 走過；C1、C6 的建立流程需要 owner 登入建券／時段，仍只有測試證據。
+  </p>
+</section>
 
 <section>
   <h2>做了什麼</h2>
@@ -274,7 +341,7 @@ footer{
   <div class="finding blocker">
     <div class="finding-h">
       <span class="id">C1</span>
-      <h4>訪客套用優惠券後，購物車顯示折扣後金額，實際建立的是原價訂單</h4>
+      <h3 class="lvl4">訪客套用優惠券後，購物車顯示折扣後金額，實際建立的是原價訂單</h3>
       <span class="tag issue">#382</span>
     </div>
     <div class="finding-b">
@@ -422,7 +489,7 @@ footer{
   <div class="finding blocker">
     <div class="finding-h">
       <span class="id">C3</span>
-      <h4>再點一次餐之後，前一筆訂單的追蹤頁變成「沒有權限執行此操作」</h4>
+      <h3 class="lvl4">再點一次餐之後，前一筆訂單的追蹤頁變成「沒有權限執行此操作」</h3>
       <span class="tag issue">#383</span>
     </div>
     <div class="finding-b">
@@ -554,7 +621,7 @@ const basePrepTime = 15;</code></pre>
   <div class="finding blocker">
     <div class="finding-h">
       <span class="id">C2</span>
-      <h4>揪團沒有任何邀請入口，別人永遠加不進來</h4>
+      <h3 class="lvl4">揪團沒有任何邀請入口，別人永遠加不進來</h3>
       <span class="tag fixed">本輪已修</span>
     </div>
     <div class="finding-b">
@@ -612,7 +679,7 @@ const basePrepTime = 15;</code></pre>
   <div class="finding ok">
     <div class="finding-h">
       <span class="id">OK</span>
-      <h4>候位登記 → 叫號 → 確認抵達，含即時推送，全部通過</h4>
+      <h3 class="lvl4">候位登記 → 叫號 → 確認抵達，含即時推送，全部通過</h3>
     </div>
     <div class="finding-b">
       <p>
@@ -684,7 +751,7 @@ const basePrepTime = 15;</code></pre>
   <div class="finding data">
     <div class="finding-h">
       <span class="id">C7</span>
-      <h4>新入駐的店在公開探索頁顯示 onboarding placeholder，且永遠「休息中」</h4>
+      <h3 class="lvl4">新入駐的店在公開探索頁顯示 onboarding placeholder，且永遠「休息中」</h3>
       <span class="tag issue">#386</span>
     </div>
     <div class="finding-b">
@@ -743,7 +810,7 @@ onboarding · onboarding-ma-ji-demo-guang-don-c6ghyx
   <div class="finding blocker">
     <div class="finding-h">
       <span class="id">C4</span>
-      <h4>顧客註冊在 production 100% 失敗，<code>customers</code> 表 0 筆</h4>
+      <h3 class="lvl4">顧客註冊在 production 100% 失敗，<code>customers</code> 表 0 筆</h3>
       <span class="tag issue">#384</span>
     </div>
     <div class="finding-b">
@@ -808,7 +875,7 @@ const failureMessage = (_err: unknown): string => t("auth.loginFailed");</code><
   <div class="finding blocker">
     <div class="finding-h">
       <span class="id">C15</span>
-      <h4>廚房單與收據的桌號永遠是 <code>null</code></h4>
+      <h3 class="lvl4">廚房單與收據的桌號永遠是 <code>null</code></h3>
       <span class="tag issue">#389</span>
     </div>
     <div class="finding-b">

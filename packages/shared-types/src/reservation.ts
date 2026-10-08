@@ -234,6 +234,8 @@ export interface WaitingListResponse extends WaitingListEntry {
    * Absent / undefined for fresh joins.
    */
   alreadyJoined?: boolean;
+  /** Private guest capability, issued only after ownership is established. */
+  waitingToken?: string;
 }
 
 /**

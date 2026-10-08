@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { z } from "zod";
+import type { SupportedCountryCode } from "@makanmasak/shared-types";
 import { requireRole } from "../../../middleware/auth";
 import {
   validateBody,
@@ -7,6 +8,7 @@ import {
   validateQuery,
 } from "../../../middleware/validation";
 import type { Env } from "../../../shared/types";
+import { assertMarketFeeWithinRegionCap } from "../../../shared/policy/regionPolicyGuards";
 import { createSearchIndexSync } from "../../discovery/services/SearchIndexSyncService";
 import {
   addMarketVendorSchema,
@@ -18,21 +20,33 @@ import {
   importMarketVendorsSchema,
   marketJoinRequestIdParamSchema,
   marketIdParamSchema,
+  marketOpenReportQuerySchema,
   marketVendorParamSchema,
   updateMarketVendorSchema,
   updateMarketSchema,
 } from "../schemas/validation";
-import { MarketsService } from "../services/MarketsService";
+import {
+  MarketsService,
+  type UpdateMarketInput,
+} from "../services/MarketsService";
+import {
+  resolveMarketCountry,
+  vendorCountry,
+} from "../services/market-country";
 import { RestaurantsService } from "../../restaurants/services/RestaurantsService";
+import { notFound } from "../../../shared/utils/api-error";
+import { MarketOpenReportService } from "../services/MarketOpenReportService";
+import { openReportResponse } from "./open-report-response";
 
 const routes = new Hono<{ Bindings: Env }>();
 
 type ImportMarketVendorInput = z.infer<
   typeof importMarketVendorsSchema
 >["vendors"][number];
-type BulkCreateMarketInput = z.infer<
-  typeof bulkCreateMarketsSchema
->["markets"][number];
+type BulkCreateMarketInput = Omit<
+  z.infer<typeof bulkCreateMarketsSchema>["markets"][number],
+  "countryCode"
+> & { countryCode?: SupportedCountryCode | null };
 
 function restaurantBusinessHoursFromMarketOpeningHours(
   openingHours: Record<
@@ -360,6 +374,23 @@ async function dryRunVendorImport(input: {
 
 routes.use("*", requireRole([0]));
 
+routes.get(
+  "/:id/open-report",
+  validateParams(marketIdParamSchema),
+  validateQuery(marketOpenReportQuerySchema),
+  async (c) => {
+    const { id } = c.get("validatedParams");
+    const query = c.get("validatedQuery");
+    const report = await new MarketOpenReportService(c.env.DB).getReport({
+      marketId: id,
+      from: query.from,
+      to: query.to,
+    });
+    if (!report) throw notFound("Market not found", "MARKET_NOT_FOUND");
+    return openReportResponse(c, report, query);
+  },
+);
+
 routes.get("/readiness", async (c) => {
   const service = new MarketsService(c.env.DB, c.env.CACHE_KV);
   const data = await service.listAdminReadiness({ limit: 100 });
@@ -490,13 +521,28 @@ routes.post(
 
 routes.post("/", validateBody(createMarketSchema), async (c) => {
   const body = c.get("validatedBody");
+  const countryCode = resolveMarketCountry(body);
+  await assertMarketFeeWithinRegionCap(c.env, {
+    countryCode,
+    platformFeeRateBps: body.platformFeeRateBps ?? 0,
+  });
   const service = new MarketsService(c.env.DB, c.env.CACHE_KV);
-  const market = await service.createMarket(body);
+  const market = await service.createMarket({ ...body, countryCode });
   return c.json({ success: true, data: { market } }, 201);
 });
 
 routes.post("/bulk", validateBody(bulkCreateMarketsSchema), async (c) => {
-  const { dryRun = false, markets } = c.get("validatedBody");
+  const { dryRun = false, markets: requested } = c.get("validatedBody");
+  const markets = requested.map((market) => ({
+    ...market,
+    countryCode: resolveMarketCountry(market),
+  }));
+  for (const market of markets) {
+    await assertMarketFeeWithinRegionCap(c.env, {
+      countryCode: market.countryCode,
+      platformFeeRateBps: market.platformFeeRateBps ?? 0,
+    });
+  }
   const service = new MarketsService(c.env.DB, c.env.CACHE_KV);
   const preflight = await preflightMarketBulkImport({
     markets,
@@ -575,7 +621,33 @@ routes.put(
     const { id } = c.get("validatedParams");
     const body = c.get("validatedBody");
     const service = new MarketsService(c.env.DB, c.env.CACHE_KV);
-    const market = await service.updateMarket(id, body);
+
+    // 城市、國別或費率任一項變動，都要重新確認國別與上限。
+    let patch: UpdateMarketInput = body;
+    if (
+      body.city !== undefined ||
+      body.countryCode !== undefined ||
+      body.platformFeeRateBps !== undefined
+    ) {
+      const existing = await service.getMarketById(id);
+      if (existing) {
+        const countryCode = resolveMarketCountry({
+          city: body.city ?? existing.city,
+          // 改了城市又沒指定國別時重新推導；否則沿用既有值。
+          countryCode:
+            body.countryCode ??
+            (body.city !== undefined ? undefined : existing.countryCode),
+        });
+        await assertMarketFeeWithinRegionCap(c.env, {
+          countryCode,
+          platformFeeRateBps:
+            body.platformFeeRateBps ?? existing.platformFeeRateBps,
+        });
+        patch = { ...body, countryCode };
+      }
+    }
+
+    const market = await service.updateMarket(id, patch);
 
     if (!market) {
       return c.json(
@@ -724,6 +796,24 @@ routes.post(
       );
     }
 
+    // Resolve every new vendor's country before creating anything: a row that
+    // failed inside the loop would leave the market half-imported.
+    const newVendorCountries = new Map(
+      vendors.flatMap((vendor, index) =>
+        vendor.restaurantId
+          ? []
+          : [
+              [
+                index,
+                vendorCountry(
+                  market.countryCode ?? null,
+                  vendor.city ?? market.city,
+                ),
+              ] as const,
+            ],
+      ),
+    );
+
     if (dryRun) {
       const data = await dryRunVendorImport({
         vendors,
@@ -795,6 +885,7 @@ routes.post(
           address: vendor.address!,
           district: vendor.district!,
           city: vendor.city ?? market.city,
+          countryCode: newVendorCountries.get(index),
           phone: vendor.phone ?? "00000000",
           email: vendor.email,
           website: vendor.website,

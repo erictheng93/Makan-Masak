@@ -193,10 +193,17 @@ test("the counter settles a guest order across origins and makes it refundable",
     OWNER_PASSWORD,
   );
   const fresh = await apiRequest<{
+    status: string;
     paymentStatus: string;
     paymentTransactionId?: string;
   }>(`/api/v1/orders/${order!.id}`, { token: inspectionLogin.token });
-  expect(fresh.body.data?.paymentStatus).toBe("completed");
+  // A completed POS refund writes the order back the same way the payments
+  // refund path does (ff90d086): the full refund above leaves it refunded,
+  // not still reading as a settled payment. The collected payment's
+  // transaction id stays on the order.
+  expect(fresh.body.data).toEqual(
+    expect.objectContaining({ status: "refunded", paymentStatus: "refunded" }),
+  );
   expect(fresh.body.data?.paymentTransactionId).toBeTruthy();
   const refunds = await apiRequest<{
     refunds: Array<{

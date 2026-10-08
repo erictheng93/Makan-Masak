@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { sign } from "hono/jwt";
 import routes from "./index";
 import { ApiError } from "../../../shared/utils/api-error";
+import { resolveCouponCustomerIdentity } from "../services/guest-coupon-identity";
 import { GUEST_ORDER_THROTTLE } from "../services/guest-order-throttle";
 import { orders, restaurants, seats, tables } from "@makanmasak/database";
 
@@ -374,7 +375,9 @@ describe("guest order routes", () => {
       new Request("https://test/", {
         method: "POST",
         headers: { Authorization: `Bearer ${await customerToken(customerId)}` },
-        body: JSON.stringify(validGuestOrderBody()),
+        body: JSON.stringify(
+          validGuestOrderBody({ couponCodes: ["SAVE10", "SAVE20"] }),
+        ),
       }),
       {
         ...env,
@@ -384,7 +387,11 @@ describe("guest order routes", () => {
 
     expect(response.status).toBe(201);
     expect(createOrder).toHaveBeenCalledWith(
-      expect.objectContaining({ customerId }),
+      expect.objectContaining({
+        customerId,
+        couponCodes: ["SAVE10", "SAVE20"],
+        couponGuestIdentity: await resolveCouponCustomerIdentity(customerId),
+      }),
     );
   });
 
@@ -504,6 +511,31 @@ describe("guest order routes", () => {
       error: { code: "SHOP_QR_REVOKED" },
     });
     expect(createOrder).not.toHaveBeenCalled();
+  });
+
+  it("forwards multiple guest coupons with a server-derived device identity", async () => {
+    setSelectFixtures({ restaurants: [[activeGuestRestaurant()]] });
+    createOrder.mockResolvedValue({ id: 504, orderNumber: "G004" });
+    const response = await routes.fetch(
+      new Request("https://test/", {
+        method: "POST",
+        headers: { "X-Guest-Device-Id": "guest-device-identifier-123" },
+        body: JSON.stringify(
+          validGuestOrderBody({
+            couponCodes: ["SAVE10", "SAVE20"],
+            couponGuestIdentity: "forged",
+          }),
+        ),
+      }),
+      createEnv() as never,
+    );
+    expect(response.status).toBe(201);
+    expect(createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        couponCodes: ["SAVE10", "SAVE20"],
+        couponGuestIdentity: expect.stringMatching(/^[a-f0-9]{64}$/),
+      }),
+    );
   });
 
   it("accepts the sticker that is currently live", async () => {

@@ -12,6 +12,7 @@ import {
   receipts,
   orders,
   paymentTransactions,
+  marketCheckoutPayments,
   refunds,
   orderItems,
   menuItems,
@@ -303,7 +304,8 @@ export class ReportService {
    */
   async getDailyReport(
     restaurantId: string,
-    date: string,
+    date?: string,
+    registerId?: string,
   ): Promise<{
     success: boolean;
     data?: Record<string, unknown>;
@@ -315,6 +317,10 @@ export class ReportService {
       const offsetMinutes =
         await this.businessTimezone.offsetMinutes(restaurantId);
 
+      date ??= new Date(Date.now() + offsetMinutes * 60_000)
+        .toISOString()
+        .slice(0, 10);
+
       // 獲取當日班次
       const shifts = await this.db
         .select()
@@ -323,10 +329,91 @@ export class ReportService {
         .where(
           and(
             eq(cashRegisters.restaurantId, restaurantId),
-            sql`${dateFromUnixMs(cashShifts.startedAt, offsetMinutes)} = ${date}`,
+            registerId ? eq(cashShifts.registerId, registerId) : undefined,
+            registerId
+              ? sql`${dateFromUnixMs(cashShifts.startedAt, offsetMinutes)} <= ${date} AND (${cashShifts.endedAt} IS NULL OR ${dateFromUnixMs(cashShifts.endedAt, offsetMinutes)} >= ${date})`
+              : sql`${dateFromUnixMs(cashShifts.startedAt, offsetMinutes)} = ${date}`,
           ),
         )
         .orderBy(cashShifts.startedAt);
+
+      if (registerId) {
+        // Shift counters span midnight. Payment timestamps define today's
+        // takings; market child payments must not duplicate the parent sale.
+        const [sales] = await this.db
+          .select({
+            totalOrders: sql<number>`COUNT(*)`,
+            totalSalesCents: sql<number>`COALESCE(SUM(${paymentTransactions.amountCents}), 0)`,
+          })
+          .from(paymentTransactions)
+          .where(
+            and(
+              eq(paymentTransactions.restaurantId, restaurantId),
+              sql`json_extract(${paymentTransactions.metadata}, '$.pos.registerId') = ${registerId}`,
+              sql`${dateFromUnixMs(paymentTransactions.completedAt, offsetMinutes)} = ${date}`,
+              inArray(paymentTransactions.status, [
+                "paid",
+                "refunded",
+                "partial_refunded",
+              ]),
+            ),
+          );
+        const [marketSales] = await this.db
+          .select({
+            totalOrders: sql<number>`COUNT(*)`,
+            totalSalesCents: sql<number>`COALESCE(SUM(${marketCheckoutPayments.amountCents}), 0)`,
+          })
+          .from(marketCheckoutPayments)
+          .innerJoin(
+            cashRegisters,
+            sql`${cashRegisters.id} = json_extract(${marketCheckoutPayments.providerPayload}, '$.registerId')`,
+          )
+          .where(
+            and(
+              eq(cashRegisters.restaurantId, restaurantId),
+              eq(cashRegisters.id, registerId),
+              sql`${dateFromUnixMs(marketCheckoutPayments.completedAt, offsetMinutes)} = ${date}`,
+              inArray(marketCheckoutPayments.status, [
+                "paid",
+                "refunded",
+                "partial_refunded",
+              ]),
+            ),
+          );
+        const [refundStats] = await this.db
+          .select({
+            totalRefunds: sql<number>`COUNT(*)`,
+            totalRefundAmount: sumMoneyAmount(refunds.refundAmountCents),
+          })
+          .from(refunds)
+          .where(
+            and(
+              eq(refunds.registerId, registerId),
+              eq(refunds.status, "completed"),
+              sql`${dateFromUnixMs(refunds.processedAt, offsetMinutes)} = ${date}`,
+            ),
+          );
+        const totalSales =
+          amountFromCents(
+            (sales?.totalSalesCents ?? 0) + (marketSales?.totalSalesCents ?? 0),
+          ) ?? 0;
+        const totalOrders =
+          (sales?.totalOrders ?? 0) + (marketSales?.totalOrders ?? 0);
+        return {
+          success: true,
+          data: {
+            date,
+            shifts: shifts.map((s) => s.cash_shifts),
+            summary: {
+              totalSales,
+              totalOrders,
+              avgOrderValue: totalOrders ? totalSales / totalOrders : 0,
+              totalRefunds: refundStats?.totalRefunds ?? 0,
+              totalRefundAmount: refundStats?.totalRefundAmount ?? 0,
+            },
+          },
+        };
+      }
 
       // 獲取當日訂單統計
       const [orderStats] = await this.db

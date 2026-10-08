@@ -65,7 +65,7 @@ export function useWaitingTicket(ticketId: string) {
     clearPolling();
     intervalMs.value = nextInterval;
     intervalId = setInterval(() => {
-      void fetchTicket();
+      void fetchTicket().catch(() => undefined);
     }, nextInterval);
   };
 
@@ -75,6 +75,14 @@ export function useWaitingTicket(ticketId: string) {
 
     try {
       ticket.value = await waitingListApi.getById(ticketId);
+      localStorage.setItem(
+        WAITING_LIST_LAST_TICKET_KEY,
+        JSON.stringify({
+          ticketId: ticket.value.id,
+          restaurantId: ticket.value.restaurantId,
+          customerPhone: ticket.value.customerPhone,
+        } satisfies LastWaitingTicket),
+      );
 
       if (isTerminalWaitingStatus(ticket.value.status)) {
         localStorage.removeItem(WAITING_LIST_LAST_TICKET_KEY);
@@ -96,13 +104,13 @@ export function useWaitingTicket(ticketId: string) {
       return;
     }
 
-    void fetchTicket();
+    void fetchTicket().catch(() => undefined);
   };
 
   onMounted(() => {
     document.addEventListener("visibilitychange", handleVisibilityChange);
     if (!document.hidden) {
-      void fetchTicket();
+      void fetchTicket().catch(() => undefined);
       syncPollingInterval();
     }
   });

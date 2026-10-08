@@ -32,6 +32,7 @@ export interface CreateCouponData {
   minOrderAmount?: number;
   applicableMenuItems?: number[];
   applicableCategories?: number[];
+  incompatibleCouponIds?: number[];
   usageLimit?: number | null;
   usageLimitPerUser?: number | null;
   /** INTEGER ms 欄位；zod 收 ISO 字串，路由邊界轉成 Date（#271） */

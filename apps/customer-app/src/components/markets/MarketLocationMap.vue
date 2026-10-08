@@ -280,6 +280,12 @@ function renderMarkers(maplibregl: typeof MapLibreGL) {
     .addTo(map);
 
   for (const vendor of plottedVendors.value) {
+    const name = vendor.stallNumber
+      ? tWithParams("markets.map.vendorPopup", {
+          name: vendor.name,
+          stall: vendor.stallNumber,
+        })
+      : vendor.name;
     new maplibregl.Marker({
       color: vendor.isOpen ? "#2da34c" : "#6b7280",
       scale: 0.82,
@@ -287,12 +293,9 @@ function renderMarkers(maplibregl: typeof MapLibreGL) {
       .setLngLat([vendor.longitude as number, vendor.latitude as number])
       .setPopup(
         new maplibregl.Popup({ offset: 14 }).setText(
-          vendor.stallNumber
-            ? tWithParams("markets.map.vendorPopup", {
-                name: vendor.name,
-                stall: vendor.stallNumber,
-              })
-            : vendor.name,
+          vendor.isOpen
+            ? name
+            : `${name} · ${t("markets.vendors.notOpenToday")}`,
         ),
       )
       .addTo(map);

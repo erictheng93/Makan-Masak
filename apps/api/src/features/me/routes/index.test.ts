@@ -14,6 +14,10 @@ const usageMocks = vi.hoisted(() => ({
   getCurrentUsage: vi.fn(),
 }));
 
+const databaseMocks = vi.hoisted(() => ({
+  responses: [] as unknown[][],
+}));
+
 vi.mock("../../../middleware/auth", () => ({
   staffOrUserCustomerAuthMiddleware: vi.fn(async (c, next) => {
     c.set("user", authState.user);
@@ -32,6 +36,24 @@ vi.mock("../../billing/services/UsageService", () => ({
   UsageService: class {
     getCurrentUsage = usageMocks.getCurrentUsage;
   },
+}));
+
+vi.mock("drizzle-orm/d1", () => ({
+  drizzle: vi.fn(() => ({
+    select: () => {
+      const rows = databaseMocks.responses.shift() ?? [];
+      const query = {
+        from: () => query,
+        where: () => query,
+        limit: async () => rows,
+        then: (
+          resolve: (value: unknown[]) => unknown,
+          reject: (reason: unknown) => unknown,
+        ) => Promise.resolve(rows).then(resolve, reject),
+      };
+      return query;
+    },
+  })),
 }));
 
 import meFeature from "../index";
@@ -56,6 +78,7 @@ function request(path: string, env = createEnv()) {
 describe("me routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    databaseMocks.responses = [];
     authState.user = {
       id: "user-42",
       username: "owner",
@@ -154,13 +177,12 @@ describe("me routes", () => {
       restaurantId: undefined,
     };
     const subscription = {
-      restaurantId: "restaurant-2",
       isActive: true,
       planTier: "pro",
       moduleOverrides: { analytics: true },
       trialEndsAt: null,
     };
-    subscriptionMocks.getByRestaurantId.mockResolvedValue(subscription);
+    databaseMocks.responses = [[subscription], [{ countryCode: null }]];
 
     const response = await request("/modules?restaurantId=restaurant-2");
 
@@ -174,9 +196,7 @@ describe("me routes", () => {
         effectiveModules: { pos: true, analytics: false },
       },
     });
-    expect(subscriptionMocks.getByRestaurantId).toHaveBeenCalledWith(
-      "restaurant-2",
-    );
+    expect(subscriptionMocks.getByRestaurantId).not.toHaveBeenCalled();
   });
 
   it("returns empty module access for platform admins without a selected restaurant", async () => {
@@ -203,8 +223,6 @@ describe("me routes", () => {
   });
 
   it("ignores restaurantId query parameters for non-admin users", async () => {
-    subscriptionMocks.getByRestaurantId.mockResolvedValue(null);
-
     const response = await request("/modules?restaurantId=restaurant-2");
 
     expect(response.status).toBe(200);
@@ -217,12 +235,10 @@ describe("me routes", () => {
         effectiveModules: {},
       },
     });
-    expect(subscriptionMocks.getByRestaurantId).toHaveBeenCalledWith(
-      "restaurant-1",
-    );
     expect(subscriptionMocks.getByRestaurantId).not.toHaveBeenCalledWith(
       "restaurant-2",
     );
+    expect(subscriptionMocks.getByRestaurantId).not.toHaveBeenCalled();
   });
 
   it("serves cached subscription modules without touching the database", async () => {
@@ -266,8 +282,6 @@ describe("me routes", () => {
   });
 
   it("falls back to empty access when no subscription exists", async () => {
-    subscriptionMocks.getByRestaurantId.mockResolvedValue(null);
-
     const response = await request("/modules");
 
     expect(response.status).toBe(200);
@@ -280,9 +294,7 @@ describe("me routes", () => {
         effectiveModules: {},
       },
     });
-    expect(subscriptionMocks.getByRestaurantId).toHaveBeenCalledWith(
-      "restaurant-1",
-    );
+    expect(subscriptionMocks.getByRestaurantId).not.toHaveBeenCalled();
   });
 
   it("reads subscription modules from the database and writes the cache", async () => {
@@ -295,7 +307,7 @@ describe("me routes", () => {
       moduleOverrides: { pos: true },
       trialEndsAt,
     };
-    subscriptionMocks.getByRestaurantId.mockResolvedValue(subscription);
+    databaseMocks.responses = [[subscription], [{ countryCode: null }]];
 
     const response = await request("/modules", env);
 
@@ -317,12 +329,14 @@ describe("me routes", () => {
         planTier: "enterprise",
         moduleOverrides: { pos: true },
         trialEndsAt: trialEndsAt.getTime(),
+        countryCode: null,
       }),
       { expirationTtl: 300 },
     );
-    expect(subscriptionMocks.getEffectiveModules).toHaveBeenCalledWith(
-      subscription,
-    );
+    expect(subscriptionMocks.getEffectiveModules).toHaveBeenCalledWith({
+      planTier: "enterprise",
+      moduleOverrides: { pos: true },
+    });
   });
 
   it("normalizes nullable subscription fields before caching", async () => {
@@ -334,7 +348,7 @@ describe("me routes", () => {
       moduleOverrides: null,
       trialEndsAt: null,
     };
-    subscriptionMocks.getByRestaurantId.mockResolvedValue(subscription);
+    databaseMocks.responses = [[subscription], [{ countryCode: null }]];
 
     const response = await request("/modules", env);
 
@@ -353,8 +367,47 @@ describe("me routes", () => {
         planTier: "trial",
         moduleOverrides: {},
         trialEndsAt: null,
+        countryCode: null,
       }),
       { expirationTtl: 300 },
+    );
+  });
+
+  it("turns off modules disabled by the restaurant country policy", async () => {
+    subscriptionMocks.getEffectiveModules.mockReturnValue({
+      pos: true,
+      analytics: true,
+    });
+    const env = createEnv(
+      new Map([
+        [
+          "subscription:restaurant-1",
+          {
+            isActive: true,
+            planTier: "growth",
+            moduleOverrides: {},
+            trialEndsAt: null,
+            countryCode: "MY",
+          },
+        ],
+        [
+          "policy:v1:country:MY",
+          { values: { "modules.disabled": ["pos"] }, invalidKeys: [] },
+        ],
+      ]),
+    );
+
+    const response = await request("/modules", env);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      data: {
+        effectiveModules: { pos: false, analytics: true },
+      },
+    });
+    expect(env.CACHE_KV.get).toHaveBeenCalledWith(
+      "policy:v1:country:MY",
+      "json",
     );
   });
 

@@ -76,12 +76,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onBeforeUnmount, onMounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "@/i18n";
 import { useAuthStore } from "@/stores/auth";
 import { ReservationService } from "@/services/reservationService";
 import { WaitingListService } from "@/services/waitingListService";
+import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
+import { SEATING_CHANGED } from "./seatingEvents";
 import {
   Calendar,
   CheckCircle,
@@ -238,7 +240,7 @@ const isActiveTab = (path: string) => {
   return route.path === path || route.path.startsWith(path + "/");
 };
 
-onMounted(async () => {
+async function loadStats() {
   const restaurantId = authStore.restaurantId;
   if (!restaurantId) return;
 
@@ -274,5 +276,28 @@ onMounted(async () => {
   } catch (error) {
     console.error("Failed to load seating stats:", error);
   }
+}
+
+// Bookings, queue joins and table turnover all happen outside this page, and
+// the tabs below mutate the same numbers, so the cards refresh on a timer, on
+// every tab switch, and whenever a tab reports that it reloaded.
+const statsPoller = createVisibilityAwarePoller({
+  intervalMs: 30_000,
+  onTick: loadStats,
+});
+
+watch(
+  () => route.path,
+  () => void loadStats(),
+);
+
+onMounted(() => {
+  void loadStats();
+  statsPoller.start();
+  window.addEventListener(SEATING_CHANGED, loadStats);
+});
+onBeforeUnmount(() => {
+  statsPoller.stop();
+  window.removeEventListener(SEATING_CHANGED, loadStats);
 });
 </script>

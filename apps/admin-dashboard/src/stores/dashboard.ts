@@ -212,7 +212,6 @@ export const useDashboardStore = defineStore("dashboard", () => {
         fallbackKey: "dashboardStore.fetchDashboardFailed",
         codeKeys: {
           MODULE_NOT_ENABLED: "errors.subscription.moduleNotEnabled",
-          TRIAL_EXPIRED: "errors.subscription.trialExpired",
           SUBSCRIPTION_NOT_FOUND: "errors.subscription.subscriptionNotFound",
           NO_RESTAURANT: "errors.subscription.noRestaurant",
         },
@@ -349,28 +348,6 @@ export const useDashboardStore = defineStore("dashboard", () => {
     };
   };
 
-  // Auto-refresh functionality
-  let refreshInterval: number | null = null;
-
-  const startAutoRefresh = (intervalMs: number = 30000) => {
-    if (refreshInterval) {
-      clearInterval(refreshInterval);
-    }
-
-    refreshInterval = window.setInterval(() => {
-      if (authStore.isAuthenticated) {
-        fetchDashboardStats();
-      }
-    }, intervalMs);
-  };
-
-  const stopAutoRefresh = () => {
-    if (refreshInterval) {
-      clearInterval(refreshInterval);
-      refreshInterval = null;
-    }
-  };
-
   return {
     stats: readonly(stats),
     isLoading: readonly(isLoading),
@@ -393,7 +370,5 @@ export const useDashboardStore = defineStore("dashboard", () => {
     formatCurrency,
     formatPercentage,
     getGrowthIndicator,
-    startAutoRefresh,
-    stopAutoRefresh,
   };
 });

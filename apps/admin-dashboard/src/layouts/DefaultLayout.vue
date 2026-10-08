@@ -20,6 +20,8 @@
       <Header @toggle-sidebar="toggleSidebar" />
 
       <RestaurantContextBanner />
+      <TrialExpiredBanner />
+      <TrialExpiredModal />
 
       <main class="flex-1 overflow-y-auto p-4">
         <router-view />
@@ -39,6 +41,8 @@ import Sidebar from "@/components/layout/Sidebar.vue";
 import Header from "@/components/layout/Header.vue";
 import NotificationPanel from "@/components/layout/NotificationPanel.vue";
 import RestaurantContextBanner from "@/components/layout/RestaurantContextBanner.vue";
+import TrialExpiredBanner from "@/components/layout/TrialExpiredBanner.vue";
+import TrialExpiredModal from "@/components/layout/TrialExpiredModal.vue";
 import { useRealtimeConnection } from "@/composables/useRealtimeConnection";
 import { useAuthStore } from "@/stores/auth";
 import { useRestaurantCurrency } from "@/composables/useRestaurantCurrency";

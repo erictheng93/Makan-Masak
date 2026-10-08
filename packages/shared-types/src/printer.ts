@@ -39,6 +39,8 @@ export interface PrinterCapabilities {
   supportsQRCode: boolean;
   supportsBarcode: boolean;
   supportedEncodings: string[];
+  /** Byte encoding for ESC/POS text; default UTF-8. Set per printer after a physical test. */
+  encoding?: "utf8" | "big5" | "gbk";
   paperSizes: PaperSize[];
 }
 
@@ -59,7 +61,7 @@ export type PrintJobStatus =
   | "failed"
   | "cancelled"
   | "paused";
-export type PrintJobType = "receipt" | "order" | "report" | "test";
+export type PrintJobType = "receipt" | "kitchen" | "order" | "report" | "test";
 export type PrintJobPriority = "low" | "normal" | "high" | "urgent";
 
 export interface PrintJob {
@@ -106,6 +108,7 @@ export interface PrintError {
 // =============================================
 
 export interface PrintContent {
+  type?: PrintJobType;
   header: ReceiptHeader;
   items: ReceiptItem[];
   summary: ReceiptSummary;
@@ -136,6 +139,9 @@ export interface PrinterRestaurantInfo {
 }
 
 export interface TransactionInfo {
+  /** Kitchen time formatted with the region's explicit locale and timezone. */
+  timestampText?: string;
+  notes?: string;
   orderId: string;
   tableNumber?: string;
   customerName?: string;
@@ -152,6 +158,7 @@ export interface TransactionInfo {
 }
 
 export interface ReceiptItem {
+  notes?: string;
   name: string;
   nameLocal?: string;
   quantity: number;
@@ -447,6 +454,7 @@ export interface PrintRequest {
   userId?: string;
   data: {
     order: OrderData;
+    cashier?: string;
     customer?: CustomerData;
     payment?: PaymentData;
   };
@@ -466,6 +474,7 @@ export interface OrderData {
   deliveryFee?: number;
   items: {
     name: string;
+    notes?: string;
     quantity: number;
     price: number;
     modifiers?: {

@@ -1,16 +1,30 @@
-import { describe, expect, it, vi } from "vitest";
+import { createServer } from "node:net";
+import type { AddressInfo, Server } from "node:net";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PrintContent, PrinterDevice } from "@makanmasak/shared-types";
 import { EpsonDriver } from "./EpsonDriver";
-import { PrinterDriverFactory } from "./PrinterDriverFactory";
+import { CitizenDriver } from "./CitizenDriver";
+import { StarDriver } from "./StarDriver";
+import { ReceiptFormattingService } from "../formatters/ReceiptFormattingService";
+import { CommandBuilder } from "../commands/CommandBuilder";
+import {
+  deviceInfoFromProbe,
+  PrinterDriverFactory,
+} from "./PrinterDriverFactory";
 import { PrinterService } from "../services/PrinterService";
 
-const device: PrinterDevice = {
+let tcpServer: Server | undefined;
+let tcpPort: number;
+let received: Buffer[];
+let nextWrite: (() => void) | undefined;
+
+const buildDevice = (): PrinterDevice => ({
   id: "printer-1",
   name: "EPSON TM-T20",
   brand: "epson",
   model: "TM-T20",
   connection: "network",
-  address: "192.0.2.10:9100",
+  address: `127.0.0.1:${tcpPort}`,
   status: "offline",
   capabilities: {
     maxWidth: 32,
@@ -24,7 +38,45 @@ const device: PrinterDevice = {
   },
   lastSeen: new Date(),
   isDefault: false,
+});
+
+const closeTcpServer = async (): Promise<void> => {
+  if (!tcpServer) return;
+  const server = tcpServer;
+  tcpServer = undefined;
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => (error ? reject(error) : resolve()));
+  });
 };
+
+const waitForWrite = async (): Promise<Buffer> => {
+  if (received.length > 0) return Buffer.concat(received);
+  await new Promise<void>((resolve) => {
+    nextWrite = resolve;
+  });
+  return Buffer.concat(received);
+};
+
+beforeEach(async () => {
+  received = [];
+  tcpServer = createServer((socket) => {
+    socket.on("data", (chunk: Buffer) => {
+      received.push(chunk);
+      nextWrite?.();
+      nextWrite = undefined;
+    });
+  });
+  await new Promise<void>((resolve, reject) => {
+    tcpServer!.once("error", reject);
+    tcpServer!.listen(0, "127.0.0.1", resolve);
+  });
+  const address = tcpServer.address() as AddressInfo;
+  tcpPort = address.port;
+});
+
+afterEach(async () => {
+  await closeTcpServer();
+});
 
 const content: PrintContent = {
   header: {
@@ -62,8 +114,103 @@ class SlowEpsonDriver extends EpsonDriver {
 }
 
 describe("PrinterDriver execution options", () => {
+  it.each(["epson", "citizen", "star", "star-esc-pos"])(
+    "sends a kitchen ticket without customer receipt content (%s)",
+    async (brand) => {
+      const device = buildDevice();
+      device.capabilities.maxWidth = 48;
+      const driver =
+        brand === "epson"
+          ? new EpsonDriver(device)
+          : brand === "citizen"
+            ? new CitizenDriver(device)
+            : new StarDriver(device, {
+                emulation: brand === "star" ? "star-prnt" : "esc-pos",
+              });
+      try {
+        expect(await driver.connect()).toBe(true);
+        const formatted = await new ReceiptFormattingService().formatReceipt({
+          country: "TW",
+          type: "kitchen",
+          data: {
+            order: {
+              id: "A-432",
+              tableNumber: "A1",
+              notes: "先上飲料",
+              items: [
+                {
+                  name: "炒飯".repeat(14),
+                  quantity: 2,
+                  price: 120,
+                  notes: "不要辣".repeat(9),
+                  modifiers: [{ name: "加蛋", price: 10 }],
+                },
+              ],
+              subtotal: 240,
+              tax: 12,
+              total: 252,
+              createdAt: new Date(),
+            },
+          },
+        });
+        expect(await driver.print(formatted)).toMatchObject({ success: true });
+        const cut = Buffer.from(
+          brand === "star" ? [0x1b, 0x64, 0x03] : [0x1d, 0x56, 0x00],
+        );
+        await vi.waitFor(() =>
+          expect(Buffer.concat(received).includes(cut)).toBe(true),
+        );
+        const bytes = Buffer.concat(received);
+        const text = bytes.toString("utf8");
+        for (const expected of ["A-432", "A1", "先上飲料", "不要辣", "加蛋"])
+          expect(text).toContain(expected);
+        expect(text).toContain("炒飯".repeat(12) + "\n炒飯炒飯 x2\n");
+        expect(text).toContain("不要辣".repeat(8) + "\n不要辣\n");
+        expect(text).toContain("-".repeat(48) + "\n");
+        for (const forbidden of [
+          "Cashier:",
+          "Subtotal:",
+          "TOTAL:",
+          "Total:",
+          "NT$",
+          "Thank you",
+          "謝謝光臨",
+          "/receipt/",
+          "電子發票",
+        ])
+          expect(text).not.toContain(forbidden);
+        expect(bytes.subarray(-3)).toEqual(cut);
+      } finally {
+        await driver.disconnect();
+      }
+    },
+  );
+
+  it("wraps fullwidth characters without splitting emoji or combining accents", () => {
+    const lines = CommandBuilder.kitchenLines(
+      {
+        ...content,
+        type: "kitchen",
+        header: {
+          ...content.header,
+          transactionInfo: {
+            ...content.header.transactionInfo,
+            notes: "中文ab🙂e\u0301XYZ\n全形ＡＢ\nabcd1️⃣2️⃣X",
+          },
+        },
+      },
+      8,
+    );
+    expect(lines).toContain("中文ab🙂");
+    expect(lines).toContain("e\u0301XYZ");
+    expect(lines).toContain("全形ＡＢ");
+    expect(lines).toContain("abcd1️⃣2️⃣");
+    expect(lines).toContain("X");
+    expect(lines).toContain("--------");
+  });
+
   it("retries a failed printer command the configured number of times", async () => {
-    const driver = new RetryingEpsonDriver(device, {
+    const driver = new RetryingEpsonDriver(buildDevice(), {
       retryAttempts: 2,
       commandTimeout: 100,
     });
@@ -73,10 +220,11 @@ describe("PrinterDriver execution options", () => {
       success: true,
     });
     expect(driver.attempts).toBe(3);
+    await driver.disconnect();
   });
 
   it("fails a command that exceeds the configured timeout", async () => {
-    const driver = new SlowEpsonDriver(device, {
+    const driver = new SlowEpsonDriver(buildDevice(), {
       retryAttempts: 0,
       commandTimeout: 5,
     });
@@ -86,9 +234,11 @@ describe("PrinterDriver execution options", () => {
       success: false,
       error: { code: "PRINT_FAILED" },
     });
+    await driver.disconnect();
   });
 
   it("forwards the service driver policy when registering a printer", async () => {
+    const device = buildDevice();
     const driver = new EpsonDriver(device);
     const createDriver = vi
       .spyOn(PrinterDriverFactory, "createDriver")
@@ -120,5 +270,95 @@ describe("PrinterDriver execution options", () => {
       }),
     );
     await service.unregisterPrinter(device.id);
+  });
+
+  it("writes raw ESC/POS bytes to a reachable TCP printer", async () => {
+    const driver = new EpsonDriver(buildDevice(), {
+      connectionTimeout: 100,
+      commandTimeout: 100,
+      retryAttempts: 0,
+    });
+
+    await expect(driver.connect()).resolves.toBe(true);
+    await expect(driver.print(content)).resolves.toMatchObject({
+      success: true,
+    });
+
+    const bytes = await waitForWrite();
+    expect(bytes.subarray(0, 2)).toEqual(Buffer.from([0x1b, 0x40]));
+    expect(bytes.toString("utf8")).toContain("order-123");
+    expect(bytes.subarray(-3)).toEqual(Buffer.from([0x1d, 0x56, 0x00]));
+    await expect(driver.getStatus()).resolves.toBe("online");
+
+    await driver.disconnect();
+  });
+
+  it("keeps a refused TCP printer offline and leaves the service unhealthy", async () => {
+    const refusedPort = tcpPort;
+    await closeTcpServer();
+    const refusedDevice: PrinterDevice = {
+      ...buildDevice(),
+      address: `127.0.0.1:${refusedPort}`,
+    };
+    const driver = new EpsonDriver(refusedDevice, {
+      connectionTimeout: 50,
+      retryAttempts: 0,
+    });
+
+    await expect(driver.connect()).resolves.toBe(false);
+    await expect(driver.getStatus()).resolves.toBe("offline");
+
+    const service = new PrinterService({
+      drivers: {
+        connectionTimeout: 50,
+        commandTimeout: 50,
+        heartbeatInterval: 100,
+        retryAttempts: 0,
+      },
+    });
+    await expect(
+      service.registerPrinter({
+        id: refusedDevice.id,
+        brand: refusedDevice.brand,
+        model: refusedDevice.model,
+        connectionType: "network",
+        connectionParams: { address: refusedDevice.address },
+      }),
+    ).rejects.toThrow(/Failed to register printer/);
+    await expect(service.healthCheck()).resolves.toMatchObject({
+      service: "unhealthy",
+      devices: [],
+    });
+  });
+
+  it("discovers a reachable TCP endpoint as generic instead of guessing a brand", async () => {
+    const factory = new PrinterDriverFactory({
+      connectionTimeout: 100,
+      commandTimeout: 100,
+      retryAttempts: 0,
+      enableAutoDetection: true,
+    });
+
+    const detected = await factory.detectPrinter({
+      type: "network",
+      host: "127.0.0.1",
+      port: tcpPort,
+    });
+
+    expect(detected).toMatchObject({
+      brand: "generic",
+      model: "Generic",
+      address: `127.0.0.1:${tcpPort}`,
+    });
+    await expect(waitForWrite()).resolves.toEqual(
+      Buffer.from([0x1d, 0x49, 0x01]),
+    );
+  });
+
+  it("does not turn a connection timeout into a generic printer", () => {
+    expect(deviceInfoFromProbe(false, [])).toBeNull();
+    expect(deviceInfoFromProbe(true, [])).toBe(
+      "Generic ESC/POS Network Printer",
+    );
   });
 });

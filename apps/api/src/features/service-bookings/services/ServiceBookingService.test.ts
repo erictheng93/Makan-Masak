@@ -539,6 +539,8 @@ describe("ServiceBookingService orchestration helpers", () => {
               name: "Spa Session",
               durationMinutes: 90,
               priceCents: 5000,
+              paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.DEPOSIT,
+              depositAmountCents: 1200,
               availableHours: { start: "09:00", end: "18:00", days: [3] },
               requiresBooking: true,
               isActive: true,
@@ -564,8 +566,6 @@ describe("ServiceBookingService orchestration helpers", () => {
         bookingDate: "2026-06-10",
         bookingTime: "10:30",
         partySize: 2,
-        paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.DEPOSIT,
-        depositAmountCents: 1200,
         reminderOptIn: true,
         reminderMinutesBefore: 30,
         specialRequests: "Window seat",
@@ -602,7 +602,7 @@ describe("ServiceBookingService orchestration helpers", () => {
     ).toEqual(new Date("2026-06-10T02:00:00.000Z"));
   });
 
-  it("creates prepaid voucher bookings with default reminders", async () => {
+  it("creates pay-at-venue voucher bookings with default reminders", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-07T00:00:00.000Z"));
     vi.spyOn(CouponService.prototype, "validateCoupon").mockResolvedValue({
@@ -662,7 +662,7 @@ describe("ServiceBookingService orchestration helpers", () => {
       couponId: 99,
       voucherDiscountCents: 1200,
       amountDueCents: 3800,
-      paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.PREPAY,
+      paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.PAY_AT_VENUE,
       reminderOptIn: 1,
       reminderMinutesBefore: 60,
       recurrenceGroupId: "series-1",
@@ -780,6 +780,8 @@ describe("ServiceBookingService orchestration helpers", () => {
       name: "Spa Session",
       durationMinutes: 60,
       priceCents: 1000,
+      paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.DEPOSIT,
+      depositAmountCents: 0,
       availableHours: { start: "09:00", end: "18:00", days: [3] },
       requiresBooking: true,
       isActive: true,
@@ -840,7 +842,6 @@ describe("ServiceBookingService orchestration helpers", () => {
         }).db,
       }).createBooking({
         ...book,
-        paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.DEPOSIT,
       }),
     ).rejects.toThrow("depositAmountCents is required");
     await expect(
@@ -848,14 +849,14 @@ describe("ServiceBookingService orchestration helpers", () => {
         d1: createD1Mock([{ changes: 0 }]).d1 as never,
         db: createDbMock({
           selectFixtures: {
-            restaurantServiceItems: [[baseService]],
+            restaurantServiceItems: [
+              [{ ...baseService, depositAmountCents: 2000 }],
+            ],
             serviceBookingSlots: [[]],
           },
         }).db,
       }).createBooking({
         ...book,
-        paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.DEPOSIT,
-        depositAmountCents: 2000,
       }),
     ).rejects.toThrow("depositAmountCents cannot exceed");
     await expect(
@@ -863,7 +864,9 @@ describe("ServiceBookingService orchestration helpers", () => {
         d1: createD1Mock([{ changes: 0 }]).d1 as never,
         db: createDbMock({
           selectFixtures: {
-            restaurantServiceItems: [[baseService]],
+            restaurantServiceItems: [
+              [{ ...baseService, depositAmountCents: 100 }],
+            ],
             serviceBookingSlots: [[]],
           },
         }).db,
@@ -887,6 +890,7 @@ describe("ServiceBookingService orchestration helpers", () => {
               name: "Spa Session",
               durationMinutes: 60,
               priceCents: 5000,
+              paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.NONE,
               availableHours: null,
               requiresBooking: true,
               isActive: true,
@@ -909,7 +913,6 @@ describe("ServiceBookingService orchestration helpers", () => {
       customerPhone: "+886900000000",
       bookingDate: "2026-06-10",
       bookingTime: "10:00",
-      paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.NONE,
     });
 
     expect(insertValues[0]).toMatchObject({
@@ -1846,6 +1849,26 @@ describe("ServiceBookingService orchestration helpers", () => {
     );
   });
 
+  it("does not allow credits for bookings payable at the venue", async () => {
+    const booking = buildBookingRow({
+      status: SERVICE_BOOKING_STATUS.PENDING,
+      paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.PAY_AT_VENUE,
+      amountDueCents: 2500,
+    });
+    const service = createService();
+    const spend = vi.spyOn(CreditService.prototype, "spend");
+    spyOnPrivate(service, "loadPayableBooking").mockResolvedValue(booking);
+
+    await expect(
+      service.payWithCredits({
+        bookingId: "booking-1",
+        creditCardPublicId: "card-public-1",
+      }),
+    ).rejects.toThrow("This booking must be paid at the venue");
+
+    expect(spend).not.toHaveBeenCalled();
+  });
+
   it("rejects payment for non-pending bookings", async () => {
     const { db } = createDbMock({
       selectFixtures: {
@@ -1900,10 +1923,11 @@ describe("ServiceBookingService orchestration helpers", () => {
     });
   });
 
-  it("confirms cash bookings through the shared confirmation path", async () => {
+  it("confirms pay-at-venue cash bookings through the shared confirmation path", async () => {
     const service = createService();
     const booking = buildBookingRow({
       status: SERVICE_BOOKING_STATUS.PENDING,
+      paymentRequirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.PAY_AT_VENUE,
       amountDueCents: 1200,
     });
     spyOnPrivate(service, "loadPayableBooking").mockResolvedValue(booking);
@@ -1920,7 +1944,7 @@ describe("ServiceBookingService orchestration helpers", () => {
     });
     expect(markConfirmed).toHaveBeenCalledWith(booking, {
       method: SERVICE_BOOKING_PAYMENT_METHOD.CASH,
-      amountPaidCents: 0,
+      amountPaidCents: 1200,
       paymentRef: null,
     });
   });

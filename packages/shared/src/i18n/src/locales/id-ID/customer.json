@@ -878,6 +878,7 @@
     "noResults": "Tidak ada hasil. Coba pencarian lain.",
     "open": "Buka",
     "closed": "Tutup",
+    "hoursUnavailable": "Jam operasional belum tersedia",
     "filters": "Filter",
     "openNow": "Buka Sekarang",
     "takeaway": "Bawa Pulang",
@@ -919,6 +920,10 @@
   "footer": {
     "copyright": "© {year} MakanMasak. Hak cipta dilindungi."
   },
+  "reservationBooking": {
+    "back": "Kembali ke toko",
+    "title": "Reservasi meja"
+  },
   "serviceBooking": {
     "back": "Kembali ke layanan",
     "title": "Pemesanan layanan",
@@ -941,9 +946,11 @@
     "confirmationCode": "Kode konfirmasi:",
     "amountDue": "Jumlah tagihan",
     "status": "Status",
+    "paymentStatusLabel": "Status pembayaran",
     "creditCardPlaceholder": "Public id kartu kredit toko",
     "creditPinPlaceholder": "PIN (opsional)",
     "payWithCredits": "Bayar dengan kredit",
+    "payAtCounter": "Silakan bayar kepada staf di tempat ({amount} harus dibayar). Kode konfirmasi: {code}",
     "lookupTitle": "Cari atau batalkan pemesanan",
     "confirmationCodePlaceholder": "Masukkan kode konfirmasi",
     "contactPlaceholder": "Telepon atau email pemesanan (opsional)",
@@ -961,6 +968,12 @@
     "lookupFailed": "Tidak dapat mencari pemesanan ini.",
     "cancelSuccess": "Pemesanan dibatalkan.",
     "cancelFailed": "Tidak dapat membatalkan pemesanan ini.",
+    "paymentStatus": {
+      "not_required": "Tidak perlu pembayaran",
+      "unpaid": "Belum dibayar",
+      "deposit_paid": "Deposit sudah dibayar",
+      "paid": "Sudah dibayar"
+    },
     "bookingStatus": {
       "pending": "Menunggu pembayaran",
       "confirmed": "Dikonfirmasi",
@@ -1111,6 +1124,7 @@
       "marketHours": "Jam pasar · {hours}",
       "primaryVendor": "Lapak utama",
       "contactVendor": "Hubungi lapak",
+      "notOpenToday": "Not open today",
       "loadMoreVendors": "Muat lebih banyak lapak"
     },
     "search": {
@@ -1203,6 +1217,7 @@
       "previousPage": "Halaman sebelumnya",
       "favoriteSyncFailed": "Tidak dapat menyinkronkan status ikutan pasar. Silakan coba lagi.",
       "checkoutSuccess": "Pesanan pasar terkirim",
+      "vendorNotOpenToday": "A stall in your cart is not open today and was removed. Please review and check out again.",
       "checkoutFailed": "Tidak dapat mengirim pesanan pasar"
     },
     "checkout": {
@@ -1351,5 +1366,13 @@
     "saved": "Pengaturan disimpan",
     "saveFailed": "Pengaturan gagal disimpan. Silakan coba lagi.",
     "loadFailed": "Pengaturan gagal dimuat. Silakan coba lagi."
+  },
+  "demoShop": {
+    "bannerTitle": "Ini adalah restoran demo",
+    "bannerBody": "Silakan coba memesan apa saja. Tidak ada pesanan yang benar-benar dikirim.",
+    "noticeTitle": "Restoran demo: pesanan ini tidak akan dikirim",
+    "noticeBody": "Anda baru saja mencoba alur pemesanan sebagai tamu. Di restoran sungguhan, pesanan ini langsung muncul di tablet dapur.",
+    "applyCta": "Buka toko saya sendiri",
+    "keepBrowsing": "Lanjut melihat-lihat"
   }
 }

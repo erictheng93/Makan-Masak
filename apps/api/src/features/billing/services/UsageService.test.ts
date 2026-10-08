@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TRIAL_DURATION_DAYS } from "@makanmasak/database";
 
 // Bucket reads are Drizzle and cannot run against the hand-rolled D1 stub
 // below. Stubbing the helper keeps these tests on what they cover — cycle
@@ -155,7 +156,30 @@ describe("UsageService", () => {
       ),
     ).resolves.toMatchObject({
       cycleStartAt: 1710000000000,
-      cycleEndAt: 1710000000000 + 14 * 24 * 60 * 60 * 1000,
+      cycleEndAt: 1710000000000 + TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000,
+    });
+
+    // The tier stays "trial" after expiry (nag-only), so usage rolls onto the
+    // monthly cycle instead of reading a window that has already closed.
+    const expired = createDb({
+      subscription: {
+        plan_tier: "trial",
+        trial_ends_at_ms: Date.UTC(2026, 5, 1),
+        billing_cycle_start_at_ms: null,
+        billing_cycle_end_at_ms: null,
+        created_at_ms: Date.UTC(2025, 11, 1),
+      },
+      meters: [],
+      pending: [],
+    });
+    await expect(
+      new UsageService(expired.db as never).getCurrentUsage(
+        "restaurant-1",
+        Date.UTC(2026, 5, 7),
+      ),
+    ).resolves.toMatchObject({
+      cycleStartAt: Date.UTC(2026, 5, 1),
+      cycleEndAt: Date.UTC(2026, 6, 1),
     });
 
     const fallback = createDb({

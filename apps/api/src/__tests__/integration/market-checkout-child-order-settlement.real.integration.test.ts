@@ -185,12 +185,14 @@ describe("market checkout child order settlement - real integration", () => {
         marketId: market.id,
         stallNumber: "A01",
         joinedAt: now,
+        openedAt: new Date(),
       },
       {
         restaurantId: String(vendorB.id),
         marketId: market.id,
         stallNumber: "B01",
         joinedAt: now,
+        openedAt: new Date(),
       },
     ]);
 

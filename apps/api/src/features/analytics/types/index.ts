@@ -110,6 +110,7 @@ export interface ProductAnalytics {
     categoryName: string;
     quantity: number;
     revenue: number;
+    currency: CurrencyCode;
     growthRate?: number;
   }>;
   categoryPerformance: Array<{
@@ -117,6 +118,7 @@ export interface ProductAnalytics {
     categoryName: string;
     quantity: number;
     revenue: number;
+    currency: CurrencyCode;
     itemCount: number;
   }>;
   lowPerformingItems: Array<{
@@ -138,12 +140,12 @@ export interface CustomerAnalytics {
   newCustomers: number;
   returningCustomers: number;
   averageOrdersPerCustomer: number;
-  customerLifetimeValue: number;
+  customerLifetimeValue: MoneyByCurrency;
   topCustomers: Array<{
     customerId: string;
     customerName: string;
     totalOrders: number;
-    totalSpent: number;
+    totalSpent: MoneyByCurrency;
   }>;
 }
 
@@ -157,11 +159,17 @@ export interface PerformanceAnalytics {
   totalOrders: number;
   completedOrders: number;
   cancelledOrders: number;
-  averageOrderValue: number;
-  totalRevenue: number;
+  averageOrderValue: MoneyByCurrency;
+  totalRevenue: MoneyByCurrency;
   conversionRate: number;
   averagePreparationTime: number;
   popularTimeSlots: Array<{ hour: number; orderCount: number }>;
+  revenueGrowth: Array<{ currency: CurrencyCode; percentage: number }>;
+  averageOrderValueGrowth: Array<{
+    currency: CurrencyCode;
+    percentage: number;
+  }>;
+  orderGrowth: number;
 }
 
 export interface PerformanceAnalyticsResponse {
@@ -219,14 +227,14 @@ export interface SSEAnalyticsEvent {
 
 // Financial report interfaces
 export interface FinancialReportData {
-  totalRevenue: number;
+  totalRevenue: MoneyByCurrency;
   totalOrders: number;
-  averageOrderValue: number;
-  taxAmount: number;
-  netRevenue: number;
+  averageOrderValue: MoneyByCurrency;
+  taxAmount: MoneyByCurrency;
+  netRevenue: MoneyByCurrency;
   periodComparison?: {
-    previousPeriodRevenue: number;
-    growthRate: number;
+    previousPeriodRevenue: MoneyByCurrency;
+    growthRate: Array<{ currency: CurrencyCode; percentage: number }>;
   };
   breakdown: {
     daily?: Array<{ date: string; revenue: MoneyByCurrency; orders: number }>;

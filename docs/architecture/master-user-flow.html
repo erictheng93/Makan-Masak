@@ -471,8 +471,8 @@ body{
         <span class="lg"><svg width="30" height="10" viewBox="0 0 30 10" fill="none" stroke="var(--flow-ext)" stroke-width="1.7" stroke-linecap="round"><path d="M1 5h22" stroke-dasharray="2 3"/><path d="m20 2 3.5 3-3.5 3"/></svg>外部系統互動</span>
       </div>
       <div class="stamp">
-        版本：<b class="mono">v1.1</b><br>
-        日期：<b class="mono">2026/09/15</b>
+        版本：<b class="mono">v1.3</b><br>
+        日期：<b class="mono">2026/10/04</b>
       </div>
     </div>
   </header>
@@ -552,7 +552,7 @@ body{
               <svg class="arr tight"><use href="#i-arrow"/></svg>
               <div class="node"><svg class="node-ico"><use href="#i-bell"/></svg><span class="node-t">可取餐</span><span class="node-s"><em class="mono">ready</em></span></div>
               <svg class="arr tight"><use href="#i-arrow"/></svg>
-              <div class="node"><svg class="node-ico"><use href="#i-wallet"/></svg><span class="node-t">送達／付訖</span><span class="node-s"><em class="mono">delivered → paid</em></span></div>
+              <div class="node"><svg class="node-ico"><use href="#i-wallet"/></svg><span class="node-t">送達／付訖</span><span class="node-s"><em class="mono">delivered</em> · 付款服務寫入 <em class="mono">paid</em></span></div>
             </div>
           </div>
 
@@ -570,10 +570,19 @@ body{
           </div>
 
           <div class="grp">
-            <span class="grp-h">揪團與夜市市集流程</span>
+            <span class="grp-h">揪團與拆帳流程</span>
             <div class="flow">
               <div class="node"><svg class="node-ico"><use href="#i-users"/></svg><span class="node-t">建立揪團</span><span class="node-s">分享碼邀請<br>同桌合單</span></div>
               <svg class="arr tight"><use href="#i-arrow"/></svg>
+              <div class="node"><svg class="node-ico"><use href="#i-cart"/></svg><span class="node-t">加菜與鎖單</span><span class="node-s">共用購物車<br>團主鎖單</span></div>
+              <svg class="arr tight"><use href="#i-arrow"/></svg>
+              <div class="node"><svg class="node-ico"><use href="#i-card"/></svg><span class="node-t">拆帳與付款</span><span class="node-s">均分 · 各付各<br>按比例</span></div>
+            </div>
+          </div>
+
+          <div class="grp">
+            <span class="grp-h">夜市市集跨攤結帳流程</span>
+            <div class="flow">
               <div class="node"><svg class="node-ico"><use href="#i-store"/></svg><span class="node-t">探索市集</span><span class="node-s">夜市頁面<br>攤位總覽</span></div>
               <svg class="arr tight"><use href="#i-arrow"/></svg>
               <div class="node"><svg class="node-ico"><use href="#i-cart"/></svg><span class="node-t">跨攤結帳</span><span class="node-s">多攤合併<br>一次付款</span></div>
@@ -600,7 +609,7 @@ body{
           <div class="grp">
             <span class="grp-h">開通與首次設定</span>
             <div class="flow">
-              <div class="node"><svg class="node-ico"><use href="#i-key"/></svg><span class="node-t">收到開通資訊</span><span class="node-s">連結或帳密<br>由平台人工轉交</span></div>
+              <div class="node"><svg class="node-ico"><use href="#i-key"/></svg><span class="node-t">收到開通資訊</span><span class="node-s">設定連結由 Email 交付<br>失敗或代設帳密時人工轉交</span></div>
               <svg class="arr tight"><use href="#i-arrow"/></svg>
               <div class="node"><svg class="node-ico"><use href="#i-lock"/></svg><span class="node-t">設定密碼</span><span class="node-s"><em class="mono">/reset-password</em><br>連結 24h 內有效</span></div>
               <svg class="arr tight"><use href="#i-arrow"/></svg>
@@ -697,7 +706,7 @@ body{
           <div class="grp">
             <span class="grp-h">送菜流程 — 送菜員 role 3</span>
             <div class="flow">
-              <div class="node"><svg class="node-ico"><use href="#i-list"/></svg><span class="node-t">待送清單</span><span class="node-s">依桌號排序<br>等待時間</span></div>
+              <div class="node"><svg class="node-ico"><use href="#i-list"/></svg><span class="node-t">待送清單</span><span class="node-s">優先級 · readyAt 排序<br>桌號篩選 · 等待時間</span></div>
               <svg class="arr tight"><use href="#i-arrow"/></svg>
               <div class="node"><svg class="node-ico"><use href="#i-box"/></svg><span class="node-t">取餐核對</span><span class="node-s">品項比對<br>備註確認</span></div>
               <svg class="arr tight"><use href="#i-arrow"/></svg>
@@ -736,7 +745,7 @@ body{
           </div>
 
           <div class="col-foot">
-            <b>三端同源：</b>廚房、送菜、收銀共用同一份訂單狀態機，任一端變更即時廣播給其餘兩端與顧客追蹤頁
+            <b>三端同源：</b>廚房、送菜、收銀共用同一份訂單狀態機，狀態變更透過事件同步；送菜頁目前每 15 秒輪詢，四端即時同步與重連仍待整合驗收
           </div>
         </div>
 
@@ -757,7 +766,7 @@ body{
               <svg class="arr tight"><use href="#i-arrow"/></svg>
               <div class="node"><svg class="node-ico"><use href="#i-building"/></svg><span class="node-t">建立租戶</span><span class="node-s">租戶 · 訂閱<br>餐廳 · 店主帳號</span></div>
               <svg class="arr tight"><use href="#i-arrow"/></svg>
-              <div class="node wide"><svg class="node-ico"><use href="#i-key"/></svg><span class="node-t">交付設定連結</span><span class="node-s">核准後畫面顯示一次<br>人工轉交 · 寄信規劃中</span></div>
+              <div class="node wide"><svg class="node-ico"><use href="#i-key"/></svg><span class="node-t">交付設定連結</span><span class="node-s">核准後寄送設定連結<br>寄送失敗時人工轉交</span></div>
             </div>
             <span class="sub-h">另一入口：平台直接建店</span>
             <div class="flow">
@@ -776,7 +785,7 @@ body{
               <svg class="arr tight"><use href="#i-arrow"/></svg>
               <div class="node"><svg class="node-ico"><use href="#i-key"/></svg><span class="node-t">授權管理</span><span class="node-s">License 發放<br>到期控管</span></div>
               <svg class="arr tight"><use href="#i-arrow"/></svg>
-              <div class="node"><svg class="node-ico"><use href="#i-rocket"/></svg><span class="node-t">部署管理</span><span class="node-s">版本推送<br>灰度更新</span></div>
+              <div class="node"><svg class="node-ico"><use href="#i-rocket"/></svg><span class="node-t">部署管理</span><span class="node-s">版本推送 · 灰度更新<br>入口契約與失敗判定待修</span></div>
             </div>
           </div>
 
@@ -802,7 +811,7 @@ body{
               <svg class="arr tight"><use href="#i-arrow"/></svg>
               <div class="node"><svg class="node-ico"><use href="#i-scroll"/></svg><span class="node-t">稽核日誌</span><span class="node-s">操作軌跡<br>權限異動</span></div>
               <svg class="arr tight"><use href="#i-arrow"/></svg>
-              <div class="node"><svg class="node-ico"><use href="#i-db"/></svg><span class="node-t">備份還原</span><span class="node-s">排程匯出<br>還原演練</span></div>
+              <div class="node"><svg class="node-ico"><use href="#i-db"/></svg><span class="node-t">備份還原</span><span class="node-s">租戶備份排程停用<br>還原演練待驗證</span></div>
             </div>
           </div>
 
@@ -836,7 +845,7 @@ body{
         <div class="scard"><svg><use href="#i-search"/></svg><div><h3>搜尋與探索</h3><p>FTS5 trigram 全文檢索 · Vectorize 語意相似推薦</p></div></div>
         <div class="scard"><svg><use href="#i-lang"/></svg><div><h3>多語系與幣別</h3><p>zh-TW ／ en ／ ms 語系切換 · 金額一律以「分」儲存</p></div></div>
         <div class="scard"><svg><use href="#i-zap"/></svg><div><h3>快取與限流</h3><p>KV 查詢快取 · 全域 per-IP 與 per-user 速率限制</p></div></div>
-        <div class="scard"><svg><use href="#i-scroll"/></svg><div><h3>稽核與備份</h3><p>完整操作軌跡 · Cron 排程備份匯出至 R2</p></div></div>
+        <div class="scard"><svg><use href="#i-scroll"/></svg><div><h3>稽核與備份</h3><p>操作軌跡 · 租戶備份 Cron 停用；R2 匯出／還原待驗證</p></div></div>
         <div class="scard"><svg><use href="#i-activity"/></svg><div><h3>健康與監控</h3><p><span class="mono">/info</span> 存活探針 · <span class="mono">/monitoring/health</span> 相依健檢</p></div></div>
       </div>
 
@@ -853,11 +862,13 @@ body{
           <span class="pill term">cancelled</span>
           <span style="width:6px"></span>
           <span class="pill term">refunded</span>
-          <span class="chain-note">付款另有獨立欄位 <span class="mono">payment_status</span>：pending / completed / failed / refunded</span>
+          <span class="chain-note"><span class="mono">paid</span> 僅由付款服務寫入；付款另有獨立欄位 <span class="mono">payment_status</span>：pending / completed / failed / refunded / partial_refunded</span>
         </div>
       </div>
     </div>
   </section>
+
+  <p style="padding:0 24px">2026-10-04 驗證邊界：本圖是流程總覽，第三方金流、推播送達、外送同步、實機列印、部署與還原不代表均已驗收。各流程的本機證據、已重現缺陷及外部待驗項目見 <a href="../investigations/2026-10-04-master-flow-audit.html">最新 master flow 稽核</a>。</p>
 
   <!-- ── external systems ───────────────────────────────────────── -->
   <section class="lane" style="--ac:var(--ext); --ac-ink:var(--ext-ink)">
@@ -884,11 +895,11 @@ body{
       <h3>流程說明</h3>
       <ul>
         <li>訪客可瀏覽公開資訊；掃描桌位／座位 QR 亦可<b>免登入下單</b>，登入僅用於歷史訂單、優惠與會員權益。</li>
-        <li>六個角色（<b>0</b> 管理者／<b>1</b> 店主／<b>2</b> 廚師／<b>3</b> 送菜／<b>4</b> 收銀／<b>5</b> 顧客）共用同一組 JWT，前端依 <code>role</code> 分流到不同門戶與路由。</li>
-        <li>訂單事件經 Durable Object 廣播，同時到達廚房顯示、送菜清單、收銀台與顧客追蹤頁，四端看到的是同一份狀態。</li>
-        <li>金流結果由金流商 webhook 回寫；夜市跨攤結帳另走 market-checkouts，付款一次、分帳逐攤。</li>
+        <li>六個角色（<b>0</b> 管理者／<b>1</b> 店主／<b>2</b> 廚師／<b>3</b> 送菜／<b>4</b> 收銀／<b>5</b> 顧客）由前端依身分分流。平台帳號 JWT 帶 <code>role</code> 與 <code>restaurantId</code>；顧客會員另以 customers UUID 為 <code>sub</code>、<code>type=customer</code> 的 JWT 與 HttpOnly refresh cookie 登入／換發，訪客訂單則使用限定訂單的 guest token。</li>
+        <li>訂單事件經 Durable Object 廣播，同時到達廚房顯示、送菜清單、收銀台與顧客追蹤頁，送菜頁目前以輪詢更新；四端一致性、漏事件與重連仍需端到端驗收。</li>
+        <li>金流結果由金流商 webhook 回寫；夜市跨攤結帳另走 market-checkouts，付款一次、逐攤分帳；揪團的「拆帳」是同一攤內多人分攤，與它無關。</li>
         <li>租戶／授權／部署屬控制平面，由獨立的 Management API 承接，與各店營運 API 分開部署。</li>
-        <li><b>店主帳號不能自行註冊</b>：由平台核准開店申請，或在後台「帳號管理」直接建立。核准只產生一次性的設定密碼連結，<b>目前不寄信</b>，由平台人員轉交店主；逐步細節見 <a href="../flows/13-platform-onboarding.md">入駐流程</a>。</li>
+        <li><b>店主帳號不能自行註冊</b>：由平台核准開店申請，或在後台「帳號管理」直接建立。核准產生一次性的設定密碼連結；啟用開通信且寄件設定齊備時自動寄送，失敗時保留人工轉交；逐步細節見 <a href="../flows/13-platform-onboarding.md">入駐流程</a>。</li>
         <li>系統由哪些東西組成、每個 Worker 綁了什麼資源，見 <a href="./system-architecture.html">系統架構圖</a>。</li>
         <li>每一條流程的<b>逐步細節與 edge cases</b> 寫在 <code>docs/flows/</code>；四張細節圖：<a href="../flows/boards/customer-ordering.html">點餐</a>、<a href="../flows/boards/order-status-chain.html">訂單狀態鏈</a>、<a href="../flows/boards/payment-and-refund.html">收款與退款</a>、<a href="../flows/boards/market-checkout.html">市集跨攤結帳</a>。</li>
       </ul>
@@ -901,7 +912,7 @@ body{
         <li><svg width="30" height="10" viewBox="0 0 30 10" fill="none" stroke="var(--flow-notify)" stroke-width="1.7" stroke-linecap="round"><path d="M1 5h22" stroke-dasharray="4 3"/><path d="m20 2 3.5 3-3.5 3"/></svg>系統通知 → Email／OTP／Web Push → 顧客與各角色</li>
         <li><svg width="30" height="10" viewBox="0 0 30 10" fill="none" stroke="var(--flow-data)" stroke-width="1.7" stroke-linecap="round"><path d="M1 5h22" stroke-dasharray="4 3"/><path d="m20 2 3.5 3-3.5 3"/></svg>訂單事件 → Durable Object → 廚房／送菜／收銀／顧客追蹤</li>
         <li><svg width="30" height="10" viewBox="0 0 30 10" fill="none" stroke="var(--flow-data)" stroke-width="1.7" stroke-linecap="round"><path d="M1 5h22" stroke-dasharray="4 3"/><path d="m20 2 3.5 3-3.5 3"/></svg>菜單異動 → Queue fan-out → FTS5 全文索引 ＋ Vectorize 向量重建</li>
-        <li><svg width="30" height="10" viewBox="0 0 30 10" fill="none" stroke="var(--flow-ext)" stroke-width="1.7" stroke-linecap="round"><path d="M1 5h22" stroke-dasharray="2 3"/><path d="m20 2 3.5 3-3.5 3"/></svg>每日排程 → D1 匯出 → R2 備份保存 ／ 異常 → Slack 告警</li>
+        <li><svg width="30" height="10" viewBox="0 0 30 10" fill="none" stroke="var(--flow-ext)" stroke-width="1.7" stroke-linecap="round"><path d="M1 5h22" stroke-dasharray="2 3"/><path d="m20 2 3.5 3-3.5 3"/></svg>規劃資料流：租戶啟用備份後 → D1 匯出 → R2；目前 Cron 停用，需先驗證保存與還原</li>
       </ul>
     </div>
 

@@ -80,8 +80,46 @@ describe("CashierView", () => {
           },
         } as never;
       }
+      if (url === "/pos/registers") {
+        return {
+          data: {
+            success: true,
+            data: [{ id: "register-1", isActive: true }],
+          },
+        } as never;
+      }
+      if (url === "/pos/shifts/current/register-1") {
+        return {
+          data: {
+            success: true,
+            data: {
+              id: "shift-1",
+              startedAt: "2026-08-18T08:00:00.000Z",
+            },
+          },
+        } as never;
+      }
       return { data: { success: true, data: [] } } as never;
     });
+  });
+
+  it("shows the active shift id returned by the POS API", async () => {
+    const wrapper = mount(CashierView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("cashier.shift: shift-1");
+    wrapper.unmount();
+  });
+
+  it("shows the shift's start as a readable local time, not the raw ISO string", async () => {
+    const wrapper = mount(CashierView);
+    await flushPromises();
+
+    const times = wrapper.get('[data-testid="cashier-shift-times"]').text();
+    expect(times).not.toContain("T08:00:00");
+    expect(times).not.toContain("Z");
+    expect(times).toMatch(/2026/);
+    wrapper.unmount();
   });
 
   it("loads pending orders with their API table and customer fields", async () => {
@@ -101,8 +139,41 @@ describe("CashierView", () => {
     expect(wrapper.text()).toContain("Ada");
   });
 
+  it("picks up newly payable orders without a reload, and stops when left", async () => {
+    vi.useFakeTimers();
+    try {
+      const wrapper = mount(CashierView);
+      await flushPromises();
+      const orderLoads = () =>
+        vi.mocked(api.get).mock.calls.filter(([url]) => url === "/orders")
+          .length;
+      expect(orderLoads()).toBe(1);
+
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(orderLoads()).toBe(2);
+
+      wrapper.unmount();
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(orderLoads()).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("submits a string order number for a refund and displays a failure", async () => {
-    vi.mocked(api.post).mockRejectedValueOnce(new Error("Refund rejected"));
+    // The shape axios rejects with: its own message is the HTTP status line,
+    // and the reason the cashier needs is the API error underneath it.
+    vi.mocked(api.post).mockRejectedValueOnce(
+      Object.assign(new Error("Request failed with status code 400"), {
+        response: {
+          status: 400,
+          data: {
+            success: false,
+            error: { code: "BAD_REQUEST", message: "退款金額超過可退款額度" },
+          },
+        },
+      }),
+    );
     const wrapper = mount(CashierView);
     await flushPromises();
 
@@ -126,8 +197,8 @@ describe("CashierView", () => {
       }),
       expect.any(Object),
     );
-    expect(wrapper.get('[data-testid="refund-error"]').text()).toContain(
-      "Refund rejected",
+    expect(wrapper.get('[data-testid="refund-error"]').text()).toBe(
+      "退款金額超過可退款額度",
     );
   });
 
@@ -146,6 +217,95 @@ describe("CashierView", () => {
     await wrapper.get('[data-testid="pay-btn"]').trigger("click");
     await flushPromises();
   }
+
+  it("shows the electronic coupon already applied to the server-priced order", async () => {
+    const get = vi.mocked(api.get).getMockImplementation()!;
+    vi.mocked(api.get).mockImplementation(async (...args) => {
+      const response = await get(...args);
+      if (args[0] === "/orders")
+        Object.assign((response.data.data as unknown[])[0] as object, {
+          couponCode: "LUNCH10",
+          discountAmount: 10,
+          totalAmount: 90,
+        });
+      return response;
+    });
+    const wrapper = mount(CashierView);
+    await flushPromises();
+    await wrapper.find(".cursor-pointer").trigger("click");
+    expect(wrapper.text()).toContain("LUNCH10");
+    expect(wrapper.text()).toContain("-10");
+    expect(wrapper.text()).toContain("90");
+    wrapper.unmount();
+  });
+
+  it("shows each persisted coupon and the final payable without recalculating", async () => {
+    const get = vi.mocked(api.get).getMockImplementation()!;
+    vi.mocked(api.get).mockImplementation(async (...args) => {
+      const response = await get(...args);
+      if (args[0] === "/orders")
+        Object.assign((response.data.data as unknown[])[0] as object, {
+          appliedCoupons: [
+            {
+              couponId: 1,
+              code: "TEN",
+              name: "Ten percent",
+              discountAmount: 10,
+            },
+            {
+              couponId: 2,
+              code: "TWENTY",
+              name: "Twenty percent",
+              discountAmount: 18,
+            },
+            { couponId: 3, code: "FIVE", name: "Five off", discountAmount: 5 },
+          ],
+          discountAmount: 33,
+          totalAmount: 67,
+        });
+      return response;
+    });
+    const wrapper = mount(CashierView);
+    await flushPromises();
+    await wrapper.find(".cursor-pointer").trigger("click");
+    const rows = wrapper.findAll('[data-testid="applied-coupon"]');
+    expect(rows.map((row) => row.text())).toEqual([
+      expect.stringContaining("Ten percent (TEN)"),
+      expect.stringContaining("Twenty percent (TWENTY)"),
+      expect.stringContaining("Five off (FIVE)"),
+    ]);
+    expect(rows[1].text()).toContain("-18");
+    expect(wrapper.text()).toContain("67");
+    wrapper.unmount();
+  });
+
+  it("still identifies a redeemed coupon when currency rounding makes its discount zero", async () => {
+    const get = vi.mocked(api.get).getMockImplementation()!;
+    vi.mocked(api.get).mockImplementation(async (...args) => {
+      const response = await get(...args);
+      if (args[0] === "/orders")
+        Object.assign((response.data.data as unknown[])[0] as object, {
+          appliedCoupons: [
+            {
+              couponId: 1,
+              code: "TEN",
+              name: "Ten percent",
+              discountAmount: 0,
+            },
+          ],
+          discountAmount: 0,
+          totalAmount: 1,
+        });
+      return response;
+    });
+    const wrapper = mount(CashierView);
+    await flushPromises();
+    await wrapper.find(".cursor-pointer").trigger("click");
+    expect(wrapper.get('[data-testid="applied-coupon"]').text()).toContain(
+      "Ten percent (TEN)",
+    );
+    wrapper.unmount();
+  });
 
   describe("cash tendered", () => {
     async function selectOrder() {
@@ -245,6 +405,25 @@ describe("CashierView", () => {
                   items: [],
                 },
               ],
+            },
+          } as never;
+        }
+        if (url === "/pos/registers") {
+          return {
+            data: {
+              success: true,
+              data: [{ id: "register-1", isActive: true }],
+            },
+          } as never;
+        }
+        if (url === "/pos/shifts/current/register-1") {
+          return {
+            data: {
+              success: true,
+              data: {
+                id: "shift-1",
+                startedAt: "2026-08-18T08:00:00.000Z",
+              },
             },
           } as never;
         }
@@ -378,6 +557,8 @@ describe("CashierView", () => {
         amount: 100,
         expectedTotal: 100,
         closeOrder: true,
+        registerId: "register-1",
+        shiftId: "shift-1",
       }),
       expect.objectContaining({
         headers: expect.objectContaining({
@@ -395,6 +576,36 @@ describe("CashierView", () => {
       expect.anything(),
       expect.anything(),
     );
+  });
+
+  it("requires a physical count before ending a shift and never defaults it to zero", async () => {
+    const wrapper = mount(CashierView);
+    await flushPromises();
+
+    await wrapper
+      .get('[data-testid="cashier-open-shift-report"]')
+      .trigger("click");
+    await flushPromises();
+    await wrapper
+      .get('[data-testid="cashier-open-end-shift"]')
+      .trigger("click");
+    expect(
+      wrapper
+        .get('[data-testid="cashier-confirm-end-shift"]')
+        .attributes("disabled"),
+    ).toBeDefined();
+
+    await wrapper
+      .get('[data-testid="cashier-ending-cash-amount"]')
+      .setValue(250);
+    await wrapper
+      .get('[data-testid="cashier-confirm-end-shift"]')
+      .trigger("click");
+    await flushPromises();
+
+    expect(api.post).toHaveBeenCalledWith("/pos/shifts/shift-1/end", {
+      actualAmount: 250,
+    });
   });
 
   it("reuses one idempotency key across a retry, and mints a new one after success", async () => {
@@ -581,5 +792,88 @@ describe("CashierView", () => {
     expect(wrapper.get('[data-testid="payment-error"]').text()).toContain(
       "cashier.amountMismatch",
     );
+  });
+
+  // The receipt route reads the till from X-Register-Id (and the shift from
+  // X-Shift-Id), exactly like refunds. Both print buttons put registerId in
+  // the body instead, so every receipt came back 400 "需要指定收銀機ID" and
+  // the catch only logged it: on production the cashier saw nothing at all.
+  describe("receipt printing", () => {
+    function withOpenShift() {
+      const orders = vi.mocked(api.get).getMockImplementation()!;
+      vi.mocked(api.get).mockImplementation(async (url: string, ...rest) => {
+        if (url === "/pos/registers") {
+          return {
+            data: {
+              success: true,
+              data: [{ id: "register-1", isActive: true }],
+            },
+          } as never;
+        }
+        if (url === "/pos/shifts/current/register-1") {
+          return { data: { success: true, data: { id: "shift-1" } } } as never;
+        }
+        return orders(url, ...rest);
+      });
+    }
+
+    it("names the till and shift in headers, as the receipt route requires", async () => {
+      withOpenShift();
+      vi.mocked(api.post).mockResolvedValue({
+        data: { success: true, data: { transactionId: "txn-9" } },
+      } as never);
+      const wrapper = mount(CashierView);
+      await flushPromises();
+      await checkout(wrapper);
+
+      await wrapper.get('[data-testid="print-final-receipt"]').trigger("click");
+      await flushPromises();
+
+      expect(api.post).toHaveBeenCalledWith(
+        "/pos/receipts/print",
+        expect.objectContaining({
+          orderId: "019fc320-c159-700c-a66c-39c9b98ed964",
+        }),
+        expect.objectContaining({
+          headers: { "X-Register-Id": "register-1", "X-Shift-Id": "shift-1" },
+        }),
+      );
+      expect(wrapper.find('[data-testid="payment-success"]').exists()).toBe(
+        false,
+      );
+    });
+
+    it("keeps the success dialog open and says why when the receipt fails", async () => {
+      withOpenShift();
+      vi.mocked(api.post).mockImplementation(async (url: string) => {
+        if (url === "/pos/receipts/print") {
+          throw {
+            response: {
+              status: 400,
+              data: {
+                success: false,
+                error: { code: "BAD_REQUEST", message: "需要指定收銀機ID" },
+              },
+            },
+          };
+        }
+        return {
+          data: { success: true, data: { transactionId: "txn-9" } },
+        } as never;
+      });
+      const wrapper = mount(CashierView);
+      await flushPromises();
+      await checkout(wrapper);
+
+      await wrapper.get('[data-testid="print-final-receipt"]').trigger("click");
+      await flushPromises();
+
+      expect(wrapper.find('[data-testid="payment-success"]').exists()).toBe(
+        true,
+      );
+      expect(wrapper.get('[data-testid="receipt-error"]').text()).toContain(
+        "需要指定收銀機ID",
+      );
+    });
   });
 });

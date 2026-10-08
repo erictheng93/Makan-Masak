@@ -35,6 +35,7 @@ import {
   REAL_D1_SETUP_TIMEOUT_MS,
   type TestDatabase,
 } from "../testing/create-test-database";
+import { CouponService } from "./coupon";
 import { orderMenuItemSummaryColumns, OrderService } from "./order";
 
 const restaurantId = "restaurant-price-test";
@@ -941,6 +942,57 @@ describe("OrderService createOrder atomicity", () => {
     expect(restaurant.totalOrders).toBe(1);
   });
 
+  it("uses the menu item's preparation time when creating an order", async () => {
+    const service = new OrderService(testDb.bindings.DB, {
+      JWT_SECRET: "test",
+    });
+    await testDb.drizzle
+      .update(menuItems)
+      .set({ preparationTime: 12 })
+      .where(eq(menuItems.id, menuItemId));
+
+    const order = await service.createOrder({
+      restaurantId,
+      items: [{ menuItemId, quantity: 1 }],
+    });
+
+    expect(order.estimatedPrepTime).toBe(12);
+    const [persisted] = await testDb.drizzle
+      .select({ estimatedPrepTime: orders.estimatedPrepTime })
+      .from(orders)
+      .where(eq(orders.id, order.id));
+    expect(persisted.estimatedPrepTime).toBe(12);
+  });
+
+  it("uses the added menu item's preparation time and keeps the longest estimate", async () => {
+    const service = new OrderService(testDb.bindings.DB, {
+      JWT_SECRET: "test",
+    });
+    await testDb.drizzle
+      .update(menuItems)
+      .set({ preparationTime: 12 })
+      .where(eq(menuItems.id, menuItemId));
+    const order = await service.createOrder({
+      restaurantId,
+      items: [{ menuItemId, quantity: 1 }],
+    });
+
+    await testDb.drizzle
+      .update(menuItems)
+      .set({ preparationTime: 30 })
+      .where(eq(menuItems.id, menuItemId));
+    const updated = await service.addItemsToOrder(order.id, [
+      { menuItemId, quantity: 1 },
+    ]);
+
+    expect(updated.estimatedPrepTime).toBe(30);
+    const [persisted] = await testDb.drizzle
+      .select({ estimatedPrepTime: orders.estimatedPrepTime })
+      .from(orders)
+      .where(eq(orders.id, order.id));
+    expect(persisted.estimatedPrepTime).toBe(30);
+  });
+
   it("creates human-readable order numbers without embedding restaurant ids", async () => {
     const service = new OrderService(testDb.bindings.DB, {
       JWT_SECRET: "test",
@@ -1539,7 +1591,7 @@ describe("OrderService cancelOrder atomicity", () => {
     await seedMenuItem(testDb);
   });
 
-  it("restores inventory only for the cancellation that changes order status", async () => {
+  it("restores inventory and sold count only for the cancellation that changes order status", async () => {
     const service = new OrderService(testDb.bindings.DB, {
       JWT_SECRET: "test",
     });
@@ -1552,7 +1604,7 @@ describe("OrderService cancelOrder atomicity", () => {
       .select()
       .from(menuItems)
       .where(eq(menuItems.id, menuItemId));
-    expect(afterCreate.inventoryCount).toBe(8);
+    expect(afterCreate).toMatchObject({ inventoryCount: 8, orderCount: 2 });
 
     await expect(service.cancelOrder(order.id, "customer")).resolves.toEqual(
       expect.objectContaining({ status: "cancelled" }),
@@ -1573,10 +1625,13 @@ describe("OrderService cancelOrder atomicity", () => {
       .select()
       .from(menuItems)
       .where(eq(menuItems.id, menuItemId));
-    expect(afterDuplicateCancel.inventoryCount).toBe(10);
+    expect(afterDuplicateCancel).toMatchObject({
+      inventoryCount: 10,
+      orderCount: 0,
+    });
   });
 
-  it("does not double-restore inventory for concurrent duplicate cancellations", async () => {
+  it("does not double-restore inventory or sold count for concurrent duplicate cancellations", async () => {
     const service = new OrderService(testDb.bindings.DB, {
       JWT_SECRET: "test",
     });
@@ -1613,7 +1668,10 @@ describe("OrderService cancelOrder atomicity", () => {
       .select()
       .from(menuItems)
       .where(eq(menuItems.id, menuItemId));
-    expect(afterConcurrentCancel.inventoryCount).toBe(10);
+    expect(afterConcurrentCancel).toMatchObject({
+      inventoryCount: 10,
+      orderCount: 0,
+    });
 
     const [persistedOrder] = await testDb.drizzle
       .select()
@@ -1985,7 +2043,7 @@ describe("OrderService changeOrderItemQuantity", () => {
     ]);
   });
 
-  it("keeps a coupon-discounted order from going negative when it shrinks", async () => {
+  it("requires cancel and reorder for coupon-bearing item changes", async () => {
     // A 5-off coupon on a 30 order. Shrinking to a single 10 item leaves 5 due,
     // and shrinking further would drive the arithmetic below zero.
     await seedCoupon(testDb);
@@ -1995,15 +2053,15 @@ describe("OrderService changeOrderItemQuantity", () => {
       items: [{ menuItemId, quantity: 3 }],
     });
     expect(order.totalAmount).toBe(25);
+    expect(order).toMatchObject({ couponCode: "SAVE5", discountAmount: 5 });
 
-    const halved = await service().changeOrderItemQuantity(
-      order.id,
-      order.items![0].id,
-      1,
-    );
-    expect(halved.subtotal).toBe(10);
-    expect(halved.totalAmount).toBe(5);
-    expect(halved.totalAmount).toBeGreaterThanOrEqual(0);
+    await expect(
+      service().changeOrderItemQuantity(order.id, order.items![0].id, 1),
+    ).rejects.toThrow("Cancel and reorder");
+    await expect(
+      service().addItemsToOrder(order.id, [{ menuItemId, quantity: 1 }]),
+    ).rejects.toThrow("Cancel and reorder");
+    expect((await service().getOrder(order.id))?.totalAmount).toBe(25);
   });
 });
 
@@ -2841,3 +2899,185 @@ async function seedMenuItem(testDb: TestDatabase) {
     },
   });
 }
+
+describe("OrderService multiple coupons", () => {
+  let testDb: TestDatabase;
+  beforeAll(async () => {
+    testDb = await createTestDatabase();
+  }, REAL_D1_SETUP_TIMEOUT_MS);
+  afterAll(async () => {
+    await testDb?.dispose();
+  });
+  beforeEach(async () => {
+    await testDb.truncateAll();
+    await seedMenuItem(testDb);
+    await seedCoupon(testDb);
+    for (const percent of [10, 20]) {
+      await testDb.drizzle.insert(coupons).values({
+        restaurantId,
+        code: `PCT${percent}`,
+        name: `${percent}% off`,
+        discountType: "percentage",
+        discountPercentageBps: percent * 100,
+        minOrderAmountCents: 10000,
+        validFrom: new Date("2020-01-01"),
+        validTo: new Date("2099-01-01"),
+      });
+    }
+  });
+  const request = {
+    restaurantId,
+    couponCodes: ["SAVE5", "PCT10", "PCT20"],
+    items: [{ menuItemId, quantity: 10 }],
+  };
+  it("applies percentages sequentially before fixed discounts, persists snapshots and releases every usage on cancellation", async () => {
+    const service = new OrderService(testDb.bindings.DB, {
+      JWT_SECRET: "test",
+    });
+    const order = await service.createOrder(request);
+    expect(order.discountAmount).toBe(33);
+    expect(order.totalAmount).toBe(67);
+    expect(
+      order.appliedCoupons?.map((coupon) => [
+        coupon.code,
+        coupon.discountAmount,
+      ]),
+    ).toEqual([
+      ["PCT10", 10],
+      ["PCT20", 18],
+      ["SAVE5", 5],
+    ]);
+    expect(await testDb.drizzle.select().from(couponUsage)).toHaveLength(3);
+    await service.cancelOrder(order.id);
+    expect(
+      (await testDb.drizzle.select().from(coupons)).map(
+        (coupon) => coupon.usedCount,
+      ),
+    ).toEqual([0, 0, 0]);
+  });
+  it("rejects either direction of incompatibility and foreign or self references", async () => {
+    const couponService = new CouponService(testDb.bindings.DB, {
+      JWT_SECRET: "test",
+    });
+    const rows = await testDb.drizzle.select().from(coupons);
+    const fixed = rows.find((coupon) => coupon.code === "SAVE5")!;
+    const percent = rows.find((coupon) => coupon.code === "PCT10")!;
+    await couponService.updateCoupon(fixed.id, {
+      incompatibleCouponIds: [percent.id],
+    });
+    for (const codes of [
+      [fixed.code, percent.code],
+      [percent.code, fixed.code],
+    ]) {
+      expect(
+        await couponService.validateCoupons({
+          codes,
+          restaurantId,
+          orderAmount: 100,
+        }),
+      ).toMatchObject({ valid: false });
+    }
+    await expect(
+      couponService.updateCoupon(fixed.id, {
+        incompatibleCouponIds: [fixed.id],
+      }),
+    ).rejects.toThrow();
+    await testDb.drizzle
+      .update(coupons)
+      .set({ restaurantId: null })
+      .where(eq(coupons.id, percent.id));
+    await expect(
+      couponService.updateCoupon(fixed.id, {
+        incompatibleCouponIds: [percent.id],
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("allows editing after an excluded coupon is soft-deleted", async () => {
+    const service = new CouponService(testDb.bindings.DB, {
+      JWT_SECRET: "test",
+    });
+    const [first, second] = await testDb.drizzle.select().from(coupons);
+    await service.updateCoupon(first.id, {
+      incompatibleCouponIds: [second.id],
+    });
+    await service.deleteCoupon(second.id);
+    await expect(
+      service.updateCoupon(first.id, {
+        name: "Updated",
+        incompatibleCouponIds: [second.id],
+      }),
+    ).resolves.toMatchObject({ name: "Updated" });
+  });
+
+  it("rejects a partial date edit that reverses the existing interval", async () => {
+    const service = new CouponService(testDb.bindings.DB, {
+      JWT_SECRET: "test",
+    });
+    const [coupon] = await testDb.drizzle.select().from(coupons);
+    await expect(
+      service.updateCoupon(coupon.id, { validFrom: new Date("2100-01-01") }),
+    ).rejects.toMatchObject({ code: "INVALID_DATE_RANGE" });
+    await expect(
+      service.updateCoupon(coupon.id, { validTo: new Date("2010-01-01") }),
+    ).rejects.toMatchObject({ code: "INVALID_DATE_RANGE" });
+  });
+
+  it("returns earlier claims when a later coupon runs out after preview", async () => {
+    const service = new OrderService(testDb.bindings.DB, {
+      JWT_SECRET: "test",
+    });
+    const original = CouponService.prototype.claimUsageSlot;
+    let calls = 0;
+    const claim = vi
+      .spyOn(CouponService.prototype, "claimUsageSlot")
+      .mockImplementation(async function (id) {
+        if (++calls === 2) throw new Error("Coupon usage limit reached");
+        return original.call(this, id);
+      });
+    try {
+      await expect(service.createOrder(request)).rejects.toThrow(
+        "Coupon usage limit reached",
+      );
+    } finally {
+      claim.mockRestore();
+    }
+    expect(
+      (await testDb.drizzle.select().from(coupons)).map(
+        (coupon) => coupon.usedCount,
+      ),
+    ).toEqual([0, 0, 0]);
+    expect(await testDb.drizzle.select().from(orders)).toHaveLength(0);
+  });
+
+  it("rolls back all claims when the order batch fails", async () => {
+    await testDb.bindings.DB.exec(
+      "CREATE TRIGGER fail_multicoupon_order BEFORE INSERT ON orders BEGIN SELECT RAISE(ABORT, 'forced failure'); END;",
+    );
+    try {
+      await expect(
+        new OrderService(testDb.bindings.DB, {
+          JWT_SECRET: "test",
+        }).createOrder(request),
+      ).rejects.toThrow("forced failure");
+    } finally {
+      await testDb.bindings.DB.exec("DROP TRIGGER fail_multicoupon_order");
+    }
+    expect(
+      (await testDb.drizzle.select().from(coupons)).map(
+        (coupon) => coupon.usedCount,
+      ),
+    ).toEqual([0, 0, 0]);
+    expect(await testDb.drizzle.select().from(couponUsage)).toHaveLength(0);
+  });
+
+  it("rejects duplicate codes before claiming any usage", async () => {
+    const service = new OrderService(testDb.bindings.DB, {
+      JWT_SECRET: "test",
+    });
+    await expect(
+      service.createOrder({ ...request, couponCodes: ["SAVE5", "save5"] }),
+    ).rejects.toThrow();
+    expect(await testDb.drizzle.select().from(couponUsage)).toHaveLength(0);
+  });
+});

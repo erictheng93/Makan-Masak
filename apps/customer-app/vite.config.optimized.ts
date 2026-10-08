@@ -80,7 +80,6 @@ export default defineConfig({
         theme_color: "#3b82f6",
         background_color: "#ffffff",
         display: "standalone",
-        orientation: "portrait-primary",
         scope: "/",
         start_url: "/",
         icons: [
@@ -108,13 +107,6 @@ export default defineConfig({
             short_name: "掃描",
             description: "掃描桌上的 QR Code 開始點餐",
             url: "/scan",
-            icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }],
-          },
-          {
-            name: "手動輸入",
-            short_name: "輸入",
-            description: "手動輸入餐廳和桌號",
-            url: "/manual",
             icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }],
           },
         ],

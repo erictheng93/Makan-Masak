@@ -2,11 +2,17 @@
   <div class="language-switcher">
     <div class="relative">
       <button
-        class="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+        class="flex min-h-11 items-center gap-2 rounded-full bg-ios-card px-3 py-2 text-sm text-ios-text shadow-card-sm transition-colors hover:bg-ios-bg focus:outline-none focus:ring-2 focus:ring-ios-blue focus:ring-offset-2"
+        :class="{ 'h-11 w-11 justify-center px-0': compact }"
+        :aria-label="`${t('profile.language')}: ${currentLanguageInfo?.name ?? ''}`"
+        :aria-expanded="isOpen"
+        aria-haspopup="true"
         @click="toggleDropdown"
       >
         <span class="text-lg">{{ currentLanguageInfo?.flag }}</span>
-        <span class="font-medium">{{ currentLanguageInfo?.name }}</span>
+        <span v-if="!compact" class="font-medium">{{
+          currentLanguageInfo?.name
+        }}</span>
         <svg
           class="w-4 h-4 transition-transform duration-200"
           :class="{ 'rotate-180': isOpen }"
@@ -25,15 +31,17 @@
 
       <div
         v-show="isOpen"
-        class="absolute top-full left-0 mt-1 w-full min-w-max bg-white border border-gray-300 rounded-lg shadow-lg z-50"
+        class="absolute top-full z-50 mt-2 w-full min-w-max rounded-2xl bg-ios-card shadow-card-lg"
+        :class="compact ? 'right-0' : 'left-0'"
       >
         <div class="py-1">
           <button
             v-for="language in supportedLanguages"
             :key="language.code"
-            class="w-full flex items-center gap-2 px-4 py-2 text-sm text-left hover:bg-gray-50 focus:outline-none focus:bg-gray-50"
+            class="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-ios-text hover:bg-ios-bg focus:outline-none focus:bg-ios-bg"
             :class="{
-              'bg-orange-50 text-orange-700': currentLanguage === language.code,
+              'bg-ios-blue-soft text-ios-blue-deep':
+                currentLanguage === language.code,
             }"
             @click="selectLanguage(language.code)"
           >
@@ -41,7 +49,7 @@
             <span class="font-medium">{{ language.name }}</span>
             <svg
               v-if="currentLanguage === language.code"
-              class="w-4 h-4 ml-auto text-orange-600"
+              class="ml-auto h-4 w-4 text-ios-blue"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -63,7 +71,17 @@ import { ref, onMounted, onUnmounted } from "vue";
 import { useI18n } from "@/composables/useI18n";
 import type { SupportedLanguage } from "@/i18n";
 
+withDefaults(
+  defineProps<{
+    compact?: boolean;
+  }>(),
+  {
+    compact: false,
+  },
+);
+
 const {
+  t,
   currentLanguage,
   currentLanguageInfo,
   supportedLanguages,

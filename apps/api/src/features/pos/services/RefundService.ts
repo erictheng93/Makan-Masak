@@ -34,7 +34,24 @@ type LiveRefundResult = Refund & {
   refundId: string;
   ledgerMutation: true;
 };
-type RefundResult = PostCloseRefundResult | LiveRefundResult;
+type PendingApprovalRefundResult = Refund & {
+  refundId: string;
+  ledgerMutation: false;
+  approvalRequired: true;
+};
+type RefundResult =
+  | PostCloseRefundResult
+  | LiveRefundResult
+  | PendingApprovalRefundResult;
+
+export interface ProcessPosRefundOptions {
+  /**
+   * Cashiers create an auditable processing record.  They never settle a
+   * refund or alter the drawer/order ledger themselves; Admin/Owner approval
+   * performs that finalisation through `approveRefund`.
+   */
+  requireApproval?: boolean;
+}
 
 export interface RefundCompletionAlert {
   title: string;
@@ -45,6 +62,12 @@ export interface RefundCompletionAlert {
 
 export interface RefundServiceOptions {
   alertSink?: (alert: RefundCompletionAlert) => Promise<void> | void;
+  /**
+   * Called once a completed refund has been written onto its order, so the
+   * caller can drop whatever it cached for that order. A failure is logged and
+   * swallowed: the money has already moved.
+   */
+  onOrderRefunded?: (orderId: string) => Promise<void> | void;
 }
 
 /**
@@ -71,11 +94,13 @@ export class RefundService {
   private db;
   private businessTimezone;
   private readonly alertSink?: RefundServiceOptions["alertSink"];
+  private readonly onOrderRefunded?: RefundServiceOptions["onOrderRefunded"];
 
   constructor(d1: D1Database, options: RefundServiceOptions = {}) {
     this.db = drizzle(d1);
     this.businessTimezone = new BusinessTimezoneResolver(this.db);
     this.alertSink = options.alertSink;
+    this.onOrderRefunded = options.onOrderRefunded;
   }
 
   /**
@@ -86,6 +111,7 @@ export class RefundService {
     registerId: string,
     processedBy: string,
     shiftId?: string,
+    options: ProcessPosRefundOptions = {},
   ): Promise<{ success: boolean; data?: RefundResult; error?: string }> {
     try {
       const validatedData = processRefundSchema.parse(data);
@@ -182,20 +208,26 @@ export class RefundService {
           processedBy,
           customerSignature: validatedData.customerSignature || null,
           status: "processing",
-          metadata: JSON.stringify(
-            isPostClose ? { postCloseAdjustment: true } : {},
-          ),
+          metadata: JSON.stringify({
+            ...(isPostClose ? { postCloseAdjustment: true } : {}),
+            ...(options.requireApproval ? { approvalRequired: true } : {}),
+          }),
           processedAt,
         }),
       ];
 
       // 記錄現金流動（如果是現金退款）— closed shifts must not mutate the live
       // ledger. The refund row itself serves as the adjustment record.
-      if (!isPostClose && shiftId && validatedData.refundMethod === "cash") {
+      if (
+        !isPostClose &&
+        !options.requireApproval &&
+        shiftId &&
+        validatedData.refundMethod === "cash"
+      ) {
         writeStatements.push(
           this.buildCashMovementInsert(shiftId, registerId, {
             type: "refund",
-            amount: -validatedData.refundAmount, // 負數表示流出
+            amountCents: -refundAmountCents, // 負數表示流出
             description: `退款 - ${refundNumber}`,
             recordedBy: processedBy,
             referenceId: undefined,
@@ -208,13 +240,28 @@ export class RefundService {
         writeStatements as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]],
       );
 
-      // Complete the refund synchronously. The previous implementation
+      // Owner/Admin refunds complete synchronously.  A cashier's refund is
+      // deliberately left processing until the existing Admin/Owner approval
+      // endpoint calls the same finaliser; it must not move either cash or
+      // order balances before that approval.
+      //
+      // The previous implementation
       // scheduled this via setTimeout to mimic an asynchronous PSP callback,
       // but on Cloudflare Workers a timer scheduled after the response is sent
       // is not guaranteed to run (and there is no real external callback here),
       // so refunds got stuck in "processing". There is no genuine async work to
       // defer, so we settle the terminal state before returning.
-      await this.completeRefund(refundId);
+      if (!options.requireApproval) {
+        await this.completeRefund(refundId, {
+          originalOrderId: validatedData.originalOrderId,
+          refundAmountCents,
+          shiftId: shiftId ?? null,
+          registerId,
+          refundMethod: validatedData.refundMethod,
+          mutateShift: !isPostClose,
+          recordCashMovement: false,
+        });
+      }
 
       const [refund] = await this.db
         .select()
@@ -233,16 +280,22 @@ export class RefundService {
 
       return {
         success: true,
-        data: (isPostClose
+        data: (options.requireApproval
           ? {
               ...base,
-              adjustmentId: refund.id,
               ledgerMutation: false,
+              approvalRequired: true,
             }
-          : {
-              ...base,
-              ledgerMutation: true,
-            }) as RefundResult,
+          : isPostClose
+            ? {
+                ...base,
+                adjustmentId: refund.id,
+                ledgerMutation: false,
+              }
+            : {
+                ...base,
+                ledgerMutation: true,
+              }) as RefundResult,
       };
     } catch (error) {
       console.error("處理退款失敗:", error);
@@ -434,15 +487,12 @@ export class RefundService {
     approvedBy: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const completedAt = new Date();
-      await this.db
-        .update(refunds)
-        .set({
-          status: "completed",
-          approvedBy,
-          completedAt,
-        })
-        .where(and(eq(refunds.id, refundId), eq(refunds.status, "processing")));
+      // New POS refunds settle synchronously. This endpoint remains the
+      // Admin/Owner-only finaliser for a cashier's `processing` refund (and
+      // recovery path for legacy processing rows). It deliberately uses the
+      // same finaliser so it cannot mark a refund complete while leaving
+      // orders.refund_amount_cents stale.
+      await this.completeRefund(refundId, undefined, approvedBy);
 
       return { success: true };
     } catch (error) {
@@ -494,7 +544,7 @@ export class RefundService {
     registerId: string,
     movement: {
       type: string;
-      amount: number;
+      amountCents: number;
       description: string;
       recordedBy: string;
       referenceId?: number;
@@ -509,7 +559,7 @@ export class RefundService {
       shiftId,
       registerId,
       type: movement.type,
-      amountCents: toRequiredCents(movement.amount),
+      amountCents: movement.amountCents,
       description: movement.description,
       referenceId: movement.referenceId || null,
       referenceType: movement.referenceType || null,
@@ -527,16 +577,131 @@ export class RefundService {
    * handled here — the refund is best-effort marked "failed" and an alert is
    * raised — so a completion failure never rejects the caller.
    */
-  private async completeRefund(refundId: string): Promise<void> {
+  private async completeRefund(
+    refundId: string,
+    knownRefund?: {
+      originalOrderId: string;
+      refundAmountCents: number;
+      shiftId: string | null;
+      registerId: string;
+      refundMethod: string;
+      metadata?: unknown;
+      mutateShift: boolean;
+      recordCashMovement: boolean;
+    },
+    approvedBy?: string,
+  ): Promise<void> {
     try {
+      const refund =
+        knownRefund ??
+        (
+          await this.db
+            .select({
+              originalOrderId: refunds.originalOrderId,
+              refundAmountCents: refunds.refundAmountCents,
+              shiftId: refunds.shiftId,
+              registerId: refunds.registerId,
+              refundMethod: refunds.refundMethod,
+              metadata: refunds.metadata,
+            })
+            .from(refunds)
+            .where(eq(refunds.id, refundId))
+            .limit(1)
+        )[0];
+
+      if (!refund) {
+        throw new Error("退款記錄不存在");
+      }
+
+      const metadata = parseRefundMetadata(refund.metadata);
+      const recordCashMovement =
+        knownRefund?.recordCashMovement ??
+        (approvedBy === undefined ? false : metadata.approvalRequired === true);
       const completedAt = new Date();
-      await this.db
+      const transition = await this.db
         .update(refunds)
         .set({
           status: "completed",
           completedAt,
+          ...(approvedBy ? { approvedBy } : {}),
         })
-        .where(and(eq(refunds.id, refundId), eq(refunds.status, "processing")));
+        .where(and(eq(refunds.id, refundId), eq(refunds.status, "processing")))
+        .run();
+
+      // The transition guard makes duplicate approval/retry safe: only the
+      // writer that changed processing -> completed may change order and shift
+      // aggregates. A no-op is a legitimate replay, not another refund.
+      if (mutationChanges(transition) === 0) {
+        return;
+      }
+
+      const refundAmountCents = refund.refundAmountCents ?? 0;
+      const nextRefundTotalCents = sql<number>`COALESCE(${orders.refundAmountCents}, 0) + ${refundAmountCents}`;
+      const isFullyRefunded = sql<boolean>`${nextRefundTotalCents} >= COALESCE(${orders.totalAmountCents}, 0)`;
+
+      await this.db
+        .update(orders)
+        .set({
+          refundAmountCents: nextRefundTotalCents,
+          paymentStatus: sql`CASE WHEN ${isFullyRefunded} THEN 'refunded' ELSE 'partial_refunded' END`,
+          status: sql`CASE WHEN ${isFullyRefunded} THEN 'refunded' ELSE ${orders.status} END`,
+          updatedAt: completedAt,
+        })
+        .where(eq(orders.id, refund.originalOrderId));
+
+      try {
+        await this.onOrderRefunded?.(refund.originalOrderId);
+      } catch (hookError) {
+        console.error("Refund order-changed hook failed:", hookError);
+      }
+
+      if (refund.shiftId && (knownRefund?.mutateShift ?? true)) {
+        await this.db
+          .update(cashShifts)
+          .set({
+            totalRefundsCents: sql`COALESCE(${cashShifts.totalRefundsCents}, 0) + ${refundAmountCents}`,
+          })
+          // A refund against a closed shift is an adjustment note only. It
+          // must never rewrite the already-reconciled closed ledger.
+          .where(
+            and(
+              eq(cashShifts.id, refund.shiftId),
+              eq(cashShifts.status, "active"),
+            ),
+          );
+      }
+
+      // A cashier has not handed out cash while the record is awaiting
+      // approval.  When an Admin/Owner approves that exact new-style record,
+      // post the matching drawer movement once.  Legacy processing rows do
+      // not carry `approvalRequired`, so this cannot duplicate their old
+      // movement records.
+      if (
+        recordCashMovement &&
+        refund.shiftId &&
+        refund.refundMethod === "cash" &&
+        metadata.postCloseAdjustment !== true
+      ) {
+        const [shift] = await this.db
+          .select({ status: cashShifts.status })
+          .from(cashShifts)
+          .where(eq(cashShifts.id, refund.shiftId))
+          .limit(1);
+        if (shift?.status === "active") {
+          await this.buildCashMovementInsert(
+            refund.shiftId,
+            refund.registerId,
+            {
+              type: "refund",
+              amountCents: -refundAmountCents,
+              description: `退款 - 待審核 ${refundId}`,
+              recordedBy: approvedBy ?? "system",
+              referenceId: undefined,
+              referenceType: "refund",
+            },
+          );
+        }
+      }
     } catch (error) {
       console.error("更新退款狀態失敗:", error);
       let markFailedError: unknown;
@@ -559,6 +724,7 @@ export class RefundService {
       }
     }
   }
+
   private async alertRefundCompletionFailure(
     refundId: string,
     completionError: unknown,
@@ -591,4 +757,21 @@ export class RefundService {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function parseRefundMetadata(value: unknown): Record<string, unknown> {
+  if (typeof value !== "string") return {};
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === "object"
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function mutationChanges(result: unknown): number {
+  const meta = (result as { meta?: { changes?: unknown } } | null)?.meta;
+  return typeof meta?.changes === "number" ? meta.changes : 0;
 }

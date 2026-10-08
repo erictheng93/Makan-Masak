@@ -1,8 +1,95 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createPinia, setActivePinia } from "pinia";
 import { adminRestaurantOptionalRoutes, router } from "./index";
 import { UserRole } from "@/types";
+import { setAuthTokenProvider } from "@/utils/authTokenProvider";
+import { useAuthStore } from "@/stores/auth";
+import { api } from "@/services/api";
+
+const redirectToKitchenDisplay = vi.hoisted(() => vi.fn());
+
+vi.mock("@/utils/loginRedirect", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/utils/loginRedirect")>()),
+  redirectToKitchenDisplay,
+}));
+
+// A structurally valid JWT that expires in 2100, so the guard does not try a
+// refresh. Only the payload's exp is read client-side.
+const LIVE_TOKEN = [
+  btoa(JSON.stringify({ alg: "HS256", typ: "JWT" })),
+  btoa(JSON.stringify({ exp: 4102444800 })),
+  "sig",
+].join(".");
+
+function signInAs(role: UserRole) {
+  localStorage.setItem(
+    "auth_user",
+    JSON.stringify({ id: "u-1", username: "staff", role, restaurantId: "r-1" }),
+  );
+  setAuthTokenProvider(() => LIVE_TOKEN);
+  setActivePinia(createPinia());
+}
+
+// The dashboard home is the owner's analytics page; every endpoint it calls
+// is admin/owner only. A cashier who opened the admin root was sent through
+// /login?redirect=/dashboard and landed there, on a permission error and
+// KPI tiles reading NT$0 (production, 2026-09-22).
+describe("dashboard home by role", () => {
+  beforeEach(async () => {
+    setActivePinia(createPinia());
+    await router.push("/login");
+  });
+  afterEach(() => {
+    localStorage.clear();
+    setAuthTokenProvider(() => null);
+    vi.restoreAllMocks();
+    redirectToKitchenDisplay.mockClear();
+  });
+
+  it("logs out an authenticated chef and opens the kitchen display", async () => {
+    signInAs(UserRole.CHEF);
+    vi.spyOn(api, "post").mockResolvedValue({} as never);
+    const authStore = useAuthStore();
+
+    await router.push("/dashboard");
+
+    expect(authStore.isAuthenticated).toBe(false);
+    expect(router.currentRoute.value.path).not.toBe("/dashboard");
+    expect(redirectToKitchenDisplay).toHaveBeenCalledExactlyOnceWith(
+      "http://localhost:3002",
+    );
+  }, 30_000);
+
+  it("keeps an authenticated chef on an allowed kitchen page", async () => {
+    signInAs(UserRole.CHEF);
+
+    await router.push("/dashboard/kitchen");
+
+    expect(router.currentRoute.value.path).toBe("/dashboard/kitchen");
+    expect(useAuthStore().isAuthenticated).toBe(true);
+    expect(redirectToKitchenDisplay).not.toHaveBeenCalled();
+  }, 30_000);
+
+  it("sends a cashier to the checkout instead", async () => {
+    signInAs(UserRole.CASHIER);
+    await router.push("/dashboard");
+    expect(router.currentRoute.value.path).toBe("/dashboard/pos/checkout");
+  }, 30_000);
+
+  it("sends service crew to the service station instead", async () => {
+    signInAs(UserRole.SERVICE);
+    await router.push("/dashboard");
+    expect(router.currentRoute.value.path).toBe("/service");
+  }, 30_000);
+
+  it("keeps the owner on the dashboard home", async () => {
+    signInAs(UserRole.OWNER);
+    await router.push("/dashboard");
+    expect(router.currentRoute.value.path).toBe("/dashboard");
+  }, 30_000);
+});
 
 describe("admin dashboard router", () => {
   it("allows platform market checkouts without a selected restaurant", () => {
@@ -73,6 +160,25 @@ describe("admin dashboard router", () => {
       titleKey: "pages.schedulingAnalytics",
       roles: [UserRole.ADMIN, UserRole.OWNER],
     });
+  });
+
+  it("limits the market open report route to admins and owners", () => {
+    const report = router.resolve("/dashboard/market-open-report");
+    expect(report.name).toBe("MarketOpenReport");
+    expect(report.matched.at(-1)?.meta).toMatchObject({
+      titleKey: "pages.marketOpenReport",
+      roles: [UserRole.ADMIN, UserRole.OWNER],
+    });
+  });
+
+  it("gives platform pages their own breadcrumb title, not the overview's", () => {
+    const titleKeyFor = (name: string) =>
+      router.getRoutes().find((route) => route.name === name)?.meta.titleKey;
+
+    expect(titleKeyFor("PlatformMarkets")).toBe("pages.platformMarkets");
+    expect(titleKeyFor("PlatformOnboardingApplications")).toBe(
+      "pages.platformOnboarding",
+    );
   });
 
   it("keeps OwnerOverview, Orders, and GroupOrders role boundaries distinct", () => {

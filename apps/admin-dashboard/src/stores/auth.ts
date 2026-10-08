@@ -81,6 +81,7 @@ const clearStoredSessionState = () => {
     localStorage.removeItem(LEGACY_CSRF_STORAGE_KEY);
     localStorage.removeItem(AUTH_REFRESH_TOKEN_KEY);
     sessionStorage.removeItem(AUTH_REFRESH_TOKEN_KEY);
+    sessionStorage.removeItem("trial_expired_modal_seen");
   } catch {
     // Storage may be unavailable; in-memory refs are still cleared below.
   }

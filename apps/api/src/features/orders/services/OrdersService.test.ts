@@ -213,6 +213,8 @@ describe("OrdersService realtime broadcasts", () => {
       items: [{ menuItemId: 101, quantity: 2, notes: "不要辣" }],
       notes: "市場結帳：逢甲夜市 / fengjia / checkout-1",
       orderSource: "market_checkout",
+      couponCodes: ["SAVE10", "SAVE20"],
+      couponGuestIdentity: "guest-hash",
       orderType: "shop",
       deliveryInfo: { type: "takeaway" },
       isGuestOrder: true,
@@ -222,6 +224,8 @@ describe("OrdersService realtime broadcasts", () => {
       expect.objectContaining({
         restaurantId: "restaurant-1",
         orderSource: "market_checkout",
+        couponCodes: ["SAVE10", "SAVE20"],
+        couponGuestIdentity: "guest-hash",
         deliveryInfo: { type: "takeaway" },
       }),
     );
@@ -665,6 +669,7 @@ describe("OrdersService workflows", () => {
       ],
       [{ ...validOrder, notes: "x".repeat(1001) }, "NOTES_TOO_LONG"],
       [{ ...validOrder, couponCode: "AB" }, "INVALID_COUPON_CODE_FORMAT"],
+      [{ ...validOrder, couponCodes: ["AB"] }, "INVALID_COUPON_CODE_FORMAT"],
     ];
 
     for (const [input, code] of cases) {
@@ -818,6 +823,41 @@ describe("OrdersService workflows", () => {
           new Date("2026-06-01T00:00:00.000Z"),
           new Date("2026-06-02T00:00:00.000Z"),
         ],
+      }),
+      1,
+      20,
+    );
+  });
+
+  // The service station asks for today's deliveries with dateFrom alone.
+  // Requiring both ends dropped the filter entirely, so "today" counted an
+  // order delivered weeks earlier.
+  it("keeps a one-sided date range instead of dropping it", async () => {
+    const service = new OrdersService(createEnv() as never);
+    getBaseOrders.mockResolvedValue({
+      orders: [],
+      pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+    });
+
+    await service.getOrders({
+      customerId: "customer-77",
+      dateFrom: new Date("2026-09-21T16:00:00.000Z"),
+    });
+    expect(getBaseOrders).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        dateRange: [new Date("2026-09-21T16:00:00.000Z"), undefined],
+      }),
+      1,
+      20,
+    );
+
+    await service.getOrders({
+      customerId: "customer-77",
+      dateTo: new Date("2026-09-22T16:00:00.000Z"),
+    });
+    expect(getBaseOrders).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        dateRange: [undefined, new Date("2026-09-22T16:00:00.000Z")],
       }),
       1,
       20,
@@ -1098,6 +1138,22 @@ describe("OrdersService workflows", () => {
     await expect(service.updateItemStatus(501, "ready")).rejects.toMatchObject({
       code: "ORDER_ITEM_STATUS_CONFLICT",
     });
+  });
+
+  it("drops the cached order when an item moves, so the detail read is not stale", async () => {
+    const env = createEnv();
+    const service = new OrdersService(env as never);
+    updateBaseOrderItemStatus.mockResolvedValueOnce(undefined);
+
+    await service.updateItemStatus(501, "ready", undefined, "42");
+
+    expect(updateBaseOrderItemStatus).toHaveBeenCalledWith(
+      501,
+      "ready",
+      undefined,
+    );
+    expect(env.CACHE_KV.delete).toHaveBeenCalledWith("order:42:full");
+    expect(env.CACHE_KV.delete).toHaveBeenCalledWith("order:42:basic");
   });
 
   it("covers status history and search fallback paths", async () => {

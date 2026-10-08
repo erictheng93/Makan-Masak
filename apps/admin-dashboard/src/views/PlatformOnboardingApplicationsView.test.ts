@@ -11,7 +11,11 @@ import {
 vi.mock("@/i18n", () => ({
   // useDateFormatter reads `locale` as well as `t`; a mock without it throws
   // inside every row's formatDate and the render silently aborts.
-  useI18n: () => ({ t: (key: string) => key, locale: { value: "zh-TW" } }),
+  useI18n: () => ({
+    t: (key: string, params?: Record<string, string>) =>
+      params ? `${key} ${Object.values(params).join(" ")}` : key,
+    locale: { value: "zh-TW" },
+  }),
 }));
 
 vi.mock("@/composables/useDateFormatter", () => ({
@@ -23,10 +27,13 @@ vi.mock("@/composables/useDateFormatter", () => ({
 vi.mock("@/services/onboardingApplicationsService", () => ({
   onboardingApplicationsService: {
     list: vi.fn(),
+    auditEvents: vi.fn(),
     approve: vi.fn(),
     regenerateSetupLink: vi.fn(),
     reject: vi.fn(),
   },
+  ONBOARDING_APPLICATIONS_CHANGED: "onboarding-applications:changed",
+  ONBOARDING_POLL_INTERVAL_MS: 60_000,
 }));
 
 const SETUP_LINK =
@@ -98,6 +105,7 @@ describe("PlatformOnboardingApplicationsView", () => {
     });
 
     mockList([buildApplication()]);
+    vi.mocked(onboardingApplicationsService.auditEvents).mockResolvedValue([]);
     vi.mocked(onboardingApplicationsService.approve).mockResolvedValue({
       tenantId: "T-1",
       subdomain: "laksa",
@@ -128,6 +136,94 @@ describe("PlatformOnboardingApplicationsView", () => {
       limit: 50,
     });
     expect(wrapper.text()).toContain("Laksa Shop");
+  });
+
+  it("shows a chronological application audit trail with actor and reason", async () => {
+    vi.mocked(onboardingApplicationsService.auditEvents).mockResolvedValue([
+      {
+        id: "evt-0",
+        eventType: "submitted",
+        actorId: null,
+        actorEmail: null,
+        metadata: null,
+        createdAtMs: Date.parse("2026-06-01T12:00:00.000Z"),
+      },
+      {
+        id: "evt-1a",
+        eventType: "approved",
+        actorId: "admin-1",
+        actorEmail: "admin@example.test",
+        metadata: null,
+        createdAtMs: Date.parse("2026-06-02T11:00:00.000Z"),
+      },
+      {
+        id: "evt-1",
+        eventType: "rejected",
+        actorId: "admin-1",
+        actorEmail: "admin@example.test",
+        metadata: { reason: "Duplicate application" },
+        createdAtMs: Date.parse("2026-06-02T12:00:00.000Z"),
+      },
+    ]);
+    const wrapper = mount(PlatformOnboardingApplicationsView);
+    await flushPromises();
+
+    await wrapper.get('[data-testid="audit-events-APP-1"]').trigger("click");
+    await flushPromises();
+
+    expect(onboardingApplicationsService.auditEvents).toHaveBeenCalledWith(
+      "APP-1",
+    );
+    expect(
+      wrapper.get('[data-testid="onboarding-audit-dialog"]').text(),
+    ).toContain("admin@example.test");
+    expect(
+      wrapper.get('[data-testid="onboarding-audit-dialog"]').text(),
+    ).toContain("platformOnboarding.audit.submitted");
+    expect(
+      wrapper.get('[data-testid="onboarding-audit-dialog"]').text(),
+    ).toContain("platformOnboarding.audit.approved");
+    expect(
+      wrapper.get('[data-testid="onboarding-audit-reason"]').text(),
+    ).toContain("Duplicate application");
+  });
+
+  it("refreshes the list in the background while the page stays open", async () => {
+    vi.useFakeTimers();
+    try {
+      const wrapper = mount(PlatformOnboardingApplicationsView);
+      await flushPromises();
+      expect(onboardingApplicationsService.list).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(onboardingApplicationsService.list).toHaveBeenCalledTimes(2);
+
+      wrapper.unmount();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(onboardingApplicationsService.list).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("tells the sidebar badge to recount after approving", async () => {
+    const onChanged = vi.fn();
+    window.addEventListener("onboarding-applications:changed", onChanged);
+    try {
+      const wrapper = mount(PlatformOnboardingApplicationsView);
+      await flushPromises();
+      expect(onChanged).not.toHaveBeenCalled();
+
+      await wrapper
+        .get('[data-testid="approve-onboarding-APP-1"]')
+        .trigger("click");
+      await flushPromises();
+
+      expect(onChanged).toHaveBeenCalledOnce();
+      wrapper.unmount();
+    } finally {
+      window.removeEventListener("onboarding-applications:changed", onChanged);
+    }
   });
 
   it("approves an application and shows the handoff", async () => {
@@ -221,7 +317,7 @@ describe("PlatformOnboardingApplicationsView", () => {
       credentialDelivery: buildDelivery({
         channel: "email",
         status: "failed",
-        errorMessage: "RESEND_API_KEY is not configured",
+        errorMessage: "ONBOARDING_NOTIFICATION_EMAIL binding is not configured",
       }),
       status: "completed",
     });
@@ -234,7 +330,9 @@ describe("PlatformOnboardingApplicationsView", () => {
     await flushPromises();
 
     const delivery = wrapper.get('[data-testid="owner-handoff-delivery"]');
-    expect(delivery.text()).toContain("RESEND_API_KEY is not configured");
+    expect(delivery.text()).toContain(
+      "ONBOARDING_NOTIFICATION_EMAIL binding is not configured",
+    );
   });
 
   it("reopens the handoff for a completed application without provisioning again", async () => {

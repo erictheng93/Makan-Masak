@@ -3,6 +3,8 @@ import { and, eq, notInArray, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import {
   amountFromCents,
+  cashMovements,
+  cashShifts,
   orders,
   paymentTransactions,
   tables,
@@ -24,7 +26,11 @@ import {
   OWNER_ALERTED_PAYMENT_FAILURE_CODES,
   raisePaymentFailedAlert,
 } from "../../alerts/producers";
-import { collectableAmount, isCurrencyAlignedCents } from "@makanmasak/utils";
+import {
+  collectableAmount,
+  generateUUID,
+  isCurrencyAlignedCents,
+} from "@makanmasak/utils";
 import {
   resolveCurrencyForRequest,
   resolveRestaurantCurrency,
@@ -51,6 +57,16 @@ export interface ProcessPaymentOptions {
   idempotencyKey?: string;
   customerInfo?: unknown;
   metadata?: unknown;
+  /**
+   * Present only for a counter sale.  Route-level tenant and active-shift
+   * checks establish this binding before PaymentService adds it to the same
+   * payment ledger batch.
+   */
+  pos?: {
+    registerId: string;
+    shiftId: string;
+    operatorId: string;
+  };
 }
 
 export interface ProcessPaymentResult {
@@ -78,6 +94,53 @@ export interface ProcessPaymentResult {
 /** What `runPayment` learned before it failed, for the failure record. */
 interface PaymentAttemptContext {
   currency?: CurrencyCode;
+}
+
+interface PosSalesBreakdown {
+  totalCents: number;
+  cashCents: number;
+  cardCents: number;
+  digitalCents: number;
+}
+
+function paymentMethodBreakdown(
+  payments: Array<{ method: string; amountCents: number }>,
+): PosSalesBreakdown {
+  return payments.reduce<PosSalesBreakdown>(
+    (totals, payment) => {
+      const amountCents = payment.amountCents;
+      totals.totalCents += amountCents;
+
+      switch (posPaymentMethodBucket(payment.method)) {
+        case "cash":
+          totals.cashCents += amountCents;
+          break;
+        case "card":
+          totals.cardCents += amountCents;
+          break;
+        case "digital":
+          totals.digitalCents += amountCents;
+          break;
+      }
+      return totals;
+    },
+    { totalCents: 0, cashCents: 0, cardCents: 0, digitalCents: 0 },
+  );
+}
+
+function posPaymentMethodBucket(
+  paymentMethod: string,
+): "cash" | "card" | "digital" {
+  switch (paymentMethod.trim().toLowerCase()) {
+    case "cash":
+      return "cash";
+    case "card":
+    case "credit_card":
+    case "debit_card":
+      return "card";
+    default:
+      return "digital";
+  }
 }
 
 function cents(value: number): number {
@@ -277,6 +340,16 @@ export class PaymentService {
     const paymentId = `pay_${input.orderId}_${Date.now()}`;
     const shouldCloseOrder = input.closeOrder ?? true;
     const now = Date.now();
+    const posSales = options.pos
+      ? paymentMethodBreakdown(
+          input.paymentMode === "partial"
+            ? (input.payments ?? []).map((payment) => ({
+                method: payment.method,
+                amountCents: cents(payment.amount),
+              }))
+            : [{ method, amountCents: collectableCents }],
+        )
+      : undefined;
 
     const orderUpdate = this.prepareOrderPaymentUpdate(
       input.orderId,
@@ -320,6 +393,14 @@ export class PaymentService {
               {}),
             paymentMode: input.paymentMode,
             closeOrder: shouldCloseOrder,
+            ...(options.pos
+              ? {
+                  pos: {
+                    registerId: options.pos.registerId,
+                    shiftId: options.pos.shiftId,
+                  },
+                }
+              : {}),
           }),
         },
         now,
@@ -369,6 +450,17 @@ export class PaymentService {
         rawPayload: { status: "paid" },
         occurredAtMs: now,
       }),
+      ...(options.pos && posSales
+        ? this.preparePosSaleLedgerStatements({
+            orderId: input.orderId,
+            paymentId,
+            registerId: options.pos.registerId,
+            shiftId: options.pos.shiftId,
+            operatorId: options.pos.operatorId,
+            sales: posSales,
+            now,
+          })
+        : []),
     ] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
 
     if (shouldCloseOrder) {
@@ -562,6 +654,71 @@ export class PaymentService {
       createdAt: timestamp,
       updatedAt: timestamp,
     });
+  }
+
+  /**
+   * Keep the POS ledger alongside the canonical payment ledger.  `totalSales`
+   * measures every method, while the drawer is deliberately fed only by cash
+   * sales.  Unknown electronic methods are classified as digital so a new
+   * gateway cannot silently make the three method buckets disagree with total
+   * sales.
+   */
+  private preparePosSaleLedgerStatements(input: {
+    orderId: string;
+    paymentId: string;
+    registerId: string;
+    shiftId: string;
+    operatorId: string;
+    sales: PosSalesBreakdown;
+    now: number;
+  }): BatchItem<"sqlite">[] {
+    const statements: BatchItem<"sqlite">[] = [
+      this.db
+        .update(cashShifts)
+        .set({
+          totalSalesCents: sql`COALESCE(${cashShifts.totalSalesCents}, 0) + ${input.sales.totalCents}`,
+          cashSalesCents: sql`COALESCE(${cashShifts.cashSalesCents}, 0) + ${input.sales.cashCents}`,
+          cardSalesCents: sql`COALESCE(${cashShifts.cardSalesCents}, 0) + ${input.sales.cardCents}`,
+          digitalSalesCents: sql`COALESCE(${cashShifts.digitalSalesCents}, 0) + ${input.sales.digitalCents}`,
+          totalTransactions: sql`${cashShifts.totalTransactions} + 1`,
+        })
+        // The route verifies it immediately before the payment. Repeating
+        // the active guard prevents a stale counter request from posting into
+        // a shift that was closed while the request was in flight.
+        .where(
+          and(
+            eq(cashShifts.id, input.shiftId),
+            eq(cashShifts.registerId, input.registerId),
+            eq(cashShifts.status, "active"),
+          ),
+        ),
+    ];
+
+    if (input.sales.cashCents > 0) {
+      statements.push(
+        this.db.insert(cashMovements).values({
+          id: generateUUID(),
+          shiftId: input.shiftId,
+          registerId: input.registerId,
+          type: "sale",
+          amountCents: input.sales.cashCents,
+          description: `POS payment ${input.paymentId}`,
+          referenceId: null,
+          referenceType: "order",
+          paymentMethod: "cash",
+          denominationBreakdown: "{}",
+          recordedBy: input.operatorId,
+          approvalStatus: "approved",
+          metadata: JSON.stringify({
+            orderId: input.orderId,
+            paymentId: input.paymentId,
+          }),
+          createdAt: new Date(input.now),
+        }),
+      );
+    }
+
+    return statements;
   }
 
   private prepareOrderPaymentUpdate(

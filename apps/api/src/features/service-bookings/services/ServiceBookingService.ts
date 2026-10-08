@@ -75,8 +75,6 @@ export interface CreateServiceBookingInput {
   specialRequests?: string;
   /** 卷 code applied as a pricing-layer discount. */
   voucherCode?: string;
-  paymentRequirement?: ServiceBookingPaymentRequirement;
-  depositAmountCents?: number;
   reminderOptIn?: boolean;
   reminderMinutesBefore?: number;
   recurrenceGroupId?: string;
@@ -242,9 +240,9 @@ export class ServiceBookingService {
       }
       const amountDueCents = Math.max(0, priceCents - voucherDiscountCents);
       const payment = resolvePaymentTerms({
-        requirement: input.paymentRequirement,
+        requirement: service.paymentRequirement,
         amountDueCents,
-        depositAmountCents: input.depositAmountCents,
+        depositAmountCents: service.depositAmountCents,
       });
       const reminder = resolveReminder({
         optIn: input.reminderOptIn,
@@ -574,6 +572,15 @@ export class ServiceBookingService {
     pin?: string;
   }): Promise<ServiceBookingRow> {
     const booking = await this.loadPayableBooking(input.bookingId);
+    if (
+      booking.paymentRequirement ===
+      SERVICE_BOOKING_PAYMENT_REQUIREMENT.PAY_AT_VENUE
+    ) {
+      throw badRequest(
+        "This booking must be paid at the venue",
+        "SERVICE_PAYMENT_AT_VENUE",
+      );
+    }
 
     let paymentRef: string | null = null;
     if (booking.amountDueCents > 0) {
@@ -608,7 +615,11 @@ export class ServiceBookingService {
     const booking = await this.loadPayableBooking(bookingId);
     return this.markConfirmed(booking, {
       method: SERVICE_BOOKING_PAYMENT_METHOD.CASH,
-      amountPaidCents: 0, // collected at venue
+      // amountDueCents is the amount this confirmation settles: the full
+      // charge for pay-at-venue/prepay, or the required deposit for deposit.
+      // Recording zero made a confirmed cash booking look unpaid in revenue
+      // and cash-drawer reports.
+      amountPaidCents: booking.amountDueCents,
       paymentRef: null,
     });
   }
@@ -1410,7 +1421,7 @@ function resolvePaymentTerms(input: {
   amountDueCents: number;
 } {
   const requirement =
-    input.requirement ?? SERVICE_BOOKING_PAYMENT_REQUIREMENT.PREPAY;
+    input.requirement ?? SERVICE_BOOKING_PAYMENT_REQUIREMENT.PAY_AT_VENUE;
   if (requirement === SERVICE_BOOKING_PAYMENT_REQUIREMENT.NONE) {
     return {
       requirement,
@@ -1441,7 +1452,7 @@ function resolvePaymentTerms(input: {
     };
   }
   return {
-    requirement: SERVICE_BOOKING_PAYMENT_REQUIREMENT.PREPAY,
+    requirement,
     depositRequiredCents: 0,
     balanceDueCents: 0,
     amountDueCents: input.amountDueCents,

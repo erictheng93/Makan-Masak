@@ -17,7 +17,9 @@ vi.mock("@/i18n", () => ({
 
 vi.mock("@/composables/useDateFormatter", () => ({
   useDateFormatter: () => ({
-    formatTime: () => "12:00",
+    // Mirrors Intl: an unparseable date formats as "Invalid Date".
+    formatTime: (value: Date) =>
+      Number.isNaN(new Date(value).getTime()) ? "Invalid Date" : "12:00",
     formatTimeWithSeconds: () => "12:00:00",
   }),
 }));
@@ -143,6 +145,20 @@ describe("ServiceView", () => {
       status: "delivered",
       notes: "Delivered by service crew",
     });
+
+    wrapper.unmount();
+  });
+
+  it("does not present a report action that has no server delivery channel", async () => {
+    const wrapper = mount(ServiceView);
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain("serviceView.reportIssue");
+    expect(
+      wrapper
+        .findAll("button")
+        .some((button) => button.text() === "serviceView.reportIssue"),
+    ).toBe(false);
 
     wrapper.unmount();
   });
@@ -281,5 +297,88 @@ describe("ServiceView", () => {
     expect(otherRestaurant.text()).not.toContain("serviceView.confirmDelivery");
 
     otherRestaurant.unmount();
+  });
+
+  describe("found on production, 2026-09-22", () => {
+    it("does not poll after unmount while the initial refresh is pending", async () => {
+      vi.useFakeTimers();
+      let finishInitialRequest!: (response: never) => void;
+      vi.mocked(api.get).mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishInitialRequest = resolve;
+          }),
+      );
+
+      const wrapper = mount(ServiceView);
+      expect(api.get).toHaveBeenCalledTimes(1);
+      wrapper.unmount();
+      finishInitialRequest({ data: { data: [] } } as never);
+      await flushPromises();
+      const callsAfterUnmount = vi.mocked(api.get).mock.calls.length;
+
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(api.get).toHaveBeenCalledTimes(callsAfterUnmount);
+    });
+
+    it("picks up newly ready orders without the crew pressing refresh", async () => {
+      // Nothing on the service station listened for updates: an order the
+      // kitchen finished stayed invisible until someone tapped Refresh.
+      vi.useFakeTimers();
+      const wrapper = mount(ServiceView);
+      await flushPromises();
+      const readyCalls = () =>
+        vi
+          .mocked(api.get)
+          .mock.calls.filter(
+            ([, options]) =>
+              (options as { status?: string })?.status === "ready",
+          ).length;
+      const before = readyCalls();
+
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(readyCalls()).toBe(before + 1);
+
+      wrapper.unmount();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(readyCalls()).toBe(before + 1);
+    });
+
+    it("shows the delivery time on today's timeline, not Invalid Date", async () => {
+      vi.mocked(api.get).mockImplementation(
+        async (_url: string, paramsOrConfig?: unknown) => {
+          const options = paramsOrConfig as { status?: string } | undefined;
+          const orders =
+            options?.status === "delivered"
+              ? [
+                  {
+                    ...readyOrder,
+                    id: "order-9",
+                    orderNumber: "ORD-9",
+                    status: "delivered",
+                    deliveredAt: Date.parse("2026-08-21T12:05:00.000Z"),
+                  },
+                ]
+              : [];
+          return { data: { data: orders } } as never;
+        },
+      );
+      const wrapper = mount(ServiceView);
+      await flushPromises();
+
+      expect(wrapper.text()).toContain("ORD-9");
+      expect(wrapper.text()).not.toContain("Invalid Date");
+      wrapper.unmount();
+    });
+
+    it("does not show an on-time rate or rating that nothing measures", async () => {
+      // Both were constants (92% and 4.8/5), shown as if they were today's.
+      const wrapper = mount(ServiceView);
+      await flushPromises();
+
+      expect(wrapper.text()).not.toContain("serviceView.onTimeRate");
+      expect(wrapper.text()).not.toContain("serviceView.customerRating");
+      wrapper.unmount();
+    });
   });
 });

@@ -234,6 +234,20 @@ describe("MarketLocationMap", () => {
     expect(markerSetLngLat).toHaveBeenCalledTimes(2);
   });
 
+  it("labels closed vendor marker popups with today's open state", async () => {
+    mapOn.mockImplementation((event: string, callback: () => void) => {
+      if (event === "load") callback();
+    });
+    mount(MarketLocationMap, {
+      props: { market: market(), vendors: [vendor({ isOpen: false })] },
+    });
+    await vi.dynamicImportSettled();
+
+    expect(popupSetText).toHaveBeenCalledWith(
+      expect.stringContaining("markets.vendors.notOpenToday"),
+    );
+  });
+
   it("uses the production PMTiles style when production map env is not injected", async () => {
     vi.stubEnv("PROD", true);
     vi.stubEnv("VITE_MAP_STYLE_URL", "");

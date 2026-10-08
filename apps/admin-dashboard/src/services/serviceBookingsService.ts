@@ -7,6 +7,12 @@ export type ServiceBookingStatus =
   | "cancelled"
   | "no_show";
 
+export type ServiceBookingPaymentRequirement =
+  | "none"
+  | "deposit"
+  | "prepay"
+  | "pay_at_venue";
+
 export interface ServiceBookingSlot {
   id: string;
   restaurantId: string;
@@ -60,7 +66,7 @@ export interface ServiceBooking {
   partySize: number;
   status: ServiceBookingStatus;
   confirmationCode: string;
-  paymentRequirement: "none" | "deposit" | "prepay";
+  paymentRequirement: ServiceBookingPaymentRequirement;
   depositRequiredCents: number;
   balanceDueCents: number;
   amountDueCents: number;

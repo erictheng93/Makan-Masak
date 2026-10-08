@@ -256,9 +256,18 @@
                 :key="coupon.id"
                 class="rounded-2xl p-4 bg-ios-bg active:bg-ios-separator cursor-pointer transition-all duration-200"
                 :class="{
-                  'bg-ios-blue/10 shadow-card-sm':
-                    selectedCoupon?.id === coupon.id,
+                  'bg-ios-blue/10 shadow-card-sm': selectedCodes.includes(
+                    coupon.code.toUpperCase(),
+                  ),
                 }"
+                role="checkbox"
+                tabindex="0"
+                :aria-checked="
+                  selectedCodes.includes(coupon.code.toUpperCase())
+                "
+                :aria-label="coupon.name"
+                @keydown.space.prevent="selectCoupon(coupon)"
+                @keydown.enter.prevent="selectCoupon(coupon)"
                 @click="selectCoupon(coupon)"
               >
                 <div class="flex justify-between items-start">
@@ -313,7 +322,7 @@
                   <!-- 選擇指示器 -->
                   <div class="ml-3">
                     <div
-                      v-if="selectedCoupon?.id === coupon.id"
+                      v-if="selectedCodes.includes(coupon.code.toUpperCase())"
                       class="w-5 h-5 bg-ios-blue rounded-full flex items-center justify-center"
                     >
                       <svg
@@ -337,20 +346,6 @@
                   </div>
                 </div>
               </div>
-            </div>
-
-            <!-- 應用選擇的優惠券 -->
-            <div
-              v-if="selectedCoupon && !appliedCoupon"
-              class="mt-4 pt-4 border-t border-ios-separator"
-            >
-              <button
-                class="w-full bg-ios-blue text-white py-2.5 px-4 rounded-full active:scale-[0.98] transition-transform duration-150 font-medium"
-                @click="applyCouponFromList"
-              >
-                {{ t("cart.applyCoupon") }} -
-                {{ formatCouponDiscount(selectedCoupon) }}
-              </button>
             </div>
           </div>
 
@@ -429,48 +424,39 @@
             </div>
           </div>
 
-          <!-- 已應用的優惠券 -->
           <div
-            v-if="appliedCoupon"
-            class="mt-4 p-3.5 bg-ios-green/10 rounded-2xl"
+            v-for="coupon in selectedCouponRows"
+            :key="coupon.code"
+            data-testid="selected-coupon"
+            class="mt-4 p-3.5 bg-ios-green/10 rounded-2xl flex justify-between items-center"
           >
-            <div class="flex justify-between items-center">
-              <div>
-                <div class="flex items-center space-x-2">
-                  <svg
-                    class="w-5 h-5 text-ios-green"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <span class="text-sm font-medium text-ios-green">{{
-                    appliedCoupon.name || appliedCoupon.code
-                  }}</span>
-                </div>
-                <p class="text-sm text-ios-green mt-1">
-                  {{ t("cart.saving") }} {{ formatPrice(couponDiscountAmount) }}
-                </p>
-              </div>
-              <button
-                class="text-sm text-ios-green font-medium"
-                @click="clearCoupon"
+            <div>
+              <span class="text-sm font-medium text-ios-green-deep">{{
+                coupon.name
+              }}</span>
+              <p
+                v-if="coupon.discountAmount !== undefined"
+                class="text-sm text-ios-green-deep mt-1"
               >
-                {{ t("cart.removeCoupon") }}
-              </button>
+                {{ t("cart.saving") }}
+                {{ formatPrice(coupon.discountAmount) }}
+              </p>
             </div>
+            <button
+              type="button"
+              :aria-label="`${t('cart.removeCoupon')} ${coupon.code}`"
+              :disabled="isSubmitting"
+              class="min-h-11 text-sm text-ios-green-deep font-medium"
+              @click="removeCoupon(coupon.code)"
+            >
+              {{ t("cart.removeCoupon") }}
+            </button>
           </div>
         </div>
 
         <!-- 智能推薦優惠券 -->
         <CouponRecommendation
-          v-if="!appliedCoupon && availableCoupons.length > 0"
+          v-if="!selectedCodes.length && availableCoupons.length > 0"
           :coupons="availableCoupons"
           :order-amount="cartStore.subtotal"
           @select-coupon="selectAndApplyCoupon"
@@ -642,7 +628,10 @@ import type { CreateGuestOrderRequest } from "@/services/orderApi";
 import menuApi from "@/services/menuApi";
 import { useCurrency } from "@/composables/useCurrency";
 import { getOrderSubmitErrorI18nKey } from "@/utils/order-submit-error";
-import type { CreateOrderRequest } from "@makanmasak/shared-types";
+import type {
+  AppliedCoupon,
+  CreateOrderRequest,
+} from "@makanmasak/shared-types";
 import type { CouponValidationResult, CustomerCoupon } from "@/types/coupon";
 
 // Props
@@ -695,7 +684,19 @@ const isSubmitting = ref(false);
 
 // 優惠券相關狀態
 const couponCode = ref("");
-const appliedCoupon = ref<CustomerCoupon | null>(null);
+const selectedCodes = ref<string[]>([]);
+const appliedCoupons = ref<AppliedCoupon[]>([]);
+const couponPreviewValid = ref(true);
+const selectedCouponRows = computed(() =>
+  couponPreviewValid.value && selectedCodes.value.length
+    ? appliedCoupons.value
+    : selectedCodes.value.map((code) => ({
+        code,
+        name: code,
+        discountAmount: undefined,
+      })),
+);
+let couponPreviewRequest = 0;
 const isValidatingCoupon = ref(false);
 const couponValidationMessage = ref("");
 const couponValidationError = ref(false);
@@ -705,7 +706,6 @@ const couponDiscountAmount = ref(0);
 const showAvailableCoupons = ref(false);
 const isLoadingCoupons = ref(false);
 const availableCoupons = ref<CustomerCoupon[]>([]);
-const selectedCoupon = ref<CustomerCoupon | null>(null);
 
 // 最低消費相關狀態
 const minimumOrderAmount = ref(0);
@@ -771,6 +771,7 @@ const { mutate: createOrder } = useMutation({
     toast.success(t("toast.orderSubmitSuccess"));
     pendingOrderMutationId.value = null;
     cartStore.clearCart();
+    isSubmitting.value = false;
     router.push(
       `/restaurant/${props.restaurantId}/table/${props.tableId}/order/${order.id}`,
     );
@@ -789,6 +790,7 @@ const { mutate: createGuestOrder } = useMutation({
     toast.success(t("toast.orderSubmitSuccess"));
     pendingOrderMutationId.value = null;
     cartStore.clearCart();
+    isSubmitting.value = false;
     router.push(
       `/restaurant/${props.restaurantId}/table/${props.tableId}/order/${response.order.id}`,
     );
@@ -855,7 +857,13 @@ const minimumOrderShortfall = computed(() => {
 });
 
 const canPlaceOrder = computed(() => {
-  return !cartStore.isEmpty && isMinimumOrderMet.value && !isSubmitting.value;
+  return (
+    !cartStore.isEmpty &&
+    isMinimumOrderMet.value &&
+    !isSubmitting.value &&
+    couponPreviewValid.value &&
+    !isValidatingCoupon.value
+  );
 });
 
 // 初始化購物車
@@ -890,6 +898,7 @@ const handleRemoveItem = (itemId: string) => {
 };
 
 const handleSubmitOrder = () => {
+  if (!canPlaceOrder.value) return;
   // 驗證必要資訊
   if (cartStore.isEmpty) {
     toast.warning(t("toast.cartCannotBeEmpty"));
@@ -902,6 +911,7 @@ const handleSubmitOrder = () => {
 
 // 優惠券相關方法
 const onCouponInput = () => {
+  if (!couponPreviewValid.value) return;
   // 清除之前的驗證狀態
   couponValidationMessage.value = "";
   couponValidationError.value = false;
@@ -936,72 +946,81 @@ const validateCouponCode = (
   return { isValid: true };
 };
 
-const validateCoupon = async () => {
-  if (!couponCode.value.trim()) return;
-
-  // Client-side input validation
+const validateCoupon = () => {
+  if (isSubmitting.value) return;
   const validation = validateCouponCode(couponCode.value);
   if (!validation.isValid) {
     couponValidationMessage.value = validation.error || "";
     couponValidationError.value = true;
     return;
   }
-
-  isValidatingCoupon.value = true;
-  couponValidationMessage.value = "";
-  couponValidationError.value = false;
-
-  try {
-    // Sanitize input: trim whitespace and convert to uppercase
-    const sanitizedCode = couponCode.value.trim().toUpperCase();
-
-    const result = await apiClient.post<CouponValidationResult>(
-      "/coupons/validate",
-      {
-        code: sanitizedCode,
-        restaurantId: props.restaurantId.toString(),
-        orderAmount: cartStore.subtotal,
-        menuItems: cartStore.items.map((item) => ({
-          menuItemId: item.menuItem.id,
-          quantity: item.quantity,
-        })),
-      },
-    );
-
-    if (result.valid) {
-      // 驗證成功
-      appliedCoupon.value = result.coupon ?? null;
-      couponDiscountAmount.value = result.discountAmount || 0;
-      couponValidationMessage.value = tWithParams("toast.couponApplied", {
-        amount: formatPrice(couponDiscountAmount.value),
-      });
-      couponValidationError.value = false;
-    } else {
-      // 驗證失敗
-      appliedCoupon.value = null;
-      couponDiscountAmount.value = 0;
-      couponValidationMessage.value = result.error || t("toast.couponFailed");
-      couponValidationError.value = true;
-    }
-  } catch (error) {
-    console.error("Coupon validation error:", error);
-    appliedCoupon.value = null;
-    couponDiscountAmount.value = 0;
-    couponValidationMessage.value = t("toast.couponValidationError");
-    couponValidationError.value = true;
-  } finally {
-    isValidatingCoupon.value = false;
+  const code = couponCode.value.trim().toUpperCase();
+  if (!selectedCodes.value.includes(code)) {
+    selectedCodes.value = [...selectedCodes.value, code];
   }
+  couponCode.value = "";
 };
 
-const clearCoupon = () => {
-  couponCode.value = "";
-  appliedCoupon.value = null;
-  couponDiscountAmount.value = 0;
-  couponValidationMessage.value = "";
-  couponValidationError.value = false;
-  selectedCoupon.value = null;
+const removeCoupon = (code: string) => {
+  if (isSubmitting.value) return;
+  selectedCodes.value = selectedCodes.value.filter(
+    (selected) => selected !== code,
+  );
 };
+
+// Invalidate synchronously, including while a confirmation dialog is open.
+// Only the latest response may publish a discount or unlock checkout.
+watch(
+  () =>
+    JSON.stringify({
+      codes: selectedCodes.value,
+      restaurantId: props.restaurantId,
+      orderAmount: cartStore.subtotal,
+      menuItems: cartStore.items.map((item) => ({
+        menuItemId: item.menuItem.id,
+        quantity: item.quantity,
+      })),
+    }),
+  async (context) => {
+    const request = ++couponPreviewRequest;
+    appliedCoupons.value = [];
+    couponDiscountAmount.value = 0;
+    couponValidationMessage.value = "";
+    couponValidationError.value = false;
+    couponPreviewValid.value = selectedCodes.value.length === 0;
+    isValidatingCoupon.value = !couponPreviewValid.value;
+    if (couponPreviewValid.value) return;
+
+    try {
+      const result = await apiClient.post<CouponValidationResult>(
+        "/coupons/validate",
+        JSON.parse(context),
+      );
+      if (request !== couponPreviewRequest) return;
+      if (
+        result.valid &&
+        result.appliedCoupons?.length === selectedCodes.value.length
+      ) {
+        appliedCoupons.value = result.appliedCoupons;
+        couponDiscountAmount.value = result.discountAmount ?? 0;
+        couponPreviewValid.value = true;
+        couponValidationMessage.value = tWithParams("toast.couponApplied", {
+          amount: formatPrice(couponDiscountAmount.value),
+        });
+      } else {
+        couponValidationMessage.value = result.error || t("toast.couponFailed");
+        couponValidationError.value = true;
+      }
+    } catch {
+      if (request !== couponPreviewRequest) return;
+      couponValidationMessage.value = t("toast.couponValidationError");
+      couponValidationError.value = true;
+    } finally {
+      if (request === couponPreviewRequest) isValidatingCoupon.value = false;
+    }
+  },
+  { flush: "sync" },
+);
 
 // 可用優惠券相關方法
 const toggleAvailableCoupons = async () => {
@@ -1028,16 +1047,10 @@ const loadAvailableCoupons = async () => {
 };
 
 const selectCoupon = (coupon: CustomerCoupon) => {
-  if (appliedCoupon.value) return; // 如果已有應用的優惠券，不允許選擇
-  selectedCoupon.value = selectedCoupon.value?.id === coupon.id ? null : coupon;
-};
-
-const applyCouponFromList = async () => {
-  if (!selectedCoupon.value) return;
-
-  // 使用選中的優惠券代碼進行驗證
-  couponCode.value = selectedCoupon.value.code;
-  await validateCoupon();
+  if (isSubmitting.value) return;
+  const code = coupon.code.trim().toUpperCase();
+  if (selectedCodes.value.includes(code)) removeCoupon(code);
+  else selectedCodes.value = [...selectedCodes.value, code];
 };
 
 // 優惠券格式化方法
@@ -1075,12 +1088,10 @@ const getCouponTypeText = (discountType: CustomerCoupon["discountType"]) => {
     : t("cart.fixedAmount");
 };
 
-const selectAndApplyCoupon = async (coupon: CustomerCoupon) => {
-  selectedCoupon.value = coupon;
-  await applyCouponFromList();
-};
+const selectAndApplyCoupon = (coupon: CustomerCoupon) => selectCoupon(coupon);
 
 const submitOrder = async () => {
+  if (!canPlaceOrder.value) return;
   try {
     isSubmitting.value = true;
     showConfirmation.value = false;
@@ -1113,7 +1124,9 @@ const submitOrder = async () => {
           notes: item.notes,
         })),
         notes: orderNotes.value.trim() || undefined,
-        couponCode: appliedCoupon.value?.code,
+        couponCodes: selectedCodes.value.length
+          ? [...selectedCodes.value]
+          : undefined,
         clientMutationId: pendingOrderMutationId.value ?? undefined,
       };
 
@@ -1132,7 +1145,9 @@ const submitOrder = async () => {
           notes: item.notes,
         })),
         notes: orderNotes.value.trim() || undefined,
-        couponCode: appliedCoupon.value?.code,
+        couponCodes: selectedCodes.value.length
+          ? [...selectedCodes.value]
+          : undefined,
         clientMutationId: pendingOrderMutationId.value ?? undefined,
       };
 

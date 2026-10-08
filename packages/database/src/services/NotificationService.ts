@@ -5,7 +5,7 @@
 
 import { BaseService, type CloudflareEnv } from "./base";
 import { createSmsProvider, TwilioSmsProvider, type SmsProvider } from "./sms";
-import type { D1Database } from "@cloudflare/workers-types";
+import type { D1Database, SendEmail } from "@cloudflare/workers-types";
 
 /**
  * Strip all HTML tags from a string, in one left-to-right scan.
@@ -145,22 +145,28 @@ export interface EmailProvider {
   }): Promise<{ success: boolean; messageId?: string; error?: string }>;
 }
 
-export type EmailProviderName = "resend" | "noop";
+export type EmailProviderName = "cloudflare" | "noop";
 
-export type EmailProviderEnv = Pick<
-  CloudflareEnv,
-  "RESEND_API_KEY" | "USE_MAILCHANNELS"
->;
+export type EmailProviderEnv = Pick<CloudflareEnv, "NOTIFICATION_EMAIL">;
 
 /**
  * Select the email provider without constructing it so deployment defaults are
- * directly testable. The retired unauthenticated MailChannels relay is never
- * selected, even if an old deployment still has its opt-in flag.
+ * directly testable. Cloudflare Email Service is the only provider; without its
+ * binding, email is off and production email flows refuse up front.
  */
 export function resolveEmailProviderName(
   env: EmailProviderEnv,
 ): EmailProviderName {
-  return env.RESEND_API_KEY ? "resend" : "noop";
+  return env.NOTIFICATION_EMAIL ? "cloudflare" : "noop";
+}
+
+export function createEmailProvider(
+  env: EmailProviderEnv,
+  fromEmail: string,
+): EmailProvider | null {
+  return env.NOTIFICATION_EMAIL
+    ? new CloudflareEmailProvider(env.NOTIFICATION_EMAIL, fromEmail)
+    : null;
 }
 
 // ========================================
@@ -173,14 +179,10 @@ export function resolveEmailProviderName(
  */
 export type SMSProvider = SmsProvider;
 
-// ========================================
-// Resend Email Provider
-// ========================================
-
-export class ResendEmailProvider implements EmailProvider {
+export class CloudflareEmailProvider implements EmailProvider {
   constructor(
-    private apiKey: string,
-    private fromEmail: string = "notifications@makanmasak.com",
+    private binding: SendEmail,
+    private fromEmail: string,
   ) {}
 
   async sendEmail(params: {
@@ -190,42 +192,19 @@ export class ResendEmailProvider implements EmailProvider {
     text?: string;
   }) {
     try {
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          "Content-Type": "application/json",
-          "User-Agent": "MakanMasak-Worker/1.0",
-        },
-        body: JSON.stringify({
-          from: this.fromEmail,
-          to: params.to,
-          subject: params.subject,
-          html: params.html,
-          text: params.text || stripHtmlTags(params.html),
-        }),
+      const result = await this.binding.send({
+        to: params.to,
+        from: this.fromEmail,
+        subject: params.subject,
+        html: params.html,
+        text: params.text || stripHtmlTags(params.html),
       });
-
-      const responseText = await response.text();
-      let data: { message?: string; id?: string } = {};
-      try {
-        data = JSON.parse(responseText) as typeof data;
-      } catch {
-        // A gateway or proxy can return plain text or HTML on failure.
-      }
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: `Resend returned ${response.status}${data.message ? `: ${data.message}` : ""}`,
-        };
-      }
-
-      return { success: true, messageId: data.id };
+      return { success: true, messageId: result?.messageId };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error:
+          error instanceof Error ? error.message : "Cloudflare email failed",
       };
     }
   }
@@ -856,17 +835,10 @@ export class NotificationService extends BaseService {
   }
 
   private initializeProviders(env: CloudflareEnv) {
-    switch (this.emailProviderName) {
-      case "resend":
-        this.emailProvider = new ResendEmailProvider(
-          env.RESEND_API_KEY!,
-          env.NOTIFICATION_FROM_EMAIL || "notifications@makanmasak.com",
-        );
-        break;
-      case "noop":
-        this.emailProvider = null;
-        break;
-    }
+    this.emailProvider = createEmailProvider(
+      env,
+      env.NOTIFICATION_FROM_EMAIL || "notifications@makanmasak.com",
+    );
 
     // Initialize SMS provider. The vendor is chosen by SMS_PROVIDER (or
     // auto-detected from whichever credentials are present) — see ./sms.

@@ -67,6 +67,7 @@ export class PrinterService {
     this.healthMonitor = new PrinterHealthMonitor();
     this.statisticsCollector = new PrintStatisticsCollector();
 
+    this.jobManager.setJobExecutor(this.executePrintJob.bind(this));
     this.setupJobManagerCallbacks();
   }
 
@@ -231,9 +232,10 @@ export class PrinterService {
       return this.getDevice(this.config.defaultDevice);
     }
 
-    // 選擇第一個線上的設備
+    // Never queue a job for an offline printer. The agent must surface
+    // NO_PRINTER_AVAILABLE rather than claim a cloud receipt it cannot print.
     const devices = this.getDevices();
-    return devices.find((d) => d.status === "online") || devices[0] || null;
+    return devices.find((d) => d.status === "online") || null;
   }
 
   // =============================================
@@ -349,6 +351,24 @@ export class PrinterService {
       failed: number;
     };
   }> {
+    await Promise.all(
+      Array.from(this.drivers.entries()).map(async ([deviceId, driver]) => {
+        try {
+          const status = await driver.getStatus();
+          this.healthMonitor.updateHealth(
+            deviceId,
+            status === "online"
+              ? "online"
+              : status === "offline"
+                ? "offline"
+                : "error",
+          );
+        } catch {
+          this.healthMonitor.updateHealth(deviceId, "error");
+        }
+      }),
+    );
+
     const healthMap = this.healthMonitor.getAllHealth();
     const healthData = Array.from(healthMap.entries());
     const queueStats = this.jobManager.getQueueStatistics();
@@ -428,9 +448,36 @@ export class PrinterService {
 
   private selectPrinter(requestedDeviceId?: string): PrinterDevice | null {
     if (requestedDeviceId) {
-      return this.getDevice(requestedDeviceId);
+      const device = this.getDevice(requestedDeviceId);
+      return device?.status === "online" ? device : null;
     }
     return this.getDefaultDevice();
+  }
+
+  private async executePrintJob(job: PrintJob): Promise<void> {
+    const driver = this.drivers.get(job.deviceId);
+    if (!driver) {
+      throw new PrinterConnectionError(
+        `No driver is registered for printer ${job.deviceId}`,
+      );
+    }
+
+    if (!driver.isConnected() && !(await driver.connect())) {
+      this.healthMonitor.updateHealth(job.deviceId, "offline");
+      throw new PrinterConnectionError(
+        `Printer ${job.deviceId} is not connected`,
+      );
+    }
+
+    const response = await driver.print(job.content);
+    if (!response.success) {
+      this.healthMonitor.updateHealth(job.deviceId, "error");
+      throw new PrintError(
+        response.error?.message || `Printer ${job.deviceId} rejected the job`,
+      );
+    }
+
+    this.healthMonitor.updateHealth(job.deviceId, "online");
   }
 
   private estimateProcessingTime(job: PrintJob): number {

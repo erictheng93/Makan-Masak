@@ -1,4 +1,11 @@
-import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
+import {
+  sqliteTable,
+  text,
+  integer,
+  index,
+  check,
+} from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
 import { restaurants } from "./restaurants";
 
@@ -14,6 +21,16 @@ export const RESTAURANT_SERVICE_TYPES = [
 
 export type RestaurantServiceType = (typeof RESTAURANT_SERVICE_TYPES)[number];
 
+export const SERVICE_ITEM_PAYMENT_REQUIREMENTS = [
+  "none",
+  "deposit",
+  "prepay",
+  "pay_at_venue",
+] as const;
+
+export type ServiceItemPaymentRequirement =
+  (typeof SERVICE_ITEM_PAYMENT_REQUIREMENTS)[number];
+
 export const restaurantServiceItems = sqliteTable(
   "restaurant_service_items",
   {
@@ -28,6 +45,11 @@ export const restaurantServiceItems = sqliteTable(
       .notNull()
       .default("general"),
     priceCents: integer("price_cents"),
+    paymentRequirement: text("payment_requirement")
+      .$type<ServiceItemPaymentRequirement>()
+      .notNull()
+      .default("pay_at_venue"),
+    depositAmountCents: integer("deposit_amount_cents").notNull().default(0),
     priceLabel: text("price_label"),
     durationMinutes: integer("duration_minutes"),
     requiresBooking: integer("requires_booking", { mode: "boolean" })
@@ -63,6 +85,14 @@ export const restaurantServiceItems = sqliteTable(
       table.restaurantId,
       table.serviceType,
       table.isActive,
+    ),
+    paymentRequirementCheck: check(
+      "restaurant_service_items_payment_requirement_check",
+      sql`${table.paymentRequirement} IN ('none', 'deposit', 'prepay', 'pay_at_venue')`,
+    ),
+    depositAmountCheck: check(
+      "restaurant_service_items_deposit_amount_check",
+      sql`${table.depositAmountCents} >= 0`,
     ),
   }),
 );

@@ -28,6 +28,7 @@ import {
   SHOP_PAYMENT_CREDENTIALS_ENCRYPTION_SALT,
 } from "../../../shared/utils/encryption";
 import { resolveRestaurantCurrency } from "../../../shared/utils/restaurant-currency";
+import { assertPaymentProviderAllowed } from "../../../shared/policy/regionPolicyGuards";
 import {
   providerSupportsCurrency,
   maskMerchantId,
@@ -263,6 +264,22 @@ export class ShopPaymentCredentialService {
   }
 
   /**
+   * Check regional policy before a new charge. Refunds, status reads, webhooks,
+   * reconciliation, and credential loading intentionally do not call this.
+   */
+  async assertChargeAllowed(
+    restaurantId: string,
+    provider: ShopPaymentProvider,
+    marketSlug: string,
+  ): Promise<void> {
+    await assertPaymentProviderAllowed(this.env, {
+      restaurantId,
+      provider,
+      marketSlug,
+    });
+  }
+
+  /**
    * Fails with `SHOP_PAYMENT_PROVIDER_CURRENCY_UNSUPPORTED` when the shop is
    * not paid in a currency the wallet settles.
    */
@@ -270,6 +287,8 @@ export class ShopPaymentCredentialService {
     restaurantId: string,
     provider: ShopPaymentProvider,
   ): Promise<void> {
+    // Connect and re-enable have no market context, so only country policy applies.
+    await assertPaymentProviderAllowed(this.env, { restaurantId, provider });
     const currency = await resolveRestaurantCurrency(this.env.DB, restaurantId);
     if (providerSupportsCurrency(provider, currency)) return;
     throw new ApiError(

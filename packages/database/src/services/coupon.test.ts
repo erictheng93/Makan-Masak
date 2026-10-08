@@ -167,7 +167,10 @@ describe("couponDiscountCents", () => {
 });
 
 describe("CouponService.validateCoupon currency precision", () => {
-  function buildService(currency: string | undefined) {
+  function buildService(
+    currency: string | undefined,
+    overrides: Record<string, unknown> = {},
+  ) {
     const coupon = {
       id: 7,
       restaurantId: "restaurant-1",
@@ -187,6 +190,7 @@ describe("CouponService.validateCoupon currency precision", () => {
       discountPercentageBps: 1500,
       discountValueCents: null,
       maxDiscountAmountCents: null,
+      ...overrides,
     };
     const restaurantsFindFirst = vi.fn(async () =>
       currency === undefined ? undefined : { settings: { currency } },
@@ -231,6 +235,24 @@ describe("CouponService.validateCoupon currency precision", () => {
     expect(result).toMatchObject({ discountAmount: 23.25 });
     expect(restaurantsFindFirst).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["TWD", "NT$500"],
+    ["MYR", "RM 500.00"],
+  ])(
+    "words the minimum-spend error in the shop's own currency (%s)",
+    async (currency, expected) => {
+      const { service } = buildService(currency, {
+        minOrderAmountCents: 50000,
+      });
+
+      const result = await service.validateCoupon("pct15", "restaurant-1", 155);
+
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain(expected);
+      expect(result.error).not.toContain("需滿 $");
+    },
+  );
 
   it("defaults an unknown restaurant to TWD precision", async () => {
     const { service } = buildService(undefined);

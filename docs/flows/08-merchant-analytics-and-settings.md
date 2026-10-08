@@ -2,7 +2,7 @@
 
 > **對應 master board**：店家後台 → 分析與設定
 > **主要角色**：店主（role 1）、管理者（role 0）
-> **最後對照原始碼**：2026-08-21
+> **最後對照原始碼**：2026-09-22
 
 ## 1. 定位
 
@@ -19,6 +19,24 @@
 | 匯出 | `GET /analytics/export` |
 | 即時推送 | `GET /analytics/sse` |
 | 同步 | `POST /analytics/:restaurantId/sync`、`POST /analytics/batch-sync` |
+
+### 2.1 平台管理者的多幣別金額
+
+店主（role 1）的查詢必定由自己的 `restaurantId` 限定，因此金額只有該店的一種幣別；
+平台管理者（role 0）可以不帶 `restaurantId`，結果可能同時涵蓋 TWD、MYR、VND。
+這類回應中的金額一律是 `MoneyByCurrency`：
+
+```json
+[
+  { "currency": "TWD", "amountCents": 10000 },
+  { "currency": "MYR", "amountCents": 10000 }
+]
+```
+
+不得把不同幣別的 cents 相加。`/performance` 的營收、AOV 與成長率、`/customers`
+的顧客終身價值與消費額，以及 `/financial-report` 的營收、稅額、淨營收和期間比較，
+都按幣別分組。商品／分類的單一 revenue 會附帶 `currency`。財務報表的 `limit`
+只限制圖表／明細 bucket；摘要仍覆蓋整個選取的日期區間。
 
 ## 3. AI 洞察
 
@@ -116,6 +134,11 @@ role 0 完全繞過閘門。
 - `apps/api/src/app-factory.feature-gate.test.ts`
 - `apps/api/src/features/billing/routes/index.test.ts`
 - `apps/api/src/features/ai-analytics/routes/index.test.ts`
+- `tests/e2e/admin/`（`admin-real`）：`settings`、`billing`、`support-and-insights`（營運分析）
+
+**手動探索 QA（production）**
+
+- [店家後台流程 QA 2026-09-01](../investigations/2026-09-01-admin-dashboard-flow-qa.html) — F11–F20（本輪首次走這兩條）
 
 **相關文件**
 

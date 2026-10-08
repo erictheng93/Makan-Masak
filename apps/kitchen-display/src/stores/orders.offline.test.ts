@@ -161,7 +161,7 @@ describe("orders store offline workflow", () => {
       { restaurantId: "restaurant-1", status: "preparing" },
       501,
     );
-    expect(store.orders[0].status).toBe("preparing");
+    expect(store.orders[0].status).toBe("confirmed");
     expect(store.orders[0].items[0].status).toBe("preparing");
     expect(store.orders[0].items[0].startedAt).toBeTruthy();
   });
@@ -179,7 +179,7 @@ describe("orders store offline workflow", () => {
       { restaurantId: "restaurant-1", status: "ready" },
       501,
     );
-    expect(store.orders[0].status).toBe("ready");
+    expect(store.orders[0].status).toBe("confirmed");
     expect(store.orders[0].items[0].status).toBe("ready");
     expect(store.orders[0].items[0].completedAt).toBeTruthy();
   });
@@ -198,7 +198,7 @@ describe("orders store offline workflow", () => {
       { restaurantId: "restaurant-1", status: "preparing" },
       501,
     );
-    expect(store.orders[0].status).toBe("preparing");
+    expect(store.orders[0].status).toBe("confirmed");
     expect(store.orders[0].items[0].status).toBe("preparing");
     expect(store.orders[0].items[1].status).toBe("preparing");
   });

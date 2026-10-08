@@ -3,6 +3,9 @@ import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
 export const IDEMPOTENCY_SCOPES = {
   PAYMENT: "payment",
   WEBHOOK: "webhook",
+  PUBLIC_RESERVATION_CREATE: "public-reservation-create",
+  PUBLIC_RESERVATION_CANCEL: "public-reservation-cancel",
+  STAFF_RESERVATION_CREATE: "staff-reservation-create",
 } as const;
 
 export type IdempotencyScope =

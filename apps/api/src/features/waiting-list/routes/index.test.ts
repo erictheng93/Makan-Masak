@@ -21,6 +21,9 @@ vi.mock("../../../middleware/auth", () => ({
     if (auth.customer) c.set("customer", auth.customer);
     await next();
   }),
+  optionalAuth: vi.fn(async (_c, next) => {
+    await next();
+  }),
   authMiddleware: vi.fn(async (c, next) => {
     c.set("user", auth.user);
     await next();
@@ -91,16 +94,26 @@ routes.onError((err, c) => {
   return c.json({ success: false, error: { message: String(err) } }, 500);
 });
 
-function request(path: string, method = "GET", body?: unknown) {
+function request(path: string, method = "GET", body?: unknown, token?: string) {
   return routes.request(
     path,
     {
       method,
       body: body === undefined ? undefined : JSON.stringify(body),
-      headers:
-        body === undefined ? undefined : { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { "X-Waiting-Ticket-Token": token } : {}),
+      },
     },
-    { DB: {}, CACHE_KV: {} } as never,
+    {
+      JWT_SECRET: "test-waiting-secret-with-32-characters",
+      DB: {
+        prepare: () => ({
+          bind: () => ({ first: async () => ({ verified: 1 }) }),
+        }),
+      },
+      CACHE_KV: {},
+    } as never,
   );
 }
 
@@ -146,6 +159,35 @@ beforeEach(() => {
 });
 
 describe("waiting list routes", () => {
+  it("rejects phone-only reads and mutations and duplicate-join recovery", async () => {
+    for (const path of [
+      "/ticket-1",
+      "/lookup?restaurantId=rest-1&phone=0912345678",
+      "/history?restaurantId=rest-1&phone=0912345678",
+    ]) {
+      expect((await request(path)).status).toBe(403);
+    }
+    expect(
+      (
+        await request("/ticket-1", "DELETE", {
+          customerPhone: entry.customerPhone,
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await request("/ticket-1/confirm", "POST", {
+          customerPhone: entry.customerPhone,
+        })
+      ).status,
+    ).toBe(403);
+    serviceFns.joinWaitingList.mockResolvedValueOnce({
+      ...entry,
+      alreadyJoined: true,
+    });
+    expect((await request("/", "POST", entry)).status).toBe(403);
+  });
+
   it("joins the waiting list with optional customer identity", async () => {
     auth.customer = { id: "customer-1" };
 
@@ -172,7 +214,8 @@ describe("waiting list routes", () => {
     expect(invalid.status).toBe(400);
   });
 
-  it("looks up active tickets and validates public phone queries", async () => {
+  it("looks up tickets after verified phone recovery", async () => {
+    auth.customer = { id: "customer-1" };
     let response = await request(
       "/lookup?restaurantId=rest-1&phone=0912-345-678",
     );
@@ -191,7 +234,8 @@ describe("waiting list routes", () => {
     expect(response.status).toBe(404);
   });
 
-  it("returns public ticket history, entry detail, queue status, and wait estimates", async () => {
+  it("returns owner ticket history and detail, public queue status and wait estimates", async () => {
+    auth.customer = { id: "customer-1" };
     let response = await request(
       "/history?restaurantId=rest-1&phone=0912 345 678&limit=5",
     );
@@ -223,17 +267,32 @@ describe("waiting list routes", () => {
     expect(response.status).toBe(404);
   });
 
-  it("cancels and confirms public tickets after phone checks", async () => {
-    let response = await request("/ticket-1", "DELETE", {
-      customerPhone: "0912345678",
-    });
+  it("cancels and confirms tickets with a scoped guest capability", async () => {
+    const joined = await request("/", "POST", entry);
+    const joinedBody = (await joined.json()) as {
+      data: { waitingToken: string };
+    };
+    const token = joinedBody.data.waitingToken;
+    let response = await request(
+      "/ticket-1",
+      "DELETE",
+      {
+        customerPhone: "0912345678",
+      },
+      token,
+    );
 
     expect(response.status).toBe(200);
     expect(serviceFns.cancelWaiting).toHaveBeenCalledWith("ticket-1");
 
-    response = await request("/ticket-1/confirm", "POST", {
-      customerPhone: "0912345678",
-    });
+    response = await request(
+      "/ticket-1/confirm",
+      "POST",
+      {
+        customerPhone: "0912345678",
+      },
+      token,
+    );
     expect(response.status).toBe(200);
     expect(serviceFns.confirmWaiting).toHaveBeenCalledWith("ticket-1");
 

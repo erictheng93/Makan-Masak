@@ -1,14 +1,26 @@
 # i18n Locale Handoff
 
+The current CSV is the 2026-10-01 handoff copied from the app locale files.
+`locale-approval-manifest.json` pins its SHA-256 and records the review history.
+The latest addendum includes 25 admin-dashboard cells for #434 reviewed by Codex
+and re-approved at the maintainer's explicit instruction; earlier translations
+remain unchanged.
+The previous review covered the 60 cells in `REVIEW-CHECKLIST.md`, signed by
+Claude at the maintainer's instruction. No native speaker has read the machine
+translations; known tone issues remain. The 2026-05-26 approval covers the CSV at
+commit `a2ece23b`.
+
 `locale-translator-handoff.csv` is the source handoff for completing the app
 locales that were previously stubbed:
 
+- `apps/admin-dashboard`: `en-US`, `zh-CN`, `ja-JP`, `vi-VN`, `id-ID`
 - `apps/kitchen-display`: `zh-CN`, `vi-VN`, `ms-MY`, `id-ID`
 - `apps/onboarding-app`: `zh-CN`, `vi-VN`, `ms-MY`, `id-ID`
 - `apps/management-portal`: `zh-CN`, `vi-VN`, `ms-MY`, `id-ID`
 
 Each row contains the app name, dot-path key, Traditional Chinese source text,
-English source text, and one column for each target locale.
+an English secondary source (empty for admin, where `en-US` is a target), and
+one column for each target locale.
 
 To regenerate the handoff after source copy changes:
 
@@ -17,7 +29,13 @@ pnpm exec tsx scripts/i18n-locale-coverage.ts --export-handoff
 ```
 
 The export preserves any already-filled target cells for matching `app` + `key`
-rows, so it is safe to rerun after source copy changes.
+rows. After source copy changes, review those preserved cells against the new
+source text before seeking approval.
+
+Every new source key also needs a CSV row with all applicable target cells filled
+and a renewed manifest SHA-256 and review record. A passing
+`check:i18n-locales:strict` alone does not verify handoff completeness; run
+`i18n:check-handoff` after adding copy.
 
 After the target columns have been reviewed and accepted by the project
 maintainer, import the approved CSV:
@@ -33,6 +51,14 @@ import command performs the same validation before writing locale files. Both
 commands also validate `locale-approval-manifest.json`, which records the
 approved handoff SHA-256, approval date, reviewer or maintainer acceptance,
 covered apps, and covered locales.
+
+Import updates changed string literals in place, preserving surrounding
+comments, key order, quotes, and formatting. Unchanged locale files are not
+written. Keys added to the source are appended to their target object; obsolete
+keys (including empty branches) are removed, keeping adjacent comments. Locale
+files must default-export a literal object, directly or through a variable;
+unsupported property syntax is rejected before any file is written. Review
+`git diff` after importing, especially when adding or deleting keys.
 
 To check whether target locales still have fewer leaf keys than `zh-TW`:
 

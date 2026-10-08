@@ -1,7 +1,11 @@
 <template>
   <div class="orders-view" data-testid="admin-orders-page">
-    <!-- 訂單統計卡片 -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <!-- 訂單統計卡片：GET /orders/stats 只開給 role 0/1，其他角色只會看到假的 0 -->
+    <div
+      v-if="canViewStats"
+      class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
+      data-testid="admin-orders-stats"
+    >
       <div class="bg-white rounded-lg shadow p-4 lg:p-6">
         <div class="flex items-center">
           <div class="p-2 bg-yellow-100 rounded-lg">
@@ -659,7 +663,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onBeforeUnmount, onMounted, watch } from "vue";
 import { api } from "@/services/api";
 import { useRouter } from "vue-router";
 import { useI18n } from "@/i18n";
@@ -673,6 +677,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useCurrency } from "@/composables/useCurrency";
 import { useDateFormatter } from "@/composables/useDateFormatter";
 import { useOrderStore } from "@/stores/order";
+import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import { useVirtualScroll } from "@/composables/useVirtualScroll";
 import { useConfirmModal } from "@/composables/useConfirmModal";
 import OrderItemsEditor from "@/components/orders/OrderItemsEditor.vue";
@@ -817,6 +822,9 @@ const {
 });
 
 const STATS_ROLES = [0, 1];
+const canViewStats = computed(() =>
+  STATS_ROLES.includes(authStore.user?.role ?? -1),
+);
 
 const refreshOrderStats = async () => {
   const role = authStore.user?.role;
@@ -1073,10 +1081,22 @@ const getTypeText = (type: string) => {
   return texts[type] || type;
 };
 
+// Realtime keeps the list current while the socket is up; this covers a
+// dropped socket and the stat cards, which no realtime event updates.
+const ordersPoller = createVisibilityAwarePoller({
+  intervalMs: 30_000,
+  onTick: async () => {
+    if (isLoading.value) return;
+    await Promise.all([orderStore.refetchOrders(), refreshOrderStats()]);
+  },
+});
+
 // 生命周期
 onMounted(() => {
   refreshOrders();
+  ordersPoller.start();
 });
+onBeforeUnmount(() => ordersPoller.stop());
 </script>
 
 <style scoped>

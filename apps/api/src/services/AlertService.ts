@@ -5,7 +5,7 @@
  */
 
 import type { Env } from "../types/env";
-import { ResendEmailProvider } from "@makanmasak/database";
+import { createEmailProvider, type EmailProvider } from "@makanmasak/database";
 
 function escapeHtml(value: unknown): string {
   return String(value)
@@ -95,17 +95,13 @@ export class SlackAlertChannel implements AlertChannel {
 export class EmailAlertChannel implements AlertChannel {
   constructor(
     private toEmail: string,
-    private apiKey: string,
-    private fromEmail: string = "alerts@makanmasak.com",
+    private provider: EmailProvider,
   ) {}
 
   async sendAlert(alert: Alert): Promise<void> {
     const html = this.generateAlertHTML(alert);
 
-    const result = await new ResendEmailProvider(
-      this.apiKey,
-      this.fromEmail,
-    ).sendEmail({
+    const result = await this.provider.sendEmail({
       to: this.toEmail,
       subject: `[${alert.severity.toUpperCase()}] ${alert.title}`,
       html,
@@ -196,13 +192,13 @@ export class AlertService {
     }
 
     // Email alerts
-    if (this.env.ALERT_EMAIL_TO && this.env.RESEND_API_KEY) {
+    const emailProvider = createEmailProvider(
+      this.env,
+      this.env.NOTIFICATION_FROM_EMAIL || "alerts@makanmasak.com",
+    );
+    if (this.env.ALERT_EMAIL_TO && emailProvider) {
       this.channels.push(
-        new EmailAlertChannel(
-          this.env.ALERT_EMAIL_TO,
-          this.env.RESEND_API_KEY,
-          this.env.NOTIFICATION_FROM_EMAIL || "alerts@makanmasak.com",
-        ),
+        new EmailAlertChannel(this.env.ALERT_EMAIL_TO, emailProvider),
       );
     }
 

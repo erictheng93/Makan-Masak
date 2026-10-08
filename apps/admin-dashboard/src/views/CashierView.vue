@@ -1,15 +1,17 @@
 <template>
   <div class="cashier-checkout">
     <!-- 結帳操作列 -->
-    <div class="flex justify-between items-center mb-6">
-      <div class="flex items-center space-x-4">
+    <div
+      class="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+    >
+      <div class="flex flex-wrap items-center gap-3">
         <!-- 班次資訊 -->
         <div class="bg-blue-50 px-4 py-2 rounded-2xl">
           <p class="text-sm text-blue-800 font-medium">
-            {{ t("cashier.shift") }}: {{ currentShift.name }}
+            {{ t("cashier.shift") }}: {{ currentShift.id || "—" }}
           </p>
           <p class="text-xs text-blue-600">
-            {{ currentShift.startTime }} - {{ currentShift.endTime }}
+            <span data-testid="cashier-shift-times">{{ shiftTimeRange }}</span>
           </p>
         </div>
 
@@ -31,8 +33,9 @@
       </div>
 
       <!-- 功能按鈕 -->
-      <div class="flex items-center space-x-2">
+      <div class="flex flex-wrap items-center gap-2">
         <button
+          data-testid="cashier-open-shift-report"
           class="px-3 py-2 bg-ios-blue text-white rounded-full hover:bg-blue-600 transition-colors text-sm"
           @click="openShiftReport"
         >
@@ -53,12 +56,14 @@
       <div class="lg:col-span-2">
         <div class="bg-white rounded-lg shadow">
           <div class="p-6 border-b border-gray-200">
-            <div class="flex items-center justify-between">
+            <div
+              class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
               <h2 class="text-xl font-semibold text-gray-900">
                 {{ t("cashier.pendingOrders") }}
               </h2>
-              <div class="flex items-center space-x-4">
-                <div class="relative">
+              <div class="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+                <div class="relative min-w-0 flex-1 sm:flex-none">
                   <MagnifyingGlassIcon
                     class="absolute left-3 top-3 h-4 w-4 text-gray-400"
                   />
@@ -66,7 +71,7 @@
                     v-model="searchQuery"
                     type="text"
                     :placeholder="t('cashier.searchPlaceholder')"
-                    class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    class="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 sm:w-56"
                   />
                 </div>
                 <button
@@ -232,11 +237,31 @@
                   <span>{{ formatPrice(selectedOrder.taxAmount) }}</span>
                 </div>
                 <div
-                  v-if="selectedOrder.discountAmount > 0"
+                  v-if="
+                    selectedOrder.discountAmount > 0 ||
+                    selectedOrder.appliedCoupons?.length
+                  "
                   class="text-sm text-green-600"
                 >
-                  <div class="flex justify-between">
-                    <span>{{ t("cashier.discount") }}:</span>
+                  <div
+                    v-for="coupon in selectedOrder.appliedCoupons"
+                    :key="coupon.couponId"
+                    data-testid="applied-coupon"
+                    class="flex justify-between"
+                  >
+                    <span>{{ coupon.name }} ({{ coupon.code }})</span>
+                    <span>-{{ formatPrice(coupon.discountAmount) }}</span>
+                  </div>
+                  <div
+                    v-if="!selectedOrder.appliedCoupons?.length"
+                    class="flex justify-between"
+                  >
+                    <span
+                      >{{ t("cashier.discount")
+                      }}<template v-if="selectedOrder.couponCode">
+                        ({{ selectedOrder.couponCode }})</template
+                      >:</span
+                    >
                     <span
                       >-{{ formatPrice(selectedOrder.discountAmount) }}</span
                     >
@@ -533,6 +558,7 @@
                 </div>
               </div>
               <div
+                v-if="cashDifference !== null"
                 class="mt-3 p-2 rounded"
                 :class="
                   cashDifference === 0
@@ -571,6 +597,7 @@
               {{ t("cashier.printReport") }}
             </button>
             <button
+              data-testid="cashier-open-end-shift"
               class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               @click="endShift"
             >
@@ -609,6 +636,14 @@
               class="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700"
             >
               {{ refundError }}
+            </div>
+            <div
+              v-if="refundNotice"
+              data-testid="refund-pending-notice"
+              role="status"
+              class="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800"
+            >
+              {{ refundNotice }}
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">{{
@@ -770,9 +805,19 @@
               })
             }}
           </p>
+          <p
+            v-if="receiptError"
+            data-testid="receipt-error"
+            role="alert"
+            class="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700"
+          >
+            {{ receiptError }}
+          </p>
           <div class="space-y-3">
             <button
+              data-testid="print-final-receipt"
               class="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              :disabled="isProcessing"
               @click="printFinalReceipt"
             >
               {{ t("cashier.printReceipt") }}
@@ -874,6 +919,20 @@
           <p class="text-gray-600 mb-6">
             {{ t("cashier.confirms.endShift") || "確定要結束當前班次嗎？" }}
           </p>
+          <label class="mb-6 block">
+            <span class="mb-2 block text-sm font-medium text-gray-700">
+              {{ t("cashier.actualAmount") || "實際清點現金" }}
+            </span>
+            <input
+              v-model.number="actualCashAmount"
+              data-testid="cashier-ending-cash-amount"
+              type="number"
+              min="0"
+              :step="inputStep"
+              :placeholder="inputPlaceholder"
+              class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+            />
+          </label>
           <div class="flex justify-end space-x-3">
             <button
               class="px-4 py-2 bg-gray-100 text-gray-800 rounded-full hover:bg-gray-200 transition-colors"
@@ -882,6 +941,8 @@
               {{ t("common.cancel") || "取消" }}
             </button>
             <button
+              :disabled="!hasValidActualCashAmount"
+              data-testid="cashier-confirm-end-shift"
               class="px-4 py-2 bg-ios-red text-white rounded-full hover:bg-red-600 transition-colors"
               @click="confirmEndShift"
             >
@@ -895,7 +956,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onBeforeUnmount, onMounted } from "vue";
 import {
   MagnifyingGlassIcon,
   ArrowPathIcon,
@@ -921,6 +982,7 @@ import { api, unwrapApiList, unwrapApiPayload } from "@/services/api";
 import { extractApiErrorCode } from "@/utils/errorHandler";
 import { toLocalDateStr } from "@/utils/dateUtils";
 import { useAuthStore } from "@/stores/auth";
+import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import type {
   Order as ApiOrder,
   OrderItem as ApiOrderItem,
@@ -966,6 +1028,8 @@ interface CashierOrder {
   serviceCharge: number;
   taxAmount: number;
   discountAmount: number;
+  couponCode?: string;
+  appliedCoupons?: ApiOrder["appliedCoupons"];
   totalAmount: number;
   paymentMethod?: string;
   // Set by a real payment. `canRefund` on the orders screen requires it, which
@@ -985,6 +1049,8 @@ interface ShiftPayload {
   name?: string;
   startTime?: string;
   endTime?: string;
+  startedAt?: string | Date;
+  endedAt?: string | Date;
   operatorName?: string;
 }
 
@@ -1026,12 +1092,16 @@ const selectedPaymentMethod = ref("cash");
 const cashReceived = ref(0);
 const paymentError = ref("");
 const showPaymentSuccess = ref(false);
+const receiptError = ref("");
 const completedOrder = ref<CashierOrder | null>(null);
 
 // 新增的狀態
 const showShiftReport = ref(false);
 const showRefundDialog = ref(false);
-const actualCashAmount = ref(0);
+const refundNotice = ref<string | null>(null);
+// A count has to be entered by the cashier; 0 is a valid count, but it must
+// never be the implicit default used to close a shift.
+const actualCashAmount = ref<number | null>(null);
 // `null` means the daily report is still untrusted (loading or unavailable),
 // while 0 is a confirmed day with no sales.
 const todayRevenue = ref<number | null>(null);
@@ -1052,6 +1122,14 @@ const currentShift = ref({
   endTime: "",
   cashierName: "",
   registerId: "",
+});
+
+// currentShift keeps the API's ISO strings (other code compares them); the
+// badge shows the shop-local time a cashier can read, not "…T18:14:56.405Z".
+const shiftTimeRange = computed(() => {
+  const { startTime, endTime } = currentShift.value;
+  if (!startTime) return "";
+  return `${formatDateTime(startTime)} - ${endTime ? formatDateTime(endTime) : ""}`;
 });
 
 // 班次報告數據
@@ -1169,7 +1247,14 @@ const changeCents = computed(() => {
 const change = computed(() => changeCents.value / 100);
 
 const canProcessPayment = computed(() => {
-  if (!selectedOrder.value || !selectedPaymentMethod.value) return false;
+  if (
+    !selectedOrder.value ||
+    !selectedPaymentMethod.value ||
+    !currentShift.value.id ||
+    !currentShift.value.registerId
+  ) {
+    return false;
+  }
 
   if (selectedPaymentMethod.value === "cash") {
     return changeCents.value >= 0;
@@ -1202,8 +1287,30 @@ const canProcessRefund = computed(() => {
 });
 
 const cashDifference = computed(() => {
+  if (
+    typeof actualCashAmount.value !== "number" ||
+    !Number.isFinite(actualCashAmount.value)
+  ) {
+    return null;
+  }
   return actualCashAmount.value - shiftReport.value.systemCashAmount;
 });
+
+const hasValidActualCashAmount = computed(
+  () =>
+    typeof actualCashAmount.value === "number" &&
+    Number.isFinite(actualCashAmount.value) &&
+    actualCashAmount.value >= 0,
+);
+
+const validIsoDate = (value: unknown): string | undefined => {
+  if (value instanceof Date) {
+    return Number.isFinite(value.getTime()) ? value.toISOString() : undefined;
+  }
+  if (typeof value !== "string" && typeof value !== "number") return undefined;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : undefined;
+};
 
 // --- Data loading functions ---
 const loadOrders = async () => {
@@ -1230,6 +1337,8 @@ const loadOrders = async () => {
         serviceCharge: order.serviceCharge ?? 0,
         taxAmount: order.taxAmount ?? 0,
         discountAmount: order.discountAmount ?? 0,
+        couponCode: order.couponCode,
+        appliedCoupons: order.appliedCoupons,
         totalAmount: order.totalAmount,
         paymentMethod: order.paymentMethod,
         items: (order.items ?? []).map((item: ApiOrderItem) => ({
@@ -1268,8 +1377,8 @@ const loadCurrentShift = async () => {
           currentShift.value = {
             id: shift.id || "",
             name: shift.name || "",
-            startTime: shift.startTime || "",
-            endTime: shift.endTime || "",
+            startTime: validIsoDate(shift.startedAt ?? shift.startTime) ?? "",
+            endTime: validIsoDate(shift.endedAt ?? shift.endTime) ?? "",
             cashierName: shift.operatorName || authStore.user?.username || "",
             registerId: activeRegister.id,
           };
@@ -1381,6 +1490,8 @@ const processPayment = async () => {
         expectedTotal: selectedOrder.value.totalAmount,
         method: selectedPaymentMethod.value,
         closeOrder: true,
+        registerId: currentShift.value.registerId,
+        shiftId: currentShift.value.id,
       },
       { headers: { "Idempotency-Key": pendingPaymentKey.value } },
     );
@@ -1503,19 +1614,33 @@ const confirmApplyDiscount = async () => {
   }
 };
 
+// The receipt route takes the till and shift from headers, like refunds do.
+const tillHeaders = () => ({
+  headers: {
+    "X-Register-Id": currentShift.value.registerId,
+    "X-Shift-Id": currentShift.value.id,
+  },
+});
+
 const printReceipt = async () => {
   if (!selectedOrder.value || !currentShift.value.registerId) return;
   isProcessing.value = true;
+  paymentError.value = "";
   try {
-    await api.post("/pos/receipts/print", {
-      orderId: String(selectedOrder.value.id),
-      registerId: currentShift.value.registerId,
-      items: selectedOrder.value.items,
-      totalAmount: selectedOrder.value.totalAmount,
-      paymentMethod: selectedPaymentMethod.value,
-    });
+    await api.post(
+      "/pos/receipts/print",
+      {
+        orderId: String(selectedOrder.value.id),
+        items: selectedOrder.value.items,
+        totalAmount: selectedOrder.value.totalAmount,
+        paymentMethod: selectedPaymentMethod.value,
+      },
+      tillHeaders(),
+    );
   } catch (error) {
     console.error("Failed to print receipt:", error);
+    paymentError.value =
+      apiErrorMessage(error) ?? t("cashier.alerts.printFailed");
   } finally {
     isProcessing.value = false;
   }
@@ -1527,32 +1652,40 @@ const printFinalReceipt = async () => {
     return;
   }
   isProcessing.value = true;
+  receiptError.value = "";
   try {
-    await api.post("/pos/receipts/print", {
-      orderId: String(completedOrder.value.id),
-      registerId: currentShift.value.registerId,
-      items: completedOrder.value.items,
-      totalAmount: completedOrder.value.totalAmount,
-      paymentMethod: completedOrder.value.paymentMethod || "cash",
-    });
+    await api.post(
+      "/pos/receipts/print",
+      {
+        orderId: String(completedOrder.value.id),
+        items: completedOrder.value.items,
+        totalAmount: completedOrder.value.totalAmount,
+        paymentMethod: completedOrder.value.paymentMethod || "cash",
+      },
+      tillHeaders(),
+    );
+    closePaymentSuccess();
   } catch (error) {
     console.error("Failed to print receipt:", error);
+    // Stay on the dialog: closing it would hide the failure and the retry.
+    receiptError.value =
+      apiErrorMessage(error) ?? t("cashier.alerts.printFailed");
   } finally {
     isProcessing.value = false;
-    closePaymentSuccess();
   }
 };
 
 const closePaymentSuccess = () => {
   showPaymentSuccess.value = false;
   completedOrder.value = null;
+  receiptError.value = "";
 };
 
 // 班次報告相關方法
 const openShiftReport = async () => {
   if (!currentShift.value.id) {
     showShiftReport.value = true;
-    actualCashAmount.value = shiftReport.value.systemCashAmount;
+    actualCashAmount.value = null;
     return;
   }
   isProcessing.value = true;
@@ -1589,7 +1722,7 @@ const openShiftReport = async () => {
     isProcessing.value = false;
   }
   showShiftReport.value = true;
-  actualCashAmount.value = shiftReport.value.systemCashAmount;
+  actualCashAmount.value = null;
 };
 
 const closeShiftReport = () => {
@@ -1603,11 +1736,12 @@ const printShiftReport = () => {
 
 const endShift = () => {
   if (!currentShift.value.id) return;
+  actualCashAmount.value = null;
   showEndShiftModal.value = true;
 };
 
 const confirmEndShift = async () => {
-  if (!currentShift.value.id) return;
+  if (!currentShift.value.id || !hasValidActualCashAmount.value) return;
   showEndShiftModal.value = false;
   isProcessing.value = true;
   try {
@@ -1633,6 +1767,7 @@ const confirmEndShift = async () => {
 // 退款相關方法
 const openRefundDialog = () => {
   refundError.value = null;
+  refundNotice.value = null;
   showRefundDialog.value = true;
   refundData.value = {
     orderNumber: "",
@@ -1653,7 +1788,7 @@ const processRefund = async () => {
 
   isProcessing.value = true;
   try {
-    await api.post(
+    const response = await api.post(
       "/pos/refunds/create",
       {
         originalOrderId: refundData.value.orderNumber.trim(),
@@ -1671,6 +1806,16 @@ const processRefund = async () => {
       },
     );
 
+    const result = unwrapApiPayload<{ approvalRequired?: boolean }>(
+      response.data.data,
+    );
+    if (result.approvalRequired) {
+      // The cashier's record is deliberately not a completed refund. Do not
+      // make the local totals look settled before an Admin/Owner approves it.
+      refundNotice.value = "退款已送交管理者審核，尚未完成。";
+      return;
+    }
+
     // 更新統計數據
     shiftReport.value.refundCount++;
     shiftReport.value.totalRevenue -= refundData.value.amount;
@@ -1681,17 +1826,31 @@ const processRefund = async () => {
     closeRefundDialog();
   } catch (error) {
     console.error("Refund processing error:", error);
+    // axios's own message is only the HTTP status line; the reason is below.
     refundError.value =
-      error instanceof Error ? error.message : t("cashier.alerts.refundFailed");
+      apiErrorMessage(error) ?? t("cashier.alerts.refundFailed");
   } finally {
     isProcessing.value = false;
   }
 };
 
 // 生命週期
+// Orders become payable when the kitchen and floor staff move them along, not
+// from anything done here, so the list has to refresh on its own. Skip a tick
+// mid-load or mid-payment so a settled order does not flicker back in.
+const ordersPoller = createVisibilityAwarePoller({
+  intervalMs: 15_000,
+  onTick: () => {
+    if (isLoadingOrders.value || isProcessing.value) return;
+    return loadOrders();
+  },
+});
+
 onMounted(async () => {
+  ordersPoller.start();
   await Promise.all([loadOrders(), loadCurrentShift(), loadTodayRevenue()]);
 });
+onBeforeUnmount(() => ordersPoller.stop());
 </script>
 
 <style scoped>

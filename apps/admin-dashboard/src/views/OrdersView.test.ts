@@ -1,15 +1,17 @@
 // @vitest-environment jsdom
 
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { ref } from "vue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import OrdersView from "./OrdersView.vue";
+import { api } from "@/services/api";
 import type { Order } from "@/types";
 
 const orderStore = vi.hoisted(() => ({
   orders: [] as Order[],
   error: null as string | null,
   fetchOrders: vi.fn().mockResolvedValue(undefined),
+  refetchOrders: vi.fn().mockResolvedValue(undefined),
   updateOrderStatus: vi.fn().mockResolvedValue(true),
   cancelOrder: vi.fn().mockResolvedValue(true),
   pagination: { page: 1, limit: 20, total: 0, totalPages: 1 },
@@ -141,6 +143,25 @@ describe("OrdersView", () => {
     );
   });
 
+  it("shows the stat cards to the roles that may read them, and not a wall of zeros to the others", async () => {
+    const asOwner = mount(OrdersView);
+    await flushPromises();
+    expect(asOwner.find('[data-testid="admin-orders-stats"]').exists()).toBe(
+      true,
+    );
+
+    authStore.user.role = 4;
+    try {
+      const asCashier = mount(OrdersView);
+      await flushPromises();
+      expect(
+        asCashier.find('[data-testid="admin-orders-stats"]').exists(),
+      ).toBe(false);
+    } finally {
+      authStore.user.role = 1;
+    }
+  });
+
   it("sends the selected delivery type to the server", async () => {
     const wrapper = mount(OrdersView);
 
@@ -151,6 +172,29 @@ describe("OrdersView", () => {
     expect(orderStore.fetchOrders).toHaveBeenLastCalledWith(
       expect.objectContaining({ fulfillmentType: "delivery", page: 1 }),
     );
+  });
+
+  it("refreshes the list and stat cards in the background, keeping the filters", async () => {
+    vi.useFakeTimers();
+    try {
+      const wrapper = mount(OrdersView);
+      await flushPromises();
+      expect(orderStore.refetchOrders).not.toHaveBeenCalled();
+      const statsLoads = () =>
+        vi.mocked(api.get).mock.calls.filter(([url]) => url === "/orders/stats")
+          .length;
+      const statsBefore = statsLoads();
+
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(orderStore.refetchOrders).toHaveBeenCalledOnce();
+      expect(statsLoads()).toBe(statsBefore + 1);
+
+      wrapper.unmount();
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(orderStore.refetchOrders).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("offers a refund action for a paid order with a payment transaction", () => {

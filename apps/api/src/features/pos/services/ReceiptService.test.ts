@@ -259,6 +259,7 @@ describe("ReceiptService", () => {
       { orderId: "101" },
       "register-1",
       "shift-1",
+      "林收銀",
     );
 
     expect(result).toMatchObject({
@@ -294,6 +295,7 @@ describe("ReceiptService", () => {
       template: "standard",
       orderNumber: "A001",
       customerName: "Dina",
+      cashier: "林收銀",
       items: [
         {
           name: "Nasi Lemak",

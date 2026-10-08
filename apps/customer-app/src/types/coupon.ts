@@ -1,3 +1,5 @@
+import type { AppliedCoupon } from "@makanmasak/shared-types";
+
 export interface CustomerCoupon {
   id: string | number;
   code: string;
@@ -13,7 +15,8 @@ export interface CustomerCoupon {
 
 export interface CouponValidationResult {
   valid: boolean;
-  coupon?: CustomerCoupon;
+  appliedCoupons?: AppliedCoupon[];
+  finalAmount?: number;
   discountAmount?: number;
   error?: string;
 }

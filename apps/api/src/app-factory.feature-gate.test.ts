@@ -98,20 +98,34 @@ describe("unlaunched feature gates", () => {
     ).not.toBe(404);
   });
 
-  // Regression: the webPush gate covered /push/* -- the staff routes -- while
-  // customer-app subscribes through /customer/push-subscriptions. With web push
-  // switched off a customer could still store a subscription for notifications
-  // that /push would then refuse to deliver: opted in to something that can
-  // never arrive, which is the exact failure this registry exists to prevent.
-  it("refuses the customer push-subscription route too", async () => {
+  // Customer subscriptions need their own flag so missing customer delivery
+  // configuration does not disable staff push in /push.
+  it("keeps customer push off while leaving staff push independently enabled", async () => {
     const path = "/api/v1/customer/push-subscriptions";
 
     // Behind customer auth, so without the gate this answers 401, not 404.
-    expect((await request(path)).status).not.toBe(404);
+    expect((await request(path)).status).toBe(404);
 
-    const gated = await request(path, { WEB_PUSH_ENABLED: "false" });
-    expect(gated.status).toBe(404);
-    await expect(gated.json()).resolves.toMatchObject({
+    const enabled = await request(path, {
+      CUSTOMER_WEB_PUSH_ENABLED: "true",
+    });
+    expect(enabled.status).not.toBe(404);
+
+    const staffPath = "/api/v1/push/subscribe";
+    expect(
+      (await request(staffPath, { CUSTOMER_WEB_PUSH_ENABLED: "false" }, "POST"))
+        .status,
+    ).not.toBe(404);
+
+    const disabledStaff = await request(
+      staffPath,
+      {
+        WEB_PUSH_ENABLED: "false",
+      },
+      "POST",
+    );
+    expect(disabledStaff.status).toBe(404);
+    await expect(disabledStaff.json()).resolves.toMatchObject({
       error: { code: "ROUTE_NOT_FOUND" },
     });
   });

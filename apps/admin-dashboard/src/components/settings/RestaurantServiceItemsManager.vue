@@ -141,6 +141,36 @@
           </div>
           <div>
             <label class="mb-2 block text-sm font-medium text-gray-700">
+              付款條件
+            </label>
+            <select
+              v-model="form.paymentRequirement"
+              data-testid="service-payment-requirement"
+              class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            >
+              <option value="pay_at_venue">現場付款</option>
+              <option value="prepay">預付全額</option>
+              <option value="deposit">支付訂金</option>
+              <option value="none">免付款</option>
+            </select>
+          </div>
+          <div v-if="form.paymentRequirement === 'deposit'">
+            <label class="mb-2 block text-sm font-medium text-gray-700">
+              訂金金額（{{ currencySymbol }}）
+            </label>
+            <input
+              v-model.number="form.depositAmount"
+              data-testid="service-deposit-amount"
+              type="number"
+              min="0.01"
+              :max="form.price"
+              :step="inputStep"
+              required
+              class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            />
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-medium text-gray-700">
               標籤
             </label>
             <input
@@ -360,6 +390,9 @@
                 servicePriceLabel(service) || t("settings.serviceItems.noPrice")
               }}
             </p>
+            <p class="mt-1 text-sm text-gray-600">
+              {{ paymentRequirementLabel(service) }}
+            </p>
           </div>
           <div class="flex shrink-0 gap-2">
             <button
@@ -391,6 +424,7 @@ import { useRouter } from "vue-router";
 import type {
   RestaurantServiceItem,
   RestaurantServiceType,
+  ServiceItemPaymentRequirement,
 } from "@makanmasak/shared-types";
 import { restaurantServiceItemsService } from "@/services/restaurantServiceItemsService";
 import { useI18n } from "@/i18n";
@@ -442,6 +476,8 @@ const defaultForm = () => ({
   price: undefined as number | undefined,
   priceLabel: "",
   durationMinutes: undefined as number | undefined,
+  paymentRequirement: "pay_at_venue" as ServiceItemPaymentRequirement,
+  depositAmount: undefined as number | undefined,
   requiresBooking: false,
   bookingUrl: "",
   sortOrder: 0,
@@ -506,6 +542,13 @@ function servicePayload() {
       typeof form.durationMinutes === "number"
         ? form.durationMinutes
         : undefined,
+    paymentRequirement: form.paymentRequirement,
+    depositAmountCents:
+      form.paymentRequirement === "deposit" &&
+      typeof form.depositAmount === "number" &&
+      Number.isFinite(form.depositAmount)
+        ? majorToCents(form.depositAmount)
+        : 0,
     requiresBooking: form.requiresBooking,
     bookingUrl: form.bookingUrl.trim() || null,
     tags,
@@ -606,6 +649,11 @@ function editService(service: RestaurantServiceItem) {
       : undefined;
   form.priceLabel = service.priceLabel ?? "";
   form.durationMinutes = service.durationMinutes ?? undefined;
+  form.paymentRequirement = service.paymentRequirement ?? "pay_at_venue";
+  form.depositAmount =
+    service.paymentRequirement === "deposit"
+      ? centsToMajor(service.depositAmountCents ?? 0)
+      : undefined;
   form.requiresBooking = service.requiresBooking;
   form.bookingUrl = service.bookingUrl ?? "";
   form.sortOrder = service.sortOrder;
@@ -641,6 +689,20 @@ function serviceTypeLabel(type: RestaurantServiceType) {
     activity: "活動",
   };
   return labels[type];
+}
+
+function paymentRequirementLabel(service: RestaurantServiceItem) {
+  const requirement = service.paymentRequirement ?? "pay_at_venue";
+  if (requirement === "deposit") {
+    return `訂金 ${formatCents(service.depositAmountCents ?? 0)}`;
+  }
+  const labels: Record<ServiceItemPaymentRequirement, string> = {
+    none: "免付款",
+    deposit: "支付訂金",
+    prepay: "預付全額",
+    pay_at_venue: "現場付款",
+  };
+  return labels[requirement];
 }
 
 function servicePriceLabel(service: RestaurantServiceItem) {

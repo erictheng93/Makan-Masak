@@ -16,7 +16,7 @@
         data-testid="service-bookings-refresh"
         class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
         :disabled="isLoading"
-        @click="loadBookings"
+        @click="loadBookings()"
       >
         {{ t("common.refresh") }}
       </button>
@@ -33,7 +33,7 @@
             data-testid="service-bookings-date"
             type="date"
             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-            @change="loadBookings"
+            @change="loadBookings()"
           />
         </div>
         <div>
@@ -44,7 +44,7 @@
             v-model="filters.status"
             data-testid="service-bookings-status"
             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-            @change="loadBookings"
+            @change="loadBookings()"
           >
             <option value="">
               {{ t("serviceBookings.filters.allStatuses") }}
@@ -222,7 +222,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from "vue";
+import { onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
+import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import { useI18n } from "@/i18n";
 import { useAuthStore } from "@/stores/auth";
 import { useCurrency } from "@/composables/useCurrency";
@@ -258,17 +259,34 @@ watch(
   },
 );
 
-onMounted(() => {
-  void loadBookings();
+// Customers book while this page is open. Skip a tick mid-load or mid-action.
+const bookingsPoller = createVisibilityAwarePoller({
+  intervalMs: 30_000,
+  onTick: () => {
+    if (isLoading.value || isSaving.value) return;
+    return loadBookings({ background: true });
+  },
 });
 
-async function loadBookings() {
+onMounted(() => {
+  void loadBookings();
+  bookingsPoller.start();
+});
+onBeforeUnmount(() => bookingsPoller.stop());
+
+/**
+ * A background tick keeps the rows on screen and leaves the messages alone,
+ * so it neither flashes the loading row nor clears a success notice.
+ */
+async function loadBookings({ background = false } = {}) {
   if (!authStore.restaurantId) {
     bookings.value = [];
     return;
   }
-  isLoading.value = true;
-  errorMessage.value = "";
+  if (!background) {
+    isLoading.value = true;
+    errorMessage.value = "";
+  }
   try {
     bookings.value = await serviceBookingsService.listBookings({
       restaurantId: authStore.restaurantId,
@@ -277,9 +295,11 @@ async function loadBookings() {
     });
   } catch (error) {
     console.error("Load service bookings failed:", error);
-    errorMessage.value = t("serviceBookings.messages.loadFailed");
+    if (!background) {
+      errorMessage.value = t("serviceBookings.messages.loadFailed");
+    }
   } finally {
-    isLoading.value = false;
+    if (!background) isLoading.value = false;
   }
 }
 

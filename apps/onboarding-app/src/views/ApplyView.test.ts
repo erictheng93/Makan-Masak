@@ -10,10 +10,11 @@ const mocks = vi.hoisted(() => ({
   store: {
     application: null as Record<string, unknown> | null,
     applicationSecret: "tracking-secret" as string | null,
-    apiError: null as string | null,
+    apiErrorCode: null as string | null,
     isLoading: false,
     clearError: vi.fn(),
   },
+  current: null as Record<string, unknown> | null,
 }));
 
 vi.mock("vue-router", () => ({
@@ -42,12 +43,20 @@ vi.mock("@/services/api", () => ({
   },
 }));
 
-vi.mock("@/stores/onboarding", () => ({
-  useOnboardingStore: () => ({
-    ...mocks.store,
-    submitApplication: mocks.submitApplication,
-  }),
-}));
+// Reactive like the real Pinia store, so a failed submit that sets
+// apiErrorCode re-renders the page. `current` is the instance the view holds.
+vi.mock("@/stores/onboarding", async () => {
+  const { reactive } = await import("vue");
+  return {
+    useOnboardingStore: () => {
+      mocks.current = reactive({
+        ...mocks.store,
+        submitApplication: mocks.submitApplication,
+      });
+      return mocks.current;
+    },
+  };
+});
 
 import ApplyView from "./ApplyView.vue";
 
@@ -100,7 +109,7 @@ describe("ApplyView locale and market selection", () => {
     vi.clearAllMocks();
     mocks.store.application = null;
     mocks.store.applicationSecret = "tracking-secret";
-    mocks.store.apiError = null;
+    mocks.store.apiErrorCode = null;
     mocks.store.isLoading = false;
     mocks.getMarkets.mockResolvedValue([]);
     mocks.submitApplication.mockResolvedValue(true);
@@ -304,6 +313,54 @@ describe("ApplyView locale and market selection", () => {
     expect(
       wrapper.find('[data-testid="onboarding-stall-number"]').exists(),
     ).toBe(false);
+  });
+
+  it("shows a translated message for a known server error, never the server's English", async () => {
+    mocks.submitApplication.mockImplementation(async () => {
+      mocks.current!.apiErrorCode = "RATE_LIMITED";
+      return false;
+    });
+    const wrapper = mount(ApplyView);
+    await fillRequiredFields(wrapper);
+
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      "apply.submitErrors.rateLimited",
+    );
+    expect(wrapper.text()).toContain("apply.submitErrors.rateLimited");
+    expect(wrapper.text()).not.toContain("Too many");
+  });
+
+  it("falls back to the generic message for an unknown server error", async () => {
+    mocks.submitApplication.mockImplementation(async () => {
+      mocks.current!.apiErrorCode = "PLATFORM_DB_UNAVAILABLE";
+      return false;
+    });
+    const wrapper = mount(ApplyView);
+    await fillRequiredFields(wrapper);
+
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      "apply.toast.submitFailureFallback",
+    );
+  });
+
+  it("rejects a phone number the server would reject before submitting", async () => {
+    const wrapper = mount(ApplyView);
+    await fillRequiredFields(wrapper);
+    await wrapper
+      .get('[data-testid="onboarding-contact-phone"]')
+      .setValue("12345");
+
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(mocks.submitApplication).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain("apply.validation.phoneInvalid");
   });
 
   it("omits empty market fields from an independent-shop submission", async () => {

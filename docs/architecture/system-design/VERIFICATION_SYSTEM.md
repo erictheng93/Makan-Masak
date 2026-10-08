@@ -68,7 +68,7 @@
 Frontend: Vue 3 + TypeScript + Tailwind CSS
 Backend: Cloudflare Workers + Hono
 Database: Cloudflare D1 (SQLite)
-Email: MailChannels (Cloudflare 官方推薦)
+Email: Cloudflare Email Service（send_email binding）
 SMS: Twilio
 ORM: Drizzle ORM
 ```
@@ -145,34 +145,18 @@ ORM: Drizzle ORM
 
 ### 1. 環境變量配置
 
-#### **MailChannels (Email)**
+#### **Cloudflare Email Service (Email)**
 
-MailChannels 是 Cloudflare 官方推薦的郵件服務，**無需 API Key**！
-
-**apps/api/wrangler.toml**:
+Email 走 **Cloudflare Email Service**：`apps/api/wrangler.toml` 在三個環境各宣告一次 `send_email` binding（named environment 不會繼承 binding），不需要任何 API key。
 
 ```toml
-# Email Provider (MailChannels - Cloudflare Official)
-NOTIFICATION_FROM_EMAIL = "noreply@yourdomain.com"
+NOTIFICATION_FROM_EMAIL = "notifications@makanmasak.com"
 
-# Optional: Disable MailChannels and use Resend instead
-# USE_MAILCHANNELS = "false"
-# RESEND_API_KEY = "re_xxx" (set via wrangler secret)
+[[env.production.send_email]]
+name = "NOTIFICATION_EMAIL"
 ```
 
-**重要**: 配置 DNS 記錄以提高郵件送達率：
-
-```dns
-# SPF Record
-Type: TXT
-Name: @
-Value: v=spf1 a mx include:relay.mailchannels.net ~all
-
-# DKIM Record (由 MailChannels 提供)
-Type: TXT
-Name: mailchannels._domainkey
-Value: (從 MailChannels dashboard 獲取)
-```
+寄件網域 `makanmasak.com` 已在 Cloudflare Email Sending 完成 onboarding（DKIM selector `cf-bounce`，return-path `cf-bounce.makanmasak.com`），SPF／DKIM 由 Cloudflare 管理，不需手動加 DNS 記錄。沒有 binding 時 email 功能關閉，production 的註冊與忘記密碼會直接回 `503 EMAIL_CHANNEL_UNAVAILABLE`，不會假裝寄出。
 
 #### **Twilio (SMS)**
 
@@ -688,24 +672,17 @@ curl -X POST http://localhost:8787/api/v1/auth/reset-password \
 **解決方案**:
 
 ```bash
-# 1. 檢查 MailChannels 配置
-wrangler tail makanmakan-api --env production
+# 1. 確認部署版本帶有 email binding（輸出應有 env.NOTIFICATION_EMAIL (Send Email)）
+wrangler versions view <version-id> --env production
 
-# 2. 驗證 DNS 記錄
-dig TXT yourdomain.com  # 檢查 SPF
-dig TXT mailchannels._domainkey.yourdomain.com  # 檢查 DKIM
+# 2. 看寄送錯誤
+wrangler tail makanmasak-api-prod
 
 # 3. 檢查垃圾郵件資料夾
 
-# 4. 測試發送
-curl -X POST https://api.mailchannels.net/tx/v1/send \
-  -H "Content-Type: application/json" \
-  -d '{
-    "personalizations": [{"to": [{"email": "test@example.com"}]}],
-    "from": {"email": "noreply@yourdomain.com", "name": "Test"},
-    "subject": "Test",
-    "content": [{"type": "text/plain", "value": "Test"}]
-  }'
+# 4. 直接用 Email Sending 寄一封測試信
+wrangler email sending send --from notifications@makanmasak.com \
+  --to you@example.com --subject "Test" --text "Test"
 ```
 
 #### 2. Token 已過期
@@ -1038,7 +1015,7 @@ MakanMakan Security System
 - ✅ 密碼重設（Email/SMS）
 - ✅ Email 驗證
 - ✅ 手機驗證
-- ✅ MailChannels 集成
+- ✅ MailChannels 集成（已於 2026-09 移除，現為 Cloudflare Email Service）
 - ✅ Customer App 前端
 - ✅ Admin Dashboard 前端
 - ✅ 單元測試（16 tests）

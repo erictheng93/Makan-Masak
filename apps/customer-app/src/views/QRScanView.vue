@@ -1,7 +1,11 @@
 <template>
-  <div class="min-h-screen bg-black">
+  <!-- Exactly one screen tall: the header and the instructions overlay the
+       camera, so the manual-entry link is never pushed below the fold. -->
+  <div class="scan-screen relative overflow-hidden bg-black">
     <!-- 頂部導航 -->
-    <div class="relative z-10 bg-black bg-opacity-50 backdrop-blur-sm">
+    <div
+      class="absolute inset-x-0 top-0 z-10 bg-black bg-opacity-50 backdrop-blur-sm"
+    >
       <div class="max-w-md mx-auto px-4 py-4">
         <div class="flex items-center justify-between">
           <button
@@ -64,11 +68,11 @@
     </div>
 
     <!-- 掃描區域 -->
-    <div class="relative">
+    <div class="relative h-full">
       <!-- 相機預覽 -->
       <video
         ref="videoElement"
-        class="w-full h-screen object-cover"
+        class="w-full h-full object-cover"
         muted
         playsinline
       />
@@ -82,7 +86,7 @@
             class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
           >
             <div
-              class="w-64 h-64 border-2 border-white border-opacity-50 relative"
+              class="w-[min(16rem,45vh)] h-[min(16rem,45vh)] border-2 border-white border-opacity-50 relative"
             >
               <!-- 四個角落的掃描框 -->
               <div
@@ -112,8 +116,8 @@
       <div
         class="absolute bottom-0 left-0 right-0 z-10 bg-black bg-opacity-50 backdrop-blur-sm"
       >
-        <div class="max-w-md mx-auto px-4 py-8 text-center">
-          <p class="text-white text-lg font-medium mb-2">
+        <div class="max-w-md mx-auto px-4 py-8 landscape:py-3 text-center">
+          <p class="text-white text-lg font-medium mb-2 landscape:mb-0">
             {{ scanStatus }}
           </p>
           <p class="text-white text-opacity-75 text-sm">
@@ -122,7 +126,7 @@
 
           <!-- 手動輸入選項 -->
           <button
-            class="mt-6 text-white text-opacity-75 underline hover:text-opacity-100 transition-opacity"
+            class="mt-6 landscape:mt-2 text-white text-opacity-75 underline hover:text-opacity-100 transition-opacity"
             @click="showManualInput = true"
           >
             {{ t("qrScanView.manualInputLink") }}
@@ -538,6 +542,12 @@ const cleanup = () => {
 </script>
 
 <style scoped>
+/* dvh follows Safari's collapsing address bar; vh is the fallback. */
+.scan-screen {
+  height: 100vh;
+  height: 100dvh;
+}
+
 .animate-scan-line {
   animation: scanLine 2s ease-in-out infinite;
 }

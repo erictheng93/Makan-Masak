@@ -1,7 +1,12 @@
 <!-- apps/customer-app/src/components/DesktopCartPanel.vue -->
 <template>
-  <aside class="w-[300px] flex-shrink-0">
-    <div class="sticky top-24">
+  <!--
+    self-stretch: the menu row is items-start, which would size this aside to
+    the panel itself and leave the sticky child no room to stick. top-36 keeps
+    it clear of the menu header (back button + category chips, ~128px).
+  -->
+  <aside class="w-[300px] flex-shrink-0 self-stretch">
+    <div class="sticky top-36">
       <div class="bg-white rounded-2xl shadow-card p-5">
         <!-- Header -->
         <div class="flex items-center justify-between mb-4">

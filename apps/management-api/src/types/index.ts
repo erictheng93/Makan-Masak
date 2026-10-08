@@ -50,7 +50,6 @@ export interface ManagementEnv {
   ONBOARDING_EMAIL_FROM?: string;
   /** Origin of the onboarding app; applicant status links point here. */
   ONBOARDING_APP_URL?: string;
-  RESEND_API_KEY?: string;
   INTERNAL_API_TOKEN?: string;
 
   // D1 Database binding
@@ -63,6 +62,8 @@ export interface ManagementEnv {
 
   // R2 bucket for worker bundles
   BUNDLE_STORAGE: R2Bucket;
+  /** Daily onboarding audit snapshots (#419). Bound in production only. */
+  AUDIT_ARCHIVE?: R2Bucket;
 }
 
 // ============================================================

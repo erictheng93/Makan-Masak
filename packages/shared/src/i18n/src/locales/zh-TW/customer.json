@@ -878,6 +878,7 @@
     "noResults": "找不到結果，請嘗試其他搜尋。",
     "open": "營業中",
     "closed": "休息中",
+    "hoursUnavailable": "未提供營業時間",
     "filters": "篩選",
     "openNow": "營業中",
     "takeaway": "外帶",
@@ -919,6 +920,10 @@
   "footer": {
     "copyright": "© {year} MakanMasak. 版權所有。"
   },
+  "reservationBooking": {
+    "back": "返回店家",
+    "title": "線上訂位"
+  },
   "serviceBooking": {
     "back": "返回服務",
     "title": "服務預約",
@@ -941,9 +946,11 @@
     "confirmationCode": "確認碼：",
     "amountDue": "應付",
     "status": "狀態",
+    "paymentStatusLabel": "付款狀態",
     "creditCardPlaceholder": "代幣卡 public id",
     "creditPinPlaceholder": "PIN（可選）",
     "payWithCredits": "代幣付款",
+    "payAtCounter": "請於到店時向店員付款（應付 {amount}），確認碼：{code}",
     "lookupTitle": "查詢/取消預約",
     "confirmationCodePlaceholder": "輸入確認碼",
     "contactPlaceholder": "預約電話或 Email（可選）",
@@ -961,6 +968,12 @@
     "lookupFailed": "查詢預約失敗。",
     "cancelSuccess": "預約已取消。",
     "cancelFailed": "取消預約失敗。",
+    "paymentStatus": {
+      "not_required": "無須付款",
+      "unpaid": "未付款",
+      "deposit_paid": "訂金已付",
+      "paid": "已付款"
+    },
     "bookingStatus": {
       "pending": "待付款",
       "confirmed": "已確認",
@@ -1111,6 +1124,7 @@
       "marketHours": "夜市時段 · {hours}",
       "primaryVendor": "主要店鋪",
       "contactVendor": "聯絡店家",
+      "notOpenToday": "今日未營業",
       "loadMoreVendors": "載入更多店鋪"
     },
     "search": {
@@ -1203,6 +1217,7 @@
       "previousPage": "上一頁",
       "favoriteSyncFailed": "無法同步市場追蹤狀態，請稍後再試。",
       "checkoutSuccess": "市場訂單已送出",
+      "vendorNotOpenToday": "有攤位今天還沒開店，已從購物車移除，請確認後再結帳",
       "checkoutFailed": "市場訂單送出失敗"
     },
     "checkout": {
@@ -1351,5 +1366,13 @@
     "saved": "設定已儲存",
     "saveFailed": "設定儲存失敗，請稍後再試",
     "loadFailed": "設定載入失敗，請稍後再試"
+  },
+  "demoShop": {
+    "bannerTitle": "這是示範店",
+    "bannerBody": "歡迎隨意點餐體驗，訂單不會真的送出。",
+    "noticeTitle": "這是示範店，訂單不會送出",
+    "noticeBody": "您剛剛走完了客人點餐的流程。在真實店家，這筆訂單會立刻出現在廚房平板上。",
+    "applyCta": "我也要開店",
+    "keepBrowsing": "繼續逛逛"
   }
 }

@@ -29,6 +29,7 @@ notification incidents.
    `duplicate: true`.
 3. For failed invoice reconciliation, replay the provider webhook after fixing
    signature/configuration issues.
-4. For notification failures, configure `SLACK_WEBHOOK_URL` or
-   `RESEND_API_KEY` plus `BILLING_EMAIL_FROM`, then resend with a new dedup key
+4. For notification failures, configure `SLACK_WEBHOOK_URL`, or confirm the
+   `NOTIFICATION_EMAIL` send_email binding is deployed (set `BILLING_EMAIL_FROM`
+   to override the sender), then resend with a new dedup key
    when the original dispatch row was intentionally skipped.

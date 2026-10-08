@@ -1,5 +1,7 @@
 import type { CurrencyCode } from "@makanmasak/utils";
 
+export type OpeningHoursStatus = "open" | "closed" | "unavailable";
+
 export interface DishSearchResult {
   resultType: "menu_item" | "product";
   menuItemId: number;
@@ -14,6 +16,7 @@ export interface DishSearchResult {
   restaurantName: string;
   district: string | null;
   isOpen: boolean;
+  openingHoursStatus: OpeningHoursStatus;
   supportsTakeaway: boolean;
   supportsDelivery: boolean;
   tags: string[];
@@ -35,6 +38,7 @@ export interface RestaurantListItem {
   priceRange: number | null;
   rating: number | null;
   isOpen: boolean;
+  openingHoursStatus: OpeningHoursStatus;
   supportsTakeaway: boolean;
   supportsDelivery: boolean;
   imageUrl: string | null;
@@ -66,6 +70,7 @@ export interface ServiceSearchResult {
   district: string | null;
   city: string | null;
   isOpen: boolean;
+  openingHoursStatus: OpeningHoursStatus;
   detailUrl: string;
   menuUrl: string;
   serviceItemsUrl: string;

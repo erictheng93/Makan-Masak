@@ -86,7 +86,7 @@ describe("useOnboardingStore", () => {
       false,
     );
 
-    expect(store.apiError).toBe("Validation failed");
+    expect(store.apiErrorCode).toBe("VALIDATION_ERROR");
     expect(store.isLoading).toBe(false);
   });
 

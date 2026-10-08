@@ -159,6 +159,26 @@ describe("validateBody", () => {
     );
   });
 
+  it("propagates a downstream ApiError without rewriting it as invalid JSON", async () => {
+    const app = createApp(validateBody(requiredFieldSchema), () => {
+      throw new ApiError("RESTAURANT_NOT_FOUND", "Restaurant not found", 404);
+    });
+
+    const res = await post(app, {
+      body: JSON.stringify({ reason: "sick" }),
+      headers: { "content-type": "application/json" },
+    });
+
+    expect(res.status).toBe(404);
+    await expect(res.json()).resolves.toEqual({
+      success: false,
+      error: {
+        code: "RESTAURANT_NOT_FOUND",
+        message: "Restaurant not found",
+      },
+    });
+  });
+
   it("still validates when an upstream middleware already consumed the body", async () => {
     // c.req.json() upstream disturbs c.req.raw, so the clone throws; the
     // middleware has to fall back to Hono's own cached copy rather than

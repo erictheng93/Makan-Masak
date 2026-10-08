@@ -8,6 +8,8 @@ import { onboardingApplicationsService } from "@/services/onboardingApplications
 
 vi.mock("@/services/onboardingApplicationsService", () => ({
   onboardingApplicationsService: { list: vi.fn() },
+  ONBOARDING_APPLICATIONS_CHANGED: "onboarding-applications:changed",
+  ONBOARDING_POLL_INTERVAL_MS: 60_000,
 }));
 
 const routeState = reactive({
@@ -152,6 +154,40 @@ describe("Sidebar", () => {
     expect(
       wrapper.get('[data-testid="submitted-applications-badge"]').text(),
     ).toBe("3");
+  });
+
+  it("recounts the badge without a page reload", async () => {
+    vi.useFakeTimers();
+    try {
+      const listMock = vi.mocked(onboardingApplicationsService.list);
+      const result = (total: number) => ({
+        applications: [],
+        total,
+        page: 1,
+        limit: 1,
+      });
+      listMock.mockResolvedValue(result(1));
+      const wrapper = mountSidebar();
+      await vi.dynamicImportSettled();
+      const badge = () =>
+        wrapper.find('[data-testid="submitted-applications-badge"]');
+      expect(badge().text()).toBe("1");
+
+      // An approve/reject elsewhere in the app announces the change.
+      listMock.mockResolvedValue(result(0));
+      window.dispatchEvent(new Event("onboarding-applications:changed"));
+      await vi.dynamicImportSettled();
+      expect(badge().exists()).toBe(false);
+
+      // A new application arriving from the onboarding app is picked up by polling.
+      listMock.mockResolvedValue(result(2));
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(badge().text()).toBe("2");
+
+      wrapper.unmount();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("shows restaurant navigation under a shop section after selection", () => {

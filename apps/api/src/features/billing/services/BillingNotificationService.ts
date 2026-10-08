@@ -2,6 +2,7 @@ import {
   BILLING_NOTIFICATION_KINDS,
   NOTIFICATION_CHANNELS,
   NOTIFICATION_DISPATCH_STATUSES,
+  createEmailProvider,
   type BillingNotificationKind,
   type NotificationChannel,
   type NotificationDispatchStatus,
@@ -109,8 +110,11 @@ export class BillingNotificationService {
 
   private async sendEmail(input: DispatchInput): Promise<DispatchResult> {
     const from =
-      this.env.BILLING_EMAIL_FROM ?? this.env.NOTIFICATION_FROM_EMAIL;
-    if (!this.env.RESEND_API_KEY || !from || !input.recipient) {
+      this.env.BILLING_EMAIL_FROM ??
+      this.env.NOTIFICATION_FROM_EMAIL ??
+      "notifications@makanmasak.com";
+    const provider = createEmailProvider(this.env, from);
+    if (!provider || !input.recipient) {
       await this.record(
         input,
         NOTIFICATION_DISPATCH_STATUSES.SKIPPED_PROVIDER_UNCONFIGURED,
@@ -122,33 +126,25 @@ export class BillingNotificationService {
     }
 
     try {
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.env.RESEND_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from,
-          to: [input.recipient],
-          subject: input.subject ?? "MakanMasak billing notification",
-          text: input.text,
-        }),
+      const result = await provider.sendEmail({
+        to: input.recipient,
+        subject: input.subject ?? "MakanMasak billing notification",
+        text: input.text,
+        html: `<pre>${input.text
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;")}</pre>`,
       });
-
-      const body = (await response.json().catch(() => null)) as {
-        id?: string;
-      } | null;
-
-      if (!response.ok) {
-        throw new Error(`Resend email failed: ${response.status}`);
-      }
+      if (!result.success)
+        throw new Error(result.error ?? "Email delivery failed");
 
       await this.record(
         input,
         NOTIFICATION_DISPATCH_STATUSES.SENT,
         null,
-        body?.id ?? null,
+        result.messageId ?? null,
       );
       return { status: NOTIFICATION_DISPATCH_STATUSES.SENT, duplicate: false };
     } catch (error) {
@@ -201,32 +197,70 @@ interface TrialReminderRow {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const TRIAL_ENDED_LOOKBACK_DAYS = 7;
+
+function endingCopy(restaurantName: string, daysLeft: number) {
+  const days = `${daysLeft} day${daysLeft === 1 ? "" : "s"}`;
+  return {
+    subject: `Your MakanMasak trial ends in ${days}`,
+    text: `The MakanMasak trial for ${restaurantName} ends in ${days}.`,
+  };
+}
 
 export class BillingReminderService {
   constructor(private readonly env: Env) {}
 
+  /**
+   * Windows are ranges on time-remaining, not exact 24h slots, so a skipped
+   * cron run is caught up on the next one. Exactly-once comes from the
+   * dispatch log (see the NOT EXISTS below), not from the window.
+   */
   async sendTrialEndingReminders(now = Date.now()) {
     const trial3d = await this.sendTrialReminderWindow(
       now,
-      3,
+      now + 2 * DAY_MS,
+      now + 4 * DAY_MS,
       BILLING_NOTIFICATION_KINDS.TRIAL_3D,
+      endingCopy,
     );
     const trial1d = await this.sendTrialReminderWindow(
       now,
-      1,
+      now,
+      now + 2 * DAY_MS,
       BILLING_NOTIFICATION_KINDS.TRIAL_1D,
+      endingCopy,
+    );
+    // An expired trial keeps working (nag-only); this is only the notice that
+    // it ended. The lookback keeps a long outage from mailing stale expiries.
+    const trial0d = await this.sendTrialReminderWindow(
+      now,
+      now - TRIAL_ENDED_LOOKBACK_DAYS * DAY_MS,
+      now,
+      BILLING_NOTIFICATION_KINDS.TRIAL_0D,
+      (name) => ({
+        subject: "Your MakanMasak trial has ended",
+        text: `The MakanMasak trial for ${name} has ended. Everything keeps working, but please choose a plan to support MakanMasak.`,
+      }),
     );
 
-    return { attempted: trial3d.attempted + trial1d.attempted };
+    return {
+      attempted: trial3d.attempted + trial1d.attempted + trial0d.attempted,
+    };
   }
 
+  /** Not-yet-notified trials whose end falls in [from, to). */
   private async sendTrialReminderWindow(
     now: number,
-    daysBeforeEnd: 1 | 3,
+    from: number,
+    to: number,
     kind: BillingNotificationKind,
+    copy: (
+      restaurantName: string,
+      daysLeft: number,
+    ) => { subject: string; text: string },
   ) {
-    const from = now + daysBeforeEnd * DAY_MS;
-    const to = from + DAY_MS;
+    // Filtering already-notified rows in SQL matters: filtering in send() would
+    // let the same 250 rows fill LIMIT every day and starve the rest.
     const rows = await this.env.DB.prepare(
       `SELECT s.restaurant_id, r.name AS restaurant_name, r.email,
               s.trial_ends_at_ms
@@ -234,11 +268,18 @@ export class BillingReminderService {
          JOIN restaurants r ON r.id = s.restaurant_id
         WHERE s.is_active = 1
           AND s.plan_tier = 'trial'
-          AND s.trial_ends_at_ms >= ?
-          AND s.trial_ends_at_ms < ?
+          AND s.trial_ends_at_ms >= ?2
+          AND s.trial_ends_at_ms < ?3
+          AND NOT EXISTS (
+            SELECT 1 FROM notification_dispatch_log d
+             WHERE d.restaurant_id = s.restaurant_id
+               AND d.kind = ?1
+               AND d.dedup_key = ?1 || ':' || s.restaurant_id || ':' || s.trial_ends_at_ms
+               AND d.channel = ?4)
+        ORDER BY s.trial_ends_at_ms
         LIMIT 250`,
     )
-      .bind(from, to)
+      .bind(kind, from, to, NOTIFICATION_CHANNELS.EMAIL)
       .all<TrialReminderRow>();
 
     let attempted = 0;
@@ -250,8 +291,10 @@ export class BillingReminderService {
         dedupKey: `${kind}:${row.restaurant_id}:${row.trial_ends_at_ms}`,
         channel: NOTIFICATION_CHANNELS.EMAIL,
         recipient: row.email,
-        subject: `Your MakanMasak trial ends in ${daysBeforeEnd} day${daysBeforeEnd === 1 ? "" : "s"}`,
-        text: `The MakanMasak trial for ${row.restaurant_name} ends in ${daysBeforeEnd} day${daysBeforeEnd === 1 ? "" : "s"}.`,
+        ...copy(
+          row.restaurant_name,
+          Math.max(1, Math.ceil((row.trial_ends_at_ms - now) / DAY_MS)),
+        ),
         payload: { trialEndsAt: row.trial_ends_at_ms },
       });
     }

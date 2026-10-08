@@ -488,6 +488,14 @@ export function useGroupOrder(options: {
         }
         break;
 
+      case RealtimeEventType.GROUP_ORDER_COMPLETED:
+        // The host submitted. Refetch rather than patch: the completed state,
+        // masterOrderId and final totals all come from the server's summary.
+        void loadGroupOrder(groupOrder.value.id).catch((error) => {
+          console.warn("Failed to reload the completed group order:", error);
+        });
+        break;
+
       case RealtimeEventType.GROUP_ORDER_CREATED:
       default:
         break;

@@ -1,3 +1,4 @@
+import type { AppliedCoupon } from "@makanmasak/shared-types";
 import {
   and,
   asc,
@@ -33,10 +34,20 @@ import {
   assertCurrencyAlignedCents,
   badRequest,
   computeDiscountCents,
+  formatCurrency,
   isAlignedInEveryCurrency,
   type CurrencyCode,
 } from "@makanmasak/utils";
 import { BaseService } from "./base";
+
+/** The minimum-spend error, in the shop's currency when it is known. */
+function minOrderMessage(
+  minOrderAmountCents: number,
+  currency?: CurrencyCode,
+): string {
+  const amount = amountFromCents(minOrderAmountCents) ?? 0;
+  return `訂單金額需滿 ${currency ? formatCurrency(amount, currency) : amount} 才可使用此優惠券`;
+}
 
 /** 完整的 `coupons` 資料列，即 `insert`/`update` … `returning()` 回傳的形狀。 */
 export type CouponRow = typeof coupons.$inferSelect;
@@ -219,6 +230,8 @@ export interface CouponEligibilityContext {
   userId?: string;
   guestIdentity?: string;
   menuItems?: Array<{ menuItemId: number; quantity: number }>;
+  /** Shop currency, when the caller already has it; only used to word errors. */
+  currency?: CurrencyCode;
   /**
    * - "validate": 顧客探索/預覽路徑 — 額外強制 isVisible
    * - "redeem":   兌換路徑 — 隱藏但仍啟用中的代碼視為合法，可兌換
@@ -228,6 +241,7 @@ export interface CouponEligibilityContext {
 
 // 優惠券創建資料接口
 export interface CreateCouponData {
+  incompatibleCouponIds?: number[];
   restaurantId?: string;
   code: string;
   name: string;
@@ -417,10 +431,22 @@ export class CouponService extends BaseService {
           userId,
           guestIdentity: options.guestIdentity,
           menuItems,
+          currency: options.currency,
           mode: "validate",
         });
       } catch (error) {
         if (error instanceof CouponEligibilityError) {
+          // The shop's currency is only looked up for the one message that
+          // quotes an amount, not on every rejected code.
+          if (error.code === "COUPON_MIN_ORDER_NOT_MET" && !options.currency) {
+            return {
+              valid: false,
+              error: minOrderMessage(
+                coupon.minOrderAmountCents ?? 0,
+                await this.getRestaurantCurrency(restaurantId),
+              ),
+            };
+          }
           return { valid: false, error: error.message };
         }
         throw error;
@@ -452,6 +478,111 @@ export class CouponService extends BaseService {
       console.error("Coupon validation error:", error);
       return { valid: false, error: "優惠券驗證失敗，請稍後再試" };
     }
+  }
+
+  async validateCoupons(input: {
+    codes: string[];
+    restaurantId: string;
+    orderAmount: number;
+    userId?: string;
+    menuItems?: Array<{ menuItemId: number; quantity: number }>;
+    currency?: CurrencyCode;
+    guestIdentity?: string;
+  }): Promise<{
+    valid: boolean;
+    coupons?: CouponWithMoneyFields[];
+    appliedCoupons?: AppliedCoupon[];
+    discountAmount?: number;
+    finalAmount?: number;
+    error?: string;
+  }> {
+    const codes = input.codes.map((code) => code.trim().toUpperCase());
+    if (codes.some((code) => !code) || new Set(codes).size !== codes.length) {
+      return { valid: false, error: "優惠券代碼不可重複或空白" };
+    }
+    const currency =
+      input.currency ?? (await this.getRestaurantCurrency(input.restaurantId));
+    const validated: CouponWithMoneyFields[] = [];
+    for (const code of codes) {
+      const result = await this.validateCoupon(
+        code,
+        input.restaurantId,
+        input.orderAmount,
+        input.userId,
+        input.menuItems,
+        { currency, guestIdentity: input.guestIdentity },
+      );
+      if (!result.valid || !result.coupon)
+        return { valid: false, error: result.error };
+      validated.push(result.coupon);
+    }
+    const ids = new Set(validated.map((coupon) => coupon.id));
+    if (
+      validated.some((coupon) =>
+        (coupon.incompatibleCouponIds ?? []).some((id) => ids.has(id)),
+      )
+    ) {
+      return { valid: false, error: "所選優惠券不可同時使用" };
+    }
+    validated.sort(
+      (a, b) =>
+        Number(a.discountType === "fixed") - Number(b.discountType === "fixed"),
+    );
+    const subtotal = toRequiredCents(input.orderAmount);
+    let remaining = subtotal;
+    const appliedCoupons = validated.map((coupon) => {
+      const discount = couponDiscountCents(coupon, remaining, currency);
+      remaining -= discount;
+      return {
+        couponId: coupon.id,
+        code: coupon.code,
+        name: coupon.name,
+        discountAmount: fromCents(discount),
+      };
+    });
+    return {
+      valid: true,
+      coupons: validated,
+      appliedCoupons,
+      discountAmount: fromCents(subtotal - remaining),
+      finalAmount: fromCents(remaining),
+    };
+  }
+
+  private async assertIncompatibleCoupons(
+    ids: number[] | undefined,
+    restaurantId?: string | null,
+    couponId?: number,
+  ) {
+    if (!ids?.length) return;
+    if (
+      ids.length > 100 ||
+      ids.some(
+        (id) => !Number.isSafeInteger(id) || id <= 0 || id === couponId,
+      ) ||
+      new Set(ids).size !== ids.length
+    ) {
+      throw badRequest(
+        "Invalid incompatible coupon IDs",
+        "INVALID_INCOMPATIBLE_COUPONS",
+      );
+    }
+    const rows = await this.db
+      .select({ id: coupons.id })
+      .from(coupons)
+      .where(
+        and(
+          inArray(coupons.id, ids),
+          restaurantId
+            ? eq(coupons.restaurantId, restaurantId)
+            : isNull(coupons.restaurantId),
+        ),
+      );
+    if (rows.length !== ids.length)
+      throw badRequest(
+        "Incompatible coupons must belong to the same restaurant",
+        "INVALID_INCOMPATIBLE_COUPONS",
+      );
   }
 
   /**
@@ -522,7 +653,7 @@ export class CouponService extends BaseService {
     ) {
       throw new CouponEligibilityError(
         "COUPON_MIN_ORDER_NOT_MET",
-        `訂單金額需滿 $${amountFromCents(minOrderAmountCents)} 才可使用此優惠券`,
+        minOrderMessage(minOrderAmountCents, context.currency),
       );
     }
 
@@ -664,6 +795,9 @@ export class CouponService extends BaseService {
             SET used_count = coalesce(used_count, 0) + 1,
                 updated_at_ms = unixepoch('now') * 1000
           WHERE id = ?
+            AND deleted_at_ms IS NULL AND is_active = 1
+            AND valid_from_ms <= unixepoch('now') * 1000
+            AND valid_to_ms >= unixepoch('now') * 1000
             AND (usage_limit IS NULL OR coalesce(used_count, 0) < usage_limit)`,
       )
       .bind(couponId)
@@ -700,7 +834,18 @@ export class CouponService extends BaseService {
    * 創建優惠券
    */
   async createCoupon(data: CreateCouponData) {
+    if (
+      !Number.isFinite(data.validFrom.getTime()) ||
+      !Number.isFinite(data.validTo.getTime()) ||
+      data.validFrom >= data.validTo
+    ) {
+      throw badRequest("Coupon end must follow start", "INVALID_DATE_RANGE");
+    }
     await this.assertCouponMoney(data);
+    await this.assertIncompatibleCoupons(
+      data.incompatibleCouponIds,
+      data.restaurantId,
+    );
 
     // Scoped to match the unique indexes from 0013. A platform-wide lookup here
     // would reject a code purely because a different restaurant already uses
@@ -738,6 +883,7 @@ export class CouponService extends BaseService {
             : toRequiredCents(data.discountValue),
         maxDiscountAmountCents: toCents(data.maxDiscountAmount),
         minOrderAmountCents: toRequiredCents(data.minOrderAmount || 0),
+        incompatibleCouponIds: data.incompatibleCouponIds,
         applicableMenuItems: data.applicableMenuItems,
         applicableCategories: data.applicableCategories,
         usageLimit: data.usageLimit,
@@ -941,9 +1087,31 @@ export class CouponService extends BaseService {
       updates.maxDiscountAmount !== undefined ||
       updates.minOrderAmount !== undefined;
     // Read once for validation (restaurant, effective type) and reuse below.
-    const current = touchesMoney
-      ? await this.db.query.coupons.findFirst({ where: eq(coupons.id, id) })
-      : undefined;
+    const current =
+      touchesMoney ||
+      updates.incompatibleCouponIds !== undefined ||
+      updates.validFrom !== undefined ||
+      updates.validTo !== undefined
+        ? await this.db.query.coupons.findFirst({ where: eq(coupons.id, id) })
+        : undefined;
+    if (updates.validFrom !== undefined || updates.validTo !== undefined) {
+      const from = updates.validFrom ?? current?.validFrom;
+      const to = updates.validTo ?? current?.validTo;
+      if (
+        !from ||
+        !to ||
+        !Number.isFinite(from.getTime()) ||
+        !Number.isFinite(to.getTime()) ||
+        from >= to
+      ) {
+        throw badRequest("Coupon end must follow start", "INVALID_DATE_RANGE");
+      }
+    }
+    await this.assertIncompatibleCoupons(
+      updates.incompatibleCouponIds,
+      current?.restaurantId,
+      id,
+    );
     if (touchesMoney) {
       const effectiveType = updates.discountType ?? current?.discountType;
       await this.assertCouponMoney({
@@ -1029,6 +1197,11 @@ export class CouponService extends BaseService {
    * refund release marker is also the idempotency marker for this path.
    */
   async releaseUsageForCancelledOrder(orderId: string): Promise<void> {
+    const writes = await this.buildCancelledUsageWrites(orderId);
+    if (writes.length) await this.db.batch([writes[0]!, ...writes.slice(1)]);
+  }
+
+  async buildCancelledUsageWrites(orderId: string) {
     const candidates = await this.db
       .select({ id: couponUsage.id, couponId: couponUsage.couponId })
       .from(couponUsage)
@@ -1040,7 +1213,7 @@ export class CouponService extends BaseService {
         ),
       );
 
-    if (candidates.length === 0) return;
+    if (candidates.length === 0) return [];
 
     const now = new Date();
     const writes = candidates.flatMap((usage) => [
@@ -1078,10 +1251,7 @@ export class CouponService extends BaseService {
         ),
     ]);
 
-    // candidates is non-empty above, so the write list has at least the two
-    // statements produced for its first usage. D1's typed batch API requires
-    // that non-empty tuple shape in addition to the runtime guarantee.
-    await this.db.batch([writes[0]!, ...writes.slice(1)]);
+    return writes;
   }
 
   /**

@@ -134,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, type Component } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, type Component } from "vue";
 import { useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { UserRole } from "@/types";
@@ -145,7 +145,12 @@ import {
 } from "@/composables/useFeatureAvailability";
 import ModuleGate from "@makanmasak/shared/components/ModuleGate.vue";
 import type { ModuleKey } from "@makanmasak/shared/types/module-access";
-import { onboardingApplicationsService } from "@/services/onboardingApplicationsService";
+import {
+  onboardingApplicationsService,
+  ONBOARDING_APPLICATIONS_CHANGED,
+  ONBOARDING_POLL_INTERVAL_MS,
+} from "@/services/onboardingApplicationsService";
+import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import {
   Home,
   ShoppingCart,
@@ -577,7 +582,27 @@ const navigationItems = computed(() => {
     });
 });
 
-onMounted(loadSubmittedApplicationCount);
+const submittedCountPoller = createVisibilityAwarePoller({
+  intervalMs: ONBOARDING_POLL_INTERVAL_MS,
+  onTick: loadSubmittedApplicationCount,
+});
+
+onMounted(() => {
+  void loadSubmittedApplicationCount();
+  if (!authStore.isAdminRole) return;
+  submittedCountPoller.start();
+  window.addEventListener(
+    ONBOARDING_APPLICATIONS_CHANGED,
+    loadSubmittedApplicationCount,
+  );
+});
+onBeforeUnmount(() => {
+  submittedCountPoller.stop();
+  window.removeEventListener(
+    ONBOARDING_APPLICATIONS_CHANGED,
+    loadSubmittedApplicationCount,
+  );
+});
 
 const isActiveRoute = (path: string) => {
   if (path === "/dashboard" && route.path === "/dashboard") return true;

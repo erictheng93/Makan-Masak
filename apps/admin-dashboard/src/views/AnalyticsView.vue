@@ -64,19 +64,8 @@
             <p v-else class="text-2xl font-bold text-gray-900">
               {{ formatMoneyByCurrency(revenueTotals) }}
             </p>
-            <p
-              v-if="!isLoading"
-              :class="
-                metrics.revenueChange >= 0 ? 'text-green-600' : 'text-red-600'
-              "
-              class="text-sm"
-            >
-              <ArrowTrendingUpIcon
-                v-if="metrics.revenueChange >= 0"
-                class="w-4 h-4 inline mr-1"
-              />
-              <ArrowTrendingDownIcon v-else class="w-4 h-4 inline mr-1" />
-              {{ Math.abs(metrics.revenueChange).toFixed(1) }}%
+            <p v-if="!isLoading" class="text-sm text-gray-600">
+              {{ formatGrowthByCurrency(performanceData.revenueGrowth) }}
               {{ t("analytics.metrics.vsPrevious") }}
             </p>
           </div>
@@ -128,21 +117,12 @@
             </p>
             <p v-if="isLoading" class="text-2xl font-bold text-gray-300">--</p>
             <p v-else class="text-2xl font-bold text-gray-900">
-              {{ formatPrice(metrics.averageOrderValue) }}
+              {{ formatMoneyByCurrency(metrics.averageOrderValue) }}
             </p>
-            <p
-              v-if="!isLoading"
-              :class="
-                metrics.aovChange >= 0 ? 'text-green-600' : 'text-red-600'
-              "
-              class="text-sm"
-            >
-              <ArrowTrendingUpIcon
-                v-if="metrics.aovChange >= 0"
-                class="w-4 h-4 inline mr-1"
-              />
-              <ArrowTrendingDownIcon v-else class="w-4 h-4 inline mr-1" />
-              {{ Math.abs(metrics.aovChange).toFixed(1) }}%
+            <p v-if="!isLoading" class="text-sm text-gray-600">
+              {{
+                formatGrowthByCurrency(performanceData.averageOrderValueGrowth)
+              }}
               {{ t("analytics.metrics.vsPrevious") }}
             </p>
           </div>
@@ -289,7 +269,7 @@
               </div>
               <div class="text-right">
                 <p class="text-sm font-medium text-gray-900">
-                  {{ formatPrice(item.revenue) }}
+                  {{ formatCurrency(item.revenue, item.currency) }}
                 </p>
                 <div class="w-32 bg-gray-200 rounded-full h-2 mt-1">
                   <div
@@ -421,7 +401,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
 import { useI18n } from "@/i18n";
-import { useCurrency } from "@/composables/useCurrency";
 import { formatCurrency } from "@makanmasak/utils";
 import type { CurrencyCode } from "@makanmasak/shared-types";
 import {
@@ -438,13 +417,10 @@ import {
   TableCellsIcon,
   ChartBarIcon,
   DocumentArrowDownIcon,
-  ArrowTrendingUpIcon,
-  ArrowTrendingDownIcon,
   ClockIcon,
 } from "@heroicons/vue/24/outline";
 
 const { t } = useI18n();
-const { formatPrice } = useCurrency();
 const authStore = useAuthStore();
 
 type MoneyByCurrency = Array<{
@@ -477,25 +453,30 @@ const performanceData = ref<{
   totalOrders: number;
   completedOrders: number;
   cancelledOrders: number;
-  averageOrderValue: number;
-  totalRevenue: number;
+  averageOrderValue: MoneyByCurrency;
+  totalRevenue: MoneyByCurrency;
   conversionRate: number;
   averagePreparationTime: number;
   popularTimeSlots: Array<{ hour: number; orderCount: number }>;
   // Change against the equally long window before the selected one, computed
   // server-side so it describes the same span as the figures above it (#312).
-  revenueGrowth: number;
+  revenueGrowth: Array<{ currency: CurrencyCode; percentage: number }>;
+  averageOrderValueGrowth: Array<{
+    currency: CurrencyCode;
+    percentage: number;
+  }>;
   orderGrowth: number;
 }>({
   totalOrders: 0,
   completedOrders: 0,
   cancelledOrders: 0,
-  averageOrderValue: 0,
-  totalRevenue: 0,
+  averageOrderValue: [],
+  totalRevenue: [],
   conversionRate: 0,
   averagePreparationTime: 0,
   popularTimeSlots: [],
-  revenueGrowth: 0,
+  revenueGrowth: [],
+  averageOrderValueGrowth: [],
   orderGrowth: 0,
 });
 
@@ -506,6 +487,7 @@ const productAnalytics = ref<{
     categoryName: string;
     quantity: number;
     revenue: number;
+    currency: CurrencyCode;
   }>;
 }>({ popularItems: [] });
 
@@ -561,21 +543,16 @@ const metrics = computed(() => ({
   // describe the selected period. They used to come from the dashboard
   // summary, whose growth rates are always month-over-month: picking 本年 put a
   // year's revenue next to a monthly change (#312).
-  revenueChange: performanceData.value.revenueGrowth || 0,
   totalOrders: performanceData.value.totalOrders || 0,
   ordersChange: performanceData.value.orderGrowth || 0,
-  averageOrderValue: performanceData.value.averageOrderValue || 0,
-  aovChange:
-    performanceData.value.totalOrders > 0
-      ? (performanceData.value.revenueGrowth || 0) -
-        (performanceData.value.orderGrowth || 0)
-      : 0,
+  averageOrderValue: performanceData.value.averageOrderValue,
   tableUtilization: currentTableUtilization.value,
 }));
 
-const revenueTotals = computed(() =>
-  sumMoneyByCurrency(revenueDataRaw.value.map((bucket) => bucket.revenue)),
-);
+// The performance endpoint is the canonical full-window aggregate. Revenue
+// buckets are chart data and may be capped by the requested `limit`, so adding
+// them here would silently understate a long selected period.
+const revenueTotals = computed(() => performanceData.value.totalRevenue);
 
 // Computed: order status distribution
 const orderStatusData = computed(() => {
@@ -621,6 +598,7 @@ const popularItems = computed(() => {
       name: item.itemName,
       orders: item.quantity,
       revenue: item.revenue,
+      currency: item.currency,
     }));
 });
 
@@ -691,20 +669,16 @@ function formatMoneyByCurrency(amounts: MoneyByCurrency): string {
     .join(" · ");
 }
 
-function sumMoneyByCurrency(buckets: MoneyByCurrency[]): MoneyByCurrency {
-  const totals = new Map<CurrencyCode, number>();
-  for (const bucket of buckets) {
-    for (const amount of bucket) {
-      totals.set(
-        amount.currency,
-        (totals.get(amount.currency) ?? 0) + amount.amountCents,
-      );
-    }
-  }
-  return Array.from(totals, ([currency, amountCents]) => ({
-    currency,
-    amountCents,
-  }));
+function formatGrowthByCurrency(
+  growthRates: Array<{ currency: CurrencyCode; percentage: number }>,
+): string {
+  if (growthRates.length === 0) return "—";
+  return growthRates
+    .map(
+      ({ currency, percentage }) =>
+        `${percentage >= 0 ? "+" : ""}${percentage.toFixed(1)}% ${currency}`,
+    )
+    .join(" · ");
 }
 
 // Business hour bar color

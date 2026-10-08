@@ -126,10 +126,14 @@ const fullValidation: Scope = {
 // is a CI concern and CI runs on Linux, so a red suite here would only ever be
 // reporting on the developer's shell, not on the script under test.
 describe.skipIf(bashCommand === null)("CI change classifier", () => {
-  it.each(["docs/operations.md", "README.md"])(
-    "skips application checks for %s",
+  it("skips checks for unrelated documentation", () => {
+    expect(classify(["docs/operations.md"])).toEqual(none);
+  });
+
+  it.each(["README.md", "docs/api/README.md", "docs/architecture/README.md"])(
+    "runs the docs drift job for %s",
     (file) => {
-      expect(classify([file])).toEqual(none);
+      expect(classify([file])).toEqual({ ...none, tooling: true });
     },
   );
 
@@ -170,6 +174,14 @@ describe.skipIf(bashCommand === null)("CI change classifier", () => {
     const [first] = guardSuites();
 
     expect(classify([first.script])).toEqual({
+      ...none,
+      tooling: true,
+      guard_tests: true,
+    });
+  });
+
+  it("runs the runner guard suite when its script changes", () => {
+    expect(classify(["scripts/check-single-test-runner.cjs"])).toEqual({
       ...none,
       tooling: true,
       guard_tests: true,

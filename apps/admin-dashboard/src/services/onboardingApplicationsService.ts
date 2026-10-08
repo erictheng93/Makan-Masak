@@ -45,6 +45,15 @@ export interface OnboardingApplicationsResult {
   limit: number;
 }
 
+export interface OnboardingApplicationAuditEvent {
+  id: string;
+  eventType: string;
+  actorId: string | null;
+  actorEmail: string | null;
+  metadata: Record<string, string> | null;
+  createdAtMs: number;
+}
+
 /**
  * The raw setup token is deliberately absent: the one-time link already carries
  * it, and the server stops handing the bare token to clients that never use it.
@@ -86,6 +95,13 @@ export interface SetupPasswordLinkResult {
   credentialDelivery?: CredentialDelivery;
 }
 
+/** Fired after an approve/reject so the sidebar badge recounts right away. */
+export const ONBOARDING_APPLICATIONS_CHANGED =
+  "onboarding-applications:changed";
+
+/** Background refresh for the list and the sidebar badge. */
+export const ONBOARDING_POLL_INTERVAL_MS = 60_000;
+
 export const onboardingApplicationsService = {
   async list(
     input: {
@@ -100,6 +116,20 @@ export const onboardingApplicationsService = {
       input,
     );
     return unwrapApiPayload<OnboardingApplicationsResult>(response.data);
+  },
+
+  async auditEvents(
+    applicationId: string,
+  ): Promise<OnboardingApplicationAuditEvent[]> {
+    await ensureManagementAuthToken();
+    const response = await managementApi.get<{
+      events: OnboardingApplicationAuditEvent[];
+    }>(
+      `/admin/onboarding/applications/${encodeURIComponent(applicationId)}/audit-events`,
+    );
+    return unwrapApiPayload<{ events: OnboardingApplicationAuditEvent[] }>(
+      response.data,
+    ).events;
   },
 
   async approve(

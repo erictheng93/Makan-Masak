@@ -878,6 +878,7 @@
     "noResults": "No results found. Try a different search.",
     "open": "Open",
     "closed": "Closed",
+    "hoursUnavailable": "Hours not provided",
     "filters": "Filters",
     "openNow": "Open Now",
     "takeaway": "Takeaway",
@@ -919,6 +920,10 @@
   "footer": {
     "copyright": "© {year} MakanMasak. All rights reserved."
   },
+  "reservationBooking": {
+    "back": "Back to shop",
+    "title": "Table reservation"
+  },
   "serviceBooking": {
     "back": "Back to services",
     "title": "Service booking",
@@ -941,9 +946,11 @@
     "confirmationCode": "Confirmation code:",
     "amountDue": "Amount due",
     "status": "Status",
+    "paymentStatusLabel": "Payment",
     "creditCardPlaceholder": "Credit card public id",
     "creditPinPlaceholder": "PIN (optional)",
     "payWithCredits": "Pay with credits",
+    "payAtCounter": "Please pay the staff at the venue ({amount} due). Confirmation code: {code}",
     "lookupTitle": "Find or cancel a booking",
     "confirmationCodePlaceholder": "Enter confirmation code",
     "contactPlaceholder": "Booking phone or email (optional)",
@@ -961,6 +968,12 @@
     "lookupFailed": "Unable to look up this booking.",
     "cancelSuccess": "Booking cancelled.",
     "cancelFailed": "Unable to cancel this booking.",
+    "paymentStatus": {
+      "not_required": "No payment required",
+      "unpaid": "Unpaid",
+      "deposit_paid": "Deposit paid",
+      "paid": "Paid"
+    },
     "bookingStatus": {
       "pending": "Awaiting payment",
       "confirmed": "Confirmed",
@@ -1111,6 +1124,7 @@
       "marketHours": "Market hours · {hours}",
       "primaryVendor": "Main stall",
       "contactVendor": "Contact stall",
+      "notOpenToday": "Not open today",
       "loadMoreVendors": "Load more stalls"
     },
     "search": {
@@ -1203,6 +1217,7 @@
       "previousPage": "Back",
       "favoriteSyncFailed": "Unable to sync whether you follow this market. Please try again.",
       "checkoutSuccess": "Market order sent",
+      "vendorNotOpenToday": "A stall in your cart is not open today and was removed. Please review and check out again.",
       "checkoutFailed": "Unable to send the market order"
     },
     "checkout": {
@@ -1351,5 +1366,13 @@
     "saved": "Settings saved",
     "saveFailed": "Settings could not be saved. Please try again.",
     "loadFailed": "Settings could not be loaded. Please try again."
+  },
+  "demoShop": {
+    "bannerTitle": "This is a demo restaurant",
+    "bannerBody": "Order anything you like to try it out. Nothing is actually sent.",
+    "noticeTitle": "Demo restaurant: this order won't be sent",
+    "noticeBody": "You've just walked through ordering as a guest. At a real restaurant, this order would appear on the kitchen tablet right away.",
+    "applyCta": "Open my own shop",
+    "keepBrowsing": "Keep browsing"
   }
 }

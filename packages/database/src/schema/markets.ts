@@ -8,6 +8,7 @@ import {
 } from "drizzle-orm/sqlite-core";
 import { relations, sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
+import type { SupportedCountryCode } from "@makanmasak/shared-types";
 import { customers } from "./customers";
 import { restaurants } from "./restaurants";
 
@@ -40,6 +41,9 @@ export const markets = sqliteTable(
     type: text("type").notNull(),
     description: text("description"),
     city: text("city").notNull(),
+    // 市集所在國。收平台費（platform_fee_rate_bps > 0）的市集必須有值，
+    // 國家層的費率上限依它套用；NULL = 未知，不可當成任何國家。
+    countryCode: text("country_code").$type<SupportedCountryCode>(),
     district: text("district").notNull(),
     address: text("address").notNull(),
     latitude: real("latitude").notNull(),
@@ -67,6 +71,12 @@ export const markets = sqliteTable(
       .notNull()
       .$onUpdate(() => new Date()),
     deletedAt: integer("deleted_at_ms", { mode: "timestamp_ms" }),
+    // Last, to match the physical column order: 0034 appends it with ALTER
+    // TABLE ADD COLUMN. Minutes after local midnight at which this market's
+    // business day rolls over (see market-business-day.ts).
+    businessDayCutoffMinutes: integer("business_day_cutoff_minutes")
+      .notNull()
+      .default(300),
   },
   (table) => ({
     cityDistrictActiveIdx: index("markets_city_district_active_idx").on(
@@ -74,6 +84,7 @@ export const markets = sqliteTable(
       table.district,
       table.isActive,
     ),
+    countryCodeIdx: index("markets_country_code_idx").on(table.countryCode),
   }),
 );
 
@@ -104,6 +115,8 @@ export const restaurantMarketMemberships = sqliteTable(
       .notNull()
       .$defaultFn(() => new Date()),
     leftAt: integer("left_at_ms", { mode: "timestamp_ms" }),
+    // Appended by 0034. NULL once the owner closes for the day.
+    openedAt: integer("opened_at_ms", { mode: "timestamp_ms" }),
   },
   (table) => ({
     activePairIdx: uniqueIndex("restaurant_market_active_pair_idx")
@@ -149,6 +162,34 @@ export const marketJoinRequests = sqliteTable(
       table.marketId,
       table.status,
     ),
+  }),
+);
+
+export const marketVendorOpenEvents = sqliteTable(
+  "market_vendor_open_events",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    marketId: text("market_id")
+      .notNull()
+      .references(() => markets.id, { onDelete: "cascade" }),
+    restaurantId: text("restaurant_id")
+      .notNull()
+      .references(() => restaurants.id, { onDelete: "cascade" }),
+    action: text("action").$type<"open" | "close">().notNull(),
+    businessDate: text("business_date").notNull(),
+    occurredAt: integer("occurred_at_ms", { mode: "timestamp_ms" }).notNull(),
+    actorUserId: text("actor_user_id"),
+  },
+  (table) => ({
+    marketDateIdx: index("market_vendor_open_events_market_date_idx").on(
+      table.marketId,
+      table.businessDate,
+    ),
+    restaurantDateIdx: index(
+      "market_vendor_open_events_restaurant_date_idx",
+    ).on(table.restaurantId, table.businessDate),
   }),
 );
 

@@ -41,49 +41,29 @@ export class StarDriver extends PrinterDriver {
 
   async connect(): Promise<boolean> {
     try {
-      // Implement Star-specific connection logic
-      // Star printers often require specific initialization sequences
-
-      // Initialize with Star commands
       return await this.executeConnection(async () => {
+        await this.connectTransport();
         await this.initializeStarPrinter();
-        this.connected = true;
-        this.device.status = "online";
-        this.device.lastSeen = new Date();
         return true;
       });
     } catch {
-      this.connected = false;
-      this.device.status = "error";
+      this.markTransportOffline();
       return false;
     }
   }
 
   async disconnect(): Promise<void> {
-    if (this.connected) {
-      // Send Star-specific disconnect commands
-      await this.sendStarCommands("\x1B\x08"); // Clear buffer
+    try {
+      if (this.connected) {
+        await this.sendStarCommands("\x1B\x08"); // Clear buffer
+      }
+    } finally {
+      await this.disconnectTransport();
     }
-
-    this.connected = false;
-    this.device.status = "offline";
   }
 
   async getStatus(): Promise<PrinterStatus> {
-    if (!this.connected) {
-      return "offline";
-    }
-
-    try {
-      // Send Star-specific status request
-      // Star printers use different status commands than ESC/POS
-      await this.sendStarCommands("\x1B\x06\x01"); // Real-time status request
-
-      // For now, simulate status response
-      return "online";
-    } catch {
-      return "error";
-    }
+    return this.transportStatus();
   }
 
   async print(content: PrintContent): Promise<PrintResponse> {
@@ -136,7 +116,10 @@ export class StarDriver extends PrinterDriver {
     // Star printers can use ESC/POS or their proprietary commands
     if (this.options.emulation === "esc-pos") {
       // Use standard ESC/POS commands
-      const commandBuilder = CommandBuilder.fromPrintContent(content);
+      const commandBuilder = CommandBuilder.fromPrintContent(
+        content,
+        this.device.capabilities.maxWidth,
+      );
       return commandBuilder.buildESCPOS();
     } else {
       // Use Star-specific commands
@@ -145,6 +128,14 @@ export class StarDriver extends PrinterDriver {
   }
 
   private buildStarSpecificCommands(content: PrintContent): string {
+    if (content.type === "kitchen") {
+      return (
+        CommandBuilder.kitchenLines(
+          content,
+          this.device.capabilities.maxWidth,
+        ).join("\n") + "\n\x1B\x64\x03"
+      );
+    }
     const commands: string[] = [];
     const money = (amount: number) =>
       formatCurrencyAmount(amount, content.summary.currency);
@@ -217,14 +208,12 @@ export class StarDriver extends PrinterDriver {
   }
 
   protected async sendStarCommands(commands: string): Promise<void> {
-    // Implement Star-specific command sending
-    // Star printers may require specific timing or handshaking
-
-    // For now, simulate command sending (commands would be sent to printer)
-    await new Promise((resolve) => setTimeout(resolve, commands.length * 3)); // Simulate processing time based on command length
-
-    // Update device status
-    this.device.lastSeen = new Date();
+    // Star's native command set has no FS &; only ESC/POS emulation re-encodes.
+    await this.sendTransport(
+      this.options.emulation === "esc-pos"
+        ? this.encode(commands)
+        : Buffer.from(commands, "utf8"),
+    );
   }
 
   /**

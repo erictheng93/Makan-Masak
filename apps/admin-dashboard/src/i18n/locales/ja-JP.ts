@@ -834,8 +834,6 @@ const jaJP: Messages = {
         "あなたのアカウントはまだどのレストランにもリンクされていません。管理者に割り当てを依頼してから、再試行してください。",
       subscriptionNotFound:
         "このレストランのサブスクリプションが見つからなかったため、その機能はまだ有効化されていません。サインインは問題ありません。セットアップするにはサポートにお問い合わせください。",
-      trialExpired:
-        "試用期間は終了しました。この機能を引き続き使用するには、プランをアップグレードしてください。",
     },
   },
   success: {
@@ -1897,6 +1895,7 @@ const jaJP: Messages = {
     waitingManagement: "待機管理",
   },
   pages: {
+    marketOpenReport: "Open-day report",
     reviews: "お客様レビュー",
     broadcasts: "プッシュ通知",
     billing: "プランと使用量",
@@ -1949,6 +1948,8 @@ const jaJP: Messages = {
     subscriptions: "定期購入",
     waitingManagement: "待機管理",
     platformMarketCheckouts: "マーケットチェックアウト",
+    platformMarkets: "マーケット品質",
+    platformOnboarding: "出店申請",
     platformCustomers: "プラットフォーム顧客",
   },
   platform: {
@@ -2017,11 +2018,12 @@ const jaJP: Messages = {
     newPassword: "新しいパスワード",
     newPasswordPlaceholder: "新しいパスワードを入力（6文字以上）",
     passwordStrength: "パスワード強度：",
-    atLeast6Chars: "6文字以上",
-    atLeast8Chars: "8文字以上（推奨）",
-    upperLowerCase: "大文字と小文字を含む",
+    atLeast8Chars: "8文字以上",
+    containsUppercase: "大文字（A-Z）を含む",
+    containsLowercase: "小文字（a-z）を含む",
+    startsWithAllowedChar: "先頭は英字・数字・@ $ ! % * ? & のいずれか",
     containsNumber: "数字を含む",
-    containsSpecialChar: "特殊文字を含む（推奨）",
+    containsSpecialChar: "記号を含む（@ $ ! % * ? & のいずれか）",
     confirmPassword: "パスワード確認",
     confirmPasswordPlaceholder: "新しいパスワードを再入力",
     resetting: "リセット中...",
@@ -2032,7 +2034,6 @@ const jaJP: Messages = {
     strengthStrong: "強",
     strengthVeryStrong: "非常に強い",
     newPasswordRequired: "新しいパスワードを入力してください",
-    passwordMin6: "パスワードは6文字以上必要です",
     confirmPasswordRequired: "パスワードを確認してください",
     passwordMismatch: "パスワードが一致しません",
     passwordResetSuccess: "パスワードが正常にリセットされました",
@@ -2040,7 +2041,11 @@ const jaJP: Messages = {
     resetTokenExpired:
       "リセットリンクの有効期限が切れています。もう一度申請してください。",
     resetTokenInvalid: "リセットリンクが無効です。もう一度申請してください。",
-    weakPassword: "パスワードが弱すぎます。6文字以上で設定してください。",
+    weakPassword:
+      "パスワードが弱すぎます。8文字以上で、大文字・小文字・数字と @ $ ! % * ? & のいずれかを含めてください。",
+    passwordRequirementsNotMet:
+      "パスワードが条件を満たしていません：8文字以上で、大文字・小文字・数字と @ $ ! % * ? & のいずれかを含めてください（その他の記号は対象外です）。",
+    passwordMissing: "パスワードに足りない条件：{items}",
     tokenInvalid: "トークンが無効または期限切れです",
     tokenVerifyError: "トークンの検証中にエラーが発生しました",
     missingToken: "リセットトークンがありません",
@@ -2087,6 +2092,7 @@ const jaJP: Messages = {
     },
     actions: {
       handoff: "開通情報",
+      auditTrail: "監査履歴",
       approve: "承認",
       reject: "却下",
     },
@@ -2116,6 +2122,17 @@ const jaJP: Messages = {
       pending: "保留中",
       failed: "送信失敗",
     },
+    audit: {
+      title: "申請の監査履歴",
+      close: "閉じる",
+      empty: "監査イベントはありません。",
+      system: "システム",
+      reason: "理由：{reason}",
+      submitted: "申請を受理",
+      approved: "申請を承認",
+      rejected: "申請を却下",
+      setupLinkRegenerated: "オーナー設定リンクを再生成",
+    },
     reject: {
       title: "申請を却下しますか",
       description: "理由を入力してください。申請者に表示されます。",
@@ -2130,6 +2147,7 @@ const jaJP: Messages = {
     },
     errors: {
       load: "店舗申請を読み込めませんでした。",
+      audit: "監査履歴を読み込めませんでした。もう一度お試しください。",
       approve: "承認に失敗しました。申請の状態を確認してください。",
       handoff: "開通情報を取得できませんでした。もう一度お試しください。",
       copy: "クリップボードにコピーできませんでした。テキストを選択してコピーしてください。",
@@ -2137,8 +2155,50 @@ const jaJP: Messages = {
       regenerate: "設定リンクの再生成に失敗しました。もう一度お試しください。",
     },
   },
+  marketOpenReport: {
+    pageTitle: "Open-day report",
+    title: "Stall open-day report",
+    market: "Market",
+    from: "From",
+    to: "To",
+    view: {
+      daily: "Daily",
+      summary: "Summary",
+    },
+    export: "Export CSV",
+    exportFailed: "Could not export CSV. Please try again.",
+    loadFailed:
+      "Could not load the report. Check the date range (92 days max).",
+    noMarkets: "Your shop is not in any market yet",
+    autoClosed: "Ended at day rollover",
+    col: {
+      date: "Business day",
+      vendor: "Stall",
+      opened: "Opened",
+      closed: "Closed",
+      hours: "Hours open",
+      openedBy: "Opened by",
+      orders: "Orders",
+      revenue: "Revenue",
+      openDays: "Days open",
+      attendance: "Attendance",
+      avgHours: "Avg hours open",
+    },
+  },
   dashboard: {
     title: "ダッシュボード",
+    marketOpenToday: {
+      title: "Open today",
+      description:
+        "Tap when you start trading so customers see your stall on the market QR",
+      open: "Open today",
+      close: "Close early",
+      closed: "Not open yet today",
+      openSince: "Open since {time}",
+      confirmClose: "Close now? Customers will not be able to order from you.",
+      error: "Could not update your status. Please try again.",
+      report: "Open-day report",
+    },
     setupChecklist: {
       title: "店舗設定を完了",
       description: "営業開始前に基本項目を完了してください。",
@@ -2721,6 +2781,7 @@ const jaJP: Messages = {
       paymentSuccess: "支払い処理が完了しました",
       paymentFailed: "支払いに失敗しました。再試行してください",
       refundFailed: "返金に失敗しました。再試行してください",
+      printFailed: "レシートを印刷できませんでした",
       printInDev: "レシート印刷は開発中です...",
       printing: "{orderNumber}のレシートを印刷中...",
       printingShiftReport: "シフトレポートを印刷中...",
@@ -3263,7 +3324,6 @@ const jaJP: Messages = {
     startDelivery: "配膳開始",
     confirmDelivery: "配膳完了を確認",
     contactCustomer: "お客様に連絡",
-    reportIssue: "問題を報告",
     noOrders: "配膳待ちの注文はありません",
     allDelivered: "すべての料理が配膳されました",
     myDeliveries: "アクティブな配膳",
@@ -3280,28 +3340,13 @@ const jaJP: Messages = {
     customerInfo: "顧客情報",
     makeCall: "電話をかける",
     sendMessage: "メッセージを送信",
-    issueType: "問題タイプ",
-    selectIssueType: "問題タイプを選択",
-    issues: {
-      wrongOrder: "注文ミス",
-      missingItems: "商品不足",
-      qualityIssue: "品質問題",
-      customerUnavailable: "お客様不在",
-      accessIssue: "テーブルにアクセスできません",
-      other: "その他の問題",
-    },
-    issueDescription: "問題の説明",
-    issueDescPlaceholder: "問題を詳しく説明してください...",
     cancel: "キャンセル",
-    submitIssue: "問題を報告",
     justReady: "準備完了直後",
     minutesAgo: "{minutes}分前",
     hoursAgo: "{hours}時間前",
     alerts: {
       calling: "{name}に電話中: {phone}",
       messaging: "{name}にメッセージ送信中",
-      issueReported:
-        "問題が報告されました:\nタイプ: {type}\n説明: {description}",
     },
   },
   pos: {
@@ -3318,6 +3363,7 @@ const jaJP: Messages = {
     balance: "残高",
     shift: "シフト",
     notStarted: "未開始",
+    shiftActive: "進行中",
     pleaseStartShift: "シフトを開始してください",
     startShift: "シフト開始",
     endShift: "シフト終了",
@@ -4325,6 +4371,10 @@ const jaJP: Messages = {
     availableSeats: "空席数",
   },
   couponForm: {
+    clearIncompatible: "併用制限を解除",
+    incompatibleCoupons: "併用できないクーポン",
+    incompatibleHint:
+      "このクーポンと併用できないクーポンを選択してください。どちらか一方の設定で併用が禁止されます。",
     editTitle: "クーポン編集",
     createTitle: "クーポン作成",
     basicInfo: "基本情報",
@@ -5016,6 +5066,8 @@ const jaJP: Messages = {
   },
   orderStore: {
     addItemsFailed: "商品の追加に失敗しました",
+    couponOrderImmutable:
+      "この注文はクーポンを使用しているため、商品を変更できません。キャンセルして注文し直してください",
     changeItemFailed: "数量の変更に失敗しました",
     removeItemFailed: "商品の削除に失敗しました",
     fetchFailed: "注文の取得に失敗しました",
@@ -5965,6 +6017,16 @@ const jaJP: Messages = {
     statusActive: "有効",
     statusInactive: "無効",
     trialRemaining: "試用期間はあと {days} 日です",
+    trialExpiredBanner:
+      "無料トライアルは終了しました。引き続きすべての機能をご利用いただけますが、MakanMasak を支援するためプランをご選択ください。",
+    trialExpiredAction: "プランを選ぶ",
+    trialExpiredTitle: "無料トライアルは終了しました",
+    trialExpiredContinue: "続ける",
+    upgradeTitle: "プランのアップグレード",
+    upgradeBody:
+      "オンラインでのお申し込みはまだご利用いただけません。メールでご連絡ください。プランを設定いたします。それまでの間もすべての機能をご利用いただけます。",
+    upgradeAction: "メールでアップグレードを依頼",
+    upgradeMailSubject: "MakanMasak プランのアップグレード",
     usageTitle: "今期の使用量",
     usageEmpty: "今期の使用記録はまだありません。",
     modulesTitle: "含まれる機能",

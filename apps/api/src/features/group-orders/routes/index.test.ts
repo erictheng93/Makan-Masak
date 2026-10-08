@@ -579,6 +579,9 @@ describe("group orders routes", () => {
 
   it("locks group orders only for the creator member token", async () => {
     isHostSession.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    getGroupOrder.mockResolvedValue({
+      groupOrder: { id: groupOrderId, restaurantId: "restaurant-1" },
+    });
     finalizeGroupOrder.mockResolvedValue({
       success: true,
       data: { masterOrderId: "order-1", status: "completed" },
@@ -600,6 +603,18 @@ describe("group orders routes", () => {
     });
     expect(isHostSession).toHaveBeenCalledWith(groupOrderId, "host-session");
     expect(finalizeGroupOrder).toHaveBeenCalledWith(groupOrderId);
+    // Every other diner's open page learns of the submit only from this.
+    expect(broadcastEvent).toHaveBeenCalledWith(
+      "customer",
+      groupOrderId,
+      expect.objectContaining({
+        type: RealtimeEventType.GROUP_ORDER_COMPLETED,
+        data: expect.objectContaining({
+          groupOrderId,
+          masterOrderId: "order-1",
+        }),
+      }),
+    );
 
     const forbiddenResponse = await withSilencedRouteError(() =>
       routes.fetch(

@@ -6,7 +6,7 @@ const viVN: Messages = {
       copyright: "© 2026 MakanMasak. Mọi quyền được bảo lưu.",
     },
     tagline: {
-      selfHosted: "Tự lưu trữ",
+      platformHosted: "Nền tảng vận hành",
     },
   },
   apply: {
@@ -69,6 +69,17 @@ const viVN: Messages = {
       submitting: "Đang gửi...",
     },
     title: "Đơn đăng ký",
+    submitErrors: {
+      rateLimited:
+        "Gửi quá nhiều lần. Mỗi mạng chỉ được gửi 5 lần mỗi giờ (lần gửi thất bại cũng được tính). Vui lòng thử lại sau giờ tiếp theo hoặc chuyển sang dữ liệu di động.",
+      validation:
+        "Một số thông tin không hợp lệ. Vui lòng kiểm tra từng ô và gửi lại.",
+      cityNotInCountry:
+        "Thành phố đã chọn không thuộc quốc gia này. Vui lòng chọn lại quốc gia và thành phố.",
+      marketNotInCity:
+        "Chợ đã chọn không thuộc thành phố này. Vui lòng chọn lại.",
+      network: "Lỗi kết nối. Vui lòng kiểm tra mạng và thử lại.",
+    },
     toast: {
       submitFailureFallback: "Gửi không thành công. Vui lòng thử lại sau.",
       submitSuccess: "Đơn đăng ký đã được gửi",
@@ -90,6 +101,8 @@ const viVN: Messages = {
       subdomainInvalidFormat:
         "Chỉ cho phép chữ cái viết thường, số và dấu gạch nối",
       subdomainTaken: "URL này đã được sử dụng",
+      tooShort: "Phải có ít nhất 2 ký tự",
+      phoneInvalid: "Số điện thoại phải từ 8 đến 20 ký tự",
       subdomainTooShort: "Phải có ít nhất 3 ký tự",
     },
   },
@@ -103,21 +116,56 @@ const viVN: Messages = {
     },
   },
   home: {
+    tour: {
+      title: "Từ lúc gọi món đến khi lên bàn, nhìn là hiểu",
+      subtitle:
+        "Đây là màn hình thật của hệ thống, dùng cửa hàng và đơn hàng mẫu.",
+      tryDemo: "Thử nhà hàng mẫu →",
+      tryDemoHint:
+        "Mở trên điện thoại của bạn, giống như khách quét mã. Đơn hàng sẽ không thật sự được gửi đi.",
+      steps: {
+        order: {
+          title: "Khách quét mã để gọi món",
+          description:
+            "Khách quét mã QR trên bàn và gọi món từ thực đơn có hình ảnh. Không cần tải ứng dụng.",
+          alt: "Màn hình gọi món trên điện thoại của khách",
+        },
+        kitchen: {
+          title: "Bếp nhận đơn ngay lập tức",
+          description:
+            "Đơn hàng hiện ngay trên máy tính bảng của bếp, xếp theo chờ xử lý, đang nấu và đã xong.",
+          alt: "Bảng đơn hàng trên máy tính bảng của bếp",
+        },
+        tracking: {
+          title: "Khách theo dõi được tiến độ",
+          description:
+            "Mỗi bước được cập nhật ngay trên điện thoại của khách, không cần hỏi món đã xong chưa.",
+          alt: "Tiến độ đơn hàng trên điện thoại của khách",
+        },
+        dashboard: {
+          title: "Chủ quán nắm doanh thu",
+          description:
+            "Doanh thu hôm nay, số đơn và bàn nào còn đang chờ, tất cả trên một màn hình.",
+          alt: "Tổng quan của chủ quán trong trang quản trị",
+        },
+      },
+    },
     cta: {
       button: "Bắt đầu ứng dụng",
       subtitle:
-        "Điền vào đơn đăng ký và chúng tôi sẽ liên hệ với bạn trong vòng 24 giờ.",
+        "Điền đơn đăng ký, đội ngũ của chúng tôi sẽ liên hệ sau khi xét duyệt.",
       title: "Sẵn sàng để bắt đầu?",
     },
     features: {
-      fast: {
-        description: "Đường ống triển khai tự động. Sống trong vòng 24 giờ.",
-        title: "Triển khai nhanh",
-      },
-      isolated: {
+      assisted: {
         description:
-          "Môi trường đám mây bị cô lập hoàn toàn. Dữ liệu của bạn là của bạn 100%.",
-        title: "Môi trường biệt lập",
+          "Đội ngũ của chúng tôi xét duyệt đơn, kích hoạt tài khoản và hướng dẫn bạn thiết lập cửa hàng",
+        title: "Kích hoạt có hỗ trợ",
+      },
+      hosted: {
+        description:
+          "Chúng tôi vận hành hệ thống cho bạn — không cần tự dựng hay bảo trì máy chủ",
+        title: "Nền tảng vận hành",
       },
       secure: {
         description:
@@ -127,8 +175,9 @@ const viVN: Messages = {
     },
     hero: {
       ctaApply: "Đăng ký ngay",
-      ctaDemo: "Xem bản trình diễn →",
-      subtitle: "Tự lưu trữ · Dữ liệu an toàn · Khởi chạy sau 24 giờ",
+      ctaTour: "Xem cách hoạt động ↓",
+      subtitle:
+        "Nền tảng vận hành · Dữ liệu an toàn · Được đội ngũ xét duyệt và kích hoạt",
       titleLine1: "Xây dựng nhà hàng của bạn",
       titleLine2: "Hệ thống quản lý chuyên dụng",
     },
@@ -160,11 +209,9 @@ const viVN: Messages = {
         title: "Triển khai hệ thống",
       },
       email: {
-        prefix: "Chúng tôi đã gửi email xác nhận tới",
-        suffix: ". Vui lòng kiểm tra hộp thư đến của bạn.",
         description:
-          "Chúng tôi sẽ gửi email khi đơn đăng ký của bạn có cập nhật.",
-        title: "Email xác nhận",
+          "Sau khi được duyệt, nền tảng sẽ cung cấp tài khoản chủ quán và liên kết đặt mật khẩu. Dùng liên kết trạng thái để theo dõi đơn của bạn.",
+        title: "Thông tin đăng nhập",
       },
       start: {
         description:
@@ -179,11 +226,8 @@ const viVN: Messages = {
     summary: {
       applicationId: "ID ứng dụng",
       businessName: "Tên nhà hàng",
-      cloudflare: "Lưu trữ nền tảng",
-      connected: "Đã bật",
       contactEmail: "Email liên hệ",
       plan: "Kế hoạch đã chọn",
-      subdomain: "URL chuyên dụng",
       tenantId: "ID người thuê",
       status: "Trạng thái ứng dụng",
       pendingReview: "Đang chờ nền tảng xét duyệt",

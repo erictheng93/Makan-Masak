@@ -35,6 +35,7 @@ import {
   ORDER_STATUSES,
 } from "@makanmasak/shared-types";
 import type {
+  AppliedCoupon,
   MenuItemOptions as WireMenuItemOptions,
   Order,
   OrderItem,
@@ -49,6 +50,7 @@ import {
   badRequest,
   conflict,
   computeDiscountCents,
+  forbidden,
   formatCurrency,
 } from "@makanmasak/utils";
 import { amountFromCents, fromCents, toRequiredCents } from "../utils/money";
@@ -134,6 +136,7 @@ export interface CreateOrderData {
     notes?: string;
   }>;
   notes?: string;
+  couponCodes?: string[];
   couponCode?: string;
   couponUserId?: string;
   /** Server-resolved guest identity; never accepted from an order body. */
@@ -177,7 +180,8 @@ export interface OrderFilters {
     | "foodpanda"
     | "grabfood";
   search?: string;
-  dateRange?: [Date, Date];
+  /** Either end may be omitted for an open-ended range. */
+  dateRange?: [Date | undefined, Date | undefined];
   minAmount?: number;
   maxAmount?: number;
   sortBy?: "createdAt" | "totalAmount" | "status" | "updatedAt";
@@ -208,6 +212,7 @@ type SelectedAddOn = NonNullable<SelectedCustomizations["addOns"]>[number];
 type PreparedOrderItem = {
   menuItemId: number;
   quantity: number;
+  preparationTime: number | null;
   unitPrice: number;
   totalPrice: number;
   unitPriceCents: number;
@@ -227,6 +232,7 @@ type PreparedOrderItem = {
 
 type PrepTimeOrderItem = {
   quantity: number;
+  preparationTime?: number | null;
   customizations?: {
     options?: unknown[];
     addOns?: unknown[];
@@ -644,6 +650,15 @@ export class OrderService extends BaseService {
         throw conflict("Restaurant is not available", "RESTAURANT_UNAVAILABLE");
       }
 
+      // 平台示範店（0033）：onboarding 首頁讓潛在店家親手走一次點餐，
+      // 但任何訂單路徑（訪客、會員、揪團、市集結帳）都不能真的成立。
+      if (restaurant.isDemo) {
+        throw forbidden(
+          "This is a demo restaurant. Orders and bookings are not accepted.",
+          "DEMO_RESTAURANT",
+        );
+      }
+
       // 外送必須由店家開啟才收單。前端只是不顯示外送選項，直接打 API 帶
       // `deliveryInfo.type = "delivery"` 一樣建得起來（#295）。守門放在這裡而
       // 不是路由層，因為 orders / guest-orders / market-checkouts / group-orders
@@ -697,33 +712,39 @@ export class OrderService extends BaseService {
 
       // 優惠券驗證和折扣計算
       let discountAmount = 0;
-      let validatedCoupon = null;
+      let appliedCoupons: AppliedCoupon[] = [];
       let couponService: InstanceType<
         typeof import("./coupon").CouponService
       > | null = null;
 
-      if (data.couponCode) {
+      if (data.couponCode !== undefined && data.couponCodes !== undefined) {
+        throw badRequest(
+          "Supply couponCode or couponCodes, not both",
+          "COUPON_INVALID",
+        );
+      }
+      const couponCodes =
+        data.couponCodes ?? (data.couponCode ? [data.couponCode] : []);
+      if (couponCodes.length) {
         const { CouponService } = await import("./coupon");
         couponService = new CouponService(this.d1, this.env);
-
-        const validationResult = await couponService.validateCoupon(
-          data.couponCode,
-          data.restaurantId.toString(),
-          subtotal,
-          data.couponUserId,
-          data.items,
-          { currency, guestIdentity: data.couponGuestIdentity },
-        );
-
-        if (validationResult.valid) {
-          discountAmount = validationResult.discountAmount || 0;
-          validatedCoupon = validationResult.coupon;
-        } else {
+        const validationResult = await couponService.validateCoupons({
+          codes: couponCodes,
+          restaurantId: data.restaurantId.toString(),
+          orderAmount: subtotal,
+          userId: data.couponUserId,
+          menuItems: data.items,
+          currency,
+          guestIdentity: data.couponGuestIdentity,
+        });
+        if (!validationResult.valid) {
           throw badRequest(
             `優惠券驗證失敗: ${validationResult.error}`,
             "COUPON_INVALID",
           );
         }
+        discountAmount = validationResult.discountAmount ?? 0;
+        appliedCoupons = validationResult.appliedCoupons ?? [];
       }
 
       // 驗證最低消費（在折扣後但在計算稅金前）
@@ -813,7 +834,13 @@ export class OrderService extends BaseService {
             totalAmountCents,
             customerInfo: data.customerInfo,
             notes: data.notes,
-            couponCode: data.couponCode,
+            couponCode: appliedCoupons[0]?.code,
+            appliedCoupons: appliedCoupons.map(
+              ({ discountAmount, ...coupon }) => ({
+                ...coupon,
+                discountAmountCents: toRequiredCents(discountAmount),
+              }),
+            ),
             ...(data.clientMutationId
               ? { clientMutationId: data.clientMutationId }
               : {}),
@@ -835,27 +862,23 @@ export class OrderService extends BaseService {
 
       // 優惠券名額仍須先佔用；其餘庫存與帳本寫入一律留在下面同一個
       // D1 batch，不能靠補償交易修復。
-      let claimedCouponId: number | null = null;
-      const releaseClaimedCoupon = async () => {
-        if (claimedCouponId !== null && couponService) {
-          try {
-            await couponService.releaseUsageSlot(claimedCouponId);
-          } catch (releaseError) {
-            console.error("Coupon slot release failed:", releaseError);
-          }
-        }
+      const claimedCouponIds: number[] = [];
+      const releaseClaimedCoupons = async () => {
+        const releases = await Promise.allSettled(
+          claimedCouponIds.map((id) => couponService!.releaseUsageSlot(id)),
+        );
+        const failure = releases.find((result) => result.status === "rejected");
+        if (failure?.status === "rejected") throw failure.reason;
       };
       const ingredientConsumption = new IngredientConsumptionService(this.db);
-      if (validatedCoupon && discountAmount > 0 && couponService) {
-        await couponService.claimUsageSlot(validatedCoupon.id);
-        claimedCouponId = validatedCoupon.id;
+      for (const coupon of appliedCoupons) {
         writeStatements.push(
           this.db.insert(couponUsage).values({
-            couponId: validatedCoupon.id,
+            couponId: coupon.couponId,
             orderId: orderIdRef as unknown as string,
             userId: data.couponUserId,
             guestIdentity: data.couponGuestIdentity,
-            discountAmountCents,
+            discountAmountCents: toRequiredCents(coupon.discountAmount),
             originalAmountCents: subtotalCents,
             finalAmountCents: totalAmountCents,
             status: "active",
@@ -918,11 +941,15 @@ export class OrderService extends BaseService {
 
       let batchResults: unknown[];
       try {
+        for (const coupon of appliedCoupons) {
+          await couponService!.claimUsageSlot(coupon.couponId);
+          claimedCouponIds.push(coupon.couponId);
+        }
         batchResults = await this.db.batch(
           writeStatements as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]],
         );
       } catch (error) {
-        await releaseClaimedCoupon();
+        await releaseClaimedCoupons();
         if (
           error instanceof Error &&
           /COUPON_GUEST_LIMIT_REACHED/.test(error.message)
@@ -1159,6 +1186,12 @@ export class OrderService extends BaseService {
           `Cannot add items to an order with status: ${existingOrder.status}`,
         );
       }
+      if (existingOrder.couponCode || existingOrder.appliedCoupons?.length) {
+        throw badRequest(
+          "Cancel and reorder to change items on a coupon order",
+          "COUPON_ORDER_IMMUTABLE",
+        );
+      }
       assertOrderTotalIsMutable(existingOrder);
       // Compared here rather than at the route, and that placement is the
       // whole point: this read is the one that feeds the CAS below, so
@@ -1339,6 +1372,7 @@ export class OrderService extends BaseService {
       await this.recomputeMemberProjection(updatedOrder);
       return updatedOrder;
     } catch (error) {
+      if (error instanceof ApiError) throw error;
       this.handleError(error, "addItemsToOrder");
     }
   }
@@ -1526,6 +1560,12 @@ export class OrderService extends BaseService {
           `Cannot modify items on an order with status: ${existingOrder.status}`,
         );
       }
+      if (existingOrder.couponCode || existingOrder.appliedCoupons?.length) {
+        throw badRequest(
+          "Cancel and reorder to change items on a coupon order",
+          "COUPON_ORDER_IMMUTABLE",
+        );
+      }
       assertOrderTotalIsMutable(existingOrder);
       if (
         expectedVersion != null &&
@@ -1618,13 +1658,6 @@ export class OrderService extends BaseService {
         discountCents: currentDiscountCents,
         deliveryFeeCents: toRequiredCents(deliveryFee),
       });
-      // The discount carries across untouched, exactly as addItemsToOrder
-      // carries it: a coupon is not re-validated against the new subtotal
-      // here. Shrinking an order below the coupon's minimum spend can
-      // therefore drive the arithmetic negative, so this floor is what keeps
-      // a "refund due" figure out of the till.
-      // ponytail: floor, not re-validation. Re-run coupon eligibility if
-      // shrinking-below-threshold turns out to be a real pattern.
       const totalAmountCents = Math.max(0, totals.totalAmountCents);
 
       const observedVersion = existingOrder.version;
@@ -1769,6 +1802,7 @@ export class OrderService extends BaseService {
       await this.recomputeMemberProjection(updatedOrder);
       return updatedOrder;
     } catch (error) {
+      if (error instanceof ApiError) throw error;
       this.handleError(error, "changeOrderItemQuantity");
     }
   }
@@ -1880,9 +1914,8 @@ export class OrderService extends BaseService {
 
       if (filters.dateRange) {
         const [startDate, endDate] = filters.dateRange;
-        conditions.push(
-          and(gte(orders.createdAt, startDate), lte(orders.createdAt, endDate)),
-        );
+        if (startDate) conditions.push(gte(orders.createdAt, startDate));
+        if (endDate) conditions.push(lte(orders.createdAt, endDate));
       }
 
       if (filters.minAmount) {
@@ -2090,6 +2123,10 @@ export class OrderService extends BaseService {
             .update(menuItems)
             .set({
               inventoryCount: sql`CASE WHEN ${menuItems.inventoryCount} IS NULL THEN NULL ELSE ${menuItems.inventoryCount} + ${item.quantity} END`,
+              // Keep the sold-count reversal with the inventory reversal in
+              // this CAS-authorized batch. A duplicate cancellation aborts
+              // before either change can run.
+              orderCount: sql`MAX(0, ${menuItems.orderCount} - ${item.quantity})`,
             })
             .where(
               and(
@@ -2135,6 +2172,15 @@ export class OrderService extends BaseService {
           .where(eq(restaurants.id, order.restaurantId)) as BatchItem<"sqlite">,
       );
       writeStatements.push(...ingredientRestoreWrites);
+      if (order.couponCode || order.appliedCoupons?.length) {
+        const { CouponService } = await import("./coupon");
+        writeStatements.push(
+          ...(await new CouponService(
+            this.d1,
+            this.env,
+          ).buildCancelledUsageWrites(id)),
+        );
+      }
 
       let batchResults: unknown[];
       try {
@@ -2416,6 +2462,7 @@ export class OrderService extends BaseService {
       orderItemsData.push({
         menuItemId: item.menuItemId,
         quantity: item.quantity,
+        preparationTime: menuItem.preparationTime,
         unitPrice,
         totalPrice,
         unitPriceCents,
@@ -2444,7 +2491,7 @@ export class OrderService extends BaseService {
 
     for (const item of orderItems) {
       // 基礎準備時間（預設 15 分鐘）
-      const basePrepTime = 15;
+      const basePrepTime = item.preparationTime ?? 15;
 
       // 根據客製化增加時間
       let itemComplexity = 1;
@@ -2466,9 +2513,10 @@ export class OrderService extends BaseService {
   }
 
   private toOrderItemInsert(item: PreparedOrderItem) {
-    const { unitPrice, totalPrice, ...insertItem } = item;
+    const { unitPrice, totalPrice, preparationTime, ...insertItem } = item;
     void unitPrice;
     void totalPrice;
+    void preparationTime;
     return insertItem;
   }
 
@@ -2541,6 +2589,12 @@ export class OrderService extends BaseService {
       taxAmount: amountFromCents(order.taxAmountCents) ?? undefined,
       serviceCharge: amountFromCents(order.serviceChargeCents) ?? undefined,
       discountAmount: amountFromCents(order.discountAmountCents) ?? undefined,
+      couponCode: order.couponCode ?? undefined,
+      appliedCoupons:
+        order.appliedCoupons?.map(({ discountAmountCents, ...coupon }) => ({
+          ...coupon,
+          discountAmount: fromCents(discountAmountCents),
+        })) ?? undefined,
       totalAmount: amountFromCents(order.totalAmountCents) ?? 0,
       customerInfo: order.customerInfo ?? undefined,
       estimatedPrepTime: order.estimatedPrepTime ?? undefined,

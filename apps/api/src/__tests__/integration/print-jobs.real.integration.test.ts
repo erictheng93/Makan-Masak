@@ -33,6 +33,7 @@ import {
   CommandBuilder,
 } from "@makanmasak/queue-core/print";
 import routes from "../../features/print/routes";
+import { PrintAgentCredentialService } from "../../features/pos/services/PrintAgentCredentialService";
 import { hashPrintAgentKey } from "../../shared/utils/print-agent-key";
 
 const SHOP_A = "print-shop-a";
@@ -231,11 +232,35 @@ describe("cloud print dispatch — real D1", () => {
             unitPriceCents: 1200,
             totalPriceCents: 1200,
             itemSnapshot: { name: "Nasi Lemak" },
+            notes: "不要辣",
+            kitchenNotes: "分開裝",
+            customizations: {
+              size: { id: "large", name: "大份" },
+              options: [
+                {
+                  id: "spice",
+                  optionName: "辣度",
+                  choiceId: "none",
+                  choiceName: "不辣",
+                },
+              ],
+              addOns: [
+                {
+                  id: "egg",
+                  name: "蛋",
+                  quantity: 2,
+                  unitPrice: 1,
+                  totalPrice: 2,
+                },
+              ],
+            },
           });
           await testDb.drizzle
             .update(orders)
             .set({
               tableId,
+              notes: "先上飲料",
+              internalNotes: "急單",
               orderType:
                 name === "seat order"
                   ? "seat"
@@ -260,7 +285,12 @@ describe("cloud print dispatch — real D1", () => {
           const result =
             kind === "kitchen"
               ? await service.createKitchenTicket(ORDER_A)
-              : await service.printReceipt({ orderId: ORDER_A }, REGISTER_A);
+              : await service.printReceipt(
+                  { orderId: ORDER_A },
+                  REGISTER_A,
+                  undefined,
+                  "林收銀",
+                );
           expect(result.success).toBe(true);
           const stored = await receiptRow(result.data!.id);
           expect(JSON.parse(stored!.content).tableNumber).toBe(expected);
@@ -292,6 +322,48 @@ describe("cloud print dispatch — real D1", () => {
             expect(commands).not.toContain("Table:");
           }
           if (name === "delivery") expect(commands).toContain("1 Test Rd");
+          if (kind === "kitchen") {
+            expect(request.type).toBe("kitchen");
+            expect(request.data.order.items[0].modifiers).toEqual([
+              { name: "大份", price: 0 },
+              { name: "辣度: 不辣", price: 0 },
+              { name: "蛋 x2", price: 0 },
+            ]);
+            expect(request.data.order.items[0].notes).toBe("不要辣\n分開裝");
+            for (const option of ["大份", "不辣", "蛋 x2"]) {
+              expect(commands.split(option)).toHaveLength(2);
+            }
+            for (const text of [
+              "Nasi Lemak x1",
+              "不要辣",
+              "分開裝",
+              "先上飲料",
+              "急單",
+              "大份",
+              "不辣",
+              "蛋 x2",
+            ]) {
+              expect(commands).toContain(text);
+            }
+            for (const text of [
+              "Cashier:",
+              "Subtotal:",
+              "TOTAL:",
+              "NT$",
+              "謝謝光臨",
+              "Thank you",
+              "/receipt/",
+              "電子發票",
+            ]) {
+              expect(commands).not.toContain(text);
+            }
+          } else {
+            expect(commands).toMatch(/Cashier:\s+林收銀/);
+            expect(commands).toContain("TOTAL:");
+            expect(commands).not.toContain("電子發票證明聯");
+            expect(commands).not.toContain("急單");
+            expect(commands).not.toContain("分開裝");
+          }
         },
       );
     },
@@ -320,6 +392,28 @@ describe("cloud print dispatch — real D1", () => {
     expect(row?.printStatus).toBe("printing");
     expect(row?.printAttempts).toBe(1);
     expect(row?.claimedAt).toBeInstanceOf(Date);
+  });
+
+  it("tells the agent whose receipt it is: the shop's name, address and phone, and the order number", async () => {
+    await seedReceipt("receipt-a", REGISTER_A, ORDER_A, {
+      content: JSON.stringify({
+        orderNumber: "A-1001",
+        items: [],
+        subtotal: 12,
+        totalAmount: 12,
+      }),
+    });
+
+    const body = await claimedJob(await poll(KEY_A));
+
+    expect(body.data?.request.data).toMatchObject({
+      restaurant: {
+        name: `Shop ${SHOP_A}`,
+        address: "1 Test Rd",
+        phone: "0900000000",
+      },
+      order: { id: ORDER_A, orderNumber: "A-1001" },
+    });
   });
 
   it("never hands one shop's receipt to another shop's agent", async () => {
@@ -361,6 +455,33 @@ describe("cloud print dispatch — real D1", () => {
       .from(printAgents)
       .where(eq(printAgents.registerId, REGISTER_A));
     expect(agent?.lastSeenAt).toBeInstanceOf(Date);
+  });
+
+  it("keeps a zero-printer agent visible as no_printer without claiming work", async () => {
+    await seedReceipt("receipt-no-printer", REGISTER_A, ORDER_A);
+
+    const body = await claimedJob(
+      await poll(KEY_A, "?printersTotal=1&printersOnline=0"),
+    );
+
+    expect(body.data).toBeNull();
+    expect(await receiptRow("receipt-no-printer")).toMatchObject({
+      printStatus: "pending",
+      printAttempts: 0,
+    });
+
+    const agents = await new PrintAgentCredentialService(
+      testDb.bindings.DB,
+    ).listAgents(SHOP_A);
+    expect(agents).toEqual([
+      expect.objectContaining({
+        registerId: REGISTER_A,
+        printersTotal: 1,
+        printersOnline: 0,
+        status: "no_printer",
+        lastSeenAt: expect.any(Date),
+      }),
+    ]);
   });
 
   it("re-queues a claim whose agent died before acknowledging", async () => {
@@ -541,6 +662,38 @@ describe("cloud print dispatch — real D1", () => {
 
     expect(body.data?.receiptId).toBe("kitchen-1");
     expect((await receiptRow("kitchen-1"))?.printStatus).toBe("printing");
+  });
+
+  // A kitchen ticket is raised when the order is confirmed; cancelling the
+  // order afterwards left it pending, so the kitchen would be handed a ticket
+  // for food nobody wants. Production had one such ticket queued (2026-09-22).
+  it("voids a kitchen ticket whose order was cancelled instead of printing it", async () => {
+    await seedShopAgent(SHOP_A, KITCHEN_KEY_A);
+    await testDb.drizzle
+      .update(orders)
+      .set({ status: "cancelled" })
+      .where(eq(orders.id, ORDER_A));
+    await seedReceipt("kitchen-1", null, ORDER_A, { receiptType: "kitchen" });
+
+    expect((await claimedJob(await poll(KITCHEN_KEY_A))).data).toBeNull();
+    expect(await receiptRow("kitchen-1")).toMatchObject({
+      printStatus: "cancelled",
+      printAttempts: 0,
+    });
+  });
+
+  it("still prints a till receipt for a cancelled order", async () => {
+    // Only kitchen tickets are orders to cook. A customer receipt for a
+    // cancelled order (e.g. a void slip) is the till's business.
+    await testDb.drizzle
+      .update(orders)
+      .set({ status: "cancelled" })
+      .where(eq(orders.id, ORDER_A));
+    await seedReceipt("receipt-1", REGISTER_A, ORDER_A);
+
+    expect((await claimedJob(await poll(KEY_A))).data?.receiptId).toBe(
+      "receipt-1",
+    );
   });
 
   it("keeps a shop agent away from a till's receipts", async () => {

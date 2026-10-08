@@ -44,7 +44,8 @@
 | 點餐主流程 | [01-customer-ordering.md](./01-customer-ordering.md) | [board](./boards/customer-ordering.html) |
 | 訂單追蹤流程 | [02-customer-order-tracking.md](./02-customer-order-tracking.md) | [board](./boards/order-status-chain.html) |
 | 座位與預約流程 | [03-customer-seating-and-booking.md](./03-customer-seating-and-booking.md) | — |
-| 揪團與夜市市集流程 | [04-customer-group-and-market.md](./04-customer-group-and-market.md) | [board](./boards/market-checkout.html) |
+| 揪團與拆帳流程 | [04-customer-group-and-market.md](./04-customer-group-and-market.md) §2 | — |
+| 夜市市集跨攤結帳流程 | [04-customer-group-and-market.md](./04-customer-group-and-market.md) §3–4 | [board](./boards/market-checkout.html) |
 
 ### 店家後台（Admin Dashboard，role 1）
 

@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>現場作業流程本機實走</title>
+<style>
+:root{
+  --ground:#F2F2F7; --surface:#FFFFFF; --surface-2:#F8F8FB;
+  --ink:#1C1C1E; --ink-2:#55555C; --ink-3:#8A8A92;
+  --hair:rgba(28,28,30,.10); --hair-2:rgba(28,28,30,.06);
+  --shadow:0 1px 1.5px rgba(24,24,45,.05), 0 5px 16px rgba(24,24,45,.05);
+  --shadow-sm:0 1px 1px rgba(24,24,45,.05), 0 3px 10px rgba(24,24,45,.05);
+  --blue:#007AFF; --blue-ink:#0A5FC2;
+  --green:#34C759; --green-ink:#17803D;
+  --orange:#FF9500; --orange-ink:#A85F04;
+  --red:#FF3B30; --red-ink:#C1271D;
+  --purple:#AF52DE; --purple-ink:#7B2FB5;
+  --teal:#30B0C7; --teal-ink:#0D7C8F;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F0F13; --surface:#1B1B21; --surface-2:#212128;
+    --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#7E7E8A;
+    --hair:rgba(255,255,255,.14); --hair-2:rgba(255,255,255,.07);
+    --shadow:0 1px 1.5px rgba(0,0,0,.4), 0 5px 16px rgba(0,0,0,.35);
+    --shadow-sm:0 1px 1px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
+    --blue:#3B9BFF; --blue-ink:#7CBEFF;
+    --green:#4CD97A; --green-ink:#84E5A3;
+    --orange:#FFB03D; --orange-ink:#FFC978;
+    --red:#FF6961; --red-ink:#FF9A94;
+    --purple:#C77BEB; --purple-ink:#DBA9F4;
+    --teal:#4ECBE0; --teal-ink:#8CE0EE;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F0F13; --surface:#1B1B21; --surface-2:#212128;
+  --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#7E7E8A;
+  --hair:rgba(255,255,255,.14); --hair-2:rgba(255,255,255,.07);
+  --shadow:0 1px 1.5px rgba(0,0,0,.4), 0 5px 16px rgba(0,0,0,.35);
+  --shadow-sm:0 1px 1px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
+  --blue:#3B9BFF; --blue-ink:#7CBEFF;
+  --green:#4CD97A; --green-ink:#84E5A3;
+  --orange:#FFB03D; --orange-ink:#FFC978;
+  --red:#FF6961; --red-ink:#FF9A94;
+  --purple:#C77BEB; --purple-ink:#DBA9F4;
+  --teal:#4ECBE0; --teal-ink:#8CE0EE;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans","Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.7; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:960px; margin:0 auto; padding:36px 22px 80px}
+code{
+  font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:.87em; background:var(--surface-2); padding:1.5px 6px;
+  border-radius:6px; overflow-wrap:anywhere;
+}
+pre{
+  background:var(--surface-2); border-radius:14px; padding:13px 16px;
+  overflow-x:auto; font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  font-size:12.5px; line-height:1.65; margin:12px 0;
+}
+pre code{background:none; padding:0}
+a{color:var(--blue-ink); font-weight:600; text-decoration:none}
+a:hover{text-decoration:underline}
+
+header.mast{margin-bottom:26px}
+header.mast h1{
+  margin:0; font-size:31px; font-weight:900; letter-spacing:-.025em;
+  line-height:1.2; text-wrap:balance;
+}
+header.mast .sub{margin:8px 0 0; font-size:14.5px; color:var(--ink-2)}
+.meta{
+  display:flex; flex-wrap:wrap; gap:10px 26px; margin-top:16px;
+  background:var(--surface); border-radius:16px; padding:13px 18px;
+  box-shadow:var(--shadow); font-size:12.5px; color:var(--ink-2);
+}
+.meta b{color:var(--ink); font-weight:600}
+
+section{margin-top:34px}
+h2{
+  margin:0 0 14px; font-size:20px; font-weight:800; letter-spacing:-.015em;
+}
+h3{
+  margin:26px 0 10px; font-size:16px; font-weight:700; letter-spacing:-.01em;
+}
+.card h4{
+  margin:18px 0 6px; font-size:13px; font-weight:700; letter-spacing:.02em;
+  text-transform:uppercase; color:var(--ink-3);
+}
+p{margin:10px 0}
+
+.card{
+  background:var(--surface); border-radius:20px; padding:18px 22px 20px;
+  box-shadow:var(--shadow); margin:14px 0;
+}
+.card > :first-child{margin-top:0}
+.card > :last-child{margin-bottom:0}
+
+.finding{
+  --ac:var(--ink-3); --ac-ink:var(--ink-2);
+  background:var(--surface); border-radius:20px; box-shadow:var(--shadow);
+  margin:14px 0; overflow:hidden;
+}
+.finding.blocker{--ac:var(--red); --ac-ink:var(--red-ink)}
+.finding.data{--ac:var(--purple); --ac-ink:var(--purple-ink)}
+.finding.ux{--ac:var(--orange); --ac-ink:var(--orange-ink)}
+.finding.ok{--ac:var(--green); --ac-ink:var(--green-ink)}
+.finding-h{
+  display:flex; align-items:baseline; gap:11px; flex-wrap:wrap;
+  padding:14px 22px 12px;
+  background:color-mix(in srgb, var(--ac) 11%, var(--surface));
+  border-bottom:1px solid color-mix(in srgb, var(--ac) 20%, transparent);
+}
+.finding-h .id{
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  font-size:12px; font-weight:700; color:var(--ac-ink);
+  background:color-mix(in srgb, var(--ac) 18%, var(--surface));
+  padding:2px 10px; border-radius:999px; flex:none;
+}
+.finding-h h4{
+  margin:0; font-size:15.5px; font-weight:700; letter-spacing:-.01em;
+  flex:1; min-width:220px;
+}
+.finding-b{padding:14px 22px 18px}
+.finding-b > :first-child{margin-top:0}
+.finding-b > :last-child{margin-bottom:0}
+
+.tag{
+  display:inline-block; font-size:11px; font-weight:700; letter-spacing:.04em;
+  padding:2.5px 11px; border-radius:999px; white-space:nowrap;
+}
+.tag.blocker{background:color-mix(in srgb, var(--red) 16%, var(--surface)); color:var(--red-ink)}
+.tag.data{background:color-mix(in srgb, var(--purple) 16%, var(--surface)); color:var(--purple-ink)}
+.tag.ux{background:color-mix(in srgb, var(--orange) 18%, var(--surface)); color:var(--orange-ink)}
+.tag.ok{background:color-mix(in srgb, var(--green) 18%, var(--surface)); color:var(--green-ink)}
+.tag.fixed{background:color-mix(in srgb, var(--blue) 16%, var(--surface)); color:var(--blue-ink)}
+.tag.issue{background:color-mix(in srgb, var(--teal) 18%, var(--surface)); color:var(--teal-ink)}
+
+.evidence{
+  margin:12px 0; padding:11px 15px; border-radius:14px;
+  background:var(--surface-2); font-size:13.5px; line-height:1.65;
+}
+.evidence b{font-weight:600}
+.evidence .lbl{
+  display:block; font-size:10.5px; font-weight:700; letter-spacing:.12em;
+  color:var(--ink-3); margin-bottom:5px;
+}
+
+.tablewrap{overflow-x:auto; margin:14px 0; border-radius:18px; box-shadow:var(--shadow)}
+table{border-collapse:collapse; width:100%; background:var(--surface); font-size:13.5px}
+th,td{padding:10px 15px; text-align:left; vertical-align:top}
+th{
+  font-size:11px; font-weight:700; letter-spacing:.08em; color:var(--ink-3);
+  background:var(--surface-2); white-space:nowrap;
+}
+td{border-top:1px solid var(--hair-2)}
+table.verdict td:nth-child(-n+2){white-space:nowrap}
+td.mono, th.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:12px; white-space:nowrap}
+
+ul,ol{margin:10px 0; padding-left:22px}
+li{margin:5px 0}
+ul.plain{list-style:none; padding-left:0}
+ul.plain li{
+  position:relative; padding-left:16px;
+}
+ul.plain li::before{
+  content:""; position:absolute; left:0; top:11px;
+  width:5px; height:5px; border-radius:50%; background:var(--ink-3);
+}
+
+.note{
+  border-radius:14px; padding:12px 16px; margin:14px 0; font-size:13.5px;
+  background:color-mix(in srgb, var(--blue) 9%, transparent);
+}
+.note b{color:var(--blue-ink)}
+.warn{background:color-mix(in srgb, var(--orange) 12%, transparent)}
+.warn b{color:var(--orange-ink)}
+
+footer{
+  margin-top:44px; padding-top:18px; border-top:1px solid var(--hair-2);
+  font-size:12.5px; color:var(--ink-3);
+}
+@media (max-width:640px){
+  .wrap{padding:24px 14px 60px}
+  header.mast h1{font-size:24px}
+  .finding-h,.finding-b,.card{padding-left:16px; padding-right:16px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="mast">
+  <div class="note">
+    <b>2026-10-04 現況覆核</b>
+    <p>以下仍是 09-30 本機走查的快照。本次確認 #431 所述三個 404 的原始碼已對齊既有 shift／日報路由，促銷也有正式路由；#432 的無發票宣稱、廚房版型與可配置 Big5/GBK 已有實作及測試。故 W7/W8 不能再直接當成當前未修缺陷；實機字碼頁與實際電子發票商仍未驗證。</p>
+    <p>「多裝置 refresh token 未測」已由本次新增的真 D1、實際 login/refresh cookie 路由測試補齊。既有廚房與雲端派工真 D1 測試通過；POS roles 與 shift tenancy 回歸測試則因測試 JWT 沒有 session 得到 401，該阻擋必須先解決，不能以歷史綠燈代替。</p>
+    <p>原文「共 7 項」實際列了 W1–W8 八項，W6 為額外時間格式修正。詳見 <a href="2026-10-04-operations-flow-verification.html">本次覆核、測試與仍未驗證項目</a>。</p>
+  </div>
+  <h1>現場作業流程本機實走 — 2026-09-30</h1>
+  <p class="sub">
+    把 <code>docs/architecture/master-user-flow.html</code> 的「3. 現場作業」四條流程——廚房（09）、送菜（10）、收銀（11）、出單與列印（12）——
+    在<b>本機真後端</b>（api＋realtime＋management-api＋本機 D1，不 mock）用 Playwright 驅動真瀏覽器從頭走一張單，
+    並把 print agent 指到本機 TCP:9100 的假印表機讀實際位元組。這是 09-22 那輪 production 走查之後的<b>回歸重走</b>：
+    驗證 K1、P2、D1、X2、P3 的修正是否成立，並找 09-22 沒走到的地方。
+  </p>
+  <div class="meta">
+    <span><b>環境</b> 本機 <code>f8ac9e559</code> 起、隔離 worktree、獨立 <code>.wrangler</code> 狀態（沒碰 production，也沒碰開發者本機 D1）</span>
+    <span><b>身分</b> 訪客（API 下單）＋ <code>chef1</code>（2）、<code>service1</code>（3）、<code>cashier1</code>（4）、<code>owner1</code>（1）</span>
+    <span><b>設備</b> 兩個 print agent（櫃檯綁收銀機、廚房全店）各連一個 raw TCP 假印表機，擷取送出的 ESC/POS 位元組</span>
+    <span><b>路徑</b> 訪客下單 → 收銀改「已確認」→ 廚房逐項製作 → 送菜領單／送達 → 收銀現金收款、列印收據、部分退款（送審→核准）→ 結班</span>
+  </div>
+</header>
+
+<section id="assessment-2026-10-04">
+  <h2>2026-10-04 現行工作樹覆核</h2>
+  <div class="note"><b>下文是原調查日期的歷史紀錄。</b>09-22 的 production 判定與 09-30 的本機實走不能當作今日部署狀態；本次依 <a href="../architecture/master-user-flow.html">總流程</a> 覆核 HEAD <code>8b9c7a571</code> 加當時未提交工作樹，未連 production、未查 GitHub issue 狀態、未重走完整瀏覽器四端流程。完整命令與平台缺口見 <a href="2026-10-04-platform-flow-verification.html">2026-10-04 驗證紀錄</a>。</div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>歷史發現</th><th>今日可支持的結論</th><th>仍未證明</th></tr></thead>
+    <tbody>
+      <tr><td>K1 / #412、W1</td><td><code>KitchenService.syncOrderStatusAfterItemUpdate</code> 已按品項推進 preparing / ready，繞過快取並處理版本衝突。現行 kitchen 真 D1 套件與廚房端 28 檔／152 測試通過。</td><td>本次真 D1 套件缺 REALTIME_SESSION binding，不能據此宣稱四端廣播成立；完整斷線／離線重放未重走。</td></tr>
+      <tr><td>P2 / #413、P3 / #416、W2、W7 / #431</td><td>09-30 已證實現金收款、退款送審／核准、實點結班。#431 後續已加入促銷路由，現金異動與日報改用既有路由；今日 API 訂單／付款／POS／列印／備份等選定套件 41 檔／528 測試、管理端現場 6 檔／79 測試通過。</td><td>這是工作樹自動測試，並非已部署證明；本次未重做刷卡、錢包、金流商退款或跨午夜瀏覽器流程。</td></tr>
+      <tr><td>D1 / #414、W3、W8 / #432</td><td>09-30 已證實 TCP 位元組派工；現行驅動／格式 2 檔／17 測試驗證廚房票不含顧客收據、金額或電子發票字樣，切紙命令與拒絕連線亦有覆蓋。歷史 W8 已被 <code>0fb79ff86</code>、<code>c83965fb9</code> 等後續修改取代。</td><td>實體印表機中文字碼、切刀、紙匣與卡紙仍未驗證；普通收據測試不等於真正電子發票開立。</td></tr>
+      <tr><td>S5 / #417、S6</td><td>非功能性回報按鈕已於 <code>ac7ce5be8</code> 移除，現行 ServiceView 無假送出路徑。領單後端仍明確限制 role 0／3。</td><td>店主 role 1 進送菜頁的 UI／API 權限差異仍需產品／權限驗證，不能把「店主可進頁」當作可領單。</td></tr>
+      <tr><td>X2 / #415</td><td>09-30 只證明兩個 access token 可用；本頁保留原 refresh token 未測的限制。</td><td>當前 auth/realtime 另有未提交修改；多裝置 refresh、撤銷與 reconnect 結論以本輪獨立共通服務驗證為準。</td></tr>
+    </tbody>
+  </table></div>
+  <p>平台租戶／授權／部署／排程備份不在兩次現場實走範圍；新增驗證紀錄分別列出可支持的實作、mock 測試界線與確定缺口，沒有以現場測試補足平台覆蓋。</p>
+</section>
+
+
+<section>
+  <h2>結論</h2>
+  <div class="tablewrap">
+    <table class="verdict">
+      <thead><tr><th>流程</th><th>判定</th><th>理由</th></tr></thead>
+      <tbody>
+        <tr><td><b>09 廚房</b></td><td><span class="tag ux">可用</span></td>
+          <td>K1 已修：第一個品項開始 → 訂單 <code>preparing</code>；最後一個完成 → <code>ready</code> 並寫 <code>readyAt</code>；桌號顯示 A1 那樣的桌號而非 id。
+            新找到一個資料問題：品項狀態變了，訂單詳情卻讀到舊快取（已修）。</td></tr>
+        <tr><td><b>10 送菜</b></td><td><span class="tag ux">可用</span></td>
+          <td>待送單出現、領單、確認送達都成立，伺服器記下 <code>deliveryAssignedTo</code>、<code>deliveredAt</code>。
+            頁首三個計數（待配送／配送中／今日）從未被賦值、永遠 0（已移除）。</td></tr>
+        <tr><td><b>11 收銀</b></td><td><span class="tag ux">可用</span></td>
+          <td>開班 1000、現金收 400 應付 320 找零 80、第二張收 190、退 50（收銀員送審 → 店主核准）、結班實點 1460：
+            預期 1460、差額 0、總銷售 510、總退款 50。P2、P3 已修且成立。
+            新找到兩個問題：退款後訂單詳情仍讀到「已付款」（已修）；「收銀櫃管理」頁打三支不存在的端點（<a href="https://github.com/erictheng93/Makan-Masak/issues/431">#431</a>）。</td></tr>
+        <tr><td><b>12 出單與列印</b></td><td><span class="tag issue">可印，內容有問題</span></td>
+          <td>D1 已修：兩台代理各自只拿自己的票，位元組（含切紙）經 TCP 送達，健康檢查 1 台在線、佇列 <code>completed</code>。
+            但紙上的內容不對：店名地址電話印成佔位字、單號印成 UUID（已修）；每張都印「電子發票證明聯」、廚房票是顧客收據版型（<a href="https://github.com/erictheng93/Makan-Masak/issues/432">#432</a>）。</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">同帳號第二次登入不會讓第一個 access token 失效（X2/<a href="https://github.com/erictheng93/Makan-Masak/issues/415">#415</a> 的一半：<code>service1</code> 兩次登入後兩個 token 都回 200）。
+    refresh token 的多裝置行為沒有測。</p>
+</section>
+
+<section>
+  <h2>發現總表</h2>
+  <p>共 <b>7 項</b>：<b>5 項本輪直接修</b>（各有測試，並做過突變驗證——把修法拿掉，新測試轉紅），<b>2 項開 issue</b>。</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>#</th><th>發現</th><th>流程</th><th>類型</th><th>處置</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">W1</td><td>廚房把品項推到 <code>ready</code>（訂單狀態沒變的那幾次）後，<code>GET /orders/:id</code> 仍回舊的品項狀態，最長五分鐘：詳情有五分鐘快取，品項更新不失效</td><td>09</td><td><span class="tag data">資料</span></td><td><span class="tag fixed">已修</span> <a href="https://github.com/erictheng93/Makan-Masak/commit/672cb2e53"><code>672cb2e53</code></a></td></tr>
+        <tr><td class="mono">W2</td><td>POS 退款核准後，資料庫是 <code>partial_refunded／5000</code>、訂單列表也對，但 <code>GET /orders/:id</code> 仍回 <code>completed</code>；兩條退款路徑（POS、<code>/payments/refund</code>）都不失效快取</td><td>11</td><td><span class="tag data">資料</span></td><td><span class="tag fixed">已修</span> <a href="https://github.com/erictheng93/Makan-Masak/commit/dc59ddcf7"><code>dc59ddcf7</code></a></td></tr>
+        <tr><td class="mono">W3</td><td>每張收據與廚房票開頭印「餐廳名稱／餐廳地址／Tel: 電話號碼」佔位字，且「Order ID」印的是 UUID：<code>GET /print/jobs</code> 組的請求沒有 restaurant、也沒帶單號</td><td>12</td><td><span class="tag data">資料</span></td><td><span class="tag fixed">已修</span> <a href="https://github.com/erictheng93/Makan-Masak/commit/b75949d1e"><code>b75949d1e</code></a></td></tr>
+        <tr><td class="mono">W4</td><td>送菜站頁首「待配送／配送中／今日」三個計數是 <code>ref(0)</code> 從未賦值，旁邊的頁面卻列著真實訂單</td><td>10</td><td><span class="tag data">資料</span></td><td><span class="tag fixed">已修</span> <a href="https://github.com/erictheng93/Makan-Masak/commit/46fc65db4"><code>46fc65db4</code></a></td></tr>
+        <tr><td class="mono">W5</td><td>收銀員的訂單管理頁上方統計卡永遠 0（<code>/orders/stats</code> 只開 role 0／1，403 被吞掉），看起來像「沒有待處理」</td><td>11</td><td><span class="tag ux">體驗</span></td><td><span class="tag fixed">已修</span> <a href="https://github.com/erictheng93/Makan-Masak/commit/05bc66cfc"><code>05bc66cfc</code></a>（對無權限角色隱藏）</td></tr>
+        <tr><td class="mono">W6</td><td>POS 頁首班次徽章顯示整串 UUID 與 <code>2026-09-29T18:14:56.405Z</code> 這種 UTC ISO 字串</td><td>11</td><td><span class="tag ux">體驗</span></td><td><span class="tag fixed">已修（時間）</span> <a href="https://github.com/erictheng93/Makan-Masak/commit/edc1c9370"><code>edc1c9370</code></a>。班次 id 仍顯示，因為既有測試明確要求</td></tr>
+        <tr><td class="mono">W7 <a href="https://github.com/erictheng93/Makan-Masak/issues/431">#431</a></td><td>POS「收銀櫃管理」進頁三個 404 toast：<code>/pos/promotions</code>、<code>/pos/registers/:id/cash-movements</code>、<code>/pos/registers/:id/stats/daily</code> 在後端不存在；今日營收／最近交易／促銷永遠空</td><td>11</td><td><span class="tag data">資料</span></td><td><span class="tag issue"><a href="https://github.com/erictheng93/Makan-Masak/issues/431">#431</a></span> 需決定促銷做不做</td></tr>
+        <tr><td class="mono">W8 <a href="https://github.com/erictheng93/Makan-Masak/issues/432">#432</a></td><td>每張出單印「本收據為電子發票證明聯」但沒有開立電子發票；廚房票沿用顧客收據版型；「Cashier:」永遠 <code>System</code>；中文以 UTF-8 送出</td><td>12</td><td><span class="tag blocker">法遵／版型</span></td><td><span class="tag issue"><a href="https://github.com/erictheng93/Makan-Masak/issues/432">#432</a></span> 需決定電子發票</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>這次沒有驗證的</h2>
+  <ul>
+    <li><b>不是 production。</b>沒有走真金流、真 Cloudflare、真 D1 副本；本機 <code>NODE_ENV=test</code>。</li>
+    <li><b>實體印表機。</b>假印表機只證明位元組送達。字碼頁、切刀、紙匣、卡紙都沒驗證。</li>
+    <li><b>離線佇列與重連。</b>廚房斷網重放、WebSocket 中斷後重抓（<code>f8ac9e559</code> 剛改過）沒有走。</li>
+    <li><b>送菜站「回報問題」（S5／<a href="https://github.com/erictheng93/Makan-Masak/issues/417">#417</a>）、店主進 <code>/service</code> 領單（S6）。</b>沒有走。</li>
+    <li><b>刷卡／電子錢包／退款到金流商。</b>只走現金。</li>
+    <li><b>多裝置 refresh token。</b>只確認了 access token。</li>
+  </ul>
+  <p class="note">本機環境的雜訊，不是產品問題：三個 <code>wrangler dev</code>（api、realtime、management-api）共用一份 SQLite，
+    偶發 <code>database is locked: SQLITE_BUSY</code>，表現為 realtime 第一次 WebSocket 連線 403（隨即重連成功）與一次
+    <code>/pos/reports/daily</code> 回 400。<code>NODE_ENV=test</code> 下，讀 user 失敗的 auth 會被當成「使用者不存在」回 401；
+    production 分支會直接丟出錯誤而不是 401（<code>middleware/auth.ts</code> 的 <code>loadTokenUser</code>）。
+    <code>chef1</code>／<code>cashier1</code> 的種子密碼不明，本機把它們的雜湊改成 owner1 的，並清掉登入限流的 KV。</p>
+</section>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "MakanMasak 廚房顯示",
+  "short_name": "MM 廚房",
+  "description": "餐廳廚房的訂單看板",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "theme_color": "#22c55e",
+  "background_color": "#F2F2F7",
+  "lang": "zh-TW",
+  "icons": [
+    { "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/pwa-512x512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

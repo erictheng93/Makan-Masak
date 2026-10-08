@@ -13,7 +13,7 @@ const routes: RouteRecordRaw[] = [
     path: "/",
     name: "Home",
     component: () => import("@/views/HomeView.vue"),
-    meta: { title: "獨立部署申請" },
+    meta: { title: "開店申請" },
   },
   {
     path: "/apply",
@@ -68,7 +68,7 @@ router.afterEach(() => {
 
 router.beforeEach((to, _from, next) => {
   const title = to.meta.title as string;
-  document.title = title ? `${title} - MakanMasak` : "MakanMasak 獨立部署";
+  document.title = title ? `${title} - MakanMasak` : "MakanMasak 開店申請";
   next();
 });
 

@@ -7,6 +7,8 @@ import { discoveryApi } from "@/services/discoveryApi";
 import { restaurantContactApi } from "@/services/restaurantContactApi";
 
 const routerPush = vi.hoisted(() => vi.fn());
+const routeQuery = vi.hoisted(() => ({ value: {} as Record<string, string> }));
+const setFulfillmentType = vi.hoisted(() => vi.fn());
 const marketCartAddItem = vi.hoisted(() => vi.fn());
 const menuItemsFixture = vi.hoisted(() => ({
   items: null as Array<Record<string, unknown>> | null,
@@ -23,6 +25,7 @@ vi.mock("vue-router", () => ({
     path: "/restaurant/restaurant-1/shop/menu",
     fullPath:
       "/restaurant/restaurant-1/shop/menu?services=true&returnPath=/markets/fengjia",
+    query: routeQuery.value,
   }),
   useRouter: () => ({ back: vi.fn(), push: routerPush }),
 }));
@@ -67,6 +70,7 @@ vi.mock("@/stores/shopCart", () => ({
     subtotal: 0,
     fulfillmentType: "takeaway",
     initializeCart: vi.fn(),
+    setFulfillmentType,
     addItem: vi.fn(),
     removeItem: vi.fn(),
     updateQuantity: vi.fn(),
@@ -122,6 +126,14 @@ vi.mock("@/components/ShopCartModal.vue", () => ({
 
 vi.mock("@/components/DesktopCartPanel.vue", () => ({
   default: { template: "<div />" },
+}));
+
+vi.mock("@/components/LanguageSwitcher.vue", () => ({
+  default: {
+    props: { compact: Boolean },
+    template:
+      "<div data-testid=\"shop-menu-language-switcher\" :data-compact=\"compact ? 'true' : 'false'\" />",
+  },
 }));
 
 vi.mock("@tanstack/vue-query", () => ({
@@ -286,6 +298,8 @@ describe("ShopMenuView service items", () => {
   beforeEach(() => {
     routerPush.mockReset();
     marketCartAddItem.mockReset();
+    setFulfillmentType.mockReset();
+    routeQuery.value = {};
     menuItemsFixture.items = null;
     serviceItemsFixture.items = null;
     marketMembershipsFixture.memberships = null;
@@ -309,6 +323,11 @@ describe("ShopMenuView service items", () => {
 
     expect(menuApi.getRestaurant).toBeDefined();
     expect(restaurantContactApi.listServiceItems).toBeDefined();
+    expect(
+      wrapper
+        .get('[data-testid="shop-menu-language-switcher"]')
+        .attributes("data-compact"),
+    ).toBe("true");
     expect(wrapper.get('[data-testid="shop-service-items"]').text()).toContain(
       "預約外送",
     );
@@ -395,6 +414,33 @@ describe("ShopMenuView service items", () => {
         restaurantId: "restaurant-1",
         serviceItemId: "1",
       },
+    });
+    wrapper.unmount();
+  });
+
+  it("offers an accessible reservation entry for the current restaurant", async () => {
+    const wrapper = mount(ShopMenuView, {
+      props: { restaurantId: "restaurant-1" },
+      global: {
+        stubs: {
+          MenuItemModal: true,
+          CustomizationModal: true,
+          ShopCartModal: true,
+          DesktopCartPanel: true,
+        },
+      },
+    });
+
+    const reservation = wrapper.get('[data-testid="shop-menu-reservation"]');
+    expect(reservation.attributes("aria-label")).toBe(
+      "reservationBooking.title",
+    );
+
+    await reservation.trigger("click");
+
+    expect(routerPush).toHaveBeenCalledWith({
+      name: "Reservation",
+      params: { restaurantId: "restaurant-1" },
     });
     wrapper.unmount();
   });
@@ -780,5 +826,29 @@ describe("ShopMenuView service items", () => {
     expect(
       wrapper.find('[data-testid="shop-menu-return-context"]').exists(),
     ).toBe(false);
+  });
+
+  // The order-type page puts the diner's choice in the URL; a cart restored
+  // from an earlier visit (fulfillmentType "takeaway" in this mock) used to
+  // win, so the badge said 外帶 on a 內用 link.
+  it("lets the URL's fulfillment type override the restored cart", () => {
+    routeQuery.value = { fulfillmentType: "dine-in" };
+    mount(ShopMenuView, {
+      props: { restaurantId: "restaurant-1" },
+      global: { stubs: { ShopCartModal: true, DesktopCartPanel: true } },
+    });
+
+    expect(setFulfillmentType).toHaveBeenCalledOnce();
+    expect(setFulfillmentType).toHaveBeenCalledWith("dine-in");
+  });
+
+  it("ignores an unknown fulfillment type in the URL", () => {
+    routeQuery.value = { fulfillmentType: "drive-thru" };
+    mount(ShopMenuView, {
+      props: { restaurantId: "restaurant-1" },
+      global: { stubs: { ShopCartModal: true, DesktopCartPanel: true } },
+    });
+
+    expect(setFulfillmentType).not.toHaveBeenCalled();
   });
 });

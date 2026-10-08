@@ -16,6 +16,9 @@ const ORDER_SUBMIT_ERROR_KEYS: Record<string, string> = {
   // GENERIC_ERROR, so this registry never had a chance to match them — a
   // closed restaurant and a retired table both surfaced as "unknown error".
   RESTAURANT_UNAVAILABLE: "toast.orderSubmitRestaurantUnavailable",
+  // The showcase shop, reached with a stale restaurant cache that did not yet
+  // carry isDemo — the cart normally stops before the request.
+  DEMO_RESTAURANT: "demoShop.noticeTitle",
   // The API sends the exact figures in `error.details`
   // ({ minOrderAmount, currentAmount, shortfall, currency }), but this registry
   // resolves a key and nothing else — `parseUserFacingError` reads transport

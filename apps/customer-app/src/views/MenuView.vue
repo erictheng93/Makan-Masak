@@ -27,14 +27,39 @@
               </svg>
             </button>
 
-            <div class="flex-1 text-center">
-              <h1 class="font-semibold text-ios-text">
+            <div class="min-w-0 flex-1 text-center">
+              <h1 class="truncate font-semibold text-ios-text">
                 {{ restaurant?.name || t("common.loading") }}
               </h1>
-              <p class="text-sm text-ios-secondary">
+              <p class="truncate text-sm text-ios-secondary">
                 {{ t("orderTracking.tableNumber") }} {{ orderContextLabel }}
               </p>
             </div>
+
+            <LanguageSwitcher compact />
+
+            <button
+              type="button"
+              data-testid="menu-reservation"
+              :aria-label="t('reservationBooking.title')"
+              class="flex h-11 w-11 items-center justify-center rounded-full bg-ios-bg text-ios-text transition-transform duration-150 active:scale-95"
+              @click="openReservation"
+            >
+              <svg
+                class="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 7V3m8 4V3M5 11h14M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z"
+                />
+              </svg>
+            </button>
 
             <button
               data-testid="cart-btn"
@@ -291,15 +316,21 @@
             <h2 class="text-xl font-semibold text-ios-text mb-4">
               {{ t("menu.featured") }}
             </h2>
+            <!--
+              Phone and iPad: a swipeable row whose first card snaps in line
+              with the column (scroll-px matches the -mx/px bleed). PC: the
+              same grid as the dish list below, since a mouse cannot swipe.
+            -->
             <div
-              class="flex gap-3 md:gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide -mx-5 px-5"
+              data-testid="featured-items"
+              class="flex gap-3 md:gap-4 overflow-x-auto snap-x snap-mandatory scroll-px-5 scrollbar-hide -mx-5 px-5 lg:grid lg:grid-cols-3 lg:overflow-visible lg:mx-0 lg:px-0"
             >
               <MenuItemCard
                 v-for="(item, index) in featuredItems"
                 :key="item.id"
                 :item="item"
                 :is-featured="true"
-                class="animate-slide-up min-w-[280px] md:min-w-[260px] snap-start flex-shrink-0"
+                class="animate-slide-up w-[80%] max-w-[300px] md:w-[42%] md:max-w-none snap-start flex-shrink-0 lg:w-auto"
                 :style="{
                   animationDelay: `${index * 50}ms`,
                   animationFillMode: 'both',
@@ -480,6 +511,7 @@ import MenuItemCard from "@/components/MenuItemCard.vue";
 import MenuItemModal from "@/components/MenuItemModal.vue";
 import CustomizationModal from "@/components/CustomizationModal.vue";
 import DesktopCartPanel from "@/components/DesktopCartPanel.vue";
+import LanguageSwitcher from "@/components/LanguageSwitcher.vue";
 import { useIsDesktop } from "@/composables/useBreakpoint";
 import { menuApi } from "@/services/menuApi";
 import { useCurrency } from "@/composables/useCurrency";
@@ -600,6 +632,13 @@ const cartRoute = computed(() => ({
   },
   query: seatQuery.value,
 }));
+
+function openReservation() {
+  router.push({
+    name: "Reservation",
+    params: { restaurantId: props.restaurantId },
+  });
+}
 
 const groupCartRoute = computed(() => ({
   name: "GroupOrder",

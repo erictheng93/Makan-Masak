@@ -1,7 +1,50 @@
 <template>
-  <div class="drag-drop-board grid grid-cols-3 gap-3 h-full">
+  <div class="drag-drop-board grid grid-cols-1 gap-3 md:grid-cols-3 h-full">
+    <div class="grid grid-cols-3 gap-2 md:hidden">
+      <button
+        type="button"
+        class="min-h-[44px] rounded-xl px-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-orange"
+        :class="
+          selectedStatus === 'pending'
+            ? 'bg-ios-orange text-white'
+            : 'bg-white text-ios-text shadow-card-sm'
+        "
+        :aria-pressed="selectedStatus === 'pending'"
+        @click="selectedStatus = 'pending'"
+      >
+        {{ t("kanban.pendingColumn") }} {{ pendingOrders.length }}
+      </button>
+      <button
+        type="button"
+        class="min-h-[44px] rounded-xl px-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+        :class="
+          selectedStatus === 'preparing'
+            ? 'bg-ios-blue text-white'
+            : 'bg-white text-ios-text shadow-card-sm'
+        "
+        :aria-pressed="selectedStatus === 'preparing'"
+        @click="selectedStatus = 'preparing'"
+      >
+        {{ t("kanban.preparingColumn") }} {{ preparingOrders.length }}
+      </button>
+      <button
+        type="button"
+        class="min-h-[44px] rounded-xl px-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-green"
+        :class="
+          selectedStatus === 'ready'
+            ? 'bg-ios-green text-white'
+            : 'bg-white text-ios-text shadow-card-sm'
+        "
+        :aria-pressed="selectedStatus === 'ready'"
+        @click="selectedStatus = 'ready'"
+      >
+        {{ t("kanban.readyColumn") }} {{ readyOrders.length }}
+      </button>
+    </div>
+
     <!-- Pending Orders Column -->
     <div
+      :class="selectedStatus !== 'pending' && 'hidden md:flex'"
       class="order-column flex flex-col rounded-2xl p-3 bg-[rgba(255,149,0,0.06)]"
     >
       <div class="column-header flex items-center justify-between mb-3">
@@ -58,6 +101,7 @@
 
     <!-- Preparing Orders Column -->
     <div
+      :class="selectedStatus !== 'preparing' && 'hidden md:flex'"
       class="order-column flex flex-col rounded-2xl p-3 bg-[rgba(0,122,255,0.04)]"
     >
       <div class="column-header flex items-center justify-between mb-3">
@@ -114,6 +158,7 @@
 
     <!-- Ready Orders Column -->
     <div
+      :class="selectedStatus !== 'ready' && 'hidden md:flex'"
       class="order-column flex flex-col rounded-2xl p-3 bg-[rgba(52,199,89,0.04)]"
     >
       <div class="column-header flex items-center justify-between mb-3">
@@ -208,6 +253,7 @@ const emit = defineEmits<{
 }>();
 
 const toast = useToast();
+const selectedStatus = ref<BoardOrderStatus>("pending");
 
 // Order Management Store
 const orderManagementStore = useOrderManagementStore();
@@ -339,6 +385,16 @@ onMounted(async () => {
 
 .order-list {
   max-height: 70vh;
+}
+
+@media (max-width: 767px) {
+  .drag-drop-board {
+    min-height: 0;
+  }
+
+  .order-list {
+    max-height: none;
+  }
 }
 
 /* Custom scrollbar */

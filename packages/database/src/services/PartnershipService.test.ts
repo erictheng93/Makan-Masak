@@ -515,6 +515,7 @@ function createPartnershipServiceTestDb(): D1DatabaseAdapter {
       enable_shop_mode INTEGER NOT NULL DEFAULT 0,
       shop_qr_settings TEXT,
       shop_qr_version INTEGER NOT NULL DEFAULT 1,
+      is_demo INTEGER NOT NULL DEFAULT 0,
       settings TEXT,
       timezone TEXT NOT NULL DEFAULT 'Asia/Taipei',
       country_code TEXT,

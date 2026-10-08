@@ -9,6 +9,10 @@ const mocks = vi.hoisted(() => ({
   paymentServiceCtor: vi.fn(),
   refundPaymentTransaction: vi.fn(),
   idempotencyOptions: [] as Array<Record<string, unknown>>,
+  tenantAccess: {
+    requireActiveRegisterAndShift: vi.fn(),
+  },
+  tenantAccessCtor: vi.fn(),
 }));
 
 const orderId101 = "018f0000-0000-7000-8000-000000000101";
@@ -80,6 +84,15 @@ vi.mock("../services/refundPayment", () => ({
   }),
 }));
 
+vi.mock("../../pos/services/PosTenantAccessService", () => ({
+  PosTenantAccessService: vi.fn(function PosTenantAccessService(
+    ...args: unknown[]
+  ) {
+    mocks.tenantAccessCtor(...args);
+    return mocks.tenantAccess;
+  }),
+}));
+
 import routes from "./index";
 import { idempotencyMiddleware } from "../../../middleware/idempotency";
 
@@ -110,15 +123,26 @@ interface D1MockRows {
 function createDb(rows: D1MockRows = {}) {
   return {
     prepare: vi.fn((sql: string) => ({
-      bind: vi.fn(() => {
+      bind: vi.fn((...bindings: unknown[]) => {
+        const scopedRow = (row: Record<string, unknown> | null | undefined) => {
+          if (!row) return null;
+          const { tenant, ...columns } = row;
+          if (
+            tenant &&
+            sql.includes('"restaurant_id" = ?') &&
+            !bindings.includes(tenant)
+          )
+            return null;
+          return columns;
+        };
         const takeRow = () => {
           const normalizedSql = sql.toLowerCase();
           if (normalizedSql.includes('from "payment_transactions"')) {
-            return rows.transaction?.shift() ?? null;
+            return scopedRow(rows.transaction?.shift());
           }
 
           if (normalizedSql.includes("payment_transaction_id")) {
-            return rows.orderStatus?.shift() ?? null;
+            return scopedRow(rows.orderStatus?.shift());
           }
 
           if (
@@ -148,14 +172,19 @@ function createDb(rows: D1MockRows = {}) {
 
 let authenticated = true;
 
-function request(path: string, init: RequestInit = {}, db = createDb()) {
+function request(
+  path: string,
+  init: RequestInit = {},
+  db = createDb(),
+  env: Record<string, unknown> = {},
+) {
   const app = new Hono<{ Variables: { user: typeof authState.user } }>();
   app.use("*", async (c, next) => {
     if (authenticated) c.set("user", authState.user);
     await next();
   });
   app.route("/", routes);
-  return app.request(path, init, { DB: db } as never);
+  return app.request(path, init, { DB: db, ...env } as never);
 }
 
 async function json(response: Response) {
@@ -210,6 +239,9 @@ describe("payments routes", () => {
       status: "succeeded",
       paymentStatus: "partially_refunded",
     });
+    mocks.tenantAccess.requireActiveRegisterAndShift.mockResolvedValue(
+      undefined,
+    );
   });
 
   it("requires idempotency keys on both payment creation routes", () => {
@@ -291,6 +323,44 @@ describe("payments routes", () => {
         },
       },
     });
+  });
+
+  it("binds a POS payment to an active register and shift", async () => {
+    const registerId = "018f0000-0000-7000-8000-000000000801";
+    const shiftId = "018f0000-0000-7000-8000-000000000802";
+    const response = await postJson("/", {
+      orderId: orderId101,
+      amount: 120,
+      method: "cash",
+      registerId,
+      shiftId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(
+      mocks.tenantAccess.requireActiveRegisterAndShift,
+    ).toHaveBeenCalledWith(authState.user, registerId, shiftId);
+    expect(mocks.paymentService.processPayment).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        pos: { registerId, shiftId, operatorId: authState.user.id },
+      }),
+    );
+  });
+
+  it("rejects an incomplete POS register/shift binding", async () => {
+    const response = await postJson("/", {
+      orderId: orderId101,
+      amount: 120,
+      method: "cash",
+      registerId: "018f0000-0000-7000-8000-000000000801",
+    });
+
+    expect(response.status).toBe(400);
+    expect(
+      mocks.tenantAccess.requireActiveRegisterAndShift,
+    ).not.toHaveBeenCalled();
+    expect(mocks.paymentService.processPayment).not.toHaveBeenCalled();
   });
 
   it("reports the currency the service recorded, not one the client omitted", async () => {
@@ -503,10 +573,91 @@ describe("payments routes", () => {
     expect(mocks.paymentService.processPayment).not.toHaveBeenCalled();
   });
 
+  it("requires a staff identity for payment status", async () => {
+    authenticated = false;
+    expect((await request("/status/txn-1")).status).toBe(401);
+  });
+
+  it.each(["transaction", "legacy"])(
+    "hides foreign %s payment status",
+    async (kind) => {
+      const db = createDb({
+        transaction:
+          kind === "transaction"
+            ? [
+                {
+                  transaction_id: "foreign",
+                  order_id: orderId404,
+                  status: "paid",
+                  tenant: "restaurant-2",
+                },
+              ]
+            : [null],
+        orderStatus:
+          kind === "legacy"
+            ? [
+                {
+                  id: orderId505,
+                  payment_status: "paid",
+                  tenant: "restaurant-2",
+                },
+              ]
+            : [null],
+      });
+      expect((await request("/status/foreign", undefined, db)).status).toBe(
+        404,
+      );
+    },
+  );
+
+  it("allows platform admins across tenants only in SaaS deployments", async () => {
+    authState.user.role = 0;
+    const makeDb = () =>
+      createDb({
+        transaction: [
+          {
+            transaction_id: "foreign",
+            order_id: orderId404,
+            status: "paid",
+            tenant: "restaurant-2",
+          },
+        ],
+      });
+    expect((await request("/status/foreign", undefined, makeDb())).status).toBe(
+      200,
+    );
+    expect(
+      (
+        await request("/status/foreign", undefined, makeDb(), {
+          DEPLOYMENT_MODE: "independent",
+          TENANT_ID: "restaurant-1",
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await request("/status/foreign", undefined, makeDb(), {
+          DEPLOYMENT_MODE: "independent",
+        })
+      ).status,
+    ).toBe(403);
+  });
+
+  it("rejects customer identities for staff payment status", async () => {
+    authState.user.role = 5;
+    expect((await request("/status/txn-1")).status).toBe(403);
+  });
+
+  it("rejects scoped staff without a restaurant", async () => {
+    authState.user.restaurantId = "";
+    expect((await request("/status/txn-1")).status).toBe(403);
+  });
+
   it("returns payment transaction status rows before order fallbacks", async () => {
     const db = createDb({
       transaction: [
         {
+          tenant: "restaurant-1",
           transaction_id: "txn-1",
           order_id: orderId404,
           status: "paid",
@@ -535,6 +686,7 @@ describe("payments routes", () => {
       transaction: [null],
       orderStatus: [
         {
+          tenant: "restaurant-1",
           id: orderId505,
           payment_status: "paid",
         },

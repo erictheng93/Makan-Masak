@@ -89,11 +89,64 @@ describe("restaurant validation schemas", () => {
       name: "Private dining",
       serviceType: "general",
       requiresBooking: false,
+      paymentRequirement: "pay_at_venue",
+      depositAmountCents: 0,
     });
 
     expect(() => restaurantSchemas.updateServiceItem.parse({})).toThrow(
       "At least one field is required",
     );
+  });
+
+  it("validates merchant-configured service booking payment terms", () => {
+    expect(
+      restaurantSchemas.createServiceItem.parse({
+        name: "Facial",
+        priceCents: 5000,
+        paymentRequirement: "deposit",
+        depositAmountCents: 1200,
+      }),
+    ).toMatchObject({
+      paymentRequirement: "deposit",
+      depositAmountCents: 1200,
+    });
+
+    expect(() =>
+      restaurantSchemas.createServiceItem.parse({
+        name: "Facial",
+        priceCents: 5000,
+        paymentRequirement: "deposit",
+        depositAmountCents: 0,
+      }),
+    ).toThrow("positive deposit");
+    expect(() =>
+      restaurantSchemas.createServiceItem.parse({
+        name: "Facial",
+        priceCents: 5000,
+        paymentRequirement: "deposit",
+        depositAmountCents: 5001,
+      }),
+    ).toThrow("no greater than the service price");
+  });
+
+  it("accepts partial payment terms for row-aware service updates", () => {
+    expect(
+      restaurantSchemas.updateServiceItem.parse({ depositAmountCents: 1500 }),
+    ).toEqual({ depositAmountCents: 1500 });
+    expect(
+      restaurantSchemas.updateServiceItem.parse({
+        paymentRequirement: "deposit",
+      }),
+    ).toEqual({ paymentRequirement: "deposit" });
+    expect(
+      restaurantSchemas.updateServiceItem.parse({
+        paymentRequirement: "deposit",
+        depositAmountCents: 2500,
+      }),
+    ).toEqual({
+      paymentRequirement: "deposit",
+      depositAmountCents: 2500,
+    });
   });
 
   it("rejects non-http service booking URLs", () => {
@@ -131,5 +184,23 @@ describe("restaurant validation schemas", () => {
     ).toEqual({
       qrCode: "SHOP-019fa136-cfe3-709f-a2ab-f8a3ebcd31a1-1785563580",
     });
+  });
+
+  it("takes a country on create but never on update", () => {
+    const create = restaurantSchemas.create.safeParse({
+      name: "Shop",
+      type: "restaurant",
+      category: "casual",
+      address: "1 Road",
+      district: "Central",
+      city: "Taipei",
+      countryCode: "TW",
+      phone: "0912345678",
+    });
+    expect(create.success && create.data.countryCode).toBe("TW");
+
+    const update = restaurantSchemas.update.safeParse({ countryCode: "MY" });
+    expect(update.success).toBe(true);
+    expect(update.success && "countryCode" in update.data).toBe(false);
   });
 });

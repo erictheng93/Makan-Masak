@@ -255,6 +255,20 @@ describe("admin order store — the server's prose never reaches the banner", ()
     expect(store.error).toBe("orderStore.updateStatusFailed");
   });
 
+  it("tells the owner a coupon order's items are frozen, instead of 'invalid request'", async () => {
+    vi.mocked(api.post).mockRejectedValue(
+      rejectWith(400, "COUPON_ORDER_IMMUTABLE"),
+    );
+    const store = useOrderStore();
+
+    await expect(
+      store.addOrderItems("order-1", [{ menuItemId: 1, quantity: 1 }]),
+    ).resolves.toBeNull();
+
+    expect(store.error).toBe("orderStore.couponOrderImmutable");
+    expect(store.error).not.toContain(SERVER_PROSE);
+  });
+
   it("keeps the server's sentence out of every failure path", async () => {
     vi.mocked(api.get).mockResolvedValue(
       axiosResponse({
@@ -271,5 +285,33 @@ describe("admin order store — the server's prose never reaches the banner", ()
 
     expect(store.error).not.toContain(SERVER_PROSE);
     expect(store.error).toBe("errorPresentation.conflict");
+  });
+});
+
+describe("admin order store — background refetch", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+    vi.mocked(api.get).mockResolvedValue(
+      axiosResponse({ data: { success: true, data: [buildOrder()] } }),
+    );
+  });
+
+  it("reloads with the filters and page the list was last fetched with", async () => {
+    const store = useOrderStore();
+    await store.fetchOrders({
+      status: ["ready"],
+      page: 3,
+      limit: 20,
+      search: "A001",
+    });
+
+    await store.refetchOrders();
+
+    expect(api.get).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(api.get).mock.calls[1][0]).toBe(
+      vi.mocked(api.get).mock.calls[0][0],
+    );
+    expect(vi.mocked(api.get).mock.calls[1][0]).toContain("page=3");
   });
 });

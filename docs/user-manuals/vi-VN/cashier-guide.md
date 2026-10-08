@@ -13,7 +13,7 @@
 3. [Giao Diện Hệ Thống Thu Ngân](#giao-diện-hệ-thống-thu-ngân)
 4. [Quy Trình Thanh Toán Đơn Hàng](#quy-trình-thanh-toán-đơn-hàng)
 5. [Phương Thức Thanh Toán](#phương-thức-thanh-toán)
-6. [Quản Lý Hóa Đơn](#quản-lý-hóa-đơn)
+6. [Xử Lý Biên Lai](#xử-lý-biên-lai)
 7. [Hoàn Tiền & Hủy Đơn](#hoàn-tiền--hủy-đơn)
 8. [Đối Soát Hàng Ngày](#đối-soát-hàng-ngày)
 9. [Truy Vấn Báo Cáo](#truy-vấn-báo-cáo)
@@ -50,7 +50,7 @@
 
 - [ ] Đăng nhập vào hệ thống thu ngân
 - [ ] Kiểm tra số tiền dự trữ trong ngăn kéo tiền
-- [ ] Kiểm tra giấy in hóa đơn
+- [ ] Kiểm tra giấy in biên lai
 - [ ] Xác nhận kết nối mạng
 - [ ] Xem lại mục tiêu doanh số hàng ngày
 
@@ -81,7 +81,7 @@
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
 │  ✅ Thanh Toán Đơn Hàng   ✅ Xử Lý Thanh Toán          │
-│  ✅ In Hóa Đơn            ✅ Yêu Cầu Hoàn Tiền         │
+│  ✅ In Biên Lai            ✅ Yêu Cầu Hoàn Tiền        │
 │  ✅ Thanh Toán Hàng Ngày  ✅ Truy Vấn Báo Cáo          │
 │  ✅ Xác Minh Số Tiền      ✅ Báo Cáo Ngoại Lệ         │
 │                                                         │
@@ -108,9 +108,9 @@
 │       ↓                                                │
 │  Thu Tiền ────→ Xác Minh Số Tiền Chính Xác            │
 │       ↓                                                │
-│  Hoàn Thành Thanh Toán ────→ In Hóa Đơn/Biên Lai      │
+│  Hoàn Thành Thanh Toán ────→ In Biên Lai              │
 │       ↓                                                │
-│  Đưa Hóa Đơn ────→ Trả Tiền Thừa (nếu cần)            │
+│  Đưa Biên Lai ────→ Trả Tiền Thừa (nếu cần)           │
 │       ↓                                                │
 │  Cảm Ơn Khách Hàng ────→ Hẹn Gặp Lại                  │
 │                                                        │
@@ -155,7 +155,7 @@
 | 🔍 **Tìm Nhanh**    | Tìm Đơn Hàng         | Tìm theo bàn, số đơn hoặc số điện thoại |
 | 📋 **Chi Tiết Đơn** | Xem Chi Tiết         | Hiển thị nội dung đơn hàng đầy đủ       |
 | 💳 **Thanh Toán**   | Xử Lý Thanh Toán     | Vào quy trình thanh toán                |
-| 🧾 **In Lại HĐ**    | In Lại               | In lại hóa đơn bị mất hoặc hỏng         |
+| 🧾 **In Lại Biên Lai**    | In Lại               | In lại biên lai bị mất hoặc hỏng         |
 | 🔄 **Hoàn Tiền**    | Xử Lý Hoàn Tiền      | Đăng ký hoàn tiền đơn hàng              |
 | 📊 **Báo Cáo**      | Truy Vấn Báo Cáo     | Xem dữ liệu kinh doanh                  |
 | 🔐 **Thanh Toán**   | Thanh Toán Hàng Ngày | Thực hiện đối soát cuối ngày            |
@@ -318,7 +318,7 @@
 
 ---
 
-#### Bước 5: In Hóa Đơn/Biên Lai
+#### Bước 5: In Biên Lai
 
 ```
 ┌────────────────────────────────────────┐
@@ -367,17 +367,17 @@
 ```
 ✅ Danh Sách Kiểm Tra Xác Nhận Cuối Cùng
 
-1. [ ] Hóa đơn/biên lai đã in
+1. [ ] Biên lai đã in
 2. [ ] Số tiền thừa chính xác
 3. [ ] Biên lai thẻ tín dụng đã ký (nếu có)
-4. [ ] Đưa hóa đơn cho khách
+4. [ ] Đưa biên lai cho khách
 5. [ ] Cảm ơn khách lịch sự
 ```
 
 **Lời Chào Chuẩn:**
 
 ```
-"Đây là hóa đơn và $439 tiền thừa của quý khách,
+"Đây là biên lai và $439 tiền thừa của quý khách,
  vui lòng giữ cẩn thận. Cảm ơn quý khách đã dùng bữa,
  hẹn gặp lại!"
 ```
@@ -512,7 +512,7 @@
 5️⃣ Khách xác nhận số tiền và hoàn thành thanh toán
 6️⃣ Hệ thống nhận thông báo thanh toán (3-5 giây)
 7️⃣ Hiển thị "Thanh Toán Thành Công" ✅
-8️⃣ Tự động in hóa đơn điện tử
+8️⃣ Tự động in biên lai
 ```
 
 ---
@@ -545,139 +545,9 @@ Thủ tục:
 
 ---
 
-## 🧾 Quản Lý Hóa Đơn
+## Xử Lý Biên Lai
 
-### Hệ Thống Hóa Đơn Điện Tử
-
-```
-┌─────────────────────────────────────────────┐
-│ Quy Trình Hóa Đơn Điện Tử                   │
-├─────────────────────────────────────────────┤
-│                                             │
-│  Thanh Toán Khách Hàng                      │
-│       ↓                                     │
-│  Hỏi Có Cần Mã Số Thuế                      │
-│       ↓                                     │
-│  ┌──────────┐  ┌──────────┐               │
-│  │Cần MST   │  │Không MST │               │
-│  └──────────┘  └──────────┘               │
-│       ↓              ↓                      │
-│  Nhập MST      Tạo Hóa Đơn Điện Tử         │
-│       ↓              ↓                      │
-│  In Hóa Đơn    Hỏi Về Lưu Trữ              │
-│  Công Ty            ↓                       │
-│                  ┌──────────┐              │
-│                  │Mã Di Động│              │
-│                  │Thành Viên│              │
-│                  │Số CMND   │              │
-│                  │In Giấy   │              │
-│                  └──────────┘              │
-│                       ↓                     │
-│                  Phát Hành Xong ✅          │
-│                                             │
-└─────────────────────────────────────────────┘
-```
-
-### Các Bước Phát Hành Hóa Đơn
-
-#### Trường Hợp 1: Tiêu Dùng Cá Nhân (Không Cần MST)
-
-```
-1. Hỏi khách: "Quý khách có cần Mã Số Thuế không?"
-2. Khách trả lời: "Không"
-3. Hỏi: "Quý khách có muốn lưu hóa đơn vào ví không?"
-
-Tùy Chọn A: Dùng mã vạch di động
-  → Khách xuất trình mã vạch di động
-  → Quét mã vạch
-  → Hóa đơn tự động lưu
-
-Tùy Chọn B: Dùng ví thành viên
-  → Nhập số điện thoại thành viên
-  → Hệ thống tự động liên kết với ví thành viên
-
-Tùy Chọn C: In giấy
-  → In hóa đơn trực tiếp
-  → Đưa cho khách
-```
-
-#### Trường Hợp 2: Hoàn Ứng Công Ty (Cần MST)
-
-```
-1. Hỏi khách: "Quý khách có cần Mã Số Thuế không?"
-2. Khách trả lời: "Có, MST là 12345678"
-3. Nhập MST: 12345678
-4. Hỏi: "Tên công ty?"
-5. Nhập tên công ty: Công Ty TNHH Công Nghệ OOO
-6. In hóa đơn công ty
-7. Kiểm tra thông tin hóa đơn chính xác
-8. Đưa cho khách
-```
-
----
-
-### In Lại Hóa Đơn
-
-**Khi nào cần in lại?**
-
-- Máy in hóa đơn kẹt giấy
-- Hóa đơn in không rõ
-- Khách mất hóa đơn
-- Thông tin hóa đơn sai (hủy trước)
-
-**Quy Trình In Lại:**
-
-```
-1️⃣ Xác nhận số đơn hàng
-2️⃣ Vào "Quản Lý Hóa Đơn"
-3️⃣ Tìm kiếm giao dịch
-4️⃣ Nhấp "In Lại Hóa Đơn"
-5️⃣ Xác minh thông tin hóa đơn
-6️⃣ In và đánh dấu "BẢN SAO"
-7️⃣ Ghi lý do in lại trong hệ thống
-```
-
-⚠️ **Lưu Ý:**
-
-- Cùng một hóa đơn có thể in lại tối đa 3 lần
-- Hóa đơn in lại phải ghi chú "BẢN SAO"
-- Ghi lại thời gian và lý do in lại
-- Cần chữ ký khách hàng để xác nhận
-
----
-
-### Hủy Hóa Đơn
-
-**Khi nào hủy hóa đơn?**
-
-- Đơn hàng bị hủy
-- Thông tin hóa đơn sai (MST, tên)
-- Số tiền phát hành sai
-- Khách yêu cầu hoàn tiền
-
-**Quy Trình Hủy:**
-
-```
-1️⃣ Xác nhận đáp ứng điều kiện hủy
-   - Cùng ngày phát hành
-   - Chưa báo cáo
-
-2️⃣ Lấy hóa đơn gốc (nếu là giấy)
-
-3️⃣ Thực hiện hủy trong hệ thống
-   - Nhập số đơn hàng
-   - Chọn "Hủy Hóa Đơn"
-   - Chọn lý do hủy
-   - Nhập ghi chú
-
-4️⃣ Hệ thống xác nhận hủy ✅
-
-5️⃣ Đóng dấu "HỦY" lên hóa đơn giấy
-
-6️⃣ Lưu hóa đơn đã hủy để lưu trữ
-
-7️⃣ Nếu cần phát hành lại, thực hiện quy trình phát hành mới
-```
+Hệ thống hiện chỉ in biên lai và không phát hành hóa đơn điện tử. Mỗi cửa hàng xử lý hóa đơn theo quy trình hiện có của mình.
 
 ---
 
@@ -739,8 +609,6 @@ Tùy Chọn C: In giấy
 │  In Biên Lai Hoàn Tiền                      │
 │       ↓                                     │
 │  Khách Ký Xác Nhận                          │
-│       ↓                                     │
-│  Hủy Hóa Đơn Gốc                            │
 │       ↓                                     │
 │  Hoàn Tiền Xong ✅                          │
 │                                             │
@@ -1638,27 +1506,9 @@ A: Phản hồi chuẩn
 
 ---
 
-### Q3: Phát hành hóa đơn sai thì sao?
+### Q3: Biên lai bị mất hoặc in không rõ thì sao?
 
-```
-A: Xử lý lỗi hóa đơn
-
-Nếu phát hiện cùng ngày:
-1️⃣ Hủy hóa đơn sai
-2️⃣ Phát hành lại hóa đơn đúng
-3️⃣ Liên hệ khách để đổi (nếu đã đi)
-
-Nếu phát hiện ngày hôm sau:
-1️⃣ Liên hệ nhân viên thuế
-2️⃣ Đánh giá có thể hủy
-3️⃣ Có thể cần phát hành biên bản tín dụng
-
-Phòng ngừa:
-✅ Xác minh trước khi phát hành
-✅ Kiểm tra MST từng chữ số
-✅ Khách xác nhận tên công ty
-✅ Kiểm tra hóa đơn trước khi đưa
-```
+Xác nhận số đơn hàng và hồ sơ thanh toán, sau đó in lại biên lai và đưa cho khách. Nhờ quản lý hỗ trợ nếu không thể in lại.
 
 ---
 
@@ -1896,7 +1746,7 @@ Nếu thật sự có việc gấp:
 │  📊 Phòng Kế Toán                       │
 │     Máy Lẻ: 102                         │
 │     Email: accounting@makanmakan.com    │
-│     Xử lý: Kế toán, vấn đề hóa đơn      │
+│     Xử lý: Kế toán, vấn đề biên lai     │
 │                                         │
 └─────────────────────────────────────────┘
 ```
@@ -1954,18 +1804,10 @@ Nếu thật sự có việc gấp:
 "Tiền thừa của quý khách là $XXX, vui lòng kiểm tra"
 ```
 
-**Phát Hành Hóa Đơn:**
+**Đưa Biên Lai:**
 
 ```
-"Quý khách có cần Mã Số Thuế không?"
-"Tên công ty là gì?"
-"Quý khách có muốn lưu hóa đơn vào ví không?"
-```
-
-**Đưa Hóa Đơn:**
-
-```
-"Đây là hóa đơn của quý khách, vui lòng giữ"
+"Đây là biên lai của quý khách, vui lòng giữ"
 "Cảm ơn đã dùng bữa, hẹn gặp lại!"
 ```
 
@@ -1986,7 +1828,7 @@ Nếu thật sự có việc gấp:
 | Tìm Nhanh     | F1         |
 | Thanh Toán    | F2         |
 | Hủy           | ESC        |
-| In Hóa Đơn    | Ctrl+P     |
+| In Biên Lai    | Ctrl+P     |
 | In Lại        | Ctrl+R     |
 | Hoàn Tiền     | Ctrl+Alt+R |
 | Khóa Màn Hình | Ctrl+L     |
@@ -2005,7 +1847,7 @@ Nếu thật sự có việc gấp:
 │ 📊 Độ Chính Xác Giao Dịch (30%)       │
 │    • Tần suất chênh lệch tiền         │
 │    • Số lần lỗi                       │
-│    • Tần suất lỗi hóa đơn             │
+│    • Tần suất lỗi biên lai            │
 │                                        │
 │ ⚡ Hiệu Quả Dịch Vụ (25%)              │
 │    • Thời gian thanh toán trung bình  │

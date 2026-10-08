@@ -13,7 +13,7 @@
 3. [Interface ng Cashier System](#interface-ng-cashier-system)
 4. [Proseso ng Pagbabayad ng Order](#proseso-ng-pagbabayad-ng-order)
 5. [Mga Paraan ng Pagbabayad](#mga-paraan-ng-pagbabayad)
-6. [Pamamahala ng Resibo](#pamamahala-ng-resibo)
+6. [Paghawak ng Resibo](#paghawak-ng-resibo)
 7. [Mga Refund at Cancellation](#mga-refund-at-cancellation)
 8. [Arawang Reconciliation](#arawang-reconciliation)
 9. [Mga Query sa Ulat](#mga-query-sa-ulat)
@@ -510,7 +510,7 @@
 5️⃣ Kumpirmahin ng customer ang halaga at tapusin ang bayad
 6️⃣ Makatanggap ang sistema ng notification ng bayad (3-5 sec)
 7️⃣ Ipakita ang "Matagumpay ang Bayad" ✅
-8️⃣ Awtomatikong i-print ang e-invoice
+8️⃣ Awtomatikong i-print ang resibo
 ```
 
 ---
@@ -543,140 +543,9 @@ Pamamaraan:
 
 ---
 
-## 🧾 Pamamahala ng Resibo
+## Paghawak ng Resibo
 
-### E-Invoice System
-
-```
-┌─────────────────────────────────────────────┐
-│ Daloy ng E-Invoice                          │
-├─────────────────────────────────────────────┤
-│                                             │
-│  Checkout ng Customer                       │
-│       ↓                                     │
-│  Tanungin kung kailangan ng Tax ID          │
-│       ↓                                     │
-│  ┌──────────┐  ┌──────────┐               │
-│  │Kailangan  │  │Walang Tax│               │
-│  │Tax ID     │  │   ID     │               │
-│  └──────────┘  └──────────┘               │
-│       ↓              ↓                      │
-│  Ilagay ang Tax ID  Gumawa ng E-Invoice    │
-│       ↓              ↓                      │
-│  I-print ang Company Tanungin ng Carrier   │
-│  Invoice              ↓                     │
-│                  ┌──────────┐              │
-│                  │Mobile Code│              │
-│                  │Member Car.│              │
-│                  │Citizen Dig│              │
-│                  │Print Paper│              │
-│                  └──────────┘              │
-│                       ↓                     │
-│                  Tapos ang Pag-issue ✅     │
-│                                             │
-└─────────────────────────────────────────────┘
-```
-
-### Mga Hakbang sa Pag-issue ng Invoice
-
-#### Kaso 1: Personal na Pagkonsumo (Walang Tax ID)
-
-```
-1. Tanungin ang customer: "Kailangan ninyo ba ng Tax ID?"
-2. Sagot ng customer: "Hindi"
-3. Tanungin: "Gusto ninyo bang i-store ang invoice sa carrier?"
-
-Opsyon A: Gumamit ng mobile barcode
-  → Ipakita ng customer ang mobile barcode
-  → I-scan ang barcode
-  → Awtomatikong ma-save ang invoice
-
-Opsyon B: Gumamit ng member carrier
-  → Ilagay ang phone number ng miyembro
-  → Awtomatikong i-link ng sistema sa member carrier
-
-Opsyon C: I-print ang papel
-  → Direktang i-print ang invoice
-  → Ibigay sa customer
-```
-
-#### Kaso 2: Reimbursement ng Kumpanya (Kailangan ng Tax ID)
-
-```
-1. Tanungin ang customer: "Kailangan ninyo ba ng Tax ID?"
-2. Sagot ng customer: "Oo, ang Tax ID ay 12345678"
-3. Ilagay ang Tax ID: 12345678
-4. Tanungin: "Ano ang pangalan ng kumpanya?"
-5. Ilagay ang pangalan ng kumpanya: OOO Technology Co., Ltd.
-6. I-print ang company invoice
-7. Suriin na tama ang impormasyon sa invoice
-8. Ibigay sa customer
-```
-
----
-
-### Muling Pag-print ng Invoice
-
-**Kailan kailangan ang muling pag-print?**
-
-- Nag-jam ang papel ng invoice machine
-- Hindi malinaw ang print ng invoice
-- Nawala ang invoice ng customer
-- Mali ang impormasyon sa invoice (i-void muna)
-
-**Proseso ng Muling Pag-print:**
-
-```
-1️⃣ Kumpirmahin ang order number
-2️⃣ Pumasok sa "Pamamahala ng Invoice"
-3️⃣ Hanapin ang transaksyon
-4️⃣ I-click ang "Muling I-print ang Invoice"
-5️⃣ I-verify ang impormasyon ng invoice
-6️⃣ I-print at markahan ng "REPRINT"
-7️⃣ I-record sa sistema ang dahilan ng muling pag-print
-```
-
-⚠️ **Mga Tala:**
-
-- Ang parehong invoice ay maaaring muling i-print ng maximum na 3 beses
-- Ang muling na-print na invoice ay dapat markahan ng "REPRINT"
-- I-record ang oras at dahilan ng muling pag-print
-- Kailangan ng pirma ng customer para sa pagtanggap
-
----
-
-### Pag-void ng Invoice
-
-**Kailan mag-void ng invoice?**
-
-- Kinansela ang order
-- Mali ang impormasyon sa invoice (Tax ID, pangalan)
-- Mali ang halagang na-issue
-- Humingi ng refund ang customer
-
-**Proseso ng Pag-void:**
-
-```
-1️⃣ Kumpirmahin na natutugunan ang mga kondisyon ng pag-void
-   - Pareho ang araw ng pag-issue
-   - Hindi pa na-file
-
-2️⃣ Kunin ang orihinal na invoice (kung papel)
-
-3️⃣ Isagawa ang void sa sistema
-   - Ilagay ang order number
-   - Piliin ang "Void Invoice"
-   - Piliin ang dahilan ng void
-   - Ilagay ang mga puna
-
-4️⃣ Kumpirmahin ng sistema ang void ✅
-
-5️⃣ I-stamp ng "VOID" ang papel na invoice
-
-6️⃣ I-file ang na-void na invoice para sa mga talaan
-
-7️⃣ Kung kailangan ng muling pag-issue, isagawa ang bagong proseso ng pag-issue
-```
+Sa kasalukuyan, resibo ang ini-print ng sistema at hindi ito nag-iisyu ng elektronikong invoice. Ang bawat tindahan ay humahawak ng mga invoice gamit ang dati nitong proseso.
 
 ---
 
@@ -740,8 +609,6 @@ Opsyon C: I-print ang papel
 │  I-print ang Resibo ng Refund               │
 │       ↓                                     │
 │  Pumirma ang Customer ng Kumpirmasyon       │
-│       ↓                                     │
-│  I-void ang Orihinal na Invoice             │
 │       ↓                                     │
 │  Tapos na ang Refund ✅                    │
 │                                             │
@@ -1642,27 +1509,9 @@ A: Standard na sagot
 
 ---
 
-### Q3: Paano kung mali ang na-issue na invoice?
+### Q3: Paano kung nawala o hindi malinaw ang resibo?
 
-```
-A: Paghawak ng error sa invoice
-
-Kung natuklasan sa parehong araw:
-1️⃣ I-void ang maling invoice
-2️⃣ Muling i-issue ang tamang invoice
-3️⃣ Kontakin ang customer para magpalit (kung umalis na)
-
-Kung natuklasan kinabukasan:
-1️⃣ Kontakin ang tax personnel
-2️⃣ Suriin kung pwedeng i-void
-3️⃣ Maaaring kailangan ng credit note
-
-Pag-iwas:
-✅ I-verify bago mag-issue
-✅ Suriin ang Tax ID digit-by-digit
-✅ Kumpirmahin ng customer ang pangalan ng kumpanya
-✅ Suriin ang invoice bago ibigay
-```
+Kumpirmahin ang numero ng order at talaan ng bayad, pagkatapos ay muling i-print ang resibo at ibigay sa customer. Humingi ng tulong sa manager kung hindi ito ma-print muli.
 
 ---
 
@@ -1900,7 +1749,7 @@ Kung talagang may emergency na bagay:
 │  📊 Accounting Department               │
 │     Extension: 102                      │
 │     Email: accounting@makanmakan.com    │
-│     Hawak: Accounting, mga isyu sa invoice │
+│     Hawak: Accounting, mga isyu sa resibo │
 │                                         │
 └─────────────────────────────────────────┘
 ```
@@ -1958,18 +1807,10 @@ Kung talagang may emergency na bagay:
 "Ang sukli ninyo ay $XXX, pakisuri po"
 ```
 
-**Pag-issue ng Invoice:**
+**Pagbibigay ng Resibo:**
 
 ```
-"Kailangan ba ninyo ng Tax ID?"
-"Ano ang pangalan ng kumpanya?"
-"Gusto ba ninyong i-store ang invoice sa carrier?"
-```
-
-**Pagbibigay ng Invoice:**
-
-```
-"Narito ang inyong invoice, pakiingatan po"
+"Narito ang inyong resibo, pakiingatan po"
 "Salamat sa pagkain, bumalik kayo!"
 ```
 
@@ -1990,7 +1831,7 @@ Kung talagang may emergency na bagay:
 | Mabilis na Hanap    | F1         |
 | Checkout            | F2         |
 | Kanselahin          | ESC        |
-| I-print ang Invoice | Ctrl+P     |
+| I-print ang Resibo | Ctrl+P     |
 | Muling I-print      | Ctrl+R     |
 | Refund              | Ctrl+Alt+R |
 | I-lock ang Screen   | Ctrl+L     |
@@ -2009,7 +1850,7 @@ Kung talagang may emergency na bagay:
 │ 📊 Katumpakan ng Transaksyon (30%)    │
 │    • Dalas ng variance sa cash        │
 │    • Bilang ng error                  │
-│    • Dalas ng error sa invoice        │
+│    • Dalas ng error sa resibo        │
 │                                        │
 │ ⚡ Kahusayan sa Serbisyo (25%)        │
 │    • Average na oras ng checkout      │

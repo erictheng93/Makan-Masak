@@ -76,4 +76,56 @@ describe("market opening hours contract", () => {
       ).toContainEqual({ key: "openingHours", severity: "required" });
     },
   );
+
+  it("keeps closed-day defaults while parsing the shared contract", () => {
+    expect(
+      createMarketSchema.parse({
+        ...market,
+        openingHours: { mon: { closed: true } },
+      }).openingHours,
+    ).toEqual({ mon: { closed: true, open: "00:00", close: "00:00" } });
+  });
+});
+
+describe("market country code contract", () => {
+  it("accepts supported country codes in create, update, and bulk inputs", () => {
+    expect(
+      createMarketSchema.parse({ ...market, countryCode: "MY" }),
+    ).toHaveProperty("countryCode", "MY");
+    expect(updateMarketSchema.parse({ countryCode: "TW" })).toHaveProperty(
+      "countryCode",
+      "TW",
+    );
+    expect(
+      bulkCreateMarketsSchema.parse({
+        markets: [{ ...market, countryCode: "TW" }],
+      }).markets[0],
+    ).toHaveProperty("countryCode", "TW");
+  });
+
+  it("rejects unsupported country codes", () => {
+    expect(
+      createMarketSchema.safeParse({ ...market, countryCode: "US" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("market business-day cutoff contract", () => {
+  it("accepts whole minutes within a day on create and update", () => {
+    expect(
+      createMarketSchema.parse({ ...market, businessDayCutoffMinutes: 1439 }),
+    ).toHaveProperty("businessDayCutoffMinutes", 1439);
+    expect(
+      updateMarketSchema.parse({ businessDayCutoffMinutes: 0 }),
+    ).toHaveProperty("businessDayCutoffMinutes", 0);
+  });
+
+  it.each([-1, 1440, 1.5, "300"])("rejects invalid cutoff %s", (value) => {
+    expect(
+      createMarketSchema.safeParse({
+        ...market,
+        businessDayCutoffMinutes: value,
+      }).success,
+    ).toBe(false);
+  });
 });

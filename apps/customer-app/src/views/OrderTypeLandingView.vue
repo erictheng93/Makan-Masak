@@ -68,6 +68,19 @@
           </p>
         </div>
 
+        <section
+          v-if="restaurant?.isDemo"
+          data-testid="order-type-demo-banner"
+          class="mb-6 rounded-2xl bg-ios-orange-soft px-4 py-3"
+        >
+          <p class="text-sm font-semibold text-ios-orange-deep">
+            {{ t("demoShop.bannerTitle") }}
+          </p>
+          <p class="mt-1 text-sm text-ios-orange-deep">
+            {{ t("demoShop.bannerBody") }}
+          </p>
+        </section>
+
         <div
           v-if="!hasFulfillmentMethods"
           data-testid="order-type-empty-state"

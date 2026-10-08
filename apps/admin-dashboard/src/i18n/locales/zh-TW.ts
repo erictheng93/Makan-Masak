@@ -958,7 +958,6 @@ const zhTWCore = {
     subscription: {
       subscriptionNotFound:
         "找不到此餐廳的訂閱方案，功能尚未開通。您的登入沒有問題，請聯絡客服協助開通。",
-      trialExpired: "試用期已結束。請升級方案以繼續使用此功能。",
       moduleNotEnabled:
         "目前的方案未包含此功能。請升級方案或聯絡客服為您開通。",
       noRestaurant:
@@ -2045,6 +2044,7 @@ const zhTWCore = {
 
   // 頁面標題
   pages: {
+    marketOpenReport: "開店紀錄",
     reviews: "顧客評價",
     broadcasts: "推播訊息",
     billing: "訂閱與用量",
@@ -2091,6 +2091,8 @@ const zhTWCore = {
     notFound: "頁面不存在",
     platformOverview: "平台總覽",
     platformMarketCheckouts: "市場結帳紀錄",
+    platformMarkets: "市場品質",
+    platformOnboarding: "開店申請",
     platformCustomers: "平台顧客",
     adminSuffix: "管理後台",
     forecast: "需求預測",
@@ -2167,11 +2169,12 @@ const zhTWCore = {
     newPassword: "新密碼",
     newPasswordPlaceholder: "請輸入新密碼（至少6個字符）",
     passwordStrength: "密碼強度：",
-    atLeast6Chars: "至少6個字符",
-    atLeast8Chars: "至少8個字符（建議）",
-    upperLowerCase: "包含大小寫字母",
+    atLeast8Chars: "至少8個字元",
+    containsUppercase: "包含大寫字母（A-Z）",
+    containsLowercase: "包含小寫字母（a-z）",
+    startsWithAllowedChar: "開頭須為字母、數字或 @ $ ! % * ? & 其中一個",
     containsNumber: "包含數字",
-    containsSpecialChar: "包含特殊字符（建議）",
+    containsSpecialChar: "包含特殊符號（@ $ ! % * ? & 其中一個）",
     confirmPassword: "確認密碼",
     confirmPasswordPlaceholder: "請再次輸入新密碼",
     resetting: "重設中...",
@@ -2182,14 +2185,17 @@ const zhTWCore = {
     strengthStrong: "強",
     strengthVeryStrong: "非常強",
     newPasswordRequired: "請輸入新密碼",
-    passwordMin6: "密碼至少需要6個字符",
     confirmPasswordRequired: "請確認密碼",
     passwordMismatch: "兩次輸入的密碼不一致",
     passwordResetSuccess: "密碼已成功重設",
     resetFailed: "重設密碼失敗，請重試",
     resetTokenExpired: "重設連結已過期，請重新申請。",
     resetTokenInvalid: "重設連結無效，請重新申請。",
-    weakPassword: "密碼強度不足，請使用至少 6 個字元的密碼。",
+    weakPassword:
+      "密碼強度不足：至少 8 個字元，並包含大寫、小寫、數字和 @ $ ! % * ? & 其中一個符號。",
+    passwordRequirementsNotMet:
+      "密碼不符合規定：至少 8 個字元，並包含大寫、小寫、數字和 @ $ ! % * ? & 其中一個符號（其他符號不算）。",
+    passwordMissing: "密碼還缺少：{items}",
     tokenInvalid: "Token 無效或已過期",
     tokenVerifyError: "驗證 Token 時發生錯誤",
     missingToken: "缺少重設 Token",
@@ -2236,6 +2242,7 @@ const zhTWCore = {
     },
     actions: {
       handoff: "開通資訊",
+      auditTrail: "稽核紀錄",
       approve: "核准",
       reject: "拒絕",
     },
@@ -2265,6 +2272,17 @@ const zhTWCore = {
       pending: "待處理",
       failed: "寄送失敗",
     },
+    audit: {
+      title: "申請稽核紀錄",
+      close: "關閉",
+      empty: "目前沒有稽核事件。",
+      system: "系統",
+      reason: "原因：{reason}",
+      submitted: "已送出申請",
+      approved: "已核准申請",
+      rejected: "拒絕申請",
+      setupLinkRegenerated: "重新產生店主設定連結",
+    },
     reject: {
       title: "確認拒絕申請",
       description: "請說明拒絕原因，申請者將可看見這項說明。",
@@ -2279,6 +2297,7 @@ const zhTWCore = {
     },
     errors: {
       load: "店家加入申請暫時無法載入。",
+      audit: "無法載入稽核紀錄，請重試。",
       approve: "核准失敗。請確認申請狀態仍可核准。",
       handoff: "無法取得開通資訊，請稍後再試。",
       copy: "無法複製到剪貼簿，請手動選取文字複製。",
@@ -2286,8 +2305,48 @@ const zhTWCore = {
       regenerate: "重新產生設定連結失敗，請稍後再試。",
     },
   },
+  marketOpenReport: {
+    pageTitle: "開店紀錄",
+    title: "開店紀錄報表",
+    market: "商圈",
+    from: "開始日期",
+    to: "結束日期",
+    view: {
+      daily: "每日明細",
+      summary: "期間彙總",
+    },
+    export: "匯出 CSV",
+    exportFailed: "無法匯出 CSV，請稍後再試",
+    loadFailed: "無法載入報表，請確認日期區間（最多 92 天）",
+    noMarkets: "你的店尚未加入任何商圈",
+    autoClosed: "換日自動結束",
+    col: {
+      date: "營業日",
+      vendor: "攤位",
+      opened: "開店",
+      closed: "收攤",
+      hours: "營業時長",
+      openedBy: "操作者",
+      orders: "訂單數",
+      revenue: "營業額",
+      openDays: "開店天數",
+      attendance: "出勤率",
+      avgHours: "平均營業時長",
+    },
+  },
   dashboard: {
     title: "儀表板",
+    marketOpenToday: {
+      title: "今日營業",
+      description: "每天開始營業時按一下，客人才會在商圈 QR 看到你的攤位",
+      open: "今日開店",
+      close: "提早收攤",
+      closed: "今日尚未開店",
+      openSince: "營業中 · 自 {time}",
+      confirmClose: "確定要收攤嗎？客人將無法再向你下單。",
+      error: "更新營業狀態失敗，請再試一次",
+      report: "開店紀錄",
+    },
     setupChecklist: {
       title: "完成店家設定",
       description: "開店前請完成這些基本項目。",
@@ -2840,6 +2899,7 @@ const zhTWCore = {
       paymentSuccess: "付款處理成功",
       paymentFailed: "付款失敗，請重試",
       refundFailed: "退款失敗，請重試",
+      printFailed: "收據列印失敗",
       printInDev: "收據列印功能開發中...",
       printing: "正在列印 {orderNumber} 的收據...",
       printingShiftReport: "正在列印班次報告...",
@@ -3297,7 +3357,6 @@ const zhTWCore = {
     startDelivery: "開始配送",
     confirmDelivery: "確認送達",
     contactCustomer: "聯絡客戶",
-    reportIssue: "回報問題",
     noOrders: "沒有待配送的訂單",
     allDelivered: "所有餐點都已送達！",
     myDeliveries: "我的配送中訂單",
@@ -3314,27 +3373,13 @@ const zhTWCore = {
     customerInfo: "客戶信息",
     makeCall: "撥打電話",
     sendMessage: "發送訊息",
-    issueType: "問題類型",
-    selectIssueType: "請選擇問題類型",
-    issues: {
-      wrongOrder: "訂單錯誤",
-      missingItems: "缺少餐點",
-      qualityIssue: "餐點品質問題",
-      customerUnavailable: "客戶無法聯絡",
-      accessIssue: "無法到達桌台",
-      other: "其他問題",
-    },
-    issueDescription: "問題描述",
-    issueDescPlaceholder: "請詳細描述遇到的問題...",
     cancel: "取消",
-    submitIssue: "回報問題",
     justReady: "剛準備好",
     minutesAgo: "{minutes} 分鐘前",
     hoursAgo: "{hours} 小時前",
     alerts: {
       calling: "撥打電話給 {name}: {phone}",
       messaging: "發送簡訊給 {name}",
-      issueReported: "問題已回報：\n類型：{type}\n描述：{description}",
     },
   },
 
@@ -3353,6 +3398,7 @@ const zhTWCore = {
     balance: "餘額",
     shift: "班次",
     notStarted: "未開始",
+    shiftActive: "進行中",
     pleaseStartShift: "請開始班次",
     startShift: "開始班次",
     endShift: "結束班次",
@@ -4350,6 +4396,10 @@ const zhTWCore = {
 
   // 優惠券表單
   couponForm: {
+    clearIncompatible: "清除互斥設定",
+    incompatibleCoupons: "不可併用的優惠券",
+    incompatibleHint:
+      "勾選不可與此券一起使用的優惠券。任一張券設定互斥，即無法併用。",
     editTitle: "編輯優惠券",
     createTitle: "建立優惠券",
     basicInfo: "基本資訊",
@@ -5027,6 +5077,8 @@ const zhTWCore = {
   // 訂單 Store
   orderStore: {
     addItemsFailed: "加點失敗",
+    couponOrderImmutable:
+      "這張訂單已使用優惠券，無法修改品項。請取消後重新下單",
     changeItemFailed: "數量修改失敗",
     removeItemFailed: "移除品項失敗",
     fetchFailed: "獲取訂單失敗",
@@ -6106,6 +6158,16 @@ const zhTWRuntimeKeys = {
     statusActive: "使用中",
     statusInactive: "已停用",
     trialRemaining: "試用期剩餘 {days} 天",
+    trialExpiredBanner:
+      "試用期已結束。所有功能仍可繼續使用，但請選擇方案以支持 MakanMasak。",
+    trialExpiredAction: "選擇方案",
+    trialExpiredTitle: "試用期已結束",
+    trialExpiredContinue: "繼續使用",
+    upgradeTitle: "升級方案",
+    upgradeBody:
+      "目前尚未提供線上自助升級。請來信聯絡我們，我們會協助您開通方案，在此之前所有功能仍可正常使用。",
+    upgradeAction: "來信升級方案",
+    upgradeMailSubject: "升級 MakanMasak 方案",
     usageTitle: "本期用量",
     usageEmpty: "本期尚無用量紀錄。",
     modulesTitle: "方案包含的功能",

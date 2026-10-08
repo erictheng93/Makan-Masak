@@ -33,9 +33,6 @@ interface AsyncModalComponents {
   CouponStatsModal: Component;
   CouponDistributeModal: Component;
 
-  // Backup Modals
-  CreateBackupModal: Component;
-
   // Scheduling Modals
   ScheduleFormModal: Component;
   ShiftTemplateFormModal: Component;
@@ -97,11 +94,6 @@ export function useAsyncModals(): AsyncModalComponents {
     ),
     CouponDistributeModal: createAsyncModal(
       () => import("@/components/coupons/CouponDistributeModal.vue"),
-    ),
-
-    // Backup Modals
-    CreateBackupModal: createAsyncModal(
-      () => import("@/components/backup/CreateBackupModal.vue"),
     ),
 
     // Scheduling Modals

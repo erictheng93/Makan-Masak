@@ -4,6 +4,20 @@ import vue from "@vitejs/plugin-vue";
 import { VitePWA } from "vite-plugin-pwa";
 import { fileURLToPath, URL } from "node:url";
 import { visualizer } from "rollup-plugin-visualizer";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+
+// Scripts pulled in by importScripts() are fetched through the HTTP cache
+// (updateViaCache defaults to "imports"), and makanmasak.com's zone serves
+// them with max-age=14400. A content-versioned URL makes a new worker fetch
+// the copy from its own deploy instead of running a stale one for 4h (#403).
+const versionedPublicScript = (name: string) =>
+  `/${name}?v=${createHash("sha256")
+    .update(
+      readFileSync(fileURLToPath(new URL(`./public/${name}`, import.meta.url))),
+    )
+    .digest("hex")
+    .slice(0, 12)}`;
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -26,7 +40,10 @@ export default defineConfig({
       // updated worker takes control of this client.
       injectRegister: false,
       workbox: {
-        importScripts: ["/sw-push.js", "/sw-cache-cleanup.js"],
+        importScripts: [
+          versionedPublicScript("sw-push.js"),
+          versionedPublicScript("sw-cache-cleanup.js"),
+        ],
         skipWaiting: true,
         clientsClaim: true,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,woff2}"],
@@ -55,7 +72,6 @@ export default defineConfig({
         theme_color: "#3b82f6",
         background_color: "#ffffff",
         display: "standalone",
-        orientation: "portrait-primary",
         scope: "/",
         start_url: "/",
         icons: [
@@ -83,13 +99,6 @@ export default defineConfig({
             short_name: "掃描",
             description: "掃描桌上的 QR Code 開始點餐",
             url: "/scan",
-            icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }],
-          },
-          {
-            name: "手動輸入",
-            short_name: "輸入",
-            description: "手動輸入餐廳和桌號",
-            url: "/manual",
             icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }],
           },
         ],
@@ -247,6 +256,15 @@ export default defineConfig({
     port: 3000,
     proxy: {
       "/api": {
+        target: "http://localhost:8787",
+        changeOrigin: true,
+        secure: false,
+      },
+      // useFeatureAvailability derives /info from the relative /api/v1 base.
+      // Unproxied, it gets the SPA's index.html, fails to parse, and fails
+      // open — so dev and the customer-real E2E saw every unlaunched feature
+      // as enabled. Exact match: a regex key keeps it off any /info* route.
+      "^/info$": {
         target: "http://localhost:8787",
         changeOrigin: true,
         secure: false,

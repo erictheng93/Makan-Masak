@@ -88,12 +88,11 @@ const readBodyText = async (c: Context): Promise<string> => {
 export const validateBody = <T extends z.ZodTypeAny>(schema: T) =>
   createMiddleware<{ Variables: { validatedBody: z.infer<T> } }>(
     async (c, next) => {
+      let validated: z.infer<T>;
       try {
         const rawBody = await readBodyText(c);
         const body = rawBody ? JSON.parse(rawBody) : {};
-        const validated = schema.parse(body);
-        c.set("validatedBody", validated);
-        await next();
+        validated = schema.parse(body);
       } catch (error) {
         if (error instanceof z.ZodError) {
           throw badRequest(
@@ -104,6 +103,8 @@ export const validateBody = <T extends z.ZodTypeAny>(schema: T) =>
         }
         throw badRequest("Invalid JSON body", "INVALID_JSON");
       }
+      c.set("validatedBody", validated);
+      await next();
     },
   );
 
@@ -117,11 +118,10 @@ export const validateOptionalBody = validateBody;
 export const validateQuery = <T extends z.ZodTypeAny>(schema: T) =>
   createMiddleware<{ Variables: { validatedQuery: z.infer<T> } }>(
     async (c, next) => {
+      let validated: z.infer<T>;
       try {
         const query = c.req.query();
-        const validated = schema.parse(query);
-        c.set("validatedQuery", validated);
-        await next();
+        validated = schema.parse(query);
       } catch (error) {
         if (error instanceof z.ZodError) {
           throw badRequest(
@@ -132,17 +132,18 @@ export const validateQuery = <T extends z.ZodTypeAny>(schema: T) =>
         }
         throw badRequest("Invalid query parameters", "INVALID_QUERY");
       }
+      c.set("validatedQuery", validated);
+      await next();
     },
   );
 
 export const validateParams = <T extends z.ZodTypeAny>(schema: T) =>
   createMiddleware<{ Variables: { validatedParams: z.infer<T> } }>(
     async (c, next) => {
+      let validated: z.infer<T>;
       try {
         const params = c.req.param();
-        const validated = schema.parse(params);
-        c.set("validatedParams", validated);
-        await next();
+        validated = schema.parse(params);
       } catch (error) {
         if (error instanceof z.ZodError) {
           throw badRequest(
@@ -153,6 +154,8 @@ export const validateParams = <T extends z.ZodTypeAny>(schema: T) =>
         }
         throw badRequest("Invalid path parameters", "INVALID_PARAMS");
       }
+      c.set("validatedParams", validated);
+      await next();
     },
   );
 

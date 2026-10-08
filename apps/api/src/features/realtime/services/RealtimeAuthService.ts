@@ -54,6 +54,7 @@ interface AuthenticatedRealtimeUser {
   restaurantId?: string;
   isActive: boolean;
   tokenVersion: number;
+  sessionId?: string;
 }
 
 const UUID_V7_PATTERN =
@@ -166,6 +167,8 @@ export class RealtimeAuthService {
               userId: authenticatedUser.id,
               publicUserId: authenticatedUser.publicId,
               appRole: authenticatedUser.role,
+              sid: authenticatedUser.sessionId,
+              tv: authenticatedUser.tokenVersion,
             }
           : {}),
         exp: issuedAt + expiresIn,
@@ -628,6 +631,16 @@ export class RealtimeAuthService {
       return { error: "User does not have access to this restaurant" };
     }
 
+    if (!this.env.DB || typeof this.env.DB.prepare !== "function") {
+      return { error: "Session lookup unavailable" };
+    }
+    const session = await this.env.DB.prepare(
+      "SELECT id FROM sessions WHERE user_id = ? AND token = ? AND is_active = 1 AND expires_at_ms > ? LIMIT 1",
+    )
+      .bind(user.id, sessionId, Date.now())
+      .first<{ id: string }>();
+    if (!session) return { error: "Session has been invalidated" };
+    user.sessionId = session.id;
     return { user };
   }
 

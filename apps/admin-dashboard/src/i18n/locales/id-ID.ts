@@ -939,8 +939,6 @@ const idID: Messages = {
     saveFailed: "Gagal menyimpan",
     deleteFailed: "Gagal menghapus",
     subscription: {
-      trialExpired:
-        "Masa uji coba Anda telah berakhir. Tingkatkan paket Anda untuk terus menggunakan fitur ini.",
       moduleNotEnabled:
         "Fitur ini tidak termasuk dalam paket Anda saat ini. Tingkatkan paket Anda atau hubungi dukungan untuk mengaktifkannya.",
       subscriptionNotFound:
@@ -2016,6 +2014,7 @@ const idID: Messages = {
     waitingManagement: "Manajemen Menunggu",
   },
   pages: {
+    marketOpenReport: "Open-day report",
     reviews: "Ulasan pelanggan",
     broadcasts: "Pesan dorong",
     billing: "Paket & Pemakaian",
@@ -2068,6 +2067,8 @@ const idID: Messages = {
     waitingManagement: "Manajemen Menunggu",
     subscriptions: "Langganan",
     platformMarketCheckouts: "Pembayaran Pasar",
+    platformMarkets: "Kualitas Pasar",
+    platformOnboarding: "Pengajuan Toko",
     platformCustomers: "Pelanggan Platform",
   },
   platform: {
@@ -2135,11 +2136,13 @@ const idID: Messages = {
     newPassword: "Kata Sandi Baru",
     newPasswordPlaceholder: "Masukkan kata sandi baru (minimal 6 karakter)",
     passwordStrength: "Kekuatan kata sandi:",
-    atLeast6Chars: "Minimal 6 karakter",
-    atLeast8Chars: "Minimal 8 karakter (disarankan)",
-    upperLowerCase: "Mengandung huruf besar dan kecil",
+    atLeast8Chars: "Minimal 8 karakter",
+    containsUppercase: "Mengandung huruf besar (A-Z)",
+    containsLowercase: "Mengandung huruf kecil (a-z)",
+    startsWithAllowedChar:
+      "Diawali huruf, angka, atau salah satu dari @ $ ! % * ? &",
     containsNumber: "Mengandung angka",
-    containsSpecialChar: "Mengandung karakter khusus (disarankan)",
+    containsSpecialChar: "Mengandung salah satu simbol: @ $ ! % * ? &",
     confirmPassword: "Konfirmasi Kata Sandi",
     confirmPasswordPlaceholder: "Masukkan ulang kata sandi baru",
     resetting: "Mengatur ulang...",
@@ -2150,7 +2153,6 @@ const idID: Messages = {
     strengthStrong: "Kuat",
     strengthVeryStrong: "Sangat Kuat",
     newPasswordRequired: "Silakan masukkan kata sandi baru",
-    passwordMin6: "Kata sandi harus minimal 6 karakter",
     confirmPasswordRequired: "Silakan konfirmasi kata sandi",
     passwordMismatch: "Kata sandi tidak cocok",
     passwordResetSuccess: "Kata sandi berhasil diatur ulang",
@@ -2158,7 +2160,11 @@ const idID: Messages = {
     resetTokenExpired:
       "Tautan reset ini telah kedaluwarsa. Silakan minta yang baru.",
     resetTokenInvalid: "Tautan reset ini tidak valid. Silakan minta yang baru.",
-    weakPassword: "Kata sandi terlalu lemah. Gunakan setidaknya 6 karakter.",
+    weakPassword:
+      "Kata sandi terlalu lemah. Gunakan minimal 8 karakter dengan huruf besar, huruf kecil, angka, dan salah satu dari @ $ ! % * ? &.",
+    passwordRequirementsNotMet:
+      "Kata sandi tidak memenuhi syarat: minimal 8 karakter dengan huruf besar, huruf kecil, angka, dan salah satu dari @ $ ! % * ? & (simbol lain tidak dihitung).",
+    passwordMissing: "Kata sandi masih kurang: {items}",
     tokenInvalid: "Token tidak valid atau sudah kedaluwarsa",
     tokenVerifyError: "Kesalahan saat memverifikasi token",
     missingToken: "Token atur ulang tidak ditemukan",
@@ -2205,6 +2211,7 @@ const idID: Messages = {
     },
     actions: {
       handoff: "Detail aktivasi",
+      auditTrail: "Riwayat audit",
       approve: "Setujui",
       reject: "Tolak",
     },
@@ -2234,6 +2241,17 @@ const idID: Messages = {
       pending: "Menunggu",
       failed: "Gagal terkirim",
     },
+    audit: {
+      title: "Riwayat audit pengajuan",
+      close: "Tutup",
+      empty: "Belum ada peristiwa audit.",
+      system: "Sistem",
+      reason: "Alasan: {reason}",
+      submitted: "Pengajuan dikirim",
+      approved: "Pengajuan disetujui",
+      rejected: "Pengajuan ditolak",
+      setupLinkRegenerated: "Tautan aktivasi pemilik dibuat ulang",
+    },
     reject: {
       title: "Konfirmasi penolakan",
       description: "Jelaskan alasannya. Pemohon akan melihat teks ini.",
@@ -2248,6 +2266,7 @@ const idID: Messages = {
     },
     errors: {
       load: "Pengajuan toko tidak dapat dimuat.",
+      audit: "Riwayat audit tidak dapat dimuat. Coba lagi.",
       approve: "Persetujuan gagal. Periksa status pengajuan.",
       handoff: "Detail aktivasi tidak dapat dimuat. Coba lagi.",
       copy: "Tidak dapat menyalin ke papan klip. Pilih teksnya dan salin manual.",
@@ -2255,8 +2274,50 @@ const idID: Messages = {
       regenerate: "Gagal membuat ulang tautan. Coba lagi.",
     },
   },
+  marketOpenReport: {
+    pageTitle: "Open-day report",
+    title: "Stall open-day report",
+    market: "Market",
+    from: "From",
+    to: "To",
+    view: {
+      daily: "Daily",
+      summary: "Summary",
+    },
+    export: "Export CSV",
+    exportFailed: "Could not export CSV. Please try again.",
+    loadFailed:
+      "Could not load the report. Check the date range (92 days max).",
+    noMarkets: "Your shop is not in any market yet",
+    autoClosed: "Ended at day rollover",
+    col: {
+      date: "Business day",
+      vendor: "Stall",
+      opened: "Opened",
+      closed: "Closed",
+      hours: "Hours open",
+      openedBy: "Opened by",
+      orders: "Orders",
+      revenue: "Revenue",
+      openDays: "Days open",
+      attendance: "Attendance",
+      avgHours: "Avg hours open",
+    },
+  },
   dashboard: {
     title: "Dasbor",
+    marketOpenToday: {
+      title: "Open today",
+      description:
+        "Tap when you start trading so customers see your stall on the market QR",
+      open: "Open today",
+      close: "Close early",
+      closed: "Not open yet today",
+      openSince: "Open since {time}",
+      confirmClose: "Close now? Customers will not be able to order from you.",
+      error: "Could not update your status. Please try again.",
+      report: "Open-day report",
+    },
     setupChecklist: {
       title: "Selesaikan pengaturan toko",
       description: "Selesaikan hal penting ini sebelum buka.",
@@ -2734,6 +2795,7 @@ const idID: Messages = {
       paymentSuccess: "Pembayaran berhasil diproses",
       paymentFailed: "Pembayaran gagal, silakan coba lagi",
       refundFailed: "Pengembalian gagal, silakan coba lagi",
+      printFailed: "Struk tidak dapat dicetak",
       printInDev: "Pencetakan struk sedang dalam pengembangan...",
       printing: "Mencetak struk untuk {orderNumber}...",
       printingShiftReport: "Mencetak laporan shift...",
@@ -3278,7 +3340,6 @@ const idID: Messages = {
     startDelivery: "Mulai Pengiriman",
     confirmDelivery: "Konfirmasi Terkirim",
     contactCustomer: "Hubungi Pelanggan",
-    reportIssue: "Laporkan Masalah",
     noOrders: "Tidak ada pesanan menunggu pengiriman",
     allDelivered: "Semua hidangan telah diantar!",
     myDeliveries: "Pengiriman Aktif Saya",
@@ -3295,28 +3356,13 @@ const idID: Messages = {
     customerInfo: "Info Pelanggan",
     makeCall: "Telepon",
     sendMessage: "Kirim Pesan",
-    issueType: "Jenis Masalah",
-    selectIssueType: "Pilih jenis masalah",
-    issues: {
-      wrongOrder: "Pesanan Salah",
-      missingItems: "Item Hilang",
-      qualityIssue: "Masalah Kualitas",
-      customerUnavailable: "Pelanggan Tidak Tersedia",
-      accessIssue: "Tidak Dapat Mengakses Meja",
-      other: "Masalah Lain",
-    },
-    issueDescription: "Deskripsi Masalah",
-    issueDescPlaceholder: "Jelaskan masalah secara detail...",
     cancel: "Batal",
-    submitIssue: "Laporkan Masalah",
     justReady: "Baru siap",
     minutesAgo: "{minutes} mnt lalu",
     hoursAgo: "{hours} jam lalu",
     alerts: {
       calling: "Menelepon {name}: {phone}",
       messaging: "Mengirim pesan ke {name}",
-      issueReported:
-        "Masalah dilaporkan:\nJenis: {type}\nDeskripsi: {description}",
     },
   },
   pos: {
@@ -3333,6 +3379,7 @@ const idID: Messages = {
     balance: "Saldo",
     shift: "Shift",
     notStarted: "Belum Dimulai",
+    shiftActive: "Sedang Berjalan",
     pleaseStartShift: "Silakan mulai shift",
     startShift: "Mulai Shift",
     endShift: "Akhiri Shift",
@@ -4348,6 +4395,10 @@ const idID: Messages = {
     availableSeats: "Kursi Tersedia",
   },
   couponForm: {
+    clearIncompatible: "Hapus pembatasan",
+    incompatibleCoupons: "Tidak dapat digabung dengan",
+    incompatibleHint:
+      "Pilih kupon yang tidak dapat digunakan bersama kupon ini. Pembatasan dari salah satu kupon berlaku.",
     editTitle: "Edit Kupon",
     createTitle: "Buat Kupon",
     basicInfo: "Informasi Dasar",
@@ -5045,6 +5096,8 @@ const idID: Messages = {
   },
   orderStore: {
     addItemsFailed: "Gagal menambah item",
+    couponOrderImmutable:
+      "Pesanan ini memakai kupon sehingga itemnya tidak bisa diubah. Batalkan lalu buat pesanan baru",
     changeItemFailed: "Gagal mengubah jumlah",
     removeItemFailed: "Gagal menghapus item",
     fetchFailed: "Gagal mengambil pesanan",
@@ -6002,6 +6055,16 @@ const idID: Messages = {
     statusActive: "Aktif",
     statusInactive: "Nonaktif",
     trialRemaining: "Sisa {days} hari masa uji coba",
+    trialExpiredBanner:
+      "Masa uji coba Anda telah berakhir. Semua fitur tetap berfungsi, tetapi mohon pilih paket untuk mendukung MakanMasak.",
+    trialExpiredAction: "Pilih paket",
+    trialExpiredTitle: "Masa uji coba telah berakhir",
+    trialExpiredContinue: "Lanjutkan",
+    upgradeTitle: "Tingkatkan paket",
+    upgradeBody:
+      "Pembayaran online belum tersedia. Kirim email kepada kami dan kami akan menyiapkan paket Anda. Sementara itu semua fitur tetap berfungsi.",
+    upgradeAction: "Kirim email untuk upgrade",
+    upgradeMailSubject: "Upgrade paket MakanMasak",
     usageTitle: "Pemakaian siklus ini",
     usageEmpty: "Belum ada pemakaian tercatat pada siklus ini.",
     modulesTitle: "Fitur yang termasuk",

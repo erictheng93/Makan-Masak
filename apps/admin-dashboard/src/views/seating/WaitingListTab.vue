@@ -782,6 +782,7 @@ import { useI18n } from "@/i18n";
 import { useConfirmModal } from "@/composables/useConfirmModal";
 import { useAuthStore } from "@/stores/auth";
 import { WaitingListService } from "@/services/waitingListService";
+import { notifySeatingChanged } from "./seatingEvents";
 import { useWebSocketService } from "@/services/websocketService";
 import { format } from "date-fns";
 import { resolveUserFacingError } from "@makanmasak/shared/utils/user-facing-error";
@@ -910,6 +911,8 @@ async function loadQueueStatus() {
   try {
     queueStatus.value =
       (await WaitingListService.getQueueStatus(restaurantId.value)) ?? null;
+    // Every waiting-list action and realtime event ends in this reload.
+    notifySeatingChanged();
   } catch (error) {
     console.error("Load queue status error:", error);
   }

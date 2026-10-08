@@ -1,4 +1,4 @@
-import { marketOpeningHoursSchema } from "../schemas/opening-hours";
+import { validateMarketOpeningHours } from "@makanmasak/shared/utils/market-opening-hours";
 
 export type MarketPublicReadinessIssueKey =
   | "description"
@@ -130,9 +130,15 @@ function hasText(value: string | null | undefined): boolean {
 }
 
 function hasOpeningHours(value: unknown): boolean {
-  const result = marketOpeningHoursSchema.safeParse(value);
-  return (
-    result.success &&
-    Object.values(result.data).some((day) => day && day.closed !== true)
+  if (
+    validateMarketOpeningHours(value).length > 0 ||
+    value == null ||
+    typeof value !== "object" ||
+    Array.isArray(value)
+  ) {
+    return false;
+  }
+  return Object.values(value).some(
+    (day) => day && typeof day === "object" && day.closed !== true,
   );
 }

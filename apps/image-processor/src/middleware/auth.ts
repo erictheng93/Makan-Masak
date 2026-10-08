@@ -15,6 +15,7 @@ type JwtAuthPayload = {
   username: string;
   role: number;
   restaurantId?: string;
+  tokenVersion: number;
   exp?: number;
   iat?: number;
   nbf?: number;
@@ -49,6 +50,7 @@ const toJwtAuthPayload = (
     role: payload.role,
     restaurantId:
       payload.restaurantId == null ? undefined : payload.restaurantId,
+    tokenVersion: typeof payload.tv === "number" ? payload.tv : 1,
     exp: typeof payload.exp === "number" ? payload.exp : undefined,
     iat: typeof payload.iat === "number" ? payload.iat : undefined,
     nbf: typeof payload.nbf === "number" ? payload.nbf : undefined,
@@ -172,12 +174,43 @@ export const authMiddleware = async (
       c.header("X-Token-Expires-In", timeUntilExpiry.toString());
     }
 
-    // 設置用戶資訊到 context
+    const principal = await c.env.DB.prepare(
+      "SELECT id, username, role, restaurant_id, is_active, token_version FROM users WHERE id = ? LIMIT 1",
+    )
+      .bind(authPayload.id)
+      .first<{
+        id: string;
+        username: string;
+        role: number;
+        restaurant_id: string | null;
+        is_active: number;
+        token_version: number;
+      }>();
+    if (
+      !principal ||
+      principal.is_active !== 1 ||
+      principal.username !== authPayload.username ||
+      principal.role !== authPayload.role ||
+      principal.token_version !== authPayload.tokenVersion
+    ) {
+      return c.json({ success: false, error: "Invalid or revoked token" }, 401);
+    }
+    const session = await c.env.DB.prepare(
+      "SELECT id FROM sessions WHERE user_id = ? AND token = ? AND is_active = 1 AND expires_at_ms > ? LIMIT 1",
+    )
+      .bind(principal.id, token, Date.now())
+      .first();
+    if (!session) {
+      return c.json(
+        { success: false, error: "Invalid or revoked session" },
+        401,
+      );
+    }
     c.set("user", {
-      id: authPayload.id,
-      username: authPayload.username,
-      role: authPayload.role,
-      restaurantId: authPayload.restaurantId,
+      id: principal.id,
+      username: principal.username,
+      role: principal.role,
+      restaurantId: principal.restaurant_id ?? undefined,
     });
 
     await next();
@@ -215,46 +248,10 @@ export const optionalAuth = async (
   c: Context<{ Bindings: Env }>,
   next: Next,
 ) => {
-  try {
-    const authHeader = c.req.header("Authorization");
-
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      const token = authHeader.substring(7);
-
-      // 檢查黑名單
-      if (c.env.TOKEN_BLACKLIST) {
-        const blacklisted = await c.env.TOKEN_BLACKLIST.get(`token:${token}`);
-        if (blacklisted) {
-          // Token 已被加入黑名單，但這是可選認證，所以繼續執行
-          await next();
-          return;
-        }
-      }
-
-      const decoded = await verify(token, c.env.JWT_SECRET, "HS256");
-
-      if (decoded && typeof decoded === "object") {
-        const authPayload = toJwtAuthPayload(
-          decoded as Record<string, unknown>,
-        );
-        if (!authPayload) {
-          await next();
-          return;
-        }
-        c.set("user", {
-          id: authPayload.id,
-          username: authPayload.username,
-          role: authPayload.role,
-          restaurantId: authPayload.restaurantId,
-        });
-      }
-    }
-
-    await next();
-  } catch {
-    // 忽略認證錯誤，繼續執行
-    await next();
-  }
+  // Use the same signature, time, live-principal and session checks as required auth.
+  // A failed optional login remains anonymous; downstream handlers run once.
+  await authMiddleware(c, async () => {});
+  await next();
 };
 
 // 角色權限檢查中間件

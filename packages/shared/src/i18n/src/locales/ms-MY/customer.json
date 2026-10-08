@@ -878,6 +878,7 @@
     "noResults": "Tiada hasil ditemui. Cuba carian lain.",
     "open": "Buka",
     "closed": "Tutup",
+    "hoursUnavailable": "Waktu operasi belum disediakan",
     "filters": "Penapis",
     "openNow": "Buka Sekarang",
     "takeaway": "Bungkus",
@@ -919,6 +920,10 @@
   "footer": {
     "copyright": "© {year} MakanMasak. Hak cipta terpelihara."
   },
+  "reservationBooking": {
+    "back": "Kembali ke kedai",
+    "title": "Tempahan meja"
+  },
   "serviceBooking": {
     "back": "Kembali ke perkhidmatan",
     "title": "Tempahan perkhidmatan",
@@ -941,9 +946,11 @@
     "confirmationCode": "Kod pengesahan:",
     "amountDue": "Jumlah perlu dibayar",
     "status": "Status",
+    "paymentStatusLabel": "Status bayaran",
     "creditCardPlaceholder": "Public id kad kredit kedai",
     "creditPinPlaceholder": "PIN (pilihan)",
     "payWithCredits": "Bayar dengan kredit",
+    "payAtCounter": "Sila bayar kepada staf di kedai (perlu dibayar: {amount}). Kod pengesahan: {code}",
     "lookupTitle": "Cari atau batalkan tempahan",
     "confirmationCodePlaceholder": "Masukkan kod pengesahan",
     "contactPlaceholder": "Telefon atau e-mel tempahan (pilihan)",
@@ -961,6 +968,12 @@
     "lookupFailed": "Tidak dapat mencari tempahan ini.",
     "cancelSuccess": "Tempahan dibatalkan.",
     "cancelFailed": "Tidak dapat membatalkan tempahan ini.",
+    "paymentStatus": {
+      "not_required": "Tiada bayaran diperlukan",
+      "unpaid": "Belum dibayar",
+      "deposit_paid": "Deposit telah dibayar",
+      "paid": "Dibayar"
+    },
     "bookingStatus": {
       "pending": "Menunggu bayaran",
       "confirmed": "Disahkan",
@@ -1111,6 +1124,7 @@
       "marketHours": "Waktu pasar · {hours}",
       "primaryVendor": "Gerai utama",
       "contactVendor": "Hubungi gerai",
+      "notOpenToday": "Not open today",
       "loadMoreVendors": "Muat lebih banyak gerai"
     },
     "search": {
@@ -1203,6 +1217,7 @@
       "previousPage": "Halaman sebelumnya",
       "favoriteSyncFailed": "Tidak dapat menyegerakkan status ikutan pasar. Sila cuba lagi.",
       "checkoutSuccess": "Pesanan pasar dihantar",
+      "vendorNotOpenToday": "A stall in your cart is not open today and was removed. Please review and check out again.",
       "checkoutFailed": "Tidak dapat menghantar pesanan pasar"
     },
     "checkout": {
@@ -1351,5 +1366,13 @@
     "saved": "Tetapan disimpan",
     "saveFailed": "Tetapan gagal disimpan. Sila cuba lagi.",
     "loadFailed": "Tetapan gagal dimuatkan. Sila cuba lagi."
+  },
+  "demoShop": {
+    "bannerTitle": "Ini ialah restoran demo",
+    "bannerBody": "Cubalah memesan apa sahaja. Tiada pesanan yang benar-benar dihantar.",
+    "noticeTitle": "Restoran demo: pesanan ini tidak akan dihantar",
+    "noticeBody": "Anda baru sahaja melalui proses pesanan sebagai pelanggan. Di restoran sebenar, pesanan ini akan terus muncul pada tablet dapur.",
+    "applyCta": "Buka kedai saya sendiri",
+    "keepBrowsing": "Teruskan melihat"
   }
 }

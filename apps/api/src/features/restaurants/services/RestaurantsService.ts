@@ -8,6 +8,7 @@ import { asc, eq, isNull, and } from "drizzle-orm";
 import {
   RestaurantService as DatabaseRestaurantService,
   type RestaurantServiceType,
+  type ServiceItemPaymentRequirement,
   markets,
   restaurantFaqs,
   restaurantMarketMemberships,
@@ -19,7 +20,11 @@ import { KVCacheService, type CacheService } from "../../../core/cache";
 import { ConsoleLogger } from "../../../core/monitoring";
 import { CACHE_TTL } from "../../../shared/constants";
 import type { Env } from "../../../shared/types";
-import { ApiError, badRequest } from "../../../shared/utils/api-error";
+import {
+  ApiError,
+  badRequest,
+  conflict,
+} from "../../../shared/utils/api-error";
 import { SubscriptionService } from "../../subscriptions/services/SubscriptionService";
 import { ManagementTenantClient } from "../../../services/managementTenantClient";
 import type {
@@ -32,6 +37,10 @@ import type {
 } from "../types";
 import { distanceKm, pointInGeoJsonBoundary } from "../../markets/services/geo";
 import { currencyFromRestaurantSettings } from "../../../shared/utils/restaurant-currency";
+import {
+  isValidServicePaymentTerms,
+  SERVICE_PAYMENT_TERMS_ERROR,
+} from "../schemas/validation";
 
 const MARKET_CACHE_VERSION_KEY = "markets:version";
 const AUTO_ATTACH_MARKET_RADIUS_KM = 2;
@@ -99,6 +108,8 @@ export interface PublicRestaurantServiceItem {
   description: string | null;
   serviceType: string;
   priceCents: number | null;
+  paymentRequirement: ServiceItemPaymentRequirement;
+  depositAmountCents: number;
   priceLabel: string | null;
   durationMinutes: number | null;
   requiresBooking: boolean;
@@ -120,6 +131,8 @@ export interface RestaurantServiceItemInput {
   description?: string | null;
   serviceType?: RestaurantServiceType;
   priceCents?: number | null;
+  paymentRequirement?: ServiceItemPaymentRequirement;
+  depositAmountCents?: number;
   priceLabel?: string | null;
   durationMinutes?: number | null;
   requiresBooking?: boolean;
@@ -580,6 +593,8 @@ export class RestaurantsService {
         description: input.description,
         serviceType: input.serviceType ?? "general",
         priceCents: input.priceCents,
+        paymentRequirement: input.paymentRequirement ?? "pay_at_venue",
+        depositAmountCents: input.depositAmountCents ?? 0,
         priceLabel: input.priceLabel,
         durationMinutes: input.durationMinutes,
         requiresBooking: input.requiresBooking ?? false,
@@ -605,6 +620,37 @@ export class RestaurantsService {
     serviceItemId: number,
     input: Partial<RestaurantServiceItemInput>,
   ): Promise<PublicRestaurantServiceItem | null> {
+    const [existing] = await this.db
+      .select()
+      .from(restaurantServiceItems)
+      .where(
+        and(
+          eq(restaurantServiceItems.id, serviceItemId),
+          eq(restaurantServiceItems.restaurantId, restaurantId),
+          isNull(restaurantServiceItems.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (!existing) return null;
+
+    const paymentRequirement =
+      input.paymentRequirement ?? existing.paymentRequirement;
+    const depositAmountCents =
+      input.depositAmountCents ??
+      (paymentRequirement === "deposit" ? existing.depositAmountCents : 0);
+    if (
+      !isValidServicePaymentTerms({
+        paymentRequirement,
+        depositAmountCents,
+        priceCents:
+          input.priceCents !== undefined
+            ? input.priceCents
+            : existing.priceCents,
+      })
+    ) {
+      throw badRequest(SERVICE_PAYMENT_TERMS_ERROR);
+    }
+
     const updateData: Record<string, unknown> = {
       updatedAt: new Date(),
     };
@@ -615,6 +661,13 @@ export class RestaurantsService {
       }
     }
 
+    if (
+      input.paymentRequirement !== undefined ||
+      input.depositAmountCents !== undefined
+    ) {
+      updateData.depositAmountCents = depositAmountCents;
+    }
+
     const [row] = await this.db
       .update(restaurantServiceItems)
       .set(updateData)
@@ -623,11 +676,23 @@ export class RestaurantsService {
           eq(restaurantServiceItems.id, serviceItemId),
           eq(restaurantServiceItems.restaurantId, restaurantId),
           isNull(restaurantServiceItems.deletedAt),
+          existing.priceCents === null
+            ? isNull(restaurantServiceItems.priceCents)
+            : eq(restaurantServiceItems.priceCents, existing.priceCents),
+          eq(
+            restaurantServiceItems.paymentRequirement,
+            existing.paymentRequirement,
+          ),
+          eq(
+            restaurantServiceItems.depositAmountCents,
+            existing.depositAmountCents,
+          ),
         ),
       )
       .returning();
 
-    if (!row) return null;
+    if (!row)
+      throw conflict("Service item changed during update; please retry");
 
     await this.cache.delete(`restaurant:${restaurantId}:service-items`);
     await this.bumpMarketPublicCacheVersion();
@@ -762,6 +827,8 @@ export class RestaurantsService {
       description: item.description,
       serviceType: item.serviceType,
       priceCents: item.priceCents,
+      paymentRequirement: item.paymentRequirement,
+      depositAmountCents: item.depositAmountCents,
       priceLabel: item.priceLabel,
       durationMinutes: item.durationMinutes,
       requiresBooking: item.requiresBooking,

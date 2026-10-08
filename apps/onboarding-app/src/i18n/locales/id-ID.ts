@@ -6,7 +6,7 @@ const idID: Messages = {
       copyright: "© 2026 MakanMasak. Semua hak dilindungi undang-undang.",
     },
     tagline: {
-      selfHosted: "Dihosting Sendiri",
+      platformHosted: "Dikelola Platform",
     },
   },
   apply: {
@@ -70,6 +70,17 @@ const idID: Messages = {
       submitting: "Mengirimkan...",
     },
     title: "Formulir Aplikasi",
+    submitErrors: {
+      rateLimited:
+        "Terlalu banyak pengiriman. Setiap jaringan dapat mengirim 5 kali per jam (percobaan gagal ikut dihitung). Silakan coba lagi setelah jam berikutnya, atau gunakan data seluler.",
+      validation:
+        "Beberapa data tidak valid. Periksa setiap kolom lalu kirim lagi.",
+      cityNotInCountry:
+        "Kota yang dipilih tidak berada di negara ini. Silakan pilih negara dan kota lagi.",
+      marketNotInCity:
+        "Pasar yang dipilih tidak berada di kota ini. Silakan pilih lagi.",
+      network: "Masalah koneksi. Periksa jaringan Anda lalu coba lagi.",
+    },
     toast: {
       submitFailureFallback: "Pengiriman gagal. Silakan coba lagi nanti.",
       submitSuccess: "Permohonan diajukan",
@@ -91,6 +102,8 @@ const idID: Messages = {
       subdomainInvalidFormat:
         "Hanya huruf kecil, angka, dan tanda hubung yang diperbolehkan",
       subdomainTaken: "URL ini sudah dipakai",
+      tooShort: "Minimal 2 karakter",
+      phoneInvalid: "Nomor telepon harus 8 sampai 20 karakter",
       subdomainTooShort: "Minimal harus 3 karakter",
     },
   },
@@ -104,21 +117,56 @@ const idID: Messages = {
     },
   },
   home: {
+    tour: {
+      title: "Dari pesanan sampai ke meja, sekilas",
+      subtitle:
+        "Ini adalah tampilan asli sistem, dengan toko dan pesanan contoh.",
+      tryDemo: "Coba restoran demo →",
+      tryDemoHint:
+        "Buka di ponsel Anda, seperti tamu yang memindai kode. Tidak ada pesanan yang benar-benar dikirim.",
+      steps: {
+        order: {
+          title: "Tamu memesan dengan memindai",
+          description:
+            "Tamu memindai kode QR di meja dan memesan dari menu bergambar. Tanpa perlu mengunduh aplikasi.",
+          alt: "Layar pemesanan di ponsel tamu",
+        },
+        kitchen: {
+          title: "Dapur langsung menerima",
+          description:
+            "Pesanan langsung muncul di tablet dapur, diurutkan menjadi menunggu, dimasak, dan siap.",
+          alt: "Papan pesanan di tablet dapur",
+        },
+        tracking: {
+          title: "Tamu bisa memantau",
+          description:
+            "Setiap langkah langsung diperbarui di ponsel tamu, jadi tidak perlu bertanya apakah sudah siap.",
+          alt: "Progres pesanan di ponsel tamu",
+        },
+        dashboard: {
+          title: "Pemilik melihat pendapatan",
+          description:
+            "Penjualan hari ini, jumlah pesanan, dan meja yang masih menunggu, semuanya dalam satu layar.",
+          alt: "Ringkasan pemilik di dasbor admin",
+        },
+      },
+    },
     cta: {
       button: "Mulai Aplikasi",
       subtitle:
-        "Isi aplikasi dan kami akan menghubungi Anda dalam waktu 24 jam.",
+        "Isi formulir pengajuan dan tim kami akan menghubungi Anda setelah ditinjau.",
       title: "Siap Memulai?",
     },
     features: {
-      fast: {
-        description: "Alur penerapan otomatis. Hidup dalam 24 jam.",
-        title: "Penerapan Cepat",
-      },
-      isolated: {
+      assisted: {
         description:
-          "Lingkungan cloud yang sepenuhnya terisolasi. Data Anda 100% milik Anda.",
-        title: "Lingkungan Terisolasi",
+          "Tim kami meninjau pengajuan Anda, mengaktifkan akun, dan memandu penyiapan toko",
+        title: "Aktivasi Dibantu",
+      },
+      hosted: {
+        description:
+          "Kami menjalankan sistem untuk Anda — tanpa server yang perlu disiapkan atau dirawat",
+        title: "Dikelola Platform",
       },
       secure: {
         description:
@@ -128,8 +176,9 @@ const idID: Messages = {
     },
     hero: {
       ctaApply: "Lamar Sekarang",
-      ctaDemo: "Lihat Demo →",
-      subtitle: "Dihosting Sendiri · Data Aman · Peluncuran dalam 24 Jam",
+      ctaTour: "Lihat cara kerjanya ↓",
+      subtitle:
+        "Dikelola Platform · Data Aman · Ditinjau dan Diaktifkan oleh Tim Kami",
       titleLine1: "Bangun Restoran Anda",
       titleLine2: "Sistem Manajemen Khusus",
     },
@@ -161,10 +210,9 @@ const idID: Messages = {
         title: "Penerapan Sistem",
       },
       email: {
-        prefix: "Kami telah mengirimkan email konfirmasi ke",
-        suffix: ". Silakan periksa kotak masuk Anda.",
-        description: "Kami akan mengirim email saat aplikasi Anda diperbarui.",
-        title: "Email Konfirmasi",
+        description:
+          "Setelah disetujui, platform akan memberikan akun pemilik dan tautan untuk mengatur kata sandi. Gunakan tautan status untuk memantau pengajuan Anda.",
+        title: "Informasi Login",
       },
       start: {
         description:
@@ -179,11 +227,8 @@ const idID: Messages = {
     summary: {
       applicationId: "ID Aplikasi",
       businessName: "Nama Restoran",
-      cloudflare: "Hosting Platform",
-      connected: "Aktif",
       contactEmail: "Hubungi Email",
       plan: "Paket yang Dipilih",
-      subdomain: "URL khusus",
       tenantId: "ID Penyewa",
       status: "Status Aplikasi",
       pendingReview: "Menunggu Tinjauan Platform",

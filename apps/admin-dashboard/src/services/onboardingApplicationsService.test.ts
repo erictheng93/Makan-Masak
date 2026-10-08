@@ -69,6 +69,39 @@ describe("onboardingApplicationsService", () => {
     });
   });
 
+  it("loads audit events for one application through the management API", async () => {
+    vi.mocked(managementApi.get).mockResolvedValueOnce({
+      data: {
+        data: {
+          events: [
+            {
+              id: "evt-1",
+              eventType: "rejected",
+              actorId: "admin-1",
+              actorEmail: "admin@example.test",
+              metadata: { reason: "Duplicate application" },
+              createdAtMs: 1_790_000_000_000,
+            },
+          ],
+        },
+      },
+    } as never);
+
+    const events = await onboardingApplicationsService.auditEvents("APP/1");
+
+    expect(managementApi.get).toHaveBeenCalledWith(
+      "/admin/onboarding/applications/APP%2F1/audit-events",
+    );
+    expect(events).toMatchObject([
+      {
+        id: "evt-1",
+        eventType: "rejected",
+        metadata: { reason: "Duplicate application" },
+      },
+    ]);
+    expect(ensureManagementAuthToken).toHaveBeenCalledOnce();
+  });
+
   it("approves, regenerates setup links, and rejects applications with a reason", async () => {
     vi.mocked(managementApi.post)
       .mockResolvedValueOnce({

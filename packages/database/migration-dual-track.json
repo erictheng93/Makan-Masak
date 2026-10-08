@@ -114,6 +114,34 @@
     {
       "fresh": "0028_restaurant_country_code.sql",
       "reason": "restaurants is a platform-API table; the management-api database has no restaurants row to carry a country on."
+    },
+    {
+      "fresh": "0029_service_bookings_pay_at_venue_default.sql",
+      "reason": "service_bookings and its waitlist are platform-API booking tables; the management API has neither tenant booking records nor a corresponding payment workflow."
+    },
+    {
+      "fresh": "0030_service_item_payment_requirements.sql",
+      "reason": "restaurant_service_items is a platform-API table; the management API has no restaurants or service catalog to configure booking payment terms for."
+    },
+    {
+      "fresh": "0031_policies.sql",
+      "reason": "Region policies scope platform-API restaurants by country and market; the management-api database has no restaurants or markets rows to scope a policy against. management-api edits them through its PLATFORM_DB binding instead."
+    },
+    {
+      "fresh": "0032_market_country_code.sql",
+      "reason": "markets is a platform-API table; the management-api database has no markets row to carry a country on."
+    },
+    {
+      "fresh": "0033_restaurant_is_demo.sql",
+      "reason": "restaurants is a platform-API table; the management-api database has no restaurants row to flag as a demo."
+    },
+    {
+      "fresh": "0034_market_vendor_daily_open.sql",
+      "reason": "markets, restaurant_market_memberships and the new open-event log are platform-API tables; the management-api database has no markets to pair against."
+    },
+    {
+      "fresh": "0035_multiple_coupons.sql",
+      "reason": "Coupons and order discount snapshots belong to the platform database; control-plane database contains neither table."
     }
   ],
   "legacyOnly": [

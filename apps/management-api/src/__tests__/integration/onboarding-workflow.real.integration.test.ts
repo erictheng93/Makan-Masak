@@ -1,3 +1,8 @@
+import {
+  MANAGEMENT_ADMIN_ID,
+  MANAGEMENT_SESSION_ID,
+  seedManagementAdmin,
+} from "../management-auth-fixture";
 import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
@@ -99,6 +104,7 @@ function createPlatformDb() {
       enable_shop_mode INTEGER NOT NULL DEFAULT 0,
       shop_qr_settings TEXT,
       shop_qr_version INTEGER NOT NULL DEFAULT 1,
+      is_demo INTEGER NOT NULL DEFAULT 0,
       settings TEXT,
       timezone TEXT NOT NULL DEFAULT 'Asia/Taipei',
       rating REAL DEFAULT 0,
@@ -169,6 +175,17 @@ function createPlatformDb() {
       created_at_ms INTEGER NOT NULL,
       updated_at_ms INTEGER NOT NULL,
       FOREIGN KEY (restaurant_id) REFERENCES restaurants(id)
+    );
+
+    CREATE TABLE policies (
+      id TEXT PRIMARY KEY NOT NULL,
+      scope_type TEXT NOT NULL,
+      scope_id TEXT NOT NULL,
+      policy_key TEXT NOT NULL,
+      value TEXT NOT NULL,
+      updated_by TEXT,
+      created_at_ms INTEGER NOT NULL,
+      updated_at_ms INTEGER NOT NULL
     );
 
     CREATE TABLE onboarding_credential_deliveries (
@@ -243,6 +260,7 @@ function createPlatformDb() {
       WHERE status = 'pending';
   `);
 
+  seedManagementAdmin(sqlite);
   return new D1DatabaseAdapter(sqlite);
 }
 
@@ -295,9 +313,11 @@ function createApplicationBody() {
 async function managementToken() {
   return sign(
     {
-      id: "workflow-admin",
+      id: MANAGEMENT_ADMIN_ID,
       email: "workflow-admin@example.test",
       role: "admin",
+      tv: 1,
+      sid: MANAGEMENT_SESSION_ID,
       aud: "management",
       iss: "makanmakan-management",
       exp: Math.floor(Date.now() / 1000) + 3600,
@@ -308,6 +328,88 @@ async function managementToken() {
 }
 
 describe("Onboarding public API workflow — real integration", () => {
+  it("blocks a paid tier disabled for the application country before provisioning", async () => {
+    const db = createManagementDb();
+    const platformDb = createPlatformDb();
+    const env = createEnv(db, platformDb);
+    platformDb
+      .raw()
+      .prepare(
+        `INSERT INTO policies
+         (id, scope_type, scope_id, policy_key, value, created_at_ms, updated_at_ms)
+         VALUES (?, 'country', 'MY', 'plans.allowed_tiers', ?, ?, ?)`,
+      )
+      .run("my-plans", '["pro"]', Date.now(), Date.now());
+
+    const created = await app.fetch(
+      new Request("https://management.test/api/v1/onboarding/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(createApplicationBody()),
+      }),
+      env,
+    );
+    const { applicationId } = await readData<CreatedApplication>(created);
+    const approvalUrl = `https://management.test/api/v1/admin/onboarding/applications/${applicationId}/approve`;
+    const token = await managementToken();
+    const approve = () =>
+      app.fetch(
+        new Request(approvalUrl, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        env,
+      );
+
+    const blocked = await approve();
+    expect(blocked.status).toBe(400);
+    await expect(readError(blocked)).resolves.toMatchObject({
+      code: "PLAN_NOT_AVAILABLE_IN_REGION",
+    });
+    expect(
+      db.raw().prepare("SELECT COUNT(*) AS count FROM tenants").get(),
+    ).toEqual({
+      count: 0,
+    });
+    expect(
+      platformDb
+        .raw()
+        .prepare("SELECT COUNT(*) AS count FROM restaurants")
+        .get(),
+    ).toEqual({ count: 0 });
+
+    platformDb
+      .raw()
+      .prepare("UPDATE policies SET value = ? WHERE id = ?")
+      .run("not-json", "my-plans");
+    const unavailable = await approve();
+    expect(unavailable.status).toBe(503);
+    await expect(readError(unavailable)).resolves.toMatchObject({
+      code: "POLICY_UNAVAILABLE",
+    });
+    expect(
+      db.raw().prepare("SELECT COUNT(*) AS count FROM tenants").get(),
+    ).toEqual({
+      count: 0,
+    });
+
+    platformDb
+      .raw()
+      .prepare("UPDATE policies SET value = ? WHERE id = ?")
+      .run('["basic","pro"]', "my-plans");
+    const allowed = await approve();
+    expect(allowed.status).toBe(200);
+    const result = await readData<ApproveResult>(allowed);
+    expect(
+      platformDb
+        .raw()
+        .prepare(
+          "SELECT plan_tier FROM shop_subscriptions WHERE restaurant_id = ?",
+        )
+        .get(result.restaurantId),
+    ).toEqual({ plan_tier: "basic" });
+  });
+
   it("creates a pending market request without granting membership", async () => {
     const db = createManagementDb();
     const platformDb = createPlatformDb();
@@ -714,22 +816,21 @@ describe("Onboarding public API workflow — real integration", () => {
         )
         .get(createdData.applicationId),
     ).toMatchObject({
-      actor_id: "workflow-admin",
+      actor_id: MANAGEMENT_ADMIN_ID,
       created_at_ms: expect.any(Number),
     });
   });
 
-  it("completes approval and records failed setup-link delivery when Resend fails", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response("denied", { status: 500 })),
-    );
+  it("completes approval and records failed setup-link delivery when the email binding fails", async () => {
+    const send = vi.fn(async () => {
+      throw new Error("Cloudflare email send failed");
+    });
     const db = createManagementDb();
     const platformDb = createPlatformDb();
     const env = createEnv(db, platformDb, {
       ONBOARDING_EMAIL_ENABLED: "true",
       ONBOARDING_EMAIL_FROM: "onboarding@makanmasak.com",
-      RESEND_API_KEY: "test-key",
+      ONBOARDING_NOTIFICATION_EMAIL: { send } as unknown as SendEmail,
     });
     const token = await managementToken();
     const created = await app.fetch(
@@ -759,8 +860,14 @@ describe("Onboarding public API workflow — real integration", () => {
         .get(createdData.applicationId),
     ).toMatchObject({
       status: "failed",
-      error_message: expect.stringContaining("500"),
+      error_message: "Cloudflare email send failed",
     });
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: createApplicationBody().contactEmail,
+        from: "onboarding@makanmasak.com",
+      }),
+    );
   });
 
   it("rate limits concurrent application submissions from one Cloudflare IP", async () => {
@@ -982,6 +1089,27 @@ describe("Onboarding public API workflow — real integration", () => {
         username: "tan-mei",
       },
     });
+    expect(
+      db
+        .raw()
+        .prepare(
+          `SELECT event_type, actor_id, actor_email
+           FROM onboarding_application_audit_events
+           WHERE application_id = ? ORDER BY created_at_ms, id`,
+        )
+        .all(approvedCandidateId),
+    ).toEqual([
+      {
+        event_type: "submitted",
+        actor_id: null,
+        actor_email: null,
+      },
+      {
+        event_type: "approved",
+        actor_id: MANAGEMENT_ADMIN_ID,
+        actor_email: "workflow-admin@example.test",
+      },
+    ]);
     // The owner logs in through apps/api, whose login schema only accepts this
     // pattern (USERNAME_REGEX in features/authentication/schemas/validation.ts).
     // A contact email of "tan.mei@…" used to yield "tan.mei", which login
@@ -1219,7 +1347,10 @@ describe("Onboarding public API workflow — real integration", () => {
       rejectionReason: "Service area is not supported yet",
     });
     expect(
-      platformDb.raw().prepare("SELECT COUNT(*) AS count FROM users").get(),
+      platformDb
+        .raw()
+        .prepare("SELECT COUNT(*) AS count FROM users WHERE id <> ?")
+        .get(MANAGEMENT_ADMIN_ID),
     ).toMatchObject({ count: 1 });
     expect(
       platformDb
@@ -1423,7 +1554,10 @@ describe("Onboarding public API workflow — real integration", () => {
       },
     });
     expect(
-      platformDb.raw().prepare("SELECT COUNT(*) AS count FROM users").get(),
+      platformDb
+        .raw()
+        .prepare("SELECT COUNT(*) AS count FROM users WHERE id <> ?")
+        .get(MANAGEMENT_ADMIN_ID),
     ).toMatchObject({ count: 1 });
     expect(
       platformDb
@@ -1511,7 +1645,10 @@ describe("Onboarding public API workflow — real integration", () => {
         .get(),
     ).toMatchObject({ count: 0 });
     expect(
-      platformDb.raw().prepare("SELECT COUNT(*) AS count FROM users").get(),
+      platformDb
+        .raw()
+        .prepare("SELECT COUNT(*) AS count FROM users WHERE id <> ?")
+        .get(MANAGEMENT_ADMIN_ID),
     ).toMatchObject({ count: 0 });
     expect(
       platformDb

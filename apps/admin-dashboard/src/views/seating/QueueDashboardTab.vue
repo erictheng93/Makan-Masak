@@ -644,7 +644,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onBeforeUnmount, onMounted } from "vue";
 import {
   UsersIcon,
   ClockIcon,
@@ -660,6 +660,7 @@ import DocumentChartBarIcon from "@heroicons/vue/24/outline/DocumentChartBarIcon
 import { Settings, Bell } from "lucide-vue-next";
 import { queueService, type QueueItem } from "@/services/queueService";
 import { useRealtimeQueue } from "@/composables/useRealtimeQueue";
+import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import { useDateFormatter } from "@/composables/useDateFormatter";
 import { useAuthStore } from "@/stores/auth";
 import { api, unwrapApiData } from "@/services/api";
@@ -1228,8 +1229,19 @@ const toggleAutoAssignment = () => {
 //   refreshQueue();
 // }, { deep: true });
 
+// 定期刷新數據。A bare setInterval here was never cleared, so it kept polling
+// after the tab was left and stacked another timer on every return.
+const queuePoller = createVisibilityAwarePoller({
+  intervalMs: 30_000,
+  onTick: () => {
+    if (loading.value) return;
+    return refreshQueue();
+  },
+});
+
 // 生命週期
 onMounted(async () => {
+  queuePoller.start();
   // 初次載入數據
   await refreshQueue();
 
@@ -1237,14 +1249,8 @@ onMounted(async () => {
   if (queueItems.value.length > 0) {
     selectedQueueItem.value = queueItems.value[0];
   }
-
-  // 定期刷新數據
-  setInterval(async () => {
-    if (!loading.value) {
-      await refreshQueue();
-    }
-  }, 30000); // 每30秒更新一次
 });
+onBeforeUnmount(() => queuePoller.stop());
 
 // 暴露給測試使用的內部狀態和函數
 defineExpose({

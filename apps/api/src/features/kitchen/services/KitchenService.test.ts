@@ -4,7 +4,9 @@ import { KitchenService } from "./KitchenService";
 const serviceMocks = vi.hoisted(() => ({
   getOrders: vi.fn(),
   getDailyStats: vi.fn(),
+  getOrder: vi.fn(),
   updateItemStatus: vi.fn(),
+  updateOrderStatus: vi.fn(),
   ctor: vi.fn(),
   prepare: vi.fn(),
   bind: vi.fn(),
@@ -31,7 +33,9 @@ vi.mock("../../orders/services/OrdersService", () => ({
     return {
       getOrders: serviceMocks.getOrders,
       getDailyStats: serviceMocks.getDailyStats,
+      getOrder: serviceMocks.getOrder,
       updateItemStatus: serviceMocks.updateItemStatus,
+      updateOrderStatus: serviceMocks.updateOrderStatus,
     };
   }),
 }));
@@ -50,6 +54,9 @@ function scopedKitchenItem(overrides: Record<string, unknown> = {}) {
     order_number: "A001",
     order_created_at: "2026-06-07T11:40:00.000Z",
     table_id: 7,
+    // The number printed on the table, which is what staff read. The id is a
+    // database key: on production table A1 is id 2 and showed as "Table 2".
+    table_number: "A1",
     item_id: 501,
     menu_item_id: 91,
     menu_item_name: "Laksa",
@@ -60,10 +67,13 @@ function scopedKitchenItem(overrides: Record<string, unknown> = {}) {
 
 function order(overrides: Record<string, unknown> = {}) {
   return {
-    id: 101,
+    id: "order-101",
     orderNumber: "A001",
+    restaurantId: "restaurant-1",
     tableId: 7,
+    table: { id: 7, number: "A1" },
     status: "confirmed",
+    version: 7,
     orderSource: "direct",
     items: [
       {
@@ -93,6 +103,11 @@ describe("KitchenService", () => {
       averagePreparationTime: 0,
     });
     serviceMocks.updateItemStatus.mockResolvedValue(undefined);
+    serviceMocks.getOrder.mockResolvedValue(order());
+    serviceMocks.updateOrderStatus.mockImplementation(
+      async (_orderId: string, statusData: { status: string }) =>
+        order({ status: statusData.status, version: 8 }),
+    );
     serviceMocks.first.mockResolvedValue(scopedKitchenItem());
     serviceMocks.bind.mockReturnValue({ first: serviceMocks.first });
     serviceMocks.prepare.mockReturnValue({ bind: serviceMocks.bind });
@@ -134,6 +149,7 @@ describe("KitchenService", () => {
           id: 102,
           orderNumber: "A002",
           tableId: null,
+          table: null,
           status: "preparing",
           orderSource: "market_checkout",
           items: [
@@ -185,7 +201,7 @@ describe("KitchenService", () => {
         id: 101,
         orderNumber: "A001",
         tableId: 7,
-        tableName: "Table 7",
+        tableName: "Table A1",
         status: "confirmed",
         customerName: "Aminah",
         totalItems: 2,
@@ -272,6 +288,7 @@ describe("KitchenService", () => {
       501,
       "ready",
       "plated",
+      "order-101",
     );
     expect(serviceMocks.prepare).toHaveBeenCalledWith(
       expect.stringContaining("JOIN orders o ON o.id = oi.order_id"),
@@ -307,7 +324,7 @@ describe("KitchenService", () => {
         orderItemId: 501,
         menuItemName: "Laksa",
         status: "ready",
-        tableName: "Table 7",
+        tableName: "Table A1",
         priority: "high",
         waitingTime: 20,
       },
@@ -316,8 +333,122 @@ describe("KitchenService", () => {
       orderId: "order-101",
       itemId: 501,
       status: "ready",
+      orderStatus: "confirmed",
       updatedAt: "2026-06-07T12:00:00.000Z",
     });
+  });
+
+  it("moves a confirmed order to preparing through OrdersService on the first started item", async () => {
+    const prefetchedOrder = order({
+      status: "confirmed",
+      version: 7,
+      items: [{ id: 501, status: "preparing" }],
+    });
+    const updatedOrder = order({ status: "preparing", version: 8 });
+    serviceMocks.getOrder.mockResolvedValue(prefetchedOrder);
+    serviceMocks.updateOrderStatus.mockResolvedValue(updatedOrder);
+
+    const result = await createService().updateOrderItemStatus(
+      "restaurant-1",
+      "order-101",
+      501,
+      { status: "preparing" },
+      "user-22",
+    );
+
+    expect(serviceMocks.updateOrderStatus).toHaveBeenCalledWith(
+      "order-101",
+      { status: "preparing" },
+      "user-22",
+      undefined,
+      undefined,
+      prefetchedOrder,
+    );
+    expect(result.orderStatus).toBe("preparing");
+  });
+
+  it("moves a preparing order to ready only after every item is ready", async () => {
+    const prefetchedOrder = order({
+      status: "preparing",
+      version: 12,
+      items: [
+        { id: 501, status: "ready" },
+        { id: 502, status: "ready" },
+      ],
+    });
+    serviceMocks.first.mockResolvedValueOnce(
+      scopedKitchenItem({ previous_status: "preparing" }),
+    );
+    serviceMocks.getOrder.mockResolvedValue(prefetchedOrder);
+    serviceMocks.updateOrderStatus.mockResolvedValue(
+      order({ status: "ready", version: 13 }),
+    );
+
+    const result = await createService().updateOrderItemStatus(
+      "restaurant-1",
+      "order-101",
+      501,
+      { status: "ready" },
+      "user-22",
+    );
+
+    expect(serviceMocks.updateOrderStatus).toHaveBeenCalledWith(
+      "order-101",
+      { status: "ready" },
+      "user-22",
+      undefined,
+      undefined,
+      prefetchedOrder,
+    );
+    expect(result.orderStatus).toBe("ready");
+  });
+
+  it("accepts a same-status replay and returns the server parent status", async () => {
+    serviceMocks.first.mockResolvedValueOnce(
+      scopedKitchenItem({ previous_status: "preparing" }),
+    );
+    serviceMocks.getOrder.mockResolvedValue(order({ status: "preparing" }));
+
+    const result = await createService().updateOrderItemStatus(
+      "restaurant-1",
+      "order-101",
+      501,
+      { status: "preparing" },
+      "user-22",
+    );
+
+    expect(serviceMocks.updateItemStatus).not.toHaveBeenCalled();
+    expect(serviceMocks.updateOrderStatus).not.toHaveBeenCalled();
+    expect(serviceMocks.broadcastOrderItemStatusUpdate).not.toHaveBeenCalled();
+    expect(result.orderStatus).toBe("preparing");
+  });
+
+  it("retries a parent version conflict and accepts the competing canonical status", async () => {
+    const versionConflict = Object.assign(new Error("stale order"), {
+      code: "ORDER_VERSION_CONFLICT",
+    });
+    serviceMocks.getOrder
+      .mockResolvedValueOnce(
+        order({
+          status: "confirmed",
+          version: 7,
+          items: [{ id: 501, status: "preparing" }],
+        }),
+      )
+      .mockResolvedValueOnce(order({ status: "preparing", version: 8 }));
+    serviceMocks.updateOrderStatus.mockRejectedValueOnce(versionConflict);
+
+    const result = await createService().updateOrderItemStatus(
+      "restaurant-1",
+      "order-101",
+      501,
+      { status: "preparing" },
+      "user-22",
+    );
+
+    expect(serviceMocks.updateOrderStatus).toHaveBeenCalledTimes(1);
+    expect(serviceMocks.getOrder).toHaveBeenCalledTimes(2);
+    expect(result.orderStatus).toBe("preparing");
   });
 
   it("rejects item status updates outside the scoped restaurant order", async () => {

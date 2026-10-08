@@ -162,7 +162,9 @@ All under `/ai-analytics/*`: `/config/:restaurantId` (get/save), `/test-provider
 
 `/admin/subscriptions` (list/create), `/admin/subscriptions/:restaurantId` (get), `/admin/subscriptions/:restaurantId/modules` (PATCH), `/admin/subscriptions/:restaurantId/plan` (PATCH), `/admin/subscriptions/:restaurantId/status` (PATCH — kill switch), `/admin/subscriptions/:restaurantId/usage`, `/admin/subscriptions/:restaurantId/usage/events`.
 
-### 2.16 Backups (`stores/backup.ts`)
+### 2.16 Backups (`stores/backup.ts`, deleted 2026-09-25)
+
+The admin-dashboard no longer calls any of these: the store and the backup views, which were never routed, were removed. The list is kept as the record of what the API exposes.
 
 `/backup/create`, `/backup/list`, `/backup/:id` (get/delete), `/backup/:id/download` (`responseType: "blob"`, filename parsed from `content-disposition` header — **server must send that header**), `/backup/:id/restore`, `/backup/configurations/:restaurantId`, `/backup/configurations` (upsert), `/backup/system/health`, `/backup/restaurants/:id/metrics?period=`, `/backup/alerts/:restaurantId?unresolved_only=`, `/backup/alerts/:id/{acknowledge,resolve}` (PATCH).
 

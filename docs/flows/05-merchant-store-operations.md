@@ -130,6 +130,11 @@
 - `apps/api/src/features/menu/services/MenuService.test.ts`
 - `apps/admin-dashboard/src/views/MenuView.test.ts`、`OrdersView.test.ts`
 - `apps/api/src/__tests__/integration/menu.real.integration.test.ts`
+- `tests/e2e/admin/`（`admin-real` project，真 API＋真 D1）：`dashboard-and-setup`、`order-management`、`menu-management`、`option-groups`
+
+**手動探索 QA（production）**
+
+- [店家後台流程 QA 2026-09-01](../investigations/2026-09-01-admin-dashboard-flow-qa.html) — F1–F6（含 08-25 首輪 #254–#270）
 
 ## 7. 已知缺口
 

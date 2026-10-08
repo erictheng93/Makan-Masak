@@ -27,6 +27,21 @@ Create an incoming webhook for the platform-operations channel, then set `SLACK_
 
 Cloudflare requires the sender domain to be onboarded even though sends to verified Email Routing destinations are free. Do not treat destination verification alone as sufficient.
 
-## Closing #380
+## Applicant email
 
-Code verification is complete only after one production notification is received through Slack or the Email Service fallback, and the sidebar displays the submitted count to a platform administrator. Configuring providers and sending that production test require an operator with Cloudflare account access; they are intentionally outside the worker code change.
+Receipt, rejection, and setup-password emails to the applicant are gated by `ONBOARDING_EMAIL_ENABLED` and sent from `ONBOARDING_EMAIL_FROM`. They go through Cloudflare Email Service over the same `ONBOARDING_NOTIFICATION_EMAIL` binding; there is no other provider (Resend was removed on 2026-09-28). Sending to arbitrary applicant addresses needs Workers Paid and a sender domain onboarded to Email Service (SPF + DKIM); verified Email Routing destinations alone are not enough.
+
+A provider failure never blocks approval: the setup-password delivery row is marked `failed` and staff hand the link over manually.
+
+Production runs with `ONBOARDING_EMAIL_ENABLED = "true"` and the `cloudflare` provider since 2026-09-27. That day a controlled application received the receipt email, the platform alert, and — after approval — the setup-password email, whose link set the owner password; the test tenant was then terminated and its platform rows removed. Replies to `onboarding@makanmasak.com` reach an operator inbox through Email Routing.
+
+## Closing #410
+
+Do not close #410 based on unit tests or a deployment alone. An operator with Cloudflare production access must record all of the following in #410:
+
+1. The UTC time and the enabled channel (Slack or Email Service fallback).
+2. A controlled production application submission and the received notification. Verify that it contains only the business name, application ID, and review URL — never the applicant's name, email address, or phone number.
+3. The platform administrator's sidebar shows the submitted application in its pending-review count, followed by normal rejection/removal of the test record.
+4. The deployed malformed-body contract: `POST` to the production application endpoint with body `{` returns `400` and error code `INVALID_JSON`.
+
+Provider configuration, production sending, and the evidence above require a Cloudflare account operator. They are deliberately outside the worker code change, so this document is a manual acceptance checklist rather than a claim that production notifications have been enabled.

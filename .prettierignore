@@ -21,8 +21,6 @@ pnpm-lock.yaml
 .claude/
 # impeccable skill's local hook cache (untracked tool artifact)
 .impeccable/
-# gstack-installed agent skills (vendored, untracked)
-.agents/
 
 # Legacy/archived code
 legacy/

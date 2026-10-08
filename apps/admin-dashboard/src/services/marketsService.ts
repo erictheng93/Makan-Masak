@@ -66,6 +66,7 @@ export interface MarketListItem {
   imageUrls?: string[] | null;
   tags?: string[] | null;
   platformFeeRateBps?: number;
+  businessDayCutoffMinutes?: number;
   vendorCount?: number;
   catalogCoverage?: MarketCatalogCoverage;
   publicReadiness?: MarketPublicReadiness;
@@ -146,6 +147,7 @@ export interface UpdateMarketPublicProfileInput {
   latitude: number;
   longitude: number;
   openingHours: Record<string, unknown> | null;
+  businessDayCutoffMinutes?: number;
   mapLayout: MarketMapLayout | null;
   bannerUrl: string | null;
   logoUrl: string | null;
@@ -283,6 +285,11 @@ export interface RestaurantMarketMembership {
   marketHours?: Record<string, unknown> | null;
   isPrimary: boolean;
   joinedAt: string | number | Date;
+  isOpenToday: boolean;
+  openedAt: string | number | null;
+  businessDate: string;
+  timezone: string;
+  nextBusinessDayStartMs: number;
   market: {
     id: string;
     slug: string;
@@ -291,6 +298,59 @@ export interface RestaurantMarketMembership {
     city: string;
     district: string;
   };
+}
+
+export interface MarketVendorOpenState {
+  isOpenToday: boolean;
+  openedAt: string | number | null;
+  businessDate: string;
+}
+
+export type MarketOpenReportScope =
+  | { kind: "platform"; marketId: string }
+  | { kind: "owner"; restaurantId: string; marketId: string };
+
+export interface MarketOpenReportDailyRow {
+  businessDate: string;
+  restaurantId: string;
+  vendorName: string;
+  stallNumber: string | null;
+  firstOpenedAtMs: number | null;
+  lastClosedAtMs: number | null;
+  autoClosed: boolean;
+  openMinutes: number;
+  openedBy: string | null;
+  orderCount: number;
+  revenueCents: number;
+  currency: string;
+  offsetMinutes: number;
+}
+
+export interface MarketOpenReportSummaryRow {
+  restaurantId: string;
+  vendorName: string;
+  stallNumber: string | null;
+  openDays: number;
+  expectedDays: number;
+  attendanceRate: number | null;
+  avgOpenMinutes: number;
+  orderCount: number;
+  revenueCents: number;
+  currency: string;
+}
+
+export interface MarketOpenReport {
+  market: { id: string; name: string; businessDayCutoffMinutes: number };
+  from: string;
+  to: string;
+  daily: MarketOpenReportDailyRow[];
+  summary: MarketOpenReportSummaryRow[];
+}
+
+function openReportPath(scope: MarketOpenReportScope) {
+  return scope.kind === "platform"
+    ? `/admin/markets/${scope.marketId}/open-report`
+    : `/restaurants/${scope.restaurantId}/markets/${scope.marketId}/open-report`;
 }
 
 export interface AddMarketVendorInput {
@@ -393,6 +453,40 @@ export const marketsService = {
     return unwrapApiPayload<{ memberships: RestaurantMarketMembership[] }>(
       response.data,
     ).memberships;
+  },
+
+  async setMarketOpenToday(
+    restaurantId: string,
+    marketId: string,
+    open: boolean,
+  ): Promise<MarketVendorOpenState> {
+    const response = await api.post<MarketVendorOpenState>(
+      `/restaurants/${restaurantId}/markets/${marketId}/${open ? "open" : "close"}`,
+    );
+    return unwrapApiPayload<MarketVendorOpenState>(response.data);
+  },
+
+  async getMarketOpenReport(
+    scope: MarketOpenReportScope,
+    range: { from: string; to: string },
+  ): Promise<MarketOpenReport> {
+    const response = await api.get<MarketOpenReport>(
+      openReportPath(scope),
+      range,
+    );
+    return unwrapApiPayload<MarketOpenReport>(response.data);
+  },
+
+  async exportMarketOpenReportCsv(
+    scope: MarketOpenReportScope,
+    range: { from: string; to: string },
+    view: "daily" | "summary",
+  ): Promise<Blob> {
+    const response = await api.instance.get<Blob>(openReportPath(scope), {
+      params: { ...range, view, format: "csv" },
+      responseType: "blob",
+    });
+    return response.data;
   },
 
   async listMarketVendors(

@@ -74,6 +74,7 @@ export interface CreateOrderData {
     | "grabfood";
   scheduledTime?: Date;
   couponCode?: string;
+  couponCodes?: string[];
   couponUserId?: string;
   /** Server-resolved guest identity; never accepted from an order body. */
   couponGuestIdentity?: string;

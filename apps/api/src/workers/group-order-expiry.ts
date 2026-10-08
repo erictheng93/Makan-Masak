@@ -24,6 +24,8 @@ import {
 } from "../features/group-orders/services/GroupOrdersService";
 import type { GroupOrderStatus } from "../features/group-orders/types";
 import type { Env } from "../types/env";
+import { RealtimeEventType } from "@makanmasak/shared-types";
+import { broadcastGroupOrderEvent } from "../features/group-orders/services/group-order-broadcast";
 
 export const GROUP_ORDER_EXPIRY_CRON = "*/5 * * * *";
 export const GROUP_ORDER_EXPIRY_WARNING_MS = 5 * 60 * 1000;
@@ -68,6 +70,7 @@ interface SweepOptions {
 
 const sweepColumns = {
   id: groupOrders.id,
+  restaurantId: groupOrders.restaurantId,
   shareCode: groupOrders.shareCode,
   expiresAt: groupOrders.expiresAt,
   settings: groupOrders.settings,
@@ -75,6 +78,7 @@ const sweepColumns = {
 
 type SweepGroupOrder = {
   id: string;
+  restaurantId: string;
   shareCode: string;
   expiresAt: Date;
   settings: GroupOrderSettings | null;
@@ -318,6 +322,16 @@ export async function sweepExpiringGroupOrders(
         continue;
       }
       result.finalized++;
+      // Diners may still have the group page open when it auto-submits.
+      await broadcastGroupOrderEvent(
+        env,
+        RealtimeEventType.GROUP_ORDER_COMPLETED,
+        {
+          groupOrderId: groupOrder.id,
+          restaurantId: String(groupOrder.restaurantId),
+          masterOrderId: finalizeResult.data?.masterOrderId,
+        },
+      );
     } catch (error) {
       result.errors.push(`${groupOrder.id}: ${(error as Error).message}`);
     }

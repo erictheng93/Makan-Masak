@@ -1,3 +1,7 @@
+import {
+  getWaitingTicketToken,
+  storeWaitingTicketToken,
+} from "@/utils/waiting-ticket-tokens";
 import { apiClient } from "./api";
 import type {
   JoinWaitingListRequest,
@@ -10,7 +14,24 @@ const BASE_URL = "/waiting-list";
 
 export const waitingListApi = {
   async join(data: JoinWaitingListRequest): Promise<WaitingListResponse> {
-    const response = await apiClient.post<WaitingListResponse>(BASE_URL, data);
+    let token: string | null = null;
+    try {
+      const last = JSON.parse(localStorage.getItem("wl:lastTicket") || "null");
+      if (
+        last?.restaurantId === data.restaurantId &&
+        last?.customerPhone === data.customerPhone
+      ) {
+        token = getWaitingTicketToken(last.ticketId);
+      }
+    } catch {
+      /* A stale browser ticket grants no access. */
+    }
+    const response = await apiClient.post<WaitingListResponse>(
+      BASE_URL,
+      data,
+      token ? { headers: { "X-Waiting-Ticket-Token": token } } : undefined,
+    );
+    storeWaitingTicketToken(response);
     return response;
   },
 
@@ -25,6 +46,7 @@ export const waitingListApi = {
     const response = await apiClient.get<WaitingListResponse>(
       `${BASE_URL}/lookup?${queryParams.toString()}`,
     );
+    storeWaitingTicketToken(response);
     return response;
   },
 
@@ -40,6 +62,7 @@ export const waitingListApi = {
     const response = await apiClient.get<WaitingListResponse[]>(
       `${BASE_URL}/history?${queryParams.toString()}`,
     );
+    response.forEach(storeWaitingTicketToken);
     return response;
   },
 

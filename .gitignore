@@ -124,8 +124,6 @@ dist
 .cache/
 public
 !apps/*/public/
-apps/*/public/*
-!apps/*/public/_headers
 
 # Build outputs
 .out
@@ -161,6 +159,8 @@ test-*.txt
 *-test-*.txt
 *-debug.txt
 test-output*.txt
+# Vite public/ is shipped verbatim; never let *.png above hide an app asset.
+!apps/*/public/**
 test-verification*.txt
 test-fixes*.txt
 perf-test.txt
@@ -233,7 +233,6 @@ tmpclaude-*
 # so an `add -A` from any session would commit one into the repo.
 .claude/worktrees/
 .superpowers/
-.gstack/
 .impeccable/
 
 # E2E integration test auth cache

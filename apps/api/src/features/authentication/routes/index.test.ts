@@ -676,6 +676,19 @@ describe("authentication routes", () => {
     expect(response.status).toBe(400);
   });
 
+  it("accepts the deployed admin forgot-password form payload", async () => {
+    const response = await request("/forgot-password", "POST", {
+      identifier: "owner@example.test",
+      method: "email",
+    }).res;
+
+    expect(response.status).toBe(200);
+    expect(service.requestPasswordReset).toHaveBeenCalledOnce();
+    expect(service.requestPasswordReset).toHaveBeenCalledWith(
+      "owner@example.test",
+    );
+  });
+
   it.each([
     [
       "requestPasswordReset",

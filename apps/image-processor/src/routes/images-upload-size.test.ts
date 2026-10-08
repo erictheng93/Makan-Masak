@@ -1,3 +1,4 @@
+import { staffAuthDatabase } from "../__tests__/staff-auth-fixture";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sign } from "hono/jwt";
 import { Hono } from "hono";
@@ -26,6 +27,7 @@ async function adminToken(): Promise<string> {
 function buildEnv(): Env {
   return {
     JWT_SECRET,
+    DB: staffAuthDatabase(),
     // The post-parse check must still enforce the 1MB image limit even though
     // the request limit allows multipart overhead.
     MAX_IMAGE_SIZE_MB: "1",

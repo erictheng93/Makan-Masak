@@ -600,18 +600,34 @@ describe("geoIntelligentRateLimitMiddleware native bucket selection", () => {
     return {
       global: { limit: vi.fn(async () => ({ success: true })) },
       strict: { limit: vi.fn(async () => ({ success: true })) },
+      reservation: { limit: vi.fn(async () => ({ success: true })) },
     };
   }
 
   async function callPath(
     path: string,
     limiters: ReturnType<typeof createLimiters>,
-    withStrictBinding = true,
+    options: {
+      withStrictBinding?: boolean;
+      withReservationBinding?: boolean;
+      method?: string;
+    } = {},
   ) {
+    const {
+      withStrictBinding = true,
+      withReservationBinding = true,
+      method = "POST",
+    } = options;
     const env = createEnv({
       GLOBAL_RATE_LIMITER: limiters.global as unknown as RateLimit,
       ...(withStrictBinding
         ? { AUTH_TOKEN_RATE_LIMITER: limiters.strict as unknown as RateLimit }
+        : {}),
+      ...(withReservationBinding
+        ? {
+            PUBLIC_RESERVATION_MUTATION_RATE_LIMITER:
+              limiters.reservation as unknown as RateLimit,
+          }
         : {}),
     });
     const app = new Hono<{ Bindings: Env }>();
@@ -619,7 +635,7 @@ describe("geoIntelligentRateLimitMiddleware native bucket selection", () => {
     app.all("*", (c) => c.json({ ok: true }));
 
     const response = await fetchWithContext(app, env, path, {
-      method: "POST",
+      method,
       headers: { "CF-Connecting-IP": "203.0.113.10" },
     });
     expect(response.status).toBe(200);
@@ -645,7 +661,9 @@ describe("geoIntelligentRateLimitMiddleware native bucket selection", () => {
   // rather than silently losing it because the binding is absent.
   it("falls back to the global bucket when the tighter one is absent", async () => {
     const limiters = createLimiters();
-    await callPath("/api/v1/realtime/auth/token", limiters, false);
+    await callPath("/api/v1/realtime/auth/token", limiters, {
+      withStrictBinding: false,
+    });
 
     expect(limiters.global.limit).toHaveBeenCalledOnce();
   });
@@ -658,5 +676,37 @@ describe("geoIntelligentRateLimitMiddleware native bucket selection", () => {
 
     expect(limiters.strict.limit).not.toHaveBeenCalled();
     expect(limiters.global.limit).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["POST", "/api/v1/reservations"],
+    ["DELETE", "/api/v1/reservations/reservation-1/cancel"],
+  ])(
+    "sends public reservation %s %s to the atomic bucket",
+    async (method, path) => {
+      const limiters = createLimiters();
+      await callPath(path, limiters, { method });
+
+      expect(limiters.reservation.limit).toHaveBeenCalledOnce();
+      expect(limiters.global.limit).not.toHaveBeenCalled();
+    },
+  );
+
+  it("does not give the staff reservation POST the anonymous bucket", async () => {
+    const limiters = createLimiters();
+    await callPath("/api/v1/reservations/staff", limiters);
+
+    expect(limiters.global.limit).toHaveBeenCalledOnce();
+    expect(limiters.reservation.limit).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the global bucket when the reservation binding is absent", async () => {
+    const limiters = createLimiters();
+    await callPath("/api/v1/reservations", limiters, {
+      withReservationBinding: false,
+    });
+
+    expect(limiters.global.limit).toHaveBeenCalledOnce();
+    expect(limiters.reservation.limit).not.toHaveBeenCalled();
   });
 });

@@ -41,7 +41,7 @@
           type="button"
           class="w-fit rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
           :disabled="isLoading"
-          @click="loadCheckouts"
+          @click="loadCheckouts()"
         >
           {{ isLoading ? "讀取中..." : "重新整理" }}
         </button>
@@ -57,7 +57,7 @@
           type="search"
           class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
           placeholder="市場 slug"
-          @keyup.enter="loadCheckouts"
+          @keyup.enter="loadCheckouts()"
         />
         <select
           v-model="paymentStatus"
@@ -103,7 +103,7 @@
           type="button"
           data-testid="market-checkout-filter"
           class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
-          @click="loadCheckouts"
+          @click="loadCheckouts()"
         >
           篩選
         </button>
@@ -880,7 +880,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import {
   marketCheckoutsService,
   type MarketCheckoutDetail,
@@ -901,6 +901,7 @@ import {
   normalizeCurrencyCode,
 } from "@makanmasak/utils";
 import { useDateFormatter } from "@/composables/useDateFormatter";
+import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 
 const { locale } = useI18n();
 const { formatPrice } = useCurrency();
@@ -1085,9 +1086,16 @@ const providerPaymentAlerts = computed(() => {
   return alerts;
 });
 
-async function loadCheckouts() {
-  isLoading.value = true;
-  error.value = null;
+/**
+ * A background refresh leaves the table in place: it does not swap in the
+ * loading placeholder, and a failed tick keeps the rows already shown rather
+ * than replacing them with an error the operator did not ask for.
+ */
+async function loadCheckouts({ background = false } = {}) {
+  if (!background) {
+    isLoading.value = true;
+    error.value = null;
+  }
   try {
     const filters = currentFilters();
     const aggregateFilters = currentAggregateFilters();
@@ -1107,12 +1115,26 @@ async function loadCheckouts() {
     vendorSettlements.value = vendorSummary.vendors;
     providerStatus.value = nextProviderStatus;
   } catch (loadError) {
+    if (background) {
+      console.error("Background market checkout refresh failed:", loadError);
+      return;
+    }
     error.value =
       loadError instanceof Error ? loadError.message : "市場結帳讀取失敗";
   } finally {
-    isLoading.value = false;
+    if (!background) isLoading.value = false;
   }
 }
+
+// Customers check out and pay while this page is open. Skip a tick while a
+// load or an operator action is in flight.
+const checkoutsPoller = createVisibilityAwarePoller({
+  intervalMs: 60_000,
+  onTick: () => {
+    if (isLoading.value || isRefunding.value || isReconciling.value) return;
+    return loadCheckouts({ background: true });
+  },
+});
 
 async function openCheckout(id: string) {
   selectedCheckout.value = await marketCheckoutsService.get(id);
@@ -1453,5 +1475,9 @@ function formatDate(value: string) {
   return formatShortDateTime(date);
 }
 
-onMounted(loadCheckouts);
+onMounted(() => {
+  void loadCheckouts();
+  checkoutsPoller.start();
+});
+onBeforeUnmount(() => checkoutsPoller.stop());
 </script>

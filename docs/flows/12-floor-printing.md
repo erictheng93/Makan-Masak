@@ -2,13 +2,14 @@
 
 > **對應 master board**：現場作業 → 出單與列印流程
 > **主要角色**：收銀（role 4）、店主（role 1）；列印代理是店內常駐服務
-> **最後對照原始碼**：2026-08-21
+> **最後對照原始碼**：2026-10-01
 
 ## 1. 定位
 
 一張紙要吐出來，會經過三段：雲端把收據列排進待印佇列、店內的列印代理把它認領走、
-代理印完再回報結果。三段都接起來了，收據狀態 `pending → printing → printed/failed`
-反映的是實體印表機的結果，不是資料庫寫入是否成功。
+代理把 ESC/POS 位元組成功交給印表機的 TCP socket 後再回報結果。三段都接起來了，收據狀態
+`pending → printing → printed/failed` 反映的是實際網路傳輸是否成功，不是資料庫寫入是否成功；
+TCP 寫入成功仍不是紙張、切刀或紙匣狀態的硬體回報。
 
 ## 2. 雲端這一端
 
@@ -21,11 +22,30 @@
 
 閘門：`moduleGate("receipt_printing")` + `quotaGate("print.jobs")` + `requireRole([0, 1, 4])`。
 
+**已取消訂單的廚房票會在認領時作廢**（`print_status = 'cancelled'`），不會交給代理。
+
 **廚房出單票是自動的。** 訂單轉 `confirmed` 時，`OrdersService.updateOrderStatus` 會呼叫
 `ReceiptService.createKitchenTicket`，寫入一張 `receipt_type = 'kitchen'`、
 **`register_id = NULL`** 的待印收據。同一張訂單已經有未取消的廚房票就不再開（冪等，
 因為外送平台那條路徑是直接寫狀態的）。產生失敗只留 log：訂單狀態已經寫進資料庫，
 不能因為排不進出單佇列就回滾。
+
+**廚房票有獨立版型。** 派工把 `receipts.receipt_type = 'kitchen'` 保留為
+`PrintRequest.type = 'kitchen'`，格式化後的 `PrintContent.type` 讓 ESC/POS 與 Star 原生
+驅動選擇相同的備餐內容：單號、桌號、品項、數量、尺寸／選項／加購、訂單及品項備註。
+外送地址與電話仍保留，不印價格、小計、總額、收銀員、致謝、數位收據 QR 或發票字樣。
+內部／廚房備註只進廚房票快照，不送到顧客收據。
+
+廚房時間在格式化時指定地區設定的語系與時區（台灣預設 `zh-TW`／`Asia/Taipei`），
+不使用代理所在電腦的預設值。分隔線與折行取自印表機 `capabilities.maxWidth` 的字元欄數，
+中文／全形字及 emoji 算兩欄，折行不拆開 emoji 組合或字母與重音符號；保留備註原有換行。
+80mm 紙的可印欄數取決於機型與字型，需設定並實測，不能只從毫米數推算。
+新票的尺寸／選項／加購只存為 `modifiers`，`notes` 只放備註；派工傳遞兩者各自的內容，
+避免同一選項同時從備註與 modifier 列印。既有票的備註快照仍可照原內容列印。
+
+**收銀員取自登入者。** `/receipts/print` 以 `user.fullName || user.username` 寫進收據
+`content.cashier`，派工再帶到格式器；重印沿用快照，不會改成重印者的名字。舊收據沒有
+姓名快照時仍使用原本的預設值，不從現任收銀員或可變的班次資料猜測歷史姓名。
 
 ## 3. 派工協定
 
@@ -42,6 +62,10 @@ drain 只會把整個佇列的重試預算一起燒掉。代價是「印表機�
 | --- | --- |
 | `GET /api/v1/print/jobs` | 認領一筆待印收據（`print_status → 'printing'`、`claimed_at_ms`、`print_attempts + 1`），回傳出單內容 |
 | `POST /api/v1/print/jobs/:receiptId/ack` | 回報 `printed` / `failed` / `indeterminate`，附 `printerName`、`response` |
+
+代理會在認領前先做本機健康檢查。當沒有任何在線印表機、或健康檢查本身失敗時，代理只保留／送出
+先前已認領工作的回報，**不會**呼叫 `GET /api/v1/print/jobs`；避免把收據移成 `printing` 並消耗
+一次投遞額度後才發現沒有硬體可用。
 
 **配對規則**：`代理.restaurant_id = 訂單.restaurant_id` **且**
 `收據.register_id IS 代理.register_id`（null-safe 相等）。
@@ -103,7 +127,7 @@ Referer 或 cookie，兩層 CSRF 都會在進入 handler 前拒絕它。豁免�
 | `never_seen` | 核發後從未連線 |
 
 `no_printer` 就是這一段存在的理由：只看 `last_seen_at_ms` 的話，它與完全正常無法分辨。
-探測失敗時代理**不送**台數，雲端沿用上一筆讀數——把「問不到」當成「零台在線」會製造假警報。
+探測失敗時代理不會認領新的工作；雲端的代理狀態會在下一個正常輪詢時更新。
 
 後台介面在 admin-dashboard `/dashboard/print-agents`（`PrintAgentsView.vue`）。
 
@@ -122,6 +146,11 @@ Referer 或 cookie，兩層 CSRF 都會在進入 handler 前拒絕它。豁免�
 - `PRINT_AGENT_CLOUD_KEY`（選填）— 雲端派工憑證，代理 → 雲端，由後台核發
 
 沒有設 `PRINT_AGENT_CLOUD_KEY` 就只當本機列印伺服器，不會去輪詢——這是合法設定，不是錯誤。
+
+目前正式支援的實體傳輸是網路印表機的 raw TCP（預設埠 `9100`）。連線、狀態與列印均使用真實
+socket：驅動會送出 raw ESC/POS bytes，TCP 被拒絕或連線中斷即離線。探索會實際連線並送出
+`GS I 1` 裝置資訊查詢；沒有回答的可連線裝置只能標示為 generic，絕不從 hostname 猜測品牌。
+USB、serial 與 Bluetooth 尚未有 transport 實作，會明確失敗而不是偽裝在線。
 
 **啟動不依賴雲端。** 開機時會先拉一次待印工作，但失敗只留 log：`index.ts` 對 `start()`
 失敗的處理是 `process.exit(1)`，讓對外連線斷掉就整個停擺，會連原本可用的本機列印一起沒了。
@@ -147,13 +176,50 @@ Referer 或 cookie，兩層 CSRF 都會在進入 handler 前拒絕它。豁免�
 - `apps/api/src/features/pos/routes/print-agents.test.ts`、`services/ReceiptService.test.ts`
 - `apps/admin-dashboard/src/views/PrintAgentsView.test.ts`
 - `apps/print-agent/src/LocalPrintService.test.ts`
+- `apps/print-agent/src/services/PrintAgentService.test.ts`、
+  `packages/queue-core/src/print/drivers/PrinterDriver.test.ts` — mock TCP 印表機：驗證 raw ESC/POS
+  bytes、拒絕連線時不認領雲端工作，以及成功傳輸後本機 job 完成
+
+**手動探索 QA（production）**
+
+- [現場作業流程 QA 2026-09-22](../investigations/2026-09-22-floor-operations-flow-qa.html) — D1–D3
+- [現場作業流程本機實走 2026-09-30](../investigations/2026-09-30-floor-operations-local-walk.html) — 兩台代理對兩個 TCP 假印表機，雲端派工到位元組落地
+
+**#432 回歸驗證命令**
+
+```sh
+pnpm exec turbo run test lint typecheck --filter=@makanmasak/api --filter=@makanmasak/queue-core --filter=@makanmasak/print-agent --filter=@makanmasak/shared-types --concurrency=2
+pnpm --filter @makanmasak/api exec vitest run --config vitest.real-integration.config.ts src/__tests__/integration/print-jobs.real.integration.test.ts
+pnpm test
+pnpm typecheck
+```
 
 ## 8. 已知缺口
 
+0. **列印內容有三處與實際店家不符**（2026-09-30 本機以 TCP:9100 假印表機擷取位元組，[現場作業流程本機實走 2026-09-30](../investigations/2026-09-30-floor-operations-local-walk.html)）：
+   - ~~每張出單都印「本收據為電子發票證明聯」~~：已移除。收據只在 `ReceiptData.invoice`（提供商開立後附上的發票號碼與選填字樣）存在時才印發票行；
+     各店之後接不同提供商時，只需在組出列印請求處填入 `invoice`，格式器不必再改。馬來西亞、越南的稅號也改為只印該店自己的 `taxNumber`，不再印寫死的假號碼（#432）。
+   - ~~廚房票沿用顧客收據版型、「Cashier:」永遠是 `System`~~：已修正（#432）。根因是
+     派工固定送 `type: "receipt"`，且沒有傳收據類型、收銀員姓名及備餐備註；格式化與驅動
+     也沒有廚房分支。現在類型保留到驅動，收銀員在建立收據時快照，備註跟著票走。
+   - 中文以 UTF-8 送出；熱感式印表機常見預設字碼頁是 GBK／Big5，需實體機驗證。
+   （店名、地址、電話原本印成「餐廳名稱／餐廳地址／電話號碼」佔位字，單號印成 UUID，已於 2026-09-30 修掉。）
+   #414 的傳輸層已修：兩台代理（櫃檯、廚房）各連一個假 TCP 印表機，票據位元組（含切紙指令）實際送達，
+   健康檢查回報 1 台在線、佇列 `completed`。
 1. **重試沒有退避。** 節奏完全來自代理的輪詢間隔（預設 60 秒）與「印失敗就停 drain」
    這條規則。要真正的指數退避需要一個 `next_attempt_at_ms` 欄位。
 2. **`processWebhook` 沒有對 `platformOrderId` 去重**，平台重送 webhook 會建出**新的**
    訂單列（連帶一張新的廚房票）。這是既有問題，不是廚房票帶來的。
 3. **毒藥收據會擋住佇列數次心跳**，直到它用完投遞預算。見第 3 節的取捨說明。
-4. **廚房票的版型與顧客收據共用** `generateReceiptContent`，只是 `templateName` 不同。
-   廚房票其實不需要價格，實際排版取決於代理端的 ESC/POS 樣板。
+4. **廚房票版型已分流**（#432）。真 D1 測試涵蓋建立票 → 重印 → 認領 → 格式化 → ESC/POS
+   的桌／座位、外帶、外送及跨店桌號案例，確認備註保留、廚房沒有顧客收據內容、顧客沒有
+   內部備註；TCP 測試涵蓋 Epson、Citizen、Star 原生及 Star ESC/POS，確認輸出與切紙位元組。
+5. **仍須以實體印表機驗收。** 自動測試只證明 mock TCP server 接收到 bytes；部署時要以可達的
+   TCP:9100 印表機確認實際收據、字元編碼、切紙、紙張／卡紙狀態及該型號的裝置資訊回應。
+   2026-10-01 使用者確認目前沒有實體機，#432 的程式修正與本項硬體驗證分開驗收。
+   驅動預設仍以 UTF-8 傳送；代理以 `PRINTER_ENCODING` 環境變數設定 `utf8`／`big5`／`gbk`。
+   此設定會套用到同一代理的所有印表機，暫不支援每台不同編碼；實測確有需求時再擴充。
+   Big5／GBK 的 ESC/POS 路徑：Epson、Citizen、Star esc-pos（
+   會在 ESC @ 後送 `FS &` 並轉碼，字型缺字印 `?`；Star 原生指令不支援）。`FS &` 是否適用各機型，仍屬未驗證，不能據此宣稱 GBK／Big5 機型可正確顯示中文。取得硬體後需記錄品牌、
+   型號、韌體及字碼頁，以「炒飯、不要辣、加蛋、林收銀」分別印顧客收據與廚房票，檢查
+   中文、數量／桌號、折行及切紙；若亂碼，再依該型號手冊選擇編碼與字碼頁指令。

@@ -30,6 +30,27 @@ import type {
   UpdateMarketRequest,
 } from "@/types";
 
+declare module "axios" {
+  interface AxiosRequestConfig {
+    /**
+     * Error codes the caller handles itself (for example by asking the admin
+     * to confirm and retrying). The global error toast skips them, so the
+     * admin does not see an error for a step that is part of the flow.
+     */
+    expectedErrorCodes?: readonly string[];
+  }
+}
+
+/** True when the failed request declared this error code as one it handles. */
+export function isExpectedApiError(
+  error: Pick<AxiosError<ApiResponse<unknown>>, "config" | "response">,
+): boolean {
+  const apiError = error.response?.data?.error;
+  const code =
+    typeof apiError === "object" && apiError !== null ? apiError.code : null;
+  return code !== null && !!error.config?.expectedErrorCodes?.includes(code);
+}
+
 function resolveApiBase(): string {
   const apiBase = import.meta.env.VITE_MANAGEMENT_API_URL;
   if (apiBase) {
@@ -118,7 +139,7 @@ apiClient.interceptors.response.use(
         : apiError) ||
       error.message ||
       "請求失敗";
-    toast.error(message);
+    if (!isExpectedApiError(error)) toast.error(message);
     if (
       error.response?.status === 401 &&
       typeof window !== "undefined" &&
@@ -449,6 +470,77 @@ export const marketsApi = {
   },
 };
 
+export type PolicyScopeType = "country" | "market";
+
+export interface PolicyDefinition {
+  key: string;
+  merge: "ceiling_deny" | "ceiling_allow" | "default" | "platform_cap";
+  scopes: PolicyScopeType[];
+  ui: { kind: "list"; options: string[] } | { kind: "bps" };
+}
+
+export interface PolicyScopeState {
+  scopeType: PolicyScopeType;
+  scopeId: string;
+  policies: Record<
+    string,
+    { value: unknown; updatedBy: string | null; updatedAt: number }
+  >;
+  restaurantsWithoutCountry?: number;
+}
+
+const policyPath = (scopeType: PolicyScopeType, scopeId: string, key: string) =>
+  `/admin/policies/${scopeType}/${encodeURIComponent(scopeId)}/${key}`;
+
+export const policiesApi = {
+  async registry(): Promise<PolicyDefinition[]> {
+    const { data } = await apiClient.get<
+      ApiResponse<{ definitions: PolicyDefinition[] }>
+    >("/admin/policies/registry");
+    return data.data!.definitions;
+  },
+
+  async list(
+    scopeType: PolicyScopeType,
+    scopeId: string,
+  ): Promise<PolicyScopeState> {
+    const { data } = await apiClient.get<ApiResponse<PolicyScopeState>>(
+      "/admin/policies",
+      { params: { scope_type: scopeType, scope_id: scopeId } },
+    );
+    return data.data!;
+  },
+
+  /** acknowledge：管理員已確認的「國別未知店家數」，見 spec D10。 */
+  async set(
+    scopeType: PolicyScopeType,
+    scopeId: string,
+    key: string,
+    value: unknown,
+    acknowledge?: number,
+  ): Promise<void> {
+    await apiClient.put(
+      policyPath(scopeType, scopeId, key),
+      {
+        value,
+        ...(acknowledge === undefined
+          ? {}
+          : { acknowledgeRestaurantsWithoutCountry: acknowledge }),
+      },
+      // The view answers this 409 with a confirm dialog, not an error.
+      { expectedErrorCodes: ["POLICY_BLOCKED_BY_UNKNOWN_COUNTRY"] },
+    );
+  },
+
+  async clear(
+    scopeType: PolicyScopeType,
+    scopeId: string,
+    key: string,
+  ): Promise<void> {
+    await apiClient.delete(policyPath(scopeType, scopeId, key));
+  },
+};
+
 export default {
   auth: authApi,
   tenants: tenantsApi,
@@ -456,4 +548,5 @@ export default {
   health: healthApi,
   licenses: licensesApi,
   markets: marketsApi,
+  policies: policiesApi,
 };

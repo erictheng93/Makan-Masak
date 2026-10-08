@@ -661,6 +661,35 @@ describe("useGroupOrder — server-pushed realtime events", () => {
     });
   });
 
+  it("reloads the group when the host submits it, so every diner sees it completed", async () => {
+    const group = await createHostedGroup();
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      ...summaryResponse(),
+      groupOrder: {
+        ...summaryResponse().groupOrder,
+        status: "completed",
+        masterOrderId: "order-9",
+      },
+    });
+
+    // Only the host's own page learns the result from its lock response. A
+    // member's open page has nothing but this event to go on.
+    pushFromServer("group_order_completed", {
+      groupOrderId: "go-1",
+      masterOrderId: "order-9",
+    });
+
+    await vi.waitFor(() =>
+      expect(group.groupOrder.value).toMatchObject({
+        status: "completed",
+        masterOrderId: "order-9",
+      }),
+    );
+    expect(apiClient.get).toHaveBeenLastCalledWith(
+      expect.stringContaining("go-1"),
+    );
+  });
+
   it("ignores events addressed to a different group order", async () => {
     const group = await createHostedGroup();
 

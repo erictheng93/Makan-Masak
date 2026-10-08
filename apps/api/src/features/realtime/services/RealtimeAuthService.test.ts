@@ -237,6 +237,17 @@ function createSessionToken(
   );
 }
 
+function activeStaffRow(role = 2) {
+  return {
+    id: userId,
+    username: "chef",
+    role,
+    restaurant_id: "restaurant-1",
+    is_active: 1,
+    token_version: 1,
+  };
+}
+
 function createPreparedDb(
   row: unknown,
   options: { throwOnFirst?: boolean } = {},
@@ -302,7 +313,7 @@ describe("RealtimeAuthService", () => {
   it("falls back to JWT_SECRET for local realtime token signing", async () => {
     const service = createService({
       REALTIME_JWT_SECRET: undefined,
-      DB: {},
+      DB: createPreparedDb(activeStaffRow()),
     });
     const sessionId = createSessionToken({ role: 2 });
 
@@ -480,8 +491,57 @@ describe("RealtimeAuthService", () => {
     });
   });
 
-  it("generates staff tokens from valid session JWTs in token-only test mode", async () => {
-    const service = createService({ DB: {} });
+  it("rejects terminated access sessions even when the staff principal remains active", async () => {
+    const db = {
+      prepare: vi.fn((sql: string) => ({
+        bind: vi.fn(() => ({
+          first: vi.fn(async () =>
+            sql.includes("FROM sessions")
+              ? null
+              : {
+                  id: userId,
+                  username: "chef",
+                  role: 2,
+                  restaurant_id: "restaurant-1",
+                  is_active: 1,
+                  token_version: 1,
+                },
+          ),
+        })),
+      })),
+    };
+    const service = createService({ NODE_ENV: "production", DB: db });
+    const response = await service.generateWebSocketToken({
+      roomType: "kitchen",
+      roomId: "restaurant-1",
+      restaurantId: "restaurant-1",
+      sessionId: sign(
+        {
+          sub: userId,
+          username: "chef",
+          role: 2,
+          restaurantId: "restaurant-1",
+          tv: 1,
+        },
+        jwtSecret,
+        { expiresIn: "1h" },
+      ),
+    });
+    expect(response).toEqual({ error: "Session has been invalidated" });
+  });
+  it("fails closed without session storage even in token-only test mode", async () => {
+    await expect(
+      createService({ DB: {} }).generateWebSocketToken({
+        roomType: "kitchen",
+        roomId: "restaurant-1",
+        restaurantId: "restaurant-1",
+        sessionId: createSessionToken({}),
+      }),
+    ).resolves.toEqual({ error: "Session lookup unavailable" });
+  });
+
+  it("generates staff tokens from valid active session JWTs", async () => {
+    const service = createService({ DB: createPreparedDb(activeStaffRow()) });
     const sessionId = sign(
       {
         sub: userId,
@@ -844,7 +904,8 @@ describe("RealtimeAuthService", () => {
   });
 
   it("derives the realtime role from the app role, not the room name", async () => {
-    const service = createService();
+    const db = createPreparedDb(activeStaffRow());
+    const service = createService({ DB: db });
 
     const chefKitchen = await service.generateWebSocketToken({
       roomType: "kitchen",
@@ -861,6 +922,7 @@ describe("RealtimeAuthService", () => {
       payload: { role: "staff", appRole: 2 },
     });
 
+    db.first.mockResolvedValue(activeStaffRow(0));
     const platformAdmin = await service.generateWebSocketToken({
       roomType: "restaurant",
       roomId: "restaurant-1",
@@ -973,7 +1035,7 @@ describe("RealtimeAuthService", () => {
         restaurantId: "restaurant-1",
         sessionId: createSessionToken({}),
       }),
-    ).resolves.toMatchObject({ expiresIn: 300 });
+    ).resolves.toEqual({ error: "Failed to generate token" });
   });
 
   it("generates scoped guest realtime tokens from cached guest order tokens", async () => {

@@ -9,9 +9,11 @@ import {
   createChunkRecovery,
 } from "@makanmasak/utils/chunk-recovery";
 import {
+  KITCHEN_DISPLAY_URL,
   LOGIN_REDIRECT_QUERY,
   loginRouteFor,
   readLoginRedirect,
+  redirectToKitchenDisplay,
 } from "@/utils/loginRedirect";
 
 const FALLBACK_DOCUMENT_TITLE = "MakanMasak";
@@ -74,6 +76,15 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: "market-open-report",
+        name: "MarketOpenReport",
+        component: () => import("@/views/MarketOpenReportView.vue"),
+        meta: {
+          titleKey: "pages.marketOpenReport",
+          roles: [UserRole.ADMIN, UserRole.OWNER],
+        },
+      },
+      {
         path: "platform",
         name: "PlatformOverview",
         component: () => import("@/views/PlatformOverview.vue"),
@@ -87,7 +98,7 @@ const routes: RouteRecordRaw[] = [
         name: "PlatformMarkets",
         component: () => import("@/views/PlatformMarketsView.vue"),
         meta: {
-          titleKey: "pages.platformOverview",
+          titleKey: "pages.platformMarkets",
           roles: [UserRole.ADMIN],
         },
       },
@@ -118,7 +129,7 @@ const routes: RouteRecordRaw[] = [
         component: () =>
           import("@/views/PlatformOnboardingApplicationsView.vue"),
         meta: {
-          titleKey: "pages.platformOverview",
+          titleKey: "pages.platformOnboarding",
           roles: [UserRole.ADMIN],
         },
       },
@@ -710,6 +721,23 @@ router.beforeEach(async (to, _, next) => {
       `Access denied to route: ${routeName} for role: ${authStore.userRole}`,
     );
     return next("/unauthorized");
+  }
+
+  // The dashboard home is the owner's analytics page, and every call it makes
+  // is admin/owner only. Other staff reach it through the root URL's
+  // ?redirect=/dashboard; send them to their own start page instead.
+  if (
+    routeName === "DashboardHome" &&
+    !authStore.isAdminRole &&
+    authStore.userRole !== UserRole.OWNER
+  ) {
+    if (authStore.userRole === UserRole.CHEF) {
+      await authStore.logout();
+      redirectToKitchenDisplay(KITCHEN_DISPLAY_URL);
+      return next(false);
+    }
+    const home = authStore.getDefaultRoute();
+    if (home !== to.path) return next(home);
   }
 
   const adminRestaurantId = firstQueryString(to.query.adminRestaurantId);

@@ -60,15 +60,15 @@ function uberPayload(platformOrderId: string) {
           id: "platform-item-1",
           title: "Laksa",
           quantity: 2,
-          price: { unit_price: { amount: 550 } },
+          price: { unit_price: { amount: 600, currency_code: "MYR" } },
         },
       ],
     },
     payment: {
       charges: {
-        total: { amount: 1325 },
-        sub_total: { amount: 1250 },
-        tax: { amount: 75 },
+        total: { amount: 1300, currency_code: "MYR" },
+        sub_total: { amount: 1200, currency_code: "MYR" },
+        tax: { amount: 100, currency_code: "MYR" },
       },
     },
   };
@@ -92,7 +92,7 @@ async function orphanCount(restaurantId: string): Promise<number> {
 
 describe("platform webhook deduplication", () => {
   async function setupRestaurant() {
-    const restaurant = await seed.restaurant();
+    const restaurant = await seed.restaurant({ settings: { currency: "MYR" } });
     const menuItem = await seed.menuItem(restaurant.id, { inventoryCount: 5 });
 
     await testDb.drizzle.insert(platformMenuMappings).values({
@@ -113,6 +113,100 @@ describe("platform webhook deduplication", () => {
       service: new PlatformOrderService(env),
     };
   }
+
+  it("stores synthetic MYR Uber minor units once in real D1", async () => {
+    // Synthetic API-shaped fixture; no live Uber sandbox payload is available.
+    const restaurant = await seed.restaurant({ settings: { currency: "MYR" } });
+    const menuItem = await seed.menuItem(restaurant.id);
+    await testDb.drizzle.insert(platformMenuMappings).values({
+      restaurantId: restaurant.id,
+      platform: "uber_eats",
+      platformItemId: "item-1",
+      menuItemId: menuItem.id,
+    });
+    const service = new PlatformOrderService({ DB: testDb.bindings.DB } as Env);
+    const orderId = await service.processWebhook(
+      "uber_eats",
+      {
+        id: "synthetic-myr-order",
+        store: { id: "store-1" },
+        cart: {
+          special_instructions: "Pack separately",
+          items: [
+            {
+              id: "item-1",
+              title: "Tea",
+              quantity: 1,
+              special_instructions: "No ice",
+              price: {
+                unit_price: {
+                  amount: 1399,
+                  currency_code: "MYR",
+                  formatted_amount: "RM13.99",
+                },
+              },
+              selected_modifier_groups: [
+                {
+                  id: "milk",
+                  title: "Milk",
+                  selected_items: [
+                    {
+                      id: "oat",
+                      title: "Oat",
+                      price: {
+                        unit_price: { amount: 99, currency_code: "MYR" },
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        payment: {
+          charges: {
+            total: {
+              amount: 1399,
+              currency_code: "MYR",
+              formatted_amount: "RM13.99",
+            },
+            sub_total: { amount: 1399, currency_code: "MYR" },
+            tax: { amount: 0, currency_code: "MYR" },
+          },
+        },
+      },
+      restaurant.id,
+    );
+
+    const [order] = await testDb.drizzle
+      .select({
+        totalAmountCents: orders.totalAmountCents,
+        notes: orders.notes,
+      })
+      .from(orders)
+      .where(eq(orders.id, orderId));
+    const [line] = await testDb.drizzle
+      .select({
+        unitPriceCents: orderItems.unitPriceCents,
+        notes: orderItems.notes,
+        customizations: orderItems.customizations,
+      })
+      .from(orderItems)
+      .where(eq(orderItems.orderId, orderId));
+    expect(order.totalAmountCents).toBe(1399);
+    expect(order.notes).toBe("Pack separately");
+    expect(line.unitPriceCents).toBe(1399);
+    expect(line.notes).toBe("No ice");
+    expect(line.customizations?.options).toEqual([
+      {
+        id: "0",
+        optionName: "Milk",
+        choiceId: "0",
+        choiceName: "Oat",
+        priceAdjustment: 0.99,
+      },
+    ]);
+  });
 
   it("maps a redelivered platform order to the same internal order and leaves no orphan", async () => {
     const { restaurantId, service } = await setupRestaurant();
@@ -150,7 +244,7 @@ describe("platform webhook deduplication", () => {
   });
 
   it("commits mapped-item inventory, ingredient ledger, and order counters exactly once", async () => {
-    const restaurant = await seed.restaurant();
+    const restaurant = await seed.restaurant({ settings: { currency: "MYR" } });
     const menuItem = await seed.menuItem(restaurant.id, { inventoryCount: 5 });
     const [ingredient] = await testDb.drizzle
       .insert(ingredientDefinitions)
@@ -232,7 +326,7 @@ describe("platform webhook deduplication", () => {
   });
 
   it("restores platform-order inventory and nets the ingredient ledger on cancellation", async () => {
-    const restaurant = await seed.restaurant();
+    const restaurant = await seed.restaurant({ settings: { currency: "MYR" } });
     const menuItem = await seed.menuItem(restaurant.id, { inventoryCount: 5 });
     const [ingredient] = await testDb.drizzle
       .insert(ingredientDefinitions)
@@ -334,7 +428,7 @@ describe("platform webhook deduplication", () => {
   });
 
   it("records paid platform sales below tracked inventory without a ledger recipe", async () => {
-    const restaurant = await seed.restaurant();
+    const restaurant = await seed.restaurant({ settings: { currency: "MYR" } });
     const menuItem = await seed.menuItem(restaurant.id, { inventoryCount: 1 });
     await testDb.drizzle.insert(platformMenuMappings).values({
       restaurantId: restaurant.id,
@@ -368,7 +462,7 @@ describe("platform webhook deduplication", () => {
   });
 
   it("keeps untracked platform menu inventory null", async () => {
-    const restaurant = await seed.restaurant();
+    const restaurant = await seed.restaurant({ settings: { currency: "MYR" } });
     const menuItem = await seed.menuItem(restaurant.id, {
       inventoryCount: null,
     });
@@ -397,8 +491,12 @@ describe("platform webhook deduplication", () => {
   });
 
   it("ignores a stale mapping that points at another restaurant's menu item", async () => {
-    const sourceRestaurant = await seed.restaurant();
-    const targetRestaurant = await seed.restaurant();
+    const sourceRestaurant = await seed.restaurant({
+      settings: { currency: "MYR" },
+    });
+    const targetRestaurant = await seed.restaurant({
+      settings: { currency: "MYR" },
+    });
     const sourceMenuItem = await seed.menuItem(sourceRestaurant.id, {
       inventoryCount: 5,
     });
@@ -501,9 +599,9 @@ describe("platform webhook deduplication", () => {
           orderNumber: "PL-loser",
           status: "pending",
           orderSource: "uber_eats",
-          totalAmountCents: 1325,
-          subtotalCents: 1250,
-          taxAmountCents: 75,
+          totalAmountCents: 1300,
+          subtotalCents: 1200,
+          taxAmountCents: 100,
           serviceChargeCents: 0,
           discountAmountCents: 0,
           createdAt: now,

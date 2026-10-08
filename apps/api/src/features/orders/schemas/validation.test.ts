@@ -30,6 +30,22 @@ const baseOrder = {
 };
 
 describe("order validation", () => {
+  it("normalizes multiple coupon codes and rejects duplicates and mixed request forms", () => {
+    expect(
+      createOrderSchema.parse({
+        ...baseOrder,
+        couponCodes: [" save10 ", "save20"],
+      }).couponCodes,
+    ).toEqual(["SAVE10", "SAVE20"]);
+    for (const selection of [
+      { couponCodes: ["save10", " SAVE10 "] },
+      { couponCode: "SAVE10", couponCodes: ["SAVE20"] },
+    ]) {
+      expect(
+        createOrderSchema.safeParse({ ...baseOrder, ...selection }).success,
+      ).toBe(false);
+    }
+  });
   it("requires customerPhone when creating a waiting-list pre-order", () => {
     const result = createOrderSchema.safeParse({
       ...baseOrder,

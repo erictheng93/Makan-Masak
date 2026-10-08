@@ -133,15 +133,15 @@
 import { ref, reactive, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import { LOGIN_REDIRECT_QUERY, readLoginRedirect } from "@/utils/loginRedirect";
+import {
+  KITCHEN_DISPLAY_URL,
+  LOGIN_REDIRECT_QUERY,
+  readLoginRedirect,
+} from "@/utils/loginRedirect";
 import { useI18n } from "@/i18n";
 import { UserRole } from "@/types";
 import { Eye, EyeOff, AlertCircle } from "lucide-vue-next";
 import { getInitialLoginCredentials } from "./loginDefaults";
-
-// Kitchen Display App URL — Chef role redirects here instead of admin dashboard
-const KITCHEN_DISPLAY_URL =
-  import.meta.env.VITE_KITCHEN_DISPLAY_URL || "http://localhost:3002";
 
 const { t } = useI18n();
 const router = useRouter();
