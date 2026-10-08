@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, shallowRef, onMounted, onUnmounted } from "vue";
 import type {
   NotificationData,
   OrderUpdateData,
@@ -46,7 +46,7 @@ export function useWebSocket<TMessage = WebSocketMessage>(
     onAuthFailure,
   } = options;
 
-  const ws = ref<WebSocket | null>(null);
+  const ws = shallowRef<WebSocket | null>(null);
   const isConnected = ref(false);
   const isConnecting = ref(false);
   const lastError = ref<Event | null>(null);
@@ -58,6 +58,7 @@ export function useWebSocket<TMessage = WebSocketMessage>(
   let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   let manualDisconnect = false;
   let attemptedUrl = "";
+  let connectionGeneration = 0;
 
   const stopHeartbeat = () => {
     if (heartbeatTimer) {
@@ -117,16 +118,26 @@ export function useWebSocket<TMessage = WebSocketMessage>(
     );
     const delay = Math.round(step / 2 + (Math.random() * step) / 2);
 
+    const generation = connectionGeneration;
     reconnectTimer = setTimeout(async () => {
-      if (reason === "auth" && onAuthFailure) {
-        await onAuthFailure();
+      reconnectTimer = null;
+      if (manualDisconnect || generation !== connectionGeneration) return;
+      try {
+        if (reason === "auth" && onAuthFailure) await onAuthFailure();
+      } catch (error) {
+        if (manualDisconnect || generation !== connectionGeneration) return;
+        console.warn("Failed to renew realtime credentials:", error);
+        scheduleReconnect("auth");
+        return;
       }
+      if (manualDisconnect || generation !== connectionGeneration) return;
       void connect();
     }, delay);
   };
 
   const connect = async (wsUrl?: string) => {
     if (
+      isConnecting.value ||
       ws.value?.readyState === WebSocket.CONNECTING ||
       ws.value?.readyState === WebSocket.OPEN
     ) {
@@ -134,20 +145,24 @@ export function useWebSocket<TMessage = WebSocketMessage>(
     }
 
     manualDisconnect = false;
+    const generation = ++connectionGeneration;
     isConnecting.value = true;
     connectionStatus.value = "connecting";
     lastError.value = null;
 
     try {
       const targetUrl = await resolveUrl(wsUrl);
+      if (generation !== connectionGeneration || manualDisconnect) return;
       if (!targetUrl) {
         throw new Error("WebSocket URL is required");
       }
 
       attemptedUrl = targetUrl;
-      ws.value = new WebSocket(targetUrl, protocols);
+      const socket = new WebSocket(targetUrl, protocols);
+      ws.value = socket;
 
-      ws.value.onopen = (event) => {
+      socket.onopen = (event) => {
+        if (ws.value !== socket || generation !== connectionGeneration) return;
         isConnected.value = true;
         isConnecting.value = false;
         connectionStatus.value = "connected";
@@ -160,7 +175,8 @@ export function useWebSocket<TMessage = WebSocketMessage>(
         onOpen?.(event);
       };
 
-      ws.value.onmessage = (event) => {
+      socket.onmessage = (event) => {
+        if (ws.value !== socket || generation !== connectionGeneration) return;
         if (event.data === "pong") {
           return;
         }
@@ -173,13 +189,15 @@ export function useWebSocket<TMessage = WebSocketMessage>(
         }
       };
 
-      ws.value.onerror = (event) => {
+      socket.onerror = (event) => {
+        if (ws.value !== socket || generation !== connectionGeneration) return;
         lastError.value = event;
         connectionStatus.value = "error";
         onError?.(event);
       };
 
-      ws.value.onclose = (event) => {
+      socket.onclose = (event) => {
+        if (ws.value !== socket || generation !== connectionGeneration) return;
         isConnected.value = false;
         isConnecting.value = false;
         stopHeartbeat();
@@ -198,6 +216,7 @@ export function useWebSocket<TMessage = WebSocketMessage>(
         scheduleReconnect(authRejected ? "auth" : "network");
       };
     } catch (error) {
+      if (generation !== connectionGeneration || manualDisconnect) return;
       isConnecting.value = false;
       connectionStatus.value = "error";
       console.error("Failed to create WebSocket connection:", error);
@@ -206,6 +225,7 @@ export function useWebSocket<TMessage = WebSocketMessage>(
   };
 
   const disconnect = () => {
+    ++connectionGeneration;
     manualDisconnect = true;
     clearReconnectTimer();
     clearStableTimer();

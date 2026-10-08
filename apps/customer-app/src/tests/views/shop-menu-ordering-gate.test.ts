@@ -5,7 +5,7 @@
  * removing ordering rather than the menu.
  */
 import { mount } from "@vue/test-utils";
-import { ref } from "vue";
+import { ref, unref, type MaybeRef } from "vue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ShopMenuView from "@/views/ShopMenuView.vue";
 
@@ -19,6 +19,8 @@ const shopState = vi.hoisted(() => ({
     | undefined
     | { valid: boolean; restaurantId?: string },
 }));
+
+vi.mock("@/composables/useMenuRealtime", () => ({ useMenuRealtime: vi.fn() }));
 
 vi.mock("vue-router", () => ({
   useRoute: () => ({
@@ -129,10 +131,10 @@ vi.mock("@/components/DesktopCartPanel.vue", () => ({
 }));
 
 vi.mock("@tanstack/vue-query", () => ({
-  useQuery: (options: { queryKey: string[] }) => {
+  useQuery: (options: { queryKey: MaybeRef<readonly string[]> }) => {
     const stub = { isLoading: ref(false), error: ref(null), refetch: vi.fn() };
 
-    if (options.queryKey[0] === "restaurant") {
+    if (unref(options.queryKey)[0] === "restaurant") {
       return {
         ...stub,
         data: ref({
@@ -144,11 +146,11 @@ vi.mock("@tanstack/vue-query", () => ({
       };
     }
 
-    if (options.queryKey[0] === "shop-qr-verify") {
+    if (unref(options.queryKey)[0] === "shop-qr-verify") {
       return { ...stub, data: ref(shopState.verification) };
     }
 
-    if (options.queryKey[0] === "menu") {
+    if (unref(options.queryKey)[0] === "menu") {
       return {
         ...stub,
         data: ref({
@@ -182,7 +184,7 @@ vi.mock("@tanstack/vue-query", () => ({
       };
     }
 
-    if (options.queryKey[0] === "restaurant-markets") {
+    if (unref(options.queryKey)[0] === "restaurant-markets") {
       return { ...stub, data: ref({ memberships: [] }) };
     }
 

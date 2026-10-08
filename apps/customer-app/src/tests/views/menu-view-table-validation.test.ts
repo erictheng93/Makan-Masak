@@ -1,5 +1,5 @@
 import { flushPromises, mount } from "@vue/test-utils";
-import { ref } from "vue";
+import { ref, unref, type MaybeRef } from "vue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MenuView from "@/views/MenuView.vue";
 
@@ -60,6 +60,8 @@ const menuResult = vi.hoisted(
     } | null;
   } => ({ __v_isRef: true, value: null }),
 );
+
+vi.mock("@/composables/useMenuRealtime", () => ({ useMenuRealtime: vi.fn() }));
 
 vi.mock("vue-router", () => ({
   useRoute: () => ({
@@ -165,8 +167,8 @@ vi.mock("@/components/LanguageSwitcher.vue", () => ({
 }));
 
 vi.mock("@tanstack/vue-query", () => ({
-  useQuery: (options: { queryKey: unknown[] }) => {
-    if (options.queryKey[0] === "table-validation") {
+  useQuery: (options: { queryKey: MaybeRef<unknown[]> }) => {
+    if (unref(options.queryKey)[0] === "table-validation") {
       return {
         data: tableValidationResult,
         isLoading: ref(false),
@@ -175,7 +177,7 @@ vi.mock("@tanstack/vue-query", () => ({
       };
     }
 
-    if (options.queryKey[0] === "restaurant") {
+    if (unref(options.queryKey)[0] === "restaurant") {
       return {
         data: restaurantResult,
         isLoading: ref(false),

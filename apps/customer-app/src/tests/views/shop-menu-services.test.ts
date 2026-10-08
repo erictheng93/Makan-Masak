@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils";
-import { computed, ref } from "vue";
+import { computed, ref, unref, type MaybeRef } from "vue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ShopMenuView from "@/views/ShopMenuView.vue";
 import { menuApi } from "@/services/menuApi";
@@ -19,6 +19,8 @@ const serviceItemsFixture = vi.hoisted(() => ({
 const marketMembershipsFixture = vi.hoisted(() => ({
   memberships: null as Array<Record<string, unknown>> | null,
 }));
+
+vi.mock("@/composables/useMenuRealtime", () => ({ useMenuRealtime: vi.fn() }));
 
 vi.mock("vue-router", () => ({
   useRoute: () => ({
@@ -137,8 +139,11 @@ vi.mock("@/components/LanguageSwitcher.vue", () => ({
 }));
 
 vi.mock("@tanstack/vue-query", () => ({
-  useQuery: (options: { queryKey: string[]; queryFn: () => unknown }) => {
-    if (options.queryKey[0] === "restaurant") {
+  useQuery: (options: {
+    queryKey: MaybeRef<readonly string[]>;
+    queryFn: () => unknown;
+  }) => {
+    if (unref(options.queryKey)[0] === "restaurant") {
       return {
         data: ref({
           id: "restaurant-1",
@@ -155,7 +160,7 @@ vi.mock("@tanstack/vue-query", () => ({
     // No `?qr=` in this suite's route, so the verification never runs. Matched
     // explicitly anyway — the fallthrough below returns service items, which
     // would read as a failed verification and block ordering.
-    if (options.queryKey[0] === "shop-qr-verify") {
+    if (unref(options.queryKey)[0] === "shop-qr-verify") {
       return {
         data: ref(undefined),
         isLoading: ref(false),
@@ -164,7 +169,7 @@ vi.mock("@tanstack/vue-query", () => ({
       };
     }
 
-    if (options.queryKey[0] === "menu") {
+    if (unref(options.queryKey)[0] === "menu") {
       return {
         data: ref({
           categories: [
@@ -203,7 +208,7 @@ vi.mock("@tanstack/vue-query", () => ({
       };
     }
 
-    if (options.queryKey[0] === "restaurant-markets") {
+    if (unref(options.queryKey)[0] === "restaurant-markets") {
       return {
         data: ref({
           memberships:

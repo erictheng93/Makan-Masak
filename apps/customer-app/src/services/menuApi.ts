@@ -20,15 +20,18 @@ export const menuApi = {
   async getRestaurantMenu(
     restaurantId: string,
     tableId?: number,
+    options?: { fresh?: boolean },
   ): Promise<MenuApiResponse> {
     const params = new URLSearchParams();
     if (tableId) {
       params.append("tableId", tableId.toString());
     }
 
-    const response = await apiClient.get<MenuApiResponse>(
-      `/menu/${restaurantId}${params.toString() ? `?${params.toString()}` : ""}`,
-    );
+    const response = await apiClient.request<MenuApiResponse>({
+      method: "GET",
+      url: `/menu/${restaurantId}${params.toString() ? `?${params.toString()}` : ""}`,
+      ...(options?.fresh ? { headers: { "Cache-Control": "no-cache" } } : {}),
+    });
     return response;
   },
 
@@ -247,8 +250,9 @@ export const menuApi = {
   async getMenu(
     restaurantId: string,
     tableId?: number,
+    options?: { fresh?: boolean },
   ): Promise<MenuApiResponse> {
-    return this.getRestaurantMenu(restaurantId, tableId);
+    return this.getRestaurantMenu(restaurantId, tableId, options);
   },
 };
 

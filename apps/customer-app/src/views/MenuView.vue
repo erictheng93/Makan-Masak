@@ -513,6 +513,7 @@ import CustomizationModal from "@/components/CustomizationModal.vue";
 import DesktopCartPanel from "@/components/DesktopCartPanel.vue";
 import LanguageSwitcher from "@/components/LanguageSwitcher.vue";
 import { useIsDesktop } from "@/composables/useBreakpoint";
+import { useMenuRealtime } from "@/composables/useMenuRealtime";
 import { menuApi } from "@/services/menuApi";
 import { useCurrency } from "@/composables/useCurrency";
 import type {
@@ -592,7 +593,11 @@ const {
   isLoading: isLoadingTableValidation,
   error: tableValidationError,
 } = useQuery({
-  queryKey: ["table-validation", props.restaurantId, props.tableId],
+  queryKey: computed(() => [
+    "table-validation",
+    props.restaurantId,
+    props.tableId,
+  ]),
   queryFn: async () => {
     if (!isValidTableId.value) {
       return { isValid: false };
@@ -678,24 +683,41 @@ const activeCartItemCount = computed(() => {
 
 // API Queries
 const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery({
-  queryKey: ["restaurant", props.restaurantId],
+  queryKey: computed(() => ["restaurant", props.restaurantId]),
   queryFn: () => menuApi.getRestaurant(props.restaurantId),
   enabled: isTableValid,
   staleTime: 5 * 60 * 1000, // 5分鐘
 });
 
+let freshMenuRead = false;
 const {
   data: menuStructure,
   isLoading: isLoadingMenu,
   error: menuError,
   refetch,
 } = useQuery({
-  queryKey: ["menu", props.restaurantId, props.tableId],
-  queryFn: () => menuApi.getMenu(props.restaurantId, props.tableId),
+  queryKey: computed(
+    () => ["menu", props.restaurantId, props.tableId] as const,
+  ),
+  queryFn: ({ queryKey }) => {
+    const fresh = freshMenuRead;
+    freshMenuRead = false;
+    return menuApi.getMenu(queryKey[1], queryKey[2], { fresh });
+  },
   enabled: isTableValid,
   staleTime: 2 * 60 * 1000, // 2分鐘
   refetchOnWindowFocus: true,
 });
+
+useMenuRealtime(
+  () => props.restaurantId,
+  async () => {
+    if (!isTableValid.value) return;
+    freshMenuRead = true;
+    await refetch({ cancelRefetch: false });
+    if (freshMenuRead) await refetch({ cancelRefetch: false });
+  },
+);
 
 // Computed
 const isLoading = computed(
