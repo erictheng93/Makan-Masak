@@ -409,7 +409,7 @@ export class MenuService extends BaseService {
   // 獲取完整菜單結構
   async getMenu(
     restaurantId: string,
-    options?: { includeUnavailable?: boolean },
+    options?: { includeUnavailable?: boolean; skipCache?: boolean },
   ): Promise<MenuStructure> {
     try {
       const includeAll = options?.includeUnavailable ?? false;
@@ -420,67 +420,63 @@ export class MenuService extends BaseService {
         includeAll ? "admin" : "full",
       );
 
-      return await this.cachedQuery(
-        cacheKey,
-        async () => {
-          const restaurant = await this.db.query.restaurants.findFirst({
-            where: eq(restaurants.id, restaurantId),
-            with: {
-              categories: {
-                // `includeAll` used to relax only item visibility, so hidden
-                // categories were dropped even for the owner (#83). The cache
-                // key above already discriminates "admin" from "full", so the
-                // relaxed result cannot be served to a public reader.
-                where: and(
-                  ...(includeAll
-                    ? adminCategoryConditions
-                    : publicCategoryConditions),
-                ),
-                orderBy: asc(categories.sortOrder),
-                with: {
-                  menuItems: {
-                    // Soft-deleted items are invisible to BOTH audiences —
-                    // includeAll widens to unavailable items, never to deleted
-                    // ones (#80).
-                    where: includeAll
-                      ? notDeletedItem
-                      : and(eq(menuItems.isAvailable, true), notDeletedItem),
-                    orderBy: [asc(menuItems.sortOrder), asc(menuItems.name)],
-                  },
+      const readMenu = async () => {
+        const restaurant = await this.db.query.restaurants.findFirst({
+          where: eq(restaurants.id, restaurantId),
+          with: {
+            categories: {
+              // `includeAll` used to relax only item visibility, so hidden
+              // categories were dropped even for the owner (#83). The cache
+              // key above already discriminates "admin" from "full", so the
+              // relaxed result cannot be served to a public reader.
+              where: and(
+                ...(includeAll
+                  ? adminCategoryConditions
+                  : publicCategoryConditions),
+              ),
+              orderBy: asc(categories.sortOrder),
+              with: {
+                menuItems: {
+                  // Soft-deleted items are invisible to BOTH audiences —
+                  // includeAll widens to unavailable items, never to deleted
+                  // ones (#80).
+                  where: includeAll
+                    ? notDeletedItem
+                    : and(eq(menuItems.isAvailable, true), notDeletedItem),
+                  orderBy: [asc(menuItems.sortOrder), asc(menuItems.name)],
                 },
               },
             },
-          });
+          },
+        });
 
-          if (!restaurant) {
-            throw new Error("Restaurant not found");
-          }
+        if (!restaurant) {
+          throw new Error("Restaurant not found");
+        }
 
-          const flatItems = restaurant.categories.flatMap(
-            (cat) => cat.menuItems,
-          );
-          const menuItemsWithOptions =
-            await this.mapToMenuItemsWithAssembledOptions(flatItems);
+        const flatItems = restaurant.categories.flatMap((cat) => cat.menuItems);
+        const menuItemsWithOptions =
+          await this.mapToMenuItemsWithAssembledOptions(flatItems);
 
-          // Item counts are derived live from the loaded rows. There is no
-          // stored categories.item_count any more — it only ever tracked
-          // creates, so deletes/toggles/moves left it stale (#84).
-          return {
-            categories: restaurant.categories.map((cat) =>
-              mapMenuCategoryRow(cat),
-            ),
-            menuItems: menuItemsWithOptions,
-          };
-        },
-        {
-          // 5 minutes, not the old hour: tag invalidation is the primary
-          // freshness mechanism, but when it misses (concurrent write races,
-          // lost tag mappings) the TTL is the ceiling on how long a customer
-          // sees a menu the owner already changed (#82).
-          ttl: 300,
-          tags: [`menu:${restaurantId}`, `restaurant:${restaurantId}`],
-        },
-      );
+        // Item counts are derived live from the loaded rows. There is no
+        // stored categories.item_count any more — it only ever tracked
+        // creates, so deletes/toggles/moves left it stale (#84).
+        return {
+          categories: restaurant.categories.map((cat) =>
+            mapMenuCategoryRow(cat),
+          ),
+          menuItems: menuItemsWithOptions,
+        };
+      };
+      if (options?.skipCache) return await readMenu();
+      return await this.cachedQuery(cacheKey, readMenu, {
+        // 5 minutes, not the old hour: tag invalidation is the primary
+        // freshness mechanism, but when it misses (concurrent write races,
+        // lost tag mappings) the TTL is the ceiling on how long a customer
+        // sees a menu the owner already changed (#82).
+        ttl: 300,
+        tags: [`menu:${restaurantId}`, `restaurant:${restaurantId}`],
+      });
     } catch (error) {
       this.handleError(error, "getMenu");
     }
@@ -886,7 +882,14 @@ export class MenuService extends BaseService {
           moneyFields,
         );
       }
-      const { price, originalPrice, ...updateData } = data;
+      const restaurantId =
+        data.restaurantId ?? (await this.restaurantIdForMenuItem(id));
+      const {
+        price,
+        originalPrice,
+        restaurantId: _restaurantId,
+        ...updateData
+      } = data;
       const [item] = await this.db
         .update(menuItems)
         .set({
@@ -899,7 +902,13 @@ export class MenuService extends BaseService {
             : {}),
           updatedAt: new Date(),
         })
-        .where(eq(menuItems.id, id))
+        .where(
+          and(
+            eq(menuItems.id, id),
+            eq(menuItems.restaurantId, restaurantId),
+            isNull(menuItems.deletedAt),
+          ),
+        )
         .returning();
 
       if (!item) {
@@ -1006,10 +1015,13 @@ export class MenuService extends BaseService {
   async batchUpdateAvailability(
     restaurantId: string,
     updates: { id: number; isAvailable: boolean }[],
-  ): Promise<void> {
+  ): Promise<MenuItem[]> {
     try {
-      for (const update of updates) {
-        await this.db
+      const unique = [
+        ...new Map(updates.map((update) => [update.id, update])).values(),
+      ];
+      const queries = unique.map((update) =>
+        this.db
           .update(menuItems)
           .set({
             isAvailable: update.isAvailable,
@@ -1019,15 +1031,21 @@ export class MenuService extends BaseService {
             and(
               eq(menuItems.id, update.id),
               eq(menuItems.restaurantId, restaurantId),
+              isNull(menuItems.deletedAt),
+              ne(menuItems.isAvailable, update.isAvailable),
             ),
-          );
-      }
-
-      // Invalidate menu cache after batch update
+          )
+          .returning(),
+      );
+      if (queries.length === 0) return [];
+      const rows = (
+        await this.db.batch([queries[0], ...queries.slice(1)])
+      ).flat();
       await this.invalidateCache(
         [`menu:${restaurantId}`, `restaurant:${restaurantId}`],
         "tag",
       );
+      return rows.map((row) => this.mapToMenuItem(row));
     } catch (error) {
       this.handleError(error, "batchUpdateAvailability");
     }

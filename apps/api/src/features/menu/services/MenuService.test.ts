@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getTableColumns } from "drizzle-orm";
-import { categories as categoriesTable } from "@makanmasak/database";
+import {
+  RealtimeBroadcastService,
+  categories as categoriesTable,
+} from "@makanmasak/database";
 import { Status } from "@makanmasak/shared-types";
 import { MenuService } from "./MenuService";
 
@@ -47,7 +50,7 @@ describe("MenuService", () => {
       reorderCategories: vi.fn(),
       getFeaturedItems: vi.fn(),
       getPopularItems: vi.fn(),
-      batchUpdateAvailability: vi.fn(),
+      batchUpdateAvailability: vi.fn(async () => []),
       batchUpdatePricesScoped: vi.fn(),
       // Stored prices for the negative-discount check (#81); defaults to "no
       // stored originalPrice anywhere", which no update can conflict with.
@@ -110,6 +113,52 @@ describe("MenuService", () => {
     };
   }
 
+  it.each([
+    [{ isAvailable: false }, true],
+    [{ inventoryCount: 0 }, true],
+    [{ name: "New name" }, false],
+    [{ isAvailable: true }, false],
+  ])("broadcasts only actual supply changes: %j", async (fields, notify) => {
+    const staff = vi
+      .spyOn(
+        RealtimeBroadcastService.prototype,
+        "broadcastMenuAvailabilityUpdate",
+      )
+      .mockResolvedValue({ success: true });
+    const { service } = createService({
+      dbService: {
+        getMenuItem: vi.fn(async () => menuItem()),
+        updateMenuItem: vi.fn(async () => menuItem(fields)),
+      },
+    });
+    await service.updateMenuItem(101, fields);
+    expect(staff).toHaveBeenCalledTimes(notify ? 1 : 0);
+    if (notify)
+      expect(staff).toHaveBeenCalledWith(
+        expect.objectContaining({
+          restaurantId: "rest-1",
+          data: expect.objectContaining({
+            menuItemId: 101,
+            menuItemName: "Laksa",
+          }),
+        }),
+      );
+  });
+  it("keeps a committed supply write successful when notification fails", async () => {
+    vi.spyOn(
+      RealtimeBroadcastService.prototype,
+      "broadcastMenuAvailabilityUpdate",
+    ).mockRejectedValue(new Error("offline"));
+    const { service } = createService({
+      dbService: {
+        getMenuItem: vi.fn(async () => menuItem()),
+        updateMenuItem: vi.fn(async () => menuItem({ isAvailable: false })),
+      },
+    });
+    await expect(
+      service.updateMenuItem(101, { isAvailable: false }),
+    ).resolves.toMatchObject({ isAvailable: false });
+  });
   it("preserves null inventory as unlimited stock in menu item responses", () => {
     const { service } = createService();
     const transformed = (
@@ -443,7 +492,7 @@ describe("MenuService", () => {
       expect(dbService.updateMenuItem).toHaveBeenCalledOnce();
       expect(dbService.updateMenuItem).toHaveBeenCalledWith(101, {
         price: 210,
-        restaurantId: undefined,
+        restaurantId: "rest-1",
       });
     });
 
@@ -520,7 +569,7 @@ describe("MenuService", () => {
 
       expect(dbService.updateMenuItem).toHaveBeenCalledWith(101, {
         isAvailable: false,
-        restaurantId: undefined,
+        restaurantId: "rest-1",
       });
     });
   });

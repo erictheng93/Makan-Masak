@@ -165,6 +165,11 @@ app.get(
 
     const menu = await service.getMenu(restaurantId, {
       includeUnavailable: !!includeAll,
+      ...(/(?:^|,)\s*no-cache\s*(?:,|$)/i.test(
+        c.req.header("Cache-Control") ?? "",
+      )
+        ? { skipCache: true }
+        : {}),
     });
 
     if (!menu) {

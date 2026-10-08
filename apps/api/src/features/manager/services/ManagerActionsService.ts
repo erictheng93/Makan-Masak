@@ -1,9 +1,9 @@
 import { drizzle } from "drizzle-orm/d1";
-import { eq } from "drizzle-orm";
-import { auditLogs, menuItems } from "@makanmasak/database";
+import { auditLogs } from "@makanmasak/database";
 import type { Env } from "../../../types/env";
 import type { AuthUser } from "../../../middleware/auth";
 import { ApiError } from "../../../shared/utils/api-error";
+import { MenuService } from "../../menu/services/MenuService";
 import type { ManagerActionCommand } from "../schemas/validation";
 
 export interface ManagerActionResult {
@@ -85,7 +85,7 @@ export class ManagerActionsService {
     input: ManagerActionCommand,
   ): Promise<boolean> {
     const menuItemId = Number(input.resourceId);
-    if (!Number.isFinite(menuItemId) || menuItemId <= 0) {
+    if (!Number.isSafeInteger(menuItemId) || menuItemId <= 0) {
       throw new ApiError(
         "MANAGER_ACTION_INVALID",
         "resourceId must be a positive integer for menu_item actions",
@@ -93,11 +93,8 @@ export class ManagerActionsService {
       );
     }
 
-    const [item] = await this.db
-      .select({ isAvailable: menuItems.isAvailable })
-      .from(menuItems)
-      .where(eq(menuItems.id, menuItemId))
-      .limit(1);
+    const menu = new MenuService(this.env);
+    const item = await menu.getMenuItem(menuItemId);
 
     if (!item) {
       throw new ApiError(
@@ -107,19 +104,21 @@ export class ManagerActionsService {
       );
     }
 
+    if (item.restaurantId !== input.restaurantId) {
+      throw new ApiError(
+        "FORBIDDEN",
+        "Menu item belongs to another restaurant",
+        403,
+      );
+    }
+
     const payloadIsAvailable =
       input.payload && typeof input.payload.isAvailable === "boolean"
         ? (input.payload.isAvailable as boolean)
         : undefined;
     const targetValue = payloadIsAvailable ?? !item.isAvailable;
 
-    await this.db
-      .update(menuItems)
-      .set({
-        isAvailable: targetValue,
-        updatedAt: new Date(),
-      })
-      .where(eq(menuItems.id, menuItemId));
+    await menu.updateMenuItem(menuItemId, { isAvailable: targetValue }, item);
 
     return true;
   }

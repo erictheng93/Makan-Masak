@@ -96,6 +96,20 @@ function orderCancelledEvent(): OrderCancelledEvent {
 }
 
 describe("RealtimeBroadcastService", () => {
+  it("delivers staff menu availability to both admin and kitchen", async () => {
+    const { env, idFromName } = createRealtimeEnv();
+    await new RealtimeBroadcastService(env).broadcastMenuAvailabilityUpdate({
+      type: RealtimeEventType.MENU_AVAILABILITY_UPDATE,
+      eventId: "menu",
+      timestamp: Date.now(),
+      restaurantId: "restaurant-1",
+      data: { menuItemId: 1, menuItemName: "Laksa", isAvailable: false },
+    });
+    expect(idFromName.mock.calls.map(([name]) => name)).toEqual([
+      "admin:restaurant-1",
+      "kitchen:restaurant-1",
+    ]);
+  });
   it("fans out new order events to kitchen and admin rooms", async () => {
     const { env, idFromName, fetch } = createRealtimeEnv();
     const service = new RealtimeBroadcastService(env);

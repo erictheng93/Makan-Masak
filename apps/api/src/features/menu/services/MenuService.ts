@@ -12,9 +12,11 @@ import {
   forbidden,
   conflict,
 } from "../../../shared/utils/api-error";
+import { invalidateRestaurantMenuEdgeCache } from "../../../middleware/edge-cache";
 import { HTTP_STATUS } from "../../../shared/constants";
 import {
   MenuService as DatabaseMenuService,
+  RealtimeBroadcastService,
   restaurants,
   categories as categoriesTable,
   amountFromCents,
@@ -25,9 +27,9 @@ import type {
   MenuItemOptionGroupState,
   ReplaceMenuItemOptionGroupData,
 } from "@makanmasak/database";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { Status } from "@makanmasak/shared-types";
+import { Status, RealtimeEventType } from "@makanmasak/shared-types";
 import type {
   MenuItem as SharedMenuItem,
   Category as SharedCategory,
@@ -184,7 +186,7 @@ export class MenuService implements IMenuService {
 
   async getMenu(
     restaurantId: string,
-    options?: { includeUnavailable?: boolean },
+    options?: { includeUnavailable?: boolean; skipCache?: boolean },
   ): Promise<MenuStructure | null> {
     try {
       this.logger.info("Fetching complete menu", { restaurantId });
@@ -332,12 +334,22 @@ export class MenuService implements IMenuService {
           existingItem.restaurantId,
         );
       }
+      if (
+        fields.restaurantId !== undefined &&
+        String(fields.restaurantId) !== existingItem.restaurantId
+      ) {
+        throw forbidden("Cannot move menu items between restaurants");
+      }
       const item = await this.dbService.updateMenuItem(id, {
         ...fields,
-        restaurantId: fields.restaurantId
-          ? String(fields.restaurantId)
-          : undefined,
+        restaurantId: existingItem.restaurantId,
       });
+      if (
+        item.isAvailable !== existingItem.isAvailable ||
+        item.inventoryCount !== existingItem.inventoryCount
+      ) {
+        await this.notifyAvailabilityChanges([this.transformMenuItem(item)]);
+      }
       this.logger.info("Menu item updated successfully", { itemId: id });
       return this.transformMenuItem(item);
     } catch (error) {
@@ -573,7 +585,13 @@ export class MenuService implements IMenuService {
         restaurantId,
       );
 
-      await this.dbService.batchUpdateAvailability(restaurantId, updates);
+      const changed = await this.dbService.batchUpdateAvailability(
+        restaurantId,
+        updates,
+      );
+      await this.notifyAvailabilityChanges(
+        changed.map((item) => this.transformMenuItem(item)),
+      );
       this.logger.info("Batch availability update completed", { restaurantId });
     } catch (error) {
       this.logger.error(
@@ -582,6 +600,65 @@ export class MenuService implements IMenuService {
         { restaurantId },
       );
       throw error;
+    }
+  }
+
+  private async notifyAvailabilityChanges(items: MenuItem[]): Promise<void> {
+    if (items.length === 0) return;
+    const restaurantId = items[0].restaurantId;
+    try {
+      await invalidateRestaurantMenuEdgeCache(this.env, restaurantId);
+      const broadcast = new RealtimeBroadcastService(this.env);
+      await Promise.all(
+        items.map((item) =>
+          broadcast.broadcastMenuAvailabilityUpdate({
+            type: RealtimeEventType.MENU_AVAILABILITY_UPDATE,
+            eventId: crypto.randomUUID(),
+            timestamp: Date.now(),
+            restaurantId,
+            data: {
+              menuItemId: item.id,
+              menuItemName: item.name,
+              isAvailable: item.isAvailable,
+              ...(item.inventoryCount != null
+                ? { inventoryCount: item.inventoryCount }
+                : {}),
+            },
+          }),
+        ),
+      );
+      if (!(await this.isPublicRestaurantAvailable(restaurantId))) return;
+      const visibleCategories = await this.db
+        .select({ id: categoriesTable.id })
+        .from(categoriesTable)
+        .where(
+          and(
+            eq(categoriesTable.restaurantId, restaurantId),
+            inArray(categoriesTable.id, [
+              ...new Set(items.map((item) => item.categoryId)),
+            ]),
+            eq(categoriesTable.isActive, true),
+            eq(categoriesTable.isVisible, true),
+            isNull(categoriesTable.deletedAt),
+          ),
+        );
+      const visible = items.find((item) =>
+        visibleCategories.some((category) => category.id === item.categoryId),
+      );
+      if (visible)
+        await broadcast.broadcastEvent("menu", restaurantId, {
+          type: RealtimeEventType.MENU_ITEM_UPDATE,
+          eventId: crypto.randomUUID(),
+          timestamp: Date.now(),
+          restaurantId,
+          data: { menuItemId: visible.id, action: "updated" },
+        });
+    } catch (error) {
+      this.logger.error(
+        "Failed to notify menu availability change",
+        error instanceof Error ? error : undefined,
+        { restaurantId },
+      );
     }
   }
 

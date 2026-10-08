@@ -159,7 +159,7 @@ export class RealtimeBroadcastService {
     event: MenuAvailabilityUpdateEvent,
   ): Promise<BroadcastResult> {
     // Admin dashboards connect to the `admin:{restaurantId}` room.
-    return this.broadcastToRooms(event, ["admin"]);
+    return this.broadcastToRooms(event, ["admin", "kitchen"]);
   }
 
   generateEventId(): string {

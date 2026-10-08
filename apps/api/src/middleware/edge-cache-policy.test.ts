@@ -123,6 +123,25 @@ describe("isPublicApiCacheableRequest", () => {
       env as never,
       executionCtx as never,
     );
+    const freshMenu = await app.request(
+      "/api/v1/menu/restaurant-1",
+      { headers: { "Cache-Control": "no-cache" } },
+      env as never,
+      executionCtx as never,
+    );
+    await expect(freshMenu.json()).resolves.toMatchObject({
+      data: { generation: 2 },
+    });
+    const stillCachedMenu = await app.request(
+      "/api/v1/menu/restaurant-1",
+      undefined,
+      env as never,
+      executionCtx as never,
+    );
+    await expect(stillCachedMenu.json()).resolves.toMatchObject({
+      data: { generation: 1 },
+      cached: true,
+    });
     const firstVerification = await app.request(
       "/api/v1/qr/verify/seat?qrCode=old",
       undefined,

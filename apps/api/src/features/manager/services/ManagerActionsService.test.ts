@@ -4,6 +4,8 @@ import type { Env } from "../../../types/env";
 import { ManagerActionsService } from "./ManagerActionsService";
 
 const mocks = vi.hoisted(() => ({
+  menuGet: vi.fn(),
+  menuUpdate: vi.fn(),
   db: {
     insert: vi.fn(),
     select: vi.fn(),
@@ -13,6 +15,13 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("drizzle-orm/d1", () => ({
   drizzle: vi.fn(() => mocks.db),
+}));
+
+vi.mock("../../menu/services/MenuService", () => ({
+  MenuService: class {
+    getMenuItem = mocks.menuGet;
+    updateMenuItem = mocks.menuUpdate;
+  },
 }));
 
 function createQuery(result: unknown[]) {
@@ -35,20 +44,20 @@ function createQuery(result: unknown[]) {
 }
 
 function mockSelectResult(result: unknown[]) {
-  mocks.db.select.mockReturnValue(createQuery(result));
+  mocks.menuGet.mockResolvedValue(
+    result[0]
+      ? { id: 55, restaurantId: "restaurant-1", ...(result[0] as object) }
+      : null,
+  );
 }
 
 function mockMutations() {
   const inserted: unknown[] = [];
   const updated: unknown[] = [];
 
-  mocks.db.update.mockImplementation(() => {
-    const query = createQuery([]);
-    query.set.mockImplementation((payload: unknown) => {
-      updated.push(payload);
-      return query;
-    });
-    return query;
+  mocks.menuUpdate.mockImplementation(async (_id: number, data: unknown) => {
+    updated.push(data);
+    return data;
   });
 
   mocks.db.insert.mockImplementation(() => {
@@ -117,7 +126,6 @@ describe("ManagerActionsService", () => {
     expect(mutations.updated).toEqual([
       {
         isAvailable: false,
-        updatedAt: new Date("2026-06-07T00:00:00.000Z"),
       },
     ]);
     expect(mutations.inserted).toEqual([
@@ -168,6 +176,24 @@ describe("ManagerActionsService", () => {
     });
   });
 
+  it("rejects foreign items and fractional resource ids before writing or auditing", async () => {
+    mockSelectResult([{ isAvailable: true, restaurantId: "other" }]);
+    const mutations = mockMutations();
+    const command = {
+      action: "update_menu_availability",
+      resource: "menu_item",
+      resourceId: "55",
+      restaurantId: "restaurant-1",
+    };
+    await expect(
+      createService().execute(command, actor()),
+    ).rejects.toMatchObject({ status: 403 });
+    await expect(
+      createService().execute({ ...command, resourceId: "1.5" }, actor()),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(mutations.updated).toEqual([]);
+    expect(mutations.inserted).toEqual([]);
+  });
   it("rejects invalid resources, invalid IDs, and missing menu items", async () => {
     mockMutations();
 

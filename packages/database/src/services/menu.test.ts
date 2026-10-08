@@ -571,6 +571,18 @@ describe("MenuService category visibility", () => {
     );
   });
 
+  it("reads the database directly when menu freshness is requested", async () => {
+    const { service, db } = buildMenuService([categoryRow()]);
+    const cache = vi.spyOn(
+      service as unknown as {
+        cachedQuery: (...args: unknown[]) => Promise<unknown>;
+      },
+      "cachedQuery",
+    );
+    await service.getMenu("restaurant-1", { skipCache: true });
+    expect(db.query.restaurants.findFirst).toHaveBeenCalledOnce();
+    expect(cache).not.toHaveBeenCalled();
+  });
   it("only excludes soft-deleted categories for the admin read", async () => {
     const { service, capturedConfigs } = buildMenuService([categoryRow()]);
 
@@ -1013,7 +1025,10 @@ describe("MenuService image ownership", () => {
       }),
     ).resolves.toMatchObject({ imageId: insertedItem.imageId });
     await expect(
-      service.updateMenuItem(101, { imageId: updatedItem.imageId }),
+      service.updateMenuItem(101, {
+        imageId: updatedItem.imageId,
+        restaurantId: "restaurant-1",
+      }),
     ).resolves.toMatchObject({ imageId: updatedItem.imageId });
     await expect(service.getMenuItem(101)).resolves.toMatchObject({
       imageId: getItem.imageId,
@@ -1079,6 +1094,7 @@ describe("MenuService menu item metadata", () => {
     ).mockResolvedValue(undefined);
 
     await service.updateMenuItem(1, {
+      restaurantId: "restaurant-1",
       originalPrice: null,
       calories: null,
       ingredients: null,
@@ -1095,5 +1111,48 @@ describe("MenuService menu item metadata", () => {
         options: null,
       }),
     );
+  });
+});
+
+describe("atomic availability writes", () => {
+  it("deduplicates ids with last target winning and returns only changed rows", async () => {
+    const where: unknown[] = [];
+    const targets: unknown[] = [];
+    const query = {
+      set: vi.fn((data: unknown) => {
+        targets.push(data);
+        return query;
+      }),
+      where: vi.fn((condition: unknown) => {
+        where.push(condition);
+        return query;
+      }),
+      returning: vi.fn(() => query),
+    };
+    const db = { update: vi.fn(() => query), batch: vi.fn(async () => [[]]) };
+    const service = createServiceWithDb(db);
+    expect(
+      await service.batchUpdateAvailability("restaurant-1", [
+        { id: 1, isAvailable: false },
+        { id: 1, isAvailable: true },
+      ]),
+    ).toEqual([]);
+    expect(db.batch).toHaveBeenCalledOnce();
+    expect(db.update).toHaveBeenCalledOnce();
+    expect(targets[0]).toMatchObject({ isAvailable: true });
+    expect(collectSqlMetadata(where[0]).columns).toEqual(
+      expect.arrayContaining([
+        "restaurant_id",
+        "deleted_at_ms",
+        "is_available",
+      ]),
+    );
+  });
+  it("does not call batch for an empty update", async () => {
+    const db = { batch: vi.fn() };
+    expect(
+      await createServiceWithDb(db).batchUpdateAvailability("restaurant-1", []),
+    ).toEqual([]);
+    expect(db.batch).not.toHaveBeenCalled();
   });
 });

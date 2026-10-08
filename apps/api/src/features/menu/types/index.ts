@@ -311,7 +311,7 @@ export interface IMenuService {
   // Menu structure
   getMenu(
     restaurantId: string,
-    options?: { includeUnavailable?: boolean },
+    options?: { includeUnavailable?: boolean; skipCache?: boolean },
   ): Promise<MenuStructure | null>;
   getMenuItem(id: number): Promise<MenuItem | null>;
 

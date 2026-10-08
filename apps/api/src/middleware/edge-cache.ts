@@ -433,6 +433,25 @@ export class EdgeCacheManager {
   }
 }
 
+/** Clear menu edge entries before availability events invite fresh reads. */
+export async function invalidateRestaurantMenuEdgeCache(
+  env: Env,
+  restaurantId: string,
+): Promise<void> {
+  if (!env.CACHE_KV) return;
+  const manager = new EdgeCacheManager(
+    env.CACHE_KV,
+    { waitUntil: () => {} },
+    env,
+  );
+  await Promise.all([
+    manager.invalidate(`GET:/api/v1/menu/${restaurantId}:`),
+    manager.invalidate(`GET:/api/v1/menu/${restaurantId}:includeAll=true`),
+    manager.invalidate(`GET:/api/v1/restaurants/${restaurantId}:`),
+    manager.invalidate([`restaurant:${restaurantId}`], "tag"),
+  ]);
+}
+
 /**
  * Smart caching middleware with automatic optimization
  */
@@ -460,7 +479,12 @@ export function smartCacheMiddleware(
     // need to run mutations through the rest of the middleware so the
     // post-mutation invalidation block fires. Track the decision but never
     // early-exit for non-GET methods.
-    const cacheable = options.shouldCache ? options.shouldCache(c) : true;
+    const freshMenu =
+      method === "GET" &&
+      /^\/api\/v1\/menu\/[^/]+$/.test(path) &&
+      /(?:^|,)\s*no-cache\s*(?:,|$)/i.test(c.req.header("Cache-Control") ?? "");
+    const cacheable =
+      !freshMenu && (options.shouldCache ? options.shouldCache(c) : true);
 
     // For cacheable GET requests, try cache first (skip for authenticated requests)
     const hasAuth = !!c.req.header("Authorization");
