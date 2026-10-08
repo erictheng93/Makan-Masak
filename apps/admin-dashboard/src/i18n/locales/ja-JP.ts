@@ -152,7 +152,7 @@ const jaJP: Messages = {
     soldOut: "売り切れ",
     metrics: {
       sold: "販売済み",
-      saved: "保存",
+      saved: "人が保存",
     },
     featured: "おすすめ",
     unknownCategory: "不明なカテゴリ",

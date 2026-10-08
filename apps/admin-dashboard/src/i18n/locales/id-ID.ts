@@ -154,7 +154,7 @@ const idID: Messages = {
     soldOut: "Habis",
     metrics: {
       sold: "terjual",
-      saved: "disimpan",
+      saved: "kali disimpan",
     },
     featured: "Unggulan",
     unknownCategory: "Kategori Tidak Dikenal",
