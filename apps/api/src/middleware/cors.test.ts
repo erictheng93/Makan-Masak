@@ -45,6 +45,7 @@ describe("corsMiddleware", () => {
     expect(response.headers.get("Access-Control-Allow-Origin")).toBe(
       "http://localhost:3001",
     );
+    expect(allowedHeaders).toContain("cache-control");
     expect(allowedHeaders).toContain("x-client-version");
     expect(allowedHeaders).toContain("x-client-platform");
     expect(allowedHeaders).toContain("x-request-id");

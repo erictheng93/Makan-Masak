@@ -176,6 +176,24 @@ describe("ManagerActionsService", () => {
     });
   });
 
+  it("does not let an owner choose another restaurant in the action body", async () => {
+    mockSelectResult([{ isAvailable: true, restaurantId: "other" }]);
+    mockMutations();
+    await expect(
+      createService().execute(
+        {
+          action: "update_menu_availability",
+          resource: "menu_item",
+          resourceId: "55",
+          restaurantId: "other",
+        },
+        actor(),
+      ),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(mocks.menuUpdate).not.toHaveBeenCalled();
+    expect(mocks.db.insert).not.toHaveBeenCalled();
+  });
+
   it("rejects foreign items and fractional resource ids before writing or auditing", async () => {
     mockSelectResult([{ isAvailable: true, restaurantId: "other" }]);
     const mutations = mockMutations();

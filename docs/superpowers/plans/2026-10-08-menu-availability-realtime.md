@@ -1,6 +1,6 @@
 # Issue #441 Menu Availability Realtime Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 顧客、後台與廚房接收售完／恢復供應更新，通過真實串接驗收後完成 #441。
 
@@ -65,7 +65,7 @@
 - Produces: `clientRateLimitKey(payload: RealtimeAuthPayload, clientAddress?: string): string`；
   `checkClientRateLimit(payload, env, request?: Request)` 的第三參數僅供公開菜單 bucket。
 
-- [ ] **1. 加入失敗測試。** 在既有 fixtures 下簽發有效餐廳的 token，並驗證 decoded payload：
+- [x] **1. 加入失敗測試。** 在既有 fixtures 下簽發有效餐廳的 token，並驗證 decoded payload：
 
   ```ts
   expect(decoded).toMatchObject({
@@ -82,7 +82,7 @@
   斷言 socket.send 未呼叫；有效公開菜單事件可收到。
   同 IP 同餐廳的新 token 維持同 key，不同 IP 不共用匿名 bucket。
 
-- [ ] **2. 執行 red。**
+- [x] **2. 執行 red。**
 
   ```sh
   pnpm --filter @makanmasak/api test -- src/features/realtime src/middleware/geo-rate-limiting.test.ts
@@ -91,7 +91,7 @@
 
   預期新方法／schema／room 尚未存在，新增測試失敗。
 
-- [ ] **3. 實作端點與權限。** API 使用既有 `isPublicRestaurantAvailable` 判定、
+- [x] **3. 實作端點與權限。** API 使用既有 `isPublicRestaurantAvailable` 判定、
   JSON envelope 與 ApiError；route 沿用 `rateLimitMiddleware` 的 10/60s 配置，
   geo limiter 將此端點納入公開簽發策略。OpenAPI 設定公開 security。
   API verifier、Worker verifier 與 DO handshake 同時加入下列綁定檢查，
@@ -118,9 +118,9 @@
 
   菜單房間拒絕 subscribe 擴張權限；握手 ACK 與既有 ping/pong 保留。
 
-- [ ] **4. 執行 green。** 重跑第 2 步，確認新 token、限流及私密事件隔離測試通過；
+- [x] **4. 執行 green。** 重跑第 2 步，確認新 token、限流及私密事件隔離測試通過；
   舊 guest/staff/group 連線測試也通過。
-- [ ] **5. 原子提交。** `feat(realtime): add scoped public menu subscriptions`。
+- [x] **5. 原子提交。** `feat(realtime): add scoped public menu subscriptions`。
 
 ### Task 2: Broadcast actual supply writes after cache invalidation
 
@@ -148,7 +148,7 @@
 - `Cache-Control: no-cache` 僅在公開 menu GET 讓 edge cache 與資料庫 QueryCache 繞過讀寫。
   直接主庫讀取解決不同地區 Cache API 與 KV 最終一致性；仍使用公開過濾與既有 GET 限流。
 
-- [ ] **1. 加入失敗測試。** 單筆供應／庫存改變會通知，name-only 或同值不通知。
+- [x] **1. 加入失敗測試。** 單筆供應／庫存改變會通知，name-only 或同值不通知。
   資料庫寫入失敗不通知；廣播失敗仍返回成功寫入結果。
   以實際 D1 比較單筆、批次和經理動作的供應結果、deletedAt 及跨租戶邊界。
   批次重複 ID 採最後一個目標值，第二筆失敗整批 rollback；空批次不呼叫 db.batch。
@@ -169,7 +169,7 @@
   cache 測試預載舊公開回應與舊查詢結果，供應寫入後在廣播 callback 中讀取，
   應取得新狀態。另一個 no-cache 請求即使 tag 刪除尚未傳播也取新主庫資料。
 
-- [ ] **2. 執行 red。**
+- [x] **2. 執行 red。**
 
   ```sh
   pnpm --filter @makanmasak/database test -- src/services/menu.test.ts src/services/RealtimeBroadcastService.test.ts
@@ -177,7 +177,7 @@
   pnpm --filter @makanmasak/api test:real-integration -- src/__tests__/integration/menu-availability.real.integration.test.ts
   ```
 
-- [ ] **3. 最小寫入實作。** 批次沿用 Drizzle D1 batch，餐廳／未刪除／不同供應狀態
+- [x] **3. 最小寫入實作。** 批次沿用 Drizzle D1 batch，餐廳／未刪除／不同供應狀態
   條件在 UPDATE WHERE，不用先讀再逐筆 await：
 
   ```ts
@@ -212,9 +212,9 @@
   執行失效是為了推送／HTTP 回應時序；只清除同餐廳已知 keys 與 tag。
   no-cache menu 讀取直接執行既有查詢函式，不創建另一套菜單過濾邏輯。
 
-- [ ] **4. 執行 green。** 重跑第 2 步，檢查實際 D1 rollback、快取順序、
+- [x] **4. 執行 green。** 重跑第 2 步，檢查實際 D1 rollback、快取順序、
   private/public payload 與跨餐廳結果。
-- [ ] **5. 原子提交。** `feat(menu): broadcast supply changes from all three write paths`。
+- [x] **5. 原子提交。** `feat(menu): broadcast supply changes from all three write paths`。
 
 ### Task 3: Refresh both customer menu views safely
 
@@ -233,7 +233,7 @@
   其別名來源 getRestaurantMenu 同步接受並傳遞第三參數。
 - `fresh: true` 在 API 請求帶 `Cache-Control: no-cache`，供推送與重連的刷新使用。
 
-- [ ] **1. 加入失敗測試。** 使用既有 Vue mount 和 WebSocket mock 模式，
+- [x] **1. 加入失敗測試。** 使用既有 Vue mount 和 WebSocket mock 模式，
   menu event／首次 open／重連 open 各觸發 refresh，其他餐廳／事件不觸發。
   fresh 請求帶標準 no-cache header；普通首次查詢仍可走快取。
   token 在五分鐘內重用，過期或 auth rejection 才重簽，不增加持久 token 存放。
@@ -251,13 +251,13 @@
   views 測試使用新餐廳 props，確認 query key 變動、舊回應不覆寫新菜單。
   售完／恢復時保持購物車內容，連線失敗不阻止原本 REST 瀏覽與下單。
 
-- [ ] **2. 執行 red。**
+- [x] **2. 執行 red。**
 
   ```sh
   pnpm --filter makanmasak-customer-app test -- src/composables/useMenuRealtime.test.ts src/composables/useWebSocket.test.ts
   ```
 
-- [ ] **3. 實作共用 composable。** token local cache 在切店失效，沿用 useWebSocket
+- [x] **3. 實作共用 composable。** token local cache 在切店失效，沿用 useWebSocket
   的五次重試與退避；事件僅為刷新訊號。
   用單一 dirty flag 和一個 in-flight refresh 合併 burst 並保留尾端補讀，
   refresh reject 在 composable 中記錄，避免未處理 promise rejection。
@@ -291,9 +291,9 @@
   不能將 headers 當第二參數傳入。現有 CORS 已允許 Cache-Control。
   watch／async 回應以餐廳世代防護；保留 table validation、group cart 及 options。
 
-- [ ] **4. 執行 green。** 重跑第 2 步，並回歸既有
+- [x] **4. 執行 green。** 重跑第 2 步，並回歸既有
   `useGroupOrder.test.ts` 及 `src/tests/views`，確認共用 socket 修改不破壞訂單／群組。
-- [ ] **5. 原子提交。** `feat(customer): refresh menu availability over scoped realtime`。
+- [x] **5. 原子提交。** `feat(customer): refresh menu availability over scoped realtime`。
 
 ### Task 4: Update staff lists and kitchen notifications
 
@@ -309,7 +309,7 @@
 不讓 useMenuManagement 建立另一條 staff 連線。廚房用單獨 menu callback，
 不能將供應事件 cast 成 KitchenSSEEvent 交給訂單 reducer。
 
-- [ ] **1. 加入失敗測試。** 後台 menu event 和 reconnect 刷新清單；編輯表單資料
+- [x] **1. 加入失敗測試。** 後台 menu event 和 reconnect 刷新清單；編輯表單資料
   不被刷新覆寫；同餐廳 burst 合併、跨餐廳忽略、unmount unsubscribe。
   廚房供應 callback 觸發 toast，訂單 reducer 不被呼叫：
 
@@ -321,22 +321,22 @@
   使用既有 dashboard test mocks 擴充 toast.info、handleSSEEvent 和 subscription
   callback 捕捉；i18n mock 必須將 name 參數包含於回傳字串，以驗證實際使用名稱。
 
-- [ ] **2. 執行 red。**
+- [x] **2. 執行 red。**
 
   ```sh
   pnpm --filter makanmasak-admin-dashboard test -- src/composables/useMenuManagement.test.ts
   pnpm --filter makanmasak-kitchen-display test -- src/views/EnhancedKitchenDashboard.test.ts
   ```
 
-- [ ] **3. 接上既有連線。** useMenuManagement 在 setup 生命週期註冊 subscriber
+- [x] **3. 接上既有連線。** useMenuManagement 在 setup 生命週期註冊 subscriber
   和 reconnect watcher，清單 refresh 重用 fetchMenu；只更新清單，保留表單狀態。
   fetchMenu 開始時捕捉餐廳 ID，回應／finally 僅套用於仍有效的餐廳／請求。
   廚房獨立訂閱 MENU_AVAILABILITY_UPDATE，檢查 restaurantId 後使用既有
   toast 與 `t("realtime.menuUnavailable", { name })`／menuAvailable 文案。
   unmount 清除所有新增訂閱；不增加 sound、timer 或歷史清單。
 
-- [ ] **4. 執行 green。** 第 2 步全部通過，六語系鍵存在，palette 檢查通過。
-- [ ] **5. 原子提交。** `feat(staff): receive menu supply updates in admin and kitchen`。
+- [x] **4. 執行 green。** 第 2 步全部通過，六語系鍵存在，palette 檢查通過。
+- [x] **5. 原子提交。** `feat(staff): receive menu supply updates in admin and kitchen`。
 
 ### Task 5: Prove the full flow and record acceptance
 
@@ -352,7 +352,7 @@
 kitchen :3002，使用既有 dev 配置確認實際 port；不注入假的 API／WebSocket 事件。
 使用既有 seed 與 `Cleanup` 建立本次 fixture，驗收僅修改本地資料。
 
-- [ ] **1. 加入真實 E2E。** import `Cleanup`、`createMenuFixture`、`getOwner`、
+- [x] **1. 加入真實 E2E。** import `Cleanup`、`createMenuFixture`、`getOwner`、
   `newDinerContext`、`markDocument`、`expectNoReload`、`recordRealtimeEvents`、
   `waitForRealtimeAck` 與 apiRequest；開兩個顧客畫面並確認 menu room ACK。
   item locator 使用菜品名稱縮小到 card，避免推薦區多次出現同名造成假失敗。
@@ -375,7 +375,7 @@ kitchen :3002，使用既有 dev 配置確認實際 port；不注入假的 API�
   owner、item、card、page 由上述 fixture／browser context 在該 test 內建立。
   finally 執行 cleanup.run 並 close contexts；測試不能讓備援輪詢掩蓋失去推送。
 
-- [ ] **2. 啟動與驗證本地 stack。** 使用現有本地 D1 migrations／seed 的命令，
+- [x] **2. 啟動與驗證本地 stack。** 使用現有本地 D1 migrations／seed 的命令，
   不重設或刪除本地資料；服務已在執行時直接重用。以 `E2E_STRICT=1`
   執行新增 E2E，任何 skip／stack down 不得列為通過：
 
@@ -386,7 +386,7 @@ kitchen :3002，使用既有 dev 配置確認實際 port；不注入假的 API�
   以三個入口的 HTTP 成功、實際 WebSocket frame 與 UI refetch／card變化，
   證明 mutation → DO → socket → menu GET 的完整流程。保留驗收截圖與 trace。
 
-- [ ] **3. 執行完整相關檢查。**
+- [x] **3. 執行完整相關檢查。**
 
   ```sh
   pnpm lint:fix

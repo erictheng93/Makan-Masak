@@ -502,7 +502,8 @@ onMounted(async () => {
         return;
       toast.info(
         t(
-          event.data.isAvailable
+          event.data.isAvailable &&
+            (event.data.inventoryCount == null || event.data.inventoryCount > 0)
             ? "realtime.menuAvailable"
             : "realtime.menuUnavailable",
           { name: event.data.menuItemName },

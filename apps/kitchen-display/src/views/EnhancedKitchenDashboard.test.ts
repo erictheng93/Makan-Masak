@@ -139,6 +139,14 @@ describe("EnhancedKitchenDashboard realtime catch-up", () => {
       data: { menuItemName: "Laksa", isAvailable: false },
     });
     expect(mocks.info).toHaveBeenCalledWith("realtime.menuUnavailable:Laksa");
+    callback?.({
+      type: "menu_availability_update",
+      restaurantId: "r1",
+      data: { menuItemName: "Laksa", isAvailable: true, inventoryCount: 0 },
+    });
+    expect(mocks.info).toHaveBeenLastCalledWith(
+      "realtime.menuUnavailable:Laksa",
+    );
     expect(mocks.handleSSEEvent).not.toHaveBeenCalled();
     wrapper.unmount();
     expect(mocks.unsubscribe).toHaveBeenCalledWith("menu_availability_update");

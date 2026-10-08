@@ -27,6 +27,13 @@ export class ManagerActionsService {
     input: ManagerActionCommand,
     actor: AuthUser,
   ): Promise<ManagerActionResult> {
+    if (
+      (this.env.DEPLOYMENT_MODE === "independent" &&
+        input.restaurantId !== this.env.TENANT_ID) ||
+      (actor.role !== 0 && String(actor.restaurantId) !== input.restaurantId)
+    ) {
+      throw new ApiError("FORBIDDEN", "Access denied to this restaurant", 403);
+    }
     this.assertActionResourcePair(input.action, input.resource);
 
     let executed = false;

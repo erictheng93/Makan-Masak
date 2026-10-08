@@ -14,6 +14,7 @@
  */
 export const CORS_ALLOWED_REQUEST_HEADERS: readonly string[] = [
   "Content-Type",
+  "Cache-Control",
   "Authorization",
   "X-Requested-With",
   "X-CSRF-Token",
