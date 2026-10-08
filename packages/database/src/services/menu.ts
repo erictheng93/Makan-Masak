@@ -873,7 +873,7 @@ export class MenuService extends BaseService {
   async updateMenuItem(
     id: number,
     data: UpdateMenuItemData,
-  ): Promise<MenuItem> {
+  ): Promise<MenuItem & { availabilityChanged: boolean }> {
     try {
       const moneyFields = menuItemMoneyFields(data);
       if (moneyFields.some((entry) => entry.cents != null)) {
@@ -890,7 +890,12 @@ export class MenuService extends BaseService {
         restaurantId: _restaurantId,
         ...updateData
       } = data;
-      const [item] = await this.db
+      const scope = and(
+        eq(menuItems.id, id),
+        eq(menuItems.restaurantId, restaurantId),
+        isNull(menuItems.deletedAt),
+      );
+      const write = this.db
         .update(menuItems)
         .set({
           ...updateData,
@@ -902,14 +907,35 @@ export class MenuService extends BaseService {
             : {}),
           updatedAt: new Date(),
         })
-        .where(
-          and(
-            eq(menuItems.id, id),
-            eq(menuItems.restaurantId, restaurantId),
-            isNull(menuItems.deletedAt),
-          ),
-        )
+        .where(scope)
         .returning();
+
+      let item: typeof menuItems.$inferSelect | undefined;
+      let availabilityChanged = false;
+      if (data.isAvailable !== undefined || data.inventoryCount !== undefined) {
+        // D1 batch is one transaction: compare against the row immediately
+        // before this write, never a route's potentially stale snapshot.
+        const [previous, updated] = await this.db.batch([
+          this.db
+            .select({
+              isAvailable: menuItems.isAvailable,
+              inventoryCount: menuItems.inventoryCount,
+            })
+            .from(menuItems)
+            .where(scope)
+            .limit(1),
+          write,
+        ]);
+        item = updated[0];
+        const before = previous[0];
+        availabilityChanged =
+          !!before &&
+          !!item &&
+          (before.isAvailable !== item.isAvailable ||
+            before.inventoryCount !== item.inventoryCount);
+      } else {
+        [item] = await write;
+      }
 
       if (!item) {
         throw new Error("Menu item not found");
@@ -921,7 +947,7 @@ export class MenuService extends BaseService {
         "tag",
       );
 
-      return this.mapToMenuItem(item);
+      return { ...this.mapToMenuItem(item), availabilityChanged };
     } catch (error) {
       this.handleError(error, "updateMenuItem");
     }

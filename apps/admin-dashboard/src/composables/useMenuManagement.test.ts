@@ -169,6 +169,31 @@ describe("useMenuManagement", () => {
     expect(apiMocks.get).toHaveBeenCalledTimes(2);
     wrapper.unmount();
   });
+  it("bypasses a repopulated stale menu cache on a supply event", async () => {
+    apiMocks.get.mockImplementation(async (_url, config) =>
+      buildMenuResponse([
+        buildApiMenuItem({
+          isAvailable: config?.headers?.["Cache-Control"] !== "no-cache",
+        }),
+      ]),
+    );
+    let menu!: ReturnType<typeof useMenuManagement>;
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          menu = useMenuManagement();
+          return () => null;
+        },
+      }),
+    );
+    realtime.callback?.({ restaurantId: "rest-1" });
+    await flushPromises();
+    expect(menu.menuItems.value[0].isAvailable).toBe(false);
+    expect(apiMocks.get).toHaveBeenCalledWith("/menu/rest-1?includeAll=true", {
+      headers: { "Cache-Control": "no-cache" },
+    });
+    wrapper.unmount();
+  });
   it("ignores a late older fetch and a fetch completing after unmount", async () => {
     let old!: (value: ReturnType<typeof buildMenuResponse>) => void;
     apiMocks.get.mockImplementationOnce(

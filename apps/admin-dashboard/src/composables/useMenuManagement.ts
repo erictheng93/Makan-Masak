@@ -154,7 +154,9 @@ export function useMenuManagement() {
       const response = await api.get<{
         categories: CategoryData[];
         menuItems: MenuItemData[];
-      }>(`/menu/${restaurantId}?includeAll=true`);
+      }>(`/menu/${restaurantId}?includeAll=true`, {
+        headers: { "Cache-Control": "no-cache" },
+      });
       if (
         disposed ||
         request !== menuRequest ||

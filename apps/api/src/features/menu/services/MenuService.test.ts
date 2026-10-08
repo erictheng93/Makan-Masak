@@ -128,7 +128,10 @@ describe("MenuService", () => {
     const { service } = createService({
       dbService: {
         getMenuItem: vi.fn(async () => menuItem()),
-        updateMenuItem: vi.fn(async () => menuItem(fields)),
+        updateMenuItem: vi.fn(async () => ({
+          ...menuItem(fields),
+          availabilityChanged: notify,
+        })),
       },
     });
     await service.updateMenuItem(101, fields);
@@ -152,7 +155,10 @@ describe("MenuService", () => {
     const { service } = createService({
       dbService: {
         getMenuItem: vi.fn(async () => menuItem()),
-        updateMenuItem: vi.fn(async () => menuItem({ isAvailable: false })),
+        updateMenuItem: vi.fn(async () => ({
+          ...menuItem({ isAvailable: false }),
+          availabilityChanged: true,
+        })),
       },
     });
     await expect(

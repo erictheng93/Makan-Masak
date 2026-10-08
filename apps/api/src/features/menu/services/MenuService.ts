@@ -344,10 +344,7 @@ export class MenuService implements IMenuService {
         ...fields,
         restaurantId: existingItem.restaurantId,
       });
-      if (
-        item.isAvailable !== existingItem.isAvailable ||
-        item.inventoryCount !== existingItem.inventoryCount
-      ) {
+      if (item.availabilityChanged) {
         await this.notifyAvailabilityChanges([this.transformMenuItem(item)]);
       }
       this.logger.info("Menu item updated successfully", { itemId: id });

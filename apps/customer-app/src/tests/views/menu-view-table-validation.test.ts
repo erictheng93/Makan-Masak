@@ -61,7 +61,21 @@ const menuResult = vi.hoisted(
   } => ({ __v_isRef: true, value: null }),
 );
 
-vi.mock("@/composables/useMenuRealtime", () => ({ useMenuRealtime: vi.fn() }));
+const realtimeRefresh = vi.hoisted(() => ({
+  callback: null as null | (() => Promise<unknown>),
+}));
+const pendingQuery = vi.hoisted(() => ({
+  table: null as null | { value: unknown },
+  menu: null as null | {
+    queryFn: (context: { queryKey: unknown[] }) => unknown;
+    enabled?: unknown;
+  },
+}));
+vi.mock("@/composables/useMenuRealtime", () => ({
+  useMenuRealtime: (_id: unknown, refresh: () => Promise<unknown>) => {
+    realtimeRefresh.callback = refresh;
+  },
+}));
 
 vi.mock("vue-router", () => ({
   useRoute: () => ({
@@ -167,10 +181,14 @@ vi.mock("@/components/LanguageSwitcher.vue", () => ({
 }));
 
 vi.mock("@tanstack/vue-query", () => ({
-  useQuery: (options: { queryKey: MaybeRef<unknown[]> }) => {
+  useQuery: (options: {
+    queryKey: MaybeRef<unknown[]>;
+    queryFn: (context: { queryKey: unknown[] }) => unknown;
+    enabled?: unknown;
+  }) => {
     if (unref(options.queryKey)[0] === "table-validation") {
       return {
-        data: tableValidationResult,
+        data: pendingQuery.table ?? tableValidationResult,
         isLoading: ref(false),
         error: ref(null),
         refetch: vi.fn(),
@@ -186,6 +204,7 @@ vi.mock("@tanstack/vue-query", () => ({
       };
     }
 
+    pendingQuery.menu = options;
     return {
       data: menuResult,
       isLoading: ref(false),
@@ -199,6 +218,8 @@ describe("MenuView table validation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();
+    pendingQuery.table = null;
+    pendingQuery.menu = null;
     tableValidationResult.value = null;
     restaurantResult.value = null;
     menuResult.value = null;
@@ -218,6 +239,29 @@ describe("MenuView table validation", () => {
     cartState.itemCount = 0;
     cartState.items = [];
     cartState.subtotal = 0;
+  });
+
+  it("retains realtime freshness until the table validation enables the first menu read", async () => {
+    const table = ref(
+      null as null | { isValid: boolean; table: { number: string } },
+    );
+    pendingQuery.table = table;
+    const wrapper = mount(MenuView, {
+      props: { restaurantId: "restaurant-1", tableId: 99 },
+    });
+    const { menuApi } = await import("@/services/menuApi");
+    await realtimeRefresh.callback?.();
+    expect(menuApi.getMenu).not.toHaveBeenCalled();
+    table.value = { isValid: true, table: { number: "99" } };
+    await flushPromises();
+    expect(unref(pendingQuery.menu!.enabled)).toBe(true);
+    await pendingQuery.menu!.queryFn({
+      queryKey: ["menu", "restaurant-1", 99],
+    });
+    expect(menuApi.getMenu).toHaveBeenCalledWith("restaurant-1", 99, {
+      fresh: true,
+    });
+    wrapper.unmount();
   });
 
   it("redirects invalid table deep links to the error page", async () => {

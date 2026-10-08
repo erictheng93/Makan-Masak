@@ -712,8 +712,8 @@ const {
 useMenuRealtime(
   () => props.restaurantId,
   async () => {
-    if (!isTableValid.value) return;
     freshMenuRead = true;
+    if (!isTableValid.value) return;
     await refetch({ cancelRefetch: false });
     if (freshMenuRead) await refetch({ cancelRefetch: false });
   },

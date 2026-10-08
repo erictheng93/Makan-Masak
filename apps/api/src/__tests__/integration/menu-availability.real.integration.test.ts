@@ -26,6 +26,39 @@ describe("menu availability — real D1", () => {
     await app?.dispose();
   });
 
+  it("notifies restoration from a stale prefetched snapshot and suppresses actual no-ops", async () => {
+    const restaurant = await seed.restaurant({ isActive: true });
+    const fixture = await seed.menuItem(restaurant.id, { isAvailable: true });
+    const statuses: boolean[] = [];
+    app.env.REALTIME_SESSION = {
+      idFromName: (room: string) => room,
+      get: (room: string) => ({
+        fetch: async (_url: string, init: RequestInit) => {
+          const event = JSON.parse(String(init.body));
+          if (room.startsWith("admin:")) statuses.push(event.data.isAvailable);
+          return Response.json({ success: true });
+        },
+      }),
+    } as unknown as DurableObjectNamespace;
+    try {
+      const service = new MenuService(app.env);
+      // Two handlers obtained the same snapshot before either write committed.
+      const before = await service.getMenuItem(fixture.id);
+      await service.updateMenuItem(fixture.id, { isAvailable: false }, before!);
+      await service.updateMenuItem(fixture.id, { isAvailable: true }, before!);
+      expect(statuses).toEqual([false, true]);
+      const staleSoldOut = { ...before!, isAvailable: false };
+      await service.updateMenuItem(
+        fixture.id,
+        { isAvailable: true },
+        staleSoldOut,
+      );
+      expect(statuses).toEqual([false, true]);
+    } finally {
+      app.env.REALTIME_SESSION = undefined as never;
+    }
+  });
+
   it("invalidates cached menus before sanitized public refresh, from all write paths", async () => {
     const restaurant = await seed.restaurant({ isActive: true });
     const fixture = await seed.menuItem(restaurant.id, {
