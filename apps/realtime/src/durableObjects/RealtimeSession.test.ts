@@ -895,6 +895,50 @@ describe("RealtimeSession message, routing, and validation behavior", () => {
     }
   });
 
+  it("rejects channel subscription escalation from public menu connections", async () => {
+    const session = createSession(createEnv());
+    const socket = createSocket();
+    const info = connection({ type: "menu" });
+    await internals(session).handleMessage(
+      socket,
+      JSON.stringify({ type: "subscribe", channel: "orders" }),
+      info,
+    );
+    expect(socket.send).toHaveBeenCalledWith(
+      expect.stringContaining("FORBIDDEN"),
+    );
+  });
+  it("allows only same-restaurant public refresh events into menu rooms", () => {
+    const session = createSession(createEnv());
+    const client = connection({
+      type: "menu",
+      auth: {
+        roomType: "menu",
+        roomId: "restaurant-1",
+        restaurantId: "restaurant-1",
+        role: "customer",
+        scope: "menu-realtime",
+      },
+    });
+    for (const type of Object.values(RealtimeEventType)) {
+      const candidate = { ...event("evt"), type };
+      expect(
+        internals(session).shouldSendEventToConnection(candidate, client),
+        type,
+      ).toBe(type === RealtimeEventType.MENU_ITEM_UPDATE);
+    }
+    expect(
+      internals(session).shouldSendEventToConnection(
+        {
+          ...event("evt"),
+          type: RealtimeEventType.MENU_ITEM_UPDATE,
+          restaurantId: "other",
+        },
+        client,
+      ),
+    ).toBe(false);
+  });
+
   it("covers event routing decisions for roles and event families", () => {
     const session = createSession(createEnv());
     const customer = connection();

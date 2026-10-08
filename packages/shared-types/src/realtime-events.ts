@@ -18,7 +18,8 @@ import type { MenuItem } from "./menu";
 export type RoomType =
   | "customer" // 顧客房間（桌號或店鋪）
   | "kitchen" // 廚房顯示系統
-  | "admin"; // 管理後台
+  | "admin" // 管理後台
+  | "menu"; // 公開菜單
 
 /**
  * 房間 ID 格式
@@ -49,7 +50,7 @@ export interface RealtimeAuthPayload {
   /** Source staff session and live account token version. */
   sid?: string;
   tv?: number;
-  scope?: "guest-realtime" | "group-order-realtime";
+  scope?: "guest-realtime" | "group-order-realtime" | "menu-realtime";
   guestFlag?: boolean;
   /** 桌號 ID（顧客連線時使用） */
   tableId?: string;

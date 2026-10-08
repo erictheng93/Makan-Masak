@@ -1,7 +1,7 @@
 import type { RealtimeAuthPayload } from "@makanmasak/shared-types";
 import type { Env } from "../types/env";
 
-export type RealtimeRoomType = "customer" | "admin" | "kitchen";
+export type RealtimeRoomType = "customer" | "admin" | "kitchen" | "menu";
 export type RateLimitLayer = "ip" | "client";
 
 // Mirrors `period` on both ratelimits bindings in wrangler.toml; the binding
@@ -39,7 +39,12 @@ export async function checkIpRateLimit(
  * token after a failed connect, so a per-token key would reset on every retry.
  * Legacy table guests carry no per-person id and share their table's bucket.
  */
-export function clientRateLimitKey(payload: RealtimeAuthPayload): string {
+export function clientRateLimitKey(
+  payload: RealtimeAuthPayload,
+  clientAddress = "unknown",
+): string {
+  if (payload.roomType === "menu")
+    return `menu:${payload.roomId}:${clientAddress}`;
   const who =
     payload.sid ??
     payload.memberId ??
@@ -53,10 +58,14 @@ export function clientRateLimitKey(payload: RealtimeAuthPayload): string {
 export async function checkClientRateLimit(
   payload: RealtimeAuthPayload,
   env: Pick<Env, "WS_CLIENT_RATE_LIMITER">,
+  request?: Request,
 ): Promise<boolean> {
   if (!env.WS_CLIENT_RATE_LIMITER) return true;
   const { success } = await env.WS_CLIENT_RATE_LIMITER.limit({
-    key: clientRateLimitKey(payload),
+    key: clientRateLimitKey(
+      payload,
+      request ? getClientAddress(request) : undefined,
+    ),
   });
   return success;
 }

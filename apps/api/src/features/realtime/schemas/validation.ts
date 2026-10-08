@@ -74,7 +74,12 @@ export const groupOrderRealtimeTokenRequestSchema = z.lazy(() =>
 /**
  * 導出 schemas 集合
  */
+export const menuRealtimeTokenRequestSchema = z.object({
+  restaurantId: z.string().min(1),
+});
+
 export const realtimeSchemas = {
+  menuRealtimeTokenRequest: menuRealtimeTokenRequestSchema,
   webSocketTokenRequest: webSocketTokenRequestSchema,
   guestRealtimeTokenRequest: guestRealtimeTokenRequestSchema,
   groupOrderRealtimeTokenRequest: groupOrderRealtimeTokenRequestSchema,

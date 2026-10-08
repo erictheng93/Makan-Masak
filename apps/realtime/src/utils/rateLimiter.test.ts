@@ -58,6 +58,22 @@ describe("checkIpRateLimit", () => {
 });
 
 describe("checkClientRateLimit", () => {
+  it("keeps public menu buckets stable per restaurant and IP", () => {
+    const payload = buildPayload({
+      roomType: "menu",
+      roomId: "r1",
+      scope: "menu-realtime",
+    });
+    expect(clientRateLimitKey(payload, "203.0.113.1")).toBe(
+      "menu:r1:203.0.113.1",
+    );
+    expect(clientRateLimitKey({ ...payload, iat: 100 }, "203.0.113.1")).toBe(
+      "menu:r1:203.0.113.1",
+    );
+    expect(clientRateLimitKey(payload, "203.0.113.2")).not.toBe(
+      clientRateLimitKey(payload, "203.0.113.1"),
+    );
+  });
   it("gives two guests on one IP separate budgets", () => {
     const first = buildPayload({ roomId: "order:o1" });
     const second = buildPayload({ roomId: "order:o2" });

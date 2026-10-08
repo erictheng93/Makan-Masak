@@ -103,6 +103,16 @@ export async function verifyWebSocketToken(
       };
     }
 
+    if (
+      (payload.roomType === "menu" || payload.scope === "menu-realtime") &&
+      (payload.roomType !== "menu" ||
+        payload.scope !== "menu-realtime" ||
+        payload.role !== "customer" ||
+        payload.guestFlag ||
+        payload.roomId !== payload.restaurantId)
+    )
+      return { valid: false, error: "Invalid menu token payload" };
+
     if (payload.guestFlag) {
       const isScopedOrderGuest =
         payload.scope === "guest-realtime" &&

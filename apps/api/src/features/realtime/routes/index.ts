@@ -127,6 +127,24 @@ realtimeRoutes.post(
 );
 
 realtimeRoutes.post(
+  "/auth/menu-token",
+  rateLimitMiddleware({
+    windowMs: 60_000,
+    maxRequests: 10,
+    keyPrefix: "realtime_menu_token",
+    message: "Too many menu realtime token requests",
+  }),
+  validateBody(realtimeSchemas.menuRealtimeTokenRequest),
+  async (c) => {
+    const result = await new RealtimeAuthService(c.env).generateMenuToken(
+      c.get("validatedBody"),
+    );
+    if ("error" in result) throw badRequest(result.error);
+    return c.json({ success: true, data: result }, HTTP_STATUS.OK);
+  },
+);
+
+realtimeRoutes.post(
   "/auth/guest-token",
   rateLimitMiddleware({
     windowMs: 60 * 1000,

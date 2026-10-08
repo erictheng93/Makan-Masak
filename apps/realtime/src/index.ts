@@ -88,7 +88,7 @@ async function connectToRoom(
 
   const payload = verification.payload;
   const clientLimited = await enforceRateLimit(c, "client", () =>
-    checkClientRateLimit(payload, c.env),
+    checkClientRateLimit(payload, c.env, c.req.raw),
   );
   if (clientLimited) return clientLimited;
 
@@ -131,6 +131,9 @@ app.get("/health", (c: Context<{ Bindings: Env }>) => {
 app.get("/customer/:tableId", (c) =>
   connectToRoom(c, "customer", c.req.param("tableId")),
 );
+app.get("/menu/:restaurantId", (c) =>
+  connectToRoom(c, "menu", c.req.param("restaurantId")),
+);
 app.get("/admin/:restaurantId", (c) =>
   connectToRoom(c, "admin", c.req.param("restaurantId")),
 );
@@ -148,6 +151,7 @@ app.notFound((c: Context<{ Bindings: Env }>) => {
         "/customer/:tableId",
         "/admin/:restaurantId",
         "/kitchen/:restaurantId",
+        "/menu/:restaurantId",
         "/health",
       ],
     },

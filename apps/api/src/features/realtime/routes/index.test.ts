@@ -5,6 +5,7 @@ import routes from "./index";
 const serviceMethods = vi.hoisted(() => ({
   generateWebSocketToken: vi.fn(),
   generateGuestToken: vi.fn(),
+  generateMenuToken: vi.fn(),
   verifyWebSocketToken: vi.fn(),
   verifyChannelAccess: vi.fn(),
   revokeToken: vi.fn(),
@@ -129,6 +130,25 @@ async function withSilencedRouteError<T>(
 }
 
 describe("realtime routes", () => {
+  it("exchanges a public restaurant id for a scoped menu token", async () => {
+    serviceMethods.generateMenuToken.mockResolvedValue({
+      token: "menu-token",
+      expiresIn: 300,
+      wsUrl: "wss://rt/menu/r1",
+    });
+    const response = await routes.fetch(
+      jsonRequest("/auth/menu-token", { restaurantId: "r1" }),
+      createEnv() as never,
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      success: true,
+      data: { token: "menu-token" },
+    });
+    expect(serviceMethods.generateMenuToken).toHaveBeenCalledWith({
+      restaurantId: "r1",
+    });
+  });
   beforeEach(() => {
     realtimeAuthService.mockClear();
     for (const method of Object.values(serviceMethods)) {

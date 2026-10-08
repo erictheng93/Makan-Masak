@@ -68,6 +68,68 @@ function createEnv(input?: {
 }
 
 describe("realtime worker routes", () => {
+  it("routes signed public menu subscriptions to the restaurant DO", async () => {
+    const env = createEnv();
+    const res = await worker.fetch(
+      upgradeRequest(
+        "/menu/restaurant-1",
+        buildToken({
+          roomType: "menu",
+          role: "customer",
+          scope: "menu-realtime",
+        }),
+      ),
+      env,
+    );
+    expect(res.status).toBe(200);
+    expect(env.REALTIME_SESSION.idFromName).toHaveBeenCalledWith(
+      "menu:restaurant-1",
+    );
+  });
+  it("rejects a staff token at the public menu route before touching a DO", async () => {
+    const env = createEnv();
+    const res = await worker.fetch(
+      upgradeRequest("/menu/restaurant-1", buildToken()),
+      env,
+    );
+    expect(res.status).toBe(403);
+    expect(env.REALTIME_SESSION.idFromName).not.toHaveBeenCalled();
+  });
+  it.each([
+    { scope: undefined },
+    { role: "admin" },
+    { roomId: "other" },
+    { restaurantId: "other" },
+    { guestFlag: true },
+    { exp: 1 },
+  ])(
+    "rejects invalid public menu credentials before allocating a room: %j",
+    async (overrides) => {
+      const env = createEnv();
+      const payload = {
+        roomType: "menu",
+        scope: "menu-realtime",
+        role: "customer",
+        ...overrides,
+      };
+      const token = overrides.exp
+        ? sign(
+            {
+              ...payload,
+              roomId: "restaurant-1",
+              restaurantId: "restaurant-1",
+            },
+            jwtSecret,
+          )
+        : buildToken(payload);
+      const res = await worker.fetch(
+        upgradeRequest("/menu/restaurant-1", token),
+        env,
+      );
+      expect(res.status).toBeGreaterThanOrEqual(400);
+      expect(env.REALTIME_SESSION.idFromName).not.toHaveBeenCalled();
+    },
+  );
   it("normalizes empty CORS origin configuration to no allowed origins", () => {
     expect(buildAllowedOrigins({ CORS_ORIGIN: undefined })).toEqual([]);
     expect(buildAllowedOrigins({ CORS_ORIGIN: " ,  , " })).toEqual([]);
@@ -325,6 +387,7 @@ describe("realtime worker routes", () => {
         "/customer/:tableId",
         "/admin/:restaurantId",
         "/kitchen/:restaurantId",
+        "/menu/:restaurantId",
         "/health",
       ],
     });

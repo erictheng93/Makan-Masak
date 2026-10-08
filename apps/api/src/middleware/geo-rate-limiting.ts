@@ -85,6 +85,7 @@ const SENSITIVE_KV_RATE_LIMIT_PATHS = [
   // Credential-in-body endpoint like guest-token: worth the durable KV counter
   // so group order IDs cannot be probed from a rotating pool of isolates.
   "/api/v1/realtime/auth/group-token",
+  "/api/v1/realtime/auth/menu-token",
 ];
 
 /**

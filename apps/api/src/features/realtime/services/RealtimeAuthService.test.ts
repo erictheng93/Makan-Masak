@@ -1,4 +1,4 @@
-import { sign } from "jsonwebtoken";
+import { sign, verify } from "jsonwebtoken";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   groupMembers,
@@ -276,6 +276,51 @@ describe("RealtimeAuthService", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("restricts public menu channel verification to its restaurant", () => {
+    const service = createService();
+    const payload = {
+      roomType: "menu",
+      scope: "menu-realtime",
+      restaurantId: "r1",
+      roomId: "r1",
+      role: "customer",
+      exp: 1000,
+      iat: 0,
+    } as RealtimeAuthPayload;
+    expect(service.verifyChannelAccess(payload, "other").allowed).toBe(false);
+    expect(service.verifyChannelAccess(payload, "r1").allowed).toBe(true);
+  });
+  it("mints a public menu token bound to one active restaurant", async () => {
+    setSelectFixtures({ restaurants: [[{ id: "restaurant-1" }]] });
+    const result = await createService().generateMenuToken({
+      restaurantId: "restaurant-1",
+    });
+    expect(result).not.toHaveProperty("error");
+    if ("error" in result) throw new Error(result.error);
+    const payload = verify(result.token, realtimeSecret) as {
+      exp: number;
+      iat: number;
+    };
+    expect(payload).toMatchObject({
+      roomType: "menu",
+      scope: "menu-realtime",
+      roomId: "restaurant-1",
+      restaurantId: "restaurant-1",
+      role: "customer",
+    });
+    expect(payload.exp - payload.iat).toBe(300);
+    expect(payload).not.toHaveProperty("guestFlag");
+    expect(result.wsUrl).toContain("/menu/restaurant-1?token=");
+    expect(mocks.db.select).toHaveBeenCalledOnce();
+  });
+  it("does not mint a menu token when the public restaurant query finds no row", async () => {
+    setSelectFixtures({ restaurants: [[]] });
+    expect(
+      await createService().generateMenuToken({ restaurantId: "restaurant-1" }),
+    ).toHaveProperty("error");
+    expect(mocks.db.select).toHaveBeenCalledOnce();
   });
 
   it("routes select fixtures by table and reports missing fixtures", async () => {

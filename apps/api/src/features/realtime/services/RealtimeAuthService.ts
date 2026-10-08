@@ -1,6 +1,6 @@
 import { sign, verify } from "jsonwebtoken";
 import { drizzle } from "drizzle-orm/d1";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import {
   groupMembers,
   groupOrders,
@@ -104,6 +104,39 @@ export class RealtimeAuthService {
     if (kvNamespace) {
       this.blacklistService = new TokenBlacklistService(kvNamespace);
     }
+  }
+
+  async generateMenuToken(request: {
+    restaurantId: string;
+  }): Promise<RealtimeAuthTokenResponse | { error: string }> {
+    const [restaurant] = await this.db
+      .select({ id: restaurants.id })
+      .from(restaurants)
+      .where(
+        and(
+          eq(restaurants.id, request.restaurantId),
+          eq(restaurants.isActive, true),
+          isNull(restaurants.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (!restaurant) return { error: "Public restaurant not found" };
+    const expiresIn = 300;
+    const payload: RealtimeAuthPayload = {
+      roomType: "menu",
+      roomId: restaurant.id,
+      restaurantId: restaurant.id,
+      role: "customer",
+      scope: "menu-realtime",
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + expiresIn,
+    };
+    const token = sign(payload, this.realtimeJwtSecret, { algorithm: "HS256" });
+    return {
+      token,
+      expiresIn,
+      wsUrl: this.buildWebSocketUrl("menu", restaurant.id, token),
+    };
   }
 
   async generateWebSocketToken(
@@ -351,6 +384,16 @@ export class RealtimeAuthService {
         };
       }
 
+      if (
+        (payload.roomType === "menu" || payload.scope === "menu-realtime") &&
+        (payload.roomType !== "menu" ||
+          payload.scope !== "menu-realtime" ||
+          payload.role !== "customer" ||
+          payload.guestFlag ||
+          payload.roomId !== payload.restaurantId)
+      )
+        return { valid: false, error: "Invalid menu token payload" };
+
       if (payload.guestFlag) {
         const isScopedGuestRealtime =
           payload.scope === "guest-realtime" &&
@@ -422,6 +465,11 @@ export class RealtimeAuthService {
     payload: RealtimeAuthPayload,
     channel: string,
   ): { allowed: boolean; error?: string } {
+    if (payload.scope === "menu-realtime") {
+      return channel === payload.roomId
+        ? { allowed: true }
+        : { allowed: false, error: "Token is not scoped to this channel" };
+    }
     if (payload.scope === "group-order-realtime") {
       if (!payload.groupOrderId) {
         return { allowed: false, error: "Invalid group order token payload" };

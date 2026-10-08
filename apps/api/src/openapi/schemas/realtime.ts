@@ -5,10 +5,10 @@
 
 import { z } from "zod";
 import { createRoute } from "@hono/zod-openapi";
-import { errorResponses } from "../config";
+import { errorResponses, errorResponseDef } from "../config";
 
 // Define enums first to avoid circular reference
-const RoomType = z.enum(["customer", "admin", "kitchen"]);
+const RoomType = z.enum(["customer", "admin", "kitchen", "menu"]);
 
 // /auth/token mints staff rooms only — customer rooms come from
 // /auth/guest-token, which verifies a signed QR or a guest token.
@@ -61,7 +61,7 @@ export const RealtimeSchemas = {
     success: z.boolean(),
     data: z.object({
       valid: z.boolean(),
-      roomType: z.enum(["customer", "admin", "kitchen"]).optional(),
+      roomType: z.enum(["customer", "admin", "kitchen", "menu"]).optional(),
       expiresAt: z.iso.datetime().optional(),
       channelAccess: z
         .object({
@@ -356,5 +356,37 @@ export const getActiveRoomsRoute = createRoute({
       },
     },
     ...errorResponses(401),
+  },
+});
+
+export const generateMenuTokenRoute = createRoute({
+  method: "post",
+  path: "/api/v1/realtime/auth/menu-token",
+  tags: ["realtime"],
+  summary: "Public restaurant menu subscription token",
+  security: [],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({ restaurantId: z.string().min(1) }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Restaurant-scoped public menu token",
+      content: {
+        "application/json": {
+          schema: RealtimeSchemas.GenerateTokenResponse,
+        },
+      },
+    },
+    ...errorResponses(400),
+    429: {
+      ...errorResponseDef[400],
+      description: "Token issuance rate limit exceeded",
+    },
   },
 });

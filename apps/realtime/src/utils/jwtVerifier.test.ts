@@ -65,6 +65,35 @@ describe("isTokenRevoked", () => {
 });
 
 describe("verifyWebSocketToken", () => {
+  it.each([
+    { scope: undefined },
+    { role: "admin" },
+    { roomId: "other" },
+    { guestFlag: true },
+    { roomType: "customer" },
+  ])("rejects invalid public menu binding %o", async (overrides) => {
+    const token = tokenFor({
+      roomType: "menu",
+      scope: "menu-realtime",
+      role: "customer",
+      ...overrides,
+    });
+    expect((await verifyWebSocketToken(token, secret)).valid).toBe(false);
+  });
+  it("accepts a restaurant-scoped public menu token", async () => {
+    expect(
+      (
+        await verifyWebSocketToken(
+          tokenFor({
+            roomType: "menu",
+            scope: "menu-realtime",
+            role: "customer",
+          }),
+          secret,
+        )
+      ).valid,
+    ).toBe(true);
+  });
   it("accepts valid realtime JWT payloads", async () => {
     const token = tokenFor({});
 

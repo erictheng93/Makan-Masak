@@ -55,6 +55,7 @@ import {
 import {
   RealtimeSchemas,
   generateWebSocketTokenRoute,
+  generateMenuTokenRoute,
   verifyWebSocketTokenRoute,
   broadcastMessageRoute,
   getConnectionStatsRoute,
@@ -505,6 +506,7 @@ export const OpenAPIRoutes = {
   },
   realtime: {
     generateToken: generateWebSocketTokenRoute,
+    generateMenuToken: generateMenuTokenRoute,
     verifyToken: verifyWebSocketTokenRoute,
     broadcast: broadcastMessageRoute,
     getConnectionStats: getConnectionStatsRoute,

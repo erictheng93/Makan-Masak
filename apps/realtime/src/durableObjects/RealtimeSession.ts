@@ -23,7 +23,7 @@ import {
 
 export interface ConnectionInfo {
   id: string;
-  type: "customer" | "admin" | "kitchen";
+  type: "customer" | "admin" | "kitchen" | "menu";
   roomId: string;
   connectedAt: number;
   lastActivity: number;
@@ -229,7 +229,7 @@ export class RealtimeSession implements DurableObject {
 
     const connectionInfo: ConnectionInfo = {
       id: connectionId,
-      type: roomType as "customer" | "admin" | "kitchen",
+      type: roomType as ConnectionInfo["type"],
       roomId: roomId,
       connectedAt: Date.now(),
       lastActivity: Date.now(),
@@ -352,6 +352,15 @@ export class RealtimeSession implements DurableObject {
         }
 
         case "subscribe":
+          if (connectionInfo.type === "menu") {
+            this.sendErrorEvent(
+              socket,
+              connectionInfo,
+              "FORBIDDEN",
+              "Menu subscriptions cannot change channels",
+            );
+            return;
+          }
           // 訂閱特定事件類型（未來擴展）
           // Subscription processed
           break;
@@ -501,6 +510,13 @@ export class RealtimeSession implements DurableObject {
     event: RealtimeEvent,
     connectionInfo: ConnectionInfo,
   ): boolean {
+    if (connectionInfo.type === "menu") {
+      return (
+        connectionInfo.auth?.scope === "menu-realtime" &&
+        event.restaurantId === connectionInfo.auth.restaurantId &&
+        event.type === RealtimeEventType.MENU_ITEM_UPDATE
+      );
+    }
     const eventType = event.type;
 
     // 群組訂單事件：房間（DO 實例）本身即以 groupOrderId 隔離
@@ -666,7 +682,7 @@ export class RealtimeSession implements DurableObject {
   ): { valid: boolean; error?: string } {
     // 定義角色允許訪問的房間類型
     const roleRoomMap: Record<string, string[]> = {
-      customer: ["customer"],
+      customer: ["customer", "menu"],
       staff: ["kitchen"],
       admin: ["admin", "kitchen"],
     };
