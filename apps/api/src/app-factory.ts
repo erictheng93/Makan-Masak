@@ -587,7 +587,14 @@ export function createApp(
         "/api/v1/auth/login",
         "/api/v1/auth/register",
         "/api/v1/auth/forgot-password$", // Public reset request uses no session cookie.
-        "/api/v1/customer/auth",
+        // The whole canonical customer feature, not only /auth: every write
+        // past /auth authenticates with `Authorization: Bearer` alone
+        // (canonicalCustomerAuthMiddleware), which a browser never attaches
+        // cross-site, and the customer app sends no CSRF token. Exempting only
+        // /auth left follow, saved dishes, preferences and push enrollment all
+        // answering 403. The refresh cookie is read only under /auth. Segment
+        // matching keeps the staff /api/v1/customers routes protected.
+        "/api/v1/customer",
         "/api/v1/monitoring/health",
         "/api/v1/sse", // SSE connections should not be CSRF protected
         "/api/v1/queue/public", // Public queue endpoints

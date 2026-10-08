@@ -64,10 +64,10 @@ describe("API cron wiring", () => {
   // could be retimed without moving the other. They want opposite cadences.
   it("keeps usage aggregation and payment reconciliation on separate ticks", () => {
     const aggregation = handler.match(
-      /cronMatches\(event\.cron, "([^"]+)"\)\)\s*\{\s*console\.log\("\[Cron\] Running usage aggregation/,
+      /cronMatches\(event\.cron, "([^"]+)"\)\)\s*\{\s*await runJob\("[^"]+", async \(\) => \{\s*console\.log\("\[Cron\] Running usage aggregation/,
     );
     const reconciliation = handler.match(
-      /cronMatches\(event\.cron, "([^"]+)"\)\)\s*\{\s*console\.log\("\[Cron\] Running market checkout payment reconciliation/,
+      /cronMatches\(event\.cron, "([^"]+)"\)\)\s*\{\s*await runJob\("[^"]+", async \(\) => \{\s*console\.log\("\[Cron\] Running market checkout payment reconciliation/,
     );
 
     expect(aggregation?.[1]).toBeDefined();

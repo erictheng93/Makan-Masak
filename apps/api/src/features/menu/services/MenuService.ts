@@ -207,6 +207,11 @@ export class MenuService implements IMenuService {
     }
   }
 
+  /** Diner saves per menu item id, for the owner's menu view. */
+  getDishFavoriteCounts(restaurantId: string): Promise<Map<number, number>> {
+    return this.dbService.countDishFavorites(restaurantId);
+  }
+
   async getMenuItem(id: number): Promise<MenuItem | null> {
     try {
       this.logger.debug("Fetching menu item", { id });

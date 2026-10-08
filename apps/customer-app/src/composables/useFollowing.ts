@@ -1,22 +1,23 @@
 import { computed, ref, type ComputedRef } from "vue";
 import { hasCustomerAccessToken } from "@/services/customerAccessToken";
+import type { CustomerFavorite } from "@/services/customerIdentityApi";
 
 /**
- * Following markets and restaurants (#335).
+ * Following markets and restaurants (#335), and favoriting dishes.
  *
  * `customer_favorites` is the table the marketing broadcast fan-out reads to
  * build its audience, so "follow" and "favorite" are the same row — there is no
- * second table and no second concept. Only the two target types a broadcast can
- * be scoped to are tracked here; `dish` favorites live in the same table but
- * belong to a different feature and are filtered out so they can never appear in
- * a followed list or be counted as an audience.
+ * second table and no second concept. Dish rows share the table but never reach
+ * an audience: `BroadcastService` only selects `market` and `restaurant` rows.
+ * Keep them out of the followed lists for the same reason — `favoriteDishes` is
+ * their only reader.
  *
  * State is module-level on purpose. A discovery page mounts twenty
  * `FollowButton`s and a market page mounts one per vendor row; each of them
  * asking the server whether this diner follows it would turn one screen into
  * twenty round trips. They share one unfiltered GET instead.
  */
-export type FollowTargetType = "market" | "restaurant";
+export type FollowTargetType = "market" | "restaurant" | "dish";
 
 export interface FollowedTarget {
   targetType: FollowTargetType;
@@ -28,11 +29,14 @@ export interface FollowedTarget {
    */
   favoriteId: number | null;
   createdAtMs: number;
+  /** Name and shop of a favorited dish; absent until the list is (re)loaded. */
+  dish?: CustomerFavorite["dish"];
 }
 
 const FOLLOW_TARGET_TYPES: readonly FollowTargetType[] = [
   "market",
   "restaurant",
+  "dish",
 ];
 
 const entries = ref<Record<string, FollowedTarget>>({});
@@ -100,6 +104,7 @@ async function load(): Promise<void> {
         targetId: row.targetId,
         favoriteId: row.id,
         createdAtMs: row.createdAtMs,
+        dish: row.dish,
       };
     }
     entries.value = next;
@@ -163,6 +168,7 @@ async function follow(
       targetId,
       favoriteId: row?.id ?? null,
       createdAtMs: row?.createdAtMs ?? Date.now(),
+      dish: row?.dish,
     };
   } catch (error) {
     delete entries.value[key];
@@ -203,6 +209,7 @@ export function useFollowing(): {
   toggle: (targetType: FollowTargetType, targetId: string) => Promise<boolean>;
   followedMarkets: ComputedRef<FollowedTarget[]>;
   followedRestaurants: ComputedRef<FollowedTarget[]>;
+  favoriteDishes: ComputedRef<FollowedTarget[]>;
 } {
   const isFollowing = (
     targetType: FollowTargetType,
@@ -235,6 +242,7 @@ export function useFollowing(): {
     toggle,
     followedMarkets: computed(() => sortedOfType("market")),
     followedRestaurants: computed(() => sortedOfType("restaurant")),
+    favoriteDishes: computed(() => sortedOfType("dish")),
   };
 }
 

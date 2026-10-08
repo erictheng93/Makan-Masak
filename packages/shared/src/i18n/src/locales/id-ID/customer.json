@@ -1342,7 +1342,14 @@
     "loading": "Memuat daftar yang diikuti…",
     "loadFailed": "Daftar yang diikuti gagal dimuat",
     "empty": "Anda belum mengikuti pasar atau kedai mana pun",
-    "unknownTarget": "Nama tidak tersedia"
+    "unknownTarget": "Nama tidak tersedia",
+    "favorite": "Simpan",
+    "favorited": "Disimpan",
+    "favoriteFailed": "Gagal menyimpan. Silakan coba lagi.",
+    "unfavoriteFailed": "Gagal menghapus. Silakan coba lagi.",
+    "dishesTitle": "Hidangan tersimpan",
+    "dishesEmpty": "Anda belum menyimpan hidangan apa pun",
+    "removeFavorite": "Hapus"
   },
   "notifications": {
     "title": "Notifikasi pemasaran",

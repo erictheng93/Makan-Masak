@@ -202,6 +202,8 @@
 
         <FollowingList />
 
+        <FavoriteDishesList />
+
         <!-- Quick Actions -->
         <div class="bg-white rounded-lg shadow p-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">
@@ -305,6 +307,7 @@ import { customerIdentityApi } from "@/services/customerIdentityApi";
 import { useI18n } from "@/composables/useI18n";
 import { useConfirmModal } from "@/composables/useConfirmModal";
 import FollowingList from "@/components/follow/FollowingList.vue";
+import FavoriteDishesList from "@/components/follow/FavoriteDishesList.vue";
 import NotificationSettingsCard from "@/components/settings/NotificationSettingsCard.vue";
 
 const router = useRouter();

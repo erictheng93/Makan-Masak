@@ -55,6 +55,7 @@ vi.mock("@makanmasak/database", async (importOriginal) => {
 
 const serviceFns = vi.hoisted(() => ({
   getMenu: vi.fn(),
+  getDishFavoriteCounts: vi.fn(),
   isPublicRestaurantAvailable: vi.fn(),
   getFeaturedItems: vi.fn(),
   getPopularItems: vi.fn(),
@@ -91,6 +92,7 @@ const serviceFns = vi.hoisted(() => ({
 vi.mock("../services/MenuService", () => ({
   MenuService: class {
     getMenu = serviceFns.getMenu;
+    getDishFavoriteCounts = serviceFns.getDishFavoriteCounts;
     isPublicRestaurantAvailable = serviceFns.isPublicRestaurantAvailable;
     getFeaturedItems = serviceFns.getFeaturedItems;
     getPopularItems = serviceFns.getPopularItems;
@@ -276,6 +278,7 @@ beforeEach(() => {
   auth.user = undefined;
 
   serviceFns.getMenu.mockResolvedValue(menu);
+  serviceFns.getDishFavoriteCounts.mockResolvedValue(new Map());
   serviceFns.isPublicRestaurantAvailable.mockResolvedValue(true);
   serviceFns.getFeaturedItems.mockResolvedValue([item]);
   serviceFns.getPopularItems.mockResolvedValue([item]);
@@ -338,6 +341,34 @@ describe("menu routes", () => {
     response = await request("/missing");
 
     expect(response.status).toBe(404);
+  });
+
+  it("adds diner save counts to the owner's menu only", async () => {
+    serviceFns.getDishFavoriteCounts.mockResolvedValue(
+      new Map([[Number(menu.menuItems[0].id), 3]]),
+    );
+
+    let response = await request("/rest-1?includeAll=true");
+    let body = (await response.json()) as {
+      data: { menuItems: Record<string, unknown>[] };
+    };
+    expect(body.data.menuItems[0]).not.toHaveProperty("favoriteCount");
+    expect(serviceFns.getDishFavoriteCounts).not.toHaveBeenCalled();
+
+    auth.user = {
+      id: "user-2",
+      username: "owner",
+      role: 1,
+      restaurantId: "rest-1",
+    };
+    response = await request("/rest-1?includeAll=true");
+    body = (await response.json()) as typeof body;
+
+    expect(response.status).toBe(200);
+    expect(serviceFns.getDishFavoriteCounts).toHaveBeenCalledWith("rest-1");
+    expect(body.data.menuItems[0]).toEqual(
+      expect.objectContaining({ favoriteCount: 3 }),
+    );
   });
 
   it("scopes includeAll to the owner's own restaurant", async () => {

@@ -153,6 +153,7 @@ const viVN: Messages = {
     soldOut: "Hết hàng",
     metrics: {
       sold: "đã bán",
+      saved: "lượt lưu",
     },
     featured: "Nổi bật",
     unknownCategory: "Danh mục không xác định",

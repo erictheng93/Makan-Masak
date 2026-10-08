@@ -41,3 +41,26 @@ describe("email alert delivery", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+describe("systemError", () => {
+  it("surfaces the wrapped cause so a Drizzle 'Failed query' alert names the D1 error", async () => {
+    const service = new AlertService({} as Env);
+    const sendAlert = vi.spyOn(service, "sendAlert").mockResolvedValue();
+
+    await service.systemError(
+      new Error("Failed query: select ...", {
+        cause: new Error("D1_ERROR: Network connection lost."),
+      }),
+      "Cron Job Execution",
+    );
+
+    expect(sendAlert).toHaveBeenCalledOnce();
+    expect(sendAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          Cause: "Error: D1_ERROR: Network connection lost.",
+        }),
+      }),
+    );
+  });
+});

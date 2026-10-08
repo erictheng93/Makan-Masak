@@ -47,6 +47,8 @@ export interface MenuItemData {
   inventoryCount?: number | null;
   minInventoryAlert?: number | null;
   orderCount?: number;
+  /** Diners who saved this dish; only on the owner's `includeAll` read. */
+  favoriteCount?: number;
   rating?: number;
   reviewCount?: number;
   /**

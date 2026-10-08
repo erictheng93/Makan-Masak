@@ -20,6 +20,7 @@ import {
   optionChoices,
   menuItemOptionGroups,
   menuItemOptionChoiceOverrides,
+  customerFavorites,
 } from "../schema";
 import type {
   MenuStructure,
@@ -927,21 +928,36 @@ export class MenuService extends BaseService {
    * reader that predates the deletedAt filters keeps hiding the row.
    *
    * Idempotent: deleting an already-deleted row keeps the original timestamp.
+   *
+   * Diners' saved-dish favorites go in the same batch: there is no restore
+   * path, so a favorite of a deleted dish could only ever render as a nameless
+   * row. Making the item unavailable does not touch them — that is a temporary
+   * state the dish comes back from.
    */
   async softDeleteMenuItem(id: number): Promise<boolean> {
     try {
-      const [item] = await this.db
-        .update(menuItems)
-        .set({
-          deletedAt: new Date(),
-          isAvailable: false,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(menuItems.id, id), notDeletedItem))
-        .returning({
-          id: menuItems.id,
-          restaurantId: menuItems.restaurantId,
-        });
+      const [[item]] = await this.db.batch([
+        this.db
+          .update(menuItems)
+          .set({
+            deletedAt: new Date(),
+            isAvailable: false,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(menuItems.id, id), notDeletedItem))
+          .returning({
+            id: menuItems.id,
+            restaurantId: menuItems.restaurantId,
+          }),
+        this.db
+          .delete(customerFavorites)
+          .where(
+            and(
+              eq(customerFavorites.targetType, "dish"),
+              eq(customerFavorites.targetId, String(id)),
+            ),
+          ),
+      ]);
 
       if (!item) {
         return false;
@@ -955,6 +971,34 @@ export class MenuService extends BaseService {
       return true;
     } catch (error) {
       this.handleError(error, "softDeleteMenuItem");
+    }
+  }
+
+  /**
+   * How many diners have saved each of a restaurant's dishes, keyed by menu
+   * item id. Dishes nobody saved are absent. Joined rather than bound as an id
+   * list: a menu can exceed D1's 100-parameter cap.
+   */
+  async countDishFavorites(restaurantId: string): Promise<Map<number, number>> {
+    try {
+      const rows = await this.db
+        .select({
+          menuItemId: menuItems.id,
+          favoriteCount: count(customerFavorites.id),
+        })
+        .from(menuItems)
+        .innerJoin(
+          customerFavorites,
+          and(
+            eq(customerFavorites.targetType, "dish"),
+            eq(customerFavorites.targetId, sql`CAST(${menuItems.id} AS TEXT)`),
+          ),
+        )
+        .where(and(eq(menuItems.restaurantId, restaurantId), notDeletedItem))
+        .groupBy(menuItems.id);
+      return new Map(rows.map((row) => [row.menuItemId, row.favoriteCount]));
+    } catch (error) {
+      this.handleError(error, "countDishFavorites");
     }
   }
 

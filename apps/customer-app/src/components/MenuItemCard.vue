@@ -59,6 +59,12 @@
             {{ getLocalizedMenuName(item, currentLanguage) }}
           </h3>
           <div class="flex items-center space-x-1 ml-2">
+            <FollowButton
+              target-type="dish"
+              :target-id="String(item.id)"
+              :name="getLocalizedMenuName(item, currentLanguage)"
+              compact
+            />
             <!-- 辣度指示器 -->
             <div v-if="item.spiceLevel > 0" class="flex items-center">
               <svg
@@ -238,6 +244,12 @@
                 {{ getLocalizedMenuName(item, currentLanguage) }}
               </h3>
               <div class="flex items-center space-x-1 ml-2">
+                <FollowButton
+                  target-type="dish"
+                  :target-id="String(item.id)"
+                  :name="getLocalizedMenuName(item, currentLanguage)"
+                  compact
+                />
                 <!-- 辣度指示器 -->
                 <div v-if="item.spiceLevel > 0" class="flex items-center">
                   <svg
@@ -384,6 +396,7 @@ import type {
 } from "@makanmasak/shared-types";
 import { useI18n } from "@/composables/useI18n";
 import { getLocalizedMenuName } from "@/utils/localized-menu-content";
+import FollowButton from "@/components/follow/FollowButton.vue";
 
 // Props
 const props = defineProps<{

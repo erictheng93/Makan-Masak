@@ -75,9 +75,15 @@ const busy = ref(false);
 
 const following = computed(() => isFollowing(props.targetType, props.targetId));
 
-const label = computed(() =>
-  following.value ? t("follow.following") : t("follow.follow"),
-);
+// A dish is saved, not followed: it never joins a broadcast audience.
+const isDish = computed(() => props.targetType === "dish");
+
+const label = computed(() => {
+  if (isDish.value) {
+    return following.value ? t("follow.favorited") : t("follow.favorite");
+  }
+  return following.value ? t("follow.following") : t("follow.follow");
+});
 
 /**
  * Twenty of these on one page all read "追蹤" to a screen reader, so the target
@@ -114,9 +120,17 @@ const onClick = async () => {
     // `toggle` has already put the shared state back, so the label is correct
     // again by the time this runs; all that is left is to say so. The message
     // names the action the diner attempted, not the one they are now in.
-    toast.error(
-      wasFollowing ? t("follow.unfollowFailed") : t("follow.followFailed"),
-    );
+    if (isDish.value) {
+      toast.error(
+        wasFollowing
+          ? t("follow.unfavoriteFailed")
+          : t("follow.favoriteFailed"),
+      );
+    } else {
+      toast.error(
+        wasFollowing ? t("follow.unfollowFailed") : t("follow.followFailed"),
+      );
+    }
   } finally {
     busy.value = false;
   }

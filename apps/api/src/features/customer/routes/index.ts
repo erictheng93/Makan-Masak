@@ -3,9 +3,12 @@ import type { Context } from "hono";
 import { getCookie } from "hono/cookie";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import { drizzle } from "drizzle-orm/d1";
+import { and, inArray, isNull } from "drizzle-orm";
 import { generateUUID, normalizeE164Phone } from "@makanmasak/utils";
 import {
   createSmsProvider,
+  menuItems,
   NotificationService,
   resolveEmailProviderName,
 } from "@makanmasak/database";
@@ -963,9 +966,10 @@ routes.get(
           .bind(customerId)
           .all();
 
+    const favorites = (result.results ?? []).map(toFavoriteSummary);
     return c.json({
       success: true,
-      data: (result.results ?? []).map(toFavoriteSummary),
+      data: await attachDishSummaries(c.env, favorites),
     });
   },
 );
@@ -991,7 +995,10 @@ routes.post(
       .first();
 
     if (existing) {
-      return c.json({ success: true, data: toFavoriteSummary(existing) });
+      const [summary] = await attachDishSummaries(c.env, [
+        toFavoriteSummary(existing),
+      ]);
+      return c.json({ success: true, data: summary });
     }
 
     await c.env.DB.prepare(
@@ -1011,7 +1018,10 @@ routes.post(
       .bind(customerId, body.targetType, body.targetId)
       .first();
 
-    return c.json({ success: true, data: toFavoriteSummary(row) }, 201);
+    const [summary] = await attachDishSummaries(c.env, [
+      toFavoriteSummary(row),
+    ]);
+    return c.json({ success: true, data: summary }, 201);
   },
 );
 
@@ -1740,6 +1750,55 @@ async function validateFavoriteTarget(
   }
 
   await validateMarketTarget(env, targetId);
+}
+
+type FavoriteSummary = NonNullable<ReturnType<typeof toFavoriteSummary>>;
+
+/**
+ * A dish row stores only the menu item id, and every public dish lookup is
+ * keyed by restaurant, so the client could not name or link a favorited dish on
+ * its own. Deleted dishes come back with `dish: null` rather than vanishing, so
+ * the diner can still see and remove the favorite.
+ */
+async function attachDishSummaries(
+  env: Env,
+  favorites: Array<FavoriteSummary | null>,
+) {
+  const dishIds = favorites
+    .filter((row) => row?.targetType === "dish")
+    .map((row) => Number(row?.targetId))
+    .filter((id) => Number.isInteger(id) && id > 0);
+  if (dishIds.length === 0) return favorites;
+
+  // D1 caps a statement at 100 bound parameters; a diner can save more dishes
+  // than that, so look them up 50 at a time.
+  const db = drizzle(env.DB);
+  const dishes = [];
+  for (let i = 0; i < dishIds.length; i += 50) {
+    dishes.push(
+      ...(await db
+        .select({
+          id: menuItems.id,
+          name: menuItems.name,
+          nameEn: menuItems.nameEn,
+          restaurantId: menuItems.restaurantId,
+        })
+        .from(menuItems)
+        .where(
+          and(
+            inArray(menuItems.id, dishIds.slice(i, i + 50)),
+            isNull(menuItems.deletedAt),
+          ),
+        )),
+    );
+  }
+  const byId = new Map(dishes.map(({ id, ...dish }) => [String(id), dish]));
+
+  return favorites.map((row) =>
+    row?.targetType === "dish"
+      ? { ...row, dish: byId.get(row.targetId) ?? null }
+      : row,
+  );
 }
 
 async function validateMarketTarget(env: Env, marketId: string): Promise<void> {

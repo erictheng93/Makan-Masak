@@ -54,6 +54,8 @@ export interface CustomerFavorite {
   targetType: "market" | "restaurant" | "dish";
   targetId: string;
   createdAtMs: number;
+  /** Only on dish rows from the list endpoint; `null` once the dish is deleted. */
+  dish?: { name: string; nameEn: string | null; restaurantId: string } | null;
 }
 
 export interface CustomerRecentMarket {

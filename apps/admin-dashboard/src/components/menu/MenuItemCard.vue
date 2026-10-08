@@ -70,12 +70,26 @@
 
       <!-- Order metrics -->
       <div
-        v-if="item.orderCount && item.orderCount > 0"
+        v-if="
+          (item.orderCount && item.orderCount > 0) ||
+          (item.favoriteCount && item.favoriteCount > 0)
+        "
         class="flex items-center gap-3 mb-2.5"
       >
-        <span class="flex items-center gap-1 text-[11px] text-ios-secondary">
+        <span
+          v-if="item.orderCount && item.orderCount > 0"
+          class="flex items-center gap-1 text-[11px] text-ios-secondary"
+        >
           <ShoppingBagIcon class="h-3 w-3" />
           {{ item.orderCount }} {{ t("menu.metrics.sold") }}
+        </span>
+        <span
+          v-if="item.favoriteCount && item.favoriteCount > 0"
+          data-testid="favorite-count"
+          class="flex items-center gap-1 text-[11px] text-ios-secondary"
+        >
+          <HeartIcon class="h-3 w-3" />
+          {{ item.favoriteCount }} {{ t("menu.metrics.saved") }}
         </span>
         <span
           v-if="item.rating && item.rating > 0"
@@ -151,6 +165,7 @@ import {
   EyeSlashIcon,
   ShoppingBagIcon,
   StarIcon,
+  HeartIcon,
 } from "@heroicons/vue/24/outline";
 import type { MenuItemData } from "@/composables/useMenuManagement";
 

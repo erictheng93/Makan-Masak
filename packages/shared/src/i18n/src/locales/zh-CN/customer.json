@@ -1342,7 +1342,14 @@
     "loading": "正在加载关注列表…",
     "loadFailed": "关注列表加载失败",
     "empty": "还没有关注任何商圈或店家",
-    "unknownTarget": "暂时无法获取名称"
+    "unknownTarget": "暂时无法获取名称",
+    "favorite": "收藏",
+    "favorited": "已收藏",
+    "favoriteFailed": "收藏失败，请稍后再试",
+    "unfavoriteFailed": "取消收藏失败，请稍后再试",
+    "dishesTitle": "收藏的菜品",
+    "dishesEmpty": "还没有收藏任何菜品",
+    "removeFavorite": "移除"
   },
   "notifications": {
     "title": "营销推送设置",

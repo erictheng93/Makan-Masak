@@ -151,6 +151,7 @@ const zhTWCore = {
     soldOut: "已售完",
     metrics: {
       sold: "已售出",
+      saved: "人收藏",
     },
     featured: "精選",
     unknownCategory: "未知分類",

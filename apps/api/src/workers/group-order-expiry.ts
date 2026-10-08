@@ -24,6 +24,7 @@ import {
 } from "../features/group-orders/services/GroupOrdersService";
 import type { GroupOrderStatus } from "../features/group-orders/types";
 import type { Env } from "../types/env";
+import { withD1Retry } from "../utils/d1-retry";
 import { RealtimeEventType } from "@makanmasak/shared-types";
 import { broadcastGroupOrderEvent } from "../features/group-orders/services/group-order-broadcast";
 
@@ -241,17 +242,22 @@ export async function sweepExpiringGroupOrders(
     options.serviceFactory ??
     ((sweepEnv: Env) => new GroupOrdersService(sweepEnv.DB, sweepEnv.CACHE_KV));
 
-  const expiringSoon = (await db
-    .select(sweepColumns)
-    .from(groupOrders)
-    .where(
-      and(
-        eq(groupOrders.status, ACTIVE),
-        gt(groupOrders.expiresAt, now),
-        lte(groupOrders.expiresAt, warningCutoff),
-      ),
-    )
-    .limit(500)) as SweepGroupOrder[];
+  // The selects and the stale-claim update below are idempotent, so a
+  // transient D1 blip is retried instead of failing the whole sweep.
+  // finalizeGroupOrder is deliberately not wrapped: it creates real orders.
+  const expiringSoon = (await withD1Retry(() =>
+    db
+      .select(sweepColumns)
+      .from(groupOrders)
+      .where(
+        and(
+          eq(groupOrders.status, ACTIVE),
+          gt(groupOrders.expiresAt, now),
+          lte(groupOrders.expiresAt, warningCutoff),
+        ),
+      )
+      .limit(500),
+  )) as SweepGroupOrder[];
 
   for (const groupOrder of expiringSoon) {
     try {
@@ -276,11 +282,15 @@ export async function sweepExpiringGroupOrders(
     }
   }
 
-  const expired = (await db
-    .select(sweepColumns)
-    .from(groupOrders)
-    .where(and(eq(groupOrders.status, ACTIVE), lte(groupOrders.expiresAt, now)))
-    .limit(500)) as SweepGroupOrder[];
+  const expired = (await withD1Retry(() =>
+    db
+      .select(sweepColumns)
+      .from(groupOrders)
+      .where(
+        and(eq(groupOrders.status, ACTIVE), lte(groupOrders.expiresAt, now)),
+      )
+      .limit(500),
+  )) as SweepGroupOrder[];
 
   for (const groupOrder of expired) {
     try {
@@ -342,32 +352,36 @@ export async function sweepExpiringGroupOrders(
   // already created is never handed back to a second finalizer.
   // `finalizing_failed` is deliberately out of scope — that is a terminal
   // state awaiting a human, not a stuck claim.
-  await db
-    .update(groupOrders)
-    .set({ status: ACTIVE, lockedAt: null, updatedAt: now })
-    .where(
-      and(
-        eq(groupOrders.status, FINALIZING),
-        isNull(groupOrders.masterOrderId),
-        isNotNull(groupOrders.lockedAt),
-        lt(groupOrders.lockedAt, staleBefore),
+  await withD1Retry(() =>
+    db
+      .update(groupOrders)
+      .set({ status: ACTIVE, lockedAt: null, updatedAt: now })
+      .where(
+        and(
+          eq(groupOrders.status, FINALIZING),
+          isNull(groupOrders.masterOrderId),
+          isNotNull(groupOrders.lockedAt),
+          lt(groupOrders.lockedAt, staleBefore),
+        ),
       ),
-    );
+  );
 
   // The other half of the same stuck claim: the order already exists, so the
   // sweep above must not touch it, but leaving it in `finalizing` strands it
   // where nothing can act on it. See demoteAbandonedFinalizeClaim.
-  const abandonedClaims = await db
-    .select()
-    .from(groupOrders)
-    .where(
-      and(
-        eq(groupOrders.status, FINALIZING),
-        isNotNull(groupOrders.masterOrderId),
-        isNotNull(groupOrders.lockedAt),
-        lt(groupOrders.lockedAt, staleBefore),
+  const abandonedClaims = await withD1Retry(() =>
+    db
+      .select()
+      .from(groupOrders)
+      .where(
+        and(
+          eq(groupOrders.status, FINALIZING),
+          isNotNull(groupOrders.masterOrderId),
+          isNotNull(groupOrders.lockedAt),
+          lt(groupOrders.lockedAt, staleBefore),
+        ),
       ),
-    );
+  );
 
   for (const groupOrder of abandonedClaims) {
     try {

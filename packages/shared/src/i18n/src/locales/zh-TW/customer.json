@@ -1342,7 +1342,14 @@
     "loading": "載入追蹤清單中…",
     "loadFailed": "追蹤清單載入失敗",
     "empty": "還沒有追蹤任何商圈或店家",
-    "unknownTarget": "名稱暫時無法取得"
+    "unknownTarget": "名稱暫時無法取得",
+    "favorite": "收藏",
+    "favorited": "已收藏",
+    "favoriteFailed": "收藏失敗，請稍後再試",
+    "unfavoriteFailed": "取消收藏失敗，請稍後再試",
+    "dishesTitle": "收藏的菜色",
+    "dishesEmpty": "還沒有收藏任何菜色",
+    "removeFavorite": "移除"
   },
   "notifications": {
     "title": "行銷推播設定",

@@ -303,6 +303,16 @@ export class AlertService {
       metadata: {
         ...(context ? { Context: context } : {}),
         "Error Name": error.name,
+        // Drizzle wraps D1 failures as "Failed query: ..." and keeps the real
+        // D1 message on `cause`; without it the alert cannot be diagnosed.
+        ...(error.cause !== undefined
+          ? {
+              Cause:
+                error.cause instanceof Error
+                  ? `${error.cause.name}: ${error.cause.message}`
+                  : String(error.cause),
+            }
+          : {}),
         Stack: error.stack?.split("\n").slice(0, 3).join("\n") || "N/A",
       },
     });
