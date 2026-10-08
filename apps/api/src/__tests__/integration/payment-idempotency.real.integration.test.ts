@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import { eq } from "drizzle-orm";
 import {
   orders,
+  tables,
   paymentTransactions,
   OrderService,
 } from "@makanmasak/database";
@@ -432,5 +433,152 @@ describe("payment currency authority", () => {
     await expect(rowsFor(order.id)).resolves.toEqual([
       expect.objectContaining({ amountCents: 12000, currency: "TWD" }),
     ]);
+  });
+});
+
+describe("atomic POS checkout", () => {
+  let testApp: RealIntegrationTestApp;
+  let seed: ReturnType<typeof buildSeedHelpers>;
+
+  beforeAll(async () => {
+    testApp = await createRealIntegrationTestApp();
+    seed = buildSeedHelpers(testApp.testDb);
+  });
+  afterAll(async () => {
+    await testApp?.dispose();
+  });
+  beforeEach(async () => {
+    await testApp.testDb.truncateAll();
+  });
+
+  const service = () => new PaymentService(testApp.env);
+  const staffActor = (restaurantId: string) => ({
+    kind: "staff" as const,
+    user: {
+      id: "018f0000-0000-7000-8000-000000000007",
+      username: "cashier",
+      role: 4,
+      restaurantId,
+    },
+  });
+  const payment = (orderId: string) => ({
+    orderId,
+    paymentMode: "full" as const,
+    amount: 120,
+    expectedTotal: 120,
+    method: "cash",
+  });
+  const recordedRows = (key: string) =>
+    testApp.testDb.drizzle
+      .select()
+      .from(paymentTransactions)
+      .where(eq(paymentTransactions.idempotencyKey, key));
+
+  const seedTable = async (restaurantId: string) => {
+    const [row] = await testApp.testDb.drizzle
+      .insert(tables)
+      .values({
+        restaurantId,
+        number: "T1",
+        qrCode: `qr-${Math.random().toString(36).slice(2)}`,
+      } as never)
+      .returning({ id: tables.id });
+    return row.id;
+  };
+  const tableRow = async (id: number) =>
+    (
+      await testApp.testDb.drizzle
+        .select()
+        .from(tables)
+        .where(eq(tables.id, id))
+    )[0];
+  const orderRow = async (id: string) =>
+    (
+      await testApp.testDb.drizzle
+        .select()
+        .from(orders)
+        .where(eq(orders.id, id))
+    )[0];
+
+  it("keeps the order unpaid when the closing batch fails", async () => {
+    const restaurant = await seed.restaurant();
+    const order = await seed.order(restaurant.id);
+    const svc = service();
+    const realBatch = (svc as never as { db: { batch: unknown } }).db;
+    const original = realBatch.batch;
+    realBatch.batch = async () => {
+      throw new Error("injected batch failure");
+    };
+
+    await expect(
+      svc.processPayment(payment(order.id), {
+        idempotencyKey: "idem-atomic-1",
+        actor: staffActor(restaurant.id),
+      }),
+    ).rejects.toThrow("injected batch failure");
+    realBatch.batch = original;
+
+    expect(await orderRow(order.id)).toMatchObject({
+      status: "pending",
+      paymentStatus: "pending",
+      paymentTransactionId: null,
+    });
+    await expect(recordedRows("idem-atomic-1")).resolves.toHaveLength(0);
+  });
+
+  it("rolls back the order update when a later statement in the batch fails", async () => {
+    const restaurant = await seed.restaurant();
+    const first = await seed.order(restaurant.id);
+    const second = await seed.order(restaurant.id);
+    await service().processPayment(payment(first.id), {
+      idempotencyKey: "idem-atomic-dup",
+      actor: staffActor(restaurant.id),
+    });
+
+    // Same key for another order is caught up front (422); to hit the
+    // unique index inside the batch, pre-empt the read-side replay check.
+    const svc = service();
+    const internals = svc as never as {
+      findPaymentByIdempotencyKey: () => Promise<undefined>;
+    };
+    internals.findPaymentByIdempotencyKey = async () => undefined;
+    await expect(
+      svc.processPayment(payment(second.id), {
+        idempotencyKey: "idem-atomic-dup",
+        actor: staffActor(restaurant.id),
+      }),
+    ).rejects.toThrow();
+
+    expect(await orderRow(second.id)).toMatchObject({
+      status: "pending",
+      paymentTransactionId: null,
+    });
+  });
+
+  it("keeps the table occupied while another open order remains on it", async () => {
+    const restaurant = await seed.restaurant();
+    const tableId = await seedTable(restaurant.id);
+    const a = await seed.order(restaurant.id, { tableId });
+    const b = await seed.order(restaurant.id, { tableId });
+    await testApp.testDb.drizzle
+      .update(tables)
+      .set({ isOccupied: true, currentOrderId: a.id })
+      .where(eq(tables.id, tableId));
+
+    await service().processPayment(payment(a.id), {
+      actor: staffActor(restaurant.id),
+    });
+    expect(await tableRow(tableId)).toMatchObject({
+      isOccupied: true,
+      currentOrderId: b.id,
+    });
+
+    await service().processPayment(payment(b.id), {
+      actor: staffActor(restaurant.id),
+    });
+    expect(await tableRow(tableId)).toMatchObject({
+      isOccupied: false,
+      currentOrderId: null,
+    });
   });
 });

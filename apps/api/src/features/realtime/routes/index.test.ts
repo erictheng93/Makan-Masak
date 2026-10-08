@@ -169,6 +169,23 @@ describe("realtime routes", () => {
     });
   });
 
+  it("rejects a `restaurant` room token request before reaching the service", async () => {
+    const response = await withSilencedRouteError(() =>
+      routes.fetch(
+        jsonRequest("/auth/token", {
+          roomType: "restaurant",
+          roomId: "restaurant-1",
+          restaurantId: "restaurant-1",
+          sessionId: "session-token",
+        }),
+        createEnv() as never,
+      ),
+    );
+
+    expect(response.status).toBeGreaterThanOrEqual(400);
+    expect(serviceMethods.generateWebSocketToken).not.toHaveBeenCalled();
+  });
+
   it("rejects unauthenticated customer room token requests before reaching the service", async () => {
     for (const body of [
       // The reported vulnerability: omit tableId and name any room.

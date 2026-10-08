@@ -158,9 +158,8 @@ export class RealtimeBroadcastService {
   async broadcastMenuAvailabilityUpdate(
     event: MenuAvailabilityUpdateEvent,
   ): Promise<BroadcastResult> {
-    // Admin dashboards connect to the `admin:{restaurantId}` room; `restaurant:*`
-    // has no connection route today but is kept for forward-compat.
-    return this.broadcastToRooms(event, ["restaurant", "admin"]);
+    // Admin dashboards connect to the `admin:{restaurantId}` room.
+    return this.broadcastToRooms(event, ["admin"]);
   }
 
   generateEventId(): string {
@@ -178,9 +177,7 @@ export class RealtimeBroadcastService {
     // The admin dashboard connects to the `admin:{restaurantId}` room (see the
     // apps/realtime routes), so order/kitchen events MUST fan out there or the
     // dashboard never receives them. `kitchen:*` serves the kitchen display.
-    // `restaurant:*` has no connection route today but is retained for
-    // forward-compat rather than removed.
-    return this.broadcastToRooms(event, ["restaurant", "kitchen", "admin"]);
+    return this.broadcastToRooms(event, ["kitchen", "admin"]);
   }
 
   private async broadcastStaffAndCustomer(

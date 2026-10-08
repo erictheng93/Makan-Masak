@@ -111,6 +111,34 @@ describe("SetupChecklistCard", () => {
     ).toBe("complete");
   });
 
+  it("explains what is lost while guest orders are still off", async () => {
+    mockChecklistRequests({
+      profile: {
+        ...completeProfile,
+        isAvailable: false,
+        settings: { allowGuestOrders: false },
+      },
+    });
+
+    const wrapper = await mountCard();
+
+    expect(
+      wrapper.get('[data-testid="setup-checklist-guest-orders-hint"]').text(),
+    ).toBe("dashboard.setupChecklist.guestOrdersHint");
+  });
+
+  it("shows no guest-order hint once they are on", async () => {
+    mockChecklistRequests({ tables: [] });
+
+    const wrapper = await mountCard();
+
+    expect(
+      wrapper
+        .find('[data-testid="setup-checklist-guest-orders-hint"]')
+        .exists(),
+    ).toBe(false);
+  });
+
   it("keeps a failed check visible as unable to verify while preserving other results", async () => {
     mockChecklistRequests({
       profile: { ...completeProfile, isAvailable: false },

@@ -351,117 +351,145 @@ export class PaymentService {
         )
       : undefined;
 
-    const orderUpdate = this.prepareOrderPaymentUpdate(
-      input.orderId,
-      paymentId,
-      method,
-      shouldCloseOrder,
-      now,
-    );
-    const orderUpdateResult = await orderUpdate.run();
-    if (mutationChanges(orderUpdateResult) === 0) {
-      throw new ApiError(
-        "ORDER_NOT_PAYABLE",
-        "Order is not in a payable state",
-        409,
-      );
-    }
-
-    await this.db.batch([
-      this.preparePaymentTransactionInsert(
-        {
-          transactionId: paymentId,
-          orderId: input.orderId,
+    // One atomic D1 batch: the order flips to paid only together with its
+    // payment row, audit rows, POS ledger and table release. The assert
+    // statement turns "the payable guard matched nothing" (a concurrent payer
+    // won) into a constraint error, which rolls the whole batch back.
+    try {
+      await this.db.batch([
+        this.prepareOrderPaymentUpdate(
+          input.orderId,
+          paymentId,
+          method,
+          shouldCloseOrder,
+          now,
+        ),
+        this.prepareOrderPaymentAssert(input.orderId, paymentId),
+        this.preparePaymentTransactionInsert(
+          {
+            transactionId: paymentId,
+            orderId: input.orderId,
+            restaurantId: existing.restaurantId,
+            amountCents: collectableCents,
+            roundingAdjustmentCents,
+            currency,
+            countryCode: country,
+            paymentMethod: method,
+            gateway:
+              options.actor.kind === "provider"
+                ? options.actor.provider
+                : (input.gateway ?? input.method ?? null),
+            providerTransactionId:
+              options.actor.kind === "provider"
+                ? options.actor.providerTransactionId
+                : null,
+            idempotencyKey: options.idempotencyKey ?? null,
+            customerInfo: jsonOrNull(options.customerInfo),
+            metadata: jsonOrNull({
+              ...((options.metadata as Record<string, unknown> | undefined) ??
+                {}),
+              paymentMode: input.paymentMode,
+              closeOrder: shouldCloseOrder,
+              ...(options.pos
+                ? {
+                    pos: {
+                      registerId: options.pos.registerId,
+                      shiftId: options.pos.shiftId,
+                    },
+                  }
+                : {}),
+            }),
+          },
+          now,
+        ),
+        this.paymentAudit.buildAppendQuery(this.db, {
           restaurantId: existing.restaurantId,
-          amountCents: collectableCents,
-          roundingAdjustmentCents,
-          currency,
-          countryCode: country,
-          paymentMethod: method,
-          gateway:
+          paymentTransactionId: paymentId,
+          eventType: PAYMENT_AUDIT_EVENT_TYPES.ATTEMPT,
+          provider:
             options.actor.kind === "provider"
               ? options.actor.provider
-              : (input.gateway ?? input.method ?? null),
-          providerTransactionId:
-            options.actor.kind === "provider"
-              ? options.actor.providerTransactionId
-              : null,
-          idempotencyKey: options.idempotencyKey ?? null,
-          customerInfo: jsonOrNull(options.customerInfo),
-          metadata: jsonOrNull({
-            ...((options.metadata as Record<string, unknown> | undefined) ??
-              {}),
-            paymentMode: input.paymentMode,
-            closeOrder: shouldCloseOrder,
-            ...(options.pos
-              ? {
-                  pos: {
-                    registerId: options.pos.registerId,
-                    shiftId: options.pos.shiftId,
-                  },
-                }
-              : {}),
-          }),
-        },
-        now,
-      ),
-      this.paymentAudit.buildAppendQuery(this.db, {
-        restaurantId: existing.restaurantId,
-        paymentTransactionId: paymentId,
-        eventType: PAYMENT_AUDIT_EVENT_TYPES.ATTEMPT,
-        provider:
-          options.actor.kind === "provider"
-            ? options.actor.provider
-            : (input.gateway ?? input.method ?? "internal"),
-        // What moved, not what was priced: for an MYR cash payment the
-        // audit trail must show the rounded figure the drawer received (#405).
-        amount: collectableCents,
-        currency,
-        rawPayload: {
-          orderId: input.orderId,
-          paymentMode: input.paymentMode,
-          paymentMethod: method,
-          gateway: input.gateway ?? input.method ?? null,
-          idempotencyKey: options.idempotencyKey ?? null,
-          closeOrder: shouldCloseOrder,
-          orderTotalCents: existing.totalAmountCents ?? 0,
-          roundingAdjustmentCents,
-        },
-        occurredAtMs: now,
-      }),
-      ...this.prepareCloseOrderSideEffects(
-        existing.tableId,
-        shouldCloseOrder,
-        now,
-      ),
-      this.preparePaymentTransactionStatusUpdate(paymentId, "paid", now),
-      this.paymentAudit.buildAppendQuery(this.db, {
-        restaurantId: existing.restaurantId,
-        paymentTransactionId: paymentId,
-        eventType: PAYMENT_AUDIT_EVENT_TYPES.SUCCESS,
-        provider:
-          options.actor.kind === "provider"
-            ? options.actor.provider
-            : (input.gateway ?? input.method ?? "internal"),
-        // What moved, not what was priced: for an MYR cash payment the
-        // audit trail must show the rounded figure the drawer received (#405).
-        amount: collectableCents,
-        currency,
-        rawPayload: { status: "paid" },
-        occurredAtMs: now,
-      }),
-      ...(options.pos && posSales
-        ? this.preparePosSaleLedgerStatements({
+              : (input.gateway ?? input.method ?? "internal"),
+          // What moved, not what was priced: for an MYR cash payment the
+          // audit trail must show the rounded figure the drawer received (#405).
+          amount: collectableCents,
+          currency,
+          rawPayload: {
             orderId: input.orderId,
-            paymentId,
-            registerId: options.pos.registerId,
-            shiftId: options.pos.shiftId,
-            operatorId: options.pos.operatorId,
-            sales: posSales,
-            now,
-          })
-        : []),
-    ] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+            paymentMode: input.paymentMode,
+            paymentMethod: method,
+            gateway: input.gateway ?? input.method ?? null,
+            idempotencyKey: options.idempotencyKey ?? null,
+            closeOrder: shouldCloseOrder,
+            orderTotalCents: existing.totalAmountCents ?? 0,
+            roundingAdjustmentCents,
+          },
+          occurredAtMs: now,
+        }),
+        ...this.prepareCloseOrderSideEffects(
+          input.orderId,
+          existing.restaurantId,
+          existing.tableId,
+          shouldCloseOrder,
+          now,
+        ),
+        this.preparePaymentTransactionStatusUpdate(paymentId, "paid", now),
+        this.paymentAudit.buildAppendQuery(this.db, {
+          restaurantId: existing.restaurantId,
+          paymentTransactionId: paymentId,
+          eventType: PAYMENT_AUDIT_EVENT_TYPES.SUCCESS,
+          provider:
+            options.actor.kind === "provider"
+              ? options.actor.provider
+              : (input.gateway ?? input.method ?? "internal"),
+          // What moved, not what was priced: for an MYR cash payment the
+          // audit trail must show the rounded figure the drawer received (#405).
+          amount: collectableCents,
+          currency,
+          rawPayload: { status: "paid" },
+          occurredAtMs: now,
+        }),
+        ...(options.pos && posSales
+          ? this.preparePosSaleLedgerStatements({
+              orderId: input.orderId,
+              paymentId,
+              registerId: options.pos.registerId,
+              shiftId: options.pos.shiftId,
+              operatorId: options.pos.operatorId,
+              sales: posSales,
+              now,
+            })
+          : []),
+      ] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+    } catch (error) {
+      // Rolled back, so the order is untouched. Tell a lost race (or a
+      // concurrent same-key request) apart from a genuine D1 failure.
+      if (options.idempotencyKey) {
+        const recorded = await this.findPaymentByIdempotencyKey(
+          options.idempotencyKey,
+        );
+        if (recorded?.orderId === input.orderId) {
+          return processPaymentResultFromRow(recorded, existing);
+        }
+      }
+      const [current] = await this.db
+        .select()
+        .from(orders)
+        .where(eq(orders.id, input.orderId))
+        .limit(1);
+      if (
+        current &&
+        current.paymentTransactionId !== paymentId &&
+        isAlreadyFinalized(current.status, current.paymentStatus)
+      ) {
+        throw new ApiError(
+          "ORDER_NOT_PAYABLE",
+          "Order is not in a payable state",
+          409,
+        );
+      }
+      throw error;
+    }
 
     if (shouldCloseOrder) {
       try {
@@ -767,14 +795,59 @@ export class PaymentService {
       .where(payableGuard);
   }
 
+  /**
+   * Violates `orders.status NOT NULL` when this payment did not take the
+   * order (the payable guard matched nothing), aborting the whole batch.
+   * Matches no row when the order update succeeded.
+   */
+  private prepareOrderPaymentAssert(orderId: string, paymentId: string) {
+    return this.db
+      .update(orders)
+      .set({ status: sql`NULL` })
+      .where(
+        and(
+          eq(orders.id, orderId),
+          sql`${orders.paymentTransactionId} IS NOT ${paymentId}`,
+        ),
+      );
+  }
+
+  /**
+   * Release the table only when no other open order remains on it; otherwise
+   * point it at one of them. Runs after the order update in the same batch, so
+   * "open" already excludes the order being paid.
+   */
   private prepareCloseOrderSideEffects(
+    orderId: string,
+    restaurantId: string,
     tableId: number | null | undefined,
     shouldCloseOrder: boolean,
     now: number,
   ) {
     if (!shouldCloseOrder || !tableId) return [];
 
+    // Layer 2 (schema refs): mirrors the payable guard in
+    // prepareOrderPaymentUpdate.
+    const otherOpen = sql`SELECT 1 FROM ${orders} WHERE ${orders.tableId} = ${tableId} AND ${orders.restaurantId} = ${restaurantId} AND ${orders.id} <> ${orderId} AND COALESCE(${orders.paymentStatus}, 'pending') NOT IN ('paid', 'completed', 'refunded', 'partial_refunded') AND ${orders.status} NOT IN ('paid', 'cancelled', 'refunded')`;
+    const tableScope = and(
+      eq(tables.id, tableId),
+      eq(tables.restaurantId, restaurantId),
+    );
+
     return [
+      this.db
+        .update(tables)
+        .set({
+          currentOrderId: sql`(SELECT ${orders.id} FROM ${orders} WHERE ${orders.tableId} = ${tableId} AND ${orders.restaurantId} = ${restaurantId} AND ${orders.id} <> ${orderId} AND COALESCE(${orders.paymentStatus}, 'pending') NOT IN ('paid', 'completed', 'refunded', 'partial_refunded') AND ${orders.status} NOT IN ('paid', 'cancelled', 'refunded') ORDER BY ${orders.createdAt} ASC LIMIT 1)`,
+          updatedAt: new Date(now),
+        })
+        .where(
+          and(
+            tableScope,
+            eq(tables.currentOrderId, orderId),
+            sql`EXISTS (${otherOpen})`,
+          ),
+        ),
       this.db
         .update(tables)
         .set({
@@ -784,7 +857,7 @@ export class PaymentService {
           occupiedBy: null,
           updatedAt: new Date(now),
         })
-        .where(eq(tables.id, tableId)),
+        .where(and(tableScope, sql`NOT EXISTS (${otherOpen})`)),
     ];
   }
 

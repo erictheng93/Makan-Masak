@@ -1,7 +1,7 @@
 # Panduan Pengguna MakanMakan
 
 > **Versi**: 2.0
-> **Terakhir Diperbarui**: 2025-10-26
+> **Terakhir Diperbarui**: 2026-10-05 (menambahkan "Daftar Tunggu" dan "Checkout Multi-Lapak Pasar")
 > **Untuk**: Semua pelanggan pengguna MakanMakan
 
 ---
@@ -21,9 +21,11 @@
 5. [Lihat Menu & Memesan](#-lihat-menu--memesan)
 6. [Kelola Keranjang](#-kelola-keranjang)
 7. [Lacak Pesanan](#-lacak-pesanan)
-8. [FAQ](#-faq)
-9. [Pemecahan Masalah](#-pemecahan-masalah)
-10. [Hubungi Kami](#-hubungi-kami)
+8. [Daftar Tunggu](#-daftar-tunggu)
+9. [Checkout Multi-Lapak Pasar](#-checkout-multi-lapak-pasar)
+10. [FAQ](#-faq)
+11. [Pemecahan Masalah](#-pemecahan-masalah)
+12. [Hubungi Kami](#-hubungi-kami)
 
 ---
 
@@ -647,6 +649,88 @@ Sistem kirim notifikasi saat:
 
 - Biarkan browser terbuka
 - Izinkan notifikasi (akan ditanya pertama kali)
+
+---
+
+## 🪑 Daftar Tunggu
+
+Jika restoran membuka daftar tunggu, Anda bisa mengambil nomor lebih dulu tanpa perlu mengantre di pintu. Alamat daftar tunggu biasanya diberikan lewat QR atau tautan restoran (`/r/kode-restoran/wait-list`).
+
+### Ambil Nomor
+
+1. Buka halaman daftar tunggu, judulnya "Gabung daftar tunggu".
+2. Isi **Nama**, **Telepon**, dan **Jumlah orang** (1–8 orang). Untuk permintaan khusus, isi **Catatan**.
+3. Nomor telepon harus **nomor ponsel Taiwan yang diawali 09** (contoh 0912 345 678, spasi dan "-" otomatis diabaikan). Jika tidak, akan muncul pesan "Masukkan nomor ponsel Taiwan yang diawali 09."
+4. Tekan "Gabung antrian". Jika berhasil, Anda langsung masuk ke halaman "Tiket tunggu saya".
+5. Di bagian bawah halaman ditampilkan jumlah kelompok "Sedang menunggu" dan menit "Perkiraan tunggu", bisa jadi acuan sebelum mengambil nomor.
+
+> Notifikasi push saat ini belum dibuka. Setelah mengambil nomor, tetap di halaman ini, atau cari nomor Anda lagi nanti dengan nomor telepon.
+
+### Lihat Nomor Saya
+
+Halaman "Tiket tunggu saya" menampilkan **Nomor antrian**, **status** saat ini, **Kelompok di depan**, **Perkiraan tunggu**, serta nama dan jumlah orang.
+
+- Halaman diperbarui otomatis sampai nomor mencapai status akhir. Jika tab browser berada di latar belakang, pembaruan dijeda; cukup kembali ke tab tersebut.
+- Status yang ada: Menunggu, Dipanggil, Kedatangan dikonfirmasi, Sudah duduk, Dibatalkan, Kedaluwarsa, Tidak datang.
+- Jangan membagikan alamat halaman ini ke publik, karena itulah bukti nomor Anda.
+
+### Setelah Dipanggil dan Tombol yang Tersedia
+
+| Tombol | Kapan muncul | Fungsi |
+| --- | --- | --- |
+| Konfirmasi kedatangan | Saat status "Dipanggil" | Memberi tahu restoran bahwa Anda sudah tiba |
+| Pesan lebih dulu | Selama nomor belum berakhir | Menuju menu restoran untuk memesan lebih dulu |
+| Batalkan tiket | Selama nomor belum berakhir | Melepas nomor ini |
+| Ambil nomor baru | Setelah nomor berakhir (dibatalkan, kedaluwarsa, dll.) | Kembali ke halaman ambil nomor untuk mendaftar ulang |
+| Kembali ke beranda | Setelah nomor berakhir | Kembali ke beranda MakanMakan |
+
+### Lupa Nomor atau Ganti Ponsel
+
+- Di halaman ambil nomor, tekan "**Cari tiket saya**", masukkan nomor telepon yang dipakai sebelumnya untuk menemukan kembali nomor yang masih berlaku. Jika tidak ditemukan, akan muncul "Tidak ada tiket aktif untuk nomor telepon ini."
+- Untuk melihat catatan sebelumnya, tekan "**Lihat riwayat**" (`/r/kode-restoran/wait-list/history`), masukkan nomor telepon lalu tekan "Muat riwayat", dan tekan "Buka tiket" untuk kembali ke tiket tersebut.
+- Jika sistem meminta verifikasi nomor telepon, Anda akan dibawa ke halaman masuk untuk verifikasi dengan **kode SMS**, lalu otomatis kembali ke halaman riwayat. Ini alur yang normal.
+
+### Pertanyaan Umum Daftar Tunggu
+
+- **Tidak bisa mengambil nomor**: Restoran mungkin belum membuka daftar tunggu, atau sementara tidak bisa bergabung. Coba lagi nanti atau tanyakan staf di tempat.
+- **Perkiraan tunggu tidak berubah**: Itu hanya perkiraan, ikuti panggilan dari restoran.
+- **Nomor tampil kedaluwarsa**: Nomor sudah tidak berlaku, tekan "Ambil nomor baru".
+
+---
+
+## 🛍️ Checkout Multi-Lapak Pasar
+
+Setelah memilih satu pasar di halaman "Pasar" (`/markets`), Anda bisa memasukkan makanan dari **lapak yang berbeda** ke dalam satu keranjang pasar, mengirimnya sekaligus, lalu melacaknya di halaman yang sama.
+
+> Fitur ini harus dibuka oleh restoran dan platform. Jika belum dibuka, tombol kirim berwarna abu-abu dan menampilkan "Belum tersedia", dengan petunjuk "Checkout multi-lapak belum dibuka. Pesan di tiap lapak secara terpisah dulu." Jika begitu, pesan di tiap lapak secara terpisah.
+
+### Kirim Pesanan Multi-Lapak
+
+1. Buka halaman pasar, tambahkan makanan dari tiap lapak ke "Keranjang pasar". Keranjang menampilkan "N lapak, N item".
+2. Checkout multi-lapak butuh **minimal 2 lapak**. Jika kurang, akan muncul petunjuk.
+3. Jika ada lapak yang tidak buka hari ini, sistem mengeluarkannya dari keranjang dan memberi tahu Anda. Periksa dulu sebelum mengirim.
+4. Masukkan **3 digit akhir telepon**, lalu tekan "Kirim". Tiga digit ini adalah bukti untuk menemukan pesanan Anda nanti, jadi ingat baik-baik.
+5. Jika berhasil, akan tampil "N pesanan lapak terkirim" dan Anda masuk ke halaman pelacakan pesanan pasar (`/markets/kode-pasar/checkout/id-checkout`).
+
+### Halaman Pelacakan Pesanan Pasar
+
+Bagian atas halaman menampilkan nama pasar dan status keseluruhan (**Sedang diproses** atau **Terkirim**), jumlah lapak, waktu kirim, serta:
+
+- **Subtotal**, **Diskon voucher** (jika memakai voucher), dan jumlah **Tagihan**.
+- Daftar **Pesanan lapak**: tiap lapak punya satu pesanan dengan nomor pesanan sendiri. Tekan "Lihat pesanan lapak" untuk melacak pesanan lapak tersebut.
+- Progres pembuatan di tiap lapak (menunggu konfirmasi, dikonfirmasi, sedang dibuat, siap diambil, selesai, ...) tetap menjadi tanggung jawab lapak itu, **ikuti panggilan atau pemberitahuan lapak di tempat**. Halaman ini hanya menyimpan ringkasan tingkat pasar.
+
+### Memakai Voucher dan Pembayaran Gabungan
+
+1. Jika halaman menampilkan "Masukkan kode voucher", masukkan kodenya lalu tekan "Terapkan". Untuk membatalkan, tekan "Hapus".
+2. Jika voucher tidak bisa dipakai, alasannya akan dijelaskan: tidak ditemukan, tidak berlaku untuk checkout pasar ini, sudah kedaluwarsa, sudah habis, belum mencapai belanja minimum. Pesanan yang sudah dibayar tidak bisa lagi mengganti voucher.
+3. Tekan "**Bayar semua lapak**" untuk melunasi semua lapak sekaligus. Saat pembayaran berjalan akan tampil "Memproses pembayaran", dan Anda dibawa ke halaman pembayaran sesuai metode pembayaran. **Setelah membayar, kembali ke halaman ini** untuk melacak.
+4. Halaman menampilkan "N dari M pembayaran lapak selesai". Jika sebagian lapak sudah dibayar, status keseluruhan adalah "Dibayar sebagian", dan Anda bisa menekan "Coba lagi pembayaran tertunda". Jika pembayaran gagal, tekan "Bayar lagi" dan periksa metode pembayaran.
+5. Jika tampil "Pembayaran gabungan pasar belum dibuka. Bayar tiap lapak langsung.", bayar langsung di tiap lapak di tempat.
+
+### Pesanan Lapak Tidak Bisa Dibuka
+
+Jika muncul "Tidak dapat membuka pesanan lapak. Buka lagi dari pesanan pasar terkini.", artinya perangkat ini tidak menemukan bukti akses untuk sub-pesanan tersebut. Kembali ke halaman pelacakan pesanan pasar lalu masuk lagi, atau beri tahu staf nomor pesanan dan 3 digit akhir telepon agar dibantu memeriksa. Jangan mengirim ulang pesanan sendiri.
 
 ---
 

@@ -131,7 +131,6 @@ export class RealtimeAuthService {
 
         case "kitchen":
         case "admin":
-        case "restaurant":
           if (!sessionId) {
             return { error: "Session ID required for this room type" };
           }
@@ -648,14 +647,14 @@ export class RealtimeAuthService {
    * The `admin` room used to fall through to "any staff role", which let a
    * chef or cashier mint a token for it. That room carries data the kitchen
    * room deliberately does not — WaitingListService broadcasts `customerName`
-   * to `admin:{rid}` — so it is owner/platform only, same as `restaurant`.
+   * to `admin:{rid}` — so it is owner/platform only.
    * `kitchen` stays the one staff-wide room. Anything outside the union is
    * denied rather than defaulted, because the route reads roomType off the
    * request body.
    */
   private canAccessRoomType(role: number, roomType: RoomType): boolean {
     if (roomType === "customer") return role === 5;
-    if (roomType === "restaurant" || roomType === "admin") {
+    if (roomType === "admin") {
       return role === 0 || role === 1;
     }
     if (roomType === "kitchen") return role >= 0 && role <= 4;

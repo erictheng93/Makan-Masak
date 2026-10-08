@@ -1103,6 +1103,16 @@ const submitOrder = async () => {
 
     const isAuthenticated = hasCustomerAccessToken();
     const isDineIn = !!props.tableId;
+    // The signed QR SignedOrderEntryView stored when the diner scanned in.
+    let scannedQr: string | undefined;
+    try {
+      scannedQr =
+        localStorage.getItem(
+          `makanmakan_table_qr:${props.restaurantId}:${props.tableId}`,
+        ) ?? undefined;
+    } catch {
+      scannedQr = undefined;
+    }
 
     if (!isAuthenticated && isDineIn) {
       // 訪客內用點餐 — 使用 guest-orders API（不需要登入）
@@ -1117,6 +1127,7 @@ const submitOrder = async () => {
         orderType: seatId.value ? "seat" : "table",
         tableId: props.tableId,
         seatId: seatId.value ?? undefined,
+        qrCode: scannedQr,
         items: cartStore.items.map((item) => ({
           menuItemId: item.menuItem.id,
           quantity: item.quantity,
@@ -1136,6 +1147,8 @@ const submitOrder = async () => {
       const orderData: CreateOrderRequest = {
         restaurantId: props.restaurantId,
         tableId: props.tableId,
+        seatId: props.tableId ? (seatId.value ?? undefined) : undefined,
+        qrCode: props.tableId ? scannedQr : undefined,
         customerName: customerInfo.value.name.trim() || undefined,
         customerPhone: customerInfo.value.phone.trim() || undefined,
         items: cartStore.items.map((item) => ({

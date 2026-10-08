@@ -93,7 +93,19 @@ describe("verifyWebSocketToken", () => {
     });
   });
 
-  it("rejects revoked tokens before decoding payload claims", async () => {
+  it("rejects a forged token without spending a blacklist read", async () => {
+    const kv = {
+      get: vi.fn().mockResolvedValue(null),
+    } as Partial<KVNamespace> as KVNamespace;
+    const forged = sign({ roomType: "admin" }, "x".repeat(32));
+
+    await expect(
+      verifyWebSocketToken(forged, secret, kv),
+    ).resolves.toMatchObject({ valid: false });
+    expect(kv.get).not.toHaveBeenCalled();
+  });
+
+  it("rejects revoked tokens once the signature checks out", async () => {
     const kv = {
       get: vi.fn().mockResolvedValue("revoked"),
     } as Partial<KVNamespace> as KVNamespace;

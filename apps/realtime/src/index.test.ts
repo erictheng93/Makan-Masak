@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { sign } from "jsonwebtoken";
 import worker, { buildAllowedOrigins } from "./index";
 import type { Env } from "./types/env";
 
@@ -9,12 +10,35 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
   });
 }
 
+const jwtSecret = "0123456789abcdefghijklmnopqrstuvwxyz";
+
+function buildToken(overrides: Record<string, unknown> = {}) {
+  return sign(
+    {
+      roomType: "admin",
+      roomId: "restaurant-1",
+      restaurantId: "restaurant-1",
+      role: "admin",
+      ...overrides,
+    },
+    jwtSecret,
+    { expiresIn: "1h" },
+  );
+}
+
+function upgradeRequest(path: string, token?: string) {
+  const url = new URL(path, "https://realtime.test");
+  if (token) url.searchParams.set("token", token);
+  return new Request(url, {
+    headers: { Upgrade: "websocket", "CF-Connecting-IP": "203.0.113.10" },
+  });
+}
+
 function createEnv(input?: {
   corsOrigin?: string;
   durableFetch?: (request: Request) => Response | Promise<Response>;
-  rateLimitValue?: string | null;
-  rateLimitEnabled?: boolean;
-  rateLimitGet?: () => Promise<string | null>;
+  ipLimiter?: Env["WS_IP_RATE_LIMITER"];
+  clientLimiter?: Env["WS_CLIENT_RATE_LIMITER"];
 }): Env {
   const durableObject = {
     fetch: vi.fn(
@@ -28,19 +52,17 @@ function createEnv(input?: {
     API_VERSION: "1",
     CORS_ORIGIN: input?.corsOrigin,
     JWT_SECRET: "secret",
-    RATE_LIMIT_ENABLED: input?.rateLimitEnabled ? "true" : "false",
+    REALTIME_JWT_SECRET: jwtSecret,
+    WS_IP_RATE_LIMITER: input?.ipLimiter,
+    WS_CLIENT_RATE_LIMITER: input?.clientLimiter,
     REALTIME_SESSION: {
       idFromName: vi.fn((name: string) => ({ name })),
       get: vi.fn(() => durableObject),
     } as unknown as DurableObjectNamespace,
-    RATE_LIMIT_KV: {
-      get: vi.fn(
-        input?.rateLimitGet ?? (async () => input?.rateLimitValue ?? null),
-      ),
-      put: vi.fn(async () => undefined),
-    } as unknown as KVNamespace,
     CACHE_KV: {} as KVNamespace,
-    TOKEN_BLACKLIST: {} as KVNamespace,
+    TOKEN_BLACKLIST: {
+      get: vi.fn(async () => null),
+    } as unknown as KVNamespace,
     DB: {} as D1Database,
   };
 }
@@ -103,10 +125,17 @@ describe("realtime worker routes", () => {
     expect(response.headers.get("Access-Control-Allow-Origin")).toBeNull();
   });
 
-  it("forwards customer websocket requests to the room Durable Object", async () => {
+  it("forwards an authenticated customer upgrade to the room Durable Object", async () => {
     const env = createEnv();
+    const token = buildToken({
+      roomType: "customer",
+      roomId: "customer:table-1",
+      role: "customer",
+      guestFlag: true,
+      tableId: "table-1",
+    });
     const response = await worker.fetch(
-      new Request("https://realtime.test/customer/table-1"),
+      upgradeRequest("/customer/table-1", token),
       env,
     );
 
@@ -119,10 +148,10 @@ describe("realtime worker routes", () => {
     expect(durable.fetch).toHaveBeenCalledWith(expect.any(Request));
   });
 
-  it("forwards admin and kitchen websocket requests to matching Durable Objects", async () => {
+  it("forwards admin and kitchen upgrades to matching Durable Objects", async () => {
     const adminEnv = createEnv();
     const adminResponse = await worker.fetch(
-      new Request("https://realtime.test/admin/restaurant-1"),
+      upgradeRequest("/admin/restaurant-1", buildToken()),
       adminEnv,
     );
 
@@ -133,7 +162,10 @@ describe("realtime worker routes", () => {
 
     const kitchenEnv = createEnv();
     const kitchenResponse = await worker.fetch(
-      new Request("https://realtime.test/kitchen/restaurant-1"),
+      upgradeRequest(
+        "/kitchen/restaurant-1",
+        buildToken({ roomType: "kitchen", role: "staff" }),
+      ),
       kitchenEnv,
     );
 
@@ -143,49 +175,114 @@ describe("realtime worker routes", () => {
     );
   });
 
-  it("enforces websocket rate limits before opening a Durable Object", async () => {
-    const env = createEnv({
-      rateLimitEnabled: true,
-      rateLimitValue: "30",
-    });
+  it.each([
+    ["no token", undefined, 401],
+    ["a forged token", sign({ roomType: "admin" }, "x".repeat(32)), 401],
+    ["a token for another room", buildToken({ roomId: "restaurant-2" }), 403],
+    ["a token for another room type", buildToken({ roomType: "kitchen" }), 403],
+  ])(
+    "rejects an upgrade with %s without touching a Durable Object",
+    async (_label, token, status) => {
+      const env = createEnv();
+      const response = await worker.fetch(
+        upgradeRequest("/admin/restaurant-1", token),
+        env,
+      );
+
+      expect(response.status).toBe(status);
+      expect(env.REALTIME_SESSION.idFromName).not.toHaveBeenCalled();
+      expect(env.REALTIME_SESSION.get).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejects a revoked token without touching a Durable Object", async () => {
+    const env = createEnv();
+    vi.mocked(env.TOKEN_BLACKLIST.get).mockResolvedValue("revoked" as never);
     const response = await worker.fetch(
-      new Request("https://realtime.test/customer/table-1", {
-        headers: {
-          Upgrade: "websocket",
-          "CF-Connecting-IP": "203.0.113.10",
-        },
-      }),
+      upgradeRequest("/admin/restaurant-1", buildToken()),
+      env,
+    );
+
+    expect(response.status).toBe(401);
+    expect(env.TOKEN_BLACKLIST.get).toHaveBeenCalledOnce();
+    expect(env.REALTIME_SESSION.get).not.toHaveBeenCalled();
+  });
+
+  it("answers a plain GET without waking a Durable Object", async () => {
+    const env = createEnv();
+    const response = await worker.fetch(
+      new Request("https://realtime.test/admin/restaurant-1"),
+      env,
+    );
+
+    expect(response.status).toBe(426);
+    expect(env.REALTIME_SESSION.get).not.toHaveBeenCalled();
+  });
+
+  it("applies the IP ceiling before reading the token", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const ipLimiter = { limit: vi.fn(async () => ({ success: false })) };
+    const env = createEnv({ ipLimiter });
+    const response = await worker.fetch(
+      upgradeRequest("/customer/table-1"),
       env,
     );
 
     expect(response.status).toBe(429);
-    expect(response.headers.get("Retry-After")).toBeTruthy();
+    expect(response.headers.get("Retry-After")).toBe("60");
+    expect(ipLimiter.limit).toHaveBeenCalledWith({ key: "203.0.113.10" });
+    expect(env.TOKEN_BLACKLIST.get).not.toHaveBeenCalled();
     expect(env.REALTIME_SESSION.get).not.toHaveBeenCalled();
     await expect(response.json()).resolves.toMatchObject({
       code: "REALTIME_RATE_LIMITED",
-      limit: 30,
     });
   });
 
-  it("returns a 503 when websocket rate-limit storage is unavailable", async () => {
-    const env = createEnv({
-      rateLimitEnabled: true,
-      rateLimitGet: async () => {
-        throw new Error("kv unavailable");
-      },
+  it("applies the per-client limit after verification, keyed by who connects", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const ipLimiter = { limit: vi.fn(async () => ({ success: true })) };
+    const clientLimiter = { limit: vi.fn(async () => ({ success: false })) };
+    const env = createEnv({ ipLimiter, clientLimiter });
+    const response = await worker.fetch(
+      upgradeRequest("/admin/restaurant-1", buildToken({ sid: "session-1" })),
+      env,
+    );
+
+    expect(response.status).toBe(429);
+    expect(ipLimiter.limit).toHaveBeenCalledOnce();
+    expect(clientLimiter.limit).toHaveBeenCalledWith({
+      key: "admin:restaurant-1:session-1",
     });
+    expect(env.REALTIME_SESSION.get).not.toHaveBeenCalled();
+  });
+
+  it("never spends the per-client budget on an unverified request", async () => {
+    const clientLimiter = { limit: vi.fn(async () => ({ success: true })) };
+    const env = createEnv({ clientLimiter });
+    const response = await worker.fetch(
+      upgradeRequest("/admin/restaurant-1"),
+      env,
+    );
+
+    expect(response.status).toBe(401);
+    expect(clientLimiter.limit).not.toHaveBeenCalled();
+  });
+
+  it("returns a 503 when the rate limiter is unavailable", async () => {
+    const ipLimiter = {
+      limit: vi.fn(async () => {
+        throw new Error("limiter unavailable");
+      }),
+    };
+    const env = createEnv({ ipLimiter });
 
     const response = await worker.fetch(
-      new Request("https://realtime.test/kitchen/restaurant-1", {
-        headers: {
-          Upgrade: "websocket",
-          "CF-Connecting-IP": "203.0.113.10",
-        },
-      }),
+      upgradeRequest("/kitchen/restaurant-1"),
       env,
     );
 
     expect(response.status).toBe(503);
+    expect(ipLimiter.limit).toHaveBeenCalledOnce();
     expect(env.REALTIME_SESSION.get).not.toHaveBeenCalled();
     await expect(response.json()).resolves.toEqual({
       error: "Realtime rate limit unavailable",

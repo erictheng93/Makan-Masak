@@ -1,7 +1,7 @@
 # Gabay sa Paggamit ng MakanMakan para sa Customer
 
 > **Bersyon**: 2.0
-> **Huling Na-update**: 2025-10-26
+> **Huling Na-update**: 2026-10-05 (idinagdag ang "Wait List" at "Checkout sa Maraming Stall ng Market")
 > **Para sa**: Lahat ng customer na gumagamit ng MakanMakan
 
 ---
@@ -21,9 +21,11 @@
 5. [Tingnan ang Menu at Mag-order](#-tingnan-ang-menu-at-mag-order)
 6. [Pamamahala ng Cart](#-pamamahala-ng-cart)
 7. [Subaybayan ang Order](#-subaybayan-ang-order)
-8. [Mga Madalas na Tanong (FAQ)](#-mga-madalas-na-tanong-faq)
-9. [Troubleshooting](#-troubleshooting)
-10. [Makipag-ugnayan sa Amin](#-makipag-ugnayan-sa-amin)
+8. [Wait List](#-wait-list)
+9. [Checkout sa Maraming Stall ng Market](#-checkout-sa-maraming-stall-ng-market)
+10. [Mga Madalas na Tanong (FAQ)](#-mga-madalas-na-tanong-faq)
+11. [Troubleshooting](#-troubleshooting)
+12. [Makipag-ugnayan sa Amin](#-makipag-ugnayan-sa-amin)
 
 ---
 
@@ -647,6 +649,88 @@ Magpapadala ang system ng notifications kapag:
 
 - Panatilihing bukas ang browser
 - Payagan ang site notifications (tatanungin sa unang gamit)
+
+---
+
+## 🪑 Wait List
+
+Kapag bukas ang wait list ng restaurant, maaari kang kumuha ng numero nang hindi pumipila sa pinto. Karaniwang ibinibigay ng QR o link ng restaurant ang URL ng wait list (`/r/kodigo-ng-restaurant/wait-list`).
+
+### Pagkuha ng Numero
+
+1. Buksan ang wait list page na may pamagat na "Sumali sa Wait List".
+2. Punan ang **pangalan**, **numero ng cellphone**, at **bilang ng kakain** (1～8 katao). Maaari ring maglagay ng **tala** kung may espesyal na pangangailangan.
+3. Dapat **Taiwan mobile number na nagsisimula sa 09** ang numero ng cellphone (halimbawa 0912 345 678; awtomatikong binabalewala ang mga espasyo at "-"). Kung hindi, lalabas ang mensaheng "Maglagay ng Taiwan mobile number na nagsisimula sa 09."
+4. Pindutin ang "Sumali sa Pila". Kapag matagumpay, direkta kang dadalhin sa page na "Aking Numero sa Wait List".
+5. Sa ibabang bahagi ng page, makikita ang bilang ng mga grupong "Kasalukuyang Naghihintay" at ang "Tinatayang Paghihintay" sa minuto, na maaari mong sangguniin bago kumuha ng numero.
+
+> Hindi pa bukas ang push notification sa ngayon. Pagkakuha ng numero, manatili sa page na ito, o hanapin ito mamaya gamit ang numero ng cellphone.
+
+### Tingnan ang Aking Numero
+
+Ipinapakita ng page na "Aking Numero sa Wait List" ang **numero sa wait list**, **kasalukuyang status**, **bilang ng grupong nauuna sa iyo**, **tinatayang paghihintay**, pati ang pangalan at bilang ng kakain.
+
+- Awtomatikong nag-a-update ang page hanggang umabot sa huling status ang numero. Kung nasa background ang browser tab, humihinto ang pag-update; bumalik lang sa tab para magpatuloy.
+- Mga posibleng status: naghihintay, tinawag na, kumpirmadong dumating na, nakaupo na, kinansela, nag-timeout, at hindi sumipot.
+- Huwag ipost nang pampubliko ang URL ng page na ito; ito mismo ang patunay ng numero mo.
+
+### Pagkatapos Tawagin at ang mga Available na Button
+
+| Button | Kailan lumalabas | Ginagawa nito |
+| --- | --- | --- |
+| Kumpirmahin ang Pagdating | Kapag "Tinawag Na" ang status | Ipinaaalam sa restaurant na dumating ka na |
+| Mag-order Muna | Hangga't hindi pa tapos ang numero | Pumunta sa menu ng restaurant para mag-order muna |
+| Kanselahin ang Wait List | Hangga't hindi pa tapos ang numero | Isuko ang numerong ito |
+| Kumuha Muli ng Numero | Kapag tapos na ang numero (kinansela, nag-timeout, atbp.) | Bumalik sa page ng pagkuha ng numero para magparehistro muli |
+| Bumalik sa Home | Kapag tapos na ang numero | Bumalik sa home page ng MakanMakan |
+
+### Nakalimutan ang Numero o Nagpalit ng Cellphone
+
+- Sa page ng pagkuha ng numero, pindutin ang "**Hanapin ang Numero Gamit ang Cellphone**" at ilagay ang orihinal na numero ng cellphone para mabawi ang kasalukuyang valid na numero. Kapag walang nahanap, lalabas ang "Walang valid na wait list para sa numero ng cellphone na ito."
+- Para makita ang mga nakaraang tala, pindutin ang "**Tingnan ang Kasaysayan**" (`/r/kodigo-ng-restaurant/wait-list/history`), ilagay ang numero ng cellphone, pindutin ang "I-load ang Kasaysayan", at pindutin ang "Tingnan ang Numero" para bumalik sa partikular na numerong iyon.
+- Kung kailangang i-verify ang cellphone, dadalhin ka sa login page para mag-verify gamit ang **SMS verification code**, at awtomatiko kang babalik sa history page pagkatapos. Normal ito.
+
+### Mga Madalas na Tanong sa Wait List
+
+- **Hindi makakuha ng numero**: Maaaring hindi pa nagbubukas ng wait list ang restaurant, o pansamantalang hindi makasali. Subukan muli mamaya o magtanong sa staff sa lugar.
+- **Hindi gumagalaw ang tinatayang paghihintay**: Tantiya lamang ito; sundin ang pagtawag ng restaurant.
+- **Nakasaad na nag-timeout ang numero**: Hindi na valid ang numero. Pindutin ang "Kumuha Muli ng Numero".
+
+---
+
+## 🛍️ Checkout sa Maraming Stall ng Market
+
+Pagkapili ng isang market sa page ng "Market" (`/markets`), maaari mong ilagay sa iisang market cart ang pagkain mula sa **iba't ibang stall**, isumite nang minsanan, at subaybayan sa iisang page.
+
+> Nangangailangan ang feature na ito ng pag-enable ng restaurant at ng platform. Kapag hindi pa bukas, magiging abuhin ang submit button at lalabas ang "Hindi Pa Bukas", kasama ang paalalang "Hindi pa bukas ang multi-stall checkout; maaari munang mag-order sa bawat stall nang hiwalay." Sa ganitong kaso, mag-order na lang sa bawat stall nang hiwalay.
+
+### Pagsumite ng Order sa Maraming Stall
+
+1. Pumunta sa market page at idagdag ang pagkain sa "Market Cart" sa bawat stall. Ipapakita ng cart ang "N stall, N item".
+2. Kailangan ng **hindi bababa sa 2 stall** para sa multi-stall checkout. Kapag kulang, may lalabas na paalala.
+3. Kung may stall na hindi bukas ngayong araw, aalisin ito ng system sa cart at aabisuhan ka. Suriin muna bago isumite.
+4. Ilagay ang **huling tatlong digit ng cellphone**, at pindutin ang "Isumite". Ang tatlong digit na ito ang patunay mo para mabawi ang order sa hinaharap, kaya tandaan ito.
+5. Kapag matagumpay, lalabas ang "Naisumite ang N order ng stall" at pupunta ka sa page ng pagsubaybay ng market order (`/markets/kodigo-ng-market/checkout/numero-ng-checkout`).
+
+### Page ng Pagsubaybay ng Market Order
+
+Sa itaas ng page makikita ang pangalan ng market at ang pangkalahatang status (**Pinoproseso** o **Naisumite na**), bilang ng stall, oras ng pagsumite, at ang mga sumusunod:
+
+- **Subtotal**, **diskwento ng kupon** (kung may ginamit na kupon), at ang **babayarang halaga**.
+- Listahan ng **order ng bawat stall**: may sariling order at order number ang bawat stall, at maaari mong pindutin ang "Tingnan ang Order ng Stall" para pumasok sa pagsubaybay ng order ng stall na iyon.
+- Ang progreso ng paghahanda ng bawat stall (naghihintay ng kumpirmasyon, kinumpirma, ipinaghahanda, handa nang kunin, tapos na...) ay responsibilidad pa rin ng stall na iyon, kaya **sundin ang pagtawag o abiso ng restaurant sa lugar**. Buod lamang sa antas ng market ang iniingatan ng page na ito.
+
+### Paggamit ng Kupon at Joint Payment
+
+1. Kung may "Ilagay ang Code ng Kupon" sa page, ilagay ang code at pindutin ang "I-apply"; para kanselahin, pindutin ang "Alisin".
+2. Kapag hindi magamit ang kupon, ipinapaliwanag ang dahilan: hindi nahanap, hindi akma sa checkout ng market na ito, expired na, naubos na, o hindi umabot sa minimum na gastos. Hindi na mapapalitan ang kupon ng order na bayad na.
+3. Pindutin ang "**Joint Payment**" para bayaran nang minsanan ang lahat ng stall. Habang nagpoproseso, lalabas ang "Pinoproseso ang Bayad" at dadalhin ka sa payment page ayon sa paraan ng pagbabayad; **pagkatapos magbayad, bumalik sa page na ito** para mag-track.
+4. Ipapakita ng page ang "Natapos ang bayad ng X / Y stall". Kapag may ilang stall lang na nabayaran, "Bahagyang Bayad ang Natapos" ang pangkalahatang status at maaari mong pindutin ang "Subukan Muli ang Hindi Natapos na Bayad". Kapag nabigo ang bayad, pindutin ang "Magbayad Muli" at kumpirmahin ang paraan ng pagbabayad.
+5. Kung lumabas ang "Hindi pa bukas ang joint payment ng market; magbayad nang direkta sa bawat stall", magbayad na lang nang personal sa bawat stall.
+
+### Paano Kung Hindi Mabuksan ang Order ng Stall
+
+Kung lumabas ang "Hindi mabuksan ang order ng stall; pumasok muli mula sa pinakabagong market order", ibig sabihin ay walang makitang access credential ng sub-order na iyon sa device na ito. Bumalik sa page ng pagsubaybay ng market order at pumasok muli, o ibigay sa staff ang order number at ang huling tatlong digit ng cellphone para matulungan kang kumpirmahin. Huwag magsumite ulit nang mag-isa.
 
 ---
 

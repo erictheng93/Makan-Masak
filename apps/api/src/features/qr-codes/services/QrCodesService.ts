@@ -12,7 +12,16 @@ import {
 } from "../../../core/monitoring";
 import { CACHE_TTL, USER_ROLES } from "../../../shared/constants";
 import { forbidden } from "../../../shared/utils/api-error";
-import { QRCodeService } from "@makanmasak/database";
+import {
+  QRCodeService,
+  count,
+  eq,
+  inArray,
+  qrCodes,
+  qrDownloads,
+  qrTemplates,
+  users,
+} from "@makanmasak/database";
 import * as QRCode from "qrcode";
 import { strToU8, zipSync } from "fflate";
 
@@ -42,17 +51,6 @@ interface QRBatchStatus {
 interface QROwnedResource {
   restaurantId?: string | number | null;
   restaurant_id?: string | number | null;
-}
-
-interface CountRow {
-  count?: number | string | bigint | null;
-}
-
-interface PopularTemplateRow {
-  id?: number | string | null;
-  name?: string | null;
-  usage_count?: number | string | bigint | null;
-  usageCount?: number | string | bigint | null;
 }
 
 export class QrCodesService implements IQRCodeService, IQRTemplateService {
@@ -391,65 +389,38 @@ export class QrCodesService implements IQRCodeService, IQRTemplateService {
   private async getRestaurantStatistics(
     restaurantId: string,
   ): Promise<QRStatistics> {
-    const [totalQRCodes, totalDownloads, totalTemplates, popularTemplates] =
-      await Promise.all([
-        this.countByRestaurant(
-          "SELECT COUNT(*) AS count FROM qr_codes WHERE restaurant_id = ?",
-          restaurantId,
-        ),
-        this.countByRestaurant(
-          `SELECT COUNT(*) AS count
-           FROM qr_downloads downloads
-           INNER JOIN qr_codes codes ON codes.id = downloads.qr_code_id
-          WHERE codes.restaurant_id = ?`,
-          restaurantId,
-        ),
-        this.countByRestaurant(
-          "SELECT COUNT(*) AS count FROM qr_templates WHERE restaurant_id = ?",
-          restaurantId,
-        ),
-        this.getPopularTemplatesByRestaurant(restaurantId),
-      ]);
+    // qr_templates has no restaurant_id: a template belongs to whoever created
+    // it, and a user belongs to one restaurant.
+    const restaurantUsers = this.db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.restaurantId, restaurantId));
+
+    const [[codes], [downloads], [templates]] = await Promise.all([
+      this.db
+        .select({ count: count() })
+        .from(qrCodes)
+        .where(eq(qrCodes.restaurantId, restaurantId)),
+      this.db
+        .select({ count: count() })
+        .from(qrDownloads)
+        .innerJoin(qrCodes, eq(qrCodes.id, qrDownloads.qrCodeId))
+        .where(eq(qrCodes.restaurantId, restaurantId)),
+      this.db
+        .select({ count: count() })
+        .from(qrTemplates)
+        .where(inArray(qrTemplates.createdBy, restaurantUsers)),
+    ]);
 
     return {
-      totalQRCodes,
-      totalDownloads,
-      totalTemplates,
-      popularTemplates,
+      totalQRCodes: codes?.count ?? 0,
+      totalDownloads: downloads?.count ?? 0,
+      totalTemplates: templates?.count ?? 0,
+      // Template usage is not recorded anywhere (same as getGlobalStatistics).
+      popularTemplates: [],
       formatDistribution: {},
       recentActivity: [],
     };
-  }
-
-  private async countByRestaurant(
-    sql: string,
-    restaurantId: string,
-  ): Promise<number> {
-    const row = await this.env.DB.prepare(sql)
-      .bind(restaurantId)
-      .first<CountRow>();
-
-    return Number(row?.count ?? 0);
-  }
-
-  private async getPopularTemplatesByRestaurant(
-    restaurantId: string,
-  ): Promise<QRStatistics["popularTemplates"]> {
-    const result = await this.env.DB.prepare(
-      `SELECT id, name, COALESCE(usage_count, 0) AS usage_count
-         FROM qr_templates
-        WHERE restaurant_id = ?
-        ORDER BY usage_count DESC
-        LIMIT 5`,
-    )
-      .bind(restaurantId)
-      .all<PopularTemplateRow>();
-
-    return (result.results || []).map((template) => ({
-      id: Number(template.id ?? 0),
-      name: String(template.name ?? ""),
-      usage_count: Number(template.usage_count ?? template.usageCount ?? 0),
-    }));
   }
 
   private parseQRStyle(styleJson: string | null | undefined) {

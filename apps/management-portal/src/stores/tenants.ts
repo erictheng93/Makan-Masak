@@ -15,6 +15,7 @@ import type {
   Tenant,
   TenantResource,
   DeploymentLog,
+  DeploymentType,
   HealthCheck,
   License,
   CreateTenantRequest,
@@ -256,10 +257,18 @@ export const useTenantsStore = defineStore("tenants", () => {
     }
   }
 
-  async function deployTenant(id: string, version?: string) {
+  async function deployTenant(
+    id: string,
+    targetVersion: string,
+    deploymentType?: DeploymentType,
+  ) {
     loading.value = true;
     try {
-      const deployment = await deploymentsApi.deploy({ tenantId: id, version });
+      const deployment = await deploymentsApi.deploy({
+        tenantId: id,
+        targetVersion,
+        deploymentType,
+      });
       currentDeployments.value.unshift(deployment);
       return deployment;
     } catch (e) {

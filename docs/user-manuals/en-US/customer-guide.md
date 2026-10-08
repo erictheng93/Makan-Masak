@@ -1,7 +1,7 @@
 # MakanMakan Customer Guide
 
 > **Version**: 2.0
-> **Last Updated**: 2025-10-26
+> **Last Updated**: 2026-10-05 (added "Wait List" and "Market Multi-Stall Checkout")
 > **Target Audience**: All MakanMakan customers
 
 ---
@@ -21,9 +21,11 @@
 5. [Browse Menu & Ordering](#-browse-menu--ordering)
 6. [Cart Management](#-cart-management)
 7. [Order Tracking](#-order-tracking)
-8. [FAQ](#-faq)
-9. [Troubleshooting](#-troubleshooting)
-10. [Contact Us](#-contact-us)
+8. [Wait List](#-wait-list)
+9. [Market Multi-Stall Checkout](#-market-multi-stall-checkout)
+10. [FAQ](#-faq)
+11. [Troubleshooting](#-troubleshooting)
+12. [Contact Us](#-contact-us)
 
 ---
 
@@ -647,6 +649,88 @@ System sends notifications when:
 
 - Keep browser open
 - Allow site notifications (will ask on first use)
+
+---
+
+## 🪑 Wait List
+
+When a restaurant has opened its wait list, you can take a number first instead of queueing at the door. The wait list address is usually provided by the restaurant's QR code or link (`/r/restaurant-code/wait-list`).
+
+### Taking a Number
+
+1. Open the wait list page, titled "Join wait list".
+2. Fill in your **name**, **phone number** and **party size** (1 to 8 guests). Add **notes** if you have special requests.
+3. The phone must be a **Taiwan mobile number starting with 09** (for example 0912 345 678; spaces and "-" are ignored automatically), otherwise you will see "Enter a Taiwan mobile number starting with 09."
+4. Tap "Join queue". On success you go straight to the "My waiting ticket" page.
+5. The bottom of the page shows the number of parties "Now waiting" and the "Estimated wait" in minutes, for your reference before taking a number.
+
+> Push notifications are not yet available. After taking a number, stay on this page, or look it up later with your phone number.
+
+### Viewing My Number
+
+The "My waiting ticket" page shows your **queue number**, **current status**, **parties ahead** and **estimated wait**, plus your name and party size.
+
+- The page refreshes automatically until the number reaches a final status; if the browser tab is in the background, updates pause, and resume when you switch back.
+- The statuses are: Waiting, Called, Arrival confirmed, Seated, Cancelled, Expired, No show.
+- Please do not post this page's URL publicly; it is the credential for your ticket.
+
+### After Being Called and the Available Buttons
+
+| Button | When it appears | What it does |
+| --- | --- | --- |
+| Confirm arrival | When the status is "Called" | Tells the restaurant you have arrived |
+| Order ahead | While the number has not ended | Goes to the restaurant's menu so you can order first |
+| Cancel ticket | While the number has not ended | Gives up this number |
+| Take a new number | After the number has ended (cancelled, expired, etc.) | Returns to the join page to register again |
+| Back to home | After the number has ended | Returns to the MakanMakan home page |
+
+### Forgot Your Number or Changed Phones
+
+- On the join page, tap "**Look up my ticket**" and enter the original phone number to recover your current active number; if none is found, it shows "No active ticket found for this phone number."
+- To see past records, tap "**View history**" (`/r/restaurant-code/wait-list/history`), enter your phone number and tap "Load history", then tap "Open ticket" to return to that ticket.
+- If the system asks you to verify your phone, it takes you to the login page to verify with an **SMS verification code**, and returns to the history page automatically afterwards. This is the normal flow.
+
+### Wait List FAQ
+
+- **Cannot get a number**: the restaurant may not have opened the wait list yet, or joining is temporarily unavailable. Please try again later or ask on-site staff.
+- **Estimated wait does not move**: it is only an estimate, so go by the restaurant's number calling.
+- **Number shows as expired**: the number is no longer valid. Tap "Take a new number".
+
+---
+
+## 🛍️ Market Multi-Stall Checkout
+
+After choosing a market on the "Markets" page (`/markets`), you can put dishes from **different stalls** into one market basket, submit them all at once, and track them afterwards on the same page.
+
+> This feature must be opened by the restaurant and the platform. When it is not open, the submit button is greyed out and shows "Not available yet", with the hint "Multi-stall checkout is not open yet. Order from each stall separately for now." In that case, please order from each stall separately.
+
+### Submitting a Multi-Stall Order
+
+1. Go to the market page and add dishes to the "Market basket" from each stall; the basket shows "N stalls, N items".
+2. You need **at least 2 stalls** for multi-stall checkout; a hint is shown when there are fewer.
+3. If a stall is not open today, the system removes it from the basket and lets you know. Please review before submitting.
+4. Enter the **last 3 phone digits** and tap "Submit". These three digits are the credential for finding your order later, so please remember them.
+5. On success it shows "Sent N stall orders." and takes you to the market order tracking page (`/markets/market-code/checkout/checkout-id`).
+
+### Market Order Tracking Page
+
+The top of the page shows the market name and the overall status (**Processing** or **Submitted**), the number of stalls, the submission time, and:
+
+- The **Subtotal**, **Voucher discount** (when a voucher is used) and **Amount due**.
+- The **Stall orders** list: each stall has its own order and order number, and you can tap "View stall order" to open that stall's order tracking.
+- Each stall's preparation progress (Awaiting confirmation, Confirmed, Being prepared, Ready for pickup, Completed, ...) is still handled by that restaurant, so **go by the stall's own call-out or notice**. This page keeps only the market-level summary.
+
+### Using Vouchers and Combined Payment
+
+1. If the page shows "Enter voucher code", enter the code and tap "Apply"; to cancel, tap "Remove".
+2. When a voucher cannot be used, the reason is explained: not found, does not apply to this market checkout, expired, used up, or below the minimum spend. A voucher cannot be changed on an order that is already paid.
+3. Tap "**Pay all stalls**" to pay all stalls at once. While paying it shows "Processing payment", and depending on the payment method takes you to a payment page; **after paying, come back to this page** to track.
+4. The page shows "N of N stall payments done". When only some stalls' payments are complete, the overall status is "Partly paid", and you can tap "Retry unpaid stalls". If a payment fails, tap "Pay again" and check your payment method.
+5. If it shows "Combined market payment is not open yet. Pay each stall directly.", please pay at each stall on site.
+
+### What If You Cannot Open a Stall Order
+
+If you see "Unable to open the stall order. Reopen it from your recent market orders.", it means the access credential for that sub-order cannot be found on this device. Go back to the market order tracking page and re-enter, or give the order number and the last 3 phone digits to staff so they can help confirm. Do not submit the order again yourself.
 
 ---
 

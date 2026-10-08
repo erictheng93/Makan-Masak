@@ -4,7 +4,6 @@
  * KV 命名空間說明：
  * - CACHE_KV: 通用快取（與 API 共用）
  * - TOKEN_BLACKLIST: 安全令牌撤銷（專用命名空間）
- * - RATE_LIMIT_KV: WebSocket 連線限流
  */
 export interface Env {
   // Durable Object bindings
@@ -20,9 +19,6 @@ export interface Env {
   /** 安全令牌黑名單（專用命名空間，確保登出/密碼變更立即生效） */
   TOKEN_BLACKLIST: KVNamespace;
 
-  /** WebSocket 連線限流（防止連線濫用） */
-  RATE_LIMIT_KV: KVNamespace;
-
   // Environment variables
   JWT_SECRET: string;
   REALTIME_JWT_SECRET?: string;
@@ -30,8 +26,10 @@ export interface Env {
   API_VERSION: string;
   CORS_ORIGIN?: string;
 
-  // Rate limiting
-  RATE_LIMIT_ENABLED: string;
+  /** WebSocket 連線限流 A 層：每個 IP 的寬鬆上限（僅 production 綁定） */
+  WS_IP_RATE_LIMITER?: RateLimit;
+  /** WebSocket 連線限流 B 層：驗證後每個客戶端的上限（僅 production 綁定） */
+  WS_CLIENT_RATE_LIMITER?: RateLimit;
 
   // Logging
   SLACK_WEBHOOK_URL?: string;

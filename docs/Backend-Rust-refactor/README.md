@@ -140,8 +140,8 @@ docs.
 >   routes themselves are intentional and kept.
 > - **#22** deletions were each re-verified zero-reference before removal;
 >   three candidates were intentionally **kept**: `useGroupOrder.ts`
->   (live type-only importers), `useOptimizedWebSocket.ts` (has a real
->   behavioral test), and the `@makanmasak/queue-service` package
+>   (live type-only importers), `useOptimizedWebSocket.ts` (its only test
+>   exercised the file itself; deleted 2026-10-07), and the `@makanmasak/queue-service` package
 >   (workspace-level decision deferred).
 > - **#20**: encryption/compression now wired into backup create/restore
 >   (key = existing `ENCRYPTION_KEY` secret; hard error if enabled without

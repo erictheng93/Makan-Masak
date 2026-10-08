@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import routes from "./index";
-import { ApiError } from "../../../shared/utils/api-error";
+import { ApiError, forbidden } from "../../../shared/utils/api-error";
 import { resolveCouponCustomerIdentity } from "../../guest-orders/services/guest-coupon-identity";
 
 const serviceMocks = vi.hoisted(() => ({
@@ -42,7 +42,7 @@ const gateMocks = vi.hoisted(() => ({
 const authState = vi.hoisted(
   (): {
     user: { id: string; role: number; restaurantId: string | null };
-    customer: { id: string };
+    customer: { id: string } | undefined;
   } => ({
     user: {
       id: "user-42",
@@ -74,6 +74,11 @@ vi.mock("../../../shared/middleware", async (importOriginal) => {
     // the auth stub above already sets.
   };
 });
+
+const assertDineInQr = vi.hoisted(() => vi.fn());
+vi.mock("../../qr-codes/services/assert-dine-in-qr", () => ({
+  assertDineInQr,
+}));
 
 vi.mock("../../../middleware/moduleGate", () => ({
   moduleGate: gateMocks.moduleGate,
@@ -180,6 +185,7 @@ describe("orders routes", () => {
       restaurantId: "restaurant-1",
     };
     authState.customer = { id: "customer-42" };
+    assertDineInQr.mockReset();
   });
 
   it("previews coupon discounts for the authenticated user", async () => {
@@ -520,6 +526,118 @@ describe("orders routes", () => {
       expect.objectContaining({ tableId: 3, orderType: "shop" }),
       "user-42",
     );
+  });
+
+  it("verifies the scanned QR and persists seatId for customer table orders", async () => {
+    serviceMocks.createOrder.mockResolvedValue({ id: 1003 });
+
+    const response = await routes.fetch(
+      jsonRequest("/", {
+        restaurantId: "restaurant-1",
+        items: [{ menuItemId: 7, quantity: 1, price: 120 }],
+        orderType: "seat",
+        tableId: 3,
+        seatId: 11,
+        qrCode: "https://x.test/order?sig=abc",
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(201);
+    expect(assertDineInQr).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        restaurantId: "restaurant-1",
+        tableId: 3,
+        seatId: 11,
+        qrCode: "https://x.test/order?sig=abc",
+      }),
+    );
+    expect(serviceMocks.createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ tableId: 3, seatId: 11 }),
+      "user-42",
+    );
+  });
+
+  it("refuses a customer table order when QR verification fails", async () => {
+    assertDineInQr.mockRejectedValue(new Error("QR_VERIFICATION_FAILED"));
+
+    const response = await withSilencedRouteError(() =>
+      routes.fetch(
+        jsonRequest("/", {
+          restaurantId: "restaurant-1",
+          items: [{ menuItemId: 7, quantity: 1, price: 120 }],
+          tableId: 3,
+        }),
+        createEnv() as never,
+      ),
+    );
+
+    expect(response.status).toBeGreaterThanOrEqual(400);
+    expect(serviceMocks.createOrder).not.toHaveBeenCalled();
+  });
+
+  it("requires QR proof for legacy role-5 table orders", async () => {
+    authState.user.role = 5;
+    authState.customer = undefined;
+    assertDineInQr.mockRejectedValue(
+      forbidden("QR required", "QR_VERIFICATION_FAILED"),
+    );
+
+    const response = await routes.fetch(
+      jsonRequest("/", {
+        restaurantId: "restaurant-1",
+        tableId: 3,
+        items: [{ menuItemId: 7, quantity: 1 }],
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "QR_VERIFICATION_FAILED" },
+    });
+    expect(assertDineInQr).toHaveBeenCalledOnce();
+    expect(serviceMocks.createOrder).not.toHaveBeenCalled();
+  });
+
+  it.each([0, 1, 2, 3, 4])(
+    "allows staff role %i to create table orders without QR proof",
+    async (role) => {
+      authState.user.role = role;
+      authState.customer = undefined;
+      serviceMocks.createOrder.mockResolvedValue({ id: 1004 });
+
+      const response = await routes.fetch(
+        jsonRequest("/", {
+          restaurantId: "restaurant-1",
+          tableId: 3,
+          items: [{ menuItemId: 7, quantity: 1 }],
+        }),
+        createEnv() as never,
+      );
+
+      expect(response.status).toBe(201);
+      expect(assertDineInQr).not.toHaveBeenCalled();
+      expect(serviceMocks.createOrder).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("rejects a customer seatId without tableId before creating an order", async () => {
+    authState.user.role = 5;
+    serviceMocks.createOrder.mockResolvedValue({ id: 1005 });
+
+    const response = await routes.fetch(
+      jsonRequest("/", {
+        restaurantId: "restaurant-1",
+        seatId: 11,
+        items: [{ menuItemId: 7, quantity: 1 }],
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(400);
+    expect(serviceMocks.createOrder).not.toHaveBeenCalled();
   });
 
   it("rejects authenticated orders for another restaurant", async () => {

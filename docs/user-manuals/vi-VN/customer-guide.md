@@ -1,7 +1,7 @@
 # Hướng Dẫn Sử Dụng MakanMakan Dành Cho Khách Hàng
 
 > **Phiên bản**: 2.0
-> **Cập nhật lần cuối**: 2025-10-26
+> **Cập nhật lần cuối**: 2026-10-05 (bổ sung mục "Hàng Chờ" và "Thanh Toán Nhiều Quầy Ở Chợ")
 > **Đối tượng**: Tất cả khách hàng sử dụng MakanMakan
 
 ---
@@ -21,9 +21,11 @@
 5. [Xem Thực Đơn & Đặt Món](#-xem-thực-đơn--đặt-món)
 6. [Quản Lý Giỏ Hàng](#-quản-lý-giỏ-hàng)
 7. [Theo Dõi Đơn Hàng](#-theo-dõi-đơn-hàng)
-8. [Câu Hỏi Thường Gặp](#-câu-hỏi-thường-gặp)
-9. [Khắc Phục Sự Cố](#-khắc-phục-sự-cố)
-10. [Liên Hệ](#-liên-hệ)
+8. [Hàng Chờ](#-hàng-chờ)
+9. [Thanh Toán Nhiều Quầy Ở Chợ](#-thanh-toán-nhiều-quầy-ở-chợ)
+10. [Câu Hỏi Thường Gặp](#-câu-hỏi-thường-gặp)
+11. [Khắc Phục Sự Cố](#-khắc-phục-sự-cố)
+12. [Liên Hệ](#-liên-hệ)
 
 ---
 
@@ -647,6 +649,88 @@ Hệ thống gửi thông báo khi:
 
 - Giữ trình duyệt mở
 - Cho phép thông báo (sẽ hỏi lần đầu)
+
+---
+
+## 🪑 Hàng Chờ
+
+Khi nhà hàng mở hàng chờ, bạn có thể lấy số trước mà không cần đứng xếp hàng ở cửa. Địa chỉ hàng chờ thường do mã QR hoặc liên kết của nhà hàng cung cấp (`/r/mã-nhà-hàng/wait-list`).
+
+### Lấy Số
+
+1. Mở trang hàng chờ, tiêu đề là "Tham gia danh sách chờ".
+2. Điền **Họ tên**, **Điện thoại**, **Số khách** (1～8 người); nếu có yêu cầu đặc biệt, điền vào **Ghi chú**.
+3. Số điện thoại phải là **số di động Đài Loan bắt đầu bằng 09** (ví dụ 0912 345 678, khoảng trắng và dấu "-" sẽ tự động được bỏ qua), nếu không hệ thống sẽ báo "Nhập số di động Đài Loan bắt đầu bằng 09."
+4. Nhấn "Vào hàng chờ". Khi thành công, bạn sẽ vào thẳng trang "Vé chờ của tôi".
+5. Phía dưới trang hiển thị số nhóm "Đang chờ" và số phút "Thời gian chờ ước tính", bạn có thể tham khảo trước khi lấy số.
+
+> Thông báo đẩy hiện chưa được mở. Sau khi lấy số, hãy ở lại trang này, hoặc về sau tra cứu bằng số điện thoại.
+
+### Xem Số Của Tôi
+
+Trang "Vé chờ của tôi" hiển thị **Số thứ tự**, **trạng thái hiện tại**, **Nhóm phía trước**, **Thời gian chờ ước tính**, cùng họ tên và số khách.
+
+- Trang tự động cập nhật cho đến khi số chuyển sang trạng thái cuối; nếu thẻ trình duyệt đang chạy ở nền, việc cập nhật sẽ tạm dừng, quay lại thẻ đó là được.
+- Các trạng thái gồm: Đang chờ, Đã gọi, Đã xác nhận đến, Đã vào bàn, Đã hủy, Đã hết hạn, Không đến.
+- Vui lòng không đăng công khai địa chỉ của trang này, vì nó chính là chứng từ của số của bạn.
+
+### Sau Khi Được Gọi Số Và Các Nút Có Thể Dùng
+
+| Nút | Khi nào xuất hiện | Tác dụng |
+| --- | --- | --- |
+| Xác nhận đã đến | Khi trạng thái là "Đã gọi" | Báo cho nhà hàng biết bạn đã đến quán |
+| Đặt món trước | Khi số chưa kết thúc | Đến thực đơn của nhà hàng để gọi món trước |
+| Hủy vé | Khi số chưa kết thúc | Từ bỏ số này |
+| Lấy số mới | Sau khi số đã kết thúc (hủy, hết hạn, v.v.) | Quay lại trang lấy số để đăng ký lại |
+| Về trang chủ | Sau khi số đã kết thúc | Quay về trang chủ MakanMakan |
+
+### Quên Số Hoặc Đổi Điện Thoại
+
+- Ở trang lấy số nhấn "**Tra cứu vé của tôi**", nhập số điện thoại đã dùng ban đầu để tìm lại số đang còn hiệu lực; nếu không tìm thấy sẽ hiển thị "Không tìm thấy vé hợp lệ cho số điện thoại này."
+- Muốn xem hồ sơ trước đây, nhấn "**Xem lịch sử**" (`/r/mã-nhà-hàng/wait-list/history`), nhập số điện thoại rồi nhấn "Tải lịch sử", nhấn "Mở vé" để quay lại vé đó.
+- Nếu hệ thống yêu cầu xác minh số điện thoại, bạn sẽ được chuyển đến trang đăng nhập để xác minh bằng **mã SMS**, xong sẽ tự động quay lại trang lịch sử, đây là quy trình bình thường.
+
+### Câu Hỏi Thường Gặp Về Hàng Chờ
+
+- **Không lấy được số**: nhà hàng có thể chưa mở hàng chờ, hoặc tạm thời không thể tham gia, vui lòng thử lại sau hoặc hỏi nhân viên tại chỗ.
+- **Thời gian chờ ước tính không thay đổi**: đây chỉ là giá trị ước tính, hãy lấy việc gọi số của nhà hàng làm chuẩn.
+- **Số hiển thị "Đã hết hạn"**: số đã mất hiệu lực, vui lòng nhấn "Lấy số mới".
+
+---
+
+## 🛍️ Thanh Toán Nhiều Quầy Ở Chợ
+
+Sau khi chọn một chợ ở trang "Chợ" (`/markets`), bạn có thể bỏ món của **các quầy khác nhau** vào cùng một giỏ chợ, gửi một lần, rồi theo dõi trên cùng một trang.
+
+> Tính năng này cần nhà hàng và nền tảng mở. Khi chưa mở, nút gửi sẽ có màu xám và hiển thị "Chưa mở", kèm gợi ý "Thanh toán nhiều quầy chưa mở. Hãy đặt riêng tại từng quầy." Lúc này hãy đặt riêng tại từng quầy.
+
+### Gửi Đơn Nhiều Quầy
+
+1. Vào trang chợ, thêm món vào "Giỏ chợ" ở từng quầy, giỏ sẽ hiển thị "N quầy, N món".
+2. Cần **ít nhất 2 quầy** mới thanh toán nhiều quầy được, nếu không đủ sẽ hiển thị gợi ý.
+3. Nếu có quầy hôm nay không mở cửa, hệ thống sẽ gỡ nó khỏi giỏ và nhắc bạn, hãy xác nhận rồi mới gửi.
+4. Nhập **3 số cuối điện thoại**, nhấn "Gửi". Ba số này là chứng từ để tìm lại đơn sau này, hãy nhớ kỹ.
+5. Khi thành công sẽ hiển thị "Đã gửi N đơn quầy." và vào trang theo dõi đơn chợ (`/markets/mã-chợ/checkout/mã-thanh-toán`).
+
+### Trang Theo Dõi Đơn Chợ
+
+Phía trên trang là tên chợ và trạng thái chung (**Đang xử lý** hoặc **Đã gửi**), số quầy, thời gian gửi, cùng với:
+
+- Số tiền **Tạm tính**, **Giảm giá voucher** (khi có dùng voucher), **Phải trả**.
+- Danh sách **Đơn theo quầy**: mỗi quầy có một đơn và mã đơn riêng, bạn có thể nhấn "Xem đơn của quầy" để vào theo dõi đơn của quầy đó.
+- Tiến độ chế biến của từng quầy (Chờ xác nhận, Đã xác nhận, Đang chuẩn bị, Sẵn sàng nhận, Hoàn tất...) vẫn do nhà hàng đó phụ trách, **hãy lấy việc gọi số hoặc thông báo trực tiếp tại quán làm chuẩn**, trang này chỉ giữ bản tóm tắt ở cấp chợ.
+
+### Dùng Voucher Và Thanh Toán Gộp
+
+1. Nếu trang hiển thị "Nhập mã voucher", hãy nhập mã rồi nhấn "Áp dụng"; muốn hủy thì nhấn "Gỡ".
+2. Khi voucher không dùng được, hệ thống sẽ giải thích lý do: không tìm thấy, không dùng được cho lần thanh toán chợ này, đã hết hạn, đã dùng hết, chưa đạt mức chi tối thiểu. Đơn đã thanh toán thì không đổi voucher được nữa.
+3. Nhấn "**Thanh toán gộp**" để trả hết tất cả các quầy một lần. Khi đang thanh toán sẽ hiển thị "Đang xử lý thanh toán", và tùy phương thức thanh toán sẽ đưa bạn đến trang thanh toán, **trả xong hãy quay lại trang này** để theo dõi.
+4. Trang sẽ hiển thị "Đã xong X/Y lần thanh toán quầy". Khi một phần các quầy thanh toán xong, tổng thể là "Đã trả một phần", bạn có thể nhấn "Thử lại phần chưa trả". Khi thanh toán thất bại, nhấn "Thanh toán lại" và xác nhận phương thức thanh toán.
+5. Nếu hiển thị "Thanh toán gộp cho chợ chưa mở. Hãy trả trực tiếp cho từng quầy.", hãy thanh toán trực tiếp tại từng quầy.
+
+### Không Mở Được Đơn Của Quầy Thì Làm Sao
+
+Nếu xuất hiện "Không thể mở đơn của quầy. Hãy mở lại từ đơn chợ gần đây.", nghĩa là thiết bị này không tìm thấy chứng từ truy cập của đơn con đó. Hãy quay lại trang theo dõi đơn chợ để vào lại, hoặc cho nhân viên biết mã đơn và 3 số cuối điện thoại để được hỗ trợ xác nhận, đừng tự gửi lại đơn.
 
 ---
 

@@ -490,7 +490,7 @@ fails closed with no error).
   fix, not just an env var.
 - `useOptimizedWebSocket.ts` — a connection-pooling variant with circuit
   breaker/message-queue/visibility-pause logic — is fully implemented but
-  **imported nowhere** in the app. Fully dead code.
+  **imported nowhere** in the app. Fully dead code. Deleted 2026-10-07.
 
 ### No SSE usage
 

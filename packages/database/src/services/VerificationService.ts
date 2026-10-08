@@ -761,35 +761,26 @@ export class VerificationService extends BaseService {
   }> {
     const now = new Date();
 
-    try {
-      const [
-        passwordResetResult,
-        emailVerificationResult,
-        phoneVerificationResult,
-      ] = await this.db.batch([
-        this.db
-          .delete(passwordResetTokens)
-          .where(lt(passwordResetTokens.expiresAt, now)),
-        this.db
-          .delete(emailVerificationTokens)
-          .where(lt(emailVerificationTokens.expiresAt, now)),
-        this.db
-          .delete(phoneVerificationTokens)
-          .where(lt(phoneVerificationTokens.expiresAt, now)),
-      ] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+    const [
+      passwordResetResult,
+      emailVerificationResult,
+      phoneVerificationResult,
+    ] = await this.db.batch([
+      this.db
+        .delete(passwordResetTokens)
+        .where(lt(passwordResetTokens.expiresAt, now)),
+      this.db
+        .delete(emailVerificationTokens)
+        .where(lt(emailVerificationTokens.expiresAt, now)),
+      this.db
+        .delete(phoneVerificationTokens)
+        .where(lt(phoneVerificationTokens.expiresAt, now)),
+    ] as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
 
-      return {
-        deletedPasswordResetTokens: passwordResetResult.meta.changes,
-        deletedEmailVerificationTokens: emailVerificationResult.meta.changes,
-        deletedPhoneVerificationTokens: phoneVerificationResult.meta.changes,
-      };
-    } catch (error) {
-      console.error("Cleanup expired tokens error:", error);
-      return {
-        deletedPasswordResetTokens: 0,
-        deletedEmailVerificationTokens: 0,
-        deletedPhoneVerificationTokens: 0,
-      };
-    }
+    return {
+      deletedPasswordResetTokens: passwordResetResult.meta.changes,
+      deletedEmailVerificationTokens: emailVerificationResult.meta.changes,
+      deletedPhoneVerificationTokens: phoneVerificationResult.meta.changes,
+    };
   }
 }

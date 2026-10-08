@@ -90,19 +90,6 @@ export async function verifyWebSocketToken(
       };
     }
 
-    // 🔒 首先檢查 token 是否在黑名單中
-    if (kv) {
-      const revoked = await isTokenRevoked(token, kv);
-      if (revoked) {
-        console.warn("WebSocket token has been revoked");
-        return {
-          valid: false,
-          error: "Token has been revoked",
-          revoked: true,
-        };
-      }
-    }
-
     // 驗證 JWT token
     const payload = verify(token, jwtSecret, {
       algorithms: ["HS256"],
@@ -144,6 +131,20 @@ export async function verifyWebSocketToken(
       }
     }
 
+    // Signature first, blacklist second: a forged or garbage token is
+    // rejected for free instead of costing a KV read each.
+    if (kv) {
+      const revoked = await isTokenRevoked(token, kv);
+      if (revoked) {
+        console.warn("WebSocket token has been revoked");
+        return {
+          valid: false,
+          error: "Token has been revoked",
+          revoked: true,
+        };
+      }
+    }
+
     // 檢查 token 是否過期（verify 已經會檢查，但我們再加一層保險）
     const now = Math.floor(Date.now() / 1000);
     if (payload.exp && payload.exp < now) {
@@ -177,6 +178,22 @@ export async function verifyWebSocketToken(
       error: "Token verification failed",
     };
   }
+}
+
+/**
+ * Whether a verified token addresses `roomId`. Legacy table guests carry
+ * `customer:{tableId}` while the URL names the bare table id.
+ */
+export function tokenRoomIdMatches(
+  payload: RealtimeAuthPayload,
+  roomId: string,
+): boolean {
+  if (payload.roomId === roomId) return true;
+  return (
+    !!payload.guestFlag &&
+    !payload.scope &&
+    payload.roomId === `customer:${roomId}`
+  );
 }
 
 /**

@@ -131,7 +131,7 @@ export function installAxiosDeduplication(
     const extendedConfig = (config || {}) as ExtendedAxiosRequestConfig;
 
     if (extendedConfig[DEDUP_SKIP_SYMBOL]) {
-      return originalGet.call(this, url, config) as Promise<R>;
+      return (originalGet<_T, R, D>).call(this, url, config) as Promise<R>;
     }
 
     const dedupKey = generateRequestKey({ ...config, method: "get", url });
@@ -139,7 +139,7 @@ export function installAxiosDeduplication(
 
     return deduplicator.dedupe(
       dedupKey,
-      () => originalGet.call(this, url, config) as Promise<R>,
+      () => (originalGet<_T, R, D>).call(this, url, config) as Promise<R>,
       { ttl },
     ) as Promise<R>;
   };
@@ -153,7 +153,12 @@ export function installAxiosDeduplication(
     const extendedConfig = (config || {}) as ExtendedAxiosRequestConfig;
 
     if (extendedConfig[DEDUP_SKIP_SYMBOL]) {
-      return originalPost.call(this, url, data, config) as Promise<R>;
+      return (originalPost<_T, R, D>).call(
+        this,
+        url,
+        data,
+        config,
+      ) as Promise<R>;
     }
 
     const dedupKey = generateRequestKey({
@@ -166,7 +171,8 @@ export function installAxiosDeduplication(
 
     return deduplicator.dedupe(
       dedupKey,
-      () => originalPost.call(this, url, data, config) as Promise<R>,
+      () =>
+        (originalPost<_T, R, D>).call(this, url, data, config) as Promise<R>,
       { ttl },
     ) as Promise<R>;
   };
@@ -180,7 +186,12 @@ export function installAxiosDeduplication(
     const extendedConfig = (config || {}) as ExtendedAxiosRequestConfig;
 
     if (extendedConfig[DEDUP_SKIP_SYMBOL]) {
-      return originalPut.call(this, url, data, config) as Promise<R>;
+      return (originalPut<_T, R, D>).call(
+        this,
+        url,
+        data,
+        config,
+      ) as Promise<R>;
     }
 
     const dedupKey = generateRequestKey({
@@ -193,7 +204,7 @@ export function installAxiosDeduplication(
 
     return deduplicator.dedupe(
       dedupKey,
-      () => originalPut.call(this, url, data, config) as Promise<R>,
+      () => (originalPut<_T, R, D>).call(this, url, data, config) as Promise<R>,
       { ttl },
     ) as Promise<R>;
   };
@@ -207,7 +218,12 @@ export function installAxiosDeduplication(
     const extendedConfig = (config || {}) as ExtendedAxiosRequestConfig;
 
     if (extendedConfig[DEDUP_SKIP_SYMBOL]) {
-      return originalPatch.call(this, url, data, config) as Promise<R>;
+      return (originalPatch<_T, R, D>).call(
+        this,
+        url,
+        data,
+        config,
+      ) as Promise<R>;
     }
 
     const dedupKey = generateRequestKey({
@@ -220,7 +236,8 @@ export function installAxiosDeduplication(
 
     return deduplicator.dedupe(
       dedupKey,
-      () => originalPatch.call(this, url, data, config) as Promise<R>,
+      () =>
+        (originalPatch<_T, R, D>).call(this, url, data, config) as Promise<R>,
       { ttl },
     ) as Promise<R>;
   };
@@ -230,7 +247,7 @@ export function installAxiosDeduplication(
     url: string,
     config?: AxiosRequestConfig<D>,
   ): Promise<R> {
-    return originalDelete.call(this, url, config) as Promise<R>;
+    return (originalDelete<_T, R, D>).call(this, url, config) as Promise<R>;
   };
 
   // Cleanup function

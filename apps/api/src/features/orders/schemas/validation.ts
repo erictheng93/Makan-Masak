@@ -153,6 +153,9 @@ export const createOrderSchema = z
   .object({
     restaurantId: z.string().min(1),
     tableId: optionalIdSchema,
+    seatId: optionalIdSchema,
+    // Signed table/seat QR URL; required of customers ordering to a table.
+    qrCode: z.string().max(2000).optional(),
     waitingListId: z.string().min(1).max(100).optional(),
     customerName: z.string().min(1).max(100).optional(),
     customerPhone: phoneSchema,
@@ -178,6 +181,15 @@ export const createOrderSchema = z
     // retry after a dropped connection creating a second order.
     clientMutationId: z.string().max(100).optional(),
   })
+  .refine(
+    (data) =>
+      data.seatId === undefined ||
+      (data.tableId !== undefined && data.orderType !== "shop"),
+    {
+      message: "seatId requires a tableId and a table/seat order type",
+      path: ["seatId"],
+    },
+  )
   .refine(
     (data) => data.couponCode === undefined || data.couponCodes === undefined,
     {

@@ -5,6 +5,8 @@ import {
 } from "./helpers/real-test-app";
 import { buildSeedHelpers } from "./helpers/seed-helper";
 import { readData, readEnvelope } from "../helpers/read-json";
+import { eq, orders, seats, tables } from "@makanmasak/database";
+import { buildSignedQRUrl } from "@makanmasak/utils";
 
 interface OtpChallenge {
   devOtp?: string;
@@ -191,6 +193,107 @@ describe("Role gap coverage: customer order flow with CSRF and idempotency", () 
     const created = await readData<CustomerOrder>(createRes);
     expect(String(created.id)).toBeTruthy();
   });
+
+  it.each(["legacy", "canonical"])(
+    "requires matching dine-in QR proof for %s customer orders",
+    async (credential) => {
+      const restaurant = await seed.restaurant({ enableShopMode: true });
+      await insertActiveSubscription(restaurant.id);
+      const menuItem = await seed.menuItem(restaurant.id);
+      const token =
+        credential === "canonical"
+          ? (await loginCustomerSession("+886911000099")).accessToken
+          : await testApp.authHelper.staffToken(
+              (await seed.user({ role: 5, restaurantId: restaurant.id })).id,
+              5,
+              restaurant.id,
+            );
+      const [table] = await testApp.testDb.drizzle
+        .insert(tables)
+        .values({ restaurantId: restaurant.id, number: "A1", qrCode: "tbl-a1" })
+        .returning();
+      const otherRestaurant = await seed.restaurant();
+      const [otherTable] = await testApp.testDb.drizzle
+        .insert(tables)
+        .values({
+          restaurantId: otherRestaurant.id,
+          number: "B1",
+          qrCode: "tbl-b1",
+        })
+        .returning();
+      const [seat] = await testApp.testDb.drizzle
+        .insert(seats)
+        .values({ tableId: table.id, seatNumber: "01", qrCode: "seat-a1-01" })
+        .returning();
+      const qrCode = await buildSignedQRUrl(
+        "https://test",
+        {
+          type: "seat",
+          restaurantId: restaurant.id,
+          tableId: table.id,
+          identifier: seat.seatNumber,
+          version: 1,
+        },
+        testApp.env.QR_SIGNING_KEY,
+      );
+      const post = (selection: Record<string, unknown>) =>
+        testApp.app.fetch(
+          new Request(ORDERS_ENDPOINT, {
+            method: "POST",
+            headers: {
+              authorization: `Bearer ${token}`,
+              "content-type": "application/json",
+              ...csrfHeaders("d".repeat(64)),
+            },
+            body: JSON.stringify({
+              ...buildOrderPayload(restaurant.id, menuItem.id),
+              ...selection,
+            }),
+          }),
+        );
+
+      expect((await post({ seatId: seat.id })).status).toBe(400);
+      expect(
+        (await post({ seatId: seat.id, tableId: table.id, orderType: "shop" }))
+          .status,
+      ).toBe(400);
+      const missingQr = await post({ tableId: table.id });
+      expect(missingQr.status).toBe(403);
+      await expect(missingQr.json()).resolves.toMatchObject({
+        error: { code: "QR_VERIFICATION_FAILED" },
+      });
+      expect(
+        (
+          await post({
+            orderType: "seat",
+            tableId: otherTable.id,
+            seatId: seat.id,
+            qrCode,
+          })
+        ).status,
+      ).toBe(403);
+      expect(await testApp.testDb.drizzle.select().from(orders)).toHaveLength(
+        0,
+      );
+
+      const valid = await post({
+        orderType: "seat",
+        tableId: table.id,
+        seatId: seat.id,
+        qrCode,
+      });
+      expect(valid.status).toBe(201);
+      const created = await readData<CustomerOrder>(valid);
+      const [row] = await testApp.testDb.drizzle
+        .select({ tableId: orders.tableId, seatId: orders.seatId })
+        .from(orders)
+        .where(eq(orders.id, created.id));
+      expect(row).toEqual({
+        tableId: table.id,
+        seatId: credential === "canonical" ? seat.id : null,
+      });
+    },
+  );
 
   it("does not dedupe repeated POST for identical payload + token when no idempotency key binding exists", async () => {
     const restaurant = await seed.restaurant({ enableShopMode: true });

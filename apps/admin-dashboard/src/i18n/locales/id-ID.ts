@@ -2330,7 +2330,9 @@ const idID: Messages = {
       menu: "Tambah menu",
       tables: "Atur meja",
       staff: "Tambah staf",
-      guestOrders: "Aktifkan pesanan tamu",
+      guestOrders: "Buka pemesanan QR untuk pelanggan",
+      guestOrdersHint:
+        "Selama belum diaktifkan, pelanggan yang memindai QR meja tidak dapat memesan dan toko tidak tampil sebagai buka.",
     },
     welcome: "Selamat datang kembali, {username}",
     lastUpdated: "Terakhir diperbarui: {time}",

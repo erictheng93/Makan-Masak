@@ -385,6 +385,12 @@ describe("POS shift report — tenancy and D1 binding", () => {
       cashierToken,
     );
     expect(denied.status).toBe(403);
-    expect(await denied.text()).not.toContain("999");
+    // Not a substring check on the body: the random requestId can contain "999".
+    const deniedBody = (await denied.json()) as {
+      error?: { code?: string; message?: string };
+    };
+    expect(
+      `${deniedBody.error?.code} ${deniedBody.error?.message}`,
+    ).not.toContain("999");
   });
 });

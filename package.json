@@ -77,6 +77,7 @@
     "check:design-palette": "node scripts/check-design-palette.cjs",
     "check:ui-reachability": "node scripts/check-ui-reachability.cjs",
     "check:docs-drift": "node scripts/check-docs-drift.cjs",
+    "check:handbook-locales": "node scripts/check-handbook-locales.cjs",
     "docs:sync": "node scripts/check-docs-drift.cjs --write",
     "check:i18n-locales": "tsx scripts/i18n-locale-coverage.ts",
     "check:i18n-locales:strict": "tsx scripts/i18n-locale-coverage.ts --fail-on-missing",
@@ -145,7 +146,6 @@
   "packageManager": "pnpm@12.3.4+sha512.961aa41fb077da3a04a441d9f8e15ebc0c96da8ef710b2eb67bf9ee7cb0610eabd48f1fd85f51cffe73846785fa0f87c56a3a872a1d893f8446741b5cce45457",
   "devDependencies": {
     "@eslint/js": "^9.39.2",
-    "@openai/codex-security": "^0.1.27",
     "@playwright/test": "^1.63.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.0.5",
@@ -175,7 +175,7 @@
     "typescript-eslint": "^8.52.0",
     "vitest": "^4.1.0",
     "vue-eslint-parser": "^10.2.0",
-    "wrangler": "^4.141.0",
+    "wrangler": "^4.148.0",
     "zod": "^4.4.3"
   }
 }

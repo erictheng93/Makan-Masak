@@ -1,145 +1,112 @@
-import { describe, expect, it } from "vitest";
-import { checkRealtimeRateLimit, rateLimitResponse } from "./rateLimiter";
-import type { Env } from "../types/env";
+import { describe, expect, it, vi } from "vitest";
+import type { RealtimeAuthPayload } from "@makanmasak/shared-types";
+import {
+  checkClientRateLimit,
+  checkIpRateLimit,
+  clientRateLimitKey,
+  rateLimitResponse,
+} from "./rateLimiter";
 
-class MemoryKV {
-  values = new Map<string, string>();
-  ttls = new Map<string, number>();
-
-  async get(key: string): Promise<string | null> {
-    return this.values.get(key) ?? null;
-  }
-
-  async put(
-    key: string,
-    value: string,
-    options?: { expirationTtl?: number },
-  ): Promise<void> {
-    if (options?.expirationTtl !== undefined && options.expirationTtl < 60) {
-      throw new Error("KV expirationTtl must be at least 60 seconds");
-    }
-    this.values.set(key, value);
-    if (options?.expirationTtl !== undefined) {
-      this.ttls.set(key, options.expirationTtl);
-    }
-  }
+function buildLimiter(success = true) {
+  return { limit: vi.fn(async () => ({ success })) };
 }
 
-function createEnv(kv: MemoryKV, enabled = "true"): Env {
+function buildPayload(
+  overrides: Partial<RealtimeAuthPayload> = {},
+): RealtimeAuthPayload {
   return {
-    REALTIME_SESSION: {} as DurableObjectNamespace,
-    DB: {} as D1Database,
-    CACHE_KV: {} as KVNamespace,
-    TOKEN_BLACKLIST: {} as KVNamespace,
-    RATE_LIMIT_KV: kv as unknown as KVNamespace,
-    JWT_SECRET: "x".repeat(32),
-    ENVIRONMENT: "test",
-    API_VERSION: "v1",
-    RATE_LIMIT_ENABLED: enabled,
-  };
+    roomType: "customer",
+    roomId: "order:o1",
+    restaurantId: "r1",
+    role: "customer",
+    exp: 0,
+    iat: 0,
+    ...overrides,
+  } as RealtimeAuthPayload;
 }
 
-describe("checkRealtimeRateLimit", () => {
-  it("increments connection attempts per room and client address", async () => {
-    const kv = new MemoryKV();
+describe("checkIpRateLimit", () => {
+  it("keys the flood ceiling by client address alone", async () => {
+    const limiter = buildLimiter();
     const request = new Request("https://realtime.example/customer/t1", {
       headers: { "CF-Connecting-IP": "203.0.113.10" },
     });
 
-    const decision = await checkRealtimeRateLimit(
-      request,
-      createEnv(kv),
-      { roomType: "customer", roomId: "t1" },
-      1_000,
-    );
-
-    expect(decision.allowed).toBe(true);
-    expect(decision.count).toBe(1);
-    expect(kv.values.get(decision.key)).toBe("1");
+    await expect(
+      checkIpRateLimit(request, { WS_IP_RATE_LIMITER: limiter }),
+    ).resolves.toBe(true);
+    expect(limiter.limit).toHaveBeenCalledOnce();
+    expect(limiter.limit).toHaveBeenCalledWith({ key: "203.0.113.10" });
   });
 
-  it("uses a Cloudflare KV-compatible minimum expiration TTL", async () => {
-    const kv = new MemoryKV();
-    const request = new Request("https://realtime.example/customer/t1", {
-      headers: { "CF-Connecting-IP": "203.0.113.10" },
-    });
+  it("rejects when the binding reports the bucket is spent", async () => {
+    const limiter = buildLimiter(false);
 
-    const decision = await checkRealtimeRateLimit(
-      request,
-      createEnv(kv),
-      { roomType: "customer", roomId: "t1" },
-      59_000,
-    );
-
-    expect(decision.allowed).toBe(true);
-    expect(decision.retryAfterSeconds).toBe(1);
-    expect(kv.ttls.get(decision.key)).toBe(60);
+    await expect(
+      checkIpRateLimit(new Request("https://realtime.example/admin/r1"), {
+        WS_IP_RATE_LIMITER: limiter,
+      }),
+    ).resolves.toBe(false);
+    expect(limiter.limit).toHaveBeenCalledWith({ key: "unknown" });
   });
 
-  it("resets the attempt count when KV contains a malformed counter", async () => {
-    const kv = new MemoryKV();
-    const request = new Request("https://realtime.example/customer/t1", {
-      headers: { "CF-Connecting-IP": "203.0.113.10" },
-    });
-    kv.values.set("ws-rate:customer:t1:203.0.113.10:0", "not-a-number");
+  it("allows every attempt when the binding is absent", async () => {
+    await expect(
+      checkIpRateLimit(new Request("https://realtime.example/customer/t1"), {}),
+    ).resolves.toBe(true);
+  });
+});
 
-    const decision = await checkRealtimeRateLimit(
-      request,
-      createEnv(kv),
-      { roomType: "customer", roomId: "t1" },
-      1_000,
-    );
+describe("checkClientRateLimit", () => {
+  it("gives two guests on one IP separate budgets", () => {
+    const first = buildPayload({ roomId: "order:o1" });
+    const second = buildPayload({ roomId: "order:o2" });
 
-    expect(decision.allowed).toBe(true);
-    expect(decision.count).toBe(1);
-    expect(kv.values.get(decision.key)).toBe("1");
+    expect(clientRateLimitKey(first)).not.toBe(clientRateLimitKey(second));
   });
 
-  it("rejects customer websocket upgrades after the per-minute limit", async () => {
-    const kv = new MemoryKV();
-    const request = new Request("https://realtime.example/customer/t1", {
-      headers: { "CF-Connecting-IP": "203.0.113.10" },
-    });
-
-    let decision = await checkRealtimeRateLimit(
-      request,
-      createEnv(kv),
-      { roomType: "customer", roomId: "t1" },
-      1_000,
+  it.each([
+    [{ sid: "s1", userId: "u1" }, "s1"],
+    [{ memberId: "m1", seatId: "seat-1" }, "m1"],
+    [{ seatId: "seat-1" }, "seat-1"],
+    [{ userId: "u1" }, "u1"],
+    [{}, "guest"],
+  ])("names the client from %o", (fields, who) => {
+    expect(clientRateLimitKey(buildPayload(fields))).toBe(
+      `customer:order:o1:${who}`,
     );
+  });
 
-    for (let i = 0; i < 30; i++) {
-      decision = await checkRealtimeRateLimit(
-        request,
-        createEnv(kv),
-        { roomType: "customer", roomId: "t1" },
-        1_000,
-      );
-    }
+  it("checks the client key against the binding", async () => {
+    const limiter = buildLimiter(false);
 
-    expect(decision.allowed).toBe(false);
-    expect(decision.count).toBe(31);
-    expect(decision.limit).toBe(30);
+    await expect(
+      checkClientRateLimit(buildPayload({ sid: "s1" }), {
+        WS_CLIENT_RATE_LIMITER: limiter,
+      }),
+    ).resolves.toBe(false);
+    expect(limiter.limit).toHaveBeenCalledWith({
+      key: "customer:order:o1:s1",
+    });
+  });
 
-    const response = rateLimitResponse(decision);
+  it("allows every attempt when the binding is absent", async () => {
+    await expect(checkClientRateLimit(buildPayload(), {})).resolves.toBe(true);
+  });
+});
+
+describe("rateLimitResponse", () => {
+  it("answers 429 with a Retry-After matching the binding period", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const response = rateLimitResponse("ip");
+
     expect(response.status).toBe(429);
-    expect(response.headers.get("Retry-After")).toBe(
-      String(decision.retryAfterSeconds),
-    );
-  });
-
-  it("allows all attempts when realtime rate limiting is disabled", async () => {
-    const kv = new MemoryKV();
-    const request = new Request("https://realtime.example/customer/t1");
-
-    const decision = await checkRealtimeRateLimit(
-      request,
-      createEnv(kv, "false"),
-      { roomType: "customer", roomId: "t1" },
-      1_000,
-    );
-
-    expect(decision.allowed).toBe(true);
-    expect(kv.values.size).toBe(0);
+    expect(response.headers.get("Retry-After")).toBe("60");
+    expect(console.warn).toHaveBeenCalledWith("Realtime connect rate limited", {
+      layer: "ip",
+    });
+    await expect(response.json()).resolves.toMatchObject({
+      code: "REALTIME_RATE_LIMITED",
+    });
   });
 });

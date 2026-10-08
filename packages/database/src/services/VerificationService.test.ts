@@ -1,6 +1,20 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { eq } from "drizzle-orm";
-import { passwordResetTokens, sessions, users } from "../schema";
+import {
+  emailVerificationTokens,
+  passwordResetTokens,
+  phoneVerificationTokens,
+  sessions,
+  users,
+} from "../schema";
 import {
   createTestDatabase,
   REAL_D1_SETUP_TIMEOUT_MS,
@@ -50,13 +64,16 @@ describe("resolveVerificationAppBaseUrl", () => {
 });
 
 /**
- * A password reset used to bump `token_version` and stop there. The `sessions`
+ * Real-D1 coverage for session revocation on password reset and for the
+ * expired-token cleanup the daily cron runs.
+ *
+ * Session revocation: a password reset used to bump `token_version` and stop there. The `sessions`
  * rows stayed active, and refreshToken() finds a session by refresh token +
  * isActive — so whoever had stolen a refresh token could trade it for a fresh
  * access token stamped with the *new* version, indefinitely. changePassword()
  * had always deactivated the rows; the reset paths had not.
  */
-describe("VerificationService.resetPassword session revocation", () => {
+describe("VerificationService", () => {
   let testDb: TestDatabase;
 
   const userId = "018f0000-0000-7000-8000-0000000002a1";
@@ -172,5 +189,71 @@ describe("VerificationService.resetPassword session revocation", () => {
       .from(sessions)
       .where(eq(sessions.userId, userId));
     expect(rows.every((row) => row.isActive === true)).toBe(true);
+  });
+
+  it("counts deleted tokens in all three tables and preserves unexpired tokens", async () => {
+    await seed("cleanup-live");
+    const expired = new Date(Date.now() - 60_000);
+    const live = new Date(Date.now() + 60_000);
+    await testDb.drizzle.insert(passwordResetTokens).values({
+      userId,
+      token: "cleanup-expired",
+      expiresAt: expired,
+    });
+    await testDb.drizzle.insert(emailVerificationTokens).values(
+      ["expired-1", "expired-2", "live"].map((token) => ({
+        userId,
+        token,
+        email: "cleanup@example.com",
+        expiresAt: token === "live" ? live : expired,
+      })),
+    );
+    await testDb.drizzle.insert(phoneVerificationTokens).values(
+      ["111111", "222222", "333333", "444444"].map((otpCode) => ({
+        userId,
+        phone: "+60123456789",
+        otpCode,
+        expiresAt: otpCode === "444444" ? live : expired,
+      })),
+    );
+
+    await expect(service().cleanupExpiredTokens()).resolves.toEqual({
+      deletedPasswordResetTokens: 1,
+      deletedEmailVerificationTokens: 2,
+      deletedPhoneVerificationTokens: 3,
+    });
+    expect(
+      await testDb.drizzle
+        .select({ token: passwordResetTokens.token })
+        .from(passwordResetTokens),
+    ).toEqual([{ token: "cleanup-live" }]);
+    expect(
+      await testDb.drizzle
+        .select({ token: emailVerificationTokens.token })
+        .from(emailVerificationTokens),
+    ).toEqual([{ token: "live" }]);
+    expect(
+      await testDb.drizzle
+        .select({ otpCode: phoneVerificationTokens.otpCode })
+        .from(phoneVerificationTokens),
+    ).toEqual([{ otpCode: "444444" }]);
+    await expect(service().cleanupExpiredTokens()).resolves.toEqual({
+      deletedPasswordResetTokens: 0,
+      deletedEmailVerificationTokens: 0,
+      deletedPhoneVerificationTokens: 0,
+    });
+  });
+
+  it("propagates a D1 batch failure instead of reporting zero deletions", async () => {
+    const error = new Error("D1 unavailable");
+    const batch = vi.fn().mockRejectedValueOnce(error);
+    const db = {
+      prepare: testDb.bindings.DB.prepare.bind(testDb.bindings.DB),
+      batch,
+    } as unknown as typeof testDb.bindings.DB;
+    const verification = new VerificationService(db, { NODE_ENV: "test" });
+
+    await expect(verification.cleanupExpiredTokens()).rejects.toBe(error);
+    expect(batch).toHaveBeenCalledOnce();
   });
 });

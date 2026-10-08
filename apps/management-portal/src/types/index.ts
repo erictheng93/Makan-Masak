@@ -189,7 +189,9 @@ export interface UpdateTenantRequest {
  */
 export interface DeployRequest {
   tenantId: string;
-  version?: string;
+  /** Strict x.y.z semver — management-api rejects anything else */
+  targetVersion: string;
+  deploymentType?: DeploymentType;
 }
 
 /**
@@ -197,7 +199,7 @@ export interface DeployRequest {
  */
 export interface BatchDeployRequest {
   tenantIds: string[];
-  version: string;
+  targetVersion: string;
 }
 
 /**

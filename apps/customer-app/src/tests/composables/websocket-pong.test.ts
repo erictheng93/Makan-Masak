@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useOptimizedWebSocket } from "@/composables/useOptimizedWebSocket";
 import { useWebSocket } from "@/composables/useWebSocket";
 
 class MockWebSocket {
@@ -45,21 +44,6 @@ describe("customer WebSocket raw pong handling", () => {
     });
 
     await socket.connect();
-    const ws = MockWebSocket.instances[0];
-    ws.onmessage?.({ data: "pong" } as MessageEvent);
-
-    expect(onMessage).not.toHaveBeenCalled();
-    expect(console.error).not.toHaveBeenCalled();
-  });
-
-  it("ignores raw pong in useOptimizedWebSocket", () => {
-    const onMessage = vi.fn();
-    const socket = useOptimizedWebSocket({
-      url: "ws://localhost/optimized",
-      onMessage,
-    });
-
-    socket.connect();
     const ws = MockWebSocket.instances[0];
     ws.onmessage?.({ data: "pong" } as MessageEvent);
 

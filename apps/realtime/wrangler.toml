@@ -15,7 +15,6 @@ local_protocol = "http"
 ENVIRONMENT = "development"
 API_VERSION = "v1"
 CORS_ORIGIN = "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost:5173,http://localhost:8000,http://localhost:8787"
-RATE_LIMIT_ENABLED = "false"
 
 [durable_objects]
 bindings = [
@@ -32,10 +31,9 @@ bindings = [
 # entry is history — wrangler sends no migration for it — and rewriting it does
 # not move the backend, it only makes the file disagree with production.
 #
-# The cost argument for SQLite is real (4 KB request units vs whole rows, and a
-# free tier 50x larger for writes) but it is not reachable from here. Revisit
-# when Cloudflare ships the key-value → SQLite migration path they have
-# promised; until then the lever is addToEventHistory's full-array rewrite.
+# The cost argument for SQLite was mostly about event-history writes, and the
+# DO no longer persists event history, so it now writes only `roomInfo` once
+# per room. Revisit if per-broadcast storage ever comes back.
 [[migrations]]
 tag = "v1"
 new_classes = ["RealtimeSession"]
@@ -61,11 +59,6 @@ binding = "TOKEN_BLACKLIST"
 id = "makanmasak-token-blacklist-dev"
 preview_id = "makanmasak-token-blacklist-preview"
 
-[[kv_namespaces]]
-binding = "RATE_LIMIT_KV"
-id = "makanmasak-ratelimit-dev"
-preview_id = "makanmasak-ratelimit-preview"
-
 # === PRODUCTION ENVIRONMENT ===
 [env.production]
 name = "makanmasak-realtime-prod"
@@ -74,7 +67,6 @@ name = "makanmasak-realtime-prod"
 ENVIRONMENT = "production"
 API_VERSION = "v1"
 CORS_ORIGIN = "https://makanmasak.com,https://customer.makanmasak.com,https://admin.makanmasak.com,https://kitchen.makanmasak.com"
-RATE_LIMIT_ENABLED = "true"
 
 # Custom domain — wrangler provisions DNS + SSL automatically on deploy
 # since the makanmasak.com zone is already on this Cloudflare account.
@@ -105,8 +97,29 @@ id = "5850dad46b684f2d8b69b3344d146a1d"
 binding = "TOKEN_BLACKLIST"
 id = "30ba7daf1e4c41438233542de10dd02f"
 
-# Rate Limit KV - for WebSocket connection rate limiting
-[[env.production.kv_namespaces]]
-binding = "RATE_LIMIT_KV"
-id = "e442a551aa3f484db44fcdfa1084ff81"
+# WebSocket connect limits, two layers (rateLimiter.ts). Production only, like
+# the API's native limiters; unbound means unlimited. Keep both `period`s in
+# step with WINDOW_SECONDS. 2001/2002 stay clear of the API's 1001-1003.
+#
+# A, before the token is read: per client IP, loose on purpose. One IP can be a
+# food court's shared Wi-Fi or many phones behind carrier-grade NAT, so this
+# only caps floods.
+[[env.production.ratelimits]]
+name = "WS_IP_RATE_LIMITER"
+namespace_id = "2001"
+
+  [env.production.ratelimits.simple]
+  limit = 600
+  period = 60
+
+# B, after verification: per client the token names (staff session, group
+# member, seat, user; legacy table guests share their table), so neighbours
+# on one IP never share a budget.
+[[env.production.ratelimits]]
+name = "WS_CLIENT_RATE_LIMITER"
+namespace_id = "2002"
+
+  [env.production.ratelimits.simple]
+  limit = 30
+  period = 60
 

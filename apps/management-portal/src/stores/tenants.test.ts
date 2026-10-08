@@ -240,17 +240,20 @@ describe("useTenantsStore", () => {
     ]);
     expect(store.currentResources).toEqual([resource()]);
 
-    await expect(store.deployTenant("tenant-1", "1.1.0")).resolves.toEqual(
-      deployment("new"),
-    );
+    await expect(
+      store.deployTenant("tenant-1", "1.1.0", "update"),
+    ).resolves.toEqual(deployment("new"));
     expect(store.currentDeployments.map((item) => item.id)).toEqual([
       "new",
       "old",
     ]);
-    expect(deploymentsApi.deploy).toHaveBeenCalledWith({
-      tenantId: "tenant-1",
-      version: "1.1.0",
-    });
+    expect(deploymentsApi.deploy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: "tenant-1",
+        targetVersion: "1.1.0",
+        deploymentType: "update",
+      }),
+    );
   });
 
   it("clears current tenant detail state", () => {

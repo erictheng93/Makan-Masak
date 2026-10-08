@@ -1,0 +1,28 @@
+# Only these advisory IDs are excepted; new advisories remain visible.
+# check-dependency-security.cjs verifies the exact lockfile versions, patch
+# hashes and installed behavior before either OSV job runs.
+
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+ignoreUntil = 2027-01-05
+reason = "braces 3.0.3 is locally patched to bound parser/AST depth and cycles; patches/braces@3.0.3.patch and check-dependency-security.cjs. Remove when upstream fixes https://github.com/micromatch/braces/issues/70."
+
+[[IgnoredVulns]]
+id = "GHSA-ch52-4w7c-c8xp"
+ignoreUntil = 2027-01-05
+reason = "http-cache-semantics 4.2.0 is locally patched to require revalidation for security-zeroed lifetimes on every stale reuse path; patches/http-cache-semantics@4.2.0.patch. Upstream 4.3.0 still reproduces https://github.com/kornelski/http-cache-semantics/issues/56."
+
+[[IgnoredVulns]]
+id = "GHSA-hp3w-g68c-fv3c"
+ignoreUntil = 2027-01-05
+reason = "sprintf-js 1.0.3 is locally patched to constrain floating-point precision to supported bounds in source and browser bundle; patches/sprintf-js@1.0.3.patch and check-dependency-security.cjs. Upstream https://github.com/alexei/sprintf.js/issues/237 remains open."
+
+[[IgnoredVulns]]
+id = "GHSA-4r6h-8v6p-xvw6"
+ignoreUntil = 2027-01-05
+reason = "Version false positive: the integrity-pinned SheetJS CDN build is 0.20.3; vendor fixed CVE-2023-30533 in 0.19.3: https://cdn.sheetjs.com/advisories/CVE-2023-30533. The guard verifies the exact CDN source and integrity."
+
+[[IgnoredVulns]]
+id = "GHSA-5pgg-2g8v-p4x9"
+ignoreUntil = 2027-01-05
+reason = "Version false positive: the integrity-pinned SheetJS CDN build is 0.20.3; vendor fixed CVE-2024-22363 in 0.20.2: https://cdn.sheetjs.com/advisories/CVE-2024-22363. The guard verifies the exact CDN source and integrity."

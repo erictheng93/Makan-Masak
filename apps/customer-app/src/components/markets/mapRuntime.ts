@@ -9,11 +9,13 @@ export interface MarketMapRuntime {
 }
 
 export async function loadMarketMapRuntime(): Promise<MarketMapRuntime> {
-  const [maplibreModule, pmtilesModule] = await Promise.all([
-    import("maplibre-gl"),
-    import("pmtiles"),
-  ]);
-  const maplibreApi = moduleDefault(maplibreModule) as typeof maplibregl;
+  const [maplibreApi, pmtilesModule, { default: workerUrl }] =
+    await Promise.all([
+      import("maplibre-gl"),
+      import("pmtiles"),
+      import("maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url"),
+    ]);
+  maplibreApi.setWorkerUrl(workerUrl);
   const pmtilesApi = moduleDefault(pmtilesModule) as {
     Protocol: typeof pmtiles.Protocol;
   };

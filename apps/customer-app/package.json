@@ -35,7 +35,7 @@
     "axios": "^1.17.0",
     "dayjs": "^1.11.23",
     "lodash-es": "^4.17.0",
-    "maplibre-gl": "^5.24.0",
+    "maplibre-gl": "6.4.1",
     "pinia": "^2.1.0",
     "pmtiles": "^4.4.1",
     "postcss": "^8.4.0",
@@ -63,6 +63,6 @@
     "vitest": "^4.1.0",
     "vue-tsc": "^3.0.6",
     "workbox-build": "^7.4.1",
-    "wrangler": "^4.141.0"
+    "wrangler": "^4.148.0"
   }
 }

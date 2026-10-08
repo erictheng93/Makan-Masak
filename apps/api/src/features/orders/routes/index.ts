@@ -3,6 +3,7 @@
  * HTTP routes for order management matching existing orders.ts functionality
  */
 
+import { assertDineInQr } from "../../qr-codes/services/assert-dine-in-qr";
 import { requireWaitingPreorderAccess } from "../../../shared/services/waiting-ticket-access";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -367,6 +368,17 @@ app.post(
       );
     }
 
+    // Customers ordering to a table must present the signed QR they scanned;
+    // staff creating orders for a table are authenticated by role instead.
+    if ((customer || user.role === 5) && data.tableId) {
+      await assertDineInQr(c.env, {
+        restaurantId: data.restaurantId,
+        tableId: data.tableId,
+        seatId: data.seatId,
+        qrCode: data.qrCode,
+      });
+    }
+
     if (data.waitingListId && user.role === 5) {
       await requireWaitingPreorderAccess(
         c,
@@ -379,6 +391,7 @@ app.post(
     const createOrderData = {
       restaurantId: data.restaurantId,
       tableId: data.tableId,
+      seatId: customer ? data.seatId : undefined,
       customerId: customer?.id,
       waitingListId: data.waitingListId,
       waitingListCustomerPhone: data.customerPhone,

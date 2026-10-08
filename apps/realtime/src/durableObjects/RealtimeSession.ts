@@ -13,6 +13,7 @@ import {
 import {
   verifyWebSocketToken,
   extractTokenFromUrl,
+  tokenRoomIdMatches,
 } from "../utils/jwtVerifier";
 import {
   formatValidationError,
@@ -28,33 +29,10 @@ export interface ConnectionInfo {
   lastActivity: number;
   auth?: RealtimeAuthPayload; // 認證資訊
   metadata?: Record<string, unknown>;
-  // 離線重連支援
-  lastEventId?: string; // 最後接收的事件 ID
-  missedEvents?: RealtimeEvent[]; // 離線期間錯過的事件
 }
 
-// Legacy key: one array holding the whole history, rewritten on every
-// broadcast. Read once per object so an in-flight history survives the
-// deploy, then retired in favour of one key per event — see loadEventLog.
-const EVENT_HISTORY_STORAGE_KEY = "eventHistory";
-const EVENT_KEY_PREFIX = "evt:";
-// Zero-padded so storage.list()'s lexicographic order is insertion order.
-// 12 digits stays well inside Number's exact-integer range.
-const EVENT_SEQ_DIGITS = 12;
-// storage.delete() takes at most 128 keys per call.
-const MAX_KEYS_PER_DELETE = 128;
 const ROOM_INFO_STORAGE_KEY = "roomInfo";
 
-const eventKey = (seq: number): string =>
-  `${EVENT_KEY_PREFIX}${String(seq).padStart(EVENT_SEQ_DIGITS, "0")}`;
-
-const eventSeq = (key: string): number =>
-  Number(key.slice(EVENT_KEY_PREFIX.length));
-
-interface StoredEvent {
-  key: string;
-  event: RealtimeEvent;
-}
 const HEARTBEAT_REQUEST = "ping";
 const HEARTBEAT_RESPONSE = "pong";
 // 1008 (policy violation) is what every client in this repo already treats as
@@ -67,11 +45,6 @@ export class RealtimeSession implements DurableObject {
   private state: DurableObjectState;
   private env: Env;
   private roomInfo: { type: string; id: string } | null = null;
-  // 事件歷史記錄（用於離線重連）— 每個事件一個 storage key
-  private eventLog: StoredEvent[] | null = null;
-  private nextEventSeq = 0;
-  private readonly MAX_EVENT_HISTORY = 100; // 最多保留 100 個事件
-  private readonly MAX_EVENT_AGE_MS = 24 * 60 * 60 * 1000; // 最多保留 24 小時的事件
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
@@ -96,8 +69,6 @@ export class RealtimeSession implements DurableObject {
         return this.handleBroadcast(request);
       case "/stats":
         return this.handleStats(request);
-      case "/history":
-        return this.handleHistoryRequest(request);
       default:
         return new Response("Not found", { status: 404 });
     }
@@ -146,12 +117,7 @@ export class RealtimeSession implements DurableObject {
     // ========== ROOM ACCESS VALIDATION ==========
 
     // 1. 驗證 roomId 與 token 是否匹配
-    const roomMatchesToken = authPayload.guestFlag
-      ? authPayload.roomId === roomId ||
-        (!authPayload.scope && authPayload.roomId === `customer:${roomId}`)
-      : authPayload.roomId === roomId;
-
-    if (!roomMatchesToken) {
+    if (!tokenRoomIdMatches(authPayload, roomId)) {
       console.warn("WebSocket connection rejected: Room ID mismatch", {
         tokenRoomId: authPayload.roomId,
         requestedRoomId: roomId,
@@ -418,9 +384,6 @@ export class RealtimeSession implements DurableObject {
         );
       }
 
-      // 添加到事件歷史記錄
-      await this.addToEventHistory(event);
-
       // 路由事件到相關的連線
       const sentCount = this.routeEvent(event);
 
@@ -443,7 +406,6 @@ export class RealtimeSession implements DurableObject {
 
   private async handleStats(_request: Request): Promise<Response> {
     const connections = this.getConnectionEntries();
-    const eventHistory = await this.loadEventHistory();
     const roomInfo = await this.loadRoomInfo();
     const stats = {
       roomInfo,
@@ -454,9 +416,7 @@ export class RealtimeSession implements DurableObject {
         role: conn.auth?.role,
         connectedAt: new Date(conn.connectedAt).toISOString(),
         lastActivity: new Date(conn.lastActivity).toISOString(),
-        lastEventId: conn.lastEventId,
       })),
-      eventHistorySize: eventHistory.length,
       uptime:
         Date.now() -
         (connections.length > 0
@@ -467,56 +427,6 @@ export class RealtimeSession implements DurableObject {
     };
 
     return Response.json(stats);
-  }
-
-  /**
-   * 處理歷史事件請求（用於離線重連）
-   */
-  private async handleHistoryRequest(request: Request): Promise<Response> {
-    try {
-      const url = new URL(request.url);
-      const sinceEventId = url.searchParams.get("since");
-      const eventHistory = await this.loadEventHistory();
-
-      if (!sinceEventId) {
-        // 返回所有歷史事件
-        return Response.json({
-          success: true,
-          events: eventHistory,
-          count: eventHistory.length,
-        });
-      }
-
-      // 找到指定事件 ID 之後的所有事件
-      const sinceIndex = eventHistory.findIndex(
-        (e) => e.eventId === sinceEventId,
-      );
-
-      if (sinceIndex === -1) {
-        // 找不到指定的事件 ID，返回所有事件
-        return Response.json({
-          success: true,
-          events: eventHistory,
-          count: eventHistory.length,
-          note: "Event ID not found, returning all available events",
-        });
-      }
-
-      // 返回指定事件之後的所有事件
-      const missedEvents = eventHistory.slice(sinceIndex + 1);
-
-      return Response.json({
-        success: true,
-        events: missedEvents,
-        count: missedEvents.length,
-      });
-    } catch (error) {
-      console.error("History request error:", error);
-      return Response.json(
-        { success: false, error: "Failed to retrieve event history" },
-        { status: 500 },
-      );
-    }
   }
 
   /**
@@ -577,9 +487,6 @@ export class RealtimeSession implements DurableObject {
       // 檢查是否應該發送此事件到此連線
       if (this.shouldSendEventToConnection(event, connectionInfo)) {
         this.sendEvent(socket, event);
-        // 更新最後接收的事件 ID
-        connectionInfo.lastEventId = event.eventId;
-        socket.serializeAttachment(connectionInfo);
         sentCount++;
       }
     }
@@ -669,100 +576,6 @@ export class RealtimeSession implements DurableObject {
     }
   }
 
-  /**
-   * 添加事件到歷史記錄
-   */
-  private async loadEventLog(): Promise<StoredEvent[]> {
-    if (this.eventLog) return this.eventLog;
-
-    const stored = await this.state.storage.list<RealtimeEvent>({
-      prefix: EVENT_KEY_PREFIX,
-    });
-    let log: StoredEvent[] = [...stored].map(([key, event]) => ({
-      key,
-      event,
-    }));
-
-    // One-time move off the legacy single-array key. Guarded on the log being
-    // empty: if any per-event key already exists it is newer than anything in
-    // the array, and prepending would be the only ordering that is correct —
-    // so simply do not migrate in that case rather than interleave wrongly.
-    if (log.length === 0) {
-      const legacy = await this.state.storage.get<RealtimeEvent[]>(
-        EVENT_HISTORY_STORAGE_KEY,
-      );
-      if (legacy?.length) {
-        log = legacy
-          .slice(-this.MAX_EVENT_HISTORY)
-          .map((event, i) => ({ key: eventKey(i), event }));
-        await this.state.storage.put(
-          Object.fromEntries(log.map((e) => [e.key, e.event])),
-        );
-        await this.state.storage.delete(EVENT_HISTORY_STORAGE_KEY);
-      }
-    }
-
-    this.nextEventSeq = log.length ? eventSeq(log[log.length - 1].key) + 1 : 0;
-    this.eventLog = log;
-    return log;
-  }
-
-  private async loadEventHistory(): Promise<RealtimeEvent[]> {
-    return (await this.loadEventLog()).map((e) => e.event);
-  }
-
-  /**
-   * Appends one event and evicts whatever the size and age caps push out.
-   *
-   * The whole point of one key per event: this costs a single write request
-   * unit plus one delete request per evicted event, where rewriting the entire
-   * ~100-event array cost ceil(arrayBytes / 4 KB) write units on every
-   * broadcast. Both caps are applied here because nothing schedules the alarm
-   * that would otherwise trim in the background.
-   */
-  private async addToEventHistory(event: RealtimeEvent): Promise<void> {
-    const log = await this.loadEventLog();
-    const key = eventKey(this.nextEventSeq++);
-    const appended = [...log, { key, event }];
-
-    // Size cap first, then age — the order the array implementation used. It
-    // lets an already-expired arrival consume a slot before being discarded,
-    // which costs one retained event in the worst case; kept as-is so this
-    // change is only about where the events are stored.
-    const cutoffTime = Date.now() - this.MAX_EVENT_AGE_MS;
-    const kept = appended
-      .slice(-this.MAX_EVENT_HISTORY)
-      .filter((e) => e.event.timestamp > cutoffTime);
-    this.eventLog = kept;
-
-    const keptKeys = new Set(kept.map((e) => e.key));
-    if (keptKeys.has(key)) {
-      await this.state.storage.put(key, event);
-    }
-    // An event that arrives already expired is never written, so it must not
-    // be handed to the delete pass either — that would spend a delete request
-    // on a key that does not exist.
-    await this.deleteEventKeys(keptKeys.has(key) ? appended : log, keptKeys);
-  }
-
-  /**
-   * Deletes the keys in `from` that `keptKeys` no longer covers.
-   *
-   * ponytail: capped at one storage.delete() call. In steady state at most one
-   * event is evicted per append, and anything over the cap is picked up by the
-   * next append because the eviction rule is recomputed from scratch each time.
-   */
-  private async deleteEventKeys(
-    from: StoredEvent[],
-    keptKeys: Set<string>,
-  ): Promise<void> {
-    const dropped = from
-      .filter((e) => !keptKeys.has(e.key))
-      .map((e) => e.key)
-      .slice(0, MAX_KEYS_PER_DELETE);
-    if (dropped.length) await this.state.storage.delete(dropped);
-  }
-
   private async loadRoomInfo(): Promise<{ type: string; id: string } | null> {
     if (this.roomInfo) return this.roomInfo;
 
@@ -808,9 +621,9 @@ export class RealtimeSession implements DurableObject {
    * into a disconnection.
    *
    * Deliberately evaluated only where the object is already awake — an inbound
-   * message, a broadcast fan-out, the cleanup alarm. No timer is scheduled,
-   * because waking a hibernating object on a schedule is exactly the cost
-   * hibernation was enabled to avoid.
+   * message or a broadcast fan-out. No alarm is scheduled, because waking a
+   * hibernating object on a schedule is exactly the cost hibernation was
+   * enabled to avoid.
    */
   private isAuthExpired(
     connectionInfo: ConnectionInfo,
@@ -855,7 +668,7 @@ export class RealtimeSession implements DurableObject {
     const roleRoomMap: Record<string, string[]> = {
       customer: ["customer"],
       staff: ["kitchen"],
-      admin: ["admin", "kitchen", "restaurant"],
+      admin: ["admin", "kitchen"],
     };
 
     const allowedRooms = roleRoomMap[role] || [];
@@ -1026,44 +839,5 @@ export class RealtimeSession implements DurableObject {
         error: "Failed to validate table access",
       };
     }
-  }
-
-  // Cleanup inactive connections and expired events
-  private async cleanupConnections(): Promise<void> {
-    const now = Date.now();
-    const timeout = 30 * 60 * 1000; // 30 minutes
-
-    // 1. 清理不活躍的連線，以及 token 已過期的連線
-    const nowSeconds = Math.floor(now / 1000);
-    for (const [socket, connectionInfo] of this.getConnectionEntries()) {
-      if (this.isAuthExpired(connectionInfo, nowSeconds)) {
-        this.closeExpiredConnection(socket);
-        continue;
-      }
-      if (now - connectionInfo.lastActivity > timeout) {
-        socket.close();
-        socket.serializeAttachment(null);
-        // Inactive connection cleanup completed
-      }
-    }
-
-    // 2. 清理過期的事件歷史記錄
-    const cutoffTime = now - this.MAX_EVENT_AGE_MS;
-    const log = await this.loadEventLog();
-    const beforeCount = log.length;
-    const kept = log.filter((e) => e.event.timestamp > cutoffTime);
-    this.eventLog = kept;
-    await this.deleteEventKeys(log, new Set(kept.map((e) => e.key)));
-    const afterCount = kept.length;
-
-    // 記錄清理情況（僅在有清理時）
-    if (beforeCount > afterCount) {
-      // Cleaned up ${beforeCount - afterCount} expired events
-    }
-  }
-
-  // Periodic cleanup
-  async alarm(): Promise<void> {
-    await this.cleanupConnections();
   }
 }

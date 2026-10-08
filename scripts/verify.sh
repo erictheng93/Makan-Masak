@@ -93,6 +93,7 @@ else
   step "integration allowlist" node scripts/check-integration-allowlist.cjs
   step "package test scripts" node scripts/check-package-test-scripts.cjs
   step "single test runner" node scripts/check-single-test-runner.cjs
+  step "dependency security regressions" node scripts/check-dependency-security.cjs
   step "production config" env \
     CHECK_PRODUCTION_CONFIG_REQUIRE_DEPLOYMENT_SECRETS=false \
     pnpm run check:prod-config
@@ -114,6 +115,10 @@ else
   # mount index it checks are derived from the code, so drift here means the
   # docs describe an API that no longer exists.
   step "docs drift" pnpm run check:docs-drift
+  # The five translated handbooks are copies of the zh-TW master; this reports
+  # a chapter edited in the master but not re-translated, or a stale copy under
+  # apps/onboarding-app/public/guide.
+  step "handbook locales" pnpm run check:handbook-locales
   step "guard script regressions" pnpm run test:ci-guards
   step "package tests" pnpm exec turbo run test --concurrency="$TURBO_CONCURRENCY"
   step "root tests" pnpm exec vitest run --project root

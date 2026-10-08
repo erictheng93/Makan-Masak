@@ -206,6 +206,9 @@ jobs:
       - name: 🧵 單一 test runner 實例檢查
         run: pnpm run check:single-test-runner
 
+      - name: Dependency security regressions
+        run: node scripts/check-dependency-security.cjs
+
       - name: 🚦 Production config 檢查
         run: pnpm run check:prod-config
         env:

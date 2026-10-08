@@ -28,7 +28,6 @@ interface RoutableEvent {
  */
 interface RealtimeSessionInternals {
   roomInfo: { type: string; id: string } | null;
-  eventLog: { key: string; event: RoutableEvent }[] | null;
   handleMessage(
     socket: WebSocket,
     data: string | ArrayBuffer,
@@ -46,7 +45,6 @@ interface RealtimeSessionInternals {
     event: RoutableEvent,
     connectionInfo: ConnectionInfo,
   ): boolean;
-  addToEventHistory(event: RoutableEvent): Promise<void>;
   validateRoleRoomAccess(
     role: string,
     roomType: string,
@@ -87,9 +85,7 @@ function createEnv(): Env {
     API_VERSION: "1",
     JWT_SECRET: "secret",
     REALTIME_JWT_SECRET: jwtSecret,
-    RATE_LIMIT_ENABLED: "false",
     REALTIME_SESSION: {} as DurableObjectNamespace,
-    RATE_LIMIT_KV: {} as KVNamespace,
     CACHE_KV: {} as KVNamespace,
     TOKEN_BLACKLIST: {} as KVNamespace,
     DB: {} as D1Database,
@@ -124,8 +120,6 @@ function createState(input?: {
         const deleted = keys.filter((key) => storage.delete(key)).length;
         return Array.isArray(keyOrKeys) ? deleted : deleted > 0;
       }),
-      // Real storage.list() returns keys in lexicographic order, which is what
-      // the zero-padded evt: suffix relies on to mean insertion order.
       list: vi.fn(async (options?: { prefix?: string }) => {
         const prefix = options?.prefix ?? "";
         return new Map(
@@ -316,7 +310,7 @@ describe("RealtimeSession HTTP endpoints", () => {
     });
   });
 
-  it("records valid broadcast events and exposes history", async () => {
+  it("routes a broadcast without persisting it", async () => {
     const state = createState();
     const session = createSession(createEnv(), state);
 
@@ -333,42 +327,11 @@ describe("RealtimeSession HTTP endpoints", () => {
       recipientCount: 0,
     });
 
+    // No replay consumer exists, so a broadcast costs no storage at all.
+    expect(state.storage.put).not.toHaveBeenCalled();
+    expect(state.__storage.size).toBe(0);
     const history = await session.fetch(new Request("https://do.test/history"));
-    expect(history.status).toBe(200);
-    await expect(history.json()).resolves.toMatchObject({
-      success: true,
-      count: 1,
-      events: [expect.objectContaining({ eventId: "evt-1" })],
-    });
-    // One key per event, not one array rewritten per broadcast.
-    const persisted = [...state.__storage].filter(([key]) =>
-      key.startsWith("evt:"),
-    );
-    expect(persisted).toHaveLength(1);
-    expect(persisted[0][1]).toMatchObject({ eventId: "evt-1" });
-    expect(state.__storage.has("eventHistory")).toBe(false);
-  });
-
-  it("returns only missed events when a history cursor is known", async () => {
-    const session = createSession(createEnv());
-    for (const id of ["evt-1", "evt-2", "evt-3"]) {
-      await session.fetch(
-        new Request("https://do.test/broadcast", {
-          method: "POST",
-          body: JSON.stringify(event(id)),
-        }),
-      );
-    }
-
-    const response = await session.fetch(
-      new Request("https://do.test/history?since=evt-1"),
-    );
-
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as {
-      events: Array<{ eventId: string }>;
-    };
-    expect(body.events.map((item) => item.eventId)).toEqual(["evt-2", "evt-3"]);
+    expect(history.status).toBe(404);
   });
 
   it("reports stats for rooms without active websocket connections", async () => {
@@ -387,7 +350,6 @@ describe("RealtimeSession HTTP endpoints", () => {
       roomInfo: null,
       connectionCount: 0,
       connections: [],
-      eventHistorySize: 1,
     });
   });
 });
@@ -1107,7 +1069,6 @@ describe("RealtimeSession message, routing, and validation behavior", () => {
     expect(admin.send).toHaveBeenCalledWith(JSON.stringify(kitchenEvent));
     expect(closed.send).not.toHaveBeenCalled();
     expect(otherRestaurant.send).not.toHaveBeenCalled();
-    expect(staff.deserializeAttachment().lastEventId).toBe("kitchen-1");
 
     const heartbeat = event("heartbeat-1");
     heartbeat.type = RealtimeEventType.HEARTBEAT;
@@ -1177,128 +1138,6 @@ describe("RealtimeSession message, routing, and validation behavior", () => {
     expect(anonymous.close).toHaveBeenCalledWith(1008, "Token expired");
   });
 
-  it("keeps event history bounded and returns all events when a cursor is unknown", async () => {
-    const session = createSession(createEnv());
-    const now = Date.now();
-
-    for (let index = 0; index < 105; index++) {
-      await internals(session).addToEventHistory(event(`evt-${index}`, now));
-    }
-    await internals(session).addToEventHistory(
-      event("too-old", now - 90_000_000),
-    );
-
-    const history = (internals(session).eventLog ?? []).map((e) => e.event);
-    expect(history).toHaveLength(99);
-    expect(history[0].eventId).toBe("evt-6");
-    expect(history.some((item) => item.eventId === "too-old")).toBe(false);
-
-    const response = await session.fetch(
-      new Request("https://do.test/history?since=missing"),
-    );
-
-    await expect(response.json()).resolves.toMatchObject({
-      success: true,
-      count: 99,
-      note: "Event ID not found, returning all available events",
-    });
-  });
-
-  it("writes one key per appended event and deletes only what the cap evicts", async () => {
-    const state = createState();
-    const session = createSession(createEnv(), state);
-    const now = Date.now();
-
-    // Fill to the cap, then append one more. This is the whole point of the
-    // per-event layout: the append costs one write request unit and the
-    // eviction one delete request, instead of rewriting the entire array.
-    for (let index = 0; index < 100; index++) {
-      await internals(session).addToEventHistory(event(`evt-${index}`, now));
-    }
-    state.storage.put.mockClear();
-    state.storage.delete.mockClear();
-
-    await internals(session).addToEventHistory(event("evt-100", now));
-
-    expect(state.storage.put).toHaveBeenCalledOnce();
-    expect(state.storage.put).toHaveBeenCalledWith(
-      expect.stringMatching(/^evt:\d+$/),
-      expect.objectContaining({ eventId: "evt-100" }),
-    );
-    expect(state.storage.delete).toHaveBeenCalledOnce();
-    expect(state.storage.delete).toHaveBeenCalledWith([
-      expect.stringMatching(/^evt:\d+$/),
-    ]);
-    expect(
-      [...state.__storage].filter(([key]) => key.startsWith("evt:")),
-    ).toHaveLength(100);
-  });
-
-  it("appends below the cap without deleting anything", async () => {
-    const state = createState();
-    const session = createSession(createEnv(), state);
-
-    await internals(session).addToEventHistory(event("evt-1", Date.now()));
-
-    expect(state.storage.put).toHaveBeenCalledOnce();
-    expect(state.storage.delete).not.toHaveBeenCalled();
-  });
-
-  it("spends no delete request on an event that arrives already expired", async () => {
-    const state = createState();
-    const session = createSession(createEnv(), state);
-
-    await internals(session).addToEventHistory(
-      event("too-old", Date.now() - 90_000_000),
-    );
-
-    // Never written, so there is nothing to delete either.
-    expect(state.storage.put).not.toHaveBeenCalled();
-    expect(state.storage.delete).not.toHaveBeenCalled();
-    expect(
-      [...state.__storage].filter(([key]) => key.startsWith("evt:")),
-    ).toEqual([]);
-  });
-
-  it("migrates the legacy event array to per-event keys, preserving order", async () => {
-    const now = Date.now();
-    const state = createState({
-      storage: new Map([
-        [
-          "eventHistory",
-          [event("old-1", now), event("old-2", now), event("old-3", now)],
-        ],
-      ]),
-    });
-    const session = createSession(createEnv(), state);
-
-    const response = await session.fetch(
-      new Request("https://do.test/history?since=old-1"),
-    );
-
-    // Order has to survive the move: the cursor only resolves to a suffix if
-    // storage.list()'s lexicographic order still means insertion order.
-    await expect(response.json()).resolves.toMatchObject({
-      success: true,
-      count: 2,
-      events: [
-        expect.objectContaining({ eventId: "old-2" }),
-        expect.objectContaining({ eventId: "old-3" }),
-      ],
-    });
-    expect(state.__storage.has("eventHistory")).toBe(false);
-    expect(
-      [...state.__storage].filter(([key]) => key.startsWith("evt:")),
-    ).toHaveLength(3);
-
-    // A migrated object keeps counting from where the array left off rather
-    // than colliding with a key it just wrote.
-    await internals(session).addToEventHistory(event("after", now));
-    expect(
-      [...state.__storage].filter(([key]) => key.startsWith("evt:")),
-    ).toHaveLength(4);
-  });
-
   it("handles malformed broadcast request bodies as failed broadcasts", async () => {
     const session = createSession(createEnv());
     const response = await session.fetch(
@@ -1315,7 +1154,7 @@ describe("RealtimeSession message, routing, and validation behavior", () => {
     });
   });
 
-  it("reports active connection stats with ISO timestamps and last event IDs", async () => {
+  it("reports active connection stats with ISO timestamps", async () => {
     const sockets: WebSocket[] = [];
     const session = createSession(createEnv(), createState({ sockets }));
     const socket = createSocket();
@@ -1326,7 +1165,6 @@ describe("RealtimeSession message, routing, and validation behavior", () => {
         type: "kitchen",
         connectedAt: Date.parse("2026-06-07T00:00:00.000Z"),
         lastActivity: Date.parse("2026-06-07T00:01:00.000Z"),
-        lastEventId: "evt-1",
         auth: {
           role: "staff",
           restaurantId: "restaurant-1",
@@ -1356,13 +1194,11 @@ describe("RealtimeSession message, routing, and validation behavior", () => {
           role: "staff",
           connectedAt: "2026-06-07T00:00:00.000Z",
           lastActivity: "2026-06-07T00:01:00.000Z",
-          lastEventId: "evt-1",
         },
         {
           id: "anonymous",
         },
       ],
-      eventHistorySize: 0,
     });
   });
 
@@ -1379,7 +1215,7 @@ describe("RealtimeSession message, routing, and validation behavior", () => {
       },
     );
     expect(
-      internals(session).validateRoleRoomAccess("admin", "restaurant"),
+      internals(session).validateRoleRoomAccess("admin", "kitchen"),
     ).toEqual({ valid: true });
     expect(
       internals(session).validateRoleRoomAccess("manager", "customer"),
@@ -1636,73 +1472,5 @@ describe("RealtimeSession message, routing, and validation behavior", () => {
       valid: false,
       error: "Failed to validate table access",
     });
-  });
-
-  it("cleans up inactive connections and expired history through alarm", async () => {
-    const staleSocket = createSocket();
-    const activeSocket = createSocket();
-    // Busy enough to survive the inactivity sweep, but its token is gone — the
-    // exact shape of a revoked staff member who keeps the socket warm.
-    const expiredButBusySocket = createSocket();
-    const now = Date.now();
-    staleSocket.serializeAttachment(
-      connection({ id: "stale", lastActivity: now - 31 * 60 * 1000 }),
-    );
-    activeSocket.serializeAttachment(
-      connection({ id: "active", lastActivity: now }),
-    );
-    expiredButBusySocket.serializeAttachment(
-      connection({
-        id: "expired-busy",
-        lastActivity: now,
-        expiresInSeconds: -30,
-      }),
-    );
-    const state = createState({
-      sockets: [staleSocket, activeSocket, expiredButBusySocket],
-      storage: new Map([
-        ["eventHistory", [event("fresh", now), event("old", now - 90_000_000)]],
-      ]),
-    });
-    const session = createSession(createEnv(), state);
-
-    await session.alarm();
-
-    expect(staleSocket.close).toHaveBeenCalled();
-    expect(staleSocket.serializeAttachment).toHaveBeenLastCalledWith(null);
-    expect(expiredButBusySocket.close).toHaveBeenCalledWith(
-      1008,
-      "Token expired",
-    );
-    expect(expiredButBusySocket.serializeAttachment).toHaveBeenLastCalledWith(
-      null,
-    );
-    expect(activeSocket.deserializeAttachment()).toMatchObject({
-      id: "active",
-    });
-    // The legacy array is migrated to one key per event on load, then the
-    // expired one is deleted rather than the whole array rewritten.
-    expect(state.__storage.has("eventHistory")).toBe(false);
-    expect(
-      [...state.__storage].filter(([key]) => key.startsWith("evt:")),
-    ).toEqual([
-      [expect.any(String), expect.objectContaining({ eventId: "fresh" })],
-    ]);
-
-    const freshOnlyState = createState({
-      storage: new Map([["eventHistory", [event("still-fresh", now)]]]),
-    });
-    const freshOnlySession = createSession(createEnv(), freshOnlyState);
-
-    await freshOnlySession.alarm();
-
-    expect(
-      [...freshOnlyState.__storage].filter(([key]) => key.startsWith("evt:")),
-    ).toEqual([
-      [expect.any(String), expect.objectContaining({ eventId: "still-fresh" })],
-    ]);
-    expect(freshOnlyState.storage.delete).not.toHaveBeenCalledWith(
-      expect.arrayContaining([expect.stringContaining("evt:")]),
-    );
   });
 });
