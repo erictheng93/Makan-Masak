@@ -1,6 +1,10 @@
 import type { Messages } from "../types";
 
 const viVN: Messages = {
+  realtime: {
+    menuAvailable: "{name} đã có trở lại",
+    menuUnavailable: "{name} hiện không có",
+  },
   myShifts: {
     title: "Ca của tôi",
     subtitle: "Xem ca làm của bạn và gửi yêu cầu đổi ca",

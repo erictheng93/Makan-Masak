@@ -1,4 +1,8 @@
 const zhTW = {
+  realtime: {
+    menuAvailable: "{name} 已恢復供應",
+    menuUnavailable: "{name} 已停止供應",
+  },
   myShifts: {
     title: "我的班表",
     subtitle: "查看自己的班次並提出換班申請",

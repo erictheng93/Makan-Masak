@@ -1,6 +1,10 @@
 import type { Messages } from "../types";
 
 const msMY: Messages = {
+  realtime: {
+    menuAvailable: "{name} tersedia semula",
+    menuUnavailable: "{name} tidak tersedia",
+  },
   myShifts: {
     title: "Syif Saya",
     subtitle: "Lihat syif anda dan hantar permohonan tukar syif",

@@ -1,8 +1,33 @@
 // @vitest-environment jsdom
 
-import { ref } from "vue";
+import { ref, defineComponent } from "vue";
+import { mount, flushPromises } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMenuManagement } from "./useMenuManagement";
+
+const realtime = vi.hoisted(() => ({
+  status: null as null | { value: string },
+  callback: null as null | ((event: { restaurantId: string }) => void),
+  subscribe: vi.fn(),
+  unsubscribe: vi.fn(),
+}));
+vi.mock("@/services/realtimeService", async () => {
+  const { ref } = await import("vue");
+  realtime.status = ref("connected");
+  realtime.subscribe.mockImplementation(
+    (_types: unknown, callback: typeof realtime.callback) => {
+      realtime.callback = callback;
+      return "menu-sub";
+    },
+  );
+  return {
+    useRealtime: () => ({
+      connectionStatus: realtime.status,
+      subscribe: realtime.subscribe,
+      unsubscribe: realtime.unsubscribe,
+    }),
+  };
+});
 
 const apiMocks = vi.hoisted(() => ({
   get: vi.fn(),
@@ -93,6 +118,91 @@ describe("useMenuManagement", () => {
       data: { success: true, data: { created: 0, items: [] } },
     });
     apiMocks.put.mockResolvedValue({ data: { success: true, data: {} } });
+  });
+
+  it("refreshes on menu updates and reconnection and unsubscribes on unmount", async () => {
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          useMenuManagement();
+          return () => null;
+        },
+      }),
+    );
+    realtime.callback?.({ restaurantId: "other" });
+    await flushPromises();
+    expect(apiMocks.get).not.toHaveBeenCalled();
+    realtime.callback?.({ restaurantId: "rest-1" });
+    await flushPromises();
+    expect(apiMocks.get).toHaveBeenCalledOnce();
+    realtime.status!.value = "reconnecting";
+    await flushPromises();
+    realtime.status!.value = "connected";
+    await flushPromises();
+    expect(apiMocks.get).toHaveBeenCalledTimes(2);
+    wrapper.unmount();
+    expect(realtime.unsubscribe).toHaveBeenCalledWith("menu-sub");
+  });
+
+  it("merges event bursts and keeps a final refresh after the pending read", async () => {
+    let finish!: (value: ReturnType<typeof buildMenuResponse>) => void;
+    apiMocks.get.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          useMenuManagement();
+          return () => null;
+        },
+      }),
+    );
+    realtime.callback?.({ restaurantId: "rest-1" });
+    realtime.callback?.({ restaurantId: "rest-1" });
+    realtime.callback?.({ restaurantId: "rest-1" });
+    expect(apiMocks.get).toHaveBeenCalledOnce();
+    finish(buildMenuResponse());
+    await flushPromises();
+    expect(apiMocks.get).toHaveBeenCalledTimes(2);
+    wrapper.unmount();
+  });
+  it("ignores a late older fetch and a fetch completing after unmount", async () => {
+    let old!: (value: ReturnType<typeof buildMenuResponse>) => void;
+    apiMocks.get.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          old = resolve;
+        }),
+    );
+    let menu!: ReturnType<typeof useMenuManagement>;
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          menu = useMenuManagement();
+          return () => null;
+        },
+      }),
+    );
+    const older = menu.fetchMenu();
+    await menu.fetchMenu();
+    expect(menu.menuItems.value[0].name).toBe("牛肉麵");
+    old(buildMenuResponse([buildApiMenuItem({ name: "Old" })]));
+    await older;
+    expect(menu.menuItems.value[0].name).toBe("牛肉麵");
+    apiMocks.get.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          old = resolve;
+        }),
+    );
+    const pending = menu.fetchMenu();
+    wrapper.unmount();
+    old(buildMenuResponse([buildApiMenuItem({ name: "Unmounted" })]));
+    await pending;
+    expect(menu.menuItems.value[0].name).toBe("牛肉麵");
   });
 
   // Issue #85: the importer POSTed one item per row, so a batch that failed on

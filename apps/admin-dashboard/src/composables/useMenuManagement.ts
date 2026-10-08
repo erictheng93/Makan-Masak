@@ -1,4 +1,13 @@
-import { ref, computed } from "vue";
+import {
+  ref,
+  computed,
+  watch,
+  onMounted,
+  onUnmounted,
+  getCurrentInstance,
+} from "vue";
+import { useRealtime } from "@/services/realtimeService";
+import { RealtimeEventType } from "@makanmasak/shared-types";
 import { api } from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "vue-toastification";
@@ -107,11 +116,14 @@ const categories = ref<CategoryData[]>([]);
 const menuItems = ref<MenuItemData[]>([]);
 const isLoading = ref(false);
 const selectedCategoryId = ref<number | null>(null);
+let menuRequest = 0;
 
 export function useMenuManagement() {
   const authStore = useAuthStore();
   const toast = useToast();
   const { t } = useI18n();
+
+  let disposed = false;
 
   // ── Computed ──
 
@@ -134,13 +146,21 @@ export function useMenuManagement() {
   // ── Fetch ──
 
   const fetchMenu = async () => {
-    if (!authStore.restaurantId) return;
+    if (!authStore.restaurantId || disposed) return;
+    const restaurantId = authStore.restaurantId;
+    const request = ++menuRequest;
     isLoading.value = true;
     try {
       const response = await api.get<{
         categories: CategoryData[];
         menuItems: MenuItemData[];
-      }>(`/menu/${authStore.restaurantId}?includeAll=true`);
+      }>(`/menu/${restaurantId}?includeAll=true`);
+      if (
+        disposed ||
+        request !== menuRequest ||
+        restaurantId !== authStore.restaurantId
+      )
+        return;
       const payload = response.data?.success ? response.data.data : undefined;
       if (payload) {
         categories.value = payload.categories.map((c) => ({
@@ -163,12 +183,59 @@ export function useMenuManagement() {
         }));
       }
     } catch (error) {
+      if (
+        disposed ||
+        request !== menuRequest ||
+        restaurantId !== authStore.restaurantId
+      )
+        return;
       console.error("Failed to fetch menu:", error);
       toast.error(t("menu.errors.fetchFailed"));
     } finally {
-      isLoading.value = false;
+      if (
+        !disposed &&
+        request === menuRequest &&
+        restaurantId === authStore.restaurantId
+      )
+        isLoading.value = false;
     }
   };
+
+  if (getCurrentInstance()) {
+    const realtime = useRealtime();
+    let subscription: string | undefined;
+    let refreshing = false;
+    let dirty = false;
+    const refresh = async () => {
+      dirty = true;
+      if (refreshing || disposed) return;
+      refreshing = true;
+      try {
+        while (dirty && !disposed) {
+          dirty = false;
+          await fetchMenu();
+        }
+      } finally {
+        refreshing = false;
+      }
+    };
+    onMounted(() => {
+      subscription = realtime.subscribe(
+        RealtimeEventType.MENU_AVAILABILITY_UPDATE,
+        (event) => {
+          if (event.restaurantId === String(authStore.restaurantId))
+            void refresh();
+        },
+      );
+    });
+    watch(realtime.connectionStatus, (status) => {
+      if (status === "connected") void refresh();
+    });
+    onUnmounted(() => {
+      disposed = true;
+      if (subscription) realtime.unsubscribe(subscription);
+    });
+  }
 
   // ── Category CRUD ──
 

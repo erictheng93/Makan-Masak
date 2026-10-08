@@ -1,6 +1,10 @@
 import type { Messages } from "../types";
 
 const enUS: Messages = {
+  realtime: {
+    menuAvailable: "{name} is available again",
+    menuUnavailable: "{name} is unavailable",
+  },
   myShifts: {
     title: "My Shifts",
     subtitle: "Review your own shifts and ask for a swap",

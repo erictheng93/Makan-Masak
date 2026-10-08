@@ -1,6 +1,10 @@
 import type { Messages } from "../types";
 
 const idID: Messages = {
+  realtime: {
+    menuAvailable: "{name} tersedia kembali",
+    menuUnavailable: "{name} tidak tersedia",
+  },
   myShifts: {
     title: "Shift Saya",
     subtitle: "Lihat shift Anda dan ajukan permintaan tukar shift",

@@ -1,6 +1,10 @@
 import type { Messages } from "../types";
 
 const zhCN: Messages = {
+  realtime: {
+    menuAvailable: "{name} 已恢复供应",
+    menuUnavailable: "{name} 已停止供应",
+  },
   myShifts: {
     title: "我的班表",
     subtitle: "查看自己的班次并提出换班申请",

@@ -425,6 +425,8 @@ const updateCurrentTime = () => {
 let refreshInterval: ReturnType<typeof setInterval> | null = null;
 let timeInterval: ReturnType<typeof setInterval> | null = null;
 let realtimeSubscriptionId: string | null = null;
+let menuSubscriptionId: string | null = null;
+let disposed = false;
 
 const startAutoRefresh = () => {
   if (settingsStore.autoRefresh && refreshInterval === null) {
@@ -477,6 +479,7 @@ onMounted(async () => {
 
   // Initial load
   await fetchOrders();
+  if (disposed) return;
 
   realtimeSubscriptionId = kitchenRealtime.subscribe(
     [
@@ -489,7 +492,26 @@ onMounted(async () => {
       handleRealtimeOrderEvent(toKitchenSSEEvent(event));
     },
   );
+  menuSubscriptionId = kitchenRealtime.subscribe(
+    [RealtimeEventType.MENU_AVAILABILITY_UPDATE],
+    (event) => {
+      if (
+        event.type !== RealtimeEventType.MENU_AVAILABILITY_UPDATE ||
+        event.restaurantId !== restaurantIdNum.value
+      )
+        return;
+      toast.info(
+        t(
+          event.data.isAvailable
+            ? "realtime.menuAvailable"
+            : "realtime.menuUnavailable",
+          { name: event.data.menuItemName },
+        ),
+      );
+    },
+  );
   await kitchenRealtime.connect(restaurantIdNum.value);
+  if (disposed) return;
 
   // Start auto-refresh
   startAutoRefresh();
@@ -501,6 +523,7 @@ onMounted(async () => {
 // Cleanup — registered at setup scope (NOT inside async onMounted after await,
 // which would log "onUnmounted is called when there is no active component instance")
 onUnmounted(() => {
+  disposed = true;
   stopAutoRefresh();
   if (timeInterval) {
     clearInterval(timeInterval);
@@ -510,6 +533,7 @@ onUnmounted(() => {
     kitchenRealtime.unsubscribe(realtimeSubscriptionId);
     realtimeSubscriptionId = null;
   }
+  if (menuSubscriptionId) kitchenRealtime.unsubscribe(menuSubscriptionId);
   kitchenRealtime.disconnect();
 });
 </script>
