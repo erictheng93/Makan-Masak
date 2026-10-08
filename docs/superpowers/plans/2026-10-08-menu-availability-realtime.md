@@ -402,7 +402,7 @@ kitchen :3002，使用既有 dev 配置確認實際 port；不注入假的 API�
   typecheck、lint 和本計畫指定測試，不能用「沒有測試被選中」聲稱通過。
   前端 build 與 realtime/API dry-run build 用現有 build scripts，驗證實際 bundle。
 
-- [ ] **4. 獨立審查與提交。** 按所選 execution skill 完成審查，修正本次問題，
+- [x] **4. 獨立審查與提交。** 按所選 execution skill 完成審查，修正本次問題，
   只重跑受修正影響的測試；提交 `test(realtime): verify menu availability across live clients`。
   驗收紀錄列實際指令、pass/fail/skip、三個入口結果、限制與提交 SHA。
 - [ ] **5. 處理 #441。** 已獲使用者授權關閉 issue，但推送／發布需另有明確授權。

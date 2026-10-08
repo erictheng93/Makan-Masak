@@ -10,14 +10,14 @@
 - 顧客購物車保持原有項目，四頁文件未重載。
 - 顧客及後台實際關閉業務 WebSocket，离線期間修改供應，重新連線 ACK 後補讀最新狀態。
 - Kitchen 庫存 0 視為停止供應；庫存 null 保留無限制供應語義。
-- 真實 D1 4/4：三入口提交後通知、批次後續失敗完整回滾、跨店／刪除菜品／轉店拒絕、非公開餐廳 token 拒絕。
+- 真實 D1 5/5：三入口提交後通知、批次後續失敗完整回滾、跨店／刪除菜品／轉店拒絕、非公開餐廳 token 拒絕。
 - Worker/DO 安全測試涵蓋 scope、過期、跨店、private 事件隔離與 subscription 限制。
-- 獨立整體審查：待完成。
+- 獨立整體審查：已完成；0 Critical、3 Important、0 Minor。三項 Important 全部 RED→GREEN 修正，無延後項目。
 
 ## 實際驗證指令
 
 ```sh
-E2E_STRICT=1 E2E_REALTIME_URL=http://localhost:8798 pnpm exec playwright test --project=customer-real tests/e2e/customer/menu-availability-realtime.spec.ts --workers=1
+E2E_STRICT=1 E2E_REALTIME_URL=http://localhost:8798 E2E_KITCHEN_URL=http://127.0.0.1:3002 pnpm exec playwright test --project=customer-real tests/e2e/customer/menu-availability-realtime.spec.ts --workers=1 --trace=on
 pnpm --filter @makanmasak/api exec vitest run --config vitest.real-integration.config.ts src/__tests__/integration/menu-availability.real.integration.test.ts
 pnpm --filter makanmasak-kitchen-display exec vitest run src/views/EnhancedKitchenDashboard.test.ts src/services/realtimeService.test.ts
 pnpm lint:fix
@@ -28,8 +28,8 @@ pnpm contract:check
 pnpm verify
 ```
 
-相關單元測試通過：API 213、realtime 93、customer 353、admin 16、kitchen 6、database menu 39、root CORS 1。
-D1 4/4；瀏覽器 strict 1/1，沒有 skip。截圖與 trace 保留在本地 `test-results/`。
+相關單元測試通過：API 249、realtime 93、customer 354、admin 17、kitchen 6、database menu 39、root CORS 1。
+D1 5/5；瀏覽器 strict 1/1，沒有 skip。截圖與 trace 保留在本地 `.superpowers/acceptance/issue-441/playwright-report/` 及 `test-results/` 副本，另存驗證日誌。trace 僅供本地查核，未上傳。
 受影響七個 workspace 的明確 typecheck/lint：19 個 Turbo tasks 全數成功；API/realtime dry-run 與三個前端 build：10 tasks 全數成功。
 廚房庫存提示修正後，另重跑 kitchen typecheck、lint、build 及 6 個測試，均通過。
 Prettier check 與 git diff --check 通過。
@@ -44,4 +44,16 @@ Prettier check 與 git diff --check 通過。
 - `16da2cadf` 三入口通知、快取與原子批次。
 - `9f0614c59` 顧客即時補讀與生命週期處理。
 - `e13370c49` 後台與廚房接收。
-- 本次驗收提交與最終審查結果：待補記。
+- `ce2ff6bb7` 真實串接驗收與必要防護。
+- `904ef2f58` 獨立審查後的三项一致性修正。
+
+## 審查修正與限制
+
+1. 單筆與經理寫入：D1 transaction 內讀取寫入前供應值，與 RETURNING 值比較；同值不通知，舊 prefetched snapshot 不再漏掉恢復通知。真實 D1 regression 先失敗，修正後 5/5 通過。
+2. 後台 event/reconnect GET：使用現有 Cache-Control no-cache 協定避開重新被舊請求填入的 query cache；admin regression 先回傳舊狀態失敗，修正後 17/17 通過。
+3. QR 桌台驗證：保留驗證期間收到的 fresh intent，第一個有效 menu GET 會補讀；驗證 gate 保留。regression 先 fresh:false 失敗，修正後 customer 354/354 通過。
+
+修正後 API 249/249、database 39/39；四個受影響 workspace typecheck/lint 13 tasks 及 bundle build 8 tasks 通過；測試型別與格式通過。
+最後 strict 瀏覽器 1/1（26.7s，0 skip），含六次供應寫入、購物車保留、顧客／後台實際重連 ACK、無 token 握手拒絕。
+並行建置期間一次廚房網址回傳其他本地服務的 404；確認本專案服務後用明確 127.0.0.1 網址驗收通過，沒有修改產品程式來迴避環境問題。
+只進行一次獨立審查與一次修正；沒有重新派出審查者。未新增依賴、alarm、事件歷史或 production migration。
