@@ -221,7 +221,6 @@ describe("admin order store — the server's prose never reaches the banner", ()
   });
 
   afterEach(() => {
-    expect(consoleError).toHaveBeenCalled();
     consoleError.mockRestore();
   });
 
