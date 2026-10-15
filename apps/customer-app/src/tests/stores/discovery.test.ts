@@ -43,6 +43,8 @@ describe("useDiscoveryStore", () => {
     const store = useDiscoveryStore();
     store.updateFilters({ marketId: "market-1" });
     await store.searchDishes("章魚燒");
+    // A swallowed throw lands in `error`; it must not be what passed.
+    expect(store.error).toBeNull();
 
     expect(discoveryApi.searchDishes).toHaveBeenLastCalledWith({
       q: "章魚燒",
@@ -149,6 +151,8 @@ describe("useDiscoveryStore", () => {
     const store = useDiscoveryStore();
     store.updateFilters({ marketId: "market-1" });
     await store.searchDishes("切水果");
+    // A swallowed throw lands in `error`; it must not be what passed.
+    expect(store.error).toBeNull();
 
     expect(discoveryApi.searchServices).toHaveBeenLastCalledWith({
       q: "切水果",
@@ -173,6 +177,8 @@ describe("useDiscoveryStore", () => {
     const store = useDiscoveryStore();
     store.updateFilters({ marketId: "market-1", serviceType: "delivery" });
     await store.searchDishes("外送");
+    // A swallowed throw lands in `error`; it must not be what passed.
+    expect(store.error).toBeNull();
 
     expect(discoveryApi.searchDishes).toHaveBeenLastCalledWith({
       q: "外送",
@@ -205,6 +211,8 @@ describe("useDiscoveryStore", () => {
       delivery: true,
     });
     await store.searchDishes("代客");
+    // A swallowed throw lands in `error`; it must not be what passed.
+    expect(store.error).toBeNull();
 
     expect(discoveryApi.searchServices).toHaveBeenLastCalledWith(
       expect.objectContaining({

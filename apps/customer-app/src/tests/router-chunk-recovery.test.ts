@@ -48,9 +48,16 @@ const CHUNK_MESSAGE =
   "Failed to fetch dynamically imported module: https://makanmasak.com/assets/HomeView-Ab12Cd34.js";
 
 async function loadRouterWithDeadHomeChunk(message = CHUNK_MESSAGE) {
-  vi.doMock("@/views/HomeView.vue", () => {
-    throw new TypeError(message);
-  });
+  // Throwing from the factory would make vitest wrap the error in its own
+  // "error when mocking a module" text, and the router would then be judging
+  // vitest's message instead of ours. A module whose `default` cannot be read
+  // fails where vue-router resolves the component, which is where a real dead
+  // chunk fails.
+  vi.doMock("@/views/HomeView.vue", () => ({
+    get default(): never {
+      throw new TypeError(message);
+    },
+  }));
   const { default: router } = await import("@/router");
   return router;
 }
@@ -104,6 +111,11 @@ describe("router recovery from a stale build", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(assign).toHaveBeenCalledWith("/");
+    // The router judged the chunk failure itself, not a wrapper around it.
+    expect(console.error).toHaveBeenCalledWith(
+      "路由錯誤:",
+      expect.objectContaining({ message: CHUNK_MESSAGE }),
+    );
     // Routing is what looped, so the reload replaces it rather than joining it.
     expect(
       push.mock.calls.filter(
