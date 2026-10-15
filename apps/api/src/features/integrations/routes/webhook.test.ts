@@ -87,11 +87,18 @@ vi.mock("../services/PlatformOrderService", () => ({
   }),
 }));
 
-import routes from "./webhook";
+import { Hono } from "hono";
+import routesRouter from "./webhook";
+import { handleAppError } from "../../../utils/app-error-handler";
 import { PlatformOrderRejectedError } from "../adapters/PlatformOrderRejectedError";
 import { eq } from "drizzle-orm";
 import { platformIntegrations } from "@makanmasak/database";
 import { idempotencyMiddleware } from "../../../middleware/idempotency";
+
+// A bare router turns every throw into 500; mount under the real handler.
+const routes = new Hono();
+routes.onError(handleAppError);
+routes.route("/", routesRouter);
 
 // The route builds its middleware once, while `./webhook` is evaluated — long
 // before the first `beforeEach`. Snapshot the options here, because

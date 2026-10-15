@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthUser } from "../../../middleware/auth";
-import app from "./index";
+import { Hono } from "hono";
+import appRouter from "./index";
+import { handleAppError } from "../../../utils/app-error-handler";
+
+// A bare router turns every throw into 500; mount under the real handler.
+const app = new Hono();
+app.onError(handleAppError);
+app.route("/", appRouter);
 
 const currentUser = vi.hoisted(() => ({
   value: {
@@ -185,8 +192,10 @@ describe("reservations routes", () => {
         env as never,
       ),
     );
-    expect(invalid.status).toBe(500);
-    await expect(invalid.text()).resolves.toBe("Internal Server Error");
+    expect(invalid.status).toBe(400);
+    await expect(invalid.json()).resolves.toMatchObject({
+      error: { code: "VALIDATION_ERROR" },
+    });
   });
 
   it("verifies reservation codes and returns availability slots", async () => {
@@ -256,7 +265,7 @@ describe("reservations routes", () => {
       ),
     );
 
-    expect(rejected.status).toBe(500);
+    expect(rejected.status).toBe(400);
     expect(createReservation).not.toHaveBeenCalled();
     expect(rateLimitMiddleware).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -334,7 +343,7 @@ describe("reservations routes", () => {
         createEnv() as never,
       ),
     );
-    expect(crossTenant.status).toBe(500);
+    expect(crossTenant.status).toBe(403);
     expect(createReservation).not.toHaveBeenCalled();
 
     currentUser.value = {
@@ -370,7 +379,7 @@ describe("reservations routes", () => {
         createEnv() as never,
       ),
     );
-    expect(invalid.status).toBe(500);
+    expect(invalid.status).toBe(400);
     expect(createReservation).not.toHaveBeenCalled();
   });
 
@@ -421,7 +430,7 @@ describe("reservations routes", () => {
     // This bare route test does not install app-factory's ApiError handler;
     // the assertion below verifies that no write path is reached. The full API
     // handler turns the thrown RESTAURANT_NOT_FOUND error into a 404 response.
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(404);
     expect(createReservation).not.toHaveBeenCalled();
     expect(getPublicReservationRestaurant).toHaveBeenCalledWith(
       "missing-restaurant",
@@ -468,10 +477,10 @@ describe("reservations routes", () => {
         env as never,
       ),
     );
-    expect(forbiddenResponse.status).toBe(500);
-    await expect(forbiddenResponse.text()).resolves.toBe(
-      "Internal Server Error",
-    );
+    expect(forbiddenResponse.status).toBe(403);
+    await expect(forbiddenResponse.json()).resolves.toMatchObject({
+      error: { code: "FORBIDDEN" },
+    });
   });
 
   it("cancels staff reservations through the authenticated tenant-scoped route", async () => {
@@ -513,7 +522,7 @@ describe("reservations routes", () => {
       ),
     );
 
-    expect(denied.status).toBe(500);
+    expect(denied.status).toBe(403);
     expect(cancelReservation).not.toHaveBeenCalled();
   });
 
@@ -578,8 +587,10 @@ describe("reservations routes", () => {
     const scopedResponse = await withSilencedRouteError(() =>
       app.fetch(new Request("https://test/reservation-2"), env as never),
     );
-    expect(scopedResponse.status).toBe(500);
-    await expect(scopedResponse.text()).resolves.toBe("Internal Server Error");
+    expect(scopedResponse.status).toBe(403);
+    await expect(scopedResponse.json()).resolves.toMatchObject({
+      error: { code: "FORBIDDEN" },
+    });
   });
 
   it("runs status actions for protected reservations", async () => {

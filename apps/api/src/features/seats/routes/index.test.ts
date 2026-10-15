@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthUser } from "../../../middleware/auth";
-import routes from "./index";
+import { Hono } from "hono";
+import routesRouter from "./index";
+import { handleAppError } from "../../../utils/app-error-handler";
 import { batchCreateSeatsSchema } from "../schemas/validation";
+
+// A bare router turns every throw into 500; mount under the real handler.
+const routes = new Hono();
+routes.onError(handleAppError);
+routes.route("/", routesRouter);
 
 const mocks = vi.hoisted(() => ({
   currentUser: {
@@ -211,7 +218,7 @@ describe("seats routes", () => {
       ),
     );
 
-    expect(missingResponse.status).toBe(500);
+    expect(missingResponse.status).toBe(404);
     expect(mocks.getSeatsByTableId).not.toHaveBeenCalled();
 
     mocks.getTableById.mockResolvedValueOnce({
@@ -226,7 +233,7 @@ describe("seats routes", () => {
       ),
     );
 
-    expect(forbiddenResponse.status).toBe(500);
+    expect(forbiddenResponse.status).toBe(403);
     expect(mocks.getSeatStats).not.toHaveBeenCalled();
   });
 
@@ -270,7 +277,7 @@ describe("seats routes", () => {
       ),
     );
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(404);
   });
 
   it("reads a seat after seat-level access checks", async () => {
@@ -295,14 +302,14 @@ describe("seats routes", () => {
       routes.fetch(new Request("https://test/99"), createEnv() as never),
     );
 
-    expect(missingResponse.status).toBe(500);
+    expect(missingResponse.status).toBe(404);
 
     mocks.getSeatById.mockResolvedValueOnce(seat({ restaurantId: "other" }));
     const forbiddenResponse = await withSilencedRouteError(() =>
       routes.fetch(new Request("https://test/7"), createEnv() as never),
     );
 
-    expect(forbiddenResponse.status).toBe(500);
+    expect(forbiddenResponse.status).toBe(403);
   });
 
   it("batch creates seats and regenerates table QR codes", async () => {
@@ -372,7 +379,7 @@ describe("seats routes", () => {
       ),
     );
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(400);
     expect(mocks.createSeatsForTable).not.toHaveBeenCalled();
   });
 
@@ -425,7 +432,7 @@ describe("seats routes", () => {
       ),
     );
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(400);
   });
 
   it("updates and deletes seats after access checks", async () => {
@@ -470,7 +477,7 @@ describe("seats routes", () => {
       ),
     );
 
-    expect(seatResponse.status).toBe(500);
+    expect(seatResponse.status).toBe(400);
 
     mocks.deleteSeatsForTable.mockResolvedValue(false);
     const tableResponse = await withSilencedRouteError(() =>
@@ -480,7 +487,7 @@ describe("seats routes", () => {
       ),
     );
 
-    expect(tableResponse.status).toBe(500);
+    expect(tableResponse.status).toBe(400);
   });
 
   it("deletes all seats for a table", async () => {
@@ -539,7 +546,7 @@ describe("seats routes", () => {
         createEnv() as never,
       ),
     );
-    expect(occupiedResponse.status).toBe(500);
+    expect(occupiedResponse.status).toBe(400);
     expect(mocks.occupySeat).toHaveBeenCalledWith(7, "42", undefined);
 
     mocks.getSeatById.mockResolvedValue(seat());
@@ -550,7 +557,7 @@ describe("seats routes", () => {
         createEnv() as never,
       ),
     );
-    expect(occupyResponse.status).toBe(500);
+    expect(occupyResponse.status).toBe(400);
 
     mocks.releaseSeat.mockResolvedValue(false);
     const releaseResponse = await withSilencedRouteError(() =>
@@ -559,7 +566,7 @@ describe("seats routes", () => {
         createEnv() as never,
       ),
     );
-    expect(releaseResponse.status).toBe(500);
+    expect(releaseResponse.status).toBe(400);
   });
 
   it("regenerates one seat QR code and reports generation failures", async () => {
@@ -586,6 +593,6 @@ describe("seats routes", () => {
         createEnv() as never,
       ),
     );
-    expect(failureResponse.status).toBe(500);
+    expect(failureResponse.status).toBe(400);
   });
 });

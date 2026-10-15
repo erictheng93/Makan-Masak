@@ -2,7 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthUser } from "../../../middleware/auth";
 import { sign } from "hono/jwt";
 import { sign as signJsonWebToken } from "jsonwebtoken";
-import routes from "./index";
+import { Hono } from "hono";
+import routesRouter from "./index";
+import { handleAppError } from "../../../utils/app-error-handler";
+
+// A bare router turns every throw into 500; mount under the real handler.
+const routes = new Hono();
+routes.onError(handleAppError);
+routes.route("/", routesRouter);
 
 const authMiddleware = vi.hoisted(() =>
   vi.fn(async (c: { set: (key: string, value: unknown) => void }, next) => {
@@ -149,7 +156,7 @@ describe("legacy SSE compatibility routes", () => {
         createEnv() as never,
       ),
     );
-    expect(missingToken.status).toBe(500);
+    expect(missingToken.status).toBe(401);
 
     const missingSecret = await withSilencedRouteError(async () =>
       routes.fetch(
@@ -167,7 +174,7 @@ describe("legacy SSE compatibility routes", () => {
         }) as never,
       ),
     );
-    expect(blacklisted.status).toBe(500);
+    expect(blacklisted.status).toBe(401);
   });
 
   it("returns retired guidance for authenticated legacy management routes", async () => {

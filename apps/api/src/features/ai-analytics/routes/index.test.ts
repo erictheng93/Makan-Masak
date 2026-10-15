@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthUser } from "../../../middleware/auth";
-import routes from "./index";
+import { Hono } from "hono";
+import routesRouter from "./index";
+import { handleAppError } from "../../../utils/app-error-handler";
+
+// A bare router turns every throw into 500; mount under the real handler.
+const routes = new Hono();
+routes.onError(handleAppError);
+routes.route("/", routesRouter);
 
 const currentUser = vi.hoisted(() => ({
   value: {
@@ -208,7 +215,7 @@ describe("ai analytics routes", () => {
       ),
     );
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(403);
     expect(serviceMethods.getConfig).not.toHaveBeenCalled();
   });
 
@@ -227,7 +234,7 @@ describe("ai analytics routes", () => {
       ),
     );
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(403);
     expect(serviceMethods.getConfig).not.toHaveBeenCalled();
   });
 
@@ -293,7 +300,7 @@ describe("ai analytics routes", () => {
       ),
     );
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(403);
     expect(serviceMethods.testProvider).not.toHaveBeenCalled();
     expect(serviceMethods.saveConfig).not.toHaveBeenCalled();
   });
@@ -312,7 +319,7 @@ describe("ai analytics routes", () => {
         createEnv() as never,
       ),
     );
-    expect(invalidResponse.status).toBe(500);
+    expect(invalidResponse.status).toBe(400);
     expect(serviceMethods.testProvider).not.toHaveBeenCalled();
 
     serviceMethods.testProvider.mockResolvedValue({
@@ -333,7 +340,7 @@ describe("ai analytics routes", () => {
       ),
     );
 
-    expect(failedTestResponse.status).toBe(500);
+    expect(failedTestResponse.status).toBe(400);
     expect(serviceMethods.saveConfig).not.toHaveBeenCalled();
   });
 
@@ -420,7 +427,7 @@ describe("ai analytics routes", () => {
       ),
     );
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(403);
     expect(serviceMethods.generateReport).not.toHaveBeenCalled();
   });
 
@@ -445,7 +452,7 @@ describe("ai analytics routes", () => {
       ),
     );
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(403);
     expect(serviceMethods.generateReport).not.toHaveBeenCalled();
   });
 
@@ -539,10 +546,10 @@ describe("ai analytics routes", () => {
       ),
     );
 
-    expect(traffic.status).toBe(500);
-    expect(best.status).toBe(500);
-    expect(profit.status).toBe(500);
-    expect(analysis.status).toBe(500);
+    expect(traffic.status).toBe(403);
+    expect(best.status).toBe(403);
+    expect(profit.status).toBe(403);
+    expect(analysis.status).toBe(403);
     expect(serviceMethods.getTrafficDrivers).not.toHaveBeenCalled();
     expect(serviceMethods.getBestsellers).not.toHaveBeenCalled();
     expect(serviceMethods.getProfitLeaders).not.toHaveBeenCalled();
@@ -584,7 +591,7 @@ describe("ai analytics routes", () => {
       ),
     );
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(403);
     expect(serviceMethods.getUsageStats).not.toHaveBeenCalled();
   });
 });

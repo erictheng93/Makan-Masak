@@ -2,16 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthUser } from "../../../middleware/auth";
 import { Hono } from "hono";
 import feedbackRoutes from "./index";
-import { ApiError } from "../../../shared/utils/api-error";
+import { handleAppError } from "../../../utils/app-error-handler";
 import { createFeedbackSchema } from "../schemas/validation";
 
-// Mirror the app-level handler: a bare router turns every throw into 500.
+// A bare router turns every throw into 500; mount under the real handler.
 const routes = new Hono();
-routes.onError((err, c) =>
-  err instanceof ApiError
-    ? c.json({ success: false, error: { code: err.code } }, err.status as 400)
-    : c.json({ success: false }, 500),
-);
+routes.onError(handleAppError);
 routes.route("/", feedbackRoutes);
 
 const mocks = vi.hoisted(() => ({
@@ -235,6 +231,7 @@ describe("feedback routes", () => {
   });
 
   it("rejects non-http attachment URLs during feedback creation", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const response = await routes.fetch(
       jsonRequest(
         "https://test/",
@@ -251,6 +248,7 @@ describe("feedback routes", () => {
 
     expect(response.status).toBe(400);
     expect(mocks.createFeedback).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 
   it("persists batch sync payloads with encoded scope and sync id", async () => {

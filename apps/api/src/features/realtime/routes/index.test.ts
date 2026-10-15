@@ -2,15 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sign } from "hono/jwt";
 import { Hono } from "hono";
 import realtimeRoutes from "./index";
-import { ApiError } from "../../../shared/utils/api-error";
+import { handleAppError } from "../../../utils/app-error-handler";
 
-// Mirror the app-level handler: a bare router turns every throw into 500.
+// A bare router turns every throw into 500; mount under the real handler.
 const routes = new Hono();
-routes.onError((err, c) =>
-  err instanceof ApiError
-    ? c.json({ success: false, error: { code: err.code } }, err.status as 400)
-    : c.json({ success: false }, 500),
-);
+routes.onError(handleAppError);
 routes.route("/", realtimeRoutes);
 
 const serviceMethods = vi.hoisted(() => ({
