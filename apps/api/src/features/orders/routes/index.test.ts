@@ -1115,6 +1115,7 @@ describe("orders routes", () => {
   });
 
   it("keeps a local cancellation successful when platform sync fails", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const waitUntilPromises: Array<Promise<unknown>> = [];
     serviceMocks.getOrder.mockResolvedValue({
       id: "55",
@@ -1140,6 +1141,12 @@ describe("orders routes", () => {
 
     expect(response.status).toBe(200);
     await expect(Promise.all(waitUntilPromises)).resolves.toEqual([undefined]);
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Failed to sync cancellation to platform"),
+      expect.stringContaining("platform unavailable"),
+      { orderId: "55" },
+    );
+    errorSpy.mockRestore();
   });
 
   it("passes a caller-supplied cancellation reason to the service", async () => {

@@ -1,5 +1,6 @@
 import {
   afterAll,
+  afterEach,
   beforeAll,
   beforeEach,
   describe,
@@ -56,9 +57,17 @@ function createDb(config: unknown) {
 }
 
 describe("AIForecastEnhancer", () => {
+  // The fixtures store the API key as legacy base64, so every decrypt warns.
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
     vi.mocked(createProvider).mockClear();
     chat.mockReset();
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
   });
 
   it("returns statistical forecasts unchanged when AI is not configured", async () => {
@@ -164,6 +173,9 @@ describe("AIForecastEnhancer", () => {
         2: "rain slowdown",
       },
     });
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("legacy base64"),
+    );
   });
 
   it("treats malformed LLM output as no-op AI enhancement", async () => {

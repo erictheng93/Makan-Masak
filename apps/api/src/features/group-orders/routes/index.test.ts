@@ -1346,6 +1346,7 @@ describe("group orders routes", () => {
     });
     broadcastEvent.mockRejectedValueOnce(new Error("realtime unavailable"));
     isMemberSession.mockResolvedValue(true);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const response = await routes.fetch(
       new Request(`https://test/${groupOrderId}/cart`, {
@@ -1369,6 +1370,11 @@ describe("group orders routes", () => {
       expect.objectContaining({ memberId, menuItemId: 101, quantity: 2 }),
     );
     expect(broadcastEvent).toHaveBeenCalledOnce();
+    expect(warnSpy).toHaveBeenCalledWith(
+      "Failed to broadcast group_cart_item_added:",
+      expect.any(Error),
+    );
+    warnSpy.mockRestore();
   });
 
   /**

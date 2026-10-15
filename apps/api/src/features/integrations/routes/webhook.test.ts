@@ -281,6 +281,8 @@ describe("platform webhook routes", () => {
   });
 
   it("decrypts exactly one integration when the store resolves", async () => {
+    // The request passes the signature check, so it reaches the log insert.
+    mockMutations();
     mockSelectResults({ platformIntegrations: [[integration()]] });
 
     await request("/uber-eats", {

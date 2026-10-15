@@ -1776,6 +1776,16 @@ describe("BackupService compression/encryption wiring (#20)", () => {
     });
   }
 
+  let errorSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    errorSpy.mockRestore();
+  });
+
   it("rejects backup creation when encryption is enabled without a key", async () => {
     const mutations = mockMutations();
     const { service, storageService } = createService();
@@ -1783,6 +1793,10 @@ describe("BackupService compression/encryption wiring (#20)", () => {
     await expect(
       service.executeBackup("enc-backup", encBackupOverride()),
     ).rejects.toThrow(/encryption key/i);
+    expect(errorSpy).toHaveBeenCalledWith(
+      "Backup execution failed for enc-backup:",
+      expect.any(Error),
+    );
 
     // Never reached storage when the key is missing.
     expect(storageService.storeBackup).not.toHaveBeenCalled();

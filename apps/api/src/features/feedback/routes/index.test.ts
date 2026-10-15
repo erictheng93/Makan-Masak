@@ -224,6 +224,8 @@ describe("feedback routes", () => {
   });
 
   it("rejects non-http attachment URLs during feedback creation", async () => {
+    // The bare router has no app.onError, so Hono logs the validation ApiError.
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const response = await routes.fetch(
       jsonRequest(
         "https://test/",
@@ -240,6 +242,10 @@ describe("feedback routes", () => {
 
     expect(response.status).not.toBe(201);
     expect(mocks.createFeedback).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "Validation failed" }),
+    );
+    errorSpy.mockRestore();
   });
 
   it("persists batch sync payloads with encoded scope and sync id", async () => {

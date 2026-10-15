@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Context, Next } from "hono";
 import type { NotificationPayload } from "@makanmasak/database";
 
@@ -276,8 +276,16 @@ type VerifyOtpBody = {
   data: { accessToken: string; customer: { id: string } };
 };
 
+// Vendor / mail failures are driven on purpose below; the routes log each one.
+let errorSpy: ReturnType<typeof vi.spyOn>;
+const smsFailedLog = [
+  "[customer-otp] SMS send failed",
+  expect.objectContaining({ provider: "mitake" }),
+] as const;
+
 beforeEach(() => {
   vi.clearAllMocks();
+  errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   auth.customer = {
     id: "customer-1",
     displayName: "Customer One",
@@ -296,6 +304,10 @@ beforeEach(() => {
     success: true,
     errors: [],
   });
+});
+
+afterEach(() => {
+  errorSpy.mockRestore();
 });
 
 describe("generateOtp", () => {
@@ -447,6 +459,7 @@ describe("customer identity routes", () => {
     });
     // The vendor's own wording must not reach the client.
     expect(JSON.stringify(body)).not.toContain("無效的手機號碼");
+    expect(errorSpy).toHaveBeenCalledWith(...smsFailedLog);
   });
 
   it("refuses OTP requests in production when no SMS vendor is configured", async () => {
@@ -716,6 +729,10 @@ describe("customer identity routes", () => {
       success: false,
       error: { code: "VERIFICATION_EMAIL_FAILED" },
     });
+    expect(errorSpy).toHaveBeenCalledWith(
+      "[customer-auth] email notification failed",
+      expect.objectContaining({ purpose: "email_verify" }),
+    );
   });
 
   it("keeps forgot-password uniform when the reset email cannot be sent", async () => {
@@ -739,6 +756,10 @@ describe("customer identity routes", () => {
       data: { sent: true },
     });
     expect(notificationMocks.sendNotification).toHaveBeenCalledOnce();
+    expect(errorSpy).toHaveBeenCalledWith(
+      "[customer-auth] email notification failed",
+      expect.objectContaining({ purpose: "password_reset" }),
+    );
   });
 
   it("issues an account-bound OTP for phone password resets", async () => {
@@ -894,6 +915,7 @@ describe("customer identity routes", () => {
 
     expect([known.status, unknown.status]).toEqual([200, 200]);
     await expect(known.json()).resolves.toEqual(await unknown.json());
+    expect(errorSpy).toHaveBeenCalledWith(...smsFailedLog);
   });
 
   // #298: production shipped for months with no working email provider and
@@ -1245,6 +1267,7 @@ describe("customer identity routes", () => {
 
     expect([known.status, unknown.status]).toEqual([200, 200]);
     await expect(known.json()).resolves.toEqual(await unknown.json());
+    expect(errorSpy).toHaveBeenCalledWith(...smsFailedLog);
     expect(
       knownDb.state.statements.some((statement) =>
         statement.sql.includes(

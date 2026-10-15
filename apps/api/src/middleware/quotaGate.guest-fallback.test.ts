@@ -13,6 +13,21 @@ vi.mock("../shared/utils/usage-buckets", () => ({
   sumUnfoldedBucketQuantities,
 }));
 
+// The hard-limit Slack notification writes through Drizzle, which this file's
+// D1 stub cannot serve; stub the sender so it does not log a swallowed failure.
+const notificationSend = vi.hoisted(() => vi.fn(async () => undefined));
+vi.mock(
+  "../features/billing/services/BillingNotificationService",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("../features/billing/services/BillingNotificationService")
+    >()),
+    BillingNotificationService: vi.fn(function BillingNotificationService() {
+      return { send: notificationSend };
+    }),
+  }),
+);
+
 import { quotaGate } from "./quotaGate";
 import { ApiError } from "../shared/utils/api-error";
 
@@ -87,5 +102,8 @@ describe("quotaGate guest restaurant fallback", () => {
     await expect(res.json()).resolves.toMatchObject({
       error: { code: "QUOTA_EXCEEDED" },
     });
+    expect(notificationSend).toHaveBeenCalledWith(
+      expect.objectContaining({ restaurantId: "rest-guest-1" }),
+    );
   });
 });

@@ -32,6 +32,7 @@ vi.mock("./services/AlertService", () => ({
 
 describe("scheduled handler", () => {
   it("runs the remaining jobs in a tick after one of them fails", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { default: worker } = await import("./index");
     mocks.reconcile.mockResolvedValue({});
     mocks.sweep.mockRejectedValue(new Error("Failed query: select ..."));
@@ -49,5 +50,10 @@ describe("scheduled handler", () => {
       expect.objectContaining({ message: "Failed query: select ..." }),
       "Cron Job Execution: group order expiry sweep",
     );
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("group order expiry sweep failed"),
+      expect.any(Error),
+    );
+    errorSpy.mockRestore();
   });
 });

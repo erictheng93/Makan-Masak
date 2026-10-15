@@ -120,6 +120,10 @@ function createError(
 }
 
 describe("SystemService", () => {
+  // Several tests drive failing dependencies on purpose; the service and the
+  // cache layer log each one. afterEach's restoreAllMocks puts console back.
+  let errorSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-07T12:00:00.000Z"));
@@ -141,7 +145,15 @@ describe("SystemService", () => {
       },
     ]);
     errorReportingFns.cleanupOldErrorReports.mockResolvedValue(7);
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   });
+
+  const expectErrorLogged = (text: string) =>
+    expect(
+      errorSpy.mock.calls.some((call: unknown[]) =>
+        String(call[0]).includes(text),
+      ),
+    ).toBe(true);
 
   afterEach(() => {
     vi.useRealTimers();
@@ -226,6 +238,7 @@ describe("SystemService", () => {
       ),
     ).rejects.toThrow("Failed to submit error report");
     expect(fetchMock).not.toHaveBeenCalled();
+    expectErrorLogged("Failed to create error report");
   });
 
   it("returns cached health without running dependency checks", async () => {
@@ -285,6 +298,7 @@ describe("SystemService", () => {
         cache: { status: "unhealthy" },
       },
     });
+    expectErrorLogged("system:health");
   });
 
   it("maps and caches error statistics", async () => {
@@ -349,6 +363,7 @@ describe("SystemService", () => {
     await expect(createService().service.getErrorStats()).rejects.toThrow(
       "Failed to get error statistics",
     );
+    expectErrorLogged("Failed to get error statistics");
   });
 
   it("cleans old reports and clears related caches", async () => {
@@ -393,6 +408,7 @@ describe("SystemService", () => {
         "https://slack.example.test/hook",
       ),
     ).resolves.toBeUndefined();
+    expectErrorLogged("Failed to send critical error notification");
     expect(fetchMock).toHaveBeenCalledWith(
       "https://slack.example.test/hook",
       expect.objectContaining({

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const meterEmit = vi.hoisted(() => vi.fn(async () => undefined));
 vi.mock("../../../shared/utils/meter", () => ({ meterEmit }));
@@ -16,6 +16,20 @@ import { createApp } from "../../../app-factory";
  * its auth guard; 404 would mean the mount does not exist.
  */
 describe("broadcast routes are reachable through the app factory", () => {
+  // The 401s are the point of these tests, and the shared 500 for the
+  // DB-less public market route is incidental; the error handler, security
+  // logger and CORS middleware log each of them.
+  let errorSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   function app() {
     return createApp(undefined, {
       disableEdgeCache: true,
@@ -49,6 +63,7 @@ describe("broadcast routes are reachable through the app factory", () => {
     async (path, method) => {
       const response = await call(path, method);
       expect(response.status).toBe(401);
+      expect(errorSpy).toHaveBeenCalled();
     },
   );
 

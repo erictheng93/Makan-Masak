@@ -118,6 +118,17 @@ function createEnv(): Env & { cacheDeletes: string[] } {
         cacheDeletes.push(key);
       }),
     },
+    // Without a binding the broadcast service warns and skips; supply one so
+    // the sweep's broadcasts take the delivered path.
+    REALTIME_SESSION: {
+      idFromName: vi.fn((name: string) => ({ name })),
+      get: vi.fn(() => ({
+        fetch: vi.fn(
+          async () =>
+            new Response(JSON.stringify({ success: true, recipientCount: 0 })),
+        ),
+      })),
+    },
     cacheDeletes,
   } as unknown as Env & { cacheDeletes: string[] };
 }

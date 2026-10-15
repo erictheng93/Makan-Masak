@@ -66,6 +66,9 @@ function createEnv(input?: {
         })),
       })),
     },
+    // Present so the rate limiter takes its real "no client IP, skip" path
+    // instead of the "CACHE_KV not available" warning path.
+    CACHE_KV: { get: vi.fn(async () => null), put: vi.fn(async () => {}) },
     JWT_SECRET: "x".repeat(32),
     REALTIME_JWT_SECRET: "y".repeat(32),
     REALTIME_SERVICE_URL: "https://realtime.test",
@@ -130,6 +133,10 @@ async function withSilencedRouteError<T>(
 }
 
 describe("realtime routes", () => {
+  // Route-level WARNs ("Failed to generate WebSocket token", "Failed to fetch
+  // realtime stats") are the deliberate failure paths asserted below.
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+
   it("exchanges a public restaurant id for a scoped menu token", async () => {
     serviceMethods.generateMenuToken.mockResolvedValue({
       token: "menu-token",
@@ -155,6 +162,7 @@ describe("realtime routes", () => {
       method.mockReset();
     }
     vi.restoreAllMocks();
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
   it("generates staff websocket tokens from validated request bodies", async () => {
@@ -262,6 +270,10 @@ describe("realtime routes", () => {
     );
     expect(validationResponse.status).toBe(500);
     expect(serviceMethods.generateWebSocketToken).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Failed to generate WebSocket token"),
+      expect.anything(),
+    );
   });
 
   it("generates guest tokens and skips rate limiting for test requests without an IP", async () => {
@@ -559,6 +571,10 @@ describe("realtime routes", () => {
       ),
     );
     expect(failedResponse.status).toBe(500);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Failed to fetch realtime stats"),
+      expect.anything(),
+    );
   });
 
   it("blocks cross-restaurant realtime room stats", async () => {

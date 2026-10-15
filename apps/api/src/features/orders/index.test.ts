@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const serviceState = vi.hoisted(() => ({
   shouldThrow: false,
@@ -43,12 +43,27 @@ function createEnv(overrides: Record<string, unknown> = {}) {
 }
 
 describe("orders feature module", () => {
+  // The module logs each failure it reports; several tests drive those on purpose.
+  let errorSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(async () => {
     await ordersFeature.cleanup();
     vi.clearAllMocks();
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     serviceState.shouldThrow = false;
     serviceState.instances.length = 0;
   });
+
+  afterEach(() => {
+    errorSpy.mockRestore();
+  });
+
+  const expectErrorLogged = (text: string) =>
+    expect(
+      errorSpy.mock.calls.some((call: unknown[]) =>
+        String(call[0]).includes(text),
+      ),
+    ).toBe(true);
 
   it("creates a singleton module with mounted routes and metadata", async () => {
     const first = createOrdersModule();
@@ -130,6 +145,7 @@ describe("orders feature module", () => {
       status: "unhealthy",
       dependencies: { orderService: "failed" },
     });
+    expectErrorLogged("Health check failed for OrdersService");
   });
 
   it("returns empty metrics structure and propagates service creation errors", async () => {
@@ -162,6 +178,7 @@ describe("orders feature module", () => {
     await expect(
       createOrdersModule().getFeatureMetrics(createEnv() as never),
     ).rejects.toThrow("service unavailable");
+    expectErrorLogged("Failed to get feature metrics");
   });
 
   it("validates required configuration and initializes only valid environments", async () => {
@@ -184,6 +201,7 @@ describe("orders feature module", () => {
     ).rejects.toThrow(
       "Orders feature configuration validation failed: Database (DB) binding is required",
     );
+    expectErrorLogged("configuration validation failed");
 
     await expect(
       module.initialize(createEnv() as never),
@@ -223,5 +241,6 @@ describe("orders feature module", () => {
     });
 
     expect(response.status).toBe(500);
+    expect(errorSpy).toHaveBeenCalled();
   });
 });

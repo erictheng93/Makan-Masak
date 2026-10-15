@@ -4,7 +4,10 @@ import { AlertService } from "./AlertService";
 import type { Env } from "../types/env";
 
 describe("email alert delivery", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
 
   it("creates a Cloudflare email channel when the binding and recipient exist", async () => {
     const send = vi.fn().mockResolvedValue({ messageId: "cf-alert-1" });
@@ -29,6 +32,7 @@ describe("email alert delivery", () => {
   });
 
   it("does not send alert email without the Cloudflare binding", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     await new AlertService({
@@ -39,11 +43,20 @@ describe("email alert delivery", () => {
       severity: "warning",
     });
     expect(fetchMock).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledWith("No alert channels configured");
+    expect(warnSpy).toHaveBeenCalledWith(
+      "No alert channels available, skipping alert:",
+      "Check",
+    );
   });
 });
 
 describe("systemError", () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it("surfaces the wrapped cause so a Drizzle 'Failed query' alert names the D1 error", async () => {
+    // The channel-less AlertService warns on construction; sendAlert is stubbed.
+    vi.spyOn(console, "warn").mockImplementation(() => {});
     const service = new AlertService({} as Env);
     const sendAlert = vi.spyOn(service, "sendAlert").mockResolvedValue();
 

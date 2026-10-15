@@ -110,6 +110,7 @@ describe("corsMiddleware", () => {
       }),
       {
         NODE_ENV: "production",
+        CORS_ORIGIN: "https://makanmasak.com",
       },
     );
 

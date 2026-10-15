@@ -39,6 +39,14 @@ vi.mock("../../../middleware/auth", () => ({
   ),
 }));
 
+// Metering writes to D1, which this file fakes as `{ binding: "db" }`; stub
+// the emit so the allowed paths do not log a swallowed meterEmit.failed.
+const meterEmit = vi.hoisted(() => vi.fn(async () => undefined));
+vi.mock("../../../shared/utils/meter", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../shared/utils/meter")>()),
+  meterEmit,
+}));
+
 const receiptServiceFns = vi.hoisted(() => ({
   printReceipt: vi.fn(),
   reprintReceipt: vi.fn(),
@@ -187,6 +195,7 @@ describe("POST /print is gated on receipt_printing", () => {
 
     expect(res.status).toBe(200);
     expect(receiptServiceFns.printReceipt).toHaveBeenCalledOnce();
+    expect(meterEmit).toHaveBeenCalledWith(expect.anything(), "print.jobs");
   });
 
   it("denies a basic-tier cashier (receipt_printing is pro-tier+)", async () => {
@@ -231,5 +240,6 @@ describe("POST /:receiptId/reprint is gated on receipt_printing", () => {
 
     expect(res.status).toBe(200);
     expect(receiptServiceFns.reprintReceipt).toHaveBeenCalledOnce();
+    expect(meterEmit).toHaveBeenCalledWith(expect.anything(), "print.jobs");
   });
 });

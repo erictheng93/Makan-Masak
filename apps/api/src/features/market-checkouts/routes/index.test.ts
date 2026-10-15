@@ -3342,6 +3342,7 @@ describe("market checkout routes", () => {
       }),
     );
 
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const response = await routes.fetch(
       new Request("https://test/checkout-1/pay", {
         method: "POST",
@@ -3353,6 +3354,11 @@ describe("market checkout routes", () => {
 
     expect(fetcher).toHaveBeenCalledOnce();
     vi.unstubAllGlobals();
+    expect(errorSpy).toHaveBeenCalledWith(
+      "[market-checkout] pay failed for checkout-1:",
+      "Provider unavailable",
+    );
+    errorSpy.mockRestore();
     expect(response.status).toBe(202);
     const json = (await response.json()) as {
       data: {

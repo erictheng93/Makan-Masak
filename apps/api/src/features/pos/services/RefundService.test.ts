@@ -587,6 +587,8 @@ describe("RefundService", () => {
   });
 
   it("rejects invalid refund requests before inserting rows", async () => {
+    // The 19.995 request fails schema validation, which processRefund logs.
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const mutations = mockMutations();
 
     mockSelectResults({ orders: [[]] });
@@ -625,6 +627,11 @@ describe("RefundService", () => {
     ).resolves.toMatchObject({ success: false });
 
     expect(mutations.inserted).toHaveLength(0);
+    expect(errorSpy).toHaveBeenCalledWith(
+      "處理退款失敗:",
+      expect.objectContaining({ name: "ZodError" }),
+    );
+    errorSpy.mockRestore();
   });
 
   /**

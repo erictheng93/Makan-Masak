@@ -8,6 +8,11 @@ import {
 import { ApiError } from "../shared/utils/api-error";
 
 const CSRF_TOKEN = "a".repeat(64);
+// Production always has CORS_ORIGIN set; without it buildAllowedOrigins warns.
+const PRODUCTION_ENV = {
+  NODE_ENV: "production",
+  CORS_ORIGIN: "https://app.test",
+};
 
 function installApiErrorHandler(app: Hono) {
   app.onError((error, c) => {
@@ -124,7 +129,7 @@ describe("csrfProtection", () => {
         },
         body: JSON.stringify({ status: "confirmed" }),
       }),
-      { NODE_ENV: "production" },
+      PRODUCTION_ENV,
     );
 
     expect(response.status).toBe(403);
@@ -152,7 +157,7 @@ describe("csrfProtection", () => {
         },
         body: JSON.stringify({ status: "confirmed" }),
       }),
-      { NODE_ENV: "production" },
+      PRODUCTION_ENV,
     );
 
     expect(response.status).toBe(403);
@@ -179,7 +184,7 @@ describe("attachCSRFToken", () => {
 
     return app.fetch(
       new Request("https://api.test/auth/login", { method: "POST" }),
-      { NODE_ENV: "production" },
+      PRODUCTION_ENV,
     );
   }
 
@@ -266,7 +271,7 @@ describe("csrfProtection excludePaths", () => {
         headers: { Host: "api.test", "Content-Type": "application/json" },
         body: "{}",
       }),
-      { NODE_ENV: "production" } as never,
+      PRODUCTION_ENV as never,
     );
   }
 

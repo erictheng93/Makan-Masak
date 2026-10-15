@@ -90,13 +90,18 @@ function backup(overrides: Partial<BackupRecord> = {}): BackupRecord {
 }
 
 describe("BackupStorageService", () => {
+  let errorSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
+    // The service logs every failure it wraps; several tests drive those on purpose.
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-07T12:00:00.000Z"));
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    errorSpy.mockRestore();
   });
 
   it("stores, retrieves, checks, and deletes R2 backups with metadata", async () => {
@@ -175,6 +180,10 @@ describe("BackupStorageService", () => {
     await expect(service.retrieveBackup(storedBackup)).rejects.toThrow(
       "Failed to retrieve backup: Backup file not found in KV storage",
     );
+    expect(errorSpy).toHaveBeenCalledWith(
+      "Error retrieving backup:",
+      expect.any(Error),
+    );
   });
 
   it("wraps unsupported providers and checksum mismatches", async () => {
@@ -203,6 +212,10 @@ describe("BackupStorageService", () => {
         backup({ storage_path: stored.storage_path, checksum: "bad" }),
       ),
     ).rejects.toThrow("checksum mismatch");
+    expect(errorSpy).toHaveBeenCalledWith(
+      "Error storing backup:",
+      expect.any(Error),
+    );
   });
 
   it("summarizes R2 usage and continues cleanup after delete failures", async () => {
@@ -233,6 +246,10 @@ describe("BackupStorageService", () => {
         }),
       ]),
     ).resolves.toBe(1);
+    expect(errorSpy).toHaveBeenCalledWith(
+      "Failed to cleanup backup backup-1:",
+      expect.any(Error),
+    );
   });
 
   it("compresses, encrypts, restores, and validates encryption keys", async () => {

@@ -202,11 +202,17 @@ describe("cleanupExpiredIdempotencyKeys", () => {
   it("does not throw when the delete fails", async () => {
     // It shares a cron tick with the token cleanup; throwing here would take
     // that down with it.
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const where = vi.fn(() => Promise.reject(new Error("D1 unavailable")));
     mocks.db.delete.mockReturnValue({ where });
 
     await expect(cleanupExpiredIdempotencyKeys(buildEnv())).resolves.toEqual({
       deleted: null,
     });
+    expect(errorSpy).toHaveBeenCalledWith(
+      "[Cron] Error cleaning up idempotency keys:",
+      expect.any(Error),
+    );
+    errorSpy.mockRestore();
   });
 });

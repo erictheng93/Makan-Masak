@@ -29,6 +29,15 @@ const resolveRestaurantCurrency = vi.hoisted(() => vi.fn());
 vi.mock("../../../shared/utils/restaurant-currency", () => ({
   resolveRestaurantCurrency,
 }));
+// The service builds the notifier per call, and with no SMS/email provider in
+// this file's env every send would log a swallowed failure. Delivery has its
+// own suite; here we only check that the transition asks for one.
+const notificationSend = vi.hoisted(() => vi.fn(async () => undefined));
+vi.mock("./ServiceBookingNotificationService", () => ({
+  ServiceBookingNotificationService: vi.fn(function () {
+    return { send: notificationSend };
+  }),
+}));
 import type { CreateServiceBookingSlotInput } from "./ServiceBookingService";
 
 type ServiceBookingRow = typeof serviceBookings.$inferSelect;
@@ -1653,6 +1662,9 @@ describe("ServiceBookingService orchestration helpers", () => {
     });
     expect(calls[2]).toMatchObject(
       expect.objectContaining({ params: expect.arrayContaining([99]) }),
+    );
+    expect(notificationSend).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "cancelled" }),
     );
   });
 
