@@ -143,4 +143,6 @@ enum 內其餘值的狀況：
 
 - `RealtimeNotificationPanel` 的 `systemAlerts` 區塊現在沒有任何資料來源，永遠顯示空狀態。
   要嘛移除這塊 UI，要嘛接上 `restaurant_alerts`。
-- 補發送的事件目前只推到 `admin` 房間；kitchen 房間未推。
+- 補發送的事件只推到 `admin` 房間，這是刻意的：`table_status_update`、`kitchen_queue_update` 的唯一訂閱者是 admin-dashboard，
+  kitchen-display 與 customer-app 都沒有訂閱。推到 kitchen 房間只會增加 Durable Object 扇出而沒有消費者；
+  等 kitchen-display 真的要用時再加。
