@@ -2,6 +2,22 @@
 
 import { flushPromises, shallowMount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { defineComponent, h } from "vue";
+
+// shallowMount's auto-stub renders every declared prop as an attribute of a
+// <xxx-stub> element, and Vue sets `isConnected` on it as a DOM property --
+// which Node defines as a read-only getter, hence a "Failed setting prop"
+// warning per render. These stubs declare the prop without rendering it.
+const stubWithIsConnected = (name: string) =>
+  defineComponent({
+    name,
+    props: { isConnected: { type: Boolean, default: false } },
+    render: () => h("div"),
+  });
+const stubs = {
+  KitchenHeader: stubWithIsConnected("KitchenHeader"),
+  ConnectionStatus: stubWithIsConnected("ConnectionStatus"),
+};
 
 const mocks = vi.hoisted(() => ({
   fetchOrders: vi.fn(),
@@ -112,6 +128,7 @@ describe("EnhancedKitchenDashboard realtime catch-up", () => {
     );
     const wrapper = shallowMount(EnhancedKitchenDashboard, {
       props: { restaurantId: "r1" },
+      global: { stubs },
     });
     wrapper.unmount();
     finish();
@@ -123,6 +140,7 @@ describe("EnhancedKitchenDashboard realtime catch-up", () => {
   it("shows menu supply notifications without invoking the order reducer", async () => {
     const wrapper = shallowMount(EnhancedKitchenDashboard, {
       props: { restaurantId: "r1" },
+      global: { stubs },
     });
     await flushPromises();
     const callback = mocks.subscriptions.get("menu_availability_update");
@@ -155,6 +173,7 @@ describe("EnhancedKitchenDashboard realtime catch-up", () => {
   it("refetches orders when the socket reconnects, not on the first connect", async () => {
     const wrapper = shallowMount(EnhancedKitchenDashboard, {
       props: { restaurantId: "r1" },
+      global: { stubs },
     });
     await flushPromises();
 
