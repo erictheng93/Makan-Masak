@@ -18,10 +18,15 @@ describe("useDiscoveryStore", () => {
     vi.mocked(discoveryApi.searchServices).mockReset();
     vi.mocked(discoveryApi.browseRestaurants).mockReset();
     vi.mocked(discoveryApi.getPopular).mockReset();
-    vi.mocked(discoveryApi.searchServices).mockResolvedValue({
-      results: [],
-      total: 0,
-    } as never);
+    // Every search reads `.results`; a call a test does not stub must not
+    // resolve to undefined and trip the store's catch.
+    for (const method of [
+      discoveryApi.searchDishes,
+      discoveryApi.searchServices,
+      discoveryApi.browseRestaurants,
+    ]) {
+      vi.mocked(method).mockResolvedValue({ results: [], total: 0 } as never);
+    }
   });
 
   it("passes selected market scope to dish search", async () => {
@@ -116,7 +121,9 @@ describe("useDiscoveryStore", () => {
       results: [],
       total: 0,
     } as never);
-    vi.mocked(discoveryApi.searchServices).mockResolvedValueOnce({
+    // updateFilters starts a search of its own, so the payload has to survive
+    // both calls rather than be consumed by the first.
+    vi.mocked(discoveryApi.searchServices).mockResolvedValue({
       results: [
         {
           serviceItemId: 7,

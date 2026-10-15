@@ -1,6 +1,19 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// The failure paths below are driven on purpose and the code logs each one.
+const silencedConsole: Array<{ mockRestore: () => void }> = [];
+beforeEach(() => {
+  for (const method of ["warn"] as const) {
+    silencedConsole.push(
+      vi.spyOn(console, method).mockImplementation(() => {}),
+    );
+  }
+});
+afterEach(() => {
+  silencedConsole.splice(0).forEach((spy) => spy.mockRestore());
+});
 
 vi.mock("@/services/customerIdentityApi", () => ({
   customerIdentityApi: { addPushSubscription: vi.fn() },

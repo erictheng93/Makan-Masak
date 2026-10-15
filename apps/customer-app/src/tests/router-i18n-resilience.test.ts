@@ -1,4 +1,25 @@
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+
+// The failure paths below are driven on purpose and the code logs each one.
+const silencedConsole: Array<{ mockRestore: () => void }> = [];
+beforeEach(() => {
+  for (const method of ["error"] as const) {
+    silencedConsole.push(
+      vi.spyOn(console, method).mockImplementation(() => {}),
+    );
+  }
+});
+afterEach(() => {
+  silencedConsole.splice(0).forEach((spy) => spy.mockRestore());
+});
 
 // #60: the production CSP blocks Vue I18n's eval-based message compiler, so
 // every `t()` call threw. Because the router translates the page title inside

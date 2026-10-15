@@ -1,4 +1,12 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 const requestInterceptors = vi.hoisted(
   () =>
@@ -31,6 +39,19 @@ vi.mock("@/services/customerAccessToken", () => ({
 }));
 
 import { getCustomerAccessToken } from "@/services/customerAccessToken";
+
+// The failure paths below are driven on purpose and the code logs each one.
+const silencedConsole: Array<{ mockRestore: () => void }> = [];
+beforeEach(() => {
+  for (const method of ["log"] as const) {
+    silencedConsole.push(
+      vi.spyOn(console, method).mockImplementation(() => {}),
+    );
+  }
+});
+afterEach(() => {
+  silencedConsole.splice(0).forEach((spy) => spy.mockRestore());
+});
 
 /** Run the request interceptor the way axios would, and hand back the headers. */
 function headersFor(url: string) {

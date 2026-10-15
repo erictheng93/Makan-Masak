@@ -1,7 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { ref } from "vue";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import MarketDetailView from "@/views/MarketDetailView.vue";
 import { customerIdentityApi } from "@/services/customerIdentityApi";
 import { discoveryApi } from "@/services/discoveryApi";
@@ -11,6 +11,19 @@ import {
   clearCustomerAccessToken,
   setCustomerAccessToken,
 } from "@/services/customerAccessToken";
+
+// The failure paths below are driven on purpose and the code logs each one.
+const silencedConsole: Array<{ mockRestore: () => void }> = [];
+beforeEach(() => {
+  for (const method of ["error"] as const) {
+    silencedConsole.push(
+      vi.spyOn(console, method).mockImplementation(() => {}),
+    );
+  }
+});
+afterEach(() => {
+  silencedConsole.splice(0).forEach((spy) => spy.mockRestore());
+});
 
 const routerPush = vi.hoisted(() => vi.fn());
 const routerReplace = vi.hoisted(() => vi.fn());
