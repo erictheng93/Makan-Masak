@@ -21,8 +21,8 @@
 舊的 HTTP 入口都不是發送路徑：
 
 - `features/sse/routes` 的 `/broadcast/*`、`/notify/group` 一律回 `410 ENDPOINT_RETIRED`。
-- OpenAPI 宣告了 `POST /api/v1/realtime/broadcast/:roomType/:roomId`（`broadcastMessageRoute`），
-  但 `features/realtime/routes/index.ts` 沒有對應實作。
+- OpenAPI 曾宣告 `POST /api/v1/realtime/broadcast/:roomType/:roomId`（`broadcastMessageRoute`），
+  但從未實作；2026-10-15 已從 OpenAPI 刪除。
 
 ## 2. 清單 A：`RealtimeEventType` enum 中，前端訂閱、後端沒發送
 
@@ -120,7 +120,7 @@ enum 內其餘值的狀況：
 
 ### 清理後仍存在的項目
 
-- OpenAPI 的 `broadcastMessageRoute` 仍宣告了不存在的路由，這次沒動，屬於文件修正。
+- OpenAPI 的 `broadcastMessageRoute`（未實作）已刪除，連同孤立的 request/response schema。
 - 清單 A 的訂閱都還在（例如 `useRealtimeQueue` 訂閱 `table_status_update`）。
 - 順手去重：舊的 `QUEUE_CALLED` 與 `QUEUE_NOTIFIED` 同時映射到 `waiting_list_called`，
   桌況四個別名映射到同一個 `table_status_update`，現在各只訂閱一次。

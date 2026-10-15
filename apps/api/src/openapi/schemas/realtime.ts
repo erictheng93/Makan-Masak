@@ -71,24 +71,6 @@ export const RealtimeSchemas = {
     }),
   }),
 
-  // Broadcast Message Request
-  BroadcastMessageRequest: z.object({
-    roomType: RoomType,
-    roomId: z.string(),
-    messageType: z.string(),
-    payload: z.record(z.string(), z.any()),
-    excludeSender: z.boolean().default(false),
-    senderId: z.string().optional(),
-  }),
-
-  // Broadcast Message Response
-  BroadcastMessageResponse: z.object({
-    success: z.boolean(),
-    messageId: z.string(),
-    recipientCount: z.number().int(),
-    timestamp: z.iso.datetime(),
-  }),
-
   // Connection Statistics
   ConnectionStatistics: z.object({
     roomType: RoomType,
@@ -188,45 +170,6 @@ export const verifyWebSocketTokenRoute = createRoute({
       },
     },
     ...errorResponses(400),
-  },
-});
-
-// Broadcast Message
-export const broadcastMessageRoute = createRoute({
-  method: "post",
-  path: "/api/v1/realtime/broadcast/:roomType/:roomId",
-  tags: ["realtime"],
-  summary: "廣播訊息",
-  description: "向指定 room 的所有連接廣播訊息",
-  security: [{ bearerAuth: [] }],
-  request: {
-    params: z.object({
-      roomType: RealtimeSchemas.RoomType,
-      roomId: z.string(),
-    }),
-    body: {
-      content: {
-        "application/json": {
-          schema: z.object({
-            messageType: z.string(),
-            payload: z.record(z.string(), z.any()),
-            excludeSender: z.boolean().optional(),
-            senderId: z.string().optional(),
-          }),
-        },
-      },
-    },
-  },
-  responses: {
-    200: {
-      description: "訊息廣播成功",
-      content: {
-        "application/json": {
-          schema: RealtimeSchemas.BroadcastMessageResponse,
-        },
-      },
-    },
-    ...errorResponses(400, 401, 404),
   },
 });
 
