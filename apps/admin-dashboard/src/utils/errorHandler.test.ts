@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // errorHandler.ts calls useToast() at module scope, so the spies must exist
 // before the mocked module is first imported.
@@ -80,6 +80,16 @@ const EXPECTED_I18N_KEYS: Record<SubscriptionErrorCode, string> = {
   MODULE_NOT_ENABLED: "errors.subscription.moduleNotEnabled",
   NO_RESTAURANT: "errors.subscription.noRestaurant",
 };
+
+// ErrorHandler logs every handled error by design; the cases below drive that
+// path on purpose, so keep the output quiet.
+let consoleError: ReturnType<typeof vi.spyOn>;
+beforeEach(() => {
+  consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+});
+afterEach(() => {
+  consoleError.mockRestore();
+});
 
 describe("KitchenErrorHandler.handleAPIError — subscription vs permission 403s", () => {
   beforeEach(() => {

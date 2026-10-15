@@ -18,6 +18,7 @@ import {
   expect,
   beforeAll,
   beforeEach,
+  afterEach,
   afterAll,
   vi,
 } from "vitest";
@@ -224,11 +225,23 @@ beforeAll(async () => {
   testDb = await createTestDatabase();
 }, REAL_D1_SETUP_TIMEOUT_MS);
 
+afterEach(() => {
+  quietError.mockRestore();
+  quietWarn.mockRestore();
+});
+
 afterAll(async () => {
   await testDb?.dispose();
 });
 
+// The test env has no SMS provider and no REALTIME_SESSION binding, so every
+// notification/broadcast logs a failure that is expected and not under test.
+// Tests that assert on console.error install their own spy on top of this one.
+let quietError: ReturnType<typeof vi.spyOn>;
+let quietWarn: ReturnType<typeof vi.spyOn>;
 beforeEach(async () => {
+  quietError = vi.spyOn(console, "error").mockImplementation(() => {});
+  quietWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
   await testDb.truncateAll();
   await seedRestaurant(testDb, RESTAURANT_ID);
   const env = { JWT_SECRET: "test", NODE_ENV: "test" } as CloudflareEnv;

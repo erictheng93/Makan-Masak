@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useOrderStore } from "./order";
 import { api } from "@/services/api";
 import { AxiosHeaders, type AxiosResponse } from "axios";
@@ -211,10 +211,18 @@ describe("admin order store — local status updates keep the API's time format"
  */
 describe("admin order store — the server's prose never reaches the banner", () => {
   const SERVER_PROSE = "Order 41 is locked by kitchen station 3";
+  let consoleError: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.clearAllMocks();
+    // The store logs each rejected request; these cases reject on purpose.
+    consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 
   function rejectWith(status: number, code?: string) {
