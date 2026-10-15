@@ -122,7 +122,7 @@ describe("OrderTrackingView guest realtime URL", () => {
 
   it("shows persisted per-coupon discounts alongside the order total", () => {
     orderQueryData.value = {
-      id: 1001,
+      id: "1001",
       orderNumber: "ORDER-1",
       status: "pending",
       items: [],
@@ -155,7 +155,7 @@ describe("OrderTrackingView guest realtime URL", () => {
     "retains the aggregate discount for legacy orders (%s)",
     (appliedCoupons) => {
       orderQueryData.value = {
-        id: 1001,
+        id: "1001",
         orderNumber: "ORDER-1",
         status: "pending",
         items: [],

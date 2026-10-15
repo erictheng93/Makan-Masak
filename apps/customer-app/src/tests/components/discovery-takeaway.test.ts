@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { useAppStore } from "@/stores/app";
 import DishResultCard from "@/components/discovery/DishResultCard.vue";
 import RestaurantCard from "@/components/discovery/RestaurantCard.vue";
+import { provideRouterInjection } from "@/tests/helpers/router-injection";
 
 vi.mock("vue-i18n", async (importOriginal) => {
   const actual = await importOriginal<typeof import("vue-i18n")>();
@@ -35,6 +36,8 @@ vi.mock("@/composables/useI18n", () => ({
     t: (key: string) => key,
   }),
 }));
+
+provideRouterInjection();
 
 describe("discovery takeaway buttons", () => {
   it("shows immediate takeaway for open takeaway dish results", async () => {

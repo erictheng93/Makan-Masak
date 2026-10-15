@@ -114,6 +114,7 @@ function apiGetResponse<T>(data: T): AxiosResponse<ApiResponse<T>> {
 // The api.get mock for /service-bookings/slots is kept so a stub can be
 // dropped again without re-deriving it.
 const settingsStubs = {
+  RouterLink: true,
   IntegrationsSettings: true,
   ShopWalletSettings: true,
   RestaurantServiceItemsManager: true,

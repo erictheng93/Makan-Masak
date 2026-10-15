@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mount } from "@vue/test-utils";
+import { defineComponent } from "vue";
 import { useWebSocket } from "@/composables/useWebSocket";
 
 class MockWebSocket {
@@ -38,10 +40,16 @@ describe("customer WebSocket raw pong handling", () => {
 
   it("ignores raw pong in useWebSocket", async () => {
     const onMessage = vi.fn();
-    const socket = useWebSocket({
-      url: "ws://localhost/customer",
-      onMessage,
-    });
+    // useWebSocket registers onUnmounted, so it has to run inside setup().
+    let socket!: ReturnType<typeof useWebSocket>;
+    mount(
+      defineComponent({
+        setup() {
+          socket = useWebSocket({ url: "ws://localhost/customer", onMessage });
+          return () => null;
+        },
+      }),
+    );
 
     await socket.connect();
     const ws = MockWebSocket.instances[0];

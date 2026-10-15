@@ -12,6 +12,7 @@ vi.mock("@/composables/useI18n", () => ({
 }));
 import MarketDetailHero from "@/components/markets/MarketDetailHero.vue";
 import type { MarketDetail } from "@/services/marketsApi";
+import { provideRouterInjection } from "@/tests/helpers/router-injection";
 
 function market(overrides: Partial<MarketDetail> = {}): MarketDetail {
   return {
@@ -34,6 +35,8 @@ function market(overrides: Partial<MarketDetail> = {}): MarketDetail {
     ...overrides,
   };
 }
+
+provideRouterInjection();
 
 describe("MarketDetailHero", () => {
   it("shows the venue type on market detail pages", () => {

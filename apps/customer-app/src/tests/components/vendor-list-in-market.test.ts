@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import VendorListInMarket from "@/components/markets/VendorListInMarket.vue";
 import RestaurantCard from "@/components/discovery/RestaurantCard.vue";
 import type { MarketVendor } from "@/services/marketsApi";
+import { provideRouterInjection } from "@/tests/helpers/router-injection";
 
 vi.mock("@/composables/useI18n", () => ({
   useI18n: () => ({
@@ -53,6 +54,8 @@ function vendor(overrides: Partial<MarketVendor> = {}): MarketVendor {
     ...overrides,
   };
 }
+
+provideRouterInjection();
 
 describe("VendorListInMarket", () => {
   it("shows an unopened stall but blocks its menu and services", async () => {

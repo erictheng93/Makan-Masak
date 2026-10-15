@@ -533,6 +533,7 @@ import {
   ExclamationTriangleIcon,
   ExclamationCircleIcon,
   UserIcon,
+  XMarkIcon,
 } from "@heroicons/vue/24/outline";
 import { useI18n } from "@/i18n";
 import { useDateFormatter } from "@/composables/useDateFormatter";

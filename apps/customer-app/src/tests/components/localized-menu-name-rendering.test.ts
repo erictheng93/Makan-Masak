@@ -4,6 +4,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import MenuItemCard from "@/components/MenuItemCard.vue";
 import type { MenuItem } from "@makanmasak/shared-types";
 import { vi } from "vitest";
+import { provideRouterInjection } from "@/tests/helpers/router-injection";
 
 // #112 shipped with helper unit tests only, so nothing proved a customer ever
 // SEES the English name — the helper could have been correct while no component
@@ -47,6 +48,8 @@ function menuItem(overrides: Partial<MenuItem> = {}): MenuItem {
     ...overrides,
   } as MenuItem;
 }
+
+provideRouterInjection();
 
 describe("menu name rendering follows the visitor's language (#112)", () => {
   beforeEach(() => {

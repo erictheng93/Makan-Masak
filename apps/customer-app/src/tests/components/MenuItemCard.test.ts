@@ -2,6 +2,7 @@ import { mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 import MenuItemCard from "@/components/MenuItemCard.vue";
 import type { MenuItem } from "@makanmasak/shared-types";
+import { provideRouterInjection } from "@/tests/helpers/router-injection";
 
 vi.mock("@/composables/useI18n", () => ({
   useI18n: () => ({
@@ -44,6 +45,8 @@ function menuItem(overrides: Partial<MenuItem> = {}): MenuItem {
     ...overrides,
   };
 }
+
+provideRouterInjection();
 
 describe("MenuItemCard", () => {
   // The standard list thumbnail sits in a 70px box: DPR 2 needs ~140 device px
