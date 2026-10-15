@@ -47,15 +47,6 @@ export interface MenuAlert {
   timestamp: number;
 }
 
-export interface SystemAlert {
-  notificationId: string;
-  level: "info" | "warning" | "error" | "success";
-  title: string;
-  message: string;
-  timestamp: number;
-  read: boolean;
-}
-
 // ============================================================================
 // Composable 主體
 // ============================================================================
@@ -96,12 +87,6 @@ export function useAdminRealtime() {
   const menuAlerts = ref<MenuAlert[]>([]);
   const activeMenuAlerts = computed(() =>
     menuAlerts.value.filter((a) => !a.isAvailable),
-  );
-
-  // 系統通知
-  const systemAlerts = ref<SystemAlert[]>([]);
-  const unreadAlertCount = computed(
-    () => systemAlerts.value.filter((a) => !a.read).length,
   );
 
   // 訂閱 ID 追蹤
@@ -394,27 +379,6 @@ export function useAdminRealtime() {
   };
 
   /**
-   * 標記系統通知為已讀
-   */
-  const markAlertAsRead = (notificationId: string) => {
-    const alert = systemAlerts.value.find(
-      (a) => a.notificationId === notificationId,
-    );
-    if (alert) {
-      alert.read = true;
-    }
-  };
-
-  /**
-   * 標記所有通知為已讀
-   */
-  const markAllAlertsAsRead = () => {
-    systemAlerts.value.forEach((a) => {
-      a.read = true;
-    });
-  };
-
-  /**
    * 清除訂單通知
    */
   const clearOrderNotifications = () => {
@@ -426,13 +390,6 @@ export function useAdminRealtime() {
    */
   const clearMenuAlerts = () => {
     menuAlerts.value = [];
-  };
-
-  /**
-   * 清除系統通知
-   */
-  const clearSystemAlerts = () => {
-    systemAlerts.value = [];
   };
 
   /**
@@ -511,13 +468,6 @@ export function useAdminRealtime() {
     menuAlerts,
     activeMenuAlerts,
     clearMenuAlerts,
-
-    // 系統通知
-    systemAlerts,
-    unreadAlertCount,
-    markAlertAsRead,
-    markAllAlertsAsRead,
-    clearSystemAlerts,
 
     // 音效控制
     soundEnabled,
