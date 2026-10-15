@@ -1033,11 +1033,6 @@ function isAlreadyFinalized(
   );
 }
 
-function mutationChanges(result: unknown): number {
-  const meta = (result as { meta?: { changes?: unknown } } | null)?.meta;
-  return typeof meta?.changes === "number" ? meta.changes : 0;
-}
-
 function roleName(role: number | undefined): string {
   switch (role) {
     case 0:
