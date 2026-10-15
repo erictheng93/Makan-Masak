@@ -132,7 +132,7 @@ enum 內其餘值的狀況：
 | `table_status_update` | **補發送** | `tables` 的 occupy、release、clean 路由成功後，經 `TablesService.broadcastStatusUpdate` 推到 `admin` 房間 |
 | `kitchen_queue_update` | **補發送** | 儀表板的 `RealtimeNotificationPanel` 靠它顯示廚房佇列，沒有它數字永遠是 0。`KitchenService` 在品項狀態變更後，用一次 GROUP BY 查詢算出各狀態數量與平均等待 |
 | `table_call_service` | 刪訂閱 | 後端沒有 service-requests 路由，顧客端也沒有呼叫端；要做需要公開端點的濫用防護，屬新功能。同時刪除 customer-app 未使用、指向不存在端點的 `orderApi.requestService` |
-| `system_notification` | 刪訂閱 | 沒有任何產生來源；店家告警走另一套（`restaurant_alerts`，由 dashboard 以多語系渲染）|
+| `system_notification` | **補發送**（2026-10-15 後續） | 餐廳告警（`restaurant_alerts`）新開立時，`features/alerts/producers.ts` 經 `RestaurantAlertService.raiseWithStatus` 判斷是新建（非 dedupe 命中）才推到 `admin` 房間；admin 面板以 `alertType` + `details` 本地化顯示，連線後另外載入目前開啟中的告警 |
 | `restaurant_status_update` | 刪訂閱 | 沒有手動開關店的寫入路徑，營業狀態由營業時間計算 |
 
 順手修掉的 bug：`useRealtimeQueue.handleTableUpdate` 以 `message.type.includes("occupied")`
@@ -141,8 +141,7 @@ enum 內其餘值的狀況：
 
 ### 仍待處理
 
-- `RealtimeNotificationPanel` 的 `systemAlerts` 區塊現在沒有任何資料來源，永遠顯示空狀態。
-  要嘛移除這塊 UI，要嘛接上 `restaurant_alerts`。
+- 面板的系統告警是「通知」，不是告警狀態的真相來源：在 OwnerView 解決或升級告警後，面板內的項目要到重新整理才會消失。
 - 補發送的事件只推到 `admin` 房間，這是刻意的：`table_status_update`、`kitchen_queue_update` 的唯一訂閱者是 admin-dashboard，
   kitchen-display 與 customer-app 都沒有訂閱。推到 kitchen 房間只會增加 Durable Object 扇出而沒有消費者；
   等 kitchen-display 真的要用時再加。

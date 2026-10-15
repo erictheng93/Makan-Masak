@@ -1,7 +1,13 @@
 import {
   RESTAURANT_ALERT_SEVERITY,
+  RealtimeBroadcastService,
   RestaurantAlertService,
+  type RestaurantAlert,
 } from "@makanmasak/database";
+import {
+  RealtimeEventType,
+  type SystemNotificationEvent,
+} from "@makanmasak/shared-types";
 import type { Env } from "../../types/env";
 
 /**
@@ -22,12 +28,54 @@ import type { Env } from "../../types/env";
  * the error is the correct trade — the operation the owner actually asked for
  * has already succeeded, and the alternative is failing it to report a warning.
  */
+const NOTIFICATION_LEVEL: Record<
+  string,
+  SystemNotificationEvent["data"]["level"]
+> = {
+  [RESTAURANT_ALERT_SEVERITY.CRITICAL]: "error",
+  [RESTAURANT_ALERT_SEVERITY.HIGH]: "warning",
+  [RESTAURANT_ALERT_SEVERITY.MEDIUM]: "warning",
+  [RESTAURANT_ALERT_SEVERITY.LOW]: "info",
+};
+
+/**
+ * Push a newly opened alert to the restaurant's admin room so the dashboard
+ * shows it without waiting for its next poll. Only called for a row this call
+ * inserted: a deduped hit is the same open alert, already announced.
+ */
+async function announce(env: Env, alert: RestaurantAlert): Promise<void> {
+  const broadcaster = new RealtimeBroadcastService(env);
+  const event: SystemNotificationEvent = {
+    type: RealtimeEventType.SYSTEM_NOTIFICATION,
+    eventId: broadcaster.generateEventId(),
+    timestamp: Date.now(),
+    restaurantId: alert.restaurantId,
+    data: {
+      notificationId: alert.id,
+      level: NOTIFICATION_LEVEL[alert.severity] ?? "warning",
+      title: alert.title,
+      message: alert.description,
+      persistUntilRead: true,
+      alert: {
+        alertType: alert.alertType,
+        severity: alert.severity,
+        details: alert.details ?? undefined,
+      },
+    },
+  };
+  await broadcaster.broadcastEvent("admin", alert.restaurantId, event);
+}
+
 async function raise(
   env: Env,
   input: Parameters<RestaurantAlertService["raise"]>[0],
 ): Promise<void> {
   try {
-    await new RestaurantAlertService(env.DB, env).raise(input);
+    const { alert, created } = await new RestaurantAlertService(
+      env.DB,
+      env,
+    ).raiseWithStatus(input);
+    if (created) await announce(env, alert);
   } catch (error) {
     console.error("alerts.producer.failed", {
       alertType: input.alertType,

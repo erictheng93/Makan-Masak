@@ -125,3 +125,49 @@ describe("RestaurantAlertService.raise", () => {
     expect(get).not.toHaveBeenCalled();
   });
 });
+
+describe("RestaurantAlertService.raiseWithStatus", () => {
+  const input = {
+    restaurantId: "restaurant-1",
+    alertType: "inventory_depleted",
+    title: "Stock out",
+    description: "Nasi lemak is out of stock.",
+    dedupeKey: "inventory:nasi-lemak",
+  };
+
+  it("reports created when this call inserted the row", async () => {
+    const service = serviceWith(
+      fakeDb({ get: async () => null, insert: async () => [EXISTING] }),
+    );
+
+    await expect(service.raiseWithStatus(input)).resolves.toEqual({
+      alert: EXISTING,
+      created: true,
+    });
+  });
+
+  it("reports not created for a deduped hit and for a lost race", async () => {
+    const hit = serviceWith(fakeDb({ get: async () => EXISTING }));
+    await expect(hit.raiseWithStatus(input)).resolves.toEqual({
+      alert: EXISTING,
+      created: false,
+    });
+
+    const get = vi
+      .fn<() => Promise<unknown>>()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(EXISTING);
+    const race = serviceWith(
+      fakeDb({
+        get,
+        insert: async () => {
+          throw new Error("UNIQUE constraint failed: restaurant_alerts");
+        },
+      }),
+    );
+    await expect(race.raiseWithStatus(input)).resolves.toEqual({
+      alert: EXISTING,
+      created: false,
+    });
+  });
+});

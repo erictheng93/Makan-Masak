@@ -178,6 +178,48 @@
         </div>
       </div>
     </div>
+
+    <!-- 系統通知面板 -->
+    <div v-show="activeTab === 'system'" class="notification-content">
+      <div class="content-header">
+        <h3>{{ t("realtimeNotification.systemNotifications") }}</h3>
+        <button
+          v-if="systemAlerts.length > 0"
+          class="clear-button"
+          @click="handleClearSystemAlerts"
+        >
+          {{ t("realtimeNotification.markAllRead") }}
+        </button>
+      </div>
+
+      <div v-if="systemAlerts.length === 0" class="empty-state">
+        <p>{{ t("realtimeNotification.noSystemNotifications") }}</p>
+      </div>
+
+      <div v-else class="notification-list">
+        <div
+          v-for="alert in systemAlerts"
+          :key="alert.notificationId"
+          class="notification-item system-item"
+          :class="[`level-${alert.level}`, { unread: !alert.read }]"
+          @click="handleAlertClick(alert)"
+        >
+          <div class="item-icon">{{ getAlertIcon(alert.level) }}</div>
+          <div class="item-content">
+            <div class="item-title">
+              {{ alertPresenter.title(alert.alert) }}
+            </div>
+            <div class="item-message">
+              {{ alertPresenter.description(alert.alert) }}
+            </div>
+            <div class="item-meta">
+              <span class="time">{{ formatTime(alert.timestamp) }}</span>
+            </div>
+          </div>
+          <div v-if="!alert.read" class="unread-indicator"></div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -187,7 +229,11 @@ import { useI18n } from "@/i18n";
 import { useDateFormatter } from "@/composables/useDateFormatter";
 import { useCurrency } from "@/composables/useCurrency";
 import { useAdminRealtime } from "@/composables/useAdminRealtime";
-import type { OrderNotification } from "@/composables/useAdminRealtime";
+import type {
+  OrderNotification,
+  SystemAlert,
+} from "@/composables/useAdminRealtime";
+import { createAlertPresenter } from "@/utils/alertPresentation";
 
 // ========================================
 // Composables
@@ -201,15 +247,34 @@ const {
   kitchenStats,
   menuAlerts,
   activeMenuAlerts,
+  systemAlerts,
+  unreadAlertCount,
   soundEnabled,
   toggleSound,
   markOrderAsRead,
   markAllOrdersAsRead,
+  markAlertAsRead,
+  markAllAlertsAsRead,
   clearOrderNotifications,
   clearMenuAlerts,
+  clearSystemAlerts,
 } = useAdminRealtime();
 
 const { t } = useI18n();
+
+// Alert bodies are stored in English by the producer and translated here.
+const ORDER_STATUS_KEYS: Record<string, string> = {
+  new: "new",
+  confirmed: "new",
+  preparing: "preparing",
+  ready: "ready",
+  delivered: "delivered",
+};
+const alertPresenter = createAlertPresenter(t, (status) =>
+  ORDER_STATUS_KEYS[status]
+    ? t(`owner.status.${ORDER_STATUS_KEYS[status]}`)
+    : status,
+);
 const { formatShortDateTime } = useDateFormatter();
 const { formatPrice } = useCurrency();
 
@@ -217,7 +282,7 @@ const { formatPrice } = useCurrency();
 // 本地狀態
 // ========================================
 
-const activeTab = ref<"orders" | "kitchen" | "menu">("orders");
+const activeTab = ref<"orders" | "kitchen" | "menu" | "system">("orders");
 
 // ========================================
 // 計算屬性
@@ -238,6 +303,11 @@ const tabs = computed(() => [
     id: "menu" as const,
     label: t("realtimeNotification.tabMenu"),
     badge: activeMenuAlerts.value.length,
+  },
+  {
+    id: "system" as const,
+    label: t("realtimeNotification.tabSystem"),
+    badge: unreadAlertCount.value,
   },
 ]);
 
@@ -291,12 +361,37 @@ const formatTime = (timestamp: number): string => {
 };
 
 /**
+ * 獲取警示圖示
+ */
+const getAlertIcon = (level: string): string => {
+  switch (level) {
+    case "info":
+      return "ℹ️";
+    case "warning":
+      return "⚠️";
+    case "error":
+      return "❌";
+    case "success":
+      return "✅";
+    default:
+      return "📢";
+  }
+};
+
+/**
  * 處理訂單點擊
  */
 const handleOrderClick = (order: OrderNotification) => {
   markOrderAsRead(order.orderId);
   // TODO: 導航到訂單詳情頁面
   console.log("Navigate to order:", order.orderId);
+};
+
+/**
+ * 處理警示點擊
+ */
+const handleAlertClick = (alert: SystemAlert) => {
+  markAlertAsRead(alert.notificationId);
 };
 
 /**
@@ -312,6 +407,14 @@ const handleClearOrders = () => {
  */
 const handleClearMenuAlerts = () => {
   clearMenuAlerts();
+};
+
+/**
+ * 清除系統通知
+ */
+const handleClearSystemAlerts = () => {
+  markAllAlertsAsRead();
+  clearSystemAlerts();
 };
 </script>
 
@@ -575,6 +678,22 @@ const handleClearMenuAlerts = () => {
 }
 
 /* 系統通知級別顏色 */
+.system-item.level-info .item-icon {
+  color: #2196f3;
+}
+
+.system-item.level-warning .item-icon {
+  color: #ff9800;
+}
+
+.system-item.level-error .item-icon {
+  color: #f44336;
+}
+
+.system-item.level-success .item-icon {
+  color: #4caf50;
+}
+
 /* 廚房統計 */
 .kitchen-stats {
   display: grid;

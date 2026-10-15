@@ -6,6 +6,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useWebSocketService } from "@/services/websocketService";
 import { useAuthStore } from "@/stores/auth";
+import { ownerService, type EmergencyAlert } from "@/services/ownerService";
 import {
   RealtimeEventType,
   type NewOrderEvent,
@@ -14,6 +15,7 @@ import {
   type KitchenQueueUpdateEvent,
   type KitchenItemStatusEvent,
   type MenuAvailabilityUpdateEvent,
+  type SystemNotificationEvent,
 } from "@makanmasak/shared-types";
 
 // ============================================================================
@@ -46,6 +48,23 @@ export interface MenuAlert {
   reason?: string;
   timestamp: number;
 }
+
+export interface SystemAlert {
+  /** restaurant_alerts 的 id；同一筆告警只會出現一次 */
+  notificationId: string;
+  level: SystemNotificationEvent["data"]["level"];
+  /** 英文後備文案在 title/description，畫面應經 createAlertPresenter 本地化 */
+  alert: EmergencyAlert;
+  timestamp: number;
+  read: boolean;
+}
+
+const SEVERITY_LEVEL: Record<string, SystemAlert["level"]> = {
+  critical: "error",
+  high: "warning",
+  medium: "warning",
+  low: "info",
+};
 
 // ============================================================================
 // Composable 主體
@@ -87,6 +106,12 @@ export function useAdminRealtime() {
   const menuAlerts = ref<MenuAlert[]>([]);
   const activeMenuAlerts = computed(() =>
     menuAlerts.value.filter((a) => !a.isAvailable),
+  );
+
+  // 系統告警（restaurant_alerts）
+  const systemAlerts = ref<SystemAlert[]>([]);
+  const unreadAlertCount = computed(
+    () => systemAlerts.value.filter((a) => !a.read).length,
   );
 
   // 訂閱 ID 追蹤
@@ -252,6 +277,79 @@ export function useAdminRealtime() {
   };
 
   /**
+   * 加入一筆告警；同 id 已存在就不重複（推播與初始載入可能撞到同一筆）
+   */
+  const addSystemAlert = (entry: SystemAlert) => {
+    if (
+      systemAlerts.value.some((a) => a.notificationId === entry.notificationId)
+    )
+      return;
+    systemAlerts.value.unshift(entry);
+    if (systemAlerts.value.length > 50) {
+      systemAlerts.value = systemAlerts.value.slice(0, 50);
+    }
+  };
+
+  const handleSystemNotification = (event: SystemNotificationEvent) => {
+    const { notificationId, level, title, message, alert } = event.data;
+    addSystemAlert({
+      notificationId,
+      level,
+      alert: {
+        id: notificationId,
+        // 沒有 alertType 的通知不在翻譯清單內，會直接顯示 title/message
+        alertType: alert?.alertType ?? "",
+        severity: (alert?.severity ?? "medium") as EmergencyAlert["severity"],
+        title,
+        description: message,
+        details: alert?.details ?? null,
+        createdAt: event.timestamp,
+      },
+      timestamp: event.timestamp,
+      read: false,
+    });
+    if (level === "error" || level === "warning") playNotificationSound();
+  };
+
+  /**
+   * 重新整理後推播不會重送，所以連線後補載入目前仍開啟的告警。
+   * 角色沒有權限（403）或載入失敗時略過：面板只是即時提示，完整清單在 OwnerView。
+   */
+  const loadOpenAlerts = async () => {
+    try {
+      const open = await ownerService.listEmergencyAlerts();
+      for (const alert of open) {
+        addSystemAlert({
+          notificationId: alert.id,
+          level: SEVERITY_LEVEL[alert.severity] ?? "warning",
+          alert,
+          timestamp: alert.createdAt,
+          read: false,
+        });
+      }
+    } catch {
+      // see above
+    }
+  };
+
+  const markAlertAsRead = (notificationId: string) => {
+    const alert = systemAlerts.value.find(
+      (a) => a.notificationId === notificationId,
+    );
+    if (alert) alert.read = true;
+  };
+
+  const markAllAlertsAsRead = () => {
+    systemAlerts.value.forEach((a) => {
+      a.read = true;
+    });
+  };
+
+  const clearSystemAlerts = () => {
+    systemAlerts.value = [];
+  };
+
+  /**
    * 切換音效
    */
   const toggleSound = () => {
@@ -312,7 +410,14 @@ export function useAdminRealtime() {
       (event) => handleMenuUpdate(event as MenuAvailabilityUpdateEvent),
     );
 
-    subscriptionIds.value = [orderSubId, kitchenSubId, menuSubId];
+    // 訂閱系統告警
+    const systemSubId = wsService.subscribe(
+      [RealtimeEventType.SYSTEM_NOTIFICATION],
+      (event) => handleSystemNotification(event as SystemNotificationEvent),
+    );
+
+    subscriptionIds.value = [orderSubId, kitchenSubId, menuSubId, systemSubId];
+    void loadOpenAlerts();
 
     console.log("✅ Started listening to realtime events");
   };
@@ -468,6 +573,13 @@ export function useAdminRealtime() {
     menuAlerts,
     activeMenuAlerts,
     clearMenuAlerts,
+
+    // 系統告警
+    systemAlerts,
+    unreadAlertCount,
+    markAlertAsRead,
+    markAllAlertsAsRead,
+    clearSystemAlerts,
 
     // 音效控制
     soundEnabled,

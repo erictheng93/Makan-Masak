@@ -8,7 +8,10 @@ import {
 } from "./producers";
 import type { Env } from "../../types/env";
 
-const mocks = vi.hoisted(() => ({ raise: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  raise: vi.fn(),
+  broadcastEvent: vi.fn(),
+}));
 
 vi.mock("@makanmasak/database", () => ({
   RESTAURANT_ALERT_SEVERITY: {
@@ -18,7 +21,13 @@ vi.mock("@makanmasak/database", () => ({
     LOW: "low",
   },
   RestaurantAlertService: vi.fn(function RestaurantAlertService() {
-    return { raise: mocks.raise };
+    return { raiseWithStatus: mocks.raise };
+  }),
+  RealtimeBroadcastService: vi.fn(function RealtimeBroadcastService() {
+    return {
+      generateEventId: () => "evt-1",
+      broadcastEvent: mocks.broadcastEvent,
+    };
   }),
 }));
 
@@ -38,7 +47,7 @@ function ingredient(overrides: Record<string, unknown> = {}) {
 describe("alertIfBelowMinimum", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.raise.mockResolvedValue(undefined);
+    mocks.raise.mockResolvedValue({ alert: undefined, created: false });
   });
 
   it("raises when stock has fallen under the minimum", async () => {
@@ -96,7 +105,7 @@ describe("alertIfBelowMinimum", () => {
 describe("raiseLowStockAlert", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.raise.mockResolvedValue(undefined);
+    mocks.raise.mockResolvedValue({ alert: undefined, created: false });
   });
 
   it("escalates to critical once stock reaches zero", async () => {
@@ -121,7 +130,7 @@ describe("raiseLowStockAlert", () => {
 describe("raiseOverdueOrderAlert", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.raise.mockResolvedValue(undefined);
+    mocks.raise.mockResolvedValue({ alert: undefined, created: false });
   });
 
   it("keys on the order so a repeating sweep collapses onto one alert", async () => {
@@ -145,7 +154,7 @@ describe("raiseOverdueOrderAlert", () => {
 describe("raisePaymentFailedAlert", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.raise.mockResolvedValue(undefined);
+    mocks.raise.mockResolvedValue({ alert: undefined, created: false });
   });
 
   function paymentFailure(overrides: Record<string, unknown> = {}) {
@@ -272,5 +281,63 @@ describe("producer failure handling", () => {
       expect.objectContaining({ alertType: "inventory_low" }),
     );
     consoleError.mockRestore();
+  });
+});
+
+describe("alert announcement", () => {
+  const alert = {
+    id: "alert-1",
+    restaurantId: "restaurant-1",
+    alertType: "inventory_low",
+    severity: "high",
+    title: "椰漿 is below its minimum stock level",
+    description: "椰漿 is at 2 L, below the 5 L minimum.",
+    details: { name: "椰漿" },
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.broadcastEvent.mockResolvedValue(undefined);
+  });
+
+  it("pushes a newly opened alert to the admin room", async () => {
+    mocks.raise.mockResolvedValue({ alert, created: true });
+
+    await alertIfBelowMinimum(env, "restaurant-1", ingredient());
+
+    expect(mocks.broadcastEvent).toHaveBeenCalledOnce();
+    expect(mocks.broadcastEvent).toHaveBeenCalledWith(
+      "admin",
+      "restaurant-1",
+      expect.objectContaining({
+        type: "system_notification",
+        data: expect.objectContaining({
+          notificationId: "alert-1",
+          level: "warning",
+          alert: expect.objectContaining({ alertType: "inventory_low" }),
+        }),
+      }),
+    );
+  });
+
+  it("stays quiet when the alert was already open", async () => {
+    mocks.raise.mockResolvedValue({ alert, created: false });
+
+    await alertIfBelowMinimum(env, "restaurant-1", ingredient());
+
+    expect(mocks.broadcastEvent).not.toHaveBeenCalled();
+  });
+
+  it("does not fail the caller when the broadcast fails", async () => {
+    mocks.raise.mockResolvedValue({ alert, created: true });
+    mocks.broadcastEvent.mockRejectedValue(new Error("realtime down"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(
+      alertIfBelowMinimum(env, "restaurant-1", ingredient()),
+    ).resolves.toBeUndefined();
+
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 });

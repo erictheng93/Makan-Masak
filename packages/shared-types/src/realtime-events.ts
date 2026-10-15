@@ -469,6 +469,15 @@ export interface SystemNotificationEvent extends BaseRealtimeEvent {
     actionUrl?: string;
     /** 是否持續顯示直到已讀 */
     persistUntilRead?: boolean;
+    /**
+     * 來源為餐廳告警（restaurant_alerts）時附上；title/message 是英文後備，
+     * 前端應依 alertType + details 以使用者語系渲染。
+     */
+    alert?: {
+      alertType: string;
+      severity: string;
+      details?: Record<string, unknown>;
+    };
   };
 }
 

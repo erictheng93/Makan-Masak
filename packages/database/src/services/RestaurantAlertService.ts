@@ -74,12 +74,23 @@ export class RestaurantAlertService extends BaseService {
    * nothing else in the alert path needs to know they exist.
    */
   async raise(input: RaiseAlertInput): Promise<RestaurantAlert> {
+    return (await this.raiseWithStatus(input)).alert;
+  }
+
+  /**
+   * Same as `raise`, but says whether this call inserted the row. A deduped
+   * hit returns the already-open alert with `created: false`, which is what
+   * lets a caller notify once per alert rather than once per occurrence.
+   */
+  async raiseWithStatus(
+    input: RaiseAlertInput,
+  ): Promise<{ alert: RestaurantAlert; created: boolean }> {
     if (input.dedupeKey) {
       const open = await this.findOpenByDedupeKey(
         input.restaurantId,
         input.dedupeKey,
       );
-      if (open) return open;
+      if (open) return { alert: open, created: false };
     }
 
     const values = {
@@ -98,7 +109,7 @@ export class RestaurantAlertService extends BaseService {
         .insert(restaurantAlerts)
         .values(values)
         .returning();
-      return row;
+      return { alert: row, created: true };
     } catch (error) {
       // The partial unique index — not the read above — is what actually keeps
       // duplicates out, so a concurrent producer losing this race is expected.
@@ -107,7 +118,7 @@ export class RestaurantAlertService extends BaseService {
           input.restaurantId,
           input.dedupeKey,
         );
-        if (open) return open;
+        if (open) return { alert: open, created: false };
       }
       throw error;
     }
