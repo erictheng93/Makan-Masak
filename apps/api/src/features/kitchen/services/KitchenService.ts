@@ -22,10 +22,19 @@ import type {
 } from "../types";
 import { OrdersService } from "../../orders/services/OrdersService";
 import { forbidden } from "../../../shared/utils/api-error";
-import { RealtimeBroadcastService } from "@makanmasak/database";
+import {
+  and,
+  createDatabase,
+  eq,
+  inArray,
+  orders,
+  RealtimeBroadcastService,
+  sql,
+} from "@makanmasak/database";
 import {
   RealtimeEventType,
   type KitchenItemStatusEvent,
+  type KitchenQueueUpdateEvent,
   type OrderItemStatusUpdateEvent,
 } from "@makanmasak/shared-types";
 
@@ -255,6 +264,7 @@ export class KitchenService implements IKitchenService {
           scopedItem,
           statusUpdate.status,
         );
+        await this.broadcastQueueUpdate(restaurantId);
       }
 
       return {
@@ -407,6 +417,80 @@ export class KitchenService implements IKitchenService {
     // The loop either returns the fresh canonical status or rethrows. This is
     // defensive for future edits that alter the retry control flow.
     throw new Error("Unable to reconcile kitchen order status");
+  }
+
+  /**
+   * Push the kitchen queue counts the dashboard panel renders. One grouped
+   * read per item transition; best-effort, like the item broadcast.
+   */
+  private async broadcastQueueUpdate(restaurantId: string): Promise<void> {
+    try {
+      const rows = await createDatabase(this.env.DB)
+        .select({
+          status: orders.status,
+          count: sql<number>`COUNT(*)`,
+          oldestMs: sql<number>`MIN(${orders.createdAt})`,
+          createdMsSum: sql<number>`SUM(${orders.createdAt})`,
+        })
+        .from(orders)
+        .where(
+          and(
+            eq(orders.restaurantId, restaurantId),
+            inArray(orders.status, ["confirmed", "preparing", "ready"]),
+          ),
+        )
+        .groupBy(orders.status);
+
+      const byStatus = new Map(rows.map((row) => [row.status, row]));
+      const pending = byStatus.get("confirmed");
+      const cooking = byStatus.get("preparing");
+      const ready = byStatus.get("ready");
+
+      const now = Date.now();
+      const waiting = [pending, cooking].filter(
+        (row): row is NonNullable<typeof row> => !!row,
+      );
+      const waitingCount = waiting.reduce((n, row) => n + row.count, 0);
+      const waitingMsSum = waiting.reduce(
+        (sum, row) => sum + (now * row.count - row.createdMsSum),
+        0,
+      );
+
+      const event: KitchenQueueUpdateEvent = {
+        type: RealtimeEventType.KITCHEN_QUEUE_UPDATE,
+        eventId: this.realtimeBroadcastService.generateEventId(),
+        timestamp: now,
+        restaurantId,
+        data: {
+          pendingCount: pending?.count ?? 0,
+          cookingCount: cooking?.count ?? 0,
+          readyCount: ready?.count ?? 0,
+          averageWaitTime:
+            waitingCount > 0
+              ? Math.round(waitingMsSum / waitingCount / 60000)
+              : 0,
+          ...(pending
+            ? {
+                oldestPendingMinutes: Math.floor(
+                  (now - pending.oldestMs) / 60000,
+                ),
+              }
+            : {}),
+        },
+      };
+
+      await this.realtimeBroadcastService.broadcastEvent(
+        "admin",
+        restaurantId,
+        event,
+      );
+    } catch (error) {
+      this.logger.error(
+        "Failed to broadcast kitchen queue update",
+        error instanceof Error ? error : undefined,
+        { restaurantId },
+      );
+    }
   }
 
   private async broadcastItemStatusUpdate(

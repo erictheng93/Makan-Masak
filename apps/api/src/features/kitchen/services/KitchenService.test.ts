@@ -13,15 +13,30 @@ const serviceMocks = vi.hoisted(() => ({
   first: vi.fn(),
   broadcastOrderItemStatusUpdate: vi.fn(),
   broadcastKitchenItemStatus: vi.fn(),
+  broadcastEvent: vi.fn(),
+  queueRows: vi.fn(),
   generateEventId: vi.fn(),
 }));
 
 vi.mock("@makanmasak/database", () => ({
+  and: vi.fn(),
+  eq: vi.fn(),
+  inArray: vi.fn(),
+  sql: vi.fn(() => ({})),
+  orders: {},
+  createDatabase: vi.fn(() => ({
+    select: () => ({
+      from: () => ({
+        where: () => ({ groupBy: () => serviceMocks.queueRows() }),
+      }),
+    }),
+  })),
   RealtimeBroadcastService: vi.fn(function RealtimeBroadcastService() {
     return {
       broadcastOrderItemStatusUpdate:
         serviceMocks.broadcastOrderItemStatusUpdate,
       broadcastKitchenItemStatus: serviceMocks.broadcastKitchenItemStatus,
+      broadcastEvent: serviceMocks.broadcastEvent,
       generateEventId: serviceMocks.generateEventId,
     };
   }),
@@ -121,9 +136,27 @@ describe("KitchenService", () => {
       eventId: "evt-kitchen-status",
       recipientCount: 2,
     });
+    serviceMocks.broadcastEvent.mockResolvedValue({ success: true });
+    serviceMocks.queueRows.mockResolvedValue([
+      {
+        status: "confirmed",
+        count: 2,
+        oldestMs: new Date("2026-06-07T11:30:00.000Z").getTime(),
+        createdMsSum:
+          new Date("2026-06-07T11:30:00.000Z").getTime() +
+          new Date("2026-06-07T11:50:00.000Z").getTime(),
+      },
+      {
+        status: "preparing",
+        count: 1,
+        oldestMs: new Date("2026-06-07T11:40:00.000Z").getTime(),
+        createdMsSum: new Date("2026-06-07T11:40:00.000Z").getTime(),
+      },
+    ]);
     serviceMocks.generateEventId
       .mockReturnValueOnce("evt-item-status")
-      .mockReturnValueOnce("evt-kitchen-status");
+      .mockReturnValueOnce("evt-kitchen-status")
+      .mockReturnValueOnce("evt-queue");
     vi.spyOn(console, "log").mockImplementation(() => undefined);
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -329,6 +362,21 @@ describe("KitchenService", () => {
         waitingTime: 20,
       },
     });
+    expect(serviceMocks.broadcastEvent).toHaveBeenCalledWith(
+      "admin",
+      "restaurant-1",
+      expect.objectContaining({
+        type: "kitchen_queue_update",
+        restaurantId: "restaurant-1",
+        data: {
+          pendingCount: 2,
+          cookingCount: 1,
+          readyCount: 0,
+          averageWaitTime: 20,
+          oldestPendingMinutes: 30,
+        },
+      }),
+    );
     expect(result).toEqual({
       orderId: "order-101",
       itemId: 501,

@@ -4,7 +4,11 @@
  * Business logic service for table management operations
  */
 
-import { TableService } from "@makanmasak/database";
+import { RealtimeBroadcastService, TableService } from "@makanmasak/database";
+import {
+  RealtimeEventType,
+  type TableStatusUpdateEvent,
+} from "@makanmasak/shared-types";
 import { ApiError } from "../../../shared/utils/api-error";
 import type { D1Database } from "@cloudflare/workers-types";
 import type { Env } from "../../../types/env";
@@ -41,6 +45,33 @@ export class TablesService {
   private formatOperationError(operation: string, error: unknown): string {
     const errorMessage = error instanceof Error ? error.message : String(error);
     return errorMessage ? `${operation}: ${errorMessage}` : operation;
+  }
+
+  /**
+   * Tell the restaurant's admin room a table changed state. Best-effort: the
+   * write has already succeeded, so a failed broadcast must not fail it.
+   */
+  async broadcastStatusUpdate(
+    table: Pick<Table, "id" | "restaurantId" | "number" | "name">,
+    status: TableStatusUpdateEvent["data"]["status"],
+  ): Promise<void> {
+    try {
+      const broadcaster = new RealtimeBroadcastService(this.env);
+      const event: TableStatusUpdateEvent = {
+        type: RealtimeEventType.TABLE_STATUS_UPDATE,
+        eventId: broadcaster.generateEventId(),
+        timestamp: Date.now(),
+        restaurantId: table.restaurantId,
+        data: {
+          tableId: String(table.id),
+          tableName: table.name || `Table ${table.number}`,
+          status,
+        },
+      };
+      await broadcaster.broadcastEvent("admin", table.restaurantId, event);
+    } catch (error) {
+      this.logError("broadcastStatusUpdate", error);
+    }
   }
 
   /**

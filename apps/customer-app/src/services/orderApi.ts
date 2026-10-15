@@ -664,33 +664,6 @@ export const orderApi = {
   },
 
   /**
-   * 請求服務（呼叫服務員）
-   */
-  async requestService(
-    restaurantId: string,
-    tableId: number,
-    request: {
-      type: "water" | "napkins" | "utensils" | "assistance" | "bill" | "other";
-      message?: string;
-      priority?: "low" | "normal" | "high" | "urgent";
-    },
-  ): Promise<{
-    id: number;
-    estimatedResponseTime: number;
-    queuePosition: number;
-  }> {
-    const response = await apiClient.post<{
-      id: number;
-      estimatedResponseTime: number;
-      queuePosition: number;
-    }>(
-      `/restaurants/${restaurantId}/tables/${tableId}/service-requests`,
-      request,
-    );
-    return response;
-  },
-
-  /**
    * 提交訂單評價 (#286)
    *
    * `orderId` is the order's UUID (an order number or client mutation id also

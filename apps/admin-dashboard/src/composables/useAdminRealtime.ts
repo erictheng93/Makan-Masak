@@ -14,9 +14,6 @@ import {
   type KitchenQueueUpdateEvent,
   type KitchenItemStatusEvent,
   type MenuAvailabilityUpdateEvent,
-  type SystemNotificationEvent,
-  type TableCallServiceEvent,
-  type RestaurantStatusUpdateEvent,
 } from "@makanmasak/shared-types";
 
 // ============================================================================
@@ -244,64 +241,6 @@ export function useAdminRealtime() {
     }
   };
 
-  /**
-   * 處理系統通知
-   */
-  const handleSystemNotification = (event: SystemNotificationEvent) => {
-    const { notificationId, level, title, message } = event.data;
-
-    const alert: SystemAlert = {
-      notificationId,
-      level,
-      title,
-      message,
-      timestamp: event.timestamp,
-      read: false,
-    };
-
-    systemAlerts.value.unshift(alert);
-
-    // 限制通知數量
-    if (systemAlerts.value.length > 20) {
-      systemAlerts.value = systemAlerts.value.slice(0, 20);
-    }
-
-    // 根據級別播放不同音效
-    if (level === "error" || level === "warning") {
-      playNotificationSound();
-    }
-
-    console.log(`🔔 System notification [${level}]:`, title);
-  };
-
-  /**
-   * 處理餐廳狀態更新
-   */
-  const handleRestaurantStatusUpdate = (event: RestaurantStatusUpdateEvent) => {
-    console.log("🏪 Restaurant status updated:", event.data);
-  };
-
-  /**
-   * 處理桌台呼叫服務
-   */
-  const handleTableCallService = (event: TableCallServiceEvent) => {
-    const { tableId, tableName, serviceType } = event.data;
-
-    const alert: SystemAlert = {
-      notificationId: `call_${tableId}_${Date.now()}`,
-      level: "warning",
-      title: "呼叫服務",
-      message: `${tableName} 請求 ${serviceType}`,
-      timestamp: event.timestamp,
-      read: false,
-    };
-
-    systemAlerts.value.unshift(alert);
-    playNotificationSound();
-
-    console.log("🔔 Table call service:", event.data);
-  };
-
   // ========================================
   // 音效管理
   // ========================================
@@ -388,34 +327,7 @@ export function useAdminRealtime() {
       (event) => handleMenuUpdate(event as MenuAvailabilityUpdateEvent),
     );
 
-    // 訂閱桌台事件
-    const tableSubId = wsService.subscribe(
-      [RealtimeEventType.TABLE_CALL_SERVICE],
-      (event) => handleTableCallService(event as TableCallServiceEvent),
-    );
-
-    // 訂閱系統通知
-    const systemSubId = wsService.subscribe(
-      [
-        RealtimeEventType.SYSTEM_NOTIFICATION,
-        RealtimeEventType.RESTAURANT_STATUS_UPDATE,
-      ],
-      (event) => {
-        if (event.type === RealtimeEventType.SYSTEM_NOTIFICATION) {
-          handleSystemNotification(event as SystemNotificationEvent);
-        } else if (event.type === RealtimeEventType.RESTAURANT_STATUS_UPDATE) {
-          handleRestaurantStatusUpdate(event as RestaurantStatusUpdateEvent);
-        }
-      },
-    );
-
-    subscriptionIds.value = [
-      orderSubId,
-      kitchenSubId,
-      menuSubId,
-      tableSubId,
-      systemSubId,
-    ];
+    subscriptionIds.value = [orderSubId, kitchenSubId, menuSubId];
 
     console.log("✅ Started listening to realtime events");
   };

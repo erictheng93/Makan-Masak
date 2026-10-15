@@ -183,13 +183,7 @@ export function useRealtimeQueue() {
       status: message.data.status,
       capacity: message.data.customerCount ?? 0,
       timestamp: message.timestamp,
-      type: message.type.includes("occupied")
-        ? "occupied"
-        : message.type.includes("available")
-          ? "available"
-          : message.type.includes("reserved")
-            ? "reserved"
-            : "cleaning",
+      type: message.data.status,
     };
 
     tableUpdates.value.unshift(update);

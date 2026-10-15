@@ -47,6 +47,7 @@ const serviceFns = vi.hoisted(() => ({
   occupyTable: vi.fn(),
   releaseTable: vi.fn(),
   markTableCleaned: vi.fn(),
+  broadcastStatusUpdate: vi.fn(),
   regenerateQRCode: vi.fn(),
   generateBulkQRCodes: vi.fn(),
   getAvailableTables: vi.fn(),
@@ -68,6 +69,7 @@ vi.mock("../services/TablesService", () => ({
     occupyTable = serviceFns.occupyTable;
     releaseTable = serviceFns.releaseTable;
     markTableCleaned = serviceFns.markTableCleaned;
+    broadcastStatusUpdate = serviceFns.broadcastStatusUpdate;
     regenerateQRCode = serviceFns.regenerateQRCode;
     generateBulkQRCodes = serviceFns.generateBulkQRCodes;
     getAvailableTables = serviceFns.getAvailableTables;
@@ -354,6 +356,10 @@ describe("tables routes", () => {
 
     expect(response.status).toBe(200);
     expect(serviceFns.occupyTable).toHaveBeenCalledWith(11, 42, "Amy", 45);
+    expect(serviceFns.broadcastStatusUpdate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: 11 }),
+      "occupied",
+    );
     expect(serviceFns.resolveOrderIdentity).toHaveBeenCalledWith(
       expect.any(Object),
       42,
@@ -377,14 +383,20 @@ describe("tables routes", () => {
     response = await request("/11/release", "POST");
     expect(response.status).toBe(200);
     expect(serviceFns.releaseTable).toHaveBeenCalledWith(11);
+    expect(serviceFns.broadcastStatusUpdate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: 11 }),
+      "available",
+    );
 
     response = await request("/11/clean", "POST", { notes: "ready" });
     expect(response.status).toBe(200);
     expect(serviceFns.markTableCleaned).toHaveBeenCalledWith(11, "ready");
 
+    serviceFns.broadcastStatusUpdate.mockClear();
     serviceFns.releaseTable.mockResolvedValueOnce(false);
     response = await request("/11/release", "POST");
     expect(response.status).toBe(400);
+    expect(serviceFns.broadcastStatusUpdate).not.toHaveBeenCalled();
   });
 
   it("occupies tables with public order ids", async () => {

@@ -21,8 +21,6 @@ const realtimeEventTypes = [
   RealtimeEventType.ORDER_CANCELLED,
   RealtimeEventType.MENU_AVAILABILITY_UPDATE,
   RealtimeEventType.MENU_ITEM_UPDATE,
-  RealtimeEventType.SYSTEM_NOTIFICATION,
-  RealtimeEventType.RESTAURANT_STATUS_UPDATE,
 ];
 
 export function buildRealtimeWebSocketUrl(
@@ -114,12 +112,6 @@ export function useRealtimeConnection() {
       case RealtimeEventType.MENU_ITEM_UPDATE:
         handleMenuUpdate(event.data);
         break;
-      case RealtimeEventType.SYSTEM_NOTIFICATION:
-        handleSystemNotification(event.data);
-        break;
-      case RealtimeEventType.RESTAURANT_STATUS_UPDATE:
-        handleRestaurantStatusUpdate(event.data);
-        break;
       default:
         console.log("Unknown realtime event type:", event.type);
     }
@@ -206,33 +198,6 @@ export function useRealtimeConnection() {
       type: "info",
       title: "Menu updated",
       message: "Menu data has changed. Refresh if the latest menu is needed.",
-    });
-  };
-
-  const handleSystemNotification = (data: Record<string, unknown>) => {
-    const type =
-      data.level === "success" ||
-      data.level === "warning" ||
-      data.level === "error"
-        ? data.level
-        : "info";
-    notificationStore.addNotification({
-      type,
-      title:
-        typeof data.title === "string" ? data.title : "System notification",
-      message: typeof data.message === "string" ? data.message : "",
-      persistent: data.persistent === true || data.persistUntilRead === true,
-    });
-  };
-
-  const handleRestaurantStatusUpdate = (data: Record<string, unknown>) => {
-    notificationStore.addNotification({
-      type: "info",
-      title: "Restaurant status updated",
-      message:
-        typeof data.message === "string"
-          ? data.message
-          : "Restaurant realtime status changed.",
     });
   };
 

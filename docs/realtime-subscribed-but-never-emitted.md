@@ -110,7 +110,7 @@ enum 內其餘值的狀況：
 
 | 清單 | 狀態 | 說明 |
 | --- | --- | --- |
-| A | 未處理 | 需先決定功能要不要做；要做就補發送，不做就刪訂閱 |
+| A | 已處理（2026-10-15） | 見下表 |
 | B | 已清理（2026-10-15） | 刪除 admin `REALTIME_EVENTS` 常數整體；`useRealtimeQueue` 改直接引用 `RealtimeEventType` |
 | C | 已清理（2026-10-15） | 刪除 customer-app `useOrderTracking`、`useRestaurantStatus` 與不再使用的 import |
 | D | 已清理（2026-10-15） | 刪除 admin `CANONICAL_EVENT_ALIASES` 與 `normalizeEventType`；`subscribe` 直接使用 enum 值 |
@@ -124,3 +124,23 @@ enum 內其餘值的狀況：
 - 清單 A 的訂閱都還在（例如 `useRealtimeQueue` 訂閱 `table_status_update`）。
 - 順手去重：舊的 `QUEUE_CALLED` 與 `QUEUE_NOTIFIED` 同時映射到 `waiting_list_called`，
   桌況四個別名映射到同一個 `table_status_update`，現在各只訂閱一次。
+
+### 清單 A 的處理結果
+
+| 事件 | 處理 | 理由 |
+| --- | --- | --- |
+| `table_status_update` | **補發送** | `tables` 的 occupy、release、clean 路由成功後，經 `TablesService.broadcastStatusUpdate` 推到 `admin` 房間 |
+| `kitchen_queue_update` | **補發送** | 儀表板的 `RealtimeNotificationPanel` 靠它顯示廚房佇列，沒有它數字永遠是 0。`KitchenService` 在品項狀態變更後，用一次 GROUP BY 查詢算出各狀態數量與平均等待 |
+| `table_call_service` | 刪訂閱 | 後端沒有 service-requests 路由，顧客端也沒有呼叫端；要做需要公開端點的濫用防護，屬新功能。同時刪除 customer-app 未使用、指向不存在端點的 `orderApi.requestService` |
+| `system_notification` | 刪訂閱 | 沒有任何產生來源；店家告警走另一套（`restaurant_alerts`，由 dashboard 以多語系渲染）|
+| `restaurant_status_update` | 刪訂閱 | 沒有手動開關店的寫入路徑，營業狀態由營業時間計算 |
+
+順手修掉的 bug：`useRealtimeQueue.handleTableUpdate` 以 `message.type.includes("occupied")`
+判斷桌況，但 `message.type` 恆為 `table_status_update`，所以 `type` 永遠是 `cleaning`，
+「桌位現已可用」通知永遠不會出現。改為讀 `message.data.status`。
+
+### 仍待處理
+
+- `RealtimeNotificationPanel` 的 `systemAlerts` 區塊現在沒有任何資料來源，永遠顯示空狀態。
+  要嘛移除這塊 UI，要嘛接上 `restaurant_alerts`。
+- 補發送的事件目前只推到 `admin` 房間；kitchen 房間未推。

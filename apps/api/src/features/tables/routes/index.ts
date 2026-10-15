@@ -412,6 +412,8 @@ app.post(
       throw badRequest("Failed to occupy table");
     }
 
+    await tablesService.broadcastStatusUpdate(table, "occupied");
+
     return c.json({
       success: true,
       message: "Table occupied successfully",
@@ -462,6 +464,8 @@ app.post(
       throw badRequest("Failed to release table");
     }
 
+    await tablesService.broadcastStatusUpdate(table, "available");
+
     return c.json({
       success: true,
       message: "Table released successfully",
@@ -508,6 +512,8 @@ app.post(
     if (!success) {
       throw badRequest("Failed to mark table as cleaned");
     }
+
+    await tablesService.broadcastStatusUpdate(table, "available");
 
     return c.json({
       success: true,
