@@ -1,10 +1,23 @@
 // @vitest-environment jsdom
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h, ref } from "vue";
 import { mount, flushPromises } from "@vue/test-utils";
 import { RealtimeEventType } from "@makanmasak/shared-types";
 import { useAdminRealtime } from "./useAdminRealtime";
+
+// The failure paths below are driven on purpose and the code logs each one.
+const silencedConsole: Array<{ mockRestore: () => void }> = [];
+beforeEach(() => {
+  for (const method of ["log"] as const) {
+    silencedConsole.push(
+      vi.spyOn(console, method).mockImplementation(() => {}),
+    );
+  }
+});
+afterEach(() => {
+  silencedConsole.splice(0).forEach((spy) => spy.mockRestore());
+});
 
 const mocks = vi.hoisted(() => ({
   subscribe: vi.fn(),

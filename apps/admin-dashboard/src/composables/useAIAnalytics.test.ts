@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/services/api", () => ({
   api: {
@@ -9,6 +9,19 @@ vi.mock("@/services/api", () => ({
 
 import { api } from "@/services/api";
 import { useAIAnalytics } from "./useAIAnalytics";
+
+// The failure paths below are driven on purpose and the code logs each one.
+const silencedConsole: Array<{ mockRestore: () => void }> = [];
+beforeEach(() => {
+  for (const method of ["error"] as const) {
+    silencedConsole.push(
+      vi.spyOn(console, method).mockImplementation(() => {}),
+    );
+  }
+});
+afterEach(() => {
+  silencedConsole.splice(0).forEach((spy) => spy.mockRestore());
+});
 
 describe("useAIAnalytics", () => {
   it("preserves an API error code when report generation fails", async () => {

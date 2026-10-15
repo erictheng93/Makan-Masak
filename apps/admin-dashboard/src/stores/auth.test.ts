@@ -8,6 +8,19 @@ import { UserRole, type ApiResponse, type User } from "@/types";
 import { api, authClient, managementAuthClient } from "@/services/api";
 import { getAuthToken } from "@/utils/authTokenProvider";
 
+// The failure paths below are driven on purpose and the code logs each one.
+const silencedConsole: Array<{ mockRestore: () => void }> = [];
+beforeEach(() => {
+  for (const method of ["error", "debug"] as const) {
+    silencedConsole.push(
+      vi.spyOn(console, method).mockImplementation(() => {}),
+    );
+  }
+});
+afterEach(() => {
+  silencedConsole.splice(0).forEach((spy) => spy.mockRestore());
+});
+
 vi.mock("@/i18n", () => ({
   t: (key: string) => key,
 }));

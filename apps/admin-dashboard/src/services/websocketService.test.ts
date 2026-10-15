@@ -3,6 +3,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import WebSocketService from "./websocketService";
 
+// The failure paths below are driven on purpose and the code logs each one.
+const silencedConsole: Array<{ mockRestore: () => void }> = [];
+beforeEach(() => {
+  for (const method of ["error"] as const) {
+    silencedConsole.push(
+      vi.spyOn(console, method).mockImplementation(() => {}),
+    );
+  }
+});
+afterEach(() => {
+  silencedConsole.splice(0).forEach((spy) => spy.mockRestore());
+});
+
 const apiPost = vi.hoisted(() => vi.fn());
 
 vi.mock("@/services/api", () => ({

@@ -2,13 +2,26 @@
 
 import { flushPromises, mount } from "@vue/test-utils";
 import { ref } from "vue";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import CashierView from "./CashierView.vue";
 import {
   clearRestaurantCurrency,
   setRestaurantCurrency,
 } from "@/composables/useCurrency";
 import { api } from "@/services/api";
+
+// The failure paths below are driven on purpose and the code logs each one.
+const silencedConsole: Array<{ mockRestore: () => void }> = [];
+beforeEach(() => {
+  for (const method of ["error"] as const) {
+    silencedConsole.push(
+      vi.spyOn(console, method).mockImplementation(() => {}),
+    );
+  }
+});
+afterEach(() => {
+  silencedConsole.splice(0).forEach((spy) => spy.mockRestore());
+});
 
 // Pinned so the calendar-day test below means the same thing on a UTC CI runner
 // as on a machine in Taipei; without it the UTC bug and the fix agree in UTC.

@@ -7,6 +7,19 @@ import { mapDashboardPayload } from "./dashboard";
 import { useDashboardStore } from "./dashboard";
 import { api } from "@/services/api";
 
+// The failure paths below are driven on purpose and the code logs each one.
+const silencedConsole: Array<{ mockRestore: () => void }> = [];
+beforeEach(() => {
+  for (const method of ["error"] as const) {
+    silencedConsole.push(
+      vi.spyOn(console, method).mockImplementation(() => {}),
+    );
+  }
+});
+afterEach(() => {
+  silencedConsole.splice(0).forEach((spy) => spy.mockRestore());
+});
+
 const authState = vi.hoisted(() => ({
   restaurantId: "restaurant-1" as string | null,
   isAuthenticated: true,

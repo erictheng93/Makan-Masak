@@ -2,10 +2,23 @@
 
 import { defineComponent, ref } from "vue";
 import { flushPromises, mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import TableSetupTab from "./TableSetupTab.vue";
 import { api } from "@/services/api";
 import type { PrintableQRCode } from "@/utils/qrPrintSheet";
+
+// The failure paths below are driven on purpose and the code logs each one.
+const silencedConsole: Array<{ mockRestore: () => void }> = [];
+beforeEach(() => {
+  for (const method of ["error"] as const) {
+    silencedConsole.push(
+      vi.spyOn(console, method).mockImplementation(() => {}),
+    );
+  }
+});
+afterEach(() => {
+  silencedConsole.splice(0).forEach((spy) => spy.mockRestore());
+});
 
 // restaurants.id is a TEXT UUID v7 — the whole point of this suite is that it
 // must reach the API as a string, never coerced through Number().

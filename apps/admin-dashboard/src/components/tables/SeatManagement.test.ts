@@ -5,6 +5,19 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SeatManagement from "./SeatManagement.vue";
 
+// The failure paths below are driven on purpose and the code logs each one.
+const silencedConsole: Array<{ mockRestore: () => void }> = [];
+beforeEach(() => {
+  for (const method of ["error"] as const) {
+    silencedConsole.push(
+      vi.spyOn(console, method).mockImplementation(() => {}),
+    );
+  }
+});
+afterEach(() => {
+  silencedConsole.splice(0).forEach((spy) => spy.mockRestore());
+});
+
 const qrDataUrl = "data:image/png;base64,c2VhdA==";
 const qrToDataUrl = vi.hoisted(() =>
   vi.fn(async (content: string) => `data:image/png;base64,${btoa(content)}`),
