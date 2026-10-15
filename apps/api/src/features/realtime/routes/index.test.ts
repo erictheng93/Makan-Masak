@@ -1,6 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sign } from "hono/jwt";
-import routes from "./index";
+import { Hono } from "hono";
+import realtimeRoutes from "./index";
+import { ApiError } from "../../../shared/utils/api-error";
+
+// Mirror the app-level handler: a bare router turns every throw into 500.
+const routes = new Hono();
+routes.onError((err, c) =>
+  err instanceof ApiError
+    ? c.json({ success: false, error: { code: err.code } }, err.status as 400)
+    : c.json({ success: false }, 500),
+);
+routes.route("/", realtimeRoutes);
 
 const serviceMethods = vi.hoisted(() => ({
   generateWebSocketToken: vi.fn(),
@@ -256,7 +267,7 @@ describe("realtime routes", () => {
         createEnv() as never,
       ),
     );
-    expect(serviceErrorResponse.status).toBe(500);
+    expect(serviceErrorResponse.status).toBe(400);
 
     const validationResponse = await withSilencedRouteError(() =>
       routes.fetch(
@@ -268,7 +279,7 @@ describe("realtime routes", () => {
         createEnv() as never,
       ),
     );
-    expect(validationResponse.status).toBe(500);
+    expect(validationResponse.status).toBe(400);
     expect(serviceMethods.generateWebSocketToken).toHaveBeenCalledTimes(1);
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("Failed to generate WebSocket token"),
@@ -372,7 +383,7 @@ describe("realtime routes", () => {
         createEnv() as never,
       ),
     );
-    expect(invalidResponse.status).toBe(500);
+    expect(invalidResponse.status).toBe(401);
 
     serviceMethods.verifyWebSocketToken.mockResolvedValueOnce({
       valid: true,
@@ -392,7 +403,7 @@ describe("realtime routes", () => {
         createEnv() as never,
       ),
     );
-    expect(deniedResponse.status).toBe(500);
+    expect(deniedResponse.status).toBe(401);
   });
 
   it("allows admins to revoke tokens and read blacklist stats", async () => {
@@ -489,8 +500,8 @@ describe("realtime routes", () => {
       ),
     );
 
-    expect(revokeResponse.status).toBe(500);
-    expect(statsResponse.status).toBe(500);
+    expect(revokeResponse.status).toBe(403);
+    expect(statsResponse.status).toBe(403);
     expect(serviceMethods.revokeToken).not.toHaveBeenCalled();
     expect(serviceMethods.getBlacklistStats).not.toHaveBeenCalled();
   });
@@ -506,7 +517,7 @@ describe("realtime routes", () => {
         createEnv() as never,
       ),
     );
-    expect(revokeResponse.status).toBe(500);
+    expect(revokeResponse.status).toBe(401);
 
     serviceMethods.revokeUserTokens.mockResolvedValue({
       success: false,
@@ -518,7 +529,7 @@ describe("realtime routes", () => {
         createEnv() as never,
       ),
     );
-    expect(userResponse.status).toBe(500);
+    expect(userResponse.status).toBe(401);
   });
 
   it("reads room stats through the realtime Durable Object binding", async () => {
@@ -557,7 +568,7 @@ describe("realtime routes", () => {
         createEnv({ userRole: 1, restaurantId: "restaurant-1" }) as never,
       ),
     );
-    expect(invalidResponse.status).toBe(500);
+    expect(invalidResponse.status).toBe(400);
 
     const failingEnv = createEnv({
       durableFetch: async () => new Response("down", { status: 503 }),
@@ -570,7 +581,7 @@ describe("realtime routes", () => {
         failingEnv as never,
       ),
     );
-    expect(failedResponse.status).toBe(500);
+    expect(failedResponse.status).toBe(503);
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("Failed to fetch realtime stats"),
       expect.anything(),
@@ -589,7 +600,7 @@ describe("realtime routes", () => {
       ),
     );
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(403);
     expect(env.REALTIME_SESSION.idFromName).not.toHaveBeenCalled();
   });
 
@@ -646,7 +657,7 @@ describe("realtime routes", () => {
         createEnv({ userRole: 1, restaurantId: "restaurant-1" }) as never,
       ),
     );
-    expect(missingResponse.status).toBe(500);
+    expect(missingResponse.status).toBe(400);
   });
 
   it("reports realtime health for up, down, and unreachable service states", async () => {
