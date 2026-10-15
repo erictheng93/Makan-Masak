@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const meterEmit = vi.hoisted(() => vi.fn(async () => undefined));
 
@@ -56,6 +56,17 @@ async function callAsPrintAgent(method: string, path: string) {
 }
 
 describe("print agent CSRF exemption", () => {
+  // These requests are rejected on purpose; the error handler and CORS/CSRF
+  // middleware log each rejection, which is not what these tests check.
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("lets the agent acknowledge a claimed job without a browser session", async () => {
     const { code } = await callAsPrintAgent(
       "POST",

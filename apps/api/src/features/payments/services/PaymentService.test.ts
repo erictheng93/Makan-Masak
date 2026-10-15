@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { orders, paymentTransactions } from "@makanmasak/database";
 import { createSelectFixtureDb } from "@makanmasak/database/testing";
 import type { KVNamespace } from "@cloudflare/workers-types";
@@ -357,6 +357,13 @@ describe("PaymentService", () => {
     vi.clearAllMocks();
     vi.spyOn(Date, "now").mockReturnValue(1780833600000);
     mocks.resolveRestaurantCurrency.mockResolvedValue("TWD");
+    // env() carries no REALTIME_SESSION, so the broadcast helper logs that it
+    // is skipping; envWithRealtime() is what the tests that assert it use.
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("rejects payment attempts that do not identify a trusted actor", async () => {

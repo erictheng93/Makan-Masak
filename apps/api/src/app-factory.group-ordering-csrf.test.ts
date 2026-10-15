@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const meterEmit = vi.hoisted(() => vi.fn(async () => undefined));
 
@@ -75,6 +75,17 @@ const staffOnly: Array<[string, string]> = [
 ];
 
 describe("group ordering CSRF exemptions", () => {
+  // These requests are rejected on purpose; the error handler and CORS/CSRF
+  // middleware log each rejection, which is not what these tests check.
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it.each(customerSelfService)(
     "lets a browser reach the handler for %s %s",
     async (method, path) => {

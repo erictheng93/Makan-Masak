@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const meterEmit = vi.hoisted(() => vi.fn(async () => undefined));
 vi.mock("./shared/utils/meter", () => ({ meterEmit }));
@@ -30,6 +30,17 @@ function request(
 }
 
 describe("unlaunched feature gates", () => {
+  // These requests are rejected on purpose; the error handler and CORS/CSRF
+  // middleware log each rejection, which is not what these tests check.
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   // A gate registered as "/x/*" has to refuse "/x" as well, or the bare-prefix
   // route slips through -- POST /api/v1/market-checkouts, the endpoint that
   // starts the whole flow, is exactly that shape.

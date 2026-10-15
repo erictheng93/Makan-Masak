@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const meterEmit = vi.hoisted(() => vi.fn(async () => undefined));
 
@@ -39,7 +39,9 @@ async function postFromCustomerApp(method: string, path: string) {
       },
       body: JSON.stringify({ targetType: "dish", targetId: "1" }),
     }),
-    { NODE_ENV: "test" } as never,
+    // JWT_SECRET so the fake bearer fails verification rather than tripping
+    // the missing-secret "Server configuration error" 500.
+    { NODE_ENV: "test", JWT_SECRET: "x".repeat(32) } as never,
   );
 
   const body = (await response.json().catch(() => null)) as {
@@ -50,6 +52,17 @@ async function postFromCustomerApp(method: string, path: string) {
 }
 
 describe("customer self-service CSRF exemption", () => {
+  // These requests are rejected on purpose; the error handler and CORS/CSRF
+  // middleware log each rejection, which is not what these tests check.
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it.each([
     ["POST", "/api/v1/customer/favorites"],
     ["DELETE", "/api/v1/customer/favorites/1"],

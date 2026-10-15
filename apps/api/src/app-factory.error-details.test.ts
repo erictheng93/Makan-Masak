@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const meterEmit = vi.hoisted(() => vi.fn(async () => undefined));
 vi.mock("./shared/utils/meter", () => ({ meterEmit }));
@@ -32,6 +32,11 @@ async function fetchThrowing(error: unknown) {
 }
 
 describe("ApiError details in the error envelope", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });

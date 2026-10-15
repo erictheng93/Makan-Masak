@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RealtimeEventType } from "@makanmasak/shared-types";
 import type { Order, OrderItem } from "@makanmasak/shared-types";
 import { ApiError } from "../../../shared/utils/api-error";
@@ -131,6 +131,16 @@ function createEnv(
     },
   };
 }
+
+// The failure paths below are driven on purpose and the service logs each one.
+beforeEach(() => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("OrdersService realtime broadcasts", () => {
   beforeEach(() => {
@@ -2385,6 +2395,7 @@ describe("OrdersService kitchen tickets", () => {
     await expect(
       service.updateOrderStatus("32", { status: "confirmed" }, "1", 1),
     ).resolves.toMatchObject({ id: "32", status: "confirmed" });
+    expect(console.warn).toHaveBeenCalledOnce();
   });
 });
 

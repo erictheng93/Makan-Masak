@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const meterEmit = vi.hoisted(() => vi.fn(async () => undefined));
 
@@ -17,6 +17,12 @@ function createExecutionContext(): ExecutionContext {
 describe("createApp API middleware registration", () => {
   beforeEach(() => {
     meterEmit.mockClear();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("protects mounted coupon writes with CSRF and meters the request", async () => {

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getTableColumns } from "drizzle-orm";
 import {
   RealtimeBroadcastService,
@@ -6,6 +6,13 @@ import {
 } from "@makanmasak/database";
 import { Status } from "@makanmasak/shared-types";
 import { MenuService } from "./MenuService";
+
+beforeEach(() => {
+  // The rejection paths under test log through the service logger; silence
+  // them here so a genuinely unexpected log still stands out in other suites.
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -16,9 +23,13 @@ describe("MenuService", () => {
     return {
       select: vi.fn(() => ({
         from: vi.fn(() => ({
-          where: vi.fn(() => ({
-            limit: vi.fn(async () => rows),
-          })),
+          // Awaitable as well as limit()-able: the availability notifier
+          // reads visible categories without a limit.
+          where: vi.fn(() =>
+            Object.assign(Promise.resolve(rows), {
+              limit: vi.fn(async () => rows),
+            }),
+          ),
         })),
       })),
     };
@@ -164,6 +175,14 @@ describe("MenuService", () => {
     await expect(
       service.updateMenuItem(101, { isAvailable: false }),
     ).resolves.toMatchObject({ isAvailable: false });
+    expect(
+      vi
+        .mocked(console.error)
+        .mock.calls.flat()
+        .some((arg) =>
+          String(arg).includes("Failed to notify menu availability change"),
+        ),
+    ).toBe(true);
   });
   it("preserves null inventory as unlimited stock in menu item responses", () => {
     const { service } = createService();
