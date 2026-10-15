@@ -3,6 +3,7 @@
  */
 
 import { drizzle } from "drizzle-orm/d1";
+import { ZodError } from "zod";
 import { eq, and } from "drizzle-orm";
 import { cashRegisters, cashShifts } from "@makanmasak/database";
 import type { CashRegister, CreateRegisterRequest } from "../types";
@@ -75,6 +76,12 @@ export class RegisterService {
         data: this.mapRegister(register),
       };
     } catch (error) {
+      if (error instanceof ZodError) {
+        return {
+          success: false,
+          error: error.issues.map((issue) => issue.message).join("; "),
+        };
+      }
       console.error("創建收銀機失敗:", error);
       return {
         success: false,

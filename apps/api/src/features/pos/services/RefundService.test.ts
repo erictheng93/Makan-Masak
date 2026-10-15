@@ -587,8 +587,6 @@ describe("RefundService", () => {
   });
 
   it("rejects invalid refund requests before inserting rows", async () => {
-    // The 19.995 request fails schema validation, which processRefund logs.
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const mutations = mockMutations();
 
     mockSelectResults({ orders: [[]] });
@@ -618,20 +616,19 @@ describe("RefundService", () => {
     mockSelectResults({
       orders: [[{ id: 101, totalAmount: 100, paymentStatus: "completed" }]],
     });
-    await expect(
-      createService().processRefund(
-        refundRequest({ refundAmount: 19.995 }),
-        "register-1",
-        "user-7",
-      ),
-    ).resolves.toMatchObject({ success: false });
+    // Schema failures come back as the field message, not Zod's JSON dump,
+    // and are not logged as server errors.
+    const invalidAmount = await createService().processRefund(
+      refundRequest({ refundAmount: 19.995 }),
+      "register-1",
+      "user-7",
+    );
+    expect(invalidAmount).toEqual({
+      success: false,
+      error: "refundAmount must not have more than two decimal places",
+    });
 
     expect(mutations.inserted).toHaveLength(0);
-    expect(errorSpy).toHaveBeenCalledWith(
-      "處理退款失敗:",
-      expect.objectContaining({ name: "ZodError" }),
-    );
-    errorSpy.mockRestore();
   });
 
   /**

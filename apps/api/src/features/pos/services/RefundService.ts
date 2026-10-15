@@ -3,6 +3,7 @@
  */
 
 import { drizzle } from "drizzle-orm/d1";
+import { ZodError } from "zod";
 import { eq, and, desc, sql, inArray, type SQL } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import {
@@ -298,6 +299,14 @@ export class RefundService {
               }) as RefundResult,
       };
     } catch (error) {
+      // Bad input is the caller's mistake, not a server fault: say which field
+      // instead of returning ZodError's JSON dump, and keep it out of error logs.
+      if (error instanceof ZodError) {
+        return {
+          success: false,
+          error: error.issues.map((issue) => issue.message).join("; "),
+        };
+      }
       console.error("處理退款失敗:", error);
       return {
         success: false,

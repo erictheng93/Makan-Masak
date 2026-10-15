@@ -178,7 +178,6 @@ describe("RegisterService", () => {
   });
 
   it("rejects invalid create payloads before inserting", async () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const mutations = mockMutations();
 
     const result = await createService().createRegister(
@@ -187,12 +186,8 @@ describe("RegisterService", () => {
     );
 
     expect(result.success).toBe(false);
+    expect(result.error).not.toMatch(/^\[/);
     expect(mutations.inserted).toHaveLength(0);
-    expect(errorSpy).toHaveBeenCalledWith(
-      "創建收銀機失敗:",
-      expect.objectContaining({ name: "ZodError" }),
-    );
-    errorSpy.mockRestore();
   });
 
   it("lists registers and reports status with shift activity", async () => {
