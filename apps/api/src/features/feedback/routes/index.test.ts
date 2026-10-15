@@ -1,7 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthUser } from "../../../middleware/auth";
-import routes from "./index";
+import { Hono } from "hono";
+import feedbackRoutes from "./index";
+import { ApiError } from "../../../shared/utils/api-error";
 import { createFeedbackSchema } from "../schemas/validation";
+
+// Mirror the app-level handler: a bare router turns every throw into 500.
+const routes = new Hono();
+routes.onError((err, c) =>
+  err instanceof ApiError
+    ? c.json({ success: false, error: { code: err.code } }, err.status as 400)
+    : c.json({ success: false }, 500),
+);
+routes.route("/", feedbackRoutes);
 
 const mocks = vi.hoisted(() => ({
   currentUser: {
@@ -224,8 +235,6 @@ describe("feedback routes", () => {
   });
 
   it("rejects non-http attachment URLs during feedback creation", async () => {
-    // The bare router has no app.onError, so Hono logs the validation ApiError.
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const response = await routes.fetch(
       jsonRequest(
         "https://test/",
@@ -240,12 +249,8 @@ describe("feedback routes", () => {
       createEnv() as never,
     );
 
-    expect(response.status).not.toBe(201);
+    expect(response.status).toBe(400);
     expect(mocks.createFeedback).not.toHaveBeenCalled();
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ message: "Validation failed" }),
-    );
-    errorSpy.mockRestore();
   });
 
   it("persists batch sync payloads with encoded scope and sync id", async () => {
@@ -404,7 +409,7 @@ describe("feedback routes", () => {
     const missingResponse = await withSilencedRouteError(() =>
       routes.fetch(new Request("https://test/99"), createEnv() as never),
     );
-    expect(missingResponse.status).toBe(500);
+    expect(missingResponse.status).toBe(404);
 
     mocks.getFeedbackById.mockResolvedValueOnce(
       feedback({ userId: "user-99" }),
@@ -412,7 +417,7 @@ describe("feedback routes", () => {
     const forbiddenResponse = await withSilencedRouteError(() =>
       routes.fetch(new Request("https://test/5"), createEnv() as never),
     );
-    expect(forbiddenResponse.status).toBe(500);
+    expect(forbiddenResponse.status).toBe(403);
   });
 
   it("updates feedback status with resolver attribution", async () => {
@@ -507,7 +512,7 @@ describe("feedback routes", () => {
         createEnv() as never,
       ),
     );
-    expect(patchResponse.status).toBe(500);
+    expect(patchResponse.status).toBe(404);
 
     mocks.deleteFeedback.mockResolvedValue(false);
     const deleteResponse = await withSilencedRouteError(() =>
@@ -516,7 +521,7 @@ describe("feedback routes", () => {
         createEnv() as never,
       ),
     );
-    expect(deleteResponse.status).toBe(500);
+    expect(deleteResponse.status).toBe(404);
   });
 
   it("adds responses and restricts internal notes to admins", async () => {
@@ -596,7 +601,7 @@ describe("feedback routes", () => {
         createEnv() as never,
       ),
     );
-    expect(updateResponse.status).toBe(500);
+    expect(updateResponse.status).toBe(404);
 
     mocks.deleteResponse.mockResolvedValue(false);
     const deleteResponse = await withSilencedRouteError(() =>
@@ -605,6 +610,6 @@ describe("feedback routes", () => {
         createEnv() as never,
       ),
     );
-    expect(deleteResponse.status).toBe(500);
+    expect(deleteResponse.status).toBe(404);
   });
 });
