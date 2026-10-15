@@ -1,10 +1,5 @@
-import { ref, shallowRef, onMounted, onUnmounted } from "vue";
-import type {
-  NotificationData,
-  OrderUpdateData,
-  RestaurantStatusData,
-  WebSocketMessage,
-} from "@makanmasak/shared-types";
+import { ref, shallowRef, onUnmounted } from "vue";
+import type { WebSocketMessage } from "@makanmasak/shared-types";
 
 interface UseWebSocketOptions<TMessage = WebSocketMessage> {
   url?: string;
@@ -295,87 +290,6 @@ export function useWebSocket<TMessage = WebSocketMessage>(
     send,
     subscribe,
     unsubscribe,
-  };
-}
-
-export function useOrderTracking(orderId: number) {
-  const orderUpdates = ref<OrderUpdateData[]>([]);
-  const currentStatus = ref<string>("");
-
-  const { isConnected, isConnecting, connect, disconnect } = useWebSocket({
-    url: `${import.meta.env.VITE_WS_BASE_URL}/orders/${orderId}/tracking`,
-    onMessage: (data: WebSocketMessage) => {
-      if (data.type === "order_update" && data.data) {
-        orderUpdates.value.push(data.data);
-        if (data.data.status !== undefined) {
-          currentStatus.value = String(data.data.status);
-        }
-      }
-    },
-  });
-
-  onMounted(() => {
-    if (orderId) {
-      void connect();
-    }
-  });
-
-  onUnmounted(() => {
-    disconnect();
-  });
-
-  return {
-    orderUpdates,
-    currentStatus,
-    isConnected,
-    isConnecting,
-    reconnect: () => connect(),
-  };
-}
-
-export function useRestaurantStatus(restaurantId: string, tableId?: number) {
-  const restaurantStatus = ref<Partial<RestaurantStatusData>>({});
-  const notifications = ref<NotificationData[]>([]);
-
-  const { isConnected, isConnecting, connect, disconnect } = useWebSocket({
-    url: `${import.meta.env.VITE_WS_BASE_URL}/restaurants/${restaurantId}/status`,
-    onMessage: (data: WebSocketMessage) => {
-      switch (data.type) {
-        case "restaurant_status_update":
-          restaurantStatus.value = {
-            ...restaurantStatus.value,
-            ...data.data,
-          };
-          break;
-        case "notification":
-          notifications.value.push(data.data);
-          break;
-      }
-    },
-  });
-
-  const clearNotification = (index: number) => {
-    notifications.value.splice(index, 1);
-  };
-
-  onMounted(() => {
-    if (restaurantId) {
-      void connect();
-    }
-  });
-
-  onUnmounted(() => {
-    disconnect();
-  });
-
-  return {
-    restaurantStatus,
-    notifications,
-    isConnected,
-    isConnecting,
-    clearNotification,
-    reconnect: () => connect(),
-    tableId,
   };
 }
 

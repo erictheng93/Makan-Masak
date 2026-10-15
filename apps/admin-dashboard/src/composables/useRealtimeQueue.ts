@@ -1,9 +1,5 @@
 import { ref, onMounted, onUnmounted } from "vue";
-import {
-  useRealtime,
-  REALTIME_EVENTS,
-  type RealtimeMessage,
-} from "@/services/realtimeService";
+import { useRealtime, type RealtimeMessage } from "@/services/realtimeService";
 import { useAuthStore } from "@/stores/auth";
 import { RealtimeEventType } from "@makanmasak/shared-types";
 
@@ -274,14 +270,12 @@ export function useRealtimeQueue() {
       return;
     }
 
-    // 訂閱候位相關事件 - 包含新的 notified 事件
     const queueEventTypes = [
-      REALTIME_EVENTS.QUEUE_JOINED,
-      REALTIME_EVENTS.QUEUE_CALLED,
-      REALTIME_EVENTS.QUEUE_NOTIFIED, // 新增通知事件
-      REALTIME_EVENTS.QUEUE_SEATED,
-      REALTIME_EVENTS.QUEUE_NO_SHOW,
-      REALTIME_EVENTS.QUEUE_CANCELLED,
+      RealtimeEventType.WAITING_LIST_JOINED,
+      RealtimeEventType.WAITING_LIST_CALLED,
+      RealtimeEventType.WAITING_LIST_SEATED,
+      RealtimeEventType.WAITING_LIST_EXPIRED,
+      RealtimeEventType.WAITING_LIST_CANCELLED,
     ];
 
     const queueSubId = subscribe(
@@ -291,12 +285,7 @@ export function useRealtimeQueue() {
     );
 
     // 訂閱桌位相關事件
-    const tableEventTypes = [
-      REALTIME_EVENTS.TABLE_OCCUPIED,
-      REALTIME_EVENTS.TABLE_AVAILABLE,
-      REALTIME_EVENTS.TABLE_RESERVED,
-      REALTIME_EVENTS.TABLE_CLEANING,
-    ];
+    const tableEventTypes = [RealtimeEventType.TABLE_STATUS_UPDATE];
 
     const tableSubId = subscribe(
       tableEventTypes,

@@ -30,31 +30,6 @@ export type RealtimeConnectionStatus =
   | "disconnected"
   | "error";
 
-const CANONICAL_EVENT_ALIASES: Record<string, RealtimeEventType> = {
-  order_created: RealtimeEventType.NEW_ORDER,
-  order_updated: RealtimeEventType.ORDER_STATUS_UPDATE,
-  order_status_changed: RealtimeEventType.ORDER_STATUS_UPDATE,
-  order_cancelled: RealtimeEventType.ORDER_CANCELLED,
-  menu_updated: RealtimeEventType.MENU_ITEM_UPDATE,
-  queue_joined: RealtimeEventType.WAITING_LIST_JOINED,
-  queue_called: RealtimeEventType.WAITING_LIST_CALLED,
-  queue_notified: RealtimeEventType.WAITING_LIST_CALLED,
-  queue_seated: RealtimeEventType.WAITING_LIST_SEATED,
-  queue_no_show: RealtimeEventType.WAITING_LIST_EXPIRED,
-  queue_cancelled: RealtimeEventType.WAITING_LIST_CANCELLED,
-  table_occupied: RealtimeEventType.TABLE_STATUS_UPDATE,
-  table_available: RealtimeEventType.TABLE_STATUS_UPDATE,
-  table_reserved: RealtimeEventType.TABLE_STATUS_UPDATE,
-  table_cleaning: RealtimeEventType.TABLE_STATUS_UPDATE,
-  system_notification: RealtimeEventType.SYSTEM_NOTIFICATION,
-};
-
-function normalizeEventType(type: string): RealtimeEventType {
-  return (
-    CANONICAL_EVENT_ALIASES[type] ?? (type as unknown as RealtimeEventType)
-  );
-}
-
 function toRealtimeMessage<TEvent extends RealtimeEvent>(
   event: TEvent,
 ): RealtimeMessage<TEvent> {
@@ -101,9 +76,9 @@ class RealtimeService {
     restaurantId?: string,
   ): string {
     const subscriptionTypes = Array.isArray(types) ? types : [types];
-    const normalizedTypes = subscriptionTypes
-      .filter((type) => type !== "*")
-      .map(normalizeEventType);
+    const normalizedTypes = subscriptionTypes.filter(
+      (type) => type !== "*",
+    ) as RealtimeEventType[];
     const websocketTypes =
       normalizedTypes.length > 0
         ? normalizedTypes
@@ -230,52 +205,5 @@ export function useRealtime() {
     getMessageBuffer: () => realtimeService.getMessageBuffer(),
   };
 }
-
-export const REALTIME_EVENTS = {
-  ORDER_CREATED: RealtimeEventType.NEW_ORDER,
-  ORDER_UPDATED: RealtimeEventType.ORDER_STATUS_UPDATE,
-  ORDER_STATUS_CHANGED: RealtimeEventType.ORDER_STATUS_UPDATE,
-  ORDER_CANCELLED: RealtimeEventType.ORDER_CANCELLED,
-  GROUP_ORDER_CREATED: RealtimeEventType.GROUP_ORDER_CREATED,
-  GROUP_ORDER_UPDATED: "group_order_updated",
-  GROUP_ORDER_EXPIRED: "group_order_expired",
-  GROUP_ORDER_COMPLETED: "group_order_completed",
-  GROUP_ORDER_CANCELLED: "group_order_cancelled",
-  GROUP_MEMBER_JOINED: RealtimeEventType.GROUP_MEMBER_JOINED,
-  GROUP_MEMBER_LEFT: "group_member_left",
-  GROUP_MEMBER_PROMOTED: "group_member_promoted",
-  GROUP_MEMBER_ACTIVITY: "group_member_activity",
-  GROUP_CART_ITEM_ADDED: RealtimeEventType.GROUP_CART_ITEM_ADDED,
-  GROUP_CART_ITEM_UPDATED: RealtimeEventType.GROUP_CART_ITEM_UPDATED,
-  GROUP_CART_ITEM_REMOVED: RealtimeEventType.GROUP_CART_ITEM_REMOVED,
-  GROUP_CART_CONFLICT: "group_cart_conflict",
-  GROUP_CART_SYNCED: "group_cart_synced",
-  GROUP_SPLIT_INITIATED: "group_split_initiated",
-  GROUP_SPLIT_UPDATED: "group_split_updated",
-  GROUP_PAYMENT_COMPLETED: "group_payment_completed",
-  GROUP_PAYMENT_FAILED: "group_payment_failed",
-  GROUP_PAYMENT_REMINDER: "group_payment_reminder",
-  QUEUE_JOINED: RealtimeEventType.WAITING_LIST_JOINED,
-  QUEUE_CALLED: RealtimeEventType.WAITING_LIST_CALLED,
-  QUEUE_NOTIFIED: RealtimeEventType.WAITING_LIST_CALLED,
-  QUEUE_SEATED: RealtimeEventType.WAITING_LIST_SEATED,
-  QUEUE_NO_SHOW: RealtimeEventType.WAITING_LIST_EXPIRED,
-  QUEUE_CANCELLED: RealtimeEventType.WAITING_LIST_CANCELLED,
-  POS_TRANSACTION: "pos_transaction",
-  CASH_MOVEMENT: "cash_movement",
-  SHIFT_STARTED: "shift_started",
-  SHIFT_ENDED: "shift_ended",
-  REGISTER_STATUS_CHANGED: "register_status_changed",
-  TABLE_OCCUPIED: RealtimeEventType.TABLE_STATUS_UPDATE,
-  TABLE_AVAILABLE: RealtimeEventType.TABLE_STATUS_UPDATE,
-  TABLE_RESERVED: RealtimeEventType.TABLE_STATUS_UPDATE,
-  TABLE_CLEANING: RealtimeEventType.TABLE_STATUS_UPDATE,
-  MENU_UPDATED: RealtimeEventType.MENU_ITEM_UPDATE,
-  USER_ACTIVITY: "user_activity",
-  SYSTEM_NOTIFICATION: RealtimeEventType.SYSTEM_NOTIFICATION,
-  CONNECTION_STATUS: RealtimeEventType.CONNECTION_ACK,
-  HEARTBEAT: RealtimeEventType.HEARTBEAT,
-  ALL: "*",
-} as const;
 
 export default realtimeService;
