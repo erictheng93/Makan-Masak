@@ -34,7 +34,20 @@ import {
   memberIdParamSchema,
 } from "../schemas/validation";
 import type { Env } from "../../../types/env";
-import { notFound } from "../../../shared/utils/api-error";
+import { forbidden, notFound } from "../../../shared/utils/api-error";
+
+/**
+ * Tenant scope for plan/usage routes: undefined for platform admins (role 0),
+ * the caller's restaurant otherwise. A non-admin with no restaurant is refused.
+ */
+function tenantScope(user: {
+  role: number;
+  restaurantId?: string | number | null;
+}): string | undefined {
+  if (user.role === 0) return undefined;
+  if (user.restaurantId == null) throw forbidden("Restaurant access required");
+  return String(user.restaurantId);
+}
 
 const routes = new Hono<{ Bindings: Env }>();
 
@@ -181,6 +194,24 @@ routes.delete(
   },
 );
 
+async function assertPlanInScope(
+  service: PartnershipService,
+  planId: string,
+  scope: string,
+) {
+  const plan = await service.getPlan(planId);
+  if (!plan || plan.restaurantId !== scope) throw notFound("Plan not found");
+}
+
+async function assertUsageInScope(
+  service: PartnershipService,
+  id: string,
+  scope: string,
+) {
+  const log = await service.getUsageLog(id);
+  if (!log || log.restaurantId !== scope) throw notFound("Usage log not found");
+}
+
 // ================================================
 // PLAN MANAGEMENT (方案管理)
 // ================================================
@@ -201,9 +232,11 @@ routes.post(
     const user = c.get("user");
     const service = new PartnershipService(c.env.DB, c.env);
 
+    const scope = tenantScope(user);
     const { validFrom, validTo, ...rest } = data;
     const plan = await service.createPlan({
       ...rest,
+      ...(scope !== undefined && { restaurantId: scope }),
       createdBy: user.id,
       validFrom: new Date(validFrom),
       validTo: new Date(validTo),
@@ -261,11 +294,13 @@ routes.get(
   validateParams(planIdParamSchema),
   async (c) => {
     const { planId } = c.get("validatedParams");
+    const user = c.get("user");
     const service = new PartnershipService(c.env.DB, c.env);
 
     const plan = await service.getPlan(planId);
+    const scope = tenantScope(user);
 
-    if (!plan) {
+    if (!plan || (scope !== undefined && plan.restaurantId !== scope)) {
       throw notFound("Plan not found");
     }
 
@@ -320,14 +355,22 @@ routes.put(
   async (c) => {
     const { planId } = c.get("validatedParams");
     const data = c.get("validatedBody");
+    const user = c.get("user");
     const service = new PartnershipService(c.env.DB, c.env);
 
+    const scope = tenantScope(user);
+    if (scope !== undefined) await assertPlanInScope(service, planId, scope);
+
     const { validFrom, validTo, ...rest } = data;
-    const plan = await service.updatePlan(planId, {
-      ...rest,
-      ...(validFrom !== undefined && { validFrom: new Date(validFrom) }),
-      ...(validTo !== undefined && { validTo: new Date(validTo) }),
-    });
+    const plan = await service.updatePlan(
+      planId,
+      {
+        ...rest,
+        ...(validFrom !== undefined && { validFrom: new Date(validFrom) }),
+        ...(validTo !== undefined && { validTo: new Date(validTo) }),
+      },
+      scope,
+    );
 
     return c.json({
       success: true,
@@ -349,9 +392,12 @@ routes.delete(
   validateParams(planIdParamSchema),
   async (c) => {
     const { planId } = c.get("validatedParams");
+    const user = c.get("user");
     const service = new PartnershipService(c.env.DB, c.env);
 
-    await service.deletePlan(planId);
+    const scope = tenantScope(user);
+    if (scope !== undefined) await assertPlanInScope(service, planId, scope);
+    await service.deletePlan(planId, scope);
 
     return c.json({
       success: true,
@@ -546,8 +592,13 @@ routes.post(
     const user = c.get("user");
     const service = new PartnershipService(c.env.DB, c.env);
 
+    const scope = tenantScope(user);
+    if (scope !== undefined)
+      await assertPlanInScope(service, data.planId, scope);
+
     const usageLog = await service.logUsage({
       ...data,
+      ...(scope !== undefined && { restaurantId: scope }),
       verifiedByUserId: user.id,
     });
 
@@ -572,12 +623,15 @@ routes.get(
   validateQuery(usageLogFiltersSchema),
   async (c) => {
     const filters = c.get("validatedQuery");
+    const user = c.get("user");
     const service = new PartnershipService(c.env.DB, c.env);
 
+    const scope = tenantScope(user);
     const { page, limit, startDate, endDate, ...restFilters } = filters;
     const result = await service.listUsageLogs(
       {
         ...restFilters,
+        ...(scope !== undefined && { restaurantId: scope }),
         ...(startDate !== undefined && { startDate: new Date(startDate) }),
         ...(endDate !== undefined && { endDate: new Date(endDate) }),
       },
@@ -609,7 +663,9 @@ routes.post(
     const data = c.get("validatedBody");
     const service = new PartnershipService(c.env.DB, c.env);
 
-    const usageLog = await service.cancelUsageLog(id, data.reason);
+    const scope = tenantScope(c.get("user"));
+    if (scope !== undefined) await assertUsageInScope(service, id, scope);
+    const usageLog = await service.cancelUsageLog(id, data.reason, scope);
 
     return c.json({
       success: true,
@@ -634,7 +690,9 @@ routes.post(
     const { id } = c.get("validatedParams");
     const service = new PartnershipService(c.env.DB, c.env);
 
-    const usageLog = await service.refundUsageLog(id);
+    const scope = tenantScope(c.get("user"));
+    if (scope !== undefined) await assertUsageInScope(service, id, scope);
+    const usageLog = await service.refundUsageLog(id, scope);
 
     return c.json({
       success: true,

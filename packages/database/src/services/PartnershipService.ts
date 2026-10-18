@@ -610,6 +610,7 @@ export class PartnershipService extends BaseService {
   async updatePlan(
     id: string,
     data: Partial<NewPartnershipPlan> & PartnershipPlanMoneyInput,
+    scopeRestaurantId?: string,
   ): Promise<PartnershipPlan> {
     const updates: Partial<NewPartnershipPlan> = {
       ...this.toPlanInsert(data),
@@ -666,7 +667,14 @@ export class PartnershipService extends BaseService {
     const [result] = await this.db
       .update(partnershipPlans)
       .set(updates)
-      .where(eq(partnershipPlans.id, id))
+      .where(
+        scopeRestaurantId === undefined
+          ? eq(partnershipPlans.id, id)
+          : and(
+              eq(partnershipPlans.id, id),
+              eq(partnershipPlans.restaurantId, scopeRestaurantId),
+            ),
+      )
       .returning();
 
     return result;
@@ -675,8 +683,17 @@ export class PartnershipService extends BaseService {
   /**
    * 刪除方案
    */
-  async deletePlan(id: string): Promise<void> {
-    await this.db.delete(partnershipPlans).where(eq(partnershipPlans.id, id));
+  async deletePlan(id: string, scopeRestaurantId?: string): Promise<void> {
+    await this.db
+      .delete(partnershipPlans)
+      .where(
+        scopeRestaurantId === undefined
+          ? eq(partnershipPlans.id, id)
+          : and(
+              eq(partnershipPlans.id, id),
+              eq(partnershipPlans.restaurantId, scopeRestaurantId),
+            ),
+      );
   }
 
   /**
@@ -1206,12 +1223,22 @@ export class PartnershipService extends BaseService {
     };
   }
 
+  private usageLogScope(id: string, scopeRestaurantId?: string) {
+    return scopeRestaurantId === undefined
+      ? eq(partnershipUsageLogs.id, id)
+      : and(
+          eq(partnershipUsageLogs.id, id),
+          eq(partnershipUsageLogs.restaurantId, scopeRestaurantId),
+        );
+  }
+
   /**
    * 取消使用記錄
    */
   async cancelUsageLog(
     id: string,
     reason: string,
+    scopeRestaurantId?: string,
   ): Promise<PartnershipUsageLog> {
     const [result] = await this.db
       .update(partnershipUsageLogs)
@@ -1220,7 +1247,7 @@ export class PartnershipService extends BaseService {
         cancelledAt: new Date(),
         cancellationReason: reason,
       })
-      .where(eq(partnershipUsageLogs.id, id))
+      .where(this.usageLogScope(id, scopeRestaurantId))
       .returning();
 
     return result;
@@ -1229,14 +1256,17 @@ export class PartnershipService extends BaseService {
   /**
    * 退款使用記錄
    */
-  async refundUsageLog(id: string): Promise<PartnershipUsageLog> {
+  async refundUsageLog(
+    id: string,
+    scopeRestaurantId?: string,
+  ): Promise<PartnershipUsageLog> {
     const [result] = await this.db
       .update(partnershipUsageLogs)
       .set({
         status: "refunded",
         refundedAt: new Date(),
       })
-      .where(eq(partnershipUsageLogs.id, id))
+      .where(this.usageLogScope(id, scopeRestaurantId))
       .returning();
 
     return result;

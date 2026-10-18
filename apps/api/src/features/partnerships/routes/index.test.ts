@@ -1,3 +1,4 @@
+import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthUser } from "../../../middleware/auth";
 import routes from "./index";
@@ -31,6 +32,8 @@ const updateMember = vi.hoisted(() => vi.fn());
 const logUsage = vi.hoisted(() => vi.fn());
 const cancelUsageLog = vi.hoisted(() => vi.fn());
 const refundUsageLog = vi.hoisted(() => vi.fn());
+const getUsageLog = vi.hoisted(() => vi.fn());
+const listUsageLogs = vi.hoisted(() => vi.fn());
 
 vi.mock("../../../middleware/auth", () => ({
   authMiddleware: vi.fn(async (c, next) => {
@@ -76,6 +79,8 @@ vi.mock("@makanmasak/database", () => ({
     logUsage = logUsage;
     cancelUsageLog = cancelUsageLog;
     refundUsageLog = refundUsageLog;
+    getUsageLog = getUsageLog;
+    listUsageLogs = listUsageLogs;
   },
 }));
 
@@ -156,6 +161,8 @@ describe("partnership routes", () => {
     logUsage.mockReset();
     cancelUsageLog.mockReset();
     refundUsageLog.mockReset();
+    getUsageLog.mockReset();
+    listUsageLogs.mockReset();
   });
 
   it("creates, lists, reads, updates, reports, and deletes partnerships", async () => {
@@ -309,7 +316,11 @@ describe("partnership routes", () => {
 
   it("creates, reads, validates, updates, and deletes plans", async () => {
     createPlan.mockResolvedValue({ id: planId, planCode: "UNI10" });
-    getPlan.mockResolvedValue({ id: planId, planName: "University 10" });
+    getPlan.mockResolvedValue({
+      id: planId,
+      planName: "University 10",
+      restaurantId: "restaurant-1",
+    });
     validatePlan.mockResolvedValue({ valid: true, discountAmount: 30 });
     updatePlan.mockResolvedValue({ id: planId, planName: "Updated Plan" });
     deletePlan.mockResolvedValue(undefined);
@@ -479,6 +490,11 @@ describe("partnership routes", () => {
   });
 
   it("logs, cancels, and refunds partnership usage", async () => {
+    getPlan.mockResolvedValue({ id: planId, restaurantId: "restaurant-1" });
+    getUsageLog.mockResolvedValue({
+      id: usageId,
+      restaurantId: "restaurant-1",
+    });
     logUsage.mockResolvedValue({ id: usageId, status: "completed" });
     cancelUsageLog.mockResolvedValue({ id: usageId, status: "cancelled" });
     refundUsageLog.mockResolvedValue({ id: usageId, status: "refunded" });
@@ -526,6 +542,7 @@ describe("partnership routes", () => {
     expect(cancelUsageLog).toHaveBeenCalledWith(
       usageId,
       "Customer returned item",
+      "restaurant-1",
     );
 
     const refundResponse = await routes.fetch(
@@ -536,6 +553,103 @@ describe("partnership routes", () => {
     await expect(refundResponse.json()).resolves.toMatchObject({
       message: "Usage refunded successfully",
       data: { id: usageId, status: "refunded" },
+    });
+  });
+
+  describe("tenant isolation", () => {
+    const foreignPlan = { id: planId, restaurantId: "restaurant-2" };
+    const foreignLog = { id: usageId, restaurantId: "restaurant-2" };
+    const app = new Hono();
+    app.onError((err, c) =>
+      c.json({}, ((err as { status?: number }).status ?? 500) as 404),
+    );
+    app.route("/", routes);
+    const send = (path: string, method = "GET", body?: unknown) =>
+      app.fetch(
+        new Request(`https://test${path}`, {
+          method,
+          ...(body !== undefined && { body: JSON.stringify(body) }),
+        }),
+        createEnv() as never,
+      );
+
+    it("rewrites restaurantId when an owner creates a plan for another restaurant", async () => {
+      createPlan.mockResolvedValue({ id: planId });
+      await send("/plans", "POST", {
+        ...planBody(),
+        restaurantId: "restaurant-2",
+      });
+      expect(createPlan).toHaveBeenCalledWith(
+        expect.objectContaining({ restaurantId: "restaurant-1" }),
+      );
+    });
+
+    it("404s read/update/delete of another restaurant's plan without writing", async () => {
+      getPlan.mockResolvedValue(foreignPlan);
+      expect((await send(`/plans/${planId}`)).status).toBe(404);
+      expect(
+        (await send(`/plans/${planId}`, "PUT", { planName: "Renamed plan" }))
+          .status,
+      ).toBe(404);
+      expect((await send(`/plans/${planId}`, "DELETE")).status).toBe(404);
+      expect(updatePlan).not.toHaveBeenCalled();
+      expect(deletePlan).not.toHaveBeenCalled();
+    });
+
+    it("passes the caller's restaurant to plan writes as a DB-level scope", async () => {
+      getPlan.mockResolvedValue({ id: planId, restaurantId: "restaurant-1" });
+      updatePlan.mockResolvedValue({ id: planId });
+      await send(`/plans/${planId}`, "PUT", { planName: "Renamed plan" });
+      await send(`/plans/${planId}`, "DELETE");
+      expect(updatePlan).toHaveBeenCalledWith(
+        planId,
+        expect.anything(),
+        "restaurant-1",
+      );
+      expect(deletePlan).toHaveBeenCalledWith(planId, "restaurant-1");
+    });
+
+    it("pins the usage list to the caller's restaurant", async () => {
+      listUsageLogs.mockResolvedValue({ data: [], pagination: {} });
+      await send("/usage?restaurantId=restaurant-2");
+      expect(listUsageLogs).toHaveBeenCalledWith(
+        expect.objectContaining({ restaurantId: "restaurant-1" }),
+        1,
+        20,
+      );
+    });
+
+    it("rejects logging usage against another restaurant's plan", async () => {
+      getPlan.mockResolvedValue(foreignPlan);
+      const res = await send("/usage", "POST", {
+        partnershipId,
+        planId,
+        memberId,
+        orderId: 42,
+        restaurantId: "restaurant-2",
+        discountType: "percentage",
+        discountValue: 10,
+        discountAmount: 30,
+        originalAmount: 300,
+        finalAmount: 270,
+        channel: "dine_in",
+      });
+      expect(res.status).toBe(404);
+      expect(logUsage).not.toHaveBeenCalled();
+    });
+
+    it("404s cancel/refund of another restaurant's usage log", async () => {
+      getUsageLog.mockResolvedValue(foreignLog);
+      expect(
+        (
+          await send(`/usage/${usageId}/cancel`, "POST", {
+            reason: "Wrong order",
+          })
+        ).status,
+      ).toBe(404);
+      expect((await send(`/usage/${usageId}/refund`, "POST")).status).toBe(404);
+      expect(cancelUsageLog).not.toHaveBeenCalled();
+      expect(refundUsageLog).not.toHaveBeenCalled();
     });
   });
 });
