@@ -458,7 +458,9 @@ describe("Market checkouts API - real integration", () => {
       marketId: market.id,
       provider: "credit_balance",
       splitMode: "provider_split",
-      idempotencyKey: `market-pay-${checkoutId}`,
+      // Credit payments ignore the client Idempotency-Key: the ledger (and its
+      // refunds) are keyed by the server-owned checkout key.
+      idempotencyKey: `market-checkout:${checkoutId}`,
       status: "paid",
       amountCents: 20000,
       paidAmountCents: 20000,
