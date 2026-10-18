@@ -577,7 +577,10 @@ export class SchedulingService extends BaseService {
       .leftJoin(users, eq(employeeSchedules.employeeId, users.id))
       .leftJoin(
         shiftTemplates,
-        eq(employeeSchedules.shiftTemplateId, shiftTemplates.id),
+        and(
+          eq(employeeSchedules.shiftTemplateId, shiftTemplates.id),
+          eq(shiftTemplates.restaurantId, employeeSchedules.restaurantId),
+        ),
       )
       .where(whereClause)
       .orderBy(
@@ -615,7 +618,10 @@ export class SchedulingService extends BaseService {
       .leftJoin(users, eq(employeeSchedules.employeeId, users.id))
       .leftJoin(
         shiftTemplates,
-        eq(employeeSchedules.shiftTemplateId, shiftTemplates.id),
+        and(
+          eq(employeeSchedules.shiftTemplateId, shiftTemplates.id),
+          eq(shiftTemplates.restaurantId, employeeSchedules.restaurantId),
+        ),
       )
       .where(this.scheduleWhere(id, restaurantId))
       .limit(1);
@@ -690,6 +696,25 @@ export class SchedulingService extends BaseService {
     data: Partial<EmployeeSchedule>,
     restaurantId?: string,
   ): Promise<EmployeeSchedule> {
+    if (data.shiftTemplateId != null) {
+      // Unscoped (platform admin) callers are checked against the schedule's own restaurant.
+      const [existing] = await this.db
+        .select({ restaurantId: employeeSchedules.restaurantId })
+        .from(employeeSchedules)
+        .where(this.scheduleWhere(id, restaurantId))
+        .limit(1);
+      if (!existing) {
+        throw new Error("Schedule not found");
+      }
+      const template = await this.getShiftTemplate(
+        data.shiftTemplateId,
+        existing.restaurantId,
+      );
+      if (!template) {
+        throw new Error("Shift template not found");
+      }
+    }
+
     const [updated] = await this.db
       .update(employeeSchedules)
       .set({ ...data, updatedAt: new Date() })
@@ -2434,7 +2459,10 @@ export class SchedulingService extends BaseService {
         .from(employeeSchedules)
         .leftJoin(
           shiftTemplates,
-          eq(employeeSchedules.shiftTemplateId, shiftTemplates.id),
+          and(
+            eq(employeeSchedules.shiftTemplateId, shiftTemplates.id),
+            eq(shiftTemplates.restaurantId, employeeSchedules.restaurantId),
+          ),
         )
         .where(
           and(
