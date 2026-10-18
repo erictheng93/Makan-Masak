@@ -13,6 +13,7 @@ import {
   assertCurrencyAlignedCents,
   centsToIsoMinorUnits,
 } from "../../../shared/utils/provider-money";
+import { timingSafeEqual } from "../../../shared/utils/timing-safe-equal";
 
 const UBER_API_BASE = "https://api.uber.com";
 const UBER_AUTH_URL = "https://login.uber.com/oauth/v2/token";
@@ -45,7 +46,7 @@ export class UberEatsAdapter implements PlatformAdapter {
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
 
-    return computedSignature === signature;
+    return timingSafeEqual(computedSignature, signature);
   }
 
   async refreshToken(
