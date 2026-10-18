@@ -15,6 +15,7 @@ import {
   usageQuerySchema,
 } from "../schemas/validation";
 import { validateBody, validateQuery } from "../../../middleware/validation";
+import { requireRole } from "../../../middleware/auth";
 import { moduleGate } from "../../../middleware/moduleGate";
 import { quotaGate } from "../../../middleware/quotaGate";
 import { meterEmit } from "../../../shared/utils/meter";
@@ -151,6 +152,7 @@ routes.post(
 routes.post(
   "/test-provider",
   moduleGate("ai_analytics"),
+  requireRole([0, 1]), // Admin or Owner only, like /config and /generate
   quotaGate("ai.requests"),
   validateBody(testProviderSchema),
   async (c) => {
@@ -227,6 +229,7 @@ routes.post(
 routes.get(
   "/products/traffic-drivers/:restaurantId",
   moduleGate("ai_analytics"),
+  requireRole([0, 1]), // Admin or Owner only, like /config and /generate
   quotaGate("ai.requests"),
   validateQuery(productQuerySchema),
   async (c) => {
@@ -264,6 +267,7 @@ routes.get(
 routes.get(
   "/products/bestsellers/:restaurantId",
   moduleGate("ai_analytics"),
+  requireRole([0, 1]), // Admin or Owner only, like /config and /generate
   quotaGate("ai.requests"),
   validateQuery(productQuerySchema),
   async (c) => {
@@ -301,6 +305,7 @@ routes.get(
 routes.get(
   "/products/profit-leaders/:restaurantId",
   moduleGate("ai_analytics"),
+  requireRole([0, 1]), // Admin or Owner only, like /config and /generate
   quotaGate("ai.requests"),
   validateQuery(productQuerySchema),
   async (c) => {
@@ -338,6 +343,7 @@ routes.get(
 routes.get(
   "/products/analysis/:restaurantId",
   moduleGate("ai_analytics"),
+  requireRole([0, 1]), // Admin or Owner only, like /config and /generate
   quotaGate("ai.requests"),
   validateQuery(productQuerySchema),
   async (c) => {
@@ -371,6 +377,7 @@ routes.get(
 routes.get(
   "/usage/:restaurantId",
   moduleGate("ai_analytics"),
+  requireRole([0, 1]), // Admin or Owner only, like /config and /generate
   quotaGate("ai.requests"),
   validateQuery(usageQuerySchema),
   async (c) => {
