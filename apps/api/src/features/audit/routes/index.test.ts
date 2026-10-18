@@ -128,8 +128,11 @@ describe("audit routes", () => {
       "203.0.113.7",
       "MakanOffline/1.0",
       1,
-      Date.parse("2026-06-07T09:10:11.000Z"),
+      expect.any(Number),
     );
+    // Client timestamp must not backdate created_at_ms.
+    const stored = Number(db.bind.mock.calls[0].at(-1));
+    expect(Math.abs(stored - Date.now())).toBeLessThan(5_000);
     expect(body).toEqual({
       success: true,
       data: {
