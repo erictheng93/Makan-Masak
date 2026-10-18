@@ -63,7 +63,7 @@ const routes = new Hono<{ Bindings: Env }>();
 routes.post(
   "/",
   authMiddleware,
-  requireRole([0, 1]), // Admin or Shop Owner
+  requireRole([0]), // Platform admin: partner orgs and members span every restaurant
   moduleGate("loyalty"),
   validateBody(createPartnershipSchema),
   async (c) => {
@@ -94,7 +94,7 @@ routes.post(
 routes.get(
   "/",
   authMiddleware,
-  requireRole([0, 1]),
+  requireRole([0]), // Platform admin: partner orgs and members span every restaurant
   moduleGate("loyalty"),
   validateQuery(partnershipFiltersSchema),
   async (c) => {
@@ -119,7 +119,7 @@ routes.get(
 routes.get(
   "/:id/statistics",
   authMiddleware,
-  requireRole([0, 1]),
+  requireRole([0]), // Platform admin: partner orgs and members span every restaurant
   moduleGate("loyalty"),
   validateParams(idParamSchema),
   async (c) => {
@@ -143,7 +143,7 @@ routes.get(
 routes.put(
   "/:id",
   authMiddleware,
-  requireRole([0, 1]),
+  requireRole([0]), // Platform admin: partner orgs and members span every restaurant
   moduleGate("loyalty"),
   validateParams(idParamSchema),
   validateBody(updatePartnershipSchema),
@@ -440,7 +440,7 @@ routes.post(
 routes.get(
   "/members",
   authMiddleware,
-  requireRole([0, 1]),
+  requireRole([0]), // Platform admin: partner orgs and members span every restaurant
   moduleGate("loyalty"),
   validateQuery(memberFiltersSchema),
   async (c) => {
@@ -465,7 +465,7 @@ routes.get(
 routes.get(
   "/members/:memberId",
   authMiddleware,
-  requireRole([0, 1]),
+  requireRole([0]), // Platform admin: partner orgs and members span every restaurant
   moduleGate("loyalty"),
   validateParams(memberIdParamSchema),
   async (c) => {
@@ -493,7 +493,7 @@ routes.get(
 routes.post(
   "/members/:memberId/approve",
   authMiddleware,
-  requireRole([0, 1]),
+  requireRole([0]), // Platform admin: partner orgs and members span every restaurant
   moduleGate("loyalty"),
   validateParams(memberIdParamSchema),
   validateBody(approveMemberSchema),
@@ -527,7 +527,7 @@ routes.post(
 routes.post(
   "/members/:memberId/reject",
   authMiddleware,
-  requireRole([0, 1]),
+  requireRole([0]), // Platform admin: partner orgs and members span every restaurant
   moduleGate("loyalty"),
   validateParams(memberIdParamSchema),
   validateBody(rejectMemberSchema),
@@ -554,7 +554,7 @@ routes.post(
 routes.put(
   "/members/:memberId",
   authMiddleware,
-  requireRole([0, 1]),
+  requireRole([0]), // Platform admin: partner orgs and members span every restaurant
   moduleGate("loyalty"),
   validateParams(memberIdParamSchema),
   validateBody(updateMemberSchema),
@@ -720,7 +720,7 @@ routes.post(
 routes.get(
   "/:id",
   authMiddleware,
-  requireRole([0, 1]),
+  requireRole([0]), // Platform admin: partner orgs and members span every restaurant
   moduleGate("loyalty"),
   validateParams(idParamSchema),
   async (c) => {
