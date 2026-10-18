@@ -381,7 +381,7 @@ describe("group orders routes", () => {
     dineIn.restaurant.value = {
       isActive: true,
       isAvailable: true,
-      settings: {},
+      settings: { allowGuestOrders: false },
     };
     createGroupOrder.mockResolvedValue({ success: false, error: "stop" });
 
@@ -407,7 +407,7 @@ describe("group orders routes", () => {
     dineIn.restaurant.value = {
       isActive: true,
       isAvailable: true,
-      settings: {},
+      settings: { allowGuestOrders: false },
     };
 
     const response = await routes.fetch(

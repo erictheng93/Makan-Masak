@@ -350,7 +350,7 @@ app.post(
         throw badRequest("Restaurant is currently unavailable");
       }
       const settings = restaurant.settings as Record<string, unknown> | null;
-      if (!user && settings?.allowGuestOrders !== true) {
+      if (!user && settings?.allowGuestOrders === false) {
         throw forbidden("Guest orders are not enabled for this restaurant");
       }
       await assertDineInQr(c.env, {
