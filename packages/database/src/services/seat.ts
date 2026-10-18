@@ -329,10 +329,45 @@ export class SeatService extends BaseService {
     data: UpdateSeatData,
   ): Promise<SeatRow | undefined> {
     try {
+      // The seat number is the seat's identity inside its signed QR, so a
+      // renumber reissues the code in the same write; otherwise the stored
+      // code would fail verification as "mismatch" with nothing telling anyone.
+      let reissuedQr = {};
+      if (data.seatNumber !== undefined) {
+        const current = await this.db
+          .select({
+            tableId: seats.tableId,
+            seatNumber: seats.seatNumber,
+            qrCodeVersion: seats.qrCodeVersion,
+            restaurantId: tables.restaurantId,
+          })
+          .from(seats)
+          .innerJoin(tables, eq(seats.tableId, tables.id))
+          .where(and(eq(seats.id, seatId), isNull(seats.deletedAt)))
+          .get();
+
+        if (current && current.seatNumber !== data.seatNumber) {
+          const qrCodeVersion = (current.qrCodeVersion || 0) + 1;
+          reissuedQr = {
+            qrCode: await this.generateSeatQRCode(
+              current.restaurantId,
+              current.tableId,
+              data.seatNumber,
+              qrCodeVersion,
+            ),
+            qrCodeVersion,
+            pendingQrCode: null,
+            pendingQrCodeVersion: null,
+            pendingQrPreparedAt: null,
+          };
+        }
+      }
+
       const [updatedSeat] = await this.db
         .update(seats)
         .set({
           ...data,
+          ...reissuedQr,
           updatedAt: new Date(),
         })
         .where(and(eq(seats.id, seatId), isNull(seats.deletedAt)))

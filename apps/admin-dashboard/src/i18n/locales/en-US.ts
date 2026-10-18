@@ -4287,6 +4287,8 @@ const enUS: Messages = {
       deleteFailed: "Failed to delete seat",
       releaseConfirm: "Are you sure you want to release seat {seat}?",
       releaseFailed: "Failed to release seat",
+      renumberConfirm:
+        "Renumbering this seat to {seat} invalidates its printed QR code, so it must be reprinted. Save anyway?",
       regenerateConfirm:
         "Are you sure you want to regenerate QR code for seat {seat}?",
       regenerateSuccess: "QR code regenerated",

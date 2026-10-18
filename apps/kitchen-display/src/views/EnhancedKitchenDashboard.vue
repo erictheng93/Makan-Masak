@@ -177,7 +177,7 @@ const kitchenRealtime = useKitchenRealtimeService();
 const audioNotifications = useAudioNotifications();
 
 const handleRealtimeOrderEvent = (event: KitchenSSEEvent) => {
-  ordersStore.handleSSEEvent(event);
+  if (ordersStore.handleSSEEvent(event)) void fetchOrders();
   void audioNotifications.handleSSEEvent(event);
 };
 

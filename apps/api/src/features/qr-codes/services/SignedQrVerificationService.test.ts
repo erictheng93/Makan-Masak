@@ -73,6 +73,39 @@ describe("SignedQrVerificationService", () => {
     });
   });
 
+  it("keeps a renamed table's printed QR valid", async () => {
+    const printedQr = await buildSignedQRUrl(
+      "https://example.test",
+      {
+        type: "table",
+        restaurantId: "restaurant-1",
+        tableId: 10,
+        identifier: "T1",
+        version: 2,
+      },
+      signingKey,
+    );
+    const renamed = {
+      id: 10,
+      restaurantId: "restaurant-1",
+      number: "VIP-1",
+      qrCodeVersion: 2,
+      isActive: true,
+      deletedAt: null,
+    };
+    const service = new SignedQrVerificationService(
+      { DB: {} as D1Database, QR_SIGNING_KEY: signingKey },
+      createDb([renamed]) as never,
+    );
+
+    // The answer names the current number, not the one printed on the sticker.
+    await expect(service.verifyTable(printedQr, 10)).resolves.toMatchObject({
+      valid: true,
+      tableId: 10,
+      tableNumber: "VIP-1",
+    });
+  });
+
   it("distinguishes inactive or deleted tables from missing tables", async () => {
     const qrCode = await buildSignedQRUrl(
       "https://example.test",

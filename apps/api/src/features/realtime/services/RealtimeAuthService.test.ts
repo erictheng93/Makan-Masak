@@ -1525,13 +1525,14 @@ describe("RealtimeAuthService", () => {
       restaurants: [[activeGuestRestaurant()]],
       tables: [[{ ...activeGuestTable(), number: "T2" }]],
     });
+    // A renamed table keeps its printed sticker: the number is not compared.
     await expect(
       service.generateGuestToken({
         restaurantId: "restaurant-1",
         tableId: "10",
         qrCode: "signed-qr",
       }),
-    ).resolves.toEqual({ error: "QR code does not match table" });
+    ).resolves.toMatchObject({ token: expect.any(String) });
   });
 
   it("wraps unexpected guest token validation failures", async () => {

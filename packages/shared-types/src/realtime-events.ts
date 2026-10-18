@@ -219,6 +219,8 @@ export interface NewOrderEvent extends BaseRealtimeEvent {
     tableName?: string;
     /** 座位 ID */
     seatId?: string;
+    /** 建立時的訂單狀態（未自動接單時為 pending） */
+    status?: OrderStatus;
     /** 訂單項目 */
     items: Array<{
       orderItemId: number;

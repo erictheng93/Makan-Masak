@@ -597,6 +597,20 @@ const closeSeatModal = () => {
 const updateSeat = async () => {
   if (!selectedSeat.value) return;
 
+  // The seat number is the seat's identity in its QR; the server reissues the
+  // code on a renumber, so the printed one stops working.
+  if (seatForm.value.seatNumber !== selectedSeat.value.seatNumber) {
+    const confirmed = await confirmModal({
+      type: "warning",
+      title: t("seatManagement.seatDetail"),
+      message: t("seatManagement.alerts.renumberConfirm", {
+        seat: seatForm.value.seatNumber,
+      }),
+      confirmLabel: t("common.save"),
+    });
+    if (!confirmed) return;
+  }
+
   try {
     const response = await api.put(`/seats/${selectedSeat.value.id}`, {
       seatNumber: seatForm.value.seatNumber,

@@ -582,7 +582,7 @@ app.post("/", optionalCanonicalCustomerAuthMiddleware, async (c) => {
       }
 
       const settings = restaurant.settings as Record<string, unknown> | null;
-      if (!settings || settings.allowGuestOrders !== true) {
+      if (settings?.allowGuestOrders === false) {
         throw forbidden(
           `Guest orders are not enabled for restaurant ${vendor.restaurantId}`,
         );

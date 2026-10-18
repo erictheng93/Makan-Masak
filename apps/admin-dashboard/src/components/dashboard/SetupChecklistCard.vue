@@ -270,7 +270,7 @@ async function loadChecklist() {
       checks[0].status === "rejected"
         ? "unknown"
         : profile?.isAvailable === true &&
-            profile.settings?.allowGuestOrders === true
+            profile.settings?.allowGuestOrders !== false
           ? "complete"
           : "incomplete",
     staff:

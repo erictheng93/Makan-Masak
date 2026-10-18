@@ -4311,6 +4311,8 @@ const zhTWCore = {
       deleteFailed: "刪除座位失敗",
       releaseConfirm: "確定要釋放座位 {seat} 嗎？",
       releaseFailed: "釋放座位失敗",
+      renumberConfirm:
+        "座位改為 {seat} 後，已印出的 QR 碼會失效，需要重新列印。確定要儲存嗎？",
       regenerateConfirm: "確定要重新生成座位 {seat} 的 QR 碼嗎？",
       regenerateSuccess: "QR 碼已重新生成",
       regenerateFailed: "重新生成 QR 碼失敗",

@@ -401,16 +401,9 @@ describe("guest order routes", () => {
     );
   });
 
-  it.each([
-    ["the owner has switched guest ordering off", { allowGuestOrders: false }],
-    ["the restaurant has no settings at all", null],
-    ["settings exist but never opted in", {}],
-  ])("refuses to create an order when %s", async (_case, settings) => {
-    // This gate is what makes guest ordering opt-in, and it is the only thing
-    // standing between a restaurant that never enabled it and an anonymous
-    // order. The route reads `!== true` rather than a falsy check, so an
-    // absent settings object and an absent key have to fail the same way as an
-    // explicit false — hence all three cases, not just the obvious one.
+  it("refuses to create an order when the owner has switched guest ordering off", async () => {
+    // Guest ordering is opt-out: only an explicit false closes it.
+    const settings = { allowGuestOrders: false };
     setSelectFixtures({ restaurants: [[activeGuestRestaurant({ settings })]] });
 
     const response = await createRoutesWithApiErrorHandler().fetch(
@@ -427,6 +420,35 @@ describe("guest order routes", () => {
       error: { message: expect.stringContaining("not enabled") },
     });
     expect(createOrder).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["the restaurant has no settings at all", null],
+    ["settings exist but never mention guest ordering", {}],
+  ])("accepts a guest order when %s", async (_case, settings) => {
+    // A newly provisioned restaurant carries no allowGuestOrders key; it must
+    // take guest orders without the owner finding a switch first.
+    setSelectFixtures({ restaurants: [[activeGuestRestaurant({ settings })]] });
+    createOrder.mockResolvedValue({
+      id: 502,
+      orderNumber: "G002",
+      status: "pending",
+      totalAmount: 240,
+    });
+
+    const response = await createRoutesWithApiErrorHandler().fetch(
+      new Request("https://test/", {
+        method: "POST",
+        body: JSON.stringify(validGuestOrderBody()),
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(201);
+    expect(createOrder).toHaveBeenCalledOnce();
+    expect(createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ restaurantId: expect.any(String) }),
+    );
   });
 
   it("refuses shop orders once the owner turns shop mode off", async () => {

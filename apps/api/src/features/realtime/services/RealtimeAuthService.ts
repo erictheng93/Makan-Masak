@@ -917,7 +917,10 @@ export class RealtimeAuthService {
 
     const settings =
       (restaurant.settings as Record<string, unknown> | null) ?? {};
-    if (restaurant.isAvailable !== true || settings.allowGuestOrders !== true) {
+    if (
+      restaurant.isAvailable !== true ||
+      settings.allowGuestOrders === false
+    ) {
       return { error: "Guest realtime is not enabled for this restaurant" };
     }
 
@@ -992,9 +995,8 @@ export class RealtimeAuthService {
     }
 
     if (qrPayload.type === "table") {
-      if (table.number !== qrPayload.identifier) {
-        return { error: "QR code does not match table" };
-      }
+      // The table number is not compared: a renamed table keeps its sticker
+      // (see SignedQrVerificationService.verifyTable).
       if (table.qrCodeVersion !== qrPayload.version) {
         return { error: "QR code version is no longer current" };
       }

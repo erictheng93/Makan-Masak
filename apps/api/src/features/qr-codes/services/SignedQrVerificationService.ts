@@ -100,10 +100,10 @@ export class SignedQrVerificationService {
     if (table.qrCodeVersion !== payload.version) {
       return { valid: false, reason: "stale" };
     }
-    if (
-      table.restaurantId !== payload.restaurantId ||
-      table.number !== payload.identifier
-    ) {
+    // The number is signed but deliberately not compared: a table keeps its
+    // id across a rename, and its printed sticker must keep working.
+    // Revocation is the version (regenerate / rotation) or deletion.
+    if (table.restaurantId !== payload.restaurantId) {
       return { valid: false, reason: "mismatch" };
     }
 

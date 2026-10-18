@@ -248,6 +248,7 @@ describe("OrdersService realtime broadcasts", () => {
         orderId: 1001,
         orderNumber: "A001",
         tableId: undefined,
+        status: "pending",
         items: [
           {
             orderItemId: 501,
