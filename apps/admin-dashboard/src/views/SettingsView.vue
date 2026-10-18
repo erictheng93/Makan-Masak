@@ -2593,7 +2593,7 @@ const loadSettings = async () => {
             DEFAULT_CURRENCY;
         }
         settings.orders.acceptGuestOrders =
-          data.settings?.allowGuestOrders === true &&
+          data.settings?.allowGuestOrders !== false &&
           data.isAvailable !== false;
         // Discovery and order eligibility read columns, not legacy settings JSON.
         deliverySettings.enableTakeaway =

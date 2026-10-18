@@ -132,11 +132,15 @@ export function useAudioNotifications() {
     switch (event.type) {
       case "NEW_ORDER":
       case "new_order":
+        // A pending order is not on the board yet; it chimes when confirmed.
+        if (eventData.status === "pending") break;
         await playNewOrderSound(eventData.priority === "urgent");
         break;
       case "ORDER_STATUS_UPDATE":
       case "order_status_update":
-        if (eventData.status === "ready") {
+        if (eventData.status === "confirmed") {
+          await playNewOrderSound();
+        } else if (eventData.status === "ready") {
           await playOrderReadySound();
         } else if (eventData.status === "completed") {
           await playOrderCompleteSound();

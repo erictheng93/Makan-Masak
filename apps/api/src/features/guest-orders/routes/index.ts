@@ -85,8 +85,10 @@ app.post(
       throw badRequest("Restaurant is currently unavailable");
     }
 
+    // Guest ordering is on unless the owner switched it off; an unset key
+    // (every newly provisioned restaurant) means allowed.
     const settings = restaurant.settings as Record<string, unknown> | null;
-    if (!settings || settings.allowGuestOrders !== true) {
+    if (settings?.allowGuestOrders === false) {
       throw forbidden("Guest orders are not enabled for this restaurant");
     }
 

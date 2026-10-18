@@ -284,6 +284,47 @@ describe("SeatService.createSeatsForTable", () => {
     expect(createdSeats).toEqual([{ seatNumber: "01" }, { seatNumber: "02" }]);
   });
 
+  it("re-signs a renamed table's QR at the same version", async () => {
+    const service = createTableService(testDb);
+    const createdTable = await service.createTable({
+      restaurantId,
+      number: "R1",
+      capacity: 2,
+    });
+
+    await service.updateTable(createdTable.id, { number: "R9" });
+    const [row] = await testDb.drizzle
+      .select({ qrCode: tables.qrCode, qrCodeVersion: tables.qrCodeVersion })
+      .from(tables)
+      .where(eq(tables.id, createdTable.id));
+
+    // Same version keeps the printed sticker valid (verification keys on id +
+    // version); the stored code carries the new number for the next print.
+    expect(row.qrCodeVersion).toBe(1);
+    expect(row.qrCode).toContain("n=R9");
+    expect(row.qrCode).not.toBe(createdTable.qrCode);
+  });
+
+  it("reissues a renumbered seat's QR at the next version", async () => {
+    const service = createService(testDb);
+    await service.createSeatsForTable(tableId, 1);
+    const [seat] = await testDb.drizzle
+      .select({ id: seats.id, qrCodeVersion: seats.qrCodeVersion })
+      .from(seats)
+      .where(eq(seats.tableId, tableId));
+
+    await service.updateSeat(seat.id, { seatNumber: "X1" });
+    const [row] = await testDb.drizzle
+      .select({ qrCode: seats.qrCode, qrCodeVersion: seats.qrCodeVersion })
+      .from(seats)
+      .where(eq(seats.id, seat.id));
+
+    // The seat number is the seat's identity in its QR, so the old code must
+    // stop verifying and the stored one must name the new number.
+    expect(row.qrCodeVersion).toBe((seat.qrCodeVersion ?? 0) + 1);
+    expect(row.qrCode).toContain("n=X1");
+  });
+
   it("enforces unique seat numbers at the database boundary", async () => {
     const service = createService(testDb);
     await service.createSeatsForTable(tableId, 1);

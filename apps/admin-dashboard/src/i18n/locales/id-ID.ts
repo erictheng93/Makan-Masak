@@ -4308,6 +4308,8 @@ const idID: Messages = {
       deleteFailed: "Gagal menghapus kursi",
       releaseConfirm: "Apakah Anda yakin ingin melepaskan kursi {seat}?",
       releaseFailed: "Gagal melepaskan kursi",
+      renumberConfirm:
+        "Mengubah nomor kursi menjadi {seat} membuat kode QR yang sudah dicetak tidak berlaku dan harus dicetak ulang. Tetap simpan?",
       regenerateConfirm:
         "Apakah Anda yakin ingin membuat ulang kode QR untuk kursi {seat}?",
       regenerateSuccess: "Kode QR dibuat ulang",

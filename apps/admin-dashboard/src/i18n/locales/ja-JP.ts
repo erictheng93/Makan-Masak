@@ -4287,6 +4287,8 @@ const jaJP: Messages = {
       deleteFailed: "座席の削除に失敗しました",
       releaseConfirm: "座席{seat}を解放してもよろしいですか？",
       releaseFailed: "座席の解放に失敗しました",
+      renumberConfirm:
+        "座席番号を{seat}に変更すると、印刷済みのQRコードは無効になり、再印刷が必要です。保存しますか？",
       regenerateConfirm: "座席{seat}のQRコードを再生成してもよろしいですか？",
       regenerateSuccess: "QRコードが再生成されました",
       regenerateFailed: "QRコードの再生成に失敗しました",

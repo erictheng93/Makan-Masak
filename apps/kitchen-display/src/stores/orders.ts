@@ -36,6 +36,10 @@ const isOrderStatus = (value: unknown): value is OrderStatus =>
     "refunded",
   ].includes(value);
 
+// The statuses the kitchen board shows; the REST list returns exactly these.
+const isKitchenBoardStatus = (value: unknown): boolean =>
+  value === "confirmed" || value === "preparing" || value === "ready";
+
 const normalizeEventType = (type: KitchenSSEEvent["type"]) => {
   switch (type) {
     case "new_order":
@@ -97,7 +101,9 @@ const buildKitchenOrderFromRealtimeData = (
         : Number.isFinite(tableId)
           ? `Table ${tableId}`
           : undefined,
-    status: "confirmed",
+    // Servers before NEW_ORDER carried a status only announced orders that
+    // were already on the board, so "confirmed" stays the fallback.
+    status: isOrderStatus(data.status) ? data.status : "confirmed",
     deliveryInfo: {
       type: Number.isFinite(tableId) ? "dine_in" : "takeaway",
     },
@@ -238,14 +244,18 @@ export const useOrdersStore = defineStore("orders", () => {
 
   /**
    * 處理 SSE 事件
+   *
+   * Returns true when the event concerns an order the board should show but
+   * does not hold (a pending order just confirmed), so the caller refetches it.
    */
-  const handleSSEEvent = (event: KitchenSSEEvent) => {
+  const handleSSEEvent = (event: KitchenSSEEvent): boolean => {
+    let needsRefetch = false;
     switch (normalizeEventType(event.type)) {
       case "NEW_ORDER":
         handleNewOrder(event);
         break;
       case "ORDER_STATUS_UPDATE":
-        handleOrderStatusUpdate(event);
+        needsRefetch = handleOrderStatusUpdate(event);
         break;
       case "ORDER_ITEM_STATUS_UPDATE":
         handleOrderStatusUpdate(event);
@@ -260,6 +270,7 @@ export const useOrdersStore = defineStore("orders", () => {
 
     // 重新計算統計
     updateStats();
+    return needsRefetch;
   };
 
   /**
@@ -282,6 +293,13 @@ export const useOrdersStore = defineStore("orders", () => {
       (o) => o.id === newOrder.id,
     );
 
+    // A pending order waits for the cashier; it reaches the board through the
+    // ORDER_STATUS_UPDATE that confirms it.
+    if (!isKitchenBoardStatus(newOrder.status)) {
+      if (existingOrderIndex !== -1) orders.value.splice(existingOrderIndex, 1);
+      return;
+    }
+
     if (existingOrderIndex === -1) {
       orders.value.unshift(newOrder); // 新訂單插入到最前面
       console.log(`New order added: ${newOrder.orderNumber}`);
@@ -295,7 +313,7 @@ export const useOrdersStore = defineStore("orders", () => {
   /**
    * 處理訂單狀態更新事件
    */
-  const handleOrderStatusUpdate = (event: KitchenSSEEvent) => {
+  const handleOrderStatusUpdate = (event: KitchenSSEEvent): boolean => {
     const payload = eventData(event);
     const orderId = event.orderId ?? Number(payload?.orderId);
     if (Number.isFinite(orderId) && payload) {
@@ -344,7 +362,12 @@ export const useOrdersStore = defineStore("orders", () => {
         // 觸發響應式更新
         orders.value[orderIndex] = { ...order };
       }
+
+      // The event carries no items, so an order that just entered the board
+      // (a pending order being confirmed) has to be fetched.
+      return orderIndex === -1 && !itemId && isKitchenBoardStatus(status);
     }
+    return false;
   };
 
   /**

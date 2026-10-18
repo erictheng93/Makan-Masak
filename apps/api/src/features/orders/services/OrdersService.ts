@@ -1439,6 +1439,9 @@ export class OrdersService implements IOrdersService {
           // order arrives fully loaded, table relation included, so the number
           // is already here -- it was only never copied across.
           tableName: order.table?.number,
+          // Without it the kitchen board assumed "confirmed" and showed
+          // pending orders before anyone accepted them.
+          status: order.status,
           items: (order.items || []).map((item) => ({
             orderItemId: item.id,
             menuItemId: item.menuItemId,

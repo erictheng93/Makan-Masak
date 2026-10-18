@@ -71,6 +71,37 @@ describe("orders store realtime events", () => {
     });
   });
 
+  it("keeps a pending NEW_ORDER off the board and refetches once it is confirmed", () => {
+    const store = useOrdersStore();
+
+    const refetchOnNew = store.handleSSEEvent({
+      type: "new_order",
+      timestamp: 1780308000000,
+      restaurantId: "restaurant-1",
+      data: {
+        orderId: 2001,
+        orderNumber: "B001",
+        status: "pending",
+        items: [],
+      },
+    } as unknown as KitchenSSEEvent);
+
+    expect(refetchOnNew).toBe(false);
+    expect(store.orders).toHaveLength(0);
+
+    // The confirmation carries no items, so the store asks for a refetch
+    // rather than inventing an empty card.
+    const refetchOnConfirm = store.handleSSEEvent({
+      type: "order_status_update",
+      timestamp: 1780308001000,
+      restaurantId: "restaurant-1",
+      data: { orderId: 2001, status: "confirmed" },
+    } as unknown as KitchenSSEEvent);
+
+    expect(refetchOnConfirm).toBe(true);
+    expect(store.orders).toHaveLength(0);
+  });
+
   it("updates and removes orders from realtime data events", () => {
     const store = useOrdersStore();
 

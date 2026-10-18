@@ -4194,6 +4194,8 @@ const zhCN: Messages = {
       deleteFailed: "删除座位失败",
       releaseConfirm: "确定要释放座位 {seat} 吗？",
       releaseFailed: "释放座位失败",
+      renumberConfirm:
+        "座位改为 {seat} 后，已打印的 QR 码会失效，需要重新打印。确定要保存吗？",
       regenerateConfirm: "确定要重新生成座位 {seat} 的 QR 码吗？",
       regenerateSuccess: "QR 码已重新生成",
       regenerateFailed: "重新生成 QR 码失败",

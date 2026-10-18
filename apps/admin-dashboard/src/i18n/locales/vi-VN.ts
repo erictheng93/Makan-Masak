@@ -4292,6 +4292,8 @@ const viVN: Messages = {
       deleteFailed: "Xóa ghế thất bại",
       releaseConfirm: "Bạn có chắc muốn giải phóng ghế {seat}?",
       releaseFailed: "Giải phóng ghế thất bại",
+      renumberConfirm:
+        "Đổi số ghế thành {seat} sẽ làm mã QR đã in mất hiệu lực và cần in lại. Vẫn lưu?",
       regenerateConfirm: "Bạn có chắc muốn tạo lại mã QR cho ghế {seat}?",
       regenerateSuccess: "Đã tạo lại mã QR",
       regenerateFailed: "Tạo lại mã QR thất bại",

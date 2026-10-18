@@ -324,6 +324,9 @@ export class TableService extends BaseService {
       const currentTable = await this.db
         .select({
           id: tables.id,
+          restaurantId: tables.restaurantId,
+          number: tables.number,
+          qrCodeVersion: tables.qrCodeVersion,
           capacity: tables.capacity,
           qrMode: tables.qrMode,
           seatCount: tables.seatCount,
@@ -377,35 +380,43 @@ export class TableService extends BaseService {
 
       // 如果更新桌號，檢查是否重複
       if (data.number) {
-        const table = await this.db
-          .select({ restaurantId: tables.restaurantId })
+        const existingTable = await this.db
+          .select({ id: tables.id })
           .from(tables)
-          .where(eq(tables.id, id))
+          .where(
+            and(
+              eq(tables.restaurantId, currentTable.restaurantId),
+              eq(tables.number, data.number),
+              isNull(tables.deletedAt),
+            ),
+          )
           .get();
 
-        if (table) {
-          const existingTable = await this.db
-            .select({ id: tables.id })
-            .from(tables)
-            .where(
-              and(
-                eq(tables.restaurantId, table.restaurantId),
-                eq(tables.number, data.number),
-                isNull(tables.deletedAt),
-              ),
-            )
-            .get();
-
-          if (existingTable && existingTable.id !== id) {
-            throw new Error("Table number already exists in this restaurant");
-          }
+        if (existingTable && existingTable.id !== id) {
+          throw new Error("Table number already exists in this restaurant");
         }
       }
+
+      // A rename re-signs the stored code at the SAME version: verification
+      // keys on table id + version, so the sticker already on the table keeps
+      // working and the next print carries the new number.
+      const renamedQr =
+        data.number && data.number !== currentTable.number
+          ? {
+              qrCode: await this.generateQRCodeData(
+                currentTable.restaurantId,
+                id,
+                data.number,
+                currentTable.qrCodeVersion,
+              ),
+            }
+          : {};
 
       const [updatedTable] = await this.db
         .update(tables)
         .set({
           ...data,
+          ...renamedQr,
           seatCount: nextMode === "table" ? 0 : nextSeatCount,
           updatedAt: new Date(),
         })
