@@ -69,6 +69,22 @@ describe("UberEatsAdapter", () => {
     ).resolves.toBe(false);
   });
 
+  it("rejects same-length one-char-different and different-length signatures", async () => {
+    const body = JSON.stringify({ id: "order-1" });
+    const signature = await hmacSha256Hex("secret", body);
+    const flipped = `${signature.slice(0, -1)}${signature.endsWith("0") ? "1" : "0"}`;
+    for (const sig of [flipped, signature.slice(0, -1), `${signature}0`]) {
+      const request = new Request("https://example.test/webhook", {
+        method: "POST",
+        headers: { "X-Uber-Signature": sig },
+        body,
+      });
+      await expect(
+        createAdapter().verifyWebhook(request, "secret"),
+      ).resolves.toBe(false);
+    }
+  });
+
   it("converts MYR minor units once and reads selected modifier items", async () => {
     const payload = {
       id: "uber-order-1",

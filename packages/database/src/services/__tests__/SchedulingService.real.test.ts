@@ -406,6 +406,33 @@ describe("SchedulingService tenant scoping", () => {
     expect(schedules.results).toEqual([]);
   });
 
+  it("rejects updating a schedule to another tenant's shift template", async () => {
+    await testDb.db
+      .prepare(
+        `INSERT INTO shift_templates
+           (id, restaurant_id, name, start_time, end_time, duration_minutes,
+            break_duration_minutes, created_by, created_at_ms, updated_at_ms)
+         VALUES
+           (701, 'other-rest', 'Other Evening', '18:00', '22:00', 240,
+            0, '${ownerId}', 1735689600000, 1735689600000)`,
+      )
+      .run();
+    const svc = service();
+
+    await expect(
+      svc.updateSchedule(70, { shiftTemplateId: 701 }, "sched-rest"),
+    ).rejects.toThrow(/Shift template not found/);
+    // Unscoped (platform admin) callers are held to the schedule's restaurant.
+    await expect(
+      svc.updateSchedule(70, { shiftTemplateId: 701 }),
+    ).rejects.toThrow(/Shift template not found/);
+
+    const row = await testDb.db
+      .prepare(`SELECT shift_template_id FROM employee_schedules WHERE id = 70`)
+      .all<{ shift_template_id: number | null }>();
+    expect(row.results[0].shift_template_id).toBeNull();
+  });
+
   it("rejects swap request creation with a forged requester identity", async () => {
     const svc = service();
 

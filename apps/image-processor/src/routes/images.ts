@@ -515,6 +515,15 @@ app.get(
 
       // Non-admins can only see their restaurant's images
       if (user.role !== 0) {
+        if (!user.restaurantId) {
+          return c.json(
+            {
+              success: false,
+              error: "Restaurant access is required to list images",
+            },
+            403,
+          );
+        }
         options.restaurantId = user.restaurantId;
       }
 
@@ -596,7 +605,12 @@ app.get(
       void format;
       void quality;
 
-      const imageUrl = metadata.variants[variant] || metadata.variants.original;
+      // Never redirect to a stored string: build the URL from the known
+      // variant name so a poisoned metadata value cannot become an open redirect.
+      const imageUrl = imageService.generateImageUrl(
+        imageId,
+        Object.hasOwn(metadata.variants, variant) ? variant : "original",
+      );
 
       // Record view for analytics
       c.executionCtx.waitUntil(imageService.recordImageView(imageId, variant));

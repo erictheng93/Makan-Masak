@@ -594,4 +594,34 @@ describe("ai analytics routes", () => {
     expect(response.status).toBe(403);
     expect(serviceMethods.getUsageStats).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["POST", "/test-provider"],
+    ["GET", "/usage/restaurant-1"],
+    ["GET", "/products/traffic-drivers/restaurant-1"],
+    ["GET", "/products/bestsellers/restaurant-1"],
+    ["GET", "/products/profit-leaders/restaurant-1"],
+    ["GET", "/products/analysis/restaurant-1"],
+  ])("%s %s refuses a cashier of the same restaurant", async (method, path) => {
+    currentUser.value = { ...currentUser.value, role: 4 };
+
+    const response = await withSilencedRouteError(() =>
+      routes.fetch(
+        new Request(`https://test${path}`, {
+          method,
+          headers: { "content-type": "application/json" },
+          body: method === "POST" ? "{}" : undefined,
+        }),
+        createEnv() as never,
+      ),
+    );
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "INSUFFICIENT_ROLE" },
+    });
+    for (const method of Object.values(serviceMethods)) {
+      expect(method).not.toHaveBeenCalled();
+    }
+  });
 });

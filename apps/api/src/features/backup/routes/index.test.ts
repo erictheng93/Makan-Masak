@@ -70,14 +70,19 @@ vi.mock("../services/BackupConfigService", () => ({
   }),
 }));
 
-vi.mock("../services/BackupValidationService", () => ({
-  BackupValidationService: vi.fn(function BackupValidationService(
-    ...args: unknown[]
-  ) {
-    mocks.backupValidationServiceCtor(...args);
-    return {};
-  }),
-}));
+vi.mock("../services/BackupValidationService", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../services/BackupValidationService")>();
+  return {
+    BackupValidationService: vi.fn(function BackupValidationService(
+      ...args: unknown[]
+    ) {
+      mocks.backupValidationServiceCtor(...args);
+      // Real access rules; they never touch the DB.
+      return new actual.BackupValidationService({} as never);
+    }),
+  };
+});
 
 import { createBackupRoutes } from "./index";
 
@@ -353,14 +358,14 @@ describe("backup routes", () => {
       { httpMetadata: { contentType: "application/json" } },
     );
     expect(result.bindings.BACKUP_KV.put).toHaveBeenCalledWith(
-      "backup:offline-upload:offline-1",
+      `backup:offline-upload:${restaurantId}:offline-1`,
       expect.stringContaining(
         `"storageKey":"offline-uploads/${restaurantId}/offline-1.json"`,
       ),
       { expirationTtl: 60 * 60 * 24 * 90 },
     );
 
-    mocks.user = { id: "user-2", username: "other-owner", role: 1 };
+    mocks.user = { id: "admin-1", username: "admin", role: 0 };
     response = await request("/upload", {
       method: "POST",
       body: JSON.stringify({
@@ -406,7 +411,7 @@ describe("backup routes", () => {
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toMatchObject({
       success: false,
-      error: { code: "BACKUP_UPLOAD_FORBIDDEN" },
+      error: { code: "FORBIDDEN" },
     });
 
     mocks.user = { id: "admin-1", username: "admin", role: 0 };
@@ -419,5 +424,33 @@ describe("backup routes", () => {
     }).response;
 
     expect(response.status).toBe(200);
+  });
+
+  it("rejects offline uploads from non-owner roles and non-admin global scope", async () => {
+    mocks.user = { id: "chef-1", username: "chef", role: 2, restaurantId };
+    for (const body of [
+      { backup_id: "own" },
+      { backup_id: "glob", restaurant_id: "global" },
+    ]) {
+      const result = request("/upload", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      expect((await result.response).status).toBe(403);
+      expect(result.bindings.BACKUP_KV.put).not.toHaveBeenCalled();
+      expect(result.bindings.BACKUP_STORAGE.put).not.toHaveBeenCalled();
+    }
+
+    mocks.user = { id: "user-1", username: "owner", role: 1, restaurantId };
+    const result = request("/upload", {
+      method: "POST",
+      body: JSON.stringify({ backup_id: "glob", restaurant_id: "global" }),
+    });
+    const response = await result.response;
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "BACKUP_UPLOAD_FORBIDDEN" },
+    });
+    expect(result.bindings.BACKUP_KV.put).not.toHaveBeenCalled();
   });
 });

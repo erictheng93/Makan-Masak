@@ -192,7 +192,6 @@ export const imageSchemas = {
     caption: z.string().max(500).optional(),
     category: z.string().max(50).optional(),
     tags: z.array(z.string()).optional(),
-    variants: z.record(z.string(), z.string()).optional(),
   }),
 
   // 分析查詢參數

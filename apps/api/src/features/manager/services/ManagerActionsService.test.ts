@@ -96,8 +96,30 @@ describe("ManagerActionsService", () => {
     vi.setSystemTime(new Date("2026-06-07T00:00:00.000Z"));
   });
 
+  it("rejects onBehalfOfUserId outside the restaurant before writing anything", async () => {
+    mockSelectResult([{ isAvailable: true }]);
+    mockMutations();
+    mocks.db.select.mockImplementation(() => createQuery([]));
+
+    await expect(
+      createService().execute(
+        {
+          action: "update_menu_availability",
+          onBehalfOfUserId: "foreign-user",
+          resource: "menu_item",
+          resourceId: "55",
+          restaurantId: "restaurant-1",
+        },
+        actor(),
+      ),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(mocks.menuUpdate).not.toHaveBeenCalled();
+    expect(mocks.db.insert).not.toHaveBeenCalled();
+  });
+
   it("updates menu availability and writes a delegated audit log", async () => {
     mockSelectResult([{ isAvailable: true }]);
+    mocks.db.select.mockImplementation(() => createQuery([{ id: "user-8" }]));
     const mutations = mockMutations();
 
     await expect(

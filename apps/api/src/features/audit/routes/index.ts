@@ -50,7 +50,9 @@ routes.post(
       );
     }
 
-    const createdAt = toTimestampMs(body.timestamp);
+    // Server clock only: a client-supplied timestamp must not backdate the trail
+    // (it is kept as metadata.requestedTimestamp).
+    const createdAt = Date.now();
     const description = resourceId
       ? `Offline ${action} on ${resource}#${resourceId}`
       : `Offline ${action} on ${resource}`;
@@ -127,13 +129,6 @@ function inferResource(action: string): string {
   if (normalized.includes("backup")) return "backups";
   if (normalized.includes("analytics")) return "analytics";
   return "admin_action";
-}
-
-function toTimestampMs(timestamp: string | undefined): number {
-  if (!timestamp) return Date.now();
-
-  const parsed = Date.parse(timestamp);
-  return Number.isNaN(parsed) ? Date.now() : parsed;
 }
 
 function canWriteRestaurantScope(

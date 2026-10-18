@@ -161,7 +161,7 @@ export function createBackupRoutes(): Hono<Context> {
   backup.post("/upload", validateBody(uploadBackupSchema), async (c) => {
     const body = c.get("validatedBody");
     const user = c.get("user") as
-      | { id?: string | number; restaurantId?: string | number }
+      | { id?: string | number; role?: number; restaurantId?: string | number }
       | undefined;
     const restaurantId =
       body.restaurant_id !== undefined
@@ -170,16 +170,25 @@ export function createBackupRoutes(): Hono<Context> {
           ? String(user.restaurantId)
           : "global";
 
-    if (!canWriteRestaurantScope(user, restaurantId)) {
-      return c.json(
-        {
-          success: false,
-          error: {
-            code: "BACKUP_UPLOAD_FORBIDDEN",
-            message: "Cannot upload backups for another restaurant",
+    if (restaurantId === "global") {
+      // Only platform admins may write to the shared "global" scope.
+      if (user?.role !== 0) {
+        return c.json(
+          {
+            success: false,
+            error: {
+              code: "BACKUP_UPLOAD_FORBIDDEN",
+              message: "Only administrators can upload global backups",
+            },
           },
-        },
-        403,
+          403,
+        );
+      }
+    } else {
+      // Same owner/admin check as every other backup route.
+      await new BackupValidationService(c.env.DB).verifyRestaurantAccess(
+        c as never,
+        restaurantId,
       );
     }
 
@@ -202,7 +211,7 @@ export function createBackupRoutes(): Hono<Context> {
       httpMetadata: { contentType: "application/json" },
     });
     await c.env.BACKUP_KV.put(
-      `backup:offline-upload:${encodeURIComponent(backupId)}`,
+      `backup:offline-upload:${encodeURIComponent(restaurantId)}:${encodeURIComponent(backupId)}`,
       JSON.stringify({
         backupId,
         restaurantId,
@@ -359,17 +368,4 @@ function createBackupUploadId(): string {
     return generateUUID();
   }
   return `offline-${Date.now()}`;
-}
-
-function canWriteRestaurantScope(
-  user:
-    | { role?: number; restaurantId?: string | number | null }
-    | undefined,
-  restaurantId: string,
-): boolean {
-  if (user?.role === 0 || restaurantId === "global") return true;
-  if (user?.restaurantId === undefined || user.restaurantId === null) {
-    return false;
-  }
-  return String(user.restaurantId) === restaurantId;
 }

@@ -1,8 +1,9 @@
 import { drizzle } from "drizzle-orm/d1";
-import { auditLogs } from "@makanmasak/database";
+import { and, eq } from "drizzle-orm";
+import { auditLogs, users } from "@makanmasak/database";
 import type { Env } from "../../../types/env";
 import type { AuthUser } from "../../../middleware/auth";
-import { ApiError } from "../../../shared/utils/api-error";
+import { ApiError, badRequest } from "../../../shared/utils/api-error";
 import { MenuService } from "../../menu/services/MenuService";
 import type { ManagerActionCommand } from "../schemas/validation";
 
@@ -35,6 +36,25 @@ export class ManagerActionsService {
       throw new ApiError("FORBIDDEN", "Access denied to this restaurant", 403);
     }
     this.assertActionResourcePair(input.action, input.resource);
+
+    if (input.onBehalfOfUserId) {
+      const [delegate] = await this.db
+        .select({ id: users.id })
+        .from(users)
+        .where(
+          and(
+            eq(users.id, input.onBehalfOfUserId),
+            eq(users.restaurantId, input.restaurantId),
+          ),
+        )
+        .limit(1);
+      if (!delegate) {
+        throw badRequest(
+          "onBehalfOfUserId must belong to this restaurant",
+          "ON_BEHALF_OF_USER_INVALID",
+        );
+      }
+    }
 
     let executed = false;
 
