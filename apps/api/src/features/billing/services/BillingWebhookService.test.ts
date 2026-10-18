@@ -134,7 +134,7 @@ async function stripeHeaders(
   rawBody: string,
   extra: Record<string, string> = {},
 ) {
-  const timestamp = "1700000000";
+  const timestamp = String(Math.floor(Date.now() / 1000));
   const signature = await hmacHex("stripe-secret", `${timestamp}.${rawBody}`);
   return new Headers({
     "stripe-signature": `t=${timestamp},v1=${signature}`,
@@ -179,7 +179,7 @@ describe("BillingWebhookService", () => {
     });
   });
 
-  it("records a received Stripe webhook and prefers provider headers", async () => {
+  it("records a received Stripe webhook and ignores unsigned provider headers", async () => {
     const { env } = createEnv();
     const body = raw({
       id: "payload-event",
@@ -205,8 +205,8 @@ describe("BillingWebhookService", () => {
 
     expect(result).toEqual({
       provider: "stripe",
-      eventId: "header-event",
-      eventType: "customer.subscription.updated",
+      eventId: "payload-event",
+      eventType: "payload.type",
       duplicate: false,
       reconciled: false,
     });
@@ -214,10 +214,54 @@ describe("BillingWebhookService", () => {
       restaurantId: "restaurant-1",
       eventType: "webhook_received",
       provider: "stripe",
-      providerEventId: "header-event",
-      providerEventType: "customer.subscription.updated",
+      providerEventId: "payload-event",
+      providerEventType: "payload.type",
       rawPayload: JSON.parse(body),
     });
+  });
+
+  it("does not let an unsigned type header turn a signed event into invoice.paid", async () => {
+    const { db, env } = createEnv();
+    const body = raw({
+      id: "evt-updated",
+      type: "customer.updated",
+      data: { object: { metadata: { restaurantId: "restaurant-1" } } },
+    });
+
+    const result = await new BillingWebhookService(env).handle(
+      "stripe",
+      body,
+      await stripeHeaders(body, {
+        "x-provider-event-id": "fresh-id",
+        "x-provider-event-type": "invoice.paid",
+      }),
+    );
+
+    expect(result).toMatchObject({
+      eventId: "evt-updated",
+      eventType: "customer.updated",
+      reconciled: false,
+    });
+    expect(db.batch).not.toHaveBeenCalled();
+    expect(auditAppend).toHaveBeenCalledWith(
+      expect.objectContaining({ providerEventId: "evt-updated" }),
+    );
+  });
+
+  it("rejects Stripe signatures older than the replay tolerance", async () => {
+    const { env } = createEnv();
+    const body = raw({ id: "evt-stale", type: "invoice.paid" });
+    const timestamp = String(Math.floor(Date.now() / 1000) - 601);
+    const signature = await hmacHex("stripe-secret", `${timestamp}.${body}`);
+
+    await expect(
+      new BillingWebhookService(env).handle(
+        "stripe",
+        body,
+        new Headers({ "stripe-signature": `t=${timestamp},v1=${signature}` }),
+      ),
+    ).rejects.toThrow("outside the tolerance window");
+    expect(auditAppend).not.toHaveBeenCalled();
   });
 
   it("short-circuits reconciliation when the provider event was already audited", async () => {

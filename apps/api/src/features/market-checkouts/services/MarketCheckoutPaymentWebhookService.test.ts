@@ -147,8 +147,21 @@ function paymentRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
-async function stripeSignature(secret: string, rawBody: string) {
-  const timestamp = "1780308000";
+function expectNoPaymentUpdate(env: Env) {
+  const updates = vi
+    .mocked(env.DB.prepare)
+    .mock.calls.filter(([sql]) =>
+      normalizeSql(sql).includes("update market_checkout_payments"),
+    );
+  expect(updates).toEqual([]);
+}
+
+async function stripeSignature(
+  secret: string,
+  rawBody: string,
+  timestampSeconds = Math.floor(Date.now() / 1000),
+) {
+  const timestamp = String(timestampSeconds);
   const signature = await hmacSha256Hex(secret, `${timestamp}.${rawBody}`);
   return `t=${timestamp},v1=${signature}`;
 }
@@ -1067,6 +1080,7 @@ describe("MarketCheckoutPaymentWebhookService", () => {
 
   it("reconciles full refunds and preserves object-based summary details", async () => {
     const rawBody = JSON.stringify({
+      type: "charge.refunded",
       data: {
         object: {
           id: "pi_refunded",
@@ -1097,7 +1111,6 @@ describe("MarketCheckoutPaymentWebhookService", () => {
       "stripe",
       rawBody,
       new Headers({
-        "x-provider-event-type": "charge.refunded",
         "stripe-signature": await stripeSignature("market-secret", rawBody),
       }),
     );
@@ -1343,6 +1356,123 @@ describe("MarketCheckoutPaymentWebhookService", () => {
         }),
       ),
     ).rejects.toThrow("Market checkout webhook secret is not configured");
+  });
+
+  it("rejects Stripe signatures older than the replay tolerance", async () => {
+    const rawBody = JSON.stringify({
+      id: "evt_stale",
+      type: "payment_intent.succeeded",
+      data: {
+        object: {
+          id: "pi_1",
+          amount_received: 12500,
+          currency: "twd",
+          metadata: { marketCheckoutId: "checkout-1" },
+        },
+      },
+    });
+    const env = createEnv({ paymentRow: paymentRow() });
+
+    await expect(
+      new MarketCheckoutPaymentWebhookService(env).handle(
+        "stripe",
+        rawBody,
+        new Headers({
+          "stripe-signature": await stripeSignature(
+            "market-secret",
+            rawBody,
+            Math.floor(Date.now() / 1000) - 601,
+          ),
+        }),
+      ),
+    ).rejects.toThrow("outside the tolerance window");
+    expectNoPaymentUpdate(env);
+  });
+
+  it("rejects a signed paid event whose identifier header points at another checkout", async () => {
+    const rawBody = JSON.stringify({
+      id: "evt_pointed",
+      type: "payment_intent.succeeded",
+      data: {
+        object: {
+          id: "pi_1",
+          amount_received: 12500,
+          currency: "twd",
+          metadata: { marketCheckoutId: "checkout-1" },
+        },
+      },
+    });
+    const env = createEnv({ paymentRow: paymentRow() });
+
+    await expect(
+      new MarketCheckoutPaymentWebhookService(env).handle(
+        "stripe",
+        rawBody,
+        new Headers({
+          "x-market-checkout-id": "checkout-2",
+          "stripe-signature": await stripeSignature("market-secret", rawBody),
+        }),
+      ),
+    ).rejects.toMatchObject({
+      code: "MARKET_CHECKOUT_WEBHOOK_IDENTIFIER_MISMATCH",
+    });
+    expectNoPaymentUpdate(env);
+  });
+
+  it("rejects signed identifiers that resolve to different payments", async () => {
+    const rawBody = JSON.stringify({
+      id: "evt_split",
+      type: "payment_intent.succeeded",
+      data: {
+        object: {
+          id: "pi_1",
+          amount_received: 12500,
+          currency: "twd",
+          metadata: {
+            marketCheckoutPaymentId: "market_pay_checkout-1",
+            marketCheckoutId: "checkout-2",
+          },
+        },
+      },
+    });
+    const env = createEnv({ paymentRow: paymentRow() });
+
+    await expect(
+      new MarketCheckoutPaymentWebhookService(env).handle(
+        "stripe",
+        rawBody,
+        new Headers({
+          "stripe-signature": await stripeSignature("market-secret", rawBody),
+        }),
+      ),
+    ).rejects.toMatchObject({
+      code: "MARKET_CHECKOUT_WEBHOOK_IDENTIFIER_MISMATCH",
+    });
+    expectNoPaymentUpdate(env);
+  });
+
+  it("ignores header-only identifiers and event type", async () => {
+    const rawBody = JSON.stringify({
+      id: "evt_header_only",
+      type: "unrelated.event",
+    });
+    const env = createEnv({ paymentRow: paymentRow() });
+
+    await expect(
+      new MarketCheckoutPaymentWebhookService(env).handle(
+        "stripe",
+        rawBody,
+        new Headers({
+          "x-provider-event-type": "payment_intent.succeeded",
+          "x-market-checkout-id": "checkout-1",
+          "stripe-signature": await stripeSignature("market-secret", rawBody),
+        }),
+      ),
+    ).resolves.toMatchObject({
+      eventType: "unrelated.event",
+      reconciled: false,
+    });
+    expectNoPaymentUpdate(env);
   });
 
   it("rejects missing and invalid LINE Pay signatures", async () => {

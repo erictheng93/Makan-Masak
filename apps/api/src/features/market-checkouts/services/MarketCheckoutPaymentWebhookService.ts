@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/d1";
-import { desc, eq, or, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import {
   PAYMENT_AUDIT_EVENT_TYPES,
   marketCheckoutChildOrders,
@@ -126,6 +126,10 @@ export interface MarketCheckoutPaymentWebhookResult {
   reviewReason?: ProviderMoneyIssue["code"];
 }
 
+// Reject Stripe deliveries whose signed timestamp is outside this skew, to
+// bound the replay window of a captured signed payload.
+const STRIPE_TIMESTAMP_TOLERANCE_SECONDS = 300;
+
 export class MarketCheckoutPaymentWebhookService {
   private readonly db: ReturnType<typeof drizzle>;
 
@@ -144,8 +148,8 @@ export class MarketCheckoutPaymentWebhookService {
     // LINE Pay transaction ids are 19 digits — past 2^53, so JSON.parse has
     // already rounded a numeric one. Recover the digits from the raw body.
     const linePayTransactionId = linePayTransactionIdFrom(payload, rawBody);
-    const eventId = eventIdFrom(payload, headers, linePayTransactionId);
-    const eventType = eventTypeFrom(payload, headers);
+    const eventId = eventIdFrom(payload, linePayTransactionId);
+    const eventType = eventTypeFrom(payload);
     let status = statusFrom(payload, eventType);
     if (!status) {
       return {
@@ -437,32 +441,43 @@ export class MarketCheckoutPaymentWebhookService {
       );
     }
 
-    return this.db
+    // Resolve a UNIQUE row from one identifier — never OR across them, which
+    // could point a signed event for one checkout at another.
+    const where = identifiers.paymentId
+      ? eq(marketCheckoutPayments.paymentId, identifiers.paymentId)
+      : identifiers.checkoutId
+        ? eq(marketCheckoutPayments.checkoutId, identifiers.checkoutId)
+        : eq(
+            marketCheckoutPayments.providerTransactionId,
+            identifiers.providerTransactionId as string,
+          );
+    const row = await this.db
       .select(marketCheckoutPaymentRowSelection)
       .from(marketCheckoutPayments)
       .innerJoin(
         marketCheckoutSessions,
         eq(marketCheckoutSessions.id, marketCheckoutPayments.checkoutId),
       )
-      .where(
-        or(
-          identifiers.paymentId == null
-            ? undefined
-            : eq(marketCheckoutPayments.paymentId, identifiers.paymentId),
-          identifiers.checkoutId == null
-            ? undefined
-            : eq(marketCheckoutPayments.checkoutId, identifiers.checkoutId),
-          identifiers.providerTransactionId == null
-            ? undefined
-            : eq(
-                marketCheckoutPayments.providerTransactionId,
-                identifiers.providerTransactionId,
-              ),
-        ),
-      )
+      .where(where)
       .orderBy(desc(marketCheckoutPayments.updatedAt))
       .limit(1)
       .get();
+
+    // Our own signed ids must agree with the resolved row. The provider's
+    // transaction id is not compared: the stored one can come from the split
+    // adapter and legitimately differ from the provider's own id.
+    if (
+      row &&
+      ((identifiers.paymentId && row.payment_id !== identifiers.paymentId) ||
+        (identifiers.checkoutId && row.checkout_id !== identifiers.checkoutId))
+    ) {
+      throw new ApiError(
+        "MARKET_CHECKOUT_WEBHOOK_IDENTIFIER_MISMATCH",
+        "Webhook identifiers do not match the same payment",
+        400,
+      );
+    }
+    return row;
   }
 
   private async updateCachedSession(
@@ -539,12 +554,23 @@ export class MarketCheckoutPaymentWebhookService {
       throw new Error("Missing webhook signature");
     }
 
-    const signedPayload = stripeSignature
-      ? `${parseStripeTimestamp(stripeSignature)}.${rawBody}`
-      : rawBody;
+    const timestamp = stripeSignature
+      ? parseStripeTimestamp(stripeSignature)
+      : null;
+    const signedPayload =
+      timestamp === null ? rawBody : `${timestamp}.${rawBody}`;
     const expected = await hmacSha256Hex(secret, signedPayload);
     if (!timingSafeEqual(signature, expected)) {
       throw new Error("Invalid webhook signature");
+    }
+    if (timestamp !== null) {
+      const ageSeconds = Math.abs(Date.now() / 1000 - Number(timestamp));
+      if (
+        !Number.isFinite(ageSeconds) ||
+        ageSeconds > STRIPE_TIMESTAMP_TOLERANCE_SECONDS
+      ) {
+        throw new Error("Webhook timestamp is outside the tolerance window");
+      }
     }
   }
 
@@ -601,13 +627,13 @@ const marketCheckoutPaymentRowSelection = {
   >`${marketCheckoutSessions.paymentSummary}`,
 };
 
+// Event id and type come from the signed body only: headers other than the
+// signature are not covered by the HMAC and must never override them.
 function eventIdFrom(
   payload: MarketCheckoutWebhookPayload,
-  headers: Headers,
   linePayTransactionId: string | undefined,
 ) {
   return (
-    headers.get("x-provider-event-id") ??
     payload.id ??
     payload.data?.object?.id ??
     // A LINE Pay confirm result has no event id; one confirm per transaction.
@@ -626,11 +652,30 @@ function linePayTransactionIdFrom(
   return match?.[1] ?? String(value);
 }
 
-function eventTypeFrom(
-  payload: MarketCheckoutWebhookPayload,
+function eventTypeFrom(payload: MarketCheckoutWebhookPayload) {
+  return payload.type ?? "unknown";
+}
+
+/**
+ * Identifiers must come from signed content. The body is authoritative; a
+ * header (not covered by the HMAC) may only repeat it, never supply or change
+ * it — a header-only value is ignored and a differing one rejects the event.
+ */
+function signedIdentifier(
   headers: Headers,
-) {
-  return headers.get("x-provider-event-type") ?? payload.type ?? "unknown";
+  headerName: string,
+  bodyValue: unknown,
+): string | undefined {
+  const value = stringValue(bodyValue);
+  const header = stringValue(headers.get(headerName));
+  if (value && header && header !== value) {
+    throw new ApiError(
+      "MARKET_CHECKOUT_WEBHOOK_IDENTIFIER_MISMATCH",
+      "Webhook identifier header does not match the signed payload",
+      400,
+    );
+  }
+  return value;
 }
 
 function identifiersFrom(
@@ -651,21 +696,23 @@ function identifiersFrom(
       : object?.id;
 
   return {
-    paymentId: stringValue(
-      headers.get("x-market-payment-id") ??
-        metadata.marketCheckoutPaymentId ??
+    paymentId: signedIdentifier(
+      headers,
+      "x-market-payment-id",
+      metadata.marketCheckoutPaymentId ??
         metadata.market_checkout_payment_id ??
         // The adapter sets LINE Pay's merchant `orderId` to the payment id.
         payload.info?.orderId,
     ),
-    checkoutId: stringValue(
-      headers.get("x-market-checkout-id") ??
-        metadata.marketCheckoutId ??
-        metadata.market_checkout_id,
+    checkoutId: signedIdentifier(
+      headers,
+      "x-market-checkout-id",
+      metadata.marketCheckoutId ?? metadata.market_checkout_id,
     ),
-    providerTransactionId: stringValue(
-      headers.get("x-provider-transaction-id") ??
-        stripeObjectTransactionId ??
+    providerTransactionId: signedIdentifier(
+      headers,
+      "x-provider-transaction-id",
+      stripeObjectTransactionId ??
         linePayTransactionId ??
         metadata.providerTransactionId ??
         metadata.provider_transaction_id,
