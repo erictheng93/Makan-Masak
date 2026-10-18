@@ -125,7 +125,29 @@ vi.mock("../services/GroupOrdersService", () => ({
   },
 }));
 
+const dineIn = vi.hoisted(() => ({
+  assertDineInQr: vi.fn(),
+  enforceGuestOrderThrottle: vi.fn(),
+  restaurant: { value: null as unknown },
+}));
+
+vi.mock("../../qr-codes/services/assert-dine-in-qr", () => ({
+  assertDineInQr: dineIn.assertDineInQr,
+}));
+
+vi.mock("../../guest-orders/services/guest-order-throttle", () => ({
+  enforceGuestOrderThrottle: dineIn.enforceGuestOrderThrottle,
+}));
+
 vi.mock("@makanmasak/database", () => ({
+  restaurants: { id: "id" },
+  createDatabase: () => ({
+    select: () => ({
+      from: () => ({
+        where: () => ({ get: async () => dineIn.restaurant.value }),
+      }),
+    }),
+  }),
   RealtimeBroadcastService: class {
     generateEventId = generateEventId;
     broadcastEvent = broadcastEvent;
@@ -188,6 +210,13 @@ describe("group orders routes", () => {
     };
     listGroupOrders.mockReset();
     createGroupOrder.mockReset();
+    dineIn.assertDineInQr.mockReset();
+    dineIn.enforceGuestOrderThrottle.mockReset();
+    dineIn.restaurant.value = {
+      isActive: true,
+      isAvailable: true,
+      settings: { allowGuestOrders: true },
+    };
     joinGroup.mockReset();
     previewGroupByShareCode.mockReset();
     recoverHost.mockReset();
@@ -314,6 +343,63 @@ describe("group orders routes", () => {
     },
   );
 
+  it("rejects a table create without a qrCode before calling the service", async () => {
+    const response = await routes.fetch(
+      new Request("https://test/create", {
+        method: "POST",
+        body: JSON.stringify({ restaurantId: "restaurant-1", tableId: 7 }),
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(400);
+    expect(createGroupOrder).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 when the table QR proof fails", async () => {
+    dineIn.assertDineInQr.mockRejectedValue(
+      new ApiError("QR_VERIFICATION_FAILED", "bad qr", 403),
+    );
+
+    const response = await routes.fetch(
+      new Request("https://test/create", {
+        method: "POST",
+        body: JSON.stringify({
+          restaurantId: "restaurant-1",
+          tableId: 7,
+          qrCode: "SHOP-restaurant-1-1",
+        }),
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(403);
+    expect(createGroupOrder).not.toHaveBeenCalled();
+  });
+
+  it("refuses a table create when guest orders are disabled", async () => {
+    dineIn.restaurant.value = {
+      isActive: true,
+      isAvailable: true,
+      settings: {},
+    };
+
+    const response = await routes.fetch(
+      new Request("https://test/create", {
+        method: "POST",
+        body: JSON.stringify({
+          restaurantId: "restaurant-1",
+          tableId: 7,
+          qrCode: "signed-qr",
+        }),
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(403);
+    expect(createGroupOrder).not.toHaveBeenCalled();
+  });
+
   it("lets the platform admin generate a share code for any restaurant", async () => {
     currentUser.value = {
       id: "user-0",
@@ -403,6 +489,7 @@ describe("group orders routes", () => {
         body: JSON.stringify({
           restaurantId: "restaurant-1",
           tableId: 7,
+          qrCode: "signed-qr",
           hostName: "Ada",
         }),
       }),
@@ -410,6 +497,14 @@ describe("group orders routes", () => {
     );
 
     expect(createResponse.status).toBe(200);
+    expect(dineIn.assertDineInQr).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        restaurantId: "restaurant-1",
+        tableId: 7,
+        qrCode: "signed-qr",
+      }),
+    );
     await expect(createResponse.json()).resolves.toMatchObject({
       data: { groupOrderId, shareCode: "CREATE1" },
     });

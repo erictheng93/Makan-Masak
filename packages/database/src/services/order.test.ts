@@ -1477,6 +1477,40 @@ describe("OrderService createOrder business-rule rejections", () => {
     expect(unknown.code).toBe("TABLE_UNAVAILABLE");
   });
 
+  it("rejects another restaurant's table as 409 TABLE_UNAVAILABLE", async () => {
+    const otherId = "other-restaurant";
+    await testDb.drizzle.insert(restaurants).values({
+      id: otherId,
+      name: "Other Restaurant",
+      type: "restaurant",
+      category: "casual",
+      address: "2 Test St",
+      district: "Test District",
+      city: "Test City",
+      phone: "0912345679",
+      isAvailable: true,
+    });
+    const [foreignTable] = await testDb.drizzle
+      .insert(tables)
+      .values({
+        restaurantId: otherId,
+        number: "F1",
+        qrCode: "TABLE-F1-FOREIGN",
+        isActive: true,
+      })
+      .returning({ id: tables.id });
+
+    const error = await rejectionOf(() =>
+      service().createOrder({
+        restaurantId,
+        tableId: foreignTable.id,
+        items: [{ menuItemId, quantity: 1 }],
+      }),
+    );
+    expect(error.status).toBe(409);
+    expect(error.code).toBe("TABLE_UNAVAILABLE");
+  });
+
   it("rejects an unusable coupon code as 400 COUPON_INVALID", async () => {
     const error = await rejectionOf(() =>
       service().createOrder({

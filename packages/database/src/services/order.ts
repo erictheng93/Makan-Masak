@@ -692,7 +692,11 @@ export class OrderService extends BaseService {
           where: eq(tables.id, data.tableId),
         });
 
-        if (!table || !table.isActive) {
+        if (
+          !table ||
+          !table.isActive ||
+          String(table.restaurantId) !== restaurantIdStr
+        ) {
           throw conflict("Table is not available", "TABLE_UNAVAILABLE");
         }
       }
