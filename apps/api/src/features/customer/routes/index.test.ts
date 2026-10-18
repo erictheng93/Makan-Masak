@@ -144,6 +144,7 @@ function createDb(queues: Partial<DbQueues> = {}) {
   };
   const db = {
     state,
+    batch: vi.fn(async (statements: unknown[]) => statements.map(() => ({}))),
     prepare: vi.fn((sql: string) => {
       const statement = {
         bind: vi.fn((...args: unknown[]) => {
@@ -488,6 +489,7 @@ describe("customer identity routes", () => {
     const db = createDb({
       first: [
         { id: 10, otp_code: "hash:123456", attempts: 0 },
+        { attempts: 1 },
         null,
         customerRow({ id: "customer-new", display_name: "+886912345678" }),
       ],
@@ -528,7 +530,10 @@ describe("customer identity routes", () => {
   it("increments OTP attempts and rejects invalid verification codes", async () => {
     bcryptMocks.compare.mockResolvedValueOnce(false);
     const db = createDb({
-      first: [{ id: 10, otp_code: "hash:123456", attempts: 0 }],
+      first: [
+        { id: 10, otp_code: "hash:123456", attempts: 0 },
+        { attempts: 1 },
+      ],
     });
 
     const response = await request(
@@ -543,7 +548,7 @@ describe("customer identity routes", () => {
       error: { code: "INVALID_OTP" },
     });
     expect(db.state.statements.at(-1)).toMatchObject({
-      args: [10],
+      args: [10, expect.any(Number)],
     });
   });
 
@@ -1321,7 +1326,13 @@ describe("customer identity routes", () => {
   it("marks pending phone password identities verified after OTP verification", async () => {
     const db = createDb({
       first: [
-        { id: 10, otp_code: "hash:123456", attempts: 0 },
+        {
+          id: 10,
+          customer_id: "customer-phone",
+          otp_code: "hash:123456",
+          attempts: 0,
+        },
+        { attempts: 1 },
         passwordIdentityRow({
           identity_id: "identity-phone",
           customer_id: "customer-phone",
@@ -1352,6 +1363,65 @@ describe("customer identity routes", () => {
     ).toEqual(["+886912345678", expect.any(Number), "customer-phone"]);
   });
 
+  it("does not adopt a pending phone identity for an OTP not issued to it", async () => {
+    utilMocks.generateUUID.mockReturnValueOnce("customer-new");
+    const db = createDb({
+      first: [
+        { id: 10, customer_id: null, otp_code: "hash:123456", attempts: 0 },
+        { attempts: 1 },
+        passwordIdentityRow({
+          identity_id: "identity-victim",
+          customer_id: "customer-attacker",
+          provider_uid: "+886912345678",
+          verified_at_ms: null,
+          primary_phone: null,
+        }),
+        null,
+        customerRow({ id: "customer-new", display_name: "+886912345678" }),
+      ],
+    });
+
+    const response = await request(
+      "/auth/verify-otp",
+      "POST",
+      { phone: "+886912345678", otp: "123456" },
+      { DB: db },
+    ).response;
+    const body = await response.json<VerifyOtpBody>();
+
+    expect(response.status).toBe(200);
+    expect(body.data.customer.id).toBe("customer-new");
+    expect(db.batch).not.toHaveBeenCalled();
+    expect(
+      db.state.statements.some((statement) =>
+        statement.sql.includes("SET verified_at_ms"),
+      ),
+    ).toBe(false);
+  });
+
+  it("rejects verification without comparing when the attempt reservation fails", async () => {
+    bcryptMocks.compare.mockClear();
+    const db = createDb({
+      first: [
+        { id: 10, otp_code: "hash:123456", attempts: 0 },
+        null, // UPDATE ... WHERE attempts < ? RETURNING matched no row
+      ],
+    });
+
+    const response = await request(
+      "/auth/verify-otp",
+      "POST",
+      { phone: "+886912345678", otp: "123456" },
+      { DB: db },
+    ).response;
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "INVALID_OTP" },
+    });
+    expect(bcryptMocks.compare).not.toHaveBeenCalled();
+  });
+
   it("exchanges an account-bound phone OTP for a one-time reset token", async () => {
     const phone = "+886912345678";
     const db = createDb({
@@ -1362,6 +1432,7 @@ describe("customer identity routes", () => {
           otp_code: "hash:123456",
           attempts: 0,
         },
+        { attempts: 1 },
         passwordIdentityRow({
           customer_id: "customer-phone",
           provider_uid: phone,
