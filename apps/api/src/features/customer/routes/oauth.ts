@@ -16,6 +16,7 @@
  */
 
 import { Hono } from "hono";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import type { Context } from "hono";
 import { z } from "zod";
 import {
@@ -54,6 +55,7 @@ import {
   generateCodeVerifier,
   generateNonce,
   generateState,
+  OAUTH_STATE_TTL_SECONDS,
   sanitizeRedirectTo,
   saveRequestState,
 } from "../services/oauth/state";
@@ -77,6 +79,26 @@ const routes = new Hono<{ Bindings: Env }>();
 
 /** Long enough for a redirect to land, short enough that a leak is worthless. */
 const OAUTH_RESULT_TTL_SECONDS = 120;
+
+const OAUTH_BINDING_COOKIE = "oauth_binding";
+
+/**
+ * Binding cookie options, scoped to the callback path. Apple form-posts its
+ * callback cross-site, and SameSite=Lax cookies are not sent on cross-site
+ * POSTs, so POST providers need SameSite=None (Secure, still HttpOnly); GET
+ * providers keep Lax.
+ */
+function bindingCookieOptions(env: OAuthEnv, provider: CustomerOAuthProvider) {
+  return {
+    httpOnly: true,
+    secure: true,
+    sameSite:
+      OAUTH_PROVIDERS[provider].callbackMethod === "POST"
+        ? ("None" as const)
+        : ("Lax" as const),
+    path: new URL(buildRedirectUri(env, provider)).pathname,
+  };
+}
 
 type PendingResult =
   | { kind: "session"; customerId: string; redirectTo?: string }
@@ -169,7 +191,14 @@ routes.get(
     // steered into linking the provider to somebody else's account.
     const linkCustomerId = c.get("customer")?.id;
 
+    const bindingNonce = generateState();
+    setCookie(c, OAUTH_BINDING_COOKIE, bindingNonce, {
+      ...bindingCookieOptions(env, provider),
+      maxAge: OAUTH_STATE_TTL_SECONDS,
+    });
+
     await saveRequestState(c.env.CACHE_KV, provider, state, {
+      bindingHash: await deriveCodeChallenge(bindingNonce),
       codeVerifier,
       nonce,
       redirectTo: sanitizeRedirectTo(c.req.query("redirectTo")),
@@ -234,10 +263,12 @@ async function handleCallback(c: Context<{ Bindings: Env }>) {
     );
   }
 
+  const bindingCookie = getCookie(c, OAUTH_BINDING_COOKIE);
   const requestState = await consumeRequestState(
     c.env.CACHE_KV,
     provider,
     state,
+    bindingCookie ? await deriveCodeChallenge(bindingCookie) : undefined,
   );
   if (!requestState) {
     // Either a replay, or the customer took longer than the TTL. Both are dead
@@ -247,6 +278,8 @@ async function handleCallback(c: Context<{ Bindings: Env }>) {
       "OAUTH_STATE_INVALID",
     );
   }
+
+  deleteCookie(c, OAUTH_BINDING_COOKIE, bindingCookieOptions(env, provider));
 
   const exchanged = await exchangeCodeForIdToken({
     env,
