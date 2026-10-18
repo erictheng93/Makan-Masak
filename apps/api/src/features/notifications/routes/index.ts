@@ -10,6 +10,7 @@ import { validateBody } from "../../../shared/middleware";
 import type { Env } from "../../../shared/types";
 import { HTTP_STATUS, USER_ROLES } from "../../../shared/constants";
 import { createSuccessResponse } from "../../../shared/utils";
+import { badRequest } from "../../../shared/utils/api-error";
 import { z } from "zod";
 
 // Import service
@@ -329,6 +330,23 @@ app.post(
       notificationData,
     );
     if (recipientGuard) return recipientGuard;
+
+    // SMS only ever goes to the number stored on the recipient's account;
+    // a body-supplied recipientPhone would make this an open SMS relay.
+    if (notificationData.type === "sms") {
+      const stored = (await c.env.DB.prepare(
+        `SELECT phone FROM users WHERE id = ?`,
+      )
+        .bind(notificationData.recipientId)
+        .first()) as { phone?: string | null } | null;
+      if (!stored?.phone) {
+        throw badRequest(
+          "Recipient has no phone number on file",
+          "RECIPIENT_PHONE_MISSING",
+        );
+      }
+      notificationData.recipientPhone = stored.phone;
+    }
 
     const service = new NotificationService(c.env.DB, c.env);
 

@@ -13,7 +13,11 @@ import {
   revokeIdentity,
   touchIdentityUse,
 } from "./identity";
-import { consumeRequestState, saveRequestState } from "./state";
+import {
+  consumeRequestState,
+  deriveCodeChallenge,
+  saveRequestState,
+} from "./state";
 import { exchangeCodeForIdToken } from "./tokenExchange";
 import { OAUTH_PROVIDERS, type OAuthEnv } from "./providers";
 import oauthRoutes from "../../routes/oauth";
@@ -280,14 +284,15 @@ describe("one-time OAuth request state", () => {
       nonce: "nonce",
       redirectTo: "/orders",
       linkCustomerId: "customer-1",
+      bindingHash: "hash",
     };
 
     await saveRequestState(kv, "google", "opaque-state", value);
     await expect(
-      consumeRequestState(kv, "google", "opaque-state"),
+      consumeRequestState(kv, "google", "opaque-state", "hash"),
     ).resolves.toEqual(value);
     await expect(
-      consumeRequestState(kv, "google", "opaque-state"),
+      consumeRequestState(kv, "google", "opaque-state", "hash"),
     ).resolves.toBeNull();
 
     expect(kv.put).toHaveBeenCalledWith(
@@ -300,23 +305,35 @@ describe("one-time OAuth request state", () => {
 
   it("drops malformed state while still deleting its replay key", async () => {
     const kv = {
-      get: vi.fn(async () => ({ codeVerifier: "verifier" })),
+      get: vi.fn(async () => ({
+        codeVerifier: "verifier",
+        bindingHash: "hash",
+      })),
       delete: vi.fn(),
     } as unknown as KVNamespace;
 
-    await expect(consumeRequestState(kv, "line", "state")).resolves.toBeNull();
+    await expect(
+      consumeRequestState(kv, "line", "state", "hash"),
+    ).resolves.toBeNull();
     expect(kv.delete).toHaveBeenCalledWith("oauth_state:line:state");
   });
 
   it("allows absent optional redirect and linking fields without manufacturing values", async () => {
     const kv = {
-      get: vi.fn(async () => ({ codeVerifier: "verifier", nonce: "nonce" })),
+      get: vi.fn(async () => ({
+        codeVerifier: "verifier",
+        nonce: "nonce",
+        bindingHash: "hash",
+      })),
       delete: vi.fn(),
     } as unknown as KVNamespace;
 
-    await expect(consumeRequestState(kv, "google", "state")).resolves.toEqual({
+    await expect(
+      consumeRequestState(kv, "google", "state", "hash"),
+    ).resolves.toEqual({
       codeVerifier: "verifier",
       nonce: "nonce",
+      bindingHash: "hash",
       redirectTo: undefined,
       linkCustomerId: undefined,
     });
@@ -523,12 +540,22 @@ describe("OAuth start route", () => {
     expect(destination.searchParams.get("code_challenge_method")).toBe("S256");
 
     expect(values.size).toBe(1);
+    const setCookie = start.headers.get("set-cookie") as string;
+    expect(setCookie).toMatch(/^oauth_binding=[A-Za-z0-9_-]{43};/);
+    expect(setCookie).toMatch(/HttpOnly/i);
+    expect(setCookie).toMatch(/Secure/i);
+    expect(setCookie).toMatch(/SameSite=Lax/i);
+    const bindingNonce = /^oauth_binding=([^;]+)/.exec(
+      setCookie,
+    )?.[1] as string;
     const stored = JSON.parse([...values.values()][0]) as {
+      bindingHash: string;
       codeVerifier: string;
       nonce: string;
       redirectTo: string;
     };
     expect(stored).toMatchObject({ redirectTo: "/orders" });
+    expect(stored.bindingHash).toBe(await deriveCodeChallenge(bindingNonce));
     expect(stored.codeVerifier).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(stored.nonce).toMatch(/^[A-Za-z0-9_-]{43}$/);
   });
@@ -684,7 +711,11 @@ describe("OAuth callback identity resolution", () => {
     const stored = new Map<string, unknown>([
       [
         "oauth_state:google:state",
-        { codeVerifier: "verifier", nonce: "nonce" },
+        {
+          codeVerifier: "verifier",
+          nonce: "nonce",
+          bindingHash: await deriveCodeChallenge("binding"),
+        },
       ],
     ]);
     const cache = {
@@ -714,12 +745,25 @@ describe("OAuth callback identity resolution", () => {
     vi.stubGlobal("fetch", fetchImpl);
 
     try {
-      const response = await oauthRoutes.request(
-        "https://api.example.test/auth/oauth/google/callback?code=code&state=state",
-        undefined,
-        { ...buildEnv(), CACHE_KV: cache, DB: database } as never,
-      );
+      const callback = (cookie?: string) =>
+        oauthRoutes.request(
+          "https://api.example.test/auth/oauth/google/callback?code=code&state=state",
+          cookie ? { headers: { cookie } } : undefined,
+          { ...buildEnv(), CACHE_KV: cache, DB: database } as never,
+        );
+
+      for (const bad of [undefined, "oauth_binding=attacker"]) {
+        const rejected = await callback(bad);
+        expect(rejected.status).toBe(400);
+        expect(await rejected.json()).toEqual({ code: "OAUTH_STATE_INVALID" });
+        expect(cache.delete).not.toHaveBeenCalled();
+        expect(stored.has("oauth_state:google:state")).toBe(true);
+        expect(fetchImpl).not.toHaveBeenCalled();
+      }
+
+      const response = await callback("oauth_binding=binding");
       expect(response.status).toBe(302);
+      expect(response.headers.get("set-cookie")).toContain("oauth_binding=;");
       expect(
         new URL(response.headers.get("location") as string).searchParams.get(
           "oauth_code",

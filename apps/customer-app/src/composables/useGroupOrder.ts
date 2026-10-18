@@ -621,14 +621,29 @@ export function useGroupOrder(options: {
     error.value = null;
 
     try {
+      const resolvedTableId = toTableId(createOptions.tableId ?? tableId);
+      // The signed QR SignedOrderEntryView stored when the diner scanned in;
+      // the server requires it as proof of presence for a table.
+      let qrCode: string | undefined;
+      if (resolvedTableId !== undefined) {
+        try {
+          qrCode =
+            localStorage.getItem(
+              `makanmakan_table_qr:${restaurantId}:${resolvedTableId}`,
+            ) ?? undefined;
+        } catch {
+          qrCode = undefined;
+        }
+      }
       const response = await apiClient.post<CreateGroupOrderResponse>(
         "/orders/group/create",
         {
           restaurantId,
+          qrCode,
           // Route params are strings, but `table_id` is an integer column and
           // the create schema rejects a string outright — the same coercion
           // `addToCart` already does for `menuItemId`.
-          tableId: toTableId(createOptions.tableId ?? tableId),
+          tableId: resolvedTableId,
           hostName: createOptions.hostName ?? userName,
         },
       );

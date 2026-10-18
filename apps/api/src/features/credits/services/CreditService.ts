@@ -234,19 +234,20 @@ export class CreditService {
       throw badRequest("Spend amount must be positive");
     }
 
+    const { card, account } = await this.loadCardAndAccount(input.publicId);
     // Replay safety: a prior identical operation returns its recorded result.
     const existing = await this.findLedgerByIdempotencyKey(
       input.idempotencyKey,
     );
     if (existing) {
-      return {
-        ledgerEntryId: existing.id,
-        accountId: existing.accountId,
-        balanceAfterCents: existing.balanceAfterCents,
-      };
+      return this.replayOrConflict(existing, {
+        entryType: "spend",
+        accountId: account.id,
+        amountCents: -input.amountCents,
+        sourceType: input.sourceType,
+        sourceId: input.sourceId,
+      });
     }
-
-    const { card, account } = await this.loadCardAndAccount(input.publicId);
     if (account.status !== "active") {
       throw forbidden(
         "Credit account is not active",
@@ -295,15 +296,17 @@ export class CreditService {
     const existing = await this.findLedgerByIdempotencyKey(
       input.idempotencyKey,
     );
-    if (existing) {
-      return {
-        ledgerEntryId: existing.id,
-        accountId: existing.accountId,
-        balanceAfterCents: existing.balanceAfterCents,
-      };
-    }
 
     const { account } = await this.loadCardAndAccount(input.publicId);
+    if (existing) {
+      return this.replayOrConflict(existing, {
+        entryType: "topup",
+        accountId: account.id,
+        amountCents: input.amountCents,
+        sourceType: input.sourceType,
+        sourceId: input.sourceId,
+      });
+    }
     if (account.currency !== input.currency) {
       throw badRequest(
         "Credit currency does not match top-up currency",
@@ -332,11 +335,13 @@ export class CreditService {
       input.idempotencyKey,
     );
     if (existing) {
-      return {
-        ledgerEntryId: existing.id,
-        accountId: existing.accountId,
-        balanceAfterCents: existing.balanceAfterCents,
-      };
+      return this.replayOrConflict(existing, {
+        entryType: "refund",
+        accountId: input.accountId,
+        amountCents: input.amountCents,
+        sourceType: input.sourceType,
+        sourceId: input.sourceId,
+      });
     }
 
     const account = await this.db
@@ -386,6 +391,12 @@ export class CreditService {
       throw notFound(
         "Original credit spend not found for refund",
         "CREDIT_SPEND_NOT_FOUND",
+      );
+    }
+    if (spend.entryType !== "spend" || input.amountCents > -spend.amountCents) {
+      throw conflict(
+        "Idempotency key does not identify a refundable credit spend",
+        "CREDIT_SPEND_NOT_REFUNDABLE",
       );
     }
     return this.refund({
@@ -677,6 +688,36 @@ export class CreditService {
         .set({ pinRetryCount: 0, lockedUntilMs: null, updatedAt: new Date() })
         .where(eq(creditCards.id, card.id));
     }
+  }
+
+  /** Same key + same operation replays; same key + different operation is a client bug or attack. */
+  private replayOrConflict(
+    existing: typeof creditLedgerEntries.$inferSelect,
+    expected: {
+      entryType: CreditEntryType;
+      accountId: string;
+      amountCents: number;
+      sourceType: string;
+      sourceId?: string;
+    },
+  ): LedgerMovementResult {
+    if (
+      existing.entryType !== expected.entryType ||
+      existing.accountId !== expected.accountId ||
+      existing.amountCents !== expected.amountCents ||
+      existing.sourceType !== expected.sourceType ||
+      (existing.sourceId ?? null) !== (expected.sourceId ?? null)
+    ) {
+      throw conflict(
+        "Idempotency key reused for a different operation",
+        "IDEMPOTENCY_KEY_REUSED",
+      );
+    }
+    return {
+      ledgerEntryId: existing.id,
+      accountId: existing.accountId,
+      balanceAfterCents: existing.balanceAfterCents,
+    };
   }
 
   private async findLedgerByIdempotencyKey(key: string) {

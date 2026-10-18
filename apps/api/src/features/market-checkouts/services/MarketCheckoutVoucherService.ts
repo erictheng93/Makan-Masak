@@ -54,6 +54,8 @@ export interface AppliedVoucher {
   name: string;
   restaurantId?: string | null;
   fundedBy: "platform" | "vendor";
+  /** coupon_usage.guest_identity for per-user-limited coupons (trigger-enforced). */
+  usageIdentity?: string;
   /** Total discount, clamped to the subtotal. */
   discountCents: number;
   allocations: VoucherAllocation[];
@@ -170,6 +172,8 @@ export class MarketCheckoutVoucherService {
     /** The checkout's currency; discounts round on its step. */
     currency: CurrencyCode;
     childOrders: VoucherChildOrder[];
+    /** Server-derived signed-in customer id; required for per-user-limited coupons. */
+    customerId?: string;
   }): Promise<AppliedVoucher> {
     const code = input.code.trim().toUpperCase();
     if (!code) {
@@ -269,6 +273,49 @@ export class MarketCheckoutVoucherService {
       );
     }
 
+    // Item/category restrictions need the child order lines, which this
+    // service does not see; fail closed rather than discount ineligible items.
+    if (
+      (coupon.applicableMenuItems?.length ?? 0) > 0 ||
+      (coupon.applicableCategories?.length ?? 0) > 0
+    ) {
+      throw badRequest(
+        "This voucher is restricted to specific items and cannot be used on a market checkout",
+        "VOUCHER_NOT_APPLICABLE",
+      );
+    }
+
+    // The identity is stored as coupon_usage.guest_identity so the
+    // coupon_usage_guest_limit trigger enforces the limit atomically; the
+    // count below only gives a friendly early error.
+    let usageIdentity: string | undefined;
+    if (coupon.usageLimitPerUser) {
+      if (!input.customerId) {
+        throw badRequest(
+          "Sign in to use this voucher",
+          "VOUCHER_REQUIRES_IDENTITY",
+        );
+      }
+      usageIdentity = `customer:${input.customerId}`;
+      const [used] = await this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(couponUsage)
+        .where(
+          and(
+            eq(couponUsage.couponId, coupon.id),
+            eq(couponUsage.guestIdentity, usageIdentity),
+            eq(couponUsage.status, "active"),
+          ),
+        )
+        .all();
+      if ((used?.count ?? 0) >= coupon.usageLimitPerUser) {
+        throw badRequest(
+          "You have reached the usage limit for this voucher",
+          "VOUCHER_USER_LIMIT_REACHED",
+        );
+      }
+    }
+
     const minOrderCents = coupon.minOrderAmountCents ?? 0;
     if (applicableSubtotalCents < minOrderCents) {
       throw badRequest(
@@ -301,6 +348,7 @@ export class MarketCheckoutVoucherService {
       name: coupon.name,
       restaurantId: coupon.restaurantId,
       fundedBy: coupon.restaurantId == null ? "platform" : "vendor",
+      usageIdentity,
       discountCents,
       allocations: MarketCheckoutVoucherService.splitDiscount(
         discountCents,
@@ -359,6 +407,12 @@ export class MarketCheckoutVoucherService {
             originalAmountCents: alloc.amountCents,
             finalAmountCents: finalCents,
             status: "active",
+            // One per-user use per checkout: only the claim row carries the
+            // identity, so a multi-vendor checkout does not trip the trigger.
+            guestIdentity:
+              alloc.orderId === claimOrderId
+                ? (applied.usageIdentity ?? null)
+                : null,
           })
           .run();
         if (alloc.orderId === claimOrderId) {

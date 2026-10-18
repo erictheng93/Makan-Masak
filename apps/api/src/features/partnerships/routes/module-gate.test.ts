@@ -171,7 +171,10 @@ describe("partnerships plan-read/validate routes are gated on loyalty", () => {
       data: [],
       pagination: { page: 1, limit: 20, total: 0 },
     });
-    serviceFns.getPlan.mockResolvedValue({ id: planId });
+    serviceFns.getPlan.mockResolvedValue({
+      id: planId,
+      restaurantId: "rest-basic",
+    });
     serviceFns.validatePlan.mockResolvedValue({ valid: true });
 
     const env = envWithSubscription("rest-basic", "enterprise") as never;

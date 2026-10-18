@@ -436,6 +436,25 @@ describe("restaurants routes", () => {
     expect(restaurantFns.deactivateRestaurant).toHaveBeenCalledWith("rest-1");
   });
 
+  it("only lets admins change isActive on restaurant update", async () => {
+    auth.user = {
+      id: "user-8",
+      username: "owner",
+      role: 1,
+      restaurantId: "rest-1",
+    };
+    let res = await request("/rest-1", "PUT", { isActive: true });
+    expect(res.status).toBe(403);
+    expect(restaurantFns.updateRestaurant).not.toHaveBeenCalled();
+
+    auth.user = { id: "user-7", username: "admin", role: 0 };
+    res = await request("/rest-1", "PUT", { isActive: true });
+    expect(res.status).toBe(200);
+    expect(restaurantFns.updateRestaurant).toHaveBeenCalledWith("rest-1", {
+      isActive: true,
+    });
+  });
+
   it("handles restaurant market memberships and join request states", async () => {
     auth.user = {
       id: "user-7",

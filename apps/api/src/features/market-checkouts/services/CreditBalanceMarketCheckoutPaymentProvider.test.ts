@@ -97,7 +97,7 @@ describe("CreditBalanceMarketCheckoutPaymentProvider", () => {
     });
   });
 
-  it("propagates the request idempotency key when provided", async () => {
+  it("ignores the client request idempotency key for the credit ledger", async () => {
     spend.mockResolvedValue({
       ledgerEntryId: "ledger-2",
       accountId: "acc-1",
@@ -111,7 +111,7 @@ describe("CreditBalanceMarketCheckoutPaymentProvider", () => {
     });
 
     expect(spend).toHaveBeenCalledWith(
-      expect.objectContaining({ idempotencyKey: "req-key-9" }),
+      expect.objectContaining({ idempotencyKey: "market-checkout:checkout-1" }),
     );
   });
 

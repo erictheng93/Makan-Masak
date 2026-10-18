@@ -220,6 +220,7 @@ export class ReservationService extends BaseService {
       // 8. 更新桌位狀態
       await this.updateTableStatus(
         tableAssignment.tableId,
+        data.restaurantId,
         "reserved",
         reservation.id,
       );
@@ -428,7 +429,17 @@ export class ReservationService extends BaseService {
         updateSet.reservationTime = data.reservationTime;
       if (data.durationMinutes)
         updateSet.durationMinutes = data.durationMinutes;
-      if (data.tableId !== undefined) updateSet.tableId = data.tableId;
+      if (data.tableId !== undefined) {
+        const table = await this.db.get(sql`
+          SELECT ${tables.id} as id FROM ${tables}
+          WHERE ${tables.id} = ${data.tableId}
+            AND ${tables.restaurantId} = ${existing.restaurantId}
+        `);
+        if (!table) {
+          throw new Error("桌位不存在");
+        }
+        updateSet.tableId = data.tableId;
+      }
       if (data.specialRequests !== undefined)
         updateSet.specialRequests = data.specialRequests;
       if (data.notes !== undefined) updateSet.notes = data.notes;
@@ -578,7 +589,12 @@ export class ReservationService extends BaseService {
 
       // 更新桌位狀態為 occupied
       if (reservation.tableId) {
-        await this.updateTableStatus(reservation.tableId, "occupied", id);
+        await this.updateTableStatus(
+          reservation.tableId,
+          reservation.restaurantId,
+          "occupied",
+          id,
+        );
       }
 
       // TODO: 自動建立訂單記錄
@@ -620,7 +636,11 @@ export class ReservationService extends BaseService {
 
       // 釋放桌位
       if (reservation.tableId) {
-        await this.updateTableStatus(reservation.tableId, "cleaning");
+        await this.updateTableStatus(
+          reservation.tableId,
+          reservation.restaurantId,
+          "cleaning",
+        );
       }
 
       return this.getReservationById(id) as Promise<ReservationResponse>;
@@ -669,7 +689,11 @@ export class ReservationService extends BaseService {
 
       // 釋放桌位
       if (reservation.tableId) {
-        await this.updateTableStatus(reservation.tableId, "available");
+        await this.updateTableStatus(
+          reservation.tableId,
+          reservation.restaurantId,
+          "available",
+        );
       }
 
       const updated = await this.getReservationById(id);
@@ -727,7 +751,11 @@ export class ReservationService extends BaseService {
 
       // 釋放桌位
       if (reservation.tableId) {
-        await this.updateTableStatus(reservation.tableId, "available");
+        await this.updateTableStatus(
+          reservation.tableId,
+          reservation.restaurantId,
+          "available",
+        );
       }
 
       const updated = await this.getReservationById(id);
@@ -1289,10 +1317,15 @@ export class ReservationService extends BaseService {
    */
   private async updateTableStatus(
     tableId: number,
+    restaurantId: string,
     status: string,
     reservationId?: string,
   ): Promise<void> {
     const now = new Date();
+    const tableWhere = and(
+      eq(tables.id, tableId),
+      eq(tables.restaurantId, restaurantId),
+    );
 
     if (status === "reserved") {
       void reservationId;
@@ -1302,7 +1335,7 @@ export class ReservationService extends BaseService {
           isOccupied: false,
           updatedAt: now,
         })
-        .where(eq(tables.id, tableId));
+        .where(tableWhere);
     } else if (status === "occupied") {
       await this.db
         .update(tables)
@@ -1312,7 +1345,7 @@ export class ReservationService extends BaseService {
           estimatedFreeAt: new Date(now.getTime() + DEFAULT_TABLE_OCCUPANCY_MS),
           updatedAt: now,
         })
-        .where(eq(tables.id, tableId));
+        .where(tableWhere);
     } else if (status === "available") {
       await this.db
         .update(tables)
@@ -1322,12 +1355,9 @@ export class ReservationService extends BaseService {
           estimatedFreeAt: null,
           updatedAt: now,
         })
-        .where(eq(tables.id, tableId));
+        .where(tableWhere);
     } else {
-      await this.db
-        .update(tables)
-        .set({ updatedAt: now })
-        .where(eq(tables.id, tableId));
+      await this.db.update(tables).set({ updatedAt: now }).where(tableWhere);
     }
   }
 

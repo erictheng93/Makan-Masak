@@ -28,6 +28,7 @@ export const createGroupOrderSchema = z.lazy(() =>
         .int()
         .positive("Table ID must be a positive integer")
         .optional(),
+      qrCode: z.string().min(1).max(2048).optional(),
       tableNumber: z.string().optional(),
       hostName: z.string().max(50).optional(),
       expectedMembers: z.number().int().min(2).max(30).optional(),
@@ -76,6 +77,10 @@ export const createGroupOrderSchema = z.lazy(() =>
         path: ["deliveryAddress"],
       },
     )
+    .refine((data) => data.tableId === undefined || !!data.qrCode, {
+      message: "qrCode is required when tableId is provided",
+      path: ["qrCode"],
+    })
     .refine((data) => data.fulfillmentType !== "pickup" || !!data.pickupAt, {
       message: "pickupAt is required when fulfillmentType is pickup",
       path: ["pickupAt"],

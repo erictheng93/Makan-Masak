@@ -4,6 +4,10 @@
  */
 
 import { Hono } from "hono";
+import { eq } from "drizzle-orm";
+import { createDatabase, restaurants } from "@makanmasak/database";
+import { assertDineInQr } from "../../qr-codes/services/assert-dine-in-qr";
+import { enforceGuestOrderThrottle } from "../../guest-orders/services/guest-order-throttle";
 import {
   authMiddleware,
   optionalAuth,
@@ -330,6 +334,31 @@ app.post(
   async (c) => {
     const data = c.get("validatedBody");
     const user = c.get("user");
+
+    // A bare tableId proves nothing: dine-in creation needs the signed table
+    // or seat QR. Anonymous hosts also get the guest-ordering gates; signed-in
+    // hosts match the ordinary /orders path, which checks only the QR.
+    if (data.tableId !== undefined) {
+      if (!user) await enforceGuestOrderThrottle(c, data.restaurantId);
+      const restaurant = await createDatabase(c.env.DB)
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.id, data.restaurantId))
+        .get();
+      if (!restaurant) throw notFound("Restaurant not found");
+      if (!restaurant.isActive || !restaurant.isAvailable) {
+        throw badRequest("Restaurant is currently unavailable");
+      }
+      const settings = restaurant.settings as Record<string, unknown> | null;
+      if (!user && settings?.allowGuestOrders === false) {
+        throw forbidden("Guest orders are not enabled for this restaurant");
+      }
+      await assertDineInQr(c.env, {
+        restaurantId: data.restaurantId,
+        tableId: data.tableId,
+        qrCode: data.qrCode,
+      });
+    }
 
     const groupOrderService = new GroupOrdersService(c.env.DB, c.env.CACHE_KV);
     const result = await groupOrderService.createGroupOrder(

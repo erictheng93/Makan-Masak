@@ -406,8 +406,9 @@ export class CreditBalanceMarketCheckoutPaymentProvider implements MarketCheckou
   async process(
     input: MarketCheckoutPaymentProviderInput,
   ): Promise<MarketCheckoutPaymentProviderResult> {
-    const parentIdempotencyKey =
-      input.requestIdempotencyKey ?? `market-checkout:${input.checkoutId}`;
+    // Server-owned key: a client Idempotency-Key must never address the
+    // credit ledger (it could collide with a top-up entry and pay for free).
+    const parentIdempotencyKey = `market-checkout:${input.checkoutId}`;
     const publicId = readProviderInputString(
       input.providerInput,
       "creditCardPublicId",

@@ -727,6 +727,11 @@ app.put(
       throw forbidden("Access denied");
     }
 
+    // Only platform admins may (re)activate or deactivate a restaurant.
+    if (user.role !== USER_ROLES.ADMIN && data.isActive !== undefined) {
+      throw forbidden("Only admins can change restaurant active status");
+    }
+
     const previousRestaurant = await restaurantsService.getRestaurant(id);
     const restaurant = await restaurantsService.updateRestaurant(id, data);
 

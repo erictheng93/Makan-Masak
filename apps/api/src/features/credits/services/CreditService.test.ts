@@ -362,11 +362,17 @@ describe("CreditService", () => {
         [
           {
             id: "ledger-existing",
+            entryType: "spend",
             accountId: "account-1",
+            amountCents: -1000,
+            sourceType: "checkout",
+            sourceId: null,
             balanceAfterCents: 49000,
           },
         ],
       ],
+      creditCards: [[card]],
+      creditAccounts: [[account]],
     });
     await expect(
       service.spend({
@@ -569,11 +575,17 @@ describe("CreditService", () => {
         [
           {
             id: "topup-existing",
+            entryType: "topup",
             accountId: "account-1",
+            amountCents: 5000,
+            sourceType: "topup",
+            sourceId: null,
             balanceAfterCents: 55000,
           },
         ],
       ],
+      creditCards: [[card]],
+      creditAccounts: [[account]],
     });
     await expect(
       service.topup({
@@ -692,7 +704,9 @@ describe("CreditService", () => {
         [
           {
             id: "spend-ledger",
+            entryType: "spend",
             accountId: "account-1",
+            amountCents: -1000,
             balanceAfterCents: 49000,
           },
         ],
@@ -709,6 +723,46 @@ describe("CreditService", () => {
         sourceType: "refund",
       }),
     ).resolves.toMatchObject({ ledgerEntryId: "refund-from-spend" });
+  });
+
+  it("refuses to replay an idempotency key that belongs to a different operation", async () => {
+    const { service, mockSelectResults } = createService();
+    const topupEntry = {
+      id: "topup-entry",
+      entryType: "topup",
+      accountId: "account-1",
+      amountCents: 100,
+      sourceType: "topup",
+      sourceId: "intent-1",
+      balanceAfterCents: 100,
+    };
+    mockSelectResults({
+      creditLedgerEntries: [[topupEntry]],
+      creditCards: [[card]],
+      creditAccounts: [[account]],
+    });
+    await expect(
+      service.spend({
+        publicId: "public-1",
+        amountCents: 5000,
+        currency: "TWD",
+        idempotencyKey: "credit-topup:intent-1",
+        sourceType: "market_checkout",
+        sourceId: "checkout-1",
+      }),
+    ).rejects.toMatchObject({ code: "IDEMPOTENCY_KEY_REUSED" });
+
+    // A top-up entry is not a spend, so it cannot anchor a refund either.
+    mockSelectResults({ creditLedgerEntries: [[topupEntry]] });
+    await expect(
+      service.refundByOriginalSpend({
+        spendIdempotencyKey: "credit-topup:intent-1",
+        refundIdempotencyKey: "refund-x",
+        amountCents: 100,
+        currency: "TWD",
+        sourceType: "refund",
+      }),
+    ).rejects.toMatchObject({ code: "CREDIT_SPEND_NOT_REFUNDABLE" });
   });
 
   it("manages cards and reads ledger/export/drift reports", async () => {

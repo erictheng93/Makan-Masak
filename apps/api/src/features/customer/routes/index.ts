@@ -671,19 +671,26 @@ routes.post("/auth/verify-otp", validateBody(verifyOtpSchema), async (c) => {
       attempts: number;
     }>();
 
-  if (!token || token.attempts >= MAX_OTP_ATTEMPTS) {
+  if (!token) {
+    throw unauthorized("Invalid or expired OTP", "INVALID_OTP");
+  }
+
+  // Reserve the attempt atomically before comparing, so concurrent guesses
+  // cannot all pass a stale `attempts < MAX` read.
+  const reservation = await c.env.DB.prepare(
+    `UPDATE customer_phone_verification_tokens
+        SET attempts = attempts + 1
+      WHERE id = ? AND attempts < ?
+      RETURNING attempts`,
+  )
+    .bind(token.id, MAX_OTP_ATTEMPTS)
+    .first<{ attempts: number }>();
+  if (!reservation) {
     throw unauthorized("Invalid or expired OTP", "INVALID_OTP");
   }
 
   const valid = await bcrypt.compare(otp, token.otp_code);
   if (!valid) {
-    await c.env.DB.prepare(
-      `UPDATE customer_phone_verification_tokens
-          SET attempts = attempts + 1
-        WHERE id = ?`,
-    )
-      .bind(token.id)
-      .run();
     throw unauthorized("Invalid or expired OTP", "INVALID_OTP");
   }
 
@@ -724,7 +731,12 @@ routes.post("/auth/verify-otp", validateBody(verifyOtpSchema), async (c) => {
   }
 
   const customer =
-    pendingPasswordIdentity && pendingPasswordIdentity.verified_at_ms === null
+    pendingPasswordIdentity &&
+    pendingPasswordIdentity.verified_at_ms === null &&
+    // Only the OTP register issued for this identity may verify it; any other
+    // OTP for the phone proves nothing about who set the password.
+    token.customer_id &&
+    token.customer_id === pendingPasswordIdentity.customer_id
       ? await verifyPendingPhonePasswordIdentity(
           c.env,
           pendingPasswordIdentity,
@@ -1503,21 +1515,18 @@ async function verifyPendingPhonePasswordIdentity(
   phone: string,
   now: number,
 ): Promise<CustomerRow> {
-  await env.DB.prepare(
-    `UPDATE customer_auth_identities
+  await env.DB.batch([
+    env.DB.prepare(
+      `UPDATE customer_auth_identities
         SET verified_at_ms = ?, updated_at_ms = ?
       WHERE id = ?`,
-  )
-    .bind(now, now, identity.identity_id)
-    .run();
-
-  await env.DB.prepare(
-    `UPDATE customers
+    ).bind(now, now, identity.identity_id),
+    env.DB.prepare(
+      `UPDATE customers
         SET primary_phone = ?, updated_at_ms = ?
       WHERE id = ?`,
-  )
-    .bind(phone, now, identity.customer_id)
-    .run();
+    ).bind(phone, now, identity.customer_id),
+  ]);
 
   return {
     id: identity.customer_id,
