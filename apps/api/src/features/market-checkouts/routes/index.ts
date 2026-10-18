@@ -932,6 +932,7 @@ app.post("/:id/voucher", optionalCanonicalCustomerAuthMiddleware, async (c) => {
     subtotalCents,
     childOrders: voucherChildOrders,
     currency: await resolveMarketCheckoutCurrency(c.env, session),
+    customerId: c.get("customer")?.id,
   });
   const reservedNextVoucher = await voucherService.reserveUsage(nextVoucher);
   const appliedVoucher = combineAppliedMarketCheckoutVouchers([

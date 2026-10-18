@@ -847,6 +847,72 @@ describe("MarketCheckoutVoucherService.validateAndPrice", () => {
   });
 });
 
+describe("MarketCheckoutVoucherService.validateAndPrice restrictions", () => {
+  const baseCoupon = {
+    id: 9,
+    code: "LIMITED",
+    name: "Limited",
+    restaurantId: null,
+    deletedAt: null,
+    isActive: true,
+    isVisible: true,
+    validFrom: new Date("2000-01-01T00:00:00.000Z"),
+    validTo: new Date("2999-01-01T00:00:00.000Z"),
+    usageLimit: null,
+    usedCount: null,
+    minOrderAmountCents: null,
+    discountType: "fixed",
+    discountValueCents: 500,
+    maxDiscountAmountCents: null,
+  };
+  const input = {
+    code: "limited",
+    subtotalCents: 1000,
+    currency: "TWD" as const,
+    childOrders: [{ orderId: "1", restaurantId: "r1", amountCents: 1000 }],
+  };
+
+  it("rejects a per-user-limited coupon already used by the same identity", async () => {
+    const service = makeValidateUnitService(null, {
+      coupons: [[{ ...baseCoupon, usageLimitPerUser: 1 }]],
+      couponUsage: [[{ count: 1 }]],
+    });
+    await expect(
+      service.validateAndPrice({ ...input, customerId: "cust-x" }),
+    ).rejects.toMatchObject({ code: "VOUCHER_USER_LIMIT_REACHED" });
+  });
+
+  it("requires an identity for a per-user-limited coupon", async () => {
+    const service = makeValidateUnitService({
+      ...baseCoupon,
+      usageLimitPerUser: 1,
+    });
+    await expect(service.validateAndPrice(input)).rejects.toMatchObject({
+      code: "VOUCHER_REQUIRES_IDENTITY",
+    });
+  });
+
+  it("returns the usage identity when under the per-user limit", async () => {
+    const service = makeValidateUnitService(null, {
+      coupons: [[{ ...baseCoupon, usageLimitPerUser: 1 }]],
+      couponUsage: [[{ count: 0 }]],
+    });
+    await expect(
+      service.validateAndPrice({ ...input, customerId: "cust-x" }),
+    ).resolves.toMatchObject({ usageIdentity: "customer:cust-x" });
+  });
+
+  it("rejects item-restricted coupons with VOUCHER_NOT_APPLICABLE", async () => {
+    const service = makeValidateUnitService({
+      ...baseCoupon,
+      applicableMenuItems: [99],
+    });
+    await expect(service.validateAndPrice(input)).rejects.toMatchObject({
+      code: "VOUCHER_NOT_APPLICABLE",
+    });
+  });
+});
+
 describe("MarketCheckoutVoucherService.redeem", () => {
   it("inserts missing usage rows and increments used_count for the claim row", async () => {
     const insertRun = vi.fn(async () => undefined);
