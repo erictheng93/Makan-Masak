@@ -31,17 +31,18 @@ export interface BillingWebhookResult {
   reconciled: boolean;
 }
 
-function eventIdFrom(payload: WebhookPayload, headers: Headers) {
-  return (
-    headers.get("x-provider-event-id") ??
-    payload.id ??
-    payload.data?.object?.id ??
-    null
-  );
+// Reject Stripe deliveries whose signed timestamp is outside this skew, to
+// bound the replay window of a captured signed payload.
+const STRIPE_TIMESTAMP_TOLERANCE_SECONDS = 300;
+
+// Event id and type come from the signed body only: HTTP headers other than
+// the signature are not covered by the HMAC and must never override them.
+function eventIdFrom(payload: WebhookPayload) {
+  return payload.id ?? payload.data?.object?.id ?? null;
 }
 
-function eventTypeFrom(payload: WebhookPayload, headers: Headers) {
-  return headers.get("x-provider-event-type") ?? payload.type ?? "unknown";
+function eventTypeFrom(payload: WebhookPayload) {
+  return payload.type ?? "unknown";
 }
 
 function restaurantIdFrom(payload: WebhookPayload) {
@@ -61,8 +62,8 @@ export class BillingWebhookService {
     await this.verifySignature(provider, rawBody, headers);
 
     const payload = JSON.parse(rawBody) as WebhookPayload;
-    const eventId = eventIdFrom(payload, headers);
-    const eventType = eventTypeFrom(payload, headers);
+    const eventId = eventIdFrom(payload);
+    const eventType = eventTypeFrom(payload);
     const restaurantId = restaurantIdFrom(payload);
 
     const audit = await new PaymentAuditService(this.env.DB).append({
@@ -178,9 +179,11 @@ export class BillingWebhookService {
       throw new Error("Missing webhook signature");
     }
 
-    const signedPayload = stripeSignature
-      ? `${parseStripeTimestamp(stripeSignature)}.${rawBody}`
-      : rawBody;
+    const timestamp = stripeSignature
+      ? parseStripeTimestamp(stripeSignature)
+      : null;
+    const signedPayload =
+      timestamp === null ? rawBody : `${timestamp}.${rawBody}`;
     const expected = await hmacSha256Hex(
       this.env.STRIPE_WEBHOOK_SECRET,
       signedPayload,
@@ -188,6 +191,16 @@ export class BillingWebhookService {
 
     if (!timingSafeEqual(signature, expected)) {
       throw new Error("Invalid webhook signature");
+    }
+
+    if (timestamp !== null) {
+      const ageSeconds = Math.abs(Date.now() / 1000 - Number(timestamp));
+      if (
+        !Number.isFinite(ageSeconds) ||
+        ageSeconds > STRIPE_TIMESTAMP_TOLERANCE_SECONDS
+      ) {
+        throw new Error("Webhook timestamp is outside the tolerance window");
+      }
     }
   }
 

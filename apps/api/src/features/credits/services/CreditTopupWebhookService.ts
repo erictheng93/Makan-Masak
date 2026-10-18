@@ -47,15 +47,15 @@ export class CreditTopupWebhookService {
     await this.verifySignature(rawBody, headers);
 
     const payload = JSON.parse(rawBody) as CreditTopupWebhookPayload;
-    const intentId = stringValue(
-      payload.intentId ??
-        payload.intent_id ??
-        headers.get("x-credit-topup-intent-id"),
+    const intentId = signedIdentifier(
+      headers,
+      "x-credit-topup-intent-id",
+      payload.intentId ?? payload.intent_id,
     );
-    const providerTransactionId = stringValue(
-      payload.providerTransactionId ??
-        payload.provider_transaction_id ??
-        headers.get("x-provider-transaction-id"),
+    const providerTransactionId = signedIdentifier(
+      headers,
+      "x-provider-transaction-id",
+      payload.providerTransactionId ?? payload.provider_transaction_id,
     );
     const status = normalizeStatus(payload.status);
     if (!status) {
@@ -143,6 +143,28 @@ function timingSafeEqualHex(a: string, b: string): boolean {
     diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   }
   return diff === 0;
+}
+
+/**
+ * Identifiers must come from signed content. The body is authoritative; a
+ * header (not covered by the HMAC) is ignored when the body lacks the value
+ * and rejects the callback when it differs.
+ */
+function signedIdentifier(
+  headers: Headers,
+  headerName: string,
+  bodyValue: unknown,
+): string | undefined {
+  const value = stringValue(bodyValue);
+  const header = stringValue(headers.get(headerName));
+  if (value && header && header !== value) {
+    throw new ApiError(
+      "CREDIT_TOPUP_IDENTIFIER_MISMATCH",
+      "Webhook identifier header does not match the signed payload",
+      400,
+    );
+  }
+  return value;
 }
 
 function stringValue(value: unknown): string | undefined {

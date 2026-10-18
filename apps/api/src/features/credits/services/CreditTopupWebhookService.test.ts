@@ -144,8 +144,13 @@ describe("CreditTopupWebhookService", () => {
     },
   );
 
-  it("uses header identifiers, maps failed statuses, and reports duplicate deliveries", async () => {
-    const body = JSON.stringify({ status: "cancelled", errorMessage: "bank" });
+  it("uses body identifiers, maps failed statuses, and reports duplicate deliveries", async () => {
+    const body = JSON.stringify({
+      status: "cancelled",
+      errorMessage: "bank",
+      intentId: "intent-header",
+      providerTransactionId: "txn-header",
+    });
     const headers = await signedHeaders(body, {
       extra: {
         "x-credit-topup-intent-id": "intent-header",
@@ -177,9 +182,48 @@ describe("CreditTopupWebhookService", () => {
       intentId: "intent-header",
       providerTransactionId: "txn-header",
       status: "failed",
-      providerPayload: { status: "cancelled", errorMessage: "bank" },
+      providerPayload: {
+        status: "cancelled",
+        errorMessage: "bank",
+        intentId: "intent-header",
+        providerTransactionId: "txn-header",
+      },
       errorMessage: "bank",
     });
+  });
+
+  it("ignores header-only identifiers and rejects a header that contradicts the body", async () => {
+    const topupService = fakeTopupService({
+      confirmIntent: vi.fn(async () => ({
+        alreadyProcessed: false,
+        credited: false,
+        intent: { id: "intent-body" },
+      })),
+    });
+    const headerOnly = JSON.stringify({ status: "failed" });
+    await new CreditTopupWebhookService(env(), topupService as never).handle(
+      headerOnly,
+      await signedHeaders(headerOnly, {
+        extra: { "x-credit-topup-intent-id": "intent-other" },
+      }),
+    );
+    expect(topupService.confirmIntent).toHaveBeenCalledWith(
+      expect.objectContaining({ intentId: undefined }),
+    );
+
+    const conflicting = JSON.stringify({
+      status: "failed",
+      intentId: "intent-body",
+    });
+    await expect(
+      new CreditTopupWebhookService(env(), topupService as never).handle(
+        conflicting,
+        await signedHeaders(conflicting, {
+          extra: { "x-credit-topup-intent-id": "intent-other" },
+        }),
+      ),
+    ).rejects.toMatchObject({ code: "CREDIT_TOPUP_IDENTIFIER_MISMATCH" });
+    expect(topupService.confirmIntent).toHaveBeenCalledOnce();
   });
 
   it("ignores callbacks with unrecognized statuses after signature validation", async () => {

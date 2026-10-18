@@ -637,7 +637,7 @@ jobs:
           pnpm db:seed:local
           pnpm db:seed:local:e2e
 
-      - name: 🚀 依序啟動 realtime、management-api、API 與顧客端
+      - name: 🚀 依序啟動 realtime、management-api、API、顧客端、店家後台與廚房
         # One at a time, each waiting for the previous one. Started together,
         # two `wrangler dev` processes can pick the same inspector port and one
         # exits with "Address already in use" (seen locally on 127.0.0.1:9230).
@@ -672,6 +672,15 @@ jobs:
           (cd apps/customer-app && pnpm exec vite --port 3000 --host 0.0.0.0 \
              > /tmp/customer-e2e-logs/customer.log 2>&1 &)
           wait_for http://localhost:3000
+          # menu-availability-realtime.spec.ts drives the admin menu page and
+          # the kitchen board alongside the customer menu.
+          (cd apps/admin-dashboard && VITE_API_BASE_URL=http://localhost:8787/api/v1 \
+             pnpm exec vite --port 3001 --host 0.0.0.0 \
+             > /tmp/customer-e2e-logs/admin.log 2>&1 &)
+          wait_for http://localhost:3001
+          (cd apps/kitchen-display && pnpm exec vite --port 3002 --host 0.0.0.0 \
+             > /tmp/customer-e2e-logs/kitchen.log 2>&1 &)
+          wait_for http://localhost:3002
 
       - name: 🧪 執行顧客端 E2E
         run: pnpm exec playwright test --project=customer-real
@@ -679,6 +688,8 @@ jobs:
           E2E_CUSTOMER_URL: http://localhost:3000
           E2E_API_URL: http://localhost:8787
           E2E_REALTIME_URL: http://localhost:8788
+          E2E_ADMIN_URL: http://localhost:3001
+          E2E_KITCHEN_URL: http://localhost:3002
           E2E_STRICT: "1"
 
       - name: 🛑 停止服務
