@@ -59,6 +59,7 @@ routes.onError((err, c) => {
 function createDb(recipient?: {
   restaurant_id?: string | number | null;
   email?: string | null;
+  phone?: string | null;
 }) {
   return {
     prepare: vi.fn(() => ({
@@ -187,6 +188,41 @@ describe("notification routes", () => {
       "email",
       "staff@test.dev",
     );
+  });
+
+  it("sends SMS only to the stored phone, ignoring a body-supplied number", async () => {
+    notificationFns.sendNotification.mockResolvedValue({ success: true });
+    const env = createEnv({
+      DB: createDb({
+        restaurant_id: "restaurant-1",
+        email: "staff@test.dev",
+        phone: "+60111111111",
+      }),
+    });
+
+    const response = await request(
+      "/send",
+      "POST",
+      { ...notificationBody, type: "sms", recipientPhone: "+19998887777" },
+      env,
+    );
+
+    expect(response.status).toBe(200);
+    expect(notificationFns.sendNotification).toHaveBeenCalledOnce();
+    expect(notificationFns.sendNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientPhone: "+60111111111" }),
+    );
+  });
+
+  it("rejects SMS when the recipient has no stored phone", async () => {
+    const response = await request("/send", "POST", {
+      ...notificationBody,
+      type: "sms",
+      recipientPhone: "+19998887777",
+    });
+
+    expect(response.status).toBe(400);
+    expect(notificationFns.sendNotification).not.toHaveBeenCalled();
   });
 
   it("refuses to send a test notification to an arbitrary external address", async () => {
