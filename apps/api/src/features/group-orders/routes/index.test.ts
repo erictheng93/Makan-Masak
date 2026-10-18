@@ -377,7 +377,33 @@ describe("group orders routes", () => {
     expect(createGroupOrder).not.toHaveBeenCalled();
   });
 
-  it("refuses a table create when guest orders are disabled", async () => {
+  it("lets a signed-in host create a table group when guest orders are disabled", async () => {
+    dineIn.restaurant.value = {
+      isActive: true,
+      isAvailable: true,
+      settings: {},
+    };
+    createGroupOrder.mockResolvedValue({ success: false, error: "stop" });
+
+    await routes.fetch(
+      new Request("https://test/create", {
+        method: "POST",
+        body: JSON.stringify({
+          restaurantId: "restaurant-1",
+          tableId: 7,
+          qrCode: "signed-qr",
+        }),
+      }),
+      createEnv() as never,
+    );
+
+    expect(dineIn.assertDineInQr).toHaveBeenCalledOnce();
+    expect(dineIn.enforceGuestOrderThrottle).not.toHaveBeenCalled();
+    expect(createGroupOrder).toHaveBeenCalledOnce();
+  });
+
+  it("refuses an anonymous table create when guest orders are disabled", async () => {
+    currentUser.value = undefined as unknown as AuthUser;
     dineIn.restaurant.value = {
       isActive: true,
       isAvailable: true,

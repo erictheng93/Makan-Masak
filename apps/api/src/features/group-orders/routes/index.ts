@@ -336,9 +336,10 @@ app.post(
     const user = c.get("user");
 
     // A bare tableId proves nothing: dine-in creation needs the signed table
-    // or seat QR, plus the same gates guest ordering applies.
+    // or seat QR. Anonymous hosts also get the guest-ordering gates; signed-in
+    // hosts match the ordinary /orders path, which checks only the QR.
     if (data.tableId !== undefined) {
-      await enforceGuestOrderThrottle(c, data.restaurantId);
+      if (!user) await enforceGuestOrderThrottle(c, data.restaurantId);
       const restaurant = await createDatabase(c.env.DB)
         .select()
         .from(restaurants)
@@ -349,7 +350,7 @@ app.post(
         throw badRequest("Restaurant is currently unavailable");
       }
       const settings = restaurant.settings as Record<string, unknown> | null;
-      if (!settings || settings.allowGuestOrders !== true) {
+      if (!user && settings?.allowGuestOrders !== true) {
         throw forbidden("Guest orders are not enabled for this restaurant");
       }
       await assertDineInQr(c.env, {
