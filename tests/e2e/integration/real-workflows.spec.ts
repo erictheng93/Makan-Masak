@@ -1339,11 +1339,20 @@ test.describe("Real system workflows", () => {
       "real API did not return two available named items",
     );
 
-    const menuUrl = `${CUSTOMER_URL}/restaurant/${fixtureIds.restaurantId}/table/${fixtureIds.tableId}`;
-    await page.goto(menuUrl, {
+    const signedTable = await createSignedTable(fixtureIds.restaurantId!);
+    const signedQr = new URL(signedTable.qrCode);
+    const entryUrl = new URL(
+      `${signedQr.pathname}${signedQr.search}`,
+      CUSTOMER_URL,
+    ).toString();
+    const menuUrl = `${CUSTOMER_URL}/restaurant/${fixtureIds.restaurantId}/table/${signedTable.id}`;
+    // Enter through the real QR route so it verifies and stores the proof
+    // of presence that the cart sends with a dine-in order.
+    await page.goto(entryUrl, {
       waitUntil: "domcontentloaded",
       timeout: 60_000,
     });
+    await page.waitForURL(menuUrl);
 
     await expect(
       page.getByTestId(`menu-item-card-${menuItemId}`).first(),
@@ -1434,11 +1443,14 @@ test.describe("Real system workflows", () => {
       await page.getByTestId("confirmation-confirm").click();
 
       const createResponse = await createResponsePromise;
+      const createBody = (await createResponse.json()) as GuestOrderResponse;
       expect(
         createResponse.ok(),
-        `guest checkout status ${createResponse.status()}`,
+        `guest checkout status ${createResponse.status()}: ${JSON.stringify(createBody)}`,
       ).toBe(true);
       const createRequestBody = createResponse.request().postDataJSON() as {
+        tableId?: number;
+        qrCode?: string;
         guestName?: string;
         phoneLastDigits?: string;
         notes?: string;
@@ -1448,6 +1460,8 @@ test.describe("Real system workflows", () => {
           notes?: string;
         }>;
       };
+      expect(createRequestBody.tableId).toBe(signedTable.id);
+      expect(createRequestBody.qrCode).toBe(entryUrl);
       expect(createRequestBody.guestName).toBe("Workflow UI");
       // Asserted absent, not equal to "678". df34417e (#193, #189) removed the
       // pickup-digits step from both order payloads — the order number is the
@@ -1468,7 +1482,6 @@ test.describe("Real system workflows", () => {
           quantity: 1,
         }),
       ]);
-      const createBody = (await createResponse.json()) as GuestOrderResponse;
       orderId = createBody.data?.order?.id;
       guestToken = createBody.data?.guestToken;
 
