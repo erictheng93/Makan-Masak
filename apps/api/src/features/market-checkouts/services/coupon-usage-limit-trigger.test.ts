@@ -9,7 +9,7 @@ const migrations = fileURLToPath(
   new URL(
     "../../../../../../packages/database/migrations_fresh/",
     import.meta.url,
-  ),
+  ).href,
 );
 
 function createDb() {

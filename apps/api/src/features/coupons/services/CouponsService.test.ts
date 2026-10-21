@@ -81,6 +81,7 @@ function buildStoredCoupon(
     usageLimit: null,
     usageLimitPerUser: null,
     usedCount: 0,
+    reservedCount: 0,
     validFrom: new Date("2026-06-01T00:00:00.000Z"),
     validTo: new Date("2026-07-01T00:00:00.000Z"),
     isActive: true,
