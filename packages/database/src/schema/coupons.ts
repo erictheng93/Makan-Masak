@@ -46,6 +46,9 @@ export const USAGE_STATUS = {
   ACTIVE: "active", // 正常使用
   REFUNDED: "refunded", // 已退款
   CANCELLED: "cancelled", // 已取消
+  // Held before payment (market checkout per-user claim). Counts toward the
+  // per-user limit but is not a redemption, so reports reading 'active' skip it.
+  RESERVED: "reserved",
 } as const;
 
 export type UsageStatus = (typeof USAGE_STATUS)[keyof typeof USAGE_STATUS];
@@ -188,7 +191,7 @@ export const couponUsage = sqliteTable(
     guestIdentityIdx: index("idx_coupon_usage_guest_identity")
       .on(table.couponId, table.guestIdentity)
       .where(
-        sql`${table.guestIdentity} IS NOT NULL AND ${table.status} = 'active'`,
+        sql`${table.guestIdentity} IS NOT NULL AND ${table.status} IN ('active', 'reserved')`,
       ),
     usedAtIdx: index("idx_coupon_usage_used_at").on(table.usedAt),
     statusIdx: index("idx_coupon_usage_status").on(table.status),

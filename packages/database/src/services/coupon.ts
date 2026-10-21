@@ -679,7 +679,8 @@ export class CouponService extends BaseService {
           and(
             eq(couponUsage.couponId, coupon.id),
             identityCondition,
-            eq(couponUsage.status, "active"),
+            // 'reserved' = a market checkout's held claim; it uses the limit too.
+            inArray(couponUsage.status, ["active", "reserved"]),
           ),
         );
       if ((userUsageCount[0]?.count ?? 0) >= coupon.usageLimitPerUser) {

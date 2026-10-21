@@ -305,7 +305,7 @@ export class MarketCheckoutVoucherService {
           and(
             eq(couponUsage.couponId, coupon.id),
             eq(couponUsage.guestIdentity, usageIdentity),
-            eq(couponUsage.status, "active"),
+            inArray(couponUsage.status, ["active", "reserved"]),
           ),
         )
         .all();
@@ -368,6 +368,20 @@ export class MarketCheckoutVoucherService {
   async redeem(applied: AppliedVoucher): Promise<void> {
     const orderIds = applied.allocations.map((alloc) => alloc.orderId);
     if (orderIds.length === 0) return;
+
+    // Payment is verified: the claim held by reserveUsage becomes a real
+    // redemption, dated now so reports put it in the period it was paid.
+    await this.db
+      .update(couponUsage)
+      .set({ status: "active", usedAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          eq(couponUsage.couponId, applied.couponId),
+          inArray(couponUsage.orderId, orderIds),
+          eq(couponUsage.status, "reserved"),
+        ),
+      )
+      .run();
 
     const existing = await this.db
       .select({ orderId: couponUsage.orderId })
@@ -500,7 +514,7 @@ export class MarketCheckoutVoucherService {
             eq(couponUsage.couponId, applied.couponId),
             eq(couponUsage.orderId, claimOrderIdOf(applied)),
             eq(couponUsage.guestIdentity, applied.usageIdentity),
-            eq(couponUsage.status, "active"),
+            eq(couponUsage.status, "reserved"),
           ),
         )
         .run();
@@ -676,7 +690,7 @@ export class MarketCheckoutVoucherService {
         and(
           eq(couponUsage.couponId, applied.couponId),
           eq(couponUsage.guestIdentity, applied.usageIdentity),
-          eq(couponUsage.status, "active"),
+          eq(couponUsage.status, "reserved"),
           sql`${couponUsage.createdAt} < ${Date.now() - CLAIM_HOLD_STALE_MS}`,
           sql`${couponUsage.orderId} IN (SELECT ${orders.id} FROM ${orders}
             WHERE coalesce(${orders.paymentStatus}, 'pending') IN ('pending', 'failed'))`,
@@ -746,7 +760,7 @@ function claimUsageValues(applied: AppliedVoucher) {
     discountAmountCents: alloc.discountCents,
     originalAmountCents: alloc.amountCents,
     finalAmountCents: Math.max(0, alloc.amountCents - alloc.discountCents),
-    status: "active" as const,
+    status: "reserved" as const,
     guestIdentity: applied.usageIdentity ?? null,
   };
 }

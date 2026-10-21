@@ -150,6 +150,10 @@
     {
       "fresh": "0037_qr_tenancy_columns.sql",
       "reason": "qr_codes is a platform-API table; the management-api database has no qr_codes to add tenancy columns to."
+    },
+    {
+      "fresh": "0038_coupon_usage_reserved_status.sql",
+      "reason": "coupon_usage and its per-user limit trigger are platform-API objects; the management-api database has no coupon_usage."
     }
   ],
   "legacyOnly": [

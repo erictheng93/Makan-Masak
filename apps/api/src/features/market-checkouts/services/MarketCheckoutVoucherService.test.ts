@@ -966,6 +966,26 @@ describe("MarketCheckoutVoucherService.redeem", () => {
     expect(couponUpdateRun).not.toHaveBeenCalled();
   });
 
+  it("turns the held claim into a redemption once payment is verified", async () => {
+    const insertRun = vi.fn(async () => undefined);
+    const couponUpdateRun = vi.fn(async () => ({ meta: { changes: 1 } }));
+    const service = makeRedeemUnitService(insertRun, couponUpdateRun, [
+      { orderId: "1001" },
+    ]);
+
+    await service.redeem({
+      ...appliedVoucherForRedeemRace(),
+      usageIdentity: "customer:cust-x",
+      reservationStatus: "reserved",
+    });
+
+    expect(service.usageUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "active", usedAt: expect.any(Date) }),
+    );
+    expect(insertRun).toHaveBeenCalledOnce(); // only the non-claim vendor row
+    expect(couponUpdateRun).not.toHaveBeenCalled();
+  });
+
   it("returns without writes when redemption is fully recorded or empty", async () => {
     const insertRun = vi.fn(async () => undefined);
     const couponUpdateRun = vi.fn(async () => ({ meta: { changes: 1 } }));
@@ -1116,7 +1136,8 @@ describe("MarketCheckoutVoucherService reservations", () => {
         couponId: 42,
         orderId: "1001",
         guestIdentity: "customer:cust-x",
-        status: "active",
+        // Held, not redeemed: reports that sum 'active' must not see it.
+        status: "reserved",
       }),
     );
   });
@@ -1324,8 +1345,16 @@ function makeRedeemUnitService(
       insert: ReturnType<typeof vi.fn>;
       update: ReturnType<typeof vi.fn>;
     };
+    usageUpdateSet: ReturnType<typeof vi.fn>;
     redeem: MarketCheckoutVoucherService["redeem"];
   };
+  // coupon_usage updates (reserved -> active) are routed apart from the
+  // coupons.used_count updates these tests count.
+  service.usageUpdateSet = vi.fn(() => ({
+    where: vi.fn(() => ({
+      run: vi.fn(async () => ({ meta: { changes: 0 } })),
+    })),
+  }));
   service.db = {
     select: createSelectMock({ couponUsage: [existingRows] }),
     insert: vi.fn(() => ({
@@ -1333,13 +1362,17 @@ function makeRedeemUnitService(
         run: insertRun,
       })),
     })),
-    update: vi.fn(() => ({
-      set: vi.fn(() => ({
-        where: vi.fn(() => ({
-          run: couponUpdateRun,
-        })),
-      })),
-    })),
+    update: vi.fn((table: unknown) =>
+      table === couponUsage
+        ? { set: service.usageUpdateSet }
+        : {
+            set: vi.fn(() => ({
+              where: vi.fn(() => ({
+                run: couponUpdateRun,
+              })),
+            })),
+          },
+    ),
   };
   return service;
 }
