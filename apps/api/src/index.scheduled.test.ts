@@ -24,6 +24,9 @@ vi.mock("./workers/overdue-order-alerts", () => ({
 vi.mock("./workers/market-checkout-reconciliation", () => ({
   reconcilePendingMarketCheckoutPayments: mocks.reconcile,
 }));
+vi.mock("./workers/market-checkout-voucher-expiry", () => ({
+  releaseStaleMarketCheckoutVoucherReservations: vi.fn(async () => ({})),
+}));
 vi.mock("./services/AlertService", () => ({
   AlertService: class {
     systemError = mocks.systemError;

@@ -188,6 +188,17 @@ export default {
       });
     }
 
+    // Rides the shared */5 tick: abandoned checkouts otherwise hold their
+    // voucher's used_count slot and per-user claim forever.
+    if (cronMatches(event.cron, "*/5 * * * *")) {
+      await runJob("market checkout voucher reservation sweep", async () => {
+        const { releaseStaleMarketCheckoutVoucherReservations } =
+          await import("./workers/market-checkout-voucher-expiry");
+        const result = await releaseStaleMarketCheckoutVoucherReservations(env);
+        console.log("[Cron] Voucher reservation sweep result:", result);
+      });
+    }
+
     // Rides the shared */5 tick rather than adding a cron entry (#285).
     if (cronMatches(event.cron, "*/5 * * * *")) {
       await runJob("overdue order alert sweep", async () => {

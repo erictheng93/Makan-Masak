@@ -23,6 +23,7 @@ import {
   getBusinessDate,
   marketCheckoutChildOrders,
   marketCheckoutSessions,
+  orders,
 } from "@makanmasak/database";
 import {
   allocateCents,
@@ -392,7 +393,7 @@ export class MarketCheckoutVoucherService {
       await this.claimUsageSlot(applied.couponId);
     }
 
-    const claimOrderId = [...orderIds].sort()[0];
+    const claimOrderId = claimOrderIdOf(applied);
     let insertedClaimUsage = false;
     for (const alloc of applied.allocations) {
       if (existingOrderIds.has(alloc.orderId)) continue;
@@ -419,6 +420,16 @@ export class MarketCheckoutVoucherService {
           insertedClaimUsage = true;
         }
       } catch (error) {
+        if (isGuestLimitError(error)) {
+          // Not a replay: this customer has no per-user use left (only
+          // reachable when the claim was not held by reserveUsage). Nothing
+          // is recorded, so the slot is released below — surface it loudly.
+          console.error(
+            `coupon_usage per-user limit hit at redemption for coupon ${applied.couponId}, order ${alloc.orderId}:`,
+            error,
+          );
+          continue;
+        }
         // Unique-index race (concurrent webhook + success path) — the row is
         // already there, so the redemption stays idempotent.
         console.warn(
@@ -439,6 +450,33 @@ export class MarketCheckoutVoucherService {
     }
 
     await this.claimUsageSlot(applied.couponId);
+    if (applied.usageIdentity) {
+      // Hold the per-user claim now, before payment: the
+      // coupon_usage_guest_limit trigger makes this atomic, so two concurrent
+      // checkouts by one customer cannot both pass. redeem() then finds the
+      // claim row already present and only adds the other vendors' rows.
+      try {
+        try {
+          await this.insertClaimHold(applied);
+        } catch (error) {
+          // Nothing expires an abandoned checkout, so a hold it left behind
+          // would lock the customer out for good. Reclaim stale unpaid holds
+          // and try once more.
+          if (!isGuestLimitError(error)) throw error;
+          if (!(await this.reclaimStaleClaimHolds(applied))) throw error;
+          await this.insertClaimHold(applied);
+        }
+      } catch (error) {
+        await this.releaseUsageSlot(applied.couponId);
+        if (isGuestLimitError(error)) {
+          throw badRequest(
+            "You have reached the usage limit for this voucher",
+            "VOUCHER_USER_LIMIT_REACHED",
+          );
+        }
+        throw error;
+      }
+    }
     return {
       ...applied,
       reservationStatus: "reserved",
@@ -453,6 +491,20 @@ export class MarketCheckoutVoucherService {
     }
 
     await this.releaseUsageSlot(applied.couponId);
+    if (applied.usageIdentity) {
+      await this.db
+        .update(couponUsage)
+        .set({ status: "cancelled", updatedAt: new Date() })
+        .where(
+          and(
+            eq(couponUsage.couponId, applied.couponId),
+            eq(couponUsage.orderId, claimOrderIdOf(applied)),
+            eq(couponUsage.guestIdentity, applied.usageIdentity),
+            eq(couponUsage.status, "active"),
+          ),
+        )
+        .run();
+    }
     return {
       ...applied,
       reservationStatus: "released",
@@ -605,6 +657,39 @@ export class MarketCheckoutVoucherService {
     return releasedRows.length > 0;
   }
 
+  private async insertClaimHold(applied: AppliedVoucher): Promise<void> {
+    await this.db.insert(couponUsage).values(claimUsageValues(applied)).run();
+  }
+
+  /**
+   * Cancel this identity's per-user holds on orders that are still unpaid
+   * after CLAIM_HOLD_STALE_MS. Returns whether any hold was freed.
+   */
+  private async reclaimStaleClaimHolds(
+    applied: AppliedVoucher,
+  ): Promise<boolean> {
+    if (!applied.usageIdentity) return false;
+    const result = await this.db
+      .update(couponUsage)
+      .set({ status: "cancelled", updatedAt: new Date() })
+      .where(
+        and(
+          eq(couponUsage.couponId, applied.couponId),
+          eq(couponUsage.guestIdentity, applied.usageIdentity),
+          eq(couponUsage.status, "active"),
+          sql`${couponUsage.createdAt} < ${Date.now() - CLAIM_HOLD_STALE_MS}`,
+          sql`${couponUsage.orderId} IN (SELECT ${orders.id} FROM ${orders}
+            WHERE coalesce(${orders.paymentStatus}, 'pending') IN ('pending', 'failed'))`,
+        ),
+      )
+      .run();
+    // Only the per-user hold is freed here. The checkout's reservation (and
+    // its coupons.used_count slot) is still "reserved" and is released by the
+    // stale-reservation sweep, so releasing the slot here would count it twice.
+    const freed = result.meta?.changes ?? 0;
+    return freed > 0;
+  }
+
   private async claimUsageSlot(couponId: number): Promise<void> {
     const claim = await this.db
       .update(coupons)
@@ -640,6 +725,38 @@ export class MarketCheckoutVoucherService {
       .where(eq(coupons.id, couponId))
       .run();
   }
+}
+
+// ponytail: fixed window instead of a sweeper; a checkout paid after this
+// window keeps its discount but redeem() logs that no per-user use was
+// recorded. Add an expiry sweeper if that log ever fires.
+const CLAIM_HOLD_STALE_MS = 30 * 60 * 1000;
+
+/** The allocation whose coupon_usage row carries the per-user identity. */
+function claimOrderIdOf(applied: AppliedVoucher): string {
+  return applied.allocations.map((alloc) => alloc.orderId).sort()[0];
+}
+
+function claimUsageValues(applied: AppliedVoucher) {
+  const claimOrderId = claimOrderIdOf(applied);
+  const alloc = applied.allocations.find((a) => a.orderId === claimOrderId)!;
+  return {
+    couponId: applied.couponId,
+    orderId: alloc.orderId,
+    discountAmountCents: alloc.discountCents,
+    originalAmountCents: alloc.amountCents,
+    finalAmountCents: Math.max(0, alloc.amountCents - alloc.discountCents),
+    status: "active" as const,
+    guestIdentity: applied.usageIdentity ?? null,
+  };
+}
+
+function isGuestLimitError(error: unknown): boolean {
+  // D1 surfaces RAISE(ABORT) text in the message, sometimes only on `cause`.
+  const cause = (error as { cause?: unknown } | null)?.cause;
+  return `${String(error)} ${String(cause ?? "")}`.includes(
+    "COUPON_GUEST_LIMIT_REACHED",
+  );
 }
 
 export function listAppliedMarketCheckoutVouchers(
@@ -779,7 +896,7 @@ function safeJsonParse(value: string): unknown {
   }
 }
 
-function readAppliedMarketCheckoutVoucher(
+export function readAppliedMarketCheckoutVoucher(
   value: unknown,
 ): AppliedMarketCheckoutVoucher | null {
   if (!value || typeof value !== "object") return null;
@@ -833,6 +950,13 @@ function readAppliedVoucherObject(value: unknown): AppliedVoucher | null {
         : candidate.restaurantId == null
           ? "platform"
           : "vendor",
+    // Dropping this would insert the claim row with a null identity and
+    // switch the per-user trigger off for webhook/reconciliation redemptions.
+    usageIdentity:
+      typeof candidate.usageIdentity === "string" &&
+      candidate.usageIdentity.startsWith("customer:")
+        ? candidate.usageIdentity
+        : undefined,
     discountCents: candidate.discountCents,
     allocations,
     reservationStatus:

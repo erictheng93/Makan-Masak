@@ -523,6 +523,32 @@ describe("redeemCachedMarketCheckoutVoucher", () => {
     redeemSpy.mockRestore();
   });
 
+  it("keeps the per-user usage identity on a cached voucher", async () => {
+    const redeemSpy = vi
+      .spyOn(MarketCheckoutVoucherService.prototype, "redeem")
+      .mockResolvedValueOnce();
+    const env = {
+      CACHE_KV: {
+        get: vi.fn(async () =>
+          JSON.stringify({
+            appliedVoucher: {
+              ...appliedVoucherForRedeemRace(),
+              usageIdentity: "customer:cust-x",
+            },
+          }),
+        ),
+      },
+      DB: { prepare: vi.fn() },
+    };
+
+    await redeemCachedMarketCheckoutVoucher(env as never, "checkout-1");
+
+    expect(redeemSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ usageIdentity: "customer:cust-x" }),
+    );
+    redeemSpy.mockRestore();
+  });
+
   it("ignores malformed cached and persisted voucher payloads", async () => {
     const redeemSpy = vi
       .spyOn(MarketCheckoutVoucherService.prototype, "redeem")
@@ -1001,6 +1027,34 @@ describe("MarketCheckoutVoucherService.redeem", () => {
     }
   });
 
+  it("treats a per-user trigger failure as a failed claim, not a replay", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const insertRun = vi
+        .fn()
+        .mockRejectedValueOnce(
+          new Error("D1_ERROR: COUPON_GUEST_LIMIT_REACHED: SQLITE_CONSTRAINT"),
+        )
+        .mockResolvedValueOnce(undefined);
+      const couponUpdateRun = vi.fn(async () => ({ meta: { changes: 1 } }));
+      const service = makeRedeemUnitService(insertRun, couponUpdateRun);
+
+      await service.redeem({
+        ...appliedVoucherForRedeemRace(),
+        usageIdentity: "customer:cust-x",
+      });
+
+      // claim + release: no per-user use was recorded, so the slot goes back.
+      expect(couponUpdateRun).toHaveBeenCalledTimes(2);
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("per-user limit"),
+        expect.any(Error),
+      );
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
   it("rejects exhausted vouchers before writing usage rows", async () => {
     const insertRun = vi.fn(async () => undefined);
     const couponUpdateRun = vi.fn(async () => ({ meta: { changes: 0 } }));
@@ -1044,6 +1098,88 @@ describe("MarketCheckoutVoucherService reservations", () => {
     await expect(service.reserveUsage(voucher)).resolves.toBe(voucher);
 
     expect(couponUpdateRun).not.toHaveBeenCalled();
+  });
+
+  it("holds the per-user claim row when reserving", async () => {
+    const couponUpdateRun = vi.fn(async () => ({ meta: { changes: 1 } }));
+    const insertRun = vi.fn(async () => undefined);
+    const service = makeReservationUnitService(couponUpdateRun, insertRun);
+
+    await service.reserveUsage({
+      ...appliedVoucherForRedeemRace(),
+      usageIdentity: "customer:cust-x",
+    });
+
+    expect(insertRun).toHaveBeenCalledOnce();
+    expect(service.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        couponId: 42,
+        orderId: "1001",
+        guestIdentity: "customer:cust-x",
+        status: "active",
+      }),
+    );
+  });
+
+  it("rejects a concurrent per-user claim and returns the used_count slot", async () => {
+    const couponUpdateRun = vi
+      .fn()
+      .mockResolvedValueOnce({ meta: { changes: 1 } }) // claim slot
+      .mockResolvedValueOnce({ meta: { changes: 0 } }) // no stale hold
+      .mockResolvedValueOnce({ meta: { changes: 1 } }); // release slot
+    const insertRun = vi.fn(async () => {
+      throw new Error("D1_ERROR: COUPON_GUEST_LIMIT_REACHED");
+    });
+    const service = makeReservationUnitService(couponUpdateRun, insertRun);
+
+    await expect(
+      service.reserveUsage({
+        ...appliedVoucherForRedeemRace(),
+        usageIdentity: "customer:cust-x",
+      }),
+    ).rejects.toMatchObject({ code: "VOUCHER_USER_LIMIT_REACHED" });
+
+    expect(insertRun).toHaveBeenCalledOnce();
+    expect(couponUpdateRun).toHaveBeenCalledTimes(3);
+  });
+
+  it("reclaims a stale unpaid hold and retries the claim once", async () => {
+    const couponUpdateRun = vi
+      .fn()
+      .mockResolvedValueOnce({ meta: { changes: 1 } }) // claim slot
+      .mockResolvedValueOnce({ meta: { changes: 1 } }); // cancel stale hold
+    const insertRun = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("COUPON_GUEST_LIMIT_REACHED"))
+      .mockResolvedValueOnce(undefined);
+    const service = makeReservationUnitService(couponUpdateRun, insertRun);
+
+    await expect(
+      service.reserveUsage({
+        ...appliedVoucherForRedeemRace(),
+        usageIdentity: "customer:cust-x",
+      }),
+    ).resolves.toMatchObject({ reservationStatus: "reserved" });
+
+    expect(insertRun).toHaveBeenCalledTimes(2);
+    // The stale checkout's used_count slot is left to the reservation sweep.
+    expect(couponUpdateRun).toHaveBeenCalledTimes(2);
+  });
+
+  it("cancels the held per-user claim when releasing", async () => {
+    const couponUpdateRun = vi.fn(async () => ({ meta: { changes: 1 } }));
+    const service = makeReservationUnitService(couponUpdateRun);
+
+    await service.releaseReservation({
+      ...appliedVoucherForRedeemRace(),
+      usageIdentity: "customer:cust-x",
+      reservationStatus: "reserved",
+    });
+
+    expect(couponUpdateRun).toHaveBeenCalledTimes(2);
+    expect(service.updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "cancelled" }),
+    );
   });
 
   it("releases only reserved voucher slots", async () => {
@@ -1208,22 +1344,29 @@ function makeRedeemUnitService(
   return service;
 }
 
-function makeReservationUnitService(couponUpdateRun: ReturnType<typeof vi.fn>) {
+function makeReservationUnitService(
+  couponUpdateRun: ReturnType<typeof vi.fn>,
+  insertRun: ReturnType<typeof vi.fn> = vi.fn(async () => undefined),
+) {
   const service = Object.create(MarketCheckoutVoucherService.prototype) as {
     db: {
+      insert: ReturnType<typeof vi.fn>;
       update: ReturnType<typeof vi.fn>;
     };
+    insertValues: ReturnType<typeof vi.fn>;
+    updateSet: ReturnType<typeof vi.fn>;
     reserveUsage: MarketCheckoutVoucherService["reserveUsage"];
     releaseReservation: MarketCheckoutVoucherService["releaseReservation"];
   };
-  service.db = {
-    update: vi.fn(() => ({
-      set: vi.fn(() => ({
-        where: vi.fn(() => ({
-          run: couponUpdateRun,
-        })),
-      })),
+  service.insertValues = vi.fn(() => ({ run: insertRun }));
+  service.updateSet = vi.fn(() => ({
+    where: vi.fn(() => ({
+      run: couponUpdateRun,
     })),
+  }));
+  service.db = {
+    insert: vi.fn(() => ({ values: service.insertValues })),
+    update: vi.fn(() => ({ set: service.updateSet })),
   };
   return service;
 }
