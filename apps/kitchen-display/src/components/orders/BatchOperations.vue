@@ -170,10 +170,10 @@ const props = defineProps<Props>();
 
 // Emits
 const emit = defineEmits<{
-  "batch-start-cooking": [orderIds: number[]];
-  "batch-mark-ready": [orderIds: number[]];
-  "batch-priority-update": [orderIds: number[], priority: string];
-  "batch-export": [orderIds: number[]];
+  "batch-start-cooking": [orderIds: Array<string | number>];
+  "batch-mark-ready": [orderIds: Array<string | number>];
+  "batch-priority-update": [orderIds: Array<string | number>, priority: string];
+  "batch-export": [orderIds: Array<string | number>];
 }>();
 
 const toast = useToast();

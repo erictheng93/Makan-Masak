@@ -124,6 +124,32 @@ export function useAudioNotifications() {
     }
   };
 
+  // Auto-accept confirms through the status path before the order is
+  // announced, so the server sends ORDER_STATUS_UPDATE(confirmed) and then a
+  // NEW_ORDER(confirmed) for the same order. A confirmed NEW_ORDER is not a
+  // duplicate in general -- item edits re-send it and that chime is wanted --
+  // so only the one that closely follows a confirmation chime is skipped.
+  const CONFIRM_ANNOUNCE_WINDOW_MS = 10_000;
+  const recentlyConfirmed = new Map<string, number>();
+
+  const consumeRecentConfirmation = (orderId: unknown): boolean => {
+    if (orderId === undefined || orderId === null) return false;
+    const key = String(orderId);
+    const at = recentlyConfirmed.get(key);
+    if (at === undefined) return false;
+    recentlyConfirmed.delete(key);
+    return Date.now() - at <= CONFIRM_ANNOUNCE_WINDOW_MS;
+  };
+
+  const rememberConfirmation = (orderId: unknown) => {
+    if (orderId === undefined || orderId === null) return;
+    const now = Date.now();
+    for (const [key, at] of recentlyConfirmed) {
+      if (now - at > CONFIRM_ANNOUNCE_WINDOW_MS) recentlyConfirmed.delete(key);
+    }
+    recentlyConfirmed.set(String(orderId), now);
+  };
+
   // SSE Event Handlers
   const handleSSEEvent = async (event: KitchenSSEEvent) => {
     const rawEventData = event.payload ?? event.data;
@@ -134,11 +160,20 @@ export function useAudioNotifications() {
       case "new_order":
         // A pending order is not on the board yet; it chimes when confirmed.
         if (eventData.status === "pending") break;
+        // Missing status (older servers, seated waiting-list pre-orders) has
+        // no preceding confirmation event, so it still chimes.
+        if (
+          eventData.status === "confirmed" &&
+          consumeRecentConfirmation(eventData.orderId ?? event.orderId)
+        ) {
+          break;
+        }
         await playNewOrderSound(eventData.priority === "urgent");
         break;
       case "ORDER_STATUS_UPDATE":
       case "order_status_update":
         if (eventData.status === "confirmed") {
+          rememberConfirmation(eventData.orderId ?? event.orderId);
           await playNewOrderSound();
         } else if (eventData.status === "ready") {
           await playOrderReadySound();

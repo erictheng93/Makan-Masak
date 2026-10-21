@@ -10,6 +10,7 @@ import type {
   ItemStatus,
 } from "@/types";
 import { t } from "@/i18n";
+import { sameOrderId, toOrderId } from "@/utils/orderId";
 import { resolveUserFacingError } from "@makanmasak/shared/utils/user-facing-error";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -17,9 +18,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const isKitchenOrder = (value: unknown): value is KitchenOrder =>
   isRecord(value) &&
-  typeof value.id === "number" &&
-  Number.isFinite(value.id) &&
-  value.id > 0 &&
+  toOrderId(value.id) !== null &&
   typeof value.orderNumber === "string" &&
   Array.isArray(value.items);
 
@@ -67,8 +66,8 @@ const buildKitchenOrderFromRealtimeData = (
   data: Record<string, unknown>,
   timestamp: KitchenSSEEvent["timestamp"],
 ): KitchenOrder | null => {
-  const orderId = Number(data.orderId);
-  if (!Number.isFinite(orderId) || orderId <= 0) return null;
+  const orderId = toOrderId(data.orderId);
+  if (orderId === null) return null;
 
   const items = Array.isArray(data.items)
     ? data.items.map((item) => {
@@ -154,6 +153,14 @@ const eventData = (event: KitchenSSEEvent) =>
     : isRecord(event.data)
       ? event.data
       : null;
+
+const eventOrderId = (
+  event: KitchenSSEEvent,
+  payload: Record<string, unknown> | null,
+): string | null => {
+  const id = toOrderId(event.orderId ?? payload?.orderId);
+  return id === null ? null : String(id);
+};
 
 export const useOrdersStore = defineStore("orders", () => {
   // State
@@ -289,8 +296,8 @@ export const useOrdersStore = defineStore("orders", () => {
     }
 
     // 檢查訂單是否已存在
-    const existingOrderIndex = orders.value.findIndex(
-      (o) => o.id === newOrder.id,
+    const existingOrderIndex = orders.value.findIndex((o) =>
+      sameOrderId(o.id, newOrder.id),
     );
 
     // A pending order waits for the cashier; it reaches the board through the
@@ -315,12 +322,14 @@ export const useOrdersStore = defineStore("orders", () => {
    */
   const handleOrderStatusUpdate = (event: KitchenSSEEvent): boolean => {
     const payload = eventData(event);
-    const orderId = event.orderId ?? Number(payload?.orderId);
-    if (Number.isFinite(orderId) && payload) {
+    const orderId = eventOrderId(event, payload);
+    if (orderId !== null && payload) {
       const { status, updatedAt, notes } = payload;
       const itemId = payload.itemId ?? payload.orderItemId;
 
-      const orderIndex = orders.value.findIndex((o) => o.id === orderId);
+      const orderIndex = orders.value.findIndex((o) =>
+        sameOrderId(o.id, orderId),
+      );
       if (orderIndex !== -1) {
         const order = orders.value[orderIndex];
 
@@ -375,9 +384,11 @@ export const useOrdersStore = defineStore("orders", () => {
    */
   const handleOrderCancelled = (event: KitchenSSEEvent) => {
     const payload = eventData(event);
-    const orderId = event.orderId ?? Number(payload?.orderId);
-    if (Number.isFinite(orderId)) {
-      const orderIndex = orders.value.findIndex((o) => o.id === orderId);
+    const orderId = eventOrderId(event, payload);
+    if (orderId !== null) {
+      const orderIndex = orders.value.findIndex((o) =>
+        sameOrderId(o.id, orderId),
+      );
       if (orderIndex !== -1) {
         // 移除已取消的訂單
         orders.value.splice(orderIndex, 1);
@@ -390,11 +401,14 @@ export const useOrdersStore = defineStore("orders", () => {
    * 處理優先級更新事件
    */
   const handlePriorityUpdate = (event: KitchenSSEEvent) => {
-    if (event.orderId && isRecord(event.payload)) {
-      const orderId = event.orderId;
-      const { priority } = event.payload;
+    const payload = eventData(event);
+    const orderId = eventOrderId(event, payload);
+    if (orderId !== null && payload) {
+      const { priority } = payload;
 
-      const orderIndex = orders.value.findIndex((o) => o.id === orderId);
+      const orderIndex = orders.value.findIndex((o) =>
+        sameOrderId(o.id, orderId),
+      );
       if (orderIndex !== -1) {
         if (
           priority === "normal" ||
@@ -473,12 +487,14 @@ export const useOrdersStore = defineStore("orders", () => {
   };
 
   const applyItemStatus = (
-    orderId: number,
+    orderId: string | number,
     itemId: number,
     status: ItemStatus,
     orderStatus?: OrderStatus,
   ) => {
-    const orderIndex = orders.value.findIndex((o) => o.id === orderId);
+    const orderIndex = orders.value.findIndex((o) =>
+      sameOrderId(o.id, orderId),
+    );
     if (orderIndex === -1) return;
 
     const order = orders.value[orderIndex];
@@ -513,7 +529,7 @@ export const useOrdersStore = defineStore("orders", () => {
    */
   const startCooking = async (
     restaurantId: number | string,
-    orderId: number,
+    orderId: string | number,
     itemId: number,
   ) => {
     try {
@@ -555,7 +571,7 @@ export const useOrdersStore = defineStore("orders", () => {
    */
   const markReady = async (
     restaurantId: number | string,
-    orderId: number,
+    orderId: string | number,
     itemId: number,
   ) => {
     try {
@@ -592,9 +608,9 @@ export const useOrdersStore = defineStore("orders", () => {
    */
   const startAllItems = async (
     restaurantId: number | string,
-    orderId: number,
+    orderId: string | number,
   ) => {
-    const order = orders.value.find((o) => o.id === orderId);
+    const order = orders.value.find((o) => sameOrderId(o.id, orderId));
     if (!order) return;
 
     const pendingItemIds = order.items
@@ -638,9 +654,9 @@ export const useOrdersStore = defineStore("orders", () => {
    */
   const markAllReady = async (
     restaurantId: number | string,
-    orderId: number,
+    orderId: string | number,
   ) => {
-    const order = orders.value.find((o) => o.id === orderId);
+    const order = orders.value.find((o) => sameOrderId(o.id, orderId));
     if (!order) return;
 
     const preparingItemIds = order.items
@@ -682,8 +698,8 @@ export const useOrdersStore = defineStore("orders", () => {
   /**
    * 根據 ID 獲取訂單
    */
-  const getOrderById = (orderId: number) => {
-    return orders.value.find((order) => order.id === orderId);
+  const getOrderById = (orderId: string | number) => {
+    return orders.value.find((order) => sameOrderId(order.id, orderId));
   };
 
   /**
@@ -705,11 +721,12 @@ export const useOrdersStore = defineStore("orders", () => {
    * 公開方法：直接更新訂單狀態（支援 number 或 string ID）
    */
   const updateOrderStatus = (
-    orderId: number | string,
+    orderId: string | number,
     newStatus: OrderStatus,
   ) => {
-    const id = typeof orderId === "string" ? parseInt(orderId, 10) : orderId;
-    const orderIndex = orders.value.findIndex((o) => o.id === id);
+    const orderIndex = orders.value.findIndex((o) =>
+      sameOrderId(o.id, orderId),
+    );
     if (orderIndex !== -1) {
       orders.value[orderIndex].status = newStatus;
       updateStats();
@@ -725,11 +742,13 @@ export const useOrdersStore = defineStore("orders", () => {
    * 公開方法：直接更新單個 item 狀態
    */
   const updateItemStatus = (
-    orderId: number,
+    orderId: string | number,
     itemId: number,
     newStatus: string | ItemStatus,
   ) => {
-    const orderIndex = orders.value.findIndex((o) => o.id === orderId);
+    const orderIndex = orders.value.findIndex((o) =>
+      sameOrderId(o.id, orderId),
+    );
     if (orderIndex !== -1) {
       const order = orders.value[orderIndex];
       const itemIndex = order.items.findIndex((i) => i.id === itemId);

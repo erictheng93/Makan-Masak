@@ -155,6 +155,7 @@ import OrderDetailsModal from "@/components/orders/OrderDetailsModal.vue";
 import ConnectionStatus from "@/components/common/ConnectionStatus.vue";
 import OfflineStatus from "@/components/offline/OfflineStatus.vue";
 import { resolveUserFacingError } from "@makanmasak/shared/utils/user-facing-error";
+import { sameOrderId } from "@/utils/orderId";
 
 // Props
 const props = defineProps<{
@@ -284,7 +285,7 @@ const fetchOrders = async () => {
   }
 };
 
-const handleStartCooking = async (orderId: number, itemId: number) => {
+const handleStartCooking = async (orderId: string | number, itemId: number) => {
   try {
     await ordersStore.startCooking(restaurantIdNum.value, orderId, itemId);
     await audioNotifications.handleOrderStartCooking();
@@ -296,7 +297,7 @@ const handleStartCooking = async (orderId: number, itemId: number) => {
   }
 };
 
-const handleMarkReady = async (orderId: number, itemId: number) => {
+const handleMarkReady = async (orderId: string | number, itemId: number) => {
   try {
     await ordersStore.markReady(restaurantIdNum.value, orderId, itemId);
     await audioNotifications.handleOrderMarkReady();
@@ -314,7 +315,7 @@ const handleViewDetails = (order: KitchenOrder) => {
 };
 
 const handleOrderStatusChanged = async (
-  _orderId: number,
+  _orderId: string | number,
   _newStatus: "pending" | "preparing" | "ready",
 ) => {
   try {
@@ -326,9 +327,9 @@ const handleOrderStatusChanged = async (
   }
 };
 
-const handleBatchStartOrder = async (orderId: number) => {
+const handleBatchStartOrder = async (orderId: string | number) => {
   try {
-    const order = orders.value.find((o) => o.id === orderId);
+    const order = orders.value.find((o) => sameOrderId(o.id, orderId));
     if (!order) return;
     for (const item of order.items) {
       if (item.status === "pending") {
@@ -343,9 +344,9 @@ const handleBatchStartOrder = async (orderId: number) => {
   }
 };
 
-const handleBatchCompleteOrder = async (orderId: number) => {
+const handleBatchCompleteOrder = async (orderId: string | number) => {
   try {
-    const order = orders.value.find((o) => o.id === orderId);
+    const order = orders.value.find((o) => sameOrderId(o.id, orderId));
     if (!order) return;
     for (const item of order.items) {
       if (item.status === "preparing") {
@@ -361,7 +362,7 @@ const handleBatchCompleteOrder = async (orderId: number) => {
 };
 
 const handleUpdateOrderStatus = async (
-  orderId: number,
+  orderId: string | number,
   itemId: number,
   status: ItemStatus,
 ) => {

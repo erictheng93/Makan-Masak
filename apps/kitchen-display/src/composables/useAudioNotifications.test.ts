@@ -69,6 +69,51 @@ describe("useAudioNotifications", () => {
     wrapper.unmount();
   });
 
+  it("chimes once for an auto-accepted order but still for later edits and status-less events", async () => {
+    let notifications: ReturnType<typeof useAudioNotifications> | undefined;
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          notifications = useAudioNotifications();
+          return () => null;
+        },
+      }),
+    );
+    const orderId = "01928f6e-7c1a-7b2e-9a3d-4f5e6a7b8c9d";
+
+    // Auto-accept: the confirmation is broadcast before the NEW_ORDER.
+    await notifications!.handleSSEEvent(
+      kitchenEvent("ORDER_STATUS_UPDATE", undefined, {
+        orderId,
+        status: "confirmed",
+        previousStatus: "pending",
+      }),
+    );
+    await notifications!.handleSSEEvent(
+      kitchenEvent("NEW_ORDER", undefined, { orderId, status: "confirmed" }),
+    );
+    expect(audioService.playNewOrder).toHaveBeenCalledTimes(1);
+
+    // An item edit re-sends NEW_ORDER(confirmed) with no confirmation first.
+    await notifications!.handleSSEEvent(
+      kitchenEvent("NEW_ORDER", undefined, { orderId, status: "confirmed" }),
+    );
+    // Seated waiting-list pre-orders and older servers carry no status.
+    await notifications!.handleSSEEvent(
+      kitchenEvent("NEW_ORDER", undefined, { orderId: "other-order" }),
+    );
+    // A pending order stays silent until it is confirmed.
+    await notifications!.handleSSEEvent(
+      kitchenEvent("NEW_ORDER", undefined, {
+        orderId: "pending-order",
+        status: "pending",
+      }),
+    );
+
+    expect(audioService.playNewOrder).toHaveBeenCalledTimes(3);
+    wrapper.unmount();
+  });
+
   it("plays status audio from shared realtime data payloads", async () => {
     let notifications: ReturnType<typeof useAudioNotifications> | undefined;
     const wrapper = mount(

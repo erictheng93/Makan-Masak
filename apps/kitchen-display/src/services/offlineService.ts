@@ -2,6 +2,7 @@ import { ref, computed } from "vue";
 import { apiClient } from "./authApi";
 import type { KitchenOrder } from "@/types";
 import { describeErrorForLog, isRecord } from "@/utils/unknown";
+import { sameOrderId } from "@/utils/orderId";
 
 interface OfflineActionPayload {
   status?: KitchenOrder["status"];
@@ -29,7 +30,7 @@ export interface OfflineAction {
     | "update_status"
     | "priority_change"
     | "batch_operation";
-  orderId: number;
+  orderId: string | number;
   itemId?: number;
   payload: OfflineActionPayload;
   timestamp: number;
@@ -251,7 +252,7 @@ class OfflineService {
   // Action queuing
   public queueAction(
     type: OfflineAction["type"],
-    orderId: number,
+    orderId: string | number,
     payload: OfflineActionPayload,
     itemId?: number,
   ): string {
@@ -284,7 +285,9 @@ class OfflineService {
   // Action application (optimistic updates)
   public applyActionLocally(action: OfflineAction) {
     const cachedOrders = this.getCachedOrders();
-    const orderIndex = cachedOrders.findIndex((o) => o.id === action.orderId);
+    const orderIndex = cachedOrders.findIndex((o) =>
+      sameOrderId(o.id, action.orderId),
+    );
 
     if (orderIndex === -1) return;
 

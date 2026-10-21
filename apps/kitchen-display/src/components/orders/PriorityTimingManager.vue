@@ -349,7 +349,7 @@ const props = defineProps<Props>();
 
 // Emits
 const emit = defineEmits<{
-  "priority-updated": [orderId: number, priority: string];
+  "priority-updated": [orderId: string | number, priority: string];
   "thresholds-updated": [warningThreshold: number, urgentThreshold: number];
 }>();
 
@@ -471,7 +471,7 @@ const saveThresholds = () => {
   toast.success(t("priorityTiming.thresholdSaved"));
 };
 
-const prioritizeOrder = (orderId: number) => {
+const prioritizeOrder = (orderId: string | number) => {
   emit("priority-updated", orderId, "urgent");
   toast.success(t("priorityTiming.orderSetUrgent"));
 };

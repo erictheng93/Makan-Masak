@@ -183,7 +183,11 @@ const props = defineProps<Props>();
 
 const emit = defineEmits<{
   close: [];
-  "update-status": [orderId: number, itemId: number, status: ItemStatus];
+  "update-status": [
+    orderId: string | number,
+    itemId: number,
+    status: ItemStatus,
+  ];
 }>();
 
 // Computed

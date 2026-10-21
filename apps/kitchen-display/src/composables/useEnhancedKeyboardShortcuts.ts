@@ -4,6 +4,7 @@ import { useToast } from "vue-toastification";
 import { enhancedAudioService } from "@/services/enhancedAudioService";
 import { useOrderManagementStore } from "@/stores/orderManagement";
 import type { KitchenOrder, OrderStatus } from "@/types";
+import { sameOrderId } from "@/utils/orderId";
 
 type KitchenOrderPriority = KitchenOrder["priority"];
 
@@ -504,8 +505,8 @@ export function useEnhancedKeyboardShortcuts(
     }
 
     const firstOrderId = selectedOrderIds[0];
-    const selectedOrder = orders.value?.find(
-      (order) => order.id === firstOrderId,
+    const selectedOrder = orders.value?.find((order) =>
+      sameOrderId(order.id, firstOrderId),
     );
     if (!selectedOrder) {
       toast.warning("找不到選中的訂單");
@@ -520,7 +521,7 @@ export function useEnhancedKeyboardShortcuts(
       // Use updateOrderPriorities instead of updateOrderPriority
       const updatedOrders =
         orders.value?.map((order) =>
-          order.id === selectedOrder.id
+          sameOrderId(order.id, selectedOrder.id)
             ? { ...order, priority: nextPriority }
             : order,
         ) || [];

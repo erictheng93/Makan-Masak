@@ -13,16 +13,16 @@ interface Props {
 defineProps<Props>();
 
 const emit = defineEmits<{
-  "start-cooking": [orderId: number, itemId: number];
-  "mark-ready": [orderId: number, itemId: number];
+  "start-cooking": [orderId: string | number, itemId: number];
+  "mark-ready": [orderId: string | number, itemId: number];
   "view-details": [order: KitchenOrder];
   "order-status-changed": [
-    orderId: number,
+    orderId: string | number,
     newStatus: "pending" | "preparing" | "ready",
   ];
-  "batch-start-order": [orderId: number];
-  "batch-complete-order": [orderId: number];
-  "toggle-selection": [orderId: number];
+  "batch-start-order": [orderId: string | number];
+  "batch-complete-order": [orderId: string | number];
+  "toggle-selection": [orderId: string | number];
 }>();
 </script>
 

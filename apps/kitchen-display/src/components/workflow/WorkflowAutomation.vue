@@ -476,8 +476,8 @@ const props = defineProps<Props>();
 // Emits
 const emit = defineEmits<{
   "workflow-updated": [rules: WorkflowRules];
-  "auto-assignment": [orderId: number, assigneeId: number];
-  "auto-progression": [orderId: number, action: string];
+  "auto-assignment": [orderId: string | number, assigneeId: number];
+  "auto-progression": [orderId: string | number, action: string];
 }>();
 
 // Types

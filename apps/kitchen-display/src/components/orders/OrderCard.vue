@@ -289,8 +289,8 @@ const { t, locale } = useI18n();
 
 // Emits
 const emit = defineEmits<{
-  "start-cooking": [orderId: number, itemId: number];
-  "mark-ready": [orderId: number, itemId: number];
+  "start-cooking": [orderId: string | number, itemId: number];
+  "mark-ready": [orderId: string | number, itemId: number];
   "view-details": [order: KitchenOrder];
 }>();
 

@@ -53,7 +53,7 @@ export const kitchenApi = {
    */
   async updateItemStatus(
     restaurantId: number | string,
-    orderId: number,
+    orderId: string | number,
     itemId: number,
     request: UpdateItemStatusRequest,
   ): Promise<ApiResponse<UpdateItemStatusResponse>> {
@@ -86,7 +86,7 @@ export const kitchenApi = {
   async batchUpdateItemStatus(
     restaurantId: number | string,
     updates: Array<{
-      orderId: number;
+      orderId: string | number;
       itemId: number;
       status: ItemStatus;
       notes?: string;
@@ -132,7 +132,7 @@ export const kitchenApi = {
    */
   async startCooking(
     restaurantId: number | string,
-    orderId: number,
+    orderId: string | number,
     itemId: number,
   ): Promise<ApiResponse<UpdateItemStatusResponse>> {
     return this.updateItemStatus(restaurantId, orderId, itemId, {
@@ -145,7 +145,7 @@ export const kitchenApi = {
    */
   async markItemReady(
     restaurantId: number | string,
-    orderId: number,
+    orderId: string | number,
     itemId: number,
   ): Promise<ApiResponse<UpdateItemStatusResponse>> {
     return this.updateItemStatus(restaurantId, orderId, itemId, {
@@ -158,7 +158,7 @@ export const kitchenApi = {
    */
   async startAllItems(
     restaurantId: number | string,
-    orderId: number,
+    orderId: string | number,
     itemIds: number[],
   ): Promise<ApiResponse<{ updatedCount: number }>> {
     const updates = itemIds.map((itemId) => ({
@@ -175,7 +175,7 @@ export const kitchenApi = {
    */
   async markAllItemsReady(
     restaurantId: number | string,
-    orderId: number,
+    orderId: string | number,
     itemIds: number[],
   ): Promise<ApiResponse<{ updatedCount: number }>> {
     const updates = itemIds.map((itemId) => ({

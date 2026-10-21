@@ -3,6 +3,7 @@ import { ref, computed } from "vue";
 import { useSettingsStore } from "./settings";
 import { useOrdersStore } from "./orders";
 import { kitchenApi } from "@/services/kitchenApi";
+import { sameOrderId } from "@/utils/orderId";
 import type {
   KitchenOrder,
   KitchenOrderItem,
@@ -34,7 +35,7 @@ export const useOrderManagementStore = defineStore("orderManagement", () => {
   const settingsStore = useSettingsStore();
 
   // State
-  const selectedOrders = ref<Set<number>>(new Set());
+  const selectedOrders = ref<Set<string | number>>(new Set());
   const filters = ref<OrderFilter>({});
   const sortBy = ref<OrderSort>({
     field: "createdAt",
@@ -45,15 +46,15 @@ export const useOrderManagementStore = defineStore("orderManagement", () => {
   const autoRefreshEnabled = ref(true);
 
   // Selection Management
-  const selectOrder = (orderId: number) => {
+  const selectOrder = (orderId: string | number) => {
     selectedOrders.value.add(orderId);
   };
 
-  const deselectOrder = (orderId: number) => {
+  const deselectOrder = (orderId: string | number) => {
     selectedOrders.value.delete(orderId);
   };
 
-  const toggleOrderSelection = (orderId: number) => {
+  const toggleOrderSelection = (orderId: string | number) => {
     if (selectedOrders.value.has(orderId)) {
       deselectOrder(orderId);
     } else {
@@ -71,7 +72,7 @@ export const useOrderManagementStore = defineStore("orderManagement", () => {
     selectedOrders.value.clear();
   };
 
-  const isOrderSelected = (orderId: number) => {
+  const isOrderSelected = (orderId: string | number) => {
     return selectedOrders.value.has(orderId);
   };
 
@@ -389,7 +390,7 @@ export const useOrderManagementStore = defineStore("orderManagement", () => {
 
   // Drag and Drop Status Management
   const moveOrderToStatus = (
-    orderId: number,
+    orderId: string | number,
     newStatus: "pending" | "preparing" | "ready",
   ) => {
     // This would trigger API calls to update order status
@@ -397,12 +398,12 @@ export const useOrderManagementStore = defineStore("orderManagement", () => {
     return { orderId, newStatus };
   };
 
-  const batchStartAllItems = (orderId: number) => {
+  const batchStartAllItems = (orderId: string | number) => {
     // Start all pending items in an order
     return { orderId, action: "start_all" };
   };
 
-  const batchCompleteAllItems = (orderId: number) => {
+  const batchCompleteAllItems = (orderId: string | number) => {
     // Complete all preparing items in an order
     return { orderId, action: "complete_all" };
   };
@@ -427,7 +428,7 @@ export const useOrderManagementStore = defineStore("orderManagement", () => {
   };
 
   // Focus management for keyboard navigation
-  const focusedOrderId = ref<number | null>(null);
+  const focusedOrderId = ref<string | number | null>(null);
   const focusedOrder = computed(() => {
     if (!focusedOrderId.value) return null;
     // This would need to be connected to the actual orders data
@@ -435,7 +436,10 @@ export const useOrderManagementStore = defineStore("orderManagement", () => {
   });
 
   // Order operations
-  const completeOrder = async (orderId: number, restaurantId?: number) => {
+  const completeOrder = async (
+    orderId: string | number,
+    restaurantId?: number,
+  ) => {
     const ordersStore = useOrdersStore();
     const restId = restaurantId || ordersStore.orders[0]?.id;
 
@@ -445,7 +449,7 @@ export const useOrderManagementStore = defineStore("orderManagement", () => {
     }
 
     // Find the order to get all preparing items
-    const order = ordersStore.orders.find((o) => o.id === orderId);
+    const order = ordersStore.orders.find((o) => sameOrderId(o.id, orderId));
     if (!order) {
       console.error(`Order ${orderId} not found`);
       return;
@@ -463,7 +467,10 @@ export const useOrderManagementStore = defineStore("orderManagement", () => {
     console.log(`Order ${orderId} completed`);
   };
 
-  const startCooking = async (orderId: number, restaurantId?: number) => {
+  const startCooking = async (
+    orderId: string | number,
+    restaurantId?: number,
+  ) => {
     const ordersStore = useOrdersStore();
     const restId = restaurantId || ordersStore.orders[0]?.id;
 
@@ -473,7 +480,7 @@ export const useOrderManagementStore = defineStore("orderManagement", () => {
     }
 
     // Find the order to get all pending items
-    const order = ordersStore.orders.find((o) => o.id === orderId);
+    const order = ordersStore.orders.find((o) => sameOrderId(o.id, orderId));
     if (!order) {
       console.error(`Order ${orderId} not found`);
       return;
@@ -489,7 +496,9 @@ export const useOrderManagementStore = defineStore("orderManagement", () => {
     if (allOrders.length === 0) return;
 
     const currentIndex = focusedOrderId.value
-      ? allOrders.findIndex((order) => order.id === focusedOrderId.value)
+      ? allOrders.findIndex((order) =>
+          sameOrderId(order.id, focusedOrderId.value),
+        )
       : -1;
 
     const nextIndex = (currentIndex + 1) % allOrders.length;
@@ -504,7 +513,9 @@ export const useOrderManagementStore = defineStore("orderManagement", () => {
     if (allOrders.length === 0) return;
 
     const currentIndex = focusedOrderId.value
-      ? allOrders.findIndex((order) => order.id === focusedOrderId.value)
+      ? allOrders.findIndex((order) =>
+          sameOrderId(order.id, focusedOrderId.value),
+        )
       : -1;
 
     const prevIndex =
@@ -561,7 +572,7 @@ export const useOrderManagementStore = defineStore("orderManagement", () => {
   // Batch operations
   const batchOperation = async (
     operation: string,
-    orderIds: number[],
+    orderIds: Array<string | number>,
     restaurantId?: number,
   ) => {
     const ordersStore = useOrdersStore();
@@ -573,14 +584,14 @@ export const useOrderManagementStore = defineStore("orderManagement", () => {
     }
 
     const updates: Array<{
-      orderId: number;
+      orderId: string | number;
       itemId: number;
       status: ItemStatus;
     }> = [];
 
     // Collect all items that need to be updated based on operation type
     for (const orderId of orderIds) {
-      const order = ordersStore.orders.find((o) => o.id === orderId);
+      const order = ordersStore.orders.find((o) => sameOrderId(o.id, orderId));
       if (!order) continue;
 
       for (const item of order.items) {

@@ -54,6 +54,7 @@
 import { ref, computed, watch, onMounted, nextTick } from "vue";
 import { useI18n } from "@/i18n";
 import type { KitchenOrder } from "@/types/index";
+import { sameOrderId } from "@/utils/orderId";
 
 const { t } = useI18n();
 
@@ -190,10 +191,12 @@ const scrollToBottom = (behavior: "auto" | "smooth" = "smooth") => {
 };
 
 const scrollToOrder = (
-  orderId: number,
+  orderId: string | number,
   behavior: "auto" | "smooth" = "smooth",
 ) => {
-  const orderIndex = props.orders.findIndex((order) => order.id === orderId);
+  const orderIndex = props.orders.findIndex((order) =>
+    sameOrderId(order.id, orderId),
+  );
   if (orderIndex === -1 || !container.value) return;
 
   const row = Math.floor(orderIndex / props.columnsCount);

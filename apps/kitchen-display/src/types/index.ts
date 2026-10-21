@@ -22,7 +22,8 @@ export interface KitchenOrderItem {
 }
 
 export interface KitchenOrder {
-  id: number;
+  // Text UUIDs in production; legacy fixtures and older servers use integers.
+  id: string | number;
   orderNumber: string;
   tableId?: number;
   tableName?: string;
@@ -54,7 +55,7 @@ export interface KitchenOrder {
 }
 
 export interface OrderStatusUpdate {
-  orderId: number;
+  orderId: string | number;
   itemId?: number;
   status: OrderStatus | ItemStatus;
   timestamp: string;
@@ -82,7 +83,7 @@ export interface KitchenSSEEvent {
     | "PRIORITY_UPDATE"
     | "HEARTBEAT";
   eventId?: string;
-  orderId?: number;
+  orderId?: string | number;
   payload?: unknown;
   data?: unknown;
   timestamp: string | number;
@@ -185,7 +186,7 @@ export interface PerformanceMetrics {
 // 歷史記錄
 export interface HistoryRecord {
   id: number;
-  orderId: number;
+  orderId: string | number;
   orderNumber: string;
   action: string;
   timestamp: string;

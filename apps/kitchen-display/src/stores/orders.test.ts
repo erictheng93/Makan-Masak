@@ -161,4 +161,102 @@ describe("orders store realtime events", () => {
 
     expect(store.orders).toHaveLength(0);
   });
+
+  it("matches text UUID order ids from realtime data events", () => {
+    const store = useOrdersStore();
+    const uuid = "01928f6e-7c1a-7b2e-9a3d-4f5e6a7b8c9d";
+
+    // A confirmed order the board does not hold yet is refetched.
+    expect(
+      store.handleSSEEvent({
+        type: "ORDER_STATUS_UPDATE",
+        timestamp: 1780308001000,
+        restaurantId: "restaurant-1",
+        data: {
+          orderId: "01928f6e-0000-7000-8000-000000000001",
+          status: "confirmed",
+        },
+      } as unknown as KitchenSSEEvent),
+    ).toBe(true);
+
+    // The REST list returns the server's text ids as-is.
+    store.orders = [
+      {
+        id: uuid,
+        orderNumber: "C001",
+        status: "confirmed",
+        items: [],
+      } as unknown as (typeof store.orders)[number],
+    ];
+
+    const refetch = store.handleSSEEvent({
+      type: "ORDER_STATUS_UPDATE",
+      timestamp: 1780308002000,
+      restaurantId: "restaurant-1",
+      data: { orderId: uuid, status: "preparing" },
+    } as unknown as KitchenSSEEvent);
+
+    expect(refetch).toBe(false);
+    expect(store.orders[0].status).toBe("preparing");
+
+    store.handleSSEEvent({
+      type: "ORDER_CANCELLED",
+      timestamp: 1780308003000,
+      restaurantId: "restaurant-1",
+      data: { orderId: uuid },
+    } as unknown as KitchenSSEEvent);
+
+    expect(store.orders).toHaveLength(0);
+  });
+
+  it("lands a UUID NEW_ORDER from realtime data on the board and applies its priority update", () => {
+    const store = useOrdersStore();
+    const uuid = "01928f6e-7c1a-7b2e-9a3d-4f5e6a7b8c9e";
+
+    // The dashboard adapter passes the realtime event through `data` only.
+    store.handleSSEEvent({
+      type: "NEW_ORDER",
+      timestamp: 1780308000000,
+      restaurantId: "restaurant-1",
+      data: {
+        orderId: uuid,
+        orderNumber: "D001",
+        status: "confirmed",
+        items: [{ orderItemId: 701, menuItemName: "滷肉飯", quantity: 1 }],
+      },
+    } as unknown as KitchenSSEEvent);
+
+    expect(store.orders).toHaveLength(1);
+    expect(store.orders[0]).toMatchObject({
+      id: uuid,
+      orderNumber: "D001",
+      status: "confirmed",
+    });
+
+    // A re-sent NEW_ORDER (item edit) upserts rather than duplicating.
+    store.handleSSEEvent({
+      type: "NEW_ORDER",
+      timestamp: 1780308001000,
+      restaurantId: "restaurant-1",
+      data: {
+        orderId: uuid,
+        orderNumber: "D001",
+        status: "confirmed",
+        items: [{ orderItemId: 701, menuItemName: "滷肉飯", quantity: 2 }],
+      },
+    } as unknown as KitchenSSEEvent);
+
+    expect(store.orders).toHaveLength(1);
+    expect(store.orders[0].totalItems).toBe(2);
+
+    store.handleSSEEvent({
+      type: "PRIORITY_UPDATE",
+      timestamp: 1780308002000,
+      restaurantId: "restaurant-1",
+      data: { orderId: uuid, priority: "urgent" },
+    } as unknown as KitchenSSEEvent);
+
+    expect(store.orders[0].priority).toBe("urgent");
+    expect(store.getOrderById(uuid)?.orderNumber).toBe("D001");
+  });
 });

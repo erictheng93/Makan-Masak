@@ -77,7 +77,7 @@
           :key="`pending-${order.id}`"
           :order="order"
           status-type="pending"
-          :is-dragging="draggedOrderId === order.id"
+          :is-dragging="sameOrderId(draggedOrderId, order.id)"
           :is-drag-over="dragOverColumn === 'pending'"
           :is-selected="isOrderSelected(order.id)"
           @start-cooking="handleStartCooking"
@@ -134,7 +134,7 @@
           :key="`preparing-${order.id}`"
           :order="order"
           status-type="preparing"
-          :is-dragging="draggedOrderId === order.id"
+          :is-dragging="sameOrderId(draggedOrderId, order.id)"
           :is-drag-over="dragOverColumn === 'preparing'"
           :is-selected="isOrderSelected(order.id)"
           @start-cooking="handleStartCooking"
@@ -191,7 +191,7 @@
           :key="`ready-${order.id}`"
           :order="order"
           status-type="ready"
-          :is-dragging="draggedOrderId === order.id"
+          :is-dragging="sameOrderId(draggedOrderId, order.id)"
           :is-drag-over="dragOverColumn === 'ready'"
           :is-selected="isOrderSelected(order.id)"
           @start-cooking="handleStartCooking"
@@ -228,6 +228,7 @@ import { resolveUserFacingError } from "@makanmasak/shared/utils/user-facing-err
 const { t } = useI18n();
 import { useOrderManagementStore } from "@/stores/orderManagement";
 import type { KitchenOrder } from "@/types";
+import { sameOrderId } from "@/utils/orderId";
 import DraggableOrderCard from "./DraggableOrderCard.vue";
 
 type BoardOrderStatus = "pending" | "preparing" | "ready";
@@ -239,17 +240,32 @@ interface Props {
   readyOrders: KitchenOrder[];
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
+
+// The DOM dataset only holds strings; map it back to the order's own id so
+// emitted ids keep their type (text UUIDs in production, integers in legacy).
+const resolveDraggedOrderId = (raw: string | undefined) => {
+  if (!raw) return null;
+  const order = [
+    ...props.pendingOrders,
+    ...props.preparingOrders,
+    ...props.readyOrders,
+  ].find((candidate) => sameOrderId(candidate.id, raw));
+  return order ? order.id : raw;
+};
 
 // Emits
 const emit = defineEmits<{
-  "start-cooking": [orderId: number, itemId: number];
-  "mark-ready": [orderId: number, itemId: number];
+  "start-cooking": [orderId: string | number, itemId: number];
+  "mark-ready": [orderId: string | number, itemId: number];
   "view-details": [order: KitchenOrder];
-  "order-status-changed": [orderId: number, newStatus: BoardOrderStatus];
-  "batch-start-order": [orderId: number];
-  "batch-complete-order": [orderId: number];
-  "toggle-selection": [orderId: number];
+  "order-status-changed": [
+    orderId: string | number,
+    newStatus: BoardOrderStatus,
+  ];
+  "batch-start-order": [orderId: string | number];
+  "batch-complete-order": [orderId: string | number];
+  "toggle-selection": [orderId: string | number];
 }>();
 
 const toast = useToast();
@@ -263,7 +279,7 @@ const { isOrderSelected, toggleOrderSelection } = orderManagementStore;
 const pendingColumn = ref<HTMLElement>();
 const preparingColumn = ref<HTMLElement>();
 const readyColumn = ref<HTMLElement>();
-const draggedOrderId = ref<number | null>(null);
+const draggedOrderId = ref<string | number | null>(null);
 const dragOverColumn = ref<string | null>(null);
 
 // Drag and Drop Setup
@@ -288,7 +304,7 @@ const setupSortable = () => {
       fallbackClass: "sortable-fallback",
 
       onStart: (evt) => {
-        const orderId = Number(evt.item.dataset.orderId);
+        const orderId = resolveDraggedOrderId(evt.item.dataset.orderId);
         draggedOrderId.value = orderId;
         document.body.classList.add("dragging-order");
       },
@@ -298,7 +314,7 @@ const setupSortable = () => {
         dragOverColumn.value = null;
         document.body.classList.remove("dragging-order");
 
-        const orderId = Number(evt.item.dataset.orderId);
+        const orderId = resolveDraggedOrderId(evt.item.dataset.orderId);
         const newStatus = evt.to.dataset.status as
           | "pending"
           | "preparing"
@@ -324,7 +340,7 @@ const setupSortable = () => {
 
 // Methods
 const handleStatusChange = async (
-  orderId: number,
+  orderId: string | number,
   newStatus: BoardOrderStatus,
   oldStatus: BoardOrderStatus,
 ) => {
@@ -350,11 +366,11 @@ const handleStatusChange = async (
   }
 };
 
-const handleStartCooking = (orderId: number, itemId: number) => {
+const handleStartCooking = (orderId: string | number, itemId: number) => {
   emit("start-cooking", orderId, itemId);
 };
 
-const handleMarkReady = (orderId: number, itemId: number) => {
+const handleMarkReady = (orderId: string | number, itemId: number) => {
   emit("mark-ready", orderId, itemId);
 };
 
@@ -362,7 +378,7 @@ const handleViewDetails = (order: KitchenOrder) => {
   emit("view-details", order);
 };
 
-const handleToggleSelection = (orderId: number) => {
+const handleToggleSelection = (orderId: string | number) => {
   toggleOrderSelection(orderId);
   emit("toggle-selection", orderId);
 };
