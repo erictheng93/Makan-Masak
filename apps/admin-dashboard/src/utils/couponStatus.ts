@@ -19,3 +19,13 @@ export const getCouponStatus = (coupon: {
   if (new Date() < new Date(coupon.validFrom)) return "scheduled";
   return "active";
 };
+
+/**
+ * Paid uses. usedCount also includes slots held by unpaid checkouts
+ * (reservedCount) — right for "is it exhausted", wrong for "how many used".
+ */
+export const paidUseCount = (coupon: {
+  usedCount?: number | null;
+  reservedCount?: number | null;
+}): number =>
+  Math.max(0, (coupon.usedCount ?? 0) - (coupon.reservedCount ?? 0));

@@ -244,7 +244,9 @@
               <td class="px-6 py-4">
                 <div class="text-sm">
                   <div class="flex items-center">
-                    <span class="text-gray-900">{{ coupon.usedCount }}</span>
+                    <span class="text-gray-900">{{
+                      paidUseCount(coupon)
+                    }}</span>
                     <span v-if="coupon.usageLimit" class="text-gray-500"
                       >/ {{ coupon.usageLimit }}</span
                     >
@@ -259,7 +261,7 @@
                     <div
                       class="bg-teal-600 h-2 rounded-full"
                       :style="{
-                        width: `${Math.min(100, (coupon.usedCount / coupon.usageLimit) * 100)}%`,
+                        width: `${Math.min(100, (paidUseCount(coupon) / coupon.usageLimit) * 100)}%`,
                       }"
                     ></div>
                   </div>
@@ -677,7 +679,11 @@ const visiblePages = computed(() => {
   return pages;
 });
 
-import { type CouponStatus, getCouponStatus } from "@/utils/couponStatus";
+import {
+  type CouponStatus,
+  getCouponStatus,
+  paidUseCount,
+} from "@/utils/couponStatus";
 
 const statusClassMap: Record<CouponStatus, string> = {
   inactive: "bg-gray-100 text-gray-800",

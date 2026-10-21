@@ -986,6 +986,49 @@ describe("MarketCheckoutVoucherService.redeem", () => {
     expect(couponUpdateRun).not.toHaveBeenCalled();
   });
 
+  it("moves a flagged reservation's slot from reserved to paid exactly once", async () => {
+    const insertRun = vi.fn(async () => undefined);
+    const couponUpdateRun = vi.fn(async () => ({ meta: { changes: 1 } }));
+    const service = makeRedeemUnitService(insertRun, couponUpdateRun);
+    const voucher = {
+      ...appliedVoucherForRedeemRace(),
+      reservationStatus: "reserved" as const,
+      reservedCountHeld: true,
+    };
+
+    await service.redeem(voucher);
+
+    // Claim row inserted by this call -> reserved_count - 1, used_count kept.
+    expect(couponUpdateRun).toHaveBeenCalledOnce();
+    expect(service.couponUpdateSet).toHaveBeenCalledWith(
+      expect.not.objectContaining({ usedCount: expect.anything() }),
+    );
+    expect(service.couponUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({ reservedCount: expect.anything() }),
+    );
+  });
+
+  it("does not settle reserved_count on a replay that lost the claim row", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const insertRun = vi.fn(async () => {
+        throw new Error("UNIQUE constraint failed: coupon_usage.coupon_id");
+      });
+      const couponUpdateRun = vi.fn(async () => ({ meta: { changes: 1 } }));
+      const service = makeRedeemUnitService(insertRun, couponUpdateRun);
+
+      await service.redeem({
+        ...appliedVoucherForRedeemRace(),
+        reservationStatus: "reserved",
+        reservedCountHeld: true,
+      });
+
+      expect(couponUpdateRun).not.toHaveBeenCalled();
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it("returns without writes when redemption is fully recorded or empty", async () => {
     const insertRun = vi.fn(async () => undefined);
     const couponUpdateRun = vi.fn(async () => ({ meta: { changes: 1 } }));
@@ -1203,6 +1246,42 @@ describe("MarketCheckoutVoucherService reservations", () => {
     );
   });
 
+  it("counts a new reservation in reserved_count and releases both counts", async () => {
+    const couponUpdateRun = vi.fn(async () => ({ meta: { changes: 1 } }));
+    const service = makeReservationUnitService(couponUpdateRun);
+
+    const reserved = await service.reserveUsage(appliedVoucherForRedeemRace());
+    expect(reserved.reservedCountHeld).toBe(true);
+    expect(service.updateSet).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        usedCount: expect.anything(),
+        reservedCount: expect.anything(),
+      }),
+    );
+
+    await service.releaseReservation(reserved);
+    expect(service.updateSet).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        usedCount: expect.anything(),
+        reservedCount: expect.anything(),
+      }),
+    );
+  });
+
+  it("releases a pre-reserved_count reservation from used_count only", async () => {
+    const couponUpdateRun = vi.fn(async () => ({ meta: { changes: 1 } }));
+    const service = makeReservationUnitService(couponUpdateRun);
+
+    await service.releaseReservation({
+      ...appliedVoucherForRedeemRace(),
+      reservationStatus: "reserved",
+    });
+
+    expect(service.updateSet).toHaveBeenCalledWith(
+      expect.not.objectContaining({ reservedCount: expect.anything() }),
+    );
+  });
+
   it("releases only reserved voucher slots", async () => {
     const couponUpdateRun = vi.fn(async () => ({ meta: { changes: 1 } }));
     const service = makeReservationUnitService(couponUpdateRun);
@@ -1346,8 +1425,12 @@ function makeRedeemUnitService(
       update: ReturnType<typeof vi.fn>;
     };
     usageUpdateSet: ReturnType<typeof vi.fn>;
+    couponUpdateSet: ReturnType<typeof vi.fn>;
     redeem: MarketCheckoutVoucherService["redeem"];
   };
+  service.couponUpdateSet = vi.fn(() => ({
+    where: vi.fn(() => ({ run: couponUpdateRun })),
+  }));
   // coupon_usage updates (reserved -> active) are routed apart from the
   // coupons.used_count updates these tests count.
   service.usageUpdateSet = vi.fn(() => ({
@@ -1365,13 +1448,7 @@ function makeRedeemUnitService(
     update: vi.fn((table: unknown) =>
       table === couponUsage
         ? { set: service.usageUpdateSet }
-        : {
-            set: vi.fn(() => ({
-              where: vi.fn(() => ({
-                run: couponUpdateRun,
-              })),
-            })),
-          },
+        : { set: service.couponUpdateSet },
     ),
   };
   return service;

@@ -61,6 +61,12 @@ export interface AppliedVoucher {
   discountCents: number;
   allocations: VoucherAllocation[];
   reservationStatus?: "reserved" | "released" | "redeemed";
+  /**
+   * The reservation also counted itself in coupons.reserved_count (so stats
+   * can report used_count - reserved_count as paid uses). Absent on
+   * reservations made before that column existed; those only touch used_count.
+   */
+  reservedCountHeld?: boolean;
   reservedAt?: string;
   releasedAt?: string;
 }
@@ -371,7 +377,7 @@ export class MarketCheckoutVoucherService {
 
     // Payment is verified: the claim held by reserveUsage becomes a real
     // redemption, dated now so reports put it in the period it was paid.
-    await this.db
+    const flip = await this.db
       .update(couponUsage)
       .set({ status: "active", usedAt: new Date(), updatedAt: new Date() })
       .where(
@@ -382,6 +388,10 @@ export class MarketCheckoutVoucherService {
         ),
       )
       .run();
+    // Exactly one call wins the claim row — by this flip or by the insert
+    // below (unique index) — and only that call moves the slot from
+    // reserved to paid, so a webhook replay cannot do it twice.
+    let wonClaim = (flip.meta?.changes ?? 0) > 0;
 
     const existing = await this.db
       .select({ orderId: couponUsage.orderId })
@@ -398,6 +408,7 @@ export class MarketCheckoutVoucherService {
 
     if (existingOrderIds.size === orderIds.length) {
       // Already fully recorded — idempotent no-op.
+      if (wonClaim) await this.settleReservedCount(applied);
       return;
     }
 
@@ -432,6 +443,7 @@ export class MarketCheckoutVoucherService {
           .run();
         if (alloc.orderId === claimOrderId) {
           insertedClaimUsage = true;
+          wonClaim = true;
         }
       } catch (error) {
         if (isGuestLimitError(error)) {
@@ -456,6 +468,21 @@ export class MarketCheckoutVoucherService {
     if (claimedDuringRedeem && !insertedClaimUsage) {
       await this.releaseUsageSlot(applied.couponId);
     }
+    if (wonClaim) await this.settleReservedCount(applied);
+  }
+
+  /** The reserved slot is now a paid use: reserved_count - 1, used_count kept. */
+  private async settleReservedCount(applied: AppliedVoucher): Promise<void> {
+    if (applied.reservationStatus !== "reserved" || !applied.reservedCountHeld)
+      return;
+    await this.db
+      .update(coupons)
+      .set({
+        reservedCount: sql`max(${coupons.reservedCount} - 1, 0)`,
+        updatedAt: new Date(),
+      })
+      .where(eq(coupons.id, applied.couponId))
+      .run();
   }
 
   async reserveUsage(applied: AppliedVoucher): Promise<AppliedVoucher> {
@@ -463,7 +490,7 @@ export class MarketCheckoutVoucherService {
       return applied;
     }
 
-    await this.claimUsageSlot(applied.couponId);
+    await this.claimUsageSlot(applied.couponId, true);
     if (applied.usageIdentity) {
       // Hold the per-user claim now, before payment: the
       // coupon_usage_guest_limit trigger makes this atomic, so two concurrent
@@ -481,7 +508,7 @@ export class MarketCheckoutVoucherService {
           await this.insertClaimHold(applied);
         }
       } catch (error) {
-        await this.releaseUsageSlot(applied.couponId);
+        await this.releaseUsageSlot(applied.couponId, true);
         if (isGuestLimitError(error)) {
           throw badRequest(
             "You have reached the usage limit for this voucher",
@@ -494,6 +521,7 @@ export class MarketCheckoutVoucherService {
     return {
       ...applied,
       reservationStatus: "reserved",
+      reservedCountHeld: true,
       reservedAt: new Date().toISOString(),
       releasedAt: undefined,
     };
@@ -504,7 +532,10 @@ export class MarketCheckoutVoucherService {
       return applied;
     }
 
-    await this.releaseUsageSlot(applied.couponId);
+    await this.releaseUsageSlot(
+      applied.couponId,
+      applied.reservedCountHeld === true,
+    );
     if (applied.usageIdentity) {
       await this.db
         .update(couponUsage)
@@ -704,11 +735,22 @@ export class MarketCheckoutVoucherService {
     return freed > 0;
   }
 
-  private async claimUsageSlot(couponId: number): Promise<void> {
+  /**
+   * used_count is the gate every coupon path checks against usage_limit, so a
+   * reservation takes a slot there too; `reserved` also counts it in
+   * reserved_count so reports can tell held slots from paid ones.
+   */
+  private async claimUsageSlot(
+    couponId: number,
+    reserved = false,
+  ): Promise<void> {
     const claim = await this.db
       .update(coupons)
       .set({
         usedCount: sql`coalesce(${coupons.usedCount}, 0) + 1`,
+        ...(reserved
+          ? { reservedCount: sql`${coupons.reservedCount} + 1` }
+          : {}),
         updatedAt: new Date(),
       })
       .where(
@@ -727,13 +769,19 @@ export class MarketCheckoutVoucherService {
     }
   }
 
-  private async releaseUsageSlot(couponId: number): Promise<void> {
+  private async releaseUsageSlot(
+    couponId: number,
+    reserved = false,
+  ): Promise<void> {
     await this.db
       .update(coupons)
       .set({
         usedCount: sql`CASE
           WHEN coalesce(${coupons.usedCount}, 0) > 0
           THEN coalesce(${coupons.usedCount}, 0) - 1 ELSE 0 END`,
+        ...(reserved
+          ? { reservedCount: sql`max(${coupons.reservedCount} - 1, 0)` }
+          : {}),
         updatedAt: new Date(),
       })
       .where(eq(coupons.id, couponId))
@@ -979,6 +1027,7 @@ function readAppliedVoucherObject(value: unknown): AppliedVoucher | null {
       candidate.reservationStatus === "redeemed"
         ? candidate.reservationStatus
         : undefined,
+    reservedCountHeld: candidate.reservedCountHeld === true ? true : undefined,
     reservedAt:
       typeof candidate.reservedAt === "string"
         ? candidate.reservedAt

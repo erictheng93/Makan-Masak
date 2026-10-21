@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getCouponStatus } from "./couponStatus";
+import { getCouponStatus, paidUseCount } from "./couponStatus";
 
 const now = new Date("2026-08-28T12:00:00.000Z");
 
@@ -48,5 +48,13 @@ describe("getCouponStatus", () => {
     expect(getCouponStatus(coupon({ validTo: now.toISOString() }))).toBe(
       "active",
     );
+  });
+});
+
+describe("paidUseCount", () => {
+  it("excludes slots held by unpaid checkouts", () => {
+    expect(paidUseCount({ usedCount: 5, reservedCount: 2 })).toBe(3);
+    expect(paidUseCount({ usedCount: 5 })).toBe(5);
+    expect(paidUseCount({ usedCount: 1, reservedCount: 3 })).toBe(0);
   });
 });

@@ -89,6 +89,9 @@ export const coupons = sqliteTable(
     usageLimit: integer("usage_limit"), // 總使用次數限制
     usageLimitPerUser: integer("usage_limit_per_user"), // 每用戶使用次數限制
     usedCount: integer("used_count").default(0), // 已使用次數
+    // Slots in used_count held by unpaid market-checkout reservations.
+    // used_count stays the limit gate; paid uses = used_count - reserved_count.
+    reservedCount: integer("reserved_count").notNull().default(0),
 
     // 有效期設定 - 標準化為 INTEGER (Unix milliseconds)，與 partnership_plans
     // 的 valid_from_ms / valid_to_ms 對齊。曾是 TEXT，靠「每一列都是 Z 結尾定寬

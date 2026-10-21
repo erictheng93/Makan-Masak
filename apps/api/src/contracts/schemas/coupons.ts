@@ -26,6 +26,8 @@ export const CouponSchema = z
     maxDiscount: z.number().optional().nullable(),
     usageLimit: z.number().optional().nullable(),
     usedCount: z.number().optional(),
+    // Slots in usedCount held by unpaid checkouts; paid uses = the difference.
+    reservedCount: z.number().optional(),
     isActive: z.union([z.boolean(), z.number()]).optional(),
     validFrom: z
       .union([z.string(), z.number(), z.date()])

@@ -1302,7 +1302,8 @@ export class CouponService extends BaseService {
             AND ${coupons.validTo} >= ${nowMs}
             AND (${coupons.usageLimit} IS NULL OR ${coupons.usedCount} < ${coupons.usageLimit})
           THEN 1 ELSE 0 END)`,
-        totalUsed: sql<number>`coalesce(sum(${coupons.usedCount}), 0)`,
+        // Paid uses only: reserved slots are unpaid checkouts still holding one.
+        totalUsed: sql<number>`coalesce(sum(coalesce(${coupons.usedCount}, 0) - ${coupons.reservedCount}), 0)`,
       })
       .from(coupons)
       .where(restaurantFilter);
