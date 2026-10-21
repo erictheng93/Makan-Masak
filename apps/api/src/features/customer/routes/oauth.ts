@@ -80,7 +80,21 @@ const routes = new Hono<{ Bindings: Env }>();
 /** Long enough for a redirect to land, short enough that a leak is worthless. */
 const OAUTH_RESULT_TTL_SECONDS = 120;
 
-const OAUTH_BINDING_COOKIE = "oauth_binding";
+const OAUTH_BINDING_COOKIE_PREFIX = "oauth_binding_";
+
+/**
+ * One binding cookie per pending state, so a second start (double-click, a
+ * second tab) does not overwrite the first flow's binding and strand its
+ * callback with OAUTH_STATE_INVALID. The name is derived from a hash of the
+ * state rather than the state itself: the callback's state is caller-supplied,
+ * and a base64url digest prefix is always a valid cookie-name token. The prefix
+ * only selects which cookie to read; the binding is still verified against the
+ * full bindingHash stored with the state in KV.
+ */
+async function bindingCookieName(state: string): Promise<string> {
+  const digest = await deriveCodeChallenge(state);
+  return `${OAUTH_BINDING_COOKIE_PREFIX}${digest.slice(0, 16)}`;
+}
 
 /**
  * Binding cookie options, scoped to the callback path. Apple form-posts its
@@ -192,7 +206,7 @@ routes.get(
     const linkCustomerId = c.get("customer")?.id;
 
     const bindingNonce = generateState();
-    setCookie(c, OAUTH_BINDING_COOKIE, bindingNonce, {
+    setCookie(c, await bindingCookieName(state), bindingNonce, {
       ...bindingCookieOptions(env, provider),
       maxAge: OAUTH_STATE_TTL_SECONDS,
     });
@@ -263,7 +277,8 @@ async function handleCallback(c: Context<{ Bindings: Env }>) {
     );
   }
 
-  const bindingCookie = getCookie(c, OAUTH_BINDING_COOKIE);
+  const cookieName = await bindingCookieName(state);
+  const bindingCookie = getCookie(c, cookieName);
   const requestState = await consumeRequestState(
     c.env.CACHE_KV,
     provider,
@@ -279,7 +294,7 @@ async function handleCallback(c: Context<{ Bindings: Env }>) {
     );
   }
 
-  deleteCookie(c, OAUTH_BINDING_COOKIE, bindingCookieOptions(env, provider));
+  deleteCookie(c, cookieName, bindingCookieOptions(env, provider));
 
   const exchanged = await exchangeCodeForIdToken({
     env,

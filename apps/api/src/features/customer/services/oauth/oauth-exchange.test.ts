@@ -501,6 +501,10 @@ describe("OAuth identity creation", () => {
   });
 });
 
+async function bindingCookieNameFor(state: string): Promise<string> {
+  return `oauth_binding_${(await deriveCodeChallenge(state)).slice(0, 16)}`;
+}
+
 oauthRoutes.onError((error, context) => {
   if (error instanceof ApiError) {
     return context.json({ code: error.code }, error.status as 400 | 503);
@@ -540,14 +544,17 @@ describe("OAuth start route", () => {
     expect(destination.searchParams.get("code_challenge_method")).toBe("S256");
 
     expect(values.size).toBe(1);
+    const state = destination.searchParams.get("state") as string;
+    const cookieName = await bindingCookieNameFor(state);
     const setCookie = start.headers.get("set-cookie") as string;
-    expect(setCookie).toMatch(/^oauth_binding=[A-Za-z0-9_-]{43};/);
+    expect(setCookie.startsWith(`${cookieName}=`)).toBe(true);
+    expect(setCookie).toMatch(
+      /^oauth_binding_[A-Za-z0-9_-]{16}=[A-Za-z0-9_-]{43};/,
+    );
     expect(setCookie).toMatch(/HttpOnly/i);
     expect(setCookie).toMatch(/Secure/i);
     expect(setCookie).toMatch(/SameSite=Lax/i);
-    const bindingNonce = /^oauth_binding=([^;]+)/.exec(
-      setCookie,
-    )?.[1] as string;
+    const bindingNonce = /^[^=]+=([^;]+)/.exec(setCookie)?.[1] as string;
     const stored = JSON.parse([...values.values()][0]) as {
       bindingHash: string;
       codeVerifier: string;
@@ -558,6 +565,49 @@ describe("OAuth start route", () => {
     expect(stored.bindingHash).toBe(await deriveCodeChallenge(bindingNonce));
     expect(stored.codeVerifier).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(stored.nonce).toMatch(/^[A-Za-z0-9_-]{43}$/);
+  });
+
+  it("keeps the first flow's binding intact when a second start follows before its callback", async () => {
+    const values = new Map<string, string>();
+    const cache = {
+      get: vi.fn(async (key: string) => values.get(key) ?? null),
+      put: vi.fn(async (key: string, value: string) => values.set(key, value)),
+      delete: vi.fn(async (key: string) => values.delete(key)),
+    } as unknown as KVNamespace;
+    const env = { ...buildEnv(), CACHE_KV: cache };
+
+    // A browser cookie jar: each start adds its own cookie; same-name cookies
+    // would overwrite, which is exactly the double-click failure.
+    const jar = new Map<string, string>();
+    const starts: string[] = [];
+    for (let i = 0; i < 2; i += 1) {
+      const start = await oauthRoutes.request(
+        "https://api.example.test/auth/oauth/google/start",
+        undefined,
+        env as never,
+      );
+      expect(start.status).toBe(302);
+      starts.push(
+        new URL(start.headers.get("location") as string).searchParams.get(
+          "state",
+        ) as string,
+      );
+      const [pair] = (start.headers.get("set-cookie") as string).split(";");
+      const [name, value] = pair.split("=");
+      jar.set(name, value);
+    }
+
+    expect(cache.put).toHaveBeenCalledTimes(2);
+    expect(starts[0]).not.toBe(starts[1]);
+    expect(jar.size).toBe(2);
+    for (const state of starts) {
+      const saved = JSON.parse(
+        values.get(`oauth_state:google:${state}`) as string,
+      ) as { bindingHash: string };
+      const binding = jar.get(await bindingCookieNameFor(state)) as string;
+      expect(binding).toEqual(expect.any(String));
+      expect(saved.bindingHash).toBe(await deriveCodeChallenge(binding));
+    }
   });
 
   it("returns safe callback outcomes before attempting a token exchange", async () => {
@@ -752,7 +802,16 @@ describe("OAuth callback identity resolution", () => {
           { ...buildEnv(), CACHE_KV: cache, DB: database } as never,
         );
 
-      for (const bad of [undefined, "oauth_binding=attacker"]) {
+      const cookieName = await bindingCookieNameFor("state");
+      // A second, still-pending flow's cookie sits beside this one.
+      const otherCookie = `${await bindingCookieNameFor("state-2")}=other-binding`;
+      for (const bad of [
+        undefined,
+        `${cookieName}=attacker`,
+        // The other flow's binding must not satisfy this state.
+        `${cookieName.replace(/.$/, (ch) => (ch === "A" ? "B" : "A"))}=binding`,
+        otherCookie,
+      ]) {
         const rejected = await callback(bad);
         expect(rejected.status).toBe(400);
         expect(await rejected.json()).toEqual({ code: "OAUTH_STATE_INVALID" });
@@ -761,9 +820,11 @@ describe("OAuth callback identity resolution", () => {
         expect(fetchImpl).not.toHaveBeenCalled();
       }
 
-      const response = await callback("oauth_binding=binding");
+      const response = await callback(`${otherCookie}; ${cookieName}=binding`);
       expect(response.status).toBe(302);
-      expect(response.headers.get("set-cookie")).toContain("oauth_binding=;");
+      const cleared = response.headers.get("set-cookie") as string;
+      expect(cleared).toContain(`${cookieName}=;`);
+      expect(cleared).not.toContain(otherCookie.split("=")[0]);
       expect(
         new URL(response.headers.get("location") as string).searchParams.get(
           "oauth_code",
