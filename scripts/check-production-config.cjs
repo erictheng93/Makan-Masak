@@ -339,6 +339,10 @@ function readDeployedProductionSecrets(root, relativeFile) {
     encoding: "utf-8",
     timeout: 120_000,
     env: { ...process.env, WRANGLER_SEND_METRICS: "false" },
+    // Node refuses to spawn a .cmd without a shell on Windows (EINVAL, the
+    // CVE-2024-27980 fix), which read as "could not read the secret list"
+    // and blocked every Windows deploy. The arguments are fixed literals.
+    shell: process.platform === "win32",
   });
 
   if (run.error || run.status !== 0 || typeof run.stdout !== "string") {
