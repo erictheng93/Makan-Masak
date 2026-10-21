@@ -7,7 +7,8 @@ import {
   it,
   vi,
 } from "vitest";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
+import { parseSignedQRUrl, verifyQRSignature } from "@makanmasak/utils";
 import { orders, restaurants, seats, tables } from "../schema";
 import {
   createTestDatabase,
@@ -784,6 +785,167 @@ describe("SeatService two-phase QR rotation", () => {
     expect(row.pendingQrCodeVersion).toBeNull();
     expect(row.pendingQrPreparedAt).toBeNull();
   });
+
+  it("re-signs a renumber at the live version when a regeneration lands mid-write", async () => {
+    const service = createService(testDb);
+    const [seat] = await readSeats();
+    const internals = service as unknown as {
+      generateSeatQRCode: (...args: unknown[]) => Promise<string>;
+    };
+    const original = internals.generateSeatQRCode.bind(service);
+    let interleaved = false;
+    const spy = vi
+      .spyOn(internals, "generateSeatQRCode")
+      .mockImplementation(async (...args) => {
+        if (!interleaved) {
+          interleaved = true;
+          // A regenerateSeatQRCode that read the same version commits first.
+          await testDb.drizzle
+            .update(seats)
+            .set({ qrCode: "concurrent-regeneration", qrCodeVersion: 2 })
+            .where(eq(seats.id, seat.id));
+        }
+        return original(...args);
+      });
+
+    await service.updateSeat(seat.id, { seatNumber: "X1" });
+    const [row] = (await readSeats()).filter((r) => r.id === seat.id);
+
+    // The first write was refused by the version CAS and retried on v2.
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(row.seatNumber).toBe("X1");
+    expect(row.qrCodeVersion).toBe(3);
+    const payload = parseSignedQRUrl(row.qrCode ?? "");
+    expect(payload).toMatchObject({ identifier: "X1", version: 3 });
+    await expect(
+      verifyQRSignature(payload!, payload!.signature, signingKey),
+    ).resolves.toBe(true);
+  });
+
+  it("refuses a regeneration whose version was advanced by a renumber", async () => {
+    const service = createService(testDb);
+    const [seat] = await readSeats();
+    const internals = service as unknown as {
+      generateSeatQRCode: (...args: unknown[]) => Promise<string>;
+    };
+    const original = internals.generateSeatQRCode.bind(service);
+    vi.spyOn(internals, "generateSeatQRCode").mockImplementationOnce(
+      async (...args) => {
+        // A renumber commits between the regeneration's read and its write.
+        await service.updateSeat(seat.id, { seatNumber: "X2" });
+        return original(...args);
+      },
+    );
+
+    const regenerated = await service.regenerateSeatQRCode(seat.id);
+    const [row] = (await readSeats()).filter((r) => r.id === seat.id);
+
+    expect(regenerated.success).toBe(false);
+    expect(row.seatNumber).toBe("X2");
+    expect(row.qrCodeVersion).toBe(2);
+    expect(parseSignedQRUrl(row.qrCode ?? "")).toMatchObject({
+      identifier: "X2",
+      version: 2,
+    });
+  });
+
+  it("refuses to activate a prepared seat code after a renumber", async () => {
+    const service = createService(testDb);
+    const [seat] = await readSeats();
+    const prepared = await service.prepareSeatQRCodeRotation(seat.id);
+    await service.updateSeat(seat.id, { seatNumber: "X3" });
+    // Simulate an activation that read the pending columns before the
+    // renumber cleared them.
+    await testDb.drizzle
+      .update(seats)
+      .set({
+        pendingQrCode: prepared.qrCode,
+        pendingQrCodeVersion: 2,
+        pendingQrPreparedAt: new Date(),
+      })
+      .where(eq(seats.id, seat.id));
+
+    await expect(service.activateSeatQRCodeRotation(seat.id)).resolves.toEqual({
+      success: false,
+      error: "Prepared QR code rotation is no longer current",
+    });
+    const [row] = (await readSeats()).filter((r) => r.id === seat.id);
+    expect(parseSignedQRUrl(row.qrCode ?? "")).toMatchObject({
+      identifier: "X3",
+      version: 2,
+    });
+  });
+
+  it("retries a batch-regenerated seat that was renumbered mid-batch", async () => {
+    const service = createService(testDb);
+    const [first, second] = await readSeats();
+    const internals = service as unknown as {
+      generateSeatQRCode: (...args: unknown[]) => Promise<string>;
+    };
+    const original = internals.generateSeatQRCode.bind(service);
+    let interleaved = false;
+    vi.spyOn(internals, "generateSeatQRCode").mockImplementation(
+      async (...args) => {
+        if (!interleaved) {
+          interleaved = true;
+          // A renumber of the first seat commits while the batch is signing.
+          await service.updateSeat(first.id, { seatNumber: "X9" });
+        }
+        return original(...args);
+      },
+    );
+
+    const result = await service.batchGenerateSeatQRCodes(tableId);
+    const rows = await readSeats();
+    const renumbered = rows.find((r) => r.id === first.id)!;
+    const untouched = rows.find((r) => r.id === second.id)!;
+
+    expect(result.success).toBe(true);
+    expect(result.failed).toBeUndefined();
+    // The batched write for the first seat lost its CAS (version 1 -> 2 under
+    // it) and was retried on its own at version 3 with the new number.
+    expect(renumbered.qrCodeVersion).toBe(3);
+    const payload = parseSignedQRUrl(renumbered.qrCode ?? "");
+    expect(payload).toMatchObject({ identifier: "X9", version: 3 });
+    await expect(
+      verifyQRSignature(payload!, payload!.signature, signingKey),
+    ).resolves.toBe(true);
+    expect(untouched.qrCodeVersion).toBe(2);
+    expect(result.qrCodes).toEqual(
+      expect.arrayContaining([
+        { seatId: first.id, seatNumber: "X9", qrCode: renumbered.qrCode },
+        { seatId: second.id, seatNumber: "02", qrCode: untouched.qrCode },
+      ]),
+    );
+  });
+
+  it("does not let a stale prepare overwrite a pending code another prepare parked", async () => {
+    const service = createService(testDb);
+    const [seat] = await readSeats();
+    const internals = service as unknown as {
+      generateSeatQRCode: (...args: unknown[]) => Promise<string>;
+    };
+    const original = internals.generateSeatQRCode.bind(service);
+    let concurrent: { qrCode?: string } | undefined;
+    vi.spyOn(internals, "generateSeatQRCode").mockImplementation(
+      async (...args) => {
+        if (!concurrent) {
+          concurrent = {};
+          concurrent = await service.prepareSeatQRCodeRotation(seat.id);
+        }
+        return original(...args);
+      },
+    );
+
+    const stale = await service.prepareSeatQRCodeRotation(seat.id);
+    const [row] = (await readSeats()).filter((r) => r.id === seat.id);
+
+    // The first parked code may already be printed; the stale prepare must
+    // hand that one back rather than replace it.
+    expect(concurrent?.qrCode).toBeDefined();
+    expect(row.pendingQrCode).toBe(concurrent?.qrCode);
+    expect(stale).toEqual({ success: true, qrCode: concurrent?.qrCode });
+  });
 });
 
 describe("TableService two-phase QR rotation", () => {
@@ -950,5 +1112,129 @@ describe("TableService two-phase QR rotation", () => {
     const row = await readRow();
     expect(row.qrCode).toBe(regenerated.qrCode);
     expect(row.qrCodeVersion).toBe(2);
+  });
+
+  it("re-signs a rename at the live version when a regeneration lands mid-write", async () => {
+    const service = createTableService(testDb);
+    const internals = service as unknown as {
+      generateQRCodeData: (...args: unknown[]) => Promise<string>;
+    };
+    const original = internals.generateQRCodeData.bind(service);
+    let regenerated: { qrCode?: string } | undefined;
+    const spy = vi
+      .spyOn(internals, "generateQRCodeData")
+      .mockImplementation(async (...args) => {
+        if (!regenerated) {
+          regenerated = {};
+          // regenerateQRCode commits between the rename's read and write.
+          regenerated = await service.regenerateQRCode(tableId);
+        }
+        return original(...args);
+      });
+
+    await service.updateTable(tableId, { number: "R9" });
+    const row = await readRow();
+
+    // rename sign (v1), regenerate sign (v2), rename retry (v2)
+    expect(spy).toHaveBeenCalledTimes(3);
+    expect(row.qrCodeVersion).toBe(2);
+    const payload = parseSignedQRUrl(row.qrCode ?? "");
+    expect(payload).toMatchObject({ identifier: "R9", version: 2 });
+    await expect(
+      verifyQRSignature(payload!, payload!.signature, signingKey),
+    ).resolves.toBe(true);
+  });
+
+  it("gives up with a conflict when the version keeps moving", async () => {
+    const service = createTableService(testDb);
+    const internals = service as unknown as {
+      generateQRCodeData: (...args: unknown[]) => Promise<string>;
+    };
+    const original = internals.generateQRCodeData.bind(service);
+    vi.spyOn(internals, "generateQRCodeData").mockImplementation(
+      async (...args) => {
+        await testDb.drizzle
+          .update(tables)
+          .set({ qrCodeVersion: sql`${tables.qrCodeVersion} + 1` })
+          .where(eq(tables.id, tableId));
+        return original(...args);
+      },
+    );
+
+    await expect(
+      service.updateTable(tableId, { number: "R9" }),
+    ).rejects.toMatchObject({ status: 409, code: "TABLE_QR_VERSION_CONFLICT" });
+    const [row] = await testDb.drizzle
+      .select({ number: tables.number })
+      .from(tables)
+      .where(eq(tables.id, tableId));
+    expect(row.number).toBe("R1");
+  });
+
+  it("prepares off the live version when a regeneration lands mid-prepare", async () => {
+    const service = createTableService(testDb);
+    const internals = service as unknown as {
+      generateQRCodeData: (...args: unknown[]) => Promise<string>;
+    };
+    const original = internals.generateQRCodeData.bind(service);
+    let regenerated: { success?: boolean } | undefined;
+    vi.spyOn(internals, "generateQRCodeData").mockImplementation(
+      async (...args) => {
+        if (!regenerated) {
+          regenerated = {};
+          regenerated = await service.regenerateQRCode(tableId);
+        }
+        return original(...args);
+      },
+    );
+
+    const prepared = await service.prepareQRCodeRotation(tableId);
+    const row = await readRow();
+
+    expect(regenerated?.success).toBe(true);
+    expect(row.qrCodeVersion).toBe(2);
+    // Parked at v2 it would equal the live version and never activate.
+    expect(row.pendingQrCodeVersion).toBe(3);
+    expect(row.pendingQrCode).toBe(prepared.qrCode);
+    expect(parseSignedQRUrl(row.pendingQrCode ?? "")).toMatchObject({
+      identifier: "R1",
+      version: 3,
+    });
+    await expect(service.activateQRCodeRotation(tableId)).resolves.toEqual({
+      success: true,
+      qrCode: prepared.qrCode,
+    });
+  });
+
+  it("retries a bulk-regenerated table that was renamed mid-batch", async () => {
+    const service = createTableService(testDb);
+    const internals = service as unknown as {
+      generateQRCodeData: (...args: unknown[]) => Promise<string>;
+    };
+    const original = internals.generateQRCodeData.bind(service);
+    let renamed = false;
+    vi.spyOn(internals, "generateQRCodeData").mockImplementation(
+      async (...args) => {
+        if (!renamed) {
+          renamed = true;
+          await service.updateTable(tableId, { number: "R9" });
+        }
+        return original(...args);
+      },
+    );
+
+    const result = await service.generateBulkQRCodes(restaurantId, [tableId]);
+    const row = await readRow();
+
+    expect(result.success).toBe(true);
+    expect(result.failed).toBeUndefined();
+    expect(row.qrCodeVersion).toBe(2);
+    expect(parseSignedQRUrl(row.qrCode ?? "")).toMatchObject({
+      identifier: "R9",
+      version: 2,
+    });
+    expect(result.qrCodes).toEqual([
+      { tableId, tableNumber: "R9", qrCode: row.qrCode },
+    ]);
   });
 });

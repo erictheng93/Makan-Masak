@@ -9,7 +9,9 @@ import {
   RealtimeEventType,
   type TableStatusUpdateEvent,
 } from "@makanmasak/shared-types";
+import { parseSignedQRUrl } from "@makanmasak/utils";
 import { ApiError } from "../../../shared/utils/api-error";
+import { SignedQrVerificationService } from "../../qr-codes/services/SignedQrVerificationService";
 import type { D1Database } from "@cloudflare/workers-types";
 import type { Env } from "../../../types/env";
 import type {
@@ -432,7 +434,22 @@ export class TablesService {
       // The lookup misses with `undefined`; this method has always promised
       // `null` for "no such table", so normalise rather than widen it.
       const table = await this.tableService.getTableByQRCode(qrCode);
-      return table ?? null;
+      if (table) return table;
+
+      // A rename re-signs the stored code at the same version, so the sticker
+      // printed before it no longer matches `qr_code` byte for byte while
+      // signed verification still accepts it. Resolve such a code by its
+      // signed table id + live version; a regenerated, rotated or deleted
+      // table still fails here exactly as it does on the signed order path.
+      if (!parseSignedQRUrl(qrCode)) return null;
+      const verification = await new SignedQrVerificationService(
+        this.env,
+      ).verifyTable(qrCode);
+      if (!verification.valid) return null;
+      const verified = await this.tableService.getTableById(
+        verification.tableId,
+      );
+      return (verified as Table | null | undefined) ?? null;
     } catch (error) {
       this.logError("getTableByQRCode", error);
       throw new Error(

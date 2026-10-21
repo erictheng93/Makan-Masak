@@ -1,8 +1,37 @@
-import { buildSignedQRUrl } from "@makanmasak/utils";
-import { and, asc, count, eq, inArray, isNull, sql } from "drizzle-orm";
+import { buildSignedQRUrl, conflict } from "@makanmasak/utils";
+import {
+  type AnyColumn,
+  and,
+  asc,
+  count,
+  eq,
+  inArray,
+  isNull,
+  sql,
+} from "drizzle-orm";
 import { restaurants, seats, tables } from "../schema";
 import { resolveAppBaseUrl } from "./app-base-url";
 import { BaseService } from "./base";
+
+/** Bounded retries for a write that compare-and-sets a QR version. */
+const QR_VERSION_CAS_ATTEMPTS = 3;
+
+/** `col = version`, treating a legacy NULL version as 0 like the readers do. */
+function qrVersionIs(col: AnyColumn, version: number | null) {
+  return eq(sql<number>`coalesce(${col}, 0)`, version ?? 0);
+}
+
+type SeatQrAttempt =
+  | { status: "ok"; qrCode: string; seatNumber: string }
+  | { status: "conflict" | "seat_not_found" | "table_not_found" };
+
+function seatQrAttemptError(
+  status: Exclude<SeatQrAttempt["status"], "ok">,
+): string {
+  if (status === "seat_not_found") return "Seat not found";
+  if (status === "table_not_found") return "Table not found";
+  return "Seat QR code changed concurrently; retry";
+}
 
 export interface CreateSeatData {
   tableId: number;
@@ -332,48 +361,71 @@ export class SeatService extends BaseService {
       // The seat number is the seat's identity inside its signed QR, so a
       // renumber reissues the code in the same write; otherwise the stored
       // code would fail verification as "mismatch" with nothing telling anyone.
-      let reissuedQr = {};
-      if (data.seatNumber !== undefined) {
-        const current = await this.db
-          .select({
-            tableId: seats.tableId,
-            seatNumber: seats.seatNumber,
-            qrCodeVersion: seats.qrCodeVersion,
-            restaurantId: tables.restaurantId,
-          })
-          .from(seats)
-          .innerJoin(tables, eq(seats.tableId, tables.id))
-          .where(and(eq(seats.id, seatId), isNull(seats.deletedAt)))
-          .get();
+      // The reissue compare-and-sets the version it read, so a concurrent
+      // regeneration cannot leave the new number with a same-version code
+      // signed for the old one (or vice versa).
+      for (let attempt = 1; ; attempt++) {
+        let reissuedQr = {};
+        let expectedVersion: number | undefined;
+        if (data.seatNumber !== undefined) {
+          const current = await this.db
+            .select({
+              tableId: seats.tableId,
+              seatNumber: seats.seatNumber,
+              qrCodeVersion: seats.qrCodeVersion,
+              restaurantId: tables.restaurantId,
+            })
+            .from(seats)
+            .innerJoin(tables, eq(seats.tableId, tables.id))
+            .where(and(eq(seats.id, seatId), isNull(seats.deletedAt)))
+            .get();
 
-        if (current && current.seatNumber !== data.seatNumber) {
-          const qrCodeVersion = (current.qrCodeVersion || 0) + 1;
-          reissuedQr = {
-            qrCode: await this.generateSeatQRCode(
-              current.restaurantId,
-              current.tableId,
-              data.seatNumber,
+          if (current && current.seatNumber !== data.seatNumber) {
+            expectedVersion = current.qrCodeVersion || 0;
+            const qrCodeVersion = expectedVersion + 1;
+            reissuedQr = {
+              qrCode: await this.generateSeatQRCode(
+                current.restaurantId,
+                current.tableId,
+                data.seatNumber,
+                qrCodeVersion,
+              ),
               qrCodeVersion,
+              pendingQrCode: null,
+              pendingQrCodeVersion: null,
+              pendingQrPreparedAt: null,
+            };
+          }
+        }
+
+        const [updatedSeat] = await this.db
+          .update(seats)
+          .set({
+            ...data,
+            ...reissuedQr,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(seats.id, seatId),
+              isNull(seats.deletedAt),
+              expectedVersion === undefined
+                ? undefined
+                : qrVersionIs(seats.qrCodeVersion, expectedVersion),
             ),
-            qrCodeVersion,
-            pendingQrCode: null,
-            pendingQrCodeVersion: null,
-            pendingQrPreparedAt: null,
-          };
+          )
+          .returning();
+
+        if (updatedSeat || expectedVersion === undefined) {
+          return updatedSeat;
+        }
+        if (attempt >= QR_VERSION_CAS_ATTEMPTS) {
+          throw conflict(
+            "The seat's QR code changed while it was being renumbered; retry",
+            "SEAT_QR_VERSION_CONFLICT",
+          );
         }
       }
-
-      const [updatedSeat] = await this.db
-        .update(seats)
-        .set({
-          ...data,
-          ...reissuedQr,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(seats.id, seatId), isNull(seats.deletedAt)))
-        .returning();
-
-      return updatedSeat;
     } catch (error) {
       this.handleError(error, "updateSeat");
     }
@@ -489,54 +541,151 @@ export class SeatService extends BaseService {
     seatId: number,
   ): Promise<{ success: boolean; qrCode?: string; error?: string }> {
     try {
-      const seat = await this.db
-        .select({
-          tableId: seats.tableId,
-          seatNumber: seats.seatNumber,
-          qrCodeVersion: seats.qrCodeVersion,
-        })
-        .from(seats)
-        .where(and(eq(seats.id, seatId), isNull(seats.deletedAt)))
-        .get();
-
-      if (!seat) {
-        return { success: false, error: "Seat not found" };
-      }
-
-      const table = await this.db
-        .select({ restaurantId: tables.restaurantId })
-        .from(tables)
-        .where(and(eq(tables.id, seat.tableId), isNull(tables.deletedAt)))
-        .get();
-
-      if (!table) {
-        return { success: false, error: "Table not found" };
-      }
-
-      const newVersion = (seat.qrCodeVersion || 0) + 1;
-      const newQRCode = await this.generateSeatQRCode(
-        table.restaurantId,
-        seat.tableId,
-        seat.seatNumber,
-        newVersion,
-      );
-
-      await this.db
-        .update(seats)
-        .set({
-          qrCode: newQRCode,
-          qrCodeVersion: newVersion,
-          pendingQrCode: null,
-          pendingQrCodeVersion: null,
-          pendingQrPreparedAt: null,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(seats.id, seatId), isNull(seats.deletedAt)));
-
-      return { success: true, qrCode: newQRCode };
+      const result = await this.tryRegenerateSeatQRCode(seatId);
+      return result.status === "ok"
+        ? { success: true, qrCode: result.qrCode }
+        : { success: false, error: seatQrAttemptError(result.status) };
     } catch {
       return { success: false, error: "Failed to regenerate QR code" };
     }
+  }
+
+  /**
+   * One read-sign-write regeneration, compare-and-set on the version it read.
+   * A renumber or another regeneration committing in between makes this a
+   * "conflict" rather than leaving a code signed for a seat number the row no
+   * longer carries.
+   */
+  private async tryRegenerateSeatQRCode(
+    seatId: number,
+  ): Promise<SeatQrAttempt> {
+    const seat = await this.db
+      .select({
+        tableId: seats.tableId,
+        seatNumber: seats.seatNumber,
+        qrCodeVersion: seats.qrCodeVersion,
+        restaurantId: tables.restaurantId,
+        tableDeletedAt: tables.deletedAt,
+      })
+      .from(seats)
+      .leftJoin(tables, eq(seats.tableId, tables.id))
+      .where(and(eq(seats.id, seatId), isNull(seats.deletedAt)))
+      .get();
+
+    if (!seat) return { status: "seat_not_found" };
+    if (!seat.restaurantId || seat.tableDeletedAt) {
+      return { status: "table_not_found" };
+    }
+
+    const newVersion = (seat.qrCodeVersion || 0) + 1;
+    const newQRCode = await this.generateSeatQRCode(
+      seat.restaurantId,
+      seat.tableId,
+      seat.seatNumber,
+      newVersion,
+    );
+
+    const written = await this.db
+      .update(seats)
+      .set({
+        qrCode: newQRCode,
+        qrCodeVersion: newVersion,
+        pendingQrCode: null,
+        pendingQrCodeVersion: null,
+        pendingQrPreparedAt: null,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(seats.id, seatId),
+          isNull(seats.deletedAt),
+          qrVersionIs(seats.qrCodeVersion, seat.qrCodeVersion),
+        ),
+      )
+      .returning({ id: seats.id });
+
+    return written.length === 1
+      ? { status: "ok", qrCode: newQRCode, seatNumber: seat.seatNumber }
+      : { status: "conflict" };
+  }
+
+  /**
+   * One read-sign-park attempt for a two-phase rotation. Parks the code only
+   * if the live version is still the one it was derived from (a renumber or
+   * regeneration would make it a code for a retired version or a stale seat
+   * number) and no other prepare got there first (its code may already be
+   * printed). An existing pending code is returned unchanged.
+   */
+  private async tryPrepareSeatQRCode(seatId: number): Promise<SeatQrAttempt> {
+    const seat = await this.db
+      .select({
+        tableId: seats.tableId,
+        seatNumber: seats.seatNumber,
+        qrCodeVersion: seats.qrCodeVersion,
+        pendingQrCode: seats.pendingQrCode,
+        restaurantId: tables.restaurantId,
+        tableDeletedAt: tables.deletedAt,
+      })
+      .from(seats)
+      .leftJoin(tables, eq(seats.tableId, tables.id))
+      .where(and(eq(seats.id, seatId), isNull(seats.deletedAt)))
+      .get();
+
+    if (!seat) return { status: "seat_not_found" };
+    if (seat.pendingQrCode) {
+      return {
+        status: "ok",
+        qrCode: seat.pendingQrCode,
+        seatNumber: seat.seatNumber,
+      };
+    }
+    if (!seat.restaurantId || seat.tableDeletedAt) {
+      return { status: "table_not_found" };
+    }
+
+    const pendingVersion = (seat.qrCodeVersion || 0) + 1;
+    const pendingQrCode = await this.generateSeatQRCode(
+      seat.restaurantId,
+      seat.tableId,
+      seat.seatNumber,
+      pendingVersion,
+    );
+
+    const written = await this.db
+      .update(seats)
+      .set({
+        pendingQrCode,
+        pendingQrCodeVersion: pendingVersion,
+        pendingQrPreparedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(seats.id, seatId),
+          isNull(seats.deletedAt),
+          qrVersionIs(seats.qrCodeVersion, seat.qrCodeVersion),
+          eq(seats.seatNumber, seat.seatNumber),
+          isNull(seats.pendingQrCode),
+        ),
+      )
+      .returning({ id: seats.id });
+
+    return written.length === 1
+      ? { status: "ok", qrCode: pendingQrCode, seatNumber: seat.seatNumber }
+      : { status: "conflict" };
+  }
+
+  /** Re-run a per-seat attempt until it stops conflicting, within the bound. */
+  private async retrySeatQrAttempt(
+    attempt: () => Promise<SeatQrAttempt>,
+    attemptsLeft: number,
+  ): Promise<SeatQrAttempt> {
+    let result: SeatQrAttempt = { status: "conflict" };
+    for (let i = 0; i < attemptsLeft; i++) {
+      result = await attempt();
+      if (result.status !== "conflict") break;
+    }
+    return result;
   }
 
   /**
@@ -546,53 +695,13 @@ export class SeatService extends BaseService {
     seatId: number,
   ): Promise<{ success: boolean; qrCode?: string; error?: string }> {
     try {
-      const seat = await this.db
-        .select({
-          tableId: seats.tableId,
-          seatNumber: seats.seatNumber,
-          qrCodeVersion: seats.qrCodeVersion,
-          pendingQrCode: seats.pendingQrCode,
-        })
-        .from(seats)
-        .where(and(eq(seats.id, seatId), isNull(seats.deletedAt)))
-        .get();
-
-      if (!seat) {
-        return { success: false, error: "Seat not found" };
-      }
-      if (seat.pendingQrCode) {
-        return { success: true, qrCode: seat.pendingQrCode };
-      }
-
-      const table = await this.db
-        .select({ restaurantId: tables.restaurantId })
-        .from(tables)
-        .where(and(eq(tables.id, seat.tableId), isNull(tables.deletedAt)))
-        .get();
-
-      if (!table) {
-        return { success: false, error: "Table not found" };
-      }
-
-      const pendingVersion = (seat.qrCodeVersion || 0) + 1;
-      const pendingQrCode = await this.generateSeatQRCode(
-        table.restaurantId,
-        seat.tableId,
-        seat.seatNumber,
-        pendingVersion,
+      const result = await this.retrySeatQrAttempt(
+        () => this.tryPrepareSeatQRCode(seatId),
+        QR_VERSION_CAS_ATTEMPTS,
       );
-
-      await this.db
-        .update(seats)
-        .set({
-          pendingQrCode,
-          pendingQrCodeVersion: pendingVersion,
-          pendingQrPreparedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(and(eq(seats.id, seatId), isNull(seats.deletedAt)));
-
-      return { success: true, qrCode: pendingQrCode };
+      return result.status === "ok"
+        ? { success: true, qrCode: result.qrCode }
+        : { success: false, error: seatQrAttemptError(result.status) };
     } catch {
       return { success: false, error: "Failed to prepare QR code rotation" };
     }
@@ -618,7 +727,7 @@ export class SeatService extends BaseService {
         return { success: false, error: "No prepared QR code to activate" };
       }
 
-      await this.db
+      const activation = await this.db
         .update(seats)
         .set({
           qrCode: seat.pendingQrCode,
@@ -628,7 +737,24 @@ export class SeatService extends BaseService {
           pendingQrPreparedAt: null,
           updatedAt: new Date(),
         })
-        .where(and(eq(seats.id, seatId), isNull(seats.deletedAt)));
+        .where(
+          and(
+            eq(seats.id, seatId),
+            isNull(seats.deletedAt),
+            // Same guard as the table activation: a renumber or regeneration
+            // after our read already moved the version, and promoting this
+            // stale code would sign the old seat number at the live version.
+            qrVersionIs(seats.qrCodeVersion, seat.pendingQrCodeVersion - 1),
+            eq(seats.pendingQrCodeVersion, seat.pendingQrCodeVersion),
+          ),
+        );
+
+      if (activation.meta.changes !== 1) {
+        return {
+          success: false,
+          error: "Prepared QR code rotation is no longer current",
+        };
+      }
 
       return { success: true, qrCode: seat.pendingQrCode };
     } catch {
@@ -659,6 +785,8 @@ export class SeatService extends BaseService {
   async batchPrepareSeatQRCodeRotations(tableId: number): Promise<{
     success: boolean;
     qrCodes?: Array<{ seatId: number; qrCode: string; seatNumber: string }>;
+    /** Seats whose QR moved under the write on every attempt; left as they are. */
+    failed?: Array<{ seatId: number; error: string }>;
     error?: string;
   }> {
     try {
@@ -693,6 +821,7 @@ export class SeatService extends BaseService {
             return {
               seatId: seat.id,
               seatNumber: seat.seatNumber,
+              readVersion: seat.qrCodeVersion,
               pendingVersion: null,
               qrCode: seat.pendingQrCode,
             };
@@ -702,6 +831,7 @@ export class SeatService extends BaseService {
           return {
             seatId: seat.id,
             seatNumber: seat.seatNumber,
+            readVersion: seat.qrCodeVersion,
             pendingVersion,
             qrCode: await this.generateSeatQRCode(
               table.restaurantId,
@@ -714,18 +844,15 @@ export class SeatService extends BaseService {
       );
 
       const updatedAt = new Date();
-      const writes = prepared
-        .filter(
-          (
-            preparedSeat,
-          ): preparedSeat is {
-            seatId: number;
-            seatNumber: string;
-            pendingVersion: number;
-            qrCode: string;
-          } => preparedSeat.pendingVersion !== null,
-        )
-        .map(({ seatId, qrCode, pendingVersion }) =>
+      const toWrite = prepared.filter(
+        (
+          preparedSeat,
+        ): preparedSeat is (typeof prepared)[number] & {
+          pendingVersion: number;
+        } => preparedSeat.pendingVersion !== null,
+      );
+      const writes = toWrite.map(
+        ({ seatId, seatNumber, qrCode, readVersion, pendingVersion }) =>
           this.db
             .update(seats)
             .set({
@@ -734,22 +861,37 @@ export class SeatService extends BaseService {
               pendingQrPreparedAt: updatedAt,
               updatedAt,
             })
-            .where(and(eq(seats.id, seatId), isNull(seats.deletedAt))),
-        );
+            .where(
+              and(
+                eq(seats.id, seatId),
+                isNull(seats.deletedAt),
+                // Same compare-and-set as the single prepare; a row that lost
+                // a race is retried on its own below.
+                qrVersionIs(seats.qrCodeVersion, readVersion),
+                eq(seats.seatNumber, seatNumber),
+                isNull(seats.pendingQrCode),
+              ),
+            )
+            .returning({ id: seats.id }),
+      );
 
-      if (writes.length > 0) {
-        await this.db.batch(
-          writes as unknown as Parameters<typeof this.db.batch>[0],
-        );
-      }
+      const results =
+        writes.length > 0
+          ? ((await this.db.batch(
+              writes as unknown as Parameters<typeof this.db.batch>[0],
+            )) as unknown as Array<Array<{ id: number }>>)
+          : [];
+      const missed = new Set(
+        toWrite
+          .filter((_, i) => results[i]?.length !== 1)
+          .map(({ seatId }) => seatId),
+      );
 
       return {
         success: true,
-        qrCodes: prepared.map(({ seatId, seatNumber, qrCode }) => ({
-          seatId,
-          seatNumber,
-          qrCode,
-        })),
+        ...(await this.settleSeatBatch(prepared, missed, (seatId) =>
+          this.tryPrepareSeatQRCode(seatId),
+        )),
       };
     } catch {
       return { success: false, error: "Failed to prepare QR code rotation" };
@@ -759,6 +901,8 @@ export class SeatService extends BaseService {
   async batchGenerateSeatQRCodes(tableId: number): Promise<{
     success: boolean;
     qrCodes?: Array<{ seatId: number; qrCode: string; seatNumber: string }>;
+    /** Seats whose QR moved under the write on every attempt; left as they are. */
+    failed?: Array<{ seatId: number; error: string }>;
     error?: string;
   }> {
     try {
@@ -793,6 +937,7 @@ export class SeatService extends BaseService {
           return {
             seatId: seat.id,
             seatNumber: seat.seatNumber,
+            readVersion: seat.qrCodeVersion,
             newVersion,
             qrCode: await this.generateSeatQRCode(
               table.restaurantId,
@@ -805,39 +950,93 @@ export class SeatService extends BaseService {
       );
 
       const updatedAt = new Date();
-      const writes = regenerated.map(({ seatId, qrCode, newVersion }) =>
-        this.db
-          .update(seats)
-          .set({
-            qrCode,
-            qrCodeVersion: newVersion,
-            pendingQrCode: null,
-            pendingQrCodeVersion: null,
-            pendingQrPreparedAt: null,
-            updatedAt,
-          })
-          .where(and(eq(seats.id, seatId), isNull(seats.deletedAt))),
+      const writes = regenerated.map(
+        ({ seatId, qrCode, readVersion, newVersion }) =>
+          this.db
+            .update(seats)
+            .set({
+              qrCode,
+              qrCodeVersion: newVersion,
+              pendingQrCode: null,
+              pendingQrCodeVersion: null,
+              pendingQrPreparedAt: null,
+              updatedAt,
+            })
+            .where(
+              and(
+                eq(seats.id, seatId),
+                isNull(seats.deletedAt),
+                // Compare-and-set per seat: one renumbered or regenerated
+                // since the read is retried on its own below instead of
+                // overwritten with a code for a version it has left.
+                qrVersionIs(seats.qrCodeVersion, readVersion),
+              ),
+            )
+            .returning({ id: seats.id }),
       );
 
-      // One transactional batch rather than a statement per seat. Regeneration
-      // invalidates the printed sticker the moment it commits, so a partial
-      // write would leave a table where some seats scan and some do not — with
-      // no record of which. D1 batch() applies all or none.
-      await this.db.batch(
+      // One batch rather than a statement per seat. Every seat that still
+      // matches what was read commits together; a seat that lost a race keeps
+      // the newer code it already has until its own retry lands.
+      const results = (await this.db.batch(
         writes as unknown as Parameters<typeof this.db.batch>[0],
+      )) as unknown as Array<Array<{ id: number }>>;
+      const missed = new Set(
+        regenerated
+          .filter((_, i) => results[i]?.length !== 1)
+          .map(({ seatId }) => seatId),
       );
 
       return {
         success: true,
-        qrCodes: regenerated.map(({ seatId, seatNumber, qrCode }) => ({
-          seatId,
-          seatNumber,
-          qrCode,
-        })),
+        ...(await this.settleSeatBatch(regenerated, missed, (seatId) =>
+          this.tryRegenerateSeatQRCode(seatId),
+        )),
       };
     } catch {
       return { success: false, error: "Failed to generate QR codes" };
     }
+  }
+
+  /**
+   * Keep the batch's order, retry the seats whose batched write lost a race,
+   * and report any that still could not be written instead of failing the
+   * whole batch.
+   */
+  private async settleSeatBatch(
+    rows: Array<{ seatId: number; seatNumber: string; qrCode: string }>,
+    missed: Set<number>,
+    attempt: (seatId: number) => Promise<SeatQrAttempt>,
+  ): Promise<{
+    qrCodes: Array<{ seatId: number; qrCode: string; seatNumber: string }>;
+    failed?: Array<{ seatId: number; error: string }>;
+  }> {
+    const qrCodes: Array<{
+      seatId: number;
+      qrCode: string;
+      seatNumber: string;
+    }> = [];
+    const failed: Array<{ seatId: number; error: string }> = [];
+    for (const { seatId, seatNumber, qrCode } of rows) {
+      if (!missed.has(seatId)) {
+        qrCodes.push({ seatId, seatNumber, qrCode });
+        continue;
+      }
+      const retried = await this.retrySeatQrAttempt(
+        () => attempt(seatId),
+        QR_VERSION_CAS_ATTEMPTS - 1,
+      );
+      if (retried.status === "ok") {
+        qrCodes.push({
+          seatId,
+          seatNumber: retried.seatNumber,
+          qrCode: retried.qrCode,
+        });
+      } else {
+        failed.push({ seatId, error: seatQrAttemptError(retried.status) });
+      }
+    }
+    return failed.length > 0 ? { qrCodes, failed } : { qrCodes };
   }
 
   /**

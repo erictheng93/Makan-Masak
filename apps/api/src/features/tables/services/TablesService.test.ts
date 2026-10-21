@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { buildSignedQRUrl } from "@makanmasak/utils";
 import { TablesService } from "./TablesService";
 import type { Table } from "../types";
 
@@ -26,6 +27,13 @@ const tableServiceCtor = vi.hoisted(() =>
 
 vi.mock("@makanmasak/database", () => ({
   TableService: tableServiceCtor,
+}));
+
+const verifyTable = vi.hoisted(() => vi.fn());
+vi.mock("../../qr-codes/services/SignedQrVerificationService", () => ({
+  SignedQrVerificationService: vi.fn(function SignedQrVerificationService() {
+    return { verifyTable };
+  }),
 }));
 
 function createEnv() {
@@ -73,6 +81,7 @@ async function withSilencedErrors<T>(action: () => Promise<T>): Promise<T> {
 describe("TablesService", () => {
   beforeEach(() => {
     tableServiceCtor.mockClear();
+    verifyTable.mockReset();
     for (const method of Object.values(tableServiceMethods)) {
       method.mockReset();
     }
@@ -338,6 +347,52 @@ describe("TablesService", () => {
       4,
     );
     expect(tableServiceMethods.getTableByQRCode).toHaveBeenCalledWith("qr-11");
+  });
+
+  it("resolves a pre-rename sticker through signed verification", async () => {
+    const table = createTable({ number: "A9" });
+    const oldSticker = await buildSignedQRUrl(
+      "https://example.test",
+      {
+        type: "table",
+        restaurantId: "rest-1",
+        tableId: 11,
+        identifier: "A1",
+        version: 1,
+      },
+      "k".repeat(32),
+    );
+    tableServiceMethods.getTableByQRCode.mockResolvedValue(undefined);
+    verifyTable.mockResolvedValue({ valid: true, tableId: 11 });
+    tableServiceMethods.getTableById.mockResolvedValue(table);
+
+    await expect(createService().getTableByQRCode(oldSticker)).resolves.toBe(
+      table,
+    );
+    expect(verifyTable).toHaveBeenCalledWith(oldSticker);
+    expect(tableServiceMethods.getTableById).toHaveBeenCalledWith(11);
+  });
+
+  it("still misses for a stale or unsigned code", async () => {
+    tableServiceMethods.getTableByQRCode.mockResolvedValue(undefined);
+    verifyTable.mockResolvedValue({ valid: false, reason: "stale" });
+    const signed = await buildSignedQRUrl(
+      "https://example.test",
+      {
+        type: "table",
+        restaurantId: "rest-1",
+        tableId: 11,
+        identifier: "A1",
+        version: 1,
+      },
+      "k".repeat(32),
+    );
+
+    const service = createService();
+    await expect(service.getTableByQRCode(signed)).resolves.toBeNull();
+    await expect(service.getTableByQRCode("qr-unknown")).resolves.toBeNull();
+    expect(verifyTable).toHaveBeenCalledOnce();
+    expect(tableServiceMethods.getTableById).not.toHaveBeenCalled();
   });
 
   it("validates access and creates public response helpers", () => {

@@ -1,5 +1,6 @@
-import { buildSignedQRUrl } from "@makanmasak/utils";
+import { buildSignedQRUrl, conflict } from "@makanmasak/utils";
 import {
+  type AnyColumn,
   and,
   asc,
   count,
@@ -18,6 +19,14 @@ import { moneyAmountExpression } from "../utils/money-sql";
 import { resolveAppBaseUrl } from "./app-base-url";
 import { BaseService } from "./base";
 import { SeatService } from "./seat";
+
+/** Bounded retries for a write that compare-and-sets a QR version. */
+const QR_VERSION_CAS_ATTEMPTS = 3;
+
+/** `col = version`, treating a legacy NULL version as 0 like the readers do. */
+function qrVersionIs(col: AnyColumn, version: number | null) {
+  return eq(sql<number>`coalesce(${col}, 0)`, version ?? 0);
+}
 
 /** A full `tables` row, as `insert`/`update` … `returning()` hands it back. */
 export type TableRow = typeof tables.$inferSelect;
@@ -399,31 +408,66 @@ export class TableService extends BaseService {
 
       // A rename re-signs the stored code at the SAME version: verification
       // keys on table id + version, so the sticker already on the table keeps
-      // working and the next print carries the new number.
-      const renamedQr =
-        data.number && data.number !== currentTable.number
+      // working and the next print carries the new number. The write is a
+      // compare-and-set on that version: a regeneration or rotation landing
+      // between our read and this write would otherwise be overwritten by a
+      // code signed at the version it just retired.
+      const isRename = Boolean(
+        data.number && data.number !== currentTable.number,
+      );
+      let signedVersion = currentTable.qrCodeVersion;
+
+      for (let attempt = 1; ; attempt++) {
+        const renamedQr = isRename
           ? {
               qrCode: await this.generateQRCodeData(
                 currentTable.restaurantId,
                 id,
-                data.number,
-                currentTable.qrCodeVersion,
+                data.number as string,
+                signedVersion,
               ),
             }
           : {};
 
-      const [updatedTable] = await this.db
-        .update(tables)
-        .set({
-          ...data,
-          ...renamedQr,
-          seatCount: nextMode === "table" ? 0 : nextSeatCount,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(tables.id, id), isNull(tables.deletedAt)))
-        .returning();
+        const [updatedTable] = await this.db
+          .update(tables)
+          .set({
+            ...data,
+            ...renamedQr,
+            seatCount: nextMode === "table" ? 0 : nextSeatCount,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(tables.id, id),
+              isNull(tables.deletedAt),
+              isRename
+                ? qrVersionIs(tables.qrCodeVersion, signedVersion)
+                : undefined,
+            ),
+          )
+          .returning();
 
-      return updatedTable;
+        if (updatedTable || !isRename) {
+          return updatedTable;
+        }
+
+        const latest = await this.db
+          .select({ qrCodeVersion: tables.qrCodeVersion })
+          .from(tables)
+          .where(and(eq(tables.id, id), isNull(tables.deletedAt)))
+          .get();
+        if (!latest) {
+          return undefined;
+        }
+        if (attempt >= QR_VERSION_CAS_ATTEMPTS) {
+          throw conflict(
+            "The table's QR code changed while it was being renamed; retry",
+            "TABLE_QR_VERSION_CONFLICT",
+          );
+        }
+        signedVersion = latest.qrCodeVersion;
+      }
     } catch (error) {
       this.handleError(error, "updateTable");
     }
@@ -740,44 +784,88 @@ export class TableService extends BaseService {
     _customData?: QRCodeOptions["customData"],
   ): Promise<{ success: boolean; qrCode?: string; error?: string }> {
     try {
-      const table = await this.db
-        .select({
-          restaurantId: tables.restaurantId,
-          number: tables.number,
-          qrCodeVersion: tables.qrCodeVersion,
-        })
-        .from(tables)
-        .where(and(eq(tables.id, tableId), isNull(tables.deletedAt)))
-        .get();
-
-      if (!table) {
-        return { success: false, error: "Table not found" };
+      const result = await this.tryRegenerateTableQRCode(tableId);
+      if (result.status !== "ok") {
+        return {
+          success: false,
+          error:
+            result.status === "not_found"
+              ? "Table not found"
+              : "Table QR code changed concurrently; retry",
+        };
       }
-
-      const newVersion = (table.qrCodeVersion || 0) + 1;
-      const newQRCode = await this.generateQRCodeData(
-        table.restaurantId,
-        tableId,
-        table.number,
-        newVersion,
-      );
-
-      await this.db
-        .update(tables)
-        .set({
-          qrCode: newQRCode,
-          qrCodeVersion: newVersion,
-          pendingQrCode: null,
-          pendingQrCodeVersion: null,
-          pendingQrPreparedAt: null,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(tables.id, tableId), isNull(tables.deletedAt)));
-
-      return { success: true, qrCode: newQRCode };
+      return { success: true, qrCode: result.qrCode };
     } catch {
       return { success: false, error: "Failed to regenerate QR code" };
     }
+  }
+
+  /**
+   * One read-sign-write regeneration, compare-and-set on the version and
+   * number it signed. A rename, regeneration or rotation that commits between
+   * the read and the write makes this a "conflict" instead of overwriting the
+   * newer code with one signed at a version (or number) the row has left.
+   */
+  private async tryRegenerateTableQRCode(
+    tableId: number,
+    restaurantId?: string,
+  ): Promise<
+    | { status: "ok"; qrCode: string; tableNumber: string }
+    | { status: "conflict" | "not_found" }
+  > {
+    const table = await this.db
+      .select({
+        restaurantId: tables.restaurantId,
+        number: tables.number,
+        qrCodeVersion: tables.qrCodeVersion,
+      })
+      .from(tables)
+      .where(
+        and(
+          eq(tables.id, tableId),
+          isNull(tables.deletedAt),
+          restaurantId === undefined
+            ? undefined
+            : eq(tables.restaurantId, restaurantId),
+        ),
+      )
+      .get();
+
+    if (!table) {
+      return { status: "not_found" };
+    }
+
+    const newVersion = (table.qrCodeVersion || 0) + 1;
+    const newQRCode = await this.generateQRCodeData(
+      table.restaurantId,
+      tableId,
+      table.number,
+      newVersion,
+    );
+
+    const written = await this.db
+      .update(tables)
+      .set({
+        qrCode: newQRCode,
+        qrCodeVersion: newVersion,
+        pendingQrCode: null,
+        pendingQrCodeVersion: null,
+        pendingQrPreparedAt: null,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(tables.id, tableId),
+          isNull(tables.deletedAt),
+          qrVersionIs(tables.qrCodeVersion, table.qrCodeVersion),
+          eq(tables.number, table.number),
+        ),
+      )
+      .returning({ id: tables.id });
+
+    return written.length === 1
+      ? { status: "ok", qrCode: newQRCode, tableNumber: table.number }
+      : { status: "conflict" };
   }
 
   /**
@@ -794,45 +882,67 @@ export class TableService extends BaseService {
     tableId: number,
   ): Promise<{ success: boolean; qrCode?: string; error?: string }> {
     try {
-      const table = await this.db
-        .select({
-          restaurantId: tables.restaurantId,
-          number: tables.number,
-          qrCodeVersion: tables.qrCodeVersion,
-          pendingQrCode: tables.pendingQrCode,
-        })
-        .from(tables)
-        .where(and(eq(tables.id, tableId), isNull(tables.deletedAt)))
-        .get();
+      for (let attempt = 1; attempt <= QR_VERSION_CAS_ATTEMPTS; attempt++) {
+        const table = await this.db
+          .select({
+            restaurantId: tables.restaurantId,
+            number: tables.number,
+            qrCodeVersion: tables.qrCodeVersion,
+            pendingQrCode: tables.pendingQrCode,
+          })
+          .from(tables)
+          .where(and(eq(tables.id, tableId), isNull(tables.deletedAt)))
+          .get();
 
-      if (!table) {
-        return { success: false, error: "Table not found" };
+        if (!table) {
+          return { success: false, error: "Table not found" };
+        }
+        // Re-preparing would mint a second code for the same rotation and
+        // invalidate stickers that may already be printed.
+        if (table.pendingQrCode) {
+          return { success: true, qrCode: table.pendingQrCode };
+        }
+
+        const pendingVersion = (table.qrCodeVersion || 0) + 1;
+        const pendingQrCode = await this.generateQRCodeData(
+          table.restaurantId,
+          tableId,
+          table.number,
+          pendingVersion,
+        );
+
+        // Park it only if nothing moved since the read: not the live version
+        // (a regeneration would make this a code for a retired version), not
+        // the number (it would be signed for the old one), and no other
+        // prepare got there first (its code may already be printed).
+        const written = await this.db
+          .update(tables)
+          .set({
+            pendingQrCode,
+            pendingQrCodeVersion: pendingVersion,
+            pendingQrPreparedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(tables.id, tableId),
+              isNull(tables.deletedAt),
+              qrVersionIs(tables.qrCodeVersion, table.qrCodeVersion),
+              eq(tables.number, table.number),
+              isNull(tables.pendingQrCode),
+            ),
+          )
+          .returning({ id: tables.id });
+
+        if (written.length === 1) {
+          return { success: true, qrCode: pendingQrCode };
+        }
       }
-      // Re-preparing would mint a second code for the same rotation and
-      // invalidate stickers that may already be printed.
-      if (table.pendingQrCode) {
-        return { success: true, qrCode: table.pendingQrCode };
-      }
 
-      const pendingVersion = (table.qrCodeVersion || 0) + 1;
-      const pendingQrCode = await this.generateQRCodeData(
-        table.restaurantId,
-        tableId,
-        table.number,
-        pendingVersion,
-      );
-
-      await this.db
-        .update(tables)
-        .set({
-          pendingQrCode,
-          pendingQrCodeVersion: pendingVersion,
-          pendingQrPreparedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(and(eq(tables.id, tableId), isNull(tables.deletedAt)));
-
-      return { success: true, qrCode: pendingQrCode };
+      return {
+        success: false,
+        error: "Table QR code changed concurrently; retry",
+      };
     } catch {
       return { success: false, error: "Failed to prepare QR code rotation" };
     }
@@ -933,6 +1043,8 @@ export class TableService extends BaseService {
   ): Promise<{
     success: boolean;
     qrCodes?: Array<{ tableId: number; qrCode: string; tableNumber: string }>;
+    /** Rows whose QR moved under the write on every attempt; left as they are. */
+    failed?: Array<{ tableId: number; error: string }>;
     error?: string;
   }> {
     try {
@@ -951,12 +1063,13 @@ export class TableService extends BaseService {
           ),
         );
 
-      const qrCodes = await Promise.all(
+      const signed = await Promise.all(
         tablesData.map(async (table) => {
           const newVersion = (table.qrCodeVersion || 0) + 1;
           return {
             tableId: table.id,
             tableNumber: table.number,
+            readVersion: table.qrCodeVersion,
             newVersion,
             qrCode: await this.generateQRCodeData(
               restaurantId,
@@ -968,35 +1081,89 @@ export class TableService extends BaseService {
         }),
       );
 
-      if (qrCodes.length === 0) {
+      if (signed.length === 0) {
         return { success: true, qrCodes: [] };
       }
 
       const updatedAt = new Date();
-      const writes = qrCodes.map(({ tableId, qrCode, newVersion }) =>
-        this.db
-          .update(tables)
-          .set({
-            qrCode,
-            qrCodeVersion: newVersion,
-            pendingQrCode: null,
-            pendingQrCodeVersion: null,
-            pendingQrPreparedAt: null,
-            updatedAt,
-          })
-          .where(and(eq(tables.id, tableId), isNull(tables.deletedAt))),
+      const writes = signed.map(
+        ({ tableId, tableNumber, qrCode, readVersion, newVersion }) =>
+          this.db
+            .update(tables)
+            .set({
+              qrCode,
+              qrCodeVersion: newVersion,
+              pendingQrCode: null,
+              pendingQrCodeVersion: null,
+              pendingQrPreparedAt: null,
+              updatedAt,
+            })
+            .where(
+              and(
+                eq(tables.id, tableId),
+                isNull(tables.deletedAt),
+                // Compare-and-set per row: a table renamed, regenerated or
+                // rotated since the read is retried on its own below rather
+                // than overwritten with a code signed for state it has left.
+                qrVersionIs(tables.qrCodeVersion, readVersion),
+                eq(tables.number, tableNumber),
+              ),
+            )
+            .returning({ id: tables.id }),
       );
 
-      // One transactional batch rather than a statement per table (up to 50 per
-      // request). Regeneration invalidates the printed sticker the moment it
-      // commits, so a partial write would leave a restaurant where some tables
-      // scan and some do not — with no record of which. D1 batch() applies all
-      // or none.
-      await this.db.batch(
+      // One batch rather than a statement per table (up to 50 per request).
+      // Every row that still matches what was read commits together; a row
+      // that lost a race is retried individually instead of failing the lot.
+      const results = (await this.db.batch(
         writes as unknown as Parameters<typeof this.db.batch>[0],
-      );
+      )) as unknown as Array<Array<{ id: number }>>;
 
-      return { success: true, qrCodes };
+      const qrCodes: Array<{
+        tableId: number;
+        qrCode: string;
+        tableNumber: string;
+      }> = [];
+      const failed: Array<{ tableId: number; error: string }> = [];
+      for (const [i, row] of signed.entries()) {
+        if (results[i]?.length === 1) {
+          qrCodes.push({
+            tableId: row.tableId,
+            qrCode: row.qrCode,
+            tableNumber: row.tableNumber,
+          });
+          continue;
+        }
+        let retried:
+          | Awaited<ReturnType<TableService["tryRegenerateTableQRCode"]>>
+          | undefined;
+        for (let attempt = 2; attempt <= QR_VERSION_CAS_ATTEMPTS; attempt++) {
+          retried = await this.tryRegenerateTableQRCode(
+            row.tableId,
+            restaurantId,
+          );
+          if (retried.status !== "conflict") break;
+        }
+        if (retried?.status === "ok") {
+          qrCodes.push({
+            tableId: row.tableId,
+            qrCode: retried.qrCode,
+            tableNumber: retried.tableNumber,
+          });
+        } else {
+          failed.push({
+            tableId: row.tableId,
+            error:
+              retried?.status === "not_found"
+                ? "Table not found"
+                : "Table QR code changed concurrently; retry",
+          });
+        }
+      }
+
+      return failed.length > 0
+        ? { success: true, qrCodes, failed }
+        : { success: true, qrCodes };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return {
