@@ -1,3 +1,5 @@
+import type { OnboardingLocale } from "@makanmasak/shared-types";
+
 /**
  * Management Portal Types
  * 管理平台類型定義
@@ -177,6 +179,8 @@ export interface OperatorOnboardingRequest {
   planId?: LicenseTier | "trial" | null;
   latitude: number;
   longitude: number;
+  /** Language of the emails the owner receives. */
+  locale?: OnboardingLocale;
   approveImmediately?: boolean;
 }
 

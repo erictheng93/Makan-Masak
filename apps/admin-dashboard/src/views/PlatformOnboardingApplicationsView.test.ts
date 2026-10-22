@@ -31,6 +31,7 @@ vi.mock("@/services/onboardingApplicationsService", () => ({
     approve: vi.fn(),
     regenerateSetupLink: vi.fn(),
     reject: vi.fn(),
+    purge: vi.fn(),
     createForOwner: vi.fn(),
   },
   ONBOARDING_APPLICATIONS_CHANGED: "onboarding-applications:changed",
@@ -529,6 +530,70 @@ describe("PlatformOnboardingApplicationsView", () => {
       wrapper.get('[data-testid="onboarding-rejection-reason"]').text(),
     ).toContain("platformOnboarding.rejectionReason");
   });
+  it("purges a completed application only after the shop name is typed", async () => {
+    mockList([buildApplication({ status: "completed" })]);
+    vi.mocked(onboardingApplicationsService.purge).mockResolvedValue({
+      purged: true,
+    });
+    const wrapper = mount(PlatformOnboardingApplicationsView);
+    await flushPromises();
+
+    await wrapper
+      .get('[data-testid="purge-onboarding-APP-1"]')
+      .trigger("click");
+    const confirm = wrapper.get('[data-testid="confirm-purge-onboarding"]');
+    const input = wrapper.get('[data-testid="onboarding-purge-confirm-input"]');
+    await input.setValue("Laksa");
+    expect(confirm.attributes("disabled")).toBeDefined();
+    await input.setValue("Laksa Shop");
+    expect(confirm.attributes("disabled")).toBeUndefined();
+    await wrapper
+      .get('[data-testid="purge-onboarding-dialog"] form')
+      .trigger("submit");
+    await flushPromises();
+
+    expect(onboardingApplicationsService.purge).toHaveBeenCalledOnce();
+    expect(onboardingApplicationsService.purge).toHaveBeenCalledWith("APP-1");
+    expect(
+      wrapper.find('[data-testid="purge-onboarding-dialog"]').exists(),
+    ).toBe(false);
+    expect(onboardingApplicationsService.list).toHaveBeenCalledTimes(2);
+  });
+
+  it("explains a refused purge and keeps the dialog open", async () => {
+    mockList([buildApplication({ status: "completed" })]);
+    vi.mocked(onboardingApplicationsService.purge).mockRejectedValue({
+      response: { data: { error: { code: "RESTAURANT_HAS_ORDERS" } } },
+    });
+    const wrapper = mount(PlatformOnboardingApplicationsView);
+    await flushPromises();
+
+    await wrapper
+      .get('[data-testid="purge-onboarding-APP-1"]')
+      .trigger("click");
+    await wrapper
+      .get('[data-testid="onboarding-purge-confirm-input"]')
+      .setValue("Laksa Shop");
+    await wrapper
+      .get('[data-testid="purge-onboarding-dialog"] form')
+      .trigger("submit");
+    await flushPromises();
+
+    expect(
+      wrapper.get('[data-testid="purge-onboarding-dialog"]').text(),
+    ).toContain("platformOnboarding.purge.errors.hasOrders");
+  });
+
+  it("does not offer purge while an application is provisioning", async () => {
+    mockList([buildApplication({ status: "provisioning" })]);
+    const wrapper = mount(PlatformOnboardingApplicationsView);
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="purge-onboarding-APP-1"]').exists(),
+    ).toBe(false);
+  });
+
   it("shows the trading location and defaults market approval on", async () => {
     mockList([
       buildApplication({

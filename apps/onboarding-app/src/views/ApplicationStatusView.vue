@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { RouterLink, useRoute, useRouter } from "vue-router";
 import { ArrowPathIcon, CheckCircleIcon } from "@heroicons/vue/24/outline";
 import {
   ApiError,
@@ -15,6 +15,8 @@ const route = useRoute();
 const router = useRouter();
 const application = ref<ApplicationDetails | null>(null);
 const error = ref<string | null>(null);
+// A missing or rejected link can be replaced by email; an outage cannot.
+const linkBroken = ref(false);
 const isLoading = ref(false);
 
 const applicationId = computed(() => String(route.params.applicationId || ""));
@@ -27,8 +29,10 @@ const statusLabel = computed(() => {
 });
 
 async function refresh() {
+  linkBroken.value = false;
   if (!applicationId.value || !applicationSecret.value) {
     error.value = t("status.error.missingLink");
+    linkBroken.value = true;
     return;
   }
 
@@ -40,12 +44,14 @@ async function refresh() {
       applicationSecret.value,
     );
   } catch (caught) {
-    // A wrong id and a wrong secret both mean the link itself is bad.
-    error.value =
+    // A wrong id and a wrong secret both mean the link itself is bad; a
+    // link replaced by a newer email reads the same way.
+    linkBroken.value =
       caught instanceof ApiError &&
-      ["APPLICATION_SECRET_REQUIRED", "NOT_FOUND"].includes(caught.code)
-        ? t("status.error.invalidLink")
-        : t("status.error.unavailable");
+      ["APPLICATION_SECRET_REQUIRED", "NOT_FOUND"].includes(caught.code);
+    error.value = linkBroken.value
+      ? t("status.error.invalidLink")
+      : t("status.error.unavailable");
   } finally {
     isLoading.value = false;
   }
@@ -77,6 +83,14 @@ onMounted(refresh);
         role="alert"
       >
         {{ error }}
+        <RouterLink
+          v-if="linkBroken"
+          to="/find-application"
+          class="mt-2 block font-medium text-primary-700 underline"
+          data-testid="status-find-application"
+        >
+          {{ t("findApplication.linkLabel") }}
+        </RouterLink>
       </div>
 
       <template v-else-if="application">

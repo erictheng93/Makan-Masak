@@ -1,3 +1,4 @@
+import type { OnboardingLocale } from "@makanmasak/shared-types";
 import { marketsService } from "@/services/marketsService";
 import {
   ensureManagementAuthToken,
@@ -110,6 +111,8 @@ export interface OperatorApplicationInput {
   planId: NonNullable<OnboardingApplication["planId"]>;
   latitude: number;
   longitude: number;
+  /** Language of the emails the owner receives. */
+  locale: OnboardingLocale;
   approveImmediately: boolean;
 }
 
@@ -252,5 +255,17 @@ export const onboardingApplicationsService = {
       { reason },
     );
     return unwrapApiPayload<{ status: "rejected" }>(response.data);
+  },
+
+  /**
+   * Deletes the application and everything its approval provisioned. The
+   * server refuses (409) once the restaurant has orders or other records.
+   */
+  async purge(applicationId: string): Promise<{ purged: true }> {
+    await ensureManagementAuthToken();
+    const response = await managementApi.delete<{ purged: true }>(
+      `/admin/onboarding/applications/${applicationId}`,
+    );
+    return unwrapApiPayload<{ purged: true }>(response.data);
   },
 };

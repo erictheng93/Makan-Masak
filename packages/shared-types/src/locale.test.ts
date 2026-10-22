@@ -3,6 +3,7 @@ import {
   COUNTRY_PROFILES,
   SUPPORTED_COUNTRIES,
   citiesForCountry,
+  defaultOnboardingLocale,
   normalizeCountryCode,
 } from "./locale";
 
@@ -51,5 +52,12 @@ describe("normalizeCountryCode", () => {
     [60, null],
   ])("narrows %p to %p", (input, expected) => {
     expect(normalizeCountryCode(input)).toBe(expected);
+  });
+});
+
+describe("defaultOnboardingLocale", () => {
+  it("writes to an applicant in the country's language", () => {
+    expect(defaultOnboardingLocale("TW")).toBe("zh-TW");
+    expect(defaultOnboardingLocale("MY")).toBe("ms-MY");
   });
 });

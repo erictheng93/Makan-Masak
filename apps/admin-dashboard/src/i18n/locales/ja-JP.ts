@@ -2052,6 +2052,19 @@ const jaJP: Messages = {
     missingToken: "リセットトークンがありません",
   },
   platformOnboarding: {
+    purge: {
+      title: "代理登録を取り消して店舗を削除",
+      description:
+        "「{business}」の申請、レストラン、オーナーとスタッフのアカウント、サブスクリプション、テナントを完全に削除します。元に戻せません。監査ログは保持されます。",
+      confirmLabel: "確認のため店舗名を入力してください",
+      confirm: "完全に削除",
+      errors: {
+        hasOrders: "この店舗には注文があるため削除できません。",
+        inUse:
+          "この店舗にはメニューなどのデータがあるため削除できません。先に削除してください。",
+        failed: "削除に失敗しました。しばらくしてから再試行してください。",
+      },
+    },
     create: {
       open: "店主の代理で登録",
       title: "店主の代理で店舗を登録",
@@ -2061,6 +2074,7 @@ const jaJP: Messages = {
       contactName: "店主名",
       contactEmail: "店主のメール",
       contactPhone: "店主の電話番号",
+      emailLanguage: "メールの言語",
       plan: "プラン",
       country: "国",
       city: "都市",
@@ -2122,6 +2136,7 @@ const jaJP: Messages = {
       actions: "操作",
     },
     actions: {
+      purge: "取り消して削除",
       handoff: "開通情報",
       auditTrail: "監査履歴",
       approve: "承認",

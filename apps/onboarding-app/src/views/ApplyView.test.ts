@@ -30,6 +30,7 @@ vi.mock("vue-toastification", () => ({
 
 vi.mock("@/i18n", () => ({
   useI18n: () => ({
+    locale: { value: "ms-MY" },
     t: (key: string) =>
       key === "apply.form.market.independent"
         ? "我是獨立店面，不屬於任何商圈"
@@ -333,26 +334,6 @@ describe("ApplyView locale and market selection", () => {
     expect(wrapper.text()).not.toContain("Too many");
   });
 
-  it("tells an applicant whose email already has a pending application how to follow it", async () => {
-    mocks.submitApplication.mockImplementation(async () => {
-      mocks.current!.apiErrorCode = "APPLICATION_ALREADY_PENDING";
-      return false;
-    });
-    const wrapper = mount(ApplyView);
-    await fillRequiredFields(wrapper);
-
-    await wrapper.get("form").trigger("submit");
-    await flushPromises();
-
-    expect(mocks.submitApplication).toHaveBeenCalledOnce();
-    expect(mocks.toastError).toHaveBeenCalledWith(
-      "apply.submitErrors.alreadyPending",
-    );
-    expect(wrapper.get('[role="alert"]').text()).toBe(
-      "apply.submitErrors.alreadyPending",
-    );
-  });
-
   it("links each field error to its input for assistive technology", async () => {
     const wrapper = mount(ApplyView);
 
@@ -435,7 +416,19 @@ describe("ApplyView locale and market selection", () => {
       latitude: 24.147736,
       longitude: 120.673648,
       planId: "trial",
+      locale: "ms-MY",
     });
+  });
+
+  it("opens the success page without a link fragment when the server mailed it", async () => {
+    mocks.store.applicationSecret = null;
+    const wrapper = mount(ApplyView);
+    await fillRequiredFields(wrapper);
+
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(mocks.push).toHaveBeenCalledWith({ path: "/success", hash: "" });
   });
 
   it("submits the selected market and stall and never sends a stale independent-shop stall", async () => {

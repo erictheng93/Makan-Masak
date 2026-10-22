@@ -13,7 +13,7 @@ import {
 } from "@makanmasak/shared-types";
 import { useI18n } from "@/i18n";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const router = useRouter();
 const toast = useToast();
 const store = useOnboardingStore();
@@ -159,7 +159,6 @@ const parseCoordinate = (value: number | string | null): number | null => {
 // the generic message: the server's own text is English.
 const submitErrorKeys: Record<string, string> = {
   RATE_LIMITED: "apply.submitErrors.rateLimited",
-  APPLICATION_ALREADY_PENDING: "apply.submitErrors.alreadyPending",
   VALIDATION_ERROR: "apply.submitErrors.validation",
   CITY_NOT_IN_COUNTRY: "apply.submitErrors.cityNotInCountry",
   MARKET_NOT_FOUND: "apply.submitErrors.marketNotInCity",
@@ -263,13 +262,18 @@ const handleSubmit = async () => {
     latitude,
     longitude,
     planId: form.value.planId,
+    // Every onboarding UI locale is one the server writes emails in.
+    locale: locale.value,
   });
 
   if (success) {
     toast.success(t("apply.toast.submitSuccess"));
+    // The secret is only in hand when the server has email off (dev/CI).
     router.push({
       path: "/success",
-      hash: `#${encodeURIComponent(store.applicationSecret!)}`,
+      hash: store.applicationSecret
+        ? `#${encodeURIComponent(store.applicationSecret)}`
+        : "",
     });
   } else {
     toast.error(submitErrorMessage.value);

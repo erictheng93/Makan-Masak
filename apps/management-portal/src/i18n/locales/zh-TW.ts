@@ -111,6 +111,7 @@ const zhTW = {
       },
       title: "新增租戶",
       field: {
+        emailLanguage: "Email 語言",
         contactName: "聯絡人姓名",
         contactNamePlaceholder: "例如：王小明",
         country: "國家",

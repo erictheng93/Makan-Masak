@@ -170,8 +170,6 @@ const enUS: Messages = {
       phoneInvalid: "Phone number must be 8 to 20 characters",
     },
     submitErrors: {
-      alreadyPending:
-        "An application for this email is already under review. Use the status link in your confirmation email to follow it, or contact support if you can't find it.",
       rateLimited:
         "Too many submissions. Each network can submit 5 times per clock hour (failed attempts count too). Please try again after the next hour, or switch to mobile data.",
       validation:
@@ -230,11 +228,27 @@ const enUS: Messages = {
       savePrompt:
         "Save this link. It is the only way to check your application progress.",
       copy: "Copy status link",
+      emailed:
+        "We've emailed you the link to follow your application. If it hasn't arrived in a few minutes, check your spam folder.",
     },
     contact: {
       prompt: "Any questions? Contact",
     },
   },
+  findApplication: {
+    linkLabel: "Can't find your status link? Send it again",
+    title: "Find my application",
+    subtitle:
+      "Enter the email you applied with and we'll send your application status link again.",
+    emailLabel: "Contact email",
+    submit: "Send status link",
+    submitting: "Sending...",
+    sent: "If this email has an application, its status link will arrive within a few minutes. Earlier status links stop working, so use the newest email. We send at most one link per application every 15 minutes.",
+    invalidEmail: "Please enter a valid email address",
+    failed: "We couldn't send that right now. Please try again later.",
+    backHome: "Back to home",
+  },
+
   status: {
     title: "Application Status",
     subtitle: "Check the latest review status for your restaurant application.",

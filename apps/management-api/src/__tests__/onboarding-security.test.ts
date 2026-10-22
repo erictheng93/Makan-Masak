@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "@makanmasak/utils";
 import app from "../index";
 import type { ManagementEnv } from "../types";
 
@@ -15,6 +16,7 @@ const onboardingMocks = vi.hoisted(() => ({
   // does not wait for them.
   notifyPlatformOfNewApplication: vi.fn(async () => undefined),
   sendApplicationReceivedEmail: vi.fn(async () => undefined),
+  sendStatusLinkEmail: vi.fn(async () => undefined),
   verifyApplicationSecret: vi.fn(),
 }));
 
@@ -24,8 +26,9 @@ vi.mock("../services/OnboardingService", () => ({
   }),
 }));
 
-function createEnv(): ManagementEnv {
+function createEnv(overrides: Partial<ManagementEnv> = {}): ManagementEnv {
   return {
+    ...overrides,
     NODE_ENV: "test",
     API_VERSION: "v1",
     API_BASE_URL: "http://localhost",
@@ -89,20 +92,94 @@ function jsonRequest(path: string, body: unknown, headers = {}) {
 }
 
 describe("onboarding route authorization", () => {
-  it("returns a one-time application secret when creating an application", async () => {
+  it("returns the status link in the response only when email is off", async () => {
     const response = await app.fetch(
       jsonRequest("/api/v1/onboarding/applications", createApplicationBody),
       createEnv(),
     );
 
-    expect(response.status).toBe(201);
+    expect(response.status).toBe(202);
     await expect(response.json()).resolves.toMatchObject({
       success: true,
       data: {
+        status: "received",
         applicationId: "app-123",
         applicationSecret: "onb_secret_123",
       },
     });
+  });
+
+  it("answers a fresh and a duplicate application identically when email is on", async () => {
+    const env = createEnv({ ONBOARDING_EMAIL_ENABLED: "true" });
+    const fresh = await app.fetch(
+      jsonRequest("/api/v1/onboarding/applications", createApplicationBody),
+      env,
+    );
+    onboardingMocks.createApplication.mockRejectedValueOnce(
+      new ApiError(
+        "APPLICATION_ALREADY_PENDING",
+        "An application for this email is already pending",
+        409,
+      ),
+    );
+    const duplicate = await app.fetch(
+      jsonRequest("/api/v1/onboarding/applications", createApplicationBody),
+      env,
+    );
+
+    expect(fresh.status).toBe(202);
+    expect(duplicate.status).toBe(202);
+    const expected = { success: true, data: { status: "received" } };
+    await expect(fresh.json()).resolves.toEqual(expected);
+    await expect(duplicate.json()).resolves.toEqual(expected);
+    expect(onboardingMocks.sendApplicationReceivedEmail).toHaveBeenCalledOnce();
+    expect(
+      onboardingMocks.notifyPlatformOfNewApplication,
+    ).toHaveBeenCalledOnce();
+    expect(onboardingMocks.sendStatusLinkEmail).toHaveBeenCalledOnce();
+    expect(onboardingMocks.sendStatusLinkEmail).toHaveBeenCalledWith(
+      "mei@example.test",
+      "alreadyPending",
+    );
+  });
+
+  it("answers a status-link request the same way whatever the email", async () => {
+    const response = await app.fetch(
+      jsonRequest(
+        "/api/v1/onboarding/applications/status-link",
+        {
+          email: "anyone@example.test",
+        },
+        { "cf-connecting-ip": "198.51.100.7" },
+      ),
+      createEnv({ ONBOARDING_EMAIL_ENABLED: "true" }),
+    );
+
+    expect(response.status).toBe(202);
+    await expect(response.json()).resolves.toEqual({
+      success: true,
+      data: { status: "received" },
+    });
+    expect(onboardingMocks.consumeApplicationRateLimit).toHaveBeenCalledWith(
+      "status-link:198.51.100.7",
+    );
+    expect(onboardingMocks.sendStatusLinkEmail).toHaveBeenCalledWith(
+      "anyone@example.test",
+      "statusLink",
+    );
+  });
+
+  it("rate limits status-link requests", async () => {
+    onboardingMocks.consumeApplicationRateLimit.mockResolvedValueOnce(false);
+    const response = await app.fetch(
+      jsonRequest("/api/v1/onboarding/applications/status-link", {
+        email: "anyone@example.test",
+      }),
+      createEnv(),
+    );
+
+    expect(response.status).toBe(429);
+    expect(onboardingMocks.sendStatusLinkEmail).not.toHaveBeenCalled();
   });
 
   it("keeps the successful submission response when notification work rejects", async () => {
@@ -115,7 +192,7 @@ describe("onboarding route authorization", () => {
       createEnv(),
     );
 
-    expect(response.status).toBe(201);
+    expect(response.status).toBe(202);
     expect(onboardingMocks.sendApplicationReceivedEmail).toHaveBeenCalled();
   });
 

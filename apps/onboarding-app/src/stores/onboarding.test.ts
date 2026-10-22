@@ -51,7 +51,7 @@ describe("useOnboardingStore", () => {
       applicationId: "app-123",
       applicationSecret: "secret-123",
       assignedSubdomain: "demo-noodles",
-      status: "submitted",
+      status: "received",
     });
     const store = useOnboardingStore();
     const data = applicationData();
@@ -74,6 +74,22 @@ describe("useOnboardingStore", () => {
     expect(sessionStorage.getItem("onboarding_application")).not.toContain(
       "secret-123",
     );
+  });
+
+  it("completes without ids when the status link goes out by email", async () => {
+    vi.mocked(onboardingApi.createApplication).mockResolvedValue({
+      status: "received",
+    });
+    const store = useOnboardingStore();
+
+    await expect(store.submitApplication(applicationData())).resolves.toBe(
+      true,
+    );
+
+    expect(onboardingApi.createApplication).toHaveBeenCalledOnce();
+    expect(store.applicationId).toBeNull();
+    expect(store.applicationSecret).toBeNull();
+    expect(store.isCompleted).toBe(true);
   });
 
   it("captures API errors from failed application submission", async () => {

@@ -68,8 +68,6 @@ const zhCN: Messages = {
     },
     title: "填写申请资料",
     submitErrors: {
-      alreadyPending:
-        "此 Email 已有一笔申请正在审核中。请用确认信里的状态链接查看进度；找不到链接请联系客服。",
       rateLimited:
         "提交次数太多了。同一个网络每小时最多提交 5 次（提交失败也会计算），请等到下一个整点再试，或改用手机网络。",
       validation: "有资料不符合规定，请检查每一栏后再提交一次。",
@@ -184,6 +182,8 @@ const zhCN: Messages = {
     statusLink: {
       savePrompt: "请保存此链接，这是查询申请进度的唯一方式。",
       copy: "复制查询链接",
+      emailed:
+        "我们已把查询申请进度的链接发到您的邮箱。几分钟内没收到的话，请看看垃圾邮件箱。",
     },
     contact: {
       prompt: "有任何问题？请联系",
@@ -219,6 +219,19 @@ const zhCN: Messages = {
     },
     title: "申请已送出！",
   },
+  findApplication: {
+    linkLabel: "找不到状态链接？重新发给我",
+    title: "找回我的申请",
+    subtitle: "输入申请时填写的邮箱，我们会把申请状态链接重新发给您。",
+    emailLabel: "联系邮箱",
+    submit: "发送状态链接",
+    submitting: "发送中...",
+    sent: "如果这个邮箱有申请记录，状态链接会在几分钟内送达。之前的状态链接会失效，请改用新的那一封。同一份申请 15 分钟内只会发送一次。",
+    invalidEmail: "请输入正确的邮箱格式",
+    failed: "目前无法提交，请稍后再试。",
+    backHome: "返回首页",
+  },
+
   status: {
     title: "申请状态",
     subtitle: "查看您的餐厅申请最新审核进度。",

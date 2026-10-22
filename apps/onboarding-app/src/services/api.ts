@@ -4,7 +4,10 @@
  */
 
 import axios, { AxiosError } from "axios";
-import type { SupportedCountryCode } from "@makanmasak/shared-types";
+import type {
+  OnboardingLocale,
+  SupportedCountryCode,
+} from "@makanmasak/shared-types";
 
 function resolveApiBase(): string {
   const apiBase = import.meta.env.VITE_API_URL;
@@ -64,13 +67,20 @@ export interface CreateApplicationData {
   planId: "trial" | "standard" | "professional" | "enterprise";
   latitude: number;
   longitude: number;
+  /** The language the applicant's emails are written in. */
+  locale?: OnboardingLocale;
 }
 
+/**
+ * The same for a new application and for an email that already has one, so
+ * the response cannot be used to probe who applied. The status link arrives
+ * by email; the ids are present only where the server has email turned off.
+ */
 export interface ApplicationResponse {
-  applicationId: string;
-  applicationSecret: string;
-  assignedSubdomain: string;
-  status: string;
+  status: "received";
+  applicationId?: string;
+  applicationSecret?: string;
+  assignedSubdomain?: string;
 }
 
 export interface ApplicationDetails {
@@ -260,6 +270,21 @@ export const onboardingApi = {
       return response.data.data;
     } catch (error) {
       if (error instanceof ApiError) throw error;
+      handleApiError(error);
+    }
+  },
+
+  /**
+   * Ask for the status link to be emailed again. The server answers the same
+   * way whether or not the email has an application.
+   */
+  async requestStatusLink(email: string): Promise<void> {
+    try {
+      await apiClient.post<ApiResponse<{ status: "received" }>>(
+        "/onboarding/applications/status-link",
+        { email },
+      );
+    } catch (error) {
       handleApiError(error);
     }
   },

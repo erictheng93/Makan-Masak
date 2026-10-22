@@ -9,6 +9,7 @@ import type { Context } from "hono";
 import { z } from "zod";
 import { markets } from "@makanmasak/database";
 import {
+  ONBOARDING_LOCALES,
   citiesForCountry,
   normalizeCountryCode,
   type SupportedCountryCode,
@@ -21,7 +22,7 @@ import {
   notFound,
   unauthorized,
 } from "@makanmasak/utils";
-import type { ManagementEnv } from "../types";
+import type { ManagementEnv, OnboardingApplication } from "../types";
 import { OnboardingService } from "../services/OnboardingService";
 
 const router = new Hono<{ Bindings: ManagementEnv }>();
@@ -54,6 +55,8 @@ export const applicationSchema = z
       .optional(),
     latitude: z.number().min(-90).max(90),
     longitude: z.number().min(-180).max(180),
+    // The language applicant emails are written in; unset means zh-TW.
+    locale: z.enum(ONBOARDING_LOCALES).optional(),
   })
   .superRefine((value, ctx) => {
     if (
@@ -151,23 +154,57 @@ async function requireApplicationSecret(
 // ============================================================
 
 /**
+ * Email and notification work never holds up the response: a slow send would
+ * otherwise make one outcome measurably slower than another.
+ */
+async function runAfterResponse(
+  c: Context<{ Bindings: ManagementEnv }>,
+  work: Promise<unknown>,
+): Promise<void> {
+  const guarded = work.catch((error) => {
+    // Providers normally absorb their own failures, but a defensive final
+    // boundary keeps an unexpected notifier regression out of the public
+    // response in Worker and non-Worker test hosts alike.
+    console.error("[Onboarding] Post-response work failed:", error);
+  });
+  try {
+    c.executionCtx.waitUntil(guarded);
+  } catch {
+    // Hono app.fetch tests and non-Worker hosts have no ExecutionContext.
+    await guarded;
+  }
+}
+
+async function requireRateLimit(
+  onboardingService: OnboardingService,
+  bucket: string,
+): Promise<void> {
+  if (!(await onboardingService.consumeApplicationRateLimit(bucket))) {
+    throw new ApiError(
+      "RATE_LIMITED",
+      "Too many application requests. Please try again later.",
+      429,
+    );
+  }
+}
+
+const RECEIVED = { status: "received" } as const;
+
+/**
  * Create new application
  * POST /api/v1/onboarding/applications
+ *
+ * A fresh application and a duplicate for an email already in review get the
+ * same 202, so the endpoint cannot be used to learn whether an email applied.
+ * The status link goes out only by email; a duplicate gets a fresh link to the
+ * application on file instead of a new row.
  */
 router.post("/applications", async (c) => {
   const onboardingService = new OnboardingService(c.env);
 
   try {
     const ipAddress = c.req.header("cf-connecting-ip") || "unknown";
-    const allowed =
-      await onboardingService.consumeApplicationRateLimit(ipAddress);
-    if (!allowed) {
-      throw new ApiError(
-        "RATE_LIMITED",
-        "Too many application requests. Please try again later.",
-        429,
-      );
-    }
+    await requireRateLimit(onboardingService, ipAddress);
 
     // An unparseable body is the client's fault; without this the SyntaxError
     // falls through to the generic 500 below and reads as a server outage.
@@ -180,42 +217,48 @@ router.post("/applications", async (c) => {
     // Get request metadata
     const userAgent = c.req.header("user-agent") || "unknown";
 
-    const application = await onboardingService.createApplication(validated, {
-      ipAddress,
-      userAgent,
-    });
-
-    const notifications = Promise.all([
-      onboardingService.notifyPlatformOfNewApplication(application),
-      onboardingService.sendApplicationReceivedEmail(
-        application,
-        application.applicationSecret!,
-      ),
-    ]).catch((error) => {
-      // Providers normally absorb their own failures, but a defensive final
-      // boundary keeps an unexpected notifier regression out of the public
-      // submission response in Worker and non-Worker test hosts alike.
-      console.error("[Onboarding] Post-submission notification failed:", error);
-    });
+    let application: OnboardingApplication | null = null;
     try {
-      c.executionCtx.waitUntil(notifications);
-    } catch {
-      // Hono app.fetch tests and non-Worker hosts have no ExecutionContext.
-      await notifications;
+      application = await onboardingService.createApplication(validated, {
+        ipAddress,
+        userAgent,
+      });
+    } catch (error) {
+      if (
+        !(error instanceof ApiError) ||
+        error.code !== "APPLICATION_ALREADY_PENDING"
+      ) {
+        throw error;
+      }
     }
 
-    return c.json(
-      {
-        success: true,
-        data: {
-          applicationId: application.id,
-          applicationSecret: application.applicationSecret,
-          assignedSubdomain: application.assignedSubdomain,
-          status: application.status,
-        },
-      },
-      201,
+    await runAfterResponse(
+      c,
+      application
+        ? Promise.all([
+            onboardingService.notifyPlatformOfNewApplication(application),
+            onboardingService.sendApplicationReceivedEmail(
+              application,
+              application.applicationSecret!,
+            ),
+          ])
+        : onboardingService.sendStatusLinkEmail(
+            validated.contactEmail,
+            "alreadyPending",
+          ),
     );
+
+    // Dev/CI exception: without email the response is the only way to get the
+    // status link, at the cost of telling fresh and duplicate apart there.
+    const devLink =
+      application && c.env.ONBOARDING_EMAIL_ENABLED !== "true"
+        ? {
+            applicationId: application.id,
+            applicationSecret: application.applicationSecret,
+            assignedSubdomain: application.assignedSubdomain,
+          }
+        : {};
+    return c.json({ success: true, data: { ...RECEIVED, ...devLink } }, 202);
   } catch (error) {
     if (error instanceof z.ZodError) {
       throw badRequest("Validation failed", "VALIDATION_ERROR", error.issues);
@@ -225,6 +268,39 @@ router.post("/applications", async (c) => {
     console.error("[Onboarding] Create application error:", error);
     throw new ApiError("CREATE_FAILED", "Failed to create application", 500);
   }
+});
+
+const statusLinkRequestSchema = z.object({ email: z.email() });
+
+/**
+ * Resend the status link
+ * POST /api/v1/onboarding/applications/status-link
+ *
+ * Always the same 202, whether or not the email has an application.
+ */
+router.post("/applications/status-link", async (c) => {
+  const onboardingService = new OnboardingService(c.env);
+  const ipAddress = c.req.header("cf-connecting-ip") || "unknown";
+  // A sibling bucket, so asking for a link does not use up submissions.
+  await requireRateLimit(onboardingService, `status-link:${ipAddress}`);
+
+  const body = await c.req.json().catch(() => {
+    throw badRequest("Invalid JSON body", "INVALID_JSON");
+  });
+  const parsed = statusLinkRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    throw badRequest(
+      "Validation failed",
+      "VALIDATION_ERROR",
+      parsed.error.issues,
+    );
+  }
+
+  await runAfterResponse(
+    c,
+    onboardingService.sendStatusLinkEmail(parsed.data.email, "statusLink"),
+  );
+  return c.json({ success: true, data: RECEIVED }, 202);
 });
 
 /**

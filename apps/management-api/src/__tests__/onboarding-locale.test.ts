@@ -113,6 +113,17 @@ describe("applicationSchema country and city", () => {
       expect(mismatch.error.issues[0]?.path).toEqual(["city"]);
   });
 
+  it("accepts only the onboarding app's locales for applicant email", () => {
+    const body = { ...base, countryCode: "MY", city: "Kuala Lumpur" };
+    expect(
+      applicationSchema.safeParse({ ...body, locale: "vi-VN" }).success,
+    ).toBe(true);
+    expect(
+      applicationSchema.safeParse({ ...body, locale: "fr-FR" }).success,
+    ).toBe(false);
+    expect(applicationSchema.safeParse(body).success).toBe(true);
+  });
+
   it("normalizes a lowercase supported country", () => {
     const result = applicationSchema.safeParse({
       ...base,
@@ -162,14 +173,16 @@ describe("onboarding application locale and market route", () => {
       stallNumber: "A-12",
       currency: "USD",
       timezone: "UTC",
+      locale: "ms-MY",
     });
-    expect(response.status).toBe(201);
+    expect(response.status).toBe(202);
     expect(onboardingMocks.createApplication).toHaveBeenCalledWith(
       expect.objectContaining({
         countryCode: "MY",
         city: "Kuala Lumpur",
         marketId: "active-kl",
         stallNumber: "A-12",
+        locale: "ms-MY",
       }),
       expect.any(Object),
     );

@@ -110,6 +110,22 @@
           </select>
         </label>
         <label class="block text-sm font-medium text-gray-700">
+          {{ t("platformOnboarding.create.emailLanguage") }}
+          <select
+            v-model="form.locale"
+            data-testid="operator-email-language"
+            :class="inputClass"
+          >
+            <option
+              v-for="locale in ONBOARDING_LOCALES"
+              :key="locale"
+              :value="locale"
+            >
+              {{ ONBOARDING_LOCALE_NAMES[locale] }}
+            </option>
+          </select>
+        </label>
+        <label class="block text-sm font-medium text-gray-700">
           {{ t("platformOnboarding.create.district") }}
           <input
             v-model.trim="form.district"
@@ -232,8 +248,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import {
+  ONBOARDING_LOCALES,
+  ONBOARDING_LOCALE_NAMES,
   SUPPORTED_COUNTRIES,
   citiesForCountry,
+  defaultOnboardingLocale,
   type SupportedCountryCode,
 } from "@makanmasak/shared-types";
 import {
@@ -262,6 +281,7 @@ const form = ref({
   contactPhone: "",
   countryCode: "TW" as SupportedCountryCode,
   city: citiesForCountry("TW")[0] ?? "",
+  locale: defaultOnboardingLocale("TW"),
   district: "",
   address: "",
   marketId: "",
@@ -282,6 +302,7 @@ const cityMarkets = computed(() =>
 
 function onCountryChange() {
   form.value.city = cityOptions.value[0] ?? "";
+  form.value.locale = defaultOnboardingLocale(form.value.countryCode);
   form.value.marketId = "";
 }
 
@@ -308,6 +329,7 @@ async function submit() {
       planId: form.value.planId,
       latitude,
       longitude,
+      locale: form.value.locale,
       approveImmediately: form.value.approveImmediately,
       // The server rejects empty strings for these optional fields.
       ...(address ? { address } : {}),

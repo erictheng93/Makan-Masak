@@ -147,4 +147,33 @@ describe("CreateTenantModal", () => {
 
     expect(tenantsApi.create).not.toHaveBeenCalled();
   });
+
+  it("writes to the owner in the country's language unless the operator picks one", async () => {
+    vi.mocked(tenantsApi.create).mockResolvedValue({
+      application: { id: "app-3", status: "submitted" },
+      approval: null,
+    });
+    const wrapper = await mountFilled();
+    const language = () =>
+      (
+        wrapper.find('[data-testid="management-tenant-email-language"]')
+          .element as HTMLSelectElement
+      ).value;
+    expect(language()).toBe("zh-TW");
+
+    await wrapper
+      .find('[data-testid="management-tenant-country"]')
+      .setValue("MY");
+    await flushPromises();
+    expect(language()).toBe("ms-MY");
+    await wrapper
+      .find('[data-testid="management-tenant-city"]')
+      .setValue("Kuala Lumpur");
+    await submit(wrapper);
+
+    expect(tenantsApi.create).toHaveBeenCalledOnce();
+    expect(tenantsApi.create).toHaveBeenCalledWith(
+      expect.objectContaining({ countryCode: "MY", locale: "ms-MY" }),
+    );
+  });
 });

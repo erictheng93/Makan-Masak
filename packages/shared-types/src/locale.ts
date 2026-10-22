@@ -108,3 +108,44 @@ export const countryForCity = (city: string): SupportedCountryCode | null =>
   SUPPORTED_COUNTRIES.find((code) =>
     COUNTRY_PROFILES[code].cities.includes(city),
   ) ?? null;
+
+/**
+ * Languages an onboarding applicant can be written to in. Must match the UI
+ * locales of apps/onboarding-app, which sends its current one with the
+ * application; management-api localizes every applicant email into each.
+ */
+export const ONBOARDING_LOCALES = [
+  "zh-TW",
+  "zh-CN",
+  "en-US",
+  "vi-VN",
+  "ms-MY",
+  "id-ID",
+] as const;
+
+export type OnboardingLocale = (typeof ONBOARDING_LOCALES)[number];
+
+/** Each language named in itself, so an operator can pick it in any UI language. */
+export const ONBOARDING_LOCALE_NAMES: Record<OnboardingLocale, string> = {
+  "zh-TW": "繁體中文",
+  "zh-CN": "简体中文",
+  "en-US": "English",
+  "vi-VN": "Tiếng Việt",
+  "ms-MY": "Bahasa Malaysia",
+  "id-ID": "Bahasa Indonesia",
+};
+
+const COUNTRY_ONBOARDING_LOCALE: Record<SupportedCountryCode, string> = {
+  TW: "zh-TW",
+  MY: "ms-MY",
+};
+
+/** The applicant-email language an operator form starts on for a country. */
+export const defaultOnboardingLocale = (
+  country: SupportedCountryCode,
+): OnboardingLocale => {
+  const locale = COUNTRY_ONBOARDING_LOCALE[country];
+  return (ONBOARDING_LOCALES as readonly string[]).includes(locale)
+    ? (locale as OnboardingLocale)
+    : "en-US";
+};

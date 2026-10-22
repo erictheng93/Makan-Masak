@@ -4,7 +4,7 @@ import { mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("vue-router", () => ({
-  RouterLink: { template: "<a><slot /></a>" },
+  RouterLink: { props: ["to"], template: '<a :href="to"><slot /></a>' },
 }));
 vi.mock("@/i18n", () => ({
   useI18n: () => ({ t: (key: string) => key }),
@@ -24,6 +24,14 @@ describe("home page tour", () => {
 
     expect(link?.attributes("href")).toBe("#how-it-works");
     expect(wrapper.find("#how-it-works").exists()).toBe(true);
+  });
+
+  it("links an applicant who lost their status link to the resend page", () => {
+    const wrapper = mount(HomeView);
+
+    expect(
+      wrapper.get('[data-testid="home-find-application"]').attributes("href"),
+    ).toBe("/find-application");
   });
 
   it("shows four captioned screenshots that exist in public/", () => {

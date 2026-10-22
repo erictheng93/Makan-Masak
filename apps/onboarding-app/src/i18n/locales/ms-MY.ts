@@ -70,8 +70,6 @@ const msMY: Messages = {
     },
     title: "Borang Permohonan",
     submitErrors: {
-      alreadyPending:
-        "Permohonan untuk e-mel ini sedang disemak. Gunakan pautan status dalam e-mel pengesahan anda untuk menjejakinya, atau hubungi sokongan jika anda tidak menjumpainya.",
       rateLimited:
         "Terlalu banyak penyerahan. Setiap rangkaian boleh menyerah 5 kali sejam (percubaan gagal turut dikira). Sila cuba selepas jam berikutnya, atau tukar ke data mudah alih.",
       validation:
@@ -200,6 +198,8 @@ const msMY: Messages = {
       savePrompt:
         "Simpan pautan ini. Ini satu-satunya cara untuk menyemak kemajuan permohonan anda.",
       copy: "Salin pautan status",
+      emailed:
+        "Kami telah menghantar pautan untuk menjejak permohonan anda ke e-mel anda. Jika ia tidak tiba dalam beberapa minit, semak folder spam.",
     },
     contact: {
       prompt: "Sebarang pertanyaan? Kenalan",
@@ -237,6 +237,20 @@ const msMY: Messages = {
     },
     title: "Permohonan Dihantar!",
   },
+  findApplication: {
+    linkLabel: "Tidak jumpa pautan status? Hantar semula",
+    title: "Cari permohonan saya",
+    subtitle:
+      "Masukkan e-mel yang anda gunakan semasa memohon dan kami akan menghantar semula pautan status permohonan anda.",
+    emailLabel: "E-mel hubungan",
+    submit: "Hantar pautan status",
+    submitting: "Menghantar...",
+    sent: "Jika e-mel ini mempunyai permohonan, pautan statusnya akan tiba dalam beberapa minit. Pautan status sebelum ini tidak lagi berfungsi, jadi gunakan e-mel yang terbaharu. Kami menghantar paling banyak satu pautan bagi setiap permohonan setiap 15 minit.",
+    invalidEmail: "Sila masukkan alamat e-mel yang sah",
+    failed: "Kami tidak dapat menghantarnya sekarang. Sila cuba lagi kemudian.",
+    backHome: "Kembali ke laman utama",
+  },
+
   status: {
     title: "Status Permohonan",
     subtitle: "Semak status semakan terkini permohonan restoran anda.",

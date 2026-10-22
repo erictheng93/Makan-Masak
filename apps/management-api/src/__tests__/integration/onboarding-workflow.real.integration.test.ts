@@ -691,7 +691,7 @@ describe("Onboarding public API workflow — real integration", () => {
       }),
       env,
     );
-    expect(created.status).toBe(201);
+    expect(created.status).toBe(202);
     const createdData = await readData<CreatedApplication>(created);
     const approved = await app.fetch(
       new Request(
@@ -841,7 +841,13 @@ describe("Onboarding public API workflow — real integration", () => {
       }),
       env,
     );
-    const createdData = await readData<CreatedApplication>(created);
+    expect(created.status).toBe(202);
+    // With email on, the status link only goes out by email, so the id is
+    // not in the response.
+    const createdData = db
+      .raw()
+      .prepare("SELECT id AS applicationId FROM onboarding_applications")
+      .get() as { applicationId: string };
     const approved = await app.fetch(
       new Request(
         `https://management.test/api/v1/admin/onboarding/applications/${createdData.applicationId}/approve`,
@@ -894,7 +900,7 @@ describe("Onboarding public API workflow — real integration", () => {
     );
 
     expect(
-      responses.filter((response) => response.status === 201),
+      responses.filter((response) => response.status === 202),
     ).toHaveLength(5);
     const rejected = responses.find((response) => response.status === 429);
     expect(rejected).toBeDefined();
@@ -935,10 +941,10 @@ describe("Onboarding public API workflow — real integration", () => {
       env,
     );
 
-    expect(createResponse.status).toBe(201);
+    expect(createResponse.status).toBe(202);
     const createJson = await readData<CreatedApplication>(createResponse);
     expect(createJson).toMatchObject({
-      status: "submitted",
+      status: "received",
     });
     expect(createJson.assignedSubdomain).toMatch(/^workflow-laksa-/);
     expect(typeof createJson.applicationId).toBe("string");
@@ -1915,7 +1921,7 @@ describe("Operator-created applications — real integration", () => {
     expect(count(platformDb, "restaurants")).toBe(0);
   });
 
-  it("rejects a second pending application for the same email on both routes", async () => {
+  it("rejects a second pending application for the same email without revealing it publicly", async () => {
     const db = createManagementDb();
     const env = createEnv(db);
     await operatorCreate(env, {
@@ -1937,12 +1943,14 @@ describe("Operator-created applications — real integration", () => {
       env,
     );
 
-    for (const response of [viaOperator, viaPublic]) {
-      expect(response.status).toBe(409);
-      await expect(readError(response)).resolves.toMatchObject({
-        code: "APPLICATION_ALREADY_PENDING",
-      });
-    }
+    expect(viaOperator.status).toBe(409);
+    await expect(readError(viaOperator)).resolves.toMatchObject({
+      code: "APPLICATION_ALREADY_PENDING",
+    });
+    // A duplicate gets the generic body that, with email on (production), a
+    // fresh submission gets too, so the route cannot probe for applications.
+    expect(viaPublic.status).toBe(202);
+    await expect(readData(viaPublic)).resolves.toEqual({ status: "received" });
     expect(count(db, "onboarding_applications")).toBe(1);
   });
 
@@ -2064,5 +2072,158 @@ describe("Operator-created applications — real integration", () => {
         .prepare("SELECT status FROM onboarding_applications WHERE id = ?")
         .get(id),
     ).toEqual({ status: "provisioning" });
+  });
+
+  describe("purge (撤銷代建)", () => {
+    // The hand-written platform schema has no orders table; purge counts
+    // orders, so these tests add the minimal shape it reads.
+    function withOrdersTable(platformDb: D1DatabaseAdapter) {
+      platformDb
+        .raw()
+        .exec(
+          "CREATE TABLE orders (id TEXT PRIMARY KEY NOT NULL, restaurant_id TEXT NOT NULL REFERENCES restaurants(id))",
+        );
+      return platformDb;
+    }
+
+    async function purge(env: ManagementEnv, id: string) {
+      return app.fetch(
+        new Request(`${operatorUrl}/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${await managementToken()}` },
+        }),
+        env,
+      );
+    }
+
+    async function createApproved(env: ManagementEnv) {
+      const data = await readData<OperatorCreateResult>(
+        await operatorCreate(env, createApplicationBody()),
+      );
+      expect(data.application.status).toBe("completed");
+      return data;
+    }
+
+    // The platform DB seeds an admin user, so owners are counted by role.
+    function owners(platformDb: D1DatabaseAdapter) {
+      return (
+        platformDb
+          .raw()
+          .prepare("SELECT COUNT(*) AS count FROM users WHERE role = 1")
+          .get() as { count: number }
+      ).count;
+    }
+
+    const platformTables = [
+      "restaurants",
+      "shop_subscriptions",
+      "password_reset_tokens",
+      "market_join_requests",
+    ];
+    const managementTables = [
+      "onboarding_applications",
+      "tenants",
+      "shop_subscriptions",
+      "onboarding_credential_deliveries",
+    ];
+
+    it("removes everything approval provisioned and keeps the audit trail", async () => {
+      const db = createManagementDb();
+      const platformDb = withOrdersTable(createPlatformDb());
+      const env = createEnv(db, platformDb);
+      const created = await createApproved(env);
+
+      const response = await purge(env, created.application.id);
+
+      expect(response.status).toBe(200);
+      for (const table of platformTables) {
+        expect(count(platformDb, table), `platform ${table}`).toBe(0);
+      }
+      expect(owners(platformDb)).toBe(0);
+      for (const table of managementTables) {
+        expect(count(db, table), `management ${table}`).toBe(0);
+      }
+      const events = db
+        .raw()
+        .prepare(
+          `SELECT event_type, actor_id FROM onboarding_application_audit_events
+           WHERE application_id = ? ORDER BY created_at_ms, rowid`,
+        )
+        .all(created.application.id);
+      expect(events).toEqual([
+        { event_type: "submitted", actor_id: MANAGEMENT_ADMIN_ID },
+        { event_type: "approved", actor_id: MANAGEMENT_ADMIN_ID },
+        { event_type: "purged", actor_id: MANAGEMENT_ADMIN_ID },
+      ]);
+    });
+
+    it("purges a submitted application that was never provisioned", async () => {
+      const db = createManagementDb();
+      const env = createEnv(db, withOrdersTable(createPlatformDb()));
+      const created = await readData<OperatorCreateResult>(
+        await operatorCreate(env, {
+          ...createApplicationBody(),
+          approveImmediately: false,
+        }),
+      );
+
+      expect((await purge(env, created.application.id)).status).toBe(200);
+      expect(count(db, "onboarding_applications")).toBe(0);
+    });
+
+    it("refuses once the restaurant has orders and deletes nothing", async () => {
+      const db = createManagementDb();
+      const platformDb = withOrdersTable(createPlatformDb());
+      const env = createEnv(db, platformDb);
+      const created = await createApproved(env);
+      platformDb
+        .raw()
+        .prepare("INSERT INTO orders (id, restaurant_id) VALUES (?, ?)")
+        .run("order-1", created.approval!.restaurantId);
+
+      const response = await purge(env, created.application.id);
+
+      expect(response.status).toBe(409);
+      await expect(readError(response)).resolves.toMatchObject({
+        code: "RESTAURANT_HAS_ORDERS",
+      });
+      expect(count(platformDb, "restaurants")).toBe(1);
+      expect(owners(platformDb)).toBe(1);
+      expect(count(db, "tenants")).toBe(1);
+      expect(count(db, "onboarding_applications")).toBe(1);
+    });
+
+    it("leaves the restaurant whole when other rows still reference it", async () => {
+      const db = createManagementDb();
+      const platformDb = withOrdersTable(createPlatformDb());
+      const env = createEnv(db, platformDb);
+      const created = await createApproved(env);
+      platformDb
+        .raw()
+        .exec(
+          "CREATE TABLE menu_items (id TEXT PRIMARY KEY, restaurant_id TEXT NOT NULL REFERENCES restaurants(id))",
+        );
+      platformDb
+        .raw()
+        .prepare("INSERT INTO menu_items (id, restaurant_id) VALUES (?, ?)")
+        .run("item-1", created.approval!.restaurantId);
+
+      const response = await purge(env, created.application.id);
+
+      expect(response.status).toBe(409);
+      await expect(readError(response)).resolves.toMatchObject({
+        code: "RESTAURANT_IN_USE",
+      });
+      // One batch: the owner and subscription survive with the restaurant.
+      expect(count(platformDb, "restaurants")).toBe(1);
+      expect(owners(platformDb)).toBe(1);
+      expect(count(platformDb, "shop_subscriptions")).toBe(1);
+      expect(count(db, "onboarding_applications")).toBe(1);
+    });
+
+    it("returns 404 for an unknown application", async () => {
+      const env = createEnv(createManagementDb());
+      expect((await purge(env, "missing")).status).toBe(404);
+    });
   });
 });

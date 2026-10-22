@@ -3,7 +3,10 @@ import { ref, watch, computed } from "vue";
 import { useTenantsStore } from "@/stores/tenants";
 import { XMarkIcon } from "@heroicons/vue/24/outline";
 import {
+  ONBOARDING_LOCALES,
+  ONBOARDING_LOCALE_NAMES,
   citiesForCountry,
+  defaultOnboardingLocale,
   type SupportedCountryCode,
 } from "@makanmasak/shared-types";
 import type {
@@ -33,6 +36,7 @@ const emptyForm = () => ({
   contactPhone: "",
   countryCode: "TW" as SupportedCountryCode,
   city: "",
+  locale: defaultOnboardingLocale("TW"),
   district: "",
   address: "",
   latitude: null as number | null,
@@ -58,6 +62,7 @@ watch(
   () => form.value.countryCode,
   () => {
     form.value.city = "";
+    form.value.locale = defaultOnboardingLocale(form.value.countryCode);
   },
 );
 
@@ -154,6 +159,7 @@ const handleSubmit = async () => {
     latitude: f.latitude!,
     longitude: f.longitude!,
     planId: f.licenseTier,
+    locale: f.locale,
     approveImmediately: f.approveImmediately,
   };
 
@@ -457,6 +463,26 @@ const finish = () => {
                   {{ errors.city }}
                 </p>
               </div>
+            </div>
+
+            <div>
+              <label class="label" for="management-tenant-email-language">
+                {{ t("tenants.createModal.field.emailLanguage") }}
+              </label>
+              <select
+                id="management-tenant-email-language"
+                v-model="form.locale"
+                data-testid="management-tenant-email-language"
+                class="input"
+              >
+                <option
+                  v-for="locale in ONBOARDING_LOCALES"
+                  :key="locale"
+                  :value="locale"
+                >
+                  {{ ONBOARDING_LOCALE_NAMES[locale] }}
+                </option>
+              </select>
             </div>
 
             <!-- 區域 / 地址 -->

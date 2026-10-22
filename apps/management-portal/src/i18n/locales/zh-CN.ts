@@ -319,6 +319,7 @@ const zhCN: Messages = {
         createFailed: "创建租户失败，请稍后再试",
       },
       field: {
+        emailLanguage: "邮件语言",
         contactName: "联络人姓名",
         contactNamePlaceholder: "例如：王小明",
         country: "国家",

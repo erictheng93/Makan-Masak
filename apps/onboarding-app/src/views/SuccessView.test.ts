@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("vue-router", () => ({
+  RouterLink: { props: ["to"], template: '<a :href="to"><slot /></a>' },
   useRoute: () => mocks.route,
   useRouter: () => ({ push: mocks.push }),
 }));
@@ -61,5 +62,30 @@ describe("application success status link", () => {
     expect(
       sessionStorage.getItem("onboarding_application") ?? "",
     ).not.toContain("unique-secret");
+    expect(
+      wrapper.find("[data-testid=onboarding-status-link-emailed]").exists(),
+    ).toBe(false);
+  });
+
+  it("points to the inbox when the server emailed the link instead", () => {
+    mocks.store.applicationId = null as unknown as string;
+    mocks.route.hash = "";
+    try {
+      const wrapper = mount(SuccessView);
+
+      expect(mocks.push).not.toHaveBeenCalled();
+      expect(
+        wrapper.find("[data-testid=onboarding-status-link]").exists(),
+      ).toBe(false);
+      const emailed = wrapper.get(
+        "[data-testid=onboarding-status-link-emailed]",
+      );
+      expect(emailed.text()).toContain("success.statusLink.emailed");
+      expect(emailed.get("a").attributes("href")).toBe("/find-application");
+      expect(wrapper.text()).not.toContain("success.summary.applicationId");
+    } finally {
+      mocks.store.applicationId = "APP-1";
+      mocks.route.hash = "#unique-secret";
+    }
   });
 });

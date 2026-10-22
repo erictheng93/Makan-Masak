@@ -2171,6 +2171,19 @@ const idID: Messages = {
     missingToken: "Token atur ulang tidak ditemukan",
   },
   platformOnboarding: {
+    purge: {
+      title: "Batalkan dan hapus toko ini",
+      description:
+        "Ini menghapus permanen aplikasi, restoran, akun pemilik dan staf, langganan, serta tenant untuk “{business}”. Tidak dapat dibatalkan. Jejak audit tetap disimpan.",
+      confirmLabel: "Ketik nama toko untuk konfirmasi",
+      confirm: "Hapus permanen",
+      errors: {
+        hasOrders: "Toko ini sudah memiliki pesanan dan tidak dapat dihapus.",
+        inUse:
+          "Toko ini sudah memiliki menu atau data lain dan tidak dapat dihapus. Hapus data tersebut terlebih dahulu.",
+        failed: "Gagal menghapus. Coba lagi nanti.",
+      },
+    },
     create: {
       open: "Daftarkan untuk pemilik",
       title: "Daftarkan toko untuk pemiliknya",
@@ -2180,6 +2193,7 @@ const idID: Messages = {
       contactName: "Nama pemilik",
       contactEmail: "Email pemilik",
       contactPhone: "Telepon pemilik",
+      emailLanguage: "Bahasa email",
       plan: "Paket",
       country: "Negara",
       city: "Kota",
@@ -2241,6 +2255,7 @@ const idID: Messages = {
       actions: "Tindakan",
     },
     actions: {
+      purge: "Batalkan & hapus",
       handoff: "Detail aktivasi",
       auditTrail: "Riwayat audit",
       approve: "Setujui",

@@ -1,6 +1,6 @@
 # Onboarding platform notifications
 
-`POST /api/v1/onboarding/applications` is publicly accessible but is limited to five accepted requests per Cloudflare client IP in each fixed one-hour window. A successful submission schedules platform notification work with `waitUntil`; a Slack or email provider error is logged but never changes the applicant's `201` response.
+`POST /api/v1/onboarding/applications` is publicly accessible but is limited to five accepted requests per Cloudflare client IP in each fixed one-hour window. A successful submission schedules platform notification work with `waitUntil`; a Slack or email provider error is logged but never changes the applicant's `202` response. That response is the same for a new application and for an email that already has one in review (the latter is emailed a fresh status link instead), so it cannot be used to learn who applied; `POST /api/v1/onboarding/applications/status-link` resends the link on the same terms.
 
 The worker tries every configured channel:
 

@@ -71,8 +71,6 @@ const idID: Messages = {
     },
     title: "Formulir Aplikasi",
     submitErrors: {
-      alreadyPending:
-        "Pengajuan untuk email ini sedang ditinjau. Gunakan tautan status di email konfirmasi untuk memantaunya, atau hubungi dukungan jika tidak menemukannya.",
       rateLimited:
         "Terlalu banyak pengiriman. Setiap jaringan dapat mengirim 5 kali per jam (percobaan gagal ikut dihitung). Silakan coba lagi setelah jam berikutnya, atau gunakan data seluler.",
       validation:
@@ -201,6 +199,8 @@ const idID: Messages = {
       savePrompt:
         "Simpan tautan ini. Ini satu-satunya cara untuk memeriksa progres aplikasi Anda.",
       copy: "Salin tautan status",
+      emailed:
+        "Kami telah mengirim tautan untuk memantau pendaftaran Anda ke email Anda. Jika belum masuk dalam beberapa menit, periksa folder spam.",
     },
     contact: {
       prompt: "Ada pertanyaan? Kontak",
@@ -238,6 +238,20 @@ const idID: Messages = {
     },
     title: "Aplikasi Dikirim!",
   },
+  findApplication: {
+    linkLabel: "Tidak menemukan tautan status? Kirim ulang",
+    title: "Cari pendaftaran saya",
+    subtitle:
+      "Masukkan email yang Anda gunakan saat mendaftar dan kami akan mengirim ulang tautan status pendaftaran Anda.",
+    emailLabel: "Email kontak",
+    submit: "Kirim tautan status",
+    submitting: "Mengirim...",
+    sent: "Jika email ini memiliki pendaftaran, tautan statusnya akan tiba dalam beberapa menit. Tautan status sebelumnya tidak berlaku lagi, jadi gunakan email terbaru. Kami mengirim paling banyak satu tautan per pendaftaran setiap 15 menit.",
+    invalidEmail: "Masukkan alamat email yang valid",
+    failed: "Kami tidak dapat mengirimnya sekarang. Silakan coba lagi nanti.",
+    backHome: "Kembali ke beranda",
+  },
+
   status: {
     title: "Status Aplikasi",
     subtitle: "Periksa status peninjauan terbaru aplikasi restoran Anda.",

@@ -157,8 +157,6 @@ const zhTW = {
       phoneInvalid: "電話需為 8 到 20 個字元",
     },
     submitErrors: {
-      alreadyPending:
-        "此 Email 已有一筆申請正在審核中。請用確認信裡的狀態連結查看進度；找不到連結請聯絡客服。",
       rateLimited:
         "送出次數太多了。同一個網路每小時最多送出 5 次（送出失敗也會算），請等到下一個整點再試，或改用手機網路。",
       validation: "有資料不符合規定，請檢查每一格後再送出一次。",
@@ -210,11 +208,26 @@ const zhTW = {
     statusLink: {
       savePrompt: "請保存此連結，這是查詢申請進度的唯一方式。",
       copy: "複製查詢連結",
+      emailed:
+        "我們已把查詢申請進度的連結寄到您的 Email。幾分鐘內沒收到的話，請看看垃圾郵件匣。",
     },
     contact: {
       prompt: "有任何問題？請聯繫",
     },
   },
+  findApplication: {
+    linkLabel: "找不到狀態連結？重新寄給我",
+    title: "找回我的申請",
+    subtitle: "輸入申請時填的 Email，我們會把申請狀態連結重新寄給您。",
+    emailLabel: "聯絡 Email",
+    submit: "寄送狀態連結",
+    submitting: "寄送中...",
+    sent: "如果這個 Email 有申請紀錄，狀態連結會在幾分鐘內寄到。之前的狀態連結會失效，請改用新的那一封。同一筆申請 15 分鐘內只會寄一次。",
+    invalidEmail: "請輸入正確的 Email 格式",
+    failed: "目前無法送出，請稍後再試。",
+    backHome: "返回首頁",
+  },
+
   status: {
     title: "申請狀態",
     subtitle: "查看您的店家申請最新審核進度。",

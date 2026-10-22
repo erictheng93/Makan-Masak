@@ -113,6 +113,13 @@ const features = computed(() => [
         >
           {{ t("home.hero.ctaTour") }}
         </a>
+        <RouterLink
+          to="/find-application"
+          class="text-sm font-medium text-primary-700 transition-colors duration-200 hover:text-primary-800"
+          data-testid="home-find-application"
+        >
+          {{ t("findApplication.linkLabel") }}
+        </RouterLink>
       </div>
     </section>
 

@@ -22,12 +22,15 @@ const migrationsDir = path.resolve(
   "../../migrations",
 );
 
-function createManagementDb(stopBefore?: string) {
+// Leaves out only the backfill under test, so the test can seed rows before it
+// runs. Later migrations still apply: drizzle inserts name every column the
+// table defines, including ones added after the backfill.
+function createManagementDb(skip?: string) {
   const sqlite = new Database(":memory:");
   sqlite.pragma("foreign_keys = OFF");
   for (const file of fs.readdirSync(migrationsDir).sort()) {
     if (file.endsWith(".sql")) {
-      if (stopBefore && file >= `${stopBefore}_`) break;
+      if (skip && file.startsWith(`${skip}_`)) continue;
       sqlite.exec(fs.readFileSync(path.join(migrationsDir, file), "utf8"));
     }
   }

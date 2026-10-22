@@ -2151,6 +2151,19 @@ const enUS: Messages = {
     missingToken: "Missing reset token",
   },
   platformOnboarding: {
+    purge: {
+      title: "Revoke and delete this shop",
+      description:
+        "This permanently deletes the application, restaurant, owner and staff accounts, subscription and tenant for “{business}”. It cannot be undone. The audit trail is kept.",
+      confirmLabel: "Type the shop name to confirm",
+      confirm: "Delete permanently",
+      errors: {
+        hasOrders: "This shop already has orders and cannot be deleted.",
+        inUse:
+          "This shop already has a menu or other records and cannot be deleted. Remove them first.",
+        failed: "Deletion failed. Please try again later.",
+      },
+    },
     create: {
       open: "Register for owner",
       title: "Register a shop for its owner",
@@ -2160,6 +2173,7 @@ const enUS: Messages = {
       contactName: "Owner name",
       contactEmail: "Owner email",
       contactPhone: "Owner phone",
+      emailLanguage: "Email language",
       plan: "Plan",
       country: "Country",
       city: "City",
@@ -2222,6 +2236,7 @@ const enUS: Messages = {
       actions: "Actions",
     },
     actions: {
+      purge: "Revoke & delete",
       handoff: "Activation details",
       auditTrail: "Audit trail",
       approve: "Approve",

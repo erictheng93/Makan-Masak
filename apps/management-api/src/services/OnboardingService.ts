@@ -37,7 +37,19 @@ import {
   normalizeCountryCode,
 } from "@makanmasak/shared-types";
 import bcrypt from "bcryptjs";
-import { and, asc, desc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNull,
+  lt,
+  lte,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import {
   onboardingApplicationAuditEvents,
@@ -46,6 +58,7 @@ import {
   onboardingCredentialDeliveries,
   tenants,
 } from "../db/onboarding-tables";
+import { applicantEmails } from "./onboarding-applicant-emails";
 
 /** Applications accepted per client IP per window. */
 const APPLICATION_RATE_LIMIT = 5;
@@ -152,6 +165,19 @@ export function buildMarketJoinRequestWrites(input: {
   ];
 }
 
+/** Minutes between two status-link emails for one application. */
+const STATUS_LINK_COOLDOWN_MS = 15 * 60 * 1000;
+
+const PENDING_EMAIL_INDEX = "idx_onboarding_applications_pending_email";
+
+/** D1 and drizzle wrap the SQLite error, so look down the cause chain. */
+function isPendingEmailConflict(error: unknown): boolean {
+  for (let e = error; e instanceof Error; e = e.cause) {
+    if (e.message.includes(PENDING_EMAIL_INDEX)) return true;
+  }
+  return false;
+}
+
 export class OnboardingService {
   private env: ManagementEnv;
   private tenantService: TenantService;
@@ -207,25 +233,6 @@ export class OnboardingService {
     // An operator-created application records who made it in the audit trail.
     submittedBy?: { id: string; email: string },
   ): Promise<OnboardingApplication> {
-    // Without this a second application for the same owner would only fail
-    // (or silently fork) at approval time, after an operator has reviewed it.
-    // shortcut: check-then-insert, so two simultaneous submits can both pass;
-    // add a partial unique index on contact_email if that is ever seen.
-    const pending = await this.env.MANAGEMENT_DB.prepare(
-      `SELECT id FROM onboarding_applications
-       WHERE contact_email = ? COLLATE NOCASE
-         AND status NOT IN ('rejected', 'completed')
-       LIMIT 1`,
-    )
-      .bind(data.contactEmail.trim())
-      .first();
-    if (pending) {
-      throw conflict(
-        "An application for this email is already pending",
-        "APPLICATION_ALREADY_PENDING",
-      );
-    }
-
     const id = this.generateApplicationId();
     const now = new Date().toISOString();
     const applicationSecret = this.generateApplicationSecret();
@@ -250,31 +257,48 @@ export class OnboardingService {
     }
 
     const managementDb = drizzle(this.env.MANAGEMENT_DB);
-    await managementDb.insert(onboardingApplications).values({
-      id,
-      businessName: data.businessName,
-      contactName: data.contactName,
-      contactEmail: data.contactEmail,
-      contactPhone: data.contactPhone,
-      address: data.address ?? null,
-      district: data.district ?? null,
-      city: data.city,
-      countryCode: data.countryCode,
-      marketId: data.marketId ?? null,
-      stallNumber: data.stallNumber ?? null,
-      planId: data.planId ?? "trial",
-      latitude: data.latitude,
-      longitude: data.longitude,
-      requestedSubdomain: null,
-      assignedSubdomain,
-      status: "submitted",
-      applicationSecretHash,
-      ipAddress: metadata?.ipAddress || null,
-      userAgent: metadata?.userAgent || null,
-      createdAt: now,
-      submittedAt: now,
-      updatedAt: now,
-    });
+    // idx_onboarding_applications_pending_email (migration 0018) allows one
+    // application in review per email. Without it a second application for
+    // the same owner would only fail (or silently fork) at approval time.
+    try {
+      await managementDb.insert(onboardingApplications).values({
+        id,
+        businessName: data.businessName,
+        contactName: data.contactName,
+        contactEmail: data.contactEmail,
+        contactPhone: data.contactPhone,
+        address: data.address ?? null,
+        district: data.district ?? null,
+        city: data.city,
+        countryCode: data.countryCode,
+        marketId: data.marketId ?? null,
+        stallNumber: data.stallNumber ?? null,
+        planId: data.planId ?? "trial",
+        latitude: data.latitude,
+        longitude: data.longitude,
+        requestedSubdomain: null,
+        assignedSubdomain,
+        status: "submitted",
+        applicationSecretHash,
+        locale: data.locale ?? null,
+        // A self-service applicant is mailed the status link right away, which
+        // starts the cooldown; an operator-created one is mailed nothing.
+        statusLinkSentAtMs: submittedBy ? null : Date.now(),
+        ipAddress: metadata?.ipAddress || null,
+        userAgent: metadata?.userAgent || null,
+        createdAt: now,
+        submittedAt: now,
+        updatedAt: now,
+      });
+    } catch (error) {
+      if (isPendingEmailConflict(error)) {
+        throw conflict(
+          "An application for this email is already pending",
+          "APPLICATION_ALREADY_PENDING",
+        );
+      }
+      throw error;
+    }
     await this.writeApplicationAuditEvent(
       id,
       "submitted",
@@ -460,21 +484,105 @@ export class OnboardingService {
       application.id,
       applicationSecret,
     );
-    const text = [
-      `${application.contactName} 您好：`,
-      "",
-      `我們已收到「${application.businessName}」的申請，正在審核中。`,
-      `您可隨時在此查看申請狀態：${statusLink}`,
-    ].join("\n");
-
     const result = await this.sendApplicantEmail({
       to: application.contactEmail,
-      subject: `MakanMasak 已收到「${application.businessName}」的申請`,
-      text,
+      ...applicantEmails(application.locale).received({
+        contactName: application.contactName,
+        businessName: application.businessName,
+        statusLink,
+      }),
     });
     if (!result.success) {
       console.error(
         "[OnboardingService] Application received email failed:",
+        result.error,
+      );
+    }
+  }
+
+  /**
+   * Mail a fresh status link to the newest non-rejected application for an
+   * email, if there is one. The public routes call this for a duplicate
+   * submit and for "resend my link", and answer the same 202 whether or not
+   * anything was found, so the response never reveals that an email applied.
+   *
+   * Completed applications count: the status page is where a completed
+   * applicant sees the shop is live and what to do next. Rejected ones do
+   * not; the rejection email already said so and a new application is the
+   * way forward.
+   *
+   * Only the secret's hash is stored, so a fresh link means a fresh secret,
+   * which invalidates the previous link. That is acceptable because the new
+   * link goes to the same inbox the old one did.
+   */
+  async sendStatusLinkEmail(
+    email: string,
+    kind: "alreadyPending" | "statusLink",
+  ): Promise<void> {
+    // Without email there is nothing to deliver, and rotating would only
+    // break the link the applicant already has.
+    if (this.env.ONBOARDING_EMAIL_ENABLED !== "true") return;
+
+    const managementDb = drizzle(this.env.MANAGEMENT_DB);
+    const [application] = await managementDb
+      .select({
+        id: onboardingApplications.id,
+        contactName: onboardingApplications.contactName,
+        contactEmail: onboardingApplications.contactEmail,
+        businessName: onboardingApplications.businessName,
+        locale: onboardingApplications.locale,
+      })
+      .from(onboardingApplications)
+      .where(
+        and(
+          sql`lower(${onboardingApplications.contactEmail}) = lower(${email.trim()})`,
+          ne(onboardingApplications.status, "rejected"),
+        ),
+      )
+      .orderBy(desc(onboardingApplications.createdAt))
+      .limit(1);
+    if (!application) return;
+
+    const nowMs = Date.now();
+    const applicationSecret = this.generateApplicationSecret();
+    // Rotating and claiming the cooldown in one statement means two
+    // concurrent requests cannot both send.
+    const claimed = await managementDb
+      .update(onboardingApplications)
+      .set({
+        applicationSecretHash:
+          await this.hashApplicationSecret(applicationSecret),
+        statusLinkSentAtMs: nowMs,
+      })
+      .where(
+        and(
+          eq(onboardingApplications.id, application.id),
+          or(
+            isNull(onboardingApplications.statusLinkSentAtMs),
+            lte(
+              onboardingApplications.statusLinkSentAtMs,
+              nowMs - STATUS_LINK_COOLDOWN_MS,
+            ),
+          ),
+        ),
+      )
+      .returning({ id: onboardingApplications.id });
+    if (claimed.length === 0) return;
+
+    const result = await this.sendApplicantEmail({
+      to: application.contactEmail,
+      ...applicantEmails(application.locale)[kind]({
+        contactName: application.contactName,
+        businessName: application.businessName,
+        statusLink: this.buildApplicationStatusLink(
+          application.id,
+          applicationSecret,
+        ),
+      }),
+    });
+    if (!result.success) {
+      console.error(
+        `[OnboardingService] Status link email for ${application.id} failed:`,
         result.error,
       );
     }
@@ -504,10 +612,16 @@ export class OnboardingService {
       };
     }
 
-    return new CloudflareEmailProvider(binding, from).sendEmail({
+    const result = await new CloudflareEmailProvider(binding, from).sendEmail({
       ...message,
       html: `<pre>${this.escapeHtml(message.text)}</pre>`,
     });
+    // Callers log this, and provider errors can quote the recipient; the
+    // public paths must not put an applicant's address in the logs.
+    return {
+      success: result.success,
+      error: result.error?.replaceAll(message.to, "<recipient>"),
+    };
   }
 
   /**
@@ -1762,16 +1876,13 @@ export class OnboardingService {
   ): Promise<void> {
     if (this.env.ONBOARDING_EMAIL_ENABLED !== "true") return;
 
-    const text = [
-      `${application.contactName} 您好：`,
-      "",
-      `很抱歉，「${application.businessName}」的申請未能通過。`,
-      `原因：${reason}`,
-    ].join("\n");
     const result = await this.sendApplicantEmail({
       to: application.contactEmail,
-      subject: `MakanMasak「${application.businessName}」申請結果`,
-      text,
+      ...applicantEmails(application.locale).rejected({
+        contactName: application.contactName,
+        businessName: application.businessName,
+        reason,
+      }),
     });
     if (!result.success) {
       console.error(
@@ -1793,18 +1904,15 @@ export class OnboardingService {
       return { attempted: false, status: "pending" };
     }
 
-    const text = [
-      `${application.contactName} 您好：`,
-      "",
-      `您的店家「${application.businessName}」已開通。`,
-      `店主帳號：${ownerAccount.username}`,
-      `請在此設定密碼：${ownerAccount.setupPasswordLink}`,
-      `此連結將於 ${ownerAccount.setupPasswordExpiresAt} 到期。`,
-    ].join("\n");
     const result = await this.sendApplicantEmail({
       to: application.contactEmail,
-      subject: `MakanMasak「${application.businessName}」店主帳號開通`,
-      text,
+      ...applicantEmails(application.locale).setupPassword({
+        contactName: application.contactName,
+        businessName: application.businessName,
+        username: ownerAccount.username,
+        setupLink: ownerAccount.setupPasswordLink,
+        expiresAt: ownerAccount.setupPasswordExpiresAt,
+      }),
     });
 
     if (!result.success) {
@@ -1910,6 +2018,7 @@ export class OnboardingService {
       status: row.status as OnboardingStatus,
       rejectionReason: row.rejection_reason as string | undefined,
       rejectedAtMs: row.rejected_at_ms as number | undefined,
+      locale: (row.locale ?? undefined) as OnboardingApplication["locale"],
       tenantId: row.tenant_id as string | undefined,
       ipAddress: row.ip_address as string | undefined,
       userAgent: row.user_agent as string | undefined,

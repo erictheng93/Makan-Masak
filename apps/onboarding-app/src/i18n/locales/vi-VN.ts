@@ -70,8 +70,6 @@ const viVN: Messages = {
     },
     title: "Đơn đăng ký",
     submitErrors: {
-      alreadyPending:
-        "Email này đã có một đơn đăng ký đang được xét duyệt. Hãy dùng liên kết trạng thái trong email xác nhận để theo dõi, hoặc liên hệ hỗ trợ nếu không tìm thấy.",
       rateLimited:
         "Gửi quá nhiều lần. Mỗi mạng chỉ được gửi 5 lần mỗi giờ (lần gửi thất bại cũng được tính). Vui lòng thử lại sau giờ tiếp theo hoặc chuyển sang dữ liệu di động.",
       validation:
@@ -200,6 +198,8 @@ const viVN: Messages = {
       savePrompt:
         "Hãy lưu liên kết này. Đây là cách duy nhất để kiểm tra tiến độ đơn đăng ký.",
       copy: "Sao chép liên kết trạng thái",
+      emailed:
+        "Chúng tôi đã gửi liên kết theo dõi đơn đăng ký đến email của bạn. Nếu sau vài phút chưa nhận được, hãy kiểm tra thư mục thư rác.",
     },
     contact: {
       prompt: "Có câu hỏi nào không? Liên hệ",
@@ -237,6 +237,20 @@ const viVN: Messages = {
     },
     title: "Ứng dụng đã được gửi!",
   },
+  findApplication: {
+    linkLabel: "Không tìm thấy liên kết trạng thái? Gửi lại cho tôi",
+    title: "Tìm đơn đăng ký của tôi",
+    subtitle:
+      "Nhập email bạn đã dùng khi đăng ký, chúng tôi sẽ gửi lại liên kết trạng thái đơn.",
+    emailLabel: "Email liên hệ",
+    submit: "Gửi liên kết trạng thái",
+    submitting: "Đang gửi...",
+    sent: "Nếu email này có đơn đăng ký, liên kết trạng thái sẽ đến trong vài phút. Các liên kết trạng thái trước đây sẽ không dùng được nữa, hãy dùng email mới nhất. Mỗi đơn chỉ được gửi tối đa một liên kết trong 15 phút.",
+    invalidEmail: "Vui lòng nhập địa chỉ email hợp lệ",
+    failed: "Hiện không thể gửi. Vui lòng thử lại sau.",
+    backHome: "Về trang chủ",
+  },
+
   status: {
     title: "Trạng thái đơn đăng ký",
     subtitle: "Kiểm tra trạng thái xét duyệt mới nhất.",

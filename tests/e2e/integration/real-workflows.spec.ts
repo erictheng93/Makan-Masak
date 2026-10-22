@@ -3066,7 +3066,9 @@ test.describe("Real system workflows", () => {
         data?: { applicationId?: string; assignedSubdomain?: string };
       };
       expect(createBody.success).toBe(true);
-      expect(createResponse.status()).toBe(201);
+      expect(createResponse.status()).toBe(202);
+      // Local and CI run with ONBOARDING_EMAIL_ENABLED off, the one mode in
+      // which the response carries the status link instead of an email.
       expect(createBody.data?.applicationId).toBeTruthy();
       applicationId = createBody.data!.applicationId;
       expect(createBody.data?.assignedSubdomain).toBeTruthy();

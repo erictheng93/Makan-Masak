@@ -2204,6 +2204,18 @@ const zhTWCore = {
 
   // 儀表板
   platformOnboarding: {
+    purge: {
+      title: "撤銷代建並刪除店鋪",
+      description:
+        "將永久刪除「{business}」的申請、餐廳、店主與員工帳號、訂閱及租戶資料，無法復原。稽核紀錄會保留。",
+      confirmLabel: "請輸入店鋪名稱以確認",
+      confirm: "永久刪除",
+      errors: {
+        hasOrders: "這家店已有訂單，無法刪除。",
+        inUse: "這家店已有菜單或其他資料，無法刪除。請先清除相關資料。",
+        failed: "刪除失敗，請稍後再試。",
+      },
+    },
     create: {
       open: "代店主建立",
       title: "代店主建立店家",
@@ -2213,6 +2225,7 @@ const zhTWCore = {
       contactName: "店主姓名",
       contactEmail: "店主 Email",
       contactPhone: "店主電話",
+      emailLanguage: "Email 語言",
       plan: "方案",
       country: "國家",
       city: "城市",
@@ -2271,6 +2284,7 @@ const zhTWCore = {
       actions: "操作",
     },
     actions: {
+      purge: "撤銷並刪除",
       handoff: "開通資訊",
       auditTrail: "稽核紀錄",
       approve: "核准",

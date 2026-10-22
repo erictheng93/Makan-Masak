@@ -322,6 +322,7 @@ const viVN: Messages = {
         createFailed: "Không tạo được đối tượng thuê. Vui lòng thử lại sau.",
       },
       field: {
+        emailLanguage: "Ngôn ngữ email",
         contactName: "Tên người liên hệ",
         contactNamePlaceholder: "ví dụ: Nguyễn Văn A",
         country: "Quốc gia",

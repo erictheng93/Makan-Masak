@@ -9,7 +9,10 @@
  */
 
 import type { KVNamespace } from "@cloudflare/workers-types";
-import type { SupportedCountryCode } from "@makanmasak/shared-types";
+import type {
+  OnboardingLocale,
+  SupportedCountryCode,
+} from "@makanmasak/shared-types";
 
 // ============================================================
 // Environment Types
@@ -424,6 +427,8 @@ export interface OnboardingApplication {
   status: OnboardingStatus;
   rejectionReason?: string;
   rejectedAtMs?: number;
+  /** Applicant email language; undefined on rows from before it was stored. */
+  locale?: OnboardingLocale;
   tenantId?: string;
   ipAddress?: string;
   userAgent?: string;
@@ -450,6 +455,7 @@ export interface CreateApplicationRequest {
   planId?: OnboardingPlanId | null;
   latitude: number;
   longitude: number;
+  locale?: OnboardingLocale;
 }
 
 /**

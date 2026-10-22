@@ -33,6 +33,8 @@ export const onboardingApplications = sqliteTable("onboarding_applications", {
   rejectedAtMs: integer("rejected_at_ms"),
   tenantId: text("tenant_id"),
   applicationSecretHash: text("application_secret_hash"),
+  locale: text("locale"),
+  statusLinkSentAtMs: integer("status_link_sent_at_ms"),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   createdAt: text("created_at").notNull(),

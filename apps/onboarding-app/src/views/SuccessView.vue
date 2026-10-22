@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { RouterLink, useRoute, useRouter } from "vue-router";
 import { useOnboardingStore } from "@/stores/onboarding";
 import {
   CheckCircleIcon,
@@ -32,7 +32,7 @@ const statusUrl = computed(() =>
 
 // Redirect if no submitted application data
 onMounted(() => {
-  if (!store.applicationId) {
+  if (!store.application) {
     router.push("/apply");
   }
 });
@@ -100,7 +100,10 @@ const handleStartNew = () => {
           {{ t("success.summary.title") }}
         </h3>
         <dl class="space-y-3 text-sm">
-          <div class="flex justify-between items-center">
+          <div
+            v-if="store.applicationId"
+            class="flex justify-between items-center"
+          >
             <dt class="text-gray-500">
               {{ t("success.summary.applicationId") }}
             </dt>
@@ -182,6 +185,20 @@ const handleStartNew = () => {
         </div>
       </div>
 
+      <!-- Dev/CI only: with email on, the link exists only in the inbox. -->
+      <p
+        v-if="!statusUrl"
+        class="mt-8 rounded-lg bg-primary-50 p-4 text-left text-sm text-gray-900"
+        data-testid="onboarding-status-link-emailed"
+      >
+        {{ t("success.statusLink.emailed") }}
+        <RouterLink
+          to="/find-application"
+          class="mt-2 block font-medium text-primary-700 underline"
+        >
+          {{ t("findApplication.linkLabel") }}
+        </RouterLink>
+      </p>
       <div
         v-if="statusUrl"
         class="mt-8 rounded-lg border border-primary-200 bg-primary-50 p-4 text-left"

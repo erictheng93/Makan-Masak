@@ -321,6 +321,7 @@ const idID: Messages = {
         createFailed: "Gagal membuat penyewa. Silakan coba lagi nanti.",
       },
       field: {
+        emailLanguage: "Bahasa email",
         contactName: "Nama Kontak",
         contactNamePlaceholder: "misalnya Budi Santoso",
         country: "Negara",

@@ -114,6 +114,7 @@ const enUS: Messages = {
       },
       title: "Create Tenant",
       field: {
+        emailLanguage: "Email language",
         contactName: "Contact Name",
         contactNamePlaceholder: "e.g. Jane Tan",
         country: "Country",

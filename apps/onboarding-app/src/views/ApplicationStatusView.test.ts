@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("vue-router", () => ({
+  RouterLink: { props: ["to"], template: '<a :href="to"><slot /></a>' },
   useRoute: () => mocks.route,
   useRouter: () => ({ push: mocks.push }),
 }));
@@ -136,6 +137,21 @@ describe("ApplicationStatusView", () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain("status.error.invalidLink");
+    expect(
+      wrapper.get('[data-testid="status-find-application"]').attributes("href"),
+    ).toBe("/find-application");
+  });
+
+  it("offers no resend link when the service, not the link, failed", async () => {
+    mocks.getApplication.mockRejectedValue(new ApiError("down", "GET_FAILED"));
+
+    const wrapper = mount(ApplicationStatusView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("status.error.unavailable");
+    expect(
+      wrapper.find('[data-testid="status-find-application"]').exists(),
+    ).toBe(false);
   });
 
   it("treats an unknown application id as an invalid link", async () => {

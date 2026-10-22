@@ -69,9 +69,18 @@ export class D1DatabaseAdapter {
   async batch<T = unknown>(
     statements: D1PreparedStatementAdapter[],
   ): Promise<D1AdapterResult<T>[]> {
+    // D1 runs a batch as one transaction: a failing statement rolls back the
+    // ones before it. Without this, tests would bless partial writes.
     const results: D1AdapterResult<T>[] = [];
-    for (const stmt of statements) {
-      results.push(await stmt.all<T>());
+    this.sqlite.exec("BEGIN");
+    try {
+      for (const stmt of statements) {
+        results.push(await stmt.all<T>());
+      }
+      this.sqlite.exec("COMMIT");
+    } catch (error) {
+      this.sqlite.exec("ROLLBACK");
+      throw error;
     }
     return results;
   }

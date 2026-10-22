@@ -494,6 +494,16 @@
                 >
                   {{ t("platformOnboarding.actions.reject") }}
                 </button>
+                <button
+                  v-if="application.status !== 'provisioning'"
+                  type="button"
+                  :data-testid="`purge-onboarding-${application.id}`"
+                  class="rounded-full bg-red-50 px-4 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
+                  :disabled="actionId === application.id"
+                  @click="openPurgeDialog(application)"
+                >
+                  {{ t("platformOnboarding.actions.purge") }}
+                </button>
               </div>
             </td>
           </tr>
@@ -653,6 +663,77 @@
       </form>
     </div>
 
+    <div
+      v-if="purgeTarget"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="purge-application-title"
+      data-testid="purge-onboarding-dialog"
+    >
+      <form
+        class="w-full max-w-md rounded-2xl bg-white p-6 shadow-ios-card"
+        @submit.prevent="purgeApplication"
+      >
+        <h2
+          id="purge-application-title"
+          class="text-lg font-semibold text-gray-900"
+        >
+          {{ t("platformOnboarding.purge.title") }}
+        </h2>
+        <p class="mt-1 text-sm text-gray-600">
+          {{
+            t("platformOnboarding.purge.description", {
+              business: purgeTarget.businessName,
+            })
+          }}
+        </p>
+        <label
+          for="onboarding-purge-confirm"
+          class="mt-4 block text-sm font-medium text-gray-700"
+        >
+          {{ t("platformOnboarding.purge.confirmLabel") }}
+        </label>
+        <input
+          id="onboarding-purge-confirm"
+          v-model="purgeConfirmation"
+          data-testid="onboarding-purge-confirm-input"
+          autocomplete="off"
+          :placeholder="purgeTarget.businessName"
+          :aria-describedby="purgeError ? 'onboarding-purge-error' : undefined"
+          class="mt-1 w-full rounded-2xl bg-gray-50 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500/20"
+        />
+        <p
+          v-if="purgeError"
+          id="onboarding-purge-error"
+          role="alert"
+          class="mt-2 text-sm text-red-700"
+        >
+          {{ purgeError }}
+        </p>
+        <div class="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            class="rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            @click="closePurgeDialog"
+          >
+            {{ t("common.cancel") }}
+          </button>
+          <button
+            type="submit"
+            data-testid="confirm-purge-onboarding"
+            class="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+            :disabled="
+              purgeConfirmation.trim() !== purgeTarget.businessName ||
+              Boolean(actionId)
+            "
+          >
+            {{ t("platformOnboarding.purge.confirm") }}
+          </button>
+        </div>
+      </form>
+    </div>
+
     <OperatorOnboardingDialog
       v-if="isCreateDialogOpen"
       @close="isCreateDialogOpen = false"
@@ -760,6 +841,9 @@ const ownerHandoff = ref<OwnerHandoff | null>(null);
 const copiedField = ref<"" | CopyableField>("");
 const rejectingApplicationId = ref("");
 const rejectionReason = ref("");
+const purgeTarget = ref<OnboardingApplication | null>(null);
+const purgeConfirmation = ref("");
+const purgeError = ref("");
 const auditApplication = ref<OnboardingApplication | null>(null);
 const auditEvents = ref<OnboardingApplicationAuditEvent[]>([]);
 const isLoadingAuditEvents = ref(false);
@@ -1018,6 +1102,46 @@ async function rejectApplication() {
   } catch (rejectError) {
     console.error("Failed to reject onboarding application:", rejectError);
     error.value = t("platformOnboarding.errors.reject");
+  } finally {
+    actionId.value = "";
+  }
+}
+
+function openPurgeDialog(application: OnboardingApplication) {
+  purgeTarget.value = application;
+  purgeConfirmation.value = "";
+  purgeError.value = "";
+}
+
+function closePurgeDialog() {
+  purgeTarget.value = null;
+  purgeConfirmation.value = "";
+  purgeError.value = "";
+}
+
+async function purgeApplication() {
+  const application = purgeTarget.value;
+  if (!application) return;
+  // Typing the shop name is the guard against purging the wrong row.
+  if (purgeConfirmation.value.trim() !== application.businessName) return;
+  actionId.value = application.id;
+  purgeError.value = "";
+  try {
+    await onboardingApplicationsService.purge(application.id);
+    closePurgeDialog();
+    notifyApplicationsChanged();
+    await loadApplications();
+  } catch (purgeFailure) {
+    console.error("Failed to purge onboarding application:", purgeFailure);
+    const code = (
+      purgeFailure as { response?: { data?: { error?: { code?: string } } } }
+    )?.response?.data?.error?.code;
+    purgeError.value =
+      code === "RESTAURANT_HAS_ORDERS"
+        ? t("platformOnboarding.purge.errors.hasOrders")
+        : code === "RESTAURANT_IN_USE"
+          ? t("platformOnboarding.purge.errors.inUse")
+          : t("platformOnboarding.purge.errors.failed");
   } finally {
     actionId.value = "";
   }

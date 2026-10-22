@@ -52,7 +52,7 @@ export const useOnboardingStore = defineStore("onboarding", () => {
   // ============================================================
 
   const isCompleted = computed(() => {
-    return applicationId.value !== null;
+    return application.value?.status === "submitted";
   });
 
   // ============================================================
@@ -71,9 +71,11 @@ export const useOnboardingStore = defineStore("onboarding", () => {
     try {
       const result = await onboardingApi.createApplication(data);
 
-      applicationId.value = result.applicationId;
-      applicationSecret.value = result.applicationSecret;
-      assignedSubdomain.value = result.assignedSubdomain;
+      // Present only when the server has email off; otherwise the status
+      // link is in the applicant's inbox and nowhere else.
+      applicationId.value = result.applicationId ?? null;
+      applicationSecret.value = result.applicationSecret ?? null;
+      assignedSubdomain.value = result.assignedSubdomain ?? null;
       application.value = {
         ...data,
         status: "submitted",

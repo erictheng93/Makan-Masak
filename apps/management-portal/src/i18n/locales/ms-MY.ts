@@ -322,6 +322,7 @@ const msMY: Messages = {
         createFailed: "Gagal membuat penyewa. Sila cuba lagi kemudian.",
       },
       field: {
+        emailLanguage: "Bahasa e-mel",
         contactName: "Nama Hubungan",
         contactNamePlaceholder: "cth. Ahmad bin Ali",
         country: "Negara",

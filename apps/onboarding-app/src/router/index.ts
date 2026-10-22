@@ -28,6 +28,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: "申請成功" },
   },
   {
+    path: "/find-application",
+    name: "FindApplication",
+    component: () => import("@/views/FindApplicationView.vue"),
+    meta: { title: "找回申請" },
+  },
+  {
     path: "/status/:applicationId",
     name: "ApplicationStatus",
     component: () => import("@/views/ApplicationStatusView.vue"),

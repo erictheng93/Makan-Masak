@@ -2013,6 +2013,18 @@ const zhCN: Messages = {
     missingToken: "缺少重设 Token",
   },
   platformOnboarding: {
+    purge: {
+      title: "撤销代建并删除店铺",
+      description:
+        "将永久删除「{business}」的申请、餐厅、店主与员工账号、订阅及租户数据，无法恢复。审计记录会保留。",
+      confirmLabel: "请输入店铺名称以确认",
+      confirm: "永久删除",
+      errors: {
+        hasOrders: "这家店已有订单，无法删除。",
+        inUse: "这家店已有菜单或其他数据，无法删除。请先清除相关数据。",
+        failed: "删除失败，请稍后再试。",
+      },
+    },
     create: {
       open: "代店主创建",
       title: "代店主创建店家",
@@ -2022,6 +2034,7 @@ const zhCN: Messages = {
       contactName: "店主姓名",
       contactEmail: "店主 Email",
       contactPhone: "店主电话",
+      emailLanguage: "邮件语言",
       plan: "方案",
       country: "国家",
       city: "城市",
@@ -2080,6 +2093,7 @@ const zhCN: Messages = {
       actions: "操作",
     },
     actions: {
+      purge: "撤销并删除",
       handoff: "开通资讯",
       auditTrail: "审核记录",
       approve: "核准",

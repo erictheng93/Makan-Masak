@@ -2054,6 +2054,19 @@ const viVN: Messages = {
     missingToken: "Thiếu token đặt lại",
   },
   platformOnboarding: {
+    purge: {
+      title: "Thu hồi và xóa cửa hàng này",
+      description:
+        "Thao tác này xóa vĩnh viễn đơn đăng ký, nhà hàng, tài khoản chủ quán và nhân viên, gói đăng ký và tenant của “{business}”. Không thể hoàn tác. Nhật ký kiểm tra được giữ lại.",
+      confirmLabel: "Nhập tên cửa hàng để xác nhận",
+      confirm: "Xóa vĩnh viễn",
+      errors: {
+        hasOrders: "Cửa hàng này đã có đơn hàng nên không thể xóa.",
+        inUse:
+          "Cửa hàng này đã có thực đơn hoặc dữ liệu khác nên không thể xóa. Hãy xóa chúng trước.",
+        failed: "Xóa thất bại. Vui lòng thử lại sau.",
+      },
+    },
     create: {
       open: "Đăng ký thay chủ quán",
       title: "Đăng ký cửa hàng thay chủ quán",
@@ -2063,6 +2076,7 @@ const viVN: Messages = {
       contactName: "Tên chủ quán",
       contactEmail: "Email chủ quán",
       contactPhone: "Điện thoại chủ quán",
+      emailLanguage: "Ngôn ngữ email",
       plan: "Gói",
       country: "Quốc gia",
       city: "Thành phố",
@@ -2123,6 +2137,7 @@ const viVN: Messages = {
       actions: "Thao tác",
     },
     actions: {
+      purge: "Thu hồi & xóa",
       handoff: "Thông tin kích hoạt",
       auditTrail: "Lịch sử kiểm toán",
       approve: "Duyệt",
