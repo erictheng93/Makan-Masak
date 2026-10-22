@@ -341,6 +341,18 @@ interface ManagementTenantBody {
   };
 }
 
+interface OperatorOnboardingBody {
+  success?: boolean;
+  data?: {
+    application?: { id?: string };
+    approval?: {
+      tenantId?: string;
+      ownerAccount?: { setupPasswordLink?: string };
+    } | null;
+    approvalError?: { code: string; message: string };
+  };
+}
+
 interface LoginResponse {
   success: boolean;
   data?: {
@@ -1111,6 +1123,7 @@ async function fetchManagementTenantById(
 
 async function createManagementTenantFixture(token: string): Promise<{
   id: string;
+  applicationId: string;
   businessName: string;
 }> {
   expect(
@@ -1120,41 +1133,94 @@ async function createManagementTenantFixture(token: string): Promise<{
 
   const suffix = randomSuffix();
   const businessName = `Workflow Detail Tenant ${suffix}`;
-  const response = await fetch(`${MANAGEMENT_WORKFLOW_API_URL}/tenants`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
+  // Tenants only come from onboarding approval, which also creates the
+  // platform restaurant and owner; purgeOnboardingApplication removes them all.
+  const response = await fetch(
+    `${MANAGEMENT_WORKFLOW_API_URL}/admin/onboarding/applications`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        businessName,
+        contactName: `Workflow Owner ${suffix}`,
+        contactEmail: `workflow-detail-${suffix}@example.com`,
+        contactPhone: randomUsPhone(),
+        city: "台中市",
+        countryCode: "TW",
+        latitude: 24.1477,
+        longitude: 120.6736,
+        planId: "standard",
+        approveImmediately: true,
+      }),
     },
-    body: JSON.stringify({
-      businessName,
-      contactEmail: `workflow-detail-${suffix}@example.com`,
-      contactPhone: randomUsPhone(),
-      subdomain: `workflow-detail-${suffix}`,
-      licenseTier: "standard",
-    }),
-  });
+  );
   expect(
     response.ok,
     `management tenant fixture create status ${response.status}`,
   ).toBe(true);
 
-  const body = (await response.json()) as ManagementTenantBody;
-  const id = body.data?.id;
+  const body = (await response.json()) as OperatorOnboardingBody;
+  const id = body.data?.approval?.tenantId;
   expect(typeof id, "management tenant fixture id").toBe("string");
+  const applicationId = body.data?.application?.id;
+  expect(typeof applicationId, "management tenant fixture application").toBe(
+    "string",
+  );
 
-  return { id: id!, businessName };
+  return { id: id!, applicationId: applicationId!, businessName };
 }
 
-async function deleteManagementTenant(tenantId: string, token: string) {
-  if (!MANAGEMENT_WORKFLOW_API_URL) return;
+/**
+ * Removes an onboarding application and everything its approval provisioned
+ * (restaurant, owner, subscriptions, tenant). A soft assertion, so a leak is
+ * reported without hiding the test's own failure.
+ */
+async function purgeOnboardingApplication(
+  managementApiUrl: string,
+  applicationId: string,
+  token: string,
+) {
+  const response = await fetch(
+    `${managementApiUrl}/admin/onboarding/applications/${applicationId}`,
+    { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
+  ).catch(() => undefined);
+  expect
+    .soft(
+      response?.ok,
+      `purge onboarding application ${applicationId}: ${response?.status ?? "network error"}`,
+    )
+    .toBe(true);
+}
 
-  await fetch(`${MANAGEMENT_WORKFLOW_API_URL}/tenants/${tenantId}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
-  }).catch(() => {
-    /* best-effort cleanup */
+/** Platform admin login exchanged for a management API token. */
+async function managementTokenFromPlatformAdmin(
+  managementApiUrl: string,
+): Promise<string> {
+  const platformLogin = await fetch(`${API_URL}/api/v1/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: "admin", password: "admin123" }),
   });
+  expect(platformLogin.status).toBe(200);
+  const platformBody = (await platformLogin.json()) as {
+    data?: { token?: string };
+  };
+  expect(platformBody.data?.token).toBeTruthy();
+
+  const exchange = await fetch(`${managementApiUrl}/auth/exchange`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: platformBody.data!.token }),
+  });
+  expect(exchange.status).toBe(200);
+  const exchangeBody = (await exchange.json()) as {
+    data?: { token?: string };
+  };
+  expect(exchangeBody.data?.token).toBeTruthy();
+  return exchangeBody.data!.token!;
 }
 
 async function confirmOrder(orderId: string, token: string) {
@@ -2718,8 +2784,8 @@ test.describe("Real system workflows", () => {
     const businessName = `Workflow Tenant ${suffix}`;
     const contactEmail = `workflow-${suffix}@example.com`;
     const contactPhone = randomUsPhone();
-    const subdomain = `workflow-${suffix}`;
     let createdTenantId: string | undefined;
+    let createdApplicationId: string | undefined;
 
     await installManagementSession(page, MANAGEMENT_TOKEN!);
 
@@ -2744,17 +2810,26 @@ test.describe("Real system workflows", () => {
         .getByTestId("management-tenant-business-name")
         .fill(businessName);
       await page
+        .getByTestId("management-tenant-contact-name")
+        .fill(`Workflow Owner ${suffix}`);
+      await page
         .getByTestId("management-tenant-contact-email")
         .fill(contactEmail);
       await page
         .getByTestId("management-tenant-contact-phone")
         .fill(contactPhone);
-      await page.getByTestId("management-tenant-subdomain").fill(subdomain);
+      await page.getByTestId("management-tenant-country").selectOption("TW");
+      await page.getByTestId("management-tenant-city").selectOption("台中市");
+      await page.getByTestId("management-tenant-latitude").fill("24.1477");
+      await page.getByTestId("management-tenant-longitude").fill("120.6736");
       await page.getByTestId("management-tenant-license-professional").check();
+      await expect(
+        page.getByTestId("management-tenant-approve-immediately"),
+      ).toBeChecked();
 
       const createResponsePromise = page.waitForResponse(
         (response) =>
-          response.url().includes("/api/v1/tenants") &&
+          response.url().includes("/api/v1/admin/onboarding/applications") &&
           response.request().method() === "POST",
       );
       await page.getByTestId("management-tenant-create-submit").click();
@@ -2763,9 +2838,20 @@ test.describe("Real system workflows", () => {
         createResponse.ok(),
         `management tenant create ${createResponse.status()}`,
       ).toBe(true);
-      const createBody = (await createResponse.json()) as ManagementTenantBody;
-      createdTenantId = createBody.data?.id;
+      const createBody =
+        (await createResponse.json()) as OperatorOnboardingBody;
+      createdApplicationId = createBody.data?.application?.id;
+      expect(createBody.data?.approvalError, "approval error").toBeUndefined();
+      createdTenantId = createBody.data?.approval?.tenantId;
       expect(typeof createdTenantId, "created tenant id").toBe("string");
+
+      await expect(
+        page.getByTestId("management-tenant-create-result"),
+      ).toHaveAttribute("data-status", "approved");
+      await expect(
+        page.getByTestId("management-tenant-setup-link"),
+      ).toHaveValue(/^https?:\/\//);
+      await page.getByTestId("management-tenant-create-done").click();
 
       await expect(
         page.locator(
@@ -2782,13 +2868,16 @@ test.describe("Real system workflows", () => {
         businessName,
         contactEmail,
         contactPhone,
-        subdomain,
         licenseTier: "professional",
       });
       await expect(page.locator("vite-error-overlay")).toHaveCount(0);
     } finally {
-      if (createdTenantId) {
-        await deleteManagementTenant(createdTenantId, MANAGEMENT_TOKEN!);
+      if (createdApplicationId) {
+        await purgeOnboardingApplication(
+          MANAGEMENT_WORKFLOW_API_URL!,
+          createdApplicationId,
+          MANAGEMENT_TOKEN!,
+        );
       }
     }
   });
@@ -2803,11 +2892,11 @@ test.describe("Real system workflows", () => {
       "WORKFLOW_MANAGEMENT_PORTAL_URL and WORKFLOW_MANAGEMENT_TOKEN are required",
     );
 
-    let createdTenantId: string | undefined;
+    let createdApplicationId: string | undefined;
     let tenant = await fetchManagementTenant(MANAGEMENT_TOKEN!);
     if (!tenant?.id) {
       const fixture = await createManagementTenantFixture(MANAGEMENT_TOKEN!);
-      createdTenantId = fixture.id;
+      createdApplicationId = fixture.applicationId;
       tenant = {
         id: fixture.id,
         businessName: fixture.businessName,
@@ -2878,8 +2967,12 @@ test.describe("Real system workflows", () => {
       await expect(page.getByTestId("management-tenant-license")).toBeVisible();
       await expect(page.locator("vite-error-overlay")).toHaveCount(0);
     } finally {
-      if (createdTenantId) {
-        await deleteManagementTenant(createdTenantId, MANAGEMENT_TOKEN!);
+      if (createdApplicationId) {
+        await purgeOnboardingApplication(
+          MANAGEMENT_WORKFLOW_API_URL!,
+          createdApplicationId,
+          MANAGEMENT_TOKEN!,
+        );
       }
     }
   });
@@ -2932,133 +3025,131 @@ test.describe("Real system workflows", () => {
     );
 
     const suffix = randomSuffix();
-    await page.goto(`${ONBOARDING_URL}/apply`, {
-      waitUntil: "domcontentloaded",
-    });
+    let applicationId: string | undefined;
+    let managementToken: string | undefined;
+    try {
+      await page.goto(`${ONBOARDING_URL}/apply`, {
+        waitUntil: "domcontentloaded",
+      });
 
-    await page.getByTestId("onboarding-business-name").fill("Workflow Laksa");
-    await page.getByTestId("onboarding-contact-name").fill("Tan Mei");
-    await page
-      .getByTestId("onboarding-contact-email")
-      .fill(`workflow-${suffix}@example.com`);
-    await page.getByTestId("onboarding-contact-phone").fill("0912345678");
-    await page
-      .getByTestId("onboarding-address")
-      .fill("台中市西屯區文華路 100 號");
-    await page.getByTestId("onboarding-district").fill("西屯區");
-    await page.getByTestId("onboarding-country").selectOption("TW");
-    await expect(page.getByTestId("onboarding-city")).toBeEnabled();
-    await page.getByTestId("onboarding-city").selectOption("台中市");
-    await page.getByTestId("onboarding-latitude").fill("24.147736");
-    await page.getByTestId("onboarding-longitude").fill("120.673648");
+      await page.getByTestId("onboarding-business-name").fill("Workflow Laksa");
+      await page.getByTestId("onboarding-contact-name").fill("Tan Mei");
+      await page
+        .getByTestId("onboarding-contact-email")
+        .fill(`workflow-${suffix}@example.com`);
+      await page.getByTestId("onboarding-contact-phone").fill("0912345678");
+      await page
+        .getByTestId("onboarding-address")
+        .fill("台中市西屯區文華路 100 號");
+      await page.getByTestId("onboarding-district").fill("西屯區");
+      await page.getByTestId("onboarding-country").selectOption("TW");
+      await expect(page.getByTestId("onboarding-city")).toBeEnabled();
+      await page.getByTestId("onboarding-city").selectOption("台中市");
+      await page.getByTestId("onboarding-latitude").fill("24.147736");
+      await page.getByTestId("onboarding-longitude").fill("120.673648");
 
-    const createResponsePromise = page.waitForResponse(
-      (response) =>
-        response.url().includes("/api/v1/onboarding/applications") &&
-        response.request().method() === "POST",
-    );
+      const createResponsePromise = page.waitForResponse(
+        (response) =>
+          response.url().includes("/api/v1/onboarding/applications") &&
+          response.request().method() === "POST",
+      );
 
-    await page.getByTestId("onboarding-submit").click();
+      await page.getByTestId("onboarding-submit").click();
 
-    const createResponse = await createResponsePromise;
-    expect(
-      createResponse.ok(),
-      `onboarding create status ${createResponse.status()}`,
-    ).toBe(true);
-    const createBody = (await createResponse.json()) as {
-      success: boolean;
-      data?: { applicationId?: string; assignedSubdomain?: string };
-    };
-    expect(createBody.success).toBe(true);
-    expect(createResponse.status()).toBe(201);
-    expect(createBody.data?.applicationId).toBeTruthy();
-    expect(createBody.data?.assignedSubdomain).toBeTruthy();
+      const createResponse = await createResponsePromise;
+      expect(
+        createResponse.ok(),
+        `onboarding create status ${createResponse.status()}`,
+      ).toBe(true);
+      const createBody = (await createResponse.json()) as {
+        success: boolean;
+        data?: { applicationId?: string; assignedSubdomain?: string };
+      };
+      expect(createBody.success).toBe(true);
+      expect(createResponse.status()).toBe(201);
+      expect(createBody.data?.applicationId).toBeTruthy();
+      applicationId = createBody.data!.applicationId;
+      expect(createBody.data?.assignedSubdomain).toBeTruthy();
 
-    await expect(page).toHaveURL(/\/success(?:#.*)?$/);
-    await expect(page.getByTestId("onboarding-success")).toBeVisible();
-    await expect(
-      page.getByText(/Pending Platform Review|等待平台審核/),
-    ).toBeVisible();
-    await expect(page.locator("vite-error-overlay")).toHaveCount(0);
+      await expect(page).toHaveURL(/\/success(?:#.*)?$/);
+      await expect(page.getByTestId("onboarding-success")).toBeVisible();
+      await expect(
+        page.getByText(/Pending Platform Review|等待平台審核/),
+      ).toBeVisible();
+      await expect(page.locator("vite-error-overlay")).toHaveCount(0);
 
-    const platformLogin = await fetch(`${API_URL}/api/v1/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: "admin", password: "admin123" }),
-    });
-    expect(platformLogin.status).toBe(200);
-    const platformBody = (await platformLogin.json()) as {
-      data?: { token?: string };
-    };
-    expect(platformBody.data?.token).toBeTruthy();
+      managementToken = await managementTokenFromPlatformAdmin(
+        MANAGEMENT_API_URL!,
+      );
 
-    const exchange = await fetch(`${MANAGEMENT_API_URL}/auth/exchange`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: platformBody.data!.token }),
-    });
-    expect(exchange.status).toBe(200);
-    const exchangeBody = (await exchange.json()) as {
-      data?: { token?: string };
-    };
-    expect(exchangeBody.data?.token).toBeTruthy();
-
-    const approve = await fetch(
-      `${MANAGEMENT_API_URL}/admin/onboarding/applications/${createBody.data!.applicationId}/approve`,
-      {
-        method: "POST",
-        headers: { Authorization: `Bearer ${exchangeBody.data!.token}` },
-      },
-    );
-    expect(approve.status).toBe(200);
-    const approveBody = (await approve.json()) as {
-      data?: {
-        ownerAccount?: {
-          username: string;
-          setupPasswordLink: string;
-          restaurantId: string;
+      const approve = await fetch(
+        `${MANAGEMENT_API_URL}/admin/onboarding/applications/${createBody.data!.applicationId}/approve`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${managementToken}` },
+        },
+      );
+      expect(approve.status).toBe(200);
+      const approveBody = (await approve.json()) as {
+        data?: {
+          ownerAccount?: {
+            username: string;
+            setupPasswordLink: string;
+            restaurantId: string;
+          };
         };
       };
-    };
-    const ownerAccount = approveBody.data?.ownerAccount;
-    expect(ownerAccount?.setupPasswordLink).toBeTruthy();
+      const ownerAccount = approveBody.data?.ownerAccount;
+      expect(ownerAccount?.setupPasswordLink).toBeTruthy();
 
-    const setupUrl = new URL(ownerAccount!.setupPasswordLink);
-    await page.goto(
-      `${OWNER_ACTIVATION_ADMIN_URL}${setupUrl.pathname}${setupUrl.search}`,
-      {
-        waitUntil: "domcontentloaded",
-      },
-    );
-    await expect(page.locator("#new-password")).toBeVisible();
-    const password = `Owner@${suffix}Setup1`;
-    await page.locator("#new-password").fill(password);
-    await page.locator("#confirm-password").fill(password);
-    await page
-      .getByRole("button", { name: /重設密碼|Reset Password/i })
-      .click();
-    await expect(page).toHaveURL(/\/login$/);
+      const setupUrl = new URL(ownerAccount!.setupPasswordLink);
+      await page.goto(
+        `${OWNER_ACTIVATION_ADMIN_URL}${setupUrl.pathname}${setupUrl.search}`,
+        {
+          waitUntil: "domcontentloaded",
+        },
+      );
+      await expect(page.locator("#new-password")).toBeVisible();
+      const password = `Owner@${suffix}Setup1`;
+      await page.locator("#new-password").fill(password);
+      await page.locator("#confirm-password").fill(password);
+      await page
+        .getByRole("button", { name: /重設密碼|Reset Password/i })
+        .click();
+      await expect(page).toHaveURL(/\/login$/);
 
-    await page.locator("#username").fill(ownerAccount!.username);
-    await page.locator("#password").fill(password);
-    await page.getByRole("button", { name: /登入|Login/i }).click();
-    await expect(page).toHaveURL(/\/dashboard\/owner-overview\/?$/);
-    const me = await fetch(`${API_URL}/api/v1/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: ownerAccount!.username, password }),
-    });
-    expect(me.status).toBe(200);
-    const meBody = (await me.json()) as {
-      data?: { user?: { role?: number; restaurantId?: string } };
-    };
-    expect(meBody.data?.user).toMatchObject({
-      role: 1,
-      restaurantId: ownerAccount!.restaurantId,
-    });
+      await page.locator("#username").fill(ownerAccount!.username);
+      await page.locator("#password").fill(password);
+      await page.getByRole("button", { name: /登入|Login/i }).click();
+      await expect(page).toHaveURL(/\/dashboard\/owner-overview\/?$/);
+      const me = await fetch(`${API_URL}/api/v1/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: ownerAccount!.username, password }),
+      });
+      expect(me.status).toBe(200);
+      const meBody = (await me.json()) as {
+        data?: { user?: { role?: number; restaurantId?: string } };
+      };
+      expect(meBody.data?.user).toMatchObject({
+        role: 1,
+        restaurantId: ownerAccount!.restaurantId,
+      });
+    } finally {
+      if (applicationId) {
+        managementToken ??= await managementTokenFromPlatformAdmin(
+          MANAGEMENT_API_URL!,
+        );
+        await purgeOnboardingApplication(
+          MANAGEMENT_API_URL!,
+          applicationId,
+          managementToken,
+        );
+      }
+    }
   });
 
-  test("account management creates a restaurant and its owner who can log in", async ({
+  test("account management adds an owner to an existing restaurant who can log in", async ({
     page,
   }) => {
     skipWhen(!ADMIN_URL, "WORKFLOW_ADMIN_URL/SMOKE_ADMIN_URL is required");
@@ -3070,7 +3161,6 @@ test.describe("Real system workflows", () => {
     const username = `workflow-owner-${suffix}`;
     const password = `Owner@${suffix}Setup1`;
     let ownerId: string | undefined;
-    let restaurantId: string | undefined;
 
     await installAdminSession(page, adminLogin);
 
@@ -3097,47 +3187,22 @@ test.describe("Real system workflows", () => {
       await page
         .getByTestId("account-management-owner-phone")
         .fill("0912345678");
-      await page
-        .getByTestId("account-management-owner-restaurant")
-        .selectOption("__new__");
-      await page
-        .getByTestId("account-management-new-restaurant-name")
-        .fill(`Workflow Restaurant ${suffix}`);
-      await page
-        .getByTestId("account-management-new-restaurant-type")
-        .fill("restaurant");
-      await page
-        .getByTestId("account-management-new-restaurant-address")
-        .fill("100 Workflow Street");
-      await page
-        .getByTestId("account-management-new-restaurant-district")
-        .fill("Workflow District");
-      await page
-        .getByTestId("account-management-new-restaurant-phone")
-        .fill("0912345678");
-
-      const restaurantCreated = page.waitForResponse(
-        (response) =>
-          response.url().includes("/api/v1/restaurants") &&
-          response.request().method() === "POST",
+      // New shops go through platform onboarding; this form only binds an
+      // owner to a restaurant that already exists.
+      const restaurantSelect = page.getByTestId(
+        "account-management-owner-restaurant",
       );
+      await expect(restaurantSelect.locator("option").nth(1)).toBeAttached();
+      await restaurantSelect.selectOption({ index: 1 });
+      const restaurantId = await restaurantSelect.inputValue();
+      expect(restaurantId, "selected restaurant id").not.toBe("");
+
       const ownerCreated = page.waitForResponse(
         (response) =>
           response.url().includes("/api/v1/users") &&
           response.request().method() === "POST",
       );
       await page.getByTestId("account-management-owner-submit").click();
-
-      const restaurantResponse = await restaurantCreated;
-      expect(
-        restaurantResponse.ok(),
-        `account-management restaurant create ${restaurantResponse.status()}`,
-      ).toBe(true);
-      const restaurantBody = (await restaurantResponse.json()) as {
-        data?: { id?: string };
-      };
-      restaurantId = restaurantBody.data?.id;
-      expect(typeof restaurantId, "created restaurant id").toBe("string");
 
       const ownerResponse = await ownerCreated;
       expect(
@@ -3168,12 +3233,6 @@ test.describe("Real system workflows", () => {
     } finally {
       if (ownerId) {
         await fetch(`${API_URL}/api/v1/users/${ownerId}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${adminLogin.token}` },
-        });
-      }
-      if (restaurantId) {
-        await fetch(`${API_URL}/api/v1/restaurants/${restaurantId}`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${adminLogin.token}` },
         });
