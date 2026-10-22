@@ -75,7 +75,7 @@ function buildEnv(
   const noRowStatement = {
     bind: () => noRowStatement,
     first: async () => null,
-    run: async () => ({ success: true }),
+    run: async () => ({ success: true, meta: { changes: 1 } }),
     all: async () => ({ results: [] }),
   };
 

@@ -37,7 +37,6 @@ const owners = ref<PlatformUser[]>([]);
 const admins = ref<PlatformUser[]>([]);
 const loadingOwners = ref(false);
 const loadingAdmins = ref(false);
-const showNewRestaurant = ref(false);
 
 // Owner form
 const ownerForm = reactive({
@@ -47,11 +46,6 @@ const ownerForm = reactive({
   email: "",
   phone: "",
   restaurantId: undefined as string | undefined,
-  newRestaurantName: "",
-  newRestaurantType: "",
-  newRestaurantAddress: "",
-  newRestaurantDistrict: "",
-  newRestaurantPhone: "",
 });
 
 // Admin form
@@ -100,28 +94,7 @@ function validateOwnerForm(): boolean {
     errors.email = t("accountManagement.emailInvalid");
   }
 
-  if (showNewRestaurant.value) {
-    if (!ownerForm.newRestaurantName?.trim()) {
-      errors.newRestaurantName = t(
-        "accountManagement.newRestaurantNameRequired",
-      );
-    }
-    if (!ownerForm.newRestaurantType?.trim()) {
-      errors.newRestaurantType = t(
-        "accountManagement.newRestaurantTypeRequired",
-      );
-    }
-    if (!ownerForm.newRestaurantDistrict?.trim()) {
-      errors.newRestaurantDistrict = t(
-        "accountManagement.newRestaurantDistrictRequired",
-      );
-    }
-    if (!ownerForm.newRestaurantPhone?.trim()) {
-      errors.newRestaurantPhone = t(
-        "accountManagement.newRestaurantPhoneRequired",
-      );
-    }
-  } else if (!ownerForm.restaurantId) {
+  if (!ownerForm.restaurantId) {
     errors.restaurantId = t("accountManagement.restaurantRequired");
   }
 
@@ -223,12 +196,6 @@ function resetOwnerForm() {
   ownerForm.email = "";
   ownerForm.phone = "";
   ownerForm.restaurantId = undefined;
-  ownerForm.newRestaurantName = "";
-  ownerForm.newRestaurantType = "";
-  ownerForm.newRestaurantAddress = "";
-  ownerForm.newRestaurantDistrict = "";
-  ownerForm.newRestaurantPhone = "";
-  showNewRestaurant.value = false;
   clearErrors();
   submitError.value = "";
 }
@@ -249,28 +216,10 @@ async function handleOwnerSubmit() {
   submitError.value = "";
 
   try {
-    let restaurantId = ownerForm.restaurantId;
-
-    // Create restaurant if needed
-    if (showNewRestaurant.value) {
-      const restaurantRes = await api.post<Restaurant>("/restaurants", {
-        name: ownerForm.newRestaurantName,
-        type: ownerForm.newRestaurantType,
-        category: "restaurant",
-        address: ownerForm.newRestaurantAddress,
-        district: ownerForm.newRestaurantDistrict,
-        phone: ownerForm.newRestaurantPhone,
-        email: ownerForm.email,
-      });
-      if (restaurantRes.data?.success && restaurantRes.data.data) {
-        restaurantId = String(restaurantRes.data.data.id);
-        await fetchRestaurants();
-      } else {
-        throw new Error(
-          restaurantRes.data?.error?.message || "Failed to create restaurant",
-        );
-      }
-    }
+    // A new shop is registered through platform onboarding, which also
+    // provisions its subscription; this form only adds an owner to an
+    // existing restaurant.
+    const restaurantId = ownerForm.restaurantId;
 
     // Create owner user
     await api.post("/users", {
@@ -330,13 +279,7 @@ async function handleAdminSubmit() {
 
 function handleRestaurantChange(event: Event) {
   const value = (event.target as HTMLSelectElement).value;
-  if (value === "__new__") {
-    showNewRestaurant.value = true;
-    ownerForm.restaurantId = undefined;
-  } else {
-    showNewRestaurant.value = false;
-    ownerForm.restaurantId = value || undefined;
-  }
+  ownerForm.restaurantId = value || undefined;
 }
 
 // ============================================================
@@ -503,9 +446,7 @@ function switchTab(tab: TabType) {
                   data-testid="account-management-owner-restaurant"
                   class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm appearance-none pr-10"
                   :class="{ 'border-red-300': errors.restaurantId }"
-                  :value="
-                    showNewRestaurant ? '__new__' : ownerForm.restaurantId || ''
-                  "
+                  :value="ownerForm.restaurantId || ''"
                   @change="handleRestaurantChange"
                 >
                   <option value="" disabled>
@@ -513,9 +454,6 @@ function switchTab(tab: TabType) {
                   </option>
                   <option v-for="r in restaurants" :key="r.id" :value="r.id">
                     {{ r.name }}
-                  </option>
-                  <option value="__new__">
-                    {{ t("accountManagement.createNewRestaurant") }}
                   </option>
                 </select>
                 <ChevronDown
@@ -525,111 +463,16 @@ function switchTab(tab: TabType) {
               <p v-if="errors.restaurantId" class="mt-1 text-xs text-red-600">
                 {{ errors.restaurantId }}
               </p>
-            </div>
-
-            <!-- New Restaurant Fields -->
-            <div
-              v-if="showNewRestaurant"
-              class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-green-50 rounded-lg border border-green-200"
-            >
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">
-                  {{ t("accountManagement.restaurantName") }} *
-                </label>
-                <input
-                  v-model="ownerForm.newRestaurantName"
-                  data-testid="account-management-new-restaurant-name"
-                  type="text"
-                  class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                  :class="{ 'border-red-300': errors.newRestaurantName }"
-                  :placeholder="
-                    t('accountManagement.restaurantNamePlaceholder')
-                  "
-                />
-                <p
-                  v-if="errors.newRestaurantName"
-                  class="mt-1 text-xs text-red-600"
+              <p class="mt-1 text-xs text-gray-500">
+                {{ t("accountManagement.newShopHint") }}
+                <router-link
+                  :to="{ name: 'PlatformOnboardingApplications' }"
+                  data-testid="account-management-new-shop-link"
+                  class="text-blue-600 hover:underline"
                 >
-                  {{ errors.newRestaurantName }}
-                </p>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">
-                  {{ t("accountManagement.restaurantType") }} *
-                </label>
-                <input
-                  v-model="ownerForm.newRestaurantType"
-                  data-testid="account-management-new-restaurant-type"
-                  type="text"
-                  class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                  :class="{ 'border-red-300': errors.newRestaurantType }"
-                  :placeholder="
-                    t('accountManagement.restaurantTypePlaceholder')
-                  "
-                />
-                <p
-                  v-if="errors.newRestaurantType"
-                  class="mt-1 text-xs text-red-600"
-                >
-                  {{ errors.newRestaurantType }}
-                </p>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">
-                  {{ t("accountManagement.restaurantAddress") }}
-                </label>
-                <input
-                  v-model="ownerForm.newRestaurantAddress"
-                  data-testid="account-management-new-restaurant-address"
-                  type="text"
-                  class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                  :placeholder="
-                    t('accountManagement.restaurantAddressPlaceholder')
-                  "
-                />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">
-                  {{ t("accountManagement.restaurantDistrict") }} *
-                </label>
-                <input
-                  v-model="ownerForm.newRestaurantDistrict"
-                  data-testid="account-management-new-restaurant-district"
-                  type="text"
-                  class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                  :class="{ 'border-red-300': errors.newRestaurantDistrict }"
-                  :placeholder="
-                    t('accountManagement.restaurantDistrictPlaceholder')
-                  "
-                />
-                <p
-                  v-if="errors.newRestaurantDistrict"
-                  class="mt-1 text-xs text-red-600"
-                >
-                  {{ errors.newRestaurantDistrict }}
-                </p>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">
-                  {{ t("accountManagement.restaurantPhone") }} *
-                </label>
-                <input
-                  v-model="ownerForm.newRestaurantPhone"
-                  data-testid="account-management-new-restaurant-phone"
-                  type="tel"
-                  class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                  :class="{ 'border-red-300': errors.newRestaurantPhone }"
-                  :placeholder="
-                    t('accountManagement.restaurantPhonePlaceholder')
-                  "
-                />
-                <p
-                  v-if="errors.newRestaurantPhone"
-                  class="mt-1 text-xs text-red-600"
-                >
-                  {{ errors.newRestaurantPhone }}
-                </p>
-              </div>
+                  {{ t("accountManagement.newShopLink") }}
+                </router-link>
+              </p>
             </div>
 
             <!-- Phone -->

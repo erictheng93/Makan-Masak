@@ -16,7 +16,8 @@ import type {
   ApiResponse,
   PaginatedResponse,
   PaginationParams,
-  CreateTenantRequest,
+  OperatorOnboardingRequest,
+  OperatorOnboardingResult,
   UpdateTenantRequest,
   DeployRequest,
   BatchDeployRequest,
@@ -182,12 +183,16 @@ export const tenantsApi = {
     return data.data!;
   },
 
-  // 創建租戶
-  async create(request: CreateTenantRequest): Promise<Tenant> {
-    const { data } = await apiClient.post<ApiResponse<Tenant>>(
-      "/tenants",
-      request,
-    );
+  // 建立租戶：走入駐申請流程，核准時一併建立平台餐廳與店主帳號
+  async create(
+    request: OperatorOnboardingRequest,
+  ): Promise<OperatorOnboardingResult> {
+    const { data } = await apiClient.post<
+      ApiResponse<OperatorOnboardingResult>
+    >("/admin/onboarding/applications", request, {
+      // The modal shows this one inline instead of as a toast.
+      expectedErrorCodes: ["APPLICATION_ALREADY_PENDING"],
+    });
     return data.data!;
   },
 

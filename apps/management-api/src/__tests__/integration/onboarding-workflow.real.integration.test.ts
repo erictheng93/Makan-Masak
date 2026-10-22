@@ -1024,7 +1024,11 @@ describe("Onboarding public API workflow — real integration", () => {
       new Request("https://management.test/api/v1/onboarding/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(createApplicationBody()),
+        // A second pending application for one email is refused (409).
+        body: JSON.stringify({
+          ...createApplicationBody(),
+          contactEmail: "rejected.candidate@example.com",
+        }),
       }),
       env,
     );
@@ -1783,5 +1787,282 @@ describe("Onboarding public API workflow — real integration", () => {
         code: "INVALID_STATUS",
       },
     });
+  });
+});
+
+type OperatorCreateResult = {
+  application: PublicApplication;
+  approval: ApproveResult | null;
+  approvalError?: { code: string; message: string };
+};
+
+describe("Operator-created applications — real integration", () => {
+  const operatorUrl =
+    "https://management.test/api/v1/admin/onboarding/applications";
+
+  async function operatorCreate(
+    env: ManagementEnv,
+    body: Record<string, unknown>,
+    token?: string,
+  ) {
+    return app.fetch(
+      new Request(operatorUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token ?? (await managementToken())}`,
+        },
+        body: JSON.stringify(body),
+      }),
+      env,
+    );
+  }
+
+  function count(db: D1DatabaseAdapter, table: string) {
+    return (
+      db.raw().prepare(`SELECT COUNT(*) AS count FROM ${table}`).get() as {
+        count: number;
+      }
+    ).count;
+  }
+
+  it("creates without approving, records the operator, and sends no notifications", async () => {
+    const db = createManagementDb();
+    const env = createEnv(db, createPlatformDb(), {
+      SLACK_WEBHOOK_URL: "https://hooks.slack.test/x",
+    });
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await operatorCreate(env, {
+      ...createApplicationBody(),
+      approveImmediately: false,
+    });
+
+    expect(response.status).toBe(201);
+    const data = await readData<OperatorCreateResult>(response);
+    expect(data.approval).toBeNull();
+    expect(data.approvalError).toBeUndefined();
+    expect(data.application).toMatchObject({
+      status: "submitted",
+      contactEmail: "tan.mei@example.com",
+    });
+    expect(data.application).not.toHaveProperty("applicationSecret");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(count(db, "onboarding_application_rate_limits")).toBe(0);
+    expect(
+      db
+        .raw()
+        .prepare(
+          `SELECT event_type, actor_id, actor_email, metadata
+           FROM onboarding_application_audit_events WHERE application_id = ?`,
+        )
+        .get(data.application.id),
+    ).toEqual({
+      event_type: "submitted",
+      actor_id: MANAGEMENT_ADMIN_ID,
+      actor_email: "workflow-admin@example.test",
+      metadata: JSON.stringify({ source: "operator" }),
+    });
+  });
+
+  it("creates and approves in one call, returning the approve payload", async () => {
+    const db = createManagementDb();
+    const platformDb = createPlatformDb();
+    const env = createEnv(db, platformDb);
+
+    const response = await operatorCreate(env, createApplicationBody());
+
+    expect(response.status).toBe(201);
+    const data = await readData<OperatorCreateResult>(response);
+    expect(data.application.status).toBe("completed");
+    expect(data.approval).toMatchObject({
+      status: "completed",
+      tenantId: expect.any(String),
+      restaurantId: expect.any(String),
+      ownerAccount: { setupPasswordLink: expect.any(String) },
+      credentialDelivery: { channel: "manual" },
+    });
+    expect(data.approval?.ownerAccount).not.toHaveProperty(
+      "setupPasswordToken",
+    );
+    expect(count(platformDb, "restaurants")).toBe(1);
+  });
+
+  it("keeps the application submitted and reports approvalError when approval fails", async () => {
+    const db = createManagementDb();
+    const platformDb = createPlatformDb();
+    const env = createEnv(db, platformDb);
+    platformDb
+      .raw()
+      .prepare(
+        `INSERT INTO policies
+         (id, scope_type, scope_id, policy_key, value, created_at_ms, updated_at_ms)
+         VALUES ('my-plans', 'country', 'MY', 'plans.allowed_tiers', '["pro"]', 0, 0)`,
+      )
+      .run();
+
+    const response = await operatorCreate(env, createApplicationBody());
+
+    expect(response.status).toBe(201);
+    const data = await readData<OperatorCreateResult>(response);
+    expect(data.approval).toBeNull();
+    expect(data.approvalError).toMatchObject({
+      code: "PLAN_NOT_AVAILABLE_IN_REGION",
+    });
+    expect(data.application.status).toBe("submitted");
+    expect(count(db, "tenants")).toBe(0);
+    expect(count(platformDb, "restaurants")).toBe(0);
+  });
+
+  it("rejects a second pending application for the same email on both routes", async () => {
+    const db = createManagementDb();
+    const env = createEnv(db);
+    await operatorCreate(env, {
+      ...createApplicationBody(),
+      approveImmediately: false,
+    });
+
+    const viaOperator = await operatorCreate(env, {
+      ...createApplicationBody(),
+      contactEmail: "TAN.MEI@example.com",
+      approveImmediately: false,
+    });
+    const viaPublic = await app.fetch(
+      new Request("https://management.test/api/v1/onboarding/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(createApplicationBody()),
+      }),
+      env,
+    );
+
+    for (const response of [viaOperator, viaPublic]) {
+      expect(response.status).toBe(409);
+      await expect(readError(response)).resolves.toMatchObject({
+        code: "APPLICATION_ALREADY_PENDING",
+      });
+    }
+    expect(count(db, "onboarding_applications")).toBe(1);
+  });
+
+  it("applies the public route's market validation", async () => {
+    const env = createEnv(createManagementDb());
+
+    const response = await operatorCreate(env, {
+      ...createApplicationBody(),
+      marketId: "missing-market",
+    });
+
+    expect(response.status).toBe(400);
+    await expect(readError(response)).resolves.toMatchObject({
+      code: "MARKET_NOT_FOUND",
+    });
+  });
+
+  it("rejects a non-admin platform user", async () => {
+    const platformDb = createPlatformDb();
+    const env = createEnv(createManagementDb(), platformDb);
+    const ownerId = "018f0000-0000-7000-8000-000000000002";
+    platformDb
+      .raw()
+      .prepare(
+        `INSERT INTO users (id, username, full_name, password_hash, role,
+           is_active, token_version, created_at_ms, updated_at_ms)
+         VALUES (?, 'owner', 'Owner', 'unused', 1, 1, 1, 0, 0)`,
+      )
+      .run(ownerId);
+    platformDb
+      .raw()
+      .prepare(
+        "INSERT INTO sessions (id, user_id, is_active, expires_at_ms) VALUES ('owner-session', ?, 1, ?)",
+      )
+      .run(ownerId, Date.now() + 3600000);
+    const ownerToken = await sign(
+      {
+        id: ownerId,
+        email: "owner@example.test",
+        role: "admin",
+        tv: 1,
+        sid: "owner-session",
+        aud: "management",
+        iss: "makanmakan-management",
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      },
+      "test-secret",
+      "HS256",
+    );
+
+    const response = await operatorCreate(
+      env,
+      createApplicationBody(),
+      ownerToken,
+    );
+
+    expect(response.status).toBe(401);
+    expect(
+      count(
+        env.MANAGEMENT_DB as unknown as D1DatabaseAdapter,
+        "onboarding_applications",
+      ),
+    ).toBe(0);
+  });
+
+  it("lets only one of two concurrent approvals provision", async () => {
+    const db = createManagementDb();
+    const platformDb = createPlatformDb();
+    const env = createEnv(db, platformDb);
+    const created = await readData<OperatorCreateResult>(
+      await operatorCreate(env, {
+        ...createApplicationBody(),
+        approveImmediately: false,
+      }),
+    );
+    const id = created.application.id;
+    // The loser read the row while it was still submitted, then the winner
+    // claimed it: a stale snapshot is exactly what the CAS must defeat.
+    db.raw()
+      .prepare(
+        "UPDATE onboarding_applications SET status = 'provisioning' WHERE id = ?",
+      )
+      .run(id);
+    const { OnboardingService } =
+      await import("../../services/OnboardingService");
+    const stale = vi
+      .spyOn(OnboardingService.prototype, "getApplication")
+      .mockResolvedValue({ ...created.application, status: "submitted" });
+    const token = await managementToken();
+    const post = (action: string, body?: unknown) =>
+      app.fetch(
+        new Request(`${operatorUrl}/${id}/${action}`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: body === undefined ? undefined : JSON.stringify(body),
+        }),
+        env,
+      );
+
+    const approve = await post("approve");
+    const reject = await post("reject", { reason: "too late" });
+    stale.mockRestore();
+
+    for (const response of [approve, reject]) {
+      expect(response.status).toBe(400);
+      await expect(readError(response)).resolves.toMatchObject({
+        code: "INVALID_STATUS",
+        message: "Application is already being processed",
+      });
+    }
+    expect(count(db, "tenants")).toBe(0);
+    expect(count(platformDb, "restaurants")).toBe(0);
+    expect(
+      db
+        .raw()
+        .prepare("SELECT status FROM onboarding_applications WHERE id = ?")
+        .get(id),
+    ).toEqual({ status: "provisioning" });
   });
 });

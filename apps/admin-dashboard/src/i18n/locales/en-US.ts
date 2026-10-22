@@ -2151,6 +2151,36 @@ const enUS: Messages = {
     missingToken: "Missing reset token",
   },
   platformOnboarding: {
+    create: {
+      open: "Register for owner",
+      title: "Register a shop for its owner",
+      description:
+        "This goes through the same review pipeline as self-service applications and is recorded as operator-created.",
+      businessName: "Business name",
+      contactName: "Owner name",
+      contactEmail: "Owner email",
+      contactPhone: "Owner phone",
+      plan: "Plan",
+      country: "Country",
+      city: "City",
+      district: "District (optional)",
+      address: "Address (optional)",
+      market: "Market (optional)",
+      noMarket: "No market",
+      stall: "Stall number (optional)",
+      latitude: "Latitude",
+      longitude: "Longitude",
+      approveImmediately: "Approve right after creating",
+      submit: "Create",
+      submitting: "Creating...",
+      approvalFailed:
+        "{business}: the application was created but approval failed ({message}). Retry approval from the list.",
+      errors: {
+        duplicate: "An application for this email is already pending.",
+        failed:
+          "Could not create the application ({code}). Check the fields and try again.",
+      },
+    },
     market: {
       location: "Trading location",
       stall: "Stall",
@@ -2233,6 +2263,7 @@ const enUS: Messages = {
       approved: "Application approved",
       rejected: "Application rejected",
       setupLinkRegenerated: "Owner setup link regenerated",
+      byOperator: "Created by a platform operator for the owner",
     },
     reject: {
       title: "Reject this application",
@@ -5387,17 +5418,9 @@ const enUS: Messages = {
     phonePlaceholder: "Optional",
     restaurant: "Restaurant",
     selectRestaurant: "Select restaurant",
-    createNewRestaurant: "+ New Restaurant",
-    restaurantName: "Restaurant Name",
-    restaurantNamePlaceholder: "New restaurant name",
-    restaurantType: "Restaurant Type",
-    restaurantTypePlaceholder: "e.g. Japanese cuisine",
-    restaurantAddress: "Restaurant Address",
-    restaurantAddressPlaceholder: "Restaurant address",
-    restaurantDistrict: "District",
-    restaurantDistrictPlaceholder: "e.g. West District",
-    restaurantPhone: "Restaurant Phone",
-    restaurantPhonePlaceholder: "e.g. 0912345678",
+    newShopHint:
+      "Opening a new shop? Register it from platform onboarding, which also sets up its subscription and the owner setup link.",
+    newShopLink: "Register a shop for an owner",
     permissionNote: "This account will have the following permissions:",
     ownerPermissions: {
       manageMenu: "Manage restaurant menu",
@@ -5433,10 +5456,6 @@ const enUS: Messages = {
     emailRequired: "Email is required",
     emailInvalid: "Please enter a valid email",
     restaurantRequired: "Please select or create a restaurant",
-    newRestaurantNameRequired: "Restaurant name is required",
-    newRestaurantTypeRequired: "Restaurant type is required",
-    newRestaurantDistrictRequired: "District is required",
-    newRestaurantPhoneRequired: "Restaurant phone is required",
   },
   ingredients: {
     title: "Ingredient Management",

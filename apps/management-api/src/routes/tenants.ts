@@ -6,13 +6,8 @@
 
 import { Hono } from "hono";
 import { z } from "zod";
-import { ApiError, badRequest, conflict, notFound } from "@makanmasak/utils";
-import type {
-  ManagementEnv,
-  Tenant,
-  CreateTenantRequest,
-  UpdateTenantRequest,
-} from "../types";
+import { ApiError, badRequest, notFound } from "@makanmasak/utils";
+import type { ManagementEnv, Tenant, UpdateTenantRequest } from "../types";
 import { TenantService } from "../services/TenantService";
 
 const router = new Hono<{ Bindings: ManagementEnv }>();
@@ -20,23 +15,6 @@ const router = new Hono<{ Bindings: ManagementEnv }>();
 // ============================================================
 // Validation Schemas
 // ============================================================
-
-const createTenantSchema = z.object({
-  businessName: z.string().min(2).max(100),
-  contactEmail: z.email(),
-  contactPhone: z.string().optional(),
-  subdomain: z
-    .string()
-    .min(3)
-    .max(30)
-    .regex(
-      /^[a-z0-9-]+$/,
-      "Subdomain must be lowercase alphanumeric with hyphens",
-    )
-    .optional(),
-  customDomain: z.string().optional(),
-  licenseTier: z.enum(["standard", "professional", "enterprise"]),
-});
 
 const updateTenantSchema = z.object({
   businessName: z.string().min(2).max(100).optional(),
@@ -116,54 +94,6 @@ router.get("/:id", async (c) => {
 
     console.error("[Tenants] Get error:", error);
     throw new ApiError("GET_FAILED", "Failed to get tenant", 500);
-  }
-});
-
-/**
- * Create new tenant
- * POST /api/v1/tenants
- */
-router.post("/", async (c) => {
-  const tenantService = new TenantService(c.env);
-
-  try {
-    const body = await c.req.json();
-    const validated = createTenantSchema.parse(body);
-
-    // Auto-generate subdomain from businessName if not provided
-    let subdomain = validated.subdomain;
-    if (!subdomain) {
-      subdomain = await tenantService.generateAvailableSubdomain(
-        validated.businessName,
-      );
-    }
-
-    // Check subdomain availability
-    const existing = await tenantService.getTenantBySubdomain(subdomain);
-    if (existing) {
-      throw conflict("Subdomain already in use", "SUBDOMAIN_TAKEN");
-    }
-
-    const tenant = await tenantService.createTenant({
-      ...validated,
-      subdomain,
-    } as CreateTenantRequest);
-
-    return c.json(
-      {
-        success: true,
-        data: tenant,
-      },
-      201,
-    );
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      throw badRequest("Validation failed", "VALIDATION_ERROR", error.issues);
-    }
-    if (error instanceof ApiError) throw error;
-
-    console.error("[Tenants] Create error:", error);
-    throw new ApiError("CREATE_FAILED", "Failed to create tenant", 500);
   }
 });
 

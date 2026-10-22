@@ -162,14 +162,51 @@ export interface PaginatedResponse<T> {
 }
 
 /**
- * 創建租戶請求
+ * 營運端建立入駐申請（POST /admin/onboarding/applications）。
+ * 與自助申請走同一條核准流程：租戶、平台餐廳、店主帳號與設定密碼連結。
  */
-export interface CreateTenantRequest {
+export interface OperatorOnboardingRequest {
   businessName: string;
+  contactName: string;
   contactEmail: string;
-  contactPhone?: string;
-  subdomain?: string;
-  licenseTier: LicenseTier;
+  contactPhone: string;
+  address?: string;
+  district?: string;
+  city: string;
+  countryCode: "TW" | "MY";
+  planId?: LicenseTier | "trial" | null;
+  latitude: number;
+  longitude: number;
+  approveImmediately?: boolean;
+}
+
+export interface OperatorOnboardingApproval {
+  tenantId: string;
+  restaurantId: string;
+  subdomain: string;
+  ownerAccount?: {
+    restaurantId: string;
+    userId: string;
+    username: string;
+    setupPasswordLink: string;
+    setupPasswordExpiresAt: string;
+  };
+  credentialDelivery?: {
+    id: string;
+    channel: "email" | "manual";
+    status: "sent" | "pending" | "failed";
+    recipientEmail: string;
+    recipientName: string;
+    setupPasswordExpiresAt: string;
+    errorMessage?: string;
+  };
+  status: string;
+}
+
+export interface OperatorOnboardingResult {
+  application: { id: string; status: string } & Record<string, unknown>;
+  approval: OperatorOnboardingApproval | null;
+  approvalError?: { code: string; message: string };
 }
 
 /**

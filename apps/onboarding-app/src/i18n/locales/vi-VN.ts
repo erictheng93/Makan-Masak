@@ -70,6 +70,8 @@ const viVN: Messages = {
     },
     title: "Đơn đăng ký",
     submitErrors: {
+      alreadyPending:
+        "Email này đã có một đơn đăng ký đang được xét duyệt. Hãy dùng liên kết trạng thái trong email xác nhận để theo dõi, hoặc liên hệ hỗ trợ nếu không tìm thấy.",
       rateLimited:
         "Gửi quá nhiều lần. Mỗi mạng chỉ được gửi 5 lần mỗi giờ (lần gửi thất bại cũng được tính). Vui lòng thử lại sau giờ tiếp theo hoặc chuyển sang dữ liệu di động.",
       validation:
@@ -242,6 +244,8 @@ const viVN: Messages = {
     businessName: "Tên nhà hàng",
     currentStatus: "Trạng thái hiện tại",
     rejectionReason: "Lý do từ chối",
+    completedHint:
+      'Cửa hàng của bạn đã được kích hoạt. Hãy đặt mật khẩu bằng liên kết gửi đến email của bạn (hoặc liên kết do đội ngũ nền tảng cung cấp), rồi đăng nhập trang quản trị. Liên kết có hiệu lực 24 giờ; nếu đã hết hạn, hãy dùng "Quên mật khẩu" ở trang đăng nhập.',
     lastUpdated: "Làm mới để kiểm tra cập nhật mới nhất.",
     refresh: "Làm mới trạng thái",
     backHome: "Quay lại trang chủ",

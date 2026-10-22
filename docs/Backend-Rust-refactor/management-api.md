@@ -213,7 +213,6 @@ TTL is fixed at `MANAGEMENT_TOKEN_TTL_SECONDS = 3600` (1 hour), with claims
 | --- | --- | --- | --- | --- | --- |
 | GET | `/api/v1/tenants` | Bearer management JWT | List tenants, paginated/filtered | Query: `page`, `limit` (≤100), `status?`, `search?` (LIKE on name/email/subdomain) | `{ success, data: Tenant[], pagination }` |
 | GET | `/api/v1/tenants/:id` | same | Get one tenant | — | `{ success, data: Tenant }` or 404 |
-| POST | `/api/v1/tenants` | same | Create tenant | `{ businessName, contactEmail, contactPhone?, subdomain?, customDomain?, licenseTier }` (zod) | 201 `{ success, data: Tenant }`; 409 `SUBDOMAIN_TAKEN` if provided subdomain in use |
 | PATCH | `/api/v1/tenants/:id` | same | Update tenant fields | `{ businessName?, contactEmail?, contactPhone?, customDomain?, licenseTier?, status? }` (zod) | `{ success, data: Tenant }` or 404 |
 | DELETE | `/api/v1/tenants/:id` | same | Soft-delete (sets `status = 'terminated'`) | — | `{ success, data: { deleted: true } }` or 404 |
 | GET | `/api/v1/tenants/:id/resources` | same | List provisioned Cloudflare resources for a tenant | — | `{ success, data: TenantResource[] }` |
@@ -363,7 +362,6 @@ Owns `tenants` CRUD plus platform-restaurant provisioning glue.
 - `generateAvailableSubdomain(businessName)` — up to 10 attempts of
   `{pinyin-slug}-{6-char random base36}`, checked for collision each time;
   throws if exhausted.
-- `createTenant(data)` — simple insert, status starts `"pending"`.
 - `provisionPlatformRestaurantTenant(data)` — idempotent entry point used by
   `routes/internal.ts`: if a tenant already exists for
   `platformRestaurantId`, ensures a `shop_subscriptions` row exists

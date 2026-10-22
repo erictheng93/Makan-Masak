@@ -84,6 +84,7 @@ const license = (): License => ({
 });
 
 beforeEach(() => {
+  vi.clearAllMocks();
   setActivePinia(createPinia());
 });
 
@@ -128,7 +129,23 @@ describe("useTenantsStore", () => {
       businessName: "Updated Noodles",
       status: "suspended",
     });
-    vi.mocked(tenantsApi.create).mockResolvedValue(original);
+    const onboardingResult = {
+      application: { id: "app-1", status: "completed" },
+      approval: {
+        tenantId: "tenant-1",
+        restaurantId: "rest-1",
+        subdomain: "demo-noodles",
+        status: "completed",
+      },
+    };
+    vi.mocked(tenantsApi.create).mockResolvedValue(onboardingResult);
+    vi.mocked(tenantsApi.list).mockResolvedValue({
+      data: [original],
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    });
     vi.mocked(tenantsApi.update).mockResolvedValue(updated);
     vi.mocked(tenantsApi.delete).mockResolvedValue(undefined);
     const store = useTenantsStore();
@@ -136,10 +153,22 @@ describe("useTenantsStore", () => {
     await expect(
       store.createTenant({
         businessName: "Demo Noodles",
+        contactName: "Demo Owner",
         contactEmail: "owner@example.com",
-        licenseTier: "standard",
+        contactPhone: "0912345678",
+        city: "台中市",
+        countryCode: "TW",
+        planId: "standard",
+        latitude: 24.15,
+        longitude: 120.67,
+        approveImmediately: true,
       }),
-    ).resolves.toEqual(original);
+    ).resolves.toEqual(onboardingResult);
+    expect(tenantsApi.create).toHaveBeenCalledWith(
+      expect.objectContaining({ countryCode: "TW", approveImmediately: true }),
+    );
+    // An approved application reloads the list so the new tenant row shows.
+    expect(tenantsApi.list).toHaveBeenCalledOnce();
     expect(store.tenants).toEqual([original]);
 
     store.currentTenant = original;
@@ -151,6 +180,29 @@ describe("useTenantsStore", () => {
 
     await store.deleteTenant("tenant-1");
     expect(store.tenants).toEqual([]);
+  });
+
+  it("does not reload tenants when the application was only filed", async () => {
+    vi.mocked(tenantsApi.create).mockResolvedValue({
+      application: { id: "app-2", status: "submitted" },
+      approval: null,
+    });
+    const store = useTenantsStore();
+
+    await store.createTenant({
+      businessName: "Pending Noodles",
+      contactName: "Owner",
+      contactEmail: "pending@example.com",
+      contactPhone: "0912345678",
+      city: "台中市",
+      countryCode: "TW",
+      latitude: 24.15,
+      longitude: 120.67,
+      approveImmediately: false,
+    });
+
+    expect(tenantsApi.create).toHaveBeenCalledOnce();
+    expect(tenantsApi.list).not.toHaveBeenCalled();
   });
 
   it("records API errors while restoring loading state", async () => {

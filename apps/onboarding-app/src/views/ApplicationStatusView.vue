@@ -40,9 +40,10 @@ async function refresh() {
       applicationSecret.value,
     );
   } catch (caught) {
+    // A wrong id and a wrong secret both mean the link itself is bad.
     error.value =
       caught instanceof ApiError &&
-      caught.code === "APPLICATION_SECRET_REQUIRED"
+      ["APPLICATION_SECRET_REQUIRED", "NOT_FOUND"].includes(caught.code)
         ? t("status.error.invalidLink")
         : t("status.error.unavailable");
   } finally {
@@ -100,6 +101,14 @@ onMounted(refresh);
             <dd class="text-gray-900">{{ application.rejectionReason }}</dd>
           </div>
         </dl>
+
+        <p
+          v-if="application.status === 'completed'"
+          class="mb-6 text-left text-sm text-gray-700"
+          data-testid="onboarding-status-completed-hint"
+        >
+          {{ t("status.completedHint") }}
+        </p>
 
         <p class="mb-6 text-sm text-gray-500">{{ t("status.lastUpdated") }}</p>
       </template>

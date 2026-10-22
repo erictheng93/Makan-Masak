@@ -2204,6 +2204,35 @@ const zhTWCore = {
 
   // 儀表板
   platformOnboarding: {
+    create: {
+      open: "代店主建立",
+      title: "代店主建立店家",
+      description:
+        "建立的申請與自助申請走同一套審核流程，並記錄為平台人員代建。",
+      businessName: "店家名稱",
+      contactName: "店主姓名",
+      contactEmail: "店主 Email",
+      contactPhone: "店主電話",
+      plan: "方案",
+      country: "國家",
+      city: "城市",
+      district: "行政區（選填）",
+      address: "地址（選填）",
+      market: "市集（選填）",
+      noMarket: "不加入市集",
+      stall: "攤位編號（選填）",
+      latitude: "緯度",
+      longitude: "經度",
+      approveImmediately: "建立後立即核准",
+      submit: "建立",
+      submitting: "建立中...",
+      approvalFailed:
+        "{business}：申請已建立，但核准失敗（{message}）。可在列表中重試核准。",
+      errors: {
+        duplicate: "這個 Email 已有待審核的申請。",
+        failed: "建立失敗（{code}），請確認欄位後再試。",
+      },
+    },
     market: {
       location: "營業地點",
       stall: "攤位",
@@ -2283,6 +2312,7 @@ const zhTWCore = {
       approved: "已核准申請",
       rejected: "拒絕申請",
       setupLinkRegenerated: "重新產生店主設定連結",
+      byOperator: "由平台人員代店主建立",
     },
     reject: {
       title: "確認拒絕申請",
@@ -5418,17 +5448,9 @@ const zhTWCore = {
     // Restaurant binding
     restaurant: "所屬餐廳",
     selectRestaurant: "選擇餐廳",
-    createNewRestaurant: "＋ 新增餐廳",
-    restaurantName: "餐廳名稱",
-    restaurantNamePlaceholder: "新餐廳名稱",
-    restaurantType: "餐廳類型",
-    restaurantTypePlaceholder: "例如：日式料理",
-    restaurantAddress: "餐廳地址",
-    restaurantAddressPlaceholder: "餐廳地址",
-    restaurantDistrict: "行政區",
-    restaurantDistrictPlaceholder: "例如：西區",
-    restaurantPhone: "餐廳電話",
-    restaurantPhonePlaceholder: "例如：0912345678",
+    newShopHint:
+      "要開新店？請到平台 Onboarding 代店主建立，系統會一併開通訂閱與設定密碼連結。",
+    newShopLink: "前往代店主建立",
     // Permissions info
     permissionNote: "此帳號建立後將擁有以下權限：",
     ownerPermissions: {
@@ -5469,10 +5491,6 @@ const zhTWCore = {
     emailRequired: "請輸入 Email",
     emailInvalid: "請輸入有效的 Email",
     restaurantRequired: "請選擇或新增餐廳",
-    newRestaurantNameRequired: "請輸入餐廳名稱",
-    newRestaurantTypeRequired: "請輸入餐廳類型",
-    newRestaurantDistrictRequired: "請輸入行政區",
-    newRestaurantPhoneRequired: "請輸入餐廳電話",
   },
 
   // 食材管理

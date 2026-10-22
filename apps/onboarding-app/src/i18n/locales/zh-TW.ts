@@ -157,6 +157,8 @@ const zhTW = {
       phoneInvalid: "電話需為 8 到 20 個字元",
     },
     submitErrors: {
+      alreadyPending:
+        "此 Email 已有一筆申請正在審核中。請用確認信裡的狀態連結查看進度；找不到連結請聯絡客服。",
       rateLimited:
         "送出次數太多了。同一個網路每小時最多送出 5 次（送出失敗也會算），請等到下一個整點再試，或改用手機網路。",
       validation: "有資料不符合規定，請檢查每一格後再送出一次。",
@@ -220,6 +222,8 @@ const zhTW = {
     businessName: "餐廳名稱",
     currentStatus: "目前狀態",
     rejectionReason: "未核准原因",
+    completedHint:
+      "您的店家已開通。請用寄到 Email 的設定密碼連結（或平台人員提供的連結）設定密碼，再登入管理後台。連結 24 小時內有效；過期的話，請在登入頁點「忘記密碼」。",
     lastUpdated: "可使用重新整理查看最新進度。",
     refresh: "重新整理狀態",
     backHome: "返回首頁",

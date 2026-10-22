@@ -296,11 +296,45 @@ const idID: Messages = {
     },
     create: "Buat Penyewa",
     createModal: {
+      country: {
+        TW: "Taiwan",
+        MY: "Malaysia",
+      },
+      result: {
+        approvedTitle: "Penyewa dibuat",
+        filedTitle: "Pengajuan dibuat, menunggu peninjauan",
+        approvalFailedTitle: "Pengajuan dibuat, tetapi persetujuan gagal",
+        setupLink: "Tautan atur kata sandi pemilik",
+        setupLinkExpires: "Tautan kedaluwarsa",
+        username: "Nama pengguna pemilik",
+        delivery: "Pengiriman kredensial",
+        deliverySent: "Terkirim ke {email}",
+        deliveryPending: "Tertunda ({email})",
+        deliveryFailed:
+          "Pengiriman ke {email} gagal; bagikan tautan di atas secara manual",
+        copy: "Salin tautan",
+        copied: "Disalin",
+        done: "Selesai",
+      },
       creating: "Membuat...",
       error: {
         createFailed: "Gagal membuat penyewa. Silakan coba lagi nanti.",
       },
       field: {
+        contactName: "Nama Kontak",
+        contactNamePlaceholder: "misalnya Budi Santoso",
+        country: "Negara",
+        city: "Kota",
+        cityPlaceholder: "Pilih kota",
+        district: "Distrik",
+        address: "Alamat",
+        latitude: "Lintang",
+        longitude: "Bujur",
+        coordinatesHint:
+          "Lokasi toko, dipakai untuk pencarian terdekat dan peta",
+        approveImmediately: "Setujui langsung",
+        approveImmediatelyHint:
+          "Membuat penyewa, restoran platform dan akun pemilik, serta tautan atur kata sandi. Jika tidak dicentang, hanya pengajuan tertunda yang dibuat.",
         businessName: "Nama Bisnis",
         businessNamePlaceholder: "misalnya Dapur Kerajaan",
         contactEmail: "Hubungi Email",
@@ -308,10 +342,6 @@ const idID: Messages = {
         contactPhone: "Telepon",
         contactPhonePlaceholder: "+1-234-567-8900",
         selectPlan: "Pilih Paket",
-        subdomain: "Subdomain",
-        subdomainHint: "Biarkan kosong untuk menghasilkan secara otomatis",
-        subdomainPlaceholder: "dapur kerajaan",
-        subdomainSuffix: ".makanmasak.com",
       },
       plan: {
         enterprise: {
@@ -330,11 +360,14 @@ const idID: Messages = {
       submit: "Buat Penyewa",
       title: "Buat Penyewa",
       validation: {
+        contactNameRequired: "Silakan masukkan nama kontak",
+        phoneRequired: "Silakan masukkan nomor telepon",
+        cityRequired: "Silakan pilih kota",
+        coordinatesInvalid:
+          "Masukkan lintang (-90 hingga 90) dan bujur (-180 hingga 180) yang valid",
         businessNameRequired: "Silakan masukkan nama bisnis",
         emailInvalid: "Silakan masukkan email yang valid",
         emailRequired: "Silakan masukkan email kontak",
-        subdomainFormat:
-          "Subdomain hanya boleh berisi huruf kecil, angka, dan tanda hubung",
       },
     },
     empty: {

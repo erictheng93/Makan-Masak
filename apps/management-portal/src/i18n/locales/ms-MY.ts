@@ -297,11 +297,45 @@ const msMY: Messages = {
     },
     create: "Buat Penyewa",
     createModal: {
+      country: {
+        TW: "Taiwan",
+        MY: "Malaysia",
+      },
+      result: {
+        approvedTitle: "Penyewa dicipta",
+        filedTitle: "Permohonan dicipta, menunggu semakan",
+        approvalFailedTitle: "Permohonan dicipta, tetapi kelulusan gagal",
+        setupLink: "Pautan tetapan kata laluan pemilik",
+        setupLinkExpires: "Pautan tamat",
+        username: "Nama pengguna pemilik",
+        delivery: "Penghantaran kelayakan",
+        deliverySent: "Dihantar ke {email}",
+        deliveryPending: "Menunggu ({email})",
+        deliveryFailed:
+          "Penghantaran ke {email} gagal; kongsi pautan di atas secara manual",
+        copy: "Salin pautan",
+        copied: "Disalin",
+        done: "Selesai",
+      },
       creating: "Mencipta...",
       error: {
         createFailed: "Gagal membuat penyewa. Sila cuba lagi kemudian.",
       },
       field: {
+        contactName: "Nama Hubungan",
+        contactNamePlaceholder: "cth. Ahmad bin Ali",
+        country: "Negara",
+        city: "Bandar",
+        cityPlaceholder: "Pilih bandar",
+        district: "Daerah",
+        address: "Alamat",
+        latitude: "Latitud",
+        longitude: "Longitud",
+        coordinatesHint:
+          "Lokasi kedai, digunakan untuk carian berdekatan dan peta",
+        approveImmediately: "Luluskan serta-merta",
+        approveImmediatelyHint:
+          "Mencipta penyewa, restoran platform dan akaun pemilik, serta pautan tetapan kata laluan. Jika tidak ditanda, hanya permohonan menunggu dicipta.",
         businessName: "Nama Perniagaan",
         businessNamePlaceholder: "cth. Dapur Diraja",
         contactEmail: "E-mel Hubungi",
@@ -309,10 +343,6 @@ const msMY: Messages = {
         contactPhone: "telefon",
         contactPhonePlaceholder: "+1-234-567-8900",
         selectPlan: "Pilih Rancangan",
-        subdomain: "Subdomain",
-        subdomainHint: "Biarkan kosong untuk menjana automatik",
-        subdomainPlaceholder: "dapur diraja",
-        subdomainSuffix: ".makanmasak.com",
       },
       plan: {
         enterprise: {
@@ -331,11 +361,14 @@ const msMY: Messages = {
       submit: "Buat Penyewa",
       title: "Buat Penyewa",
       validation: {
+        contactNameRequired: "Sila masukkan nama hubungan",
+        phoneRequired: "Sila masukkan nombor telefon",
+        cityRequired: "Sila pilih bandar",
+        coordinatesInvalid:
+          "Masukkan latitud (-90 hingga 90) dan longitud (-180 hingga 180) yang sah",
         businessNameRequired: "Sila masukkan nama perniagaan",
         emailInvalid: "Sila masukkan e-mel yang sah",
         emailRequired: "Sila masukkan e-mel hubungan",
-        subdomainFormat:
-          "Subdomain hanya boleh mengandungi huruf kecil, nombor dan sempang",
       },
     },
     empty: {

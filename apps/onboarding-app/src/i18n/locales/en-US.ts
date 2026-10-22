@@ -170,6 +170,8 @@ const enUS: Messages = {
       phoneInvalid: "Phone number must be 8 to 20 characters",
     },
     submitErrors: {
+      alreadyPending:
+        "An application for this email is already under review. Use the status link in your confirmation email to follow it, or contact support if you can't find it.",
       rateLimited:
         "Too many submissions. Each network can submit 5 times per clock hour (failed attempts count too). Please try again after the next hour, or switch to mobile data.",
       validation:
@@ -240,6 +242,8 @@ const enUS: Messages = {
     businessName: "Restaurant Name",
     currentStatus: "Current Status",
     rejectionReason: "Reason for Rejection",
+    completedHint:
+      'Your shop is active. Set your password with the link sent to your email (or the one the platform team gave you), then sign in to the admin dashboard. The link is valid for 24 hours; if it has expired, use "Forgot password" on the sign-in page.',
     lastUpdated: "Use refresh to check for the latest update.",
     refresh: "Refresh Status",
     backHome: "Back to Home",

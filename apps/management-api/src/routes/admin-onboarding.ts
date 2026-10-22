@@ -1,9 +1,10 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { badRequest, notFound } from "@makanmasak/utils";
+import { ApiError, badRequest, conflict, notFound } from "@makanmasak/utils";
 import type { ManagementEnv, OnboardingStatus } from "../types";
 import type { ManagementUser } from "../middleware/auth";
 import { OnboardingService } from "../services/OnboardingService";
+import { assertMarketInCity, parseApplicationBody } from "./onboarding";
 
 const router = new Hono<{
   Bindings: ManagementEnv;
@@ -109,6 +110,99 @@ function publicOwnerAccount(
   };
 }
 
+type ApproveResult = Awaited<
+  ReturnType<OnboardingService["approveApplication"]>
+>;
+
+function approvalData(result: ApproveResult) {
+  return {
+    tenantId: result.tenantId,
+    restaurantId: result.restaurantId,
+    marketId: result.marketId,
+    stallNumber: result.stallNumber,
+    subdomain: result.subdomain,
+    ownerAccount: publicOwnerAccount(result.ownerAccount),
+    credentialDelivery: result.credentialDelivery,
+    status: result.status ?? "completed",
+  };
+}
+
+const operatorApplicationSchema = z.object({
+  approveImmediately: z.boolean().default(true),
+});
+
+/**
+ * An operator registers a shop on an owner's behalf. It is the same
+ * application -> approval pipeline as self-service, minus the IP rate limit
+ * and the "new application" notifications (the operator is the reviewer).
+ * Approval failure leaves the application submitted and is reported, not
+ * thrown, so the UI can say "created, approve it from the list".
+ */
+router.post("/applications", async (c) => {
+  const body = await c.req.json().catch(() => {
+    throw badRequest("Invalid JSON body", "INVALID_JSON");
+  });
+  const validated = parseApplicationBody(body);
+  const options = operatorApplicationSchema.safeParse(body);
+  if (!options.success) {
+    throw badRequest(
+      "Validation failed",
+      "VALIDATION_ERROR",
+      options.error.issues,
+    );
+  }
+  await assertMarketInCity(c.env, validated.marketId, validated.city);
+
+  const actor = c.get("managementUser");
+  const service = new OnboardingService(c.env);
+  const created = await service.createApplication(
+    validated,
+    { userAgent: c.req.header("user-agent") },
+    actor,
+  );
+
+  let approval: ReturnType<typeof approvalData> | null = null;
+  let approvalError: { code: string; message: string } | undefined;
+  if (options.data.approveImmediately) {
+    try {
+      const result = await service.approveApplication(created.id, actor);
+      if (result.success) {
+        approval = approvalData(result);
+      } else {
+        approvalError = {
+          code: "APPROVAL_FAILED",
+          message: result.error ?? "Failed to approve application",
+        };
+      }
+    } catch (error) {
+      if (!(error instanceof ApiError)) {
+        console.error("[AdminOnboarding] Operator approval error:", error);
+      }
+      approvalError =
+        error instanceof ApiError
+          ? { code: error.code, message: error.message }
+          : {
+              code: "APPROVAL_FAILED",
+              message: "Failed to approve application",
+            };
+    }
+  }
+
+  // Re-read so the returned status reflects the approval outcome.
+  const application = (await service.getApplication(created.id)) ?? created;
+  return c.json(
+    {
+      success: true,
+      data: {
+        application: publicApplication(application),
+        approval,
+        ...(approvalError ? { approvalError } : {}),
+      },
+    },
+    201,
+  );
+});
+
 router.get("/applications", async (c) => {
   const parsed = listApplicationsQuerySchema.safeParse({
     status: c.req.query("status"),
@@ -165,19 +259,7 @@ router.post("/applications/:id/approve", async (c) => {
     );
   }
 
-  return c.json({
-    success: true,
-    data: {
-      tenantId: result.tenantId,
-      restaurantId: result.restaurantId,
-      marketId: result.marketId,
-      stallNumber: result.stallNumber,
-      subdomain: result.subdomain,
-      ownerAccount: publicOwnerAccount(result.ownerAccount),
-      credentialDelivery: result.credentialDelivery,
-      status: result.status ?? "completed",
-    },
-  });
+  return c.json({ success: true, data: approvalData(result) });
 });
 
 router.post("/applications/:id/setup-link", async (c) => {
@@ -202,6 +284,24 @@ router.post("/applications/:id/setup-link", async (c) => {
       credentialDelivery: result.credentialDelivery,
     },
   });
+});
+
+router.delete("/applications/:id", async (c) => {
+  const service = new OnboardingService(c.env);
+  const result = await service.purgeApplication(
+    c.req.param("id"),
+    c.get("managementUser"),
+  );
+  if (!result.success) {
+    if (result.error === "Application not found") {
+      throw notFound(result.error, "NOT_FOUND");
+    }
+    throw conflict(
+      result.error ?? "Failed to purge application",
+      result.code ?? "PURGE_FAILED",
+    );
+  }
+  return c.json({ success: true, data: { purged: true } });
 });
 
 const rejectApplicationSchema = z.object({

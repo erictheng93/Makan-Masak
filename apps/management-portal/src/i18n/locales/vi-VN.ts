@@ -297,11 +297,44 @@ const viVN: Messages = {
     },
     create: "Tạo người thuê",
     createModal: {
+      country: {
+        TW: "Đài Loan",
+        MY: "Malaysia",
+      },
+      result: {
+        approvedTitle: "Đã tạo người thuê",
+        filedTitle: "Đã tạo đơn, đang chờ duyệt",
+        approvalFailedTitle: "Đã tạo đơn nhưng duyệt thất bại",
+        setupLink: "Liên kết đặt mật khẩu cho chủ",
+        setupLinkExpires: "Liên kết hết hạn",
+        username: "Tài khoản chủ",
+        delivery: "Gửi thông tin đăng nhập",
+        deliverySent: "Đã gửi tới {email}",
+        deliveryPending: "Đang chờ gửi ({email})",
+        deliveryFailed:
+          "Gửi tới {email} thất bại; hãy chia sẻ liên kết ở trên thủ công",
+        copy: "Sao chép liên kết",
+        copied: "Đã sao chép",
+        done: "Xong",
+      },
       creating: "Đang tạo...",
       error: {
         createFailed: "Không tạo được đối tượng thuê. Vui lòng thử lại sau.",
       },
       field: {
+        contactName: "Tên người liên hệ",
+        contactNamePlaceholder: "ví dụ: Nguyễn Văn A",
+        country: "Quốc gia",
+        city: "Thành phố",
+        cityPlaceholder: "Chọn thành phố",
+        district: "Quận",
+        address: "Địa chỉ",
+        latitude: "Vĩ độ",
+        longitude: "Kinh độ",
+        coordinatesHint: "Vị trí cửa hàng, dùng cho tìm kiếm lân cận và bản đồ",
+        approveImmediately: "Duyệt ngay",
+        approveImmediatelyHint:
+          "Tạo người thuê, nhà hàng trên nền tảng và tài khoản chủ, kèm liên kết đặt mật khẩu. Bỏ chọn thì chỉ tạo đơn chờ duyệt.",
         businessName: "Tên doanh nghiệp",
         businessNamePlaceholder: "ví dụ: Bếp Hoàng Gia",
         contactEmail: "Email liên hệ",
@@ -309,10 +342,6 @@ const viVN: Messages = {
         contactPhone: "Điện thoại",
         contactPhonePlaceholder: "+1-234-567-8900",
         selectPlan: "Chọn gói",
-        subdomain: "Tên miền phụ",
-        subdomainHint: "Để trống để tự động tạo",
-        subdomainPlaceholder: "nhà bếp hoàng gia",
-        subdomainSuffix: ".makanmasak.com",
       },
       plan: {
         enterprise: {
@@ -331,11 +360,14 @@ const viVN: Messages = {
       submit: "Tạo người thuê",
       title: "Tạo người thuê",
       validation: {
+        contactNameRequired: "Vui lòng nhập tên người liên hệ",
+        phoneRequired: "Vui lòng nhập số điện thoại",
+        cityRequired: "Vui lòng chọn thành phố",
+        coordinatesInvalid:
+          "Nhập vĩ độ (-90 đến 90) và kinh độ (-180 đến 180) hợp lệ",
         businessNameRequired: "Vui lòng nhập tên doanh nghiệp",
         emailInvalid: "Vui lòng nhập email hợp lệ",
         emailRequired: "Vui lòng nhập email liên hệ",
-        subdomainFormat:
-          "Tên miền phụ chỉ có thể chứa chữ cái viết thường, số và dấu gạch nối",
       },
     },
     empty: {

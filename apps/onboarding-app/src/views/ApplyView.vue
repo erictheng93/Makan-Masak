@@ -159,6 +159,7 @@ const parseCoordinate = (value: number | string | null): number | null => {
 // the generic message: the server's own text is English.
 const submitErrorKeys: Record<string, string> = {
   RATE_LIMITED: "apply.submitErrors.rateLimited",
+  APPLICATION_ALREADY_PENDING: "apply.submitErrors.alreadyPending",
   VALIDATION_ERROR: "apply.submitErrors.validation",
   CITY_NOT_IN_COUNTRY: "apply.submitErrors.cityNotInCountry",
   MARKET_NOT_FOUND: "apply.submitErrors.marketNotInCity",
@@ -249,10 +250,10 @@ const handleSubmit = async () => {
   const stallNumber = form.value.stallNumber.trim();
 
   const success = await store.submitApplication({
-    businessName: form.value.businessName,
-    contactName: form.value.contactName,
-    contactEmail: form.value.contactEmail,
-    contactPhone: form.value.contactPhone,
+    businessName: form.value.businessName.trim(),
+    contactName: form.value.contactName.trim(),
+    contactEmail: form.value.contactEmail.trim(),
+    contactPhone: form.value.contactPhone.trim(),
     address: form.value.address,
     district: form.value.district,
     city: form.value.city,
@@ -328,6 +329,7 @@ const useCurrentLocation = () => {
       <!-- API Error Alert -->
       <div
         v-if="submitErrorMessage"
+        role="alert"
         class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg"
       >
         <p class="text-sm text-red-700">{{ submitErrorMessage }}</p>
@@ -336,70 +338,112 @@ const useCurrentLocation = () => {
       <form @submit.prevent="handleSubmit" class="space-y-6">
         <!-- 餐廳名稱 -->
         <div>
-          <label class="label"
+          <label for="onboarding-business-name" class="label"
             >{{ t("apply.form.businessName.label") }} *</label
           >
           <input
+            id="onboarding-business-name"
             v-model="form.businessName"
             data-testid="onboarding-business-name"
+            maxlength="100"
             type="text"
             class="input"
             :class="{ 'input-error': errors.businessName }"
+            :aria-invalid="errors.businessName ? 'true' : undefined"
+            :aria-describedby="
+              errors.businessName ? 'onboarding-businessName-error' : undefined
+            "
             :placeholder="t('apply.form.businessName.placeholder')"
           />
-          <p v-if="errors.businessName" class="mt-1 text-sm text-red-600">
+          <p
+            v-if="errors.businessName"
+            id="onboarding-businessName-error"
+            class="mt-1 text-sm text-red-600"
+          >
             {{ errors.businessName }}
           </p>
         </div>
 
         <!-- 聯絡人姓名 -->
         <div>
-          <label class="label">{{ t("apply.form.contactName.label") }} *</label>
+          <label for="onboarding-contact-name" class="label"
+            >{{ t("apply.form.contactName.label") }} *</label
+          >
           <input
+            id="onboarding-contact-name"
             v-model="form.contactName"
             data-testid="onboarding-contact-name"
+            maxlength="100"
             type="text"
             class="input"
             :class="{ 'input-error': errors.contactName }"
+            :aria-invalid="errors.contactName ? 'true' : undefined"
+            :aria-describedby="
+              errors.contactName ? 'onboarding-contactName-error' : undefined
+            "
             :placeholder="t('apply.form.contactName.placeholder')"
           />
-          <p v-if="errors.contactName" class="mt-1 text-sm text-red-600">
+          <p
+            v-if="errors.contactName"
+            id="onboarding-contactName-error"
+            class="mt-1 text-sm text-red-600"
+          >
             {{ errors.contactName }}
           </p>
         </div>
 
         <!-- Email -->
         <div>
-          <label class="label"
+          <label for="onboarding-contact-email" class="label"
             >{{ t("apply.form.contactEmail.label") }} *</label
           >
           <input
+            id="onboarding-contact-email"
             v-model="form.contactEmail"
             data-testid="onboarding-contact-email"
+            maxlength="254"
             type="email"
             class="input"
             :class="{ 'input-error': errors.contactEmail }"
+            :aria-invalid="errors.contactEmail ? 'true' : undefined"
+            :aria-describedby="
+              errors.contactEmail ? 'onboarding-contactEmail-error' : undefined
+            "
             :placeholder="t('apply.form.contactEmail.placeholder')"
           />
-          <p v-if="errors.contactEmail" class="mt-1 text-sm text-red-600">
+          <p
+            v-if="errors.contactEmail"
+            id="onboarding-contactEmail-error"
+            class="mt-1 text-sm text-red-600"
+          >
             {{ errors.contactEmail }}
           </p>
         </div>
 
         <!-- 電話 -->
         <div>
-          <label class="label"
+          <label for="onboarding-contact-phone" class="label"
             >{{ t("apply.form.contactPhone.label") }} *</label
           >
           <input
+            id="onboarding-contact-phone"
             v-model="form.contactPhone"
             data-testid="onboarding-contact-phone"
+            maxlength="20"
             type="tel"
             class="input"
             :class="{ 'input-error': errors.contactPhone }"
+            :aria-invalid="errors.contactPhone ? 'true' : undefined"
+            :aria-describedby="
+              errors.contactPhone ? 'onboarding-contactPhone-error' : undefined
+            "
             :placeholder="t('apply.form.contactPhone.placeholder')"
           />
-          <p v-if="errors.contactPhone" class="mt-1 text-sm text-red-600">
+          <p
+            v-if="errors.contactPhone"
+            id="onboarding-contactPhone-error"
+            class="mt-1 text-sm text-red-600"
+          >
             {{ errors.contactPhone }}
           </p>
         </div>
@@ -441,15 +485,24 @@ const useCurrentLocation = () => {
               <input
                 v-model.number="form.latitude"
                 data-testid="onboarding-latitude"
+                :aria-label="t('apply.form.location.latitudePlaceholder')"
                 type="number"
                 step="0.000001"
                 min="-90"
                 max="90"
                 class="input"
                 :class="{ 'input-error': errors.latitude }"
+                :aria-invalid="errors.latitude ? 'true' : undefined"
+                :aria-describedby="
+                  errors.latitude ? 'onboarding-latitude-error' : undefined
+                "
                 :placeholder="t('apply.form.location.latitudePlaceholder')"
               />
-              <p v-if="errors.latitude" class="mt-1 text-sm text-red-600">
+              <p
+                v-if="errors.latitude"
+                id="onboarding-latitude-error"
+                class="mt-1 text-sm text-red-600"
+              >
                 {{ errors.latitude }}
               </p>
             </div>
@@ -457,15 +510,24 @@ const useCurrentLocation = () => {
               <input
                 v-model.number="form.longitude"
                 data-testid="onboarding-longitude"
+                :aria-label="t('apply.form.location.longitudePlaceholder')"
                 type="number"
                 step="0.000001"
                 min="-180"
                 max="180"
                 class="input"
                 :class="{ 'input-error': errors.longitude }"
+                :aria-invalid="errors.longitude ? 'true' : undefined"
+                :aria-describedby="
+                  errors.longitude ? 'onboarding-longitude-error' : undefined
+                "
                 :placeholder="t('apply.form.location.longitudePlaceholder')"
               />
-              <p v-if="errors.longitude" class="mt-1 text-sm text-red-600">
+              <p
+                v-if="errors.longitude"
+                id="onboarding-longitude-error"
+                class="mt-1 text-sm text-red-600"
+              >
                 {{ errors.longitude }}
               </p>
             </div>
@@ -486,9 +548,17 @@ const useCurrentLocation = () => {
             maxlength="200"
             class="input"
             :class="{ 'input-error': errors.address }"
+            :aria-invalid="errors.address ? 'true' : undefined"
+            :aria-describedby="
+              errors.address ? 'onboarding-address-error' : undefined
+            "
             :placeholder="t('apply.form.address.placeholder')"
           />
-          <p v-if="errors.address" class="mt-1 text-sm text-red-600">
+          <p
+            v-if="errors.address"
+            id="onboarding-address-error"
+            class="mt-1 text-sm text-red-600"
+          >
             {{ errors.address }}
           </p>
         </div>
@@ -505,6 +575,10 @@ const useCurrentLocation = () => {
               autocomplete="country"
               class="input"
               :class="{ 'input-error': errors.countryCode }"
+              :aria-invalid="errors.countryCode ? 'true' : undefined"
+              :aria-describedby="
+                errors.countryCode ? 'onboarding-countryCode-error' : undefined
+              "
             >
               <option value="">
                 {{ t("apply.form.country.placeholder") }}
@@ -517,7 +591,11 @@ const useCurrentLocation = () => {
                 {{ t(`apply.form.country.options.${code}`) }}
               </option>
             </select>
-            <p v-if="errors.countryCode" class="mt-1 text-sm text-red-600">
+            <p
+              v-if="errors.countryCode"
+              id="onboarding-countryCode-error"
+              class="mt-1 text-sm text-red-600"
+            >
               {{ errors.countryCode }}
             </p>
           </div>
@@ -532,6 +610,10 @@ const useCurrentLocation = () => {
               autocomplete="address-level1"
               class="input"
               :class="{ 'input-error': errors.city }"
+              :aria-invalid="errors.city ? 'true' : undefined"
+              :aria-describedby="
+                errors.city ? 'onboarding-city-error' : undefined
+              "
               :disabled="!form.countryCode"
             >
               <option value="">{{ t("apply.form.city.placeholder") }}</option>
@@ -539,7 +621,11 @@ const useCurrentLocation = () => {
                 {{ city }}
               </option>
             </select>
-            <p v-if="errors.city" class="mt-1 text-sm text-red-600">
+            <p
+              v-if="errors.city"
+              id="onboarding-city-error"
+              class="mt-1 text-sm text-red-600"
+            >
               {{ errors.city }}
             </p>
           </div>
@@ -559,9 +645,17 @@ const useCurrentLocation = () => {
               maxlength="100"
               class="input"
               :class="{ 'input-error': errors.district }"
+              :aria-invalid="errors.district ? 'true' : undefined"
+              :aria-describedby="
+                errors.district ? 'onboarding-district-error' : undefined
+              "
               :placeholder="t('apply.form.district.placeholder')"
             />
-            <p v-if="errors.district" class="mt-1 text-sm text-red-600">
+            <p
+              v-if="errors.district"
+              id="onboarding-district-error"
+              class="mt-1 text-sm text-red-600"
+            >
               {{ errors.district }}
             </p>
           </div>

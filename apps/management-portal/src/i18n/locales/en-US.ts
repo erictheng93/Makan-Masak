@@ -92,18 +92,47 @@ const enUS: Messages = {
       createSuccess: "Tenant created successfully",
     },
     createModal: {
+      country: {
+        TW: "Taiwan",
+        MY: "Malaysia",
+      },
+      result: {
+        approvedTitle: "Tenant created",
+        filedTitle: "Application filed, awaiting review",
+        approvalFailedTitle: "Application filed, but approval failed",
+        setupLink: "Owner setup-password link",
+        setupLinkExpires: "Link expires",
+        username: "Owner username",
+        delivery: "Credential delivery",
+        deliverySent: "Sent to {email}",
+        deliveryPending: "Pending ({email})",
+        deliveryFailed:
+          "Delivery to {email} failed; share the link above manually",
+        copy: "Copy link",
+        copied: "Copied",
+        done: "Done",
+      },
       title: "Create Tenant",
       field: {
+        contactName: "Contact Name",
+        contactNamePlaceholder: "e.g. Jane Tan",
+        country: "Country",
+        city: "City",
+        cityPlaceholder: "Select a city",
+        district: "District",
+        address: "Address",
+        latitude: "Latitude",
+        longitude: "Longitude",
+        coordinatesHint: "Shop location, used for nearby search and maps",
+        approveImmediately: "Approve immediately",
+        approveImmediatelyHint:
+          "Creates the tenant, platform restaurant and owner account, and issues a setup-password link. Unchecked, only a pending application is filed.",
         businessName: "Business Name",
         businessNamePlaceholder: "e.g. Royal Kitchen",
         contactEmail: "Contact Email",
         contactEmailPlaceholder: "owner@restaurant.com",
         contactPhone: "Phone",
         contactPhonePlaceholder: "+1-234-567-8900",
-        subdomain: "Subdomain",
-        subdomainPlaceholder: "royalkitchen",
-        subdomainSuffix: ".makanmasak.com",
-        subdomainHint: "Leave blank to auto-generate",
         selectPlan: "Select Plan",
       },
       plan: {
@@ -121,11 +150,14 @@ const enUS: Messages = {
         },
       },
       validation: {
+        contactNameRequired: "Please enter a contact name",
+        phoneRequired: "Please enter a phone number",
+        cityRequired: "Please select a city",
+        coordinatesInvalid:
+          "Enter a valid latitude (-90 to 90) and longitude (-180 to 180)",
         businessNameRequired: "Please enter a business name",
         emailRequired: "Please enter a contact email",
         emailInvalid: "Please enter a valid email",
-        subdomainFormat:
-          "Subdomain can only contain lowercase letters, numbers, and hyphens",
       },
       error: {
         createFailed: "Failed to create tenant. Please try again later.",

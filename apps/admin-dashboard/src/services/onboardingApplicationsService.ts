@@ -95,6 +95,31 @@ export interface SetupPasswordLinkResult {
   credentialDelivery?: CredentialDelivery;
 }
 
+/** Body of POST /admin/onboarding/applications (an operator registering a shop). */
+export interface OperatorApplicationInput {
+  businessName: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+  address?: string;
+  district?: string;
+  city: string;
+  countryCode: string;
+  marketId?: string;
+  stallNumber?: string;
+  planId: NonNullable<OnboardingApplication["planId"]>;
+  latitude: number;
+  longitude: number;
+  approveImmediately: boolean;
+}
+
+export interface OperatorApplicationResult {
+  application: OnboardingApplication;
+  /** null when not requested or when approval failed (see approvalError). */
+  approval: ApproveOnboardingApplicationResult | null;
+  approvalError?: { code: string; message: string };
+}
+
 /** Fired after an approve/reject so the sidebar badge recounts right away. */
 export const ONBOARDING_APPLICATIONS_CHANGED =
   "onboarding-applications:changed";
@@ -116,6 +141,17 @@ export const onboardingApplicationsService = {
       input,
     );
     return unwrapApiPayload<OnboardingApplicationsResult>(response.data);
+  },
+
+  async createForOwner(
+    input: OperatorApplicationInput,
+  ): Promise<OperatorApplicationResult> {
+    await ensureManagementAuthToken();
+    const response = await managementApi.post<OperatorApplicationResult>(
+      "/admin/onboarding/applications",
+      input,
+    );
+    return unwrapApiPayload<OperatorApplicationResult>(response.data);
   },
 
   async auditEvents(

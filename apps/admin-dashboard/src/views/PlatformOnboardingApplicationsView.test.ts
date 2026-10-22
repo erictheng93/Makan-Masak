@@ -31,9 +31,19 @@ vi.mock("@/services/onboardingApplicationsService", () => ({
     approve: vi.fn(),
     regenerateSetupLink: vi.fn(),
     reject: vi.fn(),
+    createForOwner: vi.fn(),
   },
   ONBOARDING_APPLICATIONS_CHANGED: "onboarding-applications:changed",
   ONBOARDING_POLL_INTERVAL_MS: 60_000,
+}));
+
+vi.mock("@/services/marketsService", () => ({
+  marketsService: {
+    listMarkets: vi.fn(async () => [
+      { id: "m-tc", name: "逢甲夜市", city: "台中市" },
+      { id: "m-kl", name: "Jalan Alor", city: "Kuala Lumpur" },
+    ]),
+  },
 }));
 
 const SETUP_LINK =
@@ -605,5 +615,133 @@ describe("PlatformOnboardingApplicationsView", () => {
     expect(
       onboardingApplicationsService.regenerateSetupLink,
     ).not.toHaveBeenCalled();
+  });
+
+  describe("operator-created applications", () => {
+    async function fillAndSubmit(approveImmediately = true) {
+      const wrapper = mount(PlatformOnboardingApplicationsView);
+      await flushPromises();
+      await wrapper
+        .get('[data-testid="open-operator-onboarding"]')
+        .trigger("click");
+      await flushPromises();
+      const dialog = wrapper.get('[data-testid="operator-onboarding-dialog"]');
+      await dialog
+        .get('[data-testid="operator-business-name"]')
+        .setValue("Noodle Bar");
+      await dialog
+        .get('[data-testid="operator-contact-name"]')
+        .setValue("Lin Mei");
+      await dialog
+        .get('[data-testid="operator-contact-email"]')
+        .setValue("mei@example.test");
+      await dialog
+        .get('[data-testid="operator-contact-phone"]')
+        .setValue("0912345678");
+      // The default city has no market, so the 台中市 one only appears after this.
+      await dialog.get('[data-testid="operator-city"]').setValue("台中市");
+      await dialog.get('[data-testid="operator-market"]').setValue("m-tc");
+      await dialog.get('[data-testid="operator-stall"]').setValue("A-12");
+      await dialog.get('[data-testid="operator-latitude"]').setValue("24.15");
+      await dialog.get('[data-testid="operator-longitude"]').setValue("120.67");
+      if (!approveImmediately) {
+        await dialog
+          .get('[data-testid="operator-approve-immediately"]')
+          .setValue(false);
+      }
+      await dialog.get("form").trigger("submit");
+      await flushPromises();
+      return wrapper;
+    }
+
+    it("creates and approves, then shows the owner handoff", async () => {
+      vi.mocked(onboardingApplicationsService.createForOwner).mockResolvedValue(
+        {
+          application: buildApplication({
+            id: "APP-2",
+            businessName: "Noodle Bar",
+            status: "completed",
+          }),
+          approval: {
+            ownerAccount: buildOwnerAccount(),
+            credentialDelivery: buildDelivery(),
+            status: "completed",
+          },
+        },
+      );
+
+      const wrapper = await fillAndSubmit();
+
+      expect(
+        onboardingApplicationsService.createForOwner,
+      ).toHaveBeenCalledOnce();
+      expect(onboardingApplicationsService.createForOwner).toHaveBeenCalledWith(
+        expect.objectContaining({
+          businessName: "Noodle Bar",
+          contactEmail: "mei@example.test",
+          countryCode: "TW",
+          city: "台中市",
+          marketId: "m-tc",
+          stallNumber: "A-12",
+          planId: "trial",
+          latitude: 24.15,
+          longitude: 120.67,
+          approveImmediately: true,
+        }),
+      );
+      expect(
+        wrapper.find('[data-testid="operator-onboarding-dialog"]').exists(),
+      ).toBe(false);
+      expect(
+        wrapper.get('[data-testid="owner-handoff-setup-link"]').text(),
+      ).toBe(SETUP_LINK);
+      expect(onboardingApplicationsService.list).toHaveBeenCalledTimes(2);
+    });
+
+    it("reports a failed approval and keeps the application in the list", async () => {
+      vi.mocked(onboardingApplicationsService.createForOwner).mockResolvedValue(
+        {
+          application: buildApplication({
+            id: "APP-2",
+            businessName: "Noodle Bar",
+          }),
+          approval: null,
+          approvalError: {
+            code: "PLAN_NOT_AVAILABLE_IN_REGION",
+            message: "The pro plan is not offered in this region",
+          },
+        },
+      );
+
+      const wrapper = await fillAndSubmit(false);
+
+      expect(onboardingApplicationsService.createForOwner).toHaveBeenCalledWith(
+        expect.objectContaining({ approveImmediately: false }),
+      );
+      expect(wrapper.get('[data-testid="onboarding-error"]').text()).toContain(
+        "The pro plan is not offered in this region",
+      );
+      expect(
+        wrapper.find('[data-testid="approved-owner-account"]').exists(),
+      ).toBe(false);
+      expect(onboardingApplicationsService.list).toHaveBeenCalledTimes(2);
+    });
+
+    it("keeps the dialog open with a message on a duplicate email", async () => {
+      vi.mocked(onboardingApplicationsService.createForOwner).mockRejectedValue(
+        {
+          response: {
+            data: { error: { code: "APPLICATION_ALREADY_PENDING" } },
+          },
+        },
+      );
+      vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+      const wrapper = await fillAndSubmit();
+
+      expect(
+        wrapper.get('[data-testid="operator-onboarding-error"]').text(),
+      ).toBe("platformOnboarding.create.errors.duplicate");
+    });
   });
 });

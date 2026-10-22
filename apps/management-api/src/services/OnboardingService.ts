@@ -18,6 +18,7 @@ import {
   DEFAULT_BILLING_CYCLE_MS,
   marketJoinRequests,
   markets,
+  orders,
   PLAN_TIERS,
   passwordResetTokens,
   planIdToTier,
@@ -30,7 +31,7 @@ import {
   CloudflareEmailProvider,
   type PaidPlanTier,
 } from "@makanmasak/database";
-import { ApiError, generateUUID } from "@makanmasak/utils";
+import { ApiError, conflict, generateUUID } from "@makanmasak/utils";
 import {
   COUNTRY_PROFILES,
   normalizeCountryCode,
@@ -203,7 +204,28 @@ export class OnboardingService {
   async createApplication(
     data: CreateApplicationRequest,
     metadata?: { ipAddress?: string; userAgent?: string },
+    // An operator-created application records who made it in the audit trail.
+    submittedBy?: { id: string; email: string },
   ): Promise<OnboardingApplication> {
+    // Without this a second application for the same owner would only fail
+    // (or silently fork) at approval time, after an operator has reviewed it.
+    // shortcut: check-then-insert, so two simultaneous submits can both pass;
+    // add a partial unique index on contact_email if that is ever seen.
+    const pending = await this.env.MANAGEMENT_DB.prepare(
+      `SELECT id FROM onboarding_applications
+       WHERE contact_email = ? COLLATE NOCASE
+         AND status NOT IN ('rejected', 'completed')
+       LIMIT 1`,
+    )
+      .bind(data.contactEmail.trim())
+      .first();
+    if (pending) {
+      throw conflict(
+        "An application for this email is already pending",
+        "APPLICATION_ALREADY_PENDING",
+      );
+    }
+
     const id = this.generateApplicationId();
     const now = new Date().toISOString();
     const applicationSecret = this.generateApplicationSecret();
@@ -253,7 +275,12 @@ export class OnboardingService {
       submittedAt: now,
       updatedAt: now,
     });
-    await this.writeApplicationAuditEvent(id, "submitted", undefined, {});
+    await this.writeApplicationAuditEvent(
+      id,
+      "submitted",
+      submittedBy,
+      submittedBy ? { source: "operator" } : {},
+    );
 
     return {
       ...(await this.getApplication(id))!,
@@ -736,10 +763,23 @@ export class OnboardingService {
     let ownerAccount: ProvisionedOwnerAccount | undefined;
     let credentialDelivery: CredentialDelivery | undefined;
 
-    try {
-      // Update status to provisioning
-      await this.updateApplicationStatus(applicationId, "provisioning");
+    // Compare-and-set: of two concurrent approvals (or approve vs reject) only
+    // one may claim the row. Outside the try so the loser never runs rollback,
+    // which would reset the winner's status back to submitted.
+    const claimed = await this.env.MANAGEMENT_DB.prepare(
+      `UPDATE onboarding_applications SET status = 'provisioning', updated_at = ?
+       WHERE id = ? AND status = 'submitted'`,
+    )
+      .bind(now, applicationId)
+      .run();
+    if (!claimed.meta?.changes) {
+      return {
+        success: false,
+        error: "Application is already being processed",
+      };
+    }
 
+    try {
       const tenant = await this.createTenantWithSubscription(application);
       tenantId = tenant.id;
       ownerAccount = await this.createPlatformOwnerAccount(
@@ -905,7 +945,9 @@ export class OnboardingService {
 
     const rejectedAtMs = Date.now();
     const managementDb = drizzle(this.env.MANAGEMENT_DB);
-    await managementDb
+    // Guarded like approval: a reject racing an approve must not overwrite a
+    // row that is already provisioning.
+    const rejected = await managementDb
       .update(onboardingApplications)
       .set({
         status: "rejected",
@@ -915,7 +957,19 @@ export class OnboardingService {
         // table; rejected_at_ms is the new column and carries the epoch.
         updatedAt: new Date(rejectedAtMs).toISOString(),
       })
-      .where(eq(onboardingApplications.id, applicationId));
+      .where(
+        and(
+          eq(onboardingApplications.id, applicationId),
+          eq(onboardingApplications.status, "submitted"),
+        ),
+      )
+      .returning({ id: onboardingApplications.id });
+    if (rejected.length === 0) {
+      return {
+        success: false,
+        error: "Application is already being processed",
+      };
+    }
     // The free-text reason stays on the application row (redacted with it).
     // Events are append-only, so anything written here outlives retention.
     await this.writeApplicationAuditEvent(applicationId, "rejected", actor, {});
@@ -926,6 +980,117 @@ export class OnboardingService {
       rejectionReason: reason,
       rejectedAtMs,
     };
+  }
+
+  /**
+   * Remove an application and everything its approval provisioned: the
+   * platform restaurant, its users, subscription, setup tokens and market join
+   * request, then the management tenant, its subscription, the credential
+   * delivery and the application row. For a shop registered by mistake and for
+   * e2e cleanup. Refused once the restaurant has orders, and each database is
+   * deleted in one batch, so a restaurant other rows still point at is left
+   * whole rather than half-deleted. Audit events are append-only (a DB trigger
+   * enforces it) and stay, with a "purged" event added.
+   */
+  async purgeApplication(
+    applicationId: string,
+    actor: { id: string; email: string },
+  ): Promise<{ success: boolean; code?: string; error?: string }> {
+    const application = await this.getApplication(applicationId);
+    if (!application) return { success: false, error: "Application not found" };
+    if (application.status === "provisioning") {
+      return {
+        success: false,
+        code: "INVALID_STATUS",
+        error: "Application is being provisioned",
+      };
+    }
+
+    const managementDb = drizzle(this.env.MANAGEMENT_DB);
+    const tenant = application.tenantId
+      ? await managementDb
+          .select({ platformRestaurantId: tenants.platformRestaurantId })
+          .from(tenants)
+          .where(eq(tenants.id, application.tenantId))
+          .get()
+      : undefined;
+    const restaurantId = tenant?.platformRestaurantId;
+
+    if (restaurantId) {
+      if (!this.env.PLATFORM_DB) {
+        throw new Error("Platform DB binding is not configured");
+      }
+      const platformDb = drizzle(this.env.PLATFORM_DB);
+      const [orderCount] = await platformDb
+        .select({ count: sql<number>`count(*)` })
+        .from(orders)
+        .where(eq(orders.restaurantId, restaurantId));
+      if ((orderCount?.count ?? 0) > 0) {
+        return {
+          success: false,
+          code: "RESTAURANT_HAS_ORDERS",
+          error: "The restaurant already has orders and cannot be purged",
+        };
+      }
+
+      const restaurantUsers = platformDb
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.restaurantId, restaurantId));
+      try {
+        await platformDb.batch([
+          platformDb
+            .delete(passwordResetTokens)
+            .where(inArray(passwordResetTokens.userId, restaurantUsers)),
+          platformDb
+            .delete(marketJoinRequests)
+            .where(eq(marketJoinRequests.restaurantId, restaurantId)),
+          platformDb
+            .delete(shopSubscriptions)
+            .where(eq(shopSubscriptions.restaurantId, restaurantId)),
+          platformDb.delete(users).where(eq(users.restaurantId, restaurantId)),
+          platformDb
+            .delete(restaurants)
+            .where(eq(restaurants.id, restaurantId)),
+        ]);
+      } catch (error) {
+        console.error("[OnboardingService] Purge platform rows failed:", error);
+        return {
+          success: false,
+          code: "RESTAURANT_IN_USE",
+          error: "Other records still reference this restaurant",
+        };
+      }
+      await this.invalidateRestaurantListCache();
+    }
+
+    // Children before parents: credential deliveries reference both the
+    // application and the tenant. Management shop_subscriptions key on the
+    // tenant id (see rollbackTenantProvisioning).
+    const managementDeletes = [
+      this.env.MANAGEMENT_DB.prepare(
+        "DELETE FROM onboarding_credential_deliveries WHERE application_id = ?",
+      ).bind(applicationId),
+      ...(application.tenantId
+        ? [
+            this.env.MANAGEMENT_DB.prepare(
+              "DELETE FROM shop_subscriptions WHERE restaurant_id = ?",
+            ).bind(application.tenantId),
+            this.env.MANAGEMENT_DB.prepare(
+              "DELETE FROM tenants WHERE id = ?",
+            ).bind(application.tenantId),
+          ]
+        : []),
+      this.env.MANAGEMENT_DB.prepare(
+        "DELETE FROM onboarding_applications WHERE id = ?",
+      ).bind(applicationId),
+    ];
+    await this.env.MANAGEMENT_DB.batch(managementDeletes);
+    await this.writeApplicationAuditEvent(applicationId, "purged", actor, {
+      ...(application.tenantId ? { tenantId: application.tenantId } : {}),
+      ...(restaurantId ? { restaurantId } : {}),
+    });
+    return { success: true };
   }
 
   async regenerateSetupPasswordLink(
@@ -1352,8 +1517,14 @@ export class OnboardingService {
         .bind(ownerAccount.userId)
         .run(),
     );
-    // Must be deleted before the restaurant row: shop_subscriptions.restaurant_id
-    // is an FK onto restaurants.id.
+    // Both must be deleted before the restaurant row: each carries an FK onto
+    // restaurants.id, and a leftover row makes the restaurant delete fail.
+    await this.runRollbackStep("platform market join request", () =>
+      drizzle(this.env.PLATFORM_DB!)
+        .delete(marketJoinRequests)
+        .where(eq(marketJoinRequests.restaurantId, ownerAccount.restaurantId))
+        .run(),
+    );
     await this.runRollbackStep("platform shop subscription", () =>
       this.env
         .PLATFORM_DB!.prepare(

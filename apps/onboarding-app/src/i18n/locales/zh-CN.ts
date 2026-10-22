@@ -68,6 +68,8 @@ const zhCN: Messages = {
     },
     title: "填写申请资料",
     submitErrors: {
+      alreadyPending:
+        "此 Email 已有一笔申请正在审核中。请用确认信里的状态链接查看进度；找不到链接请联系客服。",
       rateLimited:
         "提交次数太多了。同一个网络每小时最多提交 5 次（提交失败也会计算），请等到下一个整点再试，或改用手机网络。",
       validation: "有资料不符合规定，请检查每一栏后再提交一次。",
@@ -224,6 +226,8 @@ const zhCN: Messages = {
     businessName: "餐厅名称",
     currentStatus: "当前状态",
     rejectionReason: "未批准原因",
+    completedHint:
+      "您的店家已开通。请用发到 Email 的设置密码链接（或平台人员提供的链接）设置密码，再登录管理后台。链接 24 小时内有效；过期的话，请在登录页点击“忘记密码”。",
     lastUpdated: "可使用刷新查看最新进度。",
     refresh: "刷新状态",
     backHome: "返回首页",

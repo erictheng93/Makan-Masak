@@ -68,6 +68,63 @@ export const applicationSchema = z
     }
   });
 
+/**
+ * Shared by the public submit route and the operator route in
+ * admin-onboarding.ts, so both report the same validation error codes.
+ */
+export function parseApplicationBody(body: unknown) {
+  const parsed = applicationSchema.safeParse(body);
+  if (!parsed.success) {
+    const cityMismatch = parsed.error.issues.some(
+      (issue) => issue.path[0] === "city" && issue.code === "custom",
+    );
+    throw badRequest(
+      cityMismatch
+        ? "City is not in the selected country"
+        : "Validation failed",
+      cityMismatch ? "CITY_NOT_IN_COUNTRY" : "VALIDATION_ERROR",
+      parsed.error.issues,
+    );
+  }
+  return parsed.data;
+}
+
+/** A selected market must be active and in the application's city. */
+export async function assertMarketInCity(
+  env: ManagementEnv,
+  marketId: string | undefined,
+  city: string,
+): Promise<void> {
+  if (!marketId) return;
+  if (!env.PLATFORM_DB) {
+    throw new ApiError(
+      "PLATFORM_DB_UNAVAILABLE",
+      "Platform database is unavailable",
+      500,
+    );
+  }
+  const [market] = await drizzle(env.PLATFORM_DB)
+    .select({ city: markets.city })
+    .from(markets)
+    .where(
+      and(
+        eq(markets.id, marketId),
+        eq(markets.isActive, true),
+        isNull(markets.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!market) {
+    throw badRequest("Market not found", "MARKET_NOT_FOUND");
+  }
+  if (market.city !== city) {
+    throw badRequest(
+      "Market is not in the selected city",
+      "MARKET_NOT_IN_CITY",
+    );
+  }
+}
+
 async function requireApplicationSecret(
   c: Context<{ Bindings: ManagementEnv }>,
   onboardingService: OnboardingService,
@@ -117,51 +174,8 @@ router.post("/applications", async (c) => {
     const body = await c.req.json().catch(() => {
       throw badRequest("Invalid JSON body", "INVALID_JSON");
     });
-    const parsed = applicationSchema.safeParse(body);
-    if (!parsed.success) {
-      const cityMismatch = parsed.error.issues.some(
-        (issue) => issue.path[0] === "city" && issue.code === "custom",
-      );
-      throw badRequest(
-        cityMismatch
-          ? "City is not in the selected country"
-          : "Validation failed",
-        cityMismatch ? "CITY_NOT_IN_COUNTRY" : "VALIDATION_ERROR",
-        parsed.error.issues,
-      );
-    }
-    const validated = parsed.data;
-
-    if (validated.marketId) {
-      if (!c.env.PLATFORM_DB) {
-        throw new ApiError(
-          "PLATFORM_DB_UNAVAILABLE",
-          "Platform database is unavailable",
-          500,
-        );
-      }
-      const platformDb = drizzle(c.env.PLATFORM_DB);
-      const [market] = await platformDb
-        .select({ city: markets.city })
-        .from(markets)
-        .where(
-          and(
-            eq(markets.id, validated.marketId),
-            eq(markets.isActive, true),
-            isNull(markets.deletedAt),
-          ),
-        )
-        .limit(1);
-      if (!market) {
-        throw badRequest("Market not found", "MARKET_NOT_FOUND");
-      }
-      if (market.city !== validated.city) {
-        throw badRequest(
-          "Market is not in the selected city",
-          "MARKET_NOT_IN_CITY",
-        );
-      }
-    }
+    const validated = parseApplicationBody(body);
+    await assertMarketInCity(c.env, validated.marketId, validated.city);
 
     // Get request metadata
     const userAgent = c.req.header("user-agent") || "unknown";

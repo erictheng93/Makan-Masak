@@ -71,6 +71,8 @@ const idID: Messages = {
     },
     title: "Formulir Aplikasi",
     submitErrors: {
+      alreadyPending:
+        "Pengajuan untuk email ini sedang ditinjau. Gunakan tautan status di email konfirmasi untuk memantaunya, atau hubungi dukungan jika tidak menemukannya.",
       rateLimited:
         "Terlalu banyak pengiriman. Setiap jaringan dapat mengirim 5 kali per jam (percobaan gagal ikut dihitung). Silakan coba lagi setelah jam berikutnya, atau gunakan data seluler.",
       validation:
@@ -243,6 +245,8 @@ const idID: Messages = {
     businessName: "Nama Restoran",
     currentStatus: "Status Saat Ini",
     rejectionReason: "Alasan Penolakan",
+    completedHint:
+      'Toko Anda sudah aktif. Atur kata sandi dengan tautan yang dikirim ke email Anda (atau yang diberikan tim platform), lalu masuk ke dasbor admin. Tautan berlaku 24 jam; jika sudah kedaluwarsa, gunakan "Lupa kata sandi" di halaman masuk.',
     lastUpdated: "Segarkan untuk memeriksa pembaruan terbaru.",
     refresh: "Segarkan Status",
     backHome: "Kembali ke Rumah",

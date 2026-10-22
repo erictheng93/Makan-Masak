@@ -12,6 +12,14 @@
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          data-testid="open-operator-onboarding"
+          class="w-fit rounded-full bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+          @click="isCreateDialogOpen = true"
+        >
+          {{ t("platformOnboarding.create.open") }}
+        </button>
         <select
           v-model="statusFilter"
           data-testid="onboarding-status-filter"
@@ -567,6 +575,13 @@
               }}
             </p>
             <p
+              v-if="event.metadata?.source === 'operator'"
+              data-testid="onboarding-audit-operator"
+              class="mt-1 text-sm text-gray-700"
+            >
+              {{ t("platformOnboarding.audit.byOperator") }}
+            </p>
+            <p
               v-if="event.metadata?.reason"
               data-testid="onboarding-audit-reason"
               class="mt-1 text-sm text-gray-700"
@@ -638,6 +653,12 @@
       </form>
     </div>
 
+    <OperatorOnboardingDialog
+      v-if="isCreateDialogOpen"
+      @close="isCreateDialogOpen = false"
+      @created="onOperatorCreated"
+    />
+
     <div
       v-if="isRegenerateDialogOpen"
       class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4"
@@ -688,8 +709,10 @@ import {
   type OnboardingApplicationAuditEvent,
   type OnboardingApplication,
   type OnboardingApplicationStatus,
+  type OperatorApplicationResult,
   type ProvisionedOwnerAccount,
 } from "@/services/onboardingApplicationsService";
+import OperatorOnboardingDialog from "@/components/onboarding/OperatorOnboardingDialog.vue";
 import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import { useDateFormatter } from "@/composables/useDateFormatter";
 import { useI18n } from "@/i18n";
@@ -742,6 +765,7 @@ const auditEvents = ref<OnboardingApplicationAuditEvent[]>([]);
 const isLoadingAuditEvents = ref(false);
 const auditEventsError = ref(false);
 const isRegenerateDialogOpen = ref(false);
+const isCreateDialogOpen = ref(false);
 let copiedResetTimer: ReturnType<typeof setTimeout> | undefined;
 
 const approvableCount = computed(
@@ -882,6 +906,51 @@ async function approveApplication(
     error.value = t("platformOnboarding.errors.approve");
   } finally {
     actionId.value = "";
+  }
+}
+
+async function onOperatorCreated(result: OperatorApplicationResult) {
+  isCreateDialogOpen.value = false;
+  if (result.approval) {
+    pendingMarket.value = null;
+    // An operator-created shop skips review, so its market membership is
+    // approved too. Re-approving a completed application is idempotent and
+    // runs the same market step as the row's approve button.
+    if (result.application.marketId) {
+      try {
+        const marketResult = await onboardingApplicationsService.approve(
+          result.application.id,
+          { approveMarketMembership: true },
+        );
+        if (marketResult.marketApproval?.status === "pending") {
+          pendingMarket.value = {
+            application: result.application,
+            errorCode: marketResult.marketApproval.errorCode,
+          };
+        }
+      } catch (marketError) {
+        console.error("Failed to approve market membership:", marketError);
+        pendingMarket.value = {
+          application: result.application,
+          errorCode: "MARKET_APPROVAL_FAILED",
+        };
+      }
+    }
+    openOwnerHandoff(
+      result.application,
+      result.approval.ownerAccount,
+      result.approval.credentialDelivery,
+    );
+  }
+  notifyApplicationsChanged();
+  await loadApplications();
+  // After the reload, which clears `error`: the application exists and stays
+  // submitted, so the operator retries approval from its row.
+  if (result.approvalError) {
+    error.value = t("platformOnboarding.create.approvalFailed", {
+      business: result.application.businessName,
+      message: result.approvalError.message,
+    });
   }
 }
 

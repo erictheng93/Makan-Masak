@@ -70,6 +70,8 @@ const msMY: Messages = {
     },
     title: "Borang Permohonan",
     submitErrors: {
+      alreadyPending:
+        "Permohonan untuk e-mel ini sedang disemak. Gunakan pautan status dalam e-mel pengesahan anda untuk menjejakinya, atau hubungi sokongan jika anda tidak menjumpainya.",
       rateLimited:
         "Terlalu banyak penyerahan. Setiap rangkaian boleh menyerah 5 kali sejam (percubaan gagal turut dikira). Sila cuba selepas jam berikutnya, atau tukar ke data mudah alih.",
       validation:
@@ -242,6 +244,8 @@ const msMY: Messages = {
     businessName: "Nama Restoran",
     currentStatus: "Status Semasa",
     rejectionReason: "Sebab Penolakan",
+    completedHint:
+      'Kedai anda telah diaktifkan. Tetapkan kata laluan dengan pautan yang dihantar ke e-mel anda (atau yang diberikan oleh pasukan platform), kemudian log masuk ke papan pemuka pentadbir. Pautan sah selama 24 jam; jika telah tamat tempoh, gunakan "Lupa kata laluan" di halaman log masuk.',
     lastUpdated: "Segarkan untuk menyemak kemas kini terkini.",
     refresh: "Segarkan Status",
     backHome: "Kembali ke Rumah",

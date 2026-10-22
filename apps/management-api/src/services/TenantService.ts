@@ -8,7 +8,6 @@ import type {
   ManagementEnv,
   Tenant,
   TenantResource,
-  CreateTenantRequest,
   UpdateTenantRequest,
   TenantStatus,
   OnboardingPlanId,
@@ -155,46 +154,6 @@ export class TenantService {
     }
 
     throw new Error("Unable to generate an available subdomain");
-  }
-
-  /**
-   * Create new tenant
-   */
-  async createTenant(data: CreateTenantRequest): Promise<Tenant> {
-    const id = this.generateTenantId();
-    const now = new Date().toISOString();
-    const licenseKey = generateLicenseKey(data.licenseTier);
-    const subdomain =
-      data.subdomain ??
-      (await this.generateAvailableSubdomain(data.businessName));
-
-    await this.env.MANAGEMENT_DB.prepare(
-      `
-      INSERT INTO tenants (
-        id, business_name, contact_email, contact_phone, latitude, longitude,
-        subdomain, custom_domain, license_tier, license_key,
-        status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-    )
-      .bind(
-        id,
-        data.businessName,
-        data.contactEmail,
-        data.contactPhone || null,
-        null,
-        null,
-        subdomain,
-        data.customDomain || null,
-        data.licenseTier,
-        licenseKey,
-        "pending",
-        now,
-        now,
-      )
-      .run();
-
-    return (await this.getTenantById(id))!;
   }
 
   async provisionPlatformRestaurantTenant(data: {

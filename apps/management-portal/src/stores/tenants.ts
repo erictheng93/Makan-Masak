@@ -18,7 +18,7 @@ import type {
   DeploymentType,
   HealthCheck,
   License,
-  CreateTenantRequest,
+  OperatorOnboardingRequest,
   UpdateTenantRequest,
   TenantStatus,
 } from "@/types";
@@ -151,13 +151,14 @@ export const useTenantsStore = defineStore("tenants", () => {
     }
   }
 
-  async function createTenant(data: CreateTenantRequest) {
+  async function createTenant(data: OperatorOnboardingRequest) {
     loading.value = true;
     error.value = null;
     try {
-      const tenant = await tenantsApi.create(data);
-      tenants.value.push(tenant);
-      return tenant;
+      const result = await tenantsApi.create(data);
+      // 核准後才有租戶列；重抓列表即可，申請本身不在租戶列表裡
+      if (result.approval) await fetchTenants();
+      return result;
     } catch (e) {
       error.value = e instanceof Error ? e.message : "創建租戶失敗";
       throw e;

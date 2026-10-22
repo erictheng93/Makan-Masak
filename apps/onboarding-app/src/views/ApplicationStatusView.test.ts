@@ -78,6 +78,28 @@ describe("ApplicationStatusView", () => {
     },
   );
 
+  it("tells the owner of a completed application how to sign in", async () => {
+    mocks.getApplication.mockResolvedValue(application("completed"));
+
+    const wrapper = mount(ApplicationStatusView);
+    await flushPromises();
+
+    expect(
+      wrapper.get('[data-testid="onboarding-status-completed-hint"]').text(),
+    ).toBe("status.completedHint");
+  });
+
+  it("shows no sign-in hint before the application is completed", async () => {
+    mocks.getApplication.mockResolvedValue(application("submitted"));
+
+    const wrapper = mount(ApplicationStatusView);
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="onboarding-status-completed-hint"]').exists(),
+    ).toBe(false);
+  });
+
   it("displays the rejection reason for a rejected application", async () => {
     mocks.getApplication.mockResolvedValue(
       application("rejected", "Please provide your business registration."),
@@ -108,6 +130,17 @@ describe("ApplicationStatusView", () => {
         "Application secret is required",
         "APPLICATION_SECRET_REQUIRED",
       ),
+    );
+
+    const wrapper = mount(ApplicationStatusView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("status.error.invalidLink");
+  });
+
+  it("treats an unknown application id as an invalid link", async () => {
+    mocks.getApplication.mockRejectedValue(
+      new ApiError("Application not found", "NOT_FOUND"),
     );
 
     const wrapper = mount(ApplicationStatusView);

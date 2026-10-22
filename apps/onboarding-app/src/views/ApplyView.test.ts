@@ -333,6 +333,59 @@ describe("ApplyView locale and market selection", () => {
     expect(wrapper.text()).not.toContain("Too many");
   });
 
+  it("tells an applicant whose email already has a pending application how to follow it", async () => {
+    mocks.submitApplication.mockImplementation(async () => {
+      mocks.current!.apiErrorCode = "APPLICATION_ALREADY_PENDING";
+      return false;
+    });
+    const wrapper = mount(ApplyView);
+    await fillRequiredFields(wrapper);
+
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(mocks.submitApplication).toHaveBeenCalledOnce();
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      "apply.submitErrors.alreadyPending",
+    );
+    expect(wrapper.get('[role="alert"]').text()).toBe(
+      "apply.submitErrors.alreadyPending",
+    );
+  });
+
+  it("links each field error to its input for assistive technology", async () => {
+    const wrapper = mount(ApplyView);
+
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    const email = wrapper.get('[data-testid="onboarding-contact-email"]');
+    expect(email.attributes("aria-invalid")).toBe("true");
+    const describedBy = email.attributes("aria-describedby");
+    expect(wrapper.get(`#${describedBy}`).text()).toBe(
+      "apply.validation.emailRequired",
+    );
+    expect(wrapper.find('label[for="onboarding-contact-email"]').exists()).toBe(
+      true,
+    );
+    expect(mocks.submitApplication).not.toHaveBeenCalled();
+  });
+
+  it("sends trimmed contact fields so server length checks match the form's", async () => {
+    const wrapper = mount(ApplyView);
+    await fillRequiredFields(wrapper);
+    await wrapper
+      .get('[data-testid="onboarding-contact-phone"]')
+      .setValue("  0912345678  ");
+
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(mocks.submitApplication).toHaveBeenCalledWith(
+      expect.objectContaining({ contactPhone: "0912345678" }),
+    );
+  });
+
   it("falls back to the generic message for an unknown server error", async () => {
     mocks.submitApplication.mockImplementation(async () => {
       mocks.current!.apiErrorCode = "PLATFORM_DB_UNAVAILABLE";

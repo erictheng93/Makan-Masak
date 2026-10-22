@@ -122,18 +122,6 @@ export interface Tenant {
 }
 
 /**
- * Create tenant request
- */
-export interface CreateTenantRequest {
-  businessName: string;
-  contactEmail: string;
-  contactPhone?: string;
-  subdomain?: string;
-  customDomain?: string;
-  licenseTier: LicenseTier;
-}
-
-/**
  * Update tenant request
  */
 export interface UpdateTenantRequest {
