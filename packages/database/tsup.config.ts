@@ -6,7 +6,8 @@ export default defineConfig({
     "testing/index": "src/testing/index.ts",
   },
   format: ["esm", "cjs"],
-  dts: true,
+  // shortcut: tsup 8 injects `baseUrl` into its dts build, which TS 6 rejects; drop this once on tsup 9 (fixed there)
+  dts: { compilerOptions: { ignoreDeprecations: "6.0" } },
   splitting: false,
   sourcemap: true,
   clean: true,

@@ -28,6 +28,9 @@ interface LeafEntry {
   value: string;
 }
 
+// Any level of a locale tree; `Messages` only describes the root.
+type MessageTree = { [key: string]: string | MessageTree };
+
 const APPS: AppLocaleConfig[] = [
   {
     name: "admin-dashboard",
@@ -82,7 +85,7 @@ const approvalManifestPath = path.resolve(
 );
 
 function flattenMessages(
-  messages: Messages,
+  messages: MessageTree,
   prefix = "",
   entries: LeafEntry[] = [],
 ): LeafEntry[] {

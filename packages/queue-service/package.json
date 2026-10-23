@@ -21,7 +21,8 @@
   "author": "MakanMasak Team",
   "license": "MIT",
   "devDependencies": {
-    "typescript": "^5.0.0"
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
   },
   "dependencies": {
     "@makanmasak/queue-core": "workspace:*",

@@ -15,14 +15,13 @@
     "composite": false,
     "noEmit": true,
     "types": ["node", "@playwright/test", "vitest/globals"],
-    "baseUrl": "..",
     "paths": {
-      "@makanmasak/shared-types": ["packages/shared-types/src"],
-      "@makanmasak/shared-types/*": ["packages/shared-types/src/*"],
-      "@makanmasak/database": ["packages/database/src"],
-      "@makanmasak/database/*": ["packages/database/src/*"],
-      "@makanmasak/utils": ["packages/utils/src"],
-      "@makanmasak/utils/*": ["packages/utils/src/*"]
+      "@makanmasak/shared-types": ["../packages/shared-types/src"],
+      "@makanmasak/shared-types/*": ["../packages/shared-types/src/*"],
+      "@makanmasak/database": ["../packages/database/src"],
+      "@makanmasak/database/*": ["../packages/database/src/*"],
+      "@makanmasak/utils": ["../packages/utils/src"],
+      "@makanmasak/utils/*": ["../packages/utils/src/*"]
     }
   },
   "include": ["**/*.ts"],

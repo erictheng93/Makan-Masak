@@ -2,7 +2,8 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
+    "types": ["node"],
     "resolveJsonModule": true,
     "isolatedModules": true,
     "composite": true,
@@ -18,7 +19,6 @@
     "sourceMap": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "baseUrl": ".",
     "paths": {
       "@makanmasak/shared-types": ["../shared-types/src"],
       "@makanmasak/shared-types/*": ["../shared-types/src/*"]

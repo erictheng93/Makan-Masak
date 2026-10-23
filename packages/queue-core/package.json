@@ -23,8 +23,9 @@
   "author": "MakanMasak Team",
   "license": "MIT",
   "devDependencies": {
+    "@typescript/native": "npm:typescript@^7.0.2",
     "@vitest/coverage-v8": "^4.1.9",
-    "typescript": "^5.0.0",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vitest": "^4.1.0"
   },
   "dependencies": {
