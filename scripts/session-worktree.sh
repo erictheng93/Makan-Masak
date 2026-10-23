@@ -42,7 +42,8 @@ link_local_state() {
   fi
 
   local item
-  for item in .env.local .wrangler; do
+  for item in .env.local .wrangler apps/api/.dev.vars apps/realtime/.dev.vars \
+    apps/management-api/.dev.vars; do
     local src="$PRIMARY_ROOT/$item"
     local dst="$root/$item"
     if [ ! -e "$src" ]; then
