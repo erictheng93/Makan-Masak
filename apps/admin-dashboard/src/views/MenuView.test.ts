@@ -236,6 +236,50 @@ describe("MenuView", () => {
     ).toContain("逢甲夜市");
   });
 
+  it("keeps bulk import collapsed until the owner asks for it", async () => {
+    const wrapper = mount(MenuView, {
+      global: {
+        stubs: {
+          CategoryPanel: true,
+          CategoryEditForm: true,
+          MenuItemCard: true,
+          VirtualMenuGrid: true,
+        },
+      },
+    });
+    const panel = () =>
+      wrapper.get<HTMLElement>('[data-testid="menu-bulk-import"]').element;
+    const toggle = wrapper.get('[data-testid="admin-menu-bulk-import-toggle"]');
+
+    expect(panel().style.display).toBe("none");
+    expect(toggle.attributes("aria-expanded")).toBe("false");
+
+    await toggle.trigger("click");
+    expect(panel().style.display).toBe("");
+    expect(toggle.attributes("aria-expanded")).toBe("true");
+    expect(toggle.text()).toBe("menu.import.collapse");
+  });
+
+  it("opens bulk import when arriving from a market product gap", () => {
+    routeQuery.source = "market-gap";
+    routeQuery.gap = "products";
+    const wrapper = mount(MenuView, {
+      global: {
+        stubs: {
+          CategoryPanel: true,
+          CategoryEditForm: true,
+          MenuItemCard: true,
+          VirtualMenuGrid: true,
+        },
+      },
+    });
+
+    expect(
+      wrapper.get<HTMLElement>('[data-testid="menu-bulk-import"]').element.style
+        .display,
+    ).toBe("");
+  });
+
   it("includes market context in the product gap import example", async () => {
     routeQuery.source = "market-gap";
     routeQuery.gap = "products";
@@ -309,6 +353,83 @@ describe("MenuView", () => {
     expect(wrapper.get('[data-testid="menu-item-import-success"]').text()).toBe(
       "menu.import.successBanner 1",
     );
+  });
+
+  it("imports the valid rows and leaves the failed ones to fix", async () => {
+    const wrapper = mount(MenuView, {
+      global: {
+        stubs: {
+          CategoryPanel: true,
+          CategoryEditForm: true,
+          MenuItemCard: true,
+          VirtualMenuGrid: true,
+        },
+      },
+    });
+
+    await wrapper
+      .get('[data-testid="menu-item-import-csv"]')
+      .setValue(
+        ["名稱\t價格\t分類", "紅茶\t25\t主食", "綠茶\t\t主食"].join("\n"),
+      );
+
+    expect(
+      wrapper
+        .findAll('[data-testid="menu-item-import-preview"] tbody tr')
+        .map((row) => row.attributes("data-status")),
+    ).toEqual(["ok", "error"]);
+    expect(wrapper.text()).toContain("menu.import.previewSkipped 1");
+
+    await wrapper
+      .get('[data-testid="menu-item-import-submit"]')
+      .trigger("click");
+    await flushPromises();
+
+    expect(importMenuItems).toHaveBeenCalledOnce();
+    expect(importMenuItems).toHaveBeenCalledWith([
+      expect.objectContaining({ name: "紅茶", categoryId: 1 }),
+    ]);
+    expect(
+      wrapper.get<HTMLTextAreaElement>('[data-testid="menu-item-import-csv"]')
+        .element.value,
+    ).toContain("綠茶");
+    expect(
+      wrapper.get<HTMLTextAreaElement>('[data-testid="menu-item-import-csv"]')
+        .element.value,
+    ).not.toContain("紅茶");
+  });
+
+  it("warns about rows already on the menu and shows the parsed price", async () => {
+    menuItems.value = [menuItem({ name: "紅茶" })];
+    const wrapper = mount(MenuView, {
+      global: {
+        stubs: {
+          CategoryPanel: true,
+          CategoryEditForm: true,
+          MenuItemCard: true,
+          VirtualMenuGrid: true,
+        },
+      },
+    });
+
+    await wrapper
+      .get('[data-testid="menu-item-import-csv"]')
+      .setValue(
+        ["名稱\t價格\t分類", "紅茶\tNT$1,200\t飲料", "綠茶\t30\t飲料"].join(
+          "\n",
+        ),
+      );
+
+    const rows = wrapper.findAll(
+      '[data-testid="menu-item-import-preview"] tbody tr',
+    );
+    expect(
+      rows[0].find('[data-testid="menu-item-import-duplicate"]').exists(),
+    ).toBe(true);
+    expect(rows[0].text()).toContain("$1200");
+    expect(
+      rows[1].find('[data-testid="menu-item-import-duplicate"]').exists(),
+    ).toBe(false);
   });
 
   it("creates image-import categories before one atomic item bulk request", async () => {

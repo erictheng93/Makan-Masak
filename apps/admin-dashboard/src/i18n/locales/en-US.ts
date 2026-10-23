@@ -314,14 +314,29 @@ const enUS: Messages = {
       importInvalid: "Check the import data format before submitting.",
     },
     import: {
+      toggle: "Bulk add",
+      collapse: "Hide bulk add",
       title: "Batch import products",
       description:
-        "Paste CSV to add products for night market and district search in one batch.",
+        "Copy your product table from Excel or Google Sheets and paste it here. Only name and price are required.",
       loadExample: "Load example",
-      previewReady: "Parsed {count} products, ready to import.",
+      previewReady: "{count} ready to import",
       submit: "Import products",
       submitting: "Importing...",
       successBanner: "Successfully imported {count} items.",
+      placeholder:
+        "Select the table in Excel or Google Sheets (including the header row with 名稱 / 價格 or name / price), copy, and paste here",
+      previewSkipped: "{count} with problems will be skipped",
+      colRow: "Row",
+      colName: "Name",
+      colCategory: "Category",
+      colPrice: "Price",
+      colStatus: "Status",
+      statusOk: "Ready",
+      statusDuplicate: "Already on the menu — will be added again",
+      submitCount: "Import {count} products",
+      retryHint:
+        "Rows that were not imported are still in the box. Fix them and import again.",
     },
     conflict: {
       title: "This item was changed by someone else",

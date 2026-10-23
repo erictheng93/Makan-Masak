@@ -63,23 +63,54 @@
 
       <!-- RIGHT: Items panel -->
       <div>
-        <!-- Items header -->
+        <!-- Items header: title + actions, then search + filters -->
         <div
-          class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 bg-white rounded-2xl px-5 py-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]"
+          class="mb-4 space-y-3 rounded-2xl bg-white px-5 py-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]"
         >
-          <div class="flex items-center gap-3">
-            <h2 class="text-[17px] font-bold text-ios-text">
-              {{ currentCategoryName }}
-            </h2>
-            <span
-              class="px-2.5 py-0.5 bg-ios-bg rounded-full text-[12px] font-semibold text-ios-secondary"
-            >
-              {{
-                t("menu.itemsHeader.itemCount", { count: filteredItems.length })
-              }}
-            </span>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex min-w-0 items-center gap-3">
+              <h2 class="truncate text-[17px] font-bold text-ios-text">
+                {{ currentCategoryName }}
+              </h2>
+              <span
+                class="shrink-0 whitespace-nowrap px-2.5 py-0.5 bg-ios-bg rounded-full text-[12px] font-semibold text-ios-secondary"
+              >
+                {{
+                  t("menu.itemsHeader.itemCount", {
+                    count: filteredItems.length,
+                  })
+                }}
+              </span>
+            </div>
+            <div class="flex items-center gap-2.5">
+              <button
+                type="button"
+                data-testid="admin-menu-bulk-import-toggle"
+                aria-controls="menu-bulk-import"
+                :aria-expanded="showBulkImport"
+                class="flex items-center gap-1.5 rounded-full bg-ios-bg px-4 py-[9px] text-[13px] font-semibold text-ios-text hover:bg-ios-separator"
+                @click="showBulkImport = !showBulkImport"
+              >
+                <TableCellsIcon class="h-4 w-4" />
+                {{
+                  showBulkImport
+                    ? t("menu.import.collapse")
+                    : t("menu.import.toggle")
+                }}
+              </button>
+
+              <!-- Add item button -->
+              <button
+                data-testid="admin-menu-add-item"
+                class="flex items-center gap-1.5 px-[18px] py-[9px] bg-blue-600 text-white rounded-full text-[13px] font-semibold -translate-y-px shadow-[0_4px_14px_rgba(0,122,255,0.3)]"
+                @click="openAddItemModal"
+              >
+                <PlusIcon class="h-4 w-4" />
+                {{ t("menu.addItem") }}
+              </button>
+            </div>
           </div>
-          <div class="flex flex-wrap gap-2.5 items-center">
+          <div class="flex flex-wrap items-center gap-2.5">
             <!-- Search input -->
             <div class="relative">
               <MagnifyingGlassIcon
@@ -93,7 +124,6 @@
                 class="pl-9 pr-4 py-2 bg-ios-bg rounded-full text-[13px] text-ios-text placeholder-ios-tertiary border-0 outline-none focus:ring-2 focus:ring-ios-primary/30 w-44 transition-all"
               />
             </div>
-
             <!-- Status filter pills -->
             <div class="flex items-center bg-ios-bg rounded-full p-0.5">
               <button
@@ -110,148 +140,239 @@
                 {{ filter.label }}
               </button>
             </div>
-
-            <!-- Add item button -->
-            <button
-              data-testid="admin-menu-add-item"
-              class="flex items-center gap-1.5 px-[18px] py-[9px] bg-blue-600 text-white rounded-full text-[13px] font-semibold -translate-y-px shadow-[0_4px_14px_rgba(0,122,255,0.3)]"
-              @click="openAddItemModal"
-            >
-              <PlusIcon class="h-4 w-4" />
-              {{ t("menu.addItem") }}
-            </button>
           </div>
         </div>
 
-        <section
-          class="mb-4 rounded-2xl bg-white px-5 py-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]"
+        <!-- Bulk import: collapsed unless asked for; v-show keeps unsaved drafts -->
+        <div
+          v-show="showBulkImport"
+          id="menu-bulk-import"
+          data-testid="menu-bulk-import"
         >
-          <div
-            v-if="isMarketProductGapContext"
-            data-testid="market-product-gap-context"
-            class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3"
+          <section
+            class="mb-4 rounded-2xl bg-white px-5 py-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]"
           >
-            <h3 class="text-[15px] font-bold text-amber-900">市場搜尋缺商品</h3>
-            <p class="mt-1 text-[13px] leading-5 text-amber-800">
-              新增可販售餐點或商品並保持上架後，這間店鋪會更容易出現在
-              {{ marketGapName || "夜市/商圈" }} 搜尋結果。
-            </p>
-          </div>
-          <div class="flex flex-col gap-3 sm:flex-row sm:justify-between">
-            <div>
-              <h3 class="text-[15px] font-bold text-ios-text">
-                {{ t("menu.import.title") }}
+            <div
+              v-if="isMarketProductGapContext"
+              data-testid="market-product-gap-context"
+              class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3"
+            >
+              <h3 class="text-[15px] font-bold text-amber-900">
+                市場搜尋缺商品
               </h3>
-              <p class="mt-1 text-[13px] text-ios-secondary">
-                {{ t("menu.import.description") }}
+              <p class="mt-1 text-[13px] leading-5 text-amber-800">
+                新增可販售餐點或商品並保持上架後，這間店鋪會更容易出現在
+                {{ marketGapName || "夜市/商圈" }} 搜尋結果。
               </p>
             </div>
-            <button
-              type="button"
-              class="w-fit rounded-full bg-ios-bg px-3.5 py-2 text-[13px] font-semibold text-ios-text hover:bg-ios-separator"
-              @click="loadMenuItemImportExample"
+            <div class="flex flex-col gap-3 sm:flex-row sm:justify-between">
+              <div>
+                <h3 class="text-[15px] font-bold text-ios-text">
+                  {{ t("menu.import.title") }}
+                </h3>
+                <p class="mt-1 text-[13px] text-ios-secondary">
+                  {{ t("menu.import.description") }}
+                </p>
+              </div>
+              <button
+                type="button"
+                class="w-fit rounded-full bg-ios-bg px-3.5 py-2 text-[13px] font-semibold text-ios-text hover:bg-ios-separator"
+                @click="loadMenuItemImportExample"
+              >
+                {{ t("menu.import.loadExample") }}
+              </button>
+            </div>
+
+            <textarea
+              v-model="menuItemImportText"
+              rows="6"
+              data-testid="menu-item-import-csv"
+              class="mt-3 w-full rounded-xl border-0 bg-ios-bg px-3 py-2 font-mono text-[13px] text-ios-text outline-none focus:ring-2 focus:ring-ios-primary/30"
+              :placeholder="t('menu.import.placeholder')"
+            />
+
+            <div
+              v-if="menuItemImportPreview.errors.length"
+              class="mt-3 space-y-1"
             >
-              {{ t("menu.import.loadExample") }}
-            </button>
-          </div>
-
-          <textarea
-            v-model="menuItemImportText"
-            rows="6"
-            data-testid="menu-item-import-csv"
-            class="mt-3 w-full rounded-xl border-0 bg-ios-bg px-3 py-2 font-mono text-[13px] text-ios-text outline-none focus:ring-2 focus:ring-ios-primary/30"
-            placeholder="name,category,price,description,imageUrl,isFeatured,isAvailable,sortOrder,catalogType,tags,keywords"
-          />
-
-          <div
-            v-if="menuItemImportPreview.errors.length"
-            class="mt-3 space-y-1"
-          >
+              <p
+                v-for="importError in menuItemImportPreview.errors"
+                :key="importError"
+                class="text-[13px] text-ios-error"
+              >
+                {{ importError }}
+              </p>
+            </div>
             <p
-              v-for="importError in menuItemImportPreview.errors"
-              :key="importError"
-              class="text-[13px] text-ios-error"
+              v-if="menuItemImportError"
+              class="mt-3 text-[13px] text-ios-error"
             >
-              {{ importError }}
+              {{ menuItemImportError }}
             </p>
-          </div>
-          <p v-if="menuItemImportError" class="mt-3 text-[13px] text-ios-error">
-            {{ menuItemImportError }}
-          </p>
-          <div
-            v-if="
-              menuItemImportText.trim() &&
-              !menuItemImportPreview.errors.length &&
-              menuItemImportPreview.items.length
-            "
-            class="mt-3 rounded-xl bg-blue-50 px-3 py-2 text-[13px] text-blue-800"
-          >
-            {{
-              t("menu.import.previewReady", {
-                count: menuItemImportPreview.items.length,
-              })
-            }}
-          </div>
-          <div
-            v-if="menuItemImportResult"
-            data-testid="menu-item-import-success"
-            class="mt-3 rounded-xl bg-green-50 px-3 py-2 text-[13px] text-green-800"
-          >
-            {{
-              t("menu.import.successBanner", { count: menuItemImportResult })
-            }}
-          </div>
-          <div
-            v-if="showMarketProductGapNextStep"
-            data-testid="market-product-gap-next-step"
-            class="mt-3 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-[13px] leading-5 text-blue-800"
-          >
-            已補齊
-            {{ marketGapName || "夜市/商圈" }}
-            的商品資料。請回到市場公開品質並重建搜尋索引，讓顧客搜尋立即包含這批商品。
-            <button
-              type="button"
-              data-testid="market-product-gap-return"
-              class="mt-2 block rounded-lg bg-blue-100 px-3 py-1.5 text-[12px] font-semibold text-blue-900 hover:bg-blue-200"
-              @click="returnToMarketReadiness"
-            >
-              回市場公開品質
-            </button>
-          </div>
-
-          <div class="mt-4 flex justify-end">
-            <button
-              type="button"
-              data-testid="menu-item-import-submit"
-              class="rounded-full bg-blue-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-[0_4px_14px_rgba(0,122,255,0.25)] disabled:opacity-50"
-              :disabled="
-                isImportingMenuItems ||
-                !menuItemImportText.trim() ||
-                menuItemImportPreview.errors.length > 0 ||
-                menuItemImportPreview.items.length === 0
+            <div
+              v-if="
+                !menuItemImportPreview.errors.length &&
+                menuItemImportPreview.rows.length
               "
-              @click="importMenuItemsFromCsv"
+              data-testid="menu-item-import-preview"
+              class="mt-3"
+            >
+              <p class="text-[13px] font-semibold text-ios-text">
+                {{
+                  t("menu.import.previewReady", {
+                    count: menuItemImportPreview.items.length,
+                  })
+                }}
+                <span
+                  v-if="menuItemImportSkippedCount"
+                  class="text-ios-warning"
+                >
+                  ·
+                  {{
+                    t("menu.import.previewSkipped", {
+                      count: menuItemImportSkippedCount,
+                    })
+                  }}
+                </span>
+              </p>
+              <div class="mt-2 max-h-72 overflow-auto rounded-xl bg-ios-bg">
+                <table class="w-full text-left text-[13px]">
+                  <thead class="sticky top-0 bg-ios-bg text-ios-secondary">
+                    <tr>
+                      <th class="hidden px-3 py-2 font-medium sm:table-cell">
+                        {{ t("menu.import.colRow") }}
+                      </th>
+                      <th class="px-3 py-2 font-medium">
+                        {{ t("menu.import.colName") }}
+                      </th>
+                      <th class="hidden px-3 py-2 font-medium sm:table-cell">
+                        {{ t("menu.import.colCategory") }}
+                      </th>
+                      <th class="px-3 py-2 text-right font-medium">
+                        {{ t("menu.import.colPrice") }}
+                      </th>
+                      <th class="px-3 py-2 font-medium">
+                        {{ t("menu.import.colStatus") }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="row in menuItemImportPreview.rows"
+                      :key="row.line"
+                      :data-status="row.errors.length ? 'error' : 'ok'"
+                      class="align-top"
+                    >
+                      <td
+                        class="hidden px-3 py-2 text-ios-secondary sm:table-cell"
+                      >
+                        {{ row.line }}
+                      </td>
+                      <td class="px-3 py-2 text-ios-text">{{ row.name }}</td>
+                      <td class="hidden px-3 py-2 text-ios-text sm:table-cell">
+                        {{ row.categoryName }}
+                      </td>
+                      <td
+                        class="whitespace-nowrap px-3 py-2 text-right text-ios-text"
+                      >
+                        {{ row.item ? formatPrice(row.item.price) : row.price }}
+                      </td>
+                      <td class="px-3 py-2">
+                        <span
+                          v-if="
+                            !row.errors.length && menuItemNames.has(row.name)
+                          "
+                          data-testid="menu-item-import-duplicate"
+                          class="text-ios-warning"
+                        >
+                          {{ t("menu.import.statusDuplicate") }}
+                        </span>
+                        <span
+                          v-else-if="!row.errors.length"
+                          class="text-ios-success"
+                        >
+                          {{ t("menu.import.statusOk") }}
+                        </span>
+                        <span
+                          v-for="rowError in row.errors"
+                          v-else
+                          :key="rowError"
+                          class="block text-ios-error"
+                        >
+                          {{ rowError }}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div
+              v-if="menuItemImportResult"
+              data-testid="menu-item-import-success"
+              class="mt-3 rounded-xl bg-green-50 px-3 py-2 text-[13px] text-green-800"
             >
               {{
-                isImportingMenuItems
-                  ? t("menu.import.submitting")
-                  : t("menu.import.submit")
+                t("menu.import.successBanner", { count: menuItemImportResult })
               }}
-            </button>
-          </div>
-        </section>
+              <span v-if="menuItemImportText.trim()">
+                {{ t("menu.import.retryHint") }}
+              </span>
+            </div>
+            <div
+              v-if="showMarketProductGapNextStep"
+              data-testid="market-product-gap-next-step"
+              class="mt-3 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-[13px] leading-5 text-blue-800"
+            >
+              已補齊
+              {{ marketGapName || "夜市/商圈" }}
+              的商品資料。請回到市場公開品質並重建搜尋索引，讓顧客搜尋立即包含這批商品。
+              <button
+                type="button"
+                data-testid="market-product-gap-return"
+                class="mt-2 block rounded-lg bg-blue-100 px-3 py-1.5 text-[12px] font-semibold text-blue-900 hover:bg-blue-200"
+                @click="returnToMarketReadiness"
+              >
+                回市場公開品質
+              </button>
+            </div>
 
-        <ImageAssistedMenuImport
-          :categories="categories"
-          :source-images="imageMenuSourceImages"
-          :is-publishing="isPublishingImageMenu"
-          :upload-error="imageMenuUploadError"
-          :publish-error="imageMenuPublishError"
-          :errors="imageMenuErrors"
-          :category-errors="imageMenuCategoryErrors"
-          @select-images="uploadImageMenuSources"
-          @publish="publishImageAssistedMenu"
-        />
+            <div class="mt-4 flex justify-end">
+              <button
+                type="button"
+                data-testid="menu-item-import-submit"
+                class="rounded-full bg-blue-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-[0_4px_14px_rgba(0,122,255,0.25)] disabled:opacity-50"
+                :disabled="
+                  isImportingMenuItems ||
+                  menuItemImportPreview.items.length === 0
+                "
+                @click="importMenuItemsFromCsv"
+              >
+                {{
+                  isImportingMenuItems
+                    ? t("menu.import.submitting")
+                    : menuItemImportPreview.items.length
+                      ? t("menu.import.submitCount", {
+                          count: menuItemImportPreview.items.length,
+                        })
+                      : t("menu.import.submit")
+                }}
+              </button>
+            </div>
+          </section>
+
+          <ImageAssistedMenuImport
+            :categories="categories"
+            :source-images="imageMenuSourceImages"
+            :is-publishing="isPublishingImageMenu"
+            :upload-error="imageMenuUploadError"
+            :publish-error="imageMenuPublishError"
+            :errors="imageMenuErrors"
+            :category-errors="imageMenuCategoryErrors"
+            @select-images="uploadImageMenuSources"
+            @publish="publishImageAssistedMenu"
+          />
+        </div>
 
         <!-- VirtualMenuGrid -->
         <VirtualMenuGrid
@@ -287,14 +408,26 @@
           <p class="text-[14px] text-ios-secondary mb-5">
             {{ t("menu.empty.subtitle") }}
           </p>
-          <button
-            data-testid="admin-menu-add-item-empty"
-            class="flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 text-white rounded-full text-[14px] font-semibold -translate-y-px shadow-[0_4px_14px_rgba(0,122,255,0.3)]"
-            @click="openAddItemModal"
-          >
-            <PlusIcon class="h-4 w-4" />
-            {{ t("menu.addItem") }}
-          </button>
+          <div class="flex flex-wrap justify-center gap-2.5">
+            <button
+              v-if="!showBulkImport"
+              type="button"
+              data-testid="admin-menu-bulk-import-empty"
+              class="flex items-center gap-1.5 rounded-full bg-ios-bg px-5 py-2.5 text-[14px] font-semibold text-ios-text hover:bg-ios-separator"
+              @click="showBulkImport = true"
+            >
+              <TableCellsIcon class="h-4 w-4" />
+              {{ t("menu.import.toggle") }}
+            </button>
+            <button
+              data-testid="admin-menu-add-item-empty"
+              class="flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 text-white rounded-full text-[14px] font-semibold -translate-y-px shadow-[0_4px_14px_rgba(0,122,255,0.3)]"
+              @click="openAddItemModal"
+            >
+              <PlusIcon class="h-4 w-4" />
+              {{ t("menu.addItem") }}
+            </button>
+          </div>
         </div>
 
         <!-- Loading state -->
@@ -1322,10 +1455,12 @@ import {
   MagnifyingGlassIcon,
   CakeIcon,
   ExclamationTriangleIcon,
+  TableCellsIcon,
 } from "@heroicons/vue/24/outline";
 import {
   buildMenuItemImportTemplate,
   parseMenuItemImport,
+  buildMenuItemImportRetryText,
 } from "@/utils/menuItemImport";
 import {
   validateImageAssistedMenuItems,
@@ -1365,7 +1500,7 @@ type CustomizationGroupForm = {
 };
 
 const { t } = useI18n();
-const { inputStep, currencyCode } = useCurrency();
+const { inputStep, currencyCode, formatPrice } = useCurrency();
 const route = useRoute();
 const router = useRouter();
 const {
@@ -1711,6 +1846,8 @@ const isMarketProductGapContext = computed(
   () => route.query.source === "market-gap" && route.query.gap === "products",
 );
 const marketGapName = computed(() => firstQueryString(route.query.marketName));
+// The market "missing products" link lands here to bulk-add, so open it there.
+const showBulkImport = ref(isMarketProductGapContext.value);
 const marketGapSlug = computed(() => firstQueryString(route.query.marketSlug));
 const marketGapAreaCity = computed(() =>
   firstQueryString(route.query.areaCity),
@@ -1729,15 +1866,24 @@ const currentImagePreview = computed(
 );
 const menuItemImportPreview = computed(() => {
   if (!menuItemImportText.value.trim()) {
-    return { items: [], errors: [] };
+    return { items: [], errors: [], rows: [] };
   }
 
   return parseMenuItemImport(
     menuItemImportText.value,
     categories.value,
     currencyCode.value,
+    selectedCategoryId.value,
   );
 });
+const menuItemNames = computed(
+  () => new Set(menuItems.value.map((item) => item.name.trim())),
+);
+const menuItemImportSkippedCount = computed(
+  () =>
+    menuItemImportPreview.value.rows.length -
+    menuItemImportPreview.value.items.length,
+);
 
 // ── Category Panel Handlers ──
 const startAddCategory = () => {
@@ -2323,7 +2469,11 @@ const loadMenuItemImportExample = () => {
   menuItemImportError.value = "";
   menuItemImportResult.value = null;
   menuItemImportText.value = buildMenuItemImportTemplate(
-    currentCategoryName.value,
+    (
+      categories.value.find(
+        (category) => category.id === selectedCategoryId.value,
+      ) ?? categories.value[0]
+    )?.name,
     marketGapName.value,
   );
 };
@@ -2350,7 +2500,7 @@ function returnToMarketReadiness() {
 
 const importMenuItemsFromCsv = async () => {
   const parsed = menuItemImportPreview.value;
-  if (!parsed.items.length || parsed.errors.length) {
+  if (!parsed.items.length) {
     menuItemImportError.value =
       parsed.errors[0] ?? t("menu.errors.importInvalid");
     return;
@@ -2363,7 +2513,8 @@ const importMenuItemsFromCsv = async () => {
     await importMenuItems(parsed.items);
     menuItemImportResult.value = parsed.items.length;
     hasCompletedMarketProductGap.value = true;
-    menuItemImportText.value = "";
+    // Leave only the skipped rows, so fixing and resubmitting cannot duplicate.
+    menuItemImportText.value = buildMenuItemImportRetryText(parsed.rows);
   } catch (error) {
     // importMenuItems already localises the reason (including the failing row)
     // and puts it on the Error it rethrows; nothing was written, so the owner

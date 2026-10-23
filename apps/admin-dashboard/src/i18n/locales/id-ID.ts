@@ -314,14 +314,29 @@ const idID: Messages = {
       importInvalid: "Check the import data format before submitting.",
     },
     import: {
+      toggle: "Tambah massal",
+      collapse: "Tutup tambah massal",
       title: "Impor produk massal",
       description:
-        "Tempel CSV untuk menambahkan produk pencarian pasar malam/kawasan sekaligus.",
+        "Salin tabel produk dari Excel atau Google Sheets lalu tempel di sini. Hanya nama dan harga yang wajib.",
       loadExample: "Muat contoh",
-      previewReady: "{count} produk berhasil dibaca, siap diimpor.",
+      previewReady: "{count} siap diimpor",
       submit: "Impor produk",
       submitting: "Mengimpor...",
       successBanner: "Successfully imported {count} items.",
+      placeholder:
+        "Pilih tabel di Excel atau Google Sheets (termasuk baris judul), salin, lalu tempel di sini",
+      previewSkipped: "{count} bermasalah akan dilewati",
+      colRow: "Baris",
+      colName: "Nama",
+      colCategory: "Kategori",
+      colPrice: "Harga",
+      colStatus: "Status",
+      statusOk: "Siap",
+      statusDuplicate: "Sudah ada di menu — akan ditambahkan lagi",
+      submitCount: "Impor {count} produk",
+      retryHint:
+        "Baris yang belum diimpor masih ada di kotak. Perbaiki lalu impor lagi.",
     },
     conflict: {
       title: "This item was changed by someone else",
