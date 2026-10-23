@@ -84,6 +84,15 @@ export default defineConfig({
           "http://localhost:8787",
         changeOrigin: true,
       },
+      // useFeatureAvailability derives /info from the relative /api/v1 base.
+      // Unproxied it 404s and fails open, so dev saw every unlaunched feature
+      // as enabled. Exact match, as in customer-app: keeps it off /info* routes.
+      "^/info$": {
+        target:
+          process.env.VITE_API_BASE_URL?.replace("/api/v1", "") ||
+          "http://localhost:8787",
+        changeOrigin: true,
+      },
     },
   },
   build: {

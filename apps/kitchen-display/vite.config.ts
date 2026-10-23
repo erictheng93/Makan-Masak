@@ -56,6 +56,14 @@ export default defineConfig({
           "http://localhost:8787",
         changeOrigin: true,
       },
+      // The connectivity probe hits /info at the API root. Exact match, as in
+      // customer-app, so no /info* SPA route is proxied.
+      "^/info$": {
+        target:
+          process.env.VITE_API_BASE_URL?.replace("/api/v1", "") ||
+          "http://localhost:8787",
+        changeOrigin: true,
+      },
     },
   },
   build: {

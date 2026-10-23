@@ -84,6 +84,8 @@ export interface Env {
 
   // Cloudflare bindings - Core
   DB: D1Database;
+  /** Set only by the local `pnpm dev` script; enables withD1ReadRetry. */
+  D1_READ_RETRY?: string;
   CACHE_KV: KVNamespace;
   TOKEN_BLACKLIST: KVNamespace; // For JWT token blacklisting security
   IMAGES_BUCKET: R2Bucket;

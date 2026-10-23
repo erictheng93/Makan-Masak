@@ -1,3 +1,4 @@
+import { withD1ReadRetry } from "@makanmasak/utils";
 import { createApp } from "./app-factory";
 import type { Env } from "./types/env";
 import type {
@@ -10,18 +11,26 @@ import { GROUP_ORDER_EXPIRY_CRON } from "./workers/group-order-expiry";
 
 const app = createApp();
 
+// Local dev only: `pnpm dev` runs api and realtime as two workerd processes on
+// one SQLite file, and their concurrent reads fail transiently. Only the dev
+// script sets D1_READ_RETRY, so deployed workers get `env` back untouched.
+const withRetryingDb = (env: Env): Env =>
+  env.D1_READ_RETRY === "true" ? { ...env, DB: withD1ReadRetry(env.DB) } : env;
+
 // 匯出應用
 export default {
-  fetch: app.fetch,
+  fetch: (request: Request, env: Env, ctx: ExecutionContext) =>
+    app.fetch(request, withRetryingDb(env), ctx),
 
   // Queue consumer: drains search-index fan-out jobs enqueued by
   // SearchIndexSyncService.onMarketChanged / onCategoryChanged. Each message
   // re-syncs one entity in its own invocation, well under D1's subrequest cap.
   queue: async (
     batch: MessageBatch<SearchSyncMessage>,
-    env: Env,
+    rawEnv: Env,
     _ctx: CfExecutionContext,
   ) => {
+    const env = withRetryingDb(rawEnv);
     const { SearchIndexSyncService } =
       await import("./features/discovery/services/SearchIndexSyncService");
     // Construct WITHOUT a queue so consumer work stays inline and never
@@ -46,9 +55,10 @@ export default {
   // 計畫任務處理器 (Cron Jobs)
   scheduled: async (
     event: ScheduledEvent,
-    env: Env,
+    rawEnv: Env,
     _ctx: ExecutionContext,
   ) => {
+    const env = withRetryingDb(rawEnv);
     console.log("Scheduled event triggered:", event.cron);
 
     // Import scheduled tasks dynamically

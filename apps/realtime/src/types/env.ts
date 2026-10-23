@@ -11,6 +11,8 @@ export interface Env {
 
   // Database bindings
   DB: D1Database;
+  /** Set only by the local `pnpm dev` script; enables withD1ReadRetry. */
+  D1_READ_RETRY?: string;
 
   // KV store bindings - aligned with API naming convention
   /** 通用快取（與 API 共用命名空間） */

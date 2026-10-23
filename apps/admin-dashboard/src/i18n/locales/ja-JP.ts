@@ -311,14 +311,29 @@ const jaJP: Messages = {
       importInvalid: "Check the import data format before submitting.",
     },
     import: {
+      toggle: "一括追加",
+      collapse: "一括追加を閉じる",
       title: "商品を一括インポート",
       description:
-        "CSV を貼り付けて、夜市/商圏検索に表示する商品情報をまとめて追加します。",
+        "Excel や Google スプレッドシートから商品の表をコピーして貼り付けてください。必須は名前と価格だけです。",
       loadExample: "例を読み込む",
-      previewReady: "{count} 件の商品を解析しました。インポートできます。",
+      previewReady: "{count} 件をインポートできます",
       submit: "商品をインポート",
       submitting: "インポート中...",
       successBanner: "Successfully imported {count} items.",
+      placeholder:
+        "Excel や Google スプレッドシートで表（見出し行を含む）を選択してコピーし、ここに貼り付けてください",
+      previewSkipped: "{count} 件に問題があるためスキップします",
+      colRow: "行",
+      colName: "名前",
+      colCategory: "カテゴリ",
+      colPrice: "価格",
+      colStatus: "状態",
+      statusOk: "OK",
+      statusDuplicate: "同じ名前の商品が既にあります。もう 1 件追加されます",
+      submitCount: "{count} 件をインポート",
+      retryHint:
+        "インポートされなかった行は入力欄に残っています。修正してもう一度インポートしてください。",
     },
     conflict: {
       title: "This item was changed by someone else",

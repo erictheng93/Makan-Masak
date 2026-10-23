@@ -273,6 +273,23 @@ function tokenFor(payload: Record<string, unknown>) {
   );
 }
 
+describe("RealtimeSession D1 read retry gate", () => {
+  const dbOf = (session: RealtimeSession) =>
+    (session as unknown as { env: Env }).env.DB;
+
+  it("leaves the binding untouched unless the dev script asks for retries", () => {
+    const env = createEnv();
+
+    expect(dbOf(createSession(env))).toBe(env.DB);
+  });
+
+  it("wraps the binding when D1_READ_RETRY is set", () => {
+    const env = { ...createEnv(), D1_READ_RETRY: "true" };
+
+    expect(dbOf(createSession(env))).not.toBe(env.DB);
+  });
+});
+
 describe("RealtimeSession HTTP endpoints", () => {
   it("configures WebSocket hibernation auto-response", () => {
     const state = createState();

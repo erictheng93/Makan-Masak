@@ -290,3 +290,36 @@ describe("ErrorHandler — unexpected runtime exceptions", () => {
     },
   );
 });
+
+describe("ErrorReportingService — CSRF", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("echoes the __Host-mm_csrf cookie the API compares against", async () => {
+    vi.spyOn(document, "cookie", "get").mockReturnValue(
+      "ws_locale=en; __Host-mm_csrf=csrf-from-cookie",
+    );
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await new ErrorHandler().reportingService.reportError({
+      type: ErrorType.NETWORK,
+      severity: ErrorSeverity.HIGH,
+      message: "boom",
+      timestamp: new Date(),
+    });
+
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/system/error-report"),
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          "X-CSRF-Token": "csrf-from-cookie",
+        }),
+      }),
+    );
+  });
+});
