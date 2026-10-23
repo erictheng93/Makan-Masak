@@ -158,3 +158,5 @@ export {
   getRefreshDelay,
   getTimeUntilExpiry,
 } from "./token";
+
+export { withD1ReadRetry, isReadOnlySql, isTransientD1Error } from "./d1-retry";

@@ -1,4 +1,5 @@
 import type { Env } from "../types/env";
+import { withD1ReadRetry } from "@makanmasak/utils";
 import type {
   RealtimeAuthPayload,
   RealtimeEvent,
@@ -48,7 +49,11 @@ export class RealtimeSession implements DurableObject {
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
-    this.env = env;
+    // Local dev only, see D1_READ_RETRY in package.json's dev script.
+    this.env =
+      env.D1_READ_RETRY === "true"
+        ? { ...env, DB: withD1ReadRetry(env.DB) }
+        : env;
     this.state.setWebSocketAutoResponse(
       new WebSocketRequestResponsePair(HEARTBEAT_REQUEST, HEARTBEAT_RESPONSE),
     );

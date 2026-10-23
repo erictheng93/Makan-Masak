@@ -247,6 +247,10 @@ export class BaseService {
     // 安全地記錄錯誤，避免循環引用問題
     if (error instanceof Error) {
       console.error(`Database error in ${operation}:`, error.message);
+      // drizzle wraps the D1 error; the message alone only says "Failed query".
+      if (error.cause) {
+        console.error("Cause:", String(error.cause));
+      }
       if (error.stack) {
         console.error("Stack trace:", error.stack);
       }
