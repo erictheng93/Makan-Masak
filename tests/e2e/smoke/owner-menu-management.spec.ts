@@ -842,6 +842,8 @@ test.describe("Smoke: owner menu management usage state", () => {
       '"Imported Curry","Appetizers",29,"Spicy","",false,true,6,menu_item,"main","hot curry"',
     ].join("\n");
 
+    // Bulk import is collapsed behind its header button by default.
+    await page.getByTestId("admin-menu-bulk-import-toggle").click();
     await page.locator('[data-testid="menu-item-import-csv"]').fill(csvText);
     await page.getByTestId("menu-item-import-submit").click();
     await expect(
