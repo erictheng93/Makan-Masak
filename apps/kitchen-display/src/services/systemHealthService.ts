@@ -812,12 +812,20 @@ class SystemHealthService {
     // that /system/health performs on every call. Raw fetch bypasses the
     // apiClient auth interceptors so a stale token cannot trigger a refresh
     // loop or login redirect from a connectivity probe.
+    //
+    // /info is on the API's origin, not this app's: a bare "/info" in
+    // production reached the kitchen's own static host, whose SPA fallback
+    // answers 200, so the probe passed whenever the page itself had loaded.
+    const base = import.meta.env.VITE_API_BASE_URL || "/api/v1";
     try {
-      const response = await fetch("/info", {
-        method: "GET",
-        cache: "no-store",
-        credentials: "omit",
-      });
+      const response = await fetch(
+        `${base.replace(/\/api\/v1\/?$/, "")}/info`,
+        {
+          method: "GET",
+          cache: "no-store",
+          credentials: "omit",
+        },
+      );
       return response.ok;
     } catch {
       return navigator.onLine;
