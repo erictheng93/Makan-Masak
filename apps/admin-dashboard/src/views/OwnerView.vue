@@ -750,7 +750,10 @@ async function fetchAllData() {
       api.get(buildScopedUrl("/orders/active")),
       api.get(buildScopedUrl("/users/stats")),
       api.get(buildScopedUrl("/users", { limit: 10 })),
-      api.get("/monitoring/health"),
+      // 503 means "critical" and its body is the report the health panel shows.
+      api.get("/monitoring/health", {
+        validateStatus: (s: number) => s < 400 || s === 503,
+      }),
       restaurantId
         ? schedulingService.getClockedInEmployees(restaurantId)
         : Promise.resolve([]),
@@ -837,8 +840,8 @@ async function fetchAllData() {
       activeOrdersRes,
       userStatsRes,
       usersRes,
-      healthRes,
     ]);
+    // healthRes is left out: a failing probe must not blank the whole dashboard.
     if (requestFailed) {
       error.value = t("owner.fetchError");
     }
