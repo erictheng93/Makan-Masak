@@ -484,16 +484,16 @@ session's "affected" set contains every other session's work, and the
 incremental scope collapses back toward a full run.
 
 ```bash
-scripts/session-worktree.sh <branch>   # new worktree + shared cache + install
-scripts/session-worktree.sh            # link an existing worktree to the shared cache
+scripts/session-worktree.sh <branch>   # new worktree + local state + install
+scripts/session-worktree.sh            # link local state into an existing worktree
 ```
 
-The turbo cache is deliberately **not** isolated — it is content-addressed, so a
-package another session already checked at the same content hash is a free hit
-here. The script symlinks each worktree's `.turbo/cache` to
-`~/.cache/turbo/makanmasak` (override with `MAKAN_TURBO_CACHE_DIR`) and links
-the gitignored `.env.local` and `.wrangler` local state from the primary
-worktree.
+The turbo cache is deliberately **not** isolated — it is content-addressed, so
+a package another session already checked at the same content hash is a free hit
+here. Turbo 2.8+ does this itself: every linked worktree reads and writes the
+primary worktree's `.turbo/cache`. Setting `cacheDir` in `turbo.json` turns that
+off, so don't. The script only links the gitignored `.env.local` and `.wrangler`
+local state from the primary worktree.
 
 ## Common Tasks
 

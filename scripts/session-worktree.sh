@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 #
-# Give one session its own git worktree, sharing the turbo cache with every
-# other worktree.
+# Give one session its own git worktree.
 #
-#   scripts/session-worktree.sh                  link this worktree to the
-#                                                shared turbo cache (idempotent)
+#   scripts/session-worktree.sh                  link the primary worktree's
+#                                                local state into this one
 #   scripts/session-worktree.sh <branch> [dir]   create a worktree for <branch>,
-#                                                link the cache, install deps
+#                                                link local state, install deps
 #
 # Why: `turbo --affected` and `vitest --changed` both derive their scope from
 # the git diff of the working tree they run in. When several sessions edit one
@@ -14,10 +13,9 @@
 # work, so the incremental scope collapses back to something close to a full
 # run. A worktree per session restores the isolation.
 #
-# The turbo cache is deliberately NOT isolated: it is content-addressed, so
-# sharing it means a package another session already typechecked or tested at
-# the exact same content hash is a cache hit here for free. Without the link,
-# every worktree starts from an empty cache and pays full price.
+# The turbo cache needs no linking: turbo 2.8+ sends every linked worktree to
+# the primary worktree's .turbo/cache by itself (unless turbo.json sets
+# cacheDir), so a hash another session already built is a hit here for free.
 
 set -euo pipefail
 
@@ -26,43 +24,7 @@ set -euo pipefail
 GIT_COMMON_DIR="$(git rev-parse --path-format=absolute --git-common-dir)"
 PRIMARY_ROOT="$(dirname "$GIT_COMMON_DIR")"
 
-SHARED_CACHE="${MAKAN_TURBO_CACHE_DIR:-$HOME/.cache/turbo/makanmasak}"
-
 log() { printf '  %s\n' "$*"; }
-
-# Point <worktree>/.turbo/cache at the shared directory, preserving whatever is
-# already cached there.
-link_cache() {
-  local root="$1"
-  local cache="$root/.turbo/cache"
-
-  mkdir -p "$SHARED_CACHE"
-
-  if [ -L "$cache" ]; then
-    local current
-    current="$(readlink "$cache")"
-    if [ "$current" = "$SHARED_CACHE" ]; then
-      log "turbo cache: already shared -> $SHARED_CACHE"
-      return 0
-    fi
-    log "turbo cache: repointing $current -> $SHARED_CACHE"
-    rm "$cache"
-  elif [ -d "$cache" ]; then
-    # Migrate, don't discard: these entries cost real CPU to produce. Existing
-    # names in the shared dir win, since identical hashes are identical output.
-    local n
-    n="$(find "$cache" -mindepth 1 -maxdepth 1 | wc -l | tr -d ' ')"
-    log "turbo cache: migrating $n existing entries into $SHARED_CACHE"
-    if [ "$n" != "0" ]; then
-      cp -Rn "$cache"/. "$SHARED_CACHE"/ 2>/dev/null || true
-    fi
-    rm -rf "$cache"
-  fi
-
-  mkdir -p "$root/.turbo"
-  ln -s "$SHARED_CACHE" "$cache"
-  log "turbo cache: $cache -> $SHARED_CACHE"
-}
 
 # Gitignored local state lives only in the primary worktree. A fresh worktree
 # without it silently falls back to defaults (no secrets, an empty local D1),
@@ -107,8 +69,8 @@ link_local_state() {
 
 if [ $# -eq 0 ]; then
   ROOT="$(git rev-parse --show-toplevel)"
-  echo "Linking $(basename "$ROOT") to the shared turbo cache"
-  link_cache "$ROOT"
+  echo "Linking local state into $(basename "$ROOT")"
+  link_local_state "$ROOT"
   exit 0
 fi
 
@@ -134,7 +96,6 @@ else
   git worktree add -b "$BRANCH" "$DIR" "$BASE"
 fi
 
-link_cache "$DIR"
 link_local_state "$DIR"
 
 echo "Installing dependencies (hardlinked from the pnpm store, not re-downloaded)"
