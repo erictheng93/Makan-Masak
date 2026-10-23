@@ -241,9 +241,12 @@ class ErrorReportingService {
       const errors = [...this.reportQueue];
       this.reportQueue = [];
 
-      const csrfToken = document.cookie
-        .split("; ")
-        .find((c) => c.startsWith("csrf_token="))
+      // The API compares the header to this cookie (legacy name second); the
+      // old lookup read only `csrf_token`, so every report was rejected 403.
+      const cookies = document.cookie.split("; ");
+      const csrfToken = ["__Host-mm_csrf=", "csrf_token="]
+        .map((prefix) => cookies.find((c) => c.startsWith(prefix)))
+        .find(Boolean)
         ?.split("=")[1];
       const response = await fetch(this.REPORT_ENDPOINT, {
         method: "POST",
