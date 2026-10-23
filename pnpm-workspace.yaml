@@ -61,7 +61,7 @@ overrides:
   "braces": "3.0.3"
   "browserslist": "^4.28.7"
   "caniuse-lite": "1.0.30001799"
-  "dompurify": "^3.4.16"
+  "dompurify": "^3.4.17"
   "fast-uri@^3": "^3.1.8"
   "fast-xml-builder": "^1.1.7"
   "fast-xml-parser": "^5.7.0"
