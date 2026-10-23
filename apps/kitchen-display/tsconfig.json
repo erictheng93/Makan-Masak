@@ -15,9 +15,8 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "noEmit": true,
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
+      "@/*": ["./src/*"],
       "@makanmasak/i18n": ["../../packages/shared/src/i18n/src/index.ts"],
       "@makanmasak/i18n/locale-manager": [
         "../../packages/shared/src/i18n/src/locale-manager.ts"

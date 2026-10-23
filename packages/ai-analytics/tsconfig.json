@@ -12,9 +12,9 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "outDir": "./dist",
+    "rootDir": "..",
     "declaration": true,
     "declarationMap": true,
-    "baseUrl": ".",
     "paths": {
       "@makanmasak/shared-types": ["../shared-types/src"],
       "@makanmasak/database": ["../database/src"]

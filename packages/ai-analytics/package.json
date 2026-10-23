@@ -27,6 +27,7 @@
     "uuid": "^14.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.3.3"
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
   }
 }

@@ -450,6 +450,32 @@ the seven were orphans. They are harmless — nothing links to them — but they
 the check read as a permanent false alarm. `rm -rf node_modules && pnpm install`
 clears them if the count matters to you.
 
+### TypeScript is installed twice, on purpose
+
+The `tsc` binary is TypeScript 7 (the Go-native compiler), but anything that
+`require("typescript")` gets the TypeScript 6 JS API, because 7.0 ships no API.
+Two layouts, and they are not interchangeable:
+
+| Packages | `typescript` | `@typescript/native` |
+| --- | --- | --- |
+| root, the Workers apps, and every package whose scripts run `tsc` | `npm:@typescript/typescript6@^6.0.2` | `npm:typescript@^7.0.2` |
+| the five Vue apps and `packages/shared` (they run `vue-tsc`) | `^6.0.3` (plain TS 6) | not declared |
+
+- **Who uses TS 6:** typescript-eslint (peer `<6.1.0`), vue-tsc/Volar, and tsup's `dts`
+  build. `@typescript/typescript6` ships only a `tsc6` binary, so `tsc` stays TS 7.
+  Installing TS 7 under any other alias brings a second `tsc` bin that steals the
+  root's from TS 6.
+- **Why the Vue apps differ:** Volar rewrites `typescript/lib/tsc.js` and only
+  recognises the real package's shim. Against `@typescript/typescript6` it fails
+  with `Failed to locate tsc module path from shim`.
+- **Check:** after a bump, run `pnpm exec tsc --version` (expect 7.x) and
+  `node -p "require('typescript').version"` (expect 6.x) in a package.
+- **Leaving the split:** it ends when vue-tsc and typescript-eslint support the
+  TS 7.1 API. Until then, a `typescript` bump to 7 breaks lint, every Vue
+  typecheck, and the `packages/database` build.
+- **Removed options:** TS 7 rejects `baseUrl` and `moduleResolution: "node"`, and
+  defaults `types` to `[]`, so list globals such as `"types": ["node"]` explicitly.
+
 ### One worktree per session
 
 `turbo --affected` and `vitest --changed` both derive scope from the git diff of

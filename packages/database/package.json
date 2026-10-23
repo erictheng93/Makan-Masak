@@ -41,12 +41,13 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^25.0.5",
+    "@typescript/native": "npm:typescript@^7.0.2",
     "cross-env": "^10.1.0",
     "drizzle-kit": "^0.31.10",
     "miniflare": "^3.20250718.3",
     "tsup": "^8.0.0",
     "tsx": "^4.0.0",
-    "typescript": "^5.9.2",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vitest": "^4.1.0"
   },
   "peerDependencies": {

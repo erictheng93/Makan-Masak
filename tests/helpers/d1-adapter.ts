@@ -124,7 +124,7 @@ export class D1PreparedStatementAdapter {
       | Record<string, unknown>
       | undefined;
     if (!row) return null;
-    if (colName !== undefined) return ((row[colName] ?? null) as T) ?? null;
+    if (colName !== undefined) return (row[colName] ?? null) as T;
     return row as T;
   }
 
