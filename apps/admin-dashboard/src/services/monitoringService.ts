@@ -90,20 +90,6 @@ class MonitoringService {
   // ============================================================================
 
   /**
-   * Get system health status
-   * @returns Health status of all system components
-   */
-  async getHealthStatus(): Promise<HealthStatus> {
-    try {
-      const response = await api.get<HealthStatus>(`${this.baseUrl}/health`);
-      return response.data.data!;
-    } catch (error) {
-      console.error("Failed to get health status:", error);
-      throw error;
-    }
-  }
-
-  /**
    * Get monitoring overview
    * @param options.includeMetrics Embed the raw SystemMetrics in the response.
    *   The endpoint already loads them to derive keyMetrics and trends, so this
