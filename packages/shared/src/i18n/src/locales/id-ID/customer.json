@@ -448,6 +448,7 @@
     "verifyEmailSuccess": "Email terverifikasi. Anda dapat masuk sekarang.",
     "linkTokenMissing": "Tautan ini tidak lengkap atau tidak berlaku lagi. Minta yang baru.",
     "otpSentForRegistration": "Kami mengirim kode melalui SMS. Masukkan kode itu untuk menyelesaikan pendaftaran.",
+    "otpRecoveryAccountSwitch": "Anda sudah masuk. Verifikasi akan memasukkan Anda ke akun pemilik nomor telepon ini, yang mungkin berbeda dari akun saat ini.",
     "forgotPasswordHint": "Masukkan ponsel atau email yang Anda daftarkan dan kami akan mengirim tautan atur ulang.",
     "resetPasswordHint": "Pilih kata sandi baru.",
     "enterNewPassword": "Masukkan kata sandi baru"

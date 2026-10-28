@@ -448,6 +448,7 @@
     "verifyEmailSuccess": "Email 已验证，现在可以登录了。",
     "linkTokenMissing": "链接不完整或已失效，请重新申请。",
     "otpSentForRegistration": "验证码已发送至您的手机，输入后即可完成注册。",
+    "otpRecoveryAccountSwitch": "你当前已登录。验证后将改用这个手机号所属的账号登录；如果它属于另一个账号，就会切换过去。",
     "forgotPasswordHint": "输入注册时使用的手机号码或 Email，我们会发送重设链接。",
     "resetPasswordHint": "请设置新的密码。",
     "enterNewPassword": "请输入新密码"

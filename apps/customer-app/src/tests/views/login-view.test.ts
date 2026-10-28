@@ -191,6 +191,10 @@ describe("LoginView", () => {
       expect(
         wrapper.find('[data-testid="phone-input"]').element,
       ).toHaveProperty("value", "0912345678");
+      // Verifying may sign them in to another account; that is said up front.
+      expect(wrapper.find('[data-testid="account-switch-notice"]').text()).toBe(
+        "auth.otpRecoveryAccountSwitch",
+      );
 
       await wrapper.find("form").trigger("submit");
       await flushPromises();
@@ -204,6 +208,16 @@ describe("LoginView", () => {
     } finally {
       storeMocks.isAuthenticated = false;
     }
+  });
+
+  it("shows no account-switch notice to a signed-out customer recovering a phone", async () => {
+    routerMocks.query = { mode: "otp", phone: "0912345678" };
+    const wrapper = mountView();
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="account-switch-notice"]').exists()).toBe(
+      false,
+    );
   });
 
   it("still sends an authenticated customer on a plain /login to /orders", async () => {

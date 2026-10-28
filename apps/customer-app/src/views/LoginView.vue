@@ -41,6 +41,17 @@
         <form class="space-y-5" @submit.prevent="handleSubmit">
           <!-- 簡訊驗證碼 -->
           <template v-if="mode === 'otp'">
+            <!-- 已登入者做手機驗證：驗證後改以手機所屬帳號登入，先說清楚 -->
+            <div
+              v-if="showAccountSwitchNotice"
+              data-testid="account-switch-notice"
+              role="note"
+              class="bg-ios-orange-soft rounded-2xl px-4 py-3"
+            >
+              <p class="text-sm text-ios-orange-deep">
+                {{ t("auth.otpRecoveryAccountSwitch") }}
+              </p>
+            </div>
             <div>
               <label
                 for="phone"
@@ -260,6 +271,12 @@ const errors = reactive({
   identifier: "",
   password: "",
 });
+
+// Verifying issues the phone owner's session, which may be a different account
+// from the one signed in (e.g. OAuth-only); say so before they request a code.
+const showAccountSwitchNotice = computed(
+  () => authStore.isAuthenticated && isOtpRecoveryRequest(route.query),
+);
 
 const submitLabelKey = computed(() => {
   if (mode.value === "password") return "auth.login";

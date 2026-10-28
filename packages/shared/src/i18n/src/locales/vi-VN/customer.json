@@ -448,6 +448,7 @@
     "verifyEmailSuccess": "Đã xác minh email. Bạn có thể đăng nhập ngay.",
     "linkTokenMissing": "Liên kết này không đầy đủ hoặc đã hết hiệu lực. Hãy yêu cầu liên kết mới.",
     "otpSentForRegistration": "Chúng tôi đã gửi mã qua SMS. Nhập mã để hoàn tất đăng ký.",
+    "otpRecoveryAccountSwitch": "Bạn đang đăng nhập. Sau khi xác minh, bạn sẽ đăng nhập vào tài khoản sở hữu số điện thoại này, có thể là một tài khoản khác.",
     "forgotPasswordHint": "Nhập số điện thoại hoặc email bạn đã đăng ký, chúng tôi sẽ gửi liên kết đặt lại.",
     "resetPasswordHint": "Hãy chọn mật khẩu mới.",
     "enterNewPassword": "Nhập mật khẩu mới"
