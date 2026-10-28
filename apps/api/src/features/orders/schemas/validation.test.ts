@@ -34,11 +34,39 @@ describe("order validation", () => {
     { seatId: 11 },
     { seatId: 11, orderType: "seat" },
     { seatId: 11, orderType: "table" },
-    { seatId: 11, tableId: 3 },
     { seatId: 11, tableId: 3, orderType: "shop" },
   ])("rejects a seat outside a table/seat order: %j", (selection) => {
     expect(
       createOrderSchema.safeParse({ ...baseOrder, ...selection }).success,
+    ).toBe(false);
+  });
+
+  it("infers a seat order from tableId + seatId + qrCode when orderType is omitted", () => {
+    expect(
+      createOrderSchema.parse({
+        ...baseOrder,
+        tableId: 3,
+        seatId: 11,
+        qrCode: "https://example.test/qr?sig=abc",
+      }),
+    ).toMatchObject({ tableId: 3, seatId: 11, orderType: "seat" });
+  });
+
+  it("infers a table order from tableId alone and keeps shop otherwise", () => {
+    expect(
+      createOrderSchema.parse({ ...baseOrder, tableId: 3 }).orderType,
+    ).toBe("table");
+    expect(createOrderSchema.parse(baseOrder).orderType).toBe("shop");
+  });
+
+  it("does not let an inferred type override an explicit shop + seatId", () => {
+    expect(
+      createOrderSchema.safeParse({
+        ...baseOrder,
+        tableId: 3,
+        seatId: 11,
+        orderType: "shop",
+      }).success,
     ).toBe(false);
   });
 

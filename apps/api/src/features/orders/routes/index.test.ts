@@ -506,9 +506,9 @@ describe("orders routes", () => {
     );
   });
 
-  it("leaves table orders ungated even though orderType defaults to shop", async () => {
-    // The schema default means a client that omits orderType sends a table
-    // order labelled "shop". Gating on that label alone would break dine-in.
+  it("leaves table orders ungated when orderType is omitted (inferred as table)", async () => {
+    // A client that omits orderType gets "table" inferred from its tableId, so
+    // the shop-mode gate never sees a dine-in order.
     serviceMocks.createOrder.mockResolvedValue({ id: 1002 });
 
     const response = await routes.fetch(
@@ -523,7 +523,7 @@ describe("orders routes", () => {
     expect(response.status).toBe(201);
     expect(gateMocks.assertShopOrderingEnabled).not.toHaveBeenCalled();
     expect(serviceMocks.createOrder).toHaveBeenCalledWith(
-      expect.objectContaining({ tableId: 3, orderType: "shop" }),
+      expect.objectContaining({ tableId: 3, orderType: "table" }),
       "user-42",
     );
   });

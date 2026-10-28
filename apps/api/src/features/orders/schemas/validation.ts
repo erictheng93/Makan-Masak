@@ -163,7 +163,10 @@ export const createOrderSchema = z
     customerInfo: customerInfoSchema,
     items: z.array(createOrderItemSchema).min(1).max(50),
     notes: notesSchema(500).optional(),
-    orderType: orderTypeSchema.default("shop"),
+    // Optional on the wire: when omitted it is inferred below from the table
+    // selection ("seat" with a seatId, "table" with a tableId, else "shop").
+    // An explicit "shop" is kept, so "shop" + seatId is still rejected.
+    orderType: orderTypeSchema.optional(),
     // What the customer scanned, when they scanned something. Optional on
     // purpose: clients that predate the field, and entry points with no sticker
     // to present, must keep working. See assertShopQrCurrent.
@@ -200,7 +203,17 @@ export const createOrderSchema = z
   .refine((data) => !data.waitingListId || !!data.customerPhone, {
     message: "customerPhone is required for waiting-list pre-orders",
     path: ["customerPhone"],
-  });
+  })
+  .transform((data) => ({
+    ...data,
+    orderType:
+      data.orderType ??
+      (data.seatId !== undefined
+        ? ("seat" as const)
+        : data.tableId !== undefined
+          ? ("table" as const)
+          : ("shop" as const)),
+  }));
 
 // Order update schemas
 export const updateOrderStatusSchema = z.lazy(() =>
