@@ -173,4 +173,64 @@ describe("LoginView", () => {
       true,
     );
   });
+  it("keeps an authenticated customer on the OTP step for a phone-recovery request", async () => {
+    routerMocks.query = {
+      mode: "otp",
+      phone: "0912345678",
+      redirect: "/r/rest-1/wait-list",
+    };
+    storeMocks.isAuthenticated = true;
+    storeMocks.checkAuth.mockResolvedValue(true);
+    storeMocks.requestOtp.mockResolvedValue({ success: true, data: {} });
+    storeMocks.verifyOtp.mockResolvedValue({ success: true });
+    try {
+      const wrapper = mountView();
+      await flushPromises();
+
+      expect(routerMocks.push).not.toHaveBeenCalled();
+      expect(
+        wrapper.find('[data-testid="phone-input"]').element,
+      ).toHaveProperty("value", "0912345678");
+
+      await wrapper.find("form").trigger("submit");
+      await flushPromises();
+      await wrapper.find('[data-testid="otp-input"]').setValue("123456");
+      await wrapper.find("form").trigger("submit");
+      await flushPromises();
+
+      expect(storeMocks.verifyOtp).toHaveBeenCalledWith("0912345678", "123456");
+      expect(routerMocks.push).toHaveBeenCalledOnce();
+      expect(routerMocks.push).toHaveBeenCalledWith("/r/rest-1/wait-list");
+    } finally {
+      storeMocks.isAuthenticated = false;
+    }
+  });
+
+  it("still sends an authenticated customer on a plain /login to /orders", async () => {
+    storeMocks.isAuthenticated = true;
+    storeMocks.checkAuth.mockResolvedValue(true);
+    try {
+      mountView();
+      await flushPromises();
+
+      expect(routerMocks.push).toHaveBeenCalledWith("/orders");
+    } finally {
+      storeMocks.isAuthenticated = false;
+    }
+  });
+
+  it("ignores a redirect that would leave the app", async () => {
+    routerMocks.query = { redirect: "//evil.example/x" };
+    storeMocks.loginWithPassword.mockResolvedValue({ success: true });
+    const wrapper = mountView();
+    await flushPromises();
+
+    await wrapper.find('[data-testid="tab-password"]').trigger("click");
+    await wrapper.find('[data-testid="identifier-input"]').setValue("a@b.co");
+    await wrapper.find('[data-testid="password-input"]').setValue("pw-123456");
+    await wrapper.find("form").trigger("submit");
+    await flushPromises();
+
+    expect(routerMocks.push).toHaveBeenCalledWith("/profile");
+  });
 });

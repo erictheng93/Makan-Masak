@@ -217,6 +217,7 @@ import { ref, reactive, computed, onMounted, defineAsyncComponent } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useI18n } from "@/composables/useI18n";
+import { isOtpRecoveryRequest, safeRedirectPath } from "@/utils/login-recovery";
 
 type LoginMode = "otp" | "password";
 
@@ -317,7 +318,7 @@ const validatePasswordForm = () => {
 };
 
 const goToNextView = () => {
-  const redirect = firstQueryValue(route.query.redirect);
+  const redirect = safeRedirectPath(firstQueryValue(route.query.redirect));
   router.push(redirect || "/profile");
 };
 
@@ -397,7 +398,9 @@ onMounted(async () => {
     fromRegistration.value = true;
   }
 
-  if (authStore.isAuthenticated) {
+  // An explicit phone-recovery request must not be bounced by an existing
+  // session (see isOtpRecoveryRequest); completing the OTP replaces it.
+  if (authStore.isAuthenticated && !isOtpRecoveryRequest(route.query)) {
     const isValid = await authStore.checkAuth();
     if (isValid) {
       router.push("/orders");

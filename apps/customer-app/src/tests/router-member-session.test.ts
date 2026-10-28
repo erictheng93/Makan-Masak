@@ -62,4 +62,18 @@ describe("member session restoration on customer routes", () => {
     await router.push("/orders");
     expect(router.currentRoute.value.path).toBe("/login");
   });
+  it("lets a signed-in member open /login for an explicit OTP phone recovery only", async () => {
+    const { default: router } = await import("@/router");
+
+    authState.user = { id: "customer-1" };
+    authState.token = "access";
+    authState.isAuthenticated = true;
+    authState.checkAuth.mockResolvedValue(true);
+
+    await router.push("/login?mode=otp&phone=0912345678&redirect=/x");
+    expect(router.currentRoute.value.path).toBe("/login");
+
+    await router.push("/login");
+    expect(router.currentRoute.value.path).toBe("/orders");
+  });
 });

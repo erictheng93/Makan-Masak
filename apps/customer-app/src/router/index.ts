@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import type { RouteRecordRaw } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { safeTranslate } from "@/utils/i18n";
+import { isOtpRecoveryRequest } from "@/utils/login-recovery";
 import {
   clearChunkRecoveryMark,
   createChunkRecovery,
@@ -444,6 +445,7 @@ router.beforeEach(async (to, from, next) => {
   // 檢查需要訪客身份的路由（如登入、註冊頁）
   if (
     requiresGuest &&
+    !(to.name === "Login" && isOtpRecoveryRequest(to.query)) &&
     (authStore.isAuthenticated ||
       (restoredSession ?? (await authStore.checkAuth())))
   ) {
