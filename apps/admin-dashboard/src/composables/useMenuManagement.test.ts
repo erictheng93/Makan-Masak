@@ -312,6 +312,22 @@ describe("useMenuManagement", () => {
       );
     });
 
+    it("maps the API's compacted index back to the original CSV line", async () => {
+      apiMocks.post.mockRejectedValueOnce(
+        buildApiError({
+          code: "VALIDATION_ERROR",
+          message: "Validation failed",
+          details: [{ field: "items.1.name", message: "Too long" }],
+        }),
+      );
+      const { importMenuItems } = useMenuManagement();
+
+      // Index 1 of the submitted array came from CSV line 5 (line 3 skipped).
+      await expect(importMenuItems(items, [2, 5])).rejects.toThrow(
+        'menu.errors.importRowFailed({"row":5,"reason":"Too long"})',
+      );
+    });
+
     it("falls back to a translated message when the API gives no details", async () => {
       apiMocks.post.mockRejectedValueOnce(new Error("network down"));
       const { importMenuItems } = useMenuManagement();

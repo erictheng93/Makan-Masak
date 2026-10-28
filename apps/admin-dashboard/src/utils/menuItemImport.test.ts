@@ -240,3 +240,31 @@ describe("menu item import: review fixes", () => {
     expect(result.items).toEqual([]);
   });
 });
+
+describe("menu item import row mapping and retry text", () => {
+  const categories = [
+    { id: 1, name: "飲料" },
+    { id: 2, name: "主食" },
+  ] as never;
+
+  it("carries the CSV line of each submitted item past skipped rows", () => {
+    const result = parseMenuItemImport(
+      "名稱,價格,分類\n壞,,飲料\n紅茶,25,飲料\n綠茶,30,飲料",
+      categories,
+    );
+
+    expect(result.items.map((item) => item.name)).toEqual(["紅茶", "綠茶"]);
+    expect(result.lines).toEqual([3, 4]);
+  });
+
+  it("keeps surplus cells of a TooManyFields row in the retry text", () => {
+    const result = parseMenuItemImport(
+      "名稱,價格,分類,說明\n紅茶,25,飲料,好喝,便宜",
+      categories,
+    );
+
+    const retry = buildMenuItemImportRetryText(result.rows);
+    expect(retry).toContain("好喝");
+    expect(retry).toContain("便宜");
+  });
+});

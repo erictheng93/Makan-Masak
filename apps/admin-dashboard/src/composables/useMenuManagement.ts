@@ -429,7 +429,7 @@ export function useMenuManagement() {
    * is CSV line `index + 2` (line 1 is the header, matching the wording
    * parseMenuItemImport already uses).
    */
-  const describeImportFailure = (error: unknown): string => {
+  const describeImportFailure = (error: unknown, lines?: number[]): string => {
     const apiError = getApiErrorPayload(error);
     const details = apiError?.details ?? [];
 
@@ -440,7 +440,8 @@ export function useMenuManagement() {
           : Number(String(detail?.field ?? "").split(".")[1]);
       if (Number.isInteger(index)) {
         return t("menu.errors.importRowFailed", {
-          row: index + 2,
+          // `lines` maps the submitted (compacted) index back to its CSV line.
+          row: lines?.[index] ?? index + 2,
           reason: detail?.message || apiError?.message || "",
         });
       }
@@ -449,7 +450,10 @@ export function useMenuManagement() {
     return apiError?.message || t("menu.errors.importFailed");
   };
 
-  const importMenuItems = async (items: MenuItemImportInput[]) => {
+  const importMenuItems = async (
+    items: MenuItemImportInput[],
+    lines?: number[],
+  ) => {
     if (!authStore.restaurantId || items.length === 0) return;
     try {
       // One atomic request, not one POST per row: a per-row loop left every
@@ -463,7 +467,7 @@ export function useMenuManagement() {
       await fetchMenu();
     } catch (error: unknown) {
       console.error("Failed to import menu items:", error);
-      const message = describeImportFailure(error);
+      const message = describeImportFailure(error, lines);
       toast.error(message);
       // Nothing was written, so the caller can safely offer a retry — it must
       // show which row stopped it, hence the message rides on the error.

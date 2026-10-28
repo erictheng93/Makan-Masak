@@ -334,20 +334,23 @@ describe("MenuView", () => {
       .trigger("click");
     await flushPromises();
 
-    expect(importMenuItems).toHaveBeenCalledWith([
-      expect.objectContaining({
-        name: "蚵仔煎",
-        categoryId: 1,
-        catalogType: "menu_item",
-        price: 7000,
-        description: "招牌小吃",
-        isFeatured: true,
-        isAvailable: true,
-        sortOrder: 1,
-        tags: ["小吃", "招牌"],
-        keywords: "小吃 招牌",
-      }),
-    ]);
+    expect(importMenuItems).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          name: "蚵仔煎",
+          categoryId: 1,
+          catalogType: "menu_item",
+          price: 7000,
+          description: "招牌小吃",
+          isFeatured: true,
+          isAvailable: true,
+          sortOrder: 1,
+          tags: ["小吃", "招牌"],
+          keywords: "小吃 招牌",
+        }),
+      ],
+      [2],
+    );
     // The outcome is reported through t() now, not a hardcoded literal (#85);
     // the t() stub here renders "<key> <count>".
     expect(wrapper.get('[data-testid="menu-item-import-success"]').text()).toBe(
@@ -386,9 +389,10 @@ describe("MenuView", () => {
     await flushPromises();
 
     expect(importMenuItems).toHaveBeenCalledOnce();
-    expect(importMenuItems).toHaveBeenCalledWith([
-      expect.objectContaining({ name: "紅茶", categoryId: 1 }),
-    ]);
+    expect(importMenuItems).toHaveBeenCalledWith(
+      [expect.objectContaining({ name: "紅茶", categoryId: 1 })],
+      [2],
+    );
     expect(
       wrapper.get<HTMLTextAreaElement>('[data-testid="menu-item-import-csv"]')
         .element.value,

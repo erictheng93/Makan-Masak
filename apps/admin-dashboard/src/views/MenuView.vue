@@ -1866,7 +1866,7 @@ const currentImagePreview = computed(
 );
 const menuItemImportPreview = computed(() => {
   if (!menuItemImportText.value.trim()) {
-    return { items: [], errors: [], rows: [] };
+    return { items: [], lines: [], errors: [], rows: [] };
   }
 
   return parseMenuItemImport(
@@ -2510,7 +2510,7 @@ const importMenuItemsFromCsv = async () => {
   menuItemImportError.value = "";
   menuItemImportResult.value = null;
   try {
-    await importMenuItems(parsed.items);
+    await importMenuItems(parsed.items, parsed.lines);
     menuItemImportResult.value = parsed.items.length;
     hasCompletedMarketProductGap.value = true;
     // Leave only the skipped rows, so fixing and resubmitting cannot duplicate.

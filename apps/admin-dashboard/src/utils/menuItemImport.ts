@@ -53,6 +53,8 @@ export interface MenuItemImportRow {
 export interface MenuItemImportParseResult {
   /** Valid rows only; rows with errors are skipped, not fatal. */
   items: MenuItemImportInput[];
+  /** CSV line of each entry in `items`, so API row indexes map back after skipped rows. */
+  lines: number[];
   /** Problems with the whole paste (header, empty); these block the import. */
   errors: string[];
   rows: MenuItemImportRow[];
@@ -146,7 +148,12 @@ export function parseMenuItemImport(
   defaultCategoryId: number | null = null,
 ): MenuItemImportParseResult {
   if (!text.trim()) {
-    return { items: [], errors: ["請貼上要匯入的商品資料。"], rows: [] };
+    return {
+      items: [],
+      lines: [],
+      errors: ["請貼上要匯入的商品資料。"],
+      rows: [],
+    };
   }
 
   // No delimiter given: Papa detects tabs (pasted from Excel) or commas.
@@ -224,10 +231,10 @@ export function parseMenuItemImport(
     }
   }
 
+  const submitted = globalErrors.length ? [] : rows.filter((row) => row.item);
   return {
-    items: globalErrors.length
-      ? []
-      : rows.flatMap((row) => (row.item ? [row.item] : [])),
+    items: submitted.map((row) => row.item as MenuItemImportInput),
+    lines: submitted.map((row) => row.line),
     errors: globalErrors,
     rows,
   };
@@ -240,11 +247,17 @@ export function buildMenuItemImportRetryText(rows: MenuItemImportRow[]) {
   const fields = csvFields.filter((field) =>
     failed.some((row) => row.raw[field] !== undefined),
   );
+  // Header rides as an ordinary row: with `fields` Papa truncates every row to
+  // the header width, which would drop the surplus cells of a TooManyFields row.
   return Papa.unparse(
-    {
-      fields: fields.map((field) => fieldLabels[field]),
-      data: failed.map((row) => fields.map((field) => row.raw[field] ?? "")),
-    },
+    [
+      fields.map((field) => fieldLabels[field]),
+      ...failed.map((row) => [
+        ...fields.map((field) => row.raw[field] ?? ""),
+        // Papa parks cells beyond the header here; keep them so the owner's text survives.
+        ...((row.raw as { __parsed_extra?: string[] }).__parsed_extra ?? []),
+      ]),
+    ],
     { delimiter: "\t" },
   );
 }
