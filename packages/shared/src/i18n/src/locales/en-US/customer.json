@@ -448,7 +448,7 @@
     "verifyEmailSuccess": "Email verified. You can sign in now.",
     "linkTokenMissing": "This link is incomplete or no longer valid. Request a new one.",
     "otpSentForRegistration": "We texted you a code. Enter it to finish signing up.",
-    "otpRecoveryAccountSwitch": "You are already signed in. Verifying signs you in to the account that owns this phone number, which may switch you to a different account.",
+    "otpRecoverySwitchedAccount": "This phone number belongs to another account, so you are now signed in to that account.",
     "forgotPasswordHint": "Enter the phone or email you signed up with and we will send a reset link.",
     "resetPasswordHint": "Choose a new password.",
     "enterNewPassword": "Enter a new password"

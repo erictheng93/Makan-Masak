@@ -111,6 +111,8 @@ describe("customer auth store", () => {
 
     await expect(store.verifyOtp("0912345678", "123456")).resolves.toEqual({
       success: true,
+      // No switchedAccount in the response means the session is not a switch.
+      switchedAccount: false,
     });
 
     expect(store.isAuthenticated).toBe(true);

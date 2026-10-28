@@ -30,6 +30,8 @@ export interface CustomerSession {
   refreshToken?: string;
   expiresIn: number;
   customer: CustomerSummary;
+  /** verify-otp only: the phone belongs to another account, so this session is that one. */
+  switchedAccount?: boolean;
 }
 
 /**

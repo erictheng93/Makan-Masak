@@ -106,6 +106,10 @@ describe("Customer Identity API - real integration", () => {
     const verifyJson = await readData<CustomerSession>(verifyRes);
     expect(verifyJson.accessToken).toBeTruthy();
     expect(verifyJson.customer.primaryPhone).toBe("+886912345678");
+    expect(
+      (verifyJson as CustomerSession & { switchedAccount: boolean })
+        .switchedAccount,
+    ).toBe(false);
 
     const meRes = await testApp.app.fetch(
       new Request(`${BASE}/me`, {
@@ -190,6 +194,63 @@ describe("Customer Identity API - real integration", () => {
       primary_phone: null,
       status: "deleted",
     });
+  });
+
+  it("links an unowned phone to the signed-in customer instead of creating an account", async () => {
+    // OAuth-only: an active customer with no phone on file.
+    await insertActiveCustomer("oauth-customer", null);
+    const token = await customerAccessToken("oauth-customer");
+
+    const verifyRes = await verifyPhone("+886955555555", token);
+
+    expect(verifyRes.status).toBe(200);
+    const session = await readData<
+      CustomerSession & { switchedAccount: boolean }
+    >(verifyRes);
+    expect(session.customer.id).toBe("oauth-customer");
+    expect(session.customer.primaryPhone).toBe("+886955555555");
+    expect(session.switchedAccount).toBe(false);
+
+    // The consumed OTP row is the evidence the waiting-list check accepts.
+    const evidence = await testApp.env.DB.prepare(
+      `SELECT customer_id FROM customer_phone_verification_tokens
+        WHERE phone = '+886955555555' AND used_at_ms IS NOT NULL`,
+    ).first<{ customer_id: string }>();
+    expect(evidence).toEqual({ customer_id: "oauth-customer" });
+    const total = await testApp.env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM customers`,
+    ).first<{ n: number }>();
+    expect(total).toEqual({ n: 1 });
+  });
+
+  it("keeps a signed-in customer's own primary phone when verifying another unowned phone", async () => {
+    await insertActiveCustomer("has-phone", "+886911111111");
+    const token = await customerAccessToken("has-phone");
+
+    const session = await readData<
+      CustomerSession & { switchedAccount: boolean }
+    >(await verifyPhone("+886922222222", token));
+
+    expect(session.customer.id).toBe("has-phone");
+    expect(session.customer.primaryPhone).toBe("+886911111111");
+    expect(session.switchedAccount).toBe(false);
+  });
+
+  it("switches to the owner when the phone belongs to another active customer", async () => {
+    await insertActiveCustomer("signed-in", null);
+    await insertActiveCustomer("phone-owner", "+886933333333");
+    const token = await customerAccessToken("signed-in");
+
+    const session = await readData<
+      CustomerSession & { switchedAccount: boolean }
+    >(await verifyPhone("+886933333333", token));
+
+    expect(session.customer.id).toBe("phone-owner");
+    expect(session.switchedAccount).toBe(true);
+    const signedIn = await testApp.env.DB.prepare(
+      `SELECT primary_phone FROM customers WHERE id = 'signed-in'`,
+    ).first<{ primary_phone: string | null }>();
+    expect(signedIn).toEqual({ primary_phone: null });
   });
 
   it("revokes refresh tokens on logout", async () => {
@@ -489,6 +550,51 @@ describe("Customer Identity API - real integration", () => {
 
     expect(res.status).toBe(400);
   });
+
+  function insertActiveCustomer(id: string, phone: string | null) {
+    return testApp.env.DB.prepare(
+      `INSERT INTO customers
+        (id, display_name, primary_phone, status, created_at_ms, updated_at_ms)
+       VALUES (?, ?, ?, 'active', 1, 1)`,
+    )
+      .bind(id, id, phone)
+      .run();
+  }
+
+  function customerAccessToken(customerId: string) {
+    return sign(
+      {
+        sub: customerId,
+        type: "customer",
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      },
+      testApp.env.JWT_SECRET,
+    );
+  }
+
+  async function verifyPhone(phone: string, accessToken?: string) {
+    const otpRes = await testApp.app.fetch(
+      new Request(`${BASE}/auth/request-otp`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "CF-Connecting-IP": testIpForPhone(phone),
+        },
+        body: JSON.stringify({ phone }),
+      }),
+    );
+    const otpJson = await readData<OtpChallenge>(otpRes);
+    return testApp.app.fetch(
+      new Request(`${BASE}/auth/verify-otp`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({ phone, otp: otpJson.devOtp }),
+      }),
+    );
+  }
 
   async function loginCustomer(phone: string): Promise<string> {
     const session = await loginCustomerSession(phone);

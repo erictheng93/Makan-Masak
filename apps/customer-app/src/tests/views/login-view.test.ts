@@ -22,6 +22,12 @@ vi.mock("@/stores/auth", () => ({
   useAuthStore: () => storeMocks,
 }));
 
+const toastMocks = vi.hoisted(() => ({ info: vi.fn() }));
+
+vi.mock("vue-toastification", () => ({
+  useToast: () => toastMocks,
+}));
+
 const routerMocks = vi.hoisted(() => ({
   push: vi.fn(),
   query: {} as Record<string, string>,
@@ -191,10 +197,6 @@ describe("LoginView", () => {
       expect(
         wrapper.find('[data-testid="phone-input"]').element,
       ).toHaveProperty("value", "0912345678");
-      // Verifying may sign them in to another account; that is said up front.
-      expect(wrapper.find('[data-testid="account-switch-notice"]').text()).toBe(
-        "auth.otpRecoveryAccountSwitch",
-      );
 
       await wrapper.find("form").trigger("submit");
       await flushPromises();
@@ -205,19 +207,36 @@ describe("LoginView", () => {
       expect(storeMocks.verifyOtp).toHaveBeenCalledWith("0912345678", "123456");
       expect(routerMocks.push).toHaveBeenCalledOnce();
       expect(routerMocks.push).toHaveBeenCalledWith("/r/rest-1/wait-list");
+      // The API linked the phone to this account: nothing to announce.
+      expect(toastMocks.info).not.toHaveBeenCalled();
     } finally {
       storeMocks.isAuthenticated = false;
     }
   });
 
-  it("shows no account-switch notice to a signed-out customer recovering a phone", async () => {
-    routerMocks.query = { mode: "otp", phone: "0912345678" };
+  it("tells the customer when verifying switched them to the phone owner's account", async () => {
+    routerMocks.query = {
+      mode: "otp",
+      phone: "0912345678",
+      otpSent: "1",
+      redirect: "/r/rest-1/wait-list",
+    };
+    storeMocks.verifyOtp.mockResolvedValue({
+      success: true,
+      switchedAccount: true,
+    });
     const wrapper = mountView();
     await flushPromises();
 
-    expect(wrapper.find('[data-testid="account-switch-notice"]').exists()).toBe(
-      false,
+    await wrapper.find('[data-testid="otp-input"]').setValue("123456");
+    await wrapper.find("form").trigger("submit");
+    await flushPromises();
+
+    expect(toastMocks.info).toHaveBeenCalledOnce();
+    expect(toastMocks.info).toHaveBeenCalledWith(
+      "auth.otpRecoverySwitchedAccount",
     );
+    expect(routerMocks.push).toHaveBeenCalledWith("/r/rest-1/wait-list");
   });
 
   it("still sends an authenticated customer on a plain /login to /orders", async () => {

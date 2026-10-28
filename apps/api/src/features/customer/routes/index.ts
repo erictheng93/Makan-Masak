@@ -4,10 +4,11 @@ import { getCookie } from "hono/cookie";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { drizzle } from "drizzle-orm/d1";
-import { and, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { generateUUID, normalizeE164Phone } from "@makanmasak/utils";
 import {
   createSmsProvider,
+  customers,
   menuItems,
   NotificationService,
   resolveEmailProviderName,
@@ -20,6 +21,7 @@ import {
 import type { Env } from "../../../types/env";
 import {
   canonicalCustomerAuthMiddleware,
+  optionalCanonicalCustomerAuthMiddleware,
   verifyJwtToken,
 } from "../../../middleware/auth";
 import { validateBody, validateQuery } from "../../../middleware/validation";
@@ -651,122 +653,151 @@ routes.post(
   },
 );
 
-routes.post("/auth/verify-otp", validateBody(verifyOtpSchema), async (c) => {
-  const { phone, otp, purpose } = c.get("validatedBody");
-  const now = Date.now();
-  const token = await c.env.DB.prepare(
-    `SELECT id, customer_id, otp_code, attempts
+routes.post(
+  "/auth/verify-otp",
+  // Optional: a signed-in customer verifying a phone (waiting-list recovery)
+  // links it to their own account instead of being switched to another one.
+  optionalCanonicalCustomerAuthMiddleware,
+  validateBody(verifyOtpSchema),
+  async (c) => {
+    const { phone, otp, purpose } = c.get("validatedBody");
+    const now = Date.now();
+    const token = await c.env.DB.prepare(
+      `SELECT id, customer_id, otp_code, attempts
        FROM customer_phone_verification_tokens
       WHERE phone = ?
         AND used_at_ms IS NULL
         AND expires_at_ms > ?
       ORDER BY created_at_ms DESC
       LIMIT 1`,
-  )
-    .bind(phone, now)
-    .first<{
-      id: number;
-      customer_id: string | null;
-      otp_code: string;
-      attempts: number;
-    }>();
+    )
+      .bind(phone, now)
+      .first<{
+        id: number;
+        customer_id: string | null;
+        otp_code: string;
+        attempts: number;
+      }>();
 
-  if (!token) {
-    throw unauthorized("Invalid or expired OTP", "INVALID_OTP");
-  }
-
-  // Reserve the attempt atomically before comparing, so concurrent guesses
-  // cannot all pass a stale `attempts < MAX` read.
-  const reservation = await c.env.DB.prepare(
-    `UPDATE customer_phone_verification_tokens
-        SET attempts = attempts + 1
-      WHERE id = ? AND attempts < ?
-      RETURNING attempts`,
-  )
-    .bind(token.id, MAX_OTP_ATTEMPTS)
-    .first<{ attempts: number }>();
-  if (!reservation) {
-    throw unauthorized("Invalid or expired OTP", "INVALID_OTP");
-  }
-
-  const valid = await bcrypt.compare(otp, token.otp_code);
-  if (!valid) {
-    throw unauthorized("Invalid or expired OTP", "INVALID_OTP");
-  }
-
-  const pendingPasswordIdentity = await loadPasswordIdentity(c.env, phone);
-
-  if (purpose === "password_reset") {
-    if (
-      !token.customer_id ||
-      !pendingPasswordIdentity ||
-      token.customer_id !== pendingPasswordIdentity.customer_id
-    ) {
+    if (!token) {
       throw unauthorized("Invalid or expired OTP", "INVALID_OTP");
     }
 
-    await c.env.DB.prepare(
+    // Reserve the attempt atomically before comparing, so concurrent guesses
+    // cannot all pass a stale `attempts < MAX` read.
+    const reservation = await c.env.DB.prepare(
       `UPDATE customer_phone_verification_tokens
+        SET attempts = attempts + 1
+      WHERE id = ? AND attempts < ?
+      RETURNING attempts`,
+    )
+      .bind(token.id, MAX_OTP_ATTEMPTS)
+      .first<{ attempts: number }>();
+    if (!reservation) {
+      throw unauthorized("Invalid or expired OTP", "INVALID_OTP");
+    }
+
+    const valid = await bcrypt.compare(otp, token.otp_code);
+    if (!valid) {
+      throw unauthorized("Invalid or expired OTP", "INVALID_OTP");
+    }
+
+    const pendingPasswordIdentity = await loadPasswordIdentity(c.env, phone);
+
+    if (purpose === "password_reset") {
+      if (
+        !token.customer_id ||
+        !pendingPasswordIdentity ||
+        token.customer_id !== pendingPasswordIdentity.customer_id
+      ) {
+        throw unauthorized("Invalid or expired OTP", "INVALID_OTP");
+      }
+
+      await c.env.DB.prepare(
+        `UPDATE customer_phone_verification_tokens
           SET used_at_ms = ?
         WHERE id = ?`,
+      )
+        .bind(now, token.id)
+        .run();
+
+      const resetToken = await createVerificationToken(
+        c,
+        "password_reset",
+        phone,
+        pendingPasswordIdentity.customer_id,
+        PASSWORD_RESET_TTL_MS,
+      );
+
+      return c.json({
+        success: true,
+        data: {
+          resetToken,
+          expiresInSeconds: PASSWORD_RESET_TTL_MS / 1000,
+        },
+      });
+    }
+
+    // Captured from this request's token, like OAuth linking: the OTP proves the
+    // phone, the token proves which account is asking.
+    const signedInCustomerId = c.get("customer")?.id;
+    const verifiesPendingRegistration =
+      pendingPasswordIdentity &&
+      pendingPasswordIdentity.verified_at_ms === null &&
+      // Only the OTP register issued for this identity may verify it; any other
+      // OTP for the phone proves nothing about who set the password.
+      token.customer_id &&
+      token.customer_id === pendingPasswordIdentity.customer_id;
+    const linked =
+      signedInCustomerId &&
+      !verifiesPendingRegistration &&
+      (!pendingPasswordIdentity ||
+        pendingPasswordIdentity.customer_id === signedInCustomerId)
+        ? await linkPhoneToSignedInCustomer(
+            c.env,
+            signedInCustomerId,
+            phone,
+            now,
+          )
+        : null;
+    const customer =
+      linked ??
+      (verifiesPendingRegistration
+        ? await verifyPendingPhonePasswordIdentity(
+            c.env,
+            pendingPasswordIdentity,
+            phone,
+            now,
+          )
+        : await findOrCreateCustomerByPhone(c.env, phone, now));
+
+    await c.env.DB.prepare(
+      `UPDATE customer_phone_verification_tokens
+        SET used_at_ms = ?, customer_id = ?
+      WHERE id = ?`,
     )
-      .bind(now, token.id)
+      .bind(now, customer.id, token.id)
       .run();
 
-    const resetToken = await createVerificationToken(
-      c,
-      "password_reset",
-      phone,
-      pendingPasswordIdentity.customer_id,
-      PASSWORD_RESET_TTL_MS,
+    const session = await issueCustomerSession(
+      c as unknown as Context<{ Bindings: Env }>,
+      customer.id,
     );
 
     return c.json({
       success: true,
       data: {
-        resetToken,
-        expiresInSeconds: PASSWORD_RESET_TTL_MS / 1000,
+        accessToken: session.accessToken,
+        expiresIn: session.expiresIn,
+        customer: toCustomerSummary(customer),
+        // The phone belongs to another account, so this session is that one.
+        switchedAccount:
+          signedInCustomerId !== undefined &&
+          customer.id !== signedInCustomerId,
       },
     });
-  }
-
-  const customer =
-    pendingPasswordIdentity &&
-    pendingPasswordIdentity.verified_at_ms === null &&
-    // Only the OTP register issued for this identity may verify it; any other
-    // OTP for the phone proves nothing about who set the password.
-    token.customer_id &&
-    token.customer_id === pendingPasswordIdentity.customer_id
-      ? await verifyPendingPhonePasswordIdentity(
-          c.env,
-          pendingPasswordIdentity,
-          phone,
-          now,
-        )
-      : await findOrCreateCustomerByPhone(c.env, phone, now);
-
-  await c.env.DB.prepare(
-    `UPDATE customer_phone_verification_tokens
-        SET used_at_ms = ?, customer_id = ?
-      WHERE id = ?`,
-  )
-    .bind(now, customer.id, token.id)
-    .run();
-
-  const session = await issueCustomerSession(
-    c as unknown as Context<{ Bindings: Env }>,
-    customer.id,
-  );
-
-  return c.json({
-    success: true,
-    data: {
-      accessToken: session.accessToken,
-      expiresIn: session.expiresIn,
-      customer: toCustomerSummary(customer),
-    },
-  });
-});
+  },
+);
 
 routes.post("/auth/refresh", async (c) => {
   const body = await readOptionalJson(c);
@@ -1833,6 +1864,53 @@ async function validateMarketTarget(env: Env, marketId: string): Promise<void> {
     .bind(marketId)
     .first();
   if (!row) throw badRequest("Market not found", "TARGET_NOT_FOUND");
+}
+
+/**
+ * A signed-in customer proved this phone by OTP. Keep them on their own
+ * account unless another active account already owns the phone (returns null:
+ * the caller falls back to that owner — merging accounts is out of scope).
+ * An unowned phone becomes their primary phone when they have none; either
+ * way the consumed OTP row, stamped with their id, is the evidence the
+ * waiting-list check accepts.
+ */
+async function linkPhoneToSignedInCustomer(
+  env: Env,
+  customerId: string,
+  phone: string,
+  now: number,
+): Promise<CustomerRow | null> {
+  const db = drizzle(env.DB);
+  const [owner] = await db
+    .select({ id: customers.id })
+    .from(customers)
+    .where(
+      and(eq(customers.primaryPhone, phone), eq(customers.status, "active")),
+    )
+    .limit(1);
+  if (owner && owner.id !== customerId) return null;
+
+  if (!owner) {
+    // A deleted account still holding the number would trip the unique index.
+    await db
+      .update(customers)
+      .set({ primaryPhone: null, updatedAt: new Date(now) })
+      .where(
+        and(eq(customers.primaryPhone, phone), eq(customers.status, "deleted")),
+      );
+    await db
+      .update(customers)
+      .set({ primaryPhone: phone, updatedAt: new Date(now) })
+      .where(
+        and(
+          eq(customers.id, customerId),
+          eq(customers.status, "active"),
+          isNull(customers.primaryPhone),
+        ),
+      );
+  }
+
+  return loadCustomer(env, customerId);
 }
 
 async function findOrCreateCustomerByPhone(

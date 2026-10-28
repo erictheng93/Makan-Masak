@@ -146,7 +146,10 @@ export const useAuthStore = defineStore("auth", () => {
 
       if (data.accessToken && data.customer) {
         adoptSession(data);
-        return { success: true };
+        return {
+          success: true,
+          switchedAccount: data.switchedAccount === true,
+        };
       }
 
       error.value = t("auth.loginFailed");

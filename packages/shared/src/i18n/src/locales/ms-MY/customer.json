@@ -448,7 +448,7 @@
     "verifyEmailSuccess": "E-mel disahkan. Anda boleh log masuk sekarang.",
     "linkTokenMissing": "Pautan ini tidak lengkap atau tidak lagi sah. Minta yang baharu.",
     "otpSentForRegistration": "Kami menghantar kod melalui SMS. Masukkannya untuk melengkapkan pendaftaran.",
-    "otpRecoveryAccountSwitch": "Anda sudah log masuk. Pengesahan akan log masuk ke akaun yang memiliki nombor telefon ini, dan mungkin menukar anda ke akaun lain.",
+    "otpRecoverySwitchedAccount": "Nombor telefon ini milik akaun lain, jadi anda kini log masuk ke akaun tersebut.",
     "forgotPasswordHint": "Masukkan telefon atau e-mel yang anda daftarkan dan kami akan menghantar pautan tetapan semula.",
     "resetPasswordHint": "Pilih kata laluan baharu.",
     "enterNewPassword": "Masukkan kata laluan baharu"
