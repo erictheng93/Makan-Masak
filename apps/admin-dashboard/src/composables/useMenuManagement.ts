@@ -169,6 +169,14 @@ export function useMenuManagement() {
           ...c,
           nameEn: c.nameEn || "",
         }));
+        // Module-level selection survives a restaurant switch; drop it if the
+        // new list no longer has that category.
+        if (
+          selectedCategoryId.value !== null &&
+          !categories.value.some((c) => c.id === selectedCategoryId.value)
+        ) {
+          selectedCategoryId.value = null;
+        }
         // No client-side deleted-item filter: soft-deleted items carry
         // deleted_at_ms and the API excludes them at the source (#80). The old
         // sortOrder !== -1 convention is retired.

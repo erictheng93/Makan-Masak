@@ -206,3 +206,37 @@ describe("menu item import parsing", () => {
     );
   });
 });
+
+describe("menu item import: review fixes", () => {
+  it("reads vi-VN grouped VND prices as whole units", () => {
+    const result = parseMenuItemImport(
+      ["name,price", "Pho,35.000 ₫", "Set,1.200.000 ₫"].join("\n"),
+      [{ id: 1, name: "Main", sortOrder: 0 }],
+      "VND",
+    );
+    expect(result.errors).toEqual([]);
+    expect(result.rows.map((row) => row.errors)).toEqual([[], []]);
+    expect(result.items.map((item) => item.price)).toEqual([35000, 1200000]);
+  });
+
+  it("still rejects an ambiguous decimal for a whole-unit currency", () => {
+    const result = parseMenuItemImport(
+      "name,price\nPho,35.5",
+      [{ id: 1, name: "Main", sortOrder: 0 }],
+      "VND",
+    );
+    expect(result.rows[0].errors.length).toBeGreaterThan(0);
+    expect(result.items).toEqual([]);
+  });
+
+  it("ignores a stale default category that is not in the current list", () => {
+    const result = parseMenuItemImport(
+      "name,price\nTea,25",
+      categories,
+      "TWD",
+      99,
+    );
+    expect(result.rows[0].errors.length).toBeGreaterThan(0);
+    expect(result.items).toEqual([]);
+  });
+});

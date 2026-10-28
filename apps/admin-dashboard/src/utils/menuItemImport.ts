@@ -156,8 +156,15 @@ export function parseMenuItemImport(
     transformHeader: normalizeHeader,
     transform: (value) => value.trim(),
   });
+  // A stale selection (e.g. left over from another restaurant) must not win.
+  const validDefaultCategoryId =
+    defaultCategoryId !== null &&
+    categories.some((category) => category.id === defaultCategoryId)
+      ? defaultCategoryId
+      : null;
   const fallbackCategoryId =
-    defaultCategoryId ?? (categories.length === 1 ? categories[0].id : null);
+    validDefaultCategoryId ??
+    (categories.length === 1 ? categories[0].id : null);
 
   const rows: MenuItemImportRow[] = parsed.data.map((row, index) => {
     const line = index + 2;
@@ -208,7 +215,12 @@ export function parseMenuItemImport(
 
   for (const row of rows) {
     if (row.errors.length === 0) {
-      row.item = csvRowToMenuItem(row.raw, categories, fallbackCategoryId);
+      row.item = csvRowToMenuItem(
+        row.raw,
+        categories,
+        fallbackCategoryId,
+        currency,
+      );
     }
   }
 
@@ -241,6 +253,7 @@ function csvRowToMenuItem(
   row: CsvRow,
   categories: CategoryData[],
   fallbackCategoryId: number | null,
+  currency: CurrencyCode,
 ): MenuItemImportInput | null {
   const categoryId = resolveCategoryId(
     row.category,
@@ -254,7 +267,7 @@ function csvRowToMenuItem(
     name: normalizeCell(row.name) ?? "",
     categoryId,
     catalogType: parseCatalogType(row.catalogType) ?? "menu_item",
-    price: parsePrice(row.price) ?? 0,
+    price: parsePrice(row.price, currency) ?? 0,
     isFeatured: parseBoolean(row.isFeatured, false),
     isAvailable: parseBoolean(row.isAvailable, true),
     sortOrder: parseOptionalNumber(row.sortOrder) ?? 0,
@@ -313,13 +326,28 @@ function parseOptionalNumber(value: string | undefined) {
 }
 
 /** Accepts what people type in a spreadsheet: "NT$1,200", "70元", "RM12.50". */
-function parsePrice(value: string | undefined) {
-  const normalized = normalizeCell(value)
-    ?.replace(/^(NT\$|RM|Rp|\$|₫)/i, "")
-    .replace(/(元|塊|₫)$/, "")
-    .replace(/,/g, "")
-    .trim();
-  return normalized ? Number(normalized) : undefined;
+function parsePrice(
+  value: string | undefined,
+  currency: CurrencyCode = DEFAULT_CURRENCY,
+) {
+  const stripped = normalizeCell(value)
+    ?.replace(/^(NT\$|RM|Rp|\$|₫)\s*/i, "")
+    .replace(/\s*(元|塊|₫)$/, "")
+    // Spaces and NBSP / narrow NBSP are grouping marks in some locales.
+    .replace(/[\s  ]/g, "");
+  if (!stripped) return undefined;
+
+  const decimals = getCurrencyConfig(currency)?.decimals ?? 0;
+  if (decimals > 0) return Number(stripped.replace(/,/g, ""));
+
+  // Whole-unit currencies (TWD, VND): "." and "," are grouping marks, as in
+  // vi-VN "1.200.000 ₫". Only accept them as clean groups of three; anything
+  // else ("35.5", "1,5", "1.200,50") is ambiguous and must fail validation.
+  if (/^\d{1,3}([.,]\d{3})+$/.test(stripped)) {
+    return Number(stripped.replace(/[.,]/g, ""));
+  }
+  // "35.5" stays 35.5 so importPriceProblem reports it as a decimal.
+  return /^\d+(\.\d+)?$/.test(stripped) ? Number(stripped) : Number.NaN;
 }
 
 function parseBoolean(value: string | undefined, fallback: boolean) {
@@ -359,7 +387,7 @@ function validateMenuItemImportRow(
     );
   }
 
-  const price = parsePrice(row.price);
+  const price = parsePrice(row.price, currency);
   const priceProblem =
     price === undefined ? null : importPriceProblem(price, currency);
   if (price === undefined) {
