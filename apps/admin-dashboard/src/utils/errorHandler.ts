@@ -197,6 +197,26 @@ class OfflineManager {
   }
 }
 
+function readPersistedCsrfToken(): string | undefined {
+  try {
+    return (
+      localStorage.getItem("mm_csrf_token_auth") ??
+      localStorage.getItem("mm_csrf_token") ??
+      undefined
+    );
+  } catch {
+    return undefined;
+  }
+}
+
+function readCsrfCookie(): string | undefined {
+  const cookies = document.cookie.split("; ");
+  return ["__Host-mm_csrf=", "csrf_token="]
+    .map((prefix) => cookies.find((c) => c.startsWith(prefix)))
+    .find(Boolean)
+    ?.split("=")[1];
+}
+
 // 錯誤上報服務
 class ErrorReportingService {
   private readonly REPORT_ENDPOINT = apiUrl(
@@ -241,15 +261,16 @@ class ErrorReportingService {
       const errors = [...this.reportQueue];
       this.reportQueue = [];
 
-      // The API compares the header to this cookie (legacy name second); the
-      // old lookup read only `csrf_token`, so every report was rejected 403.
-      const cookies = document.cookie.split("; ");
-      const csrfToken = ["__Host-mm_csrf=", "csrf_token="]
-        .map((prefix) => cookies.find((c) => c.startsWith(prefix)))
-        .find(Boolean)
-        ?.split("=")[1];
+      // The API compares the header to its `__Host-mm_csrf` cookie. That cookie
+      // is host-only on the API origin, so in production document.cookie on the
+      // admin origin cannot see it: read the token the auth client persisted
+      // from the X-CSRF-Token response header (see auth-client
+      // create-api-client.ts), and fall back to the cookie for the same-origin
+      // dev proxy. The cookie itself reaches the API via credentials: "include".
+      const csrfToken = readPersistedCsrfToken() ?? readCsrfCookie();
       const response = await fetch(this.REPORT_ENDPOINT, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
           ...(getAuthToken()

@@ -295,12 +295,10 @@ describe("ErrorReportingService — CSRF", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+    localStorage.clear();
   });
 
-  it("echoes the __Host-mm_csrf cookie the API compares against", async () => {
-    vi.spyOn(document, "cookie", "get").mockReturnValue(
-      "ws_locale=en; __Host-mm_csrf=csrf-from-cookie",
-    );
+  async function reportOnce() {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -312,10 +310,39 @@ describe("ErrorReportingService — CSRF", () => {
     });
 
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    return fetchMock;
+  }
+
+  it("echoes the persisted auth-client token with credentials when the host-only cookie is unreadable", async () => {
+    // Production: the API's __Host-mm_csrf cookie is invisible to this origin.
+    vi.spyOn(document, "cookie", "get").mockReturnValue("ws_locale=en");
+    localStorage.setItem("mm_csrf_token_auth", "csrf-from-store");
+
+    const fetchMock = await reportOnce();
+
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining("/system/error-report"),
       expect.objectContaining({
         method: "POST",
+        credentials: "include",
+        headers: expect.objectContaining({
+          "X-CSRF-Token": "csrf-from-store",
+        }),
+      }),
+    );
+  });
+
+  it("falls back to the readable cookie on the same-origin dev proxy", async () => {
+    vi.spyOn(document, "cookie", "get").mockReturnValue(
+      "ws_locale=en; __Host-mm_csrf=csrf-from-cookie",
+    );
+
+    const fetchMock = await reportOnce();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        credentials: "include",
         headers: expect.objectContaining({
           "X-CSRF-Token": "csrf-from-cookie",
         }),
