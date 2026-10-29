@@ -106,8 +106,8 @@ export const queueIdParamSchema = z.object({
 });
 
 export const paginationQuerySchema = z.object({
-  page: z.string().regex(/^\d+$/).transform(Number).optional().prefault("1"),
-  limit: z.string().regex(/^\d+$/).transform(Number).optional().prefault("20"),
+  page: z.string().regex(/^\d+$/).transform(Number).prefault("1"),
+  limit: z.string().regex(/^\d+$/).transform(Number).prefault("20"),
 });
 
 export const dateRangeQuerySchema = z.object({

@@ -84,7 +84,7 @@ export const overviewQuerySchema = z.lazy(() =>
 // Performance report query schema
 export const performanceReportQuerySchema = z.lazy(() =>
   z.object({
-    days: z.string().regex(/^\d+$/).transform(Number).optional().prefault("7"),
+    days: z.string().regex(/^\d+$/).transform(Number).prefault("7"),
   }),
 );
 

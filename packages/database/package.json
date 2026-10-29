@@ -44,7 +44,7 @@
     "@typescript/native": "npm:typescript@^7.0.2",
     "cross-env": "^10.1.0",
     "drizzle-kit": "^0.31.10",
-    "miniflare": "^3.20250718.3",
+    "miniflare": "^4.20260730.0",
     "tsup": "^8.0.0",
     "tsx": "^4.0.0",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
