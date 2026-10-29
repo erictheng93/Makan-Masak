@@ -34,6 +34,7 @@ function checkExceptionScope(yaml, installedRoots) {
   const versions = {
     artillery: "2.0.34",
     braces: "3.0.3",
+    deepmerge: "4.3.1",
     "http-cache-semantics": "4.2.0",
     "sprintf-js": "1.0.3",
     "csv-parse": "7.0.3",
@@ -53,6 +54,7 @@ function checkExceptionScope(yaml, installedRoots) {
   for (const name of [
     "artillery",
     "braces",
+    "deepmerge",
     "http-cache-semantics",
     "sprintf-js",
   ]) {
@@ -403,6 +405,29 @@ function checkSprintf({ sprintf, vsprintf }) {
   );
 }
 
+function checkDeepmerge(merge) {
+  // JSON.parse yields an own "__proto__" key; assigning it would re-parent the result.
+  const evil = JSON.parse('{"__proto__": {"polluted": true}}');
+  for (const merged of [
+    merge(Object.create(null), evil),
+    merge(evil, {}),
+    merge({}, evil),
+    merge.all([{}, evil]),
+  ]) {
+    assert.equal(Object.getPrototypeOf(merged), Object.prototype);
+    assert.equal(merged.polluted, undefined);
+  }
+  assert.equal({}.polluted, undefined);
+  assert.deepEqual(
+    merge({ a: { x: 1 }, l: [1] }, { a: { y: 2 }, l: [2], b: 3 }),
+    {
+      a: { x: 1, y: 2 },
+      l: [1, 2],
+      b: 3,
+    },
+  );
+}
+
 async function main() {
   const artilleryManifest = require.resolve("artillery/package.json");
   const artilleryRequire = createRequire(artilleryManifest);
@@ -416,9 +441,17 @@ async function main() {
   const adminRequire = createRequire(
     path.join(ROOT, "apps/admin-dashboard/package.json"),
   );
+  const nodeResolveRequire = createRequire(
+    createRequire(
+      createRequire(path.join(ROOT, "apps/customer-app/package.json")).resolve(
+        "workbox-build",
+      ),
+    ).resolve("@rollup/plugin-node-resolve"),
+  );
   const roots = {
     artillery: path.dirname(artilleryManifest),
     braces: packageRoot(chokidarRequire.resolve("braces")),
+    deepmerge: packageRoot(nodeResolveRequire.resolve("deepmerge")),
     "http-cache-semantics": packageRoot(
       cacheableRequire.resolve("http-cache-semantics"),
     ),
@@ -433,6 +466,10 @@ async function main() {
   console.log("PASS: braces strings, AST depth and normal glob patterns");
   checkSprintf(argparseRequire("sprintf-js"));
   checkSprintf(require(path.join(roots["sprintf-js"], "dist/sprintf.min.js")));
+  // index.js is unbuilt source (requires an uninstalled devDependency); main is dist/cjs.js
+  for (const entry of ["dist/cjs.js", "dist/umd.js"])
+    checkDeepmerge(require(path.join(roots.deepmerge, entry)));
+  console.log("PASS: deepmerge never re-parents merged objects via __proto__");
 }
 
 if (require.main === module) {
@@ -448,4 +485,5 @@ module.exports = {
   checkArtilleryCsv,
   checkBraces,
   checkSprintf,
+  checkDeepmerge,
 };
