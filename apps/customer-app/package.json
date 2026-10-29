@@ -42,7 +42,7 @@
     "qrcode-reader": "^1.0.4",
     "tailwindcss": "^3.4.0",
     "vue": "^3.5.42",
-    "vue-i18n": "^9.14.5",
+    "vue-i18n": "^11.4.14",
     "vue-router": "^4.2.0",
     "vue-toastification": "^2.0.0-rc.5",
     "workbox-window": "^7.4.1",
