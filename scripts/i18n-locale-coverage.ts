@@ -389,12 +389,13 @@ async function validateApprovalManifest(csvPath: string): Promise<void> {
   const issues: string[] = [];
   const expectedHash = await sha256File(csvPath);
 
-  if (
-    manifest.handoff !== path.relative(process.cwd(), path.resolve(csvPath))
-  ) {
-    issues.push(
-      `handoff must be ${path.relative(process.cwd(), path.resolve(csvPath))}`,
-    );
+  // Manifests are committed with POSIX separators; path.relative uses "\" on Windows.
+  const handoffPath = path
+    .relative(process.cwd(), path.resolve(csvPath))
+    .split(path.sep)
+    .join("/");
+  if (manifest.handoff !== handoffPath) {
+    issues.push(`handoff must be ${handoffPath}`);
   }
 
   if (manifest.sha256 !== expectedHash) {
