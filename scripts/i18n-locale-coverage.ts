@@ -540,9 +540,9 @@ function updateLocaleSource(
         ts.LanguageVariant.Standard,
         source,
       );
-      scanner.setTextPos(property.end);
+      scanner.resetTokenState(property.end);
       return scanner.scan() === ts.SyntaxKind.CommaToken
-        ? scanner.getTokenPos()
+        ? scanner.getTokenStart()
         : undefined;
     };
     for (const property of node.properties) {
