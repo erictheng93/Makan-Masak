@@ -65,7 +65,6 @@ const boundedLimitQuery = (defaultValue: string, max: number) =>
     .string()
     .regex(/^\d+$/)
     .transform(Number)
-    .optional()
     .prefault(defaultValue)
     .pipe(z.number().int().min(1).max(max));
 
@@ -411,7 +410,6 @@ export const menuFilterSchema = z.lazy(() =>
       .string()
       .regex(/^\d+$/)
       .transform(Number)
-      .optional()
       .prefault("1")
       .pipe(z.number().int().min(1).max(MAX_PAGE)),
     limit: boundedLimitQuery("20", MAX_PAGE_SIZE),
@@ -667,12 +665,10 @@ export const menuExportQuerySchema = z.lazy(() =>
     includeImages: z
       .string()
       .transform((val) => val === "true")
-      .optional()
       .prefault("false"),
     includeAnalytics: z
       .string()
       .transform((val) => val === "true")
-      .optional()
       .prefault("false"),
     categories: z.string().optional(), // Comma-separated category IDs
   }),

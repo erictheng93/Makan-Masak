@@ -38,7 +38,6 @@ export const boundedPositiveIntegerQuery = (
     .string()
     .regex(/^\d+$/)
     .transform(Number)
-    .optional()
     .prefault(defaultValue)
     .pipe(z.number().int().min(1).max(max));
 

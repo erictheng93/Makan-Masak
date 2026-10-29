@@ -318,7 +318,6 @@ export const orderSearchSchema = z.object({
   fuzzy: z
     .string()
     .transform((s) => s === "true")
-    .optional()
     .prefault("false"),
   ...orderFilterSchema.shape,
 });
@@ -397,12 +396,10 @@ export const orderStatsQuerySchema = z.lazy(() =>
     includeItems: z
       .string()
       .transform((s) => s === "true")
-      .optional()
       .prefault("false"),
     includeCustomers: z
       .string()
       .transform((s) => s === "true")
-      .optional()
       .prefault("false"),
   }),
 );
@@ -415,12 +412,7 @@ export const popularItemsQuerySchema = z.lazy(() =>
       .optional()
       .default("month"),
     limit: boundedLimitQuery("10"),
-    minQuantity: z
-      .string()
-      .regex(/^\d+$/)
-      .transform(Number)
-      .optional()
-      .prefault("1"),
+    minQuantity: z.string().regex(/^\d+$/).transform(Number).prefault("1"),
   }),
 );
 
@@ -431,12 +423,10 @@ export const exportOrdersSchema = z.lazy(() =>
     includeItems: z
       .string()
       .transform((s) => s === "true")
-      .optional()
       .prefault("false"),
     includeCustomerInfo: z
       .string()
       .transform((s) => s === "true")
-      .optional()
       .prefault("true"),
     columns: z.array(z.string()).optional(),
     ...orderFilterSchema.omit({ page: true, limit: true }).shape,
@@ -450,7 +440,6 @@ export const generateReceiptSchema = z.lazy(() =>
     includeQR: z
       .string()
       .transform((s) => s === "true")
-      .optional()
       .prefault("true"),
     language: z.enum(["en", "zh", "ms"]).optional().default("en"),
     template: z
@@ -632,27 +621,22 @@ export const advancedOrderQuerySchema = z.lazy(() =>
     includeItems: z
       .string()
       .transform((s) => s === "true")
-      .optional()
       .prefault("false"),
     includeCustomer: z
       .string()
       .transform((s) => s === "true")
-      .optional()
       .prefault("false"),
     includeRestaurant: z
       .string()
       .transform((s) => s === "true")
-      .optional()
       .prefault("false"),
     includeTable: z
       .string()
       .transform((s) => s === "true")
-      .optional()
       .prefault("false"),
     includeAnalytics: z
       .string()
       .transform((s) => s === "true")
-      .optional()
       .prefault("false"),
     fields: z
       .string()
@@ -760,17 +744,14 @@ export const getOrderValidation = {
     includeItems: z
       .string()
       .transform((s) => s === "true")
-      .optional()
       .prefault("true"),
     includeCustomer: z
       .string()
       .transform((s) => s === "true")
-      .optional()
       .prefault("false"),
     includeRestaurant: z
       .string()
       .transform((s) => s === "true")
-      .optional()
       .prefault("false"),
   }),
 };

@@ -32,12 +32,7 @@ export const auditLogQuerySchema = z.lazy(() =>
     restaurantId: z.string().min(1).optional(),
     action: z.string().min(1).optional(),
     limit: boundedLimitQuery("50"),
-    offset: z
-      .string()
-      .regex(/^\d+$/)
-      .transform(Number)
-      .optional()
-      .prefault("0"),
+    offset: z.string().regex(/^\d+$/).transform(Number).prefault("0"),
   }),
 );
 
