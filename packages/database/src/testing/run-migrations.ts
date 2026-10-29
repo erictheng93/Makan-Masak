@@ -54,6 +54,8 @@ export async function listUserTables(db: D1Database): Promise<string[]> {
        WHERE m.type='table'
          AND m.name NOT LIKE 'sqlite_%'
          AND m.name != '__drizzle_migrations'
+         -- workerd's own D1 metadata (_cf_KV, _cf_METADATA): SQLITE_AUTH on DELETE
+         AND m.name NOT LIKE '\\_cf\\_%' ESCAPE '\\'
          AND m.sql IS NOT NULL
          AND m.sql NOT LIKE 'CREATE VIRTUAL TABLE%'
          AND NOT EXISTS (
