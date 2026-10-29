@@ -8,6 +8,11 @@ ignoreUntil = 2027-01-05
 reason = "braces 3.0.3 is locally patched to bound parser/AST depth and cycles; patches/braces@3.0.3.patch and check-dependency-security.cjs. Remove when upstream fixes https://github.com/micromatch/braces/issues/70."
 
 [[IgnoredVulns]]
+id = "GHSA-gcqx-w48m-w2h4"
+ignoreUntil = 2027-01-05
+reason = "deepmerge 4.3.1 (latest; every 4.2.0-4.3.1 release affected, no fix published) is locally patched to never copy a __proto__ key in source, CJS and UMD builds; patches/deepmerge@4.3.1.patch and check-dependency-security.cjs. Build-time only (vite-plugin-pwa > workbox-build > @rollup/plugin-node-resolve). Remove when upstream ships a fix."
+
+[[IgnoredVulns]]
 id = "GHSA-ch52-4w7c-c8xp"
 ignoreUntil = 2027-01-05
 reason = "http-cache-semantics 4.2.0 is locally patched to require revalidation for security-zeroed lifetimes on every stale reuse path; patches/http-cache-semantics@4.2.0.patch. Upstream 4.3.0 still reproduces https://github.com/kornelski/http-cache-semantics/issues/56."
