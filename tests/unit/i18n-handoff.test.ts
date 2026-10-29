@@ -45,7 +45,8 @@ beforeEach(() => {
   symlinkSync(
     path.join(repo, "node_modules"),
     path.join(root, "node_modules"),
-    "dir",
+    // junction: no Developer Mode/admin needed on Windows; ignored on POSIX
+    "junction",
   );
   mkdirSync(path.join(root, "docs/i18n"), { recursive: true });
   for (const app of apps) {
