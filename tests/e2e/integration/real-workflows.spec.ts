@@ -1,4 +1,9 @@
-import { expect, test, type Page } from "@playwright/test";
+import {
+  expect,
+  test,
+  type Page,
+  type Response as PlaywrightResponse,
+} from "@playwright/test";
 import { randomInt, randomUUID } from "node:crypto";
 import {
   createLocalManagementToken,
@@ -3163,11 +3168,15 @@ test.describe("Real system workflows", () => {
   test("account management adds an owner to an existing restaurant who can log in", async ({
     page,
   }) => {
-    skipWhen(!ADMIN_URL, "WORKFLOW_ADMIN_URL/SMOKE_ADMIN_URL is required");
+    skipWhen(
+      !ADMIN_URL || !RESTAURANT_ID,
+      "WORKFLOW_ADMIN_URL/SMOKE_ADMIN_URL and WORKFLOW_RESTAURANT_ID/SMOKE_RESTAURANT_ID are required",
+    );
 
     const adminLogin = await smokeLogin(API_URL, "admin", "admin123");
     assertLoginData(adminLogin, "seeded platform admin login is required");
 
+    const restaurantId = RESTAURANT_ID!;
     const suffix = randomSuffix();
     const username = `workflow-owner-${suffix}`;
     const password = `Owner@${suffix}Setup1`;
@@ -3183,39 +3192,44 @@ test.describe("Real system workflows", () => {
         page.getByTestId("account-management-owner-form"),
       ).toBeVisible();
 
-      await page
-        .getByTestId("account-management-owner-username")
-        .fill(username);
-      await page
-        .getByTestId("account-management-owner-password")
-        .fill(password);
-      await page
-        .getByTestId("account-management-owner-full-name")
-        .fill("Workflow Owner");
-      await page
-        .getByTestId("account-management-owner-email")
-        .fill(`${username}@example.com`);
-      await page
-        .getByTestId("account-management-owner-phone")
-        .fill("0912345678");
-      // New shops go through platform onboarding; this form only binds an
-      // owner to a restaurant that already exists.
-      const restaurantSelect = page.getByTestId(
-        "account-management-owner-restaurant",
-      );
-      await expect(restaurantSelect.locator("option").nth(1)).toBeAttached();
-      await restaurantSelect.selectOption({ index: 1 });
-      const restaurantId = await restaurantSelect.inputValue();
-      expect(restaurantId, "selected restaurant id").not.toBe("");
+      // Filled and submitted as one unit: a local SQLITE_BUSY in auth reads as
+      // a 401 and bounces the page through /login, which empties the form.
+      // Without a POST the attempt repeats, so this cannot create two owners.
+      let ownerResponse!: PlaywrightResponse;
+      await expect(async () => {
+        await page
+          .getByTestId("account-management-owner-username")
+          .fill(username);
+        await page
+          .getByTestId("account-management-owner-password")
+          .fill(password);
+        await page
+          .getByTestId("account-management-owner-full-name")
+          .fill("Workflow Owner");
+        await page
+          .getByTestId("account-management-owner-email")
+          .fill(`${username}@example.com`);
+        await page
+          .getByTestId("account-management-owner-phone")
+          .fill("0912345678");
+        // New shops go through platform onboarding; this form only binds an
+        // owner to an existing restaurant whose tenant has none, which is what
+        // scripts/seed-e2e-management.sql provides.
+        await page
+          .getByTestId("account-management-owner-restaurant")
+          .selectOption(restaurantId, { timeout: 5_000 });
 
-      const ownerCreated = page.waitForResponse(
-        (response) =>
-          response.url().includes("/api/v1/users") &&
-          response.request().method() === "POST",
-      );
-      await page.getByTestId("account-management-owner-submit").click();
+        [ownerResponse] = await Promise.all([
+          page.waitForResponse(
+            (response) =>
+              response.url().includes("/api/v1/users") &&
+              response.request().method() === "POST",
+            { timeout: 5_000 },
+          ),
+          page.getByTestId("account-management-owner-submit").click(),
+        ]);
+      }).toPass({ timeout: 30_000 });
 
-      const ownerResponse = await ownerCreated;
       expect(
         ownerResponse.ok(),
         `account-management owner create ${ownerResponse.status()}`,
