@@ -8,7 +8,11 @@
 
 import { Hono } from "hono";
 import type { Context, Next } from "hono";
-import { authMiddleware, verifyJwtToken } from "../../../middleware/auth";
+import {
+  authMiddleware,
+  toAuthFailure,
+  verifyJwtToken,
+} from "../../../middleware/auth";
 import type { AuthUser } from "../../../middleware/auth";
 import { ApiError, unauthorized } from "../../../shared/utils/api-error";
 import type { Env } from "../../../types/env";
@@ -44,14 +48,21 @@ const sseAuthMiddleware = async (c: Context<{ Bindings: Env }>, next: Next) => {
     );
   }
 
-  if (c.env.TOKEN_BLACKLIST) {
-    const blacklisted = await c.env.TOKEN_BLACKLIST.get(`token:${token}`);
-    if (blacklisted) {
-      throw unauthorized("Token has been invalidated", "TOKEN_BLACKLISTED");
-    }
-  }
+  let decoded: SseJwtPayload;
+  try {
+    // Verify before the KV lookup: keys over 512 bytes make KV throw, so an
+    // unsigned garbage token must never reach it.
+    decoded = verifyJwtToken(token, c.env.JWT_SECRET) as SseJwtPayload;
 
-  const decoded = verifyJwtToken(token, c.env.JWT_SECRET) as SseJwtPayload;
+    if (c.env.TOKEN_BLACKLIST) {
+      const blacklisted = await c.env.TOKEN_BLACKLIST.get(`token:${token}`);
+      if (blacklisted) {
+        throw unauthorized("Token has been invalidated", "TOKEN_BLACKLISTED");
+      }
+    }
+  } catch (error) {
+    throw toAuthFailure(error);
+  }
 
   const user: AuthUser = {
     id: decoded.sub ?? decoded.id!,

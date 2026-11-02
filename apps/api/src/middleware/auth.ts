@@ -194,7 +194,7 @@ function isJwtInvalidError(error: unknown): boolean {
  * becomes 503 and the client keeps its session. Callers must still throw the
  * result, never fall through to next().
  */
-function toAuthFailure(error: unknown): ApiError {
+export function toAuthFailure(error: unknown): ApiError {
   if (error instanceof ApiError) return error;
   if (isJwtExpiredError(error)) {
     return unauthorized("Token has expired", "TOKEN_EXPIRED");
