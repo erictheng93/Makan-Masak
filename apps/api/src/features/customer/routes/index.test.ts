@@ -88,6 +88,12 @@ vi.mock("@makanmasak/utils", () => ({
     (message = "Resource not found", code = "NOT_FOUND") =>
       new utilMocks.ApiError(code, message, 404),
   ),
+  serviceUnavailable: vi.fn(
+    (
+      message = "Service temporarily unavailable",
+      code = "SERVICE_UNAVAILABLE",
+    ) => new utilMocks.ApiError(code, message, 503),
+  ),
 }));
 
 // Only NotificationService is stubbed. createSmsProvider stays real so the OTP
@@ -1706,6 +1712,55 @@ describe("customer identity routes", () => {
     expect(tokenKv.delete).toHaveBeenCalledWith(
       "customer_refresh:customer-1:refresh-1",
     );
+  });
+
+  it("keeps the refresh token usable and answers 503 when the customer lookup fails", async () => {
+    const tokenKv = createKv({
+      "customer_refresh:customer-1:refresh-1": "1",
+    });
+    const db = createDb();
+    db.prepare.mockImplementationOnce(() => {
+      throw new Error("D1_ERROR: SQLITE_BUSY");
+    });
+
+    const response = await request(
+      "/auth/refresh",
+      "POST",
+      undefined,
+      { DB: db, TOKEN_BLACKLIST: tokenKv },
+      { Cookie: "__Host-mm_customer_refresh=refresh-token-value-12345" },
+    ).response;
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      error: { code: "AUTH_BACKEND_UNAVAILABLE" },
+    });
+    expect(tokenKv.delete).not.toHaveBeenCalled();
+    expect(tokenKv.put).not.toHaveBeenCalled();
+    expect(tokenKv.values.has("customer_refresh:customer-1:refresh-1")).toBe(
+      true,
+    );
+    expect(response.headers.getSetCookie()).toHaveLength(0);
+  });
+
+  it("still rejects a refresh token whose record was already revoked or reused", async () => {
+    const tokenKv = createKv();
+    const db = createDb({ first: [customerRow()] });
+
+    const response = await request(
+      "/auth/refresh",
+      "POST",
+      undefined,
+      { DB: db, TOKEN_BLACKLIST: tokenKv },
+      { Cookie: "__Host-mm_customer_refresh=refresh-token-value-12345" },
+    ).response;
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "TOKEN_INVALID" },
+    });
+    expect(tokenKv.put).not.toHaveBeenCalled();
   });
 
   it("reads and updates customer profile and preferences", async () => {
