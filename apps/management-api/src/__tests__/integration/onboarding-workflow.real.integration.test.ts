@@ -2084,13 +2084,15 @@ describe("Operator-created applications — real integration", () => {
         .exec(
           "CREATE TABLE orders (id TEXT PRIMARY KEY NOT NULL, restaurant_id TEXT NOT NULL REFERENCES restaurants(id))",
         );
-      // Metering tables: restaurant_id FKs without ON DELETE CASCADE, written
-      // once the owner makes any API request.
+      // restaurant_id FKs without ON DELETE CASCADE that an owner leaves behind
+      // just by using the dashboard: metering on any API request, and an error
+      // report whenever the dashboard hits an error.
       for (const table of [
         "usage_meter_buckets",
         "usage_events",
         "usage_meters",
         "storage_counters",
+        "error_reports",
       ]) {
         platformDb
           .raw()
@@ -2134,6 +2136,7 @@ describe("Operator-created applications — real integration", () => {
       "usage_events",
       "usage_meters",
       "storage_counters",
+      "error_reports",
       "restaurants",
       "shop_subscriptions",
       "password_reset_tokens",
@@ -2163,6 +2166,7 @@ describe("Operator-created applications — real integration", () => {
         "usage_events",
         "usage_meters",
         "storage_counters",
+        "error_reports",
       ]) {
         platformDb
           .raw()
@@ -2227,6 +2231,29 @@ describe("Operator-created applications — real integration", () => {
       expect(count(platformDb, "restaurants")).toBe(1);
       expect(owners(platformDb)).toBe(1);
       expect(count(db, "tenants")).toBe(1);
+      expect(count(db, "onboarding_applications")).toBe(1);
+    });
+
+    it("does not report a database failure as the restaurant being in use", async () => {
+      const db = createManagementDb();
+      const platformDb = withOrdersTable(createPlatformDb());
+      const env = createEnv(db, platformDb);
+      const created = await createApproved(env);
+      // Any non-FK failure inside the batch (SQLITE_BUSY in CI) must not read
+      // as RESTAURANT_IN_USE: that tells the operator the shop cannot be
+      // purged when a retry would succeed.
+      platformDb.raw().exec("DROP TABLE market_join_requests");
+      const consoleError = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => undefined);
+
+      const response = await purge(env, created.application.id);
+      consoleError.mockRestore();
+
+      expect(response.status).not.toBe(409);
+      expect(response.status).toBeGreaterThanOrEqual(500);
+      expect(count(platformDb, "restaurants")).toBe(1);
+      expect(owners(platformDb)).toBe(1);
       expect(count(db, "onboarding_applications")).toBe(1);
     });
 
