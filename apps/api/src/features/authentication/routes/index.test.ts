@@ -487,6 +487,32 @@ describe("authentication routes", () => {
     expect(response.status).toBe(401);
   });
 
+  it("answers a refresh backend failure with 503 and keeps the refresh cookie", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    service.refreshToken.mockRejectedValueOnce(
+      new Error("D1_ERROR: SQLITE_BUSY: database is locked"),
+    );
+
+    const response = await request("/refresh", "POST", undefined, {
+      Cookie: "__Host-mm_staff_refresh=refresh-token-1",
+    }).res;
+
+    expect(response.status).toBe(503);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      success: false,
+      error: {
+        code: "AUTH_BACKEND_UNAVAILABLE",
+        message: "Authentication service temporarily unavailable",
+      },
+    });
+    expect(JSON.stringify(body)).not.toContain("SQLITE_BUSY");
+    expect(service.refreshToken).toHaveBeenCalledWith("refresh-token-1");
+    // A rejected token clears the cookie; an outage must leave it in place.
+    expect(response.headers.get("set-cookie")).toBeNull();
+    errorSpy.mockRestore();
+  });
+
   it("logs out with best-effort token blacklisting", async () => {
     blacklistToken.mockRejectedValueOnce(new Error("kv unavailable"));
 

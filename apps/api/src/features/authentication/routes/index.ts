@@ -28,6 +28,7 @@ import {
   conflict,
   forbidden,
   notFound,
+  serviceUnavailable,
   unauthorized,
 } from "../../../shared/utils/api-error";
 
@@ -353,7 +354,20 @@ export function createAuthRoutes(
 
     // Initialize auth service
     const authService = AuthService(c.env);
-    const result = await authService.refreshToken(refreshToken);
+    let result: Awaited<ReturnType<typeof authService.refreshToken>>;
+    try {
+      result = await authService.refreshToken(refreshToken);
+    } catch (error) {
+      // Token verdicts come back as `success: false`; anything thrown is the
+      // backend (D1/KV), which says nothing about the token. Answer 503 and
+      // leave the cookie alone so the client keeps its session and retries.
+      if (error instanceof ApiError) throw error;
+      console.error("Refresh backend failure:", error);
+      throw serviceUnavailable(
+        "Authentication service temporarily unavailable",
+        "AUTH_BACKEND_UNAVAILABLE",
+      );
+    }
 
     if (!result.success) {
       clearStaffRefreshCookie(c);

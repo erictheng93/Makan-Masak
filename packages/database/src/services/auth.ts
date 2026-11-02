@@ -2,7 +2,7 @@ import * as bcrypt from "bcryptjs";
 import { and, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { JwtPayload } from "jsonwebtoken";
-import { sign, verify } from "jsonwebtoken";
+import { JsonWebTokenError, sign, verify } from "jsonwebtoken";
 import { sessions, users } from "../schema";
 import { BaseService } from "./base";
 
@@ -92,11 +92,21 @@ function refreshTokenPrincipal(
 const verifyAuthToken = (token: string, secret: string): AuthTokenPayload => {
   const decoded = verify(token, secret, { algorithms: ["HS256"] });
   if (typeof decoded === "string") {
-    throw new Error("Invalid token payload");
+    throw new JsonWebTokenError("Invalid token payload");
   }
 
   return decoded as AuthTokenPayload;
 };
+
+// Only a verdict about the refresh token itself (bad signature, expired, not
+// yet valid, malformed) is "invalid". Anything else thrown while refreshing
+// (D1 outage, SQLITE_BUSY, ...) says nothing about the token and must reach the
+// caller, or the client is told its session is dead and signs the user out.
+const isRefreshTokenVerdictError = (error: unknown): boolean =>
+  error instanceof Error &&
+  (error.name === "JsonWebTokenError" ||
+    error.name === "TokenExpiredError" ||
+    error.name === "NotBeforeError");
 
 const ACCESS_TOKEN_TTL_HOURS = 1;
 const ACCESS_TOKEN_TTL_MS = ACCESS_TOKEN_TTL_HOURS * 60 * 60 * 1000;
@@ -530,7 +540,8 @@ export class AuthService extends BaseService {
           expiresAt: accessTokenExpiry,
         },
       };
-    } catch {
+    } catch (error) {
+      if (!isRefreshTokenVerdictError(error)) throw error;
       return {
         success: false,
         error: "Invalid refresh token",

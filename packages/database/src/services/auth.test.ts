@@ -1,4 +1,12 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { eq } from "drizzle-orm";
 import { sign, verify } from "jsonwebtoken";
 import * as bcrypt from "bcryptjs";
@@ -537,4 +545,66 @@ describe("AuthService refresh token rotation", () => {
       },
     });
   });
+});
+
+describe("AuthService.refreshToken infrastructure failures", () => {
+  const env = { JWT_SECRET: jwtSecret, NODE_ENV: "test" };
+
+  function serviceWithFailingDb() {
+    const prepare = vi.fn(() => {
+      throw new Error("D1_ERROR: SQLITE_BUSY: database is locked");
+    });
+    return {
+      prepare,
+      service: new AuthService({ prepare } as never, env as never),
+    };
+  }
+
+  it("rethrows a database failure instead of reporting an invalid refresh token", async () => {
+    const { service, prepare } = serviceWithFailingDb();
+    const refreshToken = sign(
+      { sub: publicUserId, type: "refresh", jti: "refresh-1" },
+      jwtSecret,
+      { expiresIn: "7d" },
+    );
+
+    await expect(service.refreshToken(refreshToken)).rejects.toThrow(
+      /SQLITE_BUSY/,
+    );
+    expect(prepare).toHaveBeenCalled();
+  });
+
+  it.each([
+    ["garbage", () => "not-a-jwt"],
+    [
+      "wrongly signed",
+      () =>
+        sign(
+          { sub: publicUserId, type: "refresh" },
+          "another-secret-0123456789abcdef",
+        ),
+    ],
+    [
+      "expired",
+      () =>
+        sign({ sub: publicUserId, type: "refresh" }, jwtSecret, {
+          expiresIn: -10,
+        }),
+    ],
+    [
+      "wrong type",
+      () => sign({ sub: publicUserId, type: "access" }, jwtSecret),
+    ],
+  ])(
+    "keeps a %s refresh token an invalid-token result without touching the database",
+    async (_label, makeToken) => {
+      const { service, prepare } = serviceWithFailingDb();
+
+      await expect(service.refreshToken(makeToken())).resolves.toEqual({
+        success: false,
+        error: "Invalid refresh token",
+      });
+      expect(prepare).not.toHaveBeenCalled();
+    },
+  );
 });
