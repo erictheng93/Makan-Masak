@@ -68,11 +68,11 @@ overrides:
   "fast-xml-parser": "^5.7.0"
   "fflate@^0.8": "^0.8.3"
   "flatted": "^3.4.2"
-  "follow-redirects": "^1.16.1"
+  "follow-redirects": "^1.16.2"
   "form-data": "^4.0.6"
   "hono": "^4.13.7"
   "http-cache-semantics": "4.2.0"
-  "joi": "^17.13.8"
+  "joi": "^17.13.9"
   "js-yaml@^3": "^3.15.2"
   "js-yaml@^4": "^4.3.2"
   "js-cookie": "^3.0.7"
@@ -114,5 +114,5 @@ patchedDependencies:
   "http-cache-semantics@4.2.0": "patches/http-cache-semantics@4.2.0.patch"
   "sprintf-js@1.0.3": "patches/sprintf-js@1.0.3.patch"
 minimumReleaseAgeExclude:
-  - miniflare@5.20261006.0-alpha
-  - wrangler@4.148.0
+  - miniflare@5.20261101.0-beta
+  - wrangler@4.156.1
