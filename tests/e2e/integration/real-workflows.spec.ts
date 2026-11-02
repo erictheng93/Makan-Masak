@@ -1177,22 +1177,31 @@ async function createManagementTenantFixture(token: string): Promise<{
  * Removes an onboarding application and everything its approval provisioned
  * (restaurant, owner, subscriptions, tenant). A soft assertion, so a leak is
  * reported without hiding the test's own failure.
+ *
+ * Retried because the API and management workers are separate `wrangler dev`
+ * processes on one SQLite file here, and workerd does not wait on a lock: a
+ * dashboard still loading in the page makes the purge's reads fail with
+ * SQLITE_BUSY, surfacing as 401 from auth or 500 from the service. Production
+ * D1 has no shared file. Purge is idempotent, and a real failure repeats until
+ * the timeout, so it is still reported.
  */
 async function purgeOnboardingApplication(
   managementApiUrl: string,
   applicationId: string,
   token: string,
 ) {
-  const response = await fetch(
-    `${managementApiUrl}/admin/onboarding/applications/${applicationId}`,
-    { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
-  ).catch(() => undefined);
-  expect
-    .soft(
-      response?.ok,
-      `purge onboarding application ${applicationId}: ${response?.status ?? "network error"}`,
-    )
-    .toBe(true);
+  await expect
+    .soft(async () => {
+      const response = await fetch(
+        `${managementApiUrl}/admin/onboarding/applications/${applicationId}`,
+        { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
+      ).catch(() => undefined);
+      expect(
+        response?.status,
+        `purge onboarding application ${applicationId}`,
+      ).toBe(200);
+    })
+    .toPass({ timeout: 15_000 });
 }
 
 /** Platform admin login exchanged for a management API token. */
