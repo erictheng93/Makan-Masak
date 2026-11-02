@@ -90,7 +90,15 @@ function refreshTokenPrincipal(
 }
 
 const verifyAuthToken = (token: string, secret: string): AuthTokenPayload => {
-  const decoded = verify(token, secret, { algorithms: ["HS256"] });
+  let decoded: JwtPayload | string;
+  try {
+    decoded = verify(token, secret, { algorithms: ["HS256"] });
+  } catch (error) {
+    // jsonwebtoken parses the payload before the signature, so a non-JSON
+    // payload throws a SyntaxError. It is still a verdict on the token.
+    if (error instanceof JsonWebTokenError) throw error;
+    throw new JsonWebTokenError("invalid token");
+  }
   if (typeof decoded === "string") {
     throw new JsonWebTokenError("Invalid token payload");
   }

@@ -1,5 +1,5 @@
 import { Context, Next } from "hono";
-import { verify } from "jsonwebtoken";
+import { JsonWebTokenError, verify } from "jsonwebtoken";
 import type { JwtPayload } from "jsonwebtoken";
 import type { Env } from "../types/env";
 import {
@@ -156,10 +156,18 @@ export function verifyJwtToken(
   secret: string,
   options: { ignoreExpiration?: boolean; ignoreNotBefore?: boolean } = {},
 ): JwtPayload | string {
-  return verify(token, secret, {
-    algorithms: ["HS256"],
-    ...options,
-  });
+  try {
+    return verify(token, secret, {
+      algorithms: ["HS256"],
+      ...options,
+    });
+  } catch (error) {
+    // Everything verify throws is a verdict on the token. jsonwebtoken parses
+    // the payload before checking the signature, so a non-JSON payload throws a
+    // plain SyntaxError; left as is, toAuthFailure would answer anyone with 503.
+    if (error instanceof JsonWebTokenError) throw error;
+    throw new JsonWebTokenError("invalid token");
+  }
 }
 
 const DEFER_TIME_CLAIM_VALIDATION = {

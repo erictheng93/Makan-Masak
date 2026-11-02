@@ -595,6 +595,18 @@ describe("AuthService.refreshToken infrastructure failures", () => {
       "wrong type",
       () => sign({ sub: publicUserId, type: "access" }, jwtSecret),
     ],
+    [
+      // jsonwebtoken parses the payload before checking the signature, so
+      // this throws a SyntaxError rather than a JsonWebTokenError.
+      "non-JSON payload",
+      () => {
+        const [header, , signature] = sign(
+          { sub: publicUserId, type: "refresh" },
+          jwtSecret,
+        ).split(".");
+        return `${header}.${Buffer.from("{oops").toString("base64url")}.${signature}`;
+      },
+    ],
   ])(
     "keeps a %s refresh token an invalid-token result without touching the database",
     async (_label, makeToken) => {

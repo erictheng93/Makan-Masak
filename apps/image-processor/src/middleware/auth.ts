@@ -105,8 +105,19 @@ export const authMiddleware = async (
     }
 
     // Verify first: KV keys over 512 bytes throw, so a garbage token must
-    // never reach the blacklist lookup.
-    const decoded = await verify(token, c.env.JWT_SECRET, "HS256");
+    // never reach the blacklist lookup. Anything verify() throws is a verdict
+    // on the token, not only Jwt* errors: hono reads payload claims before the
+    // signature, so a payload of `null` throws a plain TypeError.
+    let decoded: Awaited<ReturnType<typeof verify>>;
+    try {
+      decoded = await verify(token, c.env.JWT_SECRET, "HS256");
+    } catch (error) {
+      const expired =
+        error instanceof Error && error.name === "JwtTokenExpired";
+      return expired
+        ? authFailure(c, 401, "TOKEN_EXPIRED", "Token has expired")
+        : authFailure(c, 401, "TOKEN_INVALID", "Invalid token format");
+    }
 
     // 檢查 token 是否在黑名單中 (如果 KV 可用)
     if (c.env.TOKEN_BLACKLIST) {

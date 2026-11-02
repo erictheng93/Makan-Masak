@@ -353,6 +353,32 @@ describe("image processor JWT auth failure classification", () => {
     expect(reachedNext).not.toHaveBeenCalled();
   });
 
+  it("answers a token whose payload is JSON null with 401, not 503", async () => {
+    // hono/jwt reads payload.nbf before checking the signature, so this throws
+    // a plain TypeError rather than a Jwt* error. Anyone can send it.
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const get = vi.fn().mockResolvedValue(null);
+    const [header, , signature] = (await validToken()).split(".");
+    const nullPayload = Buffer.from("null").toString("base64url");
+
+    const { response, reachedNext } = run(
+      `${header}.${nullPayload}.${signature}`,
+      { TOKEN_BLACKLIST: { get }, DB: staffAuthDatabase(ownerRow) },
+    );
+    const res = await response;
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toMatchObject({
+      success: false,
+      error: { code: "TOKEN_INVALID" },
+    });
+    expect(get).not.toHaveBeenCalled();
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(reachedNext).not.toHaveBeenCalled();
+  });
+
   it("answers a blacklisted valid token with 401", async () => {
     const { response, reachedNext } = run(await validToken(), {
       TOKEN_BLACKLIST: { get: vi.fn().mockResolvedValue("revoked") },
