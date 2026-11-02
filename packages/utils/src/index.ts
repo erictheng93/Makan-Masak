@@ -111,6 +111,7 @@ export {
   unauthorized,
   forbidden,
   conflict,
+  serviceUnavailable,
   sanitizeApiErrorDetails,
 } from "./api-error";
 

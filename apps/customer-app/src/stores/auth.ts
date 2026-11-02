@@ -68,6 +68,13 @@ const failureCode = (err: unknown): string | undefined => {
   return typeof code === "string" ? code : undefined;
 };
 
+// Only 401/403 say the session is dead. 5xx (e.g. AUTH_BACKEND_UNAVAILABLE),
+// 429 and network failures (no status) must not log the customer out.
+const isAuthRejection = (err: unknown): boolean => {
+  const status = (err as { status?: unknown } | null)?.status;
+  return status === 401 || status === 403;
+};
+
 export const useAuthStore = defineStore("auth", () => {
   // 狀態
   sessionStorage.removeItem("customer_auth_token");
@@ -283,6 +290,9 @@ export const useAuthStore = defineStore("auth", () => {
       }
     } catch (err) {
       console.warn("Auth check failed:", err);
+      // Only a definitive rejection may end the session; a 5xx/429/network
+      // blip leaves the hydrated user in place until the next revalidation.
+      if (!isAuthRejection(err)) return !!user.value;
     }
 
     // Attempt refresh before giving up
@@ -297,6 +307,7 @@ export const useAuthStore = defineStore("auth", () => {
         }
       } catch (err) {
         console.warn("Auth check after refresh failed:", err);
+        if (!isAuthRejection(err)) return !!user.value;
       }
     }
 

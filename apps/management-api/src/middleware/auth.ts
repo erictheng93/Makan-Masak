@@ -8,7 +8,7 @@
 import { verify } from "hono/jwt";
 import type { Context, Next } from "hono";
 import type { ManagementEnv } from "../types";
-import { ApiError, unauthorized } from "@makanmasak/utils";
+import { ApiError, serviceUnavailable, unauthorized } from "@makanmasak/utils";
 
 export interface ManagementUser {
   id: string;
@@ -82,9 +82,16 @@ export const managementAuthMiddleware = async (c: Context<Env>, next: Next) => {
     throw unauthorized("Missing token");
   }
 
+  // `verify` is pure crypto/claim checking: anything it throws (bad signature,
+  // expiry, malformed token, algorithm mismatch) is an authentication verdict.
+  let payload: Awaited<ReturnType<typeof verify>>;
   try {
-    const payload = await verify(token, managementJwtSecret(c.env), "HS256");
+    payload = await verify(token, managementJwtSecret(c.env), "HS256");
+  } catch {
+    throw unauthorized("Invalid or expired token");
+  }
 
+  try {
     // Validate required claims
     if (
       typeof payload.id !== "string" ||
@@ -120,9 +127,16 @@ export const managementAuthMiddleware = async (c: Context<Env>, next: Next) => {
     };
 
     c.set("managementUser", user);
-    await next();
   } catch (error) {
     if (error instanceof ApiError) throw error;
-    throw unauthorized("Invalid or expired token");
+    // Not an authentication verdict (D1 outage, SQLITE_BUSY, ...): fail closed
+    // with 503 so the client keeps its session instead of being logged out.
+    console.error("[ManagementAPI] Auth backend failure:", error);
+    throw serviceUnavailable(
+      "Authentication service temporarily unavailable",
+      "AUTH_BACKEND_UNAVAILABLE",
+    );
   }
+
+  await next();
 };

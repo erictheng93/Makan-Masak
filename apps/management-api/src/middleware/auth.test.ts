@@ -189,3 +189,118 @@ describe("managementAuthMiddleware", () => {
     expect(response.status).toBe(401);
   });
 });
+
+describe("managementAuthMiddleware infrastructure failures", () => {
+  function failingEnv(failOn: "users" | "sessions") {
+    const env = envFor();
+    const original = env.PLATFORM_DB!.prepare as unknown as (
+      sql: string,
+    ) => unknown;
+    const prepare = vi.fn((sql: string) => {
+      if (!sql.includes(`FROM ${failOn}`)) return original(sql);
+      return {
+        bind: vi.fn(() => ({
+          first: vi.fn(async () => {
+            throw new Error("D1_ERROR: SQLITE_BUSY: database is locked");
+          }),
+        })),
+      };
+    });
+    (env.PLATFORM_DB as unknown as { prepare: unknown }).prepare = prepare;
+    return { env, prepare };
+  }
+
+  async function request(env: ManagementEnv, bearer: string) {
+    const handler = vi.fn();
+    const app = new Hono<TestEnv>();
+    app.onError((error, c) =>
+      error instanceof ApiError
+        ? c.json(
+            { error: error.code, message: error.message },
+            error.status as never,
+          )
+        : c.json({ error: "INTERNAL" }, 500),
+    );
+    app.use("/admin", managementAuthMiddleware);
+    app.get("/admin", (c) => {
+      handler();
+      return c.json({ ok: true });
+    });
+    const response = await app.fetch(
+      new Request("https://management.test/admin", {
+        headers: { Authorization: `Bearer ${bearer}` },
+      }),
+      env,
+    );
+    return { response, handler };
+  }
+
+  it.each(["users", "sessions"] as const)(
+    "returns 503 and fails closed when the %s lookup throws",
+    async (failOn) => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const { env, prepare } = failingEnv(failOn);
+
+      const { response, handler } = await request(
+        env,
+        await token({ role: "admin" }),
+      );
+
+      expect(response.status).toBe(503);
+      const body = await response.json();
+      expect(body).toEqual({
+        error: "AUTH_BACKEND_UNAVAILABLE",
+        message: "Authentication service temporarily unavailable",
+      });
+      expect(JSON.stringify(body)).not.toContain("SQLITE_BUSY");
+      expect(handler).not.toHaveBeenCalled();
+      expect(prepare).toHaveBeenCalledWith(
+        expect.stringContaining(`FROM ${failOn}`),
+      );
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Auth backend failure"),
+        expect.objectContaining({
+          message: expect.stringContaining("SQLITE_BUSY"),
+        }),
+      );
+      errorSpy.mockRestore();
+    },
+  );
+
+  it("keeps a tampered signature at 401 without touching the database", async () => {
+    const env = envFor();
+    const valid = await token({ role: "admin" });
+    const tampered = `${valid.slice(0, -4)}AAAA`;
+
+    const { response, handler } = await request(env, tampered);
+
+    expect(response.status).toBe(401);
+    expect(handler).not.toHaveBeenCalled();
+    expect(env.PLATFORM_DB!.prepare).not.toHaveBeenCalled();
+  });
+
+  it("keeps an expired token at 401", async () => {
+    const { response, handler } = await request(
+      envFor(),
+      await token({ role: "admin", exp: Math.floor(Date.now() / 1000) - 10 }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("keeps a wrong-audience token at 401", async () => {
+    const { response, handler } = await request(
+      envFor(),
+      await token({ role: "admin", aud: "somewhere-else" }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("keeps a malformed token at 401", async () => {
+    const { response } = await request(envFor(), "not-a-jwt");
+    expect(response.status).toBe(401);
+  });
+});

@@ -231,6 +231,49 @@ describe("guestSessionAuth", () => {
   });
 });
 
+describe("guest auth KV failures", () => {
+  it.each([
+    ["guestTokenAuth", guestTokenAuth],
+    ["guestSessionAuth", guestSessionAuth],
+  ] as const)(
+    "%s returns 503 and does not call next when the KV lookup throws",
+    async (_name, middleware) => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const handler = vi.fn();
+      const kv = {
+        get: vi.fn(async () => {
+          throw new Error("KV GET failed: 503");
+        }),
+      };
+      const app = appWithErrorHandler();
+      app.use("/orders/:id", middleware);
+      app.get("/orders/:id", (c) => {
+        handler();
+        return c.json({ ok: true });
+      });
+
+      const response = await app.fetch(
+        new Request("https://api.test/orders/order-1", {
+          headers: { Authorization: "Bearer gt_abc" },
+        }),
+        { CACHE_KV: kv } as never,
+      );
+
+      expect(response.status).toBe(503);
+      await expect(response.json()).resolves.toEqual({
+        success: false,
+        error: {
+          code: "AUTH_BACKEND_UNAVAILABLE",
+          message: "Authentication service temporarily unavailable",
+        },
+      });
+      expect(kv.get).toHaveBeenCalledWith("guest_token:gt_abc", "json");
+      expect(handler).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
+    },
+  );
+});
+
 describe("guest lock identity", () => {
   function reqWith(headers: Record<string, string>) {
     return { header: (name: string) => headers[name] };

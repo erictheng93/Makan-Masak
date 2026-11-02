@@ -9,5 +9,6 @@ export {
   unauthorized,
   forbidden,
   conflict,
+  serviceUnavailable,
   sanitizeApiErrorDetails,
 } from "@makanmasak/utils";
