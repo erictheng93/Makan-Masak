@@ -1,4 +1,9 @@
-import { test, expect, type BrowserContext } from "@playwright/test";
+import {
+  test,
+  expect,
+  type BrowserContext,
+  type Response,
+} from "@playwright/test";
 import {
   Cleanup,
   createMenuFixture,
@@ -116,7 +121,32 @@ test("all three availability writes reach customer menus, admin and kitchen live
     await shop.page.goto(
       `/restaurant/${owner.restaurantId}/shop/menu?type=takeaway`,
     );
-    await admin.goto(`${ADMIN_URL}/dashboard/menu`);
+    // The admin menu list is a plain GET with no retry. In CI the API and the
+    // management API are separate `wrangler dev` processes on one SQLite file,
+    // and workerd does not wait on a lock, so this read can come back 500
+    // ("Database operation failed", SQLITE_BUSY in api.log) and leave the page
+    // at "0 items" for good - which is what failed this spec once as an
+    // `admin-menu-item-<id>` that never appeared. Production D1 has no shared
+    // file. Gate on the load itself, so a failed read is a retried load rather
+    // than a vanished card, and a persistent failure names the status.
+    const isAdminMenuRead = (response: Response) =>
+      response.request().method() === "GET" &&
+      response.url().includes(`/api/v1/menu/${owner.restaurantId}`) &&
+      response.url().includes("includeAll=true");
+    const ackCount = () =>
+      adminFrames.filter((type) => type === "connection_ack").length;
+    let adminLoads = 0;
+    let adminAcksBeforeLoad = 0;
+    await expect(async () => {
+      adminAcksBeforeLoad = ackCount();
+      const [menuRead] = await Promise.all([
+        admin.waitForResponse(isAdminMenuRead, { timeout: 15_000 }),
+        adminLoads++ === 0
+          ? admin.goto(`${ADMIN_URL}/dashboard/menu`)
+          : admin.reload(),
+      ]);
+      expect(menuRead.status(), "admin menu list status").toBeLessThan(500);
+    }).toPass({ timeout: 60_000 });
     await kitchen.goto(
       `${process.env.E2E_KITCHEN_URL ?? "http://localhost:3002"}/kitchen/${owner.restaurantId}`,
     );
@@ -126,10 +156,16 @@ test("all three availability writes reach customer menus, admin and kitchen live
     await expect(dinerCard).toBeVisible({ timeout: 30_000 });
     await expect(shopCard).toBeVisible({ timeout: 30_000 });
     await Promise.all(
-      [dinerFrames, shopFrames, adminFrames, kitchenFrames].map(
-        waitForRealtimeAck,
-      ),
+      [dinerFrames, shopFrames, kitchenFrames].map(waitForRealtimeAck),
     );
+    // A reload above leaves the first load's ack in the log, so wait for one
+    // that arrived after the load that succeeded.
+    await expect
+      .poll(ackCount, {
+        message: "the admin page's realtime socket was never acknowledged",
+        timeout: 30_000,
+      })
+      .toBeGreaterThan(adminAcksBeforeLoad);
     await admin.getByTestId("admin-menu-search").fill(menu.plainItem.name);
     const adminCard = admin.getByTestId(`admin-menu-item-${id}`);
     await expect(adminCard).toBeVisible();
