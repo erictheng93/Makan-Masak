@@ -58,6 +58,8 @@ export interface TokenManager {
   clearRefreshTimer(): void;
   /** Execute token refresh with concurrent-request deduplication. Returns true on success. */
   refreshToken(): Promise<boolean>;
+  /** True when the last refresh failed transiently (5xx/429/network), not because the session was rejected. */
+  wasLastRefreshUnavailable(): boolean;
 }
 
 // ---------------------------------------------------------------------------

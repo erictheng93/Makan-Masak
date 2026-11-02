@@ -238,6 +238,14 @@ async function authenticateStaffToken(
     );
   }
 
+  const decoded = verifyJwtToken(
+    token,
+    c.env.JWT_SECRET,
+    DEFER_TIME_CLAIM_VALIDATION,
+  );
+
+  // Verify the signature first: an unsigned/garbage token must never reach
+  // KV (keys over 512 bytes throw, which would surface as a 503).
   // 檢查 token 是否在黑名單中 (如果 KV 可用)
   if (c.env.TOKEN_BLACKLIST) {
     const blacklisted = await c.env.TOKEN_BLACKLIST.get(`token:${token}`);
@@ -245,12 +253,6 @@ async function authenticateStaffToken(
       throw unauthorized("Token has been invalidated", "TOKEN_BLACKLISTED");
     }
   }
-
-  const decoded = verifyJwtToken(
-    token,
-    c.env.JWT_SECRET,
-    DEFER_TIME_CLAIM_VALIDATION,
-  );
 
   if (!isAuthTokenPayload(decoded)) {
     throw unauthorized("Invalid token claims", "TOKEN_INVALID");
@@ -394,18 +396,20 @@ export const canonicalCustomerAuthMiddleware = async (
       );
     }
 
+    const decoded = verifyJwtToken(
+      token,
+      c.env.JWT_SECRET,
+      DEFER_TIME_CLAIM_VALIDATION,
+    );
+
+    // Verify the signature first: an unsigned/garbage token must never reach
+    // KV (keys over 512 bytes throw, which would surface as a 503).
     if (c.env.TOKEN_BLACKLIST) {
       const blacklisted = await c.env.TOKEN_BLACKLIST.get(`token:${token}`);
       if (blacklisted) {
         throw unauthorized("Token has been invalidated", "TOKEN_BLACKLISTED");
       }
     }
-
-    const decoded = verifyJwtToken(
-      token,
-      c.env.JWT_SECRET,
-      DEFER_TIME_CLAIM_VALIDATION,
-    );
 
     if (isCustomerBindingTokenPayload(decoded)) {
       throw unauthorized(
@@ -503,6 +507,14 @@ export const optionalCanonicalCustomerAuthMiddleware = async (
 
   try {
     const token = authHeader.substring(7);
+    const decoded = verifyJwtToken(
+      token,
+      c.env.JWT_SECRET,
+      DEFER_TIME_CLAIM_VALIDATION,
+    );
+
+    // Verify the signature first: an unsigned/garbage token must never reach
+    // KV (keys over 512 bytes throw, which would surface as a 503).
     if (c.env.TOKEN_BLACKLIST) {
       const blacklisted = await c.env.TOKEN_BLACKLIST.get(`token:${token}`);
       if (blacklisted) {
@@ -510,12 +522,6 @@ export const optionalCanonicalCustomerAuthMiddleware = async (
         return;
       }
     }
-
-    const decoded = verifyJwtToken(
-      token,
-      c.env.JWT_SECRET,
-      DEFER_TIME_CLAIM_VALIDATION,
-    );
     if (!isCustomerAuthTokenPayload(decoded)) {
       await next();
       return;
@@ -576,18 +582,20 @@ export const sseAuthMiddleware = async (
       );
     }
 
+    const decoded = verifyJwtToken(
+      token,
+      c.env.JWT_SECRET,
+      DEFER_TIME_CLAIM_VALIDATION,
+    );
+
+    // Verify the signature first: an unsigned/garbage token must never reach
+    // KV (keys over 512 bytes throw, which would surface as a 503).
     if (c.env.TOKEN_BLACKLIST) {
       const blacklisted = await c.env.TOKEN_BLACKLIST.get(`token:${token}`);
       if (blacklisted) {
         throw unauthorized("Token has been invalidated", "TOKEN_BLACKLISTED");
       }
     }
-
-    const decoded = verifyJwtToken(
-      token,
-      c.env.JWT_SECRET,
-      DEFER_TIME_CLAIM_VALIDATION,
-    );
 
     if (requiresScopedSseToken) {
       if (!isSseAuthTokenPayload(decoded)) {

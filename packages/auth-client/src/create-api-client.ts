@@ -5,7 +5,10 @@ import type {
   InternalAxiosRequestConfig,
 } from "axios";
 import { createPrefixedStorage } from "./storage";
-import { createTokenManager } from "./create-token-manager";
+import {
+  createTokenManager,
+  RefreshUnavailableError,
+} from "./create-token-manager";
 import type { ApiClient, AuthClientConfig, CsrfConfig } from "./types";
 
 interface RetryableRequest extends InternalAxiosRequestConfig {
@@ -163,8 +166,15 @@ export function createAuthenticatedApiClient(
           };
         }
         return null;
-      } catch {
-        return null;
+      } catch (error) {
+        // Only a rejection of the refresh token itself ends the session. A 5xx
+        // (e.g. 503 AUTH_BACKEND_UNAVAILABLE), 429 or a dead network says
+        // nothing about it, so keep the session and let the caller retry.
+        const status = axios.isAxiosError(error)
+          ? error.response?.status
+          : undefined;
+        if (status === 400 || status === 401 || status === 403) return null;
+        throw new RefreshUnavailableError();
       }
     },
     onTokenRefreshed: config.onTokenRefreshed,
@@ -245,6 +255,12 @@ export function createAuthenticatedApiClient(
             }
             return instance(original);
           }
+        }
+
+        // A transient refresh failure leaves the session intact: surface the
+        // original error without wiping tokens or signing the user out.
+        if (retryOn401 && tokenManager.wasLastRefreshUnavailable()) {
+          return Promise.reject(error);
         }
 
         // Refresh failed or retry disabled — clean up and notify. The CSRF

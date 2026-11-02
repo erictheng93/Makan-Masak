@@ -620,6 +620,136 @@ describe("auth middlewares: infrastructure failures vs auth verdicts", () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
+  describe("blacklist lookup ordering", () => {
+    // Workers KV rejects keys over 512 bytes, so a garbage token must be
+    // rejected on its signature before it can be used as a KV key.
+    const strictKv = (blacklisted = false) => ({
+      get: vi.fn(async (key: string) => {
+        if (new TextEncoder().encode(key).length > 512) {
+          throw new Error("KV GET failed: 414 Key too long");
+        }
+        return blacklisted ? "1" : null;
+      }),
+    });
+
+    it("answers an oversized garbage bearer token with 401 and never queries KV", async () => {
+      const { app, handler } = staffApp();
+      const kv = strictKv();
+      const response = await call(
+        app,
+        { JWT_SECRET, DB: createStaffDb(activeStaff), TOKEN_BLACKLIST: kv },
+        "x".repeat(2000),
+      );
+
+      expect(response.status).toBe(401);
+      await expect(response.json()).resolves.toMatchObject({
+        error: { code: "TOKEN_INVALID" },
+      });
+      expect(kv.get).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it("answers an oversized garbage token with 401 on the canonical customer path too", async () => {
+      const handler = vi.fn();
+      const app = new Hono();
+      app.onError(apiErrorHandler);
+      app.use("/me", canonicalCustomerAuthMiddleware);
+      app.get("/me", (c) => {
+        handler();
+        return c.json({ ok: true });
+      });
+      const kv = strictKv();
+
+      const response = await call(
+        app,
+        { JWT_SECRET, DB: createCustomerDb(null), TOKEN_BLACKLIST: kv },
+        "x".repeat(2000),
+        "/me",
+      );
+
+      expect(response.status).toBe(401);
+      expect(kv.get).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it("keeps a validly signed blacklisted token at 401 TOKEN_BLACKLISTED", async () => {
+      const { app, handler } = staffApp();
+      const kv = strictKv(true);
+      const bearer = await staffToken(1);
+
+      const response = await call(
+        app,
+        { JWT_SECRET, DB: createStaffDb(activeStaff), TOKEN_BLACKLIST: kv },
+        bearer,
+      );
+
+      expect(response.status).toBe(401);
+      await expect(response.json()).resolves.toMatchObject({
+        error: { code: "TOKEN_BLACKLISTED" },
+      });
+      expect(kv.get).toHaveBeenCalledWith(`token:${bearer}`);
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it("keeps an expired and blacklisted token at 401", async () => {
+      const { app, handler } = staffApp();
+      const kv = strictKv(true);
+      const now = Math.floor(Date.now() / 1000);
+      const expired = await sign(
+        {
+          sub: staffUserId,
+          username: "role-1",
+          role: 1,
+          tv: 1,
+          iat: now - 7200,
+          exp: now - 3600,
+        },
+        JWT_SECRET,
+      );
+
+      const response = await call(
+        app,
+        { JWT_SECRET, DB: createStaffDb(activeStaff), TOKEN_BLACKLIST: kv },
+        expired,
+      );
+
+      expect(response.status).toBe(401);
+      await expect(response.json()).resolves.toMatchObject({
+        error: { code: "TOKEN_BLACKLISTED" },
+      });
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it("still reports TOKEN_EXPIRED for an expired token that is not blacklisted", async () => {
+      const { app } = staffApp();
+      const kv = strictKv(false);
+      const now = Math.floor(Date.now() / 1000);
+      const expired = await sign(
+        {
+          sub: staffUserId,
+          username: "role-1",
+          role: 1,
+          tv: 1,
+          iat: now - 7200,
+          exp: now - 3600,
+        },
+        JWT_SECRET,
+      );
+
+      const response = await call(
+        app,
+        { JWT_SECRET, DB: createStaffDb(activeStaff), TOKEN_BLACKLIST: kv },
+        expired,
+      );
+
+      expect(response.status).toBe(401);
+      await expect(response.json()).resolves.toMatchObject({
+        error: { code: "TOKEN_EXPIRED" },
+      });
+      expect(kv.get).toHaveBeenCalledOnce();
+    });
+  });
+
   it("keeps a token-version mismatch at 401 TOKEN_INVALIDATED", async () => {
     const { app, handler } = staffApp();
     const response = await call(

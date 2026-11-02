@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createTokenManager } from "./create-token-manager";
+import {
+  createTokenManager,
+  RefreshUnavailableError,
+} from "./create-token-manager";
 import type { PrefixedStorage } from "./types";
 
 function createMemoryStorage(): PrefixedStorage {
@@ -106,5 +109,42 @@ describe("createTokenManager", () => {
     manager.clearAll();
     expect(manager.getToken()).toBeNull();
     expect(manager.getRefreshToken()).toBeNull();
+  });
+
+  it("does not report failure when the refresh is only temporarily unavailable", async () => {
+    const storage = createMemoryStorage();
+    const onRefreshFailure = vi.fn();
+    const manager = createTokenManager({
+      storage,
+      refreshFn: vi.fn(async () => {
+        throw new RefreshUnavailableError();
+      }),
+      onRefreshFailure,
+    });
+
+    manager.setTokens("old-token");
+    await expect(manager.refreshToken()).resolves.toBe(false);
+
+    expect(onRefreshFailure).not.toHaveBeenCalled();
+    expect(manager.wasLastRefreshUnavailable()).toBe(true);
+    expect(manager.getToken()).toBe("old-token");
+  });
+
+  it("still reports failure for any other refresh error", async () => {
+    const storage = createMemoryStorage();
+    const onRefreshFailure = vi.fn();
+    const manager = createTokenManager({
+      storage,
+      refreshFn: vi.fn(async () => {
+        throw new Error("boom");
+      }),
+      onRefreshFailure,
+    });
+
+    manager.setTokens("old-token");
+    await expect(manager.refreshToken()).resolves.toBe(false);
+
+    expect(onRefreshFailure).toHaveBeenCalledTimes(1);
+    expect(manager.wasLastRefreshUnavailable()).toBe(false);
   });
 });

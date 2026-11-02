@@ -2,6 +2,18 @@ import { getRefreshDelay } from "@makanmasak/utils";
 import type { TokenManager, TokenManagerConfig } from "./types";
 
 /**
+ * Thrown by a `refreshFn` when the refresh could not be attempted to a verdict
+ * (5xx, 429, network): the session may still be perfectly valid, so the manager
+ * must not report an irrecoverable failure (which signs the user out).
+ */
+export class RefreshUnavailableError extends Error {
+  constructor(message = "Token refresh temporarily unavailable") {
+    super(message);
+    this.name = "RefreshUnavailableError";
+  }
+}
+
+/**
  * Create a token manager that handles:
  * - Prefixed localStorage read/write via the provided storage adapter
  * - Proactive token refresh at 80% of token lifetime
@@ -12,6 +24,7 @@ export function createTokenManager(config: TokenManagerConfig): TokenManager {
 
   let refreshTimer: ReturnType<typeof setTimeout> | null = null;
   let sharedRefreshPromise: Promise<boolean> | null = null;
+  let lastRefreshUnavailable = false;
 
   const clearRefreshTimer = () => {
     if (refreshTimer) {
@@ -21,6 +34,7 @@ export function createTokenManager(config: TokenManagerConfig): TokenManager {
   };
 
   const refreshToken = async (): Promise<boolean> => {
+    lastRefreshUnavailable = false;
     if (!refreshFn) return false;
 
     const hasRefreshableSession =
@@ -46,7 +60,11 @@ export function createTokenManager(config: TokenManagerConfig): TokenManager {
 
         if (onTokenRefreshed) onTokenRefreshed(result);
         return true;
-      } catch {
+      } catch (error) {
+        if (error instanceof RefreshUnavailableError) {
+          lastRefreshUnavailable = true;
+          return false;
+        }
         if (onRefreshFailure) await onRefreshFailure();
         return false;
       }
@@ -84,5 +102,6 @@ export function createTokenManager(config: TokenManagerConfig): TokenManager {
     scheduleProactiveRefresh,
     clearRefreshTimer,
     refreshToken,
+    wasLastRefreshUnavailable: () => lastRefreshUnavailable,
   };
 }
