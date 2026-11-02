@@ -16,6 +16,7 @@ import { randomBase36, randomBase36Upper } from "../utils/random";
 import { createSubdomainBase } from "../utils/subdomain";
 import {
   DEFAULT_BILLING_CYCLE_MS,
+  errorReports,
   marketJoinRequests,
   markets,
   orders,
@@ -1181,6 +1182,11 @@ export class OnboardingService {
           platformDb
             .delete(storageCounters)
             .where(eq(storageCounters.restaurantId, restaurantId)),
+          // Same FK, written whenever the owner's dashboard reports an error;
+          // they carry the owner's error messages and URLs, so they go too.
+          platformDb
+            .delete(errorReports)
+            .where(eq(errorReports.restaurantId, restaurantId)),
           platformDb.delete(users).where(eq(users.restaurantId, restaurantId)),
           platformDb
             .delete(restaurants)
@@ -1188,6 +1194,12 @@ export class OnboardingService {
         ]);
       } catch (error) {
         console.error("[OnboardingService] Purge platform rows failed:", error);
+        // Only a foreign-key failure means other rows still point at the
+        // restaurant. Anything else (SQLITE_BUSY, an outage) is not a reason
+        // the shop cannot be purged, so let it surface as a server error.
+        if (!/FOREIGN KEY constraint failed/i.test(errorChain(error))) {
+          throw error;
+        }
         return {
           success: false,
           code: "RESTAURANT_IN_USE",
@@ -2048,4 +2060,15 @@ export class OnboardingService {
       updatedAt: row.updated_at as string,
     };
   }
+}
+
+/** The message of an error and every `cause` beneath it (D1 wraps SQLite's). */
+function errorChain(error: unknown): string {
+  const parts: string[] = [];
+  let current: unknown = error;
+  for (let depth = 0; current && depth < 5; depth += 1) {
+    parts.push(current instanceof Error ? current.message : String(current));
+    current = current instanceof Error ? current.cause : undefined;
+  }
+  return parts.join(" | ");
 }
