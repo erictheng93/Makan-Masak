@@ -30,6 +30,6 @@
     "@vitest/coverage-v8": "4.1.9",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vitest": "^4.1.0",
-    "wrangler": "^4.148.0"
+    "wrangler": "^4.156.1"
   }
 }

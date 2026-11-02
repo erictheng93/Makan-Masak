@@ -31,3 +31,13 @@ reason = "Version false positive: the integrity-pinned SheetJS CDN build is 0.20
 id = "GHSA-5pgg-2g8v-p4x9"
 ignoreUntil = 2027-01-05
 reason = "Version false positive: the integrity-pinned SheetJS CDN build is 0.20.3; vendor fixed CVE-2024-22363 in 0.20.2: https://cdn.sheetjs.com/advisories/CVE-2024-22363. The guard verifies the exact CDN source and integrity."
+
+[[IgnoredVulns]]
+id = "GHSA-g3hv-75wg-m249"
+ignoreUntil = 2027-01-05
+reason = "minimatch globparts amplification; the only patched line is 11.0.1+ and no release on 3.x, 5.x, 9.x or 10.x is fixed. The old majors are pinned by their consumers (eslint/@eslint/eslintrc/@eslint/config-array and matcher-collection on ^3, filelist on ^5, glob 10 / @oclif/core / editorconfig on ^9, glob 11 / @typescript-eslint/typescript-estree on ^10) and are not API-compatible with 11, so a blanket override would break lint and build tooling. Exploitation needs an attacker-controlled glob pattern with optimizationLevel >= 2 (default is 1); every consumer is dev/build/CLI tooling (lint, workbox-build, artillery CLI) fed repo-controlled patterns, none ships in a Worker or Vue bundle. Our direct glob dependency was moved to 14.x, which pulls minimatch 11. Remove once consumers move to minimatch 11."
+
+[[IgnoredVulns]]
+id = "GHSA-3g3m-2fjr-6pw4"
+ignoreUntil = 2027-01-05
+reason = "glob AbortSignal cancellation does not stop the walk (affects >= 9.0.0, <= 14.0.1; fixed 14.0.2). Remaining vulnerable copies are glob 10.5.0 (js-beautify, artillery CLI) and glob 11.1.0 (workbox-build, build time); both are pinned to old majors by their consumers and no patched release exists on those lines. Impact is wasted filesystem work after an abort, only when a caller passes a signal; neither consumer does, and neither runs in a deployed Worker or browser bundle. The repo's own glob dependency is now 14.0.3. Remove once workbox-build and js-beautify move to glob 14."
