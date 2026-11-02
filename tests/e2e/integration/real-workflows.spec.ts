@@ -1827,7 +1827,7 @@ test.describe("Real system workflows", () => {
 
       await expect(page.getByTestId("market-cart-summary")).toBeVisible();
       await expect(page.getByTestId("market-cart-summary")).toContainText(
-        "2 個攤位",
+        /2 個攤位|2 stalls/,
       );
       await page.getByTestId("market-checkout-phone").fill(phoneLastDigits);
 
