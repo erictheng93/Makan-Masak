@@ -177,6 +177,38 @@ describe("legacy SSE compatibility routes", () => {
     expect(blacklisted.status).toBe(401);
   });
 
+  it("answers an oversized garbage token with 401 without touching KV", async () => {
+    const blacklist = {
+      get: vi.fn().mockRejectedValue(new Error("KV key too long")),
+    };
+
+    const response = await routes.fetch(
+      new Request(`https://api.test/events?token=${"a".repeat(600)}`),
+      createEnv({ TOKEN_BLACKLIST: blacklist }) as never,
+    );
+
+    expect(response.status).toBe(401);
+    expect(blacklist.get).not.toHaveBeenCalled();
+  });
+
+  it("reports a KV failure on a validly signed token as 503, not 500", async () => {
+    const blacklist = { get: vi.fn().mockRejectedValue(new Error("KV down")) };
+
+    const response = await withSilencedRouteError(async () =>
+      routes.fetch(
+        new Request(`https://api.test/events?token=${await createToken()}`),
+        createEnv({ TOKEN_BLACKLIST: blacklist }) as never,
+      ),
+    );
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      error: { code: "AUTH_BACKEND_UNAVAILABLE" },
+    });
+    expect(blacklist.get).toHaveBeenCalledOnce();
+  });
+
   it("returns retired guidance for authenticated legacy management routes", async () => {
     for (const request of [
       new Request("https://api.test/connections"),
