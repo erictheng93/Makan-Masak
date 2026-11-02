@@ -382,6 +382,321 @@ describe("authMiddleware", () => {
   });
 });
 
+describe("auth middlewares: infrastructure failures vs auth verdicts", () => {
+  const busy = () => new Error("D1_ERROR: SQLITE_BUSY: database is locked");
+  const activeStaff = {
+    id: staffUserId,
+    username: "role-1",
+    role: 1,
+    is_active: 1,
+    token_version: 1,
+  };
+
+  function staffApp() {
+    const handler = vi.fn();
+    const app = new Hono();
+    app.onError(apiErrorHandler);
+    app.use("/protected", authMiddleware);
+    app.get("/protected", (c) => {
+      handler();
+      return c.json({ ok: true });
+    });
+    return { app, handler };
+  }
+
+  function dbFailingOn(failOn: "sessions" | "users") {
+    return {
+      prepare: vi.fn((sql: string) => ({
+        bind: vi.fn(() => ({
+          first: vi.fn(async () => {
+            if (sql.includes(`FROM ${failOn}`)) throw busy();
+            return sql.includes("FROM sessions") ? { id: "s1" } : activeStaff;
+          }),
+        })),
+      })),
+    };
+  }
+
+  async function call(
+    app: Hono,
+    env: Record<string, unknown>,
+    bearer: string,
+    path = "/protected",
+  ) {
+    return app.fetch(
+      new Request(`https://api.test${path}`, {
+        headers: { Authorization: `Bearer ${bearer}` },
+      }),
+      env as never,
+    );
+  }
+
+  it("returns 503 AUTH_BACKEND_UNAVAILABLE and does not call next when the session lookup throws", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { app, handler } = staffApp();
+    const db = dbFailingOn("sessions");
+
+    const response = await call(
+      app,
+      { JWT_SECRET, DB: db },
+      await staffToken(1),
+    );
+
+    expect(response.status).toBe(503);
+    const body = await response.json();
+    expect(body).toEqual({
+      success: false,
+      error: {
+        code: "AUTH_BACKEND_UNAVAILABLE",
+        message: "Authentication service temporarily unavailable",
+      },
+    });
+    expect(JSON.stringify(body)).not.toContain("SQLITE_BUSY");
+    expect(handler).not.toHaveBeenCalled();
+    expect(db.prepare).toHaveBeenCalledWith(
+      expect.stringContaining("FROM sessions"),
+    );
+    expect(errorSpy).toHaveBeenCalledWith(
+      "Auth backend failure:",
+      expect.objectContaining({
+        message: expect.stringContaining("SQLITE_BUSY"),
+      }),
+    );
+    errorSpy.mockRestore();
+  });
+
+  it("returns 503 and does not call next when the user lookup throws in production", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { app, handler } = staffApp();
+    const db = {
+      prepare: vi.fn(() => ({
+        bind: vi.fn(() => ({
+          first: vi.fn(async () => {
+            throw busy();
+          }),
+        })),
+      })),
+    };
+
+    const response = await call(
+      app,
+      { JWT_SECRET, DB: db, NODE_ENV: "production" },
+      await staffToken(1),
+    );
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "AUTH_BACKEND_UNAVAILABLE" },
+    });
+    expect(handler).not.toHaveBeenCalled();
+    expect(db.prepare).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it("returns 503 and does not call next when the token blacklist KV throws", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { app, handler } = staffApp();
+    const kvGet = vi.fn(async () => {
+      throw new Error("KV GET failed: 503");
+    });
+
+    const response = await call(
+      app,
+      {
+        JWT_SECRET,
+        DB: createStaffDb(activeStaff),
+        TOKEN_BLACKLIST: { get: kvGet },
+      },
+      await staffToken(1),
+    );
+
+    expect(response.status).toBe(503);
+    expect(kvGet).toHaveBeenCalledOnce();
+    expect(handler).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it("does not turn a downstream handler failure into an auth error", async () => {
+    const app = new Hono();
+    app.use("/protected", authMiddleware);
+    app.get("/protected", () => {
+      throw new Error("handler exploded");
+    });
+    app.onError((error, c) => c.json({ message: error.message }, 500));
+
+    const response = await call(
+      app as Hono,
+      { JWT_SECRET, DB: createStaffDb(activeStaff) },
+      await staffToken(1),
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      message: "handler exploded",
+    });
+  });
+
+  it("keeps a tampered signature at 401 TOKEN_INVALID without touching the database", async () => {
+    const { app, handler } = staffApp();
+    const db = createStaffDb(activeStaff);
+    const valid = await staffToken(1);
+
+    const response = await call(
+      app,
+      { JWT_SECRET, DB: db },
+      `${valid.slice(0, -4)}AAAA`,
+    );
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "TOKEN_INVALID" },
+    });
+    expect(db.prepare).not.toHaveBeenCalled();
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("keeps a token signed with another secret at 401", async () => {
+    const { app, handler } = staffApp();
+    const now = Math.floor(Date.now() / 1000);
+    const foreign = await sign(
+      {
+        sub: staffUserId,
+        username: "role-1",
+        role: 1,
+        tv: 1,
+        iat: now,
+        exp: now + 3600,
+      },
+      "another-secret-with-at-least-32-chars!!",
+    );
+
+    const response = await call(
+      app,
+      { JWT_SECRET, DB: createStaffDb(activeStaff) },
+      foreign,
+    );
+
+    expect(response.status).toBe(401);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("keeps a malformed token at 401", async () => {
+    const { app, handler } = staffApp();
+    const response = await call(
+      app,
+      { JWT_SECRET, DB: createStaffDb(activeStaff) },
+      "not-a-jwt",
+    );
+
+    expect(response.status).toBe(401);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("keeps an expired token at 401 TOKEN_EXPIRED", async () => {
+    const { app, handler } = staffApp();
+    const now = Math.floor(Date.now() / 1000);
+    const expired = await sign(
+      {
+        sub: staffUserId,
+        username: "role-1",
+        role: 1,
+        tv: 1,
+        iat: now - 7200,
+        exp: now - 3600,
+      },
+      JWT_SECRET,
+    );
+
+    const response = await call(
+      app,
+      { JWT_SECRET, DB: createStaffDb(activeStaff) },
+      expired,
+    );
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "TOKEN_EXPIRED" },
+    });
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("keeps a token-version mismatch at 401 TOKEN_INVALIDATED", async () => {
+    const { app, handler } = staffApp();
+    const response = await call(
+      app,
+      {
+        JWT_SECRET,
+        DB: createStaffDb({ ...activeStaff, token_version: 2 }),
+      },
+      await staffToken(1),
+    );
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "TOKEN_INVALIDATED" },
+    });
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("canonicalCustomerAuthMiddleware returns 503 and does not call next when the customer lookup throws in production", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const handler = vi.fn();
+    const app = new Hono();
+    app.onError(apiErrorHandler);
+    app.use("/me", canonicalCustomerAuthMiddleware);
+    app.get("/me", (c) => {
+      handler();
+      return c.json({ ok: true });
+    });
+    const db = {
+      prepare: vi.fn(() => ({
+        bind: vi.fn(() => ({
+          first: vi.fn(async () => {
+            throw busy();
+          }),
+        })),
+      })),
+    };
+
+    const response = await call(
+      app,
+      { JWT_SECRET, DB: db, NODE_ENV: "production" },
+      await customerToken(),
+      "/me",
+    );
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "AUTH_BACKEND_UNAVAILABLE" },
+    });
+    expect(handler).not.toHaveBeenCalled();
+    expect(db.prepare).toHaveBeenCalledOnce();
+    errorSpy.mockRestore();
+  });
+
+  it("canonicalCustomerAuthMiddleware keeps a tampered token at 401", async () => {
+    const handler = vi.fn();
+    const app = new Hono();
+    app.onError(apiErrorHandler);
+    app.use("/me", canonicalCustomerAuthMiddleware);
+    app.get("/me", (c) => {
+      handler();
+      return c.json({ ok: true });
+    });
+    const valid = await customerToken();
+
+    const response = await call(
+      app,
+      { JWT_SECRET, DB: createCustomerDb(null) },
+      `${valid.slice(0, -4)}AAAA`,
+      "/me",
+    );
+
+    expect(response.status).toBe(401);
+    expect(handler).not.toHaveBeenCalled();
+  });
+});
+
 describe("requireRestaurantAccess", () => {
   function appWithUser(user: AuthUser) {
     const app = new Hono();

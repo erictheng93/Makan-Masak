@@ -2,7 +2,12 @@ import { Context, Next } from "hono";
 import { verify } from "jsonwebtoken";
 import type { JwtPayload } from "jsonwebtoken";
 import type { Env } from "../types/env";
-import { ApiError, unauthorized, forbidden } from "../shared/utils/api-error";
+import {
+  ApiError,
+  unauthorized,
+  forbidden,
+  serviceUnavailable,
+} from "../shared/utils/api-error";
 import { resolveStaffPrincipal } from "../shared/services/staff-principal";
 import { USER_ROLES } from "../shared/constants";
 
@@ -183,6 +188,28 @@ function isJwtInvalidError(error: unknown): boolean {
 }
 
 /**
+ * Classify an error caught around token verification. Only an ApiError (an
+ * explicit verdict) or a JWT library error is an authentication failure (401);
+ * anything else (D1/KV outage such as SQLITE_BUSY) is infrastructure, so it
+ * becomes 503 and the client keeps its session. Callers must still throw the
+ * result, never fall through to next().
+ */
+function toAuthFailure(error: unknown): ApiError {
+  if (error instanceof ApiError) return error;
+  if (isJwtExpiredError(error)) {
+    return unauthorized("Token has expired", "TOKEN_EXPIRED");
+  }
+  if (isJwtInvalidError(error)) {
+    return unauthorized("Invalid token format", "TOKEN_INVALID");
+  }
+  console.error("Auth backend failure:", error);
+  return serviceUnavailable(
+    "Authentication service temporarily unavailable",
+    "AUTH_BACKEND_UNAVAILABLE",
+  );
+}
+
+/**
  * 完整驗證 staff/admin bearer token，回傳可信任的 AuthUser。
  *
  * 這裡是唯一的 staff token 驗證來源：簽章、claim 形狀、時間 claim（exp/iat/nbf
@@ -322,19 +349,12 @@ function createAuthMiddleware(maxRole: number) {
       }
 
       c.set("user", user);
-
-      await next();
     } catch (error) {
-      if (error instanceof ApiError) throw error;
-
-      if (isJwtExpiredError(error)) {
-        throw unauthorized("Token has expired", "TOKEN_EXPIRED");
-      }
-      if (isJwtInvalidError(error)) {
-        throw unauthorized("Invalid token format", "TOKEN_INVALID");
-      }
-      throw unauthorized("Authentication failed", "TOKEN_INVALID");
+      throw toAuthFailure(error);
     }
+
+    // Outside the try: a downstream failure is not an authentication verdict.
+    await next();
   };
 }
 
@@ -426,19 +446,11 @@ export const canonicalCustomerAuthMiddleware = async (
       .run();
 
     c.set("customer", customer);
-
-    await next();
   } catch (error) {
-    if (error instanceof ApiError) throw error;
-
-    if (isJwtExpiredError(error)) {
-      throw unauthorized("Token has expired", "TOKEN_EXPIRED");
-    }
-    if (isJwtInvalidError(error)) {
-      throw unauthorized("Invalid token format", "TOKEN_INVALID");
-    }
-    throw unauthorized("Authentication failed", "TOKEN_INVALID");
+    throw toAuthFailure(error);
   }
+
+  await next();
 };
 
 /**
@@ -623,18 +635,11 @@ export const sseAuthMiddleware = async (
         userRecord?.restaurantId ??
         normalizeTokenRestaurantId(decoded.restaurantId),
     });
-
-    await next();
   } catch (error) {
-    if (error instanceof ApiError) throw error;
-    if (isJwtExpiredError(error)) {
-      throw unauthorized("Token has expired", "TOKEN_EXPIRED");
-    }
-    if (isJwtInvalidError(error)) {
-      throw unauthorized("Invalid token format", "TOKEN_INVALID");
-    }
-    throw unauthorized("Authentication failed", "TOKEN_INVALID");
+    throw toAuthFailure(error);
   }
+
+  await next();
 };
 
 async function loadTokenUser(

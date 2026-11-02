@@ -89,3 +89,10 @@ export function conflict(
 ): ApiError {
   return new ApiError(code, message, 409);
 }
+
+export function serviceUnavailable(
+  message = "Service temporarily unavailable",
+  code = "SERVICE_UNAVAILABLE",
+): ApiError {
+  return new ApiError(code, message, 503);
+}

@@ -6,7 +6,12 @@
 
 import { Context, Next } from "hono";
 import type { Env } from "../types/env";
-import { ApiError, forbidden, unauthorized } from "../shared/utils/api-error";
+import {
+  ApiError,
+  forbidden,
+  serviceUnavailable,
+  unauthorized,
+} from "../shared/utils/api-error";
 
 export interface GuestTokenData {
   orderId: string;
@@ -61,7 +66,10 @@ export const guestTokenAuth = async (
   } catch (error) {
     if (error instanceof ApiError) throw error;
     console.error("Guest token auth error:", error);
-    throw unauthorized("Authentication failed", "AUTH_FAILED");
+    throw serviceUnavailable(
+      "Authentication service temporarily unavailable",
+      "AUTH_BACKEND_UNAVAILABLE",
+    );
   }
 
   await next();
@@ -99,7 +107,10 @@ export const guestSessionAuth = async (
   } catch (error) {
     if (error instanceof ApiError) throw error;
     console.error("Guest session auth error:", error);
-    throw unauthorized("Authentication failed", "AUTH_FAILED");
+    throw serviceUnavailable(
+      "Authentication service temporarily unavailable",
+      "AUTH_BACKEND_UNAVAILABLE",
+    );
   }
 
   await next();

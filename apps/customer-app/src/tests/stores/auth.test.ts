@@ -155,6 +155,65 @@ describe("customer auth store", () => {
     expect(customerIdentityApi.logout).not.toHaveBeenCalled();
   });
 
+  describe("checkAuth when /customers/me fails", () => {
+    const storedUser = {
+      id: "customer-1",
+      username: "0912345678",
+      fullName: "Lin Mei",
+      role: 5,
+    };
+
+    beforeEach(() => {
+      localStorage.setItem("customer_user", JSON.stringify(storedUser));
+      vi.mocked(customerIdentityApi.refresh).mockResolvedValue({
+        accessToken: "new-access",
+        expiresIn: 3600,
+      });
+    });
+
+    it.each([503, 500, 429])(
+      "keeps the session on a transient %i instead of logging out",
+      async (status) => {
+        vi.mocked(customerIdentityApi.getMe).mockRejectedValue(
+          Object.assign(new Error("unavailable"), { status }),
+        );
+        const store = useAuthStore();
+
+        await expect(store.checkAuth()).resolves.toBe(true);
+
+        expect(customerIdentityApi.logout).not.toHaveBeenCalled();
+        expect(store.user).toMatchObject({ id: "customer-1" });
+        expect(localStorage.getItem("customer_user")).not.toBeNull();
+        expect(store.token).toBe("new-access");
+      },
+    );
+
+    it("keeps the session on a network error with no status", async () => {
+      vi.mocked(customerIdentityApi.getMe).mockRejectedValue(
+        new Error("Network Error"),
+      );
+      const store = useAuthStore();
+
+      await expect(store.checkAuth()).resolves.toBe(true);
+
+      expect(customerIdentityApi.logout).not.toHaveBeenCalled();
+      expect(store.user).toMatchObject({ id: "customer-1" });
+    });
+
+    it("still logs out on a definitive 401", async () => {
+      vi.mocked(customerIdentityApi.getMe).mockRejectedValue(
+        Object.assign(new Error("unauthorized"), { status: 401 }),
+      );
+      vi.mocked(customerIdentityApi.logout).mockResolvedValue(undefined);
+      const store = useAuthStore();
+
+      await expect(store.checkAuth()).resolves.toBe(false);
+
+      expect(store.user).toBeNull();
+      expect(localStorage.getItem("customer_user")).toBeNull();
+    });
+  });
+
   it("logs out locally even when logout API fails", async () => {
     sessionStorage.setItem("customer_auth_token", "access-token");
     localStorage.setItem(
