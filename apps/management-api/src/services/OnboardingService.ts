@@ -1198,11 +1198,15 @@ export class OnboardingService {
     }
 
     // Children before parents: credential deliveries reference both the
-    // application and the tenant. Management shop_subscriptions key on the
-    // tenant id (see rollbackTenantProvisioning).
+    // application and the tenant, and the application references the tenant.
+    // Management shop_subscriptions key on the tenant id (see
+    // rollbackTenantProvisioning).
     const managementDeletes = [
       this.env.MANAGEMENT_DB.prepare(
         "DELETE FROM onboarding_credential_deliveries WHERE application_id = ?",
+      ).bind(applicationId),
+      this.env.MANAGEMENT_DB.prepare(
+        "DELETE FROM onboarding_applications WHERE id = ?",
       ).bind(applicationId),
       ...(application.tenantId
         ? [
@@ -1214,9 +1218,6 @@ export class OnboardingService {
             ).bind(application.tenantId),
           ]
         : []),
-      this.env.MANAGEMENT_DB.prepare(
-        "DELETE FROM onboarding_applications WHERE id = ?",
-      ).bind(applicationId),
     ];
     await this.env.MANAGEMENT_DB.batch(managementDeletes);
     await this.writeApplicationAuditEvent(applicationId, "purged", actor, {

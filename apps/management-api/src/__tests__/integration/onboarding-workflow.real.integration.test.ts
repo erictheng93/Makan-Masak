@@ -70,6 +70,7 @@ function createManagementDb() {
     sqlite.exec(fs.readFileSync(path.join(migrationsDir, file), "utf8"));
   }
 
+  sqlite.pragma("foreign_keys = ON");
   return new D1DatabaseAdapter(sqlite);
 }
 
