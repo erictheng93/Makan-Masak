@@ -26,7 +26,11 @@ import {
   regionPolicies,
   restaurants,
   shopSubscriptions,
+  storageCounters,
   TRIAL_DURATION_MS,
+  usageEvents,
+  usageMeterBuckets,
+  usageMeters,
   users,
   CloudflareEmailProvider,
   type PaidPlanTier,
@@ -1162,6 +1166,21 @@ export class OnboardingService {
           platformDb
             .delete(shopSubscriptions)
             .where(eq(shopSubscriptions.restaurantId, restaurantId)),
+          // Metering rows (restaurant_id, no ON DELETE CASCADE) appear as soon
+          // as the owner makes an API request, e.g. logs in. Left behind they
+          // fail the restaurant delete with a FOREIGN KEY error.
+          platformDb
+            .delete(usageMeterBuckets)
+            .where(eq(usageMeterBuckets.restaurantId, restaurantId)),
+          platformDb
+            .delete(usageEvents)
+            .where(eq(usageEvents.restaurantId, restaurantId)),
+          platformDb
+            .delete(usageMeters)
+            .where(eq(usageMeters.restaurantId, restaurantId)),
+          platformDb
+            .delete(storageCounters)
+            .where(eq(storageCounters.restaurantId, restaurantId)),
           platformDb.delete(users).where(eq(users.restaurantId, restaurantId)),
           platformDb
             .delete(restaurants)

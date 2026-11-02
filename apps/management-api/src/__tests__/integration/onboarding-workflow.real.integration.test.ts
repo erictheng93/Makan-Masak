@@ -2083,6 +2083,20 @@ describe("Operator-created applications — real integration", () => {
         .exec(
           "CREATE TABLE orders (id TEXT PRIMARY KEY NOT NULL, restaurant_id TEXT NOT NULL REFERENCES restaurants(id))",
         );
+      // Metering tables: restaurant_id FKs without ON DELETE CASCADE, written
+      // once the owner makes any API request.
+      for (const table of [
+        "usage_meter_buckets",
+        "usage_events",
+        "usage_meters",
+        "storage_counters",
+      ]) {
+        platformDb
+          .raw()
+          .exec(
+            `CREATE TABLE ${table} (restaurant_id TEXT NOT NULL REFERENCES restaurants(id))`,
+          );
+      }
       return platformDb;
     }
 
@@ -2115,6 +2129,10 @@ describe("Operator-created applications — real integration", () => {
     }
 
     const platformTables = [
+      "usage_meter_buckets",
+      "usage_events",
+      "usage_meters",
+      "storage_counters",
       "restaurants",
       "shop_subscriptions",
       "password_reset_tokens",
@@ -2132,6 +2150,24 @@ describe("Operator-created applications — real integration", () => {
       const platformDb = withOrdersTable(createPlatformDb());
       const env = createEnv(db, platformDb);
       const created = await createApproved(env);
+      // An owner who has logged in leaves metering rows behind (the nightly
+      // 409 this test now guards against).
+      const restaurantId = (
+        platformDb.raw().prepare("SELECT id FROM restaurants").get() as {
+          id: string;
+        }
+      ).id;
+      for (const table of [
+        "usage_meter_buckets",
+        "usage_events",
+        "usage_meters",
+        "storage_counters",
+      ]) {
+        platformDb
+          .raw()
+          .prepare(`INSERT INTO ${table} (restaurant_id) VALUES (?)`)
+          .run(restaurantId);
+      }
 
       const response = await purge(env, created.application.id);
 
