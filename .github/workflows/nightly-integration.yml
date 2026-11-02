@@ -145,6 +145,13 @@ jobs:
              > /tmp/integration-logs/onboarding.log 2>&1 &)
           (cd apps/admin-dashboard && pnpm exec vite --port 3001 --host 0.0.0.0 \
              > /tmp/integration-logs/admin.log 2>&1 &)
+          # Kitchen display (proxies /api to :8787) and the management portal
+          # (proxies /api to :8789) are what the kitchen and management-portal
+          # workflows drive; without them those six tests skip.
+          (cd apps/kitchen-display && pnpm exec vite --port 3002 --host 0.0.0.0 \
+             > /tmp/integration-logs/kitchen.log 2>&1 &)
+          (cd apps/management-portal && pnpm exec vite --port 3010 --host 0.0.0.0 \
+             > /tmp/integration-logs/management-portal.log 2>&1 &)
 
       - name: ⏳ 等待服務就緒
         # /info is the app-level public endpoint (apps/api/src/app-factory.ts).
@@ -152,7 +159,8 @@ jobs:
         run: |
           for probe in http://localhost:8787/info http://localhost:3000 \
             http://localhost:8789/info http://localhost:3011 \
-            http://localhost:3001; do
+            http://localhost:3001 http://localhost:3002 \
+            http://localhost:3010; do
             elapsed=0
             until curl -sf "$probe" >/dev/null 2>&1; do
               if [ "$elapsed" -ge 240 ]; then
@@ -214,6 +222,20 @@ jobs:
             "http://localhost:8787/api/v1/menu/${RESTAURANT_ID}")
           node /tmp/assert-seed.cjs "e2e menu fixtures visible" "data.menuItems.0.id" "$MENU_BODY"
 
+          # The service booking and market checkout tests discover these from
+          # the public API and skip when they are absent.
+          SERVICE_BODY=$(curl --fail --silent --show-error \
+            "http://localhost:8787/api/v1/restaurants/${RESTAURANT_ID}/service-items")
+          node /tmp/assert-seed.cjs "e2e service item visible" "data.0.id" "$SERVICE_BODY"
+
+          MARKET_BODY=$(curl --fail --silent --show-error \
+            "http://localhost:8787/api/v1/markets?limit=25")
+          node /tmp/assert-seed.cjs "e2e market public" "data.markets.0.slug" "$MARKET_BODY"
+
+          VENDOR_BODY=$(curl --fail --silent --show-error \
+            "http://localhost:8787/api/v1/markets/e2e-seed-market/vendors?limit=25")
+          node /tmp/assert-seed.cjs "e2e market vendors" "data.vendors.1.restaurantId" "$VENDOR_BODY"
+
       - name: 🧪 執行 Integration Tests
         # By project name, not by file list: the previous file list named three
         # specs that no longer exist, which is only discoverable by running it.
@@ -222,16 +244,22 @@ jobs:
         # used_count, idempotency keys, the active-order dedup KV), and 2
         # workers produced cross-file contention.
         #
-        # Not run under WORKFLOW_STRICT: kitchen display and management portal
-        # are still outside this job. The onboarding activation test now has
-        # all required services, so it must run rather than silently skip.
-        # The summary step reports passed/failed/skipped counts.
+        # Not run under WORKFLOW_STRICT, so a missing fixture is a skip rather
+        # than a failure; the summary step reports passed/failed/skipped counts
+        # and is where a regression back to skipping shows up. Every test in the
+        # spec has what it needs here: kitchen display and the management portal
+        # are started above, the service booking and market fixtures come from
+        # seed-e2e-fixtures.sql, and the management token is minted by the spec
+        # itself (seeded platform admin login, then /auth/exchange) so no secret
+        # is involved. Set WORKFLOW_MANAGEMENT_TOKEN to override it.
         run: pnpm exec playwright test --project=integration --workers=1
         env:
           WORKFLOW_API_URL: http://localhost:8787
           WORKFLOW_CUSTOMER_URL: http://localhost:3000
           WORKFLOW_ADMIN_URL: http://localhost:3001
           WORKFLOW_OWNER_ACTIVATION_ADMIN_URL: http://localhost:3001
+          WORKFLOW_KITCHEN_URL: http://localhost:3002
+          WORKFLOW_MANAGEMENT_PORTAL_URL: http://localhost:3010
           WORKFLOW_ONBOARDING_URL: http://localhost:3011
           WORKFLOW_MANAGEMENT_API_URL: http://localhost:8789/api/v1
           E2E_BASE_URL: http://localhost:3000

@@ -1237,6 +1237,36 @@ async function managementTokenFromPlatformAdmin(
   return exchangeBody.data!.token!;
 }
 
+let derivedManagementTokenPromise: Promise<string> | undefined;
+
+/**
+ * The token the management portal tests sign in with.
+ *
+ * WORKFLOW_MANAGEMENT_TOKEN (or the local HMAC token under
+ * WORKFLOW_ENABLE_LOCAL_MANAGEMENT) wins when set. Otherwise, against a local
+ * API with the management API and portal configured, mint one the way a real
+ * operator gets theirs - seeded platform admin login, then /auth/exchange - so
+ * the nightly needs no secret and no knowledge of the Worker's JWT secret. The
+ * exchanged token is bound to that login's session, so it is minted once and
+ * shared by the five portal tests rather than logging in per test.
+ *
+ * Returns undefined, and the caller skips, when nothing could be configured.
+ * A configured exchange that fails is a failure, not a skip.
+ */
+async function resolveManagementToken(): Promise<string | undefined> {
+  if (MANAGEMENT_TOKEN) return MANAGEMENT_TOKEN;
+  if (!MANAGEMENT_PORTAL_URL || !MANAGEMENT_API_URL || !IS_LOCAL_API) {
+    return undefined;
+  }
+  derivedManagementTokenPromise ??= managementTokenFromPlatformAdmin(
+    MANAGEMENT_API_URL,
+  ).catch((error: unknown) => {
+    derivedManagementTokenPromise = undefined;
+    throw error;
+  });
+  return derivedManagementTokenPromise;
+}
+
 async function confirmOrder(orderId: string, token: string) {
   await updateOrderStatus(orderId, token, "confirmed");
 }
@@ -2741,12 +2771,13 @@ test.describe("Real system workflows", () => {
   test("management portal health page loads data from the management API", async ({
     page,
   }) => {
+    const managementToken = await resolveManagementToken();
     skipWhen(
-      !MANAGEMENT_PORTAL_URL || !MANAGEMENT_TOKEN,
-      "WORKFLOW_MANAGEMENT_PORTAL_URL and WORKFLOW_MANAGEMENT_TOKEN are required",
+      !MANAGEMENT_PORTAL_URL || !managementToken,
+      "WORKFLOW_MANAGEMENT_PORTAL_URL and a management token (WORKFLOW_MANAGEMENT_TOKEN, or WORKFLOW_MANAGEMENT_API_URL against a local API) are required",
     );
 
-    await installManagementSession(page, MANAGEMENT_TOKEN!);
+    await installManagementSession(page, managementToken!);
 
     const healthResponse = page.waitForResponse(
       (response) => response.url().includes("/api/v1/health") && response.ok(),
@@ -2764,12 +2795,13 @@ test.describe("Real system workflows", () => {
   test("management portal tenants page loads tenant data from the management API", async ({
     page,
   }) => {
+    const managementToken = await resolveManagementToken();
     skipWhen(
-      !MANAGEMENT_PORTAL_URL || !MANAGEMENT_TOKEN,
-      "WORKFLOW_MANAGEMENT_PORTAL_URL and WORKFLOW_MANAGEMENT_TOKEN are required",
+      !MANAGEMENT_PORTAL_URL || !managementToken,
+      "WORKFLOW_MANAGEMENT_PORTAL_URL and a management token (WORKFLOW_MANAGEMENT_TOKEN, or WORKFLOW_MANAGEMENT_API_URL against a local API) are required",
     );
 
-    await installManagementSession(page, MANAGEMENT_TOKEN!);
+    await installManagementSession(page, managementToken!);
 
     const tenantsResponse = page.waitForResponse(
       (response) => response.url().includes("/api/v1/tenants") && response.ok(),
@@ -2787,11 +2819,12 @@ test.describe("Real system workflows", () => {
   test("management portal creates a real tenant from the browser and reads it back from the management API", async ({
     page,
   }) => {
+    const managementToken = await resolveManagementToken();
     skipWhen(
       !MANAGEMENT_PORTAL_URL ||
-        !MANAGEMENT_TOKEN ||
+        !managementToken ||
         !MANAGEMENT_WORKFLOW_API_URL,
-      "WORKFLOW_MANAGEMENT_PORTAL_URL, WORKFLOW_MANAGEMENT_TOKEN, and management API URL are required",
+      "WORKFLOW_MANAGEMENT_PORTAL_URL, a management token (WORKFLOW_MANAGEMENT_TOKEN, or WORKFLOW_MANAGEMENT_API_URL against a local API), and management API URL are required",
     );
 
     const suffix = randomSuffix();
@@ -2801,7 +2834,7 @@ test.describe("Real system workflows", () => {
     let createdTenantId: string | undefined;
     let createdApplicationId: string | undefined;
 
-    await installManagementSession(page, MANAGEMENT_TOKEN!);
+    await installManagementSession(page, managementToken!);
 
     try {
       const tenantsResponse = page.waitForResponse(
@@ -2875,7 +2908,7 @@ test.describe("Real system workflows", () => {
 
       const createdTenant = await fetchManagementTenantById(
         createdTenantId!,
-        MANAGEMENT_TOKEN!,
+        managementToken!,
       );
       expect(createdTenant.data).toMatchObject({
         id: createdTenantId,
@@ -2890,7 +2923,7 @@ test.describe("Real system workflows", () => {
         await purgeOnboardingApplication(
           MANAGEMENT_WORKFLOW_API_URL!,
           createdApplicationId,
-          MANAGEMENT_TOKEN!,
+          managementToken!,
         );
       }
     }
@@ -2899,17 +2932,18 @@ test.describe("Real system workflows", () => {
   test("management portal tenant detail loads tenant resources, deployments, health, and licenses from the management API", async ({
     page,
   }) => {
+    const managementToken = await resolveManagementToken();
     skipWhen(
       !MANAGEMENT_PORTAL_URL ||
-        !MANAGEMENT_TOKEN ||
+        !managementToken ||
         !MANAGEMENT_WORKFLOW_API_URL,
-      "WORKFLOW_MANAGEMENT_PORTAL_URL and WORKFLOW_MANAGEMENT_TOKEN are required",
+      "WORKFLOW_MANAGEMENT_PORTAL_URL and a management token (WORKFLOW_MANAGEMENT_TOKEN, or WORKFLOW_MANAGEMENT_API_URL against a local API) are required",
     );
 
     let createdApplicationId: string | undefined;
-    let tenant = await fetchManagementTenant(MANAGEMENT_TOKEN!);
+    let tenant = await fetchManagementTenant(managementToken!);
     if (!tenant?.id) {
-      const fixture = await createManagementTenantFixture(MANAGEMENT_TOKEN!);
+      const fixture = await createManagementTenantFixture(managementToken!);
       createdApplicationId = fixture.applicationId;
       tenant = {
         id: fixture.id,
@@ -2917,7 +2951,7 @@ test.describe("Real system workflows", () => {
       };
     }
 
-    await installManagementSession(page, MANAGEMENT_TOKEN!);
+    await installManagementSession(page, managementToken!);
 
     try {
       const tenantResponse = page.waitForResponse(
@@ -2985,7 +3019,7 @@ test.describe("Real system workflows", () => {
         await purgeOnboardingApplication(
           MANAGEMENT_WORKFLOW_API_URL!,
           createdApplicationId,
-          MANAGEMENT_TOKEN!,
+          managementToken!,
         );
       }
     }
@@ -2994,12 +3028,13 @@ test.describe("Real system workflows", () => {
   test("management portal deployments, licenses, and markets pages load from management APIs", async ({
     page,
   }) => {
+    const managementToken = await resolveManagementToken();
     skipWhen(
-      !MANAGEMENT_PORTAL_URL || !MANAGEMENT_TOKEN,
-      "WORKFLOW_MANAGEMENT_PORTAL_URL and WORKFLOW_MANAGEMENT_TOKEN are required",
+      !MANAGEMENT_PORTAL_URL || !managementToken,
+      "WORKFLOW_MANAGEMENT_PORTAL_URL and a management token (WORKFLOW_MANAGEMENT_TOKEN, or WORKFLOW_MANAGEMENT_API_URL against a local API) are required",
     );
 
-    await installManagementSession(page, MANAGEMENT_TOKEN!);
+    await installManagementSession(page, managementToken!);
 
     const deploymentsTenantsResponse = page.waitForResponse(
       (response) => response.url().includes("/api/v1/tenants") && response.ok(),
