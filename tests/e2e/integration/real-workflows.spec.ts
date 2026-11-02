@@ -1779,7 +1779,7 @@ test.describe("Real system workflows", () => {
         `service booking cancel status ${cancelResponse.status()}`,
       ).toBe(true);
       await expect(page.getByTestId("service-booking-verified")).toContainText(
-        "已取消",
+        /已取消|Cancelled/,
       );
 
       const cancelledBooking = await fetchServiceBookingByCode(

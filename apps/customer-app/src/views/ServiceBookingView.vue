@@ -619,6 +619,7 @@ function statusLabel(status: ServiceBookingStatus): string {
 
 function bookingStatusLabel(booking: ServiceBooking): string {
   if (
+    (booking.status === "pending" || booking.status === "confirmed") &&
     booking.paymentStatus === "unpaid" &&
     (booking.paymentRequirement === "pay_at_venue" ||
       (storedValueCreditsDisabled.value &&

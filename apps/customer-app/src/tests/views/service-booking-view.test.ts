@@ -522,4 +522,37 @@ describe("ServiceBookingView", () => {
       "Please pay the staff at the venue (NT$120 due). Confirmation code: ABC123",
     );
   });
+
+  it("does not ask for payment on a cancelled pay-at-venue booking", async () => {
+    const payAtVenue = {
+      ...pendingBooking,
+      paymentRequirement: "pay_at_venue" as const,
+    };
+    vi.mocked(serviceBookingsApi.verify).mockResolvedValue(payAtVenue);
+    vi.mocked(serviceBookingsApi.cancelByCode).mockResolvedValue({
+      ...payAtVenue,
+      status: "cancelled",
+    });
+    const wrapper = mountView();
+    await flushPromises();
+
+    await wrapper
+      .get('[data-testid="service-booking-verify-code"]')
+      .setValue("ABC123");
+    await wrapper
+      .get('[data-testid="service-booking-verify"]')
+      .trigger("click");
+    await flushPromises();
+    const card = wrapper.get('[data-testid="service-booking-verified"]');
+    expect(card.text()).toContain("Please pay the staff at the venue");
+
+    await wrapper
+      .get('[data-testid="service-booking-cancel"]')
+      .trigger("click");
+    await flushPromises();
+
+    expect(serviceBookingsApi.cancelByCode).toHaveBeenCalledOnce();
+    expect(card.text()).toContain("serviceBooking.bookingStatus.cancelled");
+    expect(card.text()).not.toContain("Please pay the staff at the venue");
+  });
 });
