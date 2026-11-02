@@ -930,6 +930,9 @@ async function installKitchenSession(
     window.localStorage.setItem("kitchen_auth_token", session.token ?? "");
     if (session.csrfToken) {
       window.document.cookie = `csrf_token=${session.csrfToken}; path=/; SameSite=Lax`;
+      // Where auth-client reads the token back from; a browser login writes it
+      // here from the X-CSRF-Token response header.
+      window.localStorage.setItem("mm_csrf_token_kitchen", session.csrfToken);
     }
     if (session.refreshToken) {
       window.localStorage.setItem(
