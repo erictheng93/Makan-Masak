@@ -649,6 +649,29 @@ describe("auth middlewares: infrastructure failures vs auth verdicts", () => {
       expect(handler).not.toHaveBeenCalled();
     });
 
+    it("answers a token whose payload is not JSON with 401, not 503", async () => {
+      // jsonwebtoken parses the payload before the signature and throws a
+      // plain SyntaxError for this, which anyone can send.
+      const { app, handler } = staffApp();
+      const kv = strictKv();
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const bad = `${Buffer.from('{"alg":"HS256","typ":"JWT"}').toString("base64url")}.${Buffer.from("{oops").toString("base64url")}.sig`;
+      const response = await call(
+        app,
+        { JWT_SECRET, DB: createStaffDb(activeStaff), TOKEN_BLACKLIST: kv },
+        bad,
+      );
+
+      expect(response.status).toBe(401);
+      await expect(response.json()).resolves.toMatchObject({
+        error: { code: "TOKEN_INVALID" },
+      });
+      expect(kv.get).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
+    });
+
     it("answers an oversized garbage token with 401 on the canonical customer path too", async () => {
       const handler = vi.fn();
       const app = new Hono();
