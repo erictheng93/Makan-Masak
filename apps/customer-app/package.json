@@ -15,7 +15,7 @@
     "test:watch": "vitest",
     "test:unit": "vitest",
     "test:real-integration": "vitest --config vitest.real-integration.config.ts",
-    "deploy:prod": "wrangler pages deploy dist --project-name=makanmasak-customer"
+    "deploy:prod": "wrangler pages deploy dist --project-name=makanmasak-customer --branch=main"
   },
   "dependencies": {
     "@chenfengyuan/vue-qrcode": "^2.0.0",

@@ -16,7 +16,7 @@
     "test:e2e": "playwright test --config=playwright.config.ts",
     "test:real-integration": "vitest --config vitest.real-integration.config.ts",
     "test:coverage": "vitest run --coverage",
-    "deploy:prod": "pnpm run build && wrangler pages deploy dist --project-name=makanmasak-kitchen"
+    "deploy:prod": "pnpm run build && wrangler pages deploy dist --project-name=makanmasak-kitchen --branch=main"
   },
   "dependencies": {
     "@headlessui/vue": "^1.7.0",
