@@ -287,6 +287,129 @@ describe("image processor JWT auth (UUID token shape)", () => {
   });
 });
 
+describe("image processor JWT auth failure classification", () => {
+  const jwtSecret = "test-jwt-secret-with-at-least-32-chars";
+  const userUuid = "01890a5d-ac96-774b-bcce-b302099a8057";
+
+  async function validToken() {
+    const now = Math.floor(Date.now() / 1000);
+    return sign(
+      {
+        sub: userUuid,
+        username: "owner1",
+        role: 1,
+        tv: 1,
+        iat: now,
+        exp: now + 3600,
+      },
+      jwtSecret,
+    );
+  }
+
+  function run(token: string, env: Record<string, unknown>, optional = false) {
+    const reachedNext = vi.fn();
+    const app = new Hono();
+    app.use("*", (c, next) =>
+      (optional ? optionalAuth : authMiddleware)(c as never, next),
+    );
+    app.get("/protected", (c) => {
+      reachedNext();
+      return c.json({ user: c.get("user") ?? null });
+    });
+    const response = app.fetch(
+      new Request("https://images.test/protected", {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      { JWT_SECRET: jwtSecret, ...env },
+    );
+    return { response, reachedNext };
+  }
+
+  const ownerRow = {
+    id: userUuid,
+    username: "owner1",
+    role: 1,
+    restaurant_id: null,
+    is_active: 1,
+    token_version: 1,
+  };
+
+  it("answers a garbage token with a unified 401 and never touches KV", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const get = vi.fn().mockRejectedValue(new Error("KV key too long"));
+
+    const { response, reachedNext } = run("a".repeat(600), {
+      TOKEN_BLACKLIST: { get },
+      DB: staffAuthDatabase(ownerRow),
+    });
+    const res = await response;
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toMatchObject({
+      success: false,
+      error: { code: "TOKEN_INVALID", message: expect.any(String) },
+    });
+    expect(get).not.toHaveBeenCalled();
+    expect(reachedNext).not.toHaveBeenCalled();
+  });
+
+  it("answers a blacklisted valid token with 401", async () => {
+    const { response, reachedNext } = run(await validToken(), {
+      TOKEN_BLACKLIST: { get: vi.fn().mockResolvedValue("revoked") },
+      DB: staffAuthDatabase(ownerRow),
+    });
+    const res = await response;
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toMatchObject({
+      success: false,
+      error: { code: "TOKEN_BLACKLISTED" },
+    });
+    expect(reachedNext).not.toHaveBeenCalled();
+  });
+
+  it("answers a KV failure on a valid token with 503, not 401", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { response, reachedNext } = run(await validToken(), {
+      TOKEN_BLACKLIST: { get: vi.fn().mockRejectedValue(new Error("KV down")) },
+      DB: staffAuthDatabase(ownerRow),
+    });
+    const res = await response;
+
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toMatchObject({
+      success: false,
+      error: { code: "AUTH_BACKEND_UNAVAILABLE" },
+    });
+    expect(reachedNext).not.toHaveBeenCalled();
+  });
+
+  it("answers a D1 failure with 503 on required and optional auth", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const DB = {
+      prepare: vi.fn(() => {
+        throw new Error("D1_ERROR: SQLITE_BUSY");
+      }),
+    };
+
+    for (const optional of [false, true]) {
+      const { response, reachedNext } = run(
+        await validToken(),
+        { DB },
+        optional,
+      );
+      const res = await response;
+
+      expect(res.status).toBe(503);
+      await expect(res.json()).resolves.toMatchObject({
+        success: false,
+        error: { code: "AUTH_BACKEND_UNAVAILABLE" },
+      });
+      expect(reachedNext).not.toHaveBeenCalled();
+    }
+  });
+});
+
 describe("image processor CORS", () => {
   it("does not emit wildcard CORS for arbitrary origins", async () => {
     const app = new Hono();

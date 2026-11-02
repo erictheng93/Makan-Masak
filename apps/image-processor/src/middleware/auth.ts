@@ -63,6 +63,15 @@ declare module "hono" {
   }
 }
 
+// Unified error body: { success:false, error:{ code, message } }. The only
+// client (admin-dashboard useImageUpload) checks response.ok, not the body.
+const authFailure = (
+  c: Context<{ Bindings: Env }>,
+  status: 401 | 500 | 503,
+  code: string,
+  message: string,
+) => c.json({ success: false, error: { code, message } }, status);
+
 // JWT 認證中間件
 export const authMiddleware = async (
   c: Context<{ Bindings: Env }>,
@@ -72,12 +81,11 @@ export const authMiddleware = async (
     const authHeader = c.req.header("Authorization");
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return c.json(
-        {
-          success: false,
-          error: "Missing or invalid authorization header",
-        },
+      return authFailure(
+        c,
         401,
+        "MISSING_AUTH_HEADER",
+        "Missing or invalid authorization header",
       );
     }
 
@@ -88,33 +96,33 @@ export const authMiddleware = async (
       console.error(
         "JWT_SECRET is not set or too short (minimum 32 characters required)",
       );
-      return c.json(
-        { success: false, error: "Server configuration error" },
+      return authFailure(
+        c,
         500,
+        "SERVER_CONFIG_ERROR",
+        "Server configuration error",
       );
     }
+
+    // Verify first: KV keys over 512 bytes throw, so a garbage token must
+    // never reach the blacklist lookup.
+    const decoded = await verify(token, c.env.JWT_SECRET, "HS256");
 
     // 檢查 token 是否在黑名單中 (如果 KV 可用)
     if (c.env.TOKEN_BLACKLIST) {
       const blacklisted = await c.env.TOKEN_BLACKLIST.get(`token:${token}`);
       if (blacklisted) {
-        return c.json(
-          { success: false, error: "Token has been invalidated" },
+        return authFailure(
+          c,
           401,
+          "TOKEN_BLACKLISTED",
+          "Token has been invalidated",
         );
       }
     }
 
-    const decoded = await verify(token, c.env.JWT_SECRET, "HS256");
-
     if (!decoded || typeof decoded !== "object") {
-      return c.json(
-        {
-          success: false,
-          error: "Invalid token",
-        },
-        401,
-      );
+      return authFailure(c, 401, "TOKEN_INVALID", "Invalid token");
     }
     const decodedPayload = decoded as Record<string, unknown>;
     const exp =
@@ -129,30 +137,30 @@ export const authMiddleware = async (
 
     // Check token expiration
     if (!exp || exp <= now) {
-      return c.json({ success: false, error: "Token has expired" }, 401);
+      return authFailure(c, 401, "TOKEN_EXPIRED", "Token has expired");
     }
 
     // Check token issued at time (prevent future tokens)
     if (iat && iat > now + 60) {
       // Allow 60 second clock skew
-      return c.json({ success: false, error: "Token issued in future" }, 401);
+      return authFailure(c, 401, "TOKEN_INVALID", "Token issued in future");
     }
 
     // Check not before claim
     if (nbf && nbf > now + 60) {
       // Allow 60 second clock skew
-      return c.json({ success: false, error: "Token not yet valid" }, 401);
+      return authFailure(c, 401, "TOKEN_INVALID", "Token not yet valid");
     }
 
     // Validate required claims
     const authPayload = toJwtAuthPayload(decodedPayload);
     if (!authPayload) {
-      return c.json({ success: false, error: "Invalid token claims" }, 401);
+      return authFailure(c, 401, "TOKEN_INVALID", "Invalid token claims");
     }
 
     // Validate role is within expected range (0-4)
     if (authPayload.role < 0 || authPayload.role > 4) {
-      return c.json({ success: false, error: "Invalid role in token" }, 401);
+      return authFailure(c, 401, "TOKEN_INVALID", "Invalid role in token");
     }
 
     // Check token age — aligned with the main API's 72h ceiling
@@ -160,9 +168,11 @@ export const authMiddleware = async (
     const tokenAge = now - (iat || 0);
     const maxTokenAge = 72 * 60 * 60;
     if (tokenAge > maxTokenAge) {
-      return c.json(
-        { success: false, error: "Token too old, please refresh" },
+      return authFailure(
+        c,
         401,
+        "TOKEN_EXPIRED",
+        "Token too old, please refresh",
       );
     }
 
@@ -193,7 +203,7 @@ export const authMiddleware = async (
       principal.role !== authPayload.role ||
       principal.token_version !== authPayload.tokenVersion
     ) {
-      return c.json({ success: false, error: "Invalid or revoked token" }, 401);
+      return authFailure(c, 401, "TOKEN_INVALID", "Invalid or revoked token");
     }
     const session = await c.env.DB.prepare(
       "SELECT id FROM sessions WHERE user_id = ? AND token = ? AND is_active = 1 AND expires_at_ms > ? LIMIT 1",
@@ -201,10 +211,7 @@ export const authMiddleware = async (
       .bind(principal.id, token, Date.now())
       .first();
     if (!session) {
-      return c.json(
-        { success: false, error: "Invalid or revoked session" },
-        401,
-      );
+      return authFailure(c, 401, "TOKEN_INVALID", "Invalid or revoked session");
     }
     c.set("user", {
       id: principal.id,
@@ -212,35 +219,30 @@ export const authMiddleware = async (
       role: principal.role,
       restaurantId: principal.restaurant_id ?? undefined,
     });
-
-    await next();
   } catch (error) {
-    console.error("Auth middleware error:", error);
-    // 提供更詳細的錯誤資訊用於調試 (但不暴露給客戶端)
-    if (
-      error &&
-      typeof error === "object" &&
-      "name" in error &&
-      error.name === "JwtTokenExpired"
-    ) {
-      return c.json({ success: false, error: "Token has expired" }, 401);
+    // hono/jwt throws Jwt* errors for every token verdict; anything else
+    // (D1/KV outage) is infrastructure, not the caller's fault.
+    const name =
+      error && typeof error === "object" && "name" in error
+        ? String(error.name)
+        : "";
+    if (name === "JwtTokenExpired") {
+      return authFailure(c, 401, "TOKEN_EXPIRED", "Token has expired");
     }
-    if (
-      error &&
-      typeof error === "object" &&
-      "name" in error &&
-      error.name === "JwtTokenInvalid"
-    ) {
-      return c.json({ success: false, error: "Invalid token format" }, 401);
+    if (name.startsWith("Jwt")) {
+      return authFailure(c, 401, "TOKEN_INVALID", "Invalid token format");
     }
-    return c.json(
-      {
-        success: false,
-        error: "Authentication failed",
-      },
-      401,
+    console.error("Auth backend failure:", error);
+    return authFailure(
+      c,
+      503,
+      "AUTH_BACKEND_UNAVAILABLE",
+      "Authentication service temporarily unavailable",
     );
   }
+
+  // Outside the try: a downstream failure is not an authentication verdict.
+  await next();
 };
 
 // 可選認證中間件（用於公開API）
@@ -250,7 +252,9 @@ export const optionalAuth = async (
 ) => {
   // Use the same signature, time, live-principal and session checks as required auth.
   // A failed optional login remains anonymous; downstream handlers run once.
-  await authMiddleware(c, async () => {});
+  // A token verdict (401) stays anonymous; a backend outage must not.
+  const failure = await authMiddleware(c, async () => {});
+  if (failure instanceof Response && failure.status === 503) return failure;
   await next();
 };
 
