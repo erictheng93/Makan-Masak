@@ -22,6 +22,7 @@ import type { Env } from "../../../types/env";
 import {
   canonicalCustomerAuthMiddleware,
   optionalCanonicalCustomerAuthMiddleware,
+  toAuthFailure,
   verifyJwtToken,
 } from "../../../middleware/auth";
 import { validateBody, validateQuery } from "../../../middleware/validation";
@@ -810,26 +811,33 @@ routes.post("/auth/refresh", async (c) => {
     throw unauthorized("Refresh token is required", "TOKEN_INVALID");
   }
 
-  const decoded = verifyJwtToken(refreshToken, c.env.JWT_SECRET);
-  if (!isRefreshPayload(decoded)) {
-    throw unauthorized("Invalid refresh token", "TOKEN_INVALID");
-  }
+  let session: Awaited<ReturnType<typeof issueCustomerSession>>;
+  try {
+    const decoded = verifyJwtToken(refreshToken, c.env.JWT_SECRET);
+    if (!isRefreshPayload(decoded)) {
+      throw unauthorized("Invalid refresh token", "TOKEN_INVALID");
+    }
 
-  const refreshRecord = await c.env.TOKEN_BLACKLIST.get(
-    customerRefreshRecordKey(decoded.sub, decoded.jti),
-  );
-  if (refreshRecord === null) {
-    throw unauthorized("Refresh token has been revoked", "TOKEN_INVALID");
-  }
+    const refreshRecord = await c.env.TOKEN_BLACKLIST.get(
+      customerRefreshRecordKey(decoded.sub, decoded.jti),
+    );
+    if (refreshRecord === null) {
+      throw unauthorized("Refresh token has been revoked", "TOKEN_INVALID");
+    }
 
-  await revokeRefreshRecord(c.env, decoded.sub, decoded.jti);
-  const customer = await loadCustomer(c.env, decoded.sub);
-  if (!customer) {
-    await revokeCustomerSession(c, null);
-    throw unauthorized("Customer not found or inactive", "CUSTOMER_INACTIVE");
-  }
+    // Read the customer BEFORE consuming the single-use record: a D1 failure
+    // here must leave the old refresh token usable, not burn it.
+    const customer = await loadCustomer(c.env, decoded.sub);
+    await revokeRefreshRecord(c.env, decoded.sub, decoded.jti);
+    if (!customer) {
+      await revokeCustomerSession(c, null);
+      throw unauthorized("Customer not found or inactive", "CUSTOMER_INACTIVE");
+    }
 
-  const session = await issueCustomerSession(c, customer.id);
+    session = await issueCustomerSession(c, customer.id);
+  } catch (error) {
+    throw toAuthFailure(error);
+  }
 
   return c.json({
     success: true,
