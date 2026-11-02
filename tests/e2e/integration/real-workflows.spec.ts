@@ -1088,7 +1088,7 @@ async function installKitchenBrowserRuntimeHooks(page: Page) {
 
 async function installManagementSession(page: Page, token: string) {
   await page.addInitScript((managementToken) => {
-    window.localStorage.setItem("management_token", managementToken);
+    window.sessionStorage.setItem("management_token", managementToken);
   }, token);
 }
 
