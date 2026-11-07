@@ -2,9 +2,10 @@ import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
 
 const require = createRequire(import.meta.url);
-const { prunePlaceholders } =
+const { prunePlaceholders, assertCoverageShape } =
   require("../../scripts/prune-coverage-shard-placeholders.cjs") as {
     prunePlaceholders: (coverages: Array<Record<string, unknown>>) => number;
+    assertCoverageShape: (coverage: unknown, label: string) => void;
   };
 
 function buildFile(hits: number[]) {
@@ -41,5 +42,19 @@ describe("prune-coverage-shard-placeholders", () => {
     expect(prunePlaceholders([a, b])).toBe(1);
     expect(Object.keys(a)).toEqual(["z.ts"]);
     expect(b).toEqual({});
+  });
+
+  it("accepts the 4.1.x blob coverage shape", () => {
+    expect(() =>
+      assertCoverageShape({ "/repo/x.ts": buildFile([1]) }, "blob-1-4.json"),
+    ).not.toThrow();
+  });
+
+  it("fails loudly with an upgrade hint when the blob layout moves", () => {
+    for (const moved of [undefined, [], {}, { "0": "not coverage" }]) {
+      expect(() => assertCoverageShape(moved, "blob-1-4.json")).toThrow(
+        /blob format may have changed/,
+      );
+    }
   });
 });
