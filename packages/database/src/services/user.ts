@@ -19,6 +19,7 @@ import {
   auditLogs,
   USER_ROLES,
   users,
+  type AdminTier,
   type UserRole,
 } from "../schema";
 import type { UserPreferences } from "@makanmasak/shared-types";
@@ -46,6 +47,8 @@ export interface CreateUserData {
   password: string;
   role: number;
   restaurantId?: string;
+  /** Role 0 only; defaults to operator. Ignored for every other role. */
+  adminTier?: AdminTier;
   address?: string;
   dateOfBirth?: string;
   profileImageUrl?: string;
@@ -147,6 +150,10 @@ export class UserService extends BaseService {
           passwordHash,
           role: data.role,
           restaurantId: data.restaurantId,
+          adminTier:
+            data.role === USER_ROLES.ADMIN
+              ? (data.adminTier ?? "operator")
+              : null,
           address: data.address,
           dateOfBirth: data.dateOfBirth,
           profileImageUrl: data.profileImageUrl,
@@ -168,6 +175,7 @@ export class UserService extends BaseService {
         restaurantId: newUser.restaurantId
           ? String(newUser.restaurantId)
           : null,
+        adminTier: newUser.adminTier ?? null,
         address: newUser.address ? String(newUser.address) : null,
         dateOfBirth: newUser.dateOfBirth ? String(newUser.dateOfBirth) : null,
         profileImageUrl: newUser.profileImageUrl
@@ -638,6 +646,7 @@ export class UserService extends BaseService {
           fullName: users.fullName,
           role: users.role,
           restaurantId: users.restaurantId,
+          adminTier: users.adminTier,
           isActive: users.isActive,
           isVerified: users.isVerified,
           totalOrders: users.totalOrders,
@@ -721,6 +730,20 @@ export class UserService extends BaseService {
   }
 
   // 驗證用戶
+  /** Role-0 rows only; the WHERE makes a non-admin target a no-op. */
+  async setAdminTier(id: string, adminTier: AdminTier): Promise<boolean> {
+    try {
+      const result = await this.db
+        .update(users)
+        .set({ adminTier, updatedAt: new Date() })
+        .where(and(eq(users.id, id), eq(users.role, USER_ROLES.ADMIN)))
+        .returning({ id: users.id });
+      return result.length > 0;
+    } catch (error) {
+      this.handleError(error, "setAdminTier");
+    }
+  }
+
   async verifyUser(id: string): Promise<boolean> {
     try {
       const result = await this.db

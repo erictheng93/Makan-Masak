@@ -17,6 +17,14 @@ export const USER_ROLES = {
 
 export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
 
+/**
+ * Platform admin (role 0) tiers. Only an administrator may manage other admin
+ * accounts; support is read-only except for resetting shop-account passwords.
+ * NULL on every other role; a role-0 NULL is read as operator.
+ */
+export const ADMIN_TIERS = ["administrator", "operator", "support"] as const;
+export type AdminTier = (typeof ADMIN_TIERS)[number];
+
 export const users = sqliteTable(
   "users",
   {
@@ -36,6 +44,7 @@ export const users = sqliteTable(
     // 角色和權限
     role: integer("role").notNull().default(USER_ROLES.CASHIER), // 預設為收銀員，顧客應使用 customers 表
     restaurantId: text("restaurant_id"), // 引用 restaurants.public_id (TEXT)
+    adminTier: text("admin_tier", { enum: ADMIN_TIERS }),
 
     // 個人資訊
     address: text("address"),

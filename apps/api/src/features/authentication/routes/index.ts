@@ -286,6 +286,14 @@ export function createAuthRoutes(
       // NULL restaurant_id belongs to nobody, so no owner can administer it.
       const isPlatformRole = requestData.role === 0;
 
+      // Only the top admin tier may create another platform admin.
+      if (isPlatformRole && currentUser.adminTier !== "administrator") {
+        throw forbidden(
+          "Only administrators can create admin accounts",
+          "ROLE_NOT_ASSIGNABLE",
+        );
+      }
+
       const effectiveRestaurantId = isPlatformRole
         ? undefined
         : currentUser.role === 1

@@ -158,6 +158,10 @@
     {
       "fresh": "0039_coupons_reserved_count.sql",
       "reason": "coupons is a platform-API table; the management-api database has no coupons."
+    },
+    {
+      "fresh": "0040_users_admin_tier.sql",
+      "reason": "users is a platform-API table; the management-api reads it through PLATFORM_DB and has no users table of its own."
     }
   ],
   "legacyOnly": [

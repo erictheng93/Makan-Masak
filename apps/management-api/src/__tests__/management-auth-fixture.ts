@@ -9,7 +9,7 @@ export function seedManagementAdmin(sqlite: Database.Database) {
       id TEXT PRIMARY KEY, username TEXT NOT NULL, full_name TEXT NOT NULL,
       password_hash TEXT NOT NULL, role INTEGER NOT NULL, is_active INTEGER,
       token_version INTEGER, created_at_ms INTEGER, updated_at_ms INTEGER,
-      deleted_at_ms INTEGER
+      deleted_at_ms INTEGER, admin_tier TEXT
     );
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY, user_id TEXT, is_active INTEGER, expires_at_ms INTEGER

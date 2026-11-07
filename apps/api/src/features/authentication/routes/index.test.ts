@@ -426,11 +426,31 @@ describe("authentication routes", () => {
     );
   });
 
+  it("refuses an operator-tier admin creating another admin", async () => {
+    currentUser.value = {
+      id: "user-7",
+      username: "admin",
+      role: 0,
+      adminTier: "operator",
+      restaurantId: undefined,
+    };
+
+    const response = await request(
+      "/register-staff",
+      "POST",
+      staffBody({ role: 0 }),
+    ).res;
+
+    expect(response.status).toBe(403);
+    expect(service.register).not.toHaveBeenCalled();
+  });
+
   it("keeps a platform admin unbound to any restaurant", async () => {
     currentUser.value = {
       id: "user-7",
       username: "admin",
       role: 0,
+      adminTier: "administrator",
       restaurantId: undefined,
     };
 

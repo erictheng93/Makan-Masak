@@ -1,4 +1,4 @@
-import { USER_ROLES } from "@makanmasak/database";
+import { USER_ROLES, type AdminTier } from "@makanmasak/database";
 import type { UserPreferences } from "@makanmasak/shared-types";
 
 /**
@@ -24,6 +24,7 @@ export interface CreateUserData {
   password: string;
   role: number;
   restaurantId?: string;
+  adminTier?: AdminTier;
   address?: string;
   dateOfBirth?: string;
   profileImageUrl?: string;
@@ -110,6 +111,8 @@ export interface FormattedUser {
   role: number;
   role_name: string;
   restaurantId?: string | null;
+  /** Role 0 only. */
+  adminTier?: string | null;
   email?: string | null;
   fullName?: string | null;
   phone?: string | null;

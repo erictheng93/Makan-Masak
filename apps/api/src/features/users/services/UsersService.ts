@@ -1,4 +1,9 @@
-import { UserService, AuthService, USER_ROLES } from "@makanmasak/database";
+import {
+  UserService,
+  AuthService,
+  USER_ROLES,
+  type AdminTier,
+} from "@makanmasak/database";
 import type { UserPreferences } from "@makanmasak/shared-types";
 import type { Env } from "../../../types/env";
 import {
@@ -21,7 +26,13 @@ import { ManagementTenantClient } from "../../../services/managementTenantClient
 interface CurrentUser {
   id: string;
   role: number;
+  adminTier?: string;
   restaurantId?: string | number | null;
+}
+
+/** Only the top admin tier may manage other platform admin accounts. */
+function isAdministrator(user: CurrentUser): boolean {
+  return user.role === USER_ROLES.ADMIN && user.adminTier === "administrator";
 }
 
 /**
@@ -39,6 +50,7 @@ interface UserRecord {
   username: string;
   role: number;
   restaurantId?: string | null;
+  adminTier?: string | null;
   email?: string | null;
   fullName?: string | null;
   phone?: string | null;
@@ -77,7 +89,9 @@ export class UsersService {
     // comparison below already produces.
     targetRestaurantId?: string | null,
   ): boolean {
-    if (currentUser.role === USER_ROLES.ADMIN) return true;
+    if (currentUser.role === USER_ROLES.ADMIN) {
+      return targetRole !== USER_ROLES.ADMIN || isAdministrator(currentUser);
+    }
     if (currentUser.role === USER_ROLES.OWNER) {
       return (
         targetRole >= USER_ROLES.CHEF &&
@@ -109,8 +123,9 @@ export class UsersService {
     },
   ): boolean {
     return (
-      currentUser.role === USER_ROLES.ADMIN ||
       currentUser.id === targetUser.id ||
+      (currentUser.role === USER_ROLES.ADMIN &&
+        this.canManageUser(currentUser, targetUser.role)) ||
       (currentUser.role === USER_ROLES.OWNER &&
         this.canManageUser(
           currentUser,
@@ -129,6 +144,8 @@ export class UsersService {
       role: user.role,
       role_name: USER_ROLE_NAMES[user.role] || "Unknown",
       restaurantId: user.restaurantId,
+      adminTier:
+        user.role === USER_ROLES.ADMIN ? (user.adminTier ?? null) : null,
       email: user.email,
       fullName: user.fullName,
       phone: user.phone,
@@ -245,6 +262,7 @@ export class UsersService {
     const dbUserData = {
       ...userData,
       restaurantId: effectiveRestaurantId,
+      adminTier: isPlatformRole ? userData.adminTier : undefined,
     };
     const newUser = await this.userService.createUser(dbUserData);
     if (
@@ -426,6 +444,29 @@ export class UsersService {
     if (!success) {
       throw new ApiError("INTERNAL_ERROR", "Failed to reset password", 500);
     }
+  }
+
+  /** Administrator-only; the target must be another platform admin. */
+  async setAdminTier(
+    currentUser: CurrentUser,
+    userId: string,
+    adminTier: AdminTier,
+  ): Promise<FormattedUser> {
+    if (!isAdministrator(currentUser)) {
+      throw forbidden("Only administrators can change admin tiers");
+    }
+    if (currentUser.id === userId) {
+      throw badRequest("Cannot change your own admin tier");
+    }
+    const target = await this.requireUser(userId);
+    if (target.role !== USER_ROLES.ADMIN) {
+      throw badRequest(
+        "Only platform admins have a tier",
+        "NOT_PLATFORM_ADMIN",
+      );
+    }
+    await this.userService.setAdminTier(userId, adminTier);
+    return this.formatUser({ ...target, adminTier });
   }
 
   async getUserStats(

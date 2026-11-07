@@ -95,6 +95,7 @@ function createSeedTables(db: Database.Database) {
       is_active INTEGER,
       is_verified INTEGER,
       token_version INTEGER,
+      admin_tier TEXT,
       created_at_ms INTEGER,
       updated_at_ms INTEGER
     );

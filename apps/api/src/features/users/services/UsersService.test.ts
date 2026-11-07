@@ -12,6 +12,7 @@ const dbMocks = vi.hoisted(() => ({
     changeUserRole: vi.fn(),
     verifyUser: vi.fn(),
     resetPassword: vi.fn(),
+    setAdminTier: vi.fn(),
     getUserStats: vi.fn(),
     searchUsers: vi.fn(),
   },
@@ -49,7 +50,8 @@ const env = {
   },
 } as unknown as Env;
 
-const admin = { id: "user-1", role: 0 };
+const admin = { id: "user-1", role: 0, adminTier: "administrator" };
+const operator = { id: "user-2", role: 0, adminTier: "operator" };
 const owner = { id: "user-10", role: 1, restaurantId: "restaurant-1" };
 const cashier = { id: "user-42", role: 4, restaurantId: "restaurant-1" };
 
@@ -158,6 +160,7 @@ describe("UsersService", () => {
       username: "cashier",
       role: 4,
       role_name: "Cashier",
+      adminTier: null,
       restaurantId: "restaurant-1",
       email: "cashier@example.test",
       fullName: "Casey Cashier",
@@ -324,6 +327,88 @@ describe("UsersService", () => {
       message: "Restaurant ID is required for restaurant-scoped roles",
     });
     expect(dbMocks.userServiceFns.createUser).not.toHaveBeenCalled();
+  });
+
+  describe("admin tiers", () => {
+    it("lets every admin manage shop accounts but only an administrator manage admins", () => {
+      const service = createService();
+
+      expect(service.canManageUser(operator, 1, "restaurant-1")).toBe(true);
+      expect(service.canManageUser(operator, 0)).toBe(false);
+      expect(service.canManageUser(admin, 0)).toBe(true);
+    });
+
+    it("refuses an operator resetting another admin's password", async () => {
+      dbMocks.userServiceFns.getUserById.mockResolvedValueOnce(
+        user({ id: "user-3", role: 0, restaurantId: null }),
+      );
+
+      await expect(
+        createService().resetPassword(operator, "user-3", "Owner@2026"),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+      expect(dbMocks.userServiceFns.resetPassword).not.toHaveBeenCalled();
+    });
+
+    it("lets an operator reset an owner's password", async () => {
+      dbMocks.userServiceFns.getUserById.mockResolvedValueOnce(
+        user({ id: "user-4", role: 1 }),
+      );
+      dbMocks.userServiceFns.resetPassword.mockResolvedValueOnce(true);
+
+      await createService().resetPassword(operator, "user-4", "Owner@2026");
+
+      expect(dbMocks.userServiceFns.resetPassword).toHaveBeenCalledWith(
+        "user-4",
+        "Owner@2026",
+      );
+    });
+
+    it("refuses an operator creating or editing an admin", async () => {
+      const service = createService();
+      await expect(
+        service.createUser(operator, {
+          username: "admin3",
+          fullName: "Admin Three",
+          password: "Secret1!",
+          role: 0,
+        }),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+      expect(service.canUpdateUser(operator, { id: "user-3", role: 0 })).toBe(
+        false,
+      );
+      expect(service.canUpdateUser(admin, { id: "user-3", role: 0 })).toBe(
+        true,
+      );
+    });
+
+    it("lets only an administrator change another admin's tier", async () => {
+      const service = createService();
+      await expect(
+        service.setAdminTier(operator, "user-3", "support"),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+      await expect(
+        service.setAdminTier(admin, "user-1", "support"),
+      ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+
+      dbMocks.userServiceFns.getUserById.mockResolvedValueOnce(
+        user({ id: "user-3", role: 0, restaurantId: null }),
+      );
+      const result = await service.setAdminTier(admin, "user-3", "support");
+
+      expect(dbMocks.userServiceFns.setAdminTier).toHaveBeenCalledWith(
+        "user-3",
+        "support",
+      );
+      expect(result.adminTier).toBe("support");
+    });
+
+    it("refuses a tier on a non-admin account", async () => {
+      dbMocks.userServiceFns.getUserById.mockResolvedValueOnce(user());
+      await expect(
+        createService().setAdminTier(admin, "user-42", "support"),
+      ).rejects.toMatchObject({ code: "NOT_PLATFORM_ADMIN" });
+      expect(dbMocks.userServiceFns.setAdminTier).not.toHaveBeenCalled();
+    });
   });
 
   it("keeps a platform admin unbound to any restaurant", async () => {

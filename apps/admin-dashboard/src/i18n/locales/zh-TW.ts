@@ -5512,6 +5512,24 @@ const zhTWCore = {
     statusCol: "狀態",
     createdAtCol: "建立日期",
     actionsCol: "操作",
+    tierCol: "權限層級",
+    adminTier: "權限層級",
+    adminTiers: {
+      administrator: "Administrator（最高管理員）",
+      operator: "Operator（營運）",
+      support: "Support（客服）",
+    },
+    adminTierHints: {
+      administrator:
+        "全部權限，包含新增、停用、重設其他平台管理員的密碼與調整層級。",
+      operator:
+        "可管理所有店家與店主帳號（含重設店主密碼），不能管理其他平台管理員。",
+      support: "只能查看，以及重設店家帳號的密碼。",
+    },
+    adminsAdministratorOnly:
+      "只有 Administrator 可以新增平台管理員、重設其密碼或調整層級。",
+    tierChanged: "已更新 {username} 的權限層級",
+    tierChangeError: "無法更新權限層級",
     noOwners: "尚無店主帳號",
     noAdmins: "尚無其他管理員帳號",
     // Status badges

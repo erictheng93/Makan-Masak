@@ -182,3 +182,6 @@ SET
   is_verified = 1,
   updated_at_ms = unixepoch('now') * 1000
 WHERE username IN ('admin', 'owner1', 'chef1', 'service1', 'cashier1');
+
+-- The local admin is the top tier so it can manage other admin accounts.
+UPDATE users SET admin_tier = 'administrator' WHERE username = 'admin';

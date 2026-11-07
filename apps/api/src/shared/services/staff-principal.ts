@@ -9,6 +9,7 @@ export interface StaffPrincipalRow {
   restaurant_id: string | null;
   is_active: number | boolean;
   token_version: number | null;
+  admin_tier?: string | null;
 }
 
 export interface StaffPrincipal {
@@ -19,6 +20,8 @@ export interface StaffPrincipal {
   restaurantId?: string;
   isActive: boolean;
   tokenVersion: number;
+  /** Role 0 only: administrator | operator | support. */
+  adminTier?: string;
 }
 
 export interface StaffPrincipalResolveOptions {
@@ -54,7 +57,7 @@ export async function resolveStaffPrincipal(
   const lookup = toStaffPrincipalLookupInput(identifier);
   const row = await db
     .prepare(
-      "SELECT `id`, `username`, `role`, `restaurant_id`, `is_active`, `token_version` FROM `users` WHERE `id` = ? LIMIT 1",
+      "SELECT `id`, `username`, `role`, `restaurant_id`, `is_active`, `token_version`, `admin_tier` FROM `users` WHERE `id` = ? LIMIT 1",
     )
     .bind(lookup.userId)
     .first<StaffPrincipalRow>();
@@ -88,6 +91,8 @@ function toStaffPrincipal(row: StaffPrincipalRow): StaffPrincipal {
     restaurantId: row.restaurant_id ?? undefined,
     isActive: row.is_active === true || Number(row.is_active) === 1,
     tokenVersion: Number(row.token_version ?? 1),
+    adminTier:
+      Number(row.role) === 0 ? (row.admin_tier ?? "operator") : undefined,
   };
 }
 

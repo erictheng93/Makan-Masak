@@ -140,6 +140,7 @@ function createPlatformDb() {
       last_login_at_ms INTEGER,
       password_changed_at_ms INTEGER,
       token_version INTEGER NOT NULL DEFAULT 1,
+      admin_tier TEXT,
       email_verified_at_ms INTEGER,
       phone_verified_at_ms INTEGER,
       created_at_ms INTEGER NOT NULL,

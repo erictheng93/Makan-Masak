@@ -5637,6 +5637,24 @@ const zhCN: Messages = {
     emailRequired: "请输入 Email",
     createdAtCol: "建立日期",
     actionsCol: "操作",
+    tierCol: "权限层级",
+    adminTier: "权限层级",
+    adminTiers: {
+      administrator: "Administrator（最高管理员）",
+      operator: "Operator（运营）",
+      support: "Support（客服）",
+    },
+    adminTierHints: {
+      administrator:
+        "全部权限，包括新增、停用、重设其他平台管理员的密码与调整层级。",
+      operator:
+        "可管理所有店家与店主账号（含重设店主密码），不能管理其他平台管理员。",
+      support: "只能查看，以及重设店家账号的密码。",
+    },
+    adminsAdministratorOnly:
+      "只有 Administrator 可以新增平台管理员、重设其密码或调整层级。",
+    tierChanged: "已更新 {username} 的权限层级",
+    tierChangeError: "无法更新权限层级",
     emailInvalid: "请输入有效的 Email",
     existingAdmins: "现有管理员列表",
     fullName: "全名",

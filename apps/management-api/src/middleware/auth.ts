@@ -8,7 +8,12 @@
 import { verify } from "hono/jwt";
 import type { Context, Next } from "hono";
 import type { ManagementEnv } from "../types";
-import { ApiError, serviceUnavailable, unauthorized } from "@makanmasak/utils";
+import {
+  ApiError,
+  forbidden,
+  serviceUnavailable,
+  unauthorized,
+} from "@makanmasak/utils";
 
 export interface ManagementUser {
   id: string;
@@ -42,7 +47,7 @@ export async function requireCurrentAdmin(
   }
   if (!env.PLATFORM_DB) throw unauthorized("Platform user lookup unavailable");
   const user = await env.PLATFORM_DB.prepare(
-    "SELECT id, username, role, is_active, token_version FROM users WHERE id = ? AND deleted_at_ms IS NULL LIMIT 1",
+    "SELECT id, username, role, is_active, token_version, admin_tier FROM users WHERE id = ? AND deleted_at_ms IS NULL LIMIT 1",
   )
     .bind(id)
     .first<{
@@ -51,6 +56,7 @@ export async function requireCurrentAdmin(
       role: number;
       is_active: number | boolean;
       token_version: number | null;
+      admin_tier: string | null;
     }>();
   if (
     !user ||
@@ -110,7 +116,7 @@ export const managementAuthMiddleware = async (c: Context<Env>, next: Next) => {
       throw unauthorized("Token expired");
     }
 
-    await requireCurrentAdmin(c.env, payload.id, payload.tv);
+    const admin = await requireCurrentAdmin(c.env, payload.id, payload.tv);
     if (!c.env.PLATFORM_DB)
       throw unauthorized("Platform user lookup unavailable");
     const session = await c.env.PLATFORM_DB.prepare(
@@ -119,6 +125,16 @@ export const managementAuthMiddleware = async (c: Context<Env>, next: Next) => {
       .bind(payload.sid, payload.id, Date.now())
       .first();
     if (!session) throw unauthorized("Session has been invalidated");
+    // Support admins are read-only here as on the platform API (apps/api auth.ts).
+    if (
+      admin.admin_tier === "support" &&
+      !["GET", "HEAD", "OPTIONS"].includes(c.req.method)
+    ) {
+      throw forbidden(
+        "Support admins have read-only access",
+        "ADMIN_TIER_READ_ONLY",
+      );
+    }
 
     const user: ManagementUser = {
       id: payload.id,

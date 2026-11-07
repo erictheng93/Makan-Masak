@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ADMIN_TIERS } from "@makanmasak/database";
 import {
   boundedLimitQuery,
   commonSchemas,
@@ -35,6 +36,7 @@ export const createUserSchema = z.lazy(() =>
     password: strongPasswordSchema,
     role: z.number().int().min(0).max(4),
     restaurantId: restaurantIdInputSchema,
+    adminTier: z.enum(ADMIN_TIERS).optional(),
     address: z.string().max(200).optional(),
     dateOfBirth: z.string().optional(),
     profileImageUrl: z.url().optional(),
@@ -122,6 +124,10 @@ export const userRoleSchema = z.lazy(() =>
   }),
 );
 
+export const adminTierSchema = z.lazy(() =>
+  z.object({ adminTier: z.enum(ADMIN_TIERS) }),
+);
+
 /**
  * Reset password validation schema
  */
@@ -163,6 +169,7 @@ export type UpdatePasswordInput = z.infer<typeof updatePasswordSchema>;
 export type UserFilterInput = z.infer<typeof userFilterSchema>;
 export type UserStatusInput = z.infer<typeof userStatusSchema>;
 export type UserRoleInput = z.infer<typeof userRoleSchema>;
+export type AdminTierInput = z.infer<typeof adminTierSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type UserStatsInput = z.infer<typeof userStatsSchema>;
 export type UserSearchInput = z.infer<typeof userSearchSchema>;

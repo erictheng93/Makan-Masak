@@ -16,6 +16,8 @@ export interface AuthUser {
   publicId?: string;
   username: string;
   role: number;
+  /** Role 0 only: administrator | operator | support. */
+  adminTier?: string;
   restaurantId?: string | number;
   fullName?: string;
   email?: string;
@@ -38,6 +40,7 @@ interface TokenUserRecord {
   restaurantId?: string;
   isActive: boolean;
   tokenVersion: number;
+  adminTier?: string;
 }
 
 interface AuthTokenPayload {
@@ -72,6 +75,20 @@ interface SseAuthTokenPayload extends AuthTokenPayload {
 }
 
 const MAX_ACCESS_TOKEN_AGE_SECONDS = 72 * 60 * 60;
+
+/**
+ * Support admins read everything but write only their own session and shop
+ * account passwords (UsersService refuses an admin target). Checked here, once,
+ * so a write route cannot forget it.
+ */
+export function isSupportTierAllowed(method: string, path: string): boolean {
+  if (["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase())) return true;
+  return (
+    /^\/api\/v1\/auth\/(logout|refresh|change-password|sessions(\/[^/]+)?)$/.test(
+      path,
+    ) || /^\/api\/v1\/users\/[^/]+\/reset-password$/.test(path)
+  );
+}
 const UUID_V7_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
@@ -317,12 +334,23 @@ async function authenticateStaffToken(
     throw unauthorized("Session has been invalidated", "TOKEN_INVALIDATED");
   }
 
+  if (
+    userRecord.adminTier === "support" &&
+    !isSupportTierAllowed(c.req.method, c.req.path)
+  ) {
+    throw forbidden(
+      "Support admins have read-only access",
+      "ADMIN_TIER_READ_ONLY",
+    );
+  }
+
   return {
     user: {
       id: userRecord.id,
       publicId: userRecord.publicId ?? tokenPrincipal(decoded),
       username: decoded.username,
       role: decoded.role,
+      adminTier: userRecord.adminTier,
       restaurantId:
         userRecord.restaurantId ??
         normalizeTokenRestaurantId(decoded.restaurantId),
@@ -674,6 +702,7 @@ async function loadTokenUser(
       restaurantId: principal.restaurantId,
       isActive: principal.isActive,
       tokenVersion: principal.tokenVersion,
+      adminTier: principal.adminTier,
     };
   } catch (error) {
     if (

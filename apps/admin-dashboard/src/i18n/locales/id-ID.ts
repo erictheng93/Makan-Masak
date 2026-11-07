@@ -5805,6 +5805,24 @@ const idID: Messages = {
     adminName: "Admin",
     createdAtCol: "Dibuat",
     actionsCol: "Aksi",
+    tierCol: "Tingkat",
+    adminTier: "Tingkat admin",
+    adminTiers: {
+      administrator: "Administrator (tertinggi)",
+      operator: "Operator (operasional)",
+      support: "Support (dukungan)",
+    },
+    adminTierHints: {
+      administrator:
+        "Akses penuh, termasuk menambah, menonaktifkan, mengatur ulang kata sandi, dan mengubah tingkat admin platform lain.",
+      operator:
+        "Mengelola semua toko dan akun pemilik, termasuk mengatur ulang kata sandi pemilik. Tidak dapat mengelola admin platform lain.",
+      support: "Hanya lihat, serta mengatur ulang kata sandi akun toko.",
+    },
+    adminsAdministratorOnly:
+      "Hanya Administrator yang dapat menambah admin platform, mengatur ulang kata sandi, atau mengubah tingkatnya.",
+    tierChanged: "Tingkat {username} telah diperbarui",
+    tierChangeError: "Tidak dapat memperbarui tingkat",
     email: "E-mail",
     emailCol: "E-mail",
     newShopHint:

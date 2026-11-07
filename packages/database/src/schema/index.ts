@@ -195,7 +195,7 @@ export type {
 } from "./partnerships";
 
 // 匯出常數
-export { USER_ROLES } from "./users";
+export { USER_ROLES, ADMIN_TIERS, type AdminTier } from "./users";
 export { ORDER_STATUS, PAYMENT_METHODS } from "./orders";
 export { AUDIT_ACTIONS } from "./audit-logs";
 export { ERROR_TYPES, SEVERITY_LEVELS, ALERT_TYPES } from "./error-reports";

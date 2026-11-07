@@ -219,6 +219,7 @@
                   <Pencil class="w-4 h-4" />
                 </button>
                 <button
+                  v-if="user.role !== 0 || isAdministrator"
                   class="p-1.5 rounded-lg text-ios-orange hover:bg-ios-orange/10 transition-colors"
                   :title="t('users.actions.resetPassword')"
                   @click="handleResetPassword(user)"
@@ -327,6 +328,7 @@ import {
   UserRoundPlus,
 } from "lucide-vue-next";
 import { useConfirmModal } from "@/composables/useConfirmModal";
+import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps<{
   usersWithStatus?: EmployeeWithStatus[];
@@ -337,6 +339,11 @@ const props = defineProps<{
 
 const router = useRouter();
 const { t } = useI18n();
+const authStore = useAuthStore();
+// Only the top admin tier may touch another admin's credentials (API-enforced).
+const isAdministrator = computed(
+  () => authStore.user?.adminTier === "administrator",
+);
 const { roleText, statusText } = useEmployeeDisplay();
 const { formatDateTime } = useDateFormatter();
 

@@ -5771,6 +5771,24 @@ const viVN: Messages = {
     adminName: "Quản trị viên",
     createdAtCol: "Tạo",
     actionsCol: "Thao tác",
+    tierCol: "Cấp quyền",
+    adminTier: "Cấp quyền quản trị",
+    adminTiers: {
+      administrator: "Administrator (cao nhất)",
+      operator: "Operator (vận hành)",
+      support: "Support (hỗ trợ)",
+    },
+    adminTierHints: {
+      administrator:
+        "Toàn quyền, bao gồm thêm, vô hiệu hóa, đặt lại mật khẩu và đổi cấp của các quản trị viên khác.",
+      operator:
+        "Quản lý mọi cửa hàng và tài khoản chủ quán, kể cả đặt lại mật khẩu chủ quán. Không quản lý được quản trị viên khác.",
+      support: "Chỉ xem, và đặt lại mật khẩu tài khoản cửa hàng.",
+    },
+    adminsAdministratorOnly:
+      "Chỉ Administrator mới có thể thêm quản trị viên, đặt lại mật khẩu hoặc đổi cấp của họ.",
+    tierChanged: "Đã cập nhật cấp quyền cho {username}",
+    tierChangeError: "Không thể cập nhật cấp quyền",
     email: "E-mail",
     emailCol: "E-mail",
     emailPlaceholder: "user{'@'}example.com",

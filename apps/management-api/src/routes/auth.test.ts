@@ -99,9 +99,9 @@ describe("management auth exchange", () => {
     const apiToken = await createUuidApiToken({});
     try {
       db.exec(
-        `CREATE TABLE users (${users.id.name} TEXT, ${users.username.name} TEXT, ${users.role.name} INTEGER, ${users.isActive.name} INTEGER, ${users.tokenVersion.name} INTEGER, ${users.deletedAt.name} INTEGER); CREATE TABLE sessions (${sessions.id.name} TEXT, ${sessions.userId.name} TEXT, ${sessions.token.name} TEXT, ${sessions.isActive.name} INTEGER, ${sessions.expiresAt.name} INTEGER)`,
+        `CREATE TABLE users (${users.id.name} TEXT, ${users.username.name} TEXT, ${users.role.name} INTEGER, ${users.isActive.name} INTEGER, ${users.tokenVersion.name} INTEGER, ${users.deletedAt.name} INTEGER, ${users.adminTier.name} TEXT); CREATE TABLE sessions (${sessions.id.name} TEXT, ${sessions.userId.name} TEXT, ${sessions.token.name} TEXT, ${sessions.isActive.name} INTEGER, ${sessions.expiresAt.name} INTEGER)`,
       );
-      db.prepare("INSERT INTO users VALUES (?, ?, 0, 1, 1, NULL)").run(
+      db.prepare("INSERT INTO users VALUES (?, ?, 0, 1, 1, NULL, NULL)").run(
         PRINCIPAL,
         "platform-admin",
       );

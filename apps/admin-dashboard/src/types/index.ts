@@ -6,11 +6,20 @@ export type { UserId } from "./api-user";
 export type { OrderStatus } from "@makanmasak/shared-types";
 export { ORDER_STATUSES } from "@makanmasak/shared-types";
 
+/** Platform admin (role 0) tier; only administrators manage other admins. */
+export type AdminTier = "administrator" | "operator" | "support";
+export const ADMIN_TIERS: AdminTier[] = [
+  "administrator",
+  "operator",
+  "support",
+];
+
 export interface User {
   id: UserId;
   username: string;
   email: string;
   role: UserRole;
+  adminTier?: AdminTier;
   restaurantId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -283,6 +292,7 @@ export interface PlatformUser {
   fullName?: string;
   email: string;
   role: UserRole;
+  adminTier?: AdminTier | null;
   restaurantId: string | null;
   restaurantName?: string;
   status?: string;

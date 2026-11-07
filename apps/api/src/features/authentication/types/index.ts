@@ -196,6 +196,7 @@ export interface UserProfile {
   email?: string;
   phone?: string;
   role: UserRole;
+  adminTier?: string;
   restaurantId?: string;
   isActive: boolean;
   isVerified: boolean;

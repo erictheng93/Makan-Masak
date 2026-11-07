@@ -5480,6 +5480,24 @@ const enUS: Messages = {
     statusCol: "Status",
     createdAtCol: "Created",
     actionsCol: "Actions",
+    tierCol: "Tier",
+    adminTier: "Admin tier",
+    adminTiers: {
+      administrator: "Administrator",
+      operator: "Operator",
+      support: "Support",
+    },
+    adminTierHints: {
+      administrator:
+        "Full access, including creating, deactivating and resetting passwords of other platform admins and changing their tier.",
+      operator:
+        "Manages every shop and owner account, including owner password resets. Cannot manage other platform admins.",
+      support: "Read-only, plus resetting shop-account passwords.",
+    },
+    adminsAdministratorOnly:
+      "Only an Administrator can add platform admins, reset their passwords or change their tier.",
+    tierChanged: "Updated the tier for {username}",
+    tierChangeError: "Could not update the tier",
     noOwners: "No owner accounts yet",
     noAdmins: "No other admin accounts yet",
     statusActive: "Active",

@@ -27,6 +27,8 @@ import {
   type UserSearchInput,
   userRoleSchema,
   type UserRoleInput,
+  adminTierSchema,
+  type AdminTierInput,
   type UserStatsInput,
   type UserStatusInput,
 } from "../schemas/validation";
@@ -255,6 +257,26 @@ app.patch(
     const usersService = new UsersService(c.env);
 
     const user = await usersService.changeUserRole(currentUser, id, role);
+
+    return c.json({ success: true, data: user });
+  },
+);
+
+/**
+ * PATCH /api/v1/users/:id/admin-tier — administrators only (service-enforced).
+ */
+app.patch(
+  "/:id/admin-tier",
+  authMiddleware,
+  requireRole([USER_ROLES.ADMIN]),
+  validateParams(userIdParamSchema),
+  validateBody(adminTierSchema),
+  async (c) => {
+    const { id } = c.get("validatedParams") as IdParamInput;
+    const { adminTier } = c.get("validatedBody") as AdminTierInput;
+    const usersService = new UsersService(c.env);
+
+    const user = await usersService.setAdminTier(c.get("user"), id, adminTier);
 
     return c.json({ success: true, data: user });
   },

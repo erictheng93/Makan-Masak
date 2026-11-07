@@ -5770,6 +5770,24 @@ const jaJP: Messages = {
     adminName: "管理者",
     createdAtCol: "作成されました",
     actionsCol: "操作",
+    tierCol: "権限レベル",
+    adminTier: "権限レベル",
+    adminTiers: {
+      administrator: "Administrator（最高管理者）",
+      operator: "Operator（運用）",
+      support: "Support（サポート）",
+    },
+    adminTierHints: {
+      administrator:
+        "すべての権限。他のプラットフォーム管理者の追加・停止・パスワードリセット・レベル変更を含みます。",
+      operator:
+        "すべての店舗とオーナーアカウントを管理できます（オーナーのパスワードリセットを含む）。他の管理者は管理できません。",
+      support: "閲覧のみ。店舗アカウントのパスワードリセットは可能です。",
+    },
+    adminsAdministratorOnly:
+      "プラットフォーム管理者の追加、パスワードリセット、レベル変更は Administrator のみ可能です。",
+    tierChanged: "{username} の権限レベルを更新しました",
+    tierChangeError: "権限レベルを更新できませんでした",
     email: "電子メール",
     emailCol: "電子メール",
     createError: "作成に失敗しました。もう一度お試しください。",

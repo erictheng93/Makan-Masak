@@ -192,6 +192,7 @@ export interface AuthResult {
     fullName: string;
     role: number;
     restaurantId: string | null;
+    adminTier?: string | null;
     isActive: boolean;
     tokenVersion?: number;
   };
@@ -223,6 +224,7 @@ export class AuthService extends BaseService {
           passwordHash: users.passwordHash,
           role: users.role,
           restaurantId: users.restaurantId,
+          adminTier: users.adminTier,
           isActive: users.isActive,
           tokenVersion: users.tokenVersion,
         })
@@ -334,6 +336,7 @@ export class AuthService extends BaseService {
           fullName: user.fullName,
           role: user.role,
           restaurantId: user.restaurantId,
+          adminTier: user.adminTier,
           isActive: user.isActive,
           tokenVersion: user.tokenVersion,
         },
@@ -690,6 +693,7 @@ export class AuthService extends BaseService {
           fullName: users.fullName,
           role: users.role,
           restaurantId: users.restaurantId,
+          adminTier: users.adminTier,
           isActive: users.isActive,
           tokenVersion: users.tokenVersion,
         })

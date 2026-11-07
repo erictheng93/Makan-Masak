@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, computed, onMounted } from "vue";
 import { useI18n } from "@/i18n";
 import { useToast } from "vue-toastification";
 import {
@@ -12,14 +12,22 @@ import {
 } from "lucide-vue-next";
 import { api, unwrapApiList } from "@/services/api";
 import { useDateFormatter } from "@/composables/useDateFormatter";
-import type { Restaurant, PlatformUser } from "@/types";
-import { UserRole } from "@/types";
+import type { Restaurant, PlatformUser, AdminTier } from "@/types";
+import { UserRole, ADMIN_TIERS } from "@/types";
+import { useAuthStore } from "@/stores/auth";
 import { resolveUserFacingError } from "@makanmasak/shared/utils/user-facing-error";
 import ResetPasswordModal from "@/components/employees/ResetPasswordModal.vue";
 
 const { t } = useI18n();
 const { formatDate } = useDateFormatter();
 const toast = useToast();
+const authStore = useAuthStore();
+// Only administrators manage other admin accounts; the API enforces the same.
+const isAdministrator = computed(
+  () => authStore.user?.adminTier === "administrator",
+);
+const canManageAdmin = (admin: PlatformUser) =>
+  isAdministrator.value && admin.id !== authStore.user?.id;
 
 // ============================================================
 // Tab State
@@ -58,6 +66,7 @@ const adminForm = reactive({
   password: "",
   fullName: "",
   email: "",
+  adminTier: "operator" as AdminTier,
 });
 
 const errors = reactive<Record<string, string>>({});
@@ -209,6 +218,7 @@ function resetAdminForm() {
   adminForm.password = "";
   adminForm.fullName = "";
   adminForm.email = "";
+  adminForm.adminTier = "operator";
   clearErrors();
   submitError.value = "";
 }
@@ -262,6 +272,7 @@ async function handleAdminSubmit() {
       fullName: adminForm.fullName,
       email: adminForm.email,
       role: UserRole.ADMIN,
+      adminTier: adminForm.adminTier,
     });
 
     toast.success(t("accountManagement.createAdminSuccess"));
@@ -275,6 +286,23 @@ async function handleAdminSubmit() {
   } finally {
     submitting.value = false;
   }
+}
+
+async function changeAdminTier(admin: PlatformUser, event: Event) {
+  const adminTier = (event.target as HTMLSelectElement).value as AdminTier;
+  try {
+    await api.patch(`/users/${admin.id}/admin-tier`, { adminTier });
+    toast.success(
+      t("accountManagement.tierChanged", { username: admin.username }),
+    );
+  } catch (e: unknown) {
+    toast.error(
+      resolveUserFacingError(e, t, {
+        fallbackKey: "accountManagement.tierChangeError",
+      }).message,
+    );
+  }
+  await fetchAdmins();
 }
 
 // ============================================================
@@ -653,8 +681,16 @@ function switchTab(tab: TabType) {
 
     <!-- ==================== Admin Tab ==================== -->
     <template v-if="activeTab === 'admins'">
+      <p
+        v-if="!isAdministrator"
+        data-testid="account-management-admins-readonly"
+        class="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] px-6 py-4 text-sm text-ios-text/60"
+      >
+        {{ t("accountManagement.adminsAdministratorOnly") }}
+      </p>
       <!-- Admin Registration Form (simplified — no restaurant binding) -->
       <form
+        v-else
         class="bg-white rounded-lg shadow-sm border border-gray-200"
         @submit.prevent="handleAdminSubmit"
       >
@@ -730,6 +766,26 @@ function switchTab(tab: TabType) {
                 {{ errors.email }}
               </p>
             </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                {{ t("accountManagement.adminTier") }} *
+              </label>
+              <select
+                v-model="adminForm.adminTier"
+                data-testid="account-management-admin-tier"
+                class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+              >
+                <option v-for="tier in ADMIN_TIERS" :key="tier" :value="tier">
+                  {{ t(`accountManagement.adminTiers.${tier}`) }}
+                </option>
+              </select>
+              <p class="mt-1 text-xs text-gray-500">
+                {{
+                  t(`accountManagement.adminTierHints.${adminForm.adminTier}`)
+                }}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -780,6 +836,11 @@ function switchTab(tab: TabType) {
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
+                  {{ t("accountManagement.tierCol") }}
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
                   {{ t("accountManagement.statusCol") }}
                 </th>
                 <th
@@ -796,12 +857,12 @@ function switchTab(tab: TabType) {
             </thead>
             <tbody class="divide-y divide-gray-200">
               <tr v-if="loadingAdmins">
-                <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                <td colspan="6" class="px-6 py-8 text-center text-gray-500">
                   <Loader2 class="w-5 h-5 animate-spin mx-auto mb-2" />
                 </td>
               </tr>
               <tr v-else-if="admins.length === 0">
-                <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                <td colspan="6" class="px-6 py-8 text-center text-gray-500">
                   {{ t("accountManagement.noAdmins") }}
                 </td>
               </tr>
@@ -818,6 +879,31 @@ function switchTab(tab: TabType) {
                 </td>
                 <td class="px-6 py-4 text-gray-700">
                   {{ admin.email }}
+                </td>
+                <td class="px-6 py-4" data-testid="account-management-tier">
+                  <select
+                    v-if="canManageAdmin(admin)"
+                    :value="admin.adminTier ?? 'operator'"
+                    data-testid="account-management-tier-select"
+                    :aria-label="t('accountManagement.tierCol')"
+                    class="rounded-full border-0 bg-ios-bg py-1 pl-3 pr-8 text-xs font-medium text-ios-text"
+                    @change="changeAdminTier(admin, $event)"
+                  >
+                    <option
+                      v-for="tier in ADMIN_TIERS"
+                      :key="tier"
+                      :value="tier"
+                    >
+                      {{ t(`accountManagement.adminTiers.${tier}`) }}
+                    </option>
+                  </select>
+                  <span v-else class="text-xs font-medium text-ios-text/70">
+                    {{
+                      t(
+                        `accountManagement.adminTiers.${admin.adminTier ?? "operator"}`,
+                      )
+                    }}
+                  </span>
                 </td>
                 <td class="px-6 py-4">
                   <span
@@ -840,6 +926,7 @@ function switchTab(tab: TabType) {
                 </td>
                 <td class="px-6 py-4 text-right">
                   <button
+                    v-if="canManageAdmin(admin)"
                     type="button"
                     data-testid="account-management-reset-password"
                     class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-ios-orange bg-ios-orange/10 hover:bg-ios-orange/20 transition-colors"
