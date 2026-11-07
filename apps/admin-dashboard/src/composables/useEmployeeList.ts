@@ -313,14 +313,6 @@ export function useEmployeeList() {
     await Promise.all([fetchUsers(), fetchArchivedUsers()]);
   };
 
-  const resetPassword = async (userId: UserId) => {
-    const tempPassword = `Reset${Date.now().toString(36)}!`;
-    await api.post(`/users/${userId}/reset-password`, {
-      newPassword: tempPassword,
-      confirmPassword: tempPassword,
-    });
-  };
-
   return {
     // State
     users,
@@ -348,6 +340,5 @@ export function useEmployeeList() {
     fetchArchivedUsers,
     archiveUser,
     restoreUser,
-    resetPassword,
   };
 }

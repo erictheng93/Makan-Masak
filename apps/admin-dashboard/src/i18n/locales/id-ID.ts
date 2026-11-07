@@ -3873,10 +3873,17 @@ const idID: Messages = {
       cashier: "Kasir",
       unknown: "Tidak Diketahui",
     },
+    resetPasswordModal: {
+      title: "Atur ulang kata sandi",
+      description:
+        "Tetapkan kata sandi baru untuk {username}. Mereka akan keluar dari semua perangkat; sampaikan kata sandi baru kepada mereka sendiri.",
+      newPassword: "Kata sandi baru",
+      confirmPassword: "Konfirmasi kata sandi baru",
+      mismatch: "Kata sandi tidak cocok",
+      submit: "Atur ulang kata sandi",
+    },
     confirm: {
-      resetPassword:
-        "Apakah Anda yakin ingin mereset kata sandi {username}? Kata sandi baru akan dikirim ke email mereka.",
-      resetPasswordSuccess: "Email reset kata sandi terkirim!",
+      resetPasswordSuccess: "Kata sandi {username} telah diatur ulang",
       toggleStatus: "Apakah Anda yakin ingin {action} pengguna {username}?",
       archive:
         "Hapus {username} dari daftar? Karyawan hilang dari daftar aktif dan tidak bisa masuk, tetapi jadwal dan laporan lama tetap menyimpan namanya.",
@@ -5797,6 +5804,7 @@ const idID: Messages = {
   accountManagement: {
     adminName: "Admin",
     createdAtCol: "Dibuat",
+    actionsCol: "Aksi",
     email: "E-mail",
     emailCol: "E-mail",
     newShopHint:

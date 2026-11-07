@@ -3770,10 +3770,17 @@ const zhCN: Messages = {
       cashier: "收银员",
       unknown: "未知",
     },
+    resetPasswordModal: {
+      title: "重设密码",
+      description:
+        "为 {username} 设置新密码。保存后对方在所有设备上都会被登出，请自行把新密码告知对方。",
+      newPassword: "新密码",
+      confirmPassword: "确认新密码",
+      mismatch: "两次输入的密码不一致",
+      submit: "重设密码",
+    },
     confirm: {
-      resetPassword:
-        "确定要重置 {username} 的密码吗？新密码将会发送到用户 Email。",
-      resetPasswordSuccess: "密码重置邮件已发送！",
+      resetPasswordSuccess: "已重设 {username} 的密码",
       toggleStatus: "确定要{action}用户 {username} 吗？",
       archive:
         "确定要移除员工 {username} 吗？他将从在职名单消失、无法登录，但过往排班与报表仍会保留姓名。",
@@ -5629,6 +5636,7 @@ const zhCN: Messages = {
     emailPlaceholder: "user{'@'}example.com",
     emailRequired: "请输入 Email",
     createdAtCol: "建立日期",
+    actionsCol: "操作",
     emailInvalid: "请输入有效的 Email",
     existingAdmins: "现有管理员列表",
     fullName: "全名",

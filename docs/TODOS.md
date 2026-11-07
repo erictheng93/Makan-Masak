@@ -811,7 +811,9 @@ read as reachable in both trees and at HEAD.
 **admin-dashboard, 13 roots and 16 files they drag with them.** Only the roots
 are decisions; the children die or live with their parent.
 
-- `views/UsersView.vue` — no route, no importer. Standalone.
+- ~~`views/UsersView.vue`~~ — **deleted 2026-11-08**. Its reset-password button
+  set a random password it never showed anyone; the replacement is
+  `components/employees/ResetPasswordModal.vue`.
 - ~~`views/backup/BackupDashboard.vue` and `views/backup/BackupMonitoring.vue`~~
   — **deleted 2026-09-25**, with `components/backup/*`, `stores/backup.ts` and
   the `CreateBackupModal` entry in `useAsyncModals()` (registered there but

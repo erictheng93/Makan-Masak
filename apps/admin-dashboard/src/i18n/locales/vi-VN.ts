@@ -3854,10 +3854,17 @@ const viVN: Messages = {
       cashier: "Thu ngân",
       unknown: "Không xác định",
     },
+    resetPasswordModal: {
+      title: "Đặt lại mật khẩu",
+      description:
+        "Đặt mật khẩu mới cho {username}. Người này sẽ bị đăng xuất trên mọi thiết bị; hãy tự thông báo mật khẩu mới cho họ.",
+      newPassword: "Mật khẩu mới",
+      confirmPassword: "Xác nhận mật khẩu mới",
+      mismatch: "Mật khẩu không khớp",
+      submit: "Đặt lại mật khẩu",
+    },
     confirm: {
-      resetPassword:
-        "Bạn có chắc muốn đặt lại mật khẩu cho {username}? Mật khẩu mới sẽ được gửi qua email.",
-      resetPasswordSuccess: "Đã gửi email đặt lại mật khẩu!",
+      resetPasswordSuccess: "Đã đặt lại mật khẩu cho {username}",
       toggleStatus: "Bạn có chắc muốn {action} người dùng {username}?",
       archive:
         "Gỡ {username} khỏi danh sách? Nhân viên sẽ biến mất khỏi danh sách đang làm và không đăng nhập được, nhưng lịch làm và báo cáo cũ vẫn giữ tên.",
@@ -5763,6 +5770,7 @@ const viVN: Messages = {
     accountInfo: "Thông tin tài khoản",
     adminName: "Quản trị viên",
     createdAtCol: "Tạo",
+    actionsCol: "Thao tác",
     email: "E-mail",
     emailCol: "E-mail",
     emailPlaceholder: "user{'@'}example.com",

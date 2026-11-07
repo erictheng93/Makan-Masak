@@ -99,6 +99,12 @@
       @close="closeModal"
       @save="handleSave"
     />
+
+    <ResetPasswordModal
+      :user="resetTarget"
+      @close="resetTarget = null"
+      @done="resetTarget = null"
+    />
   </div>
 </template>
 
@@ -115,8 +121,8 @@ import {
 } from "@/services/leavesService";
 import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import EmployeeFormModal from "@/components/employees/EmployeeFormModal.vue";
+import ResetPasswordModal from "@/components/employees/ResetPasswordModal.vue";
 import type { Employee, EmployeeFormData } from "@/types/employee";
-import type { UserId } from "@/types/api-user";
 import { isRecord } from "@makanmasak/shared/utils/unknown";
 import { resolveUserFacingError } from "@makanmasak/shared/utils/user-facing-error";
 import {
@@ -290,17 +296,9 @@ const handleSave = async (form: EmployeeFormData, isEdit: boolean) => {
   }
 };
 
-const handleResetPassword = async (userId: UserId) => {
-  try {
-    await employeeList.resetPassword(userId);
-    toast.success(t("users.confirm.resetPasswordSuccess"));
-  } catch (error: unknown) {
-    toast.error(
-      resolveUserFacingError(error, t, {
-        fallbackKey: "users.errors.resetFailed",
-      }).message,
-    );
-  }
+const resetTarget = ref<Employee | null>(null);
+const handleResetPassword = (user: Employee) => {
+  resetTarget.value = user;
 };
 
 const handleArchiveUser = async (user: Employee) => {
