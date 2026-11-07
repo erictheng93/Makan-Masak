@@ -33,5 +33,6 @@ scripts/check-production-config.cjs                  tests/unit/check-production
 scripts/check-single-test-runner.cjs                 tests/unit/check-single-test-runner.test.ts
 scripts/check-strict-tables.cjs                      tests/unit/check-strict-tables.test.ts
 scripts/check-vitest-results.cjs                     tests/unit/check-vitest-results.test.ts
+scripts/prune-coverage-shard-placeholders.cjs        tests/unit/prune-coverage-shard-placeholders.test.ts
 scripts/generate-strict-baseline.cjs                 tests/unit/generate-strict-baseline.test.ts
 scripts/check-template-currency.cjs                  tests/unit/check-template-currency.test.ts
