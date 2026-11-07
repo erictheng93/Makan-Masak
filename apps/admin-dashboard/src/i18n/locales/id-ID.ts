@@ -247,7 +247,9 @@ const idID: Messages = {
       uploaded: "Uploaded",
       failed: "Upload failed",
       changeImage: "Change image",
-      fileTooLarge: "File is too large",
+      fileTooLarge: "Foto terlalu besar, silakan pilih foto lain",
+      photoHint: "Foto dari ponsel bisa langsung diunggah",
+      unreadable: "Foto ini tidak dapat dibuka, silakan pilih foto lain",
       invalidType: "Unsupported file type",
     },
     imageImport: {

@@ -245,7 +245,9 @@ const jaJP: Messages = {
       uploaded: "Uploaded",
       failed: "Upload failed",
       changeImage: "Change image",
-      fileTooLarge: "File is too large",
+      fileTooLarge: "写真が大きすぎます。別の写真を選んでください",
+      photoHint: "スマホの写真をそのままアップロードできます",
+      unreadable: "この写真は開けません。別の写真を選んでください",
       invalidType: "Unsupported file type",
     },
     imageImport: {

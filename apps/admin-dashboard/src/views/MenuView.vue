@@ -802,6 +802,9 @@
                   >
                     {{ imageUploadError }}
                   </p>
+                  <p v-else class="mt-2 text-[12px] text-ios-secondary">
+                    {{ t("menu.upload.photoHint") }}
+                  </p>
                 </div>
 
                 <!-- Description -->

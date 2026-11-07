@@ -241,7 +241,9 @@ const zhCN: Messages = {
       uploaded: "已上传",
       failed: "上传失败",
       changeImage: "更换图片",
-      fileTooLarge: "文件过大",
+      fileTooLarge: "照片太大，请换一张照片",
+      photoHint: "手机照片可直接上传",
+      unreadable: "这张照片无法打开，请换一张",
       invalidType: "格式不符",
     },
     imageImport: {

@@ -246,7 +246,9 @@ const enUS: Messages = {
       uploaded: "Uploaded",
       failed: "Upload failed",
       changeImage: "Change image",
-      fileTooLarge: "File is too large",
+      fileTooLarge: "This photo is too large. Please choose another one",
+      photoHint: "Phone photos can be uploaded as they are",
+      unreadable: "This photo can't be opened. Please choose another one",
       invalidType: "Unsupported file type",
     },
     imageImport: {
