@@ -62,28 +62,33 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html", "lcov"],
-      thresholds: {
-        global: {
-          branches: 85,
-          functions: 85,
-          lines: 85,
-          statements: 85,
-        },
-        "apps/api/src/features/**/*.ts": {
-          // Current feature branch baseline is ~78.5%; keep the other API
-          // feature coverage gates at 90% while branch gaps are closed.
-          branches: 78,
-          functions: 90,
-          lines: 90,
-          statements: 90,
-        },
-        "apps/realtime/src/**/*.ts": {
-          branches: 85,
-          functions: 85,
-          lines: 85,
-          statements: 85,
-        },
-      },
+      // A CI shard (`--shard=i/n --reporter=blob`) only holds part of the
+      // coverage, so it must not judge thresholds; the `--merge-reports` job
+      // re-reads this config without the variable and enforces them once.
+      thresholds: process.env.VITEST_COVERAGE_SHARD
+        ? undefined
+        : {
+            global: {
+              branches: 85,
+              functions: 85,
+              lines: 85,
+              statements: 85,
+            },
+            "apps/api/src/features/**/*.ts": {
+              // Current feature branch baseline is ~78.5%; keep the other API
+              // feature coverage gates at 90% while branch gaps are closed.
+              branches: 78,
+              functions: 90,
+              lines: 90,
+              statements: 90,
+            },
+            "apps/realtime/src/**/*.ts": {
+              branches: 85,
+              functions: 85,
+              lines: 85,
+              statements: 85,
+            },
+          },
       exclude: [
         "node_modules/",
         "dist/",
