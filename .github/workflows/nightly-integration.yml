@@ -20,8 +20,11 @@ on:
     - cron: "0 18 * * *"
   workflow_dispatch:
 
+# Per ref: a manual dispatch on a PR branch must not cancel one on main (seen
+# 2026-11-02, run 41419639329). Jobs only talk to localhost wrangler, so a
+# cancelled run leaves no external state behind.
 concurrency:
-  group: ${{ github.workflow }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
