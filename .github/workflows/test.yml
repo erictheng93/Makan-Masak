@@ -262,7 +262,7 @@ jobs:
           path: .turbo/cache
           key: turbo-lint-typecheck-${{ runner.os }}-${{ github.sha }}
 
-  # 單元測試 — sharded across machines, one Vitest run split three ways.
+  # 單元測試 — sharded across machines, one Vitest run split four ways.
   #
   # The single-machine run took 6-8.5 min and was the longest job on the
   # critical path (2026-11 measurement). Each shard runs its slice with
@@ -271,7 +271,7 @@ jobs:
   # the whole suite. Shards skip thresholds via VITEST_COVERAGE_SHARD because a
   # slice of the suite cannot meet a whole-suite coverage target.
   unit-test-shards:
-    name: 🧪 單元測試 (shard ${{ matrix.shard }}/3)
+    name: 🧪 單元測試 (shard ${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.app == 'true'
@@ -279,7 +279,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
 
     steps:
       - name: 📦 Checkout 程式碼
@@ -308,7 +308,7 @@ jobs:
         # split by file, with coverage collected in the same pass.
         env:
           VITEST_COVERAGE_SHARD: "1"
-        run: pnpm exec vitest run --coverage --shard=${{ matrix.shard }}/3 --reporter=default --reporter=blob
+        run: pnpm exec vitest run --coverage --shard=${{ matrix.shard }}/4 --reporter=default --reporter=blob
 
       - name: 📎 上傳 blob 報告
         if: ${{ !cancelled() }}
@@ -359,16 +359,19 @@ jobs:
         # that broke it: main sat red 2026-09-05..07 when #299 stage A4 took
         # `apps/api/src/features/**` branches to 77.88% against 78% while its
         # PR runs reported green. Merging re-applies the thresholds to the
-        # union of the three shards' coverage, which is the whole suite.
+        # union of the shards' coverage, which is the whole suite.
         run: |
           set -euo pipefail
           # A shard that died before writing its blob would merge into a
-          # smaller, green suite. Refuse anything but all three.
+          # smaller, green suite. Refuse anything but all four.
           count="$(find .vitest-reports -maxdepth 1 -name 'blob-*.json' | wc -l)"
-          if [ "$count" -ne 3 ]; then
-            echo "::error::expected 3 shard blob reports, found $count"
+          if [ "$count" -ne 4 ]; then
+            echo "::error::expected 4 shard blob reports, found $count"
             exit 1
           fi
+          # Without this the merged total reads ~3.4 points low on the same
+          # commit: see the script header for why shard placeholders distort it.
+          node scripts/prune-coverage-shard-placeholders.cjs .vitest-reports
           mkdir -p test-results
           pnpm exec vitest run --merge-reports --coverage --reporter=default --reporter=json --outputFile.json=./test-results/unit-tests.json
 
@@ -417,10 +420,10 @@ jobs:
   # never invoked in CI).
   #
   # apps/api holds 76 of these files and they run one at a time: 395s of the
-  # job's ~7.5 min (2026-11). Its files are split three ways across machines;
-  # every other app's suite is small and rides on shard 1.
+  # job's ~7.5 min (2026-11). Its files are split three ways across machines
+  # (shards 1-3); every other app's suite (~60s) runs on its own runner (4).
   real-integration-tests:
-    name: 🗄️ Real Integration 測試 (shard ${{ matrix.shard }}/3)
+    name: 🗄️ Real Integration 測試 (${{ matrix.shard == 4 && 'other apps' || format('api {0}/3', matrix.shard) }})
     runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.integration == 'true' || needs.changes.outputs.full == 'true'
@@ -428,7 +431,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
 
     steps:
       - name: 📦 Checkout 程式碼
@@ -450,13 +453,14 @@ jobs:
         run: pnpm --filter @makanmasak/api^... build
 
       - name: 🗄️ 執行 real-integration 測試 (apps/api shard)
+        if: matrix.shard <= 3
         env:
           NODE_OPTIONS: --max-old-space-size=8192
         run: pnpm --filter @makanmasak/api exec vitest run --config vitest.real-integration.config.ts --shard=${{ matrix.shard }}/3
 
       # The root script's own filter list, minus apps/api (sharded above).
       - name: 🗄️ 執行 real-integration 測試 (other apps)
-        if: matrix.shard == 1
+        if: matrix.shard == 4
         run: pnpm test:real-integration --filter='!./apps/api'
 
   # 店家後台 E2E，打真的 API 與真的 D1。
