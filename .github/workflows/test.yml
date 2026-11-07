@@ -8,12 +8,16 @@ on:
   workflow_dispatch:
 
 # Cancel in-flight runs on the same PR when a new commit lands so reviewers
-# only see the latest result. On push to main we never cancel: this repo has
-# no branch protection and allows direct pushes, so a cancelled run would
-# leave a commit sitting on main with no CI verdict at all, and the manual
-# production deploy gate relies on "is main green?" being answerable.
+# only see the latest result. Everything else (push to main, dispatch) gets a
+# group of its own via run_id, so it never waits behind or gets replaced by
+# another run. A shared group is not enough even with cancel-in-progress off:
+# GitHub keeps one pending run per group and cancels it when a newer one
+# queues, which is how 3284a4c86 and 082511d8c ended "cancelled" on main on
+# 2026-11-07. This repo has no branch protection and allows direct pushes, and
+# the manual production deploy gate relies on "is main green?" being
+# answerable for every commit.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
