@@ -243,7 +243,9 @@ const zhTWCore = {
       uploaded: "已上傳",
       failed: "上傳失敗",
       changeImage: "更換圖片",
-      fileTooLarge: "檔案過大",
+      fileTooLarge: "照片太大，請換一張照片",
+      photoHint: "手機照片可直接上傳",
+      unreadable: "這張照片無法開啟，請換一張",
       invalidType: "格式不符",
     },
     imageImport: {

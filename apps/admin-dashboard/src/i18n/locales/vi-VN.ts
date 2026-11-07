@@ -245,7 +245,9 @@ const viVN: Messages = {
       uploaded: "Uploaded",
       failed: "Upload failed",
       changeImage: "Change image",
-      fileTooLarge: "File is too large",
+      fileTooLarge: "Ảnh quá lớn, vui lòng chọn ảnh khác",
+      photoHint: "Có thể tải ảnh điện thoại lên trực tiếp",
+      unreadable: "Không thể mở ảnh này, vui lòng chọn ảnh khác",
       invalidType: "Unsupported file type",
     },
     imageImport: {

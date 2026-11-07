@@ -20,7 +20,13 @@ type UploadResponse = {
   };
 };
 
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+// Input cap only: the photo is re-encoded in the browser before upload, so a
+// 48MP phone shot never crosses the wire at full size.
+const MAX_FILE_SIZE_BYTES = 30 * 1024 * 1024;
+// When the browser cannot re-encode, the raw file is sent under all five
+// form keys, and image-processor rejects requests over
+// MAX_UPLOAD_REQUEST_SIZE_MB (12MB). 5 x 2MB stays under it.
+const RAW_FALLBACK_MAX_BYTES = 2 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -34,15 +40,20 @@ const VARIANT_KEYS: ImageVariantKey[] = [
   "large",
 ];
 
+// Largest first: each size is drawn from the previous canvas, so the full
+// resolution bitmap is decoded exactly once. "file" is what image-processor
+// stores as the "original" variant.
 const CLIENT_VARIANT_SPECS: Array<{
-  key: ImageVariantKey;
+  key: ImageVariantKey | "file";
   maxSize: number;
 }> = [
-  { key: "thumbnail", maxSize: 150 },
-  { key: "small", maxSize: 300 },
-  { key: "medium", maxSize: 600 },
+  { key: "file", maxSize: 2048 },
   { key: "large", maxSize: 1200 },
+  { key: "medium", maxSize: 600 },
+  { key: "small", maxSize: 300 },
+  { key: "thumbnail", maxSize: 150 },
 ];
+const ENCODE_QUALITY = 0.85;
 
 function pickSupportedVariants(
   variants: Record<string, string | undefined> = {},
@@ -56,68 +67,106 @@ function pickSupportedVariants(
   }, {});
 }
 
-async function downsampleImage(
+const canvasToBlob = (canvas: HTMLCanvasElement, type: string) =>
+  new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, type, ENCODE_QUALITY);
+  });
+
+// Safari before 17 cannot encode WebP and silently hands back a PNG, which
+// would be several MB at 2048px; fall back to JPEG instead.
+async function encodeCanvas(canvas: HTMLCanvasElement): Promise<Blob | null> {
+  const webp = await canvasToBlob(canvas, "image/webp");
+  if (webp?.type === "image/webp") {
+    return webp;
+  }
+  const jpeg = await canvasToBlob(canvas, "image/jpeg");
+  return jpeg?.type === "image/jpeg" ? jpeg : null;
+}
+
+/**
+ * Decodes the photo once and re-encodes every upload size from it.
+ * Returns null when the browser cannot do that, so the caller can fall back.
+ */
+async function compressImage(
   file: File,
-  maxSize: number,
-  variant: string,
-): Promise<File> {
+): Promise<Array<{ key: string; file: File }> | null> {
   if (
     typeof createImageBitmap !== "function" ||
     typeof document === "undefined"
   ) {
-    return file;
+    return null;
   }
 
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
-  const width = Math.max(1, Math.round(bitmap.width * scale));
-  const height = Math.max(1, Math.round(bitmap.height * scale));
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const context = canvas.getContext("2d");
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    return null;
+  }
 
-  if (!context) {
+  const baseName = file.name.replace(/\.[^/.]+$/, "");
+  const longEdge = Math.max(bitmap.width, bitmap.height);
+  const outputs: Array<{ key: string; file: File }> = [];
+  let source: CanvasImageSource = bitmap;
+
+  try {
+    for (const { key, maxSize } of CLIENT_VARIANT_SPECS) {
+      const scale = Math.min(1, maxSize / longEdge);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const context = canvas.getContext("2d");
+      if (!context) {
+        return null;
+      }
+      context.imageSmoothingQuality = "high";
+      context.drawImage(source, 0, 0, canvas.width, canvas.height);
+      // Free the full-resolution pixels (~190MB for 48MP) as soon as the
+      // first, largest canvas holds a copy.
+      bitmap.close?.();
+      source = canvas;
+
+      const blob = await encodeCanvas(canvas);
+      if (!blob) {
+        return null;
+      }
+      const ext = blob.type === "image/webp" ? "webp" : "jpg";
+      outputs.push({
+        key,
+        file: new File([blob], `${key}-${baseName}.${ext}`, {
+          type: blob.type,
+          lastModified: Date.now(),
+        }),
+      });
+    }
+  } catch {
+    return null;
+  } finally {
     bitmap.close?.();
-    return file;
   }
 
-  context.drawImage(bitmap, 0, 0, width, height);
-  bitmap.close?.();
-
-  const blob = await new Promise<Blob | null>((resolve) => {
-    canvas.toBlob(resolve, "image/webp", 0.85);
-  });
-
-  if (!blob) {
-    return file;
-  }
-
-  return new File(
-    [blob],
-    `${variant}-${file.name.replace(/\.[^/.]+$/, "")}.webp`,
-    {
-      type: "image/webp",
-      lastModified: Date.now(),
-    },
-  );
+  return outputs;
 }
 
-async function buildUploadFormData(file: File): Promise<FormData> {
+async function buildUploadFormData(file: File): Promise<FormData | null> {
   const formData = new FormData();
-  formData.append("file", file);
+  const compressed = await compressImage(file);
 
-  const variants = await Promise.all(
-    CLIENT_VARIANT_SPECS.map(async ({ key, maxSize }) => ({
-      key,
-      file: await downsampleImage(file, maxSize, key),
-    })),
-  );
-
-  for (const variant of variants) {
-    formData.append(variant.key, variant.file);
+  if (compressed) {
+    for (const output of compressed) {
+      formData.append(output.key, output.file);
+    }
+    return formData;
   }
 
+  // The worker only stores the variants it receives and the menu needs
+  // "medium", so the raw file has to stand in for every size.
+  if (file.size > RAW_FALLBACK_MAX_BYTES) {
+    return null;
+  }
+  for (const { key } of CLIENT_VARIANT_SPECS) {
+    formData.append(key, file);
+  }
   return formData;
 }
 
@@ -154,6 +203,10 @@ export function useImageUpload() {
 
     try {
       const formData = await buildUploadFormData(file);
+      if (!formData) {
+        setError("menu.upload.unreadable");
+        return null;
+      }
 
       // Platform admins (role 0) carry restaurantId: null in their token, so
       // apps/image-processor resolves the owning restaurant from this query

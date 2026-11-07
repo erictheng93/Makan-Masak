@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { ref } from "vue";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useImageUpload } from "./useImageUpload";
 
 vi.mock("@/utils/authTokenProvider", () => ({
@@ -37,9 +37,9 @@ describe("useImageUpload", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("rejects files larger than 10MB without sending a request", async () => {
+  it("rejects files larger than 30MB without sending a request", async () => {
     const uploader = useImageUpload();
-    const file = new File([new Uint8Array(11 * 1024 * 1024)], "large.jpg", {
+    const file = new File([new Uint8Array(31 * 1024 * 1024)], "large.jpg", {
       type: "image/jpeg",
     });
 
@@ -48,6 +48,20 @@ describe("useImageUpload", () => {
     expect(result).toBeNull();
     expect(uploader.state.value).toBe("error");
     expect(uploader.errorMessage.value).toBe("menu.upload.fileTooLarge");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("reports a photo it cannot open instead of calling it too large", async () => {
+    // jsdom has no createImageBitmap, so this exercises the no-compression path.
+    const uploader = useImageUpload();
+    const file = new File([new Uint8Array(3 * 1024 * 1024)], "big.jpg", {
+      type: "image/jpeg",
+    });
+
+    const result = await uploader.upload(file);
+
+    expect(result).toBeNull();
+    expect(uploader.errorMessage.value).toBe("menu.upload.unreadable");
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -174,5 +188,94 @@ describe("useImageUpload", () => {
     expect(result).toBeNull();
     expect(uploader.state.value).toBe("error");
     expect(uploader.errorMessage.value).toBe("menu.upload.failed");
+  });
+
+  describe("in-browser compression", () => {
+    const drawn: Array<[number, number]> = [];
+    let close: ReturnType<typeof vi.fn>;
+    let encodeAs: (requested: string) => string;
+
+    beforeEach(() => {
+      drawn.length = 0;
+      close = vi.fn();
+      encodeAs = (requested) => requested;
+      vi.stubGlobal(
+        "createImageBitmap",
+        vi.fn(async () => ({ width: 8000, height: 6000, close })),
+      );
+      vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(
+        () =>
+          ({
+            imageSmoothingQuality: "low",
+            drawImage: (
+              _src: unknown,
+              _x: number,
+              _y: number,
+              w: number,
+              h: number,
+            ) => drawn.push([w, h]),
+          }) as unknown as CanvasRenderingContext2D,
+      );
+      vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation(
+        (cb, type) => cb(new Blob(["px"], { type: encodeAs(type ?? "") })),
+      );
+      vi.mocked(fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: { id: "image-1", variants: { medium: "https://cdn/m.webp" } },
+        }),
+      } as Response);
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    });
+
+    const sentForm = () =>
+      (vi.mocked(fetch).mock.calls[0]?.[1] as RequestInit).body as FormData;
+
+    it("decodes a large phone photo once and sends only re-encoded sizes", async () => {
+      const uploader = useImageUpload();
+      const file = new File([new Uint8Array(20 * 1024 * 1024)], "dish.jpg", {
+        type: "image/jpeg",
+      });
+
+      await uploader.upload(file);
+
+      expect(createImageBitmap).toHaveBeenCalledOnce();
+      expect(close).toHaveBeenCalled();
+      expect(drawn).toEqual([
+        [2048, 1536],
+        [1200, 900],
+        [600, 450],
+        [300, 225],
+        [150, 113],
+      ]);
+      const form = sentForm();
+      const original = form.get("file") as File;
+      expect(original).not.toBe(file);
+      expect(original.type).toBe("image/webp");
+      expect(original.name).toBe("file-dish.webp");
+      for (const key of ["large", "medium", "small", "thumbnail"]) {
+        expect((form.get(key) as File).type).toBe("image/webp");
+      }
+      expect(uploader.state.value).toBe("success");
+    });
+
+    it("falls back to JPEG where the browser cannot encode WebP", async () => {
+      encodeAs = (requested) =>
+        requested === "image/webp" ? "image/png" : requested;
+      const uploader = useImageUpload();
+
+      await uploader.upload(
+        new File(["jpeg"], "dish.jpg", { type: "image/jpeg" }),
+      );
+
+      const original = sentForm().get("file") as File;
+      expect(original.type).toBe("image/jpeg");
+      expect(original.name).toBe("file-dish.jpg");
+    });
   });
 });
