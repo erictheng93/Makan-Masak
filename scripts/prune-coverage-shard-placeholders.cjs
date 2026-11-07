@@ -25,10 +25,34 @@ const { parse, stringify } = createRequire(
   require.resolve("vitest/package.json"),
 )("flatted");
 
-const COVERAGE_INDEX = 3; // [version, files, errors, coverage, ...]
+// The blob layout is a Vitest internal, not a public contract (4.1.x:
+// [version, files, errors, coverage, ...]). If an upgrade moves it, this
+// script must fail loudly: pruning nothing would drop merged coverage ~3.4
+// points under the whole-suite floor and read as "someone deleted tests".
+const COVERAGE_INDEX = 3;
+const UPGRADE_HINT =
+  "Vitest's blob format may have changed (upgrade?). Re-check this script " +
+  "before trusting the merged coverage.";
 
 const fileData = (entry) => (entry && entry.data ? entry.data : entry);
 const hasHits = (entry) => Object.values(fileData(entry).s).some((n) => n > 0);
+
+function assertCoverageShape(coverage, label) {
+  const fail = (why) => {
+    throw new Error(`${label}: ${why}. ${UPGRADE_HINT}`);
+  };
+  if (!coverage || typeof coverage !== "object" || Array.isArray(coverage)) {
+    fail("no coverage map at the expected position (was --coverage on?)");
+  }
+  const files = Object.keys(coverage);
+  if (files.length === 0) fail("coverage map is empty");
+  for (const file of files) {
+    const data = fileData(coverage[file]);
+    if (!path.isAbsolute(file) || !data || typeof data.s !== "object") {
+      fail(`entry "${file}" is not an istanbul file coverage`);
+    }
+  }
+}
 
 function prunePlaceholders(coverages) {
   const files = new Set(coverages.flatMap((c) => (c ? Object.keys(c) : [])));
@@ -60,17 +84,26 @@ if (require.main === module) {
     .map((name) => path.join(dir, name));
   const blobs = blobPaths.map((p) => parse(fs.readFileSync(p, "utf8")));
   const coverages = blobs.map((b) => b[COVERAGE_INDEX]);
-  if (coverages.some((c) => !c || typeof c !== "object")) {
-    console.error(
-      "A blob carries no coverage; was the shard run with --coverage?",
-    );
+  try {
+    coverages.forEach((c, i) => assertCoverageShape(c, blobPaths[i]));
+  } catch (error) {
+    console.error(error.message);
     process.exit(1);
   }
   const removed = prunePlaceholders(coverages);
+  // Several shards with `coverage.include` always produce placeholders
+  // (2026-11: ~2,200 across 4 blobs). Zero means the format or Vitest's
+  // placeholder behaviour changed, and the merged numbers can't be trusted.
+  if (blobPaths.length > 1 && removed === 0) {
+    console.error(
+      `Pruned 0 placeholders across ${blobPaths.length} blobs. ${UPGRADE_HINT}`,
+    );
+    process.exit(1);
+  }
   blobPaths.forEach((p, i) => fs.writeFileSync(p, stringify(blobs[i])));
   console.log(
     `Pruned ${removed} placeholder entries across ${blobPaths.length} blobs.`,
   );
 }
 
-module.exports = { prunePlaceholders };
+module.exports = { prunePlaceholders, assertCoverageShape };
