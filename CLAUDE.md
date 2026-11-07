@@ -267,7 +267,7 @@ pnpm dev:kitchen        # Kitchen display only
 
 # Verification (see "Two verification tiers" below — use these, not the raw commands)
 pnpm verify             # Inner loop: typecheck + lint + test, affected packages only
-pnpm verify:push        # Pre-push gate: the full CI-equivalent gate, once
+pnpm verify:push        # Full CI-equivalent gate: before pushing straight to main
 
 # Testing
 pnpm test               # All vitest tests (unit + feature)
@@ -290,15 +290,39 @@ pnpm deploy:prod        # Deploy to production
 
 ### Two verification tiers
 
-**Do not run the full suite after every edit.** `pnpm verify` after each
-meaningful change; `pnpm verify:push` once, before pushing. Both live in
-`scripts/verify.sh`.
+**Do not run the full suite after every edit, nor before every push.**
+`pnpm verify` after each meaningful change. Which gate a push needs depends
+on where it goes, because `.github/workflows/test.yml` runs the full gate on
+every PR to `main` and on every push to `main`:
+
+- **Pushing a branch for a PR:** `pnpm verify` is enough. CI on the PR is the
+  gate, and nothing merges or deploys until it is green. CI does not run on
+  branch pushes without a PR.
+- **Pushing straight to `main`:** `pnpm verify:push` first. There CI only
+  reports after the commit is already on `main`, and the Pages deploys are
+  pinned to the production branch.
+
+Both live in `scripts/verify.sh`.
 
 | | `pnpm verify` | `pnpm verify:push` |
 | --- | --- | --- |
-| Scope | packages affected vs the merge-base with `main` | every package, the root `tests/` project, and real integrations |
+| Scope | packages affected vs the merge-base with `main` | every package, the root `tests/` project, and real integrations when the change needs them |
 | Contents | typecheck, lint, test | plus prettier, i18n coverage, the `check:*` guards, and real integrations — mirrors `.github/workflows/test.yml` |
-| When | after each edit | once, before pushing |
+| When | after each edit, and before pushing a PR branch | once, before pushing straight to `main` |
+
+`verify:push` skips the real-integration suites (~130s, half the gate) when
+the push touches no path CI would run them for. It decides with CI's own
+`scripts/classify-ci-changes.sh`, fed the commits since the merge-base with
+`origin/main` plus uncommitted and untracked files, so the two cannot drift.
+Every app with a real-D1 suite counts, `admin-dashboard`, `customer-app` and
+`kitchen-display` included; in practice the skip fires for docs, `scripts/`
+and `management-portal` / `onboarding-app` changes. `VERIFY_REAL_INTEGRATION=1`
+forces the suites.
+
+Run `pnpm verify:push` *after* committing. lint-staged reformats on commit,
+so run before it, the gate's prettier step fails on files the commit would
+have fixed anyway. Committed-but-unpushed work on `main` is still in scope:
+the integration check diffs against `origin/main`, not `HEAD`.
 
 Both tiers go through turbo, so unchanged packages are cache hits rather than
 re-runs. That is what makes the full gate affordable: it still accounts for

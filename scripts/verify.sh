@@ -5,8 +5,9 @@
 #   scripts/verify.sh           inner loop — only what this branch affected
 #   scripts/verify.sh --full    pre-push gate — mirrors .github/workflows/test.yml
 #
-# The inner loop is meant to be run after every meaningful edit. The full gate
-# is meant to be run once, before pushing — not after every edit.
+# The inner loop is meant to be run after every meaningful edit, and is enough
+# before pushing a branch for a PR: CI runs the full gate on the PR. The full
+# gate is for pushing straight to main, where CI only reports after the fact.
 #
 # Both tiers go through turbo, so unchanged packages are cache hits rather than
 # re-runs. The full gate is therefore "full coverage at incremental cost": it
@@ -68,9 +69,25 @@ root_tests_changed() {
     ! git diff --quiet -- tests/ 2>/dev/null
 }
 
+# The real-integration suites are the gate's slowest step (~130s) and only
+# matter for some paths. Decide with the classifier CI itself uses, fed the
+# files this push carries: commits since the merge-base with origin/main, plus
+# anything uncommitted or untracked. No base found means run it.
+# VERIFY_REAL_INTEGRATION=1 forces it regardless.
+real_integration_needed() {
+  [ "${VERIFY_REAL_INTEGRATION:-}" = "1" ] && return 0
+  local base
+  base="$(git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main 2>/dev/null)" || return 0
+  {
+    git diff --name-only "$base"
+    git ls-files --others --exclude-standard
+  } | sort -u | bash scripts/classify-ci-changes.sh false |
+    grep -qxE 'integration=true|full=true'
+}
+
 if [ "$MODE" = "affected" ]; then
   echo "Verifying what this branch affected (vs the merge-base with main)."
-  echo "Run 'pnpm verify:push' before pushing for the full gate."
+  echo "Run 'pnpm verify:push' before pushing straight to main."
 
   step "typecheck + lint + test (affected)" \
     pnpm exec turbo run typecheck lint test --affected --concurrency="$TURBO_CONCURRENCY"
@@ -122,7 +139,11 @@ else
   step "guard script regressions" pnpm run test:ci-guards
   step "package tests" pnpm exec turbo run test --concurrency="$TURBO_CONCURRENCY"
   step "root tests" pnpm exec vitest run --project root
-  step "real integration tests" pnpm test:real-integration
+  if real_integration_needed; then
+    step "real integration tests" pnpm test:real-integration
+  else
+    printf '\n\033[1m▶ real integration tests\033[0m skipped: no change in a path CI runs them for (scripts/classify-ci-changes.sh). VERIFY_REAL_INTEGRATION=1 forces them.\n'
+  fi
 fi
 
 echo
