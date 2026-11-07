@@ -3856,10 +3856,17 @@ const jaJP: Messages = {
       cashier: "レジ",
       unknown: "不明",
     },
+    resetPasswordModal: {
+      title: "パスワードをリセット",
+      description:
+        "{username} の新しいパスワードを設定します。保存するとすべての端末でログアウトされます。新しいパスワードはご自身で本人に伝えてください。",
+      newPassword: "新しいパスワード",
+      confirmPassword: "新しいパスワード（確認）",
+      mismatch: "パスワードが一致しません",
+      submit: "リセットする",
+    },
     confirm: {
-      resetPassword:
-        "{username}のパスワードをリセットしてもよろしいですか？新しいパスワードがメールで送信されます。",
-      resetPasswordSuccess: "パスワードリセットメールが送信されました",
+      resetPasswordSuccess: "{username} のパスワードをリセットしました",
       toggleStatus: "ユーザー{username}を{action}してもよろしいですか？",
       archive:
         "{username} を名簿から削除しますか？在籍リストから消えログインできなくなりますが、過去のシフトやレポートには氏名が残ります。",
@@ -5762,6 +5769,7 @@ const jaJP: Messages = {
     accountInfo: "アカウント情報",
     adminName: "管理者",
     createdAtCol: "作成されました",
+    actionsCol: "操作",
     email: "電子メール",
     emailCol: "電子メール",
     createError: "作成に失敗しました。もう一度お試しください。",

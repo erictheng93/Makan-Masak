@@ -278,7 +278,7 @@ export interface CreateAccountRequest {
 }
 
 export interface PlatformUser {
-  id: number;
+  id: UserId;
   username: string;
   fullName?: string;
   email: string;

@@ -3851,10 +3851,17 @@ const enUS: Messages = {
       cashier: "Cashier",
       unknown: "Unknown",
     },
+    resetPasswordModal: {
+      title: "Reset password",
+      description:
+        "Set a new password for {username}. They will be signed out on every device; share the new password with them yourself.",
+      newPassword: "New password",
+      confirmPassword: "Confirm new password",
+      mismatch: "The passwords do not match",
+      submit: "Reset password",
+    },
     confirm: {
-      resetPassword:
-        "Are you sure you want to reset {username}'s password? A new password will be sent to their email.",
-      resetPasswordSuccess: "Password reset email sent!",
+      resetPasswordSuccess: "Password for {username} has been reset",
       toggleStatus: "Are you sure you want to {action} user {username}?",
       archive:
         "Remove {username} from the roster? They disappear from the staff list and can no longer sign in, but past rosters and reports keep their name.",
@@ -5472,6 +5479,7 @@ const enUS: Messages = {
     emailCol: "Email",
     statusCol: "Status",
     createdAtCol: "Created",
+    actionsCol: "Actions",
     noOwners: "No owner accounts yet",
     noAdmins: "No other admin accounts yet",
     statusActive: "Active",

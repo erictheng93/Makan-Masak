@@ -3890,10 +3890,17 @@ const zhTWCore = {
       cashier: "收銀員",
       unknown: "未知",
     },
+    resetPasswordModal: {
+      title: "重設密碼",
+      description:
+        "為 {username} 設定新密碼。儲存後對方在所有裝置上都會被登出，請自行把新密碼告知對方。",
+      newPassword: "新密碼",
+      confirmPassword: "確認新密碼",
+      mismatch: "兩次輸入的密碼不一致",
+      submit: "重設密碼",
+    },
     confirm: {
-      resetPassword:
-        "確定要重置 {username} 的密碼嗎？新密碼將會發送到用戶 Email。",
-      resetPasswordSuccess: "密碼重置郵件已發送！",
+      resetPasswordSuccess: "已重設 {username} 的密碼",
       toggleStatus: "確定要{action}用戶 {username} 嗎？",
       archive:
         "確定要移除員工 {username} 嗎？他將從在職名單消失、無法登入，但過往排班與報表仍會保留姓名。",
@@ -5504,6 +5511,7 @@ const zhTWCore = {
     emailCol: "Email",
     statusCol: "狀態",
     createdAtCol: "建立日期",
+    actionsCol: "操作",
     noOwners: "尚無店主帳號",
     noAdmins: "尚無其他管理員帳號",
     // Status badges

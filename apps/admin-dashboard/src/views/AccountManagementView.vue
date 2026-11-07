@@ -8,12 +8,14 @@ import {
   Shield,
   ChevronDown,
   Loader2,
+  KeyRound,
 } from "lucide-vue-next";
 import { api, unwrapApiList } from "@/services/api";
 import { useDateFormatter } from "@/composables/useDateFormatter";
 import type { Restaurant, PlatformUser } from "@/types";
 import { UserRole } from "@/types";
 import { resolveUserFacingError } from "@makanmasak/shared/utils/user-facing-error";
+import ResetPasswordModal from "@/components/employees/ResetPasswordModal.vue";
 
 const { t } = useI18n();
 const { formatDate } = useDateFormatter();
@@ -37,6 +39,8 @@ const owners = ref<PlatformUser[]>([]);
 const admins = ref<PlatformUser[]>([]);
 const loadingOwners = ref(false);
 const loadingAdmins = ref(false);
+// Platform ops maintain owner/admin credentials from here.
+const resetTarget = ref<PlatformUser | null>(null);
 
 // Owner form
 const ownerForm = reactive({
@@ -578,16 +582,21 @@ function switchTab(tab: TabType) {
                 >
                   {{ t("accountManagement.createdAtCol") }}
                 </th>
+                <th
+                  class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  {{ t("accountManagement.actionsCol") }}
+                </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
               <tr v-if="loadingOwners">
-                <td colspan="4" class="px-6 py-8 text-center text-gray-500">
+                <td colspan="5" class="px-6 py-8 text-center text-gray-500">
                   <Loader2 class="w-5 h-5 animate-spin mx-auto mb-2" />
                 </td>
               </tr>
               <tr v-else-if="owners.length === 0">
-                <td colspan="4" class="px-6 py-8 text-center text-gray-500">
+                <td colspan="5" class="px-6 py-8 text-center text-gray-500">
                   {{ t("accountManagement.noOwners") }}
                 </td>
               </tr>
@@ -623,6 +632,17 @@ function switchTab(tab: TabType) {
                 </td>
                 <td class="px-6 py-4 text-gray-500">
                   {{ formatDate(owner.createdAt) }}
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <button
+                    type="button"
+                    data-testid="account-management-reset-password"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-ios-orange bg-ios-orange/10 hover:bg-ios-orange/20 transition-colors"
+                    @click="resetTarget = owner"
+                  >
+                    <KeyRound class="w-3.5 h-3.5" />
+                    {{ t("users.actions.resetPassword") }}
+                  </button>
                 </td>
               </tr>
             </tbody>
@@ -767,16 +787,21 @@ function switchTab(tab: TabType) {
                 >
                   {{ t("accountManagement.createdAtCol") }}
                 </th>
+                <th
+                  class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  {{ t("accountManagement.actionsCol") }}
+                </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
               <tr v-if="loadingAdmins">
-                <td colspan="4" class="px-6 py-8 text-center text-gray-500">
+                <td colspan="5" class="px-6 py-8 text-center text-gray-500">
                   <Loader2 class="w-5 h-5 animate-spin mx-auto mb-2" />
                 </td>
               </tr>
               <tr v-else-if="admins.length === 0">
-                <td colspan="4" class="px-6 py-8 text-center text-gray-500">
+                <td colspan="5" class="px-6 py-8 text-center text-gray-500">
                   {{ t("accountManagement.noAdmins") }}
                 </td>
               </tr>
@@ -813,11 +838,28 @@ function switchTab(tab: TabType) {
                 <td class="px-6 py-4 text-gray-500">
                   {{ formatDate(admin.createdAt) }}
                 </td>
+                <td class="px-6 py-4 text-right">
+                  <button
+                    type="button"
+                    data-testid="account-management-reset-password"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-ios-orange bg-ios-orange/10 hover:bg-ios-orange/20 transition-colors"
+                    @click="resetTarget = admin"
+                  >
+                    <KeyRound class="w-3.5 h-3.5" />
+                    {{ t("users.actions.resetPassword") }}
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
     </template>
+
+    <ResetPasswordModal
+      :user="resetTarget"
+      @close="resetTarget = null"
+      @done="resetTarget = null"
+    />
   </div>
 </template>

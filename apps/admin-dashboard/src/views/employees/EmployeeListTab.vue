@@ -414,7 +414,7 @@ const navigateToDetail = (id: UserId) => {
 const emit = defineEmits<{
   editUser: [user: Employee];
   refresh: [];
-  resetPassword: [userId: UserId];
+  resetPassword: [user: EmployeeWithStatus];
   toggleStatus: [user: EmployeeWithStatus];
   archiveUser: [user: EmployeeWithStatus];
   restoreUser: [user: EmployeeWithStatus];
@@ -445,15 +445,9 @@ const handleRestore = async (user: EmployeeWithStatus) => {
   emit("restoreUser", user);
 };
 
-const handleResetPassword = async (user: EmployeeWithStatus) => {
-  const confirmed = await confirmModal({
-    type: "warning",
-    title: t("users.actions.resetPassword"),
-    message: t("users.confirm.resetPassword", { username: user.username }),
-    confirmLabel: t("users.actions.resetPassword"),
-  });
-  if (!confirmed) return;
-  emit("resetPassword", user.id);
+// The parent's password form is the confirmation; no separate dialog.
+const handleResetPassword = (user: EmployeeWithStatus) => {
+  emit("resetPassword", user);
 };
 
 const handleToggleStatus = async (user: EmployeeWithStatus) => {
