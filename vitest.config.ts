@@ -68,12 +68,17 @@ export default defineConfig({
       thresholds: process.env.VITEST_COVERAGE_SHARD
         ? undefined
         : {
-            global: {
-              branches: 85,
-              functions: 85,
-              lines: 85,
-              statements: 85,
-            },
+            // Whole-suite floor. Vitest reads it from these top-level keys
+            // only; any other key is a file glob. Until 2026-11 it sat under
+            // `global:` (Jest's spelling), a glob matching no file, so the
+            // intended 85% never ran while the suite stood at 62.49 / 56.25 /
+            // 57.46 / 63.39 (statements / branches / functions / lines). These
+            // floors are those numbers rounded down: ratchet them up as
+            // coverage rises, never down.
+            statements: 62,
+            branches: 56,
+            functions: 57,
+            lines: 63,
             "apps/api/src/features/**/*.ts": {
               // Current feature branch baseline is ~78.5%; keep the other API
               // feature coverage gates at 90% while branch gaps are closed.
