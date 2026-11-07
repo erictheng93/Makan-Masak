@@ -65,7 +65,7 @@ test that region rather than the whole DDL:
 ```sql
 SELECT name, sql FROM sqlite_master
 WHERE type='table' AND name NOT LIKE 'sqlite_%'
-  AND name NOT LIKE '%_fts%' AND name NOT LIKE 'd1_%'
+  AND name NOT LIKE 'dish\_search\_fts%' ESCAPE '\' AND name NOT LIKE 'd1_%'
 ORDER BY name;
 ```
 
@@ -115,7 +115,7 @@ BASE="pnpm wrangler d1 execute makanmasak-prod --remote --env production \
 
 # 1. STRICT count (pull DDL, classify client-side — see isStrict above)
 $BASE --command "SELECT name, sql FROM sqlite_master WHERE type='table'
-  AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '%_fts%'
+  AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'dish\_search\_fts%' ESCAPE '\'
   AND name NOT LIKE 'd1_%' ORDER BY name;" > all_ddl.json
 
 # 2. Per-table contamination + row count, ~20 tables per call.
@@ -149,7 +149,7 @@ matching on DDL:
 $BASE --command "SELECT m.name AS tbl, p.name AS col FROM sqlite_master m
   JOIN pragma_table_info(m.name) p
  WHERE m.type='table' AND upper(p.type)='REAL'
-   AND m.name NOT LIKE 'sqlite_%' AND m.name NOT LIKE '%_fts%'
+   AND m.name NOT LIKE 'sqlite_%' AND m.name NOT LIKE 'dish\_search\_fts%' ESCAPE '\'
    AND m.name NOT LIKE 'd1_%' AND m.name != '_cf_KV'
  ORDER BY m.name, p.name;"
 ```
@@ -166,7 +166,7 @@ the declared-FK list come back identical:
 ```bash
 $BASE --command "SELECT m.name FROM sqlite_master m JOIN pragma_table_info(m.name) p
  WHERE m.type='table' AND p.name='restaurant_id'
-   AND m.name NOT LIKE 'sqlite_%' AND m.name NOT LIKE '%_fts%'
+   AND m.name NOT LIKE 'sqlite_%' AND m.name NOT LIKE 'dish\_search\_fts%' ESCAPE '\'
    AND m.name NOT LIKE 'd1_%' AND m.name != '_cf_KV' ORDER BY m.name;"
 
 # then, ~23 tables per call, as scalar subqueries (not UNION ALL — see above):

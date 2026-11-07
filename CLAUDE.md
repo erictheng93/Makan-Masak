@@ -134,8 +134,13 @@ MakanMasak is a modern, serverless restaurant management system built on Cloudfl
                   THEN 1 ELSE 0 END) AS strict_tables
   FROM sqlite_master
   WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
-    AND name NOT LIKE '%_fts%' AND name NOT LIKE 'd1_%';
+    AND name NOT LIKE 'dish\_search\_fts%' ESCAPE '\' AND name NOT LIKE 'd1_%';
   ```
+
+  Exclude the fts5 tables by their real prefix, never with `'%_fts%'`: `_` is a
+  LIKE wildcard, so that pattern also drops `cash_shifts` (s**hifts**), and a
+  count taken with it is one table short. Measured 2026-11-08 with the fixed
+  filter: 131 tables (`_cf_KV` counted), 19 STRICT.
 
   Type contamination has not actually occurred yet: 721 INTEGER columns across
   the 114 non-STRICT tables that have any, 0 non-integer cells (2026-09-01). Read
