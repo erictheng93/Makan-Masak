@@ -42,8 +42,10 @@ vi.mock("@makanmasak/database", () => ({
   }),
 }));
 
+const cacheKv = { delete: vi.fn() };
 const env = {
   DB: { binding: "db" },
+  CACHE_KV: cacheKv,
   INTERNAL_API_TOKEN: "internal-token",
   MANAGEMENT_API: {
     fetch: vi.fn(),
@@ -400,6 +402,7 @@ describe("UsersService", () => {
         "support",
       );
       expect(result.adminTier).toBe("support");
+      expect(cacheKv.delete).toHaveBeenCalledWith("user-profile:user-3");
     });
 
     it("refuses a tier on a non-admin account", async () => {

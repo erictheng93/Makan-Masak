@@ -253,7 +253,18 @@ To override for your personal setup (port collision, remote API, etc.), create `
 
 ## Multi-Role Access System
 
-- **0: Admin** - Full system access
+- **0: Admin** - Platform access, split by `users.admin_tier` (migration `0040`):
+  - `administrator` — everything, including other admin accounts and their tiers
+  - `operator` — all platform operations and shop/owner password resets, but no
+    other admin account. A role-0 row with a NULL tier reads as `operator`.
+  - `support` — read-only, plus shop-account password resets. Enforced once per
+    Worker in its auth middleware (`apps/api`, `apps/management-api`,
+    `apps/image-processor`), so a new write route cannot forget it.
+
+  The tier is read from D1 on every request, never from the JWT, so a change
+  takes effect immediately. Every staff auth lookup selects `admin_tier`:
+  apply `0040` to production **before** deploying the Workers, or every staff
+  and admin request fails.
 - **1: Shop Owner (店主)** - Restaurant management. Day managers currently share this role rather than having one of their own (`features/manager/routes/actions.ts`)
 - **2: Chef (廚師)** - Kitchen display system
 - **3: Service Crew (送菜員)** - Order fulfillment
