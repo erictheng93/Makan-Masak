@@ -3096,6 +3096,21 @@ const jaJP: Messages = {
       duration: "通知表示時間（秒）",
     },
     security: {
+      changePassword: {
+        title: "パスワード変更",
+        description:
+          "ご自身のログインパスワードを変更します。保存するとすべての端末でログアウトされ、新しいパスワードで再ログインが必要です。",
+        current: "現在のパスワード",
+        new: "新しいパスワード",
+        confirm: "新しいパスワード（確認）",
+        submit: "パスワードを更新",
+        sameAsCurrent:
+          "新しいパスワードは現在のパスワードと異なる必要があります",
+        failed:
+          "現在のパスワードが正しくないか、新しいパスワードが条件を満たしていません",
+        success:
+          "パスワードを更新しました。新しいパスワードで再ログインしてください",
+      },
       passwordTitle: "パスワードポリシー",
       minLength: "最小パスワード長",
       requireNumbers: "数字を必須にする",

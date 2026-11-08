@@ -3192,6 +3192,19 @@ const enUS: Messages = {
       duration: "Notification Display Duration (seconds)",
     },
     security: {
+      changePassword: {
+        title: "Change password",
+        description:
+          "Change your own sign-in password. Saving signs you out on every device; sign in again with the new password.",
+        current: "Current password",
+        new: "New password",
+        confirm: "Confirm new password",
+        submit: "Update password",
+        sameAsCurrent: "The new password must differ from the current one",
+        failed:
+          "The current password is incorrect, or the new password does not meet the rules",
+        success: "Password updated. Please sign in with your new password",
+      },
       passwordTitle: "Password Policy",
       minLength: "Minimum Password Length",
       requireNumbers: "Require Numbers",

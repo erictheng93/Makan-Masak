@@ -3113,6 +3113,19 @@ const idID: Messages = {
       duration: "Durasi Tampilan Notifikasi (detik)",
     },
     security: {
+      changePassword: {
+        title: "Ubah kata sandi",
+        description:
+          "Ubah kata sandi masuk Anda sendiri. Setelah disimpan, Anda akan keluar dari semua perangkat dan perlu masuk lagi dengan kata sandi baru.",
+        current: "Kata sandi saat ini",
+        new: "Kata sandi baru",
+        confirm: "Konfirmasi kata sandi baru",
+        submit: "Perbarui kata sandi",
+        sameAsCurrent: "Kata sandi baru harus berbeda dari kata sandi saat ini",
+        failed:
+          "Kata sandi saat ini salah, atau kata sandi baru tidak memenuhi aturan",
+        success: "Kata sandi diperbarui. Silakan masuk dengan kata sandi baru",
+      },
       passwordTitle: "Kebijakan Kata Sandi",
       minLength: "Panjang Minimum Kata Sandi",
       requireNumbers: "Wajib Angka",

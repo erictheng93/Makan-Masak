@@ -3033,6 +3033,18 @@ const zhCN: Messages = {
       duration: "通知显示时间（秒）",
     },
     security: {
+      changePassword: {
+        title: "修改密码",
+        description:
+          "修改你自己的登录密码。保存后所有设备都会被登出，需要用新密码重新登录。",
+        current: "当前密码",
+        new: "新密码",
+        confirm: "确认新密码",
+        submit: "更新密码",
+        sameAsCurrent: "新密码不能与当前密码相同",
+        failed: "当前密码不正确，或新密码不符合规则",
+        success: "密码已更新，请用新密码重新登录",
+      },
       passwordTitle: "密码策略",
       minLength: "最小密码长度",
       requireNumbers: "需要包含数字",

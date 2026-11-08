@@ -3237,6 +3237,18 @@ const zhTWCore = {
       duration: "通知顯示時間（秒）",
     },
     security: {
+      changePassword: {
+        title: "修改密碼",
+        description:
+          "修改你自己的登入密碼。儲存後所有裝置都會被登出，需要用新密碼重新登入。",
+        current: "目前密碼",
+        new: "新密碼",
+        confirm: "確認新密碼",
+        submit: "更新密碼",
+        sameAsCurrent: "新密碼不能與目前密碼相同",
+        failed: "目前密碼不正確，或新密碼不符合規則",
+        success: "密碼已更新，請用新密碼重新登入",
+      },
       passwordTitle: "密碼政策",
       minLength: "最小密碼長度",
       requireNumbers: "需要包含數字",

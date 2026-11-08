@@ -40,6 +40,7 @@ vi.mock("@/stores/auth", () => ({
 
 vi.mock("vue-router", () => ({
   useRoute: vi.fn(),
+  useRouter: vi.fn(() => ({ push: vi.fn() })),
 }));
 
 vi.mock("@/services/api", () => ({

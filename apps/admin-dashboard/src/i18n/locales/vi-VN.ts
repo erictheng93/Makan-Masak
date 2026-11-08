@@ -3096,6 +3096,20 @@ const viVN: Messages = {
       duration: "Thời gian hiển thị thông báo (giây)",
     },
     security: {
+      changePassword: {
+        title: "Đổi mật khẩu",
+        description:
+          "Đổi mật khẩu đăng nhập của chính bạn. Sau khi lưu, bạn sẽ bị đăng xuất trên mọi thiết bị và cần đăng nhập lại bằng mật khẩu mới.",
+        current: "Mật khẩu hiện tại",
+        new: "Mật khẩu mới",
+        confirm: "Xác nhận mật khẩu mới",
+        submit: "Cập nhật mật khẩu",
+        sameAsCurrent: "Mật khẩu mới phải khác mật khẩu hiện tại",
+        failed:
+          "Mật khẩu hiện tại không đúng, hoặc mật khẩu mới không đáp ứng quy tắc",
+        success:
+          "Đã cập nhật mật khẩu. Vui lòng đăng nhập lại bằng mật khẩu mới",
+      },
       passwordTitle: "Chính sách mật khẩu",
       minLength: "Độ dài tối thiểu mật khẩu",
       requireNumbers: "Yêu cầu số",

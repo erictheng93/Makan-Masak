@@ -1747,6 +1747,7 @@
 
   <!-- 安全設定 -->
   <div v-show="activeTab === 'security'" class="space-y-8">
+    <ChangePasswordCard />
     <!-- 密碼政策 -->
     <div class="bg-white rounded-lg shadow p-6">
       <h3 class="text-lg font-semibold text-gray-900 mb-4">
@@ -1917,6 +1918,7 @@ import {
 } from "vue";
 import { useRoute } from "vue-router";
 import { CheckCircleIcon } from "@heroicons/vue/24/outline";
+import ChangePasswordCard from "@/components/settings/ChangePasswordCard.vue";
 import IntegrationsSettings from "@/components/settings/IntegrationsSettings.vue";
 import ShopWalletSettings from "@/components/settings/ShopWalletSettings.vue";
 import RestaurantServiceItemsManager from "@/components/settings/RestaurantServiceItemsManager.vue";
