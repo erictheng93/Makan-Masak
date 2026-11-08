@@ -161,6 +161,56 @@ describe("image processor JWT auth (UUID token shape)", () => {
     },
   );
 
+  it("keeps support admins read-only and lets other admin tiers write", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const token = await sign(
+      {
+        iat: now,
+        exp: now + 3600,
+        sub: userUuid,
+        username: "admin",
+        role: 0,
+        restaurantId: null,
+      },
+      jwtSecret,
+    );
+    const app = new Hono();
+    app.use("*", (c, next) => authMiddleware(c as never, next));
+    app.on(["GET", "POST", "DELETE"], "/protected", (c) =>
+      c.json({ success: true }),
+    );
+    const call = (method: string, adminTier: string | null) =>
+      app.fetch(
+        new Request("https://images.test/protected", {
+          method,
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        {
+          JWT_SECRET: jwtSecret,
+          DB: staffAuthDatabase({
+            id: userUuid,
+            username: "admin",
+            role: 0,
+            restaurant_id: null,
+            is_active: 1,
+            token_version: 1,
+            admin_tier: adminTier,
+          }),
+        },
+      );
+
+    expect((await call("GET", "support")).status).toBe(200);
+    for (const method of ["POST", "DELETE"]) {
+      const denied = await call(method, "support");
+      expect(denied.status).toBe(403);
+      await expect(denied.json()).resolves.toMatchObject({
+        error: { code: "ADMIN_TIER_READ_ONLY" },
+      });
+    }
+    expect((await call("POST", "operator")).status).toBe(200);
+    expect((await call("POST", "administrator")).status).toBe(200);
+  });
+
   it("uses the staff member's current restaurant instead of the stale token claim", async () => {
     const currentRestaurant = "01890a5d-ac96-774b-bcce-b302099a8059";
     const claims = {
@@ -477,9 +527,9 @@ describe("image auth session SQL", () => {
   it("requires the current stored access token and an unexpired active session", async () => {
     const sqlite = new Database(":memory:");
     sqlite.exec(`
-      CREATE TABLE users (id TEXT, username TEXT, role INTEGER, restaurant_id TEXT, is_active INTEGER, token_version INTEGER);
+      CREATE TABLE users (id TEXT, username TEXT, role INTEGER, restaurant_id TEXT, is_active INTEGER, token_version INTEGER, admin_tier TEXT);
       CREATE TABLE sessions (id TEXT, user_id TEXT, token TEXT, is_active INTEGER, expires_at_ms INTEGER);
-      INSERT INTO users VALUES ('01890a5d-ac96-774b-bcce-b302099a8057', 'admin', 0, NULL, 1, 1);
+      INSERT INTO users VALUES ('01890a5d-ac96-774b-bcce-b302099a8057', 'admin', 0, NULL, 1, 1, 'administrator');
     `);
     const secret = "test-jwt-secret-with-at-least-32-chars";
     const now = Math.floor(Date.now() / 1000);

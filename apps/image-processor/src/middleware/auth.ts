@@ -67,7 +67,7 @@ declare module "hono" {
 // client (admin-dashboard useImageUpload) checks response.ok, not the body.
 const authFailure = (
   c: Context<{ Bindings: Env }>,
-  status: 401 | 500 | 503,
+  status: 401 | 403 | 500 | 503,
   code: string,
   message: string,
 ) => c.json({ success: false, error: { code, message } }, status);
@@ -196,7 +196,7 @@ export const authMiddleware = async (
     }
 
     const principal = await c.env.DB.prepare(
-      "SELECT id, username, role, restaurant_id, is_active, token_version FROM users WHERE id = ? LIMIT 1",
+      "SELECT id, username, role, restaurant_id, is_active, token_version, admin_tier FROM users WHERE id = ? LIMIT 1",
     )
       .bind(authPayload.id)
       .first<{
@@ -206,6 +206,7 @@ export const authMiddleware = async (
         restaurant_id: string | null;
         is_active: number;
         token_version: number;
+        admin_tier: string | null;
       }>();
     if (
       !principal ||
@@ -223,6 +224,21 @@ export const authMiddleware = async (
       .first();
     if (!session) {
       return authFailure(c, 401, "TOKEN_INVALID", "Invalid or revoked session");
+    }
+    // Support admins are read-only here as on the platform API
+    // (apps/api/src/middleware/auth.ts); every write route here uses this
+    // middleware, so the check lives once, in it.
+    if (
+      principal.role === 0 &&
+      principal.admin_tier === "support" &&
+      !["GET", "HEAD", "OPTIONS"].includes(c.req.method)
+    ) {
+      return authFailure(
+        c,
+        403,
+        "ADMIN_TIER_READ_ONLY",
+        "Support admins have read-only access",
+      );
     }
     c.set("user", {
       id: principal.id,

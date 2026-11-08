@@ -21,6 +21,7 @@ import {
   type FormattedUser,
   type UserStats,
 } from "../types";
+import { KVCacheService } from "../../../core/cache";
 import { ManagementTenantClient } from "../../../services/managementTenantClient";
 
 interface CurrentUser {
@@ -466,6 +467,12 @@ export class UsersService {
       );
     }
     await this.userService.setAdminTier(userId, adminTier);
+    // /auth/me serves a 30-minute cached profile; without this the target's
+    // dashboard keeps showing the old tier's controls. The API itself reads
+    // the tier from D1 on every request, so this is display, not enforcement.
+    await new KVCacheService(this.env.CACHE_KV).delete(
+      `user-profile:${userId}`,
+    );
     return this.formatUser({ ...target, adminTier });
   }
 
