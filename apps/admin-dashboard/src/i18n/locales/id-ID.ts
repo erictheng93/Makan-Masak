@@ -5832,7 +5832,7 @@ const idID: Messages = {
     emailInvalid: "Silakan masukkan email yang valid",
     createOwnerSuccess: "Akun pemilik berhasil dibuat",
     createAdminSuccess: "Akun admin berhasil dibuat",
-    emailPlaceholder: "pengguna{'@'}example.com",
+    emailPlaceholder: "pengguna@example.com",
     createError: "Pembuatan gagal, coba lagi",
     fullName: "Nama Lengkap",
     fullNamePlaceholder: "Nama lengkap",

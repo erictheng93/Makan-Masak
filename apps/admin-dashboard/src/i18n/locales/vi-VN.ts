@@ -5791,7 +5791,7 @@ const viVN: Messages = {
     tierChangeError: "Không thể cập nhật cấp quyền",
     email: "E-mail",
     emailCol: "E-mail",
-    emailPlaceholder: "user{'@'}example.com",
+    emailPlaceholder: "user@example.com",
     createError: "Tạo không thành công, vui lòng thử lại",
     emailInvalid: "Vui lòng nhập email hợp lệ",
     createAdminSuccess: "Tài khoản quản trị viên được tạo thành công",

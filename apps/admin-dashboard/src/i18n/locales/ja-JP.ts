@@ -5791,7 +5791,7 @@ const jaJP: Messages = {
     email: "電子メール",
     emailCol: "電子メール",
     createError: "作成に失敗しました。もう一度お試しください。",
-    emailPlaceholder: "user{'@'}example.com",
+    emailPlaceholder: "user@example.com",
     createAdminSuccess: "管理者アカウントが正常に作成されました",
     emailInvalid: "有効なメールアドレスを入力してください",
     emailRequired: "メールアドレスは必須です",

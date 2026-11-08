@@ -5633,7 +5633,7 @@ const zhCN: Messages = {
     createAdminSuccess: "管理员帐号建立成功",
     email: "Email",
     emailCol: "Email",
-    emailPlaceholder: "user{'@'}example.com",
+    emailPlaceholder: "user@example.com",
     emailRequired: "请输入 Email",
     createdAtCol: "建立日期",
     actionsCol: "操作",

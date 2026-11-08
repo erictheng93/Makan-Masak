@@ -5480,7 +5480,7 @@ const zhTWCore = {
     fullName: "全名",
     fullNamePlaceholder: "姓名",
     email: "Email",
-    emailPlaceholder: "user{'@'}example.com",
+    emailPlaceholder: "user@example.com",
     phone: "聯絡電話",
     phonePlaceholder: "選填",
     // Restaurant binding

@@ -5452,7 +5452,7 @@ const enUS: Messages = {
     fullName: "Full Name",
     fullNamePlaceholder: "Full name",
     email: "Email",
-    emailPlaceholder: "user{'@'}example.com",
+    emailPlaceholder: "user@example.com",
     phone: "Phone",
     phonePlaceholder: "Optional",
     restaurant: "Restaurant",

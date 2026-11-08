@@ -224,3 +224,26 @@ describe("admin i18n locale parity", () => {
     expect(dropped).toEqual({});
   }, 15_000);
 });
+
+// @makanmasak/i18n only substitutes `{name}`. vue-i18n's literal escape
+// (`{'@'}`) and linked messages (`@:key`) render verbatim here, which is how
+// "user{'@'}example.com" reached the add-admin form.
+describe("admin i18n message syntax", () => {
+  function messageValues(value: unknown, prefix = ""): [string, string][] {
+    if (typeof value === "string") return [[prefix, value]];
+    if (!value || typeof value !== "object") return [];
+    return Object.entries(value as MessageTree).flatMap(([key, child]) =>
+      messageValues(child, prefix ? `${prefix}.${key}` : key),
+    );
+  }
+
+  it("uses no vue-i18n-only syntax the runtime would print verbatim", () => {
+    const offenders = Object.entries({ "zh-TW": zhTW, ...localeMessages })
+      .flatMap(([locale, messages]) =>
+        messageValues(messages).map(([key, text]) => [locale, key, text]),
+      )
+      .filter(([, , text]) => /\{'[^']*'\}|@:[\w.]/.test(text));
+
+    expect(offenders).toEqual([]);
+  });
+});
