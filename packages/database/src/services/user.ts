@@ -679,6 +679,7 @@ export class UserService extends BaseService {
         fullName: user.fullName ? String(user.fullName) : null,
         role: Number(user.role),
         restaurantId: user.restaurantId ? String(user.restaurantId) : null,
+        adminTier: user.adminTier ?? null,
         isActive: Boolean(Number(user.isActive)),
         isVerified: Boolean(Number(user.isVerified)),
         totalOrders: user.totalOrders ? Number(user.totalOrders) : 0,

@@ -32,6 +32,39 @@ describe("Users API — real integration", () => {
     await testApp.testDb.truncateAll();
   });
 
+  it("lists each platform admin with its stored tier", async () => {
+    const top = await seed.user({
+      username: "admin-top",
+      role: 0,
+      adminTier: "administrator",
+    });
+    await seed.user({
+      username: "admin-support",
+      role: 0,
+      adminTier: "support",
+    });
+    const token = await testApp.authHelper.adminToken(undefined, top.id);
+
+    const response = await testApp.app.fetch(
+      new Request(`${USERS_ENDPOINT}?role=0`, {
+        headers: { authorization: `Bearer ${token}` },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const body =
+      await readEnvelope<Array<{ username: string; adminTier: string | null }>>(
+        response,
+      );
+    const tiers = Object.fromEntries(
+      (body.data ?? []).map((u) => [u.username, u.adminTier]),
+    );
+    expect(tiers).toMatchObject({
+      "admin-top": "administrator",
+      "admin-support": "support",
+    });
+  });
+
   it("rejects an owner creating staff for another restaurant", async () => {
     const ownerRestaurant = await seed.restaurant();
     const otherRestaurant = await seed.restaurant({
