@@ -2740,6 +2740,7 @@ const zhCN: Messages = {
       saveFailed: "桌台保存失败，请稍后再试",
       loadFailed: "无法加载桌台列表",
       statusChangeFailed: "桌台状态变更失败",
+      saving: "保存中...",
       qrGenerateFailed: "QR 码生成失败，请稍后再试",
       deleteSuccess: "桌台已删除",
       deleteFailed: "桌台删除失败",

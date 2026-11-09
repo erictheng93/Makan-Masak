@@ -392,6 +392,75 @@ describe("TableSetupTab", () => {
     );
   });
 
+  it("removes a deleted table locally without refetching the list", async () => {
+    const wrapper = await mountTab([buildTable()]);
+    vi.mocked(api.delete).mockResolvedValue({
+      data: { success: true },
+    } as never);
+    const getCalls = vi.mocked(api.get).mock.calls.length;
+
+    await (
+      wrapper.vm as unknown as {
+        deleteTable: (table: Record<string, unknown>) => Promise<void>;
+      }
+    ).deleteTable({ id: 11, tableNumber: "A1", status: "available" });
+    await flushPromises();
+
+    expect(api.get).toHaveBeenCalledTimes(getCalls);
+    expect(wrapper.find('[data-testid="edit-table-11"]').exists()).toBe(false);
+  });
+
+  it("patches one table in place and guards double clicks while occupying", async () => {
+    const wrapper = await mountTab([buildTable()]);
+    let finish!: (v: unknown) => void;
+    vi.mocked(api.post).mockReturnValue(
+      new Promise((resolve) => (finish = resolve)) as never,
+    );
+    const getCalls = vi.mocked(api.get).mock.calls.length;
+    const button = () => wrapper.find('[data-testid="status-table-11"]');
+
+    await button().trigger("click");
+    expect(button().attributes("disabled")).toBeDefined();
+    await button().trigger("click");
+    expect(api.post).toHaveBeenCalledTimes(1);
+
+    finish({ data: { success: true } });
+    await flushPromises();
+    expect(button().attributes("disabled")).toBeUndefined();
+    expect(api.get).toHaveBeenCalledTimes(getCalls);
+  });
+
+  it("disables Add while saving and inserts the created table without refetching", async () => {
+    const wrapper = await mountTab();
+    let finish!: (v: unknown) => void;
+    vi.mocked(api.post).mockReturnValue(
+      new Promise((resolve) => (finish = resolve)) as never,
+    );
+    const getCalls = vi.mocked(api.get).mock.calls.length;
+    const vm = wrapper.vm as unknown as {
+      tableForm: { tableNumber: string };
+      saveTable: () => Promise<void>;
+      isSavingTable: boolean;
+    };
+    vm.tableForm.tableNumber = "B2";
+
+    const first = vm.saveTable();
+    const second = vm.saveTable();
+    await flushPromises();
+    expect(vm.isSavingTable).toBe(true);
+    expect(api.post).toHaveBeenCalledTimes(1);
+
+    finish({
+      data: { success: true, data: buildTable({ id: 42, number: "B2" }) },
+    });
+    await Promise.all([first, second]);
+    await flushPromises();
+
+    expect(vm.isSavingTable).toBe(false);
+    expect(api.get).toHaveBeenCalledTimes(getCalls);
+    expect(wrapper.find('[data-testid="edit-table-42"]').exists()).toBe(true);
+  });
+
   it("opens the QR modal by clicking the QR preview itself", async () => {
     const wrapper = await mountTab([buildTable({ id: 11 })]);
 

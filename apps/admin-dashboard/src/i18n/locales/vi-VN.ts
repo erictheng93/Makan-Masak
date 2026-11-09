@@ -2793,6 +2793,7 @@ const viVN: Messages = {
       saveFailed: "Lưu bàn thất bại, vui lòng thử lại",
       loadFailed: "Không thể tải danh sách bàn",
       statusChangeFailed: "Thay đổi trạng thái bàn thất bại",
+      saving: "Đang lưu...",
       qrGenerateFailed: "Tạo mã QR thất bại, vui lòng thử lại",
       deleteSuccess: "Đã xóa bàn thành công",
       deleteFailed: "Xóa bàn thất bại",

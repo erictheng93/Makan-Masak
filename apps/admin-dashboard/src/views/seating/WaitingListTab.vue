@@ -907,12 +907,13 @@ async function loadWaitingList() {
 /**
  * Load queue status
  */
-async function loadQueueStatus() {
+async function loadQueueStatus({ initial = false } = {}) {
   try {
     queueStatus.value =
       (await WaitingListService.getQueueStatus(restaurantId.value)) ?? null;
     // Every waiting-list action and realtime event ends in this reload.
-    notifySeatingChanged();
+    // The page entry already loaded the stat cards; only later reloads recount.
+    if (!initial) notifySeatingChanged();
   } catch (error) {
     console.error("Load queue status error:", error);
   }
@@ -1208,7 +1209,7 @@ function getStatusBadgeClass(status: string): string {
 // Initialize
 onMounted(async () => {
   await loadWaitingList();
-  await loadQueueStatus();
+  await loadQueueStatus({ initial: true });
   await startWaitingRealtime();
 });
 

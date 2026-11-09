@@ -554,6 +554,7 @@ const zhTWCore = {
       saveFailed: "桌台儲存失敗，請稍後再試",
       loadFailed: "無法載入桌台列表",
       statusChangeFailed: "桌台狀態變更失敗",
+      saving: "儲存中...",
       qrGenerateFailed: "QR 碼生成失敗，請稍後再試",
       deleteSuccess: "桌台已刪除",
       deleteFailed: "桌台刪除失敗",

@@ -749,7 +749,7 @@ const restaurantId = computed(() => authStore.restaurantId || "");
 /**
  * Load reservations list
  */
-async function loadReservations({ background = false } = {}) {
+async function loadReservations({ background = false, initial = false } = {}) {
   // A background tick keeps the rows on screen and stays quiet on failure;
   // the placeholder and the toast are for loads the user asked for.
   if (!background) loading.value = true;
@@ -772,7 +772,8 @@ async function loadReservations({ background = false } = {}) {
       pagination.total = reservations.value.length;
     }
     // Every create/confirm/arrive/seat/cancel ends in this reload.
-    if (!background) notifySeatingChanged();
+    // The page entry already loaded the stat cards; only later reloads recount.
+    if (!background && !initial) notifySeatingChanged();
   } catch (error) {
     console.error("Load reservations error:", error);
     if (!background) toast.error(t("reservation.loadError"));
@@ -1024,7 +1025,7 @@ function getPaginationPages(): number[] {
 // Initialize
 onMounted(async () => {
   reservationsPoller.start();
-  await loadReservations();
+  await loadReservations({ initial: true });
 });
 onBeforeUnmount(() => reservationsPoller.stop());
 </script>

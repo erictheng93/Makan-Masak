@@ -65,8 +65,8 @@ describe("ReservationTab", () => {
     const wrapper = mount(ReservationTab);
     await flushPromises();
     expect(ReservationService.listReservations).toHaveBeenCalledOnce();
-    // A load on the user's behalf tells the stat cards to recount...
-    expect(onSeatingChanged).toHaveBeenCalledOnce();
+    // The first load is covered by the page entry, so it does not notify...
+    expect(onSeatingChanged).not.toHaveBeenCalled();
 
     vi.mocked(ReservationService.listReservations).mockResolvedValueOnce({
       success: true,
@@ -80,7 +80,7 @@ describe("ReservationTab", () => {
     expect(ReservationService.listReservations).toHaveBeenCalledTimes(2);
     expect(wrapper.text()).toContain("陳先生");
     // ...a background tick does not; the cards have their own poll.
-    expect(onSeatingChanged).toHaveBeenCalledOnce();
+    expect(onSeatingChanged).not.toHaveBeenCalled();
     window.removeEventListener("seating:changed", onSeatingChanged);
 
     // A failed background tick must not toast every 30 seconds.

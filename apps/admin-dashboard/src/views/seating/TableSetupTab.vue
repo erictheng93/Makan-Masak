@@ -233,7 +233,9 @@
             <!-- Everyday operations: the status change leads, edit/delete pair -->
             <button
               :class="[ACTION_PILL, getStatusButtonClass(table.status)]"
-              class="w-full shadow-sm"
+              class="w-full shadow-sm disabled:opacity-60"
+              :disabled="statusPendingIds.includes(table.id)"
+              :data-testid="`status-table-${table.id}`"
               @click="changeTableStatus(table)"
             >
               <ArrowLeftRight class="h-3.5 w-3.5" />
@@ -474,9 +476,16 @@
                 <button
                   type="submit"
                   data-testid="table-submit"
-                  class="px-5 py-2.5 bg-ios-blue text-white rounded-full hover:bg-blue-600 transition-colors text-sm font-semibold"
+                  :disabled="isSavingTable"
+                  class="px-5 py-2.5 bg-ios-blue text-white rounded-full hover:bg-blue-600 transition-colors text-sm font-semibold disabled:opacity-60"
                 >
-                  {{ editingTable ? t("common.update") : t("common.add") }}
+                  {{
+                    isSavingTable
+                      ? t("tables.alert.saving")
+                      : editingTable
+                        ? t("common.update")
+                        : t("common.add")
+                  }}
                 </button>
               </div>
             </form>
@@ -831,7 +840,7 @@ const STATUS_BADGE_CLASSES: Record<string, string> = {
 };
 
 const STATUS_BUTTON_CLASSES: Record<string, string> = {
-  available: "bg-ios-red text-white hover:bg-red-600",
+  available: "bg-ios-blue text-white hover:bg-blue-600",
   occupied: "bg-ios-green text-white hover:bg-green-600",
   maintenance: "bg-ios-orange text-white hover:bg-orange-600",
 };
@@ -1058,7 +1067,7 @@ const deleteTable = async (table: TableViewModel) => {
     selectedTableIds.value = selectedTableIds.value.filter(
       (id) => id !== table.id,
     );
-    await fetchTables();
+    tables.value = tables.value.filter((item) => item.id !== table.id);
     toast.success(t("tables.alert.deleteSuccess"));
   } catch (error) {
     console.error("Failed to delete table:", error);
@@ -1066,7 +1075,13 @@ const deleteTable = async (table: TableViewModel) => {
   }
 };
 
+// Ids with a status change in flight: disables that card's button so a second
+// click cannot race the first.
+const statusPendingIds = ref<number[]>([]);
+
 const changeTableStatus = async (table: TableViewModel) => {
+  if (statusPendingIds.value.includes(table.id)) return;
+  statusPendingIds.value.push(table.id);
   try {
     if (table.status === "occupied") {
       await api.post(`/tables/${table.id}/release`);
@@ -1076,10 +1091,27 @@ const changeTableStatus = async (table: TableViewModel) => {
     } else if (table.status === "maintenance") {
       await api.put(`/tables/${table.id}`, { isActive: true });
     }
-    await fetchTables();
+    // The endpoints answer with no table, so patch the one card instead of
+    // refetching the whole list.
+    const nextStatus: TableStatus =
+      table.status === "available" ? "occupied" : "available";
+    tables.value = tables.value.map((item) =>
+      item.id === table.id
+        ? {
+            ...item,
+            status: nextStatus,
+            currentOrderId:
+              nextStatus === "available" ? null : item.currentOrderId,
+          }
+        : item,
+    );
   } catch (error) {
     console.error("Failed to change table status:", error);
     toast.error(t("tables.alert.statusChangeFailed"));
+  } finally {
+    statusPendingIds.value = statusPendingIds.value.filter(
+      (id) => id !== table.id,
+    );
   }
 };
 
@@ -1089,12 +1121,15 @@ const closeTableModal = () => {
   tableForm.value = defaultTableForm();
 };
 
+const isSavingTable = ref(false);
+
 const saveTable = async () => {
   const restaurantId = authStore.restaurantId;
-  if (!restaurantId) return;
+  if (!restaurantId || isSavingTable.value) return;
 
   // Captured before closeTableModal() clears editingTable
   const isEdit = Boolean(editingTable.value);
+  let createdResponse: { data?: { data?: ApiTable } } | undefined;
 
   try {
     const isExistingSeatMode =
@@ -1112,6 +1147,7 @@ const saveTable = async () => {
       });
       if (!confirmed) return;
     }
+    isSavingTable.value = true;
     if (editingTable.value) {
       const payload = {
         number: tableForm.value.tableNumber,
@@ -1130,7 +1166,7 @@ const saveTable = async () => {
       }
       await api.put(`/tables/${editingTable.value.id}`, payload);
     } else {
-      await api.post("/tables", {
+      createdResponse = await api.post("/tables", {
         restaurantId,
         number: tableForm.value.tableNumber,
         name: tableForm.value.tableName || undefined,
@@ -1145,7 +1181,9 @@ const saveTable = async () => {
       });
     }
     closeTableModal();
-    await fetchTables();
+    const created = createdResponse?.data?.data;
+    if (created?.id) tables.value = [...tables.value, mapTable(created)];
+    else await fetchTables();
     toast.success(
       isEdit
         ? t("tables.alert.updateSuccess")
@@ -1165,6 +1203,8 @@ const saveTable = async () => {
         fallbackKey: "tables.alert.saveFailed",
       }).message,
     );
+  } finally {
+    isSavingTable.value = false;
   }
 };
 

@@ -76,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount, onMounted, watch } from "vue";
+import { ref, computed, onBeforeUnmount, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "@/i18n";
 import { useAuthStore } from "@/stores/auth";
@@ -279,25 +279,29 @@ async function loadStats() {
 }
 
 // Bookings, queue joins and table turnover all happen outside this page, and
-// the tabs below mutate the same numbers, so the cards refresh on a timer, on
-// every tab switch, and whenever a tab reports that it reloaded.
+// the tabs below mutate the same numbers, so the cards refresh on a timer and
+// whenever a tab reports that it reloaded (not on tab switch or first load).
 const statsPoller = createVisibilityAwarePoller({
   intervalMs: 30_000,
   onTick: loadStats,
 });
 
-watch(
-  () => route.path,
-  () => void loadStats(),
-);
+// A reload in one tab often fires several events (list, queue status, realtime
+// push); recount once for the burst.
+let statsDebounce: ReturnType<typeof setTimeout> | undefined;
+function scheduleStatsReload() {
+  clearTimeout(statsDebounce);
+  statsDebounce = setTimeout(() => void loadStats(), 400);
+}
 
 onMounted(() => {
   void loadStats();
   statsPoller.start();
-  window.addEventListener(SEATING_CHANGED, loadStats);
+  window.addEventListener(SEATING_CHANGED, scheduleStatsReload);
 });
 onBeforeUnmount(() => {
   statsPoller.stop();
-  window.removeEventListener(SEATING_CHANGED, loadStats);
+  clearTimeout(statsDebounce);
+  window.removeEventListener(SEATING_CHANGED, scheduleStatsReload);
 });
 </script>

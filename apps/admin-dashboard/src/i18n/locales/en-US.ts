@@ -565,6 +565,7 @@ const enUS: Messages = {
       saveFailed: "Failed to save table, please try again",
       loadFailed: "Unable to load tables",
       statusChangeFailed: "Failed to change table status",
+      saving: "Saving...",
       qrGenerateFailed: "Failed to generate QR codes, please try again",
       deleteSuccess: "Table deleted successfully",
       deleteFailed: "Failed to delete table",

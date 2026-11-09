@@ -62,34 +62,37 @@ describe("SeatingManagementView stat cards", () => {
     vi.useRealTimers();
   });
 
-  it("recounts on a timer, on a tab switch and when a tab reports a change", async () => {
+  it("loads once per entry, then recounts on a timer or a coalesced tab report, not on a tab switch", async () => {
     const wrapper = mountView();
     await flushPromises();
     const loads = () =>
       vi.mocked(ReservationService.getStats).mock.calls.length;
     expect(loads()).toBe(1);
+    expect(WaitingListService.getQueueStatus).toHaveBeenCalledTimes(1);
 
     vi.mocked(WaitingListService.getQueueStatus).mockResolvedValue({
       totalWaiting: 7,
       averageWaitMinutes: 10,
       availableTables: 1,
     } as never);
+    // A burst of reports from one reload recounts once.
     notifySeatingChanged();
-    await flushPromises();
+    notifySeatingChanged();
+    await vi.advanceTimersByTimeAsync(500);
     expect(loads()).toBe(2);
     expect(wrapper.text()).toContain("7");
 
     routeState.path = "/dashboard/seating/waiting-list";
     await nextTick();
     await flushPromises();
-    expect(loads()).toBe(3);
+    expect(loads()).toBe(2);
 
     await vi.advanceTimersByTimeAsync(30_000);
-    expect(loads()).toBe(4);
+    expect(loads()).toBe(3);
 
     wrapper.unmount();
     notifySeatingChanged();
     await vi.advanceTimersByTimeAsync(30_000);
-    expect(loads()).toBe(4);
+    expect(loads()).toBe(3);
   });
 });

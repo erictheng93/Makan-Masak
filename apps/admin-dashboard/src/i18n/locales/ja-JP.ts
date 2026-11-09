@@ -2796,6 +2796,7 @@ const jaJP: Messages = {
         "テーブルの保存に失敗しました。しばらくしてからお試しください",
       loadFailed: "テーブル一覧を読み込めませんでした",
       statusChangeFailed: "テーブルの状態変更に失敗しました",
+      saving: "保存中...",
       qrGenerateFailed:
         "QRコードの生成に失敗しました。しばらくしてからお試しください",
       deleteSuccess: "テーブルを削除しました",

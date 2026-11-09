@@ -567,6 +567,7 @@ const idID: Messages = {
       saveFailed: "Gagal menyimpan meja, silakan coba lagi",
       loadFailed: "Tidak dapat memuat daftar meja",
       statusChangeFailed: "Gagal mengubah status meja",
+      saving: "Menyimpan...",
       qrGenerateFailed: "Gagal membuat kode QR, silakan coba lagi",
       deleteSuccess: "Meja berhasil dihapus",
       deleteFailed: "Gagal menghapus meja",
