@@ -94,6 +94,7 @@ async function loadChargeRates(restaurantId: string): Promise<void> {
     group.setChargeRates({
       serviceChargeRate: Number(settings.serviceChargeRate),
       taxRate: Number(settings.taxRate),
+      currency: settings.currency,
     });
   } catch {
     // Leaving the rates at zero shows food-only figures rather than blocking

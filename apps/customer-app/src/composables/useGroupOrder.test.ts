@@ -315,6 +315,81 @@ describe("useGroupOrder — data layer", () => {
       return group;
     }
 
+    it("splits an odd TWD bill equally with no dollar lost", async () => {
+      // 10 + 30 is 40; make it 245 so the halves are not whole dollars.
+      const group = useGroupOrder({ restaurantId: "rest-1", userId: "m-2" });
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        ...summaryResponse(),
+        groupOrder: {
+          ...summaryResponse().groupOrder,
+          splitType: "equal",
+          feeMode: "equal",
+        },
+        members: [
+          { id: "m-1", memberName: "Alex", isHost: true },
+          { id: "m-2", memberName: "Sam", isHost: false },
+        ],
+        cartItems: [
+          {
+            id: "i-1",
+            memberId: "m-1",
+            menuItemId: 1,
+            quantity: 1,
+            unitPrice: 245,
+            menuItem: { id: 1, name: "A", price: 245 },
+          },
+        ],
+      });
+      await group.loadGroupOrder("go-1");
+      group.setChargeRates({
+        serviceChargeRate: 0.1,
+        taxRate: 0,
+        currency: "TWD",
+      });
+
+      // Server: allocateCents(24500, [1, 1]) -> 123 to the earlier member, 122
+      // to the later one; the fee (NT$25 after rounding) goes 13 / 12.
+      expect(group.mySubtotal.value).toBe(122);
+      expect(group.myServiceCharge.value).toBe(12);
+      expect(group.myShare.value).toBe(134);
+    });
+
+    it("gives the remainder to whoever joined first, even when the summary lists them last", async () => {
+      const group = useGroupOrder({ restaurantId: "rest-1", userId: "m-1" });
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        ...summaryResponse(),
+        groupOrder: { ...summaryResponse().groupOrder, splitType: "equal" },
+        // Summary order is role desc, so the host (joined first) comes last.
+        members: [
+          {
+            id: "m-2",
+            memberName: "Sam",
+            isHost: false,
+            joinedAt: new Date("2026-06-07T00:05:00.000Z").toISOString(),
+          },
+          {
+            id: "m-1",
+            memberName: "Alex",
+            isHost: true,
+            joinedAt: new Date("2026-06-07T00:00:00.000Z").toISOString(),
+          },
+        ],
+        cartItems: [
+          {
+            id: "i-1",
+            memberId: "m-1",
+            menuItemId: 1,
+            quantity: 1,
+            unitPrice: 245,
+            menuItem: { id: 1, name: "A", price: 245 },
+          },
+        ],
+      });
+      await group.loadGroupOrder("go-1");
+
+      expect(group.mySubtotal.value).toBe(123);
+    });
+
     it("shows no fee until the restaurant charges one", async () => {
       const group = await twoMemberGroup();
       group.setChargeRates({ serviceChargeRate: 0, taxRate: 0 });
@@ -1100,6 +1175,18 @@ describe("useGroupOrder — submitting the order", () => {
     await expect(group.submitOrder()).rejects.toMatchObject({
       isHostOnly: true,
     });
+  });
+
+  it("does not call the host a non-host when the demo restaurant refuses", async () => {
+    const group = await createHostedGroup();
+    vi.mocked(apiClient.post).mockRejectedValueOnce(
+      Object.assign(apiError(403), { code: "DEMO_RESTAURANT" }),
+    );
+
+    const failure = await group.submitOrder().catch((e: unknown) => e);
+
+    expect(failure).toMatchObject({ code: "DEMO_RESTAURANT" });
+    expect(failure).not.toHaveProperty("isHostOnly");
   });
 
   it("does not tell the host nothing happened when the order was already placed", async () => {

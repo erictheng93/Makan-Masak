@@ -4,8 +4,17 @@
  */
 
 import { computed, getCurrentInstance, onUnmounted, ref } from "vue";
+import {
+  allocateCents,
+  DEFAULT_CURRENCY,
+  floorToCurrencyCents,
+  normalizeCurrencyCode,
+  roundToCurrencyCents,
+  type CurrencyCode,
+} from "@makanmasak/utils";
 import { useWebSocket } from "./useWebSocket";
 import { apiClient } from "@/services/api";
+import { getOrderSubmitErrorCodeI18nKey } from "@/utils/order-submit-error";
 import {
   GROUP_ORDER_FEE_MODES,
   RealtimeEventType,
@@ -554,33 +563,89 @@ export function useGroupOrder(options: {
    * ordinary cart reads. Never hardcode them: a preview built on guessed rates
    * shows a number the kitchen will not charge.
    */
-  const chargeRates = ref({ serviceChargeRate: 0, taxRate: 0 });
+  const chargeRates = ref<{
+    serviceChargeRate: number;
+    taxRate: number;
+    currency: CurrencyCode;
+  }>({ serviceChargeRate: 0, taxRate: 0, currency: DEFAULT_CURRENCY });
 
   function setChargeRates(rates: {
     serviceChargeRate?: number;
     taxRate?: number;
+    currency?: unknown;
   }): void {
     chargeRates.value = {
       serviceChargeRate: Number.isFinite(rates.serviceChargeRate)
         ? (rates.serviceChargeRate as number)
         : 0,
       taxRate: Number.isFinite(rates.taxRate) ? (rates.taxRate as number) : 0,
+      currency: normalizeCurrencyCode(rates.currency) ?? DEFAULT_CURRENCY,
     };
   }
 
+  /**
+   * Every member's subtotal and fee shares in integer cents, computed the way
+   * the server's computeSplitBills does it: largest-remainder allocation on
+   * the restaurant currency's step, ties to the earlier member. Dividing the
+   * float total by headcount showed NT$123 twice for a NT$245 bill.
+   */
+  const splitPreview = computed(() => {
+    const order = groupOrder.value;
+    if (!order) return undefined;
+    const { currency } = chargeRates.value;
+    // The server allocates over members by joinedAt ascending; the summary
+    // lists the host last, so reorder or the remainder unit lands elsewhere.
+    const members = [...order.members].sort((a, b) => a.joinedAt - b.joinedAt);
+    const totalCents = Math.round(totalAmount.value * 100);
+    // Sub-unit legacy residue goes to the first share, as on the server.
+    const allocate = (cents: number, weights: number[]): number[] => {
+      if (weights.length === 0) return [];
+      const aligned = floorToCurrencyCents(cents, currency);
+      const shares = allocateCents(aligned, weights, currency);
+      shares[0] += cents - aligned;
+      return shares;
+    };
+    const subtotals =
+      order.splitBillConfig.mode === "equal"
+        ? allocate(
+            totalCents,
+            members.map(() => 1),
+          )
+        : members.map((member) =>
+            Math.round(
+              order.cartItems
+                .filter((item) => item.addedBy === member.id)
+                .reduce(
+                  (sum, item) => sum + item.menuItemPrice * item.quantity,
+                  0,
+                ) * 100,
+            ),
+          );
+    const divideFee = (rate: number): number[] => {
+      const fee = roundToCurrencyCents(totalCents * rate, currency);
+      if (order.feeMode === "host") {
+        return members.map((member) => (member.id === order.hostId ? fee : 0));
+      }
+      return allocate(
+        fee,
+        order.feeMode === "equal"
+          ? members.map(() => 1)
+          : subtotals.map((cents) => Math.max(cents, 0)),
+      );
+    };
+    return {
+      index: members.findIndex((member) => member.id === currentMemberId.value),
+      subtotals,
+      divideFee,
+    };
+  });
+
   /** My food, before any fee — the part that depends on the split method. */
   const mySubtotal = computed(() => {
-    if (!groupOrder.value) return 0;
-
-    if (groupOrder.value.splitBillConfig.mode === "equal") {
-      const memberCount = groupOrder.value.members.length;
-      return memberCount > 0 ? totalAmount.value / memberCount : 0;
-    }
-
-    return myItems.value.reduce(
-      (sum, item) => sum + item.menuItemPrice * item.quantity,
-      0,
-    );
+    const preview = splitPreview.value;
+    return preview && preview.index >= 0
+      ? preview.subtotals[preview.index] / 100
+      : 0;
   });
 
   /**
@@ -590,21 +655,9 @@ export function useGroupOrder(options: {
    * pinned to the same cases and the same figures in their tests.
    */
   function myShareOfFee(rate: number): number {
-    if (!groupOrder.value || rate === 0) return 0;
-
-    const wholeFee = totalAmount.value * rate;
-    const feeMode = groupOrder.value.feeMode;
-
-    if (feeMode === "host") {
-      return isHost.value ? wholeFee : 0;
-    }
-
-    if (feeMode === "equal") {
-      const memberCount = groupOrder.value.members.length;
-      return memberCount > 0 ? wholeFee / memberCount : 0;
-    }
-
-    return mySubtotal.value * rate;
+    const preview = splitPreview.value;
+    if (!preview || preview.index < 0 || rate === 0) return 0;
+    return preview.divideFee(rate)[preview.index] / 100;
   }
 
   const myServiceCharge = computed(() =>
@@ -1203,7 +1256,8 @@ export function useGroupOrder(options: {
       );
       await loadGroupOrder(groupOrderId);
     } catch (submitError) {
-      if (isForbiddenError(submitError)) {
+      // A demo restaurant refuses with 403 too, but the host is still the host.
+      if (isForbiddenError(submitError) && !isDemoRefusal(submitError)) {
         throw annotateError(submitError, { isHostOnly: true });
       }
 
@@ -1242,6 +1296,10 @@ export function useGroupOrder(options: {
 
   function isForbiddenError(err: unknown): boolean {
     return getErrorStatus(err) === 403;
+  }
+
+  function isDemoRefusal(err: unknown): boolean {
+    return getOrderSubmitErrorCodeI18nKey(err) === "demoShop.noticeTitle";
   }
 
   function isBadRequestError(err: unknown): boolean {
