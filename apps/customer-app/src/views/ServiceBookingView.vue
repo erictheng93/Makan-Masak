@@ -478,23 +478,37 @@ async function loadService() {
   }
 }
 
+// Date @change and "check slots" can both fire a load; only the latest one
+// may write, or an older date's slots land over the newer ones.
+let availabilityRequest = 0;
+
 async function loadAvailability() {
   if (!serviceItem.value || !bookingDate.value) return;
+  const request = ++availabilityRequest;
   isLoadingSlots.value = true;
   errorMessage.value = "";
   selectedTime.value = "";
   try {
-    slots.value = await serviceBookingsApi.getAvailability({
+    const loaded = await serviceBookingsApi.getAvailability({
       serviceItemId: props.serviceItemId,
       date: bookingDate.value,
     });
+    if (request !== availabilityRequest) return;
+    slots.value = loaded;
+    // Keep a slot the diner picked while this load was in flight, if it is
+    // still open; resetting it booked a time they had not chosen.
+    const available = loaded.filter((slot) => slot.isAvailable);
     selectedTime.value =
-      slots.value.find((slot) => slot.isAvailable)?.timeSlot ?? "";
+      available.find((slot) => slot.timeSlot === selectedTime.value)
+        ?.timeSlot ??
+      available[0]?.timeSlot ??
+      "";
   } catch (error) {
+    if (request !== availabilityRequest) return;
     console.error("Load service booking availability failed:", error);
     errorMessage.value = t("serviceBooking.slotsFailed");
   } finally {
-    isLoadingSlots.value = false;
+    if (request === availabilityRequest) isLoadingSlots.value = false;
   }
 }
 

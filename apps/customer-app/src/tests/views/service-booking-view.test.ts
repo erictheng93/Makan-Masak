@@ -180,6 +180,87 @@ describe("ServiceBookingView", () => {
     ).toHaveLength(2);
   });
 
+  describe("slot selection across availability reloads", () => {
+    const twoOpenSlots = [
+      { timeSlot: "14:00", remaining: 2, isAvailable: true },
+      { timeSlot: "15:30", remaining: 2, isAvailable: true },
+    ];
+
+    function deferred<T>() {
+      let resolve!: (value: T) => void;
+      const promise = new Promise<T>((r) => (resolve = r));
+      return { promise, resolve };
+    }
+
+    // The customer-real E2E caught this: filling the date fires @change and
+    // "check slots" fires a second load; a slot picked while that second load
+    // was in flight was reset to the first slot, and the booking went in for
+    // 14:00 instead of the 15:30 the diner chose.
+    it("keeps a slot the diner picked while a reload was in flight", async () => {
+      vi.mocked(serviceBookingsApi.getAvailability).mockResolvedValue(
+        twoOpenSlots,
+      );
+      const wrapper = mountView();
+      await flushPromises();
+
+      const reload = deferred<typeof twoOpenSlots>();
+      vi.mocked(serviceBookingsApi.getAvailability).mockReturnValueOnce(
+        reload.promise,
+      );
+      await wrapper
+        .find('[data-testid="service-booking-load-slots"]')
+        .trigger("click");
+      await wrapper
+        .findAll('[data-testid="service-booking-slot"]')[1]
+        .trigger("click");
+      reload.resolve(twoOpenSlots);
+      await flushPromises();
+
+      await wrapper.find('[data-testid="service-booking-name"]').setValue("王");
+      await wrapper
+        .find('[data-testid="service-booking-phone"]')
+        .setValue("0911222333");
+      await wrapper
+        .get('[data-testid="service-booking-create"]')
+        .trigger("submit");
+      await flushPromises();
+
+      expect(serviceBookingsApi.createBooking).toHaveBeenCalledOnce();
+      expect(serviceBookingsApi.createBooking).toHaveBeenCalledWith(
+        expect.objectContaining({ bookingTime: "15:30" }),
+      );
+    });
+
+    it("ignores an older availability response that lands last", async () => {
+      vi.mocked(serviceBookingsApi.getAvailability).mockResolvedValue(
+        twoOpenSlots,
+      );
+      const wrapper = mountView();
+      await flushPromises();
+
+      const older = deferred<typeof twoOpenSlots>();
+      const newer = deferred<typeof twoOpenSlots>();
+      vi.mocked(serviceBookingsApi.getAvailability)
+        .mockReturnValueOnce(older.promise)
+        .mockReturnValueOnce(newer.promise);
+      const date = wrapper.find('[data-testid="service-booking-date"]');
+      // setValue fires the input's @change, i.e. one load per date.
+      await date.setValue("2026-12-01");
+      await date.setValue("2026-12-02");
+      expect(serviceBookingsApi.getAvailability).toHaveBeenCalledTimes(3);
+
+      newer.resolve([{ timeSlot: "09:00", remaining: 1, isAvailable: true }]);
+      await flushPromises();
+      older.resolve(twoOpenSlots);
+      await flushPromises();
+
+      const slots = wrapper.findAll('[data-testid="service-booking-slot"]');
+      expect(slots.map((slot) => slot.text())).toEqual([
+        expect.stringContaining("09:00"),
+      ]);
+    });
+  });
+
   describe("price currency", () => {
     it("formats the service price in this restaurant's currency when opened cold", async () => {
       vi.mocked(menuApi.getRestaurant).mockResolvedValue({
