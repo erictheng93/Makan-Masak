@@ -250,12 +250,12 @@ export class SearchIndexSyncService {
       affectedDistricts.add(options.previousDistrict);
     if (restaurant.district) affectedDistricts.add(restaurant.district);
 
-    await Promise.all(
-      Array.from(affectedDistricts).map((district) =>
+    await Promise.all([
+      ...Array.from(affectedDistricts).map((district) =>
         this.kv.delete(`search:restaurants:hours2:district:${district}`),
       ),
-    );
-    await this.bumpSearchVersion();
+      this.bumpSearchVersion(),
+    ]);
   }
 
   async onCategoryChanged(categoryId: number): Promise<void> {
@@ -342,8 +342,10 @@ export class SearchIndexSyncService {
   }
 
   private async bumpSearchVersion(): Promise<void> {
-    await this.kv.put(KV_SEARCH_VERSION_KEY, String(Date.now()));
-    await this.bumpMarketPublicCacheVersion();
+    await Promise.all([
+      this.kv.put(KV_SEARCH_VERSION_KEY, String(Date.now())),
+      this.bumpMarketPublicCacheVersion(),
+    ]);
   }
 
   private async bumpMarketPublicCacheVersion(): Promise<void> {

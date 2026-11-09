@@ -171,8 +171,18 @@ export class RestaurantsService {
   private cache: CacheService;
   private logger: ConsoleLogger;
   private env: Env;
+  private waitUntil?: (promise: Promise<unknown>) => void;
 
-  constructor(db: Env["DB"], env: Env, kv?: Env["CACHE_KV"]) {
+  /**
+   * `waitUntil` (the request's `executionCtx.waitUntil`) lets a write return
+   * before its list-cache sweep finishes. Without it the sweep is awaited.
+   */
+  constructor(
+    db: Env["DB"],
+    env: Env,
+    kv?: Env["CACHE_KV"],
+    waitUntil?: (promise: Promise<unknown>) => void,
+  ) {
     this.dbService = new DatabaseRestaurantService(db, env);
     this.db = drizzle(db);
     this.subscriptionService = new SubscriptionService(db);
@@ -180,6 +190,7 @@ export class RestaurantsService {
     this.cache = kv ? new KVCacheService(kv) : new NoopCacheService();
     this.logger = new ConsoleLogger("RestaurantsService");
     this.env = env;
+    this.waitUntil = waitUntil;
   }
 
   /**
@@ -395,9 +406,10 @@ export class RestaurantsService {
       const restaurant = await this.dbService.updateRestaurant(id, data);
 
       if (restaurant) {
-        // Invalidate caches
+        // The detail key is read straight back by the settings page, so it
+        // goes before the response; the list sweep (3 KV lists) can trail it.
         await this.cache.delete(`restaurant:${id}`);
-        await this.invalidateListCaches();
+        await this.inBackground(this.invalidateListCaches());
 
         // Emit event
         await this.emitEvent({
@@ -1016,9 +1028,32 @@ export class RestaurantsService {
       "restaurants:popular*",
     ];
 
-    for (const pattern of patterns) {
-      await this.cache.clear(pattern);
+    await Promise.all(patterns.map((pattern) => this.cache.clear(pattern)));
+  }
+
+  /** Hand a best-effort task to waitUntil when there is one; else await it. */
+  private async inBackground(task: Promise<unknown>): Promise<void> {
+    const guarded = task.catch((error) => {
+      this.logger.error("Background task failed", error as Error);
+    });
+    if (this.waitUntil) {
+      this.waitUntil(guarded);
+      return;
     }
+    await guarded;
+  }
+
+  /**
+   * District only, from D1 — for callers that need the pre-update value and
+   * should not pay getRestaurant()'s cache read/fill to get it.
+   */
+  async getRestaurantDistrict(id: string): Promise<string | null> {
+    const [row] = await this.db
+      .select({ district: restaurants.district })
+      .from(restaurants)
+      .where(eq(restaurants.id, id))
+      .limit(1);
+    return row?.district ?? null;
   }
 
   private async bumpMarketPublicCacheVersion(): Promise<void> {
@@ -1181,7 +1216,11 @@ export class RestaurantsService {
       this.logger.debug("Updating shop mode", { id, enabled, settings });
 
       if (enabled) {
-        const restaurant = await this.getRestaurant(id);
+        // Straight from D1: the cached getRestaurant() misses right after any
+        // save and would spend a KV write on a key deleted a few lines below.
+        const restaurant = (await this.dbService.getRestaurant(
+          id,
+        )) as Restaurant | null;
         if (!restaurant) {
           throw badRequest("Restaurant not found", "RESTAURANT_NOT_FOUND");
         }
@@ -1195,10 +1234,11 @@ export class RestaurantsService {
 
       await this.dbService.updateShopMode(id, enabled, settings);
 
-      // Invalidate caches
-      await this.cache.delete(`restaurant:${id}`);
-      await this.cache.delete(`restaurant:${id}:shop-qr`);
-      await this.invalidateListCaches();
+      await Promise.all([
+        this.cache.delete(`restaurant:${id}`),
+        this.cache.delete(`restaurant:${id}:shop-qr`),
+      ]);
+      await this.inBackground(this.invalidateListCaches());
 
       this.logger.info("Shop mode updated successfully", { id, enabled });
     } catch (error) {

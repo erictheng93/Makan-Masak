@@ -34,6 +34,7 @@ const restaurantFns = vi.hoisted(() => ({
   updateServiceItem: vi.fn(),
   deleteServiceItem: vi.fn(),
   getRestaurant: vi.fn(),
+  getRestaurantDistrict: vi.fn(),
   updateRestaurant: vi.fn(),
   deactivateRestaurant: vi.fn(),
   getRestaurantStats: vi.fn(),
@@ -58,6 +59,7 @@ vi.mock("../services/RestaurantsService", () => ({
     updateServiceItem = restaurantFns.updateServiceItem;
     deleteServiceItem = restaurantFns.deleteServiceItem;
     getRestaurant = restaurantFns.getRestaurant;
+    getRestaurantDistrict = restaurantFns.getRestaurantDistrict;
     updateRestaurant = restaurantFns.updateRestaurant;
     deactivateRestaurant = restaurantFns.deactivateRestaurant;
     getRestaurantStats = restaurantFns.getRestaurantStats;
@@ -197,6 +199,8 @@ beforeEach(() => {
   });
   restaurantFns.updateRestaurant.mockResolvedValue({ id: "rest-1" });
   restaurantFns.deactivateRestaurant.mockResolvedValue(true);
+  restaurantFns.getRestaurantDistrict.mockResolvedValue("Central");
+  syncFns.onRestaurantChanged.mockResolvedValue(undefined);
   restaurantFns.getRestaurantStats.mockResolvedValue({ totalOrders: 3 });
   restaurantFns.generateShopQrCode.mockResolvedValue({ qrCode: "SHOP-1-1" });
   restaurantFns.regenerateShopQrCode.mockResolvedValue({ qrCode: "SHOP-1-2" });
@@ -418,7 +422,7 @@ describe("restaurants routes", () => {
       supportsTakeaway: true,
     });
     expect(res.status).toBe(200);
-    expect(restaurantFns.getRestaurant).toHaveBeenCalledWith("rest-1");
+    expect(restaurantFns.getRestaurantDistrict).toHaveBeenCalledWith("rest-1");
     expect(restaurantFns.updateRestaurant).toHaveBeenCalledWith("rest-1", {
       name: "Updated",
       supportsTakeaway: true,
@@ -434,6 +438,22 @@ describe("restaurants routes", () => {
     res = await request("/rest-1", "DELETE");
     expect(res.status).toBe(200);
     expect(restaurantFns.deactivateRestaurant).toHaveBeenCalledWith("rest-1");
+  });
+
+  it("retries a failed search sync once and still reports the save", async () => {
+    auth.user = { id: "user-7", username: "admin", role: 0 };
+    syncFns.onRestaurantChanged
+      .mockRejectedValueOnce(new Error("D1 blip"))
+      .mockRejectedValueOnce(new Error("D1 still down"));
+
+    const res = await request("/rest-1", "PUT", { name: "Updated" });
+
+    expect(res.status).toBe(200);
+    expect(restaurantFns.updateRestaurant).toHaveBeenCalledOnce();
+    expect(syncFns.onRestaurantChanged).toHaveBeenCalledTimes(2);
+    expect(syncFns.onRestaurantChanged).toHaveBeenLastCalledWith("rest-1", {
+      previousDistrict: "Central",
+    });
   });
 
   it("only lets admins change isActive on restaurant update", async () => {

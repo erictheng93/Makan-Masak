@@ -17,11 +17,16 @@
           {{ t("settings.resetDefaults") }}
         </button>
         <button
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          :disabled="isSavingSettings"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           data-testid="settings-save"
           @click="saveSettings"
         >
-          {{ t("settings.saveSettings") }}
+          {{
+            isSavingSettings
+              ? t("settings.qrcode.saving")
+              : t("settings.saveSettings")
+          }}
         </button>
       </div>
     </div>
@@ -1992,6 +1997,7 @@ const activeTab = ref(
 );
 const serviceItemsSection = ref<HTMLElement | null>(null);
 const showSuccessMessage = ref(false);
+const isSavingSettings = ref(false);
 const isMarketServiceGapContext = computed(
   () => route.query.source === "market-gap" && route.query.gap === "services",
 );
@@ -2430,6 +2436,8 @@ const currentBusinessHours = ref<Record<
 > | null>(null);
 
 const saveSettings = async () => {
+  if (isSavingSettings.value) return;
+  isSavingSettings.value = true;
   try {
     const restaurantId = authStore.restaurantId;
     if (restaurantId) {
@@ -2512,6 +2520,8 @@ const saveSettings = async () => {
   } catch (error) {
     console.error("Failed to save settings:", error);
     toast.error(t("settings.alerts.saveFailed"));
+  } finally {
+    isSavingSettings.value = false;
   }
 };
 

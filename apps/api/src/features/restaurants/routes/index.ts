@@ -84,6 +84,17 @@ function assertCanManageRestaurant(
  * GET / - Get restaurants list (public API)
  * Query parameters: page, limit, type, district, isAvailable
  */
+/** executionCtx throws outside the Workers runtime (unit tests); fall back to awaiting. */
+function getWaitUntil(
+  c: Context,
+): ((promise: Promise<unknown>) => void) | undefined {
+  try {
+    return c.executionCtx.waitUntil.bind(c.executionCtx);
+  } catch {
+    return undefined;
+  }
+}
+
 app.get("/", optionalAuth, validateQuery(restaurantSchemas.list), async (c) => {
   logger.debug("Getting restaurants list", {
     query: c.get("validatedQuery"),
@@ -716,10 +727,12 @@ app.put(
     const { id } = c.get("validatedParams");
     const data = c.get("validatedBody");
     const user = c.get("user");
+    const waitUntil = getWaitUntil(c);
     const restaurantsService = new RestaurantsService(
       c.env.DB,
       c.env,
       c.env.CACHE_KV,
+      waitUntil,
     );
 
     // Shop owners can only update their own restaurant
@@ -732,17 +745,35 @@ app.put(
       throw forbidden("Only admins can change restaurant active status");
     }
 
-    const previousRestaurant = await restaurantsService.getRestaurant(id);
+    const previousDistrict = await restaurantsService.getRestaurantDistrict(id);
     const restaurant = await restaurantsService.updateRestaurant(id, data);
 
     if (!restaurant) {
       throw notFound("Restaurant not found");
     }
 
-    const sync = createSearchIndexSync(c.env);
-    await sync.onRestaurantChanged(id, {
-      previousDistrict: previousRestaurant?.district,
-    });
+    // The search index is eventually consistent anyway; the owner should not
+    // wait ~1.5s of D1 + KV writes for it, nor see a 500 for a save that landed.
+    // onRestaurantChanged rebuilds from current D1 state, so a retry is safe;
+    // one retry covers a transient D1/KV blip, more would not fix a real bug.
+    const syncSearchIndex = async () =>
+      createSearchIndexSync(c.env).onRestaurantChanged(id, {
+        previousDistrict,
+      });
+    const sync = syncSearchIndex()
+      .catch(async (error) => {
+        logger.warn("Search index sync failed, retrying once", {
+          id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        return syncSearchIndex();
+      })
+      .catch((error) => {
+        logger.error("Search index sync failed", error as Error, { id });
+      });
+    if (waitUntil) waitUntil(sync);
+    else await sync;
 
     return c.json(
       {
@@ -1024,6 +1055,7 @@ app.put(
       c.env.DB,
       c.env,
       c.env.CACHE_KV,
+      getWaitUntil(c),
     );
 
     // Shop owners can only manage their own restaurant

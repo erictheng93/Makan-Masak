@@ -82,7 +82,7 @@ vi.mock("@makanmasak/database", async (importOriginal) => {
 import { RestaurantsService } from "./RestaurantsService";
 import { badRequest } from "../../../shared/utils/api-error";
 
-function createService() {
+function createService(waitUntil?: (promise: Promise<unknown>) => void) {
   return new RestaurantsService(
     {} as D1Database,
     {
@@ -95,6 +95,7 @@ function createService() {
       MANAGEMENT_API: mocks.managementApi,
     } as unknown as Env,
     {} as KVNamespace,
+    waitUntil,
   );
 }
 
@@ -252,6 +253,22 @@ describe("RestaurantsService", () => {
       "Emitting restaurant event",
       expect.objectContaining({ type: "RESTAURANT_UPDATED" }),
     );
+  });
+
+  it("hands the list-cache sweep to waitUntil instead of awaiting it", async () => {
+    mocks.dbService.updateRestaurant.mockResolvedValue(restaurant);
+    const pending = new Promise<void>(() => undefined); // never settles
+    for (let i = 0; i < 3; i++) mocks.cache.clear.mockReturnValueOnce(pending);
+    const waitUntil = vi.fn();
+
+    await expect(
+      createService(waitUntil).updateRestaurant("restaurant-1", { name: "x" }),
+    ).resolves.toBe(restaurant);
+
+    expect(mocks.cache.delete).toHaveBeenCalledWith("restaurant:restaurant-1");
+    expect(waitUntil).toHaveBeenCalledOnce();
+    expect(waitUntil).toHaveBeenCalledWith(expect.any(Promise));
+    expect(mocks.cache.clear).toHaveBeenCalledTimes(3);
   });
 
   it("rejects a currency change when any order exists", async () => {
