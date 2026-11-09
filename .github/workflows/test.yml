@@ -508,7 +508,13 @@ jobs:
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: 📥 安裝依賴
-        run: pnpm install --frozen-lockfile
+        # better-sqlite3's Node 24 prebuilt download from GitHub intermittently
+        # 504s, and this image has no compiler for the source-build fallback.
+        run: |
+          pnpm install --frozen-lockfile || {
+            apt-get update && apt-get install -y --no-install-recommends make g++ python3
+            pnpm install --frozen-lockfile
+          }
 
       - name: 🏗️ 建置內部套件
         # Only the API's closure is built: it is the side that imports workspace
@@ -692,7 +698,13 @@ jobs:
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: 📥 安裝依賴
-        run: pnpm install --frozen-lockfile
+        # better-sqlite3's Node 24 prebuilt download from GitHub intermittently
+        # 504s, and this image has no compiler for the source-build fallback.
+        run: |
+          pnpm install --frozen-lockfile || {
+            apt-get update && apt-get install -y --no-install-recommends make g++ python3
+            pnpm install --frozen-lockfile
+          }
 
       - name: 🏗️ 建置內部套件
         # The API's closure also covers what realtime (shared-types) and
@@ -845,7 +857,13 @@ jobs:
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: 📥 安裝依賴
-        run: pnpm install --frozen-lockfile
+        # better-sqlite3's Node 24 prebuilt download from GitHub intermittently
+        # 504s, and this image has no compiler for the source-build fallback.
+        run: |
+          pnpm install --frozen-lockfile || {
+            apt-get update && apt-get install -y --no-install-recommends make g++ python3
+            pnpm install --frozen-lockfile
+          }
 
       - name: 🏗️ 建置 customer-app + admin-dashboard + kitchen-display
         env:
