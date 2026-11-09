@@ -210,8 +210,9 @@ describe("group orders routes", () => {
     };
     listGroupOrders.mockReset();
     createGroupOrder.mockReset();
-    dineIn.assertDineInQr.mockReset();
-    dineIn.enforceGuestOrderThrottle.mockReset();
+    // The real ones are async; a bare mock would return undefined.
+    dineIn.assertDineInQr.mockReset().mockResolvedValue(undefined);
+    dineIn.enforceGuestOrderThrottle.mockReset().mockResolvedValue(undefined);
     dineIn.restaurant.value = {
       isActive: true,
       isAvailable: true,
@@ -342,6 +343,125 @@ describe("group orders routes", () => {
       expect(meterEmit).not.toHaveBeenCalled();
     },
   );
+
+  it("answers create without waiting for the CREATED broadcast", async () => {
+    createGroupOrder.mockResolvedValue({
+      success: true,
+      data: { groupOrderId, shareCode: "CREATE1" },
+    });
+    broadcastEvent.mockReturnValue(new Promise(() => undefined));
+    const waitUntil = vi.fn();
+
+    const response = await routes.fetch(
+      new Request("https://test/create", {
+        method: "POST",
+        body: JSON.stringify({
+          restaurantId: "restaurant-1",
+          tableId: 7,
+          qrCode: "signed-qr",
+        }),
+      }),
+      createEnv() as never,
+      { waitUntil, passThroughOnException: vi.fn() } as never,
+    );
+
+    expect(response.status).toBe(200);
+    expect(broadcastEvent).toHaveBeenCalledOnce();
+    expect(waitUntil).toHaveBeenCalledWith(expect.any(Promise));
+  });
+
+  it("does not fail create when the background broadcast rejects", async () => {
+    createGroupOrder.mockResolvedValue({
+      success: true,
+      data: { groupOrderId, shareCode: "CREATE1" },
+    });
+    broadcastEvent.mockRejectedValue(new Error("realtime down"));
+    const scheduled: Promise<unknown>[] = [];
+
+    const response = await withSilencedRouteError(async () => {
+      const res = await routes.fetch(
+        new Request("https://test/create", {
+          method: "POST",
+          body: JSON.stringify({
+            restaurantId: "restaurant-1",
+            tableId: 7,
+            qrCode: "signed-qr",
+          }),
+        }),
+        createEnv() as never,
+        {
+          waitUntil: (p: Promise<unknown>) => scheduled.push(p),
+          passThroughOnException: vi.fn(),
+        } as never,
+      );
+      await Promise.all(scheduled);
+      return res;
+    });
+
+    expect(response.status).toBe(200);
+  });
+
+  it("rejects a throttled anonymous create before the service runs", async () => {
+    currentUser.value = undefined as unknown as AuthUser;
+    dineIn.enforceGuestOrderThrottle.mockRejectedValue(
+      new ApiError("RATE_LIMITED", "slow down", 429),
+    );
+
+    const response = await routes.fetch(
+      new Request("https://test/create", {
+        method: "POST",
+        body: JSON.stringify({
+          restaurantId: "restaurant-1",
+          tableId: 7,
+          qrCode: "signed-qr",
+        }),
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(429);
+    expect(createGroupOrder).not.toHaveBeenCalled();
+    expect(broadcastEvent).not.toHaveBeenCalled();
+  });
+
+  it("rejects a forged QR before inserting or broadcasting", async () => {
+    dineIn.assertDineInQr.mockRejectedValue(
+      new ApiError("QR_VERIFICATION_FAILED", "bad qr", 403),
+    );
+
+    const response = await routes.fetch(
+      new Request("https://test/create", {
+        method: "POST",
+        body: JSON.stringify({
+          restaurantId: "restaurant-1",
+          tableId: 7,
+          qrCode: "forged",
+        }),
+      }),
+      createEnv() as never,
+    );
+
+    expect(response.status).toBe(403);
+    expect(createGroupOrder).not.toHaveBeenCalled();
+    expect(meterEmit).not.toHaveBeenCalled();
+    expect(broadcastEvent).not.toHaveBeenCalled();
+  });
+
+  it("passes waitUntil to getGroupOrder so the summary cache write is deferred", async () => {
+    getGroupOrder.mockResolvedValue({ groupOrder: { id: groupOrderId } });
+
+    const response = await routes.fetch(
+      new Request(`https://test/${groupOrderId}`),
+      createEnv() as never,
+      { waitUntil: vi.fn(), passThroughOnException: vi.fn() } as never,
+    );
+
+    expect(response.status).toBe(200);
+    expect(getGroupOrder).toHaveBeenCalledWith(
+      groupOrderId,
+      expect.any(Function),
+    );
+  });
 
   it("rejects a table create without a qrCode before calling the service", async () => {
     const response = await routes.fetch(

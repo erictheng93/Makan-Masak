@@ -810,7 +810,10 @@ export class GroupOrdersService implements IGroupOrderService {
   /**
    * Get group order details with members and cart items
    */
-  async getGroupOrder(groupOrderId: string): Promise<GroupOrderSummary | null> {
+  async getGroupOrder(
+    groupOrderId: string,
+    waitUntil?: (promise: Promise<unknown>) => void,
+  ): Promise<GroupOrderSummary | null> {
     const timer = this.performance.startTimer("getGroupOrder");
 
     try {
@@ -822,61 +825,63 @@ export class GroupOrdersService implements IGroupOrderService {
         return cached as GroupOrderSummary;
       }
 
-      // Get group order
-      const groupOrderRows = await this.db
-        .select()
-        .from(groupOrders)
-        .where(eq(groupOrders.id, groupOrderId));
+      // Every read keys on groupOrderId alone, so they share one D1 round
+      // trip's latency instead of stacking five. A missing group costs four
+      // empty reads, which is the rare path.
+      const [
+        groupOrderRows,
+        members,
+        cartItemsWithMenu,
+        activities,
+        splitBillRows,
+      ] = await Promise.all([
+        this.db
+          .select()
+          .from(groupOrders)
+          .where(eq(groupOrders.id, groupOrderId)),
+        this.db
+          .select()
+          .from(groupMembers)
+          .where(
+            and(
+              eq(groupMembers.groupOrderId, groupOrderId),
+              isNull(groupMembers.leftAt),
+            ),
+          )
+          .orderBy(desc(groupMembers.role), asc(groupMembers.joinedAt)),
+        this.db
+          .select({
+            cartItem: groupCartItems,
+            menuItemName: menuItems.name,
+            menuItemPriceCents: menuItems.priceCents,
+            menuItemImageUrl: menuItems.imageUrl,
+          })
+          .from(groupCartItems)
+          .innerJoin(menuItems, eq(groupCartItems.menuItemId, menuItems.id))
+          .where(
+            and(
+              eq(groupCartItems.groupOrderId, groupOrderId),
+              eq(groupCartItems.status, "active"),
+            ),
+          )
+          .orderBy(asc(groupCartItems.addedAt)),
+        this.db
+          .select()
+          .from(groupActivityLogs)
+          .where(eq(groupActivityLogs.groupOrderId, groupOrderId))
+          .orderBy(desc(groupActivityLogs.createdAt))
+          .limit(20),
+        // Empty until the host splits the bill.
+        this.db
+          .select()
+          .from(splitBills)
+          .where(eq(splitBills.groupOrderId, groupOrderId)),
+      ]);
 
       const groupOrder = groupOrderRows[0];
-
       if (!groupOrder) {
         return null;
       }
-
-      // Get members
-      const members = await this.db
-        .select()
-        .from(groupMembers)
-        .where(
-          and(
-            eq(groupMembers.groupOrderId, groupOrderId),
-            isNull(groupMembers.leftAt),
-          ),
-        )
-        .orderBy(desc(groupMembers.role), asc(groupMembers.joinedAt));
-
-      // Get cart items with menu item details
-      const cartItemsWithMenu = await this.db
-        .select({
-          cartItem: groupCartItems,
-          menuItemName: menuItems.name,
-          menuItemPriceCents: menuItems.priceCents,
-          menuItemImageUrl: menuItems.imageUrl,
-        })
-        .from(groupCartItems)
-        .innerJoin(menuItems, eq(groupCartItems.menuItemId, menuItems.id))
-        .where(
-          and(
-            eq(groupCartItems.groupOrderId, groupOrderId),
-            eq(groupCartItems.status, "active"),
-          ),
-        )
-        .orderBy(asc(groupCartItems.addedAt));
-
-      // Get recent activities
-      const activities = await this.db
-        .select()
-        .from(groupActivityLogs)
-        .where(eq(groupActivityLogs.groupOrderId, groupOrderId))
-        .orderBy(desc(groupActivityLogs.createdAt))
-        .limit(20);
-
-      // Empty until the host splits the bill.
-      const splitBillRows = await this.db
-        .select()
-        .from(splitBills)
-        .where(eq(splitBills.groupOrderId, groupOrderId));
 
       const summary: GroupOrderSummary = {
         groupOrder: this.formatGroupOrder(groupOrder),
@@ -904,8 +909,15 @@ export class GroupOrdersService implements IGroupOrderService {
         })),
       };
 
-      // Cache for 5 minutes
-      await this.cache.set(`group_order_summary:${groupOrderId}`, summary, 300);
+      // Cache for 5 minutes. A KV write is ~420ms and the response does not
+      // depend on it, so hand it to the caller's waitUntil when there is one.
+      const write = this.cache
+        .set(`group_order_summary:${groupOrderId}`, summary, 300)
+        .catch((error) => {
+          this.logger.error("Failed to cache group order summary", error);
+        });
+      if (waitUntil) waitUntil(write);
+      else await write;
 
       return summary;
     } catch (error) {

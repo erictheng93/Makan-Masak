@@ -701,6 +701,80 @@ describe("GroupOrdersService formatting and cache behavior", () => {
     await expect(service.getGroupOrder("group-1")).resolves.toEqual(cached);
   });
 
+  describe("summary cache write", () => {
+    const groupOrder = {
+      id: "group-1",
+      restaurantId: "restaurant-1",
+      tableId: null,
+      shareCode: "ABC123",
+      createdBy: 7,
+      status: "active",
+      expiresAt: new Date("2026-06-08T00:00:00.000Z"),
+      lockedAt: null,
+      completedAt: null,
+      settings: { maxMembers: 4 },
+      totalAmount: 99,
+      totalAmountCents: 12345,
+      createdAt: new Date("2026-06-07T00:00:00.000Z"),
+      updatedAt: new Date("2026-06-07T00:00:00.000Z"),
+    };
+    const fixtures = () =>
+      createDb({
+        groupOrders: [[groupOrder]],
+        groupMembers: [[]],
+        groupCartItems: [[]],
+        groupActivityLogs: [[]],
+        splitBills: [[]],
+      });
+
+    it("hands the KV write to waitUntil instead of awaiting it", async () => {
+      const { kv } = createKV();
+      // A write that never settles: awaiting it would hang this test.
+      (kv.put as ReturnType<typeof vi.fn>).mockReturnValue(
+        new Promise(() => undefined),
+      );
+      const service = new GroupOrdersService({} as D1Database, kv);
+      useDb(service, fixtures());
+      const waitUntil = vi.fn();
+
+      const result = await service.getGroupOrder("group-1", waitUntil);
+
+      expect(result).toMatchObject({ groupOrder: { id: "group-1" } });
+      expect(waitUntil).toHaveBeenCalledOnce();
+      expect(waitUntil).toHaveBeenCalledWith(expect.any(Promise));
+      expect(kv.put).toHaveBeenCalledWith(
+        "group_order_summary:group-1",
+        expect.any(String),
+        expect.objectContaining({ expirationTtl: 300 }),
+      );
+    });
+
+    it("logs a failed background write instead of leaving it unhandled", async () => {
+      const { kv } = createKV();
+      (kv.put as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error("kv down"),
+      );
+      const service = new GroupOrdersService({} as D1Database, kv);
+      useDb(service, fixtures());
+      const scheduled: Promise<unknown>[] = [];
+
+      await service.getGroupOrder("group-1", (p) => scheduled.push(p));
+
+      expect(scheduled).toHaveLength(1);
+      await expect(scheduled[0]).resolves.toBeUndefined();
+    });
+
+    it("still awaits the write when no waitUntil is supplied", async () => {
+      const { kv, values } = createKV();
+      const service = new GroupOrdersService({} as D1Database, kv);
+      useDb(service, fixtures());
+
+      await service.getGroupOrder("group-1");
+
+      expect(values.has("group_order_summary:group-1")).toBe(true);
+    });
+  });
+
   it("assembles and caches group order summaries from query results", async () => {
     const { kv, values } = createKV();
     const service = new GroupOrdersService({} as D1Database, kv);

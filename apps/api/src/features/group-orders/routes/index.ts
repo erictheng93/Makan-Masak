@@ -49,6 +49,35 @@ import {
 
 const app = new Hono<{ Bindings: Env }>();
 
+type WaitUntilContext = {
+  executionCtx: { waitUntil(promise: Promise<unknown>): void };
+};
+
+/** waitUntil when the runtime supplies a context; undefined in tests. */
+function getWaitUntil(
+  c: WaitUntilContext,
+): ((promise: Promise<unknown>) => void) | undefined {
+  try {
+    return c.executionCtx?.waitUntil?.bind(c.executionCtx);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Run after the response; a failure is logged, never unhandled. */
+async function afterResponse(
+  c: WaitUntilContext,
+  label: string,
+  work: Promise<unknown>,
+): Promise<void> {
+  const safe = work.catch((error) => {
+    console.error(`${label}.failed`, error);
+  });
+  const waitUntil = getWaitUntil(c);
+  if (waitUntil) waitUntil(safe);
+  else await safe;
+}
+
 async function resolveGroupOrderRestaurantId(
   groupOrderService: GroupOrdersService,
   groupOrderId: string,
@@ -339,12 +368,29 @@ app.post(
     // or seat QR. Anonymous hosts also get the guest-ordering gates; signed-in
     // hosts match the ordinary /orders path, which checks only the QR.
     if (data.tableId !== undefined) {
-      if (!user) await enforceGuestOrderThrottle(c, data.restaurantId);
-      const restaurant = await createDatabase(c.env.DB)
+      const tableId = data.tableId;
+      // The three checks are independent reads, so they overlap; all of them
+      // settle before anything is created. Errors surface in the original
+      // order: throttle, then restaurant state, then QR.
+      const throttle = user
+        ? Promise.resolve()
+        : enforceGuestOrderThrottle(c, data.restaurantId);
+      const restaurantLookup = createDatabase(c.env.DB)
         .select()
         .from(restaurants)
         .where(eq(restaurants.id, data.restaurantId))
         .get();
+      const qr = assertDineInQr(c.env, {
+        restaurantId: data.restaurantId,
+        tableId,
+        qrCode: data.qrCode,
+      });
+      // Rejections are consumed below in order; this stops an earlier throw
+      // from leaving a later one unhandled.
+      for (const p of [throttle, restaurantLookup, qr]) p.catch(() => {});
+
+      await throttle;
+      const restaurant = await restaurantLookup;
       if (!restaurant) throw notFound("Restaurant not found");
       if (!restaurant.isActive || !restaurant.isAvailable) {
         throw badRequest("Restaurant is currently unavailable");
@@ -353,11 +399,7 @@ app.post(
       if (!user && settings?.allowGuestOrders === false) {
         throw forbidden("Guest orders are not enabled for this restaurant");
       }
-      await assertDineInQr(c.env, {
-        restaurantId: data.restaurantId,
-        tableId: data.tableId,
-        qrCode: data.qrCode,
-      });
+      await qr;
     }
 
     const groupOrderService = new GroupOrdersService(c.env.DB, c.env.CACHE_KV);
@@ -369,20 +411,21 @@ app.post(
     if (!result.success) {
       throw badRequest(result.error ?? "Failed to create group order");
     }
-    await meterEmit(c, "orders.created", {
-      restaurantId: data.restaurantId,
-    });
-
-    await broadcastGroupOrderEvent(
-      c.env,
-      RealtimeEventType.GROUP_ORDER_CREATED,
-      {
+    // Nobody is in the room yet and the client ignores CREATED, so the
+    // broadcast does not have to hold up the response.
+    await afterResponse(
+      c,
+      "groupOrder.created.broadcast",
+      broadcastGroupOrderEvent(c.env, RealtimeEventType.GROUP_ORDER_CREATED, {
         groupOrderId: result.data?.groupOrderId,
         restaurantId: data.restaurantId,
         tableId: data.tableId,
         shareCode: result.data?.shareCode,
-      },
+      }),
     );
+    await meterEmit(c, "orders.created", {
+      restaurantId: data.restaurantId,
+    });
 
     return c.json({
       success: true,
@@ -893,7 +936,10 @@ app.get(
     const { groupOrderId } = c.get("validatedParams");
 
     const groupOrderService = new GroupOrdersService(c.env.DB, c.env.CACHE_KV);
-    const groupOrder = await groupOrderService.getGroupOrder(groupOrderId);
+    const groupOrder = await groupOrderService.getGroupOrder(
+      groupOrderId,
+      getWaitUntil(c),
+    );
 
     if (!groupOrder) {
       throw notFound("Group order not found");
