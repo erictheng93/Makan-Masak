@@ -407,6 +407,37 @@ describe("ServiceBookingService — capacity", () => {
     ).rejects.toMatchObject({ code: "SERVICE_SLOT_FULL" });
   });
 
+  it("deletes a slot only once nobody holds it", async () => {
+    const serviceId = await seedService({});
+    const slot = await service().createSlot({
+      restaurantId: RESTAURANT_ID,
+      serviceItemId: serviceId,
+      date: "2026-06-05",
+      timeSlot: "14:00",
+      maxCapacity: 2,
+    });
+    const booking = await service().createBooking({
+      restaurantId: RESTAURANT_ID,
+      serviceItemId: serviceId,
+      customerName: "Holder",
+      customerPhone: "0911000001",
+      bookingDate: "2026-06-05",
+      bookingTime: "14:00",
+    });
+
+    await expect(service().deleteSlot(slot.id)).rejects.toMatchObject({
+      code: "SERVICE_SLOT_HAS_BOOKINGS",
+    });
+    expect(await service().getSlot(slot.id)).not.toBeNull();
+
+    await service().cancelBooking(booking.id);
+    await service().deleteSlot(slot.id);
+    expect(await service().getSlot(slot.id)).toBeNull();
+    await expect(service().deleteSlot(slot.id)).rejects.toMatchObject({
+      code: "SERVICE_SLOT_NOT_FOUND",
+    });
+  });
+
   it("reserves slot capacity and rejects an overbooked slot", async () => {
     const serviceId = await seedService({});
     await seedSlot(serviceId, "2026-06-05", "14:00", 1);

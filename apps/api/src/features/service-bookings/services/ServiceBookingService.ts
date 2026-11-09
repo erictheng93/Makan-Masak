@@ -565,6 +565,42 @@ export class ServiceBookingService {
     return this.requireSlot(input.serviceItemId, input.date, input.timeSlot);
   }
 
+  async getSlot(slotId: string): Promise<ServiceBookingSlotRow | null> {
+    const [row] = await this.db
+      .select()
+      .from(serviceBookingSlots)
+      .where(eq(serviceBookingSlots.id, slotId))
+      .limit(1);
+    return row ?? null;
+  }
+
+  /**
+   * Remove a slot nobody holds. Soft-deleting a service leaves its slots
+   * behind (the FK cascade only fires on a hard delete), so this is how they
+   * go. A slot with live bookings is refused rather than orphaning them; the
+   * check sits in the DELETE itself so a booking racing it cannot slip in.
+   */
+  async deleteSlot(slotId: string): Promise<void> {
+    const deleted = await this.db
+      .delete(serviceBookingSlots)
+      .where(
+        and(
+          eq(serviceBookingSlots.id, slotId),
+          eq(serviceBookingSlots.currentBookings, 0),
+        ),
+      )
+      .returning({ id: serviceBookingSlots.id });
+    if (deleted.length > 0) return;
+
+    if (!(await this.getSlot(slotId))) {
+      throw notFound("Slot not found", "SERVICE_SLOT_NOT_FOUND");
+    }
+    throw conflict(
+      "Slot still has bookings; cancel them first",
+      "SERVICE_SLOT_HAS_BOOKINGS",
+    );
+  }
+
   /** Pay the (voucher-discounted) amount with 代幣 and confirm the booking. */
   async payWithCredits(input: {
     bookingId: string;

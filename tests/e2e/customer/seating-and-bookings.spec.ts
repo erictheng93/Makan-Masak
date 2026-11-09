@@ -471,18 +471,34 @@ test.describe("座位與預約流程 (real API)", () => {
       // A date a few days out, in the shop's timezone, so the slots are
       // neither in the past nor dependent on what "today" is in UTC.
       const date = shopDate(3);
-      await apiData("open slots", "/api/v1/service-bookings/slots/batch", {
-        ...auth,
-        method: "POST",
-        body: {
-          restaurantId: rid,
-          serviceItemId: serviceItem.id,
-          startDate: date,
-          endDate: date,
-          timeSlots: ["14:00", "15:30"],
-          maxCapacity: 2,
+      const opened = await apiData<{ slots: { id: string }[] }>(
+        "open slots",
+        "/api/v1/service-bookings/slots/batch",
+        {
+          ...auth,
+          method: "POST",
+          body: {
+            restaurantId: rid,
+            serviceItemId: serviceItem.id,
+            startDate: date,
+            endDate: date,
+            timeSlots: ["14:00", "15:30"],
+            maxCapacity: 2,
+          },
         },
-      });
+      );
+      // Deleting the service is a soft delete, so its slots would outlive it.
+      // Registered before the booking's cancel, so it runs after it (LIFO):
+      // a slot that still holds a booking cannot be deleted.
+      for (const slot of opened.slots) {
+        localCleanup.add(`delete service slot ${slot.id}`, async () => {
+          const result = await apiRequest(
+            `/api/v1/service-bookings/slots/${slot.id}`,
+            { ...auth, method: "DELETE" },
+          );
+          if (!result.ok) throw new Error(`HTTP ${result.status}`);
+        });
+      }
 
       await page.goto(`/restaurant/${rid}/services/${serviceItem.id}/book`);
       await expect(

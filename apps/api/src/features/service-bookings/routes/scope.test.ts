@@ -54,6 +54,8 @@ const confirmCash = vi.hoisted(() => vi.fn());
 const createSlot = vi.hoisted(() => vi.fn());
 const batchCreateSlots = vi.hoisted(() => vi.fn());
 const blockSlot = vi.hoisted(() => vi.fn());
+const getSlot = vi.hoisted(() => vi.fn());
+const deleteSlot = vi.hoisted(() => vi.fn());
 
 vi.mock("../services/ServiceBookingService", () => ({
   MAX_BATCH_SLOT_CREATION_COUNT: 1000,
@@ -64,6 +66,8 @@ vi.mock("../services/ServiceBookingService", () => ({
     createSlot = createSlot;
     batchCreateSlots = batchCreateSlots;
     blockSlot = blockSlot;
+    getSlot = getSlot;
+    deleteSlot = deleteSlot;
   },
 }));
 
@@ -115,6 +119,8 @@ beforeEach(() => {
     currentBookings: 0,
     isAvailable: 0,
   });
+  getSlot.mockResolvedValue({ id: "slot-1", restaurantId: "rest-B" });
+  deleteSlot.mockResolvedValue(undefined);
   auth.user = {
     id: "user-1",
     username: "owner",
@@ -303,5 +309,26 @@ describe("service-bookings staff route scoping", () => {
     });
     expect(res.status).toBe(403);
     expect(blockSlot).not.toHaveBeenCalled();
+  });
+
+  it("forbids a non-admin from deleting another restaurant's slot", async () => {
+    const res = await req("/slots/slot-1", "DELETE");
+    expect(res.status).toBe(403);
+    expect(getSlot).toHaveBeenCalledWith("slot-1");
+    expect(deleteSlot).not.toHaveBeenCalled();
+  });
+
+  it("lets an owner delete a slot of their own restaurant", async () => {
+    getSlot.mockResolvedValue({ id: "slot-1", restaurantId: "rest-A" });
+    const res = await req("/slots/slot-1", "DELETE");
+    expect(res.status).toBe(200);
+    expect(deleteSlot).toHaveBeenCalledWith("slot-1");
+  });
+
+  it("returns 404 for a slot that does not exist", async () => {
+    getSlot.mockResolvedValue(null);
+    const res = await req("/slots/missing", "DELETE");
+    expect(res.status).toBe(404);
+    expect(deleteSlot).not.toHaveBeenCalled();
   });
 });

@@ -482,6 +482,15 @@ app.post("/slots/block", requireRole([0, 1]), async (c) => {
   return c.json({ success: true, data: { slot } });
 });
 
+app.delete("/slots/:slotId", requireRole([0, 1]), async (c) => {
+  const service = new ServiceBookingService(c.env);
+  const slot = await service.getSlot(c.req.param("slotId") ?? "");
+  if (!slot) throw notFound("Slot not found", "SERVICE_SLOT_NOT_FOUND");
+  assertRestaurantScope(c.get("user"), slot.restaurantId);
+  await service.deleteSlot(slot.id);
+  return c.json({ success: true, data: { id: slot.id } });
+});
+
 app.get("/reminders/due", requireRole([0, 1, 3, 4]), async (c) => {
   const user = c.get("user");
   const requested = c.req.query("restaurantId") ?? "";
