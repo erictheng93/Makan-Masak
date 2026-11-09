@@ -565,15 +565,21 @@ export class GroupOrdersService implements IGroupOrderService {
       const groupOrder = groupOrderRows[0];
       if (!groupOrder) return { found: false };
 
-      const memberRows = await this.db
-        .select()
-        .from(groupMembers)
-        .where(
-          and(
-            eq(groupMembers.groupOrderId, groupOrder.id),
-            isNull(groupMembers.leftAt),
+      const [memberRows, restaurantRows] = await Promise.all([
+        this.db
+          .select()
+          .from(groupMembers)
+          .where(
+            and(
+              eq(groupMembers.groupOrderId, groupOrder.id),
+              isNull(groupMembers.leftAt),
+            ),
           ),
-        );
+        this.db
+          .select({ name: restaurants.name })
+          .from(restaurants)
+          .where(eq(restaurants.id, groupOrder.restaurantId)),
+      ]);
 
       const host = memberRows.find((member) => member.role === "creator");
       const settings = (groupOrder.settings || {}) as GroupOrderSettings;
@@ -583,6 +589,8 @@ export class GroupOrdersService implements IGroupOrderService {
         data: {
           groupOrderId: groupOrder.id,
           restaurantId: groupOrder.restaurantId,
+          // The invitee arrives from a shared link with no other way to tell which shop this is.
+          restaurantName: restaurantRows[0]?.name ?? null,
           hostName: host?.name || "Host",
           memberCount: memberRows.length,
           fulfillmentType: settings.fulfillmentType || "dine_in",

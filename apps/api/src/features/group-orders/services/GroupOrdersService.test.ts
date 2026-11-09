@@ -1200,6 +1200,7 @@ describe("GroupOrdersService formatting and cache behavior", () => {
       groupMembers: [
         [hostMember, { ...hostMember, id: "member-2", role: "member" }],
       ],
+      restaurants: [[{ name: "阿明麵館" }]],
     });
     useDb(service, db);
 
@@ -1207,6 +1208,7 @@ describe("GroupOrdersService formatting and cache behavior", () => {
       found: true,
       data: expect.objectContaining({
         groupOrderId: "group-1",
+        restaurantName: "阿明麵館",
         hostName: "Host",
         memberCount: 2,
         fulfillmentType: "pickup",
@@ -1309,6 +1311,7 @@ describe("GroupOrdersService formatting and cache behavior", () => {
       createDb({
         groupOrders: [[{ ...baseGroupOrder, status: "ordering" }]],
         groupMembers: [[hostMember]],
+        restaurants: [[]],
       }),
     );
 

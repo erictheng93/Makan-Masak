@@ -12,6 +12,7 @@ import {
 interface GroupOrderJoinPreview {
   groupOrderId: string;
   restaurantId: string;
+  restaurantName?: string | null;
   hostName: string;
   memberCount: number;
   fulfillmentType: "dine_in" | "delivery" | "pickup";
@@ -170,8 +171,11 @@ onMounted(() => {
       </div>
 
       <div v-else-if="preview" class="rounded-2xl bg-ios-card p-6 shadow-card">
-        <p class="text-sm font-medium text-ios-secondary">
-          {{ t("groupJoin.label") }}
+        <p
+          data-testid="join-restaurant-name"
+          class="text-sm font-medium text-ios-secondary"
+        >
+          {{ preview.restaurantName || t("groupJoin.label") }}
         </p>
         <h1 class="mt-1 text-2xl font-semibold text-ios-text">
           {{

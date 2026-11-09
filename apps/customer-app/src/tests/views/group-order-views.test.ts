@@ -149,6 +149,22 @@ describe("GroupOrderJoinView", () => {
     expect(groupOrderMock.joinGroupOrder).not.toHaveBeenCalled();
   });
 
+  it("names the restaurant so an invitee knows where the order goes", async () => {
+    groupApi.get.mockResolvedValueOnce(
+      previewPayload({ restaurantName: "阿明麵館" }),
+    );
+
+    const wrapper = mount(GroupOrderJoinView, {
+      ...mountOptions,
+      props: { shareCode: "ABC12345" },
+    });
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="join-restaurant-name"]').text()).toBe(
+      "阿明麵館",
+    );
+  });
+
   it("requires an explicit action and a name before joining", async () => {
     groupApi.get.mockResolvedValueOnce(previewPayload());
 

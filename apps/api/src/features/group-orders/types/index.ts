@@ -163,6 +163,7 @@ export interface CreateGroupOrderResponse {
 export interface GroupOrderJoinPreview {
   groupOrderId: string;
   restaurantId: string;
+  restaurantName: string | null;
   hostName: string;
   memberCount: number;
   fulfillmentType: "dine_in" | "delivery" | "pickup";
