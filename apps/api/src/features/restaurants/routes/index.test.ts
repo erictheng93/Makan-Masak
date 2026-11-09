@@ -426,12 +426,14 @@ describe("restaurants routes", () => {
     let res = await request("/rest-1", "PUT", {
       name: "Updated",
       supportsTakeaway: true,
+      district: "North",
     });
     expect(res.status).toBe(200);
     expect(restaurantFns.getRestaurantDistrict).toHaveBeenCalledWith("rest-1");
     expect(restaurantFns.updateRestaurant).toHaveBeenCalledWith("rest-1", {
       name: "Updated",
       supportsTakeaway: true,
+      district: "North",
     });
     expect(syncFns.onRestaurantChanged).toHaveBeenCalledWith("rest-1", {
       previousDistrict: "Central",
@@ -456,9 +458,11 @@ describe("restaurants routes", () => {
 
     expect(res.status).toBe(200);
     expect(restaurantFns.updateRestaurant).toHaveBeenCalledOnce();
+    // A non-district save does not pay for the pre-update district read.
+    expect(restaurantFns.getRestaurantDistrict).not.toHaveBeenCalled();
     expect(syncFns.onRestaurantChanged).toHaveBeenCalledTimes(2);
     expect(syncFns.onRestaurantChanged).toHaveBeenLastCalledWith("rest-1", {
-      previousDistrict: "Central",
+      previousDistrict: undefined,
     });
     expect(alertFns.raiseSearchSyncFailedAlert).toHaveBeenCalledOnce();
     expect(alertFns.raiseSearchSyncFailedAlert).toHaveBeenCalledWith(

@@ -746,7 +746,12 @@ app.put(
       throw forbidden("Only admins can change restaurant active status");
     }
 
-    const previousDistrict = await restaurantsService.getRestaurantDistrict(id);
+    // Only a district change leaves an old district's index to rebuild; the
+    // sync re-derives the rest from D1, so a phone/name save skips this read.
+    const previousDistrict =
+      data.district !== undefined
+        ? await restaurantsService.getRestaurantDistrict(id)
+        : undefined;
     const restaurant = await restaurantsService.updateRestaurant(id, data);
 
     if (!restaurant) {
