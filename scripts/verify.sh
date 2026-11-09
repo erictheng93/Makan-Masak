@@ -78,11 +78,16 @@ real_integration_needed() {
   [ "${VERIFY_REAL_INTEGRATION:-}" = "1" ] && return 0
   local base
   base="$(git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main 2>/dev/null)" || return 0
-  {
+  # Capture first: piping straight into `grep -q` let grep exit at
+  # integration=true, the classifier took SIGPIPE on its next line, and under
+  # pipefail that read as "not needed" -- so the suites were skipped exactly
+  # when they were needed.
+  local classification
+  classification="$({
     git diff --name-only "$base"
     git ls-files --others --exclude-standard
-  } | sort -u | bash scripts/classify-ci-changes.sh false |
-    grep -qxE 'integration=true|full=true'
+  } | sort -u | bash scripts/classify-ci-changes.sh false)"
+  grep -qxE 'integration=true|full=true' <<<"$classification"
 }
 
 if [ "$MODE" = "affected" ]; then
