@@ -706,6 +706,7 @@ import { discoveryApi } from "@/services/discoveryApi";
 import { shopQrApi } from "@/services/shopQrApi";
 import { restaurantContactApi } from "@/services/restaurantContactApi";
 import { useCurrency } from "@/composables/useCurrency";
+import { useCategoryScrollSpy } from "@/composables/useCategoryScrollSpy";
 import type {
   MenuItem,
   RestaurantServiceItem,
@@ -763,7 +764,10 @@ const { formatPrice } = useCurrency();
 
 // State
 const searchQuery = ref("");
-const activeCategoryId = ref<number | null>(null);
+const { activeCategoryId, scrollToCategory } = useCategoryScrollSpy(
+  () => visibleCategories.value.map((category) => category.id),
+  menuCategoryElementId,
+);
 const selectedItem = ref<MenuItem | null>(null);
 const customizingItem = ref<MenuItem | null>(null);
 const showItemModal = ref(false);
@@ -1107,17 +1111,6 @@ const servicePriceLabel = (service: RestaurantServiceItem) => {
   return "";
 };
 
-const scrollToCategory = (categoryId: number) => {
-  activeCategoryId.value = categoryId;
-  const element = document.getElementById(menuCategoryElementId(categoryId));
-  if (element) {
-    element.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  }
-};
-
 const goToReturnContext = () => {
   if (!returnContext.value) return;
   router.push(returnContext.value.path);
@@ -1226,13 +1219,8 @@ const scrollToLinkedCategory = async () => {
   if (!category || openedLinkedCategoryId.value === category.id) return;
 
   openedLinkedCategoryId.value = category.id;
-  activeCategoryId.value = category.id;
   await nextTick();
-
-  document.getElementById(menuCategoryElementId(category.id))?.scrollIntoView({
-    behavior: "smooth",
-    block: "start",
-  });
+  scrollToCategory(category.id);
 };
 
 const openLinkedMenuItem = async () => {
@@ -1293,30 +1281,7 @@ const scrollToLinkedServicesSection = async () => {
   });
 };
 
-// 監聽滾動位置更新活躍分類
-const updateActiveCategoryOnScroll = () => {
-  const sections = visibleCategories.value.map((category: MenuCategory) => ({
-    id: category.id,
-    element: document.getElementById(menuCategoryElementId(category.id)),
-  }));
-
-  const _scrollTop = window.pageYOffset;
-  const windowHeight = window.innerHeight;
-
-  for (let i = sections.length - 1; i >= 0; i--) {
-    const section = sections[i];
-    if (section.element) {
-      const rect = section.element.getBoundingClientRect();
-      if (rect.top <= windowHeight / 3) {
-        activeCategoryId.value = section.id;
-        break;
-      }
-    }
-  }
-};
-
 onMounted(() => {
-  window.addEventListener("scroll", updateActiveCategoryOnScroll);
   scrollToLinkedServiceItem();
   scrollToLinkedServicesSection();
 
@@ -1326,9 +1291,7 @@ onMounted(() => {
   }
 });
 
-onUnmounted(() => {
-  window.removeEventListener("scroll", updateActiveCategoryOnScroll);
-});
+onUnmounted(() => {});
 
 // 監聽餐廳資料變化
 watch(restaurant, (newRestaurant) => {

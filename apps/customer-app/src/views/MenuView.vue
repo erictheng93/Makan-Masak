@@ -533,6 +533,7 @@ import {
 const props = defineProps<{
   restaurantId: string;
   tableId: number;
+import { useCategoryScrollSpy } from "@/composables/useCategoryScrollSpy";
 }>();
 
 // Composables
@@ -550,7 +551,10 @@ const groupOrder = useGroupOrder({
 
 // State
 const searchQuery = ref("");
-const activeCategoryId = ref<number | null>(null);
+const { activeCategoryId, scrollToCategory } = useCategoryScrollSpy(
+  () => filteredCategories.value.map((category) => category.id),
+  (id) => `category-${id}`,
+);
 const selectedItem = ref<MenuItem | null>(null);
 const customizingItem = ref<MenuItem | null>(null);
 const showItemModal = ref(false);
@@ -786,17 +790,6 @@ const getItemsByCategory = (categoryId: number) => {
   return items.sort((a: MenuItem, b: MenuItem) => a.sortOrder - b.sortOrder);
 };
 
-const scrollToCategory = (categoryId: number) => {
-  activeCategoryId.value = categoryId;
-  const element = document.getElementById(`category-${categoryId}`);
-  if (element) {
-    element.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  }
-};
-
 async function createGroupOrderFromMenu(): Promise<void> {
   const hostName = groupHostName.value.trim();
   if (!hostName) {
@@ -995,31 +988,7 @@ const handleViewDetails = (item: MenuItem) => {
   showItemModal.value = true;
 };
 
-// 監聽滾動位置更新活躍分類
-const updateActiveCategoryOnScroll = () => {
-  const sections = visibleCategories.value.map((category: MenuCategory) => ({
-    id: category.id,
-    element: document.getElementById(`category-${category.id}`),
-  }));
-
-  const _scrollTop = window.pageYOffset;
-  const windowHeight = window.innerHeight;
-
-  for (let i = sections.length - 1; i >= 0; i--) {
-    const section = sections[i];
-    if (section.element) {
-      const rect = section.element.getBoundingClientRect();
-      if (rect.top <= windowHeight / 3) {
-        activeCategoryId.value = section.id;
-        break;
-      }
-    }
-  }
-};
-
 onMounted(() => {
-  window.addEventListener("scroll", updateActiveCategoryOnScroll);
-
   // 設定餐廳上下文
   if (restaurant.value) {
     appStore.setRestaurantContext(restaurant.value, props.tableId);
@@ -1027,7 +996,6 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  window.removeEventListener("scroll", updateActiveCategoryOnScroll);
   groupOrder.disconnectRealtime();
 });
 
