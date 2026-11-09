@@ -519,9 +519,16 @@ jobs:
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: 📥 安裝依賴
-        # better-sqlite3's Node 24 prebuilt download from GitHub intermittently
-        # 504s, and this image has no compiler for the source-build fallback.
+        # better-sqlite3's Node 24 prebuilt download from github.com
+        # intermittently 504s, so it is pre-fetched through the API asset
+        # endpoint into the directory prebuild-install checks first. If that
+        # fails too, the image has no compiler for the source-build fallback,
+        # so install one and retry.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          npm_config_better_sqlite3_local_prebuilds: ${{ runner.temp }}/better-sqlite3-prebuilds
         run: |
+          node scripts/fetch-better-sqlite3-prebuilt.mjs "$npm_config_better_sqlite3_local_prebuilds"
           pnpm install --frozen-lockfile || {
             apt-get update && apt-get install -y --no-install-recommends make g++ python3
             pnpm install --frozen-lockfile
@@ -709,9 +716,16 @@ jobs:
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: 📥 安裝依賴
-        # better-sqlite3's Node 24 prebuilt download from GitHub intermittently
-        # 504s, and this image has no compiler for the source-build fallback.
+        # better-sqlite3's Node 24 prebuilt download from github.com
+        # intermittently 504s, so it is pre-fetched through the API asset
+        # endpoint into the directory prebuild-install checks first. If that
+        # fails too, the image has no compiler for the source-build fallback,
+        # so install one and retry.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          npm_config_better_sqlite3_local_prebuilds: ${{ runner.temp }}/better-sqlite3-prebuilds
         run: |
+          node scripts/fetch-better-sqlite3-prebuilt.mjs "$npm_config_better_sqlite3_local_prebuilds"
           pnpm install --frozen-lockfile || {
             apt-get update && apt-get install -y --no-install-recommends make g++ python3
             pnpm install --frozen-lockfile
@@ -868,9 +882,16 @@ jobs:
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - name: 📥 安裝依賴
-        # better-sqlite3's Node 24 prebuilt download from GitHub intermittently
-        # 504s, and this image has no compiler for the source-build fallback.
+        # better-sqlite3's Node 24 prebuilt download from github.com
+        # intermittently 504s, so it is pre-fetched through the API asset
+        # endpoint into the directory prebuild-install checks first. If that
+        # fails too, the image has no compiler for the source-build fallback,
+        # so install one and retry.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          npm_config_better_sqlite3_local_prebuilds: ${{ runner.temp }}/better-sqlite3-prebuilds
         run: |
+          node scripts/fetch-better-sqlite3-prebuilt.mjs "$npm_config_better_sqlite3_local_prebuilds"
           pnpm install --frozen-lockfile || {
             apt-get update && apt-get install -y --no-install-recommends make g++ python3
             pnpm install --frozen-lockfile
