@@ -136,11 +136,11 @@ describe("group order mutations require proof of who is calling", () => {
     });
     groupServiceMocks.setSplitType.mockResolvedValue({
       success: true,
-      data: { splitType: "equal" },
+      data: { splitType: "equal", restaurantId: "rest-1" },
     });
     groupServiceMocks.setFeeMode.mockResolvedValue({
       success: true,
-      data: { feeMode: "equal" },
+      data: { feeMode: "equal", restaurantId: "rest-1" },
     });
     groupServiceMocks.getGroupOrder.mockResolvedValue({
       groupOrder: { id: GROUP_ORDER_ID, restaurantId: "rest-1" },

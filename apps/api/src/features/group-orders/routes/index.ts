@@ -496,8 +496,13 @@ app.put(
     const { splitType, memberToken } = c.get("validatedBody");
 
     const groupOrderService = new GroupOrdersService(c.env.DB, c.env.CACHE_KV);
-    await requireHostSession(groupOrderService, groupOrderId, memberToken);
-    const status = await groupOrderService.getGroupOrderStatus(groupOrderId);
+    // Independent reads, so one D1 round trip instead of two. The host check
+    // still decides first: a non-host gets 403, never a status they could
+    // probe with.
+    const [, status] = await Promise.all([
+      requireHostSession(groupOrderService, groupOrderId, memberToken),
+      groupOrderService.getGroupOrderStatus(groupOrderId),
+    ]);
 
     if (!status) {
       throw notFound("Group order not found");
@@ -514,13 +519,25 @@ app.put(
       splitType,
     );
 
-    if (!result.success) {
+    if (!result.success || !result.data) {
       throw badRequest(result.error ?? "Failed to update split type");
     }
 
+    // Every other member previews their share from this value; without the
+    // event they keep showing the old split until something else reloads.
+    await broadcastGroupOrderEvent(
+      c.env,
+      RealtimeEventType.GROUP_ORDER_SETTINGS_UPDATED,
+      {
+        groupOrderId,
+        restaurantId: result.data.restaurantId,
+        splitType: result.data.splitType,
+      },
+    );
+
     return c.json({
       success: true,
-      data: result.data,
+      data: { splitType: result.data.splitType },
     });
   },
 );
@@ -546,11 +563,21 @@ app.put(
 
     const result = await groupOrderService.setFeeMode(groupOrderId, feeMode);
 
-    if (!result.success) {
+    if (!result.success || !result.data) {
       throw badRequest(result.error ?? "Failed to update fee mode");
     }
 
-    return c.json({ success: true, data: result.data });
+    await broadcastGroupOrderEvent(
+      c.env,
+      RealtimeEventType.GROUP_ORDER_SETTINGS_UPDATED,
+      {
+        groupOrderId,
+        restaurantId: result.data.restaurantId,
+        feeMode: result.data.feeMode,
+      },
+    );
+
+    return c.json({ success: true, data: { feeMode: result.data.feeMode } });
   },
 );
 

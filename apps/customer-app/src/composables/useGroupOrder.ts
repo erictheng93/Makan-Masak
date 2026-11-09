@@ -7,6 +7,7 @@ import { computed, getCurrentInstance, onUnmounted, ref } from "vue";
 import { useWebSocket } from "./useWebSocket";
 import { apiClient } from "@/services/api";
 import {
+  GROUP_ORDER_FEE_MODES,
   RealtimeEventType,
   type GroupOrderFeeMode,
   type GroupOrderStatus,
@@ -224,6 +225,8 @@ interface GroupOrderRealtimePayload {
   item?: unknown;
   itemId?: unknown;
   member?: unknown;
+  splitType?: unknown;
+  feeMode?: unknown;
 }
 
 interface MemberSession {
@@ -494,6 +497,10 @@ export function useGroupOrder(options: {
         void loadGroupOrder(groupOrder.value.id).catch((error) => {
           console.warn("Failed to reload the completed group order:", error);
         });
+        break;
+
+      case RealtimeEventType.GROUP_ORDER_SETTINGS_UPDATED:
+        handleSettingsUpdated(payload);
         break;
 
       case RealtimeEventType.GROUP_ORDER_CREATED:
@@ -974,21 +981,7 @@ export function useGroupOrder(options: {
    * divided by `setSplitBillMode`, this is the fee on top of it.
    */
   async function setFeeMode(mode: GroupOrderFeeMode): Promise<void> {
-    if (!groupOrder.value) {
-      throw groupOrderError("GROUP_NOT_LOADED");
-    }
-
-    const groupOrderId = groupOrder.value.id;
-    hydrateHostCredentials(groupOrderId);
-    if (!memberToken.value) {
-      throw groupOrderError("GROUP_HOST_CREDENTIAL_REQUIRED");
-    }
-
-    await apiClient.put(`/orders/group/${groupOrderId}/fee-mode`, {
-      feeMode: mode,
-      memberToken: memberToken.value,
-    });
-    await loadGroupOrder(groupOrderId);
+    await feeModeWriter.set(mode);
   }
 
   /**
@@ -998,21 +991,115 @@ export function useGroupOrder(options: {
   async function setSplitBillMode(
     mode: SplitBillConfig["mode"],
   ): Promise<void> {
-    if (!groupOrder.value) {
-      throw groupOrderError("GROUP_NOT_LOADED");
+    await splitModeWriter.set(mode);
+  }
+
+  /**
+   * A host preference that flips on screen at once and is saved behind it.
+   *
+   * The old flow waited for the PUT and then a full summary refetch before the
+   * button even lit up — two to three seconds of nothing. Every figure the
+   * choice affects (my subtotal, service charge, tax) is computed locally, so
+   * there is nothing to wait for. Writes for one preference go out one at a
+   * time and the loop always sends the newest choice next, so a quick
+   * double-tap can never leave the server on an older click than the screen
+   * shows. A failure puts the screen back on the last value the server took.
+   */
+  function createPreferenceWriter<T>(
+    read: (order: GroupOrder) => T,
+    apply: (order: GroupOrder, value: T) => void,
+    send: (groupOrderId: string, value: T, token: string) => Promise<unknown>,
+  ) {
+    let running: Promise<void> | null = null;
+
+    async function set(value: T): Promise<void> {
+      const order = groupOrder.value;
+      if (!order) {
+        throw groupOrderError("GROUP_NOT_LOADED");
+      }
+      hydrateHostCredentials(order.id);
+      const token = memberToken.value;
+      if (!token) {
+        throw groupOrderError("GROUP_HOST_CREDENTIAL_REQUIRED");
+      }
+
+      if (running) {
+        // The loop already in flight picks this up when its request returns.
+        apply(order, value);
+        return running;
+      }
+
+      let confirmed = read(order);
+      apply(order, value);
+      running = (async () => {
+        try {
+          // Stop if a reload replaced the order: the server's copy wins then.
+          while (groupOrder.value === order && read(order) !== confirmed) {
+            const next = read(order);
+            await send(order.id, next, token);
+            confirmed = next;
+          }
+        } catch (err) {
+          if (groupOrder.value === order) apply(order, confirmed);
+          throw err;
+        } finally {
+          running = null;
+        }
+      })();
+      return running;
     }
 
-    const groupOrderId = groupOrder.value.id;
-    hydrateHostCredentials(groupOrderId);
-    if (!memberToken.value) {
-      throw groupOrderError("GROUP_HOST_CREDENTIAL_REQUIRED");
+    return { set, isSaving: () => running !== null };
+  }
+
+  const feeModeWriter = createPreferenceWriter<GroupOrderFeeMode>(
+    (order) => order.feeMode,
+    (order, value) => {
+      order.feeMode = value;
+    },
+    (groupOrderId, feeMode, token) =>
+      apiClient.put(`/orders/group/${groupOrderId}/fee-mode`, {
+        feeMode,
+        memberToken: token,
+      }),
+  );
+
+  const splitModeWriter = createPreferenceWriter<SplitBillConfig["mode"]>(
+    (order) => order.splitBillConfig.mode,
+    (order, value) => {
+      order.splitBillConfig.mode = value;
+    },
+    (groupOrderId, splitType, token) =>
+      apiClient.put(`/orders/group/${groupOrderId}/split-type`, {
+        splitType,
+        memberToken: token,
+      }),
+  );
+
+  /**
+   * The host changed a preference. Ignored while this client has its own
+   * write in flight: it is the host, and the echo of an older click must not
+   * overwrite the newer one already on screen.
+   */
+  function handleSettingsUpdated(payload: GroupOrderRealtimePayload): void {
+    const order = groupOrder.value;
+    if (!order) return;
+
+    if (
+      !splitModeWriter.isSaving() &&
+      (payload.splitType === "equal" ||
+        payload.splitType === "by_item" ||
+        payload.splitType === "proportional")
+    ) {
+      order.splitBillConfig.mode = payload.splitType;
     }
 
-    await apiClient.put(`/orders/group/${groupOrderId}/split-type`, {
-      splitType: mode,
-      memberToken: memberToken.value,
-    });
-    await loadGroupOrder(groupOrderId);
+    if (
+      !feeModeWriter.isSaving() &&
+      (GROUP_ORDER_FEE_MODES as readonly unknown[]).includes(payload.feeMode)
+    ) {
+      order.feeMode = payload.feeMode as GroupOrderFeeMode;
+    }
   }
 
   /**

@@ -535,6 +535,7 @@ export class RealtimeSession implements DurableObject {
       case RealtimeEventType.GROUP_CART_ITEM_UPDATED:
       case RealtimeEventType.GROUP_CART_ITEM_REMOVED:
       case RealtimeEventType.GROUP_ORDER_COMPLETED:
+      case RealtimeEventType.GROUP_ORDER_SETTINGS_UPDATED:
         return true;
     }
 

@@ -1108,7 +1108,7 @@ describe("group orders routes", () => {
     isHostSession.mockResolvedValue(true);
     setSplitType.mockResolvedValue({
       success: true,
-      data: { splitType: "equal" },
+      data: { splitType: "equal", restaurantId: "restaurant-1" },
     });
 
     const response = await routes.fetch(
@@ -1124,6 +1124,20 @@ describe("group orders routes", () => {
 
     expect(response.status).toBe(200);
     expect(setSplitType).toHaveBeenCalledWith(groupOrderId, "equal");
+    // restaurantId is only needed to address the event; it stays out of the body.
+    expect(await response.json()).toEqual({
+      success: true,
+      data: { splitType: "equal" },
+    });
+    // The other diners preview their share from this; they must hear of it.
+    expect(broadcastEvent).toHaveBeenCalledWith(
+      "customer",
+      groupOrderId,
+      expect.objectContaining({
+        type: RealtimeEventType.GROUP_ORDER_SETTINGS_UPDATED,
+        data: expect.objectContaining({ groupOrderId, splitType: "equal" }),
+      }),
+    );
   });
 
   it("returns not found when splitting a group order that does not exist", async () => {

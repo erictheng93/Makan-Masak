@@ -38,6 +38,11 @@ const isLocked = computed(() => {
 const canSubmitOrder = computed(
   () => group.isHost.value && group.groupOrder.value?.status === "active",
 );
+// Finalize refuses an empty group, so the button says so up front instead of
+// sending the host a round trip that can only fail.
+const isCartEmpty = computed(
+  () => (group.groupOrder.value?.cartItems.length ?? 0) === 0,
+);
 const isCompleted = computed(
   () => group.groupOrder.value?.status === "completed",
 );
@@ -191,7 +196,7 @@ async function changeSplitMode(mode: SplitBillConfig["mode"]): Promise<void> {
 }
 
 async function submitGroupOrder(): Promise<void> {
-  if (isSubmitting.value) return;
+  if (isSubmitting.value || isCartEmpty.value) return;
 
   isSubmitting.value = true;
   submitError.value = "";
@@ -354,12 +359,28 @@ onUnmounted(() => {
         <button
           data-testid="group-order-submit"
           type="button"
-          class="w-full rounded-full bg-ios-blue px-4 py-3.5 text-base font-semibold text-white transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100"
-          :disabled="isSubmitting"
+          class="w-full rounded-full px-4 py-3.5 text-base font-semibold transition-all duration-200 active:scale-[0.98] disabled:active:scale-100"
+          :class="
+            isCartEmpty
+              ? 'bg-ios-separator text-ios-secondary cursor-not-allowed'
+              : 'bg-ios-blue text-white disabled:opacity-50'
+          "
+          :disabled="isSubmitting || isCartEmpty"
+          :aria-describedby="
+            isCartEmpty ? 'group-order-submit-hint' : undefined
+          "
           @click="submitGroupOrder"
         >
           {{ isSubmitting ? t("group.submitting") : t("group.submitOrder") }}
         </button>
+        <p
+          v-if="isCartEmpty"
+          id="group-order-submit-hint"
+          data-testid="group-order-submit-hint"
+          class="mt-2 text-center text-xs text-ios-secondary"
+        >
+          {{ t("group.emptyCart") }}
+        </p>
       </div>
 
       <p

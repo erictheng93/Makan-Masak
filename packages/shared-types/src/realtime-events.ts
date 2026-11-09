@@ -181,6 +181,8 @@ export enum RealtimeEventType {
   GROUP_CART_ITEM_UPDATED = "group_cart_item_updated",
   GROUP_CART_ITEM_REMOVED = "group_cart_item_removed",
   GROUP_ORDER_COMPLETED = "group_order_completed",
+  /** 主揪改了分賬方式或服務費／稅金分攤方式；data 帶 splitType 或 feeMode */
+  GROUP_ORDER_SETTINGS_UPDATED = "group_order_settings_updated",
 }
 
 /**
@@ -615,9 +617,10 @@ export interface WaitingListEvent extends BaseRealtimeEvent {
 /**
  * 群組訂單事件 (G2)
  *
- * 同一介面涵蓋 6 個群組訂單事件，由 type 欄位區分：
+ * 同一介面涵蓋 7 個群組訂單事件，由 type 欄位區分：
  *   group_order_created / group_member_joined / group_cart_item_added /
- *   group_cart_item_updated / group_cart_item_removed / group_order_completed
+ *   group_cart_item_updated / group_cart_item_removed / group_order_completed /
+ *   group_order_settings_updated
  *
  * 廣播 room 為 `customer:${groupOrderId}`（群組參與者連線的房間；DO 實例即以
  * groupOrderId 隔離）。data 的額外欄位依事件類型而異，因此除必備的
@@ -630,7 +633,8 @@ export interface GroupOrderEvent extends BaseRealtimeEvent {
     | RealtimeEventType.GROUP_CART_ITEM_ADDED
     | RealtimeEventType.GROUP_CART_ITEM_UPDATED
     | RealtimeEventType.GROUP_CART_ITEM_REMOVED
-    | RealtimeEventType.GROUP_ORDER_COMPLETED;
+    | RealtimeEventType.GROUP_ORDER_COMPLETED
+    | RealtimeEventType.GROUP_ORDER_SETTINGS_UPDATED;
   data: {
     /** 群組訂單 ID */
     groupOrderId: string;

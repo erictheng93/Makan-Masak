@@ -633,7 +633,21 @@ describe("GroupOrderView", () => {
 describe("GroupOrderView — submitting", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    groupOrderMock.groupOrder.value = loadedGroupOrder();
+    groupOrderMock.groupOrder.value = {
+      ...loadedGroupOrder(),
+      cartItems: [
+        {
+          id: "item-1",
+          menuItemId: "7",
+          menuItemName: "Laksa",
+          menuItemPrice: 12,
+          quantity: 1,
+          addedBy: "m-1",
+          addedByName: "Alex",
+          addedAt: 0,
+        },
+      ],
+    };
     groupOrderMock.isHost.value = true;
   });
 
@@ -672,6 +686,39 @@ describe("GroupOrderView — submitting", () => {
     expect(wrapper.find('[data-testid="group-order-submit"]').exists()).toBe(
       false,
     );
+  });
+
+  /**
+   * Finalize refuses an empty group, so a live button there could only answer
+   * a tap with an error. Grey it out and say why instead.
+   */
+  it("keeps the button disabled while the cart is empty, and says why", async () => {
+    groupOrderMock.groupOrder.value = loadedGroupOrder();
+
+    const wrapper = await mountView();
+    const button = wrapper.find('[data-testid="group-order-submit"]');
+    await button.trigger("click");
+    await flushPromises();
+
+    expect(button.attributes("disabled")).toBeDefined();
+    expect(button.attributes("aria-describedby")).toBe(
+      "group-order-submit-hint",
+    );
+    expect(
+      wrapper.find('[data-testid="group-order-submit-hint"]').exists(),
+    ).toBe(true);
+    expect(groupOrderMock.submitOrder).not.toHaveBeenCalled();
+  });
+
+  it("enables the button once the cart has an item", async () => {
+    const wrapper = await mountView();
+
+    expect(
+      wrapper.find('[data-testid="group-order-submit"]').attributes("disabled"),
+    ).toBeUndefined();
+    expect(
+      wrapper.find('[data-testid="group-order-submit-hint"]').exists(),
+    ).toBe(false);
   });
 
   it("submits through the composable", async () => {

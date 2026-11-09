@@ -251,10 +251,6 @@ describe("useGroupOrder — data layer", () => {
     const group = await createHostedGroup();
 
     vi.mocked(apiClient.put).mockResolvedValueOnce({ splitType: "equal" });
-    vi.mocked(apiClient.get).mockResolvedValueOnce({
-      ...summaryResponse(),
-      groupOrder: { ...summaryResponse().groupOrder, splitType: "equal" },
-    });
     await group.setSplitBillMode("equal");
 
     expect(apiClient.put).toHaveBeenLastCalledWith(
@@ -573,6 +569,79 @@ describe("useGroupOrder — data layer", () => {
   });
 
   /**
+   * The host used to stare at an unchanged button for two to three seconds:
+   * the screen only moved after the PUT and a full summary refetch. Every
+   * figure the choice affects is computed here, so the screen moves first.
+   */
+  it("shows a new split or fee choice before the server answers, without refetching", async () => {
+    const group = await createHostedGroup();
+    vi.mocked(apiClient.get).mockClear();
+
+    let resolvePut: (value: unknown) => void = () => {};
+    vi.mocked(apiClient.put).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolvePut = resolve;
+      }),
+    );
+    const saving = group.setFeeMode("host");
+
+    expect(group.groupOrder.value?.feeMode).toBe("host");
+    resolvePut({ feeMode: "host" });
+    await saving;
+
+    expect(apiClient.put).toHaveBeenCalledWith(
+      "/orders/group/go-1/fee-mode",
+      expect.objectContaining({ feeMode: "host", memberToken: "session-1" }),
+    );
+    expect(apiClient.get).not.toHaveBeenCalled();
+  });
+
+  /**
+   * A quick double-tap must not let the first request land after the second
+   * and leave the server on a choice the screen no longer shows.
+   */
+  it("sends taps one at a time and finishes on the newest choice", async () => {
+    const group = await createHostedGroup();
+    vi.mocked(apiClient.put).mockClear();
+
+    let resolveFirst: (value: unknown) => void = () => {};
+    vi.mocked(apiClient.put)
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveFirst = resolve;
+        }),
+      )
+      .mockResolvedValueOnce({ splitType: "proportional" });
+
+    const first = group.setSplitBillMode("equal");
+    const second = group.setSplitBillMode("proportional");
+
+    expect(group.groupOrder.value?.splitBillConfig.mode).toBe("proportional");
+    expect(apiClient.put).toHaveBeenCalledOnce();
+
+    resolveFirst({ splitType: "equal" });
+    await Promise.all([first, second]);
+
+    expect(
+      vi
+        .mocked(apiClient.put)
+        .mock.calls.map(
+          ([, body]) => (body as { splitType: string }).splitType,
+        ),
+    ).toEqual(["equal", "proportional"]);
+    expect(group.groupOrder.value?.splitBillConfig.mode).toBe("proportional");
+  });
+
+  it("puts the screen back on the saved choice when the server refuses", async () => {
+    const group = await createHostedGroup();
+    vi.mocked(apiClient.put).mockRejectedValueOnce(new Error("boom"));
+
+    await expect(group.setFeeMode("equal")).rejects.toThrow("boom");
+
+    expect(group.groupOrder.value?.feeMode).toBe("proportional");
+  });
+
+  /**
    * Choosing a method only stores the preference used later by finalization.
    * It must not call `POST /split`, which writes bills immediately and is not
    * part of the customer submission flow; that is what `PUT /split-type` is
@@ -582,10 +651,6 @@ describe("useGroupOrder — data layer", () => {
     const group = await createHostedGroup();
 
     vi.mocked(apiClient.put).mockResolvedValueOnce({ splitType: "equal" });
-    vi.mocked(apiClient.get).mockResolvedValueOnce({
-      ...summaryResponse(),
-      groupOrder: { ...summaryResponse().groupOrder, splitType: "equal" },
-    });
     await group.setSplitBillMode("equal");
 
     const postedPaths = vi
@@ -672,6 +737,39 @@ describe("useGroupOrder — server-pushed realtime events", () => {
       name: "Sam",
       isHost: false,
     });
+  });
+
+  /**
+   * Only the host can change these, so every other diner learns of it here or
+   * not at all — and keeps previewing a share the bill will not charge.
+   */
+  it("applies a split or fee change the host made", async () => {
+    const group = await createHostedGroup();
+
+    pushFromServer("group_order_settings_updated", {
+      groupOrderId: "go-1",
+      splitType: "equal",
+    });
+    pushFromServer("group_order_settings_updated", {
+      groupOrderId: "go-1",
+      feeMode: "host",
+    });
+
+    expect(group.groupOrder.value?.splitBillConfig.mode).toBe("equal");
+    expect(group.groupOrder.value?.feeMode).toBe("host");
+  });
+
+  it("ignores a settings value it does not recognise", async () => {
+    const group = await createHostedGroup();
+
+    pushFromServer("group_order_settings_updated", {
+      groupOrderId: "go-1",
+      splitType: "custom",
+      feeMode: "nobody",
+    });
+
+    expect(group.groupOrder.value?.splitBillConfig.mode).toBe("by_item");
+    expect(group.groupOrder.value?.feeMode).toBe("proportional");
   });
 
   it("reloads the group when the host submits it, so every diner sees it completed", async () => {

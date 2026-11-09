@@ -949,7 +949,7 @@ describe("GroupOrdersService formatting and cache behavior", () => {
     ).resolves.toEqual([]);
   });
 
-  it("creates a group order with host member, activity log, and cache aliases", async () => {
+  it("creates a group order with host member and activity log, writing no cache", async () => {
     const { kv, values } = createKV();
     const service = new GroupOrdersService({} as D1Database, kv);
     const db = createDb({ groupMembers: [[{ ...hostMember, id: "uuid-2" }]] });
@@ -999,11 +999,10 @@ describe("GroupOrdersService formatting and cache behavior", () => {
       id: "uuid-5",
       action: "group_created",
     });
-    const cached = JSON.parse(values.get("group_order:uuid-1") ?? "{}");
-    expect(cached).toMatchObject({ shareCode: "AAAAAAAA" });
-    expect(cached).not.toHaveProperty("memberToken");
-    expect(cached).not.toHaveProperty("recoveryCode");
-    expect(values.get("share_code:AAAAAAAA")).toBe('"uuid-1"');
+    // Nothing reads these keys, and each put held the host's create request
+    // for a KV write round trip. Nothing written also means no host secret
+    // can end up in the cache.
+    expect(values.size).toBe(0);
     vi.mocked(Math.random).mockRestore();
   });
 

@@ -526,18 +526,9 @@ export class GroupOrdersService implements IGroupOrderService {
         recoveryCode,
       };
 
-      // Cache the group order without host-only secrets.
-      const {
-        memberToken: _hostToken,
-        recoveryCode: _recoveryCode,
-        ...cacheableResponse
-      } = response;
-      await this.cache.set(
-        `group_order:${groupOrderId}`,
-        cacheableResponse,
-        3600,
-      );
-      await this.cache.set(`share_code:${shareCode}`, groupOrderId, 3600);
+      // No KV writes here. `group_order:*` and `share_code:*` used to be put
+      // on every create, but nothing reads either key, and the two puts were
+      // ~840ms of the host's wait before the group page could open.
 
       this.logger.info("Group order created successfully", {
         groupOrderId,
@@ -2632,6 +2623,17 @@ export class GroupOrdersService implements IGroupOrderService {
   }
 
   /**
+   * Each KV delete is a write-class round trip (~420ms measured in
+   * production); the two keys are independent, so pay for one, not two.
+   */
+  private async invalidateGroupOrderCache(groupOrderId: string): Promise<void> {
+    await Promise.all([
+      this.cache.delete(`group_order:${groupOrderId}`),
+      this.cache.delete(`group_order_summary:${groupOrderId}`),
+    ]);
+  }
+
+  /**
    * Record how the bill should be divided when this group is finalized.
    *
    * Deliberately not `splitBill`: that one performs the split, sets the group
@@ -2647,14 +2649,14 @@ export class GroupOrdersService implements IGroupOrderService {
     splitType: "equal" | "by_item" | "proportional",
   ): Promise<{
     success: boolean;
-    data?: { splitType: string };
+    data?: { splitType: string; restaurantId: string };
     error?: string;
   }> {
     const timer = this.performance.startTimer("setSplitType");
 
     try {
       const rows = await this.db
-        .select({ id: groupOrders.id })
+        .select({ restaurantId: groupOrders.restaurantId })
         .from(groupOrders)
         .where(eq(groupOrders.id, groupOrderId))
         .limit(1);
@@ -2671,10 +2673,12 @@ export class GroupOrdersService implements IGroupOrderService {
         .set({ splitType: storedValue, updatedAt: new Date() })
         .where(eq(groupOrders.id, groupOrderId));
 
-      await this.cache.delete(`group_order:${groupOrderId}`);
-      await this.cache.delete(`group_order_summary:${groupOrderId}`);
+      await this.invalidateGroupOrderCache(groupOrderId);
 
-      return { success: true, data: { splitType } };
+      return {
+        success: true,
+        data: { splitType, restaurantId: rows[0].restaurantId },
+      };
     } catch (error) {
       this.errorTracker.logError("setSplitType", error as Error, {
         groupOrderId,
@@ -2698,14 +2702,17 @@ export class GroupOrdersService implements IGroupOrderService {
     feeMode: GroupOrderFeeMode,
   ): Promise<{
     success: boolean;
-    data?: { feeMode: GroupOrderFeeMode };
+    data?: { feeMode: GroupOrderFeeMode; restaurantId: string };
     error?: string;
   }> {
     const timer = this.performance.startTimer("setFeeMode");
 
     try {
       const rows = await this.db
-        .select({ settings: groupOrders.settings })
+        .select({
+          settings: groupOrders.settings,
+          restaurantId: groupOrders.restaurantId,
+        })
         .from(groupOrders)
         .where(eq(groupOrders.id, groupOrderId))
         .limit(1);
@@ -2725,10 +2732,12 @@ export class GroupOrdersService implements IGroupOrderService {
         .set({ settings: { ...settings, feeMode }, updatedAt: new Date() })
         .where(eq(groupOrders.id, groupOrderId));
 
-      await this.cache.delete(`group_order:${groupOrderId}`);
-      await this.cache.delete(`group_order_summary:${groupOrderId}`);
+      await this.invalidateGroupOrderCache(groupOrderId);
 
-      return { success: true, data: { feeMode } };
+      return {
+        success: true,
+        data: { feeMode, restaurantId: existing.restaurantId },
+      };
     } catch (error) {
       this.errorTracker.logError("setFeeMode", error as Error, {
         groupOrderId,
