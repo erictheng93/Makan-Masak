@@ -834,7 +834,10 @@
     "inviteCopyLink": "複製邀請連結",
     "inviteCopied": "已複製邀請連結",
     "inviteCopyFailed": "複製失敗，請手動複製下方連結",
-    "inviteCodeLabel": "邀請代碼"
+    "inviteCodeLabel": "邀請代碼",
+    "inviteShare": "分享邀請",
+    "inviteScanQr": "讓同桌的人用相機掃描加入",
+    "inviteButton": "邀請"
   },
   "messages": {
     "networkError": "網路連接失敗，請檢查您的網路連接",

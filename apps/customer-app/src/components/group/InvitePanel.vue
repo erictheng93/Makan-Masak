@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import VueQrcode from "@chenfengyuan/vue-qrcode";
 import { useI18n } from "@/composables/useI18n";
 
 /**
@@ -19,6 +20,24 @@ const feedback = ref<"copied" | "failed" | null>(null);
 const canShare = computed(
   () => props.shareCode.length > 0 && props.shareLink.length > 0,
 );
+// Desktop browsers mostly lack the Web Share API; copy stays the fallback.
+const canNativeShare =
+  typeof navigator !== "undefined" && typeof navigator.share === "function";
+
+async function openShareSheet(): Promise<void> {
+  try {
+    await navigator.share({
+      title: t("group.inviteTitle"),
+      text: t("group.inviteDesc"),
+      url: props.shareLink,
+    });
+  } catch (error) {
+    // Dismissing the share sheet rejects with AbortError; that is not a failure.
+    if ((error as { name?: string })?.name !== "AbortError") {
+      await copyLink();
+    }
+  }
+}
 
 async function copyLink(): Promise<void> {
   try {
@@ -47,15 +66,48 @@ async function copyLink(): Promise<void> {
           {{ t("group.inviteDesc") }}
         </p>
       </div>
+    </div>
+
+    <div class="mt-4 flex gap-2">
+      <button
+        v-if="canNativeShare"
+        data-testid="native-share-invite"
+        type="button"
+        class="flex-1 rounded-full bg-ios-blue px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 active:scale-[0.98]"
+        @click="openShareSheet"
+      >
+        {{ t("group.inviteShare") }}
+      </button>
       <button
         data-testid="copy-invite-link"
         type="button"
-        class="shrink-0 rounded-full bg-ios-blue px-4 py-2 text-sm font-semibold text-white transition-all duration-200 active:scale-[0.98]"
+        class="flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-[0.98]"
+        :class="
+          canNativeShare
+            ? 'bg-ios-blue/10 text-ios-blue'
+            : 'bg-ios-blue text-white'
+        "
         @click="copyLink"
       >
         {{ t("group.inviteCopyLink") }}
       </button>
     </div>
+
+    <figure
+      data-testid="invite-qr"
+      class="mt-4 flex flex-col items-center rounded-xl bg-white p-4"
+    >
+      <VueQrcode
+        :value="shareLink"
+        tag="svg"
+        :options="{ type: 'svg', width: 176, margin: 1 }"
+        :aria-label="t('group.inviteScanQr')"
+        role="img"
+      />
+      <figcaption class="mt-2 text-xs text-ios-secondary">
+        {{ t("group.inviteScanQr") }}
+      </figcaption>
+    </figure>
 
     <p
       data-testid="invite-link-value"

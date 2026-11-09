@@ -184,6 +184,15 @@
                 </div>
                 <div class="flex flex-col gap-2 sm:flex-row">
                   <button
+                    data-testid="group-invite-toggle"
+                    type="button"
+                    :aria-expanded="showGroupInvite ? 'true' : 'false'"
+                    class="rounded-full bg-ios-blue/10 px-4 py-2.5 text-sm font-semibold text-ios-blue transition-all duration-200 active:scale-[0.98]"
+                    @click="showGroupInvite = !showGroupInvite"
+                  >
+                    {{ t("group.inviteButton") }}
+                  </button>
+                  <button
                     data-testid="group-cart-link"
                     type="button"
                     class="rounded-full bg-ios-blue px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 active:scale-[0.98]"
@@ -201,6 +210,13 @@
                   </button>
                 </div>
               </div>
+
+              <InvitePanel
+                v-if="showGroupInvite"
+                class="!mt-0 !bg-ios-bg !shadow-none"
+                :share-code="groupOrder.groupOrder.value?.shareCode ?? ''"
+                :share-link="groupOrder.getShareLink()"
+              />
 
               <p
                 v-if="cartStore.itemCount > 0"
@@ -512,10 +528,12 @@ import MenuItemModal from "@/components/MenuItemModal.vue";
 import CustomizationModal from "@/components/CustomizationModal.vue";
 import DesktopCartPanel from "@/components/DesktopCartPanel.vue";
 import LanguageSwitcher from "@/components/LanguageSwitcher.vue";
+import InvitePanel from "@/components/group/InvitePanel.vue";
 import { useIsDesktop } from "@/composables/useBreakpoint";
 import { useMenuRealtime } from "@/composables/useMenuRealtime";
 import { menuApi } from "@/services/menuApi";
 import { useCurrency } from "@/composables/useCurrency";
+import { useCategoryScrollSpy } from "@/composables/useCategoryScrollSpy";
 import type {
   MenuItem,
   SelectedCustomizations,
@@ -533,7 +551,6 @@ import {
 const props = defineProps<{
   restaurantId: string;
   tableId: number;
-import { useCategoryScrollSpy } from "@/composables/useCategoryScrollSpy";
 }>();
 
 // Composables
@@ -561,6 +578,7 @@ const showItemModal = ref(false);
 const showCustomizationModal = ref(false);
 const hasRedirectedInvalidTable = ref(false);
 const showGroupStartForm = ref(false);
+const showGroupInvite = ref(false);
 const groupHostName = ref("");
 const groupOrderError = ref("");
 const isCreatingGroupOrder = ref(false);
@@ -813,10 +831,11 @@ async function createGroupOrderFromMenu(): Promise<void> {
       return;
     }
 
-    await router.push({
-      name: "GroupOrder",
-      params: { groupOrderId },
-    });
+    // Stay on the menu in group mode so the table starts ordering right away;
+    // the invite opens once because nobody else is in the group yet.
+    showGroupStartForm.value = false;
+    showGroupInvite.value = true;
+    void connectActiveGroupOrder(groupOrderId);
   } catch (error) {
     groupOrderError.value = t(
       getGroupOrderErrorI18nKey(error, "group.createFailed"),
@@ -846,6 +865,10 @@ async function restoreActiveGroupOrder(): Promise<void> {
       clearLoadedGroupMode();
       return;
     }
+    // Reopen the invite after a reload while the host is still alone; once
+    // someone has joined, it stays behind the 邀請 button.
+    showGroupInvite.value =
+      groupOrder.isHost.value && (loaded.members?.length ?? 0) <= 1;
     void connectActiveGroupOrder(activeGroupOrder.groupOrderId);
   } catch {
     clearLoadedGroupMode();
@@ -896,6 +919,7 @@ function clearLoadedGroupMode(): void {
 function leaveGroupMode(): void {
   clearLoadedGroupMode();
   showGroupStartForm.value = false;
+  showGroupInvite.value = false;
 }
 
 async function connectActiveGroupOrder(groupOrderId: string): Promise<void> {

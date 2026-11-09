@@ -105,10 +105,17 @@ async function submitJoin(): Promise<void> {
       return;
     }
 
-    await router.push({
-      name: "GroupOrder",
-      params: { groupOrderId },
-    });
+    // Straight to the table menu so the new member can start ordering; a
+    // group without a table has no menu route, so it keeps the shared cart.
+    const { restaurantId, tableId } = groupOrder.groupOrder.value ?? {};
+    await router.push(
+      restaurantId && tableId
+        ? {
+            name: "RestaurantMenu",
+            params: { restaurantId, tableId: Number(tableId) },
+          }
+        : { name: "GroupOrder", params: { groupOrderId } },
+    );
   } catch (error) {
     joinError.value = t(
       getGroupOrderErrorI18nKey(error, "groupJoin.joinFailed"),

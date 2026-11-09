@@ -197,6 +197,32 @@ describe("GroupOrderJoinView", () => {
     );
   });
 
+  it("sends a member who joined a table group straight to that table's menu", async () => {
+    groupApi.get.mockResolvedValueOnce(previewPayload());
+    groupOrderMock.joinGroupOrder.mockImplementationOnce(async () => {
+      groupOrderMock.groupOrder.value = { ...loadedGroupOrder(), tableId: "7" };
+      return true;
+    });
+
+    const wrapper = mount(GroupOrderJoinView, {
+      ...mountOptions,
+      props: { shareCode: "ABC12345" },
+    });
+    await flushPromises();
+
+    await wrapper.find('[data-testid="join-confirm-button"]').trigger("click");
+    await wrapper.find('[data-testid="join-name-input"]').setValue("Sam");
+    await wrapper.find('[data-testid="join-submit-button"]').trigger("click");
+    await flushPromises();
+
+    expect(push).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "RestaurantMenu",
+        params: { restaurantId: "rest-1", tableId: 7 },
+      }),
+    );
+  });
+
   it("renders a not-found state for an unknown or expired share code", async () => {
     // What apiClient throws: an ApiException carrying the status. The bare
     // Error("404") this used to pass modelled the old string match, not the
@@ -291,6 +317,7 @@ describe("GroupOrderView", () => {
     expect(wrapper.find('[data-testid="invite-link-value"]').text()).toBe(
       "https://example.test/group/SHARE123",
     );
+    expect(wrapper.find('[data-testid="invite-qr"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="invite-share-code"]').text()).toBe(
       "ABC12345",
     );

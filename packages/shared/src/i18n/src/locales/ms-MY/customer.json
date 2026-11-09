@@ -834,7 +834,10 @@
     "inviteCopyLink": "Salin pautan jemputan",
     "inviteCopied": "Pautan jemputan disalin",
     "inviteCopyFailed": "Gagal menyalin, sila salin pautan di bawah secara manual",
-    "inviteCodeLabel": "Kod jemputan"
+    "inviteCodeLabel": "Kod jemputan",
+    "inviteShare": "Kongsi jemputan",
+    "inviteScanQr": "Rakan semeja boleh imbas untuk sertai",
+    "inviteButton": "Jemput"
   },
   "messages": {
     "networkError": "Sambungan rangkaian gagal, sila semak sambungan anda",

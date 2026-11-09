@@ -834,7 +834,10 @@
     "inviteCopyLink": "Copy invite link",
     "inviteCopied": "Invite link copied",
     "inviteCopyFailed": "Copy failed, please copy the link below manually",
-    "inviteCodeLabel": "Invite code"
+    "inviteCodeLabel": "Invite code",
+    "inviteShare": "Share invite",
+    "inviteScanQr": "Tablemates can scan this to join",
+    "inviteButton": "Invite"
   },
   "messages": {
     "networkError": "Network connection failed, please check your connection",

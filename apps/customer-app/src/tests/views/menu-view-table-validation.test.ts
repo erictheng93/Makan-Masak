@@ -19,12 +19,14 @@ const clearActiveGroupOrder = vi.hoisted(() => vi.fn());
 const groupOrderMock = vi.hoisted(() => ({
   groupOrder: { value: null as null | Record<string, unknown> },
   currentMemberId: { value: "" },
+  isHost: { value: false },
   error: { value: null as string | null },
   createGroupOrder: vi.fn(),
   loadGroupOrder: vi.fn(),
   connectToGroupOrder: vi.fn(),
   disconnectRealtime: vi.fn(),
   addToCart: vi.fn(),
+  getShareLink: vi.fn(() => "https://example.test/group/SHARE123"),
 }));
 const routeQuery = vi.hoisted(() => ({}));
 const tableValidationResult = vi.hoisted(
@@ -228,6 +230,7 @@ describe("MenuView table validation", () => {
     // reactive write happens to land first.
     groupOrderMock.groupOrder = ref(null);
     groupOrderMock.currentMemberId = ref("");
+    groupOrderMock.isHost = ref(false);
     groupOrderMock.error.value = null;
     groupOrderMock.createGroupOrder.mockReset();
     groupOrderMock.loadGroupOrder.mockReset();
@@ -354,7 +357,7 @@ describe("MenuView table validation", () => {
     );
   });
 
-  it("creates a group order from the menu and opens the shared cart", async () => {
+  it("creates a group order from the menu and stays on the menu to order", async () => {
     tableValidationResult.value = {
       isValid: true,
       table: { number: "A1" },
@@ -385,11 +388,57 @@ describe("MenuView table validation", () => {
       hostName: "Sam",
       tableId: "1",
     });
-    expect(routerPush).toHaveBeenCalledWith({
-      name: "GroupOrder",
-      params: { groupOrderId: "go-1" },
-    });
+    expect(routerPush).not.toHaveBeenCalledWith(
+      expect.objectContaining({ name: "GroupOrder" }),
+    );
   });
+
+  it.each([
+    { members: 1, isHost: true, open: true },
+    { members: 2, isHost: true, open: false },
+    { members: 1, isHost: false, open: false },
+  ])(
+    "reopens the invite on reload only for a host still alone ($members member(s), host=$isHost)",
+    async ({ members, isHost, open }) => {
+      tableValidationResult.value = { isValid: true, table: { number: "A1" } };
+      restaurantResult.value = { name: "Part 1 Smoke Restaurant" };
+      menuResult.value = { categories: [], menuItems: [] };
+      readActiveGroupOrder.mockReturnValue({
+        groupOrderId: "go-1",
+        restaurantId: "restaurant-1",
+        tableId: "1",
+        savedAt: Date.now(),
+      });
+      groupOrderMock.loadGroupOrder.mockImplementation(async () => {
+        groupOrderMock.currentMemberId.value = "m-1";
+        groupOrderMock.isHost.value = isHost;
+        groupOrderMock.groupOrder.value = {
+          id: "go-1",
+          restaurantId: "restaurant-1",
+          tableId: "1",
+          shareCode: "SHARE123",
+          status: "active",
+          cartItems: [],
+          members: Array.from({ length: members }, (_, i) => ({
+            id: `m-${i}`,
+          })),
+        };
+      });
+
+      const wrapper = mount(MenuView, {
+        props: { restaurantId: "restaurant-1", tableId: 1 },
+      });
+      await flushPromises();
+
+      expect(groupOrderMock.loadGroupOrder).toHaveBeenCalledWith("go-1");
+      expect(wrapper.find('[data-testid="group-cart-link"]').exists()).toBe(
+        true,
+      );
+      expect(wrapper.find('[data-testid="group-order-invite"]').exists()).toBe(
+        open,
+      );
+    },
+  );
 
   it("routes menu additions to the active group cart instead of local cart", async () => {
     tableValidationResult.value = {

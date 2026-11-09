@@ -63,7 +63,7 @@ function readGroup(groupOrderId: string): Promise<GroupSummary> {
   );
 }
 
-/** Scans the table, starts a group from its menu, lands on the group page. */
+/** Scans the table, starts a group from its menu, and stays on it in group mode. */
 async function startGroupFromMenu(
   page: Page,
   qrCode: string,
@@ -86,19 +86,19 @@ async function startGroupFromMenu(
       data: { groupOrderId: string; shareCode: string };
     }
   ).data;
-  await expect(page).toHaveURL(
-    new RegExp(`/group/order/${group.groupOrderId}$`),
-  );
+  // Creating keeps the host on the menu so the table can start ordering.
+  await expect(page.getByTestId("group-cart-link")).toBeVisible({
+    timeout: NAV_TIMEOUT,
+  });
   return group;
 }
 
-/** From the group page to the table menu in group mode, then one dish in. */
+/** On the table menu in group mode, one dish in, then on to the shared cart. */
 async function addDishInGroupMode(
   page: Page,
   groupOrderId: string,
   menuItemId: number,
 ): Promise<void> {
-  await page.getByTestId("group-order-menu-link").click();
   await expect(page.getByTestId("group-cart-link")).toBeVisible({
     timeout: NAV_TIMEOUT,
   });
@@ -183,7 +183,7 @@ test.describe("揪團 (real API + realtime)", () => {
       // --- 建立揪團 from the scanned table's menu ---------------------------
       const group = await startGroupFromMenu(host.page, table.qrCode);
 
-      // --- 分享碼邀請: C2 (09-15) put the invite panel on this page -----------
+      // --- 分享碼邀請: the invite panel opens on the menu right after creating -
       const invite = host.page.getByTestId("group-order-invite");
       await expect(invite).toBeVisible({ timeout: NAV_TIMEOUT });
       await expect(invite.getByTestId("invite-share-code")).toHaveText(
@@ -210,8 +210,9 @@ test.describe("揪團 (real API + realtime)", () => {
       );
       await guest.page.getByTestId("join-submit-button").click();
       expect((await joined).status(), "group join").toBeLessThan(300);
+      // Joining lands the new member on the table menu, ready to order.
       await expect(guest.page).toHaveURL(
-        new RegExp(`/group/order/${group.groupOrderId}$`),
+        new RegExp(`/restaurant/[^/]+/table/${table.id}$`),
       );
 
       // --- 同桌合單: each diner adds a different dish -------------------------
@@ -322,6 +323,7 @@ test.describe("揪團 (real API + realtime)", () => {
     try {
       const table = await createTable(localCleanup);
       const group = await startGroupFromMenu(host.page, table.qrCode);
+      await host.page.getByTestId("group-cart-link").click();
       await expect(host.page.getByTestId("group-order-menu-link")).toBeVisible({
         timeout: NAV_TIMEOUT,
       });

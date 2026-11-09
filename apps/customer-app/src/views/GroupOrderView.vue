@@ -344,6 +344,12 @@ onUnmounted(() => {
         {{ t("group.loading") }}
       </div>
 
+      <InvitePanel
+        v-if="!isLocked && !isCompleted"
+        :share-code="shareCode"
+        :share-link="shareLink"
+      />
+
       <div v-if="canSubmitOrder" class="mt-4">
         <button
           data-testid="group-order-submit"
@@ -442,8 +448,6 @@ onUnmounted(() => {
           {{ autoSubmitError }}
         </p>
       </div>
-
-      <InvitePanel :share-code="shareCode" :share-link="shareLink" />
 
       <HostRecoveryPanel
         :group-order-id="props.groupOrderId"

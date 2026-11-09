@@ -834,7 +834,10 @@
     "inviteCopyLink": "Salin tautan undangan",
     "inviteCopied": "Tautan undangan disalin",
     "inviteCopyFailed": "Gagal menyalin, silakan salin tautan di bawah secara manual",
-    "inviteCodeLabel": "Kode undangan"
+    "inviteCodeLabel": "Kode undangan",
+    "inviteShare": "Bagikan undangan",
+    "inviteScanQr": "Teman semeja bisa memindai ini untuk bergabung",
+    "inviteButton": "Undang"
   },
   "messages": {
     "networkError": "Koneksi jaringan gagal, periksa koneksi Anda",

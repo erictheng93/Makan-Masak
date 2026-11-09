@@ -834,7 +834,10 @@
     "inviteCopyLink": "Sao chép liên kết mời",
     "inviteCopied": "Đã sao chép liên kết mời",
     "inviteCopyFailed": "Sao chép thất bại, vui lòng sao chép liên kết bên dưới theo cách thủ công",
-    "inviteCodeLabel": "Mã mời"
+    "inviteCodeLabel": "Mã mời",
+    "inviteShare": "Chia sẻ lời mời",
+    "inviteScanQr": "Người cùng bàn quét mã này để tham gia",
+    "inviteButton": "Mời"
   },
   "messages": {
     "networkError": "Kết nối mạng thất bại, vui lòng kiểm tra kết nối của bạn",
