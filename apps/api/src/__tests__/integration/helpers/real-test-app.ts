@@ -58,16 +58,24 @@ export async function createRealIntegrationTestApp(
   });
   const authHelper = buildAuthHelper(env.DB);
 
-  const testCtx = {
-    waitUntil: () => {},
-    passThroughOnException: () => {},
-  } as unknown as ExecutionContext;
-
   const app = new Proxy(honoApp, {
     get(target, prop, receiver) {
       if (prop === "fetch") {
         return async (req: Request, envArg?: Env, ctx?: ExecutionContext) => {
-          return target.fetch(req, envArg ?? env, ctx ?? testCtx);
+          if (ctx) return target.fetch(req, envArg ?? env, ctx);
+          // Settle waitUntil work before handing the response back, so a test
+          // reading D1/KV right after a write sees the background side effects
+          // (search sync, cache sweeps) instead of racing them.
+          const background: Array<Promise<unknown>> = [];
+          const testCtx = {
+            waitUntil: (promise: Promise<unknown>) => {
+              background.push(promise);
+            },
+            passThroughOnException: () => {},
+          } as unknown as ExecutionContext;
+          const res = await target.fetch(req, envArg ?? env, testCtx);
+          await Promise.allSettled(background);
+          return res;
         };
       }
       return Reflect.get(target, prop, receiver);
