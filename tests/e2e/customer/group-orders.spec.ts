@@ -228,12 +228,14 @@ test.describe("揪團 (real API + realtime)", () => {
       );
 
       // The host's shared cart holds both diners' lines before submitting.
-      await expect(host.page.getByText(menu.plainItem.name)).toBeVisible({
-        timeout: LIVE_TIMEOUT,
-      });
-      await expect(host.page.getByText(menu.sideItem.name)).toBeVisible({
-        timeout: LIVE_TIMEOUT,
-      });
+      // Exact match: the "已加入 1 份 … 到群組購物車" toast from the add can
+      // still be on screen and contains the same dish name.
+      await expect(
+        host.page.getByText(menu.plainItem.name, { exact: true }),
+      ).toBeVisible({ timeout: LIVE_TIMEOUT });
+      await expect(
+        host.page.getByText(menu.sideItem.name, { exact: true }),
+      ).toBeVisible({ timeout: LIVE_TIMEOUT });
 
       const locked = host.page.waitForResponse(
         (response) =>
