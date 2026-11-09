@@ -107,4 +107,16 @@ describe("CategoryEditForm", () => {
     // A button inside a form must not submit it implicitly.
     expect(toggle.attributes("type")).toBe("button");
   });
+
+  it("disables submit and ignores a second submit while saving", async () => {
+    const wrapper = mount(CategoryEditForm, {
+      props: { editingCategory: null, saving: true },
+    });
+    const submit = wrapper.get('[data-testid="admin-category-submit"]');
+
+    expect(submit.attributes("disabled")).toBeDefined();
+    expect(submit.text()).toBe("common.saving");
+    await wrapper.get("form").trigger("submit");
+    expect(wrapper.emitted("save")).toBeUndefined();
+  });
 });

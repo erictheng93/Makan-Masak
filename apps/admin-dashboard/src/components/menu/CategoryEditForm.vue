@@ -141,9 +141,17 @@
           <button
             type="submit"
             data-testid="admin-category-submit"
-            class="px-5 py-2 rounded-full text-[13px] font-semibold bg-ios-primary text-white hover:bg-blue-600 transition-colors"
+            :disabled="saving"
+            :aria-busy="saving"
+            class="px-5 py-2 rounded-full text-[13px] font-semibold bg-ios-primary text-white hover:bg-blue-600 transition-colors disabled:opacity-60"
           >
-            {{ isEditing ? t("menu.form.update") : t("menu.form.add") }}
+            {{
+              saving
+                ? t("common.saving")
+                : isEditing
+                  ? t("menu.form.update")
+                  : t("menu.form.add")
+            }}
           </button>
         </div>
       </form>
@@ -160,6 +168,7 @@ const { t } = useI18n();
 
 const props = defineProps<{
   editingCategory?: CategoryData | null;
+  saving?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -218,6 +227,7 @@ watch(
 );
 
 const handleSubmit = () => {
+  if (props.saving) return;
   emit("save", { ...form.value }, props.editingCategory?.id);
 };
 </script>

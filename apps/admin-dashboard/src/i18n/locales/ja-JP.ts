@@ -9,6 +9,8 @@ const jaJP: Messages = {
     cancel: "キャンセル",
     confirm: "確認",
     delete: "削除",
+    deleting: "削除中...",
+    saving: "保存中...",
     edit: "編集",
     add: "追加",
     search: "検索",

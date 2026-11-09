@@ -447,4 +447,123 @@ describe("useMenuManagement", () => {
       });
     });
   });
+  describe("write latency (optimistic toggle, patch-not-refetch)", () => {
+    it("flips availability immediately, ignores a second tap, and skips the refetch", async () => {
+      const { menuItems, fetchMenu, toggleMenuItemStatus } =
+        useMenuManagement();
+      await fetchMenu();
+      apiMocks.get.mockClear();
+      let finish!: (value: unknown) => void;
+      apiMocks.put.mockImplementationOnce(
+        () => new Promise((resolve) => (finish = resolve)),
+      );
+
+      const first = toggleMenuItemStatus(menuItems.value[0]);
+      expect(menuItems.value[0].isAvailable).toBe(false);
+      await toggleMenuItemStatus(menuItems.value[0]);
+      expect(apiMocks.put).toHaveBeenCalledOnce();
+
+      finish({ data: { success: true, data: { updatedAt: 99 } } });
+      await first;
+      expect(menuItems.value[0]).toMatchObject({
+        isAvailable: false,
+        updatedAt: 99,
+      });
+      expect(apiMocks.get).not.toHaveBeenCalled();
+    });
+
+    it("reverts the toggle and reports an error when the write fails", async () => {
+      const { menuItems, fetchMenu, toggleMenuItemStatus } =
+        useMenuManagement();
+      await fetchMenu();
+      apiMocks.put.mockRejectedValueOnce(new Error("boom"));
+
+      await toggleMenuItemStatus(menuItems.value[0]);
+
+      expect(menuItems.value[0].isAvailable).toBe(true);
+      expect(toastMocks.error).toHaveBeenCalledWith("menu.errors.toggleFailed");
+    });
+
+    it("patches a created item from the response instead of refetching", async () => {
+      const { menuItems, fetchMenu, saveMenuItem } = useMenuManagement();
+      await fetchMenu();
+      apiMocks.get.mockClear();
+      apiMocks.post.mockResolvedValueOnce({
+        data: {
+          success: true,
+          data: buildApiMenuItem({ id: 12, name: "小籠包" }),
+        },
+      });
+
+      await expect(saveMenuItem(buildItemForm())).resolves.toBe("saved");
+
+      expect(menuItems.value.map((i) => i.id)).toEqual([11, 12]);
+      expect(apiMocks.get).not.toHaveBeenCalled();
+    });
+
+    it("refetches when the write response carries no entity", async () => {
+      const { fetchMenu, saveMenuItem } = useMenuManagement();
+      await fetchMenu();
+      apiMocks.get.mockClear();
+
+      await saveMenuItem(buildItemForm());
+
+      expect(apiMocks.get).toHaveBeenCalledOnce();
+    });
+
+    it("patches a created category and drops the delete refetch", async () => {
+      const { categories, fetchMenu, saveCategory, deleteCategory } =
+        useMenuManagement();
+      await fetchMenu();
+      apiMocks.get.mockClear();
+      apiMocks.post.mockResolvedValueOnce({
+        data: { success: true, data: { id: 4, name: "飲料", sortOrder: 1 } },
+      });
+
+      await saveCategory({ name: "飲料", sortOrder: 1 });
+      expect(categories.value.map((c) => c.id)).toEqual([3, 4]);
+
+      await deleteCategory(4);
+      expect(categories.value.map((c) => c.id)).toEqual([3]);
+      expect(apiMocks.get).not.toHaveBeenCalled();
+    });
+
+    it("ignores the realtime echo of its own write but not later events", async () => {
+      vi.useFakeTimers();
+      try {
+        const wrapper = mount(
+          defineComponent({
+            setup() {
+              useMenuManagement();
+              return () => null;
+            },
+          }),
+        );
+        let menu!: ReturnType<typeof useMenuManagement>;
+        const inner = mount(
+          defineComponent({
+            setup() {
+              menu = useMenuManagement();
+              return () => null;
+            },
+          }),
+        );
+        await menu.fetchMenu();
+        apiMocks.get.mockClear();
+        await menu.deleteMenuItem(menu.menuItems.value[0]);
+        realtime.callback?.({ restaurantId: "rest-1" });
+        await flushPromises();
+        expect(apiMocks.get).not.toHaveBeenCalled();
+
+        vi.advanceTimersByTime(2500);
+        realtime.callback?.({ restaurantId: "rest-1" });
+        await flushPromises();
+        expect(apiMocks.get).toHaveBeenCalledOnce();
+        inner.unmount();
+        wrapper.unmount();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
 });

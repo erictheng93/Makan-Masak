@@ -9,6 +9,8 @@ const idID: Messages = {
     cancel: "Batal",
     confirm: "Konfirmasi",
     delete: "Hapus",
+    deleting: "Menghapus...",
+    saving: "Menyimpan...",
     edit: "Edit",
     add: "Tambah",
     search: "Cari",

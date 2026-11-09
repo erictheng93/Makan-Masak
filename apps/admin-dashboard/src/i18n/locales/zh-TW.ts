@@ -10,6 +10,8 @@ const zhTWCore = {
     cancel: "取消",
     confirm: "確認",
     delete: "刪除",
+    deleting: "刪除中...",
+    saving: "儲存中...",
     edit: "編輯",
     add: "新增",
     search: "搜尋",

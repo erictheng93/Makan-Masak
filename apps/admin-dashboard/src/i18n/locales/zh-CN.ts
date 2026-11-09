@@ -9,6 +9,8 @@ const zhCN: Messages = {
     cancel: "取消",
     confirm: "确认",
     delete: "删除",
+    deleting: "删除中...",
+    saving: "保存中...",
     edit: "编辑",
     add: "添加",
     search: "搜索",

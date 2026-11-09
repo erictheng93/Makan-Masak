@@ -117,6 +117,31 @@ const menuItems = ref<MenuItemData[]>([]);
 const isLoading = ref(false);
 const selectedCategoryId = ref<number | null>(null);
 let menuRequest = 0;
+// Own writes in flight / just finished: the realtime echo of our own write must
+// not trigger a second full refetch. An event from someone else inside the
+// window is dropped too; the next fetch or reconnect reconciles it.
+let ownWrites = 0;
+let lastOwnWriteEnd = 0;
+const OWN_WRITE_ECHO_MS = 2000;
+const togglingItemIds = new Set<number>();
+
+const normalizeItem = (item: MenuItemData): MenuItemData => ({
+  ...item,
+  nameEn: item.nameEn || "",
+  catalogType: item.catalogType ?? "menu_item",
+  isFeatured: !!item.isFeatured,
+  isAvailable: !!item.isAvailable,
+});
+
+async function trackOwnWrite<T>(write: () => Promise<T>): Promise<T> {
+  ownWrites++;
+  try {
+    return await write();
+  } finally {
+    ownWrites--;
+    lastOwnWriteEnd = Date.now();
+  }
+}
 
 export function useMenuManagement() {
   const authStore = useAuthStore();
@@ -141,6 +166,35 @@ export function useMenuManagement() {
   const getCategoryName = (categoryId: number) => {
     const cat = categories.value.find((c) => c.id === categoryId);
     return cat?.name ?? t("menu.unknownCategory");
+  };
+
+  // Patch local state from a write response; false means the response lacked
+  // the entity and the caller must refetch.
+  const upsertItem = (saved: MenuItemData | undefined): boolean => {
+    if (!saved?.id) return false;
+    const index = menuItems.value.findIndex((i) => i.id === saved.id);
+    const next = normalizeItem({
+      ...(index >= 0 ? menuItems.value[index] : {}),
+      ...saved,
+    });
+    if (index >= 0) menuItems.value[index] = next;
+    else menuItems.value.push(next);
+    return true;
+  };
+
+  const upsertCategory = (saved: CategoryData | undefined): boolean => {
+    if (!saved?.id) return false;
+    const index = categories.value.findIndex((c) => c.id === saved.id);
+    const next = {
+      itemCount: 0,
+      ...(index >= 0 ? categories.value[index] : {}),
+      ...saved,
+      nameEn: saved.nameEn || "",
+    };
+    if (index >= 0) categories.value[index] = next;
+    else categories.value.push(next);
+    categories.value.sort((a, b) => a.sortOrder - b.sortOrder);
+    return true;
   };
 
   // ── Fetch ──
@@ -180,17 +234,9 @@ export function useMenuManagement() {
         // No client-side deleted-item filter: soft-deleted items carry
         // deleted_at_ms and the API excludes them at the source (#80). The old
         // sortOrder !== -1 convention is retired.
-        menuItems.value = payload.menuItems.map((item) => ({
-          ...item,
-          nameEn: item.nameEn || "",
-          catalogType: item.catalogType ?? "menu_item",
-          isFeatured: !!item.isFeatured,
-          isAvailable: !!item.isAvailable,
-          // Listed explicitly because saveMenuItem depends on it: without a
-          // version to send, an edit cannot be checked against concurrent
-          // changes (#85).
-          updatedAt: item.updatedAt,
-        }));
+        // updatedAt rides along: saveMenuItem needs a version to send, or an
+        // edit cannot be checked against concurrent changes (#85).
+        menuItems.value = payload.menuItems.map(normalizeItem);
       }
     } catch (error) {
       if (
@@ -233,6 +279,8 @@ export function useMenuManagement() {
       subscription = realtime.subscribe(
         RealtimeEventType.MENU_AVAILABILITY_UPDATE,
         (event) => {
+          if (ownWrites > 0 || Date.now() - lastOwnWriteEnd < OWN_WRITE_ECHO_MS)
+            return;
           if (event.restaurantId === String(authStore.restaurantId))
             void refresh();
         },
@@ -261,21 +309,28 @@ export function useMenuManagement() {
   ): Promise<boolean> => {
     if (!authStore.restaurantId) return false;
     try {
+      let saved: CategoryData | undefined;
       if (editingId) {
         // isVisible is update-only in the API contract (createCategorySchema
         // does not declare it, so POSTing it would just be stripped). New
         // categories start visible by DB default.
-        await api.put(`/menu/categories/${editingId}`, form);
+        const response = await trackOwnWrite(() =>
+          api.put<CategoryData>(`/menu/categories/${editingId}`, form),
+        );
+        saved = response.data?.data;
         toast.success(t("menu.toast.categoryUpdated"));
       } else {
         const { isVisible: _isVisible, ...createPayload } = form;
-        await api.post(
-          `/menu/${authStore.restaurantId}/categories`,
-          createPayload,
+        const response = await trackOwnWrite(() =>
+          api.post<CategoryData>(
+            `/menu/${authStore.restaurantId}/categories`,
+            createPayload,
+          ),
         );
+        saved = response.data?.data;
         toast.success(t("menu.toast.categoryCreated"));
       }
-      await fetchMenu();
+      if (!upsertCategory(saved)) await fetchMenu();
       return true;
     } catch (error: unknown) {
       console.error("Failed to save category:", error);
@@ -290,7 +345,7 @@ export function useMenuManagement() {
 
   const deleteCategory = async (categoryId: number) => {
     try {
-      await api.delete(`/menu/categories/${categoryId}`);
+      await trackOwnWrite(() => api.delete(`/menu/categories/${categoryId}`));
       // Optimistically remove from local state
       categories.value = categories.value.filter((c) => c.id !== categoryId);
       menuItems.value = menuItems.value.filter(
@@ -300,7 +355,6 @@ export function useMenuManagement() {
       if (selectedCategoryId.value === categoryId) {
         selectedCategoryId.value = null;
       }
-      await fetchMenu();
     } catch (error: unknown) {
       console.error("Failed to delete category:", error);
       toast.error(
@@ -365,6 +419,7 @@ export function useMenuManagement() {
   ): Promise<SaveMenuItemOutcome> => {
     if (!authStore.restaurantId) return "failed";
     try {
+      let saved: MenuItemData | undefined;
       const payload = {
         ...form,
         price: Number(form.price),
@@ -379,17 +434,26 @@ export function useMenuManagement() {
         // treat it as a conflict so the UI offers the same reload remedy
         // instead of sending a body the API would reject as invalid (#85).
         if (!form.updatedAt) return "conflict";
-        await api.put(`/menu/items/${editingId}`, {
-          ...payload,
-          updatedAt: form.updatedAt,
-        });
+        const response = await trackOwnWrite(() =>
+          api.put<MenuItemData>(`/menu/items/${editingId}`, {
+            ...payload,
+            updatedAt: form.updatedAt,
+          }),
+        );
+        saved = response.data?.data;
         toast.success(t("menu.toast.itemUpdated"));
       } else {
         const { updatedAt: _updatedAt, ...createPayload } = payload;
-        await api.post(`/menu/${authStore.restaurantId}/items`, createPayload);
+        const response = await trackOwnWrite(() =>
+          api.post<MenuItemData>(
+            `/menu/${authStore.restaurantId}/items`,
+            createPayload,
+          ),
+        );
+        saved = response.data?.data;
         toast.success(t("menu.toast.itemCreated"));
       }
-      await fetchMenu();
+      if (!upsertItem(saved)) await fetchMenu();
       return "saved";
     } catch (error: unknown) {
       console.error("Failed to save menu item:", error);
@@ -504,12 +568,9 @@ export function useMenuManagement() {
 
   const deleteMenuItem = async (item: MenuItemData) => {
     try {
-      await api.delete(`/menu/items/${item.id}`);
-      // Optimistically remove from local state immediately so UI updates
+      await trackOwnWrite(() => api.delete(`/menu/items/${item.id}`));
       menuItems.value = menuItems.value.filter((i) => i.id !== item.id);
       toast.success(t("menu.toast.itemDeleted"));
-      // Also refetch to sync with server (handles edge cache staleness)
-      await fetchMenu();
     } catch (error: unknown) {
       console.error("Failed to delete menu item:", error);
       toast.error(
@@ -523,19 +584,33 @@ export function useMenuManagement() {
   };
 
   const toggleMenuItemStatus = async (item: MenuItemData) => {
+    // One toggle per item at a time: a second tap mid-flight would flip it back.
+    if (togglingItemIds.has(item.id)) return;
+    const target = menuItems.value.find((i) => i.id === item.id);
+    if (!target) return;
+    const previous = target.isAvailable;
+    togglingItemIds.add(item.id);
+    target.isAvailable = !previous; // optimistic
     try {
       // Deliberately no updatedAt: this writes availability and nothing else,
       // so it cannot clobber a concurrent price or name edit, and the newest
       // sold-out decision is the one that should win. Sending a version here
       // would make the toggle fail whenever anything else about the item had
       // changed — see STOCK_ONLY_ITEM_FIELDS in the API's menu schemas (#85).
-      await api.put(`/menu/items/${item.id}`, {
-        isAvailable: !item.isAvailable,
-      });
-      await fetchMenu();
+      const response = await trackOwnWrite(() =>
+        api.put<MenuItemData>(`/menu/items/${item.id}`, {
+          isAvailable: !previous,
+        }),
+      );
+      // Keep the version fresh so a following edit does not hit a false conflict.
+      const updatedAt = response.data?.data?.updatedAt;
+      if (updatedAt) target.updatedAt = updatedAt;
     } catch (error) {
       console.error("Failed to toggle status:", error);
+      target.isAvailable = previous;
       toast.error(t("menu.errors.toggleFailed"));
+    } finally {
+      togglingItemIds.delete(item.id);
     }
   };
 

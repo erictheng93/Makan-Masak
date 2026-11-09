@@ -9,6 +9,8 @@ const enUS: Messages = {
     cancel: "Cancel",
     confirm: "Confirm",
     delete: "Delete",
+    deleting: "Deleting...",
+    saving: "Saving...",
     edit: "Edit",
     add: "Add",
     search: "Search",

@@ -446,6 +446,7 @@
     <CategoryEditForm
       v-if="showCategoryEditForm"
       :editing-category="editingCategory"
+      :saving="isSavingCategory"
       @save="handleSaveCategory"
       @cancel="cancelCategoryEdit"
     />
@@ -473,17 +474,20 @@
             <div class="flex gap-2.5 justify-center">
               <button
                 data-testid="admin-delete-cancel"
-                class="px-5 py-2.5 text-[14px] font-semibold text-ios-text bg-ios-bg rounded-full hover:bg-ios-separator transition-colors"
+                :disabled="isDeleting"
+                class="px-5 py-2.5 text-[14px] font-semibold text-ios-text bg-ios-bg rounded-full hover:bg-ios-separator transition-colors disabled:opacity-50"
                 @click="cancelDelete"
               >
                 {{ t("common.cancel") }}
               </button>
               <button
                 data-testid="admin-delete-confirm"
-                class="px-5 py-2.5 text-[14px] font-semibold text-white bg-ios-error rounded-full hover:bg-ios-error/90 transition-colors shadow-[0_2px_8px_rgba(255,59,48,0.25)]"
+                :disabled="isDeleting"
+                :aria-busy="isDeleting"
+                class="px-5 py-2.5 text-[14px] font-semibold text-white bg-ios-error rounded-full hover:bg-ios-error/90 transition-colors shadow-[0_2px_8px_rgba(255,59,48,0.25)] disabled:opacity-60"
                 @click="confirmDelete"
               >
-                {{ t("common.delete") }}
+                {{ isDeleting ? t("common.deleting") : t("common.delete") }}
               </button>
             </div>
           </div>
@@ -1412,10 +1416,16 @@
                 <button
                   type="submit"
                   data-testid="menu-item-submit"
-                  class="px-5 py-2.5 text-[14px] font-semibold text-white bg-ios-primary rounded-full hover:bg-ios-primary/90 transition-colors shadow-[0_2px_8px_rgba(0,122,255,0.25)]"
+                  :disabled="isSavingMenuItem"
+                  :aria-busy="isSavingMenuItem"
+                  class="px-5 py-2.5 text-[14px] font-semibold text-white bg-ios-primary rounded-full hover:bg-ios-primary/90 transition-colors shadow-[0_2px_8px_rgba(0,122,255,0.25)] disabled:opacity-60"
                 >
                   {{
-                    editingMenuItem ? t("menu.form.update") : t("menu.form.add")
+                    isSavingMenuItem
+                      ? t("common.saving")
+                      : editingMenuItem
+                        ? t("menu.form.update")
+                        : t("menu.form.add")
                   }}
                 </button>
               </div>
@@ -1899,6 +1909,8 @@ const startEditCategory = (category: CategoryData) => {
   showCategoryEditForm.value = true;
 };
 
+const isSavingCategory = ref(false);
+
 const handleSaveCategory = async (
   form: {
     name: string;
@@ -1909,9 +1921,15 @@ const handleSaveCategory = async (
   },
   editingId?: number,
 ) => {
-  if (await saveCategory(form, editingId)) {
-    showCategoryEditForm.value = false;
-    editingCategory.value = null;
+  if (isSavingCategory.value) return;
+  isSavingCategory.value = true;
+  try {
+    if (await saveCategory(form, editingId)) {
+      showCategoryEditForm.value = false;
+      editingCategory.value = null;
+    }
+  } finally {
+    isSavingCategory.value = false;
   }
 };
 
@@ -1939,14 +1957,21 @@ const openDeleteConfirm = (
   deleteConfirm.value = { title, message, action };
 };
 
+const isDeleting = ref(false);
+
 const confirmDelete = async () => {
-  if (deleteConfirm.value?.action) {
-    await deleteConfirm.value.action();
+  if (isDeleting.value) return;
+  isDeleting.value = true;
+  try {
+    await deleteConfirm.value?.action?.();
+  } finally {
+    isDeleting.value = false;
+    cancelDelete();
   }
-  cancelDelete();
 };
 
 const cancelDelete = () => {
+  if (isDeleting.value) return;
   deleteConfirm.value = null;
 };
 
@@ -2354,7 +2379,20 @@ const buildStructuredOptions = (): Record<string, unknown> | null => {
   return Object.keys(options).length ? options : null;
 };
 
+const isSavingMenuItem = ref(false);
+
+// Guards the whole submit (item write + option-group links) against a second tap.
 const handleSaveMenuItem = async () => {
+  if (isSavingMenuItem.value) return;
+  isSavingMenuItem.value = true;
+  try {
+    await submitMenuItem();
+  } finally {
+    isSavingMenuItem.value = false;
+  }
+};
+
+const submitMenuItem = async () => {
   optionsError.value = "";
   // buildStructuredOptions() drops rows it cannot turn into valid options, so
   // a half-filled row would vanish on save while the modal reported success —

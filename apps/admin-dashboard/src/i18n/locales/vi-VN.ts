@@ -9,6 +9,8 @@ const viVN: Messages = {
     cancel: "Hủy",
     confirm: "Xác nhận",
     delete: "Xóa",
+    deleting: "Đang xóa...",
+    saving: "Đang lưu...",
     edit: "Chỉnh sửa",
     add: "Thêm",
     search: "Tìm kiếm",
