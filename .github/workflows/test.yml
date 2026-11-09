@@ -132,13 +132,21 @@ jobs:
           fetch-depth: 0
 
       - name: 🧾 GitHub Actions workflow lint
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          # GitHub release downloads intermittently 504. Save to a file rather
-          # than piping into tar, so a retry cannot append to a partial stream.
-          curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
-            -o "$RUNNER_TEMP/actionlint.tar.gz" \
-            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          # github.com/<repo>/releases/download/ has gone 504 for minutes at a
+          # time (6/6 retries failed on 472f1f99f). `gh release download`
+          # fetches the same asset through api.github.com, a separate path that
+          # kept answering 200 meanwhile; curl stays as the fallback. Saved to
+          # a file so a retry cannot append to a partial tar stream.
+          asset="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          gh release download "v${ACTIONLINT_VERSION}" -R rhysd/actionlint \
+              -p "$asset" -O "$RUNNER_TEMP/actionlint.tar.gz" ||
+            curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+              -o "$RUNNER_TEMP/actionlint.tar.gz" \
+              "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${asset}"
           tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
           "$RUNNER_TEMP/actionlint" -color
 
