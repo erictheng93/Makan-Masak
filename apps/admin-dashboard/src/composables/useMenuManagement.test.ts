@@ -528,7 +528,7 @@ describe("useMenuManagement", () => {
       expect(apiMocks.get).not.toHaveBeenCalled();
     });
 
-    it("ignores the realtime echo of its own write but not later events", async () => {
+    it("defers a realtime event during its own write to one later refetch", async () => {
       vi.useFakeTimers();
       try {
         const wrapper = mount(
@@ -552,13 +552,18 @@ describe("useMenuManagement", () => {
         apiMocks.get.mockClear();
         await menu.deleteMenuItem(menu.menuItems.value[0]);
         realtime.callback?.({ restaurantId: "rest-1" });
+        realtime.callback?.({ restaurantId: "rest-1" });
         await flushPromises();
         expect(apiMocks.get).not.toHaveBeenCalled();
 
+        // Could be another device's change: it is fetched once the window ends.
         vi.advanceTimersByTime(2500);
-        realtime.callback?.({ restaurantId: "rest-1" });
         await flushPromises();
         expect(apiMocks.get).toHaveBeenCalledOnce();
+
+        realtime.callback?.({ restaurantId: "rest-1" });
+        await flushPromises();
+        expect(apiMocks.get).toHaveBeenCalledTimes(2);
         inner.unmount();
         wrapper.unmount();
       } finally {

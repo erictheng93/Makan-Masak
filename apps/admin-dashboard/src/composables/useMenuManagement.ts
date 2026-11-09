@@ -118,8 +118,8 @@ const isLoading = ref(false);
 const selectedCategoryId = ref<number | null>(null);
 let menuRequest = 0;
 // Own writes in flight / just finished: the realtime echo of our own write must
-// not trigger a second full refetch. An event from someone else inside the
-// window is dropped too; the next fetch or reconnect reconciles it.
+// not refetch on top of the save. Events in this window are deferred to one
+// background refetch after it, so another device's change is not lost.
 let ownWrites = 0;
 let lastOwnWriteEnd = 0;
 const OWN_WRITE_ECHO_MS = 2000;
@@ -275,14 +275,27 @@ export function useMenuManagement() {
         refreshing = false;
       }
     };
+    let deferred: ReturnType<typeof setTimeout> | undefined;
+    // Events inside the own-write window may be another device's change, so
+    // they are deferred to one background refetch, never dropped.
+    const onMenuEvent = () => {
+      if (deferred || disposed) return;
+      const wait =
+        ownWrites > 0
+          ? OWN_WRITE_ECHO_MS
+          : lastOwnWriteEnd + OWN_WRITE_ECHO_MS - Date.now();
+      if (wait <= 0) return void refresh();
+      deferred = setTimeout(() => {
+        deferred = undefined;
+        onMenuEvent();
+      }, wait);
+    };
     onMounted(() => {
       subscription = realtime.subscribe(
         RealtimeEventType.MENU_AVAILABILITY_UPDATE,
         (event) => {
-          if (ownWrites > 0 || Date.now() - lastOwnWriteEnd < OWN_WRITE_ECHO_MS)
-            return;
           if (event.restaurantId === String(authStore.restaurantId))
-            void refresh();
+            onMenuEvent();
         },
       );
     });
@@ -291,6 +304,7 @@ export function useMenuManagement() {
     });
     onUnmounted(() => {
       disposed = true;
+      clearTimeout(deferred);
       if (subscription) realtime.unsubscribe(subscription);
     });
   }
