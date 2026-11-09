@@ -134,9 +134,12 @@ jobs:
       - name: 🧾 GitHub Actions workflow lint
         run: |
           set -euo pipefail
-          curl -fsSL \
-            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
-            | tar -xz -C "$RUNNER_TEMP" actionlint
+          # GitHub release downloads intermittently 504. Save to a file rather
+          # than piping into tar, so a retry cannot append to a partial stream.
+          curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+            -o "$RUNNER_TEMP/actionlint.tar.gz" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
           "$RUNNER_TEMP/actionlint" -color
 
       - name: 📦 安裝 pnpm
