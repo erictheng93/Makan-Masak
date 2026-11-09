@@ -32,12 +32,12 @@ beforeEach(() => {
     expiresIn: 300,
   });
 });
-function setup(refresh = vi.fn(async () => {})) {
+function setup(refresh = vi.fn(async () => {}), ready = () => true) {
   const restaurant = ref("rest-1");
   const wrapper = mount(
     defineComponent({
       setup() {
-        useMenuRealtime(() => restaurant.value, refresh);
+        useMenuRealtime(() => restaurant.value, refresh, ready);
         return () => null;
       },
     }),
@@ -45,7 +45,26 @@ function setup(refresh = vi.fn(async () => {})) {
   return { wrapper, restaurant, refresh };
 }
 describe("menu refresh subscription", () => {
-  it("refreshes on open and same-restaurant menu events only", async () => {
+  it("skips the refresh on the first open but refreshes after a reconnect", async () => {
+    const { wrapper, refresh } = setup();
+    ws.options!.onOpen();
+    await flushPromises();
+    expect(refresh).not.toHaveBeenCalled();
+    ws.options!.onOpen();
+    await flushPromises();
+    expect(refresh).toHaveBeenCalledOnce();
+    wrapper.unmount();
+  });
+  it("waits for the first menu read before asking for a token", async () => {
+    const menuLoaded = ref(false);
+    const { wrapper } = setup(undefined, () => menuLoaded.value);
+    expect(ws.connect).not.toHaveBeenCalled();
+    menuLoaded.value = true;
+    await flushPromises();
+    expect(ws.connect).toHaveBeenCalledOnce();
+    wrapper.unmount();
+  });
+  it("refreshes on same-restaurant menu events only", async () => {
     const { wrapper, refresh } = setup();
     ws.options!.onOpen();
     await flushPromises();
@@ -53,7 +72,7 @@ describe("menu refresh subscription", () => {
     ws.options!.onMessage({ type: "new_order", restaurantId: "rest-1" });
     ws.options!.onMessage({ type: "menu_item_update", restaurantId: "rest-1" });
     await flushPromises();
-    expect(refresh).toHaveBeenCalledTimes(2);
+    expect(refresh).toHaveBeenCalledOnce();
     wrapper.unmount();
     expect(ws.disconnect).toHaveBeenCalled();
   });
@@ -69,6 +88,7 @@ describe("menu refresh subscription", () => {
       )
       .mockResolvedValue(undefined);
     const { wrapper } = setup(refresh);
+    ws.options!.onOpen();
     ws.options!.onOpen();
     ws.options!.onOpen();
     ws.options!.onOpen();

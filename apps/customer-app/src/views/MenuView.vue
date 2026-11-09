@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-ios-bg">
     <!-- 頂部固定導航 -->
-    <nav class="sticky top-0 z-40 bg-white/80 backdrop-blur-xl shadow-card-sm">
+    <nav class="sticky top-0 z-40 bg-white shadow-card-sm">
       <div
         class="max-w-lg md:max-w-3xl lg:max-w-6xl mx-auto px-4 md:px-6 lg:px-8"
       >
@@ -366,7 +366,7 @@
             class="scroll-mt-32"
           >
             <div
-              class="sticky bg-ios-bg/95 backdrop-blur-sm py-3 z-10 -mx-5 px-5"
+              class="sticky bg-ios-bg py-3 z-10 -mx-5 px-5"
               :class="visibleCategories.length > 0 ? 'top-32' : 'top-16'"
             >
               <h2 class="text-xl font-semibold text-ios-text">
@@ -718,7 +718,6 @@ const activeCartItemCount = computed(() => {
 const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery({
   queryKey: computed(() => ["restaurant", props.restaurantId]),
   queryFn: () => menuApi.getRestaurant(props.restaurantId),
-  enabled: isTableValid,
   staleTime: 5 * 60 * 1000, // 5分鐘
 });
 
@@ -737,7 +736,6 @@ const {
     freshMenuRead = false;
     return menuApi.getMenu(queryKey[1], queryKey[2], { fresh });
   },
-  enabled: isTableValid,
   staleTime: 2 * 60 * 1000, // 2分鐘
   refetchOnWindowFocus: true,
 });
@@ -746,10 +744,10 @@ useMenuRealtime(
   () => props.restaurantId,
   async () => {
     freshMenuRead = true;
-    if (!isTableValid.value) return;
     await refetch({ cancelRefetch: false });
     if (freshMenuRead) await refetch({ cancelRefetch: false });
   },
+  () => !isLoadingMenu.value,
 );
 
 // Computed
@@ -1060,8 +1058,18 @@ watch(
         props.tableId,
         currentSeatId,
       );
-      groupRestore = restoreActiveGroupOrder();
     }
+  },
+  { immediate: true },
+);
+
+// Restoring only compares the loaded group to this table, so it need not wait
+// for validation (the menu is shown only once that resolves); and it runs once,
+// not again on every seat change.
+watch(
+  isValidTableId,
+  (valid) => {
+    if (valid) groupRestore = restoreActiveGroupOrder();
   },
   { immediate: true },
 );

@@ -185,9 +185,9 @@ describe("GroupOrderJoinView", () => {
 
   it("navigates to the loaded group order id after joining, never undefined", async () => {
     groupApi.get.mockResolvedValueOnce(previewPayload());
-    groupOrderMock.joinGroupOrder.mockImplementationOnce(async () => {
-      groupOrderMock.groupOrder.value = loadedGroupOrder();
-      return true;
+    groupOrderMock.joinGroupOrder.mockResolvedValueOnce({
+      groupOrderId: "go-1",
+      restaurantId: "rest-1",
     });
 
     const wrapper = mount(GroupOrderJoinView, {
@@ -215,9 +215,10 @@ describe("GroupOrderJoinView", () => {
 
   it("sends a member who joined a table group straight to that table's menu", async () => {
     groupApi.get.mockResolvedValueOnce(previewPayload());
-    groupOrderMock.joinGroupOrder.mockImplementationOnce(async () => {
-      groupOrderMock.groupOrder.value = { ...loadedGroupOrder(), tableId: "7" };
-      return true;
+    groupOrderMock.joinGroupOrder.mockResolvedValueOnce({
+      groupOrderId: "go-1",
+      restaurantId: "rest-1",
+      tableId: "7",
     });
 
     const wrapper = mount(GroupOrderJoinView, {

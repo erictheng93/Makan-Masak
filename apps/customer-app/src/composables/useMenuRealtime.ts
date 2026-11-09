@@ -9,12 +9,16 @@ import { useWebSocket } from "./useWebSocket";
 export function useMenuRealtime(
   restaurantId: () => string,
   refresh: () => Promise<unknown>,
+  // Held back until the first menu read has landed, so the token request does
+  // not compete with it and the first open need not re-read what it just got.
+  ready: () => boolean = () => true,
 ): void {
   let token: { url: string; expiresAt: number } | undefined;
   let generation = 0;
   let disposed = false;
   let refreshing = false;
   let dirty = false;
+  let opened = false;
   const refreshMenu = async () => {
     dirty = true;
     if (refreshing || disposed) return;
@@ -60,7 +64,10 @@ export function useMenuRealtime(
       token = undefined;
     },
     onOpen: () => {
-      void refreshMenu();
+      // The first open follows a read made moments ago; only a reconnect can
+      // have missed an update.
+      if (opened) void refreshMenu();
+      opened = true;
     },
     onMessage: (event) => {
       if (
@@ -71,14 +78,20 @@ export function useMenuRealtime(
     },
   });
   watch(
-    restaurantId,
-    (id) => {
+    () => [restaurantId(), ready()] as const,
+    ([id, isReady], previous) => {
+      // Becoming ready for the same restaurant only needs the connect below.
+      if (previous && previous[0] === id && previous[1] !== isReady) {
+        if (isReady && id && import.meta.env.VITE_REALTIME_URL) void connect();
+        return;
+      }
+      opened = false;
       ++generation;
       token = undefined;
       dirty = false;
       refreshing = false;
       disconnect();
-      if (id && import.meta.env.VITE_REALTIME_URL) void connect();
+      if (isReady && id && import.meta.env.VITE_REALTIME_URL) void connect();
     },
     { immediate: true },
   );

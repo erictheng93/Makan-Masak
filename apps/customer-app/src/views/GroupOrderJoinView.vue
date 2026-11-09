@@ -97,9 +97,7 @@ async function submitJoin(): Promise<void> {
 
   try {
     const joined = await groupOrder.joinGroupOrder(props.shareCode, name);
-    const groupOrderId = groupOrder.groupOrder.value?.id;
-
-    if (!joined || !groupOrderId) {
+    if (!joined) {
       // joinGroupOrder catches its own failure into the composable's error ref,
       // which holds a translation key rather than a message.
       joinError.value = t(groupOrder.error.value ?? "groupJoin.joinFailed");
@@ -108,7 +106,7 @@ async function submitJoin(): Promise<void> {
 
     // Straight to the table menu so the new member can start ordering; a
     // group without a table has no menu route, so it keeps the shared cart.
-    const { restaurantId, tableId } = groupOrder.groupOrder.value ?? {};
+    const { groupOrderId, restaurantId, tableId } = joined;
     await router.push(
       restaurantId && tableId
         ? {

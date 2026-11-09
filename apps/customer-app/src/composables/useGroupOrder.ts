@@ -739,7 +739,11 @@ export function useGroupOrder(options: {
   async function joinGroupOrder(
     shareCode: string,
     memberName = userName,
-  ): Promise<boolean> {
+  ): Promise<{
+    groupOrderId: string;
+    restaurantId: string;
+    tableId?: string;
+  } | null> {
     isLoading.value = true;
     error.value = null;
 
@@ -762,12 +766,26 @@ export function useGroupOrder(options: {
         memberId: currentMemberId.value,
         memberToken: response.memberToken,
       });
-      await loadGroupOrder(response.groupOrder.id);
-
-      return true;
+      // No summary read here: the view the member lands on loads it, and
+      // reading it for both was the duplicate GET /orders/group/:id. Recording
+      // the active group is what tells that view which one to load.
+      const tableId =
+        response.groupOrder.tableId == null
+          ? undefined
+          : String(response.groupOrder.tableId);
+      saveActiveGroupOrder({
+        groupOrderId: response.groupOrder.id,
+        restaurantId: response.groupOrder.restaurantId,
+        tableId,
+      });
+      return {
+        groupOrderId: response.groupOrder.id,
+        restaurantId: response.groupOrder.restaurantId,
+        tableId,
+      };
     } catch (err) {
       error.value = getGroupOrderErrorI18nKey(err, "groupJoin.joinFailed");
-      return false;
+      return null;
     } finally {
       isLoading.value = false;
     }

@@ -1282,9 +1282,14 @@ describe("useGroupOrder — a member's session outlives the instance", () => {
   async function joinOnOneInstance() {
     const joining = useGroupOrder({ restaurantId: "rest-1" });
     vi.mocked(apiClient.post).mockResolvedValueOnce(joinResponse());
-    vi.mocked(apiClient.get).mockResolvedValueOnce(summaryResponse());
-    const ok = await joining.joinGroupOrder("ABC12345", "Sam");
-    expect(ok).toBe(true);
+    const joined = await joining.joinGroupOrder("ABC12345", "Sam");
+    expect(joined).toEqual({
+      groupOrderId: "go-1",
+      restaurantId: "rest-1",
+      tableId: undefined,
+    });
+    // The landing view loads the summary; reading it here too was the duplicate.
+    expect(apiClient.get).not.toHaveBeenCalled();
     return joining;
   }
 
@@ -1357,6 +1362,9 @@ describe("useGroupOrder — a member's session outlives the instance", () => {
 
   it("forgets the member once they leave", async () => {
     const joining = await joinOnOneInstance();
+    // Leaving acts on the loaded group, which the landing view reads.
+    vi.mocked(apiClient.get).mockResolvedValueOnce(summaryResponse());
+    await joining.loadGroupOrder("go-1");
     vi.mocked(apiClient.post).mockResolvedValueOnce({});
     await joining.leaveGroupOrder();
 

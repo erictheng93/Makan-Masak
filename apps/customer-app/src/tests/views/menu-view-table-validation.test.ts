@@ -257,26 +257,41 @@ describe("MenuView table validation", () => {
     cartState.subtotal = 0;
   });
 
-  it("retains realtime freshness until the table validation enables the first menu read", async () => {
-    const table = ref(
-      null as null | { isValid: boolean; table: { number: string } },
-    );
-    pendingQuery.table = table;
+  it("issues the menu read without waiting for table validation, and fresh after a realtime event", async () => {
+    pendingQuery.table = ref(null);
     const wrapper = mount(MenuView, {
       props: { restaurantId: "restaurant-1", tableId: 99 },
     });
     const { menuApi } = await import("@/services/menuApi");
+    // Not gated: the read starts alongside the validation, which still decides
+    // whether the page is shown (redirect on an invalid table).
+    expect(pendingQuery.menu!.enabled).toBeUndefined();
     await realtimeRefresh.callback?.();
-    expect(menuApi.getMenu).not.toHaveBeenCalled();
-    table.value = { isValid: true, table: { number: "99" } };
-    await flushPromises();
-    expect(unref(pendingQuery.menu!.enabled)).toBe(true);
     await pendingQuery.menu!.queryFn({
       queryKey: ["menu", "restaurant-1", 99],
     });
     expect(menuApi.getMenu).toHaveBeenCalledWith("restaurant-1", 99, {
       fresh: true,
     });
+    wrapper.unmount();
+  });
+
+  it("restores the stored group once, even before validation and across seat changes", async () => {
+    pendingQuery.table = ref(null);
+    readActiveGroupOrder.mockReturnValue({ groupOrderId: "go-1" });
+    groupOrderMock.loadGroupOrder.mockResolvedValue(undefined);
+    const wrapper = mount(MenuView, {
+      props: { restaurantId: "restaurant-1", tableId: 99 },
+    });
+    await flushPromises();
+    expect(groupOrderMock.loadGroupOrder).toHaveBeenCalledTimes(1);
+    expect(groupOrderMock.loadGroupOrder).toHaveBeenCalledWith("go-1");
+    (pendingQuery.table as { value: unknown }).value = {
+      isValid: true,
+      table: { number: "99" },
+    };
+    await flushPromises();
+    expect(groupOrderMock.loadGroupOrder).toHaveBeenCalledTimes(1);
     wrapper.unmount();
   });
 
