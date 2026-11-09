@@ -103,6 +103,12 @@ vi.mock("../../discovery/services/SearchIndexSyncService", () => ({
   createSearchIndexSync: vi.fn(() => syncFns),
 }));
 
+const alertFns = vi.hoisted(() => ({
+  raiseSearchSyncFailedAlert: vi.fn(),
+}));
+
+vi.mock("../../alerts/producers", () => alertFns);
+
 const gateMocks = vi.hoisted(() => ({
   moduleGate: vi.fn(
     (_module: ModuleKey) => async (_c: unknown, next: () => Promise<void>) =>
@@ -454,6 +460,22 @@ describe("restaurants routes", () => {
     expect(syncFns.onRestaurantChanged).toHaveBeenLastCalledWith("rest-1", {
       previousDistrict: "Central",
     });
+    expect(alertFns.raiseSearchSyncFailedAlert).toHaveBeenCalledOnce();
+    expect(alertFns.raiseSearchSyncFailedAlert).toHaveBeenCalledWith(
+      expect.anything(),
+      { restaurantId: "rest-1" },
+    );
+  });
+
+  it("does not alert the owner when the retry recovers the sync", async () => {
+    auth.user = { id: "user-7", username: "admin", role: 0 };
+    syncFns.onRestaurantChanged.mockRejectedValueOnce(new Error("D1 blip"));
+
+    const res = await request("/rest-1", "PUT", { name: "Updated" });
+
+    expect(res.status).toBe(200);
+    expect(syncFns.onRestaurantChanged).toHaveBeenCalledTimes(2);
+    expect(alertFns.raiseSearchSyncFailedAlert).not.toHaveBeenCalled();
   });
 
   it("only lets admins change isActive on restaurant update", async () => {

@@ -2643,6 +2643,11 @@ const enUS: Messages = {
         description:
           "Payment for order {orderNumber} was refused ({errorCode}). Check the order's payment state before reconciling.",
       },
+      search_sync_failed: {
+        title: "Search results did not update",
+        description:
+          "Your settings were saved, but customer search may still show the previous details. Save the settings again to retry.",
+      },
     },
     resolve: "Resolve",
     escalate: "Escalate",

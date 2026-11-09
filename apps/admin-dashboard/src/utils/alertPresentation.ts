@@ -14,6 +14,7 @@ export const TRANSLATABLE_ALERT_TYPES = new Set([
   "inventory_low",
   "order_overdue",
   "payment_failed",
+  "search_sync_failed",
 ]);
 
 /** What vue-i18n can interpolate. `details` is a JSON column, so it is wider. */

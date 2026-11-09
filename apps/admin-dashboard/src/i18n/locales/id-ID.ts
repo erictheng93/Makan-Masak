@@ -2659,6 +2659,11 @@ const idID: Messages = {
         description:
           "Pembayaran untuk pesanan {orderNumber} ditolak ({errorCode}). Periksa status pembayaran pesanan sebelum melakukan rekonsiliasi.",
       },
+      search_sync_failed: {
+        title: "Hasil pencarian belum diperbarui",
+        description:
+          "Pengaturan sudah disimpan, tetapi pelanggan mungkin masih melihat informasi lama saat mencari. Simpan pengaturan sekali lagi untuk mencoba ulang.",
+      },
     },
     resolve: "Selesaikan",
     escalate: "Eskalasi",

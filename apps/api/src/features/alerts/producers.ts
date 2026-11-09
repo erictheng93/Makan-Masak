@@ -284,3 +284,26 @@ export function raisePaymentFailedAlert(
     dedupeKey: `payment-failed:${input.orderId}`,
   });
 }
+
+/**
+ * Raised when a restaurant save landed but the discovery search index did not
+ * follow it, even after one retry. Customers searching may see the old
+ * district or fulfilment options until a later sync succeeds -- and saving the
+ * settings again re-runs that sync, which is why this goes to the owner rather
+ * than only to logs. Keyed per restaurant: repeated failures are one problem.
+ */
+export function raiseSearchSyncFailedAlert(
+  env: Env,
+  input: { restaurantId: string },
+): Promise<void> {
+  return raise(env, {
+    restaurantId: input.restaurantId,
+    alertType: "search_sync_failed",
+    severity: RESTAURANT_ALERT_SEVERITY.MEDIUM,
+    title: "Search results did not update",
+    description:
+      "Your settings were saved, but customer search may still show the previous details. Save the settings again to retry.",
+    details: {},
+    dedupeKey: `search-sync:${input.restaurantId}`,
+  });
+}

@@ -5,6 +5,7 @@ import {
   raiseLowStockAlert,
   raiseOverdueOrderAlert,
   raisePaymentFailedAlert,
+  raiseSearchSyncFailedAlert,
 } from "./producers";
 import type { Env } from "../../types/env";
 
@@ -339,5 +340,26 @@ describe("alert announcement", () => {
 
     expect(errorSpy).toHaveBeenCalled();
     errorSpy.mockRestore();
+  });
+});
+
+describe("raiseSearchSyncFailedAlert", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.raise.mockResolvedValue({ alert: undefined, created: false });
+  });
+
+  it("raises one medium alert per restaurant", async () => {
+    await raiseSearchSyncFailedAlert(env, { restaurantId: "restaurant-1" });
+
+    expect(mocks.raise).toHaveBeenCalledOnce();
+    expect(mocks.raise).toHaveBeenCalledWith(
+      expect.objectContaining({
+        restaurantId: "restaurant-1",
+        alertType: "search_sync_failed",
+        severity: "medium",
+        dedupeKey: "search-sync:restaurant-1",
+      }),
+    );
   });
 });

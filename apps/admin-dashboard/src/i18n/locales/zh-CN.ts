@@ -2493,6 +2493,11 @@ const zhCN: Messages = {
         description:
           "订单 {orderNumber} 的支付被拒绝（{errorCode}），请先确认该订单的支付状态再进行对账。",
       },
+      search_sync_failed: {
+        title: "搜索结果尚未更新",
+        description:
+          "设置已保存，但顾客搜索时可能仍看到旧的信息。请再保存一次设置以重试。",
+      },
     },
     resolve: "解决",
     escalate: "升级处理",

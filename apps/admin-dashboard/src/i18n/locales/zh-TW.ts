@@ -2695,6 +2695,11 @@ const zhTWCore = {
         description:
           "訂單 {orderNumber} 的付款遭拒（{errorCode}），請先確認該訂單的付款狀態再進行對帳。",
       },
+      search_sync_failed: {
+        title: "搜尋結果尚未更新",
+        description:
+          "設定已儲存，但顧客搜尋時可能仍看到舊的資料。請再儲存一次設定以重試。",
+      },
     },
     resolve: "解決",
     escalate: "升級處理",

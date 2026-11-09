@@ -2542,6 +2542,11 @@ const jaJP: Messages = {
         description:
           "注文 {orderNumber} の支払いが拒否されました（{errorCode}）。照合の前に注文の支払い状態を確認してください。",
       },
+      search_sync_failed: {
+        title: "検索結果が更新されていません",
+        description:
+          "設定は保存されましたが、お客様の検索結果には以前の情報が表示される場合があります。もう一度設定を保存して再試行してください。",
+      },
     },
     resolve: "解決",
     escalate: "エスカレーション",

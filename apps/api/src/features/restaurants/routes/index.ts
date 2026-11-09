@@ -25,6 +25,7 @@ import {
 } from "../../../shared/utils/api-error";
 
 import { RestaurantsService } from "../services/RestaurantsService";
+import { raiseSearchSyncFailedAlert } from "../../alerts/producers";
 import { restaurantSchemas } from "../schemas/validation";
 import { MarketsService } from "../../markets/services/MarketsService";
 import {
@@ -769,8 +770,10 @@ app.put(
         await new Promise((resolve) => setTimeout(resolve, 250));
         return syncSearchIndex();
       })
-      .catch((error) => {
+      .catch(async (error) => {
         logger.error("Search index sync failed", error as Error, { id });
+        // Saving again re-runs the sync, so the owner can act on this.
+        await raiseSearchSyncFailedAlert(c.env, { restaurantId: id });
       });
     if (waitUntil) waitUntil(sync);
     else await sync;
