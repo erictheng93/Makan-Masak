@@ -70,6 +70,7 @@ vi.mock("@/composables/useFeatureAvailability", () => ({
 
 vi.mock("vue-router", () => ({
   useRoute: () => routeState,
+  useRouter: () => ({ resolve: () => ({ matched: [] }) }),
   RouterLink: {
     props: ["to"],
     template: "<a><slot /></a>",

@@ -55,13 +55,15 @@
               :is="'router-link'"
               :to="item.path"
               :data-testid="`nav-item-${item.name}`"
-              class="flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+              class="flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600"
               :class="[
                 isActiveRoute(item.path)
                   ? 'bg-primary-50 text-primary-700 border-r-2 border-primary-600'
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
               ]"
               @click="emit('navigate')"
+              @mouseenter="prefetchRoute(router, item.path)"
+              @focus="prefetchRoute(router, item.path)"
             >
               <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
               <span v-if="!isCollapsed" class="ml-3">{{ item.label }}</span>
@@ -74,13 +76,15 @@
             v-else
             :to="item.path"
             :data-testid="`nav-item-${item.name}`"
-            class="flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+            class="flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600"
             :class="[
               isActiveRoute(item.path)
                 ? 'bg-primary-50 text-primary-700 border-r-2 border-primary-600'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
             ]"
             @click="emit('navigate')"
+            @mouseenter="prefetchRoute(router, item.path)"
+            @focus="prefetchRoute(router, item.path)"
           >
             <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
             <span v-if="!isCollapsed" class="ml-3">{{ item.label }}</span>
@@ -135,7 +139,8 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, type Component } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
+import { prefetchRoute, prefetchWhenIdle } from "@/utils/prefetchRoutes";
 import { useAuthStore } from "@/stores/auth";
 import { UserRole } from "@/types";
 import { useI18n } from "@/i18n";
@@ -196,6 +201,7 @@ const emit = defineEmits<{
 }>();
 
 const route = useRoute();
+const router = useRouter();
 const authStore = useAuthStore();
 const { t } = useI18n();
 const { isDisabled } = useFeatureAvailability();
@@ -588,6 +594,10 @@ const submittedCountPoller = createVisibilityAwarePoller({
 });
 
 onMounted(() => {
+  prefetchWhenIdle(
+    router,
+    navigationItems.value.map((item) => item.path),
+  );
   void loadSubmittedApplicationCount();
   if (!authStore.isAdminRole) return;
   submittedCountPoller.start();
@@ -608,7 +618,15 @@ const isActiveRoute = (path: string) => {
   if (path === "/dashboard" && route.path === "/dashboard") return true;
   if (path === "/dashboard") return false;
   if (path === "/dashboard/platform") return route.path === path;
-  return route.path === path || route.path.startsWith(path + "/");
+  if (!(route.path === path || route.path.startsWith(path + "/"))) {
+    return false;
+  }
+  // /dashboard/menu/option-groups must not also light up /dashboard/menu.
+  return !navigationItems.value.some(
+    (other) =>
+      other.path.length > path.length &&
+      (route.path === other.path || route.path.startsWith(other.path + "/")),
+  );
 };
 
 const getRoleLabel = (role?: UserRole) => {

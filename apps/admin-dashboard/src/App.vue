@@ -1,5 +1,6 @@
 <template>
   <div id="app" class="min-h-screen">
+    <NavigationProgress />
     <router-view />
     <ConfirmModal />
   </div>
@@ -9,6 +10,7 @@
 import { onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import NavigationProgress from "@/components/layout/NavigationProgress.vue";
 import ConfirmModal from "@/components/common/ConfirmModal.vue";
 
 const authStore = useAuthStore();

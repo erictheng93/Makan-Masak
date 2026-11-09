@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { UserRole } from "@/types";
 import { t } from "@/i18n";
+import { navigationPending } from "@/utils/routeProgress";
 import type { RouteRecordRaw } from "vue-router";
 import { isTokenExpired } from "@makanmasak/utils";
 import {
@@ -676,17 +677,24 @@ const recoverFromChunkFailure = createChunkRecovery({
 });
 
 router.onError((error, to) => {
+  navigationPending.value = false;
   console.error("[router] navigation failed", error);
   recoverFromChunkFailure(error, to);
 });
 
-router.afterEach(() => {
+router.afterEach((to, _from, failure) => {
+  navigationPending.value = false;
+  // Set once the lazy chunk has resolved, so title and content change together.
+  if (!failure) {
+    document.title = buildDocumentTitle(to.meta.titleKey as string | undefined);
+  }
   // Navigation worked, so the stale build is behind us; the next deploy earns
   // its own attempt rather than inheriting this one.
   clearChunkRecoveryMark(CHUNK_RELOAD_KEY);
 });
 
 router.beforeEach(async (to, _, next) => {
+  navigationPending.value = true;
   const authStore = useAuthStore();
 
   // 對於不需要認證的路由
@@ -764,9 +772,6 @@ router.beforeEach(async (to, _, next) => {
       return next("/unauthorized");
     }
   }
-
-  // Set page title using i18n
-  document.title = buildDocumentTitle(to.meta.titleKey as string | undefined);
 
   next();
 });
