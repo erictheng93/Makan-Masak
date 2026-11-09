@@ -1120,7 +1120,12 @@ export function useGroupOrder(options: {
       return running;
     }
 
-    return { set, isSaving: () => running !== null };
+    return {
+      set,
+      isSaving: () => running !== null,
+      /** Resolves once the server holds the on-screen value; rejects if not. */
+      settled: () => running ?? Promise.resolve(),
+    };
   }
 
   const feeModeWriter = createPreferenceWriter<GroupOrderFeeMode>(
@@ -1264,6 +1269,11 @@ export function useGroupOrder(options: {
     if (!memberToken.value) {
       throw groupOrderError("GROUP_HOST_CREDENTIAL_REQUIRED");
     }
+
+    // Split and fee choices apply on screen before the server has them. Lock
+    // settles the bill from the server's copy, so a tap on 送出 right after a
+    // change must wait for that save — and must not submit if it failed.
+    await Promise.all([splitModeWriter.settled(), feeModeWriter.settled()]);
 
     try {
       await apiClient.post<SubmitGroupOrderResponse>(

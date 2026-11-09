@@ -1085,6 +1085,57 @@ describe("useGroupOrder — submitting the order", () => {
     };
   }
 
+  /**
+   * The split choice applies on screen before the server stores it, and lock
+   * settles the bill from the server's copy. A host who taps 平分 and then 送出
+   * within a second must not get the old split.
+   */
+  it("waits for a split change still saving before it locks", async () => {
+    const group = await createHostedGroup();
+    vi.mocked(apiClient.post).mockClear();
+
+    let finishSave: (value: unknown) => void = () => {};
+    vi.mocked(apiClient.put).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishSave = resolve;
+      }),
+    );
+    const saving = group.setSplitBillMode("equal");
+
+    vi.mocked(apiClient.post).mockResolvedValueOnce({
+      masterOrderId: "order-1",
+      status: "completed",
+    });
+    vi.mocked(apiClient.get).mockResolvedValueOnce(
+      finalizedSummary("completed", "order-1"),
+    );
+    const submitting = group.submitOrder();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(apiClient.post).not.toHaveBeenCalled();
+
+    finishSave({ splitType: "equal" });
+    await Promise.all([saving, submitting]);
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      "/orders/group/go-1/lock",
+      expect.objectContaining({ memberToken: "session-1" }),
+    );
+  });
+
+  it("does not lock when the split change it waited for failed", async () => {
+    const group = await createHostedGroup();
+    vi.mocked(apiClient.post).mockClear();
+    vi.mocked(apiClient.put).mockRejectedValueOnce(apiError(500));
+
+    const saving = group.setSplitBillMode("equal").catch(() => undefined);
+    await expect(group.submitOrder()).rejects.toMatchObject({ status: 500 });
+    await saving;
+
+    expect(apiClient.post).not.toHaveBeenCalled();
+  });
+
   it("locks the group order through the real endpoint with the host token", async () => {
     const group = await createHostedGroup();
 
