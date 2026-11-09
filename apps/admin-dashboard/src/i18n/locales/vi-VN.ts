@@ -2545,7 +2545,7 @@ const viVN: Messages = {
       search_sync_failed: {
         title: "Kết quả tìm kiếm chưa được cập nhật",
         description:
-          "Cài đặt đã được lưu, nhưng khách hàng có thể vẫn thấy thông tin cũ khi tìm kiếm. Hãy lưu cài đặt lại để thử lại.",
+          "Cài đặt đã được lưu, nhưng khách hàng có thể vẫn thấy thông tin cũ khi tìm kiếm. Hãy lưu cài đặt một lần nữa để thử lại.",
       },
     },
     resolve: "Giải quyết",
