@@ -490,6 +490,8 @@ describe("menu routes", () => {
       restaurantId: "rest-1",
     });
     expect(syncFns.onMenuItemChanged).toHaveBeenCalledWith(11);
+    // Search-index sync rides waitUntil, not the response.
+    expect(waitUntilPromises).toHaveLength(1);
 
     response = await request("/items/11", "PUT", {
       name: "Updated",
@@ -1362,5 +1364,29 @@ describe("menu routes", () => {
       expect(response.status).toBe(400);
       expect(serviceFns.createMenuItem).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("menu write routes: search index sync", () => {
+  it("answers 201 and keeps a failing sync from rejecting waitUntil", async () => {
+    auth.user = undefined;
+    serviceFns.createMenuItem.mockResolvedValue(item);
+    syncFns.onMenuItemChanged.mockRejectedValueOnce(new Error("d1 down"));
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const response = await request("/rest-1/items", "POST", {
+      categoryId: 3,
+      name: "Laksa",
+      price: 180,
+    });
+
+    expect(response.status).toBe(201);
+    expect(waitUntilPromises).toHaveLength(1);
+    await expect(waitUntilPromises[0]).resolves.toBeUndefined();
+    expect(log).toHaveBeenCalledWith(
+      "Menu search index sync failed",
+      expect.any(Error),
+    );
+    log.mockRestore();
   });
 });

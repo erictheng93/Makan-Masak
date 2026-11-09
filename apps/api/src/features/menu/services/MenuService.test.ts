@@ -38,6 +38,7 @@ describe("MenuService", () => {
   function createService(options?: {
     db?: unknown;
     dbService?: Record<string, unknown>;
+    waitUntil?: (work: Promise<unknown>) => void;
   }) {
     const dbService = {
       getMenu: vi.fn(),
@@ -90,7 +91,10 @@ describe("MenuService", () => {
       getRecentlyAddedItems: vi.fn(async () => []),
       ...options?.dbService,
     };
-    const service = new MenuService({ DB: {} as D1Database } as never);
+    const service = new MenuService(
+      { DB: {} as D1Database } as never,
+      options?.waitUntil,
+    );
     Object.defineProperty(service, "db", {
       value: options?.db ?? createPublicDb(),
     });
@@ -157,6 +161,29 @@ describe("MenuService", () => {
           }),
         }),
       );
+  });
+  it("hands the realtime fan-out to waitUntil instead of awaiting it", async () => {
+    const broadcast = vi
+      .spyOn(
+        RealtimeBroadcastService.prototype,
+        "broadcastMenuAvailabilityUpdate",
+      )
+      .mockResolvedValue({ success: true });
+    const deferred: Promise<unknown>[] = [];
+    const { service } = createService({
+      waitUntil: (work) => deferred.push(work),
+      dbService: {
+        getMenuItem: vi.fn(async () => menuItem()),
+        updateMenuItem: vi.fn(async () => ({
+          ...menuItem({ isAvailable: false }),
+          availabilityChanged: true,
+        })),
+      },
+    });
+    await service.updateMenuItem(101, { isAvailable: false });
+    expect(deferred).toHaveLength(1);
+    await expect(deferred[0]).resolves.toBeUndefined();
+    expect(broadcast).toHaveBeenCalledOnce();
   });
   it("keeps a committed supply write successful when notification fails", async () => {
     vi.spyOn(

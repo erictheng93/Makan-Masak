@@ -76,7 +76,15 @@ export class MenuService implements IMenuService {
   private readonly dbService: DatabaseMenuService;
   private readonly db;
 
-  constructor(private readonly env: Env) {
+  /**
+   * `waitUntil` lets a request hand realtime fan-out to the runtime so the
+   * response does not wait on it. Without one (tests, queue consumers) the
+   * work is awaited inline, as before.
+   */
+  constructor(
+    private readonly env: Env,
+    private readonly waitUntil?: (work: Promise<unknown>) => void,
+  ) {
     this.logger = new ConsoleLogger("MenuService");
     this.dbService = new DatabaseMenuService(env.DB, env);
     this.db = drizzle(env.DB);
@@ -604,7 +612,29 @@ export class MenuService implements IMenuService {
     if (items.length === 0) return;
     const restaurantId = items[0].restaurantId;
     try {
+      // Stays on the request path: the admin refetches the menu right after
+      // this write, and a still-cached copy would show the old availability.
       await invalidateRestaurantMenuEdgeCache(this.env, restaurantId);
+    } catch (error) {
+      this.logger.error(
+        "Failed to notify menu availability change",
+        error instanceof Error ? error : undefined,
+        { restaurantId },
+      );
+      return;
+    }
+    // Realtime is push-only and best effort; nothing reads it back.
+    const fanOut = this.broadcastAvailabilityChanges(items, restaurantId);
+    if (this.waitUntil) this.waitUntil(fanOut);
+    else await fanOut;
+  }
+
+  /** Never rejects: it may run inside waitUntil after the response is sent. */
+  private async broadcastAvailabilityChanges(
+    items: MenuItem[],
+    restaurantId: string,
+  ): Promise<void> {
+    try {
       const broadcast = new RealtimeBroadcastService(this.env);
       await Promise.all(
         items.map((item) =>
@@ -669,17 +699,20 @@ export class MenuService implements IMenuService {
         count: updates.length,
       });
 
-      await this.assertItemsBelongToRestaurant(
-        updates.map((update) => update.id),
-        restaurantId,
-      );
-
-      // Entries that send only `price` are judged against the STORED
-      // originalPrice — the schema already handled pairs sent together (#81).
-      const storedPrices = await this.dbService.getMenuItemPrices(
-        restaurantId,
-        updates.map((update) => update.id),
-      );
+      // Independent reads, so overlap them; the ownership check still
+      // rejects the whole call before any price is judged or written.
+      const [, storedPrices] = await Promise.all([
+        this.assertItemsBelongToRestaurant(
+          updates.map((update) => update.id),
+          restaurantId,
+        ),
+        // Entries that send only `price` are judged against the STORED
+        // originalPrice — the schema already handled pairs sent together (#81).
+        this.dbService.getMenuItemPrices(
+          restaurantId,
+          updates.map((update) => update.id),
+        ),
+      ]);
       for (const update of updates) {
         this.assertPriceConsistent(
           update.price,
@@ -715,13 +748,15 @@ export class MenuService implements IMenuService {
       // Both halves of the move have to be checked. The destination category
       // was already validated here; the item itself was not, so an owner could
       // move another restaurant's item into their own category (#77).
-      for (const move of moves) {
-        await this.validateCategoryAccess(move.categoryId, restaurantId);
-      }
-      await this.assertItemsBelongToRestaurant(
-        moves.map((move) => move.id),
-        restaurantId,
-      );
+      await Promise.all([
+        ...moves.map((move) =>
+          this.validateCategoryAccess(move.categoryId, restaurantId),
+        ),
+        this.assertItemsBelongToRestaurant(
+          moves.map((move) => move.id),
+          restaurantId,
+        ),
+      ]);
 
       await this.dbService.batchMoveItemsScoped(restaurantId, moves);
 
