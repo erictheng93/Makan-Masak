@@ -15,6 +15,10 @@ const cartState = vi.hoisted(() => ({
 const toastSuccess = vi.hoisted(() => vi.fn());
 const toastError = vi.hoisted(() => vi.fn());
 const readActiveGroupOrder = vi.hoisted(() => vi.fn());
+/** jsdom has no IntersectionObserver; the test decides what is on screen. */
+const inviteOnScreen = vi.hoisted(() => ({
+  current: null as null | { value: boolean },
+}));
 const clearActiveGroupOrder = vi.hoisted(() => vi.fn());
 const groupOrderMock = vi.hoisted(() => ({
   groupOrder: { value: null as null | Record<string, unknown> },
@@ -73,6 +77,14 @@ const pendingQuery = vi.hoisted(() => ({
     enabled?: unknown;
   },
 }));
+vi.mock("@vueuse/core", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@vueuse/core")>();
+  const { ref: vueRef } = await import("vue");
+  const visible = vueRef(false);
+  inviteOnScreen.current = visible;
+  return { ...actual, useElementVisibility: () => visible };
+});
+
 vi.mock("@/composables/useMenuRealtime", () => ({
   useMenuRealtime: (_id: unknown, refresh: () => Promise<unknown>) => {
     realtimeRefresh.callback = refresh;
@@ -218,6 +230,7 @@ vi.mock("@tanstack/vue-query", () => ({
 
 describe("MenuView table validation", () => {
   beforeEach(() => {
+    if (inviteOnScreen.current) inviteOnScreen.current.value = false;
     vi.clearAllMocks();
     vi.unstubAllEnvs();
     pendingQuery.table = null;
@@ -439,6 +452,56 @@ describe("MenuView table validation", () => {
       );
     },
   );
+
+  /**
+   * The floating group-cart bar is fixed to the bottom of the screen and used
+   * to sit on top of the invite's QR code, so a second diner could not scan
+   * it without the host scrolling first.
+   */
+  it("hides the floating group-cart bar while the invite is on screen", async () => {
+    tableValidationResult.value = { isValid: true, table: { number: "A1" } };
+    restaurantResult.value = { name: "Part 1 Smoke Restaurant" };
+    menuResult.value = { categories: [], menuItems: [] };
+    readActiveGroupOrder.mockReturnValue({
+      groupOrderId: "go-1",
+      restaurantId: "restaurant-1",
+      tableId: "1",
+      savedAt: Date.now(),
+    });
+    groupOrderMock.loadGroupOrder.mockImplementation(async () => {
+      groupOrderMock.currentMemberId.value = "m-1";
+      groupOrderMock.isHost.value = true;
+      groupOrderMock.groupOrder.value = {
+        id: "go-1",
+        restaurantId: "restaurant-1",
+        tableId: "1",
+        shareCode: "SHARE123",
+        status: "active",
+        cartItems: [],
+        members: [{ id: "m-1" }],
+      };
+    });
+    inviteOnScreen.current!.value = true;
+
+    // Attached, so isVisible() reads real display state, not "detached".
+    const wrapper = mount(MenuView, {
+      props: { restaurantId: "restaurant-1", tableId: 1 },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    const bar = wrapper.find('[data-testid="group-cart-bar"]');
+    expect(wrapper.find('[data-testid="group-order-invite"]').exists()).toBe(
+      true,
+    );
+    expect(bar.isVisible()).toBe(false);
+
+    // Scrolled past the invite: the bar is the way to the cart again.
+    inviteOnScreen.current!.value = false;
+    await flushPromises();
+    expect(bar.isVisible()).toBe(true);
+    wrapper.unmount();
+  });
 
   it("routes menu additions to the active group cart instead of local cart", async () => {
     tableValidationResult.value = {

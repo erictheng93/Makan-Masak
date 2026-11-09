@@ -213,6 +213,7 @@
 
               <InvitePanel
                 v-if="showGroupInvite"
+                ref="invitePanel"
                 class="!mt-0 !bg-ios-bg !shadow-none"
                 :share-code="groupOrder.groupOrder.value?.shareCode ?? ''"
                 :share-link="groupOrder.getShareLink()"
@@ -450,8 +451,15 @@
     </main>
 
     <!-- 底部固定購物車按鈕 -->
+    <!--
+      v-show, not v-if: dropping this node would let the personal-cart bar
+      below take its place. Hidden while the invite is on screen so it does
+      not sit on the QR code; the group card above it has the same button.
+    -->
     <div
       v-if="isGroupMode"
+      v-show="!isInviteOnScreen"
+      data-testid="group-cart-bar"
       class="fixed bottom-4 left-4 right-4 z-50 max-w-lg mx-auto lg:hidden"
     >
       <button
@@ -514,6 +522,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { useElementVisibility } from "@vueuse/core";
 import { useRouter } from "vue-router";
 import { useQuery } from "@tanstack/vue-query";
 import { useToast } from "vue-toastification";
@@ -579,6 +588,8 @@ const showCustomizationModal = ref(false);
 const hasRedirectedInvalidTable = ref(false);
 const showGroupStartForm = ref(false);
 const showGroupInvite = ref(false);
+const invitePanel = ref<InstanceType<typeof InvitePanel> | null>(null);
+const isInviteOnScreen = useElementVisibility(invitePanel);
 const groupHostName = ref("");
 const groupOrderError = ref("");
 const isCreatingGroupOrder = ref(false);
