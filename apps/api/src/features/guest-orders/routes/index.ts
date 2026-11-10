@@ -49,6 +49,7 @@ import {
 import { enforceQuota } from "../../../middleware/quotaGate";
 import { meterEmit } from "../../../shared/utils/meter";
 import { validateBody } from "../../../shared/middleware";
+import { deferAfterResponse } from "../../../shared/utils/defer-after-response";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -70,13 +71,49 @@ app.post(
 
     const db = createDatabase(c.env.DB);
 
-    // 1. Query restaurant and check allowGuestOrders
-    const restaurant = await db
-      .select()
-      .from(restaurants)
-      .where(eq(restaurants.id, data.restaurantId))
-      .get();
+    // The reads below are independent of one another, so issue them together
+    // (each is a ~100-200ms round trip) and then judge the results in the
+    // original order, which keeps every error's precedence unchanged.
+    const isDineIn = data.orderType === "table" || data.orderType === "seat";
+    const requestLockIdentity = resolveGuestLockIdentity(c.req);
+    // Brand-new anonymous guests have no identity yet; using IP here
+    // incorrectly makes a restaurant's shared WiFi/CGNAT address the lock.
+    const existingActiveOrderKey = requestLockIdentity
+      ? guestActiveOrderKey(data.restaurantId, requestLockIdentity)
+      : null;
+    // Never rejects: the failure is rethrown at its original position below.
+    const qrFailure: Promise<unknown> = isDineIn
+      ? Promise.resolve(
+          assertDineInQr(c.env, {
+            restaurantId: data.restaurantId,
+            tableId: data.tableId!,
+            seatId: data.orderType === "seat" ? data.seatId : undefined,
+            qrCode: data.qrCode,
+          }),
+        ).then(
+          () => undefined,
+          (error: unknown) => error ?? new Error("QR verification failed"),
+        )
+      : Promise.resolve(undefined);
 
+    const [restaurant, existingActiveOrder, table, seat] = await Promise.all([
+      db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.id, data.restaurantId))
+        .get(),
+      existingActiveOrderKey
+        ? c.env.CACHE_KV.get(existingActiveOrderKey)
+        : null,
+      isDineIn
+        ? db.select().from(tables).where(eq(tables.id, data.tableId!)).get()
+        : undefined,
+      data.orderType === "seat"
+        ? db.select().from(seats).where(eq(seats.id, data.seatId!)).get()
+        : undefined,
+    ]);
+
+    // 1. Check restaurant and allowGuestOrders
     if (!restaurant) {
       throw notFound("Restaurant not found");
     }
@@ -99,16 +136,7 @@ app.post(
       assertShopQrCurrent(restaurant.shopQrCode, data.shopQrCode);
     }
 
-    // 2. Check active order limit for this device when it already carries an
-    // identity. Brand-new anonymous guests have none yet; using IP here
-    // incorrectly makes a restaurant's shared WiFi/CGNAT address the lock.
-    const requestLockIdentity = resolveGuestLockIdentity(c.req);
-    const existingActiveOrderKey = requestLockIdentity
-      ? guestActiveOrderKey(data.restaurantId, requestLockIdentity)
-      : null;
-    const existingActiveOrder = existingActiveOrderKey
-      ? await c.env.CACHE_KV.get(existingActiveOrderKey)
-      : null;
+    // 2. Active order limit for this device (see existingActiveOrderKey above).
     if (existingActiveOrder) {
       if (data.clientMutationId) {
         const duplicateMutation = await db
@@ -138,13 +166,7 @@ app.post(
     }
 
     // 3. Validate table/seat if needed
-    if (data.orderType === "table" || data.orderType === "seat") {
-      const table = await db
-        .select()
-        .from(tables)
-        .where(eq(tables.id, data.tableId!))
-        .get();
-
+    if (isDineIn) {
       if (!table || String(table.restaurantId) !== data.restaurantId) {
         throw badRequest(
           "Table not found or does not belong to this restaurant",
@@ -153,21 +175,11 @@ app.post(
 
       // A bare tableId proves nothing: require the signed QR (also rejects
       // inactive/deleted tables and seats and superseded stickers).
-      await assertDineInQr(c.env, {
-        restaurantId: data.restaurantId,
-        tableId: data.tableId!,
-        seatId: data.orderType === "seat" ? data.seatId : undefined,
-        qrCode: data.qrCode,
-      });
+      const failure = await qrFailure;
+      if (failure) throw failure;
     }
 
     if (data.orderType === "seat") {
-      const seat = await db
-        .select()
-        .from(seats)
-        .where(eq(seats.id, data.seatId!))
-        .get();
-
       if (!seat || seat.tableId !== data.tableId) {
         throw badRequest("Seat not found or does not belong to this table");
       }
@@ -189,48 +201,52 @@ app.post(
     const ordersService = new OrdersService(c.env);
     let order;
     try {
-      order = await ordersService.createOrder({
-        restaurantId: data.restaurantId,
-        customerId: customer?.id,
-        // Only pass tableId for table/seat orders — shop orders don't need a table
-        tableId: data.orderType === "shop" ? undefined : data.tableId,
-        seatId: data.orderType === "seat" ? data.seatId : undefined,
-        waitingListId: data.waitingListId,
-        waitingListCustomerPhone: data.customerPhone,
-        // `customerPhone` used to feed the waiting-list lookup and nothing
-        // else, so a guest who filled in 聯絡電話 on the cart had it validated,
-        // sent and then dropped: `customer_info` stored the name alone and the
-        // shop had no way to call the diner back about their order.
-        customerInfo: {
-          name: data.guestName,
-          ...(data.customerPhone ? { phone: data.customerPhone } : {}),
+      order = await ordersService.createOrder(
+        {
+          restaurantId: data.restaurantId,
+          customerId: customer?.id,
+          // Only pass tableId for table/seat orders — shop orders don't need a table
+          tableId: data.orderType === "shop" ? undefined : data.tableId,
+          seatId: data.orderType === "seat" ? data.seatId : undefined,
+          waitingListId: data.waitingListId,
+          waitingListCustomerPhone: data.customerPhone,
+          // `customerPhone` used to feed the waiting-list lookup and nothing
+          // else, so a guest who filled in 聯絡電話 on the cart had it validated,
+          // sent and then dropped: `customer_info` stored the name alone and the
+          // shop had no way to call the diner back about their order.
+          customerInfo: {
+            name: data.guestName,
+            ...(data.customerPhone ? { phone: data.customerPhone } : {}),
+          },
+          items: data.items.map((item) => ({
+            menuItemId: item.menuItemId,
+            quantity: item.quantity,
+            customizations: item.customizations,
+            notes: item.notes,
+          })),
+          notes: data.notes,
+          couponCode: data.couponCode,
+          couponCodes: data.couponCodes,
+          couponGuestIdentity:
+            data.couponCode || data.couponCodes?.length
+              ? customer?.id
+                ? await resolveCouponCustomerIdentity(customer.id)
+                : await resolveGuestCouponIdentity(c.req)
+              : undefined,
+          clientMutationId: data.clientMutationId,
+          orderType: data.orderType,
+          deliveryInfo: {
+            type: fulfillmentType,
+            address: data.deliveryInfo?.address,
+            phone: data.deliveryInfo?.phone,
+            instructions: data.deliveryInfo?.instructions,
+            deliveryFee: data.deliveryInfo?.deliveryFee,
+          },
+          isGuestOrder: true,
         },
-        items: data.items.map((item) => ({
-          menuItemId: item.menuItemId,
-          quantity: item.quantity,
-          customizations: item.customizations,
-          notes: item.notes,
-        })),
-        notes: data.notes,
-        couponCode: data.couponCode,
-        couponCodes: data.couponCodes,
-        couponGuestIdentity:
-          data.couponCode || data.couponCodes?.length
-            ? customer?.id
-              ? await resolveCouponCustomerIdentity(customer.id)
-              : await resolveGuestCouponIdentity(c.req)
-            : undefined,
-        clientMutationId: data.clientMutationId,
-        orderType: data.orderType,
-        deliveryInfo: {
-          type: fulfillmentType,
-          address: data.deliveryInfo?.address,
-          phone: data.deliveryInfo?.phone,
-          instructions: data.deliveryInfo?.instructions,
-          deliveryFee: data.deliveryInfo?.deliveryFee,
-        },
-        isGuestOrder: true,
-      });
+        undefined,
+        { defer: deferAfterResponse(c) },
+      );
     } catch (error) {
       // The database service now rejects its own business rules as ApiErrors
       // (#352), so they arrive complete with code, status and details. Rewrap
@@ -265,32 +281,34 @@ app.post(
     };
 
     const fourHoursInSeconds = 4 * 60 * 60;
-    await c.env.CACHE_KV.put(
-      `guest_token:${guestToken}`,
-      JSON.stringify(tokenData),
-      { expirationTtl: fourHoursInSeconds },
-    );
-
-    // 6. Set active order KV key (2hr TTL). A device that presented no identity
-    // gets its lock keyed on the token minted just above — the customer app
-    // stores that token, so its next order arrives holding the matching key.
+    // Token, lock and reverse mapping are independent writes. The response
+    // must not return before all three exist (the client uses the token at
+    // once, and the lock is an abuse control), so overlap rather than defer.
     const twoHoursInSeconds = 2 * 60 * 60;
+    // A device that presented no identity gets its lock keyed on the token
+    // minted just above — the customer app stores that token, so its next
+    // order arrives holding the matching key.
     const activeOrderKey = guestActiveOrderKey(
       data.restaurantId,
       requestLockIdentity ?? { kind: "token", value: guestToken },
     );
-    await c.env.CACHE_KV.put(activeOrderKey, String(order.id), {
-      expirationTtl: twoHoursInSeconds,
-    });
-    // Reverse mapping so any cancel path (admin DELETE, guest cancel, cleanup
-    // jobs) can locate and clear the active-order key from the order id alone.
-    await c.env.CACHE_KV.put(
-      `guest_active_lookup:${order.id}`,
-      activeOrderKey,
-      {
+    await Promise.all([
+      c.env.CACHE_KV.put(
+        `guest_token:${guestToken}`,
+        JSON.stringify(tokenData),
+        {
+          expirationTtl: fourHoursInSeconds,
+        },
+      ),
+      c.env.CACHE_KV.put(activeOrderKey, String(order.id), {
         expirationTtl: twoHoursInSeconds,
-      },
-    );
+      }),
+      // Reverse mapping so any cancel path (admin DELETE, guest cancel, cleanup
+      // jobs) can locate and clear the active-order key from the order id alone.
+      c.env.CACHE_KV.put(`guest_active_lookup:${order.id}`, activeOrderKey, {
+        expirationTtl: twoHoursInSeconds,
+      }),
+    ]);
     await meterEmit(c, "orders.created", {
       restaurantId: data.restaurantId,
     });

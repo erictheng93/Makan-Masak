@@ -345,6 +345,8 @@ describe("guest order routes", () => {
         deliveryInfo: { type: "takeaway" },
         isGuestOrder: true,
       }),
+      undefined,
+      expect.objectContaining({}),
     );
     expect(env.CACHE_KV.put).toHaveBeenCalledWith(
       "guest_token:gt_test_token",
@@ -361,6 +363,42 @@ describe("guest order routes", () => {
       "orders.created",
       { restaurantId: "restaurant-1" },
     );
+  });
+
+  it("passes a waitUntil-backed defer to order creation when the runtime has one", async () => {
+    setSelectFixtures({
+      restaurants: [
+        [
+          {
+            id: "restaurant-1",
+            isActive: true,
+            isAvailable: true,
+            enableShopMode: true,
+            settings: { allowGuestOrders: true },
+          },
+        ],
+      ],
+    });
+    createOrder.mockResolvedValue({ id: 502, orderNumber: "G002" });
+    const waitUntil = vi.fn();
+
+    const response = await routes.fetch(
+      new Request("https://test/", {
+        method: "POST",
+        headers: { "cf-connecting-ip": "203.0.113.11" },
+        body: JSON.stringify(validGuestOrderBody()),
+      }),
+      createEnv() as never,
+      { waitUntil, passThroughOnException: vi.fn() } as never,
+    );
+
+    expect(response.status).toBe(201);
+    const options = createOrder.mock.calls[0][2] as {
+      defer: (work: Promise<unknown>) => void;
+    };
+    const work = Promise.resolve();
+    options.defer(work);
+    expect(waitUntil).toHaveBeenCalledWith(work);
   });
 
   it("assigns a guest order to the authenticated customer", async () => {
@@ -398,6 +436,8 @@ describe("guest order routes", () => {
         couponCodes: ["SAVE10", "SAVE20"],
         couponGuestIdentity: await resolveCouponCustomerIdentity(customerId),
       }),
+      undefined,
+      expect.objectContaining({}),
     );
   });
 
@@ -448,6 +488,8 @@ describe("guest order routes", () => {
     expect(createOrder).toHaveBeenCalledOnce();
     expect(createOrder).toHaveBeenCalledWith(
       expect.objectContaining({ restaurantId: expect.any(String) }),
+      undefined,
+      expect.objectContaining({}),
     );
   });
 
@@ -563,6 +605,8 @@ describe("guest order routes", () => {
         couponCodes: ["SAVE10", "SAVE20"],
         couponGuestIdentity: expect.stringMatching(/^[a-f0-9]{64}$/),
       }),
+      undefined,
+      expect.objectContaining({}),
     );
   });
 
@@ -610,6 +654,8 @@ describe("guest order routes", () => {
     expect(response.status).toBe(201);
     expect(createOrder).toHaveBeenCalledWith(
       expect.objectContaining({ orderType: "table", tableId: 3 }),
+      undefined,
+      expect.objectContaining({}),
     );
   });
 
@@ -649,6 +695,8 @@ describe("guest order routes", () => {
     );
     expect(createOrder).toHaveBeenCalledWith(
       expect.objectContaining({ tableId: 3, seatId: 11 }),
+      undefined,
+      expect.objectContaining({}),
     );
   });
 

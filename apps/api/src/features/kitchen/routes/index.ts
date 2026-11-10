@@ -2,6 +2,7 @@
  * Kitchen Feature Routes
  */
 
+import { deferAfterResponse } from "../../../shared/utils/defer-after-response";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { z } from "zod";
@@ -73,19 +74,6 @@ function extractLegacyNotes(payload: unknown): string | undefined {
   }
 
   return undefined;
-}
-
-// Runs best-effort work after the response when the runtime provides
-// waitUntil; unit tests and local fallbacks have no ExecutionContext.
-function deferAfterResponse(c: {
-  executionCtx: Pick<ExecutionContext, "waitUntil">;
-}) {
-  try {
-    const ctx = c.executionCtx;
-    return (work: Promise<unknown>) => ctx.waitUntil(work);
-  } catch {
-    return undefined;
-  }
 }
 
 async function updateLegacyItemStatus<E extends { Bindings: Env }>(

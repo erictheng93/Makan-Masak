@@ -251,19 +251,12 @@ export async function enforceQuota<E extends { Bindings: Env }>(
   if (!quota) return;
 
   const cycle = resolveCycle(subscription, Date.now());
-  const aggregated = await getAggregatedCount(
-    c,
-    restaurantId,
-    meterKey,
-    cycle.startAt,
-  );
-  const pending = await getPendingCount(c, restaurantId, meterKey);
-  const buckets = await getUnfoldedBucketCount(
-    c,
-    restaurantId,
-    meterKey,
-    cycle,
-  );
+  // Independent reads: overlap them rather than paying three round trips.
+  const [aggregated, pending, buckets] = await Promise.all([
+    getAggregatedCount(c, restaurantId, meterKey, cycle.startAt),
+    getPendingCount(c, restaurantId, meterKey),
+    getUnfoldedBucketCount(c, restaurantId, meterKey, cycle),
+  ]);
   const effectiveCount = aggregated + pending + buckets;
 
   if (effectiveCount >= quota.hard) {

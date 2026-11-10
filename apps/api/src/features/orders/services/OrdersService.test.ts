@@ -287,6 +287,47 @@ describe("OrdersService realtime broadcasts", () => {
     });
   });
 
+  it("hands the broadcast to defer instead of awaiting it when the caller supplies one", async () => {
+    createBaseOrder.mockResolvedValue({
+      id: 1003,
+      restaurantId: "restaurant-1",
+      orderNumber: "A003",
+      orderType: "shop",
+      status: "pending",
+      totalAmount: 60,
+      items: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    let releaseBroadcast!: () => void;
+    broadcastNewOrder.mockReturnValue(
+      new Promise((resolve) => {
+        releaseBroadcast = () => resolve({ success: true });
+      }),
+    );
+    const deferred: Promise<unknown>[] = [];
+    const service = new OrdersService(createEnv() as never);
+
+    const order = await service.createOrder(
+      {
+        restaurantId: "restaurant-1",
+        items: [{ menuItemId: 101, quantity: 1 }],
+        orderType: "shop",
+      } as never,
+      undefined,
+      { defer: (work) => deferred.push(work) },
+    );
+
+    // The broadcast is still pending, yet the order came back.
+    expect(order).toEqual(expect.objectContaining({ id: 1003 }));
+    expect(deferred).toHaveLength(1);
+    expect(broadcastNewOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ type: RealtimeEventType.NEW_ORDER }),
+    );
+    releaseBroadcast();
+    await deferred[0];
+  });
+
   it("carries the table number into the new-order event so the admin badge can render", async () => {
     createBaseOrder.mockResolvedValue({
       id: 1002,

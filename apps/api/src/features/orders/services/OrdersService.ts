@@ -174,7 +174,14 @@ export class OrdersService implements IOrdersService {
   }
 
   // Core CRUD Operations
-  async createOrder(data: CreateOrderData, userId?: string): Promise<Order> {
+  async createOrder(
+    data: CreateOrderData,
+    userId?: string,
+    options: {
+      /** Hand best-effort audit/realtime/push work to waitUntil instead of awaiting it. */
+      defer?: (work: Promise<unknown>) => void;
+    } = {},
+  ): Promise<Order> {
     try {
       this.logger.info("Creating new order", {
         restaurantId: data.restaurantId,
@@ -313,9 +320,12 @@ export class OrdersService implements IOrdersService {
         order = confirmedOrder;
       }
 
-      // Cache the order
-      await Promise.all([
-        this.cacheOrder(order),
+      // The cache write stays awaited: a deferred put could land after a
+      // later status change has cleared the key and re-cache a stale copy.
+      // The audit row, realtime broadcast and web push never feed the response
+      // (each logs and swallows its own failure), so a caller with waitUntil
+      // lets them finish after it.
+      const bestEffort = [
         this.logOrderActivity(
           order.id,
           "ORDER_CREATED",
@@ -328,7 +338,13 @@ export class OrdersService implements IOrdersService {
         ),
         data.waitingListId ? Promise.resolve() : this.broadcastNewOrder(order),
         data.waitingListId ? Promise.resolve() : this.notifyNewOrderPush(order),
-      ]);
+      ];
+      if (options.defer) {
+        options.defer(Promise.allSettled(bestEffort));
+        await this.cacheOrder(order);
+      } else {
+        await Promise.all([this.cacheOrder(order), ...bestEffort]);
+      }
 
       this.logger.info("Order created successfully", {
         orderId: order.id,
