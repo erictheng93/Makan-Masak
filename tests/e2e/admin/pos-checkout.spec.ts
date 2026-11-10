@@ -130,7 +130,9 @@ test("the counter settles a guest order across origins and makes it refundable",
   // setup requests before this point.
   await gotoAdmin(page, "/login", { waitForApi: false });
   await page.getByLabel("Username").fill(OWNER_USERNAME);
-  await page.getByLabel("Password").fill(OWNER_PASSWORD);
+  // exact: the show/hide toggle is labelled "Show password", which a substring
+  // match would also hit.
+  await page.getByLabel("Password", { exact: true }).fill(OWNER_PASSWORD);
   await page.getByRole("button", { name: "Login" }).click();
   await expect(page).toHaveURL(/\/dashboard\//);
   await gotoAdmin(page, "/dashboard/pos/checkout", {

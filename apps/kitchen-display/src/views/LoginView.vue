@@ -283,6 +283,9 @@ onMounted(async () => {
 
   // 聚焦到用戶名稱欄位
   focusTimer = setTimeout(() => {
+    // A test that never unmounts the view leaves this to fire after jsdom is
+    // torn down; unmount clears it, this covers the rest.
+    if (typeof document === "undefined") return;
     const usernameInput = document.getElementById("username");
     if (usernameInput) {
       usernameInput.focus();
