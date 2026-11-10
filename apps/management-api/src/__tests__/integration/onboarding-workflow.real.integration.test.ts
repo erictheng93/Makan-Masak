@@ -101,6 +101,7 @@ function createPlatformDb() {
       banner_url TEXT,
       image_urls TEXT,
       shop_qr_code TEXT UNIQUE,
+      login_slug TEXT,
       shop_qr_code_image_url TEXT,
       enable_shop_mode INTEGER NOT NULL DEFAULT 0,
       shop_qr_settings TEXT,
@@ -119,6 +120,8 @@ function createPlatformDb() {
       supports_takeaway INTEGER NOT NULL DEFAULT 0,
       supports_delivery INTEGER NOT NULL DEFAULT 0
     );
+
+    CREATE UNIQUE INDEX restaurants_login_slug_unique ON restaurants (login_slug) WHERE login_slug IS NOT NULL;
 
     CREATE TABLE users (
       id TEXT PRIMARY KEY NOT NULL,
@@ -619,12 +622,13 @@ describe("Onboarding public API workflow — real integration", () => {
     const row = platformDb
       .raw()
       .prepare(
-        `SELECT country_code, timezone, settings, city
+        `SELECT country_code, timezone, settings, city, login_slug
          FROM restaurants WHERE id = ?`,
       )
       .get(approvedData.ownerAccount!.restaurantId);
 
     expect(row).toMatchObject({
+      login_slug: expect.stringMatching(/^shop-[0-9a-f]{8}$/),
       country_code: "TW",
       timezone: "Asia/Taipei",
       settings: JSON.stringify({ currency: "TWD" }),

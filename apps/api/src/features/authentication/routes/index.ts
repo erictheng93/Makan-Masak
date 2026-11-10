@@ -64,6 +64,7 @@ const LOGIN_FAILURE_CODES: Record<AuthFailureReason, string> = {
   customer_password_registration_retired:
     "CUSTOMER_PASSWORD_REGISTRATION_RETIRED",
   username_taken: "USERNAME_TAKEN",
+  shop_required: "SHOP_REQUIRED",
   weak_password: "WEAK_PASSWORD",
 };
 const PASSWORD_RESET_FAILURE_CODES: Record<PasswordResetFailureReason, string> =
@@ -200,6 +201,7 @@ export function createAuthRoutes(
     const loginData: LoginData = {
       username: requestData.username,
       password: requestData.password,
+      shop: requestData.shop,
       deviceInfo,
       location,
     };
@@ -215,6 +217,9 @@ export function createAuthRoutes(
       // limiter's copy happens to contain that word, and it labelled the
       // retired-customer-login case as bad credentials, which it is not.
       const code = LOGIN_FAILURE_CODES[result.reason ?? "invalid_credentials"];
+      if (result.reason === "shop_required") {
+        throw badRequest(result.error || "Shop required", code);
+      }
       throw unauthorized(result.error || "Authentication failed", code);
     }
 
@@ -639,6 +644,7 @@ export function createAuthRoutes(
           requestData.username ||
           requestData.identifier ||
           "",
+        requestData.shop,
       );
 
       if (!result.success) {

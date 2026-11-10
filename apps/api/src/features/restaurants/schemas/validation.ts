@@ -443,7 +443,12 @@ const qrCodeParam = z.lazy(() =>
   }),
 );
 
+// Format/reserved/uniqueness are checked in the service so each failure
+// carries its own code (SLUG_INVALID / SLUG_RESERVED / SLUG_TAKEN).
+const updateLoginSlugSchema = z.object({ loginSlug: z.string().max(100) });
+
 export const restaurantSchemas = {
+  updateLoginSlug: updateLoginSlugSchema,
   // Parameters
   params: idParam,
   serviceItemParams: serviceItemParam,

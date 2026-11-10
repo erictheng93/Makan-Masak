@@ -18,6 +18,7 @@ import {
   and,
   count,
   eq,
+  restaurants,
   sessions,
   sql,
   users,
@@ -138,6 +139,16 @@ export class AuthService implements IAuthService {
 
       // Call the existing DatabaseAuthService
       const dbResult = await this.dbAuthService.login(data);
+
+      // Not a credential failure: the caller only has to name its shop, so it
+      // must not count toward the lockout or raise a LOGIN_FAILED event.
+      if (dbResult.reason === "shop_required") {
+        return {
+          success: false,
+          reason: "shop_required",
+          error: dbResult.error,
+        };
+      }
 
       // Transform database result to match our interface
       const result: AuthResult = {
@@ -859,12 +870,15 @@ export class AuthService implements IAuthService {
   }
 
   // Password Reset Methods
-  async requestPasswordReset(identifier: string): Promise<{
+  async requestPasswordReset(
+    identifier: string,
+    shop?: string,
+  ): Promise<{
     success: boolean;
     reason?: PasswordResetFailureReason;
     error?: string;
   }> {
-    const resetTarget = await this.resolvePasswordResetTarget(identifier);
+    const resetTarget = await this.resolvePasswordResetTarget(identifier, shop);
     if (!resetTarget) {
       // Do not reveal account existence.
       return { success: true };
@@ -892,19 +906,34 @@ export class AuthService implements IAuthService {
 
   private async resolvePasswordResetTarget(
     identifier: string,
+    shop?: string,
   ): Promise<{ identifier: string; method: "email" | "sms" } | null> {
     if (identifier.includes("@")) {
       return { identifier, method: "email" };
     }
 
-    const user = await this.db
+    // Usernames repeat across shops: pin to the named shop, and with none
+    // refuse to guess when several accounts match (same generic reply as an
+    // unknown username, so nothing leaks).
+    const matches = await this.db
       .select({
         email: users.email,
         phone: users.phone,
       })
       .from(users)
-      .where(eq(users.username, identifier))
-      .get();
+      .leftJoin(restaurants, eq(restaurants.id, users.restaurantId))
+      .where(
+        and(
+          eq(users.username, identifier),
+          shop
+            ? eq(restaurants.loginSlug, shop.trim().toLowerCase())
+            : undefined,
+        ),
+      )
+      .limit(2)
+      .all();
+    if (matches.length > 1) return null;
+    const user = matches[0];
 
     if (user?.email) {
       return { identifier: user.email, method: "email" };

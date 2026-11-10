@@ -3,12 +3,14 @@ import { and, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { JwtPayload } from "jsonwebtoken";
 import { JsonWebTokenError, sign, verify } from "jsonwebtoken";
-import { sessions, users } from "../schema";
+import { restaurants, sessions, users } from "../schema";
 import { BaseService } from "./base";
 
 export interface LoginData {
   username: string;
   password: string;
+  /** restaurants.login_slug; required when the username exists at several shops. */
+  shop?: string;
   deviceInfo?: {
     userAgent?: string;
     ipAddress?: string;
@@ -179,6 +181,7 @@ export type AuthFailureReason =
   | "customer_password_login_retired"
   | "customer_password_registration_retired"
   | "username_taken"
+  | "shop_required"
   | "weak_password";
 
 export interface AuthResult {
@@ -193,6 +196,8 @@ export interface AuthResult {
     role: number;
     restaurantId: string | null;
     adminTier?: string | null;
+    /** Shop code of the user's restaurant, null for platform admins. */
+    loginSlug?: string | null;
     isActive: boolean;
     tokenVersion?: number;
   };
@@ -215,8 +220,13 @@ export class AuthService extends BaseService {
   // plus a write on every outcome while changing no decision.
   async login(data: LoginData): Promise<AuthResult> {
     try {
-      // 查詢活躍用戶 - Using sql`` to match actual database schema
-      const user = await this.db
+      // Usernames are unique per restaurant, so a bare username can match
+      // several shops. With a shop code the lookup is pinned to that shop; and
+      // without one, more than one match is refused BEFORE any bcrypt work.
+      // Archived staff are barred here as well as by isActive: the two are
+      // set together on departure, but a login must not turn on one of them
+      // staying in step with the other (#337).
+      const matches = await this.db
         .select({
           id: users.id,
           username: users.username,
@@ -227,19 +237,37 @@ export class AuthService extends BaseService {
           adminTier: users.adminTier,
           isActive: users.isActive,
           tokenVersion: users.tokenVersion,
+          loginSlug: restaurants.loginSlug,
         })
         .from(users)
-        // Archived staff are barred here as well as by isActive: the two are
-        // set together on departure, but a login must not turn on one of them
-        // staying in step with the other (#337).
+        .leftJoin(restaurants, eq(restaurants.id, users.restaurantId))
         .where(
           and(
             eq(users.username, data.username),
             eq(users.isActive, true),
             isNull(users.deletedAt),
+            data.shop
+              ? and(
+                  eq(restaurants.loginSlug, data.shop.trim().toLowerCase()),
+                  eq(restaurants.isActive, true),
+                  isNull(restaurants.deletedAt),
+                )
+              : undefined,
           ),
         )
-        .get();
+        .limit(2)
+        .all();
+
+      if (!data.shop && matches.length > 1) {
+        return {
+          success: false,
+          reason: "shop_required",
+          error:
+            "This username is used at more than one shop. Sign in from your shop's login link.",
+        };
+      }
+
+      const user = matches[0];
 
       if (!user) {
         return {
@@ -337,6 +365,7 @@ export class AuthService extends BaseService {
           role: user.role,
           restaurantId: user.restaurantId,
           adminTier: user.adminTier,
+          loginSlug: user.loginSlug,
           isActive: user.isActive,
           tokenVersion: user.tokenVersion,
         },
@@ -367,7 +396,14 @@ export class AuthService extends BaseService {
       const existingUser = await this.db
         .select({ id: users.id })
         .from(users)
-        .where(eq(users.username, data.username))
+        .where(
+          and(
+            eq(users.username, data.username),
+            data.restaurantId
+              ? eq(users.restaurantId, data.restaurantId)
+              : isNull(users.restaurantId),
+          ),
+        )
         .get();
 
       if (existingUser) {

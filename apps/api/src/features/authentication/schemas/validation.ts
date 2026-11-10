@@ -69,6 +69,9 @@ const usernameSchema = z
     "Username can only contain letters, numbers, hyphens, and underscores",
   );
 
+// Shop code (restaurants.login_slug); format is checked by lookup, not here.
+const shopSchema = z.string().trim().min(1).max(64);
+
 // Email validation schema
 const emailSchema = z
   .email("Invalid email format")
@@ -108,6 +111,7 @@ const loginSchema = z.object({
     .min(1, "Password is required")
     .max(100, "Password is too long"),
   rememberMe: z.boolean().optional(),
+  shop: shopSchema.optional(),
 });
 
 const registerSchema = z
@@ -193,6 +197,7 @@ const forgotPasswordSchema = z.lazy(() =>
       email: emailSchema.optional(),
       username: usernameSchema.optional(),
       identifier: z.string().trim().min(1).max(320).optional(),
+      shop: shopSchema.optional(),
     })
     .refine((data) => data.email || data.username || data.identifier, {
       message: "Either email, username, or identifier is required",

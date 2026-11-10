@@ -45,6 +45,9 @@ export interface Restaurant extends UUIDEntity {
 
   /** A platform showcase shop: browsable, but every order is refused. */
   isDemo?: boolean;
+
+  /** Shop code in staff login URLs (`/s/{slug}`); null until backfilled. */
+  loginSlug?: string | null;
 }
 
 export interface ShopQrSettings {

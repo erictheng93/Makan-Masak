@@ -129,7 +129,14 @@ export class UserService extends BaseService {
       const existingUser = await this.db
         .select({ id: users.id })
         .from(users)
-        .where(eq(users.username, data.username))
+        .where(
+          and(
+            eq(users.username, data.username),
+            data.restaurantId
+              ? eq(users.restaurantId, data.restaurantId)
+              : isNull(users.restaurantId),
+          ),
+        )
         .get();
 
       if (existingUser) {
@@ -153,7 +160,8 @@ export class UserService extends BaseService {
       const saltRounds = 10;
       const passwordHash = await bcrypt.hash(data.password, saltRounds);
 
-      // 插入新用戶
+      // 插入新用戶. The pre-check above is racy; the unique index (per
+      // restaurant, or the legacy platform-wide one) is the real guard.
       const [newUser] = await this.db
         .insert(users)
         .values({
@@ -207,6 +215,17 @@ export class UserService extends BaseService {
 
       return userWithoutPassword;
     } catch (error) {
+      // Lost the race against the unique index (either index set).
+      const detail = `${error instanceof Error ? error.message : ""} ${String(
+        (error as { cause?: unknown })?.cause ?? "",
+      )}`;
+      if (
+        /UNIQUE constraint failed: users\.(restaurant_id, users\.)?username/.test(
+          detail,
+        )
+      ) {
+        throw takenField("username", "Username already exists");
+      }
       this.handleError(error, "createUser");
     }
   }
@@ -271,48 +290,6 @@ export class UserService extends BaseService {
       };
     } catch (error) {
       this.handleError(error, "getUserById");
-    }
-  }
-
-  // 根據用戶名取得用戶
-  async getUserByUsername(username: string) {
-    try {
-      const user = await this.db
-        .select({
-          id: users.id,
-          username: users.username,
-          email: users.email,
-          phone: users.phone,
-          fullName: users.fullName,
-          role: users.role,
-          restaurantId: users.restaurantId,
-          isActive: users.isActive,
-          isVerified: users.isVerified,
-          lastLoginAt: users.lastLoginAt,
-          createdAt: users.createdAt,
-        })
-        .from(users)
-        .where(eq(users.username, username))
-        .get();
-
-      if (!user) return null;
-
-      // Convert Drizzle objects to primitive values to avoid circular references
-      return {
-        id: String(user.id),
-        username: String(user.username),
-        email: user.email ? String(user.email) : null,
-        phone: user.phone ? String(user.phone) : null,
-        fullName: user.fullName ? String(user.fullName) : null,
-        role: Number(user.role),
-        restaurantId: user.restaurantId ? String(user.restaurantId) : null,
-        isActive: Boolean(Number(user.isActive)),
-        isVerified: Boolean(Number(user.isVerified)),
-        lastLoginAt: isoOrNull(user.lastLoginAt),
-        createdAt: isoOrNull(user.createdAt),
-      };
-    } catch (error) {
-      this.handleError(error, "getUserByUsername");
     }
   }
 

@@ -15,6 +15,10 @@ import {
   restaurantServiceItems,
   restaurants,
   orders,
+  isLoginSlugConflict,
+  isValidLoginSlug,
+  normalizeLoginSlug,
+  RESERVED_LOGIN_SLUGS,
 } from "@makanmasak/database";
 import { KVCacheService, type CacheService } from "../../../core/cache";
 import { ConsoleLogger } from "../../../core/monitoring";
@@ -24,6 +28,7 @@ import {
   ApiError,
   badRequest,
   conflict,
+  notFound,
 } from "../../../shared/utils/api-error";
 import { SubscriptionService } from "../../subscriptions/services/SubscriptionService";
 import { ManagementTenantClient } from "../../../services/managementTenantClient";
@@ -435,6 +440,80 @@ export class RestaurantsService {
       });
       throw new Error("Failed to update restaurant");
     }
+  }
+
+  /** Public shop-login lookup: active restaurants only, never cached. */
+  async getLoginContext(
+    slug: string,
+  ): Promise<{ slug: string; name: string; logoUrl: string | null } | null> {
+    const row = await this.db
+      .select({
+        slug: restaurants.loginSlug,
+        name: restaurants.name,
+        logoUrl: restaurants.logoUrl,
+      })
+      .from(restaurants)
+      .where(
+        and(
+          eq(restaurants.loginSlug, slug),
+          eq(restaurants.isActive, true),
+          isNull(restaurants.deletedAt),
+        ),
+      )
+      .get();
+    return row ? { slug, name: row.name, logoUrl: row.logoUrl ?? null } : null;
+  }
+
+  /** Set the shop code used in `/s/{slug}` login links. Returns the stored slug. */
+  async updateLoginSlug(id: string, input: string): Promise<string> {
+    const loginSlug = normalizeLoginSlug(input);
+    const detail = (message: string) => [
+      { field: "loginSlug", message, code: "invalid" },
+    ];
+    if (!isValidLoginSlug(loginSlug)) {
+      throw new ApiError(
+        "SLUG_INVALID",
+        "Shop code must be 3-40 lowercase letters, numbers or hyphens, without double hyphens",
+        400,
+        detail("invalid"),
+      );
+    }
+    if (RESERVED_LOGIN_SLUGS.has(loginSlug)) {
+      throw new ApiError(
+        "SLUG_RESERVED",
+        "This shop code is reserved",
+        400,
+        detail("reserved"),
+      );
+    }
+    const taken = new ApiError(
+      "SLUG_TAKEN",
+      "This shop code is already taken",
+      409,
+      [{ field: "loginSlug", message: "taken", code: "taken" }],
+    );
+
+    const [owner] = await this.db
+      .select({ id: restaurants.id })
+      .from(restaurants)
+      .where(and(eq(restaurants.loginSlug, loginSlug)))
+      .limit(1);
+    if (owner && owner.id !== id) throw taken;
+
+    try {
+      const updated = await this.db
+        .update(restaurants)
+        .set({ loginSlug, updatedAt: new Date() })
+        .where(eq(restaurants.id, id))
+        .returning({ id: restaurants.id });
+      if (updated.length === 0) throw notFound("Restaurant not found");
+    } catch (error) {
+      if (isLoginSlugConflict(error)) throw taken;
+      throw error;
+    }
+
+    await this.cache.delete(`restaurant:${id}`);
+    return loginSlug;
   }
 
   async getContactProfile(

@@ -34,6 +34,8 @@ import {
   usageMeters,
   users,
   CloudflareEmailProvider,
+  loginSlugFromId,
+  randomLoginSlug,
   type PaidPlanTier,
 } from "@makanmasak/database";
 import { ApiError, conflict, generateUUID } from "@makanmasak/utils";
@@ -1447,6 +1449,7 @@ export class OnboardingService {
     const restaurantId = generateUUID();
     const userId = generateUUID();
     const username = await this.generateAvailableOwnerUsername(application);
+    const loginSlug = await this.generateAvailableLoginSlug(restaurantId);
     const passwordHash = await bcrypt.hash(this.generateUnusablePassword(), 10);
     // Security token, not a domain id — keep v4. UUID v7 embeds a timestamp and
     // carries 74 random bits instead of v4's 122, which weakens a setup link.
@@ -1494,6 +1497,7 @@ export class OnboardingService {
               application.district ??
               this.initialRestaurantDistrict(application),
           }),
+          loginSlug,
           latitude: application.latitude ?? null,
           longitude: application.longitude ?? null,
           createdAt: new Date(nowMs),
@@ -1809,6 +1813,24 @@ export class OnboardingService {
       await Promise.all(keys.map(({ name }) => this.env.CACHE_KV.delete(name)));
       cursor = list.list_complete ? undefined : list.cursor;
     } while (cursor);
+  }
+
+  /** Shop code for staff login URLs: id-derived, random fallback on collision. */
+  private async generateAvailableLoginSlug(
+    restaurantId: string,
+  ): Promise<string> {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const slug =
+        attempt === 0 ? loginSlugFromId(restaurantId) : randomLoginSlug();
+      const existing = await this.env
+        .PLATFORM_DB!.prepare(
+          "SELECT id FROM restaurants WHERE login_slug = ? LIMIT 1",
+        )
+        .bind(slug)
+        .first();
+      if (!existing) return slug;
+    }
+    return randomLoginSlug();
   }
 
   private async generateAvailableOwnerUsername(

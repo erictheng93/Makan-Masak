@@ -493,6 +493,7 @@ function createPartnershipServiceTestDb(): D1DatabaseAdapter {
 
     CREATE TABLE restaurants (
       id TEXT PRIMARY KEY NOT NULL,
+      login_slug TEXT,
       name TEXT NOT NULL,
       type TEXT NOT NULL,
       category TEXT NOT NULL,

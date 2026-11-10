@@ -24,6 +24,7 @@ import {
   forbidden,
 } from "../../../shared/utils/api-error";
 
+import { isValidLoginSlug } from "@makanmasak/database";
 import { RestaurantsService } from "../services/RestaurantsService";
 import { raiseSearchSyncFailedAlert } from "../../alerts/producers";
 import { restaurantSchemas } from "../schemas/validation";
@@ -493,6 +494,57 @@ app.delete(
         success: true,
         message: "Service item deleted successfully",
       },
+      HTTP_STATUS.OK,
+    );
+  },
+);
+
+/**
+ * GET /login-context/:slug - Public shop-login lookup (name + logo for the
+ * login page). Deliberately uncached: a slug change must take effect at once.
+ */
+app.get("/login-context/:slug", async (c) => {
+  const slug = c.req.param("slug").toLowerCase();
+  const restaurantsService = new RestaurantsService(
+    c.env.DB,
+    c.env,
+    c.env.CACHE_KV,
+  );
+  const context = isValidLoginSlug(slug)
+    ? await restaurantsService.getLoginContext(slug)
+    : null;
+  if (!context) throw notFound("Shop not found", "SHOP_NOT_FOUND");
+
+  c.header("Cache-Control", "no-store");
+  return c.json({ success: true, data: context }, HTTP_STATUS.OK);
+});
+
+/**
+ * PUT /:id/login-slug - Change the shop code used in staff login links.
+ * Owner of that restaurant or a platform admin (support tier is read-only and
+ * is refused by the auth middleware).
+ */
+app.put(
+  "/:id/login-slug",
+  authMiddleware,
+  requireRole([USER_ROLES.ADMIN, USER_ROLES.OWNER]),
+  validateParams(commonSchemas.idParam),
+  validateBody(restaurantSchemas.updateLoginSlug),
+  async (c) => {
+    const { id } = c.get("validatedParams");
+    const { loginSlug } = c.get("validatedBody");
+    const user = c.get("user");
+    if (user.role === USER_ROLES.OWNER && user.restaurantId !== id) {
+      throw forbidden("Access denied");
+    }
+    const restaurantsService = new RestaurantsService(
+      c.env.DB,
+      c.env,
+      c.env.CACHE_KV,
+    );
+    const stored = await restaurantsService.updateLoginSlug(id, loginSlug);
+    return c.json(
+      { success: true, data: { loginSlug: stored } },
       HTTP_STATUS.OK,
     );
   },

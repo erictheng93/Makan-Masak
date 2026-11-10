@@ -1,5 +1,11 @@
 import { eq, and, or, desc, asc, count, sql, notExists } from "drizzle-orm";
+import { v7 as uuidv7 } from "uuid";
 import { BaseService } from "./base";
+import {
+  isLoginSlugConflict,
+  loginSlugFromId,
+  randomLoginSlug,
+} from "../utils/login-slug";
 import { resolveAppBaseUrl } from "./app-base-url";
 import {
   restaurants,
@@ -63,7 +69,7 @@ type RestaurantRow = Pick<
   | "type"
   | "updatedAt"
   | "website"
->;
+> & { loginSlug?: string | null }; // list queries do not select it
 type RestaurantInsert = typeof restaurants.$inferInsert;
 
 export interface CreateRestaurantData {
@@ -202,16 +208,31 @@ export class RestaurantService extends BaseService {
         isPlainRecord(initialSettings) ? initialSettings : null,
       );
       console.log("[RestaurantService] Creating restaurant with data:", data);
-      const result = await this.db
-        .insert(restaurants)
-        .values({
-          ...data,
-          ...region,
-          city,
-          isAvailable: true, // Default: restaurant is available
-          isActive: true, // Default: restaurant is active
-        })
-        .returning();
+      // Every shop gets a login slug at birth: derived from the id, with a
+      // random fallback if that (vanishingly unlikely) collides.
+      const id = uuidv7();
+      let result: (typeof restaurants.$inferSelect)[] = [];
+      for (let attempt = 0; ; attempt++) {
+        try {
+          result = await this.db
+            .insert(restaurants)
+            .values({
+              ...data,
+              ...region,
+              id,
+              city,
+              loginSlug:
+                attempt === 0 ? loginSlugFromId(id) : randomLoginSlug(),
+              isAvailable: true, // Default: restaurant is available
+              isActive: true, // Default: restaurant is active
+            })
+            .returning();
+          break;
+        } catch (insertError) {
+          if (attempt >= 3 || !isLoginSlugConflict(insertError))
+            throw insertError;
+        }
+      }
 
       console.log("[RestaurantService] Insert result:", result);
       const [restaurant] = result;
@@ -907,6 +928,7 @@ export class RestaurantService extends BaseService {
       shopQrSettings: restaurant.shopQrSettings ?? undefined,
       shopQrVersion: restaurant.shopQrVersion,
       isDemo: restaurant.isDemo,
+      loginSlug: restaurant.loginSlug,
       createdAt: restaurant.createdAt.toISOString(),
       updatedAt: restaurant.updatedAt.toISOString(),
     };

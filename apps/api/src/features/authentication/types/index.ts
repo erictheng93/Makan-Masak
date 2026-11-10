@@ -72,6 +72,8 @@ export interface VerifyEmailRequest {
 export interface LoginData {
   username: string;
   password: string;
+  /** Shop code (restaurants.login_slug); required when the username is shared. */
+  shop?: string;
   deviceInfo?: DeviceInfo;
   location?: LocationInfo;
 }
@@ -95,6 +97,8 @@ export interface AuthUser {
   phone?: string;
   role: UserRole;
   restaurantId?: string | null;
+  /** Shop code of the user's restaurant; null for platform admins. */
+  loginSlug?: string | null;
   isActive: boolean;
   isVerified: boolean;
   lastLoginAt?: Date;
@@ -163,6 +167,7 @@ export type AuthFailureReason =
   | "customer_password_registration_retired"
   | "username_taken"
   | "weak_password"
+  | "shop_required"
   | "rate_limited";
 
 export type PasswordResetFailureReason =
