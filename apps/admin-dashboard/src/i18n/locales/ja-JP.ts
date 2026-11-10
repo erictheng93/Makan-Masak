@@ -831,6 +831,24 @@ const jaJP: Messages = {
   },
 
   errors: {
+    global: {
+      unknown: "不明なエラーが発生しました",
+      network: "ネットワークエラーです。接続を確認してください",
+      serverError: "サーバーがこのリクエストを完了できませんでした",
+      permission: "権限がないか、ログインの有効期限が切れています",
+      criticalPrefix: "重大なエラー：",
+      systemPrefix: "システムエラー：",
+      sseDisconnected: "リアルタイム接続が切断されました",
+      sseReconnecting: "リアルタイム接続が切断されました。再接続しています...",
+      sseReconnectFailed:
+        "リアルタイム接続を再確立できません。ページを更新してください",
+      sseRestored: "リアルタイム接続が回復しました",
+      offlineQueued:
+        "ネットワークに接続できません。回復後にリクエストを再試行します",
+      sessionRefreshed: "ログイン状態を更新しました。もう一度お試しください",
+      sessionExpired:
+        "ログインの有効期限が切れました。もう一度ログインしてください",
+    },
     loadUsersFailed: "従業員一覧の読み込みに失敗しました。",
     loadEmployeeFailed: "従業員情報の読み込みに失敗しました。",
     generic: "操作に失敗しました。もう一度お試しください",

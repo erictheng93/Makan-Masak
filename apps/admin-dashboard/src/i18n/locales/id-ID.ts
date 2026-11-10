@@ -943,6 +943,24 @@ const idID: Messages = {
   },
 
   errors: {
+    global: {
+      unknown: "Terjadi kesalahan yang tidak diketahui",
+      network: "Kesalahan jaringan, periksa koneksi Anda",
+      serverError: "Server tidak dapat menyelesaikan permintaan ini",
+      permission: "Anda tidak memiliki izin atau sesi Anda telah berakhir",
+      criticalPrefix: "Kesalahan kritis:",
+      systemPrefix: "Kesalahan sistem:",
+      sseDisconnected: "Koneksi langsung terputus",
+      sseReconnecting:
+        "Koneksi langsung terputus, mencoba menyambung kembali...",
+      sseReconnectFailed:
+        "Tidak dapat memulihkan koneksi langsung. Muat ulang halaman",
+      sseRestored: "Koneksi langsung dipulihkan",
+      offlineQueued:
+        "Jaringan tidak tersedia. Permintaan akan dicoba lagi saat jaringan kembali",
+      sessionRefreshed: "Sesi Anda diperbarui, silakan coba lagi",
+      sessionExpired: "Sesi Anda telah berakhir, silakan masuk kembali",
+    },
     loadUsersFailed: "Gagal memuat daftar karyawan.",
     loadEmployeeFailed: "Gagal memuat data karyawan.",
     generic: "Operasi gagal, silakan coba lagi",

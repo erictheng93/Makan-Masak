@@ -958,6 +958,21 @@ const zhTWCore = {
   },
 
   errors: {
+    global: {
+      unknown: "發生了未知錯誤",
+      network: "網路連線錯誤，請檢查您的網路連線",
+      serverError: "伺服器無法完成此請求",
+      permission: "權限不足或登入已過期",
+      criticalPrefix: "嚴重錯誤：",
+      systemPrefix: "系統錯誤：",
+      sseDisconnected: "即時連線中斷",
+      sseReconnecting: "即時連線中斷，正在嘗試重新連線...",
+      sseReconnectFailed: "無法重新建立即時連線，請重新整理頁面",
+      sseRestored: "即時連線已恢復",
+      offlineQueued: "目前網路無法使用，網路恢復後會重新嘗試請求",
+      sessionRefreshed: "登入狀態已更新，請重新嘗試",
+      sessionExpired: "登入已過期，請重新登入",
+    },
     loadUsersFailed: "載入員工列表失敗",
     loadEmployeeFailed: "載入員工資料失敗",
     generic: "操作失敗，請重試",

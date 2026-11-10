@@ -818,6 +818,21 @@ const zhCN: Messages = {
   },
 
   errors: {
+    global: {
+      unknown: "发生了未知错误",
+      network: "网络连接错误，请检查您的网络连接",
+      serverError: "服务器无法完成此请求",
+      permission: "权限不足或登录已过期",
+      criticalPrefix: "严重错误：",
+      systemPrefix: "系统错误：",
+      sseDisconnected: "实时连接中断",
+      sseReconnecting: "实时连接中断，正在尝试重新连接...",
+      sseReconnectFailed: "无法重新建立实时连接，请刷新页面",
+      sseRestored: "实时连接已恢复",
+      offlineQueued: "当前网络不可用，网络恢复后会重新尝试请求",
+      sessionRefreshed: "登录状态已更新，请重新尝试",
+      sessionExpired: "登录已过期，请重新登录",
+    },
     loadUsersFailed: "载入员工列表失败",
     loadEmployeeFailed: "载入员工资料失败",
     generic: "操作失败，请重试",

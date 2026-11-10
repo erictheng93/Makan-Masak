@@ -936,6 +936,23 @@ const enUS: Messages = {
   },
 
   errors: {
+    global: {
+      unknown: "An unknown error occurred",
+      network: "Network error, please check your connection",
+      serverError: "The server could not complete this request",
+      permission: "You do not have permission, or your session has expired",
+      criticalPrefix: "Critical error:",
+      systemPrefix: "System error:",
+      sseDisconnected: "Live connection lost",
+      sseReconnecting: "Live connection lost, reconnecting...",
+      sseReconnectFailed:
+        "Could not restore the live connection. Please refresh the page",
+      sseRestored: "Live connection restored",
+      offlineQueued:
+        "The network is unavailable. The request will be retried when it returns",
+      sessionRefreshed: "Your session was renewed, please try again",
+      sessionExpired: "Your session has expired, please sign in again",
+    },
     loadUsersFailed: "Loading the employee list failed.",
     loadEmployeeFailed: "Loading the employee record failed.",
     generic: "Operation failed, please try again",

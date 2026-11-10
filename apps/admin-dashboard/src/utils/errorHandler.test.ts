@@ -65,7 +65,7 @@ function buildApiError({
   };
 }
 
-const GENERIC_PERMISSION_MESSAGE = "權限不足或登入已過期";
+const GENERIC_PERMISSION_MESSAGE = t("errorPresentation.permissionDenied");
 
 // Server-side copy from apps/api/src/middleware/moduleGate.ts, so the tests
 // prove we do not simply echo the (English-only) server message back.
@@ -101,7 +101,7 @@ describe("KitchenErrorHandler.handleAPIError — subscription vs permission 403s
     (code) => {
       const expectedMessage = t(EXPECTED_I18N_KEYS[code]);
 
-      const details = KitchenErrorHandler.handleAPIError(
+      const details = ErrorHandler.getInstance().handleError(
         buildApiError({ code, message: SERVER_MESSAGES[code] }),
         { url: "/tables" },
       );
@@ -142,7 +142,7 @@ describe("KitchenErrorHandler.handleAPIError — subscription vs permission 403s
   });
 
   it("keeps a plain FORBIDDEN 403 on the existing permission message", () => {
-    const details = KitchenErrorHandler.handleAPIError(
+    const details = ErrorHandler.getInstance().handleError(
       buildApiError({ code: "FORBIDDEN", message: "Access denied" }),
       { url: "/users" },
     );
@@ -171,7 +171,7 @@ describe("KitchenErrorHandler.handleAPIError — subscription vs permission 403s
       expect.objectContaining({
         type: ErrorType.PERMISSION,
         code: 401,
-        message: GENERIC_PERMISSION_MESSAGE,
+        message: t("errorPresentation.sessionExpired"),
       }),
     );
   });
@@ -193,7 +193,7 @@ describe("KitchenErrorHandler.handleAPIError — subscription vs permission 403s
   it.each(DEDICATED_UI_ERROR_CODES)(
     "suppresses the global toast for %s because the view owns the recovery UI",
     (code) => {
-      const details = KitchenErrorHandler.handleAPIError(
+      const details = ErrorHandler.getInstance().handleError(
         buildApiError({
           status: 409,
           code,
@@ -207,7 +207,6 @@ describe("KitchenErrorHandler.handleAPIError — subscription vs permission 403s
           type: ErrorType.API,
           severity: ErrorSeverity.MEDIUM,
           code: 409,
-          message: "Menu item was modified by another user",
         }),
       );
       expect(toastError).not.toHaveBeenCalled();
@@ -284,7 +283,7 @@ describe("ErrorHandler — unexpected runtime exceptions", () => {
         expect.objectContaining({
           type: ErrorType.UNKNOWN,
           severity: ErrorSeverity.CRITICAL,
-          message: "發生了未知錯誤",
+          message: t("errors.global.unknown"),
         }),
       );
     },
@@ -347,6 +346,51 @@ describe("ErrorReportingService — CSRF", () => {
           "X-CSRF-Token": "csrf-from-cookie",
         }),
       }),
+    );
+  });
+});
+
+describe("one failure -> at most one toast", () => {
+  const failure = () =>
+    buildApiError({ status: 500, code: "INTERNAL_ERROR", message: "boom" });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("the interceptor path (handleAPIError) never toasts, so a caller that handles the error owns the message", () => {
+    KitchenErrorHandler.handleAPIError(failure(), { url: "/users" });
+
+    expect(toastError).not.toHaveBeenCalled();
+    expect(toastWarning).not.toHaveBeenCalled();
+  });
+
+  it("an unhandled rejection of the same error toasts exactly once, even if two global hooks see it", () => {
+    const error = failure();
+    KitchenErrorHandler.handleAPIError(error, { url: "/users" });
+
+    const handler = ErrorHandler.getInstance();
+    handler.handleError(error, { type: "unhandledRejection" });
+    handler.handleError(error, { type: "vue_error" });
+
+    expect(toastError).toHaveBeenCalledOnce();
+  });
+
+  it("takes the HIGH prefix and a localized body from i18n, not server prose", () => {
+    ErrorHandler.getInstance().handleError(failure());
+
+    const [text] = toastError.mock.calls[0] as [string];
+    expect(text.startsWith(t("errors.global.systemPrefix"))).toBe(true);
+    expect(text).not.toContain("boom");
+    expect(text).not.toMatch(/^系統錯誤: /);
+  });
+
+  it("takes the CRITICAL prefix from i18n", () => {
+    ErrorHandler.getInstance().handleError(new TypeError("x"));
+
+    expect(toastError).toHaveBeenCalledWith(
+      `${t("errors.global.criticalPrefix")} ${t("errors.global.unknown")}`,
+      expect.objectContaining({ timeout: false }),
     );
   });
 });

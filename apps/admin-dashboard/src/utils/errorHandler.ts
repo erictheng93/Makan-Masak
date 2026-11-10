@@ -1,10 +1,27 @@
 import { useToast } from "vue-toastification";
 import { apiUrl } from "@/services/api-url";
 import { t } from "@/i18n";
+import { resolveAdminUserFacingError } from "@/utils/userFacingError";
 import { getAuthToken } from "@/utils/authTokenProvider";
 import { currentLoginPath } from "@/utils/loginShop";
 
+/**
+ * One failure -> at most one toast.
+ *
+ *  - A caller that catches an error (e.g. useAsyncAction, which never
+ *    rethrows) owns its message. The axios interceptor therefore only logs and
+ *    reports (`handleError(..., { notify: false })`); it never toasts.
+ *  - This layer toasts only errors nobody handled: the window
+ *    `unhandledrejection` / `error` events and Vue's `app.config.errorHandler`.
+ *    Each error object is toasted once (`notified`), even if it reaches two
+ *    of those hooks.
+ *  - Deliberate suppressions stay: silent telemetry URLs,
+ *    DEDICATED_UI_ERROR_CODES, and 401/403 on the login page or without a token.
+ *  - All text is i18n (`errors.global.*`); API errors use the localized
+ *    user-facing copy, never the server's prose.
+ */
 const toast = useToast();
+const notified = new WeakSet<object>();
 
 type AuthRefreshHandler = () => Promise<boolean>;
 
@@ -323,7 +340,11 @@ export class ErrorHandler {
   }
 
   // 處理一般錯誤
-  handleError(error: unknown, context?: Record<string, unknown>): ErrorDetails {
+  handleError(
+    error: unknown,
+    context?: Record<string, unknown>,
+    options: { notify?: boolean } = {},
+  ): ErrorDetails {
     const errorDetails = this.parseError(error, context);
 
     // 記錄錯誤
@@ -338,8 +359,12 @@ export class ErrorHandler {
     }
 
     // 顯示用戶提示
-    if (this.userNotificationEnabled) {
-      this.showUserNotification(errorDetails);
+    if (this.userNotificationEnabled && options.notify !== false) {
+      const key = typeof error === "object" && error !== null ? error : null;
+      if (!key || !notified.has(key)) {
+        if (key) notified.add(key);
+        this.showUserNotification(errorDetails);
+      }
     }
 
     return errorDetails;
@@ -352,7 +377,7 @@ export class ErrorHandler {
   ): ErrorDetails {
     let type = ErrorType.UNKNOWN;
     let severity = ErrorSeverity.MEDIUM;
-    let message = "發生了未知錯誤";
+    let message = t("errors.global.unknown");
     let code: string | number | undefined;
 
     // Error 實例也是物件，所以 asRecord 一樣能讀到它的 name / message。
@@ -367,7 +392,7 @@ export class ErrorHandler {
     ) {
       type = ErrorType.NETWORK;
       severity = ErrorSeverity.HIGH;
-      message = "網絡連接錯誤，請檢查您的網絡連接";
+      message = t("errors.global.network");
     } else if (record?.response) {
       // API 錯誤 — unified format: { success: false, error: { code, message } }
       type = ErrorType.API;
@@ -377,19 +402,11 @@ export class ErrorHandler {
         typeof status === "number" || typeof status === "string"
           ? status
           : undefined;
-      const apiError = asRecord(response?.data)?.error;
-      const apiErrorMessage = asRecord(apiError)?.message;
-      if (typeof apiError === "object" && apiError !== null) {
-        message =
-          typeof apiErrorMessage === "string" && apiErrorMessage
-            ? apiErrorMessage
-            : "服務器錯誤";
-      } else if (typeof apiError === "string") {
-        // Backward compatibility: un-migrated routes may still return error as string
-        message = apiError || "服務器錯誤";
-      } else {
-        message = "服務器錯誤";
-      }
+      message = resolveAdminUserFacingError(
+        error,
+        t,
+        "errors.global.serverError",
+      );
 
       const apiErrorCode = extractApiErrorCode(error);
 
@@ -403,7 +420,11 @@ export class ErrorHandler {
       } else if (code === 403 || code === 401) {
         type = ErrorType.PERMISSION;
         severity = ErrorSeverity.MEDIUM;
-        message = "權限不足或登入已過期";
+        message = resolveAdminUserFacingError(
+          error,
+          t,
+          "errors.global.permission",
+        );
       }
     } else if (typeof record?.message === "string" && record.message) {
       message = record.message;
@@ -473,9 +494,13 @@ export class ErrorHandler {
     const duration = error.severity === ErrorSeverity.HIGH ? 8000 : 4000;
 
     if (error.severity === ErrorSeverity.CRITICAL) {
-      toast.error(`嚴重錯誤: ${error.message}`, { timeout: false });
+      toast.error(`${t("errors.global.criticalPrefix")} ${error.message}`, {
+        timeout: false,
+      });
     } else if (error.severity === ErrorSeverity.HIGH) {
-      toast.error(`系統錯誤: ${error.message}`, { timeout: duration });
+      toast.error(`${t("errors.global.systemPrefix")} ${error.message}`, {
+        timeout: duration,
+      });
     } else {
       if (error.severity === ErrorSeverity.LOW) {
         toast.warning(error.message, { timeout: duration });
@@ -509,7 +534,9 @@ export class KitchenErrorHandler extends ErrorHandler {
 
   static handleAPIError(error: unknown, context?: Record<string, unknown>) {
     const handler = ErrorHandler.getInstance();
-    return handler.handleError(error, context);
+    // The interceptor never toasts: the caller owns handled errors and the
+    // global hooks toast unhandled ones (see the rule at the top of the file).
+    return handler.handleError(error, context, { notify: false });
   }
 
   // 處理 SSE 連接錯誤
@@ -517,7 +544,7 @@ export class KitchenErrorHandler extends ErrorHandler {
     const errorDetails: ErrorDetails = {
       type: ErrorType.SSE,
       severity: ErrorSeverity.HIGH,
-      message: "SSE 連接中斷",
+      message: t("errors.global.sseDisconnected"),
       originalError: error,
       context: {
         readyState: eventSource?.readyState,
@@ -534,7 +561,7 @@ export class KitchenErrorHandler extends ErrorHandler {
 
     // 顯示連接狀態
     if (this.userNotificationEnabled) {
-      toast.warning("實時連接中斷，正在嘗試重新連接...", { timeout: 3000 });
+      toast.warning(t("errors.global.sseReconnecting"), { timeout: 3000 });
     }
 
     // 自動重連
@@ -544,7 +571,7 @@ export class KitchenErrorHandler extends ErrorHandler {
   // SSE 自動重連
   private attemptSSEReconnect(_eventSource?: EventSource) {
     if (this.sseReconnectAttempts >= this.maxReconnectAttempts) {
-      toast.error("連接失敗: 無法重新建立實時連接，請刷新頁面", {
+      toast.error(t("errors.global.sseReconnectFailed"), {
         timeout: false,
       });
       return;
@@ -590,7 +617,7 @@ export class KitchenErrorHandler extends ErrorHandler {
     this.resetSSEReconnectAttempts();
 
     if (this.sseReconnectAttempts > 0) {
-      toast.success("實時連接已恢復", { timeout: 2000 });
+      toast.success(t("errors.global.sseRestored"), { timeout: 2000 });
     }
   }
 
@@ -627,7 +654,7 @@ export class KitchenErrorHandler extends ErrorHandler {
     _context?: Record<string, unknown>,
   ): Promise<never> {
     const toast = useToast();
-    toast.warning("當前網絡不可用，請求將在網絡恢復後重新嘗試");
+    toast.warning(t("errors.global.offlineQueued"));
 
     return new Promise<never>((_resolve, reject) => {
       // 創建重試請求函數
@@ -658,12 +685,12 @@ export class KitchenErrorHandler extends ErrorHandler {
 
       if (success) {
         const toast = useToast();
-        toast.info("登入狀態已更新，請重新嘗試");
+        toast.info(t("errors.global.sessionRefreshed"));
         // 這裡應該重新執行原始請求
         return Promise.reject(new Error("Please retry the request"));
       } else {
         // Token 刷新失敗，跳轉到登入頁
-        toast.error("登入已過期，請重新登入", { timeout: 5000 });
+        toast.error(t("errors.global.sessionExpired"), { timeout: 5000 });
         window.location.href = currentLoginPath();
         return Promise.reject(_originalError);
       }

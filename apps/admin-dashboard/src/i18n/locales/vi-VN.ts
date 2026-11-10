@@ -828,6 +828,23 @@ const viVN: Messages = {
   },
 
   errors: {
+    global: {
+      unknown: "Đã xảy ra lỗi không xác định",
+      network: "Lỗi mạng, vui lòng kiểm tra kết nối của bạn",
+      serverError: "Máy chủ không thể hoàn tất yêu cầu này",
+      permission: "Bạn không có quyền hoặc phiên đăng nhập đã hết hạn",
+      criticalPrefix: "Lỗi nghiêm trọng:",
+      systemPrefix: "Lỗi hệ thống:",
+      sseDisconnected: "Mất kết nối thời gian thực",
+      sseReconnecting: "Mất kết nối thời gian thực, đang kết nối lại...",
+      sseReconnectFailed:
+        "Không thể khôi phục kết nối thời gian thực. Vui lòng tải lại trang",
+      sseRestored: "Đã khôi phục kết nối thời gian thực",
+      offlineQueued:
+        "Không có mạng. Yêu cầu sẽ được thử lại khi mạng hoạt động trở lại",
+      sessionRefreshed: "Phiên đăng nhập đã được làm mới, vui lòng thử lại",
+      sessionExpired: "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
+    },
     loadUsersFailed: "Không tải được danh sách nhân viên.",
     loadEmployeeFailed: "Không tải được hồ sơ nhân viên.",
     generic: "Thao tác thất bại, vui lòng thử lại",
