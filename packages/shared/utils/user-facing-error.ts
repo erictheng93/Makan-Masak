@@ -154,6 +154,12 @@ export function resolveUserFacingError(
     if (codeKey) return withMessage(codeKey, "code");
   }
 
+  // A CSRF 403 is not a permission problem: the session's CSRF cookie is gone
+  // or stale, and signing in again issues a fresh one.
+  if (parsed.code?.startsWith("CSRF_")) {
+    return withMessage("errorPresentation.sessionExpired", "status");
+  }
+
   if (parsed.code && TIMEOUT_CODES.has(parsed.code)) {
     return withMessage("errorPresentation.timeout", "network");
   }

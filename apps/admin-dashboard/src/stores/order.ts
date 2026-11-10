@@ -3,6 +3,7 @@ import { ref, computed, readonly } from "vue";
 import type { Order, OrderStatus } from "@/types";
 import { api, unwrapApiList } from "@/services/api";
 import { t } from "@/i18n";
+import { markErrorHandled } from "@/utils/errorHandler";
 import { resolveUserFacingError } from "@makanmasak/shared/utils/user-facing-error";
 
 interface FetchOrdersParams {
@@ -144,6 +145,9 @@ export const useOrderStore = defineStore("order", () => {
       return false;
     } catch (err: unknown) {
       console.error("Failed to update order status:", err);
+      // The caller (OrdersView) toasts error.value; without this the global
+      // interceptor toasts the same failure a second time.
+      markErrorHandled(err);
       error.value = resolveUserFacingError(err, t, {
         fallbackKey: "orderStore.updateStatusFailed",
       }).message;

@@ -4,6 +4,7 @@ import { useOrderStore } from "./order";
 import { api } from "@/services/api";
 import { AxiosHeaders, type AxiosResponse } from "axios";
 import type { ApiResponse, Order } from "@/types";
+import { markErrorHandled } from "@/utils/errorHandler";
 
 vi.mock("@/services/api", () => ({
   api: {
@@ -18,6 +19,8 @@ vi.mock("@/services/api", () => ({
 vi.mock("@/i18n", () => ({
   t: (key: string) => key,
 }));
+
+vi.mock("@/utils/errorHandler", () => ({ markErrorHandled: vi.fn() }));
 
 // api.* return a full AxiosResponse, so a mock has to supply the whole envelope
 // rather than just `data`.
@@ -162,6 +165,21 @@ describe("admin order store — local status updates keep the API's time format"
    * gave one field two runtime types depending on how it was last touched,
    * which is how `createdAt` ended up crashing the orders table.
    */
+  // OrdersView toasts store.error; the interceptor must not toast it again.
+  it("marks a failed status change handled so it is shown once", async () => {
+    const failure = { response: { status: 403, data: {} } };
+    vi.mocked(api.put).mockRejectedValue(failure);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const store = useOrderStore();
+
+    await expect(store.updateOrderStatus("order-1", "confirmed")).resolves.toBe(
+      false,
+    );
+
+    expect(markErrorHandled).toHaveBeenCalledWith(failure);
+    expect(store.error).toBeTruthy();
+  });
+
   it("stamps updatedAt as Unix milliseconds after a status change", async () => {
     vi.mocked(api.get).mockResolvedValue(
       axiosResponse({

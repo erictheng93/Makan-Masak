@@ -211,6 +211,20 @@ describe("resolveUserFacingError", () => {
    * The shared 401 copy tells the reader to sign in again. On the sign-in form
    * that is the one thing they are already doing.
    */
+  it("tells the user to sign in again on a CSRF 403, not that they lack permission", () => {
+    const result = resolveUserFacingError(
+      {
+        response: {
+          status: 403,
+          data: { success: false, error: { code: "CSRF_TOKEN_INVALID" } },
+        },
+      },
+      translate,
+    );
+
+    expect(result.message).toBe("登入狀態已失效，請重新登入");
+  });
+
   it("lets a screen override the copy for a status", () => {
     const result = resolveUserFacingError(
       { response: { status: 401, data: {} } },
