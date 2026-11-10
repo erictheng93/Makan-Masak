@@ -491,6 +491,12 @@ crons = [
 name = "makanmasak-api-staging"
 workers_dev = true
 
+# Same site as the *-staging.makanmasak.com frontends (scripts/staging/frontend-proxy),
+# so the SameSite=Lax CSRF and refresh cookies reach the API.
+[[env.staging.routes]]
+pattern = "api-staging.makanmasak.com"
+custom_domain = true
+
 [env.staging.vars]
 # NODE_ENV stays "production" on purpose: strong-key, CORS and auth code paths
 # must behave as they do in production. ENVIRONMENT is what says "staging".
@@ -499,9 +505,9 @@ ENVIRONMENT = "staging"
 API_VERSION = "v1"
 ANALYTICS_DATASET = "makanmasak-metrics-staging"
 CLOUDFLARE_ACCOUNT_ID = "bdddc08c066a9abc285d75fe5947a468"
-API_BASE_URL = "https://makanmasak-api-staging.omfg.workers.dev"
-CLIENT_BASE_URL = "https://makanmasak-customer-staging.pages.dev"
-CORS_ORIGIN = "https://makanmasak-customer-staging.pages.dev,https://makanmasak-admin-staging.pages.dev,https://makanmasak-kitchen-staging.pages.dev"
+API_BASE_URL = "https://api-staging.makanmasak.com"
+CLIENT_BASE_URL = "https://customer-staging.makanmasak.com"
+CORS_ORIGIN = "https://customer-staging.makanmasak.com,https://admin-staging.makanmasak.com,https://kitchen-staging.makanmasak.com"
 LOG_LEVEL = "info"
 MAX_REQUEST_SIZE = "5MB"
 CACHE_TTL = "600"

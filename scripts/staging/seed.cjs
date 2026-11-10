@@ -28,7 +28,7 @@ const {
   writePrivate,
 } = require("./common.cjs");
 
-const DEFAULT_CUSTOMER_URL = "https://makanmasak-customer-staging.pages.dev";
+const DEFAULT_CUSTOMER_URL = "https://customer-staging.makanmasak.com";
 // Fixed so the shop QR code (a public identifier) is stable across re-seeds.
 const SHOP_QR_TS = 1767225600000;
 
@@ -229,6 +229,33 @@ function buildSeed({
       ].join(
         ", ",
       )}) ON CONFLICT(id) DO UPDATE SET name = excluded.name, is_demo = 0, is_available = 1, is_active = 1, enable_shop_mode = 1, login_slug = excluded.login_slug, settings = excluded.settings, updated_at_ms = excluded.updated_at_ms;`,
+      // Without a subscription row every module-gated route (kitchen, POS)
+      // answers 403 SUBSCRIPTION_NOT_FOUND. Same module set as seed-local.sql.
+      `INSERT INTO shop_subscriptions (id, restaurant_id, plan_tier, module_overrides, is_active, trial_ends_at_ms, billing_cycle_start_at_ms, billing_cycle_end_at_ms, notes, created_at_ms, updated_at_ms) VALUES (${[
+        q(r.id.replace(/^019469b0/, "019469b2")),
+        q(r.id),
+        q("trial"),
+        q(
+          JSON.stringify({
+            online_ordering: true,
+            analytics: true,
+            menu_management: true,
+            table_management: true,
+            staff_management: true,
+            pos: true,
+            kitchen_display: true,
+          }),
+        ),
+        1,
+        now + 365 * 24 * 60 * 60 * 1000,
+        now,
+        now + 365 * 24 * 60 * 60 * 1000,
+        q("staging walkthrough subscription"),
+        now,
+        now,
+      ].join(
+        ", ",
+      )}) ON CONFLICT(restaurant_id) DO UPDATE SET plan_tier = excluded.plan_tier, module_overrides = excluded.module_overrides, is_active = 1, trial_ends_at_ms = excluded.trial_ends_at_ms, updated_at_ms = excluded.updated_at_ms;`,
     );
 
     for (const s of r.staff) {

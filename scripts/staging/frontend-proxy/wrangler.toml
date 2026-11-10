@@ -1,0 +1,17 @@
+# Staging only. Deploy: pnpm exec wrangler deploy -c scripts/staging/frontend-proxy/wrangler.toml
+name = "makanmasak-frontends-staging"
+main = "index.js"
+compatibility_date = "2026-10-01"
+workers_dev = false
+
+[[routes]]
+pattern = "admin-staging.makanmasak.com"
+custom_domain = true
+
+[[routes]]
+pattern = "kitchen-staging.makanmasak.com"
+custom_domain = true
+
+[[routes]]
+pattern = "customer-staging.makanmasak.com"
+custom_domain = true

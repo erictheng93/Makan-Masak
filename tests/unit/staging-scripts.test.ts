@@ -290,8 +290,33 @@ describe("production-config guard: staging isolation", () => {
         'API_BASE_URL = "https://api.makanmasak.com"',
       ].join("\n"),
     );
-    expect(out).toContain("must not declare routes");
+    expect(out).toContain("staging routes may only use");
     expect(out).toContain("production domain");
+
+    // <name>-staging.makanmasak.com is staging's own host, in routes and vars.
+    const own = check(
+      [
+        "[env.staging]",
+        'name = "makanmasak-api-staging"',
+        "[[env.staging.routes]]",
+        'pattern = "api-staging.makanmasak.com"',
+        "custom_domain = true",
+        "[env.staging.vars]",
+        'CORS_ORIGIN = "https://admin-staging.makanmasak.com,https://kitchen-staging.makanmasak.com"',
+      ].join("\n"),
+    );
+    expect(own).not.toContain("staging routes may only use");
+    expect(own).not.toContain("production domain");
+
+    const mixed = check(
+      [
+        "[env.staging]",
+        'name = "makanmasak-api-staging"',
+        "[env.staging.vars]",
+        'CORS_ORIGIN = "https://admin-staging.makanmasak.com,https://admin.makanmasak.com"',
+      ].join("\n"),
+    );
+    expect(mixed).toContain("production domain");
 
     const leaked = check(
       [

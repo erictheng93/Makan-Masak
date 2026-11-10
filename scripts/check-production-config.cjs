@@ -272,8 +272,14 @@ function validateStagingIsolation(relativeFile, lines, violations) {
   );
 
   for (const entry of staging) {
-    if (entry.table === "routes" || entry.table === "route") {
-      fail(entry, "staging must not declare routes (workers.dev only)");
+    // Staging may own <name>-staging.makanmasak.com and nothing else: the
+    // frontends must share a site with the API for its SameSite=Lax cookies.
+    if (
+      (entry.table === "routes" || entry.table === "route") &&
+      entry.key === "pattern" &&
+      !STAGING_HOST.test(entry.value)
+    ) {
+      fail(entry, "staging routes may only use <name>-staging.makanmasak.com");
     }
     if (RESOURCE_ID_KEYS.has(entry.key) && productionIds.has(entry.value)) {
       fail(
@@ -296,11 +302,18 @@ function validateStagingIsolation(relativeFile, lines, violations) {
     if (
       entry.table === "vars" &&
       /^(https?|wss?):\/\//.test(entry.value) &&
-      /(^|[/.,])makanmasak\.com(?=[:/,]|$)/.test(entry.value)
+      /(^|[/.,])makanmasak\.com(?=[:/,]|$)/.test(
+        withoutStagingHosts(entry.value),
+      )
     ) {
       fail(entry, `staging var points at a production domain: ${entry.key}`);
     }
   }
+}
+
+const STAGING_HOST = /^[a-z0-9-]+-staging\.makanmasak\.com$/;
+function withoutStagingHosts(text) {
+  return text.replace(/[a-z0-9-]+-staging\.makanmasak\.com/g, "");
 }
 
 // apps/*/.env.staging feed the staging frontend builds: a production host in
@@ -322,7 +335,9 @@ function validateStagingEnvFiles(root, violations) {
     }
     text.split(/\r?\n/).forEach((line, index) => {
       if (
-        /(^|[/.=,])makanmasak\.com(?=[:/,]|$)/.test(line.replace(/#.*/, ""))
+        /(^|[/.=,])makanmasak\.com(?=[:/,]|$)/.test(
+          withoutStagingHosts(line.replace(/#.*/, "")),
+        )
       ) {
         violations.push({
           file: rel,

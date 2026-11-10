@@ -135,7 +135,7 @@ workers_dev = true
 [env.staging.vars]
 ENVIRONMENT = "staging"
 API_VERSION = "v1"
-CORS_ORIGIN = "https://makanmasak-customer-staging.pages.dev,https://makanmasak-admin-staging.pages.dev,https://makanmasak-kitchen-staging.pages.dev"
+CORS_ORIGIN = "https://customer-staging.makanmasak.com,https://admin-staging.makanmasak.com,https://kitchen-staging.makanmasak.com"
 
 [env.staging.durable_objects]
 bindings = [

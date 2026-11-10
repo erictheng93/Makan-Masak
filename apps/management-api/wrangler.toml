@@ -151,10 +151,10 @@ NODE_ENV = "production"
 ENVIRONMENT = "staging"
 API_VERSION = "v1"
 API_BASE_URL = "https://makanmasak-management-api-staging.omfg.workers.dev"
-CORS_ORIGIN = "https://makanmasak-admin-staging.pages.dev"
+CORS_ORIGIN = "https://admin-staging.makanmasak.com"
 LOG_LEVEL = "info"
 ONBOARDING_APP_URL = "https://makanmasak-onboarding-staging.pages.dev"
-ADMIN_APP_URL = "https://makanmasak-admin-staging.pages.dev"
+ADMIN_APP_URL = "https://admin-staging.makanmasak.com"
 # No applicant email from staging.
 ONBOARDING_EMAIL_ENABLED = "false"
 
