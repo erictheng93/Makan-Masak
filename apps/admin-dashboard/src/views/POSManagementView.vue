@@ -1365,7 +1365,7 @@ const deactivateRegister = async (registerId: string) => {
 };
 
 const startShift = async () => {
-  if (!currentRegister.value) {
+  if (currentRegister.value?.status !== "active") {
     const active = registers.value.filter((r) => r.status === "active");
     if (active.length !== 1) {
       toast.warning(t("pos.selectRegisterFirst"));
@@ -1784,7 +1784,10 @@ onMounted(async () => {
   // Load registers from API
   await loadRegisters();
 
-  if (registers.value.length > 0) await selectRegister(registers.value[0]);
+  // A deactivated register must not become the default: Start Shift would then
+  // offer to open a shift on a register the owner turned off.
+  const firstActive = registers.value.find((r) => r.status === "active");
+  if (firstActive) await selectRegister(firstActive);
   watch(
     hasPromotions,
     (ready) => {

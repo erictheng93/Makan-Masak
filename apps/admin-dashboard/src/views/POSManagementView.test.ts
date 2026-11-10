@@ -515,6 +515,25 @@ describe("POSManagementView", () => {
       wrapper.unmount();
     });
 
+    // Seen on production: the page defaulted to a deactivated register and then
+    // offered to open a shift on it.
+    it("never defaults to a deactivated register or opens a shift on one", async () => {
+      mockRegisters([{ ...reg("r-off", "Off"), isActive: false }]);
+      const wrapper = mount(POSManagementView);
+      await flushPromises();
+
+      expect(
+        (wrapper.vm as unknown as { currentRegister: unknown }).currentRegister,
+      ).toBeNull();
+      await wrapper.get('[data-testid="pos-start-shift"]').trigger("click");
+      await flushPromises();
+      expect(toast.warning).toHaveBeenCalledWith("pos.selectRegisterFirst");
+      expect(
+        wrapper.find('[data-testid="pos-confirm-start-shift"]').exists(),
+      ).toBe(false);
+      wrapper.unmount();
+    });
+
     it("auto-selects the only active register and opens the shift dialog", async () => {
       mockRegisters([reg("r1", "One")]);
       const wrapper = mount(POSManagementView);
