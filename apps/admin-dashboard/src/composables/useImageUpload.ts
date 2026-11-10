@@ -105,7 +105,10 @@ async function compressImage(
   }
 
   const baseName = file.name.replace(/\.[^/.]+$/, "");
-  const longEdge = Math.max(bitmap.width, bitmap.height);
+  // Cache before the loop: a closed ImageBitmap reports 0×0 (HTML spec), and
+  // the first iteration closes it.
+  const { width, height } = bitmap;
+  const longEdge = Math.max(width, height);
   const outputs: Array<{ key: string; file: File }> = [];
   let source: CanvasImageSource = bitmap;
 
@@ -113,8 +116,8 @@ async function compressImage(
     for (const { key, maxSize } of CLIENT_VARIANT_SPECS) {
       const scale = Math.min(1, maxSize / longEdge);
       const canvas = document.createElement("canvas");
-      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      canvas.width = Math.max(1, Math.round(width * scale));
+      canvas.height = Math.max(1, Math.round(height * scale));
       const context = canvas.getContext("2d");
       if (!context) {
         return null;

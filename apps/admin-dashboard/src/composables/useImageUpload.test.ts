@@ -197,11 +197,19 @@ describe("useImageUpload", () => {
 
     beforeEach(() => {
       drawn.length = 0;
-      close = vi.fn();
       encodeAs = (requested) => requested;
       vi.stubGlobal(
         "createImageBitmap",
-        vi.fn(async () => ({ width: 8000, height: 6000, close })),
+        vi.fn(async () => {
+          // Like a real ImageBitmap, a closed one reports 0×0.
+          const bitmap = { width: 8000, height: 6000, close: vi.fn() };
+          bitmap.close.mockImplementation(() => {
+            bitmap.width = 0;
+            bitmap.height = 0;
+          });
+          close = bitmap.close;
+          return bitmap;
+        }),
       );
       vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(
         () =>
