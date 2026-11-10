@@ -95,8 +95,7 @@ export class MenuService implements IMenuService {
   ) {
     this.logger = new ConsoleLogger("MenuService");
     this.dbService = new DatabaseMenuService(env.DB, env);
-    if (deferred)
-      this.dbService.deferCacheInvalidation(deferred.pending, deferred.replay);
+    if (deferred) this.dbService.deferCacheInvalidation(deferred);
     this.db = drizzle(env.DB);
   }
 

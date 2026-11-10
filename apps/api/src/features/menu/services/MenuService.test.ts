@@ -202,6 +202,7 @@ describe("MenuService", () => {
       pending: [] as Promise<void>[],
       after: [] as Array<() => Promise<unknown>>,
       replay: [] as Array<() => Promise<unknown>>,
+      cleared: [] as string[],
     };
     const { service } = createService({
       waitUntil,

@@ -520,6 +520,93 @@ describe("isPublicApiCacheableRequest", () => {
   });
 });
 
+describe("menu writes without a restaurant in the URL", () => {
+  // PUT /menu/items/:id used to clear no edge entry at all: the middleware
+  // scoped by the URL's restaurant id and this URL has none, so a repriced
+  // dish stayed at the old price for diners until the entry aged out.
+  it("clears the diner's cached menu for the restaurant the write touched", async () => {
+    const cacheEntries = new Map<string, Response>();
+    vi.stubGlobal("caches", {
+      default: {
+        async match(key: RequestInfo | URL) {
+          return cacheEntries.get(String(key))?.clone();
+        },
+        async put(key: RequestInfo | URL, response: Response) {
+          cacheEntries.set(String(key), response.clone());
+        },
+        async delete(key: RequestInfo | URL) {
+          return cacheEntries.delete(String(key));
+        },
+      },
+    });
+    const kvEntries = new Map<string, string>();
+    const cacheKv = {
+      async get(key: string, options?: { type?: string }) {
+        const value = kvEntries.get(key);
+        if (value === undefined) return null;
+        return options?.type === "json" ? JSON.parse(value) : value;
+      },
+      async put(key: string, value: string) {
+        kvEntries.set(key, value);
+      },
+      async delete(key: string) {
+        kvEntries.delete(key);
+      },
+    };
+    const app = new Hono();
+    app.use(
+      "*",
+      smartCacheMiddleware({
+        defaultTtl: 300,
+        cacheTags: (c) => {
+          const id = c.req.param("restaurantId");
+          return id ? [`restaurant:${id}`] : [];
+        },
+        shouldCache: (c) =>
+          isPublicApiCacheableRequest(c.req.method, c.req.path),
+      }),
+    );
+    let price = 180;
+    app.get("/api/v1/menu/:restaurantId", (c) =>
+      c.json({ success: true, data: { price } }),
+    );
+    app.put("/api/v1/menu/items/:id", (c) => {
+      price = 200;
+      // What the query-cache layer records when the item's restaurant clears.
+      c.get("deferredCache").cleared.push(
+        "menu:restaurant-1",
+        "restaurant:restaurant-1",
+      );
+      return c.json({ success: true });
+    });
+    const env = { CACHE_KV: cacheKv };
+    const executionCtx = {
+      waitUntil: vi.fn(),
+      passThroughOnException: vi.fn(),
+    };
+    const dinerUrl = "/api/v1/menu/restaurant-1?tableId=2";
+    const read = () =>
+      app.request(dinerUrl, undefined, env as never, executionCtx as never);
+
+    await read();
+    await expect((await read()).json()).resolves.toMatchObject({
+      data: { price: 180 },
+      cached: true,
+    });
+    await app.request(
+      "/api/v1/menu/items/11",
+      { method: "PUT" },
+      env as never,
+      executionCtx as never,
+    );
+    await settleDeferred(executionCtx.waitUntil);
+
+    await expect((await read()).json()).resolves.toMatchObject({
+      data: { price: 200 },
+    });
+  });
+});
+
 /** Run every waitUntil job to completion, including the delayed sweep. */
 async function settleDeferred(waitUntil: ReturnType<typeof vi.fn>) {
   vi.useFakeTimers({ toFake: ["setTimeout"] });

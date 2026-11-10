@@ -522,16 +522,32 @@ export function smartCacheMiddleware(
     // again REPLAY_DELAY_MS later to remove it.
     const deferred: DeferredCacheWork | undefined =
       isMutation && path.startsWith("/api/v1/menu")
-        ? { pending: [], after: [], replay: [] }
+        ? { pending: [], after: [], replay: [], cleared: [] }
         : undefined;
     if (deferred) c.set("deferredCache", deferred);
 
     // Cache miss or non-GET request - execute handler
     await next();
 
+    // Routes like PUT /menu/items/:id carry no restaurant in the URL; the
+    // query-cache clears they queued name it (`restaurant:{id}` tags), so the
+    // edge tier follows whatever the query cache cleared.
+    const scopes = () =>
+      new Set(
+        [
+          getRestaurantIdForCacheScope(c),
+          ...(deferred?.cleared ?? []).flatMap((tag) =>
+            tag.startsWith("restaurant:")
+              ? [tag.slice("restaurant:".length)]
+              : [],
+          ),
+        ].filter((id): id is string => !!id),
+      );
     const invalidateEdge = async () => {
-      const restaurantId = getRestaurantIdForCacheScope(c);
-
+      for (const restaurantId of scopes())
+        await invalidateEdgeFor(restaurantId);
+    };
+    const invalidateEdgeFor = async (restaurantId: string) => {
       // Outside the menu path this runs before the response goes out —
       // fire-and-forget invalidation lost races against the next GET and left
       // clients reading stale data immediately after a write.
@@ -581,7 +597,10 @@ export function smartCacheMiddleware(
       }
     };
 
-    const succeeded = c.res.status >= 200 && c.res.status < 300;
+    // A failed request that still cleared the query cache wrote something.
+    const succeeded =
+      (c.res.status >= 200 && c.res.status < 300) ||
+      (deferred?.cleared.length ?? 0) > 0;
     if (deferred) {
       // A failed request may still have written and queued clears; settle them.
       c.executionCtx.waitUntil(
@@ -646,6 +665,8 @@ export interface DeferredCacheWork {
   after: Array<() => Promise<unknown>>;
   /** Re-runs of each clear for the delayed second sweep, in queue order. */
   replay: Array<() => Promise<unknown>>;
+  /** Keys and tags the query cache cleared; `restaurant:{id}` scopes the edge sweep. */
+  cleared: string[];
 }
 
 /**

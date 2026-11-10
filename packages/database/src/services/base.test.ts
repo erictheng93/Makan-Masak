@@ -34,7 +34,8 @@ describe("BaseService deferred cache invalidation", () => {
     const { service, invalidate, release } = build();
     const pending: Promise<void>[] = [];
     const replays: Array<() => Promise<unknown>> = [];
-    service.deferCacheInvalidation(pending, replays);
+    const cleared: string[] = [];
+    service.deferCacheInvalidation({ pending, replay: replays, cleared });
 
     // Resolves although the KV clear has not: the request is not held on it.
     await service.clear("menu:rest-1");
@@ -51,11 +52,13 @@ describe("BaseService deferred cache invalidation", () => {
     await again;
     expect(invalidate).toHaveBeenCalledTimes(2);
     expect(invalidate).toHaveBeenLastCalledWith(["menu:rest-1"], "tag");
+    // Recorded so the edge tier can be scoped to the same restaurant.
+    expect(cleared).toEqual(["menu:rest-1"]);
   });
 
   it("reads through to D1 while its own clear is still pending", async () => {
     const { service, getOrExecute } = build();
-    service.deferCacheInvalidation([]);
+    service.deferCacheInvalidation({ pending: [], replay: [], cleared: [] });
     expect(await service.read("menu", async () => "fresh")).toBe("cached");
 
     await service.clear("menu:rest-1");

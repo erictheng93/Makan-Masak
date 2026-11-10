@@ -124,6 +124,13 @@ export function isWebPushEnabled(
   return env.WEB_PUSH_ENABLED !== "false";
 }
 
+/** Where a request collects cache clears it settles after responding. */
+export interface CacheInvalidationSink {
+  pending: Promise<void>[];
+  replay: Array<() => Promise<unknown>>;
+  cleared: string[];
+}
+
 // 基礎服務類別
 export class BaseService {
   protected db: ReturnType<typeof drizzle<typeof schema>>;
@@ -182,25 +189,21 @@ export class BaseService {
   ): Promise<T> {
     // A deferred invalidation from this same request may not have landed yet;
     // read through to D1 rather than see (and re-cache) the pre-write copy.
-    if (this.deferredInvalidations?.length) return queryFn();
+    if (this.deferredInvalidations?.pending.length) return queryFn();
     return this.queryCache.getOrExecute(cacheKey, queryFn, options);
   }
 
-  private deferredInvalidations?: Promise<void>[];
-  private deferredReplays?: Array<() => Promise<unknown>>;
+  private deferredInvalidations?: CacheInvalidationSink;
 
   /**
-   * Collect cache invalidations into `into` instead of awaiting them, so a
+   * Collect cache invalidations into `sink` instead of awaiting them, so a
    * request can answer first and settle them (in order) after responding.
-   * `replays` receives a re-run of each clear, for a later sweep that removes
-   * a stale copy a concurrent reader wrote back while the first clear ran.
+   * `replay` receives a re-run of each clear, for a later sweep that removes
+   * a stale copy a concurrent reader wrote back while the first clear ran;
+   * `cleared` records what was cleared so callers can scope other cache tiers.
    */
-  deferCacheInvalidation(
-    into: Promise<void>[],
-    replays?: Array<() => Promise<unknown>>,
-  ): void {
-    this.deferredInvalidations = into;
-    this.deferredReplays = replays;
+  deferCacheInvalidation(sink: CacheInvalidationSink): void {
+    this.deferredInvalidations = sink;
   }
 
   /**
@@ -211,11 +214,11 @@ export class BaseService {
     type: "key" | "tag" = "key",
   ): Promise<void> {
     const work = this.queryCache.invalidate(keyOrTags, type);
-    if (!this.deferredInvalidations) return work;
-    this.deferredInvalidations.push(work);
-    this.deferredReplays?.push(() =>
-      this.queryCache.invalidate(keyOrTags, type),
-    );
+    const sink = this.deferredInvalidations;
+    if (!sink) return work;
+    sink.pending.push(work);
+    sink.replay.push(() => this.queryCache.invalidate(keyOrTags, type));
+    sink.cleared.push(...(Array.isArray(keyOrTags) ? keyOrTags : [keyOrTags]));
   }
 
   /**
