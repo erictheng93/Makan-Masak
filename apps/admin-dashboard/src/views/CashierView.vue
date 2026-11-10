@@ -401,7 +401,7 @@
               </div>
 
               <button
-                :disabled="!canProcessPayment"
+                :disabled="!canProcessPayment || isProcessing"
                 data-testid="pay-btn"
                 class="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg"
                 @click="processPayment"
@@ -411,13 +411,15 @@
 
               <div class="grid grid-cols-2 gap-3">
                 <button
-                  class="py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm"
+                  :disabled="isProcessing"
+                  class="py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm disabled:opacity-50"
                   @click="applyDiscount"
                 >
                   {{ t("cashier.applyDiscount") }}
                 </button>
                 <button
-                  class="py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                  :disabled="isProcessing"
+                  class="py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm disabled:opacity-50"
                   @click="printReceipt"
                 >
                   {{ t("cashier.printReceipt") }}
@@ -771,12 +773,16 @@
               {{ t("common.cancel") }}
             </button>
             <button
-              :disabled="!canProcessRefund"
+              :disabled="!canProcessRefund || refundAction.pending.value"
               data-testid="cashier-confirm-refund"
               class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               @click="processRefund"
             >
-              {{ t("cashier.confirmRefund") }}
+              {{
+                refundAction.pending.value
+                  ? t("common.processing")
+                  : t("cashier.confirmRefund")
+              }}
             </button>
           </div>
         </div>
@@ -941,12 +947,18 @@
               {{ t("common.cancel") || "取消" }}
             </button>
             <button
-              :disabled="!hasValidActualCashAmount"
+              :disabled="
+                !hasValidActualCashAmount || endShiftAction.pending.value
+              "
               data-testid="cashier-confirm-end-shift"
-              class="px-4 py-2 bg-ios-red text-white rounded-full hover:bg-red-600 transition-colors"
+              class="px-4 py-2 bg-ios-red text-white rounded-full hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               @click="confirmEndShift"
             >
-              {{ t("cashier.endShift") || "結束班次" }}
+              {{
+                endShiftAction.pending.value
+                  ? t("common.processing")
+                  : t("cashier.endShift") || "結束班次"
+              }}
             </button>
           </div>
         </div>
@@ -982,6 +994,7 @@ import { api, unwrapApiList, unwrapApiPayload } from "@/services/api";
 import { extractApiErrorCode } from "@/utils/errorHandler";
 import { toLocalDateStr } from "@/utils/dateUtils";
 import { useAuthStore } from "@/stores/auth";
+import { useAsyncAction } from "@/composables/useAsyncAction";
 import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import type {
   Order as ApiOrder,
@@ -1453,7 +1466,8 @@ const getOrderStatusText = (status: string) => {
 const pendingPaymentKey = ref<string | null>(null);
 
 const processPayment = async () => {
-  if (!canProcessPayment.value || !selectedOrder.value) return;
+  if (!canProcessPayment.value || !selectedOrder.value || isProcessing.value)
+    return;
 
   paymentError.value = "";
   isProcessing.value = true;
@@ -1623,7 +1637,12 @@ const tillHeaders = () => ({
 });
 
 const printReceipt = async () => {
-  if (!selectedOrder.value || !currentShift.value.registerId) return;
+  if (
+    !selectedOrder.value ||
+    !currentShift.value.registerId ||
+    isProcessing.value
+  )
+    return;
   isProcessing.value = true;
   paymentError.value = "";
   try {
@@ -1740,14 +1759,12 @@ const endShift = () => {
   showEndShiftModal.value = true;
 };
 
-const confirmEndShift = async () => {
-  if (!currentShift.value.id || !hasValidActualCashAmount.value) return;
-  showEndShiftModal.value = false;
-  isProcessing.value = true;
-  try {
+const endShiftAction = useAsyncAction(
+  async () => {
     await api.post(`/pos/shifts/${currentShift.value.id}/end`, {
       actualAmount: actualCashAmount.value,
     });
+    showEndShiftModal.value = false;
     currentShift.value = {
       id: "",
       name: "",
@@ -1757,12 +1774,14 @@ const confirmEndShift = async () => {
       registerId: "",
     };
     closeShiftReport();
-  } catch (error) {
-    console.error("Failed to end shift:", error);
-  } finally {
-    isProcessing.value = false;
-  }
-};
+  },
+  { fallbackError: t("pos.alerts.operationFailed") },
+);
+
+const confirmEndShift = () =>
+  currentShift.value.id && hasValidActualCashAmount.value
+    ? endShiftAction.run()
+    : Promise.resolve(undefined);
 
 // 退款相關方法
 const openRefundDialog = () => {
@@ -1783,9 +1802,7 @@ const closeRefundDialog = () => {
   showRefundDialog.value = false;
 };
 
-const processRefund = async () => {
-  if (!canProcessRefund.value) return;
-
+const refundAction = useAsyncAction(async () => {
   isProcessing.value = true;
   try {
     const response = await api.post(
@@ -1832,7 +1849,11 @@ const processRefund = async () => {
   } finally {
     isProcessing.value = false;
   }
-};
+});
+
+// The failure is shown inline in the dialog, so the action handles it itself.
+const processRefund = () =>
+  canProcessRefund.value ? refundAction.run() : Promise.resolve(undefined);
 
 // 生命週期
 // Orders become payable when the kitchen and floor staff move them along, not

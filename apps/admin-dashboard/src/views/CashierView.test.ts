@@ -27,6 +27,10 @@ afterEach(() => {
 // as on a machine in Taipei; without it the UTC bug and the fix agree in UTC.
 process.env.TZ = "Asia/Taipei";
 
+vi.mock("vue-toastification", () => ({
+  useToast: () => ({ success: vi.fn(), error: vi.fn(), warning: vi.fn() }),
+}));
+
 vi.mock("@/i18n", () => ({
   useI18n: () => ({
     t: (key: string, params?: Record<string, unknown>) =>

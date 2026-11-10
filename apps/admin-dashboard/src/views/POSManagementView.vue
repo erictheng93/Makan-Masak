@@ -41,7 +41,8 @@
         <button
           v-if="!currentShift"
           data-testid="pos-start-shift"
-          class="px-4 py-2 bg-ios-green text-white rounded-full hover:bg-green-600 transition-colors text-sm"
+          :disabled="isSelectingRegister"
+          class="px-4 py-2 disabled:opacity-50 bg-ios-green text-white rounded-full hover:bg-green-600 transition-colors text-sm"
           @click="startShift"
         >
           {{ t("pos.startShift") }}
@@ -165,8 +166,9 @@
               <div
                 v-for="register in registers"
                 :key="register.id"
+                :aria-busy="selectingRegisterId === register.id"
                 :class="[
-                  'border-2 rounded-lg p-4 cursor-pointer transition-all',
+                  'relative border-2 rounded-lg p-4 cursor-pointer transition-all',
                   currentRegister?.id === register.id
                     ? 'border-blue-500 bg-blue-50'
                     : 'border-gray-200 hover:border-gray-300',
@@ -175,11 +177,22 @@
               >
                 <div class="flex items-center justify-between mb-3">
                   <h3 class="font-medium text-gray-900">{{ register.name }}</h3>
-                  <span
-                    :class="getRegisterStatusClass(register.status)"
-                    class="px-2 py-1 text-xs font-medium rounded-full"
-                  >
-                    {{ getRegisterStatusText(register.status) }}
+                  <span class="flex items-center gap-2">
+                    <span
+                      v-if="selectingRegisterId === register.id"
+                      data-testid="pos-register-loading"
+                    >
+                      <ArrowPathIcon
+                        class="h-4 w-4 animate-spin text-ios-blue"
+                        aria-hidden="true"
+                      />
+                    </span>
+                    <span
+                      :class="getRegisterStatusClass(register.status)"
+                      class="px-2 py-1 text-xs font-medium rounded-full"
+                    >
+                      {{ getRegisterStatusText(register.status) }}
+                    </span>
                   </span>
                 </div>
 
@@ -209,14 +222,18 @@
                 <div class="mt-4 flex space-x-2">
                   <button
                     v-if="register.status === 'inactive'"
-                    class="flex-1 py-2 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors"
+                    :data-testid="`pos-activate-${register.id}`"
+                    :disabled="isProcessing"
+                    class="flex-1 py-2 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors disabled:opacity-50"
                     @click.stop="activateRegister(register.id)"
                   >
                     {{ t("pos.activate") }}
                   </button>
                   <button
                     v-else
-                    class="flex-1 py-2 bg-gray-600 text-white rounded text-xs hover:bg-gray-700 transition-colors"
+                    :data-testid="`pos-deactivate-${register.id}`"
+                    :disabled="isProcessing"
+                    class="flex-1 py-2 bg-gray-600 text-white rounded text-xs hover:bg-gray-700 transition-colors disabled:opacity-50"
                     @click.stop="deactivateRegister(register.id)"
                   >
                     {{ t("pos.deactivate") }}
@@ -250,6 +267,8 @@
                 </button>
                 <button
                   data-testid="refresh-btn"
+                  :aria-label="t('orders.refresh')"
+                  :title="t('orders.refresh')"
                   class="p-2 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
                   @click="refreshTransactions"
                 >
@@ -387,11 +406,17 @@
               </div>
 
               <button
-                :disabled="!canProcessQuickPayment"
+                :disabled="
+                  !canProcessQuickPayment || quickPaymentAction.pending.value
+                "
                 class="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 @click="processQuickPayment"
               >
-                {{ t("pos.confirmPayment") }}
+                {{
+                  quickPaymentAction.pending.value
+                    ? t("common.processing")
+                    : t("pos.confirmPayment")
+                }}
               </button>
             </div>
           </div>
@@ -441,12 +466,15 @@
 
               <button
                 data-testid="pos-market-checkout-pay"
-                :disabled="!canProcessMarketCheckoutPayment || isProcessing"
+                :disabled="
+                  !canProcessMarketCheckoutPayment ||
+                  marketPaymentAction.pending.value
+                "
                 class="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 @click="processMarketCheckoutPayment"
               >
                 {{
-                  isProcessing
+                  marketPaymentAction.pending.value
                     ? t("common.processing")
                     : t("pos.confirmMarketCheckoutPayment")
                 }}
@@ -598,6 +626,7 @@
             </h3>
             <button
               class="text-gray-400 hover:text-gray-600"
+              :aria-label="t('common.close')"
               @click="closeCashMovementDialog"
             >
               <XMarkIcon class="w-6 h-6" />
@@ -661,11 +690,17 @@
               {{ t("pos.cancel") }}
             </button>
             <button
-              :disabled="!canProcessCashMovement"
+              :disabled="
+                !canProcessCashMovement || cashMovementAction.pending.value
+              "
               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               @click="processCashMovement"
             >
-              {{ t("pos.confirmOperation") }}
+              {{
+                cashMovementAction.pending.value
+                  ? t("common.processing")
+                  : t("pos.confirmOperation")
+              }}
             </button>
           </div>
         </div>
@@ -691,6 +726,7 @@
             </h3>
             <button
               class="text-gray-400 hover:text-gray-600"
+              :aria-label="t('common.close')"
               @click="closePromotionsDialog"
             >
               <XMarkIcon class="w-6 h-6" />
@@ -741,6 +777,7 @@
                 <div class="flex space-x-2">
                   <button
                     class="px-3 py-1 bg-gray-100 text-gray-600 rounded text-sm hover:bg-gray-200 transition-colors"
+                    :disabled="isProcessing"
                     @click="editPromotion(promotion)"
                   >
                     {{ t("pos.edit") }}
@@ -752,6 +789,7 @@
                         ? 'bg-red-100 text-red-600 hover:bg-red-200'
                         : 'bg-green-100 text-green-600 hover:bg-green-200',
                     ]"
+                    :disabled="isProcessing"
                     @click="togglePromotion(promotion)"
                   >
                     {{ promotion.isActive ? t("pos.pause") : t("pos.enable") }}
@@ -810,6 +848,7 @@
             </h3>
             <button
               class="text-gray-400 hover:text-gray-600"
+              :aria-label="t('common.close')"
               @click="showCreateRegisterModal = false"
             >
               <XMarkIcon class="w-6 h-6" />
@@ -839,7 +878,9 @@
             </button>
             <button
               data-testid="pos-confirm-create-register"
-              :disabled="!newRegisterName.trim() || isProcessing"
+              :disabled="
+                !newRegisterName.trim() || createRegisterAction.pending.value
+              "
               class="px-4 py-2 bg-ios-blue text-white rounded-full hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               @click="confirmCreateRegister"
             >
@@ -866,6 +907,7 @@
             </h3>
             <button
               class="text-gray-400 hover:text-gray-600"
+              :aria-label="t('common.close')"
               @click="showStartShiftModal = false"
             >
               <XMarkIcon class="w-6 h-6" />
@@ -899,11 +941,17 @@
             </button>
             <button
               data-testid="pos-confirm-start-shift"
-              :disabled="startingCashAmount < 0"
+              :disabled="
+                startingCashAmount < 0 || startShiftAction.pending.value
+              "
               class="px-4 py-2 bg-ios-green text-white rounded-full hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               @click="confirmStartShift"
             >
-              {{ t("pos.startShift") || "開始班次" }}
+              {{
+                startShiftAction.pending.value
+                  ? t("common.processing")
+                  : t("pos.startShift") || "開始班次"
+              }}
             </button>
           </div>
         </div>
@@ -926,6 +974,7 @@
             </h3>
             <button
               class="text-gray-400 hover:text-gray-600"
+              :aria-label="t('common.close')"
               @click="showEndShiftModal = false"
             >
               <XMarkIcon class="w-6 h-6" />
@@ -959,12 +1008,16 @@
               {{ t("common.cancel") || "取消" }}
             </button>
             <button
-              :disabled="!hasValidEndingCash"
+              :disabled="!hasValidEndingCash || endShiftAction.pending.value"
               data-testid="pos-confirm-end-shift"
-              class="px-4 py-2 bg-ios-red text-white rounded-full hover:bg-red-600 transition-colors"
+              class="px-4 py-2 bg-ios-red text-white rounded-full hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               @click="confirmEndShift"
             >
-              {{ t("pos.endShift") || "結束班次" }}
+              {{
+                endShiftAction.pending.value
+                  ? t("common.processing")
+                  : t("pos.endShift") || "結束班次"
+              }}
             </button>
           </div>
         </div>
@@ -986,7 +1039,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, type Component } from "vue";
+import {
+  ref,
+  computed,
+  defineComponent,
+  h,
+  onMounted,
+  watch,
+  type Component,
+} from "vue";
 import type { UserId } from "@/types/api-user";
 import {
   BanknotesIcon,
@@ -1016,6 +1077,7 @@ import { getCouponStatus } from "@/utils/couponStatus";
 import { useModuleAccessStore } from "@makanmasak/shared/stores/moduleAccess";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "vue-toastification";
+import { useAsyncAction } from "@/composables/useAsyncAction";
 
 const { t } = useI18n();
 const { formatPrice, currencySymbol, inputStep, inputPlaceholder } =
@@ -1023,9 +1085,7 @@ const { formatPrice, currencySymbol, inputStep, inputPlaceholder } =
 const { formatDateTime, formatTime } = useDateFormatter();
 const authStore = useAuthStore();
 const toast = useToast();
-// Unified API errors carry a user-safe message; fall back for network failures.
-const failMessage = (error: unknown) =>
-  (error instanceof Error && error.message) || t("pos.alerts.operationFailed");
+const operationFailed = () => t("pos.alerts.operationFailed");
 const moduleAccess = useModuleAccessStore();
 const hasPromotions = computed(
   () =>
@@ -1040,7 +1100,9 @@ const isLoadingRegisters = ref(false);
 const isLoadingTransactions = ref(false);
 const isLoadingPromotions = ref(false);
 const isLoadingStats = ref(false);
-const isProcessing = ref(false);
+// Which register card is fetching its shift and totals, for an in-place spinner.
+const selectingRegisterId = ref<string | null>(null);
+const isSelectingRegister = computed(() => selectingRegisterId.value !== null);
 
 // Mark as used for TS — these are consumed in async functions below
 // and will be wired to template loading indicators
@@ -1050,7 +1112,6 @@ void isLoadingRegisters.value;
 void isLoadingTransactions.value;
 void isLoadingPromotions.value;
 void isLoadingStats.value;
-void isProcessing.value;
 
 // 類型定義
 interface CashRegister {
@@ -1291,8 +1352,15 @@ const selectRegister = async (register: CashRegister) => {
   latestShiftId.value = undefined;
   register.currentBalance = undefined;
   todayStats.value = { revenue: 0, orders: 0, avgOrderValue: 0 };
-  await Promise.all([loadCurrentShift(register.id), loadDailyStats()]);
-  if (currentRegister.value?.id === register.id) await refreshTransactions();
+  selectingRegisterId.value = register.id;
+  try {
+    await Promise.all([loadCurrentShift(register.id), loadDailyStats()]);
+    if (currentRegister.value?.id === register.id) await refreshTransactions();
+  } finally {
+    if (selectingRegisterId.value === register.id) {
+      selectingRegisterId.value = null;
+    }
+  }
 };
 
 const refreshRegister = async () => {
@@ -1304,11 +1372,8 @@ const createRegister = () => {
   showCreateRegisterModal.value = true;
 };
 
-const confirmCreateRegister = async () => {
-  const name = newRegisterName.value.trim();
-  if (!name || isProcessing.value) return;
-  isProcessing.value = true;
-  try {
+const createRegisterAction = useAsyncAction(
+  async (name: string) => {
     const response = await api.post("/pos/registers", {
       name,
       restaurantId: authStore.restaurantId,
@@ -1323,46 +1388,81 @@ const confirmCreateRegister = async () => {
       );
       if (created) await selectRegister(created);
     }
-  } catch (error) {
-    console.error("Failed to create register:", error);
-    toast.error(failMessage(error));
-  } finally {
-    isProcessing.value = false;
-  }
+  },
+  { fallbackError: operationFailed() },
+);
+
+const confirmCreateRegister = async () => {
+  const name = newRegisterName.value.trim();
+  if (name) await createRegisterAction.run(name);
 };
 
-const activateRegister = async (registerId: string) => {
-  isProcessing.value = true;
-  try {
+const activateRegisterAction = useAsyncAction(
+  async (registerId: string) => {
     await api.post(`/pos/registers/${registerId}/activate`);
     const register = registers.value.find((r) => r.id === registerId);
     if (register) {
       register.status = "active";
       register.lastActivity = new Date().toISOString();
     }
-  } catch (error) {
-    console.error("Failed to activate register:", error);
-    toast.error(failMessage(error));
-  } finally {
-    isProcessing.value = false;
-  }
-};
+  },
+  { fallbackError: operationFailed() },
+);
+const activateRegister = (registerId: string) =>
+  activateRegisterAction.run(registerId);
 
-const deactivateRegister = async (registerId: string) => {
-  isProcessing.value = true;
-  try {
-    await api.post(`/pos/registers/${registerId}/deactivate`);
+// Toast body with an Undo button; vue-toastification renders it as a component.
+const UndoToast = defineComponent({
+  props: { message: String, label: String },
+  emits: ["undo"],
+  setup:
+    (props, { emit }) =>
+    () =>
+      h("div", { class: "flex items-center justify-between gap-4" }, [
+        h("span", props.message),
+        h(
+          "button",
+          {
+            type: "button",
+            "data-testid": "pos-undo-deactivate",
+            class: "font-semibold underline",
+            onClick: () => emit("undo"),
+          },
+          props.label,
+        ),
+      ]),
+});
+
+// Turning a register off is reversible, so apply it at once and offer Undo
+// instead of asking first. The row flips before the request and flips back if
+// the server refuses.
+const deactivateRegisterAction = useAsyncAction(
+  async (registerId: string) => {
     const register = registers.value.find((r) => r.id === registerId);
-    if (register) {
-      register.status = "inactive";
+    const previous = register?.status;
+    if (register) register.status = "inactive";
+    try {
+      await api.post(`/pos/registers/${registerId}/deactivate`);
+    } catch (error) {
+      if (register && previous) register.status = previous;
+      throw error;
     }
-  } catch (error) {
-    console.error("Failed to deactivate register:", error);
-    toast.error(failMessage(error));
-  } finally {
-    isProcessing.value = false;
-  }
-};
+    toast(
+      {
+        component: UndoToast,
+        props: {
+          message: t("pos.registerDeactivated", { name: register?.name ?? "" }),
+          label: t("pos.undo"),
+        },
+        listeners: { undo: () => void activateRegister(registerId) },
+      },
+      { timeout: 8000 },
+    );
+  },
+  { fallbackError: operationFailed() },
+);
+const deactivateRegister = (registerId: string) =>
+  deactivateRegisterAction.run(registerId);
 
 const startShift = async () => {
   if (currentRegister.value?.status !== "active") {
@@ -1377,26 +1477,35 @@ const startShift = async () => {
   showStartShiftModal.value = true;
 };
 
-const confirmStartShift = async () => {
-  if (!currentRegister.value) return;
-  const amount = startingCashAmount.value;
-  showStartShiftModal.value = false;
-  isProcessing.value = true;
-  try {
+// Starting a shift returns the shift itself, so show it from that response and
+// let the totals refresh alongside rather than re-reading what we just wrote.
+const startShiftAction = useAsyncAction(
+  async (amount: number) => {
+    const register = currentRegister.value;
+    if (!register) return;
     const response = await api.post("/pos/shifts/start", {
-      registerId: currentRegister.value.id,
+      registerId: register.id,
       startAmount: amount,
       operatorId: authStore.user?.id ?? "",
     });
-    if (response.data.success && response.data.data) {
+    if (!(response.data.success && response.data.data)) return;
+    showStartShiftModal.value = false;
+    const shift = unwrapApiPayload<ShiftPayload>(response.data.data);
+    if (shift.id && (shift.startedAt ?? shift.startTime)) {
+      applyShift(shift, register, amount);
+      latestShiftId.value = shift.id;
+      recentTransactions.value = [];
+      void loadDailyStats();
+    } else {
       await refreshRegister();
     }
-  } catch (error) {
-    console.error("Failed to start shift:", error);
-    toast.error(failMessage(error));
-  } finally {
-    isProcessing.value = false;
-  }
+  },
+  { fallbackError: operationFailed() },
+);
+
+const confirmStartShift = () => {
+  if (!currentRegister.value) return Promise.resolve();
+  return startShiftAction.run(startingCashAmount.value);
 };
 
 const endShift = () => {
@@ -1405,21 +1514,25 @@ const endShift = () => {
   showEndShiftModal.value = true;
 };
 
-const confirmEndShift = async () => {
-  if (!currentShift.value || !hasValidEndingCash.value) return;
-  showEndShiftModal.value = false;
-  isProcessing.value = true;
-  try {
-    await api.post(`/pos/shifts/${currentShift.value.id}/end`, {
-      actualAmount: endingCashAmount.value,
-    });
-    await refreshRegister();
-  } catch (error) {
-    console.error("Failed to end shift:", error);
-    toast.error(failMessage(error));
-  } finally {
-    isProcessing.value = false;
+// The shift is over once the POST returns; the register's totals and its last
+// movements are independent reads, so fetch them together.
+const endShiftAction = useAsyncAction(
+  async (shiftId: string, actualAmount: number | null) => {
+    await api.post(`/pos/shifts/${shiftId}/end`, { actualAmount });
+    showEndShiftModal.value = false;
+    latestShiftId.value = shiftId;
+    currentShift.value = null;
+    if (currentRegister.value) currentRegister.value.currentBalance = undefined;
+    await Promise.all([loadDailyStats(), refreshTransactions()]);
+  },
+  { fallbackError: operationFailed() },
+);
+
+const confirmEndShift = () => {
+  if (!currentShift.value || !hasValidEndingCash.value) {
+    return Promise.resolve();
   }
+  return endShiftAction.run(currentShift.value.id, endingCashAmount.value);
 };
 
 const getShiftDuration = () => {
@@ -1433,11 +1546,8 @@ const getShiftDuration = () => {
   return hours.toString();
 };
 
-const processQuickPayment = async () => {
-  if (!canProcessQuickPayment.value) return;
-
-  isProcessing.value = true;
-  try {
+const quickPaymentAction = useAsyncAction(
+  async () => {
     const response = await api.post("/pos/quick-payment", {
       orderId: quickPayment.value.orderNumber,
       registerId: currentRegister.value!.id,
@@ -1456,18 +1566,16 @@ const processQuickPayment = async () => {
         paymentMethod: "",
       };
     }
-  } catch (error) {
-    console.error("Quick payment failed:", error);
-  } finally {
-    isProcessing.value = false;
-  }
-};
+  },
+  { fallbackError: operationFailed() },
+);
+const processQuickPayment = () =>
+  canProcessQuickPayment.value
+    ? quickPaymentAction.run()
+    : Promise.resolve(undefined);
 
-const processMarketCheckoutPayment = async () => {
-  if (!canProcessMarketCheckoutPayment.value) return;
-
-  isProcessing.value = true;
-  try {
+const marketPaymentAction = useAsyncAction(
+  async () => {
     await posService.payMarketCheckout({
       checkoutId: marketCheckoutPayment.value.checkoutId.trim(),
       registerId: currentRegister.value!.id,
@@ -1480,12 +1588,13 @@ const processMarketCheckoutPayment = async () => {
       checkoutId: "",
       paymentMethod: "cash",
     };
-  } catch (error) {
-    console.error("Market checkout POS payment failed:", error);
-  } finally {
-    isProcessing.value = false;
-  }
-};
+  },
+  { fallbackError: operationFailed() },
+);
+const processMarketCheckoutPayment = () =>
+  canProcessMarketCheckoutPayment.value
+    ? marketPaymentAction.run()
+    : Promise.resolve(undefined);
 
 const openCashMovement = async (register: CashRegister) => {
   await selectRegister(register);
@@ -1498,12 +1607,9 @@ const closeCashMovementDialog = () => {
   showCashMovementDialog.value = false;
 };
 
-const processCashMovement = async () => {
-  if (!canProcessCashMovement.value || !currentRegister.value) return;
-  if (!currentShift.value) return;
-
-  isProcessing.value = true;
-  try {
+const cashMovementAction = useAsyncAction(
+  async () => {
+    if (!currentRegister.value || !currentShift.value) return;
     const response = await api.post(
       `/pos/shifts/${currentShift.value.id}/cash-movements`,
       {
@@ -1519,12 +1625,13 @@ const processCashMovement = async () => {
       await refreshRegister();
       closeCashMovementDialog();
     }
-  } catch (error) {
-    console.error("Cash movement failed:", error);
-  } finally {
-    isProcessing.value = false;
-  }
-};
+  },
+  { fallbackError: operationFailed() },
+);
+const processCashMovement = () =>
+  canProcessCashMovement.value
+    ? cashMovementAction.run()
+    : Promise.resolve(undefined);
 
 const openPromotionsDialog = () => {
   showPromotionsDialog.value = true;
@@ -1544,10 +1651,8 @@ const editPromotion = (promotion: Promotion) => {
   showCreatePromotionModal.value = true;
 };
 
-const savePromotion = async (data: PromotionInput) => {
-  if (isProcessing.value || !canManagePromotions.value) return;
-  isProcessing.value = true;
-  try {
+const savePromotionAction = useAsyncAction(
+  async (data: PromotionInput) => {
     if (editingPromotion.value)
       await posService.updatePromotion(String(editingPromotion.value.id), data);
     else
@@ -1557,46 +1662,54 @@ const savePromotion = async (data: PromotionInput) => {
       });
     showCreatePromotionModal.value = false;
     await loadPromotions();
-  } catch (error) {
-    console.error("Failed to save promotion:", error);
-  } finally {
-    isProcessing.value = false;
-  }
-};
+  },
+  { fallbackError: operationFailed() },
+);
+const savePromotion = (data: PromotionInput) =>
+  canManagePromotions.value
+    ? savePromotionAction.run(data)
+    : Promise.resolve(undefined);
 
-const togglePromotion = async (promotion: Promotion) => {
-  if (isProcessing.value) return;
-  isProcessing.value = true;
-  try {
+const togglePromotionAction = useAsyncAction(
+  async (promotion: Promotion) => {
     await posService.updatePromotion(String(promotion.id), {
       isActive: !promotion.isActive,
     });
     await loadPromotions();
-  } catch (error) {
-    console.error("Failed to toggle promotion:", error);
-  } finally {
-    isProcessing.value = false;
-  }
-};
+  },
+  { fallbackError: operationFailed() },
+);
+const togglePromotion = (promotion: Promotion) =>
+  togglePromotionAction.run(promotion);
 
-const deletePromotion = async (promotion: Promotion) => {
-  if (
-    isProcessing.value ||
-    !window.confirm(
-      t("coupons.messages.deleteConfirm", { name: promotion.name }),
-    )
-  )
-    return;
-  isProcessing.value = true;
-  try {
+const deletePromotionAction = useAsyncAction(
+  async (promotion: Promotion) => {
     await posService.deletePromotion(String(promotion.id));
     await loadPromotions();
-  } catch (error) {
-    console.error("Failed to delete promotion:", error);
-  } finally {
-    isProcessing.value = false;
-  }
-};
+  },
+  { fallbackError: operationFailed() },
+);
+// Deleting cannot be undone, so it keeps its confirmation.
+const deletePromotion = (promotion: Promotion) =>
+  window.confirm(t("coupons.messages.deleteConfirm", { name: promotion.name }))
+    ? deletePromotionAction.run(promotion)
+    : Promise.resolve(undefined);
+
+const isProcessing = computed(() =>
+  [
+    createRegisterAction,
+    activateRegisterAction,
+    deactivateRegisterAction,
+    startShiftAction,
+    endShiftAction,
+    quickPaymentAction,
+    marketPaymentAction,
+    cashMovementAction,
+    savePromotionAction,
+    togglePromotionAction,
+    deletePromotionAction,
+  ].some((action) => action.pending.value),
+);
 
 const changePromotionPage = async (page: number) => {
   promotionPage.value = page;
@@ -1691,39 +1804,49 @@ const loadRegisters = async () => {
   }
 };
 
+type ShiftPayload = Partial<CashShift> & {
+  totalSales?: number;
+  startedAt?: string | Date;
+  endedAt?: string | Date;
+  startAmount?: number;
+  totalTransactions?: number;
+};
+
+const applyShift = (
+  shiftData: ShiftPayload,
+  register: CashRegister,
+  fallbackBalance?: number,
+) => {
+  currentShift.value = {
+    id: shiftData.id || "",
+    name: shiftData.name || "",
+    startTime: validIsoDate(shiftData.startedAt ?? shiftData.startTime) ?? "",
+    endTime: validIsoDate(shiftData.endedAt ?? shiftData.endTime),
+    registerId: shiftData.registerId || register.id,
+    operatorId: shiftData.operatorId || "",
+    startingCash: shiftData.startAmount ?? shiftData.startingCash ?? 0,
+    expectedAmount: shiftData.expectedAmount,
+    totalRevenue: shiftData.totalSales || 0,
+    processedOrders:
+      shiftData.totalTransactions ?? shiftData.processedOrders ?? 0,
+    status:
+      shiftData.status === "ended" || shiftData.status === "closed"
+        ? "ended"
+        : "active",
+  };
+  // A just-opened shift expects exactly its opening cash.
+  register.currentBalance = shiftData.expectedAmount ?? fallbackBalance;
+};
+
 const loadCurrentShift = async (registerId: string) => {
   try {
     const response = await api.get(`/pos/shifts/current/${registerId}`);
     if (currentRegister.value?.id !== registerId) return;
     if (response.data.success && response.data.data) {
-      const shiftData = unwrapApiPayload<
-        Partial<CashShift> & {
-          totalSales?: number;
-          startedAt?: string | Date;
-          endedAt?: string | Date;
-          startAmount?: number;
-          totalTransactions?: number;
-        }
-      >(response.data.data);
-      currentShift.value = {
-        id: shiftData.id || "",
-        name: shiftData.name || "",
-        startTime:
-          validIsoDate(shiftData.startedAt ?? shiftData.startTime) ?? "",
-        endTime: validIsoDate(shiftData.endedAt ?? shiftData.endTime),
-        registerId: shiftData.registerId || registerId,
-        operatorId: shiftData.operatorId || "",
-        startingCash: shiftData.startAmount ?? shiftData.startingCash ?? 0,
-        expectedAmount: shiftData.expectedAmount,
-        totalRevenue: shiftData.totalSales || 0,
-        processedOrders:
-          shiftData.totalTransactions ?? shiftData.processedOrders ?? 0,
-        status:
-          shiftData.status === "ended" || shiftData.status === "closed"
-            ? "ended"
-            : "active",
-      };
-      currentRegister.value.currentBalance = shiftData.expectedAmount;
+      applyShift(
+        unwrapApiPayload<ShiftPayload>(response.data.data),
+        currentRegister.value,
+      );
     } else {
       currentShift.value = null;
     }
@@ -1781,13 +1904,7 @@ const loadPromotions = async () => {
 
 // 生命週期
 onMounted(async () => {
-  // Load registers from API
-  await loadRegisters();
-
-  // A deactivated register must not become the default: Start Shift would then
-  // offer to open a shift on a register the owner turned off.
-  const firstActive = registers.value.find((r) => r.status === "active");
-  if (firstActive) await selectRegister(firstActive);
+  // Promotions do not depend on the register list; start both requests now.
   watch(
     hasPromotions,
     (ready) => {
@@ -1796,6 +1913,12 @@ onMounted(async () => {
     },
     { immediate: true },
   );
+  await loadRegisters();
+
+  // A deactivated register must not become the default: Start Shift would then
+  // offer to open a shift on a register the owner turned off.
+  const firstActive = registers.value.find((r) => r.status === "active");
+  if (firstActive) await selectRegister(firstActive);
 });
 </script>
 

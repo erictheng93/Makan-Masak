@@ -3509,6 +3509,8 @@ const enUS: Messages = {
     lastActivity: "Last Activity",
     activate: "Activate",
     deactivate: "Deactivate",
+    undo: "Undo",
+    registerDeactivated: "{name} deactivated",
     cashManagement: "Cash Management",
     recentTransactions: "Recent Transactions",
     export: "Export",

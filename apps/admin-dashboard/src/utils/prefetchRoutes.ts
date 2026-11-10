@@ -30,9 +30,18 @@ const DAILY_PATHS = new Set([
   "/dashboard/pos",
 ]);
 
+// /dashboard/pos only redirects to its checkout child, and resolving the bare
+// path matches no child component, so warming the entry alone left the first
+// visit waiting on the checkout chunk. Warm the real children with it.
+const DAILY_CHILDREN: Record<string, string[]> = {
+  "/dashboard/pos": ["/dashboard/pos/checkout", "/dashboard/pos/management"],
+};
+
 /** The subset of the visible navigation worth warming before any hover. */
 export function idlePrefetchPaths(paths: string[]): string[] {
-  return paths.filter((path) => DAILY_PATHS.has(path));
+  return paths
+    .filter((path) => DAILY_PATHS.has(path))
+    .flatMap((path) => [path, ...(DAILY_CHILDREN[path] ?? [])]);
 }
 
 /** Warms every path while the browser is idle, unless the user opted out of data use. */

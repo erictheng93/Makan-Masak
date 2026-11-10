@@ -51,6 +51,8 @@ describe("prefetchRoutes", () => {
       "/dashboard/orders",
       "/dashboard/seating",
       "/dashboard/pos",
+      "/dashboard/pos/checkout",
+      "/dashboard/pos/management",
     ]);
   });
 

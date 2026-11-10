@@ -3519,6 +3519,8 @@ const jaJP: Messages = {
     lastActivity: "最終操作",
     activate: "有効化",
     deactivate: "無効化",
+    undo: "元に戻す",
+    registerDeactivated: "{name} を無効化しました",
     cashManagement: "現金管理",
     recentTransactions: "最近の取引",
     export: "エクスポート",

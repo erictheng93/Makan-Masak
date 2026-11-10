@@ -3427,6 +3427,8 @@ const zhCN: Messages = {
     lastActivity: "最后活动",
     activate: "启用",
     deactivate: "停用",
+    undo: "撤销",
+    registerDeactivated: "已停用 {name}",
     cashManagement: "现金管理",
     recentTransactions: "最近交易",
     export: "导出",

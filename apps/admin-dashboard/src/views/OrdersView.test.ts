@@ -162,6 +162,22 @@ describe("OrdersView", () => {
     }
   });
 
+  it("starts the stats request without waiting for the order list", async () => {
+    let releaseOrders!: () => void;
+    orderStore.fetchOrders.mockImplementationOnce(
+      () => new Promise<void>((resolve) => (releaseOrders = resolve)),
+    );
+    const wrapper = mount(OrdersView);
+    await Promise.resolve();
+    expect(orderStore.fetchOrders).toHaveBeenCalledOnce();
+    expect(
+      vi.mocked(api.get).mock.calls.filter(([url]) => url === "/orders/stats"),
+    ).toHaveLength(1);
+    releaseOrders();
+    await flushPromises();
+    wrapper.unmount();
+  });
+
   it("sends the selected delivery type to the server", async () => {
     const wrapper = mount(OrdersView);
 

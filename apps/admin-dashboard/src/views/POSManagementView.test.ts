@@ -69,11 +69,14 @@ vi.mock("@/services/api", () => ({
   unwrapApiPayload: (payload: unknown) => payload,
 }));
 
-const toast = vi.hoisted(() => ({
-  success: vi.fn(),
-  error: vi.fn(),
-  warning: vi.fn(),
-}));
+// The instance is callable (toast(content, options)) as well as having helpers.
+const toast = vi.hoisted(() =>
+  Object.assign(vi.fn(), {
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+  }),
+);
 vi.mock("vue-toastification", () => ({ useToast: () => toast }));
 
 vi.mock("@/services/posService", async (importOriginal) => {
@@ -211,6 +214,59 @@ describe("POSManagementView", () => {
         paidAmountCents: 20000,
       },
     });
+  });
+
+  it("starts the promotions request together with the register list", async () => {
+    const base = vi.mocked(api.get).getMockImplementation()!;
+    let releaseRegisters!: () => void;
+    const gate = new Promise<void>((resolve) => (releaseRegisters = resolve));
+    vi.mocked(api.get).mockImplementation(async (url: string, ...a) => {
+      if (url === "/pos/registers") await gate;
+      return base(url, ...a);
+    });
+    const wrapper = mount(POSManagementView);
+    await Promise.resolve();
+    await Promise.resolve();
+    const issued = vi.mocked(api.get).mock.calls.map(([url]) => url);
+    expect(issued).toContain("/pos/registers");
+    expect(issued).toContain("/pos/promotions");
+    releaseRegisters();
+    await flushPromises();
+    wrapper.unmount();
+  });
+
+  it("starts the shift and the daily report together when a register is picked", async () => {
+    const base = vi.mocked(api.get).getMockImplementation()!;
+    const wrapper = mount(POSManagementView);
+    await flushPromises();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    vi.mocked(api.get).mockImplementation(async (url: string, ...a) => {
+      if (url === "/pos/shifts/current/register-1") await gate;
+      return base(url, ...a);
+    });
+    vi.mocked(api.get).mockClear();
+    const vm = wrapper.vm as unknown as {
+      selectRegister: (r: unknown) => Promise<void>;
+      registers: unknown[];
+    };
+    const pick = vm.selectRegister(vm.registers[0]);
+    await Promise.resolve();
+    await Promise.resolve();
+    const issued = vi.mocked(api.get).mock.calls.map(([url]) => url);
+    expect(issued).toContain("/pos/shifts/current/register-1");
+    expect(issued).toContain("/pos/reports/daily");
+    await flushPromises();
+    expect(wrapper.find('[data-testid="pos-register-loading"]').exists()).toBe(
+      true,
+    );
+    release();
+    await pick;
+    await flushPromises();
+    expect(wrapper.find('[data-testid="pos-register-loading"]').exists()).toBe(
+      false,
+    );
+    wrapper.unmount();
   });
 
   it("loads the selected register totals, drawer balance and real cash movement envelope without unsupported requests", async () => {
@@ -590,7 +646,17 @@ describe("POSManagementView", () => {
 
     it("shows the server message when starting a shift fails", async () => {
       mockRegisters([reg("r1", "One")]);
-      vi.mocked(api.post).mockRejectedValue(new Error("Shift already open"));
+      vi.mocked(api.post).mockRejectedValue(
+        Object.assign(new Error("Request failed"), {
+          response: {
+            status: 409,
+            data: {
+              success: false,
+              error: { code: "SHIFT_OPEN", message: "Shift already open" },
+            },
+          },
+        }),
+      );
       const wrapper = mount(POSManagementView);
       await flushPromises();
       await wrapper.get('[data-testid="pos-start-shift"]').trigger("click");
@@ -599,6 +665,94 @@ describe("POSManagementView", () => {
         .trigger("click");
       await flushPromises();
       expect(toast.error).toHaveBeenCalledWith("Shift already open");
+      wrapper.unmount();
+    });
+
+    it("opens the shift from the start response in one round, without re-reading it", async () => {
+      mockRegisters([reg("r1", "One")]);
+      const wrapper = mount(POSManagementView);
+      await flushPromises();
+      vi.mocked(api.post).mockResolvedValue({
+        data: {
+          success: true,
+          data: {
+            id: "shift-new",
+            startedAt: "2026-06-02T08:00:00.000Z",
+            registerId: "r1",
+            startAmount: 300,
+            status: "active",
+          },
+        },
+      } as never);
+      vi.mocked(api.get).mockClear();
+
+      await wrapper.get('[data-testid="pos-start-shift"]').trigger("click");
+      await flushPromises();
+      await wrapper
+        .get('[data-testid="pos-confirm-start-shift"]')
+        .trigger("click");
+      await flushPromises();
+
+      const vm = wrapper.vm as unknown as {
+        currentShift: { id: string } | null;
+      };
+      expect(vm.currentShift?.id).toBe("shift-new");
+      const reads = vi.mocked(api.get).mock.calls.map(([url]) => url);
+      expect(reads).not.toContain("/pos/shifts/current/r1");
+      expect(reads).not.toContain("/pos/shifts/shift-new/cash-movements");
+      expect(
+        wrapper.find('[data-testid="pos-confirm-start-shift"]').exists(),
+      ).toBe(false);
+      wrapper.unmount();
+    });
+
+    it("sends one start-shift request for a double tap", async () => {
+      mockRegisters([reg("r1", "One")]);
+      const wrapper = mount(POSManagementView);
+      await flushPromises();
+      let finish!: (value: unknown) => void;
+      vi.mocked(api.post).mockImplementation(
+        () => new Promise((resolve) => (finish = resolve)) as never,
+      );
+      await wrapper.get('[data-testid="pos-start-shift"]').trigger("click");
+      await flushPromises();
+      const confirm = wrapper.get('[data-testid="pos-confirm-start-shift"]');
+      await confirm.trigger("click");
+      await confirm.trigger("click");
+      expect(
+        vi
+          .mocked(api.post)
+          .mock.calls.filter(([u]) => u === "/pos/shifts/start"),
+      ).toHaveLength(1);
+      expect(confirm.attributes("disabled")).toBeDefined();
+      finish({ data: { success: true, data: null } });
+      await flushPromises();
+      wrapper.unmount();
+    });
+
+    it("deactivates at once with an Undo that re-activates", async () => {
+      mockRegisters([reg("r1", "One")]);
+      const wrapper = mount(POSManagementView);
+      await flushPromises();
+      vi.mocked(api.post).mockResolvedValue({
+        data: { success: true, data: null },
+      } as never);
+
+      await wrapper.get('[data-testid="pos-deactivate-r1"]').trigger("click");
+      await flushPromises();
+
+      const vm = wrapper.vm as unknown as {
+        registers: Array<{ id: string; status: string }>;
+      };
+      expect(vm.registers[0].status).toBe("inactive");
+      expect(api.post).toHaveBeenCalledWith("/pos/registers/r1/deactivate");
+      const content = toast.mock.calls[0][0] as {
+        listeners: { undo: () => void };
+      };
+      content.listeners.undo();
+      await flushPromises();
+      expect(api.post).toHaveBeenCalledWith("/pos/registers/r1/activate");
+      expect(vm.registers[0].status).toBe("active");
       wrapper.unmount();
     });
   });

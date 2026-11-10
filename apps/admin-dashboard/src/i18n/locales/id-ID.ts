@@ -3533,6 +3533,8 @@ const idID: Messages = {
     lastActivity: "Aktivitas Terakhir",
     activate: "Aktifkan",
     deactivate: "Nonaktifkan",
+    undo: "Urungkan",
+    registerDeactivated: "{name} dinonaktifkan",
     cashManagement: "Manajemen Kas",
     recentTransactions: "Transaksi Terbaru",
     export: "Ekspor",

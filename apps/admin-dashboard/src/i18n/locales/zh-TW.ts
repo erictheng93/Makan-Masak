@@ -3542,6 +3542,8 @@ const zhTWCore = {
     lastActivity: "最後活動",
     activate: "啟用",
     deactivate: "停用",
+    undo: "復原",
+    registerDeactivated: "已停用 {name}",
     cashManagement: "現金管理",
     recentTransactions: "最近交易",
     export: "匯出",

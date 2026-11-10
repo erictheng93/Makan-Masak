@@ -3514,6 +3514,8 @@ const viVN: Messages = {
     lastActivity: "Hoạt động cuối",
     activate: "Kích hoạt",
     deactivate: "Vô hiệu hóa",
+    undo: "Hoàn tác",
+    registerDeactivated: "Đã vô hiệu hóa {name}",
     cashManagement: "Quản lý tiền mặt",
     recentTransactions: "Giao dịch gần đây",
     export: "Xuất",

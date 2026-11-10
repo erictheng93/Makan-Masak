@@ -255,6 +255,7 @@
                       class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                       :data-testid="`admin-order-view-${order.id}`"
                       :title="t('orders.actions.view')"
+                      :aria-label="t('orders.actions.view')"
                       @click="viewOrderDetails(order)"
                     >
                       <EyeIcon class="h-4 w-4" />
@@ -264,6 +265,7 @@
                       class="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
                       :data-testid="`admin-order-update-${order.id}`"
                       :title="t('orders.actions.update')"
+                      :aria-label="t('orders.actions.update')"
                       @click="updateOrderStatus(order)"
                     >
                       <ArrowPathIcon class="h-4 w-4" />
@@ -273,6 +275,7 @@
                       class="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
                       :data-testid="`admin-order-cancel-${order.id}`"
                       :title="t('orders.actions.cancel')"
+                      :aria-label="t('orders.actions.cancel')"
                       @click="cancelOrder(order)"
                     >
                       <XCircleIcon class="h-4 w-4" />
@@ -854,22 +857,23 @@ const refreshOrderStats = async () => {
 const refreshOrders = async () => {
   isLoading.value = true;
   try {
-    await orderStore.fetchOrders({
-      page: 1,
-      limit: 20,
-      status: statusFilter.value
-        ? [statusFilter.value as OrderStatus]
-        : undefined,
-      fulfillmentType: selectedFulfillmentType(),
-      orderSource: sourceFilter.value || undefined,
-      search: searchQuery.value.trim() || undefined,
-    });
-    // The stat cards are a supplement to the list, so a failure here must not
-    // take the page down with it. GET /orders/stats is requireRole([0, 1])
-    // while this screen is also routed for roles 2-4, so a 403 is expected
-    // rather than exceptional -- leave the cards at zero and keep the orders
-    // visible instead of rejecting out of refreshOrders().
-    await refreshOrderStats();
+    // The stat cards are a supplement to the list, so a failure there must not
+    // take the page down with it (GET /orders/stats is requireRole([0, 1]) while
+    // this screen is also routed for roles 2-4; refreshOrderStats swallows its
+    // own errors). They are independent reads, so start both together.
+    await Promise.all([
+      orderStore.fetchOrders({
+        page: 1,
+        limit: 20,
+        status: statusFilter.value
+          ? [statusFilter.value as OrderStatus]
+          : undefined,
+        fulfillmentType: selectedFulfillmentType(),
+        orderSource: sourceFilter.value || undefined,
+        search: searchQuery.value.trim() || undefined,
+      }),
+      refreshOrderStats(),
+    ]);
   } finally {
     isLoading.value = false;
   }
