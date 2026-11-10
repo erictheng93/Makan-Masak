@@ -130,6 +130,8 @@ else
   step "design palette" pnpm run check:design-palette
   step "template currency" pnpm run check:template-currency
   step "accessible names" pnpm run check:accessible-names
+  # A catch that only logs leaves the owner with no idea the action failed.
+  step "silent catches" pnpm run check:silent-catches
   # Until 2026-09-06 this script ran from no gate at all -- not this tier, not
   # CI, not the pre-commit hook. A snapshot nobody compares is not a guard.
   step "API contracts" pnpm run contract:check

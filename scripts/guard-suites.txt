@@ -40,3 +40,4 @@ scripts/verify.sh                                    tests/unit/verify-real-inte
 scripts/api-rollback.cjs                             tests/unit/api-rollback-guard.test.ts
 scripts/pages-rollback-check.cjs                    tests/unit/api-rollback-guard.test.ts
 scripts/check-accessible-names.cjs                   tests/unit/check-accessible-names.test.ts
+scripts/check-silent-catches.cjs                    tests/unit/check-silent-catches.test.ts

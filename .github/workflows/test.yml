@@ -255,6 +255,9 @@ jobs:
       - name: Accessible names on icon-only controls
         run: pnpm run check:accessible-names
 
+      - name: No silent catch blocks (log-only error handling)
+        run: pnpm run check:silent-catches
+
       # The response-contract snapshot. It compares every field path and its
       # Zod type against .api-contracts-snapshot.json, so a field that changes
       # type -- an ISO string becoming Unix milliseconds -- fails here. Before
