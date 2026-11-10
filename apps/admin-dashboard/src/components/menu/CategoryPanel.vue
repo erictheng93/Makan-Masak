@@ -1,8 +1,51 @@
 <template>
   <div>
+    <!-- Phone: one scrollable chip row instead of a tall panel -->
+    <div v-if="compact" class="mb-3 flex items-center gap-2">
+      <div
+        role="group"
+        :aria-label="t('menu.categoryPanel.title')"
+        data-testid="category-chip-row"
+        class="-mx-1 flex min-w-0 flex-1 gap-2 overflow-x-auto px-1 py-1"
+      >
+        <button
+          type="button"
+          data-testid="category-chip-all"
+          :aria-pressed="selectedCategoryId === null"
+          :class="chipClass(selectedCategoryId === null)"
+          @click="emit('select', null)"
+        >
+          {{ t("menu.categoryPanel.allItems") }}
+        </button>
+        <button
+          v-for="category in localCategories"
+          :key="category.id"
+          type="button"
+          data-testid="category-chip"
+          :data-category-id="category.id"
+          :aria-pressed="selectedCategoryId === category.id"
+          :class="chipClass(selectedCategoryId === category.id)"
+          @click="emit('select', category.id)"
+        >
+          {{ category.name }}
+        </button>
+      </div>
+      <button
+        type="button"
+        data-testid="manage-categories-btn"
+        :aria-label="t('menu.manageCategories')"
+        :aria-expanded="managing"
+        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-ios-secondary shadow-[0_1px_6px_rgba(0,0,0,0.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-ios-primary"
+        @click="managing = !managing"
+      >
+        <Cog6ToothIcon class="h-5 w-5" aria-hidden="true" />
+      </button>
+    </div>
+
     <!-- Category List Card -->
     <div
-      class="bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] overflow-hidden lg:sticky lg:top-7"
+      v-if="!compact || managing"
+      class="bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] overflow-hidden lg:sticky lg:top-7 mb-4 lg:mb-0"
     >
       <!-- Header -->
       <div class="flex justify-between items-center px-5 pt-5 pb-4">
@@ -10,7 +53,7 @@
           {{ t("menu.categoryPanel.title") }}
         </h2>
         <button
-          class="flex items-center gap-1 px-3.5 py-1.5 bg-ios-green-soft text-ios-green-deep rounded-full text-[13px] font-semibold hover:bg-green-200 transition-colors"
+          class="flex min-h-11 items-center gap-1 px-3.5 py-1.5 lg:min-h-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ios-primary bg-ios-green-soft text-ios-green-deep rounded-full text-[13px] font-semibold hover:bg-green-200 transition-colors"
           data-testid="add-category-btn"
           @click="$emit('add-category')"
         >
@@ -128,20 +171,25 @@
 
           <!-- Hover actions -->
           <div
-            class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+            :class="[
+              'flex gap-1 transition-opacity focus-within:opacity-100',
+              compact ? '' : 'opacity-0 group-hover:opacity-100',
+            ]"
           >
             <button
-              class="w-7 h-7 flex items-center justify-center rounded-lg text-ios-secondary hover:bg-black/5 hover:text-ios-text transition-colors"
+              :class="[actionBtn, 'hover:bg-black/5 hover:text-ios-text']"
               :data-testid="`admin-category-edit-${category.id}`"
               :title="t('common.edit')"
+              :aria-label="t('common.edit')"
               @click.stop="emit('edit-category', category)"
             >
               <PencilIcon class="h-3.5 w-3.5" />
             </button>
             <button
-              class="w-7 h-7 flex items-center justify-center rounded-lg text-ios-secondary hover:bg-ios-red-soft hover:text-ios-error transition-colors"
+              :class="[actionBtn, 'hover:bg-ios-red-soft hover:text-ios-error']"
               :data-testid="`admin-category-delete-${category.id}`"
               :title="t('common.delete')"
+              :aria-label="t('common.delete')"
               @click.stop="emit('delete-category', category)"
             >
               <TrashIcon class="h-3.5 w-3.5" />
@@ -164,6 +212,7 @@ import {
   PencilIcon,
   TrashIcon,
   Squares2X2Icon,
+  Cog6ToothIcon,
   EyeSlashIcon,
 } from "@heroicons/vue/24/outline";
 import type {
@@ -177,6 +226,7 @@ const props = defineProps<{
   categories: CategoryData[];
   menuItems: MenuItemData[];
   selectedCategoryId: number | null;
+  compact?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -186,6 +236,19 @@ const emit = defineEmits<{
   "delete-category": [category: CategoryData];
   reorder: [categories: CategoryData[]];
 }>();
+
+const managing = ref(false);
+
+const chipClass = (active: boolean) => [
+  "shrink-0 min-h-11 rounded-full px-4 text-[14px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ios-primary",
+  active
+    ? "bg-ios-primary text-white"
+    : "bg-white text-ios-text shadow-[0_1px_6px_rgba(0,0,0,0.06)]",
+];
+
+// 44px hit area on touch (Apple HIG), the old 28px square from lg up.
+const actionBtn =
+  "w-11 h-11 lg:w-7 lg:h-7 flex items-center justify-center rounded-lg text-ios-secondary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ios-primary";
 
 // Local writable copy for VueDraggable v-model (props are readonly)
 const localCategories = ref<CategoryData[]>([]);

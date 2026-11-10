@@ -151,6 +151,8 @@ const enUS: Messages = {
     statusActive: "Active",
     statusInactive: "Inactive",
     actionUnpublish: "Take off sale",
+    moreActions: "More actions",
+    manageCategories: "Manage categories",
     actionPublish: "Put on sale",
     available: "Available",
     soldOut: "Sold Out",

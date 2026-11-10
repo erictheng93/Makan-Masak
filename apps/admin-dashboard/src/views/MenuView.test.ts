@@ -212,6 +212,35 @@ describe("MenuView", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null)));
   });
 
+  it("lists dishes in the page flow, not a nested scroller, on a phone", () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: true,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    menuItems.value = [menuItem({ id: 1 }), menuItem({ id: 2, name: "紅茶" })];
+    const wrapper = mount(MenuView, {
+      global: {
+        stubs: {
+          CategoryPanel: true,
+          CategoryEditForm: true,
+          MenuItemCard: true,
+          VirtualMenuGrid: true,
+        },
+      },
+    });
+
+    expect(wrapper.find('[data-testid="menu-compact-list"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.findAllComponents({ name: "MenuItemCard" })).toHaveLength(2);
+    expect(wrapper.findComponent({ name: "VirtualMenuGrid" }).exists()).toBe(
+      false,
+    );
+    vi.unstubAllGlobals();
+  });
+
   it("shows market search context when opened from a product gap", () => {
     routeQuery.source = "market-gap";
     routeQuery.gap = "products";

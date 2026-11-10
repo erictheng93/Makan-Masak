@@ -126,3 +126,61 @@ describe("CategoryPanel", () => {
     expect(wrapper.emitted("edit-category")).toEqual([[hidden]]);
   });
 });
+
+describe("CategoryPanel compact (phone)", () => {
+  const categories = [
+    buildCategory({ id: 1, name: "主食" }),
+    buildCategory({ id: 2, name: "飲料" }),
+  ];
+
+  it("renders All plus one chip per category and emits select", async () => {
+    const wrapper = mount(CategoryPanel, {
+      props: {
+        categories,
+        menuItems: [],
+        selectedCategoryId: null,
+        compact: true,
+      },
+    });
+
+    expect(wrapper.findAll('[data-testid="category-chip"]')).toHaveLength(2);
+    expect(
+      wrapper
+        .get('[data-testid="category-chip-all"]')
+        .attributes("aria-pressed"),
+    ).toBe("true");
+    expect(wrapper.find('[data-testid="category-row"]').exists()).toBe(false);
+
+    await wrapper.findAll('[data-testid="category-chip"]')[1]!.trigger("click");
+    expect(wrapper.emitted("select")?.[0]).toEqual([2]);
+    await wrapper.get('[data-testid="category-chip-all"]').trigger("click");
+    expect(wrapper.emitted("select")?.[1]).toEqual([null]);
+  });
+
+  it("reaches add/edit/delete through the labelled manage button", async () => {
+    const wrapper = mount(CategoryPanel, {
+      props: {
+        categories,
+        menuItems: [],
+        selectedCategoryId: null,
+        compact: true,
+      },
+    });
+
+    expect(wrapper.find('[data-testid="add-category-btn"]').exists()).toBe(
+      false,
+    );
+    const manage = wrapper.get('[data-testid="manage-categories-btn"]');
+    expect(manage.attributes("aria-label")).toBe("menu.manageCategories");
+    await manage.trigger("click");
+
+    await wrapper.get('[data-testid="add-category-btn"]').trigger("click");
+    await wrapper.get('[data-testid="admin-category-edit-1"]').trigger("click");
+    await wrapper
+      .get('[data-testid="admin-category-delete-2"]')
+      .trigger("click");
+    expect(wrapper.emitted("add-category")).toHaveLength(1);
+    expect(wrapper.emitted("edit-category")?.[0]).toEqual([categories[0]]);
+    expect(wrapper.emitted("delete-category")?.[0]).toEqual([categories[1]]);
+  });
+});

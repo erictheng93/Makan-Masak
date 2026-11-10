@@ -151,6 +151,8 @@ const viVN: Messages = {
     statusActive: "Đang bán",
     statusInactive: "Ngừng bán",
     actionUnpublish: "Ngừng bán",
+    moreActions: "Thao tác khác",
+    manageCategories: "Quản lý danh mục",
     actionPublish: "Mở bán",
     available: "Còn hàng",
     soldOut: "Hết hàng",

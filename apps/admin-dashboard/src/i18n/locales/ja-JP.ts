@@ -150,6 +150,8 @@ const jaJP: Messages = {
     statusActive: "提供中",
     statusInactive: "非公開",
     actionUnpublish: "販売停止",
+    moreActions: "その他の操作",
+    manageCategories: "カテゴリを管理",
     actionPublish: "販売再開",
     available: "提供中",
     soldOut: "売り切れ",

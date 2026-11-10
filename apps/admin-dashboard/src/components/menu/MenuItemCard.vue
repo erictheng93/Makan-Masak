@@ -1,5 +1,109 @@
 <template>
+  <!-- Compact row for phones: the page scrolls, so each dish must be short. -->
   <div
+    v-if="compact"
+    :data-testid="`admin-menu-item-${item.id}`"
+    :class="[
+      'bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)]',
+      highlighted && 'ring-2 ring-ios-blue',
+    ]"
+  >
+    <div class="flex items-center gap-3 p-2.5">
+      <OptimizedImage
+        :src="item.imageUrl || placeholderSvg"
+        :alt="item.name"
+        :width="128"
+        :height="128"
+        format="auto"
+        fit="cover"
+        :lazy="true"
+        :fade-in="true"
+        image-class="h-16 w-16 shrink-0 rounded-xl object-cover"
+      />
+      <div class="min-w-0 flex-1">
+        <h3 class="text-[15px] font-bold text-ios-text line-clamp-1">
+          {{ item.name }}
+        </h3>
+        <div class="mt-0.5 flex flex-wrap items-center gap-1.5">
+          <span class="text-[14px] font-bold text-ios-primary">
+            {{ formatPrice(item.price) }}
+          </span>
+          <span
+            v-if="item.isFeatured"
+            class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-ios-warning/90 text-white"
+          >
+            {{ t("menu.featured") }}
+          </span>
+          <span
+            :class="[
+              'px-2 py-0.5 rounded-full text-[11px] font-semibold text-white',
+              isAvailable ? 'bg-ios-success/90' : 'bg-ios-error/85',
+            ]"
+          >
+            {{ isAvailable ? t("menu.available") : t("menu.soldOut") }}
+          </span>
+        </div>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        :aria-checked="item.isAvailable"
+        :aria-label="
+          item.isAvailable ? t('menu.actionUnpublish') : t('menu.actionPublish')
+        "
+        :data-testid="`admin-menu-item-toggle-${item.id}`"
+        class="flex h-11 w-14 shrink-0 items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ios-primary"
+        @click.stop="$emit('toggle-status', item)"
+      >
+        <span
+          :class="[
+            'relative block h-[31px] w-[51px] rounded-full transition-colors duration-200',
+            item.isAvailable ? 'bg-ios-success' : 'bg-ios-tertiary',
+          ]"
+        >
+          <span
+            :class="[
+              'absolute top-0.5 left-0.5 h-[27px] w-[27px] rounded-full bg-white shadow transition-transform duration-200',
+              item.isAvailable && 'translate-x-5',
+            ]"
+          />
+        </span>
+      </button>
+      <button
+        type="button"
+        :aria-label="t('menu.moreActions')"
+        :aria-expanded="actionsOpen"
+        :data-testid="`admin-menu-item-more-${item.id}`"
+        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ios-secondary hover:bg-black/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ios-primary"
+        @click.stop="actionsOpen = !actionsOpen"
+      >
+        <EllipsisHorizontalIcon class="h-5 w-5" aria-hidden="true" />
+      </button>
+    </div>
+    <div v-if="actionsOpen" class="flex gap-2 px-2.5 pb-2.5">
+      <button
+        type="button"
+        :data-testid="`admin-menu-item-edit-${item.id}`"
+        class="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-ios-bg text-[14px] font-semibold text-ios-text focus:outline-none focus-visible:ring-2 focus-visible:ring-ios-primary"
+        @click.stop="$emit('edit', item)"
+      >
+        <PencilIcon class="h-4 w-4" aria-hidden="true" />
+        {{ t("common.edit") }}
+      </button>
+      <button
+        type="button"
+        :data-testid="`admin-menu-item-delete-${item.id}`"
+        class="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-ios-red-soft text-[14px] font-semibold text-ios-error focus:outline-none focus-visible:ring-2 focus-visible:ring-ios-error"
+        @click.stop="$emit('delete', item)"
+      >
+        <TrashIcon class="h-4 w-4" aria-hidden="true" />
+        {{ t("common.delete") }}
+      </button>
+    </div>
+  </div>
+
+  <div
+    v-else
     :data-testid="`admin-menu-item-${item.id}`"
     :class="[
       'bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.07)] transition-all duration-[280ms] cursor-pointer group',
@@ -111,12 +215,13 @@
         </div>
         <!-- Hover actions -->
         <div
-          class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+          class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 focus-within:opacity-100"
         >
           <button
             :data-testid="`admin-menu-item-edit-${item.id}`"
             class="w-[30px] h-[30px] flex items-center justify-center rounded-lg text-ios-secondary hover:bg-black/5 hover:text-ios-text transition-colors"
             :title="t('common.edit')"
+            :aria-label="t('common.edit')"
             @click.stop="$emit('edit', item)"
           >
             <PencilIcon class="h-[15px] w-[15px]" />
@@ -132,6 +237,11 @@
                 ? t('menu.actionUnpublish')
                 : t('menu.actionPublish')
             "
+            :aria-label="
+              item.isAvailable
+                ? t('menu.actionUnpublish')
+                : t('menu.actionPublish')
+            "
             @click.stop="$emit('toggle-status', item)"
           >
             <component
@@ -143,6 +253,7 @@
             :data-testid="`admin-menu-item-delete-${item.id}`"
             class="w-[30px] h-[30px] flex items-center justify-center rounded-lg text-ios-secondary hover:bg-ios-red-soft hover:text-ios-error transition-colors"
             :title="t('common.delete')"
+            :aria-label="t('common.delete')"
             @click.stop="$emit('delete', item)"
           >
             <TrashIcon class="h-[15px] w-[15px]" />
@@ -154,7 +265,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { useI18n } from "@/i18n";
 import { useCurrency } from "@/composables/useCurrency";
 import OptimizedImage from "@/components/OptimizedImage.vue";
@@ -163,6 +274,7 @@ import {
   TrashIcon,
   EyeIcon,
   EyeSlashIcon,
+  EllipsisHorizontalIcon,
   ShoppingBagIcon,
   StarIcon,
   HeartIcon,
@@ -176,7 +288,10 @@ const props = defineProps<{
   item: MenuItemData;
   categoryName?: string;
   highlighted?: boolean;
+  compact?: boolean;
 }>();
+
+const actionsOpen = ref(false);
 
 const isAvailable = computed(
   () =>

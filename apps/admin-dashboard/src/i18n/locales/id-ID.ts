@@ -152,6 +152,8 @@ const idID: Messages = {
     statusActive: "Aktif",
     statusInactive: "Nonaktif",
     actionUnpublish: "Hentikan penjualan",
+    moreActions: "Tindakan lainnya",
+    manageCategories: "Kelola kategori",
     actionPublish: "Jual kembali",
     available: "Tersedia",
     soldOut: "Habis",

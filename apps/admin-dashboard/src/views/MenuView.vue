@@ -54,6 +54,7 @@
         :categories="categories"
         :menu-items="menuItems"
         :selected-category-id="selectedCategoryId"
+        :compact="isCompact"
         @select="selectedCategoryId = $event"
         @add-category="startAddCategory"
         @edit-category="startEditCategory"
@@ -374,9 +375,28 @@
           />
         </div>
 
+        <!-- Phones: plain list, the page itself scrolls (no nested scroller) -->
+        <div
+          v-if="isCompact && filteredItems.length > 0"
+          data-testid="menu-compact-list"
+          class="space-y-2.5"
+        >
+          <MenuItemCard
+            v-for="menuItem in filteredItems"
+            :key="menuItem.id"
+            compact
+            :item="menuItem"
+            :category-name="getCategoryName(menuItem.categoryId)"
+            :highlighted="menuItem.id === highlightedItemId"
+            @edit="editMenuItem"
+            @toggle-status="toggleMenuItemStatus"
+            @delete="handleDeleteMenuItem"
+          />
+        </div>
+
         <!-- VirtualMenuGrid -->
         <VirtualMenuGrid
-          v-if="filteredItems.length > 0"
+          v-else-if="filteredItems.length > 0"
           ref="menuGridRef"
           :menu-items="filteredItems"
           :item-height="330"
@@ -1455,6 +1475,7 @@ import type {
 import CategoryPanel from "@/components/menu/CategoryPanel.vue";
 import CategoryEditForm from "@/components/menu/CategoryEditForm.vue";
 import MenuItemCard from "@/components/menu/MenuItemCard.vue";
+import { useIsCompactViewport } from "@/composables/useIsCompactViewport";
 import MenuItemOptionGroups from "@/components/menu/MenuItemOptionGroups.vue";
 import ImageAssistedMenuImport from "@/components/menu/ImageAssistedMenuImport.vue";
 import {
@@ -1513,6 +1534,7 @@ type CustomizationGroupForm = {
 };
 
 const { t } = useI18n();
+const isCompact = useIsCompactViewport();
 const { inputStep, currencyCode, formatPrice } = useCurrency();
 const route = useRoute();
 const router = useRouter();
@@ -2685,7 +2707,13 @@ watch(
 
     await nextTick();
     await nextTick();
-    menuGridRef.value?.scrollToMenuItem(itemId);
+    if (isCompact.value) {
+      document
+        .querySelector(`[data-testid="admin-menu-item-${itemId}"]`)
+        ?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    } else {
+      menuGridRef.value?.scrollToMenuItem(itemId);
+    }
 
     setTimeout(() => {
       highlightedItemId.value = null;
@@ -2718,7 +2746,7 @@ onMounted(() => {
   -webkit-line-clamp: 2;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1023px) {
   .grid-cols-\[300px_1fr\] {
     grid-template-columns: 1fr;
   }

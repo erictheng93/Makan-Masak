@@ -147,6 +147,8 @@ const zhCN: Messages = {
     statusActive: "上架中",
     statusInactive: "已下架",
     actionUnpublish: "下架",
+    moreActions: "更多操作",
+    manageCategories: "管理分类",
     actionPublish: "上架",
     available: "供应中",
     soldOut: "已售完",
