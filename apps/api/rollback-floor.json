@@ -1,0 +1,5 @@
+{
+  "commit": "b85b1855572125b671dde0b490d9b19841179641",
+  "versions": ["8905d372-9f39-4e56-9af6-8aa3e31e61b2"],
+  "reason": "Migration 0042 made staff usernames unique per restaurant. API versions before this commit find a staff member by username alone and key the failed-login lockout on the username, so once two shops share a username they would log the wrong account in, refuse a correct password, or lock one shop's staff out for another's mistakes. Roll back only to a version at or after this commit."
+}

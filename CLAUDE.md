@@ -93,6 +93,14 @@ MakanMasak is a modern, serverless restaurant management system built on Cloudfl
   `INSERT OR IGNORE INTO d1_migrations`. Check row counts first: a
   recreate-table migration is only trivially safe while the table is empty.
 - **Migration Guard**: changes after the reviewed checkpoint must be paired or documented in `packages/database/migration-dual-track.json`, then verified with `pnpm check:migration-dual-track`.
+- **API rollback floor**: roll the production API back only with
+  `pnpm rollback:api <version-id>`, never a bare `wrangler rollback`. It refuses
+  any version older than the commit in `apps/api/rollback-floor.json` (or not
+  listed there). The floor exists because of `0042`: staff usernames are unique
+  per restaurant, and pre-0042 API code would log in the wrong shop's account
+  or share one lockout counter across shops. When a migration makes older API
+  code unsafe against the new data, raise the floor in the same change.
+  `deploy:prod` in `apps/api` tags each version with its commit for this check.
 - **ID Strategy**: mixed by design while legacy modules remain. New domain tables should prefer `TEXT` UUID v7 primary keys, but existing integer-autoincrement tables are still valid until a scoped migration retires them. Do not claim the whole database is UUID-only.
 - **Timestamp Strategy**: use `INTEGER` Unix milliseconds via Drizzle `{ mode: "timestamp_ms" }`. Avoid new `TEXT` timestamp columns.
 - **Idempotency Strategy**: nullable idempotency/event keys on payment, webhook, billing, or retryable write paths require a DB-level partial unique index such as `WHERE idempotency_key IS NOT NULL`.

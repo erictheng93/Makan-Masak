@@ -37,3 +37,4 @@ scripts/prune-coverage-shard-placeholders.cjs        tests/unit/prune-coverage-s
 scripts/generate-strict-baseline.cjs                 tests/unit/generate-strict-baseline.test.ts
 scripts/check-template-currency.cjs                  tests/unit/check-template-currency.test.ts
 scripts/verify.sh                                    tests/unit/verify-real-integration-decision.test.ts
+scripts/api-rollback.cjs                             tests/unit/api-rollback-guard.test.ts
