@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>店主操作回應速度 QA</title>
+<style>
+:root{
+  --ground:#F2F2F7; --surface:#FFFFFF; --surface-2:#F8F8FB;
+  --ink:#1C1C1E; --ink-2:#55555C; --ink-3:#8A8A92;
+  --hair:rgba(28,28,30,.10); --hair-2:rgba(28,28,30,.06);
+  --shadow:0 1px 1.5px rgba(24,24,45,.05), 0 5px 16px rgba(24,24,45,.05);
+  --shadow-sm:0 1px 1px rgba(24,24,45,.05), 0 3px 10px rgba(24,24,45,.05);
+  --blue:#007AFF; --blue-ink:#0A5FC2;
+  --green:#34C759; --green-ink:#17803D;
+  --orange:#FF9500; --orange-ink:#A85F04;
+  --red:#FF3B30; --red-ink:#C1271D;
+  --purple:#AF52DE; --purple-ink:#7B2FB5;
+  --teal:#30B0C7; --teal-ink:#0D7C8F;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F0F13; --surface:#1B1B21; --surface-2:#212128;
+    --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#7E7E8A;
+    --hair:rgba(255,255,255,.14); --hair-2:rgba(255,255,255,.07);
+    --shadow:0 1px 1.5px rgba(0,0,0,.4), 0 5px 16px rgba(0,0,0,.35);
+    --shadow-sm:0 1px 1px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
+    --blue:#3B9BFF; --blue-ink:#7CBEFF;
+    --green:#4CD97A; --green-ink:#84E5A3;
+    --orange:#FFB03D; --orange-ink:#FFC978;
+    --red:#FF6961; --red-ink:#FF9A94;
+    --purple:#C77BEB; --purple-ink:#DBA9F4;
+    --teal:#4ECBE0; --teal-ink:#8CE0EE;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F0F13; --surface:#1B1B21; --surface-2:#212128;
+  --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#7E7E8A;
+  --hair:rgba(255,255,255,.14); --hair-2:rgba(255,255,255,.07);
+  --shadow:0 1px 1.5px rgba(0,0,0,.4), 0 5px 16px rgba(0,0,0,.35);
+  --shadow-sm:0 1px 1px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
+  --blue:#3B9BFF; --blue-ink:#7CBEFF;
+  --green:#4CD97A; --green-ink:#84E5A3;
+  --orange:#FFB03D; --orange-ink:#FFC978;
+  --red:#FF6961; --red-ink:#FF9A94;
+  --purple:#C77BEB; --purple-ink:#DBA9F4;
+  --teal:#4ECBE0; --teal-ink:#8CE0EE;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans","Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.7; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:960px; margin:0 auto; padding:36px 22px 80px}
+code{
+  font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:.87em; background:var(--surface-2); padding:1.5px 6px;
+  border-radius:6px; overflow-wrap:anywhere;
+}
+pre{
+  background:var(--surface-2); border-radius:14px; padding:13px 16px;
+  overflow-x:auto; font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  font-size:12.5px; line-height:1.65; margin:12px 0;
+}
+pre code{background:none; padding:0}
+a{color:var(--blue-ink); font-weight:600; text-decoration:none}
+a:hover{text-decoration:underline}
+
+header.mast{margin-bottom:26px}
+header.mast h1{
+  margin:0; font-size:31px; font-weight:900; letter-spacing:-.025em;
+  line-height:1.2; text-wrap:balance;
+}
+header.mast .sub{margin:8px 0 0; font-size:14.5px; color:var(--ink-2)}
+.meta{
+  display:flex; flex-wrap:wrap; gap:10px 26px; margin-top:16px;
+  background:var(--surface); border-radius:16px; padding:13px 18px;
+  box-shadow:var(--shadow); font-size:12.5px; color:var(--ink-2);
+}
+.meta b{color:var(--ink); font-weight:600}
+
+section{margin-top:34px}
+h2{
+  margin:0 0 14px; font-size:20px; font-weight:800; letter-spacing:-.015em;
+}
+h3{
+  margin:26px 0 10px; font-size:16px; font-weight:700; letter-spacing:-.01em;
+}
+.card h4{
+  margin:18px 0 6px; font-size:13px; font-weight:700; letter-spacing:.02em;
+  text-transform:uppercase; color:var(--ink-3);
+}
+p{margin:10px 0}
+
+.card{
+  background:var(--surface); border-radius:20px; padding:18px 22px 20px;
+  box-shadow:var(--shadow); margin:14px 0;
+}
+.card > :first-child{margin-top:0}
+.card > :last-child{margin-bottom:0}
+
+.finding{
+  --ac:var(--ink-3); --ac-ink:var(--ink-2);
+  background:var(--surface); border-radius:20px; box-shadow:var(--shadow);
+  margin:14px 0; overflow:hidden;
+}
+.finding.blocker{--ac:var(--red); --ac-ink:var(--red-ink)}
+.finding.data{--ac:var(--purple); --ac-ink:var(--purple-ink)}
+.finding.ux{--ac:var(--orange); --ac-ink:var(--orange-ink)}
+.finding.ok{--ac:var(--green); --ac-ink:var(--green-ink)}
+.finding-h{
+  display:flex; align-items:baseline; gap:11px; flex-wrap:wrap;
+  padding:14px 22px 12px;
+  background:color-mix(in srgb, var(--ac) 11%, var(--surface));
+  border-bottom:1px solid color-mix(in srgb, var(--ac) 20%, transparent);
+}
+.finding-h .id{
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  font-size:12px; font-weight:700; color:var(--ac-ink);
+  background:color-mix(in srgb, var(--ac) 18%, var(--surface));
+  padding:2px 10px; border-radius:999px; flex:none;
+}
+.finding-h h4{
+  margin:0; font-size:15.5px; font-weight:700; letter-spacing:-.01em;
+  flex:1; min-width:220px;
+}
+.finding-b{padding:14px 22px 18px}
+.finding-b > :first-child{margin-top:0}
+.finding-b > :last-child{margin-bottom:0}
+
+.tag{
+  display:inline-block; font-size:11px; font-weight:700; letter-spacing:.04em;
+  padding:2.5px 11px; border-radius:999px; white-space:nowrap;
+}
+.tag.blocker{background:color-mix(in srgb, var(--red) 16%, var(--surface)); color:var(--red-ink)}
+.tag.data{background:color-mix(in srgb, var(--purple) 16%, var(--surface)); color:var(--purple-ink)}
+.tag.ux{background:color-mix(in srgb, var(--orange) 18%, var(--surface)); color:var(--orange-ink)}
+.tag.ok{background:color-mix(in srgb, var(--green) 18%, var(--surface)); color:var(--green-ink)}
+.tag.fixed{background:color-mix(in srgb, var(--blue) 16%, var(--surface)); color:var(--blue-ink)}
+.tag.issue{background:color-mix(in srgb, var(--teal) 18%, var(--surface)); color:var(--teal-ink)}
+
+.evidence{
+  margin:12px 0; padding:11px 15px; border-radius:14px;
+  background:var(--surface-2); font-size:13.5px; line-height:1.65;
+}
+.evidence b{font-weight:600}
+.evidence .lbl{
+  display:block; font-size:10.5px; font-weight:700; letter-spacing:.12em;
+  color:var(--ink-3); margin-bottom:5px;
+}
+
+.tablewrap{overflow-x:auto; margin:14px 0; border-radius:18px; box-shadow:var(--shadow)}
+table{border-collapse:collapse; width:100%; background:var(--surface); font-size:13.5px}
+th,td{padding:10px 15px; text-align:left; vertical-align:top}
+th{
+  font-size:11px; font-weight:700; letter-spacing:.08em; color:var(--ink-3);
+  background:var(--surface-2); white-space:nowrap;
+}
+td{border-top:1px solid var(--hair-2)}
+table.verdict td:nth-child(-n+2){white-space:nowrap}
+td.mono, th.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-size:12px; white-space:nowrap}
+
+ul,ol{margin:10px 0; padding-left:22px}
+li{margin:5px 0}
+ul.plain{list-style:none; padding-left:0}
+ul.plain li{
+  position:relative; padding-left:16px;
+}
+ul.plain li::before{
+  content:""; position:absolute; left:0; top:11px;
+  width:5px; height:5px; border-radius:50%; background:var(--ink-3);
+}
+
+.note{
+  border-radius:14px; padding:12px 16px; margin:14px 0; font-size:13.5px;
+  background:color-mix(in srgb, var(--blue) 9%, transparent);
+}
+.note b{color:var(--blue-ink)}
+.warn{background:color-mix(in srgb, var(--orange) 12%, transparent)}
+.warn b{color:var(--orange-ink)}
+
+footer{
+  margin-top:44px; padding-top:18px; border-top:1px solid var(--hair-2);
+  font-size:12.5px; color:var(--ink-3);
+}
+@media (max-width:640px){
+  .wrap{padding:24px 14px 60px}
+  header.mast h1{font-size:24px}
+  .finding-h,.finding-b,.card{padding-left:16px; padding-right:16px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="mast">
+  <h1>店主操作回應速度 QA</h1>
+  <p class="sub">
+    以店主身分在 production 實際操作 Demo 小館：上架與編輯菜單、修改店家資料、新增／編輯／刪除桌台，逐一量測每個點擊到畫面有反應、到伺服器回應的時間。凡是點了沒反應或慢到影響使用的，全部列出並修復，修完重新部署、再用同一套流程量一次。</p>
+  <div class="meta">
+    <span><b>環境</b> production（admin.makanmasak.com、api.makanmasak.com）</span>
+    <span><b>帳號</b> <code>demo</code>（role 1 店主）</span>
+    <span><b>餐廳</b> Demo 小館 <code>01a0d2b6-…8e11</code></span>
+    <span><b>日期</b> 2026-11-10</span>
+    <span><b>commits</b> <code>fc16aee15</code> … <code>3e070eb0b</code>（11 個）</span>
+    <span><b>部署</b> API <code>baf16560</code>、admin <code>index-Ckc45mMl.js</code></span>
+  </div>
+</header>
+
+<section>
+  <h2>結論摘要</h2>
+  <div class="card">
+    <p>
+      走查共找出 <b>13 個</b>點擊後反應不良的地方，最嚴重的是<b>新增菜品要等 5.7 秒、期間畫面完全沒有回饋</b>，店主很可能重按而建出重複菜品。根因分兩層：前端寫入時沒有載入狀態、也不做樂觀更新；後端每次菜單寫入都要等快取清除、搜尋索引同步、即時推播全部跑完才回應。</p>
+    <p>
+      兩層都已修好並上線。現在每個按鈕都在 0.1 秒內有回饋，新增菜品伺服器回應 0.44 秒，顧客端菜單約 2.5 秒內反映店主的修改。修復過程另外發現並處理了 3 個問題：刪掉的菜在管理畫面又冒出來、顧客可能把舊菜單寫回快取，以及改價／刪菜從來沒有清掉顧客端的外層快取。最後一項早在這次修改之前就存在。</p>
+  </div>
+
+  <div class="tablewrap">
+    <table class="verdict">
+      <thead><tr><th>操作</th><th>修復前</th><th>修復後</th></tr></thead>
+      <tbody>
+        <tr><td>側欄 → 菜單（首次進入）</td><td>1.5 秒畫面不動</td><td>2 ms 有反應（背景預先載入）</td></tr>
+        <tr><td>新增菜品</td><td>伺服器 5.7 秒，無回饋，可重複送出</td><td>立即顯示「儲存中」；伺服器 0.44 秒；連點只送一次</td></tr>
+        <tr><td>編輯菜品（改價）</td><td>2.4 秒，無回饋</td><td>伺服器 0.69 秒；顧客端 2.2 秒內看到新價</td></tr>
+        <tr><td>下架／上架</td><td>卡片 2–4 秒後才翻面</td><td>60 ms 內翻面；伺服器 0.4–1.3 秒</td></tr>
+        <tr><td>刪除菜品</td><td>確認框凍結約 2 秒</td><td>立即顯示「刪除中」；0.6 秒後從畫面消失</td></tr>
+        <tr><td>新增／刪除分類</td><td>1.7／2.2 秒，無回饋</td><td>有載入狀態，不再重新下載整份菜單</td></tr>
+        <tr><td>桌台：新增</td><td>1.55 秒，無回饋，再整份重抓</td><td>立即「儲存中」，0.48 秒出現，連點只送一次</td></tr>
+        <tr><td>桌台：刪除</td><td>約 1.1 秒</td><td>0.7 秒</td></tr>
+        <tr><td>座位管理頁載入</td><td>統計 API 各打兩次，切分頁再重打</td><td>每個只打一次，切分頁不重打</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note"><b>量測方式</b>：在頁面注入 XHR 計時與 MutationObserver，記錄點擊到第一次 DOM 變化、以及每個請求的耗時。每項各量一次，數字會隨網路與快取狀態浮動。</p>
+</section>
+
+<section>
+  <h2>走查發現與修復</h2>
+
+  <h3>菜單管理</h3>
+
+  <div class="finding blocker">
+    <div class="finding-h"><span class="id">M1</span><h4>新增菜品 5.7 秒無回饋，可能建出重複菜品</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>按下「新增」後按鈕沒有停用、文字不變，5.7 秒後畫面才變。店主很自然會再按一次。</p>
+      <div class="evidence"><span class="lbl">修復</span>
+        前端：送出期間按鈕停用並顯示「儲存中」，第二次送出直接忽略（<code>66fe3ffe2</code>）。<br>
+        後端：見 M6。</div>
+      <div class="evidence"><span class="lbl">驗證</span>連點兩次只送出一個 POST、只建出一道菜；「儲存中」在 50 ms 內出現；伺服器 0.44 秒。</div>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">M2</span><h4>編輯菜品、新增分類沒有載入狀態</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>「更新」2.4 秒、新增分類 1.7 秒，按鈕都維持可按、沒有任何提示。</p>
+      <div class="evidence"><span class="lbl">修復</span>同 M1 的載入狀態與防重複送出；分類表單新增 <code>saving</code> 狀態（<code>66fe3ffe2</code>）。</div>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">M3</span><h4>下架／上架要等 2–4 秒卡片才翻面</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>畫面要等 PUT 回來、再重新下載整份菜單後才更新。</p>
+      <div class="evidence"><span class="lbl">修復</span>樂觀更新：點下去立刻翻面，失敗時翻回並跳錯誤訊息；同一道菜在請求中不能再點（<code>66fe3ffe2</code>）。</div>
+      <div class="evidence"><span class="lbl">驗證</span>60 ms 內翻面。</div>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">M4</span><h4>刪除菜品／分類時確認框凍結約 2 秒</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <div class="evidence"><span class="lbl">修復</span>確認框在請求中顯示「刪除中」、按鈕停用；成功後直接從本地清單移除，不再整份重抓（<code>66fe3ffe2</code>）。</div>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">M5</span><h4>每次寫入後都重新下載整份菜單</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>每次寫入後多 0.3–0.4 秒；伺服器的即時事件還會再觸發一次重抓。</p>
+      <div class="evidence"><span class="lbl">修復</span>
+        用伺服器回應直接更新本地狀態，回應裡缺資料才重抓（<code>66fe3ffe2</code>）。自己寫入期間收到的即時事件延後成一次背景重抓，不丟棄，所以其他裝置的變更不會漏掉（<code>bc0a8e0a1</code>）。</div>
+    </div>
+  </div>
+
+  <div class="finding blocker">
+    <div class="finding-h"><span class="id">M6</span><h4>根因：菜單寫入要等快取、搜尋、推播全部做完才回應</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>
+        桌台寫入在同一個 Worker 只要 0.3–0.6 秒，菜單寫入卻要 1.6–5.7 秒。每次寫入都依序等待：搜尋索引同步、即時推播，以及兩層快取（<code>packages/database</code> 的查詢快取、edge 快取）的 tag 清除。每次 tag 清除都是好幾趟 KV 往返，每趟 0.2–0.4 秒。</p>
+      <div class="evidence"><span class="lbl">修復</span>
+        第一步：搜尋同步與推播移到 <code>waitUntil</code>（<code>fc16aee15</code>），新增菜品從 5.7 降到 4.1 秒。<br>
+        第二步：快取清除也改成回應之後才做，但<b>順序固定</b>：先清查詢快取，再清 edge 快取，最後才推播（<code>5303691a0</code>）。這個順序保證收到「菜單已變更」的客戶端重抓時，兩層快取都已經清掉。店主自己的重抓帶 <code>Cache-Control: no-cache</code>，兩層快取都會略過；同一請求內在清除完成前的快取讀取，則直接讀 D1。</div>
+      <div class="evidence"><span class="lbl">取捨</span>回應後才清快取，代表顧客可能在店主存檔後約 1–2 秒內還看到舊菜單。實測顧客端約 2.2–2.5 秒反映變更。</div>
+    </div>
+  </div>
+
+  <h3>座位管理</h3>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">S1</span><h4>新增桌台、佔用／清桌沒有即時回饋</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>新增 1.55 秒、佔用 0.9 秒，按鈕都沒有狀態；成功後再整份重抓桌台清單。</p>
+      <div class="evidence"><span class="lbl">修復</span>新增有「儲存中」與防重複送出，用回應直接插入新桌；佔用／清桌按鈕在請求中停用，成功後只更新那一張卡；刪除後直接從本地移除（<code>dbdc27c2c</code>）。</div>
+      <div class="evidence"><span class="lbl">驗證</span>新增連點兩次只送一個 POST，0.48 秒出現；刪除 0.7 秒消失。</div>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">S2</span><h4>統計 API 每次進頁打兩次，切分頁再重打</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>根因：頁面 <code>onMounted</code> 載入統計後，第一個分頁自己初次載入時又送出 <code>seating:changed</code>，頁面因此再載一次；另外還有一個監聽路由的 watcher 在切分頁時重載。</p>
+      <div class="evidence"><span class="lbl">修復</span>分頁初次載入不再送事件，移除路由 watcher，後續事件以 400 ms 合併（<code>dbdc27c2c</code>）。驗證：進頁每支 API 各一次，切到桌台設定只打 <code>/tables</code>。</div>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">S3</span><h4>「佔用」按鈕用紅色</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b"><p>例行操作卻用錯誤／危險色，已改成藍色（<code>dbdc27c2c</code>）。</p></div>
+  </div>
+
+  <h3>店家設定與導覽</h3>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">N1</span><h4>首次進入頁面時畫面停在舊頁 0.85–1.5 秒</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>頁面的 JS 是延遲載入，下載期間沒有任何提示；分頁標題卻已先換掉，標題與內容不一致。</p>
+      <div class="evidence"><span class="lbl">修復</span>頂端加載入條（超過 120 ms 才出現）；標題改成換頁成功後才更新；側欄連結在 hover／focus 時、以及登入後瀏覽器空閒時預先載入（省流量模式與 2G 跳過）（<code>07ee1f08a</code>）。</div>
+      <div class="evidence"><span class="lbl">驗證</span>點側欄「菜單」2 ms 內有反應。</div>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">N2</span><h4>側欄同時亮兩個項目</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>找到一個真的比對錯誤：在「共用選項群組」頁，「菜單」也會一起亮。現在只亮路徑最長的那一項。從菜單切到座位後「菜單」還亮著的情況，判斷是瀏覽器預設的 focus 樣式，已改成只有鍵盤操作才顯示 focus 外框（<code>07ee1f08a</code>）。</p>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">N3</span><h4>設定頁 service-items 打兩次；儲存設定 1.3–2 秒</h4><span class="tag fixed">部分修復</span></div>
+    <div class="finding-b">
+      <p>兩個子元件各自在掛載時呼叫 <code>list</code>，現在同一間餐廳共用一個進行中的請求（<code>07ee1f08a</code>）。儲存設定本來就有「儲存中」狀態；伺服器端主要的修正 <code>24ad6c15e</code> 已在之前上線，這次只多省一次 D1 讀取（<code>9f5c4f5a4</code>）。</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>修復過程中新發現的問題</h2>
+
+  <div class="finding data">
+    <div class="finding-h"><span class="id">F1</span><h4>刪掉的菜在管理畫面又冒出來</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>M6 讓推播排在快取清除之後，所以會晚一點到。實測時下架的推播在刪除期間才到達，它觸發的背景重抓帶回刪除前的菜單，蓋掉了本地的刪除。伺服器端實際上已經刪掉。</p>
+      <div class="evidence"><span class="lbl">修復</span>重抓期間如果自己有寫入開始或結束，丟掉這次結果再抓一次（<code>103c5367c</code>）。回歸測試在沒修時失敗、修了通過。</div>
+      <div class="evidence"><span class="lbl">驗證</span>下架後 0.7 秒內刪除：0.6 秒從畫面消失，之後 8 秒都沒有再出現。</div>
+    </div>
+  </div>
+
+  <div class="finding data">
+    <div class="finding-h"><span class="id">F2</span><h4>顧客讀菜單時可能把舊菜單寫回快取</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>
+        有兩種情況。一是顧客在清快取的空檔讀菜單，從還沒清的查詢快取拿到舊資料，再存回已經清過的 edge 快取；二是顧客在寫入生效前讀了 D1，結果在清除之後才存進查詢快取。兩種都會讓舊菜單最多再留 5 分鐘，例如已下架的菜顧客還點得到。這兩個競態在這次修改前就存在、時序也相同，但一直沒有防護。</p>
+      <div class="evidence"><span class="lbl">修復</span>每次延後的清除在 3 秒後重跑一次，先查詢快取、再 edge 快取（<code>4fa04afe7</code>）。測試模擬顧客在第一次清除後寫回舊菜單：沒有第二次清除時失敗，有時通過。</div>
+    </div>
+  </div>
+
+  <div class="finding data">
+    <div class="finding-h"><span class="id">F3</span><h4>改價、改名、刪菜從來沒清顧客端的外層快取</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>edge 快取只依網址裡的餐廳 ID 決定清哪一間，但有 10 條寫入路由的網址沒有餐廳 ID（<code>/menu/items/:id</code>、<code>/categories/:id</code>、選項群組、選項等），只有上下架另外走了清除路徑。結果顧客最多 5 分鐘看到舊價格。這是早就存在的問題。</p>
+      <div class="evidence"><span class="lbl">修復</span>每條菜單寫入在清查詢快取時都帶 <code>restaurant:{id}</code> tag（已逐一確認），現在記錄下來，edge 清除也涵蓋這些餐廳（<code>78d262c56</code>）。</div>
+      <div class="evidence"><span class="lbl">驗證</span>改價 150 → 168，顧客端菜單 2.2 秒內變成 168。</div>
+    </div>
+  </div>
+
+  <div class="finding blocker">
+    <div class="finding-h"><span class="id">P1</span><h4>流程事故：typecheck 失敗的 commit 被推上 main</h4><span class="tag fixed">已處理</span></div>
+    <div class="finding-b">
+      <p><code>78d262c56</code> 在 <code>verify:push</code> 回報 typecheck 失敗的情況下被推上 <code>main</code>，遠端 CI 的程式碼檢查也跟著失敗。沒有部署任何東西，因為部署要等 CI 綠燈。</p>
+      <ul class="plain">
+        <li>測試檔的型別用文字取代修改，但 Prettier 已把它排成多行，取代沒對上，也沒有報錯。</li>
+        <li>本地只跑了 <code>tsc -p .</code>，不包含測試檔；正式的 <code>typecheck</code> 腳本還會跑 <code>tsconfig.test.json</code>。</li>
+        <li>推送指令沒有依閘門結果決定是否執行。</li>
+      </ul>
+      <div class="evidence"><span class="lbl">處理</span><code>3e070eb0b</code> 讓測試直接 import <code>DeferredCacheWork</code>；之後的推送都改成閘門通過才執行。</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>驗證</h2>
+  <div class="card">
+    <ul class="plain">
+      <li>每批推送前都跑 <code>pnpm verify:push</code>，包含真 D1 整合測試（918 項）；推送後等 <code>main</code> 的 CI 綠燈才部署。</li>
+      <li>只部署有改到的 app：先 API，再 admin dashboard。每次部署後檢查 <code>/info</code> 與 <code>/api/v1/system/health</code>，並比對線上 bundle 與本地建置。</li>
+      <li>部署後用同一套流程在 Demo 小館重新量測，結果見摘要表。測試用的菜與桌台都已刪除。</li>
+    </ul>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>部署</th><th>API</th><th>admin bundle</th><th>內容</th></tr></thead>
+      <tbody>
+        <tr><td>修復前</td><td class="mono">672cdea4</td><td class="mono">—</td><td>走查基準</td></tr>
+        <tr><td>第一批</td><td class="mono">cdb1e4ff</td><td class="mono">index-Bdhd-V9U.js</td><td>M1–M5、S1–S3、N1–N3，以及 M6 第一步</td></tr>
+        <tr><td>第二批</td><td class="mono">7f102d28</td><td class="mono">（未變）</td><td>M6：回應後才清快取</td></tr>
+        <tr><td>第三批（現行）</td><td class="mono">baf16560</td><td class="mono">index-Ckc45mMl.js</td><td>F1–F3、P1</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note"><b>回滾點</b>：API <code>7f102d28</code>、admin bundle <code>index-Bdhd-V9U.js</code>。</p>
+</section>
+
+<section>
+  <h2>未驗證與後續</h2>
+  <div class="card">
+    <ul class="plain">
+      <li><b>F2 的第二次清除</b>只有自動測試證明；它防的是顧客恰好和店主同時讀菜單，線上無法穩定重現。</li>
+      <li><b>儲存設定</b>的 1.3–2 秒在修改後沒有重新量測。</li>
+      <li><b>座位模式</b>（一座位一 QR）沒有測試。</li>
+      <li><b>菜單圖片</b>每張載入約 2 秒（image-processor），高於 P90 &lt; 1 秒的目標，這次沒有處理。</li>
+      <li><b>背景預先載入</b>每次登入後多約 25 個小檔案下載，包含分析圖表等較重的頁面，可考慮縮小範圍。</li>
+      <li><b>N2 的 focus 外框</b>是推測的原因，還沒在真實瀏覽器確認。</li>
+      <li>POS 與廚房顯示讀菜單時是否略過快取沒有確認；如果沒有，它們會在店主存檔後約 1–2 秒內看到舊菜單。</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  2026-11-10 · production 走查與修復 · commits <code>fc16aee15</code>…<code>3e070eb0b</code>
+</footer>
+
+</div>
+</body>
+</html>
