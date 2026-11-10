@@ -15,6 +15,15 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: "/s/:slug",
+    name: "ShopLogin",
+    component: () => import("../views/LoginView.vue"),
+    meta: {
+      requiresAuth: false,
+      title: "廚房系統登入",
+    },
+  },
+  {
     path: "/kitchen/:restaurantId",
     name: "Kitchen",
     component: () => import("../views/EnhancedKitchenDashboard.vue"),

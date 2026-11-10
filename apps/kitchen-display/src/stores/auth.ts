@@ -4,6 +4,7 @@ import type { User } from "@/types";
 import { authApi, apiClient } from "@/services/authApi";
 import { offlineService } from "@/services/offlineService";
 import { isTokenExpired } from "@makanmasak/utils";
+import { rememberShop } from "@/utils/login-shop";
 
 export const useAuthStore = defineStore("auth", () => {
   // State
@@ -20,7 +21,11 @@ export const useAuthStore = defineStore("auth", () => {
   });
 
   // Actions
-  const login = async (credentials: { username: string; password: string }) => {
+  const login = async (credentials: {
+    username: string;
+    password: string;
+    shop?: string;
+  }) => {
     loading.value = true;
     try {
       const response = await authApi.login(credentials);
@@ -43,6 +48,9 @@ export const useAuthStore = defineStore("auth", () => {
         apiClient.tokens.setTokens(authToken);
         apiClient.tokens.setUser(userData);
         apiClient.tokens.scheduleProactiveRefresh(authToken);
+
+        const slug = userData.loginSlug ?? credentials.shop;
+        if (slug) rememberShop(slug);
 
         return { success: true };
       } else {

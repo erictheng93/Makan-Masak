@@ -12,6 +12,18 @@
           {{ t("login.title") }}
         </h1>
         <p class="text-sm text-ios-secondary">{{ t("login.subtitle") }}</p>
+        <div v-if="shopName" class="mt-3 text-center" data-testid="login-shop">
+          <p class="text-base font-semibold text-ios-text">{{ shopName }}</p>
+          <button
+            v-if="!routeSlug"
+            type="button"
+            data-testid="login-shop-clear"
+            class="text-sm text-ios-blue min-h-[44px]"
+            @click="clearShop"
+          >
+            {{ t("login.notYourShop") }}
+          </button>
+        </div>
       </div>
 
       <!-- Login Form Card -->
@@ -128,7 +140,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import {
   ChefHat,
@@ -142,9 +154,12 @@ import { useAuthStore } from "@/stores/auth";
 import { useSettingsStore } from "@/stores/settings";
 import { useI18n } from "@/i18n";
 import { resolveKitchenLoginError } from "@/utils/login-error";
+import { authApi } from "@/services/authApi";
+import { clearRememberedShop, getRememberedShop } from "@/utils/login-shop";
 
 // Composables
 const router = useRouter();
+const route = useRoute();
 const toast = useToast();
 const authStore = useAuthStore();
 const settingsStore = useSettingsStore();
@@ -160,12 +175,44 @@ const showPassword = ref(false);
 const errorMessage = ref("");
 const isLoading = ref(false);
 
+// /s/:slug is the shop's own link; on /login a remembered slug stands in.
+const routeSlug = computed(() =>
+  typeof route.params.slug === "string" ? route.params.slug : null,
+);
+const shopSlug = ref<string | null>(routeSlug.value ?? getRememberedShop());
+const shopName = ref("");
+const shopInvalid = ref(false);
+
+const clearShop = () => {
+  clearRememberedShop();
+  shopSlug.value = null;
+  shopName.value = "";
+};
+
+const loadShop = async () => {
+  if (!shopSlug.value) return;
+  try {
+    shopName.value = (await authApi.getLoginContext(shopSlug.value)).name;
+  } catch (error: unknown) {
+    const status = (error as { response?: { status?: number } })?.response
+      ?.status;
+    if (status !== 404) return; // offline etc.: still allow a sign-in attempt
+    if (routeSlug.value) {
+      shopInvalid.value = true;
+      errorMessage.value = t("login.shopNotFound");
+    } else {
+      clearShop(); // remembered shop no longer exists
+    }
+  }
+};
+
 // Computed
 const canSubmit = computed(() => {
   return (
     credentials.value.username.trim() !== "" &&
     credentials.value.password.trim() !== "" &&
-    !isLoading.value
+    !isLoading.value &&
+    !shopInvalid.value
   );
 });
 
@@ -180,6 +227,7 @@ const handleLogin = async () => {
     await authStore.login({
       username: credentials.value.username.trim(),
       password: credentials.value.password,
+      ...(shopSlug.value ? { shop: shopSlug.value } : {}),
     });
 
     toast.success(t("login.loginSuccess"));
@@ -214,6 +262,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
 onMounted(async () => {
   // 初始化設定
   settingsStore.initialize();
+  void loadShop();
 
   // 檢查是否已登入
   if (authStore.isAuthenticated) {

@@ -113,6 +113,7 @@ export interface User {
   restaurantId: number;
   permissions: string[];
   lastLogin?: string;
+  loginSlug?: string | null;
 }
 
 export interface AuthState {

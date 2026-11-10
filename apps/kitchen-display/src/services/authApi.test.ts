@@ -71,6 +71,23 @@ describe("kitchen auth API config", () => {
     expect(assign).not.toHaveBeenCalled();
   });
 
+  it("does not redirect from a shop login page", () => {
+    const assign = vi.fn();
+    createKitchenAuthFailureHandler()({ pathname: "/s/my-shop", assign });
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it("redirects session expiry to the remembered shop link", () => {
+    localStorage.setItem("mm_kitchen_login_shop", "my-shop");
+    try {
+      const assign = vi.fn();
+      createKitchenAuthFailureHandler()({ pathname: "/kitchen/1", assign });
+      expect(assign).toHaveBeenCalledWith("/s/my-shop");
+    } finally {
+      localStorage.clear();
+    }
+  });
+
   it("redirects to login once when authentication fails away from the login page", () => {
     const assign = vi.fn();
     const handleAuthFailure = createKitchenAuthFailureHandler();

@@ -3,6 +3,7 @@ import { resolveUserFacingError } from "@makanmasak/shared/utils/user-facing-err
 const LOGIN_ERROR_KEYS: Record<string, string> = {
   INVALID_CREDENTIALS: "login.invalidCredentials",
   ACCOUNT_LOCKED: "login.accountLocked",
+  SHOP_REQUIRED: "login.shopRequired",
 };
 
 /**

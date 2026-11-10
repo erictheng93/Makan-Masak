@@ -156,6 +156,7 @@ import ConnectionStatus from "@/components/common/ConnectionStatus.vue";
 import OfflineStatus from "@/components/offline/OfflineStatus.vue";
 import { resolveUserFacingError } from "@makanmasak/shared/utils/user-facing-error";
 import { sameOrderId } from "@/utils/orderId";
+import { loginPath } from "@/utils/login-shop";
 
 // Props
 const props = defineProps<{
@@ -384,7 +385,7 @@ const handleUpdateOrderStatus = async (
 const handleLogout = async () => {
   try {
     await authStore.logout();
-    await router.push("/login");
+    await router.push(loginPath());
     toast.success(t("kitchen.loggedOut"));
   } catch (error: unknown) {
     toast.error(
@@ -462,7 +463,7 @@ const toKitchenSSEEvent = (event: RealtimeEvent): KitchenSSEEvent => ({
 onMounted(async () => {
   // Check authentication
   if (!authStore.isAuthenticated || !authStore.isChef) {
-    await router.push("/login");
+    await router.push(loginPath());
     return;
   }
 

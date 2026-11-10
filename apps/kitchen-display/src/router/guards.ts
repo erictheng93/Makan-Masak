@@ -1,5 +1,6 @@
 import type { RouteLocationNormalized, Router } from "vue-router";
 import type { useAuthStore } from "@/stores/auth";
+import { loginPath } from "@/utils/login-shop";
 
 type AuthStore = ReturnType<typeof useAuthStore>;
 
@@ -13,7 +14,7 @@ export function getKitchenRouteRedirect(
 
   if (!authStore.isAuthenticated) {
     return {
-      path: "/login",
+      path: loginPath(),
       query: { redirect: to.fullPath },
     };
   }

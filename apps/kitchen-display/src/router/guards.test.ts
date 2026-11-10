@@ -42,6 +42,33 @@ describe("kitchen route guards", () => {
     ).toBeNull();
   });
 
+  it("allows the shop login route unauthenticated", async () => {
+    const { default: routes } = await import("./index");
+    const shopRoute = routes.find((r) => r.path === "/s/:slug");
+    expect(shopRoute).toBeDefined();
+    expect(
+      getKitchenRouteRedirect(
+        route({
+          meta: shopRoute!.meta,
+          params: { slug: "my-shop" },
+          fullPath: "/s/my-shop",
+        }),
+        auth({ isAuthenticated: false }),
+      ),
+    ).toBeNull();
+  });
+
+  it("sends unauthenticated users to the remembered shop link", () => {
+    localStorage.setItem("mm_kitchen_login_shop", "my-shop");
+    try {
+      expect(
+        getKitchenRouteRedirect(route(), auth({ isAuthenticated: false })),
+      ).toEqual({ path: "/s/my-shop", query: { redirect: "/kitchen/42" } });
+    } finally {
+      localStorage.clear();
+    }
+  });
+
   it("redirects unauthenticated protected routes to login", () => {
     expect(
       getKitchenRouteRedirect(route(), auth({ isAuthenticated: false })),

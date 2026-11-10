@@ -523,6 +523,10 @@ const viVN: Messages = {
     invalidCredentials: "Tên người dùng hoặc mật khẩu không đúng",
     accountLocked:
       "Tài khoản đã bị khóa. Vui lòng thử lại sau hoặc liên hệ quản trị viên",
+    shopRequired: "Vui lòng đăng nhập bằng liên kết đăng nhập của cửa hàng",
+    shopNotFound:
+      "Liên kết đăng nhập này không hợp lệ. Hãy xin chủ cửa hàng liên kết đúng",
+    notYourShop: "Không phải cửa hàng của bạn?",
     loginSuccess: "Đăng nhập thành công!",
     password: "Mật khẩu",
     passwordPlaceholder: "Nhập mật khẩu",

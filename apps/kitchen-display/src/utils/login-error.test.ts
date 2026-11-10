@@ -21,6 +21,12 @@ describe("kitchen login error copy", () => {
     },
   });
 
+  it("points SHOP_REQUIRED at the shop's login link", () => {
+    expect(
+      resolveKitchenLoginError(rejected(400, "SHOP_REQUIRED"), translate),
+    ).toBe("login.shopRequired");
+  });
+
   it("separates a locked account from a wrong password", () => {
     expect(
       resolveKitchenLoginError(rejected(401, "ACCOUNT_LOCKED"), translate),

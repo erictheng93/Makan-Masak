@@ -522,6 +522,10 @@ const msMY: Messages = {
     invalidCredentials: "Nama pengguna atau kata laluan tidak sah",
     accountLocked:
       "Akaun anda dikunci. Sila cuba lagi kemudian atau hubungi pentadbir",
+    shopRequired: "Sila log masuk melalui pautan log masuk kedai anda",
+    shopNotFound:
+      "Pautan log masuk ini tidak sah. Minta pautan yang betul daripada pemilik kedai",
+    notYourShop: "Bukan kedai anda?",
     loginSuccess: "Log masuk berjaya!",
     password: "Kata laluan",
     passwordPlaceholder: "Masukkan kata laluan",

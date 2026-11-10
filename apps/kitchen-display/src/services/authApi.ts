@@ -1,6 +1,7 @@
 import { createAuthenticatedApiClient } from "@makanmasak/auth-client";
 import type { ApiResponse, User } from "@/types";
 import { describeErrorForLog } from "@/utils/unknown";
+import { isLoginPath, loginPath } from "@/utils/login-shop";
 
 export function getKitchenApiBaseUrl(env = import.meta.env): string {
   const baseUrl = env.VITE_API_BASE_URL;
@@ -13,8 +14,6 @@ export function getKitchenApiBaseUrl(env = import.meta.env): string {
 
   return baseUrl || "/api/v1";
 }
-
-const LOGIN_PATH = "/login";
 
 interface AuthFailureLocation {
   pathname: string;
@@ -29,12 +28,12 @@ export function createKitchenAuthFailureHandler() {
   ): void {
     // A failed login also returns 401, but navigating from this page destroys
     // the login form before it can render the server-provided error message.
-    if (loginRedirectRequested || location.pathname === LOGIN_PATH) {
+    if (loginRedirectRequested || isLoginPath(location.pathname)) {
       return;
     }
 
     loginRedirectRequested = true;
-    location.assign(LOGIN_PATH);
+    location.assign(loginPath());
   };
 }
 
@@ -55,6 +54,7 @@ export default api;
 export interface LoginCredentials {
   username: string;
   password: string;
+  shop?: string;
 }
 
 export interface LoginResponse {
@@ -64,7 +64,21 @@ export interface LoginResponse {
   expiresIn: number;
 }
 
+export interface LoginContext {
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+}
+
 export const authApi = {
+  // Public shop info for the login page; 404 SHOP_NOT_FOUND = invalid link.
+  async getLoginContext(slug: string): Promise<LoginContext> {
+    const response = await api.get(
+      `/restaurants/login-context/${encodeURIComponent(slug)}`,
+    );
+    return response.data.data;
+  },
+
   // 登入
   async login(
     credentials: LoginCredentials,

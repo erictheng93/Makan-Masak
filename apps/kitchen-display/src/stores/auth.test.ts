@@ -119,4 +119,32 @@ describe("kitchen auth store — failed login messages", () => {
 
     await expect(useAuthStore().login(credentials)).rejects.toBe(apiError);
   });
+
+  it("remembers the shop after a successful login", async () => {
+    vi.mocked(authApi.login).mockResolvedValue({
+      success: true,
+      data: {
+        user: {
+          id: 1,
+          username: "chef1",
+          name: "Chef",
+          role: 2,
+          restaurantId: 7,
+          permissions: [],
+          loginSlug: "my-shop",
+        },
+        token: "t",
+        expiresIn: 1,
+      },
+      timestamp: "",
+    });
+
+    await useAuthStore().login({ ...credentials, shop: "other" });
+
+    expect(authApi.login).toHaveBeenCalledWith(
+      expect.objectContaining({ shop: "other" }),
+    );
+    expect(localStorage.getItem("mm_kitchen_login_shop")).toBe("my-shop");
+    localStorage.clear();
+  });
 });

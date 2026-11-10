@@ -1,16 +1,22 @@
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
 
 /* 廚房顯示專用樣式 */
 @layer base {
   html {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family:
+      "Inter",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Roboto,
+      sans-serif;
   }
 
   body {
     @apply bg-ios-bg text-ios-text;
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
   /* 大屏幕優化 */
@@ -170,17 +176,17 @@
 }
 
 .Vue-Toastification__toast--success {
-  background-color: #34C759;
+  background-color: #34c759;
 }
 
 .Vue-Toastification__toast--error {
-  background-color: #FF3B30;
+  background-color: #ff3b30;
 }
 
 /* 載入動畫 */
 .loading-spinner {
   @apply animate-spin rounded-full border-4 border-gray-200;
-  border-top-color: #007AFF;
+  border-top-color: #007aff;
 }
 
 /* 連接狀態指示器 */

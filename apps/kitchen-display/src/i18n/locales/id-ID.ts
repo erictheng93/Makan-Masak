@@ -522,6 +522,10 @@ const idID: Messages = {
     invalidCredentials: "Nama pengguna atau kata sandi tidak valid",
     accountLocked:
       "Akun Anda dikunci. Silakan coba lagi nanti atau hubungi administrator",
+    shopRequired: "Silakan masuk melalui tautan login toko Anda",
+    shopNotFound:
+      "Tautan login ini tidak valid. Minta tautan yang benar kepada pemilik toko",
+    notYourShop: "Bukan toko Anda?",
     loginSuccess: "Masuk berhasil!",
     password: "Kata sandi",
     passwordPlaceholder: "Masukkan kata sandi",

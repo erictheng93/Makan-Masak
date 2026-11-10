@@ -125,6 +125,10 @@ const enUS: Messages = {
     invalidCredentials: "Invalid username or password",
     accountLocked:
       "Your account is locked. Please try again later or contact an administrator",
+    shopRequired: "Please sign in with your shop's login link",
+    shopNotFound:
+      "This login link is not valid. Ask the shop owner for the correct link",
+    notYourShop: "Not your shop?",
   },
 
   // Copy resolveUserFacingError picks from an HTTP status or transport error.
