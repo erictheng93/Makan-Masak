@@ -21,7 +21,7 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --ground:#0F0F13; --surface:#1B1B21; --surface-2:#212128;
-    --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#7E7E8A;
+    --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#8E8E9A;
     --hair:rgba(255,255,255,.14); --hair-2:rgba(255,255,255,.07);
     --shadow:0 1px 1.5px rgba(0,0,0,.4), 0 5px 16px rgba(0,0,0,.35);
     --shadow-sm:0 1px 1px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
@@ -35,7 +35,7 @@
 }
 :root[data-theme="dark"]{
   --ground:#0F0F13; --surface:#1B1B21; --surface-2:#212128;
-  --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#7E7E8A;
+  --ink:#F0F0F4; --ink-2:#B4B4BE; --ink-3:#8E8E9A;
   --hair:rgba(255,255,255,.14); --hair-2:rgba(255,255,255,.07);
   --shadow:0 1px 1.5px rgba(0,0,0,.4), 0 5px 16px rgba(0,0,0,.35);
   --shadow-sm:0 1px 1px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
@@ -146,7 +146,7 @@ p{margin:10px 0}
 }
 .evidence b{font-weight:600}
 .evidence .lbl{
-  display:block; font-size:10.5px; font-weight:700; letter-spacing:.12em;
+  display:block; font-size:11px; font-weight:700; letter-spacing:.12em;
   color:var(--ink-3); margin-bottom:5px;
 }
 
@@ -216,7 +216,7 @@ footer{
     <p>
       兩層都已修好並上線。現在每個按鈕都在 0.1 秒內有回饋，新增菜品伺服器回應 0.44 秒，顧客端菜單約 2.5 秒內反映店主的修改。修復過程另外發現並處理了 3 個問題：刪掉的菜在管理畫面又冒出來、顧客可能把舊菜單寫回快取，以及改價／刪菜從來沒有清掉顧客端的外層快取。最後一項早在這次修改之前就存在。</p>
     <p>之後又走查了店主總覽、員工管理、優惠券、POS 與廚房顯示，修掉會讓店主卡住或畫面閃動的問題，並把員工帳號改成每家店各自唯一：每家店有自己的登入網址，登入鎖定改為按帳號計算，API 與兩個前端都設了回滾下限。處理訂單與 POS 結帳因為 Demo 小館拒收訂單，改在新建的 staging 環境走完。</p>
-    <p>第四輪把錯誤通知統一為「每個失敗剛好顯示一次」，並加上守門防止新的無聲錯誤與無名稱按鈕；補了手機版版面、停用員工的確認，以及部署前必須是乾淨工作目錄的保護。staging 走查從顧客點餐一路到收款與退款，找出 7 個問題：其中 2 個只影響 staging，其餘 5 個（CSRF 錯誤誤報成權限不足、沒開班時的死按鈕、收銀員看得到不能用的按鈕、寫死的中文提示、廚房更新慢）在 production 一樣存在，都已修正，等部署。</p>
+    <p>第四輪把錯誤通知統一為「每個失敗剛好顯示一次」，並加上守門防止新的無聲錯誤與無名稱按鈕；補了手機版版面、停用員工的確認，以及部署前必須是乾淨工作目錄的保護。staging 走查從顧客點餐一路到收款與退款，找出 8 個問題：其中 2 個只影響 staging，其餘 6 個（CSRF 錯誤誤報成權限不足、沒開班時的死按鈕、收銀員看得到不能用的按鈕、寫死的中文提示、廚房更新慢、顧客送單慢）在 production 一樣存在，都已修正，等部署。</p>
   </div>
 
   <div class="tablewrap">
@@ -242,7 +242,8 @@ footer{
         <tr><td>優惠券修改</td><td>伺服器 1.58 秒（新增 2.19、停用 1.93）</td><td>伺服器 0.46 秒，0.88 秒畫面更新</td></tr>
         <tr><td>POS 確認收款（未開班）</td><td>按鈕灰掉，沒有任何說明</td><td>提示先到收銀機管理開班，附連結</td></tr>
         <tr><td>CSRF 失效時的寫入</td><td>兩則「你沒有權限」</td><td>一則「登入狀態已失效，請重新登入」</td></tr>
-        <tr><td>廚房開始／完成一個品項</td><td>伺服器 2.6–3.4 秒</td><td>預估省 0.7–1.1 秒，部署後重新量測</td></tr>
+        <tr><td>顧客送出訂單</td><td>5.8–6.0 秒</td><td>staging 3.35 秒</td></tr>
+        <tr><td>廚房開始／完成一個品項</td><td>伺服器 2.6–3.4 秒；完成後卡片 2.5 秒才移動</td><td>staging：完成 1.3 秒、開始 2.1 秒</td></tr>
         <tr><td>廚房顯示閒置時</td><td>沒有訂單時每 30 秒整個畫面白色閃一下</td><td>背景更新時畫面完全不變</td></tr>
       </tbody>
     </table>
@@ -620,10 +621,20 @@ footer{
   </div>
 
   <div class="finding ux">
-    <div class="finding-h"><span class="id">T7</span><h4>廚房按「開始」「完成」後卡片要 2.5 秒才移動</h4><span class="tag fixed">已修改，待量測</span></div>
+    <div class="finding-h"><span class="id">T7</span><h4>廚房按「開始」「完成」後卡片要 2.5 秒才移動</h4><span class="tag fixed">部分改善</span></div>
     <div class="finding-b">
       <p>每個品項的狀態更新在伺服器內就花 2.6–3.4 秒（<code>x-response-time</code> 2859 ms），與 production 同區。拆解後約 12 個依序等待：驗證、模組檢查、多次 D1 查詢、KV 刪除，以及即時推播。</p>
-      <div class="evidence"><span class="lbl">修改</span>清除訂單快取與父訂單狀態同步改為同時進行；品項與佇列推播改到回應之後（<code>waitUntil</code>），兩者本來就只記 log、不影響回應內容（<code>237b29597</code>、<code>0533d8b41</code>）。預估省 0.7–1.1 秒，部署後要重新量測。</div>
+      <div class="evidence"><span class="lbl">修改</span>清除訂單快取與父訂單狀態同步改為同時進行；品項與佇列推播改到回應之後（<code>waitUntil</code>），兩者本來就只記 log、不影響回應內容（<code>237b29597</code>、<code>0533d8b41</code>）。預估省 0.7–1.1 秒。</div>
+      <div class="evidence"><span class="lbl">staging 量測</span>「完成」：伺服器 3.4 → 1.3–1.5 秒，卡片 2.5 → 1.3 秒移動。「開始」：伺服器 2.6 → 2.2–2.4 秒，改善較少，因為訂單第一個品項開始時，訂單本身的狀態更新與推播仍在回應前等待。</div>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">T8</span><h4>顧客送出訂單要等將近 6 秒</h4><span class="tag fixed">已改善</span></div>
+    <div class="finding-b">
+      <p>兩次量測都是 5.8–6.0 秒，不是冷啟動。建立訪客訂單約有 20 個依序等待：額度計數、防濫用計數、餐廳／桌台／座位／QR 檢查、建單、稽核、推播，以及三個 KV 寫入。</p>
+      <div class="evidence"><span class="lbl">修改</span>互不相關的讀取改為同時進行（錯誤仍按原本的先後判斷）、三個 KV 寫入同時進行、額度的三個計數同時讀；稽核紀錄、即時推播與網頁推播移到回應之後。價格、優惠券、重複送單檢查、防濫用計數與訂單寫入都沒有延後（<code>178251539</code>）。</div>
+      <div class="evidence"><span class="lbl">staging 量測</span>5.8 秒 → 3.35 秒。剩下的大頭是建單本身會重讀剛查過的餐廳與桌台，要改 <code>packages/database</code> 的介面，留待下一輪。</div>
     </div>
   </div>
 </section>
@@ -714,7 +725,7 @@ footer{
         <tr><td>第十批</td><td class="mono">（未變）</td><td class="mono">（未變）</td><td>手動套用 <code>0042</code>：帳號改為每店唯一</td></tr>
         <tr><td>第十一批</td><td class="mono">（未變）</td><td class="mono">（未變）</td><td>K1：只部署廚房顯示 <code>index-Djoketd1.js</code></td></tr>
         <tr><td>第十二批</td><td class="mono">（未變）</td><td class="mono">index-BiALJuLU.js</td><td>第四輪（commit <code>412e852</code>）；廚房顯示 <code>index-CJGWq13N.js</code></td></tr>
-        <tr><td>第十三批</td><td class="mono">待部署</td><td class="mono">待部署</td><td>T3–T7：等 gate 與 CI 通過後部署 API 與 admin dashboard</td></tr>
+        <tr><td>第十三批</td><td class="mono">待部署</td><td class="mono">待部署</td><td>T3–T8：等 gate 與 CI 通過後部署 API 與 admin dashboard</td></tr>
       </tbody>
     </table>
   </div>
@@ -733,7 +744,7 @@ footer{
       <li><b>其他裝置讀菜單：</b>廚房顯示不讀菜單；管理端的讀取都帶登入憑證，本來就略過 edge 快取，只有內層查詢快取在清除生效前約 1 秒可能是舊的。</li>
       <li><b>R1 的根因</b>是推論，沒有逐步追到；兩條實測路線都沒再重現，但沒有從每一頁出發試過。</li>
       <li><b>Staging 不能證明 production 安全：</b>staging 的資料庫由新基線建立，production 由舊的 migration 系列建立，兩者仍有差異；正式 migration 前仍要在 production 結構的副本上預演。</li>
-      <li><b>整體 API 延遲：</b>staging 上登入 2.2–2.5 秒、開班 2.1 秒、收款 3.2 秒、送出退款 3.5 秒、顧客送單 6 秒。每個需登入的請求都先付驗證（約 0.4–0.5 秒）與模組檢查（約 0.2–0.4 秒）的依序等待；這兩段影響所有頁面，值得下一輪處理。</li>
+      <li><b>整體 API 延遲：</b>staging 上登入 2.2–2.5 秒、開班 2.1 秒、收款 3.2 秒、送出退款 3.5 秒、顧客送單 3.35 秒（原 6 秒）。每個需登入的請求都先付驗證（約 0.4–0.5 秒）與模組檢查（約 0.2–0.4 秒）的依序等待；這兩段影響所有頁面，值得下一輪處理。</li>
       <li><b>POS 其他小問題：</b>選「全額退款」不會自動帶入金額；班次標題顯示原始 ID（<code>01a1c5cf-…</code>）而非可讀名稱；收款成功、退款等對話框沒有 <code>role="dialog"</code>；退款送審後沒有走查店主核准的步驟。</li>
       <li><b>訪客訂單需要店員先接單</b>才會出現在廚房（廚房只顯示已確認的訂單）。這是現有設計，但店家若沒人盯訂單頁，顧客會一直等；要不要自動確認是產品決定。</li>
       <li><b>無聲錯誤的基準：</b>仍有 134 處只寫 log 的 catch 待逐步改掉。</li>
