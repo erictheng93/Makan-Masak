@@ -29,7 +29,7 @@ Before adding a Durable Object alarm (`setAlarm`), read `CLAUDE.md`, "Durable Ob
 
 ## Testing Guidelines
 
-Vitest is the primary test runner; Playwright covers end-to-end and visual flows. Name tests `*.test.ts` and keep them near the owning app/package or under `tests/`. Global coverage thresholds are 85%; `apps/api/src/features/**/*.ts` requires 90% functions, lines, and statements, with an interim 78% branch threshold. Add or update tests with every behavior change, especially for API routes, realtime flows, and database logic.
+Vitest is the primary test runner; Playwright covers end-to-end and visual flows. Name tests `*.test.ts` and keep them near the owning app/package or under `tests/`. The global coverage target is 85%, but the enforced whole-suite floor is the measured baseline in the root `vitest.config.ts` (62 / 56 / 57 / 63 statements / branches / functions / lines as of 2026-11). The old 85% sat under a `global:` key that Vitest reads as a file glob, so it never ran. Ratchet the floor up as coverage rises, never down; `apps/api/src/features/**/*.ts` requires 90% functions, lines, and statements, with an interim 78% branch threshold. Add or update tests with every behavior change, especially for API routes, realtime flows, and database logic.
 
 ## Database Schema & Migration Guidelines
 
