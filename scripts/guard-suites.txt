@@ -38,3 +38,4 @@ scripts/generate-strict-baseline.cjs                 tests/unit/generate-strict-
 scripts/check-template-currency.cjs                  tests/unit/check-template-currency.test.ts
 scripts/verify.sh                                    tests/unit/verify-real-integration-decision.test.ts
 scripts/api-rollback.cjs                             tests/unit/api-rollback-guard.test.ts
+scripts/pages-rollback-check.cjs                    tests/unit/api-rollback-guard.test.ts

@@ -85,6 +85,7 @@
     "i18n:check-handoff": "tsx scripts/i18n-locale-coverage.ts --check-handoff",
     "i18n:import-handoff": "tsx scripts/i18n-locale-coverage.ts --import-handoff",
     "rollback:api": "node scripts/api-rollback.cjs",
+    "rollback:check": "node scripts/pages-rollback-check.cjs",
     "deploy:prod": "pnpm run check:prod-config && pnpm run check:migration-dual-track && pnpm run build && pnpm -r run deploy:prod",
     "feature:create": "node scripts/migration/create-feature.js",
     "feature:migrate": "node scripts/migration/migrate-routes.js",

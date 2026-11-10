@@ -101,6 +101,10 @@ MakanMasak is a modern, serverless restaurant management system built on Cloudfl
   or share one lockout counter across shops. When a migration makes older API
   code unsafe against the new data, raise the floor in the same change.
   `deploy:prod` in `apps/api` tags each version with its commit for this check.
+  The admin dashboard and kitchen display have floors too
+  (`rollback-floor.json` in each app): before rolling either back in the
+  Pages dashboard, run `pnpm rollback:check <admin|kitchen> <deployment-id>`;
+  builds older than the floor have no `/s/{shop}` login page.
 - **ID Strategy**: mixed by design while legacy modules remain. New domain tables should prefer `TEXT` UUID v7 primary keys, but existing integer-autoincrement tables are still valid until a scoped migration retires them. Do not claim the whole database is UUID-only.
 - **Timestamp Strategy**: use `INTEGER` Unix milliseconds via Drizzle `{ mode: "timestamp_ms" }`. Avoid new `TEXT` timestamp columns.
 - **Idempotency Strategy**: nullable idempotency/event keys on payment, webhook, billing, or retryable write paths require a DB-level partial unique index such as `WHERE idempotency_key IS NOT NULL`.

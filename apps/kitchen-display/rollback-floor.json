@@ -1,0 +1,6 @@
+{
+  "project": "makanmasak-kitchen",
+  "commit": "b0897e9c1da18b6dfc7dc3249bf7cff8fb73d17e",
+  "deployments": [],
+  "reason": "Staff usernames are unique per restaurant since migration 0042. Kitchen display builds before this commit have no /s/{shop} login page and never send a shop code, so staff whose username exists at more than one shop could not sign in at all (the API answers SHOP_REQUIRED and the old page has no shop link to offer)."
+}

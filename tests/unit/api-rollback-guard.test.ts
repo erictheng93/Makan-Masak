@@ -93,3 +93,42 @@ describe("API rollback floor", () => {
     expect(typeof file.reason).toBe("string");
   });
 });
+
+describe("Pages rollback floors", () => {
+  for (const app of ["admin-dashboard", "kitchen-display"]) {
+    it(`keeps the ${app} floor file well-formed`, () => {
+      const file = JSON.parse(
+        readFileSync(
+          fileURLToPath(
+            new URL(`../../apps/${app}/rollback-floor.json`, import.meta.url),
+          ),
+          "utf8",
+        ),
+      );
+      expect(file.project).toMatch(/^makanmasak-/);
+      expect(file.commit).toMatch(/^[0-9a-f]{40}$/);
+      expect(Array.isArray(file.deployments)).toBe(true);
+      expect(typeof file.reason).toBe("string");
+    });
+  }
+
+  // Pages reports a 7-char source commit; the shared decision must accept it.
+  it("judges a Pages source commit with the same rule as the API", () => {
+    expect(
+      decideRollback({
+        floor: { commit: floor.commit, versions: [] },
+        versionId: "4512ec32",
+        tag: "83114cb",
+        isAncestor: () => false,
+      }).allowed,
+    ).toBe(false);
+    expect(
+      decideRollback({
+        floor: { commit: floor.commit, versions: [] },
+        versionId: "c9e3d24c",
+        tag: "4d5ee22",
+        isAncestor: () => true,
+      }).allowed,
+    ).toBe(true);
+  });
+});

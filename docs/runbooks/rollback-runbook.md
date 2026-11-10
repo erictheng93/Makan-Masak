@@ -41,7 +41,20 @@ wrangler deployments list --name <worker-name>
 wrangler rollback --name <worker-name> --message "Rollback <incident-id>"
 ```
 
-5. Roll back affected Pages app from the Cloudflare Pages dashboard to the previous known-good deployment.
+5. Roll back an affected Pages app from the Cloudflare Pages dashboard to a
+   known-good deployment. **For the admin dashboard and the kitchen display,
+   check the target first** (wrangler has no Pages rollback command, so this
+   check is the only gate):
+
+```bash
+pnpm rollback:check admin <deployment-id>     # or: kitchen
+```
+
+   It refuses any deployment older than the commit in that app's
+   `rollback-floor.json`. Since migration 0042 those older builds have no
+   `/s/{shop}` login page, so staff whose username exists at more than one
+   shop could not sign in at all. Only click "Rollback" on a deployment the
+   check prints as safe.
 6. If a D1 migration is involved, do not manually reverse it in production until the backup/restore runbook has been reviewed for the incident.
 7. Re-run smoke checks:
 

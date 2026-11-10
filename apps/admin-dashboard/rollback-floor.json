@@ -1,0 +1,6 @@
+{
+  "project": "makanmasak-admin",
+  "commit": "45df9560fd604803382aad6de97d82c5a4e9cf0a",
+  "deployments": [],
+  "reason": "Staff usernames are unique per restaurant since migration 0042. Admin dashboard builds before this commit have no /s/{shop} login page and never send a shop code, so staff whose username exists at more than one shop could not sign in at all (the API answers SHOP_REQUIRED and the old page has no shop link to offer)."
+}
