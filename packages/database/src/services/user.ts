@@ -23,7 +23,21 @@ import {
   type UserRole,
 } from "../schema";
 import type { UserPreferences } from "@makanmasak/shared-types";
+import { ApiError } from "@makanmasak/utils";
 import { BaseService } from "./base";
+
+/**
+ * A 409 the admin form can pin to the offending field. A plain Error here was
+ * rebuilt by handleError into a 500, so the owner saw "cannot process this
+ * right now" for an ordinary taken username.
+ */
+const takenField = (field: "username" | "email", message: string) =>
+  new ApiError(
+    field === "username" ? "USERNAME_TAKEN" : "EMAIL_TAKEN",
+    message,
+    409,
+    [{ field, message, code: "taken" }],
+  );
 
 /**
  * `last_login_at_ms`, `created_at_ms` and `updated_at_ms` are `timestamp_ms`
@@ -119,7 +133,7 @@ export class UserService extends BaseService {
         .get();
 
       if (existingUser) {
-        throw new Error("Username already exists");
+        throw takenField("username", "Username already exists");
       }
 
       // 檢查 email 是否已存在（如果提供）
@@ -131,7 +145,7 @@ export class UserService extends BaseService {
           .get();
 
         if (existingEmail) {
-          throw new Error("Email already exists");
+          throw takenField("email", "Email already exists");
         }
       }
 
@@ -314,7 +328,7 @@ export class UserService extends BaseService {
           .get();
 
         if (existingEmail) {
-          throw new Error("Email already exists");
+          throw takenField("email", "Email already exists");
         }
       }
 
