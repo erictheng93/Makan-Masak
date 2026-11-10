@@ -24,11 +24,15 @@ describe("kitchen-display production config", () => {
     expect(html).not.toMatch(/http-equiv=["']Content-Security-Policy["']/i);
   });
 
-  it("builds the deploy artifact before direct Pages deploys", () => {
+  it("builds the deploy artifact from a clean tree before direct Pages deploys", () => {
     const pkg = JSON.parse(
       readFileSync(resolve(appRoot, "package.json"), "utf-8"),
     ) as { scripts?: Record<string, string> };
 
-    expect(pkg.scripts?.["deploy:prod"]).toMatch(/^pnpm run build && /);
+    // Refuse a dirty tree first (Codex edits the main checkout live), then
+    // always build, so the uploaded dist is this commit and nothing else.
+    expect(pkg.scripts?.["deploy:prod"]).toMatch(
+      /^node \.\.\/\.\.\/scripts\/require-clean-build\.cjs && pnpm run build && wrangler pages deploy /,
+    );
   });
 });
