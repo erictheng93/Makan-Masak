@@ -98,6 +98,33 @@ describe("OwnerView data loading", () => {
     wrapper.unmount();
   });
 
+  // The probe took ~1.7s on production and used to hold every number behind it.
+  it("finishes loading the dashboard while the health probe is still pending", async () => {
+    let answerHealth!: (value: unknown) => void;
+    respondWith({
+      "/monitoring/health": () =>
+        new Promise((resolve) => {
+          answerHealth = resolve;
+        }),
+    });
+    const wrapper = await mountView();
+
+    expect((wrapper.vm as unknown as { isLoading: boolean }).isLoading).toBe(
+      false,
+    );
+    expect(apiGet).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/analytics\/dashboard/),
+    );
+
+    answerHealth({ data: { overall: "critical", components: {} } });
+    await flushPromises();
+    expect(
+      (wrapper.vm as unknown as { healthData: { overall: string } | null })
+        .healthData?.overall,
+    ).toBe("critical");
+    wrapper.unmount();
+  });
+
   it("still reports a failure of a core request", async () => {
     respondWith({
       "/orders/active": () => Promise.reject(new Error("orders down")),

@@ -727,8 +727,27 @@ function buildScopedUrl(
   return query ? `${path}?${query}` : path;
 }
 
+// The health probe is the slowest call here (~1.7s on production) and the one
+// an owner looks at least, so it fills its own panel when it lands instead of
+// holding every other number behind isLoading.
+async function fetchHealth() {
+  try {
+    // 503 means "critical" and its body is the report the health panel shows.
+    const res = await api.get("/monitoring/health", {
+      validateStatus: (s: number) => s < 400 || s === 503,
+    });
+    const payload = res.data;
+    healthData.value = (
+      payload?.success ? payload.data : payload
+    ) as typeof healthData.value;
+  } catch {
+    // Left as-is: the panel keeps its last reading rather than claiming health.
+  }
+}
+
 // --- Fetch all data with graceful degradation ---
 async function fetchAllData() {
+  void fetchHealth();
   isLoading.value = true;
   error.value = null;
 
@@ -742,7 +761,6 @@ async function fetchAllData() {
       activeOrdersRes,
       userStatsRes,
       usersRes,
-      healthRes,
       onShiftRes,
       alertsRes,
     ] = await Promise.allSettled([
@@ -750,10 +768,6 @@ async function fetchAllData() {
       api.get(buildScopedUrl("/orders/active")),
       api.get(buildScopedUrl("/users/stats")),
       api.get(buildScopedUrl("/users", { limit: 10 })),
-      // 503 means "critical" and its body is the report the health panel shows.
-      api.get("/monitoring/health", {
-        validateStatus: (s: number) => s < 400 || s === 503,
-      }),
       restaurantId
         ? schedulingService.getClockedInEmployees(restaurantId)
         : Promise.resolve([]),
@@ -821,14 +835,6 @@ async function fetchAllData() {
       onShiftIds.value = toOnShiftIds(onShiftRes.value);
     }
 
-    // Health check
-    if (healthRes.status === "fulfilled") {
-      const payload = healthRes.value.data;
-      healthData.value = (
-        payload?.success ? payload.data : payload
-      ) as typeof healthData.value;
-    }
-
     // Emergency alerts (#285). Left untouched on failure so a transient error
     // blanks the panel rather than silently claiming there is nothing wrong.
     if (alertsRes.status === "fulfilled") {
@@ -841,7 +847,7 @@ async function fetchAllData() {
       userStatsRes,
       usersRes,
     ]);
-    // healthRes is left out: a failing probe must not blank the whole dashboard.
+    // Health is loaded separately: a failing probe must not blank the whole dashboard.
     if (requestFailed) {
       error.value = t("owner.fetchError");
     }
