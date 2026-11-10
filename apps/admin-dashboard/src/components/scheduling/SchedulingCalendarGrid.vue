@@ -94,8 +94,9 @@
                       employeeLabel(schedule)
                     }}</span>
                     <button
-                      class="opacity-0 group-hover:opacity-100 transition-opacity ml-auto shrink-0 hover:bg-black/10 rounded-full p-0.5"
+                      class="opacity-0 group-hover:opacity-100 transition-opacity ml-auto shrink-0 hover:bg-black/10 rounded-full p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                       :title="'移除排班'"
+                      :aria-label="'移除排班'"
                       @click.stop="$emit('remove', schedule.id)"
                     >
                       <X class="w-2.5 h-2.5" />
@@ -105,8 +106,14 @@
                 <!-- Empty cell placeholder -->
                 <div
                   v-else
-                  class="h-[32px] rounded-lg border-2 border-dashed border-ios-text/10 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+                  class="h-[32px] rounded-lg border-2 border-dashed border-ios-text/10 flex items-center justify-center opacity-0 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue transition-opacity cursor-pointer"
+                  role="button"
+                  tabindex="0"
+                  :aria-label="t('a11y.addShift')"
                   @click.stop="$emit('cell-click', template.id, col.dateStr)"
+                  @keydown.enter.stop.prevent="
+                    $emit('cell-click', template.id, col.dateStr)
+                  "
                 >
                   <Plus class="w-3 h-3 text-ios-text/30" />
                 </div>

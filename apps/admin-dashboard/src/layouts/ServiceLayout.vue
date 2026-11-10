@@ -110,7 +110,8 @@
             {{ t("serviceLayout.notifications") }}
           </h3>
           <button
-            class="text-gray-400 hover:text-gray-500"
+            :aria-label="t('common.close')"
+            class="text-gray-400 hover:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             @click="closeNotifications"
           >
             <XMarkIcon class="h-5 w-5" />
@@ -206,7 +207,8 @@
           </div>
         </div>
         <button
-          class="text-red-400 hover:text-red-600 ml-2"
+          :aria-label="t('common.close')"
+          class="text-red-400 hover:text-red-600 ml-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
           @click="closeUrgentAlert"
         >
           <XMarkIcon class="h-4 w-4" />
@@ -217,7 +219,8 @@
     <!-- 快速操作浮動按鈕 (移動端) -->
     <div class="sm:hidden fixed bottom-6 right-6 z-30">
       <button
-        class="w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
+        :aria-label="t('a11y.quickActions')"
+        class="w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
         @click="toggleQuickActions"
       >
         <component
@@ -229,13 +232,15 @@
       <!-- 快速操作選單 -->
       <div v-if="showQuickActions" class="absolute bottom-16 right-0 space-y-2">
         <button
-          class="flex items-center justify-center w-12 h-12 bg-green-600 text-white rounded-full shadow-lg hover:bg-green-700 transition-colors"
+          :aria-label="t('common.refresh')"
+          class="flex items-center justify-center w-12 h-12 bg-green-600 text-white rounded-full shadow-lg hover:bg-green-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
           @click="refreshData"
         >
           <ArrowPathIcon class="h-5 w-5" />
         </button>
         <button
-          class="flex items-center justify-center w-12 h-12 bg-yellow-600 text-white rounded-full shadow-lg hover:bg-yellow-700 transition-colors"
+          :aria-label="t('a11y.notifications')"
+          class="flex items-center justify-center w-12 h-12 bg-yellow-600 text-white rounded-full shadow-lg hover:bg-yellow-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
           @click="openNotifications"
         >
           <BellIcon class="h-5 w-5" />

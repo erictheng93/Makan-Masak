@@ -137,15 +137,17 @@
             <!-- Edit / Delete feedback buttons -->
             <template v-if="canEditFeedback">
               <button
-                class="p-1.5 rounded-xl text-ios-secondary hover:text-ios-blue hover:bg-ios-blue/10 transition-colors"
+                class="p-1.5 rounded-xl text-ios-secondary hover:text-ios-blue hover:bg-ios-blue/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                 :title="t('feedback.editFeedback')"
+                :aria-label="t('feedback.editFeedback')"
                 @click="startFeedbackEdit"
               >
                 <Pencil class="w-4 h-4" />
               </button>
               <button
-                class="p-1.5 rounded-xl text-ios-secondary hover:text-ios-red hover:bg-ios-red/10 transition-colors"
+                class="p-1.5 rounded-xl text-ios-secondary hover:text-ios-red hover:bg-ios-red/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                 :title="t('feedback.deleteFeedback')"
+                :aria-label="t('feedback.deleteFeedback')"
                 @click="isDeletingFeedback = true"
               >
                 <Trash2 class="w-4 h-4" />
@@ -288,15 +290,17 @@
                 <template v-if="canEditResponse(response)">
                   <button
                     v-if="editingResponseId !== response.id"
-                    class="p-1 rounded-lg text-ios-secondary hover:text-ios-blue hover:bg-ios-blue/10 transition-colors"
+                    class="p-1 rounded-lg text-ios-secondary hover:text-ios-blue hover:bg-ios-blue/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                     :title="t('feedback.editReply')"
+                    :aria-label="t('feedback.editReply')"
                     @click="startEdit(response)"
                   >
                     <Pencil class="w-3.5 h-3.5" />
                   </button>
                   <button
-                    class="p-1 rounded-lg text-ios-secondary hover:text-ios-red hover:bg-ios-red/10 transition-colors"
+                    class="p-1 rounded-lg text-ios-secondary hover:text-ios-red hover:bg-ios-red/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                     :title="t('feedback.deleteReply')"
+                    :aria-label="t('feedback.deleteReply')"
                     @click="handleDeleteResponse(response.id)"
                   >
                     <Trash2 class="w-3.5 h-3.5" />

@@ -76,7 +76,8 @@
                 {{ selectedSeat?.seatNumber }}
               </h3>
               <button
-                class="text-gray-400 hover:text-gray-600"
+                :aria-label="t('common.close')"
+                class="text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                 @click="closeSeatModal"
               >
                 <XMarkIcon class="h-6 w-6" />

@@ -40,6 +40,7 @@
 
         <!-- Toggle Collection -->
         <button
+          :aria-label="t('performance.title')"
           :class="[
             'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2',
             isCollecting ? 'bg-emerald-600' : 'bg-gray-200',
@@ -423,7 +424,8 @@
           <p class="text-sm text-gray-600">{{ formatTime(Date.now()) }} 生成</p>
         </div>
         <button
-          class="text-gray-400 hover:text-gray-600"
+          :aria-label="t('common.close')"
+          class="text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
           @click="showReportModal = false"
         >
           <XMarkIcon class="w-5 h-5" />

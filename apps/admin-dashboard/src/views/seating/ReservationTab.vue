@@ -203,40 +203,45 @@
                 class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2"
               >
                 <button
-                  class="text-blue-600 hover:text-blue-900"
+                  class="text-blue-600 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   :title="t('reservation.viewDetail')"
+                  :aria-label="t('reservation.viewDetail')"
                   @click="viewDetail(reservation)"
                 >
                   <Eye class="w-5 h-5" />
                 </button>
                 <button
                   v-if="reservation.status === 'pending'"
-                  class="text-green-600 hover:text-green-900"
+                  class="text-green-600 hover:text-green-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   :title="t('reservation.confirmReservation')"
+                  :aria-label="t('reservation.confirmReservation')"
                   @click="confirmReservation(reservation.id)"
                 >
                   <CheckCircle class="w-5 h-5" />
                 </button>
                 <button
                   v-if="reservation.status === 'confirmed'"
-                  class="text-teal-600 hover:text-teal-900"
+                  class="text-teal-600 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   :title="t('reservation.markArrived')"
+                  :aria-label="t('reservation.markArrived')"
                   @click="markArrived(reservation.id)"
                 >
                   <UserCheck class="w-5 h-5" />
                 </button>
                 <button
                   v-if="reservation.status === 'arrived'"
-                  class="text-teal-600 hover:text-teal-900"
+                  class="text-teal-600 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   :title="t('reservation.markSeated')"
+                  :aria-label="t('reservation.markSeated')"
                   @click="markSeated(reservation.id)"
                 >
                   <CheckCheck class="w-5 h-5" />
                 </button>
                 <button
                   v-if="['pending', 'confirmed'].includes(reservation.status)"
-                  class="text-red-600 hover:text-red-900"
+                  class="text-red-600 hover:text-red-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   :title="t('reservation.cancelReservation')"
+                  :aria-label="t('reservation.cancelReservation')"
                   @click="cancelReservation(reservation.id)"
                 >
                   <XCircle class="w-5 h-5" />
@@ -296,8 +301,9 @@
               class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
             >
               <button
+                :aria-label="t('common.previousPage')"
                 :disabled="pagination.page === 1"
-                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                 @click="
                   pagination.page--;
                   loadReservations();
@@ -322,10 +328,11 @@
                 {{ page }}
               </button>
               <button
+                :aria-label="t('common.nextPage')"
                 :disabled="
                   pagination.page * pagination.limit >= pagination.total
                 "
-                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                 @click="
                   pagination.page++;
                   loadReservations();

@@ -224,8 +224,13 @@ function handleCancel() {
           <h3 class="text-sm font-medium text-gray-900">{{ widget.title }}</h3>
           <div v-if="editMode" class="flex items-center gap-1">
             <button
-              class="p-1 text-gray-500 hover:text-gray-700 rounded"
+              class="p-1 text-gray-500 hover:text-gray-700 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
               :title="
+                widget.locked
+                  ? t('dashboardEditor.unlock')
+                  : t('dashboardEditor.lock')
+              "
+              :aria-label="
                 widget.locked
                   ? t('dashboardEditor.unlock')
                   : t('dashboardEditor.lock')
@@ -236,15 +241,17 @@ function handleCancel() {
               <LockOpenIcon v-else class="w-4 h-4" />
             </button>
             <button
-              class="p-1 text-gray-500 hover:text-gray-700 rounded"
+              class="p-1 text-gray-500 hover:text-gray-700 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
               :title="t('dashboardEditor.configure')"
+              :aria-label="t('dashboardEditor.configure')"
               @click.stop="configureWidget(widget.id)"
             >
               <Cog6ToothIcon class="w-4 h-4" />
             </button>
             <button
-              class="p-1 text-red-500 hover:text-red-700 rounded"
+              class="p-1 text-red-500 hover:text-red-700 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
               :title="t('dashboardEditor.remove')"
+              :aria-label="t('dashboardEditor.remove')"
               @click.stop="removeWidget(widget.id)"
             >
               <XMarkIcon class="w-4 h-4" />
@@ -295,7 +302,8 @@ function handleCancel() {
               {{ t("dashboardEditor.selectWidget") }}
             </h2>
             <button
-              class="text-gray-400 hover:text-gray-600"
+              :aria-label="t('common.close')"
+              class="text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
               @click="showWidgetPicker = false"
             >
               <XMarkIcon class="w-6 h-6" />
@@ -348,7 +356,8 @@ function handleCancel() {
               {{ t("dashboardEditor.selectPresetLayout") }}
             </h2>
             <button
-              class="text-gray-400 hover:text-gray-600"
+              :aria-label="t('common.close')"
+              class="text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
               @click="showPresetPicker = false"
             >
               <XMarkIcon class="w-6 h-6" />

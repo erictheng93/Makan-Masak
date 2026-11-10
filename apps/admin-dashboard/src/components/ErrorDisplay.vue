@@ -56,7 +56,8 @@
             {{ t("errorDisplay.pendingRequests") }}
           </h3>
           <button
-            class="text-gray-400 hover:text-gray-600"
+            :aria-label="t('common.close')"
+            class="text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             @click="showPendingRequests = false"
           >
             <XMarkIcon class="w-5 h-5" />
@@ -106,7 +107,8 @@
             </h3>
           </div>
           <button
-            class="text-red-400 hover:text-red-600"
+            :aria-label="t('common.close')"
+            class="text-red-400 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             @click="showRecoveryPanel = false"
           >
             <XMarkIcon class="w-5 h-5" />
@@ -157,7 +159,8 @@
             {{ t("errorDisplay.errorStats") }}
           </h3>
           <button
-            class="text-gray-400 hover:text-gray-200"
+            :aria-label="t('common.close')"
+            class="text-gray-400 hover:text-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             @click="showErrorStats = false"
           >
             <XMarkIcon class="w-4 h-4" />

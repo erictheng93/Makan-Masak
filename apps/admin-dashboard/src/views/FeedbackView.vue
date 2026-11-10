@@ -192,7 +192,8 @@
                 {{ t("feedback.detailTitle") }}
               </h2>
               <button
-                class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 text-ios-text/85 hover:bg-gray-300 transition-colors"
+                :aria-label="t('common.close')"
+                class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 text-ios-text/85 hover:bg-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                 @click="selectedFeedback = null"
               >
                 <X class="w-4 h-4" />

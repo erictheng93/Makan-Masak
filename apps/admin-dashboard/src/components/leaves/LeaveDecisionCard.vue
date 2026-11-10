@@ -71,8 +71,9 @@
 
         <!-- Expand toggle -->
         <button
+          :aria-label="t('a11y.toggleDetails')"
           data-testid="leave-expand-toggle"
-          class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-ios-bg transition-colors text-ios-text/40"
+          class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-ios-bg transition-colors text-ios-text/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
           @click="toggleExpanded"
         >
           <ChevronDown
@@ -219,9 +220,12 @@
 import { ref, computed } from "vue";
 import { ChevronDown, Paperclip } from "lucide-vue-next";
 import LeaveTimelineStrip from "./LeaveTimelineStrip.vue";
+import { useI18n } from "@/i18n";
 import { useLeaveConflict } from "@/composables/useLeaveConflict";
 import { safeExternalHref } from "@/utils/safeExternalHref";
 import type { LeaveRequest, LeaveBalance } from "@/services/leavesService";
+
+const { t } = useI18n();
 
 interface Props {
   request: LeaveRequest;

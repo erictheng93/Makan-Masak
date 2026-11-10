@@ -252,6 +252,9 @@ jobs:
       - name: Currency formatting in Vue templates
         run: pnpm run check:template-currency
 
+      - name: Accessible names on icon-only controls
+        run: pnpm run check:accessible-names
+
       # The response-contract snapshot. It compares every field path and its
       # Zod type against .api-contracts-snapshot.json, so a field that changes
       # type -- an ISO string becoming Unix milliseconds -- fails here. Before

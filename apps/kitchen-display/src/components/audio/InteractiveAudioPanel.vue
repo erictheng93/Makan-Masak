@@ -20,6 +20,7 @@
 
         <!-- Master Toggle -->
         <button
+          :aria-label="t('audio.title')"
           :class="[
             'relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-600',
             audioService.settings.enabled ? 'bg-green-400' : 'bg-gray-300',

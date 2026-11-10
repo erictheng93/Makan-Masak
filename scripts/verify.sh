@@ -129,6 +129,7 @@ else
   # is skippable and platform-dependent; this tier is neither.
   step "design palette" pnpm run check:design-palette
   step "template currency" pnpm run check:template-currency
+  step "accessible names" pnpm run check:accessible-names
   # Until 2026-09-06 this script ran from no gate at all -- not this tier, not
   # CI, not the pre-commit hook. A snapshot nobody compares is not a guard.
   step "API contracts" pnpm run contract:check

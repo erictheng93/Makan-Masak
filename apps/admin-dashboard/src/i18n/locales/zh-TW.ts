@@ -5,6 +5,24 @@ import { mergeLocaleMessages } from "../merge-locale-messages";
  */
 const zhTWCore = {
   // 通用詞彙
+  a11y: {
+    toggleSidebar: "切換側邊欄",
+    notifications: "通知",
+    clearSearch: "清除搜尋",
+    showPassword: "顯示密碼",
+    hidePassword: "隱藏密碼",
+    muteSound: "靜音",
+    enableSound: "開啟音效",
+    toggleDetails: "展開或收合詳情",
+    previousMonth: "上個月",
+    nextMonth: "下個月",
+    viewCard: "卡片檢視",
+    viewTable: "表格檢視",
+    pauseRule: "暫停規則",
+    resumeRule: "恢復規則",
+    quickActions: "快速操作",
+    addShift: "新增排班",
+  },
   common: {
     save: "儲存",
     cancel: "取消",

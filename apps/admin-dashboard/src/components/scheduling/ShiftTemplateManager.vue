@@ -32,7 +32,8 @@
             >
               <h2 class="text-lg font-bold text-ios-text">管理班次模板</h2>
               <button
-                class="w-8 h-8 flex items-center justify-center rounded-full bg-ios-bg hover:bg-ios-separator transition-colors"
+                :aria-label="t('common.close')"
+                class="w-8 h-8 flex items-center justify-center rounded-full bg-ios-bg hover:bg-ios-separator transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                 @click="$emit('close')"
               >
                 <X class="w-4 h-4 text-ios-text/60" />
@@ -63,15 +64,17 @@
                 <!-- Actions -->
                 <div class="flex items-center gap-1 shrink-0">
                   <button
-                    class="p-1.5 rounded-full hover:bg-ios-blue/10 text-ios-blue transition-colors"
+                    class="p-1.5 rounded-full hover:bg-ios-blue/10 text-ios-blue transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                     title="編輯"
+                    aria-label="編輯"
                     @click="startEdit(tpl)"
                   >
                     <Pencil class="w-3.5 h-3.5" />
                   </button>
                   <button
-                    class="p-1.5 rounded-full hover:bg-ios-red/10 text-ios-red transition-colors"
+                    class="p-1.5 rounded-full hover:bg-ios-red/10 text-ios-red transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                     title="刪除"
+                    aria-label="刪除"
                     @click="handleDelete(tpl.id)"
                   >
                     <Trash2 class="w-3.5 h-3.5" />

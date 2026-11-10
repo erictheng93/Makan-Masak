@@ -20,7 +20,8 @@
           class="absolute inset-y-0 right-0 pr-3 flex items-center"
         >
           <button
-            class="text-ios-secondary hover:text-ios-text transition-colors"
+            :aria-label="t('a11y.clearSearch')"
+            class="text-ios-secondary hover:text-ios-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             @click="clearSearch"
           >
             <X class="w-4 h-4" />
@@ -153,8 +154,13 @@
           {{ t("common.clearAll") }}
         </button>
         <button
-          class="p-1.5 text-ios-secondary hover:text-ios-text rounded-lg hover:bg-ios-bg transition-colors"
+          class="p-1.5 text-ios-secondary hover:text-ios-text rounded-lg hover:bg-ios-bg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
           :title="
+            showFilters
+              ? t('filters.collapseFilters')
+              : t('filters.expandFilters')
+          "
+          :aria-label="
             showFilters
               ? t('filters.collapseFilters')
               : t('filters.expandFilters')

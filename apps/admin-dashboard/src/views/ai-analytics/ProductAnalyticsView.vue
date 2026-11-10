@@ -226,8 +226,9 @@ const getTrendColor = (trend: number) => {
             </select>
 
             <button
+              :aria-label="t('common.refresh')"
               :disabled="isRefreshing"
-              class="px-4 py-2 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-all"
+              class="px-4 py-2 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
               @click="loadData()"
             >
               <ArrowPathIcon

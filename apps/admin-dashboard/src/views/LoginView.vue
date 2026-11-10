@@ -87,8 +87,11 @@
                 :placeholder="t('auth.enterPassword')"
               />
               <button
+                :aria-label="
+                  showPassword ? t('a11y.hidePassword') : t('a11y.showPassword')
+                "
                 type="button"
-                class="absolute inset-y-0 right-0 pr-3 flex items-center"
+                class="absolute inset-y-0 right-0 pr-3 flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                 @click="showPassword = !showPassword"
               >
                 <Eye v-if="showPassword" class="w-4 h-4 text-gray-400" />

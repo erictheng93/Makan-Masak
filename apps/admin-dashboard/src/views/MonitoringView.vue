@@ -448,7 +448,12 @@
                       </div>
                       <div class="ml-4 flex items-center space-x-2">
                         <button
-                          class="p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100"
+                          :aria-label="
+                            rule.isActive
+                              ? t('a11y.pauseRule')
+                              : t('a11y.resumeRule')
+                          "
+                          class="p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                           @click="toggleAlertRule(rule)"
                         >
                           <component
@@ -457,7 +462,8 @@
                           />
                         </button>
                         <button
-                          class="p-2 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50"
+                          :aria-label="t('common.delete')"
+                          class="p-2 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                           @click="deleteAlert(rule.id)"
                         >
                           <TrashIcon class="w-5 h-5" />

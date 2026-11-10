@@ -4,6 +4,24 @@ import type { Messages } from "../types";
  * Japanese Translation
  */
 const jaJP: Messages = {
+  a11y: {
+    toggleSidebar: "サイドバーを切り替え",
+    notifications: "通知",
+    clearSearch: "検索をクリア",
+    showPassword: "パスワードを表示",
+    hidePassword: "パスワードを非表示",
+    muteSound: "ミュート",
+    enableSound: "サウンドを有効化",
+    toggleDetails: "詳細の表示切り替え",
+    previousMonth: "前の月",
+    nextMonth: "次の月",
+    viewCard: "カード表示",
+    viewTable: "テーブル表示",
+    pauseRule: "ルールを一時停止",
+    resumeRule: "ルールを再開",
+    quickActions: "クイックアクション",
+    addShift: "シフトを追加",
+  },
   common: {
     save: "保存",
     cancel: "キャンセル",

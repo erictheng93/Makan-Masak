@@ -39,3 +39,4 @@ scripts/check-template-currency.cjs                  tests/unit/check-template-c
 scripts/verify.sh                                    tests/unit/verify-real-integration-decision.test.ts
 scripts/api-rollback.cjs                             tests/unit/api-rollback-guard.test.ts
 scripts/pages-rollback-check.cjs                    tests/unit/api-rollback-guard.test.ts
+scripts/check-accessible-names.cjs                   tests/unit/check-accessible-names.test.ts

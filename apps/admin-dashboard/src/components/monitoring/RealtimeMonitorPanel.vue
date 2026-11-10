@@ -193,8 +193,9 @@ onUnmounted(() => {
         </span>
         <!-- Refresh Button -->
         <button
+          :aria-label="t('common.refresh')"
           :disabled="isLoading"
-          class="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          class="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
           :class="{ 'animate-spin': isLoading }"
           @click="fetchOverview"
         >

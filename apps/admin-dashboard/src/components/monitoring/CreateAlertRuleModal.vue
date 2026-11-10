@@ -245,8 +245,9 @@ watch(
                 </h2>
               </div>
               <button
+                :aria-label="t('common.close')"
                 :disabled="submitting"
-                class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors duration-200"
+                class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                 @click="handleClose"
               >
                 <XMarkIcon class="w-5 h-5 text-gray-400" />
@@ -440,6 +441,7 @@ watch(
                   </p>
                 </div>
                 <button
+                  :aria-label="t('monitoring.createRule.enabled')"
                   type="button"
                   role="switch"
                   :aria-checked="form.configEnabled"

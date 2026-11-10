@@ -75,7 +75,8 @@
                   />
                 </div>
                 <button
-                  class="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  :aria-label="t('common.refresh')"
+                  class="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   @click="refreshOrders"
                 >
                   <ArrowPathIcon class="h-5 w-5" />
@@ -446,7 +447,8 @@
               {{ t("cashier.shiftReport") }}
             </h3>
             <button
-              class="text-gray-400 hover:text-gray-600"
+              :aria-label="t('common.close')"
+              class="text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
               @click="closeShiftReport"
             >
               <XMarkIcon class="w-6 h-6" />
@@ -623,7 +625,8 @@
               {{ t("cashier.refundProcess") }}
             </h3>
             <button
-              class="text-gray-400 hover:text-gray-600"
+              :aria-label="t('common.close')"
+              class="text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
               @click="closeRefundDialog"
             >
               <XMarkIcon class="w-6 h-6" />
@@ -854,7 +857,8 @@
               {{ t("cashier.applyDiscount") || "套用折扣" }}
             </h3>
             <button
-              class="text-gray-400 hover:text-gray-600"
+              :aria-label="t('common.close')"
+              class="text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
               @click="showDiscountModal = false"
             >
               <XMarkIcon class="w-6 h-6" />
@@ -916,7 +920,8 @@
               {{ t("cashier.endShift") || "結束班次" }}
             </h3>
             <button
-              class="text-gray-400 hover:text-gray-600"
+              :aria-label="t('common.close')"
+              class="text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
               @click="showEndShiftModal = false"
             >
               <XMarkIcon class="w-6 h-6" />

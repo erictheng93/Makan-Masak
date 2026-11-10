@@ -35,6 +35,7 @@
           </div>
 
           <button
+            :aria-label="t('shortcuts.title')"
             :class="[
               'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-teal-600',
               shortcuts.enabled ? 'bg-green-400' : 'bg-gray-300',
@@ -201,8 +202,9 @@
                 <!-- Test button -->
                 <button
                   :disabled="!shortcuts.enabled"
-                  class="p-1 text-blue-600 hover:text-blue-700 disabled:text-gray-400"
+                  class="p-1 text-blue-600 hover:text-blue-700 disabled:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   :title="t('shortcuts.testShortcut')"
+                  :aria-label="t('shortcuts.testShortcut')"
                   @click="testShortcut(shortcut)"
                 >
                   <PlayIcon class="w-4 h-4" />
@@ -211,8 +213,9 @@
                 <!-- Edit button for customizable shortcuts -->
                 <button
                   v-if="shortcut.customizable"
-                  class="p-1 text-gray-600 hover:text-gray-700"
+                  class="p-1 text-gray-600 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   :title="t('shortcuts.editShortcut')"
+                  :aria-label="t('shortcuts.editShortcut')"
                   @click="editShortcut(shortcut)"
                 >
                   <PencilIcon class="w-4 h-4" />

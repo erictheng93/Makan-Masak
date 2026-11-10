@@ -4,6 +4,24 @@ import type { Messages } from "../types";
  * Vietnamese Translation
  */
 const viVN: Messages = {
+  a11y: {
+    toggleSidebar: "Bật/tắt thanh bên",
+    notifications: "Thông báo",
+    clearSearch: "Xóa tìm kiếm",
+    showPassword: "Hiện mật khẩu",
+    hidePassword: "Ẩn mật khẩu",
+    muteSound: "Tắt tiếng",
+    enableSound: "Bật âm thanh",
+    toggleDetails: "Hiện hoặc ẩn chi tiết",
+    previousMonth: "Tháng trước",
+    nextMonth: "Tháng sau",
+    viewCard: "Dạng thẻ",
+    viewTable: "Dạng bảng",
+    pauseRule: "Tạm dừng quy tắc",
+    resumeRule: "Tiếp tục quy tắc",
+    quickActions: "Thao tác nhanh",
+    addShift: "Thêm ca làm",
+  },
   common: {
     save: "Lưu",
     cancel: "Hủy",

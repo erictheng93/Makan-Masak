@@ -1,0 +1,10 @@
+{
+  "apps/admin-dashboard/src/components/coupons/CouponDistributeModal.vue": 1,
+  "apps/admin-dashboard/src/components/coupons/CouponFormModal.vue": 1,
+  "apps/admin-dashboard/src/components/coupons/CouponStatsModal.vue": 1,
+  "apps/admin-dashboard/src/views/CouponsView.vue": 2,
+  "apps/admin-dashboard/src/views/OrdersView.vue": 4,
+  "apps/admin-dashboard/src/views/POSManagementView.vue": 6,
+  "apps/admin-dashboard/src/views/employees/EmployeeListTab.vue": 6,
+  "apps/admin-dashboard/src/views/employees/SchedulingTab.vue": 2
+}

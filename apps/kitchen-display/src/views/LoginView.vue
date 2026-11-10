@@ -81,9 +81,12 @@
                 class="w-full bg-ios-bg rounded-xl py-3.5 pl-10 pr-10 text-base text-ios-text placeholder-ios-tertiary outline-none focus:ring-2 focus:ring-ios-blue/30 transition-all"
               />
               <button
+                :aria-label="
+                  showPassword ? t('a11y.hidePassword') : t('a11y.showPassword')
+                "
                 type="button"
                 :disabled="isLoading"
-                class="absolute inset-y-0 right-0 pr-3.5 flex items-center"
+                class="absolute inset-y-0 right-0 pr-3.5 flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                 @click="showPassword = !showPassword"
               >
                 <Eye

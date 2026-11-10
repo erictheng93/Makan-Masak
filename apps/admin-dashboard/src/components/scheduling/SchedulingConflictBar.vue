@@ -41,8 +41,9 @@
           />
           <span>{{ conflict.message }}</span>
           <button
-            class="ml-1 hover:opacity-70 transition-opacity"
+            class="ml-1 hover:opacity-70 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :title="'關閉'"
+            :aria-label="'關閉'"
             @click="dismiss(idx)"
           >
             <X class="w-3 h-3" />

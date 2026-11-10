@@ -53,6 +53,11 @@ const zhTW = {
       expired: "已過期",
     },
   },
+  a11y: {
+    clearSearch: "清除搜尋",
+    showPassword: "顯示密碼",
+    hidePassword: "隱藏密碼",
+  },
   common: {
     save: "儲存",
     cancel: "取消",

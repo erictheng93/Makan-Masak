@@ -1424,8 +1424,9 @@
                     {{ shopQrPayload }}
                   </code>
                   <button
-                    class="px-3 py-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+                    class="px-3 py-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                     :title="t('settings.qrcode.copy')"
+                    :aria-label="t('settings.qrcode.copy')"
                     @click="copyQRCode"
                   >
                     <svg

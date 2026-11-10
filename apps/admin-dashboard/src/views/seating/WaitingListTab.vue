@@ -93,6 +93,7 @@
         </h2>
         <div class="flex rounded-lg shadow-sm">
           <button
+            :aria-label="t('a11y.viewCard')"
             :class="[
               viewMode === 'card'
                 ? 'bg-primary-600 text-white'
@@ -105,6 +106,7 @@
             <LayoutGrid class="w-4 h-4" />
           </button>
           <button
+            :aria-label="t('a11y.viewTable')"
             :class="[
               viewMode === 'table'
                 ? 'bg-primary-600 text-white'
@@ -356,8 +358,9 @@
               >
                 <button
                   v-if="entry.status === 'waiting'"
-                  class="text-blue-600 hover:text-blue-900"
+                  class="text-blue-600 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   :title="t('waitingList.call')"
+                  :aria-label="t('waitingList.call')"
                   @click="callCustomer(entry)"
                 >
                   <Bell class="w-5 h-5" />
@@ -366,24 +369,27 @@
                   v-if="
                     entry.status === 'called' || entry.status === 'confirmed'
                   "
-                  class="text-green-600 hover:text-green-900"
+                  class="text-green-600 hover:text-green-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   :title="t('waitingList.seat')"
+                  :aria-label="t('waitingList.seat')"
                   @click="markSeated(entry.id)"
                 >
                   <CheckCircle class="w-5 h-5" />
                 </button>
                 <button
                   v-if="entry.status === 'called'"
-                  class="text-red-600 hover:text-red-900"
+                  class="text-red-600 hover:text-red-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   :title="t('waitingList.expire')"
+                  :aria-label="t('waitingList.expire')"
                   @click="markExpired(entry.id)"
                 >
                   <XCircle class="w-5 h-5" />
                 </button>
                 <button
                   v-if="['waiting', 'called'].includes(entry.status)"
-                  class="text-gray-600 hover:text-gray-900"
+                  class="text-gray-600 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   :title="t('waitingList.cancel')"
+                  :aria-label="t('waitingList.cancel')"
                   @click="cancelEntry(entry)"
                 >
                   <Trash2 class="w-5 h-5" />
@@ -415,8 +421,9 @@
               class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
             >
               <button
+                :aria-label="t('common.previousPage')"
                 :disabled="pagination.page === 1"
-                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                 @click="
                   pagination.page--;
                   loadWaitingList();
@@ -425,10 +432,11 @@
                 <ChevronLeft class="h-5 w-5" />
               </button>
               <button
+                :aria-label="t('common.nextPage')"
                 :disabled="
                   pagination.page * pagination.limit >= pagination.total
                 "
-                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                 @click="
                   pagination.page++;
                   loadWaitingList();

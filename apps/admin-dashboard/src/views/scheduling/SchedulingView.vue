@@ -176,7 +176,11 @@
         <ExclamationCircleIcon class="h-5 w-5 text-red-600 mr-3" />
         <span class="text-sm text-red-800 font-medium">{{ error }}</span>
       </div>
-      <button class="text-red-600 hover:text-red-800" @click="error = null">
+      <button
+        :aria-label="t('common.close')"
+        class="text-red-600 hover:text-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+        @click="error = null"
+      >
         <XMarkIcon class="h-5 w-5" />
       </button>
     </div>

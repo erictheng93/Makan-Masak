@@ -3,7 +3,8 @@
     <!-- Calendar Header -->
     <div class="flex items-center justify-between mb-6">
       <button
-        class="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        :aria-label="t('a11y.previousMonth')"
+        class="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
         :disabled="loading"
         @click="previousMonth"
       >
@@ -23,7 +24,8 @@
       </div>
 
       <button
-        class="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        :aria-label="t('a11y.nextMonth')"
+        class="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
         :disabled="loading"
         @click="nextMonth"
       >

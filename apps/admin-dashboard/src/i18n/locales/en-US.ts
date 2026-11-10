@@ -4,6 +4,24 @@ import type { Messages } from "../types";
  * English Translation
  */
 const enUS: Messages = {
+  a11y: {
+    toggleSidebar: "Toggle sidebar",
+    notifications: "Notifications",
+    clearSearch: "Clear search",
+    showPassword: "Show password",
+    hidePassword: "Hide password",
+    muteSound: "Mute sound",
+    enableSound: "Enable sound",
+    toggleDetails: "Show or hide details",
+    previousMonth: "Previous month",
+    nextMonth: "Next month",
+    viewCard: "Card view",
+    viewTable: "Table view",
+    pauseRule: "Pause rule",
+    resumeRule: "Resume rule",
+    quickActions: "Quick actions",
+    addShift: "Add shift",
+  },
   common: {
     save: "Save",
     cancel: "Cancel",

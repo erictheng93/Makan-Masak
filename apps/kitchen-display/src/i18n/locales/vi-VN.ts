@@ -159,6 +159,11 @@ const viVN: Messages = {
     startFailed: "Bắt đầu hàng loạt không thành công:",
     startSuccess: "Đã khởi động thành công các mục {count}!",
   },
+  a11y: {
+    clearSearch: "Xóa tìm kiếm",
+    showPassword: "Hiện mật khẩu",
+    hidePassword: "Ẩn mật khẩu",
+  },
   common: {
     ago: "trước đây",
     all: "Tất cả",

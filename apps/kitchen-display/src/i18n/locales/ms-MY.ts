@@ -159,6 +159,11 @@ const msMY: Messages = {
     startFailed: "Permulaan kelompok gagal:",
     startSuccess: "Berjaya memulakan item {count}!",
   },
+  a11y: {
+    clearSearch: "Kosongkan carian",
+    showPassword: "Tunjukkan kata laluan",
+    hidePassword: "Sembunyikan kata laluan",
+  },
   common: {
     ago: "lalu",
     all: "Semua",

@@ -9,8 +9,13 @@
       <button
         data-testid="kitchen-audio-toggle"
         :data-audio-enabled="audioEnabled ? 'true' : 'false'"
-        class="audio-control"
+        class="audio-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
         :title="
+          audioEnabled
+            ? t('shortcuts.audioToggleOff')
+            : t('shortcuts.audioToggleOn')
+        "
+        :aria-label="
           audioEnabled
             ? t('shortcuts.audioToggleOff')
             : t('shortcuts.audioToggleOn')

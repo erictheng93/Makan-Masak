@@ -55,6 +55,11 @@ const enUS: Messages = {
       expired: "Expired",
     },
   },
+  a11y: {
+    clearSearch: "Clear search",
+    showPassword: "Show password",
+    hidePassword: "Hide password",
+  },
   common: {
     save: "Save",
     cancel: "Cancel",

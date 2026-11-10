@@ -18,7 +18,8 @@
             />
             <button
               v-if="searchQuery"
-              class="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+              :aria-label="t('a11y.clearSearch')"
+              class="absolute right-3 top-3 text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
               @click="searchQuery = ''"
             >
               <XMarkIcon class="h-4 w-4" />
@@ -309,15 +310,17 @@
               <td class="px-6 py-4 whitespace-nowrap text-sm">
                 <div class="flex gap-2">
                   <button
-                    class="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                    class="p-1 text-gray-400 hover:text-blue-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                     :title="t('common.edit')"
+                    :aria-label="t('common.edit')"
                     @click="$emit('edit', schedule)"
                   >
                     <PencilIcon class="h-4 w-4" />
                   </button>
                   <button
-                    class="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                    class="p-1 text-gray-400 hover:text-red-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                     :title="t('common.delete')"
+                    :aria-label="t('common.delete')"
                     @click="$emit('delete', schedule)"
                   >
                     <TrashIcon class="h-4 w-4" />
@@ -354,7 +357,8 @@
             ««
           </button>
           <button
-            class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            :aria-label="t('common.previousPage')"
+            class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :disabled="currentPage === 1"
             @click="goToPage(currentPage - 1)"
           >
@@ -378,7 +382,8 @@
           </div>
 
           <button
-            class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            :aria-label="t('common.nextPage')"
+            class="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :disabled="currentPage === totalPages"
             @click="goToPage(currentPage + 1)"
           >

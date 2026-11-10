@@ -4,6 +4,24 @@ import type { Messages } from "../types";
  * Simplified Chinese Translation
  */
 const zhCN: Messages = {
+  a11y: {
+    toggleSidebar: "切换侧边栏",
+    notifications: "通知",
+    clearSearch: "清除搜索",
+    showPassword: "显示密码",
+    hidePassword: "隐藏密码",
+    muteSound: "静音",
+    enableSound: "开启音效",
+    toggleDetails: "展开或收起详情",
+    previousMonth: "上个月",
+    nextMonth: "下个月",
+    viewCard: "卡片视图",
+    viewTable: "表格视图",
+    pauseRule: "暂停规则",
+    resumeRule: "恢复规则",
+    quickActions: "快捷操作",
+    addShift: "新增排班",
+  },
   common: {
     save: "保存",
     cancel: "取消",

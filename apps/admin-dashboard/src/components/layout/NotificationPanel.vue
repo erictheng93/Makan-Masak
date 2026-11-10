@@ -19,7 +19,8 @@
         </span>
       </div>
       <button
-        class="text-gray-400 hover:text-gray-600 transition-colors"
+        :aria-label="t('common.close')"
+        class="text-gray-400 hover:text-gray-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
         @click="$emit('close')"
       >
         <XMarkIcon class="w-4 h-4" />
@@ -48,14 +49,18 @@
       </div>
       <div class="flex items-center space-x-2">
         <button
-          class="p-1 rounded hover:bg-gray-200 transition-colors"
+          :aria-label="
+            soundEnabled ? t('a11y.muteSound') : t('a11y.enableSound')
+          "
+          class="p-1 rounded hover:bg-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
           @click="toggleSound"
         >
           <SpeakerWaveIcon v-if="soundEnabled" class="w-4 h-4 text-blue-600" />
           <SpeakerXMarkIcon v-else class="w-4 h-4 text-gray-400" />
         </button>
         <button
-          class="p-1 rounded hover:bg-gray-200 transition-colors"
+          :aria-label="t('common.refresh')"
+          class="p-1 rounded hover:bg-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
           @click="refreshNotifications"
         >
           <ArrowPathIcon

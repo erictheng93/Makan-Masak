@@ -51,6 +51,11 @@
                 ? t('monitoring.alertPanel.muteSound')
                 : t('monitoring.alertPanel.enableSound')
             "
+            :aria-label="
+              soundEnabled
+                ? t('monitoring.alertPanel.muteSound')
+                : t('monitoring.alertPanel.enableSound')
+            "
             @click="toggleSound"
           >
             <component

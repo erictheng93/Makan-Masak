@@ -7,7 +7,11 @@
           <h2 class="dialog-title">
             {{ t("leaves.request.title") }}
           </h2>
-          <button class="btn-close" @click="handleClose">
+          <button
+            :aria-label="t('common.close')"
+            class="btn-close focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+            @click="handleClose"
+          >
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor">
               <path
                 fill-rule="evenodd"

@@ -41,6 +41,7 @@
               statsService.autoRefresh ? 'bg-green-400' : 'bg-gray-300',
             ]"
             :title="t('interactiveStats.autoUpdate')"
+            :aria-label="t('interactiveStats.autoUpdate')"
             @click="toggleAutoRefresh"
           >
             <span
@@ -54,8 +55,9 @@
           <!-- Refresh button -->
           <button
             :disabled="statsService.isLoading.value"
-            class="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors disabled:opacity-50"
+            class="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :title="t('interactiveStats.immediateUpdate')"
+            :aria-label="t('interactiveStats.immediateUpdate')"
             @click="refreshStats"
           >
             <ArrowPathIcon

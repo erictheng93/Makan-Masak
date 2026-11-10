@@ -33,7 +33,8 @@
           </div>
         </div>
         <button
-          class="w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0"
+          :aria-label="t('settings.audioNotifications')"
+          class="w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
           :class="audioEnabled ? 'bg-ios-green' : 'bg-ios-bg'"
           @click="toggleAudio"
         >
@@ -98,7 +99,8 @@
           </p>
         </div>
         <button
-          class="w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0"
+          :aria-label="t('audio.notificationQueue')"
+          class="w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
           :class="
             notificationQueue && audioEnabled ? 'bg-ios-green' : 'bg-ios-bg'
           "
@@ -127,7 +129,8 @@
           </p>
         </div>
         <button
-          class="w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0"
+          :aria-label="t('audio.priorityOverride')"
+          class="w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
           :class="
             priorityOverride && audioEnabled && notificationQueue
               ? 'bg-ios-green'
@@ -162,8 +165,9 @@
         >
           <div class="flex items-center gap-3 flex-1 min-w-0">
             <button
+              :aria-label="`${t('audio.play')} ${getSoundLabel(soundType)}`"
               :disabled="!audioEnabled || !soundSettings[soundType].enabled"
-              class="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-200"
+              class="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
               :class="
                 audioEnabled && soundSettings[soundType].enabled
                   ? 'bg-ios-blue/10 active:bg-ios-blue/20'
@@ -220,7 +224,8 @@
             </div>
           </div>
           <button
-            class="w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 ml-3"
+            :aria-label="getSoundLabel(soundType)"
+            class="w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 ml-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :class="
               soundSettings[soundType].enabled && audioEnabled
                 ? 'bg-ios-green'
@@ -256,8 +261,9 @@
         >
           <div class="flex items-center gap-3 flex-1 min-w-0">
             <button
+              :aria-label="`${t('audio.play')} ${getSoundLabel(soundType)}`"
               :disabled="!audioEnabled || !soundSettings[soundType].enabled"
-              class="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-200"
+              class="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
               :class="
                 audioEnabled && soundSettings[soundType].enabled
                   ? 'bg-ios-blue/10 active:bg-ios-blue/20'
@@ -314,7 +320,8 @@
             </div>
           </div>
           <button
-            class="w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 ml-3"
+            :aria-label="getSoundLabel(soundType)"
+            class="w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 ml-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :class="
               soundSettings[soundType].enabled && audioEnabled
                 ? 'bg-ios-green'
@@ -350,8 +357,9 @@
         >
           <div class="flex items-center gap-3 flex-1 min-w-0">
             <button
+              :aria-label="`${t('audio.play')} ${getSoundLabel(soundType)}`"
               :disabled="!audioEnabled || !soundSettings[soundType].enabled"
-              class="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-200"
+              class="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
               :class="
                 audioEnabled && soundSettings[soundType].enabled
                   ? 'bg-ios-blue/10 active:bg-ios-blue/20'
@@ -408,7 +416,8 @@
             </div>
           </div>
           <button
-            class="w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 ml-3"
+            :aria-label="getSoundLabel(soundType)"
+            class="w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 ml-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :class="
               soundSettings[soundType].enabled && audioEnabled
                 ? 'bg-ios-green'

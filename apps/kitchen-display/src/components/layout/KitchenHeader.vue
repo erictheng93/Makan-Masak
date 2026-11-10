@@ -69,8 +69,9 @@
           <!-- Reconnect Button (when disconnected) -->
           <button
             v-if="!isConnected"
-            class="h-11 w-11 shrink-0 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95"
+            class="h-11 w-11 shrink-0 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :title="t('header.reconnect')"
+            :aria-label="t('header.reconnect')"
             @click="$emit('reconnect')"
           >
             <RefreshCw class="w-5 h-5 text-ios-orange" />
@@ -80,8 +81,9 @@
           <button
             v-if="isConnected"
             :disabled="isRefreshing"
-            class="h-11 w-11 shrink-0 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95 disabled:opacity-50"
+            class="h-11 w-11 shrink-0 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :title="t('header.refreshOrders')"
+            :aria-label="t('header.refreshOrders')"
             @click="$emit('refresh')"
           >
             <RefreshCw
@@ -94,8 +96,9 @@
 
           <!-- Fullscreen Toggle -->
           <button
-            class="h-11 w-11 shrink-0 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95"
+            class="h-11 w-11 shrink-0 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :title="t('header.fullscreen')"
+            :aria-label="t('header.fullscreen')"
             @click="$emit('toggle-fullscreen')"
           >
             <Minimize2 v-if="isFullscreen" class="w-5 h-5 text-ios-secondary" />
@@ -104,8 +107,9 @@
 
           <!-- Notification Button -->
           <button
-            class="h-11 w-11 shrink-0 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95"
+            class="h-11 w-11 shrink-0 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :title="t('header.notifications')"
+            :aria-label="t('header.notifications')"
           >
             <Bell class="w-5 h-5 text-ios-secondary" />
           </button>
@@ -155,8 +159,9 @@
           <!-- My Shifts Button — the employee swap entry (#320) -->
           <button
             data-testid="open-my-shifts"
-            class="h-11 w-11 shrink-0 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95"
+            class="h-11 w-11 shrink-0 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :title="t('header.myShifts')"
+            :aria-label="t('header.myShifts')"
             @click="$emit('open-my-shifts')"
           >
             <CalendarClock class="w-5 h-5 text-ios-secondary" />
@@ -164,8 +169,9 @@
 
           <!-- Settings Button -->
           <button
-            class="h-11 w-11 shrink-0 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95"
+            class="h-11 w-11 shrink-0 rounded-full bg-ios-bg flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :title="t('header.settings')"
+            :aria-label="t('header.settings')"
             @click="$emit('open-settings')"
           >
             <Settings class="w-5 h-5 text-ios-secondary" />
@@ -173,8 +179,9 @@
 
           <!-- Logout Button -->
           <button
-            class="h-11 w-11 shrink-0 rounded-full bg-ios-red/10 flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-red/20 active:scale-95"
+            class="h-11 w-11 shrink-0 rounded-full bg-ios-red/10 flex items-center justify-center transition-all duration-200 ease-out hover:bg-ios-red/20 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :title="t('header.logout')"
+            :aria-label="t('header.logout')"
             @click="handleLogoutClick"
           >
             <LogOut class="w-5 h-5 text-ios-red" />

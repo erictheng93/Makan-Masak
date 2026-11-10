@@ -144,7 +144,8 @@
                 </select>
 
                 <button
-                  class="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex-shrink-0"
+                  class="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+                  :aria-label="t('common.refresh')"
                   @click="refreshGroupOrders()"
                 >
                   <ArrowPathIcon class="h-5 w-5" />
@@ -343,8 +344,9 @@
                   </h4>
                   <div class="flex items-center space-x-2">
                     <button
-                      class="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                      class="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                       :title="t('groupOrders.copyShareCode')"
+                      :aria-label="t('groupOrders.copyShareCode')"
                       @click="copyShareCode(selectedGroupOrder.shareCode)"
                     >
                       <DocumentDuplicateIcon class="w-4 h-4" />
@@ -752,7 +754,8 @@
               {{ t("groupOrders.createOrder") }}
             </h3>
             <button
-              class="text-gray-400 hover:text-gray-600"
+              class="text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+              :aria-label="t('common.close')"
               @click="closeCreateDialog"
             >
               <XMarkIcon class="w-6 h-6" />
@@ -846,7 +849,8 @@
               {{ t("groupOrders.shareOrder") }}
             </h3>
             <button
-              class="text-gray-400 hover:text-gray-600"
+              class="text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+              :aria-label="t('common.close')"
               @click="closeShareDialog"
             >
               <XMarkIcon class="w-6 h-6" />

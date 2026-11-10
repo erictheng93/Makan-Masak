@@ -159,6 +159,11 @@ const idID: Messages = {
     startFailed: "Gagal memulai batch:",
     startSuccess: "Berhasil memulai item {count}!",
   },
+  a11y: {
+    clearSearch: "Hapus pencarian",
+    showPassword: "Tampilkan kata sandi",
+    hidePassword: "Sembunyikan kata sandi",
+  },
   common: {
     ago: "lalu",
     all: "Semua",

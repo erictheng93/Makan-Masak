@@ -242,8 +242,9 @@
         <!-- Secondary: view details + keyboard hint -->
         <div class="flex items-center gap-2 shrink-0">
           <button
-            class="w-11 h-11 rounded-full bg-ios-bg flex items-center justify-center text-ios-secondary hover:text-ios-text transition-colors"
+            class="w-11 h-11 rounded-full bg-ios-bg flex items-center justify-center text-ios-secondary hover:text-ios-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :title="t('orders.viewDetails')"
+            :aria-label="t('orders.viewDetails')"
             @click="$emit('view-details', order)"
           >
             <EyeIcon class="w-5 h-5" />

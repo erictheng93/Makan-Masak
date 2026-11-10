@@ -43,7 +43,8 @@
               </p>
             </div>
             <button
-              class="w-11 h-11 rounded-full bg-ios-bg flex items-center justify-center flex-shrink-0 ml-3"
+              :aria-label="t('common.close')"
+              class="w-11 h-11 rounded-full bg-ios-bg flex items-center justify-center flex-shrink-0 ml-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
               @click="$emit('close')"
             >
               <XIcon class="w-5 h-5 text-ios-secondary" />

@@ -45,7 +45,8 @@
                 </select>
 
                 <button
-                  class="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  :aria-label="t('common.refresh')"
+                  class="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   @click="refreshQueue"
                 >
                   <ArrowPathIcon class="h-5 w-5" />
@@ -404,7 +405,8 @@
               {{ t("queue.addToQueue") }}
             </h3>
             <button
-              class="text-gray-400 hover:text-gray-600"
+              :aria-label="t('common.close')"
+              class="text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
               @click="closeAddDialog"
             >
               <XMarkIcon class="w-6 h-6" />
@@ -532,7 +534,8 @@
               {{ t("queue.assignSeat") }}
             </h3>
             <button
-              class="text-gray-400 hover:text-gray-600"
+              :aria-label="t('common.close')"
+              class="text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
               @click="closeSeatDialog"
             >
               <XMarkIcon class="w-6 h-6" />

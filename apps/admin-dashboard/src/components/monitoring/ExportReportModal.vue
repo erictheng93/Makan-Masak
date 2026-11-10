@@ -175,8 +175,9 @@ function handleClose() {
             </h2>
           </div>
           <button
+            :aria-label="t('common.close')"
             :disabled="isExporting"
-            class="text-gray-400 hover:text-gray-600"
+            class="text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             @click="handleClose"
           >
             <XMarkIcon class="w-6 h-6" />

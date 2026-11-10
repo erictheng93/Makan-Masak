@@ -85,8 +85,9 @@
           </div>
           <div class="flex items-center gap-2">
             <button
-              class="p-2 rounded-lg hover:bg-blue-50 transition-colors group"
+              class="p-2 rounded-lg hover:bg-blue-50 transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
               :title="t('shiftTemplates.editTemplate')"
+              :aria-label="t('shiftTemplates.editTemplate')"
               @click="$emit('edit', template)"
             >
               <PencilIcon
@@ -94,8 +95,9 @@
               />
             </button>
             <button
-              class="p-2 rounded-lg hover:bg-red-50 transition-colors group"
+              class="p-2 rounded-lg hover:bg-red-50 transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
               :title="t('shiftTemplates.deleteTemplate')"
+              :aria-label="t('shiftTemplates.deleteTemplate')"
               @click="handleDelete(template)"
             >
               <TrashIcon

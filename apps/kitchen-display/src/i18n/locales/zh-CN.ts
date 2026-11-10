@@ -158,6 +158,11 @@ const zhCN: Messages = {
     startFailed: "批量开始制作失败：",
     startSuccess: "成功开始制作 {count} 个项目！",
   },
+  a11y: {
+    clearSearch: "清除搜索",
+    showPassword: "显示密码",
+    hidePassword: "隐藏密码",
+  },
   common: {
     ago: "前",
     all: "全部",

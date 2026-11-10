@@ -4,6 +4,24 @@ import type { Messages } from "../types";
  * Indonesian Translation
  */
 const idID: Messages = {
+  a11y: {
+    toggleSidebar: "Alihkan bilah samping",
+    notifications: "Notifikasi",
+    clearSearch: "Hapus pencarian",
+    showPassword: "Tampilkan kata sandi",
+    hidePassword: "Sembunyikan kata sandi",
+    muteSound: "Bisukan suara",
+    enableSound: "Aktifkan suara",
+    toggleDetails: "Tampilkan atau sembunyikan detail",
+    previousMonth: "Bulan sebelumnya",
+    nextMonth: "Bulan berikutnya",
+    viewCard: "Tampilan kartu",
+    viewTable: "Tampilan tabel",
+    pauseRule: "Jeda aturan",
+    resumeRule: "Lanjutkan aturan",
+    quickActions: "Aksi cepat",
+    addShift: "Tambah shift",
+  },
   common: {
     save: "Simpan",
     cancel: "Batal",

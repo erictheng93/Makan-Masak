@@ -219,7 +219,7 @@
         >
           <button
             :data-testid="`admin-menu-item-edit-${item.id}`"
-            class="w-[30px] h-[30px] flex items-center justify-center rounded-lg text-ios-secondary hover:bg-black/5 hover:text-ios-text transition-colors"
+            class="w-[30px] h-[30px] flex items-center justify-center rounded-lg text-ios-secondary hover:bg-black/5 hover:text-ios-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :title="t('common.edit')"
             :aria-label="t('common.edit')"
             @click.stop="$emit('edit', item)"
@@ -231,7 +231,7 @@
                item's state rather than as what the click will do. -->
           <button
             :data-testid="`admin-menu-item-toggle-${item.id}`"
-            class="w-[30px] h-[30px] flex items-center justify-center rounded-lg text-ios-secondary hover:bg-black/5 hover:text-ios-text transition-colors"
+            class="w-[30px] h-[30px] flex items-center justify-center rounded-lg text-ios-secondary hover:bg-black/5 hover:text-ios-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :title="
               item.isAvailable
                 ? t('menu.actionUnpublish')
@@ -251,7 +251,7 @@
           </button>
           <button
             :data-testid="`admin-menu-item-delete-${item.id}`"
-            class="w-[30px] h-[30px] flex items-center justify-center rounded-lg text-ios-secondary hover:bg-ios-red-soft hover:text-ios-error transition-colors"
+            class="w-[30px] h-[30px] flex items-center justify-center rounded-lg text-ios-secondary hover:bg-ios-red-soft hover:text-ios-error transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :title="t('common.delete')"
             :aria-label="t('common.delete')"
             @click.stop="$emit('delete', item)"
