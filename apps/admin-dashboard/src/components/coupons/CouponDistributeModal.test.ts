@@ -20,7 +20,10 @@ vi.mock("@/composables/useDateFormatter", () => ({
   useDateFormatter: () => ({ formatDate: (value: string) => value }),
 }));
 vi.mock("vue-toastification", () => ({ useToast: () => toast }));
-vi.mock("@/utils/errorHandler", () => ({ extractApiErrorCode }));
+vi.mock("@/utils/errorHandler", () => ({
+  extractApiErrorCode,
+  markErrorHandled: vi.fn(),
+}));
 vi.mock("@/services/api", () => ({
   api: { get: vi.fn(), post: vi.fn() },
 }));

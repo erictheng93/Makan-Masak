@@ -55,7 +55,11 @@ vi.mock("@/stores/auth", () => ({
   useAuthStore: () => ({ user: { role: 0 } }),
 }));
 vi.mock("vue-toastification", () => ({ useToast: () => toast }));
-vi.mock("@/utils/errorHandler", () => ({ extractApiErrorCode }));
+vi.mock("@/utils/errorHandler", () => ({
+  extractApiErrorCode,
+  // useAsyncAction marks the failures it shows so the interceptor skips them.
+  markErrorHandled: vi.fn(),
+}));
 vi.mock("@makanmasak/shared/stores/moduleAccess", () => ({
   useModuleAccessStore: () => moduleAccess,
 }));
