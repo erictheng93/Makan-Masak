@@ -11,6 +11,7 @@ const jaJP: Messages = {
     delete: "削除",
     deleting: "削除中...",
     saving: "保存中...",
+    undo: "元に戻す",
     edit: "編集",
     add: "追加",
     search: "検索",
@@ -3953,6 +3954,8 @@ const jaJP: Messages = {
     success: {
       archived: "{username} を削除しました",
       restored: "{username} を復帰させました",
+      disabled: "{username} を無効にしました",
+      enabled: "{username} を有効にしました",
       created: "従業員を追加しました",
       createdSignIn: "従業員を追加しました。サインインは {url} から",
     },

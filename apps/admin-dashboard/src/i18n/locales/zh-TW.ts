@@ -12,6 +12,7 @@ const zhTWCore = {
     delete: "刪除",
     deleting: "刪除中...",
     saving: "儲存中...",
+    undo: "復原",
     edit: "編輯",
     add: "新增",
     search: "搜尋",
@@ -3976,6 +3977,8 @@ const zhTWCore = {
     success: {
       archived: "已移除 {username}",
       restored: "已復職 {username}",
+      disabled: "已停用 {username}",
+      enabled: "已啟用 {username}",
       created: "已新增員工",
       createdSignIn: "已新增員工。員工請從 {url} 登入",
     },

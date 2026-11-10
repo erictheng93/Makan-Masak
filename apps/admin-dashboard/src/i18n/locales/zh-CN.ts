@@ -11,6 +11,7 @@ const zhCN: Messages = {
     delete: "删除",
     deleting: "删除中...",
     saving: "保存中...",
+    undo: "撤销",
     edit: "编辑",
     add: "添加",
     search: "搜索",
@@ -3856,6 +3857,8 @@ const zhCN: Messages = {
     success: {
       archived: "已移除 {username}",
       restored: "已复职 {username}",
+      disabled: "已停用 {username}",
+      enabled: "已启用 {username}",
       created: "已添加员工",
       createdSignIn: "已添加员工。员工请从 {url} 登录",
     },

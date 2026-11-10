@@ -435,9 +435,9 @@
                 type="submit"
                 data-testid="coupon-submit"
                 class="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                :disabled="isSubmitting || !isFormValid"
+                :disabled="isSubmitting || saving || !isFormValid"
               >
-                <span v-if="isSubmitting">
+                <span v-if="isSubmitting || saving">
                   <svg
                     class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline"
                     fill="none"
@@ -496,6 +496,8 @@ const { formatDate } = useDateFormatter();
 
 // Props
 interface Props {
+  /** The parent's write is in flight (the modal only emits `save`). */
+  saving?: boolean;
   restaurantId?: string;
   coupon?: Pick<
     Coupon,
@@ -663,7 +665,7 @@ const resetForm = () => {
 };
 
 const handleSubmit = async () => {
-  if (!isFormValid.value || isSubmitting.value) return;
+  if (!isFormValid.value || isSubmitting.value || props.saving) return;
 
   isSubmitting.value = true;
   try {

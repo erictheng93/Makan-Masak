@@ -30,7 +30,11 @@ afterEach(() => {
   silencedConsole.splice(0).forEach((spy) => spy.mockRestore());
 });
 
-const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
+const toast = vi.hoisted(() => ({
+  error: vi.fn(),
+  success: vi.fn(),
+  dismiss: vi.fn(),
+}));
 const extractApiErrorCode = vi.hoisted(() => vi.fn());
 // Mutable so a test can take the module away without re-mocking the module.
 const moduleAccess = vi.hoisted(() => ({
@@ -291,5 +295,85 @@ describe("CouponsView", () => {
     expect(toast.error).not.toHaveBeenCalledWith(
       expect.stringContaining("Request failed"),
     );
+  });
+
+  describe("status toggle", () => {
+    const listCalls = () =>
+      vi.mocked(api.get).mock.calls.filter(([url]) => url === "/coupons");
+    const rowButton = (
+      wrapper: ReturnType<typeof mountCoupons>,
+      label: string,
+    ) => wrapper.findAll("button").find((b) => b.text().includes(label))!;
+
+    it("flips the row at once, sends one request on a double tap, and skips the list refetch", async () => {
+      let resolve!: (value: unknown) => void;
+      vi.mocked(api.post).mockReturnValue(
+        new Promise((r) => (resolve = r)) as never,
+      );
+      const wrapper = mountCoupons();
+      await flushPromises();
+      const before = listCalls().length;
+
+      const button = rowButton(wrapper, "coupons.actions.deactivate");
+      await button.trigger("click");
+      await button.trigger("click");
+
+      expect(api.post).toHaveBeenCalledOnce();
+      expect(api.post).toHaveBeenCalledWith("/coupons/1/deactivate");
+      // The row flipped, so the pending button is now the "activate" one.
+      expect(
+        rowButton(wrapper, "common.saving").attributes("disabled"),
+      ).toBeDefined();
+
+      resolve({
+        data: { success: true, data: { ...coupon(), isActive: false } },
+      });
+      await flushPromises();
+
+      expect(wrapper.text()).toContain("coupons.actions.activate");
+      expect(listCalls()).toHaveLength(before);
+      expect(toast.success).toHaveBeenCalledWith(
+        expect.objectContaining({
+          props: expect.objectContaining({
+            message: "coupons.messages.deactivateSuccess",
+          }),
+        }),
+        expect.anything(),
+      );
+    });
+
+    it("Undo performs the reverse call", async () => {
+      vi.mocked(api.put).mockResolvedValue({} as never);
+      const wrapper = mountCoupons();
+      await flushPromises();
+      await rowButton(wrapper, "coupons.actions.deactivate").trigger("click");
+      await flushPromises();
+
+      toast.success.mock.calls.at(-1)![0].listeners.undo();
+      await flushPromises();
+
+      expect(api.put).toHaveBeenCalledOnce();
+      expect(api.put).toHaveBeenCalledWith("/coupons/1", { isActive: true });
+      expect(toast.dismiss).toHaveBeenCalledOnce();
+      expect(wrapper.text()).toContain("coupons.actions.deactivate");
+    });
+
+    it("reverts the row and shows the server message when the call fails", async () => {
+      vi.mocked(api.post).mockRejectedValue({
+        response: {
+          status: 409,
+          data: { error: { code: "X", message: "Coupon is in use" } },
+        },
+      });
+      const wrapper = mountCoupons();
+      await flushPromises();
+      await rowButton(wrapper, "coupons.actions.deactivate").trigger("click");
+      await flushPromises();
+
+      expect(toast.error).toHaveBeenCalledOnce();
+      expect(toast.error).toHaveBeenCalledWith("Coupon is in use");
+      expect(wrapper.text()).toContain("coupons.actions.deactivate");
+      expect(wrapper.text()).not.toContain("coupons.actions.activate");
+    });
   });
 });

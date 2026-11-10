@@ -11,6 +11,7 @@ const enUS: Messages = {
     delete: "Delete",
     deleting: "Deleting...",
     saving: "Saving...",
+    undo: "Undo",
     edit: "Edit",
     add: "Add",
     search: "Search",
@@ -3945,6 +3946,8 @@ const enUS: Messages = {
     success: {
       archived: "{username} removed",
       restored: "{username} restored",
+      disabled: "{username} disabled",
+      enabled: "{username} enabled",
       created: "Employee created",
       createdSignIn: "Employee created. They sign in at {url}",
     },

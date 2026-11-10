@@ -94,7 +94,11 @@
               :disabled="saving"
               class="px-5 py-2 rounded-full text-[13px] font-semibold bg-ios-orange text-white hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {{ t("users.resetPasswordModal.submit") }}
+              {{
+                saving
+                  ? t("common.saving")
+                  : t("users.resetPasswordModal.submit")
+              }}
             </button>
           </div>
         </form>
@@ -158,7 +162,7 @@ function close() {
 }
 
 async function submit() {
-  if (!props.user) return;
+  if (!props.user || saving.value) return;
   if (!meetsPasswordRule(newPassword.value)) {
     error.value = t("accountManagement.passwordStrength");
     return;

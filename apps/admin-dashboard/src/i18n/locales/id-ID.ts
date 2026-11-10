@@ -11,6 +11,7 @@ const idID: Messages = {
     delete: "Hapus",
     deleting: "Menghapus...",
     saving: "Menyimpan...",
+    undo: "Urungkan",
     edit: "Edit",
     add: "Tambah",
     search: "Cari",
@@ -3968,6 +3969,8 @@ const idID: Messages = {
     success: {
       archived: "{username} dihapus",
       restored: "{username} dipulihkan",
+      disabled: "{username} dinonaktifkan",
+      enabled: "{username} diaktifkan",
       created: "Karyawan dibuat",
       createdSignIn: "Karyawan dibuat. Mereka masuk melalui {url}",
     },

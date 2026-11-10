@@ -49,6 +49,15 @@ function buildUsersUrl(
   return query ? `/users?${query}` : "/users";
 }
 
+const activeFields = (isActive: boolean) => ({
+  isActive,
+  status: isActive ? ("active" as const) : ("inactive" as const),
+});
+
+const patchUser = (id: UserId, patch: Partial<Employee>) => {
+  users.value = users.value.map((u) => (u.id === id ? { ...u, ...patch } : u));
+};
+
 export function useEmployeeList() {
   const authStore = useAuthStore();
 
@@ -273,14 +282,30 @@ export function useEmployeeList() {
       await api.patch(`/users/${employee.id}/status`, { isActive });
     }
 
-    await fetchUsers();
+    // The writes above are the whole change; no need to re-read the roster.
+    patchUser(employee.id, {
+      fullName: form.fullName,
+      email: form.email.trim(),
+      role: form.role,
+      ...activeFields(isActive),
+    });
   };
 
-  const toggleUserStatus = async (user: Employee) => {
-    const newIsActive = user.status !== "active";
-    await api.patch(`/users/${user.id}/status`, { isActive: newIsActive });
-    await fetchUsers();
+  /** Optimistic: the row flips now and flips back if the request fails. */
+  const setUserActive = async (userId: UserId, isActive: boolean) => {
+    const before = users.value.find((u) => u.id === userId);
+    patchUser(userId, activeFields(isActive));
+    try {
+      await api.patch(`/users/${userId}/status`, { isActive });
+    } catch (e) {
+      if (before) patchUser(userId, activeFields(before.isActive));
+      throw e;
+    }
+    return isActive;
   };
+
+  const toggleUserStatus = (user: Employee) =>
+    setUserActive(user.id, user.status !== "active");
 
   const fetchArchivedUsers = async () => {
     archivedLoading.value = true;
@@ -307,13 +332,15 @@ export function useEmployeeList() {
   /** Remove a departed employee from the roster; the row survives for history. */
   const archiveUser = async (userId: UserId) => {
     await api.delete(`/users/${userId}`);
-    await Promise.all([fetchUsers(), fetchArchivedUsers()]);
+    // The archived tab re-reads its own list whenever it is opened.
+    users.value = users.value.filter((u) => u.id !== userId);
   };
 
   /** Rehire: put an archived employee back on the active roster. */
   const restoreUser = async (userId: UserId) => {
     await api.post(`/users/${userId}/restore`);
-    await Promise.all([fetchUsers(), fetchArchivedUsers()]);
+    archivedUsers.value = archivedUsers.value.filter((u) => u.id !== userId);
+    void fetchUsers(); // the restored row's status comes from the server
   };
 
   return {
@@ -340,6 +367,7 @@ export function useEmployeeList() {
     createUser,
     updateUser,
     toggleUserStatus,
+    setUserActive,
     fetchArchivedUsers,
     archiveUser,
     restoreUser,

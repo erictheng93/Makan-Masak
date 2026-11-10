@@ -212,33 +212,33 @@
             <td class="px-4 py-3.5" @click.stop>
               <div class="flex items-center gap-2">
                 <button
-                  class="p-1.5 rounded-lg text-ios-blue hover:bg-ios-blue/10 transition-colors"
+                  class="p-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed text-ios-blue hover:bg-ios-blue/10 transition-colors"
                   :title="t('users.actions.edit')"
+                  :aria-label="t('users.actions.edit')"
                   @click="$emit('editUser', user)"
                 >
                   <Pencil class="w-4 h-4" />
                 </button>
                 <button
                   v-if="user.role !== 0 || isAdministrator"
-                  class="p-1.5 rounded-lg text-ios-orange hover:bg-ios-orange/10 transition-colors"
+                  class="p-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed text-ios-orange hover:bg-ios-orange/10 transition-colors"
                   :title="t('users.actions.resetPassword')"
+                  :aria-label="t('users.actions.resetPassword')"
                   @click="handleResetPassword(user)"
                 >
                   <KeyRound class="w-4 h-4" />
                 </button>
                 <button
                   v-if="!isArchivedRoster"
-                  class="p-1.5 rounded-lg transition-colors"
+                  class="p-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   :class="
                     user.status === 'active'
                       ? 'text-ios-red hover:bg-ios-red/10'
                       : 'text-ios-green hover:bg-ios-green/10'
                   "
-                  :title="
-                    user.status === 'active'
-                      ? t('users.actions.disable')
-                      : t('users.actions.enable')
-                  "
+                  :title="toggleLabel(user)"
+                  :aria-label="toggleLabel(user)"
+                  :disabled="busy"
                   @click="handleToggleStatus(user)"
                 >
                   <UserX v-if="user.status === 'active'" class="w-4 h-4" />
@@ -246,16 +246,20 @@
                 </button>
                 <button
                   v-if="!isArchivedRoster"
-                  class="p-1.5 rounded-lg text-ios-red hover:bg-ios-red/10 transition-colors"
+                  class="p-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed text-ios-red hover:bg-ios-red/10 transition-colors"
                   :title="t('users.actions.archive')"
+                  :aria-label="t('users.actions.archive')"
+                  :disabled="busy"
                   @click="handleArchive(user)"
                 >
                   <UserMinus class="w-4 h-4" />
                 </button>
                 <button
                   v-else
-                  class="p-1.5 rounded-lg text-ios-green hover:bg-ios-green/10 transition-colors"
+                  class="p-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed text-ios-green hover:bg-ios-green/10 transition-colors"
                   :title="t('users.actions.restore')"
+                  :aria-label="t('users.actions.restore')"
+                  :disabled="busy"
                   @click="handleRestore(user)"
                 >
                   <UserRoundPlus class="w-4 h-4" />
@@ -335,6 +339,8 @@ const props = defineProps<{
   archivedUsers?: EmployeeWithStatus[];
   isLoading?: boolean;
   archivedLoading?: boolean;
+  /** A row write is in flight; the status and remove buttons wait. */
+  busy?: boolean;
 }>();
 
 const router = useRouter();
@@ -418,6 +424,11 @@ const navigateToDetail = (id: UserId) => {
   router.push(`/dashboard/employees/${id}`);
 };
 
+const toggleLabel = (user: Employee) =>
+  user.status === "active"
+    ? t("users.actions.disable")
+    : t("users.actions.enable");
+
 const emit = defineEmits<{
   editUser: [user: Employee];
   refresh: [];
@@ -457,21 +468,7 @@ const handleResetPassword = (user: EmployeeWithStatus) => {
   emit("resetPassword", user);
 };
 
-const handleToggleStatus = async (user: EmployeeWithStatus) => {
-  const isActive = user.status === "active";
-  const action = isActive
-    ? t("users.actions.disable")
-    : t("users.actions.enable");
-  const confirmed = await confirmModal({
-    type: isActive ? "danger" : "warning",
-    title: action,
-    message: t("users.confirm.toggleStatus", {
-      action,
-      username: user.username,
-    }),
-    confirmLabel: action,
-  });
-  if (!confirmed) return;
+const handleToggleStatus = (user: EmployeeWithStatus) => {
   emit("toggleStatus", user);
 };
 </script>

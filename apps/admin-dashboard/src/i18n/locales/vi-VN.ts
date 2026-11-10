@@ -11,6 +11,7 @@ const viVN: Messages = {
     delete: "Xóa",
     deleting: "Đang xóa...",
     saving: "Đang lưu...",
+    undo: "Hoàn tác",
     edit: "Chỉnh sửa",
     add: "Thêm",
     search: "Tìm kiếm",
@@ -3949,6 +3950,8 @@ const viVN: Messages = {
     success: {
       archived: "Đã gỡ {username}",
       restored: "Đã khôi phục {username}",
+      disabled: "Đã vô hiệu hóa {username}",
+      enabled: "Đã kích hoạt {username}",
       created: "Đã tạo nhân viên",
       createdSignIn: "Đã tạo nhân viên. Họ đăng nhập tại {url}",
     },

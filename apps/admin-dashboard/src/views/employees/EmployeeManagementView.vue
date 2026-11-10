@@ -81,6 +81,7 @@
           :archived-users="employeeList.archivedUsers.value"
           :is-loading="employeeList.isLoading.value"
           :archived-loading="employeeList.archivedLoading.value"
+          :busy="rowBusy"
           @edit-user="editUser"
           @refresh="employeeList.fetchAll"
           @reset-password="handleResetPassword"
@@ -116,6 +117,8 @@ import { useRoute } from "vue-router";
 import { useI18n } from "@/i18n";
 import { useToast } from "vue-toastification";
 import { useEmployeeList } from "@/composables/useEmployeeList";
+import { useAsyncAction } from "@/composables/useAsyncAction";
+import { useUndoToast } from "@/composables/useUndoToast";
 import { useAuthStore } from "@/stores/auth";
 import { api } from "@/services/api";
 import {
@@ -145,6 +148,7 @@ import {
 const route = useRoute();
 const { t } = useI18n();
 const toast = useToast();
+const undoToast = useUndoToast();
 const employeeList = useEmployeeList();
 const authStore = useAuthStore();
 
@@ -345,42 +349,50 @@ const handleResetPassword = (user: Employee) => {
   resetTarget.value = user;
 };
 
+const archiveAction = useAsyncAction(
+  (user: Employee) => employeeList.archiveUser(user.id),
+  { fallbackError: t("users.errors.archiveFailed") },
+);
+const restoreAction = useAsyncAction(
+  (user: Employee) => employeeList.restoreUser(user.id),
+  { fallbackError: t("users.errors.restoreFailed") },
+);
+const statusAction = useAsyncAction(
+  (userId: Employee["id"], isActive: boolean) =>
+    employeeList.setUserActive(userId, isActive),
+  { fallbackError: t("users.errors.toggleFailed") },
+);
+
+// Row buttons that write stay disabled while any of them is in flight.
+const rowBusy = computed(
+  () =>
+    archiveAction.pending.value ||
+    restoreAction.pending.value ||
+    statusAction.pending.value,
+);
+
 const handleArchiveUser = async (user: Employee) => {
-  try {
-    await employeeList.archiveUser(user.id);
+  if ((await archiveAction.run(user)) !== undefined) {
     toast.success(t("users.success.archived", { username: user.username }));
-  } catch (error: unknown) {
-    toast.error(
-      resolveUserFacingError(error, t, {
-        fallbackKey: "users.errors.archiveFailed",
-      }).message,
-    );
   }
 };
 
 const handleRestoreUser = async (user: Employee) => {
-  try {
-    await employeeList.restoreUser(user.id);
+  if ((await restoreAction.run(user)) !== undefined) {
     toast.success(t("users.success.restored", { username: user.username }));
-  } catch (error: unknown) {
-    toast.error(
-      resolveUserFacingError(error, t, {
-        fallbackKey: "users.errors.restoreFailed",
-      }).message,
-    );
   }
 };
 
+// Reversible, so no confirmation: apply now, offer Undo.
 const handleToggleStatus = async (user: Employee) => {
-  try {
-    await employeeList.toggleUserStatus(user);
-  } catch (error: unknown) {
-    toast.error(
-      resolveUserFacingError(error, t, {
-        fallbackKey: "users.errors.toggleFailed",
-      }).message,
-    );
-  }
+  const next = user.status !== "active";
+  if ((await statusAction.run(user.id, next)) === undefined) return;
+  undoToast(
+    t(next ? "users.success.enabled" : "users.success.disabled", {
+      username: user.username,
+    }),
+    () => void statusAction.run(user.id, !next),
+  );
 };
 
 async function loadPendingLeaveCount() {

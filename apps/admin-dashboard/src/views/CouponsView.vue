@@ -314,21 +314,32 @@
                   </button>
                   <button
                     v-if="coupon.isActive"
-                    class="text-yellow-600 hover:text-yellow-900 text-sm"
-                    @click="deactivateCoupon(coupon)"
+                    class="text-yellow-600 hover:text-yellow-900 text-sm disabled:opacity-50"
+                    :disabled="statusAction.pending.value"
+                    @click="setCouponActive(coupon, false)"
                   >
-                    {{ t("coupons.actions.deactivate") }}
+                    {{
+                      rowBusyId === coupon.id
+                        ? t("common.saving")
+                        : t("coupons.actions.deactivate")
+                    }}
                   </button>
                   <button
                     v-else
-                    class="text-green-600 hover:text-green-900 text-sm"
-                    @click="activateCoupon(coupon)"
+                    class="text-green-600 hover:text-green-900 text-sm disabled:opacity-50"
+                    :disabled="statusAction.pending.value"
+                    @click="setCouponActive(coupon, true)"
                   >
-                    {{ t("coupons.actions.activate") }}
+                    {{
+                      rowBusyId === coupon.id
+                        ? t("common.saving")
+                        : t("coupons.actions.activate")
+                    }}
                   </button>
                   <button
                     v-if="isAdmin"
-                    class="text-red-600 hover:text-red-900 text-sm"
+                    class="text-red-600 hover:text-red-900 text-sm disabled:opacity-50"
+                    :disabled="statusAction.pending.value"
                     @click="deleteCoupon(coupon)"
                   >
                     {{ t("coupons.actions.delete") }}
@@ -423,6 +434,7 @@
             authStore.user?.restaurantId ||
             undefined
           "
+          :saving="saveAction.pending.value"
           @close="closeModal"
           @save="handleSaveCoupon"
         />
@@ -517,10 +529,15 @@
                 {{ t("common.cancel") }}
               </button>
               <button
-                class="px-5 py-2.5 text-[14px] font-semibold text-white bg-red-500 rounded-full hover:bg-red-600 transition-colors shadow-[0_2px_8px_rgba(255,59,48,0.25)]"
+                class="px-5 py-2.5 text-[14px] font-semibold text-white bg-red-500 rounded-full hover:bg-red-600 transition-colors shadow-[0_2px_8px_rgba(255,59,48,0.25)] disabled:opacity-50"
+                :disabled="deleteAction.pending.value"
                 @click="confirmDeleteCoupon"
               >
-                {{ t("common.delete") }}
+                {{
+                  deleteAction.pending.value
+                    ? t("common.deleting")
+                    : t("common.delete")
+                }}
               </button>
             </div>
           </div>
@@ -548,6 +565,8 @@
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useToast } from "vue-toastification";
 import { useI18n } from "@/i18n";
+import { useAsyncAction } from "@/composables/useAsyncAction";
+import { useUndoToast } from "@/composables/useUndoToast";
 import { useCurrency } from "@/composables/useCurrency";
 import { useDateFormatter } from "@/composables/useDateFormatter";
 import { api } from "@/services/api";
@@ -717,29 +736,54 @@ const closeModal = () => {
   editingCoupon.value = null;
 };
 
-const handleSaveCoupon = async (couponData: Record<string, unknown>) => {
-  try {
-    if (editingCoupon.value) {
-      await api.put(`/coupons/${editingCoupon.value.id}`, couponData);
-      toast.success(t("coupons.messages.updateSuccess"));
-    } else {
-      await api.post("/coupons", couponData);
-      toast.success(t("coupons.messages.createSuccess"));
-    }
+// Patch the row from what the write returned; the list is only re-read when
+// a new coupon's place in it depends on the server (page, filters, order).
+const patchCoupon = (id: Coupon["id"], patch: Partial<Coupon>) => {
+  if (!couponsData.value) return;
+  couponsData.value = {
+    ...couponsData.value,
+    data: couponsData.value.data.map((c) =>
+      c.id === id ? { ...c, ...patch } : c,
+    ),
+  };
+};
 
-    await Promise.all([fetchCoupons(), fetchStats()]);
-    closeModal();
-  } catch (error) {
-    if (extractApiErrorCode(error) === "COUPON_CODE_EXISTS") {
+const undoToast = useUndoToast();
+
+const saveAction = useAsyncAction(
+  async (couponData: Record<string, unknown>) => {
+    const editing = editingCoupon.value;
+    try {
+      if (editing) {
+        const res = await api.put<Coupon>(`/coupons/${editing.id}`, couponData);
+        const updated = res?.data?.data;
+        if (updated?.id === editing.id) patchCoupon(editing.id, updated);
+        else void fetchCoupons();
+      } else {
+        await api.post("/coupons", couponData);
+        void fetchCoupons();
+      }
+    } catch (error) {
+      if (extractApiErrorCode(error) !== "COUPON_CODE_EXISTS") throw error;
       toast.error(t("coupons.messages.codeExists"));
-    } else {
-      toast.error(
-        t("coupons.messages.operationFailed", {
-          message: (error as Error).message,
-        }),
-      );
+      return false;
     }
-  }
+    void fetchStats(); // summary only; never blocks the row
+    return true;
+  },
+);
+
+const handleSaveCoupon = async (couponData: Record<string, unknown>) => {
+  const editing = editingCoupon.value !== null;
+  if (!(await saveAction.run(couponData))) return;
+  toast.success(
+    t(
+      editing
+        ? "coupons.messages.updateSuccess"
+        : "coupons.messages.createSuccess",
+    ),
+  );
+  closeModal();
 };
 
 const distributeCoupon = (coupon: Coupon) => {
@@ -766,42 +810,73 @@ const viewCouponStats = async (coupon: Coupon) => {
   }
 };
 
-const deactivateCoupon = async (coupon: Coupon) => {
-  try {
-    await api.post(`/coupons/${coupon.id}/deactivate`);
-    toast.success(t("coupons.messages.deactivateSuccess"));
-    await Promise.all([fetchCoupons(), fetchStats()]);
-  } catch {
-    toast.error(t("coupons.messages.deactivateFailed"));
-  }
-};
+// Optimistic: the row flips at once and flips back if the request fails.
+const rowBusyId = ref<Coupon["id"] | null>(null);
+const statusAction = useAsyncAction(
+  async (id: Coupon["id"], isActive: boolean) => {
+    const before =
+      couponsData.value?.data.find((c) => c.id === id)?.isActive ?? !isActive;
+    rowBusyId.value = id;
+    patchCoupon(id, { isActive });
+    try {
+      const res = isActive
+        ? await api.put<Coupon>(`/coupons/${id}`, { isActive: true })
+        : await api.post<Coupon>(`/coupons/${id}/deactivate`);
+      const updated = res?.data?.data;
+      if (updated?.id === id) patchCoupon(id, updated);
+    } catch (error) {
+      patchCoupon(id, { isActive: before });
+      throw error;
+    } finally {
+      rowBusyId.value = null;
+    }
+    void fetchStats();
+    return isActive;
+  },
+);
 
-const activateCoupon = async (coupon: Coupon) => {
-  try {
-    await api.put(`/coupons/${coupon.id}`, { isActive: true });
-    toast.success(t("coupons.messages.activateSuccess"));
-    await Promise.all([fetchCoupons(), fetchStats()]);
-  } catch {
-    toast.error(t("coupons.messages.activateFailed"));
-  }
+// Reversible, so no confirmation: apply now, offer Undo.
+const setCouponActive = async (coupon: Coupon, isActive: boolean) => {
+  if ((await statusAction.run(coupon.id, isActive)) === undefined) return;
+  undoToast(
+    t(
+      isActive
+        ? "coupons.messages.activateSuccess"
+        : "coupons.messages.deactivateSuccess",
+    ),
+    () => void setCouponActive(coupon, !isActive),
+  );
 };
 
 const deleteCoupon = (coupon: Coupon) => {
   deleteTarget.value = coupon;
 };
 
+const deleteAction = useAsyncAction(
+  async (id: Coupon["id"]) => {
+    await api.delete(`/coupons/${id}`);
+    if (couponsData.value) {
+      const data = couponsData.value.data.filter((c) => c.id !== id);
+      couponsData.value = {
+        data,
+        pagination: {
+          total: Math.max(0, couponsData.value.pagination.total - 1),
+        },
+      };
+      if (data.length === 0) void fetchCoupons();
+    }
+    void fetchStats();
+    return true;
+  },
+  {
+    success: t("coupons.messages.deleteSuccess"),
+    fallbackError: t("coupons.messages.deleteFailed"),
+  },
+);
+
 const confirmDeleteCoupon = async () => {
   if (!deleteTarget.value) return;
-  const couponId = deleteTarget.value.id;
-  deleteTarget.value = null;
-
-  try {
-    await api.delete(`/coupons/${couponId}`);
-    toast.success(t("coupons.messages.deleteSuccess"));
-    await Promise.all([fetchCoupons(), fetchStats()]);
-  } catch {
-    toast.error(t("coupons.messages.deleteFailed"));
-  }
+  if (await deleteAction.run(deleteTarget.value.id)) deleteTarget.value = null;
 };
 
 // Initialize data and watchers.

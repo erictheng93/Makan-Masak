@@ -20,12 +20,14 @@ const apiGet = vi.fn();
 const apiPost = vi.fn();
 const apiPut = vi.fn();
 const apiPatch = vi.fn();
+const apiDelete = vi.fn();
 vi.mock("@/services/api", () => ({
   api: {
     get: (...args: unknown[]) => apiGet(...args),
     post: (...args: unknown[]) => apiPost(...args),
     put: (...args: unknown[]) => apiPut(...args),
     patch: (...args: unknown[]) => apiPatch(...args),
+    delete: (...args: unknown[]) => apiDelete(...args),
   },
 }));
 
@@ -56,6 +58,7 @@ describe("useEmployeeList status lookup", () => {
     apiPost.mockReset();
     apiPut.mockReset();
     apiPatch.mockReset();
+    apiDelete.mockReset();
     getClockedInEmployees.mockReset();
 
     // Module-level state is shared across callers, so every test reseeds it.
@@ -166,6 +169,70 @@ describe("useEmployeeList status lookup", () => {
     expect(apiPatch).toHaveBeenCalledWith(`/users/${CHEF}/status`, {
       isActive: false,
     });
+  });
+
+  const listFetches = () =>
+    apiGet.mock.calls.filter(
+      ([url]) => url === "/users?restaurantId=restaurant-1",
+    );
+
+  it("patches the edited row from the form without re-reading the roster", async () => {
+    const list = useEmployeeList();
+    const employee = list.users.value.find((user) => user.id === CHEF)!;
+    const before = listFetches().length;
+
+    await list.updateUser(employee, {
+      username: employee.username,
+      password: "",
+      fullName: "Updated Chef",
+      email: " new@example.test ",
+      role: 4,
+      status: "inactive",
+    });
+
+    expect(list.users.value.find((u) => u.id === CHEF)).toEqual(
+      expect.objectContaining({
+        fullName: "Updated Chef",
+        email: "new@example.test",
+        role: 4,
+        status: "inactive",
+        isActive: false,
+      }),
+    );
+    expect(listFetches()).toHaveLength(before);
+  });
+
+  it("flips the status locally and reverts it when the request fails", async () => {
+    const list = useEmployeeList();
+    const before = listFetches().length;
+    let reject!: (e: unknown) => void;
+    apiPatch.mockReturnValue(new Promise((_, r) => (reject = r)));
+
+    const pending = list.setUserActive(CHEF, false);
+    expect(list.users.value.find((u) => u.id === CHEF)?.status).toBe(
+      "inactive",
+    );
+
+    reject(new Error("boom"));
+    await expect(pending).rejects.toThrow("boom");
+    expect(list.users.value.find((u) => u.id === CHEF)?.status).toBe("active");
+    expect(apiPatch).toHaveBeenCalledOnce();
+    expect(apiPatch).toHaveBeenCalledWith(`/users/${CHEF}/status`, {
+      isActive: false,
+    });
+    expect(listFetches()).toHaveLength(before);
+  });
+
+  it("drops a removed employee locally without re-reading the roster", async () => {
+    const list = useEmployeeList();
+    const before = listFetches().length;
+    apiDelete.mockResolvedValue({ data: { success: true } });
+
+    await list.archiveUser(CHEF);
+
+    expect(apiDelete).toHaveBeenCalledWith(`/users/${CHEF}`);
+    expect(list.users.value.map((u) => u.id)).not.toContain(CHEF);
+    expect(listFetches()).toHaveLength(before);
   });
 
   it("omits a blank email instead of sending an empty string", async () => {
