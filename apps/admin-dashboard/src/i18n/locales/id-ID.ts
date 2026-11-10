@@ -3549,6 +3549,8 @@ const idID: Messages = {
     minutes: "menit",
     registerList: "Daftar Mesin Kasir",
     addRegister: "Tambah Mesin Kasir",
+    noRegisterAskOwner:
+      "Belum ada mesin kasir. Minta pemilik toko untuk menambahkannya.",
     currentBalance: "Saldo Saat Ini",
     todayTransactions: "Transaksi Hari Ini",
     lastActivity: "Aktivitas Terakhir",

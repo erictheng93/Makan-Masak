@@ -3443,6 +3443,7 @@ const zhCN: Messages = {
     minutes: "分钟",
     registerList: "收银柜列表",
     addRegister: "新增收银柜",
+    noRegisterAskOwner: "还没有收银柜，请店主先新增一台。",
     currentBalance: "当前余额",
     todayTransactions: "今日交易",
     lastActivity: "最后活动",

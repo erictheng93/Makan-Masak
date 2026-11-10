@@ -3525,6 +3525,7 @@ const enUS: Messages = {
     minutes: "minutes",
     registerList: "Register List",
     addRegister: "Add Register",
+    noRegisterAskOwner: "No register yet. Ask the shop owner to add one.",
     currentBalance: "Current Balance",
     todayTransactions: "Today's Transactions",
     lastActivity: "Last Activity",

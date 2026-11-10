@@ -355,6 +355,41 @@ describe("POSManagementView", () => {
     wrapper.unmount();
   });
 
+  // POST /pos/registers is owner/admin only; a cashier clicking Add Register
+  // got "Insufficient permissions" and no way forward.
+  it("tells a cashier with no register to ask the owner instead of offering Add Register", async () => {
+    access.role = 4;
+    const defaultGet = vi.mocked(api.get).getMockImplementation()!;
+    vi.mocked(api.get).mockImplementation(async (url: string, ...rest) =>
+      url === "/pos/registers"
+        ? ({ data: { success: true, data: [] } } as never)
+        : defaultGet(url, ...rest),
+    );
+    const wrapper = mount(POSManagementView);
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="pos-add-register"]').exists()).toBe(
+      false,
+    );
+    expect(wrapper.get('[data-testid="pos-no-register"]').text()).toBe(
+      "pos.noRegisterAskOwner",
+    );
+    wrapper.unmount();
+  });
+
+  it("offers Add Register to the owner", async () => {
+    const wrapper = mount(POSManagementView);
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="pos-add-register"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.find('[data-testid="pos-no-register"]').exists()).toBe(
+      false,
+    );
+    wrapper.unmount();
+  });
+
   it("shows usable electronic coupon codes to cashiers without management controls", async () => {
     access.role = 4;
     const wrapper = mount(POSManagementView);

@@ -3558,6 +3558,7 @@ const zhTWCore = {
     minutes: "分鐘",
     registerList: "收銀櫃列表",
     addRegister: "新增收銀櫃",
+    noRegisterAskOwner: "還沒有收銀櫃，請店主先新增一台。",
     currentBalance: "當前餘額",
     todayTransactions: "今日交易",
     lastActivity: "最後活動",

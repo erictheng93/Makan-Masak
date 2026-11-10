@@ -151,7 +151,9 @@
               <h2 class="text-xl font-semibold text-gray-900">
                 {{ t("pos.registerList") }}
               </h2>
+              <!-- Creating a register is owner/admin only on the API. -->
               <button
+                v-if="canManageRegisters"
                 class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                 data-testid="pos-add-register"
                 @click="createRegister"
@@ -162,6 +164,13 @@
           </div>
 
           <div class="p-6">
+            <p
+              v-if="registers.length === 0 && !canManageRegisters"
+              data-testid="pos-no-register"
+              class="text-sm text-gray-600"
+            >
+              {{ t("pos.noRegisterAskOwner") }}
+            </p>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div
                 v-for="register in registers"
@@ -1090,6 +1099,9 @@ const moduleAccess = useModuleAccessStore();
 const hasPromotions = computed(
   () =>
     moduleAccess.isLoaded && moduleAccess.effectiveModules?.coupons === true,
+);
+const canManageRegisters = computed(() =>
+  [0, 1].includes(authStore.user?.role ?? -1),
 );
 const canManagePromotions = computed(
   () => hasPromotions.value && [0, 1].includes(authStore.user?.role ?? -1),

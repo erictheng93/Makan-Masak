@@ -3536,6 +3536,7 @@ const jaJP: Messages = {
     minutes: "分",
     registerList: "レジスター一覧",
     addRegister: "レジスター追加",
+    noRegisterAskOwner: "レジがまだありません。店主に追加を依頼してください。",
     currentBalance: "現在残高",
     todayTransactions: "本日の取引",
     lastActivity: "最終操作",

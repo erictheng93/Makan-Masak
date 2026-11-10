@@ -3531,6 +3531,8 @@ const viVN: Messages = {
     minutes: "phút",
     registerList: "Danh sách máy tính tiền",
     addRegister: "Thêm máy",
+    noRegisterAskOwner:
+      "Chưa có máy tính tiền. Hãy nhờ chủ cửa hàng thêm một máy.",
     currentBalance: "Số dư hiện tại",
     todayTransactions: "Giao dịch hôm nay",
     lastActivity: "Hoạt động cuối",
