@@ -4,8 +4,9 @@ import {
   integer,
   real,
   index,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import type { SupportedCountryCode } from "@makanmasak/shared-types";
 import { v7 as uuidv7 } from "uuid";
 import { categories } from "./categories";
@@ -68,6 +69,9 @@ export const restaurants = sqliteTable(
 
     // 店家级别 QR Code（用于无桌号的外带/自取订单）
     shopQrCode: text("shop_qr_code").unique(),
+    // URL-safe shop code for staff login links (`/s/{slug}`); migration 0041.
+    // A public identifier, not a credential. Unique among non-NULL values.
+    loginSlug: text("login_slug"),
     shopQrCodeImageUrl: text("shop_qr_code_image_url"),
     enableShopMode: integer("enable_shop_mode", { mode: "boolean" })
       .notNull()
@@ -136,6 +140,9 @@ export const restaurants = sqliteTable(
       table.deletedAt,
     ),
     countryCodeIdx: index("restaurants_country_code_idx").on(table.countryCode),
+    loginSlugUnique: uniqueIndex("restaurants_login_slug_unique")
+      .on(table.loginSlug)
+      .where(sql`${table.loginSlug} IS NOT NULL`),
   }),
 );
 

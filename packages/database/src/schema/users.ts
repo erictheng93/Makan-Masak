@@ -1,5 +1,11 @@
-import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
-import { relations } from "drizzle-orm";
+import {
+  sqliteTable,
+  text,
+  integer,
+  index,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
+import { relations, sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import type { UserPreferences } from "@makanmasak/shared-types";
 import { restaurants } from "./restaurants";
@@ -33,7 +39,7 @@ export const users = sqliteTable(
       .$defaultFn(() => uuidv7()),
 
     // 基本資訊
-    username: text("username").notNull().unique(),
+    username: text("username").notNull(),
     email: text("email"),
     phone: text("phone"),
     fullName: text("full_name").notNull(),
@@ -87,6 +93,14 @@ export const users = sqliteTable(
     deletedAt: integer("deleted_at_ms", { mode: "timestamp_ms" }),
   },
   (table) => ({
+    // Staff usernames are unique per restaurant; platform admins
+    // (restaurant_id NULL) are unique among themselves. Migration 0042.
+    restaurantUsernameUnique: uniqueIndex("users_restaurant_username_unique")
+      .on(table.restaurantId, table.username)
+      .where(sql`${table.restaurantId} IS NOT NULL`),
+    platformUsernameUnique: uniqueIndex("users_platform_username_unique")
+      .on(table.username)
+      .where(sql`${table.restaurantId} IS NULL`),
     restaurantRoleActiveIdx: index("users_restaurant_role_active_idx").on(
       table.restaurantId,
       table.role,

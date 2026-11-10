@@ -162,6 +162,14 @@
     {
       "fresh": "0040_users_admin_tier.sql",
       "reason": "users is a platform-API table; the management-api reads it through PLATFORM_DB and has no users table of its own."
+    },
+    {
+      "fresh": "0041_restaurant_login_slug.sql",
+      "reason": "restaurants is a platform-API table; the management-api reads it through PLATFORM_DB and has no restaurants table of its own."
+    },
+    {
+      "fresh": "0042_users_username_per_restaurant.sql",
+      "reason": "users is a platform-API table; the management-api reads it through PLATFORM_DB and has no users table of its own."
     }
   ],
   "legacyOnly": [

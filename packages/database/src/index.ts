@@ -6,6 +6,7 @@ export * from "./services";
 
 // 匯出工具函數
 export * from "./utils/timestamp";
+export * from "./utils/login-slug";
 export * from "./utils/soft-delete";
 export * from "./utils/money";
 export * from "./utils/order-totals";
