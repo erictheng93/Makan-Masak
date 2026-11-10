@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Router } from "vue-router";
-import { prefetchRoute, prefetchWhenIdle } from "./prefetchRoutes";
+import {
+  idlePrefetchPaths,
+  prefetchRoute,
+  prefetchWhenIdle,
+} from "./prefetchRoutes";
 
 function fakeRouter(load: () => Promise<unknown>) {
   return {
@@ -28,6 +32,26 @@ describe("prefetchRoutes", () => {
     const load = vi.fn().mockRejectedValue(new Error("boom"));
     expect(() => prefetchRoute(fakeRouter(load), "/x")).not.toThrow();
     expect(load).toHaveBeenCalledOnce();
+  });
+
+  it("idle-warms only the daily pages, not every sidebar entry", () => {
+    expect(
+      idlePrefetchPaths([
+        "/dashboard",
+        "/dashboard/menu",
+        "/dashboard/analytics",
+        "/dashboard/orders",
+        "/dashboard/ai-analytics/insights",
+        "/dashboard/seating",
+        "/dashboard/pos",
+        "/dashboard/settings",
+      ]),
+    ).toEqual([
+      "/dashboard/menu",
+      "/dashboard/orders",
+      "/dashboard/seating",
+      "/dashboard/pos",
+    ]);
   });
 
   it("prefetches in idle time and skips when saveData is on", () => {

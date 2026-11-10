@@ -140,7 +140,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, type Component } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { prefetchRoute, prefetchWhenIdle } from "@/utils/prefetchRoutes";
+import {
+  idlePrefetchPaths,
+  prefetchRoute,
+  prefetchWhenIdle,
+} from "@/utils/prefetchRoutes";
 import { useAuthStore } from "@/stores/auth";
 import { UserRole } from "@/types";
 import { useI18n } from "@/i18n";
@@ -596,7 +600,7 @@ const submittedCountPoller = createVisibilityAwarePoller({
 onMounted(() => {
   prefetchWhenIdle(
     router,
-    navigationItems.value.map((item) => item.path),
+    idlePrefetchPaths(navigationItems.value.map((item) => item.path)),
   );
   void loadSubmittedApplicationCount();
   if (!authStore.isAdminRole) return;

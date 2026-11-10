@@ -20,6 +20,21 @@ export function prefetchRoute(router: Router, path: string): void {
   }
 }
 
+// Pages a shop works in all day. Idle-warming every sidebar entry cost ~25
+// chunk downloads per login, analytics charts included; the rest still warm
+// on hover/focus of their link, which is early enough.
+const DAILY_PATHS = new Set([
+  "/dashboard/menu",
+  "/dashboard/orders",
+  "/dashboard/seating",
+  "/dashboard/pos",
+]);
+
+/** The subset of the visible navigation worth warming before any hover. */
+export function idlePrefetchPaths(paths: string[]): string[] {
+  return paths.filter((path) => DAILY_PATHS.has(path));
+}
+
 /** Warms every path while the browser is idle, unless the user opted out of data use. */
 export function prefetchWhenIdle(router: Router, paths: string[]): void {
   const connection = (
