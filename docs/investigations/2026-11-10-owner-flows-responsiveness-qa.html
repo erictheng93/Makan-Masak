@@ -203,8 +203,8 @@ footer{
     <span><b>帳號</b> <code>demo</code>（role 1 店主）</span>
     <span><b>餐廳</b> Demo 小館 <code>01a0d2b6-…8e11</code></span>
     <span><b>日期</b> 2026-11-10</span>
-    <span><b>commits</b> <code>fc16aee15</code> … <code>3e070eb0b</code>（11 個）、<code>3cdf81363</code></span>
-    <span><b>部署</b> API <code>baf16560</code>、admin <code>index-Ckc45mMl.js</code>、image-processor <code>f47f4f42</code></span>
+    <span><b>commits</b> <code>fc16aee15</code> … <code>3e070eb0b</code>（11 個）、<code>3cdf81363</code>、<code>afd6cbe0d</code></span>
+    <span><b>部署</b> API <code>baf16560</code>、admin <code>index-BXPn2qaW.js</code>、image-processor <code>f47f4f42</code></span>
   </div>
 </header>
 
@@ -347,6 +347,15 @@ footer{
     </div>
   </div>
 
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">N4</span><h4>登入後在背景下載約 25 個頁面的程式</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>N1 的背景預先載入會在瀏覽器空閒時，把側欄上每一頁的程式都先下載，包含分析圖表、AI 分析等較重、店主少用的頁面，每次登入約多 25 個下載。</p>
+      <div class="evidence"><span class="lbl">修復</span>空閒時只預先載入每天會用的四頁：菜單、訂單、座位、POS；其他頁面仍在滑鼠移到連結上或鍵盤 focus 時才載入（<code>afd6cbe0d</code>）。</div>
+      <div class="evidence"><span class="lbl">驗證</span>production 以空快取載入儀表板、等 9 秒：背景只下載了 POS、訂單、菜單、座位四頁（加上座位頁預設開啟的訂位分頁），分析與 AI 頁面都沒有下載。</div>
+    </div>
+  </div>
+
   <h3>菜單圖片</h3>
 
   <div class="finding ux">
@@ -424,10 +433,11 @@ footer{
         <tr><td>第二批</td><td class="mono">7f102d28</td><td class="mono">（未變）</td><td>M6：回應後才清快取</td></tr>
         <tr><td>第三批</td><td class="mono">baf16560</td><td class="mono">index-Ckc45mMl.js</td><td>F1–F3、P1</td></tr>
         <tr><td>第四批</td><td class="mono">（未變）</td><td class="mono">（未變）</td><td>I1：只部署 image-processor，版本 <code>f47f4f42</code></td></tr>
+        <tr><td>第五批</td><td class="mono">（未變）</td><td class="mono">index-BXPn2qaW.js</td><td>N4：只部署 admin dashboard</td></tr>
       </tbody>
     </table>
   </div>
-  <p class="note"><b>回滾點</b>：API <code>7f102d28</code>、admin bundle <code>index-Bdhd-V9U.js</code>、image-processor <code>98bd5732</code>。</p>
+  <p class="note"><b>回滾點</b>：API <code>7f102d28</code>、admin bundle <code>index-Ckc45mMl.js</code>（第五批前）、image-processor <code>98bd5732</code>。</p>
 </section>
 
 <section>
@@ -438,7 +448,6 @@ footer{
       <li><b>儲存設定</b>的 1.3–2 秒在修改後沒有重新量測。</li>
       <li><b>座位模式</b>（一座位一 QR）沒有測試。</li>
       <li><b>I1 刪圖時清 edge 副本</b>沒有自動測試；它只清處理刪除的那個資料中心，其他地方要等 1 天過期。</li>
-      <li><b>背景預先載入</b>每次登入後多約 25 個小檔案下載，包含分析圖表等較重的頁面，可考慮縮小範圍。</li>
       <li><b>N2 的 focus 外框</b>是推測的原因，還沒在真實瀏覽器確認。</li>
       <li>POS 與廚房顯示讀菜單時是否略過快取沒有確認；如果沒有，它們會在店主存檔後約 1–2 秒內看到舊菜單。</li>
     </ul>
@@ -446,7 +455,7 @@ footer{
 </section>
 
 <footer>
-  2026-11-10 · production 走查與修復 · commits <code>fc16aee15</code>…<code>3e070eb0b</code>、<code>3cdf81363</code>
+  2026-11-10 · production 走查與修復 · commits <code>fc16aee15</code>…<code>3e070eb0b</code>、<code>3cdf81363</code>、<code>afd6cbe0d</code>
 </footer>
 
 </div>
