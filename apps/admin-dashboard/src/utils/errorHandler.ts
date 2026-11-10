@@ -8,13 +8,15 @@ import { currentLoginPath } from "@/utils/loginShop";
 /**
  * One failure -> at most one toast.
  *
- *  - A caller that catches an error (e.g. useAsyncAction, which never
- *    rethrows) owns its message. The axios interceptor therefore only logs and
- *    reports (`handleError(..., { notify: false })`); it never toasts.
- *  - This layer toasts only errors nobody handled: the window
- *    `unhandledrejection` / `error` events and Vue's `app.config.errorHandler`.
- *    Each error object is toasted once (`notified`), even if it reaches two
- *    of those hooks.
+ *  - The axios interceptor owns a toast for every failed request, but defers
+ *    it one macrotask (`handleError(..., { defer: true })`) so the caller's
+ *    catch runs first. A caller that handles the error and shows its own
+ *    message (e.g. useAsyncAction) calls `markErrorHandled(error)`; the
+ *    deferred toast then skips it. A caller that catches and only logs is not
+ *    marked, so the user still sees the interceptor's toast.
+ *  - Unhandled rejections / Vue errors toast through the same path. Each error
+ *    object is toasted once (`notified`) whichever hook sees it first, and
+ *    handled errors are skipped.
  *  - Deliberate suppressions stay: silent telemetry URLs,
  *    DEDICATED_UI_ERROR_CODES, and 401/403 on the login page or without a token.
  *  - All text is i18n (`errors.global.*`); API errors use the localized
@@ -22,6 +24,15 @@ import { currentLoginPath } from "@/utils/loginShop";
  */
 const toast = useToast();
 const notified = new WeakSet<object>();
+const handled = new WeakSet<object>();
+
+/** Call from a catch that shows its own message, so no second toast follows. */
+export function markErrorHandled(error: unknown): void {
+  if (typeof error !== "object" || error === null) return;
+  handled.add(error);
+  const inner = (error as { originalError?: unknown }).originalError;
+  if (typeof inner === "object" && inner !== null) handled.add(inner);
+}
 
 type AuthRefreshHandler = () => Promise<boolean>;
 
@@ -343,7 +354,7 @@ export class ErrorHandler {
   handleError(
     error: unknown,
     context?: Record<string, unknown>,
-    options: { notify?: boolean } = {},
+    options: { defer?: boolean } = {},
   ): ErrorDetails {
     const errorDetails = this.parseError(error, context);
 
@@ -359,15 +370,24 @@ export class ErrorHandler {
     }
 
     // 顯示用戶提示
-    if (this.userNotificationEnabled && options.notify !== false) {
-      const key = typeof error === "object" && error !== null ? error : null;
-      if (!key || !notified.has(key)) {
-        if (key) notified.add(key);
-        this.showUserNotification(errorDetails);
+    if (this.userNotificationEnabled) {
+      if (options.defer) {
+        setTimeout(() => this.notifyOnce(error, errorDetails), 0);
+      } else {
+        this.notifyOnce(error, errorDetails);
       }
     }
 
     return errorDetails;
+  }
+
+  private notifyOnce(error: unknown, details: ErrorDetails) {
+    const key = typeof error === "object" && error !== null ? error : null;
+    if (key) {
+      if (handled.has(key) || notified.has(key)) return;
+      notified.add(key);
+    }
+    this.showUserNotification(details);
   }
 
   // 解析錯誤
@@ -534,9 +554,8 @@ export class KitchenErrorHandler extends ErrorHandler {
 
   static handleAPIError(error: unknown, context?: Record<string, unknown>) {
     const handler = ErrorHandler.getInstance();
-    // The interceptor never toasts: the caller owns handled errors and the
-    // global hooks toast unhandled ones (see the rule at the top of the file).
-    return handler.handleError(error, context, { notify: false });
+    // Deferred so the caller can mark the error handled first.
+    return handler.handleError(error, context, { defer: true });
   }
 
   // 處理 SSE 連接錯誤

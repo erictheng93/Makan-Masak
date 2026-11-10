@@ -5,6 +5,8 @@ import { parseApiError, useAsyncAction } from "./useAsyncAction";
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock("vue-toastification", () => ({ useToast: () => toast }));
+const markErrorHandled = vi.hoisted(() => vi.fn());
+vi.mock("@/utils/errorHandler", () => ({ markErrorHandled }));
 vi.mock("@/i18n", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 
 const apiError = (status: number, error: Record<string, unknown>) =>
@@ -100,5 +102,18 @@ describe("useAsyncAction", () => {
     const { run } = useAsyncAction(() => Promise.reject(new Error("offline")));
     await run();
     expect(toast.error).toHaveBeenCalledWith("errors.saveFailed");
+  });
+});
+
+describe("useAsyncAction + global error handler", () => {
+  it("marks a caught failure handled before toasting, so only one toast shows", async () => {
+    vi.clearAllMocks();
+    const error = apiError(500, { code: "X", message: "boom" });
+    const { run } = useAsyncAction(() => Promise.reject(error));
+
+    await run();
+
+    expect(markErrorHandled).toHaveBeenCalledWith(error);
+    expect(toast.error).toHaveBeenCalledOnce();
   });
 });

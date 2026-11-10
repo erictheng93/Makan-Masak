@@ -1,6 +1,7 @@
 import { ref, type Ref } from "vue";
 import { useToast } from "vue-toastification";
 import { useI18n } from "@/i18n";
+import { markErrorHandled } from "@/utils/errorHandler";
 
 /** A failure from the API's unified envelope, flattened for the UI. */
 export interface ApiFailure {
@@ -61,7 +62,7 @@ export interface AsyncActionOptions<R> {
  *
  * `run` resolves to the action's result, or `undefined` when it was ignored
  * (already pending) or failed. Failures are handled here and never rethrown,
- * so they do not also reach the global error handler.
+ * and marked handled so the interceptor's deferred toast skips them.
  */
 export function useAsyncAction<A extends unknown[], R>(
   action: (...args: A) => Promise<R>,
@@ -89,6 +90,8 @@ export function useAsyncAction<A extends unknown[], R>(
       if (success) toast.success(success);
       return result;
     } catch (caught) {
+      // We show the message; the interceptor's deferred toast must skip it.
+      markErrorHandled(caught);
       const failure = parseApiError(caught);
       error.value = failure;
       const hasFieldErrors = Object.keys(failure.fieldErrors).length > 0;

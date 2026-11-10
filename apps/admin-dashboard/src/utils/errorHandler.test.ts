@@ -38,6 +38,7 @@ import {
   isDedicatedUiErrorCode,
   extractApiErrorCode,
   isSubscriptionErrorCode,
+  markErrorHandled,
   setAuthRefreshHandler,
   type SubscriptionErrorCode,
 } from "./errorHandler";
@@ -358,22 +359,69 @@ describe("one failure -> at most one toast", () => {
     vi.clearAllMocks();
   });
 
-  it("the interceptor path (handleAPIError) never toasts, so a caller that handles the error owns the message", () => {
-    KitchenErrorHandler.handleAPIError(failure(), { url: "/users" });
-
-    expect(toastError).not.toHaveBeenCalled();
-    expect(toastWarning).not.toHaveBeenCalled();
+  it("(a) a caller that catches and only logs still gets exactly one toast: the interceptor's, deferred", () => {
+    vi.useFakeTimers();
+    try {
+      const error = failure();
+      KitchenErrorHandler.handleAPIError(error, { url: "/users" });
+      expect(toastError).not.toHaveBeenCalled(); // deferred past the catch
+      console.error("caller only logs", error);
+      vi.runAllTimers();
+      expect(toastError).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
-  it("an unhandled rejection of the same error toasts exactly once, even if two global hooks see it", () => {
+  it("(b) a handled error (markErrorHandled, as useAsyncAction does) gets no interceptor toast", () => {
+    vi.useFakeTimers();
+    try {
+      const error = failure();
+      KitchenErrorHandler.handleAPIError(error, { url: "/users" });
+      markErrorHandled(error);
+      vi.runAllTimers();
+      expect(toastError).not.toHaveBeenCalled();
+      expect(toastWarning).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("marking a wrapper also marks its originalError", () => {
+    vi.useFakeTimers();
+    try {
+      const error = failure();
+      KitchenErrorHandler.handleAPIError(error, { url: "/users" });
+      markErrorHandled({ originalError: error });
+      vi.runAllTimers();
+      expect(toastError).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("(c) an uncaught error seen by the interceptor and the global hooks toasts exactly once", () => {
+    vi.useFakeTimers();
+    try {
+      const error = failure();
+      KitchenErrorHandler.handleAPIError(error, { url: "/users" });
+      const handler = ErrorHandler.getInstance();
+      handler.handleError(error, { type: "unhandledRejection" });
+      handler.handleError(error, { type: "vue_error" });
+      vi.runAllTimers();
+      expect(toastError).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("global hooks skip an error that was marked handled", () => {
     const error = failure();
-    KitchenErrorHandler.handleAPIError(error, { url: "/users" });
-
-    const handler = ErrorHandler.getInstance();
-    handler.handleError(error, { type: "unhandledRejection" });
-    handler.handleError(error, { type: "vue_error" });
-
-    expect(toastError).toHaveBeenCalledOnce();
+    markErrorHandled(error);
+    ErrorHandler.getInstance().handleError(error, {
+      type: "unhandledRejection",
+    });
+    expect(toastError).not.toHaveBeenCalled();
   });
 
   it("takes the HIGH prefix and a localized body from i18n, not server prose", () => {
