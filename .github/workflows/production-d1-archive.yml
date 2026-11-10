@@ -1,0 +1,73 @@
+name: Daily production D1 archive
+on:
+  schedule:
+    - cron: "17 19 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: production-d1-archive
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false # one database failing must not cost the other its archive
+      matrix:
+        include:
+          - db: platform # makanmasak-prod
+            id: 4e3c7ba8-5aa7-4652-bfea-a9c565b3a141
+          - db: management # makanmasak-management-prod
+            id: 0a1f532c-37b5-4b77-8e9f-403cfda307c4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: sudo apt-get update -qq && sudo apt-get install -y age
+      - name: Unit test
+        run: python3 scripts/archive/test_d1_archive.py
+      - name: Snapshot and encrypt
+        env:
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_TOKEN: ${{ secrets.D1_ARCHIVE_READ_TOKEN }}
+          AGE_RECIPIENT: ${{ vars.D1_ARCHIVE_AGE_RECIPIENT }}
+          DB: ${{ matrix.db }}
+          DB_ID: ${{ matrix.id }}
+        run: |
+          set -eu
+          cd "$RUNNER_TEMP"
+          trap 'rm -f "$DB".sqlite*' EXIT
+          for attempt in 1 2 3; do
+            if python3 "$GITHUB_WORKSPACE/scripts/archive/d1_snapshot.py" "$DB.sqlite" "$DB_ID"; then break; fi
+            if [ "$attempt" = 3 ]; then exit 1; fi
+            sleep 30
+          done
+          age -r "$AGE_RECIPIENT" -o "$DB.age" "$DB.sqlite"
+      - name: Upload to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ARCHIVE_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_ARCHIVE_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DB: ${{ matrix.db }}
+        run: |
+          set -eu
+          test -f "$RUNNER_TEMP/$DB.age"
+          aws s3 cp "$RUNNER_TEMP/$DB.age" "s3://makanmasak-backups-prod/$DB-d1/$(date -u +%Y-%m-%d)-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.age" --endpoint-url "https://${CF_ACCOUNT}.r2.cloudflarestorage.com" --only-show-errors
+      - name: Alert on failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          DB: ${{ matrix.db }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "::notice::SLACK_WEBHOOK_URL is not set; no alert sent"
+            exit 0
+          fi
+          curl -sS --max-time 20 -X POST -H 'Content-Type: application/json' \
+            --data "{\"text\":\"${GITHUB_WORKFLOW} (${DB}) failed: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}" \
+            "$SLACK_WEBHOOK_URL" >/dev/null || echo "::warning::Slack post failed"
