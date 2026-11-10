@@ -220,11 +220,13 @@ export function useEmployeeList() {
   };
 
   const fetchAll = async () => {
-    await fetchUsers();
-    // Fire-and-forget for secondary data
-    fetchClockedIn();
-    fetchTodayLeaves();
-    fetchTodaySchedules();
+    // None of these needs another's result; each handles its own errors.
+    await Promise.all([
+      fetchUsers(),
+      fetchClockedIn(),
+      fetchTodayLeaves(),
+      fetchTodaySchedules(),
+    ]);
   };
 
   // CRUD

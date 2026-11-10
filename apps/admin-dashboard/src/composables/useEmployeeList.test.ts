@@ -38,6 +38,7 @@ vi.mock("@/services/schedulingService", () => ({
   },
 }));
 
+import { schedulingService } from "@/services/schedulingService";
 import { useEmployeeList } from "./useEmployeeList";
 
 const apiUser = (id: string, username: string) => ({
@@ -165,5 +166,30 @@ describe("useEmployeeList status lookup", () => {
     expect(apiPatch).toHaveBeenCalledWith(`/users/${CHEF}/status`, {
       isActive: false,
     });
+  });
+});
+
+describe("useEmployeeList.fetchAll", () => {
+  it("starts every request before any of them resolves", async () => {
+    const gate = new Promise<never>(() => {});
+    const getSchedules = vi.mocked(schedulingService.getSchedules);
+    apiGet.mockReset();
+    apiGet.mockReturnValue(gate);
+    getClockedInEmployees.mockReset();
+    getClockedInEmployees.mockReturnValue(gate);
+    getSchedules.mockReset();
+    getSchedules.mockReturnValue(gate);
+
+    void useEmployeeList().fetchAll();
+
+    expect(apiGet).toHaveBeenCalledWith(
+      expect.stringContaining("/users?restaurantId="),
+    );
+    expect(apiGet).toHaveBeenCalledWith(
+      "/leaves/restaurant-1/requests",
+      expect.objectContaining({ status: "approved" }),
+    );
+    expect(getClockedInEmployees).toHaveBeenCalledOnce();
+    expect(getSchedules).toHaveBeenCalledOnce();
   });
 });
