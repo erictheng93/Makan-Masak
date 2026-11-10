@@ -3007,6 +3007,7 @@ const zhTWCore = {
     cashShort: "現金短缺 {amount}",
     cashInsufficient: "收到的現金不足，還差 {amount}",
     cashNotEntered: "請輸入收到的現金金額",
+    shiftRequired: "請先到「收銀機管理」開班，才能收款。",
     endShift: "結束班次",
     alerts: {
       paymentSuccess: "付款處理成功",

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { flushPromises, mount } from "@vue/test-utils";
+import { flushPromises, mount, RouterLinkStub } from "@vue/test-utils";
 import { ref } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import CashierView from "./CashierView.vue";
@@ -136,6 +136,43 @@ describe("CashierView", () => {
     expect(times).not.toContain("T08:00:00");
     expect(times).not.toContain("Z");
     expect(times).toMatch(/2026/);
+    wrapper.unmount();
+  });
+
+  it("says a shift must be opened instead of leaving a dead pay button", async () => {
+    const defaultGet = vi.mocked(api.get).getMockImplementation()!;
+    vi.mocked(api.get).mockImplementation(async (url: string, ...rest) =>
+      url === "/pos/shifts/current/register-1"
+        ? ({ data: { success: true, data: null } } as never)
+        : defaultGet(url, ...rest),
+    );
+    const wrapper = mount(CashierView, {
+      global: { stubs: { RouterLink: RouterLinkStub } },
+    });
+    await flushPromises();
+
+    await wrapper.find('[role="button"]').trigger("keydown", { key: "Enter" });
+
+    expect(wrapper.get('[data-testid="shift-required"]').text()).toBe(
+      "cashier.shiftRequired",
+    );
+    expect(wrapper.getComponent(RouterLinkStub).props("to")).toBe(
+      "/dashboard/pos/management",
+    );
+    expect(
+      wrapper.get('[data-testid="pay-btn"]').attributes("disabled"),
+    ).toBeDefined();
+    wrapper.unmount();
+  });
+
+  it("shows no shift prompt while a shift is open", async () => {
+    const wrapper = mount(CashierView, {
+      global: { stubs: { RouterLink: RouterLinkStub } },
+    });
+    await flushPromises();
+    await wrapper.find('[role="button"]').trigger("click");
+
+    expect(wrapper.find('[data-testid="shift-required"]').exists()).toBe(false);
     wrapper.unmount();
   });
 

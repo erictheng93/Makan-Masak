@@ -2944,6 +2944,7 @@ const idID: Messages = {
     cashShort: "Uang tunai berkurang pada {amount}",
     cashInsufficient: "Uang tunai yang diterima kurang {amount}",
     cashNotEntered: "Masukkan jumlah uang tunai yang diterima",
+    shiftRequired: "Buka shift di Manajemen Kasir sebelum menerima pembayaran.",
     allOrdersCompleted: "Semua pesanan telah selesai",
     customer: "Pelanggan",
     discount: "Diskon",

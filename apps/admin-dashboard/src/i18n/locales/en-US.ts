@@ -2949,6 +2949,7 @@ const enUS: Messages = {
     cashShort: "Cash short by {amount}",
     cashInsufficient: "Cash received is short by {amount}",
     cashNotEntered: "Enter the cash received",
+    shiftRequired: "Open a shift in Register Management before taking payment.",
     endShift: "End Shift",
     alerts: {
       paymentSuccess: "Payment processed successfully",

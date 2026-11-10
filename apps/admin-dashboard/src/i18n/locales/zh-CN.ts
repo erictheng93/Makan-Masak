@@ -2867,6 +2867,7 @@ const zhCN: Messages = {
     cashShort: "现金短缺 {amount}",
     cashInsufficient: "收到的现金不足，还差 {amount}",
     cashNotEntered: "请输入收到的现金金额",
+    shiftRequired: "请先到“收银机管理”开班，才能收款。",
     cashierName: "收银员",
     confirmPayment: "确认付款",
     coupon: "优惠券",

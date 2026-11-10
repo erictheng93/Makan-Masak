@@ -2948,6 +2948,8 @@ const viVN: Messages = {
     cashShort: "Thiếu tiền mặt {amount}",
     cashInsufficient: "Tiền mặt nhận được còn thiếu {amount}",
     cashNotEntered: "Nhập số tiền mặt đã nhận",
+    shiftRequired:
+      "Hãy mở ca trong Quản lý máy tính tiền trước khi nhận thanh toán.",
     printReport: "In báo cáo",
     noPendingOrders: "Không có lệnh chờ xử lý",
     received: "Đã nhận",

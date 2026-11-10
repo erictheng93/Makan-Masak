@@ -95,7 +95,12 @@
                   ? 'bg-blue-50 border-l-4 border-blue-500'
                   : '',
               ]"
+              role="button"
+              tabindex="0"
+              :aria-pressed="selectedOrder?.id === order.id"
               @click="selectOrder(order)"
+              @keydown.enter.prevent="selectOrder(order)"
+              @keydown.space.prevent="selectOrder(order)"
             >
               <div class="flex items-center justify-between">
                 <div class="flex items-center">
@@ -313,14 +318,17 @@
 
             <!-- 現金付款輸入 -->
             <div v-if="selectedPaymentMethod === 'cash'" class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-2">{{
-                t("cashier.amountReceived")
-              }}</label>
+              <label
+                for="cash-received"
+                class="block text-sm font-medium text-gray-700 mb-2"
+                >{{ t("cashier.amountReceived") }}</label
+              >
               <div class="relative">
                 <span class="absolute left-3 top-3 text-gray-500">{{
                   currencySymbol
                 }}</span>
                 <input
+                  id="cash-received"
                   v-model.number="cashReceived"
                   data-testid="received-amount"
                   type="number"
@@ -400,6 +408,17 @@
               >
                 {{ paymentError }}
               </div>
+
+              <p
+                v-if="shiftRequired"
+                data-testid="shift-required"
+                role="status"
+                class="text-sm font-medium text-red-600"
+              >
+                <router-link to="/dashboard/pos/management" class="underline">{{
+                  t("cashier.shiftRequired")
+                }}</router-link>
+              </p>
 
               <button
                 :disabled="!canProcessPayment || isProcessing"
@@ -1280,6 +1299,13 @@ const canProcessPayment = computed(() => {
 
   return true;
 });
+
+/** Payment needs an open shift on a register; say so instead of a dead button. */
+const shiftRequired = computed(
+  () =>
+    Boolean(selectedOrder.value) &&
+    (!currentShift.value.id || !currentShift.value.registerId),
+);
 
 /** Why the confirm button is disabled for a cash payment, if it is. */
 const cashPaymentBlockedReason = computed(() => {
