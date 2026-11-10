@@ -203,8 +203,8 @@ footer{
     <span><b>帳號</b> <code>demo</code>（role 1 店主）</span>
     <span><b>餐廳</b> Demo 小館 <code>01a0d2b6-…8e11</code></span>
     <span><b>日期</b> 2026-11-10</span>
-    <span><b>commits</b> <code>fc16aee15</code> … <code>3e070eb0b</code>（11 個）</span>
-    <span><b>部署</b> API <code>baf16560</code>、admin <code>index-Ckc45mMl.js</code></span>
+    <span><b>commits</b> <code>fc16aee15</code> … <code>3e070eb0b</code>（11 個）、<code>3cdf81363</code></span>
+    <span><b>部署</b> API <code>baf16560</code>、admin <code>index-Ckc45mMl.js</code>、image-processor <code>f47f4f42</code></span>
   </div>
 </header>
 
@@ -230,6 +230,7 @@ footer{
         <tr><td>桌台：新增</td><td>1.55 秒，無回饋，再整份重抓</td><td>立即「儲存中」，0.48 秒出現，連點只送一次</td></tr>
         <tr><td>桌台：刪除</td><td>約 1.1 秒</td><td>0.7 秒</td></tr>
         <tr><td>座位管理頁載入</td><td>統計 API 各打兩次，切分頁再重打</td><td>每個只打一次，切分頁不重打</td></tr>
+        <tr><td>菜單圖片（8 張）</td><td>每張約 2 秒；Worker 每張 137–354 ms</td><td>8 張同時載入共 0.86 秒；Worker 每張 4–12 ms</td></tr>
       </tbody>
     </table>
   </div>
@@ -345,6 +346,20 @@ footer{
       <p>兩個子元件各自在掛載時呼叫 <code>list</code>，現在同一間餐廳共用一個進行中的請求（<code>07ee1f08a</code>）。儲存設定本來就有「儲存中」狀態；伺服器端主要的修正 <code>24ad6c15e</code> 已在之前上線，這次只多省一次 D1 讀取（<code>9f5c4f5a4</code>）。</p>
     </div>
   </div>
+
+  <h3>菜單圖片</h3>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">I1</span><h4>菜單圖片每張約 2 秒，每次瀏覽都重讀 R2</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p><code>images.makanmasak.com</code> 是直接掛在網域上的 Worker，而這種 Worker 位在 Cloudflare 快取前面。所以每次瀏覽每張圖都會重跑 Worker、重讀 R2，連 16 KB 的縮圖也要 0.6–1 秒；回應雖然標了 <code>immutable</code>，但 edge 從來沒有存過。</p>
+      <div class="evidence"><span class="lbl">修復</span>
+        第一次讀取後，Worker 把每個尺寸的圖存一份在 Cloudflare edge（<code>caches.default</code>），之後直接從 edge 回應，不碰 R2（<code>3cdf81363</code>）。
+        edge 副本 1 天過期，所以刪掉的圖最多一天內各地都停止提供；瀏覽器端仍維持一年快取。刪圖時也會清掉 edge 副本，但只清處理刪除的那個資料中心。</div>
+      <div class="evidence"><span class="lbl">驗證</span>用空的瀏覽器快取同時載入 Demo 小館的 8 張菜單圖：Worker 每張從 137–354 ms 降到 4–12 ms，每張 0.65–0.86 秒，8 張共 0.86 秒（修復前每張約 2 秒）。</div>
+      <div class="evidence"><span class="lbl">剩下的</span>時間主要花在下載約 830 KB 的 JPEG 和網路往返。Demo 小館的圖是舊的 JPEG；新上傳的圖已經編成 WebP（<code>useImageUpload.ts</code>），檔案會比較小。每個資料中心第一次讀某張圖時，仍要從 R2 讀（95–354 ms）。</div>
+    </div>
+  </div>
 </section>
 
 <section>
@@ -407,11 +422,12 @@ footer{
         <tr><td>修復前</td><td class="mono">672cdea4</td><td class="mono">—</td><td>走查基準</td></tr>
         <tr><td>第一批</td><td class="mono">cdb1e4ff</td><td class="mono">index-Bdhd-V9U.js</td><td>M1–M5、S1–S3、N1–N3，以及 M6 第一步</td></tr>
         <tr><td>第二批</td><td class="mono">7f102d28</td><td class="mono">（未變）</td><td>M6：回應後才清快取</td></tr>
-        <tr><td>第三批（現行）</td><td class="mono">baf16560</td><td class="mono">index-Ckc45mMl.js</td><td>F1–F3、P1</td></tr>
+        <tr><td>第三批</td><td class="mono">baf16560</td><td class="mono">index-Ckc45mMl.js</td><td>F1–F3、P1</td></tr>
+        <tr><td>第四批</td><td class="mono">（未變）</td><td class="mono">（未變）</td><td>I1：只部署 image-processor，版本 <code>f47f4f42</code></td></tr>
       </tbody>
     </table>
   </div>
-  <p class="note"><b>回滾點</b>：API <code>7f102d28</code>、admin bundle <code>index-Bdhd-V9U.js</code>。</p>
+  <p class="note"><b>回滾點</b>：API <code>7f102d28</code>、admin bundle <code>index-Bdhd-V9U.js</code>、image-processor <code>98bd5732</code>。</p>
 </section>
 
 <section>
@@ -421,7 +437,7 @@ footer{
       <li><b>F2 的第二次清除</b>只有自動測試證明；它防的是顧客恰好和店主同時讀菜單，線上無法穩定重現。</li>
       <li><b>儲存設定</b>的 1.3–2 秒在修改後沒有重新量測。</li>
       <li><b>座位模式</b>（一座位一 QR）沒有測試。</li>
-      <li><b>菜單圖片</b>每張載入約 2 秒（image-processor），高於 P90 &lt; 1 秒的目標，這次沒有處理。</li>
+      <li><b>I1 刪圖時清 edge 副本</b>沒有自動測試；它只清處理刪除的那個資料中心，其他地方要等 1 天過期。</li>
       <li><b>背景預先載入</b>每次登入後多約 25 個小檔案下載，包含分析圖表等較重的頁面，可考慮縮小範圍。</li>
       <li><b>N2 的 focus 外框</b>是推測的原因，還沒在真實瀏覽器確認。</li>
       <li>POS 與廚房顯示讀菜單時是否略過快取沒有確認；如果沒有，它們會在店主存檔後約 1–2 秒內看到舊菜單。</li>
@@ -430,7 +446,7 @@ footer{
 </section>
 
 <footer>
-  2026-11-10 · production 走查與修復 · commits <code>fc16aee15</code>…<code>3e070eb0b</code>
+  2026-11-10 · production 走查與修復 · commits <code>fc16aee15</code>…<code>3e070eb0b</code>、<code>3cdf81363</code>
 </footer>
 
 </div>
