@@ -95,7 +95,8 @@ export class MenuService implements IMenuService {
   ) {
     this.logger = new ConsoleLogger("MenuService");
     this.dbService = new DatabaseMenuService(env.DB, env);
-    if (deferred) this.dbService.deferCacheInvalidation(deferred.pending);
+    if (deferred)
+      this.dbService.deferCacheInvalidation(deferred.pending, deferred.replay);
     this.db = drizzle(env.DB);
   }
 
@@ -626,6 +627,9 @@ export class MenuService implements IMenuService {
         await invalidateRestaurantMenuEdgeCache(this.env, restaurantId);
         await this.broadcastAvailabilityChanges(items, restaurantId);
       });
+      this.deferred.replay.push(() =>
+        invalidateRestaurantMenuEdgeCache(this.env, restaurantId),
+      );
       return;
     }
     try {

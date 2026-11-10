@@ -201,6 +201,7 @@ describe("MenuService", () => {
     const deferred = {
       pending: [] as Promise<void>[],
       after: [] as Array<() => Promise<unknown>>,
+      replay: [] as Array<() => Promise<unknown>>,
     };
     const { service } = createService({
       waitUntil,
@@ -218,6 +219,7 @@ describe("MenuService", () => {
     expect(broadcast).not.toHaveBeenCalled();
     expect(waitUntil).not.toHaveBeenCalled();
     expect(deferred.after).toHaveLength(1);
+    expect(deferred.replay).toHaveLength(1);
     await deferred.after[0]();
     expect(broadcast).toHaveBeenCalledOnce();
     expect(broadcast).toHaveBeenCalledWith(

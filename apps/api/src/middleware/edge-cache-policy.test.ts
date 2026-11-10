@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   isPublicApiCacheableRequest,
+  REPLAY_DELAY_MS,
   smartCacheMiddleware,
 } from "./edge-cache";
 
@@ -351,7 +352,7 @@ describe("isPublicApiCacheableRequest", () => {
     );
     // Menu writes clear the cache after responding, inside waitUntil.
     expect(executionCtx.waitUntil).toHaveBeenCalled();
-    await Promise.all(executionCtx.waitUntil.mock.calls.map(([work]) => work));
+    await settleDeferred(executionCtx.waitUntil);
     const afterWrite = await app.request(
       dinerUrl,
       undefined,
@@ -422,9 +423,111 @@ describe("isPublicApiCacheableRequest", () => {
     expect(executionCtx.waitUntil).toHaveBeenCalledOnce();
 
     releaseQueryCache();
-    await executionCtx.waitUntil.mock.calls[0][0];
-    expect(order[0]).toBe("query-cache");
-    expect(order.at(-1)).toBe("push");
-    expect(order).toContain("edge");
+    await settleDeferred(executionCtx.waitUntil);
+    const firstPass = order.slice(0, order.indexOf("push") + 1);
+    expect(firstPass[0]).toBe("query-cache");
+    expect(firstPass).toContain("edge");
+    expect(firstPass.at(-1)).toBe("push");
+  });
+
+  // A diner's read that raced the first clear can write the pre-write menu
+  // back into the edge tier; the delayed second sweep must remove it, or the
+  // stale menu (a dish already taken off sale) stays up for the full TTL.
+  it("sweeps again after the first clear so a raced stale copy does not survive", async () => {
+    const cacheEntries = new Map<string, Response>();
+    vi.stubGlobal("caches", {
+      default: {
+        async match(key: RequestInfo | URL) {
+          return cacheEntries.get(String(key))?.clone();
+        },
+        async put(key: RequestInfo | URL, response: Response) {
+          cacheEntries.set(String(key), response.clone());
+        },
+        async delete(key: RequestInfo | URL) {
+          return cacheEntries.delete(String(key));
+        },
+      },
+    });
+    const kvEntries = new Map<string, string>();
+    const cacheKv = {
+      async get(key: string, options?: { type?: string }) {
+        const value = kvEntries.get(key);
+        if (value === undefined) return null;
+        return options?.type === "json" ? JSON.parse(value) : value;
+      },
+      async put(key: string, value: string) {
+        kvEntries.set(key, value);
+      },
+      async delete(key: string) {
+        kvEntries.delete(key);
+      },
+    };
+    const app = new Hono();
+    app.use(
+      "*",
+      smartCacheMiddleware({
+        defaultTtl: 300,
+        cacheTags: (c) => {
+          const id = c.req.param("restaurantId");
+          return id ? [`restaurant:${id}`] : [];
+        },
+        shouldCache: (c) =>
+          isPublicApiCacheableRequest(c.req.method, c.req.path),
+      }),
+    );
+    let served = ["congee", "noodles"];
+    app.get("/api/v1/menu/:restaurantId", (c) =>
+      c.json({ success: true, data: { dishes: served } }),
+    );
+    app.put("/api/v1/menu/:restaurantId", (c) => c.json({ success: true }));
+    const env = { CACHE_KV: cacheKv };
+    const executionCtx = {
+      waitUntil: vi.fn(),
+      passThroughOnException: vi.fn(),
+    };
+    const dinerUrl = "/api/v1/menu/restaurant-1?tableId=2";
+    const read = () =>
+      app.request(dinerUrl, undefined, env as never, executionCtx as never);
+
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    try {
+      await app.request(
+        "/api/v1/menu/restaurant-1",
+        { method: "PUT" },
+        env as never,
+        executionCtx as never,
+      );
+      const sweep = executionCtx.waitUntil.mock.calls[0][0] as Promise<void>;
+      await vi.advanceTimersByTimeAsync(0);
+
+      // The race: a read that loaded the pre-write menu lands after the first
+      // clear and caches it.
+      await read();
+      await expect((await read()).json()).resolves.toMatchObject({
+        data: { dishes: ["congee", "noodles"] },
+        cached: true,
+      });
+
+      served = ["congee"];
+      await vi.advanceTimersByTimeAsync(REPLAY_DELAY_MS);
+      await sweep;
+      await expect((await read()).json()).resolves.toMatchObject({
+        data: { dishes: ["congee"] },
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
+
+/** Run every waitUntil job to completion, including the delayed sweep. */
+async function settleDeferred(waitUntil: ReturnType<typeof vi.fn>) {
+  vi.useFakeTimers({ toFake: ["setTimeout"] });
+  try {
+    const jobs = Promise.all(waitUntil.mock.calls.map(([work]) => work));
+    await vi.advanceTimersByTimeAsync(REPLAY_DELAY_MS);
+    await jobs;
+  } finally {
+    vi.useRealTimers();
+  }
+}

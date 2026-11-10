@@ -33,7 +33,8 @@ describe("BaseService deferred cache invalidation", () => {
   it("collects the clear instead of awaiting it", async () => {
     const { service, invalidate, release } = build();
     const pending: Promise<void>[] = [];
-    service.deferCacheInvalidation(pending);
+    const replays: Array<() => Promise<unknown>> = [];
+    service.deferCacheInvalidation(pending, replays);
 
     // Resolves although the KV clear has not: the request is not held on it.
     await service.clear("menu:rest-1");
@@ -42,6 +43,14 @@ describe("BaseService deferred cache invalidation", () => {
     expect(pending).toHaveLength(1);
     release();
     await expect(pending[0]).resolves.toBeUndefined();
+
+    // The replay re-runs the same clear for the delayed second sweep.
+    expect(replays).toHaveLength(1);
+    const again = replays[0]();
+    release();
+    await again;
+    expect(invalidate).toHaveBeenCalledTimes(2);
+    expect(invalidate).toHaveBeenLastCalledWith(["menu:rest-1"], "tag");
   });
 
   it("reads through to D1 while its own clear is still pending", async () => {

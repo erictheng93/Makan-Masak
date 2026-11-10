@@ -516,9 +516,13 @@ export function smartCacheMiddleware(
     // pushes queued in `after` — a client told "menu changed" must not refetch
     // into a copy that is still cached. The admin's own refetch sends
     // `Cache-Control: no-cache` and bypasses both tiers (see freshMenu).
+    // A concurrent public read can still write a pre-write copy back while
+    // the first clear runs (stale query cache into the edge tier, or a D1 read
+    // from before the commit into the query cache); `replay` sweeps both tiers
+    // again REPLAY_DELAY_MS later to remove it.
     const deferred: DeferredCacheWork | undefined =
       isMutation && path.startsWith("/api/v1/menu")
-        ? { pending: [], after: [] }
+        ? { pending: [], after: [], replay: [] }
         : undefined;
     if (deferred) c.set("deferredCache", deferred);
 
@@ -586,6 +590,13 @@ export function smartCacheMiddleware(
           if (succeeded) await invalidateEdge().catch(logDeferredError);
           for (const step of deferred.after)
             await step().catch(logDeferredError);
+          if (!succeeded && deferred.replay.length === 0) return;
+          await new Promise((resolve) => setTimeout(resolve, REPLAY_DELAY_MS));
+          // Query-cache replays were queued first, so they run before any edge
+          // replay; the middleware's own edge sweep goes last.
+          for (const step of deferred.replay)
+            await step().catch(logDeferredError);
+          if (succeeded) await invalidateEdge().catch(logDeferredError);
         })(),
       );
     } else if (isMutation && succeeded) {
@@ -633,7 +644,17 @@ export function smartCacheMiddleware(
 export interface DeferredCacheWork {
   pending: Promise<void>[];
   after: Array<() => Promise<unknown>>;
+  /** Re-runs of each clear for the delayed second sweep, in queue order. */
+  replay: Array<() => Promise<unknown>>;
 }
+
+/**
+ * How long after the first sweep the second runs. A concurrent read that raced
+ * the first clear writes its stale copy back within about a second (KV puts
+ * plus the tag mapping); 3s leaves margin and stays far inside waitUntil's
+ * post-response budget.
+ */
+export const REPLAY_DELAY_MS = 3000;
 
 function logDeferredError(error: unknown): void {
   console.error("Deferred cache/realtime work failed:", error);

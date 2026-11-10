@@ -187,13 +187,20 @@ export class BaseService {
   }
 
   private deferredInvalidations?: Promise<void>[];
+  private deferredReplays?: Array<() => Promise<unknown>>;
 
   /**
    * Collect cache invalidations into `into` instead of awaiting them, so a
    * request can answer first and settle them (in order) after responding.
+   * `replays` receives a re-run of each clear, for a later sweep that removes
+   * a stale copy a concurrent reader wrote back while the first clear ran.
    */
-  deferCacheInvalidation(into: Promise<void>[]): void {
+  deferCacheInvalidation(
+    into: Promise<void>[],
+    replays?: Array<() => Promise<unknown>>,
+  ): void {
     this.deferredInvalidations = into;
+    this.deferredReplays = replays;
   }
 
   /**
@@ -204,8 +211,11 @@ export class BaseService {
     type: "key" | "tag" = "key",
   ): Promise<void> {
     const work = this.queryCache.invalidate(keyOrTags, type);
-    if (this.deferredInvalidations) this.deferredInvalidations.push(work);
-    else await work;
+    if (!this.deferredInvalidations) return work;
+    this.deferredInvalidations.push(work);
+    this.deferredReplays?.push(() =>
+      this.queryCache.invalidate(keyOrTags, type),
+    );
   }
 
   /**
