@@ -349,6 +349,9 @@ describe("isPublicApiCacheableRequest", () => {
       env as never,
       executionCtx as never,
     );
+    // Menu writes clear the cache after responding, inside waitUntil.
+    expect(executionCtx.waitUntil).toHaveBeenCalled();
+    await Promise.all(executionCtx.waitUntil.mock.calls.map(([work]) => work));
     const afterWrite = await app.request(
       dinerUrl,
       undefined,
@@ -363,5 +366,65 @@ describe("isPublicApiCacheableRequest", () => {
     await expect(afterWrite.json()).resolves.toMatchObject({
       data: { dishes: ["congee", "noodles"] },
     });
+  });
+
+  // A menu write answers before its cache clears, but realtime must not go
+  // out until both tiers are clear, or a client refetches into a stale copy.
+  it("answers a menu write first, then clears query cache, edge cache, and only then pushes", async () => {
+    const order: string[] = [];
+    vi.stubGlobal("caches", {
+      default: {
+        match: async () => undefined,
+        put: async () => {},
+        delete: async () => {
+          order.push("edge");
+          return true;
+        },
+      },
+    });
+    const cacheKv = {
+      get: async () => null,
+      put: async () => {},
+      delete: async () => {},
+    };
+    const app = new Hono();
+    app.use("*", smartCacheMiddleware({ defaultTtl: 300 }));
+    let releaseQueryCache!: () => void;
+    app.post("/api/v1/menu/:restaurantId/items", (c) => {
+      const deferred = c.get("deferredCache");
+      deferred.pending.push(
+        new Promise<void>((resolve) => {
+          releaseQueryCache = () => {
+            order.push("query-cache");
+            resolve();
+          };
+        }),
+      );
+      deferred.after.push(async () => {
+        order.push("push");
+      });
+      return c.json({ success: true }, 201);
+    });
+    const executionCtx = {
+      waitUntil: vi.fn(),
+      passThroughOnException: vi.fn(),
+    };
+
+    const response = await app.request(
+      "/api/v1/menu/restaurant-1/items",
+      { method: "POST" },
+      { CACHE_KV: cacheKv } as never,
+      executionCtx as never,
+    );
+
+    expect(response.status).toBe(201);
+    expect(order).toEqual([]);
+    expect(executionCtx.waitUntil).toHaveBeenCalledOnce();
+
+    releaseQueryCache();
+    await executionCtx.waitUntil.mock.calls[0][0];
+    expect(order[0]).toBe("query-cache");
+    expect(order.at(-1)).toBe("push");
+    expect(order).toContain("edge");
   });
 });

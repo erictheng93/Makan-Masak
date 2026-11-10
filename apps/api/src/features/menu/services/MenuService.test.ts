@@ -39,6 +39,10 @@ describe("MenuService", () => {
     db?: unknown;
     dbService?: Record<string, unknown>;
     waitUntil?: (work: Promise<unknown>) => void;
+    deferred?: {
+      pending: Promise<void>[];
+      after: Array<() => Promise<unknown>>;
+    };
   }) {
     const dbService = {
       getMenu: vi.fn(),
@@ -94,6 +98,7 @@ describe("MenuService", () => {
     const service = new MenuService(
       { DB: {} as D1Database } as never,
       options?.waitUntil,
+      options?.deferred,
     );
     Object.defineProperty(service, "db", {
       value: options?.db ?? createPublicDb(),
@@ -184,6 +189,43 @@ describe("MenuService", () => {
     expect(deferred).toHaveLength(1);
     await expect(deferred[0]).resolves.toBeUndefined();
     expect(broadcast).toHaveBeenCalledOnce();
+  });
+  it("queues the push behind deferred cache clears on a menu write", async () => {
+    const broadcast = vi
+      .spyOn(
+        RealtimeBroadcastService.prototype,
+        "broadcastMenuAvailabilityUpdate",
+      )
+      .mockResolvedValue({ success: true });
+    const waitUntil = vi.fn();
+    const deferred = {
+      pending: [] as Promise<void>[],
+      after: [] as Array<() => Promise<unknown>>,
+    };
+    const { service } = createService({
+      waitUntil,
+      deferred,
+      dbService: {
+        getMenuItem: vi.fn(async () => menuItem()),
+        updateMenuItem: vi.fn(async () => ({
+          ...menuItem({ isAvailable: false }),
+          availabilityChanged: true,
+        })),
+      },
+    });
+    await service.updateMenuItem(101, { isAvailable: false });
+    // Nothing pushed yet: the middleware runs `after` once the clears settle.
+    expect(broadcast).not.toHaveBeenCalled();
+    expect(waitUntil).not.toHaveBeenCalled();
+    expect(deferred.after).toHaveLength(1);
+    await deferred.after[0]();
+    expect(broadcast).toHaveBeenCalledOnce();
+    expect(broadcast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        restaurantId: "rest-1",
+        data: expect.objectContaining({ menuItemId: 101, isAvailable: false }),
+      }),
+    );
   });
   it("keeps a committed supply write successful when notification fails", async () => {
     vi.spyOn(

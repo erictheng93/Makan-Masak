@@ -180,7 +180,20 @@ export class BaseService {
     queryFn: () => Promise<T>,
     options: QueryCacheOptions,
   ): Promise<T> {
+    // A deferred invalidation from this same request may not have landed yet;
+    // read through to D1 rather than see (and re-cache) the pre-write copy.
+    if (this.deferredInvalidations?.length) return queryFn();
     return this.queryCache.getOrExecute(cacheKey, queryFn, options);
+  }
+
+  private deferredInvalidations?: Promise<void>[];
+
+  /**
+   * Collect cache invalidations into `into` instead of awaiting them, so a
+   * request can answer first and settle them (in order) after responding.
+   */
+  deferCacheInvalidation(into: Promise<void>[]): void {
+    this.deferredInvalidations = into;
   }
 
   /**
@@ -190,7 +203,9 @@ export class BaseService {
     keyOrTags: string | string[],
     type: "key" | "tag" = "key",
   ): Promise<void> {
-    await this.queryCache.invalidate(keyOrTags, type);
+    const work = this.queryCache.invalidate(keyOrTags, type);
+    if (this.deferredInvalidations) this.deferredInvalidations.push(work);
+    else await work;
   }
 
   /**

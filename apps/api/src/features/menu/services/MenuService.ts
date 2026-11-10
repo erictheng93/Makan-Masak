@@ -12,7 +12,10 @@ import {
   forbidden,
   conflict,
 } from "../../../shared/utils/api-error";
-import { invalidateRestaurantMenuEdgeCache } from "../../../middleware/edge-cache";
+import {
+  invalidateRestaurantMenuEdgeCache,
+  type DeferredCacheWork,
+} from "../../../middleware/edge-cache";
 import { HTTP_STATUS } from "../../../shared/constants";
 import {
   MenuService as DatabaseMenuService,
@@ -80,13 +83,19 @@ export class MenuService implements IMenuService {
    * `waitUntil` lets a request hand realtime fan-out to the runtime so the
    * response does not wait on it. Without one (tests, queue consumers) the
    * work is awaited inline, as before.
+   *
+   * `deferred` (set by the edge-cache middleware on menu writes) takes cache
+   * clears off the request path too; realtime then rides behind them so no
+   * client is told to refetch into a still-cached copy.
    */
   constructor(
     private readonly env: Env,
     private readonly waitUntil?: (work: Promise<unknown>) => void,
+    private readonly deferred?: DeferredCacheWork,
   ) {
     this.logger = new ConsoleLogger("MenuService");
     this.dbService = new DatabaseMenuService(env.DB, env);
+    if (deferred) this.dbService.deferCacheInvalidation(deferred.pending);
     this.db = drizzle(env.DB);
   }
 
@@ -611,9 +620,15 @@ export class MenuService implements IMenuService {
   private async notifyAvailabilityChanges(items: MenuItem[]): Promise<void> {
     if (items.length === 0) return;
     const restaurantId = items[0].restaurantId;
+    if (this.deferred) {
+      // Runs after the query-cache clears have settled: edge tier, then push.
+      this.deferred.after.push(async () => {
+        await invalidateRestaurantMenuEdgeCache(this.env, restaurantId);
+        await this.broadcastAvailabilityChanges(items, restaurantId);
+      });
+      return;
+    }
     try {
-      // Stays on the request path: the admin refetches the menu right after
-      // this write, and a still-cached copy would show the old availability.
       await invalidateRestaurantMenuEdgeCache(this.env, restaurantId);
     } catch (error) {
       this.logger.error(

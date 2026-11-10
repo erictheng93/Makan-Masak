@@ -5,7 +5,56 @@ class TestService extends BaseService {
   exposeD1() {
     return this.d1;
   }
+  read<T>(key: string, fn: () => Promise<T>) {
+    return this.cachedQuery(key, fn, { ttl: 60 });
+  }
+  clear(tag: string) {
+    return this.invalidateCache([tag], "tag");
+  }
 }
+
+describe("BaseService deferred cache invalidation", () => {
+  function build() {
+    const service = new TestService(
+      { prepare: vi.fn(), batch: vi.fn() } as never,
+      { CACHE_KV: {} } as never,
+    );
+    let release!: () => void;
+    const invalidate = vi.fn(
+      () => new Promise<void>((resolve) => (release = resolve)),
+    );
+    const getOrExecute = vi.fn(async () => "cached");
+    Object.defineProperty(service, "queryCache", {
+      value: { invalidate, getOrExecute },
+    });
+    return { service, invalidate, getOrExecute, release: () => release() };
+  }
+
+  it("collects the clear instead of awaiting it", async () => {
+    const { service, invalidate, release } = build();
+    const pending: Promise<void>[] = [];
+    service.deferCacheInvalidation(pending);
+
+    // Resolves although the KV clear has not: the request is not held on it.
+    await service.clear("menu:rest-1");
+
+    expect(invalidate).toHaveBeenCalledWith(["menu:rest-1"], "tag");
+    expect(pending).toHaveLength(1);
+    release();
+    await expect(pending[0]).resolves.toBeUndefined();
+  });
+
+  it("reads through to D1 while its own clear is still pending", async () => {
+    const { service, getOrExecute } = build();
+    service.deferCacheInvalidation([]);
+    expect(await service.read("menu", async () => "fresh")).toBe("cached");
+
+    await service.clear("menu:rest-1");
+
+    expect(await service.read("menu", async () => "fresh")).toBe("fresh");
+    expect(getOrExecute).toHaveBeenCalledOnce();
+  });
+});
 
 describe("BaseService read replication sessions", () => {
   function buildD1() {

@@ -509,20 +509,28 @@ export function smartCacheMiddleware(
       }
     }
 
+    const isMutation = ["POST", "PUT", "DELETE", "PATCH"].includes(method);
+    // Menu writes answer before their cache clears land (an owner's add-dish
+    // took 4–6s on KV round trips). Order is what keeps that safe: query-cache
+    // clears settle first, then the edge tier, and only then the realtime
+    // pushes queued in `after` — a client told "menu changed" must not refetch
+    // into a copy that is still cached. The admin's own refetch sends
+    // `Cache-Control: no-cache` and bypasses both tiers (see freshMenu).
+    const deferred: DeferredCacheWork | undefined =
+      isMutation && path.startsWith("/api/v1/menu")
+        ? { pending: [], after: [] }
+        : undefined;
+    if (deferred) c.set("deferredCache", deferred);
+
     // Cache miss or non-GET request - execute handler
     await next();
 
-    // Invalidate related caches on successful mutations (non-blocking)
-    if (
-      ["POST", "PUT", "DELETE", "PATCH"].includes(method) &&
-      c.res.status >= 200 &&
-      c.res.status < 300
-    ) {
+    const invalidateEdge = async () => {
       const restaurantId = getRestaurantIdForCacheScope(c);
 
-      // Synchronously invalidate both cache tiers before the response goes
-      // out — fire-and-forget invalidation lost races against the next GET
-      // and left clients reading stale menus immediately after a write.
+      // Outside the menu path this runs before the response goes out —
+      // fire-and-forget invalidation lost races against the next GET and left
+      // clients reading stale data immediately after a write.
       // Both KV and Cache API must be cleared; the earlier code only touched
       // KV "to avoid local-dev hangs".
       if (restaurantId) {
@@ -567,6 +575,21 @@ export function smartCacheMiddleware(
           }
         }
       }
+    };
+
+    const succeeded = c.res.status >= 200 && c.res.status < 300;
+    if (deferred) {
+      // A failed request may still have written and queued clears; settle them.
+      c.executionCtx.waitUntil(
+        (async () => {
+          await Promise.allSettled(deferred.pending);
+          if (succeeded) await invalidateEdge().catch(logDeferredError);
+          for (const step of deferred.after)
+            await step().catch(logDeferredError);
+        })(),
+      );
+    } else if (isMutation && succeeded) {
+      await invalidateEdge();
     }
 
     // Cache successful GET responses (skip authenticated requests for real-time data)
@@ -602,8 +625,23 @@ export function smartCacheMiddleware(
 // wired up: on a cache miss the caller already fetches and `set()`s the result,
 // which is the same warm-up one request later and costs nothing extra.
 
+/**
+ * Cache clears a menu write defers past its response. `pending` holds
+ * query-cache invalidations already in flight; `after` runs once those and the
+ * edge tier have settled (realtime pushes go here).
+ */
+export interface DeferredCacheWork {
+  pending: Promise<void>[];
+  after: Array<() => Promise<unknown>>;
+}
+
+function logDeferredError(error: unknown): void {
+  console.error("Deferred cache/realtime work failed:", error);
+}
+
 declare module "hono" {
   interface ContextVariableMap {
     cacheManager: EdgeCacheManager;
+    deferredCache: DeferredCacheWork;
   }
 }

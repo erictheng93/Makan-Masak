@@ -3,7 +3,7 @@
  * All HTTP routes for the menu feature
  */
 
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import {
   authMiddleware,
   requireRole,
@@ -36,6 +36,15 @@ import { MenuService } from "../services/MenuService";
 import { createSearchIndexSync } from "../../discovery/services/SearchIndexSyncService";
 
 const app = new Hono<{ Bindings: Env }>();
+
+/** Realtime and cache work ride behind the response (see DeferredCacheWork). */
+function menuService<E extends { Bindings: Env }>(c: Context<E>): MenuService {
+  return new MenuService(
+    c.env,
+    (work) => c.executionCtx.waitUntil(work),
+    c.get("deferredCache"),
+  );
+}
 
 type MenuContext = {
   env: Env;
@@ -167,9 +176,7 @@ app.get(
   validateParams(menuSchemas.restaurantIdParam),
   async (c) => {
     const { restaurantId } = c.get("validatedParams");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     // Authenticated admin/owner requests can see all items (including
     // unavailable). Role alone is not enough — an owner is only privileged on
@@ -226,9 +233,7 @@ app.get(
   async (c) => {
     const { restaurantId } = c.get("validatedParams");
     const { limit } = c.get("validatedQuery");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     if (!(await service.isPublicRestaurantAvailable(restaurantId))) {
       throw notFound("Menu not found for restaurant", "MENU_NOT_FOUND");
@@ -248,9 +253,7 @@ app.get(
   async (c) => {
     const { restaurantId } = c.get("validatedParams");
     const { limit } = c.get("validatedQuery");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     if (!(await service.isPublicRestaurantAvailable(restaurantId))) {
       throw notFound("Menu not found for restaurant", "MENU_NOT_FOUND");
@@ -270,9 +273,7 @@ app.get(
   async (c) => {
     const { restaurantId } = c.get("validatedParams");
     const query = c.get("validatedQuery");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     if (!(await service.isPublicRestaurantAvailable(restaurantId))) {
       throw notFound("Menu not found for restaurant", "MENU_NOT_FOUND");
@@ -321,9 +322,7 @@ app.get(
   optionalAuth,
   async (c) => {
     const { id } = c.get("validatedParams");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     const item = await service.getMenuItem(id);
 
@@ -383,9 +382,7 @@ app.get(
   validateParams(menuSchemas.restaurantIdParam),
   async (c) => {
     const { restaurantId } = c.get("validatedParams");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     const groups = await service.listOptionGroups(restaurantId);
 
@@ -405,9 +402,7 @@ app.post(
   async (c) => {
     const { restaurantId } = c.get("validatedParams");
     const data = c.get("validatedBody");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     let group;
     try {
@@ -445,9 +440,7 @@ app.put(
     const { groupId } = c.get("validatedParams");
     const data = c.get("validatedBody");
     const user = c.get("user");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     const existingGroup = await service.getOptionGroup(groupId);
     if (!existingGroup) {
@@ -474,9 +467,7 @@ app.delete(
   async (c) => {
     const { groupId } = c.get("validatedParams");
     const user = c.get("user");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     const existingGroup = await service.getOptionGroup(groupId);
     if (!existingGroup) {
@@ -508,9 +499,7 @@ app.post(
     const { groupId } = c.get("validatedParams");
     const data = c.get("validatedBody");
     const user = c.get("user");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     const existingGroup = await service.getOptionGroup(groupId);
     if (!existingGroup) {
@@ -557,9 +546,7 @@ app.patch(
     const { choiceId } = c.get("validatedParams");
     const data = c.get("validatedBody");
     const user = c.get("user");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     const existingChoice = await service.getOptionChoice(choiceId);
     if (!existingChoice) {
@@ -595,9 +582,7 @@ app.delete(
   async (c) => {
     const { choiceId } = c.get("validatedParams");
     const user = c.get("user");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     const existingChoice = await service.getOptionChoice(choiceId);
     if (!existingChoice) {
@@ -630,9 +615,7 @@ app.get(
   async (c) => {
     const { id } = c.get("validatedParams");
     const user = c.get("user");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     const existingItem = await service.getMenuItem(id);
     if (!existingItem) {
@@ -658,9 +641,7 @@ app.put(
     const { id } = c.get("validatedParams");
     const data = c.get("validatedBody");
     const user = c.get("user");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     const existingItem = await service.getMenuItem(id);
     if (!existingItem) {
@@ -716,9 +697,7 @@ app.post(
   async (c) => {
     const { restaurantId } = c.get("validatedParams");
     const data = c.get("validatedBody");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     const item = await service.createMenuItem({
       ...data,
@@ -748,9 +727,7 @@ app.post(
   async (c) => {
     const { restaurantId } = c.get("validatedParams");
     const { items } = c.get("validatedBody");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     const created = await service.bulkCreateMenuItems(restaurantId, items);
     syncMenuItems(
@@ -782,9 +759,7 @@ app.put(
     const { id } = c.get("validatedParams");
     const data = c.get("validatedBody");
     const user = c.get("user");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     // Body-shape check before any DB work: a chef sending price/name is
     // refused whether or not the item exists.
@@ -824,9 +799,7 @@ app.delete(
   async (c) => {
     const { id } = c.get("validatedParams");
     const user = c.get("user");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     const existingItem = await service.getMenuItem(id);
     if (!existingItem) {
@@ -866,9 +839,7 @@ app.patch(
   async (c) => {
     const { restaurantId } = c.get("validatedParams");
     const { updates } = c.get("validatedBody");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     await service.batchUpdateAvailability(restaurantId, updates);
     syncMenuItems(
@@ -898,9 +869,7 @@ app.patch(
   async (c) => {
     const { restaurantId } = c.get("validatedParams");
     const { updates } = c.get("validatedBody");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     await service.batchUpdatePrices(restaurantId, updates);
     syncMenuItems(
@@ -927,9 +896,7 @@ app.patch(
   async (c) => {
     const { restaurantId } = c.get("validatedParams");
     const { updates } = c.get("validatedBody");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     await service.batchMoveItems(restaurantId, updates);
     syncMenuItems(
@@ -961,9 +928,7 @@ app.post(
   async (c) => {
     const { restaurantId } = c.get("validatedParams");
     const data = c.get("validatedBody");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     const category = await service.createCategory({
       ...data,
@@ -989,9 +954,7 @@ app.put(
     const { id } = c.get("validatedParams");
     const data = c.get("validatedBody");
     const user = c.get("user");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     // Check restaurant access BEFORE mutation
     const existingCategory = await service.getCategoryById(id);
@@ -1027,9 +990,7 @@ app.patch(
   async (c) => {
     const { restaurantId } = c.get("validatedParams");
     const { categories } = c.get("validatedBody");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     await service.reorderCategories(restaurantId, categories);
 
@@ -1050,9 +1011,7 @@ app.delete(
   async (c) => {
     const { id } = c.get("validatedParams");
     const user = c.get("user");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     // Check restaurant access BEFORE deletion
     const existingCategory = await service.getCategoryById(id);
@@ -1093,9 +1052,7 @@ app.get(
   validateQuery(menuSchemas.analyticsQuery),
   async (c) => {
     const { restaurantId } = c.get("validatedParams");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     const analytics = await service.getMenuAnalytics(restaurantId);
 
@@ -1116,9 +1073,7 @@ app.get(
   validateParams(menuSchemas.restaurantIdParam),
   async (c) => {
     const { restaurantId } = c.get("validatedParams");
-    const service = new MenuService(c.env, (work) =>
-      c.executionCtx.waitUntil(work),
-    );
+    const service = menuService(c);
 
     const metrics = await service.getPopularityMetrics(restaurantId);
 
