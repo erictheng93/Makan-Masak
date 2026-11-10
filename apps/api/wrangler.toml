@@ -499,7 +499,7 @@ ENVIRONMENT = "staging"
 API_VERSION = "v1"
 ANALYTICS_DATASET = "makanmasak-metrics-staging"
 CLOUDFLARE_ACCOUNT_ID = "bdddc08c066a9abc285d75fe5947a468"
-API_BASE_URL = "https://makanmasak-api-staging.__WORKERS_SUBDOMAIN__.workers.dev"
+API_BASE_URL = "https://makanmasak-api-staging.omfg.workers.dev"
 CLIENT_BASE_URL = "https://makanmasak-customer-staging.pages.dev"
 CORS_ORIGIN = "https://makanmasak-customer-staging.pages.dev,https://makanmasak-admin-staging.pages.dev,https://makanmasak-kitchen-staging.pages.dev"
 LOG_LEVEL = "info"
@@ -508,8 +508,8 @@ CACHE_TTL = "600"
 RATE_LIMIT_REQUESTS = "100"
 DEPLOYMENT_MODE = "saas"
 PLATFORM_VERSION = "1.0.0"
-CENTRAL_API_URL = "https://makanmasak-management-api-staging.__WORKERS_SUBDOMAIN__.workers.dev"
-REALTIME_WS_URL = "wss://makanmasak-realtime-staging.__WORKERS_SUBDOMAIN__.workers.dev"
+CENTRAL_API_URL = "https://makanmasak-management-api-staging.omfg.workers.dev"
+REALTIME_WS_URL = "wss://makanmasak-realtime-staging.omfg.workers.dev"
 DISCOVERY_EMBEDDING_MODEL = "@cf/baai/bge-m3"
 # "warn", not "enforce": staging shops have no subscription row, and the
 # walkthrough must not be blocked by plan quotas.
@@ -523,7 +523,7 @@ name = "NOTIFICATION_EMAIL"
 [[env.staging.d1_databases]]
 binding = "DB"
 database_name = "makanmasak-staging"
-database_id = "STAGING_D1_PLATFORM_ID"
+database_id = "3caaa99d-f04c-4aba-b943-6927bd6b0c0f"
 migrations_dir = "../../packages/database/migrations_fresh"
 
 [[env.staging.services]]
@@ -532,19 +532,19 @@ service = "makanmasak-management-api-staging"
 
 [[env.staging.kv_namespaces]]
 binding = "CACHE_KV"
-id = "STAGING_KV_CACHE_ID"
+id = "ab4fb1a88fc04347a7e1421c67ca612b"
 
 [[env.staging.kv_namespaces]]
 binding = "RATE_LIMIT_KV"
-id = "STAGING_KV_RATELIMIT_ID"
+id = "45c1f0c28b284169b091c2133560f304"
 
 [[env.staging.kv_namespaces]]
 binding = "BACKUP_KV"
-id = "STAGING_KV_BACKUP_ID"
+id = "58795f9fa7734b5489948d52445710f6"
 
 [[env.staging.kv_namespaces]]
 binding = "TOKEN_BLACKLIST"
-id = "STAGING_KV_TOKEN_BLACKLIST_ID"
+id = "04bdd3bb6ca540f88348cd17e86c3d49"
 
 [[env.staging.ratelimits]]
 name = "GLOBAL_RATE_LIMITER"

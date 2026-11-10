@@ -151,12 +151,12 @@ new_classes = ["RealtimeSession"]
 [[env.staging.d1_databases]]
 binding = "DB"
 database_name = "makanmasak-staging"
-database_id = "STAGING_D1_PLATFORM_ID"
+database_id = "3caaa99d-f04c-4aba-b943-6927bd6b0c0f"
 
 [[env.staging.kv_namespaces]]
 binding = "CACHE_KV"
-id = "STAGING_KV_CACHE_ID"
+id = "ab4fb1a88fc04347a7e1421c67ca612b"
 
 [[env.staging.kv_namespaces]]
 binding = "TOKEN_BLACKLIST"
-id = "STAGING_KV_TOKEN_BLACKLIST_ID"
+id = "04bdd3bb6ca540f88348cd17e86c3d49"

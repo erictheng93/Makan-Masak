@@ -164,7 +164,17 @@ function planCommands({ skipMigrations = false } = {}) {
     ]);
   }
   for (const p of RESOURCES.pages) {
-    cmds.push(["pages", "project", "create", p, "--production-branch=main"]);
+    // --force: wrangler 4.15x delegates Pages to "Pages on Workers" and refuses
+    // to run its project detection from the monorepo root. Production uses
+    // classic Pages projects; staging should match.
+    cmds.push([
+      "pages",
+      "project",
+      "create",
+      p,
+      "--production-branch=main",
+      "--force",
+    ]);
   }
   if (!skipMigrations) {
     cmds.push([
@@ -210,7 +220,7 @@ function wrangler(argv, { input } = {}) {
 }
 
 const ALREADY =
-  /already[ _]exists?|already (taken|in use)|name is already|\b(10004|10014|11009|7502|800000\d)\b/i;
+  /already[ _]exists?|already (taken|in use)|name is already|duplicate_name|\b(10004|10014|11009|7502|3002|800000\d)\b/i;
 
 function listJson(argv) {
   const r = wrangler(argv);

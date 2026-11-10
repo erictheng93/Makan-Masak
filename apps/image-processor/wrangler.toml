@@ -100,7 +100,7 @@ workers_dev = true
 NODE_ENV = "production"
 ENVIRONMENT = "staging"
 API_VERSION = "v1"
-IMAGE_API_BASE_URL = "https://makanmasak-image-processor-staging.__WORKERS_SUBDOMAIN__.workers.dev"
+IMAGE_API_BASE_URL = "https://makanmasak-image-processor-staging.omfg.workers.dev"
 CORS_ORIGIN = "https://makanmasak-admin-staging.pages.dev"
 MAX_IMAGE_SIZE_MB = "10"
 MAX_UPLOAD_REQUEST_SIZE_MB = "12"
@@ -119,11 +119,11 @@ crons = []
 
 [[env.staging.kv_namespaces]]
 binding = "IMAGE_CACHE"
-id = "STAGING_KV_IMAGE_CACHE_ID"
+id = "e49b90bf217a47c1bcd27db6abf90b13"
 
 [[env.staging.kv_namespaces]]
 binding = "TOKEN_BLACKLIST"
-id = "STAGING_KV_TOKEN_BLACKLIST_ID"
+id = "04bdd3bb6ca540f88348cd17e86c3d49"
 
 [[env.staging.r2_buckets]]
 binding = "IMAGES_BUCKET"
@@ -132,4 +132,4 @@ bucket_name = "makanmasak-images-staging"
 [[env.staging.d1_databases]]
 binding = "DB"
 database_name = "makanmasak-staging"
-database_id = "STAGING_D1_PLATFORM_ID"
+database_id = "3caaa99d-f04c-4aba-b943-6927bd6b0c0f"

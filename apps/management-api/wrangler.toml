@@ -150,7 +150,7 @@ workers_dev = true
 NODE_ENV = "production"
 ENVIRONMENT = "staging"
 API_VERSION = "v1"
-API_BASE_URL = "https://makanmasak-management-api-staging.__WORKERS_SUBDOMAIN__.workers.dev"
+API_BASE_URL = "https://makanmasak-management-api-staging.omfg.workers.dev"
 CORS_ORIGIN = "https://makanmasak-admin-staging.pages.dev"
 LOG_LEVEL = "info"
 ONBOARDING_APP_URL = "https://makanmasak-onboarding-staging.pages.dev"
@@ -161,22 +161,22 @@ ONBOARDING_EMAIL_ENABLED = "false"
 [[env.staging.d1_databases]]
 binding = "MANAGEMENT_DB"
 database_name = "makanmasak-management-staging"
-database_id = "STAGING_D1_MANAGEMENT_ID"
+database_id = "b597d4ce-abe7-4018-b293-4a0c5feea3e6"
 migrations_dir = "migrations"
 
 [[env.staging.d1_databases]]
 binding = "PLATFORM_DB"
 database_name = "makanmasak-staging"
-database_id = "STAGING_D1_PLATFORM_ID"
+database_id = "3caaa99d-f04c-4aba-b943-6927bd6b0c0f"
 migrations_dir = "../../packages/database/migrations_fresh"
 
 [[env.staging.kv_namespaces]]
 binding = "CACHE_KV"
-id = "STAGING_KV_CACHE_ID"
+id = "ab4fb1a88fc04347a7e1421c67ca612b"
 
 [[env.staging.kv_namespaces]]
 binding = "DEPLOYMENT_STATUS_KV"
-id = "STAGING_KV_DEPLOYMENT_STATUS_ID"
+id = "b5b0127a99b84fca84fb6eb5a313728e"
 
 [[env.staging.r2_buckets]]
 binding = "BUNDLE_STORAGE"
