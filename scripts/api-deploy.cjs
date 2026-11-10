@@ -14,6 +14,16 @@
 
 const { execFileSync, spawnSync } = require("child_process");
 
+// The environment is spelled out by the caller (`deploy:prod` passes
+// `--env production`, which tests/unit/package-test-scripts.test.ts checks), so
+// this script never publishes a config nobody named.
+const envIndex = process.argv.indexOf("--env");
+const env = envIndex === -1 ? undefined : process.argv[envIndex + 1];
+if (env !== "production") {
+  console.error("Usage: node scripts/api-deploy.cjs --env production");
+  process.exit(2);
+}
+
 const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).trim();
 
 const sha = git("rev-parse", "--short=12", "HEAD");
@@ -34,7 +44,7 @@ const result = spawnSync(
     "wrangler",
     "deploy",
     "--env",
-    "production",
+    env,
     "--tag",
     tag,
     "--message",

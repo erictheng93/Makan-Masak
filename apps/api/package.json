@@ -8,7 +8,7 @@
     "build": "wrangler deploy --dry-run --env=\"\"",
     "build:prod": "wrangler deploy --dry-run --env production",
     "deploy": "node -e \"console.error('Refusing unqualified deploy. Use pnpm run deploy:prod.'); process.exit(1)\"",
-    "deploy:prod": "node ../../scripts/api-deploy.cjs",
+    "deploy:prod": "node ../../scripts/api-deploy.cjs --env production",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
