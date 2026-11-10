@@ -414,7 +414,7 @@ describe("CartView seat orders", () => {
     createGuestOrder.mockRejectedValue(
       Object.assign(
         new Error(
-          "You already have an active order at this restaurant. Please wait for it to complete.",
+          "You already have 3 orders in progress at this restaurant. Ask a member of staff to add to them.",
         ),
         {
           code: "ACTIVE_GUEST_ORDER_EXISTS",

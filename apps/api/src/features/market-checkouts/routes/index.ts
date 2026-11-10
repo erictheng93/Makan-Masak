@@ -27,6 +27,8 @@ import { rateLimitMiddleware } from "../../../middleware/rateLimiter";
 import {
   generateGuestToken,
   guestActiveOrderKey,
+  guestActiveOrderSlotKeys,
+  GUEST_ACTIVE_ORDER_LIMIT,
   resolveGuestLockIdentity,
   type GuestLockIdentity,
   type GuestTokenData,
@@ -537,11 +539,15 @@ app.post("/", optionalCanonicalCustomerAuthMiddleware, async (c) => {
   // can only carry one token as its bearer, so every other vendor's lock would
   // be invisible on the next checkout.
   const requestLockIdentity = resolveGuestLockIdentity(c.req);
-  const activeOrderKeys = requestLockIdentity
-    ? restaurantIds.map((restaurantId) =>
-        guestActiveOrderKey(restaurantId, requestLockIdentity),
-      )
-    : [];
+  // Per vendor, this device's open-order slots (see guestActiveOrderSlotKeys).
+  const activeSlotKeysByRestaurant = new Map(
+    requestLockIdentity
+      ? restaurantIds.map((restaurantId) => [
+          restaurantId,
+          guestActiveOrderSlotKeys(restaurantId, requestLockIdentity),
+        ])
+      : [],
+  );
 
   await Promise.all(
     data.vendors.map((vendor) =>
@@ -629,12 +635,22 @@ app.post("/", optionalCanonicalCustomerAuthMiddleware, async (c) => {
     })),
   );
 
-  const existingActiveOrders = await Promise.all(
-    activeOrderKeys.map((key) => c.env.CACHE_KV.get(key)),
+  // First free slot per vendor; a vendor whose slots are all taken blocks.
+  const freeSlotKeyByRestaurant = new Map<string, string>();
+  await Promise.all(
+    [...activeSlotKeysByRestaurant].map(async ([restaurantId, slotKeys]) => {
+      const holders = await Promise.all(
+        slotKeys.map((key) => c.env.CACHE_KV.get(key)),
+      );
+      const freeSlot = holders.findIndex((orderId) => !orderId);
+      if (freeSlot !== -1) {
+        freeSlotKeyByRestaurant.set(restaurantId, slotKeys[freeSlot]);
+      }
+    }),
   );
-  if (existingActiveOrders.some(Boolean)) {
+  if (freeSlotKeyByRestaurant.size < activeSlotKeysByRestaurant.size) {
     throw conflict(
-      "You already have an active order at one of these vendors. Please wait for it to complete.",
+      `You already have ${GUEST_ACTIVE_ORDER_LIMIT} orders in progress at one of these vendors. Ask a member of staff to add to them.`,
       "MARKET_VENDOR_ACTIVE_ORDER_EXISTS",
     );
   }
@@ -726,10 +742,9 @@ app.post("/", optionalCanonicalCustomerAuthMiddleware, async (c) => {
       // keyed on the first child's token — the one the customer app stores as
       // its bearer, so its next checkout arrives holding the matching key.
       checkoutLockIdentity ??= { kind: "token", value: guestToken };
-      const activeOrderKey = guestActiveOrderKey(
-        vendor.restaurantId,
-        checkoutLockIdentity,
-      );
+      const activeOrderKey =
+        freeSlotKeyByRestaurant.get(vendor.restaurantId) ??
+        guestActiveOrderKey(vendor.restaurantId, checkoutLockIdentity);
 
       // Record for compensation before writing locks: if the KV writes below
       // partially succeed and a later vendor fails, we still want to attempt to

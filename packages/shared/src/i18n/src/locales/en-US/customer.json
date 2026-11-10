@@ -456,7 +456,7 @@
   "toast": {
     "orderSubmitSuccess": "Order submitted successfully!",
     "orderSubmitFailed": "Order submission failed, please try again",
-    "orderSubmitActiveGuestOrder": "You already have an active order at this restaurant. Please wait until it is complete.",
+    "orderSubmitActiveGuestOrder": "You already have 3 orders in progress at this restaurant. To order more, ask a member of staff to add it for you.",
     "orderSubmitDuplicate": "This order has already been sent. Please check your order status.",
     "orderSubmitQrInvalid": "This table QR code is no longer valid. Please scan the QR code on the table again.",
     "orderSubmitMenuItemUnavailable": "One or more items are no longer available. Please update your cart and try again.",

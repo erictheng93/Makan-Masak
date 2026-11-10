@@ -456,7 +456,7 @@
   "toast": {
     "orderSubmitSuccess": "Đặt hàng thành công!",
     "orderSubmitFailed": "Đặt hàng thất bại, vui lòng thử lại",
-    "orderSubmitActiveGuestOrder": "Bạn đã có một đơn đang hoạt động tại nhà hàng này. Vui lòng chờ đơn hoàn tất.",
+    "orderSubmitActiveGuestOrder": "Bạn đã có 3 đơn đang thực hiện tại nhà hàng này. Muốn gọi thêm, hãy nhờ nhân viên thêm giúp.",
     "orderSubmitDuplicate": "Đơn hàng này đã được gửi. Vui lòng kiểm tra trạng thái đơn hàng.",
     "orderSubmitQrInvalid": "Mã QR bàn này không còn hợp lệ. Vui lòng quét lại mã QR trên bàn.",
     "orderSubmitMenuItemUnavailable": "Một số món không còn phục vụ. Vui lòng cập nhật giỏ hàng và thử lại.",

@@ -456,7 +456,7 @@
   "toast": {
     "orderSubmitSuccess": "订单提交成功！",
     "orderSubmitFailed": "订单提交失败，请重试",
-    "orderSubmitActiveGuestOrder": "您在此餐厅已有进行中的订单，请等待完成后再提交新订单。",
+    "orderSubmitActiveGuestOrder": "您在此餐厅已有 3 张进行中的订单。如需加点，请联系店员协助。",
     "orderSubmitDuplicate": "此订单已提交，请查看订单状态。",
     "orderSubmitQrInvalid": "此桌位 QR Code 已失效，请重新扫描桌上的 QR Code。",
     "orderSubmitMenuItemUnavailable": "部分商品已暂停供应，请更新购物车后再试。",

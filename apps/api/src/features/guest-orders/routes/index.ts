@@ -20,6 +20,8 @@ import {
   guestTokenAuth,
   generateGuestToken,
   guestActiveOrderKey,
+  guestActiveOrderSlotKeys,
+  GUEST_ACTIVE_ORDER_LIMIT,
   resolveGuestLockIdentity,
 } from "../../../middleware/guestAuth";
 import type { GuestTokenData } from "../../../middleware/guestAuth";
@@ -78,9 +80,9 @@ app.post(
     const requestLockIdentity = resolveGuestLockIdentity(c.req);
     // Brand-new anonymous guests have no identity yet; using IP here
     // incorrectly makes a restaurant's shared WiFi/CGNAT address the lock.
-    const existingActiveOrderKey = requestLockIdentity
-      ? guestActiveOrderKey(data.restaurantId, requestLockIdentity)
-      : null;
+    const activeSlotKeys = requestLockIdentity
+      ? guestActiveOrderSlotKeys(data.restaurantId, requestLockIdentity)
+      : [];
     // Never rejects: the failure is rethrown at its original position below.
     const qrFailure: Promise<unknown> = isDineIn
       ? Promise.resolve(
@@ -96,15 +98,13 @@ app.post(
         )
       : Promise.resolve(undefined);
 
-    const [restaurant, existingActiveOrder, table, seat] = await Promise.all([
+    const [restaurant, activeSlots, table, seat] = await Promise.all([
       db
         .select()
         .from(restaurants)
         .where(eq(restaurants.id, data.restaurantId))
         .get(),
-      existingActiveOrderKey
-        ? c.env.CACHE_KV.get(existingActiveOrderKey)
-        : null,
+      Promise.all(activeSlotKeys.map((key) => c.env.CACHE_KV.get(key))),
       isDineIn
         ? db.select().from(tables).where(eq(tables.id, data.tableId!)).get()
         : undefined,
@@ -136,8 +136,9 @@ app.post(
       assertShopQrCurrent(restaurant.shopQrCode, data.shopQrCode);
     }
 
-    // 2. Active order limit for this device (see existingActiveOrderKey above).
-    if (existingActiveOrder) {
+    // 2. Open-order limit for this device (see activeSlotKeys above).
+    const freeSlot = activeSlots.findIndex((orderId) => !orderId);
+    if (activeSlotKeys.length > 0 && freeSlot === -1) {
       if (data.clientMutationId) {
         const duplicateMutation = await db
           .select({ id: orders.id })
@@ -160,7 +161,7 @@ app.post(
 
       throw new ApiError(
         "ACTIVE_GUEST_ORDER_EXISTS",
-        "You already have an active order at this restaurant. Please wait for it to complete.",
+        `You already have ${GUEST_ACTIVE_ORDER_LIMIT} orders in progress at this restaurant. Ask a member of staff to add to them.`,
         429,
       );
     }
@@ -288,10 +289,14 @@ app.post(
     // A device that presented no identity gets its lock keyed on the token
     // minted just above — the customer app stores that token, so its next
     // order arrives holding the matching key.
-    const activeOrderKey = guestActiveOrderKey(
-      data.restaurantId,
-      requestLockIdentity ?? { kind: "token", value: guestToken },
-    );
+    // shortcut: two orders sent at the same instant from one device can pick
+    // the same free slot and count once; the per-IP throttle still bounds it.
+    const activeOrderKey = requestLockIdentity
+      ? activeSlotKeys[freeSlot]
+      : guestActiveOrderKey(data.restaurantId, {
+          kind: "token",
+          value: guestToken,
+        });
     await Promise.all([
       c.env.CACHE_KV.put(
         `guest_token:${guestToken}`,
@@ -427,13 +432,25 @@ app.post("/:id/cancel", guestTokenAuth, async (c) => {
   const guestData = c.get("guestOrder");
   const requestLockIdentity = resolveGuestLockIdentity(c.req);
   const lookupKey = `guest_active_lookup:${orderId}`;
-  const activeOrderKey =
-    (await c.env.CACHE_KV.get(lookupKey)) ??
-    (requestLockIdentity
-      ? guestActiveOrderKey(guestData.restaurantId, requestLockIdentity)
-      : null);
+  // Without the mapping, free whichever of this device's slots holds the order.
+  let activeOrderKeys: string[] = [];
+  const mappedKey = await c.env.CACHE_KV.get(lookupKey);
+  if (mappedKey) {
+    activeOrderKeys = [mappedKey];
+  } else if (requestLockIdentity) {
+    const slotKeys = guestActiveOrderSlotKeys(
+      guestData.restaurantId,
+      requestLockIdentity,
+    );
+    const holders = await Promise.all(
+      slotKeys.map((key) => c.env.CACHE_KV.get(key)),
+    );
+    activeOrderKeys = slotKeys.filter(
+      (_, slot) => holders[slot] === String(orderId),
+    );
+  }
   await Promise.allSettled([
-    activeOrderKey ? c.env.CACHE_KV.delete(activeOrderKey) : Promise.resolve(),
+    ...activeOrderKeys.map((key) => c.env.CACHE_KV.delete(key)),
     c.env.CACHE_KV.delete(lookupKey),
   ]);
 

@@ -197,6 +197,28 @@ export function guestActiveOrderKey(
 }
 
 /**
+ * Open orders one device may hold at a restaurant. One blocked a diner from
+ * ordering a second round until the first was served or paid; the per-IP
+ * guest throttle remains the abuse limit.
+ */
+export const GUEST_ACTIVE_ORDER_LIMIT = 3;
+
+/**
+ * One lock key per open-order slot. Slot 0 is the original single-lock key, so
+ * locks written before slots existed still count. Each order records its own
+ * slot in `guest_active_lookup:{orderId}`, so releasing one frees only that slot.
+ */
+export function guestActiveOrderSlotKeys(
+  restaurantId: string,
+  identity: GuestLockIdentity,
+): string[] {
+  const base = guestActiveOrderKey(restaurantId, identity);
+  return Array.from({ length: GUEST_ACTIVE_ORDER_LIMIT }, (_, slot) =>
+    slot === 0 ? base : `${base}:${slot}`,
+  );
+}
+
+/**
  * Generate a cryptographically random guest token.
  */
 export function generateGuestToken(): string {

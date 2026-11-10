@@ -456,7 +456,7 @@
   "toast": {
     "orderSubmitSuccess": "Pesanan berjaya dihantar!",
     "orderSubmitFailed": "Penghantaran pesanan gagal, sila cuba lagi",
-    "orderSubmitActiveGuestOrder": "Anda sudah mempunyai pesanan aktif di restoran ini. Sila tunggu sehingga pesanan selesai.",
+    "orderSubmitActiveGuestOrder": "Anda sudah mempunyai 3 pesanan yang sedang diproses di restoran ini. Untuk memesan lagi, minta bantuan kakitangan.",
     "orderSubmitDuplicate": "Pesanan ini telah dihantar. Sila semak status pesanan anda.",
     "orderSubmitQrInvalid": "Kod QR meja ini tidak lagi sah. Sila imbas semula kod QR di atas meja.",
     "orderSubmitMenuItemUnavailable": "Satu atau lebih item tidak lagi tersedia. Sila kemas kini troli dan cuba lagi.",

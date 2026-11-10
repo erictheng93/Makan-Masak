@@ -1124,10 +1124,13 @@ describe("market checkout routes", () => {
     // The active-order lock rejects before the menu is read.
     setTwoVendorCreateFixtures({ menuItems: [] });
     const env = createEnv();
-    await env.CACHE_KV.put(
-      `guest_active:restaurant-1:token:${ACTIVE_GUEST_TOKEN}`,
-      "order-1",
-    );
+    // All three open-order slots at this vendor are taken.
+    for (const suffix of ["", ":1", ":2"]) {
+      await env.CACHE_KV.put(
+        `guest_active:restaurant-1:token:${ACTIVE_GUEST_TOKEN}${suffix}`,
+        "order-1",
+      );
+    }
 
     const response = await withSilencedRouteError(() =>
       routes.fetch(
@@ -1254,10 +1257,55 @@ describe("market checkout routes", () => {
       .filter((key: string) => key.startsWith("guest_active:"));
     expect(activeLookups).toEqual([
       `guest_active:restaurant-1:device:${GUEST_DEVICE_ID}`,
+      `guest_active:restaurant-1:device:${GUEST_DEVICE_ID}:1`,
+      `guest_active:restaurant-1:device:${GUEST_DEVICE_ID}:2`,
       `guest_active:restaurant-2:device:${GUEST_DEVICE_ID}`,
+      `guest_active:restaurant-2:device:${GUEST_DEVICE_ID}:1`,
+      `guest_active:restaurant-2:device:${GUEST_DEVICE_ID}:2`,
     ]);
     expect(env.CACHE_KV.put).toHaveBeenCalledWith(
       `guest_active:restaurant-1:device:${GUEST_DEVICE_ID}`,
+      "1001",
+      { expirationTtl: 7200 },
+    );
+    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+      `guest_active:restaurant-2:device:${GUEST_DEVICE_ID}`,
+      "1002",
+      { expirationTtl: 7200 },
+    );
+  });
+
+  it("lets a shopper with one open order at a vendor check out there again, in the next slot", async () => {
+    setTwoVendorCreateFixtures();
+    createOrder
+      .mockResolvedValueOnce({
+        id: 1001,
+        orderNumber: "A001",
+        totalAmount: 120,
+        totalAmountCents: 12000,
+      })
+      .mockResolvedValueOnce({
+        id: 1002,
+        orderNumber: "A002",
+        totalAmount: 80,
+        totalAmountCents: 8000,
+      });
+    const env = createEnv();
+    await env.CACHE_KV.put(
+      `guest_active:restaurant-1:device:${GUEST_DEVICE_ID}`,
+      "900",
+    );
+
+    const response = await routes.fetch(
+      twoVendorRequestWithHeaders({
+        [GUEST_DEVICE_ID_HEADER]: GUEST_DEVICE_ID,
+      }),
+      env as never,
+    );
+
+    expect(response.status).toBe(201);
+    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+      `guest_active:restaurant-1:device:${GUEST_DEVICE_ID}:1`,
       "1001",
       { expirationTtl: 7200 },
     );
@@ -1274,10 +1322,13 @@ describe("market checkout routes", () => {
     // different token. Only a device-wide identity finds it.
     setTwoVendorCreateFixtures({ menuItems: [] });
     const env = createEnv();
-    await env.CACHE_KV.put(
-      `guest_active:restaurant-2:device:${GUEST_DEVICE_ID}`,
-      "1002",
-    );
+    // All three open-order slots at this vendor are taken.
+    for (const suffix of ["", ":1", ":2"]) {
+      await env.CACHE_KV.put(
+        `guest_active:restaurant-2:device:${GUEST_DEVICE_ID}${suffix}`,
+        "1002",
+      );
+    }
 
     const response = await withSilencedRouteError(() =>
       routes.fetch(
@@ -1298,10 +1349,13 @@ describe("market checkout routes", () => {
     // Reading the identity off that header alone would skip the check entirely.
     setTwoVendorCreateFixtures({ menuItems: [] });
     const env = createEnv();
-    await env.CACHE_KV.put(
-      `guest_active:restaurant-1:device:${GUEST_DEVICE_ID}`,
-      "1001",
-    );
+    // All three open-order slots at this vendor are taken.
+    for (const suffix of ["", ":1", ":2"]) {
+      await env.CACHE_KV.put(
+        `guest_active:restaurant-1:device:${GUEST_DEVICE_ID}${suffix}`,
+        "1001",
+      );
+    }
 
     const response = await withSilencedRouteError(() =>
       routes.fetch(

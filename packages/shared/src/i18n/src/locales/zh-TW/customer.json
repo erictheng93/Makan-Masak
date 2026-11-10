@@ -456,7 +456,7 @@
   "toast": {
     "orderSubmitSuccess": "訂單提交成功！",
     "orderSubmitFailed": "訂單提交失敗，請重試",
-    "orderSubmitActiveGuestOrder": "您在此餐廳已有進行中的訂單，請等待完成後再送出新訂單。",
+    "orderSubmitActiveGuestOrder": "您在此餐廳已有 3 張進行中的訂單。若要加點，請洽店員協助。",
     "orderSubmitDuplicate": "此訂單已送出，請查看訂單狀態。",
     "orderSubmitQrInvalid": "此桌位 QR Code 已失效，請重新掃描桌上的 QR Code。",
     "orderSubmitMenuItemUnavailable": "部分商品已暫停供應，請更新購物車後再試。",

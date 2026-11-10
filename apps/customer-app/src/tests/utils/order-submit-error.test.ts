@@ -10,7 +10,7 @@ describe("getOrderSubmitErrorI18nKey", () => {
       getOrderSubmitErrorI18nKey({
         code: "ACTIVE_GUEST_ORDER_EXISTS",
         message:
-          "You already have an active order at this restaurant. Please wait for it to complete.",
+          "You already have 3 orders in progress at this restaurant. Ask a member of staff to add to them.",
         status: 429,
       }),
     ).toBe("toast.orderSubmitActiveGuestOrder");

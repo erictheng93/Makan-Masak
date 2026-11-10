@@ -755,10 +755,14 @@ describe("guest order routes", () => {
     const duplicateEnv = createEnv();
     const activeGuestToken =
       "gt_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    await duplicateEnv.CACHE_KV.put(
-      `guest_active:restaurant-1:token:${activeGuestToken}`,
-      "501",
-    );
+    // All three open-order slots taken.
+    for (const [key, id] of [
+      [`guest_active:restaurant-1:token:${activeGuestToken}`, "501"],
+      [`guest_active:restaurant-1:token:${activeGuestToken}:1`, "502"],
+      [`guest_active:restaurant-1:token:${activeGuestToken}:2`, "503"],
+    ]) {
+      await duplicateEnv.CACHE_KV.put(key, id);
+    }
     setSelectFixtures({ restaurants: [[activeGuestRestaurant()]] });
 
     const duplicateResponse = await app.fetch(
@@ -776,7 +780,7 @@ describe("guest order routes", () => {
       error: {
         code: "ACTIVE_GUEST_ORDER_EXISTS",
         message:
-          "You already have an active order at this restaurant. Please wait for it to complete.",
+          "You already have 3 orders in progress at this restaurant. Ask a member of staff to add to them.",
       },
     });
     expect(createOrder).not.toHaveBeenCalled();
@@ -788,10 +792,16 @@ describe("guest order routes", () => {
     // the bearer token, is the identity the lock hangs off.
     const deviceId = "01890a5d-ac96-774b-bcce-b302099a8057";
     const env = createEnv();
-    await env.CACHE_KV.put(
-      `guest_active:restaurant-1:device:${deviceId}`,
-      "501",
-    );
+    for (const [suffix, id] of [
+      ["", "501"],
+      [":1", "502"],
+      [":2", "503"],
+    ]) {
+      await env.CACHE_KV.put(
+        `guest_active:restaurant-1:device:${deviceId}${suffix}`,
+        id,
+      );
+    }
     setSelectFixtures({ restaurants: [[activeGuestRestaurant()]] });
     const app = createRoutesWithApiErrorHandler();
 
@@ -813,6 +823,41 @@ describe("guest order routes", () => {
       error: { code: "ACTIVE_GUEST_ORDER_EXISTS" },
     });
     expect(createOrder).not.toHaveBeenCalled();
+  });
+
+  // A diner ordering a second round before the first is served must not be
+  // turned away; the new order takes the next free slot.
+  it("accepts a second open order from the same device in the next slot", async () => {
+    const deviceId = "01890a5d-ac96-774b-bcce-b302099a8057";
+    setSelectFixtures({ restaurants: [[activeGuestRestaurant()]] });
+    createOrder.mockResolvedValueOnce({ id: 502, orderNumber: "G002" });
+    const env = createEnv();
+    await env.CACHE_KV.put(
+      `guest_active:restaurant-1:device:${deviceId}`,
+      "501",
+    );
+
+    const response = await routes.fetch(
+      new Request("https://test/", {
+        method: "POST",
+        headers: { "X-Guest-Device-Id": deviceId },
+        body: JSON.stringify(validGuestOrderBody()),
+      }),
+      env as never,
+    );
+
+    expect(response.status).toBe(201);
+    expect(createOrder).toHaveBeenCalledOnce();
+    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+      `guest_active:restaurant-1:device:${deviceId}:1`,
+      "502",
+      expect.objectContaining({ expirationTtl: expect.any(Number) }),
+    );
+    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+      "guest_active_lookup:502",
+      `guest_active:restaurant-1:device:${deviceId}:1`,
+      expect.objectContaining({ expirationTtl: expect.any(Number) }),
+    );
   });
 
   it("writes the new order's lock under the device id", async () => {
@@ -1104,6 +1149,14 @@ describe("guest order routes", () => {
       status: "cancelled",
     });
     const env = createEnv();
+    await env.CACHE_KV.put(
+      `guest_active:restaurant-1:token:${CANCELLING_GUEST_TOKEN}:1`,
+      "501",
+    );
+    await env.CACHE_KV.put(
+      `guest_active:restaurant-1:token:${CANCELLING_GUEST_TOKEN}`,
+      "499",
+    );
 
     const response = await routes.fetch(
       new Request("https://test/501/cancel", {
@@ -1125,9 +1178,12 @@ describe("guest order routes", () => {
     expect(getOrder).toHaveBeenCalledWith("501", false, undefined, {
       bypassCache: true,
     });
-    // No reverse lookup is stored, so the lock key is rebuilt from the token
-    // this request presented — the same token that created the order.
+    // No reverse lookup is stored, so the slot holding this order is found
+    // from the token this request presented; the slot of order 499 stays.
     expect(env.CACHE_KV.delete).toHaveBeenCalledWith(
+      `guest_active:restaurant-1:token:${CANCELLING_GUEST_TOKEN}:1`,
+    );
+    expect(env.CACHE_KV.delete).not.toHaveBeenCalledWith(
       `guest_active:restaurant-1:token:${CANCELLING_GUEST_TOKEN}`,
     );
     expect(env.CACHE_KV.delete).toHaveBeenCalledWith("guest_active_lookup:501");
