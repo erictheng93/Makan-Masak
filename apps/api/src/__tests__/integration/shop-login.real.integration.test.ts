@@ -158,6 +158,79 @@ describe("Shop login — real integration", () => {
     });
   });
 
+  describe("failed-login lockout is per account", () => {
+    const counter = async (userId: string) =>
+      Number(
+        (await testApp.env.CACHE_KV.get(`failed-login-user:${userId}`)) ?? 0,
+      );
+    const idOf = async (restaurantId: string, username: string) =>
+      (
+        await testApp.env.DB.prepare(
+          "SELECT id FROM users WHERE restaurant_id = ? AND username = ?",
+        )
+          .bind(restaurantId, username)
+          .first<{ id: string }>()
+      )?.id as string;
+
+    it("locks shop A's chef but still lets shop B's chef in", async () => {
+      for (let i = 0; i < 5; i++) {
+        expect(
+          (
+            await login({
+              username: "chef",
+              shop: "shop-a",
+              password: "Wrong@1",
+            })
+          ).status,
+        ).toBe(401);
+      }
+      expect(await counter(await idOf(shopA, "chef"))).toBe(5);
+
+      // Correct password at A is now refused...
+      expect(
+        (await login({ username: "chef", shop: "shop-a" })).status,
+      ).not.toBe(200);
+      // ...while B's chef is untouched.
+      expect((await login({ username: "chef", shop: "shop-b" })).status).toBe(
+        200,
+      );
+      expect(await counter(await idOf(shopB, "chef"))).toBe(0);
+    });
+
+    it("accumulates no-shop and shop failures of one account on one counter, and success resets it", async () => {
+      await seed.user({
+        username: "solo",
+        role: 2,
+        restaurantId: shopA,
+        passwordHash: hash,
+      });
+      const solo = await idOf(shopA, "solo");
+
+      await login({ username: "solo", password: "Wrong@1" });
+      await login({ username: "solo", shop: "shop-a", password: "Wrong@1" });
+      expect(await counter(solo)).toBe(2);
+
+      expect((await login({ username: "solo" })).status).toBe(200);
+      // success clears the counter (bookkeeping runs after the response)
+      await new Promise((r) => setTimeout(r, 100));
+      expect(await counter(solo)).toBe(0);
+    });
+
+    it("never counts SHOP_REQUIRED or an unknown shop against any account", async () => {
+      for (let i = 0; i < 6; i++) {
+        const res = await login({ username: "chef", password: "Wrong@1" });
+        expect((await readEnvelope(res)).error?.code).toBe("SHOP_REQUIRED");
+      }
+      await login({
+        username: "chef",
+        shop: "no-such-shop",
+        password: "Wrong@1",
+      });
+      expect(await counter(await idOf(shopA, "chef"))).toBe(0);
+      expect(await counter(await idOf(shopB, "chef"))).toBe(0);
+    });
+  });
+
   describe("users in one restaurant", () => {
     it("rejects a second 'chef' in the same restaurant with 409 USERNAME_TAKEN", async () => {
       const owner = await testApp.authHelper.ownerToken(900, shopA);

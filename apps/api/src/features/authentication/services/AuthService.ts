@@ -54,17 +54,32 @@ const LOGIN_RATE_LIMIT_TTL_SECONDS = 15 * 60;
 const LOGIN_IP_FAILURE_LIMIT = 10;
 const LOGIN_USERNAME_FAILURE_LIMIT = 5;
 
-function loginRateLimitKeys(username: string, ipAddress?: string) {
+function normalizedShop(shop?: string) {
+  return shop?.trim().toLowerCase() ?? "";
+}
+
+/**
+ * Pre-lookup throttles only (coarse, never an account lockout): per IP, and per
+ * (shop, username, IP). The shop is part of the key so a burst against one
+ * shop's "chef" cannot throttle another shop's "chef" from the same IP.
+ */
+function loginRateLimitKeys(
+  username: string,
+  ipAddress?: string,
+  shop?: string,
+) {
   const normalizedUsername = username.trim().toLowerCase();
   const normalizedIp = ipAddress?.trim() || null;
 
   return {
     normalizedUsername,
-    usernameIpKey: `failed-login:${normalizedUsername}:${normalizedIp || "unknown"}`,
+    usernameIpKey: `failed-login:${normalizedShop(shop)}:${normalizedUsername}:${normalizedIp || "unknown"}`,
     ipKey: normalizedIp ? `failed-login-ip:${normalizedIp}` : null,
-    usernameKey: `failed-login:${normalizedUsername}`,
   };
 }
+
+/** The account lockout counter: one per resolved users.id, shop-agnostic. */
+const accountFailureKey = (userId: string) => `failed-login-user:${userId}`;
 
 export class AuthService implements IAuthService {
   private db: ReturnType<typeof getDatabaseConnection>;
@@ -114,11 +129,7 @@ export class AuthService implements IAuthService {
 
     try {
       // Rate limiting check
-      const rateLimitError = await this.checkRateLimit(
-        data.username,
-        data.deviceInfo?.ipAddress,
-      );
-      if (rateLimitError) {
+      const lockedOut = async (error: string): Promise<AuthResult> => {
         await this.logSecurityEvent({
           type: "ACCOUNT_LOCKED",
           username: data.username,
@@ -130,15 +141,27 @@ export class AuthService implements IAuthService {
         });
         this.performance.recordMetric("auth.login.rate_limited", 1);
 
-        return {
-          success: false,
-          reason: "rate_limited",
-          error: rateLimitError,
-        };
-      }
+        return { success: false, reason: "rate_limited", error };
+      };
+
+      // Pre-lookup throttle: IP-based only. The per-account lockout runs
+      // inside the lookup, once the shop-scoped account is known.
+      const rateLimitError = await this.checkRateLimit(
+        data.username,
+        data.deviceInfo?.ipAddress,
+        data.shop,
+      );
+      if (rateLimitError) return lockedOut(rateLimitError);
 
       // Call the existing DatabaseAuthService
-      const dbResult = await this.dbAuthService.login(data);
+      const dbResult = await this.dbAuthService.login({
+        ...data,
+        isAccountLocked: (userId) => this.isAccountLocked(userId),
+      });
+
+      if (dbResult.reason === "rate_limited") {
+        return lockedOut(LOGIN_RATE_LIMIT_ERROR);
+      }
 
       // Not a credential failure: the caller only has to name its shop, so it
       // must not count toward the lockout or raise a LOGIN_FAILED event.
@@ -196,6 +219,8 @@ export class AuthService implements IAuthService {
             this.clearFailedLoginAttempts(
               result.user.username,
               data.deviceInfo?.ipAddress,
+              data.shop,
+              result.user.id,
             ),
           ]),
         );
@@ -217,6 +242,8 @@ export class AuthService implements IAuthService {
             this.logFailedLoginAttempt(
               data.username,
               data.deviceInfo?.ipAddress,
+              data.shop,
+              dbResult.failedAccountId,
             ),
             this.logSecurityEvent({
               type: "LOGIN_FAILED",
@@ -1159,35 +1186,45 @@ export class AuthService implements IAuthService {
     }
   }
 
+  /** Per-account lockout, read after the shop-scoped lookup, before bcrypt. */
+  private async isAccountLocked(userId: string): Promise<boolean> {
+    try {
+      const attempts = await this.cache.get<number>(accountFailureKey(userId));
+      return Number(attempts ?? 0) >= LOGIN_USERNAME_FAILURE_LIMIT;
+    } catch (error) {
+      this.logger.error("Failed to check account lockout", error as Error);
+      return false;
+    }
+  }
+
   private async checkRateLimit(
     username: string,
     ipAddress?: string,
+    shop?: string,
   ): Promise<string | null> {
     try {
-      const { normalizedUsername, usernameIpKey, ipKey, usernameKey } =
-        loginRateLimitKeys(username, ipAddress);
+      const { normalizedUsername, usernameIpKey, ipKey } = loginRateLimitKeys(
+        username,
+        ipAddress,
+        shop,
+      );
 
-      const [usernameIpAttempts, ipAttempts, usernameAttempts] =
-        await Promise.all([
-          this.cache.get<number>(usernameIpKey),
-          ipKey ? this.cache.get<number>(ipKey) : Promise.resolve(null),
-          this.cache.get<number>(usernameKey),
-        ]);
+      const [usernameIpAttempts, ipAttempts] = await Promise.all([
+        this.cache.get<number>(usernameIpKey),
+        ipKey ? this.cache.get<number>(ipKey) : Promise.resolve(null),
+      ]);
 
       const usernameIpCount = Number(usernameIpAttempts ?? 0);
       const ipCount = Number(ipAttempts ?? 0);
-      const usernameCount = Number(usernameAttempts ?? 0);
       const limited =
         usernameIpCount >= LOGIN_IP_FAILURE_LIMIT ||
-        ipCount >= LOGIN_IP_FAILURE_LIMIT ||
-        usernameCount >= LOGIN_USERNAME_FAILURE_LIMIT;
+        ipCount >= LOGIN_IP_FAILURE_LIMIT;
 
       this.logger.debug("Rate limit check", {
         username: normalizedUsername,
         ipAddress: ipAddress || "unknown",
         usernameIpCount,
         ipCount,
-        usernameCount,
         limited,
       });
 
@@ -1198,20 +1235,30 @@ export class AuthService implements IAuthService {
     }
   }
 
+  /**
+   * Counts a failed attempt: the IP counters always, the account counter only
+   * when the shop-scoped lookup resolved a real account (wrong password).
+   */
   private async logFailedLoginAttempt(
     username: string,
     ipAddress?: string,
+    shop?: string,
+    accountId?: string,
   ): Promise<void> {
     try {
-      const { usernameIpKey, ipKey, usernameKey } = loginRateLimitKeys(
+      const { usernameIpKey, ipKey } = loginRateLimitKeys(
         username,
         ipAddress,
+        shop,
       );
-      const [usernameIpAttempts, ipAttempts, usernameAttempts] =
+      const accountKey = accountId ? accountFailureKey(accountId) : null;
+      const [usernameIpAttempts, ipAttempts, accountAttempts] =
         await Promise.all([
           this.cache.get<number>(usernameIpKey),
           ipKey ? this.cache.get<number>(ipKey) : Promise.resolve(null),
-          this.cache.get<number>(usernameKey),
+          accountKey
+            ? this.cache.get<number>(accountKey)
+            : Promise.resolve(null),
         ]);
 
       const writes = [
@@ -1220,12 +1267,17 @@ export class AuthService implements IAuthService {
           Number(usernameIpAttempts ?? 0) + 1,
           LOGIN_RATE_LIMIT_TTL_SECONDS,
         ),
-        this.cache.set(
-          usernameKey,
-          Number(usernameAttempts ?? 0) + 1,
-          LOGIN_RATE_LIMIT_TTL_SECONDS,
-        ),
       ];
+
+      if (accountKey) {
+        writes.push(
+          this.cache.set(
+            accountKey,
+            Number(accountAttempts ?? 0) + 1,
+            LOGIN_RATE_LIMIT_TTL_SECONDS,
+          ),
+        );
+      }
 
       if (ipKey) {
         writes.push(
@@ -1245,19 +1297,20 @@ export class AuthService implements IAuthService {
 
   private async clearFailedLoginAttempts(
     username: string,
-    ipAddress?: string,
+    ipAddress: string | undefined,
+    shop: string | undefined,
+    userId: string,
   ): Promise<void> {
     try {
-      const { usernameIpKey, ipKey, usernameKey } = loginRateLimitKeys(
+      const { usernameIpKey, ipKey } = loginRateLimitKeys(
         username,
         ipAddress,
+        shop,
       );
-      // delete(), not clear(): these are three exact keys, and clear() treats
-      // its argument as a prefix — it runs a paginated kv.list() and deletes
-      // whatever comes back. That turned every successful login into three KV
-      // list scans to remove three keys we can already name.
+      // delete(), not clear(): these are exact keys, and clear() treats its
+      // argument as a prefix — a paginated kv.list() per call.
       const clears = [
-        this.cache.delete(usernameKey),
+        this.cache.delete(accountFailureKey(userId)),
         this.cache.delete(usernameIpKey),
       ];
 

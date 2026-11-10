@@ -11,6 +11,11 @@ export interface LoginData {
   password: string;
   /** restaurants.login_slug; required when the username exists at several shops. */
   shop?: string;
+  /**
+   * Called with the resolved account id after the shop-scoped lookup and
+   * BEFORE any password check. True means the account is locked out.
+   */
+  isAccountLocked?: (userId: string) => Promise<boolean>;
   deviceInfo?: {
     userAgent?: string;
     ipAddress?: string;
@@ -182,12 +187,15 @@ export type AuthFailureReason =
   | "customer_password_registration_retired"
   | "username_taken"
   | "shop_required"
+  | "rate_limited"
   | "weak_password";
 
 export interface AuthResult {
   success: boolean;
   /** Set on every failure path; absent on success. */
   reason?: AuthFailureReason;
+  /** Resolved account of a wrong-password attempt, for per-account lockout counters. */
+  failedAccountId?: string;
   user?: {
     id: string;
     publicId?: string | null;
@@ -286,6 +294,15 @@ export class AuthService extends BaseService {
         };
       }
 
+      if (data.isAccountLocked && (await data.isAccountLocked(user.id))) {
+        return {
+          success: false,
+          reason: "rate_limited",
+          error:
+            "Account locked after repeated failures. Please try again later.",
+        };
+      }
+
       // 驗證密碼
       const isPasswordValid = await bcrypt.compare(
         data.password,
@@ -296,6 +313,7 @@ export class AuthService extends BaseService {
           success: false,
           reason: "invalid_credentials",
           error: "Invalid username or password",
+          failedAccountId: user.id,
         };
       }
 

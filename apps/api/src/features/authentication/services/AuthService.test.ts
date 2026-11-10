@@ -133,6 +133,144 @@ function mockUpdateReturning(rows: unknown[]) {
   });
 }
 
+describe("AuthService per-account login lockout", () => {
+  // A stateful KV plus a fake shop-scoped lookup: "chef" exists at shop-a
+  // (chef-a) and shop-b (chef-b); only chef-a / chef-b know their password.
+  const accounts: Record<string, { id: string; password: string }> = {
+    "shop-a": { id: "chef-a", password: "right-a" },
+    "shop-b": { id: "chef-b", password: "right-b" },
+  };
+  let kv: Map<string, number>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    kv = new Map();
+    mocks.cache.get.mockReset();
+    mocks.cache.set.mockReset();
+    mocks.cache.delete.mockReset();
+    mocks.cache.get.mockImplementation(async (k: string) => kv.get(k) ?? null);
+    mocks.cache.set.mockImplementation(async (k: string, v: number) => {
+      kv.set(k, v);
+    });
+    mocks.cache.delete.mockImplementation(async (k: string) => {
+      kv.delete(k);
+    });
+    mocks.dbAuthService.login.mockImplementation(
+      async (data: {
+        shop?: string;
+        password: string;
+        isAccountLocked?: (id: string) => Promise<boolean>;
+      }) => {
+        if (!data.shop)
+          return { success: false, reason: "shop_required", error: "x" };
+        const acct = accounts[data.shop];
+        if (!acct) {
+          return {
+            success: false,
+            reason: "invalid_credentials",
+            error: "bad",
+          };
+        }
+        if (await data.isAccountLocked?.(acct.id)) {
+          return { success: false, reason: "rate_limited", error: "locked" };
+        }
+        return data.password === acct.password
+          ? {
+              success: true,
+              user: {
+                id: acct.id,
+                username: "chef",
+                role: 2,
+                restaurantId: null,
+                isActive: true,
+              },
+              tokens: {
+                accessToken: "t",
+                refreshToken: "r",
+                expiresAt: new Date(Date.now() + 1000),
+              },
+            }
+          : {
+              success: false,
+              reason: "invalid_credentials",
+              error: "bad",
+              failedAccountId: acct.id,
+            };
+      },
+    );
+  });
+
+  const login = (
+    shop: string | undefined,
+    password: string,
+    ip = "198.51.100.1",
+  ) =>
+    new AuthService({ DB: {}, CACHE_KV: {} } as unknown as Env).login({
+      username: "chef",
+      password,
+      shop,
+      deviceInfo: { ipAddress: ip },
+    });
+
+  it("locks shop A's chef but not shop B's chef", async () => {
+    for (let i = 0; i < 5; i++) {
+      // distinct IPs so only the account counter can be what locks
+      await login("shop-a", "wrong", `198.51.100.${10 + i}`);
+    }
+    expect(kv.get("failed-login-user:chef-a")).toBe(5);
+
+    const locked = await login("shop-a", "right-a", "198.51.100.99");
+    expect(locked).toMatchObject({ success: false, reason: "rate_limited" });
+
+    const other = await login("shop-b", "right-b", "198.51.100.99");
+    expect(other.success).toBe(true);
+    expect(kv.has("failed-login-user:chef-b")).toBe(false);
+  });
+
+  it("counts shop-path and no-shop-path failures of one account on ONE counter", async () => {
+    // Both forms resolve to chef-a; the no-shop form is simulated by a lookup
+    // that resolves the same account.
+    await login("shop-a", "wrong", "198.51.100.1");
+    await login("shop-a", "wrong", "198.51.100.2");
+    expect(kv.get("failed-login-user:chef-a")).toBe(2);
+    expect(
+      [...kv.keys()].filter((k) => k.startsWith("failed-login-user:")),
+    ).toEqual(["failed-login-user:chef-a"]);
+  });
+
+  it("resets only the signed-in account's counter on success", async () => {
+    await login("shop-a", "wrong", "198.51.100.1");
+    await login("shop-b", "wrong", "198.51.100.2");
+    expect((await login("shop-a", "right-a", "198.51.100.3")).success).toBe(
+      true,
+    );
+    // allow the un-awaited bookkeeping to settle
+    await Promise.resolve();
+    expect(kv.has("failed-login-user:chef-a")).toBe(false);
+    expect(kv.get("failed-login-user:chef-b")).toBe(1);
+  });
+
+  it("never counts SHOP_REQUIRED or unknown-shop attempts against an account", async () => {
+    for (let i = 0; i < 8; i++) {
+      expect(await login(undefined, "x", "198.51.100.1")).toMatchObject({
+        reason: "shop_required",
+      });
+    }
+    await login("no-such-shop", "x", "198.51.100.2");
+    expect(
+      [...kv.keys()].filter((k) => k.startsWith("failed-login-user:")),
+    ).toEqual([]);
+    // SHOP_REQUIRED touches no counter at all (not even the IP's).
+    expect(kv.has("failed-login-ip:198.51.100.1")).toBe(false);
+  });
+
+  it("keeps a burst against shop A's chef from throttling shop B's chef from the same IP", async () => {
+    const ip = "198.51.100.50";
+    for (let i = 0; i < 4; i++) await login("shop-a", "wrong", ip);
+    expect((await login("shop-b", "right-b", ip)).success).toBe(true);
+  });
+});
+
 describe("AuthService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -202,7 +340,7 @@ describe("AuthService", () => {
       expect.objectContaining({ userId: "user-7" }),
       expect.any(Number),
     );
-    expect(mocks.cache.delete).toHaveBeenCalledWith("failed-login:owner");
+    expect(mocks.cache.delete).toHaveBeenCalledWith("failed-login-user:user-7");
   });
 
   it("transforms successful login results and records session/security cache entries", async () => {
@@ -267,14 +405,14 @@ describe("AuthService", () => {
     );
     // Exact keys, so these must be point deletes. clear() treats its argument
     // as a prefix and runs a paginated kv.list() to find what to remove.
-    expect(mocks.cache.delete).toHaveBeenCalledWith("failed-login:owner");
+    expect(mocks.cache.delete).toHaveBeenCalledWith("failed-login-user:user-7");
     expect(mocks.cache.delete).toHaveBeenCalledWith(
-      "failed-login:owner:203.0.113.10",
+      "failed-login::owner:203.0.113.10",
     );
     expect(mocks.cache.delete).toHaveBeenCalledWith(
       "failed-login-ip:203.0.113.10",
     );
-    expect(mocks.cache.clear).not.toHaveBeenCalledWith("failed-login:owner");
+    expect(mocks.cache.clear).not.toHaveBeenCalled();
     expect(mocks.performance.recordMetric).toHaveBeenCalledWith(
       "auth.login.success",
       1,
@@ -285,13 +423,13 @@ describe("AuthService", () => {
     mocks.cache.get
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(2)
       .mockResolvedValueOnce(6)
       .mockResolvedValueOnce(4);
     mocks.dbAuthService.login.mockResolvedValue({
       success: false,
       error: "Invalid credentials",
+      failedAccountId: "user-7",
     });
 
     await expect(
@@ -308,7 +446,7 @@ describe("AuthService", () => {
     });
 
     expect(mocks.cache.set).toHaveBeenCalledWith(
-      "failed-login:owner:203.0.113.10",
+      "failed-login::owner:203.0.113.10",
       3,
       expect.any(Number),
     );
@@ -318,7 +456,7 @@ describe("AuthService", () => {
       expect.any(Number),
     );
     expect(mocks.cache.set).toHaveBeenCalledWith(
-      "failed-login:owner",
+      "failed-login-user:user-7",
       5,
       expect.any(Number),
     );
@@ -367,25 +505,37 @@ describe("AuthService", () => {
     );
   });
 
-  it("blocks login before password verification when the username is rate limited", async () => {
-    mocks.cache.get
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(5);
+  it("blocks a locked account after the shop-scoped lookup, before password verification", async () => {
+    mocks.cache.get.mockImplementation(async (key: string) =>
+      key === "failed-login-user:user-7" ? 5 : null,
+    );
+    mocks.dbAuthService.login.mockImplementation(
+      async (data: { isAccountLocked?: (id: string) => Promise<boolean> }) =>
+        (await data.isAccountLocked?.("user-7"))
+          ? { success: false, reason: "rate_limited", error: "locked" }
+          : { success: false, reason: "invalid_credentials", error: "nope" },
+    );
 
     await expect(
       createService().login({
         username: "Owner",
         password: "wrong",
+        shop: "shop-a",
         deviceInfo: { ipAddress: "203.0.113.10" },
       }),
     ).resolves.toMatchObject({
       success: false,
+      reason: "rate_limited",
       error: "Account locked after repeated failures. Please try again later.",
     });
 
-    expect(mocks.dbAuthService.login).not.toHaveBeenCalled();
-    expect(mocks.cache.get).toHaveBeenNthCalledWith(3, "failed-login:owner");
+    expect(mocks.cache.get).toHaveBeenCalledWith("failed-login-user:user-7");
+    // A locked attempt is refused without counting.
+    expect(mocks.cache.set).not.toHaveBeenCalledWith(
+      "failed-login-user:user-7",
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
   it("blocks one IP across different usernames before password verification", async () => {
