@@ -3873,6 +3873,8 @@ const idID: Messages = {
       addTitle: "Tambah Karyawan",
       usernameLabel: "Username",
       passwordLabel: "Kata Sandi",
+      passwordHint:
+        "Minimal 8 karakter, dengan huruf besar, huruf kecil, angka, dan salah satu dari @$!%*?&",
       fullNameLabel: "Nama Lengkap",
       emailLabel: "Email",
       roleLabel: "Peran",

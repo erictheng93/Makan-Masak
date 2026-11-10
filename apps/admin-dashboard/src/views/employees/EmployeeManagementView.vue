@@ -96,6 +96,8 @@
     <EmployeeFormModal
       :is-open="showModal"
       :employee="editingEmployee"
+      :saving="saving"
+      :field-errors="fieldErrors"
       @close="closeModal"
       @save="handleSave"
     />
@@ -252,15 +254,24 @@ const isActiveTab = (path: string) => {
 // Modal handlers
 const editUser = (user: Employee) => {
   editingEmployee.value = user;
+  fieldErrors.value = {};
   showModal.value = true;
 };
 
 const closeModal = () => {
+  fieldErrors.value = {};
   showModal.value = false;
   editingEmployee.value = null;
 };
 
+const saving = ref(false);
+const fieldErrors = ref<Record<string, string>>({});
+const FORM_FIELDS = ["username", "password", "fullName", "email"];
+
 const handleSave = async (form: EmployeeFormData, isEdit: boolean) => {
+  if (saving.value) return;
+  saving.value = true;
+  fieldErrors.value = {};
   try {
     if (isEdit && editingEmployee.value) {
       await employeeList.updateUser(editingEmployee.value, form);
@@ -269,8 +280,8 @@ const handleSave = async (form: EmployeeFormData, isEdit: boolean) => {
     }
     closeModal();
   } catch (error: unknown) {
-    // 驗證失敗時後端會在信封的 details 帶逐欄訊息，那比信封本身的
-    // 「Validation failed」有用得多，所以優先顯示。
+    // 後端驗證失敗會在信封的 details 帶逐欄訊息：對得上表單欄位的顯示在欄位下，
+    // 其餘（或沒有 details）才用 toast。
     const envelope =
       isRecord(error) &&
       isRecord(error.response) &&
@@ -278,21 +289,29 @@ const handleSave = async (form: EmployeeFormData, isEdit: boolean) => {
         ? error.response.data.error
         : undefined;
     const details = isRecord(envelope) ? envelope.details : undefined;
-    const fieldMessages = Array.isArray(details)
-      ? details
-          .map((d) =>
-            isRecord(d) && typeof d.message === "string" ? d.message : "",
-          )
-          .filter(Boolean)
-      : [];
+    const unmapped: string[] = [];
+    const mapped: Record<string, string> = {};
+    for (const d of Array.isArray(details) ? details : []) {
+      if (!isRecord(d) || typeof d.message !== "string") continue;
+      if (typeof d.field === "string" && FORM_FIELDS.includes(d.field)) {
+        mapped[d.field] ??= d.message;
+      } else {
+        unmapped.push(d.message);
+      }
+    }
+    fieldErrors.value = mapped;
 
-    toast.error(
-      fieldMessages.length > 0
-        ? fieldMessages.join("\n")
-        : resolveUserFacingError(error, t, {
-            fallbackKey: "users.errors.saveFailed",
-          }).message,
-    );
+    if (Object.keys(mapped).length === 0 || unmapped.length > 0) {
+      toast.error(
+        unmapped.length > 0
+          ? unmapped.join("\n")
+          : resolveUserFacingError(error, t, {
+              fallbackKey: "users.errors.saveFailed",
+            }).message,
+      );
+    }
+  } finally {
+    saving.value = false;
   }
 };
 

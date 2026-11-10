@@ -3855,6 +3855,8 @@ const viVN: Messages = {
       addTitle: "Thêm nhân viên",
       usernameLabel: "Tên đăng nhập",
       passwordLabel: "Mật khẩu",
+      passwordHint:
+        "Tối thiểu 8 ký tự, gồm chữ hoa, chữ thường, chữ số và một ký tự trong @$!%*?&",
       fullNameLabel: "Họ tên",
       emailLabel: "Email",
       roleLabel: "Vai trò",

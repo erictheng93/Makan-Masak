@@ -27,6 +27,14 @@
                   :disabled="!!employee"
                   class="w-full px-3.5 py-2.5 bg-ios-bg border-none rounded-xl text-ios-text focus:shadow-[0_0_0_2px_rgba(0,122,255,0.25)] focus:bg-white transition-all disabled:opacity-50"
                 />
+                <p
+                  v-if="errors.username"
+                  data-testid="error-username"
+                  role="alert"
+                  class="mt-1 text-xs text-ios-red"
+                >
+                  {{ errors.username }}
+                </p>
               </div>
 
               <div v-if="!employee">
@@ -38,8 +46,26 @@
                   v-model="form.password"
                   type="password"
                   required
+                  autocomplete="new-password"
+                  aria-describedby="employee-password-hint"
                   class="w-full px-3.5 py-2.5 bg-ios-bg border-none rounded-xl text-ios-text focus:shadow-[0_0_0_2px_rgba(0,122,255,0.25)] focus:bg-white transition-all"
                 />
+                <p
+                  id="employee-password-hint"
+                  data-testid="password-hint"
+                  class="mt-1 text-xs"
+                  :class="passwordInvalid ? 'text-ios-red' : 'text-ios-text/50'"
+                >
+                  {{ t("users.modal.passwordHint") }}
+                </p>
+                <p
+                  v-if="errors.password"
+                  data-testid="error-password"
+                  role="alert"
+                  class="mt-1 text-xs text-ios-red"
+                >
+                  {{ errors.password }}
+                </p>
               </div>
 
               <div>
@@ -51,17 +77,33 @@
                   type="text"
                   class="w-full px-3.5 py-2.5 bg-ios-bg border-none rounded-xl text-ios-text focus:shadow-[0_0_0_2px_rgba(0,122,255,0.25)] focus:bg-white transition-all"
                 />
+                <p
+                  v-if="errors.fullName"
+                  data-testid="error-fullName"
+                  role="alert"
+                  class="mt-1 text-xs text-ios-red"
+                >
+                  {{ errors.fullName }}
+                </p>
               </div>
 
               <div>
                 <label class="block text-sm font-medium text-ios-text/70 mb-1">
-                  Email
+                  {{ t("users.modal.emailLabel") }}
                 </label>
                 <input
                   v-model="form.email"
                   type="email"
                   class="w-full px-3.5 py-2.5 bg-ios-bg border-none rounded-xl text-ios-text focus:shadow-[0_0_0_2px_rgba(0,122,255,0.25)] focus:bg-white transition-all"
                 />
+                <p
+                  v-if="errors.email"
+                  data-testid="error-email"
+                  role="alert"
+                  class="mt-1 text-xs text-ios-red"
+                >
+                  {{ errors.email }}
+                </p>
               </div>
 
               <div>
@@ -113,7 +155,13 @@
                 :disabled="saving"
                 class="px-5 py-2 rounded-full text-[13px] font-semibold bg-ios-blue text-white hover:bg-blue-600 transition-colors disabled:opacity-50"
               >
-                {{ employee ? t("users.modal.update") : t("users.modal.add") }}
+                {{
+                  saving
+                    ? t("common.saving")
+                    : employee
+                      ? t("users.modal.update")
+                      : t("users.modal.add")
+                }}
               </button>
             </div>
           </form>
@@ -124,13 +172,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useI18n } from "@/i18n";
 import type { Employee, EmployeeFormData } from "@/types/employee";
 
 const props = defineProps<{
   isOpen: boolean;
   employee?: Employee | null;
+  /** Owned by the parent: true while the save request is in flight. */
+  saving?: boolean;
+  /** Server (or parent) field messages keyed by field name. */
+  fieldErrors?: Record<string, string>;
 }>();
 
 const emit = defineEmits<{
@@ -139,7 +191,15 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const saving = ref(false);
+
+// Mirrors apps/api users/schemas/validation.ts strongPasswordSchema.
+const PASSWORD_STRENGTH_REGEX =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
+const isStrongPassword = (p: string) =>
+  p.length >= 8 && p.length <= 100 && PASSWORD_STRENGTH_REGEX.test(p);
+
+const passwordInvalid = ref(false);
+const errors = computed(() => props.fieldErrors ?? {});
 
 const form = ref<EmployeeFormData>({
   username: "",
@@ -153,6 +213,7 @@ const form = ref<EmployeeFormData>({
 watch(
   () => props.isOpen,
   (open) => {
+    passwordInvalid.value = false;
     if (open && props.employee) {
       form.value = {
         username: props.employee.username,
@@ -175,12 +236,17 @@ watch(
   },
 );
 
-const handleSave = async () => {
-  saving.value = true;
-  try {
-    emit("save", { ...form.value }, !!props.employee);
-  } finally {
-    saving.value = false;
+watch(
+  () => form.value.password,
+  () => (passwordInvalid.value = false),
+);
+
+const handleSave = () => {
+  if (props.saving) return;
+  if (!props.employee && !isStrongPassword(form.value.password)) {
+    passwordInvalid.value = true;
+    return;
   }
+  emit("save", { ...form.value }, !!props.employee);
 };
 </script>

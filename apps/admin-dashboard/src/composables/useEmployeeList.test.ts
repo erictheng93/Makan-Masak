@@ -167,6 +167,26 @@ describe("useEmployeeList status lookup", () => {
       isActive: false,
     });
   });
+
+  it("omits a blank email instead of sending an empty string", async () => {
+    apiPost.mockResolvedValue({ data: { success: true } });
+    const list = useEmployeeList();
+
+    await list.createUser({
+      username: "newbie",
+      password: "QaTemp@2026xyz",
+      fullName: "New Hire",
+      email: "  ",
+      role: 3,
+      status: "active",
+    });
+
+    const call = apiPost.mock.calls.find(([url]) => url === "/users");
+    expect(call?.[1]).toEqual(
+      expect.objectContaining({ username: "newbie", role: 3 }),
+    );
+    expect(call?.[1].email).toBeUndefined();
+  });
 });
 
 describe("useEmployeeList.fetchAll", () => {

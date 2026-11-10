@@ -238,7 +238,8 @@ export function useEmployeeList() {
       username: form.username,
       password: form.password,
       fullName: form.fullName,
-      email: form.email,
+      // The API's email is optional but rejects "" — omit it when blank.
+      email: form.email.trim() || undefined,
       role: form.role,
     });
     await fetchUsers();
@@ -260,7 +261,7 @@ export function useEmployeeList() {
 
     await api.put(`/users/${employee.id}`, {
       fullName: form.fullName,
-      email: form.email,
+      email: form.email.trim() || undefined,
     });
 
     if (form.role !== employee.role) {

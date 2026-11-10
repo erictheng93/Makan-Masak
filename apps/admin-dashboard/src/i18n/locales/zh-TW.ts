@@ -3889,6 +3889,8 @@ const zhTWCore = {
       addTitle: "新增員工",
       usernameLabel: "用戶名",
       passwordLabel: "密碼",
+      passwordHint:
+        "至少 8 個字元，需包含大寫字母、小寫字母、數字及 @$!%*?& 其中一個符號",
       fullNameLabel: "全名",
       emailLabel: "Email",
       roleLabel: "角色",

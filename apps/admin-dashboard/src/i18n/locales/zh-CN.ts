@@ -3769,6 +3769,8 @@ const zhCN: Messages = {
       addTitle: "新增员工",
       usernameLabel: "用户名",
       passwordLabel: "密码",
+      passwordHint:
+        "至少 8 个字符，需包含大写字母、小写字母、数字及 @$!%*?& 其中一个符号",
       fullNameLabel: "全名",
       emailLabel: "Email",
       roleLabel: "角色",

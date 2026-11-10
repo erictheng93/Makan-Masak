@@ -3851,6 +3851,8 @@ const enUS: Messages = {
       addTitle: "Add Employee",
       usernameLabel: "Username",
       passwordLabel: "Password",
+      passwordHint:
+        "At least 8 characters, with an uppercase letter, a lowercase letter, a number and one of @$!%*?&",
       fullNameLabel: "Full Name",
       emailLabel: "Email",
       roleLabel: "Role",

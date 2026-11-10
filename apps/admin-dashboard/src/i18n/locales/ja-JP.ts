@@ -3858,6 +3858,8 @@ const jaJP: Messages = {
       addTitle: "従業員追加",
       usernameLabel: "ユーザー名",
       passwordLabel: "パスワード",
+      passwordHint:
+        "8文字以上で、大文字・小文字・数字・@$!%*?& のいずれか1つを含めてください",
       fullNameLabel: "フルネーム",
       emailLabel: "メールアドレス",
       roleLabel: "役割",
