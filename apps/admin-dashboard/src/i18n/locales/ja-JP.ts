@@ -3455,6 +3455,7 @@ const jaJP: Messages = {
     shiftActive: "進行中",
     pleaseStartShift: "シフトを開始してください",
     startShift: "シフト開始",
+    selectRegisterFirst: "先にレジを選択してください",
     endShift: "シフト終了",
     registerManagement: "レジスター管理",
     promotionManagement: "プロモーション管理",

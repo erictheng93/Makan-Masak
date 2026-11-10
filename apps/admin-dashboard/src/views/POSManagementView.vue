@@ -40,6 +40,7 @@
       <div class="flex flex-wrap items-center gap-2">
         <button
           v-if="!currentShift"
+          data-testid="pos-start-shift"
           class="px-4 py-2 bg-ios-green text-white rounded-full hover:bg-green-600 transition-colors text-sm"
           @click="startShift"
         >
@@ -151,6 +152,7 @@
               </h2>
               <button
                 class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                data-testid="pos-add-register"
                 @click="createRegister"
               >
                 {{ t("pos.addRegister") }}
@@ -819,6 +821,7 @@
             </label>
             <input
               v-model="newRegisterName"
+              data-testid="pos-register-name"
               type="text"
               class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ios-blue focus:border-ios-blue"
               :placeholder="
@@ -835,7 +838,8 @@
               {{ t("common.cancel") || "取消" }}
             </button>
             <button
-              :disabled="!newRegisterName.trim()"
+              data-testid="pos-confirm-create-register"
+              :disabled="!newRegisterName.trim() || isProcessing"
               class="px-4 py-2 bg-ios-blue text-white rounded-full hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               @click="confirmCreateRegister"
             >
@@ -894,6 +898,7 @@
               {{ t("common.cancel") || "取消" }}
             </button>
             <button
+              data-testid="pos-confirm-start-shift"
               :disabled="startingCashAmount < 0"
               class="px-4 py-2 bg-ios-green text-white rounded-full hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               @click="confirmStartShift"
@@ -1010,12 +1015,17 @@ import CouponFormModal from "@/components/coupons/CouponFormModal.vue";
 import { getCouponStatus } from "@/utils/couponStatus";
 import { useModuleAccessStore } from "@makanmasak/shared/stores/moduleAccess";
 import { useAuthStore } from "@/stores/auth";
+import { useToast } from "vue-toastification";
 
 const { t } = useI18n();
 const { formatPrice, currencySymbol, inputStep, inputPlaceholder } =
   useCurrency();
 const { formatDateTime, formatTime } = useDateFormatter();
 const authStore = useAuthStore();
+const toast = useToast();
+// Unified API errors carry a user-safe message; fall back for network failures.
+const failMessage = (error: unknown) =>
+  (error instanceof Error && error.message) || t("pos.alerts.operationFailed");
 const moduleAccess = useModuleAccessStore();
 const hasPromotions = computed(
   () =>
@@ -1296,8 +1306,7 @@ const createRegister = () => {
 
 const confirmCreateRegister = async () => {
   const name = newRegisterName.value.trim();
-  if (!name) return;
-  showCreateRegisterModal.value = false;
+  if (!name || isProcessing.value) return;
   isProcessing.value = true;
   try {
     const response = await api.post("/pos/registers", {
@@ -1306,10 +1315,17 @@ const confirmCreateRegister = async () => {
       location: t("pos.defaults.locationPending"),
     });
     if (response.data.success) {
+      showCreateRegisterModal.value = false;
       await loadRegisters();
+      // loadRegisters replaces the list with fresh objects, so match by id.
+      const created = registers.value.find(
+        (r) => r.id === (response.data.data as { id?: string } | undefined)?.id,
+      );
+      if (created) await selectRegister(created);
     }
   } catch (error) {
     console.error("Failed to create register:", error);
+    toast.error(failMessage(error));
   } finally {
     isProcessing.value = false;
   }
@@ -1326,6 +1342,7 @@ const activateRegister = async (registerId: string) => {
     }
   } catch (error) {
     console.error("Failed to activate register:", error);
+    toast.error(failMessage(error));
   } finally {
     isProcessing.value = false;
   }
@@ -1341,13 +1358,21 @@ const deactivateRegister = async (registerId: string) => {
     }
   } catch (error) {
     console.error("Failed to deactivate register:", error);
+    toast.error(failMessage(error));
   } finally {
     isProcessing.value = false;
   }
 };
 
-const startShift = () => {
-  if (!currentRegister.value) return;
+const startShift = async () => {
+  if (!currentRegister.value) {
+    const active = registers.value.filter((r) => r.status === "active");
+    if (active.length !== 1) {
+      toast.warning(t("pos.selectRegisterFirst"));
+      return;
+    }
+    await selectRegister(active[0]);
+  }
   startingCashAmount.value = 0;
   showStartShiftModal.value = true;
 };
@@ -1368,6 +1393,7 @@ const confirmStartShift = async () => {
     }
   } catch (error) {
     console.error("Failed to start shift:", error);
+    toast.error(failMessage(error));
   } finally {
     isProcessing.value = false;
   }
@@ -1390,6 +1416,7 @@ const confirmEndShift = async () => {
     await refreshRegister();
   } catch (error) {
     console.error("Failed to end shift:", error);
+    toast.error(failMessage(error));
   } finally {
     isProcessing.value = false;
   }

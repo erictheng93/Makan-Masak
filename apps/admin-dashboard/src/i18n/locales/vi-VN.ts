@@ -3451,6 +3451,7 @@ const viVN: Messages = {
     shiftActive: "Đang diễn ra",
     pleaseStartShift: "Vui lòng bắt đầu ca",
     startShift: "Bắt đầu ca",
+    selectRegisterFirst: "Vui lòng chọn quầy thu ngân trước",
     endShift: "Kết thúc ca",
     registerManagement: "Quản lý máy tính tiền",
     promotionManagement: "Quản lý khuyến mãi",

@@ -3485,6 +3485,7 @@ const zhTWCore = {
     shiftActive: "進行中",
     pleaseStartShift: "請開始班次",
     startShift: "開始班次",
+    selectRegisterFirst: "請先選擇收銀櫃",
     endShift: "結束班次",
     registerManagement: "收銀櫃管理",
     promotionManagement: "促銷管理",

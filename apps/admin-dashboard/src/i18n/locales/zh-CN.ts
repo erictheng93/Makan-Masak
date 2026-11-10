@@ -3370,6 +3370,7 @@ const zhCN: Messages = {
     shiftActive: "进行中",
     pleaseStartShift: "请开始班次",
     startShift: "开始班次",
+    selectRegisterFirst: "请先选择收银台",
     endShift: "结束班次",
     registerManagement: "收银柜管理",
     promotionManagement: "促销管理",

@@ -69,6 +69,13 @@ vi.mock("@/services/api", () => ({
   unwrapApiPayload: (payload: unknown) => payload,
 }));
 
+const toast = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+  warning: vi.fn(),
+}));
+vi.mock("vue-toastification", () => ({ useToast: () => toast }));
+
 vi.mock("@/services/posService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/services/posService")>();
   return { posService: { ...actual.posService, payMarketCheckout: vi.fn() } };
@@ -471,6 +478,109 @@ describe("POSManagementView", () => {
 
     expect(api.post).toHaveBeenCalledWith("/pos/shifts/shift-1/end", {
       actualAmount: 1130,
+    });
+  });
+
+  describe("register actions", () => {
+    const reg = (id: string, name: string) => ({
+      id,
+      name,
+      isActive: true,
+      location: "Front",
+      updatedAt: "2026-06-01T10:00:00.000Z",
+    });
+    const mockRegisters = (list: ReturnType<typeof reg>[]) => {
+      const base = vi.mocked(api.get).getMockImplementation()!;
+      vi.mocked(api.get).mockImplementation(async (url: string, ...a) => {
+        if (url === "/pos/registers")
+          return { data: { success: true, data: list } } as never;
+        if (url.startsWith("/pos/shifts/current/"))
+          return { data: { success: true, data: null } } as never;
+        return base(url, ...a);
+      });
+    };
+
+    it("tells the owner to pick a register when several exist and none is selected", async () => {
+      mockRegisters([reg("r1", "One"), reg("r2", "Two")]);
+      const wrapper = mount(POSManagementView);
+      await flushPromises();
+      (wrapper.vm as unknown as { currentRegister: unknown }).currentRegister =
+        null;
+      await wrapper.get('[data-testid="pos-start-shift"]').trigger("click");
+      await flushPromises();
+      expect(toast.warning).toHaveBeenCalledWith("pos.selectRegisterFirst");
+      expect(
+        wrapper.find('[data-testid="pos-confirm-start-shift"]').exists(),
+      ).toBe(false);
+      wrapper.unmount();
+    });
+
+    it("auto-selects the only active register and opens the shift dialog", async () => {
+      mockRegisters([reg("r1", "One")]);
+      const wrapper = mount(POSManagementView);
+      await flushPromises();
+      (wrapper.vm as unknown as { currentRegister: unknown }).currentRegister =
+        null;
+      await wrapper.get('[data-testid="pos-start-shift"]').trigger("click");
+      await flushPromises();
+      expect(toast.warning).not.toHaveBeenCalled();
+      expect(
+        wrapper.find('[data-testid="pos-confirm-start-shift"]').exists(),
+      ).toBe(true);
+      wrapper.unmount();
+    });
+
+    it("selects a newly created register and ignores a second confirm while in flight", async () => {
+      mockRegisters([reg("r1", "One")]);
+      const wrapper = mount(POSManagementView);
+      await flushPromises();
+      let created = false;
+      const base = vi.mocked(api.get).getMockImplementation()!;
+      vi.mocked(api.get).mockImplementation(async (url: string, ...a) =>
+        url === "/pos/registers" && created
+          ? ({
+              data: {
+                success: true,
+                data: [reg("r1", "One"), reg("r2", "Two")],
+              },
+            } as never)
+          : base(url, ...a),
+      );
+      vi.mocked(api.post).mockImplementation(async () => {
+        created = true;
+        return { data: { success: true, data: { id: "r2" } } } as never;
+      });
+      await wrapper.get('[data-testid="pos-add-register"]').trigger("click");
+      await wrapper.get('[data-testid="pos-register-name"]').setValue("Two");
+      const confirm = wrapper.get(
+        '[data-testid="pos-confirm-create-register"]',
+      );
+      await confirm.trigger("click");
+      await confirm.trigger("click");
+      await flushPromises();
+      const posts = vi
+        .mocked(api.post)
+        .mock.calls.filter(([url]) => url === "/pos/registers");
+      expect(posts).toHaveLength(1);
+      expect(
+        (wrapper.vm as unknown as { currentRegister: { id: string } })
+          .currentRegister.id,
+      ).toBe("r2");
+      wrapper.unmount();
+    });
+
+    it("shows the server message when starting a shift fails", async () => {
+      mockRegisters([reg("r1", "One")]);
+      vi.mocked(api.post).mockRejectedValue(new Error("Shift already open"));
+      const wrapper = mount(POSManagementView);
+      await flushPromises();
+      await wrapper.get('[data-testid="pos-start-shift"]').trigger("click");
+      await wrapper
+        .get('[data-testid="pos-confirm-start-shift"]')
+        .trigger("click");
+      await flushPromises();
+      expect(toast.error).toHaveBeenCalledWith("Shift already open");
+      wrapper.unmount();
     });
   });
 });

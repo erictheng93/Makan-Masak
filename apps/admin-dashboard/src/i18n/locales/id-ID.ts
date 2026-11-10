@@ -3469,6 +3469,7 @@ const idID: Messages = {
     shiftActive: "Sedang Berjalan",
     pleaseStartShift: "Silakan mulai shift",
     startShift: "Mulai Shift",
+    selectRegisterFirst: "Pilih kasir terlebih dahulu",
     endShift: "Akhiri Shift",
     registerManagement: "Manajemen Mesin Kasir",
     promotionManagement: "Manajemen Promosi",

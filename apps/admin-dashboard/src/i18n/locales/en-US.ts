@@ -3446,6 +3446,7 @@ const enUS: Messages = {
     shiftActive: "In Progress",
     pleaseStartShift: "Please start a shift",
     startShift: "Start Shift",
+    selectRegisterFirst: "Select a register first",
     endShift: "End Shift",
     registerManagement: "Register Management",
     promotionManagement: "Promotion Management",
