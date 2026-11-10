@@ -32,7 +32,8 @@ pnpm rollback:api <version-id>            # refuses a version below the floor
    two shops sharing a username it logs in the wrong account or locks one
    shop's staff out for another's mistakes. If no version at or after the floor
    is good, roll forward with a fix instead. `pnpm run deploy:prod` in
-   `apps/api` tags every version with its commit so the guard can check it.
+   `apps/api` tags every version with its commit so the guard can check it, and
+   refuses to deploy from a working tree with uncommitted API build inputs.
 
    Other Workers:
 

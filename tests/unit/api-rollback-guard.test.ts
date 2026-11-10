@@ -132,3 +132,40 @@ describe("Pages rollback floors", () => {
     ).toBe(true);
   });
 });
+
+describe("API deploy refuses a dirty build", () => {
+  const { dirtyBuildInputs, BUILD_INPUTS } =
+    require("../../scripts/api-deploy.cjs") as {
+      dirtyBuildInputs: (porcelain: string) => string[];
+      BUILD_INPUTS: string[];
+    };
+
+  // Another tool editing the main checkout must not have its uncommitted work
+  // shipped by our deploy.
+  it("reports modified, untracked and renamed build inputs", () => {
+    expect(
+      dirtyBuildInputs(
+        [
+          " M apps/api/src/index.ts",
+          "?? packages/database/src/services/new.ts",
+          "R  apps/api/a.ts -> apps/api/b.ts",
+          "",
+        ].join("\n"),
+      ),
+    ).toEqual([
+      "apps/api/src/index.ts",
+      "packages/database/src/services/new.ts",
+      "apps/api/b.ts",
+    ]);
+  });
+
+  it("treats a clean status as deployable", () => {
+    expect(dirtyBuildInputs("")).toEqual([]);
+  });
+
+  it("covers everything the API bundle is built from", () => {
+    expect(BUILD_INPUTS).toEqual(
+      expect.arrayContaining(["apps/api", "packages", "pnpm-lock.yaml"]),
+    );
+  });
+});

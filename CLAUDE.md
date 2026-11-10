@@ -100,7 +100,11 @@ MakanMasak is a modern, serverless restaurant management system built on Cloudfl
   per restaurant, and pre-0042 API code would log in the wrong shop's account
   or share one lockout counter across shops. When a migration makes older API
   code unsafe against the new data, raise the floor in the same change.
-  `deploy:prod` in `apps/api` tags each version with its commit for this check.
+  `deploy:prod` in `apps/api` tags each version with its commit for this check,
+  and refuses to run while `apps/api`, `packages/`, `package.json` or the
+  lockfile has uncommitted or untracked changes: wrangler bundles the working
+  tree, and Codex edits the main checkout live. Deploy from a clean checkout or
+  a dedicated worktree.
   The admin dashboard and kitchen display have floors too
   (`rollback-floor.json` in each app): before rolling either back in the
   Pages dashboard, run `pnpm rollback:check <admin|kitchen> <deployment-id>`;
