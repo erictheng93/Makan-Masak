@@ -6,6 +6,7 @@ import {
 } from "@makanmasak/database";
 import { Status } from "@makanmasak/shared-types";
 import { MenuService } from "./MenuService";
+import type { DeferredCacheWork } from "../../../middleware/edge-cache";
 
 beforeEach(() => {
   // The rejection paths under test log through the service logger; silence
@@ -39,10 +40,7 @@ describe("MenuService", () => {
     db?: unknown;
     dbService?: Record<string, unknown>;
     waitUntil?: (work: Promise<unknown>) => void;
-    deferred?: {
-      pending: Promise<void>[];
-      after: Array<() => Promise<unknown>>;
-    };
+    deferred?: DeferredCacheWork;
   }) {
     const dbService = {
       getMenu: vi.fn(),
