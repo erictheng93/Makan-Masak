@@ -277,6 +277,24 @@ describe("Database Query Performance Benchmarks", () => {
 
       expect(result.indexUsed).toBe(true);
     });
+
+    it("should keep per-restaurant and platform unique username indexes", async () => {
+      const rows = (await db
+        .prepare(
+          `SELECT name, sql FROM sqlite_master
+           WHERE type = 'index' AND tbl_name = 'users' AND name LIKE '%username%'`,
+        )
+        .all()) as { results: { name: string; sql: string }[] };
+      const byName = new Map(rows.results.map((r) => [r.name, r.sql]));
+
+      expect(byName.has("users_username_unique")).toBe(false);
+      expect(byName.get("users_restaurant_username_unique")).toMatch(
+        /UNIQUE.*\(`restaurant_id`, `username`\).*WHERE.*restaurant_id.*IS NOT NULL/is,
+      );
+      expect(byName.get("users_platform_username_unique")).toMatch(
+        /UNIQUE.*\(`username`\).*WHERE.*restaurant_id.*IS NULL/is,
+      );
+    });
   });
 
   describe("Analytics Queries", () => {

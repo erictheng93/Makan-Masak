@@ -112,6 +112,17 @@ function mockSelectRows(rows: unknown[]) {
   });
 }
 
+/** The reset-target lookup: select().from().leftJoin().where().limit().all(). */
+function mockSelectResetMatches(rows: unknown[]) {
+  const chain = {
+    leftJoin: vi.fn(() => chain),
+    where: vi.fn(() => chain),
+    limit: vi.fn(() => chain),
+    all: vi.fn(async () => rows),
+  };
+  mocks.db.select.mockReturnValueOnce({ from: vi.fn(() => chain) });
+}
+
 function mockUpdateReturning(rows: unknown[]) {
   mocks.db.update.mockReturnValueOnce({
     set: vi.fn(() => ({
@@ -683,8 +694,10 @@ describe("AuthService", () => {
     mocks.verificationService.requestPasswordReset.mockResolvedValue({
       success: true,
     });
-    mockSelectGet({ email: "owner@example.test", phone: "+886900000000" });
-    mockSelectGet(null);
+    mockSelectResetMatches([
+      { email: "owner@example.test", phone: "+886900000000" },
+    ]);
+    mockSelectResetMatches([]);
 
     await expect(
       createService().requestPasswordReset("direct@example.test"),
@@ -708,6 +721,20 @@ describe("AuthService", () => {
       identifier: "owner@example.test",
       method: "email",
     });
+  });
+
+  it("sends nothing when a username matches accounts at several shops", async () => {
+    mockSelectResetMatches([
+      { email: "a@example.test", phone: null },
+      { email: "b@example.test", phone: null },
+    ]);
+
+    await expect(createService().requestPasswordReset("chef")).resolves.toEqual(
+      { success: true },
+    );
+    expect(
+      mocks.verificationService.requestPasswordReset,
+    ).not.toHaveBeenCalled();
   });
 
   it("handles password changes, resets, and email verification workflows", async () => {

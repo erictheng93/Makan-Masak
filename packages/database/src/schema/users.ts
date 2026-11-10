@@ -101,6 +101,7 @@ export const users = sqliteTable(
     platformUsernameUnique: uniqueIndex("users_platform_username_unique")
       .on(table.username)
       .where(sql`${table.restaurantId} IS NULL`),
+    usernameIdx: index("users_username_idx").on(table.username),
     restaurantRoleActiveIdx: index("users_restaurant_role_active_idx").on(
       table.restaurantId,
       table.role,

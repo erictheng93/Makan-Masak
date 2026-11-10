@@ -690,6 +690,7 @@ describe("authentication routes", () => {
     expect(response.status).toBe(200);
     expect(service.requestPasswordReset).toHaveBeenCalledWith(
       "owner@example.test",
+      undefined,
     );
 
     service.requestPasswordReset.mockResolvedValueOnce({
@@ -722,6 +723,16 @@ describe("authentication routes", () => {
     expect(response.status).toBe(400);
   });
 
+  it("forwards the shop code to the password reset lookup", async () => {
+    const response = await request("/forgot-password", "POST", {
+      username: "chef",
+      shop: "shop-a",
+    }).res;
+
+    expect(response.status).toBe(200);
+    expect(service.requestPasswordReset).toHaveBeenCalledWith("chef", "shop-a");
+  });
+
   it("accepts the deployed admin forgot-password form payload", async () => {
     const response = await request("/forgot-password", "POST", {
       identifier: "owner@example.test",
@@ -732,6 +743,7 @@ describe("authentication routes", () => {
     expect(service.requestPasswordReset).toHaveBeenCalledOnce();
     expect(service.requestPasswordReset).toHaveBeenCalledWith(
       "owner@example.test",
+      undefined,
     );
   });
 
