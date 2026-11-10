@@ -328,6 +328,7 @@ describe("kitchen routes", () => {
       9,
       { status: "ready", notes: "plate now" },
       "user-22",
+      { defer: undefined },
     );
     expect(mocks.resolveOrderIdentity).toHaveBeenCalledWith(
       { binding: "db" },
@@ -360,6 +361,7 @@ describe("kitchen routes", () => {
       9,
       { status: "ready", notes: "" },
       "user-22",
+      { defer: undefined },
     );
   });
 
@@ -409,6 +411,7 @@ describe("kitchen routes", () => {
       9,
       { status: "preparing", notes: "fire" },
       "user-22",
+      { defer: undefined },
     );
     expect(mocks.updateOrderItemStatus).toHaveBeenNthCalledWith(
       2,
@@ -417,6 +420,7 @@ describe("kitchen routes", () => {
       9,
       { status: "ready", notes: "window" },
       "user-22",
+      { defer: undefined },
     );
     expect(console.warn).toHaveBeenCalledWith(
       "[deprecated-route] kitchen legacy item status hit",

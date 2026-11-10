@@ -75,6 +75,17 @@ function extractLegacyNotes(payload: unknown): string | undefined {
   return undefined;
 }
 
+// Runs best-effort work after the response when the runtime provides
+// waitUntil; unit tests and local fallbacks have no ExecutionContext.
+function deferAfterResponse(c: Context<{ Bindings: Env }>) {
+  try {
+    const ctx = c.executionCtx;
+    return (work: Promise<unknown>) => ctx.waitUntil(work);
+  } catch {
+    return undefined;
+  }
+}
+
 async function updateLegacyItemStatus<E extends { Bindings: Env }>(
   c: Context<E>,
   status: OrderItemStatusUpdate["status"],
@@ -127,6 +138,7 @@ async function updateLegacyItemStatus<E extends { Bindings: Env }>(
       notes: extractLegacyNotes(payload),
     },
     user.id,
+    { defer: deferAfterResponse(c as unknown as Context<{ Bindings: Env }>) },
   );
 
   return c.json(
@@ -432,6 +444,7 @@ app.put(
       itemId,
       statusUpdate,
       user.id,
+      { defer: deferAfterResponse(c) },
     );
 
     return c.json(

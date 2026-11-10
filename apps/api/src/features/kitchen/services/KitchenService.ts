@@ -21,6 +21,7 @@ import type {
   OrderItemStatusUpdate,
 } from "../types";
 import { OrdersService } from "../../orders/services/OrdersService";
+import { invalidateOrderCache } from "../../orders/services/order-finalization";
 import { forbidden } from "../../../shared/utils/api-error";
 import {
   and,
@@ -207,6 +208,10 @@ export class KitchenService implements IKitchenService {
     itemId: number,
     statusUpdate: OrderItemStatusUpdate,
     userId: string,
+    options: {
+      /** Hand best-effort realtime work to waitUntil so the response need not wait on it. */
+      defer?: (work: Promise<unknown>) => void;
+    } = {},
   ): Promise<{
     orderId: string;
     itemId: number;
@@ -241,30 +246,44 @@ export class KitchenService implements IKitchenService {
       // the parent-order reconciliation below, which also heals a request that
       // committed the item before a transient failure interrupted its parent
       // status update.
-      if (scopedItem.previous_status !== statusUpdate.status) {
+      const itemChanged = scopedItem.previous_status !== statusUpdate.status;
+      if (itemChanged) {
+        // No orderId: the detail-cache clear is a KV write (~400ms) that the
+        // parent reconciliation (a bypassCache D1 read) does not depend on, so
+        // it runs beside it below. The response still waits for it, because a
+        // client that refetches right after must not read the old statuses.
         await this.ordersService.updateItemStatus(
           itemId,
           statusUpdate.status,
           statusUpdate.notes,
-          orderId,
         );
       }
 
-      const orderStatus = await this.syncOrderStatusAfterItemUpdate(
-        orderId,
-        userId,
-      );
+      const [orderStatus] = await Promise.all([
+        this.syncOrderStatusAfterItemUpdate(orderId, userId),
+        itemChanged
+          ? invalidateOrderCache(this.env.CACHE_KV, orderId)
+          : undefined,
+      ]);
 
       // A same-status replay has already emitted this event when it first
       // succeeded. Avoid a duplicate notification while still returning the
       // authoritative parent status to the replaying display.
-      if (scopedItem.previous_status !== statusUpdate.status) {
-        await this.broadcastItemStatusUpdate(
-          restaurantId,
-          scopedItem,
-          statusUpdate.status,
-        );
-        await this.broadcastQueueUpdate(restaurantId);
+      if (itemChanged) {
+        // Both are best-effort (they log and swallow their own errors), so
+        // nothing here can change what the response claims. They read no state
+        // the caller is waiting on, hence parallel and, when the route gives
+        // us waitUntil, after the response.
+        const realtime = Promise.all([
+          this.broadcastItemStatusUpdate(
+            restaurantId,
+            scopedItem,
+            statusUpdate.status,
+          ),
+          this.broadcastQueueUpdate(restaurantId),
+        ]);
+        if (options.defer) options.defer(realtime);
+        else await realtime;
       }
 
       return {

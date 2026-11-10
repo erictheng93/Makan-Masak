@@ -14,6 +14,7 @@ const serviceMocks = vi.hoisted(() => ({
   broadcastOrderItemStatusUpdate: vi.fn(),
   broadcastKitchenItemStatus: vi.fn(),
   broadcastEvent: vi.fn(),
+  kvDelete: vi.fn(),
   queueRows: vi.fn(),
   generateEventId: vi.fn(),
 }));
@@ -60,6 +61,7 @@ function createService() {
     DB: {
       prepare: serviceMocks.prepare,
     },
+    CACHE_KV: { delete: serviceMocks.kvDelete },
   } as never);
 }
 
@@ -118,6 +120,7 @@ describe("KitchenService", () => {
       averagePreparationTime: 0,
     });
     serviceMocks.updateItemStatus.mockResolvedValue(undefined);
+    serviceMocks.kvDelete.mockResolvedValue(undefined);
     serviceMocks.getOrder.mockResolvedValue(order());
     serviceMocks.updateOrderStatus.mockImplementation(
       async (_orderId: string, statusData: { status: string }) =>
@@ -222,6 +225,7 @@ describe("KitchenService", () => {
       DB: {
         prepare: serviceMocks.prepare,
       },
+      CACHE_KV: { delete: serviceMocks.kvDelete },
     });
     expect(serviceMocks.getOrders).toHaveBeenCalledWith({
       restaurantId: "restaurant-1",
@@ -321,8 +325,9 @@ describe("KitchenService", () => {
       501,
       "ready",
       "plated",
-      "order-101",
     );
+    expect(serviceMocks.kvDelete).toHaveBeenCalledWith("order:order-101:full");
+    expect(serviceMocks.kvDelete).toHaveBeenCalledWith("order:order-101:basic");
     expect(serviceMocks.prepare).toHaveBeenCalledWith(
       expect.stringContaining("JOIN orders o ON o.id = oi.order_id"),
     );
@@ -384,6 +389,39 @@ describe("KitchenService", () => {
       orderStatus: "confirmed",
       updatedAt: "2026-06-07T12:00:00.000Z",
     });
+  });
+
+  it("defers realtime work past the response and clears the order cache before it", async () => {
+    const deferred: Promise<unknown>[] = [];
+    let releaseBroadcast!: () => void;
+    serviceMocks.broadcastOrderItemStatusUpdate.mockReturnValue(
+      new Promise((resolve) => {
+        releaseBroadcast = () => resolve({ success: true });
+      }),
+    );
+
+    const result = await createService().updateOrderItemStatus(
+      "restaurant-1",
+      "order-101",
+      501,
+      { status: "ready" },
+      "user-22",
+      { defer: (work) => deferred.push(work) },
+    );
+
+    // The slow broadcast has not settled, yet the call returned.
+    expect(result.status).toBe("ready");
+    expect(deferred).toHaveLength(1);
+    expect(serviceMocks.kvDelete).toHaveBeenCalledTimes(2);
+    expect(serviceMocks.broadcastOrderItemStatusUpdate).toHaveBeenCalledOnce();
+    expect(serviceMocks.broadcastEvent).toHaveBeenCalledWith(
+      "admin",
+      "restaurant-1",
+      expect.objectContaining({ type: "kitchen_queue_update" }),
+    );
+
+    releaseBroadcast();
+    await deferred[0];
   });
 
   it("moves a confirmed order to preparing through OrdersService on the first started item", async () => {
