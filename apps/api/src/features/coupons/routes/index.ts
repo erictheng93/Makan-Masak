@@ -9,6 +9,7 @@ import {
  */
 
 import { Hono } from "hono";
+import type { DeferredCacheWork } from "../../../middleware/edge-cache";
 import {
   authMiddleware,
   optionalCanonicalCustomerAuthMiddleware,
@@ -57,6 +58,18 @@ function createCouponsService(env: Env): CouponsService {
 
 function userRestaurantId(user: { restaurantId?: string | number }): string {
   return String(user.restaurantId);
+}
+
+// The edge sweep scopes by this tag (see smartCacheMiddleware). A shop owner's
+// restaurant is scoped already; an admin's write names none in its URL, so
+// record the coupon's restaurant to get `available/{restaurantId}` cleared.
+// Call only after the write succeeded.
+function recordCouponScope(
+  c: { get(key: "deferredCache"): DeferredCacheWork | undefined },
+  restaurantId: string | null | undefined,
+): void {
+  if (restaurantId)
+    c.get("deferredCache")?.cleared.push(`restaurant:${restaurantId}`);
 }
 
 function toCouponFilters(input: CouponFiltersInput): CouponFilters {
@@ -178,6 +191,7 @@ routes.post(
     data.createdBy = user.id;
 
     const coupon = await couponsService.createCouponWithValidation(data);
+    recordCouponScope(c, coupon?.restaurantId);
 
     return c.json(
       {
@@ -324,6 +338,7 @@ routes.put(
     }
 
     const updatedCoupon = await couponsService.updateCoupon(id, data);
+    recordCouponScope(c, existingCoupon.restaurantId);
 
     // The existence check above and this UPDATE are two statements: a coupon
     // deleted in between leaves nothing to return, and formatting undefined
@@ -370,6 +385,7 @@ routes.post(
     }
 
     const deactivatedCoupon = await couponsService.deactivateCoupon(id);
+    recordCouponScope(c, existingCoupon.restaurantId);
 
     if (!deactivatedCoupon) {
       throw notFound("Coupon not found");
@@ -405,6 +421,7 @@ routes.delete(
     }
 
     await couponsService.deleteCoupon(id);
+    recordCouponScope(c, existingCoupon.restaurantId);
 
     return c.json({
       success: true,

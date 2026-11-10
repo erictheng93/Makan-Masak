@@ -441,6 +441,40 @@ describe("coupons routes", () => {
     );
   });
 
+  it("records the coupon's restaurant on the deferred sink only after the write lands", async () => {
+    const sink = {
+      pending: [],
+      after: [],
+      replay: [],
+      cleared: [] as string[],
+    };
+    const wrapper = new Hono();
+    wrapper.use("*", async (c, next) => {
+      c.set("deferredCache" as never, sink as never);
+      await next();
+    });
+    wrapper.route("/", app);
+    mocks.currentUser.role = 0;
+    mocks.getCoupon.mockResolvedValue(coupon({ restaurantId: "restaurant-9" }));
+    mocks.deactivateCoupon.mockRejectedValueOnce(new Error("d1 down"));
+
+    await withSilencedRouteError(() =>
+      wrapper.fetch(
+        new Request("https://test/10/deactivate", { method: "POST" }),
+        createEnv() as never,
+      ),
+    );
+    expect(sink.cleared).toEqual([]);
+
+    mocks.deactivateCoupon.mockResolvedValue(coupon({ isActive: false }));
+    const res = await wrapper.fetch(
+      new Request("https://test/10/deactivate", { method: "POST" }),
+      createEnv() as never,
+    );
+    expect(res.status).toBe(200);
+    expect(sink.cleared).toEqual(["restaurant:restaurant-9"]);
+  });
+
   it("creates, lists, and summarizes owner-scoped coupons", async () => {
     mocks.createCouponWithValidation.mockResolvedValue(coupon());
     mocks.getCouponsWithEnhancedFilters.mockResolvedValue({

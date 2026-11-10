@@ -607,6 +607,135 @@ describe("menu writes without a restaurant in the URL", () => {
   });
 });
 
+describe("coupon writes", () => {
+  function setup() {
+    const cacheEntries = new Map<string, Response>();
+    vi.stubGlobal("caches", {
+      default: {
+        async match(key: RequestInfo | URL) {
+          return cacheEntries.get(String(key))?.clone();
+        },
+        async put(key: RequestInfo | URL, response: Response) {
+          cacheEntries.set(String(key), response.clone());
+        },
+        async delete(key: RequestInfo | URL) {
+          return cacheEntries.delete(String(key));
+        },
+      },
+    });
+    const kvEntries = new Map<string, string>();
+    const kvDelete = vi.fn(async (key: string) => {
+      kvEntries.delete(key);
+    });
+    const cacheKv = {
+      async get(key: string, options?: { type?: string }) {
+        const value = kvEntries.get(key);
+        if (value === undefined) return null;
+        return options?.type === "json" ? JSON.parse(value) : value;
+      },
+      async put(key: string, value: string) {
+        kvEntries.set(key, value);
+      },
+      delete: kvDelete,
+    };
+    const app = new Hono();
+    app.use(
+      "*",
+      smartCacheMiddleware({
+        defaultTtl: 300,
+        cacheTags: (c) => {
+          const id = c.req.param("restaurantId");
+          return id ? [`restaurant:${id}`] : [];
+        },
+        shouldCache: (c) =>
+          isPublicApiCacheableRequest(c.req.method, c.req.path),
+      }),
+    );
+    const env = { CACHE_KV: cacheKv };
+    const executionCtx = {
+      waitUntil: vi.fn(),
+      passThroughOnException: vi.fn(),
+    };
+    return { app, env, executionCtx, kvDelete };
+  }
+
+  it("answers before the edge clear, then clears the customer coupon list the route scoped", async () => {
+    const { app, env, executionCtx, kvDelete } = setup();
+    let active = true;
+    app.get("/api/v1/coupons/available/:restaurantId", (c) =>
+      c.json({ success: true, data: { active } }),
+    );
+    // No user on the context (an admin write): only the route's recorded
+    // scope can name the restaurant.
+    let release!: () => void;
+    app.post("/api/v1/coupons/:id/deactivate", (c) => {
+      active = false;
+      // Stands in for a query-cache clear still in flight at response time.
+      c.get("deferredCache").pending.push(
+        new Promise<void>((resolve) => {
+          release = resolve;
+        }),
+      );
+      c.get("deferredCache").cleared.push("restaurant:restaurant-1");
+      return c.json({ success: true });
+    });
+    const read = () =>
+      app.request(
+        "/api/v1/coupons/available/restaurant-1",
+        undefined,
+        env as never,
+        executionCtx as never,
+      );
+
+    await read();
+    await expect((await read()).json()).resolves.toMatchObject({
+      data: { active: true },
+      cached: true,
+    });
+    kvDelete.mockClear();
+
+    const res = await app.request(
+      "/api/v1/coupons/10/deactivate",
+      { method: "POST" },
+      env as never,
+      executionCtx as never,
+    );
+
+    expect(res.status).toBe(200);
+    expect(kvDelete).not.toHaveBeenCalled(); // edge clear waits on the query cache
+    release();
+    await settleDeferred(executionCtx.waitUntil);
+    expect(kvDelete).toHaveBeenCalledWith(
+      "GET:/api/v1/coupons/available/restaurant-1:",
+    );
+    await expect((await read()).json()).resolves.toMatchObject({
+      data: { active: false },
+    });
+  });
+
+  it("leaves validate, use and distribute inline", async () => {
+    const { app, env, executionCtx } = setup();
+    const seen: unknown[] = [];
+    const paths = ["validate", "use", "10/distribute"];
+    for (const path of paths) {
+      app.post(`/api/v1/coupons/${path}`, (c) => {
+        seen.push(c.get("deferredCache"));
+        return c.json({ success: true });
+      });
+    }
+    for (const path of paths) {
+      await app.request(
+        `/api/v1/coupons/${path}`,
+        { method: "POST" },
+        env as never,
+        executionCtx as never,
+      );
+    }
+    expect(seen).toEqual([undefined, undefined, undefined]);
+    expect(executionCtx.waitUntil).not.toHaveBeenCalled();
+  });
+});
+
 /** Run every waitUntil job to completion, including the delayed sweep. */
 async function settleDeferred(waitUntil: ReturnType<typeof vi.fn>) {
   vi.useFakeTimers({ toFake: ["setTimeout"] });

@@ -110,6 +110,15 @@ export function getRestaurantIdForCacheScope(
     : String(userRestaurantId);
 }
 
+// Menu writes, plus the owner's coupon writes (create, edit, deactivate,
+// delete). /validate, /use and /distribute stay inline: they change no
+// customer-visible coupon list, and a deferred request always holds waitUntil
+// open for the replay sweep.
+const COUPON_WRITE_PATH = /^\/api\/v1\/coupons(?:\/\d+(?:\/deactivate)?)?$/;
+function defersCacheClears(path: string): boolean {
+  return path.startsWith("/api/v1/menu") || COUPON_WRITE_PATH.test(path);
+}
+
 export class EdgeCacheManager {
   constructor(
     private kv: KVNamespace,
@@ -521,7 +530,7 @@ export function smartCacheMiddleware(
     // from before the commit into the query cache); `replay` sweeps both tiers
     // again REPLAY_DELAY_MS later to remove it.
     const deferred: DeferredCacheWork | undefined =
-      isMutation && path.startsWith("/api/v1/menu")
+      isMutation && defersCacheClears(path)
         ? { pending: [], after: [], replay: [], cleared: [] }
         : undefined;
     if (deferred) c.set("deferredCache", deferred);
