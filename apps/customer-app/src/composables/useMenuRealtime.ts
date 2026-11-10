@@ -10,7 +10,7 @@ export function useMenuRealtime(
   restaurantId: () => string,
   refresh: () => Promise<unknown>,
   // Held back until the first menu read has landed, so the token request does
-  // not compete with it and the first open need not re-read what it just got.
+  // not compete with the initial page load.
   ready: () => boolean = () => true,
 ): void {
   let token: { url: string; expiresAt: number } | undefined;
@@ -18,7 +18,6 @@ export function useMenuRealtime(
   let disposed = false;
   let refreshing = false;
   let dirty = false;
-  let opened = false;
   const refreshMenu = async () => {
     dirty = true;
     if (refreshing || disposed) return;
@@ -64,10 +63,8 @@ export function useMenuRealtime(
       token = undefined;
     },
     onOpen: () => {
-      // The first open follows a read made moments ago; only a reconnect can
-      // have missed an update.
-      if (opened) void refreshMenu();
-      opened = true;
+      // Updates can arrive between the initial menu read and the handshake.
+      void refreshMenu();
     },
     onMessage: (event) => {
       if (
@@ -85,7 +82,6 @@ export function useMenuRealtime(
         if (isReady && id && import.meta.env.VITE_REALTIME_URL) void connect();
         return;
       }
-      opened = false;
       ++generation;
       token = undefined;
       dirty = false;

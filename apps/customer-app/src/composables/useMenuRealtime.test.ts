@@ -45,14 +45,14 @@ function setup(refresh = vi.fn(async () => {}), ready = () => true) {
   return { wrapper, restaurant, refresh };
 }
 describe("menu refresh subscription", () => {
-  it("skips the refresh on the first open but refreshes after a reconnect", async () => {
+  it("catches changes missed before the first connection and during reconnects", async () => {
     const { wrapper, refresh } = setup();
     ws.options!.onOpen();
     await flushPromises();
-    expect(refresh).not.toHaveBeenCalled();
+    expect(refresh).toHaveBeenCalledOnce();
     ws.options!.onOpen();
     await flushPromises();
-    expect(refresh).toHaveBeenCalledOnce();
+    expect(refresh).toHaveBeenCalledTimes(2);
     wrapper.unmount();
   });
   it("waits for the first menu read before asking for a token", async () => {
@@ -68,6 +68,7 @@ describe("menu refresh subscription", () => {
     const { wrapper, refresh } = setup();
     ws.options!.onOpen();
     await flushPromises();
+    refresh.mockClear();
     ws.options!.onMessage({ type: "menu_item_update", restaurantId: "other" });
     ws.options!.onMessage({ type: "new_order", restaurantId: "rest-1" });
     ws.options!.onMessage({ type: "menu_item_update", restaurantId: "rest-1" });
