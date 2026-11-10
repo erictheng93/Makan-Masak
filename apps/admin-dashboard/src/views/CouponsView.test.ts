@@ -380,4 +380,37 @@ describe("CouponsView", () => {
       expect(wrapper.text()).not.toContain("coupons.actions.activate");
     });
   });
+
+  describe("compact viewport", () => {
+    afterEach(() => vi.unstubAllGlobals());
+
+    it("renders each coupon as a card with every action reachable", async () => {
+      vi.stubGlobal(
+        "matchMedia",
+        vi.fn().mockReturnValue({
+          matches: true,
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        }),
+      );
+      const wrapper = mountCoupons();
+      await flushPromises();
+
+      expect(wrapper.find("table").exists()).toBe(false);
+      const card = wrapper.get('[data-testid="coupon-card"]');
+      for (const text of [
+        "Save 10",
+        "SAVE10",
+        "10%",
+        "coupons.table.unlimited",
+        "coupons.actions.stats",
+        "coupons.actions.edit",
+        "coupons.actions.distribute",
+        "coupons.actions.deactivate",
+        "coupons.actions.delete",
+      ]) {
+        expect(card.text()).toContain(text);
+      }
+    });
+  });
 });

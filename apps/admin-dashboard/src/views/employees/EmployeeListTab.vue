@@ -77,7 +77,7 @@
     </div>
 
     <div v-else class="overflow-x-auto">
-      <table class="min-w-full">
+      <table v-if="!compact" class="min-w-full">
         <thead>
           <tr class="border-b border-ios-bg">
             <th
@@ -210,65 +210,91 @@
 
             <!-- Actions -->
             <td class="px-4 py-3.5" @click.stop>
-              <div class="flex items-center gap-2">
-                <button
-                  class="p-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed text-ios-blue hover:bg-ios-blue/10 transition-colors"
-                  :title="t('users.actions.edit')"
-                  :aria-label="t('users.actions.edit')"
-                  @click="$emit('editUser', user)"
-                >
-                  <Pencil class="w-4 h-4" />
-                </button>
-                <button
-                  v-if="user.role !== 0 || isAdministrator"
-                  class="p-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed text-ios-orange hover:bg-ios-orange/10 transition-colors"
-                  :title="t('users.actions.resetPassword')"
-                  :aria-label="t('users.actions.resetPassword')"
-                  @click="handleResetPassword(user)"
-                >
-                  <KeyRound class="w-4 h-4" />
-                </button>
-                <button
-                  v-if="!isArchivedRoster"
-                  class="p-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  :class="
-                    user.status === 'active'
-                      ? 'text-ios-red hover:bg-ios-red/10'
-                      : 'text-ios-green hover:bg-ios-green/10'
-                  "
-                  :title="toggleLabel(user)"
-                  :aria-label="toggleLabel(user)"
-                  :disabled="busy"
-                  @click="handleToggleStatus(user)"
-                >
-                  <UserX v-if="user.status === 'active'" class="w-4 h-4" />
-                  <UserCheck v-else class="w-4 h-4" />
-                </button>
-                <button
-                  v-if="!isArchivedRoster"
-                  class="p-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed text-ios-red hover:bg-ios-red/10 transition-colors"
-                  :title="t('users.actions.archive')"
-                  :aria-label="t('users.actions.archive')"
-                  :disabled="busy"
-                  @click="handleArchive(user)"
-                >
-                  <UserMinus class="w-4 h-4" />
-                </button>
-                <button
-                  v-else
-                  class="p-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed text-ios-green hover:bg-ios-green/10 transition-colors"
-                  :title="t('users.actions.restore')"
-                  :aria-label="t('users.actions.restore')"
-                  :disabled="busy"
-                  @click="handleRestore(user)"
-                >
-                  <UserRoundPlus class="w-4 h-4" />
-                </button>
-              </div>
+              <EmployeeRowActions
+                v-bind="actionProps(user)"
+                @edit="$emit('editUser', user)"
+                @reset="handleResetPassword(user)"
+                @toggle="handleToggleStatus(user)"
+                @archive="handleArchive(user)"
+                @restore="handleRestore(user)"
+              />
             </td>
           </tr>
         </tbody>
       </table>
+
+      <ul v-else class="space-y-3" data-testid="employee-cards">
+        <li
+          v-for="user in paginatedUsers"
+          :key="user.id"
+          class="rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+          data-testid="employee-card"
+        >
+          <button
+            type="button"
+            class="flex w-full items-center gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+            @click="navigateToDetail(user.id)"
+          >
+            <span
+              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+              :class="avatarClass(user.role)"
+            >
+              {{ getInitials(user) }}
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-sm font-medium text-ios-text">
+                {{ user.fullName || user.username }}
+              </span>
+              <span class="block truncate text-xs text-ios-text/40">
+                {{ user.email || user.username }}
+              </span>
+            </span>
+          </button>
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <span
+              class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
+              :class="roleBadgeClass(user.role)"
+            >
+              <component :is="roleIcon(user.role)" class="h-3 w-3" />
+              {{ roleText(user.role) }}
+            </span>
+            <span
+              class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium"
+              :class="statusBadgeClass(user.status)"
+            >
+              {{ statusText(user.status) }}
+            </span>
+            <span
+              v-if="user.clockInStatus?.isClockedIn"
+              class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700"
+            >
+              <Clock class="h-3 w-3" />
+              {{ t("employees.clockIn.working") }}
+            </span>
+            <span
+              v-else-if="user.leaveStatus?.isOnLeave"
+              class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700"
+            >
+              <CalendarOff class="h-3 w-3" />
+              {{ user.leaveStatus.leaveType || t("employees.clockIn.onLeave") }}
+            </span>
+            <span v-else class="text-xs text-ios-text/30">
+              {{ t("employees.clockIn.off") }}
+            </span>
+          </div>
+          <div class="mt-2 flex justify-end">
+            <EmployeeRowActions
+              v-bind="actionProps(user)"
+              compact
+              @edit="$emit('editUser', user)"
+              @reset="handleResetPassword(user)"
+              @toggle="handleToggleStatus(user)"
+              @archive="handleArchive(user)"
+              @restore="handleRestore(user)"
+            />
+          </div>
+        </li>
+      </ul>
 
       <!-- Pagination -->
       <div
@@ -319,18 +345,9 @@ import {
 } from "@/composables/useEmployeeDisplay";
 import type { Employee, EmployeeWithStatus } from "@/types/employee";
 import type { UserId } from "@/types/api-user";
-import {
-  Search,
-  Users,
-  Clock,
-  CalendarOff,
-  Pencil,
-  KeyRound,
-  UserX,
-  UserCheck,
-  UserMinus,
-  UserRoundPlus,
-} from "lucide-vue-next";
+import { Search, Users, Clock, CalendarOff } from "lucide-vue-next";
+import EmployeeRowActions from "@/components/employees/EmployeeRowActions.vue";
+import { useIsCompactViewport } from "@/composables/useIsCompactViewport";
 import { useConfirmModal } from "@/composables/useConfirmModal";
 import { useAuthStore } from "@/stores/auth";
 
@@ -424,10 +441,13 @@ const navigateToDetail = (id: UserId) => {
   router.push(`/dashboard/employees/${id}`);
 };
 
-const toggleLabel = (user: Employee) =>
-  user.status === "active"
-    ? t("users.actions.disable")
-    : t("users.actions.enable");
+const compact = useIsCompactViewport();
+const actionProps = (user: Employee) => ({
+  user,
+  archived: isArchivedRoster.value,
+  busy: props.busy,
+  isAdministrator: isAdministrator.value,
+});
 
 const emit = defineEmits<{
   editUser: [user: Employee];

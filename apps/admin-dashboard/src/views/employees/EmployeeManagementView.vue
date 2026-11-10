@@ -20,11 +20,14 @@
     </div>
 
     <!-- Stats Grid -->
-    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+    <div
+      class="-mx-6 flex snap-x gap-3 overflow-x-auto px-6 pb-1 lg:mx-0 lg:grid lg:grid-cols-7 lg:gap-4 lg:overflow-visible lg:px-0"
+      data-testid="employee-stats"
+    >
       <div
         v-for="stat in statCards"
         :key="stat.label"
-        class="bg-white rounded-2xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-transform hover:scale-[1.02]"
+        class="w-36 shrink-0 snap-start bg-white rounded-2xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-transform hover:scale-[1.02] lg:w-auto"
       >
         <div class="flex items-center gap-3">
           <div
@@ -49,12 +52,15 @@
 
     <!-- Tab Navigation -->
     <div class="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-      <nav class="flex flex-wrap border-b border-ios-bg px-3 sm:px-6">
+      <nav
+        class="flex overflow-x-auto border-b border-ios-bg px-3 sm:px-6"
+        data-testid="employee-tabs"
+      >
         <router-link
           v-for="tab in tabs"
           :key="tab.name"
           :to="tab.path"
-          class="flex items-center gap-2 px-4 py-3.5 text-sm font-medium border-b-2 transition-colors -mb-px"
+          class="flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap px-4 py-3.5 text-sm font-medium border-b-2 transition-colors -mb-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ios-blue"
           :class="
             isActiveTab(tab.path)
               ? 'border-ios-blue text-ios-blue'
@@ -75,7 +81,7 @@
       </nav>
 
       <!-- Tab Content -->
-      <div class="p-6">
+      <div class="p-4 sm:p-6">
         <router-view
           :users-with-status="employeeList.usersWithStatus.value"
           :archived-users="employeeList.archivedUsers.value"

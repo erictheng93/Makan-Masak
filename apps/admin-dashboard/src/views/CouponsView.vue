@@ -21,7 +21,7 @@
     </div>
 
     <!-- 統計卡片 -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-8">
       <div class="bg-white rounded-lg shadow p-6">
         <div class="flex items-center">
           <div class="p-2 bg-blue-100 rounded-lg">
@@ -135,7 +135,7 @@
 
     <!-- 優惠券列表 -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div class="overflow-x-auto">
+      <div v-if="!compact" class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
@@ -349,6 +349,119 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div v-else class="p-3" data-testid="coupon-cards">
+        <p v-if="isLoading" class="py-10 text-center text-sm text-gray-500">
+          {{ t("common.loading") }}
+        </p>
+        <p
+          v-else-if="filteredCoupons.length === 0"
+          class="py-10 text-center text-sm text-gray-500"
+        >
+          {{ t("common.noData") }}
+        </p>
+        <ul v-else class="space-y-3">
+          <li
+            v-for="coupon in filteredCoupons"
+            :key="coupon.id"
+            class="rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+            data-testid="coupon-card"
+          >
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <div class="truncate text-sm font-medium text-gray-900">
+                  {{ coupon.name }}
+                </div>
+                <div class="text-sm text-gray-500">{{ coupon.code }}</div>
+              </div>
+              <span
+                :class="[
+                  'inline-flex shrink-0 px-2 py-1 text-xs font-semibold rounded-full',
+                  getCouponStatusClass(coupon),
+                ]"
+              >
+                {{ getCouponStatusText(coupon) }}
+              </span>
+            </div>
+            <dl class="mt-3 space-y-1 text-sm">
+              <div class="flex justify-between gap-3">
+                <dt class="text-gray-500">{{ t("coupons.table.discount") }}</dt>
+                <dd class="text-gray-900">
+                  <template v-if="coupon.discountType === 'percentage'">
+                    {{ coupon.discountValue }}%
+                  </template>
+                  <template v-else>{{
+                    formatPrice(coupon.discountValue)
+                  }}</template>
+                </dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt class="text-gray-500">{{ t("coupons.table.usage") }}</dt>
+                <dd class="text-gray-900">
+                  {{ paidUseCount(coupon) }} /
+                  {{ coupon.usageLimit || t("coupons.table.unlimited") }}
+                </dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt class="text-gray-500">{{ t("coupons.table.validity") }}</dt>
+                <dd class="text-right text-gray-900">
+                  {{ formatDate(coupon.validFrom) }}
+                  <span class="block text-gray-500">
+                    {{
+                      t("coupons.table.validTo", {
+                        date: formatDate(coupon.validTo),
+                      })
+                    }}
+                  </span>
+                </dd>
+              </div>
+            </dl>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button
+                class="text-teal-600 min-h-11 rounded-full px-4 text-sm font-medium bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:opacity-50"
+                @click="viewCouponStats(coupon)"
+              >
+                {{ t("coupons.actions.stats") }}
+              </button>
+              <button
+                class="text-blue-600 min-h-11 rounded-full px-4 text-sm font-medium bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:opacity-50"
+                @click="editCoupon(coupon)"
+              >
+                {{ t("coupons.actions.edit") }}
+              </button>
+              <button
+                class="text-teal-600 min-h-11 rounded-full px-4 text-sm font-medium bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:opacity-50"
+                :data-testid="`distribute-coupon-card-${coupon.id}`"
+                @click="distributeCoupon(coupon)"
+              >
+                {{ t("coupons.actions.distribute") }}
+              </button>
+              <button
+                class="min-h-11 rounded-full px-4 text-sm font-medium bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:opacity-50"
+                :class="coupon.isActive ? 'text-yellow-600' : 'text-green-600'"
+                :disabled="statusAction.pending.value"
+                @click="setCouponActive(coupon, !coupon.isActive)"
+              >
+                {{
+                  rowBusyId === coupon.id
+                    ? t("common.saving")
+                    : coupon.isActive
+                      ? t("coupons.actions.deactivate")
+                      : t("coupons.actions.activate")
+                }}
+              </button>
+              <button
+                v-if="isAdmin"
+                class="text-red-600 min-h-11 rounded-full px-4 text-sm font-medium bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:opacity-50"
+                :disabled="statusAction.pending.value"
+                @click="deleteCoupon(coupon)"
+              >
+                {{ t("coupons.actions.delete") }}
+              </button>
+            </div>
+          </li>
+        </ul>
       </div>
 
       <!-- 分頁 -->
@@ -566,6 +679,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useToast } from "vue-toastification";
 import { useI18n } from "@/i18n";
 import { useAsyncAction } from "@/composables/useAsyncAction";
+import { useIsCompactViewport } from "@/composables/useIsCompactViewport";
 import { useUndoToast } from "@/composables/useUndoToast";
 import { useCurrency } from "@/composables/useCurrency";
 import { useDateFormatter } from "@/composables/useDateFormatter";
@@ -631,6 +745,7 @@ const filters = ref({
   discountType: "",
 });
 
+const compact = useIsCompactViewport();
 const stats = ref<CouponsSummary>({
   total: 0,
   active: 0,
