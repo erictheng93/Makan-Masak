@@ -1994,6 +1994,13 @@ const jaJP: Messages = {
     enterUsername: "ユーザー名を入力",
     enterPassword: "パスワードを入力",
     forgotPasswordLink: "パスワードを忘れた？",
+    shopSigningIn: "{shop} にサインイン中",
+    shopNotYours: "お店が違いますか？",
+    shopInvalidLink:
+      "このお店のログインリンクは無効です。店長に確認するか、通常のログインをご利用ください。",
+    shopPlainLogin: "通常のログインを使う",
+    shopRequired:
+      "このユーザー名は複数の店舗で使われています。お店のログインリンクからサインインしてください。",
     login: "ログイン",
     loggingIn: "ログイン中...",
     loginFailed: "ログインに失敗しました",
@@ -2964,6 +2971,28 @@ const jaJP: Messages = {
       contact: "接触",
       markets: "市場",
     },
+    staffLogin: {
+      title: "スタッフ用ログインリンク",
+      description:
+        "スタッフはお店専用のリンクからサインインします。このリンクとキッチン用リンクをチームに共有してください。",
+      adminLink: "管理ダッシュボードのリンク",
+      kitchenLink: "キッチンディスプレイのリンク",
+      copy: "コピー",
+      copied: "リンクをコピーしました",
+      copyFailed: "リンクをコピーできませんでした",
+      code: "店舗コード",
+      codeHint: "3〜40文字：小文字、数字、ハイフン。",
+      changeWarning:
+        "店舗コードを変更すると、スタッフが使うリンクも変わります。新しいリンクを共有してください。",
+      notSet: "店舗コードはまだ設定されていません。",
+      invalid:
+        "小文字・数字・ハイフンで3〜40文字にしてください（先頭と末尾のハイフンは不可）。",
+      reserved: "このコードは予約済みです。別のコードを選んでください。",
+      taken: "このコードは既に使われています。別のコードを選んでください。",
+      saved: "店舗コードを保存しました",
+      saveFailed: "店舗コードを保存できませんでした",
+      save: "保存",
+    },
     general: {
       restaurantInfo: "レストラン情報",
       restaurantName: "レストラン名",
@@ -3906,6 +3935,8 @@ const jaJP: Messages = {
     success: {
       archived: "{username} を削除しました",
       restored: "{username} を復帰させました",
+      created: "従業員を追加しました",
+      createdSignIn: "従業員を追加しました。サインインは {url} から",
     },
     errors: {
       saveFailed: "保存に失敗しました",

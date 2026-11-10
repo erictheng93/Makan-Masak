@@ -9,6 +9,9 @@ vi.mock("@/i18n", () => ({
   useI18n: () => ({ t: (key: string) => key }),
 }));
 
+const route = vi.hoisted(() => ({ query: {} as Record<string, string> }));
+vi.mock("vue-router", () => ({ useRoute: () => route }));
+
 vi.mock("@/services/api", () => ({
   api: { instance: { post: vi.fn() } },
 }));
@@ -18,6 +21,8 @@ const SERVER_MESSAGE = "Password reset email sent";
 describe("ForgotPasswordView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
+    route.query = {};
     vi.mocked(api.instance.post).mockResolvedValue({
       status: 200,
       data: { success: true, message: SERVER_MESSAGE },
@@ -42,5 +47,22 @@ describe("ForgotPasswordView", () => {
     expect(wrapper.text()).toContain("auth.emailSent");
     expect(wrapper.text()).toContain("auth.emailSentMessage");
     expect(wrapper.text()).not.toContain(SERVER_MESSAGE);
+  });
+
+  it("carries the shop from ?shop= into the request", async () => {
+    route.query = { shop: "noodle-bar" };
+    const wrapper = mount(ForgotPasswordView, {
+      global: { stubs: { RouterLink: true, "router-link": true } },
+    });
+
+    await wrapper.get('input[type="email"]').setValue("owner@example.test");
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(api.instance.post).toHaveBeenCalledWith(
+      "/auth/forgot-password",
+      expect.objectContaining({ shop: "noodle-bar" }),
+      expect.any(Object),
+    );
   });
 });

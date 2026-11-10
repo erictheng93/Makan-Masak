@@ -260,6 +260,13 @@
           </div>
         </div>
       </div>
+
+      <StaffLoginLinkCard
+        v-if="authStore.user?.role === UserRole.OWNER && authStore.restaurantId"
+        :restaurant-id="authStore.restaurantId"
+        :login-slug="staffLoginSlug"
+        @saved="(slug) => (staffLoginSlug = slug)"
+      />
     </div>
 
     <!-- 市場 / 商圈 -->
@@ -1925,6 +1932,8 @@ import { useRoute } from "vue-router";
 import { CheckCircleIcon } from "@heroicons/vue/24/outline";
 import ChangePasswordCard from "@/components/settings/ChangePasswordCard.vue";
 import IntegrationsSettings from "@/components/settings/IntegrationsSettings.vue";
+import StaffLoginLinkCard from "@/components/settings/StaffLoginLinkCard.vue";
+import { UserRole } from "@/types";
 import ShopWalletSettings from "@/components/settings/ShopWalletSettings.vue";
 import RestaurantServiceItemsManager from "@/components/settings/RestaurantServiceItemsManager.vue";
 import ServiceBookingSlotsManager from "@/components/settings/ServiceBookingSlotsManager.vue";
@@ -2540,11 +2549,14 @@ const resetToDefaults = async () => {
   Object.assign(settings, structuredClone(defaultSettings));
 };
 
+const staffLoginSlug = ref<string | null>(null);
+
 const loadSettings = async () => {
   try {
     const restaurantId = authStore.restaurantId;
     if (restaurantId) {
       const response = await api.get<{
+        loginSlug?: string | null;
         name?: string;
         phone?: string;
         address?: string;
@@ -2587,6 +2599,7 @@ const loadSettings = async () => {
       }>(`/restaurants/${restaurantId}`);
       const data = response.data?.data;
       if (data) {
+        staffLoginSlug.value = data.loginSlug ?? null;
         if (data.name) settings.restaurant.name = data.name;
         if (data.phone) settings.restaurant.phone = data.phone;
         if (data.address) settings.restaurant.address = data.address;

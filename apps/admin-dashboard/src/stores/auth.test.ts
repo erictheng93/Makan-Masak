@@ -624,6 +624,47 @@ describe("admin auth store — what a rejected login tells the reader", () => {
     expect(result).toEqual({ success: false, error: "auth.accountLocked" });
   });
 
+  it("sends the shop and tells the user to use their shop link on SHOP_REQUIRED", async () => {
+    vi.mocked(api.post).mockRejectedValue({
+      response: {
+        status: 400,
+        data: {
+          success: false,
+          error: { code: "SHOP_REQUIRED", message: SERVER_PROSE },
+        },
+      },
+    });
+
+    const result = await useAuthStore().login("owner", "hunter2");
+
+    expect(result).toEqual({ success: false, error: "auth.shopRequired" });
+    expect(api.post).toHaveBeenCalledWith("/auth/login", {
+      username: "owner",
+      password: "hunter2",
+    });
+  });
+
+  it("posts the shop and remembers it after a successful login", async () => {
+    localStorage.removeItem("mm_admin_login_shop");
+    vi.mocked(api.post).mockResolvedValue(
+      axiosResponse({
+        data: {
+          success: true,
+          data: { token: "t", user: user({ loginSlug: "noodle-bar" }) },
+        },
+      }),
+    );
+
+    await useAuthStore().login("owner", "hunter2", "noodle-bar");
+
+    expect(api.post).toHaveBeenCalledWith("/auth/login", {
+      username: "owner",
+      password: "hunter2",
+      shop: "noodle-bar",
+    });
+    expect(localStorage.getItem("mm_admin_login_shop")).toBe("noodle-bar");
+  });
+
   /**
    * The shared 401 copy says "please sign in again", which on the sign-in form
    * is the one thing they are already doing.

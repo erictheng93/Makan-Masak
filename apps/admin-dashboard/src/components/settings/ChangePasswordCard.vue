@@ -91,6 +91,7 @@ import { useI18n } from "@/i18n";
 import { useToast } from "vue-toastification";
 import { api } from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
+import { currentLoginPath } from "@/utils/loginShop";
 import { resolveUserFacingError } from "@makanmasak/shared/utils/user-facing-error";
 
 const { t } = useI18n();
@@ -146,6 +147,6 @@ async function submit() {
   toast.success(t("settings.security.changePassword.success"));
   await authStore.logout();
   saving.value = false;
-  await router.push("/login");
+  await router.push(currentLoginPath());
 }
 </script>

@@ -55,13 +55,13 @@
 
         <div class="flex flex-col sm:flex-row gap-3">
           <router-link
-            to="/forgot-password"
+            :to="forgotPasswordTo"
             class="flex-1 btn-primary text-center"
           >
             {{ t("auth.resendResetEmail") }}
           </router-link>
           <router-link
-            to="/login"
+            :to="loginTo"
             class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 text-center"
           >
             {{ t("auth.returnToLogin") }}
@@ -90,7 +90,7 @@
         </div>
 
         <div class="text-center">
-          <router-link to="/login" class="w-full btn-primary inline-block">
+          <router-link :to="loginTo" class="w-full btn-primary inline-block">
             {{ t("auth.goToLogin") }}
           </router-link>
         </div>
@@ -277,6 +277,11 @@ import { ref, reactive, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "@/i18n";
 import { api } from "@/services/api";
+import {
+  getRememberedShop,
+  loginPathFor,
+  parseShopSlug,
+} from "@/utils/loginShop";
 import { resolveUserFacingError } from "@makanmasak/shared/utils/user-facing-error";
 import {
   Eye,
@@ -291,6 +296,14 @@ import {
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
+
+// The shop travels in ?shop= (or this device's remembered one) so the way back
+// lands on the shop's own login link.
+const shop = parseShopSlug(route.query.shop) ?? getRememberedShop();
+const loginTo = loginPathFor(shop);
+const forgotPasswordTo = shop
+  ? { path: "/forgot-password", query: { shop } }
+  : "/forgot-password";
 
 type ResetTokenVerificationResponse = {
   valid: boolean;
@@ -518,7 +531,7 @@ const handleSubmit = async () => {
 
       // Redirect to login after 2 seconds
       setTimeout(() => {
-        router.push("/login");
+        router.push(loginTo);
       }, 2000);
     } else {
       error.value = resolveUserFacingError(

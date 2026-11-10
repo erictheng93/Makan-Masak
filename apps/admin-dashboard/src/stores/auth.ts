@@ -11,6 +11,7 @@ import {
   setAuthRefreshHandler,
 } from "@/utils/errorHandler";
 import { getAuthToken } from "@/utils/authTokenProvider";
+import { rememberShop } from "@/utils/loginShop";
 import { useModuleAccessStore } from "@makanmasak/shared/stores/moduleAccess";
 import { getApiErrorStatus } from "@makanmasak/shared/utils/unknown";
 import { resolveUserFacingError } from "@makanmasak/shared/utils/user-facing-error";
@@ -315,24 +316,26 @@ export const useAuthStore = defineStore("auth", () => {
       codeKeys: {
         INVALID_CREDENTIALS: "auth.invalidCredentials",
         ACCOUNT_LOCKED: "auth.accountLocked",
+        SHOP_REQUIRED: "auth.shopRequired",
       },
       statusKeys: { 401: "auth.invalidCredentials" },
       fallbackKey: "auth.loginFailed",
     }).message,
   });
 
-  const login = async (username: string, password: string) => {
+  const login = async (username: string, password: string, shop?: string) => {
     isLoading.value = true;
     try {
       const response = await api.post<{
         token: string;
         refreshToken?: string;
         user: User;
-      }>("/auth/login", { username, password });
+      }>("/auth/login", { username, password, ...(shop ? { shop } : {}) });
 
       if (response.data.success && response.data.data) {
         token.value = response.data.data.token;
         user.value = response.data.data.user;
+        rememberShop(user.value?.loginSlug ?? shop);
 
         authClient.tokens.setTokens(token.value!);
         authClient.tokens.setUser(user.value);

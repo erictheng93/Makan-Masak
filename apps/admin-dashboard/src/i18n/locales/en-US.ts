@@ -2095,6 +2095,13 @@ const enUS: Messages = {
     enterUsername: "Enter username",
     enterPassword: "Enter password",
     forgotPasswordLink: "Forgot password?",
+    shopSigningIn: "Signing in to {shop}",
+    shopNotYours: "Not your shop?",
+    shopInvalidLink:
+      "This shop login link is not valid. Check it with your manager, or sign in without it.",
+    shopPlainLogin: "Use standard sign in",
+    shopRequired:
+      "This username is used at more than one shop. Sign in from your shop's login link.",
     login: "Login",
     loggingIn: "Logging in...",
     loginFailed: "Login failed",
@@ -2961,6 +2968,28 @@ const enUS: Messages = {
       security: "Security",
       integrations: "Integrations",
       payments: "Payment Methods",
+    },
+    staffLogin: {
+      title: "Staff login link",
+      description:
+        "Staff sign in from your shop's own link. Share it, and the kitchen link, with your team.",
+      adminLink: "Admin dashboard link",
+      kitchenLink: "Kitchen display link",
+      copy: "Copy",
+      copied: "Link copied",
+      copyFailed: "Could not copy the link",
+      code: "Shop code",
+      codeHint: "3-40 characters: lowercase letters, numbers and hyphens.",
+      changeWarning:
+        "Changing the shop code changes the links your staff use. Share the new links with them.",
+      notSet: "No shop code is set yet.",
+      invalid:
+        "Use 3-40 lowercase letters, numbers or hyphens, not starting or ending with a hyphen.",
+      reserved: "This code is reserved. Choose another.",
+      taken: "This code is already taken. Choose another.",
+      saved: "Shop code saved",
+      saveFailed: "Could not save the shop code",
+      save: "Save",
     },
     general: {
       restaurantInfo: "Restaurant Information",
@@ -3899,6 +3928,8 @@ const enUS: Messages = {
     success: {
       archived: "{username} removed",
       restored: "{username} restored",
+      created: "Employee created",
+      createdSignIn: "Employee created. They sign in at {url}",
     },
     errors: {
       saveFailed: "Save failed",

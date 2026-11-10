@@ -2,6 +2,7 @@ import { useToast } from "vue-toastification";
 import { apiUrl } from "@/services/api-url";
 import { t } from "@/i18n";
 import { getAuthToken } from "@/utils/authTokenProvider";
+import { currentLoginPath } from "@/utils/loginShop";
 
 const toast = useToast();
 
@@ -461,7 +462,8 @@ export class ErrorHandler {
     if (error.type === ErrorType.PERMISSION) {
       const onLoginPage =
         typeof window !== "undefined" &&
-        window.location?.pathname?.startsWith("/login");
+        (window.location?.pathname?.startsWith("/login") ||
+          window.location?.pathname?.startsWith("/s/"));
       const hasToken = !!getAuthToken();
       if (onLoginPage || !hasToken) {
         return;
@@ -662,7 +664,7 @@ export class KitchenErrorHandler extends ErrorHandler {
       } else {
         // Token 刷新失敗，跳轉到登入頁
         toast.error("登入已過期，請重新登入", { timeout: 5000 });
-        window.location.href = "/login";
+        window.location.href = currentLoginPath();
         return Promise.reject(_originalError);
       }
     } catch (error) {

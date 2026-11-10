@@ -1994,6 +1994,13 @@ const viVN: Messages = {
     enterUsername: "Nhập tên đăng nhập",
     enterPassword: "Nhập mật khẩu",
     forgotPasswordLink: "Quên mật khẩu?",
+    shopSigningIn: "Đăng nhập vào {shop}",
+    shopNotYours: "Không phải cửa hàng của bạn?",
+    shopInvalidLink:
+      "Liên kết đăng nhập cửa hàng này không hợp lệ. Hãy hỏi quản lý, hoặc đăng nhập thông thường.",
+    shopPlainLogin: "Dùng đăng nhập thông thường",
+    shopRequired:
+      "Tên đăng nhập này được dùng ở nhiều cửa hàng. Hãy đăng nhập từ liên kết đăng nhập của cửa hàng bạn.",
     login: "Đăng nhập",
     loggingIn: "Đang đăng nhập...",
     loginFailed: "Đăng nhập thất bại",
@@ -2960,6 +2967,28 @@ const viVN: Messages = {
       contact: "Liên hệ",
       markets: "Thị trường",
     },
+    staffLogin: {
+      title: "Liên kết đăng nhập nhân viên",
+      description:
+        "Nhân viên đăng nhập từ liên kết riêng của cửa hàng. Hãy chia sẻ liên kết này và liên kết bếp cho nhóm.",
+      adminLink: "Liên kết bảng điều khiển",
+      kitchenLink: "Liên kết màn hình bếp",
+      copy: "Sao chép",
+      copied: "Đã sao chép liên kết",
+      copyFailed: "Không thể sao chép liên kết",
+      code: "Mã cửa hàng",
+      codeHint: "3-40 ký tự: chữ thường, số và dấu gạch ngang.",
+      changeWarning:
+        "Đổi mã cửa hàng sẽ đổi liên kết nhân viên sử dụng. Hãy chia sẻ liên kết mới cho họ.",
+      notSet: "Chưa đặt mã cửa hàng.",
+      invalid:
+        "Dùng 3-40 chữ thường, số hoặc dấu gạch ngang, không bắt đầu hoặc kết thúc bằng dấu gạch ngang.",
+      reserved: "Mã này đã được dành riêng. Hãy chọn mã khác.",
+      taken: "Mã này đã được sử dụng. Hãy chọn mã khác.",
+      saved: "Đã lưu mã cửa hàng",
+      saveFailed: "Không thể lưu mã cửa hàng",
+      save: "Lưu",
+    },
     general: {
       restaurantInfo: "Thông tin nhà hàng",
       restaurantName: "Tên nhà hàng",
@@ -3903,6 +3932,8 @@ const viVN: Messages = {
     success: {
       archived: "Đã gỡ {username}",
       restored: "Đã khôi phục {username}",
+      created: "Đã tạo nhân viên",
+      createdSignIn: "Đã tạo nhân viên. Họ đăng nhập tại {url}",
     },
     errors: {
       saveFailed: "Lưu thất bại",

@@ -11,6 +11,43 @@
         </div>
         <h2 class="text-3xl font-bold text-gray-900">MakanMasak</h2>
         <p class="mt-2 text-sm text-gray-600">{{ t("auth.adminLogin") }}</p>
+        <div
+          v-if="shopSlug"
+          data-testid="login-shop"
+          class="mt-4 flex flex-col items-center gap-1"
+        >
+          <img
+            v-if="shopLogoUrl"
+            :src="shopLogoUrl"
+            alt=""
+            class="w-12 h-12 rounded-full object-cover"
+          />
+          <p class="text-base font-semibold text-gray-900">
+            {{ t("auth.shopSigningIn", { shop: shopName || shopSlug }) }}
+          </p>
+          <button
+            v-if="!isShopRoute"
+            type="button"
+            data-testid="login-shop-clear"
+            class="text-sm font-medium text-primary-600 hover:text-primary-500"
+            @click="clearShop"
+          >
+            {{ t("auth.shopNotYours") }}
+          </button>
+        </div>
+        <div
+          v-else-if="shopInvalid"
+          data-testid="login-shop-invalid"
+          class="mt-4 rounded-2xl bg-orange-50 p-4 text-sm text-orange-800"
+        >
+          <p>{{ t("auth.shopInvalidLink") }}</p>
+          <router-link
+            to="/login"
+            class="mt-2 inline-block font-medium text-primary-600 hover:text-primary-500"
+          >
+            {{ t("auth.shopPlainLogin") }}
+          </router-link>
+        </div>
       </div>
 
       <form class="mt-8 space-y-6" @submit.prevent="handleSubmit">
@@ -63,7 +100,7 @@
             </p>
             <div class="flex items-center justify-end mt-2">
               <router-link
-                to="/forgot-password"
+                :to="forgotPasswordTo"
                 class="text-sm font-medium text-primary-600 hover:text-primary-500"
               >
                 {{ t("auth.forgotPasswordLink") }}
@@ -130,7 +167,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, computed, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import {
@@ -139,6 +176,13 @@ import {
   readLoginRedirect,
 } from "@/utils/loginRedirect";
 import { useI18n } from "@/i18n";
+import { api } from "@/services/api";
+import { getApiErrorStatus } from "@makanmasak/shared/utils/unknown";
+import {
+  clearRememberedShop,
+  getRememberedShop,
+  parseShopSlug,
+} from "@/utils/loginShop";
 import { UserRole } from "@/types";
 import { Eye, EyeOff, AlertCircle } from "lucide-vue-next";
 import { getInitialLoginCredentials } from "./loginDefaults";
@@ -156,6 +200,46 @@ const authStore = useAuthStore();
 const postLoginTarget = () =>
   readLoginRedirect(route.query[LOGIN_REDIRECT_QUERY]) ??
   authStore.getDefaultRoute();
+
+// /s/:slug is "shop mode"; on plain /login a remembered slug plays the same role.
+const isShopRoute = route.name === "ShopLogin";
+const routeSlug = parseShopSlug(route.params.slug);
+const shopSlug = ref<string | null>(
+  isShopRoute ? routeSlug : getRememberedShop(),
+);
+const shopName = ref("");
+const shopLogoUrl = ref<string | null>(null);
+const shopInvalid = ref(isShopRoute && !routeSlug);
+
+const forgotPasswordTo = computed(() =>
+  shopSlug.value
+    ? { path: "/forgot-password", query: { shop: shopSlug.value } }
+    : "/forgot-password",
+);
+
+const clearShop = () => {
+  clearRememberedShop();
+  shopSlug.value = null;
+};
+
+const loadShopContext = async () => {
+  const slug = shopSlug.value;
+  if (!slug) return;
+  try {
+    const response = await api.get<{
+      slug: string;
+      name: string;
+      logoUrl: string | null;
+    }>(`/restaurants/login-context/${slug}`);
+    shopName.value = response.data?.data?.name ?? "";
+    shopLogoUrl.value = response.data?.data?.logoUrl ?? null;
+  } catch (e) {
+    if (getApiErrorStatus(e) !== 404) return; // offline: still send the shop
+    shopSlug.value = null;
+    if (isShopRoute) shopInvalid.value = true;
+    else clearRememberedShop(); // a stale remembered shop must not block login
+  }
+};
 
 const showPassword = ref(false);
 const isLoading = ref(false);
@@ -200,7 +284,11 @@ const handleSubmit = async () => {
   error.value = "";
 
   try {
-    const result = await authStore.login(form.username, form.password);
+    const result = await authStore.login(
+      form.username,
+      form.password,
+      shopSlug.value ?? undefined,
+    );
 
     if (result.success) {
       const role = authStore.user?.role;
@@ -232,6 +320,7 @@ const handleSubmit = async () => {
 
 // Auto-redirect if already authenticated
 onMounted(() => {
+  void loadShopContext();
   if (authStore.isAuthenticated) {
     if (authStore.user?.role === UserRole.CHEF) {
       // Chef shouldn't be in admin dashboard — show redirect

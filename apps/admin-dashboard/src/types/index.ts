@@ -21,6 +21,7 @@ export interface User {
   role: UserRole;
   adminTier?: AdminTier;
   restaurantId: string | null;
+  loginSlug?: string | null;
   createdAt: string;
   updatedAt: string;
 }

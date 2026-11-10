@@ -162,6 +162,7 @@ import {
   ArrowRightOnRectangleIcon,
 } from "@heroicons/vue/24/outline";
 import { useAuthStore } from "@/stores/auth";
+import { currentLoginPath } from "@/utils/loginShop";
 import { UserRole } from "@/types";
 
 const router = useRouter();
@@ -351,7 +352,7 @@ const handleRoleSwitch = (event: Event) => {
 const handleLogout = async () => {
   try {
     await authStore.logout();
-    router.push("/login");
+    router.push(currentLoginPath());
   } catch (error) {
     console.error("Logout error:", error);
   }

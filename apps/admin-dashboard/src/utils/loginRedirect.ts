@@ -7,6 +7,8 @@
  * fell through to getDefaultRoute(). An admin refreshing /dashboard/monitoring
  * landed on /dashboard/platform instead of the page they were reading.
  */
+import { currentLoginPath } from "@/utils/loginShop";
+
 export const LOGIN_PATH = "/login";
 export const LOGIN_REDIRECT_QUERY = "redirect";
 export const KITCHEN_DISPLAY_URL =
@@ -34,7 +36,7 @@ export function sanitizeLoginRedirect(target: unknown): string | null {
 
   // Bouncing back to the login page would just loop.
   const [path] = target.split(/[?#]/, 1);
-  if (path === LOGIN_PATH) return null;
+  if (path === LOGIN_PATH || path.startsWith("/s/")) return null;
 
   return target;
 }
@@ -56,8 +58,8 @@ export function readLoginRedirect(value: unknown): string | null {
 export function loginRouteFor(fullPath: string) {
   const redirect = sanitizeLoginRedirect(fullPath);
   return redirect
-    ? { path: LOGIN_PATH, query: { [LOGIN_REDIRECT_QUERY]: redirect } }
-    : { path: LOGIN_PATH };
+    ? { path: currentLoginPath(), query: { [LOGIN_REDIRECT_QUERY]: redirect } }
+    : { path: currentLoginPath() };
 }
 
 /**
@@ -67,6 +69,6 @@ export function loginRouteFor(fullPath: string) {
 export function loginUrlFor(fullPath: string): string {
   const redirect = sanitizeLoginRedirect(fullPath);
   return redirect
-    ? `${LOGIN_PATH}?${LOGIN_REDIRECT_QUERY}=${encodeURIComponent(redirect)}`
-    : LOGIN_PATH;
+    ? `${currentLoginPath()}?${LOGIN_REDIRECT_QUERY}=${encodeURIComponent(redirect)}`
+    : currentLoginPath();
 }

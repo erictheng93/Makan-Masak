@@ -38,7 +38,7 @@
 
         <div class="text-center">
           <router-link
-            to="/login"
+            :to="loginTo"
             class="text-sm font-medium text-primary-600 hover:text-primary-500"
           >
             {{ t("auth.backToLogin") }}
@@ -114,7 +114,7 @@
           <!-- Back to Login -->
           <div class="text-center">
             <router-link
-              to="/login"
+              :to="loginTo"
               class="text-sm font-medium text-gray-600 hover:text-gray-900"
             >
               {{ t("auth.backToLogin") }}
@@ -137,10 +137,20 @@
 import { ref, reactive } from "vue";
 import { useI18n } from "@/i18n";
 import { CheckCircle, AlertCircle, Info } from "lucide-vue-next";
+import { useRoute } from "vue-router";
 import { api } from "@/services/api";
+import {
+  getRememberedShop,
+  loginPathFor,
+  parseShopSlug,
+} from "@/utils/loginShop";
 import { resolveUserFacingError } from "@makanmasak/shared/utils/user-facing-error";
 
 const { t } = useI18n();
+const route = useRoute();
+
+const shop = parseShopSlug(route.query.shop) ?? getRememberedShop();
+const loginTo = loginPathFor(shop);
 
 type ForgotPasswordResponse = {
   success: boolean;
@@ -197,6 +207,7 @@ const handleSubmit = async () => {
       {
         identifier: form.email,
         method: "email",
+        ...(shop ? { shop } : {}),
       },
       {
         validateStatus: () => true,

@@ -2114,6 +2114,13 @@ const idID: Messages = {
     enterUsername: "Masukkan nama pengguna",
     enterPassword: "Masukkan kata sandi",
     forgotPasswordLink: "Lupa kata sandi?",
+    shopSigningIn: "Masuk ke {shop}",
+    shopNotYours: "Bukan toko Anda?",
+    shopInvalidLink:
+      "Tautan masuk toko ini tidak valid. Tanyakan ke manajer, atau masuk seperti biasa.",
+    shopPlainLogin: "Gunakan masuk biasa",
+    shopRequired:
+      "Nama pengguna ini dipakai di lebih dari satu toko. Masuk dari tautan masuk toko Anda.",
     login: "Masuk",
     loggingIn: "Sedang masuk...",
     loginFailed: "Gagal masuk",
@@ -2977,6 +2984,28 @@ const idID: Messages = {
       payments: "Metode Pembayaran",
       contact: "Kontak",
       markets: "Pasar",
+    },
+    staffLogin: {
+      title: "Tautan masuk staf",
+      description:
+        "Staf masuk dari tautan khusus toko. Bagikan tautan ini dan tautan dapur ke tim Anda.",
+      adminLink: "Tautan dasbor admin",
+      kitchenLink: "Tautan layar dapur",
+      copy: "Salin",
+      copied: "Tautan disalin",
+      copyFailed: "Tidak dapat menyalin tautan",
+      code: "Kode toko",
+      codeHint: "3-40 karakter: huruf kecil, angka, dan tanda hubung.",
+      changeWarning:
+        "Mengubah kode toko akan mengubah tautan yang dipakai staf. Bagikan tautan baru kepada mereka.",
+      notSet: "Kode toko belum diatur.",
+      invalid:
+        "Gunakan 3-40 huruf kecil, angka, atau tanda hubung, tidak diawali atau diakhiri tanda hubung.",
+      reserved: "Kode ini dicadangkan. Pilih kode lain.",
+      taken: "Kode ini sudah dipakai. Pilih kode lain.",
+      saved: "Kode toko disimpan",
+      saveFailed: "Tidak dapat menyimpan kode toko",
+      save: "Simpan",
     },
     general: {
       restaurantInfo: "Informasi Restoran",
@@ -3921,6 +3950,8 @@ const idID: Messages = {
     success: {
       archived: "{username} dihapus",
       restored: "{username} dipulihkan",
+      created: "Karyawan dibuat",
+      createdSignIn: "Karyawan dibuat. Mereka masuk melalui {url}",
     },
     errors: {
       saveFailed: "Gagal menyimpan",

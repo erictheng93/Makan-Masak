@@ -117,6 +117,7 @@ import { useI18n } from "@/i18n";
 import { useToast } from "vue-toastification";
 import { useEmployeeList } from "@/composables/useEmployeeList";
 import { useAuthStore } from "@/stores/auth";
+import { api } from "@/services/api";
 import {
   leavesService,
   LEAVE_REQUESTS_CHANGED,
@@ -268,6 +269,29 @@ const saving = ref(false);
 const fieldErrors = ref<Record<string, string>>({});
 const FORM_FIELDS = ["username", "password", "fullName", "email"];
 
+// Staff cannot sign in from a shop-less page (usernames are per shop), so tell
+// the owner which link to hand the new employee. Best effort: never blocks.
+const announceSignInLink = async () => {
+  let slug = authStore.user?.loginSlug ?? null;
+  if (!slug && authStore.restaurantId) {
+    try {
+      const res = await api.get<{ loginSlug?: string | null }>(
+        `/restaurants/${authStore.restaurantId}`,
+      );
+      slug = res.data?.data?.loginSlug ?? null;
+    } catch {
+      /* the plain success path below still runs */
+    }
+  }
+  toast.success(
+    slug
+      ? t("users.success.createdSignIn", {
+          url: `${window.location.origin}/s/${slug}`,
+        })
+      : t("users.success.created"),
+  );
+};
+
 const handleSave = async (form: EmployeeFormData, isEdit: boolean) => {
   if (saving.value) return;
   saving.value = true;
@@ -277,6 +301,7 @@ const handleSave = async (form: EmployeeFormData, isEdit: boolean) => {
       await employeeList.updateUser(editingEmployee.value, form);
     } else {
       await employeeList.createUser(form);
+      void announceSignInLink();
     }
     closeModal();
   } catch (error: unknown) {

@@ -113,6 +113,7 @@
 import { ref, computed, onMounted, onUnmounted, unref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { currentLoginPath } from "@/utils/loginShop";
 import { useNotificationStore } from "@/stores/notification";
 import { useRealtimeConnection } from "@/composables/useRealtimeConnection";
 import { useI18n } from "@/i18n";
@@ -208,7 +209,7 @@ const toggleNotifications = () => {
 
 const handleLogout = async () => {
   await authStore.logout();
-  router.push("/login");
+  router.push(currentLoginPath());
 };
 
 const getRoleLabel = (role?: UserRole) => {

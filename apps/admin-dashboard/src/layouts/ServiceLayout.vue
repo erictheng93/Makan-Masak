@@ -251,6 +251,7 @@ import { useRouter } from "vue-router";
 import { useI18n } from "@/i18n";
 import { useToast } from "vue-toastification";
 import { useAuthStore } from "@/stores/auth";
+import { currentLoginPath } from "@/utils/loginShop";
 import type { SystemNotification, UrgentOrderAlert } from "@/types";
 import {
   BellIcon,
@@ -346,7 +347,7 @@ const logout = async () => {
   });
   if (!confirmed) return;
   authStore.logout();
-  router.push("/login");
+  router.push(currentLoginPath());
 };
 
 const refreshData = () => {

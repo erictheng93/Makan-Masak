@@ -5,23 +5,32 @@ import { ref } from "vue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import EmployeeManagementView from "./EmployeeManagementView.vue";
 
-const { createUser, toastError } = vi.hoisted(() => ({
+const { createUser, toastError, toastSuccess } = vi.hoisted(() => ({
   createUser: vi.fn(),
   toastError: vi.fn(),
+  toastSuccess: vi.fn(),
 }));
 
 vi.mock("vue-router", () => ({
   useRoute: () => ({ path: "/dashboard/employees" }),
 }));
 vi.mock("@/i18n", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: ref("zh-TW") }),
+  useI18n: () => ({
+    t: (key: string, params?: Record<string, string>) =>
+      params ? `${key} ${Object.values(params).join(" ")}` : key,
+    locale: ref("zh-TW"),
+  }),
 }));
 vi.mock("vue-toastification", () => ({
-  useToast: () => ({ success: vi.fn(), error: toastError }),
+  useToast: () => ({ success: toastSuccess, error: toastError }),
 }));
 vi.mock("@/stores/auth", () => ({
-  useAuthStore: () => ({ restaurantId: "restaurant-1" }),
+  useAuthStore: () => ({
+    restaurantId: "restaurant-1",
+    user: { loginSlug: "noodle-bar" },
+  }),
 }));
+vi.mock("@/services/api", () => ({ api: { get: vi.fn() } }));
 vi.mock("@/services/leavesService", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("@/services/leavesService")>();
@@ -71,6 +80,18 @@ describe("EmployeeManagementView save", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     document.body.innerHTML = "";
+  });
+
+  it("tells the owner which link the new employee signs in at", async () => {
+    createUser.mockResolvedValue(undefined);
+    const wrapper = await openAndSubmit();
+    await flushPromises();
+
+    expect(toastSuccess).toHaveBeenCalledOnce();
+    expect(toastSuccess).toHaveBeenCalledWith(
+      expect.stringContaining(`${window.location.origin}/s/noodle-bar`),
+    );
+    wrapper.unmount();
   });
 
   it("sends one request when the form is submitted twice", async () => {

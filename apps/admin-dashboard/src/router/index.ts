@@ -27,6 +27,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false, titleKey: "pages.login" },
   },
   {
+    path: "/s/:slug",
+    name: "ShopLogin",
+    component: () => import("@/views/LoginView.vue"),
+    meta: { requiresAuth: false, titleKey: "pages.login" },
+  },
+  {
     path: "/forgot-password",
     name: "ForgotPassword",
     component: () => import("@/views/ForgotPasswordView.vue"),
@@ -699,7 +705,10 @@ router.beforeEach(async (to, _, next) => {
 
   // 對於不需要認證的路由
   if (to.meta.requiresAuth === false) {
-    if (to.name === "Login" && authStore.isAuthenticated) {
+    if (
+      (to.name === "Login" || to.name === "ShopLogin") &&
+      authStore.isAuthenticated
+    ) {
       // 已登入用戶訪問登入頁，優先回到原本要去的頁面，否則角色默認頁面
       return next(
         readLoginRedirect(to.query[LOGIN_REDIRECT_QUERY]) ??
