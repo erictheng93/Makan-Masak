@@ -123,3 +123,40 @@ namespace_id = "2002"
   limit = 30
   period = 60
 
+
+
+# === STAGING ENVIRONMENT ===
+# Placeholders (STAGING_*, __WORKERS_SUBDOMAIN__) are filled by
+# scripts/staging/provision.cjs. See docs/runbooks/staging.md.
+[env.staging]
+name = "makanmasak-realtime-staging"
+workers_dev = true
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+API_VERSION = "v1"
+CORS_ORIGIN = "https://makanmasak-customer-staging.pages.dev,https://makanmasak-admin-staging.pages.dev,https://makanmasak-kitchen-staging.pages.dev"
+
+[env.staging.durable_objects]
+bindings = [
+  { name = "REALTIME_SESSION", class_name = "RealtimeSession" }
+]
+
+# Same legacy-kv declaration as production, so staging rehearses the same
+# storage backend (see the comment on the top-level [[migrations]]).
+[[env.staging.migrations]]
+tag = "v1"
+new_classes = ["RealtimeSession"]
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "makanmasak-staging"
+database_id = "STAGING_D1_PLATFORM_ID"
+
+[[env.staging.kv_namespaces]]
+binding = "CACHE_KV"
+id = "STAGING_KV_CACHE_ID"
+
+[[env.staging.kv_namespaces]]
+binding = "TOKEN_BLACKLIST"
+id = "STAGING_KV_TOKEN_BLACKLIST_ID"

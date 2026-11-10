@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vue-tsc && vite build && node ../../scripts/check-csp-safe-bundle.cjs dist",
+    "build:staging": "node ../../scripts/staging/assert-ready.cjs .env.staging && vue-tsc && vite build --mode staging && node ../../scripts/check-csp-safe-bundle.cjs dist",
     "build:analyze": "cross-env ANALYZE=true vue-tsc && vite build",
     "preview": "vite preview --host",
     "typecheck": "vue-tsc --noEmit",
@@ -15,7 +16,8 @@
     "test:watch": "vitest",
     "test:unit": "vitest",
     "test:real-integration": "vitest --config vitest.real-integration.config.ts",
-    "deploy:prod": "wrangler pages deploy dist --project-name=makanmasak-customer --branch=main"
+    "deploy:prod": "wrangler pages deploy dist --project-name=makanmasak-customer --branch=main",
+    "deploy:staging": "pnpm run build:staging && wrangler pages deploy dist --project-name=makanmasak-customer-staging --branch=main"
   },
   "dependencies": {
     "@chenfengyuan/vue-qrcode": "^2.0.0",

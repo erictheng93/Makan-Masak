@@ -171,6 +171,7 @@ function checkProductionConfig(options = {}) {
     }
 
     validateProductionRuntimeVars(relativeFile, lines, violations);
+    validateStagingIsolation(relativeFile, lines, violations);
     validateDeploymentSecrets(
       relativeFile,
       lines,
@@ -180,6 +181,8 @@ function checkProductionConfig(options = {}) {
       warnings,
     );
   }
+
+  validateStagingEnvFiles(root, violations);
 
   return { violations, warnings, checkedFiles: wranglerFiles.length };
 }
@@ -203,6 +206,131 @@ function walk(dir, hits) {
     } else if (entry.name === "wrangler.toml") {
       hits.push(fullPath);
     }
+  }
+}
+
+// Staging is a full copy of the stack in the SAME Cloudflare account, so the
+// failure to guard against is a staging section that quietly points at a
+// production resource (a shared D1 would let a walkthrough write to real
+// data), or a production section that picked up a staging placeholder.
+const STAGING_NAMED_KEYS = new Set([
+  "database_name",
+  "bucket_name",
+  "queue",
+  "dead_letter_queue",
+  "index_name",
+  "dataset",
+  "service",
+  "script_name",
+]);
+const RESOURCE_ID_KEYS = new Set(["id", "database_id"]);
+
+function collectAssignments(lines) {
+  const out = [];
+  let env = "default";
+  let table = "";
+  lines.forEach((rawLine, index) => {
+    const line = rawLine.replace(/#.*/, "").trim();
+    const header = line.match(/^\[\[?([^\]]+)\]\]?$/);
+    if (header) {
+      ({ env, bindingType: table } = parseSection(header[1]));
+      return;
+    }
+    const match = line.match(/^([A-Za-z0-9_]+)\s*=\s*"([^"]*)"/);
+    if (match) {
+      out.push({ env, table, key: match[1], value: match[2], line: index + 1 });
+    }
+  });
+  return out;
+}
+
+function validateStagingIsolation(relativeFile, lines, violations) {
+  const all = collectAssignments(lines);
+  const staging = all.filter((entry) => entry.env === "staging");
+  const production = all.filter((entry) => entry.env === "production");
+  const fail = (entry, text) =>
+    violations.push({ file: relativeFile, line: entry.line, text });
+
+  for (const entry of production) {
+    if (/STAGING_|-staging\b|__WORKERS_SUBDOMAIN__/.test(entry.value)) {
+      fail(
+        entry,
+        `staging value in a production section: ${entry.key} = ${entry.value}`,
+      );
+    }
+  }
+
+  const productionIds = new Set(
+    production
+      .filter((entry) => RESOURCE_ID_KEYS.has(entry.key))
+      .map((entry) => entry.value),
+  );
+  const productionNames = new Set(
+    production
+      .filter((entry) => STAGING_NAMED_KEYS.has(entry.key))
+      .map((entry) => entry.value),
+  );
+
+  for (const entry of staging) {
+    if (entry.table === "routes" || entry.table === "route") {
+      fail(entry, "staging must not declare routes (workers.dev only)");
+    }
+    if (RESOURCE_ID_KEYS.has(entry.key) && productionIds.has(entry.value)) {
+      fail(
+        entry,
+        `staging references a production resource id: ${entry.value}`,
+      );
+    }
+    const isStagingName =
+      STAGING_NAMED_KEYS.has(entry.key) ||
+      (entry.key === "name" && entry.table === "");
+    if (isStagingName && !entry.value.endsWith("-staging")) {
+      fail(
+        entry,
+        `staging resource name must end in -staging: ${entry.key} = ${entry.value}`,
+      );
+    }
+    if (isStagingName && productionNames.has(entry.value)) {
+      fail(entry, `staging references a production resource: ${entry.value}`);
+    }
+    if (
+      entry.table === "vars" &&
+      /^(https?|wss?):\/\//.test(entry.value) &&
+      /(^|[/.,])makanmasak\.com(?=[:/,]|$)/.test(entry.value)
+    ) {
+      fail(entry, `staging var points at a production domain: ${entry.key}`);
+    }
+  }
+}
+
+// apps/*/.env.staging feed the staging frontend builds: a production host in
+// one would build a "staging" app that talks to production.
+function validateStagingEnvFiles(root, violations) {
+  let apps;
+  try {
+    apps = fs.readdirSync(path.join(root, "apps"), { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const app of apps) {
+    const rel = `apps/${app.name}/.env.staging`;
+    let text;
+    try {
+      text = fs.readFileSync(path.join(root, rel), "utf-8");
+    } catch {
+      continue;
+    }
+    text.split(/\r?\n/).forEach((line, index) => {
+      if (
+        /(^|[/.=,])makanmasak\.com(?=[:/,]|$)/.test(line.replace(/#.*/, ""))
+      ) {
+        violations.push({
+          file: rel,
+          line: index + 1,
+          text: "staging env file points at a production domain",
+        });
+      }
+    });
   }
 }
 

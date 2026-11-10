@@ -474,3 +474,135 @@ crons = [
 # [[env.independent-template.r2_buckets]]
 # binding = "BACKUP_STORAGE"
 # bucket_name = "makanmasak-backups-{TENANT_CODE}"
+
+
+# ========================================
+# === STAGING ENVIRONMENT ===
+# ========================================
+# A full, isolated copy of the stack in the same Cloudflare account. Every
+# resource name ends in -staging; every STAGING_* id below is a placeholder that
+# `node scripts/staging/provision.cjs --apply` replaces with the real id. Nothing
+# here may point at a production resource (scripts/check-production-config.cjs
+# enforces that). See docs/runbooks/staging.md.
+#
+# `__WORKERS_SUBDOMAIN__` is the account's workers.dev subdomain, substituted by
+# the same script (--workers-subdomain).
+[env.staging]
+name = "makanmasak-api-staging"
+workers_dev = true
+
+[env.staging.vars]
+# NODE_ENV stays "production" on purpose: strong-key, CORS and auth code paths
+# must behave as they do in production. ENVIRONMENT is what says "staging".
+NODE_ENV = "production"
+ENVIRONMENT = "staging"
+API_VERSION = "v1"
+ANALYTICS_DATASET = "makanmasak-metrics-staging"
+CLOUDFLARE_ACCOUNT_ID = "bdddc08c066a9abc285d75fe5947a468"
+API_BASE_URL = "https://makanmasak-api-staging.__WORKERS_SUBDOMAIN__.workers.dev"
+CLIENT_BASE_URL = "https://makanmasak-customer-staging.pages.dev"
+CORS_ORIGIN = "https://makanmasak-customer-staging.pages.dev,https://makanmasak-admin-staging.pages.dev,https://makanmasak-kitchen-staging.pages.dev"
+LOG_LEVEL = "info"
+MAX_REQUEST_SIZE = "5MB"
+CACHE_TTL = "600"
+RATE_LIMIT_REQUESTS = "100"
+DEPLOYMENT_MODE = "saas"
+PLATFORM_VERSION = "1.0.0"
+CENTRAL_API_URL = "https://makanmasak-management-api-staging.__WORKERS_SUBDOMAIN__.workers.dev"
+REALTIME_WS_URL = "wss://makanmasak-realtime-staging.__WORKERS_SUBDOMAIN__.workers.dev"
+DISCOVERY_EMBEDDING_MODEL = "@cf/baai/bge-m3"
+# "warn", not "enforce": staging shops have no subscription row, and the
+# walkthrough must not be blocked by plan quotas.
+QUOTA_ENFORCEMENT_MODE = "warn"
+NOTIFICATION_FROM_EMAIL = "notifications@makanmasak.com"
+OTP_SMS_BRAND = "MakanMasak-Staging"
+
+[[env.staging.send_email]]
+name = "NOTIFICATION_EMAIL"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "makanmasak-staging"
+database_id = "STAGING_D1_PLATFORM_ID"
+migrations_dir = "../../packages/database/migrations_fresh"
+
+[[env.staging.services]]
+binding = "MANAGEMENT_API"
+service = "makanmasak-management-api-staging"
+
+[[env.staging.kv_namespaces]]
+binding = "CACHE_KV"
+id = "STAGING_KV_CACHE_ID"
+
+[[env.staging.kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "STAGING_KV_RATELIMIT_ID"
+
+[[env.staging.kv_namespaces]]
+binding = "BACKUP_KV"
+id = "STAGING_KV_BACKUP_ID"
+
+[[env.staging.kv_namespaces]]
+binding = "TOKEN_BLACKLIST"
+id = "STAGING_KV_TOKEN_BLACKLIST_ID"
+
+[[env.staging.ratelimits]]
+name = "GLOBAL_RATE_LIMITER"
+namespace_id = "1001"
+
+  [env.staging.ratelimits.simple]
+  limit = 100
+  period = 60
+
+[[env.staging.ratelimits]]
+name = "AUTH_TOKEN_RATE_LIMITER"
+namespace_id = "1002"
+
+  [env.staging.ratelimits.simple]
+  limit = 20
+  period = 60
+
+[[env.staging.ratelimits]]
+name = "PUBLIC_RESERVATION_MUTATION_RATE_LIMITER"
+namespace_id = "1003"
+
+  [env.staging.ratelimits.simple]
+  limit = 5
+  period = 60
+
+[[env.staging.r2_buckets]]
+binding = "BACKUP_STORAGE"
+bucket_name = "makanmasak-backups-staging"
+
+[[env.staging.durable_objects.bindings]]
+name = "REALTIME_SESSION"
+class_name = "RealtimeSession"
+script_name = "makanmasak-realtime-staging"
+
+[[env.staging.queues.producers]]
+binding = "SEARCH_SYNC_QUEUE"
+queue = "makanmasak-search-sync-staging"
+
+[[env.staging.queues.consumers]]
+queue = "makanmasak-search-sync-staging"
+max_batch_size = 25
+max_batch_timeout = 10
+max_retries = 3
+dead_letter_queue = "makanmasak-search-sync-dlq-staging"
+
+[env.staging.ai]
+binding = "AI"
+
+[[env.staging.vectorize]]
+binding = "DISCOVERY_VECTORIZE"
+index_name = "makanmasak-discovery-staging"
+
+[[env.staging.analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "makanmasak-metrics-staging"
+
+# The top-level [triggers] crons are inherited, so staging has to say it wants
+# none: billing close, payment reconciliation and credit expiry have no business
+# running against a walkthrough database.
+[env.staging.triggers]
+crons = []

@@ -69,6 +69,7 @@ Operational playbooks for production incidents and migrations.
 | [runbooks/backup-restore-runbook.md](./runbooks/backup-restore-runbook.md)     | D1 backup/restore procedure                             |
 | [runbooks/incident-triage-runbook.md](./runbooks/incident-triage-runbook.md)   | General incident triage steps                           |
 | [runbooks/rollback-runbook.md](./runbooks/rollback-runbook.md)                 | Deployment rollback procedure                            |
+| [runbooks/staging.md](./runbooks/staging.md)                                   | Staging stack: provision, seed, deploy, reset, teardown  |
 | [incidents/](./incidents/)                                                     | Post-incident write-ups (INC-NNN, dated reports)         |
 
 ### Feature Documentation

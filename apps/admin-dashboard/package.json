@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vue-tsc && vite build && node ../../scripts/check-csp-safe-bundle.cjs dist",
+    "build:staging": "node ../../scripts/staging/assert-ready.cjs .env.staging && vue-tsc && vite build --mode staging && node ../../scripts/check-csp-safe-bundle.cjs dist",
     "build:analyze": "cross-env ANALYZE=true vue-tsc && vite build",
     "preview": "vite preview --host",
     "typecheck": "cross-env NODE_OPTIONS='--max-old-space-size=6144' vue-tsc -p tsconfig.json --noEmit && cross-env NODE_OPTIONS='--max-old-space-size=6144' vue-tsc -p tsconfig.test.json --noEmit",
@@ -16,7 +17,8 @@
     "test:coverage": "vitest --coverage",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
-    "deploy:prod": "wrangler pages deploy dist --project-name=makanmasak-admin --branch=main"
+    "deploy:prod": "wrangler pages deploy dist --project-name=makanmasak-admin --branch=main",
+    "deploy:staging": "pnpm run build:staging && wrangler pages deploy dist --project-name=makanmasak-admin-staging --branch=main"
   },
   "dependencies": {
     "@headlessui/vue": "^1.7.0",

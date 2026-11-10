@@ -9,6 +9,7 @@
     "build": "tsc && wrangler deploy --dry-run --env=\"\"",
     "build:prod": "tsc && wrangler deploy --dry-run --env production",
     "deploy:prod": "wrangler deploy --env production",
+    "deploy:staging": "node ../../scripts/staging/assert-ready.cjs wrangler.toml && wrangler deploy --env staging",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",

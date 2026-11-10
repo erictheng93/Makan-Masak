@@ -137,3 +137,58 @@ name = "ONBOARDING_NOTIFICATION_EMAIL"
 # - PLATFORM_NOTIFICATION_EMAIL_FROM: Sender on a domain onboarded to
 #   Cloudflare Email Service
 # - CF_API_TOKEN / CF_ACCOUNT_ID: Legacy fallback names for platform provisioning
+
+
+# === STAGING ENVIRONMENT ===
+# Placeholders (STAGING_*, __WORKERS_SUBDOMAIN__) are filled by
+# scripts/staging/provision.cjs. See docs/runbooks/staging.md.
+[env.staging]
+name = "makanmasak-management-api-staging"
+workers_dev = true
+
+[env.staging.vars]
+NODE_ENV = "production"
+ENVIRONMENT = "staging"
+API_VERSION = "v1"
+API_BASE_URL = "https://makanmasak-management-api-staging.__WORKERS_SUBDOMAIN__.workers.dev"
+CORS_ORIGIN = "https://makanmasak-admin-staging.pages.dev"
+LOG_LEVEL = "info"
+ONBOARDING_APP_URL = "https://makanmasak-onboarding-staging.pages.dev"
+ADMIN_APP_URL = "https://makanmasak-admin-staging.pages.dev"
+# No applicant email from staging.
+ONBOARDING_EMAIL_ENABLED = "false"
+
+[[env.staging.d1_databases]]
+binding = "MANAGEMENT_DB"
+database_name = "makanmasak-management-staging"
+database_id = "STAGING_D1_MANAGEMENT_ID"
+migrations_dir = "migrations"
+
+[[env.staging.d1_databases]]
+binding = "PLATFORM_DB"
+database_name = "makanmasak-staging"
+database_id = "STAGING_D1_PLATFORM_ID"
+migrations_dir = "../../packages/database/migrations_fresh"
+
+[[env.staging.kv_namespaces]]
+binding = "CACHE_KV"
+id = "STAGING_KV_CACHE_ID"
+
+[[env.staging.kv_namespaces]]
+binding = "DEPLOYMENT_STATUS_KV"
+id = "STAGING_KV_DEPLOYMENT_STATUS_ID"
+
+[[env.staging.r2_buckets]]
+binding = "BUNDLE_STORAGE"
+bucket_name = "makanmasak-management-bundles-staging"
+
+[[env.staging.r2_buckets]]
+binding = "AUDIT_ARCHIVE"
+bucket_name = "makanmasak-backups-staging"
+
+# No cron on staging (production's 18:30 UTC audit archive).
+[env.staging.triggers]
+crons = []
+
+[[env.staging.send_email]]
+name = "ONBOARDING_NOTIFICATION_EMAIL"

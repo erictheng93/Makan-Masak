@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
+    "build:staging": "node ../../scripts/staging/assert-ready.cjs .env.staging && vite build --mode staging",
     "build:full": "vue-tsc && vite build",
     "preview": "vite preview --host",
     "typecheck": "vue-tsc --noEmit",
@@ -16,7 +17,8 @@
     "test:e2e": "playwright test --config=playwright.config.ts",
     "test:real-integration": "vitest --config vitest.real-integration.config.ts",
     "test:coverage": "vitest run --coverage",
-    "deploy:prod": "pnpm run build && wrangler pages deploy dist --project-name=makanmasak-kitchen --branch=main"
+    "deploy:prod": "pnpm run build && wrangler pages deploy dist --project-name=makanmasak-kitchen --branch=main",
+    "deploy:staging": "pnpm run build:staging && wrangler pages deploy dist --project-name=makanmasak-kitchen-staging --branch=main"
   },
   "dependencies": {
     "@headlessui/vue": "^1.7.0",

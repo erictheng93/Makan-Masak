@@ -87,3 +87,49 @@ binding = "DB"
 database_name = "makanmakan-local"
 # Provision with: wrangler d1 create makanmakan-local --local
 database_id = "local"
+
+
+# === STAGING ENVIRONMENT ===
+# Placeholders (STAGING_*, __WORKERS_SUBDOMAIN__) are filled by
+# scripts/staging/provision.cjs. See docs/runbooks/staging.md.
+[env.staging]
+name = "makanmasak-image-processor-staging"
+workers_dev = true
+
+[env.staging.vars]
+NODE_ENV = "production"
+ENVIRONMENT = "staging"
+API_VERSION = "v1"
+IMAGE_API_BASE_URL = "https://makanmasak-image-processor-staging.__WORKERS_SUBDOMAIN__.workers.dev"
+CORS_ORIGIN = "https://makanmasak-admin-staging.pages.dev"
+MAX_IMAGE_SIZE_MB = "10"
+MAX_UPLOAD_REQUEST_SIZE_MB = "12"
+ALLOWED_MIME_TYPES = "image/jpeg,image/png,image/webp,image/gif"
+DEFAULT_VARIANTS = "thumbnail,small,medium,large,original"
+THUMBNAIL_SIZE = "150x150"
+SMALL_SIZE = "300x300"
+MEDIUM_SIZE = "600x600"
+LARGE_SIZE = "1200x1200"
+MAX_UPLOADS_PER_MINUTE = "20"
+MAX_TRANSFORMS_PER_MINUTE = "100"
+
+# The top-level cron is inherited; staging runs no scheduled cleanup.
+[env.staging.triggers]
+crons = []
+
+[[env.staging.kv_namespaces]]
+binding = "IMAGE_CACHE"
+id = "STAGING_KV_IMAGE_CACHE_ID"
+
+[[env.staging.kv_namespaces]]
+binding = "TOKEN_BLACKLIST"
+id = "STAGING_KV_TOKEN_BLACKLIST_ID"
+
+[[env.staging.r2_buckets]]
+binding = "IMAGES_BUCKET"
+bucket_name = "makanmasak-images-staging"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "makanmasak-staging"
+database_id = "STAGING_D1_PLATFORM_ID"
