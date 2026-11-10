@@ -16,7 +16,7 @@
     "test:watch": "vitest",
     "test:unit": "vitest",
     "test:real-integration": "vitest --config vitest.real-integration.config.ts",
-    "deploy:prod": "wrangler pages deploy dist --project-name=makanmasak-customer --branch=main",
+    "deploy:prod": "node ../../scripts/require-clean-build.cjs && pnpm run build && wrangler pages deploy dist --project-name=makanmasak-customer --branch=main",
     "deploy:staging": "pnpm run build:staging && wrangler pages deploy dist --project-name=makanmasak-customer-staging --branch=main"
   },
   "dependencies": {
