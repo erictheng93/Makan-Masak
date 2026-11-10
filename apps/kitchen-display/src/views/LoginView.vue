@@ -259,6 +259,8 @@ const handleKeyDown = (event: KeyboardEvent) => {
 };
 
 // 生命週期
+let focusTimer: ReturnType<typeof setTimeout> | undefined;
+
 onMounted(async () => {
   // 初始化設定
   settingsStore.initialize();
@@ -277,7 +279,7 @@ onMounted(async () => {
   document.addEventListener("keydown", handleKeyDown);
 
   // 聚焦到用戶名稱欄位
-  setTimeout(() => {
+  focusTimer = setTimeout(() => {
     const usernameInput = document.getElementById("username");
     if (usernameInput) {
       usernameInput.focus();
@@ -285,8 +287,10 @@ onMounted(async () => {
   }, 100);
 });
 
-// 清理
+// 清理 — the focus timer must not outlive the view (it touched `document`
+// after a test unmounted the page, failing CI with an uncaught error).
 onUnmounted(() => {
+  clearTimeout(focusTimer);
   document.removeEventListener("keydown", handleKeyDown);
 });
 </script>
