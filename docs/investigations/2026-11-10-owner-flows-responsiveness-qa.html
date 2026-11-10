@@ -203,8 +203,8 @@ footer{
     <span><b>帳號</b> <code>demo</code>（role 1 店主）</span>
     <span><b>餐廳</b> Demo 小館 <code>01a0d2b6-…8e11</code></span>
     <span><b>日期</b> 2026-11-10</span>
-    <span><b>commits</b> <code>fc16aee15</code> … <code>3e070eb0b</code>（11 個）、<code>3cdf81363</code>、<code>afd6cbe0d</code>、<code>2acec86fa</code> … <code>ace793ca0</code>（4 個）</span>
-    <span><b>部署</b> API <code>baf16560</code>、admin <code>index-DXodqv27.js</code>、image-processor <code>f47f4f42</code></span>
+    <span><b>commits</b> <code>fc16aee15</code> … <code>3e070eb0b</code>（11 個）、<code>3cdf81363</code>、<code>afd6cbe0d</code>、<code>2acec86fa</code> … <code>ace793ca0</code>（4 個）、<code>55c16803f</code> … <code>c5cf3d720</code>（第三輪與店家登入）</span>
+    <span><b>部署</b> API <code>8905d372</code>、admin <code>index-D9su3Aq2.js</code>、kitchen <code>index-Djoketd1.js</code>、image-processor <code>f47f4f42</code>；D1 至 <code>0042</code></span>
   </div>
 </header>
 
@@ -215,6 +215,7 @@ footer{
       走查共找出 <b>13 個</b>點擊後反應不良的地方，最嚴重的是<b>新增菜品要等 5.7 秒、期間畫面完全沒有回饋</b>，店主很可能重按而建出重複菜品。根因分兩層：前端寫入時沒有載入狀態、也不做樂觀更新；後端每次菜單寫入都要等快取清除、搜尋索引同步、即時推播全部跑完才回應。</p>
     <p>
       兩層都已修好並上線。現在每個按鈕都在 0.1 秒內有回饋，新增菜品伺服器回應 0.44 秒，顧客端菜單約 2.5 秒內反映店主的修改。修復過程另外發現並處理了 3 個問題：刪掉的菜在管理畫面又冒出來、顧客可能把舊菜單寫回快取，以及改價／刪菜從來沒有清掉顧客端的外層快取。最後一項早在這次修改之前就存在。</p>
+    <p>之後又走查了店主總覽、員工管理、優惠券、POS 與廚房顯示，修掉會讓店主卡住或畫面閃動的問題，並把員工帳號改成每家店各自唯一：每家店有自己的登入網址，登入鎖定改為按帳號計算，API 與兩個前端都設了回滾下限。處理訂單與 POS 結帳因為 Demo 小館拒收訂單，仍未走查。</p>
   </div>
 
   <div class="tablewrap">
@@ -234,6 +235,11 @@ footer{
         <tr><td>店主總覽</td><td>所有數字顯示「--」直到 1.7 秒的健康檢查回來</td><td>0.94 秒出現數字；健康檢查另外填入</td></tr>
         <tr><td>員工管理頁</td><td>分兩輪請求，約 2 秒完成</td><td>5 個請求同時發出，0.86 秒完成</td></tr>
         <tr><td>離開儀表板後進菜單</td><td>即時連線重連，徽章顯示「Reconnecting」，菜單再下載一次</td><td>沿用原連線，不再要新 token，菜單只下載一次</td></tr>
+        <tr><td>新增員工失敗（例如密碼不合規）</td><td>對話框毫無反應，店主卡住；連點會送兩次</td><td>錯誤顯示在對應欄位下，密碼規則事先顯示並檢查，連點只送一次</td></tr>
+        <tr><td>員工帳號名稱重複</td><td>伺服器回 500，跳出「系統暫時無法處理」與中文錯誤</td><td>409，「Username already exists」顯示在帳號欄位</td></tr>
+        <tr><td>POS「開始班次」</td><td>沒選收銀機時按了沒反應；會自動選到已停用的收銀機</td><td>提示「請先選擇收銀機」；只自動選啟用中的收銀機</td></tr>
+        <tr><td>優惠券修改</td><td>伺服器 1.58 秒（新增 2.19、停用 1.93）</td><td>伺服器 0.46 秒，0.88 秒畫面更新</td></tr>
+        <tr><td>廚房顯示閒置時</td><td>沒有訂單時每 30 秒整個畫面白色閃一下</td><td>背景更新時畫面完全不變</td></tr>
       </tbody>
     </table>
   </div>
@@ -411,6 +417,101 @@ footer{
       <div class="evidence"><span class="lbl">驗證</span>5 個請求在 2 ms 內全部發出，0.86 秒完成。</div>
     </div>
   </div>
+
+  <h3>第三輪：員工管理、優惠券與 POS</h3>
+  <p>接著以店主身分走查員工管理、優惠券與 POS 收銀機管理。<b>處理訂單與 POS 結帳無法完整走查</b>：伺服器對 Demo 小館的所有訂單都回 <code>403 DEMO_RESTAURANT</code>，沒有訂單可處理或收款。</p>
+
+  <div class="finding blocker">
+    <div class="finding-h"><span class="id">E2</span><h4>新增員工失敗時對話框毫無反應</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>伺服器回傳逐欄位的錯誤，但表單什麼都不顯示，對話框就停在那裡。Email 沒有必填標記，空白卻會失敗（前端送出 <code>""</code>，伺服器其實允許省略）；密碼規則沒有寫在任何地方，<code>#</code> 也不被接受（只接受 <code>@$!%*?&amp;</code>）。連點會送出兩次新增。</p>
+      <div class="evidence"><span class="lbl">修復</span>伺服器錯誤對應到欄位顯示；空白 email 不送出；密碼規則顯示在欄位下並在送出前以同一規則檢查；儲存中按鈕停用（<code>3d859218c</code>）。</div>
+      <div class="evidence"><span class="lbl">驗證</span>production：弱密碼在前端擋下、一個請求都沒送；連點只送一次，按鈕顯示「Saving...」。</div>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">E3</span><h4>帳號名稱重複時伺服器回 500</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p><code>UserService.createUser</code> 對重複帳號丟出一般 <code>Error</code>，被轉成 500，店主看到「系統暫時無法處理」和一個中文的「系統錯誤」提示。</p>
+      <div class="evidence"><span class="lbl">修復</span>帳號或 email 重複改回 409，並附上欄位資訊，對話框直接把錯誤顯示在該欄位（<code>36700c3da</code>）。</div>
+      <div class="evidence"><span class="lbl">驗證</span>production：以已存在的帳號測試，回 409（0.52 秒），錯誤顯示在帳號欄位，沒有建立任何資料。</div>
+    </div>
+  </div>
+
+  <div class="finding blocker">
+    <div class="finding-h"><span class="id">W1</span><h4>POS「開始班次」按了沒反應</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>沒選收銀機時，按鈕看起來可以按，卻直接 return，什麼都不說（<code>POSManagementView.vue:1350</code>）；剛新增的收銀機不會被選取；開班、關班、新增、停用收銀機失敗時只寫進 console。</p>
+      <div class="evidence"><span class="lbl">修復</span>只有一台啟用中的收銀機時自動選取，多台時提示「請先選擇收銀機」；新增後自動選取新收銀機；失敗顯示伺服器的錯誤訊息；新增收銀機時按鈕停用（<code>abfc9a563</code>）。</div>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">W2</span><h4>POS 自動選到已停用的收銀機</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>進頁時不管狀態就選第一台收銀機；只剩停用的收銀機時，「開始班次」會提議在一台已停用的收銀機上開班。</p>
+      <div class="evidence"><span class="lbl">修復</span>進頁只選第一台啟用中的收銀機；選中的收銀機已停用時視同未選（<code>83114cbcf</code>）。</div>
+      <div class="evidence"><span class="lbl">驗證</span>production：只剩停用的收銀機時顯示「Register: Not Selected」，按開始班次提示「Select a register first」，沒有開出對話框。</div>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">C1</span><h4>優惠券寫入 1.6–2.2 秒</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>原因與 M6 相同：edge-cache 中介層在回應前同步清掉 <code>/coupons</code> 相關快取（店主寫入時以登入者的餐廳為範圍），要好幾趟 KV 往返。</p>
+      <div class="evidence"><span class="lbl">修復</span>優惠券的新增、修改、停用、刪除改用與菜單相同的延後清除：先回應，再依序清查詢快取、edge 快取，3 秒後再掃一次（<code>55c16803f</code>）。</div>
+      <div class="evidence"><span class="lbl">驗證</span>production：修改優惠券伺服器 0.46 秒（原 1.58 秒）。</div>
+    </div>
+  </div>
+
+  <h3>員工帳號改為「每家店各自唯一」</h3>
+  <p>原本員工帳號名稱全平台唯一，A 店用了「chef」，B 店就不能再用，店主不會知道原因。改成每家店各自唯一後，登入必須知道是哪家店，所以每家店有自己的登入網址 <code>/s/{店家代碼}</code>。</p>
+
+  <div class="finding data">
+    <div class="finding-h"><span class="id">L1</span><h4>店家代碼、店家登入網址與每店唯一的帳號</h4><span class="tag fixed">已上線</span></div>
+    <div class="finding-b">
+      <ul class="plain">
+        <li><b>資料庫：</b><code>0041</code> 新增 <code>restaurants.login_slug</code>（Demo 小館為 <code>demo</code>，其餘 QA 店家為 <code>shop-xxxxxxxx</code>）；<code>0042</code> 把全平台唯一的帳號索引換成「同店唯一」與「平台管理員之間唯一」，另加一般索引讓不帶店家的登入不必掃整張表。</li>
+        <li><b>登入：</b>可帶店家代碼；沒帶且有多家店同名時回 <code>SHOP_REQUIRED</code>，在驗證密碼之前就回應；平台管理員不需店家代碼。忘記密碼與新增員工的重複檢查也改成以店家為範圍。</li>
+        <li><b>前端：</b>管理後台與廚房顯示新增 <code>/s/{代碼}</code> 登入頁，裝置記住上次的店家，登出與逾時回到該店的登入頁；設定頁可查看、複製、修改店家代碼；新增員工後提示該員工的登入網址。</li>
+      </ul>
+      <div class="evidence"><span class="lbl">上線順序</span>先在 production 結構副本上重放兩個遷移；手動套用 <code>0041</code> 並記入 <code>d1_migrations</code>；部署 API、管理後台、廚房顯示；驗證後再手動套用 <code>0042</code>。每一步都不影響當下的登入。</div>
+      <div class="evidence"><span class="lbl">驗證</span>production：兩個 app 的 <code>/s/demo</code> 都顯示 Demo 小館，無效代碼顯示「登入連結無效」；未知帳號與未知店家都回相同的 <code>INVALID_CREDENTIALS</code>；設定頁顯示兩個登入網址；店主從 <code>/s/demo</code>、廚房測試帳號從廚房 <code>/s/demo</code> 實際登入成功。</div>
+      <p>commits：<code>2557d39be</code>、<code>41c4a88d7</code>、<code>45df9560f</code>、<code>b0897e9c1</code>，及最終審查補上的測試修正與索引。</p>
+    </div>
+  </div>
+
+  <div class="finding blocker">
+    <div class="finding-h"><span class="id">L2</span><h4>登入失敗鎖定原本只按帳號名稱計算</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>帳號鎖定計數器的鍵是 <code>failed-login:{username}</code>。改成每店唯一後，A 店有人一直猜「chef」的密碼，B 店的「chef」會一起被鎖住。</p>
+      <div class="evidence"><span class="lbl">修復</span>帳號鎖定改成以解析後的帳號（<code>users.id</code>）計算，在找到正確店家的員工之後、驗證密碼之前檢查；登入前的節流只用 IP 或「店家＋帳號＋IP」，不會鎖帳號；<code>SHOP_REQUIRED</code> 與未知店家、帳號都不計數。攻擊者能猜的次數沒有比以前多：每個帳號、每個 IP 在 15 分鐘內各 5 次和 10 次（<code>b85b18555</code>）。</div>
+      <div class="evidence"><span class="lbl">驗證</span>真 D1 整合測試：A 店的 chef 被鎖住時 B 店的 chef 仍能登入；同一帳號帶與不帶店家代碼的失敗累計在同一個計數器。<code>0042</code> 在這項修正部署並驗證之後才套用。</div>
+    </div>
+  </div>
+
+  <div class="finding data">
+    <div class="finding-h"><span class="id">L3</span><h4>舊版本回滾會讓同名員工登不進去</h4><span class="tag fixed">已處理</span></div>
+    <div class="finding-b">
+      <p><code>0042</code> 之後，舊版 API 只靠帳號名稱找人、按帳號名稱鎖定；舊版管理後台與廚房顯示沒有店家登入頁。一旦兩家店有同名員工，退回這些版本就會登入錯人、互相鎖住，或完全登不進去。</p>
+      <div class="evidence"><span class="lbl">處理</span>
+        API：<code>apps/api/rollback-floor.json</code> 記錄下限 commit，<code>pnpm rollback:api &lt;版本&gt;</code> 拒絕低於下限、未標記或未提交程式碼部署的版本，<code>--dry-run</code> 只檢查，未知參數直接中止；每次 API 部署都標記 commit（<code>032dbacf0</code>、<code>ed9da8594</code>）。<br>
+        前端：兩個 app 各有 <code>rollback-floor.json</code>；wrangler 沒有 Pages 回滾指令，所以 <code>pnpm rollback:check &lt;admin|kitchen&gt; &lt;部署&gt;</code> 是在 Cloudflare 後台點「Rollback」前必跑的檢查（<code>c5cf3d720</code>）。回滾手冊與 CLAUDE.md 已更新。</div>
+      <div class="evidence"><span class="lbl">驗證</span>對 production 實際版本：API 舊版 <code>328cb61c</code> 與管理後台舊版 <code>4512ec32</code> 被拒並說明原因；現行版本判定安全。</div>
+    </div>
+  </div>
+
+  <h3>廚房顯示</h3>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">K1</span><h4>閒置時每 30 秒整個畫面閃白一下</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>每次抓訂單（每 30 秒自動更新、即時連線恢復、每個操作之後）都會把 loading 設為真；畫面在 loading 且沒有訂單時，會隱藏「沒有訂單」並升起全螢幕的白色模糊遮罩。Demo 小館目前沒有訂單，所以整個畫面每 30 秒閃一次。</p>
+      <div class="evidence"><span class="lbl">修復</span>遮罩與空狀態只看「第一次載入」；背景更新不再改變畫面，頂部的重新整理按鈕仍顯示正在更新（<code>8009f5b60</code>）。</div>
+      <div class="evidence"><span class="lbl">驗證</span>production 錄製 75 秒、經過兩次自動更新：遮罩出現 0 次，150 次取樣中畫面內容變化 0 次。</div>
+    </div>
+  </div>
 </section>
 
 <section>
@@ -455,6 +556,22 @@ footer{
       <div class="evidence"><span class="lbl">處理</span><code>3e070eb0b</code> 讓測試直接 import <code>DeferredCacheWork</code>；之後的推送都改成閘門通過才執行。</div>
     </div>
   </div>
+
+  <div class="finding blocker">
+    <div class="finding-h"><span class="id">P2</span><h4>流程事故：測試回滾保護時對 production 執行了一次回滾</h4><span class="tag fixed">已處理</span></div>
+    <div class="finding-b">
+      <p>測試 <code>rollback:api</code> 時帶了一個當時不存在的 <code>--dry-run-check</code> 參數，腳本忽略它並真的執行了 <code>wrangler rollback</code>。目標剛好是正在服務的版本 <code>8905d372</code>，所以 production 從 <code>8905d372</code> 換到 <code>8905d372</code>：程式碼相同，沒有中斷。</p>
+      <div class="evidence"><span class="lbl">處理</span>腳本遇到未知參數一律中止，並加入真正的 <code>--dry-run</code>。</div>
+    </div>
+  </div>
+
+  <div class="finding data">
+    <div class="finding-h"><span class="id">P3</span><h4>測試資料與誤建的測試帳號</h4><span class="tag fixed">已清理</span></div>
+    <div class="finding-b">
+      <p>走查留下的測試資料無法從介面刪除：優惠券 <code>QATEST10</code>、收銀機「QA 測試收銀機」與它的 1 筆班次、2 筆現金異動、測試員工 <code>qatmp384813</code>。驗證員工表單時又誤建了帳號「chef」（以為它已存在），在帳號全平台唯一的期間佔住了這個常見名稱。</p>
+      <div class="evidence"><span class="lbl">處理</span>確認在所有指向這些資料的欄位都沒有引用後，先備份 7 筆，再以精準 ID 刪除；刪後各表為 0 筆，相關 10 張表沒有孤兒資料。之後的重複帳號測試改用確定存在、受唯一索引保護的帳號。</div>
+    </div>
+  </div>
 </section>
 
 <section>
@@ -477,10 +594,15 @@ footer{
         <tr><td>第四批</td><td class="mono">（未變）</td><td class="mono">（未變）</td><td>I1：只部署 image-processor，版本 <code>f47f4f42</code></td></tr>
         <tr><td>第五批</td><td class="mono">（未變）</td><td class="mono">index-BXPn2qaW.js</td><td>N4：只部署 admin dashboard</td></tr>
         <tr><td>第六批</td><td class="mono">（未變）</td><td class="mono">index-DXodqv27.js</td><td>H1、H2、R1、E1：只部署 admin dashboard</td></tr>
+        <tr><td>第七批</td><td class="mono">4cea5659</td><td class="mono">index-ChKHCmkO.js</td><td>E2、W1、C1</td></tr>
+        <tr><td>第八批</td><td class="mono">328cb61c</td><td class="mono">index-DYjeq6sg.js</td><td>E3、W2</td></tr>
+        <tr><td>第九批</td><td class="mono">8905d372</td><td class="mono">index-D9su3Aq2.js</td><td>L1、L2：先手動套用 <code>0041</code>；廚房顯示 <code>index-Djl86-6s.js</code></td></tr>
+        <tr><td>第十批</td><td class="mono">（未變）</td><td class="mono">（未變）</td><td>手動套用 <code>0042</code>：帳號改為每店唯一</td></tr>
+        <tr><td>第十一批</td><td class="mono">（未變）</td><td class="mono">（未變）</td><td>K1：只部署廚房顯示 <code>index-Djoketd1.js</code></td></tr>
       </tbody>
     </table>
   </div>
-  <p class="note"><b>回滾點</b>：API <code>7f102d28</code>、admin bundle <code>index-BXPn2qaW.js</code>（第六批前）、image-processor <code>98bd5732</code>。</p>
+  <p class="note warn"><b>回滾下限（取代先前列的回滾點）</b>：<code>0042</code> 之後，第九批以前的 API、管理後台和廚房顯示版本都<b>不能再回滾</b>，包括本報告先前列出的 API <code>7f102d28</code>、<code>328cb61c</code> 與 admin <code>index-BXPn2qaW.js</code>、<code>index-DYjeq6sg.js</code>、廚房 <code>index-F1y7Lrqq.js</code>。API 只能用 <code>pnpm rollback:api</code> 回滾；兩個前端回滾前必須先跑 <code>pnpm rollback:check</code>。image-processor 不受影響，仍可回滾到 <code>98bd5732</code>。</p>
 </section>
 
 <section>
@@ -494,13 +616,18 @@ footer{
       <li><b>N2 的 focus 外框</b>是推測的原因，還沒在真實瀏覽器確認。</li>
       <li><b>其他裝置讀菜單：</b>廚房顯示不讀菜單；管理端的讀取都帶登入憑證，本來就略過 edge 快取，只有內層查詢快取在清除生效前約 1 秒可能是舊的。</li>
       <li><b>R1 的根因</b>是推論，沒有逐步追到；兩條實測路線都沒再重現，但沒有從每一頁出發試過。</li>
-      <li><b>還沒走查的店主流程：</b>處理訂單、POS 結帳、員工管理、優惠券。這些是每天點最多的地方，值得再走一輪。</li>
+      <li><b>處理訂單與 POS 結帳</b>仍未走查：Demo 小館拒收訂單（<code>DEMO_RESTAURANT</code>），需要一家非示範的測試餐廳或本機環境。</li>
+      <li><b>員工與 POS 的其他等待：</b>員工新增、修改、停用、移除後仍會重新載入整份名單；選擇收銀機 1.5 秒，開班要三輪請求共約 2.2 秒；訂單頁的統計、收銀機管理的促銷都等前一個請求完成才開始。</li>
+      <li><b>停用優惠券與停用收銀機</b>沒有確認步驟，誤觸立即生效；要不要加是產品決定。</li>
+      <li><b>全域錯誤處理</b>對伺服器錯誤（5xx）的提示仍寫死中文「系統錯誤:」前綴，不管介面語言；重複帳號這類欄位錯誤會同時出現在欄位與一則提示中。</li>
+      <li><b>店家登入：</b>重設密碼信件的連結不帶店家代碼（頁面會改用這台裝置記住的店家）；在兩個 <code>/s/</code> 連結之間切換而不重新整理時，頁面仍顯示第一家店；本機種子資料的店家沒有店家代碼。</li>
+      <li><b>L2 的鎖定隔離</b>以真 D1 整合測試驗證；為了不影響真實帳號，沒有在 production 對真實帳號輸入錯誤密碼。</li>
     </ul>
   </div>
 </section>
 
 <footer>
-  2026-11-10 · production 走查與修復 · commits <code>fc16aee15</code>…<code>3e070eb0b</code>、<code>3cdf81363</code>、<code>afd6cbe0d</code>、<code>2acec86fa</code>…<code>ace793ca0</code>
+  2026-11-10 · production 走查與修復 · commits <code>fc16aee15</code>…<code>3e070eb0b</code>、<code>3cdf81363</code>、<code>afd6cbe0d</code>、<code>2acec86fa</code>…<code>ace793ca0</code>、<code>55c16803f</code>…<code>c5cf3d720</code>
 </footer>
 
 </div>
