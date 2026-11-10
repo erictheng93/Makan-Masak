@@ -162,6 +162,37 @@ const variantsFromMetadata = (metadata?: ImageMetadata): string[] => {
   return variants.length > 0 ? variants : fallbackVariantKeys;
 };
 
+// A Worker on a custom domain runs in front of the CDN cache, so without this
+// every image view paid a Worker run plus an R2 read (0.6–1s measured, even
+// for a 16KB thumbnail). The edge copy lives a day, not the browser's year, so
+// a deleted image stops being served everywhere within EDGE_IMAGE_TTL_SECONDS
+// (the delete route purges only the colo it runs in).
+const BROWSER_IMAGE_CACHE = "public, max-age=31536000, immutable";
+const EDGE_IMAGE_TTL_SECONDS = 86400;
+// The Workers `caches.default`; this package's lib types only know DOM caches.
+const edgeCache = (): Cache | undefined =>
+  typeof caches === "undefined"
+    ? undefined
+    : (caches as unknown as { default: Cache }).default;
+const variantCacheKey = (url: string, imageId: string, variant: string) =>
+  new Request(
+    `${new URL(url).origin}/images/${encodeURIComponent(imageId)}/${encodeURIComponent(variant)}`,
+  );
+/** Hono throws on executionCtx outside a Worker (tests); run inline there. */
+const runAfterResponse = (
+  c: { executionCtx: { waitUntil(work: Promise<unknown>): void } },
+  work: Promise<unknown>,
+) => {
+  const settled = work.catch((error) =>
+    console.error("Image edge cache update failed:", error),
+  );
+  try {
+    c.executionCtx.waitUntil(settled);
+  } catch {
+    void settled;
+  }
+};
+
 /**
  * Upload image
  * POST /images/upload
@@ -473,6 +504,17 @@ app.delete(
         );
         // Continue anyway since the image objects were deleted from R2.
       }
+
+      const cache = edgeCache();
+      if (cache)
+        runAfterResponse(
+          c,
+          Promise.all(
+            variants.map((variant) =>
+              cache.delete(variantCacheKey(c.req.url, imageId, variant)),
+            ),
+          ),
+        );
 
       return c.json({
         success: true,
@@ -915,6 +957,15 @@ app.get("/:imageId/:variant", async (c) => {
   try {
     const imageId = c.req.param("imageId");
     const variant = c.req.param("variant");
+    const cache = edgeCache();
+    const cacheKey = variantCacheKey(c.req.url, imageId, variant);
+    const hit = await cache?.match(cacheKey);
+    if (hit) {
+      const hitHeaders = new Headers(hit.headers);
+      hitHeaders.set("Cache-Control", BROWSER_IMAGE_CACHE);
+      return new Response(hit.body, { status: 200, headers: hitHeaders });
+    }
+
     const imageService = new ImageService(c.env);
     const object = await imageService.getImageVariant(imageId, variant);
 
@@ -936,14 +987,24 @@ app.get("/:imageId/:variant", async (c) => {
     objectHeaders.forEach((value, key) => {
       headers[key] = value;
     });
-    headers["Cache-Control"] = "public, max-age=31536000, immutable";
+    headers["Cache-Control"] = BROWSER_IMAGE_CACHE;
     headers.ETag = object.httpEtag;
 
-    return c.newResponse(
+    const response = c.newResponse(
       object.body as unknown as ReadableStream,
       200,
       headers,
     );
+    if (cache) {
+      const edgeCopy = new Response(response.clone().body, {
+        headers: {
+          ...headers,
+          "Cache-Control": `public, max-age=${EDGE_IMAGE_TTL_SECONDS}`,
+        },
+      });
+      runAfterResponse(c, cache.put(cacheKey, edgeCopy));
+    }
+    return response;
   } catch (error) {
     console.error("Image delivery error:", error);
     return c.json(
