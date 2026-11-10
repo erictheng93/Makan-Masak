@@ -3988,6 +3988,8 @@ const zhTWCore = {
     confirm: {
       resetPasswordSuccess: "已重設 {username} 的密碼",
       toggleStatus: "確定要{action}用戶 {username} 嗎？",
+      disable:
+        "停用 {username}？對方會立即從所有裝置登出（包括廚房顯示、收銀），在你重新啟用前都無法登入。",
       archive:
         "確定要移除員工 {username} 嗎？他將從在職名單消失、無法登入，但過往排班與報表仍會保留姓名。",
       restore: "確定要讓 {username} 復職嗎？他將回到在職名單並可重新登入。",

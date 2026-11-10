@@ -124,7 +124,6 @@ import { useI18n } from "@/i18n";
 import { useToast } from "vue-toastification";
 import { useEmployeeList } from "@/composables/useEmployeeList";
 import { useAsyncAction } from "@/composables/useAsyncAction";
-import { useUndoToast } from "@/composables/useUndoToast";
 import { useAuthStore } from "@/stores/auth";
 import { api } from "@/services/api";
 import {
@@ -154,7 +153,6 @@ import {
 const route = useRoute();
 const { t } = useI18n();
 const toast = useToast();
-const undoToast = useUndoToast();
 const employeeList = useEmployeeList();
 const authStore = useAuthStore();
 
@@ -389,15 +387,16 @@ const handleRestoreUser = async (user: Employee) => {
   }
 };
 
-// Reversible, so no confirmation: apply now, offer Undo.
+// The list tab confirms a disable first. No Undo here: disabling signs the
+// employee out everywhere, and re-enabling would not restore those sessions,
+// so an "Undo" would promise more than it does.
 const handleToggleStatus = async (user: Employee) => {
   const next = user.status !== "active";
   if ((await statusAction.run(user.id, next)) === undefined) return;
-  undoToast(
+  toast.success(
     t(next ? "users.success.enabled" : "users.success.disabled", {
       username: user.username,
     }),
-    () => void statusAction.run(user.id, !next),
   );
 };
 

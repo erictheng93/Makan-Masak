@@ -488,7 +488,19 @@ const handleResetPassword = (user: EmployeeWithStatus) => {
   emit("resetPassword", user);
 };
 
-const handleToggleStatus = (user: EmployeeWithStatus) => {
+// Disabling bumps the account's token version: the employee is signed out of
+// every device at once (kitchen display, POS) mid-shift, and re-enabling does
+// not bring those sessions back. That is not a one-tap action.
+const handleToggleStatus = async (user: EmployeeWithStatus) => {
+  if (user.status === "active") {
+    const confirmed = await confirmModal({
+      type: "danger",
+      title: t("users.actions.disable"),
+      message: t("users.confirm.disable", { username: user.username }),
+      confirmLabel: t("users.actions.disable"),
+    });
+    if (!confirmed) return;
+  }
   emit("toggleStatus", user);
 };
 </script>

@@ -3868,6 +3868,8 @@ const zhCN: Messages = {
     confirm: {
       resetPasswordSuccess: "已重设 {username} 的密码",
       toggleStatus: "确定要{action}用户 {username} 吗？",
+      disable:
+        "停用 {username}？对方会立即从所有设备登出（包括厨房显示、收银），在你重新启用前都无法登录。",
       archive:
         "确定要移除员工 {username} 吗？他将从在职名单消失、无法登录，但过往排班与报表仍会保留姓名。",
       restore: "确定要让 {username} 复职吗？他将回到在职名单并可重新登录。",

@@ -3960,6 +3960,8 @@ const viVN: Messages = {
     confirm: {
       resetPasswordSuccess: "Đã đặt lại mật khẩu cho {username}",
       toggleStatus: "Bạn có chắc muốn {action} người dùng {username}?",
+      disable:
+        "Vô hiệu hóa {username}? Người này sẽ bị đăng xuất ngay trên mọi thiết bị (màn hình bếp, POS) và không thể đăng nhập cho đến khi bạn bật lại.",
       archive:
         "Gỡ {username} khỏi danh sách? Nhân viên sẽ biến mất khỏi danh sách đang làm và không đăng nhập được, nhưng lịch làm và báo cáo cũ vẫn giữ tên.",
       restore:

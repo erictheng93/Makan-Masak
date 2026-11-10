@@ -3956,6 +3956,8 @@ const enUS: Messages = {
     confirm: {
       resetPasswordSuccess: "Password for {username} has been reset",
       toggleStatus: "Are you sure you want to {action} user {username}?",
+      disable:
+        "Disable {username}? They are signed out on every device at once (kitchen display, POS) and cannot sign in until you enable them again.",
       archive:
         "Remove {username} from the roster? They disappear from the staff list and can no longer sign in, but past rosters and reports keep their name.",
       restore:

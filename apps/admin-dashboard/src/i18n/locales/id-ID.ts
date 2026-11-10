@@ -3979,6 +3979,8 @@ const idID: Messages = {
     confirm: {
       resetPasswordSuccess: "Kata sandi {username} telah diatur ulang",
       toggleStatus: "Apakah Anda yakin ingin {action} pengguna {username}?",
+      disable:
+        "Nonaktifkan {username}? Mereka langsung keluar dari semua perangkat (layar dapur, POS) dan tidak bisa masuk sampai Anda mengaktifkannya lagi.",
       archive:
         "Hapus {username} dari daftar? Karyawan hilang dari daftar aktif dan tidak bisa masuk, tetapi jadwal dan laporan lama tetap menyimpan namanya.",
       restore:

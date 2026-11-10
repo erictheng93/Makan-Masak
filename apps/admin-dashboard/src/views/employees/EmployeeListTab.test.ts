@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { mount } from "@vue/test-utils";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import EmployeeListTab from "./EmployeeListTab.vue";
 import type { EmployeeWithStatus } from "@/types/employee";
 
@@ -16,8 +16,9 @@ vi.mock("@/stores/auth", () => ({
 vi.mock("@/composables/useDateFormatter", () => ({
   useDateFormatter: () => ({ formatDateTime: (v: string) => v }),
 }));
+const confirm = vi.hoisted(() => vi.fn());
 vi.mock("@/composables/useConfirmModal", () => ({
-  useConfirmModal: () => ({ confirm: vi.fn().mockResolvedValue(true) }),
+  useConfirmModal: () => ({ confirm }),
 }));
 
 function buildUser(overrides: Partial<EmployeeWithStatus> = {}) {
@@ -49,7 +50,11 @@ function stubCompact() {
   );
 }
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  confirm.mockReset();
+});
+beforeEach(() => confirm.mockResolvedValue(true));
 
 describe("EmployeeListTab at a compact viewport", () => {
   it("renders a card with the key fields and every action by name", () => {
@@ -84,5 +89,57 @@ describe("EmployeeListTab at a compact viewport", () => {
 
   it("keeps the table at a wide viewport", () => {
     expect(mountList().find("table").exists()).toBe(true);
+  });
+});
+
+// Disabling signs the employee out of every device mid-shift and re-enabling
+// does not restore those sessions, so it must be confirmed (enabling need not).
+describe("EmployeeListTab disable confirmation", () => {
+  // Count only what the click does, not anything earlier tests left behind.
+  const clickStatus = (wrapper: ReturnType<typeof mountList>) => {
+    confirm.mockClear();
+    return wrapper
+      .findAll(
+        'button[aria-label="users.actions.disable"], button[aria-label="users.actions.enable"]',
+      )[0]
+      .trigger("click");
+  };
+
+  it("asks before disabling and warns about the sign-out", async () => {
+    stubCompact();
+    const wrapper = mountList();
+    await clickStatus(wrapper);
+    await Promise.resolve();
+
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(confirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "danger",
+        message: "users.confirm.disable",
+      }),
+    );
+    expect(wrapper.emitted("toggleStatus")).toHaveLength(1);
+  });
+
+  it("does nothing when the owner cancels", async () => {
+    confirm.mockResolvedValue(false);
+    stubCompact();
+    const wrapper = mountList();
+    await clickStatus(wrapper);
+    await Promise.resolve();
+
+    expect(wrapper.emitted("toggleStatus")).toBeUndefined();
+  });
+
+  it("enables a disabled employee without a dialog", async () => {
+    stubCompact();
+    const wrapper = mount(EmployeeListTab, {
+      props: { usersWithStatus: [buildUser({ status: "inactive" })] },
+    });
+    await clickStatus(wrapper);
+    await Promise.resolve();
+
+    expect(confirm).not.toHaveBeenCalled();
+    expect(wrapper.emitted("toggleStatus")).toHaveLength(1);
   });
 });

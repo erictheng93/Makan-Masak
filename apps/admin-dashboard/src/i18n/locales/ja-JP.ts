@@ -3964,6 +3964,8 @@ const jaJP: Messages = {
     confirm: {
       resetPasswordSuccess: "{username} のパスワードをリセットしました",
       toggleStatus: "ユーザー{username}を{action}してもよろしいですか？",
+      disable:
+        "{username} を無効にしますか？すべての端末（キッチンディスプレイ、POS を含む）から直ちにログアウトされ、再度有効にするまでログインできません。",
       archive:
         "{username} を名簿から削除しますか？在籍リストから消えログインできなくなりますが、過去のシフトやレポートには氏名が残ります。",
       restore:
