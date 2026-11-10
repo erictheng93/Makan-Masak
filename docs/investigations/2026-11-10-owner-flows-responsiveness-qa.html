@@ -203,8 +203,8 @@ footer{
     <span><b>帳號</b> <code>demo</code>（role 1 店主）</span>
     <span><b>餐廳</b> Demo 小館 <code>01a0d2b6-…8e11</code></span>
     <span><b>日期</b> 2026-11-10</span>
-    <span><b>commits</b> <code>fc16aee15</code> … <code>3e070eb0b</code>（11 個）、<code>3cdf81363</code>、<code>afd6cbe0d</code>、<code>2acec86fa</code> … <code>ace793ca0</code>（4 個）、<code>55c16803f</code> … <code>c5cf3d720</code>（第三輪與店家登入）</span>
-    <span><b>部署</b> API <code>8905d372</code>、admin <code>index-D9su3Aq2.js</code>、kitchen <code>index-Djoketd1.js</code>、image-processor <code>f47f4f42</code>；D1 至 <code>0042</code></span>
+    <span><b>commits</b> <code>fc16aee15</code> … <code>3e070eb0b</code>（11 個）、<code>3cdf81363</code>、<code>afd6cbe0d</code>、<code>2acec86fa</code> … <code>ace793ca0</code>（4 個）、<code>55c16803f</code> … <code>c5cf3d720</code>（第三輪與店家登入）、<code>10c91620c</code> … <code>5f656e4c2</code>（第四輪與 staging 走查）</span>
+    <span><b>部署</b> API <code>8905d372</code>、admin <code>index-BiALJuLU.js</code>、kitchen <code>index-CJGWq13N.js</code>、image-processor <code>f47f4f42</code>；D1 至 <code>0042</code></span>
   </div>
 </header>
 
@@ -215,7 +215,8 @@ footer{
       走查共找出 <b>13 個</b>點擊後反應不良的地方，最嚴重的是<b>新增菜品要等 5.7 秒、期間畫面完全沒有回饋</b>，店主很可能重按而建出重複菜品。根因分兩層：前端寫入時沒有載入狀態、也不做樂觀更新；後端每次菜單寫入都要等快取清除、搜尋索引同步、即時推播全部跑完才回應。</p>
     <p>
       兩層都已修好並上線。現在每個按鈕都在 0.1 秒內有回饋，新增菜品伺服器回應 0.44 秒，顧客端菜單約 2.5 秒內反映店主的修改。修復過程另外發現並處理了 3 個問題：刪掉的菜在管理畫面又冒出來、顧客可能把舊菜單寫回快取，以及改價／刪菜從來沒有清掉顧客端的外層快取。最後一項早在這次修改之前就存在。</p>
-    <p>之後又走查了店主總覽、員工管理、優惠券、POS 與廚房顯示，修掉會讓店主卡住或畫面閃動的問題，並把員工帳號改成每家店各自唯一：每家店有自己的登入網址，登入鎖定改為按帳號計算，API 與兩個前端都設了回滾下限。處理訂單與 POS 結帳因為 Demo 小館拒收訂單，仍未走查。</p>
+    <p>之後又走查了店主總覽、員工管理、優惠券、POS 與廚房顯示，修掉會讓店主卡住或畫面閃動的問題，並把員工帳號改成每家店各自唯一：每家店有自己的登入網址，登入鎖定改為按帳號計算，API 與兩個前端都設了回滾下限。處理訂單與 POS 結帳因為 Demo 小館拒收訂單，改在新建的 staging 環境走完。</p>
+    <p>第四輪把錯誤通知統一為「每個失敗剛好顯示一次」，並加上守門防止新的無聲錯誤與無名稱按鈕；補了手機版版面、停用員工的確認，以及部署前必須是乾淨工作目錄的保護。staging 走查從顧客點餐一路到收款與退款，找出 7 個問題：其中 2 個只影響 staging，其餘 5 個（CSRF 錯誤誤報成權限不足、沒開班時的死按鈕、收銀員看得到不能用的按鈕、寫死的中文提示、廚房更新慢）在 production 一樣存在，都已修正，等部署。</p>
   </div>
 
   <div class="tablewrap">
@@ -239,6 +240,9 @@ footer{
         <tr><td>員工帳號名稱重複</td><td>伺服器回 500，跳出「系統暫時無法處理」與中文錯誤</td><td>409，「Username already exists」顯示在帳號欄位</td></tr>
         <tr><td>POS「開始班次」</td><td>沒選收銀機時按了沒反應；會自動選到已停用的收銀機</td><td>提示「請先選擇收銀機」；只自動選啟用中的收銀機</td></tr>
         <tr><td>優惠券修改</td><td>伺服器 1.58 秒（新增 2.19、停用 1.93）</td><td>伺服器 0.46 秒，0.88 秒畫面更新</td></tr>
+        <tr><td>POS 確認收款（未開班）</td><td>按鈕灰掉，沒有任何說明</td><td>提示先到收銀機管理開班，附連結</td></tr>
+        <tr><td>CSRF 失效時的寫入</td><td>兩則「你沒有權限」</td><td>一則「登入狀態已失效，請重新登入」</td></tr>
+        <tr><td>廚房開始／完成一個品項</td><td>伺服器 2.6–3.4 秒</td><td>預估省 0.7–1.1 秒，部署後重新量測</td></tr>
         <tr><td>廚房顯示閒置時</td><td>沒有訂單時每 30 秒整個畫面白色閃一下</td><td>背景更新時畫面完全不變</td></tr>
       </tbody>
     </table>
@@ -512,6 +516,116 @@ footer{
       <div class="evidence"><span class="lbl">驗證</span>production 錄製 75 秒、經過兩次自動更新：遮罩出現 0 次，150 次取樣中畫面內容變化 0 次。</div>
     </div>
   </div>
+
+  <h3>第四輪：錯誤通知、手機版、無障礙與部署保護</h3>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">E4</span><h4>失敗會變成無聲，或同一個錯誤跳兩次</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>寫入按鈕各自處理錯誤：有的只寫 console（店主什麼都看不到），有的自己跳提示、全域攔截器又跳一次。原則定為「每個失敗剛好顯示一次」。</p>
+      <div class="evidence"><span class="lbl">修復</span>新增共用的 <code>useAsyncAction</code>：處理中狀態、防連點、欄位錯誤顯示在欄位下，其餘只跳一則提示（<code>10c91620c</code>）。全域攔截器的提示延後一個 tick，畫面已自行處理的錯誤用 <code>markErrorHandled</code> 跳過（<code>33c953fd6</code>）；全域錯誤字串改走 i18n，不再寫死中文「系統錯誤:」（<code>24b209c98</code>）。</div>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">G1</span><h4>防止新的「只寫 log」錯誤處理</h4><span class="tag fixed">已加守門</span></div>
+    <div class="finding-b">
+      <p><code>check:silent-catches</code> 會擋下只有 <code>console.*</code>、沒有任何顯示給使用者的 catch。現有 66 個檔案共 134 處列為基準，只會減不會增；刻意不顯示的地方要加 <code>silent-catch-ok</code> 註解說明（<code>3ec445d6e</code>）。在 <code>verify:push</code> 與 CI 執行。</p>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">A1</span><h4>只有圖示的按鈕沒有名稱</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>螢幕閱讀器只會念「button」。補上 aria-label，並加 <code>check:accessible-names</code> 守門，以每個檔案的現況為基準（<code>de1ef00dc</code>）。</p>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">R2</span><h4>手機與平板上菜單、員工、優惠券難以操作</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>菜單管理改為精簡列、分類改成可橫向滑動的標籤、整頁捲動（<code>cad9a8c8f</code>）；員工與優惠券在 1024px 以下改成卡片（<code>87575a695</code>）。</p>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">W3</span><h4>POS、訂單、員工、優惠券的等待</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>POS 與訂單頁的請求改為同時發出，開班／結班從三輪請求變一輪，停用收銀機可復原（<code>8f7086f7e</code>）；員工與優惠券寫入有處理中狀態、只更新該列、可復原（<code>9b6fdbb10</code>）。</p>
+    </div>
+  </div>
+
+  <div class="finding blocker">
+    <div class="finding-h"><span class="id">U1</span><h4>停用員工沒有確認，卻會立刻把他登出所有裝置</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>停用會讓該員工在廚房顯示、POS 等所有裝置同時被登出，原本卻只給一個「復原」。改為先確認、說明後果，並拿掉復原（<code>c2995fc79</code>）。啟用不需確認。</p>
+    </div>
+  </div>
+
+  <div class="finding blocker">
+    <div class="finding-h"><span class="id">D1</span><h4>部署會把未提交的檔案一起帶上線</h4><span class="tag fixed">已加守門</span></div>
+    <div class="finding-b">
+      <p><code>wrangler</code> 打包的是工作目錄，而 Codex 會即時修改主 checkout。API 的 <code>deploy:prod</code> 在 <code>apps/api</code>、<code>packages/</code>、<code>package.json</code>、lockfile 有未提交或未追蹤的變更時拒絕部署（<code>d7fcec54e</code>）；三個 Pages app 改為先檢查乾淨再重新建置（<code>757b4f139</code>）。</p>
+    </div>
+  </div>
+
+  <h3>Staging 端到端走查：訂單 → 廚房 → POS 結帳</h3>
+  <p class="note">在 staging 建了一套獨立環境（同一個 Cloudflare 帳號，資源名稱都以 <code>-staging</code> 結尾，見 <code>docs/runbooks/staging.md</code>），用非示範的測試餐廳 <code>staging-a</code> 走完 Demo 小館做不到的流程：顧客掃桌碼點餐 → 收銀員接單 → 廚房開始／完成 → 店主新增收銀機 → 收銀員開班、現金收款 → 退款送審。並確認兩家店的同名帳號 <code>chef</code> 各自登入、沒帶店家代碼時回 <code>SHOP_REQUIRED</code>。</p>
+
+  <div class="finding data">
+    <div class="finding-h"><span class="id">T1</span><h4>Staging：所有受模組管控的頁面回 403 SUBSCRIPTION_NOT_FOUND</h4><span class="tag fixed">已修復（僅 staging）</span></div>
+    <div class="finding-b">
+      <p>種子資料沒有建立 <code>shop_subscriptions</code>，廚房與 POS 全部被擋，廚房只顯示通用的「An unexpected error occurred」。種子資料補上訂閱（<code>12960d650</code>）。</p>
+    </div>
+  </div>
+
+  <div class="finding blocker">
+    <div class="finding-h"><span class="id">T2</span><h4>Staging：瀏覽器的每個寫入都回 403 CSRF_TOKEN_INVALID，重新整理就被登出</h4><span class="tag fixed">已修復（僅 staging）</span></div>
+    <div class="finding-b">
+      <p>前端在 <code>*.pages.dev</code>、API 在 <code>*.workers.dev</code>，是不同網站；CSRF 與登入續期 cookie 都是 <code>SameSite=Lax</code>，瀏覽器根本不送。production 的 <code>admin.makanmasak.com</code> 與 <code>api.makanmasak.com</code> 同站，所以不受影響。</p>
+      <div class="evidence"><span class="lbl">修復</span>staging 改用 <code>api-staging</code>／<code>admin-staging</code>／<code>kitchen-staging</code>／<code>customer-staging.makanmasak.com</code>；三個前端經由一個小的轉發 Worker，因為 Pages 自訂網域需要寫 DNS，而部署用的 token 沒有這個權限（<code>12960d650</code>）。<code>check-production-config</code> 只放行 <code>&lt;name&gt;-staging.makanmasak.com</code>。</div>
+      <div class="evidence"><span class="lbl">驗證</span>改完後接單、廚房更新、收款、退款都成功，重新整理後仍保持登入。</div>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">T3</span><h4>CSRF 失敗顯示成「你沒有權限」，而且跳兩次</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>收銀員按「更新」接單，畫面跳出兩則「You do not have permission to do that.」，實際原因是 CSRF。會讓人去找根本不存在的權限問題。這在 production 也會發生（例如 cookie 被清掉）。</p>
+      <div class="evidence"><span class="lbl">修復</span><code>CSRF_*</code> 錯誤改顯示「登入狀態已失效，請重新登入」（所有語系已有此文案）；訂單 store 把錯誤交給畫面顯示時標記為已處理，不再重複（<code>4d632c951</code>）。</div>
+    </div>
+  </div>
+
+  <div class="finding blocker">
+    <div class="finding-h"><span class="id">T4</span><h4>POS 沒開班時「確認收款」是死按鈕，沒有任何說明</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>收銀員輸入現金、看到找零 NT$75，按鈕卻一直是灰的，畫面沒說缺什麼。另外待收款訂單卡片是沒有 role 也不能 Tab 到的 div，鍵盤與螢幕閱讀器無法選單；現金輸入框的標籤沒有關聯，名稱被念成「0」。</p>
+      <div class="evidence"><span class="lbl">修復</span>沒開班時顯示「請先到收銀機管理開班」並連過去；訂單卡片可用 Enter／空白鍵選取；標籤關聯到輸入框（<code>e3b8cb03f</code>）。</div>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">T5</span><h4>收銀員看得到「新增收銀機」，填完才被拒</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>建立收銀機只有店主可以；收銀員填完名稱按確認才看到「Insufficient permissions」。沒有收銀機時收銀員也無法開班，卻沒人告訴他要找誰。</p>
+      <div class="evidence"><span class="lbl">修復</span>只有店主看得到按鈕；收銀員在沒有收銀機時看到「請店主先新增一台」（<code>9fab53c42</code>）。</div>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">T6</span><h4>退款送審的提示寫死中文</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>英文介面下收銀員送出退款，提示卻是「退款已送交管理者審核，尚未完成。」。改用 i18n，六個語系都有（<code>5f656e4c2</code>）。</p>
+    </div>
+  </div>
+
+  <div class="finding ux">
+    <div class="finding-h"><span class="id">T7</span><h4>廚房按「開始」「完成」後卡片要 2.5 秒才移動</h4><span class="tag fixed">已修改，待量測</span></div>
+    <div class="finding-b">
+      <p>每個品項的狀態更新在伺服器內就花 2.6–3.4 秒（<code>x-response-time</code> 2859 ms），與 production 同區。拆解後約 12 個依序等待：驗證、模組檢查、多次 D1 查詢、KV 刪除，以及即時推播。</p>
+      <div class="evidence"><span class="lbl">修改</span>清除訂單快取與父訂單狀態同步改為同時進行；品項與佇列推播改到回應之後（<code>waitUntil</code>），兩者本來就只記 log、不影響回應內容（<code>237b29597</code>、<code>0533d8b41</code>）。預估省 0.7–1.1 秒，部署後要重新量測。</div>
+    </div>
+  </div>
 </section>
 
 <section>
@@ -599,6 +713,8 @@ footer{
         <tr><td>第九批</td><td class="mono">8905d372</td><td class="mono">index-D9su3Aq2.js</td><td>L1、L2：先手動套用 <code>0041</code>；廚房顯示 <code>index-Djl86-6s.js</code></td></tr>
         <tr><td>第十批</td><td class="mono">（未變）</td><td class="mono">（未變）</td><td>手動套用 <code>0042</code>：帳號改為每店唯一</td></tr>
         <tr><td>第十一批</td><td class="mono">（未變）</td><td class="mono">（未變）</td><td>K1：只部署廚房顯示 <code>index-Djoketd1.js</code></td></tr>
+        <tr><td>第十二批</td><td class="mono">（未變）</td><td class="mono">index-BiALJuLU.js</td><td>第四輪（commit <code>412e852</code>）；廚房顯示 <code>index-CJGWq13N.js</code></td></tr>
+        <tr><td>第十三批</td><td class="mono">待部署</td><td class="mono">待部署</td><td>T3–T7：等 gate 與 CI 通過後部署 API 與 admin dashboard</td></tr>
       </tbody>
     </table>
   </div>
@@ -616,10 +732,12 @@ footer{
       <li><b>N2 的 focus 外框</b>是推測的原因，還沒在真實瀏覽器確認。</li>
       <li><b>其他裝置讀菜單：</b>廚房顯示不讀菜單；管理端的讀取都帶登入憑證，本來就略過 edge 快取，只有內層查詢快取在清除生效前約 1 秒可能是舊的。</li>
       <li><b>R1 的根因</b>是推論，沒有逐步追到；兩條實測路線都沒再重現，但沒有從每一頁出發試過。</li>
-      <li><b>處理訂單與 POS 結帳</b>仍未走查：Demo 小館拒收訂單（<code>DEMO_RESTAURANT</code>），需要一家非示範的測試餐廳或本機環境。</li>
-      <li><b>員工與 POS 的其他等待：</b>員工新增、修改、停用、移除後仍會重新載入整份名單；選擇收銀機 1.5 秒，開班要三輪請求共約 2.2 秒；訂單頁的統計、收銀機管理的促銷都等前一個請求完成才開始。</li>
-      <li><b>停用優惠券與停用收銀機</b>沒有確認步驟，誤觸立即生效；要不要加是產品決定。</li>
-      <li><b>全域錯誤處理</b>對伺服器錯誤（5xx）的提示仍寫死中文「系統錯誤:」前綴，不管介面語言；重複帳號這類欄位錯誤會同時出現在欄位與一則提示中。</li>
+      <li><b>Staging 不能證明 production 安全：</b>staging 的資料庫由新基線建立，production 由舊的 migration 系列建立，兩者仍有差異；正式 migration 前仍要在 production 結構的副本上預演。</li>
+      <li><b>整體 API 延遲：</b>staging 上登入 2.2–2.5 秒、開班 2.1 秒、收款 3.2 秒、送出退款 3.5 秒、顧客送單 6 秒。每個需登入的請求都先付驗證（約 0.4–0.5 秒）與模組檢查（約 0.2–0.4 秒）的依序等待；這兩段影響所有頁面，值得下一輪處理。</li>
+      <li><b>POS 其他小問題：</b>選「全額退款」不會自動帶入金額；班次標題顯示原始 ID（<code>01a1c5cf-…</code>）而非可讀名稱；收款成功、退款等對話框沒有 <code>role="dialog"</code>；退款送審後沒有走查店主核准的步驟。</li>
+      <li><b>訪客訂單需要店員先接單</b>才會出現在廚房（廚房只顯示已確認的訂單）。這是現有設計，但店家若沒人盯訂單頁，顧客會一直等；要不要自動確認是產品決定。</li>
+      <li><b>無聲錯誤的基準：</b>仍有 134 處只寫 log 的 catch 待逐步改掉。</li>
+      <li><b>停用優惠券</b>沒有確認步驟，誤觸立即生效；要不要加是產品決定（停用收銀機已可復原）。</li>
       <li><b>店家登入：</b>重設密碼信件的連結不帶店家代碼（頁面會改用這台裝置記住的店家）；在兩個 <code>/s/</code> 連結之間切換而不重新整理時，頁面仍顯示第一家店；本機種子資料的店家沒有店家代碼。</li>
       <li><b>L2 的鎖定隔離</b>以真 D1 整合測試驗證；為了不影響真實帳號，沒有在 production 對真實帳號輸入錯誤密碼。</li>
     </ul>
@@ -627,7 +745,7 @@ footer{
 </section>
 
 <footer>
-  2026-11-10 · production 走查與修復 · commits <code>fc16aee15</code>…<code>3e070eb0b</code>、<code>3cdf81363</code>、<code>afd6cbe0d</code>、<code>2acec86fa</code>…<code>ace793ca0</code>、<code>55c16803f</code>…<code>c5cf3d720</code>
+  2026-11-10 · production 走查與修復 · commits <code>fc16aee15</code>…<code>3e070eb0b</code>、<code>3cdf81363</code>、<code>afd6cbe0d</code>、<code>2acec86fa</code>…<code>ace793ca0</code>、<code>55c16803f</code>…<code>c5cf3d720</code>、<code>10c91620c</code>…<code>5f656e4c2</code>
 </footer>
 
 </div>

@@ -2,9 +2,34 @@
 
 Staging is a full, isolated copy of the stack in the **same Cloudflare account**
 as production: its own Workers, D1 databases, KV namespaces, R2 buckets, queue,
-Vectorize index and Pages projects. Every resource name ends in `-staging`, there
-are no custom domains (Workers on `workers.dev`, Pages on `pages.dev`), and no
-cron triggers run.
+Vectorize index and Pages projects. Every resource name ends in `-staging` and no
+cron triggers run. The apps and the API are served from
+`<name>-staging.makanmasak.com` (see "Hostnames" below); the other Workers stay
+on `workers.dev`.
+
+**Staging can find bugs; it cannot prove production safe.** Its D1 is built from
+the `migrations_fresh` baseline, while production was built from the legacy
+track and still differs (table count, STRICT, column history; see CLAUDE.md).
+A migration that replays cleanly here can still fail there, so the
+prod-schema-copy rehearsal in CLAUDE.md stays mandatory before any production
+migration.
+
+## Hostnames
+
+| Host | Serves |
+| --- | --- |
+| `api-staging.makanmasak.com` | API Worker (`custom_domain` route in `apps/api/wrangler.toml`) |
+| `admin-staging.makanmasak.com`, `kitchen-staging.makanmasak.com`, `customer-staging.makanmasak.com` | `makanmasak-frontends-staging`, a proxy Worker in `scripts/staging/frontend-proxy/` that forwards to the `*-staging.pages.dev` projects |
+
+They must share a site with the API. The CSRF cookie (`__Host-mm_csrf`) and the
+staff refresh cookie are `SameSite=Lax`, so from `*.pages.dev` to
+`*.workers.dev` the browser sends neither: every write failed
+`CSRF_TOKEN_INVALID` and no session survived a reload. The proxy exists only
+because a Pages custom domain needs a DNS record, and the wrangler OAuth token
+has no DNS write scope; a Workers `custom_domain` creates its own. The
+`*.pages.dev` URLs still load but cannot write. `check-production-config`
+allows `<name>-staging.makanmasak.com` in staging config and rejects every other
+`makanmasak.com` host there.
 
 **Rule: staging is where walkthroughs, migration rehearsals and rollback drills
 happen.** Do the order -> kitchen -> POS checkout walkthrough here before a
@@ -67,8 +92,8 @@ Placement: production api pins `aws:ap-northeast-1`; staging does not.
 Staging vars live in `[env.staging.vars]`. `NODE_ENV` stays `"production"` so
 production-only code paths (strong-key crypto, CORS, auth) behave as in
 production; `ENVIRONMENT = "staging"` is what labels it. `CORS_ORIGIN`,
-`CLIENT_BASE_URL`, `API_BASE_URL`, `CENTRAL_API_URL`, `REALTIME_WS_URL` point at
-the `pages.dev` / `workers.dev` hosts. `QUOTA_ENFORCEMENT_MODE` is `warn` (staging
+`CLIENT_BASE_URL`, `API_BASE_URL` point at the `*-staging.makanmasak.com` hosts;
+`CENTRAL_API_URL`, `REALTIME_WS_URL` at `workers.dev`. `QUOTA_ENFORCEMENT_MODE` is `warn` (staging
 shops have no subscription). The `__WORKERS_SUBDOMAIN__` token in those URLs is
 your account's `workers.dev` subdomain, filled in by `provision.cjs`.
 
@@ -141,6 +166,7 @@ node scripts/staging/provision.cjs --apply --secrets --skip-migrations   # first
 pnpm --filter makanmasak-customer-app    run deploy:staging
 pnpm --filter makanmasak-admin-dashboard run deploy:staging
 pnpm --filter makanmasak-kitchen-display run deploy:staging
+pnpm exec wrangler deploy -c scripts/staging/frontend-proxy/wrangler.toml   # first time, or when its host map changes
 ```
 
 `deploy:staging` for a Worker refuses to run while a `STAGING_*_ID` or
@@ -150,7 +176,7 @@ pnpm --filter makanmasak-kitchen-display run deploy:staging
 to the `makanmasak-<app>-staging` Pages project on branch `main`. These scripts
 are not part of `pnpm deploy:prod` (`pnpm -r run deploy:prod`).
 
-Smoke test: `curl https://makanmasak-api-staging.<subdomain>.workers.dev/info`.
+Smoke test: `curl https://api-staging.makanmasak.com/info`.
 
 ## Seed
 
@@ -169,6 +195,9 @@ Seeds, all via idempotent upserts on fixed ids:
 - staging-b: owner and a `chef` (same username as shop A, to exercise per-shop
   usernames), 2 menu items.
 - A platform administrator `staging-admin` (`admin_tier = administrator`).
+- A `shop_subscriptions` row per shop with every module on. Without it every
+  module-gated route (kitchen, POS) answers 403 `SUBSCRIPTION_NOT_FOUND`.
+- No POS register: creating one is part of the walkthrough (owner only).
 
 Passwords are random, hashed with bcryptjs at cost 10 and written in plaintext
 **only** to `.wrangler/staging-credentials.json` (gitignored, 0600, never
@@ -183,12 +212,19 @@ dashboard and kitchen display.
 
 1. Open a table QR URL from the credentials file on a phone (customer app),
    add items, place the order as a guest.
-2. Log in to the kitchen display as `staging-a` / `chef`; the order should
-   arrive over the realtime WebSocket, move it through the statuses.
-3. Log in to the admin dashboard as `staging-a` / `cashier`, open a shift if the
-   POS requires it, and take payment (cash) for the table.
-4. Log in as `staging-b` / `chef` to confirm the same username resolves to a
-   different person per shop.
+2. Log in to the admin dashboard (`https://admin-staging.makanmasak.com/s/staging-a`)
+   as `cashier` and accept the order under Orders. The kitchen only shows
+   `confirmed` orders, so a guest order stays off the board until staff accept it.
+3. Log in to the kitchen display (`https://kitchen-staging.makanmasak.com/s/staging-a`)
+   as `chef`; the order should be on the board, and moving it through the
+   statuses should reach the other screens over the realtime WebSocket.
+4. If there is no register yet, log in as `owner` and add one under POS ->
+   Register Management. As the cashier, select it, start a shift, then take
+   payment (cash) under POS -> Checkout. A cashier's refund goes to an owner
+   for approval.
+5. Log in as `staging-b` / `chef` to confirm the same username resolves to a
+   different person per shop, and that a login without a shop answers
+   `SHOP_REQUIRED`.
 
 ## Migration rehearsal and rollback drills
 
