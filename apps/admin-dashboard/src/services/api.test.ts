@@ -2,6 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  api,
   clearAdminAuthStorage,
   createAdminAuthFailureHandler,
   ensureManagementAuthToken,
@@ -111,5 +112,30 @@ describe("admin API auth storage", () => {
     expect(managementAuthClient.setAuthToken).toHaveBeenCalledWith(
       "management-token",
     );
+  });
+});
+
+describe("api.get config detection", () => {
+  it("passes validateStatus as request config, not as query params", async () => {
+    const get = vi
+      .spyOn(api.instance, "get")
+      .mockResolvedValueOnce({ status: 503, data: {} });
+    const validateStatus = (status: number) => status < 400 || status === 503;
+
+    await api.get("/monitoring/health", { validateStatus });
+
+    expect(get).toHaveBeenCalledWith("/monitoring/health", {
+      validateStatus,
+    });
+  });
+
+  it("still treats a plain object as query params", async () => {
+    const get = vi
+      .spyOn(api.instance, "get")
+      .mockResolvedValueOnce({ status: 200, data: {} });
+
+    await api.get("/orders", { limit: 20 });
+
+    expect(get).toHaveBeenCalledWith("/orders", { params: { limit: 20 } });
   });
 });

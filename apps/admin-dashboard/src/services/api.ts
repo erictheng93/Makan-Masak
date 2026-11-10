@@ -261,6 +261,9 @@ class ApiServiceCompat {
       return false;
     }
 
+    // A config key missing here turns the whole object into query params:
+    // OwnerView's `validateStatus` went out as `?validateStatus=e=>...` and a
+    // 503 "critical" health report threw instead of rendering.
     return [
       "params",
       "headers",
@@ -268,6 +271,7 @@ class ApiServiceCompat {
       "signal",
       "timeout",
       "withCredentials",
+      "validateStatus",
     ].some((key) => Object.prototype.hasOwnProperty.call(value, key));
   }
 }
