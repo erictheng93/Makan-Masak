@@ -637,6 +637,17 @@ footer{
       <div class="evidence"><span class="lbl">staging 量測</span>5.8 秒 → 3.35 秒。剩下的大頭是建單本身會重讀剛查過的餐廳與桌台，要改 <code>packages/database</code> 的介面，留待下一輪。</div>
     </div>
   </div>
+
+  <div class="finding blocker">
+    <div class="finding-h"><span class="id">T9</span><h4>顧客在第一張單送達前無法加點</h4><span class="tag fixed">已修復</span></div>
+    <div class="finding-b">
+      <p>每支手機在同一家店只能有 1 張進行中的訂單，直到店員標示「已送達」或「已付款」才解除（最長 2 小時）。顧客想在出餐前加點飲料，會被「您已有進行中的訂單，請等待完成」擋下。現有的「加到原訂單」介面只能在廚房開始前使用，顧客端也沒有接上。</p>
+      <div class="evidence"><span class="lbl">決定</span>改為每支手機每家店最多 3 張；防濫用由原本的每店每 IP 限流負責。不做「加到原訂單」：廚房一開始做就不能加，價值很低。被擋時的訊息改為說明原因，並請顧客洽店員加點（六個語系）。</div>
+      <div class="evidence"><span class="lbl">實作</span>3 個 KV 鍵各存一張單；第 0 格沿用舊的鍵，production 現有的鎖照樣計算；每張單記住自己的格子，解除時只釋放那一格。市集結帳用同一套（<code>59d0cb625</code>）。</div>
+      <div class="evidence"><span class="lbl">staging 驗證</span>同一支手機第一張單仍在「待確認」時送出第二張，成功（3.4 秒）。</div>
+      <p class="note warn">取捨：一桌點兩次就是兩張單，POS 要分兩筆收款；目前沒有整桌合併結帳。</p>
+    </div>
+  </div>
 </section>
 
 <section>
@@ -725,7 +736,8 @@ footer{
         <tr><td>第十批</td><td class="mono">（未變）</td><td class="mono">（未變）</td><td>手動套用 <code>0042</code>：帳號改為每店唯一</td></tr>
         <tr><td>第十一批</td><td class="mono">（未變）</td><td class="mono">（未變）</td><td>K1：只部署廚房顯示 <code>index-Djoketd1.js</code></td></tr>
         <tr><td>第十二批</td><td class="mono">（未變）</td><td class="mono">index-BiALJuLU.js</td><td>第四輪（commit <code>412e852</code>）；廚房顯示 <code>index-CJGWq13N.js</code></td></tr>
-        <tr><td>第十三批</td><td class="mono">待部署</td><td class="mono">待部署</td><td>T3–T8：等 gate 與 CI 通過後部署 API 與 admin dashboard</td></tr>
+        <tr><td>第十三批</td><td class="mono">a13fbb41</td><td class="mono">index-DGPKkinX.js</td><td>T3–T8：API <code>a13fbb41</code>、admin <code>index-DGPKkinX.js</code>（commit <code>0a994d6</code>）</td></tr>
+        <tr><td>第十四批</td><td class="mono">待部署</td><td class="mono">（未變）</td><td>T9：API 與顧客端</td></tr>
       </tbody>
     </table>
   </div>
@@ -746,6 +758,7 @@ footer{
       <li><b>Staging 不能證明 production 安全：</b>staging 的資料庫由新基線建立，production 由舊的 migration 系列建立，兩者仍有差異；正式 migration 前仍要在 production 結構的副本上預演。</li>
       <li><b>整體 API 延遲：</b>staging 上登入 2.2–2.5 秒、開班 2.1 秒、收款 3.2 秒、送出退款 3.5 秒、顧客送單 3.35 秒（原 6 秒）。每個需登入的請求都先付驗證（約 0.4–0.5 秒）與模組檢查（約 0.2–0.4 秒）的依序等待；這兩段影響所有頁面，值得下一輪處理。</li>
       <li><b>POS 其他小問題：</b>選「全額退款」不會自動帶入金額；班次標題顯示原始 ID（<code>01a1c5cf-…</code>）而非可讀名稱；收款成功、退款等對話框沒有 <code>role="dialog"</code>；退款送審後沒有走查店主核准的步驟。</li>
+      <li><b>整桌合併結帳：</b>T9 之後一桌可能有多張單，POS 要逐筆收款；若店家習慣一桌一張帳單，需要另外規劃。</li>
       <li><b>訪客訂單需要店員先接單</b>才會出現在廚房（廚房只顯示已確認的訂單）。這是現有設計，但店家若沒人盯訂單頁，顧客會一直等；要不要自動確認是產品決定。</li>
       <li><b>無聲錯誤的基準：</b>仍有 134 處只寫 log 的 catch 待逐步改掉。</li>
       <li><b>停用優惠券</b>沒有確認步驟，誤觸立即生效；要不要加是產品決定（停用收銀機已可復原）。</li>
