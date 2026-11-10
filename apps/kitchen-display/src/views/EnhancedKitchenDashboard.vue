@@ -55,7 +55,7 @@
 
         <!-- Empty State -->
         <div
-          v-if="filteredOrders.length === 0 && !isLoading"
+          v-if="filteredOrders.length === 0 && !isInitialLoading"
           class="flex flex-col items-center justify-center py-20 text-center"
         >
           <div
@@ -90,7 +90,7 @@
 
       <!-- Loading Overlay -->
       <div
-        v-if="isLoading && orders.length === 0"
+        v-if="isInitialLoading && orders.length === 0"
         class="fixed inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50"
       >
         <div class="text-center">
@@ -198,8 +198,17 @@ const {
   orders,
   stats,
   loading: isLoading,
+  lastUpdated,
   error: ordersError,
 } = storeToRefs(ordersStore);
+
+// Only the first load may cover the board. Background refreshes (the 30s
+// auto-refresh, realtime catch-up, after every action) used to flip the empty
+// state off and raise the full-screen loading overlay whenever there were no
+// orders: a white flash every 30 seconds on an idle kitchen screen.
+const isInitialLoading = computed(
+  () => isLoading.value && lastUpdated.value === null,
+);
 
 const { filterOrders, sortOrders, updateOrderPriorities } =
   orderManagementStore;

@@ -60,18 +60,28 @@ vi.mock("@/stores/settings", () => ({
   // Auto-refresh off: the reconnect catch-up is the only thing that fetches.
   useSettingsStore: () => ({ autoRefresh: false, refreshInterval: 30 }),
 }));
+const ordersState = vi.hoisted(() => ({
+  store: null as null | {
+    orders: unknown[];
+    loading: boolean;
+    lastUpdated: Date | null;
+  },
+}));
 vi.mock("@/stores/orders", async () => {
   const { reactive } = await import("vue");
   return {
-    useOrdersStore: () =>
-      reactive({
+    useOrdersStore: () => {
+      ordersState.store ??= reactive({
         orders: [],
         stats: {},
         loading: false,
+        lastUpdated: null,
         error: null,
         fetchOrders: mocks.fetchOrders,
         handleSSEEvent: mocks.handleSSEEvent,
-      }),
+      });
+      return ordersState.store;
+    },
   };
 });
 vi.mock("@/stores/orderManagement", () => ({
@@ -111,6 +121,7 @@ import EnhancedKitchenDashboard from "./EnhancedKitchenDashboard.vue";
 describe("EnhancedKitchenDashboard realtime catch-up", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    ordersState.store = null;
     mocks.subscriptions.clear();
     mocks.status!.value = "disconnected";
     mocks.connect.mockImplementation(async () => {
@@ -188,6 +199,33 @@ describe("EnhancedKitchenDashboard realtime catch-up", () => {
 
     expect(mocks.fetchOrders).toHaveBeenCalledTimes(2);
     expect(mocks.fetchOrders).toHaveBeenLastCalledWith("r1");
+    wrapper.unmount();
+  });
+
+  // Seen on production: an idle kitchen screen (no orders) flashed a
+  // full-screen white loading overlay on every 30s auto-refresh.
+  it("keeps the board steady during a background refresh with no orders", async () => {
+    const wrapper = shallowMount(EnhancedKitchenDashboard, {
+      global: { stubs },
+    });
+    await flushPromises();
+    const store = ordersState.store!;
+
+    // First load: nothing has arrived yet, so the overlay is right.
+    store.loading = true;
+    await flushPromises();
+    expect(wrapper.text()).toContain("kitchen.loadingOrders");
+
+    store.loading = false;
+    store.lastUpdated = new Date();
+    await flushPromises();
+    const idle = wrapper.text();
+    expect(idle).not.toContain("kitchen.loadingOrders");
+
+    // Background refresh: nothing on screen may change.
+    store.loading = true;
+    await flushPromises();
+    expect(wrapper.text()).toBe(idle);
     wrapper.unmount();
   });
 });
