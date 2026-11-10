@@ -308,8 +308,18 @@ export function useMenuManagement() {
         },
       );
     });
+    // Refetch only on a reconnect after a drop: the first connect is not a gap
+    // in this page's data, the menu was just fetched on mount.
+    let hasBeenConnected = realtime.connectionStatus.value === "connected";
+    let dropped = false;
     watch(realtime.connectionStatus, (status) => {
-      if (status === "connected") void refresh();
+      if (status !== "connected") {
+        dropped = hasBeenConnected;
+        return;
+      }
+      hasBeenConnected = true;
+      if (dropped) void refresh();
+      dropped = false;
     });
     onUnmounted(() => {
       disposed = true;

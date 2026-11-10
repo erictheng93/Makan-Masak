@@ -546,7 +546,9 @@ export function useAdminRealtime() {
   });
 
   onUnmounted(() => {
-    disconnect();
+    // The socket is a shared singleton owned by DefaultLayout; leaving this
+    // panel's page must only drop its own listeners, not the connection.
+    stopListening();
   });
 
   // ========================================

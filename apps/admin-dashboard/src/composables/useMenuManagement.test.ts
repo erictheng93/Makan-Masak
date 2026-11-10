@@ -157,6 +157,27 @@ describe("useMenuManagement", () => {
     expect(realtime.unsubscribe).toHaveBeenCalledWith("menu-sub");
   });
 
+  it("does not refetch when the first realtime connect lands after mount", async () => {
+    realtime.status!.value = "connecting";
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          useMenuManagement();
+          return () => null;
+        },
+      }),
+    );
+    realtime.status!.value = "connected";
+    await flushPromises();
+    expect(apiMocks.get).not.toHaveBeenCalled();
+    realtime.status!.value = "connecting";
+    await flushPromises();
+    realtime.status!.value = "connected";
+    await flushPromises();
+    expect(apiMocks.get).toHaveBeenCalledOnce();
+    wrapper.unmount();
+  });
+
   it("merges event bursts and keeps a final refresh after the pending read", async () => {
     let finish!: (value: ReturnType<typeof buildMenuResponse>) => void;
     apiMocks.get.mockImplementationOnce(

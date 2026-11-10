@@ -163,4 +163,13 @@ describe("useAdminRealtime system alerts", () => {
     api.markAllAlertsAsRead();
     expect(api.unreadAlertCount.value).toBe(0);
   });
+
+  it("keeps the shared socket open when its page unmounts", async () => {
+    const { wrapper } = await setup();
+
+    wrapper.unmount();
+
+    expect(mocks.unsubscribe).toHaveBeenCalled();
+    expect(mocks.disconnect).not.toHaveBeenCalled();
+  });
 });
