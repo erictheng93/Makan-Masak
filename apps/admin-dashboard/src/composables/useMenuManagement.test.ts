@@ -511,6 +511,32 @@ describe("useMenuManagement", () => {
       expect(apiMocks.get).toHaveBeenCalledOnce();
     });
 
+    // Seen on production: a background refetch started before a delete came
+    // back after it and put the deleted dish back on screen.
+    it("does not let a refetch that spans an own write restore stale rows", async () => {
+      const { menuItems, fetchMenu, deleteMenuItem } = useMenuManagement();
+      await fetchMenu();
+      apiMocks.get.mockClear();
+      let answerStale!: () => void;
+      apiMocks.get.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            answerStale = () =>
+              resolve(buildMenuResponse([buildApiMenuItem()]));
+          }),
+      );
+      apiMocks.get.mockResolvedValueOnce(buildMenuResponse([]));
+      apiMocks.delete.mockResolvedValueOnce({ data: { success: true } });
+
+      const inFlight = fetchMenu();
+      await deleteMenuItem(menuItems.value[0]);
+      answerStale();
+      await inFlight;
+
+      expect(menuItems.value).toEqual([]);
+      expect(apiMocks.get).toHaveBeenCalledTimes(2);
+    });
+
     it("patches a created category and drops the delete refetch", async () => {
       const { categories, fetchMenu, saveCategory, deleteCategory } =
         useMenuManagement();

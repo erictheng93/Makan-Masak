@@ -133,12 +133,18 @@ const normalizeItem = (item: MenuItemData): MenuItemData => ({
   isAvailable: !!item.isAvailable,
 });
 
+// Bumped when an own write starts and ends: a fetch spanning either may hold a
+// snapshot from before that write and must not overwrite the local patch.
+let ownWriteEpoch = 0;
+
 async function trackOwnWrite<T>(write: () => Promise<T>): Promise<T> {
   ownWrites++;
+  ownWriteEpoch++;
   try {
     return await write();
   } finally {
     ownWrites--;
+    ownWriteEpoch++;
     lastOwnWriteEnd = Date.now();
   }
 }
@@ -203,6 +209,7 @@ export function useMenuManagement() {
     if (!authStore.restaurantId || disposed) return;
     const restaurantId = authStore.restaurantId;
     const request = ++menuRequest;
+    const epoch = ownWriteEpoch;
     isLoading.value = true;
     try {
       const response = await api.get<{
@@ -217,6 +224,8 @@ export function useMenuManagement() {
         restaurantId !== authStore.restaurantId
       )
         return;
+      // An own write landed mid-flight; this snapshot may predate it.
+      if (epoch !== ownWriteEpoch) return void (await fetchMenu());
       const payload = response.data?.success ? response.data.data : undefined;
       if (payload) {
         categories.value = payload.categories.map((c) => ({
