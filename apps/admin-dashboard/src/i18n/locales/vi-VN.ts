@@ -2950,6 +2950,8 @@ const viVN: Messages = {
     cashNotEntered: "Nhập số tiền mặt đã nhận",
     shiftRequired:
       "Hãy mở ca trong Quản lý máy tính tiền trước khi nhận thanh toán.",
+    refundPendingApproval:
+      "Yêu cầu hoàn tiền đã gửi quản lý duyệt, chưa hoàn tất.",
     printReport: "In báo cáo",
     noPendingOrders: "Không có lệnh chờ xử lý",
     received: "Đã nhận",

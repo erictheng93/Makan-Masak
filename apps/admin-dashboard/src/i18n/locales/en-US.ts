@@ -2950,6 +2950,8 @@ const enUS: Messages = {
     cashInsufficient: "Cash received is short by {amount}",
     cashNotEntered: "Enter the cash received",
     shiftRequired: "Open a shift in Register Management before taking payment.",
+    refundPendingApproval:
+      "Refund sent to a manager for approval. It is not complete yet.",
     endShift: "End Shift",
     alerts: {
       paymentSuccess: "Payment processed successfully",

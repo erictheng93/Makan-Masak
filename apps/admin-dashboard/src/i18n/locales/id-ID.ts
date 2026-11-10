@@ -2945,6 +2945,8 @@ const idID: Messages = {
     cashInsufficient: "Uang tunai yang diterima kurang {amount}",
     cashNotEntered: "Masukkan jumlah uang tunai yang diterima",
     shiftRequired: "Buka shift di Manajemen Kasir sebelum menerima pembayaran.",
+    refundPendingApproval:
+      "Pengembalian dana dikirim ke manajer untuk disetujui. Belum selesai.",
     allOrdersCompleted: "Semua pesanan telah selesai",
     customer: "Pelanggan",
     discount: "Diskon",

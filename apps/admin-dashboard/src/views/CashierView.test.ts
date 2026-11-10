@@ -825,6 +825,36 @@ describe("CashierView", () => {
     );
   });
 
+  it("says a refund awaiting approval is not complete, in the screen's language", async () => {
+    vi.mocked(api.post).mockResolvedValue({
+      data: { success: true, data: { approvalRequired: true } },
+    } as never);
+    const wrapper = mount(CashierView);
+    await flushPromises();
+
+    await wrapper.get('[data-testid="cashier-open-refund"]').trigger("click");
+    await wrapper
+      .get('[data-testid="cashier-refund-order-number"]')
+      .setValue("order-1");
+    await wrapper.get('[data-testid="cashier-refund-amount"]').setValue("10");
+    await wrapper
+      .get('[data-testid="cashier-refund-reason"]')
+      .setValue("wrong_order");
+    await wrapper
+      .get('[data-testid="cashier-confirm-refund"]')
+      .trigger("click");
+    await flushPromises();
+
+    expect(api.post).toHaveBeenCalledWith(
+      "/pos/refunds/create",
+      expect.objectContaining({ originalOrderId: "order-1" }),
+      expect.any(Object),
+    );
+    expect(wrapper.get('[data-testid="refund-pending-notice"]').text()).toBe(
+      "cashier.refundPendingApproval",
+    );
+  });
+
   it("explains an amount mismatch instead of surfacing the raw HTTP failure", async () => {
     // The server prices the order. A discount applied on this screen changes
     // only what is displayed here, so it arrives as a total the server does

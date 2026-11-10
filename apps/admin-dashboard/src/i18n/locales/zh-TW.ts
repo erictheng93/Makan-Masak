@@ -3008,6 +3008,7 @@ const zhTWCore = {
     cashInsufficient: "收到的現金不足，還差 {amount}",
     cashNotEntered: "請輸入收到的現金金額",
     shiftRequired: "請先到「收銀機管理」開班，才能收款。",
+    refundPendingApproval: "退款已送交管理者審核，尚未完成。",
     endShift: "結束班次",
     alerts: {
       paymentSuccess: "付款處理成功",

@@ -2945,6 +2945,7 @@ const jaJP: Messages = {
     cashNotEntered: "受け取った現金の金額を入力してください",
     shiftRequired:
       "支払いを受け付ける前に、レジ管理でシフトを開始してください。",
+    refundPendingApproval: "返金は管理者の承認待ちです。まだ完了していません。",
     paymentFailed: "支払いに失敗しました",
     amountMismatch:
       "サーバー上の注文合計と金額が一致しません。注文を再読み込みしてからもう一度お試しください。",

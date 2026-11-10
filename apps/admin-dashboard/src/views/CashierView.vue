@@ -1860,7 +1860,7 @@ const refundAction = useAsyncAction(async () => {
     if (result.approvalRequired) {
       // The cashier's record is deliberately not a completed refund. Do not
       // make the local totals look settled before an Admin/Owner approves it.
-      refundNotice.value = "退款已送交管理者審核，尚未完成。";
+      refundNotice.value = t("cashier.refundPendingApproval");
       return;
     }
 
