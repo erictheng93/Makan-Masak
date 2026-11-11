@@ -213,6 +213,43 @@ describe("MyShiftsView (admin dashboard)", () => {
     expect(getSchedules).toHaveBeenCalledTimes(2);
   });
 
+  it("asks before discarding an edited swap and ignores Escape while submitting", async () => {
+    const wrapper = mount(MyShiftsView);
+    await flushPromises();
+    await wrapper.get('[data-testid="request-swap-button"]').trigger("click");
+    await wrapper.get('[data-testid="swap-reason"]').setValue("家中有事");
+    confirmModal.mockResolvedValueOnce(false);
+    await wrapper.get('[role="dialog"]').trigger("keydown", { key: "Escape" });
+    await flushPromises();
+    expect(confirmModal).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "confirmations.unsavedChanges" }),
+    );
+    expect(wrapper.find('[data-testid="swap-form"]').exists()).toBe(true);
+    let decide!: (value: boolean) => void;
+    confirmModal.mockReturnValueOnce(
+      new Promise((resolve) => {
+        decide = resolve;
+      }),
+    );
+    await wrapper.get('[role="dialog"]').trigger("keydown", { key: "Escape" });
+    await wrapper.get('[role="dialog"]').trigger("keydown", { key: "Escape" });
+    expect(confirmModal).toHaveBeenCalledTimes(2);
+    decide(false);
+    await flushPromises();
+    let complete!: (value: unknown) => void;
+    createSwapRequest.mockReturnValueOnce(
+      new Promise((resolve) => {
+        complete = resolve;
+      }),
+    );
+    await wrapper.get('[data-testid="swap-submit"]').trigger("click");
+    await wrapper.get('[role="dialog"]').trigger("keydown", { key: "Escape" });
+    expect(wrapper.find('[data-testid="swap-form"]').exists()).toBe(true);
+    complete(buildRequest());
+    await flushPromises();
+    expect(wrapper.find('[data-testid="swap-form"]').exists()).toBe(false);
+  });
+
   it("refuses to submit without a reason", async () => {
     const wrapper = mount(MyShiftsView);
     await flushPromises();

@@ -316,10 +316,10 @@
           </p>
         </section>
 
-        <details class="mt-4 rounded-2xl bg-ios-card p-4 shadow-card-sm">
-          <summary class="text-base font-semibold text-ios-text">
+        <section class="mt-4 rounded-2xl bg-ios-card p-4 shadow-card-sm">
+          <h2 class="text-base font-semibold text-ios-text">
             {{ t("serviceBooking.lookupTitle") }}
-          </summary>
+          </h2>
           <div v-if="messageContext === 'lookup'" class="space-y-2">
             <p
               v-if="errorMessage"
@@ -366,6 +366,8 @@
           <div
             v-if="verifiedReservation"
             data-testid="reservation-verified"
+            tabindex="-1"
+            role="status"
             class="mt-3 rounded-xl bg-ios-bg px-3 py-2 text-sm text-ios-text/70"
           >
             {{ verifiedReservation.reservationDate }}
@@ -387,14 +389,14 @@
               {{ t("serviceBooking.cancel") }}
             </button>
           </div>
-        </details>
+        </section>
       </template>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch, nextTick } from "vue";
+import { onMounted, reactive, ref, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import type {
   ReservationResponse,
@@ -429,15 +431,6 @@ const loadError = ref("");
 const messageContext = ref("availability");
 const errorMessage = ref("");
 const successMessage = ref("");
-watch(createdReservation, async (result) => {
-  if (!result) return;
-  await nextTick();
-  const confirmation = document.querySelector<HTMLElement>(
-    '[data-testid="reservation-confirmation"]',
-  );
-  confirmation?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
-  confirmation?.focus();
-});
 const bookingDate = ref(today);
 const selectedTime = ref("");
 const verifyCode = ref("");
@@ -525,6 +518,12 @@ async function createReservation() {
     lastCreatePayload.value = null;
     successMessage.value = t("serviceBooking.createSuccess");
     await loadAvailability();
+    await nextTick();
+    const confirmation = document.querySelector<HTMLElement>(
+      '[data-testid="reservation-confirmation"]',
+    );
+    confirmation?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+    confirmation?.focus();
   } catch (error) {
     console.error("Create reservation failed:", error);
     errorMessage.value = t("serviceBooking.createFailed");
@@ -574,6 +573,10 @@ async function cancelVerifiedReservation() {
     }
     successMessage.value = t("serviceBooking.cancelSuccess");
     await loadAvailability();
+    await nextTick();
+    document
+      .querySelector<HTMLElement>('[data-testid="reservation-verified"]')
+      ?.focus();
   } catch (error) {
     console.error("Cancel reservation failed:", error);
     errorMessage.value = t("serviceBooking.cancelFailed");

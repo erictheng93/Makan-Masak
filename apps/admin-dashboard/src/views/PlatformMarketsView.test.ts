@@ -1122,6 +1122,15 @@ describe("PlatformMarketsView", () => {
       wrapper.get('[data-testid="returned-market-reindex-notice"]').text(),
     ).toContain("重建搜尋索引");
 
+    expect(
+      wrapper
+        .get('[data-testid="returned-market-reindex-notice"]')
+        .element.closest("details:not([open])"),
+    ).toBeNull();
+    expect(
+      wrapper.get('[data-testid="market-operations-link"]').attributes("href"),
+    ).toBe("#market-operations");
+
     await wrapper
       .get('[data-testid="returned-market-reindex"]')
       .trigger("click");

@@ -330,6 +330,11 @@ describe("GroupOrderView", () => {
     expect(wrapper.find('[data-testid="group-order-invite"]').exists()).toBe(
       true,
     );
+    expect(
+      wrapper
+        .get('[data-testid="group-order-invite"]')
+        .element.closest("details:not([open])"),
+    ).toBeNull();
     expect(groupOrderMock.getShareLink).toHaveBeenCalled();
     expect(wrapper.find('[data-testid="invite-link-value"]').text()).toBe(
       "https://example.test/group/SHARE123",

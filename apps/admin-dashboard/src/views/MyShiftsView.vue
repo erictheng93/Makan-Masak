@@ -262,6 +262,7 @@
           <button
             type="button"
             class="flex-1 rounded-full bg-ios-bg px-4 py-3 text-sm font-semibold text-ios-secondary transition-all duration-200 ease-out active:scale-95"
+            :disabled="submitting"
             @click="closeForm"
           >
             {{ t("myShifts.cancel") }}
@@ -447,8 +448,27 @@ function openForm(shift: EmployeeSchedule) {
   formError.value = "";
 }
 
-function closeForm() {
-  formShift.value = null;
+let isConfirmingClose = false;
+async function closeForm() {
+  if (submitting.value || isConfirmingClose) return;
+  isConfirmingClose = true;
+  try {
+    if (
+      (form.reason.trim() ||
+        form.requestType !== "swap" ||
+        form.urgency !== "normal") &&
+      !(await confirmModal({
+        type: "warning",
+        title: t("myShifts.cancel"),
+        message: t("confirmations.unsavedChanges"),
+        confirmLabel: t("common.confirm"),
+      }))
+    )
+      return;
+    if (!submitting.value) formShift.value = null;
+  } finally {
+    isConfirmingClose = false;
+  }
 }
 
 async function submit() {
@@ -474,7 +494,7 @@ async function submit() {
     });
 
     toast.success(t("myShifts.submitSuccess"));
-    closeForm();
+    formShift.value = null;
     await loadAll();
   } catch (err) {
     formError.value = resolveUserFacingError(err, t, {

@@ -59,8 +59,9 @@ const reservation = {
   updatedAt: 1,
 };
 
-function mountView() {
+function mountView(attachTo?: HTMLElement) {
   return mount(ReservationView, {
+    attachTo,
     props: { restaurantId: "restaurant-1" },
   });
 }
@@ -152,6 +153,39 @@ describe("ReservationView", () => {
     expect(
       wrapper.get('[data-testid="reservation-confirmation"]').text(),
     ).toContain("CONFIRM-1");
+    expect(
+      wrapper
+        .get('[data-testid="reservation-cancel"]')
+        .element.closest("details:not([open])"),
+    ).toBeNull();
+  });
+
+  it("keeps cancellation feedback at the lookup result after creating a reservation", async () => {
+    const wrapper = mountView(document.body);
+    try {
+      await flushPromises();
+      await wrapper.get('[data-testid="reservation-name"]').setValue("Ada");
+      await wrapper
+        .get('[data-testid="reservation-phone"]')
+        .setValue("0912345678");
+      await wrapper.get('[data-testid="reservation-create"]').trigger("submit");
+      await flushPromises();
+      expect(document.activeElement).toBe(
+        wrapper.get('[data-testid="reservation-confirmation"]').element,
+      );
+      const cancel = wrapper.get('[data-testid="reservation-cancel"]');
+      (cancel.element as HTMLButtonElement).focus();
+      await cancel.trigger("click");
+      await flushPromises();
+      expect(document.activeElement).toBe(
+        wrapper.get('[data-testid="reservation-verified"]').element,
+      );
+      expect(
+        wrapper.get('[data-testid="reservation-verified"]').text(),
+      ).toContain("serviceBooking.bookingStatus.cancelled");
+    } finally {
+      wrapper.unmount();
+    }
   });
 
   it("rotates the create idempotency key after a completed reservation", async () => {

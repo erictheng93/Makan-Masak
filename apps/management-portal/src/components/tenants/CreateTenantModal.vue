@@ -211,8 +211,15 @@ const copySetupLink = async () => {
 
 // 只有真的建出租戶才算「創建成功」；未送出或只送出申請時單純關閉
 const finish = () => {
+  if (submitting.value) return;
   if (result.value?.approval) emit("success");
   else emit("close");
+};
+
+// Keep an in-flight request and its one-time setup link until explicit Done.
+const requestDismiss = () => {
+  if (submitting.value || result.value) return;
+  emit("close");
 };
 </script>
 
@@ -221,12 +228,12 @@ const finish = () => {
     <Dialog
       :open="show"
       class="fixed inset-0 z-50 overflow-y-auto"
-      @close="finish"
+      @close="requestDismiss"
     >
       <!-- 背景遮罩 -->
       <div
         class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-        @click="finish"
+        @click="requestDismiss"
       />
 
       <!-- Modal -->
@@ -248,7 +255,8 @@ const finish = () => {
               type="button"
               class="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-gray-600 hover:text-gray-800"
               :aria-label="t('common.cancel')"
-              @click="finish"
+              :disabled="submitting || Boolean(result)"
+              @click="requestDismiss"
             >
               <XMarkIcon class="h-6 w-6" />
             </button>
@@ -636,7 +644,8 @@ const finish = () => {
                 type="button"
                 data-testid="management-tenant-create-cancel"
                 class="btn btn-secondary"
-                @click="emit('close')"
+                :disabled="submitting"
+                @click="requestDismiss"
               >
                 {{ t("common.cancel") }}
               </button>

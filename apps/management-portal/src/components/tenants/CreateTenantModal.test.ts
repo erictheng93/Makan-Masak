@@ -121,6 +121,13 @@ describe("CreateTenantModal", () => {
         .text(),
     ).toContain("owner@example.com");
 
+    await dialog().get('[role="dialog"]').trigger("keydown", { key: "Escape" });
+    expect(wrapper.emitted("close")).toBeUndefined();
+    expect(wrapper.emitted("success")).toBeUndefined();
+    expect(
+      dialog().find('[data-testid="management-tenant-setup-link"]').exists(),
+    ).toBe(true);
+
     await dialog()
       .find('[data-testid="management-tenant-create-done"]')
       .trigger("click");
@@ -156,6 +163,35 @@ describe("CreateTenantModal", () => {
     await submit();
 
     expect(tenantsApi.create).not.toHaveBeenCalled();
+  });
+
+  it("keeps the modal open while creation is pending, including cancel and Escape", async () => {
+    let complete!: (
+      value: Awaited<ReturnType<typeof tenantsApi.create>>,
+    ) => void;
+    vi.mocked(tenantsApi.create).mockReturnValue(
+      new Promise((resolve) => {
+        complete = resolve;
+      }),
+    );
+    const wrapper = await mountFilled();
+    await submit();
+    await dialog().get('[role="dialog"]').trigger("keydown", { key: "Escape" });
+    await dialog()
+      .get('[data-testid="management-tenant-create-cancel"]')
+      .trigger("click");
+    expect(wrapper.emitted("close")).toBeUndefined();
+    expect(wrapper.emitted("success")).toBeUndefined();
+    expect(
+      dialog()
+        .get('[data-testid="management-tenant-create-cancel"]')
+        .attributes("disabled"),
+    ).toBeDefined();
+    complete({
+      application: { id: "app-pending", status: "submitted" },
+      approval: null,
+    });
+    await flushPromises();
   });
 
   it("writes to the owner in the country's language unless the operator picks one", async () => {

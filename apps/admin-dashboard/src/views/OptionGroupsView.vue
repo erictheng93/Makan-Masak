@@ -194,10 +194,11 @@
       tabindex="-1"
       data-testid="group-modal"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
-      @keydown.esc.stop="showGroupModal = false"
+      @keydown.esc.stop="closeEditor('group')"
     >
       <form
         class="ui-panel w-full max-w-md rounded-3xl bg-white p-6 shadow-xl"
+        :aria-busy="isSaving"
         @submit.prevent="saveGroup"
       >
         <h3
@@ -309,13 +310,15 @@
           <button
             type="button"
             class="rounded-full bg-ios-bg px-4 py-2 text-[14px] font-semibold text-ios-text"
-            @click="showGroupModal = false"
+            :disabled="isSaving"
+            @click="closeEditor('group')"
           >
             {{ t("common.cancel") }}
           </button>
           <button
             type="submit"
             data-testid="save-group"
+            :disabled="isSaving"
             class="rounded-full bg-primary-700 px-4 py-2 text-[14px] font-semibold text-white"
           >
             {{ t("common.save") }}
@@ -334,10 +337,11 @@
       tabindex="-1"
       data-testid="choice-modal"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
-      @keydown.esc.stop="showChoiceModal = false"
+      @keydown.esc.stop="closeEditor('choice')"
     >
       <form
         class="ui-panel w-full max-w-md rounded-3xl bg-white p-6 shadow-xl"
+        :aria-busy="isSaving"
         @submit.prevent="saveChoice"
       >
         <h3
@@ -409,13 +413,15 @@
           <button
             type="button"
             class="rounded-full bg-ios-bg px-4 py-2 text-[14px] font-semibold text-ios-text"
-            @click="showChoiceModal = false"
+            :disabled="isSaving"
+            @click="closeEditor('choice')"
           >
             {{ t("common.cancel") }}
           </button>
           <button
             type="submit"
             data-testid="save-choice"
+            :disabled="isSaving"
             class="rounded-full bg-primary-700 px-4 py-2 text-[14px] font-semibold text-white"
           >
             {{ t("common.save") }}
@@ -478,6 +484,32 @@ const choiceForm = ref({
   isDefault: false,
 });
 
+const isSaving = ref(false);
+const initialForms = { group: "", choice: "" };
+
+let isConfirmingClose = false;
+const closeEditor = async (kind: "group" | "choice") => {
+  if (isSaving.value || isConfirmingClose) return;
+  isConfirmingClose = true;
+  try {
+    const form = kind === "group" ? groupForm.value : choiceForm.value;
+    if (
+      JSON.stringify(form) !== initialForms[kind] &&
+      !(await confirmModal({
+        type: "warning",
+        title: t("common.cancel"),
+        message: t("confirmations.unsavedChanges"),
+        confirmLabel: t("common.confirm"),
+      }))
+    )
+      return;
+    if (!isSaving.value)
+      (kind === "group" ? showGroupModal : showChoiceModal).value = false;
+  } finally {
+    isConfirmingClose = false;
+  }
+};
+
 /** Blank is "no cap" and must reach the API as null, not as 0 or omitted. */
 const nullableCount = (value: NumericFormValue): number | null => {
   if (value === "" || value === null) return null;
@@ -500,6 +532,7 @@ const openCreateGroup = () => {
     required: false,
     maxSelections: "",
   };
+  initialForms.group = JSON.stringify(groupForm.value);
   showGroupModal.value = true;
 };
 
@@ -513,33 +546,40 @@ const openEditGroup = (group: OptionGroupData) => {
     required: group.required,
     maxSelections: group.maxSelections ?? "",
   };
+  initialForms.group = JSON.stringify(groupForm.value);
   showGroupModal.value = true;
 };
 
 const saveGroup = async () => {
-  const form = groupForm.value;
-  // A single-choice group cannot hold a cap; sending a leftover value would
-  // put a self-contradicting field into the menu.
-  const maxSelections =
-    form.type === "multiple" ? nullableCount(form.maxSelections) : null;
+  if (isSaving.value) return;
+  isSaving.value = true;
+  try {
+    const form = groupForm.value;
+    // A single-choice group cannot hold a cap; sending a leftover value would
+    // put a self-contradicting field into the menu.
+    const maxSelections =
+      form.type === "multiple" ? nullableCount(form.maxSelections) : null;
 
-  const ok = editingGroup.value
-    ? await updateGroup(editingGroup.value.id, {
-        name: form.name,
-        type: form.type,
-        required: form.required,
-        maxSelections,
-      })
-    : await createGroup({
-        publicId: form.publicId,
-        kind: form.kind,
-        name: form.name,
-        type: form.type,
-        required: form.required,
-        maxSelections,
-      });
+    const ok = editingGroup.value
+      ? await updateGroup(editingGroup.value.id, {
+          name: form.name,
+          type: form.type,
+          required: form.required,
+          maxSelections,
+        })
+      : await createGroup({
+          publicId: form.publicId,
+          kind: form.kind,
+          name: form.name,
+          type: form.type,
+          required: form.required,
+          maxSelections,
+        });
 
-  if (ok) showGroupModal.value = false;
+    if (ok) showGroupModal.value = false;
+  } finally {
+    isSaving.value = false;
+  }
 };
 
 const confirmDeleteGroup = async (group: OptionGroupData) => {
@@ -566,6 +606,7 @@ const openCreateChoice = (group: OptionGroupData) => {
     maxQuantity: "",
     isDefault: false,
   };
+  initialForms.choice = JSON.stringify(choiceForm.value);
   showChoiceModal.value = true;
 };
 
@@ -583,31 +624,38 @@ const openEditChoice = (
     maxQuantity: choice.maxQuantity,
     isDefault: choice.isDefault,
   };
+  initialForms.choice = JSON.stringify(choiceForm.value);
   showChoiceModal.value = true;
 };
 
 const saveChoice = async () => {
-  const form = choiceForm.value;
-  const input = {
-    name: form.name,
-    priceAdjustment: numberOrZero(form.priceAdjustment),
-    isDefault: form.isDefault,
-    maxQuantity:
-      choiceGroupKind.value === "addon"
-        ? nullableCount(form.maxQuantity)
-        : null,
-  };
-  // Availability belongs to the 標記售完 toggle on the row, not to this form.
-  // Sending `isAvailable: true` on the update path silently put a sold-out
-  // choice back on sale whenever the owner edited its name or price.
-  const ok = editingChoice.value
-    ? await updateChoice(editingChoice.value, input)
-    : await createChoice(choiceGroupId.value, {
-        publicId: form.publicId,
-        isAvailable: true,
-        ...input,
-      });
-  if (ok) showChoiceModal.value = false;
+  if (isSaving.value) return;
+  isSaving.value = true;
+  try {
+    const form = choiceForm.value;
+    const input = {
+      name: form.name,
+      priceAdjustment: numberOrZero(form.priceAdjustment),
+      isDefault: form.isDefault,
+      maxQuantity:
+        choiceGroupKind.value === "addon"
+          ? nullableCount(form.maxQuantity)
+          : null,
+    };
+    // Availability belongs to the 標記售完 toggle on the row, not to this form.
+    // Sending `isAvailable: true` on the update path silently put a sold-out
+    // choice back on sale whenever the owner edited its name or price.
+    const ok = editingChoice.value
+      ? await updateChoice(editingChoice.value, input)
+      : await createChoice(choiceGroupId.value, {
+          publicId: form.publicId,
+          isAvailable: true,
+          ...input,
+        });
+    if (ok) showChoiceModal.value = false;
+  } finally {
+    isSaving.value = false;
+  }
 };
 
 const confirmDeleteChoice = async (choiceId: string) => {

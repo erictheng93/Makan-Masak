@@ -324,6 +324,9 @@ describe("MarketsView", () => {
     expect(wrapper.text()).toContain("逢甲夜市");
     expect(wrapper.text()).toContain("markets.directory.recentVisits");
     expect(wrapper.text()).toContain("西門町商圈");
+    for (const card of wrapper.findAll('[data-testid="market-card"]')) {
+      expect(card.element.closest("details:not([open])")).toBeNull();
+    }
   });
 
   it("hydrates authenticated market favorites from customer identity", async () => {
@@ -413,6 +416,11 @@ describe("MarketsView", () => {
       wrapper.get('[data-testid="recent-market-checkout"]').text(),
     ).toContain("markets.checkoutStatus.partial_paid");
 
+    expect(
+      wrapper
+        .get('[data-testid="recent-market-checkout"]')
+        .element.closest("details:not([open])"),
+    ).toBeNull();
     await wrapper
       .get('[data-testid="recent-market-checkout"]')
       .trigger("click");

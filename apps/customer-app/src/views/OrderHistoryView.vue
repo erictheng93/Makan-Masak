@@ -138,7 +138,7 @@
         <div
           v-for="order in orders"
           :key="order.id"
-          class="bg-ios-card rounded-2xl shadow-[0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[0_4px_16px_rgb(0,0,0,0.06)] transition"
+          class="relative isolate bg-ios-card rounded-2xl shadow-[0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[0_4px_16px_rgb(0,0,0,0.06)] transition"
         >
           <div class="p-6">
             <div class="flex justify-between items-start">
@@ -148,7 +148,7 @@
                   <h3 class="text-lg font-semibold text-gray-900">
                     <router-link
                       :to="`/orders/${order.id}`"
-                      class="inline-flex min-h-11 items-center text-ios-blue underline-offset-4 hover:underline"
+                      class="inline-flex min-h-11 items-center text-ios-blue underline-offset-4 hover:underline after:absolute after:inset-0 after:rounded-2xl focus-visible:after:ring-2 focus-visible:after:ring-ios-blue"
                       >{{ order.orderNumber }}</router-link
                     >
                   </h3>
@@ -208,7 +208,7 @@
 
             <!-- Action Buttons -->
             <div
-              class="mt-4 pt-4 border-t border-ios-separator flex justify-end space-x-2"
+              class="relative z-10 mt-4 pt-4 border-t border-ios-separator flex justify-end space-x-2"
             >
               <router-link
                 :to="`/orders/${order.id}`"
@@ -226,7 +226,7 @@
             </div>
 
             <!-- Reviews retain their own interaction boundary. -->
-            <div @click.stop>
+            <div class="relative z-10" @click.stop>
               <OrderReviewSection
                 :order-id="order.id"
                 :order-status="order.status"

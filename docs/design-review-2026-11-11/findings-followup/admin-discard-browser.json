@@ -1,0 +1,41 @@
+{
+  "pass": true,
+  "results": [
+    {
+      "kind": "options",
+      "width": 1100,
+      "initialFocus": true,
+      "tabContained": true,
+      "escapeKeepsEdit": true,
+      "focusReturned": true,
+      "repeatedEscapeThenDiscard": true
+    },
+    {
+      "kind": "shifts",
+      "width": 1100,
+      "initialFocus": true,
+      "tabContained": true,
+      "escapeKeepsEdit": true,
+      "focusReturned": true,
+      "repeatedEscapeThenDiscard": true
+    },
+    {
+      "kind": "options",
+      "width": 390,
+      "initialFocus": true,
+      "tabContained": true,
+      "escapeKeepsEdit": true,
+      "focusReturned": true,
+      "repeatedEscapeThenDiscard": true
+    },
+    {
+      "kind": "shifts",
+      "width": 390,
+      "initialFocus": true,
+      "tabContained": true,
+      "escapeKeepsEdit": true,
+      "focusReturned": true,
+      "repeatedEscapeThenDiscard": true
+    }
+  ]
+}

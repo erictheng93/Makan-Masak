@@ -350,16 +350,11 @@ onUnmounted(() => {
         {{ t("group.loading") }}
       </div>
 
-      <details v-if="!isLocked && !isCompleted" class="mt-5">
-        <summary class="min-h-11 cursor-pointer font-medium text-ios-blue">
-          {{ t("group.inviteButton") }}
-        </summary>
-        <InvitePanel
-          v-if="!isLocked && !isCompleted"
-          :share-code="shareCode"
-          :share-link="shareLink"
-        />
-      </details>
+      <InvitePanel
+        v-if="!isLocked && !isCompleted"
+        :share-code="shareCode"
+        :share-link="shareLink"
+      />
 
       <!--
         Host only. What this switch decides — whether a table that never

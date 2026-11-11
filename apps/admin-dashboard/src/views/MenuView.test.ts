@@ -212,6 +212,39 @@ describe("MenuView", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null)));
   });
 
+  it("keeps every option label attached to one field after deleting and adding rows", async () => {
+    const wrapper = mountMenuView();
+    await editItem(wrapper, menuItem());
+    for (const [list, testId] of [
+      ["sizes", "add-size-option"],
+      ["addOns", "add-addon-option"],
+      ["customizations", "add-customization-group"],
+    ] as const) {
+      await wrapper.get(`[data-testid="${testId}"]`).trigger("click");
+      await wrapper.get(`[data-testid="${testId}"]`).trigger("click");
+      wrapper.vm.menuItemForm[list].splice(0, 1);
+      await wrapper.get(`[data-testid="${testId}"]`).trigger("click");
+    }
+    const addChoice = () =>
+      wrapper
+        .findAll("button")
+        .find((button) => button.text() === "menu.form.addChoice")!;
+    await addChoice().trigger("click");
+    wrapper.vm.menuItemForm.customizations[0].choices.splice(0, 1);
+    await addChoice().trigger("click");
+    const fields = wrapper.findAll(
+      '[data-testid="item-modal"] input[id], [data-testid="item-modal"] select[id]',
+    );
+    const ids = fields.map((field) => field.attributes("id"));
+    expect(new Set(ids).size).toBe(ids.length);
+    const typeField = wrapper.get<HTMLSelectElement>(
+      'select[id^="group-type-"]',
+    );
+    expect(typeField.element.labels?.[0]?.textContent).toContain(
+      "optionGroups.typeLabel",
+    );
+  });
+
   it("lists dishes in the page flow, not a nested scroller, on a phone", () => {
     vi.stubGlobal("matchMedia", (query: string) => ({
       matches: true,

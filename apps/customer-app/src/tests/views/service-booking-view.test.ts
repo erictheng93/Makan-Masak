@@ -109,8 +109,9 @@ const pendingBooking = {
   calendarUid: "booking-1@makanmakan.service-bookings",
 };
 
-function mountView() {
+function mountView(attachTo?: HTMLElement) {
   return mount(ServiceBookingView, {
+    attachTo,
     props: {
       restaurantId: "restaurant-1",
       serviceItemId: 10,
@@ -161,6 +162,55 @@ describe("ServiceBookingView", () => {
       ...pendingBooking,
       status: "cancelled",
     });
+  });
+
+  it("keeps cancellation feedback at the lookup result after creating a booking", async () => {
+    const wrapper = mountView(document.body);
+    try {
+      await flushPromises();
+      await wrapper.get('[data-testid="service-booking-name"]').setValue("Ada");
+      await wrapper
+        .get('[data-testid="service-booking-phone"]')
+        .setValue("0912345678");
+      await wrapper
+        .get('[data-testid="service-booking-create"]')
+        .trigger("submit");
+      await flushPromises();
+      expect(document.activeElement).toBe(
+        wrapper.get('[data-testid="service-booking-confirmation"]').element,
+      );
+      await wrapper
+        .get('[data-testid="service-booking-verify"]')
+        .trigger("click");
+      await flushPromises();
+      const cancel = wrapper.get('[data-testid="service-booking-cancel"]');
+      (cancel.element as HTMLButtonElement).focus();
+      await cancel.trigger("click");
+      await flushPromises();
+      expect(document.activeElement).toBe(
+        wrapper.get('[data-testid="service-booking-verified"]').element,
+      );
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it("keeps availability errors outside the date and query controls", async () => {
+    const loggedError = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      vi.mocked(serviceBookingsApi.getAvailability).mockRejectedValueOnce(
+        new Error("Unavailable"),
+      );
+      const wrapper = mountView();
+      await flushPromises();
+      const dateRow = wrapper.get('[data-testid="service-booking-date"]')
+        .element.parentElement!.parentElement!;
+      expect(dateRow.contains(wrapper.get('[role="alert"]').element)).toBe(
+        false,
+      );
+    } finally {
+      loggedError.mockRestore();
+    }
   });
 
   it("loads service details and availability slots", async () => {

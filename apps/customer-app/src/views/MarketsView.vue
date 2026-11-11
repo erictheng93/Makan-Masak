@@ -120,34 +120,34 @@
         {{ t(store.error) }}
       </div>
       <template v-else>
-        <details v-if="favoriteMarkets.length > 0" class="space-y-3">
-          <summary class="text-sm font-medium text-gray-700">
+        <section v-if="favoriteMarkets.length > 0" class="space-y-3">
+          <h2 class="text-sm font-medium text-gray-700">
             {{ t("markets.directory.favorites") }}
-          </summary>
+          </h2>
           <MarketCard
             v-for="market in favoriteMarkets"
             :key="`favorite-${market.id}`"
             :market="market"
             @select="openMarket"
           />
-        </details>
+        </section>
 
-        <details v-if="recentMarkets.length > 0" class="space-y-3">
-          <summary class="text-sm font-medium text-gray-700">
+        <section v-if="recentMarkets.length > 0" class="space-y-3">
+          <h2 class="text-sm font-medium text-gray-700">
             {{ t("markets.directory.recentVisits") }}
-          </summary>
+          </h2>
           <MarketCard
             v-for="market in recentMarkets"
             :key="`recent-${market.id}`"
             :market="market"
             @select="openMarket"
           />
-        </details>
+        </section>
 
-        <details v-if="recentCheckouts.length > 0" class="space-y-3">
-          <summary class="text-sm font-medium text-gray-700">
+        <section v-if="recentCheckouts.length > 0" class="space-y-3">
+          <h2 class="text-sm font-medium text-gray-700">
             {{ t("markets.directory.recentOrders") }}
-          </summary>
+          </h2>
           <!-- Kept visible but inert while the API has market checkouts
                switched off. The tracking screen this opens does nothing but
                read /market-checkouts, so following the link would land the
@@ -197,7 +197,7 @@
               </template>
             </span>
           </button>
-        </details>
+        </section>
 
         <section v-if="store.nearbyMarkets.length > 0" class="space-y-3">
           <h2 class="text-sm font-medium text-gray-700">

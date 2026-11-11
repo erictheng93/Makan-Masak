@@ -1247,7 +1247,7 @@
                           <label
                             :for="`group-type-${group.id}`"
                             class="admin-field"
-                            ><span>{{ t("menu.form.optionGroupName") }}</span
+                            ><span>{{ t("optionGroups.typeLabel") }}</span
                             ><select
                               :id="`group-type-${group.id}`"
                               v-model="group.type"
@@ -1811,6 +1811,13 @@ const optionId = (prefix: string, index: number, current?: unknown): string =>
     ? current
     : `${prefix}-${index + 1}`;
 
+const nextOptionId = (prefix: string, rows: Array<{ id: string }>): string => {
+  const used = new Set(rows.map((row) => row.id));
+  let index = 0;
+  while (used.has(optionId(prefix, index))) index++;
+  return optionId(prefix, index);
+};
+
 const normalizeOptionsForForm = (
   options: unknown,
 ): {
@@ -2279,7 +2286,7 @@ const handleImageFileSelected = async (event: Event) => {
 
 const addSizeOption = () => {
   menuItemForm.value.sizes.push({
-    id: optionId("size", menuItemForm.value.sizes.length),
+    id: nextOptionId("size", menuItemForm.value.sizes),
     name: "",
     priceAdjustment: 0,
     isDefault: menuItemForm.value.sizes.length === 0,
@@ -2292,7 +2299,7 @@ const removeSizeOption = (index: number) => {
 
 const addAddOnOption = () => {
   menuItemForm.value.addOns.push({
-    id: optionId("addon", menuItemForm.value.addOns.length),
+    id: nextOptionId("addon", menuItemForm.value.addOns),
     name: "",
     price: 0,
     maxQuantity: "",
@@ -2308,7 +2315,7 @@ const addCustomizationChoice = (groupIndex: number) => {
   const group = menuItemForm.value.customizations[groupIndex];
   if (!group) return;
   group.choices.push({
-    id: optionId("choice", group.choices.length),
+    id: nextOptionId("choice", group.choices),
     name: "",
     priceAdjustment: 0,
     isDefault: group.choices.length === 0,
@@ -2323,7 +2330,7 @@ const removeCustomizationChoice = (groupIndex: number, choiceIndex: number) => {
 
 const addCustomizationGroup = () => {
   menuItemForm.value.customizations.push({
-    id: optionId("group", menuItemForm.value.customizations.length),
+    id: nextOptionId("group", menuItemForm.value.customizations),
     name: "",
     type: "single",
     required: false,

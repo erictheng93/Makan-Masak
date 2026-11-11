@@ -4,6 +4,7 @@ import { mount, flushPromises } from "@vue/test-utils";
 import { ref } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import OptionGroupsView from "./OptionGroupsView.vue";
+import { useConfirmModal } from "@/composables/useConfirmModal";
 
 const get = vi.fn();
 const post = vi.fn();
@@ -129,6 +130,58 @@ describe("OptionGroupsView", () => {
     expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
     expect(document.activeElement).toBe(trigger.element);
     wrapper.unmount();
+  });
+
+  it("keeps edited group data until discarding is confirmed", async () => {
+    const wrapper = await mountView();
+    await wrapper.get('[data-testid="add-group"]').trigger("click");
+    wrapper.vm.groupForm.name = "甜度";
+    await wrapper
+      .get('[data-testid="group-modal"]')
+      .trigger("keydown", { key: "Escape" });
+    const confirmation = useConfirmModal();
+    const pending = confirmation.modalState.value;
+    await wrapper
+      .get('[data-testid="group-modal"]')
+      .trigger("keydown", { key: "Escape" });
+    expect(confirmation.modalState.value).toBe(pending);
+    expect(confirmation.modalState.value?.message).toBe(
+      "confirmations.unsavedChanges",
+    );
+    confirmation.close(false);
+    await flushPromises();
+    expect(wrapper.vm.showGroupModal).toBe(true);
+    expect(wrapper.vm.groupForm.name).toBe("甜度");
+    await wrapper
+      .get('[data-testid="group-modal"]')
+      .trigger("keydown", { key: "Escape" });
+    confirmation.close(true);
+    await flushPromises();
+    expect(wrapper.vm.showGroupModal).toBe(false);
+  });
+
+  it("does not dismiss a saving choice with Escape", async () => {
+    respondWith([group()]);
+    const wrapper = await mountView();
+    await wrapper
+      .get('[data-testid="add-choice-group-sweet"]')
+      .trigger("click");
+    wrapper.vm.choiceForm.name = "無糖";
+    wrapper.vm.choiceForm.publicId = "none";
+    let complete!: (value: unknown) => void;
+    post.mockReturnValueOnce(
+      new Promise((resolve) => {
+        complete = resolve;
+      }),
+    );
+    await wrapper.get('[data-testid="choice-modal"] form').trigger("submit");
+    await wrapper
+      .get('[data-testid="choice-modal"]')
+      .trigger("keydown", { key: "Escape" });
+    expect(wrapper.vm.showChoiceModal).toBe(true);
+    complete({ data: { success: true } });
+    await flushPromises();
+    expect(wrapper.vm.showChoiceModal).toBe(false);
   });
 
   it("loads the restaurant's groups on open", async () => {

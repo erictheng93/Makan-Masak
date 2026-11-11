@@ -122,7 +122,8 @@ it("exposes current switches and keyboard-operable named setting dialogs", async
   expect(dialog.attributes("aria-modal")).toBe("true");
   expect(dialog.attributes("aria-labelledby")).toBeTruthy();
   await dialog.trigger("keydown", { key: "Escape" });
-  await flushPromises();
-  expect(body.find('[role="dialog"]').exists()).toBe(false);
-  expect(document.activeElement).toBe(trigger!.element);
+  await vi.waitFor(() => {
+    expect(body.find('[role="dialog"]').exists()).toBe(false);
+    expect(document.activeElement).toBe(trigger!.element);
+  });
 });

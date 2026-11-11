@@ -1,3 +1,5 @@
+@import "../../../../../packages/shared/styles/app-ui.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

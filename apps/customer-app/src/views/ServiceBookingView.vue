@@ -112,23 +112,23 @@
             >
               {{ t("serviceBooking.checkSlots") }}
             </button>
-            <div v-if="messageContext === 'availability'" class="space-y-2">
-              <p
-                v-if="errorMessage"
-                id="booking-error"
-                role="alert"
-                class="mt-3 text-sm text-ios-red-deep"
-              >
-                {{ errorMessage }}
-              </p>
-              <p
-                v-if="successMessage"
-                role="status"
-                class="mt-3 text-sm text-ios-green-deep"
-              >
-                {{ successMessage }}
-              </p>
-            </div>
+          </div>
+          <div v-if="messageContext === 'availability'" class="space-y-2">
+            <p
+              v-if="errorMessage"
+              id="booking-error"
+              role="alert"
+              class="mt-3 text-sm text-ios-red-deep"
+            >
+              {{ errorMessage }}
+            </p>
+            <p
+              v-if="successMessage"
+              role="status"
+              class="mt-3 text-sm text-ios-green-deep"
+            >
+              {{ successMessage }}
+            </p>
           </div>
 
           <div class="mt-4 grid grid-cols-2 gap-2">
@@ -170,10 +170,10 @@
           </p>
         </section>
 
-        <details :open="!booking" class="mt-4">
-          <summary class="font-semibold text-ios-text">
+        <section class="mt-4">
+          <h2 class="font-semibold text-ios-text">
             {{ t("serviceBooking.create") }}
-          </summary>
+          </h2>
           <form
             class="mt-4 space-y-3 rounded-xl border border-gray-200 bg-white p-4"
             @submit.prevent="
@@ -336,7 +336,7 @@
               </p>
             </div>
           </form>
-        </details>
+        </section>
 
         <section
           v-if="booking"
@@ -440,10 +440,10 @@
           </div>
         </section>
 
-        <details class="mt-4 rounded-xl border border-gray-200 bg-white p-4">
-          <summary class="text-base font-semibold text-gray-900">
+        <section class="mt-4 rounded-xl border border-gray-200 bg-white p-4">
+          <h2 class="text-base font-semibold text-gray-900">
             {{ t("serviceBooking.lookupTitle") }}
-          </summary>
+          </h2>
           <div v-if="messageContext === 'lookup'" class="space-y-2">
             <p
               v-if="errorMessage"
@@ -503,6 +503,8 @@
           <div
             v-if="verifiedBooking"
             data-testid="service-booking-verified"
+            tabindex="-1"
+            role="status"
             class="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700"
           >
             {{ verifiedBooking.serviceNameSnapshot }} ·
@@ -526,14 +528,14 @@
               {{ t("serviceBooking.cancel") }}
             </button>
           </div>
-        </details>
+        </section>
       </template>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch, nextTick } from "vue";
+import { computed, onMounted, reactive, ref, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import type { RestaurantServiceItem } from "@makanmasak/shared-types";
 import { useFeatureAvailability } from "@/composables/useFeatureAvailability";
@@ -595,15 +597,6 @@ const loadError = ref("");
 const messageContext = ref("availability");
 const errorMessage = ref("");
 const successMessage = ref("");
-watch(booking, async (result) => {
-  if (!result) return;
-  await nextTick();
-  const confirmation = document.querySelector<HTMLElement>(
-    '[data-testid="service-booking-confirmation"]',
-  );
-  confirmation?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
-  confirmation?.focus();
-});
 const bookingDate = ref(today);
 const selectedTime = ref("");
 const creditCardPublicId = ref("");
@@ -714,6 +707,12 @@ async function createBooking() {
       form.customerEmail.trim() || form.customerPhone.trim() || "";
     successMessage.value = t("serviceBooking.createSuccess");
     await loadAvailability();
+    await nextTick();
+    const confirmation = document.querySelector<HTMLElement>(
+      '[data-testid="service-booking-confirmation"]',
+    );
+    confirmation?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+    confirmation?.focus();
   } catch (error) {
     console.error("Create service booking failed:", error);
     errorMessage.value = t("serviceBooking.createFailed");
@@ -780,6 +779,10 @@ async function cancelVerifiedBooking() {
     }
     successMessage.value = t("serviceBooking.cancelSuccess");
     await loadAvailability();
+    await nextTick();
+    document
+      .querySelector<HTMLElement>('[data-testid="service-booking-verified"]')
+      ?.focus();
   } catch (error) {
     console.error("Cancel service booking failed:", error);
     errorMessage.value = t("serviceBooking.cancelFailed");

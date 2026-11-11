@@ -189,15 +189,15 @@
             </div>
           </section>
 
-          <details
+          <section
             v-if="marketCart && marketCartItemCount > 0"
             id="market-basket"
             data-testid="market-cart-summary"
             class="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4"
           >
-            <summary class="text-base font-semibold text-emerald-950">
+            <h2 class="text-base font-semibold text-emerald-950">
               {{ t("markets.detail.cartTitle") }}
-            </summary>
+            </h2>
             <div class="flex items-start justify-between gap-3">
               <div>
                 <p class="mt-1 text-sm text-emerald-800">
@@ -330,7 +330,7 @@
                 })
               }}
             </div>
-          </details>
+          </section>
 
           <VendorListInMarket
             id="market-vendors"

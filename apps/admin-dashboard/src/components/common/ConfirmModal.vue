@@ -3,10 +3,15 @@
     <Transition name="confirm-modal">
       <div
         v-if="modalState"
+        v-dialog-focus
         data-testid="confirm-modal"
         role="dialog"
         aria-modal="true"
+        aria-labelledby="confirm-modal-title"
+        aria-describedby="confirm-modal-message"
+        tabindex="-1"
         class="fixed inset-0 z-50 overflow-y-auto"
+        @keydown.esc.stop.prevent="close(false)"
       >
         <div class="flex items-center justify-center min-h-screen px-4">
           <div
@@ -32,10 +37,16 @@
                   "
                 />
               </div>
-              <h3 class="text-[17px] font-bold text-ios-text mb-2">
+              <h3
+                id="confirm-modal-title"
+                class="text-[17px] font-bold text-ios-text mb-2"
+              >
                 {{ modalState.title }}
               </h3>
-              <p class="text-[14px] text-ios-secondary mb-6">
+              <p
+                id="confirm-modal-message"
+                class="text-[14px] text-ios-secondary mb-6"
+              >
                 {{ modalState.message }}
               </p>
               <div class="flex gap-2.5 justify-center">
@@ -71,6 +82,7 @@
 import { AlertTriangle } from "lucide-vue-next";
 import { useI18n } from "@/i18n";
 import { useConfirmModal } from "@/composables/useConfirmModal";
+import { vDialogFocus } from "@/utils/dialog-focus";
 
 const { t } = useI18n();
 const { modalState, close } = useConfirmModal();

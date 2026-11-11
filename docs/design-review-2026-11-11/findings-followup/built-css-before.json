@@ -1,0 +1,26 @@
+[
+  {
+    "app": "admin-dashboard",
+    "width": 390,
+    "actual": {
+      "mobile": true,
+      "desktop": true,
+      "heading": "flex",
+      "switchWidth": 44,
+      "switchHeight": 44
+    },
+    "pass": false
+  },
+  {
+    "app": "admin-dashboard",
+    "width": 1100,
+    "actual": {
+      "mobile": true,
+      "desktop": true,
+      "heading": "flex",
+      "switchWidth": 44,
+      "switchHeight": 44
+    },
+    "pass": false
+  }
+]

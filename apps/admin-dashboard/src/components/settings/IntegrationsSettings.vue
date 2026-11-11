@@ -126,6 +126,8 @@
             </div>
             <button
               :aria-label="t('integrations.autoAccept')"
+              role="switch"
+              :aria-checked="Boolean(uberEats.config?.autoAcceptOrders)"
               :class="[
                 'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
                 uberEats.config?.autoAcceptOrders
@@ -156,6 +158,8 @@
             </div>
             <button
               :aria-label="t('integrations.menuSync')"
+              role="switch"
+              :aria-checked="Boolean(uberEats.config?.menuSyncEnabled)"
               :class="[
                 'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
                 uberEats.config?.menuSyncEnabled

@@ -5,7 +5,6 @@ import App from "./App.vue";
 import Toast, { type PluginOptions, POSITION } from "vue-toastification";
 import "vue-toastification/dist/index.css";
 import "./assets/css/main.css";
-import "../../../packages/shared/styles/app-ui.css";
 import { initI18n } from "./i18n";
 
 const app = createApp(App);

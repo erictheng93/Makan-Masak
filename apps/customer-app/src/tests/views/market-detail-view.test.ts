@@ -642,6 +642,12 @@ describe("MarketDetailView", () => {
     const wrapper = mountView();
 
     const summary = wrapper.get('[data-testid="market-cart-summary"]');
+    expect(summary.element.closest("details:not([open])")).toBeNull();
+    expect(
+      wrapper
+        .get('[data-testid="market-checkout-phone"]')
+        .element.closest("details:not([open])"),
+    ).toBeNull();
     expect(summary.text()).toContain("markets.detail.cartTitle");
     expect(summary.text()).toContain("markets.detail.cartSummary:1,");
     expect(summary.text()).toContain("markets.detail.vendorItemCount:2");

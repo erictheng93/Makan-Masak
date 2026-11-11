@@ -1,0 +1,75 @@
+{
+  "checks": [
+    {
+      "name": "urgent",
+      "reducedMotion": "no-preference",
+      "enterMoving": true,
+      "leaveMoving": true,
+      "pass": true
+    },
+    {
+      "name": "refresh",
+      "reducedMotion": "no-preference",
+      "enterMoving": true,
+      "leaveMoving": true,
+      "pass": true
+    },
+    {
+      "name": "sound",
+      "reducedMotion": "no-preference",
+      "enterMoving": true,
+      "leaveMoving": true,
+      "pass": true
+    },
+    {
+      "name": "confirmation",
+      "reducedMotion": "no-preference",
+      "enterMoving": true,
+      "leaveMoving": true,
+      "pass": true
+    },
+    {
+      "name": "order-details",
+      "reducedMotion": "no-preference",
+      "enterMoving": true,
+      "leaveMoving": true,
+      "pass": true
+    },
+    {
+      "name": "urgent",
+      "reducedMotion": "reduce",
+      "enterMoving": true,
+      "leaveMoving": true,
+      "pass": true
+    },
+    {
+      "name": "refresh",
+      "reducedMotion": "reduce",
+      "enterMoving": true,
+      "leaveMoving": true,
+      "pass": true
+    },
+    {
+      "name": "sound",
+      "reducedMotion": "reduce",
+      "enterMoving": true,
+      "leaveMoving": true,
+      "pass": true
+    },
+    {
+      "name": "confirmation",
+      "reducedMotion": "reduce",
+      "enterMoving": false,
+      "leaveMoving": false,
+      "pass": true
+    },
+    {
+      "name": "order-details",
+      "reducedMotion": "reduce",
+      "enterMoving": true,
+      "leaveMoving": true,
+      "pass": true
+    }
+  ],
+  "passed": 10
+}

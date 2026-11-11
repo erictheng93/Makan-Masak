@@ -82,7 +82,11 @@ describe("application success status link", () => {
       );
       expect(emailed.text()).toContain("success.statusLink.emailed");
       expect(emailed.get("a").attributes("href")).toBe("/find-application");
-      expect(wrapper.text()).not.toContain("success.summary.copyApplicationId");
+      expect(
+        wrapper
+          .find('button[aria-label="success.summary.copyApplicationId"]')
+          .exists(),
+      ).toBe(false);
     } finally {
       mocks.store.applicationId = "APP-1";
       mocks.route.hash = "#unique-secret";
@@ -98,6 +102,7 @@ it("names the application copy action and announces its result", async () => {
   );
   await button.trigger("click");
   await flushPromises();
+  expect(mocks.copy).toHaveBeenCalledWith("APP-1");
   expect(wrapper.get('[role="status"]').text()).toBe(
     "common.toast.copiedToClipboard",
   );

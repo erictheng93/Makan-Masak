@@ -233,143 +233,227 @@
     </div>
 
     <!-- Urgent Threshold Picker Sheet -->
-    <Dialog
-      :open="showUrgentPicker"
-      class="fixed inset-0 z-50 flex items-end"
-      @close="showUrgentPicker = false"
+    <TransitionRoot
+      as="template"
+      :show="showUrgentPicker"
+      appear
+      @after-leave="restorePickerFocus"
     >
-      <div
-        class="absolute inset-0 bg-black/30"
-        @click="showUrgentPicker = false"
-      />
-      <DialogPanel
-        class="relative w-full bg-white rounded-t-3xl sm:rounded-3xl sm:max-w-2xl sm:mx-auto shadow-card-lg px-5 pt-5 pb-8 max-h-[90dvh] overflow-y-auto"
+      <Dialog
+        class="fixed inset-0 z-50 flex items-end"
+        @close="showUrgentPicker = false"
       >
-        <div class="flex items-center justify-between mb-4">
-          <DialogTitle as="h2" class="text-lg font-bold text-ios-text">{{
-            t("settings.urgentTime")
-          }}</DialogTitle>
-          <button
-            class="text-ios-blue font-semibold text-[15px]"
+        <TransitionChild
+          as="template"
+          enter="transition-opacity duration-200 ease-out"
+          enter-from="opacity-0"
+          enter-to="opacity-100"
+          leave="transition-opacity duration-200 ease-in"
+          leave-from="opacity-100"
+          leave-to="opacity-0"
+        >
+          <div
+            class="absolute inset-0 bg-black/30"
             @click="showUrgentPicker = false"
+          />
+        </TransitionChild>
+        <TransitionChild
+          as="template"
+          enter="transition-transform duration-300 ease-out"
+          enter-from="translate-y-full"
+          enter-to="translate-y-0"
+          leave="transition-transform duration-200 ease-in"
+          leave-from="translate-y-0"
+          leave-to="translate-y-full"
+        >
+          <DialogPanel
+            class="relative w-full bg-white rounded-t-3xl sm:rounded-3xl sm:max-w-2xl sm:mx-auto shadow-card-lg px-5 pt-5 pb-8 max-h-[90dvh] overflow-y-auto"
           >
-            {{ t("common.done") }}
-          </button>
-        </div>
-        <div class="grid grid-cols-4 gap-2">
-          <button
-            v-for="val in urgentOptions"
-            :key="val"
-            class="py-2.5 rounded-full text-sm font-semibold transition-all duration-200"
-            :class="
-              settings.urgentThreshold === val
-                ? 'bg-red-700 text-white'
-                : 'bg-ios-bg text-ios-secondary'
-            "
-            @click="setUrgentThreshold(val)"
-          >
-            {{ val }} {{ t("settings.min") }}
-          </button>
-        </div>
-      </DialogPanel>
-    </Dialog>
+            <div class="flex items-center justify-between mb-4">
+              <DialogTitle as="h2" class="text-lg font-bold text-ios-text">{{
+                t("settings.urgentTime")
+              }}</DialogTitle>
+              <button
+                class="text-ios-blue font-semibold text-[15px]"
+                @click="showUrgentPicker = false"
+              >
+                {{ t("common.done") }}
+              </button>
+            </div>
+            <div class="grid grid-cols-4 gap-2">
+              <button
+                v-for="val in urgentOptions"
+                :key="val"
+                class="py-2.5 rounded-full text-sm font-semibold transition-all duration-200"
+                :class="
+                  settings.urgentThreshold === val
+                    ? 'bg-red-700 text-white'
+                    : 'bg-ios-bg text-ios-secondary'
+                "
+                @click="setUrgentThreshold(val)"
+              >
+                {{ val }} {{ t("settings.min") }}
+              </button>
+            </div>
+          </DialogPanel>
+        </TransitionChild>
+      </Dialog>
+    </TransitionRoot>
 
     <!-- Refresh Interval Picker Sheet -->
-    <Dialog
-      :open="showRefreshPicker"
-      class="fixed inset-0 z-50 flex items-end"
-      @close="showRefreshPicker = false"
+    <TransitionRoot
+      as="template"
+      :show="showRefreshPicker"
+      appear
+      @after-leave="restorePickerFocus"
     >
-      <div
-        class="absolute inset-0 bg-black/30"
-        @click="showRefreshPicker = false"
-      />
-      <DialogPanel
-        class="relative w-full bg-white rounded-t-3xl sm:rounded-3xl sm:max-w-2xl sm:mx-auto shadow-card-lg px-5 pt-5 pb-8 max-h-[90dvh] overflow-y-auto"
+      <Dialog
+        class="fixed inset-0 z-50 flex items-end"
+        @close="showRefreshPicker = false"
       >
-        <div class="flex items-center justify-between mb-4">
-          <DialogTitle as="h2" class="text-lg font-bold text-ios-text">{{
-            t("settings.autoRefreshInterval")
-          }}</DialogTitle>
-          <button
-            class="text-ios-blue font-semibold text-[15px]"
+        <TransitionChild
+          as="template"
+          enter="transition-opacity duration-200 ease-out"
+          enter-from="opacity-0"
+          enter-to="opacity-100"
+          leave="transition-opacity duration-200 ease-in"
+          leave-from="opacity-100"
+          leave-to="opacity-0"
+        >
+          <div
+            class="absolute inset-0 bg-black/30"
             @click="showRefreshPicker = false"
+          />
+        </TransitionChild>
+        <TransitionChild
+          as="template"
+          enter="transition-transform duration-300 ease-out"
+          enter-from="translate-y-full"
+          enter-to="translate-y-0"
+          leave="transition-transform duration-200 ease-in"
+          leave-from="translate-y-0"
+          leave-to="translate-y-full"
+        >
+          <DialogPanel
+            class="relative w-full bg-white rounded-t-3xl sm:rounded-3xl sm:max-w-2xl sm:mx-auto shadow-card-lg px-5 pt-5 pb-8 max-h-[90dvh] overflow-y-auto"
           >
-            {{ t("common.done") }}
-          </button>
-        </div>
-        <div class="grid grid-cols-4 gap-2">
-          <button
-            v-for="val in refreshOptions"
-            :key="val"
-            class="py-2.5 rounded-full text-sm font-semibold transition-all duration-200"
-            :class="
-              settings.refreshInterval === val
-                ? 'bg-blue-700 text-white'
-                : 'bg-ios-bg text-ios-secondary'
-            "
-            @click="setRefreshInterval(val)"
-          >
-            {{ val }} {{ t("common.seconds") }}
-          </button>
-        </div>
-      </DialogPanel>
-    </Dialog>
+            <div class="flex items-center justify-between mb-4">
+              <DialogTitle as="h2" class="text-lg font-bold text-ios-text">{{
+                t("settings.autoRefreshInterval")
+              }}</DialogTitle>
+              <button
+                class="text-ios-blue font-semibold text-[15px]"
+                @click="showRefreshPicker = false"
+              >
+                {{ t("common.done") }}
+              </button>
+            </div>
+            <div class="grid grid-cols-4 gap-2">
+              <button
+                v-for="val in refreshOptions"
+                :key="val"
+                class="py-2.5 rounded-full text-sm font-semibold transition-all duration-200"
+                :class="
+                  settings.refreshInterval === val
+                    ? 'bg-blue-700 text-white'
+                    : 'bg-ios-bg text-ios-secondary'
+                "
+                @click="setRefreshInterval(val)"
+              >
+                {{ val }} {{ t("common.seconds") }}
+              </button>
+            </div>
+          </DialogPanel>
+        </TransitionChild>
+      </Dialog>
+    </TransitionRoot>
 
     <!-- Sound Picker Sheet -->
-    <Dialog
-      :open="showSoundPicker"
-      class="fixed inset-0 z-50 flex items-end"
-      @close="showSoundPicker = false"
+    <TransitionRoot
+      as="template"
+      :show="showSoundPicker"
+      appear
+      @after-leave="restorePickerFocus"
     >
-      <div
-        class="absolute inset-0 bg-black/30"
-        @click="showSoundPicker = false"
-      />
-      <DialogPanel
-        class="relative w-full bg-white rounded-t-3xl sm:rounded-3xl sm:max-w-2xl sm:mx-auto shadow-card-lg px-5 pt-5 pb-8 max-h-[90dvh] overflow-y-auto"
+      <Dialog
+        class="fixed inset-0 z-50 flex items-end"
+        @close="showSoundPicker = false"
       >
-        <div class="flex items-center justify-between mb-4">
-          <DialogTitle as="h2" class="text-lg font-bold text-ios-text">{{
-            t("settings.notificationSound")
-          }}</DialogTitle>
-          <button
-            class="text-ios-blue font-semibold text-[15px]"
+        <TransitionChild
+          as="template"
+          enter="transition-opacity duration-200 ease-out"
+          enter-from="opacity-0"
+          enter-to="opacity-100"
+          leave="transition-opacity duration-200 ease-in"
+          leave-from="opacity-100"
+          leave-to="opacity-0"
+        >
+          <div
+            class="absolute inset-0 bg-black/30"
             @click="showSoundPicker = false"
+          />
+        </TransitionChild>
+        <TransitionChild
+          as="template"
+          enter="transition-transform duration-300 ease-out"
+          enter-from="translate-y-full"
+          enter-to="translate-y-0"
+          leave="transition-transform duration-200 ease-in"
+          leave-from="translate-y-0"
+          leave-to="translate-y-full"
+        >
+          <DialogPanel
+            class="relative w-full bg-white rounded-t-3xl sm:rounded-3xl sm:max-w-2xl sm:mx-auto shadow-card-lg px-5 pt-5 pb-8 max-h-[90dvh] overflow-y-auto"
           >
-            {{ t("common.done") }}
-          </button>
-        </div>
-        <div class="space-y-1">
-          <button
-            v-for="sound in soundOptions"
-            :key="sound.value"
-            type="button"
-            class="w-full text-left flex items-center justify-between py-3 px-4 rounded-2xl cursor-pointer transition-colors"
-            :class="
-              selectedSound === sound.value
-                ? 'bg-ios-blue/10'
-                : 'active:bg-ios-bg'
-            "
-            :aria-pressed="selectedSound === sound.value"
-            @click="selectedSound = sound.value"
-          >
-            <span class="text-[15px] font-medium text-ios-text">{{
-              sound.label
-            }}</span>
-            <Check
-              v-if="selectedSound === sound.value"
-              class="w-5 h-5 text-ios-blue"
-            />
-          </button>
-        </div>
-      </DialogPanel>
-    </Dialog>
+            <div class="flex items-center justify-between mb-4">
+              <DialogTitle as="h2" class="text-lg font-bold text-ios-text">{{
+                t("settings.notificationSound")
+              }}</DialogTitle>
+              <button
+                class="text-ios-blue font-semibold text-[15px]"
+                @click="showSoundPicker = false"
+              >
+                {{ t("common.done") }}
+              </button>
+            </div>
+            <div class="space-y-1">
+              <button
+                v-for="sound in soundOptions"
+                :key="sound.value"
+                type="button"
+                class="w-full text-left flex items-center justify-between py-3 px-4 rounded-2xl cursor-pointer transition-colors"
+                :class="
+                  selectedSound === sound.value
+                    ? 'bg-ios-blue/10'
+                    : 'active:bg-ios-bg'
+                "
+                :aria-pressed="selectedSound === sound.value"
+                @click="selectedSound = sound.value"
+              >
+                <span class="text-[15px] font-medium text-ios-text">{{
+                  sound.label
+                }}</span>
+                <Check
+                  v-if="selectedSound === sound.value"
+                  class="w-5 h-5 text-ios-blue"
+                />
+              </button>
+            </div>
+          </DialogPanel>
+        </TransitionChild>
+      </Dialog>
+    </TransitionRoot>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Dialog, DialogPanel, DialogTitle } from "@headlessui/vue";
+import {
+  Dialog,
+  DialogPanel,
+  DialogTitle,
+  TransitionRoot,
+  TransitionChild,
+} from "@headlessui/vue";
 import { reactive, ref, computed } from "vue";
 import { ArrowLeft, ChevronRight, Check } from "lucide-vue-next";
 import { useSettingsStore } from "@/stores/settings";
@@ -377,6 +461,7 @@ import { useToast } from "vue-toastification";
 import { useConfirmModal } from "@/composables/useConfirmModal";
 import { useI18n } from "@/i18n";
 import { storeToRefs } from "pinia";
+import { useDialogReturnFocus } from "@/composables/use-dialog-return-focus";
 
 const settingsStore = useSettingsStore();
 const toast = useToast();
@@ -391,6 +476,10 @@ const settings = reactive({ ...storeSettings.value });
 const showUrgentPicker = ref(false);
 const showRefreshPicker = ref(false);
 const showSoundPicker = ref(false);
+const restorePickerFocus = useDialogReturnFocus(
+  () =>
+    showUrgentPicker.value || showRefreshPicker.value || showSoundPicker.value,
+);
 const selectedSound = ref("default");
 
 // Options

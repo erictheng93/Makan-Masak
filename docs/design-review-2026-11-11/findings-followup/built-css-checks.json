@@ -1,0 +1,162 @@
+[
+  {
+    "app": "customer-app",
+    "width": 390,
+    "hasPaginationUtilities": false,
+    "hasSwitchUtilities": true,
+    "actual": {
+      "mobile": true,
+      "desktop": false,
+      "heading": "block",
+      "switchWidth": 38.5,
+      "switchHeight": 21,
+      "expandedSwitchHit": true,
+      "actionHeight": 44
+    },
+    "pass": true
+  },
+  {
+    "app": "customer-app",
+    "width": 1100,
+    "hasPaginationUtilities": false,
+    "hasSwitchUtilities": true,
+    "actual": {
+      "mobile": true,
+      "desktop": false,
+      "heading": "block",
+      "switchWidth": 44,
+      "switchHeight": 24,
+      "expandedSwitchHit": true,
+      "actionHeight": 44
+    },
+    "pass": true
+  },
+  {
+    "app": "admin-dashboard",
+    "width": 390,
+    "hasPaginationUtilities": true,
+    "hasSwitchUtilities": true,
+    "actual": {
+      "mobile": true,
+      "desktop": false,
+      "heading": "block",
+      "switchWidth": 44,
+      "switchHeight": 24,
+      "expandedSwitchHit": true,
+      "actionHeight": 44
+    },
+    "pass": true
+  },
+  {
+    "app": "admin-dashboard",
+    "width": 1100,
+    "hasPaginationUtilities": true,
+    "hasSwitchUtilities": true,
+    "actual": {
+      "mobile": false,
+      "desktop": true,
+      "heading": "block",
+      "switchWidth": 44,
+      "switchHeight": 24,
+      "expandedSwitchHit": true,
+      "actionHeight": 44
+    },
+    "pass": true
+  },
+  {
+    "app": "kitchen-display",
+    "width": 390,
+    "hasPaginationUtilities": false,
+    "hasSwitchUtilities": true,
+    "actual": {
+      "mobile": true,
+      "desktop": false,
+      "heading": "block",
+      "switchWidth": 44,
+      "switchHeight": 24,
+      "expandedSwitchHit": true,
+      "actionHeight": 44
+    },
+    "pass": true
+  },
+  {
+    "app": "kitchen-display",
+    "width": 1100,
+    "hasPaginationUtilities": false,
+    "hasSwitchUtilities": true,
+    "actual": {
+      "mobile": true,
+      "desktop": false,
+      "heading": "block",
+      "switchWidth": 44,
+      "switchHeight": 24,
+      "expandedSwitchHit": true,
+      "actionHeight": 44
+    },
+    "pass": true
+  },
+  {
+    "app": "management-portal",
+    "width": 390,
+    "hasPaginationUtilities": false,
+    "hasSwitchUtilities": false,
+    "actual": {
+      "mobile": true,
+      "desktop": false,
+      "heading": "block",
+      "switchWidth": 16,
+      "switchHeight": 24,
+      "expandedSwitchHit": true,
+      "actionHeight": 44
+    },
+    "pass": true
+  },
+  {
+    "app": "management-portal",
+    "width": 1100,
+    "hasPaginationUtilities": false,
+    "hasSwitchUtilities": false,
+    "actual": {
+      "mobile": true,
+      "desktop": false,
+      "heading": "block",
+      "switchWidth": 16,
+      "switchHeight": 24,
+      "expandedSwitchHit": true,
+      "actionHeight": 44
+    },
+    "pass": true
+  },
+  {
+    "app": "onboarding-app",
+    "width": 390,
+    "hasPaginationUtilities": false,
+    "hasSwitchUtilities": false,
+    "actual": {
+      "mobile": true,
+      "desktop": false,
+      "heading": "block",
+      "switchWidth": 16,
+      "switchHeight": 24,
+      "expandedSwitchHit": true,
+      "actionHeight": 44
+    },
+    "pass": true
+  },
+  {
+    "app": "onboarding-app",
+    "width": 1100,
+    "hasPaginationUtilities": false,
+    "hasSwitchUtilities": false,
+    "actual": {
+      "mobile": true,
+      "desktop": false,
+      "heading": "block",
+      "switchWidth": 16,
+      "switchHeight": 24,
+      "expandedSwitchHit": true,
+      "actionHeight": 44
+    },
+    "pass": true
+  }
+]

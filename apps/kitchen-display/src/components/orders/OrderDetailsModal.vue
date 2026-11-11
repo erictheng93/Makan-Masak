@@ -1,181 +1,203 @@
 <template>
-  <Dialog :open="show" @close="$emit('close')">
-    <Transition name="fade">
-      <div
-        v-if="show"
-        class="fixed inset-0 bg-black/30 z-50"
-        @click="$emit('close')"
-      />
-    </Transition>
-
-    <Transition name="slide-up">
-      <DialogPanel
-        v-if="show"
-        class="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl z-50 max-h-[90vh] flex flex-col"
-        @click.stop
+  <TransitionRoot as="template" :show="show" appear @after-leave="restoreFocus">
+    <Dialog @close="$emit('close')">
+      <TransitionChild
+        as="template"
+        enter="fade-enter-active"
+        enter-from="fade-enter-from"
+        enter-to="opacity-100"
+        leave="fade-leave-active"
+        leave-from="opacity-100"
+        leave-to="fade-leave-to"
       >
-        <!-- Drag Handle -->
-        <div class="flex justify-center pt-3 pb-1 flex-shrink-0">
-          <div class="w-10 h-1 rounded-full bg-gray-300" />
-        </div>
+        <div class="fixed inset-0 bg-black/30 z-50" @click="$emit('close')" />
+      </TransitionChild>
 
-        <!-- Header -->
-        <div class="px-5 pt-3 pb-4 flex-shrink-0">
-          <div class="flex items-start justify-between">
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-3 flex-wrap">
-                <DialogTitle
-                  as="h2"
-                  class="text-2xl font-extrabold text-ios-text"
-                >
-                  {{ order.orderNumber }}
-                </DialogTitle>
-                <span :class="getOrderTypeBadgeClass(order.deliveryInfo?.type)">
-                  {{ getOrderTypeText(order.deliveryInfo?.type) }}
-                </span>
+      <TransitionChild
+        as="template"
+        enter="slide-up-enter-active"
+        enter-from="slide-up-enter-from"
+        enter-to="translate-y-0"
+        leave="slide-up-leave-active"
+        leave-from="translate-y-0"
+        leave-to="slide-up-leave-to"
+      >
+        <DialogPanel
+          class="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl z-50 max-h-[90vh] flex flex-col"
+          @click.stop
+        >
+          <!-- Drag Handle -->
+          <div class="flex justify-center pt-3 pb-1 flex-shrink-0">
+            <div class="w-10 h-1 rounded-full bg-gray-300" />
+          </div>
+
+          <!-- Header -->
+          <div class="px-5 pt-3 pb-4 flex-shrink-0">
+            <div class="flex items-start justify-between">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-3 flex-wrap">
+                  <DialogTitle
+                    as="h2"
+                    class="text-2xl font-extrabold text-ios-text"
+                  >
+                    {{ order.orderNumber }}
+                  </DialogTitle>
+                  <span
+                    :class="getOrderTypeBadgeClass(order.deliveryInfo?.type)"
+                  >
+                    {{ getOrderTypeText(order.deliveryInfo?.type) }}
+                  </span>
+                </div>
+                <p class="text-sm text-ios-secondary mt-1">
+                  {{ order.tableName }}
+                  <span class="mx-1.5">·</span>
+                  {{ formatTime(order.createdAt) }}
+                  <span class="mx-1.5">·</span>
+                  <span :class="getTimeClass(order.elapsedTime)">
+                    {{ t("orders.waiting") }}
+                    {{ formatElapsedTime(order.elapsedTime) }}
+                  </span>
+                </p>
               </div>
-              <p class="text-sm text-ios-secondary mt-1">
-                {{ order.tableName }}
-                <span class="mx-1.5">·</span>
-                {{ formatTime(order.createdAt) }}
-                <span class="mx-1.5">·</span>
-                <span :class="getTimeClass(order.elapsedTime)">
-                  {{ t("orders.waiting") }}
-                  {{ formatElapsedTime(order.elapsedTime) }}
-                </span>
+              <button
+                :aria-label="t('common.close')"
+                class="w-11 h-11 rounded-full bg-ios-bg flex items-center justify-center flex-shrink-0 ml-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+                @click="$emit('close')"
+              >
+                <XIcon class="w-5 h-5 text-ios-secondary" />
+              </button>
+            </div>
+          </div>
+
+          <!-- Scrollable Content -->
+          <div class="flex-1 overflow-y-auto px-5 space-y-4 pb-6">
+            <!-- Order Items -->
+            <div class="bg-ios-bg rounded-2xl overflow-hidden">
+              <div
+                v-for="(item, index) in order.items"
+                :key="item.id"
+                :class="[
+                  'px-4 py-3.5',
+                  index < order.items.length - 1
+                    ? 'border-b border-white/60'
+                    : '',
+                ]"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="text-base font-semibold text-ios-text">
+                        {{ item.name }}
+                      </span>
+                      <span :class="getItemStatusClass(item.status)">
+                        {{ getItemStatusText(item.status) }}
+                      </span>
+                    </div>
+
+                    <!-- Customization notes -->
+                    <div v-if="item.notes" class="mt-1 text-ios-orange text-sm">
+                      {{ t("orders.notes") }} {{ item.notes }}
+                    </div>
+                    <div
+                      v-if="item.customizations && item.customizations.length"
+                      class="mt-1 text-ios-orange text-sm"
+                    >
+                      {{ t("orders.customization") }}
+                      {{ item.customizations.join(", ") }}
+                    </div>
+
+                    <!-- Item timestamps -->
+                    <div
+                      v-if="item.startedAt || item.completedAt"
+                      class="mt-1 flex gap-3 text-xs text-ios-secondary"
+                    >
+                      <span v-if="item.startedAt">
+                        {{ t("orders.startTimestamp") }}
+                        {{ formatTime(item.startedAt) }}
+                      </span>
+                      <span v-if="item.completedAt" class="text-ios-green">
+                        {{ t("orders.completeTimestamp") }}
+                        {{ formatTime(item.completedAt) }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Quantity + Item Actions -->
+                  <div class="flex items-center gap-2 flex-shrink-0">
+                    <span class="text-base font-semibold text-ios-text">
+                      x{{ item.quantity }}
+                    </span>
+                    <button
+                      v-if="item.status === 'pending'"
+                      class="rounded-full px-3 py-1.5 text-sm font-semibold bg-blue-700 text-white"
+                      @click="updateItemStatus(item.id, 'preparing')"
+                    >
+                      {{ t("orders.startItem") }}
+                    </button>
+                    <button
+                      v-else-if="item.status === 'preparing'"
+                      class="rounded-full px-3 py-1.5 text-sm font-semibold bg-green-700 text-white"
+                      @click="updateItemStatus(item.id, 'ready')"
+                    >
+                      {{ t("orders.completeItem") }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Order Notes -->
+            <div
+              v-if="order.notes"
+              class="bg-ios-orange-soft rounded-xl p-3 flex items-start gap-2"
+            >
+              <ZapIcon
+                class="w-4 h-4 text-ios-orange-deep flex-shrink-0 mt-0.5"
+              />
+              <p class="text-ios-orange-deep text-sm font-medium">
+                {{ order.notes }}
               </p>
             </div>
+          </div>
+
+          <!-- Action Button -->
+          <div class="px-5 pb-8 pt-3 flex-shrink-0">
             <button
-              :aria-label="t('common.close')"
-              class="w-11 h-11 rounded-full bg-ios-bg flex items-center justify-center flex-shrink-0 ml-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+              v-if="hasUncompletedItems"
+              class="w-full rounded-full py-4 font-bold text-white bg-blue-700 text-base"
+              @click="markAllComplete"
+            >
+              {{
+                hasPendingItems ? t("orders.startAll") : t("orders.completeAll")
+              }}
+            </button>
+            <button
+              v-else
+              class="w-full rounded-full py-4 font-bold text-white bg-green-700 text-base"
               @click="$emit('close')"
             >
-              <XIcon class="w-5 h-5 text-ios-secondary" />
+              {{ t("orders.completeAll") }}
             </button>
           </div>
-        </div>
-
-        <!-- Scrollable Content -->
-        <div class="flex-1 overflow-y-auto px-5 space-y-4 pb-6">
-          <!-- Order Items -->
-          <div class="bg-ios-bg rounded-2xl overflow-hidden">
-            <div
-              v-for="(item, index) in order.items"
-              :key="item.id"
-              :class="[
-                'px-4 py-3.5',
-                index < order.items.length - 1
-                  ? 'border-b border-white/60'
-                  : '',
-              ]"
-            >
-              <div class="flex items-start justify-between gap-3">
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-base font-semibold text-ios-text">
-                      {{ item.name }}
-                    </span>
-                    <span :class="getItemStatusClass(item.status)">
-                      {{ getItemStatusText(item.status) }}
-                    </span>
-                  </div>
-
-                  <!-- Customization notes -->
-                  <div v-if="item.notes" class="mt-1 text-ios-orange text-sm">
-                    {{ t("orders.notes") }} {{ item.notes }}
-                  </div>
-                  <div
-                    v-if="item.customizations && item.customizations.length"
-                    class="mt-1 text-ios-orange text-sm"
-                  >
-                    {{ t("orders.customization") }}
-                    {{ item.customizations.join(", ") }}
-                  </div>
-
-                  <!-- Item timestamps -->
-                  <div
-                    v-if="item.startedAt || item.completedAt"
-                    class="mt-1 flex gap-3 text-xs text-ios-secondary"
-                  >
-                    <span v-if="item.startedAt">
-                      {{ t("orders.startTimestamp") }}
-                      {{ formatTime(item.startedAt) }}
-                    </span>
-                    <span v-if="item.completedAt" class="text-ios-green">
-                      {{ t("orders.completeTimestamp") }}
-                      {{ formatTime(item.completedAt) }}
-                    </span>
-                  </div>
-                </div>
-
-                <!-- Quantity + Item Actions -->
-                <div class="flex items-center gap-2 flex-shrink-0">
-                  <span class="text-base font-semibold text-ios-text">
-                    x{{ item.quantity }}
-                  </span>
-                  <button
-                    v-if="item.status === 'pending'"
-                    class="rounded-full px-3 py-1.5 text-sm font-semibold bg-blue-700 text-white"
-                    @click="updateItemStatus(item.id, 'preparing')"
-                  >
-                    {{ t("orders.startItem") }}
-                  </button>
-                  <button
-                    v-else-if="item.status === 'preparing'"
-                    class="rounded-full px-3 py-1.5 text-sm font-semibold bg-green-700 text-white"
-                    @click="updateItemStatus(item.id, 'ready')"
-                  >
-                    {{ t("orders.completeItem") }}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Order Notes -->
-          <div
-            v-if="order.notes"
-            class="bg-ios-orange-soft rounded-xl p-3 flex items-start gap-2"
-          >
-            <ZapIcon
-              class="w-4 h-4 text-ios-orange-deep flex-shrink-0 mt-0.5"
-            />
-            <p class="text-ios-orange-deep text-sm font-medium">
-              {{ order.notes }}
-            </p>
-          </div>
-        </div>
-
-        <!-- Action Button -->
-        <div class="px-5 pb-8 pt-3 flex-shrink-0">
-          <button
-            v-if="hasUncompletedItems"
-            class="w-full rounded-full py-4 font-bold text-white bg-blue-700 text-base"
-            @click="markAllComplete"
-          >
-            {{
-              hasPendingItems ? t("orders.startAll") : t("orders.completeAll")
-            }}
-          </button>
-          <button
-            v-else
-            class="w-full rounded-full py-4 font-bold text-white bg-green-700 text-base"
-            @click="$emit('close')"
-          >
-            {{ t("orders.completeAll") }}
-          </button>
-        </div>
-      </DialogPanel>
-    </Transition>
-  </Dialog>
+        </DialogPanel>
+      </TransitionChild>
+    </Dialog>
+  </TransitionRoot>
 </template>
 
 <script setup lang="ts">
-import { Dialog, DialogPanel, DialogTitle } from "@headlessui/vue";
+import {
+  Dialog,
+  DialogPanel,
+  DialogTitle,
+  TransitionRoot,
+  TransitionChild,
+} from "@headlessui/vue";
 import { computed } from "vue";
 import { XIcon, ZapIcon } from "lucide-vue-next";
 import { useI18n } from "@/i18n";
 import type { KitchenOrder, ItemStatus } from "@/types";
+import { useDialogReturnFocus } from "@/composables/use-dialog-return-focus";
 
 const { t, locale } = useI18n();
 
@@ -185,6 +207,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const restoreFocus = useDialogReturnFocus(() => props.show);
 
 const emit = defineEmits<{
   close: [];

@@ -12,6 +12,13 @@
         </p>
       </div>
       <div class="flex flex-wrap gap-2">
+        <a
+          href="#market-operations"
+          data-testid="market-operations-link"
+          class="inline-flex min-h-11 items-center rounded-lg bg-primary-50 px-4 py-2 text-sm font-medium text-primary-700"
+        >
+          索引與加入申請（{{ pendingJoinRequests.length }}）
+        </a>
         <button
           type="button"
           data-testid="export-catalog-gaps"
@@ -1533,12 +1540,10 @@
         :scope="{ kind: 'platform', marketId: editingMarket.id }"
       />
     </div>
-    <details class="ui-panel bg-white p-4">
-      <summary
-        class="min-h-11 cursor-pointer text-sm font-semibold text-ios-text"
-      >
+    <section id="market-operations" class="ui-panel bg-white p-4">
+      <h2 class="text-sm font-semibold text-ios-text">
         索引、加入申請與資料匯入
-      </summary>
+      </h2>
       <div class="mt-4 space-y-6">
         <section class="ui-panel rounded-lg bg-white p-4 shadow-ios-card">
           <div
@@ -1900,7 +1905,7 @@
           </div>
         </section>
       </div>
-    </details>
+    </section>
   </div>
 </template>
 
