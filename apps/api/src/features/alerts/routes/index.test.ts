@@ -105,6 +105,68 @@ describe("alerts routes", () => {
     expect(mocks.listOpen).toHaveBeenCalledWith("restaurant-1");
   });
 
+  const selectedRestaurant = "0198c3a4-5b6c-7d8e-9f01-234567890aaa";
+  it.each(["GET", "resolve", "escalate"])(
+    "scopes platform-admin %s to the explicit selected restaurant",
+    async (action) => {
+      mocks.currentUser = { id: "admin-0", username: "admin", role: 0 };
+      mocks.listOpen.mockResolvedValue([]);
+      mocks.resolve.mockResolvedValue(alert({ status: "resolved" }));
+      mocks.escalate.mockResolvedValue(alert({ status: "escalated" }));
+      const response =
+        action === "GET"
+          ? await get(`/?restaurantId=${selectedRestaurant}`)
+          : await post(
+              `/${ALERT_ID}/${action}?restaurantId=${selectedRestaurant}`,
+            );
+      expect(response.status).toBe(200);
+      if (action === "GET")
+        expect(mocks.listOpen).toHaveBeenCalledWith(selectedRestaurant);
+      else
+        expect(
+          action === "resolve" ? mocks.resolve : mocks.escalate,
+        ).toHaveBeenCalledWith(ALERT_ID, selectedRestaurant, "admin-0");
+    },
+  );
+
+  it.each(["GET", "resolve", "escalate"])(
+    "rejects invalid platform context on %s before service access",
+    async (action) => {
+      mocks.currentUser = { id: "admin-0", username: "admin", role: 0 };
+      const response =
+        action === "GET"
+          ? await get("/?restaurantId=not-a-uuid")
+          : await post(`/${ALERT_ID}/${action}?restaurantId=not-a-uuid`);
+      expect(response.status).toBe(400);
+      expect(mocks.listOpen).not.toHaveBeenCalled();
+      expect(mocks.resolve).not.toHaveBeenCalled();
+      expect(mocks.escalate).not.toHaveBeenCalled();
+    },
+  );
+
+  it("does not let an owner replace their session tenant with a query", async () => {
+    mocks.listOpen.mockResolvedValue([alert()]);
+    const response = await get(`/?restaurantId=${selectedRestaurant}`);
+    expect(response.status).toBe(200);
+    expect(mocks.listOpen).toHaveBeenCalledWith("restaurant-1");
+  });
+
+  it.each(["resolve", "escalate"])(
+    "retains owner tenant isolation and nondisclosing404 on %s",
+    async (action) => {
+      const spy = action === "resolve" ? mocks.resolve : mocks.escalate;
+      spy.mockResolvedValue(null);
+      const response = await post(
+        `/${OTHER_ID}/${action}?restaurantId=${selectedRestaurant}`,
+      );
+      expect(response.status).toBe(404);
+      expect(spy).toHaveBeenCalledWith(OTHER_ID, "restaurant-1", "user-10");
+      await expect(response.json()).resolves.toMatchObject({
+        error: { code: "ALERT_NOT_FOUND" },
+      });
+    },
+  );
+
   it("caps the list at the requested limit", async () => {
     mocks.listOpen.mockResolvedValue([
       alert({ id: ALERT_ID }),

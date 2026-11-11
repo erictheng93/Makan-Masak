@@ -3,6 +3,7 @@
 import { flushPromises, shallowMount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import OwnerView from "./OwnerView.vue";
+import { ownerService } from "@/services/ownerService";
 
 const apiGet = vi.hoisted(() => vi.fn());
 const authState = vi.hoisted(() => ({ restaurantId: "rest-1" }));
@@ -78,6 +79,12 @@ describe("OwnerView data loading", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("passes the selected restaurant to emergency-alert loading", async () => {
+    const wrapper = await mountView();
+    expect(ownerService.listEmergencyAlerts).toHaveBeenCalledWith("rest-1");
+    wrapper.unmount();
   });
 
   it("shows no error banner when every request succeeds", async () => {

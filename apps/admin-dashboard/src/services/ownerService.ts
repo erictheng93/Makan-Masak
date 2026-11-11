@@ -25,18 +25,30 @@ class OwnerService {
     return routes[action] ?? null;
   }
 
-  /** Open operational alerts for the signed-in owner's restaurant (#285). */
-  async listEmergencyAlerts(): Promise<EmergencyAlert[]> {
-    const response = await api.get<EmergencyAlert[]>("/alerts");
+  /** Operational alerts for the selected restaurant; the API pins owners to their own tenant. */
+  async listEmergencyAlerts(restaurantId: string): Promise<EmergencyAlert[]> {
+    const response = await api.get<EmergencyAlert[]>("/alerts", {
+      params: { restaurantId },
+    });
     return unwrapApiList<EmergencyAlert>(response.data);
   }
 
-  async resolveEmergencyAlert(alertId: string): Promise<void> {
-    await api.post(`/alerts/${alertId}/resolve`);
+  async resolveEmergencyAlert(
+    alertId: string,
+    restaurantId: string,
+  ): Promise<void> {
+    await api.post(`/alerts/${alertId}/resolve`, undefined, {
+      params: { restaurantId },
+    });
   }
 
-  async escalateEmergencyAlert(alertId: string): Promise<void> {
-    await api.post(`/alerts/${alertId}/escalate`);
+  async escalateEmergencyAlert(
+    alertId: string,
+    restaurantId: string,
+  ): Promise<void> {
+    await api.post(`/alerts/${alertId}/escalate`, undefined, {
+      params: { restaurantId },
+    });
   }
 }
 

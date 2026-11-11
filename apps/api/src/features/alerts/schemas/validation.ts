@@ -6,8 +6,17 @@ export const alertIdParamSchema = z.lazy(() =>
   }),
 );
 
+export const alertContextQuerySchema = z.lazy(() =>
+  z.object({
+    restaurantId: z.uuid().optional(),
+  }),
+);
+
+export type AlertContextQueryInput = z.infer<typeof alertContextQuerySchema>;
+
 export const alertListQuerySchema = z.lazy(() =>
   z.object({
+    restaurantId: z.uuid().optional(),
     limit: z.coerce.number().int().positive().max(100).optional().default(20),
   }),
 );

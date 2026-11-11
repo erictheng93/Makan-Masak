@@ -851,9 +851,13 @@ const canViewStats = computed(() =>
   STATS_ROLES.includes(authStore.user?.role ?? -1),
 );
 
+let statsRequestVersion = 0;
 const refreshOrderStats = async () => {
+  const requestVersion = ++statsRequestVersion;
+  const restaurantId = authStore.restaurantId;
   const role = authStore.user?.role;
-  if (role === undefined || !STATS_ROLES.includes(role)) return;
+  if (!restaurantId || role === undefined || !STATS_ROLES.includes(role))
+    return;
 
   try {
     const response = await api.get<{
@@ -861,7 +865,12 @@ const refreshOrderStats = async () => {
       preparingOrders: number;
       completedOrders: number;
       cancelledOrders: number;
-    }>("/orders/stats");
+    }>("/orders/stats", { params: { restaurantId: String(restaurantId) } });
+    if (
+      requestVersion !== statsRequestVersion ||
+      restaurantId !== authStore.restaurantId
+    )
+      return;
     const data = response.data.data;
     if (!data) return;
     stats.value = {
@@ -1116,6 +1125,15 @@ const ordersPoller = createVisibilityAwarePoller({
     await Promise.all([orderStore.refetchOrders(), refreshOrderStats()]);
   },
 });
+
+watch(
+  () => authStore.restaurantId,
+  (restaurantId) => {
+    statsRequestVersion++;
+    stats.value = { pending: 0, preparing: 0, completed: 0, cancelled: 0 };
+    if (restaurantId) void refreshOrders();
+  },
+);
 
 // 生命周期
 onMounted(() => {

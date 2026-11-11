@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { defineComponent, h, ref } from "vue";
+import { defineComponent, h, reactive } from "vue";
 import { mount, flushPromises } from "@vue/test-utils";
 import { RealtimeEventType } from "@makanmasak/shared-types";
 import { useAdminRealtime } from "./useAdminRealtime";
@@ -20,6 +20,7 @@ afterEach(() => {
 });
 
 const mocks = vi.hoisted(() => ({
+  auth: { isAuthenticated: true, restaurantId: "restaurant-1" },
   subscribe: vi.fn(),
   unsubscribe: vi.fn(),
   connect: vi.fn(),
@@ -42,10 +43,7 @@ vi.mock("@/services/websocketService", async () => {
 });
 
 vi.mock("@/stores/auth", () => ({
-  useAuthStore: () => ({
-    isAuthenticated: true,
-    restaurantId: ref("restaurant-1").value,
-  }),
+  useAuthStore: () => reactive(mocks.auth),
 }));
 
 vi.mock("@/services/ownerService", () => ({
@@ -97,8 +95,51 @@ describe("useAdminRealtime system alerts", () => {
     // jsdom does not implement media playback; the browser returns a promise.
     vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
     mocks.subscribe.mockReturnValue("sub-1");
+    mocks.auth.restaurantId = "restaurant-1";
     mocks.connect.mockResolvedValue(undefined);
     mocks.listEmergencyAlerts.mockResolvedValue([]);
+  });
+
+  it("scopes alert backfills to selected restaurants and drops a previous restaurant's late response", async () => {
+    let completeOld!: (value: unknown) => void;
+    mocks.listEmergencyAlerts.mockReturnValueOnce(
+      new Promise((resolve) => {
+        completeOld = resolve;
+      }),
+    );
+    mocks.listEmergencyAlerts.mockResolvedValueOnce([
+      {
+        id: "new-shop-alert",
+        alertType: "inventory_low",
+        severity: "high",
+        title: "New shop",
+        description: "New shop only",
+        details: null,
+        createdAt: 1,
+      },
+    ]);
+    const { api, wrapper } = await setup();
+    expect(mocks.listEmergencyAlerts).toHaveBeenCalledWith("restaurant-1");
+    reactive(mocks.auth).restaurantId = "restaurant-2";
+    await flushPromises();
+    expect(mocks.listEmergencyAlerts).toHaveBeenLastCalledWith("restaurant-2");
+    expect(api.systemAlerts.value.map((item) => item.notificationId)).toEqual([
+      "new-shop-alert",
+    ]);
+    completeOld([
+      {
+        id: "old-shop-alert",
+        severity: "high",
+        title: "Old shop",
+        description: "Old shop only",
+        createdAt: 1,
+      },
+    ]);
+    await flushPromises();
+    expect(api.systemAlerts.value.map((item) => item.notificationId)).toEqual([
+      "new-shop-alert",
+    ]);
+    wrapper.unmount();
   });
 
   it("subscribes to system notifications and records a pushed alert", async () => {

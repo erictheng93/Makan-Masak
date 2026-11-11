@@ -38,10 +38,12 @@ describe("ownerService", () => {
         data: { success: true, data: [ALERT] },
       } as never);
 
-      await expect(ownerService.listEmergencyAlerts()).resolves.toEqual([
-        ALERT,
-      ]);
-      expect(api.get).toHaveBeenCalledWith("/alerts");
+      await expect(
+        ownerService.listEmergencyAlerts("restaurant-1"),
+      ).resolves.toEqual([ALERT]);
+      expect(api.get).toHaveBeenCalledWith("/alerts", {
+        params: { restaurantId: "restaurant-1" },
+      });
     });
 
     // A shape the panel cannot iterate must not reach the template: an owner
@@ -53,15 +55,17 @@ describe("ownerService", () => {
     ])("returns an empty list for %s", async (_label, payload) => {
       vi.mocked(api.get).mockResolvedValueOnce({ data: payload } as never);
 
-      await expect(ownerService.listEmergencyAlerts()).resolves.toEqual([]);
+      await expect(
+        ownerService.listEmergencyAlerts("restaurant-1"),
+      ).resolves.toEqual([]);
     });
 
     it("propagates a request failure to the caller", async () => {
       vi.mocked(api.get).mockRejectedValueOnce(new Error("network down"));
 
-      await expect(ownerService.listEmergencyAlerts()).rejects.toThrow(
-        "network down",
-      );
+      await expect(
+        ownerService.listEmergencyAlerts("restaurant-1"),
+      ).rejects.toThrow("network down");
     });
   });
 
@@ -70,24 +74,38 @@ describe("ownerService", () => {
     it("posts a resolve for the given alert id", async () => {
       vi.mocked(api.post).mockResolvedValueOnce({} as never);
 
-      await ownerService.resolveEmergencyAlert(ALERT.id);
+      await ownerService.resolveEmergencyAlert(ALERT.id, "restaurant-1");
 
-      expect(api.post).toHaveBeenCalledWith(`/alerts/${ALERT.id}/resolve`);
+      expect(api.post).toHaveBeenCalledWith(
+        `/alerts/${ALERT.id}/resolve`,
+        undefined,
+        { params: { restaurantId: "restaurant-1" } },
+      );
     });
 
     it("posts an escalate for the given alert id", async () => {
       vi.mocked(api.post).mockResolvedValueOnce({} as never);
 
-      await ownerService.escalateEmergencyAlert(ALERT.id);
+      await ownerService.escalateEmergencyAlert(ALERT.id, "restaurant-1");
 
-      expect(api.post).toHaveBeenCalledWith(`/alerts/${ALERT.id}/escalate`);
+      expect(api.post).toHaveBeenCalledWith(
+        `/alerts/${ALERT.id}/escalate`,
+        undefined,
+        { params: { restaurantId: "restaurant-1" } },
+      );
     });
 
     // OwnerView's handler shows a toast on rejection; swallowing here would
     // make the button look like it worked.
     it.each([
-      ["resolve", () => ownerService.resolveEmergencyAlert(ALERT.id)],
-      ["escalate", () => ownerService.escalateEmergencyAlert(ALERT.id)],
+      [
+        "resolve",
+        () => ownerService.resolveEmergencyAlert(ALERT.id, "restaurant-1"),
+      ],
+      [
+        "escalate",
+        () => ownerService.escalateEmergencyAlert(ALERT.id, "restaurant-1"),
+      ],
     ])("lets a failed %s reject", async (_label, call) => {
       vi.mocked(api.post).mockRejectedValueOnce(new Error("404"));
 

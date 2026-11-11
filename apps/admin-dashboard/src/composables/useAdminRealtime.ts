@@ -315,9 +315,18 @@ export function useAdminRealtime() {
    * 重新整理後推播不會重送，所以連線後補載入目前仍開啟的告警。
    * 角色沒有權限（403）或載入失敗時略過：面板只是即時提示，完整清單在 OwnerView。
    */
+  let alertLoadVersion = 0;
   const loadOpenAlerts = async () => {
+    const restaurantId = authStore.restaurantId;
+    if (!restaurantId) return;
+    const version = ++alertLoadVersion;
     try {
-      const open = await ownerService.listEmergencyAlerts();
+      const open = await ownerService.listEmergencyAlerts(String(restaurantId));
+      if (
+        version !== alertLoadVersion ||
+        restaurantId !== authStore.restaurantId
+      )
+        return;
       for (const alert of open) {
         addSystemAlert({
           notificationId: alert.id,
@@ -426,6 +435,8 @@ export function useAdminRealtime() {
    * 停止監聽
    */
   const stopListening = () => {
+    alertLoadVersion++;
+    clearSystemAlerts();
     subscriptionIds.value.forEach((subId) => {
       wsService.unsubscribe(subId);
     });

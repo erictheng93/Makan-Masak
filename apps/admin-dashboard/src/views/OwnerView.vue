@@ -777,8 +777,16 @@ async function fetchAllData() {
       restaurantId
         ? schedulingService.getClockedInEmployees(restaurantId)
         : Promise.resolve([]),
-      ownerService.listEmergencyAlerts(),
+      restaurantId
+        ? ownerService.listEmergencyAlerts(restaurantId)
+        : Promise.resolve([]),
     ]);
+
+    if (
+      restaurantId !==
+      (authStore.restaurantId ? String(authStore.restaurantId) : null)
+    )
+      return;
 
     // Dashboard summary + top items + table status
     if (
@@ -874,14 +882,17 @@ const handleQuickAction = (action: string) => {
 
 // --- Emergency alert handler ---
 const handleEmergencyAlert = async (alertId: string, action: string) => {
+  const restaurantId = authStore.restaurantId;
+  if (!restaurantId) return;
   try {
     if (action === "resolve") {
-      await ownerService.resolveEmergencyAlert(alertId);
+      await ownerService.resolveEmergencyAlert(alertId, String(restaurantId));
+      if (restaurantId !== authStore.restaurantId) return;
       emergencyAlerts.value = emergencyAlerts.value.filter(
         (alert) => alert.id !== alertId,
       );
     } else if (action === "escalate") {
-      await ownerService.escalateEmergencyAlert(alertId);
+      await ownerService.escalateEmergencyAlert(alertId, String(restaurantId));
     }
   } catch (err) {
     console.error("Error handling emergency alert:", err);

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { flushPromises, mount } from "@vue/test-utils";
-import { ref } from "vue";
+import { reactive, ref } from "vue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import OrdersView from "./OrdersView.vue";
 import { api } from "@/services/api";
@@ -16,7 +16,10 @@ const orderStore = vi.hoisted(() => ({
   cancelOrder: vi.fn().mockResolvedValue(true),
   pagination: { page: 1, limit: 20, total: 0, totalPages: 1 },
 }));
-const authStore = vi.hoisted(() => ({ user: { role: 1 } }));
+const authStore = vi.hoisted(() => ({
+  user: { role: 1 },
+  restaurantId: "restaurant-1",
+}));
 
 // locale is not decoration here: the view formats timestamps through
 // useDateFormatter, which reads locale.value to pick a date format. A mock
@@ -53,7 +56,7 @@ vi.mock("@/stores/order", () => ({
 }));
 
 vi.mock("@/stores/auth", () => ({
-  useAuthStore: () => authStore,
+  useAuthStore: () => reactive(authStore),
 }));
 
 vi.mock("@/services/api", () => ({
@@ -85,6 +88,44 @@ describe("OrdersView", () => {
     orderStore.orders = [];
     orderStore.error = null;
     authStore.user.role = 1;
+    authStore.restaurantId = "restaurant-1";
+  });
+
+  it("scopes platform-admin stats to the selected restaurant and ignores old responses after switching", async () => {
+    authStore.user.role = 0;
+    const state = reactive(authStore);
+    let completeOld!: (value: unknown) => void;
+    vi.mocked(api.get).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          completeOld = resolve;
+        }) as never,
+    );
+    const wrapper = mount(OrdersView);
+    await Promise.resolve();
+    expect(api.get).toHaveBeenCalledWith("/orders/stats", {
+      params: { restaurantId: "restaurant-1" },
+    });
+    vi.mocked(api.get).mockResolvedValueOnce({
+      data: { data: { pendingOrders: 9 } },
+    } as never);
+    state.restaurantId = "restaurant-2";
+    await flushPromises();
+    expect(api.get).toHaveBeenLastCalledWith("/orders/stats", {
+      params: { restaurantId: "restaurant-2" },
+    });
+    expect(wrapper.get('[data-testid="admin-orders-stats"]').text()).toContain(
+      "9",
+    );
+    completeOld({ data: { data: { pendingOrders: 7 } } });
+    await flushPromises();
+    expect(wrapper.get('[data-testid="admin-orders-stats"]').text()).toContain(
+      "9",
+    );
+    expect(
+      wrapper.get('[data-testid="admin-orders-stats"]').text(),
+    ).not.toContain("7");
+    wrapper.unmount();
   });
 
   it("renders API order numbers", () => {
