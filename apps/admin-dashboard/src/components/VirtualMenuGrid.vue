@@ -21,6 +21,7 @@
       v-for="menuItem in visibleMenuItems"
       :key="menuItem.id"
       :style="{ minHeight: itemHeight + 'px' }"
+      :data-row="Math.floor(menuItem._virtualIndex / columns)"
       class="virtual-grid-item"
       data-testid="menu-grid-item"
     >
@@ -71,7 +72,15 @@ export interface VirtualMenuGridInstance {
 </script>
 
 <script setup lang="ts" generic="T extends { id: number }">
-import { ref, computed, watch, onMounted, nextTick } from "vue";
+import {
+  ref,
+  computed,
+  watch,
+  onMounted,
+  onUpdated,
+  onBeforeUnmount,
+  nextTick,
+} from "vue";
 import { useI18n } from "@/i18n";
 
 const { t } = useI18n();
@@ -91,13 +100,54 @@ const props = withDefaults(defineProps<VirtualMenuGridProps<T>>(), {
 const container = ref<HTMLElement>();
 const scrollTop = ref(0);
 
+// The props are only estimates: the column count follows the breakpoint and a
+// card's height follows its width and content. Scrolling by the estimates made
+// every card jump whenever the first rendered row changed, so rows are measured
+// as they render; rows not seen yet stand in at the average of those that were.
+const columns = ref(props.columnsCount);
+const rowGap = ref(0);
+const measuredRows = ref(new Map<number, number>());
+let measuredWidth = -1;
+const measure = () => {
+  const element = container.value;
+  if (!element) return;
+  const style = getComputedStyle(element);
+  const tracks = style.gridTemplateColumns.split(" ").filter(Boolean).length;
+  const cols =
+    style.display === "grid" && tracks > 0 ? tracks : props.columnsCount;
+  const gap = parseFloat(style.rowGap) || 0;
+  if (
+    cols !== columns.value ||
+    gap !== rowGap.value ||
+    element.clientWidth !== measuredWidth
+  ) {
+    // A new width reflows every card, so earlier measurements no longer hold.
+    columns.value = cols;
+    rowGap.value = gap;
+    measuredWidth = element.clientWidth;
+    measuredRows.value = new Map();
+    nextTick(measure);
+    return;
+  }
+  const next = new Map(measuredRows.value);
+  let changed = false;
+  element
+    .querySelectorAll<HTMLElement>(".virtual-grid-item")
+    .forEach((cell) => {
+      const row = Number(cell.dataset.row);
+      if (cell.offsetHeight > 0 && next.get(row) !== cell.offsetHeight) {
+        next.set(row, cell.offsetHeight);
+        changed = true;
+      }
+    });
+  if (changed) measuredRows.value = next;
+};
+let resizeObserver: ResizeObserver | undefined;
+
 // Computed properties
 const totalMenuItems = computed(() => props.menuItems.length);
-const rowsPerView = computed(() =>
-  Math.ceil(props.containerHeight / props.itemHeight),
-);
 const totalRows = computed(() =>
-  Math.ceil(totalMenuItems.value / props.columnsCount),
+  Math.ceil(totalMenuItems.value / columns.value),
 );
 
 const gridCols = computed(() => {
@@ -115,19 +165,46 @@ const gridCols = computed(() => {
   );
 });
 
-const startRow = computed(() => {
-  const row = Math.floor(scrollTop.value / props.itemHeight) - props.bufferSize;
-  return Math.max(0, row);
+const estimatedRowHeight = computed(() => {
+  const heights = [...measuredRows.value.values()];
+  return heights.length
+    ? heights.reduce((sum, height) => sum + height, 0) / heights.length
+    : props.itemHeight;
 });
 
+// rowTops[r] is where row r starts; the extra last entry closes the list.
+const rowTops = computed(() => {
+  const tops: number[] = [0];
+  for (let row = 0; row < totalRows.value; row++)
+    tops.push(
+      tops[row] +
+        (measuredRows.value.get(row) ?? estimatedRowHeight.value) +
+        rowGap.value,
+    );
+  return tops;
+});
+
+const firstVisibleRow = computed(() => {
+  let row = 0;
+  while (row < totalRows.value - 1 && rowTops.value[row + 1] <= scrollTop.value)
+    row++;
+  return row;
+});
+
+const startRow = computed(() =>
+  Math.max(0, firstVisibleRow.value - props.bufferSize),
+);
+
 const endRow = computed(() => {
-  const row = startRow.value + rowsPerView.value + props.bufferSize * 2;
-  return Math.min(totalRows.value - 1, row);
+  const bottom = scrollTop.value + props.containerHeight;
+  let row = firstVisibleRow.value;
+  while (row < totalRows.value - 1 && rowTops.value[row + 1] < bottom) row++;
+  return Math.min(totalRows.value - 1, row + props.bufferSize);
 });
 
 const visibleMenuItems = computed(() => {
-  const startIndex = startRow.value * props.columnsCount;
-  const endIndex = (endRow.value + 1) * props.columnsCount - 1;
+  const startIndex = startRow.value * columns.value;
+  const endIndex = (endRow.value + 1) * columns.value - 1;
 
   const items: MenuItemWithIndex[] = [];
   for (let i = startIndex; i <= endIndex && i < props.menuItems.length; i++) {
@@ -141,11 +218,19 @@ const visibleMenuItems = computed(() => {
   return items;
 });
 
-const beforeHeight = computed(() => startRow.value * props.itemHeight);
-const afterHeight = computed(() => {
-  const remaining = totalRows.value - endRow.value - 1;
-  return Math.max(0, remaining * props.itemHeight);
-});
+// Each spacer is itself a grid row, so the gap beside it is part of the
+// distance it stands in for.
+const beforeHeight = computed(() =>
+  Math.max(0, rowTops.value[startRow.value] - rowGap.value),
+);
+const afterHeight = computed(() =>
+  Math.max(
+    0,
+    rowTops.value[totalRows.value] -
+      (rowTops.value[endRow.value + 1] ?? 0) -
+      rowGap.value,
+  ),
+);
 
 // Methods
 const handleScroll = (event: Event) => {
@@ -178,8 +263,8 @@ const scrollToMenuItem = (
   const itemIndex = props.menuItems.findIndex((item) => item.id === menuItemId);
   if (itemIndex === -1 || !container.value) return;
 
-  const row = Math.floor(itemIndex / props.columnsCount);
-  const scrollPosition = row * props.itemHeight;
+  const row = Math.floor(itemIndex / columns.value);
+  const scrollPosition = rowTops.value[row] ?? 0;
 
   container.value.scrollTo({
     top: scrollPosition,
@@ -198,8 +283,10 @@ watch(
     if (itemsAdded > 0 && previousMenuItemsLength > 0) {
       nextTick(() => {
         if (container.value) {
-          const newRows = Math.ceil(itemsAdded / props.columnsCount);
-          const newScrollTop = scrollTop.value + newRows * props.itemHeight;
+          const newRows = Math.ceil(itemsAdded / columns.value);
+          const newScrollTop =
+            scrollTop.value +
+            newRows * (estimatedRowHeight.value + rowGap.value);
           container.value.scrollTop = newScrollTop;
         }
       });
@@ -213,8 +300,16 @@ watch(
 onMounted(() => {
   if (container.value) {
     scrollTop.value = container.value.scrollTop;
+    measure();
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(measure);
+      resizeObserver.observe(container.value);
+    }
   }
 });
+
+onUpdated(measure);
+onBeforeUnmount(() => resizeObserver?.disconnect());
 
 // Expose methods for parent components
 // NOTE: the public contract is VirtualMenuGridInstance (exported above).
@@ -232,6 +327,9 @@ defineExpose({
 .virtual-menu-grid-container {
   position: relative;
   box-sizing: border-box;
+  /* Rows take their card's height; the fixed container height would
+     otherwise hold them at the minimum and clip the card's action row. */
+  grid-auto-rows: max-content;
 }
 
 .virtual-grid-item {
