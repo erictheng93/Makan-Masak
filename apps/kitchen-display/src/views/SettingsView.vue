@@ -65,7 +65,7 @@
             :aria-label="t('settings.showCustomerName')"
             role="switch"
             :aria-checked="settings.showCustomerNames"
-            class="kitchen-switch w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+            class="kitchen-switch w-[44px] h-11 rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :class="settings.showCustomerNames ? 'bg-green-700' : 'bg-ios-bg'"
             @click="toggleCustomerNames"
           >
@@ -89,7 +89,7 @@
             :aria-label="t('settings.showEstimatedTime')"
             role="switch"
             :aria-checked="settings.showEstimatedTime"
-            class="kitchen-switch w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+            class="kitchen-switch w-[44px] h-11 rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :class="settings.showEstimatedTime ? 'bg-green-700' : 'bg-ios-bg'"
             @click="toggleEstimatedTime"
           >
@@ -123,7 +123,7 @@
             :aria-label="t('settings.audioNotifications')"
             role="switch"
             :aria-checked="settings.audioEnabled"
-            class="kitchen-switch w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+            class="kitchen-switch w-[44px] h-11 rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
             :class="settings.audioEnabled ? 'bg-green-700' : 'bg-ios-bg'"
             @click="toggleAudio"
           >

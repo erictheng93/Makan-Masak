@@ -337,10 +337,10 @@
               {{ successMessage }}
             </p>
           </div>
-          <div class="mt-3 flex gap-2">
+          <div class="mt-3 flex flex-wrap gap-2">
             <label
               for="reservation-verify-code"
-              class="block text-sm font-medium"
+              class="block w-full text-sm font-medium"
               >{{ t("serviceBooking.confirmationCode") }}</label
             >
             <input
