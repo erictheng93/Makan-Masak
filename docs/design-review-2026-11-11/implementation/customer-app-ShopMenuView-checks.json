@@ -1,0 +1,90 @@
+{
+  "startedAt": "2026-11-11T14:02:55.098Z",
+  "method": "Actual production Vue components, isolated local data scenarios. Unknown APIs return explicit 503; this is visual and local interaction evidence, not full backend certification.",
+  "pages": [
+    {
+      "app": "customer-app",
+      "file": "apps/customer-app/src/views/ShopMenuView.vue",
+      "title": "店家菜單與服務",
+      "device": "desktop",
+      "route": "/restaurant/:restaurantId/shop/menu",
+      "sourceHash": "22446ff17d9c1a9064fec84bc39aef0814538469c44d85555ddd7c55f47ba7a2",
+      "actualRoute": "/restaurant/demo-restaurant/shop/menu",
+      "inheritedFrom": null,
+      "routeMatches": true,
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "scrollWidth": 1100,
+      "scrollHeight": 1238,
+      "textLength": 265,
+      "headings": [
+        "示範餐廳",
+        "店家服務",
+        "🌟 推薦菜品",
+        "餐點"
+      ],
+      "tinyControls": [],
+      "unnamedButtons": [],
+      "overflow": [],
+      "brokenImages": [],
+      "unavailableApi": [
+        "/discovery/restaurants/demo-restaurant/markets",
+        "/realtime/auth/menu-token"
+      ],
+      "jsErrors": [],
+      "dataState": "includes-unavailable-api",
+      "screenshot": "screenshots/customer-app--ShopMenuView--desktop.png",
+      "pass": true
+    },
+    {
+      "app": "customer-app",
+      "file": "apps/customer-app/src/views/ShopMenuView.vue",
+      "title": "店家菜單與服務",
+      "device": "mobile",
+      "route": "/restaurant/:restaurantId/shop/menu",
+      "sourceHash": "22446ff17d9c1a9064fec84bc39aef0814538469c44d85555ddd7c55f47ba7a2",
+      "actualRoute": "/restaurant/demo-restaurant/shop/menu",
+      "inheritedFrom": null,
+      "routeMatches": true,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "scrollWidth": 390,
+      "scrollHeight": 1383,
+      "textLength": 265,
+      "headings": [
+        "示範餐廳",
+        "店家服務",
+        "🌟 推薦菜品",
+        "餐點"
+      ],
+      "tinyControls": [],
+      "unnamedButtons": [],
+      "overflow": [],
+      "brokenImages": [],
+      "unavailableApi": [
+        "/discovery/restaurants/demo-restaurant/markets",
+        "/realtime/auth/menu-token"
+      ],
+      "jsErrors": [],
+      "dataState": "includes-unavailable-api",
+      "screenshot": "screenshots/customer-app--ShopMenuView--mobile.png",
+      "pass": true
+    }
+  ],
+  "interactions": [],
+  "errors": [],
+  "mutationsSentToRemote": 0,
+  "finishedAt": "2026-11-11T14:02:57.069Z",
+  "summary": {
+    "checked": 2,
+    "passed": 2,
+    "needsReview": 0,
+    "unavailableDataPages": 2,
+    "jsErrors": 0,
+    "unnamedButtons": 0
+  }
+}

@@ -1,0 +1,420 @@
+[
+  {
+    "file": "scroll-contact-sheets/customer-app-desktop-1.jpg",
+    "device": "desktop",
+    "pages": [
+      "apps/customer-app/src/views/AboutView.vue",
+      "apps/customer-app/src/views/CartView.vue",
+      "apps/customer-app/src/views/DiscoveryView.vue",
+      "apps/customer-app/src/views/ErrorView.vue",
+      "apps/customer-app/src/views/ForgotPasswordView.vue",
+      "apps/customer-app/src/views/GroupOrderJoinView.vue",
+      "apps/customer-app/src/views/GroupOrderView.vue",
+      "apps/customer-app/src/views/HomeView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/customer-app-desktop-2.jpg",
+    "device": "desktop",
+    "pages": [
+      "apps/customer-app/src/views/LoginView.vue",
+      "apps/customer-app/src/views/MarketCheckoutTrackingView.vue",
+      "apps/customer-app/src/views/MarketDetailView.vue",
+      "apps/customer-app/src/views/MarketsView.vue",
+      "apps/customer-app/src/views/MenuView.vue",
+      "apps/customer-app/src/views/NotFoundView.vue",
+      "apps/customer-app/src/views/OrderHistoryView.vue",
+      "apps/customer-app/src/views/OrderTrackingView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/customer-app-desktop-3.jpg",
+    "device": "desktop",
+    "pages": [
+      "apps/customer-app/src/views/OrderTypeLandingView.vue",
+      "apps/customer-app/src/views/PrivacyView.vue",
+      "apps/customer-app/src/views/ProfileView.vue",
+      "apps/customer-app/src/views/QRScanView.vue",
+      "apps/customer-app/src/views/RegisterView.vue",
+      "apps/customer-app/src/views/ReservationView.vue",
+      "apps/customer-app/src/views/ResetPasswordView.vue",
+      "apps/customer-app/src/views/ServiceBookingView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/customer-app-desktop-4.jpg",
+    "device": "desktop",
+    "pages": [
+      "apps/customer-app/src/views/ShopMenuView.vue",
+      "apps/customer-app/src/views/SignedOrderEntryView.vue",
+      "apps/customer-app/src/views/TermsView.vue",
+      "apps/customer-app/src/views/VerifyEmailView.vue",
+      "apps/customer-app/src/views/waiting-list/JoinWaitingListView.vue",
+      "apps/customer-app/src/views/waiting-list/MyWaitingTicketView.vue",
+      "apps/customer-app/src/views/waiting-list/WaitingListHistoryView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/customer-app-mobile-1.jpg",
+    "device": "mobile",
+    "pages": [
+      "apps/customer-app/src/views/AboutView.vue",
+      "apps/customer-app/src/views/CartView.vue",
+      "apps/customer-app/src/views/DiscoveryView.vue",
+      "apps/customer-app/src/views/ErrorView.vue",
+      "apps/customer-app/src/views/ForgotPasswordView.vue",
+      "apps/customer-app/src/views/GroupOrderJoinView.vue",
+      "apps/customer-app/src/views/GroupOrderView.vue",
+      "apps/customer-app/src/views/HomeView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/customer-app-mobile-2.jpg",
+    "device": "mobile",
+    "pages": [
+      "apps/customer-app/src/views/LoginView.vue",
+      "apps/customer-app/src/views/MarketCheckoutTrackingView.vue",
+      "apps/customer-app/src/views/MarketDetailView.vue",
+      "apps/customer-app/src/views/MarketsView.vue",
+      "apps/customer-app/src/views/MenuView.vue",
+      "apps/customer-app/src/views/NotFoundView.vue",
+      "apps/customer-app/src/views/OrderHistoryView.vue",
+      "apps/customer-app/src/views/OrderTrackingView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/customer-app-mobile-3.jpg",
+    "device": "mobile",
+    "pages": [
+      "apps/customer-app/src/views/OrderTypeLandingView.vue",
+      "apps/customer-app/src/views/PrivacyView.vue",
+      "apps/customer-app/src/views/ProfileView.vue",
+      "apps/customer-app/src/views/QRScanView.vue",
+      "apps/customer-app/src/views/RegisterView.vue",
+      "apps/customer-app/src/views/ReservationView.vue",
+      "apps/customer-app/src/views/ResetPasswordView.vue",
+      "apps/customer-app/src/views/ServiceBookingView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/customer-app-mobile-4.jpg",
+    "device": "mobile",
+    "pages": [
+      "apps/customer-app/src/views/ShopMenuView.vue",
+      "apps/customer-app/src/views/SignedOrderEntryView.vue",
+      "apps/customer-app/src/views/TermsView.vue",
+      "apps/customer-app/src/views/VerifyEmailView.vue",
+      "apps/customer-app/src/views/waiting-list/JoinWaitingListView.vue",
+      "apps/customer-app/src/views/waiting-list/MyWaitingTicketView.vue",
+      "apps/customer-app/src/views/waiting-list/WaitingListHistoryView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/admin-dashboard-desktop-1.jpg",
+    "device": "desktop",
+    "pages": [
+      "apps/admin-dashboard/src/views/AccountManagementView.vue",
+      "apps/admin-dashboard/src/views/AnalyticsView.vue",
+      "apps/admin-dashboard/src/views/BillingView.vue",
+      "apps/admin-dashboard/src/views/BroadcastsView.vue",
+      "apps/admin-dashboard/src/views/CashierView.vue",
+      "apps/admin-dashboard/src/views/CouponsView.vue",
+      "apps/admin-dashboard/src/views/DashboardView.vue",
+      "apps/admin-dashboard/src/views/FeedbackView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/admin-dashboard-desktop-2.jpg",
+    "device": "desktop",
+    "pages": [
+      "apps/admin-dashboard/src/views/ForgotPasswordView.vue",
+      "apps/admin-dashboard/src/views/GroupOrdersView.vue",
+      "apps/admin-dashboard/src/views/KitchenView.vue",
+      "apps/admin-dashboard/src/views/LoginView.vue",
+      "apps/admin-dashboard/src/views/MarketOpenReportView.vue",
+      "apps/admin-dashboard/src/views/MembersView.vue",
+      "apps/admin-dashboard/src/views/MenuView.vue",
+      "apps/admin-dashboard/src/views/MonitoringView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/admin-dashboard-desktop-3.jpg",
+    "device": "desktop",
+    "pages": [
+      "apps/admin-dashboard/src/views/MyAttendanceView.vue",
+      "apps/admin-dashboard/src/views/MyLeavesView.vue",
+      "apps/admin-dashboard/src/views/MyShiftsView.vue",
+      "apps/admin-dashboard/src/views/NotFoundView.vue",
+      "apps/admin-dashboard/src/views/OptionGroupsView.vue",
+      "apps/admin-dashboard/src/views/OrdersView.vue",
+      "apps/admin-dashboard/src/views/OwnerView.vue",
+      "apps/admin-dashboard/src/views/POSManagementView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/admin-dashboard-desktop-4.jpg",
+    "device": "desktop",
+    "pages": [
+      "apps/admin-dashboard/src/views/POSView.vue",
+      "apps/admin-dashboard/src/views/PlatformCustomersView.vue",
+      "apps/admin-dashboard/src/views/PlatformMarketCheckoutsView.vue",
+      "apps/admin-dashboard/src/views/PlatformMarketsView.vue",
+      "apps/admin-dashboard/src/views/PlatformOnboardingApplicationsView.vue",
+      "apps/admin-dashboard/src/views/PlatformOverview.vue",
+      "apps/admin-dashboard/src/views/PrintAgentsView.vue",
+      "apps/admin-dashboard/src/views/ResetPasswordView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/admin-dashboard-desktop-5.jpg",
+    "device": "desktop",
+    "pages": [
+      "apps/admin-dashboard/src/views/ReviewsView.vue",
+      "apps/admin-dashboard/src/views/ServiceBookingsView.vue",
+      "apps/admin-dashboard/src/views/ServiceView.vue",
+      "apps/admin-dashboard/src/views/SettingsView.vue",
+      "apps/admin-dashboard/src/views/SubscriptionsView.vue",
+      "apps/admin-dashboard/src/views/TableDetailView.vue",
+      "apps/admin-dashboard/src/views/UnauthorizedView.vue",
+      "apps/admin-dashboard/src/views/ai-analytics/AIInsightsDashboard.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/admin-dashboard-desktop-6.jpg",
+    "device": "desktop",
+    "pages": [
+      "apps/admin-dashboard/src/views/ai-analytics/AIProviderConfig.vue",
+      "apps/admin-dashboard/src/views/ai-analytics/ProductAnalyticsView.vue",
+      "apps/admin-dashboard/src/views/employees/AttendanceOverviewTab.vue",
+      "apps/admin-dashboard/src/views/employees/EmployeeDetailView.vue",
+      "apps/admin-dashboard/src/views/employees/EmployeeLeaveTab.vue",
+      "apps/admin-dashboard/src/views/employees/EmployeeListTab.vue",
+      "apps/admin-dashboard/src/views/employees/EmployeeManagementView.vue",
+      "apps/admin-dashboard/src/views/employees/EmployeeProfileTab.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/admin-dashboard-desktop-7.jpg",
+    "device": "desktop",
+    "pages": [
+      "apps/admin-dashboard/src/views/employees/EmployeeScheduleTab.vue",
+      "apps/admin-dashboard/src/views/employees/LeavesTab.vue",
+      "apps/admin-dashboard/src/views/employees/SchedulingTab.vue",
+      "apps/admin-dashboard/src/views/forecast/ForecastView.vue",
+      "apps/admin-dashboard/src/views/ingredients/IngredientsView.vue",
+      "apps/admin-dashboard/src/views/scheduling/SchedulingAnalyticsView.vue",
+      "apps/admin-dashboard/src/views/scheduling/SchedulingView.vue",
+      "apps/admin-dashboard/src/views/seating/QueueDashboardTab.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/admin-dashboard-desktop-8.jpg",
+    "device": "desktop",
+    "pages": [
+      "apps/admin-dashboard/src/views/seating/ReservationTab.vue",
+      "apps/admin-dashboard/src/views/seating/SeatingManagementView.vue",
+      "apps/admin-dashboard/src/views/seating/TableSetupTab.vue",
+      "apps/admin-dashboard/src/views/seating/WaitingListTab.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/admin-dashboard-mobile-1.jpg",
+    "device": "mobile",
+    "pages": [
+      "apps/admin-dashboard/src/views/AccountManagementView.vue",
+      "apps/admin-dashboard/src/views/AnalyticsView.vue",
+      "apps/admin-dashboard/src/views/BillingView.vue",
+      "apps/admin-dashboard/src/views/BroadcastsView.vue",
+      "apps/admin-dashboard/src/views/CashierView.vue",
+      "apps/admin-dashboard/src/views/CouponsView.vue",
+      "apps/admin-dashboard/src/views/DashboardView.vue",
+      "apps/admin-dashboard/src/views/FeedbackView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/admin-dashboard-mobile-2.jpg",
+    "device": "mobile",
+    "pages": [
+      "apps/admin-dashboard/src/views/ForgotPasswordView.vue",
+      "apps/admin-dashboard/src/views/GroupOrdersView.vue",
+      "apps/admin-dashboard/src/views/KitchenView.vue",
+      "apps/admin-dashboard/src/views/LoginView.vue",
+      "apps/admin-dashboard/src/views/MarketOpenReportView.vue",
+      "apps/admin-dashboard/src/views/MembersView.vue",
+      "apps/admin-dashboard/src/views/MenuView.vue",
+      "apps/admin-dashboard/src/views/MonitoringView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/admin-dashboard-mobile-3.jpg",
+    "device": "mobile",
+    "pages": [
+      "apps/admin-dashboard/src/views/MyAttendanceView.vue",
+      "apps/admin-dashboard/src/views/MyLeavesView.vue",
+      "apps/admin-dashboard/src/views/MyShiftsView.vue",
+      "apps/admin-dashboard/src/views/NotFoundView.vue",
+      "apps/admin-dashboard/src/views/OptionGroupsView.vue",
+      "apps/admin-dashboard/src/views/OrdersView.vue",
+      "apps/admin-dashboard/src/views/OwnerView.vue",
+      "apps/admin-dashboard/src/views/POSManagementView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/admin-dashboard-mobile-4.jpg",
+    "device": "mobile",
+    "pages": [
+      "apps/admin-dashboard/src/views/POSView.vue",
+      "apps/admin-dashboard/src/views/PlatformCustomersView.vue",
+      "apps/admin-dashboard/src/views/PlatformMarketCheckoutsView.vue",
+      "apps/admin-dashboard/src/views/PlatformMarketsView.vue",
+      "apps/admin-dashboard/src/views/PlatformOnboardingApplicationsView.vue",
+      "apps/admin-dashboard/src/views/PlatformOverview.vue",
+      "apps/admin-dashboard/src/views/PrintAgentsView.vue",
+      "apps/admin-dashboard/src/views/ResetPasswordView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/admin-dashboard-mobile-5.jpg",
+    "device": "mobile",
+    "pages": [
+      "apps/admin-dashboard/src/views/ReviewsView.vue",
+      "apps/admin-dashboard/src/views/ServiceBookingsView.vue",
+      "apps/admin-dashboard/src/views/ServiceView.vue",
+      "apps/admin-dashboard/src/views/SettingsView.vue",
+      "apps/admin-dashboard/src/views/SubscriptionsView.vue",
+      "apps/admin-dashboard/src/views/TableDetailView.vue",
+      "apps/admin-dashboard/src/views/UnauthorizedView.vue",
+      "apps/admin-dashboard/src/views/ai-analytics/AIInsightsDashboard.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/admin-dashboard-mobile-6.jpg",
+    "device": "mobile",
+    "pages": [
+      "apps/admin-dashboard/src/views/ai-analytics/AIProviderConfig.vue",
+      "apps/admin-dashboard/src/views/ai-analytics/ProductAnalyticsView.vue",
+      "apps/admin-dashboard/src/views/employees/AttendanceOverviewTab.vue",
+      "apps/admin-dashboard/src/views/employees/EmployeeDetailView.vue",
+      "apps/admin-dashboard/src/views/employees/EmployeeLeaveTab.vue",
+      "apps/admin-dashboard/src/views/employees/EmployeeListTab.vue",
+      "apps/admin-dashboard/src/views/employees/EmployeeManagementView.vue",
+      "apps/admin-dashboard/src/views/employees/EmployeeProfileTab.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/admin-dashboard-mobile-7.jpg",
+    "device": "mobile",
+    "pages": [
+      "apps/admin-dashboard/src/views/employees/EmployeeScheduleTab.vue",
+      "apps/admin-dashboard/src/views/employees/LeavesTab.vue",
+      "apps/admin-dashboard/src/views/employees/SchedulingTab.vue",
+      "apps/admin-dashboard/src/views/forecast/ForecastView.vue",
+      "apps/admin-dashboard/src/views/ingredients/IngredientsView.vue",
+      "apps/admin-dashboard/src/views/scheduling/SchedulingAnalyticsView.vue",
+      "apps/admin-dashboard/src/views/scheduling/SchedulingView.vue",
+      "apps/admin-dashboard/src/views/seating/QueueDashboardTab.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/admin-dashboard-mobile-8.jpg",
+    "device": "mobile",
+    "pages": [
+      "apps/admin-dashboard/src/views/seating/ReservationTab.vue",
+      "apps/admin-dashboard/src/views/seating/SeatingManagementView.vue",
+      "apps/admin-dashboard/src/views/seating/TableSetupTab.vue",
+      "apps/admin-dashboard/src/views/seating/WaitingListTab.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/kitchen-display-desktop-1.jpg",
+    "device": "desktop",
+    "pages": [
+      "apps/kitchen-display/src/views/EnhancedKitchenDashboard.vue",
+      "apps/kitchen-display/src/views/HistoryView.vue",
+      "apps/kitchen-display/src/views/LoginView.vue",
+      "apps/kitchen-display/src/views/MyShiftsView.vue",
+      "apps/kitchen-display/src/views/NotFoundView.vue",
+      "apps/kitchen-display/src/views/SettingsView.vue",
+      "apps/kitchen-display/src/views/UnauthorizedView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/kitchen-display-mobile-1.jpg",
+    "device": "mobile",
+    "pages": [
+      "apps/kitchen-display/src/views/EnhancedKitchenDashboard.vue",
+      "apps/kitchen-display/src/views/HistoryView.vue",
+      "apps/kitchen-display/src/views/LoginView.vue",
+      "apps/kitchen-display/src/views/MyShiftsView.vue",
+      "apps/kitchen-display/src/views/NotFoundView.vue",
+      "apps/kitchen-display/src/views/SettingsView.vue",
+      "apps/kitchen-display/src/views/UnauthorizedView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/management-portal-desktop-1.jpg",
+    "device": "desktop",
+    "pages": [
+      "apps/management-portal/src/views/DashboardView.vue",
+      "apps/management-portal/src/views/DeploymentsView.vue",
+      "apps/management-portal/src/views/HealthView.vue",
+      "apps/management-portal/src/views/LicensesView.vue",
+      "apps/management-portal/src/views/LoginView.vue",
+      "apps/management-portal/src/views/MarketsView.vue",
+      "apps/management-portal/src/views/NotFoundView.vue",
+      "apps/management-portal/src/views/PoliciesView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/management-portal-desktop-2.jpg",
+    "device": "desktop",
+    "pages": [
+      "apps/management-portal/src/views/TenantDetailView.vue",
+      "apps/management-portal/src/views/TenantsView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/management-portal-mobile-1.jpg",
+    "device": "mobile",
+    "pages": [
+      "apps/management-portal/src/views/DashboardView.vue",
+      "apps/management-portal/src/views/DeploymentsView.vue",
+      "apps/management-portal/src/views/HealthView.vue",
+      "apps/management-portal/src/views/LicensesView.vue",
+      "apps/management-portal/src/views/LoginView.vue",
+      "apps/management-portal/src/views/MarketsView.vue",
+      "apps/management-portal/src/views/NotFoundView.vue",
+      "apps/management-portal/src/views/PoliciesView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/management-portal-mobile-2.jpg",
+    "device": "mobile",
+    "pages": [
+      "apps/management-portal/src/views/TenantDetailView.vue",
+      "apps/management-portal/src/views/TenantsView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/onboarding-app-desktop-1.jpg",
+    "device": "desktop",
+    "pages": [
+      "apps/onboarding-app/src/views/ApplicationStatusView.vue",
+      "apps/onboarding-app/src/views/ApplyView.vue",
+      "apps/onboarding-app/src/views/FindApplicationView.vue",
+      "apps/onboarding-app/src/views/HomeView.vue",
+      "apps/onboarding-app/src/views/SuccessView.vue"
+    ]
+  },
+  {
+    "file": "scroll-contact-sheets/onboarding-app-mobile-1.jpg",
+    "device": "mobile",
+    "pages": [
+      "apps/onboarding-app/src/views/ApplicationStatusView.vue",
+      "apps/onboarding-app/src/views/ApplyView.vue",
+      "apps/onboarding-app/src/views/FindApplicationView.vue",
+      "apps/onboarding-app/src/views/HomeView.vue",
+      "apps/onboarding-app/src/views/SuccessView.vue"
+    ]
+  }
+]

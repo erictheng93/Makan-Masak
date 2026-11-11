@@ -1,0 +1,383 @@
+{
+  "method": "Real production components in an isolated browser with local example responses; no production service writes.",
+  "checks": [
+    {
+      "name": "customer-manual-1100: named dialog",
+      "pass": true
+    },
+    {
+      "name": "customer-manual-1100: initial focus inside",
+      "pass": true
+    },
+    {
+      "name": "customer-manual-1100: Tab contained",
+      "pass": true
+    },
+    {
+      "name": "customer-manual-1100: trigger focus restored",
+      "pass": true
+    },
+    {
+      "name": "customer-entry-1100: real router navigation",
+      "pass": true
+    },
+    {
+      "name": "customer-entry-1100: no JavaScript errors",
+      "pass": true,
+      "details": []
+    },
+    {
+      "name": "customer-cart-1100: real quantity handler",
+      "pass": true
+    },
+    {
+      "name": "customer-cart-1100: footer visible",
+      "pass": true
+    },
+    {
+      "name": "customer-cart-1100: content clears measured footer",
+      "pass": true,
+      "details": {
+        "reserved": 144,
+        "footer": 120
+      }
+    },
+    {
+      "name": "customer-cart-1100: no JavaScript errors",
+      "pass": true,
+      "details": []
+    },
+    {
+      "name": "menu-bottom-MenuView-1100: final Add is exposed",
+      "pass": true,
+      "details": {
+        "bottom": 748.25,
+        "viewport": 844,
+        "hit": true
+      }
+    },
+    {
+      "name": "menu-bottom-MenuView-1100: final Add opens item choices or updates cart",
+      "pass": true
+    },
+    {
+      "name": "menu-bottom-MenuView-1100: no JavaScript errors",
+      "pass": true,
+      "details": []
+    },
+    {
+      "name": "menu-bottom-ShopMenuView-1100: final Add is exposed",
+      "pass": true,
+      "details": {
+        "bottom": 748,
+        "viewport": 844,
+        "hit": true
+      }
+    },
+    {
+      "name": "menu-bottom-ShopMenuView-1100: final Add opens item choices or updates cart",
+      "pass": true
+    },
+    {
+      "name": "menu-bottom-ShopMenuView-1100: no JavaScript errors",
+      "pass": true,
+      "details": []
+    },
+    {
+      "name": "admin-option-group-1100: named dialog",
+      "pass": true
+    },
+    {
+      "name": "admin-option-group-1100: initial focus inside",
+      "pass": true
+    },
+    {
+      "name": "admin-option-group-1100: Tab contained",
+      "pass": true
+    },
+    {
+      "name": "admin-option-group-1100: trigger focus restored",
+      "pass": true
+    },
+    {
+      "name": "admin-dialog-1100: no JavaScript errors",
+      "pass": true,
+      "details": []
+    },
+    {
+      "name": "kitchen-settings-1100: switch updates real state",
+      "pass": true
+    },
+    {
+      "name": "kitchen-threshold-1100: named dialog",
+      "pass": true
+    },
+    {
+      "name": "kitchen-threshold-1100: initial focus inside",
+      "pass": true
+    },
+    {
+      "name": "kitchen-threshold-1100: Tab contained",
+      "pass": true
+    },
+    {
+      "name": "kitchen-threshold-1100: trigger focus restored",
+      "pass": true
+    },
+    {
+      "name": "kitchen-settings-1100: no JavaScript errors",
+      "pass": true,
+      "details": []
+    },
+    {
+      "name": "portal-license-1100: named dialog",
+      "pass": true
+    },
+    {
+      "name": "portal-license-1100: initial focus inside",
+      "pass": true
+    },
+    {
+      "name": "portal-license-1100: Tab contained",
+      "pass": true
+    },
+    {
+      "name": "portal-license-1100: trigger focus restored",
+      "pass": true
+    },
+    {
+      "name": "portal-dialog-1100: no JavaScript errors",
+      "pass": true,
+      "details": []
+    },
+    {
+      "name": "onboarding-form-1100: empty required form rejected",
+      "pass": true
+    },
+    {
+      "name": "onboarding-form-1100: visible associated field labels",
+      "pass": true
+    },
+    {
+      "name": "onboarding-form-1100: country enables city",
+      "pass": true
+    },
+    {
+      "name": "onboarding-form-1100: no JavaScript errors",
+      "pass": true,
+      "details": []
+    },
+    {
+      "name": "customer-manual-390: named dialog",
+      "pass": true
+    },
+    {
+      "name": "customer-manual-390: initial focus inside",
+      "pass": true
+    },
+    {
+      "name": "customer-manual-390: Tab contained",
+      "pass": true
+    },
+    {
+      "name": "customer-manual-390: trigger focus restored",
+      "pass": true
+    },
+    {
+      "name": "customer-entry-390: real router navigation",
+      "pass": true
+    },
+    {
+      "name": "customer-entry-390: no JavaScript errors",
+      "pass": true,
+      "details": []
+    },
+    {
+      "name": "customer-cart-390: real quantity handler",
+      "pass": true
+    },
+    {
+      "name": "customer-cart-390: footer visible",
+      "pass": true
+    },
+    {
+      "name": "customer-cart-390: content clears measured footer",
+      "pass": true,
+      "details": {
+        "reserved": 129,
+        "footer": 105
+      }
+    },
+    {
+      "name": "customer-cart-390: no JavaScript errors",
+      "pass": true,
+      "details": []
+    },
+    {
+      "name": "menu-bottom-MenuView-390: final Add is exposed",
+      "pass": true,
+      "details": {
+        "bottom": 745.625,
+        "viewport": 844,
+        "hit": true
+      }
+    },
+    {
+      "name": "menu-bottom-MenuView-390: final Add opens item choices or updates cart",
+      "pass": true
+    },
+    {
+      "name": "menu-bottom-MenuView-390: no JavaScript errors",
+      "pass": true,
+      "details": []
+    },
+    {
+      "name": "menu-bottom-ShopMenuView-390: final Add is exposed",
+      "pass": true,
+      "details": {
+        "bottom": 746.125,
+        "viewport": 844,
+        "hit": true
+      }
+    },
+    {
+      "name": "menu-bottom-ShopMenuView-390: final Add opens item choices or updates cart",
+      "pass": true
+    },
+    {
+      "name": "menu-bottom-ShopMenuView-390: no JavaScript errors",
+      "pass": true,
+      "details": []
+    },
+    {
+      "name": "admin-option-group-390: named dialog",
+      "pass": true
+    },
+    {
+      "name": "admin-option-group-390: initial focus inside",
+      "pass": true
+    },
+    {
+      "name": "admin-option-group-390: Tab contained",
+      "pass": true
+    },
+    {
+      "name": "admin-option-group-390: trigger focus restored",
+      "pass": true
+    },
+    {
+      "name": "admin-dialog-390: no JavaScript errors",
+      "pass": true,
+      "details": []
+    },
+    {
+      "name": "kitchen-settings-390: switch updates real state",
+      "pass": true
+    },
+    {
+      "name": "kitchen-threshold-390: named dialog",
+      "pass": true
+    },
+    {
+      "name": "kitchen-threshold-390: initial focus inside",
+      "pass": true
+    },
+    {
+      "name": "kitchen-threshold-390: Tab contained",
+      "pass": true
+    },
+    {
+      "name": "kitchen-threshold-390: trigger focus restored",
+      "pass": true
+    },
+    {
+      "name": "kitchen-settings-390: no JavaScript errors",
+      "pass": true,
+      "details": []
+    },
+    {
+      "name": "portal-license-390: named dialog",
+      "pass": true
+    },
+    {
+      "name": "portal-license-390: initial focus inside",
+      "pass": true
+    },
+    {
+      "name": "portal-license-390: Tab contained",
+      "pass": true
+    },
+    {
+      "name": "portal-license-390: trigger focus restored",
+      "pass": true
+    },
+    {
+      "name": "portal-dialog-390: no JavaScript errors",
+      "pass": true,
+      "details": []
+    },
+    {
+      "name": "onboarding-form-390: empty required form rejected",
+      "pass": true
+    },
+    {
+      "name": "onboarding-form-390: visible associated field labels",
+      "pass": true
+    },
+    {
+      "name": "onboarding-form-390: country enables city",
+      "pass": true
+    },
+    {
+      "name": "onboarding-form-390: no JavaScript errors",
+      "pass": true,
+      "details": []
+    },
+    {
+      "name": "kitchen-language: popup not clipped on phone",
+      "pass": true
+    },
+    {
+      "name": "kitchen-language: actual locale changes",
+      "pass": true
+    },
+    {
+      "name": "kitchen-language: no JavaScript errors",
+      "pass": true,
+      "details": []
+    },
+    {
+      "name": "employee-long-identifier: phone page stays within viewport",
+      "pass": true,
+      "details": {
+        "page": 390,
+        "viewport": 390,
+        "content": 210,
+        "parent": 230
+      }
+    },
+    {
+      "name": "employee-long-identifier: email wraps within card",
+      "pass": true,
+      "details": {
+        "page": 390,
+        "viewport": 390,
+        "content": 210,
+        "parent": 230
+      }
+    },
+    {
+      "name": "employee-long-identifier: no JavaScript errors",
+      "pass": true,
+      "details": []
+    }
+  ],
+  "errors": [],
+  "finishedAt": "2026-11-11T14:05:16.913Z",
+  "summary": {
+    "checks": 78,
+    "passed": 78,
+    "failures": 0,
+    "scenarioErrors": 0
+  }
+}

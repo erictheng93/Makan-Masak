@@ -1,0 +1,80 @@
+{
+  "implementationCommit": "099113379cb49f94cb60dceaa0caee59078c1922",
+  "views": 113,
+  "visual": {
+    "checked": 226,
+    "passed": 226,
+    "needsReview": 0,
+    "unavailableDataPages": 132,
+    "jsErrors": 0,
+    "unnamedButtons": 0
+  },
+  "interactions": {
+    "checks": 78,
+    "passed": 78,
+    "failures": 0,
+    "scenarioErrors": 0
+  },
+  "frontendTests": {
+    "customer": 904,
+    "admin": 1174,
+    "kitchen": 184,
+    "portal": 56,
+    "onboarding": 58,
+    "total": 2376
+  },
+  "affectedGate": {
+    "tasks": 35,
+    "passed": 35,
+    "node": "24.22.1",
+    "abi": 137
+  },
+  "frontendBuildGraph": {
+    "tasks": 9,
+    "passed": 9,
+    "frontends": 5
+  },
+  "realIntegrationGraph": {
+    "tasks": 11,
+    "passed": 11,
+    "api": {
+      "passed": 936,
+      "expectedFail": 1,
+      "skipped": 2,
+      "todo": 1
+    }
+  },
+  "apiUnitTests": {
+    "passed": 3634,
+    "expectedFail": 1
+  },
+  "independentReviews": {
+    "source": "no remaining blocker",
+    "visual": "approved with stated limits"
+  },
+  "remotePush": false,
+  "deployment": false,
+  "productionBusinessWrites": 0,
+  "scrolling": {
+    "checked": 226,
+    "passed": 226,
+    "needsReview": 0,
+    "unavailableDataPages": 132,
+    "jsErrors": 0,
+    "unnamedButtons": 0,
+    "keyboardStops": 678,
+    "scrollRegions": 264,
+    "scrollSteps": 642
+  },
+  "implementationCommits": [
+    "099113379",
+    "256ccadb4"
+  ],
+  "finalSourceCommit": "256ccadb48a267e792c0a6c4b0710a3d7d2beb8e",
+  "finalRerun": {
+    "affectedGateTasks": 20,
+    "affectedGatePassed": 20,
+    "frontendBuildTasks": 9,
+    "frontendBuildPassed": 9
+  }
+}

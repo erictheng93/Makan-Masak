@@ -1,0 +1,86 @@
+{
+  "startedAt": "2026-11-11T14:02:30.894Z",
+  "method": "Actual production Vue components, isolated local data scenarios. Unknown APIs return explicit 503; this is visual and local interaction evidence, not full backend certification.",
+  "pages": [
+    {
+      "app": "customer-app",
+      "file": "apps/customer-app/src/views/MenuView.vue",
+      "title": "餐桌菜單",
+      "device": "desktop",
+      "route": "/restaurant/:restaurantId/table/:tableId",
+      "sourceHash": "5cb65eff6afe9e00a3861d8050599a7cda119adfdfae668a481001534d83b9b2",
+      "actualRoute": "/restaurant/demo-restaurant/table/1",
+      "inheritedFrom": null,
+      "routeMatches": true,
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "scrollWidth": 1100,
+      "scrollHeight": 1208,
+      "textLength": 271,
+      "headings": [
+        "示範餐廳",
+        "招牌推薦",
+        "經典主餐"
+      ],
+      "tinyControls": [],
+      "unnamedButtons": [],
+      "overflow": [],
+      "brokenImages": [],
+      "unavailableApi": [
+        "/realtime/auth/menu-token"
+      ],
+      "jsErrors": [],
+      "dataState": "includes-unavailable-api",
+      "screenshot": "screenshots/customer-app--MenuView--desktop.png",
+      "pass": true
+    },
+    {
+      "app": "customer-app",
+      "file": "apps/customer-app/src/views/MenuView.vue",
+      "title": "餐桌菜單",
+      "device": "mobile",
+      "route": "/restaurant/:restaurantId/table/:tableId",
+      "sourceHash": "5cb65eff6afe9e00a3861d8050599a7cda119adfdfae668a481001534d83b9b2",
+      "actualRoute": "/restaurant/demo-restaurant/table/1",
+      "inheritedFrom": null,
+      "routeMatches": true,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "scrollWidth": 390,
+      "scrollHeight": 1329,
+      "textLength": 243,
+      "headings": [
+        "示範餐廳",
+        "招牌推薦",
+        "經典主餐"
+      ],
+      "tinyControls": [],
+      "unnamedButtons": [],
+      "overflow": [],
+      "brokenImages": [],
+      "unavailableApi": [
+        "/realtime/auth/menu-token"
+      ],
+      "jsErrors": [],
+      "dataState": "includes-unavailable-api",
+      "screenshot": "screenshots/customer-app--MenuView--mobile.png",
+      "pass": true
+    }
+  ],
+  "interactions": [],
+  "errors": [],
+  "mutationsSentToRemote": 0,
+  "finishedAt": "2026-11-11T14:02:32.503Z",
+  "summary": {
+    "checked": 2,
+    "passed": 2,
+    "needsReview": 0,
+    "unavailableDataPages": 2,
+    "jsErrors": 0,
+    "unnamedButtons": 0
+  }
+}

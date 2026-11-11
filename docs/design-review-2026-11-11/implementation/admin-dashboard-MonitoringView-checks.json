@@ -1,0 +1,94 @@
+{
+  "startedAt": "2026-11-11T13:42:32.974Z",
+  "method": "Actual production Vue components, isolated local data scenarios. Unknown APIs return explicit 503; this is visual and local interaction evidence, not full backend certification.",
+  "pages": [
+    {
+      "app": "admin-dashboard",
+      "file": "apps/admin-dashboard/src/views/MonitoringView.vue",
+      "title": "系統監控",
+      "device": "desktop",
+      "route": "/dashboard/monitoring",
+      "sourceHash": "b2a1d615b3658a8b7823b146ead9c0d9a7a70b7b05f001060d65039dedbe8388",
+      "actualRoute": "/dashboard/monitoring",
+      "inheritedFrom": null,
+      "routeMatches": true,
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "scrollWidth": 1100,
+      "scrollHeight": 820,
+      "textLength": 473,
+      "headings": [
+        "系統監控",
+        "整體健康狀態"
+      ],
+      "tinyControls": [],
+      "unnamedButtons": [],
+      "overflow": [],
+      "brokenImages": [],
+      "unavailableApi": [
+        "/realtime/auth/token",
+        "/monitoring/overview",
+        "/monitoring/alerts/rules",
+        "/monitoring/reports/performance",
+        "/system/error-report",
+        "/monitoring/alerts/recent"
+      ],
+      "jsErrors": [],
+      "dataState": "includes-unavailable-api",
+      "screenshot": "screenshots/admin-dashboard--MonitoringView--desktop.png",
+      "pass": true
+    },
+    {
+      "app": "admin-dashboard",
+      "file": "apps/admin-dashboard/src/views/MonitoringView.vue",
+      "title": "系統監控",
+      "device": "mobile",
+      "route": "/dashboard/monitoring",
+      "sourceHash": "b2a1d615b3658a8b7823b146ead9c0d9a7a70b7b05f001060d65039dedbe8388",
+      "actualRoute": "/dashboard/monitoring",
+      "inheritedFrom": null,
+      "routeMatches": true,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "scrollWidth": 390,
+      "scrollHeight": 844,
+      "textLength": 235,
+      "headings": [
+        "系統監控",
+        "整體健康狀態"
+      ],
+      "tinyControls": [],
+      "unnamedButtons": [],
+      "overflow": [],
+      "brokenImages": [],
+      "unavailableApi": [
+        "/realtime/auth/token",
+        "/monitoring/overview",
+        "/monitoring/alerts/rules",
+        "/monitoring/reports/performance",
+        "/system/error-report",
+        "/monitoring/alerts/recent"
+      ],
+      "jsErrors": [],
+      "dataState": "includes-unavailable-api",
+      "screenshot": "screenshots/admin-dashboard--MonitoringView--mobile.png",
+      "pass": true
+    }
+  ],
+  "interactions": [],
+  "errors": [],
+  "mutationsSentToRemote": 0,
+  "finishedAt": "2026-11-11T13:42:34.880Z",
+  "summary": {
+    "checked": 2,
+    "passed": 2,
+    "needsReview": 0,
+    "unavailableDataPages": 2,
+    "jsErrors": 0,
+    "unnamedButtons": 0
+  }
+}
