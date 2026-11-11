@@ -340,7 +340,9 @@
                 <div class="text-gray-500">
                   {{ t("orders.columns.customer") }}
                 </div>
-                <div class="text-gray-900 text-right">
+                <div
+                  class="min-w-0 text-gray-900 text-right [overflow-wrap:anywhere]"
+                >
                   {{ getCustomerName(order) }}
                 </div>
 
@@ -533,7 +535,9 @@
                   <label class="block text-sm font-medium text-gray-700">{{
                     t("orders.detail.customerName")
                   }}</label>
-                  <p class="text-sm text-gray-900">
+                  <p
+                    class="min-w-0 text-sm text-gray-900 [overflow-wrap:anywhere]"
+                  >
                     {{ getCustomerName(selectedOrder) }}
                   </p>
                 </div>
