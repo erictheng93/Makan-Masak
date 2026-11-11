@@ -268,7 +268,9 @@
                     {{ formatDateTime(order.createdAt) }}
                   </div>
                   <!-- Desktop actions: icon buttons -->
-                  <div class="ui-toolbar flex items-center justify-end gap-1">
+                  <div
+                    class="ui-toolbar flex flex-nowrap items-center justify-end gap-1"
+                  >
                     <button
                       class="p-1.5 text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
                       :data-testid="`admin-order-view-${order.id}`"

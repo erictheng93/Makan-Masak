@@ -54,6 +54,14 @@ async function expectMenuLoaded(page: Page, itemId: number): Promise<void> {
   ).toBeVisible({ timeout: NAV_TIMEOUT });
 }
 
+// The landing page offers fulfilment types as visually hidden radios inside
+// their label cards, so the card is what a customer sees and taps.
+function fulfillmentOption(page: Page, name: RegExp) {
+  return page
+    .locator("label")
+    .filter({ has: page.getByRole("radio", { name }) });
+}
+
 test.describe("點餐主流程 (real API)", () => {
   test("掃描 QR: a signed table QR opens that table's menu", async ({
     browser,
@@ -212,14 +220,10 @@ test.describe("點餐主流程 (real API)", () => {
       );
 
       // --- 選擇取餐: the landing page offers what the shop enabled ----------
-      const dineIn = page.getByRole("button", { name: /內用 Dine-in/ });
+      const dineIn = fulfillmentOption(page, /內用 Dine-in/);
       await expect(dineIn).toBeVisible({ timeout: NAV_TIMEOUT });
-      await expect(
-        page.getByRole("button", { name: /外帶 Takeaway/ }),
-      ).toHaveCount(0);
-      await expect(
-        page.getByRole("button", { name: /外送 Delivery/ }),
-      ).toHaveCount(0);
+      await expect(fulfillmentOption(page, /外帶 Takeaway/)).toHaveCount(0);
+      await expect(fulfillmentOption(page, /外送 Delivery/)).toHaveCount(0);
 
       await dineIn.click();
       await page.getByTestId("continue-btn").click();
@@ -346,14 +350,10 @@ test.describe("點餐主流程 (real API)", () => {
       await page.goto(
         `/restaurant/${rid}/shop/order-type?qr=${encodeURIComponent(shopQrCode)}`,
       );
-      const delivery = page.getByRole("button", { name: /外送 Delivery/ });
+      const delivery = fulfillmentOption(page, /外送 Delivery/);
       await expect(delivery).toBeVisible({ timeout: NAV_TIMEOUT });
-      await expect(
-        page.getByRole("button", { name: /外帶 Takeaway/ }),
-      ).toBeVisible();
-      await expect(
-        page.getByRole("button", { name: /內用 Dine-in/ }),
-      ).toHaveCount(0);
+      await expect(fulfillmentOption(page, /外帶 Takeaway/)).toBeVisible();
+      await expect(fulfillmentOption(page, /內用 Dine-in/)).toHaveCount(0);
 
       await delivery.click();
       await page.getByTestId("continue-btn").click();
@@ -432,9 +432,9 @@ test.describe("點餐主流程 (real API)", () => {
       await page.goto(
         `/restaurant/${shop.restaurantId}/shop/order-type?qr=${encodeURIComponent(shopQr.qrCode)}`,
       );
-      await page
-        .getByRole("button", { name: /外帶 Takeaway/ })
-        .click({ timeout: NAV_TIMEOUT });
+      await fulfillmentOption(page, /外帶 Takeaway/).click({
+        timeout: NAV_TIMEOUT,
+      });
       await page.getByTestId("continue-btn").click();
 
       const card = page.getByTestId(`menu-item-card-${shop.dish.id}`);
