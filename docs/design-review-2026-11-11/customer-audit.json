@@ -1,0 +1,3089 @@
+[
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/AboutView.vue",
+    "title": "關於 MakanMasak",
+    "routes": [
+      "/about"
+    ],
+    "kind": "detail",
+    "purpose": "閱讀平台介紹、功能與聯絡說明。",
+    "headings": [
+      "{{ t(\"about.title\") }}",
+      "MakanMasak",
+      "{{ t(\"about.features.title\") }}",
+      "{{ t(\"about.contact.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "low",
+        "line": 8,
+        "finding": "介紹卡使用 rounded-lg，與顧客頁既有 rounded-2xl 卡片語言不一致。",
+        "fix": "保留三段內容，使用 24px 圓角、共用輕陰影與一致的 24px 章節間距。"
+      }
+    ],
+    "proposal": {
+      "title": "關於 MakanMasak",
+      "subtitle": "平台介紹、功能與聯絡資訊。",
+      "primaryAction": "查看聯絡資訊",
+      "sections": [
+        {
+          "title": "MakanMasak",
+          "content": [
+            "about.description"
+          ]
+        },
+        {
+          "title": "主要功能",
+          "content": [
+            "掃碼點餐",
+            "訂單追蹤",
+            "付款",
+            "餐點客製化",
+            "管理功能"
+          ]
+        },
+        {
+          "title": "聯絡我們",
+          "content": [
+            "about.contact.description"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "4xl 內容容器、頁首大標、單張白色 rounded-lg 卡，依序平台、功能條列、聯絡說明。",
+      "colors": [
+        "bg-ios-bg",
+        "text-gray-900",
+        "bg-white",
+        "text-gray-700"
+      ],
+      "facts": [
+        "實際 template 包含 4 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：4xl 內容容器、頁首大標、單張白色 rounded-lg 卡，依序平台、功能條列、聯絡說明。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/CartView.vue",
+    "title": "確認購物車",
+    "routes": [
+      "/restaurant/:restaurantId/table/:tableId/cart"
+    ],
+    "kind": "cart",
+    "purpose": "確認餐點、優惠、備註與聯絡資料後送單。",
+    "headings": [
+      "{{ t(\"cart.title\") }}",
+      "{{ t(\"cart.empty\") }}",
+      "{{ t(\"order.title\") }}",
+      "{{ t(\"cart.coupons\") }}",
+      "{{ t(\"cart.availableCoupons\") }}",
+      "{{ coupon.name }}",
+      "{{ t(\"order.details.customerInfo\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 43,
+        "finding": "main 沒有底部避讓，固定 bottom-0 結帳區覆蓋最後的顧客資訊；法務文字及最低消費提示會增加遮擋高度。",
+        "fix": "內容底部預留實際結帳區高度＋safe-area，底欄同時加底部安全區內距，確認電話欄可完整捲入視窗。"
+      },
+      {
+        "severity": "medium",
+        "line": 207,
+        "finding": "優惠券區包含列表、手動輸入、驗證、已套用項與推薦，讓非必要折扣操作占據結帳主線。",
+        "fix": "預設收合可用優惠列表，先顯示已套用優惠與輸入碼入口，再以明確展開操作呈現清單。"
+      }
+    ],
+    "proposal": {
+      "title": "確認購物車",
+      "subtitle": "確認餐點與應付金額後送出訂單。",
+      "primaryAction": "送出訂單",
+      "sections": [
+        {
+          "title": "餐點明細",
+          "content": [
+            "餐點名稱",
+            "數量",
+            "客製內容",
+            "單品備註"
+          ]
+        },
+        {
+          "title": "金額摘要",
+          "content": [
+            "小計",
+            "服務費",
+            "稅額",
+            "折扣",
+            "總計"
+          ]
+        },
+        {
+          "title": "優惠與備註",
+          "content": [
+            "優惠碼",
+            "可用優惠券",
+            "訂單備註"
+          ]
+        },
+        {
+          "title": "顧客資訊",
+          "content": [
+            "姓名（選填）",
+            "電話（選填）",
+            "服務條款與隱私權政策"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "窄版置頂列；餐點卡、金額摘要、大段優惠券選單、備註、聯絡資料；固定底部結帳與法務。",
+      "colors": [
+        "bg-ios-bg",
+        "bg-white",
+        "bg-gray-100",
+        "text-ios-text",
+        "text-ios-secondary",
+        "text-gray-400",
+        "bg-ios-blue",
+        "text-white",
+        "text-green-600",
+        "border-ios-separator",
+        "bg-ios-green",
+        "bg-ios-orange",
+        "text-ios-green",
+        "text-ios-orange",
+        "text-ios-blue",
+        "border-ios-blue",
+        "text-gray-500",
+        "bg-ios-separator",
+        "text-ios-tertiary",
+        "border-white",
+        "text-ios-red",
+        "text-ios-green-deep",
+        "bg-gray-200"
+      ],
+      "facts": [
+        "實際 template 包含 7 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：窄版置頂列；餐點卡、金額摘要、大段優惠券選單、備註、聯絡資料；固定底部結帳與法務。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/DiscoveryView.vue",
+    "title": "探索美食與服務",
+    "routes": [
+      "/discover"
+    ],
+    "kind": "discovery",
+    "purpose": "搜尋餐點、店家或服務並依地區篩選。",
+    "headings": [
+      "{{ t(\"discovery.title\") }}",
+      "選擇夜市或商圈",
+      "{{ service.name }}",
+      "{{ t(\"discovery.popularDishes\") }}",
+      "{{ t(\"discovery.restaurants\") }}",
+      "{{ t(\"discovery.popularRestaurants\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 83,
+        "finding": "搜尋失敗僅顯示紅色錯誤文字，沒有重試入口或保留條件的恢復動作。",
+        "fix": "錯誤區加入保留目前查詢的重試按鈕與可理解說明；空結果增加清除篩選操作。"
+      },
+      {
+        "severity": "medium",
+        "line": 195,
+        "finding": "直接預約、查看服務等主要結果動作使用 h-9（36px），手機觸控偏小。",
+        "fix": "改為至少 44px、圓角 pill，讓同列服務動作可換行而不縮小。"
+      }
+    ],
+    "proposal": {
+      "title": "探索美食與服務",
+      "subtitle": "依夜市、地區與服務類型找到店家。",
+      "primaryAction": "搜尋",
+      "sections": [
+        {
+          "title": "搜尋與篩選",
+          "content": [
+            "搜尋餐點或服務",
+            "選擇夜市或商圈",
+            "城市",
+            "區域",
+            "分類",
+            "服務類型"
+          ]
+        },
+        {
+          "title": "搜尋結果",
+          "content": [
+            "餐點名稱",
+            "店家名稱",
+            "價格",
+            "直接預約",
+            "查看服務"
+          ]
+        },
+        {
+          "title": "探索推薦",
+          "content": [
+            "熱門餐點",
+            "餐廳",
+            "熱門餐廳"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "max-w-md 單欄；搜尋、夜市 chips、FilterPanel，接餐點／服務結果或店家推薦。",
+      "colors": [
+        "bg-ios-bg",
+        "bg-white",
+        "border-gray-100",
+        "text-gray-500",
+        "text-gray-700",
+        "text-gray-900",
+        "text-ios-blue",
+        "border-ios-blue",
+        "bg-ios-blue",
+        "text-white",
+        "border-gray-300",
+        "text-red-500",
+        "border-gray-200",
+        "bg-gray-100",
+        "text-gray-600",
+        "text-ios-secondary",
+        "border-emerald-500",
+        "text-emerald-700"
+      ],
+      "facts": [
+        "實際 template 包含 6 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：max-w-md 單欄；搜尋、夜市 chips、FilterPanel，接餐點／服務結果或店家推薦。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/ErrorView.vue",
+    "title": "頁面暫時無法載入",
+    "routes": [
+      "/error"
+    ],
+    "kind": "error",
+    "purpose": "理解錯誤並重試或返回首頁。",
+    "headings": [
+      "{{ t(\"errors.general\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 27,
+        "finding": "錯誤說明使用 ios-secondary，白底上的一般字級對比約 3:1，不利於閱讀恢復指示。",
+        "fix": "將關鍵錯誤與恢復說明改為 ios-text/70 或更深，保留次要中繼資料的淡色。"
+      }
+    ],
+    "proposal": {
+      "title": "頁面暫時無法載入",
+      "subtitle": "保留錯誤原因，提供清楚的恢復方式。",
+      "primaryAction": "重新載入",
+      "sections": [
+        {
+          "title": "發生什麼事",
+          "content": [
+            "errors.general",
+            "errorMessage 或 errors.generalDesc"
+          ]
+        },
+        {
+          "title": "接下來",
+          "content": [
+            "重試",
+            "回到首頁"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "全頁置中白卡；紅色警示圖示、一般錯誤標題與動態說明；重試與首頁雙按鈕。",
+      "colors": [
+        "bg-ios-bg",
+        "bg-ios-card",
+        "bg-ios-red",
+        "text-ios-red",
+        "text-ios-text",
+        "text-ios-secondary",
+        "bg-ios-blue",
+        "text-white",
+        "bg-ios-separator"
+      ],
+      "facts": [
+        "實際 template 包含 1 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：全頁置中白卡；紅色警示圖示、一般錯誤標題與動態說明；重試與首頁雙按鈕。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/ForgotPasswordView.vue",
+    "title": "找回密碼",
+    "routes": [
+      "/forgot-password"
+    ],
+    "kind": "auth",
+    "purpose": "透過帳號識別碼取得重設連結或電話 OTP。",
+    "headings": [
+      "{{ t(\"auth.forgotPasswordTitle\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 62,
+        "finding": "OTP 錯誤僅以條件段落顯示，輸入框沒有錯誤關聯；識別碼欄位亦相同。",
+        "fix": "將 OTP 和識別碼錯誤與欄位 aria-describedby 綁定；保留不透露帳號是否存在的一致回覆。"
+      }
+    ],
+    "proposal": {
+      "title": "找回密碼",
+      "subtitle": "輸入手機號碼或 Email，依指示重設密碼。",
+      "primaryAction": "送出重設要求",
+      "sections": [
+        {
+          "title": "找回帳號",
+          "content": [
+            "手機號碼或 Email"
+          ]
+        },
+        {
+          "title": "電話驗證",
+          "content": [
+            "六位數驗證碼",
+            "驗證並繼續"
+          ]
+        },
+        {
+          "title": "電子郵件回覆",
+          "content": [
+            "auth.forgotPasswordSent",
+            "返回登入"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "窄白卡內切換識別碼表單、已寄出回覆、電話 OTP 表單；返回密碼登入連結固定在卡底。",
+      "colors": [
+        "bg-ios-bg",
+        "bg-ios-blue",
+        "text-white",
+        "text-ios-text",
+        "bg-ios-card",
+        "text-ios-blue",
+        "text-ios-secondary",
+        "text-ios-tertiary",
+        "bg-white",
+        "text-ios-red",
+        "bg-ios-green",
+        "text-ios-green",
+        "bg-ios-red"
+      ],
+      "facts": [
+        "實際 template 包含 1 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：窄白卡內切換識別碼表單、已寄出回覆、電話 OTP 表單；返回密碼登入連結固定在卡底。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/GroupOrderJoinView.vue",
+    "title": "加入團體點餐",
+    "routes": [
+      "/group/:shareCode"
+    ],
+    "kind": "form",
+    "purpose": "檢視團主、餐廳與有效時間後加入共用購物車。",
+    "headings": [
+      "{{ t(\"groupJoin.notFoundTitle\") }}",
+      "{{ t(\"groupJoin.loadFailedTitle\") }}",
+      "{{ tWithParams(\"groupJoin.hostOrdering\", { hostName: preview.hostName, }) }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 139,
+        "finding": "團體不存在時只顯示標題與說明，沒有返回或重新取得邀請入口，使用者無法繼續。",
+        "fix": "在終止狀態加入回首頁／重新開啟邀請說明；維持載入失敗與邀請不存在的區別。"
+      }
+    ],
+    "proposal": {
+      "title": "加入團體點餐",
+      "subtitle": "確認餐廳、團主與有效時間後加入。",
+      "primaryAction": "加入團體點餐",
+      "sections": [
+        {
+          "title": "邀請資訊",
+          "content": [
+            "餐廳名稱",
+            "團主姓名",
+            "目前成員數",
+            "用餐方式",
+            "到期時間"
+          ]
+        },
+        {
+          "title": "加入",
+          "content": [
+            "你的名字",
+            "立即加入"
+          ]
+        },
+        {
+          "title": "邀請失效時",
+          "content": [
+            "邀請不存在說明",
+            "回首頁"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "窄白卡；團主主標、餐廳、成員／用餐方式雙欄與到期時間，再展開姓名表單；另有不存在及載入失敗狀態。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-secondary",
+        "bg-ios-card",
+        "text-ios-text",
+        "bg-ios-blue",
+        "text-white",
+        "text-ios-tertiary",
+        "bg-white",
+        "text-ios-red"
+      ],
+      "facts": [
+        "實際 template 包含 3 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：窄白卡；團主主標、餐廳、成員／用餐方式雙欄與到期時間，再展開姓名表單；另有不存在及載入失敗狀態。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/GroupOrderView.vue",
+    "title": "共用購物車",
+    "routes": [
+      "/group/order/:groupOrderId"
+    ],
+    "kind": "cart",
+    "purpose": "一起編輯餐點、分帳、邀請成員並由團主送單。",
+    "headings": [
+      "{{ group.groupOrder.value?.hostName || t(\"group.sharedCart\") }}",
+      "{{ t(\"group.lockedTitle\") }}",
+      "{{ t(\"group.orderPlacedTitle\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 359,
+        "finding": "送出訂單先出現，到期自動送出的重要選擇卻位於送單及數種提示之後；兩個影響送單的設定分散。",
+        "fix": "將團主送單摘要與自動送出設定相鄰呈現，邀請區可收合；明示目前是否自動送出。"
+      },
+      {
+        "severity": "medium",
+        "line": 436,
+        "finding": "自動送出 switch 的可點擊高度僅 h-8（32px）。",
+        "fix": "維持視覺開關尺寸，外層觸控目標補至至少 44px，保留 role=switch 與 aria-checked。"
+      }
+    ],
+    "proposal": {
+      "title": "共用購物車",
+      "subtitle": "確認自己的餐點、分攤金額與團體送單設定。",
+      "primaryAction": "送出團體訂單",
+      "sections": [
+        {
+          "title": "團體狀態",
+          "content": [
+            "團主姓名",
+            "目前成員",
+            "鎖定／已送單狀態"
+          ]
+        },
+        {
+          "title": "共用餐點與分帳",
+          "content": [
+            "餐點數量",
+            "我的小計",
+            "服務費",
+            "稅額",
+            "我的應付",
+            "分帳方式"
+          ]
+        },
+        {
+          "title": "邀請成員",
+          "content": [
+            "分享碼",
+            "邀請連結"
+          ]
+        },
+        {
+          "title": "團主送單",
+          "content": [
+            "團體合計",
+            "到期自動送出開關",
+            "送出訂單",
+            "團主身分恢復"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "2xl 單欄；團主標題與訊息、GroupCartPanel、完成或繼續點餐、InvitePanel、送單、到期自動送出控制、團主恢復。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-secondary",
+        "text-ios-text",
+        "bg-ios-red",
+        "text-ios-red",
+        "bg-ios-orange",
+        "text-ios-orange",
+        "bg-ios-card",
+        "bg-ios-green",
+        "bg-ios-blue",
+        "text-white",
+        "border-ios-blue",
+        "text-ios-blue",
+        "bg-ios-separator",
+        "bg-ios-gray-4",
+        "bg-white",
+        "text-ios-green"
+      ],
+      "facts": [
+        "實際 template 包含 3 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：2xl 單欄；團主標題與訊息、GroupCartPanel、完成或繼續點餐、InvitePanel、送單、到期自動送出控制、團主恢復。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/HomeView.vue",
+    "title": "開始點餐",
+    "routes": [
+      "/",
+      "/menu"
+    ],
+    "kind": "landing",
+    "purpose": "掃碼、手動輸入餐廳，或探索店家。",
+    "headings": [
+      "MakanMasak",
+      "{{ t(\"home.title\") }}",
+      "{{ t(\"home.recentOrders\") }}",
+      "{{ t(\"home.features.title\") }}",
+      "{{ t(\"home.features.qrOrder\") }}",
+      "{{ t(\"home.features.realtime\") }}",
+      "{{ t(\"home.features.payment\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 315,
+        "finding": "PWA 提示以 common.home、common.loading、common.apply 作為標題、說明與按鈕，無法表達安裝用途。",
+        "fix": "改為專用的安裝標題、安裝後用途與「安裝 App」；保留原安裝動作。"
+      },
+      {
+        "severity": "medium",
+        "line": 105,
+        "finding": "探索美食入口使用橘色漸層且與掃碼同等強度，四個入口缺乏主次。",
+        "fix": "掃碼保留藍色主按鈕；手動輸入、探索美食、夜市與商圈採白卡與柔和陰影，移除核心入口漸層。"
+      }
+    ],
+    "proposal": {
+      "title": "開始點餐",
+      "subtitle": "掃描桌上 QR Code，或探索夜市與商圈。",
+      "primaryAction": "掃描 QR Code",
+      "sections": [
+        {
+          "title": "在餐廳",
+          "content": [
+            "掃描 QR Code",
+            "手動輸入餐廳資訊"
+          ]
+        },
+        {
+          "title": "探索",
+          "content": [
+            "探索美食",
+            "夜市與商圈"
+          ]
+        },
+        {
+          "title": "最近使用的餐廳",
+          "content": [
+            "餐廳名稱",
+            "地址"
+          ]
+        },
+        {
+          "title": "使用方式",
+          "content": [
+            "掃碼點餐",
+            "即時追蹤",
+            "付款"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "半透明頂部品牌列；手機置中歡迎區＋四個大型入口，桌面左右雙欄；最近餐廳、功能介紹；底部安裝提示。",
+      "colors": [
+        "bg-ios-bg",
+        "bg-white",
+        "bg-ios-blue",
+        "text-white",
+        "text-ios-text",
+        "text-ios-secondary",
+        "text-ios-blue",
+        "bg-gray-100",
+        "from-amber-500",
+        "to-orange-500",
+        "border-ios-blue",
+        "text-ios-tertiary",
+        "bg-ios-green",
+        "text-ios-green",
+        "bg-ios-teal",
+        "text-ios-teal"
+      ],
+      "facts": [
+        "實際 template 包含 7 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：半透明頂部品牌列；手機置中歡迎區＋四個大型入口，桌面左右雙欄；最近餐廳、功能介紹；底部安裝提示。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/LoginView.vue",
+    "title": "會員登入",
+    "routes": [
+      "/login"
+    ],
+    "kind": "auth",
+    "purpose": "使用簡訊驗證碼或密碼登入。",
+    "headings": [
+      "MakanMasak"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 29,
+        "finding": "登入方式切換為 text-sm py-2，未保證 44px 觸控高度；主流程常用控制過小。",
+        "fix": "將兩個模式按鈕設為 min-height:44px，保留 aria-pressed 與目前模式視覺。"
+      },
+      {
+        "severity": "medium",
+        "line": 61,
+        "finding": "電話、OTP 與密碼欄位錯誤沒有 aria-invalid／aria-describedby 對應。",
+        "fix": "給錯誤文字穩定 id，將欄位狀態與錯誤連結，送出後移焦第一個錯誤。"
+      }
+    ],
+    "proposal": {
+      "title": "會員登入",
+      "subtitle": "選擇登入方式，繼續查看訂單。",
+      "primaryAction": "登入",
+      "sections": [
+        {
+          "title": "登入方式",
+          "content": [
+            "簡訊驗證碼",
+            "密碼登入"
+          ]
+        },
+        {
+          "title": "簡訊登入",
+          "content": [
+            "手機號碼",
+            "驗證碼",
+            "取得驗證碼"
+          ]
+        },
+        {
+          "title": "其他方式",
+          "content": [
+            "忘記密碼",
+            "立即註冊",
+            "訪客瀏覽"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "窄版品牌標、白色 32px 圓角卡；雙模式分段按鈕、條件式欄位與登入鈕；忘記密碼、註冊、訪客連結。",
+      "colors": [
+        "bg-ios-bg",
+        "bg-ios-blue",
+        "text-white",
+        "text-ios-text",
+        "text-ios-secondary",
+        "bg-ios-card",
+        "text-ios-tertiary",
+        "bg-white",
+        "text-ios-red",
+        "bg-ios-red",
+        "border-white",
+        "text-ios-blue"
+      ],
+      "facts": [
+        "實際 template 包含 1 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：窄版品牌標、白色 32px 圓角卡；雙模式分段按鈕、條件式欄位與登入鈕；忘記密碼、註冊、訪客連結。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/MarketCheckoutTrackingView.vue",
+    "title": "市場訂單追蹤",
+    "routes": [
+      "/markets/:slug/checkout/:checkoutId"
+    ],
+    "kind": "tracking",
+    "purpose": "查看跨攤位付款摘要、子訂單與取餐進度。",
+    "headings": [
+      "{{ t(\"markets.checkout.title\") }}",
+      "{{ t(\"markets.checkout.loadFailedTitle\") }}",
+      "{{ statusLabel }}",
+      "{{ t(\"markets.checkout.stallOrders\") }}",
+      "{{ order.restaurantName }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 170,
+        "finding": "折價券輸入只有 placeholder，且付款／優惠結果訊息沒有 live 宣告，送出結果不容易被輔助工具感知。",
+        "fix": "為優惠碼新增 label，付款錯誤採 alert、成功採 status；保留市場結帳停用原因。"
+      },
+      {
+        "severity": "medium",
+        "line": 330,
+        "finding": "每攤位卡片重複框線、小尺寸狀態與取餐說明，資料多時付款重點與各攤位狀態不易比較。",
+        "fix": "摘要保留應付與付款狀態，子訂單用一致的店家／狀態／金額三區，操作至少 44px。"
+      }
+    ],
+    "proposal": {
+      "title": "市場訂單追蹤",
+      "subtitle": "先確認付款狀態，再查看各攤位訂單。",
+      "primaryAction": "查看攤位訂單",
+      "sections": [
+        {
+          "title": "付款總覽",
+          "content": [
+            "提交時間",
+            "小計",
+            "折價券折抵",
+            "應付金額",
+            "付款進度"
+          ]
+        },
+        {
+          "title": "優惠與付款",
+          "content": [
+            "優惠碼",
+            "已套用折價券",
+            "付款停用或失敗說明"
+          ]
+        },
+        {
+          "title": "各攤位訂單",
+          "content": [
+            "店家名稱",
+            "訂單號碼",
+            "餐點狀態",
+            "付款狀態",
+            "金額",
+            "查看攤位訂單"
+          ]
+        },
+        {
+          "title": "返回",
+          "content": [
+            "回到市場"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "窄版固定標題；摘要卡含應付、折價券、付款摘要／付款按鈕；各攤位子訂單；返回市場。",
+      "colors": [
+        "bg-ios-bg",
+        "border-gray-100",
+        "bg-white",
+        "text-gray-500",
+        "text-gray-700",
+        "text-gray-900",
+        "border-red-100",
+        "text-gray-600",
+        "bg-ios-blue",
+        "text-white",
+        "border-gray-200",
+        "bg-emerald-50",
+        "text-emerald-700",
+        "bg-gray-50",
+        "border-gray-300",
+        "border-ios-blue",
+        "bg-gray-900",
+        "text-red-600",
+        "bg-gray-200",
+        "text-gray-400",
+        "bg-blue-300",
+        "text-amber-700",
+        "bg-red-50",
+        "text-red-700",
+        "bg-gray-100",
+        "bg-blue-50",
+        "text-blue-700",
+        "bg-amber-50",
+        "text-ios-blue"
+      ],
+      "facts": [
+        "實際 template 包含 5 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：窄版固定標題；摘要卡含應付、折價券、付款摘要／付款按鈕；各攤位子訂單；返回市場。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/MarketDetailView.vue",
+    "title": "夜市與商圈導覽",
+    "routes": [
+      "/markets/:slug"
+    ],
+    "kind": "detail",
+    "purpose": "探索市場攤位、位置、商品與服務並查看市場購物籃。",
+    "headings": [
+      "{{ store.selectedMarket?.name || t(\"markets.detail.fallbackTitle\") }}",
+      "{{ t(\"markets.detail.readinessTitle\") }}",
+      "{{ t(\"markets.detail.syncingTitle\") }}",
+      "{{ t(\"markets.detail.exploreTitle\") }}",
+      "{{ t(\"markets.detail.popularDishes\") }}",
+      "{{ t(\"markets.detail.popularProducts\") }}",
+      "{{ t(\"markets.detail.stallServices\") }}",
+      "{{ t(\"markets.detail.cartTitle\") }}",
+      "{{ vendor.name }}",
+      "{{ selectedContactVendor.name }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 301,
+        "finding": "兩個地圖、攤位清單與商品搜尋完整串接，手機必須穿越長區塊才能切換想找的內容。",
+        "fix": "在市場摘要下加入「攤位／商品與服務／地圖」同頁導覽，保留既有元件並將購物籃摘要縮為固定可見入口。"
+      },
+      {
+        "severity": "medium",
+        "line": 228,
+        "finding": "市場結帳停用時仍展示可輸入電話末三碼欄位，旁邊只有停用送出，讓使用者先填了不能完成的資料。",
+        "fix": "停用狀態先顯示既有原因提示，將輸入區明確停用；保留既有購物籃品項與金額。"
+      }
+    ],
+    "proposal": {
+      "title": "夜市與商圈導覽",
+      "subtitle": "先選攤位、商品與服務，或查看地圖位置。",
+      "primaryAction": "探索攤位",
+      "sections": [
+        {
+          "title": "市場摘要",
+          "content": [
+            "市場名稱",
+            "攤位數",
+            "追蹤",
+            "公開資料狀態"
+          ]
+        },
+        {
+          "title": "快速探索",
+          "content": [
+            "熱門餐點分類",
+            "熱門商品分類",
+            "攤位服務"
+          ]
+        },
+        {
+          "title": "分區瀏覽",
+          "content": [
+            "攤位清單",
+            "商品與服務搜尋",
+            "攤位圖",
+            "位置地圖"
+          ]
+        },
+        {
+          "title": "市場購物籃",
+          "content": [
+            "攤位品項",
+            "小計",
+            "結帳暫停提示"
+          ]
+        },
+        {
+          "title": "聯絡店家",
+          "content": [
+            "常見問題",
+            "可用聯絡方式"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "窄版單欄；市場 hero、兩類提醒、探索捷徑、購物籃、攤位圖、位置地圖、攤位清單、商品搜尋、聯絡卡。",
+      "colors": [
+        "bg-ios-bg",
+        "border-gray-100",
+        "bg-white",
+        "text-gray-500",
+        "text-gray-700",
+        "text-gray-900",
+        "border-ios-blue",
+        "text-ios-blue",
+        "text-red-500",
+        "border-amber-200",
+        "bg-amber-50",
+        "text-amber-900",
+        "text-amber-800",
+        "border-blue-200",
+        "bg-blue-50",
+        "text-blue-900",
+        "text-blue-800",
+        "border-gray-200",
+        "bg-ios-blue",
+        "text-amber-700",
+        "border-emerald-200",
+        "bg-emerald-50",
+        "text-emerald-700",
+        "text-emerald-600",
+        "text-emerald-950",
+        "text-emerald-800",
+        "text-gray-600",
+        "border-emerald-500",
+        "bg-gray-200",
+        "text-gray-400",
+        "bg-emerald-700",
+        "text-white",
+        "bg-emerald-300",
+        "text-emerald-900",
+        "border-gray-300",
+        "bg-gray-50"
+      ],
+      "facts": [
+        "實際 template 包含 10 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：窄版單欄；市場 hero、兩類提醒、探索捷徑、購物籃、攤位圖、位置地圖、攤位清單、商品搜尋、聯絡卡。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/MarketsView.vue",
+    "title": "夜市與商圈",
+    "routes": [
+      "/markets"
+    ],
+    "kind": "discovery",
+    "purpose": "依地區搜尋、定位附近市場並找回收藏及近期資料。",
+    "headings": [
+      "{{ t(\"markets.directory.title\") }}",
+      "{{ t(\"markets.directory.favorites\") }}",
+      "{{ t(\"markets.directory.recentVisits\") }}",
+      "{{ t(\"markets.directory.recentOrders\") }}",
+      "{{ t(\"markets.directory.nearby\") }}",
+      "{{ t(\"markets.directory.allMarkets\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 38,
+        "finding": "搜尋框與三個篩選 select 只有 placeholder 或 option，沒有 label／aria-label，輔助工具無法辨別篩選用途。",
+        "fix": "增加搜尋、縣市、區域、類型的可見或隱藏標籤，篩選改為同一群組並呈現已選條件。"
+      },
+      {
+        "severity": "medium",
+        "line": 131,
+        "finding": "收藏、近期瀏覽、近期訂單、附近市場都可能在全部清單前展開，資料多時主要結果被推得很後面。",
+        "fix": "收藏與近期採緊湊橫列或可收合區；把篩選結果標題及計數放在清單前，保留目前資料。"
+      }
+    ],
+    "proposal": {
+      "title": "夜市與商圈",
+      "subtitle": "搜尋市場，或查看你收藏與最近探索的地點。",
+      "primaryAction": "搜尋夜市與商圈",
+      "sections": [
+        {
+          "title": "尋找市場",
+          "content": [
+            "搜尋名稱",
+            "縣市",
+            "區域",
+            "市場類型",
+            "尋找附近"
+          ]
+        },
+        {
+          "title": "你的紀錄",
+          "content": [
+            "收藏市場",
+            "最近瀏覽",
+            "近期市場訂單"
+          ]
+        },
+        {
+          "title": "市場列表",
+          "content": [
+            "附近市場",
+            "全部市場",
+            "載入更多",
+            "清除篩選"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "max-w-md 單欄；搜尋、三個 select、附近定位；收藏、近期瀏覽、近期訂單、附近與全部市場依序堆疊。",
+      "colors": [
+        "bg-ios-bg",
+        "border-gray-100",
+        "bg-white",
+        "text-gray-500",
+        "text-gray-700",
+        "text-gray-900",
+        "border-gray-300",
+        "border-ios-blue",
+        "bg-ios-blue",
+        "text-white",
+        "text-ios-blue",
+        "text-gray-400",
+        "text-red-500",
+        "border-gray-200",
+        "bg-gray-50"
+      ],
+      "facts": [
+        "實際 template 包含 6 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：max-w-md 單欄；搜尋、三個 select、附近定位；收藏、近期瀏覽、近期訂單、附近與全部市場依序堆疊。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/MenuView.vue",
+    "title": "餐桌菜單",
+    "routes": [
+      "/restaurant/:restaurantId/table/:tableId"
+    ],
+    "kind": "menu",
+    "purpose": "依分類挑選餐點，個人或團體加入購物車。",
+    "headings": [
+      "{{ restaurant?.name || t(\"common.loading\") }}",
+      "{{ t(\"shopMenu.loadFailed\") }}",
+      "{{ t(\"menu.featured\") }}",
+      "{{ getLocalizedMenuName(category, currentLanguage) }}",
+      "{{ t(\"menu.noResults\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 64,
+        "finding": "購物車和返回圖示按鈕缺少 aria-label，固定 40px 也低於 44px 觸控目標。",
+        "fix": "補上包含購物車數量的名稱與返回名稱，統一 h-11 w-11；搜尋補上隱藏標籤。"
+      },
+      {
+        "severity": "medium",
+        "line": 164,
+        "finding": "主要區域已有 px-4，餐點欄又加 px-5，手機有效菜單寬度被重複內距縮窄。",
+        "fix": "將頁面左右內距收斂為單一層，保留分類與卡片對齊，增加餐名與價格可讀寬度。"
+      }
+    ],
+    "proposal": {
+      "title": "餐桌菜單",
+      "subtitle": "餐廳名稱 · 桌號，快速找到想吃的餐點。",
+      "primaryAction": "查看購物車",
+      "sections": [
+        {
+          "title": "餐廳與桌位",
+          "content": [
+            "餐廳名稱",
+            "桌號",
+            "預約",
+            "語言"
+          ]
+        },
+        {
+          "title": "找餐點",
+          "content": [
+            "搜尋餐點",
+            "推薦餐點",
+            "菜單分類"
+          ]
+        },
+        {
+          "title": "一起點餐",
+          "content": [
+            "發起團體點餐",
+            "邀請朋友",
+            "共用購物車"
+          ]
+        },
+        {
+          "title": "購物車",
+          "content": [
+            "餐點數量",
+            "小計",
+            "查看購物車"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "置頂餐廳／桌號工具列與分類 pills；團體點餐卡、搜尋、推薦橫滑、分類雙欄；桌面側車／手機浮動結帳。",
+      "colors": [
+        "bg-ios-bg",
+        "bg-white",
+        "bg-gray-100",
+        "text-ios-text",
+        "text-ios-secondary",
+        "bg-ios-red",
+        "text-white",
+        "bg-ios-blue",
+        "bg-gray-200",
+        "border-ios-blue",
+        "text-ios-red",
+        "bg-ios-card",
+        "text-ios-blue",
+        "border-ios-gray-4",
+        "bg-ios-orange",
+        "text-ios-orange",
+        "text-ios-tertiary",
+        "text-gray-500",
+        "text-gray-400"
+      ],
+      "facts": [
+        "實際 template 包含 5 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：置頂餐廳／桌號工具列與分類 pills；團體點餐卡、搜尋、推薦橫滑、分類雙欄；桌面側車／手機浮動結帳。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/NotFoundView.vue",
+    "title": "找不到這個頁面",
+    "routes": [
+      "/:pathMatch(.*)*"
+    ],
+    "kind": "error",
+    "purpose": "說明路徑不存在並協助返回。",
+    "headings": [
+      "{{ t(\"errorBoundary.notFoundTitle\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "low",
+        "line": 7,
+        "finding": "404 使用 text-7xl，加上第二個圖示占據主要視覺空間，實際原因與返回操作較晚出現。",
+        "fix": "縮小 404 為次要識別，將頁面說明和返回操作向上集中，維持原白卡與雙操作。"
+      }
+    ],
+    "proposal": {
+      "title": "找不到這個頁面",
+      "subtitle": "請返回上一頁，或從首頁重新開始。",
+      "primaryAction": "返回上一頁",
+      "sections": [
+        {
+          "title": "頁面不存在",
+          "content": [
+            "errorBoundary.notFoundTitle",
+            "errorBoundary.notFoundMessage"
+          ]
+        },
+        {
+          "title": "返回",
+          "content": [
+            "上一頁",
+            "首頁"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "全頁置中白卡；巨大 404＋情緒圖示、h1 說明與返回／首頁按鈕。",
+      "colors": [
+        "bg-ios-bg",
+        "bg-ios-card",
+        "text-ios-tertiary",
+        "text-ios-secondary",
+        "text-ios-text",
+        "bg-ios-blue",
+        "text-white",
+        "bg-ios-separator"
+      ],
+      "facts": [
+        "實際 template 包含 1 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：全頁置中白卡；巨大 404＋情緒圖示、h1 說明與返回／首頁按鈕。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/OrderHistoryView.vue",
+    "title": "我的訂單",
+    "routes": [
+      "/orders"
+    ],
+    "kind": "list",
+    "purpose": "依狀態與日期查詢訂單、查看詳情與評價。",
+    "headings": [
+      "{{ t(\"orderHistory.title\") }}",
+      "{{ t(\"orderHistory.noOrders\") }}",
+      "{{ order.orderNumber }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 138,
+        "finding": "整張訂單卡使用可點擊 div，沒有鍵盤焦點或連結語意，卡內另有按鈕及評價。",
+        "fix": "讓訂單編號／查看詳情使用 RouterLink，卡片維持容器；不要把含互動評價的整張卡變成單一按鈕。"
+      },
+      {
+        "severity": "medium",
+        "line": 129,
+        "finding": "空狀態 CTA 使用橘紅漸層，金額／操作採橘色，與顧客主流程藍色語言不一致。",
+        "fix": "使用藍色主入口、深色金額、語意色狀態徽章，保留原有篩選與評價。"
+      }
+    ],
+    "proposal": {
+      "title": "我的訂單",
+      "subtitle": "依日期與狀態，快速找到每一筆訂單。",
+      "primaryAction": "查看訂單詳情",
+      "sections": [
+        {
+          "title": "篩選訂單",
+          "content": [
+            "訂單狀態",
+            "開始日期",
+            "結束日期",
+            "重設篩選"
+          ]
+        },
+        {
+          "title": "訂單卡",
+          "content": [
+            "訂單編號",
+            "餐廳",
+            "桌號",
+            "建立時間",
+            "金額",
+            "付款狀態"
+          ]
+        },
+        {
+          "title": "訂單操作",
+          "content": [
+            "查看詳情",
+            "可取消時取消訂單",
+            "餐點評價"
+          ]
+        },
+        {
+          "title": "分頁",
+          "content": [
+            "上一頁",
+            "目前頁／總頁",
+            "下一頁"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "寬頁首含個人中心／登出；三欄篩選卡、縱向訂單卡含評價，底部分頁。",
+      "colors": [
+        "bg-ios-bg",
+        "bg-ios-card",
+        "text-gray-900",
+        "text-gray-600",
+        "text-orange-600",
+        "text-red-600",
+        "text-gray-700",
+        "bg-white",
+        "text-ios-secondary",
+        "text-ios-text",
+        "bg-ios-separator",
+        "border-orange-500",
+        "text-gray-400",
+        "text-gray-500",
+        "text-white",
+        "from-orange-500",
+        "to-red-500",
+        "from-orange-600",
+        "to-red-600",
+        "text-green-600",
+        "border-ios-separator",
+        "text-orange-700",
+        "bg-orange-50",
+        "text-ios-red",
+        "bg-ios-red"
+      ],
+      "facts": [
+        "實際 template 包含 3 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：寬頁首含個人中心／登出；三欄篩選卡、縱向訂單卡含評價，底部分頁。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/OrderTrackingView.vue",
+    "title": "訂單進度",
+    "routes": [
+      "/orders/:id",
+      "/restaurant/:restaurantId/shop/order/:orderId",
+      "/restaurant/:restaurantId/table/:tableId/order/:orderId"
+    ],
+    "kind": "tracking",
+    "purpose": "追蹤訂單狀態、時間軸、明細與金額。",
+    "headings": [
+      "{{ t(\"orderTracking.title\") }}",
+      "{{ t(\"orderTracking.loadFailed\") }}",
+      "{{ getStatusTitle(order.status) }}",
+      "{{ t(\"orderTracking.orderTimeline\") }}",
+      "{{ t(\"orderTracking.orderDetails\") }}",
+      "{{ t(\"orderTracking.orderedItems\") }}",
+      "{{ t(\"orderTracking.orderNotes\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 9,
+        "finding": "返回按鈕一律導向餐桌菜單，但同頁支援 isShopOrder；商店訂單的頂部返回與底部繼續點餐導向不同。",
+        "fix": "共用依訂單情境決定的菜單返回目的地，商店訂單返回 shop/menu；按鈕加入可存取名稱。"
+      },
+      {
+        "severity": "medium",
+        "line": 118,
+        "finding": "百分比進度只以 div 寬度表示，沒有 progressbar 語意；狀態更新也沒有 live 宣告。",
+        "fix": "保留狀態文字，進度使用原生 progress 或完整 aria-valuenow，動態狀態採 polite 宣告。"
+      }
+    ],
+    "proposal": {
+      "title": "訂單進度",
+      "subtitle": "訂單狀態、預估時間與餐點明細集中查看。",
+      "primaryAction": "繼續點餐",
+      "sections": [
+        {
+          "title": "目前進度",
+          "content": [
+            "訂單編號",
+            "目前狀態",
+            "狀態說明",
+            "預估分鐘"
+          ]
+        },
+        {
+          "title": "訂單時間軸",
+          "content": [
+            "已完成步驟",
+            "目前步驟",
+            "待完成步驟"
+          ]
+        },
+        {
+          "title": "訂單明細",
+          "content": [
+            "餐點",
+            "備註",
+            "小計",
+            "服務費",
+            "稅額",
+            "折扣",
+            "總計"
+          ]
+        },
+        {
+          "title": "操作",
+          "content": [
+            "餐點評價",
+            "繼續點餐",
+            "可取消時取消"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "窄版置頂編號；大型狀態卡＋百分比進度、時間軸、完整明細、評價、取消與繼續點餐；斷線浮層。",
+      "colors": [
+        "bg-ios-bg",
+        "bg-white",
+        "bg-gray-100",
+        "text-ios-text",
+        "text-ios-secondary",
+        "border-ios-blue",
+        "bg-ios-red",
+        "text-ios-red",
+        "bg-ios-blue",
+        "text-white",
+        "bg-gray-200",
+        "text-ios-blue",
+        "border-ios-separator",
+        "text-ios-green-deep",
+        "text-ios-green",
+        "bg-ios-orange",
+        "text-ios-orange"
+      ],
+      "facts": [
+        "實際 template 包含 7 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：窄版置頂編號；大型狀態卡＋百分比進度、時間軸、完整明細、評價、取消與繼續點餐；斷線浮層。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/OrderTypeLandingView.vue",
+    "title": "選擇用餐方式",
+    "routes": [
+      "/restaurant/:restaurantId/shop/order-type"
+    ],
+    "kind": "menu",
+    "purpose": "確認店家並選擇內用、外帶或外送。",
+    "headings": [
+      "{{ t(BLOCKED_COPY[blockedReason].title) }}",
+      "{{ restaurant?.name }}",
+      "{{ t(\"orderTypeLanding.noMethodsTitle\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 103,
+        "finding": "用餐方式以一般 button 選取，只靠框線、底色和勾號表達選中，沒有 aria-pressed 或 radio 群組語意。",
+        "fix": "使用原生 radio＋整卡 label，或補上 radio 群組與方向鍵行為，保留單選與停用邏輯。"
+      }
+    ],
+    "proposal": {
+      "title": "選擇用餐方式",
+      "subtitle": "確認餐廳後，選擇適合的用餐方式。",
+      "primaryAction": "繼續",
+      "sections": [
+        {
+          "title": "店家資訊",
+          "content": [
+            "餐廳名稱",
+            "餐廳描述"
+          ]
+        },
+        {
+          "title": "用餐方式",
+          "content": [
+            "內用",
+            "外帶",
+            "外送"
+          ]
+        },
+        {
+          "title": "不可點餐時",
+          "content": [
+            "已停用 QR Code 說明",
+            "尚未提供用餐方式"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "窄版店家標識＋名稱，示範提示；各用餐方式選擇卡與繼續按鈕；停用或無方式有獨立狀態。",
+      "colors": [
+        "bg-ios-bg",
+        "border-ios-blue",
+        "text-red-500",
+        "text-ios-blue",
+        "bg-ios-card",
+        "bg-red-50",
+        "text-ios-text",
+        "text-ios-secondary",
+        "bg-gray-200",
+        "text-gray-900",
+        "text-gray-500",
+        "bg-ios-orange-soft",
+        "text-ios-orange-deep",
+        "border-gray-300",
+        "bg-white",
+        "bg-blue-50",
+        "border-gray-200",
+        "bg-ios-blue",
+        "text-white",
+        "bg-blue-600"
+      ],
+      "facts": [
+        "實際 template 包含 3 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：窄版店家標識＋名稱，示範提示；各用餐方式選擇卡與繼續按鈕；停用或無方式有獨立狀態。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/PrivacyView.vue",
+    "title": "隱私權政策",
+    "routes": [
+      "/privacy"
+    ],
+    "kind": "legal",
+    "purpose": "了解資料收集、使用與保護。",
+    "headings": [
+      "{{ t(\"privacy.title\") }}",
+      "{{ t(\"privacy.dataCollection.title\") }}",
+      "{{ t(\"privacy.dataUsage.title\") }}",
+      "{{ t(\"privacy.dataProtection.title\") }}",
+      "{{ t(\"privacy.contact.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 13,
+        "finding": "政策段落沿用預設行高，4xl 寬度使長行難以追讀；實際換行會隨語系與裝置而變。",
+        "fix": "限制正文閱讀寬度約 65ch、採 1.65 行高；保留所有政策文案，增加章節錨點目錄。"
+      }
+    ],
+    "proposal": {
+      "title": "隱私權政策",
+      "subtitle": "資料如何收集、使用與受到保護。",
+      "primaryAction": "前往聯絡資訊",
+      "sections": [
+        {
+          "title": "章節目錄",
+          "content": [
+            "資料收集",
+            "資料使用",
+            "資料保護",
+            "聯絡我們"
+          ]
+        },
+        {
+          "title": "資料收集與使用",
+          "content": [
+            "privacy.dataCollection.description",
+            "privacy.dataUsage.description"
+          ]
+        },
+        {
+          "title": "資料保護與聯絡",
+          "content": [
+            "privacy.dataProtection.description",
+            "privacy.contact.description"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "4xl 容器內單張白卡，四個政策章節；段落沒有獨立行高或文字寬度限制。",
+      "colors": [
+        "bg-ios-bg",
+        "text-gray-900",
+        "bg-white",
+        "text-gray-700"
+      ],
+      "facts": [
+        "實際 template 包含 5 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：4xl 容器內單張白卡，四個政策章節；段落沒有獨立行高或文字寬度限制。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/ProfileView.vue",
+    "title": "個人中心",
+    "routes": [
+      "/profile"
+    ],
+    "kind": "profile",
+    "purpose": "查看個資、通知偏好、追蹤與收藏。",
+    "headings": [
+      "{{ t(\"profile.pageTitle\") }}",
+      "{{ profile.fullName }}",
+      "通知與同意設定",
+      "{{ t(\"profile.quickActions\") }}",
+      "{{ t(\"profile.accountSettings\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 52,
+        "finding": "個人資訊使用橘紅漸層、較重陰影，且設定主按鈕採橘色，偏離顧客藍色與平面白卡的既有方向。",
+        "fix": "改為白色個人摘要卡、藍色姓名標識與儲存主按鈕；保留紅色只給登出等需注意的操作。"
+      },
+      {
+        "severity": "medium",
+        "line": 136,
+        "finding": "Email、姓名等資料列使用固定三分之一標籤寬且值沒有換行策略，長 Email 可能撐開手機版。",
+        "fix": "值區加 min-width:0 與 anywhere 換行，小螢幕允許標籤和值上下排列。"
+      }
+    ],
+    "proposal": {
+      "title": "個人中心",
+      "subtitle": "管理個人資料、候位通知與收藏。",
+      "primaryAction": "儲存設定",
+      "sections": [
+        {
+          "title": "個人資料",
+          "content": [
+            "使用者名稱",
+            "顯示名稱",
+            "Email",
+            "電話"
+          ]
+        },
+        {
+          "title": "通知設定",
+          "content": [
+            "候位通知",
+            "通知與同意設定",
+            "儲存設定"
+          ]
+        },
+        {
+          "title": "追蹤與收藏",
+          "content": [
+            "追蹤店家",
+            "收藏餐點"
+          ]
+        },
+        {
+          "title": "常用操作",
+          "content": [
+            "我的訂單",
+            "瀏覽菜單",
+            "登出"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "寬頁首含返回與登出；3xl 內容，橘紅漸層個人卡、通知設定、追蹤／收藏元件、快捷入口、再次登出。",
+      "colors": [
+        "bg-ios-bg",
+        "bg-white",
+        "text-gray-600",
+        "text-orange-600",
+        "text-gray-900",
+        "text-red-600",
+        "border-orange-500",
+        "from-orange-500",
+        "to-red-500",
+        "text-white",
+        "text-orange-100",
+        "border-gray-200",
+        "text-gray-400",
+        "text-gray-700",
+        "border-gray-300",
+        "bg-orange-600",
+        "bg-orange-700",
+        "bg-orange-50",
+        "text-gray-500",
+        "border-red-300",
+        "bg-red-50"
+      ],
+      "facts": [
+        "實際 template 包含 5 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：寬頁首含返回與登出；3xl 內容，橘紅漸層個人卡、通知設定、追蹤／收藏元件、快捷入口、再次登出。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/QRScanView.vue",
+    "title": "掃描 QR Code",
+    "routes": [
+      "/scan"
+    ],
+    "kind": "form",
+    "purpose": "以相機掃描餐廳碼，支援手動輸入。",
+    "headings": [
+      "{{ t(\"qrScanView.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 11,
+        "finding": "返回、閃光燈和關閉錯誤為純圖示按鈕且缺少可存取名稱，前兩者 40px、關閉僅 24px。",
+        "fix": "加入動作 aria-label，閃光燈附 aria-pressed；觸控容器擴為至少 44px，保留相機畫面與可見手動入口。"
+      }
+    ],
+    "proposal": {
+      "title": "掃描 QR Code",
+      "subtitle": "將餐廳 QR Code 對準掃描框。",
+      "primaryAction": "手動輸入",
+      "sections": [
+        {
+          "title": "相機預覽",
+          "content": [
+            "掃描框",
+            "掃描狀態",
+            "開關閃光燈"
+          ]
+        },
+        {
+          "title": "掃描指示",
+          "content": [
+            "qrScanView.instruction",
+            "手動輸入餐廳"
+          ]
+        },
+        {
+          "title": "發生問題時",
+          "content": [
+            "錯誤原因",
+            "關閉提示",
+            "重新掃描"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "100dvh 相機全螢幕；頂部返回／閃光燈，中央掃描框，底部狀態與手動輸入；錯誤浮層。",
+      "colors": [
+        "bg-black",
+        "text-white",
+        "border-white",
+        "bg-white",
+        "bg-red-600",
+        "text-red-100",
+        "text-red-200"
+      ],
+      "facts": [
+        "實際 template 包含 1 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：100dvh 相機全螢幕；頂部返回／閃光燈，中央掃描框，底部狀態與手動輸入；錯誤浮層。",
+        "QRScanView.vue:544–565 以 100dvh 配合行動瀏覽器高度，已有橫向壓縮底部間距。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/RegisterView.vue",
+    "title": "建立會員帳號",
+    "routes": [
+      "/register"
+    ],
+    "kind": "auth",
+    "purpose": "建立帳號，依電話或 Email 進入驗證。",
+    "headings": [
+      "MakanMasak",
+      "{{ t(\"auth.verificationEmailSentTitle\") }}",
+      "{{ t(\"auth.verificationEmailFailedTitle\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 133,
+        "finding": "註冊欄位雖顯示驗證錯誤，但輸入框沒有 aria-invalid、aria-describedby，輔助工具難以識別原因。",
+        "fix": "保留現有驗證，將三個欄位各自連結錯誤訊息與密碼規則，寄信結果以 status 宣告。"
+      }
+    ],
+    "proposal": {
+      "title": "建立會員帳號",
+      "subtitle": "填寫帳號與顯示名稱，完成必要驗證。",
+      "primaryAction": "建立帳號",
+      "sections": [
+        {
+          "title": "帳號資料",
+          "content": [
+            "手機號碼或 Email",
+            "顯示名稱",
+            "密碼",
+            "密碼規則"
+          ]
+        },
+        {
+          "title": "送出之後",
+          "content": [
+            "驗證信已寄出",
+            "寄信失敗時重新寄送"
+          ]
+        },
+        {
+          "title": "已有帳號",
+          "content": [
+            "立即登入",
+            "訪客瀏覽"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "品牌標＋單張窄白卡；識別碼、顯示名稱、密碼；成功寄信與寄信失敗取代表單。",
+      "colors": [
+        "bg-ios-bg",
+        "bg-ios-blue",
+        "text-white",
+        "text-ios-text",
+        "text-ios-secondary",
+        "bg-ios-card",
+        "bg-ios-green",
+        "text-ios-green",
+        "bg-ios-orange",
+        "text-ios-orange",
+        "bg-ios-red",
+        "text-ios-red",
+        "text-ios-tertiary",
+        "bg-white",
+        "border-white",
+        "text-ios-blue"
+      ],
+      "facts": [
+        "實際 template 包含 3 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：品牌標＋單張窄白卡；識別碼、顯示名稱、密碼；成功寄信與寄信失敗取代表單。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/ReservationView.vue",
+    "title": "餐廳訂位",
+    "routes": [
+      "/restaurant/:restaurantId/reserve"
+    ],
+    "kind": "form",
+    "purpose": "選擇日期人數與可用桌位時段，建立或查詢訂位。",
+    "headings": [
+      "{{ t(\"reservationBooking.title\") }}",
+      "{{ restaurant.name }}",
+      "{{ t(\"serviceBooking.created\") }}",
+      "{{ t(\"serviceBooking.lookupTitle\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 66,
+        "finding": "日期、人數、姓名與電話等 label 未以 for/id 或包裹方式綁定輸入框，表單沒有可靠欄位名稱。",
+        "fix": "為每個欄位新增 id 與對應 for；查詢碼也需標籤，選定時段補 aria-pressed。"
+      },
+      {
+        "severity": "medium",
+        "line": 270,
+        "finding": "建立、查詢與取消共用頁底錯誤／成功訊息，使用者操作上方時可能看不到結果。",
+        "fix": "將訊息放回相應操作區，使用 alert/status，成功後將確認碼區捲入並移焦。"
+      }
+    ],
+    "proposal": {
+      "title": "餐廳訂位",
+      "subtitle": "選擇日期、人數與可預約時段。",
+      "primaryAction": "確認訂位",
+      "sections": [
+        {
+          "title": "餐廳資訊",
+          "content": [
+            "餐廳名稱",
+            "地址"
+          ]
+        },
+        {
+          "title": "選擇桌位",
+          "content": [
+            "日期",
+            "用餐人數",
+            "查看時段",
+            "時段剩餘桌數"
+          ]
+        },
+        {
+          "title": "聯絡資料",
+          "content": [
+            "姓名",
+            "電話",
+            "Email（選填）",
+            "特殊需求"
+          ]
+        },
+        {
+          "title": "查詢訂位",
+          "content": [
+            "確認碼",
+            "預約日期與時段",
+            "訂位狀態",
+            "取消訂位"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "窄版頁首；餐廳摘要、日期／人數、時段格、聯絡表單、建立成功、查詢與取消；錯誤訊息置底。",
+      "colors": [
+        "bg-ios-bg",
+        "bg-white",
+        "text-ios-text",
+        "bg-ios-separator",
+        "text-ios-secondary",
+        "bg-ios-red-soft",
+        "text-ios-red-deep",
+        "bg-ios-card",
+        "border-ios-separator",
+        "border-ios-blue",
+        "bg-ios-blue-soft",
+        "text-ios-blue-deep",
+        "bg-ios-blue",
+        "text-white",
+        "text-ios-tertiary",
+        "bg-ios-green-soft",
+        "text-ios-green-deep"
+      ],
+      "facts": [
+        "實際 template 包含 4 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：窄版頁首；餐廳摘要、日期／人數、時段格、聯絡表單、建立成功、查詢與取消；錯誤訊息置底。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/ResetPasswordView.vue",
+    "title": "重設密碼",
+    "routes": [
+      "/reset-password"
+    ],
+    "kind": "auth",
+    "purpose": "使用 Email token 設定新密碼。",
+    "headings": [
+      "{{ t(\"auth.resetPasswordTitle\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 19,
+        "finding": "缺少 token 時只顯示紅字與返回登入，無法直接重新取得有效重設連結。",
+        "fix": "錯誤狀態補上「重新取得重設連結」導向 forgot-password；保留返回登入。"
+      }
+    ],
+    "proposal": {
+      "title": "重設密碼",
+      "subtitle": "設定新的登入密碼。",
+      "primaryAction": "儲存新密碼",
+      "sections": [
+        {
+          "title": "設定密碼",
+          "content": [
+            "新密碼",
+            "確認新密碼",
+            "密碼規則"
+          ]
+        },
+        {
+          "title": "連結失效時",
+          "content": [
+            "重新取得重設連結",
+            "返回登入"
+          ]
+        },
+        {
+          "title": "完成",
+          "content": [
+            "密碼已更新",
+            "前往登入"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "窄白卡依 token 缺少、成功、表單三態呈現；新密碼、確認密碼與規則，卡底登入連結。",
+      "colors": [
+        "bg-ios-bg",
+        "bg-ios-blue",
+        "text-white",
+        "text-ios-text",
+        "bg-ios-card",
+        "text-ios-red",
+        "bg-ios-green",
+        "text-ios-green",
+        "text-ios-secondary",
+        "text-ios-tertiary",
+        "bg-white",
+        "bg-ios-red",
+        "text-ios-blue"
+      ],
+      "facts": [
+        "實際 template 包含 1 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：窄白卡依 token 缺少、成功、表單三態呈現；新密碼、確認密碼與規則，卡底登入連結。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/ServiceBookingView.vue",
+    "title": "服務預約",
+    "routes": [
+      "/restaurant/:restaurantId/services/:serviceItemId/book"
+    ],
+    "kind": "form",
+    "purpose": "選擇服務時段並建立、付款或查詢服務預約。",
+    "headings": [
+      "{{ t(\"serviceBooking.title\") }}",
+      "{{ serviceItem.name }}",
+      "{{ t(\"serviceBooking.created\") }}",
+      "{{ t(\"serviceBooking.lookupTitle\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 150,
+        "finding": "聯絡資料、日期、人數及優惠碼的 label 沒有 for/id 關聯；付款與查詢輸入甚至只靠 placeholder。",
+        "fix": "為所有欄位補明確 label/id，錯誤連結該欄位；信用／點數支付識別碼與 PIN 保留獨立標籤。"
+      },
+      {
+        "severity": "medium",
+        "line": 302,
+        "finding": "建立預約、點數付款與查詢既有預約三個不同任務在同頁完整展開，主流程易混淆。",
+        "fix": "主視圖聚焦日期→時段→聯絡資料；查詢既有預約收合，成功後明確切換到確認／付款區。"
+      }
+    ],
+    "proposal": {
+      "title": "服務預約",
+      "subtitle": "選定服務時段，再填寫聯絡資料。",
+      "primaryAction": "建立預約",
+      "sections": [
+        {
+          "title": "服務摘要",
+          "content": [
+            "服務名稱",
+            "服務類型",
+            "價格",
+            "預估時間"
+          ]
+        },
+        {
+          "title": "選擇時段",
+          "content": [
+            "預約日期",
+            "查看時段",
+            "可用名額"
+          ]
+        },
+        {
+          "title": "預約資料",
+          "content": [
+            "姓名",
+            "電話",
+            "Email",
+            "人數",
+            "優惠碼",
+            "備註"
+          ]
+        },
+        {
+          "title": "確認與付款",
+          "content": [
+            "確認碼",
+            "應付金額",
+            "預約狀態",
+            "付款狀態",
+            "點數卡識別碼",
+            "PIN"
+          ]
+        },
+        {
+          "title": "查詢既有預約",
+          "content": [
+            "確認碼",
+            "聯絡資料",
+            "查詢",
+            "取消"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "窄版頁首；服務摘要、日期與時段、長表單、預約成功與點數付款、查詢／取消。",
+      "colors": [
+        "bg-ios-bg",
+        "border-gray-100",
+        "bg-white",
+        "text-gray-500",
+        "text-gray-700",
+        "text-gray-900",
+        "border-red-100",
+        "text-red-700",
+        "border-gray-200",
+        "text-gray-600",
+        "border-gray-300",
+        "border-ios-blue",
+        "text-ios-blue",
+        "bg-blue-50",
+        "bg-gray-50",
+        "text-gray-400",
+        "bg-ios-blue",
+        "text-white",
+        "border-emerald-200",
+        "bg-emerald-50",
+        "text-emerald-900",
+        "text-emerald-800",
+        "bg-emerald-700",
+        "border-red-300",
+        "text-red-600",
+        "text-emerald-700"
+      ],
+      "facts": [
+        "實際 template 包含 4 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：窄版頁首；服務摘要、日期與時段、長表單、預約成功與點數付款、查詢／取消。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/ShopMenuView.vue",
+    "title": "店家菜單與服務",
+    "routes": [
+      "/restaurant/:restaurantId/shop/menu"
+    ],
+    "kind": "menu",
+    "purpose": "瀏覽店家餐點、商品、服務並使用店家購物車。",
+    "headings": [
+      "{{ restaurant?.name || t(\"common.loading\") }}",
+      "{{ t(\"shopMenu.loadFailed\") }}",
+      "所屬夜市與商圈",
+      "店家服務",
+      "{{ service.name }}",
+      "尚未提供公開服務",
+      "{{ t(\"shopMenu.recommended\") }}",
+      "餐點",
+      "{{ getLocalizedMenuName(category, currentLanguage) }}",
+      "商品",
+      "尚未提供可點選的菜單商品",
+      "{{ t(\"shopMenu.noResults\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 437,
+        "finding": "沒有公開服務時仍在推薦餐點前放整張空服務卡，常見純餐飲店會先看到無內容區塊。",
+        "fix": "將空服務說明移至服務分區，優先露出可購買餐點；保留實際有服務時的預約入口。"
+      },
+      {
+        "severity": "medium",
+        "line": 631,
+        "finding": "手機購物車浮條使用固定 bottom-4，沒有 safe-area 內距；裝置底部保留區的實際影響需實機確認。",
+        "fix": "浮條距底加 safe-area inset，主要內容留出浮條高度，保留既有數量與小計。"
+      }
+    ],
+    "proposal": {
+      "title": "店家菜單與服務",
+      "subtitle": "餐點、商品與店家服務清楚分區。",
+      "primaryAction": "查看購物車",
+      "sections": [
+        {
+          "title": "店家資訊",
+          "content": [
+            "用餐方式",
+            "評價",
+            "所屬夜市與商圈"
+          ]
+        },
+        {
+          "title": "餐點",
+          "content": [
+            "搜尋餐點",
+            "推薦餐點",
+            "分類餐點"
+          ]
+        },
+        {
+          "title": "商品與服務",
+          "content": [
+            "商品",
+            "店家服務",
+            "站內預約",
+            "開啟預約"
+          ]
+        },
+        {
+          "title": "購物車",
+          "content": [
+            "餐點數量",
+            "小計",
+            "返回市場購物籃"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "置頂店家、履約徽章與分類；搜尋後依序狀態、評論、商圈、服務、推薦、餐點、商品；桌面側車／手機浮條。",
+      "colors": [
+        "bg-ios-bg",
+        "bg-white",
+        "bg-gray-100",
+        "text-ios-text",
+        "text-ios-secondary",
+        "bg-ios-red",
+        "text-white",
+        "bg-ios-blue",
+        "bg-gray-200",
+        "border-emerald-200",
+        "bg-emerald-50",
+        "text-emerald-900",
+        "border-ios-blue",
+        "text-ios-red",
+        "text-ios-tertiary",
+        "bg-ios-card",
+        "bg-ios-orange-soft",
+        "text-ios-orange-deep",
+        "text-ios-blue",
+        "border-gray-200",
+        "border-gray-100",
+        "bg-ios-orange",
+        "text-ios-orange",
+        "bg-gray-50",
+        "text-gray-500",
+        "text-gray-400"
+      ],
+      "facts": [
+        "實際 template 包含 12 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：置頂店家、履約徽章與分類；搜尋後依序狀態、評論、商圈、服務、推薦、餐點、商品；桌面側車／手機浮條。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/SignedOrderEntryView.vue",
+    "title": "正在開啟點餐頁面",
+    "routes": [
+      "/order"
+    ],
+    "kind": "tracking",
+    "purpose": "驗證掃碼連結並跳轉至正確餐廳。",
+    "headings": [
+      "{{ t(\"qrScanView.processing\") }}",
+      "{{ t(\"toast.qrValidationFailed\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 26,
+        "finding": "驗證失敗只提供重試，永久失效 QR Code 仍讓使用者停留於同一失敗路徑。",
+        "fix": "保留重試，補上返回掃碼入口的次要操作；失效連結說明應明確建議使用店家現行碼。"
+      }
+    ],
+    "proposal": {
+      "title": "正在開啟點餐頁面",
+      "subtitle": "驗證 QR Code 後會自動進入對應餐廳。",
+      "primaryAction": "重試",
+      "sections": [
+        {
+          "title": "處理中",
+          "content": [
+            "qrScanView.processing"
+          ]
+        },
+        {
+          "title": "驗證失敗時",
+          "content": [
+            "錯誤原因",
+            "重試",
+            "重新掃描"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "全頁置中窄白卡；處理中 spinner＋h1；失敗切換為錯誤說明與重試按鈕，main 已有 polite live。",
+      "colors": [
+        "bg-ios-bg",
+        "bg-ios-card",
+        "border-ios-separator",
+        "text-ios-text",
+        "text-ios-secondary",
+        "bg-ios-blue",
+        "text-white"
+      ],
+      "facts": [
+        "實際 template 包含 2 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：全頁置中窄白卡；處理中 spinner＋h1；失敗切換為錯誤說明與重試按鈕，main 已有 polite live。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/TermsView.vue",
+    "title": "服務條款",
+    "routes": [
+      "/terms"
+    ],
+    "kind": "legal",
+    "purpose": "閱讀使用規範、責任與條款變更。",
+    "headings": [
+      "{{ t(\"terms.title\") }}",
+      "{{ t(\"terms.usage.title\") }}",
+      "{{ t(\"terms.responsibility.title\") }}",
+      "{{ t(\"terms.disclaimer.title\") }}",
+      "{{ t(\"terms.changes.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 8,
+        "finding": "四段條款連續放在寬白卡內，沒有章節捷徑，手機需反覆捲動才能找責任或變更規則。",
+        "fix": "保留正文，新增同頁錨點目錄；正文限寬並提高行距，章節使用一致留白。"
+      }
+    ],
+    "proposal": {
+      "title": "服務條款",
+      "subtitle": "使用規範與責任說明。",
+      "primaryAction": "查看使用規範",
+      "sections": [
+        {
+          "title": "章節目錄",
+          "content": [
+            "使用規範",
+            "責任說明",
+            "免責聲明",
+            "條款變更"
+          ]
+        },
+        {
+          "title": "使用規範與責任",
+          "content": [
+            "terms.usage.description",
+            "terms.responsibility.description"
+          ]
+        },
+        {
+          "title": "免責與變更",
+          "content": [
+            "terms.disclaimer.description",
+            "terms.changes.description"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "4xl 容器、單張 rounded-lg 白卡；四個 h2 章節連續排列。",
+      "colors": [
+        "bg-ios-bg",
+        "text-gray-900",
+        "bg-white",
+        "text-gray-700"
+      ],
+      "facts": [
+        "實際 template 包含 5 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：4xl 容器、單張 rounded-lg 白卡；四個 h2 章節連續排列。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/VerifyEmailView.vue",
+    "title": "驗證電子郵件",
+    "routes": [
+      "/verify-email"
+    ],
+    "kind": "auth",
+    "purpose": "自動驗證 Email token 並顯示結果。",
+    "headings": [
+      "{{ t(\"auth.verifyEmailTitle\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 18,
+        "finding": "驗證從 pending 切換成功／失敗時，狀態容器沒有 live region 或 status，螢幕閱讀器可能不會得知結果。",
+        "fix": "在結果區使用 polite status，失敗訊息採 alert，保留 pending 時隱藏登入按鈕。"
+      }
+    ],
+    "proposal": {
+      "title": "驗證電子郵件",
+      "subtitle": "正在確認這個電子郵件地址。",
+      "primaryAction": "前往登入",
+      "sections": [
+        {
+          "title": "驗證狀態",
+          "content": [
+            "驗證中",
+            "驗證成功",
+            "驗證失敗原因"
+          ]
+        },
+        {
+          "title": "完成後",
+          "content": [
+            "前往密碼登入"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "品牌標＋置中白卡；pending spinner、verified 勾號或 failed 警示；完成後顯示登入連結。",
+      "colors": [
+        "bg-ios-bg",
+        "bg-ios-blue",
+        "text-white",
+        "text-ios-text",
+        "bg-ios-card",
+        "border-ios-blue",
+        "text-ios-secondary",
+        "bg-ios-green",
+        "text-ios-green",
+        "bg-ios-red",
+        "text-ios-red"
+      ],
+      "facts": [
+        "實際 template 包含 1 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：品牌標＋置中白卡；pending spinner、verified 勾號或 failed 警示；完成後顯示登入連結。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/waiting-list/JoinWaitingListView.vue",
+    "title": "加入候位",
+    "routes": [
+      "/r/:restaurantId/wait-list"
+    ],
+    "kind": "queue",
+    "purpose": "填寫聯絡資料並取得候位票，亦可查詢或看紀錄。",
+    "headings": [
+      "{{ t(\"waitingList.join.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 133,
+        "finding": "目前等候組數和預估時間位於完整表單及三個按鈕之後，使用者填完才知道等候成本。",
+        "fix": "將既有候位摘要移到表單前，通知不可用提醒靠近送出；查詢與紀錄縮為次要入口。"
+      }
+    ],
+    "proposal": {
+      "title": "加入候位",
+      "subtitle": "先確認等候資訊，再登記候位。",
+      "primaryAction": "加入候位",
+      "sections": [
+        {
+          "title": "目前候位",
+          "content": [
+            "等候組數",
+            "預估等候分鐘"
+          ]
+        },
+        {
+          "title": "候位資料",
+          "content": [
+            "姓名",
+            "電話",
+            "用餐人數",
+            "備註"
+          ]
+        },
+        {
+          "title": "通知與操作",
+          "content": [
+            "通知未開放說明",
+            "加入候位",
+            "查詢候位",
+            "候位紀錄"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "窄版長表單卡；姓名、電話、人數、備註、通知未上線提醒與三個全寬操作；隊列摘要卡位於表單後。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "bg-white",
+        "bg-ios-blue",
+        "text-ios-blue",
+        "text-ios-secondary",
+        "text-ios-tertiary",
+        "text-ios-red",
+        "text-white"
+      ],
+      "facts": [
+        "實際 template 包含 1 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：窄版長表單卡；姓名、電話、人數、備註、通知未上線提醒與三個全寬操作；隊列摘要卡位於表單後。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/waiting-list/MyWaitingTicketView.vue",
+    "title": "我的候位票",
+    "routes": [
+      "/r/:restaurantId/wait-list/:ticketId"
+    ],
+    "kind": "queue",
+    "purpose": "追蹤號碼、前方組數與預估時間，預點餐或確認抵達。",
+    "headings": [],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 28,
+        "finding": "頁面有候位號碼與狀態但全頁沒有 h1；候位與狀態即時更新也未用 live region。",
+        "fix": "加入可見或隱藏「我的候位票」h1，狀態以 polite 宣告，維持號碼的大字辨識。"
+      },
+      {
+        "severity": "medium",
+        "line": 118,
+        "finding": "確認抵達以 ios-green 底白字，既定綠色和白色對比不足以支援一般字級。",
+        "fix": "使用對比合格的 green-700 或深綠文字搭柔綠底，保留綠色成功語意與 44px 目標。"
+      }
+    ],
+    "proposal": {
+      "title": "我的候位票",
+      "subtitle": "候位號碼與目前進度保持清楚可見。",
+      "primaryAction": "確認抵達（叫號時）",
+      "sections": [
+        {
+          "title": "候位票",
+          "content": [
+            "候位號碼",
+            "目前狀態"
+          ]
+        },
+        {
+          "title": "等候資訊",
+          "content": [
+            "前方組數",
+            "預估等候分鐘",
+            "姓名",
+            "用餐人數"
+          ]
+        },
+        {
+          "title": "可用操作",
+          "content": [
+            "預先點餐",
+            "確認抵達",
+            "取消候位",
+            "重新候位",
+            "回首頁"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "窄白卡；超大候位號、文字狀態、雙欄等候資訊、姓名人數、條件式預點餐／抵達／取消或重新候位。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "bg-white",
+        "border-ios-blue",
+        "text-ios-secondary",
+        "text-ios-red",
+        "text-ios-blue",
+        "bg-ios-blue",
+        "text-white",
+        "bg-ios-green",
+        "bg-ios-red"
+      ],
+      "facts": [
+        "實際 template 包含 0 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：窄白卡；超大候位號、文字狀態、雙欄等候資訊、姓名人數、條件式預點餐／抵達／取消或重新候位。"
+      ]
+    }
+  },
+  {
+    "app": "customer-app",
+    "file": "apps/customer-app/src/views/waiting-list/WaitingListHistoryView.vue",
+    "title": "候位紀錄",
+    "routes": [
+      "/r/:restaurantId/wait-list/history"
+    ],
+    "kind": "list",
+    "purpose": "以電話查詢候位紀錄並返回有效票券。",
+    "headings": [
+      "{{ t(\"waitingList.history.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 94,
+        "finding": "查看有效候位票為純文字按鈕，沒有內距或最低高度；返回按鈕也僅 40px 且缺少名稱。",
+        "fix": "查看票券設 44px 操作區，返回補 aria-label 並擴至 44px；保留終止票無操作的狀態。"
+      }
+    ],
+    "proposal": {
+      "title": "候位紀錄",
+      "subtitle": "輸入電話，查看過去與目前的候位。",
+      "primaryAction": "查詢紀錄",
+      "sections": [
+        {
+          "title": "查詢條件",
+          "content": [
+            "電話號碼",
+            "查詢候位紀錄"
+          ]
+        },
+        {
+          "title": "候位紀錄",
+          "content": [
+            "候位號碼",
+            "用餐人數",
+            "狀態",
+            "建立時間",
+            "查看有效候位票"
+          ]
+        },
+        {
+          "title": "無紀錄時",
+          "content": [
+            "waitingList.history.empty"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "窄白卡上方返回圖示與標題，電話查詢表單；下方列表含號碼、人數、狀態、時間及有效票入口。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "bg-white",
+        "text-ios-secondary",
+        "text-ios-tertiary",
+        "text-ios-red",
+        "bg-ios-blue",
+        "text-white",
+        "border-ios-bg",
+        "text-ios-blue"
+      ],
+      "facts": [
+        "實際 template 包含 1 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：窄白卡上方返回圖示與標題，電話查詢表單；下方列表含號碼、人數、狀態、時間及有效票入口。"
+      ]
+    }
+  },
+  {
+    "app": "onboarding-app",
+    "file": "apps/onboarding-app/src/views/ApplicationStatusView.vue",
+    "title": "開店申請狀態",
+    "routes": [
+      "/status/:applicationId"
+    ],
+    "kind": "tracking",
+    "purpose": "查看審核狀態與拒絕原因，刷新或重新取得安全連結。",
+    "headings": [
+      "{{ t(\"status.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 69,
+        "finding": "頁首無條件顯示 CheckCircleIcon，載入、錯誤、審核中或遭拒都會看見完成勾號，狀態語意矛盾。",
+        "fix": "依實際狀態切換等待、完成、拒絕圖示與語意色；載入與失效連結使用獨立狀態，不顯示成功勾號。"
+      },
+      {
+        "severity": "medium",
+        "line": 98,
+        "finding": "店家名稱與狀態使用左右 flex，長店名無換行限制，窄螢幕容易擠壓欄位。",
+        "fix": "摘要改彈性網格，值可換行；拒絕原因獨立全文區塊，刷新結果以 status 宣告。"
+      }
+    ],
+    "proposal": {
+      "title": "開店申請狀態",
+      "subtitle": "查詢店家目前的審核與啟用進度。",
+      "primaryAction": "重新整理狀態",
+      "sections": [
+        {
+          "title": "申請摘要",
+          "content": [
+            "餐廳名稱",
+            "目前狀態"
+          ]
+        },
+        {
+          "title": "狀態說明",
+          "content": [
+            "待審核",
+            "審核中",
+            "已完成",
+            "拒絕原因（若有）"
+          ]
+        },
+        {
+          "title": "查詢與恢復",
+          "content": [
+            "重新整理",
+            "連結失效時找回申請",
+            "回到首頁"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "2xl 置中白卡；無條件勾號圖示、狀態標題；錯誤或店家／狀態摘要、條件拒絕原因、更新提示與刷新／首頁。",
+      "colors": [
+        "bg-primary-100",
+        "text-primary-500",
+        "text-gray-900",
+        "text-gray-600",
+        "text-gray-500",
+        "border-red-200",
+        "bg-red-50",
+        "text-red-700",
+        "text-primary-700",
+        "bg-gray-50",
+        "text-primary-800",
+        "text-gray-700"
+      ],
+      "facts": [
+        "實際 template 包含 1 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：2xl 置中白卡；無條件勾號圖示、狀態標題；錯誤或店家／狀態摘要、條件拒絕原因、更新提示與刷新／首頁。"
+      ]
+    }
+  },
+  {
+    "app": "onboarding-app",
+    "file": "apps/onboarding-app/src/views/ApplyView.vue",
+    "title": "填寫開店申請",
+    "routes": [
+      "/apply"
+    ],
+    "kind": "form",
+    "purpose": "提交店家、聯絡、位置與市場歸屬資料供審核。",
+    "headings": [
+      "{{ t(\"apply.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 310,
+        "finding": "進度列只有數字 1、2，沒有步驟名稱或 aria-current；使用者不知道第二步其實是送出結果。",
+        "fix": "命名「填寫資料／申請送出」，目前步驟加 aria-current=step，保持兩步流程。"
+      },
+      {
+        "severity": "medium",
+        "line": 456,
+        "finding": "必填經緯度放在店家地址與國家之前，非技術店主需先理解座標才可繼續。",
+        "fix": "將地址、國家與縣市提前為店家位置群組；保留定位按鈕與可手填座標，清楚提示使用店面位置。"
+      }
+    ],
+    "proposal": {
+      "title": "填寫開店申請",
+      "subtitle": "準備店家資料與聯絡方式，送交平台審核。",
+      "primaryAction": "送出申請",
+      "sections": [
+        {
+          "title": "步驟",
+          "content": [
+            "1 填寫資料",
+            "2 申請送出"
+          ]
+        },
+        {
+          "title": "店家與聯絡人",
+          "content": [
+            "餐廳名稱",
+            "聯絡人姓名",
+            "Email",
+            "聯絡電話"
+          ]
+        },
+        {
+          "title": "店家位置",
+          "content": [
+            "店家地址",
+            "國家",
+            "縣市",
+            "鄉鎮市區",
+            "使用目前位置",
+            "緯度",
+            "經度"
+          ]
+        },
+        {
+          "title": "市場歸屬",
+          "content": [
+            "夜市／商圈或獨立店面",
+            "攤位號碼（選填）"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "2xl 長白卡；只有數字 1/2 的進度列；餐廳與聯絡資料、定位座標、地址地區、市場與攤位；底部返回／下一步。",
+      "colors": [
+        "bg-primary-500",
+        "text-white",
+        "bg-gray-200",
+        "text-gray-500",
+        "text-gray-900",
+        "bg-red-50",
+        "border-red-200",
+        "text-red-700",
+        "text-red-600"
+      ],
+      "facts": [
+        "實際 template 包含 1 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：2xl 長白卡；只有數字 1/2 的進度列；餐廳與聯絡資料、定位座標、地址地區、市場與攤位；底部返回／下一步。",
+        "ApplyView.vue:345–368 等欄位已具備 for/id、aria-invalid 與錯誤關聯，需保留。"
+      ]
+    }
+  },
+  {
+    "app": "onboarding-app",
+    "file": "apps/onboarding-app/src/views/FindApplicationView.vue",
+    "title": "找回開店申請",
+    "routes": [
+      "/find-application"
+    ],
+    "kind": "form",
+    "purpose": "以申請 Email 重新取得查詢連結。",
+    "headings": [
+      "{{ t(\"findApplication.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 103,
+        "finding": "回首頁是 text-sm 文字連結，無觸控內距；完成寄信後它成為唯一可用操作但目標偏小。",
+        "fix": "將回首頁設為至少 44px 的次要操作，保留不透露申請是否存在的寄送結果與既有 role=status。"
+      }
+    ],
+    "proposal": {
+      "title": "找回開店申請",
+      "subtitle": "使用申請時填寫的 Email，重新取得查詢連結。",
+      "primaryAction": "寄送查詢連結",
+      "sections": [
+        {
+          "title": "找回申請",
+          "content": [
+            "申請 Email",
+            "寄送查詢連結"
+          ]
+        },
+        {
+          "title": "寄送結果",
+          "content": [
+            "findApplication.sent"
+          ]
+        },
+        {
+          "title": "返回",
+          "content": [
+            "回到首頁"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "窄版白卡；信封圖示與標題，Email 表單或已寄送回覆；回首頁連結。",
+      "colors": [
+        "bg-primary-100",
+        "text-primary-500",
+        "text-gray-900",
+        "text-gray-700",
+        "text-gray-600",
+        "text-red-600",
+        "text-primary-700"
+      ],
+      "facts": [
+        "實際 template 包含 1 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：窄版白卡；信封圖示與標題，Email 表單或已寄送回覆；回首頁連結。"
+      ]
+    }
+  },
+  {
+    "app": "onboarding-app",
+    "file": "apps/onboarding-app/src/views/HomeView.vue",
+    "title": "開店申請",
+    "routes": [
+      "/"
+    ],
+    "kind": "landing",
+    "purpose": "了解平台代管與實際操作畫面後開始申請。",
+    "headings": [
+      "{{ t(\"home.hero.titleLine1\") }}<br /> <span class=\"text-primary-500\">{{ t(\"home.hero.titleLine2\") }}</span>",
+      "{{ feature.title }}",
+      "{{ t(\"home.tour.title\") }}",
+      "{{ step.title }}",
+      "{{ t(\"home.cta.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 105,
+        "finding": "白字主按鈕搭 primary-500（#F38020），對比約 2.65:1；一般字級 CTA 低於 4.5:1。",
+        "fix": "維持既有 Cloudflare 橘系，按鈕使用 primary-700 等對比合格深階，500 保留圖示與裝飾。"
+      },
+      {
+        "severity": "medium",
+        "line": 94,
+        "finding": "主標第二行 primary-500 在白底約 2.65:1，仍未達大型文字 3:1。",
+        "fix": "標題改 primary-700，保留原字體、尺寸與雙行內容。"
+      }
+    ],
+    "proposal": {
+      "title": "開店申請",
+      "subtitle": "平台代管 · 資料安全 · 專人審核開通",
+      "primaryAction": "立即申請",
+      "sections": [
+        {
+          "title": "平台服務",
+          "content": [
+            "平台代管",
+            "安全可靠",
+            "專人開通"
+          ]
+        },
+        {
+          "title": "實際畫面導覽",
+          "content": [
+            "客人掃碼點餐",
+            "廚房即時收單",
+            "客人看得到進度",
+            "老闆隨時掌握營收"
+          ]
+        },
+        {
+          "title": "開始使用",
+          "content": [
+            "立即申請",
+            "找回申請",
+            "有設定時親自試試示範店"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "置中大標與橘色申請 CTA；三張功能白卡；四張實際產品截圖導覽；示範店入口及底部 CTA。",
+      "colors": [
+        "text-ios-text",
+        "text-primary-500",
+        "text-gray-500",
+        "bg-primary-500",
+        "text-white",
+        "bg-primary-600",
+        "text-primary-700",
+        "text-primary-800",
+        "bg-white",
+        "bg-primary-50",
+        "bg-ios-bg"
+      ],
+      "facts": [
+        "實際 template 包含 5 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：置中大標與橘色申請 CTA；三張功能白卡；四張實際產品截圖導覽；示範店入口及底部 CTA。",
+        "HomeView.vue:194–205 的導覽圖片已具備寬高、loading=lazy、decoding=async，應保留。"
+      ]
+    }
+  },
+  {
+    "app": "onboarding-app",
+    "file": "apps/onboarding-app/src/views/SuccessView.vue",
+    "title": "申請已送出",
+    "routes": [
+      "/success"
+    ],
+    "kind": "tracking",
+    "purpose": "確認送出資料、審核後續與安全查詢方式。",
+    "headings": [
+      "{{ t(\"success.title\") }}",
+      "{{ t(\"success.summary.title\") }}",
+      "{{ t(\"success.nextSteps.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 110,
+        "finding": "申請編號在固定 flex 列中以極小字顯示，旁邊 16px 複製圖示無名稱與觸控內距；長編號／Email 可能擠壓。",
+        "fix": "摘要列容許窄螢幕上下排列與長字換行；複製使用具名稱的 44px 按鈕並宣告已複製。"
+      },
+      {
+        "severity": "medium",
+        "line": 159,
+        "finding": "接下來的步驟先列登入資訊、後列平台審核，與「審核後才提供登入資訊」的內容時間順序相反。",
+        "fix": "保留文案，依平台審核→收到登入資訊排序，以編號清單呈現。"
+      }
+    ],
+    "proposal": {
+      "title": "申請已送出",
+      "subtitle": "平台已收到申請，請保留查詢方式。",
+      "primaryAction": "查看申請狀態（可用時）",
+      "sections": [
+        {
+          "title": "申請摘要",
+          "content": [
+            "申請編號",
+            "餐廳名稱",
+            "聯絡 Email",
+            "選擇方案",
+            "等待平台審核"
+          ]
+        },
+        {
+          "title": "接下來",
+          "content": [
+            "平台審核",
+            "收到登入資訊"
+          ]
+        },
+        {
+          "title": "查詢進度",
+          "content": [
+            "已寄送查詢連結",
+            "找回申請",
+            "僅開發環境可見的連結複製"
+          ]
+        },
+        {
+          "title": "聯絡",
+          "content": [
+            "support@makanmasak.com",
+            "回到首頁"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "兩個完成符號進度列；白卡內成功狀態、申請摘要、後續說明、安全查詢連結區與底部操作；客服信箱。",
+      "colors": [
+        "bg-primary-500",
+        "text-white",
+        "bg-green-100",
+        "text-green-600",
+        "text-gray-900",
+        "text-gray-600",
+        "bg-gray-50",
+        "text-gray-500",
+        "text-gray-400",
+        "text-amber-700",
+        "bg-primary-100",
+        "text-primary-500",
+        "bg-primary-50",
+        "text-primary-700",
+        "border-primary-200",
+        "text-gray-700"
+      ],
+      "facts": [
+        "實際 template 包含 3 個標題節點；文字為 i18n key 或 API 資料時，預覽僅示意欄位，不宣稱已載入真實資料。",
+        "原頁主要結構：兩個完成符號進度列；白卡內成功狀態、申請摘要、後續說明、安全查詢連結區與底部操作；客服信箱。"
+      ]
+    }
+  }
+]

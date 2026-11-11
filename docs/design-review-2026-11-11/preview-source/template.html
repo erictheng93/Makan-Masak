@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>MakanMasak — 全站介面設計審視</title>
+    <style>/* WORKBENCH_CSS */</style>
+  </head>
+  <body>
+    <a class="skip" href="#workspace">跳至頁面比較</a>
+    <aside class="sidebar" aria-label="頁面目錄">
+      <a class="brand" href="#"><span class="brand-mark" aria-hidden="true">m.</span><span>MakanMasak<small>介面設計審視</small></span></a>
+      <label class="search-label" for="page-search">尋找頁面</label>
+      <div class="searchbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="page-search" type="search" placeholder="名稱、路徑或問題" autocomplete="off" /></div>
+      <div class="catalog-meta"><span id="page-count"></span><button id="all-apps" class="text-button">顯示全部</button></div>
+      <nav id="catalog" aria-label="各應用程式頁面"></nav>
+      <p class="sidebar-foot">2026.11.11<span>設計提案 · 等待審閱</span></p>
+    </aside>
+    <main id="workspace">
+      <header class="masthead"><div><span class="project-name">全站介面審視</span><span class="review-state">預覽階段</span></div><button id="method-button" class="quiet">審視依據與涵蓋範圍</button></header>
+      <section class="page-intro" aria-labelledby="page-title">
+        <div class="breadcrumb" id="breadcrumb"></div>
+        <div class="title-row"><h1 id="page-title"></h1><div class="pager"><button id="prev" class="icon-button" aria-label="上一頁">←</button><span id="position"></span><button id="next" class="icon-button" aria-label="下一頁">→</button></div></div>
+        <p id="page-purpose"></p>
+        <div class="intro-meta"><code id="page-route"></code><span id="evidence-status"></span></div>
+      </section>
+      <div class="comparison-toolbar"><div class="view-tabs" role="group" aria-label="比較顯示方式"><button data-view="compare" aria-pressed="true">左右對照</button><button data-view="after" aria-pressed="false">放大優化版</button><button data-view="before" aria-pressed="false">放大原版</button></div><div class="device-tabs" role="group" aria-label="提案裝置尺寸"><button data-device="desktop" aria-pressed="true">桌面</button><button data-device="mobile" aria-pressed="false">手機</button></div></div>
+      <section id="comparison" class="comparison" aria-label="原版與優化版本比較">
+        <article class="pane before-pane"><div class="pane-label"><div><span class="version-dot original"></span><h2>現在的原版</h2></div><select id="capture-selector" aria-label="選擇原版擷取版本"></select></div><div id="before-note" class="capture-note"></div><div id="original-content" class="original-content"></div></article>
+        <article class="pane after-pane"><div class="pane-label"><div><span class="version-dot proposed"></span><h2>優化提案</h2></div><span>互動示意 · 範例資料</span></div><div class="capture-note" id="proposal-note">保留既有功能與品牌規範；互動只在本機示範。</div><div class="proposal-viewport"><iframe id="proposal" title="優化介面互動預覽" sandbox="allow-scripts allow-forms" referrerpolicy="no-referrer"></iframe></div></article>
+      </section>
+      <section class="findings" aria-labelledby="findings-title"><div class="section-heading"><h2 id="findings-title">這一頁，為什麼這樣調整</h2><span id="issue-count"></span></div><div id="issues"></div></section>
+      <details class="source-details"><summary>原始介面依據與提案內容</summary><div id="source-facts"></div><p id="source-path"></p></details>
+      <footer class="work-footer">此檔案可離線開啟。正式頁面與樣式尚未修改。<a href="#" id="footer-method">查看驗收方式</a></footer>
+    </main>
+    <dialog id="method-dialog"><div class="dialog-head"><h2>先看得見，再決定怎麼改。</h2><button id="close-method" class="icon-button" aria-label="關閉說明">×</button></div><p>審視涵蓋五套前端所有現存 Vue 頁面，也包含巢狀分頁與未直接掛在路由的介面。每一頁的問題與提案都來自原始模板及樣式檢查。</p><div class="method-stats" id="method-stats"></div><h3>如何閱讀左右對照</h3><p>左側是目前程式的實際畫面；本機示範資料、空狀態、錯誤與登入阻擋會個別註明。沒有有效擷取的頁面只展示原始結構依據，絕不以重畫畫面充當原版。右側是視覺與互動提案，範例資料不代表正式營運結果。</p><h3>品質驗收</h3><ul><li>辨識度：遵守現有品牌色、字體與 Apple-Native Soft Minimalism。</li><li>清晰度：主要任務、狀態與下一步可迅速辨識。</li><li>細節：字級、留白、對比、觸控範圍與鍵盤操作。</li><li>完整度：桌面與手機、長文字、空／錯誤／載入狀態。</li></ul><p>這是設計提案的自評依據，並非任何獎項的正式評分或得獎認證。真實效能、完整資料狀態與完整使用流程需在你同意實作後驗收。</p><h3>參考依據</h3><p><a href="https://www.awwwards.com/about-evaluation/" target="_blank" rel="noreferrer">Awwwards 評選說明</a> · <a href="https://www.webbyawards.com/judging-criteria/" target="_blank" rel="noreferrer">Webby 評選準則</a> · <a href="https://thefwa.com/" target="_blank" rel="noreferrer">FWA 作品標竿</a></p><h3>目前限制</h3><p id="limitations"></p></dialog>
+    <div class="sr-only" id="announcement" aria-live="polite"></div>
+    <script>/* REVIEW_DATA */</script>
+    <script>/* PREVIEW_RUNTIME */</script>
+  </body>
+</html>

@@ -1,0 +1,6325 @@
+[
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/AccountManagementView.vue",
+    "title": "帳號與權限",
+    "routes": [
+      "/dashboard/account-management"
+    ],
+    "kind": "form",
+    "purpose": "建立店主及平台管理員，確認店鋪綁定與權限",
+    "headings": [
+      "{{ t(\"accountManagement.title\") }}",
+      "{{ t(\"accountManagement.accountInfo\") }}",
+      "{{ t(\"accountManagement.restaurantBinding\") }}",
+      "{{ t(\"accountManagement.permissionConfirm\") }}",
+      "{{ t(\"accountManagement.existingOwners\") }}",
+      "{{ t(\"accountManagement.accountInfo\") }}",
+      "{{ t(\"accountManagement.existingAdmins\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 396,
+        "finding": "店主帳號欄位旁有可視標籤，但 input 沒有 id，標籤也未以 for 關聯；必填及錯誤只在視覺附近呈現。",
+        "fix": "為帳號、密碼、姓名、信箱與店鋪選擇建立唯一 id／for，並將欄位錯誤連到 aria-describedby。"
+      }
+    ],
+    "proposal": {
+      "title": "帳號與權限",
+      "subtitle": "建立店主及平台管理員，確認店鋪綁定與權限",
+      "primaryAction": "建立帳號",
+      "sections": [
+        {
+          "title": "帳號資料",
+          "content": [
+            "使用者名稱",
+            "密碼",
+            "姓名",
+            "電子郵件"
+          ]
+        },
+        {
+          "title": "店鋪與權限",
+          "content": [
+            "店鋪綁定",
+            "管理員層級",
+            "權限確認"
+          ]
+        },
+        {
+          "title": "現有帳號",
+          "content": [
+            "店主",
+            "平台管理員",
+            "重設密碼"
+          ]
+        }
+      ],
+      "columns": [
+        "店主",
+        "餐廳",
+        "狀態",
+        "建立日期",
+        "操作",
+        "管理員",
+        "Email",
+        "權限層級"
+      ]
+    },
+    "original": {
+      "layout": "置中 max-w-4xl；店主／管理員分頁；上方建立帳號表單，下方既有帳號表格；重設密碼對話框。",
+      "colors": [
+        "text-gray-900",
+        "border-gray-200",
+        "border-blue-600",
+        "text-blue-600",
+        "text-gray-500",
+        "text-gray-700",
+        "border-gray-300",
+        "border-blue-500",
+        "ring-blue-500",
+        "border-red-300",
+        "text-red-600",
+        "text-green-600",
+        "text-gray-400",
+        "bg-red-50",
+        "border-red-200",
+        "text-red-700",
+        "bg-blue-600",
+        "bg-blue-700"
+      ],
+      "facts": [
+        "來源包含 12 個原生輸入控制、6 組按鈕模板及 2 個表格。",
+        "模板組合元件：UserPlus, Building2, ChevronDown, Shield, Loader2, KeyRound, ResetPasswordModal",
+        "來源標題：帳號管理／帳號資訊／餐廳綁定／權限確認／現有店主列表／帳號資訊",
+        "來源表頭：店主／餐廳／狀態／建立日期／操作／管理員／Email／權限層級／狀態／建立日期",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "97b3bd4ab63ee54662afe87b672d509f461f04f83582c89718dbb7b8d7b40de7"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/AnalyticsView.vue",
+    "title": "營運分析",
+    "routes": [
+      "/dashboard/analytics"
+    ],
+    "kind": "analytics",
+    "purpose": "依期間查看營收、訂單與熱門品項並匯出報表",
+    "headings": [
+      "{{ t(\"analytics.title\") }}",
+      "{{ t(\"analytics.charts.revenueTrend\") }}",
+      "{{ t(\"analytics.charts.orderStatusDist\") }}",
+      "{{ t(\"analytics.popularItems.title\") }}",
+      "{{ t(\"analytics.businessHours.title\") }}",
+      "{{ t(\"analytics.detailedReport.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 15,
+        "finding": "報表期間選單只有選項文字，沒有明確欄位名稱；鍵盤及讀屏使用者不易確認它影響哪一份報表。",
+        "fix": "在標題工具列加入「分析期間」標籤，連結原生 select，並將匯出動作與所選期間並列。"
+      }
+    ],
+    "proposal": {
+      "title": "營運分析",
+      "subtitle": "依期間查看營收、訂單與熱門品項並匯出報表",
+      "primaryAction": "匯出報表",
+      "sections": [
+        {
+          "title": "營運摘要",
+          "content": [
+            "營收",
+            "訂單數",
+            "平均客單價"
+          ]
+        },
+        {
+          "title": "趨勢與結構",
+          "content": [
+            "營收趨勢",
+            "訂單狀態分布",
+            "營業時段"
+          ]
+        },
+        {
+          "title": "詳細報表",
+          "content": [
+            "日期",
+            "訂單數",
+            "營收",
+            "平均客單價"
+          ]
+        }
+      ],
+      "columns": [
+        "日期",
+        "訂單數",
+        "營收",
+        "平均客單價"
+      ]
+    },
+    "original": {
+      "layout": "頁首期間與匯出工具列；統計卡；營收與訂單分布雙圖；熱門品項、營業時段及明細表。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-600",
+        "border-gray-300",
+        "ring-blue-500",
+        "border-blue-500",
+        "bg-primary-600",
+        "bg-primary-700",
+        "bg-red-50",
+        "border-red-200",
+        "text-red-700",
+        "text-red-600",
+        "text-red-800",
+        "bg-green-100",
+        "text-green-600",
+        "text-gray-500",
+        "text-gray-300",
+        "bg-blue-100",
+        "text-blue-600"
+      ],
+      "facts": [
+        "來源包含 1 個原生輸入控制、2 組按鈕模板及 1 個表格。",
+        "模板組合元件：DocumentArrowDownIcon, CurrencyDollarIcon, ShoppingBagIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, CalculatorIcon, TableCellsIcon, ChartBarIcon, ClockIcon",
+        "來源標題：數據分析／營收趨勢／訂單狀態分布／熱門菜品／營業時段分析／詳細營業報表",
+        "來源表頭：日期／訂單數／營收／平均客單價",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "7334416e6f4927f7148e164295192007d12aaf82eda9b27f752ffd8c93ec56bd"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/BillingView.vue",
+    "title": "店鋪訂閱與帳務",
+    "routes": [
+      "/dashboard/billing"
+    ],
+    "kind": "billing",
+    "purpose": "核對目前方案、試用期限、週期用量與已啟用模組",
+    "headings": [
+      "{{ t(\"billing.title\") }}",
+      "{{ t(\"billing.usageTitle\") }}",
+      "{{ t(\"billing.modulesTitle\") }}",
+      "{{ t(\"billing.changePlanTitle\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 39,
+        "finding": "目前方案啟用徽章以 ios-green 小字放在淡綠底，與規範要求的深色語意文字不一致，狀態辨識較弱。",
+        "fix": "改用 ios-green-soft／ios-green-deep 配對，未啟用使用 red-deep，保留文字狀態。"
+      }
+    ],
+    "proposal": {
+      "title": "店鋪訂閱與帳務",
+      "subtitle": "核對目前方案、試用期限、週期用量與已啟用模組",
+      "primaryAction": "聯絡支援",
+      "sections": [
+        {
+          "title": "目前方案",
+          "content": [
+            "方案等級",
+            "啟用狀態",
+            "試用剩餘天數"
+          ]
+        },
+        {
+          "title": "本期用量",
+          "content": [
+            "用量指標",
+            "已使用",
+            "上限"
+          ]
+        },
+        {
+          "title": "功能模組",
+          "content": [
+            "已啟用",
+            "未啟用",
+            "方案變更聯絡"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "灰底垂直白卡：目前方案、試用升級提示、用量條、模組格狀清單、聯絡支援。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "text-ios-secondary",
+        "text-ios-red",
+        "bg-ios-green/10",
+        "text-ios-green",
+        "bg-ios-red/10",
+        "bg-ios-orange-soft",
+        "text-ios-orange-deep",
+        "bg-ios-blue",
+        "bg-blue-600"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、0 組按鈕模板及 0 個表格。",
+        "模板組合元件：RouterLink",
+        "來源標題：訂閱與用量／本期用量／方案包含的功能／需要調整方案？",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "0b5e0b4563139c8e716ad06baad03c4c54437b2a117f30d6bc85126fcdaedbd8"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/BroadcastsView.vue",
+    "title": "店鋪推播",
+    "routes": [
+      "/dashboard/broadcasts"
+    ],
+    "kind": "form",
+    "purpose": "向店鋪追蹤者編寫訊息並確認發送結果",
+    "headings": [
+      "{{ t(\"broadcasts.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 14,
+        "finding": "未指定店鋪時只呈現一行錯誤，推播編輯區整個消失；畫面沒有說明要從哪裡恢復。",
+        "fix": "把空狀態改為「請先選擇店鋪」並明確指出既有店鋪切換入口，再保留推播頁的工作脈絡。"
+      }
+    ],
+    "proposal": {
+      "title": "店鋪推播",
+      "subtitle": "向店鋪追蹤者編寫訊息並確認發送結果",
+      "primaryAction": "確認推播",
+      "sections": [
+        {
+          "title": "編寫訊息",
+          "content": [
+            "標題",
+            "內文",
+            "連結"
+          ]
+        },
+        {
+          "title": "發送確認",
+          "content": [
+            "店鋪追蹤者",
+            "市場追蹤者選項"
+          ]
+        },
+        {
+          "title": "發送紀錄",
+          "content": [
+            "發送結果",
+            "成功",
+            "失敗"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "max-w-4xl 標題與說明；無店鋪錯誤卡或 BroadcastComposer 編輯、確認、結果、紀錄區。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "text-ios-secondary"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、0 組按鈕模板及 0 個表格。",
+        "模板組合元件：BroadcastComposer",
+        "來源標題：推播訊息",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "358bc4e3f36e483dbeae9b3307237a8ddbe69ebb11537d93be05969de4314bc9"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/CashierView.vue",
+    "title": "收銀結帳",
+    "routes": [
+      "/dashboard/pos/checkout"
+    ],
+    "kind": "billing",
+    "purpose": "從待結帳訂單核對品項、收款、退款與交班",
+    "headings": [
+      "{{ t(\"cashier.pendingOrders\") }}",
+      "{{ order.orderNumber }}",
+      "{{ t(\"cashier.noPendingOrders\") }}",
+      "{{ selectedOrder ? t(\"cashier.orderDetails\") : t(\"cashier.selectOrder\") }}",
+      "{{ selectedOrder.orderNumber }}",
+      "{{ t(\"cashier.itemList\") }}",
+      "{{ t(\"cashier.paymentMethod\") }}",
+      "{{ t(\"cashier.shiftReport\") }}",
+      "{{ t(\"cashier.shiftInfo\") }}",
+      "{{ t(\"cashier.revenueTotal\") }}",
+      "{{ t(\"cashier.transactionDetails\") }}",
+      "{{ t(\"cashier.cashCount\") }}",
+      "{{ t(\"cashier.refundProcess\") }}",
+      "{{ t(\"cashier.paymentSuccess\") }}",
+      "{{ t(\"cashier.applyDiscount\") || \"套用折扣\" }}",
+      "{{ t(\"cashier.endShift\") || \"結束班次\" }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 46,
+        "finding": "退款入口以白字搭配純 iOS Orange，正常大小文字的對比不足；高風險金錢操作不夠清楚。",
+        "fix": "退款改為淡橙底與 orange-deep 文字，維持至少 44px 高，將確認收款保留為最醒目的主動作。"
+      }
+    ],
+    "proposal": {
+      "title": "收銀結帳",
+      "subtitle": "從待結帳訂單核對品項、收款、退款與交班",
+      "primaryAction": "確認收款",
+      "sections": [
+        {
+          "title": "待結帳訂單",
+          "content": [
+            "訂單編號",
+            "桌號",
+            "應付總額"
+          ]
+        },
+        {
+          "title": "收款明細",
+          "content": [
+            "品項",
+            "付款方式",
+            "實收金額",
+            "找零"
+          ]
+        },
+        {
+          "title": "交班與退款",
+          "content": [
+            "交班報表",
+            "現金盤點",
+            "退款處理"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "班次工具列；待結帳訂單清單與選取訂單明細／收款區；交班、退款、成功、折扣、結束班次等彈窗。",
+      "colors": [
+        "bg-blue-50",
+        "text-blue-800",
+        "text-blue-600",
+        "bg-green-50",
+        "text-gray-500",
+        "text-ios-green",
+        "bg-ios-blue",
+        "bg-blue-600",
+        "bg-ios-orange",
+        "bg-orange-600",
+        "border-gray-200",
+        "text-gray-900",
+        "text-gray-400",
+        "border-gray-300",
+        "border-blue-500",
+        "ring-blue-500",
+        "bg-gray-100",
+        "bg-gray-200"
+      ],
+      "facts": [
+        "來源包含 11 個原生輸入控制、22 組按鈕模板及 0 個表格。",
+        "模板組合元件：MagnifyingGlassIcon, ArrowPathIcon, DocumentTextIcon, MapPinIcon, ClockIcon, ShoppingBagIcon, CursorArrowRaysIcon, XMarkIcon, CheckCircleIcon",
+        "來源標題：待處理訂單／{{ order.orderNumber }}／沒有待處理訂單／{{ selectedOrder ? t(\"cashier.orderDetails\") : t(\"cashier.selectOrder\") }}／{{ selectedOrder.orderNumber }}／品項清單",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "5f9c89ecfa8cc69f1574982c8d296aebd6b97c9a89394bd603b061fa6c47d8a9"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/CouponsView.vue",
+    "title": "優惠券管理",
+    "routes": [
+      "/dashboard/coupons"
+    ],
+    "kind": "table",
+    "purpose": "建立、篩選、發放優惠券並查看使用狀況",
+    "headings": [
+      "{{ t(\"coupons.title\") }}",
+      "{{ t(\"coupons.messages.deleteConfirmTitle\") }}",
+      "{{ t(\"coupons.moduleUnavailable.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 4,
+        "finding": "標題與新增優惠券共用不可換行的水平列，窄畫面及長翻譯容易擠壓標題與操作。",
+        "fix": "標題區改為小螢幕直向排列、較寬畫面並排，讓新增優惠券保持 44px 高的完整文字按鈕。"
+      }
+    ],
+    "proposal": {
+      "title": "優惠券管理",
+      "subtitle": "建立、篩選、發放優惠券並查看使用狀況",
+      "primaryAction": "新增優惠券",
+      "sections": [
+        {
+          "title": "優惠概況",
+          "content": [
+            "有效優惠券",
+            "使用狀況"
+          ]
+        },
+        {
+          "title": "篩選",
+          "content": [
+            "搜尋",
+            "狀態",
+            "折扣類型"
+          ]
+        },
+        {
+          "title": "優惠券清單",
+          "content": [
+            "優惠資訊",
+            "折扣",
+            "使用量",
+            "有效期限",
+            "狀態",
+            "操作"
+          ]
+        }
+      ],
+      "columns": [
+        "優惠券資訊",
+        "折扣",
+        "使用情況",
+        "有效期",
+        "狀態",
+        "操作"
+      ]
+    },
+    "original": {
+      "layout": "頁首新增按鈕；優惠統計與篩選列；桌面優惠券表格、手機卡片；分頁與刪除確認。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-600",
+        "bg-teal-600",
+        "bg-teal-700",
+        "bg-blue-100",
+        "text-blue-600",
+        "bg-green-100",
+        "text-green-600",
+        "bg-teal-100",
+        "text-teal-600",
+        "text-gray-700",
+        "border-gray-300",
+        "ring-teal-500",
+        "border-teal-500",
+        "bg-gray-600",
+        "bg-gray-700",
+        "bg-gray-50",
+        "text-gray-500"
+      ],
+      "facts": [
+        "來源包含 3 個原生輸入控制、20 組按鈕模板及 1 個表格。",
+        "模板組合元件：PlusIcon, TicketIcon, CheckCircleIcon, ClockIcon, CurrencyDollarIcon, ChevronLeftIcon, ChevronRightIcon, Suspense, CouponFormModal, CouponDistributeModal, CouponStatsModal, ExclamationTriangleIcon",
+        "來源標題：優惠券管理／刪除優惠券／優惠券功能不在目前方案內",
+        "來源表頭：優惠券資訊／折扣／使用情況／有效期／狀態／操作",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "c857c92cc06322b24778c98c450f4b7d0fd82970c5bfc1543707b17b06c163fd"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/DashboardView.vue",
+    "title": "營運儀表板",
+    "routes": [
+      "/dashboard"
+    ],
+    "kind": "dashboard",
+    "purpose": "快速查看營收、訂單趨勢與近期營運活動",
+    "headings": [
+      "{{ t(\"dashboard.title\") }}",
+      "{{ t(\"dashboard.revenueTrend\") }}",
+      "{{ t(\"dashboard.orderTrend\") }}",
+      "{{ t(\"dashboard.popularItems\") }}",
+      "{{ t(\"dashboard.recentOrders\") }}",
+      "{{ t(\"dashboard.quickActions\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 89,
+        "finding": "營收與訂單圖表各自有期間選單，但選單沒有明確可存取名稱，容易混淆兩個圖表的控制範圍。",
+        "fix": "將兩個選單分別標為「營收期間」及「訂單期間」，以一致工具列放在對應圖表標題旁。"
+      }
+    ],
+    "proposal": {
+      "title": "營運儀表板",
+      "subtitle": "快速查看營收、訂單趨勢與近期營運活動",
+      "primaryAction": "重新整理",
+      "sections": [
+        {
+          "title": "營運摘要",
+          "content": [
+            "營收",
+            "訂單",
+            "平均客單價"
+          ]
+        },
+        {
+          "title": "營運趨勢",
+          "content": [
+            "營收趨勢",
+            "訂單趨勢"
+          ]
+        },
+        {
+          "title": "即時營運",
+          "content": [
+            "熱門品項",
+            "近期訂單",
+            "快速操作"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "頁首問候與更新；統計卡；營收／訂單圖表；熱門品項、近期訂單及快速操作。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-600",
+        "text-gray-500",
+        "bg-ios-error/10",
+        "text-ios-error",
+        "text-primary-600",
+        "text-primary-700",
+        "bg-gray-50",
+        "bg-gray-100",
+        "bg-green-50",
+        "bg-green-100",
+        "text-green-600",
+        "bg-blue-50",
+        "bg-blue-100",
+        "text-blue-600",
+        "bg-teal-50",
+        "bg-teal-100",
+        "text-teal-600"
+      ],
+      "facts": [
+        "來源包含 2 個原生輸入控制、1 組按鈕模板及 0 個表格。",
+        "模板組合元件：RefreshCw, SetupChecklistCard, MarketOpenTodayCard, StatsCard, RealtimeNotificationPanel, LazyChart, RevenueChart, OrdersChart, TopMenuItems, RecentOrders, Menu, Table",
+        "來源標題：儀表板／營收趨勢／訂單趨勢／熱門菜品／最新訂單／快速操作",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "3093a5ab3884bcf56d54f81c93fa679ba0327bbd9798e4ee73716696151f5015"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/FeedbackView.vue",
+    "title": "支援工單",
+    "routes": [
+      "/dashboard/feedback"
+    ],
+    "kind": "table",
+    "purpose": "提交平台支援問題並追蹤狀態、分類與優先度",
+    "headings": [
+      "{{ t(\"feedback.title\") }}",
+      "{{ item.subject }}",
+      "{{ t(\"feedback.detailTitle\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 69,
+        "finding": "支援工單的狀態、分類、優先度主要靠選單內容辨識，缺少持續可見且關聯的篩選名稱。",
+        "fix": "在篩選列加入狀態、分類、優先度標籤；搜尋另給名稱，套用後顯示目前條件與清除入口。"
+      }
+    ],
+    "proposal": {
+      "title": "支援工單",
+      "subtitle": "提交平台支援問題並追蹤狀態、分類與優先度",
+      "primaryAction": "提交意見",
+      "sections": [
+        {
+          "title": "工單篩選",
+          "content": [
+            "搜尋",
+            "狀態",
+            "分類",
+            "優先度"
+          ]
+        },
+        {
+          "title": "工單清單",
+          "content": [
+            "主旨",
+            "處理狀態",
+            "優先度"
+          ]
+        },
+        {
+          "title": "工單詳情",
+          "content": [
+            "問題內容",
+            "回覆",
+            "處理進度"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "灰底頁首及新增工單；搜尋與三個篩選；工單清單與分頁；工單詳情抽屜及提交表單。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "text-ios-secondary",
+        "bg-ios-blue",
+        "bg-blue-600",
+        "bg-gray-50",
+        "ring-ios-blue/30",
+        "border-ios-blue",
+        "text-ios-tertiary",
+        "text-ios-blue",
+        "bg-gray-200",
+        "text-ios-text/85",
+        "bg-gray-300",
+        "ring-ios-blue"
+      ],
+      "facts": [
+        "來源包含 4 個原生輸入控制、5 組按鈕模板及 0 個表格。",
+        "模板組合元件：Plus, Transition, FeedbackForm, FeedbackStats, MessageSquare, ChevronRight, Teleport, FeedbackDetail",
+        "來源標題：意見反饋／{{ item.subject }}／反饋詳情",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "e1d8eaf726d8309e3062931e5669de3989d31e53075f1bac83d36f9b10f56e15"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/ForgotPasswordView.vue",
+    "title": "忘記密碼",
+    "routes": [
+      "/forgot-password"
+    ],
+    "kind": "auth",
+    "purpose": "透過電子郵件取得密碼重設連結",
+    "headings": [
+      "MakanMasak",
+      "{{ t(\"auth.emailSent\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 13,
+        "finding": "頁面主標題是產品名稱，找回密碼任務在較弱文字中；進入畫面時不易立即辨認目前流程。",
+        "fix": "以「忘記密碼」作為 h1，品牌縮為眉題；成功畫面保留收件信箱提示及返回登入。"
+      }
+    ],
+    "proposal": {
+      "title": "忘記密碼",
+      "subtitle": "透過電子郵件取得密碼重設連結",
+      "primaryAction": "寄送重設信件",
+      "sections": [
+        {
+          "title": "找回帳號",
+          "content": [
+            "電子郵件"
+          ]
+        },
+        {
+          "title": "信件已寄出",
+          "content": [
+            "寄送結果",
+            "返回登入"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "滿高置中 max-w-md；品牌、電子郵件表單；寄送成功訊息與返回登入。",
+      "colors": [
+        "bg-gray-50",
+        "bg-primary-600",
+        "text-gray-900",
+        "text-gray-600",
+        "bg-green-50",
+        "border-green-200",
+        "bg-green-100",
+        "text-green-600",
+        "text-green-900",
+        "text-primary-600",
+        "text-primary-500",
+        "bg-blue-50",
+        "border-blue-200",
+        "text-blue-400",
+        "text-blue-800",
+        "border-red-500",
+        "text-red-600",
+        "bg-red-50"
+      ],
+      "facts": [
+        "來源包含 1 個原生輸入控制、1 組按鈕模板及 0 個表格。",
+        "模板組合元件：CheckCircle, Info, AlertCircle",
+        "來源標題：MakanMasak／郵件已發送",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "f1fefd6f38650e2f16fb46608ad1bd288a533eb0e1bf9a697bd4078691e23f45"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/GroupOrdersView.vue",
+    "title": "團體訂單",
+    "routes": [
+      "/dashboard/group-orders"
+    ],
+    "kind": "orders",
+    "purpose": "追蹤分享碼、成員與團單完成狀態，必要時復原結帳",
+    "headings": [
+      "{{ t(\"groupOrders.title\") }}",
+      "{{ t(\"groupOrders.orderList\") }}",
+      "{{ groupOrder.shareCode }}",
+      "{{ t(\"groupOrders.noOrders\") }}",
+      "{{ selectedGroupOrder ? t(\"groupOrders.orderDetails\") : t(\"groupOrders.selectOrder\") }}",
+      "{{ selectedGroupOrder.shareCode }}",
+      "{{ t(\"groupOrders.finalizeFailure.title\") }}",
+      "{{ t(\"groupOrders.finalizeFailure.recoveryHistory\") }}",
+      "{{ t(\"groupOrders.members\") }} ({{ selectedGroupOrder.members.length }})",
+      "{{ t(\"groupOrders.quickActions\") }}",
+      "{{ t(\"groupOrders.usageStats\") }}",
+      "{{ t(\"groupOrders.createOrder\") }}",
+      "{{ t(\"groupOrders.shareOrder\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 1476,
+        "finding": "團體訂單自行寫死 #f9fafb 作為整頁背景，脫離既定 ios-bg；與同後台其他訂單頁的灰階不一致。",
+        "fix": "改用共用 ios-bg，讓團單分享碼、成員和失敗復原區維持白卡及一致的柔和陰影。"
+      }
+    ],
+    "proposal": {
+      "title": "團體訂單",
+      "subtitle": "追蹤分享碼、成員與團單完成狀態，必要時復原結帳",
+      "primaryAction": "建立團體訂單",
+      "sections": [
+        {
+          "title": "團體訂單",
+          "content": [
+            "分享碼",
+            "狀態",
+            "桌號"
+          ]
+        },
+        {
+          "title": "團單明細",
+          "content": [
+            "成員",
+            "品項",
+            "完成狀態"
+          ]
+        },
+        {
+          "title": "復原與分享",
+          "content": [
+            "失敗復原紀錄",
+            "分享連結",
+            "匯出報表"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "統計與建立工具列；團單清單／選取明細；分享碼、成員、失敗復原區；建立及分享彈窗。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-600",
+        "bg-blue-100",
+        "text-blue-800",
+        "text-blue-600",
+        "bg-green-600",
+        "bg-green-700",
+        "bg-blue-600",
+        "bg-blue-700",
+        "bg-green-100",
+        "text-green-600",
+        "text-gray-500",
+        "border-gray-200",
+        "text-gray-400",
+        "border-gray-300",
+        "ring-blue-500",
+        "border-blue-500",
+        "bg-gray-100"
+      ],
+      "facts": [
+        "來源包含 10 個原生輸入控制、21 組按鈕模板及 0 個表格。",
+        "模板組合元件：UserGroupIcon, CurrencyDollarIcon, UsersIcon, MagnifyingGlassIcon, ArrowPathIcon, MapPinIcon, ClockIcon, DocumentDuplicateIcon, CursorArrowRaysIcon, XMarkIcon",
+        "來源標題：團體訂單／團體訂單列表／{{ groupOrder.shareCode }}／尚無團體訂單／{{ selectedGroupOrder ? t(\"groupOrders.orderDetails\") : t(\"groupOrders.selectOrder\") }}／{{ selectedGroupOrder.shareCode }}",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "2dec46e6923c61490eface632201b5ca5470396e43b4628c6429218ba4358ab0"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/KitchenView.vue",
+    "title": "廚房顯示權限",
+    "routes": [
+      "/dashboard/kitchen"
+    ],
+    "kind": "kitchen",
+    "purpose": "說明目前方案是否可使用獨立廚房顯示器",
+    "headings": [],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 11,
+        "finding": "功能啟用時畫面只有英文狀態句，沒有頁面標題或後續使用指引，使用者無法從此頁理解如何進入廚房工作。",
+        "fix": "補上「廚房顯示器」標題與繁中狀態說明，指向既有獨立廚房入口；未包含方案時提供既有帳務支援路徑。"
+      }
+    ],
+    "proposal": {
+      "title": "廚房顯示權限",
+      "subtitle": "說明目前方案是否可使用獨立廚房顯示器",
+      "primaryAction": "",
+      "sections": [
+        {
+          "title": "廚房顯示器",
+          "content": [
+            "目前店鋪",
+            "功能已啟用"
+          ]
+        },
+        {
+          "title": "方案狀態",
+          "content": [
+            "功能未包含",
+            "載入中"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "ModuleGate 三種狀態：白卡英文啟用說明、未包含方案說明、載入骨架；沒有廚房訂單看板。",
+      "colors": [
+        "bg-gray-50",
+        "border-gray-200",
+        "text-gray-600",
+        "bg-gray-100"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、0 組按鈕模板及 0 個表格。",
+        "模板組合元件：ModuleGate",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "12890f0170c65c732d57ab248a1d6451dc801b15dad8465d9bff7f18b6f91452"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/LoginView.vue",
+    "title": "管理後台登入",
+    "routes": [
+      "/login",
+      "/s/:slug"
+    ],
+    "kind": "auth",
+    "purpose": "以店鋪脈絡驗證員工帳號並進入工作區",
+    "headings": [
+      "MakanMasak"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 12,
+        "finding": "主標題只寫產品名稱，員工要從次要文字辨認是管理後台登入，與廚房登入的任務區隔不夠直接。",
+        "fix": "保留品牌小標，將 h1 改為「管理後台登入」，店鋪名稱與切換入口置於帳密表單上方。"
+      }
+    ],
+    "proposal": {
+      "title": "管理後台登入",
+      "subtitle": "以店鋪脈絡驗證員工帳號並進入工作區",
+      "primaryAction": "登入",
+      "sections": [
+        {
+          "title": "店鋪辨識",
+          "content": [
+            "店鋪名稱",
+            "切換店鋪"
+          ]
+        },
+        {
+          "title": "員工登入",
+          "content": [
+            "使用者名稱",
+            "密碼",
+            "忘記密碼"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "滿高置中登入欄；品牌及店鋪辨識；帳號、密碼與忘記密碼；登入結果。",
+      "colors": [
+        "bg-ios-bg",
+        "bg-primary-600",
+        "text-gray-900",
+        "text-gray-600",
+        "text-primary-600",
+        "text-primary-500",
+        "bg-orange-50",
+        "text-orange-800",
+        "border-red-500",
+        "text-red-600",
+        "ring-ios-blue",
+        "text-gray-400",
+        "bg-red-50",
+        "border-red-200",
+        "text-red-400",
+        "text-red-800",
+        "text-gray-500"
+      ],
+      "facts": [
+        "來源包含 2 個原生輸入控制、3 組按鈕模板及 0 個表格。",
+        "模板組合元件：Eye, EyeOff, AlertCircle",
+        "來源標題：MakanMasak",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "e6d49946175559714806598c77c3ffa71d32061402b592093b6f438c7cc39a74"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/MarketOpenReportView.vue",
+    "title": "市場開店報表",
+    "routes": [
+      "/dashboard/market-open-report"
+    ],
+    "kind": "analytics",
+    "purpose": "依市場與日期查閱每日開關店及店鋪出勤彙總並匯出。",
+    "headings": [
+      "{{ t(\"marketOpenReport.pageTitle\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 7,
+        "finding": "市場名稱只在有多個會員資格時顯示；單一市場的頁面缺少持續可見的報表範圍標示。",
+        "fix": "單一市場也顯示目前市場名稱，多市場才呈現切換選單，讓提交前能確認報表對象。"
+      }
+    ],
+    "proposal": {
+      "title": "市場開店報表",
+      "subtitle": "依市場與日期查閱每日開關店及店鋪出勤彙總並匯出。",
+      "primaryAction": "匯出 CSV",
+      "sections": [
+        {
+          "title": "日期範圍",
+          "content": [
+            "市場",
+            "開始日期",
+            "結束日期"
+          ]
+        },
+        {
+          "title": "每日明細",
+          "content": [
+            "日期",
+            "店鋪",
+            "開店",
+            "關店",
+            "營業時數",
+            "開店人員",
+            "訂單數",
+            "營收"
+          ]
+        },
+        {
+          "title": "店鋪彙總",
+          "content": [
+            "店鋪",
+            "開店天數",
+            "營業時數",
+            "訂單數",
+            "營收"
+          ]
+        }
+      ],
+      "columns": [
+        "日期",
+        "店鋪",
+        "開店",
+        "關店",
+        "營業時數",
+        "開店人員",
+        "訂單數",
+        "營收"
+      ]
+    },
+    "original": {
+      "layout": "市場與起迄日期篩選、每日明細／店鋪彙總分頁、CSV 匯出與開店營運報表。",
+      "colors": [
+        "text-ios-text",
+        "text-ios-secondary"
+      ],
+      "facts": [
+        "MarketOpenReportPanel 提供每日與店鋪彙總檢視。",
+        "報表欄位包含開關店時間、營業時數、開店人員與營運數字。"
+      ],
+      "sourceSha256": "ccac565777f59373d934e3a229803833dc24f9e740f1e2654a710cccd5821a83"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/MembersView.vue",
+    "title": "店鋪會員",
+    "routes": [
+      "/dashboard/members"
+    ],
+    "kind": "table",
+    "purpose": "篩選本店會員、查看消費紀錄並管理店內註記與封鎖",
+    "headings": [
+      "{{ t(\"pages.members\") }}",
+      "{{ t(\"members.filters.title\") }}",
+      "{{ t(\"members.detail.title\") }}",
+      "{{ t(\"members.detail.contact\") }}",
+      "{{ t(\"members.detail.summary\") }}",
+      "{{ t(\"members.detail.orders\") }}",
+      "{{ t(\"members.annotations.title\") }}",
+      "{{ t(\"members.block.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 413,
+        "finding": "會員頁桌面分頁箭頭只有 32×32px，與密集操作表格並用時不符合專案 44px 觸控目標。",
+        "fix": "把分頁箭頭外部點擊區擴為 44×44px，保留精簡圖示與可讀頁碼，手機用上一頁／下一頁。"
+      }
+    ],
+    "proposal": {
+      "title": "店鋪會員",
+      "subtitle": "篩選本店會員、查看消費紀錄並管理店內註記與封鎖",
+      "primaryAction": "匯出會員",
+      "sections": [
+        {
+          "title": "會員篩選",
+          "content": [
+            "搜尋",
+            "排序",
+            "封鎖狀態",
+            "標籤"
+          ]
+        },
+        {
+          "title": "會員清單",
+          "content": [
+            "會員",
+            "聯絡方式",
+            "訂單數",
+            "累計消費"
+          ]
+        },
+        {
+          "title": "會員詳情",
+          "content": [
+            "消費紀錄",
+            "店內註記",
+            "標籤",
+            "封鎖"
+          ]
+        }
+      ],
+      "columns": [
+        "會員",
+        "聯絡方式",
+        "本店訂單",
+        "本店消費",
+        "最後消費",
+        "首次消費",
+        "狀態",
+        "操作"
+      ]
+    },
+    "original": {
+      "layout": "具名會員篩選與摘要；八欄會員表格、分頁；會員詳情抽屜，內含揭露聯絡資料、消費、註記、標籤及封鎖。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "text-ios-secondary",
+        "text-red-700",
+        "bg-ios-blue",
+        "ring-ios-blue/30",
+        "bg-gray-200",
+        "text-ios-tertiary",
+        "bg-blue-50",
+        "text-ios-blue",
+        "bg-orange-50",
+        "text-ios-orange",
+        "text-ios-text/85",
+        "bg-gray-300",
+        "bg-ios-red/10",
+        "text-ios-red",
+        "bg-blue-600",
+        "text-blue-700"
+      ],
+      "facts": [
+        "來源包含 11 個原生輸入控制、17 組按鈕模板及 1 個表格。",
+        "模板組合元件：UsersIcon, ChevronLeftIcon, ChevronRightIcon, Teleport, Transition, XMarkIcon, EyeIcon, EyeSlashIcon",
+        "來源標題：會員管理／進階篩選／會員詳情／聯絡方式／本店消費摘要／本店訂單紀錄",
+        "來源表頭：會員／聯絡方式／本店訂單／本店消費／最後消費／首次消費／狀態／操作",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "473cf096bb4459c633ed1f2d49bb23d5292e919f4a1e8f136da830e8ad61ac21"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/MenuView.vue",
+    "title": "菜單管理",
+    "routes": [
+      "/dashboard/menu"
+    ],
+    "kind": "table",
+    "purpose": "編輯商品、分類、選項、庫存與匯入預覽",
+    "headings": [
+      "{{ t(\"menu.title\") }}",
+      "{{ currentCategoryName }}",
+      "市場搜尋缺商品",
+      "{{ t(\"menu.import.title\") }}",
+      "{{ t(\"menu.empty.title\") }}",
+      "{{ deleteConfirmTitle }}",
+      "{{ editingMenuItem ? t(\"menu.editItem\") : t(\"menu.addItem\") }}",
+      "{{ t(\"menu.form.productDetails\") }}",
+      "{{ t(\"menu.form.dietaryInfo\") }}",
+      "{{ t(\"menu.form.options\") }}",
+      "{{ t(\"menu.form.optionSizes\") }}",
+      "{{ t(\"menu.form.optionAddOns\") }}",
+      "{{ t(\"menu.form.optionGroups\") }}",
+      "{{ t(\"menu.form.inventory\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 662,
+        "finding": "品項名稱等多個編輯欄位以分離的 label 呈現，但 input 沒有 id／for 關聯；長表單的欄位定位不利讀屏與點標籤聚焦。",
+        "fix": "為品項基本資料、價格、分類、庫存與選項數值建立關聯標籤；將同一群組的小數值欄位各別命名。"
+      }
+    ],
+    "proposal": {
+      "title": "菜單管理",
+      "subtitle": "編輯商品、分類、選項、庫存與匯入預覽",
+      "primaryAction": "新增品項",
+      "sections": [
+        {
+          "title": "菜單篩選",
+          "content": [
+            "分類",
+            "搜尋",
+            "上架狀態"
+          ]
+        },
+        {
+          "title": "商品清單",
+          "content": [
+            "品項名稱",
+            "價格",
+            "分類",
+            "供應狀態"
+          ]
+        },
+        {
+          "title": "編輯品項",
+          "content": [
+            "圖片",
+            "說明",
+            "選項",
+            "庫存",
+            "飲食資訊"
+          ]
+        }
+      ],
+      "columns": [
+        "列",
+        "名稱",
+        "分類",
+        "價格",
+        "狀態"
+      ]
+    },
+    "original": {
+      "layout": "分類側欄與品項清單／卡片；搜尋及供應狀態；可展開 CSV 匯入預覽；長篇品項編輯彈窗與刪除確認。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "text-ios-secondary",
+        "bg-ios-green-soft",
+        "text-ios-green-deep",
+        "bg-ios-separator",
+        "bg-blue-600",
+        "text-ios-tertiary",
+        "ring-ios-primary/30",
+        "text-ios-error",
+        "text-ios-warning",
+        "text-ios-success",
+        "bg-green-50",
+        "text-green-800",
+        "border-blue-200",
+        "bg-blue-50",
+        "text-blue-800",
+        "bg-blue-100"
+      ],
+      "facts": [
+        "來源包含 38 個原生輸入控制、33 組按鈕模板及 1 個表格。",
+        "模板組合元件：CategoryPanel, TableCellsIcon, PlusIcon, MagnifyingGlassIcon, ImageAssistedMenuImport, MenuItemCard, VirtualMenuGrid, CakeIcon, CategoryEditForm, ExclamationTriangleIcon, MenuItemOptionGroups",
+        "來源標題：菜單管理／{{ currentCategoryName }}／市場搜尋缺商品／批次匯入商品／尚無菜品／{{ deleteConfirmTitle }}",
+        "來源表頭：列／名稱／分類／價格／狀態",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "076a84ed5c4ddfd6c3bf09896ccb4ac588f053a93278c456802f2a206678ab90"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/MonitoringView.vue",
+    "title": "系統監控",
+    "routes": [
+      "/dashboard/monitoring"
+    ],
+    "kind": "analytics",
+    "purpose": "查看健康度、關鍵指標、告警規則與效能報告",
+    "headings": [
+      "{{ t(\"monitoring.title\") }}",
+      "{{ t(\"monitoring.health.overall\") }}",
+      "{{ t(\"monitoring.keyMetrics.title\") }}",
+      "{{ t(\"monitoring.components.title\") }}",
+      "{{ component.displayName }}",
+      "{{ t(\"monitoring.alerts.title\") }}",
+      "{{ rule.name }}",
+      "{{ t(\"monitoring.misc.noAlertRules\") }}",
+      "{{ t(\"monitoring.performance.title\") }}",
+      "{{ t(\"monitoring.performance.api.title\") }}",
+      "{{ t(\"monitoring.performance.database.title\") }}",
+      "{{ t(\"monitoring.performance.cache.title\") }}",
+      "{{ t(\"monitoring.performance.charts.trendComparison\") }}",
+      "{{ t(\"monitoring.performance.charts.cacheHitRate\") }}",
+      "{{ t(\"monitoring.performance.recommendations.title\") }}",
+      "{{ t(\"monitoring.performance.recommendations.loading\") }}",
+      "{{ t(\"monitoring.errors.title\") }}",
+      "{{ t(\"monitoring.errors.statistics\") }}",
+      "{{ t(\"monitoring.errors.details\") }}",
+      "{{ error.type }}",
+      "{{ t(\"monitoring.errors.noErrors\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 1487,
+        "finding": "scoped 樣式對所有元素套用 transition-property，讓整個監控面板都參與顏色過場，沒有依工作狀態選擇回饋。",
+        "fix": "移除萬用 transition，僅對按鈕、分頁和狀態徽章套用短過場，並替減少動態偏好保留即時狀態切換。"
+      }
+    ],
+    "proposal": {
+      "title": "系統監控",
+      "subtitle": "查看健康度、關鍵指標、告警規則與效能報告",
+      "primaryAction": "重新整理",
+      "sections": [
+        {
+          "title": "即時狀態",
+          "content": [
+            "整體健康度",
+            "關鍵指標",
+            "元件"
+          ]
+        },
+        {
+          "title": "監控分頁",
+          "content": [
+            "告警規則",
+            "效能報告",
+            "錯誤統計"
+          ]
+        },
+        {
+          "title": "效能診斷",
+          "content": [
+            "API",
+            "資料庫",
+            "快取",
+            "建議"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "滿寬頁首及自動更新；整體健康、指標、元件；分頁切換告警、效能、錯誤；圖表與建議。",
+      "colors": [
+        "bg-gray-50",
+        "text-gray-900",
+        "text-gray-600",
+        "border-green-500",
+        "bg-green-50",
+        "text-green-700",
+        "border-gray-300",
+        "text-gray-700",
+        "bg-blue-600",
+        "bg-blue-700",
+        "ring-blue-500",
+        "border-blue-600",
+        "text-gray-500",
+        "text-gray-400",
+        "bg-gray-200",
+        "border-gray-200",
+        "text-red-600",
+        "border-blue-500"
+      ],
+      "facts": [
+        "來源包含 1 個原生輸入控制、7 組按鈕模板及 0 個表格。",
+        "模板組合元件：ArrowPathIcon, HealthScoreGauge, AlertNotificationPanel, PlusIcon, TrashIcon, BellIcon, MultiMetricChart, MetricTrendChart, InformationCircleIcon, ChartBarIcon, MetricBarChart, ExclamationTriangleIcon",
+        "來源標題：系統監控／整體健康狀態／關鍵指標／系統組件狀態／{{ component.displayName }}／警報規則",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "1ecd63277a9d92d9807bbd18802df196055a2ac282c4a430bfa412d1d3f48559"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/MyAttendanceView.vue",
+    "title": "我的出勤",
+    "routes": [
+      "/dashboard/my-attendance"
+    ],
+    "kind": "schedule",
+    "purpose": "查看自己的當日班次並執行上下班打卡",
+    "headings": [
+      "{{ t(\"myAttendance.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 18,
+        "finding": "缺少店鋪範圍時顯示錯誤卡，但卡片只有訊息且沒有明確恢復指引，員工無法判斷下一步。",
+        "fix": "在錯誤狀態說明需要有效店鋪工作階段，提供既有登入或切換店鋪入口的清楚引導。"
+      }
+    ],
+    "proposal": {
+      "title": "我的出勤",
+      "subtitle": "查看自己的當日班次並執行上下班打卡",
+      "primaryAction": "上班打卡",
+      "sections": [
+        {
+          "title": "今日班次",
+          "content": [
+            "預定時間",
+            "班別"
+          ]
+        },
+        {
+          "title": "打卡紀錄",
+          "content": [
+            "上班時間",
+            "下班時間",
+            "實際工時"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "max-w-3xl 個人頁標題；無店鋪錯誤卡或 ClockInOutPanel 的班次、打卡與紀錄。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "text-ios-secondary",
+        "text-ios-red"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、0 組按鈕模板及 0 個表格。",
+        "模板組合元件：ExclamationTriangleIcon, ClockInOutPanel",
+        "來源標題：我的出勤",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "05a982c5e8f12c63b2c5838674da6b8b5db3e84523097249fa840b6b82397b81"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/MyLeavesView.vue",
+    "title": "我的請假",
+    "routes": [
+      "/dashboard/my-leaves"
+    ],
+    "kind": "schedule",
+    "purpose": "查看剩餘假別額度、申請紀錄並取消自己的申請",
+    "headings": [
+      "{{ t(\"leaves.myLeaves\") }}",
+      "{{ t(\"leaves.balance.title\") }}",
+      "{{ t(\"leaves.request.myRequests\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 193,
+        "finding": "取消請假的原因欄位只有 placeholder，開始輸入後欄位目的不再持續可見。",
+        "fix": "在取消確認區加上「取消原因」可視標籤，連結 input，並將錯誤關聯至該欄位。"
+      }
+    ],
+    "proposal": {
+      "title": "我的請假",
+      "subtitle": "查看剩餘假別額度、申請紀錄並取消自己的申請",
+      "primaryAction": "申請請假",
+      "sections": [
+        {
+          "title": "我的假期",
+          "content": [
+            "剩餘額度",
+            "已使用",
+            "待核准"
+          ]
+        },
+        {
+          "title": "我的申請",
+          "content": [
+            "假別",
+            "日期",
+            "狀態",
+            "取消原因"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "max-w-3xl 請假頁首；假期餘額卡、申請清單；新申請及行內取消原因確認。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "text-ios-secondary",
+        "bg-ios-blue",
+        "text-ios-red",
+        "text-ios-tertiary",
+        "bg-ios-green-soft",
+        "text-ios-green-deep",
+        "text-ios-blue",
+        "text-ios-orange-deep",
+        "bg-ios-blue-soft",
+        "text-ios-blue-deep",
+        "text-ios-red-deep",
+        "bg-ios-separator",
+        "ring-ios-red",
+        "bg-ios-red"
+      ],
+      "facts": [
+        "來源包含 1 個原生輸入控制、5 組按鈕模板及 0 個表格。",
+        "模板組合元件：ExclamationTriangleIcon, CalendarIcon, LeaveRequestDialog",
+        "來源標題：我的請假／假期餘額／我的請假記錄",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "98082f8b7a7e36c8f91f7e85eba50b820e707e9dcefc0bd489c00f94ca0b0878"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/MyShiftsView.vue",
+    "title": "我的班表",
+    "routes": [
+      "/dashboard/my-shifts"
+    ],
+    "kind": "schedule",
+    "purpose": "查看即將到來的班次並提出公開換班申請",
+    "headings": [
+      "{{ t(\"myShifts.title\") }}",
+      "{{ t(\"myShifts.upcomingTitle\") }}",
+      "{{ t(\"myShifts.requestsTitle\") }}",
+      "{{ t(\"myShifts.formTitle\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 166,
+        "finding": "換班表單以遮罩 div 覆蓋頁面，未在容器宣告 dialog／aria-modal；鍵盤與讀屏無法取得清楚的模態脈絡。",
+        "fix": "沿用既有對話框模式，加入可命名的 dialog、初始焦點、Tab 圈限、Esc 關閉與關閉後焦點返回。"
+      }
+    ],
+    "proposal": {
+      "title": "我的班表",
+      "subtitle": "查看即將到來的班次並提出公開換班申請",
+      "primaryAction": "提出換班申請",
+      "sections": [
+        {
+          "title": "即將到來的班次",
+          "content": [
+            "日期",
+            "開始時間",
+            "結束時間"
+          ]
+        },
+        {
+          "title": "我的換班申請",
+          "content": [
+            "類型",
+            "急迫程度",
+            "狀態"
+          ]
+        },
+        {
+          "title": "申請內容",
+          "content": [
+            "原因",
+            "提交"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "max-w-3xl 即將到來班次清單與換班申請；底部或置中的換班表單遮罩。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "text-ios-secondary",
+        "text-ios-red",
+        "bg-ios-blue",
+        "text-ios-tertiary",
+        "bg-ios-orange-soft",
+        "text-ios-orange-deep",
+        "bg-ios-blue-soft",
+        "text-ios-blue-deep",
+        "text-ios-red-deep",
+        "bg-ios-separator",
+        "ring-ios-blue"
+      ],
+      "facts": [
+        "來源包含 1 個原生輸入控制、7 組按鈕模板及 0 個表格。",
+        "模板組合元件：ExclamationTriangleIcon, CalendarIcon",
+        "來源標題：我的班表／即將到來的班次／我的換班申請／申請換班",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "4b69abef10da766d3363c34e021595229655a966800789b6aa97aee6fb49890b"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/NotFoundView.vue",
+    "title": "找不到頁面",
+    "routes": [
+      "/:pathMatch(.*)*"
+    ],
+    "kind": "error",
+    "purpose": "從失效路徑返回可用功能或管理首頁",
+    "headings": [
+      "404",
+      "{{ t(\"notFound.title\") }}",
+      "{{ t(\"notFound.quickNav\") }}",
+      "{{ t(\"notFound.cantFind\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 9,
+        "finding": "404 以極大 h1 佔據第一層級，實際的找不到頁面說明及回復操作被推到下方。",
+        "fix": "把「找不到頁面」升為 h1，404 改為安靜的小型識別，優先顯示返回首頁及上一頁。"
+      }
+    ],
+    "proposal": {
+      "title": "找不到頁面",
+      "subtitle": "從失效路徑返回可用功能或管理首頁",
+      "primaryAction": "返回首頁",
+      "sections": [
+        {
+          "title": "找不到頁面",
+          "content": [
+            "錯誤代碼 404",
+            "說明"
+          ]
+        },
+        {
+          "title": "恢復導航",
+          "content": [
+            "快速功能",
+            "返回上一頁",
+            "返回首頁"
+          ]
+        },
+        {
+          "title": "尋找功能",
+          "content": [
+            "功能搜尋",
+            "聯絡支援"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "max-w-md 置中；大型 404、錯誤說明、快速導航、返回操作、搜尋、聯絡資訊及錯誤時間。",
+      "colors": [
+        "bg-gray-50",
+        "text-gray-200",
+        "text-gray-400",
+        "text-gray-900",
+        "text-gray-600",
+        "text-gray-500",
+        "bg-gray-100",
+        "text-red-600",
+        "border-gray-200",
+        "border-gray-300",
+        "text-gray-700",
+        "ring-blue-500",
+        "bg-blue-600",
+        "bg-blue-700",
+        "bg-blue-50",
+        "border-blue-200",
+        "text-blue-400",
+        "text-blue-800"
+      ],
+      "facts": [
+        "來源包含 1 個原生輸入控制、4 組按鈕模板及 0 個表格。",
+        "模板組合元件：QuestionMarkCircleIcon, ArrowLeftIcon, HomeIcon, InformationCircleIcon, MagnifyingGlassIcon, EnvelopeIcon, PhoneIcon",
+        "來源標題：404／頁面不存在／快速導航／無法找到您要的內容？",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "88d0f3c6739d6813004614f888c11a259bb098ad11264e04a358b9a191fa4165"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/OptionGroupsView.vue",
+    "title": "共用選項群組",
+    "routes": [
+      "/dashboard/menu/option-groups"
+    ],
+    "kind": "settings",
+    "purpose": "管理可供多個商品重用的規格、加購與客製選項",
+    "headings": [
+      "{{ t(\"optionGroups.title\") }}",
+      "{{ group.name }}",
+      "{{ editingGroup ? t(\"optionGroups.editGroup\") : t(\"optionGroups.addGroup\") }}",
+      "{{ editingChoice ? t(\"common.edit\") : t(\"menu.form.addChoice\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 185,
+        "finding": "選項群組編輯以固定遮罩及 form 呈現，沒有 dialog／aria-modal 與標題關聯，鍵盤操作缺少清楚模態邊界。",
+        "fix": "補上具名對話框語意與焦點管理，保留現有包覆式 label 及公開識別碼格式提示。"
+      }
+    ],
+    "proposal": {
+      "title": "共用選項群組",
+      "subtitle": "管理可供多個商品重用的規格、加購與客製選項",
+      "primaryAction": "新增選項群組",
+      "sections": [
+        {
+          "title": "選項群組",
+          "content": [
+            "群組名稱",
+            "公開識別碼",
+            "種類",
+            "選取方式"
+          ]
+        },
+        {
+          "title": "選項明細",
+          "content": [
+            "選項名稱",
+            "加價",
+            "供應狀態"
+          ]
+        },
+        {
+          "title": "編輯規則",
+          "content": [
+            "必選",
+            "最多選取數"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "max-w-4xl 群組區塊，每組包含選項及供應狀態；新增／編輯群組與選項的遮罩表單。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "text-ios-secondary",
+        "bg-ios-primary",
+        "bg-ios-red-soft",
+        "text-ios-error",
+        "bg-ios-orange-soft",
+        "text-ios-warning",
+        "bg-ios-green-soft",
+        "text-ios-success",
+        "ring-ios-primary/30",
+        "border-ios-tertiary",
+        "text-ios-primary"
+      ],
+      "facts": [
+        "來源包含 11 個原生輸入控制、11 組按鈕模板及 0 個表格。",
+        "來源標題：共用選項組／{{ group.name }}／{{ editingGroup ? t(\"optionGroups.editGroup\") : t(\"optionGroups.addGroup\") }}／{{ editingChoice ? t(\"common.edit\") : t(\"menu.form.addChoice\") }}",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "1fcf323b8f41bfed27223b2d5379421a9c43fa94c97194bdac2f491947c7756a"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/OrdersView.vue",
+    "title": "訂單管理",
+    "routes": [
+      "/dashboard/orders"
+    ],
+    "kind": "orders",
+    "purpose": "依狀態、類型與來源篩選訂單並處理更新、取消與退款",
+    "headings": [
+      "{{ t(\"orders.stats.pending\") }}",
+      "{{ t(\"orders.stats.preparing\") }}",
+      "{{ t(\"orders.stats.completed\") }}",
+      "{{ t(\"orders.stats.cancelled\") }}",
+      "{{ t(\"orders.orderList\") }}",
+      "{{ t(\"orders.empty.title\") }}",
+      "{{ t(\"orders.orderDetail\") }} - {{ getOrderNumber(selectedOrder) }}",
+      "📦 {{ t(\"orders.detail.deliveryInfo\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 132,
+        "finding": "狀態、類型、來源選單缺少明確可視關聯標籤，讀屏及窄畫面下難以判斷各選單控制的條件。",
+        "fix": "用具名篩選列排列狀態、訂單類型、訂單來源，保留搜尋欄與可見的篩選結果數。"
+      }
+    ],
+    "proposal": {
+      "title": "訂單管理",
+      "subtitle": "依狀態、類型與來源篩選訂單並處理更新、取消與退款",
+      "primaryAction": "重新整理",
+      "sections": [
+        {
+          "title": "訂單狀態",
+          "content": [
+            "待處理",
+            "製作中",
+            "已完成",
+            "已取消"
+          ]
+        },
+        {
+          "title": "篩選與清單",
+          "content": [
+            "搜尋",
+            "狀態",
+            "類型",
+            "來源"
+          ]
+        },
+        {
+          "title": "訂單詳情",
+          "content": [
+            "品項",
+            "顧客資訊",
+            "外送資訊",
+            "退款"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "可依角色顯示統計；搜尋與狀態／類型／來源篩選；桌面清單及手機訂單卡；明細與品項編輯區。",
+      "colors": [
+        "text-gray-900",
+        "bg-blue-100",
+        "text-blue-600",
+        "bg-green-100",
+        "text-green-600",
+        "bg-red-100",
+        "text-red-600",
+        "text-gray-400",
+        "ring-ios-blue",
+        "bg-blue-600",
+        "bg-blue-700",
+        "bg-gray-50",
+        "text-gray-500",
+        "border-gray-200",
+        "bg-blue-50",
+        "bg-green-50",
+        "bg-red-50",
+        "text-orange-600"
+      ],
+      "facts": [
+        "來源包含 4 個原生輸入控制、13 組按鈕模板及 0 個表格。",
+        "模板組合元件：ClockIcon, ShoppingBagIcon, CheckCircleIcon, XCircleIcon, MagnifyingGlassIcon, ArrowPathIcon, EyeIcon, XMarkIcon, OrderItemsEditor, ArrowTopRightOnSquareIcon",
+        "來源標題：待處理／準備中／已完成／已取消／訂單列表／暫無訂單",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "3f539ba41c9c3c4d850cf31f0e690b338db92e8c2a5910bbd7a5501588aadeb7"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/OwnerView.vue",
+    "title": "店主總覽",
+    "routes": [
+      "/dashboard/owner-overview"
+    ],
+    "kind": "dashboard",
+    "purpose": "彙整營運數字、即時訂單、員工活動及緊急告警",
+    "headings": [
+      "{{ t(\"owner.quickActions\") }}",
+      "{{ t(\"owner.realtimeOrders\") }}",
+      "{{ t(\"owner.staffActivity\") }}",
+      "{{ t(\"owner.todayFinance\") }}",
+      "{{ t(\"owner.revenueTrend\") }}",
+      "{{ t(\"owner.popularItems\") }}",
+      "{{ t(\"owner.systemHealth\") }}",
+      "{{ t(\"owner.emergency\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 243,
+        "finding": "營收趨勢期間選單以 py-1 小型控制呈現，與繁忙現場使用的觸控需求不一致。",
+        "fix": "將期間選單補上「營收期間」名稱，點擊高度提高至 44px，靠齊圖表標題而不擠壓趨勢區。"
+      }
+    ],
+    "proposal": {
+      "title": "店主總覽",
+      "subtitle": "彙整營運數字、即時訂單、員工活動及緊急告警",
+      "primaryAction": "查看即時訂單",
+      "sections": [
+        {
+          "title": "今日營運",
+          "content": [
+            "營收",
+            "訂單數",
+            "平均客單價"
+          ]
+        },
+        {
+          "title": "營運動態",
+          "content": [
+            "即時訂單",
+            "員工活動",
+            "熱門品項"
+          ]
+        },
+        {
+          "title": "系統與待辦",
+          "content": [
+            "設定檢查",
+            "健康狀態",
+            "緊急告警"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "開店檢查卡；KPI、快速操作、即時訂單與員工活動；今日財務、趨勢佔位、熱門品項、系統健康及緊急告警。",
+      "colors": [
+        "bg-red-50",
+        "border-red-200",
+        "text-red-700",
+        "text-red-600",
+        "text-red-800",
+        "text-gray-600",
+        "text-gray-900",
+        "text-green-600",
+        "text-gray-500",
+        "border-gray-300",
+        "border-teal-500",
+        "bg-teal-50",
+        "text-gray-400",
+        "text-gray-700",
+        "bg-green-500",
+        "bg-gray-50",
+        "bg-green-100",
+        "text-green-800"
+      ],
+      "facts": [
+        "來源包含 1 個原生輸入控制、4 組按鈕模板及 0 個表格。",
+        "模板組合元件：SetupChecklistCard, ChartBarIcon, ExclamationTriangleIcon",
+        "來源標題：快速操作／即時訂單／員工動態／今日財務／營收趨勢／熱門商品",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "bc4a1019eae504b5783c6d38c7f0b41e95b2889546b40c475ddb72113ed7361f"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/POSManagementView.vue",
+    "title": "收銀櫃與班次",
+    "routes": [
+      "/dashboard/pos/management"
+    ],
+    "kind": "billing",
+    "purpose": "管理收銀櫃、班次、現金作業、快速付款與促銷",
+    "headings": [
+      "{{ t(\"pos.registerList\") }}",
+      "{{ register.name }}",
+      "{{ t(\"pos.recentTransactions\") }}",
+      "{{ t(\"pos.noTransactions\") }}",
+      "{{ t(\"pos.quickPayment\") }}",
+      "{{ t(\"pos.marketCheckoutPayment\") }}",
+      "{{ t(\"pos.activePromotions\") }}",
+      "{{ t(\"pos.todayShift\") }}",
+      "{{ t(\"pos.cashManagement\") }}",
+      "{{ t(\"pos.promotionManagementTitle\") }}",
+      "{{ promotion.name }}",
+      "{{ t(\"pos.createRegister\") || \"新增收銀櫃\" }}",
+      "{{ t(\"pos.startShift\") || \"開始班次\" }}",
+      "{{ t(\"pos.endShift\") || \"結束班次\" }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 370,
+        "finding": "快速付款的訂單號碼、金額與方式使用分離標籤但未建立欄位關聯，收款流程中的確認脈絡不足。",
+        "fix": "為快速付款、聯合付款及現金作業欄位建立 id／for，將金額與付款方式放入清楚的同一確認區。"
+      }
+    ],
+    "proposal": {
+      "title": "收銀櫃與班次",
+      "subtitle": "管理收銀櫃、班次、現金作業、快速付款與促銷",
+      "primaryAction": "開始班次",
+      "sections": [
+        {
+          "title": "收銀櫃",
+          "content": [
+            "收銀櫃列表",
+            "啟用",
+            "停用"
+          ]
+        },
+        {
+          "title": "付款與交易",
+          "content": [
+            "近期交易",
+            "快速付款",
+            "市場聯合付款"
+          ]
+        },
+        {
+          "title": "班次與現金",
+          "content": [
+            "今日班次",
+            "現金異動",
+            "促銷管理"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "班次與收銀櫃工具列；收銀櫃、近期交易、快速付款、聯合付款、促銷、今日班次；現金及班次彈窗。",
+      "colors": [
+        "bg-green-50",
+        "text-green-800",
+        "text-green-600",
+        "bg-blue-50",
+        "text-blue-800",
+        "text-blue-600",
+        "bg-ios-green",
+        "bg-green-600",
+        "bg-ios-red",
+        "bg-red-600",
+        "bg-ios-blue",
+        "bg-blue-600",
+        "bg-ios-orange",
+        "bg-orange-600",
+        "bg-blue-100",
+        "text-gray-500",
+        "text-gray-900",
+        "bg-green-100"
+      ],
+      "facts": [
+        "來源包含 11 個原生輸入控制、36 組按鈕模板及 0 個表格。",
+        "模板組合元件：BanknotesIcon, ShoppingCartIcon, UserGroupIcon, ClockIcon, ArrowPathIcon, DocumentTextIcon, XMarkIcon, CouponFormModal",
+        "來源標題：收銀櫃列表／{{ register.name }}／最近交易／尚無交易記錄／快速收款／市場結帳收款",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "05b3a11a011b538dda07250e7f1160aefb51e072697e3ee0e8d403ab6cfd520f"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/POSView.vue",
+    "title": "POS 工作區",
+    "routes": [
+      "/dashboard/pos"
+    ],
+    "kind": "billing",
+    "purpose": "提供收銀結帳與收銀管理的共同導航與當前時間",
+    "headings": [
+      "{{ t(\"pos.systemTitle\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 94,
+        "finding": "POS 外框另寫 #f9fafb 背景，分頁則採 rounded-xl，與共同 ios-bg／膠囊操作形狀分離。",
+        "fix": "共用 ios-bg，將兩個工作模式做成一致的膠囊切換；保留目前時間與子頁原有行為。"
+      }
+    ],
+    "proposal": {
+      "title": "POS 工作區",
+      "subtitle": "提供收銀結帳與收銀管理的共同導航與當前時間",
+      "primaryAction": "前往收銀結帳",
+      "sections": [
+        {
+          "title": "工作模式",
+          "content": [
+            "收銀結帳",
+            "收銀管理"
+          ]
+        },
+        {
+          "title": "當前工作區",
+          "content": [
+            "現在時間",
+            "分頁內容"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "POS 標題與目前時間；收銀結帳／管理兩個 router-link 分頁；下方 router-view 子頁。",
+      "colors": [
+        "text-ios-text",
+        "text-gray-500",
+        "bg-gray-100",
+        "text-ios-blue",
+        "text-gray-700",
+        "#f9fafb"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、0 組按鈕模板及 0 個表格。",
+        "來源標題：POS 收銀系統",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "97f70e89064f2f1f377b318e5f8bb4203afc1c50e9d0920feb9de94b96fcf38a"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/PlatformCustomersView.vue",
+    "title": "平台顧客",
+    "routes": [
+      "/dashboard/platform/customers"
+    ],
+    "kind": "table",
+    "purpose": "依平台身分檢索跨店顧客與消費摘要",
+    "headings": [
+      "{{ t(\"pages.platformCustomers\") }}",
+      "{{ t(\"platformCustomers.filters.title\") }}",
+      "{{ t(\"platformCustomers.detail.title\") }}",
+      "{{ t(\"platformCustomers.detail.identity\") }}",
+      "{{ t(\"platformCustomers.detail.perRestaurant\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 276,
+        "finding": "平台顧客清單的分頁箭頭只有 32px 點擊區，密集資料查找時容易誤觸。",
+        "fix": "將箭頭與頁碼觸控區擴為至少 44px，並保持上一頁／下一頁名稱及目前頁狀態。"
+      }
+    ],
+    "proposal": {
+      "title": "平台顧客",
+      "subtitle": "依平台身分檢索跨店顧客與消費摘要",
+      "primaryAction": "搜尋顧客",
+      "sections": [
+        {
+          "title": "顧客篩選",
+          "content": [
+            "搜尋",
+            "狀態",
+            "排序"
+          ]
+        },
+        {
+          "title": "顧客清單",
+          "content": [
+            "顧客",
+            "聯絡方式",
+            "店鋪數",
+            "訂單數",
+            "累計消費"
+          ]
+        },
+        {
+          "title": "顧客詳情",
+          "content": [
+            "身分資訊",
+            "依店鋪消費",
+            "聯絡資料揭露"
+          ]
+        }
+      ],
+      "columns": [
+        "顧客",
+        "聯絡方式",
+        "消費店家數",
+        "總訂單",
+        "總消費",
+        "最後消費",
+        "狀態",
+        "操作"
+      ]
+    },
+    "original": {
+      "layout": "平台顧客搜尋、狀態及排序；八欄清單與分頁；身分及各店消費的詳情抽屜。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "text-ios-secondary",
+        "ring-ios-blue/30",
+        "bg-gray-200",
+        "text-ios-tertiary",
+        "bg-blue-50",
+        "text-ios-blue",
+        "bg-gray-100",
+        "bg-green-50",
+        "text-ios-green",
+        "border-gray-100",
+        "bg-ios-blue",
+        "text-ios-text/85",
+        "bg-gray-300",
+        "text-red-700"
+      ],
+      "facts": [
+        "來源包含 3 個原生輸入控制、10 組按鈕模板及 1 個表格。",
+        "模板組合元件：UsersIcon, ChevronLeftIcon, ChevronRightIcon, Teleport, Transition, XMarkIcon, EyeIcon, EyeSlashIcon",
+        "來源標題：平台顧客／篩選條件／顧客詳情／顧客資料／各店消費",
+        "來源表頭：顧客／聯絡方式／消費店家數／總訂單／總消費／最後消費／狀態／操作",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "7dd4387a56cce444cf09c90851efee9cdb2a887e44d3ecbc19939367daaf928b"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/PlatformMarketCheckoutsView.vue",
+    "title": "市場結帳紀錄",
+    "routes": [
+      "/dashboard/platform/market-checkouts"
+    ],
+    "kind": "billing",
+    "purpose": "追蹤跨攤位結帳、付款對帳、退款與會計匯出",
+    "headings": [
+      "市場結帳紀錄",
+      "{{ checkout.market.name }}",
+      "{{ selectedCheckout.market.name }} 結帳明細",
+      "{{ order.restaurantName }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 56,
+        "finding": "市場 slug 搜尋靠 placeholder 命名；同列有多種付款及異常篩選，輸入後條件含義不夠持續清楚。",
+        "fix": "新增「市場識別碼」可視標籤並與搜尋欄關聯，付款狀態、異常與日期範圍各自具名。"
+      }
+    ],
+    "proposal": {
+      "title": "市場結帳紀錄",
+      "subtitle": "追蹤跨攤位結帳、付款對帳、退款與會計匯出",
+      "primaryAction": "匯出對帳",
+      "sections": [
+        {
+          "title": "結帳篩選",
+          "content": [
+            "市場 slug",
+            "付款狀態",
+            "異常",
+            "日期範圍"
+          ]
+        },
+        {
+          "title": "結帳與對帳",
+          "content": [
+            "GMV",
+            "已收",
+            "已退",
+            "淨收",
+            "平台費",
+            "淨撥款"
+          ]
+        },
+        {
+          "title": "結帳詳情",
+          "content": [
+            "子訂單",
+            "付款識別碼",
+            "錯誤",
+            "整筆退款"
+          ]
+        }
+      ],
+      "columns": [
+        "攤位",
+        "子訂單",
+        "GMV",
+        "已收",
+        "已退",
+        "淨收",
+        "平台費",
+        "淨撥款",
+        "異常",
+        "訂單",
+        "狀態",
+        "金額",
+        "付款 ID",
+        "錯誤"
+      ]
+    },
+    "original": {
+      "layout": "多個匯出工具；市場／付款／異常／日期篩選；結帳與攤位對帳資料；選取結帳明細及退款／查單操作。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-500",
+        "border-gray-300",
+        "text-gray-700",
+        "bg-gray-50",
+        "bg-primary-600",
+        "bg-primary-700",
+        "border-primary-500",
+        "ring-primary-500/20",
+        "bg-gray-100",
+        "bg-gray-200",
+        "text-red-700",
+        "text-gray-600",
+        "border-gray-200",
+        "text-primary-700",
+        "text-red-600",
+        "border-primary-600",
+        "bg-primary-50"
+      ],
+      "facts": [
+        "來源包含 5 個原生輸入控制、9 組按鈕模板及 3 個表格。",
+        "來源標題：市場結帳紀錄／{{ checkout.market.name }}／{{ selectedCheckout.market.name }} 結帳明細／{{ order.restaurantName }}",
+        "來源表頭：攤位／子訂單／GMV／已收／已退／淨收／平台費／淨撥款／異常／攤位",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "469dbaf3a7e6307a5657bc62c175b83dbb7fddd5738bd66f289c0d9b6bc0cea2"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/PlatformMarketsView.vue",
+    "title": "市場公開品質",
+    "routes": [
+      "/dashboard/platform/markets"
+    ],
+    "kind": "table",
+    "purpose": "維護市場公開資料、補齊探索搜尋缺口並管理店鋪加入",
+    "headings": [
+      "市場 / 商圈公開品質",
+      "Discovery 搜尋索引",
+      "店家加入申請",
+      "批次匯入市場 / 商圈",
+      "區域缺口排行",
+      "{{ area.city }} · {{ area.district }}",
+      "市集推播：{{ broadcastMarket.name }}",
+      "編輯公開資料：{{ editingMarket.name }}",
+      "批次匯入店鋪",
+      "已加入店鋪",
+      "攤位地圖定位",
+      "加入既有店鋪"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 7,
+        "finding": "同頁串接搜尋索引、申請、兩套匯入、缺口排行與市場清單，再開多種維護面板，主工作密度過高。",
+        "fix": "保留現有功能，將主區收斂為「公開品質清單＋補齊項目」，匯入、索引與申請移至明確次級分區或收合區。"
+      }
+    ],
+    "proposal": {
+      "title": "市場公開品質",
+      "subtitle": "維護市場公開資料、補齊探索搜尋缺口並管理店鋪加入",
+      "primaryAction": "查看補齊項目",
+      "sections": [
+        {
+          "title": "公開品質",
+          "content": [
+            "市場",
+            "區域",
+            "店鋪",
+            "商品與服務",
+            "缺項"
+          ]
+        },
+        {
+          "title": "營運工具",
+          "content": [
+            "搜尋索引",
+            "加入申請",
+            "區域缺口"
+          ]
+        },
+        {
+          "title": "市場維護",
+          "content": [
+            "公開資料",
+            "店鋪匯入",
+            "攤位地圖",
+            "推播"
+          ]
+        }
+      ],
+      "columns": [
+        "市場 / 商圈",
+        "區域",
+        "店鋪",
+        "商品 / 服務",
+        "補齊優先",
+        "公開頁狀態",
+        "缺項",
+        "操作"
+      ]
+    },
+    "original": {
+      "layout": "公開品質頁首；索引、加入申請、批次匯入及區域缺口；品質表格；多種公開資料、店鋪、地圖及推播維護面板。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-500",
+        "bg-gray-100",
+        "text-gray-700",
+        "bg-gray-200",
+        "bg-primary-600",
+        "bg-primary-700",
+        "border-blue-200",
+        "bg-blue-50",
+        "text-blue-900",
+        "bg-blue-600",
+        "bg-blue-700",
+        "bg-gray-50",
+        "text-red-600",
+        "bg-green-50",
+        "text-green-800",
+        "border-gray-200",
+        "text-gray-600"
+      ],
+      "facts": [
+        "來源包含 32 個原生輸入控制、54 組按鈕模板及 1 個表格。",
+        "模板組合元件：BroadcastComposer, MarketOpenReportPanel",
+        "來源標題：市場 / 商圈公開品質／Discovery 搜尋索引／店家加入申請／批次匯入市場 / 商圈／區域缺口排行／{{ area.city }} · {{ area.district }}",
+        "來源表頭：市場 / 商圈／區域／店鋪／商品 / 服務／補齊優先／公開頁狀態／缺項／操作",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "3feb43e4b0b16d5a0cc52e8245f2334d412bd59855ddc940f979a961c4de66c6"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/PlatformOnboardingApplicationsView.vue",
+    "title": "平台開店申請",
+    "routes": [
+      "/dashboard/platform/onboarding"
+    ],
+    "kind": "table",
+    "purpose": "審核店鋪申請、處理開通交接與市場加入",
+    "headings": [
+      "{{ t(\"platformOnboarding.title\") }}",
+      "{{ t(\"platformOnboarding.handoff.title\", { business: ownerHandoff.businessName, }) }}",
+      "{{ t(\"platformOnboarding.audit.title\") }}",
+      "{{ t(\"platformOnboarding.reject.title\") }}",
+      "{{ t(\"platformOnboarding.purge.title\") }}",
+      "{{ t(\"platformOnboarding.regenerate.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 319,
+        "finding": "申請表格包在 overflow-hidden 容器中，桌面多欄資訊在窄螢幕沒有同層可辨識的橫向捲動入口。",
+        "fix": "保留白卡外框，內加可鍵盤聚焦的橫向捲動區，或在窄畫面改為商家、狀態、審核操作的摘要列。"
+      }
+    ],
+    "proposal": {
+      "title": "平台開店申請",
+      "subtitle": "審核店鋪申請、處理開通交接與市場加入",
+      "primaryAction": "建立開店申請",
+      "sections": [
+        {
+          "title": "申請清單",
+          "content": [
+            "商家",
+            "地點",
+            "聯絡人",
+            "方案與網域",
+            "狀態"
+          ]
+        },
+        {
+          "title": "開通交接",
+          "content": [
+            "帳號",
+            "密碼設定連結",
+            "期限"
+          ]
+        },
+        {
+          "title": "審核操作",
+          "content": [
+            "核准",
+            "拒絕",
+            "稽核紀錄",
+            "清除申請"
+          ]
+        }
+      ],
+      "columns": [
+        "店家",
+        "營業地點",
+        "聯絡人",
+        "方案 / 網域",
+        "狀態",
+        "送出時間",
+        "操作"
+      ]
+    },
+    "original": {
+      "layout": "狀態與更新工具列、三個統計卡；開通交接區；七欄申請表；稽核、拒絕、清除及重新產生連結對話框。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-500",
+        "bg-primary-600",
+        "bg-primary-700",
+        "bg-gray-100",
+        "text-gray-700",
+        "ring-primary-500/20",
+        "bg-gray-200",
+        "bg-red-50",
+        "text-red-700",
+        "bg-orange-50",
+        "text-orange-800",
+        "border-primary-600",
+        "bg-gray-50",
+        "bg-red-100",
+        "bg-gray-900/50",
+        "text-gray-600",
+        "border-gray-200"
+      ],
+      "facts": [
+        "來源包含 4 個原生輸入控制、20 組按鈕模板及 1 個表格。",
+        "模板組合元件：OperatorOnboardingDialog",
+        "來源標題：店家加入申請／{{ t(\"platformOnboarding.handoff.title\", { business: ownerHandoff.businessName, }) }}／申請稽核紀錄／確認拒絕申請／撤銷代建並刪除店鋪／重新產生設定密碼連結？",
+        "來源表頭：店家／營業地點／聯絡人／方案 / 網域／狀態／送出時間／操作",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "480be40714b8a4e3c6467fb0840c9f7c566260085052545189f3115940d21708"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/PlatformOverview.vue",
+    "title": "平台店鋪總覽",
+    "routes": [
+      "/dashboard/platform"
+    ],
+    "kind": "dashboard",
+    "purpose": "查看平台店鋪總數與狀態並選擇管理店鋪",
+    "headings": [
+      "{{ t(\"platform.title\") }}",
+      "{{ t(\"platform.noRestaurants\") }}",
+      "{{ restaurant.name }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 75,
+        "finding": "店名採 truncate 而沒有可見的完整名稱替代；同名分店或長店名在選擇管理店鋪時容易混淆。",
+        "fix": "允許店名最多兩行並保留地址辨識，必要時加完整名稱 title；管理操作維持在卡片底部。"
+      }
+    ],
+    "proposal": {
+      "title": "平台店鋪總覽",
+      "subtitle": "查看平台店鋪總數與狀態並選擇管理店鋪",
+      "primaryAction": "管理店鋪",
+      "sections": [
+        {
+          "title": "店鋪摘要",
+          "content": [
+            "總店鋪數",
+            "營運中",
+            "未啟用"
+          ]
+        },
+        {
+          "title": "店鋪目錄",
+          "content": [
+            "店名",
+            "地址",
+            "狀態",
+            "管理"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "三個店鋪統計；載入或空狀態；桌面三欄店鋪卡，每張含名稱、地址、狀態與管理按鈕。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-500",
+        "text-green-600",
+        "text-gray-400",
+        "border-primary-600",
+        "bg-green-100",
+        "text-green-700",
+        "bg-gray-100",
+        "bg-primary-600",
+        "bg-primary-700"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、1 組按鈕模板及 0 個表格。",
+        "模板組合元件：Store",
+        "來源標題：平台總覽／尚無餐廳／{{ restaurant.name }}",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "e8ac924757b354b359227922dc32ca24fa9b755d7d1f003c3732c27a2f3921a8"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/PrintAgentsView.vue",
+    "title": "列印代理",
+    "routes": [
+      "/dashboard/print-agents"
+    ],
+    "kind": "settings",
+    "purpose": "檢視店內列印代理並由授權角色核發或撤銷憑證",
+    "headings": [
+      "{{ t(\"printAgents.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 35,
+        "finding": "核發代理的名稱欄位與收銀櫃選單使用 outline-none，卻沒有同欄位 focus ring，鍵盤聚焦缺少明顯回饋。",
+        "fix": "替兩個核發欄位加共用 focus-visible／focus-within 外框，保留與標籤的程式化關聯。"
+      }
+    ],
+    "proposal": {
+      "title": "列印代理",
+      "subtitle": "檢視店內列印代理並由授權角色核發或撤銷憑證",
+      "primaryAction": "核發列印代理",
+      "sections": [
+        {
+          "title": "列印代理",
+          "content": [
+            "名稱",
+            "狀態",
+            "綁定收銀櫃"
+          ]
+        },
+        {
+          "title": "核發資料",
+          "content": [
+            "標籤",
+            "收銀櫃",
+            "一次性憑證"
+          ]
+        },
+        {
+          "title": "代理管理",
+          "content": [
+            "撤銷",
+            "核發結果"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "max-w-4xl 代理頁首；核發表單；代理狀態清單與撤銷；一次性核發結果。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "text-ios-secondary",
+        "bg-ios-primary",
+        "text-ios-error",
+        "text-ios-warning"
+      ],
+      "facts": [
+        "來源包含 2 個原生輸入控制、4 組按鈕模板及 0 個表格。",
+        "來源標題：列印代理",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "696af078b5bf27fffd23351d335f558c97cf40953a224792998f8d94d7798c63"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/ResetPasswordView.vue",
+    "title": "重設密碼",
+    "routes": [
+      "/reset-password"
+    ],
+    "kind": "auth",
+    "purpose": "確認有效重設連結並設定新的登入密碼",
+    "headings": [
+      "MakanMasak",
+      "{{ t(\"auth.linkInvalid\") }}",
+      "{{ t(\"auth.resetSuccess\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 13,
+        "finding": "主標題仍是產品名稱，重設任務與連結失效、重設成功狀態未在首要標題形成一致層級。",
+        "fix": "以「重設密碼」為 h1，將連結失效與成功作為具名狀態區，帳密表單保留清楚的密碼規則。"
+      }
+    ],
+    "proposal": {
+      "title": "重設密碼",
+      "subtitle": "確認有效重設連結並設定新的登入密碼",
+      "primaryAction": "重設密碼",
+      "sections": [
+        {
+          "title": "重設連結",
+          "content": [
+            "有效性",
+            "連結失效"
+          ]
+        },
+        {
+          "title": "設定新密碼",
+          "content": [
+            "新密碼",
+            "確認密碼",
+            "密碼強度"
+          ]
+        },
+        {
+          "title": "完成",
+          "content": [
+            "重設成功",
+            "返回登入"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "置中品牌與連結驗證；失效或成功狀態卡；新密碼、確認密碼及強度提示表單。",
+      "colors": [
+        "bg-gray-50",
+        "bg-primary-600",
+        "text-gray-900",
+        "text-gray-600",
+        "bg-blue-50",
+        "border-blue-200",
+        "border-blue-600",
+        "text-blue-800",
+        "bg-red-50",
+        "border-red-200",
+        "bg-red-100",
+        "text-red-600",
+        "text-red-900",
+        "text-red-700",
+        "border-gray-300",
+        "text-gray-700",
+        "bg-green-50",
+        "border-green-200"
+      ],
+      "facts": [
+        "來源包含 2 個原生輸入控制、3 組按鈕模板及 0 個表格。",
+        "模板組合元件：AlertCircle, CheckCircle, User, Eye, EyeOff, Check",
+        "來源標題：MakanMasak／連結無效或已過期／密碼重設成功",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "05991759581882e053b72894287372644607745a814ca329def47e880246df4e"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/ReviewsView.vue",
+    "title": "顧客評價",
+    "routes": [
+      "/dashboard/reviews"
+    ],
+    "kind": "table",
+    "purpose": "篩選已完成訂單的評價並回覆顧客",
+    "headings": [
+      "{{ t(\"reviews.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 334,
+        "finding": "每筆公開回覆 textarea 主要靠 placeholder 命名，鍵盤使用者輸入後缺少持續欄位標籤。",
+        "fix": "為每筆回覆建立唯一 id 與「回覆此評價」標籤，回覆按鈕保留送出中狀態，焦點框不可移除。"
+      }
+    ],
+    "proposal": {
+      "title": "顧客評價",
+      "subtitle": "篩選已完成訂單的評價並回覆顧客",
+      "primaryAction": "回覆評價",
+      "sections": [
+        {
+          "title": "評價摘要",
+          "content": [
+            "評分",
+            "評價數"
+          ]
+        },
+        {
+          "title": "篩選",
+          "content": [
+            "星等",
+            "回覆狀態",
+            "起始日期",
+            "結束日期"
+          ]
+        },
+        {
+          "title": "評價清單",
+          "content": [
+            "顧客評語",
+            "店家回覆",
+            "回覆送出"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "max-w-4xl 評分摘要；星等／回覆／日期篩選；評價卡、既有回覆或回覆輸入；分頁。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "text-ios-secondary",
+        "text-ios-orange",
+        "text-ios-tertiary",
+        "bg-ios-orange-soft",
+        "text-ios-orange-deep",
+        "bg-ios-green-soft",
+        "text-ios-green-deep",
+        "bg-ios-orange",
+        "text-ios-blue-deep",
+        "bg-ios-blue"
+      ],
+      "facts": [
+        "來源包含 3 個原生輸入控制、7 組按鈕模板及 0 個表格。",
+        "模板組合元件：Star",
+        "來源標題：顧客評價",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "e4b6260c6188c522b699abf3a61d33b31b936a27c9a2b03a6f01c86014d874cb"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/ServiceBookingsView.vue",
+    "title": "服務預約",
+    "routes": [
+      "/dashboard/service-bookings"
+    ],
+    "kind": "table",
+    "purpose": "依日期與狀態處理服務預約、現金確認、完成與未到",
+    "headings": [
+      "{{ t(\"serviceBookings.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 44,
+        "finding": "預約狀態篩選的標籤與 select 未使用 id／for 關聯；同頁日期及付款狀態多，需更清楚欄位識別。",
+        "fix": "為日期及狀態篩選建立明確 label 關聯，將處理按鈕與預約狀態文字放在同一列。"
+      }
+    ],
+    "proposal": {
+      "title": "服務預約",
+      "subtitle": "依日期與狀態處理服務預約、現金確認、完成與未到",
+      "primaryAction": "重新整理",
+      "sections": [
+        {
+          "title": "預約篩選",
+          "content": [
+            "日期",
+            "狀態"
+          ]
+        },
+        {
+          "title": "預約清單",
+          "content": [
+            "預約",
+            "顧客",
+            "時間",
+            "付款",
+            "狀態"
+          ]
+        },
+        {
+          "title": "處理預約",
+          "content": [
+            "確認現金",
+            "完成",
+            "未到",
+            "取消"
+          ]
+        }
+      ],
+      "columns": [
+        "預約",
+        "顧客",
+        "時間",
+        "付款",
+        "狀態",
+        "操作"
+      ]
+    },
+    "original": {
+      "layout": "預約標題與更新；白卡日期／狀態篩選；六欄預約表格與確認現金／完成／未到／取消操作。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-500",
+        "border-gray-300",
+        "text-gray-700",
+        "bg-gray-50",
+        "border-blue-500",
+        "ring-blue-500/20",
+        "text-red-600",
+        "text-green-700",
+        "text-gray-600",
+        "bg-blue-600",
+        "bg-blue-700",
+        "bg-green-600",
+        "bg-green-700",
+        "border-red-300",
+        "bg-red-50"
+      ],
+      "facts": [
+        "來源包含 2 個原生輸入控制、5 組按鈕模板及 1 個表格。",
+        "來源標題：服務預約管理",
+        "來源表頭：預約／顧客／時間／付款／狀態／操作",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "e88bcb24254b216828b02870c39f9cb3b787590cf5f1e13b2ef3624f8eecaa21"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/ServiceView.vue",
+    "title": "送菜工作台",
+    "routes": [
+      "/service"
+    ],
+    "kind": "queue",
+    "purpose": "處理待送餐點並追蹤自己的進行中送餐",
+    "headings": [
+      "{{ t(\"serviceView.title\") }}",
+      "{{ t(\"serviceView.pendingOrders\") }}",
+      "{{ order.orderNumber }}",
+      "{{ t(\"serviceView.noOrders\") }}",
+      "{{ t(\"serviceView.myDeliveries\") }} ({{ myActiveDeliveries.length }})",
+      "{{ t(\"serviceView.todayPerformance\") }}",
+      "{{ t(\"serviceView.todayTimeline\") }}",
+      "{{ t(\"serviceView.contactCustomer\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 116,
+        "finding": "送菜現場的桌號與優先程度選單採 py-1 小型控制，手持裝置及現場快速操作較難點選。",
+        "fix": "把兩個篩選控制提高至 44px，標示桌號／優先程度，手機置於可換行的獨立工具列。"
+      }
+    ],
+    "proposal": {
+      "title": "送菜工作台",
+      "subtitle": "處理待送餐點並追蹤自己的進行中送餐",
+      "primaryAction": "重新整理",
+      "sections": [
+        {
+          "title": "待送訂單",
+          "content": [
+            "桌號",
+            "優先程度",
+            "訂單編號"
+          ]
+        },
+        {
+          "title": "我的送餐",
+          "content": [
+            "開始送餐",
+            "確認送達",
+            "聯絡顧客"
+          ]
+        },
+        {
+          "title": "今日紀錄",
+          "content": [
+            "送餐績效",
+            "送餐時間軸"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "送菜員標題及更新；狀態統計；待送訂單與桌號／優先度篩選；我的送餐、績效、時間軸及聯絡顧客彈窗。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-600",
+        "bg-green-100",
+        "text-green-800",
+        "text-green-600",
+        "text-gray-500",
+        "bg-blue-600",
+        "bg-blue-700",
+        "bg-orange-100",
+        "border-orange-500",
+        "text-orange-600",
+        "text-orange-800",
+        "text-orange-900",
+        "bg-blue-100",
+        "border-blue-500",
+        "text-blue-600",
+        "text-blue-800",
+        "text-blue-900"
+      ],
+      "facts": [
+        "來源包含 2 個原生輸入控制、8 組按鈕模板及 0 個表格。",
+        "模板組合元件：ArrowPathIcon, TruckIcon, MapIcon, CheckCircleIcon, ClockIcon, ExclamationTriangleIcon, UserIcon, ExclamationCircleIcon, XMarkIcon",
+        "來源標題：送菜服務台／待配送訂單／{{ order.orderNumber }}／沒有待配送的訂單／我的配送中訂單 ({{ myActiveDeliveries.length }})／今日個人績效",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "7cbd406c977ed6ac533f61173327bff1e5ddde237ae86667455fe9594d1029f2"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/SettingsView.vue",
+    "title": "店鋪設定",
+    "routes": [
+      "/dashboard/settings"
+    ],
+    "kind": "settings",
+    "purpose": "維護店鋪資訊、訂單、外送、桌台、通知與安全設定",
+    "headings": [
+      "{{ t(\"settings.title\") }}",
+      "{{ t(\"settings.general.restaurantInfo\") }}",
+      "{{ t(\"settings.general.systemPreferences\") }}",
+      "{{ t(\"settings.markets.readinessTitle\") }}",
+      "{{ t(\"settings.markets.title\") }}",
+      "{{ t(\"settings.markets.requestsTitle\") }}",
+      "{{ t(\"settings.markets.requestTitle\") }}",
+      "{{ t(\"settings.contact.title\") }}",
+      "{{ t(\"settings.contact.faqTitle\") }}",
+      "{{ t(\"settings.orders.title\") }}",
+      "{{ t(\"settings.delivery.title\") }}",
+      "{{ t(\"settings.tables.title\") }}",
+      "{{ t(\"settings.qrcode.shopTitle\") }}",
+      "{{ t(\"settings.qrcode.management\") }}",
+      "{{ t(\"settings.notifications.soundTitle\") }}",
+      "{{ t(\"settings.notifications.desktopTitle\") }}",
+      "{{ t(\"settings.security.passwordTitle\") }}",
+      "{{ t(\"settings.security.loginTitle\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 3092,
+        "finding": "自訂開關把原生 input 設為 0×0 並透明，滑塊沒有 input:focus-visible 對應樣式；鍵盤焦點無法看見。",
+        "fix": "保留原生 checkbox，增加涵蓋整列的 44px 點擊區，並用 input:focus-visible + .slider 畫出清楚焦點框。"
+      }
+    ],
+    "proposal": {
+      "title": "店鋪設定",
+      "subtitle": "維護店鋪資訊、訂單、外送、桌台、通知與安全設定",
+      "primaryAction": "儲存設定",
+      "sections": [
+        {
+          "title": "一般與公開資料",
+          "content": [
+            "店鋪資訊",
+            "市場加入",
+            "聯絡資料與常見問題"
+          ]
+        },
+        {
+          "title": "營運設定",
+          "content": [
+            "訂單",
+            "外送",
+            "桌台",
+            "QR Code"
+          ]
+        },
+        {
+          "title": "通知與安全",
+          "content": [
+            "聲音通知",
+            "桌面通知",
+            "密碼",
+            "登入安全"
+          ]
+        }
+      ],
+      "columns": [
+        "市場",
+        "區域",
+        "攤位",
+        "主要市場"
+      ]
+    },
+    "original": {
+      "layout": "頁首還原與儲存；分頁切換一般、市場、聯絡、訂單、外送、桌台、QR、通知與安全；各區使用長表單與自訂開關。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-600",
+        "text-gray-700",
+        "bg-gray-100",
+        "bg-gray-200",
+        "bg-blue-600",
+        "bg-blue-700",
+        "border-blue-500",
+        "text-blue-600",
+        "text-gray-500",
+        "border-gray-300",
+        "ring-blue-500",
+        "text-green-700",
+        "border-green-200",
+        "bg-green-50",
+        "border-gray-200",
+        "bg-gray-50",
+        "bg-green-100"
+      ],
+      "facts": [
+        "來源包含 54 個原生輸入控制、14 組按鈕模板及 1 個表格。",
+        "模板組合元件：StaffLoginLinkCard, RouterLink, RestaurantServiceItemsManager, ServiceBookingSlotsManager, ChangePasswordCard, IntegrationsSettings, ShopWalletSettings, CheckCircleIcon",
+        "來源標題：系統設定／餐廳資訊／系統偏好／Marketplace 資料完整度／所屬市場 / 商圈／加入申請狀態",
+        "來源表頭：市場／區域／攤位／主要市場",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "d733f9bbe4f7306e983b7b98ce671add056048b0854a39355947c094de6d7b22"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/SubscriptionsView.vue",
+    "title": "平台訂閱管理",
+    "routes": [
+      "/dashboard/subscriptions"
+    ],
+    "kind": "billing",
+    "purpose": "由平台人員調整店鋪方案、功能模組與試用期限",
+    "headings": [
+      "{{ t(\"subscriptions.title\") }}",
+      "{{ t(\"subscriptions.addSubscription\") }}",
+      "{{ t(\"subscriptions.confirmDeactivateTitle\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 127,
+        "finding": "每間店鋪的方案選單缺少包含店名的可存取名稱，連續瀏覽多筆訂閱容易失去調整對象。",
+        "fix": "將方案 select 具名為「店名／訂閱方案」，調整中保留該列狀態，啟停操作以文字確認對象。"
+      }
+    ],
+    "proposal": {
+      "title": "平台訂閱管理",
+      "subtitle": "由平台人員調整店鋪方案、功能模組與試用期限",
+      "primaryAction": "新增訂閱",
+      "sections": [
+        {
+          "title": "訂閱清單",
+          "content": [
+            "店鋪",
+            "方案",
+            "啟用狀態",
+            "模組"
+          ]
+        },
+        {
+          "title": "訂閱操作",
+          "content": [
+            "方案調整",
+            "停用確認"
+          ]
+        },
+        {
+          "title": "新增訂閱",
+          "content": [
+            "店鋪識別碼",
+            "方案",
+            "試用截止日"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "訂閱／用量切換；店鋪訂閱卡內的方案選單、啟用與模組切換；新增訂閱抽屜及停用確認。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "text-ios-secondary",
+        "bg-ios-blue",
+        "bg-blue-600",
+        "text-ios-text/85",
+        "border-ios-blue",
+        "text-ios-red",
+        "text-ios-tertiary",
+        "text-ios-orange",
+        "ring-ios-blue/30",
+        "bg-ios-green/10",
+        "text-ios-green",
+        "bg-ios-green/20",
+        "bg-ios-red/10",
+        "bg-ios-red/20",
+        "bg-gray-200",
+        "bg-gray-300"
+      ],
+      "facts": [
+        "來源包含 4 個原生輸入控制、11 組按鈕模板及 0 個表格。",
+        "模板組合元件：Plus, UsageTab, AlertCircle, CreditCard, ChevronDown, ToggleRight, ToggleLeft, Teleport, Transition",
+        "來源標題：訂閱管理／新增訂閱／確認停用訂閱",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "202f4512205fb1820b1b6cf18ca418f4a72bcfa5d58d4afa70c1ee5547ff67d1"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/TableDetailView.vue",
+    "title": "桌台詳情",
+    "routes": [
+      "/dashboard/seating/tables/:id"
+    ],
+    "kind": "detail",
+    "purpose": "核對單一桌台資料、QR Code 與點餐模式",
+    "headings": [
+      "{{ t(\"tableDetail.tableNumber\", { number: table.tableNumber }) }}",
+      "{{ t(\"tableDetail.qrCode.title\") }}",
+      "{{ t(\"tableDetail.modeSwitch.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 6,
+        "finding": "返回桌台列表只有文字高度的點擊區，與頁內較大的 QR 操作按鈕不一致。",
+        "fix": "給返回控制至少 44px 高的觸控區，並與桌號標題同列，QR 下載／列印保留為次要操作。"
+      }
+    ],
+    "proposal": {
+      "title": "桌台詳情",
+      "subtitle": "核對單一桌台資料、QR Code 與點餐模式",
+      "primaryAction": "編輯桌台",
+      "sections": [
+        {
+          "title": "桌台資訊",
+          "content": [
+            "桌號",
+            "座位",
+            "狀態"
+          ]
+        },
+        {
+          "title": "QR Code",
+          "content": [
+            "下載",
+            "列印",
+            "重新產生"
+          ]
+        },
+        {
+          "title": "點餐模式",
+          "content": [
+            "目前模式",
+            "切換確認"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "返回桌台列表；桌台資訊卡；QR 圖片與下載／列印／重新產生；點餐模式切換彈窗。",
+      "colors": [
+        "text-gray-600",
+        "text-gray-900",
+        "bg-blue-100",
+        "text-blue-700",
+        "bg-blue-600",
+        "bg-blue-700",
+        "bg-gray-50",
+        "text-gray-500",
+        "text-gray-400",
+        "text-orange-600",
+        "text-red-600",
+        "bg-green-600",
+        "bg-green-700",
+        "ring-ios-blue",
+        "text-gray-700",
+        "bg-gray-100",
+        "bg-gray-200"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、9 組按鈕模板及 0 個表格。",
+        "模板組合元件：ArrowLeftIcon, SeatManagement, QRCodeRenderer, XMarkIcon, QRModeSelector",
+        "來源標題：{{ t(\"tableDetail.tableNumber\", { number: table.tableNumber }) }}／桌台 QR 碼／切換 QR 模式",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "19eae7aac8043f0c12c09fd6d14b227e5043a1dfd305f48df3e51685f4a885f4"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/UnauthorizedView.vue",
+    "title": "權限不足",
+    "routes": [
+      "/unauthorized"
+    ],
+    "kind": "error",
+    "purpose": "告知目前帳號權限並返回可用工作區",
+    "headings": [
+      "{{ t(\"unauthorized.title\") }}",
+      "{{ t(\"unauthorized.permissionDenied\") }}",
+      "{{ t(\"unauthorized.currentLoginInfo\") }}",
+      "{{ t(\"unauthorized.availableFeatures\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 14,
+        "finding": "獨立錯誤頁第一個任務標題使用 h2，沒有 h1，讀屏無法獲得頁面主要題名。",
+        "fix": "將權限不足升為 h1，將目前帳號與可用功能分成 h2，優先呈現可用的返回操作。"
+      }
+    ],
+    "proposal": {
+      "title": "權限不足",
+      "subtitle": "告知目前帳號權限並返回可用工作區",
+      "primaryAction": "返回首頁",
+      "sections": [
+        {
+          "title": "權限說明",
+          "content": [
+            "權限不足",
+            "目前登入資訊"
+          ]
+        },
+        {
+          "title": "可用功能",
+          "content": [
+            "依角色顯示",
+            "返回上一頁",
+            "返回首頁"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "max-w-md 置中盾牌、權限說明、登入資訊、可用功能；返回上一頁及首頁。",
+      "colors": [
+        "bg-gray-50",
+        "text-red-400",
+        "text-gray-900",
+        "text-gray-600",
+        "bg-red-50",
+        "border-red-200",
+        "text-red-800",
+        "text-red-700",
+        "bg-gray-100",
+        "bg-blue-50",
+        "border-blue-200",
+        "text-blue-400",
+        "text-blue-800",
+        "text-blue-700",
+        "border-gray-300",
+        "text-gray-700",
+        "ring-blue-500",
+        "bg-blue-600"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、2 組按鈕模板及 0 個表格。",
+        "模板組合元件：ShieldExclamationIcon, ExclamationTriangleIcon, InformationCircleIcon, ArrowLeftIcon, HomeIcon",
+        "來源標題：存取被拒絕／權限不足／當前登入資訊／您可以使用的功能",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "f8a8e3d82abb4fc225fcbf078ab3d560ff902f36f6c191546631cce825ad45d9"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/ai-analytics/AIInsightsDashboard.vue",
+    "title": "AI 營運洞察",
+    "routes": [
+      "/dashboard/ai-analytics/insights"
+    ],
+    "kind": "analytics",
+    "purpose": "在指定期間產生與閱讀 AI 摘要、建議及預測",
+    "headings": [
+      "{{ t(\"aiAnalytics.title\") }}",
+      "{{ t(\"aiAnalytics.providerNotConfiguredTitle\") }}",
+      "{{ t(\"aiAnalytics.reportError\") }}",
+      "{{ t(\"aiAnalytics.executiveSummary\") }}",
+      "{{ insight.title }}",
+      "{{ t(\"aiAnalytics.next7DaysForecast\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 731,
+        "finding": "載入骨架以自訂灰色漸層無限 shimmer，未在本頁提供減少動態替代，也未使用共同表面 token。",
+        "fix": "改為靜態 ios-bg 骨架或受減少動態偏好控制的輕量脈動，將報告產生狀態以文字標示。"
+      }
+    ],
+    "proposal": {
+      "title": "AI 營運洞察",
+      "subtitle": "在指定期間產生與閱讀 AI 摘要、建議及預測",
+      "primaryAction": "重新產生報告",
+      "sections": [
+        {
+          "title": "分析期間",
+          "content": [
+            "時間範圍",
+            "服務設定狀態"
+          ]
+        },
+        {
+          "title": "營運洞察",
+          "content": [
+            "執行摘要",
+            "洞察建議"
+          ]
+        },
+        {
+          "title": "未來預測",
+          "content": [
+            "未來七日預測",
+            "報告產生狀態"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "ModuleGate 包覆；AI 子導航、期間與產生報告；服務未設定、報告錯誤或骨架；摘要、洞察及未來七日預測。",
+      "colors": [
+        "bg-gray-50",
+        "text-teal-600",
+        "text-gray-900",
+        "text-gray-600",
+        "border-gray-100",
+        "bg-teal-600",
+        "bg-gray-100",
+        "border-gray-300",
+        "ring-teal-500",
+        "text-gray-700",
+        "bg-teal-50",
+        "border-teal-200",
+        "text-teal-900",
+        "text-teal-800",
+        "bg-teal-700",
+        "bg-red-50",
+        "border-red-200",
+        "text-red-600"
+      ],
+      "facts": [
+        "來源包含 1 個原生輸入控制、3 組按鈕模板及 0 個表格。",
+        "模板組合元件：ModuleGate, SparklesIcon, ArrowPathIcon, ExclamationTriangleIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, ChartBarIcon, CheckCircleIcon, CalendarIcon",
+        "來源標題：AI 智能分析／尚未設定 AI 供應商／報告生成失敗／摘要總覽／{{ insight.title }}／未來 7 天預測",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "9043ecb9f7e40fdfb21e45a6f03f73a946a8637a3dfe76a303ae419f32b221bc"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/ai-analytics/AIProviderConfig.vue",
+    "title": "AI 服務設定",
+    "routes": [
+      "/dashboard/ai-analytics/config"
+    ],
+    "kind": "settings",
+    "purpose": "選擇 AI 供應商、模型與端點並測試連線",
+    "headings": [
+      "{{ t(\"aiConfig.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 276,
+        "finding": "API 金鑰欄位旁的可視 label 未與 password input 建立 id／for 關聯，敏感連線設定的欄位辨識不足。",
+        "fix": "為金鑰、模型、自訂端點建立唯一 id 與 label，將測試連線結果關聯到設定區；保留遮蔽輸入。"
+      }
+    ],
+    "proposal": {
+      "title": "AI 服務設定",
+      "subtitle": "選擇 AI 供應商、模型與端點並測試連線",
+      "primaryAction": "儲存設定",
+      "sections": [
+        {
+          "title": "服務選擇",
+          "content": [
+            "供應商",
+            "模型"
+          ]
+        },
+        {
+          "title": "連線資訊",
+          "content": [
+            "API 金鑰",
+            "自訂端點"
+          ]
+        },
+        {
+          "title": "驗證與儲存",
+          "content": [
+            "測試連線",
+            "測試結果",
+            "儲存設定"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "max-w-3xl；AI 子導航；供應商選擇卡、API 金鑰、模型及自訂端點；測試連線與儲存結果。",
+      "colors": [
+        "bg-gray-50",
+        "text-teal-600",
+        "text-gray-900",
+        "text-gray-600",
+        "border-gray-100",
+        "bg-gray-100",
+        "bg-teal-600",
+        "border-teal-300",
+        "border-teal-600",
+        "bg-teal-50",
+        "border-gray-200",
+        "text-gray-500",
+        "text-gray-400",
+        "border-gray-300",
+        "ring-teal-500",
+        "bg-green-50",
+        "border-green-200",
+        "bg-red-50"
+      ],
+      "facts": [
+        "來源包含 3 個原生輸入控制、3 組按鈕模板及 0 個表格。",
+        "模板組合元件：SparklesIcon, CheckCircleIcon, ShieldCheckIcon, XCircleIcon, ArrowPathIcon",
+        "來源標題：AI 服務設定",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "3936505dc04a4381ef86616642f6a54b4a114436d370cc8379cf331dce818c3e"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/ai-analytics/ProductAnalyticsView.vue",
+    "title": "商品成效分析",
+    "routes": [
+      "/dashboard/ai-analytics/products"
+    ],
+    "kind": "analytics",
+    "purpose": "依期間比較流量商品、熱銷商品與獲利表現",
+    "headings": [
+      "{{ t(\"productAnalytics.title\") }}",
+      "{{ t(\"productAnalytics.loadError\") }}",
+      "{{ product.menuItemName }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 216,
+        "finding": "商品分析期間 select 沒有關聯的可視標籤，與多個分類切換並列時無法立即看出範圍。",
+        "fix": "在期間工具列標示「分析期間」，將分類切換獨立一列並保留選取狀態文字。"
+      }
+    ],
+    "proposal": {
+      "title": "商品成效分析",
+      "subtitle": "依期間比較流量商品、熱銷商品與獲利表現",
+      "primaryAction": "重新整理",
+      "sections": [
+        {
+          "title": "分析範圍",
+          "content": [
+            "時間範圍",
+            "商品分類"
+          ]
+        },
+        {
+          "title": "商品排行",
+          "content": [
+            "品項",
+            "訂單數",
+            "營收",
+            "平均客單價"
+          ]
+        },
+        {
+          "title": "成效與行動",
+          "content": [
+            "轉換率",
+            "利潤率",
+            "趨勢",
+            "最佳化建議"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "AI 子導航及期間／重新整理；分類切換；商品排行榜卡；錯誤／空狀態與分析提示。",
+      "colors": [
+        "bg-gray-50",
+        "text-teal-600",
+        "text-gray-900",
+        "text-gray-600",
+        "border-gray-100",
+        "bg-gray-100",
+        "bg-teal-600",
+        "border-gray-300",
+        "ring-teal-500",
+        "ring-ios-blue",
+        "text-gray-700",
+        "text-gray-400",
+        "text-gray-500",
+        "bg-red-50",
+        "border-red-200",
+        "text-red-600",
+        "text-red-900",
+        "text-red-700"
+      ],
+      "facts": [
+        "來源包含 1 個原生輸入控制、3 組按鈕模板及 0 個表格。",
+        "模板組合元件：ChartBarIcon, ArrowPathIcon, ExclamationTriangleIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, ShoppingCartIcon, SparklesIcon",
+        "來源標題：產品分析／載入失敗／{{ product.menuItemName }}",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "c910844165a6b0e78a5001752154b657467fbb1d6761aebcd4dda67d8803da3b"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/employees/AttendanceOverviewTab.vue",
+    "title": "出勤總覽",
+    "routes": [
+      "/dashboard/employees/attendance"
+    ],
+    "kind": "schedule",
+    "purpose": "查看在班及請假員工並為指定員工處理打卡",
+    "headings": [
+      "{{ t(\"employees.attendance.clockPanel\") }}",
+      "{{ t(\"employees.attendance.working\") }} ({{ clockedInEmployees.length }})",
+      "{{ t(\"employees.attendance.onLeave\") }} ({{ onLeaveEmployees.length }})"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 20,
+        "finding": "出勤統計名稱以 40% 不透明度的小字顯示在白卡，辨識度偏低，現場難以快速確認數字代表的狀態。",
+        "fix": "將人數標籤提升到 text-ios-text/70，數值維持主要文字，狀態用語意徽章而非降低對比。"
+      }
+    ],
+    "proposal": {
+      "title": "出勤總覽",
+      "subtitle": "查看在班及請假員工並為指定員工處理打卡",
+      "primaryAction": "查看出勤分析",
+      "sections": [
+        {
+          "title": "出勤摘要",
+          "content": [
+            "即時人數",
+            "在班",
+            "請假"
+          ]
+        },
+        {
+          "title": "指定員工打卡",
+          "content": [
+            "員工選擇",
+            "班次",
+            "上下班打卡"
+          ]
+        },
+        {
+          "title": "員工狀態",
+          "content": [
+            "在班名單",
+            "請假名單"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "六格出勤統計與分析連結；指定員工選單及打卡面板；在班員工卡與請假員工卡。",
+      "colors": [
+        "text-ios-blue",
+        "border-ios-blue/20",
+        "bg-ios-blue/10",
+        "bg-ios-bg",
+        "text-ios-text/40",
+        "text-ios-text",
+        "ring-ios-blue/30",
+        "text-ios-text/15",
+        "text-ios-text/30",
+        "bg-ios-green",
+        "border-ios-blue",
+        "bg-ios-orange"
+      ],
+      "facts": [
+        "來源包含 1 個原生輸入控制、0 組按鈕模板及 0 個表格。",
+        "模板組合元件：RouterLink, Clock, ClockInOutPanel, CalendarOff",
+        "來源標題：打卡／目前在班 ({{ clockedInEmployees.length }})／請假 ({{ onLeaveEmployees.length }})",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "0021be773077d12fd3787ed6ae5a72ae00ec9bcd67387134b0a7e97bf6f4ea1e"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/employees/EmployeeDetailView.vue",
+    "title": "員工詳情",
+    "routes": [
+      "/dashboard/employees/:id"
+    ],
+    "kind": "detail",
+    "purpose": "提供員工身分、工作狀態及個人資料子頁導航",
+    "headings": [
+      "{{ employee.fullName || employee.username }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 80,
+        "finding": "員工詳情的三個分頁固定並排且有較大水平內距，沒有溢出處理，長翻譯或手機會壓縮分頁。",
+        "fix": "分頁加 overflow-x-auto、shrink-0 與 nowrap，減少手機內距，保留目前分頁狀態。"
+      }
+    ],
+    "proposal": {
+      "title": "員工詳情",
+      "subtitle": "提供員工身分、工作狀態及個人資料子頁導航",
+      "primaryAction": "返回員工列表",
+      "sections": [
+        {
+          "title": "員工身分",
+          "content": [
+            "姓名",
+            "帳號",
+            "角色",
+            "狀態"
+          ]
+        },
+        {
+          "title": "個人工作資料",
+          "content": [
+            "基本資料",
+            "班表",
+            "請假"
+          ]
+        },
+        {
+          "title": "聯絡摘要",
+          "content": [
+            "電子郵件",
+            "加入時間",
+            "最後登入"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "返回名單；員工頭像、姓名、角色與聯絡摘要；個人資料／班表／請假子導航與 router-view。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-blue",
+        "text-blue-600",
+        "border-ios-blue",
+        "text-ios-text",
+        "text-ios-text/50",
+        "text-ios-text/40",
+        "border-ios-bg",
+        "text-ios-text/70"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、1 組按鈕模板及 0 個表格。",
+        "模板組合元件：ChevronLeft, Mail, Calendar, Clock",
+        "來源標題：{{ employee.fullName || employee.username }}",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "60ffc648f321a52425252852cacfb98e8c461b4a329e36b8796797d2b6eb3a3c"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/employees/EmployeeLeaveTab.vue",
+    "title": "員工假期",
+    "routes": [
+      "/dashboard/employees/:id/leave"
+    ],
+    "kind": "schedule",
+    "purpose": "查閱單一員工的假別餘額與請假申請",
+    "headings": [
+      "{{ t(\"employees.leave.balances\") }}",
+      "{{ t(\"employees.leave.requests\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 20,
+        "finding": "假期空狀態與請假原因使用 30% 不透明度小字，重要的申請脈絡在白卡上過淡。",
+        "fix": "將假別資訊、日期、原因提升至可讀深灰；原因可展開換行，保留額度條與狀態文字。"
+      }
+    ],
+    "proposal": {
+      "title": "員工假期",
+      "subtitle": "查閱單一員工的假別餘額與請假申請",
+      "primaryAction": "",
+      "sections": [
+        {
+          "title": "假期餘額",
+          "content": [
+            "假別",
+            "剩餘天數",
+            "已使用",
+            "待核准"
+          ]
+        },
+        {
+          "title": "請假申請",
+          "content": [
+            "日期",
+            "上午或下午",
+            "原因",
+            "狀態"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "假期餘額卡與用量條；請假申請清單含日期、時段、原因、狀態；載入與空狀態。",
+      "colors": [
+        "text-ios-text",
+        "border-ios-blue",
+        "text-ios-text/15",
+        "text-ios-text/30",
+        "bg-ios-bg",
+        "text-ios-blue",
+        "text-ios-text/40"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、0 組按鈕模板及 0 個表格。",
+        "模板組合元件：CalendarOff, FileText",
+        "來源標題：假期餘額／請假紀錄",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "b6426c32715187de367c093eab880b979ec65ce81ad89940d4862d819f9eb565"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/employees/EmployeeListTab.vue",
+    "title": "員工名單",
+    "routes": [
+      "/dashboard/employees"
+    ],
+    "kind": "table",
+    "purpose": "篩選在職與離職員工並開啟個人工作資料",
+    "headings": [
+      "{{ isArchivedRoster ? t(\"users.empty.archivedTitle\") : t(\"users.empty.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 34,
+        "finding": "名單的角色與帳號狀態篩選主要靠選項辨識，沒有關聯標籤，與在職／離職切換的範圍容易混淆。",
+        "fix": "為角色、帳號狀態與搜尋欄加上具名標籤，維持在職／離職為獨立上層切換。"
+      }
+    ],
+    "proposal": {
+      "title": "員工名單",
+      "subtitle": "篩選在職與離職員工並開啟個人工作資料",
+      "primaryAction": "查看員工",
+      "sections": [
+        {
+          "title": "名單篩選",
+          "content": [
+            "在職",
+            "離職",
+            "搜尋",
+            "角色",
+            "狀態"
+          ]
+        },
+        {
+          "title": "員工清單",
+          "content": [
+            "員工資訊",
+            "角色",
+            "帳號狀態",
+            "工作狀態",
+            "最後登入"
+          ]
+        },
+        {
+          "title": "員工操作",
+          "content": [
+            "編輯",
+            "重設密碼",
+            "封存",
+            "還原"
+          ]
+        }
+      ],
+      "columns": [
+        "員工資訊",
+        "角色",
+        "狀態",
+        "工作狀態",
+        "最後登入",
+        "操作"
+      ]
+    },
+    "original": {
+      "layout": "在職／離職切換；搜尋、角色及狀態篩選；員工表格與手機名單、分頁及逐列管理操作。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "text-ios-text/60",
+        "text-ios-text/30",
+        "border-ios-blue",
+        "text-ios-text/20",
+        "text-ios-text/40",
+        "border-ios-bg",
+        "bg-ios-bg/50",
+        "bg-ios-green",
+        "bg-ios-orange",
+        "text-ios-text/50",
+        "ring-ios-blue",
+        "bg-ios-blue"
+      ],
+      "facts": [
+        "來源包含 3 個原生輸入控制、3 組按鈕模板及 1 個表格。",
+        "模板組合元件：Search, Users, Clock, CalendarOff, EmployeeRowActions",
+        "來源標題：{{ isArchivedRoster ? t(\"users.empty.archivedTitle\") : t(\"users.empty.title\") }}",
+        "來源表頭：員工資訊／角色／狀態／工作狀態／最後登入／操作",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "7d5966a41430ce7ad4a42c82e5865451c6af32ab3b0222199ed679611bcfc390"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/employees/EmployeeManagementView.vue",
+    "title": "員工管理",
+    "routes": [
+      "/dashboard/employees"
+    ],
+    "kind": "dashboard",
+    "purpose": "彙整員工狀態並導航至名單、出勤、排班與請假",
+    "headings": [
+      "{{ t(\"employees.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 67,
+        "finding": "非目前分頁以 40% 不透明度小字顯示，重要的出勤、排班及請假導航對比偏低。",
+        "fix": "將非作用中分頁改為 text-ios-text/70，使用底線與 aria-current 辨別目前分頁，保留既有橫向捲動。"
+      }
+    ],
+    "proposal": {
+      "title": "員工管理",
+      "subtitle": "彙整員工狀態並導航至名單、出勤、排班與請假",
+      "primaryAction": "新增員工",
+      "sections": [
+        {
+          "title": "員工概況",
+          "content": [
+            "人數",
+            "角色",
+            "工作狀態"
+          ]
+        },
+        {
+          "title": "管理工作區",
+          "content": [
+            "員工名單",
+            "出勤",
+            "排班",
+            "請假"
+          ]
+        },
+        {
+          "title": "員工表單",
+          "content": [
+            "基本資料",
+            "角色",
+            "狀態"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "員工管理頁首與新增；手機橫向統計、桌面七格統計；可捲動工作分頁及 router-view；員工與密碼彈窗。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "text-ios-text/50",
+        "bg-ios-blue",
+        "bg-blue-600",
+        "border-ios-bg",
+        "ring-ios-blue",
+        "border-ios-blue",
+        "text-ios-blue",
+        "text-ios-text/40",
+        "text-ios-text/70",
+        "bg-ios-red"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、1 組按鈕模板及 0 個表格。",
+        "模板組合元件：Plus, EmployeeFormModal, ResetPasswordModal",
+        "來源標題：員工管理",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "22c572e202ea1f7b7119f89a2f07300982457176053e98f833a5b0f000a7f6dc"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/employees/EmployeeProfileTab.vue",
+    "title": "員工基本資料",
+    "routes": [
+      "/dashboard/employees/:id"
+    ],
+    "kind": "detail",
+    "purpose": "檢視單一員工帳號資料與近期活動摘要",
+    "headings": [
+      "{{ t(\"employees.profile.basicInfo\") }}",
+      "{{ t(\"employees.profile.recentActivity\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 13,
+        "finding": "即將到來班次、已完成班次、待審請假的統計標籤採 40% 小字，數字與意義難以一起掃讀。",
+        "fix": "統計標籤改用可讀深灰，將數值與對應標籤保留緊密配對；近期活動時間也採同一字階。"
+      }
+    ],
+    "proposal": {
+      "title": "員工基本資料",
+      "subtitle": "檢視單一員工帳號資料與近期活動摘要",
+      "primaryAction": "",
+      "sections": [
+        {
+          "title": "工作摘要",
+          "content": [
+            "即將到來班次",
+            "已完成班次",
+            "待審請假"
+          ]
+        },
+        {
+          "title": "基本資料",
+          "content": [
+            "使用者名稱",
+            "姓名",
+            "電子郵件",
+            "加入時間",
+            "最後登入"
+          ]
+        },
+        {
+          "title": "近期活動",
+          "content": [
+            "活動內容",
+            "時間",
+            "狀態"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "三個工作摘要卡；基本帳號資訊；近期活動時間軸或空狀態。",
+      "colors": [
+        "bg-ios-bg",
+        "bg-blue-50",
+        "text-blue-600",
+        "text-ios-text/40",
+        "text-ios-text",
+        "text-ios-text/50",
+        "border-ios-blue",
+        "text-ios-text/15",
+        "text-ios-text/30"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、0 組按鈕模板及 0 個表格。",
+        "模板組合元件：Clock, CalendarCheck, CalendarOff, Activity",
+        "來源標題：基本資訊／近期活動",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "f9ce349d1c828987bd8c1db3c0c401b7c154f634260f11496064520342be20cf"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/employees/EmployeeScheduleTab.vue",
+    "title": "員工班表",
+    "routes": [
+      "/dashboard/employees/:id/schedule"
+    ],
+    "kind": "schedule",
+    "purpose": "檢視單一員工的工時摘要與班次紀錄",
+    "headings": [
+      "{{ t(\"employees.schedule.shifts\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 6,
+        "finding": "總工時、加班與班次摘要以 40% 小字標示，工時資訊在白底較難閱讀。",
+        "fix": "摘要與實際工時使用 text-ios-text/70，日期維持清楚層級，加班保留有文字的 warning 深色徽章。"
+      }
+    ],
+    "proposal": {
+      "title": "員工班表",
+      "subtitle": "檢視單一員工的工時摘要與班次紀錄",
+      "primaryAction": "",
+      "sections": [
+        {
+          "title": "工時摘要",
+          "content": [
+            "總工時",
+            "加班工時",
+            "已完成班次",
+            "即將到來班次"
+          ]
+        },
+        {
+          "title": "班次紀錄",
+          "content": [
+            "日期",
+            "預定時間",
+            "實際工時",
+            "狀態"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "四個工時／班次統計；依日期排列的班次列，含預定時間、實際工時與狀態。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text/40",
+        "text-ios-text",
+        "text-blue-600",
+        "border-ios-blue",
+        "text-ios-text/15",
+        "text-ios-text/30",
+        "bg-ios-text/10"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、0 組按鈕模板及 0 個表格。",
+        "模板組合元件：Calendar, Clock, Timer",
+        "來源標題：排班紀錄",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "3219edb6358a9ab33b5734e42d1fd68386f28276e3b6b17ab5e350443375c92e"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/employees/LeavesTab.vue",
+    "title": "請假管理",
+    "routes": [
+      "/dashboard/employees/leaves"
+    ],
+    "kind": "schedule",
+    "purpose": "處理請假審核、申請與假別設定",
+    "headings": [],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 161,
+        "finding": "假別代碼欄位旁有標籤，但沒有 id／for 關聯，建立假別時讀屏難以辨認代碼、名稱及累計方式。",
+        "fix": "為假別設定的各欄位建立關聯標籤，保留代碼長度限制與儲存中回饋。"
+      }
+    ],
+    "proposal": {
+      "title": "請假管理",
+      "subtitle": "處理請假審核、申請與假別設定",
+      "primaryAction": "代為申請請假",
+      "sections": [
+        {
+          "title": "請假工作區",
+          "content": [
+            "申請",
+            "審核",
+            "假別設定"
+          ]
+        },
+        {
+          "title": "假別管理",
+          "content": [
+            "代碼",
+            "名稱",
+            "累計方式",
+            "有薪假",
+            "需審核"
+          ]
+        },
+        {
+          "title": "申請處理",
+          "content": [
+            "狀態",
+            "核准",
+            "拒絕"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "申請／審核／假別子切換；請假處理區；假別清單與代碼、名稱、累計方式等建立表單。",
+      "colors": [
+        "bg-ios-blue",
+        "bg-ios-bg",
+        "text-ios-text/60",
+        "text-ios-text",
+        "bg-ios-separator",
+        "bg-ios-red",
+        "bg-blue-600",
+        "border-ios-blue",
+        "bg-ios-red/10",
+        "text-ios-red",
+        "text-ios-red/70",
+        "text-ios-text/40"
+      ],
+      "facts": [
+        "來源包含 5 個原生輸入控制、5 組按鈕模板及 0 個表格。",
+        "模板組合元件：Plus, LeaveApprovalQueue, LeaveHistoryList, LeaveBalanceOverview, LeaveRequestDialog",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "365928e74c000f8af3646a41382e1cffb99cb208c9c4f2066ae5f97f60dc5ca9"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/employees/SchedulingTab.vue",
+    "title": "員工排班",
+    "routes": [
+      "/dashboard/employees/scheduling"
+    ],
+    "kind": "schedule",
+    "purpose": "在週或月視圖選擇員工與班別進行排班",
+    "headings": [
+      "{{ t(\"employees.scheduling.confirmAssign\") }}",
+      "{{ t(\"employees.scheduling.selectEmployee\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 11,
+        "finding": "上一期／下一期按鈕只有 28×28px，排班高頻日期導航不符合 44px 觸控目標。",
+        "fix": "圖示可維持 16px，外部點擊區擴為 44×44px，日期範圍與今天放在同一個穩定工具列。"
+      }
+    ],
+    "proposal": {
+      "title": "員工排班",
+      "subtitle": "在週或月視圖選擇員工與班別進行排班",
+      "primaryAction": "管理班別範本",
+      "sections": [
+        {
+          "title": "日期與檢視",
+          "content": [
+            "上一期",
+            "下一期",
+            "今天",
+            "週",
+            "月"
+          ]
+        },
+        {
+          "title": "排班表",
+          "content": [
+            "員工",
+            "日期",
+            "班次"
+          ]
+        },
+        {
+          "title": "指派確認",
+          "content": [
+            "員工選擇",
+            "班別",
+            "確認指派"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "日期前後與今天；週／月切換、範本管理；排班視圖；員工選擇及指派確認彈窗。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text/60",
+        "text-ios-text",
+        "bg-ios-blue/10",
+        "text-ios-blue",
+        "bg-ios-blue/20",
+        "text-ios-text/50",
+        "text-ios-text/70",
+        "border-ios-blue/20",
+        "bg-ios-blue",
+        "bg-blue-600",
+        "text-ios-text/40",
+        "border-ios-blue/30",
+        "bg-ios-red/5",
+        "border-ios-red/20",
+        "text-ios-red",
+        "bg-ios-red/10",
+        "bg-ios-red/20"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、10 組按鈕模板及 0 個表格。",
+        "模板組合元件：ChevronLeft, ChevronRight, RouterLink, Settings, SchedulingConflictBar, SchedulingCalendarGrid, UnassignedSidebar, Teleport, Transition, ShiftTemplateManager",
+        "來源標題：確認排班／選擇員工",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "e35b4a4dc487c4048470633b1261cf57dfccb7ba6432237a69463f1f3aa77157"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/forecast/ForecastView.vue",
+    "title": "需求預測",
+    "routes": [
+      "/dashboard/forecast"
+    ],
+    "kind": "analytics",
+    "purpose": "在指定日期範圍檢視需求、準確度與食材採購預測",
+    "headings": [
+      "{{ t(\"forecast.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 3,
+        "finding": "標題和兩個預測操作固定水平排列，窄畫面或較長翻譯會擠壓按鈕與頁名。",
+        "fix": "小螢幕改為標題在上、重新整理及產生預測在下，兩個操作保持 44px 高並可換行。"
+      }
+    ],
+    "proposal": {
+      "title": "需求預測",
+      "subtitle": "在指定日期範圍檢視需求、準確度與食材採購預測",
+      "primaryAction": "產生預測",
+      "sections": [
+        {
+          "title": "預測範圍",
+          "content": [
+            "開始日期",
+            "結束日期",
+            "資料時效"
+          ]
+        },
+        {
+          "title": "預測工作區",
+          "content": [
+            "需求預測",
+            "準確度",
+            "食材預測"
+          ]
+        },
+        {
+          "title": "採購規劃",
+          "content": [
+            "食材預測",
+            "採購清單"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "頁首更新與產生；時效警告、日期選擇；需求／準確度／食材分頁；預測表、告警與採購清單。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-600",
+        "text-gray-700",
+        "border-gray-300",
+        "bg-gray-50",
+        "bg-blue-600",
+        "bg-blue-700",
+        "border-red-200",
+        "bg-red-50",
+        "text-red-800",
+        "border-blue-200",
+        "bg-blue-50",
+        "text-blue-800",
+        "border-gray-200",
+        "border-blue-600",
+        "text-blue-600",
+        "text-gray-500",
+        "text-red-700"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、5 組按鈕模板及 0 個表格。",
+        "模板組合元件：ArrowPathIcon, ForecastDatePicker, ForecastAlerts, ForecastTable, ForecastAccuracyTab, IngredientForecastTable, ProcurementList",
+        "來源標題：需求預測",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "87939b5c531e9ec3f8644036e33de06fb4c2bc4e91f37390dd9c7f501c232dce"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/ingredients/IngredientsView.vue",
+    "title": "食材管理",
+    "routes": [
+      "/dashboard/ingredients"
+    ],
+    "kind": "table",
+    "purpose": "篩選庫存與低庫存食材，維護食譜與匯入",
+    "headings": [
+      "{{ t(\"ingredients.title\") }}",
+      "{{ t(\"ingredients.recipes\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 3,
+        "finding": "頁首同列放食譜、匯入、新增食材三個動作，沒有小螢幕換行排列，工作起點過擠。",
+        "fix": "以新增食材作為主操作，食譜與匯入置於次列或更多操作，手機讓標題與工具列分行。"
+      }
+    ],
+    "proposal": {
+      "title": "食材管理",
+      "subtitle": "篩選庫存與低庫存食材，維護食譜與匯入",
+      "primaryAction": "新增食材",
+      "sections": [
+        {
+          "title": "食材篩選",
+          "content": [
+            "搜尋",
+            "分類",
+            "只看低庫存"
+          ]
+        },
+        {
+          "title": "食材清單",
+          "content": [
+            "食材名稱",
+            "庫存"
+          ]
+        },
+        {
+          "title": "食譜與匯入",
+          "content": [
+            "食譜管理",
+            "未設定食譜",
+            "匯入"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "新增／匯入／食譜工具列；低庫存、搜尋、分類；食材清單與分頁；食譜編輯面板。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-600",
+        "text-gray-700",
+        "border-gray-300",
+        "bg-gray-50",
+        "bg-blue-600",
+        "bg-blue-700",
+        "ring-blue-500",
+        "border-blue-500",
+        "border-blue-600",
+        "text-gray-400",
+        "text-red-600",
+        "text-gray-500"
+      ],
+      "facts": [
+        "來源包含 3 個原生輸入控制、7 組按鈕模板及 0 個表格。",
+        "模板組合元件：IngredientTable, IngredientForm, BulkImportDialog, StockAdjustDialog, RecipeEditor",
+        "來源標題：食材管理／配方管理",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "de24a4185a337138bccb0894af85a20a15c40ae8f4e9fec04558490f6a9c8571"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/scheduling/SchedulingAnalyticsView.vue",
+    "title": "排班分析",
+    "routes": [
+      "/dashboard/employees/scheduling/analytics"
+    ],
+    "kind": "analytics",
+    "purpose": "閱讀排班統計、圖表、洞察並匯出分析報表",
+    "headings": [
+      "📊 {{ t(\"schedulingAnalytics.title\") }}",
+      "💡 {{ t(\"schedulingAnalytics.dataInsights\") }}",
+      "{{ insight.title }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 439,
+        "finding": "統計卡片 hover 位移並提高到 12% 陰影，超出既定柔和陰影上限，非互動數據看起來像可點擊控制。",
+        "fix": "移除非互動卡片 hover 位移，統一使用共用 card 陰影與標準圓角，保留真正可操作的詳情連結回饋。"
+      }
+    ],
+    "proposal": {
+      "title": "排班分析",
+      "subtitle": "閱讀排班統計、圖表、洞察並匯出分析報表",
+      "primaryAction": "匯出報表",
+      "sections": [
+        {
+          "title": "排班摘要",
+          "content": [
+            "快速統計",
+            "變化"
+          ]
+        },
+        {
+          "title": "分析圖表",
+          "content": [
+            "排班與出勤圖表"
+          ]
+        },
+        {
+          "title": "資料洞察",
+          "content": [
+            "洞察內容",
+            "查看詳情"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "白卡頁首帶 emoji；快速統計；雙欄圖表；洞察卡與詳情操作；自訂陰影及 hover 位移。",
+      "colors": [
+        "#f9fafb",
+        "#1f2937",
+        "#6b7280",
+        "#f3f4f6",
+        "#374151",
+        "#e5e7eb",
+        "#007aff",
+        "#2563eb",
+        "#34c759",
+        "#ff3b30",
+        "#ff9500"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、3 組按鈕模板及 0 個表格。",
+        "模板組合元件：WorkHoursChart, ShiftDistributionChart, TrendChart",
+        "來源標題：📊 排班分析／💡 資料洞察／{{ insight.title }}",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "00b040569dc028a09a22dfba5bc4367b6ec49fdcf87d4694f8f79ad8d04a8333"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/scheduling/SchedulingView.vue",
+    "title": "進階排班管理",
+    "routes": [
+      "/dashboard/employees/scheduling/advanced"
+    ],
+    "kind": "schedule",
+    "purpose": "處理排班日曆、清單、班別範本、衝突及換班審核",
+    "headings": [
+      "{{ t(\"scheduling.managementTitle\") }}",
+      "{{ t(\"scheduling.monthlySchedules\") }}",
+      "{{ t(\"shiftTemplates.title\") }}",
+      "{{ t(\"scheduling.pendingConflicts\") }}",
+      "{{ t(\"scheduling.pendingSwaps\") }}",
+      "{{ t(\"scheduling.currentlyWorking\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 193,
+        "finding": "進階排班的分頁導覽名稱寫死為英文 Tabs，無法告訴讀屏使用者此處切換的是日曆、列表與例外處理。",
+        "fix": "改成可翻譯的「排班檢視」，各按鈕補上 aria-selected 或 aria-pressed 與對應面板識別。"
+      }
+    ],
+    "proposal": {
+      "title": "進階排班管理",
+      "subtitle": "處理排班日曆、清單、班別範本、衝突及換班審核",
+      "primaryAction": "建立排班",
+      "sections": [
+        {
+          "title": "工作摘要",
+          "content": [
+            "當月排班",
+            "班別範本",
+            "待處理衝突",
+            "待審換班"
+          ]
+        },
+        {
+          "title": "排班工作區",
+          "content": [
+            "日曆",
+            "列表",
+            "班別範本"
+          ]
+        },
+        {
+          "title": "例外處理",
+          "content": [
+            "衝突解決",
+            "換班審核",
+            "目前在班"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "操作頁首與排班摘要；目前在班名單；可橫捲日曆／清單／範本／衝突／換班分頁；排班及範本彈窗。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-600",
+        "text-gray-700",
+        "border-gray-300",
+        "bg-gray-50",
+        "bg-green-600",
+        "bg-green-700",
+        "bg-blue-600",
+        "bg-blue-700",
+        "bg-blue-100",
+        "text-blue-600",
+        "bg-green-100",
+        "text-green-600",
+        "bg-teal-100",
+        "text-teal-600",
+        "border-gray-200",
+        "text-green-800",
+        "text-gray-400"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、5 組按鈕模板及 0 個表格。",
+        "模板組合元件：ArrowPathIcon, PlusIcon, CalendarIcon, ExclamationTriangleIcon, ExclamationCircleIcon, XMarkIcon, SchedulingCalendar, SchedulingList, ShiftTemplatesList, SchedulingConflicts, SwapRequests, ScheduleFormModal",
+        "來源標題：員工排班管理／本月排班數／班次範本／待處理衝突／待處理換班／目前上班中",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "2827dd81226f2cf74b682b00a76dd62ca3d13acbabdaec9a66cd118179628fa4"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/seating/QueueDashboardTab.vue",
+    "title": "候位現場看板",
+    "routes": [
+      "/dashboard/seating/queue-dashboard"
+    ],
+    "kind": "queue",
+    "purpose": "叫號、安排座位並查看可用桌台與自動分配",
+    "headings": [
+      "{{ t(\"queue.queueList\") }}",
+      "{{ queueItem.customerName || t(\"queue.customerNumber\", { number: queueItem.queueNumber, }) }}",
+      "{{ t(\"queue.noCustomers\") }}",
+      "{{ t(\"queue.tableStatus\") }}",
+      "{{ t(\"queue.quickActions\") }}",
+      "{{ t(\"queue.smartAssignment\") }}",
+      "{{ t(\"queue.addToQueue\") }}",
+      "{{ t(\"queue.assignSeat\") }}",
+      "{{ t(\"queue.customerInfo\") }}",
+      "{{ t(\"queue.recommendedTables\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 34,
+        "finding": "候位篩選 select 只有選項內容，沒有清楚的篩選名稱；高密度現場看板容易混淆清單範圍。",
+        "fix": "在佇列標題工具列加入「候位狀態」標籤並關聯 select，叫下一組保持最醒目的單一主操作。"
+      }
+    ],
+    "proposal": {
+      "title": "候位現場看板",
+      "subtitle": "叫號、安排座位並查看可用桌台與自動分配",
+      "primaryAction": "叫下一組",
+      "sections": [
+        {
+          "title": "候位佇列",
+          "content": [
+            "號碼",
+            "顧客",
+            "人數",
+            "等待時間"
+          ]
+        },
+        {
+          "title": "桌台狀態",
+          "content": [
+            "可用",
+            "使用中",
+            "全部"
+          ]
+        },
+        {
+          "title": "現場操作",
+          "content": [
+            "手動加入",
+            "安排座位",
+            "智慧分配"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "叫號工具列；候位清單與狀態篩選；桌台狀態卡；快速操作及智慧分配；新增候位與分配座位彈窗。",
+      "colors": [
+        "text-ios-text/70",
+        "border-ios-bg",
+        "bg-ios-bg",
+        "bg-ios-blue",
+        "bg-blue-600",
+        "border-gray-200",
+        "text-gray-900",
+        "border-gray-300",
+        "ring-blue-500",
+        "border-blue-500",
+        "bg-gray-100",
+        "bg-gray-200",
+        "ring-ios-blue",
+        "bg-gray-50",
+        "bg-red-50",
+        "text-gray-500",
+        "bg-green-600",
+        "bg-green-700"
+      ],
+      "facts": [
+        "來源包含 9 個原生輸入控制、19 組按鈕模板及 0 個表格。",
+        "模板組合元件：Settings, Bell, ArrowPathIcon, UsersIcon, ClockIcon, BuildingStorefrontIcon, StarIcon, PlusIcon, SparklesIcon, BellIcon, DocumentChartBarIcon, XMarkIcon",
+        "來源標題：候位佇列／{{ queueItem.customerName || t(\"queue.customerNumber\", { number: queueItem.queueNumber, }) }}／尚無候位顧客／桌位狀態／快速操作／智慧分配",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "3c848846026a8102ee2e267d181eb07762223e8e3af492bdb17e695a2668d77e"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/seating/ReservationTab.vue",
+    "title": "桌位預約",
+    "routes": [
+      "/dashboard/seating"
+    ],
+    "kind": "table",
+    "purpose": "依日期、狀態與電話查詢並建立桌位預約",
+    "headings": [],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 22,
+        "finding": "日期、狀態、電話篩選的可視 label 未與欄位建立 id／for，預約查詢的程式化名稱不完整。",
+        "fix": "為查詢欄位及新增預約表單建立唯一 id／for；目前篩選條件與查詢結果數保持可見。"
+      }
+    ],
+    "proposal": {
+      "title": "桌位預約",
+      "subtitle": "依日期、狀態與電話查詢並建立桌位預約",
+      "primaryAction": "新增預約",
+      "sections": [
+        {
+          "title": "預約查詢",
+          "content": [
+            "日期",
+            "狀態",
+            "電話"
+          ]
+        },
+        {
+          "title": "預約清單",
+          "content": [
+            "確認碼",
+            "顧客",
+            "時間",
+            "人數",
+            "狀態",
+            "特殊需求"
+          ]
+        },
+        {
+          "title": "預約處理",
+          "content": [
+            "建立",
+            "查看",
+            "編輯",
+            "取消"
+          ]
+        }
+      ],
+      "columns": [
+        "確認碼",
+        "客戶姓名",
+        "預訂時間",
+        "用餐人數",
+        "狀態",
+        "特殊要求",
+        "操作"
+      ]
+    },
+    "original": {
+      "layout": "新增預約工具列；日期／狀態／電話篩選；七欄預約表及分頁；建立與詳情彈窗。",
+      "colors": [
+        "bg-ios-blue",
+        "bg-blue-600",
+        "text-gray-700",
+        "bg-gray-50",
+        "text-gray-500",
+        "bg-gray-200",
+        "text-gray-400",
+        "text-gray-900",
+        "text-blue-600",
+        "text-blue-900",
+        "ring-ios-blue",
+        "text-green-600",
+        "text-green-900",
+        "text-teal-600",
+        "text-teal-900",
+        "text-red-600",
+        "text-red-900",
+        "border-gray-200"
+      ],
+      "facts": [
+        "來源包含 11 個原生輸入控制、16 組按鈕模板及 1 個表格。",
+        "模板組合元件：Plus, Search, RotateCcw, Calendar, Eye, CheckCircle, UserCheck, CheckCheck, XCircle, ChevronLeft, ChevronRight, TransitionRoot",
+        "來源表頭：確認碼／客戶姓名／預訂時間／用餐人數／狀態／特殊要求／操作",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "e33a999d092dbf75d84e522d56c9af2fcb8d9af1f4014f6a1fd0d7b20841888e"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/seating/SeatingManagementView.vue",
+    "title": "座位管理",
+    "routes": [
+      "/dashboard/seating"
+    ],
+    "kind": "dashboard",
+    "purpose": "彙整桌位與候位狀態並提供四個工作區導航",
+    "headings": [
+      "{{ t(\"seating.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 55,
+        "finding": "非作用中座位管理分頁以 40% 小字呈現，預約、候位與桌台設定等主要導航過淡。",
+        "fix": "提高分頁文字對比至 text-ios-text/70，為標籤加入 nowrap／shrink-0，保留既有可橫向捲動容器。"
+      }
+    ],
+    "proposal": {
+      "title": "座位管理",
+      "subtitle": "彙整桌位與候位狀態並提供四個工作區導航",
+      "primaryAction": "查看座位工作區",
+      "sections": [
+        {
+          "title": "座位摘要",
+          "content": [
+            "桌台",
+            "預約",
+            "候位"
+          ]
+        },
+        {
+          "title": "座位工作區",
+          "content": [
+            "預約",
+            "候位清單",
+            "候位看板",
+            "桌台設定"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "座位頁首；兩至七欄統計；可橫捲的預約、候位、看板與桌台設定導航；router-view。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "text-ios-text/50",
+        "border-ios-bg",
+        "border-ios-blue",
+        "text-ios-blue",
+        "text-ios-text/40",
+        "text-ios-text/70",
+        "bg-ios-red"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、0 組按鈕模板及 0 個表格。",
+        "來源標題：座位管理",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "2ecf56b85c6ac2c89bf39577495d57bf9cbc5377abf6d84e07954303adf890dc"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/seating/TableSetupTab.vue",
+    "title": "桌台與 QR 設定",
+    "routes": [
+      "/dashboard/seating/table-setup"
+    ],
+    "kind": "settings",
+    "purpose": "維護桌台、座位與 QR Code 的準備、啟用及列印",
+    "headings": [
+      "{{ t(\"tables.tableNumber\") }} {{ table.tableNumber }}",
+      "{{ t(\"tables.empty.title\") }}",
+      "{{ editingTable ? t(\"tables.editTable\") : t(\"tables.addTable\") }}",
+      "{{ t(\"tables.qrModal.title\", { number: selectedTable?.tableNumber ?? \"\", }) }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 21,
+        "finding": "QR 準備與啟用相關動作以白字放在 iOS Orange，正常文字對比不足，且容易與警告狀態混淆。",
+        "fix": "警告操作採淡橙底配 orange-deep 文字，僅保留新增桌台為主色；準備與啟用以明確文字區分。"
+      }
+    ],
+    "proposal": {
+      "title": "桌台與 QR 設定",
+      "subtitle": "維護桌台、座位與 QR Code 的準備、啟用及列印",
+      "primaryAction": "新增桌台",
+      "sections": [
+        {
+          "title": "桌台篩選",
+          "content": [
+            "搜尋",
+            "狀態",
+            "選取"
+          ]
+        },
+        {
+          "title": "桌台清單",
+          "content": [
+            "桌號",
+            "座位",
+            "狀態"
+          ]
+        },
+        {
+          "title": "QR 作業",
+          "content": [
+            "產生",
+            "準備",
+            "啟用",
+            "捨棄",
+            "列印"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "批次 QR 產生／準備／啟用／列印與新增；搜尋、狀態及選取；桌台卡；桌台表單與 QR 彈窗。",
+      "colors": [
+        "bg-ios-green",
+        "bg-green-600",
+        "bg-ios-blue",
+        "bg-blue-600",
+        "bg-ios-orange",
+        "bg-orange-600",
+        "bg-ios-text",
+        "bg-ios-text/85",
+        "bg-ios-text/10",
+        "text-ios-text",
+        "bg-ios-text/20",
+        "text-ios-text/30",
+        "border-ios-separator",
+        "ring-ios-blue/30",
+        "border-ios-blue",
+        "bg-ios-bg/50",
+        "text-ios-text/70",
+        "text-ios-blue"
+      ],
+      "facts": [
+        "來源包含 10 個原生輸入控制、22 組按鈕模板及 0 個表格。",
+        "模板組合元件：QrCode, XCircle, Plus, Search, Users, MapPin, FileText, QRCodeRenderer, Maximize2, ArrowLeftRight, Pencil, Trash2",
+        "來源標題：桌號 {{ table.tableNumber }}／暫無桌台／{{ editingTable ? t(\"tables.editTable\") : t(\"tables.addTable\") }}／{{ t(\"tables.qrModal.title\", { number: selectedTable?.tableNumber ?? \"\", }) }}",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "41381d2adab49b0537d4adfe6617d6861cc97adb4c3ba53acefd8df14a72a0e3"
+    }
+  },
+  {
+    "app": "admin-dashboard",
+    "file": "apps/admin-dashboard/src/views/seating/WaitingListTab.vue",
+    "title": "候位清單",
+    "routes": [
+      "/dashboard/seating/waiting-list"
+    ],
+    "kind": "table",
+    "purpose": "搜尋候位顧客、叫號、安排入座並管理等待狀態",
+    "headings": [
+      "{{ t(\"waitingList.queue\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 6,
+        "finding": "叫下一組的正常大小白字直接放在 iOS Orange，對比不足；這是現場高頻關鍵操作。",
+        "fix": "改為 orange-deep 高對比填色，或淡橙底配深色文字，維持 44px 觸控高度並保留叫號中狀態。"
+      }
+    ],
+    "proposal": {
+      "title": "候位清單",
+      "subtitle": "搜尋候位顧客、叫號、安排入座並管理等待狀態",
+      "primaryAction": "新增候位",
+      "sections": [
+        {
+          "title": "候位查詢",
+          "content": [
+            "狀態",
+            "電話",
+            "搜尋"
+          ]
+        },
+        {
+          "title": "候位清單",
+          "content": [
+            "候位號碼",
+            "顧客",
+            "人數",
+            "等待時間",
+            "狀態",
+            "加入時間"
+          ]
+        },
+        {
+          "title": "候位操作",
+          "content": [
+            "叫號",
+            "入座",
+            "過期",
+            "取消"
+          ]
+        }
+      ],
+      "columns": [
+        "號碼",
+        "客戶資訊",
+        "用餐人數",
+        "等待時間",
+        "狀態",
+        "加入時間",
+        "操作"
+      ]
+    },
+    "original": {
+      "layout": "叫下一組與新增候位；狀態／電話篩選；候位表格與手機摘要、分頁；新增與叫號確認彈窗。",
+      "colors": [
+        "bg-ios-orange",
+        "bg-orange-600",
+        "bg-ios-blue",
+        "bg-blue-600",
+        "text-gray-700",
+        "border-gray-200",
+        "text-gray-900",
+        "bg-primary-600",
+        "bg-gray-50",
+        "border-gray-300",
+        "bg-gray-200",
+        "text-gray-500",
+        "text-gray-400",
+        "text-gray-600",
+        "bg-green-600",
+        "bg-green-700",
+        "bg-red-600",
+        "bg-red-700"
+      ],
+      "facts": [
+        "來源包含 10 個原生輸入控制、21 組按鈕模板及 1 個表格。",
+        "模板組合元件：Bell, Plus, Search, RotateCcw, RefreshCw, LayoutGrid, List, Users, User, Phone, Clock, CheckCircle",
+        "來源標題：候位隊列",
+        "來源表頭：號碼／客戶資訊／用餐人數／等待時間／狀態／加入時間／操作",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "c4a77c79ed1f07b45c9179b89e166e4a6c9423f53ffce8cfffe6028182a42e52"
+    }
+  },
+  {
+    "app": "kitchen-display",
+    "file": "apps/kitchen-display/src/views/EnhancedKitchenDashboard.vue",
+    "title": "廚房出餐看板",
+    "routes": [
+      "/kitchen/:restaurantId"
+    ],
+    "kind": "kitchen",
+    "purpose": "在看板或格狀檢視處理待製作、製作中與待出餐訂單",
+    "headings": [],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 556,
+        "finding": "載入指示器在 scoped CSS 寫死品牌色與背景，跳過共用設計 token，日後廚房主題調整不會同步。",
+        "fix": "載入圓環改用 ios-blue／ios-bg 對應 class，並附具名載入狀態；既有看板及格狀操作保持不變。"
+      }
+    ],
+    "proposal": {
+      "title": "廚房出餐看板",
+      "subtitle": "在看板或格狀檢視處理待製作、製作中與待出餐訂單",
+      "primaryAction": "開始製作",
+      "sections": [
+        {
+          "title": "廚房狀態",
+          "content": [
+            "店名",
+            "時間",
+            "連線",
+            "訂單統計"
+          ]
+        },
+        {
+          "title": "出餐佇列",
+          "content": [
+            "待製作",
+            "製作中",
+            "待出餐"
+          ]
+        },
+        {
+          "title": "訂單詳情",
+          "content": [
+            "品項",
+            "備註",
+            "標記完成"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "KitchenHeader；離線與統計；可切換 KanbanBoard 或篩選格狀 OrderCard；訂單詳情與連線狀態。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-secondary",
+        "text-ios-text",
+        "#f2f2f7",
+        "#007aff"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、0 組按鈕模板及 0 個表格。",
+        "模板組合元件：KitchenHeader, OfflineStatus, OrderStats, KanbanBoard, OrderFilters, ClipboardList, OrderCard, OrderDetailsModal, ConnectionStatus",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "da6ac8f6d68b0c994d84cfed4dd2d344ccf6daf884f8ac03c1d8e0e9cc74bb0e"
+    }
+  },
+  {
+    "app": "kitchen-display",
+    "file": "apps/kitchen-display/src/views/HistoryView.vue",
+    "title": "廚房歷史訂單",
+    "routes": [
+      "/history"
+    ],
+    "kind": "orders",
+    "purpose": "依今天、昨天與本週查看訂單及出餐摘要",
+    "headings": [
+      "{{ t(\"history.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 190,
+        "finding": "讀取失敗只寫入 console，而 loading 沒有映射到模板；載入及失敗都可被顯示成「沒有紀錄」。",
+        "fix": "明確區分載入、讀取失敗、有效空資料三種畫面，失敗提供重試；成功後才顯示統計數字。"
+      }
+    ],
+    "proposal": {
+      "title": "廚房歷史訂單",
+      "subtitle": "依今天、昨天與本週查看訂單及出餐摘要",
+      "primaryAction": "切換日期",
+      "sections": [
+        {
+          "title": "日期範圍",
+          "content": [
+            "今天",
+            "昨天",
+            "本週"
+          ]
+        },
+        {
+          "title": "出餐摘要",
+          "content": [
+            "訂單總數",
+            "平均備餐時間",
+            "準時率"
+          ]
+        },
+        {
+          "title": "訂單紀錄",
+          "content": [
+            "訂單編號",
+            "桌位",
+            "品項數",
+            "備餐時間"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "返回、頁名與今天／昨天／本週切換；三格摘要；訂單列表或空狀態；讀取狀態未在模板分支呈現。",
+      "colors": [
+        "bg-ios-bg",
+        "ring-ios-blue",
+        "text-ios-text",
+        "bg-ios-blue",
+        "text-ios-secondary",
+        "text-ios-green",
+        "text-ios-blue",
+        "border-ios-bg",
+        "text-ios-tertiary"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、2 組按鈕模板及 0 個表格。",
+        "模板組合元件：ArrowLeft, Inbox",
+        "來源標題：歷史紀錄",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "4260d1ca2208dde3f9bd3bfeea634b7f18673ce643c81a4e9c7b233db5877fa8"
+    }
+  },
+  {
+    "app": "kitchen-display",
+    "file": "apps/kitchen-display/src/views/LoginView.vue",
+    "title": "廚房登入",
+    "routes": [
+      "/login",
+      "/s/:slug"
+    ],
+    "kind": "auth",
+    "purpose": "以店鋪員工帳密進入廚房顯示器",
+    "headings": [
+      "{{ t(\"login.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 89,
+        "finding": "密碼顯示按鈕只有圖示加右側 padding，沒有保證 44px 寬，廚房觸控情境容易點不準。",
+        "fix": "保留既有顯示／隱藏名稱，外部點擊區設至少 44×44px，密碼輸入同步保留足夠右內距。"
+      }
+    ],
+    "proposal": {
+      "title": "廚房登入",
+      "subtitle": "以店鋪員工帳密進入廚房顯示器",
+      "primaryAction": "登入廚房",
+      "sections": [
+        {
+          "title": "店鋪辨識",
+          "content": [
+            "店鋪名稱",
+            "切換店鋪"
+          ]
+        },
+        {
+          "title": "登入資料",
+          "content": [
+            "使用者名稱",
+            "密碼"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "廚師圖示與店鋪辨識；帳號及可顯示密碼；錯誤提示與全寬登入按鈕。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "text-ios-secondary",
+        "text-ios-blue",
+        "text-ios-tertiary",
+        "ring-ios-blue/30",
+        "ring-ios-blue",
+        "bg-ios-red/10",
+        "text-ios-red",
+        "bg-ios-blue"
+      ],
+      "facts": [
+        "來源包含 2 個原生輸入控制、3 組按鈕模板及 0 個表格。",
+        "模板組合元件：ChefHat, User, Lock, Eye, EyeOff, AlertTriangle",
+        "來源標題：廚房顯示系統",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "2194b2e3617032e71521d9505c3d36a3c38efe151030f9b1aeccd02d2087515e"
+    }
+  },
+  {
+    "app": "kitchen-display",
+    "file": "apps/kitchen-display/src/views/MyShiftsView.vue",
+    "title": "廚師班表與換班",
+    "routes": [
+      "/my-shifts"
+    ],
+    "kind": "schedule",
+    "purpose": "讓廚師在廚房端檢視班表並提出公開換班申請",
+    "headings": [
+      "{{ t(\"myShifts.title\") }}",
+      "{{ t(\"myShifts.formTitle\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 167,
+        "finding": "換班表單以遮罩 div 顯示，未在容器宣告 dialog／aria-modal；需要明確模態語意才能安全使用鍵盤操作。",
+        "fix": "採用既有對話框模式，補上標題關聯、初始焦點、焦點圈限、Esc 及關閉後回到申請按鈕。"
+      }
+    ],
+    "proposal": {
+      "title": "廚師班表與換班",
+      "subtitle": "讓廚師在廚房端檢視班表並提出公開換班申請",
+      "primaryAction": "申請換班",
+      "sections": [
+        {
+          "title": "即將到來班次",
+          "content": [
+            "日期",
+            "開始時間",
+            "結束時間"
+          ]
+        },
+        {
+          "title": "我的換班申請",
+          "content": [
+            "類型",
+            "急迫程度",
+            "狀態"
+          ]
+        },
+        {
+          "title": "換班原因",
+          "content": [
+            "原因",
+            "提交",
+            "取消"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "返回與頁名；即將到來班次、我的換班申請；手機底部換班表單，含類型、急迫度及原因。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-text",
+        "text-ios-secondary",
+        "bg-ios-blue",
+        "bg-ios-orange-soft",
+        "text-ios-orange-deep",
+        "bg-ios-blue-soft",
+        "text-ios-blue-deep",
+        "text-ios-red-deep",
+        "text-ios-red",
+        "text-ios-tertiary",
+        "ring-ios-blue"
+      ],
+      "facts": [
+        "來源包含 1 個原生輸入控制、8 組按鈕模板及 0 個表格。",
+        "模板組合元件：ArrowLeft",
+        "來源標題：我的班表／申請換班",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "47f68b5b97c837b126fc9ff5058e7fc8401e01af8f87d87992caa2c6a80b4cd4"
+    }
+  },
+  {
+    "app": "kitchen-display",
+    "file": "apps/kitchen-display/src/views/NotFoundView.vue",
+    "title": "廚房頁面不存在",
+    "routes": [
+      "/:pathMatch(.*)*"
+    ],
+    "kind": "error",
+    "purpose": "從無效路徑回到廚房登入入口",
+    "headings": [
+      "{{ t(\"errorPages.notFoundTitle\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 13,
+        "finding": "按鈕文案是返回廚房，但實際導向 /login；操作承諾與落點不一致。",
+        "fix": "依實際落點改寫為「返回登入」，或在已有有效工作階段時使用既有廚房路徑並同步文案。"
+      }
+    ],
+    "proposal": {
+      "title": "廚房頁面不存在",
+      "subtitle": "從無效路徑回到廚房登入入口",
+      "primaryAction": "返回登入",
+      "sections": [
+        {
+          "title": "頁面不存在",
+          "content": [
+            "說明",
+            "返回登入"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "滿高置中搜尋錯誤圖示、頁面不存在說明；單一按鈕導向登入。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-tertiary",
+        "text-ios-text",
+        "text-ios-secondary",
+        "bg-ios-blue"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、1 組按鈕模板及 0 個表格。",
+        "模板組合元件：SearchX",
+        "來源標題：找不到頁面",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "a23e6aea3f25e3be7d93b480d3355c9481c9cdfd3867c6773a5b9fa418e4da9e"
+    }
+  },
+  {
+    "app": "kitchen-display",
+    "file": "apps/kitchen-display/src/views/SettingsView.vue",
+    "title": "廚房偏好設定",
+    "routes": [
+      "/settings"
+    ],
+    "kind": "settings",
+    "purpose": "調整顯示字級、聲音、急迫門檻與自動更新",
+    "headings": [
+      "{{ t(\"settings.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 66,
+        "finding": "顯示姓名、預估時間、音效的開關只有 26px 高，且只有 aria-label，沒有 switch 角色或目前開關狀態。",
+        "fix": "保留 44×26px 視覺滑塊，擴成至少 44px 高的點擊列；加入 role=switch 與 aria-checked 或改用原生 checkbox。"
+      }
+    ],
+    "proposal": {
+      "title": "廚房偏好設定",
+      "subtitle": "調整顯示字級、聲音、急迫門檻與自動更新",
+      "primaryAction": "完成設定",
+      "sections": [
+        {
+          "title": "顯示",
+          "content": [
+            "字級",
+            "顧客姓名",
+            "預估時間"
+          ]
+        },
+        {
+          "title": "通知",
+          "content": [
+            "音效",
+            "音量",
+            "提示音"
+          ]
+        },
+        {
+          "title": "工作節奏",
+          "content": [
+            "急單門檻",
+            "自動更新",
+            "還原預設"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "返回與還原；顯示、通知、其他設定的白色群組；分段字級、三個開關、音量；急單／更新／音效底部選單。",
+      "colors": [
+        "bg-ios-bg",
+        "ring-ios-blue",
+        "text-ios-text",
+        "text-ios-red",
+        "text-ios-secondary",
+        "border-ios-bg",
+        "bg-ios-green",
+        "bg-ios-blue",
+        "text-ios-blue",
+        "bg-ios-red",
+        "bg-ios-blue/10"
+      ],
+      "facts": [
+        "來源包含 1 個原生輸入控制、11 組按鈕模板及 0 個表格。",
+        "模板組合元件：ArrowLeft, ChevronRight, Transition, Check",
+        "來源標題：設定",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "c7c9108393ede292a8dff20824ba1884e811f1d44b3a3fb71194d279637e0b2d"
+    }
+  },
+  {
+    "app": "kitchen-display",
+    "file": "apps/kitchen-display/src/views/UnauthorizedView.vue",
+    "title": "廚房存取受限",
+    "routes": [
+      "/unauthorized"
+    ],
+    "kind": "error",
+    "purpose": "告知目前帳號無法開啟廚房工作區並提供登入入口",
+    "headings": [
+      "{{ t(\"errorPages.unauthorizedTitle\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 2,
+        "finding": "權限錯誤頁沒有水平安全內距，窄螢幕與較長說明容易貼近邊緣。",
+        "fix": "加上安全區與至少 24px 側邊內距，說明設可讀行寬，讓重新登入控制保持清楚的單一出口。"
+      }
+    ],
+    "proposal": {
+      "title": "廚房存取受限",
+      "subtitle": "告知目前帳號無法開啟廚房工作區並提供登入入口",
+      "primaryAction": "重新登入",
+      "sections": [
+        {
+          "title": "存取受限",
+          "content": [
+            "權限說明",
+            "重新登入"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "滿高置中盾牌、權限說明與重新登入按鈕，沒有其他工作控制。",
+      "colors": [
+        "bg-ios-bg",
+        "text-ios-tertiary",
+        "text-ios-text",
+        "text-ios-secondary",
+        "bg-ios-blue"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、1 組按鈕模板及 0 個表格。",
+        "模板組合元件：ShieldX",
+        "來源標題：無權限存取",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "8df3a86896d0949902f5c9932be3c9e14ab7d0de3a328852ae03019c1e60ef8b"
+    }
+  },
+  {
+    "app": "management-portal",
+    "file": "apps/management-portal/src/views/DashboardView.vue",
+    "title": "管理平台總覽",
+    "routes": [
+      "/"
+    ],
+    "kind": "dashboard",
+    "purpose": "檢視租戶、健康狀態與待辦，快速進入需要處理的租戶",
+    "headings": [
+      "{{ t(\"dashboard.title\") }}",
+      "{{ t(\"dashboard.health.title\") }}",
+      "{{ t(\"dashboard.pending.title\") }}",
+      "{{ t(\"dashboard.recentTenants.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 304,
+        "finding": "最近租戶表格最後一欄為空白表頭，詳情連結缺少欄位名稱，讀屏表格導航不夠完整。",
+        "fix": "最後欄加上「操作」的可視或 sr-only 表頭，詳情連結的名稱包含租戶商家名稱。"
+      }
+    ],
+    "proposal": {
+      "title": "管理平台總覽",
+      "subtitle": "檢視租戶、健康狀態與待辦，快速進入需要處理的租戶",
+      "primaryAction": "查看租戶",
+      "sections": [
+        {
+          "title": "平台摘要",
+          "content": [
+            "租戶數",
+            "狀態"
+          ]
+        },
+        {
+          "title": "健康與待辦",
+          "content": [
+            "健康分布",
+            "待配置租戶",
+            "健康問題"
+          ]
+        },
+        {
+          "title": "最近租戶",
+          "content": [
+            "商家名稱",
+            "狀態",
+            "版本",
+            "建立時間"
+          ]
+        }
+      ],
+      "columns": [
+        "商家名稱",
+        "狀態",
+        "版本",
+        "建立時間",
+        "操作"
+      ]
+    },
+    "original": {
+      "layout": "四張統計卡；健康環形示意與狀態計數、待辦兩欄；最近租戶表格與詳情連結。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-500",
+        "text-primary-600",
+        "text-primary-700",
+        "border-green-500",
+        "border-red-500",
+        "border-gray-300",
+        "text-green-500",
+        "text-red-500",
+        "text-green-400",
+        "bg-red-50",
+        "text-gray-400"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、0 組按鈕模板及 1 個表格。",
+        "模板組合元件：RouterLink, CheckCircleIcon, ExclamationTriangleIcon, XCircleIcon, ClockIcon, BuildingStorefrontIcon, ArrowTrendingUpIcon",
+        "來源標題：總覽／健康狀態／待處理事項／最近租戶",
+        "來源表頭：商家名稱／狀態／版本／建立時間／空白操作欄",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "12fafae579ae53f9e383a866ea2d6c71d57e90a5fafbba3781dbc47894b918af"
+    }
+  },
+  {
+    "app": "management-portal",
+    "file": "apps/management-portal/src/views/DeploymentsView.vue",
+    "title": "部署管理",
+    "routes": [
+      "/deployments"
+    ],
+    "kind": "settings",
+    "purpose": "選擇租戶與目標版本進行批次部署並查看紀錄",
+    "headings": [
+      "{{ t(\"deployments.title\") }}",
+      "{{ t(\"deployments.batch.title\") }}",
+      "{{ t(\"deployments.recent.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 162,
+        "finding": "目標版本 input 與上方 label 沒有 id／for 關聯，批次部署的關鍵參數不具完整欄位名稱。",
+        "fix": "為目標版本建立關聯標籤，將選取租戶數與目標版本在部署按鈕前摘要呈現，保留現有批次操作。"
+      }
+    ],
+    "proposal": {
+      "title": "部署管理",
+      "subtitle": "選擇租戶與目標版本進行批次部署並查看紀錄",
+      "primaryAction": "批次部署",
+      "sections": [
+        {
+          "title": "部署設定",
+          "content": [
+            "目標版本",
+            "選取租戶"
+          ]
+        },
+        {
+          "title": "租戶選擇",
+          "content": [
+            "全選",
+            "商家名稱",
+            "目前版本"
+          ]
+        },
+        {
+          "title": "最近部署",
+          "content": [
+            "部署狀態",
+            "版本",
+            "開始時間"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "版本輸入與批次部署；可全選的租戶清單；下方最近部署紀錄。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-500",
+        "text-primary-600",
+        "ring-primary-500",
+        "border-gray-300",
+        "text-gray-600",
+        "bg-gray-50",
+        "text-gray-400",
+        "text-green-500",
+        "text-red-500",
+        "text-blue-500",
+        "text-primary-700"
+      ],
+      "facts": [
+        "來源包含 3 個原生輸入控制、1 組按鈕模板及 0 個表格。",
+        "模板組合元件：RocketLaunchIcon, RouterLink",
+        "來源標題：部署管理／批量部署／最近部署",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "6050a704dfd5aa9604535b42156f9af84a58048a7630a512bf494d26c79f59dc"
+    }
+  },
+  {
+    "app": "management-portal",
+    "file": "apps/management-portal/src/views/HealthView.vue",
+    "title": "租戶健康狀態",
+    "routes": [
+      "/health"
+    ],
+    "kind": "analytics",
+    "purpose": "識別離線或降級租戶並檢查 API、資料庫、快取與儲存",
+    "headings": [
+      "{{ t(\"health.title\") }}",
+      "{{ t(\"health.avgResponseTime\") }}",
+      "{{ t(\"health.attention.title\") }}",
+      "{{ t(\"health.all.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 56,
+        "finding": "健康頁標題與重新整理固定橫向並排，長翻譯及小螢幕容易擠壓標題、說明與操作。",
+        "fix": "以可換行工具列呈現健康標題與更新動作，把檢查時間放在操作附近，保持異常租戶區優先。"
+      }
+    ],
+    "proposal": {
+      "title": "租戶健康狀態",
+      "subtitle": "識別離線或降級租戶並檢查 API、資料庫、快取與儲存",
+      "primaryAction": "重新整理",
+      "sections": [
+        {
+          "title": "健康摘要",
+          "content": [
+            "整體狀態",
+            "正常",
+            "降級",
+            "離線"
+          ]
+        },
+        {
+          "title": "需關注租戶",
+          "content": [
+            "異常狀態",
+            "平均回應時間"
+          ]
+        },
+        {
+          "title": "健康檢查",
+          "content": [
+            "租戶",
+            "狀態",
+            "API",
+            "資料庫",
+            "快取",
+            "儲存",
+            "檢查時間"
+          ]
+        }
+      ],
+      "columns": [
+        "租戶",
+        "狀態",
+        "回應時間",
+        "API",
+        "資料庫",
+        "快取",
+        "儲存",
+        "檢查時間"
+      ]
+    },
+    "original": {
+      "layout": "頁首更新；四格狀態統計、平均回應時間；離線／降級租戶；八欄健康檢查表。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-500",
+        "bg-green-100",
+        "bg-red-100",
+        "bg-gray-100",
+        "text-green-600",
+        "text-red-600",
+        "text-gray-600",
+        "bg-red-50",
+        "text-red-500",
+        "text-primary-600",
+        "text-primary-700",
+        "text-gray-400"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、1 組按鈕模板及 1 個表格。",
+        "模板組合元件：ArrowPathIcon, CheckCircleIcon, ExclamationTriangleIcon, XCircleIcon, RouterLink",
+        "來源標題：健康監控／平均回應時間／需要注意／所有租戶",
+        "來源表頭：租戶／狀態／回應時間／API／資料庫／快取／儲存／檢查時間",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "c3b5051e769a5dd0b7fbcd88662fe88d57ffaf7cd3e3bafedc79e09e267c77c5"
+    }
+  },
+  {
+    "app": "management-portal",
+    "file": "apps/management-portal/src/views/LicensesView.vue",
+    "title": "授權管理",
+    "routes": [
+      "/licenses"
+    ],
+    "kind": "table",
+    "purpose": "查看租戶授權、有效期限與等級並產生授權",
+    "headings": [
+      "{{ t(\"licenses.title\") }}",
+      "{{ t(\"licenses.modal.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 261,
+        "finding": "授權產生視窗是固定定位 div，沒有 dialog 角色、aria-modal 或標題關聯，對讀屏缺少模態邊界。",
+        "fix": "使用具名對話框語意並管理開關焦點；租戶、等級及到期日的 label 同時連到欄位。"
+      }
+    ],
+    "proposal": {
+      "title": "授權管理",
+      "subtitle": "查看租戶授權、有效期限與等級並產生授權",
+      "primaryAction": "產生授權",
+      "sections": [
+        {
+          "title": "授權清單",
+          "content": [
+            "租戶",
+            "授權金鑰",
+            "等級",
+            "狀態",
+            "有效期限"
+          ]
+        },
+        {
+          "title": "新增授權",
+          "content": [
+            "選擇租戶",
+            "等級",
+            "到期日"
+          ]
+        }
+      ],
+      "columns": [
+        "租戶",
+        "授權金鑰",
+        "等級",
+        "狀態",
+        "有效期",
+        "建立時間",
+        "操作"
+      ]
+    },
+    "original": {
+      "layout": "頁首產生授權；統計卡；七欄授權列表；租戶、等級、到期日的產生授權彈窗。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-500",
+        "bg-blue-100",
+        "text-blue-600",
+        "text-green-600",
+        "text-teal-600",
+        "text-gray-400",
+        "text-primary-600",
+        "text-primary-700",
+        "bg-gray-500",
+        "bg-gray-50"
+      ],
+      "facts": [
+        "來源包含 3 個原生輸入控制、4 組按鈕模板及 1 個表格。",
+        "模板組合元件：PlusIcon, KeyIcon, RouterLink, ArrowUpIcon, Teleport",
+        "來源標題：授權管理／生成授權",
+        "來源表頭：租戶／授權金鑰／等級／狀態／有效期／建立時間／操作",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "ef44ad24beb66081ad7bc1c6990dbe7002ffa1161977561a498c798fb3587752"
+    }
+  },
+  {
+    "app": "management-portal",
+    "file": "apps/management-portal/src/views/LoginView.vue",
+    "title": "平台管理登入",
+    "routes": [
+      "/login"
+    ],
+    "kind": "auth",
+    "purpose": "使用平台管理員 token 交換管理工作階段",
+    "headings": [
+      "管理平台登入"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 63,
+        "finding": "登入錯誤已有 alert，但 token 欄位未以 aria-describedby 關聯錯誤。",
+        "fix": "為錯誤訊息加入 id，使用 aria-describedby 將 token 欄位與錯誤連結，並保留既有 alert。"
+      }
+    ],
+    "proposal": {
+      "title": "平台管理登入",
+      "subtitle": "使用平台管理員 token 交換管理工作階段",
+      "primaryAction": "登入管理平台",
+      "sections": [
+        {
+          "title": "管理員驗證",
+          "content": [
+            "API admin token"
+          ]
+        },
+        {
+          "title": "登入結果",
+          "content": [
+            "錯誤訊息",
+            "登入中"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "滿高灰底置中白卡；品牌、管理平台登入說明；管理員 token 多行欄位、錯誤與登入按鈕。",
+      "colors": [
+        "bg-gray-100",
+        "text-primary-600",
+        "text-gray-900",
+        "text-gray-600",
+        "bg-red-50",
+        "text-red-700"
+      ],
+      "facts": [
+        "來源包含 1 個原生輸入控制、1 組按鈕模板及 0 個表格。",
+        "模板組合元件：ArrowRightOnRectangleIcon",
+        "來源標題：管理平台登入",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "5ef6b30d23c7b933ccf8ed98616b3ca676da2600ab2b85661d3a9ccfc013ea18"
+    }
+  },
+  {
+    "app": "management-portal",
+    "file": "apps/management-portal/src/views/MarketsView.vue",
+    "title": "市場與商圈管理",
+    "routes": [
+      "/markets"
+    ],
+    "kind": "table",
+    "purpose": "維護市場探索資料、審核加入申請與匯入店鋪",
+    "headings": [
+      "Markets",
+      "Join requests",
+      "{{ request.restaurant.name }}",
+      "{{ selectedMarketId ? \"Edit market\" : \"Create market\" }}",
+      "Vendor membership",
+      "Vendor CSV import",
+      "Search readiness after import"
+    ],
+    "issues": [
+      {
+        "severity": "high",
+        "line": 638,
+        "finding": "市場名稱、slug、城市、行政區與座標等必填欄位主要靠英文 placeholder 命名；輸入後欄位意義消失。",
+        "fix": "將市場編輯區分成基本資料、地點、媒體與營業時間，每一欄加繁中可視標籤與關聯 id，保留既有驗證。"
+      }
+    ],
+    "proposal": {
+      "title": "市場與商圈管理",
+      "subtitle": "維護市場探索資料、審核加入申請與匯入店鋪",
+      "primaryAction": "儲存市場",
+      "sections": [
+        {
+          "title": "市場目錄",
+          "content": [
+            "名稱",
+            "區域",
+            "類型"
+          ]
+        },
+        {
+          "title": "市場編輯",
+          "content": [
+            "名稱",
+            "slug",
+            "城市",
+            "行政區",
+            "座標",
+            "營業時間"
+          ]
+        },
+        {
+          "title": "店鋪作業",
+          "content": [
+            "加入申請",
+            "既有店鋪加入",
+            "CSV 匯入預覽"
+          ]
+        }
+      ],
+      "columns": [
+        "名稱",
+        "區域",
+        "類型",
+        "操作"
+      ]
+    },
+    "original": {
+      "layout": "桌面主欄與固定 420px 側欄；市場篩選與列表、加入申請；長篇市場編輯、店鋪加入及 CSV 匯入。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-500",
+        "text-gray-400",
+        "text-primary-600",
+        "text-primary-700",
+        "text-red-600",
+        "text-red-700",
+        "bg-gray-50",
+        "text-gray-600",
+        "text-gray-700",
+        "border-gray-300",
+        "ring-primary-500",
+        "bg-primary-50",
+        "bg-red-50",
+        "border-gray-200"
+      ],
+      "facts": [
+        "來源包含 24 個原生輸入控制、15 組按鈕模板及 1 個表格。",
+        "模板組合元件：PlusIcon, ArrowPathIcon, MapIcon, TrashIcon, MagnifyingGlassIcon",
+        "來源標題：Markets／Join requests／{{ request.restaurant.name }}／{{ selectedMarketId ? \"Edit market\" : \"Create market\" }}／Vendor membership／Vendor CSV import",
+        "來源表頭：Name／Area／Type／Actions",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "6489dd2fc9730a3fd2c89271a9b847d77b2d9e7f993be73f860fa66a63041474"
+    }
+  },
+  {
+    "app": "management-portal",
+    "file": "apps/management-portal/src/views/NotFoundView.vue",
+    "title": "管理頁面不存在",
+    "routes": [
+      "/:pathMatch(.*)*"
+    ],
+    "kind": "error",
+    "purpose": "在管理平台路徑失效時返回總覽",
+    "headings": [
+      "{{ t(\"notFound.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "low",
+        "line": 17,
+        "finding": "復原操作只提供回到總覽，使用者無法直接返回剛才的工作位置。",
+        "fix": "保留回到總覽，並在有有效歷史位置時提供返回上一頁的次要操作。"
+      }
+    ],
+    "proposal": {
+      "title": "管理頁面不存在",
+      "subtitle": "在管理平台路徑失效時返回總覽",
+      "primaryAction": "返回總覽",
+      "sections": [
+        {
+          "title": "找不到頁面",
+          "content": [
+            "錯誤代碼 404",
+            "說明"
+          ]
+        },
+        {
+          "title": "恢復導航",
+          "content": [
+            "返回總覽"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "60vh 置中 404、找不到頁面說明及返回總覽連結。",
+      "colors": [
+        "text-primary-600",
+        "text-gray-900",
+        "text-gray-500"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、0 組按鈕模板及 0 個表格。",
+        "模板組合元件：RouterLink, HomeIcon",
+        "來源標題：頁面不存在",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "a3af487a9c0c16f46726cfc288c96f77152b77e91d500efabe868a5a4addbff4"
+    }
+  },
+  {
+    "app": "management-portal",
+    "file": "apps/management-portal/src/views/PoliciesView.vue",
+    "title": "市場政策",
+    "routes": [
+      "/policies"
+    ],
+    "kind": "settings",
+    "purpose": "依國家與市場範圍調整政策覆寫值",
+    "headings": [
+      "{{ t(\"policies.title\") }}",
+      "{{ t(labelKey(definition.key)) }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 259,
+        "finding": "政策清單選項的 label 僅有文字行高與 checkbox，沒有 44px 最小點擊高度；密集選項較難觸控。",
+        "fix": "保留既有包覆式 label 及國家／市場範圍選擇，讓每個政策選項至少 44px 高並保留清楚選取狀態。"
+      }
+    ],
+    "proposal": {
+      "title": "市場政策",
+      "subtitle": "依國家與市場範圍調整政策覆寫值",
+      "primaryAction": "儲存政策",
+      "sections": [
+        {
+          "title": "政策範圍",
+          "content": [
+            "國家",
+            "市場"
+          ]
+        },
+        {
+          "title": "政策設定",
+          "content": [
+            "選項",
+            "數值"
+          ]
+        },
+        {
+          "title": "儲存與還原",
+          "content": [
+            "儲存",
+            "清除覆寫"
+          ]
+        }
+      ],
+      "columns": []
+    },
+    "original": {
+      "layout": "國家按鈕與市場下拉；逐條政策白卡，包含繼承狀態、清單選項或百分比輸入、儲存及清除。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-500",
+        "text-gray-600",
+        "text-gray-700",
+        "bg-gray-100"
+      ],
+      "facts": [
+        "來源包含 3 個原生輸入控制、3 組按鈕模板及 0 個表格。",
+        "來源標題：地區政策／{{ t(labelKey(definition.key)) }}",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "14c52e8429f686a5f3be1c4b94eae32161efa4941b5e20b99fdb50a976b71886"
+    }
+  },
+  {
+    "app": "management-portal",
+    "file": "apps/management-portal/src/views/TenantDetailView.vue",
+    "title": "租戶詳情",
+    "routes": [
+      "/tenants/:id"
+    ],
+    "kind": "detail",
+    "purpose": "檢查租戶部署、資源、健康與授權並執行配置或重新部署",
+    "headings": [
+      "{{ tenant.businessName }}",
+      "{{ t(\"tenantDetail.basicInfo.title\") }}",
+      "{{ t(\"tenantDetail.deployInfo.title\") }}",
+      "{{ t(\"tenantDetail.resources.title\") }}",
+      "{{ t(\"tenantDetail.deployments.title\") }}",
+      "{{ t(\"tenantDetail.health.title\") }}",
+      "{{ t(\"tenantDetail.license.title\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 276,
+        "finding": "五個租戶分頁固定水平排列，未處理溢出；手機與較長語言容易擠壓資源、部署、健康及授權入口。",
+        "fix": "改為可橫向捲動且不壓縮的分頁列，使用 tablist／aria-selected 或具名導航，將當前分頁保持可見。"
+      }
+    ],
+    "proposal": {
+      "title": "租戶詳情",
+      "subtitle": "檢查租戶部署、資源、健康與授權並執行配置或重新部署",
+      "primaryAction": "重新部署",
+      "sections": [
+        {
+          "title": "租戶資訊",
+          "content": [
+            "商家名稱",
+            "聯絡方式",
+            "子網域",
+            "版本"
+          ]
+        },
+        {
+          "title": "營運分頁",
+          "content": [
+            "概覽",
+            "資源",
+            "部署",
+            "健康",
+            "授權"
+          ]
+        },
+        {
+          "title": "資源狀態",
+          "content": [
+            "類型",
+            "名稱",
+            "識別碼",
+            "狀態",
+            "建立時間"
+          ]
+        }
+      ],
+      "columns": [
+        "資源類型",
+        "資源名稱",
+        "資源 ID",
+        "狀態",
+        "建立時間"
+      ]
+    },
+    "original": {
+      "layout": "返回租戶；商家概要與配置／重部署；概覽、資源、部署、健康、授權五分頁；雙欄資料及紀錄卡。",
+      "colors": [
+        "text-gray-500",
+        "text-gray-700",
+        "bg-primary-100",
+        "text-primary-700",
+        "text-gray-900",
+        "border-gray-200",
+        "border-primary-500",
+        "text-primary-600",
+        "border-gray-300",
+        "text-gray-400",
+        "text-green-500",
+        "text-red-500",
+        "text-blue-500"
+      ],
+      "facts": [
+        "來源包含 0 個原生輸入控制、4 組按鈕模板及 1 個表格。",
+        "模板組合元件：ArrowLeftIcon, CloudIcon, ArrowPathIcon, PlayIcon, CheckCircleIcon, ExclamationTriangleIcon, HeartIcon, KeyIcon",
+        "來源標題：{{ tenant.businessName }}／基本資訊／部署資訊／Cloudflare 資源／部署歷史／健康狀態",
+        "來源表頭：資源類型／資源名稱／資源 ID／狀態／建立時間",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "c91676b961636a0c6ea1b768125fe0b0194ce69c19e90a0bed873d689e196021"
+    }
+  },
+  {
+    "app": "management-portal",
+    "file": "apps/management-portal/src/views/TenantsView.vue",
+    "title": "租戶目錄",
+    "routes": [
+      "/tenants"
+    ],
+    "kind": "table",
+    "purpose": "搜尋商家並依狀態篩選與進入租戶詳情",
+    "headings": [
+      "{{ t(\"tenants.title\") }}",
+      "{{ searchQuery || statusFilter !== \"all\" ? t(\"tenants.empty.noResults\") : t(\"tenants.empty.none\") }}"
+    ],
+    "issues": [
+      {
+        "severity": "medium",
+        "line": 120,
+        "finding": "租戶搜尋與狀態選單沒有明確關聯標籤，搜尋欄以 placeholder 作主要名稱。",
+        "fix": "加入「搜尋租戶」與「租戶狀態」標籤，手機讓控制堆疊，保留現有空結果提示與新增租戶。"
+      }
+    ],
+    "proposal": {
+      "title": "租戶目錄",
+      "subtitle": "搜尋商家並依狀態篩選與進入租戶詳情",
+      "primaryAction": "建立租戶",
+      "sections": [
+        {
+          "title": "租戶篩選",
+          "content": [
+            "搜尋",
+            "狀態"
+          ]
+        },
+        {
+          "title": "租戶清單",
+          "content": [
+            "商家名稱",
+            "狀態",
+            "聯絡信箱",
+            "子網域",
+            "部署版本",
+            "建立時間"
+          ]
+        }
+      ],
+      "columns": [
+        "商家名稱",
+        "狀態",
+        "聯絡 Email",
+        "子域名",
+        "部署版本",
+        "建立時間",
+        "操作"
+      ]
+    },
+    "original": {
+      "layout": "頁首新增租戶；搜尋與固定寬狀態選單；七欄租戶表，部分長值截斷及超寬螢幕才顯示的欄位；建立租戶彈窗。",
+      "colors": [
+        "text-gray-900",
+        "text-gray-500",
+        "text-gray-400",
+        "bg-primary-100",
+        "text-primary-700",
+        "bg-gray-100",
+        "text-primary-600"
+      ],
+      "facts": [
+        "來源包含 2 個原生輸入控制、1 組按鈕模板及 1 個表格。",
+        "模板組合元件：PlusIcon, MagnifyingGlassIcon, FunnelIcon, BuildingStorefrontIcon, RouterLink, CreateTenantModal",
+        "來源標題：租戶管理／{{ searchQuery || statusFilter !== \"all\" ? t(\"tenants.empty.noResults\") : t(\"tenants.empty.none\") }}",
+        "來源表頭：商家名稱／狀態／聯絡 Email／子域名／部署版本／建立時間／操作",
+        "檢視來源為本機 .vue 模板與 scoped CSS；示意內容是待審設計，非執行中頁面截圖。"
+      ],
+      "sourceSha256": "bb77eba5e26e42f391c6f76306bdee22c6b8ee1e057e8de4539f99cf79a674d4"
+    }
+  }
+]

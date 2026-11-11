@@ -1,0 +1,3426 @@
+{
+  "createdAt": "2026-11-11T08:46:16.220Z",
+  "method": "實際原始 Vue 元件的隔離本機截圖。認證、餐廳為範例資料；未知 API 回傳預覽不可用錯誤，不連線正式服務。",
+  "routes": [
+    {
+      "app": "customer-app",
+      "route": "/",
+      "name": "Home",
+      "file": "apps/customer-app/src/views/HomeView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/",
+      "visitedPath": "/",
+      "title": "MakanMasak - 智慧點餐",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n\n掃描 QR Code 開始點餐\n\n🇹🇼\nTraditional Chinese\n歡迎來到 MakanMasak\n\n掃描 QR Code 開始點餐\n\n掃描 QR Code\n手動輸入\n探索美食\n夜市與商圈\n服務特色\nQR Code 點餐\n\n掃描桌上 QR Code 即可開始點餐\n\n即時追蹤\n\n即時查看訂單製作進度\n\n多種付款\n\n支援現金、信用卡等多種付款方式",
+      "screenshot": "baseline/customer-app--Home.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/login",
+      "name": "Login",
+      "file": "apps/customer-app/src/views/LoginView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/login",
+      "visitedPath": "/login",
+      "title": "會員登入",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n\n會員登入\n\n簡訊驗證碼\n密碼\n手機號碼\n取得驗證碼\n\n還沒有帳號？ 立即註冊\n\n以訪客身分繼續瀏覽\n\n© 2026 MakanMasak. 版權所有。",
+      "screenshot": "baseline/customer-app--Login.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/register",
+      "name": "Register",
+      "file": "apps/customer-app/src/views/RegisterView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/register",
+      "visitedPath": "/register",
+      "title": "會員註冊",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n\n會員註冊\n\n手機號碼或 Email\n姓名\n密碼\n\n至少需要 10 個字元\n\n註冊\n\n已經有帳號？ 立即登入\n\n以訪客身分繼續瀏覽\n\n© 2026 MakanMasak. 版權所有。",
+      "screenshot": "baseline/customer-app--Register.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/forgot-password",
+      "name": "ForgotPassword",
+      "file": "apps/customer-app/src/views/ForgotPasswordView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/forgot-password",
+      "visitedPath": "/forgot-password",
+      "title": "忘記密碼",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "M\n忘記密碼\n\n輸入註冊時使用的手機號碼或 Email，我們會寄出重設連結。\n\n手機號碼或 Email\n寄送重設連結\n返回登入",
+      "screenshot": "baseline/customer-app--ForgotPassword.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/reset-password",
+      "name": "ResetPassword",
+      "file": "apps/customer-app/src/views/ResetPasswordView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/reset-password",
+      "visitedPath": "/reset-password",
+      "title": "重設密碼",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "M\n重設密碼\n\n連結不完整或已失效，請重新申請。\n\n返回登入",
+      "screenshot": "baseline/customer-app--ResetPassword.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/verify-email",
+      "name": "VerifyEmail",
+      "file": "apps/customer-app/src/views/VerifyEmailView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/verify-email",
+      "visitedPath": "/verify-email",
+      "title": "Email 驗證",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "M\n驗證 Email\n\n連結不完整或已失效，請重新申請。\n\n前往登入",
+      "screenshot": "baseline/customer-app--VerifyEmail.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/orders",
+      "name": "Orders",
+      "file": "apps/customer-app/src/views/OrderHistoryView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。",
+      "actualRoute": "/orders",
+      "visitedPath": "/orders",
+      "title": "我的訂單",
+      "unavailableApi": [
+        "/customers/me/orders"
+      ],
+      "browserErrors": [],
+      "visibleText": "我的訂單\n個人中心\n登出\n訂單狀態\n全部狀態\n待確認\n已確認\n準備中\n已完成\n已送達\n已付款\n已取消\n開始日期\n結束日期\n重置篩選\n暫無訂單\n\n您還沒有任何訂單記錄\n\n開始點餐",
+      "screenshot": "baseline/customer-app--Orders.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/orders/:id",
+      "name": "OrderDetail",
+      "file": "apps/customer-app/src/views/OrderTrackingView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。",
+      "actualRoute": "/orders/1",
+      "visitedPath": "/orders/1",
+      "title": "訂單詳情",
+      "unavailableApi": [
+        "/orders/1"
+      ],
+      "browserErrors": [],
+      "visibleText": "訂單追蹤\n\n訂單編號:\n\n載入失敗\n\nApiException: 服務維護中\n\n重新載入",
+      "screenshot": "baseline/customer-app--OrderDetail.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/profile",
+      "name": "Profile",
+      "file": "apps/customer-app/src/views/ProfileView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。",
+      "actualRoute": "/profile",
+      "visitedPath": "/profile",
+      "title": "個人中心",
+      "unavailableApi": [
+        "/customer/notification-preferences",
+        "/customer/consents",
+        "/customer/push-subscriptions",
+        "/customer/favorites"
+      ],
+      "browserErrors": [],
+      "visibleText": "個人中心\n登出\n範\n範例顧客\n\n@0900000000\n\n帳號\n0900000000\n姓名\n範例顧客\n電子郵件\nreview@example.test\n手機號碼\n0900000000\n通知與同意設定\n候位通知\n儲存設定\n行銷推播設定\n\n決定哪些店家可以推播優惠給你\n\n接收行銷推播\n包含優惠、新品與活動通知，隨時可以關閉\n只收追蹤中的店家\n關閉後，追蹤商圈時也會收到該商圈店家的推播\n\n免擾時段\n\n這段時間內不會收到行銷推播\n\n開始\n結束\n儲存時段\n清除時段\n\n設定載入失敗，請稍後再試\n\n追蹤中\n\n追蹤的商圈與店家才會收到行銷推播\n\n追蹤清單載入失敗\n\n收藏的菜色\n\n追蹤清單載入失敗\n\n快速操作\n\n我的訂單\n\n查看訂單歷史記錄\n\n瀏覽菜單\n\n查看餐廳菜單\n\n帳號設定\n登出帳號",
+      "screenshot": "baseline/customer-app--Profile.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/menu",
+      "name": "Menu",
+      "file": "apps/customer-app/src/views/HomeView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/menu",
+      "visitedPath": "/menu",
+      "title": "瀏覽菜單",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n\n掃描 QR Code 開始點餐\n\n🇹🇼\nTraditional Chinese\n歡迎來到 MakanMasak\n\n掃描 QR Code 開始點餐\n\n掃描 QR Code\n手動輸入\n探索美食\n夜市與商圈\n服務特色\nQR Code 點餐\n\n掃描桌上 QR Code 即可開始點餐\n\n即時追蹤\n\n即時查看訂單製作進度\n\n多種付款\n\n支援現金、信用卡等多種付款方式",
+      "screenshot": "baseline/customer-app--Menu.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/scan",
+      "name": "QRScan",
+      "file": "apps/customer-app/src/views/QRScanView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/scan",
+      "visitedPath": "/scan",
+      "title": "掃描QR碼",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "掃描QR碼\n\n正在啟動相機...\n\n請將QR碼對準掃描框內\n\n無法掃描？點此手動輸入\n\n掃描失敗\n\n掃描功能啟動失敗",
+      "screenshot": "baseline/customer-app--QRScan.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/order",
+      "name": "SignedOrderEntry",
+      "file": "apps/customer-app/src/views/SignedOrderEntryView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/order",
+      "visitedPath": "/order",
+      "title": "瀏覽菜單",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "QR碼資料驗證失敗\n\n處理QR碼時發生錯誤\n\n重試",
+      "screenshot": "baseline/customer-app--SignedOrderEntry.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/group/order/:groupOrderId",
+      "name": "GroupOrder",
+      "file": "apps/customer-app/src/views/GroupOrderView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。",
+      "actualRoute": "/group/order/demo-group",
+      "visitedPath": "/group/order/demo-group",
+      "title": "揪團購物車",
+      "unavailableApi": [
+        "/orders/group/demo-group"
+      ],
+      "browserErrors": [],
+      "visibleText": "揪團點餐\n\n揪團購物車\n\n無法載入揪團訂單。\n\n載入揪團訂單中…\n救回主揪權限\n救援",
+      "screenshot": "baseline/customer-app--GroupOrder.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/group/:shareCode",
+      "name": "GroupOrderJoin",
+      "file": "apps/customer-app/src/views/GroupOrderJoinView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。",
+      "actualRoute": "/group/DEMO12",
+      "visitedPath": "/group/DEMO12",
+      "title": "MakanMasak",
+      "unavailableApi": [
+        "/orders/group/join/DEMO12"
+      ],
+      "browserErrors": [],
+      "visibleText": "無法載入揪團訂單\n\n無法載入這筆揪團訂單。\n\n重試",
+      "screenshot": "baseline/customer-app--GroupOrderJoin.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/restaurant/:restaurantId/table/:tableId",
+      "name": "RestaurantMenu",
+      "file": "apps/customer-app/src/views/MenuView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。",
+      "actualRoute": "/restaurant/demo-restaurant/table/1",
+      "visitedPath": "/restaurant/demo-restaurant/table/1",
+      "title": "瀏覽菜單",
+      "unavailableApi": [
+        "/realtime/auth/menu-token"
+      ],
+      "browserErrors": [],
+      "visibleText": "示範餐廳\n\n桌號 A1\n\n🇹🇼\n2\n經典主餐\n\n揪團一起點\n\n把連結傳給大家各自選餐，最後合成一張訂單送出。\n\n開始揪團\n招牌推薦\n⭐ 招牌推薦\n招牌海南雞飯\n收藏\n\n香嫩雞肉、雞油飯與特製醬汁\n\nNT$150\n加入\n經典主餐\n招牌海南雞飯\n收藏\n\n香嫩雞肉、雞油飯與特製醬汁\n\nNT$150\n加入\n叻沙麵\n收藏\n\n濃郁椰奶湯底，搭配鮮蝦與豆腐\n\nNT$180\n加入\n南洋咖哩雞飯\n收藏\n\n每日現煮咖哩與時蔬\n\nNT$160\n加入\n2\n查看購物車\nNT$300",
+      "screenshot": "baseline/customer-app--RestaurantMenu.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/restaurant/:restaurantId/shop/order-type",
+      "name": "OrderTypeLanding",
+      "file": "apps/customer-app/src/views/OrderTypeLandingView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/restaurant/demo-restaurant/shop/order-type",
+      "visitedPath": "/restaurant/demo-restaurant/shop/order-type",
+      "title": "選擇取餐方式",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "🍽️\n示範餐廳\n\n本機設計檢視用範例餐廳\n\n請選擇用餐方式\n\n🍽️\n內用 Dine-in\n在店內用餐\n🛍️\n外帶 Takeaway\n到店自取\n繼續",
+      "screenshot": "baseline/customer-app--OrderTypeLanding.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/restaurant/:restaurantId/shop/menu",
+      "name": "ShopMenu",
+      "file": "apps/customer-app/src/views/ShopMenuView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。",
+      "actualRoute": "/restaurant/demo-restaurant/shop/menu",
+      "visitedPath": "/restaurant/demo-restaurant/shop/menu",
+      "title": "示範餐廳菜單｜線上點餐｜MakanMasak",
+      "unavailableApi": [
+        "/restaurants/demo-restaurant/service-items",
+        "/discovery/restaurants/demo-restaurant/markets",
+        "/realtime/auth/menu-token"
+      ],
+      "browserErrors": [],
+      "visibleText": "示範餐廳\n🛍️ 外帶\n\n店家點餐\n\n🇹🇼\n經典主餐\n尚未提供公開服務\n\n這間店目前沒有公開的預約、外送或現場服務，仍可查看可點選的菜單商品。\n\n🌟 推薦菜品\n⭐ 招牌推薦\n招牌海南雞飯\n收藏\n\n香嫩雞肉、雞油飯與特製醬汁\n\nNT$150\n加入\n餐點\n\n可直接加入購物車的現點餐點\n\n經典主餐\n招牌海南雞飯\n收藏\n\n香嫩雞肉、雞油飯與特製醬汁\n\nNT$150\n加入\n叻沙麵\n收藏\n\n濃郁椰奶湯底，搭配鮮蝦與豆腐\n\nNT$180\n加入\n南洋咖哩雞飯\n收藏\n\n每日現煮咖哩與時蔬\n\nNT$160\n加入",
+      "screenshot": "baseline/customer-app--ShopMenu.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/restaurant/:restaurantId/services/:serviceItemId/book",
+      "name": "ServiceBooking",
+      "file": "apps/customer-app/src/views/ServiceBookingView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。",
+      "actualRoute": "/restaurant/demo-restaurant/services/1/book",
+      "visitedPath": "/restaurant/demo-restaurant/services/1/book",
+      "title": "服務預約",
+      "unavailableApi": [
+        "/restaurants/demo-restaurant/service-items"
+      ],
+      "browserErrors": [],
+      "visibleText": "服務預約\n\n載入中\n\n載入服務失敗。",
+      "screenshot": "baseline/customer-app--ServiceBooking.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/restaurant/:restaurantId/reserve",
+      "name": "Reservation",
+      "file": "apps/customer-app/src/views/ReservationView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。",
+      "actualRoute": "/restaurant/demo-restaurant/reserve",
+      "visitedPath": "/restaurant/demo-restaurant/reserve",
+      "title": "線上訂位",
+      "unavailableApi": [
+        "/reservations/availability"
+      ],
+      "browserErrors": [],
+      "visibleText": "線上訂位\n\n示範餐廳\n\n示範餐廳\n\n台北市示範路 1 號\n\n預約日期\n人數\n查時段\n\n目前沒有可顯示的時段，請選擇其他日期。\n\n姓名\n電話\nEmail\n備註\n建立預約\n查詢/取消預約\n查詢\n\n查詢可預約時段失敗。",
+      "screenshot": "baseline/customer-app--Reservation.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/restaurant/:restaurantId/table/:tableId/cart",
+      "name": "Cart",
+      "file": "apps/customer-app/src/views/CartView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/restaurant/demo-restaurant/table/1/cart",
+      "visitedPath": "/restaurant/demo-restaurant/table/1/cart",
+      "title": "購物車",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "購物車\n\n示範餐廳 · 桌號 A1\n\n招牌海南雞飯\nNT$300\n(NT$150 × 2)\n2\n收起備註\n訂單確認\n小計\nNT$300\n總計\nNT$300\n優惠券\n查看可用優惠券\n或手動輸入優惠券代碼\n使用\n備註 (可選)\n顧客資訊\n顧客姓名 (可選)\n聯絡電話 (可選)\n送出訂單 · NT$300\n\n送出訂單即表示您同意 服務條款 與 隱私權政策",
+      "screenshot": "baseline/customer-app--Cart.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/restaurant/:restaurantId/shop/order/:orderId",
+      "name": "ShopOrderTracking",
+      "file": "apps/customer-app/src/views/OrderTrackingView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。",
+      "actualRoute": "/restaurant/demo-restaurant/shop/order/101",
+      "visitedPath": "/restaurant/demo-restaurant/shop/order/101",
+      "title": "訂單追蹤",
+      "unavailableApi": [
+        "/orders/101"
+      ],
+      "browserErrors": [],
+      "visibleText": "訂單追蹤\n\n訂單編號:\n\n載入失敗\n\nApiException: 服務維護中\n\n重新載入",
+      "screenshot": "baseline/customer-app--ShopOrderTracking.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/r/:restaurantId/wait-list",
+      "name": "JoinWaitingList",
+      "file": "apps/customer-app/src/views/waiting-list/JoinWaitingListView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。",
+      "actualRoute": "/r/demo-restaurant/wait-list",
+      "visitedPath": "/r/demo-restaurant/wait-list",
+      "title": "加入候位",
+      "unavailableApi": [
+        "/waiting-list/queue-status/demo-restaurant"
+      ],
+      "browserErrors": [],
+      "visibleText": "發生錯誤\n\n服務維護中\n\n重新載入回到首頁\n顯示錯誤詳情\n\n問題持續發生？\n\n回報問題",
+      "screenshot": "baseline/customer-app--JoinWaitingList.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/r/:restaurantId/wait-list/history",
+      "name": "WaitingListHistory",
+      "file": "apps/customer-app/src/views/waiting-list/WaitingListHistoryView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/r/demo-restaurant/wait-list/history",
+      "visitedPath": "/r/demo-restaurant/wait-list/history",
+      "title": "候位歷史紀錄",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "候位歷史紀錄\n\n用手機號碼查詢近期候位紀錄。\n\n手機號碼\n載入歷史紀錄",
+      "screenshot": "baseline/customer-app--WaitingListHistory.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/r/:restaurantId/wait-list/:ticketId",
+      "name": "MyWaitingTicket",
+      "file": "apps/customer-app/src/views/waiting-list/MyWaitingTicketView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。",
+      "actualRoute": "/r/demo-restaurant/wait-list/demo-ticket",
+      "visitedPath": "/r/demo-restaurant/wait-list/demo-ticket",
+      "title": "我的候位號碼",
+      "unavailableApi": [
+        "/waiting-list/demo-ticket"
+      ],
+      "browserErrors": [],
+      "visibleText": "無法載入候位號碼。\n\n用手機查詢號碼",
+      "screenshot": "baseline/customer-app--MyWaitingTicket.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/restaurant/:restaurantId/table/:tableId/order/:orderId",
+      "name": "OrderTracking",
+      "file": "apps/customer-app/src/views/OrderTrackingView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。",
+      "actualRoute": "/restaurant/demo-restaurant/table/1/order/101",
+      "visitedPath": "/restaurant/demo-restaurant/table/1/order/101",
+      "title": "訂單追蹤",
+      "unavailableApi": [
+        "/orders/101"
+      ],
+      "browserErrors": [],
+      "visibleText": "訂單追蹤\n\n訂單編號:\n\n載入失敗\n\nApiException: 服務維護中\n\n重新載入",
+      "screenshot": "baseline/customer-app--OrderTracking.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/about",
+      "name": "About",
+      "file": "apps/customer-app/src/views/AboutView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/about",
+      "visitedPath": "/about",
+      "title": "關於我們",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "關於我們\nMakanMasak\n\nMakanMasak 是一個現代化的餐廳管理系統，致力於提供最佳的點餐體驗。我們利用先進的技術，為餐廳和顧客打造無縫的服務體驗。\n\n我們的服務\nQR Code 掃碼點餐\n即時訂單追蹤\n多種支付方式\n客製化餐點選項\n餐廳營運管理\n聯絡我們\n\n如有任何問題或建議，歡迎透過客服管道與我們聯絡。",
+      "screenshot": "baseline/customer-app--About.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/privacy",
+      "name": "Privacy",
+      "file": "apps/customer-app/src/views/PrivacyView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/privacy",
+      "visitedPath": "/privacy",
+      "title": "隱私權政策",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "隱私權政策\n資料收集\n\n我們僅收集必要的資料以提供服務，包括訂單資訊、聯絡方式等。\n\n資料使用\n\n收集的資料僅用於處理訂單、提供客戶服務以及改善服務品質。\n\n資料保護\n\n我們採用適當的技術和組織措施來保護您的個人資料安全。\n\n聯絡我們\n\n如有任何隱私權相關問題，請透過客服管道與我們聯絡。",
+      "screenshot": "baseline/customer-app--Privacy.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/terms",
+      "name": "Terms",
+      "file": "apps/customer-app/src/views/TermsView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/terms",
+      "visitedPath": "/terms",
+      "title": "服務條款",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "服務條款\n服務使用\n\n使用本服務即表示您同意遵守相關條款與規範。\n\n用戶責任\n\n用戶應確保所提供資訊的正確性，並遵守相關法律法規。\n\n免責聲明\n\n本服務按現況提供，我們不對服務的完整性或適用性作出保證。\n\n條款變更\n\n我們保留隨時修改這些條款的權利，修改後的條款將在網站上公佈。",
+      "screenshot": "baseline/customer-app--Terms.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/discover",
+      "name": "Discover",
+      "file": "apps/customer-app/src/views/DiscoveryView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。",
+      "actualRoute": "/discover",
+      "visitedPath": "/discover",
+      "title": "探索美食",
+      "unavailableApi": [
+        "/discovery/popular",
+        "/discovery/restaurants",
+        "/markets",
+        "/discovery/categories",
+        "/discovery/service-types",
+        "/markets/areas"
+      ],
+      "browserErrors": [],
+      "visibleText": "探索美食\n篩選\n\n無法載入店家列表，請稍後再試。",
+      "screenshot": "baseline/customer-app--Discover.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/markets",
+      "name": "Markets",
+      "file": "apps/customer-app/src/views/MarketsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。",
+      "actualRoute": "/markets",
+      "visitedPath": "/markets",
+      "title": "夜市與商圈",
+      "unavailableApi": [
+        "/customers/me/market-checkouts",
+        "/markets/areas",
+        "/markets",
+        "/customer/favorites",
+        "/customer/recent-markets"
+      ],
+      "browserErrors": [],
+      "visibleText": "夜市與商圈\n搜尋\n全部城市\n全部區域\n全部類型\n夜市\n商圈\n美食街\n活動場域\n找附近夜市\n無法載入夜市列表，請稍後再試。",
+      "screenshot": "baseline/customer-app--Markets.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/markets/:slug",
+      "name": "MarketDetail",
+      "file": "apps/customer-app/src/views/MarketDetailView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。",
+      "actualRoute": "/markets/demo-shop",
+      "visitedPath": "/markets/demo-shop",
+      "title": "夜市與商圈",
+      "unavailableApi": [
+        "/markets/demo-shop",
+        "/markets/demo-shop/vendors"
+      ],
+      "browserErrors": [],
+      "visibleText": "市場\n無法載入攤商列表，請稍後再試。",
+      "screenshot": "baseline/customer-app--MarketDetail.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/markets/:slug/checkout/:checkoutId",
+      "name": "MarketCheckoutTracking",
+      "file": "apps/customer-app/src/views/MarketCheckoutTrackingView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。",
+      "actualRoute": "/markets/demo-shop/checkout/demo-checkout",
+      "visitedPath": "/markets/demo-shop/checkout/demo-checkout",
+      "title": "夜市與商圈",
+      "unavailableApi": [
+        "/market-checkouts/demo-checkout"
+      ],
+      "browserErrors": [],
+      "visibleText": "市場訂單\n\n載入中\n\n無法載入訂單\n\n市場訂單載入失敗\n\n重新載入",
+      "screenshot": "baseline/customer-app--MarketCheckoutTracking.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/error",
+      "name": "Error",
+      "file": "apps/customer-app/src/views/ErrorView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/error",
+      "visitedPath": "/error",
+      "title": "發生錯誤",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "發生錯誤\n\n很抱歉，系統發生了未預期的錯誤\n\n重新嘗試回到首頁",
+      "screenshot": "baseline/customer-app--Error.png"
+    },
+    {
+      "app": "customer-app",
+      "route": "/:pathMatch(.*)*",
+      "name": "NotFound",
+      "file": "apps/customer-app/src/views/NotFoundView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/preview-not-found",
+      "visitedPath": "/preview-not-found",
+      "title": "頁面不存在",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "404\n頁面不存在\n\n您要查看的頁面可能已被移除或網址有誤\n\n返回首頁",
+      "screenshot": "baseline/customer-app--NotFound.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/login",
+      "name": "Login",
+      "file": "apps/admin-dashboard/src/views/LoginView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/login",
+      "visitedPath": "/login",
+      "title": "登入 - 管理後台",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n\n管理後台登入\n\n帳號\n密碼\n忘記密碼？\n登入\n\n© 2026 MakanMasak. All rights reserved.",
+      "screenshot": "baseline/admin-dashboard--Login.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/s/:slug",
+      "name": "ShopLogin",
+      "file": "apps/admin-dashboard/src/views/LoginView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/s/demo-shop",
+      "visitedPath": "/s/demo-shop",
+      "title": "登入 - 管理後台",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n\n管理後台登入\n\n正在登入 示範餐廳\n\n帳號\n密碼\n忘記密碼？\n登入\n\n© 2026 MakanMasak. All rights reserved.",
+      "screenshot": "baseline/admin-dashboard--ShopLogin.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/forgot-password",
+      "name": "ForgotPassword",
+      "file": "apps/admin-dashboard/src/views/ForgotPasswordView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/forgot-password",
+      "visitedPath": "/forgot-password",
+      "title": "忘記密碼 - 管理後台",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n\n管理後台 - 忘記密碼\n\n請輸入您註冊時使用的電子郵件地址。我們將向您發送密碼重設連結。\n\n電子郵件\n發送重設密碼郵件\n← 返回登入頁面\n\n© 2026 MakanMasak. All rights reserved.",
+      "screenshot": "baseline/admin-dashboard--ForgotPassword.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/reset-password",
+      "name": "ResetPassword",
+      "file": "apps/admin-dashboard/src/views/ResetPasswordView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/reset-password",
+      "visitedPath": "/reset-password",
+      "title": "重設密碼 - 管理後台",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n\n管理後台 - 重設密碼\n\n連結無效或已過期\n\n缺少重設 Token\n\n請重新請求密碼重設郵件，或聯絡系統管理員以獲得協助。\n\n重新發送重設郵件\n返回登入\n\n© 2026 MakanMasak. All rights reserved.",
+      "screenshot": "baseline/admin-dashboard--ResetPassword.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/",
+      "name": "",
+      "file": "",
+      "kind": "redirect",
+      "status": "blocked",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "相容性重新導向路由，沒有獨立頁面元件，未作獨立截圖。"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/owner",
+      "name": "",
+      "file": "",
+      "kind": "redirect",
+      "status": "blocked",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "相容性重新導向路由，沒有獨立頁面元件，未作獨立截圖。"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard",
+      "name": "Dashboard",
+      "file": "apps/admin-dashboard/src/layouts/DefaultLayout.vue",
+      "kind": "layout",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "路由容器由此子頁的同一張實際截圖呈現：DashboardHome。已依正常關閉按鈕收起暫時錯誤通知；訂單／菜單／租戶為範例 API 資料。實際原始元件；本機範例身份／餐廳。未連線 API，呈現真實錯誤／空白狀態。",
+      "screenshot": "baseline/admin-dashboard--DashboardHome.png",
+      "inheritedFrom": {
+        "route": "/dashboard",
+        "name": "DashboardHome",
+        "file": "apps/admin-dashboard/src/views/DashboardView.vue"
+      },
+      "actualRoute": "/dashboard"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard",
+      "name": "DashboardHome",
+      "file": "apps/admin-dashboard/src/views/DashboardView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard",
+      "visitedPath": "/dashboard",
+      "title": "儀表板 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/analytics/dashboard",
+        "/analytics/revenue",
+        "/alerts",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n儀表板\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\nCurrently managing: 示範餐廳\nExit\n儀表板\n\n歡迎回來，design-review\n\n最後更新: 從未更新\n重新整理\n系統暫時無法處理，請稍後再試。 [PREVIEW_UNAVAILABLE]\n\n今日訂單\n\n0\n\n今日營收\n\nNT$0\n\n平均客單價\n\nNT$0\n\n完成率\n\n0.0%\n\n重新連接中...\n訂單\n廚房\n菜單\n系統\n🔔\n訂單通知\n\n沒有新的訂單通知\n\n營收趨勢\n今日\n本週\n本月\n\n載入營收圖表...\n\n訂單趨勢\n今日\n本週\n本月\n\n載入訂單圖表...\n\n熱門菜品\n查看全部\n\n載入熱門菜品...\n\n最新訂單\n查看全部\n\n暫無最新訂單\n\n快速操作\n管理菜單\n管理桌台\n員工管理\nPOS系統\n團體訂單\n候位管理\n詳細分析",
+      "screenshot": "baseline/admin-dashboard--DashboardHome.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/owner-overview",
+      "name": "OwnerOverview",
+      "file": "apps/admin-dashboard/src/views/OwnerView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/owner-overview",
+      "visitedPath": "/dashboard/owner-overview",
+      "title": "店主總覽 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/monitoring/health",
+        "/analytics/dashboard",
+        "/orders/active",
+        "/users/stats",
+        "/users",
+        "/scheduling/demo-restaurant/clocked-in",
+        "/alerts",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n店主總覽\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n店主總覽\nCurrently managing: 示範餐廳\nExit\n無法載入儀表板資料\n重試\n\n今日營收\n\nNT$0\n\n+0.0%\n\n今日訂單\n\n0\n\n+0.0%\n\n目前在班\n\n0/0\n\n正常\n\n桌位使用率\n\n0/0\n\n0 空閒\n\n快速操作\n新增員工\n更新菜單\n查看報表\n系統設定\n即時訂單\n即時更新\n暫無資料\n員工動態\n暫無資料\n今日財務\n營收\nNT$0\n訂單數\n0\n平均客單價\nNT$0\n預估月營收\nNT$0\n營收趨勢\n近 7 天\n近 30 天\n近 3 個月\n圖表區域（即將推出）\n熱門商品\n暫無資料\n系統健康狀態\n\nAPI 服務\n\n後端服務\n\n警告\n\n資料庫\n\n資料存儲\n\n警告\n\n即時系統\n\nWebSocket 連線\n\n警告",
+      "screenshot": "baseline/admin-dashboard--OwnerOverview.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/market-open-report",
+      "name": "MarketOpenReport",
+      "file": "apps/admin-dashboard/src/views/MarketOpenReportView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/market-open-report",
+      "visitedPath": "/dashboard/market-open-report",
+      "title": "開店紀錄 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/restaurants/demo-restaurant/markets",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n開店紀錄\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n開店紀錄\nCurrently managing: 示範餐廳\nExit\n開店紀錄\n\n你的店尚未加入任何商圈",
+      "screenshot": "baseline/admin-dashboard--MarketOpenReport.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/platform",
+      "name": "PlatformOverview",
+      "file": "apps/admin-dashboard/src/views/PlatformOverview.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/platform",
+      "visitedPath": "/dashboard/platform",
+      "title": "平台總覽 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/restaurants",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n平台總覽\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n平台總覽\nCurrently managing: 示範餐廳\nExit\n平台總覽\n\n從單一儀表板管理所有餐廳。選擇餐廳以進入其完整管理介面。\n\n餐廳總數\n0\n營業中\n0\n未營業\n0\n尚無餐廳\n\n系統中尚未建立任何餐廳。",
+      "screenshot": "baseline/admin-dashboard--PlatformOverview.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/platform/markets",
+      "name": "PlatformMarkets",
+      "file": "apps/admin-dashboard/src/views/PlatformMarketsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/platform/markets",
+      "visitedPath": "/dashboard/platform/markets",
+      "title": "市場品質 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/admin/markets/readiness",
+        "/admin/markets/area-readiness",
+        "/discovery/index-status",
+        "/admin/markets/join-requests",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n市場品質\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n市場品質\nCurrently managing: 示範餐廳\nExit\n市場 / 商圈公開品質\n\n集中檢查夜市、商圈與活動場域的公開頁資料是否足以上架。\n\n匯出缺口 CSV\n匯出店鋪模板\n匯出區域 CSV\n重新整理\n總數\n0\n可上架\n0\n需補齊\n0\n未知\n0\n平均完整度\n0%\n缺商品店鋪\n0\n缺服務店鋪\n0\n缺攤位號\n0\n缺攤位座標\n0\n缺市場地圖\n0\n缺搜尋入口\n0\n無店鋪市場\n0\n無搜尋內容市場\n0\nDiscovery 搜尋索引\n\n大量匯入市場、店鋪或菜單後，可手動重建公開搜尋索引。\n\n重建索引\n\n搜尋索引狀態暫時無法載入。\n\n店家加入申請\n\n審核店家申請加入市場或商圈；核准後會建立攤位關聯並更新公開搜尋索引。\n\n重新整理申請\n\n載入加入申請失敗，請稍後再試。\n\n批次匯入市場 / 商圈\n\n貼上 CSV 或 JSON，一次建立夜市、商圈、商場或活動場域。\n\n載入範例\nCSV\nJSON\n匯入市場\n全部\n可上架\n需補齊\n缺商品\n缺服務\n缺攤位號\n缺地圖\n缺入口\n無店鋪\n無搜尋內容\n未知\n沒有符合條件的市場或商圈。",
+      "screenshot": "baseline/admin-dashboard--PlatformMarkets.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/platform/market-checkouts",
+      "name": "PlatformMarketCheckouts",
+      "file": "apps/admin-dashboard/src/views/PlatformMarketCheckoutsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/platform/market-checkouts",
+      "visitedPath": "/dashboard/platform/market-checkouts",
+      "title": "市場結帳紀錄 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/market-checkouts/admin",
+        "/market-checkouts/admin/summary",
+        "/market-checkouts/admin/vendors",
+        "/market-checkouts/admin/provider-status",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n市場結帳紀錄\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n市場結帳紀錄\nCurrently managing: 示範餐廳\nExit\n市場結帳紀錄\n\n追蹤跨攤位 checkout、子訂單與聯合付款狀態。\n\n匯出 CSV\n匯出攤位對帳\n匯出會計分錄\n重新整理\n全部付款狀態\n待付款\n部分付款\n已付款\n付款失敗\n已退款\n部分退款\n全部營運狀態\n待對帳\n未收到 webhook\nwebhook 失敗\n狀態不一致\n退款處理中\n退款失敗\n金額不符待審\n篩選\nRequest failed with status code 503",
+      "screenshot": "baseline/admin-dashboard--PlatformMarketCheckouts.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/platform/customers",
+      "name": "PlatformCustomers",
+      "file": "apps/admin-dashboard/src/views/PlatformCustomersView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/platform/customers",
+      "visitedPath": "/dashboard/platform/customers",
+      "title": "平台顧客 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/admin/customers",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n平台顧客\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n平台顧客\nCurrently managing: 示範餐廳\nExit\n平台顧客\n\n跨店查看顧客與消費彙總（僅平台管理員）\n\n篩選條件\n搜尋顧客\n帳號狀態\n全部\n正常\n已刪除\n排序方式\n最新加入\n訂單數\n消費店家數\n姓名\n重設條件\n顧客\t聯絡方式\t消費店家數\t總訂單\t總消費\t最後消費\t狀態\t操作\n\n\n尚無顧客資料\n\n顧客完成第一筆訂單後就會出現在這裡。",
+      "screenshot": "baseline/admin-dashboard--PlatformCustomers.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/platform/onboarding",
+      "name": "PlatformOnboardingApplications",
+      "file": "apps/admin-dashboard/src/views/PlatformOnboardingApplicationsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/platform/onboarding",
+      "visitedPath": "/dashboard/platform/onboarding",
+      "title": "開店申請 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n開店申請\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n開店申請\nCurrently managing: 示範餐廳\nExit\n店家加入申請\n\n審核自助開店申請，核准後由平台資源啟用租戶。\n\n代店主建立\n全部狀態\n待審核\n建置中\n已完成\n已拒絕\n重新整理\n申請總數\n0\n待審核\n0\n已拒絕\n0\n\n店家加入申請暫時無法載入。\n\n目前沒有符合條件的申請。",
+      "screenshot": "baseline/admin-dashboard--PlatformOnboardingApplications.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/orders",
+      "name": "Orders",
+      "file": "apps/admin-dashboard/src/views/OrdersView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/orders",
+      "visitedPath": "/dashboard/orders",
+      "title": "訂單管理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n訂單管理\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n訂單管理\nCurrently managing: 示範餐廳\nExit\n待處理\n\n1\n\n準備中\n\n1\n\n已完成\n\n24\n\n已取消\n\n0\n\n全部狀態\n待確認\n已確認\n準備中\n待取餐\n已出餐\n已付款\n已退款\n已取消\n全部類型\n內用\n外帶\n外送\n全部來源\n現場\n市場結帳\nUber Eats\nFoodpanda\nGrabFood\n重新整理\n訂單列表\n訂單編號\n桌號\n客戶\n類型\n來源\n狀態\n金額\n下單時間\n操作\nA101\nA1\n範例顧客\n內用\n現場\n已確認\nNT$300\n2026年11月11日 16:50\nA102\nA2\n範例顧客\n內用\n現場\n準備中\nNT$300\n2026年11月11日 16:49\nA103\nA3\n範例顧客\n內用\n現場\n待取餐\nNT$300\n2026年11月11日 16:48",
+      "screenshot": "baseline/admin-dashboard--Orders.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/kitchen",
+      "name": "Kitchen",
+      "file": "apps/admin-dashboard/src/views/KitchenView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/kitchen",
+      "visitedPath": "/dashboard/kitchen",
+      "title": "廚房顯示 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n廚房顯示\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n廚房顯示\nCurrently managing: 示範餐廳\nExit",
+      "screenshot": "baseline/admin-dashboard--Kitchen.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/menu",
+      "name": "Menu",
+      "file": "apps/admin-dashboard/src/views/MenuView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/menu",
+      "visitedPath": "/dashboard/menu",
+      "title": "菜單管理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n菜單管理\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n菜單管理\nCurrently managing: 示範餐廳\nExit\n菜單管理\n\n管理餐廳菜品與分類\n\n1\n分類\n3\n菜品\n3\n供應中\n分類管理\n新增\n所有菜品\n共 3 項\n經典主餐\n3\n全部供應中\n所有菜品\n3 項菜品\n批次新增\n新增菜品\n全部\n供應中\n已停售\n精選\n供應中\n招牌海南雞飯\nNT$150\n\n香嫩雞肉、雞油飯與特製醬汁\n\n經典主餐\n供應中\n叻沙麵\nNT$180\n\n濃郁椰奶湯底，搭配鮮蝦與豆腐\n\n經典主餐\n供應中\n南洋咖哩雞飯\nNT$160\n\n每日現煮咖哩與時蔬\n\n經典主餐",
+      "screenshot": "baseline/admin-dashboard--Menu.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/print-agents",
+      "name": "PrintAgents",
+      "file": "apps/admin-dashboard/src/views/PrintAgentsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/print-agents",
+      "visitedPath": "/dashboard/print-agents",
+      "title": "列印代理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/pos/print-agents",
+        "/system/error-report",
+        "/pos/registers"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n列印代理\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n列印代理\nCurrently managing: 示範餐廳\nExit\n列印代理\n\n每台店內出單機一份憑證。綁收銀機的只印該台的收據，不綁的印訂單確認時自動產生的廚房票。\n\n核發憑證\nRequest failed with status code 503",
+      "screenshot": "baseline/admin-dashboard--PrintAgents.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/menu/option-groups",
+      "name": "MenuOptionGroups",
+      "file": "apps/admin-dashboard/src/views/OptionGroupsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/menu/option-groups",
+      "visitedPath": "/dashboard/menu/option-groups",
+      "title": "共用選項組 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n共用選項組\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n共用選項組\nCurrently managing: 示範餐廳\nExit\n共用選項組\n\n在這裡建立一次，套用到多道菜品。改一次，所有引用的菜品一起變。\n\n新增選項組\n\n還沒有共用選項組\n\n例如「甜度」「冰塊」「加購」——建立後就能套用到每一杯飲料。",
+      "screenshot": "baseline/admin-dashboard--MenuOptionGroups.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/tables",
+      "name": "",
+      "file": "",
+      "kind": "redirect",
+      "status": "blocked",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "相容性重新導向路由，沒有獨立頁面元件，未作獨立截圖。"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/my-shifts",
+      "name": "MyShifts",
+      "file": "apps/admin-dashboard/src/views/MyShiftsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/my-shifts",
+      "visitedPath": "/dashboard/my-shifts",
+      "title": "我的班表 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/scheduling/demo-restaurant/schedules",
+        "/scheduling/demo-restaurant/swap-requests",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n我的班表\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n我的班表\nCurrently managing: 示範餐廳\nExit\n我的班表\n\n查看自己的班次並提出換班申請\n\n系統暫時無法處理，請稍後再試。 [PREVIEW_UNAVAILABLE]\n\n重試\n即將到來的班次\n\n目前沒有排定的班次\n\n店長排班後會顯示在這裡\n\n我的換班申請\n\n尚未送出任何換班申請",
+      "screenshot": "baseline/admin-dashboard--MyShifts.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/my-leaves",
+      "name": "MyLeaves",
+      "file": "apps/admin-dashboard/src/views/MyLeavesView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/my-leaves",
+      "visitedPath": "/dashboard/my-leaves",
+      "title": "我的請假 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/leaves/demo-restaurant/types",
+        "/leaves/demo-restaurant/requests",
+        "/leaves/balances",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n我的請假\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n我的請假\nCurrently managing: 示範餐廳\nExit\n我的請假\n\n查看自己的假期餘額並送出請假申請\n\n申請請假\n\n系統暫時無法處理，請稍後再試。 [PREVIEW_UNAVAILABLE]\n\n重試\n假期餘額\n\n尚未有假期餘額\n\n店長設定假別並發放年度假期後會顯示在這裡\n\n我的請假記錄\n\n暫無請假記錄",
+      "screenshot": "baseline/admin-dashboard--MyLeaves.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/my-attendance",
+      "name": "MyAttendance",
+      "file": "apps/admin-dashboard/src/views/MyAttendanceView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/my-attendance",
+      "visitedPath": "/dashboard/my-attendance",
+      "title": "我的出勤 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/scheduling/demo-restaurant/schedules",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n我的出勤\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n我的出勤\nCurrently managing: 示範餐廳\nExit\n我的出勤\n\n查看今天的班次並完成上下班打卡\n\n⏰\n打卡系統\n🕒\n16:52:42\n📭\n今天沒有排班\n\n你今天沒有安排工作班次\n\n⚠️\n無法載入今日排班資料\n✕",
+      "screenshot": "baseline/admin-dashboard--MyAttendance.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/employees",
+      "name": "",
+      "file": "apps/admin-dashboard/src/views/employees/EmployeeManagementView.vue",
+      "kind": "layout",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "路由容器由此子頁的同一張實際截圖呈現：EmployeeList。已依正常關閉按鈕收起暫時錯誤通知；訂單／菜單／租戶為範例 API 資料。實際原始元件；本機範例身份／餐廳。未連線 API，呈現真實錯誤／空白狀態。",
+      "screenshot": "baseline/admin-dashboard--EmployeeList.png",
+      "inheritedFrom": {
+        "route": "/dashboard/employees",
+        "name": "EmployeeList",
+        "file": "apps/admin-dashboard/src/views/employees/EmployeeListTab.vue"
+      },
+      "actualRoute": "/dashboard/employees"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/employees",
+      "name": "EmployeeList",
+      "file": "apps/admin-dashboard/src/views/employees/EmployeeListTab.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/employees",
+      "visitedPath": "/dashboard/employees",
+      "title": "員工管理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/users",
+        "/scheduling/demo-restaurant/clocked-in",
+        "/leaves/demo-restaurant/requests",
+        "/scheduling/demo-restaurant/schedules",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n員工管理\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n員工管理\nCurrently managing: 示範餐廳\nExit\n員工管理\n\n管理員工資訊、排班與請假\n\n新增員工\n\n店主\n\n0\n\n廚師\n\n0\n\n送菜員\n\n0\n\n收銀\n\n0\n\n總員工\n\n0\n\n目前在班\n\n0\n\n今日請假\n\n0\n\n員工列表\n排班總覽\n請假管理\n出勤總覽\n在職\n已離職\n所有角色\n店主 (Owner)\n廚師 (Chef)\n送菜員 (Service)\n收銀員 (Cashier)\n所有狀態\n活躍\n停用\n暫停\n暫無員工\n\n開始添加您的第一位員工",
+      "screenshot": "baseline/admin-dashboard--EmployeeList.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/employees/attendance",
+      "name": "EmployeeAttendance",
+      "file": "apps/admin-dashboard/src/views/employees/AttendanceOverviewTab.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/employees/attendance",
+      "visitedPath": "/dashboard/employees/attendance",
+      "title": "員工管理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/scheduling/demo-restaurant/clocked-in",
+        "/leaves/demo-restaurant/requests",
+        "/scheduling/demo-restaurant/schedules",
+        "/users",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n員工管理\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n員工管理\nCurrently managing: 示範餐廳\nExit\n員工管理\n\n管理員工資訊、排班與請假\n\n新增員工\n\n店主\n\n0\n\n廚師\n\n0\n\n送菜員\n\n0\n\n收銀\n\n0\n\n總員工\n\n0\n\n目前在班\n\n0\n\n今日請假\n\n0\n\n員工列表\n排班總覽\n請假管理\n出勤總覽\n排班分析\n\n在職人數\n\n0\n\n今日排班\n\n0\n\n已到班\n\n0\n\n請假\n\n0\n\n缺席\n\n0\n\n出勤率\n\n—\n\n打卡\n\n尚無可打卡的在職員工\n\n目前在班\n(0)\n\n目前沒有員工在班\n\n請假\n(0)\n\n今日無人請假",
+      "screenshot": "baseline/admin-dashboard--EmployeeAttendance.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/employees/scheduling",
+      "name": "EmployeeScheduling",
+      "file": "apps/admin-dashboard/src/views/employees/SchedulingTab.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/employees/scheduling",
+      "visitedPath": "/dashboard/employees/scheduling",
+      "title": "員工管理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/system/error-report",
+        "/realtime/auth/token",
+        "/users",
+        "/scheduling/demo-restaurant/templates",
+        "/scheduling/demo-restaurant/schedules",
+        "/leaves/demo-restaurant/requests",
+        "/scheduling/demo-restaurant/clocked-in"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n員工管理\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n員工管理\nCurrently managing: 示範餐廳\nExit\n員工管理\n\n管理員工資訊、排班與請假\n\n新增員工\n\n店主\n\n0\n\n廚師\n\n0\n\n送菜員\n\n0\n\n收銀\n\n0\n\n總員工\n\n0\n\n目前在班\n\n0\n\n今日請假\n\n0\n\n員工列表\n排班總覽\n請假管理\n出勤總覽\n11/9 - 15\n週\n月\n進階排班\n排班分析\n管理模板\n\n系統暫時無法處理，請稍後再試。 [PREVIEW_UNAVAILABLE]\n\n重試",
+      "screenshot": "baseline/admin-dashboard--EmployeeScheduling.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/employees/scheduling/advanced",
+      "name": "AdvancedScheduling",
+      "file": "apps/admin-dashboard/src/views/scheduling/SchedulingView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/employees/scheduling/advanced",
+      "visitedPath": "/dashboard/employees/scheduling/advanced",
+      "title": "員工排班 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/scheduling/demo-restaurant/schedules",
+        "/users",
+        "/scheduling/demo-restaurant/clocked-in",
+        "/leaves/demo-restaurant/requests",
+        "/system/error-report",
+        "/scheduling/demo-restaurant/templates",
+        "/scheduling/demo-restaurant/conflicts",
+        "/scheduling/demo-restaurant/swap-requests"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n員工排班\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n員工管理\n員工排班\nCurrently managing: 示範餐廳\nExit\n員工管理\n\n管理員工資訊、排班與請假\n\n新增員工\n\n店主\n\n0\n\n廚師\n\n0\n\n送菜員\n\n0\n\n收銀\n\n0\n\n總員工\n\n0\n\n目前在班\n\n0\n\n今日請假\n\n0\n\n員工列表\n排班總覽\n請假管理\n出勤總覽\n員工排班管理\n\n管理員工班次與排班表\n\n重新整理\n新增班次範本\n建立排班\n本月排班數\n\n0\n\n班次範本\n\n0\n\n目前上班中\n0 人\n目前沒有員工上班\nRequest failed with status code 503\n行事曆檢視\n列表檢視\n班次範本\n衝突警告\n換班申請管理\n2026年 11月\n日\n一\n二\n三\n四\n五\n六\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n今天\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n今天\n有排班\n週末",
+      "screenshot": "baseline/admin-dashboard--AdvancedScheduling.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/employees/scheduling/analytics",
+      "name": "SchedulingAnalytics",
+      "file": "apps/admin-dashboard/src/views/scheduling/SchedulingAnalyticsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/employees/scheduling/analytics",
+      "visitedPath": "/dashboard/employees/scheduling/analytics",
+      "title": "排班分析 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/scheduling/demo-restaurant/attendance-report",
+        "/scheduling/demo-restaurant/templates",
+        "/scheduling/demo-restaurant/stats/daily",
+        "/users",
+        "/scheduling/demo-restaurant/clocked-in",
+        "/leaves/demo-restaurant/requests",
+        "/scheduling/demo-restaurant/schedules",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n排班分析\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n員工管理\n排班分析\nCurrently managing: 示範餐廳\nExit\n員工管理\n\n管理員工資訊、排班與請假\n\n新增員工\n\n店主\n\n0\n\n廚師\n\n0\n\n送菜員\n\n0\n\n收銀\n\n0\n\n總員工\n\n0\n\n目前在班\n\n0\n\n今日請假\n\n0\n\n員工列表\n排班總覽\n請假管理\n出勤總覽\n📊\n排班分析\n\n分析工時、出勤與排班效率\n\n🔄\n重新整理資料\n📥\n匯出報告\n👥\n活躍員工\n—\n⏰\n總排班時數\n—\n📅\n本週排班\n—\n⚡\n目前在班\n—\n📊\n總時數\n本週\n本月\n自訂期間\n柱狀圖\n折線圖\n總工時\n0.0h\n平均工時\n0.0h\n員工數\n0\n⚠️\n\n載入數據失敗\n\n🥧\n班別分布統計\n環形圖\n圓餅圖\n⚠️\n\n載入數據失敗\n\n📈\n工時趨勢分析\n總工時\n平均工時\n排班數量\n最近 7 天\n最近 30 天\n最近 90 天\n📊\n當前值\n0.0h\n📉\n趨勢\n持平\n→\n🎯\n變化率\nNaN%\n💡\n資料洞察",
+      "screenshot": "baseline/admin-dashboard--SchedulingAnalytics.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/employees/leaves",
+      "name": "EmployeeLeaves",
+      "file": "apps/admin-dashboard/src/views/employees/LeavesTab.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/employees/leaves",
+      "visitedPath": "/dashboard/employees/leaves",
+      "title": "員工管理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/users",
+        "/leaves/demo-restaurant/types",
+        "/leaves/demo-restaurant/requests",
+        "/leaves/demo-restaurant/balances",
+        "/scheduling/demo-restaurant/clocked-in",
+        "/scheduling/demo-restaurant/schedules",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n員工管理\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n員工管理\nCurrently managing: 示範餐廳\nExit\n員工管理\n\n管理員工資訊、排班與請假\n\n新增員工\n\n店主\n\n0\n\n廚師\n\n0\n\n送菜員\n\n0\n\n收銀\n\n0\n\n總員工\n\n0\n\n目前在班\n\n0\n\n今日請假\n\n0\n\n員工列表\n排班總覽\n請假管理\n出勤總覽\n待我處理\n全部請假\n假期餘額\n假別設定\n申請請假\n系統暫時無法處理，請稍後再試。 [PREVIEW_UNAVAILABLE] 重試",
+      "screenshot": "baseline/admin-dashboard--EmployeeLeaves.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/employees/:id",
+      "name": "",
+      "file": "apps/admin-dashboard/src/views/employees/EmployeeDetailView.vue",
+      "kind": "layout",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "路由容器由此子頁的同一張實際截圖呈現：EmployeeProfile。已依正常關閉按鈕收起暫時錯誤通知；訂單／菜單／租戶為範例 API 資料。實際原始元件；本機範例身份／餐廳。未連線 API，呈現真實錯誤／空白狀態。",
+      "screenshot": "baseline/admin-dashboard--EmployeeProfile.png",
+      "inheritedFrom": {
+        "route": "/dashboard/employees/:id",
+        "name": "EmployeeProfile",
+        "file": "apps/admin-dashboard/src/views/employees/EmployeeProfileTab.vue"
+      },
+      "actualRoute": "/dashboard/employees/1"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/employees/:id",
+      "name": "EmployeeProfile",
+      "file": "apps/admin-dashboard/src/views/employees/EmployeeProfileTab.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/employees/1",
+      "visitedPath": "/dashboard/employees/1",
+      "title": "員工管理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/users/1",
+        "/users",
+        "/scheduling/demo-restaurant/clocked-in",
+        "/leaves/demo-restaurant/requests",
+        "/scheduling/demo-restaurant/schedules",
+        "/system/error-report",
+        "/leaves/balances"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n員工管理\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n員工管理\nCurrently managing: 示範餐廳\nExit\n員工管理\n\n管理員工資訊、排班與請假\n\n新增員工\n\n店主\n\n0\n\n廚師\n\n0\n\n送菜員\n\n0\n\n收銀\n\n0\n\n總員工\n\n0\n\n目前在班\n\n0\n\n今日請假\n\n0\n\n員工列表\n排班總覽\n請假管理\n出勤總覽\n返回員工列表\n個人資料\n排班紀錄\n請假紀錄\n\n即將排班\n\n0\n\n已完成班次\n\n0\n\n待審請假\n\n0\n\n基本資訊\n用戶名\n全名\n-\nEmail\n-\n加入日期\n-\n最後登入\n從未登入\n近期活動\n\n暫無活動紀錄",
+      "screenshot": "baseline/admin-dashboard--EmployeeProfile.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/employees/:id/schedule",
+      "name": "EmployeeSchedule",
+      "file": "apps/admin-dashboard/src/views/employees/EmployeeScheduleTab.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/employees/1/schedule",
+      "visitedPath": "/dashboard/employees/1/schedule",
+      "title": "員工管理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/users/1",
+        "/users",
+        "/scheduling/demo-restaurant/clocked-in",
+        "/leaves/demo-restaurant/requests",
+        "/scheduling/demo-restaurant/schedules",
+        "/system/error-report",
+        "/leaves/balances"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n員工管理\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n員工管理\nCurrently managing: 示範餐廳\nExit\n員工管理\n\n管理員工資訊、排班與請假\n\n新增員工\n\n店主\n\n0\n\n廚師\n\n0\n\n送菜員\n\n0\n\n收銀\n\n0\n\n總員工\n\n0\n\n目前在班\n\n0\n\n今日請假\n\n0\n\n員工列表\n排班總覽\n請假管理\n出勤總覽\n返回員工列表\n個人資料\n排班紀錄\n請假紀錄\n\n總時數\n\n0.0h\n\n加班時數\n\n0.0h\n\n已完成\n\n0\n\n即將到來\n\n0\n\n排班紀錄\n\n暫無排班紀錄",
+      "screenshot": "baseline/admin-dashboard--EmployeeSchedule.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/employees/:id/leave",
+      "name": "EmployeeLeave",
+      "file": "apps/admin-dashboard/src/views/employees/EmployeeLeaveTab.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/employees/1/leave",
+      "visitedPath": "/dashboard/employees/1/leave",
+      "title": "員工管理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/users/1",
+        "/users",
+        "/scheduling/demo-restaurant/clocked-in",
+        "/leaves/demo-restaurant/requests",
+        "/scheduling/demo-restaurant/schedules",
+        "/system/error-report",
+        "/leaves/balances"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n員工管理\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n員工管理\nCurrently managing: 示範餐廳\nExit\n員工管理\n\n管理員工資訊、排班與請假\n\n新增員工\n\n店主\n\n0\n\n廚師\n\n0\n\n送菜員\n\n0\n\n收銀\n\n0\n\n總員工\n\n0\n\n目前在班\n\n0\n\n今日請假\n\n0\n\n員工列表\n排班總覽\n請假管理\n出勤總覽\n返回員工列表\n個人資料\n排班紀錄\n請假紀錄\n假期餘額\n\n暫無假期資訊\n\n請假紀錄\n\n暫無請假紀錄",
+      "screenshot": "baseline/admin-dashboard--EmployeeLeave.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/users",
+      "name": "",
+      "file": "",
+      "kind": "redirect",
+      "status": "blocked",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "相容性重新導向路由，沒有獨立頁面元件，未作獨立截圖。"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/analytics",
+      "name": "Analytics",
+      "file": "apps/admin-dashboard/src/views/AnalyticsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/analytics",
+      "visitedPath": "/dashboard/analytics",
+      "title": "數據分析 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/analytics/dashboard",
+        "/analytics/performance",
+        "/analytics/products",
+        "/analytics/revenue",
+        "/analytics/realtime-dashboard",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n數據分析\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n數據分析\nCurrently managing: 示範餐廳\nExit\n數據分析\n\n餐廳經營數據和趨勢分析\n\n今天\n本週\n本月\n本季\n本年\n匯出報表\n載入數據失敗，請重試\n重試\n\n總營收\n\n—\n\n— vs 上期\n\n訂單數量\n\n0\n\n0.0% vs 上期\n\n平均客單價\n\n—\n\n— vs 上期\n\n桌台使用率\n\n0%\n\n營收趨勢\n\n暫無數據\n\n訂單狀態分布\n0\n\n已送達\n\n0\n\n製作中\n\n0\n\n待確認\n\n0\n\n已取消\n\n熱門菜品\n暫無數據\n營業時段分析\n暫無數據\n詳細營業報表\n暫無數據",
+      "screenshot": "baseline/admin-dashboard--Analytics.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/ingredients",
+      "name": "Ingredients",
+      "file": "apps/admin-dashboard/src/views/ingredients/IngredientsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/ingredients",
+      "visitedPath": "/dashboard/ingredients",
+      "title": "食材管理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/ingredients/demo-restaurant",
+        "/ingredients/demo-restaurant/categories",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n食材管理\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n食材管理\nCurrently managing: 示範餐廳\nExit\n食材管理\n\n管理食材、配方與庫存\n\n配方管理\n匯入\n新增食材\n只看低量\n所有分類\n名稱\t單位\t分類\t單位成本\t供應商\t現有庫存\t最低庫存\t操作\n暫無資料",
+      "screenshot": "baseline/admin-dashboard--Ingredients.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/forecast",
+      "name": "Forecast",
+      "file": "apps/admin-dashboard/src/views/forecast/ForecastView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/forecast",
+      "visitedPath": "/dashboard/forecast",
+      "title": "需求預測 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/forecast/demo-restaurant",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n需求預測\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n需求預測\nCurrently managing: 示範餐廳\nExit\n需求預測\n\nAI 驅動的菜品與食材需求預測\n\n重新整理\n產生預測\n\n無法載入預測資料\n\n明日\n未來 7 天\n自訂\n預測\n準確度\n預測期間沒有警報\n菜品\t預測量\t信心度\t趨勢\t歷史平均\n暫無預測資料",
+      "screenshot": "baseline/admin-dashboard--Forecast.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/feedback",
+      "name": "Feedback",
+      "file": "apps/admin-dashboard/src/views/FeedbackView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/feedback",
+      "visitedPath": "/dashboard/feedback",
+      "title": "意見反饋 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/feedback",
+        "/feedback/stats",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n意見反饋\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n意見反饋\nCurrently managing: 示範餐廳\nExit\n意見反饋\n\n查看並處理所有店家反饋\n\n全部狀態\n待處理\n處理中\n已解決\n已關閉\n全部類型\n程式錯誤\n功能建議\n易用性\n效能問題\n帳單費用\n其他\n全部優先級\n低\n中\n高\n緊急\n\n暫無反饋記錄",
+      "screenshot": "baseline/admin-dashboard--Feedback.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/billing",
+      "name": "Billing",
+      "file": "apps/admin-dashboard/src/views/BillingView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/billing",
+      "visitedPath": "/dashboard/billing",
+      "title": "訂閱與用量 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/me/usage",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n訂閱與用量\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n訂閱與用量\nCurrently managing: 示範餐廳\nExit\n訂閱與用量\n\n查看你目前的方案、試用期與本期用量\n\n無法載入訂閱資訊，請稍後再試。\n\n目前方案\n\n—\n\n已停用\n本期用量\n\n本期尚無用量紀錄。\n\n方案包含的功能\n需要調整方案？\n\n方案變更目前由平台團隊處理，請透過支援工單提出，我們會與你聯繫。\n\n提出支援工單",
+      "screenshot": "baseline/admin-dashboard--Billing.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/settings",
+      "name": "Settings",
+      "file": "apps/admin-dashboard/src/views/SettingsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/settings",
+      "visitedPath": "/dashboard/settings",
+      "title": "系統設定 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/restaurants/demo-restaurant/service-items",
+        "/integrations/demo-restaurant/uber_eats",
+        "/restaurants/demo-restaurant/qr/shop",
+        "/markets",
+        "/restaurants/demo-restaurant/markets",
+        "/restaurants/demo-restaurant/market-join-requests",
+        "/restaurants/demo-restaurant/contact-profile",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n系統設定\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n系統設定\nCurrently managing: 示範餐廳\nExit\n系統設定\n\n管理餐廳系統偏好設定\n\n重置為預設值\n儲存設定\n基本設定\n市場 / 商圈\n聯絡與 FAQ\n訂單設定\nQR Code 設定\n通知設定\n安全設定\n外送平台串接\n收款方式\n餐廳資訊\n餐廳名稱\n聯絡電話\n餐廳地址\n城市\n區域\n營業時間\n至\n時區\n台灣 (GMT+8)\n馬來西亞 (GMT+8)\n新加坡 (GMT+8)\n中國 (GMT+8)\n日本 (GMT+9)\n越南 (GMT+7)\n印尼 (GMT+7)\n系統偏好\n介面語言\n\n選擇系統顯示語言\n\n繁體中文\n简体中文\nEnglish\n日本語\nTiếng Việt\nBahasa Indonesia\n貨幣單位\n\n選擇系統使用的貨幣\n\n馬來西亞令吉 (RM)\n新台幣 (NT$)\n越南盾 (₫)\n自動登出時間\n\n無操作時自動登出的時間\n\n30 分鐘\n1 小時\n2 小時\n4 小時\n不自動登出",
+      "screenshot": "baseline/admin-dashboard--Settings.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/coupons",
+      "name": "Coupons",
+      "file": "apps/admin-dashboard/src/views/CouponsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/coupons",
+      "visitedPath": "/dashboard/coupons",
+      "title": "優惠券管理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n優惠券管理\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n優惠券管理\nCurrently managing: 示範餐廳\nExit",
+      "screenshot": "baseline/admin-dashboard--Coupons.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/members",
+      "name": "Members",
+      "file": "apps/admin-dashboard/src/views/MembersView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/members",
+      "visitedPath": "/dashboard/members",
+      "title": "會員管理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/restaurants/demo-restaurant/members",
+        "/restaurants/demo-restaurant/members/stats",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n會員管理\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n會員管理\nCurrently managing: 示範餐廳\nExit\n會員管理\n\n查看在本店有消費紀錄的顧客\n\n匯出 CSV\n\n總會員數\n\n0\n\n本月新增\n\n0\n\n回頭客比例\n\n0%\n\n平均客單價\n\nNT$0\n\n全部\n常客（5 單以上）\n新客（1 單）\n30 天未回\n已封鎖\n進階篩選\n搜尋會員\n排序方式\n最近消費\n消費金額\n訂單數\n姓名\n封鎖狀態\n全部\n已封鎖\n未封鎖\n標籤\n最少訂單數\n最低消費金額\n最後消費起日\n最後消費迄日\n重設條件\n會員\t聯絡方式\t本店訂單\t本店消費\t最後消費\t首次消費\t狀態\t操作\n\n\n尚無會員資料\n\n顧客在本店完成第一筆訂單後就會出現在這裡。",
+      "screenshot": "baseline/admin-dashboard--Members.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/reviews",
+      "name": "Reviews",
+      "file": "apps/admin-dashboard/src/views/ReviewsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/reviews",
+      "visitedPath": "/dashboard/reviews",
+      "title": "顧客評價 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/reviews/demo-restaurant/summary",
+        "/reviews/demo-restaurant",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n顧客評價\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n顧客評價\nCurrently managing: 示範餐廳\nExit\n顧客評價\n\n查看顧客對訂單與菜色的評分，並回覆尚未處理的評價。",
+      "screenshot": "baseline/admin-dashboard--Reviews.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/broadcasts",
+      "name": "Broadcasts",
+      "file": "apps/admin-dashboard/src/views/BroadcastsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/broadcasts",
+      "visitedPath": "/dashboard/broadcasts",
+      "title": "推播訊息 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/restaurants/demo-restaurant/broadcasts",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n推播訊息\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n推播訊息\nCurrently managing: 示範餐廳\nExit\n推播訊息\n\n向追蹤本店、且同意接收行銷通知的顧客推送一則訊息。\n\n撰寫推播\n今日剩餘 3 / 3 則\n標題\n0 / 80\n內容\n0 / 300\n連結（選填）\n顧客點開通知後前往的頁面；留空則只顯示文字。\n同時通知市集追蹤者\n也推給追蹤本店所在市集、但還沒追蹤本店的顧客（他們可自行關閉）。\n預覽並發送\n發送紀錄\n\n還沒有發送過推播。",
+      "screenshot": "baseline/admin-dashboard--Broadcasts.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/pos",
+      "name": "",
+      "file": "apps/admin-dashboard/src/views/POSView.vue",
+      "kind": "layout",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "路由容器由此子頁的同一張實際截圖呈現：POSCheckout。已依正常關閉按鈕收起暫時錯誤通知；訂單／菜單／租戶為範例 API 資料。實際原始元件；本機範例身份／餐廳。未連線 API，呈現真實錯誤／空白狀態。",
+      "screenshot": "baseline/admin-dashboard--POSCheckout.png",
+      "inheritedFrom": {
+        "route": "/dashboard/pos/checkout",
+        "name": "POSCheckout",
+        "file": "apps/admin-dashboard/src/views/CashierView.vue"
+      },
+      "actualRoute": "/dashboard/pos/checkout"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/pos",
+      "name": "",
+      "file": "",
+      "kind": "redirect",
+      "status": "blocked",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "相容性重新導向路由，沒有獨立頁面元件，未作獨立截圖。"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/pos/checkout",
+      "name": "POSCheckout",
+      "file": "apps/admin-dashboard/src/views/CashierView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/pos/checkout",
+      "visitedPath": "/dashboard/pos/checkout",
+      "title": "POS系統 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/pos/registers",
+        "/pos/reports/daily",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\nPOS系統\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\nPOS系統\nCurrently managing: 示範餐廳\nExit\nPOS 收銀系統\n\n整合結帳收銀與收銀櫃管理\n\n目前時間\n\n16:53:41\n\n結帳收銀\n收銀櫃管理\n\n當前班次: —\n\n今日業績\n\n—\n\n班次報告\n退款處理\n待處理訂單\n沒有待處理訂單\n\n所有訂單已完成處理\n\n選擇訂單\n\n請選擇一個訂單進行結帳",
+      "screenshot": "baseline/admin-dashboard--POSCheckout.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/pos/management",
+      "name": "POSManagement",
+      "file": "apps/admin-dashboard/src/views/POSManagementView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/pos/management",
+      "visitedPath": "/dashboard/pos/management",
+      "title": "POS系統 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/pos/registers",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\nPOS系統\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\nPOS系統\nCurrently managing: 示範餐廳\nExit\nPOS 收銀系統\n\n整合結帳收銀與收銀櫃管理\n\n目前時間\n\n16:53:44\n\n結帳收銀\n收銀櫃管理\n\n收銀櫃: 未選擇\n\n餘額: —\n\n班次: 未開始\n\n請開始班次\n\n開始班次\n收銀櫃管理\n\n今日營收\n\nNT$0\n\n訂單數量\n\n0\n\n活躍收銀櫃\n\n0\n\n平均客單價\n\nNT$0\n\n收銀櫃列表\n新增收銀櫃\n最近交易\n匯出\n尚無交易記錄\n\n開始使用 POS 系統後會顯示交易記錄\n\n快速收款\n訂單編號\n金額\nNT$\n付款方式\n請選擇\n現金\n信用卡\n電子錢包\n銀行轉帳\n確認付款\n市場結帳收款\n市場結帳 ID\n付款方式\n現金\n信用卡\n電子錢包\n\n使用目前選取的收銀櫃與開啟中的班次完成現場市場結帳收款。\n\n確認市場結帳收款\n今日班次\n產生報告\n\n尚未開始班次\n\n開始班次",
+      "screenshot": "baseline/admin-dashboard--POSManagement.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/group-orders",
+      "name": "GroupOrders",
+      "file": "apps/admin-dashboard/src/views/GroupOrdersView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/group-orders",
+      "visitedPath": "/dashboard/group-orders",
+      "title": "團體訂單 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/orders/group",
+        "/orders/group/statistics",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n團體訂單\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n團體訂單\nCurrently managing: 示範餐廳\nExit\n團體訂單\n\n管理多人共享訂單\n\n活躍訂單: 0\n\n訂單總數: 0\n\n建立團體訂單\n生成分享碼\n\n活躍訂單\n\n0\n\n平均客單價\n\nNT$0\n\n平均成員數\n\n0.0 人\n\n團體訂單列表\n全部狀態\n進行中\n結帳處理中\n結帳處理失敗\n結帳中\n已完成\n已取消\n尚無團體訂單\n\n建立第一個團體訂單開始使用\n\n選擇訂單\n\n點選一個團體訂單查看詳情\n\n快速操作\n建立團體訂單生成分享碼匯出報表\n使用統計\n訂單總數\n0\n平均成員數\n0.0 人",
+      "screenshot": "baseline/admin-dashboard--GroupOrders.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/service-bookings",
+      "name": "ServiceBookings",
+      "file": "apps/admin-dashboard/src/views/ServiceBookingsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/service-bookings",
+      "visitedPath": "/dashboard/service-bookings",
+      "title": "服務預約管理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/service-bookings",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n服務預約管理\n示範餐廳\n連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n服務預約管理\nCurrently managing: 示範餐廳\nExit\n服務預約管理\n\n查看服務預約並處理現金確認、完成、未到與取消。\n\n重新整理\n日期\n狀態\n全部\n待付款/待確認\n已確認\n已完成\n未到\n已取消\n\n載入服務預約失敗。\n\n預約\t顧客\t時間\t付款\t狀態\t操作\n目前沒有服務預約。",
+      "screenshot": "baseline/admin-dashboard--ServiceBookings.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/queue",
+      "name": "",
+      "file": "",
+      "kind": "redirect",
+      "status": "blocked",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "相容性重新導向路由，沒有獨立頁面元件，未作獨立截圖。"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/ai-analytics/config",
+      "name": "AIProviderConfig",
+      "file": "apps/admin-dashboard/src/views/ai-analytics/AIProviderConfig.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/ai-analytics/config",
+      "visitedPath": "/dashboard/ai-analytics/config",
+      "title": "AI 配置 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/ai-analytics/config/demo-restaurant",
+        "/system/error-report",
+        "/ai-analytics/models/anthropic"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\nAI 配置\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\nAI 配置\nCurrently managing: 示範餐廳\nExit\nAI 服務設定\n\n設定 AI 分析服務的供應商與 API 金鑰\n\nAI 洞察\n產品分析\nAI 設定\n選擇 AI 供應商\n🤖\nAnthropic Claude\nClaude AI — 強大的分析與推理能力\n✨\nOpenAI GPT\nGPT 系列 — 廣泛的語言理解能力\n🔮\nGoogle Gemini\nGemini — Google 的多模態 AI\n🚀\nDeepSeek\nDeepSeek — 高效能開源模型\n⚙️\n自訂\n使用自訂的 OpenAI 相容 API\n🤖\nAnthropic Claude\nClaude AI — 強大的分析與推理能力\nAPI Key\n\nAPI 金鑰將以加密方式儲存\n\n模型選擇\n\n可從清單中選擇，或直接輸入供應商支援的任何模型 ID。\n\n 測試連線\n儲存設定\nAPI 金鑰儲存\nAPI 金鑰會儲存為所選 AI 供應商的設定。\n📊 用量追蹤\n自動記錄 API 使用量與費用\n⚡ 智能快取\n相似查詢自動快取以節省 API 費用",
+      "screenshot": "baseline/admin-dashboard--AIProviderConfig.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/ai-analytics/insights",
+      "name": "AIInsightsDashboard",
+      "file": "apps/admin-dashboard/src/views/ai-analytics/AIInsightsDashboard.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/ai-analytics/insights",
+      "visitedPath": "/dashboard/ai-analytics/insights",
+      "title": "AI 洞察 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\nAI 洞察\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\nAI 洞察\nCurrently managing: 示範餐廳\nExit",
+      "screenshot": "baseline/admin-dashboard--AIInsightsDashboard.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/ai-analytics/products",
+      "name": "ProductAnalytics",
+      "file": "apps/admin-dashboard/src/views/ai-analytics/ProductAnalyticsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/ai-analytics/products",
+      "visitedPath": "/dashboard/ai-analytics/products",
+      "title": "產品分析 - 管理後台",
+      "unavailableApi": [
+        "/realtime/auth/token",
+        "/me/modules",
+        "/ai-analytics/products/traffic-drivers/demo-restaurant",
+        "/ai-analytics/products/bestsellers/demo-restaurant",
+        "/ai-analytics/products/profit-leaders/demo-restaurant",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n產品分析\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n產品分析\nCurrently managing: 示範餐廳\nExit\n產品分析\n\n深入分析菜品表現，優化菜單策略\n\nAI 洞察\n產品分析\nAI 設定\n過去 7 天\n過去 14 天\n過去 30 天\n過去 90 天\n流量引擎\n吸引顧客的熱門菜品\n暢銷菜品\n銷售量最高的菜品\n利潤冠軍\n利潤貢獻最高的菜品\n尚無分析數據\n選擇時間範圍並等待數據載入",
+      "screenshot": "baseline/admin-dashboard--ProductAnalytics.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/scheduling",
+      "name": "",
+      "file": "",
+      "kind": "redirect",
+      "status": "blocked",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "相容性重新導向路由，沒有獨立頁面元件，未作獨立截圖。"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/leaves",
+      "name": "",
+      "file": "",
+      "kind": "redirect",
+      "status": "blocked",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "相容性重新導向路由，沒有獨立頁面元件，未作獨立截圖。"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/seating",
+      "name": "",
+      "file": "apps/admin-dashboard/src/views/seating/SeatingManagementView.vue",
+      "kind": "layout",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "路由容器由此子頁的同一張實際截圖呈現：SeatingReservations。已依正常關閉按鈕收起暫時錯誤通知；訂單／菜單／租戶為範例 API 資料。實際原始元件；本機範例身份／餐廳。未連線 API，呈現真實錯誤／空白狀態。",
+      "screenshot": "baseline/admin-dashboard--SeatingReservations.png",
+      "inheritedFrom": {
+        "route": "/dashboard/seating",
+        "name": "SeatingReservations",
+        "file": "apps/admin-dashboard/src/views/seating/ReservationTab.vue"
+      },
+      "actualRoute": "/dashboard/seating"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/seating/table-setup",
+      "name": "SeatingTableSetup",
+      "file": "apps/admin-dashboard/src/views/seating/TableSetupTab.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/seating/table-setup",
+      "visitedPath": "/dashboard/seating/table-setup",
+      "title": "座位管理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/tables",
+        "/reservations/stats/demo-restaurant",
+        "/waiting-list/queue-status/demo-restaurant",
+        "/waiting-list/stats/demo-restaurant",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n座位管理\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n座位管理\nCurrently managing: 示範餐廳\nExit\n座位管理\n\n統一管理訂位、候位與排隊\n\n今日訂位\n\n0\n\n已確認\n\n0\n\n等待中\n\n0\n\n平均等待\n\n0 min\n\n可用桌位\n\n0\n\n未到店率\n\n0.0%\n\n今日已服務\n\n0\n\n桌台設定\n訂位\n候位\n排隊看板\n批量生成 QR 碼\n備妥目前顯示\n列印全部 QR 碼\n新增桌台\n全部狀態\n可用\n使用中\n維護中\n全部容量\n2 人座\n4 人座\n6 人座\n8 人以上\n\n共 0 張桌台\n\n暫無桌台\n\n開始添加您的第一張桌台\n\n新增桌台",
+      "screenshot": "baseline/admin-dashboard--SeatingTableSetup.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/seating/tables/:id",
+      "name": "TableDetail",
+      "file": "apps/admin-dashboard/src/views/TableDetailView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/seating/tables/1",
+      "visitedPath": "/dashboard/seating/tables/1",
+      "title": "座位管理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/tables/1",
+        "/reservations/stats/demo-restaurant",
+        "/waiting-list/queue-status/demo-restaurant",
+        "/waiting-list/stats/demo-restaurant",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n座位管理\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n座位管理\nCurrently managing: 示範餐廳\nExit\n座位管理\n\n統一管理訂位、候位與排隊\n\n今日訂位\n\n0\n\n已確認\n\n0\n\n等待中\n\n0\n\n平均等待\n\n0 min\n\n可用桌位\n\n0\n\n未到店率\n\n0.0%\n\n今日已服務\n\n0\n\n桌台設定\n訂位\n候位\n排隊看板\n返回桌台列表\n桌號 {number}\n可用\n桌子模式\n編輯桌台\n切換模式\n容量\n0 人\n位置\n未設定\n使用次數\n0 次\n桌台 QR 碼\n請先重新生成此 QR 碼，再下載或列印。\n下載 QR 碼\n列印 QR 碼\n重新生成",
+      "screenshot": "baseline/admin-dashboard--TableDetail.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/seating",
+      "name": "SeatingReservations",
+      "file": "apps/admin-dashboard/src/views/seating/ReservationTab.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/seating",
+      "visitedPath": "/dashboard/seating",
+      "title": "座位管理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/reservations",
+        "/reservations/stats/demo-restaurant",
+        "/waiting-list/queue-status/demo-restaurant",
+        "/waiting-list/stats/demo-restaurant",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n座位管理\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n座位管理\nCurrently managing: 示範餐廳\nExit\n座位管理\n\n統一管理訂位、候位與排隊\n\n今日訂位\n\n0\n\n已確認\n\n0\n\n等待中\n\n0\n\n平均等待\n\n0 min\n\n可用桌位\n\n0\n\n未到店率\n\n0.0%\n\n今日已服務\n\n0\n\n桌台設定\n訂位\n候位\n排隊看板\n建立訂位\n日期\n狀態\n全部狀態\n待確認\n已確認\n已到店\n已入座\n已完成\n已取消\n未到店\n電話號碼\n搜尋\n重置\n確認碼\t客戶姓名\t預訂時間\t用餐人數\t狀態\t特殊要求\t操作\n\n\n暫無訂位記錄",
+      "screenshot": "baseline/admin-dashboard--SeatingReservations.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/seating/waiting-list",
+      "name": "SeatingWaitingList",
+      "file": "apps/admin-dashboard/src/views/seating/WaitingListTab.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/seating/waiting-list",
+      "visitedPath": "/dashboard/seating/waiting-list",
+      "title": "座位管理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/waiting-list",
+        "/reservations/stats/demo-restaurant",
+        "/waiting-list/queue-status/demo-restaurant",
+        "/waiting-list/stats/demo-restaurant",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n座位管理\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n座位管理\nCurrently managing: 示範餐廳\nExit\n座位管理\n\n統一管理訂位、候位與排隊\n\n今日訂位\n\n0\n\n已確認\n\n0\n\n等待中\n\n0\n\n平均等待\n\n0 min\n\n可用桌位\n\n0\n\n未到店率\n\n0.0%\n\n今日已服務\n\n0\n\n桌台設定\n訂位\n候位\n排隊看板\n叫號下一組\n新增候位\n狀態\n全部狀態\n等待中\n已叫號\n已確認\n已入座\n已取消\n已過號\n電話號碼\n搜尋\n重置\n重新整理\n候位隊列\n\n暫無候位隊列",
+      "screenshot": "baseline/admin-dashboard--SeatingWaitingList.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/seating/queue-dashboard",
+      "name": "SeatingQueueDashboard",
+      "file": "apps/admin-dashboard/src/views/seating/QueueDashboardTab.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/seating/queue-dashboard",
+      "visitedPath": "/dashboard/seating/queue-dashboard",
+      "title": "座位管理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/queue/demo-restaurant/current",
+        "/queue/demo-restaurant/status",
+        "/tables",
+        "/reservations/stats/demo-restaurant",
+        "/waiting-list/queue-status/demo-restaurant",
+        "/waiting-list/stats/demo-restaurant",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n座位管理\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n座位管理\nCurrently managing: 示範餐廳\nExit\n座位管理\n\n統一管理訂位、候位與排隊\n\n今日訂位\n\n0\n\n已確認\n\n0\n\n等待中\n\n0\n\n平均等待\n\n0 min\n\n可用桌位\n\n0\n\n未到店率\n\n0.0%\n\n今日已服務\n\n0\n\n桌台設定\n訂位\n候位\n排隊看板\n候位設定\n呼叫下一位\n候位佇列\n全部\n候位中\n已叫號\n未到場\n尚無候位顧客\n\n目前沒有顧客在候位佇列\n\n桌位狀態\n可用 (0)\n使用中(0)\n全部\n快速操作\n手動加入候位\n發送通知\n統計報表\n智慧分配\n\n已啟用自動座位分配",
+      "screenshot": "baseline/admin-dashboard--SeatingQueueDashboard.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/reservations",
+      "name": "",
+      "file": "",
+      "kind": "redirect",
+      "status": "blocked",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "相容性重新導向路由，沒有獨立頁面元件，未作獨立截圖。"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/waiting",
+      "name": "",
+      "file": "",
+      "kind": "redirect",
+      "status": "blocked",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "相容性重新導向路由，沒有獨立頁面元件，未作獨立截圖。"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/waiting/list",
+      "name": "",
+      "file": "",
+      "kind": "redirect",
+      "status": "blocked",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "相容性重新導向路由，沒有獨立頁面元件，未作獨立截圖。"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/waiting/dashboard",
+      "name": "",
+      "file": "",
+      "kind": "redirect",
+      "status": "blocked",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "相容性重新導向路由，沒有獨立頁面元件，未作獨立截圖。"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/waiting-list",
+      "name": "",
+      "file": "",
+      "kind": "redirect",
+      "status": "blocked",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "相容性重新導向路由，沒有獨立頁面元件，未作獨立截圖。"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/account-management",
+      "name": "AccountManagement",
+      "file": "apps/admin-dashboard/src/views/AccountManagementView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/account-management",
+      "visitedPath": "/dashboard/account-management",
+      "title": "帳號管理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/restaurants",
+        "/users",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n帳號管理\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n帳號管理\nCurrently managing: 示範餐廳\nExit\n帳號管理\n店主帳號\n管理員帳號\n帳號資訊\n用戶名 *\n密碼 *\n全名 *\nEmail *\n餐廳綁定\n所屬餐廳 *\n選擇餐廳\n\n要開新店？請到平台 Onboarding 代店主建立，系統會一併開通訂閱與設定密碼連結。 前往代店主建立\n\n聯絡電話\n權限確認\n\n此帳號建立後將擁有以下權限：\n\n管理餐廳菜單\n查看及管理訂單\n管理員工（廚師、服務員、收銀員）\n查看營業數據分析\n管理餐廳設定\n建立店主帳號\n現有店主列表\n店主\t餐廳\t狀態\t建立日期\t操作\n尚無店主帳號",
+      "screenshot": "baseline/admin-dashboard--AccountManagement.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/subscriptions",
+      "name": "Subscriptions",
+      "file": "apps/admin-dashboard/src/views/SubscriptionsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/subscriptions",
+      "visitedPath": "/dashboard/subscriptions",
+      "title": "訂閱管理 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/admin/subscriptions",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n訂閱管理\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n訂閱管理\nCurrently managing: 示範餐廳\nExit\n訂閱管理\n\n管理平台各店家的訂閱方案與模組權限\n\n新增訂閱\n訂閱\n用量\n\n系統暫時無法處理，請稍後再試。 [PREVIEW_UNAVAILABLE]\n\n重試",
+      "screenshot": "baseline/admin-dashboard--Subscriptions.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/monitoring",
+      "name": "Monitoring",
+      "file": "apps/admin-dashboard/src/views/MonitoringView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/dashboard/monitoring",
+      "visitedPath": "/dashboard/monitoring",
+      "title": "系統監控 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/monitoring/overview",
+        "/monitoring/alerts/rules",
+        "/monitoring/reports/performance",
+        "/system/error-report",
+        "/monitoring/alerts/recent"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n系統監控\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n系統監控\nCurrently managing: 示範餐廳\nExit\n系統監控\n\n即時監控系統健康狀態、性能指標與警報\n\n自動更新\n立即更新\n整體健康狀態\n離線\n健康分數\n—\n/100\n系統運行時間\n0分鐘\n最後更新\n剛才\n系統健康度\n—%\n關鍵指標\n監控中（輪詢）\n即時警報\n沒有警報\n\n系統正常運作\n\n系統組件狀態\n警報規則\n性能報告\n錯誤分析\n警報規則\n新增警報規則\n沒有警報規則\n\n開始建立警報規則來監控系統狀態\n\n新增警報規則",
+      "screenshot": "baseline/admin-dashboard--Monitoring.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/cashier",
+      "name": "",
+      "file": "",
+      "kind": "redirect",
+      "status": "blocked",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "相容性重新導向路由，沒有獨立頁面元件，未作獨立截圖。"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/service",
+      "name": "Service",
+      "file": "apps/admin-dashboard/src/layouts/ServiceLayout.vue",
+      "kind": "layout",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "路由容器由此子頁的同一張實際截圖呈現：ServiceDelivery。已依正常關閉按鈕收起暫時錯誤通知；訂單／菜單／租戶為範例 API 資料。實際原始元件；本機範例身份／餐廳。未連線 API，呈現真實錯誤／空白狀態。",
+      "screenshot": "baseline/admin-dashboard--ServiceDelivery.png",
+      "inheritedFrom": {
+        "route": "/service",
+        "name": "ServiceDelivery",
+        "file": "apps/admin-dashboard/src/views/ServiceView.vue"
+      },
+      "actualRoute": "/service"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/service",
+      "name": "ServiceDelivery",
+      "file": "apps/admin-dashboard/src/views/ServiceView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/service",
+      "visitedPath": "/service",
+      "title": "送菜系統 - 管理後台",
+      "unavailableApi": [
+        "/me/modules"
+      ],
+      "browserErrors": [],
+      "visibleText": "MakanMasak\n送菜員\ndesign-review\n送菜服務台\n\n管理餐點配送和桌台服務\n\n今日配送: 3單\n\n效率: 100%\n\n當前時間\n\n16:54:21\n\n刷新\n\n待配送\n\n1\n\n配送中\n\n0\n\n已送達\n\n0\n\n平均配送時間\n\n3分\n\n待配送訂單\n所有桌台\n桌號 A1\n桌號 A2\n桌號 A3\n所有優先級\n緊急\n普通\nA103\n\n桌號 A3\n\n普通\n剛準備好\n2\n南洋咖哩雞飯\n範例顧客\n開始配送\n聯絡客戶\n我的配送中訂單 (0)\n\n目前沒有配送中的訂單\n\n今日個人績效\n\n完成配送\n\n3\n\n平均時間\n\n3分\n\n服務效率\n100%\n今日配送時間軸\n16:54\nA101\n2分\n16:54\nA102\n3分\n16:54\nA103\n4分",
+      "screenshot": "baseline/admin-dashboard--ServiceDelivery.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/unauthorized",
+      "name": "Unauthorized",
+      "file": "apps/admin-dashboard/src/views/UnauthorizedView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/unauthorized",
+      "visitedPath": "/unauthorized",
+      "title": "無權限 - 管理後台",
+      "unavailableApi": [
+        "/me/modules"
+      ],
+      "browserErrors": [],
+      "visibleText": "存取被拒絕\n\n抱歉，您沒有權限存取此頁面\n\n權限不足\n\n您目前的角色無法存取此功能。如需協助，請聯絡系統管理員。\n\n當前登入資訊\n用戶名:\ndesign-review\n角色:\n系統管理員\n餐廳:\n示範餐廳\n您可以使用的功能\n系統管理\n用戶管理\n餐廳管理\n數據分析\n所有功能\n返回上一頁\n回到首頁\n\n如有疑問，請聯絡系統管理員\n\nadmin@makanmasak.com",
+      "screenshot": "baseline/admin-dashboard--Unauthorized.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/:pathMatch(.*)*",
+      "name": "NotFound",
+      "file": "apps/admin-dashboard/src/views/NotFoundView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/preview-not-found",
+      "visitedPath": "/preview-not-found",
+      "title": "頁面不存在 - 管理後台",
+      "unavailableApi": [
+        "/me/modules"
+      ],
+      "browserErrors": [],
+      "visibleText": "404\n頁面不存在\n\n抱歉，您要找的頁面不存在或已被移除\n\n請檢查網址是否正確，或使用下方導航回到主要功能頁面\n\n您嘗試訪問的路徑:\n\n/preview-not-found\n快速導航\n儀表板\n收銀台\n返回上一頁\n回到首頁\n無法找到您要的內容？\n\n嘗試搜索您需要的功能：\n\n搜索\n\n如果問題持續存在，請聯絡技術支援\n\n技術支援\n聯絡電話\n\n錯誤代碼: 404 | 2026-11-11T08:54:24.591Z",
+      "screenshot": "baseline/admin-dashboard--NotFound.png"
+    },
+    {
+      "app": "kitchen-display",
+      "route": "/",
+      "name": "",
+      "file": "",
+      "kind": "redirect",
+      "status": "blocked",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "相容性重新導向路由，沒有獨立頁面元件，未作獨立截圖。"
+    },
+    {
+      "app": "kitchen-display",
+      "route": "/login",
+      "name": "Login",
+      "file": "apps/kitchen-display/src/views/LoginView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/login",
+      "visitedPath": "/login",
+      "title": "MakanMasak 廚房顯示系統",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "廚房顯示系統\n\nKitchen Display System\n\n用戶名稱\n密碼\n登入\n\n僅限廚師角色登入\n\nMakanMasak 廚房顯示系統 v1.0\n\n需要協助？請聯繫系統管理員",
+      "screenshot": "baseline/kitchen-display--Login.png"
+    },
+    {
+      "app": "kitchen-display",
+      "route": "/s/:slug",
+      "name": "ShopLogin",
+      "file": "apps/kitchen-display/src/views/LoginView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/s/demo-shop",
+      "visitedPath": "/s/demo-shop",
+      "title": "MakanMasak 廚房顯示系統",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "廚房顯示系統\n\nKitchen Display System\n\n示範餐廳\n\n用戶名稱\n密碼\n登入\n\n僅限廚師角色登入\n\nMakanMasak 廚房顯示系統 v1.0\n\n需要協助？請聯繫系統管理員",
+      "screenshot": "baseline/kitchen-display--ShopLogin.png"
+    },
+    {
+      "app": "kitchen-display",
+      "route": "/kitchen/:restaurantId",
+      "name": "Kitchen",
+      "file": "apps/kitchen-display/src/views/EnhancedKitchenDashboard.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。",
+      "actualRoute": "/kitchen/demo-restaurant",
+      "visitedPath": "/kitchen/demo-restaurant",
+      "title": "MakanMasak 廚房顯示系統",
+      "unavailableApi": [
+        "/realtime/auth/token"
+      ],
+      "browserErrors": [],
+      "visibleText": "廚房看板\n離線\n看板\n格狀\n🇹🇼\n1\n待處理\n1\n製作中\n1\n已完成\n1\n緊急訂單\n待處理\n1\nA101\n桌 A1\n🪑 內用\n2分鐘\n16:48\n招牌海南雞飯\n×2\n開始\n少辣\n請先出餐\n開始製作\nSpace\n製作中\n1\nA102\n桌 A2\n🪑 內用\n3分鐘\n16:47\n叻沙麵\n×2\n完成\n少辣\n進度\n30%\n✓ 標記完成\nSpace\n準備完成\n1\nA103\n桌 A3\n🪑 內用\n4分鐘\n16:46\n南洋咖哩雞飯\n×2\n已完成\n少辣\n已出餐\nSpace\n連線中...",
+      "screenshot": "baseline/kitchen-display--Kitchen.png"
+    },
+    {
+      "app": "kitchen-display",
+      "route": "/my-shifts",
+      "name": "MyShifts",
+      "file": "apps/kitchen-display/src/views/MyShiftsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。",
+      "actualRoute": "/my-shifts",
+      "visitedPath": "/my-shifts",
+      "title": "MakanMasak 廚房顯示系統",
+      "unavailableApi": [
+        "/scheduling/demo-restaurant/schedules",
+        "/scheduling/demo-restaurant/swap-requests"
+      ],
+      "browserErrors": [],
+      "visibleText": "我的班表\n\n查看自己的班次並提出換班申請\n\n服務暫時無法使用，請稍後再試 [PREVIEW_UNAVAILABLE]\n\n重試\n即將到來的班次\n\n目前沒有排定的班次\n\n店長排班後會顯示在這裡\n\n我的換班申請\n\n尚未送出任何換班申請",
+      "screenshot": "baseline/kitchen-display--MyShifts.png"
+    },
+    {
+      "app": "kitchen-display",
+      "route": "/settings",
+      "name": "Settings",
+      "file": "apps/kitchen-display/src/views/SettingsView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/settings",
+      "visitedPath": "/settings",
+      "title": "MakanMasak 廚房顯示系統",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "設定\n恢復預設\n顯示\n字體大小\n一般\n大\n特大\n顯示顧客姓名\n顯示預估時間\n音效\n音效通知\n音量\n70%\n通知音效\n預設\n時間門檻\n緊急時間\n15 分鐘\n自動刷新間隔\n30 秒",
+      "screenshot": "baseline/kitchen-display--Settings.png"
+    },
+    {
+      "app": "kitchen-display",
+      "route": "/history",
+      "name": "History",
+      "file": "apps/kitchen-display/src/views/HistoryView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/history",
+      "visitedPath": "/history",
+      "title": "MakanMasak 廚房顯示系統",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "歷史紀錄\n今天\n昨天\n本週\n3\n總訂單\n0\n平均製作 (min)\n0%\n準時率\nA101\n已確認\nA1\n·\n2 項\n·\n0 min\n16:48\nA102\n製作中\nA2\n·\n2 項\n·\n0 min\n16:47\nA103\n已完成\nA3\n·\n2 項\n·\n0 min\n16:46",
+      "screenshot": "baseline/kitchen-display--History.png"
+    },
+    {
+      "app": "kitchen-display",
+      "route": "/unauthorized",
+      "name": "Unauthorized",
+      "file": "apps/kitchen-display/src/views/UnauthorizedView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/unauthorized",
+      "visitedPath": "/unauthorized",
+      "title": "MakanMasak 廚房顯示系統",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "無權限存取\n\n此頁面僅限廚師角色使用\n\n重新登入",
+      "screenshot": "baseline/kitchen-display--Unauthorized.png"
+    },
+    {
+      "app": "kitchen-display",
+      "route": "/:pathMatch(.*)*",
+      "name": "NotFound",
+      "file": "apps/kitchen-display/src/views/NotFoundView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/preview-not-found",
+      "visitedPath": "/preview-not-found",
+      "title": "MakanMasak 廚房顯示系統",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "找不到頁面\n\n請確認網址是否正確\n\n返回廚房",
+      "screenshot": "baseline/kitchen-display--NotFound.png"
+    },
+    {
+      "app": "management-portal",
+      "route": "/login",
+      "name": "Login",
+      "file": "apps/management-portal/src/views/LoginView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/login",
+      "visitedPath": "/login",
+      "title": "登入 - MakanMasak 管理平台",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "MakanMasak\n\n管理平台登入\n\n使用 API 平台管理員 token 換取管理平台工作階段。\n\nAPI admin token\n登入管理平台",
+      "screenshot": "baseline/management-portal--Login.png"
+    },
+    {
+      "app": "management-portal",
+      "route": "/",
+      "name": "Dashboard",
+      "file": "apps/management-portal/src/views/DashboardView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/",
+      "visitedPath": "/",
+      "title": "總覽 - MakanMasak 管理平台",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "MakanMasak\n管理平台\n總覽\n租戶管理\n部署管理\n健康監控\n授權管理\n市場管理\n地區政策\n登出\n繁體中文\n🇹🇼\n\n版本 1.0.0\n\n總覽\n\n管理平台運行狀態概覽\n\n總租戶數\n\n1\n\n運行中\n\n1\n\n待處理\n\n0\n\n健康異常\n\n0\n\n健康狀態\n查看全部\n1\n正常運行\n1\n正常\n0\n降級\n0\n離線\n待處理事項\n\n沒有待處理的事項\n\n最近租戶\n查看全部\n商家名稱\t狀態\t版本\t建立時間\t\n範例南洋餐館\t運行中\t2.1.0\t2026/11/11\t查看",
+      "screenshot": "baseline/management-portal--Dashboard.png"
+    },
+    {
+      "app": "management-portal",
+      "route": "/tenants",
+      "name": "Tenants",
+      "file": "apps/management-portal/src/views/TenantsView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/tenants",
+      "visitedPath": "/tenants",
+      "title": "租戶管理 - MakanMasak 管理平台",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "MakanMasak\n管理平台\n總覽\n租戶管理\n部署管理\n健康監控\n授權管理\n市場管理\n地區政策\n登出\n繁體中文\n🇹🇼\n\n版本 1.0.0\n\n租戶管理\n\n管理所有獨立部署的餐廳租戶\n\n新增租戶\n全部狀態\n運行中\n待處理\n配置中\n已暫停\n已終止\n商家名稱\t狀態\t聯絡 EMAIL\t子域名\t建立時間\t操作\n\n範\n範例南洋餐館\n\t運行中\t\nreview@example.test\n\t\ndemo-shop.makanmasak.com\n\t2026/11/11\t管理",
+      "screenshot": "baseline/management-portal--Tenants.png"
+    },
+    {
+      "app": "management-portal",
+      "route": "/tenants/:id",
+      "name": "TenantDetail",
+      "file": "apps/management-portal/src/views/TenantDetailView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/tenants/1",
+      "visitedPath": "/tenants/1",
+      "title": "租戶詳情 - MakanMasak 管理平台",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "MakanMasak\n管理平台\n總覽\n租戶管理\n部署管理\n健康監控\n授權管理\n市場管理\n地區政策\n登出\n繁體中文\n🇹🇼\n\n版本 1.0.0\n\n返回租戶列表\n範\n範例南洋餐館\n運行中\ndemo-shop.makanmasak.com\n重新部署\n概覽\n資源\n部署\n健康\n授權\n基本資訊\n商家名稱\n範例南洋餐館\n聯絡 Email\nreview@example.test\n聯絡電話\n02-0000-0000\n子域名\ndemo-shop.makanmasak.com\n自訂域名\n-\n建立時間\n2026/11/11 下午4:54:52\n部署資訊\n當前版本\nv2.1.0\n資源數量\n0 個\n最近部署\n-",
+      "screenshot": "baseline/management-portal--TenantDetail.png"
+    },
+    {
+      "app": "management-portal",
+      "route": "/deployments",
+      "name": "Deployments",
+      "file": "apps/management-portal/src/views/DeploymentsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/deployments",
+      "visitedPath": "/deployments",
+      "title": "部署管理 - MakanMasak 管理平台",
+      "unavailableApi": [
+        "/deployments/1/history"
+      ],
+      "browserErrors": [],
+      "visibleText": "MakanMasak\n管理平台\n總覽\n租戶管理\n部署管理\n健康監控\n授權管理\n市場管理\n地區政策\n登出\n繁體中文\n🇹🇼\n\n版本 1.0.0\n\n部署管理\n\n批量部署和版本更新\n\n批量部署\n目標版本\n部署 (0)\n選擇租戶\n全選\n範例南洋餐館\n當前版本：2.1.0\n最近部署\n\n暫無部署記錄\n\n隔離預覽未連線資料服務\n×",
+      "screenshot": "baseline/management-portal--Deployments.png"
+    },
+    {
+      "app": "management-portal",
+      "route": "/health",
+      "name": "Health",
+      "file": "apps/management-portal/src/views/HealthView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/health",
+      "visitedPath": "/health",
+      "title": "健康監控 - MakanMasak 管理平台",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "MakanMasak\n管理平台\n總覽\n租戶管理\n部署管理\n健康監控\n授權管理\n市場管理\n地區政策\n登出\n繁體中文\n🇹🇼\n\n版本 1.0.0\n\n健康監控\n\n監控所有租戶的運行狀態\n\n刷新\n\n總體狀態\n\n正常\n\n正常\n\n1\n\n降級\n\n0\n\n離線\n\n0\n\n平均回應時間\n\n86 ms\n\n最後更新：下午4:51:03\n所有租戶\n租戶\t狀態\t回應時間\tAPI\t資料庫\t快取\t儲存\t檢查時間\n範例南洋餐館\t正常\t86ms\t正常\t正常\t正常\t正常\t2026/11/11 下午4:51:03",
+      "screenshot": "baseline/management-portal--Health.png"
+    },
+    {
+      "app": "management-portal",
+      "route": "/licenses",
+      "name": "Licenses",
+      "file": "apps/management-portal/src/views/LicensesView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/licenses",
+      "visitedPath": "/licenses",
+      "title": "授權管理 - MakanMasak 管理平台",
+      "unavailableApi": [
+        "/licenses/1"
+      ],
+      "browserErrors": [],
+      "visibleText": "MakanMasak\n管理平台\n總覽\n租戶管理\n部署管理\n健康監控\n授權管理\n市場管理\n地區政策\n登出\n繁體中文\n🇹🇼\n\n版本 1.0.0\n\n授權管理\n\n管理租戶授權金鑰\n\n生成授權\n\n有效授權\n\n0\n\n標準版\n\n0\n\n專業版\n\n0\n\n企業版\n\n0\n\n暫無授權記錄\n\n隔離預覽未連線資料服務\n×",
+      "screenshot": "baseline/management-portal--Licenses.png"
+    },
+    {
+      "app": "management-portal",
+      "route": "/markets",
+      "name": "Markets",
+      "file": "apps/management-portal/src/views/MarketsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/markets",
+      "visitedPath": "/markets",
+      "title": "市場管理 - MakanMasak 管理平台",
+      "unavailableApi": [
+        "/markets",
+        "/admin/markets/join-requests"
+      ],
+      "browserErrors": [],
+      "visibleText": "MakanMasak\n管理平台\n總覽\n租戶管理\n部署管理\n健康監控\n授權管理\n市場管理\n地區政策\n登出\n繁體中文\n🇹🇼\n\n版本 1.0.0\n\nMarkets\n\nCurate night markets and commercial districts for customer discovery.\n\nNew market\nRefresh\nNo markets match the current filters.\nJoin requests\n\nReview restaurants asking to join a market or district.\n\nRefresh\nNo pending join requests.\nCreate market\n\nMarket metadata is public in customer discovery.\n\nNight market\nCommercial district\nFood court\nEvent venue\nOpening hours\nMon\nClosed\nTue\nClosed\nWed\nClosed\nThu\nClosed\nFri\nClosed\nSat\nClosed\nSun\nClosed\nSave market\nVendor membership\n\nSelect a market above, then search and attach a restaurant.\n\nSearch\nPrimary market for this restaurant\nAttach\nRemove\nVendor CSV import\n\nBulk ",
+      "screenshot": "baseline/management-portal--Markets.png"
+    },
+    {
+      "app": "management-portal",
+      "route": "/policies",
+      "name": "Policies",
+      "file": "apps/management-portal/src/views/PoliciesView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/policies",
+      "visitedPath": "/policies",
+      "title": "地區政策 - MakanMasak 管理平台",
+      "unavailableApi": [
+        "/admin/policies/registry",
+        "/markets"
+      ],
+      "browserErrors": [],
+      "visibleText": "MakanMasak\n管理平台\n總覽\n租戶管理\n部署管理\n健康監控\n授權管理\n市場管理\n地區政策\n登出\n繁體中文\n🇹🇼\n\n版本 1.0.0\n\n地區政策\n\n依國家或市集設定功能、金流、方案與費率。沒有設定的項目沿用上一層。\n\n台灣\n馬來西亞\n市集\n選擇市集…\n隔離預覽未連線資料服務\n×\n隔離預覽未連線資料服務\n×",
+      "screenshot": "baseline/management-portal--Policies.png"
+    },
+    {
+      "app": "management-portal",
+      "route": "/:pathMatch(.*)*",
+      "name": "NotFound",
+      "file": "apps/management-portal/src/views/NotFoundView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 暫時通知已以原有關閉按鈕收起。",
+      "actualRoute": "/preview-not-found",
+      "visitedPath": "/preview-not-found",
+      "title": "頁面不存在 - MakanMasak 管理平台",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "MakanMasak\n管理平台\n總覽\n租戶管理\n部署管理\n健康監控\n授權管理\n市場管理\n地區政策\n登出\n繁體中文\n🇹🇼\n\n版本 1.0.0\n\n404\n\n頁面不存在\n\n您訪問的頁面可能已被移除或暫時無法使用\n\n返回首頁",
+      "screenshot": "baseline/management-portal--NotFound.png"
+    },
+    {
+      "app": "onboarding-app",
+      "route": "/",
+      "name": "Home",
+      "file": "apps/onboarding-app/src/views/HomeView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/",
+      "visitedPath": "/",
+      "title": "開店申請 - MakanMasak",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "MakanMasak\n平台代管\n🇹🇼\n為您的餐廳打造\n專屬管理系統\n\n平台代管 · 資料安全 · 專人審核開通\n\n立即申請\n看看怎麼運作 ↓\n找不到狀態連結？重新寄給我\n平台代管\n\n系統由平台維運，不需要自己架設主機或管理伺服器\n\n安全可靠\n\n基於 Cloudflare 全球邊緣網絡，企業級安全防護\n\n專人開通\n\n平台團隊審核後為您開通帳號，並引導完成開店設定\n\n從點餐到出餐，一次看懂\n\n以下都是系統的實際畫面，店家與訂單是示範資料。\n\n1\n客人掃碼點餐\n\n客人用手機掃桌上的 QR Code，看著照片點餐，不用下載 App。\n\n2\n廚房即時收單\n\n訂單立刻出現在廚房平板，依待處理、製作中、準備完成排好。\n\n3\n客人看得到進度\n\n餐點做到哪一步，客人手機上即時更新，不用再問「好了沒」。\n\n4\n老闆隨時掌握營收\n\n今天賣了多少、幾張訂單、哪桌還在等，後台一眼看完。\n\n準備好開始了嗎？\n\n填寫申請表單，平台團隊審核後會與您聯繫\n\n開始申請\n\n© 2026 MakanMasak. All rights reserved.",
+      "screenshot": "baseline/onboarding-app--Home.png"
+    },
+    {
+      "app": "onboarding-app",
+      "route": "/apply",
+      "name": "Apply",
+      "file": "apps/onboarding-app/src/views/ApplyView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/apply",
+      "visitedPath": "/apply",
+      "title": "填寫申請 - MakanMasak",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "MakanMasak\n平台代管\n🇹🇼\n1\n2\n填寫申請資料\n餐廳名稱 *\n聯絡人姓名 *\nEmail *\n聯絡電話 *\n餐廳位置 *\n\n用於夜市 / 商圈探索與附近搜尋。請使用店面或攤位的實際座標。\n\n使用目前位置\n店家地址 *\n國家 *\n請選擇國家\n台灣\n馬來西亞\n縣市 *\n請選擇縣市\n鄉鎮市區 *\n夜市／商圈\n我是獨立店面，不屬於任何商圈\n返回\n下一步\n\n© 2026 MakanMasak. All rights reserved.",
+      "screenshot": "baseline/onboarding-app--Apply.png"
+    },
+    {
+      "app": "onboarding-app",
+      "route": "/success",
+      "name": "Success",
+      "file": "apps/onboarding-app/src/views/SuccessView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/success",
+      "visitedPath": "/success#local-fixture-secret",
+      "title": "申請成功 - MakanMasak",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "MakanMasak\n平台代管\n🇹🇼\n✓\n✓\n申請已送出！\n\n我們已收到您的店家加入申請。\n平台團隊審核通過後，會啟用您的帳號與系統資源。\n\n申請摘要\n申請編號\ndemo-application\n餐廳名稱\n範例南洋餐館\n聯絡 Email\nreview@example.test\n選擇方案\n免費試用\n申請狀態\n等待平台審核\n接下來會發生什麼？\n\n登入資訊\n\n核准後，平台會提供店主帳號與設定密碼連結。申請進度請以查詢連結查看。\n\n平台審核\n\n平台方會確認店家資料與方案，核准後即啟用平台代管資源。\n\n請保存此連結，這是查詢申請進度的唯一方式。\n\nhttp://127.0.0.1:4314/status/demo-application#local-fixture-secret\n\n複製查詢連結\n查看申請狀態\n返回首頁\n有任何問題？請聯繫 support@makanmasak.com\n\n© 2026 MakanMasak. All rights reserved.",
+      "screenshot": "baseline/onboarding-app--Success.png"
+    },
+    {
+      "app": "onboarding-app",
+      "route": "/find-application",
+      "name": "FindApplication",
+      "file": "apps/onboarding-app/src/views/FindApplicationView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/find-application",
+      "visitedPath": "/find-application",
+      "title": "找回申請 - MakanMasak",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "MakanMasak\n平台代管\n🇹🇼\n找回我的申請\n\n輸入申請時填的 Email，我們會把申請狀態連結重新寄給您。\n\n聯絡 Email\n寄送狀態連結\n返回首頁\n\n© 2026 MakanMasak. All rights reserved.",
+      "screenshot": "baseline/onboarding-app--FindApplication.png"
+    },
+    {
+      "app": "onboarding-app",
+      "route": "/status/:applicationId",
+      "name": "ApplicationStatus",
+      "file": "apps/onboarding-app/src/views/ApplicationStatusView.vue",
+      "kind": "page",
+      "status": "captured",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。",
+      "actualRoute": "/status/demo-application",
+      "visitedPath": "/status/demo-application#local-fixture-secret",
+      "title": "申請狀態 - MakanMasak",
+      "unavailableApi": [],
+      "browserErrors": [],
+      "visibleText": "MakanMasak\n平台代管\n🇹🇼\n申請狀態\n\n查看您的店家申請最新審核進度。\n\n餐廳名稱\n範例南洋餐館\n目前狀態\n等待審核\n\n可使用重新整理查看最新進度。\n\n重新整理狀態\n返回首頁\n\n© 2026 MakanMasak. All rights reserved.",
+      "screenshot": "baseline/onboarding-app--ApplicationStatus.png"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/settings?tab=markets",
+      "name": "Settings-markets",
+      "file": "apps/admin-dashboard/src/views/SettingsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。 設定分頁 markets",
+      "actualRoute": "/dashboard/settings",
+      "visitedPath": "/dashboard/settings?tab=markets",
+      "title": "系統設定 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/restaurants/demo-restaurant/service-items",
+        "/integrations/demo-restaurant/uber_eats",
+        "/restaurants/demo-restaurant/qr/shop",
+        "/markets",
+        "/restaurants/demo-restaurant/markets",
+        "/restaurants/demo-restaurant/market-join-requests",
+        "/restaurants/demo-restaurant/contact-profile",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n系統設定\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n系統設定\nCurrently managing: 示範餐廳\nExit\n系統設定\n\n管理餐廳系統偏好設定\n\n重置為預設值\n儲存設定\n基本設定\n市場 / 商圈\n聯絡與 FAQ\n訂單設定\nQR Code 設定\n通知設定\n安全設定\n外送平台串接\n收款方式\nMarketplace 資料完整度\n\n補齊定位、外帶、店家模式、聯絡資料與市場歸屬後，顧客才能在夜市 / 商圈中順利找到並使用服務。\n\n17%\n尚需補齊\n地址與 GPS\n\n需有城市、行政區、地址、經緯度，才能支援附近搜尋。\n\n必要\n外帶能力\n\n需啟用外帶，顧客才可從商圈探索直接開始訂購。\n\n已完成\n店家模式 QR\n\n需啟用店家模式並生成 QR token，才能承接免掃碼外帶流程。\n\n必要\n公開聯絡渠道\n\n至少設定一個 LINE、WhatsApp、Instagram 或 Telegram 連結。\n\n建議\n常見問題\n\n提供取餐、付款、預訂等常見回答，降低顧客詢問成本。\n\n建議\n市場 / 商圈歸屬\n\n至少加入一個市場或商圈，才會出現在該場域頁面。\n\n必要\n所屬市場 / 商圈\n\n查看目前已加入的夜市、商圈或美食聚落。\n\n開店紀錄",
+      "screenshot": "baseline/admin-dashboard--Settings-markets.png",
+      "variant": "設定分頁 markets"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/settings?tab=contact",
+      "name": "Settings-contact",
+      "file": "apps/admin-dashboard/src/views/SettingsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。 設定分頁 contact",
+      "actualRoute": "/dashboard/settings",
+      "visitedPath": "/dashboard/settings?tab=contact",
+      "title": "系統設定 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/restaurants/demo-restaurant/service-items",
+        "/integrations/demo-restaurant/uber_eats",
+        "/restaurants/demo-restaurant/qr/shop",
+        "/markets",
+        "/restaurants/demo-restaurant/markets",
+        "/restaurants/demo-restaurant/market-join-requests",
+        "/restaurants/demo-restaurant/contact-profile",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n系統設定\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n系統設定\nCurrently managing: 示範餐廳\nExit\n系統設定\n\n管理餐廳系統偏好設定\n\n重置為預設值\n儲存設定\n基本設定\n市場 / 商圈\n聯絡與 FAQ\n訂單設定\nQR Code 設定\n通知設定\n安全設定\n外送平台串接\n收款方式\n聯絡渠道與常見問題\n\n設定顧客可開啟的 LINE、WhatsApp、IG、Telegram 與常見問答。\n\n儲存聯絡資料\nLINE\nWhatsApp\nInstagram\nTelegram\n常見問題\n新增 FAQ\n尚未建立 FAQ。\n店家服務項目\n\n維護會顯示在店鋪菜單與夜市/商圈搜尋裡的預約、外送、租借或現場服務。\n\n新增服務\n服務名稱\n類型\n一般服務\n預約\n自取\n外送\n諮詢\n租借\n活動\n排序\n說明\n價格（NT$）\n價格文字\n預估分鐘\n付款條件\n現場付款\n預付全額\n支付訂金\n免付款\n標籤\n預約連結\n需預約\n公開顯示\n啟用\n新增服務\n批次匯入服務\n\n貼上 CSV，一次建立會顯示在市場搜尋裡的服務項目。\n\n載入範例\n匯入服務\nRequest failed with status code 503\n尚未建立服務項目。\n服務預約",
+      "screenshot": "baseline/admin-dashboard--Settings-contact.png",
+      "variant": "設定分頁 contact"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/settings?tab=orders",
+      "name": "Settings-orders",
+      "file": "apps/admin-dashboard/src/views/SettingsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。 設定分頁 orders",
+      "actualRoute": "/dashboard/settings",
+      "visitedPath": "/dashboard/settings?tab=orders",
+      "title": "系統設定 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/restaurants/demo-restaurant/service-items",
+        "/integrations/demo-restaurant/uber_eats",
+        "/restaurants/demo-restaurant/qr/shop",
+        "/markets",
+        "/restaurants/demo-restaurant/markets",
+        "/restaurants/demo-restaurant/market-join-requests",
+        "/restaurants/demo-restaurant/contact-profile",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n系統設定\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n系統設定\nCurrently managing: 示範餐廳\nExit\n系統設定\n\n管理餐廳系統偏好設定\n\n重置為預設值\n儲存設定\n基本設定\n市場 / 商圈\n聯絡與 FAQ\n訂單設定\nQR Code 設定\n通知設定\n安全設定\n外送平台串接\n收款方式\n訂單流程設定\n接受顧客掃碼點餐\n\n允許顧客透過桌台與店家 QR Code 送出訂單\n\n自動確認訂單\n\n新訂單自動確認，無需人工審核\n\n訂單準備時間提醒\n\n訂單超過準備時間時發送提醒\n\n預設準備時間（分鐘）\n啟用最低消費\n\n設定訂單最低消費金額限制\n\n稅率\n%\n\n套用於訂單小計。設為 0 表示不加稅。\n\n服務費\n%\n\n套用於訂單小計。設為 0 表示不收服務費。\n\n訂單記錄保留期限\n30 天\n90 天\n180 天\n1 年\n用餐方式設定\n\n設定內用、外帶與外送相關選項\n\n🍽️ 啟用內用\n允許客戶選擇在店內用餐\n🛍️ 啟用外帶\n允許客戶選擇外帶取餐\n🛵 啟用外送\n啟用外送服務選項\n外送費用\nNT$\n\n設定 0 表示免運費\n\n預估備餐時間\n~\n分鐘\n桌台設定\n桌號前綴\n自動清理桌台\n\n結帳後自動標記桌台為清潔狀態\n\n清理延遲",
+      "screenshot": "baseline/admin-dashboard--Settings-orders.png",
+      "variant": "設定分頁 orders"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/settings?tab=qrcode",
+      "name": "Settings-qrcode",
+      "file": "apps/admin-dashboard/src/views/SettingsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。 設定分頁 qrcode",
+      "actualRoute": "/dashboard/settings",
+      "visitedPath": "/dashboard/settings?tab=qrcode",
+      "title": "系統設定 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/restaurants/demo-restaurant/service-items",
+        "/integrations/demo-restaurant/uber_eats",
+        "/restaurants/demo-restaurant/qr/shop",
+        "/markets",
+        "/restaurants/demo-restaurant/markets",
+        "/restaurants/demo-restaurant/market-join-requests",
+        "/restaurants/demo-restaurant/contact-profile",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n系統設定\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n系統設定\nCurrently managing: 示範餐廳\nExit\n系統設定\n\n管理餐廳系統偏好設定\n\n重置為預設值\n儲存設定\n基本設定\n市場 / 商圈\n聯絡與 FAQ\n訂單設定\nQR Code 設定\n通知設定\n安全設定\n外送平台串接\n收款方式\n店家 QR Code\n\n設定店家模式 QR Code，讓客戶無需桌號即可點餐\n\n啟用店家模式\n\n啟用後客戶可透過店家 QR Code 直接點餐",
+      "screenshot": "baseline/admin-dashboard--Settings-qrcode.png",
+      "variant": "設定分頁 qrcode"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/settings?tab=notifications",
+      "name": "Settings-notifications",
+      "file": "apps/admin-dashboard/src/views/SettingsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。 設定分頁 notifications",
+      "actualRoute": "/dashboard/settings",
+      "visitedPath": "/dashboard/settings?tab=notifications",
+      "title": "系統設定 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/restaurants/demo-restaurant/service-items",
+        "/integrations/demo-restaurant/uber_eats",
+        "/restaurants/demo-restaurant/qr/shop",
+        "/markets",
+        "/restaurants/demo-restaurant/markets",
+        "/restaurants/demo-restaurant/market-join-requests",
+        "/restaurants/demo-restaurant/contact-profile",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n系統設定\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n系統設定\nCurrently managing: 示範餐廳\nExit\n系統設定\n\n管理餐廳系統偏好設定\n\n重置為預設值\n儲存設定\n基本設定\n市場 / 商圈\n聯絡與 FAQ\n訂單設定\nQR Code 設定\n通知設定\n安全設定\n外送平台串接\n收款方式\n音效通知\n啟用音效通知\n\n有新訂單或訂單完成時播放音效\n\n音量\n75%\n新訂單音效\n鈴聲\n鐘聲\n通知音\n自訂\n訂單完成音效\n成功音\n叮咚\n鐘聲\n自訂\n桌面通知\n啟用桌面通知\n\n透過瀏覽器推送桌面通知\n\n通知顯示時間（秒）",
+      "screenshot": "baseline/admin-dashboard--Settings-notifications.png",
+      "variant": "設定分頁 notifications"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/settings?tab=security",
+      "name": "Settings-security",
+      "file": "apps/admin-dashboard/src/views/SettingsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。 設定分頁 security",
+      "actualRoute": "/dashboard/settings",
+      "visitedPath": "/dashboard/settings?tab=security",
+      "title": "系統設定 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/restaurants/demo-restaurant/service-items",
+        "/integrations/demo-restaurant/uber_eats",
+        "/restaurants/demo-restaurant/qr/shop",
+        "/markets",
+        "/restaurants/demo-restaurant/markets",
+        "/restaurants/demo-restaurant/market-join-requests",
+        "/restaurants/demo-restaurant/contact-profile",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n系統設定\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n系統設定\nCurrently managing: 示範餐廳\nExit\n系統設定\n\n管理餐廳系統偏好設定\n\n重置為預設值\n儲存設定\n基本設定\n市場 / 商圈\n聯絡與 FAQ\n訂單設定\nQR Code 設定\n通知設定\n安全設定\n外送平台串接\n收款方式\n修改密碼\n\n修改你自己的登入密碼。儲存後所有裝置都會被登出，需要用新密碼重新登入。\n\n目前密碼\n新密碼\n\n密碼需至少 8 個字元，包含大小寫字母、數字及特殊字元\n\n確認新密碼\n更新密碼\n密碼政策\n最小密碼長度\n需要包含數字\n\n密碼必須包含至少一個數字\n\n需要包含符號\n\n密碼必須包含至少一個特殊符號\n\n密碼過期天數\n永不過期\n30 天\n60 天\n90 天\n180 天\n登入安全\n最大嘗試次數\n鎖定時間（分鐘）\n記錄登入記錄\n\n記錄所有登入和登出活動",
+      "screenshot": "baseline/admin-dashboard--Settings-security.png",
+      "variant": "設定分頁 security"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/settings?tab=integrations",
+      "name": "Settings-integrations",
+      "file": "apps/admin-dashboard/src/views/SettingsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。 設定分頁 integrations",
+      "actualRoute": "/dashboard/settings",
+      "visitedPath": "/dashboard/settings?tab=integrations",
+      "title": "系統設定 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/restaurants/demo-restaurant/service-items",
+        "/integrations/demo-restaurant/uber_eats",
+        "/restaurants/demo-restaurant/qr/shop",
+        "/markets",
+        "/restaurants/demo-restaurant/markets",
+        "/restaurants/demo-restaurant/market-join-requests",
+        "/restaurants/demo-restaurant/contact-profile",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n系統設定\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n系統設定\nCurrently managing: 示範餐廳\nExit\n系統設定\n\n管理餐廳系統偏好設定\n\n重置為預設值\n儲存設定\n基本設定\n市場 / 商圈\n聯絡與 FAQ\n訂單設定\nQR Code 設定\n通知設定\n安全設定\n外送平台串接\n收款方式\n外送平台串接\n\n連接外送平台以統一管理來自不同平台的訂單和菜單\n\n🟢\nUber Eats\n\n外送平台串接\n\n未連接\n\n連接 Uber Eats 以自動接收並管理外送訂單\n\n連接 Uber Eats\n🩷\nFoodpanda\n\n外送平台串接\n\n即將推出\n\nFoodpanda 串接功能即將推出，敬請期待\n\nWebhook 紀錄\n展開",
+      "screenshot": "baseline/admin-dashboard--Settings-integrations.png",
+      "variant": "設定分頁 integrations"
+    },
+    {
+      "app": "admin-dashboard",
+      "route": "/dashboard/settings?tab=payments",
+      "name": "Settings-payments",
+      "file": "apps/admin-dashboard/src/views/SettingsView.vue",
+      "kind": "page",
+      "status": "error-state",
+      "viewport": {
+        "width": 1100,
+        "height": 820
+      },
+      "note": "實際原始 Vue 元件；身份與範例資料僅供隔離本機預覽。 部分 API 未提供範例回應；錯誤、空白或離線狀態須搭配 unavailableApi 判讀。 暫時通知已以原有關閉按鈕收起。 設定分頁 payments",
+      "actualRoute": "/dashboard/settings",
+      "visitedPath": "/dashboard/settings?tab=payments",
+      "title": "系統設定 - 管理後台",
+      "unavailableApi": [
+        "/me/modules",
+        "/realtime/auth/token",
+        "/restaurants/demo-restaurant/service-items",
+        "/integrations/demo-restaurant/uber_eats",
+        "/restaurants/demo-restaurant/qr/shop",
+        "/markets",
+        "/restaurants/demo-restaurant/markets",
+        "/restaurants/demo-restaurant/market-join-requests",
+        "/restaurants/demo-restaurant/contact-profile",
+        "/system/error-report"
+      ],
+      "browserErrors": [],
+      "visibleText": "M\nMakanMasak\n平台總覽\n市場品質\n市場結帳\n平台顧客\n開店申請\n店鋪管理\n儀表板\n店主總覽\nPOS系統\n列印代理\n訂單管理\n菜單管理\n共用選項組\n座位管理\n員工管理\n會員管理\n顧客評價\n推播訊息\n團體訂單\n服務預約\n帳號管理\n意見反饋\n系統監控\n訂閱與用量\n系統設定\ndesign-review\n系統管理員\n系統設定\n示範餐廳\n重新連線中\n🇹🇼\n繁體中文\n▼\ndesign-review\n系統管理員\n首頁\n系統設定\nCurrently managing: 示範餐廳\nExit\n系統設定\n\n管理餐廳系統偏好設定\n\n重置為預設值\n儲存設定\n基本設定\n市場 / 商圈\n聯絡與 FAQ\n訂單設定\nQR Code 設定\n通知設定\n安全設定\n外送平台串接\n收款方式\n電子錢包收款\n\n連結店家自己的 Touch 'n Go eWallet 或 GrabPay 商戶帳號，顧客付款直接進入您的帳戶。\n\n本店以 TWD 結算，而 Touch 'n Go eWallet 與 GrabPay 只結算馬幣（MYR），因此無法連結。",
+      "screenshot": "baseline/admin-dashboard--Settings-payments.png",
+      "variant": "設定分頁 payments"
+    },
+    {
+      "app": "admin-dashboard",
+      "file": "apps/admin-dashboard/src/views/OrdersView.vue",
+      "route": "/dashboard/orders",
+      "name": "Live-demo-orders",
+      "kind": "page",
+      "status": "captured",
+      "origin": "live",
+      "role": "demo 店主",
+      "viewport": {
+        "width": 1100,
+        "height": 708
+      },
+      "screenshot": "baseline/live/demo-orders.jpg",
+      "note": "使用者提供網址的實際部署畫面；demo 店主 測試帳號，英文介面。唯讀檢視，沒有變更營運資料。部署版本可能與工作區不同。",
+      "site": "https://admin.makanmasak.com",
+      "capturedDate": "2026-11-11"
+    },
+    {
+      "app": "admin-dashboard",
+      "file": "apps/admin-dashboard/src/views/PlatformOverview.vue",
+      "route": "/dashboard/platform",
+      "name": "Live-admin-platform",
+      "kind": "page",
+      "status": "captured",
+      "origin": "live",
+      "role": "Admin",
+      "viewport": {
+        "width": 1100,
+        "height": 708
+      },
+      "screenshot": "baseline/live/admin-platform.jpg",
+      "note": "使用者提供網址的實際部署畫面；Admin 測試帳號，英文介面。唯讀檢視，沒有變更營運資料。部署版本可能與工作區不同。",
+      "site": "https://admin.makanmasak.com",
+      "capturedDate": "2026-11-11"
+    },
+    {
+      "app": "admin-dashboard",
+      "file": "apps/admin-dashboard/src/views/OwnerView.vue",
+      "route": "/dashboard/owner-overview",
+      "name": "Live-admin-owner",
+      "kind": "page",
+      "status": "captured",
+      "origin": "live",
+      "role": "Admin 選擇示範店家",
+      "viewport": {
+        "width": 1100,
+        "height": 708
+      },
+      "screenshot": "baseline/live/admin-owner.jpg",
+      "note": "使用者提供網址的實際部署畫面；Admin 選擇示範店家 測試帳號，英文介面。唯讀檢視，沒有變更營運資料。部署版本可能與工作區不同。",
+      "site": "https://admin.makanmasak.com",
+      "capturedDate": "2026-11-11"
+    },
+    {
+      "app": "kitchen-display",
+      "file": "apps/kitchen-display/src/views/EnhancedKitchenDashboard.vue",
+      "route": "/kitchen/:restaurantId",
+      "name": "Live-chef-kitchen",
+      "kind": "page",
+      "status": "captured",
+      "origin": "live",
+      "role": "Chef",
+      "viewport": {
+        "width": 1470,
+        "height": 705
+      },
+      "screenshot": "baseline/live/chef-kitchen.jpg",
+      "note": "使用者提供網址的實際部署畫面；Chef 測試帳號，英文介面。唯讀檢視，沒有變更營運資料。部署版本可能與工作區不同。",
+      "site": "https://kitchen.makanmasak.com",
+      "capturedDate": "2026-11-11"
+    },
+    {
+      "app": "kitchen-display",
+      "file": "apps/kitchen-display/src/views/SettingsView.vue",
+      "route": "/settings",
+      "name": "Live-chef-settings",
+      "kind": "page",
+      "status": "captured",
+      "origin": "live",
+      "role": "Chef",
+      "viewport": {
+        "width": 1470,
+        "height": 705
+      },
+      "screenshot": "baseline/live/chef-settings.jpg",
+      "note": "使用者提供網址的實際部署畫面；Chef 測試帳號，英文介面。唯讀檢視，沒有變更營運資料。部署版本可能與工作區不同。",
+      "site": "https://kitchen.makanmasak.com",
+      "capturedDate": "2026-11-11"
+    }
+  ],
+  "servers": [
+    {
+      "app": "customer-app",
+      "url": "http://127.0.0.1:4310",
+      "sessionId": 73643,
+      "pid": 30441
+    },
+    {
+      "app": "admin-dashboard",
+      "url": "http://127.0.0.1:4311",
+      "sessionId": 22881,
+      "pid": 30618
+    },
+    {
+      "app": "kitchen-display",
+      "url": "http://127.0.0.1:4312",
+      "sessionId": 67080,
+      "pid": 30720
+    },
+    {
+      "app": "management-portal",
+      "url": "http://127.0.0.1:4313",
+      "sessionId": 27016,
+      "pid": 30819
+    },
+    {
+      "app": "onboarding-app",
+      "url": "http://127.0.0.1:4314",
+      "sessionId": 93557,
+      "pid": 30924
+    }
+  ],
+  "scan": {
+    "file": "baseline/technical-scan.json",
+    "command": "impeccable detect --json apps/customer-app/src apps/admin-dashboard/src apps/kitchen-display/src apps/management-portal/src apps/onboarding-app/src"
+  },
+  "updatedAt": "2026-11-11T08:55:03.173Z",
+  "summary": {
+    "sourceViewFiles": 113,
+    "routeRecords": 143,
+    "leafRoutes": 114,
+    "extraVariants": 8,
+    "uniqueScreenshots": 122,
+    "blockedLeafRoutes": [],
+    "runtimeErrorScreens": []
+  },
+  "coverage": {
+    "tier": 2,
+    "graphProject": "Users-eric-Documents-Code-Makan-Masak",
+    "generation": "2026-11-11T08:51:22Z",
+    "note": "支援擷取設定的路由、認證、API、型別及狀態檔案皆經 check_index_coverage；無已記錄涵蓋缺口。這是 best-effort 訊號，並非完整性證明。"
+  },
+  "liveInspection": {
+    "sites": [
+      "https://admin.makanmasak.com",
+      "https://kitchen.makanmasak.com"
+    ],
+    "roles": [
+      "Admin",
+      "demo Owner",
+      "Chef"
+    ],
+    "credentialsPersisted": false,
+    "dataMutations": false,
+    "note": "使用者授權的實際登入補看；登入使用畫面要求的 username，密碼未寫入任何檔案。"
+  }
+}
