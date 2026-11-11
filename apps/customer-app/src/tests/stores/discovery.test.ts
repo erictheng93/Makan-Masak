@@ -29,6 +29,43 @@ describe("useDiscoveryStore", () => {
     }
   });
 
+  it("retains both independent load failures and clears only the retried operation", async () => {
+    setActivePinia(createPinia());
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(discoveryApi.getPopular).mockRejectedValueOnce(
+      new Error("popular offline"),
+    );
+    vi.mocked(discoveryApi.browseRestaurants).mockRejectedValueOnce(
+      new Error("browse offline"),
+    );
+    const store = useDiscoveryStore();
+    await Promise.all([store.loadPopular(), store.browseRestaurants()]);
+    expect(store).toMatchObject({
+      popularLoadFailed: true,
+      resultsLoadFailed: true,
+    });
+    vi.mocked(discoveryApi.getPopular).mockResolvedValueOnce({
+      keywords: [],
+      dishes: [],
+      restaurants: [],
+    });
+    await store.loadPopular();
+    expect(store).toMatchObject({
+      popularLoadFailed: false,
+      resultsLoadFailed: true,
+    });
+    await store.browseRestaurants();
+    expect(store).toMatchObject({
+      popularLoadFailed: false,
+      resultsLoadFailed: false,
+    });
+    store.resetAll();
+    expect(store).toMatchObject({
+      popularLoadFailed: false,
+      resultsLoadFailed: false,
+    });
+  });
+
   it("passes selected market scope to dish search", async () => {
     setActivePinia(createPinia());
     vi.mocked(discoveryApi.searchDishes).mockResolvedValueOnce({

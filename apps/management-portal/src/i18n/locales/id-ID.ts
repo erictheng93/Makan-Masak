@@ -113,6 +113,7 @@ const idID: Messages = {
     version: "Versi {version}",
   },
   licenses: {
+    confirmDiscard: "Buang rincian lisensi yang belum disimpan?",
     column: {
       createdAt: "Dibuat Pada",
       licenseKey: "Kunci Lisensi",

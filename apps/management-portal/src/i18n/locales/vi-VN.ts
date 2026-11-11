@@ -113,6 +113,7 @@ const viVN: Messages = {
     version: "Phiên bản {version}",
   },
   licenses: {
+    confirmDiscard: "Hủy thông tin giấy phép chưa lưu?",
     column: {
       createdAt: "Được tạo tại",
       licenseKey: "Khóa cấp phép",

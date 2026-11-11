@@ -28,3 +28,26 @@ User explicitly authorized: verify the submitted findings, repair confirmed defe
 - Persist a production QA result with screenshots, successful operations and explicit untested/blocked paths. No secret/session-token storage in committed evidence.
 
 This directory supplements the previous local-layout evidence. Existing `implementation/production-checks.json` and screenshots describe the earlier source revision and must not be presented as validation of this follow-up release.
+
+## Live QA and additional findings, November 12
+
+The first follow-up release was pushed as `a1d8fdbbe` and deployed to all five Pages apps after the full release gate passed. Production UI checks then found additional defects, now corrected in the follow-up patch:
+
+- Platform-admin order statistics omitted the selected restaurant. Alert routes allowed roles 0/1 but only read the session restaurant. Explicit, validated administrator context now reaches statistics and all alert actions; owners remain pinned to their session restaurant, and tenant/status mutation predicates and 404 nondisclosure remain unchanged. Tests also cover late responses from a previously selected restaurant. No migrations are required.
+- Kitchen phone Grid pills were compressed by flex layout; the existing scrolling row now keeps its buttons from shrinking.
+- Customer order confirmation was visible but lacked a dialog role and focus containment. It now uses the installed dialog primitives, a safe Cancel focus, loading dismissal protection and actual-opener focus return.
+
+The six additional user findings were assessed individually:
+
+| Finding | Verdict and correction |
+| --- | --- |
+| License Escape loses input | Partly confirmed: the old form retained values when reopened, but lacked dirty/busy dismissal protection. Added that protection, including one prompt per backdrop click. |
+| Kitchen shift dialog immediately focuses textarea | Confirmed; initial focus now goes to the noneditable heading. |
+| Kitchen History three-column phone dividers | Confirmed; local three-column separator rules replace the inherited two-column pattern. |
+| Discovery simultaneous failures retry only one request | Confirmed; independent failure flags retain both retry targets and preserve the active search/filter mode. |
+| Market section links grow browser history | Confirmed; links preserve native href/keyboard/modifier behavior and replace the current hash while scrolling. |
+| Dialog container Shift+Tab can escape | Confirmed; container focus now wraps to the last focusable descendant. |
+
+See [independent follow-up review](live-fixes-review.md) and the scoped reports for RED/GREEN evidence. The review found and independently cleared the redundant license-backdrop discard prompt. Production reproduction, final rechecks and screenshots are kept separately from local fixtures in the task's `production-qa` artifact folder.
+
+The supplied accounts belong to an `isDemo` restaurant. Public Discovery deliberately excludes it; direct table/shop browsing and local cart operations are supported, but real order creation is prohibited. The user explicitly limited this round to Demo-permitted flows. See [live search diagnostic](live-search-diagnostic.md). No restaurant flags were changed, and no real order or payment is needed for this QA scope.

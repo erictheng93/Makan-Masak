@@ -65,22 +65,26 @@
             <a
               href="#market-vendors"
               class="inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium text-ios-blue"
+              @click="navigateSection"
               >{{ t("customerNavigation.vendors") }}</a
             >
             <a
               href="#market-products"
               class="inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium text-ios-blue"
+              @click="navigateSection"
               >{{ t("markets.detail.exploreTitle") }}</a
             >
             <a
               href="#market-maps"
               class="inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium text-ios-blue"
+              @click="navigateSection"
               >{{ t("customerNavigation.maps") }}</a
             >
             <a
               v-if="marketCartItemCount > 0"
               href="#market-basket"
               class="inline-flex min-h-11 items-center rounded-full bg-ios-blue px-3 text-sm font-medium text-white"
+              @click="navigateSection"
               >{{ t("cart.title") }} ({{ marketCartItemCount }})</a
             >
           </nav>
@@ -193,7 +197,7 @@
             v-if="marketCart && marketCartItemCount > 0"
             id="market-basket"
             data-testid="market-cart-summary"
-            class="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4"
+            class="scroll-mt-40 space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4"
           >
             <h2 class="text-base font-semibold text-emerald-950">
               {{ t("markets.detail.cartTitle") }}
@@ -1068,6 +1072,21 @@ function marketDirectoryReturnQuery() {
     returnPath: returnContext.value.path,
     returnLabel: returnContext.value.label,
   };
+}
+
+function navigateSection(event: MouseEvent) {
+  if (
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  )
+    return;
+  event.preventDefault();
+  const anchor = event.currentTarget as HTMLAnchorElement;
+  // Reuse the router's hash scrolling without adding another Back step.
+  router.replace({ hash: anchor.hash, query: route.query });
 }
 
 function goBack() {

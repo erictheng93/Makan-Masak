@@ -83,6 +83,8 @@ function discoveryStore(overrides: Record<string, unknown> = {}) {
     filters: {},
     loading: false,
     error: null,
+    popularLoadFailed: false,
+    resultsLoadFailed: false,
     isSearchMode: true,
     dishResults: [dish()],
     serviceResults: [],
@@ -232,6 +234,44 @@ describe("DiscoveryView", () => {
     expect(store.searchDishes).toHaveBeenLastCalledWith("章魚燒");
     expect(store.filters).toMatchObject({ city: "Taipei" });
   });
+
+  it.each([
+    [false, "discovery.popularFailed"],
+    [false, "discovery.browseFailed"],
+    [true, "discovery.popularFailed"],
+    [true, "discovery.searchFailed"],
+  ])(
+    "retries both failed operations regardless of last error (search=%s, %s)",
+    async (isSearchMode, error) => {
+      if (isSearchMode)
+        Object.assign(routeQuery, { q: "章魚燒", city: "Taipei" });
+      const store = discoveryStore({
+        searchQuery: isSearchMode ? "章魚燒" : "",
+        isSearchMode,
+        error,
+        popularLoadFailed: true,
+        resultsLoadFailed: true,
+      });
+      vi.mocked(useDiscoveryStore).mockReturnValue(store as never);
+      const wrapper = mountView();
+      await wrapper
+        .findAll("button")
+        .find((button) => button.text() === "common.retry")!
+        .trigger("click");
+      expect(store.loadPopular).toHaveBeenCalledTimes(2);
+      if (isSearchMode) {
+        expect(store.searchDishes).toHaveBeenCalledTimes(2);
+        expect(store.searchDishes).toHaveBeenLastCalledWith("章魚燒");
+        expect(store.filters).toMatchObject({ city: "Taipei" });
+        expect(store.browseRestaurants).not.toHaveBeenCalled();
+      } else {
+        expect(store.browseRestaurants).toHaveBeenCalledTimes(2);
+        expect(store.searchDishes).not.toHaveBeenCalled();
+        expect(store.filters).toEqual({});
+      }
+      expect(store.isSearchMode).toBe(isSearchMode);
+    },
+  );
 
   it("clears every filter from an empty result", async () => {
     const store = discoveryStore({

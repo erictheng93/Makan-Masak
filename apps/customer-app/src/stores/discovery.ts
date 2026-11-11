@@ -24,6 +24,9 @@ export const useDiscoveryStore = defineStore("discovery", () => {
    * message baked in here can only ever be in one language.
    */
   const error = ref<string | null>(null);
+  // Popular content and result requests run independently on entry.
+  const popularLoadFailed = ref(false);
+  const resultsLoadFailed = ref(false);
   const total = ref(0);
   const page = ref(1);
   const mode = ref<"search" | "browse">("browse");
@@ -52,6 +55,7 @@ export const useDiscoveryStore = defineStore("discovery", () => {
   async function searchDishes(query: string) {
     searchQuery.value = query;
     mode.value = "search";
+    resultsLoadFailed.value = false;
     loading.value = true;
     error.value = null;
 
@@ -102,6 +106,7 @@ export const useDiscoveryStore = defineStore("discovery", () => {
       total.value = dishResult.total + serviceResult.total;
     } catch (e) {
       console.error("Discovery search failed:", e);
+      resultsLoadFailed.value = true;
       error.value = "discovery.searchFailed";
     } finally {
       loading.value = false;
@@ -110,6 +115,7 @@ export const useDiscoveryStore = defineStore("discovery", () => {
 
   async function browseRestaurants() {
     mode.value = "browse";
+    resultsLoadFailed.value = false;
     loading.value = true;
     error.value = null;
 
@@ -123,6 +129,7 @@ export const useDiscoveryStore = defineStore("discovery", () => {
       total.value = result.total;
     } catch (e) {
       console.error("Discovery browse failed:", e);
+      resultsLoadFailed.value = true;
       error.value = "discovery.browseFailed";
     } finally {
       loading.value = false;
@@ -130,6 +137,7 @@ export const useDiscoveryStore = defineStore("discovery", () => {
   }
 
   async function loadPopular() {
+    popularLoadFailed.value = false;
     loading.value = true;
     error.value = null;
 
@@ -140,6 +148,7 @@ export const useDiscoveryStore = defineStore("discovery", () => {
       popularRestaurants.value = result.restaurants;
     } catch (e) {
       console.error("Discovery popular load failed:", e);
+      popularLoadFailed.value = true;
       error.value = "discovery.popularFailed";
     } finally {
       loading.value = false;
@@ -174,6 +183,8 @@ export const useDiscoveryStore = defineStore("discovery", () => {
     serviceResults.value = [];
     restaurantResults.value = [];
     error.value = null;
+    popularLoadFailed.value = false;
+    resultsLoadFailed.value = false;
     total.value = 0;
     page.value = 1;
     mode.value = "browse";
@@ -190,6 +201,8 @@ export const useDiscoveryStore = defineStore("discovery", () => {
     popularRestaurants,
     loading,
     error,
+    popularLoadFailed,
+    resultsLoadFailed,
     total,
     page,
     mode,

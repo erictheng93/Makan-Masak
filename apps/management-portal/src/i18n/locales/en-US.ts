@@ -252,6 +252,7 @@ const enUS: Messages = {
   },
 
   licenses: {
+    confirmDiscard: "Discard the unsaved license details?",
     title: "License Management",
     subtitle: "Manage tenant license keys",
     generate: "Generate License",

@@ -264,7 +264,7 @@ describe("KitchenHeader entry point", () => {
   });
 });
 
-it("names the swap dialog, focuses its reason, dismisses with Escape and restores focus", async () => {
+it("names the swap dialog, focuses a non-input heading, dismisses with Escape and restores focus", async () => {
   const wrapper = mount(MyShiftsView, { attachTo: document.body });
   await flushPromises();
   const trigger = wrapper.get('[data-testid="request-swap-button"]');
@@ -275,9 +275,7 @@ it("names the swap dialog, focuses its reason, dismisses with Escape and restore
   const dialog = body.get('[role="dialog"]');
   expect(dialog.attributes("aria-modal")).toBe("true");
   expect(dialog.attributes("aria-labelledby")).toBeTruthy();
-  expect(document.activeElement).toBe(
-    body.get('[data-testid="swap-reason"]').element,
-  );
+  expect(document.activeElement).toBe(dialog.get("h2").element);
   await dialog.trigger("keydown", { key: "Escape" });
   await flushPromises();
   expect(body.find('[role="dialog"]').exists()).toBe(false);

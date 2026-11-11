@@ -497,6 +497,21 @@ describe("MarketDetailView", () => {
     vi.mocked(useMarketsStore).mockReturnValue(marketStore() as never);
   });
 
+  it("replaces section navigation while preserving query filters and native link destinations", async () => {
+    Object.assign(routeQuery, { q: "雞排", takeaway: "true" });
+    const wrapper = mountView();
+    const link = wrapper.get('a[href="#market-vendors"]');
+    await link.trigger("click", { button: 0 });
+    expect(routerReplace).toHaveBeenLastCalledWith({
+      hash: "#market-vendors",
+      query: routeQuery,
+    });
+    routerReplace.mockClear();
+    await link.trigger("click", { button: 0, ctrlKey: true });
+    expect(routerReplace).not.toHaveBeenCalled();
+    expect(link.attributes("href")).toBe("#market-vendors");
+  });
+
   it("records recent market visits and toggles favorite markets", async () => {
     setCustomerAccessToken("customer-token");
     const wrapper = mountView();

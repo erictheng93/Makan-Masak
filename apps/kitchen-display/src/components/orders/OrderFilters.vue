@@ -31,7 +31,9 @@
     </div>
 
     <!-- Status Pill Row -->
-    <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+    <div
+      class="flex gap-2 overflow-x-auto pb-1 scrollbar-none [&>button]:shrink-0"
+    >
       <!-- 全部 pill -->
       <button
         :class="[

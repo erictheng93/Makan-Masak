@@ -536,12 +536,15 @@ function searchAndSync(query: string) {
 }
 
 function retryDiscovery() {
-  if (store.error === "discovery.popularFailed") {
-    store.loadPopular();
-  } else if (store.isSearchMode) {
-    store.searchDishes(store.searchQuery);
-  } else {
-    store.browseRestaurants();
+  const retryPopular =
+    store.popularLoadFailed || store.error === "discovery.popularFailed";
+  const retryResults =
+    store.resultsLoadFailed ||
+    (store.error !== null && store.error !== "discovery.popularFailed");
+  if (retryPopular) store.loadPopular();
+  if (retryResults) {
+    if (store.isSearchMode) store.searchDishes(store.searchQuery);
+    else store.browseRestaurants();
   }
 }
 

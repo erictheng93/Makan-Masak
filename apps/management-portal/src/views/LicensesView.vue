@@ -17,6 +17,7 @@ const toast = useToast();
 const licenses = ref<(License & { tenantName?: string })[]>([]);
 const loading = ref(false);
 const showGenerateModal = ref(false);
+const generating = ref(false);
 
 // 生成表單
 const generateForm = ref<GenerateLicenseRequest>({
@@ -24,6 +25,17 @@ const generateForm = ref<GenerateLicenseRequest>({
   tier: "standard",
   expiresAt: "",
 });
+
+const closeGenerateModal = () => {
+  if (generating.value) return;
+  const dirty =
+    generateForm.value.tenantId ||
+    generateForm.value.expiresAt ||
+    generateForm.value.tier !== "standard";
+  if (dirty && !window.confirm(t("licenses.confirmDiscard"))) return;
+  showGenerateModal.value = false;
+  generateForm.value = { tenantId: "", tier: "standard", expiresAt: "" };
+};
 
 // 載入資料
 onMounted(async () => {
@@ -70,11 +82,13 @@ const stats = computed(() => ({
 
 // 生成授權
 const handleGenerate = async () => {
+  if (generating.value) return;
   if (!generateForm.value.tenantId) {
     toast.warning(t("licenses.validation.selectTenant"));
     return;
   }
 
+  generating.value = true;
   try {
     const license = await licensesApi.generate(generateForm.value);
     const tenant = tenantsStore.tenants.find(
@@ -89,6 +103,8 @@ const handleGenerate = async () => {
     generateForm.value = { tenantId: "", tier: "standard", expiresAt: "" };
   } catch (e) {
     toast.error(t("licenses.toast.generateFailed"));
+  } finally {
+    generating.value = false;
   }
 };
 
@@ -265,12 +281,9 @@ const getTierClass = (tier: LicenseTier) => {
       <Dialog
         :open="showGenerateModal"
         class="fixed inset-0 z-50 overflow-y-auto"
-        @close="showGenerateModal = false"
+        @close="closeGenerateModal"
       >
-        <div
-          class="fixed inset-0 bg-gray-500 bg-opacity-75"
-          @click="showGenerateModal = false"
-        />
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" />
         <div class="flex min-h-full items-center justify-center p-4">
           <DialogPanel
             class="relative overflow-hidden bg-white rounded-3xl shadow-xl max-w-md w-full"
@@ -344,16 +357,18 @@ const getTierClass = (tier: LicenseTier) => {
               <button
                 type="button"
                 class="btn btn-secondary"
-                @click="showGenerateModal = false"
+                :disabled="generating"
+                @click="closeGenerateModal"
               >
                 {{ t("common.cancel") }}
               </button>
               <button
                 type="button"
                 class="btn btn-primary"
+                :disabled="generating"
                 @click="handleGenerate"
               >
-                {{ t("common.generate") }}
+                {{ generating ? t("common.processing") : t("common.generate") }}
               </button>
             </div>
           </DialogPanel>

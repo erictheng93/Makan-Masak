@@ -376,3 +376,13 @@ function formatTime(isoString: string): string {
   }
 }
 </script>
+
+<style scoped>
+/* This summary stays in three columns, including on phones. */
+.history-stats > .ui-stat {
+  border-block-start: 0;
+}
+.history-stats > .ui-stat + .ui-stat {
+  border-inline-start: 1px solid var(--ui-separator);
+}
+</style>

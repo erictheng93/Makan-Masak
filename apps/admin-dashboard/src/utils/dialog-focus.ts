@@ -16,6 +16,7 @@ export const vDialogFocus: ObjectDirective<HTMLElement> = {
       const target = event.shiftKey ? items.at(-1) : items[0];
       if (
         !items.length ||
+        document.activeElement === element ||
         (event.shiftKey
           ? document.activeElement === items[0]
           : document.activeElement === items.at(-1))

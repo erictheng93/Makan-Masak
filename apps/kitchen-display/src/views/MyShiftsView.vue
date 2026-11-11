@@ -165,7 +165,7 @@
     <!-- ── Request form ───────────────────────────────────── -->
     <Dialog
       :open="!!formShift"
-      :initial-focus="reasonInput"
+      :initial-focus="formHeading"
       class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30"
       @close="closeForm"
     >
@@ -174,8 +174,14 @@
         data-testid="swap-form"
         class="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-6 shadow-card-lg max-h-[90dvh] overflow-y-auto"
       >
-        <DialogTitle as="h2" class="text-lg font-bold text-ios-text">
-          {{ t("myShifts.formTitle") }}
+        <DialogTitle as="template">
+          <h2
+            ref="formHeading"
+            tabindex="-1"
+            class="text-lg font-bold text-ios-text"
+          >
+            {{ t("myShifts.formTitle") }}
+          </h2>
         </DialogTitle>
         <p class="mt-1 text-sm text-ios-secondary">
           {{ formShift.workDate }} · {{ formShift.startTime }} –
@@ -232,7 +238,6 @@
         </label>
         <textarea
           id="swap-reason"
-          ref="reasonInput"
           v-model="form.reason"
           data-testid="swap-reason"
           rows="3"
@@ -311,7 +316,7 @@ const formError = ref("");
 const shifts = ref<MyShift[]>([]);
 const myRequests = ref<MySwapRequest[]>([]);
 const formShift = ref<MyShift | null>(null);
-const reasonInput = ref<HTMLTextAreaElement | null>(null);
+const formHeading = ref<HTMLElement | null>(null);
 
 const form = reactive({
   requestType: "swap" as SwapRequestType,

@@ -113,6 +113,7 @@ const zhCN: Messages = {
     version: "版本 {version}",
   },
   licenses: {
+    confirmDiscard: "要舍弃尚未保存的授权资料吗？",
     column: {
       createdAt: "建立时间",
       licenseKey: "授权金钥",

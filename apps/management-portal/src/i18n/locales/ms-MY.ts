@@ -113,6 +113,7 @@ const msMY: Messages = {
     version: "Versi {version}",
   },
   licenses: {
+    confirmDiscard: "Buang butiran lesen yang belum disimpan?",
     column: {
       createdAt: "Dicipta Pada",
       licenseKey: "Kunci Lesen",

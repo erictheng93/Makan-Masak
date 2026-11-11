@@ -248,6 +248,7 @@ const zhTW = {
   },
 
   licenses: {
+    confirmDiscard: "要捨棄尚未儲存的授權資料嗎？",
     title: "授權管理",
     subtitle: "管理租戶授權金鑰",
     generate: "生成授權",
