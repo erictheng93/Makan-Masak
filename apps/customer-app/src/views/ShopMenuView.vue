@@ -155,6 +155,13 @@
     <!-- 主要內容區域 -->
     <main
       class="max-w-lg md:max-w-3xl lg:max-w-6xl mx-auto pb-20 px-4 md:px-6 lg:px-8"
+      :style="
+        isDesktop
+          ? undefined
+          : {
+              paddingBottom: `calc(${cartBarHeight}px + 2rem + env(safe-area-inset-bottom, 0px))`,
+            }
+      "
     >
       <!-- 載入狀態 -->
       <div v-if="isLoading" class="p-8 text-center">
@@ -632,6 +639,7 @@
     <!-- 底部固定購物車按鈕 -->
     <div
       v-if="shopCartStore.itemCount > 0"
+      ref="cartBar"
       class="customer-floating-cart fixed bottom-4 left-4 right-4 z-50 max-w-lg mx-auto lg:hidden"
     >
       <button
@@ -688,6 +696,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onUnmounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useElementSize } from "@vueuse/core";
 import { useQuery } from "@tanstack/vue-query";
 import { useToast } from "vue-toastification";
 import { useI18n } from "@/composables/useI18n";
@@ -754,6 +763,10 @@ const appStore = useAppStore();
 const marketCartStore = useMarketCartStore();
 const shopCartStore = useShopCartStore();
 const isDesktop = useIsDesktop();
+const cartBar = ref<HTMLElement | null>(null);
+const { height: cartBarHeight } = useElementSize(cartBar, undefined, {
+  box: "border-box",
+});
 // List cards put the photo beside the text and need ~320px a column. The
 // desktop cart panel takes ~320px of the row, so three columns next to it
 // wrap dish names mid-word; drop to two while it is open.

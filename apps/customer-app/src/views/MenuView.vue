@@ -120,6 +120,13 @@
     <!-- 主要內容區域 -->
     <main
       class="max-w-lg md:max-w-3xl lg:max-w-6xl mx-auto pb-20 px-4 md:px-6 lg:px-8"
+      :style="
+        isDesktop
+          ? undefined
+          : {
+              paddingBottom: `calc(${cartBarHeight}px + 2rem + env(safe-area-inset-bottom, 0px))`,
+            }
+      "
     >
       <!-- 載入狀態 -->
       <div v-if="isLoading" class="p-8 text-center">
@@ -466,8 +473,9 @@
     <div
       v-if="isGroupMode"
       v-show="!isInviteOnScreen"
+      ref="cartBar"
       data-testid="group-cart-bar"
-      class="fixed bottom-4 left-4 right-4 z-50 max-w-lg mx-auto lg:hidden"
+      class="customer-floating-cart fixed bottom-4 left-4 right-4 z-50 max-w-lg mx-auto lg:hidden"
     >
       <button
         class="w-full bg-ios-blue text-white font-semibold py-4 px-6 rounded-full shadow-card-lg active:scale-[0.98] transition-transform duration-150 flex items-center justify-between"
@@ -487,7 +495,8 @@
 
     <div
       v-else-if="cartStore.itemCount > 0"
-      class="fixed bottom-4 left-4 right-4 z-50 max-w-lg mx-auto lg:hidden"
+      ref="cartBar"
+      class="customer-floating-cart fixed bottom-4 left-4 right-4 z-50 max-w-lg mx-auto lg:hidden"
     >
       <button
         class="w-full bg-ios-blue text-white font-semibold py-4 px-6 rounded-full shadow-card-lg active:scale-[0.98] transition-transform duration-150 flex items-center justify-between"
@@ -529,7 +538,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { useElementVisibility } from "@vueuse/core";
+import { useElementSize, useElementVisibility } from "@vueuse/core";
 import { useRouter } from "vue-router";
 import { useQuery } from "@tanstack/vue-query";
 import { useToast } from "vue-toastification";
@@ -576,6 +585,10 @@ const { t, tWithParams, currentLanguage } = useI18n();
 const appStore = useAppStore();
 const cartStore = useCartStore();
 const isDesktop = useIsDesktop();
+const cartBar = ref<HTMLElement | null>(null);
+const { height: cartBarHeight } = useElementSize(cartBar, undefined, {
+  box: "border-box",
+});
 const { formatPrice } = useCurrency();
 const groupOrder = useGroupOrder({
   restaurantId: props.restaurantId,
