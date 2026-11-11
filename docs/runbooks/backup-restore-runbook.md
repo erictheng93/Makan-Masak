@@ -148,28 +148,37 @@ run at all, because export fails on production's FTS5 table.
 The `buildRestoreDrillPlan` helper referenced here previously no longer exists
 in `apps/api/src/workers/backup-scheduler.ts`.
 
-Drill recipe, as executed on 2026-07-30:
+Drill recipe, as executed on 2026-07-30 and again on 2026-11-11 (#435):
 
 ```bash
 pnpm wrangler d1 create makanmasak-tt-drill
 ```
 
 1. Recreate production's risky shape, not the whole schema. Copy the
-   `dish_search_index` table, the `dish_search_fts` virtual table and its three
-   sync triggers out of `sqlite_master`, plus one plain table. Apply them **one
-   statement per `--command` call**; batched `--file` execution against D1
-   fails opaquely with partial writes.
+   `dish_search_index` table, its indexes, the `dish_search_fts` virtual table
+   and **all five** of its triggers out of `sqlite_master` — three FTS sync
+   triggers (`_fts_ai`, `_fts_ad`, `_fts_au`) and two restaurant guards
+   (`_restaurant_guard_bi`, `_restaurant_guard_bu`). The guards abort any
+   insert whose `restaurant_id` is missing from `restaurants`, so create a
+   minimal `restaurants (id TEXT PRIMARY KEY, name TEXT NOT NULL)` as the plain
+   table and seed one row in it first. Apply everything **one statement per
+   `--command` call**; batched `--file` execution against D1 fails opaquely
+   with partial writes.
 2. Seed rows and confirm `dish_search_fts MATCH` returns them. This is the
    baseline the restore has to reproduce.
 3. `time-travel info` → record the good bookmark.
 4. Cause damage: delete rows, rename a dish so the FTS index diverges.
 5. Restore the good bookmark. **Record the undo bookmark it prints.**
 6. Validate all four together — plain rows, index rows, an actual `MATCH`
-   query, and `COUNT(*) FROM sqlite_master WHERE type='trigger'`. Row counts
+   query, and `COUNT(*) FROM sqlite_master WHERE type='trigger'` (expect 5).
+   Check `MATCH` on both the old and the new dish name: a rename leaves row
+   counts unchanged, so only the query shows which name the index holds. Row counts
    alone would not have caught a broken index.
 7. Insert a new row and confirm it appears in the index, proving the restored
    triggers still fire rather than merely existing.
 8. Restore the undo bookmark and confirm you land back on the damaged state.
+   The row inserted in step 7 is gone too: undo returns to the moment before
+   the restore, so anything written after a restore is lost if you undo it.
 9. `pnpm wrangler d1 delete makanmasak-tt-drill`.
 
 ## Production Restore
