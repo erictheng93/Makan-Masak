@@ -1,6 +1,6 @@
 <template>
   <div
-    class="min-h-screen flex items-center justify-center bg-ios-bg py-12 px-4 sm:px-6 lg:px-8"
+    class="ui-page min-h-screen flex items-center justify-center bg-ios-bg py-12 px-4 sm:px-6 lg:px-8"
   >
     <div class="max-w-md w-full space-y-8">
       <div class="text-center">
@@ -9,8 +9,11 @@
         >
           <span class="text-white font-bold text-2xl">M</span>
         </div>
-        <h2 class="text-3xl font-bold text-gray-900">MakanMasak</h2>
-        <p class="mt-2 text-sm text-gray-600">{{ t("auth.adminLogin") }}</p>
+        <p class="text-sm font-semibold text-primary-700">MakanMasak</p>
+        <h1 class="ui-page-heading mt-3 text-2xl font-bold text-ios-text">
+          {{ t("auth.adminLogin") }}
+        </h1>
+
         <div
           v-if="shopSlug"
           data-testid="login-shop"
@@ -29,7 +32,7 @@
             v-if="!isShopRoute"
             type="button"
             data-testid="login-shop-clear"
-            class="text-sm font-medium text-primary-600 hover:text-primary-500"
+            class="text-sm font-medium text-primary-700 hover:text-primary-700"
             @click="clearShop"
           >
             {{ t("auth.shopNotYours") }}
@@ -43,7 +46,7 @@
           <p>{{ t("auth.shopInvalidLink") }}</p>
           <router-link
             to="/login"
-            class="mt-2 inline-block font-medium text-primary-600 hover:text-primary-500"
+            class="mt-2 inline-block font-medium text-primary-700 hover:text-primary-700"
           >
             {{ t("auth.shopPlainLogin") }}
           </router-link>
@@ -66,7 +69,7 @@
               :class="{ 'border-red-500': errors.username }"
               :placeholder="t('auth.enterUsername')"
             />
-            <p v-if="errors.username" class="mt-1 text-sm text-red-600">
+            <p v-if="errors.username" class="mt-1 text-sm text-red-700">
               {{ errors.username }}
             </p>
           </div>
@@ -98,13 +101,13 @@
                 <EyeOff v-else class="w-4 h-4 text-gray-400" />
               </button>
             </div>
-            <p v-if="errors.password" class="mt-1 text-sm text-red-600">
+            <p v-if="errors.password" class="mt-1 text-sm text-red-700">
               {{ errors.password }}
             </p>
-            <div class="flex items-center justify-end mt-2">
+            <div class="ui-toolbar flex items-center justify-end mt-2">
               <router-link
                 :to="forgotPasswordTo"
-                class="text-sm font-medium text-primary-600 hover:text-primary-500"
+                class="text-sm font-medium text-primary-700 hover:text-primary-700"
               >
                 {{ t("auth.forgotPasswordLink") }}
               </router-link>
@@ -117,7 +120,7 @@
           class="bg-red-50 border border-red-200 rounded-lg p-4"
         >
           <div class="flex items-center">
-            <AlertCircle class="w-5 h-5 text-red-400 mr-2" />
+            <AlertCircle class="w-5 h-5 text-red-700 mr-2" />
             <p class="text-sm text-red-800">
               {{ error }}
             </p>
@@ -149,7 +152,7 @@
       >
         <div class="text-3xl">👨‍🍳</div>
         <p class="font-semibold text-emerald-800">廚師帳號請使用廚房顯示系統</p>
-        <p class="text-sm text-emerald-600">
+        <p class="text-sm text-emerald-700">
           此管理後台不適用於廚師角色，請前往專用的廚房看板系統。
         </p>
         <a

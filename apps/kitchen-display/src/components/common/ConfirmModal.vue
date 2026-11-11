@@ -1,15 +1,19 @@
 <template>
   <Teleport to="body">
     <Transition name="confirm-modal">
-      <div
+      <Dialog
         v-if="modalState"
+        :open="true"
         class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        @close="close(false)"
       >
         <div
           class="fixed inset-0 bg-black/30 backdrop-blur-sm"
           @click="close(false)"
         />
-        <div class="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full">
+        <DialogPanel
+          class="relative bg-white rounded-3xl shadow-card-lg max-w-sm w-full"
+        >
           <div class="p-6 text-center">
             <div
               class="mx-auto flex items-center justify-center h-12 w-12 rounded-full mb-4"
@@ -28,9 +32,12 @@
                 "
               />
             </div>
-            <h3 class="text-[17px] font-bold text-ios-text mb-2">
+            <DialogTitle
+              as="h3"
+              class="text-[17px] font-bold text-ios-text mb-2"
+            >
               {{ modalState.title }}
-            </h3>
+            </DialogTitle>
             <p class="text-[14px] text-ios-secondary mb-6">
               {{ modalState.message }}
             </p>
@@ -45,8 +52,8 @@
                 class="px-5 py-2.5 text-[14px] font-semibold text-white rounded-full transition-colors"
                 :class="
                   modalState.type === 'danger'
-                    ? 'bg-ios-red hover:bg-ios-red/90 shadow-[0_2px_8px_rgba(255,59,48,0.25)]'
-                    : 'bg-ios-orange hover:bg-ios-orange/90 shadow-[0_2px_8px_rgba(255,149,0,0.25)]'
+                    ? 'bg-red-700 hover:bg-ios-red/90 shadow-[0_2px_8px_rgba(255,59,48,0.25)]'
+                    : 'bg-orange-700 hover:bg-ios-orange/90 shadow-[0_2px_8px_rgba(255,149,0,0.25)]'
                 "
                 @click="close(true)"
               >
@@ -54,13 +61,14 @@
               </button>
             </div>
           </div>
-        </div>
-      </div>
+        </DialogPanel>
+      </Dialog>
     </Transition>
   </Teleport>
 </template>
 
 <script setup lang="ts">
+import { Dialog, DialogPanel, DialogTitle } from "@headlessui/vue";
 import { AlertTriangle } from "lucide-vue-next";
 import { useI18n } from "@/i18n";
 import { useConfirmModal } from "@/composables/useConfirmModal";

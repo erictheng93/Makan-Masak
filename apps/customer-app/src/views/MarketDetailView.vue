@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-ios-bg">
+  <div class="customer-shell min-h-screen bg-ios-bg">
     <nav class="sticky top-0 z-10 border-b border-gray-100 bg-white shadow-sm">
       <div class="mx-auto flex max-w-md items-center gap-3 px-4 py-3">
         <button
@@ -58,6 +58,32 @@
           :vendor-count="store.vendorCount"
         />
         <section class="space-y-4 px-4 py-4">
+          <nav
+            class="ui-toolbar sticky top-20 z-10 flex-wrap rounded-2xl bg-white p-2 shadow-card-sm"
+            :aria-label="t('markets.detail.exploreTitle')"
+          >
+            <a
+              href="#market-vendors"
+              class="inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium text-ios-blue"
+              >{{ t("customerNavigation.vendors") }}</a
+            >
+            <a
+              href="#market-products"
+              class="inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium text-ios-blue"
+              >{{ t("markets.detail.exploreTitle") }}</a
+            >
+            <a
+              href="#market-maps"
+              class="inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium text-ios-blue"
+              >{{ t("customerNavigation.maps") }}</a
+            >
+            <a
+              v-if="marketCartItemCount > 0"
+              href="#market-basket"
+              class="inline-flex min-h-11 items-center rounded-full bg-ios-blue px-3 text-sm font-medium text-white"
+              >{{ t("cart.title") }} ({{ marketCartItemCount }})</a
+            >
+          </nav>
           <section
             v-if="isPublicSetupIncomplete"
             data-testid="market-public-readiness-notice"
@@ -163,16 +189,17 @@
             </div>
           </section>
 
-          <section
+          <details
             v-if="marketCart && marketCartItemCount > 0"
+            id="market-basket"
             data-testid="market-cart-summary"
             class="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4"
           >
+            <summary class="text-base font-semibold text-emerald-950">
+              {{ t("markets.detail.cartTitle") }}
+            </summary>
             <div class="flex items-start justify-between gap-3">
               <div>
-                <h2 class="text-base font-semibold text-emerald-950">
-                  {{ t("markets.detail.cartTitle") }}
-                </h2>
                 <p class="mt-1 text-sm text-emerald-800">
                   {{
                     tWithParams("markets.detail.cartSummary", {
@@ -228,6 +255,12 @@
                 <input
                   id="market-checkout-phone"
                   v-model="marketCheckoutPhoneLastDigits"
+                  :disabled="marketCheckoutsDisabled"
+                  :aria-describedby="
+                    marketCheckoutsDisabled
+                      ? 'market-checkout-unavailable'
+                      : undefined
+                  "
                   type="tel"
                   inputmode="numeric"
                   maxlength="3"
@@ -272,6 +305,7 @@
               </div>
               <p
                 v-if="marketCheckoutsDisabled"
+                id="market-checkout-unavailable"
                 data-testid="market-checkout-unavailable-hint"
                 class="text-xs text-emerald-800"
               >
@@ -296,20 +330,11 @@
                 })
               }}
             </div>
-          </section>
-
-          <StallMapInMarket
-            :vendors="store.vendors"
-            :layout="store.selectedMarket.mapLayout"
-            @select-vendor="openVendor"
-          />
-
-          <MarketLocationMap
-            :market="store.selectedMarket"
-            :vendors="store.vendors"
-          />
+          </details>
 
           <VendorListInMarket
+            id="market-vendors"
+            class="scroll-mt-40"
             :vendors="store.vendors"
             :loading="store.vendorsLoading"
             :query="vendorQuery"
@@ -328,7 +353,9 @@
           />
 
           <MarketProductSearch
+            id="market-products"
             :key="marketSearchKey"
+            class="scroll-mt-40"
             :market-id="store.selectedMarket.id"
             :initial-query="marketSearchState.q"
             :initial-category="marketSearchState.categoryName"
@@ -348,6 +375,18 @@
             @takeaway="startDishTakeaway"
           />
 
+          <div id="market-maps" class="scroll-mt-40 space-y-5">
+            <StallMapInMarket
+              :vendors="store.vendors"
+              :layout="store.selectedMarket.mapLayout"
+              @select-vendor="openVendor"
+            />
+
+            <MarketLocationMap
+              :market="store.selectedMarket"
+              :vendors="store.vendors"
+            />
+          </div>
           <section
             v-if="selectedContactVendor"
             class="rounded-xl border border-gray-200 bg-white p-4"

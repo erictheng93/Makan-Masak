@@ -1,8 +1,8 @@
 <template>
-  <div class="min-h-screen bg-ios-bg p-6 space-y-6">
+  <div class="ui-page min-h-screen bg-ios-bg p-6 space-y-6">
     <!-- Back Button -->
     <button
-      class="flex items-center gap-1.5 text-sm text-ios-blue hover:text-blue-600 transition-colors"
+      class="flex items-center gap-1.5 text-sm text-ios-blue hover:text-blue-700 transition-colors"
       @click="router.push('/dashboard/employees')"
     >
       <ChevronLeft class="w-4 h-4" />
@@ -10,7 +10,9 @@
     </button>
 
     <!-- Employee Header Card -->
-    <div class="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-6">
+    <div
+      class="ui-panel bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-6"
+    >
       <div v-if="employeeLoading" class="flex items-center justify-center py-8">
         <div
           class="w-8 h-8 border-2 border-ios-blue border-t-transparent rounded-full animate-spin"
@@ -32,10 +34,10 @@
 
         <!-- Info -->
         <div class="flex-1 min-w-0">
-          <h1 class="text-xl font-bold text-ios-text">
+          <h1 class="ui-page-heading text-xl font-bold text-ios-text">
             {{ employee.fullName || employee.username }}
           </h1>
-          <p class="text-sm text-ios-text/50 mt-0.5">
+          <p class="text-sm text-ios-text/70 mt-0.5">
             @{{ employee.username }}
           </p>
           <div class="flex flex-wrap items-center gap-2 mt-2">
@@ -56,37 +58,53 @@
         </div>
 
         <!-- Quick Info -->
-        <div class="flex flex-col gap-1.5 text-xs text-ios-text/40">
-          <div v-if="employee.email" class="flex items-center gap-1.5">
-            <Mail class="w-3.5 h-3.5" />
-            {{ employee.email }}
+        <div
+          class="min-w-0 max-w-full flex flex-col gap-1.5 text-xs text-ios-text/70"
+        >
+          <div
+            v-if="employee.email"
+            class="min-w-0 max-w-full flex items-start gap-1.5"
+          >
+            <Mail class="w-3.5 h-3.5 shrink-0" />
+            <span class="min-w-0 [overflow-wrap:anywhere]">{{
+              employee.email
+            }}</span>
           </div>
-          <div class="flex items-center gap-1.5">
-            <Calendar class="w-3.5 h-3.5" />
-            {{ t("employees.detail.joined") }}
-            {{ formatDate(employee.createdAt) }}
+          <div class="min-w-0 max-w-full flex items-start gap-1.5">
+            <Calendar class="w-3.5 h-3.5 shrink-0" />
+            <span class="min-w-0 [overflow-wrap:anywhere]"
+              >{{ t("employees.detail.joined") }}
+              {{ formatDate(employee.createdAt) }}</span
+            >
           </div>
-          <div v-if="employee.lastLoginAt" class="flex items-center gap-1.5">
-            <Clock class="w-3.5 h-3.5" />
-            {{ t("employees.detail.lastLogin") }}
-            {{ formatDateTime(employee.lastLoginAt) }}
+          <div
+            v-if="employee.lastLoginAt"
+            class="min-w-0 max-w-full flex items-start gap-1.5"
+          >
+            <Clock class="w-3.5 h-3.5 shrink-0" />
+            <span class="min-w-0 [overflow-wrap:anywhere]"
+              >{{ t("employees.detail.lastLogin") }}
+              {{ formatDateTime(employee.lastLoginAt) }}</span
+            >
           </div>
         </div>
       </div>
     </div>
 
     <!-- Sub-tab Navigation -->
-    <div class="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-      <nav class="flex border-b border-ios-bg px-6">
+    <div
+      class="ui-panel bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+    >
+      <nav class="ui-tabs overflow-x-auto flex border-b border-ios-bg px-6">
         <router-link
           v-for="tab in subTabs"
           :key="tab.name"
           :to="tab.path"
-          class="flex items-center gap-2 px-4 py-3.5 text-sm font-medium border-b-2 transition-colors -mb-px"
+          class="shrink-0 whitespace-nowrap flex items-center gap-2 px-4 py-3.5 text-sm font-medium border-b-2 transition-colors -mb-px"
           :class="
             isActiveTab(tab.path)
               ? 'border-ios-blue text-ios-blue'
-              : 'border-transparent text-ios-text/40 hover:text-ios-text/70'
+              : 'border-transparent text-ios-text/70 hover:text-ios-text/70'
           "
           :data-active="isActiveTab(tab.path)"
         >

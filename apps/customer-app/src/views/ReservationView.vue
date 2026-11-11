@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-ios-bg">
+  <div class="customer-shell min-h-screen bg-ios-bg">
     <nav class="sticky top-0 z-10 bg-white/80 shadow-card-sm backdrop-blur-xl">
       <div class="mx-auto flex max-w-md items-center gap-3 px-4 py-3">
         <button
@@ -63,30 +63,44 @@
         <section class="mt-4 rounded-2xl bg-ios-card p-4 shadow-card-sm">
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="mb-2 block text-sm font-medium text-ios-text/70">
+              <label
+                for="reservation-field-1"
+                class="mb-2 block text-sm font-medium text-ios-text/70"
+              >
                 {{ t("serviceBooking.bookingDate") }}
               </label>
               <input
+                id="reservation-field-1"
                 v-model="bookingDate"
                 data-testid="reservation-date"
                 :min="today"
                 type="date"
                 class="min-h-11 w-full rounded-xl border border-ios-separator px-3 py-2 text-sm text-ios-text focus:border-ios-blue focus:ring-2 focus:ring-ios-blue/20"
-                @change="loadAvailability"
+                @change="
+                  messageContext = 'availability';
+                  loadAvailability();
+                "
               />
             </div>
             <div>
-              <label class="mb-2 block text-sm font-medium text-ios-text/70">
+              <label
+                for="reservation-field-2"
+                class="mb-2 block text-sm font-medium text-ios-text/70"
+              >
                 {{ t("serviceBooking.partySize") }}
               </label>
               <input
+                id="reservation-field-2"
                 v-model.number="form.partySize"
                 data-testid="reservation-party-size"
                 type="number"
                 min="1"
                 max="20"
                 class="min-h-11 w-full rounded-xl border border-ios-separator px-3 py-2 text-sm text-ios-text focus:border-ios-blue focus:ring-2 focus:ring-ios-blue/20"
-                @change="loadAvailability"
+                @change="
+                  messageContext = 'availability';
+                  loadAvailability();
+                "
               />
             </div>
           </div>
@@ -95,10 +109,30 @@
             data-testid="reservation-load-slots"
             class="mt-3 min-h-11 w-full rounded-full bg-ios-blue-soft px-3 py-2 text-sm font-semibold text-ios-blue-deep transition-colors hover:bg-ios-bg disabled:opacity-50"
             :disabled="isLoadingSlots"
-            @click="loadAvailability"
+            @click="
+              messageContext = 'availability';
+              loadAvailability();
+            "
           >
             {{ t("serviceBooking.checkSlots") }}
           </button>
+          <div v-if="messageContext === 'availability'" class="space-y-2">
+            <p
+              v-if="errorMessage"
+              id="booking-error"
+              role="alert"
+              class="mt-3 text-sm text-ios-red-deep"
+            >
+              {{ errorMessage }}
+            </p>
+            <p
+              v-if="successMessage"
+              role="status"
+              class="mt-3 text-sm text-ios-green-deep"
+            >
+              {{ successMessage }}
+            </p>
+          </div>
 
           <div class="mt-4 grid grid-cols-2 gap-2">
             <button
@@ -115,6 +149,7 @@
                     : 'bg-ios-bg text-ios-tertiary'
               "
               :disabled="!slot.available"
+              :aria-pressed="selectedTime === slot.time"
               @click="selectedTime = slot.time"
             >
               <span>{{ slot.time }}</span>
@@ -140,14 +175,26 @@
 
         <form
           class="mt-4 space-y-3 rounded-2xl bg-ios-card p-4 shadow-card-sm"
-          @submit.prevent="createReservation"
+          @submit.prevent="
+            messageContext = 'create';
+            createReservation();
+          "
         >
           <div>
-            <label class="mb-2 block text-sm font-medium text-ios-text/70">
+            <label
+              for="reservation-field-3"
+              class="mb-2 block text-sm font-medium text-ios-text/70"
+            >
               {{ t("serviceBooking.name") }}
             </label>
             <input
+              id="reservation-field-3"
               v-model="form.customerName"
+              :aria-describedby="
+                errorMessage && messageContext === 'create'
+                  ? 'booking-error'
+                  : undefined
+              "
               data-testid="reservation-name"
               type="text"
               required
@@ -156,11 +203,20 @@
             />
           </div>
           <div>
-            <label class="mb-2 block text-sm font-medium text-ios-text/70">
+            <label
+              for="reservation-field-4"
+              class="mb-2 block text-sm font-medium text-ios-text/70"
+            >
               {{ t("serviceBooking.phone") }}
             </label>
             <input
+              id="reservation-field-4"
               v-model="form.customerPhone"
+              :aria-describedby="
+                errorMessage && messageContext === 'create'
+                  ? 'booking-error'
+                  : undefined
+              "
               data-testid="reservation-phone"
               type="tel"
               required
@@ -169,11 +225,20 @@
             />
           </div>
           <div>
-            <label class="mb-2 block text-sm font-medium text-ios-text/70">
+            <label
+              for="reservation-field-5"
+              class="mb-2 block text-sm font-medium text-ios-text/70"
+            >
               {{ t("serviceBooking.email") }}
             </label>
             <input
+              id="reservation-field-5"
               v-model="form.customerEmail"
+              :aria-describedby="
+                errorMessage && messageContext === 'create'
+                  ? 'booking-error'
+                  : undefined
+              "
               data-testid="reservation-email"
               type="email"
               maxlength="254"
@@ -181,11 +246,20 @@
             />
           </div>
           <div>
-            <label class="mb-2 block text-sm font-medium text-ios-text/70">
+            <label
+              for="reservation-field-6"
+              class="mb-2 block text-sm font-medium text-ios-text/70"
+            >
               {{ t("serviceBooking.notes") }}
             </label>
             <textarea
+              id="reservation-field-6"
               v-model="form.specialRequests"
+              :aria-describedby="
+                errorMessage && messageContext === 'create'
+                  ? 'booking-error'
+                  : undefined
+              "
               data-testid="reservation-requests"
               rows="2"
               maxlength="500"
@@ -200,12 +274,31 @@
           >
             {{ t("serviceBooking.create") }}
           </button>
+          <div v-if="messageContext === 'create'" class="space-y-2">
+            <p
+              v-if="errorMessage"
+              id="booking-error"
+              role="alert"
+              class="mt-3 text-sm text-ios-red-deep"
+            >
+              {{ errorMessage }}
+            </p>
+            <p
+              v-if="successMessage"
+              role="status"
+              class="mt-3 text-sm text-ios-green-deep"
+            >
+              {{ successMessage }}
+            </p>
+          </div>
         </form>
 
         <section
           v-if="createdReservation"
           class="mt-4 rounded-2xl bg-ios-green-soft p-4 shadow-card-sm"
           data-testid="reservation-confirmation"
+          tabindex="-1"
+          role="status"
         >
           <h2 class="text-base font-semibold text-ios-green-deep">
             {{ t("serviceBooking.created") }}
@@ -223,12 +316,35 @@
           </p>
         </section>
 
-        <section class="mt-4 rounded-2xl bg-ios-card p-4 shadow-card-sm">
-          <h2 class="text-base font-semibold text-ios-text">
+        <details class="mt-4 rounded-2xl bg-ios-card p-4 shadow-card-sm">
+          <summary class="text-base font-semibold text-ios-text">
             {{ t("serviceBooking.lookupTitle") }}
-          </h2>
+          </summary>
+          <div v-if="messageContext === 'lookup'" class="space-y-2">
+            <p
+              v-if="errorMessage"
+              id="booking-error"
+              role="alert"
+              class="mt-3 text-sm text-ios-red-deep"
+            >
+              {{ errorMessage }}
+            </p>
+            <p
+              v-if="successMessage"
+              role="status"
+              class="mt-3 text-sm text-ios-green-deep"
+            >
+              {{ successMessage }}
+            </p>
+          </div>
           <div class="mt-3 flex gap-2">
+            <label
+              for="reservation-verify-code"
+              class="block text-sm font-medium"
+              >{{ t("serviceBooking.confirmationCode") }}</label
+            >
             <input
+              id="reservation-verify-code"
               v-model="verifyCode"
               data-testid="reservation-verify-code"
               type="text"
@@ -239,7 +355,10 @@
               type="button"
               data-testid="reservation-verify"
               class="min-h-11 rounded-full bg-ios-blue-soft px-3 py-2 text-sm font-semibold text-ios-blue-deep transition-colors hover:bg-ios-bg"
-              @click="verifyReservation"
+              @click="
+                messageContext = 'lookup';
+                verifyReservation();
+              "
             >
               {{ t("serviceBooking.lookup") }}
             </button>
@@ -260,26 +379,22 @@
               data-testid="reservation-cancel"
               class="mt-2 block min-h-11 rounded-full bg-ios-red-soft px-3 py-2 text-sm font-semibold text-ios-red-deep transition-colors hover:bg-ios-bg"
               :disabled="isCancelling"
-              @click="cancelVerifiedReservation"
+              @click="
+                messageContext = 'lookup';
+                cancelVerifiedReservation();
+              "
             >
               {{ t("serviceBooking.cancel") }}
             </button>
           </div>
-        </section>
-
-        <p v-if="errorMessage" class="mt-3 text-sm text-ios-red-deep">
-          {{ errorMessage }}
-        </p>
-        <p v-if="successMessage" class="mt-3 text-sm text-ios-green-deep">
-          {{ successMessage }}
-        </p>
+        </details>
       </template>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from "vue";
+import { onMounted, reactive, ref, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import type {
   ReservationResponse,
@@ -311,8 +426,18 @@ const isLoadingSlots = ref(false);
 const isCreating = ref(false);
 const isCancelling = ref(false);
 const loadError = ref("");
+const messageContext = ref("availability");
 const errorMessage = ref("");
 const successMessage = ref("");
+watch(createdReservation, async (result) => {
+  if (!result) return;
+  await nextTick();
+  const confirmation = document.querySelector<HTMLElement>(
+    '[data-testid="reservation-confirmation"]',
+  );
+  confirmation?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+  confirmation?.focus();
+});
 const bookingDate = ref(today);
 const selectedTime = ref("");
 const verifyCode = ref("");

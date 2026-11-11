@@ -1,12 +1,14 @@
 <template>
-  <div class="min-h-screen bg-ios-bg">
+  <div class="customer-shell min-h-screen bg-ios-bg">
     <!-- 頂部導航 -->
     <nav class="sticky top-0 z-40 bg-white/80 backdrop-blur-xl shadow-card-sm">
       <div class="max-w-md mx-auto px-5 py-4">
         <div class="flex items-center justify-between">
           <button
             class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-ios-text active:scale-95 transition-transform duration-150"
-            @click="router.push(`/restaurant/${restaurantId}/table/${tableId}`)"
+            data-testid="back-to-menu"
+            :aria-label="t('common.back')"
+            @click="router.push(menuReturnRoute)"
           >
             <svg
               class="w-5 h-5"
@@ -86,7 +88,7 @@
         <!-- 訂單狀態卡片 -->
         <div class="bg-white rounded-2xl p-6 shadow-card">
           <!-- 狀態圖標和標題 -->
-          <div class="text-center mb-6">
+          <div class="text-center mb-6" role="status" aria-live="polite">
             <div
               :class="[
                 'w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4',
@@ -115,7 +117,14 @@
               <span>{{ t("orderTracking.orderProgress") }}</span>
               <span>{{ getProgressPercentage(order.status) }}%</span>
             </div>
-            <div class="w-full bg-gray-200 rounded-full h-1.5">
+            <div
+              role="progressbar"
+              :aria-label="t('orderTracking.orderProgress')"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              :aria-valuenow="getProgressPercentage(order.status)"
+              class="w-full bg-gray-200 rounded-full h-1.5"
+            >
               <div
                 class="bg-ios-blue h-1.5 rounded-full transition-all duration-500"
                 :style="{ width: `${getProgressPercentage(order.status)}%` }"
@@ -324,13 +333,7 @@
           <button
             data-testid="continue-ordering"
             class="w-full bg-ios-blue text-white font-semibold py-3.5 px-4 rounded-full active:scale-[0.98] transition-transform duration-150"
-            @click="
-              router.push(
-                isShopOrder
-                  ? `/restaurant/${restaurantId}/shop/menu`
-                  : `/restaurant/${restaurantId}/table/${tableId}`,
-              )
-            "
+            @click="router.push(menuReturnRoute)"
           >
             {{ t("orderTracking.continueOrdering") }}
           </button>
@@ -410,6 +413,12 @@ const { formatPrice } = useCurrency();
 const queryClient = useQueryClient();
 
 const showCancelConfirmation = ref(false);
+const menuReturnRoute = computed(() =>
+  props.isShopOrder
+    ? `/restaurant/${props.restaurantId}/shop/menu`
+    : `/restaurant/${props.restaurantId}/table/${props.tableId}`,
+);
+
 const guestRealtimeCacheKey = `makanmakan_guest_realtime_token:${props.restaurantId}:${props.isShopOrder ? "shop" : props.tableId}:${props.orderId}`;
 const guestQrCacheKey = `makanmakan_table_qr:${props.restaurantId}:${props.tableId}`;
 const shouldUseGuestRealtime = computed(() => {

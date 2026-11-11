@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Action Bar -->
-    <div class="flex items-center justify-end gap-3 mb-6">
+    <div class="ui-toolbar ui-page flex items-center justify-end gap-3 mb-6">
       <button
         class="flex items-center px-4 py-2.5 rounded-full text-[13px] font-semibold bg-white text-ios-text/70 border border-ios-bg hover:bg-ios-bg transition-colors"
         @click="showSettings = true"
@@ -10,7 +10,7 @@
         {{ t("queue.queueSettings") }}
       </button>
       <button
-        class="flex items-center px-5 py-2.5 rounded-full text-[13px] font-semibold bg-ios-blue text-white hover:bg-blue-600 transition-colors shadow-sm"
+        class="flex items-center px-5 py-2.5 rounded-full text-[13px] font-semibold bg-primary-700 text-white hover:bg-primary-800 transition-colors shadow-sm"
         @click="callNextCustomer"
       >
         <Bell class="w-4 h-4 mr-1.5" />
@@ -22,27 +22,35 @@
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
       <!-- 左側：候位列表 -->
       <div class="lg:col-span-2">
-        <div class="bg-white rounded-lg shadow">
+        <div class="ui-panel bg-white rounded-lg shadow">
           <div class="p-6 border-b border-gray-200">
-            <div class="flex items-center justify-between">
+            <div class="ui-toolbar flex items-center justify-between">
               <h2 class="text-xl font-semibold text-gray-900">
                 {{ t("queue.queueList") }}
               </h2>
               <div class="flex items-center space-x-4">
                 <!-- 篩選器 -->
-                <select
-                  v-model="queueFilter"
-                  class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                <label class="admin-field" for="queuedashboardtab-queueFilter"
+                  ><span
+                    >{{ t("queue.queueList") }} ·
+                    {{ t("orders.columns.status") }}</span
+                  ><select
+                    id="queuedashboardtab-queueFilter"
+                    v-model="queueFilter"
+                    class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">{{ t("queue.filterAll") }}</option>
+                    <option value="waiting">
+                      {{ t("queue.status.waiting") }}
+                    </option>
+                    <option value="called">
+                      {{ t("queue.status.called") }}
+                    </option>
+                    <option value="no_show">
+                      {{ t("queue.status.noShow") }}
+                    </option>
+                  </select></label
                 >
-                  <option value="">{{ t("queue.filterAll") }}</option>
-                  <option value="waiting">
-                    {{ t("queue.status.waiting") }}
-                  </option>
-                  <option value="called">{{ t("queue.status.called") }}</option>
-                  <option value="no_show">
-                    {{ t("queue.status.noShow") }}
-                  </option>
-                </select>
 
                 <button
                   :aria-label="t('common.refresh')"
@@ -66,7 +74,7 @@
               ]"
               @click="selectQueueItem(queueItem)"
             >
-              <div class="flex items-center justify-between">
+              <div class="ui-toolbar flex items-center justify-between">
                 <div class="flex items-center">
                   <!-- 號碼 -->
                   <div class="flex-shrink-0">
@@ -132,8 +140,8 @@
                 <div class="flex items-center space-x-2">
                   <!-- 優先級標示 -->
                   <div v-if="queueItem.priority > 0" class="flex items-center">
-                    <StarIcon class="w-4 h-4 text-yellow-500" />
-                    <span class="text-xs text-yellow-600 ml-1">VIP</span>
+                    <StarIcon class="w-4 h-4 text-yellow-700" />
+                    <span class="text-xs text-yellow-700 ml-1">VIP</span>
                   </div>
 
                   <!-- 預估等待時間 -->
@@ -161,7 +169,7 @@
 
                     <button
                       v-if="queueItem.status === 'called'"
-                      class="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors"
+                      class="px-3 py-1 bg-primary-700 text-white rounded text-xs hover:bg-primary-800 transition-colors"
                       @click.stop="seatCustomer(queueItem)"
                     >
                       {{ t("queue.assignSeat") }}
@@ -212,9 +220,9 @@
 
       <!-- 右側上：桌位狀態 -->
       <div class="lg:col-span-2">
-        <div class="bg-white rounded-lg shadow mb-6">
+        <div class="ui-panel bg-white rounded-lg shadow mb-6">
           <div class="p-6 border-b border-gray-200">
-            <div class="flex items-center justify-between">
+            <div class="ui-toolbar flex items-center justify-between">
               <h2 class="text-xl font-semibold text-gray-900">
                 {{ t("queue.tableStatus") }}
               </h2>
@@ -304,7 +312,7 @@
         </div>
 
         <!-- 快速操作面板 -->
-        <div class="bg-white rounded-lg shadow">
+        <div class="ui-panel bg-white rounded-lg shadow">
           <div class="p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
               {{ t("queue.quickActions") }}
@@ -328,7 +336,7 @@
                 class="p-4 bg-orange-100 rounded-lg hover:bg-orange-200 transition-colors text-center"
                 @click="cleanTable(selectedTable)"
               >
-                <SparklesIcon class="w-6 h-6 text-orange-600 mx-auto mb-2" />
+                <SparklesIcon class="w-6 h-6 text-orange-700 mx-auto mb-2" />
                 <span class="text-sm font-medium text-orange-800">{{
                   t("queue.cleanTable")
                 }}</span>
@@ -339,7 +347,7 @@
                 class="p-4 bg-teal-100 rounded-lg hover:bg-teal-200 transition-colors text-center"
                 @click="sendNotification"
               >
-                <BellIcon class="w-6 h-6 text-teal-600 mx-auto mb-2" />
+                <BellIcon class="w-6 h-6 text-teal-700 mx-auto mb-2" />
                 <span class="text-sm font-medium text-teal-800">{{
                   t("queue.sendNotification")
                 }}</span>
@@ -363,7 +371,7 @@
             <div
               class="mt-6 p-4 bg-gradient-to-r from-blue-50 to-teal-50 rounded-lg"
             >
-              <div class="flex items-center justify-between mb-3">
+              <div class="ui-toolbar flex items-center justify-between mb-3">
                 <h4 class="font-medium text-gray-900">
                   {{ t("queue.smartAssignment") }}
                 </h4>
@@ -399,8 +407,10 @@
           class="fixed inset-0 bg-black opacity-30"
           @click="closeAddDialog"
         />
-        <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-          <div class="flex items-center justify-between mb-6">
+        <div
+          class="ui-panel relative bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+        >
+          <div class="ui-toolbar flex items-center justify-between mb-6">
             <h3 class="text-xl font-semibold text-gray-900">
               {{ t("queue.addToQueue") }}
             </h3>
@@ -493,7 +503,7 @@
                 <input
                   v-model="newQueueItem.isVIP"
                   type="checkbox"
-                  class="rounded border-gray-300 text-yellow-600 shadow-sm focus:border-yellow-300 focus:ring focus:ring-yellow-200 focus:ring-opacity-50"
+                  class="rounded border-gray-300 text-yellow-700 shadow-sm focus:border-yellow-300 focus:ring focus:ring-yellow-200 focus:ring-opacity-50"
                 />
                 <span class="ml-2 text-sm text-gray-700">{{
                   t("queue.vipCustomer")
@@ -502,7 +512,7 @@
             </div>
           </div>
 
-          <div class="flex justify-end space-x-3 mt-6">
+          <div class="ui-toolbar flex justify-end space-x-3 mt-6">
             <button
               class="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors"
               @click="closeAddDialog"
@@ -528,8 +538,10 @@
           class="fixed inset-0 bg-black opacity-30"
           @click="closeSeatDialog"
         />
-        <div class="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
-          <div class="flex items-center justify-between mb-6">
+        <div
+          class="ui-panel relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6"
+        >
+          <div class="ui-toolbar flex items-center justify-between mb-6">
             <h3 class="text-xl font-semibold text-gray-900">
               {{ t("queue.assignSeat") }}
             </h3>
@@ -603,7 +615,7 @@
                     <div class="text-sm text-gray-600">
                       {{ table.capacity }}{{ t("queue.seats") }}
                     </div>
-                    <div class="text-xs text-green-600 mt-1">
+                    <div class="text-xs text-green-700 mt-1">
                       {{ t("queue.matchScore") }} {{ table.matchScore }}%
                     </div>
                   </div>
@@ -625,7 +637,7 @@
             </div>
           </div>
 
-          <div class="flex justify-end space-x-3 mt-6">
+          <div class="ui-toolbar flex justify-end space-x-3 mt-6">
             <button
               class="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors"
               @click="closeSeatDialog"
@@ -634,7 +646,7 @@
             </button>
             <button
               :disabled="!seatAssignment.tableId"
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              class="px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               @click="confirmSeatAssignment"
             >
               {{ t("queue.confirmAssignment") }}

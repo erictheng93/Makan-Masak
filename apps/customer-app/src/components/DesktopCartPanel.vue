@@ -39,6 +39,7 @@
               </div>
               <button
                 class="text-ios-secondary hover:text-ios-red transition-colors p-1 -mr-1"
+                :aria-label="`${t('cart.remove')} ${getLocalizedMenuName(item.menuItem, currentLanguage)}`"
                 @click="$emit('remove-item', item.id)"
               >
                 <svg
@@ -61,6 +62,7 @@
               <div class="flex items-center gap-2">
                 <button
                   class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-ios-text active:scale-95 transition-transform text-sm"
+                  :aria-label="`${t('customizationLimits.decrease')} ${getLocalizedMenuName(item.menuItem, currentLanguage)}`"
                   @click="$emit('update-quantity', item.id, item.quantity - 1)"
                 >
                   −
@@ -70,6 +72,7 @@
                 </span>
                 <button
                   class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-ios-text active:scale-95 transition-transform text-sm"
+                  :aria-label="`${t('customizationLimits.increase')} ${getLocalizedMenuName(item.menuItem, currentLanguage)}`"
                   @click="$emit('update-quantity', item.id, item.quantity + 1)"
                 >
                   +

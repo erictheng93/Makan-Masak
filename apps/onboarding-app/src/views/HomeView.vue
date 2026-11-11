@@ -84,62 +84,83 @@ const features = computed(() => [
 </script>
 
 <template>
-  <div>
+  <div class="onboarding-page ui-page">
     <!-- Hero Section -->
-    <section class="pt-16 pb-20 text-center sm:pt-20 sm:pb-24">
-      <h1
-        class="text-4xl font-semibold tracking-tight text-ios-text sm:text-5xl"
-      >
-        {{ t("home.hero.titleLine1") }}<br />
-        <span class="text-primary-500">{{ t("home.hero.titleLine2") }}</span>
-      </h1>
-      <p
-        class="mx-auto mt-5 max-w-xl text-base leading-relaxed text-gray-500 sm:text-lg"
-      >
-        {{ t("home.hero.subtitle") }}
-      </p>
+    <section
+      class="onboarding-hero grid items-center gap-10 py-10 lg:grid-cols-[1fr_1.15fr] lg:py-16"
+    >
+      <div class="min-w-0">
+        <h1
+          class="text-4xl font-semibold tracking-tight text-ios-text sm:text-5xl"
+        >
+          {{ t("home.hero.titleLine1") }}<br />
+          <span class="text-primary-700">{{ t("home.hero.titleLine2") }}</span>
+        </h1>
+        <p
+          class="mt-5 max-w-xl text-base leading-relaxed text-gray-500 sm:text-lg"
+        >
+          {{ t("home.hero.subtitle") }}
+        </p>
 
-      <div class="mt-10 flex flex-col items-center gap-4">
-        <RouterLink
-          to="/apply"
-          class="inline-flex items-center justify-center rounded-full bg-primary-500 px-8 py-3.5 text-base font-semibold text-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-primary-600 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-        >
-          {{ t("home.hero.ctaApply") }}
-          <ArrowRightIcon class="ml-2 h-4 w-4" />
-        </RouterLink>
-        <a
-          href="#how-it-works"
-          class="text-sm font-medium text-primary-700 transition-colors duration-200 hover:text-primary-800"
-        >
-          {{ t("home.hero.ctaTour") }}
-        </a>
-        <RouterLink
-          to="/find-application"
-          class="text-sm font-medium text-primary-700 transition-colors duration-200 hover:text-primary-800"
-          data-testid="home-find-application"
-        >
-          {{ t("findApplication.linkLabel") }}
-        </RouterLink>
+        <div class="mt-8 flex flex-wrap items-center gap-4">
+          <RouterLink
+            to="/apply"
+            class="inline-flex items-center justify-center rounded-full bg-primary-700 px-8 py-3.5 text-base font-semibold text-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-primary-800 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+          >
+            {{ t("home.hero.ctaApply") }}
+            <ArrowRightIcon class="ml-2 h-4 w-4" />
+          </RouterLink>
+          <a
+            href="#how-it-works"
+            class="inline-flex min-h-[44px] items-center text-sm font-medium text-primary-700 transition-colors duration-200 hover:text-primary-800"
+          >
+            {{ t("home.hero.ctaTour") }}
+          </a>
+          <RouterLink
+            to="/find-application"
+            class="inline-flex min-h-[44px] items-center text-sm font-medium text-primary-700 transition-colors duration-200 hover:text-primary-800"
+            data-testid="home-find-application"
+          >
+            {{ t("findApplication.linkLabel") }}
+          </RouterLink>
+        </div>
       </div>
+      <figure class="min-w-0 rounded-3xl bg-white p-3 shadow-card-lg sm:p-4">
+        <img
+          src="/tour/4-dashboard.jpg"
+          :alt="tourSteps[3].alt"
+          width="2880"
+          height="1800"
+          fetchpriority="high"
+          class="w-full rounded-2xl"
+        />
+        <figcaption
+          class="px-2 pt-3 pb-1 text-sm leading-relaxed text-gray-600"
+        >
+          {{ t("home.tour.subtitle") }}
+        </figcaption>
+      </figure>
     </section>
 
     <!-- Features -->
-    <section class="grid grid-cols-1 gap-5 md:grid-cols-3 md:gap-6">
+    <section
+      class="grid grid-cols-1 gap-6 border-y border-ios-separator py-8 md:grid-cols-3 md:gap-8"
+    >
       <div
         v-for="feature in features"
         :key="feature.title"
-        class="group flex flex-col rounded-3xl bg-white p-8 shadow-card transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)]"
+        class="flex flex-col min-w-0"
       >
         <div
           class="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-50"
         >
           <component
             :is="feature.icon"
-            class="h-6 w-6 text-primary-500"
+            class="h-6 w-6 text-primary-700"
             aria-hidden="true"
           />
         </div>
-        <h3 class="mt-5 text-lg font-semibold text-ios-text">
+        <h3 class="mt-4 text-lg font-semibold text-ios-text">
           {{ feature.title }}
         </h3>
         <p class="mt-2 text-sm leading-relaxed text-gray-500">
@@ -238,7 +259,7 @@ const features = computed(() => [
       </div>
       <RouterLink
         to="/apply"
-        class="inline-flex shrink-0 items-center justify-center rounded-full bg-primary-500 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-primary-600 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+        class="inline-flex shrink-0 items-center justify-center rounded-full bg-primary-700 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:bg-primary-800 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
       >
         {{ t("home.cta.button") }}
         <ArrowRightIcon class="ml-2 h-4 w-4" />

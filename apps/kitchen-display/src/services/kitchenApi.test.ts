@@ -1,4 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mount, flushPromises } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
+import { useAuthStore } from "@/stores/auth";
+import HistoryView from "@/views/HistoryView.vue";
 import { kitchenApi } from "./kitchenApi";
 
 const mockApi = vi.hoisted(() => ({
@@ -292,5 +296,49 @@ describe("kitchen API service", () => {
       success: true,
       data: { updatedCount: 2 },
     });
+  });
+});
+
+describe("history response states", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setActivePinia(createPinia());
+    useAuthStore().user = {
+      id: 7,
+      username: "chef",
+      name: "Chef",
+      role: 2,
+      restaurantId: 7,
+      permissions: [],
+    };
+  });
+
+  it("keeps loading and failure distinct from a successful empty result and retries", async () => {
+    let finish!: (value: unknown) => void;
+    mockApi.get.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const wrapper = mount(HistoryView);
+    expect(wrapper.get('[role="status"]').text()).toContain("載入中");
+    expect(wrapper.text()).not.toContain("尚無訂單紀錄");
+    expect(wrapper.find('[data-testid="history-summary"]').exists()).toBe(
+      false,
+    );
+    finish({ data: { data: null } });
+    await flushPromises();
+    expect(wrapper.get('[role="alert"]').text()).toContain("載入訂單失敗");
+    expect(wrapper.text()).not.toContain("尚無訂單紀錄");
+    mockApi.get.mockResolvedValueOnce({
+      data: { data: { pending: [], preparing: [], ready: [] } },
+    });
+    await wrapper.get('[data-testid="history-retry"]').trigger("click");
+    await flushPromises();
+    expect(wrapper.text()).toContain("尚無訂單紀錄");
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="history-summary"]').exists()).toBe(true);
+    wrapper.unmount();
   });
 });

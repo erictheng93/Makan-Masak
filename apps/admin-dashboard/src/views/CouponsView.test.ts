@@ -199,6 +199,18 @@ describe("CouponsView", () => {
   // warm-up, which runs before the first `beforeEach`.
   afterAll(() => vi.useRealTimers());
 
+  it("names the icon pagination actions", async () => {
+    const wrapper = mountCoupons();
+    await flushPromises();
+    const nav = wrapper.get('nav[aria-label="coupons.pagination.label"]');
+    expect(
+      nav.find('button[aria-label="coupons.pagination.previous"]').exists(),
+    ).toBe(true);
+    expect(
+      nav.find('button[aria-label="coupons.pagination.next"]').exists(),
+    ).toBe(true);
+  });
+
   it("resets pagination before requesting status, discount, and search filters", async () => {
     const wrapper = mountCoupons();
     await flushPromises();

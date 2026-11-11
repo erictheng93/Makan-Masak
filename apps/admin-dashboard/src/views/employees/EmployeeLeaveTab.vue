@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-6">
+  <div class="ui-page space-y-6">
     <!-- Leave Balances -->
     <div>
       <h3 class="text-sm font-semibold text-ios-text mb-3">
@@ -17,7 +17,7 @@
         class="text-center py-8"
       >
         <CalendarOff class="mx-auto w-8 h-8 text-ios-text/15 mb-2" />
-        <p class="text-xs text-ios-text/30">
+        <p class="text-xs text-ios-text/70">
           {{ t("employees.leave.noBalances") }}
         </p>
       </div>
@@ -51,7 +51,7 @@
             <span class="text-2xl font-bold text-ios-blue">{{
               balance.remainingDays
             }}</span>
-            <span class="text-sm text-ios-text/40"
+            <span class="text-sm text-ios-text/70"
               >/ {{ balance.totalDays }} {{ t("employees.leave.days") }}</span
             >
           </div>
@@ -66,9 +66,9 @@
           </div>
 
           <!-- Details -->
-          <div class="flex justify-between text-xs text-ios-text/40">
+          <div class="ui-toolbar flex justify-between text-xs text-ios-text/70">
             <span>{{ t("employees.leave.used") }}: {{ balance.usedDays }}</span>
-            <span v-if="balance.pendingDays > 0" class="text-amber-600">
+            <span v-if="balance.pendingDays > 0" class="text-amber-700">
               {{ t("employees.leave.pending") }}: {{ balance.pendingDays }}
             </span>
           </div>
@@ -93,7 +93,7 @@
         class="text-center py-8"
       >
         <FileText class="mx-auto w-8 h-8 text-ios-text/15 mb-2" />
-        <p class="text-xs text-ios-text/30">
+        <p class="text-xs text-ios-text/70">
           {{ t("employees.leave.noRequests") }}
         </p>
       </div>
@@ -117,7 +117,7 @@
                 {{ request.leaveType?.name || t("employees.leave.unknown") }}
               </span>
             </div>
-            <p class="text-xs text-ios-text/40 mt-0.5">
+            <p class="text-xs text-ios-text/70 mt-0.5">
               {{ formatDate(request.startDate) }} -
               {{ formatDate(request.endDate) }}
               <span
@@ -132,7 +132,7 @@
             </p>
             <p
               v-if="request.reason"
-              class="text-xs text-ios-text/30 mt-0.5 truncate"
+              class="text-xs text-ios-text/70 mt-0.5 break-words"
             >
               {{ request.reason }}
             </p>

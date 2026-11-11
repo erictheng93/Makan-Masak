@@ -404,6 +404,7 @@ const idID: Messages = {
     uptime: "Waktu aktif",
   },
   history: {
+    loadFailed: "Tidak dapat memuat pesanan. Silakan coba lagi.",
     avgPrepTime: "Rata-rata Persiapan (mnt)",
     noRecords: "Tidak Ada Catatan Pesanan",
     noRecordsHint:

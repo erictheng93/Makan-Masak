@@ -64,9 +64,10 @@ const isCurrentRoute = (href: string) => {
         <div
           class="flex h-16 items-center justify-between px-4 border-b border-gray-200"
         >
-          <span class="text-xl font-bold text-primary-600">MakanMasak</span>
+          <span class="text-xl font-bold text-primary-700">MakanMasak</span>
           <button
             type="button"
+            :aria-label="t('common.cancel')"
             class="text-gray-500 hover:text-gray-700"
             @click="sidebarOpen = false"
           >
@@ -78,6 +79,7 @@ const isCurrentRoute = (href: string) => {
             v-for="item in navigation"
             :key="item.name"
             :to="item.href"
+            :aria-current="isCurrentRoute(item.href) ? 'page' : undefined"
             :class="[
               isCurrentRoute(item.href)
                 ? 'bg-primary-50 text-primary-700'
@@ -90,7 +92,7 @@ const isCurrentRoute = (href: string) => {
               :is="item.icon"
               :class="[
                 isCurrentRoute(item.href)
-                  ? 'text-primary-600'
+                  ? 'text-primary-700'
                   : 'text-gray-400 group-hover:text-gray-500',
                 'mr-3 h-5 w-5 flex-shrink-0',
               ]"
@@ -119,7 +121,7 @@ const isCurrentRoute = (href: string) => {
       <div class="flex flex-col flex-grow bg-white border-r border-gray-200">
         <!-- Logo -->
         <div class="flex h-16 items-center px-6 border-b border-gray-200">
-          <span class="text-xl font-bold text-primary-600">MakanMasak</span>
+          <span class="text-xl font-bold text-primary-700">MakanMasak</span>
           <span class="ml-2 text-sm text-gray-500">{{
             t("layout.managementPortal")
           }}</span>
@@ -131,6 +133,7 @@ const isCurrentRoute = (href: string) => {
             v-for="item in navigation"
             :key="item.name"
             :to="item.href"
+            :aria-current="isCurrentRoute(item.href) ? 'page' : undefined"
             :class="[
               isCurrentRoute(item.href)
                 ? 'bg-primary-50 text-primary-700'
@@ -142,7 +145,7 @@ const isCurrentRoute = (href: string) => {
               :is="item.icon"
               :class="[
                 isCurrentRoute(item.href)
-                  ? 'text-primary-600'
+                  ? 'text-primary-700'
                   : 'text-gray-400 group-hover:text-gray-500',
                 'mr-3 h-5 w-5 flex-shrink-0',
               ]"
@@ -190,7 +193,7 @@ const isCurrentRoute = (href: string) => {
                   class="w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-gray-50"
                   :class="
                     loc.code === locale
-                      ? 'text-primary-600 font-semibold bg-primary-50'
+                      ? 'text-primary-700 font-semibold bg-primary-50'
                       : 'text-gray-700'
                   "
                   @click="handleLocaleChange(loc.code)"
@@ -199,7 +202,7 @@ const isCurrentRoute = (href: string) => {
                   <span class="flex-1 text-left">{{ loc.nativeName }}</span>
                   <CheckIcon
                     v-if="loc.code === locale"
-                    class="h-4 w-4 text-primary-600"
+                    class="h-4 w-4 text-primary-700"
                   />
                 </button>
               </div>
@@ -218,26 +221,27 @@ const isCurrentRoute = (href: string) => {
     </div>
 
     <!-- Main content area -->
-    <div class="lg:pl-64">
+    <div class="lg:pl-64 min-w-0">
       <!-- Top bar -->
       <div
         class="sticky top-0 z-10 flex h-16 bg-white border-b border-gray-200 lg:hidden"
       >
         <button
           type="button"
+          :aria-label="t('layout.managementPortal')"
           class="px-4 text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
           @click="sidebarOpen = true"
         >
           <Bars3Icon class="h-6 w-6" />
         </button>
         <div class="flex items-center px-4">
-          <span class="text-lg font-bold text-primary-600">MakanMasak</span>
+          <span class="text-lg font-bold text-primary-700">MakanMasak</span>
         </div>
       </div>
 
       <!-- Page content -->
-      <main class="py-6">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <main class="py-7 sm:py-9">
+        <div class="mx-auto min-w-0 max-w-7xl px-5 sm:px-7 lg:px-9">
           <slot />
         </div>
       </main>

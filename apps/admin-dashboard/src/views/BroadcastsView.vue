@@ -1,8 +1,8 @@
 <template>
-  <div class="min-h-screen bg-ios-bg p-4 md:p-6">
+  <div class="ui-page min-h-screen bg-ios-bg p-4 md:p-6">
     <div class="mx-auto max-w-4xl">
       <header class="mb-5">
-        <h1 class="text-[22px] font-bold text-ios-text">
+        <h1 class="ui-page-heading text-[22px] font-bold text-ios-text">
           {{ t("broadcasts.title") }}
         </h1>
         <p class="mt-1 text-[13px] text-ios-secondary">
@@ -13,10 +13,13 @@
       <div
         v-if="!restaurantId"
         data-testid="broadcast-no-restaurant"
-        class="rounded-3xl bg-white p-10 text-center shadow-ios-sm"
+        class="ui-panel rounded-3xl bg-white p-10 text-center shadow-ios-sm"
       >
         <p class="text-[15px] font-semibold text-ios-text">
           {{ t("broadcasts.errors.noRestaurant") }}
+        </p>
+        <p class="mt-2 text-sm text-ios-text/70">
+          {{ t("nav.restaurantContextHint") }}
         </p>
       </div>
 

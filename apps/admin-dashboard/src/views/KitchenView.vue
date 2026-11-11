@@ -1,31 +1,40 @@
 <script setup lang="ts">
 import ModuleGate from "@makanmasak/shared/components/ModuleGate.vue";
+import { useI18n } from "@/i18n";
+import { KITCHEN_DISPLAY_URL } from "@/utils/loginRedirect";
+const { t } = useI18n();
 </script>
 
 <template>
-  <ModuleGate module="kitchen_display">
-    <div class="min-h-screen bg-gray-50 px-4 py-10 sm:px-6 lg:px-8">
-      <div
-        class="mx-auto max-w-3xl rounded-lg border border-gray-200 bg-white p-6 text-sm text-gray-600"
-      >
-        Kitchen display access is enabled for this restaurant.
-      </div>
-    </div>
-    <template #fallback>
-      <div class="min-h-screen bg-gray-50 px-4 py-10 sm:px-6 lg:px-8">
-        <div
-          class="mx-auto max-w-3xl rounded-lg border border-gray-200 bg-white p-6 text-sm text-gray-600"
-        >
-          Kitchen display is not included in the current plan.
+  <div class="ui-page space-y-6">
+    <header>
+      <h1 class="ui-page-heading text-2xl font-bold text-ios-text">
+        {{ t("nav.kitchen") }}
+      </h1>
+      <p class="text-sm text-ios-text/70">{{ t("ui.kitchenDescription") }}</p>
+    </header>
+    <ModuleGate module="kitchen_display">
+      <section class="ui-panel bg-white p-6 space-y-4">
+        <p class="text-sm text-ios-text/70">{{ t("ui.kitchenEnabled") }}</p>
+        <a :href="KITCHEN_DISPLAY_URL" class="btn btn-primary">{{
+          t("ui.openKitchen")
+        }}</a>
+      </section>
+      <template #fallback>
+        <section class="ui-panel bg-white p-6 space-y-4">
+          <p class="text-sm text-ios-text/70">
+            {{ t("ui.kitchenUnavailable") }}
+          </p>
+          <RouterLink to="/dashboard/billing" class="btn btn-primary">{{
+            t("billing.title")
+          }}</RouterLink>
+        </section>
+      </template>
+      <template #loading>
+        <div class="ui-panel h-32 bg-white p-6" role="status">
+          {{ t("common.loading") }}
         </div>
-      </div>
-    </template>
-    <template #loading>
-      <div class="min-h-screen bg-gray-50 px-4 py-10 sm:px-6 lg:px-8">
-        <div
-          class="mx-auto h-32 max-w-3xl animate-pulse rounded-lg bg-gray-100"
-        />
-      </div>
-    </template>
-  </ModuleGate>
+      </template>
+    </ModuleGate>
+  </div>
 </template>

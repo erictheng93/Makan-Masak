@@ -197,6 +197,7 @@ const idID: Messages = {
     toast: { saved: "Kebijakan disimpan", cleared: "Kebijakan dihapus" },
   },
   notFound: {
+    backPrevious: "Kembali ke halaman sebelumnya",
     backHome: "Kembali ke Rumah",
     description:
       "Halaman yang Anda kunjungi mungkin telah dihapus atau untuk sementara tidak tersedia",

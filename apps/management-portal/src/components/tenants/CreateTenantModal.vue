@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Dialog, DialogPanel, DialogTitle } from "@headlessui/vue";
 import { ref, watch, computed } from "vue";
 import { useTenantsStore } from "@/stores/tenants";
 import { XMarkIcon } from "@heroicons/vue/24/outline";
@@ -217,7 +218,11 @@ const finish = () => {
 
 <template>
   <Teleport to="body">
-    <div v-if="show" class="fixed inset-0 z-50 overflow-y-auto">
+    <Dialog
+      :open="show"
+      class="fixed inset-0 z-50 overflow-y-auto"
+      @close="finish"
+    >
       <!-- 背景遮罩 -->
       <div
         class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
@@ -228,20 +233,21 @@ const finish = () => {
       <div
         class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0"
       >
-        <div
+        <DialogPanel
           data-testid="management-tenant-create-modal"
-          class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg"
+          class="relative transform overflow-hidden rounded-3xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg"
         >
           <!-- 標題 -->
           <div
             class="flex items-center justify-between px-6 py-4 border-b border-gray-200"
           >
-            <h3 class="text-lg font-semibold text-gray-900">
+            <DialogTitle as="h3" class="text-lg font-semibold text-gray-900">
               {{ t("tenants.create") }}
-            </h3>
+            </DialogTitle>
             <button
               type="button"
-              class="text-gray-400 hover:text-gray-500"
+              class="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-gray-600 hover:text-gray-800"
+              :aria-label="t('common.cancel')"
               @click="finish"
             >
               <XMarkIcon class="h-6 w-6" />
@@ -650,8 +656,8 @@ const finish = () => {
               </button>
             </template>
           </div>
-        </div>
+        </DialogPanel>
       </div>
-    </div>
+    </Dialog>
   </Teleport>
 </template>

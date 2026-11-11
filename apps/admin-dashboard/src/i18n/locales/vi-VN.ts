@@ -22,6 +22,18 @@ const viVN: Messages = {
     quickActions: "Thao tác nhanh",
     addShift: "Thêm ca làm",
   },
+  ui: {
+    kitchenDescription:
+      "Xem đơn hàng trực tiếp, tiến độ chuẩn bị và món đã sẵn sàng.",
+    kitchenEnabled:
+      "Màn hình bếp đã được bật cho nhà hàng này. Tiếp tục trong không gian làm việc riêng.",
+    openKitchen: "Mở màn hình bếp",
+    kitchenUnavailable:
+      "Gói hiện tại không bao gồm màn hình bếp. Xem trang thanh toán để biết các gói và hỗ trợ.",
+    analysisPeriod: "Kỳ phân tích",
+    revenuePeriod: "Kỳ doanh thu",
+    orderPeriod: "Kỳ đơn hàng",
+  },
   common: {
     save: "Lưu",
     cancel: "Hủy",

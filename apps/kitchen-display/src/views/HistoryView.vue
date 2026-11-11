@@ -1,7 +1,7 @@
 <template>
-  <div class="bg-ios-bg min-h-screen px-5 pt-6 pb-10">
+  <div class="kitchen-page ui-page bg-ios-bg min-h-screen px-5 pt-6 pb-10">
     <!-- Header Row -->
-    <div class="flex items-center gap-3">
+    <div class="kitchen-page-heading ui-page-heading">
       <button
         :aria-label="t('common.back')"
         class="w-11 h-11 rounded-full bg-white shadow-card-sm flex items-center justify-center flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
@@ -14,14 +14,17 @@
       </h1>
 
       <!-- iOS Segmented Control -->
-      <div class="bg-white rounded-full p-1 inline-flex gap-0.5 shadow-card-sm">
+      <div
+        class="ui-tabs bg-white rounded-full p-1 inline-flex gap-0.5 shadow-card-sm"
+      >
         <button
           v-for="tab in tabs"
           :key="tab.key"
+          :aria-pressed="activeTab === tab.key"
           class="px-3.5 py-1.5 text-sm rounded-full transition-all duration-200"
           :class="
             activeTab === tab.key
-              ? 'bg-ios-blue text-white font-semibold shadow-card-sm'
+              ? 'bg-blue-700 text-white font-semibold shadow-card-sm'
               : 'text-ios-secondary font-medium'
           "
           @click="activeTab = tab.key"
@@ -32,10 +35,14 @@
     </div>
 
     <!-- Summary Card -->
-    <div class="bg-white rounded-2xl p-4 shadow-card mt-4">
-      <div class="grid grid-cols-3 divide-x divide-ios-bg">
+    <div
+      v-if="!loading && !loadError"
+      data-testid="history-summary"
+      class="mt-5"
+    >
+      <div class="history-stats ui-stat-strip">
         <!-- Total Orders -->
-        <div class="flex flex-col items-center px-3">
+        <div class="ui-stat flex flex-col items-center">
           <span class="text-2xl font-extrabold text-ios-text">{{
             summary.total
           }}</span>
@@ -44,7 +51,7 @@
           }}</span>
         </div>
         <!-- Avg Cooking Time -->
-        <div class="flex flex-col items-center px-3">
+        <div class="ui-stat flex flex-col items-center">
           <span class="text-2xl font-extrabold text-ios-green">{{
             summary.avgCookingTime
           }}</span>
@@ -53,7 +60,7 @@
           }}</span>
         </div>
         <!-- On-time Rate -->
-        <div class="flex flex-col items-center px-3">
+        <div class="ui-stat flex flex-col items-center">
           <span class="text-2xl font-extrabold text-ios-blue"
             >{{ summary.onTimeRate }}%</span
           >
@@ -64,9 +71,31 @@
       </div>
     </div>
 
+    <div
+      v-if="loading"
+      role="status"
+      class="ui-empty-state mt-5 bg-white rounded-3xl p-10 text-center"
+    >
+      <div class="loading-spinner w-8 h-8 mx-auto mb-4" aria-hidden="true" />
+      {{ t("common.loading") }}
+    </div>
+    <div
+      v-else-if="loadError"
+      role="alert"
+      class="ui-empty-state mt-5 bg-white rounded-3xl p-8 text-center"
+    >
+      <p class="font-semibold text-red-700">{{ loadError }}</p>
+      <button
+        data-testid="history-retry"
+        class="btn-kitchen btn-kitchen-primary mt-4"
+        @click="loadOrders"
+      >
+        {{ t("common.retry") }}
+      </button>
+    </div>
     <!-- Order List -->
     <div
-      v-if="filteredOrders.length > 0"
+      v-else-if="filteredOrders.length > 0"
       class="bg-white rounded-2xl shadow-card overflow-hidden mt-4"
     >
       <div
@@ -169,11 +198,17 @@ const activeTab = ref<TabKey>("today");
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 const allOrders = ref<KitchenOrder[]>([]);
-const loading = ref(false);
+const loading = ref(true);
+const loadError = ref("");
 
-onMounted(async () => {
+async function loadOrders() {
   const restaurantId = authStore.restaurantId;
-  if (!restaurantId) return;
+  loadError.value = "";
+  if (!restaurantId) {
+    loading.value = false;
+    loadError.value = t("myShifts.noRestaurant");
+    return;
+  }
 
   loading.value = true;
   try {
@@ -185,13 +220,18 @@ onMounted(async () => {
         ...response.data.preparing,
         ...response.data.ready,
       ];
+    } else {
+      loadError.value = t("history.loadFailed");
     }
   } catch (err) {
     console.error("Failed to fetch history orders:", err);
+    loadError.value = t("history.loadFailed");
   } finally {
     loading.value = false;
   }
-});
+}
+
+onMounted(loadOrders);
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 function startOfDay(date: Date): Date {

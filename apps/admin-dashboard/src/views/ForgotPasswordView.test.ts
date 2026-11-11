@@ -46,6 +46,10 @@ describe("ForgotPasswordView", () => {
     );
     expect(wrapper.text()).toContain("auth.emailSent");
     expect(wrapper.text()).toContain("auth.emailSentMessage");
+    expect(wrapper.get('[role="status"]').text()).toContain("auth.emailSent");
+    expect(wrapper.get('[role="status"]').text()).toContain(
+      "owner@example.test",
+    );
     expect(wrapper.text()).not.toContain(SERVER_MESSAGE);
   });
 

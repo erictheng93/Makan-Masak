@@ -1,11 +1,11 @@
 <template>
-  <div class="users-view">
+  <div class="ui-page users-view">
     <!-- 頁面標題和操作 -->
     <div
       class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"
     >
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">
+        <h1 class="ui-page-heading text-2xl font-bold text-gray-900">
           {{ t("scheduling.managementTitle") }}
         </h1>
         <p class="text-gray-600">
@@ -29,7 +29,7 @@
           {{ t("scheduling.addTemplate") }}
         </button>
         <button
-          class="flex items-center whitespace-nowrap px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          class="flex items-center whitespace-nowrap px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors"
           @click="showCreateScheduleModal"
         >
           <PlusIcon class="h-4 w-4 mr-2" />
@@ -40,48 +40,51 @@
 
     <!-- Quick Stats -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
         <div class="flex items-center">
           <div class="p-2 bg-blue-100 rounded-lg">
-            <CalendarIcon class="h-6 w-6 text-blue-600" />
+            <CalendarIcon class="h-6 w-6 text-blue-700" />
           </div>
           <div class="ml-4">
             <h3 class="text-sm font-semibold text-gray-900">
               {{ t("scheduling.monthlySchedules") }}
             </h3>
-            <p class="text-xl font-bold text-blue-600">
+            <p class="text-xl font-bold text-blue-700">
               {{ schedulesLoading ? "—" : schedules.length }}
             </p>
           </div>
         </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
         <div class="flex items-center">
           <div class="p-2 bg-green-100 rounded-lg">
-            <CalendarIcon class="h-6 w-6 text-green-600" />
+            <CalendarIcon class="h-6 w-6 text-green-700" />
           </div>
           <div class="ml-4">
             <h3 class="text-sm font-semibold text-gray-900">
               {{ t("shiftTemplates.title") }}
             </h3>
-            <p class="text-xl font-bold text-green-600">
+            <p class="text-xl font-bold text-green-700">
               {{ templatesLoading ? "—" : shiftTemplates.length }}
             </p>
           </div>
         </div>
       </div>
 
-      <div v-if="conflicts.length > 0" class="bg-white rounded-lg shadow p-6">
+      <div
+        v-if="conflicts.length > 0"
+        class="ui-panel bg-white rounded-lg shadow p-6"
+      >
         <div class="flex items-center">
           <div class="p-2 bg-yellow-100 rounded-lg">
-            <ExclamationTriangleIcon class="h-6 w-6 text-yellow-600" />
+            <ExclamationTriangleIcon class="h-6 w-6 text-yellow-700" />
           </div>
           <div class="ml-4">
             <h3 class="text-sm font-semibold text-gray-900">
               {{ t("scheduling.pendingConflicts") }}
             </h3>
-            <p class="text-xl font-bold text-yellow-600">
+            <p class="text-xl font-bold text-yellow-700">
               {{ conflicts.length }}
             </p>
           </div>
@@ -90,17 +93,17 @@
 
       <div
         v-if="swapRequests.length > 0"
-        class="bg-white rounded-lg shadow p-6"
+        class="ui-panel bg-white rounded-lg shadow p-6"
       >
         <div class="flex items-center">
           <div class="p-2 bg-teal-100 rounded-lg">
-            <ArrowPathIcon class="h-6 w-6 text-teal-600" />
+            <ArrowPathIcon class="h-6 w-6 text-teal-700" />
           </div>
           <div class="ml-4">
             <h3 class="text-sm font-semibold text-gray-900">
               {{ t("scheduling.pendingSwaps") }}
             </h3>
-            <p class="text-xl font-bold text-teal-600">
+            <p class="text-xl font-bold text-teal-700">
               {{ swapRequests.filter((r) => r.status === "pending").length }}
             </p>
           </div>
@@ -109,8 +112,10 @@
     </div>
 
     <!-- Currently Working Employees -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-      <div class="flex items-center justify-between mb-4">
+    <div
+      class="ui-panel bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6"
+    >
+      <div class="ui-toolbar flex items-center justify-between mb-4">
         <h3 class="text-lg font-semibold text-gray-900">
           {{ t("scheduling.currentlyWorking") }}
         </h3>
@@ -170,15 +175,15 @@
     <!-- Error Banner -->
     <div
       v-if="error"
-      class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center justify-between"
+      class="ui-toolbar bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center justify-between"
     >
       <div class="flex items-center">
-        <ExclamationCircleIcon class="h-5 w-5 text-red-600 mr-3" />
+        <ExclamationCircleIcon class="h-5 w-5 text-red-700 mr-3" />
         <span class="text-sm text-red-800 font-medium">{{ error }}</span>
       </div>
       <button
         :aria-label="t('common.close')"
-        class="text-red-600 hover:text-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+        class="text-red-700 hover:text-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
         @click="error = null"
       >
         <XMarkIcon class="h-5 w-5" />
@@ -186,20 +191,21 @@
     </div>
 
     <!-- Tab Navigation -->
-    <div class="bg-white rounded-lg shadow mb-6">
+    <div class="ui-panel bg-white rounded-lg shadow mb-6">
       <div class="border-b border-gray-200">
         <nav
-          class="-mb-px flex overflow-x-auto space-x-8 px-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
-          aria-label="Tabs"
+          class="ui-table-scroll -mb-px flex overflow-x-auto space-x-8 px-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
+          :aria-label="t('scheduling.managementTitle')"
           tabindex="0"
         >
           <button
             v-for="tab in tabs"
             :key="tab.id"
+            :aria-pressed="activeTab === tab.id"
             :class="[
               'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center transition-colors',
               activeTab === tab.id
-                ? 'border-blue-500 text-blue-600'
+                ? 'border-blue-500 text-blue-700'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
             ]"
             @click="switchTab(tab.id)"
@@ -211,7 +217,7 @@
               :class="[
                 'ml-2 py-0.5 px-2 rounded-full text-xs font-medium',
                 activeTab === tab.id
-                  ? 'bg-blue-100 text-blue-600'
+                  ? 'bg-blue-100 text-blue-700'
                   : 'bg-gray-100 text-gray-600',
               ]"
             >
@@ -223,7 +229,7 @@
     </div>
 
     <!-- Tab Content -->
-    <div class="bg-white rounded-lg shadow p-6">
+    <div class="ui-panel bg-white rounded-lg shadow p-6">
       <!-- Calendar View -->
       <div v-if="activeTab === 'calendar'">
         <SchedulingCalendar

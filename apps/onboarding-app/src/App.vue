@@ -17,14 +17,12 @@ const handleLocaleChange = async (code: string) => {
 <template>
   <div class="min-h-screen bg-ios-bg">
     <!-- Header -->
-    <header
-      class="bg-white/80 backdrop-blur-md shadow-[0_1px_0_rgba(0,0,0,0.04)]"
-    >
-      <div class="max-w-4xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between">
+    <header class="bg-white border-b border-ios-separator">
+      <div class="max-w-6xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between gap-3">
           <div class="flex items-center">
-            <span class="text-2xl font-bold text-primary-500">MakanMasak</span>
-            <span class="ml-2 text-sm text-gray-500">{{
+            <span class="text-2xl font-bold text-primary-700">MakanMasak</span>
+            <span class="ml-3 hidden sm:inline text-sm text-gray-600">{{
               t("app.tagline.platformHosted")
             }}</span>
           </div>
@@ -79,13 +77,13 @@ const handleLocaleChange = async (code: string) => {
     </header>
 
     <!-- Main -->
-    <main class="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    <main class="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
       <RouterView />
     </main>
 
     <!-- Footer -->
     <footer class="mt-auto py-8">
-      <div class="max-w-4xl mx-auto px-4 text-center text-sm text-gray-500">
+      <div class="max-w-6xl mx-auto px-4 text-center text-sm text-gray-500">
         <p>{{ t("app.footer.copyright") }}</p>
       </div>
     </footer>

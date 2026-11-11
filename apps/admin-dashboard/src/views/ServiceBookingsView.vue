@@ -1,10 +1,10 @@
 <template>
-  <div class="space-y-6" data-testid="service-bookings-view">
+  <div class="ui-page space-y-6" data-testid="service-bookings-view">
     <div
       class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
     >
       <div>
-        <h1 class="text-2xl font-semibold text-gray-900">
+        <h1 class="ui-page-heading text-2xl font-semibold text-gray-900">
           {{ t("serviceBookings.title") }}
         </h1>
         <p class="mt-1 text-sm text-gray-500">
@@ -22,13 +22,17 @@
       </button>
     </div>
 
-    <section class="rounded-lg bg-white p-5 shadow">
+    <section class="ui-panel rounded-lg bg-white p-5 shadow">
       <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
         <div>
-          <label class="mb-2 block text-sm font-medium text-gray-700">
+          <label
+            for="servicebookingsview-field-1"
+            class="mb-2 block text-sm font-medium text-gray-700"
+          >
             {{ t("serviceBookings.filters.date") }}
           </label>
           <input
+            id="servicebookingsview-field-1"
             v-model="filters.date"
             data-testid="service-bookings-date"
             type="date"
@@ -37,10 +41,14 @@
           />
         </div>
         <div>
-          <label class="mb-2 block text-sm font-medium text-gray-700">
+          <label
+            for="servicebookingsview-field-2"
+            class="mb-2 block text-sm font-medium text-gray-700"
+          >
             {{ t("serviceBookings.filters.status") }}
           </label>
           <select
+            id="servicebookingsview-field-2"
             v-model="filters.status"
             data-testid="service-bookings-status"
             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
@@ -67,7 +75,7 @@
           </select>
         </div>
       </div>
-      <p v-if="errorMessage" class="mt-4 text-sm text-red-600">
+      <p v-if="errorMessage" class="mt-4 text-sm text-red-700">
         {{ errorMessage }}
       </p>
       <p v-if="successMessage" class="mt-4 text-sm text-green-700">
@@ -75,8 +83,8 @@
       </p>
     </section>
 
-    <section class="overflow-hidden rounded-lg bg-white shadow">
-      <div class="overflow-x-auto">
+    <section class="ui-panel overflow-hidden rounded-lg bg-white shadow">
+      <div class="ui-table-scroll overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 text-sm">
           <thead class="bg-gray-50 text-left text-xs uppercase text-gray-500">
             <tr>
@@ -167,12 +175,12 @@
                 </span>
               </td>
               <td class="px-4 py-3 align-top">
-                <div class="flex flex-wrap justify-end gap-2">
+                <div class="ui-toolbar flex flex-wrap justify-end gap-2">
                   <button
                     v-if="booking.status === 'pending'"
                     type="button"
                     :data-testid="`booking-confirm-cash-${booking.id}`"
-                    class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                    class="rounded-lg bg-primary-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-800 disabled:opacity-50"
                     :disabled="isSaving"
                     @click="runAction(() => confirmCash(booking.id))"
                   >
@@ -205,7 +213,7 @@
                     "
                     type="button"
                     :data-testid="`booking-cancel-${booking.id}`"
-                    class="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    class="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
                     :disabled="isSaving"
                     @click="runAction(() => cancelBooking(booking.id))"
                   >

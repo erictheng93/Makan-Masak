@@ -1,9 +1,11 @@
 <template>
-  <div class="min-h-screen bg-ios-bg p-4 md:p-6">
+  <div class="ui-page min-h-screen bg-ios-bg p-4 md:p-6">
     <div class="mx-auto max-w-4xl">
-      <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div
+        class="ui-toolbar mb-5 flex flex-wrap items-center justify-between gap-3"
+      >
         <div>
-          <h1 class="text-[22px] font-bold text-ios-text">
+          <h1 class="ui-page-heading text-[22px] font-bold text-ios-text">
             {{ t("optionGroups.title") }}
           </h1>
           <p class="mt-1 text-[13px] text-ios-secondary">
@@ -13,7 +15,7 @@
         <button
           type="button"
           data-testid="add-group"
-          class="rounded-full bg-ios-primary px-4 py-2 text-[14px] font-semibold text-white active:scale-95 transition-transform duration-150"
+          class="rounded-full bg-primary-700 px-4 py-2 text-[14px] font-semibold text-white active:scale-95 transition-transform duration-150"
           @click="openCreateGroup"
         >
           {{ t("optionGroups.addGroup") }}
@@ -22,7 +24,7 @@
 
       <div
         v-if="isLoading"
-        class="rounded-2xl bg-white p-8 text-center text-[14px] text-ios-secondary shadow-sm"
+        class="ui-panel rounded-2xl bg-white p-8 text-center text-[14px] text-ios-secondary shadow-sm"
       >
         {{ t("common.loading") }}
       </div>
@@ -30,7 +32,7 @@
       <div
         v-else-if="groups.length === 0"
         data-testid="option-groups-empty"
-        class="rounded-3xl bg-white p-10 text-center shadow-sm"
+        class="ui-panel rounded-3xl bg-white p-10 text-center shadow-sm"
       >
         <p class="text-[15px] font-semibold text-ios-text">
           {{ t("optionGroups.emptyTitle") }}
@@ -45,9 +47,11 @@
           v-for="group in groups"
           :key="group.id"
           :data-testid="`option-group-${group.id}`"
-          class="rounded-3xl bg-white p-5 shadow-sm"
+          class="ui-panel rounded-3xl bg-white p-5 shadow-sm"
         >
-          <div class="flex flex-wrap items-start justify-between gap-3">
+          <div
+            class="ui-toolbar flex flex-wrap items-start justify-between gap-3"
+          >
             <div>
               <div class="flex items-center gap-2">
                 <h2 class="text-[16px] font-bold text-ios-text">
@@ -183,14 +187,23 @@
     <!-- Group create / edit -->
     <div
       v-if="showGroupModal"
+      v-dialog-focus
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="group-dialog-title"
+      tabindex="-1"
       data-testid="group-modal"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
+      @keydown.esc.stop="showGroupModal = false"
     >
       <form
-        class="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl"
+        class="ui-panel w-full max-w-md rounded-3xl bg-white p-6 shadow-xl"
         @submit.prevent="saveGroup"
       >
-        <h3 class="mb-4 text-[17px] font-bold text-ios-text">
+        <h3
+          id="group-dialog-title"
+          class="mb-4 text-[17px] font-bold text-ios-text"
+        >
           {{
             editingGroup
               ? t("optionGroups.editGroup")
@@ -292,7 +305,7 @@
           </label>
         </div>
 
-        <div class="mt-6 flex justify-end gap-2">
+        <div class="ui-toolbar mt-6 flex justify-end gap-2">
           <button
             type="button"
             class="rounded-full bg-ios-bg px-4 py-2 text-[14px] font-semibold text-ios-text"
@@ -303,7 +316,7 @@
           <button
             type="submit"
             data-testid="save-group"
-            class="rounded-full bg-ios-primary px-4 py-2 text-[14px] font-semibold text-white"
+            class="rounded-full bg-primary-700 px-4 py-2 text-[14px] font-semibold text-white"
           >
             {{ t("common.save") }}
           </button>
@@ -314,14 +327,23 @@
     <!-- Choice create / edit -->
     <div
       v-if="showChoiceModal"
+      v-dialog-focus
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="choice-dialog-title"
+      tabindex="-1"
       data-testid="choice-modal"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
+      @keydown.esc.stop="showChoiceModal = false"
     >
       <form
-        class="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl"
+        class="ui-panel w-full max-w-md rounded-3xl bg-white p-6 shadow-xl"
         @submit.prevent="saveChoice"
       >
-        <h3 class="mb-4 text-[17px] font-bold text-ios-text">
+        <h3
+          id="choice-dialog-title"
+          class="mb-4 text-[17px] font-bold text-ios-text"
+        >
           {{ editingChoice ? t("common.edit") : t("menu.form.addChoice") }}
         </h3>
         <div class="space-y-3">
@@ -383,7 +405,7 @@
             {{ t("menu.form.defaultOption") }}
           </label>
         </div>
-        <div class="mt-6 flex justify-end gap-2">
+        <div class="ui-toolbar mt-6 flex justify-end gap-2">
           <button
             type="button"
             class="rounded-full bg-ios-bg px-4 py-2 text-[14px] font-semibold text-ios-text"
@@ -394,7 +416,7 @@
           <button
             type="submit"
             data-testid="save-choice"
-            class="rounded-full bg-ios-primary px-4 py-2 text-[14px] font-semibold text-white"
+            class="rounded-full bg-primary-700 px-4 py-2 text-[14px] font-semibold text-white"
           >
             {{ t("common.save") }}
           </button>
@@ -405,6 +427,7 @@
 </template>
 
 <script setup lang="ts">
+import { vDialogFocus } from "@/utils/dialog-focus";
 import { onMounted, ref } from "vue";
 import { useI18n } from "@/i18n";
 import { useCurrency } from "@/composables/useCurrency";

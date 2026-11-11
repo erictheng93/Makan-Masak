@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-4">
+  <div class="ui-page space-y-4">
     <!-- Current staff vs departed -->
     <div class="inline-flex gap-1 p-1 bg-ios-bg rounded-full">
       <button
@@ -9,7 +9,7 @@
         :class="
           roster === option.value
             ? 'bg-white text-ios-text shadow-sm'
-            : 'text-ios-text/60 hover:text-ios-text'
+            : 'text-ios-text/70 hover:text-ios-text'
         "
         @click="roster = option.value"
       >
@@ -21,34 +21,45 @@
     <div class="flex flex-col sm:flex-row gap-3">
       <div class="relative flex-1">
         <Search
-          class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ios-text/30"
+          class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ios-text/70"
         />
-        <input
-          v-model="searchQuery"
-          type="text"
-          :placeholder="t('users.search.placeholder')"
-          class="w-full pl-10 pr-4 py-2.5 bg-ios-bg border-none rounded-xl text-sm text-ios-text placeholder-ios-text/30 focus:shadow-[0_0_0_2px_rgba(0,122,255,0.25)] focus:bg-white transition-all"
-        />
+        <label class="admin-field" for="employeelisttab-searchQuery"
+          ><span>{{ t("users.search.placeholder") }}</span
+          ><input
+            id="employeelisttab-searchQuery"
+            v-model="searchQuery"
+            type="text"
+            :placeholder="t('users.search.placeholder')"
+            class="w-full pl-10 pr-4 py-2.5 bg-ios-bg border-none rounded-xl text-sm text-ios-text placeholder-ios-text/30 focus:shadow-[0_0_0_2px_rgba(0,122,255,0.25)] focus:bg-white transition-all"
+        /></label>
       </div>
-      <select
-        v-model="roleFilter"
-        class="px-3.5 py-2.5 bg-ios-bg border-none rounded-xl text-sm text-ios-text focus:shadow-[0_0_0_2px_rgba(0,122,255,0.25)] focus:bg-white transition-all"
+      <label class="admin-field" for="employeelisttab-roleFilter"
+        ><span>{{ t("users.search.allRoles") }}</span
+        ><select
+          id="employeelisttab-roleFilter"
+          v-model="roleFilter"
+          class="px-3.5 py-2.5 bg-ios-bg border-none rounded-xl text-sm text-ios-text focus:shadow-[0_0_0_2px_rgba(0,122,255,0.25)] focus:bg-white transition-all"
+        >
+          <option value="">{{ t("users.search.allRoles") }}</option>
+          <option value="1">{{ t("users.search.ownerRole") }}</option>
+          <option value="2">{{ t("users.search.chefRole") }}</option>
+          <option value="3">{{ t("users.search.serviceRole") }}</option>
+          <option value="4">{{ t("users.search.cashierRole") }}</option>
+        </select></label
       >
-        <option value="">{{ t("users.search.allRoles") }}</option>
-        <option value="1">{{ t("users.search.ownerRole") }}</option>
-        <option value="2">{{ t("users.search.chefRole") }}</option>
-        <option value="3">{{ t("users.search.serviceRole") }}</option>
-        <option value="4">{{ t("users.search.cashierRole") }}</option>
-      </select>
-      <select
-        v-model="statusFilter"
-        class="px-3.5 py-2.5 bg-ios-bg border-none rounded-xl text-sm text-ios-text focus:shadow-[0_0_0_2px_rgba(0,122,255,0.25)] focus:bg-white transition-all"
+      <label class="admin-field" for="employeelisttab-statusFilter"
+        ><span>{{ t("users.search.allStatuses") }}</span
+        ><select
+          id="employeelisttab-statusFilter"
+          v-model="statusFilter"
+          class="px-3.5 py-2.5 bg-ios-bg border-none rounded-xl text-sm text-ios-text focus:shadow-[0_0_0_2px_rgba(0,122,255,0.25)] focus:bg-white transition-all"
+        >
+          <option value="">{{ t("users.search.allStatuses") }}</option>
+          <option value="active">{{ t("users.status.active") }}</option>
+          <option value="inactive">{{ t("users.status.inactive") }}</option>
+          <option value="suspended">{{ t("users.status.suspended") }}</option>
+        </select></label
       >
-        <option value="">{{ t("users.search.allStatuses") }}</option>
-        <option value="active">{{ t("users.status.active") }}</option>
-        <option value="inactive">{{ t("users.status.inactive") }}</option>
-        <option value="suspended">{{ t("users.status.suspended") }}</option>
-      </select>
     </div>
 
     <!-- Employee Table -->
@@ -59,15 +70,15 @@
     </div>
 
     <div v-else-if="filteredUsers.length === 0" class="text-center py-16">
-      <Users class="mx-auto w-12 h-12 text-ios-text/20 mb-3" />
-      <h3 class="text-sm font-medium text-ios-text/60">
+      <Users class="mx-auto w-12 h-12 text-ios-text/70 mb-3" />
+      <h3 class="text-sm font-medium text-ios-text/70">
         {{
           isArchivedRoster
             ? t("users.empty.archivedTitle")
             : t("users.empty.title")
         }}
       </h3>
-      <p class="text-xs text-ios-text/40 mt-1">
+      <p class="text-xs text-ios-text/70 mt-1">
         {{
           isArchivedRoster
             ? t("users.empty.archivedDescription")
@@ -76,37 +87,37 @@
       </p>
     </div>
 
-    <div v-else class="overflow-x-auto">
+    <div v-else class="ui-table-scroll overflow-x-auto">
       <table v-if="!compact" class="min-w-full">
         <thead>
           <tr class="border-b border-ios-bg">
             <th
-              class="px-4 py-3 text-left text-xs font-medium text-ios-text/40 uppercase tracking-wider"
+              class="px-4 py-3 text-left text-xs font-medium text-ios-text/70 uppercase tracking-wider"
             >
               {{ t("users.table.info") }}
             </th>
             <th
-              class="px-4 py-3 text-left text-xs font-medium text-ios-text/40 uppercase tracking-wider"
+              class="px-4 py-3 text-left text-xs font-medium text-ios-text/70 uppercase tracking-wider"
             >
               {{ t("users.table.role") }}
             </th>
             <th
-              class="px-4 py-3 text-left text-xs font-medium text-ios-text/40 uppercase tracking-wider"
+              class="px-4 py-3 text-left text-xs font-medium text-ios-text/70 uppercase tracking-wider"
             >
               {{ t("users.table.status") }}
             </th>
             <th
-              class="px-4 py-3 text-left text-xs font-medium text-ios-text/40 uppercase tracking-wider"
+              class="px-4 py-3 text-left text-xs font-medium text-ios-text/70 uppercase tracking-wider"
             >
               {{ t("employees.table.workStatus") }}
             </th>
             <th
-              class="px-4 py-3 text-left text-xs font-medium text-ios-text/40 uppercase tracking-wider"
+              class="px-4 py-3 text-left text-xs font-medium text-ios-text/70 uppercase tracking-wider"
             >
               {{ t("users.table.lastLogin") }}
             </th>
             <th
-              class="px-4 py-3 text-left text-xs font-medium text-ios-text/40 uppercase tracking-wider"
+              class="px-4 py-3 text-left text-xs font-medium text-ios-text/70 uppercase tracking-wider"
             >
               {{ t("users.table.actions") }}
             </th>
@@ -148,7 +159,7 @@
                   <div class="text-sm font-medium text-ios-text truncate">
                     {{ user.fullName || user.username }}
                   </div>
-                  <div class="text-xs text-ios-text/40 truncate">
+                  <div class="text-xs text-ios-text/70 truncate">
                     {{ user.email || user.username }}
                   </div>
                 </div>
@@ -194,13 +205,13 @@
                   user.leaveStatus.leaveType || t("employees.clockIn.onLeave")
                 }}
               </span>
-              <span v-else class="text-xs text-ios-text/30">
+              <span v-else class="text-xs text-ios-text/70">
                 {{ t("employees.clockIn.off") }}
               </span>
             </td>
 
             <!-- Last Login -->
-            <td class="px-4 py-3.5 text-xs text-ios-text/50">
+            <td class="px-4 py-3.5 text-xs text-ios-text/70">
               {{
                 user.lastLoginAt
                   ? formatDateTime(user.lastLoginAt)
@@ -227,7 +238,7 @@
         <li
           v-for="user in paginatedUsers"
           :key="user.id"
-          class="rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+          class="ui-panel rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
           data-testid="employee-card"
         >
           <button
@@ -245,7 +256,7 @@
               <span class="block truncate text-sm font-medium text-ios-text">
                 {{ user.fullName || user.username }}
               </span>
-              <span class="block truncate text-xs text-ios-text/40">
+              <span class="block truncate text-xs text-ios-text/70">
                 {{ user.email || user.username }}
               </span>
             </span>
@@ -278,11 +289,11 @@
               <CalendarOff class="h-3 w-3" />
               {{ user.leaveStatus.leaveType || t("employees.clockIn.onLeave") }}
             </span>
-            <span v-else class="text-xs text-ios-text/30">
+            <span v-else class="text-xs text-ios-text/70">
               {{ t("employees.clockIn.off") }}
             </span>
           </div>
-          <div class="mt-2 flex justify-end">
+          <div class="ui-toolbar mt-2 flex justify-end">
             <EmployeeRowActions
               v-bind="actionProps(user)"
               compact
@@ -299,9 +310,9 @@
       <!-- Pagination -->
       <div
         v-if="totalPages > 1"
-        class="flex items-center justify-between pt-4 border-t border-ios-bg"
+        class="ui-toolbar flex items-center justify-between pt-4 border-t border-ios-bg"
       >
-        <p class="text-xs text-ios-text/40">
+        <p class="text-xs text-ios-text/70">
           {{
             t("employees.pagination.showing", {
               from: (currentPage - 1) * pageSize + 1,
@@ -317,8 +328,8 @@
             class="w-8 h-8 rounded-lg text-xs font-medium transition-colors"
             :class="
               page === currentPage
-                ? 'bg-ios-blue text-white'
-                : 'text-ios-text/50 hover:bg-ios-bg'
+                ? 'bg-primary-700 text-white'
+                : 'text-ios-text/70 hover:bg-ios-bg'
             "
             @click="currentPage = page"
           >

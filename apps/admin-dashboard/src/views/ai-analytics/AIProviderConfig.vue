@@ -169,13 +169,13 @@ const handleSaveConfig = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+  <div class="ui-page min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-3xl mx-auto">
       <!-- Header -->
       <div class="mb-8">
         <div class="flex items-center space-x-3 mb-2">
-          <SparklesIcon class="w-8 h-8 text-teal-600" />
-          <h1 class="text-3xl font-bold text-gray-900">
+          <SparklesIcon class="w-8 h-8 text-teal-700" />
+          <h1 class="ui-page-heading text-3xl font-bold text-gray-900">
             {{ t("aiConfig.title") }}
           </h1>
         </div>
@@ -208,7 +208,7 @@ const handleSaveConfig = async () => {
 
       <!-- Main Config Card -->
       <div
-        class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+        class="ui-panel bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
       >
         <!-- Provider Selection -->
         <div class="p-8 border-b border-gray-100">
@@ -242,7 +242,7 @@ const handleSaveConfig = async () => {
               </div>
               <CheckCircleIcon
                 v-if="form.provider === provider.value"
-                class="w-5 h-5 text-teal-600 absolute top-4 right-4"
+                class="w-5 h-5 text-teal-700 absolute top-4 right-4"
               />
             </button>
           </div>
@@ -265,7 +265,10 @@ const handleSaveConfig = async () => {
 
           <!-- API Key Input -->
           <div>
-            <label class="block text-sm font-semibold text-gray-900 mb-2">
+            <label
+              for="ai-provider-key"
+              class="block text-sm font-semibold text-gray-900 mb-2"
+            >
               API Key
             </label>
             <div class="relative">
@@ -273,7 +276,11 @@ const handleSaveConfig = async () => {
                 class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
               />
               <input
+                id="ai-provider-key"
                 v-model="form.apiKey"
+                :aria-describedby="
+                  testResult ? 'ai-connection-result' : undefined
+                "
                 type="password"
                 :placeholder="t('aiConfig.enterApiKey')"
                 class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
@@ -286,11 +293,18 @@ const handleSaveConfig = async () => {
 
           <!-- Model Selection (combobox: select from list or type custom) -->
           <div>
-            <label class="block text-sm font-semibold text-gray-900 mb-2">
+            <label
+              for="aiproviderconfig-field-1"
+              class="block text-sm font-semibold text-gray-900 mb-2"
+            >
               {{ t("aiConfig.modelSelection") }}
             </label>
             <input
+              id="aiproviderconfig-field-1"
               v-model="form.model"
+              :aria-describedby="
+                testResult ? 'ai-connection-result' : undefined
+              "
               type="text"
               :list="`models-${form.provider}`"
               :placeholder="t('aiConfig.modelPlaceholder')"
@@ -310,11 +324,18 @@ const handleSaveConfig = async () => {
 
           <!-- Custom Base URL (for custom provider) -->
           <div v-if="form.provider === 'custom'">
-            <label class="block text-sm font-semibold text-gray-900 mb-2">
+            <label
+              for="aiproviderconfig-field-2"
+              class="block text-sm font-semibold text-gray-900 mb-2"
+            >
               Base URL
             </label>
             <input
+              id="aiproviderconfig-field-2"
               v-model="form.customBaseUrl"
+              :aria-describedby="
+                testResult ? 'ai-connection-result' : undefined
+              "
               type="url"
               placeholder="https://your-api-endpoint.com"
               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
@@ -324,6 +345,8 @@ const handleSaveConfig = async () => {
           <!-- Test Result -->
           <div
             v-if="testResult"
+            id="ai-connection-result"
+            role="status"
             class="rounded-xl p-4 flex items-center space-x-3 transition-all"
             :class="
               testResult.success
@@ -333,9 +356,9 @@ const handleSaveConfig = async () => {
           >
             <CheckCircleIcon
               v-if="testResult.success"
-              class="w-6 h-6 text-green-600"
+              class="w-6 h-6 text-green-700"
             />
-            <XCircleIcon v-else class="w-6 h-6 text-red-600" />
+            <XCircleIcon v-else class="w-6 h-6 text-red-700" />
             <div class="flex-1">
               <div
                 class="font-semibold"
@@ -367,7 +390,7 @@ const handleSaveConfig = async () => {
             v-if="saveSuccess"
             class="rounded-xl p-4 bg-green-50 border border-green-200 flex items-center space-x-3 animate-fade-in"
           >
-            <CheckCircleIcon class="w-6 h-6 text-green-600" />
+            <CheckCircleIcon class="w-6 h-6 text-green-700" />
             <div class="text-green-900 font-semibold">
               {{ t("aiConfig.saveSuccess") }}
             </div>
@@ -378,7 +401,7 @@ const handleSaveConfig = async () => {
             v-if="saveError"
             class="rounded-xl p-4 bg-red-50 border border-red-200 flex items-center space-x-3 animate-fade-in"
           >
-            <XCircleIcon class="w-6 h-6 text-red-600" />
+            <XCircleIcon class="w-6 h-6 text-red-700" />
             <div class="flex-1">
               <div class="text-red-900 font-semibold mb-1">
                 {{ t("aiConfig.saveFailed") }}

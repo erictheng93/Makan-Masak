@@ -1,13 +1,19 @@
 <template>
-  <div class="ingredients-view">
-    <div class="flex justify-between items-center mb-8">
+  <div class="ui-page ingredients-view">
+    <div class="ui-toolbar flex justify-between items-center mb-8">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">
+        <h1 class="ui-page-heading text-2xl font-bold text-gray-900">
           {{ t("ingredients.title") }}
         </h1>
         <p class="text-gray-600">{{ t("ingredients.subtitle") }}</p>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="ui-toolbar flex flex-wrap items-center gap-3">
+        <button
+          class="flex items-center px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800"
+          @click="showForm = true"
+        >
+          {{ t("ingredients.addIngredient") }}
+        </button>
         <button
           class="flex items-center px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
           data-testid="open-recipes"
@@ -21,17 +27,11 @@
         >
           {{ t("common.import") }}
         </button>
-        <button
-          class="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          @click="showForm = true"
-        >
-          {{ t("ingredients.addIngredient") }}
-        </button>
       </div>
     </div>
 
     <!-- Search & Filter -->
-    <div class="flex gap-4 mb-6 items-center">
+    <div class="ui-toolbar flex flex-wrap gap-4 mb-6 items-center">
       <label
         class="flex items-center gap-2 text-sm text-gray-700 whitespace-nowrap"
       >
@@ -134,8 +134,8 @@
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
       @click.self="showRecipes = false"
     >
-      <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
-        <div class="flex items-center justify-between mb-4">
+      <div class="ui-panel bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+        <div class="ui-toolbar flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold text-gray-900">
             {{ t("ingredients.recipes") }}
           </h3>
@@ -151,7 +151,7 @@
           v-if="recipeError"
           data-testid="recipe-error"
           role="alert"
-          class="text-sm text-red-600 py-3"
+          class="text-sm text-red-700 py-3"
         >
           {{ recipeError }}
         </p>
@@ -170,7 +170,7 @@
         >
           <li v-for="item in menuItems" :key="item.id">
             <button
-              class="w-full flex items-center justify-between px-2 py-3 text-left hover:bg-gray-50"
+              class="ui-toolbar w-full flex items-center justify-between px-2 py-3 text-left hover:bg-gray-50"
               :data-testid="`edit-recipe-${item.id}`"
               @click="editRecipe(item)"
             >

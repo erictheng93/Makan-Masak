@@ -1,16 +1,16 @@
 <template>
-  <div class="space-y-6">
+  <div class="ui-page space-y-6">
     <!-- Quick Stats -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="admin-stat-strip grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div class="bg-ios-bg rounded-2xl p-4">
         <div class="flex items-center gap-3">
           <div
             class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center"
           >
-            <Clock class="w-5 h-5 text-blue-600" />
+            <Clock class="w-5 h-5 text-blue-700" />
           </div>
           <div>
-            <p class="text-xs text-ios-text/40">
+            <p class="text-xs text-ios-text/70">
               {{ t("employees.profile.upcomingShifts") }}
             </p>
             <p class="text-xl font-bold text-ios-text">
@@ -24,13 +24,13 @@
           <div
             class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center"
           >
-            <CalendarCheck class="w-5 h-5 text-emerald-600" />
+            <CalendarCheck class="w-5 h-5 text-emerald-700" />
           </div>
           <div>
-            <p class="text-xs text-ios-text/40">
+            <p class="text-xs text-ios-text/70">
               {{ t("employees.profile.completedShifts") }}
             </p>
-            <p class="text-xl font-bold text-emerald-600">
+            <p class="text-xl font-bold text-emerald-700">
               {{ completedShiftsCount }}
             </p>
           </div>
@@ -41,13 +41,13 @@
           <div
             class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center"
           >
-            <CalendarOff class="w-5 h-5 text-amber-600" />
+            <CalendarOff class="w-5 h-5 text-amber-700" />
           </div>
           <div>
-            <p class="text-xs text-ios-text/40">
+            <p class="text-xs text-ios-text/70">
               {{ t("employees.profile.pendingLeave") }}
             </p>
-            <p class="text-xl font-bold text-amber-600">
+            <p class="text-xl font-bold text-amber-700">
               {{ pendingLeaveCount }}
             </p>
           </div>
@@ -61,45 +61,54 @@
         {{ t("employees.profile.basicInfo") }}
       </h3>
       <div class="bg-ios-bg rounded-2xl divide-y divide-white/80">
-        <div class="flex justify-between items-center px-4 py-3">
-          <span class="text-sm text-ios-text/50">{{
+        <div class="ui-toolbar flex justify-between items-center px-4 py-3">
+          <span class="text-sm text-ios-text/70">{{
             t("users.modal.usernameLabel")
           }}</span>
-          <span class="text-sm font-medium text-ios-text">{{
-            employee?.username
-          }}</span>
+          <span
+            class="min-w-0 max-w-full [overflow-wrap:anywhere] text-sm font-medium text-ios-text"
+            >{{ employee?.username }}</span
+          >
         </div>
-        <div class="flex justify-between items-center px-4 py-3">
-          <span class="text-sm text-ios-text/50">{{
+        <div class="ui-toolbar flex justify-between items-center px-4 py-3">
+          <span class="text-sm text-ios-text/70">{{
             t("users.modal.fullNameLabel")
           }}</span>
-          <span class="text-sm font-medium text-ios-text">{{
-            employee?.fullName || "-"
-          }}</span>
+          <span
+            class="min-w-0 max-w-full [overflow-wrap:anywhere] text-sm font-medium text-ios-text"
+            >{{ employee?.fullName || "-" }}</span
+          >
         </div>
-        <div class="flex justify-between items-center px-4 py-3">
-          <span class="text-sm text-ios-text/50">Email</span>
-          <span class="text-sm font-medium text-ios-text">{{
-            employee?.email || "-"
-          }}</span>
+        <div class="ui-toolbar flex justify-between items-center px-4 py-3">
+          <span class="text-sm text-ios-text/70">Email</span>
+          <span
+            class="min-w-0 max-w-full [overflow-wrap:anywhere] text-sm font-medium text-ios-text"
+            >{{ employee?.email || "-" }}</span
+          >
         </div>
-        <div class="flex justify-between items-center px-4 py-3">
-          <span class="text-sm text-ios-text/50">{{
+        <div class="ui-toolbar flex justify-between items-center px-4 py-3">
+          <span class="text-sm text-ios-text/70">{{
             t("users.table.joinDate")
           }}</span>
-          <span class="text-sm font-medium text-ios-text">{{
-            employee?.createdAt ? formatDate(employee.createdAt) : "-"
-          }}</span>
+          <span
+            class="min-w-0 max-w-full [overflow-wrap:anywhere] text-sm font-medium text-ios-text"
+            >{{
+              employee?.createdAt ? formatDate(employee.createdAt) : "-"
+            }}</span
+          >
         </div>
-        <div class="flex justify-between items-center px-4 py-3">
-          <span class="text-sm text-ios-text/50">{{
+        <div class="ui-toolbar flex justify-between items-center px-4 py-3">
+          <span class="text-sm text-ios-text/70">{{
             t("users.table.lastLogin")
           }}</span>
-          <span class="text-sm font-medium text-ios-text">{{
-            employee?.lastLoginAt
-              ? formatDateTime(employee.lastLoginAt)
-              : t("users.table.neverLoggedIn")
-          }}</span>
+          <span
+            class="min-w-0 max-w-full [overflow-wrap:anywhere] text-sm font-medium text-ios-text"
+            >{{
+              employee?.lastLoginAt
+                ? formatDateTime(employee.lastLoginAt)
+                : t("users.table.neverLoggedIn")
+            }}</span
+          >
         </div>
       </div>
     </div>
@@ -119,7 +128,7 @@
       </div>
       <div v-else-if="recentActivity.length === 0" class="text-center py-8">
         <Activity class="mx-auto w-8 h-8 text-ios-text/15 mb-2" />
-        <p class="text-xs text-ios-text/30">
+        <p class="text-xs text-ios-text/70">
           {{ t("employees.profile.noActivity") }}
         </p>
       </div>
@@ -141,7 +150,7 @@
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm text-ios-text">{{ item.title }}</p>
-            <p class="text-xs text-ios-text/40">{{ item.subtitle }}</p>
+            <p class="text-xs text-ios-text/70">{{ item.subtitle }}</p>
           </div>
           <span
             class="px-2 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0"
@@ -234,7 +243,7 @@ const recentActivity = computed(() => {
       ...status,
       icon: Clock,
       bgClass: "bg-blue-50",
-      iconClass: "text-blue-600",
+      iconClass: "text-blue-700",
       date: new Date(s.workDate),
     });
   }
@@ -269,7 +278,7 @@ const recentActivity = computed(() => {
       ...status,
       icon: CalendarOff,
       bgClass: "bg-amber-50",
-      iconClass: "text-amber-600",
+      iconClass: "text-amber-700",
       date: new Date(r.createdAt),
     });
   }

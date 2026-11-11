@@ -9,6 +9,7 @@ import App from "./App.vue";
 import router from "./router";
 import { setupI18n } from "./i18n";
 import "./assets/css/main.css";
+import "../../../packages/shared/styles/app-ui.css";
 import { cleanupLegacyPWAStorage } from "./utils/legacy-pwa-storage-cleanup";
 
 // A fresh worker claims this tab under `autoUpdate`; reload its document so

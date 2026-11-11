@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-ios-bg">
+  <div class="customer-shell min-h-screen bg-ios-bg">
     <nav class="sticky top-0 z-10 border-b border-gray-100 bg-white shadow-sm">
       <div class="mx-auto flex max-w-md items-center gap-3 px-4 py-3">
         <button
@@ -82,15 +82,22 @@
         <section class="mt-4 rounded-xl border border-gray-200 bg-white p-4">
           <div class="flex items-end gap-3">
             <div class="flex-1">
-              <label class="mb-2 block text-sm font-medium text-gray-700">
+              <label
+                for="servicebooking-field-1"
+                class="mb-2 block text-sm font-medium text-gray-700"
+              >
                 {{ t("serviceBooking.bookingDate") }}
               </label>
               <input
+                id="servicebooking-field-1"
                 v-model="bookingDate"
                 data-testid="service-booking-date"
                 type="date"
                 class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ios-blue focus:ring-2 focus:ring-blue-500/20"
-                @change="loadAvailability"
+                @change="
+                  messageContext = 'availability';
+                  loadAvailability();
+                "
               />
             </div>
             <button
@@ -98,10 +105,30 @@
               data-testid="service-booking-load-slots"
               class="rounded-lg border border-ios-blue px-3 py-2 text-sm font-semibold text-ios-blue disabled:opacity-50"
               :disabled="isLoadingSlots"
-              @click="loadAvailability"
+              @click="
+                messageContext = 'availability';
+                loadAvailability();
+              "
             >
               {{ t("serviceBooking.checkSlots") }}
             </button>
+            <div v-if="messageContext === 'availability'" class="space-y-2">
+              <p
+                v-if="errorMessage"
+                id="booking-error"
+                role="alert"
+                class="mt-3 text-sm text-ios-red-deep"
+              >
+                {{ errorMessage }}
+              </p>
+              <p
+                v-if="successMessage"
+                role="status"
+                class="mt-3 text-sm text-ios-green-deep"
+              >
+                {{ successMessage }}
+              </p>
+            </div>
           </div>
 
           <div class="mt-4 grid grid-cols-2 gap-2">
@@ -119,6 +146,7 @@
                     : 'border-gray-100 bg-gray-50 text-gray-400'
               "
               :disabled="!slot.isAvailable"
+              :aria-pressed="selectedTime === slot.timeSlot"
               @click="selectedTime = slot.timeSlot"
             >
               <span>{{ slot.timeSlot }}</span>
@@ -142,99 +170,180 @@
           </p>
         </section>
 
-        <form
-          class="mt-4 space-y-3 rounded-xl border border-gray-200 bg-white p-4"
-          @submit.prevent="createBooking"
-        >
-          <div>
-            <label class="mb-2 block text-sm font-medium text-gray-700">
-              {{ t("serviceBooking.name") }}
-            </label>
-            <input
-              v-model="form.customerName"
-              data-testid="service-booking-name"
-              type="text"
-              required
-              maxlength="100"
-              class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ios-blue focus:ring-2 focus:ring-blue-500/20"
-            />
-          </div>
-          <div>
-            <label class="mb-2 block text-sm font-medium text-gray-700">
-              {{ t("serviceBooking.phone") }}
-            </label>
-            <input
-              v-model="form.customerPhone"
-              data-testid="service-booking-phone"
-              type="tel"
-              required
-              class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ios-blue focus:ring-2 focus:ring-blue-500/20"
-            />
-          </div>
-          <div>
-            <label class="mb-2 block text-sm font-medium text-gray-700">
-              {{ t("serviceBooking.email") }}
-            </label>
-            <input
-              v-model="form.customerEmail"
-              data-testid="service-booking-email"
-              type="email"
-              class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ios-blue focus:ring-2 focus:ring-blue-500/20"
-            />
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="mb-2 block text-sm font-medium text-gray-700">
-                {{ t("serviceBooking.partySize") }}
-              </label>
-              <input
-                v-model.number="form.partySize"
-                data-testid="service-booking-party-size"
-                type="number"
-                min="1"
-                max="100"
-                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ios-blue focus:ring-2 focus:ring-blue-500/20"
-              />
-            </div>
-            <div>
-              <label class="mb-2 block text-sm font-medium text-gray-700">
-                {{ t("serviceBooking.voucherCode") }}
-              </label>
-              <input
-                v-model="form.voucherCode"
-                data-testid="service-booking-voucher"
-                type="text"
-                maxlength="64"
-                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ios-blue focus:ring-2 focus:ring-blue-500/20"
-              />
-            </div>
-          </div>
-          <div>
-            <label class="mb-2 block text-sm font-medium text-gray-700">
-              {{ t("serviceBooking.notes") }}
-            </label>
-            <textarea
-              v-model="form.specialRequests"
-              data-testid="service-booking-requests"
-              rows="2"
-              maxlength="500"
-              class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ios-blue focus:ring-2 focus:ring-blue-500/20"
-            />
-          </div>
-          <button
-            type="submit"
-            data-testid="service-booking-create"
-            class="w-full rounded-lg bg-ios-blue px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
-            :disabled="isCreating || !selectedTime"
-          >
+        <details :open="!booking" class="mt-4">
+          <summary class="font-semibold text-ios-text">
             {{ t("serviceBooking.create") }}
-          </button>
-        </form>
+          </summary>
+          <form
+            class="mt-4 space-y-3 rounded-xl border border-gray-200 bg-white p-4"
+            @submit.prevent="
+              messageContext = 'create';
+              createBooking();
+            "
+          >
+            <div>
+              <label
+                for="servicebooking-field-2"
+                class="mb-2 block text-sm font-medium text-gray-700"
+              >
+                {{ t("serviceBooking.name") }}
+              </label>
+              <input
+                id="servicebooking-field-2"
+                v-model="form.customerName"
+                :aria-describedby="
+                  errorMessage && messageContext === 'create'
+                    ? 'booking-error'
+                    : undefined
+                "
+                data-testid="service-booking-name"
+                type="text"
+                required
+                maxlength="100"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ios-blue focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+            <div>
+              <label
+                for="servicebooking-field-3"
+                class="mb-2 block text-sm font-medium text-gray-700"
+              >
+                {{ t("serviceBooking.phone") }}
+              </label>
+              <input
+                id="servicebooking-field-3"
+                v-model="form.customerPhone"
+                :aria-describedby="
+                  errorMessage && messageContext === 'create'
+                    ? 'booking-error'
+                    : undefined
+                "
+                data-testid="service-booking-phone"
+                type="tel"
+                required
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ios-blue focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+            <div>
+              <label
+                for="servicebooking-field-4"
+                class="mb-2 block text-sm font-medium text-gray-700"
+              >
+                {{ t("serviceBooking.email") }}
+              </label>
+              <input
+                id="servicebooking-field-4"
+                v-model="form.customerEmail"
+                :aria-describedby="
+                  errorMessage && messageContext === 'create'
+                    ? 'booking-error'
+                    : undefined
+                "
+                data-testid="service-booking-email"
+                type="email"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ios-blue focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label
+                  for="servicebooking-field-5"
+                  class="mb-2 block text-sm font-medium text-gray-700"
+                >
+                  {{ t("serviceBooking.partySize") }}
+                </label>
+                <input
+                  id="servicebooking-field-5"
+                  v-model.number="form.partySize"
+                  :aria-describedby="
+                    errorMessage && messageContext === 'create'
+                      ? 'booking-error'
+                      : undefined
+                  "
+                  data-testid="service-booking-party-size"
+                  type="number"
+                  min="1"
+                  max="100"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ios-blue focus:ring-2 focus:ring-blue-500/20"
+                />
+              </div>
+              <div>
+                <label
+                  for="servicebooking-field-6"
+                  class="mb-2 block text-sm font-medium text-gray-700"
+                >
+                  {{ t("serviceBooking.voucherCode") }}
+                </label>
+                <input
+                  id="servicebooking-field-6"
+                  v-model="form.voucherCode"
+                  :aria-describedby="
+                    errorMessage && messageContext === 'create'
+                      ? 'booking-error'
+                      : undefined
+                  "
+                  data-testid="service-booking-voucher"
+                  type="text"
+                  maxlength="64"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ios-blue focus:ring-2 focus:ring-blue-500/20"
+                />
+              </div>
+            </div>
+            <div>
+              <label
+                for="servicebooking-field-7"
+                class="mb-2 block text-sm font-medium text-gray-700"
+              >
+                {{ t("serviceBooking.notes") }}
+              </label>
+              <textarea
+                id="servicebooking-field-7"
+                v-model="form.specialRequests"
+                :aria-describedby="
+                  errorMessage && messageContext === 'create'
+                    ? 'booking-error'
+                    : undefined
+                "
+                data-testid="service-booking-requests"
+                rows="2"
+                maxlength="500"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ios-blue focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+            <button
+              type="submit"
+              data-testid="service-booking-create"
+              class="w-full rounded-lg bg-ios-blue px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+              :disabled="isCreating || !selectedTime"
+            >
+              {{ t("serviceBooking.create") }}
+            </button>
+            <div v-if="messageContext === 'create'" class="space-y-2">
+              <p
+                v-if="errorMessage"
+                id="booking-error"
+                role="alert"
+                class="mt-3 text-sm text-ios-red-deep"
+              >
+                {{ errorMessage }}
+              </p>
+              <p
+                v-if="successMessage"
+                role="status"
+                class="mt-3 text-sm text-ios-green-deep"
+              >
+                {{ successMessage }}
+              </p>
+            </div>
+          </form>
+        </details>
 
         <section
           v-if="booking"
           class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4"
           data-testid="service-booking-confirmation"
+          tabindex="-1"
+          role="status"
         >
           <h2 class="text-base font-semibold text-emerald-900">
             {{ t("serviceBooking.created") }}
@@ -273,14 +382,26 @@
             </div>
           </dl>
           <div v-if="canPayWithCredits" class="mt-4 space-y-2">
+            <label
+              for="service-booking-credit-id"
+              class="block text-sm font-medium"
+              >{{ t("serviceBooking.creditCardPlaceholder") }}</label
+            >
             <input
+              id="service-booking-credit-id"
               v-model="creditCardPublicId"
               data-testid="service-booking-credit-id"
               type="text"
               class="w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm"
               :placeholder="t('serviceBooking.creditCardPlaceholder')"
             />
+            <label
+              for="service-booking-credit-pin"
+              class="block text-sm font-medium"
+              >{{ t("serviceBooking.creditPinPlaceholder") }}</label
+            >
             <input
+              id="service-booking-credit-pin"
               v-model="creditPin"
               data-testid="service-booking-credit-pin"
               type="password"
@@ -292,37 +413,89 @@
               data-testid="service-booking-pay"
               class="w-full rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
               :disabled="isPaying || !creditCardPublicId.trim()"
-              @click="payBooking"
+              @click="
+                messageContext = 'payment';
+                payBooking();
+              "
             >
               {{ t("serviceBooking.payWithCredits") }}
             </button>
+            <div v-if="messageContext === 'payment'" class="space-y-2">
+              <p
+                v-if="errorMessage"
+                id="booking-error"
+                role="alert"
+                class="mt-3 text-sm text-ios-red-deep"
+              >
+                {{ errorMessage }}
+              </p>
+              <p
+                v-if="successMessage"
+                role="status"
+                class="mt-3 text-sm text-ios-green-deep"
+              >
+                {{ successMessage }}
+              </p>
+            </div>
           </div>
         </section>
 
-        <section class="mt-4 rounded-xl border border-gray-200 bg-white p-4">
-          <h2 class="text-base font-semibold text-gray-900">
+        <details class="mt-4 rounded-xl border border-gray-200 bg-white p-4">
+          <summary class="text-base font-semibold text-gray-900">
             {{ t("serviceBooking.lookupTitle") }}
-          </h2>
-          <div class="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+          </summary>
+          <div v-if="messageContext === 'lookup'" class="space-y-2">
+            <p
+              v-if="errorMessage"
+              id="booking-error"
+              role="alert"
+              class="mt-3 text-sm text-ios-red-deep"
+            >
+              {{ errorMessage }}
+            </p>
+            <p
+              v-if="successMessage"
+              role="status"
+              class="mt-3 text-sm text-ios-green-deep"
+            >
+              {{ successMessage }}
+            </p>
+          </div>
+          <div class="mt-3 grid gap-2">
+            <label
+              for="service-booking-verify-code"
+              class="block text-sm font-medium"
+              >{{ t("serviceBooking.confirmationCode") }}</label
+            >
             <input
+              id="service-booking-verify-code"
               v-model="verifyCode"
               data-testid="service-booking-verify-code"
               type="text"
               class="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
               :placeholder="t('serviceBooking.confirmationCodePlaceholder')"
             />
+            <label
+              for="service-booking-verify-contact"
+              class="block text-sm font-medium"
+              >{{ t("serviceBooking.contactPlaceholder") }}</label
+            >
             <input
+              id="service-booking-verify-contact"
               v-model="verifyContact"
               data-testid="service-booking-verify-contact"
               type="text"
-              class="min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm sm:col-start-1"
+              class="min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm"
               :placeholder="t('serviceBooking.contactPlaceholder')"
             />
             <button
               type="button"
               data-testid="service-booking-verify"
-              class="rounded-lg border border-ios-blue px-3 py-2 text-sm font-semibold text-ios-blue sm:col-start-2 sm:row-span-2 sm:row-start-1"
-              @click="verifyBooking"
+              class="rounded-lg border border-ios-blue px-3 py-2 text-sm font-semibold text-ios-blue"
+              @click="
+                messageContext = 'lookup';
+                verifyBooking();
+              "
             >
               {{ t("serviceBooking.lookup") }}
             </button>
@@ -345,26 +518,22 @@
               type="button"
               data-testid="service-booking-cancel"
               class="mt-2 block rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-600"
-              @click="cancelVerifiedBooking"
+              @click="
+                messageContext = 'lookup';
+                cancelVerifiedBooking();
+              "
             >
               {{ t("serviceBooking.cancel") }}
             </button>
           </div>
-        </section>
-
-        <p v-if="errorMessage" class="mt-3 text-sm text-red-600">
-          {{ errorMessage }}
-        </p>
-        <p v-if="successMessage" class="mt-3 text-sm text-emerald-700">
-          {{ successMessage }}
-        </p>
+        </details>
       </template>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import type { RestaurantServiceItem } from "@makanmasak/shared-types";
 import { useFeatureAvailability } from "@/composables/useFeatureAvailability";
@@ -423,8 +592,18 @@ const isLoadingSlots = ref(false);
 const isCreating = ref(false);
 const isPaying = ref(false);
 const loadError = ref("");
+const messageContext = ref("availability");
 const errorMessage = ref("");
 const successMessage = ref("");
+watch(booking, async (result) => {
+  if (!result) return;
+  await nextTick();
+  const confirmation = document.querySelector<HTMLElement>(
+    '[data-testid="service-booking-confirmation"]',
+  );
+  confirmation?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+  confirmation?.focus();
+});
 const bookingDate = ref(today);
 const selectedTime = ref("");
 const creditCardPublicId = ref("");

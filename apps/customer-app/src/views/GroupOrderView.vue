@@ -252,7 +252,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="min-h-screen bg-ios-bg px-4 py-6">
+  <main class="customer-shell min-h-screen bg-ios-bg px-4 py-6">
     <section class="mx-auto w-full max-w-2xl">
       <div class="mb-5">
         <p class="text-sm font-medium text-ios-secondary">
@@ -350,11 +350,80 @@ onUnmounted(() => {
         {{ t("group.loading") }}
       </div>
 
-      <InvitePanel
-        v-if="!isLocked && !isCompleted"
-        :share-code="shareCode"
-        :share-link="shareLink"
-      />
+      <details v-if="!isLocked && !isCompleted" class="mt-5">
+        <summary class="min-h-11 cursor-pointer font-medium text-ios-blue">
+          {{ t("group.inviteButton") }}
+        </summary>
+        <InvitePanel
+          v-if="!isLocked && !isCompleted"
+          :share-code="shareCode"
+          :share-link="shareLink"
+        />
+      </details>
+
+      <!--
+        Host only. What this switch decides — whether a table that never
+        pressed submit still gets an order — is the same decision as submitting,
+        so it sits with whoever owns the group.
+      -->
+      <div
+        v-if="group.isHost.value && !isLocked && !isCompleted"
+        class="mt-6 rounded-2xl bg-ios-card p-5 shadow-card-sm"
+      >
+        <div class="flex items-start justify-between gap-4">
+          <div class="min-w-0">
+            <p class="text-base font-semibold text-ios-text">
+              {{ t("group.autoSubmitTitle") }}
+            </p>
+            <p class="mt-1 text-sm text-ios-secondary">
+              {{ t("group.autoSubmitDesc") }}
+            </p>
+          </div>
+
+          <button
+            data-testid="auto-submit-toggle"
+            type="button"
+            role="switch"
+            :aria-checked="group.autoSubmitOnExpiry.value ? 'true' : 'false'"
+            :aria-label="t('group.autoSubmitTitle')"
+            :disabled="isSavingAutoSubmit"
+            class="relative mt-1 min-h-11 w-[60px] flex-shrink-0 rounded-full transition-all duration-300 ease-out disabled:opacity-60"
+            :class="
+              group.autoSubmitOnExpiry.value ? 'bg-ios-green' : 'bg-ios-gray-4'
+            "
+            @click="toggleAutoSubmit"
+          >
+            <span
+              class="absolute top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-white shadow-sm transition-all duration-300 ease-out"
+              :class="group.autoSubmitOnExpiry.value ? 'left-6' : 'left-1'"
+            />
+          </button>
+        </div>
+
+        <p
+          data-testid="auto-submit-state"
+          class="mt-3 text-sm font-medium"
+          :class="
+            group.autoSubmitOnExpiry.value
+              ? 'text-ios-green'
+              : 'text-ios-secondary'
+          "
+        >
+          {{
+            group.autoSubmitOnExpiry.value
+              ? t("group.autoSubmitOn")
+              : t("group.autoSubmitOff")
+          }}
+        </p>
+
+        <p
+          v-if="autoSubmitError"
+          data-testid="auto-submit-error"
+          class="mt-3 rounded-xl bg-ios-red/10 p-3 text-sm text-ios-red"
+        >
+          {{ autoSubmitError }}
+        </p>
+      </div>
 
       <div v-if="canSubmitOrder" class="mt-4">
         <button
@@ -406,70 +475,6 @@ onUnmounted(() => {
       >
         {{ splitNotice }}
       </p>
-
-      <!--
-        Host only. What this switch decides — whether a table that never
-        pressed submit still gets an order — is the same decision as submitting,
-        so it sits with whoever owns the group.
-      -->
-      <div
-        v-if="group.isHost.value && !isLocked && !isCompleted"
-        class="mt-6 rounded-2xl bg-ios-card p-5 shadow-card-sm"
-      >
-        <div class="flex items-start justify-between gap-4">
-          <div class="min-w-0">
-            <p class="text-base font-semibold text-ios-text">
-              {{ t("group.autoSubmitTitle") }}
-            </p>
-            <p class="mt-1 text-sm text-ios-secondary">
-              {{ t("group.autoSubmitDesc") }}
-            </p>
-          </div>
-
-          <button
-            data-testid="auto-submit-toggle"
-            type="button"
-            role="switch"
-            :aria-checked="group.autoSubmitOnExpiry.value ? 'true' : 'false'"
-            :aria-label="t('group.autoSubmitTitle')"
-            :disabled="isSavingAutoSubmit"
-            class="relative mt-1 h-8 w-[52px] flex-shrink-0 rounded-full transition-all duration-300 ease-out disabled:opacity-60"
-            :class="
-              group.autoSubmitOnExpiry.value ? 'bg-ios-green' : 'bg-ios-gray-4'
-            "
-            @click="toggleAutoSubmit"
-          >
-            <span
-              class="absolute top-1 h-6 w-6 rounded-full bg-white shadow-sm transition-all duration-300 ease-out"
-              :class="group.autoSubmitOnExpiry.value ? 'left-6' : 'left-1'"
-            />
-          </button>
-        </div>
-
-        <p
-          data-testid="auto-submit-state"
-          class="mt-3 text-sm font-medium"
-          :class="
-            group.autoSubmitOnExpiry.value
-              ? 'text-ios-green'
-              : 'text-ios-secondary'
-          "
-        >
-          {{
-            group.autoSubmitOnExpiry.value
-              ? t("group.autoSubmitOn")
-              : t("group.autoSubmitOff")
-          }}
-        </p>
-
-        <p
-          v-if="autoSubmitError"
-          data-testid="auto-submit-error"
-          class="mt-3 rounded-xl bg-ios-red/10 p-3 text-sm text-ios-red"
-        >
-          {{ autoSubmitError }}
-        </p>
-      </div>
 
       <HostRecoveryPanel
         :group-order-id="props.groupOrderId"

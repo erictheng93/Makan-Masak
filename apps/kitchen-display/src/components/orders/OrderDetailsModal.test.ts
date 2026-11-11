@@ -1,7 +1,15 @@
-import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import {
+  mount,
+  flushPromises,
+  DOMWrapper,
+  enableAutoUnmount,
+} from "@vue/test-utils";
+import { afterEach, describe, expect, it } from "vitest";
 import OrderDetailsModal from "./OrderDetailsModal.vue";
 import type { KitchenOrder } from "@/types";
+
+enableAutoUnmount(afterEach);
+const modal = () => new DOMWrapper(document.body);
 
 const order: KitchenOrder = {
   id: 1001,
@@ -39,8 +47,8 @@ const expectedTime = (dateString: string) =>
   });
 
 describe("OrderDetailsModal", () => {
-  it("renders order metadata, item status labels, notes, and timestamps", () => {
-    const wrapper = mount(OrderDetailsModal, {
+  it("renders order metadata, item status labels, notes, and timestamps", async () => {
+    mount(OrderDetailsModal, {
       props: {
         order: {
           ...order,
@@ -80,26 +88,26 @@ describe("OrderDetailsModal", () => {
       },
       global: {
         stubs: {
-          Teleport: true,
           Transition: false,
         },
       },
     });
 
-    expect(wrapper.text()).toContain("A001");
-    expect(wrapper.text()).toContain("Table 8");
-    expect(wrapper.text()).toContain("外送");
-    expect(wrapper.text()).toContain("等待 1時5分");
-    expect(wrapper.text()).toContain("待處理");
-    expect(wrapper.text()).toContain("製作中");
-    expect(wrapper.text()).toContain("已送達");
-    expect(wrapper.text()).toContain("Extra spicy");
-    expect(wrapper.text()).toContain("less oil");
-    expect(wrapper.text()).toContain("No peanuts");
-    expect(wrapper.text()).toContain(
+    await flushPromises();
+    expect(modal().text()).toContain("A001");
+    expect(modal().text()).toContain("Table 8");
+    expect(modal().text()).toContain("外送");
+    expect(modal().text()).toContain("等待 1時5分");
+    expect(modal().text()).toContain("待處理");
+    expect(modal().text()).toContain("製作中");
+    expect(modal().text()).toContain("已送達");
+    expect(modal().text()).toContain("Extra spicy");
+    expect(modal().text()).toContain("less oil");
+    expect(modal().text()).toContain("No peanuts");
+    expect(modal().text()).toContain(
       `開始 ${expectedTime("2026-06-08T01:05:00.000Z")}`,
     );
-    expect(wrapper.text()).toContain(
+    expect(modal().text()).toContain(
       `完成 ${expectedTime("2026-06-08T01:10:00.000Z")}`,
     );
   });
@@ -109,17 +117,17 @@ describe("OrderDetailsModal", () => {
       props: { order, show: true },
       global: {
         stubs: {
-          Teleport: true,
           Transition: false,
         },
       },
     });
 
-    const buttons = wrapper.findAll("button");
+    await flushPromises();
+    const buttons = modal().findAll("button");
 
     await buttons.find((button) => button.text() === "開始")!.trigger("click");
     await buttons.find((button) => button.text() === "完成")!.trigger("click");
-    await buttons[0].trigger("click");
+    await modal().get('button[aria-label="關閉"]').trigger("click");
 
     expect(wrapper.emitted("update-status")).toEqual([
       [1001, 501, "preparing"],
@@ -133,13 +141,13 @@ describe("OrderDetailsModal", () => {
       props: { order, show: true },
       global: {
         stubs: {
-          Teleport: true,
           Transition: false,
         },
       },
     });
 
-    await wrapper.find("button.w-full").trigger("click");
+    await flushPromises();
+    await modal().find("button.w-full").trigger("click");
 
     expect(wrapper.emitted("update-status")).toEqual([
       [1001, 501, "preparing"],
@@ -157,13 +165,13 @@ describe("OrderDetailsModal", () => {
       props: { order: completedOrder, show: true },
       global: {
         stubs: {
-          Teleport: true,
           Transition: false,
         },
       },
     });
 
-    const footerButton = wrapper.find("button.w-full");
+    await flushPromises();
+    const footerButton = modal().find("button.w-full");
 
     expect(footerButton.text()).toBe("全部已完成");
 
@@ -173,18 +181,30 @@ describe("OrderDetailsModal", () => {
     expect(wrapper.emitted("close")).toEqual([[]]);
   });
 
-  it("does not render modal content when hidden", () => {
-    const wrapper = mount(OrderDetailsModal, {
+  it("does not render modal content when hidden", async () => {
+    mount(OrderDetailsModal, {
       props: { order, show: false },
       global: {
         stubs: {
-          Teleport: true,
           Transition: false,
         },
       },
     });
 
-    expect(wrapper.text()).not.toContain("A001");
-    expect(wrapper.find("button").exists()).toBe(false);
+    expect(modal().text()).not.toContain("A001");
+    expect(modal().find("button").exists()).toBe(false);
   });
+});
+
+it("names the order dialog and dismisses it with Escape", async () => {
+  const wrapper = mount(OrderDetailsModal, {
+    props: { order, show: true },
+    attachTo: document.body,
+  });
+  await flushPromises();
+  const dialog = modal().get('[role="dialog"]');
+  expect(dialog.attributes("aria-modal")).toBe("true");
+  expect(dialog.attributes("aria-labelledby")).toBeTruthy();
+  await dialog.trigger("keydown", { key: "Escape" });
+  expect(wrapper.emitted("close")).toEqual([[]]);
 });

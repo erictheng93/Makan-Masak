@@ -200,6 +200,25 @@ describe("MyLeavesView (admin dashboard)", () => {
     expect(getRequests).toHaveBeenCalledTimes(2);
   });
 
+  it("keeps a failed cancellation linked to its reason field", async () => {
+    cancelRequest.mockRejectedValueOnce(new Error("offline"));
+    const wrapper = mount(MyLeavesView);
+    await flushPromises();
+    await wrapper.get('[data-testid="my-leave-cancel-open"]').trigger("click");
+    await wrapper
+      .get('[data-testid="my-leave-cancel-reason"]')
+      .setValue("行程取消");
+    await wrapper
+      .get('[data-testid="my-leave-cancel-confirm"]')
+      .trigger("click");
+    await flushPromises();
+    const input = wrapper.get('[data-testid="my-leave-cancel-reason"]');
+    const errorId = input.attributes("aria-describedby");
+    expect(errorId).toBeTruthy();
+    expect(wrapper.get(`#${errorId}`).attributes("role")).toBe("alert");
+    expect(input.element).toHaveProperty("value", "行程取消");
+  });
+
   it("will not send a cancellation without a reason", async () => {
     const wrapper = mountView();
     await flushPromises();

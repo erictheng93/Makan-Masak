@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-ios-bg">
+  <div class="customer-shell min-h-screen bg-ios-bg">
     <!-- Header -->
     <div class="bg-white shadow">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -7,7 +7,8 @@
           <div class="flex items-center">
             <router-link
               to="/orders"
-              class="mr-4 text-gray-600 hover:text-orange-600"
+              :aria-label="t('common.back')"
+              class="mr-4 text-gray-600 hover:text-ios-blue"
             >
               <svg
                 class="w-6 h-6"
@@ -41,26 +42,26 @@
       <!-- Loading State -->
       <div v-if="isLoading" class="flex justify-center items-center py-12">
         <div
-          class="animate-spin rounded-full h-12 w-12 border-4 border-orange-500 border-t-transparent"
+          class="animate-spin rounded-full h-12 w-12 border-4 border-ios-blue border-t-transparent"
         />
       </div>
 
       <div v-else class="space-y-6">
         <!-- Profile Card -->
-        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div class="bg-white rounded-2xl shadow-card-sm overflow-hidden">
           <!-- Header with Gradient -->
-          <div class="bg-gradient-to-r from-orange-500 to-red-500 px-6 py-8">
+          <div class="bg-white px-6 py-8">
             <div class="flex items-center space-x-4">
               <div
                 class="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg"
               >
-                <span class="text-3xl font-bold text-orange-600">
+                <span class="text-3xl font-bold text-ios-blue">
                   {{ getInitial(profile.fullName) }}
                 </span>
               </div>
-              <div class="text-white">
+              <div class="min-w-0 text-ios-text">
                 <h2 class="text-2xl font-bold">{{ profile.fullName }}</h2>
-                <p class="text-orange-100">@{{ profile.username }}</p>
+                <p class="text-ios-text/70">@{{ profile.username }}</p>
               </div>
             </div>
           </div>
@@ -68,8 +69,10 @@
           <!-- Profile Details -->
           <div class="px-6 py-6 space-y-4">
             <!-- Username -->
-            <div class="flex items-center py-3 border-b border-gray-200">
-              <div class="flex items-center w-1/3">
+            <div
+              class="flex flex-col items-start gap-2 sm:flex-row sm:items-center py-3 border-b border-gray-200"
+            >
+              <div class="flex items-center sm:w-1/3">
                 <svg
                   class="w-5 h-5 text-gray-400 mr-3"
                   fill="none"
@@ -87,12 +90,18 @@
                   t("auth.username")
                 }}</span>
               </div>
-              <div class="flex-1 text-gray-900">{{ profile.username }}</div>
+              <div
+                class="min-w-0 flex-1 break-words [overflow-wrap:anywhere] text-ios-text"
+              >
+                {{ profile.username }}
+              </div>
             </div>
 
             <!-- Full Name -->
-            <div class="flex items-center py-3 border-b border-gray-200">
-              <div class="flex items-center w-1/3">
+            <div
+              class="flex flex-col items-start gap-2 sm:flex-row sm:items-center py-3 border-b border-gray-200"
+            >
+              <div class="flex items-center sm:w-1/3">
                 <svg
                   class="w-5 h-5 text-gray-400 mr-3"
                   fill="none"
@@ -110,12 +119,18 @@
                   t("auth.displayName")
                 }}</span>
               </div>
-              <div class="flex-1 text-gray-900">{{ profile.fullName }}</div>
+              <div
+                class="min-w-0 flex-1 break-words [overflow-wrap:anywhere] text-ios-text"
+              >
+                {{ profile.fullName }}
+              </div>
             </div>
 
             <!-- Email -->
-            <div class="flex items-center py-3 border-b border-gray-200">
-              <div class="flex items-center w-1/3">
+            <div
+              class="flex flex-col items-start gap-2 sm:flex-row sm:items-center py-3 border-b border-gray-200"
+            >
+              <div class="flex items-center sm:w-1/3">
                 <svg
                   class="w-5 h-5 text-gray-400 mr-3"
                   fill="none"
@@ -133,14 +148,18 @@
                   t("profile.email")
                 }}</span>
               </div>
-              <div class="flex-1 text-gray-900">
+              <div
+                class="min-w-0 flex-1 break-words [overflow-wrap:anywhere] text-ios-text"
+              >
                 {{ profile.email || t("profile.notSet") }}
               </div>
             </div>
 
             <!-- Phone -->
-            <div class="flex items-center py-3">
-              <div class="flex items-center w-1/3">
+            <div
+              class="flex flex-col items-start gap-2 sm:flex-row sm:items-center py-3"
+            >
+              <div class="flex items-center sm:w-1/3">
                 <svg
                   class="w-5 h-5 text-gray-400 mr-3"
                   fill="none"
@@ -158,14 +177,16 @@
                   t("auth.phone")
                 }}</span>
               </div>
-              <div class="flex-1 text-gray-900">
+              <div
+                class="min-w-0 flex-1 break-words [overflow-wrap:anywhere] text-ios-text"
+              >
                 {{ profile.phone || t("profile.notSet") }}
               </div>
             </div>
           </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow p-6">
+        <div class="bg-white rounded-2xl shadow-card-sm p-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">
             通知與同意設定
           </h3>
@@ -175,7 +196,7 @@
               <input
                 v-model="preferences.waitingListOptIn"
                 type="checkbox"
-                class="h-5 w-5 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                class="h-5 w-5 rounded border-gray-300 text-ios-blue focus:ring-orange-500"
               />
             </label>
             <!-- The marketing switches that used to sit here wrote
@@ -186,7 +207,7 @@
                  stays here: CustomerWebPushService does read it. -->
             <div class="flex flex-col sm:flex-row gap-3">
               <button
-                class="flex-1 px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition"
+                class="flex-1 px-4 py-3 bg-ios-blue text-white rounded-lg hover:bg-blue-700 transition"
                 @click="savePreferences"
               >
                 儲存設定
@@ -205,17 +226,17 @@
         <FavoriteDishesList />
 
         <!-- Quick Actions -->
-        <div class="bg-white rounded-lg shadow p-6">
+        <div class="bg-white rounded-2xl shadow-card-sm p-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">
             {{ t("profile.quickActions") }}
           </h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <router-link
               to="/orders"
-              class="flex items-center p-4 border border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition"
+              class="flex items-center p-4 border border-gray-200 rounded-lg hover:border-ios-blue hover:bg-orange-50 transition"
             >
               <svg
-                class="w-6 h-6 text-orange-600 mr-3"
+                class="w-6 h-6 text-ios-blue mr-3"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -239,10 +260,10 @@
 
             <router-link
               to="/menu"
-              class="flex items-center p-4 border border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition"
+              class="flex items-center p-4 border border-gray-200 rounded-lg hover:border-ios-blue hover:bg-orange-50 transition"
             >
               <svg
-                class="w-6 h-6 text-orange-600 mr-3"
+                class="w-6 h-6 text-ios-blue mr-3"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -267,7 +288,7 @@
         </div>
 
         <!-- Account Actions -->
-        <div class="bg-white rounded-lg shadow p-6">
+        <div class="bg-white rounded-2xl shadow-card-sm p-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">
             {{ t("profile.accountSettings") }}
           </h3>

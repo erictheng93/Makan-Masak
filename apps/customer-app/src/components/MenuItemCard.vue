@@ -53,12 +53,12 @@
       <div class="p-4">
         <div class="flex items-start justify-between mb-1">
           <h3
-            class="text-base font-bold text-ios-text cursor-pointer"
+            class="min-w-0 text-base font-bold leading-snug text-ios-text cursor-pointer"
             @click="$emit('view-details', item)"
           >
             {{ getLocalizedMenuName(item, currentLanguage) }}
           </h3>
-          <div class="flex items-center space-x-1 ml-2">
+          <div class="flex shrink-0 items-center space-x-1 ml-2">
             <FollowButton
               target-type="dish"
               :target-id="String(item.id)"
@@ -104,7 +104,7 @@
         </div>
 
         <!-- 價格和操作 -->
-        <div class="flex items-center justify-between mt-3">
+        <div class="flex flex-wrap items-center justify-between gap-3 mt-3">
           <div class="flex items-baseline space-x-2">
             <span class="text-lg font-bold text-ios-text">
               {{ formatPrice(item.price) }}
@@ -238,12 +238,12 @@
           <div class="flex-1 min-w-0">
             <div class="flex items-start justify-between mb-1">
               <h3
-                class="text-base font-bold text-ios-text cursor-pointer"
+                class="min-w-0 text-base font-bold leading-snug text-ios-text cursor-pointer"
                 @click="$emit('view-details', item)"
               >
                 {{ getLocalizedMenuName(item, currentLanguage) }}
               </h3>
-              <div class="flex items-center space-x-1 ml-2">
+              <div class="flex shrink-0 items-center space-x-1 ml-2">
                 <FollowButton
                   target-type="dish"
                   :target-id="String(item.id)"
@@ -292,7 +292,7 @@
             </div>
 
             <!-- 價格和操作 -->
-            <div class="flex items-center justify-between mt-3">
+            <div class="flex flex-wrap items-center justify-between gap-3 mt-3">
               <div class="flex items-baseline space-x-2">
                 <span class="text-lg font-bold text-ios-text">
                   {{ formatPrice(item.price) }}

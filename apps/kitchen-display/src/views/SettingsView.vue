@@ -1,7 +1,7 @@
 <template>
-  <div class="bg-ios-bg min-h-screen">
+  <div class="kitchen-page ui-page bg-ios-bg min-h-screen">
     <!-- Header -->
-    <div class="px-4 pt-6 pb-2 flex items-center gap-3">
+    <div class="kitchen-page-heading ui-page-heading px-4 pt-6 pb-4">
       <button
         :aria-label="t('common.back')"
         class="w-11 h-11 rounded-full bg-white shadow-card-sm flex items-center justify-center flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
@@ -63,8 +63,10 @@
           }}</span>
           <button
             :aria-label="t('settings.showCustomerName')"
-            class="w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
-            :class="settings.showCustomerNames ? 'bg-ios-green' : 'bg-ios-bg'"
+            role="switch"
+            :aria-checked="settings.showCustomerNames"
+            class="kitchen-switch w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+            :class="settings.showCustomerNames ? 'bg-green-700' : 'bg-ios-bg'"
             @click="toggleCustomerNames"
           >
             <span
@@ -85,8 +87,10 @@
           }}</span>
           <button
             :aria-label="t('settings.showEstimatedTime')"
-            class="w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
-            :class="settings.showEstimatedTime ? 'bg-ios-green' : 'bg-ios-bg'"
+            role="switch"
+            :aria-checked="settings.showEstimatedTime"
+            class="kitchen-switch w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+            :class="settings.showEstimatedTime ? 'bg-green-700' : 'bg-ios-bg'"
             @click="toggleEstimatedTime"
           >
             <span
@@ -117,8 +121,10 @@
           }}</span>
           <button
             :aria-label="t('settings.audioNotifications')"
-            class="w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
-            :class="settings.audioEnabled ? 'bg-ios-green' : 'bg-ios-bg'"
+            role="switch"
+            :aria-checked="settings.audioEnabled"
+            class="kitchen-switch w-[44px] h-[26px] rounded-full relative cursor-pointer transition-colors duration-200 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+            :class="settings.audioEnabled ? 'bg-green-700' : 'bg-ios-bg'"
             @click="toggleAudio"
           >
             <span
@@ -142,10 +148,10 @@
               >{{ settings.soundVolume }}%</span
             >
           </div>
-          <div class="relative h-5 flex items-center">
+          <div class="relative h-11 flex items-center">
             <div class="h-1 rounded-full bg-ios-bg w-full overflow-hidden">
               <div
-                class="h-full rounded-full bg-ios-blue transition-all duration-150"
+                class="h-full rounded-full bg-blue-700 transition-all duration-150"
                 :style="{ width: settings.soundVolume + '%' }"
               />
             </div>
@@ -156,6 +162,7 @@
               max="100"
               step="5"
               class="absolute inset-0 w-full opacity-0 cursor-pointer h-full"
+              :aria-label="t('settings.volume')"
               :disabled="!settings.audioEnabled"
               @input="onVolumeInput"
             />
@@ -167,8 +174,9 @@
         </div>
 
         <!-- Notification Sound Disclosure -->
-        <div
-          class="flex items-center justify-between py-3.5 px-4 cursor-pointer active:bg-ios-bg transition-colors"
+        <button
+          type="button"
+          class="w-full text-left flex items-center justify-between py-3.5 px-4 cursor-pointer active:bg-ios-bg transition-colors"
           @click="showSoundPicker = true"
         >
           <span class="text-[15px] font-medium text-ios-text">{{
@@ -178,7 +186,7 @@
             <span class="text-[15px]">{{ t("settings.soundDefault") }}</span>
             <ChevronRight class="w-4 h-4" />
           </div>
-        </div>
+        </button>
       </div>
 
       <!-- Section: 時間門檻 -->
@@ -189,8 +197,9 @@
       </div>
       <div class="bg-white rounded-2xl shadow-card-sm overflow-hidden">
         <!-- Urgent Threshold Disclosure -->
-        <div
-          class="flex items-center justify-between py-3.5 px-4 border-b border-ios-bg cursor-pointer active:bg-ios-bg transition-colors"
+        <button
+          type="button"
+          class="w-full text-left flex items-center justify-between py-3.5 px-4 border-b border-ios-bg cursor-pointer active:bg-ios-bg transition-colors"
           @click="showUrgentPicker = true"
         >
           <span class="text-[15px] font-medium text-ios-text">{{
@@ -202,11 +211,12 @@
             >
             <ChevronRight class="w-4 h-4 text-ios-secondary" />
           </div>
-        </div>
+        </button>
 
         <!-- Auto-Refresh Interval Disclosure -->
-        <div
-          class="flex items-center justify-between py-3.5 px-4 cursor-pointer active:bg-ios-bg transition-colors"
+        <button
+          type="button"
+          class="w-full text-left flex items-center justify-between py-3.5 px-4 cursor-pointer active:bg-ios-bg transition-colors"
           @click="showRefreshPicker = true"
         >
           <span class="text-[15px] font-medium text-ios-text">{{
@@ -218,151 +228,148 @@
             >
             <ChevronRight class="w-4 h-4 text-ios-secondary" />
           </div>
-        </div>
+        </button>
       </div>
     </div>
 
     <!-- Urgent Threshold Picker Sheet -->
-    <Transition name="sheet">
+    <Dialog
+      :open="showUrgentPicker"
+      class="fixed inset-0 z-50 flex items-end"
+      @close="showUrgentPicker = false"
+    >
       <div
-        v-if="showUrgentPicker"
-        class="fixed inset-0 z-50 flex items-end"
-        @click.self="showUrgentPicker = false"
+        class="absolute inset-0 bg-black/30"
+        @click="showUrgentPicker = false"
+      />
+      <DialogPanel
+        class="relative w-full bg-white rounded-t-3xl sm:rounded-3xl sm:max-w-2xl sm:mx-auto shadow-card-lg px-5 pt-5 pb-8 max-h-[90dvh] overflow-y-auto"
       >
-        <div
-          class="absolute inset-0 bg-black/30"
-          @click="showUrgentPicker = false"
-        />
-        <div
-          class="relative w-full bg-white rounded-t-3xl shadow-card-lg px-4 pt-5 pb-8"
-        >
-          <div class="flex items-center justify-between mb-4">
-            <span class="text-lg font-bold text-ios-text">{{
-              t("settings.urgentTime")
-            }}</span>
-            <button
-              class="text-ios-blue font-semibold text-[15px]"
-              @click="showUrgentPicker = false"
-            >
-              {{ t("common.done") }}
-            </button>
-          </div>
-          <div class="grid grid-cols-4 gap-2">
-            <button
-              v-for="val in urgentOptions"
-              :key="val"
-              class="py-2.5 rounded-full text-sm font-semibold transition-all duration-200"
-              :class="
-                settings.urgentThreshold === val
-                  ? 'bg-ios-red text-white'
-                  : 'bg-ios-bg text-ios-secondary'
-              "
-              @click="setUrgentThreshold(val)"
-            >
-              {{ val }} {{ t("settings.min") }}
-            </button>
-          </div>
+        <div class="flex items-center justify-between mb-4">
+          <DialogTitle as="h2" class="text-lg font-bold text-ios-text">{{
+            t("settings.urgentTime")
+          }}</DialogTitle>
+          <button
+            class="text-ios-blue font-semibold text-[15px]"
+            @click="showUrgentPicker = false"
+          >
+            {{ t("common.done") }}
+          </button>
         </div>
-      </div>
-    </Transition>
+        <div class="grid grid-cols-4 gap-2">
+          <button
+            v-for="val in urgentOptions"
+            :key="val"
+            class="py-2.5 rounded-full text-sm font-semibold transition-all duration-200"
+            :class="
+              settings.urgentThreshold === val
+                ? 'bg-red-700 text-white'
+                : 'bg-ios-bg text-ios-secondary'
+            "
+            @click="setUrgentThreshold(val)"
+          >
+            {{ val }} {{ t("settings.min") }}
+          </button>
+        </div>
+      </DialogPanel>
+    </Dialog>
 
     <!-- Refresh Interval Picker Sheet -->
-    <Transition name="sheet">
+    <Dialog
+      :open="showRefreshPicker"
+      class="fixed inset-0 z-50 flex items-end"
+      @close="showRefreshPicker = false"
+    >
       <div
-        v-if="showRefreshPicker"
-        class="fixed inset-0 z-50 flex items-end"
-        @click.self="showRefreshPicker = false"
+        class="absolute inset-0 bg-black/30"
+        @click="showRefreshPicker = false"
+      />
+      <DialogPanel
+        class="relative w-full bg-white rounded-t-3xl sm:rounded-3xl sm:max-w-2xl sm:mx-auto shadow-card-lg px-5 pt-5 pb-8 max-h-[90dvh] overflow-y-auto"
       >
-        <div
-          class="absolute inset-0 bg-black/30"
-          @click="showRefreshPicker = false"
-        />
-        <div
-          class="relative w-full bg-white rounded-t-3xl shadow-card-lg px-4 pt-5 pb-8"
-        >
-          <div class="flex items-center justify-between mb-4">
-            <span class="text-lg font-bold text-ios-text">{{
-              t("settings.autoRefreshInterval")
-            }}</span>
-            <button
-              class="text-ios-blue font-semibold text-[15px]"
-              @click="showRefreshPicker = false"
-            >
-              {{ t("common.done") }}
-            </button>
-          </div>
-          <div class="grid grid-cols-4 gap-2">
-            <button
-              v-for="val in refreshOptions"
-              :key="val"
-              class="py-2.5 rounded-full text-sm font-semibold transition-all duration-200"
-              :class="
-                settings.refreshInterval === val
-                  ? 'bg-ios-blue text-white'
-                  : 'bg-ios-bg text-ios-secondary'
-              "
-              @click="setRefreshInterval(val)"
-            >
-              {{ val }} {{ t("common.seconds") }}
-            </button>
-          </div>
+        <div class="flex items-center justify-between mb-4">
+          <DialogTitle as="h2" class="text-lg font-bold text-ios-text">{{
+            t("settings.autoRefreshInterval")
+          }}</DialogTitle>
+          <button
+            class="text-ios-blue font-semibold text-[15px]"
+            @click="showRefreshPicker = false"
+          >
+            {{ t("common.done") }}
+          </button>
         </div>
-      </div>
-    </Transition>
+        <div class="grid grid-cols-4 gap-2">
+          <button
+            v-for="val in refreshOptions"
+            :key="val"
+            class="py-2.5 rounded-full text-sm font-semibold transition-all duration-200"
+            :class="
+              settings.refreshInterval === val
+                ? 'bg-blue-700 text-white'
+                : 'bg-ios-bg text-ios-secondary'
+            "
+            @click="setRefreshInterval(val)"
+          >
+            {{ val }} {{ t("common.seconds") }}
+          </button>
+        </div>
+      </DialogPanel>
+    </Dialog>
 
     <!-- Sound Picker Sheet -->
-    <Transition name="sheet">
+    <Dialog
+      :open="showSoundPicker"
+      class="fixed inset-0 z-50 flex items-end"
+      @close="showSoundPicker = false"
+    >
       <div
-        v-if="showSoundPicker"
-        class="fixed inset-0 z-50 flex items-end"
-        @click.self="showSoundPicker = false"
+        class="absolute inset-0 bg-black/30"
+        @click="showSoundPicker = false"
+      />
+      <DialogPanel
+        class="relative w-full bg-white rounded-t-3xl sm:rounded-3xl sm:max-w-2xl sm:mx-auto shadow-card-lg px-5 pt-5 pb-8 max-h-[90dvh] overflow-y-auto"
       >
-        <div
-          class="absolute inset-0 bg-black/30"
-          @click="showSoundPicker = false"
-        />
-        <div
-          class="relative w-full bg-white rounded-t-3xl shadow-card-lg px-4 pt-5 pb-8"
-        >
-          <div class="flex items-center justify-between mb-4">
-            <span class="text-lg font-bold text-ios-text">{{
-              t("settings.notificationSound")
-            }}</span>
-            <button
-              class="text-ios-blue font-semibold text-[15px]"
-              @click="showSoundPicker = false"
-            >
-              {{ t("common.done") }}
-            </button>
-          </div>
-          <div class="space-y-1">
-            <div
-              v-for="sound in soundOptions"
-              :key="sound.value"
-              class="flex items-center justify-between py-3 px-4 rounded-2xl cursor-pointer transition-colors"
-              :class="
-                selectedSound === sound.value
-                  ? 'bg-ios-blue/10'
-                  : 'active:bg-ios-bg'
-              "
-              @click="selectedSound = sound.value"
-            >
-              <span class="text-[15px] font-medium text-ios-text">{{
-                sound.label
-              }}</span>
-              <Check
-                v-if="selectedSound === sound.value"
-                class="w-5 h-5 text-ios-blue"
-              />
-            </div>
-          </div>
+        <div class="flex items-center justify-between mb-4">
+          <DialogTitle as="h2" class="text-lg font-bold text-ios-text">{{
+            t("settings.notificationSound")
+          }}</DialogTitle>
+          <button
+            class="text-ios-blue font-semibold text-[15px]"
+            @click="showSoundPicker = false"
+          >
+            {{ t("common.done") }}
+          </button>
         </div>
-      </div>
-    </Transition>
+        <div class="space-y-1">
+          <button
+            v-for="sound in soundOptions"
+            :key="sound.value"
+            type="button"
+            class="w-full text-left flex items-center justify-between py-3 px-4 rounded-2xl cursor-pointer transition-colors"
+            :class="
+              selectedSound === sound.value
+                ? 'bg-ios-blue/10'
+                : 'active:bg-ios-bg'
+            "
+            :aria-pressed="selectedSound === sound.value"
+            @click="selectedSound = sound.value"
+          >
+            <span class="text-[15px] font-medium text-ios-text">{{
+              sound.label
+            }}</span>
+            <Check
+              v-if="selectedSound === sound.value"
+              class="w-5 h-5 text-ios-blue"
+            />
+          </button>
+        </div>
+      </DialogPanel>
+    </Dialog>
   </div>
 </template>
 
 <script setup lang="ts">
+import { Dialog, DialogPanel, DialogTitle } from "@headlessui/vue";
 import { reactive, ref, computed } from "vue";
 import { ArrowLeft, ChevronRight, Check } from "lucide-vue-next";
 import { useSettingsStore } from "@/stores/settings";
@@ -453,22 +460,3 @@ const resetToDefaults = async () => {
   toast.success(t("settings.restoredSuccess"));
 };
 </script>
-
-<style scoped>
-.sheet-enter-active,
-.sheet-leave-active {
-  transition: opacity 0.25s ease;
-}
-.sheet-enter-active > div:last-child,
-.sheet-leave-active > div:last-child {
-  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-}
-.sheet-enter-from,
-.sheet-leave-to {
-  opacity: 0;
-}
-.sheet-enter-from > div:last-child,
-.sheet-leave-to > div:last-child {
-  transform: translateY(100%);
-}
-</style>

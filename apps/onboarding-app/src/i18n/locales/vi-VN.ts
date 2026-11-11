@@ -226,6 +226,7 @@ const viVN: Messages = {
     subtitleLine2:
       "Sau khi nền tảng xét duyệt, chúng tôi sẽ kích hoạt tài khoản và tài nguyên lưu trữ của bạn.",
     summary: {
+      copyApplicationId: "Sao chép mã đăng ký",
       applicationId: "ID ứng dụng",
       businessName: "Tên nhà hàng",
       contactEmail: "Email liên hệ",

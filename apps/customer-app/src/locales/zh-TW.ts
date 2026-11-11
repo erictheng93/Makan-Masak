@@ -1,4 +1,10 @@
 export const waitingListZhTw = {
+  pwa: {
+    installTitle: "安裝 MakanMasak",
+    installDescription: "從主畫面快速開啟菜單並追蹤訂單。",
+    installAction: "安裝 App",
+  },
+  customerNavigation: { vendors: "攤位", maps: "地圖", flashlight: "閃光燈" },
   customizationLimits: {
     decrease: "減少",
     increase: "增加",

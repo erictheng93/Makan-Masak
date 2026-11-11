@@ -20,7 +20,7 @@
   }
 
   .btn-primary {
-    @apply btn bg-ios-blue text-white hover:bg-blue-600 focus:ring-2 focus:ring-ios-blue focus:ring-offset-2;
+    @apply btn bg-primary-700 text-white hover:bg-primary-800 focus:ring-2 focus:ring-ios-blue focus:ring-offset-2;
   }
 
   .btn-secondary {
@@ -41,5 +41,108 @@
 
   .form-label {
     @apply block text-sm font-medium text-gray-700 mb-1;
+  }
+}
+
+:root {
+  --ui-accent: theme("colors.primary.700");
+  --ui-accent-soft: theme("colors.primary.50");
+  --ui-accent-hover: theme("colors.primary.800");
+}
+
+.admin-shell {
+  height: 100dvh;
+}
+.admin-content {
+  min-width: 0;
+  padding: 24px;
+}
+.admin-content > .ui-page {
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+}
+.admin-content .ui-page-heading {
+  display: block;
+  margin-bottom: 4px;
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+}
+.admin-content .ui-panel {
+  border-radius: 16px;
+}
+.admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: theme("colors.ios-text / 70%");
+}
+.admin-field > input,
+.admin-field > select {
+  width: 100%;
+}
+.admin-content table {
+  font-variant-numeric: tabular-nums;
+}
+.admin-content th {
+  color: theme("colors.ios-text / 70%");
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.admin-content td {
+  vertical-align: middle;
+}
+.admin-content .ui-tabs > * {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.admin-content .ui-toolbar > :where(div, label, section) {
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .admin-content {
+    padding: 16px;
+  }
+  .admin-content .admin-field {
+    flex: 1 1 140px;
+  }
+  .admin-content .ui-toolbar {
+    align-items: stretch;
+  }
+}
+
+.admin-stat-strip {
+  gap: 0;
+  padding: 16px 0;
+  background: theme("colors.ios-card");
+  border-radius: 16px;
+  box-shadow: theme("boxShadow.ios-sm");
+}
+.admin-stat-strip > div {
+  min-width: 0;
+  margin: 0;
+  padding: 12px 20px;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+.admin-stat-strip > div + div {
+  border-inline-start: 1px solid theme("colors.ios-separator");
+}
+.admin-stat-strip p {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .admin-stat-strip > div {
+    padding-inline: 16px;
+  }
+  .admin-stat-strip > div:nth-child(odd) {
+    border-inline-start: 0;
   }
 }

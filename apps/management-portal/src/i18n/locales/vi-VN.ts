@@ -198,6 +198,7 @@ const viVN: Messages = {
     toast: { saved: "Đã lưu chính sách", cleared: "Đã xóa chính sách" },
   },
   notFound: {
+    backPrevious: "Quay lại trang trước",
     backHome: "Quay lại trang chủ",
     description:
       "Trang bạn truy cập có thể đã bị xóa hoặc tạm thời không khả dụng",

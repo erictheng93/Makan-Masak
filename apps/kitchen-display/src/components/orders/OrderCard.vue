@@ -2,9 +2,9 @@
   <div
     :data-testid="`kitchen-order-card-${order.id}`"
     :class="[
-      'relative overflow-hidden rounded-2xl transition-transform duration-150 ease-spring active:scale-[0.97]',
+      'kitchen-ticket relative overflow-hidden rounded-3xl',
       isUrgent
-        ? 'bg-ios-red-soft border-t-[6px] border-ios-red shadow-[0_4px_20px_rgba(255,59,48,0.08)] animate-urgent-pulse'
+        ? 'bg-ios-red-soft border-t-4 border-ios-red shadow-card'
         : isCancelled
           ? 'bg-white shadow-card opacity-45 ' + statusBorderClass
           : 'bg-white shadow-card ' + statusBorderClass,
@@ -13,23 +13,23 @@
     <!-- URGENT corner badge -->
     <div
       v-if="isUrgent"
-      class="absolute top-0 right-0 bg-ios-red text-white text-xs font-extrabold px-2.5 py-1 rounded-bl-xl tracking-wide"
+      class="absolute top-0 right-0 bg-red-700 text-white text-xs font-extrabold px-2.5 py-1 rounded-bl-xl tracking-wide"
     >
       URGENT
     </div>
 
-    <div class="p-4">
+    <div class="ticket-content p-5">
       <!-- Row 1: Order number + Table number -->
-      <div class="flex items-center justify-between mb-2">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
         <span
           :class="[
-            'text-xl font-extrabold text-ios-text',
+            'ticket-number text-2xl font-extrabold text-ios-text',
             isCancelled && 'line-through',
           ]"
         >
           {{ order.orderNumber }}
         </span>
-        <span v-if="order.tableName" class="text-lg font-bold text-ios-blue">
+        <span v-if="order.tableName" class="text-lg font-bold text-blue-700">
           {{ t("orders.table") }} {{ displayTableName }}
         </span>
       </div>
@@ -39,25 +39,19 @@
         <div class="flex items-center gap-1.5 flex-wrap">
           <!-- Order type badge -->
           <span
-            :style="{
-              backgroundColor: orderTypeBadge.bg,
-              color: orderTypeBadge.text,
-            }"
-            class="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+            :class="orderTypeBadge.class"
+            class="rounded-full px-2.5 py-0.5 text-sm font-semibold"
           >
-            {{ orderTypeBadge.emoji }} {{ orderTypeBadge.label }}
+            {{ orderTypeBadge.label }}
           </span>
 
           <!-- Platform badge (only if not direct) -->
           <span
             v-if="order.orderSource && order.orderSource !== 'direct'"
-            :style="{
-              backgroundColor: platformBadge.bg,
-              color: platformBadge.text,
-            }"
-            class="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+            :class="platformBadge.class"
+            class="rounded-full px-2.5 py-0.5 text-sm font-semibold"
           >
-            {{ platformBadge.emoji }} {{ platformBadge.label }}
+            {{ platformBadge.label }}
           </span>
         </div>
 
@@ -87,10 +81,12 @@
           :key="item.id"
           class="py-2 first:pt-0 last:pb-0"
         >
-          <div class="flex items-center justify-between">
+          <div class="ticket-item-row flex items-center justify-between">
             <!-- Item name + quantity + status icon -->
             <div class="flex items-center gap-2 flex-1 min-w-0">
-              <span class="text-base font-medium text-ios-text truncate">
+              <span
+                class="ticket-item-name text-lg font-semibold text-ios-text"
+              >
                 {{ item.name }}
               </span>
               <span class="text-sm text-ios-secondary shrink-0">
@@ -104,7 +100,9 @@
             </div>
 
             <!-- Per-item action + estimated time -->
-            <div class="flex items-center gap-2 ml-3 shrink-0">
+            <div
+              class="ticket-item-controls flex items-center gap-2 ml-3 shrink-0"
+            >
               <div
                 v-if="item.estimatedTime && showEstimatedTime"
                 class="flex flex-col items-center text-ios-secondary"
@@ -117,7 +115,7 @@
 
               <button
                 v-if="item.status === 'pending'"
-                class="min-h-[44px] px-3 py-1 rounded-full bg-ios-blue text-white text-sm font-semibold"
+                class="min-h-[56px] px-3 py-1 rounded-full bg-blue-700 text-white text-sm font-semibold"
                 :data-testid="`kitchen-item-start-${order.id}-${item.id}`"
                 :title="t('orders.startPreparing')"
                 @click.stop="handleStartCooking(item.id)"
@@ -126,7 +124,7 @@
               </button>
               <button
                 v-else-if="item.status === 'preparing'"
-                class="min-h-[44px] px-3 py-1 rounded-full bg-ios-green text-white text-sm font-semibold"
+                class="min-h-[56px] px-3 py-1 rounded-full bg-green-700 text-white text-sm font-semibold"
                 :data-testid="`kitchen-item-ready-${order.id}-${item.id}`"
                 :title="t('orders.markComplete')"
                 @click.stop="handleMarkReady(item.id)"
@@ -216,7 +214,7 @@
         <!-- Primary action button (full-width pill) -->
         <button
           v-if="statusType === 'pending'"
-          class="flex-1 min-h-[44px] rounded-full py-3 font-bold text-white bg-ios-blue flex items-center justify-center gap-2"
+          class="flex-1 min-h-[56px] rounded-full py-3 font-bold text-white bg-blue-700 flex items-center justify-center gap-2"
           :data-testid="`kitchen-order-start-${order.id}`"
           @click="handleStartAll"
         >
@@ -225,7 +223,7 @@
         </button>
         <button
           v-else-if="statusType === 'preparing'"
-          class="flex-1 min-h-[44px] rounded-full py-3 font-bold text-white bg-ios-green flex items-center justify-center gap-2"
+          class="flex-1 min-h-[56px] rounded-full py-3 font-bold text-white bg-green-700 flex items-center justify-center gap-2"
           :data-testid="`kitchen-order-ready-${order.id}`"
           @click="handleMarkAllReady"
         >
@@ -234,7 +232,7 @@
         </button>
         <div
           v-else-if="statusType === 'ready'"
-          class="flex-1 min-h-[44px] rounded-full py-3 font-bold text-ios-secondary bg-ios-bg flex items-center justify-center"
+          class="flex-1 min-h-[56px] rounded-full py-3 font-bold text-ios-secondary bg-ios-bg flex items-center justify-center"
         >
           {{ t("orders.served") }}
         </div>
@@ -329,27 +327,18 @@ const statusBorderClass = computed(() => {
 // Order Type Badge
 const orderTypeBadge = computed(() => {
   const type = props.order.deliveryInfo?.type ?? "dine_in";
-  const badges: Record<
-    string,
-    { label: string; emoji: string; bg: string; text: string }
-  > = {
+  const badges: Record<string, { label: string; class: string }> = {
     dine_in: {
       label: t("orderType.dineIn"),
-      emoji: "🪑",
-      bg: "#E3F2FD",
-      text: "#007AFF",
+      class: "bg-blue-100 text-blue-800",
     },
     takeaway: {
       label: t("orderType.takeaway"),
-      emoji: "🛍️",
-      bg: "#FFF3E0",
-      text: "#FF9500",
+      class: "bg-orange-100 text-orange-800",
     },
     delivery: {
       label: t("orderType.delivery"),
-      emoji: "🛵",
-      bg: "#E8EAF6",
-      text: "#283593",
+      class: "bg-teal-100 text-teal-800",
     },
   };
   return badges[type] || badges.dine_in;
@@ -358,47 +347,32 @@ const orderTypeBadge = computed(() => {
 // Platform Source Badge
 const platformBadge = computed(() => {
   const source = props.order.orderSource ?? "direct";
-  const badges: Record<
-    string,
-    { label: string; emoji: string; bg: string; text: string }
-  > = {
+  const badges: Record<string, { label: string; class: string }> = {
     uber_eats: {
       label: t("platform.uberEats"),
-      emoji: "🟢",
-      bg: "#E8F5E9",
-      text: "#004D40",
+      class: "bg-green-100 text-green-800",
     },
     foodpanda: {
       label: t("platform.foodpanda"),
-      emoji: "🦋",
-      bg: "#FFEBEE",
-      text: "#B71C1C",
+      class: "bg-red-100 text-red-800",
     },
     grabfood: {
       label: t("platform.grabFood"),
-      emoji: "🟠",
-      bg: "#E8F5E9",
-      text: "#1B5E20",
+      class: "bg-green-100 text-green-800",
     },
     market_checkout: {
       label: t("platform.marketCheckout"),
-      emoji: "🏮",
-      bg: "#FFF3E0",
-      text: "#E65100",
+      class: "bg-orange-100 text-orange-800",
     },
     direct: {
       label: t("platform.direct"),
-      emoji: "📦",
-      bg: "#F2F2F7",
-      text: "#1C1C1E",
+      class: "bg-ios-bg text-ios-text",
     },
   };
   return (
     badges[source] || {
       label: source,
-      emoji: "📦",
-      bg: "#F2F2F7",
-      text: "#1C1C1E",
+      class: "bg-ios-bg text-ios-text",
     }
   );
 });
@@ -406,10 +380,10 @@ const platformBadge = computed(() => {
 // Elapsed time class
 const elapsedTimeClass = computed(() => {
   if (isUrgent.value || props.order.elapsedTime >= urgentThreshold.value) {
-    return "text-ios-red font-extrabold text-sm";
+    return "text-red-700 font-extrabold text-lg";
   }
   if (props.statusType === "preparing") {
-    return "text-ios-blue font-semibold text-sm";
+    return "text-blue-700 font-semibold text-lg";
   }
   return "text-ios-secondary text-sm";
 });

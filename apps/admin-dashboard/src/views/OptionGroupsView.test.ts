@@ -115,6 +115,22 @@ describe("OptionGroupsView", () => {
     del.mockResolvedValue({ data: { success: true } });
   });
 
+  it("names the group dialog, traps focus and returns focus after Escape", async () => {
+    const wrapper = mount(OptionGroupsView, { attachTo: document.body });
+    await flushPromises();
+    const trigger = wrapper.get('[data-testid="add-group"]');
+    (trigger.element as HTMLButtonElement).focus();
+    await trigger.trigger("click");
+    await flushPromises();
+    const dialog = wrapper.get('[role="dialog"]');
+    expect(dialog.attributes("aria-modal")).toBe("true");
+    expect(dialog.element.contains(document.activeElement)).toBe(true);
+    await dialog.trigger("keydown", { key: "Escape" });
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    expect(document.activeElement).toBe(trigger.element);
+    wrapper.unmount();
+  });
+
   it("loads the restaurant's groups on open", async () => {
     respondWith([group()]);
     const wrapper = await mountView();

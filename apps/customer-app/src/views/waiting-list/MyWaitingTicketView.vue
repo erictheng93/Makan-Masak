@@ -1,6 +1,9 @@
 <template>
-  <div class="min-h-screen bg-ios-bg text-ios-text">
+  <div class="customer-shell min-h-screen bg-ios-bg text-ios-text">
     <main class="max-w-md mx-auto px-4 py-8 space-y-5">
+      <h1 class="text-2xl font-semibold text-ios-text">
+        {{ t("waitingList.ticket.title") }}
+      </h1>
       <section class="bg-white rounded-2xl shadow-card p-6 animate-slide-up">
         <div v-if="isLoading && !ticket" class="py-12 text-center">
           <div
@@ -37,6 +40,8 @@
             </p>
             <p
               data-testid="ticket-status"
+              role="status"
+              aria-live="polite"
               :class="[
                 'mt-4 text-lg font-semibold transition-colors duration-200 ease-out',
                 statusColorClass,
@@ -53,6 +58,7 @@
               </p>
               <p
                 data-testid="parties-ahead"
+                aria-live="polite"
                 class="mt-1 text-2xl font-semibold text-ios-text"
               >
                 {{ ticket.partiesAhead }}
@@ -115,7 +121,7 @@
             <button
               v-if="canConfirmArrival"
               data-testid="confirm-arrival-button"
-              class="w-full rounded-full bg-ios-green px-5 py-3.5 font-semibold text-white active:scale-[0.98] transition-transform duration-200 ease-out disabled:opacity-60"
+              class="w-full rounded-full bg-green-700 px-5 py-3.5 font-semibold text-white active:scale-[0.98] transition-transform duration-200 ease-out disabled:opacity-60"
               type="button"
               :disabled="isActing"
               @click="handleConfirmArrival"

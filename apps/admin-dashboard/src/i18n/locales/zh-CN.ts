@@ -22,6 +22,16 @@ const zhCN: Messages = {
     quickActions: "快捷操作",
     addShift: "新增排班",
   },
+  ui: {
+    kitchenDescription: "查看实时订单、备餐进度与出餐状态。",
+    kitchenEnabled: "此店铺已启用厨房显示器，请从独立工作区开始操作。",
+    openKitchen: "打开厨房显示器",
+    kitchenUnavailable:
+      "当前方案未包含厨房显示器，请至账务页查看方案与支持方式。",
+    analysisPeriod: "分析期间",
+    revenuePeriod: "营收期间",
+    orderPeriod: "订单期间",
+  },
   common: {
     save: "保存",
     cancel: "取消",

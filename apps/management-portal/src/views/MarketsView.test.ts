@@ -213,3 +213,15 @@ describe("MarketsView", () => {
     );
   });
 });
+
+it("retains visible names for every market metadata field after typing", async () => {
+  const wrapper = mount(MarketsView);
+  const form = wrapper.get("form");
+  for (const control of form.findAll(
+    "input:not([type=time]):not([type=checkbox]), select, textarea",
+  )) {
+    const id = control.attributes("id");
+    expect(id).toBeTruthy();
+    expect(form.find(`label[for="${id}"]`).exists()).toBe(true);
+  }
+});

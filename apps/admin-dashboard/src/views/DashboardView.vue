@@ -1,9 +1,9 @@
 <template>
-  <div class="space-y-6">
+  <div class="ui-page space-y-6">
     <!-- Page Header -->
-    <div class="flex items-center justify-between">
+    <div class="ui-toolbar flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">
+        <h1 class="ui-page-heading text-2xl font-bold text-gray-900">
           {{ t("dashboard.title") }}
         </h1>
         <p class="text-gray-600">
@@ -41,7 +41,9 @@
     <MarketOpenTodayCard />
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div
+      class="admin-stat-strip grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+    >
       <StatsCard
         :title="t('dashboard.todayOrders')"
         :value="todayOrders"
@@ -81,19 +83,23 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Revenue Chart -->
       <div class="card p-6">
-        <div class="flex items-center justify-between mb-4">
+        <div class="ui-toolbar flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold text-gray-900">
             {{ t("dashboard.revenueTrend") }}
           </h3>
-          <select
-            v-model="revenueChartPeriod"
-            class="form-input w-auto"
-            @change="updateRevenueChart"
+          <label class="admin-field" for="dashboardview-revenueChartPeriod"
+            ><span>{{ t("ui.revenuePeriod") }}</span
+            ><select
+              id="dashboardview-revenueChartPeriod"
+              v-model="revenueChartPeriod"
+              class="form-input w-auto"
+              @change="updateRevenueChart"
+            >
+              <option value="daily">{{ t("dashboard.today") }}</option>
+              <option value="weekly">{{ t("dashboard.thisWeek") }}</option>
+              <option value="monthly">{{ t("dashboard.thisMonth") }}</option>
+            </select></label
           >
-            <option value="daily">{{ t("dashboard.today") }}</option>
-            <option value="weekly">{{ t("dashboard.thisWeek") }}</option>
-            <option value="monthly">{{ t("dashboard.thisMonth") }}</option>
-          </select>
         </div>
         <!-- 懶加載：只在可見時渲染圖表 -->
         <LazyChart
@@ -110,19 +116,23 @@
 
       <!-- Orders Chart -->
       <div class="card p-6">
-        <div class="flex items-center justify-between mb-4">
+        <div class="ui-toolbar flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold text-gray-900">
             {{ t("dashboard.orderTrend") }}
           </h3>
-          <select
-            v-model="ordersChartPeriod"
-            class="form-input w-auto"
-            @change="updateOrdersChart"
+          <label class="admin-field" for="dashboardview-ordersChartPeriod"
+            ><span>{{ t("ui.orderPeriod") }}</span
+            ><select
+              id="dashboardview-ordersChartPeriod"
+              v-model="ordersChartPeriod"
+              class="form-input w-auto"
+              @change="updateOrdersChart"
+            >
+              <option value="daily">{{ t("dashboard.today") }}</option>
+              <option value="weekly">{{ t("dashboard.thisWeek") }}</option>
+              <option value="monthly">{{ t("dashboard.thisMonth") }}</option>
+            </select></label
           >
-            <option value="daily">{{ t("dashboard.today") }}</option>
-            <option value="weekly">{{ t("dashboard.thisWeek") }}</option>
-            <option value="monthly">{{ t("dashboard.thisMonth") }}</option>
-          </select>
         </div>
         <!-- 懶加載：只在可見時渲染圖表 -->
         <LazyChart
@@ -143,13 +153,13 @@
       <!-- Top Menu Items -->
       <div class="lg:col-span-2">
         <div class="card p-6">
-          <div class="flex items-center justify-between mb-4">
+          <div class="ui-toolbar flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-900">
               {{ t("dashboard.popularItems") }}
             </h3>
             <router-link
               to="/dashboard/menu"
-              class="text-primary-600 hover:text-primary-700 text-sm font-medium"
+              class="text-primary-700 hover:text-primary-700 text-sm font-medium"
             >
               {{ t("dashboard.viewAll") }}
             </router-link>
@@ -170,13 +180,13 @@
 
       <!-- Recent Orders -->
       <div class="card p-6">
-        <div class="flex items-center justify-between mb-4">
+        <div class="ui-toolbar flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold text-gray-900">
             {{ t("dashboard.recentOrders") }}
           </h3>
           <router-link
             to="/dashboard/orders"
-            class="text-primary-600 hover:text-primary-700 text-sm font-medium"
+            class="text-primary-700 hover:text-primary-700 text-sm font-medium"
           >
             {{ t("dashboard.viewAll") }}
           </router-link>
@@ -199,7 +209,7 @@
           to="/dashboard/menu"
           class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
         >
-          <Menu class="w-8 h-8 text-primary-600 mb-2" />
+          <Menu class="w-8 h-8 text-primary-700 mb-2" />
           <span class="text-sm font-medium text-gray-900">{{
             t("dashboard.manageMenu")
           }}</span>
@@ -209,7 +219,7 @@
           to="/dashboard/seating"
           class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
         >
-          <Table class="w-8 h-8 text-primary-600 mb-2" />
+          <Table class="w-8 h-8 text-primary-700 mb-2" />
           <span class="text-sm font-medium text-gray-900">{{
             t("dashboard.manageTables")
           }}</span>
@@ -219,7 +229,7 @@
           to="/dashboard/employees"
           class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
         >
-          <Users class="w-8 h-8 text-primary-600 mb-2" />
+          <Users class="w-8 h-8 text-primary-700 mb-2" />
           <span class="text-sm font-medium text-gray-900">{{
             t("dashboard.manageStaff")
           }}</span>
@@ -229,7 +239,7 @@
           to="/dashboard/pos"
           class="flex flex-col items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
         >
-          <CreditCard class="w-8 h-8 text-green-600 mb-2" />
+          <CreditCard class="w-8 h-8 text-green-700 mb-2" />
           <span class="text-sm font-medium text-gray-900">{{
             t("dashboard.posSystem")
           }}</span>
@@ -239,7 +249,7 @@
           to="/dashboard/group-orders"
           class="flex flex-col items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
         >
-          <Users class="w-8 h-8 text-blue-600 mb-2" />
+          <Users class="w-8 h-8 text-blue-700 mb-2" />
           <span class="text-sm font-medium text-gray-900">{{
             t("dashboard.groupOrders")
           }}</span>
@@ -249,7 +259,7 @@
           to="/dashboard/seating"
           class="flex flex-col items-center p-4 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors"
         >
-          <Clock class="w-8 h-8 text-teal-600 mb-2" />
+          <Clock class="w-8 h-8 text-teal-700 mb-2" />
           <span class="text-sm font-medium text-gray-900">{{
             t("dashboard.waitingManagement")
           }}</span>
@@ -259,7 +269,7 @@
           to="/dashboard/analytics"
           class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
         >
-          <BarChart3 class="w-8 h-8 text-primary-600 mb-2" />
+          <BarChart3 class="w-8 h-8 text-primary-700 mb-2" />
           <span class="text-sm font-medium text-gray-900">{{
             t("dashboard.detailedAnalysis")
           }}</span>

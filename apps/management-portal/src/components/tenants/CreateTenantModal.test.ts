@@ -1,6 +1,11 @@
-import { flushPromises, mount } from "@vue/test-utils";
+import {
+  flushPromises,
+  mount,
+  DOMWrapper,
+  enableAutoUnmount,
+} from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import CreateTenantModal from "./CreateTenantModal.vue";
 import { tenantsApi } from "@/services/api";
 
@@ -11,14 +16,19 @@ vi.mock("@/services/api", () => ({
   licensesApi: {},
 }));
 
+enableAutoUnmount(afterEach);
+const dialog = () => new DOMWrapper(document.body);
+
 async function mountFilled() {
   const wrapper = mount(CreateTenantModal, {
     props: { show: false },
-    global: { stubs: { teleport: true } },
+    attachTo: document.body,
   });
   await wrapper.setProps({ show: true });
+  await flushPromises();
+  expect(dialog().get('[role="dialog"]').attributes("aria-modal")).toBe("true");
   const fill = (id: string, value: string) =>
-    wrapper.find(`[data-testid="management-tenant-${id}"]`).setValue(value);
+    dialog().find(`[data-testid="management-tenant-${id}"]`).setValue(value);
   await fill("business-name", "Demo Noodles");
   await fill("contact-name", "Demo Owner");
   await fill("contact-email", "owner@example.com");
@@ -27,14 +37,14 @@ async function mountFilled() {
   await fill("city", "台中市");
   await fill("latitude", "24.15");
   await fill("longitude", "120.67");
-  await wrapper
+  await dialog()
     .find('[data-testid="management-tenant-license-professional"]')
     .setValue(true);
   return wrapper;
 }
 
-const submit = async (wrapper: Awaited<ReturnType<typeof mountFilled>>) => {
-  await wrapper
+const submit = async () => {
+  await dialog()
     .find('[data-testid="management-tenant-create-submit"]')
     .trigger("click");
   await flushPromises();
@@ -80,7 +90,7 @@ describe("CreateTenantModal", () => {
     });
     const wrapper = await mountFilled();
 
-    await submit(wrapper);
+    await submit();
 
     expect(tenantsApi.create).toHaveBeenCalledOnce();
     expect(tenantsApi.create).toHaveBeenCalledWith(
@@ -95,23 +105,23 @@ describe("CreateTenantModal", () => {
       }),
     );
     expect(
-      wrapper
+      dialog()
         .find('[data-testid="management-tenant-create-result"]')
         .attributes("data-status"),
     ).toBe("approved");
     expect(
       (
-        wrapper.find('[data-testid="management-tenant-setup-link"]')
+        dialog().find('[data-testid="management-tenant-setup-link"]')
           .element as HTMLInputElement
       ).value,
     ).toBe("https://admin.example.com/setup?token=abc");
     expect(
-      wrapper
+      dialog()
         .find('[data-testid="management-tenant-credential-delivery"]')
         .text(),
     ).toContain("owner@example.com");
 
-    await wrapper
+    await dialog()
       .find('[data-testid="management-tenant-create-done"]')
       .trigger("click");
     expect(wrapper.emitted("success")).toHaveLength(1);
@@ -125,12 +135,12 @@ describe("CreateTenantModal", () => {
     });
     const wrapper = await mountFilled();
 
-    await submit(wrapper);
+    await submit();
 
     expect(
-      wrapper.find('[data-testid="management-tenant-approval-error"]').text(),
+      dialog().find('[data-testid="management-tenant-approval-error"]').text(),
     ).toContain("Platform down");
-    await wrapper
+    await dialog()
       .find('[data-testid="management-tenant-create-done"]')
       .trigger("click");
     expect(wrapper.emitted("success")).toBeUndefined();
@@ -138,12 +148,12 @@ describe("CreateTenantModal", () => {
   });
 
   it("blocks submit without coordinates", async () => {
-    const wrapper = await mountFilled();
-    await wrapper
+    await mountFilled();
+    await dialog()
       .find('[data-testid="management-tenant-latitude"]')
       .setValue("");
 
-    await submit(wrapper);
+    await submit();
 
     expect(tenantsApi.create).not.toHaveBeenCalled();
   });
@@ -153,23 +163,23 @@ describe("CreateTenantModal", () => {
       application: { id: "app-3", status: "submitted" },
       approval: null,
     });
-    const wrapper = await mountFilled();
+    await mountFilled();
     const language = () =>
       (
-        wrapper.find('[data-testid="management-tenant-email-language"]')
+        dialog().find('[data-testid="management-tenant-email-language"]')
           .element as HTMLSelectElement
       ).value;
     expect(language()).toBe("zh-TW");
 
-    await wrapper
+    await dialog()
       .find('[data-testid="management-tenant-country"]')
       .setValue("MY");
     await flushPromises();
     expect(language()).toBe("ms-MY");
-    await wrapper
+    await dialog()
       .find('[data-testid="management-tenant-city"]')
       .setValue("Kuala Lumpur");
-    await submit(wrapper);
+    await submit();
 
     expect(tenantsApi.create).toHaveBeenCalledOnce();
     expect(tenantsApi.create).toHaveBeenCalledWith(

@@ -230,6 +230,13 @@ describe("OrderTrackingView guest realtime URL", () => {
     const wrapper = mountView({ tableId: 0, isShopOrder: true });
 
     expect(wrapper.text()).not.toContain("orderTracking.tableNumber");
+    expect(
+      wrapper.get('[role="progressbar"]').attributes("aria-valuenow"),
+    ).toBe("20");
+    await wrapper.get('[data-testid="back-to-menu"]').trigger("click");
+    expect(routerPush).toHaveBeenCalledWith(
+      "/restaurant/restaurant-1/shop/menu",
+    );
     await wrapper.get('[data-testid="continue-ordering"]').trigger("click");
     expect(routerPush).toHaveBeenCalledWith(
       "/restaurant/restaurant-1/shop/menu",

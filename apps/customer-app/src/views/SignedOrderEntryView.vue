@@ -1,6 +1,6 @@
 <template>
   <main
-    class="min-h-screen bg-ios-bg flex items-center justify-center px-5"
+    class="customer-shell min-h-screen bg-ios-bg flex items-center justify-center px-5"
     aria-live="polite"
   >
     <section
@@ -29,6 +29,13 @@
           @click="processQrCode"
         >
           {{ t("common.retry") }}
+        </button>
+        <button
+          type="button"
+          class="mt-3 w-full rounded-full bg-ios-bg px-6 py-3 text-ios-blue"
+          @click="router.push('/scan')"
+        >
+          {{ t("home.scanQR") }}
         </button>
       </template>
     </section>

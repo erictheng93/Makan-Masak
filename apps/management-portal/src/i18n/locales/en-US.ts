@@ -398,6 +398,7 @@ const enUS: Messages = {
   },
 
   notFound: {
+    backPrevious: "Back to previous page",
     title: "Page Not Found",
     description:
       "The page you visited may have been removed or is temporarily unavailable",

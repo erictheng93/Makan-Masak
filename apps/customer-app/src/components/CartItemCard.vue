@@ -64,6 +64,7 @@
           <!-- 移除按鈕 -->
           <button
             data-testid="remove-item"
+            :aria-label="`${t('cart.remove')} ${getLocalizedMenuName(item.menuItem, currentLanguage)}`"
             class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-ios-secondary active:bg-ios-red/10 active:text-ios-red transition-all duration-200"
             @click="$emit('remove', item.id)"
           >
@@ -84,7 +85,7 @@
         </div>
 
         <!-- 價格和數量控制 -->
-        <div class="flex items-center justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-baseline space-x-1">
             <span class="text-base font-semibold text-ios-text">
               {{ formatPrice(itemTotal) }}
@@ -100,6 +101,7 @@
               :data-testid="`qty-decrease-${item.id}`"
               :disabled="item.quantity <= 1"
               class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-ios-text active:bg-gray-200 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+              :aria-label="`${t('customizationLimits.decrease')} ${getLocalizedMenuName(item.menuItem, currentLanguage)}`"
               @click="updateQuantity(item.quantity - 1)"
             >
               <svg
@@ -128,6 +130,7 @@
               :disabled="item.quantity >= 99"
               :data-testid="`qty-increase-${item.id}`"
               class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-ios-text active:bg-gray-200 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+              :aria-label="`${t('customizationLimits.increase')} ${getLocalizedMenuName(item.menuItem, currentLanguage)}`"
               @click="updateQuantity(item.quantity + 1)"
             >
               <svg
@@ -151,6 +154,7 @@
         <div v-if="showNotesInput" class="mt-3">
           <textarea
             :data-testid="`cart-item-notes-${item.id}`"
+            :aria-label="t('cart.notes')"
             :value="item.notes || ''"
             :placeholder="t('cart.notes')"
             rows="2"

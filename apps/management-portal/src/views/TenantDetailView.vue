@@ -190,7 +190,10 @@ const tabs = computed(() => [
 </script>
 
 <template>
-  <div class="space-y-6" data-testid="management-tenant-detail-page">
+  <div
+    class="portal-page ui-page space-y-6"
+    data-testid="management-tenant-detail-page"
+  >
     <!-- 返回按鈕 -->
     <button
       type="button"
@@ -273,13 +276,17 @@ const tabs = computed(() => [
 
       <!-- 標籤頁 -->
       <div class="border-b border-gray-200">
-        <nav class="flex space-x-8">
+        <nav
+          class="ui-tabs flex gap-6 overflow-x-auto"
+          :aria-label="tenant.businessName"
+        >
           <button
             v-for="tab in tabs"
             :key="tab.id"
             type="button"
             :data-testid="`management-tenant-tab-${tab.id}`"
-            class="flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-colors"
+            :aria-current="activeTab === tab.id ? 'page' : undefined"
+            class="shrink-0 whitespace-nowrap flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-colors"
             :class="{
               'border-primary-500 text-primary-600': activeTab === tab.id,
               'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300':
@@ -410,7 +417,7 @@ const tabs = computed(() => [
             {{ t("tenantDetail.resources.empty") }}
           </p>
         </div>
-        <div v-else class="overflow-x-auto">
+        <div v-else class="ui-table-scroll overflow-x-auto">
           <table class="table">
             <thead>
               <tr>
@@ -472,7 +479,7 @@ const tabs = computed(() => [
             :key="deployment.id"
             class="border rounded-lg p-4"
           >
-            <div class="flex items-center justify-between">
+            <div class="portal-heading ui-page-heading">
               <div class="flex items-center gap-3">
                 <CheckCircleIcon
                   v-if="deployment.status === 'completed'"
@@ -540,7 +547,7 @@ const tabs = computed(() => [
             :key="check.id"
             class="border rounded-lg p-4"
           >
-            <div class="flex items-center justify-between">
+            <div class="portal-heading ui-page-heading">
               <div class="flex items-center gap-3">
                 <span class="badge" :class="getHealthStatusClass(check.status)">
                   {{ getHealthStatusLabel(check.status) }}

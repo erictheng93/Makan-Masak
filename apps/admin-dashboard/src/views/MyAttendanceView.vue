@@ -1,9 +1,11 @@
 <template>
-  <div class="min-h-full bg-ios-bg -mx-4 -my-4 px-4 py-6 sm:-mx-6 sm:px-6">
+  <div
+    class="ui-page min-h-full bg-ios-bg -mx-4 -my-4 px-4 py-6 sm:-mx-6 sm:px-6"
+  >
     <div class="max-w-3xl mx-auto space-y-6">
       <!-- Page header -->
       <header>
-        <h1 class="text-2xl font-bold text-ios-text">
+        <h1 class="ui-page-heading text-2xl font-bold text-ios-text">
           {{ t("myAttendance.title") }}
         </h1>
         <p class="mt-1 text-sm text-ios-secondary">
@@ -16,11 +18,14 @@
       <div
         v-if="!restaurantId"
         data-testid="my-attendance-error"
-        class="flex items-start gap-3 rounded-2xl bg-white p-5 shadow-ios-card"
+        class="ui-panel flex items-start gap-3 rounded-2xl bg-white p-5 shadow-ios-card"
       >
         <ExclamationTriangleIcon class="h-5 w-5 shrink-0 text-ios-red" />
         <p class="flex-1 text-sm font-semibold text-ios-text">
-          {{ t("myShifts.noRestaurant") }}
+          {{ t("myShifts.noRestaurant")
+          }}<span class="mt-2 block font-normal">{{
+            t("nav.restaurantContextHint")
+          }}</span>
         </p>
       </div>
 

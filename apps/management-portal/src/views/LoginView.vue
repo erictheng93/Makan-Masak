@@ -47,11 +47,11 @@ async function submit() {
 
 <template>
   <main
-    class="min-h-screen bg-gray-100 flex items-center justify-center px-4 py-12"
+    class="portal-page ui-page min-h-screen bg-gray-100 flex items-center justify-center px-4 py-12"
   >
-    <section class="w-full max-w-md bg-white rounded-lg shadow-card p-6">
+    <section class="w-full max-w-md bg-white rounded-3xl shadow-card p-6">
       <div class="mb-6">
-        <p class="text-sm font-semibold text-primary-600">MakanMasak</p>
+        <p class="text-lg font-bold text-green-700">MakanMasak</p>
         <h1 class="mt-2 text-2xl font-semibold text-gray-900">管理平台登入</h1>
         <p class="mt-2 text-sm text-gray-600">
           使用 API 平台管理員 token 換取管理平台工作階段。
@@ -66,6 +66,8 @@ async function submit() {
             v-model="apiToken"
             class="input min-h-28 resize-y font-mono text-xs"
             :class="{ 'input-error': errorMessage }"
+            :aria-invalid="errorMessage ? 'true' : undefined"
+            :aria-describedby="errorMessage ? 'portal-login-error' : undefined"
             autocomplete="off"
             spellcheck="false"
             required
@@ -74,6 +76,7 @@ async function submit() {
 
         <p
           v-if="errorMessage"
+          id="portal-login-error"
           class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700"
           role="alert"
         >

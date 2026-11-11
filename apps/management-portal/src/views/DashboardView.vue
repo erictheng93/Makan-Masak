@@ -71,7 +71,7 @@ const getTenantName = (tenantId: string) => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="portal-page ui-page space-y-6">
     <!-- 頁面標題 -->
     <div>
       <h1 class="text-2xl font-bold text-gray-900">
@@ -81,8 +81,8 @@ const getTenantName = (tenantId: string) => {
     </div>
 
     <!-- 統計卡片 -->
-    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-      <div v-for="stat in stats" :key="stat.name" class="card">
+    <div class="ui-stat-strip">
+      <div v-for="stat in stats" :key="stat.name" class="ui-stat">
         <div class="flex items-center">
           <div :class="[stat.color, 'rounded-md p-3']">
             <component :is="stat.icon" class="h-6 w-6" />
@@ -293,7 +293,7 @@ const getTenantName = (tenantId: string) => {
         </RouterLink>
       </div>
 
-      <div v-else class="overflow-x-auto">
+      <div v-else class="ui-table-scroll overflow-x-auto">
         <table class="table">
           <thead>
             <tr>
@@ -301,7 +301,7 @@ const getTenantName = (tenantId: string) => {
               <th>{{ t("tenants.column.status") }}</th>
               <th>{{ t("tenants.column.version") }}</th>
               <th>{{ t("tenants.column.createdAt") }}</th>
-              <th></th>
+              <th>{{ t("common.actions") }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -344,6 +344,7 @@ const getTenantName = (tenantId: string) => {
               <td>
                 <RouterLink
                   :to="`/tenants/${tenant.id}`"
+                  :aria-label="`${t('common.view')} ${tenant.businessName}`"
                   class="text-primary-600 hover:text-primary-700"
                 >
                   {{ t("common.view") }}

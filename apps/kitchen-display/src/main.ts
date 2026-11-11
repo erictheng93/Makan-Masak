@@ -13,6 +13,7 @@ import { installKitchenChunkRecovery } from "./router/chunk-recovery";
 
 // CSS imports
 import "./assets/css/main.css";
+import "../../../packages/shared/styles/app-ui.css";
 import "vue-toastification/dist/index.css";
 
 const app = createApp(App);

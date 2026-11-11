@@ -1,7 +1,7 @@
 <template>
   <!-- Exactly one screen tall: the header and the instructions overlay the
        camera, so the manual-entry link is never pushed below the fold. -->
-  <div class="scan-screen relative overflow-hidden bg-black">
+  <div class="customer-shell scan-screen relative overflow-hidden bg-black">
     <!-- 頂部導航 -->
     <div
       class="absolute inset-x-0 top-0 z-10 bg-black bg-opacity-50 backdrop-blur-sm"
@@ -9,7 +9,8 @@
       <div class="max-w-md mx-auto px-4 py-4">
         <div class="flex items-center justify-between">
           <button
-            class="w-10 h-10 bg-black bg-opacity-30 rounded-full flex items-center justify-center text-white hover:bg-opacity-50 transition-colors"
+            class="w-11 h-11 bg-black bg-opacity-30 rounded-full flex items-center justify-center text-white hover:bg-opacity-50 transition-colors"
+            :aria-label="t('common.back')"
             @click="router.back()"
           >
             <svg
@@ -31,7 +32,9 @@
           </h1>
           <button
             v-if="flashSupported"
-            class="w-10 h-10 bg-black bg-opacity-30 rounded-full flex items-center justify-center text-white hover:bg-opacity-50 transition-colors"
+            class="w-11 h-11 bg-black bg-opacity-30 rounded-full flex items-center justify-center text-white hover:bg-opacity-50 transition-colors"
+            :aria-label="t('customerNavigation.flashlight')"
+            :aria-pressed="flashOn"
             @click="toggleFlash"
           >
             <svg
@@ -161,7 +164,8 @@
           </p>
         </div>
         <button
-          class="w-6 h-6 flex items-center justify-center text-red-200 hover:text-white"
+          class="w-11 h-11 shrink-0 flex items-center justify-center text-red-200 hover:text-white"
+          :aria-label="t('common.close')"
           @click="clearError"
         >
           <svg

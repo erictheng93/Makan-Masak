@@ -37,19 +37,19 @@
   /* 廚房專用按鈕樣式 */
   .btn-kitchen {
     @apply px-6 py-3 rounded-xl font-semibold transition-all duration-200 focus:outline-none focus:ring-4;
-    min-height: 44px; /* 確保觸控友好 */
+    min-height: 56px; /* 廚房戴手套操作 */
   }
 
   .btn-kitchen-primary {
-    @apply btn-kitchen bg-ios-blue text-white hover:opacity-90 focus:ring-blue-200;
+    @apply btn-kitchen bg-blue-700 text-white hover:opacity-90 focus:ring-blue-200;
   }
 
   .btn-kitchen-success {
-    @apply btn-kitchen bg-ios-green text-white hover:opacity-90 focus:ring-green-200;
+    @apply btn-kitchen bg-green-700 text-white hover:opacity-90 focus:ring-green-200;
   }
 
   .btn-kitchen-urgent {
-    @apply btn-kitchen bg-ios-red text-white hover:opacity-90 focus:ring-red-200;
+    @apply btn-kitchen bg-red-700 text-white hover:opacity-90 focus:ring-red-200;
   }
 
   .btn-kitchen-secondary {
@@ -176,17 +176,17 @@
 }
 
 .Vue-Toastification__toast--success {
-  background-color: #34c759;
+  @apply bg-green-700;
 }
 
 .Vue-Toastification__toast--error {
-  background-color: #ff3b30;
+  @apply bg-red-700;
 }
 
 /* 載入動畫 */
 .loading-spinner {
   @apply animate-spin rounded-full border-4 border-gray-200;
-  border-top-color: #007aff;
+  @apply border-t-ios-blue;
 }
 
 /* 連接狀態指示器 */
@@ -214,4 +214,80 @@
 /* 鍵盤快捷鍵提示 */
 .keyboard-hint {
   @apply text-xs text-ios-secondary font-mono bg-ios-bg px-2 py-1 rounded;
+}
+
+:root {
+  --ui-accent: theme("colors.blue.700");
+  --ui-accent-soft: theme("colors.blue.50");
+  --ui-accent-hover: theme("colors.blue.800");
+}
+
+@layer components {
+  .kitchen-page {
+    @apply min-w-0;
+  }
+  .kitchen-page-heading {
+    @apply flex flex-wrap items-center gap-3;
+  }
+  .kitchen-ticket {
+    @apply rounded-3xl;
+    min-width: 0;
+  }
+  .kitchen-ticket button {
+    min-width: 56px;
+    min-height: 56px;
+  }
+  .kitchen-ticket .ticket-item-name {
+    @apply text-lg font-semibold leading-snug;
+    overflow-wrap: anywhere;
+  }
+  .kitchen-ticket .ticket-number {
+    @apply text-2xl;
+    overflow-wrap: anywhere;
+  }
+  .kitchen-ticket .ticket-content {
+    @apply p-5;
+  }
+  .kitchen-ticket .ticket-item-row {
+    @apply flex flex-wrap items-start gap-y-3;
+  }
+  .kitchen-ticket .ticket-item-controls {
+    @apply ml-auto;
+  }
+  .kitchen-ticket span,
+  .kitchen-ticket p {
+    overflow-wrap: anywhere;
+  }
+  .kitchen-switch {
+    background-color: transparent !important;
+    height: 44px;
+  }
+  .kitchen-switch::before {
+    content: "";
+    @apply absolute inset-x-0 top-[9px] h-[26px] rounded-full bg-gray-300;
+  }
+  .kitchen-switch[aria-checked="true"]::before {
+    @apply bg-green-700;
+  }
+  .kitchen-switch > span {
+    left: 0;
+    top: 11px;
+  }
+}
+
+.kitchen-page .history-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.text-ios-blue {
+  color: theme("colors.blue.700");
+}
+.text-ios-green {
+  color: theme("colors.green.700");
+}
+.text-ios-orange {
+  color: theme("colors.orange.700");
+}
+.text-ios-red {
+  color: theme("colors.red.700");
 }

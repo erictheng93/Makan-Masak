@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-ios-bg py-12 px-4 sm:px-6 lg:px-8">
+  <div class="customer-shell min-h-screen bg-ios-bg py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full mx-auto space-y-8">
       <!-- Logo 和標題 -->
       <div class="text-center">
@@ -18,7 +18,11 @@
         class="bg-ios-card rounded-3xl shadow-[0_4px_16px_rgba(0,0,0,0.06)] p-8"
       >
         <!-- 驗證信已寄出 -->
-        <div v-if="outcome === 'email_sent'" data-testid="email-sent-panel">
+        <div
+          v-if="outcome === 'email_sent'"
+          data-testid="email-sent-panel"
+          role="status"
+        >
           <div
             class="w-12 h-12 rounded-full bg-ios-green/10 flex items-center justify-center mb-4"
           >
@@ -123,6 +127,10 @@
             <input
               id="identifier"
               v-model="form.identifier"
+              :aria-invalid="!!errors.identifier"
+              :aria-describedby="
+                errors.identifier ? 'identifier-error' : undefined
+              "
               type="text"
               required
               autocomplete="username"
@@ -130,7 +138,12 @@
               class="w-full px-4 py-3 bg-ios-bg rounded-2xl text-ios-text placeholder:text-ios-tertiary focus:ring-2 focus:ring-ios-blue focus:bg-white transition"
               :placeholder="t('auth.identifierPlaceholder')"
             />
-            <p v-if="errors.identifier" class="mt-2 text-sm text-ios-red">
+            <p
+              v-if="errors.identifier"
+              id="identifier-error"
+              role="alert"
+              class="mt-2 text-sm text-ios-red"
+            >
               {{ errors.identifier }}
             </p>
           </div>
@@ -145,6 +158,10 @@
             <input
               id="displayName"
               v-model="form.displayName"
+              :aria-invalid="!!errors.displayName"
+              :aria-describedby="
+                errors.displayName ? 'displayName-error' : undefined
+              "
               type="text"
               required
               autocomplete="name"
@@ -152,7 +169,12 @@
               class="w-full px-4 py-3 bg-ios-bg rounded-2xl text-ios-text placeholder:text-ios-tertiary focus:ring-2 focus:ring-ios-blue focus:bg-white transition"
               :placeholder="t('auth.displayNamePlaceholder')"
             />
-            <p v-if="errors.displayName" class="mt-2 text-sm text-ios-red">
+            <p
+              v-if="errors.displayName"
+              id="displayName-error"
+              role="alert"
+              class="mt-2 text-sm text-ios-red"
+            >
               {{ errors.displayName }}
             </p>
           </div>
@@ -167,6 +189,10 @@
             <input
               id="password"
               v-model="form.password"
+              :aria-invalid="!!errors.password"
+              :aria-describedby="
+                errors.password ? 'password-error' : 'password-rule'
+              "
               type="password"
               required
               autocomplete="new-password"
@@ -174,10 +200,19 @@
               class="w-full px-4 py-3 bg-ios-bg rounded-2xl text-ios-text placeholder:text-ios-tertiary focus:ring-2 focus:ring-ios-blue focus:bg-white transition"
               :placeholder="t('auth.passwordPlaceholder')"
             />
-            <p v-if="errors.password" class="mt-2 text-sm text-ios-red">
+            <p
+              v-if="errors.password"
+              id="password-error"
+              role="alert"
+              class="mt-2 text-sm text-ios-red"
+            >
               {{ errors.password }}
             </p>
-            <p v-else class="mt-2 text-sm text-ios-secondary">
+            <p
+              v-else
+              id="password-rule"
+              class="mt-2 text-sm text-ios-secondary"
+            >
               {{ passwordRule }}
             </p>
           </div>
@@ -185,6 +220,7 @@
           <div
             v-if="error"
             data-testid="auth-error"
+            role="alert"
             class="bg-ios-red/10 rounded-2xl px-4 py-3"
           >
             <p class="text-sm text-ios-red">{{ error }}</p>

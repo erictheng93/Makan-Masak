@@ -144,7 +144,7 @@ describe("SchedulingView", () => {
     const actions = wrapper
       .findAll(".users-view > div > div")
       .find((element) => element.findAll("button").length === 3);
-    const tabs = wrapper.get('nav[aria-label="Tabs"]');
+    const tabs = wrapper.get('nav[aria-label="scheduling.managementTitle"]');
 
     expect(actions).toBeDefined();
     expect(actions!.classes()).toContain("flex-wrap");

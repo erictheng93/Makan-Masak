@@ -172,7 +172,10 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="space-y-6" data-testid="management-policies-page">
+  <div
+    class="portal-page ui-page space-y-6"
+    data-testid="management-policies-page"
+  >
     <div>
       <h1 class="text-2xl font-bold text-gray-900">
         {{ t("policies.title") }}
@@ -258,7 +261,7 @@ onMounted(async () => {
           <label
             v-for="option in definition.ui.options"
             :key="option"
-            class="flex items-center gap-2 text-sm text-gray-700"
+            class="min-h-[44px] rounded-xl px-3 bg-gray-50 flex items-center gap-2 text-sm text-gray-700"
           >
             <input
               v-model="drafts[definition.key]"
@@ -269,7 +272,10 @@ onMounted(async () => {
             <code>{{ option }}</code>
           </label>
         </div>
-        <label v-else class="flex items-center gap-2 text-sm text-gray-700">
+        <label
+          v-else
+          class="min-h-[44px] rounded-xl px-3 bg-gray-50 flex items-center gap-2 text-sm text-gray-700"
+        >
           <input
             v-model="drafts[definition.key]"
             class="input w-32"

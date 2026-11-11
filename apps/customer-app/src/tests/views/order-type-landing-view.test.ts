@@ -83,6 +83,15 @@ describe("OrderTypeLandingView", () => {
     await vi.waitFor(() => {
       expect(wrapper.find('[data-testid="continue-btn"]').exists()).toBe(true);
     });
+    const choices = wrapper.findAll('input[type="radio"]');
+    expect(choices).toHaveLength(3);
+    expect(
+      choices.filter((choice) => (choice.element as HTMLInputElement).checked),
+    ).toHaveLength(1);
+    await choices[1].setValue(true);
+    expect((choices[1].element as HTMLInputElement).checked).toBe(true);
+    expect((choices[0].element as HTMLInputElement).checked).toBe(false);
+    await choices[0].setValue(true);
     await wrapper.get('[data-testid="continue-btn"]').trigger("click");
 
     expect(routerPush).toHaveBeenCalledWith({

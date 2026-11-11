@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-ios-bg py-12 px-4 sm:px-6 lg:px-8">
+  <div class="customer-shell min-h-screen bg-ios-bg py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full mx-auto space-y-8">
       <div class="text-center">
         <div
@@ -19,6 +19,7 @@
         <p
           v-if="!token"
           data-testid="missing-token"
+          role="alert"
           class="text-sm text-ios-red"
         >
           {{ t("auth.linkTokenMissing") }}
@@ -119,6 +120,12 @@
           </button>
         </form>
 
+        <router-link
+          v-if="!token"
+          to="/forgot-password"
+          class="mt-4 inline-flex min-h-11 items-center text-ios-blue"
+          >{{ t("auth.forgotPasswordTitle") }}</router-link
+        >
         <div class="mt-6 text-center">
           <router-link
             to="/login?mode=password"

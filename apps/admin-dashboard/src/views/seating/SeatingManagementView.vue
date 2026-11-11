@@ -1,12 +1,12 @@
 <template>
-  <div class="min-h-screen bg-ios-bg p-4 sm:p-6 space-y-6">
+  <div class="ui-page min-h-screen bg-ios-bg p-4 sm:p-6 space-y-6">
     <!-- Header -->
-    <div class="flex justify-between items-center">
+    <div class="ui-toolbar flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-ios-text">
+        <h1 class="ui-page-heading text-2xl font-bold text-ios-text">
           {{ t("seating.title") }}
         </h1>
-        <p class="text-sm text-ios-text/50 mt-1">
+        <p class="text-sm text-ios-text/70 mt-1">
           {{ t("seating.subtitle") }}
         </p>
       </div>
@@ -14,13 +14,15 @@
     </div>
 
     <!-- Stats Grid -->
-    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+    <div
+      class="admin-stat-strip grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4"
+    >
       <div
         v-for="stat in statCards"
         :key="stat.label"
-        class="bg-white rounded-2xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-transform hover:scale-[1.02]"
+        class="ui-panel bg-white rounded-2xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-transform"
       >
-        <div class="flex items-center gap-3">
+        <div class="shrink-0 whitespace-nowrap flex items-center gap-3">
           <div
             class="w-10 h-10 rounded-xl flex items-center justify-center"
             :class="stat.bgClass"
@@ -32,7 +34,7 @@
             />
           </div>
           <div class="min-w-0">
-            <p class="text-xs text-ios-text/50 truncate">{{ stat.label }}</p>
+            <p class="text-xs text-ios-text/70 truncate">{{ stat.label }}</p>
             <p class="text-xl font-bold" :class="stat.valueClass">
               {{ stat.value }}
             </p>
@@ -42,17 +44,21 @@
     </div>
 
     <!-- Tab Navigation -->
-    <div class="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-      <nav class="flex overflow-x-auto border-b border-ios-bg px-4 sm:px-6">
+    <div
+      class="ui-panel bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+    >
+      <nav
+        class="ui-tabs overflow-x-auto ui-table-scroll flex overflow-x-auto border-b border-ios-bg px-4 sm:px-6"
+      >
         <router-link
           v-for="tab in tabs"
           :key="tab.name"
           :to="tab.path"
-          class="flex items-center gap-2 px-4 py-3.5 text-sm font-medium border-b-2 transition-colors -mb-px"
+          class="shrink-0 whitespace-nowrap flex items-center gap-2 px-4 py-3.5 text-sm font-medium border-b-2 transition-colors -mb-px"
           :class="
             isActiveTab(tab.path)
               ? 'border-ios-blue text-ios-blue'
-              : 'border-transparent text-ios-text/40 hover:text-ios-text/70'
+              : 'border-transparent text-ios-text/70 hover:text-ios-text/70'
           "
           :data-active="isActiveTab(tab.path)"
         >
@@ -133,24 +139,24 @@ const statCards = computed(() => [
     value: reservationStats.value.totalReservations,
     icon: Calendar,
     bgClass: "bg-blue-50",
-    iconClass: "text-blue-600",
-    valueClass: "text-blue-600",
+    iconClass: "text-blue-700",
+    valueClass: "text-blue-700",
   },
   {
     label: t("seating.stats.confirmed"),
     value: reservationStats.value.confirmedCount,
     icon: CheckCircle,
     bgClass: "bg-green-50",
-    iconClass: "text-green-600",
-    valueClass: "text-green-600",
+    iconClass: "text-green-700",
+    valueClass: "text-green-700",
   },
   {
     label: t("seating.stats.currentlyWaiting"),
     value: queueStatus.value.totalWaiting,
     icon: Clock,
     bgClass: "bg-orange-50",
-    iconClass: "text-orange-600",
-    valueClass: "text-orange-600",
+    iconClass: "text-orange-700",
+    valueClass: "text-orange-700",
   },
   {
     label: t("seating.stats.avgWaitTime"),
@@ -160,16 +166,16 @@ const statCards = computed(() => [
         : "--",
     icon: Timer,
     bgClass: "bg-sky-50",
-    iconClass: "text-sky-600",
-    valueClass: "text-sky-600",
+    iconClass: "text-sky-700",
+    valueClass: "text-sky-700",
   },
   {
     label: t("seating.stats.availableTables"),
     value: queueStatus.value.availableTables,
     icon: UtensilsCrossed,
     bgClass: "bg-emerald-50",
-    iconClass: "text-emerald-600",
-    valueClass: "text-emerald-600",
+    iconClass: "text-emerald-700",
+    valueClass: "text-emerald-700",
   },
   {
     label: t("seating.stats.noShowRate"),
@@ -179,16 +185,16 @@ const statCards = computed(() => [
         : "--",
     icon: AlertCircle,
     bgClass: "bg-red-50",
-    iconClass: "text-red-600",
-    valueClass: "text-red-600",
+    iconClass: "text-red-700",
+    valueClass: "text-red-700",
   },
   {
     label: t("seating.stats.todayServed"),
     value: waitingStats.value.totalServedToday,
     icon: Users,
     bgClass: "bg-teal-50",
-    iconClass: "text-teal-600",
-    valueClass: "text-teal-600",
+    iconClass: "text-teal-700",
+    valueClass: "text-teal-700",
   },
 ]);
 

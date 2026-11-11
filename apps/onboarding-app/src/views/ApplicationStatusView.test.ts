@@ -165,3 +165,52 @@ describe("ApplicationStatusView", () => {
     expect(wrapper.text()).toContain("status.error.invalidLink");
   });
 });
+
+it.each([
+  ["pending", "clock"],
+  ["submitted", "clock"],
+  ["approved", "success"],
+  ["provisioning", "clock"],
+  ["completed", "success"],
+  ["rejected", "rejected"],
+])("uses a truthful icon for %s", async (status, icon) => {
+  mocks.route.hash = "#tracking-secret";
+  mocks.getApplication.mockResolvedValue(application(status));
+  const wrapper = mount(ApplicationStatusView);
+  await flushPromises();
+  expect(wrapper.get("[data-status-icon]").attributes("data-status-icon")).toBe(
+    icon,
+  );
+  expect(wrapper.get('[role="status"]').text()).toContain(
+    `status.labels.${status}`,
+  );
+});
+
+it("does not show a completion icon for an invalid status link", async () => {
+  mocks.route.hash = "";
+  const wrapper = mount(ApplicationStatusView);
+  await flushPromises();
+  expect(wrapper.get("[data-status-icon]").attributes("data-status-icon")).toBe(
+    "error",
+  );
+});
+
+it("shows a loading icon while the status request is pending", async () => {
+  mocks.route.hash = "#tracking-secret";
+  let finish!: (value: ReturnType<typeof application>) => void;
+  mocks.getApplication.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const wrapper = mount(ApplicationStatusView);
+  await wrapper.vm.$nextTick();
+  expect(wrapper.get("[data-status-icon]").attributes("data-status-icon")).toBe(
+    "loading",
+  );
+  expect(wrapper.get('[role="status"]').text()).toBe("status.loading");
+  finish(application("pending"));
+  await flushPromises();
+  wrapper.unmount();
+});

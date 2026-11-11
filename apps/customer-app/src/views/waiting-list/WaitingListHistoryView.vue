@@ -1,11 +1,12 @@
 <template>
-  <div class="min-h-screen bg-ios-bg text-ios-text">
+  <div class="customer-shell min-h-screen bg-ios-bg text-ios-text">
     <main class="max-w-md mx-auto px-4 py-8 space-y-5">
       <section class="bg-white rounded-2xl shadow-card p-6 animate-slide-up">
         <div class="flex items-center gap-3 mb-6">
           <button
-            class="w-10 h-10 rounded-full bg-ios-bg flex items-center justify-center text-ios-text active:scale-95 transition-transform duration-150"
+            class="w-11 h-11 rounded-full bg-ios-bg flex items-center justify-center text-ios-text active:scale-95 transition-transform duration-150"
             type="button"
+            :aria-label="t('common.back')"
             @click="router.back()"
           >
             <ArrowLeftIcon class="w-5 h-5" />
@@ -93,7 +94,7 @@
             <span class="text-ios-secondary">{{ formatDate(ticket) }}</span>
             <button
               v-if="!isTerminalWaitingStatus(ticket.status)"
-              class="font-semibold text-ios-blue"
+              class="inline-flex min-h-11 items-center px-3 font-semibold text-ios-blue"
               type="button"
               @click="openTicket(ticket.id)"
             >

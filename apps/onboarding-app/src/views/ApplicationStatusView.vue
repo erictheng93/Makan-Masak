@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
-import { ArrowPathIcon, CheckCircleIcon } from "@heroicons/vue/24/outline";
+import {
+  ArrowPathIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  XCircleIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/vue/24/outline";
 import {
   ApiError,
   onboardingApi,
@@ -19,6 +25,17 @@ const error = ref<string | null>(null);
 const linkBroken = ref(false);
 const isLoading = ref(false);
 
+const statusIcon = computed(() =>
+  isLoading.value
+    ? "loading"
+    : error.value
+      ? "error"
+      : ["approved", "completed"].includes(application.value?.status || "")
+        ? "success"
+        : application.value?.status === "rejected"
+          ? "rejected"
+          : "clock",
+);
 const applicationId = computed(() => String(route.params.applicationId || ""));
 const applicationSecret = computed(() =>
   getApplicationSecretFromHash(route.hash),
@@ -61,19 +78,51 @@ onMounted(refresh);
 </script>
 
 <template>
-  <div class="mx-auto max-w-2xl" data-testid="onboarding-application-status">
+  <div
+    class="onboarding-page ui-page mx-auto max-w-2xl"
+    data-testid="onboarding-application-status"
+  >
     <div class="card text-center">
       <div
-        class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary-100"
+        :data-status-icon="statusIcon"
+        class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full"
+        :class="
+          statusIcon === 'success'
+            ? 'bg-green-100'
+            : statusIcon === 'error' || statusIcon === 'rejected'
+              ? 'bg-red-100'
+              : 'bg-primary-100'
+        "
       >
-        <CheckCircleIcon class="h-10 w-10 text-primary-500" />
+        <component
+          :is="
+            statusIcon === 'loading'
+              ? ArrowPathIcon
+              : statusIcon === 'error'
+                ? ExclamationTriangleIcon
+                : statusIcon === 'success'
+                  ? CheckCircleIcon
+                  : statusIcon === 'rejected'
+                    ? XCircleIcon
+                    : ClockIcon
+          "
+          class="h-10 w-10"
+          :class="
+            statusIcon === 'success'
+              ? 'text-green-700'
+              : statusIcon === 'error' || statusIcon === 'rejected'
+                ? 'text-red-700'
+                : 'text-primary-700'
+          "
+          aria-hidden="true"
+        />
       </div>
       <h1 class="mb-2 text-2xl font-bold text-gray-900">
         {{ t("status.title") }}
       </h1>
       <p class="mb-8 text-gray-600">{{ t("status.subtitle") }}</p>
 
-      <div v-if="isLoading" class="py-8 text-sm text-gray-500">
+      <div v-if="isLoading" role="status" class="py-8 text-sm text-gray-500">
         {{ t("status.loading") }}
       </div>
 
@@ -94,7 +143,10 @@ onMounted(refresh);
       </div>
 
       <template v-else-if="application">
-        <dl class="mb-8 space-y-4 rounded-lg bg-gray-50 p-6 text-left text-sm">
+        <dl
+          role="status"
+          class="mb-8 space-y-4 rounded-lg bg-gray-50 p-6 text-left text-sm"
+        >
           <div class="flex justify-between gap-4">
             <dt class="text-gray-500">{{ t("status.businessName") }}</dt>
             <dd class="font-medium text-gray-900">

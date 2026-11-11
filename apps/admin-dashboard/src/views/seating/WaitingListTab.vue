@@ -1,9 +1,9 @@
 <template>
-  <div class="space-y-6">
+  <div class="ui-page space-y-6">
     <!-- Action Bar -->
-    <div class="flex items-center justify-end gap-3">
+    <div class="ui-toolbar flex items-center justify-end gap-3">
       <button
-        class="flex items-center px-4 py-2.5 rounded-full text-[13px] font-semibold bg-ios-orange text-white hover:bg-orange-600 transition-colors shadow-sm"
+        class="flex items-center px-4 py-2.5 rounded-full text-[13px] font-semibold bg-ios-orange-soft text-ios-orange-deep hover:bg-orange-100 transition-colors shadow-sm"
         :disabled="batchCalling"
         @click="batchCallNext"
       >
@@ -11,7 +11,7 @@
         {{ t("waitingList.callNext") }}
       </button>
       <button
-        class="flex items-center px-5 py-2.5 rounded-full text-[13px] font-semibold bg-ios-blue text-white hover:bg-blue-600 transition-colors shadow-sm"
+        class="flex items-center px-5 py-2.5 rounded-full text-[13px] font-semibold bg-primary-700 text-white hover:bg-primary-800 transition-colors shadow-sm"
         @click="showAddDialog = true"
       >
         <Plus class="w-4 h-4 mr-1.5" />
@@ -86,7 +86,7 @@
     <!-- Waiting Queue -->
     <div class="card">
       <div
-        class="px-6 py-4 border-b border-gray-200 flex items-center justify-between"
+        class="ui-toolbar px-6 py-4 border-b border-gray-200 flex items-center justify-between"
       >
         <h2 class="text-lg font-medium text-gray-900">
           {{ t("waitingList.queue") }}
@@ -161,7 +161,7 @@
                     : 'border-l-gray-300',
             ]"
           >
-            <div class="flex items-start justify-between mb-3">
+            <div class="ui-toolbar flex items-start justify-between mb-3">
               <div>
                 <div class="text-2xl font-bold text-gray-900">
                   {{ formatQueueNumber(entry) }}
@@ -244,7 +244,7 @@
       </div>
 
       <!-- Table View -->
-      <div v-else class="overflow-x-auto">
+      <div v-else class="ui-table-scroll overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
@@ -358,7 +358,7 @@
               >
                 <button
                   v-if="entry.status === 'waiting'"
-                  class="text-blue-600 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+                  class="text-blue-700 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   :title="t('waitingList.call')"
                   :aria-label="t('waitingList.call')"
                   @click="callCustomer(entry)"
@@ -369,7 +369,7 @@
                   v-if="
                     entry.status === 'called' || entry.status === 'confirmed'
                   "
-                  class="text-green-600 hover:text-green-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+                  class="text-green-700 hover:text-green-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   :title="t('waitingList.seat')"
                   :aria-label="t('waitingList.seat')"
                   @click="markSeated(entry.id)"
@@ -378,7 +378,7 @@
                 </button>
                 <button
                   v-if="entry.status === 'called'"
-                  class="text-red-600 hover:text-red-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+                  class="text-red-700 hover:text-red-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   :title="t('waitingList.expire')"
                   :aria-label="t('waitingList.expire')"
                   @click="markExpired(entry.id)"
@@ -402,7 +402,7 @@
         <!-- Pagination -->
         <div
           v-if="pagination.total > 0 && viewMode === 'table'"
-          class="px-6 py-4 flex items-center justify-between border-t border-gray-200"
+          class="ui-toolbar px-6 py-4 flex items-center justify-between border-t border-gray-200"
         >
           <div class="text-sm text-gray-700">
             {{
@@ -481,7 +481,7 @@
               leave-to="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
               <DialogPanel
-                class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg"
+                class="ui-panel relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg"
               >
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                   <DialogTitle
@@ -543,7 +543,7 @@
                       class="bg-blue-50 border border-blue-200 rounded-lg p-4"
                     >
                       <div class="flex items-start">
-                        <Info class="w-5 h-5 text-blue-600 mr-3 mt-0.5" />
+                        <Info class="w-5 h-5 text-blue-700 mr-3 mt-0.5" />
                         <div class="text-sm">
                           <p class="font-medium text-blue-900 mb-1">
                             {{
@@ -632,7 +632,7 @@
               leave-to="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
               <DialogPanel
-                class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg"
+                class="ui-panel relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg"
               >
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                   <DialogTitle

@@ -1,15 +1,16 @@
 <template>
-  <div class="min-h-screen bg-ios-bg">
+  <div class="customer-shell min-h-screen bg-ios-bg">
     <!-- 頂部固定導航 -->
     <nav class="sticky top-0 z-40 bg-white shadow-card-sm">
       <div
         class="max-w-lg md:max-w-3xl lg:max-w-6xl mx-auto px-4 md:px-6 lg:px-8"
       >
         <!-- 餐廳資訊區域 -->
-        <div class="px-5 py-3">
+        <div class="py-3">
           <div class="flex items-center justify-between">
             <button
-              class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-ios-text active:scale-95 transition-transform duration-150"
+              class="w-11 h-11 shrink-0 rounded-full bg-gray-100 flex items-center justify-center text-ios-text active:scale-95 transition-transform duration-150"
+              :aria-label="t('common.back')"
               @click="router.push('/')"
             >
               <svg
@@ -63,7 +64,8 @@
 
             <button
               data-testid="cart-btn"
-              class="relative w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-ios-text active:scale-95 transition-transform duration-150"
+              :aria-label="`${t('cart.title')} (${activeCartItemCount})`"
+              class="relative w-11 h-11 shrink-0 rounded-full bg-gray-100 flex items-center justify-center text-ios-text active:scale-95 transition-transform duration-150"
               @click="router.push(activeCartRoute)"
             >
               <svg
@@ -92,7 +94,7 @@
         </div>
 
         <!-- 分類導航 -->
-        <div v-if="visibleCategories.length > 0" class="px-4 py-3">
+        <div v-if="visibleCategories.length > 0" class="py-3">
           <div
             class="flex space-x-2 overflow-x-auto scrollbar-hide md:flex-wrap md:overflow-x-visible md:gap-2 md:space-x-0"
           >
@@ -105,6 +107,7 @@
                   ? 'bg-ios-blue text-white shadow-card-sm'
                   : 'bg-gray-100 text-ios-secondary active:bg-gray-200',
               ]"
+              :aria-pressed="activeCategoryId === category.id"
               @click="scrollToCategory(category.id)"
             >
               {{ getLocalizedMenuName(category, currentLanguage) }}
@@ -161,7 +164,7 @@
 
       <!-- 菜單內容 -->
       <div v-else-if="menuStructure" class="lg:flex lg:gap-6 lg:items-start">
-        <div class="flex-1 min-w-0 px-5 space-y-6">
+        <div class="flex-1 min-w-0 space-y-6 pt-6">
           <section
             data-testid="group-order-entry"
             class="rounded-2xl bg-ios-card p-4 shadow-card-sm"
@@ -306,8 +309,12 @@
           </section>
 
           <!-- 搜尋框 -->
+          <label for="menu-search" class="sr-only">{{
+            t("menu.searchPlaceholder")
+          }}</label>
           <div class="relative">
             <input
+              id="menu-search"
               v-model="searchQuery"
               type="text"
               :placeholder="t('menu.searchPlaceholder')"
@@ -340,7 +347,7 @@
             -->
             <div
               data-testid="featured-items"
-              class="flex gap-3 md:gap-4 overflow-x-auto snap-x snap-mandatory scroll-px-5 scrollbar-hide -mx-5 px-5 lg:grid lg:grid-cols-3 lg:overflow-visible lg:mx-0 lg:px-0"
+              class="flex gap-3 md:gap-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 scrollbar-hide -mx-4 px-4 lg:grid lg:grid-cols-3 lg:overflow-visible lg:mx-0 lg:px-0"
             >
               <MenuItemCard
                 v-for="(item, index) in featuredItems"
@@ -366,7 +373,7 @@
             class="scroll-mt-32"
           >
             <div
-              class="sticky bg-ios-bg py-3 z-10 -mx-5 px-5"
+              class="sticky bg-ios-bg py-3 z-10 -mx-4 px-4"
               :class="visibleCategories.length > 0 ? 'top-32' : 'top-16'"
             >
               <h2 class="text-xl font-semibold text-ios-text">

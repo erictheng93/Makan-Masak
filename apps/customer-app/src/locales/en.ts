@@ -1,4 +1,15 @@
 export const waitingListEn = {
+  pwa: {
+    installTitle: "Install MakanMasak",
+    installDescription:
+      "Open menus and follow your orders from your home screen.",
+    installAction: "Install App",
+  },
+  customerNavigation: {
+    vendors: "Vendors",
+    maps: "Maps",
+    flashlight: "Flashlight",
+  },
   customizationLimits: {
     decrease: "Decrease",
     increase: "Increase",

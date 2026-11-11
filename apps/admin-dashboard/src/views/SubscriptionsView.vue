@@ -1,9 +1,9 @@
 <template>
-  <div class="min-h-screen bg-ios-bg p-5 space-y-5">
+  <div class="ui-page min-h-screen bg-ios-bg p-5 space-y-5">
     <!-- Header -->
-    <div class="flex items-center justify-between">
+    <div class="ui-toolbar flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-ios-text">
+        <h1 class="ui-page-heading text-3xl font-bold text-ios-text">
           {{ t("subscriptions.title") }}
         </h1>
         <p class="text-sm text-ios-secondary mt-0.5">
@@ -11,7 +11,7 @@
         </p>
       </div>
       <button
-        class="flex items-center gap-2 px-5 py-2.5 rounded-full bg-ios-blue text-white text-sm font-semibold hover:bg-blue-600 transition-all duration-200 shadow-sm"
+        class="flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary-700 text-white text-sm font-semibold hover:bg-primary-800 transition-all duration-200 shadow-sm"
         @click="showCreateModal = true"
       >
         <Plus class="w-4 h-4" />
@@ -19,12 +19,12 @@
       </button>
     </div>
 
-    <div class="inline-flex rounded-full bg-white p-1 shadow-sm">
+    <div class="ui-panel inline-flex rounded-full bg-white p-1 shadow-sm">
       <button
         class="rounded-full px-4 py-2 text-sm font-semibold transition"
         :class="
           activeTab === 'subscriptions'
-            ? 'bg-ios-blue text-white'
+            ? 'bg-primary-700 text-white'
             : 'text-ios-text/85 hover:bg-ios-bg'
         "
         @click="activeTab = 'subscriptions'"
@@ -35,7 +35,7 @@
         class="rounded-full px-4 py-2 text-sm font-semibold transition"
         :class="
           activeTab === 'usage'
-            ? 'bg-ios-blue text-white'
+            ? 'bg-primary-700 text-white'
             : 'text-ios-text/85 hover:bg-ios-bg'
         "
         @click="activeTab = 'usage'"
@@ -56,12 +56,12 @@
     <!-- Error state -->
     <div
       v-else-if="errorMessage"
-      class="bg-white rounded-2xl p-8 shadow-sm text-center"
+      class="ui-panel bg-white rounded-2xl p-8 shadow-sm text-center"
     >
       <AlertCircle class="w-10 h-10 text-ios-red mx-auto mb-3" />
       <p class="text-ios-text font-medium">{{ errorMessage }}</p>
       <button
-        class="mt-4 px-5 py-2.5 rounded-full bg-ios-blue text-white text-sm font-semibold hover:bg-blue-600 transition-all"
+        class="mt-4 px-5 py-2.5 rounded-full bg-primary-700 text-white text-sm font-semibold hover:bg-primary-800 transition-all"
         @click="loadSubscriptions"
       >
         {{ t("common.retry") }}
@@ -71,7 +71,7 @@
     <!-- Empty state -->
     <div
       v-else-if="subscriptions.length === 0"
-      class="bg-white rounded-2xl p-12 shadow-sm text-center"
+      class="ui-panel bg-white rounded-2xl p-12 shadow-sm text-center"
     >
       <CreditCard class="w-12 h-12 text-ios-tertiary mx-auto mb-3" />
       <p class="text-ios-secondary text-sm">{{ t("subscriptions.empty") }}</p>
@@ -82,12 +82,12 @@
       <div
         v-for="sub in subscriptions"
         :key="sub.id"
-        class="bg-white rounded-2xl shadow-sm overflow-hidden transition-all duration-200"
+        class="ui-panel bg-white rounded-2xl shadow-sm overflow-hidden transition-all duration-200"
         :class="{ 'opacity-60': !sub.isActive }"
       >
         <!-- Card header -->
         <div class="p-5">
-          <div class="flex items-start justify-between gap-4">
+          <div class="ui-toolbar flex items-start justify-between gap-4">
             <!-- Left: restaurant info + plan badge -->
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2.5 flex-wrap">
@@ -124,6 +124,7 @@
               <!-- Plan change dropdown -->
               <div class="relative">
                 <select
+                  :aria-label="`${sub.restaurantId} / ${t('subscriptions.form.planTier')}`"
                   :value="sub.planTier"
                   class="appearance-none pl-3 pr-8 py-2 bg-ios-bg border-0 rounded-xl text-sm text-ios-text focus:ring-2 focus:ring-ios-blue/30 transition-all cursor-pointer"
                   :disabled="updatingPlan[sub.restaurantId]"
@@ -151,6 +152,7 @@
                     ? 'bg-ios-green/10 text-ios-green hover:bg-ios-green/20'
                     : 'bg-ios-red/10 text-ios-red hover:bg-ios-red/20'
                 "
+                :aria-label="`${sub.restaurantId} / ${sub.isActive ? t('subscriptions.active') : t('subscriptions.inactive')}`"
                 :disabled="updatingStatus[sub.restaurantId]"
                 @click="onToggleActive(sub)"
               >
@@ -215,7 +217,7 @@
             class="relative w-full sm:max-w-lg bg-ios-bg rounded-t-3xl sm:rounded-3xl p-5 space-y-4"
           >
             <!-- Modal header -->
-            <div class="flex items-center justify-between">
+            <div class="ui-toolbar flex items-center justify-between">
               <h2 class="text-base font-semibold text-ios-text">
                 {{ t("subscriptions.addSubscription") }}
               </h2>
@@ -229,7 +231,7 @@
             </div>
 
             <!-- Form -->
-            <div class="bg-white rounded-2xl p-4 shadow-sm space-y-4">
+            <div class="ui-panel bg-white rounded-2xl p-4 shadow-sm space-y-4">
               <!-- Restaurant ID -->
               <div>
                 <label
@@ -300,7 +302,7 @@
                 {{ t("common.cancel") }}
               </button>
               <button
-                class="flex-1 py-3 rounded-full bg-ios-blue text-white text-sm font-semibold hover:bg-blue-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                class="flex-1 py-3 rounded-full bg-primary-700 text-white text-sm font-semibold hover:bg-primary-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 :disabled="isCreating"
                 @click="onCreateSubscription"
               >

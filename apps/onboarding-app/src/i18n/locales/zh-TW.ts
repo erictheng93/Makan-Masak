@@ -175,6 +175,7 @@ const zhTW = {
     subtitleLine1: "我們已收到您的店家加入申請。",
     subtitleLine2: "平台團隊審核通過後，會啟用您的帳號與系統資源。",
     summary: {
+      copyApplicationId: "複製申請編號",
       title: "申請摘要",
       applicationId: "申請編號",
       tenantId: "租戶編號",

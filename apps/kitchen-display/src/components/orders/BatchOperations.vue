@@ -3,13 +3,13 @@
   <Transition name="slide-up">
     <div
       v-if="selectedOrdersCount > 0"
-      class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl rounded-t-2xl shadow-card-lg px-5 py-3 z-40"
+      class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl rounded-t-2xl shadow-card-lg px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-40"
     >
-      <div class="flex items-center justify-between gap-3">
+      <div class="flex flex-wrap items-center justify-between gap-3">
         <!-- Left: Selection Count -->
         <div class="flex items-center gap-2 shrink-0">
           <span
-            class="bg-ios-blue text-white rounded-full min-w-6 h-6 px-2 text-xs font-bold inline-flex items-center justify-center"
+            class="bg-blue-700 text-white rounded-full min-w-6 h-6 px-2 text-xs font-bold inline-flex items-center justify-center"
           >
             {{ selectedOrdersCount }}
           </span>
@@ -35,7 +35,7 @@
           <button
             v-if="canBatchStartCooking(selectedOrders)"
             :disabled="isProcessing"
-            class="bg-ios-blue text-white rounded-full px-4 py-2.5 text-sm font-bold min-h-[44px] disabled:opacity-50 active:scale-95 transition-transform"
+            class="bg-blue-700 text-white rounded-full px-4 py-2.5 text-sm font-bold min-h-[44px] disabled:opacity-50 active:scale-95 transition-transform"
             @click="confirmBatchStart"
           >
             {{ t("batch.startAll") }}
@@ -45,7 +45,7 @@
           <button
             v-if="canBatchMarkReady(selectedOrders)"
             :disabled="isProcessing"
-            class="bg-ios-green text-white rounded-full px-4 py-2.5 text-sm font-bold min-h-[44px] disabled:opacity-50 active:scale-95 transition-transform"
+            class="bg-green-700 text-white rounded-full px-4 py-2.5 text-sm font-bold min-h-[44px] disabled:opacity-50 active:scale-95 transition-transform"
             @click="confirmBatchReady"
           >
             {{ t("batch.completeAll") }}
@@ -55,7 +55,7 @@
           <div ref="priorityMenuRef" class="relative">
             <button
               :disabled="isProcessing"
-              class="bg-ios-orange text-white rounded-full px-4 py-2.5 text-sm font-bold min-h-[44px] flex items-center gap-1.5 disabled:opacity-50 active:scale-95 transition-transform"
+              class="bg-orange-700 text-white rounded-full px-4 py-2.5 text-sm font-bold min-h-[44px] flex items-center gap-1.5 disabled:opacity-50 active:scale-95 transition-transform"
               @click="showPriorityMenu = !showPriorityMenu"
             >
               <AlertTriangle class="w-4 h-4" />
@@ -105,13 +105,13 @@
 
   <!-- Confirmation Modal -->
   <Transition name="fade">
-    <div
-      v-if="showConfirmation"
+    <Dialog
+      :open="showConfirmation"
       class="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"
-      @click="cancelConfirmation"
+      @close="cancelConfirmation"
     >
-      <div
-        class="bg-white rounded-2xl shadow-card-lg max-w-sm w-full mx-4 p-6"
+      <DialogPanel
+        class="bg-white rounded-3xl shadow-card-lg max-w-sm w-full mx-4 p-6"
         @click.stop
       >
         <div class="text-center mb-5">
@@ -120,9 +120,12 @@
           >
             <AlertTriangle class="w-6 h-6 text-ios-blue" />
           </div>
-          <h3 class="text-lg font-extrabold text-ios-text mb-2">
+          <DialogTitle
+            as="h3"
+            class="text-lg font-extrabold text-ios-text mb-2"
+          >
             {{ t("batch.confirmTitle") }}
-          </h3>
+          </DialogTitle>
           <p class="text-sm text-ios-secondary">{{ confirmationMessage }}</p>
         </div>
 
@@ -134,18 +137,19 @@
             {{ t("common.cancel") }}
           </button>
           <button
-            class="flex-1 px-4 py-2.5 bg-ios-blue text-white rounded-full text-sm font-bold min-h-[44px] active:scale-95 transition-transform"
+            class="flex-1 px-4 py-2.5 bg-blue-700 text-white rounded-full text-sm font-bold min-h-[44px] active:scale-95 transition-transform"
             @click="executeBatchOperation"
           >
             {{ t("batch.confirmExecute") }}
           </button>
         </div>
-      </div>
-    </div>
+      </DialogPanel>
+    </Dialog>
   </Transition>
 </template>
 
 <script setup lang="ts">
+import { Dialog, DialogPanel, DialogTitle } from "@headlessui/vue";
 import { ref, computed } from "vue";
 import { onClickOutside } from "@vueuse/core";
 import { Loader2Icon, AlertTriangle, ChevronDownIcon } from "lucide-vue-next";

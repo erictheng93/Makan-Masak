@@ -404,6 +404,7 @@ const msMY: Messages = {
     uptime: "Masa aktif",
   },
   history: {
+    loadFailed: "Tidak dapat memuatkan pesanan. Sila cuba lagi.",
     avgPrepTime: "Purata Persediaan (min)",
     noRecords: "Tiada Rekod Pesanan",
     noRecordsHint: "Tiada pesanan lengkap dalam julat masa yang dipilih",

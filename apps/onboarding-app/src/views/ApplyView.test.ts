@@ -463,3 +463,17 @@ describe("ApplyView locale and market selection", () => {
     );
   });
 });
+
+it("names both real steps and puts the address before coordinates", () => {
+  const wrapper = mount(ApplyView);
+  expect(wrapper.get('[aria-current="step"]').text()).toContain("apply.title");
+  const controls = wrapper
+    .findAll("input, select")
+    .map((input) => input.attributes("data-testid"));
+  expect(controls.indexOf("onboarding-address")).toBeLessThan(
+    controls.indexOf("onboarding-latitude"),
+  );
+  expect(controls.indexOf("onboarding-country")).toBeLessThan(
+    controls.indexOf("onboarding-latitude"),
+  );
+});

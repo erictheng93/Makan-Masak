@@ -1,4 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  mount,
+  flushPromises,
+  DOMWrapper,
+  enableAutoUnmount,
+} from "@vue/test-utils";
+import BatchOperations from "@/components/orders/BatchOperations.vue";
 import { createPinia, setActivePinia } from "pinia";
 import { useOrderManagementStore } from "./orderManagement";
 import { useOrdersStore } from "./orders";
@@ -377,4 +384,32 @@ describe("useOrderManagementStore", () => {
       "batch failed",
     );
   });
+});
+
+enableAutoUnmount(afterEach);
+it("keeps batch confirmation named and dismissible without executing an order action", async () => {
+  const pending = order();
+  useOrderManagementStore().selectOrder(pending.id);
+  const wrapper = mount(BatchOperations, {
+    props: {
+      orders: [pending],
+      pendingOrders: [pending],
+      preparingOrders: [],
+      readyOrders: [],
+    },
+    attachTo: document.body,
+  });
+  await wrapper
+    .findAll("button")
+    .find((button) => button.text() === "全部開始製作")!
+    .trigger("click");
+  await flushPromises();
+  const body = new DOMWrapper(document.body);
+  const dialog = body.get('[role="dialog"]');
+  expect(dialog.attributes("aria-modal")).toBe("true");
+  expect(dialog.attributes("aria-labelledby")).toBeTruthy();
+  await dialog.trigger("keydown", { key: "Escape" });
+  await flushPromises();
+  expect(body.find('[role="dialog"]').exists()).toBe(false);
+  expect(wrapper.emitted("batch-start-cooking")).toBeUndefined();
 });

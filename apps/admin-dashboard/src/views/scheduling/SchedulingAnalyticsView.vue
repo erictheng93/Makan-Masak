@@ -1,9 +1,9 @@
 <template>
-  <div class="scheduling-analytics-view">
+  <div class="ui-page scheduling-analytics-view">
     <!-- 頁面標題 -->
     <div class="page-header">
       <div class="header-content">
-        <h1 class="page-title">
+        <h1 class="ui-page-heading page-title">
           <span class="title-icon">📊</span>
           {{ t("schedulingAnalytics.title") }}
         </h1>
@@ -345,7 +345,7 @@ onMounted(() => {
   background: white;
   padding: 24px;
   border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .header-content {
@@ -429,14 +429,8 @@ onMounted(() => {
   gap: 16px;
   background: white;
   padding: 20px;
-  border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s;
-}
-
-.stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .stat-icon {
@@ -521,7 +515,7 @@ onMounted(() => {
   background: white;
   border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .panel-title {

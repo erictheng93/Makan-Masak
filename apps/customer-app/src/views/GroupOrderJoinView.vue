@@ -130,7 +130,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="min-h-screen bg-ios-bg px-4 py-8">
+  <main class="customer-shell min-h-screen bg-ios-bg px-4 py-8">
     <section class="mx-auto w-full max-w-md">
       <div v-if="isLoading" class="py-16 text-center text-ios-secondary">
         {{ t("groupJoin.loading") }}
@@ -147,6 +147,13 @@ onMounted(() => {
         <p class="mt-2 text-sm text-ios-secondary">
           {{ t("groupJoin.notFoundDesc") }}
         </p>
+        <button
+          type="button"
+          class="mt-4 rounded-full bg-ios-blue px-5 py-3 text-white"
+          @click="router.push('/')"
+        >
+          {{ t("common.home") }}
+        </button>
       </div>
 
       <div

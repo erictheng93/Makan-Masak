@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-ios-bg py-12 px-4 sm:px-6 lg:px-8">
+  <div class="customer-shell min-h-screen bg-ios-bg py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full mx-auto space-y-8">
       <!-- Logo 和標題 -->
       <div class="text-center">
@@ -51,6 +51,8 @@
               <input
                 id="phone"
                 v-model="form.phone"
+                :aria-invalid="!!errors.phone"
+                :aria-describedby="errors.phone ? 'phone-error' : undefined"
                 type="tel"
                 required
                 autocomplete="tel"
@@ -58,7 +60,12 @@
                 class="w-full px-4 py-3 bg-ios-bg rounded-2xl text-ios-text placeholder:text-ios-tertiary focus:ring-2 focus:ring-ios-blue focus:bg-white transition"
                 placeholder="0912 345 678"
               />
-              <p v-if="errors.phone" class="mt-2 text-sm text-ios-red">
+              <p
+                v-if="errors.phone"
+                id="phone-error"
+                role="alert"
+                class="mt-2 text-sm text-ios-red"
+              >
                 {{ errors.phone }}
               </p>
             </div>
@@ -73,6 +80,8 @@
               <input
                 id="otp"
                 v-model="form.otp"
+                :aria-invalid="!!errors.otp"
+                :aria-describedby="errors.otp ? 'otp-error' : undefined"
                 type="text"
                 inputmode="numeric"
                 maxlength="6"
@@ -82,7 +91,12 @@
                 class="w-full px-4 py-3 bg-ios-bg rounded-2xl text-ios-text placeholder:text-ios-tertiary focus:ring-2 focus:ring-ios-blue focus:bg-white transition"
                 placeholder="123456"
               />
-              <p v-if="errors.otp" class="mt-2 text-sm text-ios-red">
+              <p
+                v-if="errors.otp"
+                id="otp-error"
+                role="alert"
+                class="mt-2 text-sm text-ios-red"
+              >
                 {{ errors.otp }}
               </p>
               <p
@@ -112,6 +126,10 @@
               <input
                 id="identifier"
                 v-model="form.identifier"
+                :aria-invalid="!!errors.identifier"
+                :aria-describedby="
+                  errors.identifier ? 'identifier-error' : undefined
+                "
                 type="text"
                 required
                 autocomplete="username"
@@ -119,7 +137,12 @@
                 class="w-full px-4 py-3 bg-ios-bg rounded-2xl text-ios-text placeholder:text-ios-tertiary focus:ring-2 focus:ring-ios-blue focus:bg-white transition"
                 :placeholder="t('auth.identifierPlaceholder')"
               />
-              <p v-if="errors.identifier" class="mt-2 text-sm text-ios-red">
+              <p
+                v-if="errors.identifier"
+                id="identifier-error"
+                role="alert"
+                class="mt-2 text-sm text-ios-red"
+              >
                 {{ errors.identifier }}
               </p>
             </div>
@@ -134,6 +157,10 @@
               <input
                 id="password"
                 v-model="form.password"
+                :aria-invalid="!!errors.password"
+                :aria-describedby="
+                  errors.password ? 'password-error' : undefined
+                "
                 type="password"
                 required
                 autocomplete="current-password"
@@ -141,7 +168,12 @@
                 class="w-full px-4 py-3 bg-ios-bg rounded-2xl text-ios-text placeholder:text-ios-tertiary focus:ring-2 focus:ring-ios-blue focus:bg-white transition"
                 :placeholder="t('auth.passwordPlaceholder')"
               />
-              <p v-if="errors.password" class="mt-2 text-sm text-ios-red">
+              <p
+                v-if="errors.password"
+                id="password-error"
+                role="alert"
+                class="mt-2 text-sm text-ios-red"
+              >
                 {{ errors.password }}
               </p>
             </div>
@@ -151,6 +183,7 @@
           <div
             v-if="error"
             data-testid="auth-error"
+            role="alert"
             class="bg-ios-red/10 rounded-2xl px-4 py-3"
           >
             <p class="text-sm text-ios-red">{{ error }}</p>
@@ -213,7 +246,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, defineAsyncComponent } from "vue";
+import {
+  ref,
+  reactive,
+  computed,
+  onMounted,
+  defineAsyncComponent,
+  nextTick,
+} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "vue-toastification";
@@ -372,7 +412,14 @@ const handleSubmit = async () => {
 
   const valid =
     mode.value === "otp" ? validateOtpForm() : validatePasswordForm();
-  if (!valid) return;
+  if (!valid) {
+    await nextTick();
+    const firstInvalid = Object.keys(errors).find(
+      (key) => errors[key as keyof typeof errors],
+    );
+    document.getElementById(firstInvalid ?? "")?.focus();
+    return;
+  }
 
   isLoading.value = true;
 

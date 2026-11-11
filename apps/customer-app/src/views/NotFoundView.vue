@@ -1,15 +1,17 @@
 <template>
-  <div class="min-h-screen bg-ios-bg flex items-center justify-center px-5">
+  <div
+    class="customer-shell min-h-screen bg-ios-bg flex items-center justify-center px-5"
+  >
     <div
       class="w-full max-w-md bg-ios-card rounded-3xl shadow-[0_4px_16px_rgb(0,0,0,0.06)] p-8 text-center"
     >
       <div class="mb-6">
-        <div class="text-7xl font-bold text-ios-tertiary mb-3">404</div>
+        <div class="text-2xl font-semibold text-ios-tertiary mb-3">404</div>
         <div
-          class="w-16 h-16 mx-auto rounded-full bg-ios-bg flex items-center justify-center"
+          class="w-12 h-12 mx-auto rounded-full bg-ios-bg flex items-center justify-center"
         >
           <svg
-            class="w-8 h-8 text-ios-secondary"
+            class="w-6 h-6 text-ios-secondary"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

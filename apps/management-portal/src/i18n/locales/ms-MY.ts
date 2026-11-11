@@ -198,6 +198,7 @@ const msMY: Messages = {
     toast: { saved: "Dasar disimpan", cleared: "Dasar dikosongkan" },
   },
   notFound: {
+    backPrevious: "Kembali ke halaman sebelumnya",
     backHome: "Kembali ke Rumah",
     description:
       "Halaman yang anda lawati mungkin telah dialih keluar atau tidak tersedia buat sementara waktu",

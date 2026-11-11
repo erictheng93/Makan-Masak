@@ -1,9 +1,9 @@
 <template>
-  <div class="space-y-6">
+  <div class="ui-page space-y-6">
     <!-- Schedule Summary Stats -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="admin-stat-strip grid grid-cols-2 sm:grid-cols-4 gap-4">
       <div class="bg-ios-bg rounded-2xl p-4">
-        <p class="text-xs text-ios-text/40">
+        <p class="text-xs text-ios-text/70">
           {{ t("employees.schedule.totalHours") }}
         </p>
         <p class="text-xl font-bold text-ios-text">
@@ -11,24 +11,24 @@
         </p>
       </div>
       <div class="bg-ios-bg rounded-2xl p-4">
-        <p class="text-xs text-ios-text/40">
+        <p class="text-xs text-ios-text/70">
           {{ t("employees.schedule.overtime") }}
         </p>
-        <p class="text-xl font-bold text-amber-600">
+        <p class="text-xl font-bold text-amber-700">
           {{ overtimeHours.toFixed(1) }}h
         </p>
       </div>
       <div class="bg-ios-bg rounded-2xl p-4">
-        <p class="text-xs text-ios-text/40">
+        <p class="text-xs text-ios-text/70">
           {{ t("employees.schedule.completed") }}
         </p>
-        <p class="text-xl font-bold text-emerald-600">{{ completedCount }}</p>
+        <p class="text-xl font-bold text-emerald-700">{{ completedCount }}</p>
       </div>
       <div class="bg-ios-bg rounded-2xl p-4">
-        <p class="text-xs text-ios-text/40">
+        <p class="text-xs text-ios-text/70">
           {{ t("employees.schedule.upcoming") }}
         </p>
-        <p class="text-xl font-bold text-blue-600">{{ upcomingCount }}</p>
+        <p class="text-xl font-bold text-blue-700">{{ upcomingCount }}</p>
       </div>
     </div>
 
@@ -52,7 +52,7 @@
         class="text-center py-12"
       >
         <Calendar class="mx-auto w-8 h-8 text-ios-text/15 mb-2" />
-        <p class="text-xs text-ios-text/30">
+        <p class="text-xs text-ios-text/70">
           {{ t("employees.schedule.noShifts") }}
         </p>
       </div>
@@ -65,13 +65,13 @@
         >
           <!-- Date -->
           <div class="flex flex-col items-center w-14 flex-shrink-0">
-            <span class="text-xs text-ios-text/40">{{
+            <span class="text-xs text-ios-text/70">{{
               getWeekday(schedule.workDate)
             }}</span>
             <span class="text-lg font-bold text-ios-text">{{
               getDay(schedule.workDate)
             }}</span>
-            <span class="text-[10px] text-ios-text/30">{{
+            <span class="text-[10px] text-ios-text/70">{{
               getMonth(schedule.workDate)
             }}</span>
           </div>
@@ -82,7 +82,7 @@
           <!-- Details -->
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2">
-              <Clock class="w-3.5 h-3.5 text-ios-text/40" />
+              <Clock class="w-3.5 h-3.5 text-ios-text/70" />
               <span class="text-sm font-medium text-ios-text">
                 {{ schedule.startTime || "?" }} - {{ schedule.endTime || "?" }}
               </span>
@@ -91,11 +91,14 @@
               v-if="schedule.actualHours"
               class="flex items-center gap-2 mt-1"
             >
-              <Timer class="w-3.5 h-3.5 text-ios-text/30" />
-              <span class="text-xs text-ios-text/40">
+              <Timer class="w-3.5 h-3.5 text-ios-text/70" />
+              <span class="text-xs text-ios-text/70">
                 {{ t("employees.schedule.worked") }}
                 {{ schedule.actualHours.toFixed(1) }}h
-                <span v-if="schedule.overtimeHours" class="text-amber-600">
+                <span
+                  v-if="schedule.overtimeHours"
+                  class="rounded-full bg-ios-orange-soft px-2 py-1 text-ios-orange-deep"
+                >
                   (+{{ schedule.overtimeHours.toFixed(1) }}h OT)
                 </span>
               </span>

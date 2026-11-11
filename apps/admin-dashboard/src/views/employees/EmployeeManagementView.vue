@@ -1,17 +1,17 @@
 <template>
-  <div class="min-h-screen bg-ios-bg p-6 space-y-6">
+  <div class="ui-page min-h-screen bg-ios-bg p-6 space-y-6">
     <!-- Header -->
-    <div class="flex justify-between items-center">
+    <div class="ui-toolbar flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-ios-text">
+        <h1 class="ui-page-heading text-2xl font-bold text-ios-text">
           {{ t("employees.title") }}
         </h1>
-        <p class="text-sm text-ios-text/50 mt-1">
+        <p class="text-sm text-ios-text/70 mt-1">
           {{ t("employees.subtitle") }}
         </p>
       </div>
       <button
-        class="flex items-center px-5 py-2.5 rounded-full text-[13px] font-semibold bg-ios-blue text-white hover:bg-blue-600 transition-colors shadow-sm"
+        class="shrink-0 whitespace-nowrap flex items-center px-5 py-2.5 rounded-full text-[13px] font-semibold bg-primary-700 text-white hover:bg-primary-800 transition-colors shadow-sm"
         @click="showModal = true"
       >
         <Plus class="w-4 h-4 mr-1.5" />
@@ -21,15 +21,15 @@
 
     <!-- Stats Grid -->
     <div
-      class="-mx-6 flex snap-x gap-3 overflow-x-auto px-6 pb-1 lg:mx-0 lg:grid lg:grid-cols-7 lg:gap-4 lg:overflow-visible lg:px-0"
+      class="ui-table-scroll -mx-6 flex snap-x gap-3 overflow-x-auto px-6 pb-1 lg:mx-0 lg:grid lg:grid-cols-7 lg:gap-4 lg:overflow-visible lg:px-0"
       data-testid="employee-stats"
     >
       <div
         v-for="stat in statCards"
         :key="stat.label"
-        class="w-36 shrink-0 snap-start bg-white rounded-2xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-transform hover:scale-[1.02] lg:w-auto"
+        class="ui-panel w-36 shrink-0 snap-start bg-white rounded-2xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-transform lg:w-auto"
       >
-        <div class="flex items-center gap-3">
+        <div class="shrink-0 whitespace-nowrap flex items-center gap-3">
           <div
             class="w-10 h-10 rounded-xl flex items-center justify-center"
             :class="stat.bgClass"
@@ -41,7 +41,7 @@
             />
           </div>
           <div class="min-w-0">
-            <p class="text-xs text-ios-text/50 truncate">{{ stat.label }}</p>
+            <p class="text-xs text-ios-text/70 truncate">{{ stat.label }}</p>
             <p class="text-xl font-bold" :class="stat.valueClass">
               {{ stat.value }}
             </p>
@@ -51,9 +51,11 @@
     </div>
 
     <!-- Tab Navigation -->
-    <div class="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+    <div
+      class="ui-panel bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+    >
       <nav
-        class="flex overflow-x-auto border-b border-ios-bg px-3 sm:px-6"
+        class="ui-table-scroll flex overflow-x-auto border-b border-ios-bg px-3 sm:px-6"
         data-testid="employee-tabs"
       >
         <router-link
@@ -64,7 +66,7 @@
           :class="
             isActiveTab(tab.path)
               ? 'border-ios-blue text-ios-blue'
-              : 'border-transparent text-ios-text/40 hover:text-ios-text/70'
+              : 'border-transparent text-ios-text/70 hover:text-ios-text/70'
           "
           :data-active="isActiveTab(tab.path)"
         >
@@ -167,39 +169,39 @@ const statCards = computed(() => [
     value: employeeList.stats.value.owner,
     icon: Crown,
     bgClass: "bg-teal-50",
-    iconClass: "text-teal-600",
-    valueClass: "text-teal-600",
+    iconClass: "text-teal-700",
+    valueClass: "text-teal-700",
   },
   {
     label: t("users.stats.chef"),
     value: employeeList.stats.value.chef,
     icon: ChefHat,
     bgClass: "bg-orange-50",
-    iconClass: "text-orange-600",
-    valueClass: "text-orange-600",
+    iconClass: "text-orange-700",
+    valueClass: "text-orange-700",
   },
   {
     label: t("users.stats.service"),
     value: employeeList.stats.value.service,
     icon: Truck,
     bgClass: "bg-green-50",
-    iconClass: "text-green-600",
-    valueClass: "text-green-600",
+    iconClass: "text-green-700",
+    valueClass: "text-green-700",
   },
   {
     label: t("users.stats.cashier"),
     value: employeeList.stats.value.cashier,
     icon: CreditCard,
     bgClass: "bg-blue-50",
-    iconClass: "text-blue-600",
-    valueClass: "text-blue-600",
+    iconClass: "text-blue-700",
+    valueClass: "text-blue-700",
   },
   {
     label: t("users.stats.total"),
     value: employeeList.stats.value.total,
     icon: Users,
     bgClass: "bg-gray-100",
-    iconClass: "text-ios-text/60",
+    iconClass: "text-ios-text/70",
     valueClass: "text-ios-text",
   },
   {
@@ -207,16 +209,16 @@ const statCards = computed(() => [
     value: employeeList.stats.value.currentlyWorking,
     icon: Clock,
     bgClass: "bg-emerald-50",
-    iconClass: "text-emerald-600",
-    valueClass: "text-emerald-600",
+    iconClass: "text-emerald-700",
+    valueClass: "text-emerald-700",
   },
   {
     label: t("employees.stats.onLeaveToday"),
     value: employeeList.stats.value.onLeaveToday,
     icon: CalendarOff,
     bgClass: "bg-amber-50",
-    iconClass: "text-amber-600",
-    valueClass: "text-amber-600",
+    iconClass: "text-amber-700",
+    valueClass: "text-amber-700",
   },
 ]);
 

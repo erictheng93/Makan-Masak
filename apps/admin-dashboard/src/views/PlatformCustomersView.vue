@@ -1,8 +1,8 @@
 <template>
   <main class="min-h-full space-y-6 bg-ios-bg p-5">
-    <header class="flex flex-wrap items-end justify-between gap-4">
+    <header class="ui-toolbar flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-semibold text-ios-text">
+        <h1 class="ui-page-heading text-2xl font-semibold text-ios-text">
           {{ t("pages.platformCustomers") }}
         </h1>
         <p class="mt-1 text-sm text-ios-secondary">
@@ -12,11 +12,11 @@
     </header>
 
     <!-- 篩選 -->
-    <section class="rounded-2xl bg-white p-5 shadow-ios-card">
+    <section class="ui-panel rounded-2xl bg-white p-5 shadow-ios-card">
       <h2 class="mb-4 text-base font-semibold text-ios-text">
         {{ t("platformCustomers.filters.title") }}
       </h2>
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <div class="ui-page grid grid-cols-1 gap-4 md:grid-cols-4">
         <div class="md:col-span-2">
           <label
             class="mb-2 block text-xs font-medium text-ios-secondary"
@@ -98,8 +98,10 @@
     </section>
 
     <!-- 顧客列表 -->
-    <section class="overflow-hidden rounded-2xl bg-white shadow-ios-card">
-      <div class="overflow-x-auto">
+    <section
+      class="ui-panel overflow-hidden rounded-2xl bg-white shadow-ios-card"
+    >
+      <div class="ui-table-scroll overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-100">
           <thead>
             <tr
@@ -231,9 +233,9 @@
 
       <footer
         v-if="pagination.pages > 1"
-        class="flex items-center justify-between border-t border-gray-100 px-6 py-4"
+        class="ui-toolbar flex items-center justify-between border-t border-gray-100 px-6 py-4"
       >
-        <div class="flex flex-1 justify-between sm:hidden">
+        <div class="ui-toolbar flex flex-1 justify-between sm:hidden">
           <button
             type="button"
             :disabled="page === 1"
@@ -252,7 +254,7 @@
           </button>
         </div>
         <div
-          class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between"
+          class="ui-toolbar hidden sm:flex sm:flex-1 sm:items-center sm:justify-between"
         >
           <p
             class="text-sm text-ios-secondary"
@@ -273,7 +275,7 @@
             <button
               type="button"
               :disabled="page === 1"
-              class="flex h-8 w-8 items-center justify-center rounded-full bg-ios-bg text-ios-text disabled:opacity-40"
+              class="flex h-11 w-11 items-center justify-center rounded-full bg-ios-bg text-ios-text disabled:opacity-40"
               :aria-label="t('platformCustomers.pagination.previous')"
               @click="changePage(page - 1)"
             >
@@ -282,11 +284,12 @@
             <button
               v-for="visiblePage in visiblePages"
               :key="visiblePage"
+              :aria-current="visiblePage === page ? 'page' : undefined"
               type="button"
-              class="min-w-8 rounded-full px-3 py-1.5 text-sm font-medium transition-colors duration-200"
+              class="min-w-11 rounded-full px-3 py-1.5 text-sm font-medium transition-colors duration-200"
               :class="
                 visiblePage === page
-                  ? 'bg-ios-blue text-white'
+                  ? 'bg-primary-700 text-white'
                   : 'bg-ios-bg text-ios-text hover:bg-gray-200'
               "
               @click="changePage(visiblePage)"
@@ -296,7 +299,7 @@
             <button
               type="button"
               :disabled="page >= pagination.pages"
-              class="flex h-8 w-8 items-center justify-center rounded-full bg-ios-bg text-ios-text disabled:opacity-40"
+              class="flex h-11 w-11 items-center justify-center rounded-full bg-ios-bg text-ios-text disabled:opacity-40"
               :aria-label="t('platformCustomers.pagination.next')"
               @click="changePage(page + 1)"
             >
@@ -322,14 +325,14 @@
             data-testid="platform-customer-detail-panel"
             class="relative max-h-[90vh] w-full space-y-4 overflow-y-auto rounded-t-3xl bg-ios-bg p-5 sm:max-w-2xl sm:rounded-3xl"
           >
-            <div class="flex items-center justify-between">
+            <div class="ui-toolbar flex items-center justify-between">
               <h2 class="text-base font-semibold text-ios-text">
                 {{ t("platformCustomers.detail.title") }}
               </h2>
               <button
                 type="button"
                 data-testid="platform-customer-detail-close"
-                class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-ios-text/85 transition-colors duration-200 hover:bg-gray-300"
+                class="flex h-11 w-11 items-center justify-center rounded-full bg-gray-200 text-ios-text/85 transition-colors duration-200 hover:bg-gray-300"
                 :aria-label="t('platformCustomers.detail.close')"
                 @click="closeDetail"
               >
@@ -338,7 +341,7 @@
             </div>
 
             <!-- 身分與聯絡方式 -->
-            <article class="rounded-2xl bg-white p-4 shadow-ios-card">
+            <article class="ui-panel rounded-2xl bg-white p-4 shadow-ios-card">
               <h3 class="text-sm font-semibold text-ios-text">
                 {{ t("platformCustomers.detail.identity") }}
               </h3>
@@ -360,7 +363,7 @@
               </div>
 
               <dl class="mt-4 space-y-2 text-sm">
-                <div class="flex items-center justify-between gap-3">
+                <div class="ui-toolbar flex items-center justify-between gap-3">
                   <dt class="text-ios-secondary">
                     {{ t("platformCustomers.reveal.phone") }}
                   </dt>
@@ -375,7 +378,7 @@
                     }}
                   </dd>
                 </div>
-                <div class="flex items-center justify-between gap-3">
+                <div class="ui-toolbar flex items-center justify-between gap-3">
                   <dt class="text-ios-secondary">
                     {{ t("platformCustomers.reveal.email") }}
                   </dt>
@@ -438,7 +441,7 @@
             </article>
 
             <!-- 各店消費 -->
-            <article class="rounded-2xl bg-white p-4 shadow-ios-card">
+            <article class="ui-panel rounded-2xl bg-white p-4 shadow-ios-card">
               <h3 class="text-sm font-semibold text-ios-text">
                 {{ t("platformCustomers.detail.perRestaurant") }}
               </h3>
@@ -470,7 +473,7 @@
                   v-for="slice in slices"
                   :key="slice.restaurantId"
                   :data-testid="`platform-customer-slice-${slice.restaurantId}`"
-                  class="flex items-center justify-between gap-3 py-2.5"
+                  class="ui-toolbar flex items-center justify-between gap-3 py-2.5"
                 >
                   <div>
                     <p class="text-sm font-medium text-ios-text">

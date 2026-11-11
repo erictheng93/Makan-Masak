@@ -334,6 +334,7 @@ const enUS: Messages = {
   },
 
   history: {
+    loadFailed: "Unable to load orders. Please retry.",
     title: "History",
     today: "Today",
     yesterday: "Yesterday",

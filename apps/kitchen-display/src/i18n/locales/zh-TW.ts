@@ -329,6 +329,7 @@ const zhTW = {
   },
 
   history: {
+    loadFailed: "載入訂單失敗，請重試",
     title: "歷史紀錄",
     today: "今天",
     yesterday: "昨天",

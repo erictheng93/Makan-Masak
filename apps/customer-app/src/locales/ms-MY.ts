@@ -1,4 +1,14 @@
 export const waitingListMsMy = {
+  pwa: {
+    installTitle: "Pasang MakanMasak",
+    installDescription: "Buka menu dan ikuti pesanan dari skrin utama anda.",
+    installAction: "Pasang App",
+  },
+  customerNavigation: {
+    vendors: "Gerai",
+    maps: "Peta",
+    flashlight: "Lampu suluh",
+  },
   customizationLimits: {
     decrease: "Kurangkan",
     increase: "Tambah",

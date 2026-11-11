@@ -404,6 +404,7 @@ const viVN: Messages = {
     uptime: "Thời gian hoạt động",
   },
   history: {
+    loadFailed: "Không thể tải đơn hàng. Vui lòng thử lại.",
     avgPrepTime: "Chuẩn bị trung bình (phút)",
     noRecords: "Không có hồ sơ đặt hàng",
     noRecordsHint:

@@ -1,9 +1,10 @@
 <template>
-  <div class="min-h-screen bg-ios-bg">
+  <div class="customer-shell min-h-screen bg-ios-bg">
     <nav class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-10">
       <div class="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
         <button
           class="text-gray-500 hover:text-gray-700"
+          :aria-label="t('common.back')"
           @click="$router.back()"
         >
           <svg
@@ -51,7 +52,7 @@
             :key="market.id"
             type="button"
             data-testid="discovery-market-chip"
-            class="h-9 shrink-0 rounded-full border px-3 text-sm font-medium"
+            class="min-h-11 shrink-0 rounded-full border px-3 text-sm font-medium"
             :class="
               isSelectedMarket(market)
                 ? 'border-ios-blue bg-ios-blue text-white'
@@ -81,7 +82,14 @@
       </div>
 
       <div v-else-if="store.error" class="text-center py-8">
-        <p class="text-red-500 text-sm">{{ t(store.error) }}</p>
+        <p role="alert" class="text-red-700 text-sm">{{ t(store.error) }}</p>
+        <button
+          type="button"
+          class="mt-4 rounded-full bg-ios-blue px-5 py-3 text-white"
+          @click="retryDiscovery"
+        >
+          {{ t("common.retry") }}
+        </button>
       </div>
 
       <template v-else>
@@ -192,7 +200,7 @@
                   v-if="service.requiresBooking"
                   type="button"
                   data-testid="discovery-service-booking"
-                  class="h-9 rounded-lg border border-emerald-500 px-3 text-sm font-medium text-emerald-700"
+                  class="min-h-11 rounded-lg border border-emerald-500 px-3 text-sm font-medium text-emerald-700"
                   @click="onServiceBooking(service)"
                 >
                   直接預約
@@ -203,14 +211,14 @@
                   target="_blank"
                   rel="noopener noreferrer"
                   data-testid="discovery-service-booking-url"
-                  class="inline-flex h-9 items-center rounded-lg border border-emerald-500 px-3 text-sm font-medium text-emerald-700"
+                  class="inline-flex min-h-11 items-center rounded-lg border border-emerald-500 px-3 text-sm font-medium text-emerald-700"
                 >
                   開啟預約
                 </a>
                 <button
                   type="button"
                   data-testid="select-service"
-                  class="h-9 rounded-lg border border-ios-blue px-3 text-sm font-medium text-ios-blue"
+                  class="min-h-11 rounded-lg border border-ios-blue px-3 text-sm font-medium text-ios-blue"
                   @click="onServiceSelect(service)"
                 >
                   查看服務
@@ -286,6 +294,14 @@
           class="text-center py-12"
         >
           <p class="text-gray-500">{{ t("discovery.noResults") }}</p>
+          <button
+            type="button"
+            class="mt-4 rounded-full bg-white px-5 py-3 text-ios-blue shadow-card-sm"
+            data-testid="discovery-clear-filters"
+            @click="clearDiscoveryFilters"
+          >
+            {{ t("markets.common.clearFilters") }}
+          </button>
         </div>
       </template>
     </main>
@@ -519,9 +535,26 @@ function searchAndSync(query: string) {
   syncUrl(store.filters, query);
 }
 
+function retryDiscovery() {
+  if (store.error === "discovery.popularFailed") {
+    store.loadPopular();
+  } else if (store.isSearchMode) {
+    store.searchDishes(store.searchQuery);
+  } else {
+    store.browseRestaurants();
+  }
+}
+
 function clearSearchAndSync() {
   store.clearSearch();
   syncUrl(store.filters, "");
+}
+
+function clearDiscoveryFilters() {
+  store.filters = {};
+  store.clearSearch();
+  store.browseRestaurants();
+  syncUrl({}, "");
 }
 
 function updateFiltersAndSync(filters: SearchFilters) {

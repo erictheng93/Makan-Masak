@@ -394,6 +394,7 @@ const zhTW = {
   },
 
   notFound: {
+    backPrevious: "返回上一頁",
     title: "頁面不存在",
     description: "您訪問的頁面可能已被移除或暫時無法使用",
     backHome: "返回首頁",

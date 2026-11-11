@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-ios-bg">
+  <div class="customer-shell min-h-screen bg-ios-bg">
     <!-- 頂部固定導航 -->
     <nav class="sticky top-0 z-40 bg-white shadow-card-sm">
       <div
@@ -10,6 +10,7 @@
           <div class="flex items-center justify-between">
             <button
               data-testid="shop-menu-back"
+              :aria-label="t('common.back')"
               class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-ios-text active:scale-95 transition-transform duration-150"
               @click="goBack"
             >
@@ -76,6 +77,7 @@
 
             <button
               data-testid="cart-btn"
+              :aria-label="`${t('cart.title')} (${shopCartStore.itemCount})`"
               class="relative w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-ios-text active:scale-95 transition-transform duration-150"
               @click="showCart = true"
             >
@@ -421,18 +423,18 @@
               </article>
             </div>
           </section>
-          <section
+          <details
             v-else
             data-testid="shop-empty-services"
             class="rounded-xl border border-dashed border-gray-200 bg-white px-4 py-5"
           >
-            <h2 class="text-base font-semibold text-ios-text">
+            <summary class="text-base font-semibold text-ios-text">
               尚未提供公開服務
-            </h2>
+            </summary>
             <p class="mt-1 text-sm leading-6 text-ios-secondary">
               這間店目前沒有公開的預約、外送或現場服務，仍可查看可點選的菜單商品。
             </p>
-          </section>
+          </details>
 
           <!-- 推薦菜品 -->
           <section v-if="featuredItems.length > 0" class="mb-8">
@@ -630,7 +632,7 @@
     <!-- 底部固定購物車按鈕 -->
     <div
       v-if="shopCartStore.itemCount > 0"
-      class="fixed bottom-4 left-4 right-4 z-50 max-w-lg mx-auto lg:hidden"
+      class="customer-floating-cart fixed bottom-4 left-4 right-4 z-50 max-w-lg mx-auto lg:hidden"
     >
       <button
         class="w-full bg-ios-blue text-white font-semibold py-4 px-6 rounded-full shadow-card-lg active:scale-[0.98] transition-transform duration-150 flex items-center justify-between"

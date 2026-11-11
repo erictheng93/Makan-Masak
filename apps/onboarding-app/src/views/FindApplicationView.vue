@@ -35,7 +35,10 @@ async function submit() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-xl" data-testid="onboarding-find-application">
+  <div
+    class="onboarding-page ui-page mx-auto max-w-xl"
+    data-testid="onboarding-find-application"
+  >
     <div class="card">
       <div
         class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary-100"
@@ -100,7 +103,10 @@ async function submit() {
       </form>
 
       <div class="mt-6 text-center">
-        <RouterLink to="/" class="text-sm font-medium text-primary-700">
+        <RouterLink
+          to="/"
+          class="btn btn-secondary text-sm font-medium text-primary-700"
+        >
           {{ t("findApplication.backHome") }}
         </RouterLink>
       </div>

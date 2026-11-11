@@ -51,6 +51,12 @@ describe("SchedulingTab", () => {
     });
     await flushPromises();
 
+    expect(
+      wrapper.get('[data-testid="nav-prev"]').attributes("aria-label"),
+    ).toBe("common.previousPage");
+    expect(
+      wrapper.get('[data-testid="nav-next"]').attributes("aria-label"),
+    ).toBe("common.nextPage");
     const link = wrapper.get('[data-testid="advanced-scheduling-link"]');
     expect(link.text()).toBe("employees.scheduling.advancedScheduling");
     expect(link.attributes("data-route-name")).toBe("AdvancedScheduling");

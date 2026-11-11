@@ -1,9 +1,9 @@
 <template>
-  <div class="settings-view">
+  <div class="ui-page settings-view">
     <!-- 頁面標題 -->
-    <div class="flex justify-between items-center mb-8">
+    <div class="ui-toolbar flex justify-between items-center mb-8">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">
+        <h1 class="ui-page-heading text-2xl font-bold text-gray-900">
           {{ t("settings.title") }}
         </h1>
         <p class="text-gray-600">{{ t("settings.subtitle") }}</p>
@@ -18,7 +18,7 @@
         </button>
         <button
           :disabled="isSavingSettings"
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           data-testid="settings-save"
           @click="saveSettings"
         >
@@ -40,7 +40,7 @@
           :class="[
             'py-2 px-1 border-b-2 font-medium text-sm',
             activeTab === tab.id
-              ? 'border-blue-500 text-blue-600'
+              ? 'border-blue-500 text-blue-700'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
           ]"
           :data-active="activeTab === tab.id"
@@ -55,7 +55,7 @@
     <!-- 基本設定 -->
     <div v-show="activeTab === 'general'" class="space-y-8">
       <!-- 餐廳資訊 -->
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">
           {{ t("settings.general.restaurantInfo") }}
         </h3>
@@ -185,12 +185,12 @@
       </div>
 
       <!-- 系統偏好 -->
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">
           {{ t("settings.general.systemPreferences") }}
         </h3>
         <div class="space-y-4">
-          <div class="flex items-center justify-between">
+          <div class="ui-toolbar flex items-center justify-between">
             <div>
               <label class="text-sm font-medium text-gray-900">{{
                 t("settings.general.language")
@@ -212,7 +212,7 @@
             </select>
           </div>
 
-          <div class="flex items-center justify-between">
+          <div class="ui-toolbar flex items-center justify-between">
             <div>
               <label class="text-sm font-medium text-gray-900">{{
                 t("settings.general.currency")
@@ -238,7 +238,7 @@
             </select>
           </div>
 
-          <div class="flex items-center justify-between">
+          <div class="ui-toolbar flex items-center justify-between">
             <div>
               <label class="text-sm font-medium text-gray-900">{{
                 t("settings.general.autoLogout")
@@ -271,7 +271,7 @@
 
     <!-- 市場 / 商圈 -->
     <div v-show="activeTab === 'markets'" class="space-y-8">
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
         <div
           class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
         >
@@ -315,7 +315,7 @@
                   : 'border-gray-200 bg-gray-50'
             "
           >
-            <div class="flex items-start justify-between gap-3">
+            <div class="ui-toolbar flex items-start justify-between gap-3">
               <div>
                 <div class="font-medium text-gray-900">
                   {{ t(`settings.markets.readiness.${issue.key}.title`) }}
@@ -347,7 +347,7 @@
         </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
         <div
           class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
         >
@@ -452,7 +452,7 @@
         </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
         <h3 class="text-lg font-semibold text-gray-900">
           {{ t("settings.markets.requestsTitle") }}
         </h3>
@@ -505,7 +505,7 @@
         </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
         <h3 class="text-lg font-semibold text-gray-900">
           {{ t("settings.markets.requestTitle") }}
         </h3>
@@ -557,7 +557,7 @@
                   : 'border-amber-200 bg-amber-50 text-amber-900'
               "
             >
-              <div class="flex items-center justify-between gap-3">
+              <div class="ui-toolbar flex items-center justify-between gap-3">
                 <span class="font-medium">
                   {{ selectedMarketReadinessSummary.text }}
                 </span>
@@ -606,11 +606,11 @@
               :placeholder="t('settings.markets.messagePlaceholder')"
             />
           </div>
-          <div class="flex justify-end">
+          <div class="ui-toolbar flex justify-end">
             <button
               type="button"
               data-testid="market-join-submit"
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              class="px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               :disabled="isSubmittingMarketRequest || !marketJoinForm.marketId"
               @click="submitMarketJoinRequest"
             >
@@ -627,8 +627,8 @@
 
     <!-- 聯絡與 FAQ -->
     <div v-show="activeTab === 'contact'" class="space-y-8">
-      <div class="bg-white rounded-lg shadow p-6">
-        <div class="flex items-center justify-between gap-3">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
+        <div class="ui-toolbar flex items-center justify-between gap-3">
           <div>
             <h3 class="text-lg font-semibold text-gray-900">
               {{ t("settings.contact.title") }}
@@ -639,7 +639,7 @@
           </div>
           <button
             type="button"
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            class="px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors disabled:opacity-50"
             :disabled="isSavingContactProfile"
             @click="saveContactProfile"
           >
@@ -670,7 +670,7 @@
           </div>
 
           <div>
-            <div class="flex items-center justify-between gap-3">
+            <div class="ui-toolbar flex items-center justify-between gap-3">
               <h4 class="font-medium text-gray-900">
                 {{ t("settings.contact.faqTitle") }}
               </h4>
@@ -695,10 +695,10 @@
                 :key="faq.localId"
                 class="rounded-lg border border-gray-200 p-4"
               >
-                <div class="flex justify-end">
+                <div class="ui-toolbar flex justify-end">
                   <button
                     type="button"
-                    class="text-sm text-red-600 hover:text-red-700"
+                    class="text-sm text-red-700 hover:text-red-700"
                     @click="removeContactFaq(index)"
                   >
                     {{ t("settings.contact.removeFaq") }}
@@ -754,7 +754,7 @@
                     <input
                       v-model="faq.isActive"
                       type="checkbox"
-                      class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      class="rounded border-gray-300 text-blue-700 focus:ring-blue-500"
                     />
                     {{ t("settings.contact.active") }}
                   </label>
@@ -785,12 +785,12 @@
     <!-- 訂單設定 -->
     <div v-show="activeTab === 'orders'" class="space-y-8">
       <!-- 訂單流程 -->
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">
           {{ t("settings.orders.title") }}
         </h3>
         <div class="space-y-4">
-          <div class="flex items-center justify-between">
+          <div class="ui-toolbar flex items-center justify-between">
             <div>
               <label class="text-sm font-medium text-gray-900">{{
                 t("settings.orders.acceptGuestOrders")
@@ -811,7 +811,7 @@
             </label>
           </div>
 
-          <div class="flex items-center justify-between">
+          <div class="ui-toolbar flex items-center justify-between">
             <div>
               <label class="text-sm font-medium text-gray-900">{{
                 t("settings.orders.autoConfirm")
@@ -832,7 +832,7 @@
             </label>
           </div>
 
-          <div class="flex items-center justify-between">
+          <div class="ui-toolbar flex items-center justify-between">
             <div>
               <label class="text-sm font-medium text-gray-900">{{
                 t("settings.orders.prepTimeAlert")
@@ -868,7 +868,7 @@
 
           <!-- 最低消費設定 -->
           <div class="border-t border-gray-200 pt-4">
-            <div class="flex items-center justify-between mb-4">
+            <div class="ui-toolbar flex items-center justify-between mb-4">
               <div>
                 <label class="text-sm font-medium text-gray-900">{{
                   t("settings.orders.enableMinOrder")
@@ -920,7 +920,7 @@
               <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <div class="flex items-start space-x-2">
                   <svg
-                    class="w-5 h-5 text-blue-600 mt-0.5"
+                    class="w-5 h-5 text-blue-700 mt-0.5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -1009,7 +1009,7 @@
       </div>
 
       <!-- 外帶/外送設定 -->
-      <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+      <div class="ui-panel bg-white rounded-xl shadow-sm p-6 mb-6">
         <h3 class="text-lg font-bold text-gray-900 mb-1">
           {{ t("settings.delivery.title") }}
         </h3>
@@ -1019,7 +1019,7 @@
 
         <!-- Enable Dine-in -->
         <div
-          class="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2"
+          class="ui-toolbar flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2"
         >
           <div>
             <div class="font-semibold text-sm">
@@ -1043,7 +1043,7 @@
 
         <!-- Enable Takeaway -->
         <div
-          class="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2"
+          class="ui-toolbar flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2"
         >
           <div>
             <div class="font-semibold text-sm">
@@ -1067,7 +1067,7 @@
 
         <!-- Enable Delivery -->
         <div
-          class="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-4"
+          class="ui-toolbar flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-4"
         >
           <div>
             <div class="font-semibold text-sm">
@@ -1144,7 +1144,7 @@
       </div>
 
       <!-- 桌台設定 -->
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">
           {{ t("settings.tables.title") }}
         </h3>
@@ -1162,7 +1162,7 @@
             />
           </div>
 
-          <div class="flex items-center justify-between">
+          <div class="ui-toolbar flex items-center justify-between">
             <div>
               <label class="text-sm font-medium text-gray-900">{{
                 t("settings.tables.autoClean")
@@ -1202,8 +1202,8 @@
     <!-- QR Code 設定 -->
     <div v-show="activeTab === 'qrcode'" class="space-y-8">
       <!-- 店家模式設定 -->
-      <div class="bg-white rounded-lg shadow p-6">
-        <div class="flex items-center justify-between mb-4">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
+        <div class="ui-toolbar flex items-center justify-between mb-4">
           <div>
             <h3 class="text-lg font-semibold text-gray-900">
               {{ t("settings.qrcode.shopTitle") }}
@@ -1216,7 +1216,7 @@
 
         <!-- 啟用店家模式 -->
         <div class="border-b border-gray-200 pb-4 mb-4">
-          <div class="flex items-center justify-between">
+          <div class="ui-toolbar flex items-center justify-between">
             <div>
               <label class="text-sm font-medium text-gray-900">{{
                 t("settings.qrcode.enableShopMode")
@@ -1274,10 +1274,10 @@
           </div>
 
           <!-- 儲存設定按鈕 -->
-          <div class="flex justify-end pt-4">
+          <div class="ui-toolbar flex justify-end pt-4">
             <button
               :disabled="isSavingShopSettings"
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              class="px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               @click="saveShopSettings"
             >
               <span v-if="!isSavingShopSettings">{{
@@ -1312,7 +1312,10 @@
       </div>
 
       <!-- QR Code 管理 -->
-      <div v-if="shopQR.enabled" class="bg-white rounded-lg shadow p-6">
+      <div
+        v-if="shopQR.enabled"
+        class="ui-panel bg-white rounded-lg shadow p-6"
+      >
         <h3 class="text-lg font-semibold text-gray-900 mb-4">
           {{ t("settings.qrcode.management") }}
         </h3>
@@ -1341,7 +1344,7 @@
           </p>
           <button
             :disabled="isGeneratingQR"
-            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            class="px-6 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             @click="generateShopQR"
           >
             <span v-if="!isGeneratingQR">{{
@@ -1456,7 +1459,7 @@
               <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <div class="flex items-start space-x-2">
                   <svg
-                    class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"
+                    class="w-5 h-5 text-blue-700 mt-0.5 flex-shrink-0"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -1483,7 +1486,7 @@
               <div class="flex flex-wrap gap-3 pt-2">
                 <button
                   data-testid="shop-qr-download"
-                  class="px-4 py-2 text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                  class="px-4 py-2 text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
                   @click="downloadQRCode"
                 >
                   <span class="flex items-center">
@@ -1529,7 +1532,7 @@
 
                 <button
                   :disabled="isRegeneratingQR"
-                  class="px-4 py-2 text-orange-600 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="px-4 py-2 text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   @click="regenerateShopQR"
                 >
                   <span v-if="!isRegeneratingQR" class="flex items-center">
@@ -1578,7 +1581,7 @@
               <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                 <div class="flex items-start space-x-2">
                   <svg
-                    class="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0"
+                    class="w-5 h-5 text-yellow-700 mt-0.5 flex-shrink-0"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -1609,12 +1612,12 @@
     <!-- 通知設定 -->
     <div v-show="activeTab === 'notifications'" class="space-y-8">
       <!-- 音效通知 -->
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">
           {{ t("settings.notifications.soundTitle") }}
         </h3>
         <div class="space-y-4">
-          <div class="flex items-center justify-between">
+          <div class="ui-toolbar flex items-center justify-between">
             <div>
               <label class="text-sm font-medium text-gray-900">{{
                 t("settings.notifications.enableSound")
@@ -1710,13 +1713,13 @@
     <!-- 桌面通知 -->
     <div
       v-show="activeTab === 'notifications'"
-      class="bg-white rounded-lg shadow p-6"
+      class="ui-panel bg-white rounded-lg shadow p-6"
     >
       <h3 class="text-lg font-semibold text-gray-900 mb-4">
         {{ t("settings.notifications.desktopTitle") }}
       </h3>
       <div class="space-y-4">
-        <div class="flex items-center justify-between">
+        <div class="ui-toolbar flex items-center justify-between">
           <div>
             <label class="text-sm font-medium text-gray-900">{{
               t("settings.notifications.enableDesktop")
@@ -1762,7 +1765,7 @@
   <div v-show="activeTab === 'security'" class="space-y-8">
     <ChangePasswordCard />
     <!-- 密碼政策 -->
-    <div class="bg-white rounded-lg shadow p-6">
+    <div class="ui-panel bg-white rounded-lg shadow p-6">
       <h3 class="text-lg font-semibold text-gray-900 mb-4">
         {{ t("settings.security.passwordTitle") }}
       </h3>
@@ -1781,7 +1784,7 @@
           />
         </div>
 
-        <div class="flex items-center justify-between">
+        <div class="ui-toolbar flex items-center justify-between">
           <div>
             <label class="text-sm font-medium text-gray-900">{{
               t("settings.security.requireNumbers")
@@ -1802,7 +1805,7 @@
           </label>
         </div>
 
-        <div class="flex items-center justify-between">
+        <div class="ui-toolbar flex items-center justify-between">
           <div>
             <label class="text-sm font-medium text-gray-900">{{
               t("settings.security.requireSymbols")
@@ -1842,7 +1845,7 @@
     </div>
 
     <!-- 登入安全 -->
-    <div class="bg-white rounded-lg shadow p-6">
+    <div class="ui-panel bg-white rounded-lg shadow p-6">
       <h3 class="text-lg font-semibold text-gray-900 mb-4">
         {{ t("settings.security.loginTitle") }}
       </h3>
@@ -1873,7 +1876,7 @@
           />
         </div>
 
-        <div class="flex items-center justify-between">
+        <div class="ui-toolbar flex items-center justify-between">
           <div>
             <label class="text-sm font-medium text-gray-900">{{
               t("settings.security.logActivity")
@@ -3086,7 +3089,8 @@ onMounted(() => {
   position: relative;
   display: inline-block;
   width: 44px;
-  height: 24px;
+  height: 44px;
+  vertical-align: middle;
 }
 
 .toggle-switch input {
@@ -3098,10 +3102,10 @@ onMounted(() => {
 .slider {
   position: absolute;
   cursor: pointer;
-  top: 0;
+  top: 10px;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: 10px;
   /* ios-separator. The on-state below already uses ios-blue; #ccc was a plain
      web grey that predates the palette. */
   background-color: #e5e5ea;
@@ -3119,6 +3123,11 @@ onMounted(() => {
   background-color: white;
   transition: 0.4s;
   border-radius: 50%;
+}
+
+input:focus-visible + .slider {
+  outline: 3px solid var(--ui-focus);
+  outline-offset: 3px;
 }
 
 input:checked + .slider {

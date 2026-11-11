@@ -68,6 +68,13 @@ describe("Header", () => {
     });
   }
 
+  it("names the notification action independently of its unread badge", () => {
+    const wrapper = mountHeader();
+    expect(
+      wrapper.find('button[aria-label="a11y.notifications"]').exists(),
+    ).toBe(true);
+  });
+
   it.each([
     ["connected", "header.realtime.connected"],
     ["connecting", "header.realtime.connecting"],

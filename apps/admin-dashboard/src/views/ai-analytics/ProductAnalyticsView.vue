@@ -66,9 +66,9 @@ const ACTIVE_TAB_CLASSES: Record<ProductAnalyticsTab["color"], string> = {
 };
 
 const ACTIVE_TAB_ICON_CLASSES: Record<ProductAnalyticsTab["color"], string> = {
-  teal: "text-teal-600",
-  orange: "text-orange-600",
-  green: "text-green-600",
+  teal: "text-teal-700",
+  orange: "text-orange-700",
+  green: "text-green-700",
 };
 
 const ACTIVE_TAB_LABEL_CLASSES: Record<ProductAnalyticsTab["color"], string> = {
@@ -162,22 +162,22 @@ const formatPercent = (value: number) => {
 
 // Get trend color
 const getTrendColor = (trend: number) => {
-  if (trend > 0.2) return "text-green-600";
-  if (trend < -0.2) return "text-red-600";
+  if (trend > 0.2) return "text-green-700";
+  if (trend < -0.2) return "text-red-700";
   return "text-gray-600";
 };
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+  <div class="ui-page min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-7xl mx-auto">
       <!-- Header -->
       <div class="mb-8">
-        <div class="flex items-center justify-between mb-4">
+        <div class="ui-toolbar flex items-center justify-between mb-4">
           <div>
             <div class="flex items-center space-x-3 mb-2">
-              <ChartBarIcon class="w-8 h-8 text-teal-600" />
-              <h1 class="text-3xl font-bold text-gray-900">
+              <ChartBarIcon class="w-8 h-8 text-teal-700" />
+              <h1 class="ui-page-heading text-3xl font-bold text-gray-900">
                 {{ t("productAnalytics.title") }}
               </h1>
             </div>
@@ -186,7 +186,7 @@ const getTrendColor = (trend: number) => {
         </div>
 
         <!-- Quick Navigation -->
-        <div class="flex items-center justify-between">
+        <div class="ui-toolbar flex items-center justify-between">
           <div
             class="flex items-center space-x-2 bg-white rounded-xl p-2 border border-gray-100 w-fit"
           >
@@ -212,18 +212,24 @@ const getTrendColor = (trend: number) => {
 
           <!-- Time Range & Refresh -->
           <div class="flex items-center space-x-3">
-            <select
-              v-model="selectedTimeRange"
-              class="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            >
-              <option
-                v-for="option in timeRangeOptions"
-                :key="option.value"
-                :value="option.value"
+            <label
+              class="admin-field"
+              for="productanalyticsview-selectedTimeRange"
+              ><span>{{ t("ui.analysisPeriod") }}</span
+              ><select
+                id="productanalyticsview-selectedTimeRange"
+                v-model="selectedTimeRange"
+                class="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               >
-                {{ option.label }}
-              </option>
-            </select>
+                <option
+                  v-for="option in timeRangeOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select></label
+            >
 
             <button
               :aria-label="t('common.refresh')"
@@ -289,7 +295,7 @@ const getTrendColor = (trend: number) => {
       >
         <div class="flex items-start space-x-3">
           <ExclamationTriangleIcon
-            class="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5"
+            class="w-6 h-6 text-red-700 flex-shrink-0 mt-0.5"
           />
           <div class="flex-1">
             <h3 class="text-red-900 font-semibold mb-1">
@@ -313,7 +319,7 @@ const getTrendColor = (trend: number) => {
       >
         <div class="text-center">
           <ArrowPathIcon
-            class="w-12 h-12 text-teal-600 animate-spin mx-auto mb-4"
+            class="w-12 h-12 text-teal-700 animate-spin mx-auto mb-4"
           />
           <div class="text-gray-600 font-medium">
             {{ t("productAnalytics.loading") }}
@@ -357,7 +363,7 @@ const getTrendColor = (trend: number) => {
             <!-- Traffic Drivers Metrics -->
             <template v-if="activeTab === 'traffic'">
               <div
-                class="flex items-center justify-between py-2 border-b border-gray-100"
+                class="ui-toolbar flex items-center justify-between py-2 border-b border-gray-100"
               >
                 <span class="text-sm text-gray-600">{{
                   t("productAnalytics.firstPickCount")
@@ -367,22 +373,22 @@ const getTrendColor = (trend: number) => {
                 }}</span>
               </div>
               <div
-                class="flex items-center justify-between py-2 border-b border-gray-100"
+                class="ui-toolbar flex items-center justify-between py-2 border-b border-gray-100"
               >
                 <span class="text-sm text-gray-600">{{
                   t("productAnalytics.conversionRate")
                 }}</span>
-                <span class="font-semibold text-teal-600">{{
+                <span class="font-semibold text-teal-700">{{
                   formatPercent(product.conversionRate)
                 }}</span>
               </div>
               <div
-                class="flex items-center justify-between py-2 border-b border-gray-100"
+                class="ui-toolbar flex items-center justify-between py-2 border-b border-gray-100"
               >
                 <span class="text-sm text-gray-600">{{
                   t("productAnalytics.cartAdditionRate")
                 }}</span>
-                <span class="font-semibold text-teal-600">{{
+                <span class="font-semibold text-teal-700">{{
                   formatPercent(product.cartAdditionRate)
                 }}</span>
               </div>
@@ -391,7 +397,7 @@ const getTrendColor = (trend: number) => {
             <!-- Bestsellers Metrics -->
             <template v-if="activeTab === 'bestsellers'">
               <div
-                class="flex items-center justify-between py-2 border-b border-gray-100"
+                class="ui-toolbar flex items-center justify-between py-2 border-b border-gray-100"
               >
                 <span class="text-sm text-gray-600">{{
                   t("aiAnalytics.totalOrders")
@@ -401,22 +407,22 @@ const getTrendColor = (trend: number) => {
                 }}</span>
               </div>
               <div
-                class="flex items-center justify-between py-2 border-b border-gray-100"
+                class="ui-toolbar flex items-center justify-between py-2 border-b border-gray-100"
               >
                 <span class="text-sm text-gray-600">{{
                   t("aiAnalytics.totalRevenue")
                 }}</span>
-                <span class="font-semibold text-green-600">{{
+                <span class="font-semibold text-green-700">{{
                   formatCurrency(product.totalRevenue)
                 }}</span>
               </div>
               <div
-                class="flex items-center justify-between py-2 border-b border-gray-100"
+                class="ui-toolbar flex items-center justify-between py-2 border-b border-gray-100"
               >
                 <span class="text-sm text-gray-600">{{
                   t("aiAnalytics.avgOrderValue")
                 }}</span>
-                <span class="font-semibold text-blue-600">{{
+                <span class="font-semibold text-blue-700">{{
                   formatCurrency(product.averageOrderValue)
                 }}</span>
               </div>
@@ -425,22 +431,22 @@ const getTrendColor = (trend: number) => {
             <!-- Profit Leaders Metrics -->
             <template v-if="activeTab === 'profit'">
               <div
-                class="flex items-center justify-between py-2 border-b border-gray-100"
+                class="ui-toolbar flex items-center justify-between py-2 border-b border-gray-100"
               >
                 <span class="text-sm text-gray-600">{{
                   t("productAnalytics.totalProfit")
                 }}</span>
-                <span class="font-semibold text-green-600">{{
+                <span class="font-semibold text-green-700">{{
                   formatCurrency(product.totalProfit)
                 }}</span>
               </div>
               <div
-                class="flex items-center justify-between py-2 border-b border-gray-100"
+                class="ui-toolbar flex items-center justify-between py-2 border-b border-gray-100"
               >
                 <span class="text-sm text-gray-600">{{
                   t("productAnalytics.profitMargin")
                 }}</span>
-                <span class="font-semibold text-emerald-600">
+                <span class="font-semibold text-emerald-700">
                   {{
                     product.profitMargin
                       ? formatPercent(product.profitMargin)
@@ -449,7 +455,7 @@ const getTrendColor = (trend: number) => {
                 </span>
               </div>
               <div
-                class="flex items-center justify-between py-2 border-b border-gray-100"
+                class="ui-toolbar flex items-center justify-between py-2 border-b border-gray-100"
               >
                 <span class="text-sm text-gray-600">{{
                   t("productAnalytics.unitPrice")
@@ -461,7 +467,7 @@ const getTrendColor = (trend: number) => {
             </template>
 
             <!-- Common Metrics -->
-            <div class="flex items-center justify-between py-2">
+            <div class="ui-toolbar flex items-center justify-between py-2">
               <span class="text-sm text-gray-600">{{
                 t("productAnalytics.trend")
               }}</span>

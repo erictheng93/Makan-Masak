@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import { useOnboardingStore } from "@/stores/onboarding";
 import {
@@ -37,8 +37,10 @@ onMounted(() => {
   }
 });
 
-const copyToClipboard = (text: string) => {
-  navigator.clipboard.writeText(text);
+const copied = ref(false);
+const copyToClipboard = async (text: string) => {
+  await navigator.clipboard.writeText(text);
+  copied.value = true;
   toast.success(t("common.toast.copiedToClipboard"));
 };
 
@@ -60,23 +62,14 @@ const handleStartNew = () => {
 </script>
 
 <template>
-  <div class="max-w-2xl mx-auto text-center" data-testid="onboarding-success">
-    <!-- Progress -->
-    <div class="flex items-center justify-center mb-8">
-      <div class="flex items-center">
-        <div
-          class="w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center font-medium"
-        >
-          ✓
-        </div>
-        <div class="w-24 h-1 bg-primary-500" />
-        <div
-          class="w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center font-medium"
-        >
-          ✓
-        </div>
-      </div>
-    </div>
+  <div
+    class="onboarding-page ui-page max-w-2xl mx-auto text-center"
+    data-testid="onboarding-success"
+  >
+    <ol class="onboarding-progress">
+      <li><span>1</span>{{ t("apply.title") }}</li>
+      <li aria-current="step"><span>2</span>{{ t("success.title") }}</li>
+    </ol>
 
     <!-- Success Message -->
     <div class="card">
@@ -107,12 +100,13 @@ const handleStartNew = () => {
             <dt class="text-gray-500">
               {{ t("success.summary.applicationId") }}
             </dt>
-            <dd class="text-gray-900 font-mono text-xs flex items-center">
+            <dd class="text-gray-900 font-mono text-sm flex items-center gap-2">
               {{ store.applicationId || "-" }}
               <button
                 v-if="store.applicationId"
                 type="button"
-                class="ml-2 text-gray-400 hover:text-gray-600"
+                class="ml-2 min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-full bg-white text-gray-700 hover:bg-gray-100"
+                :aria-label="t('success.summary.copyApplicationId')"
                 @click="copyToClipboard(store.applicationId!)"
               >
                 <DocumentDuplicateIcon class="h-4 w-4" />
@@ -155,34 +149,38 @@ const handleStartNew = () => {
         <h3 class="font-medium text-gray-900">
           {{ t("success.nextSteps.title") }}
         </h3>
-        <div class="space-y-4">
-          <div class="flex items-start">
-            <div class="flex-shrink-0 p-2 bg-primary-100 rounded-lg">
-              <EnvelopeIcon class="h-5 w-5 text-primary-500" />
+        <ol class="list-decimal pl-5 space-y-5">
+          <li class="pl-2">
+            <div class="flex items-start gap-3">
+              <div class="flex-shrink-0 p-2 bg-primary-100 rounded-lg">
+                <ClockIcon class="h-5 w-5 text-primary-500" />
+              </div>
+              <div class="min-w-0">
+                <p class="font-medium text-gray-900">
+                  {{ t("success.nextSteps.deploy.title") }}
+                </p>
+                <p class="text-sm text-gray-500">
+                  {{ t("success.nextSteps.deploy.description") }}
+                </p>
+              </div>
             </div>
-            <div class="ml-4">
-              <p class="font-medium text-gray-900">
-                {{ t("success.nextSteps.email.title") }}
-              </p>
-              <p class="text-sm text-gray-500">
-                {{ t("success.nextSteps.email.description") }}
-              </p>
+          </li>
+          <li class="pl-2">
+            <div class="flex items-start gap-3">
+              <div class="flex-shrink-0 p-2 bg-primary-100 rounded-lg">
+                <EnvelopeIcon class="h-5 w-5 text-primary-500" />
+              </div>
+              <div class="min-w-0">
+                <p class="font-medium text-gray-900">
+                  {{ t("success.nextSteps.email.title") }}
+                </p>
+                <p class="text-sm text-gray-500">
+                  {{ t("success.nextSteps.email.description") }}
+                </p>
+              </div>
             </div>
-          </div>
-          <div class="flex items-start">
-            <div class="flex-shrink-0 p-2 bg-primary-100 rounded-lg">
-              <ClockIcon class="h-5 w-5 text-primary-500" />
-            </div>
-            <div class="ml-4">
-              <p class="font-medium text-gray-900">
-                {{ t("success.nextSteps.deploy.title") }}
-              </p>
-              <p class="text-sm text-gray-500">
-                {{ t("success.nextSteps.deploy.description") }}
-              </p>
-            </div>
-          </div>
-        </div>
+          </li>
+        </ol>
       </div>
 
       <!-- Dev/CI only: with email on, the link exists only in the inbox. -->
@@ -232,6 +230,9 @@ const handleStartNew = () => {
       </div>
     </div>
 
+    <p v-if="copied" role="status" class="mt-4 text-sm text-green-700">
+      {{ t("common.toast.copiedToClipboard") }}
+    </p>
     <!-- 聯絡資訊 -->
     <div class="mt-6 text-sm text-gray-500">
       {{ t("success.contact.prompt") }}

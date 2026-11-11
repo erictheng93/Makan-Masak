@@ -58,6 +58,12 @@ describe("LoginView", () => {
 
     expect(sessionStorage.getItem("management_token")).toBeNull();
     expect(wrapper.text()).toContain("登入失敗");
+    const errorId = wrapper.get('[role="alert"]').attributes("id");
+    expect(errorId).toBeTruthy();
+    expect(wrapper.get("textarea").attributes("aria-describedby")).toBe(
+      errorId,
+    );
+    expect(wrapper.get("textarea").attributes("aria-invalid")).toBe("true");
     expect(replace).not.toHaveBeenCalled();
   });
 });

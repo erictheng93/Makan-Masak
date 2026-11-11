@@ -6,7 +6,7 @@
         class="min-h-[44px] rounded-xl px-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-orange"
         :class="
           selectedStatus === 'pending'
-            ? 'bg-ios-orange text-white'
+            ? 'bg-orange-700 text-white'
             : 'bg-white text-ios-text shadow-card-sm'
         "
         :aria-pressed="selectedStatus === 'pending'"
@@ -19,7 +19,7 @@
         class="min-h-[44px] rounded-xl px-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
         :class="
           selectedStatus === 'preparing'
-            ? 'bg-ios-blue text-white'
+            ? 'bg-blue-700 text-white'
             : 'bg-white text-ios-text shadow-card-sm'
         "
         :aria-pressed="selectedStatus === 'preparing'"
@@ -32,7 +32,7 @@
         class="min-h-[44px] rounded-xl px-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-green"
         :class="
           selectedStatus === 'ready'
-            ? 'bg-ios-green text-white'
+            ? 'bg-green-700 text-white'
             : 'bg-white text-ios-text shadow-card-sm'
         "
         :aria-pressed="selectedStatus === 'ready'"
@@ -50,12 +50,12 @@
       <div class="column-header flex items-center justify-between mb-3">
         <div class="flex items-center gap-2">
           <span class="w-2.5 h-2.5 rounded-full bg-ios-orange" />
-          <span class="text-sm font-bold text-ios-text">{{
+          <span class="text-lg font-bold text-ios-text">{{
             t("kanban.pendingColumn")
           }}</span>
         </div>
         <span
-          class="min-w-6 h-6 rounded-full bg-ios-orange text-white text-xs font-bold flex items-center justify-center px-1.5"
+          class="min-w-6 h-6 rounded-full bg-orange-700 text-white text-xs font-bold flex items-center justify-center px-1.5"
         >
           {{ pendingOrders.length }}
         </span>
@@ -64,7 +64,7 @@
       <div
         ref="pendingColumn"
         :class="[
-          'order-list flex-1 space-y-2 min-h-24 p-1 rounded-xl transition-colors overflow-y-auto',
+          'order-list flex-1 space-y-4 min-h-24 p-1 rounded-xl transition-colors overflow-y-auto',
           {
             'ring-2 ring-ios-orange ring-opacity-40 bg-[rgba(255,149,0,0.04)]':
               dragOverColumn === 'pending',
@@ -107,12 +107,12 @@
       <div class="column-header flex items-center justify-between mb-3">
         <div class="flex items-center gap-2">
           <span class="w-2.5 h-2.5 rounded-full bg-ios-blue" />
-          <span class="text-sm font-bold text-ios-text">{{
+          <span class="text-lg font-bold text-ios-text">{{
             t("kanban.preparingColumn")
           }}</span>
         </div>
         <span
-          class="min-w-6 h-6 rounded-full bg-ios-blue text-white text-xs font-bold flex items-center justify-center px-1.5"
+          class="min-w-6 h-6 rounded-full bg-blue-700 text-white text-xs font-bold flex items-center justify-center px-1.5"
         >
           {{ preparingOrders.length }}
         </span>
@@ -121,7 +121,7 @@
       <div
         ref="preparingColumn"
         :class="[
-          'order-list flex-1 space-y-2 min-h-24 p-1 rounded-xl transition-colors overflow-y-auto',
+          'order-list flex-1 space-y-4 min-h-24 p-1 rounded-xl transition-colors overflow-y-auto',
           {
             'ring-2 ring-ios-blue ring-opacity-40 bg-[rgba(0,122,255,0.04)]':
               dragOverColumn === 'preparing',
@@ -164,12 +164,12 @@
       <div class="column-header flex items-center justify-between mb-3">
         <div class="flex items-center gap-2">
           <span class="w-2.5 h-2.5 rounded-full bg-ios-green" />
-          <span class="text-sm font-bold text-ios-text">{{
+          <span class="text-lg font-bold text-ios-text">{{
             t("kanban.readyColumn")
           }}</span>
         </div>
         <span
-          class="min-w-6 h-6 rounded-full bg-ios-green text-white text-xs font-bold flex items-center justify-center px-1.5"
+          class="min-w-6 h-6 rounded-full bg-green-700 text-white text-xs font-bold flex items-center justify-center px-1.5"
         >
           {{ readyOrders.length }}
         </span>
@@ -178,7 +178,7 @@
       <div
         ref="readyColumn"
         :class="[
-          'order-list flex-1 space-y-2 min-h-24 p-1 rounded-xl transition-colors overflow-y-auto',
+          'order-list flex-1 space-y-4 min-h-24 p-1 rounded-xl transition-colors overflow-y-auto',
           {
             'ring-2 ring-ios-green ring-opacity-40 bg-[rgba(52,199,89,0.04)]':
               dragOverColumn === 'ready',

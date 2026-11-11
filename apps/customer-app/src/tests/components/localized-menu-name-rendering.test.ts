@@ -1,6 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { ref } from "vue";
 import { describe, expect, it, beforeEach } from "vitest";
+import CartItemCard from "@/components/CartItemCard.vue";
 import MenuItemCard from "@/components/MenuItemCard.vue";
 import type { MenuItem } from "@makanmasak/shared-types";
 import { vi } from "vitest";
@@ -54,6 +55,26 @@ provideRouterInjection();
 describe("menu name rendering follows the visitor's language (#112)", () => {
   beforeEach(() => {
     locale.value = "zh-TW";
+  });
+
+  it("names quantity and remove actions for the real cart item", () => {
+    const wrapper = mount(CartItemCard, {
+      props: {
+        item: {
+          id: "cart-1",
+          menuItem: menuItem(),
+          quantity: 2,
+          price: 50,
+          totalPrice: 100,
+        },
+      },
+    });
+    for (const button of wrapper.findAll("button")) {
+      expect(button.attributes("aria-label") || button.text()).toBeTruthy();
+    }
+    expect(
+      wrapper.get('[data-testid="remove-item"]').attributes("aria-label"),
+    ).toContain("海南雞飯");
   });
 
   it("shows the canonical name in a Chinese locale", () => {

@@ -1,9 +1,9 @@
 <template>
-  <div class="space-y-6">
+  <div class="ui-page space-y-6">
     <!-- Action Bar -->
-    <div class="flex justify-end mb-0">
+    <div class="ui-toolbar flex justify-end mb-0">
       <button
-        class="flex items-center px-5 py-2.5 rounded-full text-[13px] font-semibold bg-ios-blue text-white hover:bg-blue-600 transition-colors shadow-sm"
+        class="flex items-center px-5 py-2.5 rounded-full text-[13px] font-semibold bg-primary-700 text-white hover:bg-primary-800 transition-colors shadow-sm"
         @click="showCreateDialog = true"
       >
         <Plus class="w-4 h-4 mr-1.5" />
@@ -15,10 +15,13 @@
     <div class="card p-6">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">{{
-            t("reservation.filter.date")
-          }}</label>
+          <label
+            for="reservationtab-field-1"
+            class="block text-sm font-medium text-gray-700 mb-2"
+            >{{ t("reservation.filter.date") }}</label
+          >
           <input
+            id="reservationtab-field-1"
             v-model="filters.date"
             type="date"
             class="form-input"
@@ -27,10 +30,13 @@
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">{{
-            t("reservation.filter.status")
-          }}</label>
+          <label
+            for="reservationtab-field-2"
+            class="block text-sm font-medium text-gray-700 mb-2"
+            >{{ t("reservation.filter.status") }}</label
+          >
           <select
+            id="reservationtab-field-2"
             v-model="filters.status"
             class="form-input"
             @change="loadReservations()"
@@ -61,10 +67,13 @@
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">{{
-            t("reservation.customerPhone")
-          }}</label>
+          <label
+            for="reservationtab-field-3"
+            class="block text-sm font-medium text-gray-700 mb-2"
+            >{{ t("reservation.customerPhone") }}</label
+          >
           <input
+            id="reservationtab-field-3"
             v-model="filters.phone"
             type="tel"
             class="form-input"
@@ -88,7 +97,7 @@
 
     <!-- Reservations List -->
     <div class="card">
-      <div class="overflow-x-auto">
+      <div class="ui-table-scroll overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
@@ -203,7 +212,7 @@
                 class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2"
               >
                 <button
-                  class="text-blue-600 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+                  class="text-blue-700 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   :title="t('reservation.viewDetail')"
                   :aria-label="t('reservation.viewDetail')"
                   @click="viewDetail(reservation)"
@@ -212,7 +221,7 @@
                 </button>
                 <button
                   v-if="reservation.status === 'pending'"
-                  class="text-green-600 hover:text-green-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+                  class="text-green-700 hover:text-green-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   :title="t('reservation.confirmReservation')"
                   :aria-label="t('reservation.confirmReservation')"
                   @click="confirmReservation(reservation.id)"
@@ -221,7 +230,7 @@
                 </button>
                 <button
                   v-if="reservation.status === 'confirmed'"
-                  class="text-teal-600 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+                  class="text-teal-700 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   :title="t('reservation.markArrived')"
                   :aria-label="t('reservation.markArrived')"
                   @click="markArrived(reservation.id)"
@@ -230,7 +239,7 @@
                 </button>
                 <button
                   v-if="reservation.status === 'arrived'"
-                  class="text-teal-600 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+                  class="text-teal-700 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   :title="t('reservation.markSeated')"
                   :aria-label="t('reservation.markSeated')"
                   @click="markSeated(reservation.id)"
@@ -239,7 +248,7 @@
                 </button>
                 <button
                   v-if="['pending', 'confirmed'].includes(reservation.status)"
-                  class="text-red-600 hover:text-red-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+                  class="text-red-700 hover:text-red-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                   :title="t('reservation.cancelReservation')"
                   :aria-label="t('reservation.cancelReservation')"
                   @click="cancelReservation(reservation.id)"
@@ -255,9 +264,9 @@
       <!-- Pagination -->
       <div
         v-if="pagination.total > 0"
-        class="px-6 py-4 flex items-center justify-between border-t border-gray-200"
+        class="ui-toolbar px-6 py-4 flex items-center justify-between border-t border-gray-200"
       >
-        <div class="flex-1 flex justify-between sm:hidden">
+        <div class="ui-toolbar flex-1 flex justify-between sm:hidden">
           <button
             :disabled="pagination.page === 1"
             class="btn-secondary"
@@ -280,7 +289,7 @@
           </button>
         </div>
         <div
-          class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between"
+          class="ui-toolbar hidden sm:flex-1 sm:flex sm:items-center sm:justify-between"
         >
           <div>
             <p class="text-sm text-gray-700">
@@ -316,7 +325,7 @@
                 :key="page"
                 :class="[
                   page === pagination.page
-                    ? 'z-10 bg-primary-50 border-primary-500 text-primary-600'
+                    ? 'z-10 bg-primary-50 border-primary-500 text-primary-700'
                     : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50',
                   'relative inline-flex items-center px-4 py-2 border text-sm font-medium',
                 ]"
@@ -377,7 +386,7 @@
               leave-to="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
               <DialogPanel
-                class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg"
+                class="ui-panel relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg"
               >
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                   <DialogTitle
@@ -550,7 +559,7 @@
               leave-to="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
               <DialogPanel
-                class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl"
+                class="ui-panel relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl"
               >
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
                   <DialogTitle

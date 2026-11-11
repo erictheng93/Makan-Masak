@@ -1,5 +1,8 @@
 <template>
-  <div class="bg-ios-bg min-h-screen" data-testid="kitchen-dashboard">
+  <div
+    class="kitchen-page ui-page bg-ios-bg min-h-screen"
+    data-testid="kitchen-dashboard"
+  >
     <!-- Kitchen Header (fixed top) -->
     <KitchenHeader
       :restaurant-name="restaurantName"
@@ -17,8 +20,8 @@
       @update:view-mode="setViewMode"
     />
 
-    <!-- Main Content (offset for fixed header) -->
-    <main class="px-5 pb-6 pt-32 lg:pt-20">
+    <!-- Main Content -->
+    <main class="px-5 py-6">
       <OfflineStatus class="mb-4" />
 
       <!-- Stats Bar -->
@@ -74,7 +77,7 @@
         <!-- Order Cards Grid -->
         <div
           v-else
-          class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3"
+          class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"
         >
           <OrderCard
             v-for="order in filteredOrders"
@@ -91,7 +94,9 @@
       <!-- Loading Overlay -->
       <div
         v-if="isInitialLoading && orders.length === 0"
-        class="fixed inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50"
+        role="status"
+        :aria-label="t('kitchen.loadingOrders')"
+        class="fixed inset-0 bg-ios-bg/95 flex items-center justify-center z-50"
       >
         <div class="text-center">
           <div class="loading-spinner w-12 h-12 mx-auto mb-4" />
@@ -552,8 +557,7 @@ onUnmounted(() => {
 
 <style scoped>
 .loading-spinner {
-  border: 3px solid #f2f2f7;
-  border-top: 3px solid #007aff;
+  @apply border-[3px] border-ios-bg border-t-ios-blue;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }

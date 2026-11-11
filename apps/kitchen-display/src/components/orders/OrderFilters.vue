@@ -37,7 +37,7 @@
         :class="[
           'rounded-full px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap cursor-pointer transition-all duration-200',
           selectedStatuses.length === 0 && selectedPriorities.length === 0
-            ? 'bg-ios-blue text-white shadow-sm'
+            ? 'bg-blue-700 text-white shadow-sm'
             : 'bg-ios-bg text-ios-text hover:bg-ios-blue/10',
         ]"
         @click="clearStatusFilters"
@@ -50,7 +50,7 @@
         :class="[
           'rounded-full px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap cursor-pointer transition-all duration-200',
           selectedStatuses.includes('confirmed')
-            ? 'bg-ios-blue text-white shadow-sm'
+            ? 'bg-blue-700 text-white shadow-sm'
             : 'bg-ios-orange-soft text-ios-orange hover:opacity-80',
         ]"
         @click="toggleStatusFilter('confirmed')"
@@ -63,7 +63,7 @@
         :class="[
           'rounded-full px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap cursor-pointer transition-all duration-200',
           selectedStatuses.includes('preparing')
-            ? 'bg-ios-blue text-white shadow-sm'
+            ? 'bg-blue-700 text-white shadow-sm'
             : 'bg-ios-blue-soft text-ios-blue hover:opacity-80',
         ]"
         @click="toggleStatusFilter('preparing')"
@@ -76,7 +76,7 @@
         :class="[
           'rounded-full px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap cursor-pointer transition-all duration-200',
           selectedStatuses.includes('ready')
-            ? 'bg-ios-blue text-white shadow-sm'
+            ? 'bg-blue-700 text-white shadow-sm'
             : 'bg-ios-green-soft text-ios-green hover:opacity-80',
         ]"
         @click="toggleStatusFilter('ready')"
@@ -89,7 +89,7 @@
         :class="[
           'rounded-full px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap cursor-pointer transition-all duration-200',
           selectedPriorities.includes('urgent')
-            ? 'bg-ios-red text-white shadow-sm'
+            ? 'bg-red-700 text-white shadow-sm'
             : 'bg-ios-red-soft text-ios-red hover:opacity-80',
         ]"
         @click="toggleUrgentFilter"
@@ -107,7 +107,7 @@
         :class="[
           'rounded-full px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap cursor-pointer transition-all duration-200 flex items-center gap-1.5',
           filter.active
-            ? 'bg-ios-blue text-white shadow-sm'
+            ? 'bg-blue-700 text-white shadow-sm'
             : 'bg-ios-bg text-ios-text hover:bg-ios-blue/10',
         ]"
         @click="applyQuickFilter(key)"
@@ -121,7 +121,7 @@
         :class="[
           'rounded-full px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap cursor-pointer transition-all duration-200',
           isTakeawayDeliveryActive
-            ? 'bg-ios-orange text-white shadow-sm'
+            ? 'bg-orange-700 text-white shadow-sm'
             : 'bg-ios-orange-soft text-ios-orange hover:opacity-80',
         ]"
         @click="toggleTakeawayDeliveryFilter"

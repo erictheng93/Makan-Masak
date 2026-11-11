@@ -65,6 +65,9 @@ describe("ResetPasswordView", () => {
     );
     expect(wrapper.text()).toContain("auth.resetSuccess");
     expect(wrapper.text()).toContain("auth.resetSuccessMessage");
+    expect(wrapper.get('[role="status"]').attributes("aria-labelledby")).toBe(
+      "password-reset-success",
+    );
     expect(wrapper.text()).not.toContain(SERVER_MESSAGE);
   });
 

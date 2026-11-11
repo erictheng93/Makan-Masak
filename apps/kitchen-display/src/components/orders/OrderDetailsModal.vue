@@ -1,5 +1,5 @@
 <template>
-  <Teleport to="body">
+  <Dialog :open="show" @close="$emit('close')">
     <Transition name="fade">
       <div
         v-if="show"
@@ -9,7 +9,7 @@
     </Transition>
 
     <Transition name="slide-up">
-      <div
+      <DialogPanel
         v-if="show"
         class="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl z-50 max-h-[90vh] flex flex-col"
         @click.stop
@@ -24,9 +24,12 @@
           <div class="flex items-start justify-between">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-3 flex-wrap">
-                <h2 class="text-2xl font-extrabold text-ios-text">
+                <DialogTitle
+                  as="h2"
+                  class="text-2xl font-extrabold text-ios-text"
+                >
                   {{ order.orderNumber }}
-                </h2>
+                </DialogTitle>
                 <span :class="getOrderTypeBadgeClass(order.deliveryInfo?.type)">
                   {{ getOrderTypeText(order.deliveryInfo?.type) }}
                 </span>
@@ -112,14 +115,14 @@
                   </span>
                   <button
                     v-if="item.status === 'pending'"
-                    class="rounded-full px-3 py-1.5 text-sm font-semibold bg-ios-blue text-white"
+                    class="rounded-full px-3 py-1.5 text-sm font-semibold bg-blue-700 text-white"
                     @click="updateItemStatus(item.id, 'preparing')"
                   >
                     {{ t("orders.startItem") }}
                   </button>
                   <button
                     v-else-if="item.status === 'preparing'"
-                    class="rounded-full px-3 py-1.5 text-sm font-semibold bg-ios-green text-white"
+                    class="rounded-full px-3 py-1.5 text-sm font-semibold bg-green-700 text-white"
                     @click="updateItemStatus(item.id, 'ready')"
                   >
                     {{ t("orders.completeItem") }}
@@ -147,7 +150,7 @@
         <div class="px-5 pb-8 pt-3 flex-shrink-0">
           <button
             v-if="hasUncompletedItems"
-            class="w-full rounded-full py-4 font-bold text-white bg-ios-blue text-base"
+            class="w-full rounded-full py-4 font-bold text-white bg-blue-700 text-base"
             @click="markAllComplete"
           >
             {{
@@ -156,18 +159,19 @@
           </button>
           <button
             v-else
-            class="w-full rounded-full py-4 font-bold text-white bg-ios-green text-base"
+            class="w-full rounded-full py-4 font-bold text-white bg-green-700 text-base"
             @click="$emit('close')"
           >
             {{ t("orders.completeAll") }}
           </button>
         </div>
-      </div>
+      </DialogPanel>
     </Transition>
-  </Teleport>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
+import { Dialog, DialogPanel, DialogTitle } from "@headlessui/vue";
 import { computed } from "vue";
 import { XIcon, ZapIcon } from "lucide-vue-next";
 import { useI18n } from "@/i18n";

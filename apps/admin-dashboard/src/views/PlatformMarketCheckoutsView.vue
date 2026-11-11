@@ -1,10 +1,12 @@
 <template>
-  <div class="space-y-6">
+  <div class="ui-page space-y-6">
     <div
       class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
     >
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">市場結帳紀錄</h1>
+        <h1 class="ui-page-heading text-2xl font-bold text-gray-900">
+          市場結帳紀錄
+        </h1>
         <p class="mt-1 text-sm text-gray-500">
           追蹤跨攤位 checkout、子訂單與聯合付款狀態。
         </p>
@@ -48,43 +50,58 @@
       </div>
     </div>
 
-    <section class="rounded-lg bg-white p-4 shadow-ios-card">
+    <section class="ui-panel rounded-lg bg-white p-4 shadow-ios-card">
       <div
         class="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_12rem_13rem_10rem_10rem_auto]"
       >
-        <input
-          v-model="marketSlug"
-          type="search"
-          class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
-          placeholder="市場 slug"
-          @keyup.enter="loadCheckouts()"
-        />
-        <select
-          v-model="paymentStatus"
-          class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+        <label class="admin-field" for="platformmarketcheckoutsview-marketSlug"
+          ><span>市場識別碼</span
+          ><input
+            id="platformmarketcheckoutsview-marketSlug"
+            v-model="marketSlug"
+            type="search"
+            class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+            placeholder="市場 slug"
+            @keyup.enter="loadCheckouts()"
+        /></label>
+        <label
+          class="admin-field"
+          for="platformmarketcheckoutsview-paymentStatus"
+          ><span>付款狀態</span
+          ><select
+            id="platformmarketcheckoutsview-paymentStatus"
+            v-model="paymentStatus"
+            class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+          >
+            <option value="">全部付款狀態</option>
+            <option value="pending">待付款</option>
+            <option value="partial_paid">部分付款</option>
+            <option value="paid">已付款</option>
+            <option value="failed">付款失敗</option>
+            <option value="refunded">已退款</option>
+            <option value="partial_refunded">部分退款</option>
+          </select></label
         >
-          <option value="">全部付款狀態</option>
-          <option value="pending">待付款</option>
-          <option value="partial_paid">部分付款</option>
-          <option value="paid">已付款</option>
-          <option value="failed">付款失敗</option>
-          <option value="refunded">已退款</option>
-          <option value="partial_refunded">部分退款</option>
-        </select>
-        <select
-          v-model="operationAlert"
-          data-testid="market-checkout-operation-alert"
-          class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+        <label
+          class="admin-field"
+          for="platformmarketcheckoutsview-operationAlert"
+          ><span>異常狀態</span
+          ><select
+            id="platformmarketcheckoutsview-operationAlert"
+            v-model="operationAlert"
+            data-testid="market-checkout-operation-alert"
+            class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+          >
+            <option value="">全部營運狀態</option>
+            <option value="provider_pending_stale">待對帳</option>
+            <option value="provider_webhook_missing">未收到 webhook</option>
+            <option value="provider_webhook_failed">webhook 失敗</option>
+            <option value="provider_status_mismatch">狀態不一致</option>
+            <option value="provider_refund_pending">退款處理中</option>
+            <option value="provider_refund_failed">退款失敗</option>
+            <option value="provider_amount_mismatch">金額不符待審</option>
+          </select></label
         >
-          <option value="">全部營運狀態</option>
-          <option value="provider_pending_stale">待對帳</option>
-          <option value="provider_webhook_missing">未收到 webhook</option>
-          <option value="provider_webhook_failed">webhook 失敗</option>
-          <option value="provider_status_mismatch">狀態不一致</option>
-          <option value="provider_refund_pending">退款處理中</option>
-          <option value="provider_refund_failed">退款失敗</option>
-          <option value="provider_amount_mismatch">金額不符待審</option>
-        </select>
         <input
           v-model="dateFrom"
           type="date"
@@ -152,7 +169,7 @@
         <div
           v-for="item in providerConfigurationChecks"
           :key="item.label"
-          class="flex items-center justify-between gap-3 rounded-lg bg-white/70 px-3 py-2"
+          class="ui-toolbar flex items-center justify-between gap-3 rounded-lg bg-white/70 px-3 py-2"
         >
           <dt class="font-medium text-gray-600">{{ item.label }}</dt>
           <dd
@@ -210,7 +227,7 @@
       <div
         v-for="metric in summaryMetrics"
         :key="metric.label"
-        class="rounded-lg bg-white p-4 shadow-ios-card"
+        class="ui-panel rounded-lg bg-white p-4 shadow-ios-card"
       >
         <div class="text-xs font-medium text-gray-500">{{ metric.label }}</div>
         <div class="mt-2 text-xl font-semibold text-gray-900">
@@ -221,7 +238,7 @@
 
     <section
       v-if="summary?.topMarkets.length"
-      class="rounded-lg bg-white p-4 shadow-ios-card"
+      class="ui-panel rounded-lg bg-white p-4 shadow-ios-card"
     >
       <div class="mb-3 text-sm font-semibold text-gray-900">市場排行</div>
       <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
@@ -230,7 +247,7 @@
           :key="market.slug"
           class="rounded-lg border border-gray-200 p-3"
         >
-          <div class="flex items-start justify-between gap-3">
+          <div class="ui-toolbar flex items-start justify-between gap-3">
             <div>
               <div class="font-semibold text-gray-900">{{ market.name }}</div>
               <div class="mt-1 text-xs text-gray-500">/{{ market.slug }}</div>
@@ -263,10 +280,10 @@
     <section
       v-if="vendorSettlements.length"
       data-testid="vendor-settlements"
-      class="rounded-lg bg-white p-4 shadow-ios-card"
+      class="ui-panel rounded-lg bg-white p-4 shadow-ios-card"
     >
       <div class="mb-3 text-sm font-semibold text-gray-900">攤位對帳</div>
-      <div class="overflow-x-auto">
+      <div class="ui-table-scroll overflow-x-auto">
         <table class="min-w-full text-left text-sm">
           <thead class="text-xs text-gray-500">
             <tr>
@@ -336,8 +353,8 @@
       </div>
     </section>
 
-    <section class="rounded-lg bg-white shadow-ios-card">
-      <div v-if="error" class="p-4 text-sm text-red-600">{{ error }}</div>
+    <section class="ui-panel rounded-lg bg-white shadow-ios-card">
+      <div v-if="error" class="p-4 text-sm text-red-700">{{ error }}</div>
       <div v-else-if="isLoading" class="p-8 text-center text-sm text-gray-500">
         載入市場結帳中...
       </div>
@@ -424,7 +441,7 @@
     <section
       v-if="selectedCheckout"
       data-testid="checkout-detail"
-      class="rounded-lg bg-white p-4 shadow-ios-card"
+      class="ui-panel rounded-lg bg-white p-4 shadow-ios-card"
     >
       <div
         class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
@@ -725,7 +742,7 @@
             }}
           </div>
         </div>
-        <div class="mt-3 overflow-x-auto">
+        <div class="ui-table-scroll mt-3 overflow-x-auto">
           <table class="min-w-full text-left text-sm">
             <thead class="text-xs text-gray-500">
               <tr>
@@ -789,7 +806,7 @@
           </div>
         </div>
 
-        <div class="mt-3 overflow-x-auto">
+        <div class="ui-table-scroll mt-3 overflow-x-auto">
           <table class="min-w-full text-left text-sm">
             <thead class="text-xs text-gray-500">
               <tr>

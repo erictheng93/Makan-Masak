@@ -22,6 +22,18 @@ const enUS: Messages = {
     quickActions: "Quick actions",
     addShift: "Add shift",
   },
+  ui: {
+    kitchenDescription:
+      "View live orders, preparation progress and ready dishes.",
+    kitchenEnabled:
+      "Kitchen display is enabled for this restaurant. Continue in the dedicated workspace.",
+    openKitchen: "Open kitchen display",
+    kitchenUnavailable:
+      "Kitchen display is not included in this plan. View billing for plan and support options.",
+    analysisPeriod: "Analysis period",
+    revenuePeriod: "Revenue period",
+    orderPeriod: "Order period",
+  },
   common: {
     save: "Save",
     cancel: "Cancel",

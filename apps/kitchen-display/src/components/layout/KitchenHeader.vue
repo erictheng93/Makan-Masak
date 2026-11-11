@@ -1,6 +1,6 @@
 <template>
   <header
-    class="fixed top-0 w-full z-50 bg-white/85 backdrop-blur-xl border-b border-black/5"
+    class="sticky top-0 w-full z-40 bg-white border-b border-ios-separator"
   >
     <div class="px-4 py-3">
       <div
@@ -8,9 +8,7 @@
       >
         <!-- Left Section: Title + Connection Status -->
         <div class="flex items-center gap-3 min-w-0">
-          <h1
-            class="shrink-0 whitespace-nowrap text-lg font-extrabold text-ios-text lg:text-2xl"
-          >
+          <h1 class="min-w-0 text-lg font-extrabold text-ios-text lg:text-2xl">
             {{ t("header.title") }}
           </h1>
           <!-- Connection Status -->
@@ -18,13 +16,13 @@
             <div
               :class="[
                 'w-2.5 h-2.5 rounded-full transition-colors duration-200',
-                isConnected ? 'bg-ios-green' : 'bg-ios-red',
+                isConnected ? 'bg-green-700' : 'bg-red-700',
               ]"
             />
             <span
               :class="[
                 'text-sm font-medium hidden sm:inline',
-                isConnected ? 'text-ios-green' : 'text-ios-red',
+                isConnected ? 'text-green-700' : 'text-red-700',
               ]"
             >
               {{
@@ -64,7 +62,7 @@
 
         <!-- Right Section: Action Buttons -->
         <div
-          class="flex w-full min-w-0 items-center gap-2 overflow-x-auto pb-1 lg:w-auto lg:flex-none lg:overflow-visible lg:pb-0"
+          class="flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto lg:flex-none"
         >
           <!-- Reconnect Button (when disconnected) -->
           <button
@@ -118,6 +116,8 @@
           <div class="relative">
             <button
               class="h-11 shrink-0 px-3 rounded-full bg-ios-bg flex items-center gap-1.5 transition-all duration-200 ease-out hover:bg-ios-separator active:scale-95"
+              :aria-label="localeConfig.nativeName"
+              :aria-expanded="showLanguageMenu"
               @click="showLanguageMenu = !showLanguageMenu"
             >
               <Globe class="w-5 h-5 text-ios-secondary" />
@@ -191,12 +191,12 @@
     </div>
 
     <!-- Logout Confirmation Modal -->
-    <div
-      v-if="showLogoutConfirm"
+    <Dialog
+      :open="showLogoutConfirm"
       class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-      @click="showLogoutConfirm = false"
+      @close="showLogoutConfirm = false"
     >
-      <div
+      <DialogPanel
         class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-card-lg"
         @click.stop
       >
@@ -206,9 +206,9 @@
           >
             <AlertTriangle class="w-6 h-6 text-ios-red" />
           </div>
-          <h3 class="text-lg font-semibold text-ios-text mb-2">
+          <DialogTitle as="h3" class="text-lg font-semibold text-ios-text mb-2">
             {{ t("header.logoutConfirmTitle") }}
-          </h3>
+          </DialogTitle>
           <p class="text-ios-secondary mb-6">
             {{ t("header.logoutConfirmMessage") }}
           </p>
@@ -221,19 +221,20 @@
               {{ t("common.cancel") }}
             </button>
             <button
-              class="flex-1 py-2.5 px-4 rounded-full bg-ios-red text-white font-semibold text-sm transition-all duration-200 ease-out hover:bg-ios-red/90 active:scale-95"
+              class="flex-1 py-2.5 px-4 rounded-full bg-red-700 text-white font-semibold text-sm transition-all duration-200 ease-out hover:bg-ios-red/90 active:scale-95"
               @click="confirmLogout"
             >
               {{ t("header.logout") }}
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogPanel>
+    </Dialog>
   </header>
 </template>
 
 <script setup lang="ts">
+import { Dialog, DialogPanel, DialogTitle } from "@headlessui/vue";
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import {
   RefreshCw,

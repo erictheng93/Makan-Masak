@@ -113,6 +113,16 @@ describe("ReservationView", () => {
       partySize: 1,
     });
     expect(wrapper.text()).toContain("Demo Noodles");
+    for (const field of wrapper.findAll("input, textarea")) {
+      const id = field.attributes("id");
+      expect(id).toBeTruthy();
+      expect(wrapper.find(`label[for="${id}"]`).exists()).toBe(true);
+    }
+    expect(
+      wrapper
+        .get('[data-testid="reservation-slot"]')
+        .attributes("aria-pressed"),
+    ).toBe("true");
     expect(wrapper.findAll('[data-testid="reservation-slot"]')).toHaveLength(2);
     expect(
       wrapper.get('[data-testid="reservation-slot"]').attributes("disabled"),

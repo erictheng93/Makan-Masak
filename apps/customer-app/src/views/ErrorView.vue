@@ -1,5 +1,7 @@
 <template>
-  <div class="min-h-screen bg-ios-bg flex items-center justify-center px-5">
+  <div
+    class="customer-shell min-h-screen bg-ios-bg flex items-center justify-center px-5"
+  >
     <div
       class="w-full max-w-md bg-ios-card rounded-3xl shadow-[0_4px_16px_rgb(0,0,0,0.06)] p-8 text-center"
     >
@@ -24,7 +26,7 @@
       <h1 class="text-2xl font-bold text-ios-text mb-2">
         {{ t("errors.general") }}
       </h1>
-      <p class="text-ios-secondary mb-8">
+      <p class="text-ios-text/70 mb-8">
         {{ errorMessage || t("errors.generalDesc") }}
       </p>
 

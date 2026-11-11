@@ -414,7 +414,10 @@ onMounted(loadDashboard);
 </script>
 
 <template>
-  <div class="space-y-6" data-testid="management-markets-page">
+  <div
+    class="portal-page ui-page space-y-6"
+    data-testid="management-markets-page"
+  >
     <div
       class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
     >
@@ -468,7 +471,7 @@ onMounted(loadDashboard);
             <MapIcon class="mx-auto mb-3 h-10 w-10 text-gray-400" />
             No markets match the current filters.
           </div>
-          <div v-else class="overflow-x-auto">
+          <div v-else class="ui-table-scroll overflow-x-auto">
             <table class="table">
               <thead>
                 <tr>
@@ -633,77 +636,133 @@ onMounted(loadDashboard);
             </p>
           </div>
 
-          <div class="grid gap-3 sm:grid-cols-2">
-            <input
-              v-model="form.name"
+          <fieldset class="grid gap-4 sm:grid-cols-2">
+            <legend class="mb-3 font-semibold text-gray-900">
+              基本資料與位置
+            </legend>
+            <div class="min-w-0">
+              <label for="market-name" class="label">市場名稱</label
+              ><input
+                id="market-name"
+                v-model="form.name"
+                required
+                class="input"
+                placeholder="Name"
+              />
+            </div>
+            <div class="min-w-0">
+              <label for="market-slug" class="label">市場代稱（slug）</label
+              ><input
+                id="market-slug"
+                v-model="form.slug"
+                required
+                class="input"
+                placeholder="slug"
+                pattern="[a-z0-9]+(-[a-z0-9]+)*"
+              />
+            </div>
+            <div class="min-w-0">
+              <label for="market-type" class="label">市場類型</label
+              ><select id="market-type" v-model="form.type" class="input">
+                <option value="night_market">Night market</option>
+                <option value="commercial_district">Commercial district</option>
+                <option value="food_court">Food court</option>
+                <option value="event_venue">Event venue</option>
+              </select>
+            </div>
+            <div class="min-w-0">
+              <label for="market-city" class="label">城市</label
+              ><input
+                id="market-city"
+                v-model="form.city"
+                required
+                class="input"
+                placeholder="City"
+              />
+            </div>
+            <div class="min-w-0">
+              <label for="market-district" class="label">行政區</label
+              ><input
+                id="market-district"
+                v-model="form.district"
+                required
+                class="input"
+                placeholder="District"
+              />
+            </div>
+            <div class="min-w-0">
+              <label for="market-latitude" class="label">緯度</label
+              ><input
+                id="market-latitude"
+                v-model.number="form.latitude"
+                required
+                type="number"
+                step="0.000001"
+                class="input"
+                placeholder="Latitude"
+              />
+            </div>
+            <div class="min-w-0">
+              <label for="market-longitude" class="label">經度</label
+              ><input
+                id="market-longitude"
+                v-model.number="form.longitude"
+                required
+                type="number"
+                step="0.000001"
+                class="input"
+                placeholder="Longitude"
+              />
+            </div>
+          </fieldset>
+          <div class="min-w-0">
+            <label for="market-address" class="label">地址</label
+            ><input
+              id="market-address"
+              v-model="form.address"
               required
               class="input"
-              placeholder="Name"
-            />
-            <input
-              v-model="form.slug"
-              required
-              class="input"
-              placeholder="slug"
-              pattern="[a-z0-9]+(-[a-z0-9]+)*"
-            />
-            <select v-model="form.type" class="input">
-              <option value="night_market">Night market</option>
-              <option value="commercial_district">Commercial district</option>
-              <option value="food_court">Food court</option>
-              <option value="event_venue">Event venue</option>
-            </select>
-            <input
-              v-model="form.city"
-              required
-              class="input"
-              placeholder="City"
-            />
-            <input
-              v-model="form.district"
-              required
-              class="input"
-              placeholder="District"
-            />
-            <input
-              v-model.number="form.latitude"
-              required
-              type="number"
-              step="0.000001"
-              class="input"
-              placeholder="Latitude"
-            />
-            <input
-              v-model.number="form.longitude"
-              required
-              type="number"
-              step="0.000001"
-              class="input"
-              placeholder="Longitude"
+              placeholder="Address"
             />
           </div>
-          <input
-            v-model="form.address"
-            required
-            class="input"
-            placeholder="Address"
-          />
-          <input
-            v-model="form.bannerUrl"
-            class="input"
-            placeholder="Banner URL"
-          />
-          <input v-model="form.logoUrl" class="input" placeholder="Logo URL" />
-          <textarea
-            v-model="imageUrlsText"
-            class="input min-h-24"
-            placeholder="Gallery image URLs, one per line"
-          />
-          <input
-            v-model="tagsText"
-            class="input"
-            placeholder="Tags, separated by commas"
-          />
+          <h3 class="pt-3 font-semibold text-gray-900">圖片與分類</h3>
+          <div class="min-w-0">
+            <label for="market-bannerUrl" class="label">橫幅圖片網址</label
+            ><input
+              id="market-bannerUrl"
+              v-model="form.bannerUrl"
+              class="input"
+              placeholder="Banner URL"
+            />
+          </div>
+          <div class="min-w-0">
+            <label for="market-logoUrl" class="label">標誌圖片網址</label
+            ><input
+              id="market-logoUrl"
+              v-model="form.logoUrl"
+              class="input"
+              placeholder="Logo URL"
+            />
+          </div>
+          <div class="min-w-0">
+            <label for="market-imageUrls" class="label"
+              >相簿圖片網址（每行一個）</label
+            ><textarea
+              id="market-imageUrls"
+              v-model="imageUrlsText"
+              class="input min-h-24"
+              placeholder="Gallery image URLs, one per line"
+            />
+          </div>
+          <div class="min-w-0">
+            <label for="market-tags" class="label">標籤（逗號分隔）</label
+            ><input
+              id="market-tags"
+              v-model="tagsText"
+              class="input"
+              placeholder="Tags, separated by commas"
+            />
+          </div>
 
           <fieldset class="space-y-3">
             <legend class="text-sm font-medium text-gray-900">
@@ -744,11 +803,15 @@ onMounted(loadDashboard);
             </div>
           </fieldset>
 
-          <textarea
-            v-model="form.description"
-            class="input min-h-24"
-            placeholder="Description"
-          />
+          <div class="min-w-0">
+            <label for="market-description" class="label">市場說明</label
+            ><textarea
+              id="market-description"
+              v-model="form.description"
+              class="input min-h-24"
+              placeholder="Description"
+            />
+          </div>
           <button
             type="submit"
             class="btn btn-primary w-full"

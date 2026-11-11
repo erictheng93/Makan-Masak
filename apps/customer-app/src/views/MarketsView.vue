@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-ios-bg">
+  <div class="customer-shell min-h-screen bg-ios-bg">
     <nav class="sticky top-0 z-10 border-b border-gray-100 bg-white shadow-sm">
       <div class="mx-auto flex max-w-md items-center gap-3 px-4 py-3">
         <button
@@ -37,6 +37,7 @@
         >
           <input
             v-model="query"
+            :aria-label="t('markets.common.search')"
             data-testid="markets-search-input"
             type="search"
             class="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ios-blue focus:outline-none focus:ring-2 focus:ring-ios-blue/20"
@@ -52,6 +53,7 @@
         <div class="flex gap-2">
           <select
             v-model="city"
+            :aria-label="t('markets.directory.allCities')"
             data-testid="markets-city-select"
             class="h-10 flex-1 rounded-lg border border-gray-300 px-3 text-sm focus:border-ios-blue focus:outline-none focus:ring-2 focus:ring-ios-blue/20"
             @change="onCityChange"
@@ -67,6 +69,7 @@
           </select>
           <select
             v-model="district"
+            :aria-label="t('markets.directory.allDistricts')"
             data-testid="markets-district-select"
             class="h-10 flex-1 rounded-lg border border-gray-300 px-3 text-sm focus:border-ios-blue focus:outline-none focus:ring-2 focus:ring-ios-blue/20"
             @change="reloadList"
@@ -79,6 +82,7 @@
         </div>
         <select
           v-model="marketType"
+          :aria-label="t('markets.directory.allTypes')"
           data-testid="markets-type-select"
           class="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm focus:border-ios-blue focus:outline-none focus:ring-2 focus:ring-ios-blue/20"
           @change="reloadList"
@@ -116,34 +120,34 @@
         {{ t(store.error) }}
       </div>
       <template v-else>
-        <section v-if="favoriteMarkets.length > 0" class="space-y-3">
-          <h2 class="text-sm font-medium text-gray-700">
+        <details v-if="favoriteMarkets.length > 0" class="space-y-3">
+          <summary class="text-sm font-medium text-gray-700">
             {{ t("markets.directory.favorites") }}
-          </h2>
+          </summary>
           <MarketCard
             v-for="market in favoriteMarkets"
             :key="`favorite-${market.id}`"
             :market="market"
             @select="openMarket"
           />
-        </section>
+        </details>
 
-        <section v-if="recentMarkets.length > 0" class="space-y-3">
-          <h2 class="text-sm font-medium text-gray-700">
+        <details v-if="recentMarkets.length > 0" class="space-y-3">
+          <summary class="text-sm font-medium text-gray-700">
             {{ t("markets.directory.recentVisits") }}
-          </h2>
+          </summary>
           <MarketCard
             v-for="market in recentMarkets"
             :key="`recent-${market.id}`"
             :market="market"
             @select="openMarket"
           />
-        </section>
+        </details>
 
-        <section v-if="recentCheckouts.length > 0" class="space-y-3">
-          <h2 class="text-sm font-medium text-gray-700">
+        <details v-if="recentCheckouts.length > 0" class="space-y-3">
+          <summary class="text-sm font-medium text-gray-700">
             {{ t("markets.directory.recentOrders") }}
-          </h2>
+          </summary>
           <!-- Kept visible but inert while the API has market checkouts
                switched off. The tracking screen this opens does nothing but
                read /market-checkouts, so following the link would land the
@@ -193,7 +197,7 @@
               </template>
             </span>
           </button>
-        </section>
+        </details>
 
         <section v-if="store.nearbyMarkets.length > 0" class="space-y-3">
           <h2 class="text-sm font-medium text-gray-700">
@@ -210,6 +214,9 @@
         <section class="space-y-3">
           <h2 class="text-sm font-medium text-gray-700">
             {{ t("markets.directory.allMarkets") }}
+            <span class="ml-2 text-ios-text/70"
+              >({{ store.markets.length }})</span
+            >
           </h2>
           <MarketCard
             v-for="market in store.markets"

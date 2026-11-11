@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-ios-bg py-12 px-4 sm:px-6 lg:px-8">
+  <div class="customer-shell min-h-screen bg-ios-bg py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full mx-auto space-y-8">
       <div class="text-center">
         <div
@@ -13,6 +13,8 @@
       </div>
 
       <div
+        role="status"
+        aria-live="polite"
         class="bg-ios-card rounded-3xl shadow-[0_4px_16px_rgba(0,0,0,0.06)] p-8 text-center"
       >
         <div v-if="state === 'pending'" data-testid="pending-panel">
@@ -47,7 +49,7 @@
           </p>
         </div>
 
-        <div v-else data-testid="failed-panel">
+        <div v-else data-testid="failed-panel" role="alert">
           <div
             class="mx-auto w-12 h-12 rounded-full bg-ios-red/10 flex items-center justify-center mb-4"
           >

@@ -334,9 +334,9 @@ function switchTab(tab: TabType) {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto space-y-6">
+  <div class="ui-page max-w-4xl mx-auto space-y-6">
     <!-- Page Title -->
-    <h1 class="text-2xl font-bold text-gray-900">
+    <h1 class="ui-page-heading text-2xl font-bold text-gray-900">
       {{ t("accountManagement.title") }}
     </h1>
 
@@ -347,7 +347,7 @@ function switchTab(tab: TabType) {
           class="pb-3 text-sm font-medium border-b-2 transition-colors"
           :class="
             activeTab === 'owners'
-              ? 'border-blue-600 text-blue-600'
+              ? 'border-blue-600 text-blue-700'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
           "
           :data-active="activeTab === 'owners'"
@@ -359,7 +359,7 @@ function switchTab(tab: TabType) {
           class="pb-3 text-sm font-medium border-b-2 transition-colors"
           :class="
             activeTab === 'admins'
-              ? 'border-blue-600 text-blue-600'
+              ? 'border-blue-600 text-blue-700'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
           "
           :data-active="activeTab === 'admins'"
@@ -375,13 +375,13 @@ function switchTab(tab: TabType) {
       <!-- Owner Registration Form -->
       <form
         data-testid="account-management-owner-form"
-        class="bg-white rounded-lg shadow-sm border border-gray-200"
+        class="ui-panel bg-white rounded-lg shadow-sm border border-gray-200"
         @submit.prevent="handleOwnerSubmit"
       >
         <!-- Section 1: Account Info -->
         <div class="px-6 py-5 border-b border-gray-200">
           <div class="flex items-center gap-2 mb-4">
-            <UserPlus class="w-5 h-5 text-blue-600" />
+            <UserPlus class="w-5 h-5 text-blue-700" />
             <h2 class="text-lg font-semibold text-gray-900">
               {{ t("accountManagement.accountInfo") }}
             </h2>
@@ -389,69 +389,129 @@ function switchTab(tab: TabType) {
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                for="accountmanagementview-field-1"
+                class="block text-sm font-medium text-gray-700 mb-1"
+              >
                 {{ t("accountManagement.username") }} *
               </label>
               <input
+                id="accountmanagementview-field-1"
                 v-model="ownerForm.username"
+                aria-required="true"
+                :aria-invalid="!!errors.username"
+                :aria-describedby="
+                  errors.username
+                    ? 'accountmanagementview-field-1-error'
+                    : undefined
+                "
                 data-testid="account-management-owner-username"
                 type="text"
                 class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                 :class="{ 'border-red-300': errors.username }"
                 :placeholder="t('accountManagement.usernamePlaceholder')"
               />
-              <p v-if="errors.username" class="mt-1 text-xs text-red-600">
+              <p
+                v-if="errors.username"
+                id="accountmanagementview-field-1-error"
+                class="mt-1 text-xs text-red-700"
+              >
                 {{ errors.username }}
               </p>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                for="accountmanagementview-field-2"
+                class="block text-sm font-medium text-gray-700 mb-1"
+              >
                 {{ t("accountManagement.password") }} *
               </label>
               <input
+                id="accountmanagementview-field-2"
                 v-model="ownerForm.password"
+                aria-required="true"
+                :aria-invalid="!!errors.password"
+                :aria-describedby="
+                  errors.password
+                    ? 'accountmanagementview-field-2-error'
+                    : undefined
+                "
                 data-testid="account-management-owner-password"
                 type="password"
                 class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                 :class="{ 'border-red-300': errors.password }"
                 :placeholder="t('accountManagement.passwordPlaceholder')"
               />
-              <p v-if="errors.password" class="mt-1 text-xs text-red-600">
+              <p
+                v-if="errors.password"
+                id="accountmanagementview-field-2-error"
+                class="mt-1 text-xs text-red-700"
+              >
                 {{ errors.password }}
               </p>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                for="accountmanagementview-field-3"
+                class="block text-sm font-medium text-gray-700 mb-1"
+              >
                 {{ t("accountManagement.fullName") }} *
               </label>
               <input
+                id="accountmanagementview-field-3"
                 v-model="ownerForm.fullName"
+                aria-required="true"
+                :aria-invalid="!!errors.fullName"
+                :aria-describedby="
+                  errors.fullName
+                    ? 'accountmanagementview-field-3-error'
+                    : undefined
+                "
                 data-testid="account-management-owner-full-name"
                 type="text"
                 class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                 :class="{ 'border-red-300': errors.fullName }"
                 :placeholder="t('accountManagement.fullNamePlaceholder')"
               />
-              <p v-if="errors.fullName" class="mt-1 text-xs text-red-600">
+              <p
+                v-if="errors.fullName"
+                id="accountmanagementview-field-3-error"
+                class="mt-1 text-xs text-red-700"
+              >
                 {{ errors.fullName }}
               </p>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                for="accountmanagementview-field-4"
+                class="block text-sm font-medium text-gray-700 mb-1"
+              >
                 {{ t("accountManagement.email") }} *
               </label>
               <input
+                id="accountmanagementview-field-4"
                 v-model="ownerForm.email"
+                aria-required="true"
+                :aria-invalid="!!errors.email"
+                :aria-describedby="
+                  errors.email
+                    ? 'accountmanagementview-field-4-error'
+                    : undefined
+                "
                 data-testid="account-management-owner-email"
                 type="email"
                 class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                 :class="{ 'border-red-300': errors.email }"
                 :placeholder="t('accountManagement.emailPlaceholder')"
               />
-              <p v-if="errors.email" class="mt-1 text-xs text-red-600">
+              <p
+                v-if="errors.email"
+                id="accountmanagementview-field-4-error"
+                class="mt-1 text-xs text-red-700"
+              >
                 {{ errors.email }}
               </p>
             </div>
@@ -461,7 +521,7 @@ function switchTab(tab: TabType) {
         <!-- Section 2: Restaurant Binding -->
         <div class="px-6 py-5 border-b border-gray-200">
           <div class="flex items-center gap-2 mb-4">
-            <Building2 class="w-5 h-5 text-green-600" />
+            <Building2 class="w-5 h-5 text-green-700" />
             <h2 class="text-lg font-semibold text-gray-900">
               {{ t("accountManagement.restaurantBinding") }}
             </h2>
@@ -470,11 +530,22 @@ function switchTab(tab: TabType) {
           <div class="space-y-4">
             <!-- Restaurant Select -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                for="accountmanagementview-field-5"
+                class="block text-sm font-medium text-gray-700 mb-1"
+              >
                 {{ t("accountManagement.restaurant") }} *
               </label>
               <div class="relative">
                 <select
+                  id="accountmanagementview-field-5"
+                  aria-required="true"
+                  :aria-invalid="!!errors.restaurantId"
+                  :aria-describedby="
+                    errors.restaurantId
+                      ? 'accountmanagementview-field-5-error'
+                      : undefined
+                  "
                   data-testid="account-management-owner-restaurant"
                   class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm appearance-none pr-10"
                   :class="{ 'border-red-300': errors.restaurantId }"
@@ -492,7 +563,11 @@ function switchTab(tab: TabType) {
                   class="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
                 />
               </div>
-              <p v-if="errors.restaurantId" class="mt-1 text-xs text-red-600">
+              <p
+                v-if="errors.restaurantId"
+                id="accountmanagementview-field-5-error"
+                class="mt-1 text-xs text-red-700"
+              >
                 {{ errors.restaurantId }}
               </p>
               <p class="mt-1 text-xs text-gray-500">
@@ -500,7 +575,7 @@ function switchTab(tab: TabType) {
                 <router-link
                   :to="{ name: 'PlatformOnboardingApplications' }"
                   data-testid="account-management-new-shop-link"
-                  class="text-blue-600 hover:underline"
+                  class="text-blue-700 hover:underline"
                 >
                   {{ t("accountManagement.newShopLink") }}
                 </router-link>
@@ -509,10 +584,14 @@ function switchTab(tab: TabType) {
 
             <!-- Phone -->
             <div class="max-w-sm">
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                for="accountmanagementview-field-6"
+                class="block text-sm font-medium text-gray-700 mb-1"
+              >
                 {{ t("accountManagement.phone") }}
               </label>
               <input
+                id="accountmanagementview-field-6"
                 v-model="ownerForm.phone"
                 data-testid="account-management-owner-phone"
                 type="tel"
@@ -526,7 +605,7 @@ function switchTab(tab: TabType) {
         <!-- Section 3: Permission Confirmation -->
         <div class="px-6 py-5 border-b border-gray-200">
           <div class="flex items-center gap-2 mb-4">
-            <Shield class="w-5 h-5 text-amber-600" />
+            <Shield class="w-5 h-5 text-amber-700" />
             <h2 class="text-lg font-semibold text-gray-900">
               {{ t("accountManagement.permissionConfirm") }}
             </h2>
@@ -566,7 +645,7 @@ function switchTab(tab: TabType) {
           <button
             data-testid="account-management-owner-submit"
             type="submit"
-            class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+            class="w-full sm:w-auto px-6 py-2.5 bg-primary-700 hover:bg-primary-800 disabled:bg-blue-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
             :disabled="submitting"
           >
             <Loader2 v-if="submitting" class="w-4 h-4 animate-spin" />
@@ -580,13 +659,15 @@ function switchTab(tab: TabType) {
       </form>
 
       <!-- Existing Owners Table -->
-      <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div
+        class="ui-panel bg-white rounded-lg shadow-sm border border-gray-200"
+      >
         <div class="px-6 py-4 border-b border-gray-200">
           <h2 class="text-lg font-semibold text-gray-900">
             {{ t("accountManagement.existingOwners") }}
           </h2>
         </div>
-        <div class="overflow-x-auto">
+        <div class="ui-table-scroll overflow-x-auto">
           <table class="w-full text-sm">
             <thead class="bg-gray-50">
               <tr>
@@ -684,19 +765,19 @@ function switchTab(tab: TabType) {
       <p
         v-if="!isAdministrator"
         data-testid="account-management-admins-readonly"
-        class="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] px-6 py-4 text-sm text-ios-text/60"
+        class="ui-panel bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] px-6 py-4 text-sm text-ios-text/70"
       >
         {{ t("accountManagement.adminsAdministratorOnly") }}
       </p>
       <!-- Admin Registration Form (simplified — no restaurant binding) -->
       <form
         v-else
-        class="bg-white rounded-lg shadow-sm border border-gray-200"
+        class="ui-panel bg-white rounded-lg shadow-sm border border-gray-200"
         @submit.prevent="handleAdminSubmit"
       >
         <div class="px-6 py-5 border-b border-gray-200">
           <div class="flex items-center gap-2 mb-4">
-            <UserPlus class="w-5 h-5 text-blue-600" />
+            <UserPlus class="w-5 h-5 text-blue-700" />
             <h2 class="text-lg font-semibold text-gray-900">
               {{ t("accountManagement.accountInfo") }}
             </h2>
@@ -704,74 +785,138 @@ function switchTab(tab: TabType) {
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                for="accountmanagementview-field-7"
+                class="block text-sm font-medium text-gray-700 mb-1"
+              >
                 {{ t("accountManagement.username") }} *
               </label>
               <input
+                id="accountmanagementview-field-7"
                 v-model="adminForm.username"
+                aria-required="true"
+                :aria-invalid="!!errors.username"
+                :aria-describedby="
+                  errors.username
+                    ? 'accountmanagementview-field-7-error'
+                    : undefined
+                "
                 type="text"
                 class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                 :class="{ 'border-red-300': errors.username }"
                 :placeholder="t('accountManagement.usernamePlaceholder')"
               />
-              <p v-if="errors.username" class="mt-1 text-xs text-red-600">
+              <p
+                v-if="errors.username"
+                id="accountmanagementview-field-7-error"
+                class="mt-1 text-xs text-red-700"
+              >
                 {{ errors.username }}
               </p>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                for="accountmanagementview-field-8"
+                class="block text-sm font-medium text-gray-700 mb-1"
+              >
                 {{ t("accountManagement.password") }} *
               </label>
               <input
+                id="accountmanagementview-field-8"
                 v-model="adminForm.password"
+                aria-required="true"
+                :aria-invalid="!!errors.password"
+                :aria-describedby="
+                  errors.password
+                    ? 'accountmanagementview-field-8-error'
+                    : undefined
+                "
                 type="password"
                 class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                 :class="{ 'border-red-300': errors.password }"
                 :placeholder="t('accountManagement.passwordPlaceholder')"
               />
-              <p v-if="errors.password" class="mt-1 text-xs text-red-600">
+              <p
+                v-if="errors.password"
+                id="accountmanagementview-field-8-error"
+                class="mt-1 text-xs text-red-700"
+              >
                 {{ errors.password }}
               </p>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                for="accountmanagementview-field-9"
+                class="block text-sm font-medium text-gray-700 mb-1"
+              >
                 {{ t("accountManagement.fullName") }} *
               </label>
               <input
+                id="accountmanagementview-field-9"
                 v-model="adminForm.fullName"
+                aria-required="true"
+                :aria-invalid="!!errors.fullName"
+                :aria-describedby="
+                  errors.fullName
+                    ? 'accountmanagementview-field-9-error'
+                    : undefined
+                "
                 type="text"
                 class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                 :class="{ 'border-red-300': errors.fullName }"
                 :placeholder="t('accountManagement.fullNamePlaceholder')"
               />
-              <p v-if="errors.fullName" class="mt-1 text-xs text-red-600">
+              <p
+                v-if="errors.fullName"
+                id="accountmanagementview-field-9-error"
+                class="mt-1 text-xs text-red-700"
+              >
                 {{ errors.fullName }}
               </p>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                for="accountmanagementview-field-10"
+                class="block text-sm font-medium text-gray-700 mb-1"
+              >
                 {{ t("accountManagement.email") }} *
               </label>
               <input
+                id="accountmanagementview-field-10"
                 v-model="adminForm.email"
+                aria-required="true"
+                :aria-invalid="!!errors.email"
+                :aria-describedby="
+                  errors.email
+                    ? 'accountmanagementview-field-10-error'
+                    : undefined
+                "
                 type="email"
                 class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                 :class="{ 'border-red-300': errors.email }"
                 :placeholder="t('accountManagement.emailPlaceholder')"
               />
-              <p v-if="errors.email" class="mt-1 text-xs text-red-600">
+              <p
+                v-if="errors.email"
+                id="accountmanagementview-field-10-error"
+                class="mt-1 text-xs text-red-700"
+              >
                 {{ errors.email }}
               </p>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                for="accountmanagementview-field-11"
+                class="block text-sm font-medium text-gray-700 mb-1"
+              >
                 {{ t("accountManagement.adminTier") }} *
               </label>
               <select
+                id="accountmanagementview-field-11"
                 v-model="adminForm.adminTier"
                 data-testid="account-management-admin-tier"
                 class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
@@ -799,7 +944,7 @@ function switchTab(tab: TabType) {
           </div>
           <button
             type="submit"
-            class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+            class="w-full sm:w-auto px-6 py-2.5 bg-primary-700 hover:bg-primary-800 disabled:bg-blue-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
             :disabled="submitting"
           >
             <Loader2 v-if="submitting" class="w-4 h-4 animate-spin" />
@@ -813,13 +958,15 @@ function switchTab(tab: TabType) {
       </form>
 
       <!-- Existing Admins Table -->
-      <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div
+        class="ui-panel bg-white rounded-lg shadow-sm border border-gray-200"
+      >
         <div class="px-6 py-4 border-b border-gray-200">
           <h2 class="text-lg font-semibold text-gray-900">
             {{ t("accountManagement.existingAdmins") }}
           </h2>
         </div>
-        <div class="overflow-x-auto">
+        <div class="ui-table-scroll overflow-x-auto">
           <table class="w-full text-sm">
             <thead class="bg-gray-50">
               <tr>

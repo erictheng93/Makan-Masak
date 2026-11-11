@@ -1,6 +1,6 @@
 <template>
   <div
-    class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"
+    class="ui-page min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"
   >
     <div class="max-w-md w-full space-y-8">
       <!-- Header -->
@@ -10,14 +10,22 @@
         >
           <span class="text-white font-bold text-2xl">M</span>
         </div>
-        <h2 class="text-3xl font-bold text-gray-900">MakanMasak</h2>
+        <p class="text-sm font-semibold text-primary-700">MakanMasak</p>
+        <h1 class="ui-page-heading mt-3 text-2xl font-bold text-ios-text">
+          {{ t("pages.resetPassword") }}
+        </h1>
         <p class="mt-2 text-sm text-gray-600">
           {{ t("auth.resetPasswordSubtitle") }}
         </p>
       </div>
 
       <!-- Verifying Token -->
-      <div v-if="verifying" class="mt-8 space-y-6">
+      <div
+        v-if="verifying"
+        role="status"
+        :aria-label="t('auth.verifyingLink')"
+        class="mt-8 space-y-6"
+      >
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
           <div class="flex items-center justify-center">
             <div
@@ -31,22 +39,30 @@
       </div>
 
       <!-- Token Error -->
-      <div v-else-if="tokenError" class="mt-8 space-y-6">
+      <div
+        v-else-if="tokenError"
+        role="alert"
+        aria-labelledby="password-reset-invalid"
+        class="mt-8 space-y-6"
+      >
         <div class="bg-red-50 border border-red-200 rounded-lg p-6">
           <div class="flex items-start">
             <div
               class="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center"
             >
-              <AlertCircle class="w-6 h-6 text-red-600" />
+              <AlertCircle class="w-6 h-6 text-red-700" />
             </div>
             <div class="ml-4 flex-1">
-              <h3 class="text-lg font-medium text-red-900">
+              <h3
+                id="password-reset-invalid"
+                class="text-lg font-medium text-red-900"
+              >
                 {{ t("auth.linkInvalid") }}
               </h3>
               <p class="mt-2 text-sm text-red-700">
                 {{ tokenError }}
               </p>
-              <p class="mt-3 text-sm text-red-600">
+              <p class="mt-3 text-sm text-red-700">
                 {{ t("auth.linkInvalidMessage") }}
               </p>
             </div>
@@ -70,19 +86,27 @@
       </div>
 
       <!-- Success State -->
-      <div v-else-if="success" class="mt-8 space-y-6">
+      <div
+        v-else-if="success"
+        role="status"
+        aria-labelledby="password-reset-success"
+        class="mt-8 space-y-6"
+      >
         <div class="bg-green-50 border border-green-200 rounded-lg p-6">
           <div class="flex items-start">
             <div
               class="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center"
             >
-              <CheckCircle class="w-6 h-6 text-green-600" />
+              <CheckCircle class="w-6 h-6 text-green-700" />
             </div>
             <div class="ml-4 flex-1">
-              <h3 class="text-lg font-medium text-green-900">
+              <h3
+                id="password-reset-success"
+                class="text-lg font-medium text-green-900"
+              >
                 {{ t("auth.resetSuccess") }}
               </h3>
-              <p class="mt-2 text-sm text-green-600">
+              <p class="mt-2 text-sm text-green-700">
                 {{ t("auth.resetSuccessMessage") }}
               </p>
             </div>
@@ -147,13 +171,13 @@
                 <EyeOff v-else class="w-4 h-4 text-gray-400" />
               </button>
             </div>
-            <p v-if="errors.newPassword" class="mt-1 text-sm text-red-600">
+            <p v-if="errors.newPassword" class="mt-1 text-sm text-red-700">
               {{ errors.newPassword }}
             </p>
 
             <!-- Password Strength Indicator -->
             <div v-if="form.newPassword" class="mt-2">
-              <div class="flex items-center justify-between mb-1">
+              <div class="ui-toolbar flex items-center justify-between mb-1">
                 <span class="text-xs text-gray-600">{{
                   t("auth.passwordStrength")
                 }}</span>
@@ -184,9 +208,9 @@
                 :data-status="req.met ? 'met' : 'missing'"
                 :class="
                   req.met
-                    ? 'text-green-600'
+                    ? 'text-green-700'
                     : submitAttempted
-                      ? 'text-red-600'
+                      ? 'text-red-700'
                       : 'text-gray-500'
                 "
               >
@@ -229,7 +253,7 @@
                 <EyeOff v-else class="w-4 h-4 text-gray-400" />
               </button>
             </div>
-            <p v-if="errors.confirmPassword" class="mt-1 text-sm text-red-600">
+            <p v-if="errors.confirmPassword" class="mt-1 text-sm text-red-700">
               {{ errors.confirmPassword }}
             </p>
           </div>
@@ -241,7 +265,7 @@
           class="bg-red-50 border border-red-200 rounded-lg p-4"
         >
           <div class="flex items-center">
-            <AlertCircle class="w-5 h-5 text-red-400 mr-2" />
+            <AlertCircle class="w-5 h-5 text-red-700 mr-2" />
             <p class="text-sm text-red-800">
               {{ error }}
             </p>
@@ -438,11 +462,11 @@ const passwordStrengthColor = computed(() => {
 
 const passwordStrengthTextColor = computed(() => {
   const strength = passwordStrength.value;
-  if (strength <= 1) return "text-red-600";
-  if (strength <= 2) return "text-orange-600";
-  if (strength <= 3) return "text-yellow-600";
-  if (strength <= 4) return "text-blue-600";
-  return "text-green-600";
+  if (strength <= 1) return "text-red-700";
+  if (strength <= 2) return "text-orange-700";
+  if (strength <= 3) return "text-yellow-700";
+  if (strength <= 4) return "text-blue-700";
+  return "text-green-700";
 });
 
 const verifyToken = async () => {

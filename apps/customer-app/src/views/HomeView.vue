@@ -1,8 +1,8 @@
 <template>
-  <div class="min-h-screen bg-ios-bg">
+  <div class="customer-shell min-h-screen bg-ios-bg">
     <!-- 頂部導航 -->
     <nav class="bg-white/80 backdrop-blur-xl shadow-card-sm">
-      <div class="max-w-md lg:max-w-3xl mx-auto px-4 lg:px-8 py-4">
+      <div class="max-w-md lg:max-w-5xl mx-auto px-4 lg:px-8 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-3">
             <div
@@ -23,16 +23,18 @@
     </nav>
 
     <!-- 主要內容 -->
-    <main class="max-w-md lg:max-w-3xl mx-auto px-4 lg:px-8 py-8 lg:py-16">
+    <main class="max-w-md lg:max-w-5xl mx-auto px-4 lg:px-8 py-8 lg:py-16">
       <!-- 歡迎區塊 — tablet: two-column hero layout -->
-      <div class="lg:flex lg:items-center lg:gap-16 mb-8 lg:mb-16">
+      <div
+        class="home-entry lg:grid lg:grid-cols-2 lg:items-center lg:gap-12 mb-10 lg:mb-14"
+      >
         <!-- 圖示 + 文字 -->
-        <div class="text-center lg:text-left lg:flex-1 mb-8 lg:mb-0">
+        <div class="text-left lg:flex-1 mb-8 lg:mb-0">
           <div
-            class="w-24 h-24 lg:w-32 lg:h-32 mx-auto lg:mx-0 mb-6 bg-ios-blue/10 rounded-2xl lg:rounded-3xl flex items-center justify-center"
+            class="w-16 h-16 lg:w-20 lg:h-20 mb-6 bg-ios-blue/10 rounded-2xl lg:rounded-3xl flex items-center justify-center"
           >
             <svg
-              class="w-12 h-12 lg:w-16 lg:h-16 text-ios-blue"
+              class="w-8 h-8 lg:w-10 lg:h-10 text-ios-blue"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -45,7 +47,7 @@
               />
             </svg>
           </div>
-          <h2 class="text-2xl lg:text-4xl font-bold text-ios-text mb-2 lg:mb-3">
+          <h2 class="text-3xl lg:text-4xl font-bold text-ios-text mb-2 lg:mb-3">
             {{ t("home.title") }}
           </h2>
           <p class="text-ios-secondary text-base lg:text-lg">
@@ -58,7 +60,7 @@
           <!-- 掃描QR碼按鈕 -->
           <button
             data-testid="scan-qr-btn"
-            class="w-full bg-ios-blue text-white font-semibold py-4 px-6 rounded-full active:scale-[0.98] transition-transform duration-150 flex items-center justify-center space-x-3 shadow-lg"
+            class="w-full bg-ios-blue text-white font-semibold py-4 px-6 rounded-full active:scale-[0.98] transition-transform duration-150 flex items-center justify-center space-x-3 shadow-card-sm"
             @click="startQRScan"
           >
             <svg
@@ -80,7 +82,7 @@
           <!-- 手動輸入按鈕 -->
           <button
             data-testid="manual-input-btn"
-            class="w-full bg-gray-100 text-ios-text font-semibold py-4 px-6 rounded-full active:scale-[0.98] transition-transform duration-150 flex items-center justify-center space-x-3"
+            class="w-full bg-white shadow-card-sm text-ios-text font-semibold py-4 px-6 rounded-full active:scale-[0.98] transition-transform duration-150 flex items-center justify-center space-x-3"
             @click="showManualInput = true"
           >
             <svg
@@ -102,7 +104,7 @@
           <!-- 探索美食按鈕 -->
           <router-link
             to="/discover"
-            class="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold py-4 px-6 rounded-full active:scale-[0.98] transition-transform duration-150 flex items-center justify-center space-x-3 shadow-lg"
+            class="w-full bg-white text-ios-text font-semibold py-4 px-6 rounded-full active:scale-[0.98] transition-transform duration-150 flex items-center justify-center space-x-3 shadow-card-sm"
           >
             <svg
               class="w-6 h-6"
@@ -123,7 +125,7 @@
           <router-link
             to="/markets"
             data-testid="market-directory-link"
-            class="w-full border border-ios-blue bg-white text-ios-blue font-semibold py-4 px-6 rounded-full active:scale-[0.98] transition-transform duration-150 flex items-center justify-center space-x-3"
+            class="w-full shadow-card-sm bg-white text-ios-text font-semibold py-4 px-6 rounded-full active:scale-[0.98] transition-transform duration-150 flex items-center justify-center space-x-3"
           >
             <svg
               class="w-6 h-6"
@@ -308,22 +310,22 @@
     <!-- PWA 安裝提示 -->
     <div
       v-if="appStore.isInstallable"
-      class="fixed bottom-4 left-4 right-4 bg-ios-blue text-white p-4 rounded-2xl shadow-lg max-w-md mx-auto"
+      class="customer-floating-cart fixed bottom-4 left-4 right-4 bg-ios-blue text-white p-4 rounded-2xl shadow-lg max-w-md mx-auto"
     >
       <div class="flex items-center justify-between">
         <div class="flex-1 pr-4">
           <p class="font-medium">
-            {{ t("common.home") }}
+            {{ t("pwa.installTitle") }}
           </p>
           <p class="text-sm text-white/80">
-            {{ t("common.loading") }}
+            {{ t("pwa.installDescription") }}
           </p>
         </div>
         <button
           class="bg-white text-ios-blue px-4 py-2 rounded-full font-medium text-sm active:scale-[0.98] transition-transform duration-150"
           @click="appStore.installApp"
         >
-          {{ t("common.apply") }}
+          {{ t("pwa.installAction") }}
         </button>
       </div>
     </div>

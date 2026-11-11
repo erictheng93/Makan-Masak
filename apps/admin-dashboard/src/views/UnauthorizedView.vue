@@ -1,29 +1,48 @@
 <template>
-  <div class="unauthorized-view">
+  <div class="ui-page unauthorized-view">
     <div
       class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"
     >
       <div class="max-w-md w-full space-y-8 text-center">
         <!-- 圖標 -->
         <div class="mx-auto">
-          <ShieldExclamationIcon class="mx-auto h-24 w-24 text-red-400" />
+          <ShieldExclamationIcon class="mx-auto h-24 w-24 text-red-700" />
         </div>
 
         <!-- 標題和描述 -->
         <div>
-          <h2 class="mt-6 text-3xl font-bold text-gray-900">
+          <h1 class="ui-page-heading mt-6 text-3xl font-bold text-gray-900">
             {{ t("unauthorized.title") }}
-          </h2>
+          </h1>
           <p class="mt-2 text-sm text-gray-600">
             {{ t("unauthorized.description") }}
           </p>
+        </div>
+
+        <!-- 操作按鈕 -->
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button
+            class="ui-panel flex-1 flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            @click="goBack"
+          >
+            <ArrowLeftIcon class="h-4 w-4 mr-2" />
+            {{ t("unauthorized.goBack") }}
+          </button>
+
+          <button
+            class="flex-1 flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm bg-primary-700 text-sm font-medium text-white hover:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            @click="goToDashboard"
+          >
+            <HomeIcon class="h-4 w-4 mr-2" />
+            {{ t("unauthorized.goHome") }}
+          </button>
         </div>
 
         <!-- 錯誤詳情 -->
         <div class="bg-red-50 border border-red-200 rounded-md p-4">
           <div class="flex">
             <div class="flex-shrink-0">
-              <ExclamationTriangleIcon class="h-5 w-5 text-red-400" />
+              <ExclamationTriangleIcon class="h-5 w-5 text-red-700" />
             </div>
             <div class="ml-3">
               <h3 class="text-sm font-medium text-red-800">
@@ -38,21 +57,24 @@
 
         <!-- 用戶資訊 -->
         <div v-if="currentUser" class="bg-gray-100 rounded-md p-4">
-          <h4 class="text-sm font-medium text-gray-900 mb-2">
+          <h2 class="text-sm font-medium text-gray-900 mb-2">
             {{ t("unauthorized.currentLoginInfo") }}
-          </h4>
+          </h2>
           <div class="text-sm text-gray-600 space-y-1">
-            <div class="flex justify-between">
+            <div class="ui-toolbar flex justify-between">
               <span>{{ t("unauthorized.usernameLabel") }}</span>
               <span class="font-medium">{{ currentUser.username }}</span>
             </div>
-            <div class="flex justify-between">
+            <div class="ui-toolbar flex justify-between">
               <span>{{ t("unauthorized.roleLabel") }}</span>
               <span class="font-medium">{{
                 getRoleText(currentUser.role)
               }}</span>
             </div>
-            <div v-if="currentRestaurantName" class="flex justify-between">
+            <div
+              v-if="currentRestaurantName"
+              class="ui-toolbar flex justify-between"
+            >
               <span>{{ t("unauthorized.restaurantLabel") }}</span>
               <span class="font-medium">{{ currentRestaurantName }}</span>
             </div>
@@ -63,12 +85,12 @@
         <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
           <div class="flex">
             <div class="flex-shrink-0">
-              <InformationCircleIcon class="h-5 w-5 text-blue-400" />
+              <InformationCircleIcon class="h-5 w-5 text-blue-700" />
             </div>
             <div class="ml-3">
-              <h3 class="text-sm font-medium text-blue-800">
+              <h2 class="text-sm font-medium text-blue-800">
                 {{ t("unauthorized.availableFeatures") }}
-              </h3>
+              </h2>
               <div class="mt-2 text-sm text-blue-700">
                 <ul class="list-disc list-inside space-y-1">
                   <li
@@ -83,31 +105,12 @@
           </div>
         </div>
 
-        <!-- 操作按鈕 -->
-        <div class="flex flex-col sm:flex-row gap-3">
-          <button
-            class="flex-1 flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-            @click="goBack"
-          >
-            <ArrowLeftIcon class="h-4 w-4 mr-2" />
-            {{ t("unauthorized.goBack") }}
-          </button>
-
-          <button
-            class="flex-1 flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-            @click="goToDashboard"
-          >
-            <HomeIcon class="h-4 w-4 mr-2" />
-            {{ t("unauthorized.goHome") }}
-          </button>
-        </div>
-
         <!-- 聯絡資訊 -->
         <div class="text-center">
           <p class="text-xs text-gray-500">
             {{ t("unauthorized.contactAdmin") }}
           </p>
-          <p class="text-xs text-blue-600 mt-1">
+          <p class="text-xs text-blue-700 mt-1">
             <a
               href="mailto:admin@makanmasak.com"
               class="hover:text-blue-800 transition-colors"

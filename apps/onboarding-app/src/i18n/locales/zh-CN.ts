@@ -208,6 +208,7 @@ const zhCN: Messages = {
     subtitleLine1: "我们已收到您的店家加入申请。",
     subtitleLine2: "平台团队审核通过后，会启用您的帐号与系统资源。",
     summary: {
+      copyApplicationId: "复制申请编号",
       applicationId: "申请编号",
       businessName: "餐厅名称",
       contactEmail: "联络 Email",

@@ -197,6 +197,7 @@ const zhCN: Messages = {
     toast: { saved: "已保存政策", cleared: "已清除政策" },
   },
   notFound: {
+    backPrevious: "返回上一页",
     backHome: "返回首页",
     description: "您访问的页面可能已被移除或暂时无法使用",
     title: "页面不存在",

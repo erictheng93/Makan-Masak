@@ -15,6 +15,7 @@ import { getAuthToken } from "@/utils/authTokenProvider";
 import Toast from "vue-toastification";
 import "vue-toastification/dist/index.css";
 import "./assets/css/main.css";
+import "../../../packages/shared/styles/app-ui.css";
 
 async function bootstrap() {
   // Load translations before creating the app so t() works on first render

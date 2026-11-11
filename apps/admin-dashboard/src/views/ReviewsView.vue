@@ -1,8 +1,8 @@
 <template>
-  <div class="min-h-screen bg-ios-bg p-4 md:p-6">
+  <div class="ui-page min-h-screen bg-ios-bg p-4 md:p-6">
     <div class="mx-auto max-w-4xl">
       <header class="mb-5">
-        <h1 class="text-[22px] font-bold text-ios-text">
+        <h1 class="ui-page-heading text-[22px] font-bold text-ios-text">
           {{ t("reviews.title") }}
         </h1>
         <p class="mt-1 text-[13px] text-ios-secondary">
@@ -13,7 +13,7 @@
       <div
         v-if="!restaurantId"
         data-testid="reviews-no-restaurant"
-        class="rounded-3xl bg-white p-10 text-center shadow-ios-sm"
+        class="ui-panel rounded-3xl bg-white p-10 text-center shadow-ios-sm"
       >
         <p class="text-[15px] font-semibold text-ios-text">
           {{ t("reviews.errors.noRestaurant") }}
@@ -22,7 +22,7 @@
 
       <div
         v-else-if="isInitialLoading"
-        class="rounded-3xl bg-white p-10 text-center text-[14px] text-ios-secondary shadow-ios-sm"
+        class="ui-panel rounded-3xl bg-white p-10 text-center text-[14px] text-ios-secondary shadow-ios-sm"
       >
         {{ t("common.loading") }}
       </div>
@@ -33,7 +33,7 @@
       <div
         v-else-if="summary && summary.count === 0"
         data-testid="reviews-empty"
-        class="rounded-3xl bg-white p-10 text-center shadow-ios-sm"
+        class="ui-panel rounded-3xl bg-white p-10 text-center shadow-ios-sm"
       >
         <p class="text-[15px] font-semibold text-ios-text">
           {{ t("reviews.empty.title") }}
@@ -46,7 +46,7 @@
       <template v-else-if="summary">
         <section
           data-testid="reviews-summary"
-          class="rounded-3xl bg-white p-5 shadow-ios-card"
+          class="ui-panel rounded-3xl bg-white p-5 shadow-ios-card"
         >
           <div class="flex flex-wrap items-start gap-6">
             <div class="min-w-[120px]">
@@ -128,7 +128,7 @@
           </div>
         </section>
 
-        <section class="mt-4 rounded-2xl bg-white p-4 shadow-ios-sm">
+        <section class="ui-panel mt-4 rounded-2xl bg-white p-4 shadow-ios-sm">
           <div class="flex flex-wrap items-center gap-2">
             <span class="text-[12px] font-medium text-ios-secondary">
               {{ t("reviews.filters.rating") }}
@@ -207,7 +207,7 @@
 
         <div
           v-if="isListLoading"
-          class="mt-4 rounded-2xl bg-white p-8 text-center text-[14px] text-ios-secondary shadow-ios-sm"
+          class="ui-panel mt-4 rounded-2xl bg-white p-8 text-center text-[14px] text-ios-secondary shadow-ios-sm"
         >
           {{ t("common.loading") }}
         </div>
@@ -215,7 +215,7 @@
         <div
           v-else-if="reviews.length === 0"
           data-testid="reviews-empty-filtered"
-          class="mt-4 rounded-3xl bg-white p-10 text-center shadow-ios-sm"
+          class="ui-panel mt-4 rounded-3xl bg-white p-10 text-center shadow-ios-sm"
         >
           <p class="text-[15px] font-semibold text-ios-text">
             {{ t("reviews.empty.filteredTitle") }}
@@ -232,9 +232,11 @@
             data-testid="review-card"
             :data-rating="item.rating"
             :data-replied="item.reply ? 'yes' : 'no'"
-            class="rounded-2xl bg-white p-4 shadow-ios-sm"
+            class="ui-panel rounded-2xl bg-white p-4 shadow-ios-sm"
           >
-            <div class="flex flex-wrap items-start justify-between gap-2">
+            <div
+              class="ui-toolbar flex flex-wrap items-start justify-between gap-2"
+            >
               <div class="min-w-0">
                 <div class="flex items-center gap-0.5">
                   <Star
@@ -307,7 +309,9 @@
               data-testid="review-reply"
               class="mt-3 rounded-xl bg-ios-bg p-3"
             >
-              <div class="flex flex-wrap items-center justify-between gap-2">
+              <div
+                class="ui-toolbar flex flex-wrap items-center justify-between gap-2"
+              >
                 <p class="text-[12px] font-semibold text-ios-blue-deep">
                   {{ t("reviews.card.replyHeading") }}
                 </p>
@@ -329,7 +333,13 @@
                  textarea, where Enter inserts a newline, so a submit event
                  has no way to be raised other than this button. -->
             <div v-else class="mt-3">
+              <label
+                :for="`review-reply-${item.id}`"
+                class="mb-2 block text-sm font-medium text-ios-text"
+                >{{ t("reviews.card.replyPlaceholder") }}</label
+              >
               <textarea
+                :id="`review-reply-${item.id}`"
                 :value="drafts[item.id] ?? ''"
                 data-testid="review-reply-input"
                 rows="2"
@@ -338,12 +348,12 @@
                 class="w-full resize-none rounded-xl bg-ios-bg px-3 py-2 text-[13px] text-ios-text outline-none"
                 @input="onDraftInput(item.id, $event)"
               />
-              <div class="mt-2 flex justify-end">
+              <div class="ui-toolbar mt-2 flex justify-end">
                 <button
                   type="button"
                   data-testid="review-reply-submit"
                   :disabled="!canSubmit(item.id)"
-                  class="rounded-full bg-ios-blue px-4 py-2 text-[13px] font-semibold text-white transition-transform duration-150 active:scale-95 disabled:opacity-40"
+                  class="rounded-full bg-primary-700 px-4 py-2 text-[13px] font-semibold text-white transition-transform duration-150 active:scale-95 disabled:opacity-40"
                   @click="submitReply(item)"
                 >
                   {{
@@ -359,7 +369,7 @@
 
         <nav
           v-if="pagination && pagination.totalPages > 1"
-          class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 shadow-ios-sm"
+          class="ui-panel ui-toolbar mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 shadow-ios-sm"
         >
           <p class="text-[12px] text-ios-secondary">
             {{

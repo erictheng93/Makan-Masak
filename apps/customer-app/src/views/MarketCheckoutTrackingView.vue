@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-ios-bg">
+  <div class="customer-shell min-h-screen bg-ios-bg">
     <nav class="sticky top-0 z-10 border-b border-gray-100 bg-white shadow-sm">
       <div class="mx-auto flex max-w-md items-center gap-3 px-4 py-3">
         <button
@@ -60,7 +60,7 @@
       <template v-else-if="checkout">
         <section
           data-testid="market-checkout-summary"
-          class="rounded-xl border border-gray-200 bg-white p-4"
+          class="rounded-2xl bg-white p-5 shadow-card-sm"
         >
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
@@ -168,7 +168,11 @@
               </button>
             </div>
             <form v-else class="flex gap-2" @submit.prevent="applyVoucher">
+              <label for="market-voucher-code" class="sr-only">{{
+                t("markets.checkout.voucherPlaceholder")
+              }}</label>
               <input
+                id="market-voucher-code"
                 v-model="voucherCode"
                 data-testid="market-checkout-voucher-code"
                 type="text"
@@ -199,6 +203,7 @@
             <p
               v-if="voucherError"
               data-testid="market-checkout-voucher-error"
+              role="alert"
               class="mt-2 text-xs text-red-600"
             >
               {{ voucherError }}
@@ -206,6 +211,7 @@
             <p
               v-if="voucherSuccess"
               data-testid="market-checkout-voucher-success"
+              role="status"
               class="mt-2 text-xs text-emerald-700"
             >
               {{ voucherSuccess }}
@@ -215,6 +221,8 @@
           <div
             v-if="checkout.payment"
             data-testid="market-checkout-payment-summary"
+            role="status"
+            aria-live="polite"
             :class="['mt-4 rounded-lg px-3 py-2 text-sm', paymentSummaryClass]"
           >
             <div class="flex items-center justify-between gap-3">
@@ -327,7 +335,7 @@
             v-for="order in checkout.childOrders"
             :key="`${order.restaurantId}-${order.orderId}`"
             data-testid="market-checkout-child-order"
-            class="rounded-xl border border-gray-200 bg-white p-4"
+            class="rounded-2xl bg-white p-5 shadow-card-sm"
           >
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">

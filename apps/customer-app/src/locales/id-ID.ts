@@ -1,4 +1,10 @@
 export const waitingListIdId = {
+  pwa: {
+    installTitle: "Pasang MakanMasak",
+    installDescription: "Buka menu dan pantau pesanan dari layar utama.",
+    installAction: "Pasang App",
+  },
+  customerNavigation: { vendors: "Gerai", maps: "Peta", flashlight: "Senter" },
   customizationLimits: {
     decrease: "Kurangi",
     increase: "Tambah",

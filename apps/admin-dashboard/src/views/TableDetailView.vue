@@ -1,21 +1,17 @@
 <template>
-  <div class="table-detail-view">
-    <!-- 返回按鈕 -->
-    <div class="mb-6">
-      <button
-        class="flex items-center text-gray-600 hover:text-gray-900"
-        @click="goBack"
-      >
-        <ArrowLeftIcon class="h-5 w-5 mr-2" />
-        {{ t("tableDetail.backToList") }}
-      </button>
-    </div>
-
+  <div class="ui-page table-detail-view">
     <!-- 桌台資訊卡片 -->
-    <div class="bg-white rounded-lg shadow p-6 mb-6">
-      <div class="flex justify-between items-start">
+    <div class="ui-panel bg-white rounded-lg shadow p-6 mb-6">
+      <div class="ui-toolbar flex justify-between items-start">
+        <button
+          class="flex items-center text-gray-600 hover:text-gray-900"
+          @click="goBack"
+        >
+          <ArrowLeftIcon class="h-5 w-5 mr-2" />
+          {{ t("tableDetail.backToList") }}
+        </button>
         <div>
-          <h1 class="text-2xl font-bold text-gray-900 mb-2">
+          <h1 class="ui-page-heading text-2xl font-bold text-gray-900 mb-2">
             {{ t("tableDetail.tableNumber", { number: table.tableNumber }) }}
           </h1>
           <div class="flex items-center space-x-4">
@@ -39,7 +35,7 @@
 
         <div class="flex space-x-2">
           <button
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            class="px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors"
             @click="editTable"
           >
             {{ t("tableDetail.editTable") }}
@@ -106,7 +102,7 @@
     </div>
 
     <!-- 桌子 QR 碼（桌子模式） -->
-    <div v-else class="bg-white rounded-lg shadow p-6">
+    <div v-else class="ui-panel bg-white rounded-lg shadow p-6">
       <h2 class="text-xl font-bold text-gray-900 mb-4">
         {{ t("tableDetail.qrCode.title") }}
       </h2>
@@ -130,12 +126,12 @@
               </p>
               <p
                 v-if="table.pendingQrCode"
-                class="text-xs font-medium text-orange-600 mt-2"
+                class="text-xs font-medium text-orange-700 mt-2"
               >
                 {{ t("qrRotation.pending") }}
               </p>
             </div>
-            <div v-else class="text-center text-red-600">
+            <div v-else class="text-center text-red-700">
               {{ t("qrReadiness.notReadyDescription") }}
             </div>
           </div>
@@ -150,7 +146,7 @@
             {{ t("tableDetail.qrCode.download") }}
           </button>
           <button
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+            class="px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
             :disabled="!isTableQrReady"
             @click="printQRCode"
           >
@@ -174,10 +170,10 @@
           @click="showModeSwitchModal = false"
         />
         <div
-          class="relative bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+          class="ui-panel relative bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
         >
           <div class="p-6">
-            <div class="flex justify-between items-center mb-4">
+            <div class="ui-toolbar flex justify-between items-center mb-4">
               <h3 class="text-lg font-semibold">
                 {{ t("tableDetail.modeSwitch.title") }}
               </h3>
@@ -207,7 +203,7 @@
               :max-seat-count="table.capacity"
             />
 
-            <div class="flex justify-end space-x-3 mt-6">
+            <div class="ui-toolbar flex justify-end space-x-3 mt-6">
               <button
                 type="button"
                 class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
@@ -217,7 +213,7 @@
               </button>
               <button
                 type="button"
-                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                class="px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors"
                 @click="switchQRMode"
               >
                 {{ t("tableDetail.modeSwitch.confirm") }}

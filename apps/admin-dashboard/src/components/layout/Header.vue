@@ -1,7 +1,7 @@
 <template>
-  <header class="bg-white border-b border-gray-200 px-4 py-3">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center space-x-4">
+  <header class="bg-white border-b border-gray-200 px-4 sm:px-6 py-3">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2 sm:gap-4">
         <button
           :aria-label="t('a11y.toggleSidebar')"
           class="p-2 rounded-lg hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
@@ -11,18 +11,19 @@
         </button>
 
         <div class="hidden sm:block">
-          <h1 class="text-lg font-semibold text-gray-900">
+          <p class="text-sm font-semibold text-ios-text/70">
             {{ pageTitle }}
-          </h1>
+          </p>
         </div>
       </div>
 
-      <div class="flex items-center space-x-4">
+      <div class="flex items-center gap-2 sm:gap-4">
         <!-- Restaurant Selector (Admin only) -->
         <RestaurantSelector />
 
         <!-- Notifications -->
         <button
+          :aria-label="t('a11y.notifications')"
           class="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
           @click="toggleNotifications"
         >
@@ -49,6 +50,8 @@
         <!-- User Menu -->
         <div class="relative">
           <button
+            :aria-label="user?.username || t('header.title')"
+            :aria-expanded="showUserMenu"
             class="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
             @click="toggleUserMenu"
           >
@@ -91,7 +94,7 @@
 
     <!-- Breadcrumb -->
     <div v-if="breadcrumbs.length > 1" class="mt-2">
-      <nav class="flex items-center space-x-1 text-sm text-gray-500">
+      <nav class="flex flex-wrap items-center gap-1 text-sm text-gray-500">
         <template v-for="(crumb, index) in breadcrumbs" :key="crumb.path">
           <router-link
             v-if="index < breadcrumbs.length - 1"

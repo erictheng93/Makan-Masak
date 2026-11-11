@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-ios-bg">
+  <div class="customer-shell min-h-screen bg-ios-bg">
     <div class="max-w-md mx-auto px-4 py-8">
       <div
         v-if="isLoading"
@@ -98,18 +98,28 @@
           <p class="text-sm font-semibold text-gray-500 mb-3">
             {{ t("orderTypeLanding.selectMethod") }}
           </p>
-          <div class="flex flex-col gap-3">
+          <div
+            class="flex flex-col gap-3"
+            role="radiogroup"
+            :aria-label="t('orderTypeLanding.selectMethod')"
+          >
             <!-- 內用 -->
-            <button
+            <label
               v-if="dineInEnabled"
               :class="[
-                'flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left',
+                'cursor-pointer focus-within:ring-2 focus-within:ring-ios-blue flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left',
                 selectedType === 'dine-in'
                   ? 'border-ios-blue bg-blue-50'
                   : 'border-gray-200 bg-white hover:border-gray-300',
               ]"
-              @click="selectedType = 'dine-in'"
             >
+              <input
+                v-model="selectedType"
+                type="radio"
+                name="fulfillment-type"
+                value="dine-in"
+                class="sr-only"
+              />
               <span class="text-3xl">🍽️</span>
               <div class="flex-1">
                 <div class="font-semibold text-gray-900">
@@ -131,19 +141,25 @@
                   clip-rule="evenodd"
                 />
               </svg>
-            </button>
+            </label>
 
             <!-- 外帶 -->
-            <button
+            <label
               v-if="takeawayEnabled"
               :class="[
-                'flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left',
+                'cursor-pointer focus-within:ring-2 focus-within:ring-ios-blue flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left',
                 selectedType === 'takeaway'
                   ? 'border-ios-blue bg-blue-50'
                   : 'border-gray-200 bg-white hover:border-gray-300',
               ]"
-              @click="selectedType = 'takeaway'"
             >
+              <input
+                v-model="selectedType"
+                type="radio"
+                name="fulfillment-type"
+                value="takeaway"
+                class="sr-only"
+              />
               <span class="text-3xl">🛍️</span>
               <div class="flex-1">
                 <div class="font-semibold text-gray-900">
@@ -165,19 +181,25 @@
                   clip-rule="evenodd"
                 />
               </svg>
-            </button>
+            </label>
 
             <!-- 外送 -->
-            <button
+            <label
               v-if="deliveryEnabled"
               :class="[
-                'flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left',
+                'cursor-pointer focus-within:ring-2 focus-within:ring-ios-blue flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left',
                 selectedType === 'delivery'
                   ? 'border-ios-blue bg-blue-50'
                   : 'border-gray-200 bg-white hover:border-gray-300',
               ]"
-              @click="selectedType = 'delivery'"
             >
+              <input
+                v-model="selectedType"
+                type="radio"
+                name="fulfillment-type"
+                value="delivery"
+                class="sr-only"
+              />
               <span class="text-3xl">🛵</span>
               <div class="flex-1">
                 <div class="font-semibold text-gray-900">
@@ -199,7 +221,7 @@
                   clip-rule="evenodd"
                 />
               </svg>
-            </button>
+            </label>
           </div>
 
           <button

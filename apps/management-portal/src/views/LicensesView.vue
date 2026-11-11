@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Dialog, DialogPanel, DialogTitle } from "@headlessui/vue";
 import { ref, onMounted, computed } from "vue";
 import { useTenantsStore } from "@/stores/tenants";
 import { licensesApi } from "@/services/api";
@@ -109,9 +110,12 @@ const getTierClass = (tier: LicenseTier) => {
 </script>
 
 <template>
-  <div class="space-y-6" data-testid="management-licenses-page">
+  <div
+    class="portal-page ui-page space-y-6"
+    data-testid="management-licenses-page"
+  >
     <!-- 頁面標題 -->
-    <div class="flex items-center justify-between">
+    <div class="portal-heading ui-page-heading">
       <div>
         <h1 class="text-2xl font-bold text-gray-900">
           {{ t("licenses.title") }}
@@ -129,8 +133,8 @@ const getTierClass = (tier: LicenseTier) => {
     </div>
 
     <!-- 統計卡片 -->
-    <div class="grid grid-cols-1 gap-5 sm:grid-cols-4">
-      <div class="card">
+    <div class="ui-stat-strip">
+      <div class="ui-stat">
         <div class="flex items-center">
           <div class="rounded-full bg-blue-100 p-3">
             <KeyIcon class="h-6 w-6 text-blue-600" />
@@ -145,7 +149,7 @@ const getTierClass = (tier: LicenseTier) => {
           </div>
         </div>
       </div>
-      <div class="card">
+      <div class="ui-stat">
         <div class="text-center">
           <p class="text-sm font-medium text-gray-500">
             {{ t("licenses.tier.standard") }}
@@ -155,7 +159,7 @@ const getTierClass = (tier: LicenseTier) => {
           </p>
         </div>
       </div>
-      <div class="card">
+      <div class="ui-stat">
         <div class="text-center">
           <p class="text-sm font-medium text-gray-500">
             {{ t("licenses.tier.professional") }}
@@ -165,7 +169,7 @@ const getTierClass = (tier: LicenseTier) => {
           </p>
         </div>
       </div>
-      <div class="card">
+      <div class="ui-stat">
         <div class="text-center">
           <p class="text-sm font-medium text-gray-500">
             {{ t("licenses.tier.enterprise") }}
@@ -189,7 +193,7 @@ const getTierClass = (tier: LicenseTier) => {
         <p class="mt-2 text-sm text-gray-500">{{ t("licenses.empty") }}</p>
       </div>
 
-      <div v-else class="overflow-x-auto">
+      <div v-else class="ui-table-scroll overflow-x-auto">
         <table class="table">
           <thead>
             <tr>
@@ -258,25 +262,35 @@ const getTierClass = (tier: LicenseTier) => {
 
     <!-- 生成授權 Modal -->
     <Teleport to="body">
-      <div v-if="showGenerateModal" class="fixed inset-0 z-50 overflow-y-auto">
+      <Dialog
+        :open="showGenerateModal"
+        class="fixed inset-0 z-50 overflow-y-auto"
+        @close="showGenerateModal = false"
+      >
         <div
           class="fixed inset-0 bg-gray-500 bg-opacity-75"
           @click="showGenerateModal = false"
         />
         <div class="flex min-h-full items-center justify-center p-4">
-          <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full">
+          <DialogPanel
+            class="relative overflow-hidden bg-white rounded-3xl shadow-xl max-w-md w-full"
+          >
             <div class="px-6 py-4 border-b">
-              <h3 class="text-lg font-semibold">
+              <DialogTitle as="h3" class="text-lg font-semibold">
                 {{ t("licenses.modal.title") }}
-              </h3>
+              </DialogTitle>
             </div>
             <div class="px-6 py-4 space-y-4">
               <!-- 選擇租戶 -->
               <div>
-                <label class="label">
+                <label for="license-tenant" class="label">
                   {{ t("licenses.modal.selectTenant") }}
                 </label>
-                <select v-model="generateForm.tenantId" class="input">
+                <select
+                  id="license-tenant"
+                  v-model="generateForm.tenantId"
+                  class="input"
+                >
                   <option value="">{{ t("common.pleaseSelect") }}</option>
                   <option
                     v-for="tenant in tenantsStore.tenants"
@@ -290,8 +304,14 @@ const getTierClass = (tier: LicenseTier) => {
 
               <!-- 選擇等級 -->
               <div>
-                <label class="label">{{ t("licenses.modal.tier") }}</label>
-                <select v-model="generateForm.tier" class="input">
+                <label for="license-tier" class="label">{{
+                  t("licenses.modal.tier")
+                }}</label>
+                <select
+                  id="license-tier"
+                  v-model="generateForm.tier"
+                  class="input"
+                >
                   <option value="standard">
                     {{ t("licenses.modal.tierOption.standard") }}
                   </option>
@@ -306,8 +326,11 @@ const getTierClass = (tier: LicenseTier) => {
 
               <!-- 有效期 -->
               <div>
-                <label class="label">{{ t("licenses.modal.expiresAt") }}</label>
+                <label for="license-expiry" class="label">{{
+                  t("licenses.modal.expiresAt")
+                }}</label>
                 <input
+                  id="license-expiry"
                   v-model="generateForm.expiresAt"
                   type="date"
                   class="input"
@@ -333,9 +356,9 @@ const getTierClass = (tier: LicenseTier) => {
                 {{ t("common.generate") }}
               </button>
             </div>
-          </div>
+          </DialogPanel>
         </div>
-      </div>
+      </Dialog>
     </Teleport>
   </div>
 </template>

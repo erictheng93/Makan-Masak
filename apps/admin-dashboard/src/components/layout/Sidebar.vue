@@ -1,6 +1,6 @@
 <template>
   <aside
-    class="bg-white border-r border-gray-200 transition-all duration-300"
+    class="bg-white shrink-0 border-r border-ios-separator transition-[width,transform] duration-300"
     :class="[
       isCollapsed ? 'w-16' : 'w-64',
       isMobile ? 'fixed inset-y-0 left-0 z-40' : '',
@@ -23,11 +23,11 @@
       </div>
 
       <!-- Navigation -->
-      <nav class="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
+      <nav class="flex-1 px-3 py-5 space-y-1 overflow-y-auto">
         <template v-for="item in navigationItems" :key="item.name">
           <div
             v-if="item.showRestaurantSectionLabel && !isCollapsed"
-            class="px-3 pt-3 pb-1 text-xs font-medium uppercase tracking-wide text-gray-400"
+            class="px-3 pt-3 pb-1 text-xs font-medium uppercase tracking-wide text-ios-text/70"
             data-testid="restaurant-section-label"
           >
             {{ t("nav.restaurantManagement") }}
@@ -42,7 +42,7 @@
             data-disabled="true"
             :title="t('nav.featureUnavailable')"
             aria-disabled="true"
-            class="flex items-center px-3 py-2 rounded-lg text-sm font-medium text-gray-400 cursor-not-allowed select-none"
+            class="flex items-center min-h-11 px-3 py-2.5 rounded-xl text-sm font-medium text-ios-text/70 cursor-not-allowed select-none"
           >
             <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
             <span v-if="!isCollapsed" class="ml-3">{{ item.label }}</span>
@@ -55,10 +55,10 @@
               :is="'router-link'"
               :to="item.path"
               :data-testid="`nav-item-${item.name}`"
-              class="flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600"
+              class="flex items-center min-h-11 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600"
               :class="[
                 isActiveRoute(item.path)
-                  ? 'bg-primary-50 text-primary-700 border-r-2 border-primary-600'
+                  ? 'bg-primary-50 text-primary-700 font-semibold'
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
               ]"
               @click="emit('navigate')"
@@ -76,10 +76,10 @@
             v-else
             :to="item.path"
             :data-testid="`nav-item-${item.name}`"
-            class="flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600"
+            class="flex items-center min-h-11 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600"
             :class="[
               isActiveRoute(item.path)
-                ? 'bg-primary-50 text-primary-700 border-r-2 border-primary-600'
+                ? 'bg-primary-50 text-primary-700 font-semibold'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
             ]"
             @click="emit('navigate')"

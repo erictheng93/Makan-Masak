@@ -1,5 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
+import {
+  mount,
+  flushPromises,
+  DOMWrapper,
+  enableAutoUnmount,
+} from "@vue/test-utils";
+import SettingsView from "@/views/SettingsView.vue";
 import { nextTick } from "vue";
 import { useSettingsStore } from "./settings";
 
@@ -93,4 +100,29 @@ describe("useSettingsStore", () => {
     );
     expect(document.documentElement.className).toBe("text-xl");
   });
+});
+
+enableAutoUnmount(afterEach);
+it("exposes current switches and keyboard-operable named setting dialogs", async () => {
+  const wrapper = mount(SettingsView, { attachTo: document.body });
+  const switches = wrapper.findAll('[role="switch"]');
+  expect(switches).toHaveLength(3);
+  const oldValue = switches[0].attributes("aria-checked");
+  await switches[0].trigger("click");
+  expect(switches[0].attributes("aria-checked")).not.toBe(oldValue);
+  const trigger = wrapper
+    .findAll("button")
+    .find((button) => button.text().includes("緊急時間"));
+  expect(trigger).toBeDefined();
+  (trigger!.element as HTMLElement).focus();
+  await trigger!.trigger("click");
+  await flushPromises();
+  const body = new DOMWrapper(document.body);
+  const dialog = body.get('[role="dialog"]');
+  expect(dialog.attributes("aria-modal")).toBe("true");
+  expect(dialog.attributes("aria-labelledby")).toBeTruthy();
+  await dialog.trigger("keydown", { key: "Escape" });
+  await flushPromises();
+  expect(body.find('[role="dialog"]').exists()).toBe(false);
+  expect(document.activeElement).toBe(trigger!.element);
 });

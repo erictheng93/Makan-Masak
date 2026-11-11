@@ -1,11 +1,13 @@
 <template>
-  <div class="group-orders-view">
+  <div class="ui-page group-orders-view">
     <!-- 標題區域 -->
     <div
       class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8"
     >
       <div>
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">
+        <h1
+          class="ui-page-heading text-2xl sm:text-3xl font-bold text-gray-900"
+        >
           {{ t("groupOrders.title") }}
         </h1>
         <p class="text-gray-600 text-sm sm:text-base">
@@ -18,7 +20,7 @@
           <p class="text-sm text-blue-800 font-medium whitespace-nowrap">
             {{ t("groupOrders.activeOrders") }}: {{ activeGroupOrders }}
           </p>
-          <p class="text-xs text-blue-600 whitespace-nowrap">
+          <p class="text-xs text-blue-700 whitespace-nowrap">
             {{ t("groupOrders.totalOrders") }}: {{ totalGroupOrders }}
           </p>
         </div>
@@ -33,7 +35,7 @@
         </button>
 
         <button
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm whitespace-nowrap"
+          class="px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors text-sm whitespace-nowrap"
           @click="generateShareCode"
         >
           {{ t("groupOrders.generateShareCode") }}
@@ -43,10 +45,10 @@
 
     <!-- 統計卡片 -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
-      <div class="bg-white rounded-lg shadow p-3 sm:p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-3 sm:p-6">
         <div class="flex items-center gap-3">
           <div class="p-2 sm:p-3 rounded-full bg-green-100 flex-shrink-0">
-            <UserGroupIcon class="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+            <UserGroupIcon class="h-5 w-5 sm:h-6 sm:w-6 text-green-700" />
           </div>
           <div class="min-w-0">
             <p class="text-xs sm:text-sm font-medium text-gray-500 truncate">
@@ -59,10 +61,10 @@
         </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow p-3 sm:p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-3 sm:p-6">
         <div class="flex items-center gap-3">
           <div class="p-2 sm:p-3 rounded-full bg-blue-100 flex-shrink-0">
-            <CurrencyDollarIcon class="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+            <CurrencyDollarIcon class="h-5 w-5 sm:h-6 sm:w-6 text-blue-700" />
           </div>
           <div class="min-w-0">
             <p class="text-xs sm:text-sm font-medium text-gray-500 truncate">
@@ -75,10 +77,10 @@
         </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow p-3 sm:p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-3 sm:p-6">
         <div class="flex items-center gap-3">
           <div class="p-2 sm:p-3 rounded-full bg-yellow-100 flex-shrink-0">
-            <UsersIcon class="h-5 w-5 sm:h-6 sm:w-6 text-yellow-600" />
+            <UsersIcon class="h-5 w-5 sm:h-6 sm:w-6 text-yellow-700" />
           </div>
           <div class="min-w-0">
             <p class="text-xs sm:text-sm font-medium text-gray-500 truncate">
@@ -96,7 +98,7 @@
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-8">
       <!-- 左側：整體團體訂單列表 -->
       <div class="xl:col-span-2">
-        <div class="bg-white rounded-lg shadow">
+        <div class="ui-panel bg-white rounded-lg shadow">
           <div class="p-4 sm:p-6 border-b border-gray-200">
             <div
               class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
@@ -161,7 +163,7 @@
               class="p-4 sm:p-6 hover:bg-gray-50 cursor-pointer transition-colors"
               @click="selectGroupOrder(groupOrder)"
             >
-              <div class="flex items-start justify-between">
+              <div class="ui-toolbar flex items-start justify-between">
                 <div class="flex-1">
                   <!-- 訂單基本信息 -->
                   <div class="flex items-center mb-3">
@@ -210,11 +212,11 @@
                         <span class="text-2xl font-bold text-blue-900">{{
                           groupOrder.memberCount
                         }}</span>
-                        <span class="text-sm text-blue-600 ml-2">{{
+                        <span class="text-sm text-blue-700 ml-2">{{
                           t("groupOrders.people")
                         }}</span>
                       </div>
-                      <div class="text-xs text-blue-600 mt-1">
+                      <div class="text-xs text-blue-700 mt-1">
                         {{ t("groupOrders.host") }}: {{ groupOrder.hostName }}
                       </div>
                     </div>
@@ -228,14 +230,14 @@
                           formatPrice(groupOrder.totalAmount)
                         }}</span>
                       </div>
-                      <div class="text-xs text-green-600 mt-1">
+                      <div class="text-xs text-green-700 mt-1">
                         {{ groupOrder.itemCount }} {{ t("groupOrders.items") }}
                       </div>
                     </div>
                   </div>
 
                   <!-- 付款狀態 -->
-                  <div class="flex items-center justify-between">
+                  <div class="ui-toolbar flex items-center justify-between">
                     <div class="flex items-center">
                       <!-- 成員頭像 -->
                       <div class="flex -space-x-2">
@@ -290,7 +292,7 @@
                 <div class="flex flex-col space-y-2 ml-6">
                   <button
                     v-if="groupOrder.status === 'active'"
-                    class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
+                    class="px-3 py-1 bg-primary-700 text-white rounded text-sm hover:bg-primary-800 transition-colors"
                     @click.stop="shareGroupOrder(groupOrder)"
                   >
                     {{ t("groupOrders.share") }}
@@ -325,7 +327,7 @@
       <!-- 右側：詳細信息面板 -->
       <div class="space-y-6">
         <!-- 選中訂單詳情 -->
-        <div class="bg-white rounded-lg shadow">
+        <div class="ui-panel bg-white rounded-lg shadow">
           <div class="p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
               {{
@@ -338,13 +340,13 @@
             <div v-if="selectedGroupOrder">
               <!-- 基本信息 -->
               <div class="mb-6">
-                <div class="flex items-center justify-between mb-4">
+                <div class="ui-toolbar flex items-center justify-between mb-4">
                   <h4 class="font-medium text-gray-900">
                     {{ selectedGroupOrder.shareCode }}
                   </h4>
                   <div class="flex items-center space-x-2">
                     <button
-                      class="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+                      class="p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                       :title="t('groupOrders.copyShareCode')"
                       :aria-label="t('groupOrders.copyShareCode')"
                       @click="copyShareCode(selectedGroupOrder.shareCode)"
@@ -352,7 +354,7 @@
                       <DocumentDuplicateIcon class="w-4 h-4" />
                     </button>
                     <button
-                      class="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
+                      class="p-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
                       :title="t('groupOrders.share')"
                       @click="shareGroupOrder(selectedGroupOrder!)"
                     >
@@ -362,7 +364,7 @@
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 text-sm">
-                  <div class="flex justify-between">
+                  <div class="ui-toolbar flex justify-between">
                     <span class="text-gray-600"
                       >{{ t("groupOrders.statusLabel") }}:</span
                     >
@@ -373,7 +375,7 @@
                       {{ getStatusText(selectedGroupOrder.status) }}
                     </span>
                   </div>
-                  <div class="flex justify-between">
+                  <div class="ui-toolbar flex justify-between">
                     <span class="text-gray-600"
                       >{{ t("groupOrders.tableLabel") }}:</span
                     >
@@ -382,7 +384,7 @@
                       t("groupOrders.takeaway")
                     }}</span>
                   </div>
-                  <div class="flex justify-between">
+                  <div class="ui-toolbar flex justify-between">
                     <span class="text-gray-600"
                       >{{ t("groupOrders.createdTime") }}:</span
                     >
@@ -390,7 +392,7 @@
                       formatClockTime(selectedGroupOrder.createdAt)
                     }}</span>
                   </div>
-                  <div class="flex justify-between">
+                  <div class="ui-toolbar flex justify-between">
                     <span class="text-gray-600"
                       >{{ t("groupOrders.hostLabel") }}:</span
                     >
@@ -422,13 +424,13 @@
                   {{ t("groupOrders.finalizeFailure.title") }}
                 </h5>
                 <dl class="space-y-1 text-red-800">
-                  <div class="flex justify-between gap-4">
+                  <div class="ui-toolbar flex justify-between gap-4">
                     <dt>{{ t("groupOrders.finalizeFailure.code") }}</dt>
                     <dd class="font-mono">
                       {{ selectedGroupOrder.finalizeFailure.code }}
                     </dd>
                   </div>
-                  <div class="flex justify-between gap-4">
+                  <div class="ui-toolbar flex justify-between gap-4">
                     <dt>{{ t("groupOrders.finalizeFailure.failedAt") }}</dt>
                     <dd>
                       {{
@@ -449,7 +451,7 @@
                       selectedGroupOrder.finalizeFailure.roundedTotalCents !==
                         undefined
                     "
-                    class="flex justify-between gap-4"
+                    class="ui-toolbar flex justify-between gap-4"
                   >
                     <dt>
                       {{ t("groupOrders.finalizeFailure.totalMismatch") }}
@@ -569,7 +571,7 @@
                   <div
                     v-for="(member, index) in selectedGroupOrder.members"
                     :key="member.id"
-                    class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    class="ui-toolbar flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                   >
                     <div class="flex items-center">
                       <div
@@ -616,13 +618,13 @@
               <!-- 訂單金額 -->
               <div class="border-t border-gray-200 pt-4">
                 <div class="space-y-2 text-sm">
-                  <div class="flex justify-between">
+                  <div class="ui-toolbar flex justify-between">
                     <span class="text-gray-600"
                       >{{ t("groupOrders.subtotal") }}:</span
                     >
                     <span>{{ formatPrice(selectedGroupOrder.subtotal) }}</span>
                   </div>
-                  <div class="flex justify-between">
+                  <div class="ui-toolbar flex justify-between">
                     <span class="text-gray-600"
                       >{{ t("groupOrders.serviceCharge") }}:</span
                     >
@@ -630,17 +632,17 @@
                       formatPrice(selectedGroupOrder.serviceCharge)
                     }}</span>
                   </div>
-                  <div class="flex justify-between">
+                  <div class="ui-toolbar flex justify-between">
                     <span class="text-gray-600"
                       >{{ t("groupOrders.tax") }}:</span
                     >
                     <span>{{ formatPrice(selectedGroupOrder.taxAmount) }}</span>
                   </div>
                   <div
-                    class="flex justify-between font-bold text-lg pt-2 border-t border-gray-200"
+                    class="ui-toolbar flex justify-between font-bold text-lg pt-2 border-t border-gray-200"
                   >
                     <span>{{ t("groupOrders.total") }}:</span>
-                    <span class="text-green-600">{{
+                    <span class="text-green-700">{{
                       formatPrice(selectedGroupOrder.totalAmount)
                     }}</span>
                   </div>
@@ -660,7 +662,7 @@
         </div>
 
         <!-- 快速操作 -->
-        <div class="bg-white rounded-lg shadow">
+        <div class="ui-panel bg-white rounded-lg shadow">
           <div class="p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
               {{ t("groupOrders.quickActions") }}
@@ -692,7 +694,7 @@
         </div>
 
         <!-- 統計圖表 -->
-        <div class="bg-white rounded-lg shadow">
+        <div class="ui-panel bg-white rounded-lg shadow">
           <div class="p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
               {{ t("groupOrders.usageStats") }}
@@ -701,7 +703,7 @@
             <div class="space-y-4">
               <!-- 訂單總數 -->
               <div>
-                <div class="flex justify-between text-sm mb-2">
+                <div class="ui-toolbar flex justify-between text-sm mb-2">
                   <span class="text-gray-600">{{
                     t("groupOrders.totalOrders")
                   }}</span>
@@ -719,7 +721,7 @@
 
               <!-- 平均成員數 -->
               <div>
-                <div class="flex justify-between text-sm mb-2">
+                <div class="ui-toolbar flex justify-between text-sm mb-2">
                   <span class="text-gray-600">{{
                     t("groupOrders.avgMembers")
                   }}</span>
@@ -748,8 +750,10 @@
           class="fixed inset-0 bg-black opacity-30"
           @click="closeCreateDialog"
         />
-        <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-          <div class="flex items-center justify-between mb-6">
+        <div
+          class="ui-panel relative bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+        >
+          <div class="ui-toolbar flex items-center justify-between mb-6">
             <h3 class="text-xl font-semibold text-gray-900">
               {{ t("groupOrders.createOrder") }}
             </h3>
@@ -816,7 +820,7 @@
             </div>
           </div>
 
-          <div class="flex justify-end space-x-3 mt-6">
+          <div class="ui-toolbar flex justify-end space-x-3 mt-6">
             <button
               class="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors"
               @click="closeCreateDialog"
@@ -843,8 +847,10 @@
           class="fixed inset-0 bg-black opacity-30"
           @click="closeShareDialog"
         />
-        <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-          <div class="flex items-center justify-between mb-6">
+        <div
+          class="ui-panel relative bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+        >
+          <div class="ui-toolbar flex items-center justify-between mb-6">
             <h3 class="text-xl font-semibold text-gray-900">
               {{ t("groupOrders.shareOrder") }}
             </h3>
@@ -870,7 +876,7 @@
                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
                 />
                 <button
-                  class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  class="px-3 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors"
                   @click="copyShareCode(shareData.shareCode)"
                 >
                   {{ t("groupOrders.copy") }}
@@ -925,7 +931,7 @@
             <!-- 分享按鈕 -->
             <div class="grid grid-cols-2 gap-3">
               <button
-                class="py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                class="py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors"
                 @click="shareToWhatsApp"
               >
                 WhatsApp
@@ -1473,7 +1479,7 @@ onMounted(async () => {
 .group-orders-view {
   padding: 1.5rem;
   min-height: 100vh;
-  background-color: #f9fafb;
+  background-color: theme("colors.ios-bg");
 }
 
 @media (max-width: 640px) {

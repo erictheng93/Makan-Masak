@@ -21,6 +21,7 @@
           <div class="flex items-center space-x-4">
             <!-- 通知指示器 -->
             <button
+              :aria-label="t('a11y.notifications')"
               class="relative p-2 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               @click="toggleNotifications"
             >

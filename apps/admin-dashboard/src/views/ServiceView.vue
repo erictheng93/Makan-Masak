@@ -1,9 +1,9 @@
 <template>
-  <div class="service-view">
+  <div class="ui-page service-view">
     <!-- 送菜員控制台標題 -->
-    <div class="flex justify-between items-center mb-8">
+    <div class="ui-toolbar flex justify-between items-center mb-8">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">
+        <h1 class="ui-page-heading text-3xl font-bold text-gray-900">
           {{ t("serviceView.title") }}
         </h1>
         <p class="text-gray-600">{{ t("serviceView.subtitle") }}</p>
@@ -15,7 +15,7 @@
             {{ t("serviceView.todayDelivered") }}: {{ todayDelivered
             }}{{ t("serviceView.orders") }}
           </p>
-          <p class="text-xs text-green-600">
+          <p class="text-xs text-green-700">
             {{ t("serviceView.efficiency") }}: {{ deliveryEfficiency }}%
           </p>
         </div>
@@ -32,7 +32,7 @@
 
         <!-- 刷新按鈕 -->
         <button
-          class="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          class="flex items-center px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors"
           @click="refreshOrders"
         >
           <ArrowPathIcon class="h-4 w-4 mr-2" />
@@ -45,7 +45,7 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
       <div class="bg-orange-100 rounded-lg p-6 border-l-4 border-orange-500">
         <div class="flex items-center">
-          <TruckIcon class="h-8 w-8 text-orange-600 mr-3" />
+          <TruckIcon class="h-8 w-8 text-orange-700 mr-3" />
           <div>
             <p class="text-sm font-medium text-orange-800">
               {{ t("serviceView.readyForDelivery") }}
@@ -59,7 +59,7 @@
 
       <div class="bg-blue-100 rounded-lg p-6 border-l-4 border-blue-500">
         <div class="flex items-center">
-          <MapIcon class="h-8 w-8 text-blue-600 mr-3" />
+          <MapIcon class="h-8 w-8 text-blue-700 mr-3" />
           <div>
             <p class="text-sm font-medium text-blue-800">
               {{ t("serviceView.delivering") }}
@@ -73,7 +73,7 @@
 
       <div class="bg-green-100 rounded-lg p-6 border-l-4 border-green-500">
         <div class="flex items-center">
-          <CheckCircleIcon class="h-8 w-8 text-green-600 mr-3" />
+          <CheckCircleIcon class="h-8 w-8 text-green-700 mr-3" />
           <div>
             <p class="text-sm font-medium text-green-800">
               {{ t("serviceView.delivered") }}
@@ -87,7 +87,7 @@
 
       <div class="bg-teal-100 rounded-lg p-6 border-l-4 border-teal-500">
         <div class="flex items-center">
-          <ClockIcon class="h-8 w-8 text-teal-600 mr-3" />
+          <ClockIcon class="h-8 w-8 text-teal-700 mr-3" />
           <div>
             <p class="text-sm font-medium text-teal-800">
               {{ t("serviceView.avgDeliveryTime") }}
@@ -104,41 +104,49 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <!-- 左側：待配送訂單 -->
       <div class="lg:col-span-2">
-        <div class="bg-white rounded-lg shadow">
+        <div class="ui-panel bg-white rounded-lg shadow">
           <div class="p-6 border-b border-gray-200">
-            <div class="flex items-center justify-between">
+            <div class="ui-toolbar flex items-center justify-between">
               <h2 class="text-xl font-semibold text-gray-900">
                 {{ t("serviceView.pendingOrders") }}
               </h2>
               <div class="flex items-center space-x-3">
                 <!-- 桌台篩選 -->
-                <select
-                  v-model="selectedTable"
-                  class="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">{{ t("serviceView.allTables") }}</option>
-                  <option
-                    v-for="table in availableTables"
-                    :key="table"
-                    :value="table"
+                <label class="admin-field" for="serviceview-selectedTable"
+                  ><span>{{ t("orders.columns.tableNumber") }}</span
+                  ><select
+                    id="serviceview-selectedTable"
+                    v-model="selectedTable"
+                    class="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    {{ t("serviceView.tableNumber", { number: table }) }}
-                  </option>
-                </select>
+                    <option value="">{{ t("serviceView.allTables") }}</option>
+                    <option
+                      v-for="table in availableTables"
+                      :key="table"
+                      :value="table"
+                    >
+                      {{ t("serviceView.tableNumber", { number: table }) }}
+                    </option>
+                  </select></label
+                >
 
                 <!-- 優先級篩選 -->
-                <select
-                  v-model="selectedPriority"
-                  class="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                <label class="admin-field" for="serviceview-selectedPriority"
+                  ><span>{{ t("feedback.allPriorities") }}</span
+                  ><select
+                    id="serviceview-selectedPriority"
+                    v-model="selectedPriority"
+                    class="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">{{ t("serviceView.allPriority") }}</option>
+                    <option value="high">
+                      {{ t("serviceView.priority.high") }}
+                    </option>
+                    <option value="normal">
+                      {{ t("serviceView.priority.normal") }}
+                    </option>
+                  </select></label
                 >
-                  <option value="">{{ t("serviceView.allPriority") }}</option>
-                  <option value="high">
-                    {{ t("serviceView.priority.high") }}
-                  </option>
-                  <option value="normal">
-                    {{ t("serviceView.priority.normal") }}
-                  </option>
-                </select>
               </div>
             </div>
           </div>
@@ -149,7 +157,7 @@
               :key="order.id"
               class="p-6 hover:bg-gray-50 transition-colors"
             >
-              <div class="flex items-start justify-between">
+              <div class="ui-toolbar flex items-start justify-between">
                 <div class="flex-1">
                   <!-- 訂單標題 -->
                   <div class="flex items-center mb-3">
@@ -199,7 +207,7 @@
                       <div
                         v-for="item in order.items"
                         :key="item.id"
-                        class="flex items-center justify-between text-sm"
+                        class="ui-toolbar flex items-center justify-between text-sm"
                       >
                         <div class="flex items-center">
                           <span
@@ -212,7 +220,7 @@
                           }}</span>
                           <div
                             v-if="item.specialInstructions"
-                            class="ml-2 text-orange-600"
+                            class="ml-2 text-orange-700"
                           >
                             <ExclamationTriangleIcon
                               class="w-4 h-4 inline mr-1"
@@ -262,7 +270,7 @@
                   >
                     <div class="flex items-start">
                       <ExclamationCircleIcon
-                        class="w-4 h-4 text-yellow-600 mr-2 mt-0.5 flex-shrink-0"
+                        class="w-4 h-4 text-yellow-700 mr-2 mt-0.5 flex-shrink-0"
                       />
                       <p class="text-sm text-yellow-800">
                         {{ order.deliveryNotes }}
@@ -275,7 +283,7 @@
                 <div class="ml-6 flex flex-col space-y-2">
                   <button
                     v-if="order.status === 'ready' && !order.localPhase"
-                    class="min-h-[44px] px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm whitespace-nowrap"
+                    class="min-h-[44px] px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors font-medium text-sm whitespace-nowrap"
                     @click="startDelivery(order)"
                   >
                     {{ t("serviceView.startDelivery") }}
@@ -317,7 +325,7 @@
       <!-- 右側：今日配送記錄和個人統計 -->
       <div class="space-y-6">
         <!-- 配送中的訂單 -->
-        <div class="bg-white rounded-lg shadow">
+        <div class="ui-panel bg-white rounded-lg shadow">
           <div class="p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
               {{ t("serviceView.myDeliveries") }} ({{
@@ -329,7 +337,7 @@
               <div
                 v-for="delivery in myActiveDeliveries"
                 :key="delivery.id"
-                class="flex items-center justify-between p-3 bg-blue-50 rounded-lg"
+                class="ui-toolbar flex items-center justify-between p-3 bg-blue-50 rounded-lg"
               >
                 <div>
                   <p class="font-medium text-gray-900">
@@ -342,7 +350,7 @@
                       })
                     }}
                   </p>
-                  <p class="text-xs text-blue-600">
+                  <p class="text-xs text-blue-700">
                     {{ t("serviceView.startTime") }}:
                     {{ formatClockTime(delivery.deliveryStartTime) }}
                   </p>
@@ -371,7 +379,7 @@
         </div>
 
         <!-- 今日個人績效 -->
-        <div class="bg-white rounded-lg shadow">
+        <div class="ui-panel bg-white rounded-lg shadow">
           <div class="p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
               {{ t("serviceView.todayPerformance") }}
@@ -381,7 +389,7 @@
               <!-- 績效指標 -->
               <div class="grid grid-cols-2 gap-4">
                 <div class="text-center p-3 bg-green-50 rounded">
-                  <p class="text-sm text-green-600">
+                  <p class="text-sm text-green-700">
                     {{ t("serviceView.completedDeliveries") }}
                   </p>
                   <p class="text-2xl font-bold text-green-800">
@@ -389,7 +397,7 @@
                   </p>
                 </div>
                 <div class="text-center p-3 bg-blue-50 rounded">
-                  <p class="text-sm text-blue-600">
+                  <p class="text-sm text-blue-700">
                     {{ t("serviceView.avgTime") }}
                   </p>
                   <p class="text-2xl font-bold text-blue-800">
@@ -400,7 +408,7 @@
 
               <!-- 效率進度條 -->
               <div>
-                <div class="flex justify-between text-sm mb-1">
+                <div class="ui-toolbar flex justify-between text-sm mb-1">
                   <span class="text-gray-600">{{
                     t("serviceView.serviceEfficiency")
                   }}</span>
@@ -456,8 +464,10 @@
           class="fixed inset-0 bg-black opacity-30"
           @click="closeContactDialog"
         />
-        <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-          <div class="flex items-center justify-between mb-4">
+        <div
+          class="ui-panel relative bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+        >
+          <div class="ui-toolbar flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-900">
               {{ t("serviceView.contactCustomer") }}
             </h3>
@@ -503,7 +513,7 @@
                 {{ t("serviceView.makeCall") }}
               </button>
               <button
-                class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                class="flex-1 px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors"
                 @click="sendMessage"
               >
                 {{ t("serviceView.sendMessage") }}
@@ -995,9 +1005,9 @@ const getStatusIcon = (status: string) => {
 
 const getStatusIconClass = (status: string) => {
   const classes: Record<string, string> = {
-    ready: "bg-orange-100 text-orange-600",
-    delivering: "bg-blue-100 text-blue-600",
-    delivered: "bg-green-100 text-green-600",
+    ready: "bg-orange-100 text-orange-700",
+    delivering: "bg-blue-100 text-blue-700",
+    delivered: "bg-green-100 text-green-700",
   };
   return classes[status] || "bg-gray-100 text-gray-600";
 };

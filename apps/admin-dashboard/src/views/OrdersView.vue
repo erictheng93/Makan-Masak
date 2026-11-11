@@ -1,69 +1,69 @@
 <template>
-  <div class="orders-view" data-testid="admin-orders-page">
+  <div class="ui-page orders-view" data-testid="admin-orders-page">
     <!-- 訂單統計卡片：GET /orders/stats 只開給 role 0/1，其他角色只會看到假的 0 -->
     <div
       v-if="canViewStats"
       class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
       data-testid="admin-orders-stats"
     >
-      <div class="bg-white rounded-lg shadow p-4 lg:p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-4 lg:p-6">
         <div class="flex items-center">
           <div class="p-2 bg-yellow-100 rounded-lg">
-            <ClockIcon class="h-5 w-5 lg:h-6 lg:w-6 text-yellow-600" />
+            <ClockIcon class="h-5 w-5 lg:h-6 lg:w-6 text-yellow-700" />
           </div>
           <div class="ml-3 lg:ml-4 min-w-0">
             <h3 class="text-sm lg:text-lg font-semibold text-gray-900 truncate">
               {{ t("orders.stats.pending") }}
             </h3>
-            <p class="text-xl lg:text-2xl font-bold text-yellow-600">
+            <p class="text-xl lg:text-2xl font-bold text-yellow-700">
               {{ stats.pending }}
             </p>
           </div>
         </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow p-4 lg:p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-4 lg:p-6">
         <div class="flex items-center">
           <div class="p-2 bg-blue-100 rounded-lg">
-            <ShoppingBagIcon class="h-5 w-5 lg:h-6 lg:w-6 text-blue-600" />
+            <ShoppingBagIcon class="h-5 w-5 lg:h-6 lg:w-6 text-blue-700" />
           </div>
           <div class="ml-3 lg:ml-4 min-w-0">
             <h3 class="text-sm lg:text-lg font-semibold text-gray-900 truncate">
               {{ t("orders.stats.preparing") }}
             </h3>
-            <p class="text-xl lg:text-2xl font-bold text-blue-600">
+            <p class="text-xl lg:text-2xl font-bold text-blue-700">
               {{ stats.preparing }}
             </p>
           </div>
         </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow p-4 lg:p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-4 lg:p-6">
         <div class="flex items-center">
           <div class="p-2 bg-green-100 rounded-lg">
-            <CheckCircleIcon class="h-5 w-5 lg:h-6 lg:w-6 text-green-600" />
+            <CheckCircleIcon class="h-5 w-5 lg:h-6 lg:w-6 text-green-700" />
           </div>
           <div class="ml-3 lg:ml-4 min-w-0">
             <h3 class="text-sm lg:text-lg font-semibold text-gray-900 truncate">
               {{ t("orders.stats.completed") }}
             </h3>
-            <p class="text-xl lg:text-2xl font-bold text-green-600">
+            <p class="text-xl lg:text-2xl font-bold text-green-700">
               {{ stats.completed }}
             </p>
           </div>
         </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow p-4 lg:p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-4 lg:p-6">
         <div class="flex items-center">
           <div class="p-2 bg-red-100 rounded-lg">
-            <XCircleIcon class="h-5 w-5 lg:h-6 lg:w-6 text-red-600" />
+            <XCircleIcon class="h-5 w-5 lg:h-6 lg:w-6 text-red-700" />
           </div>
           <div class="ml-3 lg:ml-4 min-w-0">
             <h3 class="text-sm lg:text-lg font-semibold text-gray-900 truncate">
               {{ t("orders.stats.cancelled") }}
             </h3>
-            <p class="text-xl lg:text-2xl font-bold text-red-600">
+            <p class="text-xl lg:text-2xl font-bold text-red-700">
               {{ stats.cancelled }}
             </p>
           </div>
@@ -72,7 +72,7 @@
     </div>
 
     <!-- 訂單篩選和搜索 -->
-    <div class="bg-white rounded-lg shadow mb-6">
+    <div class="ui-panel bg-white rounded-lg shadow mb-6">
       <div class="p-4 lg:p-6">
         <div class="flex flex-col gap-3">
           <!-- Search -->
@@ -85,66 +85,84 @@
               type="text"
               data-testid="admin-orders-search"
               :placeholder="t('orders.searchPlaceholder')"
-              class="w-full pl-10 pr-4 py-2 bg-white border-0 rounded-xl shadow-ios-sm focus:ring-2 focus:ring-ios-blue focus:ring-opacity-30 transition-colors"
+              class="ui-panel w-full pl-10 pr-4 py-2 bg-white border-0 rounded-xl shadow-ios-sm focus:ring-2 focus:ring-ios-blue focus:ring-opacity-30 transition-colors"
             />
           </div>
 
           <!-- Filters row -->
           <div class="flex flex-wrap gap-2">
-            <select
-              v-model="statusFilter"
-              data-testid="admin-orders-status-filter"
-              class="flex-1 min-w-[120px] px-3 py-2 bg-white border-0 rounded-xl shadow-ios-sm text-sm focus:ring-2 focus:ring-ios-blue focus:ring-opacity-30 transition-colors"
+            <label class="admin-field" for="ordersview-statusFilter"
+              ><span>{{ t("orders.columns.status") }}</span
+              ><select
+                id="ordersview-statusFilter"
+                v-model="statusFilter"
+                data-testid="admin-orders-status-filter"
+                class="ui-panel flex-1 min-w-[120px] px-3 py-2 bg-white border-0 rounded-xl shadow-ios-sm text-sm focus:ring-2 focus:ring-ios-blue focus:ring-opacity-30 transition-colors"
+              >
+                <option value="">{{ t("orders.filter.allStatus") }}</option>
+                <option value="pending">
+                  {{ t("orders.status.pending") }}
+                </option>
+                <option value="confirmed">
+                  {{ t("orders.status.confirmed") }}
+                </option>
+                <option value="preparing">
+                  {{ t("orders.status.preparing") }}
+                </option>
+                <option value="ready">{{ t("orders.status.ready") }}</option>
+                <option value="delivered">
+                  {{ t("orders.status.delivered") }}
+                </option>
+                <option value="paid">{{ t("orders.status.paid") }}</option>
+                <option value="refunded">
+                  {{ t("orders.status.refunded") }}
+                </option>
+                <option value="cancelled">
+                  {{ t("orders.status.cancelled") }}
+                </option>
+              </select></label
             >
-              <option value="">{{ t("orders.filter.allStatus") }}</option>
-              <option value="pending">{{ t("orders.status.pending") }}</option>
-              <option value="confirmed">
-                {{ t("orders.status.confirmed") }}
-              </option>
-              <option value="preparing">
-                {{ t("orders.status.preparing") }}
-              </option>
-              <option value="ready">{{ t("orders.status.ready") }}</option>
-              <option value="delivered">
-                {{ t("orders.status.delivered") }}
-              </option>
-              <option value="paid">{{ t("orders.status.paid") }}</option>
-              <option value="refunded">
-                {{ t("orders.status.refunded") }}
-              </option>
-              <option value="cancelled">
-                {{ t("orders.status.cancelled") }}
-              </option>
-            </select>
 
-            <select
-              v-model="typeFilter"
-              data-testid="admin-orders-type-filter"
-              class="flex-1 min-w-[120px] px-3 py-2 bg-white border-0 rounded-xl shadow-ios-sm text-sm focus:ring-2 focus:ring-ios-blue focus:ring-opacity-30 transition-colors"
+            <label class="admin-field" for="ordersview-typeFilter"
+              ><span>{{ t("orders.columns.type") }}</span
+              ><select
+                id="ordersview-typeFilter"
+                v-model="typeFilter"
+                data-testid="admin-orders-type-filter"
+                class="ui-panel flex-1 min-w-[120px] px-3 py-2 bg-white border-0 rounded-xl shadow-ios-sm text-sm focus:ring-2 focus:ring-ios-blue focus:ring-opacity-30 transition-colors"
+              >
+                <option value="">{{ t("orders.filter.allTypes") }}</option>
+                <option value="dine_in">{{ t("orders.type.dineIn") }}</option>
+                <option value="takeaway">
+                  {{ t("orders.type.takeaway") }}
+                </option>
+                <option value="delivery">
+                  {{ t("orders.type.delivery") }}
+                </option>
+              </select></label
             >
-              <option value="">{{ t("orders.filter.allTypes") }}</option>
-              <option value="dine_in">{{ t("orders.type.dineIn") }}</option>
-              <option value="takeaway">{{ t("orders.type.takeaway") }}</option>
-              <option value="delivery">{{ t("orders.type.delivery") }}</option>
-            </select>
 
-            <select
-              v-model="sourceFilter"
-              data-testid="admin-orders-source-filter"
-              class="flex-1 min-w-[120px] px-3 py-2 bg-white border-0 rounded-xl shadow-ios-sm text-sm focus:ring-2 focus:ring-ios-blue focus:ring-opacity-30 transition-colors"
+            <label class="admin-field" for="ordersview-sourceFilter"
+              ><span>{{ t("orders.columns.source") }}</span
+              ><select
+                id="ordersview-sourceFilter"
+                v-model="sourceFilter"
+                data-testid="admin-orders-source-filter"
+                class="ui-panel flex-1 min-w-[120px] px-3 py-2 bg-white border-0 rounded-xl shadow-ios-sm text-sm focus:ring-2 focus:ring-ios-blue focus:ring-opacity-30 transition-colors"
+              >
+                <option value="">{{ t("orders.filter.allSources") }}</option>
+                <option value="direct">{{ t("orders.source.direct") }}</option>
+                <option value="market_checkout">
+                  {{ t("orders.source.marketCheckout") }}
+                </option>
+                <option value="uber_eats">Uber Eats</option>
+                <option value="foodpanda">Foodpanda</option>
+                <option value="grabfood">GrabFood</option>
+              </select></label
             >
-              <option value="">{{ t("orders.filter.allSources") }}</option>
-              <option value="direct">{{ t("orders.source.direct") }}</option>
-              <option value="market_checkout">
-                {{ t("orders.source.marketCheckout") }}
-              </option>
-              <option value="uber_eats">Uber Eats</option>
-              <option value="foodpanda">Foodpanda</option>
-              <option value="grabfood">GrabFood</option>
-            </select>
 
             <button
-              class="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm whitespace-nowrap"
+              class="flex items-center justify-center px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors text-sm whitespace-nowrap"
               @click="refreshOrders"
             >
               <ArrowPathIcon class="h-4 w-4 mr-1.5" />
@@ -156,7 +174,7 @@
     </div>
 
     <!-- 訂單列表 -->
-    <div class="bg-white rounded-lg shadow">
+    <div class="ui-panel bg-white rounded-lg shadow">
       <div class="p-4 lg:p-6">
         <h2 class="text-lg lg:text-xl font-semibold text-gray-900 mb-4 lg:mb-6">
           {{ t("orders.orderList") }}
@@ -250,9 +268,9 @@
                     {{ formatDateTime(order.createdAt) }}
                   </div>
                   <!-- Desktop actions: icon buttons -->
-                  <div class="flex items-center justify-end gap-1">
+                  <div class="ui-toolbar flex items-center justify-end gap-1">
                     <button
-                      class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                      class="p-1.5 text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
                       :data-testid="`admin-order-view-${order.id}`"
                       :title="t('orders.actions.view')"
                       :aria-label="t('orders.actions.view')"
@@ -262,7 +280,7 @@
                     </button>
                     <button
                       v-if="canUpdateStatus(order.status)"
-                      class="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                      class="p-1.5 text-green-700 hover:bg-green-50 rounded-md transition-colors"
                       :data-testid="`admin-order-update-${order.id}`"
                       :title="t('orders.actions.update')"
                       :aria-label="t('orders.actions.update')"
@@ -272,7 +290,7 @@
                     </button>
                     <button
                       v-if="canCancel(order.status)"
-                      class="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                      class="p-1.5 text-red-700 hover:bg-red-50 rounded-md transition-colors"
                       :data-testid="`admin-order-cancel-${order.id}`"
                       :title="t('orders.actions.cancel')"
                       :aria-label="t('orders.actions.cancel')"
@@ -282,7 +300,7 @@
                     </button>
                     <button
                       v-if="canRefund(order)"
-                      class="p-1.5 text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
+                      class="p-1.5 text-orange-700 hover:bg-orange-50 rounded-md transition-colors"
                       :data-testid="`admin-order-refund-${order.id}`"
                       :title="t('orders.actions.refund')"
                       @click="refundOrder(order)"
@@ -305,7 +323,7 @@
               class="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
             >
               <!-- Card header: order number + status -->
-              <div class="flex items-center justify-between mb-3">
+              <div class="ui-toolbar flex items-center justify-between mb-3">
                 <span class="text-sm font-semibold text-gray-900">
                   {{ getOrderNumber(order) }}
                 </span>
@@ -364,7 +382,7 @@
                 class="flex items-center gap-2 pt-3 border-t border-gray-100"
               >
                 <button
-                  class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                  class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
                   :data-testid="`admin-order-view-${order.id}`"
                   @click="viewOrderDetails(order)"
                 >
@@ -373,7 +391,7 @@
                 </button>
                 <button
                   v-if="canUpdateStatus(order.status)"
-                  class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-green-600 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+                  class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
                   :data-testid="`admin-order-update-${order.id}`"
                   @click="updateOrderStatus(order)"
                 >
@@ -382,7 +400,7 @@
                 </button>
                 <button
                   v-if="canCancel(order.status)"
-                  class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                  class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
                   :data-testid="`admin-order-cancel-${order.id}`"
                   @click="cancelOrder(order)"
                 >
@@ -391,7 +409,7 @@
                 </button>
                 <button
                   v-if="canRefund(order)"
-                  class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
+                  class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors"
                   :data-testid="`admin-order-refund-${order.id}`"
                   @click="refundOrder(order)"
                 >
@@ -403,7 +421,7 @@
         </div>
         <nav
           v-if="orderStore.pagination.totalPages > 1"
-          class="flex items-center justify-between border-t px-4 py-3 text-sm"
+          class="ui-toolbar flex items-center justify-between border-t px-4 py-3 text-sm"
           aria-label="Order pagination"
         >
           <span>{{ orderStore.pagination.total }}</span>
@@ -464,9 +482,11 @@
           class="fixed inset-0 bg-black opacity-30"
           @click="selectedOrder = null"
         />
-        <div class="relative bg-white rounded-lg shadow-xl max-w-2xl w-full">
+        <div
+          class="ui-panel relative bg-white rounded-lg shadow-xl max-w-2xl w-full"
+        >
           <div class="p-4 sm:p-6">
-            <div class="flex items-center justify-between mb-4">
+            <div class="ui-toolbar flex items-center justify-between mb-4">
               <div class="flex items-center gap-2">
                 <h3 class="text-lg font-semibold">
                   {{ t("orders.orderDetail") }} -
@@ -589,7 +609,7 @@
               </div>
 
               <div>
-                <div class="flex items-center justify-between mb-2">
+                <div class="ui-toolbar flex items-center justify-between mb-2">
                   <label class="block text-sm font-medium text-gray-700">{{
                     t("orders.detail.orderItems")
                   }}</label>
@@ -620,7 +640,7 @@
                     class="p-3 hover:bg-ios-bg transition-colors rounded-lg cursor-pointer group/item"
                     @click="navigateToMenuItem(item)"
                   >
-                    <div class="flex justify-between items-start">
+                    <div class="ui-toolbar flex justify-between items-start">
                       <div class="flex-1 min-w-0">
                         <p
                           class="font-medium text-ios-blue group-hover/item:underline flex items-center gap-1"
@@ -645,14 +665,16 @@
               <div class="border-t pt-4">
                 <div
                   v-if="selectedOrder?.deliveryInfo?.deliveryFee"
-                  class="flex justify-between text-sm text-gray-500 mb-2"
+                  class="ui-toolbar flex justify-between text-sm text-gray-500 mb-2"
                 >
                   <span>{{ t("orders.detail.deliveryFee") }}</span>
                   <span>{{
                     formatPrice(selectedOrder.deliveryInfo.deliveryFee)
                   }}</span>
                 </div>
-                <div class="flex justify-between text-lg font-semibold">
+                <div
+                  class="ui-toolbar flex justify-between text-lg font-semibold"
+                >
                   <span>{{ t("orders.detail.totalAmount") }}</span>
                   <span>{{ formatPrice(selectedOrder.totalAmount) }}</span>
                 </div>

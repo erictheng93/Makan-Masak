@@ -1,16 +1,16 @@
 <template>
-  <div class="space-y-6">
+  <div class="ui-page space-y-6">
     <!-- Action Bar -->
-    <div class="flex flex-wrap justify-end gap-3 mb-0">
+    <div class="ui-toolbar flex flex-wrap justify-end gap-3 mb-0">
       <button
-        class="flex items-center px-5 py-2.5 rounded-full text-[13px] font-semibold bg-ios-green text-white hover:bg-green-600 transition-colors shadow-sm"
+        class="flex items-center px-5 py-2.5 rounded-full text-[13px] font-semibold bg-ios-bg text-ios-text hover:bg-ios-separator transition-colors shadow-sm"
         @click="generateAllQRCodes"
       >
         <QrCode class="w-4 h-4 mr-1.5" />
         {{ t("tables.batchGenerateQR") }}
       </button>
       <button
-        class="flex items-center px-5 py-2.5 rounded-full text-[13px] font-semibold bg-ios-blue text-white hover:bg-blue-600 transition-colors shadow-sm"
+        class="flex items-center px-5 py-2.5 rounded-full text-[13px] font-semibold bg-primary-700 text-white hover:bg-primary-800 transition-colors shadow-sm"
         @click="prepareFilteredTableQRCodes"
       >
         <QrCode class="w-4 h-4 mr-1.5" />
@@ -18,7 +18,7 @@
       </button>
       <button
         v-if="pendingTableCount > 0"
-        class="flex items-center px-5 py-2.5 rounded-full text-[13px] font-semibold bg-ios-orange text-white hover:bg-orange-600 transition-colors shadow-sm"
+        class="flex items-center px-5 py-2.5 rounded-full text-[13px] font-semibold bg-ios-orange-soft text-ios-orange-deep hover:bg-orange-100 transition-colors shadow-sm"
         @click="discardAllPreparedTableQRCodes"
       >
         <XCircle class="w-4 h-4 mr-1.5" />
@@ -42,7 +42,7 @@
         {{ t("tables.qrModal.printAll") }}
       </button>
       <button
-        class="flex items-center px-5 py-2.5 rounded-full text-[13px] font-semibold bg-ios-blue text-white hover:bg-blue-600 transition-colors shadow-sm"
+        class="flex items-center px-5 py-2.5 rounded-full text-[13px] font-semibold bg-primary-700 text-white hover:bg-primary-800 transition-colors shadow-sm"
         data-testid="open-create-table"
         @click="showTableModal = true"
       >
@@ -55,7 +55,7 @@
     <div class="card p-6">
       <div class="flex flex-col sm:flex-row gap-4">
         <div class="relative flex-1">
-          <Search class="absolute left-3 top-3 h-4 w-4 text-ios-text/30" />
+          <Search class="absolute left-3 top-3 h-4 w-4 text-ios-text/70" />
           <input
             v-model="searchQuery"
             type="text"
@@ -97,7 +97,7 @@
           <option value="8">{{ t("tables.filter.seats8plus") }}</option>
         </select>
       </div>
-      <p class="mt-3 text-sm text-ios-text/60" role="status">
+      <p class="mt-3 text-sm text-ios-text/70" role="status">
         {{ t("tables.totalCount", { count: tablePagination.total }) }}
         <span
           v-if="tablePagination.total > TABLE_FETCH_LIMIT"
@@ -115,10 +115,10 @@
       <div
         v-for="table in filteredTables"
         :key="table.id"
-        class="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.1)] transition-all"
+        class="ui-panel bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.1)] transition-all"
       >
         <div class="p-6">
-          <div class="flex items-center justify-between mb-4">
+          <div class="ui-toolbar flex items-center justify-between mb-4">
             <div class="flex items-center">
               <input
                 type="checkbox"
@@ -142,7 +142,7 @@
                 {{ t("tables.tableNumber") }} {{ table.tableNumber }}
               </h3>
             </div>
-            <div class="flex flex-wrap justify-end gap-2">
+            <div class="ui-toolbar flex flex-wrap justify-end gap-2">
               <span
                 v-if="!tableQrIsReady(table)"
                 class="px-2.5 py-1 text-xs font-medium rounded-full bg-ios-red/10 text-ios-red-deep"
@@ -159,14 +159,14 @@
           </div>
 
           <div class="space-y-2 mb-4">
-            <div class="flex items-center text-sm text-ios-text/60">
+            <div class="flex items-center text-sm text-ios-text/70">
               <Users class="h-4 w-4 mr-2" />
               <span
                 >{{ t("tables.capacity") }}: {{ table.capacity }}
                 {{ t("tables.people") }}</span
               >
             </div>
-            <div class="flex items-center text-sm text-ios-text/60">
+            <div class="flex items-center text-sm text-ios-text/70">
               <MapPin class="h-4 w-4 mr-2" />
               <span
                 >{{ t("tables.location") }}:
@@ -175,7 +175,7 @@
             </div>
             <div
               v-if="table.currentOrderId"
-              class="flex items-center text-sm text-ios-text/60"
+              class="flex items-center text-sm text-ios-text/70"
             >
               <FileText class="h-4 w-4 mr-2" />
               <span>{{ t("tables.order") }}: #{{ table.currentOrderId }}</span>
@@ -206,7 +206,7 @@
                 <QrCode class="w-8 h-8 text-ios-secondary" />
               </div>
               <span
-                class="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-white text-ios-blue shadow-[0_2px_6px_rgba(0,0,0,0.14)] opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100"
+                class="ui-panel absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-white text-ios-blue shadow-[0_2px_6px_rgba(0,0,0,0.14)] opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100"
               >
                 <Maximize2 class="h-3.5 w-3.5" />
               </span>
@@ -223,7 +223,7 @@
             >
               {{ t("qrReadiness.notReady") }}
             </div>
-            <div v-else class="mt-2 text-[11px] text-ios-text/40">
+            <div v-else class="mt-2 text-[11px] text-ios-text/70">
               {{ t("tables.qrPreview.hint") }}
             </div>
           </div>
@@ -321,15 +321,15 @@
         v-if="filteredTables.length === 0"
         class="col-span-full text-center py-12"
       >
-        <TableProperties class="mx-auto h-12 w-12 text-ios-text/30" />
+        <TableProperties class="mx-auto h-12 w-12 text-ios-text/70" />
         <h3 class="mt-2 text-sm font-medium text-ios-text">
           {{ t("tables.empty.title") }}
         </h3>
-        <p class="mt-1 text-sm text-ios-text/50">
+        <p class="mt-1 text-sm text-ios-text/70">
           {{ t("tables.empty.subtitle") }}
         </p>
         <button
-          class="mt-4 inline-flex items-center px-5 py-2.5 bg-ios-blue text-white rounded-full hover:bg-blue-600 transition-colors text-sm font-semibold"
+          class="mt-4 inline-flex items-center px-5 py-2.5 bg-primary-700 text-white rounded-full hover:bg-primary-800 transition-colors text-sm font-semibold"
           data-testid="open-create-table-empty"
           @click="showTableModal = true"
         >
@@ -344,7 +344,7 @@
       <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-black/30" @click="closeTableModal" />
         <div
-          class="relative bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+          class="ui-panel relative bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
         >
           <div class="p-6">
             <h3 class="text-lg font-semibold text-ios-text mb-4">
@@ -465,7 +465,7 @@
                 />
               </div>
 
-              <div class="flex justify-end space-x-3 mt-6">
+              <div class="ui-toolbar flex justify-end space-x-3 mt-6">
                 <button
                   type="button"
                   class="px-5 py-2.5 text-ios-text bg-ios-bg rounded-full hover:bg-ios-separator transition-colors text-sm font-semibold"
@@ -477,7 +477,7 @@
                   type="submit"
                   data-testid="table-submit"
                   :disabled="isSavingTable"
-                  class="px-5 py-2.5 bg-ios-blue text-white rounded-full hover:bg-blue-600 transition-colors text-sm font-semibold disabled:opacity-60"
+                  class="px-5 py-2.5 bg-primary-700 text-white rounded-full hover:bg-primary-800 transition-colors text-sm font-semibold disabled:opacity-60"
                 >
                   {{
                     isSavingTable
@@ -498,7 +498,9 @@
     <div v-if="showQRModal" class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-black/30" @click="showQRModal = false" />
-        <div class="relative bg-white rounded-2xl shadow-xl max-w-md w-full">
+        <div
+          class="ui-panel relative bg-white rounded-2xl shadow-xl max-w-md w-full"
+        >
           <div class="p-6 text-center">
             <h3 class="text-lg font-semibold text-ios-text mb-4">
               {{
@@ -532,7 +534,7 @@
               </div>
               <p
                 v-if="selectedTable && tableQrIsReady(selectedTable)"
-                class="text-xs text-ios-text/30 mt-2 font-mono"
+                class="text-xs text-ios-text/70 mt-2 font-mono"
               >
                 {{ selectedTable ? printableTableQrCode(selectedTable) : "" }}
               </p>
@@ -550,7 +552,7 @@
                 {{ t("tables.qrModal.download") }}
               </button>
               <button
-                class="px-5 py-2.5 bg-ios-blue text-white rounded-full hover:bg-blue-600 transition-colors text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                class="px-5 py-2.5 bg-primary-700 text-white rounded-full hover:bg-primary-800 transition-colors text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                 :disabled="!selectedTable || !tableQrIsReady(selectedTable)"
                 @click="printQRCode"
               >
@@ -841,8 +843,8 @@ const STATUS_BADGE_CLASSES: Record<string, string> = {
 
 const STATUS_BUTTON_CLASSES: Record<string, string> = {
   available: "bg-ios-blue text-white hover:bg-blue-600",
-  occupied: "bg-ios-green text-white hover:bg-green-600",
-  maintenance: "bg-ios-orange text-white hover:bg-orange-600",
+  occupied: "bg-ios-bg text-ios-text hover:bg-ios-separator",
+  maintenance: "bg-ios-orange-soft text-ios-orange-deep hover:bg-orange-100",
 };
 
 /**
@@ -862,12 +864,12 @@ const ACTION_PILL =
  */
 const TONAL = {
   neutral: "bg-ios-text/10 text-ios-text hover:bg-ios-text/20",
-  blue: "bg-ios-blue/10 text-blue-600 hover:bg-ios-blue/20",
+  blue: "bg-ios-blue/10 text-blue-700 hover:bg-ios-blue/20",
   green: "bg-ios-green/15 text-ios-green-deep hover:bg-ios-green/25",
   red: "bg-ios-red/10 text-ios-red-deep hover:bg-ios-red/20",
 };
 
-const SOLID_GREEN = "bg-ios-green text-white hover:bg-green-600 shadow-sm";
+const SOLID_GREEN = "bg-ios-bg text-ios-text hover:bg-ios-separator shadow-sm";
 
 const getStatusColor = (status: string) =>
   STATUS_COLORS[status] || STATUS_COLORS.maintenance;

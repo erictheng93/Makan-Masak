@@ -1,8 +1,8 @@
 <template>
-  <div class="space-y-6">
+  <div class="ui-page space-y-6">
     <!-- Header -->
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">
+      <h1 class="ui-page-heading text-2xl font-bold text-gray-900">
         {{ t("platform.title") }}
       </h1>
       <p class="mt-1 text-sm text-gray-500">
@@ -12,7 +12,7 @@
 
     <!-- Stats Row -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div class="bg-white rounded-2xl shadow-ios-card p-4">
+      <div class="ui-panel bg-white rounded-2xl shadow-ios-card p-4">
         <div class="text-sm font-medium text-gray-500">
           {{ t("platform.totalRestaurants") }}
         </div>
@@ -20,15 +20,15 @@
           {{ restaurants.length }}
         </div>
       </div>
-      <div class="bg-white rounded-2xl shadow-ios-card p-4">
+      <div class="ui-panel bg-white rounded-2xl shadow-ios-card p-4">
         <div class="text-sm font-medium text-gray-500">
           {{ t("platform.active") }}
         </div>
-        <div class="mt-1 text-2xl font-bold text-green-600">
+        <div class="mt-1 text-2xl font-bold text-green-700">
           {{ activeCount }}
         </div>
       </div>
-      <div class="bg-white rounded-2xl shadow-ios-card p-4">
+      <div class="ui-panel bg-white rounded-2xl shadow-ios-card p-4">
         <div class="text-sm font-medium text-gray-500">
           {{ t("platform.inactive") }}
         </div>
@@ -51,7 +51,7 @@
     <!-- Empty State -->
     <div
       v-else-if="restaurants.length === 0"
-      class="text-center py-12 bg-white rounded-2xl shadow-ios-card"
+      class="ui-panel text-center py-12 bg-white rounded-2xl shadow-ios-card"
     >
       <Store class="mx-auto h-12 w-12 text-gray-400" />
       <h3 class="mt-2 text-sm font-medium text-gray-900">
@@ -67,16 +67,19 @@
       <div
         v-for="restaurant in restaurants"
         :key="restaurant.id"
-        class="bg-white rounded-2xl shadow-ios-card p-5 hover:shadow-ios-float transition-shadow"
+        class="ui-panel bg-white rounded-2xl shadow-ios-card p-5 hover:shadow-ios-float transition-shadow"
       >
-        <div class="flex items-start justify-between">
+        <div class="ui-toolbar flex items-start justify-between">
           <div class="min-w-0 flex-1">
-            <h3 class="text-lg font-semibold text-gray-900 truncate">
+            <h3
+              :title="restaurant.name"
+              class="text-lg font-semibold text-gray-900 line-clamp-2 break-words"
+            >
               {{ restaurant.name }}
             </h3>
             <p
               v-if="restaurant.address"
-              class="mt-1 text-sm text-gray-500 truncate"
+              class="mt-1 text-sm text-gray-500 break-words"
             >
               {{ restaurant.address }}
             </p>

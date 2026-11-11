@@ -1,11 +1,13 @@
 <template>
-  <div class="menu-view p-6 bg-ios-bg min-h-screen">
+  <div class="ui-page menu-view p-6 bg-ios-bg min-h-screen">
     <!-- Page header -->
     <div
       class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6"
     >
       <div>
-        <h1 class="text-2xl font-bold text-ios-text">{{ t("menu.title") }}</h1>
+        <h1 class="ui-page-heading text-2xl font-bold text-ios-text">
+          {{ t("menu.title") }}
+        </h1>
         <p class="text-[15px] text-ios-secondary mt-0.5">
           {{ t("menu.subtitle") }}
         </p>
@@ -13,7 +15,7 @@
       <div class="flex gap-2.5 items-center">
         <!-- Categories stat chip -->
         <div
-          class="flex items-center gap-1.5 px-3.5 py-2 bg-white rounded-full shadow-[0_1px_6px_rgba(0,0,0,0.06)]"
+          class="ui-panel flex items-center gap-1.5 px-3.5 py-2 bg-white rounded-full shadow-[0_1px_6px_rgba(0,0,0,0.06)]"
         >
           <span class="text-[13px] font-semibold text-ios-text">{{
             categories.length
@@ -24,7 +26,7 @@
         </div>
         <!-- Total items stat chip -->
         <div
-          class="flex items-center gap-1.5 px-3.5 py-2 bg-white rounded-full shadow-[0_1px_6px_rgba(0,0,0,0.06)]"
+          class="ui-panel flex items-center gap-1.5 px-3.5 py-2 bg-white rounded-full shadow-[0_1px_6px_rgba(0,0,0,0.06)]"
         >
           <span class="text-[13px] font-semibold text-ios-text">{{
             menuItems.length
@@ -66,9 +68,11 @@
       <div>
         <!-- Items header: title + actions, then search + filters -->
         <div
-          class="mb-4 space-y-3 rounded-2xl bg-white px-5 py-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]"
+          class="ui-panel mb-4 space-y-3 rounded-2xl bg-white px-5 py-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]"
         >
-          <div class="flex flex-wrap items-center justify-between gap-3">
+          <div
+            class="ui-toolbar flex flex-wrap items-center justify-between gap-3"
+          >
             <div class="flex min-w-0 items-center gap-3">
               <h2 class="truncate text-[17px] font-bold text-ios-text">
                 {{ currentCategoryName }}
@@ -103,7 +107,7 @@
               <!-- Add item button -->
               <button
                 data-testid="admin-menu-add-item"
-                class="flex items-center gap-1.5 px-[18px] py-[9px] bg-blue-600 text-white rounded-full text-[13px] font-semibold -translate-y-px shadow-[0_4px_14px_rgba(0,122,255,0.3)]"
+                class="flex items-center gap-1.5 px-[18px] py-[9px] bg-primary-700 text-white rounded-full text-[13px] font-semibold -translate-y-px shadow-[0_4px_14px_rgba(0,122,255,0.3)]"
                 @click="openAddItemModal"
               >
                 <PlusIcon class="h-4 w-4" />
@@ -151,7 +155,7 @@
           data-testid="menu-bulk-import"
         >
           <section
-            class="mb-4 rounded-2xl bg-white px-5 py-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]"
+            class="ui-panel mb-4 rounded-2xl bg-white px-5 py-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]"
           >
             <div
               v-if="isMarketProductGapContext"
@@ -338,11 +342,11 @@
               </button>
             </div>
 
-            <div class="mt-4 flex justify-end">
+            <div class="ui-toolbar mt-4 flex justify-end">
               <button
                 type="button"
                 data-testid="menu-item-import-submit"
-                class="rounded-full bg-blue-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-[0_4px_14px_rgba(0,122,255,0.25)] disabled:opacity-50"
+                class="rounded-full bg-primary-700 px-5 py-2.5 text-[13px] font-semibold text-white shadow-[0_4px_14px_rgba(0,122,255,0.25)] disabled:opacity-50"
                 :disabled="
                   isImportingMenuItems ||
                   menuItemImportPreview.items.length === 0
@@ -419,7 +423,7 @@
         <!-- Empty state -->
         <div
           v-if="filteredItems.length === 0 && !isLoading"
-          class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)]"
+          class="ui-panel flex flex-col items-center justify-center py-20 bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)]"
         >
           <CakeIcon class="h-14 w-14 text-ios-tertiary mb-3" />
           <h3 class="text-[17px] font-semibold text-ios-text mb-1">
@@ -441,7 +445,7 @@
             </button>
             <button
               data-testid="admin-menu-add-item-empty"
-              class="flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 text-white rounded-full text-[14px] font-semibold -translate-y-px shadow-[0_4px_14px_rgba(0,122,255,0.3)]"
+              class="flex items-center gap-1.5 px-5 py-2.5 bg-primary-700 text-white rounded-full text-[14px] font-semibold -translate-y-px shadow-[0_4px_14px_rgba(0,122,255,0.3)]"
               @click="openAddItemModal"
             >
               <PlusIcon class="h-4 w-4" />
@@ -453,7 +457,7 @@
         <!-- Loading state -->
         <div
           v-if="isLoading"
-          class="flex items-center justify-center py-20 bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)]"
+          class="ui-panel flex items-center justify-center py-20 bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)]"
         >
           <div
             class="animate-spin rounded-full h-8 w-8 border-b-2 border-ios-primary"
@@ -478,7 +482,9 @@
           class="fixed inset-0 bg-black/30 backdrop-blur-sm"
           @click="cancelDelete"
         />
-        <div class="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full">
+        <div
+          class="ui-panel relative bg-white rounded-2xl shadow-2xl max-w-sm w-full"
+        >
           <div class="p-6 text-center">
             <div
               class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-ios-error/10 mb-4"
@@ -523,7 +529,7 @@
           @click="closeMenuItemModal"
         />
         <div
-          class="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          class="ui-panel relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
           data-testid="item-modal"
         >
           <div class="p-6">
@@ -563,7 +569,7 @@
                       v-if="!menuItemConflict.removed"
                       type="button"
                       data-testid="menu-item-conflict-reload"
-                      class="rounded-full bg-ios-primary px-4 py-2 text-[13px] font-semibold text-white shadow-[0_2px_8px_rgba(0,122,255,0.25)] transition-colors hover:bg-ios-primary/90"
+                      class="rounded-full bg-primary-700 px-4 py-2 text-[13px] font-semibold text-white shadow-[0_2px_8px_rgba(0,122,255,0.25)] transition-colors hover:bg-primary-700/90"
                       @click="reloadConflictedMenuItem"
                     >
                       {{ t("menu.conflict.reload") }}
@@ -653,12 +659,14 @@
                 <!-- Item name -->
                 <div class="md:col-span-2">
                   <label
+                    for="menuview-field-1"
                     class="block text-[13px] font-semibold text-ios-text mb-1.5"
                   >
                     {{ t("menu.form.itemName") }}
                     <span class="text-ios-error ml-0.5">*</span>
                   </label>
                   <input
+                    id="menuview-field-1"
                     v-model="menuItemForm.name"
                     data-testid="menu-item-name-input"
                     type="text"
@@ -670,11 +678,13 @@
                 <!-- Name (English) -->
                 <div>
                   <label
+                    for="menuview-field-2"
                     class="block text-[13px] font-semibold text-ios-text mb-1.5"
                   >
                     {{ t("menu.form.nameEn") }}
                   </label>
                   <input
+                    id="menuview-field-2"
                     v-model="menuItemForm.nameEn"
                     type="text"
                     class="w-full px-4 py-2.5 bg-ios-bg rounded-xl text-[14px] text-ios-text border-0 outline-none focus:ring-2 focus:ring-ios-primary/30 transition-all"
@@ -684,11 +694,13 @@
                 <!-- Original price -->
                 <div>
                   <label
+                    for="menuview-field-3"
                     class="block text-[13px] font-semibold text-ios-text mb-1.5"
                   >
                     {{ t("menu.form.originalPrice") }}
                   </label>
                   <input
+                    id="menuview-field-3"
                     v-model.number="menuItemForm.originalPrice"
                     type="number"
                     :step="inputStep"
@@ -700,12 +712,14 @@
                 <!-- Price -->
                 <div>
                   <label
+                    for="menuview-field-4"
                     class="block text-[13px] font-semibold text-ios-text mb-1.5"
                   >
                     {{ t("menu.form.price") }}
                     <span class="text-ios-error ml-0.5">*</span>
                   </label>
                   <input
+                    id="menuview-field-4"
                     v-model.number="menuItemForm.price"
                     data-testid="menu-item-price-input"
                     type="number"
@@ -719,12 +733,14 @@
                 <!-- Category -->
                 <div>
                   <label
+                    for="menuview-field-5"
                     class="block text-[13px] font-semibold text-ios-text mb-1.5"
                   >
                     {{ t("menu.form.category") }}
                     <span class="text-ios-error ml-0.5">*</span>
                   </label>
                   <select
+                    id="menuview-field-5"
                     v-model="menuItemForm.categoryId"
                     data-testid="menu-item-category-select"
                     required
@@ -746,11 +762,13 @@
                 <!-- Catalog type -->
                 <div>
                   <label
+                    for="menuview-field-6"
                     class="block text-[13px] font-semibold text-ios-text mb-1.5"
                   >
                     類型
                   </label>
                   <select
+                    id="menuview-field-6"
                     v-model="menuItemForm.catalogType"
                     class="w-full px-4 py-2.5 bg-ios-bg rounded-xl text-[14px] text-ios-text border-0 outline-none focus:ring-2 focus:ring-ios-primary/30 transition-all"
                   >
@@ -784,7 +802,7 @@
                       />
                       <button
                         type="button"
-                        class="rounded-full bg-ios-primary px-4 py-2 text-[13px] font-semibold text-white shadow-[0_2px_8px_rgba(0,122,255,0.18)] transition-all duration-300 ease-out hover:bg-ios-primary/90 disabled:opacity-60"
+                        class="rounded-full bg-primary-700 px-4 py-2 text-[13px] font-semibold text-white shadow-[0_2px_8px_rgba(0,122,255,0.18)] transition-all duration-300 ease-out hover:bg-primary-700/90 disabled:opacity-60"
                         :disabled="imageUploadState === 'uploading'"
                         @click="imageFileInput?.click()"
                       >
@@ -834,11 +852,13 @@
                 <!-- Description -->
                 <div class="md:col-span-2">
                   <label
+                    for="menuview-field-7"
                     class="block text-[13px] font-semibold text-ios-text mb-1.5"
                   >
                     {{ t("menu.form.description") }}
                   </label>
                   <textarea
+                    id="menuview-field-7"
                     v-model="menuItemForm.description"
                     rows="3"
                     class="w-full px-4 py-2.5 bg-ios-bg rounded-xl text-[14px] text-ios-text border-0 outline-none focus:ring-2 focus:ring-ios-primary/30 transition-all resize-none"
@@ -948,7 +968,7 @@
                 <!-- Customization options -->
                 <div class="md:col-span-2 rounded-xl bg-ios-bg p-4">
                   <div
-                    class="mb-3 flex flex-wrap items-center justify-between gap-2"
+                    class="ui-toolbar mb-3 flex flex-wrap items-center justify-between gap-2"
                   >
                     <h4 class="text-[14px] font-bold text-ios-text">
                       {{ t("menu.form.options") }}
@@ -1004,7 +1024,9 @@
                       </button>
                     </div>
                     <section class="rounded-xl bg-white p-3">
-                      <div class="mb-3 flex items-center justify-between gap-3">
+                      <div
+                        class="ui-toolbar mb-3 flex items-center justify-between gap-3"
+                      >
                         <h5 class="text-[13px] font-semibold text-ios-text">
                           {{ t("menu.form.optionSizes") }}
                         </h5>
@@ -1022,18 +1044,26 @@
                         :key="size.id"
                         class="mb-2 grid grid-cols-1 gap-2 last:mb-0 sm:grid-cols-[1fr_120px_auto_auto] sm:items-center"
                       >
-                        <input
-                          v-model="size.name"
-                          type="text"
-                          :placeholder="t('menu.form.optionName')"
-                          class="rounded-xl bg-ios-bg px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
-                        />
-                        <input
-                          v-model.number="size.priceAdjustment"
-                          type="number"
-                          :step="inputStep"
-                          class="rounded-xl bg-ios-bg px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
-                        />
+                        <label :for="`size-name-${size.id}`" class="admin-field"
+                          ><span>{{ t("menu.form.optionName") }}</span
+                          ><input
+                            :id="`size-name-${size.id}`"
+                            v-model="size.name"
+                            type="text"
+                            :placeholder="t('menu.form.optionName')"
+                            class="rounded-xl bg-ios-bg px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
+                        /></label>
+                        <label
+                          :for="`size-price-${size.id}`"
+                          class="admin-field"
+                          ><span>{{ t("menu.form.price") }}</span
+                          ><input
+                            :id="`size-price-${size.id}`"
+                            v-model.number="size.priceAdjustment"
+                            type="number"
+                            :step="inputStep"
+                            class="rounded-xl bg-ios-bg px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
+                        /></label>
                         <label
                           class="flex items-center gap-1.5 text-[12px] text-ios-text"
                         >
@@ -1077,7 +1107,9 @@
                     </section>
 
                     <section class="rounded-xl bg-white p-3">
-                      <div class="mb-3 flex items-center justify-between gap-3">
+                      <div
+                        class="ui-toolbar mb-3 flex items-center justify-between gap-3"
+                      >
                         <h5 class="text-[13px] font-semibold text-ios-text">
                           {{ t("menu.form.optionAddOns") }}
                         </h5>
@@ -1095,29 +1127,44 @@
                         :key="addOn.id"
                         class="mb-2 grid grid-cols-1 gap-2 last:mb-0 sm:grid-cols-[1fr_120px_120px_auto_auto] sm:items-center"
                       >
-                        <input
-                          v-model="addOn.name"
-                          type="text"
-                          :placeholder="t('menu.form.optionName')"
-                          class="rounded-xl bg-ios-bg px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
-                        />
-                        <input
-                          v-model.number="addOn.price"
-                          type="number"
-                          :step="inputStep"
-                          min="0"
-                          class="rounded-xl bg-ios-bg px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
-                        />
-                        <input
-                          v-model.number="addOn.maxQuantity"
-                          :data-testid="`addon-max-quantity-${index}`"
-                          :placeholder="t('menu.form.optionMaxQuantity')"
-                          :title="t('menu.form.optionMaxQuantity')"
-                          type="number"
-                          min="1"
-                          step="1"
-                          class="rounded-xl bg-ios-bg px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
-                        />
+                        <label
+                          :for="`addon-name-${addOn.id}`"
+                          class="admin-field"
+                          ><span>{{ t("menu.form.optionName") }}</span
+                          ><input
+                            :id="`addon-name-${addOn.id}`"
+                            v-model="addOn.name"
+                            type="text"
+                            :placeholder="t('menu.form.optionName')"
+                            class="rounded-xl bg-ios-bg px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
+                        /></label>
+                        <label
+                          :for="`addon-price-${addOn.id}`"
+                          class="admin-field"
+                          ><span>{{ t("menu.form.price") }}</span
+                          ><input
+                            :id="`addon-price-${addOn.id}`"
+                            v-model.number="addOn.price"
+                            type="number"
+                            :step="inputStep"
+                            min="0"
+                            class="rounded-xl bg-ios-bg px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
+                        /></label>
+                        <label
+                          :for="`addon-max-${addOn.id}`"
+                          class="admin-field"
+                          ><span>{{ t("menu.form.optionMaxQuantity") }}</span
+                          ><input
+                            :id="`addon-max-${addOn.id}`"
+                            v-model.number="addOn.maxQuantity"
+                            :data-testid="`addon-max-quantity-${index}`"
+                            :placeholder="t('menu.form.optionMaxQuantity')"
+                            :title="t('menu.form.optionMaxQuantity')"
+                            type="number"
+                            min="1"
+                            step="1"
+                            class="rounded-xl bg-ios-bg px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
+                        /></label>
                         <label
                           class="flex items-center gap-1.5 text-[12px] text-ios-text"
                         >
@@ -1161,7 +1208,9 @@
                     </section>
 
                     <section class="rounded-xl bg-white p-3">
-                      <div class="mb-3 flex items-center justify-between gap-3">
+                      <div
+                        class="ui-toolbar mb-3 flex items-center justify-between gap-3"
+                      >
                         <h5 class="text-[13px] font-semibold text-ios-text">
                           {{ t("menu.form.optionGroups") }}
                         </h5>
@@ -1184,34 +1233,52 @@
                         <div
                           class="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_120px_120px_auto_auto] sm:items-center"
                         >
-                          <input
-                            v-model="group.name"
-                            type="text"
-                            :placeholder="t('menu.form.optionGroupName')"
-                            class="rounded-xl bg-white px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
-                          />
-                          <select
-                            v-model="group.type"
-                            class="rounded-xl bg-white px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
+                          <label
+                            :for="`group-name-${group.id}`"
+                            class="admin-field"
+                            ><span>{{ t("menu.form.optionGroupName") }}</span
+                            ><input
+                              :id="`group-name-${group.id}`"
+                              v-model="group.name"
+                              type="text"
+                              :placeholder="t('menu.form.optionGroupName')"
+                              class="rounded-xl bg-white px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
+                          /></label>
+                          <label
+                            :for="`group-type-${group.id}`"
+                            class="admin-field"
+                            ><span>{{ t("menu.form.optionGroupName") }}</span
+                            ><select
+                              :id="`group-type-${group.id}`"
+                              v-model="group.type"
+                              class="rounded-xl bg-white px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
+                            >
+                              <option value="single">
+                                {{ t("menu.form.singleChoice") }}
+                              </option>
+                              <option value="multiple">
+                                {{ t("menu.form.multipleChoice") }}
+                              </option>
+                            </select></label
                           >
-                            <option value="single">
-                              {{ t("menu.form.singleChoice") }}
-                            </option>
-                            <option value="multiple">
-                              {{ t("menu.form.multipleChoice") }}
-                            </option>
-                          </select>
-                          <input
+                          <label
                             v-if="group.type === 'multiple'"
-                            v-model.number="group.maxSelections"
-                            :data-testid="`group-max-selections-${groupIndex}`"
-                            :placeholder="t('menu.form.optionMaxSelections')"
-                            :title="t('menu.form.optionMaxSelections')"
-                            type="number"
-                            min="1"
-                            step="1"
-                            class="rounded-xl bg-white px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
-                          />
+                            :for="`group-max-${group.id}`"
+                            class="admin-field"
+                            ><span>{{
+                              t("menu.form.optionMaxSelections")
+                            }}</span
+                            ><input
+                              :id="`group-max-${group.id}`"
+                              v-model.number="group.maxSelections"
+                              :data-testid="`group-max-selections-${groupIndex}`"
+                              :placeholder="t('menu.form.optionMaxSelections')"
+                              :title="t('menu.form.optionMaxSelections')"
+                              type="number"
+                              min="1"
+                              step="1"
+                              class="rounded-xl bg-white px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
+                          /></label>
                           <span v-else />
 
                           <label
@@ -1263,18 +1330,28 @@
                             :key="choice.id"
                             class="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_120px_auto_auto] sm:items-center"
                           >
-                            <input
-                              v-model="choice.name"
-                              type="text"
-                              :placeholder="t('menu.form.optionChoiceName')"
-                              class="rounded-xl bg-white px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
-                            />
-                            <input
-                              v-model.number="choice.priceAdjustment"
-                              type="number"
-                              :step="inputStep"
-                              class="rounded-xl bg-white px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
-                            />
+                            <label
+                              :for="`choice-name-${group.id}-${choice.id}`"
+                              class="admin-field"
+                              ><span>{{ t("menu.form.optionChoiceName") }}</span
+                              ><input
+                                :id="`choice-name-${group.id}-${choice.id}`"
+                                v-model="choice.name"
+                                type="text"
+                                :placeholder="t('menu.form.optionChoiceName')"
+                                class="rounded-xl bg-white px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
+                            /></label>
+                            <label
+                              :for="`choice-price-${group.id}-${choice.id}`"
+                              class="admin-field"
+                              ><span>{{ t("menu.form.price") }}</span
+                              ><input
+                                :id="`choice-price-${group.id}-${choice.id}`"
+                                v-model.number="choice.priceAdjustment"
+                                type="number"
+                                :step="inputStep"
+                                class="rounded-xl bg-white px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-ios-primary/30"
+                            /></label>
                             <label
                               class="flex items-center gap-1.5 text-[12px] text-ios-text"
                             >
@@ -1356,11 +1433,13 @@
                 <!-- Sort order -->
                 <div>
                   <label
+                    for="menuview-field-8"
                     class="block text-[13px] font-semibold text-ios-text mb-1.5"
                   >
                     {{ t("menu.form.sortOrder") }}
                   </label>
                   <input
+                    id="menuview-field-8"
                     v-model.number="menuItemForm.sortOrder"
                     type="number"
                     min="0"
@@ -1424,7 +1503,7 @@
 
               <!-- Modal actions -->
               <div
-                class="flex justify-end gap-2.5 mt-6 pt-5 border-t border-black/[0.06]"
+                class="ui-toolbar flex justify-end gap-2.5 mt-6 pt-5 border-t border-black/[0.06]"
               >
                 <button
                   type="button"
@@ -1438,7 +1517,7 @@
                   data-testid="menu-item-submit"
                   :disabled="isSavingMenuItem"
                   :aria-busy="isSavingMenuItem"
-                  class="px-5 py-2.5 text-[14px] font-semibold text-white bg-ios-primary rounded-full hover:bg-ios-primary/90 transition-colors shadow-[0_2px_8px_rgba(0,122,255,0.25)] disabled:opacity-60"
+                  class="px-5 py-2.5 text-[14px] font-semibold text-white bg-primary-700 rounded-full hover:bg-primary-700/90 transition-colors shadow-[0_2px_8px_rgba(0,122,255,0.25)] disabled:opacity-60"
                 >
                   {{
                     isSavingMenuItem

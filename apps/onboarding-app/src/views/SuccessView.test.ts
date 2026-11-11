@@ -1,4 +1,4 @@
-import { mount } from "@vue/test-utils";
+import { mount, flushPromises } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -82,10 +82,23 @@ describe("application success status link", () => {
       );
       expect(emailed.text()).toContain("success.statusLink.emailed");
       expect(emailed.get("a").attributes("href")).toBe("/find-application");
-      expect(wrapper.text()).not.toContain("success.summary.applicationId");
+      expect(wrapper.text()).not.toContain("success.summary.copyApplicationId");
     } finally {
       mocks.store.applicationId = "APP-1";
       mocks.route.hash = "#unique-secret";
     }
   });
+});
+
+it("names the application copy action and announces its result", async () => {
+  const wrapper = mount(SuccessView);
+  const button = wrapper.get("button[aria-label]");
+  expect(button.attributes("aria-label")).toContain(
+    "success.summary.copyApplicationId",
+  );
+  await button.trigger("click");
+  await flushPromises();
+  expect(wrapper.get('[role="status"]').text()).toBe(
+    "common.toast.copiedToClipboard",
+  );
 });

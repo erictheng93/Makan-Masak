@@ -1,9 +1,11 @@
 <template>
-  <div class="min-h-full bg-ios-bg -mx-4 -my-4 px-4 py-6 sm:-mx-6 sm:px-6">
+  <div
+    class="ui-page min-h-full bg-ios-bg -mx-4 -my-4 px-4 py-6 sm:-mx-6 sm:px-6"
+  >
     <div class="max-w-3xl mx-auto space-y-6">
       <!-- Page header -->
       <header>
-        <h1 class="text-2xl font-bold text-ios-text">
+        <h1 class="ui-page-heading text-2xl font-bold text-ios-text">
           {{ t("myShifts.title") }}
         </h1>
         <p class="mt-1 text-sm text-ios-secondary">
@@ -15,13 +17,13 @@
       <div
         v-if="loadError"
         data-testid="my-shifts-error"
-        class="flex items-start gap-3 rounded-2xl bg-white p-5 shadow-ios-card"
+        class="ui-panel flex items-start gap-3 rounded-2xl bg-white p-5 shadow-ios-card"
       >
         <ExclamationTriangleIcon class="h-5 w-5 shrink-0 text-ios-red" />
         <div class="flex-1">
           <p class="text-sm font-semibold text-ios-text">{{ loadError }}</p>
           <button
-            class="mt-3 rounded-full bg-ios-blue px-4 py-1.5 text-sm font-semibold text-white transition-all duration-200 ease-out active:scale-95"
+            class="mt-3 rounded-full bg-primary-700 px-4 py-1.5 text-sm font-semibold text-white transition-all duration-200 ease-out active:scale-95"
             @click="loadAll"
           >
             {{ t("myShifts.retry") }}
@@ -37,7 +39,10 @@
           {{ t("myShifts.upcomingTitle") }}
         </h2>
 
-        <div v-if="loading" class="rounded-2xl bg-white p-8 shadow-ios-card">
+        <div
+          v-if="loading"
+          class="ui-panel rounded-2xl bg-white p-8 shadow-ios-card"
+        >
           <p class="text-center text-sm text-ios-secondary">
             {{ t("myShifts.loading") }}
           </p>
@@ -46,7 +51,7 @@
         <div
           v-else-if="eligibleShifts.length === 0"
           data-testid="my-shifts-empty"
-          class="rounded-2xl bg-white p-8 text-center shadow-ios-card"
+          class="ui-panel rounded-2xl bg-white p-8 text-center shadow-ios-card"
         >
           <CalendarIcon class="mx-auto h-10 w-10 text-ios-tertiary" />
           <p class="mt-3 text-sm font-semibold text-ios-text">
@@ -62,7 +67,7 @@
             v-for="shift in eligibleShifts"
             :key="shift.id"
             data-testid="my-shift-row"
-            class="flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-ios-card sm:flex-row sm:items-center sm:justify-between"
+            class="ui-panel flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-ios-card sm:flex-row sm:items-center sm:justify-between"
           >
             <div class="min-w-0">
               <p class="text-base font-semibold text-ios-text">
@@ -84,7 +89,7 @@
               <button
                 v-else
                 data-testid="request-swap-button"
-                class="rounded-full bg-ios-blue px-4 py-2 text-sm font-semibold text-white transition-all duration-200 ease-out hover:opacity-90 active:scale-95"
+                class="rounded-full bg-primary-700 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 ease-out hover:opacity-90 active:scale-95"
                 @click="openForm(shift)"
               >
                 {{ t("myShifts.requestSwap") }}
@@ -105,7 +110,7 @@
         <div
           v-if="!loading && myRequests.length === 0"
           data-testid="my-requests-empty"
-          class="rounded-2xl bg-white p-8 text-center shadow-ios-card"
+          class="ui-panel rounded-2xl bg-white p-8 text-center shadow-ios-card"
         >
           <p class="text-sm text-ios-secondary">
             {{ t("myShifts.noRequests") }}
@@ -118,7 +123,7 @@
             :key="request.id"
             data-testid="my-request-row"
             :data-status="request.status"
-            class="rounded-2xl bg-white p-5 shadow-ios-card"
+            class="ui-panel rounded-2xl bg-white p-5 shadow-ios-card"
           >
             <div class="flex flex-wrap items-center gap-2">
               <span
@@ -168,10 +173,16 @@
       @click.self="closeForm"
     >
       <div
+        v-dialog-focus
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="swap-form-title"
+        tabindex="-1"
         data-testid="swap-form"
-        class="w-full max-w-md rounded-t-3xl bg-white p-6 shadow-ios-float sm:rounded-3xl"
+        class="ui-panel w-full max-w-md rounded-t-3xl bg-white p-6 shadow-ios-float sm:rounded-3xl"
+        @keydown.esc.stop="closeForm"
       >
-        <h3 class="text-lg font-bold text-ios-text">
+        <h3 id="swap-form-title" class="text-lg font-bold text-ios-text">
           {{ t("myShifts.formTitle") }}
         </h3>
         <p class="mt-1 text-sm text-ios-secondary">
@@ -192,7 +203,7 @@
             class="flex-1 rounded-full px-3 py-2 text-sm font-semibold transition-all duration-200 ease-out"
             :class="
               form.requestType === option
-                ? 'bg-ios-blue text-white'
+                ? 'bg-primary-700 text-white'
                 : 'bg-ios-bg text-ios-secondary'
             "
             @click="form.requestType = option"
@@ -214,7 +225,7 @@
             class="flex-1 rounded-full px-2 py-2 text-sm font-semibold transition-all duration-200 ease-out"
             :class="
               form.urgency === option
-                ? 'bg-ios-blue text-white'
+                ? 'bg-primary-700 text-white'
                 : 'bg-ios-bg text-ios-secondary'
             "
             @click="form.urgency = option"
@@ -259,7 +270,7 @@
             type="button"
             data-testid="swap-submit"
             :disabled="submitting"
-            class="flex-1 rounded-full bg-ios-blue px-4 py-3 text-sm font-semibold text-white transition-all duration-200 ease-out active:scale-95 disabled:opacity-50"
+            class="flex-1 rounded-full bg-primary-700 px-4 py-3 text-sm font-semibold text-white transition-all duration-200 ease-out active:scale-95 disabled:opacity-50"
             @click="submit"
           >
             {{ submitting ? t("myShifts.submitting") : t("myShifts.submit") }}
@@ -281,6 +292,7 @@
  * is bound to the session by the route handler (#99), and the only shifts this
  * page can reach are the caller's own within their own restaurant.
  */
+import { vDialogFocus } from "@/utils/dialog-focus";
 import { computed, onMounted, reactive, ref } from "vue";
 import { useToast } from "vue-toastification";
 import {

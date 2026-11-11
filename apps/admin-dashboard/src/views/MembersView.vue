@@ -1,8 +1,8 @@
 <template>
   <main class="min-h-full space-y-6 bg-ios-bg p-5">
-    <header class="flex flex-wrap items-end justify-between gap-4">
+    <header class="ui-toolbar flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-semibold text-ios-text">
+        <h1 class="ui-page-heading text-2xl font-semibold text-ios-text">
           {{ t("pages.members") }}
         </h1>
         <p class="mt-1 text-sm text-ios-secondary">
@@ -13,7 +13,7 @@
         type="button"
         data-testid="member-export"
         :disabled="exporting || !restaurantId"
-        class="rounded-full bg-white px-5 py-2.5 text-sm font-medium text-ios-text shadow-ios-sm transition-all duration-200 hover:shadow-ios-card disabled:opacity-50"
+        class="ui-panel rounded-full bg-white px-5 py-2.5 text-sm font-medium text-ios-text shadow-ios-sm transition-all duration-200 hover:shadow-ios-card disabled:opacity-50"
         @click="exportCsv"
       >
         {{ exporting ? t("members.export.busy") : t("members.export.action") }}
@@ -23,7 +23,7 @@
     <p
       v-if="exportError"
       data-testid="member-export-error"
-      class="rounded-2xl bg-white px-4 py-3 text-sm text-red-700 shadow-ios-sm"
+      class="ui-panel rounded-2xl bg-white px-4 py-3 text-sm text-red-700 shadow-ios-sm"
       role="alert"
     >
       {{ exportError }}
@@ -34,9 +34,9 @@
       <article
         v-for="card in statCards"
         :key="card.key"
-        class="rounded-2xl bg-white p-5 shadow-ios-card"
+        class="ui-panel rounded-2xl bg-white p-5 shadow-ios-card"
       >
-        <div class="flex items-center gap-3">
+        <div class="ui-page flex items-center gap-3">
           <span
             class="flex h-10 w-10 items-center justify-center rounded-full"
             :class="card.tint"
@@ -65,7 +65,7 @@
         class="rounded-full px-4 py-2 text-sm font-medium transition-all duration-200"
         :class="
           activeQuickFilter === pill.key
-            ? 'bg-ios-blue text-white'
+            ? 'bg-primary-700 text-white'
             : 'bg-white text-ios-secondary shadow-ios-sm hover:text-ios-text'
         "
         @click="applyQuickFilter(pill.key)"
@@ -75,7 +75,7 @@
     </section>
 
     <!-- 進階篩選 -->
-    <section class="rounded-2xl bg-white p-5 shadow-ios-card">
+    <section class="ui-panel rounded-2xl bg-white p-5 shadow-ios-card">
       <h2 class="mb-4 text-base font-semibold text-ios-text">
         {{ t("members.filters.title") }}
       </h2>
@@ -242,8 +242,10 @@
     </section>
 
     <!-- 會員列表 -->
-    <section class="overflow-hidden rounded-2xl bg-white shadow-ios-card">
-      <div class="overflow-x-auto">
+    <section
+      class="ui-panel overflow-hidden rounded-2xl bg-white shadow-ios-card"
+    >
+      <div class="ui-table-scroll overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-100">
           <thead>
             <tr
@@ -368,9 +370,9 @@
       <!-- 分頁 -->
       <footer
         v-if="pagination.total > 0"
-        class="flex items-center justify-between px-4 py-3 sm:px-6"
+        class="ui-toolbar flex items-center justify-between px-4 py-3 sm:px-6"
       >
-        <div class="flex flex-1 justify-between sm:hidden">
+        <div class="ui-toolbar flex flex-1 justify-between sm:hidden">
           <button
             type="button"
             :disabled="page === 1"
@@ -389,7 +391,7 @@
           </button>
         </div>
         <div
-          class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between"
+          class="ui-toolbar hidden sm:flex sm:flex-1 sm:items-center sm:justify-between"
         >
           <p
             class="text-sm text-ios-secondary"
@@ -410,7 +412,7 @@
             <button
               type="button"
               :disabled="page === 1"
-              class="flex h-8 w-8 items-center justify-center rounded-full bg-ios-bg text-ios-text disabled:opacity-40"
+              class="flex h-11 w-11 items-center justify-center rounded-full bg-ios-bg text-ios-text disabled:opacity-40"
               :aria-label="t('members.pagination.previous')"
               @click="changePage(page - 1)"
             >
@@ -419,11 +421,12 @@
             <button
               v-for="visiblePage in visiblePages"
               :key="visiblePage"
+              :aria-current="visiblePage === page ? 'page' : undefined"
               type="button"
-              class="min-w-8 rounded-full px-3 py-1.5 text-sm font-medium transition-colors duration-200"
+              class="min-w-11 rounded-full px-3 py-1.5 text-sm font-medium transition-colors duration-200"
               :class="
                 visiblePage === page
-                  ? 'bg-ios-blue text-white'
+                  ? 'bg-primary-700 text-white'
                   : 'bg-ios-bg text-ios-text hover:bg-gray-200'
               "
               @click="changePage(visiblePage)"
@@ -433,7 +436,7 @@
             <button
               type="button"
               :disabled="page >= pagination.pages"
-              class="flex h-8 w-8 items-center justify-center rounded-full bg-ios-bg text-ios-text disabled:opacity-40"
+              class="flex h-11 w-11 items-center justify-center rounded-full bg-ios-bg text-ios-text disabled:opacity-40"
               :aria-label="t('members.pagination.next')"
               @click="changePage(page + 1)"
             >
@@ -459,14 +462,14 @@
             data-testid="member-detail-panel"
             class="relative max-h-[90vh] w-full space-y-4 overflow-y-auto rounded-t-3xl bg-ios-bg p-5 sm:max-w-2xl sm:rounded-3xl"
           >
-            <div class="flex items-center justify-between">
+            <div class="ui-toolbar flex items-center justify-between">
               <h2 class="text-base font-semibold text-ios-text">
                 {{ t("members.detail.title") }}
               </h2>
               <button
                 type="button"
                 data-testid="member-detail-close"
-                class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-ios-text/85 transition-colors duration-200 hover:bg-gray-300"
+                class="flex h-11 w-11 items-center justify-center rounded-full bg-gray-200 text-ios-text/85 transition-colors duration-200 hover:bg-gray-300"
                 :aria-label="t('members.detail.close')"
                 @click="closeDetail"
               >
@@ -483,7 +486,7 @@
             </p>
 
             <!-- 身分與聯絡方式 -->
-            <article class="rounded-2xl bg-white p-4 shadow-ios-card">
+            <article class="ui-panel rounded-2xl bg-white p-4 shadow-ios-card">
               <div class="flex items-center gap-3">
                 <span
                   class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-base font-semibold text-ios-blue"
@@ -545,7 +548,7 @@
                   :disabled="
                     revealLoading || selectedMember.status === 'deleted'
                   "
-                  class="inline-flex items-center gap-1.5 rounded-full bg-ios-blue px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-blue-600 disabled:opacity-40"
+                  class="inline-flex items-center gap-1.5 rounded-full bg-primary-700 px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-primary-800 disabled:opacity-40"
                   @click="revealContact"
                 >
                   <EyeIcon class="h-4 w-4" />
@@ -589,7 +592,7 @@
             </article>
 
             <!-- 本店消費摘要 -->
-            <article class="rounded-2xl bg-white p-4 shadow-ios-card">
+            <article class="ui-panel rounded-2xl bg-white p-4 shadow-ios-card">
               <h3 class="text-base font-semibold text-ios-text">
                 {{ t("members.detail.summary") }}
               </h3>
@@ -606,7 +609,7 @@
             </article>
 
             <!-- 本店訂單紀錄 -->
-            <article class="rounded-2xl bg-white p-4 shadow-ios-card">
+            <article class="ui-panel rounded-2xl bg-white p-4 shadow-ios-card">
               <h3 class="text-base font-semibold text-ios-text">
                 {{ t("members.detail.orders") }}
               </h3>
@@ -635,7 +638,7 @@
                   v-for="order in memberOrders"
                   :key="order.orderId"
                   :data-testid="`member-order-${order.orderId}`"
-                  class="flex items-center justify-between gap-3 py-2.5"
+                  class="ui-toolbar flex items-center justify-between gap-3 py-2.5"
                 >
                   <div>
                     <p class="text-sm font-medium text-ios-text">
@@ -661,7 +664,7 @@
               </ul>
               <div
                 v-if="ordersPagination.pages > 1"
-                class="mt-3 flex items-center justify-between"
+                class="ui-toolbar mt-3 flex items-center justify-between"
               >
                 <span class="text-xs text-ios-secondary">
                   {{
@@ -696,7 +699,7 @@
             </article>
 
             <!-- 本店註記：標籤與備註 -->
-            <article class="rounded-2xl bg-white p-4 shadow-ios-card">
+            <article class="ui-panel rounded-2xl bg-white p-4 shadow-ios-card">
               <h3 class="text-base font-semibold text-ios-text">
                 {{ t("members.annotations.title") }}
               </h3>
@@ -764,7 +767,7 @@
                   type="button"
                   data-testid="member-annotations-save"
                   :disabled="annotationsSaving"
-                  class="inline-flex h-11 items-center rounded-full bg-blue-500 px-5 text-sm font-medium text-white transition-colors duration-200 hover:bg-blue-700 disabled:opacity-40"
+                  class="inline-flex h-11 items-center rounded-full bg-blue-500 px-5 text-sm font-medium text-white transition-colors duration-200 hover:bg-primary-800 disabled:opacity-40"
                   @click="saveAnnotations"
                 >
                   {{
@@ -1020,7 +1023,7 @@ const statCards = computed(() => [
     label: t("members.stats.avgOrderValue"),
     value: formatCents(stats.value.avgOrderValueCents),
     icon: CurrencyDollarIcon,
-    tint: "bg-teal-50 text-teal-500",
+    tint: "bg-teal-50 text-teal-700",
   },
 ]);
 

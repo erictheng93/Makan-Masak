@@ -1,10 +1,10 @@
 <template>
-  <div class="space-y-6">
+  <div class="ui-page space-y-6">
     <div
       class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
     >
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">
+        <h1 class="ui-page-heading text-2xl font-bold text-gray-900">
           {{ t("platformOnboarding.title") }}
         </h1>
         <p class="mt-1 text-sm text-gray-500">
@@ -57,13 +57,13 @@
     </div>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <div class="rounded-2xl bg-white p-4 shadow-ios-card">
+      <div class="ui-panel rounded-2xl bg-white p-4 shadow-ios-card">
         <div class="text-sm font-medium text-gray-500">
           {{ t("platformOnboarding.stats.total") }}
         </div>
         <div class="mt-1 text-2xl font-bold text-gray-900">{{ total }}</div>
       </div>
-      <div class="rounded-2xl bg-white p-4 shadow-ios-card">
+      <div class="ui-panel rounded-2xl bg-white p-4 shadow-ios-card">
         <div class="text-sm font-medium text-gray-500">
           {{ t("platformOnboarding.stats.pending") }}
         </div>
@@ -74,7 +74,7 @@
           {{ approvableCount }}
         </div>
       </div>
-      <div class="rounded-2xl bg-white p-4 shadow-ios-card">
+      <div class="ui-panel rounded-2xl bg-white p-4 shadow-ios-card">
         <div class="text-sm font-medium text-gray-500">
           {{ t("platformOnboarding.stats.rejected") }}
         </div>
@@ -301,7 +301,7 @@
 
     <div
       v-if="isLoading"
-      class="flex items-center justify-center rounded-2xl bg-white py-12 text-gray-500 shadow-ios-card"
+      class="ui-panel flex items-center justify-center rounded-2xl bg-white py-12 text-gray-500 shadow-ios-card"
     >
       <div
         class="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-600"
@@ -311,204 +311,214 @@
     <div
       v-else-if="applications.length === 0"
       data-testid="onboarding-empty"
-      class="rounded-2xl bg-white p-8 text-center text-sm text-gray-500 shadow-ios-card"
+      class="ui-panel rounded-2xl bg-white p-8 text-center text-sm text-gray-500 shadow-ios-card"
     >
       {{ t("platformOnboarding.empty") }}
     </div>
 
-    <div v-else class="overflow-hidden rounded-2xl bg-white shadow-ios-card">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th
-              class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
-            >
-              {{ t("platformOnboarding.table.business") }}
-            </th>
-            <th
-              class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
-            >
-              {{ t("platformOnboarding.market.location") }}
-            </th>
-            <th
-              class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
-            >
-              {{ t("platformOnboarding.table.contact") }}
-            </th>
-            <th
-              class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
-            >
-              {{ t("platformOnboarding.table.planDomain") }}
-            </th>
-            <th
-              class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
-            >
-              {{ t("platformOnboarding.table.status") }}
-            </th>
-            <th
-              class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
-            >
-              {{ t("platformOnboarding.table.submittedAt") }}
-            </th>
-            <th
-              class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500"
-            >
-              {{ t("platformOnboarding.table.actions") }}
-            </th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200 bg-white">
-          <tr v-for="application in applications" :key="application.id">
-            <td class="px-4 py-4">
-              <div class="font-medium text-gray-900">
-                {{ application.businessName }}
-              </div>
-              <div class="mt-0.5 text-xs text-gray-500">
-                {{ application.id }}
-              </div>
-              <div
-                v-if="application.latitude && application.longitude"
-                class="mt-1 text-xs text-gray-500"
+    <div
+      v-else
+      class="ui-panel overflow-hidden rounded-2xl bg-white shadow-ios-card"
+    >
+      <div
+        class="ui-table-scroll overflow-x-auto"
+        tabindex="0"
+        :aria-label="t('platformOnboarding.title')"
+      >
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th
+                class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
               >
-                {{ application.latitude.toFixed(5) }},
-                {{ application.longitude.toFixed(5) }}
-              </div>
-            </td>
-            <td
-              data-testid="application-location"
-              class="px-4 py-4 text-sm text-gray-700"
-            >
-              {{ locationLabel(application) }}
-            </td>
-            <td class="px-4 py-4 text-sm text-gray-700">
-              <div>{{ application.contactName }}</div>
-              <div class="mt-0.5 text-xs text-gray-500">
-                {{ application.contactEmail }}
-              </div>
-              <div class="mt-0.5 text-xs text-gray-500">
-                {{ application.contactPhone }}
-              </div>
-              <div
-                v-if="application.rejectionReason"
-                data-testid="onboarding-rejection-reason"
-                class="mt-1 text-xs text-red-700"
+                {{ t("platformOnboarding.table.business") }}
+              </th>
+              <th
+                class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
               >
-                {{
-                  t("platformOnboarding.rejectionReason", {
-                    reason: application.rejectionReason,
-                  })
-                }}
-              </div>
-            </td>
-            <td class="px-4 py-4 text-sm text-gray-700">
-              <div>{{ planLabel(application.planId) }}</div>
-              <div class="mt-0.5 text-xs text-gray-500">
-                {{ application.assignedSubdomain || "-" }}
-              </div>
-            </td>
-            <td class="px-4 py-4">
-              <span
-                class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
-                :class="statusClass(application.status)"
+                {{ t("platformOnboarding.market.location") }}
+              </th>
+              <th
+                class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
               >
-                {{ statusLabel(application.status) }}
-              </span>
-            </td>
-            <td class="px-4 py-4 text-sm text-gray-700">
-              {{ formatDate(application.createdAt) }}
-            </td>
-            <td class="px-4 py-4 text-right">
-              <label
-                v-if="
-                  application.marketId && isApprovableStatus(application.status)
-                "
-                class="mb-2 flex min-h-11 items-center justify-end gap-2 text-sm text-gray-700"
+                {{ t("platformOnboarding.table.contact") }}
+              </th>
+              <th
+                class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
               >
-                <input
-                  :data-testid="`approve-market-membership-${application.id}`"
-                  type="checkbox"
-                  :checked="marketChoices[application.id] !== false"
-                  @change="
-                    marketChoices[application.id] = (
-                      $event.target as HTMLInputElement
-                    ).checked
-                  "
-                />
-                {{ t("platformOnboarding.market.approveTogether") }}
-              </label>
-              <div class="flex justify-end gap-2">
-                <button
-                  type="button"
-                  :data-testid="`audit-events-${application.id}`"
-                  class="rounded-full bg-gray-100 px-4 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50"
-                  :disabled="isLoadingAuditEvents"
-                  @click="showAuditEvents(application)"
+                {{ t("platformOnboarding.table.planDomain") }}
+              </th>
+              <th
+                class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
+              >
+                {{ t("platformOnboarding.table.status") }}
+              </th>
+              <th
+                class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
+              >
+                {{ t("platformOnboarding.table.submittedAt") }}
+              </th>
+              <th
+                class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500"
+              >
+                {{ t("platformOnboarding.table.actions") }}
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 bg-white">
+            <tr v-for="application in applications" :key="application.id">
+              <td class="px-4 py-4">
+                <div class="font-medium text-gray-900">
+                  {{ application.businessName }}
+                </div>
+                <div class="mt-0.5 text-xs text-gray-500">
+                  {{ application.id }}
+                </div>
+                <div
+                  v-if="application.latitude && application.longitude"
+                  class="mt-1 text-xs text-gray-500"
                 >
-                  {{ t("platformOnboarding.actions.auditTrail") }}
-                </button>
-                <button
+                  {{ application.latitude.toFixed(5) }},
+                  {{ application.longitude.toFixed(5) }}
+                </div>
+              </td>
+              <td
+                data-testid="application-location"
+                class="px-4 py-4 text-sm text-gray-700"
+              >
+                {{ locationLabel(application) }}
+              </td>
+              <td class="px-4 py-4 text-sm text-gray-700">
+                <div>{{ application.contactName }}</div>
+                <div class="mt-0.5 text-xs text-gray-500">
+                  {{ application.contactEmail }}
+                </div>
+                <div class="mt-0.5 text-xs text-gray-500">
+                  {{ application.contactPhone }}
+                </div>
+                <div
+                  v-if="application.rejectionReason"
+                  data-testid="onboarding-rejection-reason"
+                  class="mt-1 text-xs text-red-700"
+                >
+                  {{
+                    t("platformOnboarding.rejectionReason", {
+                      reason: application.rejectionReason,
+                    })
+                  }}
+                </div>
+              </td>
+              <td class="px-4 py-4 text-sm text-gray-700">
+                <div>{{ planLabel(application.planId) }}</div>
+                <div class="mt-0.5 text-xs text-gray-500">
+                  {{ application.assignedSubdomain || "-" }}
+                </div>
+              </td>
+              <td class="px-4 py-4">
+                <span
+                  class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                  :class="statusClass(application.status)"
+                >
+                  {{ statusLabel(application.status) }}
+                </span>
+              </td>
+              <td class="px-4 py-4 text-sm text-gray-700">
+                {{ formatDate(application.createdAt) }}
+              </td>
+              <td class="px-4 py-4 text-right">
+                <label
                   v-if="
-                    application.marketId && application.status === 'completed'
+                    application.marketId &&
+                    isApprovableStatus(application.status)
                   "
-                  type="button"
-                  :data-testid="`approve-completed-market-${application.id}`"
-                  class="min-h-11 rounded-full bg-orange-50 px-4 py-2 text-sm font-medium text-orange-800 disabled:opacity-50"
-                  :disabled="Boolean(actionId)"
-                  @click="approveApplication(application, true)"
+                  class="ui-toolbar mb-2 flex min-h-11 items-center justify-end gap-2 text-sm text-gray-700"
                 >
-                  {{ t("platformOnboarding.market.retry") }}
-                </button>
-                <button
-                  v-if="application.status === 'completed'"
-                  type="button"
-                  :data-testid="`owner-handoff-${application.id}`"
-                  class="rounded-full bg-gray-100 px-4 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50"
-                  :disabled="actionId === application.id"
-                  @click="showOwnerHandoff(application)"
-                >
-                  {{ t("platformOnboarding.actions.handoff") }}
-                </button>
-                <button
-                  type="button"
-                  :data-testid="`approve-onboarding-${application.id}`"
-                  class="rounded-full bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
-                  :disabled="
-                    actionId === application.id ||
-                    !isApprovableStatus(application.status)
-                  "
-                  @click="approveApplication(application)"
-                >
-                  {{ t("platformOnboarding.actions.approve") }}
-                </button>
-                <button
-                  type="button"
-                  :data-testid="`reject-onboarding-${application.id}`"
-                  class="rounded-full bg-red-50 px-4 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
-                  :disabled="
-                    actionId === application.id ||
-                    ['completed', 'provisioning', 'rejected'].includes(
-                      application.status,
-                    )
-                  "
-                  @click="openRejectDialog(application.id)"
-                >
-                  {{ t("platformOnboarding.actions.reject") }}
-                </button>
-                <button
-                  v-if="application.status !== 'provisioning'"
-                  type="button"
-                  :data-testid="`purge-onboarding-${application.id}`"
-                  class="rounded-full bg-red-50 px-4 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
-                  :disabled="actionId === application.id"
-                  @click="openPurgeDialog(application)"
-                >
-                  {{ t("platformOnboarding.actions.purge") }}
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+                  <input
+                    :data-testid="`approve-market-membership-${application.id}`"
+                    type="checkbox"
+                    :checked="marketChoices[application.id] !== false"
+                    @change="
+                      marketChoices[application.id] = (
+                        $event.target as HTMLInputElement
+                      ).checked
+                    "
+                  />
+                  {{ t("platformOnboarding.market.approveTogether") }}
+                </label>
+                <div class="ui-toolbar flex justify-end gap-2">
+                  <button
+                    type="button"
+                    :data-testid="`audit-events-${application.id}`"
+                    class="rounded-full bg-gray-100 px-4 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+                    :disabled="isLoadingAuditEvents"
+                    @click="showAuditEvents(application)"
+                  >
+                    {{ t("platformOnboarding.actions.auditTrail") }}
+                  </button>
+                  <button
+                    v-if="
+                      application.marketId && application.status === 'completed'
+                    "
+                    type="button"
+                    :data-testid="`approve-completed-market-${application.id}`"
+                    class="min-h-11 rounded-full bg-orange-50 px-4 py-2 text-sm font-medium text-orange-800 disabled:opacity-50"
+                    :disabled="Boolean(actionId)"
+                    @click="approveApplication(application, true)"
+                  >
+                    {{ t("platformOnboarding.market.retry") }}
+                  </button>
+                  <button
+                    v-if="application.status === 'completed'"
+                    type="button"
+                    :data-testid="`owner-handoff-${application.id}`"
+                    class="rounded-full bg-gray-100 px-4 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+                    :disabled="actionId === application.id"
+                    @click="showOwnerHandoff(application)"
+                  >
+                    {{ t("platformOnboarding.actions.handoff") }}
+                  </button>
+                  <button
+                    type="button"
+                    :data-testid="`approve-onboarding-${application.id}`"
+                    class="rounded-full bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                    :disabled="
+                      actionId === application.id ||
+                      !isApprovableStatus(application.status)
+                    "
+                    @click="approveApplication(application)"
+                  >
+                    {{ t("platformOnboarding.actions.approve") }}
+                  </button>
+                  <button
+                    type="button"
+                    :data-testid="`reject-onboarding-${application.id}`"
+                    class="rounded-full bg-red-50 px-4 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
+                    :disabled="
+                      actionId === application.id ||
+                      ['completed', 'provisioning', 'rejected'].includes(
+                        application.status,
+                      )
+                    "
+                    @click="openRejectDialog(application.id)"
+                  >
+                    {{ t("platformOnboarding.actions.reject") }}
+                  </button>
+                  <button
+                    v-if="application.status !== 'provisioning'"
+                    type="button"
+                    :data-testid="`purge-onboarding-${application.id}`"
+                    class="rounded-full bg-red-50 px-4 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
+                    :disabled="actionId === application.id"
+                    @click="openPurgeDialog(application)"
+                  >
+                    {{ t("platformOnboarding.actions.purge") }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <div
@@ -520,9 +530,9 @@
       data-testid="onboarding-audit-dialog"
     >
       <section
-        class="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-ios-card"
+        class="ui-panel max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-ios-card"
       >
-        <div class="flex items-start justify-between gap-4">
+        <div class="ui-toolbar flex items-start justify-between gap-4">
           <div>
             <h2
               id="onboarding-audit-title"
@@ -615,7 +625,7 @@
       aria-labelledby="reject-application-title"
     >
       <form
-        class="w-full max-w-md rounded-2xl bg-white p-6 shadow-ios-card"
+        class="ui-panel w-full max-w-md rounded-2xl bg-white p-6 shadow-ios-card"
         @submit.prevent="rejectApplication"
       >
         <h2
@@ -643,7 +653,7 @@
           rows="3"
           class="mt-1 w-full rounded-2xl bg-gray-50 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500/20"
         />
-        <div class="mt-5 flex justify-end gap-2">
+        <div class="ui-toolbar mt-5 flex justify-end gap-2">
           <button
             type="button"
             class="rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
@@ -672,7 +682,7 @@
       data-testid="purge-onboarding-dialog"
     >
       <form
-        class="w-full max-w-md rounded-2xl bg-white p-6 shadow-ios-card"
+        class="ui-panel w-full max-w-md rounded-2xl bg-white p-6 shadow-ios-card"
         @submit.prevent="purgeApplication"
       >
         <h2
@@ -711,7 +721,7 @@
         >
           {{ purgeError }}
         </p>
-        <div class="mt-5 flex justify-end gap-2">
+        <div class="ui-toolbar mt-5 flex justify-end gap-2">
           <button
             type="button"
             class="rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
@@ -747,7 +757,9 @@
       aria-modal="true"
       aria-labelledby="regenerate-setup-link-title"
     >
-      <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-ios-card">
+      <div
+        class="ui-panel w-full max-w-md rounded-2xl bg-white p-6 shadow-ios-card"
+      >
         <h2
           id="regenerate-setup-link-title"
           class="text-lg font-semibold text-gray-900"
@@ -757,7 +769,7 @@
         <p class="mt-1 text-sm text-gray-600">
           {{ t("platformOnboarding.regenerate.description") }}
         </p>
-        <div class="mt-5 flex justify-end gap-2">
+        <div class="ui-toolbar mt-5 flex justify-end gap-2">
           <button
             type="button"
             class="rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"

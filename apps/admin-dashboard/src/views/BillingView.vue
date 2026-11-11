@@ -1,7 +1,12 @@
 <template>
-  <div class="min-h-screen bg-ios-bg p-5 space-y-5" data-testid="billing-page">
+  <div
+    class="ui-page min-h-screen bg-ios-bg p-5 space-y-5"
+    data-testid="billing-page"
+  >
     <div>
-      <h1 class="text-3xl font-bold text-ios-text">{{ t("billing.title") }}</h1>
+      <h1 class="ui-page-heading text-3xl font-bold text-ios-text">
+        {{ t("billing.title") }}
+      </h1>
       <p class="text-sm text-ios-secondary mt-0.5">
         {{ t("billing.subtitle") }}
       </p>
@@ -10,17 +15,17 @@
     <div
       v-if="error"
       data-testid="billing-error"
-      class="bg-white rounded-2xl shadow-sm p-5 text-sm text-ios-red"
+      class="ui-panel bg-white rounded-2xl shadow-sm p-5 text-sm text-ios-red"
     >
       {{ error }}
     </div>
 
     <!-- Plan -->
     <section
-      class="bg-white rounded-3xl shadow-sm p-6"
+      class="ui-panel bg-white rounded-3xl shadow-sm p-6"
       data-testid="billing-plan"
     >
-      <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="ui-toolbar flex flex-wrap items-center justify-between gap-3">
         <div>
           <p class="text-xs font-semibold text-ios-secondary uppercase">
             {{ t("billing.currentPlan") }}
@@ -36,8 +41,8 @@
           class="px-4 py-1.5 rounded-full text-sm font-semibold"
           :class="
             subscription?.isActive
-              ? 'bg-ios-green/10 text-ios-green'
-              : 'bg-ios-red/10 text-ios-red'
+              ? 'bg-ios-green-soft text-ios-green-deep'
+              : 'bg-ios-red-soft text-ios-red-deep'
           "
           :data-status="subscription?.isActive ? 'active' : 'inactive'"
           data-testid="billing-plan-status"
@@ -76,7 +81,7 @@
         </p>
         <a
           :href="upgradeMailto"
-          class="mt-3 inline-block rounded-full bg-ios-blue px-5 py-2 text-sm font-semibold text-white"
+          class="mt-3 inline-block rounded-full bg-primary-700 px-5 py-2 text-sm font-semibold text-white"
           data-testid="billing-upgrade-action"
         >
           {{ t("billing.upgradeAction") }}
@@ -86,10 +91,12 @@
 
     <!-- Usage -->
     <section
-      class="bg-white rounded-3xl shadow-sm p-6"
+      class="ui-panel bg-white rounded-3xl shadow-sm p-6"
       data-testid="billing-usage"
     >
-      <div class="flex flex-wrap items-baseline justify-between gap-2">
+      <div
+        class="ui-toolbar flex flex-wrap items-baseline justify-between gap-2"
+      >
         <h2 class="text-lg font-bold text-ios-text">
           {{ t("billing.usageTitle") }}
         </h2>
@@ -113,7 +120,7 @@
           :data-testid="`billing-meter-${meter.meterKey}`"
           :data-state="meterState(meter)"
         >
-          <div class="flex items-baseline justify-between gap-3">
+          <div class="ui-toolbar flex items-baseline justify-between gap-3">
             <span class="text-sm font-semibold text-ios-text">
               {{ meterLabel(meter.meterKey) }}
             </span>
@@ -137,7 +144,7 @@
 
     <!-- Modules -->
     <section
-      class="bg-white rounded-3xl shadow-sm p-6"
+      class="ui-panel bg-white rounded-3xl shadow-sm p-6"
       data-testid="billing-modules"
     >
       <h2 class="text-lg font-bold text-ios-text">
@@ -147,7 +154,7 @@
         <div
           v-for="entry in moduleEntries"
           :key="entry.key"
-          class="flex items-center justify-between px-4 py-2.5 rounded-2xl bg-ios-bg"
+          class="ui-toolbar flex items-center justify-between px-4 py-2.5 rounded-2xl bg-ios-bg"
           :data-testid="`billing-module-${entry.key}`"
           :data-enabled="entry.enabled ? 'true' : 'false'"
         >
@@ -170,7 +177,7 @@
       operator console, so a button here would be a dead end. The support-ticket
       channel is the route that actually reaches someone.
     -->
-    <section class="bg-white rounded-3xl shadow-sm p-6">
+    <section class="ui-panel bg-white rounded-3xl shadow-sm p-6">
       <h2 class="text-lg font-bold text-ios-text">
         {{ t("billing.changePlanTitle") }}
       </h2>
@@ -180,7 +187,7 @@
       <RouterLink
         to="/dashboard/feedback"
         data-testid="billing-contact-support"
-        class="inline-flex items-center gap-2 mt-4 px-5 py-2.5 rounded-full bg-ios-blue text-white text-sm font-semibold hover:bg-blue-600 transition-all duration-200 shadow-sm"
+        class="inline-flex items-center gap-2 mt-4 px-5 py-2.5 rounded-full bg-primary-700 text-white text-sm font-semibold hover:bg-primary-800 transition-all duration-200 shadow-sm"
       >
         {{ t("billing.changePlanCta") }}
       </RouterLink>

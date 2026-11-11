@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-ios-bg text-ios-text">
+  <div class="customer-shell min-h-screen bg-ios-bg text-ios-text">
     <main class="max-w-md mx-auto px-4 py-8 space-y-5">
       <section class="bg-white rounded-2xl shadow-card p-6 animate-slide-up">
         <div class="flex items-center gap-3 mb-6">
@@ -18,6 +18,35 @@
           </div>
         </div>
 
+        <section
+          v-if="queueStatus || waitEstimate"
+          data-testid="queue-summary"
+          class="bg-ios-bg rounded-2xl p-5 grid grid-cols-2 gap-4 animate-slide-up"
+        >
+          <div>
+            <p class="text-xs text-ios-secondary">
+              {{ t("waitingList.join.nowWaiting") }}
+            </p>
+            <p class="mt-1 text-2xl font-semibold text-ios-text">
+              {{ queueStatus?.totalWaiting ?? "-" }}
+            </p>
+          </div>
+          <div>
+            <p class="text-xs text-ios-secondary">
+              {{ t("waitingList.join.estimatedWait") }}
+            </p>
+            <p class="mt-1 text-2xl font-semibold text-ios-text">
+              {{
+                tWithParams("waitingList.minutesShort", {
+                  minutes:
+                    waitEstimate?.estimatedWaitMinutes ??
+                    queueStatus?.averageWaitMinutes ??
+                    "-",
+                })
+              }}
+            </p>
+          </div>
+        </section>
         <form class="space-y-4" @submit.prevent="handleJoin">
           <label class="block">
             <span class="text-sm font-medium text-ios-text">{{
@@ -128,36 +157,6 @@
             </button>
           </div>
         </form>
-      </section>
-
-      <section
-        v-if="queueStatus || waitEstimate"
-        data-testid="queue-summary"
-        class="bg-white rounded-2xl shadow-card p-5 grid grid-cols-2 gap-4 animate-slide-up"
-      >
-        <div>
-          <p class="text-xs text-ios-secondary">
-            {{ t("waitingList.join.nowWaiting") }}
-          </p>
-          <p class="mt-1 text-2xl font-semibold text-ios-text">
-            {{ queueStatus?.totalWaiting ?? "-" }}
-          </p>
-        </div>
-        <div>
-          <p class="text-xs text-ios-secondary">
-            {{ t("waitingList.join.estimatedWait") }}
-          </p>
-          <p class="mt-1 text-2xl font-semibold text-ios-text">
-            {{
-              tWithParams("waitingList.minutesShort", {
-                minutes:
-                  waitEstimate?.estimatedWaitMinutes ??
-                  queueStatus?.averageWaitMinutes ??
-                  "-",
-              })
-            }}
-          </p>
-        </div>
       </section>
     </main>
   </div>

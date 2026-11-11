@@ -1,6 +1,6 @@
 <template>
-  <div class="space-y-6">
-    <h1 class="text-2xl font-semibold text-ios-text">
+  <div class="ui-page space-y-6">
+    <h1 class="ui-page-heading text-2xl font-semibold text-ios-text">
       {{ t("marketOpenReport.pageTitle") }}
     </h1>
     <label
@@ -11,13 +11,19 @@
       <select
         v-model="marketId"
         data-testid="open-report-market"
-        class="mt-1 block rounded-full bg-white px-4 py-2 text-sm text-ios-text shadow-ios-card"
+        class="ui-panel mt-1 block rounded-full bg-white px-4 py-2 text-sm text-ios-text shadow-ios-card"
       >
         <option v-for="m in memberships" :key="m.marketId" :value="m.marketId">
           {{ m.market.name }}
         </option>
       </select>
     </label>
+    <p
+      v-if="memberships.length === 1"
+      class="rounded-xl bg-white p-4 text-sm font-semibold text-ios-text"
+    >
+      {{ t("marketOpenReport.market") }}: {{ memberships[0].market.name }}
+    </p>
     <MarketOpenReportPanel v-if="scope" :scope="scope" />
     <p v-else-if="loaded" class="text-sm text-ios-secondary">
       {{ t("marketOpenReport.noMarkets") }}

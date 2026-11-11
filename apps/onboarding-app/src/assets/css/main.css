@@ -16,7 +16,7 @@
     @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2;
   }
   .btn-primary {
-    @apply bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500;
+    @apply bg-primary-700 text-white hover:bg-primary-800 focus:ring-primary-500;
   }
   .btn-secondary {
     @apply bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-primary-500;
@@ -35,5 +35,59 @@
   }
   .card {
     @apply bg-white rounded-2xl shadow-card p-6;
+  }
+}
+
+:root {
+  --ui-accent: theme("colors.primary.700");
+  --ui-accent-soft: theme("colors.primary.50");
+  --ui-accent-hover: theme("colors.primary.800");
+}
+
+@layer components {
+  .onboarding-page {
+    @apply min-w-0;
+  }
+  .onboarding-page .card {
+    @apply rounded-3xl p-6 sm:p-8;
+  }
+  .onboarding-page h1 {
+    text-wrap: balance;
+  }
+  .onboarding-page dl > div {
+    @apply grid gap-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)];
+  }
+  .onboarding-page dd {
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+  .onboarding-progress {
+    @apply mb-8 grid grid-cols-2 gap-3;
+  }
+  .onboarding-progress li {
+    @apply flex items-center gap-3 rounded-2xl px-4 py-3 text-sm text-gray-600;
+  }
+  .onboarding-progress li[aria-current="step"] {
+    @apply bg-primary-50 font-semibold text-primary-800;
+  }
+  .onboarding-progress span {
+    @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-current;
+  }
+  .onboarding-form {
+    @apply grid gap-6 sm:grid-cols-2;
+  }
+  .onboarding-form > .location-fields,
+  .onboarding-form > .form-actions,
+  .onboarding-form > .address-field,
+  .onboarding-form > .country-fields,
+  .onboarding-form > .district-fields,
+  .onboarding-form > .stall-field {
+    grid-column: 1 / -1;
+  }
+  .onboarding-form .location-fields {
+    @apply rounded-2xl bg-gray-50 p-5;
+  }
+  .onboarding-form .form-actions {
+    @apply flex-wrap gap-3 border-t border-gray-200 pt-6;
   }
 }

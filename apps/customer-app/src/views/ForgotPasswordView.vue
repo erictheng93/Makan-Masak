@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-ios-bg py-12 px-4 sm:px-6 lg:px-8">
+  <div class="customer-shell min-h-screen bg-ios-bg py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full mx-auto space-y-8">
       <div class="text-center">
         <div
@@ -50,6 +50,8 @@
               <input
                 id="otp"
                 v-model="otp"
+                :aria-invalid="!!otpError"
+                :aria-describedby="otpError ? 'otp-error' : undefined"
                 type="text"
                 inputmode="numeric"
                 maxlength="6"
@@ -61,7 +63,9 @@
               />
               <p
                 v-if="otpError"
+                id="otp-error"
                 data-testid="otp-error"
+                role="alert"
                 class="mt-2 text-sm text-ios-red"
               >
                 {{ otpError }}
@@ -92,7 +96,7 @@
         </div>
 
         <!-- 送出後的答覆對「帳號存在」與否完全一致，前端不得再細分 -->
-        <div v-else-if="sent" data-testid="sent-panel">
+        <div v-else-if="sent" data-testid="sent-panel" role="status">
           <div
             class="w-12 h-12 rounded-full bg-ios-green/10 flex items-center justify-center mb-4"
           >
@@ -130,6 +134,8 @@
             <input
               id="identifier"
               v-model="identifier"
+              :aria-invalid="!!fieldError"
+              :aria-describedby="fieldError ? 'identifier-error' : undefined"
               type="text"
               required
               autocomplete="username"
@@ -137,7 +143,12 @@
               class="w-full px-4 py-3 bg-ios-bg rounded-2xl text-ios-text placeholder:text-ios-tertiary focus:ring-2 focus:ring-ios-blue focus:bg-white transition"
               :placeholder="t('auth.identifierPlaceholder')"
             />
-            <p v-if="fieldError" class="mt-2 text-sm text-ios-red">
+            <p
+              v-if="fieldError"
+              id="identifier-error"
+              role="alert"
+              class="mt-2 text-sm text-ios-red"
+            >
               {{ fieldError }}
             </p>
           </div>
@@ -145,6 +156,7 @@
           <div
             v-if="error"
             data-testid="auth-error"
+            role="alert"
             class="bg-ios-red/10 rounded-2xl px-4 py-3"
           >
             <p class="text-sm text-ios-red">{{ error }}</p>

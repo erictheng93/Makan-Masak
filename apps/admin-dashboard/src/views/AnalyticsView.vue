@@ -1,26 +1,30 @@
 <template>
-  <div class="analytics-view">
+  <div class="ui-page analytics-view">
     <!-- 頁面標題和日期選擇 -->
     <div
       class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8"
     >
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">
+        <h1 class="ui-page-heading text-2xl font-bold text-gray-900">
           {{ t("analytics.title") }}
         </h1>
         <p class="text-gray-600">{{ t("analytics.subtitle") }}</p>
       </div>
       <div class="mt-4 sm:mt-0 flex items-center space-x-4">
-        <select
-          v-model="selectedPeriod"
-          class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        <label class="admin-field" for="analyticsview-selectedPeriod"
+          ><span>{{ t("ui.analysisPeriod") }}</span
+          ><select
+            id="analyticsview-selectedPeriod"
+            v-model="selectedPeriod"
+            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="today">{{ t("analytics.period.today") }}</option>
+            <option value="week">{{ t("analytics.period.week") }}</option>
+            <option value="month">{{ t("analytics.period.month") }}</option>
+            <option value="quarter">{{ t("analytics.period.quarter") }}</option>
+            <option value="year">{{ t("analytics.period.year") }}</option>
+          </select></label
         >
-          <option value="today">{{ t("analytics.period.today") }}</option>
-          <option value="week">{{ t("analytics.period.week") }}</option>
-          <option value="month">{{ t("analytics.period.month") }}</option>
-          <option value="quarter">{{ t("analytics.period.quarter") }}</option>
-          <option value="year">{{ t("analytics.period.year") }}</option>
-        </select>
         <button
           class="flex items-center px-4 py-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 transition-colors disabled:opacity-50"
           :disabled="isExporting"
@@ -37,11 +41,11 @@
     <!-- 載入錯誤提示 -->
     <div
       v-if="error"
-      class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center justify-between"
+      class="ui-toolbar mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center justify-between"
     >
       <span>{{ error }}</span>
       <button
-        class="text-red-600 hover:text-red-800 underline text-sm"
+        class="text-red-700 hover:text-red-800 underline text-sm"
         @click="fetchAllData"
       >
         {{ t("analytics.retry") }}
@@ -49,12 +53,14 @@
     </div>
 
     <!-- 關鍵指標卡片 -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div
+      class="admin-stat-strip grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+    >
       <!-- 總營收 -->
-      <div class="bg-white rounded-2xl shadow-ios-card p-6">
+      <div class="ui-panel bg-white rounded-2xl shadow-ios-card p-6">
         <div class="flex items-center">
           <div class="p-3 rounded-full bg-green-100">
-            <CurrencyDollarIcon class="h-8 w-8 text-green-600" />
+            <CurrencyDollarIcon class="h-8 w-8 text-green-700" />
           </div>
           <div class="ml-4">
             <p class="text-sm text-gray-500">
@@ -73,10 +79,10 @@
       </div>
 
       <!-- 訂單數量 -->
-      <div class="bg-white rounded-2xl shadow-ios-card p-6">
+      <div class="ui-panel bg-white rounded-2xl shadow-ios-card p-6">
         <div class="flex items-center">
           <div class="p-3 rounded-full bg-blue-100">
-            <ShoppingBagIcon class="h-8 w-8 text-blue-600" />
+            <ShoppingBagIcon class="h-8 w-8 text-blue-700" />
           </div>
           <div class="ml-4">
             <p class="text-sm text-gray-500">
@@ -89,7 +95,7 @@
             <p
               v-if="!isLoading"
               :class="
-                metrics.ordersChange >= 0 ? 'text-green-600' : 'text-red-600'
+                metrics.ordersChange >= 0 ? 'text-green-700' : 'text-red-700'
               "
               class="text-sm"
             >
@@ -106,10 +112,10 @@
       </div>
 
       <!-- 平均客單價 -->
-      <div class="bg-white rounded-2xl shadow-ios-card p-6">
+      <div class="ui-panel bg-white rounded-2xl shadow-ios-card p-6">
         <div class="flex items-center">
           <div class="p-3 rounded-full bg-teal-100">
-            <CalculatorIcon class="h-8 w-8 text-teal-600" />
+            <CalculatorIcon class="h-8 w-8 text-teal-700" />
           </div>
           <div class="ml-4">
             <p class="text-sm text-gray-500">
@@ -130,10 +136,10 @@
       </div>
 
       <!-- 桌台使用率 -->
-      <div class="bg-white rounded-2xl shadow-ios-card p-6">
+      <div class="ui-panel bg-white rounded-2xl shadow-ios-card p-6">
         <div class="flex items-center">
           <div class="p-3 rounded-full bg-yellow-100">
-            <TableCellsIcon class="h-8 w-8 text-yellow-600" />
+            <TableCellsIcon class="h-8 w-8 text-yellow-700" />
           </div>
           <div class="ml-4">
             <p class="text-sm text-gray-500">
@@ -151,7 +157,7 @@
     <!-- 圖表區域 -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
       <!-- 營收趨勢圖 -->
-      <div class="bg-white rounded-2xl shadow-ios-card p-6">
+      <div class="ui-panel bg-white rounded-2xl shadow-ios-card p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">
           {{ t("analytics.charts.revenueTrend") }}
         </h3>
@@ -171,7 +177,7 @@
           <div
             v-for="item in revenueChartData"
             :key="`${item.date}-${item.currency}`"
-            class="flex items-center justify-between text-sm"
+            class="ui-toolbar flex items-center justify-between text-sm"
           >
             <span class="text-gray-600 w-24 flex-shrink-0">
               {{ formatDate(item.date) }} · {{ item.currency }}
@@ -192,7 +198,7 @@
       </div>
 
       <!-- 訂單狀態分布 -->
-      <div class="bg-white rounded-2xl shadow-ios-card p-6">
+      <div class="ui-panel bg-white rounded-2xl shadow-ios-card p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">
           {{ t("analytics.charts.orderStatusDist") }}
         </h3>
@@ -226,7 +232,7 @@
     <!-- 熱門菜品和詳細數據 -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
       <!-- 熱門菜品 -->
-      <div class="bg-white rounded-2xl shadow-ios-card">
+      <div class="ui-panel bg-white rounded-2xl shadow-ios-card">
         <div class="p-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">
             {{ t("analytics.popularItems.title") }}
@@ -244,7 +250,7 @@
             <div
               v-for="(item, index) in popularItems"
               :key="item.id"
-              class="flex items-center justify-between"
+              class="ui-toolbar flex items-center justify-between"
             >
               <div class="flex items-center">
                 <div
@@ -286,7 +292,7 @@
       </div>
 
       <!-- 營業時段分析 -->
-      <div class="bg-white rounded-2xl shadow-ios-card">
+      <div class="ui-panel bg-white rounded-2xl shadow-ios-card">
         <div class="p-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">
             {{ t("analytics.businessHours.title") }}
@@ -304,7 +310,7 @@
             <div
               v-for="period in businessHours"
               :key="period.time"
-              class="flex items-center justify-between"
+              class="ui-toolbar flex items-center justify-between"
             >
               <div class="flex items-center">
                 <ClockIcon class="w-5 h-5 text-gray-400 mr-3" />
@@ -331,7 +337,7 @@
     </div>
 
     <!-- 詳細報表 -->
-    <div class="mt-8 bg-white rounded-2xl shadow-ios-card">
+    <div class="ui-panel mt-8 bg-white rounded-2xl shadow-ios-card">
       <div class="p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">
           {{ t("analytics.detailedReport.title") }}
@@ -345,7 +351,7 @@
         >
           {{ t("analytics.noData") }}
         </div>
-        <div v-else class="overflow-x-auto">
+        <div v-else class="ui-table-scroll overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>

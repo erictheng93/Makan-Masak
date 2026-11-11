@@ -286,3 +286,115 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Customer ordering: one blue action, calm surfaces and room for real content. */
+:root {
+  --ui-accent: theme("colors.primary.600");
+  --ui-accent-soft: theme("colors.blue.100");
+  --ui-accent-hover: theme("colors.blue.700");
+}
+
+.customer-shell {
+  color: theme("colors.ios-text");
+  overflow-wrap: anywhere;
+}
+
+.customer-shell :is(h1, h2, h3) {
+  text-wrap: balance;
+}
+
+.customer-shell :is(button, a, summary) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.customer-shell :is(input, select, textarea) {
+  min-width: 0;
+  caret-color: var(--ui-accent);
+}
+
+.customer-shell :is(button, a).bg-ios-blue:not(:disabled),
+.customer-shell .btn-primary {
+  background-color: var(--ui-accent);
+}
+
+.customer-shell :is(button, a).bg-ios-blue:not(:disabled):hover {
+  background-color: var(--ui-accent-hover);
+}
+
+.customer-shell .text-ios-blue {
+  color: var(--ui-accent);
+}
+
+.customer-shell :is(button, a).bg-ios-blue:not(:disabled) {
+  color: theme("colors.ios-card");
+}
+
+.customer-shell nav :is(button, a) {
+  flex-shrink: 0;
+}
+
+.customer-shell nav :is(h1, h2, p) {
+  min-width: 0;
+}
+
+.customer-shell summary {
+  min-height: 44px;
+  padding-block: 0.625rem;
+  cursor: pointer;
+}
+
+.customer-shell details[open] > summary {
+  margin-bottom: 1rem;
+}
+
+.customer-checkout-footer {
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
+.customer-floating-cart {
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
+.customer-prose {
+  max-width: 70ch;
+  line-height: 1.65;
+  margin-inline: auto;
+}
+
+.customer-prose section + section {
+  padding-top: 0.5rem;
+}
+
+.home-entry {
+  border-radius: 1.5rem;
+  background: theme("colors.ios-card");
+  padding: clamp(1.5rem, 4vw, 3rem);
+  box-shadow: theme("boxShadow.card-sm");
+}
+
+@media (max-width: 640px) {
+  .customer-shell nav .max-w-md {
+    gap: 0.75rem;
+  }
+
+  .customer-shell main {
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .customer-shell .customer-floating-cart ~ main,
+  .customer-shell main:has(+ .customer-floating-cart) {
+    padding-bottom: calc(8rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.customer-shell .text-ios-orange {
+  color: theme("colors.ios-orange.deep");
+}
+
+.customer-shell .text-ios-green {
+  color: theme("colors.ios-green.deep");
+}
+
+.customer-shell .text-ios-red {
+  color: theme("colors.ios-red.deep");
+}

@@ -1,9 +1,9 @@
 <template>
-  <div class="min-h-screen bg-ios-bg p-5 space-y-5">
+  <div class="ui-page min-h-screen bg-ios-bg p-5 space-y-5">
     <!-- Header -->
-    <div class="flex items-center justify-between">
+    <div class="ui-toolbar flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-ios-text">
+        <h1 class="ui-page-heading text-3xl font-bold text-ios-text">
           {{ t("feedback.title") }}
         </h1>
         <p class="text-sm text-ios-secondary mt-0.5">
@@ -14,7 +14,7 @@
       </div>
       <button
         v-if="!isAdmin && !showForm"
-        class="flex items-center gap-2 px-5 py-2.5 rounded-full bg-ios-blue text-white text-sm font-semibold hover:bg-blue-600 transition-all duration-200 shadow-sm"
+        class="flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary-700 text-white text-sm font-semibold hover:bg-primary-800 transition-all duration-200 shadow-sm"
         data-testid="open-feedback-form"
         @click="showForm = true"
       >
@@ -36,46 +36,88 @@
     <FeedbackStats v-if="stats" :stats="stats" />
 
     <!-- Filters -->
-    <div class="bg-white rounded-2xl p-4 shadow-sm">
+    <div class="ui-panel bg-white rounded-2xl p-4 shadow-sm">
       <div class="flex flex-wrap gap-3">
-        <input
-          v-model="filters.search"
-          type="text"
-          :placeholder="t('feedback.searchPlaceholder')"
-          class="flex-1 min-w-48 px-4 py-2 bg-gray-50 border-0 rounded-xl text-sm text-ios-text placeholder-ios-secondary focus:ring-2 focus:ring-ios-blue/30 focus:bg-white transition-all"
-          @input="debouncedFetch"
-        />
-        <select
-          v-model="filters.status"
-          class="px-3 py-2 bg-gray-50 border-0 rounded-xl text-sm text-ios-text focus:ring-2 focus:ring-ios-blue/30 transition-all"
-          @change="applyFilters"
+        <label class="admin-field" for="feedbackview-filters-search"
+          ><span>{{ t("feedback.searchPlaceholder") }}</span
+          ><input
+            id="feedbackview-filters-search"
+            v-model="filters.search"
+            type="text"
+            :placeholder="t('feedback.searchPlaceholder')"
+            class="flex-1 min-w-48 px-4 py-2 bg-gray-50 border-0 rounded-xl text-sm text-ios-text placeholder-ios-secondary focus:ring-2 focus:ring-ios-blue/30 focus:bg-white transition-all"
+            @input="debouncedFetch"
+        /></label>
+        <label class="admin-field" for="feedbackview-filters-status"
+          ><span>{{ t("feedback.allStatuses") }}</span
+          ><select
+            id="feedbackview-filters-status"
+            v-model="filters.status"
+            class="px-3 py-2 bg-gray-50 border-0 rounded-xl text-sm text-ios-text focus:ring-2 focus:ring-ios-blue/30 transition-all"
+            @change="applyFilters"
+          >
+            <option value="">{{ t("feedback.allStatuses") }}</option>
+            <option v-for="s in statuses" :key="s" :value="s">
+              {{ t(`feedback.statuses.${s}`) }}
+            </option>
+          </select></label
         >
-          <option value="">{{ t("feedback.allStatuses") }}</option>
-          <option v-for="s in statuses" :key="s" :value="s">
-            {{ t(`feedback.statuses.${s}`) }}
-          </option>
-        </select>
-        <select
-          v-model="filters.category"
-          class="px-3 py-2 bg-gray-50 border-0 rounded-xl text-sm text-ios-text focus:ring-2 focus:ring-ios-blue/30 transition-all"
-          @change="applyFilters"
+        <label class="admin-field" for="feedbackview-filters-category"
+          ><span>{{ t("feedback.allCategories") }}</span
+          ><select
+            id="feedbackview-filters-category"
+            v-model="filters.category"
+            class="px-3 py-2 bg-gray-50 border-0 rounded-xl text-sm text-ios-text focus:ring-2 focus:ring-ios-blue/30 transition-all"
+            @change="applyFilters"
+          >
+            <option value="">{{ t("feedback.allCategories") }}</option>
+            <option v-for="c in categories" :key="c" :value="c">
+              {{ t(`feedback.categories.${c}`) }}
+            </option>
+          </select></label
         >
-          <option value="">{{ t("feedback.allCategories") }}</option>
-          <option v-for="c in categories" :key="c" :value="c">
-            {{ t(`feedback.categories.${c}`) }}
-          </option>
-        </select>
-        <select
-          v-model="filters.priority"
-          class="px-3 py-2 bg-gray-50 border-0 rounded-xl text-sm text-ios-text focus:ring-2 focus:ring-ios-blue/30 transition-all"
-          @change="applyFilters"
+        <label class="admin-field" for="feedbackview-filters-priority"
+          ><span>{{ t("feedback.allPriorities") }}</span
+          ><select
+            id="feedbackview-filters-priority"
+            v-model="filters.priority"
+            class="px-3 py-2 bg-gray-50 border-0 rounded-xl text-sm text-ios-text focus:ring-2 focus:ring-ios-blue/30 transition-all"
+            @change="applyFilters"
+          >
+            <option value="">{{ t("feedback.allPriorities") }}</option>
+            <option v-for="p in priorities" :key="p" :value="p">
+              {{ t(`feedback.priorities.${p}`) }}
+            </option>
+          </select></label
         >
-          <option value="">{{ t("feedback.allPriorities") }}</option>
-          <option v-for="p in priorities" :key="p" :value="p">
-            {{ t(`feedback.priorities.${p}`) }}
-          </option>
-        </select>
       </div>
+    </div>
+
+    <div
+      v-if="
+        filters.search || filters.status || filters.category || filters.priority
+      "
+      class="ui-toolbar text-sm text-ios-text/70"
+      role="status"
+    >
+      <span
+        >{{ filters.search }}
+        {{ filters.status ? t(`feedback.statuses.${filters.status}`) : "" }}
+        {{
+          filters.category ? t(`feedback.categories.${filters.category}`) : ""
+        }}
+        {{
+          filters.priority ? t(`feedback.priorities.${filters.priority}`) : ""
+        }}</span
+      >
+      <button
+        type="button"
+        data-testid="clear-feedback-filters"
+        class="rounded-full bg-white px-4 py-2 text-sm font-medium text-primary-700"
+        @click="clearFilters"
+      >
+        {{ t("common.reset") }}
+      </button>
     </div>
 
     <!-- Feedback list -->
@@ -87,13 +129,13 @@
 
     <div
       v-else-if="feedbackList.length === 0"
-      class="bg-white rounded-2xl p-12 shadow-sm text-center"
+      class="ui-panel bg-white rounded-2xl p-12 shadow-sm text-center"
     >
       <MessageSquare class="w-12 h-12 text-ios-tertiary mx-auto mb-3" />
       <p class="text-ios-secondary text-sm">{{ t("feedback.noFeedback") }}</p>
       <button
         v-if="!isAdmin && !showForm"
-        class="mt-4 px-5 py-2.5 rounded-full bg-ios-blue text-white text-sm font-semibold hover:bg-blue-600 transition-all"
+        class="mt-4 px-5 py-2.5 rounded-full bg-primary-700 text-white text-sm font-semibold hover:bg-primary-800 transition-all"
         @click="showForm = true"
       >
         {{ t("feedback.submit") }}
@@ -104,7 +146,7 @@
       <div
         v-for="item in feedbackList"
         :key="item.id"
-        class="bg-white rounded-2xl p-5 shadow-sm cursor-pointer hover:shadow-md transition-all duration-200 active:scale-[0.99]"
+        class="ui-panel bg-white rounded-2xl p-5 shadow-sm cursor-pointer hover:shadow-md transition-all duration-200 active:scale-[0.99]"
         @click="openDetail(item)"
       >
         <div class="flex items-start gap-3">
@@ -156,7 +198,7 @@
     >
       <button
         :disabled="pagination.page <= 1"
-        class="px-4 py-2 rounded-full text-sm font-medium bg-white shadow-sm text-ios-blue disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-all"
+        class="ui-panel px-4 py-2 rounded-full text-sm font-medium bg-white shadow-sm text-ios-blue disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-all"
         @click="changePage(pagination.page - 1)"
       >
         {{ t("common.previous") }}
@@ -166,7 +208,7 @@
       </span>
       <button
         :disabled="pagination.page >= pagination.totalPages"
-        class="px-4 py-2 rounded-full text-sm font-medium bg-white shadow-sm text-ios-blue disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-all"
+        class="ui-panel px-4 py-2 rounded-full text-sm font-medium bg-white shadow-sm text-ios-blue disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-all"
         @click="changePage(pagination.page + 1)"
       >
         {{ t("common.next") }}
@@ -187,7 +229,7 @@
           <div
             class="relative w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-ios-bg rounded-t-3xl sm:rounded-3xl p-5 space-y-4"
           >
-            <div class="flex items-center justify-between mb-2">
+            <div class="ui-toolbar flex items-center justify-between mb-2">
               <h2 class="text-base font-semibold text-ios-text">
                 {{ t("feedback.detailTitle") }}
               </h2>
@@ -272,6 +314,18 @@ function debouncedFetch() {
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
   filters.page = 1;
   searchDebounceTimer = setTimeout(() => loadFeedback(), 400);
+}
+
+function clearFilters() {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+  Object.assign(filters, {
+    search: "",
+    status: "",
+    category: "",
+    priority: "",
+    page: 1,
+  });
+  loadFeedback();
 }
 
 function applyFilters() {

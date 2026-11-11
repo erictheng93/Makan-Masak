@@ -1,6 +1,6 @@
 <template>
-  <div class="space-y-6">
-    <div class="flex justify-end">
+  <div class="ui-page space-y-6">
+    <div class="ui-toolbar flex justify-end">
       <RouterLink
         :to="{ name: 'SchedulingAnalytics' }"
         data-testid="scheduling-analytics-link"
@@ -11,13 +11,15 @@
     </div>
 
     <!-- Quick Stats -->
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div
+      class="admin-stat-strip grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
+    >
       <div
         v-for="stat in attendanceStats"
         :key="stat.label"
         class="bg-ios-bg rounded-2xl p-4"
       >
-        <p class="text-xs text-ios-text/40 mb-1">{{ stat.label }}</p>
+        <p class="text-xs text-ios-text/70 mb-1">{{ stat.label }}</p>
         <p class="text-2xl font-bold" :class="stat.valueClass">
           {{ stat.value }}
         </p>
@@ -35,7 +37,7 @@
 
       <div v-if="clockableEmployees.length > 0" class="max-w-[500px] mx-auto">
         <label
-          class="block text-xs text-ios-text/40 mb-1"
+          class="block text-xs text-ios-text/70 mb-1"
           for="clock-target-select"
         >
           {{ t("employees.attendance.clockFor") }}
@@ -67,7 +69,7 @@
       </div>
       <div v-else class="text-center py-8">
         <Clock class="mx-auto w-8 h-8 text-ios-text/15 mb-2" />
-        <p class="text-xs text-ios-text/30">
+        <p class="text-xs text-ios-text/70">
           {{ t("employees.attendance.noClockableStaff") }}
         </p>
       </div>
@@ -80,7 +82,7 @@
       >
         <div class="w-2 h-2 rounded-full bg-ios-green animate-pulse" />
         {{ t("employees.attendance.working") }}
-        <span class="text-ios-text/30">({{ clockedInEmployees.length }})</span>
+        <span class="text-ios-text/70">({{ clockedInEmployees.length }})</span>
       </h3>
       <div
         v-if="clockedInLoading"
@@ -92,7 +94,7 @@
       </div>
       <div v-else-if="clockedInEmployees.length === 0" class="text-center py-8">
         <Clock class="mx-auto w-8 h-8 text-ios-text/15 mb-2" />
-        <p class="text-xs text-ios-text/30">
+        <p class="text-xs text-ios-text/70">
           {{ t("employees.attendance.noOneWorking") }}
         </p>
       </div>
@@ -121,7 +123,7 @@
             <p class="text-sm font-medium text-ios-text truncate">
               {{ emp.employeeName || `Employee #${emp.employeeId}` }}
             </p>
-            <p class="text-xs text-emerald-600">
+            <p class="text-xs text-emerald-700">
               {{ emp.clockInTime ? formatClockTime(emp.clockInTime) : "" }}
               {{
                 emp.startTime && emp.endTime
@@ -141,7 +143,7 @@
       >
         <div class="w-2 h-2 rounded-full bg-ios-orange" />
         {{ t("employees.attendance.onLeave") }}
-        <span class="text-ios-text/30">({{ onLeaveEmployees.length }})</span>
+        <span class="text-ios-text/70">({{ onLeaveEmployees.length }})</span>
       </h3>
       <div v-if="leaveLoading" class="flex items-center justify-center py-8">
         <div
@@ -150,7 +152,7 @@
       </div>
       <div v-else-if="onLeaveEmployees.length === 0" class="text-center py-8">
         <CalendarOff class="mx-auto w-8 h-8 text-ios-text/15 mb-2" />
-        <p class="text-xs text-ios-text/30">
+        <p class="text-xs text-ios-text/70">
           {{ t("employees.attendance.noOneOnLeave") }}
         </p>
       </div>
@@ -171,7 +173,7 @@
                 getEmployeeName(emp.employeeId) || `Employee #${emp.employeeId}`
               }}
             </p>
-            <p class="text-xs text-amber-600">{{ emp.leaveTypeName }}</p>
+            <p class="text-xs text-amber-700">{{ emp.leaveTypeName }}</p>
           </div>
         </div>
       </div>
@@ -311,27 +313,27 @@ const attendanceStats = computed(() => {
     {
       label: t("employees.attendance.present"),
       value: present,
-      valueClass: "text-emerald-600",
+      valueClass: "text-emerald-700",
     },
     {
       label: t("employees.attendance.onLeave"),
       value: onLeaveIds.size,
-      valueClass: "text-amber-600",
+      valueClass: "text-amber-700",
     },
     {
       label: t("employees.attendance.absent"),
       value: absent,
-      valueClass: "text-red-500",
+      valueClass: "text-red-700",
     },
     {
       label: t("employees.attendance.rate"),
       value: rate === null ? "—" : `${rate}%`,
       valueClass:
         rate === null
-          ? "text-ios-text/30"
+          ? "text-ios-text/70"
           : rate >= 80
-            ? "text-emerald-600"
-            : "text-amber-600",
+            ? "text-emerald-700"
+            : "text-amber-700",
     },
   ];
 });

@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-screen bg-ios-bg">
+  <div class="admin-shell flex h-screen bg-ios-bg">
     <!-- Mobile overlay backdrop -->
     <Transition name="fade">
       <div
@@ -16,14 +16,14 @@
       @navigate="onSidebarNavigate"
     />
 
-    <div class="flex-1 flex flex-col overflow-hidden">
+    <div class="min-w-0 flex-1 flex flex-col overflow-hidden">
       <Header @toggle-sidebar="toggleSidebar" />
 
       <RestaurantContextBanner />
       <TrialExpiredBanner />
       <TrialExpiredModal />
 
-      <main class="flex-1 overflow-y-auto p-4">
+      <main class="admin-content flex-1 overflow-y-auto">
         <router-view />
       </main>
     </div>

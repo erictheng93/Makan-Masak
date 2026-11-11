@@ -1,9 +1,11 @@
 <template>
-  <div class="min-h-screen bg-ios-bg p-4 md:p-6">
+  <div class="ui-page min-h-screen bg-ios-bg p-4 md:p-6">
     <div class="mx-auto max-w-4xl">
-      <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div
+        class="ui-toolbar mb-5 flex flex-wrap items-center justify-between gap-3"
+      >
         <div>
-          <h1 class="text-[22px] font-bold text-ios-text">
+          <h1 class="ui-page-heading text-[22px] font-bold text-ios-text">
             {{ t("printAgents.title") }}
           </h1>
           <p class="mt-1 text-[13px] text-ios-secondary">
@@ -14,7 +16,7 @@
           v-if="canManagePrintAgents"
           type="button"
           data-testid="issue-agent"
-          class="rounded-full bg-ios-primary px-4 py-2 text-[14px] font-semibold text-white transition-transform duration-150 active:scale-95"
+          class="rounded-full bg-primary-700 px-4 py-2 text-[14px] font-semibold text-white transition-transform duration-150 active:scale-95"
           @click="isIssuing = !isIssuing"
         >
           {{ t("printAgents.issue") }}
@@ -24,13 +26,17 @@
       <form
         v-if="isIssuing"
         data-testid="issue-form"
-        class="mb-4 rounded-2xl bg-white p-4 shadow-ios-sm"
+        class="ui-panel mb-4 rounded-2xl bg-white p-4 shadow-ios-sm"
         @submit.prevent="issue"
       >
-        <label class="block text-[13px] font-semibold text-ios-text">
+        <label
+          for="print-agent-label"
+          class="block text-[13px] font-semibold text-ios-text"
+        >
           {{ t("printAgents.form.label") }}
         </label>
         <input
+          id="print-agent-label"
           v-model="form.label"
           data-testid="agent-label"
           required
@@ -39,10 +45,14 @@
           :placeholder="t('printAgents.form.labelPlaceholder')"
         />
 
-        <label class="mt-4 block text-[13px] font-semibold text-ios-text">
+        <label
+          for="print-agent-register"
+          class="mt-4 block text-[13px] font-semibold text-ios-text"
+        >
           {{ t("printAgents.form.register") }}
         </label>
         <select
+          id="print-agent-register"
           v-model="form.registerId"
           data-testid="agent-register"
           class="mt-2 w-full rounded-xl bg-ios-bg px-3 py-2 text-[14px] text-ios-text outline-none"
@@ -64,7 +74,7 @@
         <button
           type="submit"
           data-testid="issue-submit"
-          class="mt-4 rounded-full bg-ios-primary px-4 py-2 text-[14px] font-semibold text-white transition-transform duration-150 active:scale-95"
+          class="mt-4 rounded-full bg-primary-700 px-4 py-2 text-[14px] font-semibold text-white transition-transform duration-150 active:scale-95"
         >
           {{ t("printAgents.form.submit") }}
         </button>
@@ -72,7 +82,7 @@
 
       <div
         v-if="isLoading"
-        class="rounded-2xl bg-white p-8 text-center text-[14px] text-ios-secondary shadow-ios-sm"
+        class="ui-panel rounded-2xl bg-white p-8 text-center text-[14px] text-ios-secondary shadow-ios-sm"
       >
         {{ t("common.loading") }}
       </div>
@@ -80,7 +90,7 @@
       <div
         v-else-if="error"
         data-testid="print-agents-error"
-        class="rounded-2xl bg-white p-8 text-center text-[14px] text-ios-error shadow-ios-sm"
+        class="ui-panel rounded-2xl bg-white p-8 text-center text-[14px] text-ios-error shadow-ios-sm"
       >
         {{ error }}
       </div>
@@ -88,7 +98,7 @@
       <div
         v-else-if="agents.length === 0"
         data-testid="print-agents-empty"
-        class="rounded-3xl bg-white p-10 text-center shadow-ios-sm"
+        class="ui-panel rounded-3xl bg-white p-10 text-center shadow-ios-sm"
       >
         <p class="text-[15px] font-semibold text-ios-text">
           {{ t("printAgents.empty.title") }}
@@ -104,9 +114,11 @@
           :key="agent.id"
           :data-status="agent.status"
           data-testid="print-agent-row"
-          class="rounded-2xl bg-white p-4 shadow-ios-sm"
+          class="ui-panel rounded-2xl bg-white p-4 shadow-ios-sm"
         >
-          <div class="flex flex-wrap items-center justify-between gap-3">
+          <div
+            class="ui-toolbar flex flex-wrap items-center justify-between gap-3"
+          >
             <div class="min-w-0">
               <div class="flex items-center gap-2">
                 <span
@@ -143,7 +155,7 @@
       <div
         v-if="issuedKey"
         data-testid="issued-key"
-        class="mt-4 rounded-2xl bg-white p-4 shadow-ios-card"
+        class="ui-panel mt-4 rounded-2xl bg-white p-4 shadow-ios-card"
       >
         <p class="text-[15px] font-semibold text-ios-text">
           {{ t("printAgents.issued.title") }}
@@ -157,7 +169,7 @@
         >
         <button
           type="button"
-          class="mt-3 rounded-full bg-ios-primary px-4 py-2 text-[14px] font-semibold text-white transition-transform duration-150 active:scale-95"
+          class="mt-3 rounded-full bg-primary-700 px-4 py-2 text-[14px] font-semibold text-white transition-transform duration-150 active:scale-95"
           @click="issuedKey = null"
         >
           {{ t("printAgents.issued.done") }}

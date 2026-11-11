@@ -1,6 +1,8 @@
 <template>
-  <div class="bg-ios-bg min-h-screen flex items-center justify-center">
-    <div class="text-center">
+  <div
+    class="kitchen-page ui-page bg-ios-bg min-h-screen flex items-center justify-center px-6"
+  >
+    <div class="ui-empty-state text-center max-w-md">
       <ShieldX class="w-12 h-12 text-ios-tertiary mx-auto" />
       <h1 class="text-[22px] font-bold text-ios-text mt-4">
         {{ t("errorPages.unauthorizedTitle") }}
@@ -9,7 +11,7 @@
         {{ t("errorPages.unauthorizedDescription") }}
       </p>
       <button
-        class="bg-ios-blue text-white rounded-full px-6 py-3 font-bold mt-6 min-h-[44px]"
+        class="bg-blue-700 text-white rounded-full px-6 py-3 font-bold mt-6 min-h-[44px]"
         @click="handleLogin"
       >
         {{ t("errorPages.reLogin") }}

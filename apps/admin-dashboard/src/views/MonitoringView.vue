@@ -1,11 +1,11 @@
 <template>
-  <div class="min-h-screen bg-gray-50 py-6">
+  <div class="ui-page min-h-screen bg-gray-50 py-6">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Header -->
       <div class="mb-8">
-        <div class="flex items-center justify-between">
+        <div class="ui-toolbar flex items-center justify-between">
           <div>
-            <h1 class="text-3xl font-bold text-gray-900">
+            <h1 class="ui-page-heading text-3xl font-bold text-gray-900">
               {{ t("monitoring.title") }}
             </h1>
             <p class="mt-2 text-sm text-gray-600">
@@ -39,7 +39,7 @@
             <!-- Refresh button -->
             <button
               :disabled="loading"
-              class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-700 hover:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               data-testid="manual-refresh"
               @click="refreshAllData()"
             >
@@ -72,9 +72,11 @@
       <template v-else>
         <!-- Overall Health Status -->
         <div class="mb-8">
-          <div class="bg-white overflow-hidden shadow-lg rounded-lg">
+          <div class="ui-panel bg-white overflow-hidden shadow-lg rounded-lg">
             <div class="px-6 py-8">
-              <div class="flex items-center">
+              <div
+                class="flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:gap-0"
+              >
                 <div class="flex-shrink-0">
                   <div
                     :class="[
@@ -89,16 +91,18 @@
                   </div>
                 </div>
 
-                <div class="ml-6 flex-1">
-                  <div class="flex items-center justify-between">
-                    <div>
-                      <div class="flex items-center">
+                <div class="ml-0 min-w-0 w-full flex-1 sm:ml-6 sm:w-auto">
+                  <div
+                    class="flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+                  >
+                    <div class="min-w-0 flex-1">
+                      <div class="flex flex-wrap items-center gap-3">
                         <h2 class="text-2xl font-bold text-gray-900">
                           {{ t("monitoring.health.overall") }}
                         </h2>
                         <span
                           :class="[
-                            'ml-3 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium',
+                            'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium',
                             getHealthBadgeColor(overview?.status || 'down'),
                           ]"
                         >
@@ -106,7 +110,9 @@
                         </span>
                       </div>
 
-                      <div class="mt-3 flex items-center space-x-6">
+                      <div
+                        class="mt-3 flex flex-wrap items-start gap-x-6 gap-y-4"
+                      >
                         <div>
                           <div class="text-sm text-gray-500 mb-1">
                             {{ t("monitoring.health.score") }}
@@ -121,7 +127,7 @@
                                saying which keeps 100 from overclaiming. -->
                           <div
                             v-if="healthScoreBasis.length"
-                            class="text-xs text-gray-400 mt-1"
+                            class="max-w-full [overflow-wrap:anywhere] text-xs text-gray-500 mt-1"
                           >
                             {{
                               t("monitoring.health.basis", {
@@ -135,7 +141,9 @@
                           <div class="text-sm text-gray-500 mb-1">
                             {{ t("monitoring.misc.uptime") }}
                           </div>
-                          <div class="text-lg font-semibold text-gray-900">
+                          <div
+                            class="[overflow-wrap:anywhere] text-lg font-semibold text-gray-900"
+                          >
                             {{ formatUptime(overview?.uptime || 0) }}
                           </div>
                         </div>
@@ -144,7 +152,9 @@
                           <div class="text-sm text-gray-500 mb-1">
                             {{ t("monitoring.misc.lastUpdate") }}
                           </div>
-                          <div class="text-lg font-semibold text-gray-900">
+                          <div
+                            class="[overflow-wrap:anywhere] text-lg font-semibold text-gray-900"
+                          >
                             {{ formatLastUpdate(lastUpdateTime) }}
                           </div>
                         </div>
@@ -153,7 +163,7 @@
                       <!-- Health Score Progress Bar -->
                       <div class="mt-4 max-w-md">
                         <div
-                          class="flex justify-between text-sm text-gray-600 mb-1"
+                          class="ui-toolbar flex justify-between text-sm text-gray-600 mb-1"
                         >
                           <span>{{ t("monitoring.misc.systemHealth") }}</span>
                           <span>{{ healthScoreDisplay }}%</span>
@@ -171,7 +181,7 @@
                     </div>
 
                     <!-- Health Score Gauge Chart -->
-                    <div class="flex-shrink-0">
+                    <div class="max-w-full shrink-0 self-center sm:self-auto">
                       <HealthScoreGauge
                         :score="healthScore ?? 0"
                         :label="t('monitoring.health.score')"
@@ -194,7 +204,7 @@
             <div
               v-for="metric in keyMetricsCards"
               :key="metric.id"
-              class="bg-white overflow-hidden shadow rounded-lg"
+              class="ui-panel bg-white overflow-hidden shadow rounded-lg"
             >
               <div class="p-5">
                 <div class="flex items-center">
@@ -261,10 +271,10 @@
             <div
               v-for="component in componentsStatus"
               :key="component.name"
-              class="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
+              class="ui-panel bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
             >
               <div class="p-5">
-                <div class="flex items-center justify-between mb-3">
+                <div class="ui-toolbar flex items-center justify-between mb-3">
                   <h4 class="text-sm font-medium text-gray-900">
                     {{ component.displayName }}
                   </h4>
@@ -280,7 +290,9 @@
 
                 <!-- Health Indicator -->
                 <div class="mb-3">
-                  <div class="flex justify-between text-xs text-gray-600 mb-1">
+                  <div
+                    class="ui-toolbar flex justify-between text-xs text-gray-600 mb-1"
+                  >
                     <span>{{ t("monitoring.components.healthScore") }}</span>
                     <span>{{ component.healthScore }}/100</span>
                   </div>
@@ -323,10 +335,10 @@
                   v-if="component.issues.length > 0"
                   class="mt-3 pt-3 border-t border-gray-200"
                 >
-                  <div class="text-xs font-medium text-red-600 mb-1">
+                  <div class="text-xs font-medium text-red-700 mb-1">
                     {{ t("monitoring.components.issuesFound") }}
                   </div>
-                  <ul class="text-xs text-red-600 space-y-1">
+                  <ul class="text-xs text-red-700 space-y-1">
                     <li
                       v-for="(issue, idx) in component.issues"
                       :key="idx"
@@ -343,7 +355,7 @@
 
         <!-- Alert Rules & Performance Report in Tabs -->
         <div class="mb-8">
-          <div class="bg-white shadow rounded-lg">
+          <div class="ui-panel bg-white shadow rounded-lg">
             <!-- Tabs -->
             <div class="border-b border-gray-200">
               <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
@@ -353,7 +365,7 @@
                   :class="[
                     'py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap',
                     activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
+                      ? 'border-blue-500 text-blue-700'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
                   ]"
                   @click="activeTab = tab.id as typeof activeTab"
@@ -366,7 +378,7 @@
                       :class="[
                         'ml-2 py-0.5 px-2 rounded-full text-xs font-medium',
                         activeTab === tab.id
-                          ? 'bg-blue-100 text-blue-600'
+                          ? 'bg-blue-100 text-blue-700'
                           : 'bg-gray-100 text-gray-600',
                       ]"
                     >
@@ -381,12 +393,12 @@
             <div class="p-6">
               <!-- Alert Rules Tab -->
               <div v-if="activeTab === 'alerts'" class="space-y-4">
-                <div class="flex justify-between items-center mb-4">
+                <div class="ui-toolbar flex justify-between items-center mb-4">
                   <h3 class="text-lg font-medium text-gray-900">
                     {{ t("monitoring.alerts.title") }}
                   </h3>
                   <button
-                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-700 hover:bg-primary-800"
                     @click="showCreateAlertDialog = true"
                   >
                     <PlusIcon class="w-4 h-4 mr-2" />
@@ -401,7 +413,7 @@
                     :key="rule.id"
                     class="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
                   >
-                    <div class="flex items-center justify-between">
+                    <div class="ui-toolbar flex items-center justify-between">
                       <div class="flex-1">
                         <div class="flex items-center">
                           <h4 class="text-sm font-medium text-gray-900">
@@ -463,7 +475,7 @@
                         </button>
                         <button
                           :aria-label="t('common.delete')"
-                          class="p-2 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+                          class="p-2 text-red-700 hover:text-red-700 rounded-md hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                           @click="deleteAlert(rule.id)"
                         >
                           <TrashIcon class="w-5 h-5" />
@@ -483,7 +495,7 @@
                   </p>
                   <div class="mt-6">
                     <button
-                      class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                      class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-700 hover:bg-primary-800"
                       @click="showCreateAlertDialog = true"
                     >
                       <PlusIcon class="w-4 h-4 mr-2" />
@@ -495,7 +507,7 @@
 
               <!-- Performance Report Tab -->
               <div v-if="activeTab === 'performance'" class="space-y-6">
-                <div class="flex justify-between items-center mb-4">
+                <div class="ui-toolbar flex justify-between items-center mb-4">
                   <h3 class="text-lg font-medium text-gray-900">
                     {{ t("monitoring.performance.title") }}
                   </h3>
@@ -713,7 +725,7 @@
                   >
                     <div class="flex">
                       <div class="flex-shrink-0">
-                        <InformationCircleIcon class="h-5 w-5 text-blue-400" />
+                        <InformationCircleIcon class="h-5 w-5 text-blue-700" />
                       </div>
                       <div class="ml-3">
                         <h3 class="text-sm font-medium text-blue-800">
@@ -781,7 +793,7 @@
                       :key="error.type"
                       class="border border-gray-200 rounded-lg p-4"
                     >
-                      <div class="flex items-center justify-between">
+                      <div class="ui-toolbar flex items-center justify-between">
                         <div>
                           <h4 class="text-sm font-medium text-gray-900">
                             {{ error.type }}
@@ -791,14 +803,14 @@
                             {{ error.count }}
                           </p>
                         </div>
-                        <ExclamationTriangleIcon class="w-6 h-6 text-red-500" />
+                        <ExclamationTriangleIcon class="w-6 h-6 text-red-700" />
                       </div>
                     </div>
                   </div>
                 </div>
 
                 <div v-else class="text-center py-12">
-                  <CheckCircleIcon class="mx-auto h-12 w-12 text-green-400" />
+                  <CheckCircleIcon class="mx-auto h-12 w-12 text-green-700" />
                   <h3 class="mt-2 text-sm font-medium text-gray-900">
                     {{ t("monitoring.errors.noErrors") }}
                   </h3>
@@ -985,7 +997,7 @@ const keyMetricsCards = computed(() => {
       trendIcon: MinusIcon,
       trendColor: "text-gray-400",
       icon: ServerIcon,
-      iconColor: "text-blue-600",
+      iconColor: "text-blue-700",
       bgColor: "bg-blue-50",
     },
     {
@@ -996,7 +1008,7 @@ const keyMetricsCards = computed(() => {
       trendIcon: MinusIcon,
       trendColor: "text-gray-400",
       icon: ClockIcon,
-      iconColor: "text-green-600",
+      iconColor: "text-green-700",
       bgColor: "bg-green-50",
     },
     {
@@ -1007,7 +1019,7 @@ const keyMetricsCards = computed(() => {
       trendIcon: MinusIcon,
       trendColor: "text-gray-400",
       icon: CircleStackIcon,
-      iconColor: "text-teal-600",
+      iconColor: "text-teal-700",
       bgColor: "bg-teal-50",
     },
     {
@@ -1030,10 +1042,10 @@ const keyMetricsCards = computed(() => {
           : ExclamationTriangleIcon,
       trendColor:
         overview.value.keyMetrics.serverErrors === 0
-          ? "text-green-600"
-          : "text-red-600",
+          ? "text-green-700"
+          : "text-red-700",
       icon: ExclamationTriangleIcon,
-      iconColor: "text-red-600",
+      iconColor: "text-red-700",
       bgColor: "bg-red-50",
     },
   ];
@@ -1484,7 +1496,9 @@ onUnmounted(() => {
 }
 
 /* Smooth transitions */
-* {
+button,
+[aria-current],
+[role="status"] {
   transition-property:
     color, background-color, border-color, text-decoration-color, fill, stroke;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);

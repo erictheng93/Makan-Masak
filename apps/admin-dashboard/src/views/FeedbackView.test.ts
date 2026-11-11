@@ -148,6 +148,24 @@ describe("FeedbackView", () => {
     );
   });
 
+  it("clears all active filters and returns to the first page", async () => {
+    const wrapper = mountView();
+    await flushPromises();
+    await wrapper.findAll("select")[0].setValue("resolved");
+    await flushPromises();
+    await wrapper
+      .get('[data-testid="clear-feedback-filters"]')
+      .trigger("click");
+    await flushPromises();
+    expect(feedbackApi.fetchFeedback).toHaveBeenLastCalledWith({
+      page: 1,
+      limit: 20,
+    });
+    expect(
+      (wrapper.findAll("select")[0].element as HTMLSelectElement).value,
+    ).toBe("");
+  });
+
   it("reloads the active filtered list after an owner submits feedback", async () => {
     const wrapper = mountView();
     await flushPromises();

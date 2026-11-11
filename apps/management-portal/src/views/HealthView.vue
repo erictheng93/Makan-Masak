@@ -51,33 +51,42 @@ const getTenantName = (tenantId: string) => {
 </script>
 
 <template>
-  <div class="space-y-6" data-testid="management-health-page">
+  <div
+    class="portal-page ui-page space-y-6"
+    data-testid="management-health-page"
+  >
     <!-- 頁面標題 -->
-    <div class="flex items-center justify-between">
+    <div class="portal-heading ui-page-heading">
       <div>
         <h1 class="text-2xl font-bold text-gray-900">
           {{ t("health.title") }}
         </h1>
         <p class="mt-1 text-sm text-gray-500">{{ t("health.subtitle") }}</p>
       </div>
-      <button
-        type="button"
-        class="btn btn-secondary"
-        :disabled="refreshing"
-        @click="handleRefresh"
-      >
-        <ArrowPathIcon
-          class="h-5 w-5 mr-2"
-          :class="{ 'animate-spin': refreshing }"
-        />
-        {{ refreshing ? t("health.refreshing") : t("health.refresh") }}
-      </button>
+      <div class="flex flex-wrap items-center gap-3">
+        <p v-if="healthStore.lastUpdated" class="text-sm text-gray-600">
+          {{ t("health.lastUpdated") }}
+          {{ healthStore.lastUpdated.toLocaleTimeString() }}
+        </p>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="refreshing"
+          @click="handleRefresh"
+        >
+          <ArrowPathIcon
+            class="h-5 w-5 mr-2"
+            :class="{ 'animate-spin': refreshing }"
+          />
+          {{ refreshing ? t("health.refreshing") : t("health.refresh") }}
+        </button>
+      </div>
     </div>
 
     <!-- 狀態統計 -->
-    <div class="grid grid-cols-1 gap-5 sm:grid-cols-4">
+    <div class="ui-stat-strip">
       <!-- 總體狀態 -->
-      <div class="card">
+      <div class="ui-stat">
         <div class="flex items-center">
           <div
             class="rounded-full p-3"
@@ -117,7 +126,7 @@ const getTenantName = (tenantId: string) => {
       </div>
 
       <!-- 正常 -->
-      <div class="card">
+      <div class="ui-stat">
         <div class="flex items-center">
           <div class="rounded-full bg-green-100 p-3">
             <CheckCircleIcon class="h-6 w-6 text-green-600" />
@@ -134,7 +143,7 @@ const getTenantName = (tenantId: string) => {
       </div>
 
       <!-- 降級 -->
-      <div class="card">
+      <div class="ui-stat">
         <div class="flex items-center">
           <div class="rounded-full bg-yellow-100 p-3">
             <ExclamationTriangleIcon class="h-6 w-6 text-yellow-600" />
@@ -151,7 +160,7 @@ const getTenantName = (tenantId: string) => {
       </div>
 
       <!-- 離線 -->
-      <div class="card">
+      <div class="ui-stat">
         <div class="flex items-center">
           <div class="rounded-full bg-red-100 p-3">
             <XCircleIcon class="h-6 w-6 text-red-600" />
@@ -170,7 +179,7 @@ const getTenantName = (tenantId: string) => {
 
     <!-- 平均回應時間 -->
     <div class="card">
-      <div class="flex items-center justify-between">
+      <div class="ui-toolbar portal-heading">
         <div>
           <h3 class="text-lg font-semibold text-gray-900">
             {{ t("health.avgResponseTime") }}
@@ -179,10 +188,6 @@ const getTenantName = (tenantId: string) => {
             {{ healthStore.averageResponseTime }}
             <span class="text-lg font-normal text-gray-500">ms</span>
           </p>
-        </div>
-        <div v-if="healthStore.lastUpdated" class="text-sm text-gray-500">
-          {{ t("health.lastUpdated")
-          }}{{ healthStore.lastUpdated.toLocaleTimeString() }}
         </div>
       </div>
     </div>
@@ -200,7 +205,7 @@ const getTenantName = (tenantId: string) => {
         <div
           v-for="check in healthStore.groupedByStatus.down"
           :key="check.id"
-          class="flex items-center justify-between p-4 bg-red-50 rounded-lg"
+          class="flex flex-wrap items-center justify-between gap-4 p-4 bg-red-50 rounded-lg"
         >
           <div class="flex items-center">
             <XCircleIcon class="h-6 w-6 text-red-500" />
@@ -225,7 +230,7 @@ const getTenantName = (tenantId: string) => {
         <div
           v-for="check in healthStore.groupedByStatus.degraded"
           :key="check.id"
-          class="flex items-center justify-between p-4 bg-yellow-50 rounded-lg"
+          class="flex flex-wrap items-center justify-between gap-4 p-4 bg-yellow-50 rounded-lg"
         >
           <div class="flex items-center">
             <ExclamationTriangleIcon class="h-6 w-6 text-yellow-500" />
@@ -266,7 +271,7 @@ const getTenantName = (tenantId: string) => {
         <p class="text-sm text-gray-500">{{ t("health.all.empty") }}</p>
       </div>
 
-      <div v-else class="overflow-x-auto">
+      <div v-else class="ui-table-scroll overflow-x-auto">
         <table class="table">
           <thead>
             <tr>

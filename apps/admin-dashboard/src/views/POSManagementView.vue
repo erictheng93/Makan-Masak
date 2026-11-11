@@ -1,5 +1,5 @@
 <template>
-  <div class="pos-management">
+  <div class="ui-page pos-management">
     <!-- 收銀櫃管理操作列 -->
     <div
       class="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
@@ -11,7 +11,7 @@
             {{ t("pos.register") }}:
             {{ currentRegister?.name || t("pos.notSelected") }}
           </p>
-          <p class="text-xs text-green-600">
+          <p class="text-xs text-green-700">
             {{ t("pos.balance") }}:
             {{ formatDrawerBalance(currentRegister) }}
           </p>
@@ -26,7 +26,7 @@
               (currentShift ? t("pos.shiftActive") : t("pos.notStarted"))
             }}
           </p>
-          <p class="text-xs text-blue-600">
+          <p class="text-xs text-blue-700">
             {{
               currentShift
                 ? `${formatClockTime(currentShift.startTime)} - ${formatClockTime(currentShift.endTime || "")}`
@@ -57,7 +57,7 @@
         </button>
 
         <button
-          class="px-3 py-2 bg-ios-blue text-white rounded-full hover:bg-blue-600 transition-colors text-sm"
+          class="px-3 py-2 bg-primary-700 text-white rounded-full hover:bg-primary-800 transition-colors text-sm"
           @click="openRegisterManagement"
         >
           {{ t("pos.registerManagement") }}
@@ -74,11 +74,11 @@
     </div>
 
     <!-- 統計卡片 -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-      <div class="bg-white rounded-lg shadow p-6">
+    <div class="admin-stat-strip grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
         <div class="flex items-center">
           <div class="p-3 rounded-full bg-blue-100">
-            <BanknotesIcon class="h-6 w-6 text-blue-600" />
+            <BanknotesIcon class="h-6 w-6 text-blue-700" />
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-500">
@@ -91,10 +91,10 @@
         </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
         <div class="flex items-center">
           <div class="p-3 rounded-full bg-green-100">
-            <ShoppingCartIcon class="h-6 w-6 text-green-600" />
+            <ShoppingCartIcon class="h-6 w-6 text-green-700" />
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-500">
@@ -107,10 +107,10 @@
         </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
         <div class="flex items-center">
           <div class="p-3 rounded-full bg-teal-100">
-            <UserGroupIcon class="h-6 w-6 text-teal-600" />
+            <UserGroupIcon class="h-6 w-6 text-teal-700" />
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-500">
@@ -123,10 +123,10 @@
         </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
         <div class="flex items-center">
           <div class="p-3 rounded-full bg-yellow-100">
-            <ClockIcon class="h-6 w-6 text-yellow-600" />
+            <ClockIcon class="h-6 w-6 text-yellow-700" />
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-500">
@@ -145,16 +145,16 @@
       <!-- 左側：現金櫃管理 -->
       <div class="lg:col-span-2 space-y-6">
         <!-- 收銀櫃列表 -->
-        <div class="bg-white rounded-lg shadow">
+        <div class="ui-panel bg-white rounded-lg shadow">
           <div class="p-6 border-b border-gray-200">
-            <div class="flex items-center justify-between">
+            <div class="ui-toolbar flex items-center justify-between">
               <h2 class="text-xl font-semibold text-gray-900">
                 {{ t("pos.registerList") }}
               </h2>
               <!-- Creating a register is owner/admin only on the API. -->
               <button
                 v-if="canManageRegisters"
-                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                class="px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors text-sm"
                 data-testid="pos-add-register"
                 @click="createRegister"
               >
@@ -184,7 +184,7 @@
                 ]"
                 @click="selectRegister(register)"
               >
-                <div class="flex items-center justify-between mb-3">
+                <div class="ui-toolbar flex items-center justify-between mb-3">
                   <h3 class="font-medium text-gray-900">{{ register.name }}</h3>
                   <span class="flex items-center gap-2">
                     <span
@@ -206,7 +206,7 @@
                 </div>
 
                 <div class="space-y-2 text-sm">
-                  <div class="flex justify-between">
+                  <div class="ui-toolbar flex justify-between">
                     <span class="text-gray-600"
                       >{{ t("pos.currentBalance") }}:</span
                     >
@@ -214,13 +214,13 @@
                       formatDrawerBalance(register)
                     }}</span>
                   </div>
-                  <div class="flex justify-between">
+                  <div class="ui-toolbar flex justify-between">
                     <span class="text-gray-600"
                       >{{ t("pos.todayTransactions") }}:</span
                     >
                     <span>{{ register.todayTransactions }}</span>
                   </div>
-                  <div class="flex justify-between">
+                  <div class="ui-toolbar flex justify-between">
                     <span class="text-gray-600"
                       >{{ t("pos.lastActivity") }}:</span
                     >
@@ -249,7 +249,7 @@
                   </button>
 
                   <button
-                    class="flex-1 py-2 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors"
+                    class="flex-1 py-2 bg-primary-700 text-white rounded text-xs hover:bg-primary-800 transition-colors"
                     @click.stop="openCashMovement(register)"
                   >
                     {{ t("pos.cashManagement") }}
@@ -261,9 +261,9 @@
         </div>
 
         <!-- 最近交易 -->
-        <div class="bg-white rounded-lg shadow">
+        <div class="ui-panel bg-white rounded-lg shadow">
           <div class="p-6 border-b border-gray-200">
-            <div class="flex items-center justify-between">
+            <div class="ui-toolbar flex items-center justify-between">
               <h2 class="text-xl font-semibold text-gray-900">
                 {{ t("pos.recentTransactions") }}
               </h2>
@@ -293,7 +293,7 @@
               :key="transaction.id"
               class="p-4 hover:bg-gray-50"
             >
-              <div class="flex items-center justify-between">
+              <div class="ui-toolbar flex items-center justify-between">
                 <div class="flex items-center">
                   <div class="flex-shrink-0">
                     <div
@@ -323,8 +323,8 @@
                     :class="[
                       'text-sm font-semibold',
                       transaction.amount >= 0
-                        ? 'text-green-600'
-                        : 'text-red-600',
+                        ? 'text-green-700'
+                        : 'text-red-700',
                     ]"
                   >
                     {{ transaction.amount >= 0 ? "+" : "-"
@@ -355,7 +355,7 @@
       <!-- 右側：快速操作 -->
       <div class="space-y-6">
         <!-- 快速收款 -->
-        <div class="bg-white rounded-lg shadow">
+        <div class="ui-panel bg-white rounded-lg shadow">
           <div class="p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
               {{ t("pos.quickPayment") }}
@@ -363,10 +363,13 @@
 
             <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">{{
-                  t("pos.orderNumber")
-                }}</label>
+                <label
+                  for="posmanagementview-field-1"
+                  class="block text-sm font-medium text-gray-700 mb-2"
+                  >{{ t("pos.orderNumber") }}</label
+                >
                 <input
+                  id="posmanagementview-field-1"
                   v-model="quickPayment.orderNumber"
                   type="text"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -395,10 +398,13 @@
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">{{
-                  t("pos.paymentMethod")
-                }}</label>
+                <label
+                  for="posmanagementview-field-2"
+                  class="block text-sm font-medium text-gray-700 mb-2"
+                  >{{ t("pos.paymentMethod") }}</label
+                >
                 <select
+                  id="posmanagementview-field-2"
                   v-model="quickPayment.paymentMethod"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
@@ -432,7 +438,7 @@
         </div>
 
         <!-- 市場結帳收款 -->
-        <div class="bg-white rounded-lg shadow">
+        <div class="ui-panel bg-white rounded-lg shadow">
           <div class="p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
               {{ t("pos.marketCheckoutPayment") }}
@@ -440,10 +446,13 @@
 
             <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">{{
-                  t("pos.marketCheckoutId")
-                }}</label>
+                <label
+                  for="posmanagementview-field-3"
+                  class="block text-sm font-medium text-gray-700 mb-2"
+                  >{{ t("pos.marketCheckoutId") }}</label
+                >
                 <input
+                  id="posmanagementview-field-3"
                   v-model="marketCheckoutPayment.checkoutId"
                   data-testid="pos-market-checkout-id"
                   type="text"
@@ -453,10 +462,13 @@
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">{{
-                  t("pos.paymentMethod")
-                }}</label>
+                <label
+                  for="posmanagementview-field-4"
+                  class="block text-sm font-medium text-gray-700 mb-2"
+                  >{{ t("pos.paymentMethod") }}</label
+                >
                 <select
+                  id="posmanagementview-field-4"
                   v-model="marketCheckoutPayment.paymentMethod"
                   data-testid="pos-market-checkout-payment-method"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -479,7 +491,7 @@
                   !canProcessMarketCheckoutPayment ||
                   marketPaymentAction.pending.value
                 "
-                class="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                class="w-full py-3 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 @click="processMarketCheckoutPayment"
               >
                 {{
@@ -493,15 +505,15 @@
         </div>
 
         <!-- 促銷活動 -->
-        <div v-if="hasPromotions" class="bg-white rounded-lg shadow">
+        <div v-if="hasPromotions" class="ui-panel bg-white rounded-lg shadow">
           <div class="p-6">
-            <div class="flex items-center justify-between mb-4">
+            <div class="ui-toolbar flex items-center justify-between mb-4">
               <h3 class="text-lg font-semibold text-gray-900">
                 {{ t("pos.activePromotions") }}
               </h3>
               <button
                 v-if="canManagePromotions"
-                class="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                class="text-blue-700 hover:text-blue-700 text-sm font-medium"
                 @click="openPromotionsDialog"
               >
                 {{ t("pos.managePromotions") }}
@@ -514,12 +526,12 @@
                 :key="promotion.id"
                 class="p-3 bg-teal-50 rounded-lg border border-teal-200"
               >
-                <div class="flex items-center justify-between">
+                <div class="ui-toolbar flex items-center justify-between">
                   <div>
                     <p class="text-sm font-medium text-teal-900">
                       {{ promotion.name }}
                     </p>
-                    <p class="text-xs text-teal-600">
+                    <p class="text-xs text-teal-700">
                       {{ promotion.description }} · {{ promotion.code }}
                     </p>
                   </div>
@@ -539,7 +551,10 @@
               >
                 <p class="text-sm text-gray-500">{{ t("pos.noPromotions") }}</p>
               </div>
-              <div v-if="promotionPages > 1" class="flex justify-between gap-2">
+              <div
+                v-if="promotionPages > 1"
+                class="ui-toolbar flex justify-between gap-2"
+              >
                 <button
                   :disabled="promotionPage <= 1 || isLoadingPromotions"
                   @click="changePromotionPage(promotionPage - 1)"
@@ -561,14 +576,14 @@
         </div>
 
         <!-- 今日班次狀況 -->
-        <div class="bg-white rounded-lg shadow">
+        <div class="ui-panel bg-white rounded-lg shadow">
           <div class="p-6">
-            <div class="flex items-center justify-between mb-4">
+            <div class="ui-toolbar flex items-center justify-between mb-4">
               <h3 class="text-lg font-semibold text-gray-900">
                 {{ t("pos.todayShift") }}
               </h3>
               <button
-                class="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                class="text-blue-700 hover:text-blue-700 text-sm font-medium"
                 @click="generateShiftReport"
               >
                 {{ t("pos.generateReport") }}
@@ -576,19 +591,19 @@
             </div>
 
             <div v-if="currentShift" class="space-y-3">
-              <div class="flex justify-between text-sm">
+              <div class="ui-toolbar flex justify-between text-sm">
                 <span class="text-gray-600">{{ t("pos.startTime") }}:</span>
                 <span class="font-medium">{{
                   formatClockTime(currentShift.startTime)
                 }}</span>
               </div>
-              <div class="flex justify-between text-sm">
+              <div class="ui-toolbar flex justify-between text-sm">
                 <span class="text-gray-600">{{ t("pos.workHours") }}:</span>
                 <span class="font-medium"
                   >{{ getShiftDuration() }}{{ t("pos.hours") }}</span
                 >
               </div>
-              <div class="flex justify-between text-sm">
+              <div class="ui-toolbar flex justify-between text-sm">
                 <span class="text-gray-600"
                   >{{ t("pos.processedOrders") }}:</span
                 >
@@ -596,9 +611,9 @@
                   currentShift.processedOrders
                 }}</span>
               </div>
-              <div class="flex justify-between text-sm">
+              <div class="ui-toolbar flex justify-between text-sm">
                 <span class="text-gray-600">{{ t("pos.totalRevenue") }}:</span>
-                <span class="font-medium text-green-600">{{
+                <span class="font-medium text-green-700">{{
                   formatPrice(currentShift.totalRevenue)
                 }}</span>
               </div>
@@ -607,7 +622,7 @@
             <div v-else class="text-center py-4">
               <p class="text-sm text-gray-500 mb-3">{{ t("pos.noShift") }}</p>
               <button
-                class="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                class="w-full py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors text-sm"
                 @click="startShift"
               >
                 {{ t("pos.startShift") }}
@@ -628,8 +643,10 @@
           class="fixed inset-0 bg-black opacity-30"
           @click="closeCashMovementDialog"
         />
-        <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-          <div class="flex items-center justify-between mb-6">
+        <div
+          class="ui-panel relative bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+        >
+          <div class="ui-toolbar flex items-center justify-between mb-6">
             <h3 class="text-xl font-semibold text-gray-900">
               {{ t("pos.cashManagement") }}
             </h3>
@@ -644,10 +661,13 @@
 
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">{{
-                t("pos.operationType")
-              }}</label>
+              <label
+                for="posmanagementview-field-5"
+                class="block text-sm font-medium text-gray-700 mb-2"
+                >{{ t("pos.operationType") }}</label
+              >
               <select
+                id="posmanagementview-field-5"
                 v-model="cashMovement.type"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
@@ -660,14 +680,17 @@
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">{{
-                t("pos.amount")
-              }}</label>
+              <label
+                for="cash-movement-amount"
+                class="block text-sm font-medium text-gray-700 mb-2"
+                >{{ t("pos.amount") }}</label
+              >
               <div class="relative">
                 <span class="absolute left-3 top-3 text-gray-500">{{
                   currencySymbol
                 }}</span>
                 <input
+                  id="cash-movement-amount"
                   v-model.number="cashMovement.amount"
                   type="number"
                   :step="inputStep"
@@ -679,10 +702,13 @@
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">{{
-                t("pos.description")
-              }}</label>
+              <label
+                for="posmanagementview-field-6"
+                class="block text-sm font-medium text-gray-700 mb-2"
+                >{{ t("pos.description") }}</label
+              >
               <textarea
+                id="posmanagementview-field-6"
                 v-model="cashMovement.description"
                 rows="3"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -691,7 +717,7 @@
             </div>
           </div>
 
-          <div class="flex justify-end space-x-3 mt-6">
+          <div class="ui-toolbar flex justify-end space-x-3 mt-6">
             <button
               class="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors"
               @click="closeCashMovementDialog"
@@ -702,7 +728,7 @@
               :disabled="
                 !canProcessCashMovement || cashMovementAction.pending.value
               "
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              class="px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               @click="processCashMovement"
             >
               {{
@@ -727,9 +753,9 @@
           @click="closePromotionsDialog"
         />
         <div
-          class="relative bg-white rounded-lg shadow-xl max-w-4xl w-full p-6"
+          class="ui-panel relative bg-white rounded-lg shadow-xl max-w-4xl w-full p-6"
         >
-          <div class="flex items-center justify-between mb-6">
+          <div class="ui-toolbar flex items-center justify-between mb-6">
             <h3 class="text-xl font-semibold text-gray-900">
               {{ t("pos.promotionManagementTitle") }}
             </h3>
@@ -744,7 +770,7 @@
 
           <div class="mb-6">
             <button
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              class="px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors"
               @click="createPromotion"
             >
               {{ t("pos.addPromotion") }}
@@ -757,7 +783,7 @@
               :key="promotion.id"
               class="border rounded-lg p-4"
             >
-              <div class="flex items-center justify-between mb-2">
+              <div class="ui-toolbar flex items-center justify-between mb-2">
                 <h4 class="font-medium text-gray-900">{{ promotion.name }}</h4>
                 <span
                   :class="[
@@ -774,8 +800,8 @@
                 {{ promotion.description }} · {{ promotion.code }}
               </p>
 
-              <div class="flex items-center justify-between">
-                <span class="text-lg font-bold text-teal-600">
+              <div class="ui-toolbar flex items-center justify-between">
+                <span class="text-lg font-bold text-teal-700">
                   {{
                     promotion.discountType === "percentage"
                       ? `${promotion.discountValue}%`
@@ -795,8 +821,8 @@
                     :class="[
                       'px-3 py-1 rounded text-sm transition-colors',
                       promotion.isActive
-                        ? 'bg-red-100 text-red-600 hover:bg-red-200'
-                        : 'bg-green-100 text-green-600 hover:bg-green-200',
+                        ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                        : 'bg-green-100 text-green-700 hover:bg-green-200',
                     ]"
                     :disabled="isProcessing"
                     @click="togglePromotion(promotion)"
@@ -816,7 +842,7 @@
           </div>
           <div
             v-if="promotionPages > 1"
-            class="mt-4 flex justify-between gap-2"
+            class="ui-toolbar mt-4 flex justify-between gap-2"
           >
             <button
               data-testid="pos-promotions-prev"
@@ -849,9 +875,9 @@
           @click="showCreateRegisterModal = false"
         />
         <div
-          class="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+          class="ui-panel relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
         >
-          <div class="flex items-center justify-between mb-6">
+          <div class="ui-toolbar flex items-center justify-between mb-6">
             <h3 class="text-xl font-semibold text-ios-text">
               {{ t("pos.createRegister") || "新增收銀櫃" }}
             </h3>
@@ -864,10 +890,14 @@
             </button>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              for="posmanagementview-field-7"
+              class="block text-sm font-medium text-gray-700 mb-2"
+            >
               {{ t("pos.prompts.registerName") || "收銀櫃名稱" }}
             </label>
             <input
+              id="posmanagementview-field-7"
               v-model="newRegisterName"
               data-testid="pos-register-name"
               type="text"
@@ -878,7 +908,7 @@
               @keyup.enter="confirmCreateRegister"
             />
           </div>
-          <div class="flex justify-end space-x-3 mt-6">
+          <div class="ui-toolbar flex justify-end space-x-3 mt-6">
             <button
               class="px-4 py-2 bg-gray-100 text-gray-800 rounded-full hover:bg-gray-200 transition-colors"
               @click="showCreateRegisterModal = false"
@@ -890,7 +920,7 @@
               :disabled="
                 !newRegisterName.trim() || createRegisterAction.pending.value
               "
-              class="px-4 py-2 bg-ios-blue text-white rounded-full hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              class="px-4 py-2 bg-primary-700 text-white rounded-full hover:bg-primary-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               @click="confirmCreateRegister"
             >
               {{ t("common.confirm") || "確認" }}
@@ -908,9 +938,9 @@
           @click="showStartShiftModal = false"
         />
         <div
-          class="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+          class="ui-panel relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
         >
-          <div class="flex items-center justify-between mb-6">
+          <div class="ui-toolbar flex items-center justify-between mb-6">
             <h3 class="text-xl font-semibold text-ios-text">
               {{ t("pos.startShift") || "開始班次" }}
             </h3>
@@ -923,7 +953,10 @@
             </button>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              for="starting-cash-amount"
+              class="block text-sm font-medium text-gray-700 mb-2"
+            >
               {{ t("pos.prompts.startingCash") || "初始現金金額" }}
             </label>
             <div class="relative">
@@ -931,6 +964,7 @@
                 currencySymbol
               }}</span>
               <input
+                id="starting-cash-amount"
                 v-model.number="startingCashAmount"
                 type="number"
                 :step="inputStep"
@@ -941,7 +975,7 @@
               />
             </div>
           </div>
-          <div class="flex justify-end space-x-3 mt-6">
+          <div class="ui-toolbar flex justify-end space-x-3 mt-6">
             <button
               class="px-4 py-2 bg-gray-100 text-gray-800 rounded-full hover:bg-gray-200 transition-colors"
               @click="showStartShiftModal = false"
@@ -975,9 +1009,9 @@
           @click="showEndShiftModal = false"
         />
         <div
-          class="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+          class="ui-panel relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
         >
-          <div class="flex items-center justify-between mb-6">
+          <div class="ui-toolbar flex items-center justify-between mb-6">
             <h3 class="text-xl font-semibold text-ios-text">
               {{ t("pos.endShift") || "結束班次" }}
             </h3>
@@ -1009,7 +1043,7 @@
               class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
             />
           </label>
-          <div class="flex justify-end space-x-3">
+          <div class="ui-toolbar flex justify-end space-x-3">
             <button
               class="px-4 py-2 bg-gray-100 text-gray-800 rounded-full hover:bg-gray-200 transition-colors"
               @click="showEndShiftModal = false"

@@ -23,6 +23,16 @@ const zhTWCore = {
     quickActions: "快速操作",
     addShift: "新增排班",
   },
+  ui: {
+    kitchenDescription: "查看即時訂單、備餐進度與出餐狀態。",
+    kitchenEnabled: "此店鋪已啟用廚房顯示器，請從獨立工作區開始作業。",
+    openKitchen: "開啟廚房顯示器",
+    kitchenUnavailable:
+      "目前方案未包含廚房顯示器，請至帳務頁查看方案與支援方式。",
+    analysisPeriod: "分析期間",
+    revenuePeriod: "營收期間",
+    orderPeriod: "訂單期間",
+  },
   common: {
     save: "儲存",
     cancel: "取消",

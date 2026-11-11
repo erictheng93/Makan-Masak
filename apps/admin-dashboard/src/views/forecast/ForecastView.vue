@@ -1,13 +1,13 @@
 <template>
-  <div class="forecast-view">
-    <div class="flex justify-between items-center mb-8">
+  <div class="ui-page forecast-view">
+    <div class="ui-toolbar flex justify-between items-center mb-8">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">
+        <h1 class="ui-page-heading text-2xl font-bold text-gray-900">
           {{ t("forecast.title") }}
         </h1>
         <p class="text-gray-600">{{ t("forecast.subtitle") }}</p>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="ui-toolbar flex flex-wrap items-center gap-3">
         <button
           class="flex items-center px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           :disabled="loading"
@@ -17,7 +17,7 @@
           {{ t("common.refresh") }}
         </button>
         <button
-          class="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          class="flex items-center px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors"
           :disabled="generating"
           @click="generateForecast"
         >
@@ -65,7 +65,7 @@
           class="pb-3 text-sm font-medium border-b-2 transition-colors"
           :class="
             activeTab === 'forecast'
-              ? 'border-blue-600 text-blue-600'
+              ? 'border-blue-600 text-blue-700'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           "
           @click="activeTab = 'forecast'"
@@ -76,7 +76,7 @@
           class="pb-3 text-sm font-medium border-b-2 transition-colors"
           :class="
             activeTab === 'accuracy'
-              ? 'border-blue-600 text-blue-600'
+              ? 'border-blue-600 text-blue-700'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           "
           @click="
@@ -94,7 +94,7 @@
           class="pb-3 text-sm font-medium border-b-2 transition-colors"
           :class="
             activeTab === 'ingredients'
-              ? 'border-blue-600 text-blue-600'
+              ? 'border-blue-600 text-blue-700'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           "
           @click="

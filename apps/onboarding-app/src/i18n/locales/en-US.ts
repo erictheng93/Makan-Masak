@@ -192,6 +192,7 @@ const enUS: Messages = {
     subtitleLine2:
       "After platform review, we'll activate your account and hosted resources.",
     summary: {
+      copyApplicationId: "Copy application ID",
       title: "Application Summary",
       applicationId: "Application ID",
       tenantId: "Tenant ID",

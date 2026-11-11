@@ -1,7 +1,7 @@
 <template>
-  <div class="bg-ios-bg min-h-screen">
+  <div class="kitchen-page ui-page bg-ios-bg min-h-screen">
     <!-- Header -->
-    <div class="px-4 pt-6 pb-2 flex items-center gap-3">
+    <div class="kitchen-page-heading ui-page-heading px-4 pt-6 pb-4">
       <button
         class="w-11 h-11 rounded-full bg-white shadow-card-sm flex items-center justify-center flex-shrink-0"
         :aria-label="t('common.back')"
@@ -27,7 +27,7 @@
       >
         <p class="text-[15px] font-semibold text-ios-text">{{ loadError }}</p>
         <button
-          class="mt-3 rounded-full bg-ios-blue px-4 py-2 text-sm font-semibold text-white active:scale-95 transition-all duration-200"
+          class="mt-3 rounded-full bg-blue-700 px-4 py-2 text-sm font-semibold text-white active:scale-95 transition-all duration-200"
           @click="loadAll"
         >
           {{ t("myShifts.retry") }}
@@ -87,7 +87,7 @@
             <button
               v-else
               data-testid="request-swap-button"
-              class="rounded-full bg-ios-blue px-4 py-2 text-sm font-semibold text-white flex-shrink-0 active:scale-95 transition-all duration-200"
+              class="rounded-full bg-blue-700 px-4 py-2 text-sm font-semibold text-white flex-shrink-0 active:scale-95 transition-all duration-200"
               @click="openForm(shift)"
             >
               {{ t("myShifts.requestSwap") }}
@@ -163,18 +163,20 @@
     </div>
 
     <!-- ── Request form ───────────────────────────────────── -->
-    <div
-      v-if="formShift"
+    <Dialog
+      :open="!!formShift"
+      :initial-focus="reasonInput"
       class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30"
-      @click.self="closeForm"
+      @close="closeForm"
     >
-      <div
+      <DialogPanel
+        v-if="formShift"
         data-testid="swap-form"
-        class="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-6 shadow-card-lg"
+        class="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-6 shadow-card-lg max-h-[90dvh] overflow-y-auto"
       >
-        <h2 class="text-lg font-bold text-ios-text">
+        <DialogTitle as="h2" class="text-lg font-bold text-ios-text">
           {{ t("myShifts.formTitle") }}
-        </h2>
+        </DialogTitle>
         <p class="mt-1 text-sm text-ios-secondary">
           {{ formShift.workDate }} · {{ formShift.startTime }} –
           {{ formShift.endTime }}
@@ -192,7 +194,7 @@
             class="flex-1 rounded-full px-3 py-2 text-sm font-semibold transition-all duration-200"
             :class="
               form.requestType === option
-                ? 'bg-ios-blue text-white'
+                ? 'bg-blue-700 text-white'
                 : 'bg-ios-bg text-ios-secondary'
             "
             @click="form.requestType = option"
@@ -213,7 +215,7 @@
             class="flex-1 rounded-full px-2 py-2 text-sm font-semibold transition-all duration-200"
             :class="
               form.urgency === option
-                ? 'bg-ios-blue text-white'
+                ? 'bg-blue-700 text-white'
                 : 'bg-ios-bg text-ios-secondary'
             "
             @click="form.urgency = option"
@@ -230,6 +232,7 @@
         </label>
         <textarea
           id="swap-reason"
+          ref="reasonInput"
           v-model="form.reason"
           data-testid="swap-reason"
           rows="3"
@@ -256,14 +259,14 @@
           <button
             data-testid="swap-submit"
             :disabled="submitting"
-            class="flex-1 rounded-full bg-ios-blue px-4 py-3 text-sm font-semibold text-white disabled:opacity-50 active:scale-95 transition-all duration-200"
+            class="flex-1 rounded-full bg-blue-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50 active:scale-95 transition-all duration-200"
             @click="submit"
           >
             {{ submitting ? t("myShifts.submitting") : t("myShifts.submit") }}
           </button>
         </div>
-      </div>
-    </div>
+      </DialogPanel>
+    </Dialog>
   </div>
 </template>
 
@@ -280,6 +283,7 @@
  * reads another employee's schedule.
  */
 import { computed, onMounted, reactive, ref } from "vue";
+import { Dialog, DialogPanel, DialogTitle } from "@headlessui/vue";
 import { ArrowLeft } from "lucide-vue-next";
 import { useToast } from "vue-toastification";
 import { useI18n } from "@/i18n";
@@ -307,6 +311,7 @@ const formError = ref("");
 const shifts = ref<MyShift[]>([]);
 const myRequests = ref<MySwapRequest[]>([]);
 const formShift = ref<MyShift | null>(null);
+const reasonInput = ref<HTMLTextAreaElement | null>(null);
 
 const form = reactive({
   requestType: "swap" as SwapRequestType,

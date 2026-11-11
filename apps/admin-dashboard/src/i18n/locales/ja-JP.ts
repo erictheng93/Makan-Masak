@@ -22,6 +22,17 @@ const jaJP: Messages = {
     quickActions: "クイックアクション",
     addShift: "シフトを追加",
   },
+  ui: {
+    kitchenDescription: "リアルタイムの注文、調理状況、提供状況を確認します。",
+    kitchenEnabled:
+      "この店舗ではキッチン表示が有効です。専用ワークスペースで作業できます。",
+    openKitchen: "キッチン表示を開く",
+    kitchenUnavailable:
+      "現在のプランにはキッチン表示が含まれていません。請求ページでプランとサポートをご確認ください。",
+    analysisPeriod: "分析期間",
+    revenuePeriod: "売上期間",
+    orderPeriod: "注文期間",
+  },
   common: {
     save: "保存",
     cancel: "キャンセル",

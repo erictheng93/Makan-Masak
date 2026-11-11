@@ -1,15 +1,15 @@
 <template>
-  <div class="space-y-6">
+  <div class="ui-page space-y-6">
     <SetupChecklistCard />
 
     <!-- 載入錯誤提示 -->
     <div
       v-if="error"
-      class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center justify-between"
+      class="ui-toolbar p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center justify-between"
     >
       <span>{{ error }}</span>
       <button
-        class="text-red-600 hover:text-red-800 underline text-sm"
+        class="text-red-700 hover:text-red-800 underline text-sm"
         @click="fetchAllData"
       >
         {{ t("owner.retry") }}
@@ -17,14 +17,16 @@
     </div>
 
     <!-- 主要 KPI 指標 -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div
+      class="admin-stat-strip grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+    >
       <div
         v-for="kpi in kpiMetrics"
         :key="kpi.key"
-        class="bg-white rounded-lg shadow-sm p-6 border-l-4"
+        class="ui-panel bg-white rounded-lg shadow-sm p-6 border-l-4"
         :class="kpi.borderColor"
       >
-        <div class="flex items-center justify-between">
+        <div class="ui-toolbar flex items-center justify-between">
           <div>
             <p class="text-sm font-medium text-gray-600">
               {{ kpi.label }}
@@ -36,9 +38,9 @@
               :class="[
                 'text-sm flex items-center mt-2',
                 kpi.trend === 'up'
-                  ? 'text-green-600'
+                  ? 'text-green-700'
                   : kpi.trend === 'down'
-                    ? 'text-red-600'
+                    ? 'text-red-700'
                     : 'text-gray-500',
               ]"
             >
@@ -59,7 +61,7 @@
     </div>
 
     <!-- 快速操作面板 -->
-    <div class="bg-white rounded-lg shadow-sm p-6">
+    <div class="ui-panel bg-white rounded-lg shadow-sm p-6">
       <h2 class="text-lg font-semibold text-gray-900 mb-4">
         {{ t("owner.quickActions") }}
       </h2>
@@ -81,8 +83,8 @@
     <!-- 實時監控儀表板 -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- 實時訂單狀態 -->
-      <div class="bg-white rounded-lg shadow-sm p-6">
-        <div class="flex items-center justify-between mb-4">
+      <div class="ui-panel bg-white rounded-lg shadow-sm p-6">
+        <div class="ui-toolbar flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold text-gray-900">
             {{ t("owner.realtimeOrders") }}
           </h3>
@@ -104,7 +106,7 @@
           <div
             v-for="order in realtimeOrders"
             :key="order.id"
-            class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+            class="ui-toolbar flex items-center justify-between p-3 bg-gray-50 rounded-lg"
           >
             <div>
               <p class="font-medium text-gray-900">
@@ -136,7 +138,7 @@
       </div>
 
       <!-- 員工動態 -->
-      <div class="bg-white rounded-lg shadow-sm p-6">
+      <div class="ui-panel bg-white rounded-lg shadow-sm p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">
           {{ t("owner.staffActivity") }}
         </h3>
@@ -196,33 +198,33 @@
       </div>
 
       <!-- 財務摘要 -->
-      <div class="bg-white rounded-lg shadow-sm p-6">
+      <div class="ui-panel bg-white rounded-lg shadow-sm p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">
           {{ t("owner.todayFinance") }}
         </h3>
         <div class="space-y-4">
-          <div class="flex justify-between items-center">
+          <div class="ui-toolbar flex justify-between items-center">
             <span class="text-gray-600">{{ t("owner.revenue") }}</span>
-            <span class="font-bold text-green-600">{{
+            <span class="font-bold text-green-700">{{
               formatPrice(todayRevenue)
             }}</span>
           </div>
-          <div class="flex justify-between items-center">
+          <div class="ui-toolbar flex justify-between items-center">
             <span class="text-gray-600">{{ t("owner.orderCount") }}</span>
             <span class="font-medium text-gray-900">{{ todayOrders }}</span>
           </div>
-          <div class="flex justify-between items-center">
+          <div class="ui-toolbar flex justify-between items-center">
             <span class="text-gray-600">{{ t("owner.avgOrderValue") }}</span>
             <span class="font-medium text-gray-900">{{
               formatPrice(avgOrderValue)
             }}</span>
           </div>
           <div class="pt-3 border-t border-gray-200">
-            <div class="flex justify-between items-center">
+            <div class="ui-toolbar flex justify-between items-center">
               <span class="text-gray-600">{{
                 t("owner.estimatedMonthly")
               }}</span>
-              <span class="font-bold text-teal-600">{{
+              <span class="font-bold text-teal-700">{{
                 formatPrice(todayRevenue * 30)
               }}</span>
             </div>
@@ -234,19 +236,23 @@
     <!-- 營運分析圖表 -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- 營業額趨勢 -->
-      <div class="bg-white rounded-lg shadow-sm p-6">
-        <div class="flex items-center justify-between mb-4">
+      <div class="ui-panel bg-white rounded-lg shadow-sm p-6">
+        <div class="ui-toolbar flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold text-gray-900">
             {{ t("owner.revenueTrend") }}
           </h3>
-          <select
-            v-model="revenueTimeRange"
-            class="text-sm border border-gray-300 rounded-md px-3 py-1"
+          <label class="admin-field" for="ownerview-revenueTimeRange"
+            ><span>{{ t("ui.revenuePeriod") }}</span
+            ><select
+              id="ownerview-revenueTimeRange"
+              v-model="revenueTimeRange"
+              class="text-sm border border-gray-300 rounded-md px-3 py-1"
+            >
+              <option value="7d">{{ t("owner.timeRange.7d") }}</option>
+              <option value="30d">{{ t("owner.timeRange.30d") }}</option>
+              <option value="3m">{{ t("owner.timeRange.3m") }}</option>
+            </select></label
           >
-            <option value="7d">{{ t("owner.timeRange.7d") }}</option>
-            <option value="30d">{{ t("owner.timeRange.30d") }}</option>
-            <option value="3m">{{ t("owner.timeRange.3m") }}</option>
-          </select>
         </div>
         <div class="h-64 flex items-center justify-center text-gray-500">
           <ChartBarIcon class="w-12 h-12 mr-2" />
@@ -255,7 +261,7 @@
       </div>
 
       <!-- 熱門商品 -->
-      <div class="bg-white rounded-lg shadow-sm p-6">
+      <div class="ui-panel bg-white rounded-lg shadow-sm p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">
           {{ t("owner.popularItems") }}
         </h3>
@@ -272,13 +278,13 @@
           <div
             v-for="item in popularItems"
             :key="item.id"
-            class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+            class="ui-toolbar flex items-center justify-between p-3 bg-gray-50 rounded-lg"
           >
             <div class="flex items-center space-x-3">
               <div
                 class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center"
               >
-                <span class="text-sm font-bold text-orange-600">{{
+                <span class="text-sm font-bold text-orange-700">{{
                   item.rank
                 }}</span>
               </div>
@@ -305,7 +311,7 @@
     </div>
 
     <!-- 系統健康狀態 -->
-    <div class="bg-white rounded-lg shadow-sm p-6">
+    <div class="ui-panel bg-white rounded-lg shadow-sm p-6">
       <h3 class="text-lg font-semibold text-gray-900 mb-4">
         {{ t("owner.systemHealth") }}
       </h3>
@@ -313,7 +319,7 @@
         <div
           v-for="system in systemHealth"
           :key="system.name"
-          class="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+          class="ui-toolbar flex items-center justify-between p-4 bg-gray-50 rounded-lg"
         >
           <div class="flex items-center space-x-3">
             <div
@@ -363,7 +369,7 @@
       class="bg-red-50 border border-red-200 rounded-lg p-6"
     >
       <div class="flex items-center mb-4">
-        <ExclamationTriangleIcon class="w-6 h-6 text-red-600 mr-2" />
+        <ExclamationTriangleIcon class="w-6 h-6 text-red-700 mr-2" />
         <h3 class="text-lg font-semibold text-red-900">
           {{ t("owner.emergency") }}
         </h3>
@@ -372,7 +378,7 @@
         <div
           v-for="alert in emergencyAlerts"
           :key="alert.id"
-          class="flex items-center justify-between p-3 bg-white rounded-lg border border-red-200"
+          class="ui-toolbar flex items-center justify-between p-3 bg-white rounded-lg border border-red-200"
         >
           <div>
             <p class="font-medium text-red-900">
@@ -381,7 +387,7 @@
             <p class="text-sm text-red-700">
               {{ alertDescription(alert) }}
             </p>
-            <p class="text-xs text-red-600 mt-1">
+            <p class="text-xs text-red-700 mt-1">
               {{ formatAlertTime(alert.createdAt) }}
             </p>
           </div>

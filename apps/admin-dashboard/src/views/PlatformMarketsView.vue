@@ -1,10 +1,12 @@
 <template>
-  <div class="space-y-6">
+  <div class="ui-page space-y-6">
     <div
       class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
     >
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">市場 / 商圈公開品質</h1>
+        <h1 class="ui-page-heading text-2xl font-bold text-gray-900">
+          市場 / 商圈公開品質
+        </h1>
         <p class="mt-1 text-sm text-gray-500">
           集中檢查夜市、商圈與活動場域的公開頁資料是否足以上架。
         </p>
@@ -52,7 +54,7 @@
       <div
         v-for="metric in metrics"
         :key="metric.label"
-        class="rounded-lg bg-white p-4 shadow-ios-card"
+        class="ui-panel rounded-lg bg-white p-4 shadow-ios-card"
       >
         <div class="text-sm font-medium text-gray-500">{{ metric.label }}</div>
         <div class="mt-1 text-2xl font-bold" :class="metric.class">
@@ -61,361 +63,9 @@
       </div>
     </div>
 
-    <section class="rounded-lg bg-white p-4 shadow-ios-card">
-      <div
-        v-if="returnedMarket"
-        data-testid="returned-market-reindex-notice"
-        class="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900"
-      >
-        <div
-          class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <p class="leading-5">
-            已回到
-            {{ returnedMarket.name }}
-            的公開品質工作台。剛補完商品或服務後，請重建搜尋索引，讓顧客搜尋立即更新。
-          </p>
-          <button
-            type="button"
-            data-testid="returned-market-reindex"
-            class="w-fit rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            :disabled="isReindexingDiscovery"
-            @click="reindexDiscovery"
-          >
-            {{ isReindexingDiscovery ? "重建中..." : "重建搜尋索引" }}
-          </button>
-        </div>
-      </div>
-      <div
-        class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
-      >
-        <div>
-          <h2 class="text-base font-semibold text-gray-900">
-            Discovery 搜尋索引
-          </h2>
-          <p class="mt-1 text-sm text-gray-500">
-            大量匯入市場、店鋪或菜單後，可手動重建公開搜尋索引。
-          </p>
-        </div>
-        <button
-          type="button"
-          data-testid="discovery-reindex"
-          class="w-fit rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50"
-          :disabled="isReindexingDiscovery"
-          @click="reindexDiscovery"
-        >
-          {{ isReindexingDiscovery ? "重建中..." : "重建索引" }}
-        </button>
-      </div>
-      <div
-        v-if="discoveryIndexStatus"
-        data-testid="discovery-index-status"
-        class="mt-4 grid gap-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-700 sm:grid-cols-4"
-      >
-        <div>
-          <div class="text-xs font-medium text-gray-500">版本</div>
-          <div class="mt-1 font-semibold text-gray-900">
-            {{ discoveryIndexStatus.version }}
-          </div>
-        </div>
-        <div>
-          <div class="text-xs font-medium text-gray-500">最後完整重建</div>
-          <div class="mt-1 font-semibold text-gray-900">
-            {{ formatIndexStatusTime(discoveryIndexStatus.lastReindexedAt) }}
-          </div>
-        </div>
-        <div>
-          <div class="text-xs font-medium text-gray-500">可搜尋商品</div>
-          <div class="mt-1 font-semibold text-gray-900">
-            {{ discoveryIndexStatus.availableDishCount }} /
-            {{ discoveryIndexStatus.sourceAvailableDishCount }}
-          </div>
-        </div>
-        <div>
-          <div class="text-xs font-medium text-gray-500">已索引店鋪</div>
-          <div class="mt-1 font-semibold text-gray-900">
-            {{ discoveryIndexStatus.indexedRestaurantCount }}
-          </div>
-        </div>
-      </div>
-      <p
-        v-if="discoveryIndexStatus?.unindexedAvailableDishCount"
-        data-testid="discovery-index-gap-warning"
-        class="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800"
-      >
-        {{ discoveryIndexStatus.unindexedAvailableDishCount }}
-        項公開商品尚未進入搜尋索引，影響
-        {{ discoveryIndexStatus.restaurantsWithUnindexedAvailableDishes }}
-        間店鋪。請重建索引或檢查同步流程。
-      </p>
-      <p
-        v-else-if="discoveryIndexStatusError"
-        data-testid="discovery-index-status-error"
-        class="mt-3 text-sm text-amber-700"
-      >
-        {{ discoveryIndexStatusError }}
-      </p>
-      <p v-if="discoveryReindexError" class="mt-3 text-sm text-red-600">
-        {{ discoveryReindexError }}
-      </p>
-      <p
-        v-if="discoveryReindexResult"
-        data-testid="discovery-reindex-result"
-        class="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800"
-      >
-        已重建 {{ discoveryReindexResult.dishes }} 筆商品索引，
-        {{ discoveryReindexResult.restaurants }} 間店鋪，耗時
-        {{ discoveryReindexResult.duration_ms }}ms。
-      </p>
-    </section>
-
-    <section class="rounded-lg bg-white p-4 shadow-ios-card">
-      <div
-        class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
-      >
-        <div>
-          <h2 class="text-base font-semibold text-gray-900">店家加入申請</h2>
-          <p class="mt-1 text-sm text-gray-500">
-            審核店家申請加入市場或商圈；核准後會建立攤位關聯並更新公開搜尋索引。
-          </p>
-        </div>
-        <button
-          type="button"
-          class="w-fit rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50"
-          :disabled="isLoadingJoinRequests"
-          @click="loadJoinRequests"
-        >
-          {{ isLoadingJoinRequests ? "讀取中..." : "重新整理申請" }}
-        </button>
-      </div>
-
-      <p v-if="joinRequestError" class="mt-3 text-sm text-red-600">
-        {{ joinRequestError }}
-      </p>
-
-      <div
-        v-if="pendingJoinRequests.length > 0"
-        class="mt-4 divide-y divide-gray-200 rounded-lg border border-gray-200"
-      >
-        <div
-          v-for="request in pendingJoinRequests"
-          :key="request.id"
-          class="grid gap-3 p-3 lg:grid-cols-[1fr_9rem_12rem_8rem_auto_auto]"
-        >
-          <div>
-            <div class="font-medium text-gray-900">
-              {{ request.restaurant.name }}
-            </div>
-            <div class="mt-0.5 text-xs text-gray-500">
-              {{ request.restaurant.city || "未填城市" }} ·
-              {{ request.restaurant.district || "未填區域" }}
-            </div>
-            <div class="mt-1 text-sm text-gray-700">
-              申請加入 {{ request.market.name }}
-            </div>
-            <p
-              v-if="request.message"
-              class="mt-1 text-sm leading-5 text-gray-600"
-            >
-              {{ request.message }}
-            </p>
-          </div>
-          <input
-            v-model="joinRequestDrafts[request.id].stallNumber"
-            type="text"
-            :data-testid="`join-request-stall-${request.id}`"
-            class="h-fit rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
-            placeholder="攤位號"
-          />
-          <input
-            v-model="joinRequestDrafts[request.id].locationLabel"
-            type="text"
-            :data-testid="`join-request-location-${request.id}`"
-            class="h-fit rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
-            placeholder="位置描述"
-          />
-          <label
-            class="inline-flex h-fit items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700"
-          >
-            <input
-              v-model="joinRequestDrafts[request.id].isPrimary"
-              type="checkbox"
-              :data-testid="`join-request-primary-${request.id}`"
-              class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-            主要市場
-          </label>
-          <button
-            type="button"
-            :data-testid="`approve-join-request-${request.id}`"
-            class="h-fit rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
-            :disabled="resolvingJoinRequestId === request.id"
-            @click="approveJoinRequest(request)"
-          >
-            {{ resolvingJoinRequestId === request.id ? "處理中..." : "核准" }}
-          </button>
-          <button
-            type="button"
-            :data-testid="`reject-join-request-${request.id}`"
-            class="h-fit rounded-lg bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
-            :disabled="resolvingJoinRequestId === request.id"
-            @click="rejectJoinRequest(request)"
-          >
-            拒絕
-          </button>
-        </div>
-      </div>
-
-      <p
-        v-else-if="!isLoadingJoinRequests && !joinRequestError"
-        class="mt-3 rounded-lg border border-dashed border-gray-300 px-3 py-3 text-sm text-gray-500"
-      >
-        目前沒有待審加入申請。
-      </p>
-    </section>
-
-    <section class="rounded-lg bg-white p-4 shadow-ios-card">
-      <div
-        class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
-      >
-        <div>
-          <h2 class="text-base font-semibold text-gray-900">
-            批次匯入市場 / 商圈
-          </h2>
-          <p class="mt-1 text-sm text-gray-500">
-            貼上 CSV 或 JSON，一次建立夜市、商圈、商場或活動場域。
-          </p>
-        </div>
-        <button
-          type="button"
-          class="w-fit rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
-          @click="loadMarketImportExample"
-        >
-          載入範例
-        </button>
-      </div>
-
-      <div class="mt-4 flex flex-wrap gap-2">
-        <button
-          v-for="option in marketImportFormatOptions"
-          :key="option.value"
-          type="button"
-          class="rounded-lg px-3 py-2 text-sm font-medium transition-colors"
-          :class="
-            marketImportFormat === option.value
-              ? 'bg-primary-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          "
-          :data-testid="`market-import-format-${option.value}`"
-          @click="setMarketImportFormat(option.value)"
-        >
-          {{ option.label }}
-        </button>
-      </div>
-
-      <textarea
-        v-model="marketImportText"
-        rows="6"
-        data-testid="market-import-text"
-        class="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
-        :placeholder="marketImportPlaceholder"
-      />
-
-      <div v-if="marketImportPreview.errors.length" class="mt-3 space-y-1">
-        <p
-          v-for="error in marketImportPreview.errors"
-          :key="error"
-          class="text-sm text-red-600"
-        >
-          {{ error }}
-        </p>
-      </div>
-      <p v-if="marketImportError" class="mt-3 text-sm text-red-600">
-        {{ marketImportError }}
-      </p>
-      <div
-        v-if="
-          marketImportText.trim() &&
-          !marketImportPreview.errors.length &&
-          marketImportPreview.markets.length
-        "
-        class="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800"
-      >
-        已解析 {{ marketImportPreview.markets.length }} 筆市場，準備匯入。
-      </div>
-      <div
-        v-if="marketImportResult"
-        class="mt-3 rounded-lg px-3 py-2 text-sm"
-        :class="
-          marketImportResult.failed > 0
-            ? 'bg-amber-50 text-amber-900'
-            : 'bg-green-50 text-green-800'
-        "
-      >
-        <p>
-          已建立 {{ marketImportResult.created }} 個市場
-          <span v-if="marketImportResult.failed > 0">
-            ，匯入失敗 {{ marketImportResult.failed }} 筆
-          </span>
-          。
-        </p>
-        <p v-if="marketImportResult.created > 0" class="mt-1 text-xs">
-          下一步：編輯市場並批次匯入店鋪，才能讓使用者搜尋商品/服務並開啟菜單。
-        </p>
-        <ul
-          v-if="marketImportResult.items.length"
-          class="mt-2 space-y-1"
-          data-testid="market-import-result-items"
-        >
-          <li
-            v-for="item in marketImportResult.items"
-            :key="`${item.slug}-${item.status}`"
-            class="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-2"
-          >
-            <span class="font-medium">
-              {{ item.name }}（{{ item.slug }}）
-            </span>
-            <span
-              :class="
-                item.status === 'created' ? 'text-green-700' : 'text-red-700'
-              "
-            >
-              {{ item.status === "created" ? "已建立" : item.message }}
-            </span>
-            <button
-              v-if="item.status === 'created' && item.createdMarket"
-              type="button"
-              :data-testid="`market-import-edit-${item.slug}`"
-              class="w-fit rounded bg-green-100 px-2 py-1 text-xs font-medium text-green-800 hover:bg-green-200"
-              @click="startEditing(item.createdMarket)"
-            >
-              匯入店鋪
-            </button>
-          </li>
-        </ul>
-      </div>
-
-      <div class="mt-4 flex justify-end">
-        <button
-          type="button"
-          data-testid="market-import-submit"
-          class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
-          :disabled="
-            isImportingMarkets ||
-            !marketImportText.trim() ||
-            marketImportPreview.errors.length > 0 ||
-            marketImportPreview.markets.length === 0
-          "
-          @click="importMarkets"
-        >
-          {{ isImportingMarkets ? "匯入中..." : "匯入市場" }}
-        </button>
-      </div>
-    </section>
-
     <section
       v-if="areaReadiness.length > 0"
-      class="rounded-lg bg-white p-4 shadow-ios-card"
+      class="ui-panel rounded-lg bg-white p-4 shadow-ios-card"
     >
       <div
         class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between"
@@ -445,7 +95,7 @@
           @keydown.enter.prevent="selectArea(area)"
           @keydown.space.prevent="selectArea(area)"
         >
-          <div class="flex items-start justify-between gap-3">
+          <div class="ui-toolbar flex items-start justify-between gap-3">
             <div>
               <h3 class="font-medium text-gray-900">
                 {{ area.city }} · {{ area.district }}
@@ -527,7 +177,7 @@
       </div>
     </section>
 
-    <div class="rounded-lg bg-white p-4 shadow-ios-card">
+    <div class="ui-panel rounded-lg bg-white p-4 shadow-ios-card">
       <div class="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
         <input
           v-model="query"
@@ -574,7 +224,7 @@
 
     <div
       v-if="isLoading"
-      class="flex items-center justify-center rounded-lg bg-white py-12 text-gray-500 shadow-ios-card"
+      class="ui-panel flex items-center justify-center rounded-lg bg-white py-12 text-gray-500 shadow-ios-card"
     >
       <div
         class="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-600"
@@ -588,7 +238,10 @@
       沒有符合條件的市場或商圈。
     </div>
 
-    <div v-else class="overflow-hidden rounded-lg bg-white shadow-ios-card">
+    <div
+      v-else
+      class="ui-panel overflow-hidden rounded-lg bg-white shadow-ios-card"
+    >
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
@@ -951,7 +604,7 @@
               </span>
             </td>
             <td class="px-4 py-4 text-right">
-              <div class="flex justify-end gap-2">
+              <div class="ui-toolbar flex justify-end gap-2">
                 <button
                   type="button"
                   :data-testid="`download-market-qr-${market.id}`"
@@ -991,7 +644,7 @@
         </tbody>
       </table>
     </div>
-    <p v-if="marketQrError" class="text-sm text-red-600">
+    <p v-if="marketQrError" class="text-sm text-red-700">
       {{ marketQrError }}
     </p>
 
@@ -1003,7 +656,7 @@
     <div
       v-if="broadcastMarket"
       data-testid="market-broadcast-panel"
-      class="rounded-lg border border-gray-200 bg-white p-5 shadow-ios-card"
+      class="ui-panel rounded-lg border border-gray-200 bg-white p-5 shadow-ios-card"
     >
       <div
         class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
@@ -1033,7 +686,7 @@
 
     <div
       v-if="editingMarket"
-      class="rounded-lg border border-gray-200 bg-white p-5 shadow-ios-card"
+      class="ui-panel rounded-lg border border-gray-200 bg-white p-5 shadow-ios-card"
     >
       <div
         class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
@@ -1198,11 +851,11 @@
         </label>
       </div>
 
-      <p v-if="formError" class="mt-4 text-sm text-red-600">
+      <p v-if="formError" class="mt-4 text-sm text-red-700">
         {{ formError }}
       </p>
 
-      <div class="mt-5 flex justify-end gap-3">
+      <div class="ui-toolbar mt-5 flex justify-end gap-3">
         <button
           type="button"
           class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
@@ -1235,7 +888,7 @@
           <button
             type="button"
             data-testid="market-vendor-reindex"
-            class="w-fit rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            class="w-fit rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800 disabled:opacity-50"
             :disabled="isReindexingDiscovery"
             @click="reindexDiscovery"
           >
@@ -1298,12 +951,12 @@
           <p
             v-for="error in vendorImportPreview.errors"
             :key="error"
-            class="text-sm text-red-600"
+            class="text-sm text-red-700"
           >
             {{ error }}
           </p>
         </div>
-        <p v-if="vendorImportError" class="mt-3 text-sm text-red-600">
+        <p v-if="vendorImportError" class="mt-3 text-sm text-red-700">
           {{ vendorImportError }}
         </p>
         <div
@@ -1484,7 +1137,7 @@
           </ul>
         </div>
 
-        <div class="mt-4 flex flex-wrap justify-end gap-2">
+        <div class="ui-toolbar mt-4 flex flex-wrap justify-end gap-2">
           <button
             type="button"
             data-testid="vendor-import-dry-run"
@@ -1537,7 +1190,7 @@
           </button>
         </div>
 
-        <p v-if="attachedVendorError" class="mt-3 text-sm text-red-600">
+        <p v-if="attachedVendorError" class="mt-3 text-sm text-red-700">
           {{ attachedVendorError }}
         </p>
 
@@ -1615,7 +1268,7 @@
               <span
                 v-for="vendor in attachedVendorsWithMapDrafts"
                 :key="vendor.restaurantId"
-                class="absolute min-w-24 -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-white px-2 py-1 text-xs shadow-sm"
+                class="ui-panel absolute min-w-24 -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-white px-2 py-1 text-xs shadow-sm"
                 :class="
                   vendor.restaurantId === selectedMapVendorId
                     ? 'border-primary-500 text-primary-700'
@@ -1702,7 +1355,7 @@
                   v-model="vendor.draftIsPrimary"
                   type="checkbox"
                   :data-testid="`attached-vendor-primary-${vendor.restaurantId}`"
-                  class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  class="rounded border-gray-300 text-primary-700 focus:ring-primary-500"
                 />
                 主要市場
               </label>
@@ -1801,7 +1454,7 @@
           </button>
         </div>
 
-        <p v-if="vendorCandidateError" class="mt-3 text-sm text-red-600">
+        <p v-if="vendorCandidateError" class="mt-3 text-sm text-red-700">
           {{ vendorCandidateError }}
         </p>
         <p v-if="vendorAttachMessage" class="mt-3 text-sm text-green-700">
@@ -1853,7 +1506,7 @@
                 v-model="vendorCandidatePrimary[candidate.id]"
                 type="checkbox"
                 :data-testid="`vendor-candidate-primary-${candidate.id}`"
-                class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                class="rounded border-gray-300 text-primary-700 focus:ring-primary-500"
               />
               主要市場
             </label>
@@ -1880,6 +1533,374 @@
         :scope="{ kind: 'platform', marketId: editingMarket.id }"
       />
     </div>
+    <details class="ui-panel bg-white p-4">
+      <summary
+        class="min-h-11 cursor-pointer text-sm font-semibold text-ios-text"
+      >
+        索引、加入申請與資料匯入
+      </summary>
+      <div class="mt-4 space-y-6">
+        <section class="ui-panel rounded-lg bg-white p-4 shadow-ios-card">
+          <div
+            v-if="returnedMarket"
+            data-testid="returned-market-reindex-notice"
+            class="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900"
+          >
+            <div
+              class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <p class="leading-5">
+                已回到
+                {{ returnedMarket.name }}
+                的公開品質工作台。剛補完商品或服務後，請重建搜尋索引，讓顧客搜尋立即更新。
+              </p>
+              <button
+                type="button"
+                data-testid="returned-market-reindex"
+                class="w-fit rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800 disabled:opacity-50"
+                :disabled="isReindexingDiscovery"
+                @click="reindexDiscovery"
+              >
+                {{ isReindexingDiscovery ? "重建中..." : "重建搜尋索引" }}
+              </button>
+            </div>
+          </div>
+          <div
+            class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
+          >
+            <div>
+              <h2 class="text-base font-semibold text-gray-900">
+                Discovery 搜尋索引
+              </h2>
+              <p class="mt-1 text-sm text-gray-500">
+                大量匯入市場、店鋪或菜單後，可手動重建公開搜尋索引。
+              </p>
+            </div>
+            <button
+              type="button"
+              data-testid="discovery-reindex"
+              class="w-fit rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+              :disabled="isReindexingDiscovery"
+              @click="reindexDiscovery"
+            >
+              {{ isReindexingDiscovery ? "重建中..." : "重建索引" }}
+            </button>
+          </div>
+          <div
+            v-if="discoveryIndexStatus"
+            data-testid="discovery-index-status"
+            class="mt-4 grid gap-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-700 sm:grid-cols-4"
+          >
+            <div>
+              <div class="text-xs font-medium text-gray-500">版本</div>
+              <div class="mt-1 font-semibold text-gray-900">
+                {{ discoveryIndexStatus.version }}
+              </div>
+            </div>
+            <div>
+              <div class="text-xs font-medium text-gray-500">最後完整重建</div>
+              <div class="mt-1 font-semibold text-gray-900">
+                {{
+                  formatIndexStatusTime(discoveryIndexStatus.lastReindexedAt)
+                }}
+              </div>
+            </div>
+            <div>
+              <div class="text-xs font-medium text-gray-500">可搜尋商品</div>
+              <div class="mt-1 font-semibold text-gray-900">
+                {{ discoveryIndexStatus.availableDishCount }} /
+                {{ discoveryIndexStatus.sourceAvailableDishCount }}
+              </div>
+            </div>
+            <div>
+              <div class="text-xs font-medium text-gray-500">已索引店鋪</div>
+              <div class="mt-1 font-semibold text-gray-900">
+                {{ discoveryIndexStatus.indexedRestaurantCount }}
+              </div>
+            </div>
+          </div>
+          <p
+            v-if="discoveryIndexStatus?.unindexedAvailableDishCount"
+            data-testid="discovery-index-gap-warning"
+            class="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800"
+          >
+            {{ discoveryIndexStatus.unindexedAvailableDishCount }}
+            項公開商品尚未進入搜尋索引，影響
+            {{ discoveryIndexStatus.restaurantsWithUnindexedAvailableDishes }}
+            間店鋪。請重建索引或檢查同步流程。
+          </p>
+          <p
+            v-else-if="discoveryIndexStatusError"
+            data-testid="discovery-index-status-error"
+            class="mt-3 text-sm text-amber-700"
+          >
+            {{ discoveryIndexStatusError }}
+          </p>
+          <p v-if="discoveryReindexError" class="mt-3 text-sm text-red-700">
+            {{ discoveryReindexError }}
+          </p>
+          <p
+            v-if="discoveryReindexResult"
+            data-testid="discovery-reindex-result"
+            class="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800"
+          >
+            已重建 {{ discoveryReindexResult.dishes }} 筆商品索引，
+            {{ discoveryReindexResult.restaurants }} 間店鋪，耗時
+            {{ discoveryReindexResult.duration_ms }}ms。
+          </p>
+        </section>
+
+        <section class="ui-panel rounded-lg bg-white p-4 shadow-ios-card">
+          <div
+            class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
+          >
+            <div>
+              <h2 class="text-base font-semibold text-gray-900">
+                店家加入申請
+              </h2>
+              <p class="mt-1 text-sm text-gray-500">
+                審核店家申請加入市場或商圈；核准後會建立攤位關聯並更新公開搜尋索引。
+              </p>
+            </div>
+            <button
+              type="button"
+              class="w-fit rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+              :disabled="isLoadingJoinRequests"
+              @click="loadJoinRequests"
+            >
+              {{ isLoadingJoinRequests ? "讀取中..." : "重新整理申請" }}
+            </button>
+          </div>
+
+          <p v-if="joinRequestError" class="mt-3 text-sm text-red-700">
+            {{ joinRequestError }}
+          </p>
+
+          <div
+            v-if="pendingJoinRequests.length > 0"
+            class="mt-4 divide-y divide-gray-200 rounded-lg border border-gray-200"
+          >
+            <div
+              v-for="request in pendingJoinRequests"
+              :key="request.id"
+              class="grid gap-3 p-3 lg:grid-cols-[1fr_9rem_12rem_8rem_auto_auto]"
+            >
+              <div>
+                <div class="font-medium text-gray-900">
+                  {{ request.restaurant.name }}
+                </div>
+                <div class="mt-0.5 text-xs text-gray-500">
+                  {{ request.restaurant.city || "未填城市" }} ·
+                  {{ request.restaurant.district || "未填區域" }}
+                </div>
+                <div class="mt-1 text-sm text-gray-700">
+                  申請加入 {{ request.market.name }}
+                </div>
+                <p
+                  v-if="request.message"
+                  class="mt-1 text-sm leading-5 text-gray-600"
+                >
+                  {{ request.message }}
+                </p>
+              </div>
+              <input
+                v-model="joinRequestDrafts[request.id].stallNumber"
+                type="text"
+                :data-testid="`join-request-stall-${request.id}`"
+                class="h-fit rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+                placeholder="攤位號"
+              />
+              <input
+                v-model="joinRequestDrafts[request.id].locationLabel"
+                type="text"
+                :data-testid="`join-request-location-${request.id}`"
+                class="h-fit rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+                placeholder="位置描述"
+              />
+              <label
+                class="inline-flex h-fit items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700"
+              >
+                <input
+                  v-model="joinRequestDrafts[request.id].isPrimary"
+                  type="checkbox"
+                  :data-testid="`join-request-primary-${request.id}`"
+                  class="rounded border-gray-300 text-primary-700 focus:ring-primary-500"
+                />
+                主要市場
+              </label>
+              <button
+                type="button"
+                :data-testid="`approve-join-request-${request.id}`"
+                class="h-fit rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+                :disabled="resolvingJoinRequestId === request.id"
+                @click="approveJoinRequest(request)"
+              >
+                {{
+                  resolvingJoinRequestId === request.id ? "處理中..." : "核准"
+                }}
+              </button>
+              <button
+                type="button"
+                :data-testid="`reject-join-request-${request.id}`"
+                class="h-fit rounded-lg bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
+                :disabled="resolvingJoinRequestId === request.id"
+                @click="rejectJoinRequest(request)"
+              >
+                拒絕
+              </button>
+            </div>
+          </div>
+
+          <p
+            v-else-if="!isLoadingJoinRequests && !joinRequestError"
+            class="mt-3 rounded-lg border border-dashed border-gray-300 px-3 py-3 text-sm text-gray-500"
+          >
+            目前沒有待審加入申請。
+          </p>
+        </section>
+
+        <section class="ui-panel rounded-lg bg-white p-4 shadow-ios-card">
+          <div
+            class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
+          >
+            <div>
+              <h2 class="text-base font-semibold text-gray-900">
+                批次匯入市場 / 商圈
+              </h2>
+              <p class="mt-1 text-sm text-gray-500">
+                貼上 CSV 或 JSON，一次建立夜市、商圈、商場或活動場域。
+              </p>
+            </div>
+            <button
+              type="button"
+              class="w-fit rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+              @click="loadMarketImportExample"
+            >
+              載入範例
+            </button>
+          </div>
+
+          <div class="mt-4 flex flex-wrap gap-2">
+            <button
+              v-for="option in marketImportFormatOptions"
+              :key="option.value"
+              type="button"
+              class="rounded-lg px-3 py-2 text-sm font-medium transition-colors"
+              :class="
+                marketImportFormat === option.value
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              "
+              :data-testid="`market-import-format-${option.value}`"
+              @click="setMarketImportFormat(option.value)"
+            >
+              {{ option.label }}
+            </button>
+          </div>
+
+          <textarea
+            v-model="marketImportText"
+            rows="6"
+            data-testid="market-import-text"
+            class="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+            :placeholder="marketImportPlaceholder"
+          />
+
+          <div v-if="marketImportPreview.errors.length" class="mt-3 space-y-1">
+            <p
+              v-for="error in marketImportPreview.errors"
+              :key="error"
+              class="text-sm text-red-700"
+            >
+              {{ error }}
+            </p>
+          </div>
+          <p v-if="marketImportError" class="mt-3 text-sm text-red-700">
+            {{ marketImportError }}
+          </p>
+          <div
+            v-if="
+              marketImportText.trim() &&
+              !marketImportPreview.errors.length &&
+              marketImportPreview.markets.length
+            "
+            class="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800"
+          >
+            已解析 {{ marketImportPreview.markets.length }} 筆市場，準備匯入。
+          </div>
+          <div
+            v-if="marketImportResult"
+            class="mt-3 rounded-lg px-3 py-2 text-sm"
+            :class="
+              marketImportResult.failed > 0
+                ? 'bg-amber-50 text-amber-900'
+                : 'bg-green-50 text-green-800'
+            "
+          >
+            <p>
+              已建立 {{ marketImportResult.created }} 個市場
+              <span v-if="marketImportResult.failed > 0">
+                ，匯入失敗 {{ marketImportResult.failed }} 筆
+              </span>
+              。
+            </p>
+            <p v-if="marketImportResult.created > 0" class="mt-1 text-xs">
+              下一步：編輯市場並批次匯入店鋪，才能讓使用者搜尋商品/服務並開啟菜單。
+            </p>
+            <ul
+              v-if="marketImportResult.items.length"
+              class="mt-2 space-y-1"
+              data-testid="market-import-result-items"
+            >
+              <li
+                v-for="item in marketImportResult.items"
+                :key="`${item.slug}-${item.status}`"
+                class="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-2"
+              >
+                <span class="font-medium">
+                  {{ item.name }}（{{ item.slug }}）
+                </span>
+                <span
+                  :class="
+                    item.status === 'created'
+                      ? 'text-green-700'
+                      : 'text-red-700'
+                  "
+                >
+                  {{ item.status === "created" ? "已建立" : item.message }}
+                </span>
+                <button
+                  v-if="item.status === 'created' && item.createdMarket"
+                  type="button"
+                  :data-testid="`market-import-edit-${item.slug}`"
+                  class="w-fit rounded bg-green-100 px-2 py-1 text-xs font-medium text-green-800 hover:bg-green-200"
+                  @click="startEditing(item.createdMarket)"
+                >
+                  匯入店鋪
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          <div class="ui-toolbar mt-4 flex justify-end">
+            <button
+              type="button"
+              data-testid="market-import-submit"
+              class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+              :disabled="
+                isImportingMarkets ||
+                !marketImportText.trim() ||
+                marketImportPreview.errors.length > 0 ||
+                marketImportPreview.markets.length === 0
+              "
+              @click="importMarkets"
+            >
+              {{ isImportingMarkets ? "匯入中..." : "匯入市場" }}
+            </button>
+          </div>
+        </section>
+      </div>
+    </details>
   </div>
 </template>
 
@@ -2115,53 +2136,53 @@ const filteredMarkets = computed(() =>
 );
 const metrics = computed(() => [
   { label: "總數", value: stats.value.total, class: "text-gray-900" },
-  { label: "可上架", value: stats.value.ready, class: "text-green-600" },
-  { label: "需補齊", value: stats.value.blocked, class: "text-amber-600" },
+  { label: "可上架", value: stats.value.ready, class: "text-green-700" },
+  { label: "需補齊", value: stats.value.blocked, class: "text-amber-700" },
   { label: "未知", value: stats.value.unknown, class: "text-gray-400" },
   {
     label: "平均完整度",
     value: `${stats.value.averageScore}%`,
-    class: "text-primary-600",
+    class: "text-primary-700",
   },
   {
     label: "缺商品店鋪",
     value: stats.value.vendorsMissingProducts,
-    class: "text-amber-600",
+    class: "text-amber-700",
   },
   {
     label: "缺服務店鋪",
     value: stats.value.vendorsMissingServices,
-    class: "text-amber-600",
+    class: "text-amber-700",
   },
   {
     label: "缺攤位號",
     value: stats.value.vendorsMissingStallNumbers,
-    class: "text-amber-600",
+    class: "text-amber-700",
   },
   {
     label: "缺攤位座標",
     value: stats.value.vendorsMissingMapPositions,
-    class: "text-amber-600",
+    class: "text-amber-700",
   },
   {
     label: "缺市場地圖",
     value: stats.value.marketsMissingMapLayout,
-    class: "text-amber-600",
+    class: "text-amber-700",
   },
   {
     label: "缺搜尋入口",
     value: stats.value.vendorsMissingSearchEntrypoints,
-    class: "text-amber-600",
+    class: "text-amber-700",
   },
   {
     label: "無店鋪市場",
     value: stats.value.marketsWithoutVendors,
-    class: "text-red-600",
+    class: "text-red-700",
   },
   {
     label: "無搜尋內容市場",
     value: stats.value.marketsWithoutSearchableCatalog,
-    class: "text-red-600",
+    class: "text-red-700",
   },
 ]);
 const catalogGapRowCount = computed(() =>

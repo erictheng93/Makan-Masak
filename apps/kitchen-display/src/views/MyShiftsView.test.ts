@@ -1,7 +1,20 @@
 // @vitest-environment jsdom
 
-import { flushPromises, mount } from "@vue/test-utils";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  flushPromises,
+  mount,
+  DOMWrapper,
+  enableAutoUnmount,
+} from "@vue/test-utils";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import type { Component } from "vue";
 
 /**
@@ -27,6 +40,7 @@ vi.mock("@/i18n", async () => {
   };
 });
 
+enableAutoUnmount(afterEach);
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
 vi.mock("vue-toastification", () => ({
@@ -135,8 +149,13 @@ describe("MyShiftsView (kitchen display)", () => {
     await flushPromises();
 
     await wrapper.find('[data-testid="request-swap-button"]').trigger("click");
-    await wrapper.find('[data-testid="swap-reason"]').setValue("要看醫生");
-    await wrapper.find('[data-testid="swap-submit"]').trigger("click");
+    await flushPromises();
+    await new DOMWrapper(document.body)
+      .find('[data-testid="swap-reason"]')
+      .setValue("要看醫生");
+    await new DOMWrapper(document.body)
+      .find('[data-testid="swap-submit"]')
+      .trigger("click");
     await flushPromises();
 
     expect(createSwapRequest).toHaveBeenCalledOnce();
@@ -154,7 +173,9 @@ describe("MyShiftsView (kitchen display)", () => {
     expect(payload).not.toHaveProperty("targetEmployeeId");
 
     expect(toastSuccess).toHaveBeenCalledWith("myShifts.submitSuccess");
-    expect(wrapper.find('[data-testid="swap-form"]').exists()).toBe(false);
+    expect(
+      new DOMWrapper(document.body).find('[data-testid="swap-form"]').exists(),
+    ).toBe(false);
   });
 
   it("refuses to submit without a reason", async () => {
@@ -162,13 +183,18 @@ describe("MyShiftsView (kitchen display)", () => {
     await flushPromises();
 
     await wrapper.find('[data-testid="request-swap-button"]').trigger("click");
-    await wrapper.find('[data-testid="swap-submit"]').trigger("click");
+    await flushPromises();
+    await new DOMWrapper(document.body)
+      .find('[data-testid="swap-submit"]')
+      .trigger("click");
     await flushPromises();
 
     expect(createSwapRequest).not.toHaveBeenCalled();
-    expect(wrapper.find('[data-testid="swap-form-error"]').text()).toBe(
-      "myShifts.reasonRequired",
-    );
+    expect(
+      new DOMWrapper(document.body)
+        .find('[data-testid="swap-form-error"]')
+        .text(),
+    ).toBe("myShifts.reasonRequired");
   });
 
   it("shows an empty state and an error state rather than a blank screen", async () => {
@@ -236,4 +262,24 @@ describe("KitchenHeader entry point", () => {
     // EnhancedKitchenDashboard turns this into router.push("/my-shifts").
     expect(wrapper.emitted("open-my-shifts")).toHaveLength(1);
   });
+});
+
+it("names the swap dialog, focuses its reason, dismisses with Escape and restores focus", async () => {
+  const wrapper = mount(MyShiftsView, { attachTo: document.body });
+  await flushPromises();
+  const trigger = wrapper.get('[data-testid="request-swap-button"]');
+  (trigger.element as HTMLElement).focus();
+  await trigger.trigger("click");
+  await flushPromises();
+  const body = new DOMWrapper(document.body);
+  const dialog = body.get('[role="dialog"]');
+  expect(dialog.attributes("aria-modal")).toBe("true");
+  expect(dialog.attributes("aria-labelledby")).toBeTruthy();
+  expect(document.activeElement).toBe(
+    body.get('[data-testid="swap-reason"]').element,
+  );
+  await dialog.trigger("keydown", { key: "Escape" });
+  await flushPromises();
+  expect(body.find('[role="dialog"]').exists()).toBe(false);
+  expect(document.activeElement).toBe(trigger.element);
 });

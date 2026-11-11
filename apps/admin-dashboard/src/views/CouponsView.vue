@@ -1,16 +1,16 @@
 <template>
-  <div v-if="hasCouponsModule" class="coupons-view">
+  <div v-if="hasCouponsModule" class="ui-page coupons-view">
     <!-- 標題和操作按鈕 -->
-    <div class="flex justify-between items-center mb-8">
+    <div class="ui-toolbar flex justify-between items-center mb-8">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">
+        <h1 class="ui-page-heading text-3xl font-bold text-gray-900">
           {{ t("coupons.title") }}
         </h1>
         <p class="text-gray-600">{{ t("coupons.subtitle") }}</p>
       </div>
       <div class="flex items-center space-x-4">
         <button
-          class="px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 transition-colors"
+          class="px-6 py-3 bg-primary-700 text-white font-semibold rounded-full hover:bg-primary-800 transition-colors"
           data-testid="open-create-coupon"
           @click="showCreateModal = true"
         >
@@ -22,10 +22,10 @@
 
     <!-- 統計卡片 -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-8">
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
         <div class="flex items-center">
           <div class="p-2 bg-blue-100 rounded-lg">
-            <TicketIcon class="w-6 h-6 text-blue-600" />
+            <TicketIcon class="w-6 h-6 text-blue-700" />
           </div>
           <div class="ml-4">
             <p class="text-sm text-gray-600">{{ t("coupons.stats.total") }}</p>
@@ -33,10 +33,10 @@
           </div>
         </div>
       </div>
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
         <div class="flex items-center">
           <div class="p-2 bg-green-100 rounded-lg">
-            <CheckCircleIcon class="w-6 h-6 text-green-600" />
+            <CheckCircleIcon class="w-6 h-6 text-green-700" />
           </div>
           <div class="ml-4">
             <p class="text-sm text-gray-600">{{ t("coupons.stats.used") }}</p>
@@ -46,10 +46,10 @@
           </div>
         </div>
       </div>
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
         <div class="flex items-center">
           <div class="p-2 bg-yellow-100 rounded-lg">
-            <ClockIcon class="w-6 h-6 text-yellow-600" />
+            <ClockIcon class="w-6 h-6 text-yellow-700" />
           </div>
           <div class="ml-4">
             <p class="text-sm text-gray-600">{{ t("coupons.stats.active") }}</p>
@@ -57,10 +57,10 @@
           </div>
         </div>
       </div>
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="ui-panel bg-white rounded-lg shadow p-6">
         <div class="flex items-center">
           <div class="p-2 bg-teal-100 rounded-lg">
-            <CurrencyDollarIcon class="w-6 h-6 text-teal-600" />
+            <CurrencyDollarIcon class="w-6 h-6 text-teal-700" />
           </div>
           <div class="ml-4">
             <p class="text-sm text-gray-600">
@@ -75,7 +75,7 @@
     </div>
 
     <!-- 篩選和搜索 -->
-    <div class="bg-white rounded-lg shadow mb-6 p-6">
+    <div class="ui-panel bg-white rounded-lg shadow mb-6 p-6">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">{{
@@ -134,8 +134,8 @@
     </div>
 
     <!-- 優惠券列表 -->
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div v-if="!compact" class="overflow-x-auto">
+    <div class="ui-panel bg-white rounded-lg shadow overflow-hidden">
+      <div v-if="!compact" class="ui-table-scroll overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
@@ -292,21 +292,21 @@
                 </span>
               </td>
               <td class="px-6 py-4 text-right">
-                <div class="flex items-center justify-end space-x-2">
+                <div class="ui-toolbar flex items-center justify-end space-x-2">
                   <button
-                    class="text-teal-600 hover:text-teal-900 text-sm"
+                    class="text-teal-700 hover:text-teal-900 text-sm"
                     @click="viewCouponStats(coupon)"
                   >
                     {{ t("coupons.actions.stats") }}
                   </button>
                   <button
-                    class="text-blue-600 hover:text-blue-900 text-sm"
+                    class="text-blue-700 hover:text-blue-900 text-sm"
                     @click="editCoupon(coupon)"
                   >
                     {{ t("coupons.actions.edit") }}
                   </button>
                   <button
-                    class="text-teal-600 hover:text-teal-900 text-sm"
+                    class="text-teal-700 hover:text-teal-900 text-sm"
                     :data-testid="`distribute-coupon-${coupon.id}`"
                     @click="distributeCoupon(coupon)"
                   >
@@ -314,7 +314,7 @@
                   </button>
                   <button
                     v-if="coupon.isActive"
-                    class="text-yellow-600 hover:text-yellow-900 text-sm disabled:opacity-50"
+                    class="text-yellow-700 hover:text-yellow-900 text-sm disabled:opacity-50"
                     :disabled="statusAction.pending.value"
                     @click="setCouponActive(coupon, false)"
                   >
@@ -326,7 +326,7 @@
                   </button>
                   <button
                     v-else
-                    class="text-green-600 hover:text-green-900 text-sm disabled:opacity-50"
+                    class="text-green-700 hover:text-green-900 text-sm disabled:opacity-50"
                     :disabled="statusAction.pending.value"
                     @click="setCouponActive(coupon, true)"
                   >
@@ -338,7 +338,7 @@
                   </button>
                   <button
                     v-if="isAdmin"
-                    class="text-red-600 hover:text-red-900 text-sm disabled:opacity-50"
+                    class="text-red-700 hover:text-red-900 text-sm disabled:opacity-50"
                     :disabled="statusAction.pending.value"
                     @click="deleteCoupon(coupon)"
                   >
@@ -365,10 +365,10 @@
           <li
             v-for="coupon in filteredCoupons"
             :key="coupon.id"
-            class="rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+            class="ui-panel rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
             data-testid="coupon-card"
           >
-            <div class="flex items-start justify-between gap-2">
+            <div class="ui-toolbar flex items-start justify-between gap-2">
               <div class="min-w-0">
                 <div class="truncate text-sm font-medium text-gray-900">
                   {{ coupon.name }}
@@ -385,7 +385,7 @@
               </span>
             </div>
             <dl class="mt-3 space-y-1 text-sm">
-              <div class="flex justify-between gap-3">
+              <div class="ui-toolbar flex justify-between gap-3">
                 <dt class="text-gray-500">{{ t("coupons.table.discount") }}</dt>
                 <dd class="text-gray-900">
                   <template v-if="coupon.discountType === 'percentage'">
@@ -396,14 +396,14 @@
                   }}</template>
                 </dd>
               </div>
-              <div class="flex justify-between gap-3">
+              <div class="ui-toolbar flex justify-between gap-3">
                 <dt class="text-gray-500">{{ t("coupons.table.usage") }}</dt>
                 <dd class="text-gray-900">
                   {{ paidUseCount(coupon) }} /
                   {{ coupon.usageLimit || t("coupons.table.unlimited") }}
                 </dd>
               </div>
-              <div class="flex justify-between gap-3">
+              <div class="ui-toolbar flex justify-between gap-3">
                 <dt class="text-gray-500">{{ t("coupons.table.validity") }}</dt>
                 <dd class="text-right text-gray-900">
                   {{ formatDate(coupon.validFrom) }}
@@ -419,19 +419,19 @@
             </dl>
             <div class="mt-3 flex flex-wrap gap-2">
               <button
-                class="text-teal-600 min-h-11 rounded-full px-4 text-sm font-medium bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:opacity-50"
+                class="text-teal-700 min-h-11 rounded-full px-4 text-sm font-medium bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:opacity-50"
                 @click="viewCouponStats(coupon)"
               >
                 {{ t("coupons.actions.stats") }}
               </button>
               <button
-                class="text-blue-600 min-h-11 rounded-full px-4 text-sm font-medium bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:opacity-50"
+                class="text-blue-700 min-h-11 rounded-full px-4 text-sm font-medium bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:opacity-50"
                 @click="editCoupon(coupon)"
               >
                 {{ t("coupons.actions.edit") }}
               </button>
               <button
-                class="text-teal-600 min-h-11 rounded-full px-4 text-sm font-medium bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:opacity-50"
+                class="text-teal-700 min-h-11 rounded-full px-4 text-sm font-medium bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:opacity-50"
                 :data-testid="`distribute-coupon-card-${coupon.id}`"
                 @click="distributeCoupon(coupon)"
               >
@@ -439,7 +439,7 @@
               </button>
               <button
                 class="min-h-11 rounded-full px-4 text-sm font-medium bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:opacity-50"
-                :class="coupon.isActive ? 'text-yellow-600' : 'text-green-600'"
+                :class="coupon.isActive ? 'text-yellow-700' : 'text-green-700'"
                 :disabled="statusAction.pending.value"
                 @click="setCouponActive(coupon, !coupon.isActive)"
               >
@@ -453,7 +453,7 @@
               </button>
               <button
                 v-if="isAdmin"
-                class="text-red-600 min-h-11 rounded-full px-4 text-sm font-medium bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:opacity-50"
+                class="text-red-700 min-h-11 rounded-full px-4 text-sm font-medium bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:opacity-50"
                 :disabled="statusAction.pending.value"
                 @click="deleteCoupon(coupon)"
               >
@@ -466,10 +466,11 @@
 
       <!-- 分頁 -->
       <div
-        class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6"
+        class="ui-toolbar bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6"
       >
-        <div class="flex-1 flex justify-between sm:hidden">
+        <div class="ui-toolbar flex-1 flex justify-between sm:hidden">
           <button
+            :aria-label="t('coupons.pagination.previous')"
             :disabled="currentPage === 1"
             class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
             @click="currentPage--"
@@ -477,6 +478,7 @@
             {{ t("coupons.pagination.previous") }}
           </button>
           <button
+            :aria-label="t('coupons.pagination.next')"
             :disabled="currentPage >= totalPages"
             class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
             @click="currentPage++"
@@ -485,7 +487,7 @@
           </button>
         </div>
         <div
-          class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between"
+          class="ui-toolbar hidden sm:flex-1 sm:flex sm:items-center sm:justify-between"
         >
           <div>
             <p class="text-sm text-gray-700">
@@ -504,6 +506,7 @@
               :aria-label="t('coupons.pagination.label')"
             >
               <button
+                :aria-label="t('coupons.pagination.previous')"
                 :disabled="currentPage === 1"
                 class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                 @click="currentPage--"
@@ -516,7 +519,7 @@
                 :class="[
                   'relative inline-flex items-center px-4 py-2 border text-sm font-medium',
                   page === currentPage
-                    ? 'z-10 bg-teal-50 border-teal-500 text-teal-600'
+                    ? 'z-10 bg-teal-50 border-teal-500 text-teal-700'
                     : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50',
                 ]"
                 @click="currentPage = page"
@@ -524,6 +527,7 @@
                 {{ page }}
               </button>
               <button
+                :aria-label="t('coupons.pagination.next')"
                 :disabled="currentPage >= totalPages"
                 class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                 @click="currentPage++"
@@ -619,12 +623,14 @@
           class="fixed inset-0 bg-black/30 backdrop-blur-sm"
           @click="deleteTarget = null"
         />
-        <div class="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full">
+        <div
+          class="ui-panel relative bg-white rounded-2xl shadow-2xl max-w-sm w-full"
+        >
           <div class="p-6 text-center">
             <div
               class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4"
             >
-              <ExclamationTriangleIcon class="h-6 w-6 text-red-600" />
+              <ExclamationTriangleIcon class="h-6 w-6 text-red-700" />
             </div>
             <h3 class="text-[17px] font-bold text-ios-text mb-2">
               {{ t("coupons.messages.deleteConfirmTitle") }}
@@ -663,8 +669,8 @@
   </div>
 
   <div v-else class="coupons-view">
-    <div class="rounded-2xl bg-white p-6 shadow-sm">
-      <h1 class="text-xl font-semibold text-gray-900">
+    <div class="ui-panel rounded-2xl bg-white p-6 shadow-sm">
+      <h1 class="ui-page-heading text-xl font-semibold text-gray-900">
         {{ t("coupons.moduleUnavailable.title") }}
       </h1>
       <p class="mt-2 text-sm text-gray-600">

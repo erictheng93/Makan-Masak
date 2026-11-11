@@ -1,11 +1,12 @@
 <template>
-  <div class="min-h-screen bg-ios-bg" data-testid="cart-page">
+  <div class="customer-shell min-h-screen bg-ios-bg" data-testid="cart-page">
     <!-- 頂部導航 -->
     <nav class="sticky top-0 z-40 bg-white/80 backdrop-blur-xl shadow-card-sm">
       <div class="max-w-md mx-auto px-5 py-4">
         <div class="flex items-center justify-between">
           <button
             class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-ios-text transition-all duration-200"
+            :aria-label="t('common.back')"
             @click="router.back()"
           >
             <svg
@@ -40,7 +41,10 @@
     </nav>
 
     <!-- 主要內容 -->
-    <main class="max-w-md mx-auto">
+    <main
+      class="max-w-md mx-auto"
+      :style="{ paddingBottom: `${checkoutHeight + 24}px` }"
+    >
       <!-- 空購物車狀態 -->
       <div v-if="cartStore.isEmpty" class="px-4 py-16 text-center">
         <div
@@ -213,6 +217,8 @@
             <button
               v-if="!showAvailableCoupons"
               data-testid="cart-view-coupons"
+              :aria-expanded="showAvailableCoupons"
+              aria-controls="available-coupons"
               class="text-sm text-ios-blue font-medium"
               @click="toggleAvailableCoupons"
             >
@@ -221,7 +227,7 @@
           </div>
 
           <!-- 可用優惠券列表 -->
-          <div v-if="showAvailableCoupons" class="mb-6">
+          <div v-if="showAvailableCoupons" id="available-coupons" class="mb-6">
             <div class="flex items-center justify-between mb-3">
               <h4 class="text-md font-medium text-ios-text">
                 {{ t("cart.availableCoupons") }}
@@ -352,9 +358,11 @@
           <!-- 手動輸入優惠券 -->
           <div>
             <div class="flex items-center space-x-2 mb-3">
-              <span class="text-sm font-medium text-ios-text">{{
-                t("cart.orEnterCode")
-              }}</span>
+              <label
+                for="coupon-code"
+                class="text-sm font-medium text-ios-text"
+                >{{ t("cart.orEnterCode") }}</label
+              >
               <div class="flex-1 h-px bg-ios-separator" />
             </div>
 
@@ -366,7 +374,7 @@
                 type="text"
                 :placeholder="t('cart.couponPlaceholder')"
                 :disabled="isValidatingCoupon"
-                class="flex-1 px-4 py-2.5 bg-ios-bg rounded-xl border-0 focus:ring-2 focus:ring-ios-blue/30 focus:bg-white text-ios-text placeholder:text-ios-tertiary transition-all duration-200 disabled:opacity-50"
+                class="min-w-0 flex-1 px-4 py-2.5 bg-ios-bg rounded-xl border-0 focus:ring-2 focus:ring-ios-blue/30 focus:bg-white text-ios-text placeholder:text-ios-tertiary transition-all duration-200 disabled:opacity-50"
                 @input="onCouponInput"
                 @keyup.enter="validateCoupon"
               />
@@ -528,7 +536,8 @@
     <!-- 底部確認按鈕 -->
     <div
       v-if="!cartStore.isEmpty"
-      class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl p-4 shadow-[0_-4px_16px_rgb(0,0,0,0.04)]"
+      ref="checkoutFooter"
+      class="customer-checkout-footer fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl p-4 shadow-[0_-4px_16px_rgb(0,0,0,0.04)]"
     >
       <div class="max-w-md mx-auto">
         <button
@@ -611,6 +620,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
+import { useElementSize } from "@vueuse/core";
 import { useRouter } from "vue-router";
 import { useQuery, useMutation } from "@tanstack/vue-query";
 import { useToast } from "vue-toastification";
@@ -703,6 +713,10 @@ const couponValidationError = ref(false);
 const couponDiscountAmount = ref(0);
 
 // 可用優惠券列表相關狀態
+const checkoutFooter = ref<HTMLElement | null>(null);
+const { height: checkoutHeight } = useElementSize(checkoutFooter, undefined, {
+  box: "border-box",
+});
 const showAvailableCoupons = ref(false);
 const isLoadingCoupons = ref(false);
 const availableCoupons = ref<CustomerCoupon[]>([]);

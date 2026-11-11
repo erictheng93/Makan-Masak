@@ -180,6 +180,75 @@ describe("DiscoveryView", () => {
     vi.mocked(useDiscoveryStore).mockReturnValue(discoveryStore() as never);
   });
 
+  it("retries an initial browse failure without changing to empty search", async () => {
+    const store = discoveryStore({
+      searchQuery: "",
+      isSearchMode: false,
+      error: "discovery.browseFailed",
+      dishResults: [],
+    });
+    vi.mocked(useDiscoveryStore).mockReturnValue(store as never);
+    const wrapper = mountView();
+    expect(store.browseRestaurants).toHaveBeenCalledTimes(1);
+    await wrapper
+      .findAll("button")
+      .find((button) => button.text() === "common.retry")!
+      .trigger("click");
+    expect(store.browseRestaurants).toHaveBeenCalledTimes(2);
+    expect(store.searchDishes).not.toHaveBeenCalled();
+    expect(store.searchQuery).toBe("");
+    expect(store.filters).toEqual({});
+  });
+
+  it("retries a failed popular load through the same operation", async () => {
+    const store = discoveryStore({
+      searchQuery: "",
+      isSearchMode: false,
+      error: "discovery.popularFailed",
+      dishResults: [],
+    });
+    vi.mocked(useDiscoveryStore).mockReturnValue(store as never);
+    const wrapper = mountView();
+    expect(store.loadPopular).toHaveBeenCalledTimes(1);
+    await wrapper
+      .findAll("button")
+      .find((button) => button.text() === "common.retry")!
+      .trigger("click");
+    expect(store.loadPopular).toHaveBeenCalledTimes(2);
+    expect(store.searchDishes).not.toHaveBeenCalled();
+  });
+
+  it("retries a search failure with its current query and filters", async () => {
+    Object.assign(routeQuery, { q: "章魚燒", city: "Taipei" });
+    const store = discoveryStore({ error: "discovery.searchFailed" });
+    vi.mocked(useDiscoveryStore).mockReturnValue(store as never);
+    const wrapper = mountView();
+    expect(store.searchDishes).toHaveBeenCalledTimes(1);
+    await wrapper
+      .findAll("button")
+      .find((button) => button.text() === "common.retry")!
+      .trigger("click");
+    expect(store.searchDishes).toHaveBeenCalledTimes(2);
+    expect(store.searchDishes).toHaveBeenLastCalledWith("章魚燒");
+    expect(store.filters).toMatchObject({ city: "Taipei" });
+  });
+
+  it("clears every filter from an empty result", async () => {
+    const store = discoveryStore({
+      dishResults: [],
+      filters: { city: "Taipei", takeaway: true },
+    });
+    vi.mocked(useDiscoveryStore).mockReturnValue(store as never);
+    const wrapper = mountView();
+    await wrapper
+      .get('[data-testid="discovery-clear-filters"]')
+      .trigger("click");
+    expect(store.filters).toEqual({});
+    expect(store.clearSearch).toHaveBeenCalled();
+    expect(store.browseRestaurants).toHaveBeenCalled();
+    expect(routerReplace).toHaveBeenCalledWith({ query: {} });
+  });
+
   it("opens a dish result in the shop menu with a stable item deep link", async () => {
     const wrapper = mountView();
 

@@ -1,7 +1,7 @@
 <template>
-  <div class="space-y-4">
+  <div class="ui-page space-y-4">
     <!-- Sub-tab navigation -->
-    <div class="flex items-center justify-between">
+    <div class="ui-toolbar flex items-center justify-between">
       <div class="flex items-center gap-2">
         <button
           v-for="tab in tabs"
@@ -10,8 +10,8 @@
           class="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all"
           :class="
             activeTab === tab.key
-              ? 'bg-ios-blue text-white shadow-sm'
-              : 'bg-ios-bg text-ios-text/60 hover:text-ios-text hover:bg-ios-separator'
+              ? 'bg-primary-700 text-white shadow-sm'
+              : 'bg-ios-bg text-ios-text/70 hover:text-ios-text hover:bg-ios-separator'
           "
           @click="activeTab = tab.key"
         >
@@ -35,7 +35,7 @@
            never enable and the dialog gave no clue why (#307). -->
       <button
         data-testid="leaves-apply"
-        class="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-ios-blue text-white hover:bg-blue-600 transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+        class="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-primary-700 text-white hover:bg-primary-800 transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
         :disabled="leaveTypes.length === 0"
         :title="leaveTypes.length === 0 ? t('leaves.manage.noTypesHint') : ''"
         @click="showRequestDialog = true"
@@ -100,34 +100,34 @@
         <div
           v-if="leaveTypes.length === 0"
           data-testid="leaves-no-types"
-          class="bg-white rounded-2xl shadow-sm px-5 py-6 text-center"
+          class="ui-panel bg-white rounded-2xl shadow-sm px-5 py-6 text-center"
         >
           <p class="text-ios-text font-semibold">
             {{ t("leaves.manage.noTypes") }}
           </p>
-          <p class="text-sm text-ios-text/60 mt-1">
+          <p class="text-sm text-ios-text/70 mt-1">
             {{ t("leaves.manage.noTypesHint") }}
           </p>
         </div>
 
         <div
           v-else
-          class="bg-white rounded-2xl shadow-sm divide-y divide-ios-separator"
+          class="ui-panel bg-white rounded-2xl shadow-sm divide-y divide-ios-separator"
         >
           <div
             v-for="type in leaveTypes"
             :key="type.id"
             data-testid="leave-type-row"
-            class="flex items-center justify-between px-5 py-3"
+            class="ui-toolbar flex items-center justify-between px-5 py-3"
           >
             <div>
               <p class="text-sm font-semibold text-ios-text">
                 {{ type.name }}
-                <span class="ml-2 text-xs font-normal text-ios-text/40">{{
+                <span class="ml-2 text-xs font-normal text-ios-text/70">{{
                   type.code
                 }}</span>
               </p>
-              <p class="text-xs text-ios-text/60 mt-0.5">
+              <p class="text-xs text-ios-text/70 mt-0.5">
                 {{
                   t(`leaves.manage.accrual${accrualLabel(type.accrualType)}`)
                 }}
@@ -145,7 +145,7 @@
         </div>
 
         <form
-          class="bg-white rounded-2xl shadow-sm px-5 py-4 space-y-3"
+          class="ui-panel bg-white rounded-2xl shadow-sm px-5 py-4 space-y-3"
           @submit.prevent="handleCreateType"
         >
           <p class="text-sm font-semibold text-ios-text">
@@ -153,25 +153,31 @@
           </p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs text-ios-text/60 mb-1">{{
-                t("leaves.manage.code")
-              }}</label>
+              <label
+                for="leavestab-field-1"
+                class="block text-xs text-ios-text/70 mb-1"
+                >{{ t("leaves.manage.code") }}</label
+              >
               <input
+                id="leavestab-field-1"
                 v-model="typeForm.code"
                 data-testid="leave-type-code"
                 required
                 maxlength="20"
                 class="w-full px-3 py-2 rounded-xl bg-ios-bg text-sm"
               />
-              <p class="text-xs text-ios-text/40 mt-1">
+              <p class="text-xs text-ios-text/70 mt-1">
                 {{ t("leaves.manage.codeHint") }}
               </p>
             </div>
             <div>
-              <label class="block text-xs text-ios-text/60 mb-1">{{
-                t("leaves.manage.name")
-              }}</label>
+              <label
+                for="leavestab-field-2"
+                class="block text-xs text-ios-text/70 mb-1"
+                >{{ t("leaves.manage.name") }}</label
+              >
               <input
+                id="leavestab-field-2"
                 v-model="typeForm.name"
                 data-testid="leave-type-name"
                 required
@@ -180,10 +186,13 @@
               />
             </div>
             <div>
-              <label class="block text-xs text-ios-text/60 mb-1">{{
-                t("leaves.manage.accrualType")
-              }}</label>
+              <label
+                for="leavestab-field-3"
+                class="block text-xs text-ios-text/70 mb-1"
+                >{{ t("leaves.manage.accrualType") }}</label
+              >
               <select
+                id="leavestab-field-3"
                 v-model="typeForm.accrualType"
                 data-testid="leave-type-accrual"
                 class="w-full px-3 py-2 rounded-xl bg-ios-bg text-sm"
@@ -200,10 +209,13 @@
               </select>
             </div>
             <div>
-              <label class="block text-xs text-ios-text/60 mb-1">{{
-                t("leaves.manage.accrualAmount")
-              }}</label>
+              <label
+                for="leavestab-field-4"
+                class="block text-xs text-ios-text/70 mb-1"
+                >{{ t("leaves.manage.accrualAmount") }}</label
+              >
               <input
+                id="leavestab-field-4"
                 v-model.number="typeForm.accrualAmount"
                 data-testid="leave-type-amount"
                 type="number"
@@ -225,7 +237,7 @@
             type="submit"
             data-testid="leave-type-save"
             :disabled="isSavingType"
-            class="px-4 py-2 rounded-full text-sm font-semibold bg-ios-blue text-white disabled:opacity-40"
+            class="px-4 py-2 rounded-full text-sm font-semibold bg-primary-700 text-white disabled:opacity-40"
           >
             {{ t("leaves.manage.save") }}
           </button>

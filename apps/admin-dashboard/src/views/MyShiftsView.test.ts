@@ -160,6 +160,28 @@ describe("MyShiftsView (admin dashboard)", () => {
     expect(wrapper.findAll('[data-testid="my-shift-row"]')).toHaveLength(1);
   });
 
+  it("names the swap dialog, contains keyboard focus and restores its trigger", async () => {
+    const wrapper = mount(MyShiftsView, { attachTo: document.body });
+    await flushPromises();
+    const trigger = wrapper.get('[data-testid="request-swap-button"]');
+    (trigger.element as HTMLButtonElement).focus();
+    await trigger.trigger("click");
+    await flushPromises();
+    const dialog = wrapper.get('[role="dialog"]');
+    expect(dialog.attributes("aria-modal")).toBe("true");
+    expect(dialog.attributes("aria-labelledby")).toBeTruthy();
+    expect(dialog.element.contains(document.activeElement)).toBe(true);
+    const last = dialog.get('[data-testid="swap-submit"]');
+    (last.element as HTMLButtonElement).focus();
+    await last.trigger("keydown", { key: "Tab" });
+    expect(document.activeElement).not.toBe(last.element);
+    expect(dialog.element.contains(document.activeElement)).toBe(true);
+    await dialog.trigger("keydown", { key: "Escape" });
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    expect(document.activeElement).toBe(trigger.element);
+    wrapper.unmount();
+  });
+
   it("submits a swap request bound to the session, never naming a requester", async () => {
     const wrapper = mount(MyShiftsView);
     await flushPromises();

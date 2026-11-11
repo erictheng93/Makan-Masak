@@ -1,4 +1,14 @@
 export const waitingListViVn = {
+  pwa: {
+    installTitle: "Cài đặt MakanMasak",
+    installDescription: "Mở thực đơn và theo dõi đơn hàng từ màn hình chính.",
+    installAction: "Cài ứng dụng",
+  },
+  customerNavigation: {
+    vendors: "Gian hàng",
+    maps: "Bản đồ",
+    flashlight: "Đèn flash",
+  },
   customizationLimits: {
     decrease: "Giảm",
     increase: "Tăng",

@@ -401,6 +401,7 @@ const zhCN: Messages = {
     uptime: "运行时间",
   },
   history: {
+    loadFailed: "加载订单失败，请重试",
     avgPrepTime: "平均制作 (min)",
     noRecords: "尚无订单纪录",
     noRecordsHint: "选择的时间范围内没有已完成的订单",

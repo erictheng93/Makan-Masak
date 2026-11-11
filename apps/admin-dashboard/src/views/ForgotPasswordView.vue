@@ -1,6 +1,6 @@
 <template>
   <div
-    class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"
+    class="ui-page min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"
   >
     <div class="max-w-md w-full space-y-8">
       <!-- Header -->
@@ -10,27 +10,41 @@
         >
           <span class="text-white font-bold text-2xl">M</span>
         </div>
-        <h2 class="text-3xl font-bold text-gray-900">MakanMasak</h2>
+        <p class="text-sm font-semibold text-primary-700">MakanMasak</p>
+        <h1 class="ui-page-heading mt-3 text-2xl font-bold text-ios-text">
+          {{ t("pages.forgotPassword") }}
+        </h1>
         <p class="mt-2 text-sm text-gray-600">
           {{ t("auth.forgotPasswordSubtitle") }}
         </p>
       </div>
 
       <!-- Success State -->
-      <div v-if="success" class="mt-8 space-y-6">
+      <div
+        v-if="success"
+        role="status"
+        aria-labelledby="password-email-sent"
+        class="mt-8 space-y-6"
+      >
         <div class="bg-green-50 border border-green-200 rounded-lg p-6">
           <div class="flex items-start">
             <div
               class="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center"
             >
-              <CheckCircle class="w-6 h-6 text-green-600" />
+              <CheckCircle class="w-6 h-6 text-green-700" />
             </div>
             <div class="ml-4 flex-1">
-              <h3 class="text-lg font-medium text-green-900">
+              <h3
+                id="password-email-sent"
+                class="text-lg font-medium text-green-900"
+              >
                 {{ t("auth.emailSent") }}
               </h3>
-              <p class="mt-2 text-sm text-green-600">
+              <p class="mt-2 text-sm text-green-700">
                 {{ t("auth.emailSentMessage") }}
+              </p>
+              <p class="mt-2 break-all text-sm font-semibold text-green-700">
+                {{ form.email }}
               </p>
             </div>
           </div>
@@ -39,7 +53,7 @@
         <div class="text-center">
           <router-link
             :to="loginTo"
-            class="text-sm font-medium text-primary-600 hover:text-primary-500"
+            class="text-sm font-medium text-primary-700 hover:text-primary-700"
           >
             {{ t("auth.backToLogin") }}
           </router-link>
@@ -52,7 +66,7 @@
           <!-- Instructions -->
           <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div class="flex items-start">
-              <Info class="w-5 h-5 text-blue-400 mt-0.5 mr-3 flex-shrink-0" />
+              <Info class="w-5 h-5 text-blue-700 mt-0.5 mr-3 flex-shrink-0" />
               <div>
                 <p class="text-sm text-blue-800">
                   {{ t("auth.forgotPasswordInstruction") }}
@@ -75,7 +89,7 @@
               :placeholder="t('auth.enterEmail')"
               :disabled="isLoading"
             />
-            <p v-if="emailError" class="mt-1 text-sm text-red-600">
+            <p v-if="emailError" class="mt-1 text-sm text-red-700">
               {{ emailError }}
             </p>
           </div>
@@ -87,7 +101,7 @@
           class="bg-red-50 border border-red-200 rounded-lg p-4"
         >
           <div class="flex items-center">
-            <AlertCircle class="w-5 h-5 text-red-400 mr-2" />
+            <AlertCircle class="w-5 h-5 text-red-700 mr-2" />
             <p class="text-sm text-red-800">
               {{ error }}
             </p>

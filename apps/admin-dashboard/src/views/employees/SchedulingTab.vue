@@ -1,14 +1,15 @@
 <template>
-  <div class="space-y-4">
+  <div class="ui-page space-y-4">
     <!-- Toolbar -->
     <div class="flex flex-wrap items-center gap-3">
       <!-- Date navigation -->
       <div
-        class="flex items-center gap-1 bg-white rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.06)] px-2 py-1"
+        class="ui-panel flex items-center gap-1 bg-white rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.06)] px-2 py-1"
       >
         <button
           data-testid="nav-prev"
-          class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-ios-bg transition-colors text-ios-text/60 hover:text-ios-text"
+          :aria-label="t('common.previousPage')"
+          class="w-11 h-11 flex items-center justify-center rounded-full hover:bg-ios-bg transition-colors text-ios-text/70 hover:text-ios-text"
           @click="shiftRange(-1)"
         >
           <ChevronLeft class="w-4 h-4" />
@@ -20,7 +21,8 @@
         </span>
         <button
           data-testid="nav-next"
-          class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-ios-bg transition-colors text-ios-text/60 hover:text-ios-text"
+          :aria-label="t('common.nextPage')"
+          class="w-11 h-11 flex items-center justify-center rounded-full hover:bg-ios-bg transition-colors text-ios-text/70 hover:text-ios-text"
           @click="shiftRange(1)"
         >
           <ChevronRight class="w-4 h-4" />
@@ -45,7 +47,7 @@
           :class="
             viewMode === mode
               ? 'bg-white text-ios-text shadow-sm'
-              : 'text-ios-text/50 hover:text-ios-text/70'
+              : 'text-ios-text/70 hover:text-ios-text/70'
           "
           :data-active="viewMode === mode"
           @click="viewMode = mode"
@@ -76,7 +78,7 @@
 
       <!-- Manage templates button -->
       <button
-        class="ml-auto flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-ios-blue text-white hover:bg-blue-600 transition-colors shadow-sm"
+        class="ml-auto flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-primary-700 text-white hover:bg-primary-800 transition-colors shadow-sm"
         @click="showTemplateManager = true"
       >
         <Settings class="w-3.5 h-3.5" />
@@ -87,7 +89,7 @@
     <!-- Loading skeleton -->
     <div
       v-if="loading"
-      class="flex items-center justify-center py-16 text-ios-text/40"
+      class="flex items-center justify-center py-16 text-ios-text/70"
     >
       <div class="flex flex-col items-center gap-3">
         <div
@@ -161,12 +163,12 @@
           @click.self="pendingAssignment = null"
         >
           <div
-            class="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 w-72"
+            class="ui-panel bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-6 w-72"
           >
             <h3 class="text-base font-bold text-ios-text mb-1">
               {{ t("employees.scheduling.confirmAssign") }}
             </h3>
-            <p class="text-sm text-ios-text/60 mb-4">
+            <p class="text-sm text-ios-text/70 mb-4">
               {{
                 t("employees.scheduling.assignMessage", {
                   name: pendingAssignment.employeeName,
@@ -177,13 +179,13 @@
             </p>
             <div class="flex gap-2">
               <button
-                class="flex-1 px-3 py-2 text-sm font-medium rounded-full bg-ios-bg text-ios-text/60 hover:bg-ios-separator transition-colors"
+                class="flex-1 px-3 py-2 text-sm font-medium rounded-full bg-ios-bg text-ios-text/70 hover:bg-ios-separator transition-colors"
                 @click="pendingAssignment = null"
               >
                 {{ t("employees.scheduling.cancel") }}
               </button>
               <button
-                class="flex-1 px-3 py-2 text-sm font-semibold rounded-full bg-ios-blue text-white hover:bg-blue-600 transition-colors disabled:opacity-50"
+                class="flex-1 px-3 py-2 text-sm font-semibold rounded-full bg-primary-700 text-white hover:bg-primary-800 transition-colors disabled:opacity-50"
                 :disabled="assigning"
                 @click="confirmAssign"
               >
@@ -208,14 +210,14 @@
           @click.self="cellClickTarget = null"
         >
           <div
-            class="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-5 w-72 max-h-80 flex flex-col"
+            class="ui-panel bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] p-5 w-72 max-h-80 flex flex-col"
           >
             <h3 class="text-base font-bold text-ios-text mb-3">
               {{ t("employees.scheduling.selectEmployee") }}
             </h3>
             <div
               v-if="availableForCell.length === 0"
-              class="text-sm text-ios-text/40 text-center py-4"
+              class="text-sm text-ios-text/70 text-center py-4"
             >
               {{ t("employees.scheduling.noAvailableEmployees") }}
             </div>
@@ -230,7 +232,7 @@
               </button>
             </div>
             <button
-              class="mt-3 px-3 py-2 text-sm font-medium rounded-full bg-ios-bg text-ios-text/60 hover:bg-ios-separator transition-colors"
+              class="mt-3 px-3 py-2 text-sm font-medium rounded-full bg-ios-bg text-ios-text/70 hover:bg-ios-separator transition-colors"
               @click="cellClickTarget = null"
             >
               {{ t("employees.scheduling.cancel") }}

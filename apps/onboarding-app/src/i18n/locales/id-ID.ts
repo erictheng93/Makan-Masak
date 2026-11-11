@@ -227,6 +227,7 @@ const idID: Messages = {
     subtitleLine2:
       "Setelah ditinjau platform, kami akan mengaktifkan akun dan sumber daya hosting Anda.",
     summary: {
+      copyApplicationId: "Salin ID pengajuan",
       applicationId: "ID Aplikasi",
       businessName: "Nama Restoran",
       contactEmail: "Hubungi Email",

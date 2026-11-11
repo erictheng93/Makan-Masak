@@ -226,6 +226,7 @@ const msMY: Messages = {
     subtitleLine2:
       "Selepas semakan platform, kami akan mengaktifkan akaun dan sumber hosting anda.",
     summary: {
+      copyApplicationId: "Salin ID permohonan",
       applicationId: "ID Permohonan",
       businessName: "Nama Restoran",
       contactEmail: "E-mel Hubungi",

@@ -82,28 +82,28 @@ const insightTypeConfig = {
     bgColor: "bg-blue-50",
     borderColor: "border-blue-200",
     textColor: "text-blue-900",
-    iconColor: "text-blue-600",
+    iconColor: "text-blue-700",
   },
   recommendation: {
     icon: LightBulbIcon,
     bgColor: "bg-green-50",
     borderColor: "border-green-200",
     textColor: "text-green-900",
-    iconColor: "text-green-600",
+    iconColor: "text-green-700",
   },
   warning: {
     icon: ExclamationTriangleIcon,
     bgColor: "bg-yellow-50",
     borderColor: "border-yellow-200",
     textColor: "text-yellow-900",
-    iconColor: "text-yellow-600",
+    iconColor: "text-yellow-700",
   },
   opportunity: {
     icon: SparklesIcon,
     bgColor: "bg-teal-50",
     borderColor: "border-teal-200",
     textColor: "text-teal-900",
-    iconColor: "text-teal-600",
+    iconColor: "text-teal-700",
   },
 };
 
@@ -153,17 +153,21 @@ const formatPercent = (value: number) => {
 
 <template>
   <ModuleGate module="ai_analytics">
-    <div class="min-h-screen bg-gray-50 py-4 sm:py-8 px-4 sm:px-6 lg:px-8">
+    <div
+      class="ui-page min-h-screen bg-gray-50 py-4 sm:py-8 px-4 sm:px-6 lg:px-8"
+    >
       <div class="max-w-7xl mx-auto">
         <!-- Header -->
         <div class="mb-6 sm:mb-8">
           <div class="mb-4">
             <div class="flex items-center space-x-3 mb-2">
               <SparklesIcon
-                class="w-6 h-6 sm:w-8 sm:h-8 text-teal-600"
+                class="w-6 h-6 sm:w-8 sm:h-8 text-teal-700"
                 aria-hidden="true"
               />
-              <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">
+              <h1
+                class="ui-page-heading text-2xl sm:text-3xl font-bold text-gray-900"
+              >
                 {{ t("aiAnalytics.title") }}
               </h1>
             </div>
@@ -271,7 +275,7 @@ const formatPercent = (value: number) => {
         >
           <div class="flex items-start space-x-3">
             <SparklesIcon
-              class="w-6 h-6 text-teal-600 flex-shrink-0 mt-0.5"
+              class="w-6 h-6 text-teal-700 flex-shrink-0 mt-0.5"
               aria-hidden="true"
             />
             <div class="flex-1">
@@ -297,7 +301,7 @@ const formatPercent = (value: number) => {
         >
           <div class="flex items-start space-x-3">
             <ExclamationTriangleIcon
-              class="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5"
+              class="w-6 h-6 text-red-700 flex-shrink-0 mt-0.5"
             />
             <div class="flex-1">
               <h3 class="text-red-900 font-semibold mb-1">
@@ -321,7 +325,7 @@ const formatPercent = (value: number) => {
         >
           <div class="text-center">
             <ArrowPathIcon
-              class="w-12 h-12 text-teal-600 animate-spin mx-auto mb-4"
+              class="w-12 h-12 text-teal-700 animate-spin mx-auto mb-4"
             />
             <div class="text-gray-600 font-medium">
               {{ t("aiAnalytics.analyzing") }}
@@ -340,14 +344,14 @@ const formatPercent = (value: number) => {
             <div
               class="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-shadow"
             >
-              <div class="flex items-center justify-between mb-4">
+              <div class="ui-toolbar flex items-center justify-between mb-4">
                 <div class="text-sm font-medium text-gray-600">
                   {{ t("aiAnalytics.totalRevenue") }}
                 </div>
                 <div
                   class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center"
                 >
-                  <ArrowTrendingUpIcon class="w-6 h-6 text-green-600" />
+                  <ArrowTrendingUpIcon class="w-6 h-6 text-green-700" />
                 </div>
               </div>
               <div class="text-2xl font-bold text-gray-900 mb-1">
@@ -357,8 +361,8 @@ const formatPercent = (value: number) => {
                 class="flex items-center space-x-1 text-sm"
                 :class="
                   report.metrics.revenueGrowth >= 0
-                    ? 'text-green-600'
-                    : 'text-red-600'
+                    ? 'text-green-700'
+                    : 'text-red-700'
                 "
               >
                 <ArrowTrendingUpIcon
@@ -379,14 +383,14 @@ const formatPercent = (value: number) => {
             <div
               class="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-shadow"
             >
-              <div class="flex items-center justify-between mb-4">
+              <div class="ui-toolbar flex items-center justify-between mb-4">
                 <div class="text-sm font-medium text-gray-600">
                   {{ t("aiAnalytics.totalOrders") }}
                 </div>
                 <div
                   class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center"
                 >
-                  <ChartBarIcon class="w-6 h-6 text-blue-600" />
+                  <ChartBarIcon class="w-6 h-6 text-blue-700" />
                 </div>
               </div>
               <div class="text-2xl font-bold text-gray-900 mb-1">
@@ -396,8 +400,8 @@ const formatPercent = (value: number) => {
                 class="flex items-center space-x-1 text-sm"
                 :class="
                   report.metrics.orderGrowth >= 0
-                    ? 'text-green-600'
-                    : 'text-red-600'
+                    ? 'text-green-700'
+                    : 'text-red-700'
                 "
               >
                 <ArrowTrendingUpIcon
@@ -418,7 +422,7 @@ const formatPercent = (value: number) => {
             <div
               class="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-shadow"
             >
-              <div class="flex items-center justify-between mb-4">
+              <div class="ui-toolbar flex items-center justify-between mb-4">
                 <div class="text-sm font-medium text-gray-600">
                   {{ t("aiAnalytics.avgOrderValue") }}
                 </div>
@@ -440,7 +444,7 @@ const formatPercent = (value: number) => {
             <div
               class="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-shadow"
             >
-              <div class="flex items-center justify-between mb-4">
+              <div class="ui-toolbar flex items-center justify-between mb-4">
                 <div class="text-sm font-medium text-gray-600">
                   {{ t("aiAnalytics.uniqueCustomers") }}
                 </div>
@@ -493,7 +497,7 @@ const formatPercent = (value: number) => {
                 ]"
               >
                 <!-- Insight Header -->
-                <div class="flex items-start justify-between mb-4">
+                <div class="ui-toolbar flex items-start justify-between mb-4">
                   <div class="flex items-center space-x-3">
                     <div
                       class="w-10 h-10 rounded-xl flex items-center justify-center"
@@ -575,7 +579,7 @@ const formatPercent = (value: number) => {
                       class="flex items-start space-x-2 text-sm text-gray-700"
                     >
                       <CheckCircleIcon
-                        class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5"
+                        class="w-5 h-5 text-green-700 flex-shrink-0 mt-0.5"
                       />
                       <span>{{ action }}</span>
                     </li>
@@ -584,7 +588,7 @@ const formatPercent = (value: number) => {
 
                 <!-- Confidence Score -->
                 <div
-                  class="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between"
+                  class="ui-toolbar mt-4 pt-4 border-t border-gray-100 flex items-center justify-between"
                 >
                   <div class="text-xs text-gray-500">
                     {{ t("aiAnalytics.confidenceScore") }}
@@ -613,7 +617,7 @@ const formatPercent = (value: number) => {
             class="bg-white rounded-2xl p-8 border border-gray-100"
           >
             <div class="flex items-center space-x-3 mb-6">
-              <CalendarIcon class="w-6 h-6 text-teal-600" />
+              <CalendarIcon class="w-6 h-6 text-teal-700" />
               <h2 class="text-xl font-bold text-gray-900">
                 {{ t("aiAnalytics.next7DaysForecast") }}
               </h2>
@@ -630,8 +634,10 @@ const formatPercent = (value: number) => {
                     formatCurrency(report.forecast.nextWeekRevenue.predicted)
                   }}
                 </div>
-                <div class="flex items-center justify-between text-sm">
-                  <div class="text-green-600">
+                <div
+                  class="ui-toolbar flex items-center justify-between text-sm"
+                >
+                  <div class="text-green-700">
                     {{ t("aiAnalytics.forecastMin") }}:
                     {{
                       formatCurrency(
@@ -639,7 +645,7 @@ const formatPercent = (value: number) => {
                       )
                     }}
                   </div>
-                  <div class="text-green-600">
+                  <div class="text-green-700">
                     {{ t("aiAnalytics.forecastMax") }}:
                     {{
                       formatCurrency(
@@ -660,14 +666,16 @@ const formatPercent = (value: number) => {
                     report.forecast.nextWeekOrders.predicted.toLocaleString()
                   }}
                 </div>
-                <div class="flex items-center justify-between text-sm">
-                  <div class="text-blue-600">
+                <div
+                  class="ui-toolbar flex items-center justify-between text-sm"
+                >
+                  <div class="text-blue-700">
                     {{ t("aiAnalytics.forecastMin") }}:
                     {{
                       report.forecast.nextWeekOrders.confidenceLower.toLocaleString()
                     }}
                   </div>
-                  <div class="text-blue-600">
+                  <div class="text-blue-700">
                     {{ t("aiAnalytics.forecastMax") }}:
                     {{
                       report.forecast.nextWeekOrders.confidenceUpper.toLocaleString()
@@ -727,14 +735,6 @@ const formatPercent = (value: number) => {
 }
 
 .animate-shimmer {
-  animation: shimmer 2s infinite linear;
-  background: linear-gradient(
-    to right,
-    #f3f4f6 0%,
-    #e5e7eb 20%,
-    #f3f4f6 40%,
-    #f3f4f6 100%
-  );
-  background-size: 1000px 100%;
+  background: theme("colors.ios-bg");
 }
 </style>

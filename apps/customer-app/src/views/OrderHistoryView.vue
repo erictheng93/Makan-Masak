@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-ios-bg">
+  <div class="customer-shell min-h-screen bg-ios-bg">
     <!-- Header -->
     <div class="bg-ios-card shadow-[0_2px_8px_rgb(0,0,0,0.04)]">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -12,7 +12,7 @@
           <div class="flex items-center space-x-4">
             <router-link
               to="/profile"
-              class="text-sm text-gray-600 hover:text-orange-600"
+              class="text-sm text-gray-600 hover:text-ios-blue"
             >
               {{ t("orderHistory.personalCenter") }}
             </router-link>
@@ -95,7 +95,7 @@
       <!-- Loading State -->
       <div v-if="isLoading" class="flex justify-center items-center py-12">
         <div
-          class="animate-spin rounded-full h-12 w-12 border-4 border-orange-500 border-t-transparent"
+          class="animate-spin rounded-full h-12 w-12 border-4 border-ios-blue border-t-transparent"
         />
       </div>
 
@@ -126,7 +126,7 @@
         <div class="mt-6">
           <router-link
             to="/menu"
-            class="inline-flex items-center px-5 py-2.5 shadow-md text-sm font-semibold rounded-full text-white bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 transition"
+            class="inline-flex items-center px-5 py-2.5 shadow-md text-sm font-semibold rounded-full text-white bg-ios-blue hover:bg-blue-700 transition"
           >
             {{ t("orderHistory.startOrdering") }}
           </router-link>
@@ -138,8 +138,7 @@
         <div
           v-for="order in orders"
           :key="order.id"
-          class="bg-ios-card rounded-2xl shadow-[0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[0_4px_16px_rgb(0,0,0,0.06)] transition cursor-pointer"
-          @click="viewOrderDetail(order.id)"
+          class="bg-ios-card rounded-2xl shadow-[0_2px_8px_rgb(0,0,0,0.04)] hover:shadow-[0_4px_16px_rgb(0,0,0,0.06)] transition"
         >
           <div class="p-6">
             <div class="flex justify-between items-start">
@@ -147,7 +146,11 @@
                 <!-- Order Number -->
                 <div class="flex items-center space-x-2 mb-2">
                   <h3 class="text-lg font-semibold text-gray-900">
-                    {{ order.orderNumber }}
+                    <router-link
+                      :to="`/orders/${order.id}`"
+                      class="inline-flex min-h-11 items-center text-ios-blue underline-offset-4 hover:underline"
+                      >{{ order.orderNumber }}</router-link
+                    >
                   </h3>
                   <span
                     class="px-2 py-1 text-xs font-medium rounded-full"
@@ -188,7 +191,7 @@
 
               <!-- Amount -->
               <div class="text-right">
-                <p class="text-2xl font-bold text-orange-600">
+                <p class="text-2xl font-bold text-ios-text">
                   {{ formatPriceIn(order.totalAmount, order.currency) }}
                 </p>
                 <p
@@ -207,12 +210,12 @@
             <div
               class="mt-4 pt-4 border-t border-ios-separator flex justify-end space-x-2"
             >
-              <button
-                class="px-4 py-2 text-sm font-semibold text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded-full transition"
-                @click.stop="viewOrderDetail(order.id)"
+              <router-link
+                :to="`/orders/${order.id}`"
+                class="inline-flex min-h-11 items-center px-4 py-2 text-sm font-semibold text-ios-blue hover:bg-blue-50 rounded-full transition"
               >
                 {{ t("orderHistory.viewDetails") }}
-              </button>
+              </router-link>
               <button
                 v-if="order.status === 'pending'"
                 class="px-4 py-2 text-sm font-semibold text-ios-red hover:bg-ios-red/10 rounded-full transition"
@@ -222,10 +225,7 @@
               </button>
             </div>
 
-            <!--
-              評價：留在訂單卡片內，接在操作列之後。整張卡片本身是「看詳情」的
-              連結，所以這一塊要自己擋下點擊，不然選一顆星就跳頁了。
-            -->
+            <!-- Reviews retain their own interaction boundary. -->
             <div @click.stop>
               <OrderReviewSection
                 :order-id="order.id"
@@ -353,11 +353,6 @@ const resetFilters = () => {
 const changePage = (page: number) => {
   pagination.page = page;
   loadOrders();
-};
-
-// 查看訂單詳情
-const viewOrderDetail = (orderId: string) => {
-  router.push(`/orders/${orderId}`);
 };
 
 // 取消訂單

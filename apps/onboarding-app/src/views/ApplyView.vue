@@ -305,25 +305,11 @@ const useCurrentLocation = () => {
 </script>
 
 <template>
-  <div class="max-w-2xl mx-auto">
-    <!-- Progress -->
-    <div class="flex items-center justify-center mb-8">
-      <div class="flex items-center">
-        <div
-          class="w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center font-medium"
-        >
-          1
-        </div>
-        <div class="w-24 h-1 bg-gray-200">
-          <div class="w-0 h-full bg-primary-500" />
-        </div>
-        <div
-          class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-medium"
-        >
-          2
-        </div>
-      </div>
-    </div>
+  <div class="onboarding-page ui-page max-w-2xl mx-auto">
+    <ol class="onboarding-progress">
+      <li aria-current="step"><span>1</span>{{ t("apply.title") }}</li>
+      <li><span>2</span>{{ t("success.title") }}</li>
+    </ol>
 
     <div class="card">
       <h1 class="text-2xl font-bold text-gray-900 mb-6">
@@ -339,7 +325,7 @@ const useCurrentLocation = () => {
         <p class="text-sm text-red-700">{{ submitErrorMessage }}</p>
       </div>
 
-      <form @submit.prevent="handleSubmit" class="space-y-6">
+      <form @submit.prevent="handleSubmit" class="onboarding-form">
         <!-- 餐廳名稱 -->
         <div>
           <label for="onboarding-business-name" class="label"
@@ -452,94 +438,8 @@ const useCurrentLocation = () => {
           </p>
         </div>
 
-        <!-- 餐廳位置 -->
-        <div class="space-y-3">
-          <div
-            class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
-          >
-            <div>
-              <label class="label"
-                >{{ t("apply.form.location.label") }} *</label
-              >
-              <p class="mt-1 text-sm text-gray-500">
-                {{ t("apply.form.location.help") }}
-              </p>
-            </div>
-            <button
-              type="button"
-              class="btn btn-secondary shrink-0"
-              :disabled="isLocating"
-              @click="useCurrentLocation"
-            >
-              <ArrowPathIcon
-                v-if="isLocating"
-                class="h-4 w-4 mr-2 animate-spin"
-              />
-              <MapPinIcon v-else class="h-4 w-4 mr-2" />
-              {{
-                isLocating
-                  ? t("apply.form.location.locating")
-                  : t("apply.form.location.useCurrent")
-              }}
-            </button>
-          </div>
-
-          <div class="grid gap-4 sm:grid-cols-2">
-            <div>
-              <input
-                v-model.number="form.latitude"
-                data-testid="onboarding-latitude"
-                :aria-label="t('apply.form.location.latitudePlaceholder')"
-                type="number"
-                step="0.000001"
-                min="-90"
-                max="90"
-                class="input"
-                :class="{ 'input-error': errors.latitude }"
-                :aria-invalid="errors.latitude ? 'true' : undefined"
-                :aria-describedby="
-                  errors.latitude ? 'onboarding-latitude-error' : undefined
-                "
-                :placeholder="t('apply.form.location.latitudePlaceholder')"
-              />
-              <p
-                v-if="errors.latitude"
-                id="onboarding-latitude-error"
-                class="mt-1 text-sm text-red-600"
-              >
-                {{ errors.latitude }}
-              </p>
-            </div>
-            <div>
-              <input
-                v-model.number="form.longitude"
-                data-testid="onboarding-longitude"
-                :aria-label="t('apply.form.location.longitudePlaceholder')"
-                type="number"
-                step="0.000001"
-                min="-180"
-                max="180"
-                class="input"
-                :class="{ 'input-error': errors.longitude }"
-                :aria-invalid="errors.longitude ? 'true' : undefined"
-                :aria-describedby="
-                  errors.longitude ? 'onboarding-longitude-error' : undefined
-                "
-                :placeholder="t('apply.form.location.longitudePlaceholder')"
-              />
-              <p
-                v-if="errors.longitude"
-                id="onboarding-longitude-error"
-                class="mt-1 text-sm text-red-600"
-              >
-                {{ errors.longitude }}
-              </p>
-            </div>
-          </div>
-        </div>
-
         <!-- 店家地址 -->
-        <div>
+        <div class="address-field">
           <label for="onboarding-address" class="label"
             >{{ t("apply.form.address.label") }} *</label
           >
@@ -567,7 +467,7 @@ const useCurrentLocation = () => {
           </p>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2">
+        <div class="country-fields grid gap-4 sm:grid-cols-2">
           <div>
             <label for="onboarding-country" class="label"
               >{{ t("apply.form.country.label") }} *</label
@@ -635,7 +535,7 @@ const useCurrentLocation = () => {
           </div>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2">
+        <div class="district-fields grid gap-4 sm:grid-cols-2">
           <div>
             <label for="onboarding-district" class="label"
               >{{ t("apply.form.district.label") }} *</label
@@ -698,7 +598,7 @@ const useCurrentLocation = () => {
           </div>
         </div>
 
-        <div v-if="form.marketId">
+        <div v-if="form.marketId" class="stall-field">
           <label for="onboarding-stall-number" class="label">
             {{ t("apply.form.stallNumber.label") }}
           </label>
@@ -713,8 +613,100 @@ const useCurrentLocation = () => {
           />
         </div>
 
+        <!-- 餐廳位置 -->
+        <div class="location-fields space-y-3">
+          <div
+            class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
+          >
+            <div>
+              <p class="label">{{ t("apply.form.location.label") }} *</p>
+              <p class="mt-1 text-sm text-gray-500">
+                {{ t("apply.form.location.help") }}
+              </p>
+            </div>
+            <button
+              type="button"
+              class="btn btn-secondary shrink-0"
+              :disabled="isLocating"
+              @click="useCurrentLocation"
+            >
+              <ArrowPathIcon
+                v-if="isLocating"
+                class="h-4 w-4 mr-2 animate-spin"
+              />
+              <MapPinIcon v-else class="h-4 w-4 mr-2" />
+              {{
+                isLocating
+                  ? t("apply.form.location.locating")
+                  : t("apply.form.location.useCurrent")
+              }}
+            </button>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label for="onboarding-latitude" class="label">{{
+                t("apply.form.location.latitudePlaceholder")
+              }}</label>
+              <input
+                id="onboarding-latitude"
+                v-model.number="form.latitude"
+                data-testid="onboarding-latitude"
+                :aria-label="t('apply.form.location.latitudePlaceholder')"
+                type="number"
+                step="0.000001"
+                min="-90"
+                max="90"
+                class="input"
+                :class="{ 'input-error': errors.latitude }"
+                :aria-invalid="errors.latitude ? 'true' : undefined"
+                :aria-describedby="
+                  errors.latitude ? 'onboarding-latitude-error' : undefined
+                "
+                :placeholder="t('apply.form.location.latitudePlaceholder')"
+              />
+              <p
+                v-if="errors.latitude"
+                id="onboarding-latitude-error"
+                class="mt-1 text-sm text-red-600"
+              >
+                {{ errors.latitude }}
+              </p>
+            </div>
+            <div>
+              <label for="onboarding-longitude" class="label">{{
+                t("apply.form.location.longitudePlaceholder")
+              }}</label>
+              <input
+                id="onboarding-longitude"
+                v-model.number="form.longitude"
+                data-testid="onboarding-longitude"
+                :aria-label="t('apply.form.location.longitudePlaceholder')"
+                type="number"
+                step="0.000001"
+                min="-180"
+                max="180"
+                class="input"
+                :class="{ 'input-error': errors.longitude }"
+                :aria-invalid="errors.longitude ? 'true' : undefined"
+                :aria-describedby="
+                  errors.longitude ? 'onboarding-longitude-error' : undefined
+                "
+                :placeholder="t('apply.form.location.longitudePlaceholder')"
+              />
+              <p
+                v-if="errors.longitude"
+                id="onboarding-longitude-error"
+                class="mt-1 text-sm text-red-600"
+              >
+                {{ errors.longitude }}
+              </p>
+            </div>
+          </div>
+        </div>
+
         <!-- 提交按鈕 -->
-        <div class="flex justify-between pt-4">
+        <div class="form-actions flex justify-between pt-4">
           <button
             type="button"
             class="btn btn-secondary"

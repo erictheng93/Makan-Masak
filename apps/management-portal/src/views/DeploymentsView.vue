@@ -139,7 +139,10 @@ const getStatusIcon = (status: DeploymentStatus) => {
 </script>
 
 <template>
-  <div class="space-y-6" data-testid="management-deployments-page">
+  <div
+    class="portal-page ui-page space-y-6"
+    data-testid="management-deployments-page"
+  >
     <!-- 頁面標題 -->
     <div>
       <h1 class="text-2xl font-bold text-gray-900">
@@ -153,19 +156,28 @@ const getStatusIcon = (status: DeploymentStatus) => {
       <h3 class="card-header">{{ t("deployments.batch.title") }}</h3>
       <div class="space-y-4">
         <!-- 版本輸入 -->
-        <div class="flex gap-4">
+        <div class="ui-toolbar flex flex-col sm:flex-row gap-4">
           <div class="flex-1">
-            <label class="label">
+            <label for="deployment-target-version" class="label">
               {{ t("deployments.batch.targetVersion") }}
             </label>
             <input
+              id="deployment-target-version"
               v-model="targetVersion"
               type="text"
               class="input"
               :placeholder="t('deployments.batch.versionPlaceholder')"
             />
           </div>
-          <div class="flex items-end">
+          <div class="flex flex-col justify-end gap-2">
+            <p class="text-sm text-gray-600" role="status">
+              {{
+                t("deployments.batch.deployWithCount", {
+                  count: selectedTenants.length,
+                })
+              }}
+              · {{ targetVersion || "—" }}
+            </p>
             <button
               type="button"
               class="btn btn-primary"

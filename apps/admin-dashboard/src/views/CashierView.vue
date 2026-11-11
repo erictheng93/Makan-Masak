@@ -1,5 +1,5 @@
 <template>
-  <div class="cashier-checkout">
+  <div class="ui-page cashier-checkout">
     <!-- 結帳操作列 -->
     <div
       class="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
@@ -10,7 +10,7 @@
           <p class="text-sm text-blue-800 font-medium">
             {{ t("cashier.shift") }}: {{ currentShift.id || "—" }}
           </p>
-          <p class="text-xs text-blue-600">
+          <p class="text-xs text-blue-700">
             <span data-testid="cashier-shift-times">{{ shiftTimeRange }}</span>
           </p>
         </div>
@@ -36,14 +36,14 @@
       <div class="flex flex-wrap items-center gap-2">
         <button
           data-testid="cashier-open-shift-report"
-          class="px-3 py-2 bg-ios-blue text-white rounded-full hover:bg-blue-600 transition-colors text-sm"
+          class="px-3 py-2 bg-primary-700 text-white rounded-full hover:bg-primary-800 transition-colors text-sm"
           @click="openShiftReport"
         >
           {{ t("cashier.shiftReport") }}
         </button>
         <button
           data-testid="cashier-open-refund"
-          class="px-3 py-2 bg-ios-orange text-white rounded-full hover:bg-orange-600 transition-colors text-sm"
+          class="px-3 py-2 bg-ios-orange-soft text-ios-orange-deep rounded-full hover:bg-orange-100 transition-colors text-sm"
           @click="openRefundDialog"
         >
           {{ t("cashier.refundProcess") }}
@@ -54,7 +54,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <!-- 左側：待結帳訂單列表 -->
       <div class="lg:col-span-2">
-        <div class="bg-white rounded-lg shadow">
+        <div class="ui-panel bg-white rounded-lg shadow">
           <div class="p-6 border-b border-gray-200">
             <div
               class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
@@ -102,13 +102,13 @@
               @keydown.enter.prevent="selectOrder(order)"
               @keydown.space.prevent="selectOrder(order)"
             >
-              <div class="flex items-center justify-between">
+              <div class="ui-toolbar flex items-center justify-between">
                 <div class="flex items-center">
                   <div class="flex-shrink-0">
                     <div
                       class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center"
                     >
-                      <DocumentTextIcon class="w-5 h-5 text-blue-600" />
+                      <DocumentTextIcon class="w-5 h-5 text-blue-700" />
                     </div>
                   </div>
                   <div class="ml-4">
@@ -162,7 +162,7 @@
       <!-- 右側：結帳區域 -->
       <div class="space-y-6">
         <!-- 選中的訂單詳情 -->
-        <div class="bg-white rounded-lg shadow">
+        <div class="ui-panel bg-white rounded-lg shadow">
           <div class="p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
               {{
@@ -175,7 +175,7 @@
             <div v-if="selectedOrder">
               <!-- 訂單基本信息 -->
               <div class="mb-6">
-                <div class="flex items-center justify-between mb-4">
+                <div class="ui-toolbar flex items-center justify-between mb-4">
                   <h4 class="font-medium text-gray-900">
                     {{ selectedOrder.orderNumber }}
                   </h4>
@@ -187,17 +187,17 @@
                   </span>
                 </div>
                 <div class="text-sm text-gray-600 space-y-1">
-                  <div class="flex justify-between">
+                  <div class="ui-toolbar flex justify-between">
                     <span>{{ t("cashier.tableNumber") }}:</span>
                     <span>{{
                       selectedOrder.tableNumber || t("cashier.takeaway")
                     }}</span>
                   </div>
-                  <div class="flex justify-between">
+                  <div class="ui-toolbar flex justify-between">
                     <span>{{ t("cashier.orderTime") }}:</span>
                     <span>{{ formatDateTime(selectedOrder.createdAt) }}</span>
                   </div>
-                  <div class="flex justify-between">
+                  <div class="ui-toolbar flex justify-between">
                     <span>{{ t("cashier.customer") }}:</span>
                     <span>{{
                       selectedOrder.customerName || t("cashier.customer")
@@ -215,7 +215,7 @@
                   <div
                     v-for="item in selectedOrder.items"
                     :key="item.id"
-                    class="flex justify-between text-sm"
+                    class="ui-toolbar flex justify-between text-sm"
                   >
                     <div>
                       <span class="font-medium">{{ item.menuItemName }}</span>
@@ -230,15 +230,15 @@
 
               <!-- 金額計算 -->
               <div class="border-t border-gray-200 pt-4 space-y-2">
-                <div class="flex justify-between text-sm">
+                <div class="ui-toolbar flex justify-between text-sm">
                   <span>{{ t("cashier.subtotal") }}:</span>
                   <span>{{ formatPrice(selectedOrder.subtotal) }}</span>
                 </div>
-                <div class="flex justify-between text-sm">
+                <div class="ui-toolbar flex justify-between text-sm">
                   <span>{{ t("cashier.serviceCharge") }}:</span>
                   <span>{{ formatPrice(selectedOrder.serviceCharge) }}</span>
                 </div>
-                <div class="flex justify-between text-sm">
+                <div class="ui-toolbar flex justify-between text-sm">
                   <span>{{ t("cashier.tax") }}:</span>
                   <span>{{ formatPrice(selectedOrder.taxAmount) }}</span>
                 </div>
@@ -247,20 +247,20 @@
                     selectedOrder.discountAmount > 0 ||
                     selectedOrder.appliedCoupons?.length
                   "
-                  class="text-sm text-green-600"
+                  class="text-sm text-green-700"
                 >
                   <div
                     v-for="coupon in selectedOrder.appliedCoupons"
                     :key="coupon.couponId"
                     data-testid="applied-coupon"
-                    class="flex justify-between"
+                    class="ui-toolbar flex justify-between"
                   >
                     <span>{{ coupon.name }} ({{ coupon.code }})</span>
                     <span>-{{ formatPrice(coupon.discountAmount) }}</span>
                   </div>
                   <div
                     v-if="!selectedOrder.appliedCoupons?.length"
-                    class="flex justify-between"
+                    class="ui-toolbar flex justify-between"
                   >
                     <span
                       >{{ t("cashier.discount")
@@ -274,7 +274,7 @@
                   </div>
                 </div>
                 <div
-                  class="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t border-gray-200"
+                  class="ui-toolbar flex justify-between text-lg font-bold text-gray-900 pt-2 border-t border-gray-200"
                 >
                   <span>{{ t("cashier.total") }}:</span>
                   <span>{{ formatPrice(selectedOrder.totalAmount) }}</span>
@@ -292,7 +292,7 @@
         </div>
 
         <!-- 付款方式選擇 -->
-        <div v-if="selectedOrder" class="bg-white rounded-lg shadow">
+        <div v-if="selectedOrder" class="ui-panel bg-white rounded-lg shadow">
           <div class="p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
               {{ t("cashier.paymentMethod") }}
@@ -349,13 +349,13 @@
                   只印原來那一行「應付金額」，畫面完全不變。
                 -->
                 <template v-if="cashRoundingAdjustmentCents !== 0">
-                  <div class="flex justify-between text-sm">
+                  <div class="ui-toolbar flex justify-between text-sm">
                     <span>{{ t("cashier.orderTotal") }}:</span>
                     <span class="font-medium">{{
                       formatPrice(selectedOrder.totalAmount)
                     }}</span>
                   </div>
-                  <div class="flex justify-between text-sm">
+                  <div class="ui-toolbar flex justify-between text-sm">
                     <span>{{ t("cashier.cashRounding") }}:</span>
                     <span
                       data-testid="cash-rounding-adjustment"
@@ -364,25 +364,25 @@
                     >
                   </div>
                 </template>
-                <div class="flex justify-between text-sm">
+                <div class="ui-toolbar flex justify-between text-sm">
                   <span>{{ t("cashier.amountDue") }}:</span>
                   <span data-testid="cash-amount-due" class="font-medium">{{
                     formatPrice(amountDueCents / 100)
                   }}</span>
                 </div>
-                <div class="flex justify-between text-sm">
+                <div class="ui-toolbar flex justify-between text-sm">
                   <span>{{ t("cashier.received") }}:</span>
                   <span class="font-medium">{{
                     formatPrice(cashReceived)
                   }}</span>
                 </div>
                 <div
-                  class="flex justify-between text-lg font-bold mt-1 pt-1 border-t border-gray-200"
+                  class="ui-toolbar flex justify-between text-lg font-bold mt-1 pt-1 border-t border-gray-200"
                 >
                   <span>{{ t("cashier.change") }}:</span>
                   <span
                     data-testid="cash-change"
-                    :class="change >= 0 ? 'text-green-600' : 'text-red-600'"
+                    :class="change >= 0 ? 'text-green-700' : 'text-red-700'"
                   >
                     {{ formatPrice(change) }}
                   </span>
@@ -392,7 +392,7 @@
                 v-if="cashPaymentBlockedReason"
                 data-testid="cash-insufficient"
                 role="status"
-                class="mt-2 text-sm font-medium text-red-600"
+                class="mt-2 text-sm font-medium text-red-700"
               >
                 {{ cashPaymentBlockedReason }}
               </p>
@@ -413,7 +413,7 @@
                 v-if="shiftRequired"
                 data-testid="shift-required"
                 role="status"
-                class="text-sm font-medium text-red-600"
+                class="text-sm font-medium text-red-700"
               >
                 <router-link to="/dashboard/pos/management" class="underline">{{
                   t("cashier.shiftRequired")
@@ -459,9 +459,9 @@
           @click="closeShiftReport"
         />
         <div
-          class="relative bg-white rounded-lg shadow-xl max-w-2xl w-full p-6"
+          class="ui-panel relative bg-white rounded-lg shadow-xl max-w-2xl w-full p-6"
         >
-          <div class="flex items-center justify-between mb-6">
+          <div class="ui-toolbar flex items-center justify-between mb-6">
             <h3 class="text-xl font-semibold text-gray-900">
               {{ t("cashier.shiftReport") }}
             </h3>
@@ -606,7 +606,7 @@
             </div>
           </div>
 
-          <div class="flex justify-end space-x-3 mt-6">
+          <div class="ui-toolbar flex justify-end space-x-3 mt-6">
             <button
               class="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors"
               @click="closeShiftReport"
@@ -614,7 +614,7 @@
               {{ t("common.close") }}
             </button>
             <button
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              class="px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors"
               @click="printShiftReport"
             >
               {{ t("cashier.printReport") }}
@@ -638,8 +638,10 @@
           class="fixed inset-0 bg-black opacity-30"
           @click="closeRefundDialog"
         />
-        <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-          <div class="flex items-center justify-between mb-6">
+        <div
+          class="ui-panel relative bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+        >
+          <div class="ui-toolbar flex items-center justify-between mb-6">
             <h3 class="text-xl font-semibold text-gray-900">
               {{ t("cashier.refundProcess") }}
             </h3>
@@ -787,7 +789,7 @@
             </div>
           </div>
 
-          <div class="flex justify-end space-x-3 mt-6">
+          <div class="ui-toolbar flex justify-end space-x-3 mt-6">
             <button
               class="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors"
               @click="closeRefundDialog"
@@ -820,9 +822,9 @@
       <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-black opacity-30" />
         <div
-          class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6 text-center"
+          class="ui-panel relative bg-white rounded-lg shadow-xl max-w-md w-full p-6 text-center"
         >
-          <CheckCircleIcon class="mx-auto h-16 w-16 text-green-600 mb-4" />
+          <CheckCircleIcon class="mx-auto h-16 w-16 text-green-700 mb-4" />
           <h3 class="text-xl font-semibold text-gray-900 mb-2">
             {{ t("cashier.paymentSuccess") }}
           </h3>
@@ -844,7 +846,7 @@
           <div class="space-y-3">
             <button
               data-testid="print-final-receipt"
-              class="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              class="w-full py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors"
               :disabled="isProcessing"
               @click="printFinalReceipt"
             >
@@ -869,9 +871,9 @@
           @click="showDiscountModal = false"
         />
         <div
-          class="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+          class="ui-panel relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
         >
-          <div class="flex items-center justify-between mb-6">
+          <div class="ui-toolbar flex items-center justify-between mb-6">
             <h3 class="text-xl font-semibold text-ios-text">
               {{ t("cashier.applyDiscount") || "套用折扣" }}
             </h3>
@@ -901,7 +903,7 @@
               <span class="absolute right-3 top-2.5 text-gray-500">%</span>
             </div>
           </div>
-          <div class="flex justify-end space-x-3 mt-6">
+          <div class="ui-toolbar flex justify-end space-x-3 mt-6">
             <button
               class="px-4 py-2 bg-gray-100 text-gray-800 rounded-full hover:bg-gray-200 transition-colors"
               @click="showDiscountModal = false"
@@ -914,7 +916,7 @@
                 discountPercentInput <= 0 ||
                 discountPercentInput > 100
               "
-              class="px-4 py-2 bg-ios-blue text-white rounded-full hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              class="px-4 py-2 bg-primary-700 text-white rounded-full hover:bg-primary-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               @click="confirmApplyDiscount"
             >
               {{ t("common.confirm") || "確認" }}
@@ -932,9 +934,9 @@
           @click="showEndShiftModal = false"
         />
         <div
-          class="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+          class="ui-panel relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
         >
-          <div class="flex items-center justify-between mb-6">
+          <div class="ui-toolbar flex items-center justify-between mb-6">
             <h3 class="text-xl font-semibold text-ios-text">
               {{ t("cashier.endShift") || "結束班次" }}
             </h3>
@@ -963,7 +965,7 @@
               class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
             />
           </label>
-          <div class="flex justify-end space-x-3">
+          <div class="ui-toolbar flex justify-end space-x-3">
             <button
               class="px-4 py-2 bg-gray-100 text-gray-800 rounded-full hover:bg-gray-200 transition-colors"
               @click="showEndShiftModal = false"

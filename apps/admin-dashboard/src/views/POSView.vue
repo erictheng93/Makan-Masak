@@ -1,9 +1,9 @@
 <template>
-  <div class="pos-container">
+  <div class="ui-page pos-container">
     <!-- POS 系統標題 -->
-    <div class="flex justify-between items-center mb-6">
+    <div class="ui-toolbar flex justify-between items-center mb-6">
       <div>
-        <h1 class="text-3xl font-bold text-ios-text">
+        <h1 class="ui-page-heading text-3xl font-bold text-ios-text">
           {{ t("pos.systemTitle") }}
         </h1>
         <p class="text-gray-500 mt-1">{{ t("pos.systemSubtitle") }}</p>
@@ -18,15 +18,17 @@
     </div>
 
     <!-- Tab 導航 -->
-    <div class="flex space-x-1 bg-gray-100 rounded-2xl p-1 mb-6">
+    <div
+      class="ui-tabs flex gap-1 bg-white rounded-full p-1 mb-6 shadow-ios-sm"
+    >
       <router-link
         v-for="tab in tabs"
         :key="tab.name"
         :to="tab.path"
         :class="[
-          'flex items-center justify-center px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+          'flex items-center justify-center px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-200',
           isActiveTab(tab.path)
-            ? 'bg-white text-ios-blue shadow-sm'
+            ? 'bg-primary-700 text-white shadow-sm'
             : 'text-gray-500 hover:text-gray-700',
         ]"
       >
@@ -91,7 +93,7 @@ onUnmounted(() => {
 .pos-container {
   padding: 1.5rem;
   min-height: 100vh;
-  background-color: #f9fafb;
+  background-color: theme("colors.ios-bg");
 }
 
 @media (max-width: 640px) {

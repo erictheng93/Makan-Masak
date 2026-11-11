@@ -87,9 +87,12 @@ const getStatusClass = (status: TenantStatus) => {
 </script>
 
 <template>
-  <div class="space-y-6" data-testid="management-tenants-page">
+  <div
+    class="portal-page ui-page space-y-6"
+    data-testid="management-tenants-page"
+  >
     <!-- 頁面標題 -->
-    <div class="flex items-center justify-between">
+    <div class="portal-heading ui-page-heading">
       <div>
         <h1 class="text-2xl font-bold text-gray-900">
           {{ t("tenants.title") }}
@@ -111,12 +114,16 @@ const getStatusClass = (status: TenantStatus) => {
     <div class="card">
       <div class="flex flex-col sm:flex-row gap-4">
         <!-- 搜索 -->
-        <div class="flex-1">
+        <div class="flex-1 min-w-0">
+          <label for="tenant-search" class="label">{{
+            t("tenants.filter.searchPlaceholder")
+          }}</label>
           <div class="relative">
             <MagnifyingGlassIcon
               class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"
             />
             <input
+              id="tenant-search"
               v-model="searchQuery"
               type="text"
               :placeholder="t('tenants.filter.searchPlaceholder')"
@@ -126,17 +133,26 @@ const getStatusClass = (status: TenantStatus) => {
         </div>
 
         <!-- 狀態過濾 -->
-        <div class="flex items-center gap-2">
-          <FunnelIcon class="h-5 w-5 text-gray-400" />
-          <select v-model="statusFilter" class="input w-40">
-            <option
-              v-for="option in statusOptions"
-              :key="option.value"
-              :value="option.value"
+        <div>
+          <label for="tenant-status" class="label">{{
+            t("tenants.column.status")
+          }}</label>
+          <div class="flex items-center gap-2">
+            <FunnelIcon class="h-5 w-5 text-gray-400" />
+            <select
+              id="tenant-status"
+              v-model="statusFilter"
+              class="input w-full sm:w-44"
             >
-              {{ option.label }}
-            </option>
-          </select>
+              <option
+                v-for="option in statusOptions"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
@@ -166,7 +182,7 @@ const getStatusClass = (status: TenantStatus) => {
         </p>
       </div>
 
-      <div v-else class="overflow-x-auto">
+      <div v-else class="ui-table-scroll overflow-x-auto">
         <table class="table">
           <thead>
             <tr>

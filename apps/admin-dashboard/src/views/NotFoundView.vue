@@ -1,12 +1,12 @@
 <template>
-  <div class="not-found-view">
+  <div class="ui-page not-found-view">
     <div
       class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"
     >
       <div class="max-w-md w-full space-y-8 text-center">
         <!-- 404 大字 -->
         <div class="mb-8">
-          <h1 class="text-9xl font-bold text-gray-200 mb-4">404</h1>
+          <p class="text-sm font-semibold text-ios-text/70 mb-4">404</p>
           <div class="flex justify-center">
             <QuestionMarkCircleIcon class="h-20 w-20 text-gray-400" />
           </div>
@@ -14,9 +14,9 @@
 
         <!-- 標題和描述 -->
         <div class="space-y-4">
-          <h2 class="text-3xl font-bold text-gray-900">
+          <h1 class="ui-page-heading text-3xl font-bold text-gray-900">
             {{ t("notFound.title") }}
-          </h2>
+          </h1>
           <p class="text-lg text-gray-600">
             {{ t("notFound.description") }}
           </p>
@@ -30,11 +30,30 @@
           <div class="text-sm text-gray-600">
             <p class="font-medium mb-2">{{ t("notFound.attemptedPath") }}</p>
             <code
-              class="bg-white px-3 py-1 rounded border text-red-600 break-all"
+              class="bg-white px-3 py-1 rounded border text-red-700 break-all"
             >
               {{ currentPath }}
             </code>
           </div>
+        </div>
+
+        <!-- 主要操作按鈕 -->
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button
+            class="ui-panel flex-1 flex justify-center items-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            @click="goBack"
+          >
+            <ArrowLeftIcon class="h-4 w-4 mr-2" />
+            {{ t("notFound.goBack") }}
+          </button>
+
+          <button
+            class="flex-1 flex justify-center items-center px-6 py-3 border border-transparent rounded-lg shadow-sm bg-primary-700 text-sm font-medium text-white hover:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            @click="goHome"
+          >
+            <HomeIcon class="h-4 w-4 mr-2" />
+            {{ t("notFound.goHome") }}
+          </button>
         </div>
 
         <!-- 快速導航 -->
@@ -46,7 +65,7 @@
             <button
               v-for="link in navigationLinks"
               :key="link.path"
-              class="flex items-center justify-center px-4 py-3 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 group"
+              class="ui-panel flex items-center justify-center px-4 py-3 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 group"
               @click="navigateTo(link.path)"
             >
               <component
@@ -62,30 +81,11 @@
           </div>
         </div>
 
-        <!-- 主要操作按鈕 -->
-        <div class="flex flex-col sm:flex-row gap-3">
-          <button
-            class="flex-1 flex justify-center items-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-            @click="goBack"
-          >
-            <ArrowLeftIcon class="h-4 w-4 mr-2" />
-            {{ t("notFound.goBack") }}
-          </button>
-
-          <button
-            class="flex-1 flex justify-center items-center px-6 py-3 border border-transparent rounded-lg shadow-sm bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-            @click="goHome"
-          >
-            <HomeIcon class="h-4 w-4 mr-2" />
-            {{ t("notFound.goHome") }}
-          </button>
-        </div>
-
         <!-- 搜索功能 -->
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div class="flex items-start">
             <div class="flex-shrink-0">
-              <InformationCircleIcon class="h-5 w-5 text-blue-400" />
+              <InformationCircleIcon class="h-5 w-5 text-blue-700" />
             </div>
             <div class="ml-3">
               <h3 class="text-sm font-medium text-blue-800">
@@ -106,7 +106,7 @@
                   />
                 </div>
                 <button
-                  class="mt-2 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  class="mt-2 w-full px-4 py-2 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors text-sm font-medium"
                   @click="performSearch"
                 >
                   {{ t("notFound.search") }}
@@ -124,14 +124,14 @@
           <div class="flex justify-center space-x-6 text-sm">
             <a
               href="mailto:support@makanmasak.com"
-              class="text-blue-600 hover:text-blue-800 transition-colors flex items-center"
+              class="text-blue-700 hover:text-blue-800 transition-colors flex items-center"
             >
               <EnvelopeIcon class="h-4 w-4 mr-1" />
               {{ t("notFound.techSupport") }}
             </a>
             <a
               href="tel:+60123456789"
-              class="text-blue-600 hover:text-blue-800 transition-colors flex items-center"
+              class="text-blue-700 hover:text-blue-800 transition-colors flex items-center"
             >
               <PhoneIcon class="h-4 w-4 mr-1" />
               {{ t("notFound.contactPhone") }}

@@ -1,11 +1,11 @@
 <template>
-  <div class="min-h-screen bg-ios-bg">
+  <div class="customer-shell min-h-screen bg-ios-bg">
     <div class="max-w-4xl mx-auto py-8 px-4">
       <h1 class="text-3xl font-bold text-gray-900 mb-8">
         {{ t("about.title") }}
       </h1>
 
-      <div class="bg-white rounded-lg shadow-sm p-6 space-y-6">
+      <div class="bg-white rounded-2xl shadow-card-sm p-6 space-y-6">
         <section>
           <h2 class="text-xl font-semibold text-gray-900 mb-4">MakanMasak</h2>
           <p class="text-gray-700 leading-relaxed">

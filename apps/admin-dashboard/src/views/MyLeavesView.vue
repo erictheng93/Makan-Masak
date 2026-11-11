@@ -1,10 +1,14 @@
 <template>
-  <div class="min-h-full bg-ios-bg -mx-4 -my-4 px-4 py-6 sm:-mx-6 sm:px-6">
+  <div
+    class="ui-page min-h-full bg-ios-bg -mx-4 -my-4 px-4 py-6 sm:-mx-6 sm:px-6"
+  >
     <div class="max-w-3xl mx-auto space-y-6">
       <!-- Page header -->
-      <header class="flex flex-wrap items-start justify-between gap-3">
+      <header
+        class="ui-toolbar flex flex-wrap items-start justify-between gap-3"
+      >
         <div>
-          <h1 class="text-2xl font-bold text-ios-text">
+          <h1 class="ui-page-heading text-2xl font-bold text-ios-text">
             {{ t("leaves.myLeaves") }}
           </h1>
           <p class="mt-1 text-sm text-ios-secondary">
@@ -18,7 +22,7 @@
           data-testid="my-leaves-apply"
           :disabled="loading || leaveTypes.length === 0"
           :title="leaveTypes.length === 0 ? t('leaves.manage.noTypesHint') : ''"
-          class="rounded-full bg-ios-blue px-4 py-2 text-sm font-semibold text-white transition-all duration-200 ease-out hover:opacity-90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+          class="rounded-full bg-primary-700 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 ease-out hover:opacity-90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
           @click="showRequestDialog = true"
         >
           {{ t("leaves.request.new") }}
@@ -29,13 +33,13 @@
       <div
         v-if="loadError"
         data-testid="my-leaves-error"
-        class="flex items-start gap-3 rounded-2xl bg-white p-5 shadow-ios-card"
+        class="ui-panel flex items-start gap-3 rounded-2xl bg-white p-5 shadow-ios-card"
       >
         <ExclamationTriangleIcon class="h-5 w-5 shrink-0 text-ios-red" />
         <div class="flex-1">
           <p class="text-sm font-semibold text-ios-text">{{ loadError }}</p>
           <button
-            class="mt-3 rounded-full bg-ios-blue px-4 py-1.5 text-sm font-semibold text-white transition-all duration-200 ease-out active:scale-95"
+            class="mt-3 rounded-full bg-primary-700 px-4 py-1.5 text-sm font-semibold text-white transition-all duration-200 ease-out active:scale-95"
             @click="loadAll"
           >
             {{ t("leaves.manage.retry") }}
@@ -51,7 +55,10 @@
           {{ t("leaves.balance.title") }}
         </h2>
 
-        <div v-if="loading" class="rounded-2xl bg-white p-8 shadow-ios-card">
+        <div
+          v-if="loading"
+          class="ui-panel rounded-2xl bg-white p-8 shadow-ios-card"
+        >
           <p class="text-center text-sm text-ios-secondary">
             {{ t("myShifts.loading") }}
           </p>
@@ -60,7 +67,7 @@
         <div
           v-else-if="balances.length === 0"
           data-testid="my-leaves-no-balances"
-          class="rounded-2xl bg-white p-8 text-center shadow-ios-card"
+          class="ui-panel rounded-2xl bg-white p-8 text-center shadow-ios-card"
         >
           <CalendarIcon class="mx-auto h-10 w-10 text-ios-tertiary" />
           <p class="mt-3 text-sm font-semibold text-ios-text">
@@ -76,7 +83,7 @@
             v-for="balance in balances"
             :key="balance.id"
             data-testid="my-leave-balance"
-            class="rounded-2xl bg-white p-5 shadow-ios-card"
+            class="ui-panel rounded-2xl bg-white p-5 shadow-ios-card"
           >
             <div class="flex items-center gap-2">
               <span class="text-sm font-semibold text-ios-text">
@@ -122,7 +129,7 @@
         <div
           v-if="!loading && myRequests.length === 0"
           data-testid="my-leaves-empty"
-          class="rounded-2xl bg-white p-8 text-center shadow-ios-card"
+          class="ui-panel rounded-2xl bg-white p-8 text-center shadow-ios-card"
         >
           <p class="text-sm text-ios-secondary">
             {{ t("leaves.list.noRequests") }}
@@ -135,7 +142,7 @@
             :key="request.id"
             data-testid="my-leave-request"
             :data-status="request.status"
-            class="rounded-2xl bg-white p-5 shadow-ios-card"
+            class="ui-panel rounded-2xl bg-white p-5 shadow-ios-card"
           >
             <div class="flex flex-wrap items-center gap-2">
               <span
@@ -186,8 +193,18 @@
               </button>
 
               <div v-else class="mt-4 space-y-2">
+                <label
+                  :for="`cancel-reason-${request.id}`"
+                  class="block text-sm font-medium text-ios-text"
+                  >{{ t("leaveActions.cancelReasonPrompt") }}</label
+                >
                 <input
+                  :id="`cancel-reason-${request.id}`"
                   v-model="cancelReason"
+                  :aria-invalid="!!cancelError"
+                  :aria-describedby="
+                    cancelError ? `cancel-error-${request.id}` : undefined
+                  "
                   type="text"
                   maxlength="500"
                   data-testid="my-leave-cancel-reason"
@@ -196,6 +213,14 @@
                   @keydown.enter="submitCancel"
                   @keydown.esc="closeCancel"
                 />
+                <p
+                  v-if="cancelError"
+                  :id="`cancel-error-${request.id}`"
+                  role="alert"
+                  class="text-sm text-ios-red-deep"
+                >
+                  {{ cancelError }}
+                </p>
                 <div class="flex gap-2">
                   <button
                     data-testid="my-leave-cancel-confirm"
@@ -279,6 +304,7 @@ const myRequests = ref<LeaveRequest[]>([]);
 
 const cancellingId = ref<number | null>(null);
 const cancelReason = ref("");
+const cancelError = ref("");
 
 const restaurantId = computed(() => authStore.restaurantId || "");
 const employeeId = computed(() => authStore.user?.id ?? "");
@@ -391,11 +417,13 @@ async function submitRequest(formData: LeaveRequestFormData) {
 function openCancel(requestId: number) {
   cancellingId.value = requestId;
   cancelReason.value = "";
+  cancelError.value = "";
 }
 
 function closeCancel() {
   cancellingId.value = null;
   cancelReason.value = "";
+  cancelError.value = "";
 }
 
 async function submitCancel() {
@@ -404,17 +432,17 @@ async function submitCancel() {
   if (requestId === null || !reason || submitting.value) return;
 
   submitting.value = true;
+  cancelError.value = "";
   try {
     await leavesService.cancelRequest(requestId, reason);
     closeCancel();
     toast.success(t("leaves.messages.cancelSuccess"));
     await loadAll();
   } catch (err) {
-    toast.error(
-      resolveUserFacingError(err, t, {
-        fallbackKey: "leaves.messages.cancelFailed",
-      }).message,
-    );
+    cancelError.value = resolveUserFacingError(err, t, {
+      fallbackKey: "leaves.messages.cancelFailed",
+    }).message;
+    toast.error(cancelError.value);
   } finally {
     submitting.value = false;
   }

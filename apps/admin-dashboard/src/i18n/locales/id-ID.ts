@@ -22,6 +22,18 @@ const idID: Messages = {
     quickActions: "Aksi cepat",
     addShift: "Tambah shift",
   },
+  ui: {
+    kitchenDescription:
+      "Lihat pesanan langsung, proses persiapan, dan hidangan siap.",
+    kitchenEnabled:
+      "Layar dapur aktif untuk restoran ini. Lanjutkan di ruang kerja khusus.",
+    openKitchen: "Buka layar dapur",
+    kitchenUnavailable:
+      "Paket ini tidak mencakup layar dapur. Lihat penagihan untuk pilihan paket dan dukungan.",
+    analysisPeriod: "Periode analisis",
+    revenuePeriod: "Periode pendapatan",
+    orderPeriod: "Periode pesanan",
+  },
   common: {
     save: "Simpan",
     cancel: "Batal",

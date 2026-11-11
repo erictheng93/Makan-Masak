@@ -1,5 +1,7 @@
 <template>
-  <div class="bg-ios-bg min-h-screen flex items-center justify-center p-4">
+  <div
+    class="kitchen-page ui-page bg-ios-bg min-h-screen flex items-center justify-center p-4"
+  >
     <div class="max-w-sm w-full">
       <!-- App Icon & Title -->
       <div class="flex flex-col items-center mb-8">
@@ -86,7 +88,7 @@
                 "
                 type="button"
                 :disabled="isLoading"
-                class="absolute inset-y-0 right-0 pr-3.5 flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
+                class="min-w-[44px] min-h-[44px] absolute inset-y-0 right-0 pr-3.5 flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue"
                 @click="showPassword = !showPassword"
               >
                 <Eye
@@ -114,7 +116,7 @@
           <button
             type="submit"
             :disabled="isLoading || !canSubmit"
-            class="w-full bg-ios-blue text-white rounded-full py-4 font-bold text-base min-h-[44px] flex items-center justify-center gap-2 transition-opacity disabled:opacity-50 active:scale-[0.98] transition-transform mt-2"
+            class="w-full bg-blue-700 text-white rounded-full py-4 font-bold text-base min-h-[44px] flex items-center justify-center gap-2 transition-opacity disabled:opacity-50 active:scale-[0.98] transition-transform mt-2"
           >
             <div
               v-if="isLoading"
