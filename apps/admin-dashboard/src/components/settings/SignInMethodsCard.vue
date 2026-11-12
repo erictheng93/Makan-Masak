@@ -11,6 +11,12 @@
     <p class="text-sm text-ios-text/60 mb-4">
       {{ t("settings.security.signInMethods.description") }}
     </p>
+    <p
+      class="text-xs text-ios-text/50 mb-4 -mt-2"
+      data-testid="signin-methods-multi-shop"
+    >
+      {{ t("settings.security.signInMethods.multiShopHint") }}
+    </p>
 
     <ul v-if="identities.length > 0" class="space-y-2 mb-4">
       <li

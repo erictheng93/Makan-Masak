@@ -16,9 +16,10 @@ import { users } from "./users";
  * tokens are deliberately not stored; `provider_email` is a display snapshot
  * and is never used to match an account.
  *
- * Unlinking sets `revoked_at_ms` and keeps the row. The two unique indexes are
- * partial on `revoked_at_ms IS NULL`, so a provider account is live for at most
- * one user, and a user has at most one live identity per provider.
+ * Unlinking sets `revoked_at_ms` and keeps the row. A user has at most one live
+ * identity per provider (partial unique index). One provider account may be
+ * live for several users, one per shop the same person owns (0045); sign-in
+ * then asks which shop.
  */
 export const userAuthIdentities = sqliteTable(
   "user_auth_identities",
@@ -45,9 +46,7 @@ export const userAuthIdentities = sqliteTable(
       .$defaultFn(() => new Date()),
   },
   (table) => ({
-    liveProviderUidIdx: uniqueIndex(
-      "user_auth_identities_live_provider_uid_idx",
-    )
+    liveProviderUidIdx: index("user_auth_identities_live_provider_uid_idx")
       .on(table.provider, table.providerUid)
       .where(sql`${table.revokedAt} IS NULL`),
     liveUserProviderIdx: uniqueIndex(

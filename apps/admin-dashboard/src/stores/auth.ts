@@ -11,7 +11,10 @@ import {
   setAuthRefreshHandler,
 } from "@/utils/errorHandler";
 import { getAuthToken } from "@/utils/authTokenProvider";
-import { completeStaffOAuth } from "@/services/staffOAuthService";
+import {
+  completeStaffOAuth,
+  type StaffOAuthShop,
+} from "@/services/staffOAuthService";
 import { rememberShop } from "@/utils/loginShop";
 import { useModuleAccessStore } from "@makanmasak/shared/stores/moduleAccess";
 import { getApiErrorStatus } from "@makanmasak/shared/utils/unknown";
@@ -375,13 +378,24 @@ export const useAuthStore = defineStore("auth", () => {
     }
   };
 
-  /** Trades the one-time code from the Google / LINE callback for a session. */
-  const loginWithOAuth = async (code: string): Promise<LoginResult> => {
+  /**
+   * Trades the one-time code from the Google / LINE callback for a session.
+   * An account linked to several shops first gets the list back; call again
+   * with the chosen `userId` under the same code.
+   */
+  const loginWithOAuth = async (
+    code: string,
+    userId?: string,
+  ): Promise<LoginResult | { success: false; shops: StaffOAuthShop[] }> => {
     isLoading.value = true;
     try {
-      const response = await completeStaffOAuth(code);
-      if (response.data.success && response.data.data) {
-        establishSession(response.data.data);
+      const response = await completeStaffOAuth(code, userId);
+      const data = response.data.success ? response.data.data : undefined;
+      if (data && "needsShopSelection" in data) {
+        return { success: false, shops: data.shops };
+      }
+      if (data) {
+        establishSession(data);
         return { success: true };
       }
     } catch {

@@ -32,19 +32,30 @@ function insertUser(
     role?: number;
     email?: string;
     passwordSetAt?: number;
+    shop?: string;
   },
 ) {
+  if (overrides.shop) {
+    sqlite
+      .prepare(
+        `INSERT INTO restaurants (id, name, type, category, address, district, phone,
+           created_at_ms, updated_at_ms)
+         VALUES (?, ?, 'restaurant', 'food', 'addr', 'd', '000', 1, 1)`,
+      )
+      .run(`r-${overrides.id}`, overrides.shop);
+  }
   sqlite
     .prepare(
       `INSERT INTO users (id, username, email, full_name, password_hash, role,
-        password_set_at_ms, created_at_ms, updated_at_ms)
-       VALUES (?, ?, ?, 'Name', 'hash', ?, ?, 1, 1)`,
+        restaurant_id, password_set_at_ms, created_at_ms, updated_at_ms)
+       VALUES (?, ?, ?, 'Name', 'hash', ?, ?, ?, 1, 1)`,
     )
     .run(
       overrides.id,
       overrides.id,
       overrides.email ?? null,
       overrides.role ?? 1,
+      overrides.shop ? `r-${overrides.id}` : null,
       overrides.passwordSetAt ?? null,
     );
 }
@@ -95,6 +106,7 @@ function buildHarness(envOverrides: Record<string, unknown> = {}) {
   applyMigration(sqlite, "0000_baseline_strict.sql");
   applyMigration(sqlite, "0043_ephemeral_kv.sql");
   applyMigration(sqlite, "0044_user_auth_identities.sql");
+  applyMigration(sqlite, "0045_user_auth_identities_multi_shop.sql");
   const db = drizzle(sqlite);
   const clock = { now: 1_000_000 };
   const store = new D1EphemeralStore(db as never, () => clock.now);
@@ -593,19 +605,103 @@ describe("link mode", () => {
     expect(h.count("user_auth_identities")).toBe(0);
   });
 
-  it("refuses an identity already linked to another user", async () => {
+  it("links one provider account to the owner accounts of several shops", async () => {
     const h = buildHarness();
     insertUser(h.sqlite, { id: "a" });
     insertUser(h.sqlite, { id: "b" });
     await h.signInAs("shared-sub", { linkAs: "a" });
     const { res } = await h.signInAs("shared-sub", { linkAs: "b" });
+    // linking again to the same user is a no-op
+    await h.signInAs("shared-sub", { linkAs: "b" });
 
-    expect(h.outcome(res).params).toEqual({
-      oauth_error: "OAUTH_IDENTITY_ALREADY_LINKED",
-    });
+    expect(h.outcome(res).params).toEqual({ oauth_linked: "google" });
     expect(
-      h.sqlite.prepare("SELECT user_id FROM user_auth_identities").all(),
-    ).toEqual([{ user_id: "a" }]);
+      h.sqlite
+        .prepare("SELECT user_id FROM user_auth_identities ORDER BY user_id")
+        .all(),
+    ).toEqual([{ user_id: "a" }, { user_id: "b" }]);
+  });
+});
+
+describe("sign-in across several shops", () => {
+  async function twoShops() {
+    const h = buildHarness();
+    insertUser(h.sqlite, { id: "a", shop: "Beta Noodles" });
+    insertUser(h.sqlite, { id: "b", shop: "Alpha Cafe" });
+    insertUser(h.sqlite, { id: "chef", role: 2 });
+    h.sqlite
+      .prepare(
+        `INSERT INTO user_auth_identities (id, user_id, provider, provider_uid, created_at_ms)
+         VALUES ('ia', 'a', 'google', 'boss', 1), ('ib', 'b', 'google', 'boss', 2),
+                ('ic', 'chef', 'google', 'boss', 3)`,
+      )
+      .run();
+    const { res } = await h.signInAs("boss");
+    const code = h.outcome(res).params.oauth_code;
+    const complete = (body: Record<string, unknown>) =>
+      h.request("/oauth/complete", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie: completeCookie(res),
+        },
+        body: JSON.stringify({ code, ...body }),
+      });
+    return { h, code, complete };
+  }
+
+  it("lists the owner's shops without consuming the code, then signs in to the chosen one", async () => {
+    const { h, complete } = await twoShops();
+
+    const ask = await complete({});
+    expect(ask.status).toBe(200);
+    expect(await ask.json()).toEqual({
+      success: true,
+      data: {
+        needsShopSelection: true,
+        // owners only, by shop name
+        shops: [
+          { userId: "b", restaurantId: "r-b", restaurantName: "Alpha Cafe" },
+          { userId: "a", restaurantId: "r-a", restaurantName: "Beta Noodles" },
+        ],
+      },
+    });
+    expect(h.auth.loginWithOAuth).not.toHaveBeenCalled();
+
+    // A choice outside the list is refused and does not cost the code.
+    const bad = await complete({ userId: "chef" });
+    expect(bad.status).toBe(400);
+    expect(await bad.json()).toEqual(
+      expect.objectContaining({
+        error: expect.objectContaining({ code: "OAUTH_SHOP_INVALID" }),
+      }),
+    );
+
+    // Picking takes longer than the single-shop 60s window.
+    h.clock.now += 120_000;
+    const ok = await complete({ userId: "a" });
+    expect(ok.status).toBe(200);
+    expect(h.auth.loginWithOAuth).toHaveBeenCalledOnce();
+    expect(h.auth.loginWithOAuth).toHaveBeenCalledWith(
+      "a",
+      "google",
+      expect.any(Object),
+    );
+
+    const reused = await complete({ userId: "b" });
+    expect(reused.status).toBe(400);
+    expect(h.auth.loginWithOAuth).toHaveBeenCalledOnce();
+  });
+
+  it("does not reveal the shops to a browser without the completion cookie", async () => {
+    const { h, code } = await twoShops();
+    const res = await h.request("/oauth/complete", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+    expect(res.status).toBe(400);
+    expect(JSON.stringify(await res.json())).not.toContain("Alpha");
   });
 });
 

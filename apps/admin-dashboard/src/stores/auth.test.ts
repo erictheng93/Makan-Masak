@@ -738,6 +738,28 @@ describe("auth store loginWithOAuth", () => {
     expect(store.user).toEqual(expect.objectContaining({ id: "u1" }));
   });
 
+  it("returns the shop list instead of a session when several are linked", async () => {
+    const shops = [{ userId: "u1", restaurantId: "r1", restaurantName: "A" }];
+    vi.mocked(api.post).mockResolvedValue(
+      axiosResponse({
+        data: { success: true, data: { needsShopSelection: true, shops } },
+      }),
+    );
+    const store = useAuthStore();
+
+    expect(await store.loginWithOAuth("code-1")).toEqual({
+      success: false,
+      shops,
+    });
+    expect(authClient.tokens.setTokens).not.toHaveBeenCalled();
+
+    await store.loginWithOAuth("code-1", "u1");
+    expect(api.post).toHaveBeenLastCalledWith("/auth/oauth/complete", {
+      code: "code-1",
+      userId: "u1",
+    });
+  });
+
   it("stores nothing when the code is rejected", async () => {
     vi.mocked(api.post).mockRejectedValue({ response: { status: 400 } });
     const store = useAuthStore();

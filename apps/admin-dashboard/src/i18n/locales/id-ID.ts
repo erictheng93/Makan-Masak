@@ -2167,6 +2167,8 @@ const idID: Messages = {
       signingIn: "Menyelesaikan proses masuk...",
       completeFailed:
         "Proses masuk tidak dapat diselesaikan. Silakan coba lagi.",
+      chooseShop: "Pilih toko yang ingin dibuka",
+      unnamedShop: "Toko tanpa nama",
       errors: {
         declined: "Anda membatalkan otorisasi, jadi tidak masuk.",
         OAUTH_IDENTITY_NOT_LINKED:
@@ -3235,6 +3237,8 @@ const idID: Messages = {
         title: "Metode masuk",
         description:
           "Hubungkan Google atau LINE untuk masuk tanpa mengetik kata sandi.",
+        multiShopHint:
+          "Punya lebih dari satu toko? Masuk ke setiap toko dengan nama pengguna dan kata sandinya, lalu tautkan akun Google atau LINE yang sama di sini. Setelah dua toko atau lebih ditautkan, saat masuk Anda dapat memilih toko yang ingin dibuka. Melepas tautan di satu toko tidak memengaruhi toko lainnya.",
         linkedOn: "Terhubung pada {date}",
         link: "Hubungkan",
         unlink: "Putuskan",

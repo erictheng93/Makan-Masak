@@ -1242,6 +1242,19 @@
               >, mag-login muli; hindi sapat na manu-manong maglagay sa browser ng JWT na ikaw mismo ang pumirma. Dapat pa ring tumugma sa active na sessions row ang valid na signature.
             </li>
           </ol>
+          <h3>Pag-login ng may-ari gamit ang Google / LINE (maraming tindahan)</h3>
+          <p>Maaaring mag-login ang may-ari sa admin dashboard gamit ang Google o LINE sa halip na password. Hindi kailanman tinutugma ng sistema ang mga account ayon sa email, kaya hindi nito malalaman kung aling mga tindahan ang pag-aari ng iisang may-ari; kailangang i-link ang bawat tindahan nang hiwalay.</p>
+          <ol>
+            <li>Mag-login sa admin dashboard gamit ang username at password ng tindahan A, saka i-link ang Google o LINE sa Settings &gt; Security &gt; Sign-in methods.</li>
+            <li>Mag-logout, mag-login gamit ang username at password ng tindahan B, at i-link ang parehong Google / LINE account. Ulitin sa bawat iba pang tindahan.</li>
+            <li>Mula noon, piliin ang “Sign in with Google” o “Sign in with LINE” sa login page. Kung iisang tindahan lang ang naka-link, diretso kang papasok doon; kung dalawa o higit pa, lalabas ang screen na pumili ng tindahan, at i-tap ang pangalan ng tindahan.</li>
+            <li>Mag-e-expire ang pagpili ng tindahan pagkalipas ng 5 minuto; kapag nangyari ito, simulan muli ang Google / LINE login.</li>
+          </ol>
+          <ul>
+            <li>Ang screen ay naglilista lamang ng mga tindahang naka-link na ang account. Kung may kulang na tindahan, hindi pa ito naka-link: mag-login doon gamit ang password nito at i-link.</li>
+            <li>Hiwalay ang pag-unlink sa bawat tindahan: ang pag-unlink sa tindahan A ay hindi nakaaapekto sa tindahan B.</li>
+            <li>Ang mensaheng hindi pa naka-link ang account sa anumang account ng may-ari ay nangangahulugang hindi pa naka-link ang Google / LINE na ito sa anumang tindahan.</li>
+          </ul>
           <h3>Login ng customer at pagbawi ng account</h3>
           <p>
             Ang Customer App ay may login, registration, forgot password／reset password (/forgot-password, /reset-password), email

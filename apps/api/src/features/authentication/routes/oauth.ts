@@ -52,7 +52,7 @@ import {
 import { exchangeCodeForIdToken } from "../../../shared/oauth/tokenExchange";
 import { verifyIdToken } from "../../../shared/oauth/idToken";
 import {
-  findLiveIdentity,
+  findLiveIdentities,
   isLiveOwnerIdentity,
   isStaffOAuthProvider,
   linkIdentity,
@@ -68,6 +68,8 @@ import type { AuthMiddleware, AuthServiceFactory } from "./index";
 
 /** One-time code lifetime. Short: it only has to survive one redirect. */
 const OAUTH_CODE_TTL_SECONDS = 60;
+/** Long enough for an owner of several shops to pick one. */
+const OAUTH_CHOICE_TTL_SECONDS = 300;
 const BINDING_COOKIE_PREFIX = "staff_oauth_binding_";
 const COMPLETE_COOKIE_PREFIX = "staff_oauth_complete_";
 /**
@@ -77,10 +79,17 @@ const COMPLETE_COOKIE_PREFIX = "staff_oauth_complete_";
  */
 const FALLBACK_RETURN_PATH = "/login";
 
-interface PendingSignIn {
+interface PendingAccount {
   userId: string;
   /** Re-checked at completion: unlinking must stop a pending sign-in too. */
   identityId: string;
+  restaurantId: string | null;
+  restaurantName: string | null;
+}
+
+interface PendingSignIn {
+  /** One per shop-owner account this provider account is linked to. */
+  accounts: PendingAccount[];
   provider: StaffOAuthProvider;
   /**
    * SHA-256 of the completion cookie's value, set on the browser the callback
@@ -229,7 +238,11 @@ async function completeCookieName(code: string) {
 const resultKey = (code: string) => `staff_oauth_result:${code}`;
 
 const completeSchema = z.lazy(() =>
-  z.object({ code: z.string().min(1).max(200) }),
+  z.object({
+    code: z.string().min(1).max(200),
+    /** Required when the code covers several shops; one of the offered ids. */
+    userId: z.string().min(1).max(100).optional(),
+  }),
 );
 
 export function createStaffOAuthRoutes(
@@ -410,26 +423,34 @@ export function createStaffOAuthRoutes(
 
       // Sign-in. Not linked, or linked to a non-owner: same answer, and
       // nothing is created either way.
-      const identity = await findLiveIdentity(db, provider, verified.sub);
-      if (!identity || identity.role !== USER_ROLES.OWNER) {
+      const owned = (
+        await findLiveIdentities(db, provider, verified.sub)
+      ).filter((row) => row.role === USER_ROLES.OWNER);
+      if (owned.length === 0) {
         return back({ oauth_error: "OAUTH_IDENTITY_NOT_LINKED" }, path);
       }
-      await touchLastUsed(db, identity.id, now);
+      await Promise.all(owned.map((row) => touchLastUsed(db, row.id, now)));
+      const ttl =
+        owned.length > 1 ? OAUTH_CHOICE_TTL_SECONDS : OAUTH_CODE_TTL_SECONDS;
 
       const resultCode = generateState();
       const completeNonce = generateState();
       setCookie(c, await completeCookieName(resultCode), completeNonce, {
         ...completeCookieOptions(env),
-        maxAge: OAUTH_CODE_TTL_SECONDS,
+        maxAge: ttl,
       });
       const pending: PendingSignIn = {
-        userId: identity.userId,
-        identityId: identity.id,
+        accounts: owned.map((row) => ({
+          userId: row.userId,
+          identityId: row.id,
+          restaurantId: row.restaurantId ?? null,
+          restaurantName: row.restaurantName ?? null,
+        })),
         provider,
         bindingHash: await deriveCodeChallenge(completeNonce),
       };
       await store.put(resultKey(resultCode), JSON.stringify(pending), {
-        expirationTtl: OAUTH_CODE_TTL_SECONDS,
+        expirationTtl: ttl,
       });
       return back({ oauth_code: resultCode }, path);
     } catch (error) {
@@ -445,32 +466,75 @@ export function createStaffOAuthRoutes(
   });
 
   routes.post("/oauth/complete", validateBody(completeSchema), async (c) => {
-    const { code } = c.get("validatedBody") as { code: string };
-    // take() is one statement, so a code cannot be redeemed twice even by two
-    // requests racing each other; a wrong cookie still burns it.
-    const raw = await getStore(c.env).take(resultKey(code));
-    const pending = raw ? (JSON.parse(raw) as PendingSignIn) : null;
+    const { code, userId } = c.get("validatedBody") as {
+      code: string;
+      userId?: string;
+    };
+    const store = getStore(c.env);
+    const key = resultKey(code);
     const cookieName = await completeCookieName(code);
     const completeNonce = getCookie(c, cookieName);
-    if (completeNonce) {
-      deleteCookie(c, cookieName, completeCookieOptions(c.env as OAuthEnv));
-    }
-    if (
-      !pending ||
-      !completeNonce ||
-      (await deriveCodeChallenge(completeNonce)) !== pending.bindingHash
-    ) {
-      throw badRequest(
+    const expired = () =>
+      badRequest(
         "Sign-in result expired or already used",
         "OAUTH_RESULT_INVALID",
       );
+    const bound = async (raw: string | null) => {
+      const pending = raw ? (JSON.parse(raw) as PendingSignIn) : null;
+      return pending &&
+        completeNonce &&
+        (await deriveCodeChallenge(completeNonce)) === pending.bindingHash
+        ? pending
+        : null;
+    };
+
+    // Read without consuming first: an owner of several shops is shown the
+    // list and comes back with a choice under the same code.
+    const peeked = await bound(await store.get(key));
+    if (!peeked) {
+      // A wrong cookie still burns the code.
+      await store.delete(key);
+      if (completeNonce) {
+        deleteCookie(c, cookieName, completeCookieOptions(c.env as OAuthEnv));
+      }
+      throw expired();
     }
+    if (peeked.accounts.length > 1 && !userId) {
+      return c.json({
+        success: true,
+        data: {
+          needsShopSelection: true,
+          shops: peeked.accounts.map((a) => ({
+            userId: a.userId,
+            restaurantId: a.restaurantId,
+            restaurantName: a.restaurantName,
+          })),
+        },
+      });
+    }
+
+    const pick = (p: PendingSignIn) =>
+      userId ? p.accounts.find((a) => a.userId === userId) : p.accounts[0];
+    // Checked before consuming, so a bad choice does not cost the code.
+    if (!pick(peeked)) {
+      throw badRequest(
+        "That shop is not one this sign-in can open",
+        "OAUTH_SHOP_INVALID",
+      );
+    }
+
+    // take() is one statement, so a code cannot be redeemed twice even by two
+    // requests racing each other.
+    const pending = await bound(await store.take(key));
+    deleteCookie(c, cookieName, completeCookieOptions(c.env as OAuthEnv));
+    const account = pending && pick(pending);
+    if (!pending || !account) throw expired();
 
     if (
       !(await isLiveOwnerIdentity(
         getDb(c.env),
-        pending.identityId,
-        pending.userId,
+        account.identityId,
+        account.userId,
       ))
     ) {
       throw unauthorized(
@@ -482,7 +546,7 @@ export function createStaffOAuthRoutes(
     const { deviceInfo, location } = deps.extractRequestInfo(c);
     const result = await deps
       .AuthService(c.env, deps.getWaitUntil(c))
-      .loginWithOAuth(pending.userId, pending.provider, {
+      .loginWithOAuth(account.userId, pending.provider, {
         deviceInfo,
         location,
       });

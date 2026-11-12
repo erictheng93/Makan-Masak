@@ -2194,6 +2194,8 @@ const zhTWCore = {
       providers: { google: "Google", line: "LINE" },
       signingIn: "正在完成登入…",
       completeFailed: "登入未能完成，請重新操作一次。",
+      chooseShop: "選擇要進入的店",
+      unnamedShop: "未命名的店",
       errors: {
         declined: "你已取消授權，未進行登入。",
         OAUTH_IDENTITY_NOT_LINKED:
@@ -3342,6 +3344,8 @@ const zhTWCore = {
       signInMethods: {
         title: "登入方式",
         description: "連結 Google 或 LINE 後，可以不輸入密碼直接登入。",
+        multiShopHint:
+          "有多家店？每家店都要各自用帳號密碼登入，再到這裡連結同一個 Google 或 LINE。連結兩家以上後，用它登入時就能選擇要進入哪一家；在某家店解除連結不影響其他店。",
         linkedOn: "連結於 {date}",
         link: "連結",
         unlink: "解除連結",
