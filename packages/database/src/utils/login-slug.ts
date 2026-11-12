@@ -45,11 +45,13 @@ export function isLoginSlugConflict(error: unknown): boolean {
   const seen = new Set<unknown>();
   for (let e: unknown = error; e && !seen.has(e); ) {
     seen.add(e);
-    const msg = e instanceof Error ? e.message : String(e);
+    // Plain substring search, not a regex: `failed.*login_slug` backtracks
+    // quadratically on a message that repeats the prefix (CodeQL js/polynomial-redos).
+    const msg = (e instanceof Error ? e.message : String(e)).toLowerCase();
+    const failed = msg.indexOf("unique constraint failed");
     if (
-      /UNIQUE constraint failed.*login_slug|restaurants_login_slug_unique/i.test(
-        msg,
-      )
+      msg.includes("restaurants_login_slug_unique") ||
+      (failed !== -1 && msg.includes("login_slug", failed))
     ) {
       return true;
     }
