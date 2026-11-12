@@ -260,7 +260,7 @@ afterEach(() => vi.unstubAllGlobals());
 function completeCookie(res: Response): string {
   const header = res.headers
     .getSetCookie()
-    .find((value) => value.startsWith("staff_oauth_complete="));
+    .find((value) => value.startsWith("staff_oauth_complete_"));
   return header ? header.split(";")[0] : "";
 }
 
@@ -670,7 +670,7 @@ describe("identities", () => {
       .run();
     const { res } = await h.signInAs("owner-sub");
     const code = h.outcome(res).params.oauth_code;
-    expect(completeCookie(res)).toMatch(/^staff_oauth_complete=.+/);
+    expect(completeCookie(res)).toMatch(/^staff_oauth_complete_[\w-]+=.+/);
 
     const send = (cookie: string) =>
       h.request("/oauth/complete", {
@@ -680,7 +680,9 @@ describe("identities", () => {
       });
 
     // Login CSRF: the attacker's code arrives without the attacker's cookie.
-    const injected = await send("staff_oauth_complete=someone-else");
+    const injected = await send(
+      `${completeCookie(res).split("=")[0]}=someone-else`,
+    );
     expect(injected.status).toBe(400);
     expect(h.auth.loginWithOAuth).not.toHaveBeenCalled();
 
@@ -734,5 +736,55 @@ describe("identities", () => {
     expect(complete.status).toBe(401);
     expect(h.auth.loginWithOAuth).not.toHaveBeenCalled();
     expect(h.setRefreshCookie).not.toHaveBeenCalled();
+  });
+
+  it("returns a cancelled authorization to the page it started from", async () => {
+    const h = buildHarness();
+    const flow = (await h.start({ query: "?redirectTo=/s/shop1" })) as {
+      state: string;
+      cookie: string;
+    };
+
+    const res = await h.request(
+      `/oauth/google/callback?error=access_denied&state=${flow.state}`,
+      { headers: { cookie: flow.cookie } },
+    );
+    const { url, params } = h.outcome(res);
+    expect(url.origin).toBe(ADMIN);
+    expect(url.pathname).toBe("/s/shop1");
+    expect(params).toEqual({ oauth_error: "declined" });
+
+    // With no state there is nowhere to return to; "/" would lose the message
+    // behind the dashboard's auth redirect, so it goes to the login page.
+    const stateless = h.outcome(
+      await h.request("/oauth/google/callback?error=access_denied"),
+    );
+    expect(stateless.url.pathname).toBe("/login");
+    expect(stateless.params).toEqual({ oauth_error: "declined" });
+  });
+
+  it("lets two sign-ins that finish in one browser both complete", async () => {
+    const h = buildHarness();
+    insertUser(h.sqlite, { id: "owner" });
+    h.sqlite
+      .prepare(
+        `INSERT INTO user_auth_identities (id, user_id, provider, provider_uid, created_at_ms)
+         VALUES ('i1', 'owner', 'google', 'owner-sub', 1)`,
+      )
+      .run();
+    const first = await h.signInAs("owner-sub");
+    const second = await h.signInAs("owner-sub");
+    // One browser: it holds both cookies and sends them together.
+    const cookie = [first.res, second.res].map(completeCookie).join("; ");
+
+    for (const { res } of [first, second]) {
+      const done = await h.request("/oauth/complete", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie },
+        body: JSON.stringify({ code: h.outcome(res).params.oauth_code }),
+      });
+      expect(done.status).toBe(200);
+    }
+    expect(h.auth.loginWithOAuth).toHaveBeenCalledTimes(2);
   });
 });

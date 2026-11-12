@@ -69,7 +69,13 @@ import type { AuthMiddleware, AuthServiceFactory } from "./index";
 /** One-time code lifetime. Short: it only has to survive one redirect. */
 const OAUTH_CODE_TTL_SECONDS = 60;
 const BINDING_COOKIE_PREFIX = "staff_oauth_binding_";
-const COMPLETE_COOKIE = "staff_oauth_complete";
+const COMPLETE_COOKIE_PREFIX = "staff_oauth_complete_";
+/**
+ * Where the browser goes when there is no usable state to say where it came
+ * from. The login page is the one place that reads ?oauth_error; "/" passes
+ * through the auth guard, which buries the parameter inside ?redirect=.
+ */
+const FALLBACK_RETURN_PATH = "/login";
 
 interface PendingSignIn {
   userId: string;
@@ -77,7 +83,7 @@ interface PendingSignIn {
   identityId: string;
   provider: StaffOAuthProvider;
   /**
-   * SHA-256 of the value in COMPLETE_COOKIE, set on the browser the callback
+   * SHA-256 of the completion cookie's value, set on the browser the callback
    * redirected. Without it a one-time code is a bearer value: an attacker could
    * hand their own code to a victim's browser and sign the victim in to the
    * attacker's shop (login CSRF).
@@ -195,17 +201,29 @@ function bindingCookieOptions(env: OAuthEnv, provider: StaffOAuthProvider) {
   };
 }
 
-/** Sent only to POST /oauth/complete, and only for as long as the code lives. */
-function completeCookieOptions(env: OAuthEnv, provider: StaffOAuthProvider) {
+/**
+ * Sent only to POST /oauth/complete, and only for as long as the code lives.
+ * The path is the same for every provider.
+ */
+function completeCookieOptions(env: OAuthEnv) {
   return {
     httpOnly: true,
     secure: true,
     sameSite: "Lax" as const,
-    path: new URL(buildRedirectUri(env, provider, "staff")).pathname.replace(
-      `/${provider}/callback`,
+    path: new URL(buildRedirectUri(env, "google", "staff")).pathname.replace(
+      "/google/callback",
       "/complete",
     ),
   };
+}
+
+/**
+ * One cookie per code, like the binding cookie per state: two sign-ins
+ * finishing in one browser must not overwrite each other's nonce.
+ */
+async function completeCookieName(code: string) {
+  const digest = await deriveCodeChallenge(code);
+  return `${COMPLETE_COOKIE_PREFIX}${digest.slice(0, 16)}`;
 }
 
 const resultKey = (code: string) => `staff_oauth_result:${code}`;
@@ -301,18 +319,25 @@ export function createStaffOAuthRoutes(
     assertConfigured(env, provider);
     const origin = adminOrigin(c.env);
 
-    const back = (params: Record<string, string>, path = "/") => {
+    const back = (
+      params: Record<string, string>,
+      path = FALLBACK_RETURN_PATH,
+    ) => {
       let url = new URL(path, origin);
       // Last line of defence: never leave the admin origin, whatever `path` is.
-      if (url.origin !== origin) url = new URL("/", origin);
+      if (url.origin !== origin) url = new URL(FALLBACK_RETURN_PATH, origin);
       for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
       return c.redirect(url.toString(), 302);
     };
 
-    if (c.req.query("error")) return back({ oauth_error: "declined" });
+    const declined = Boolean(c.req.query("error"));
     const code = c.req.query("code");
     const state = c.req.query("state");
-    if (!code || !state) return back({ oauth_error: "OAUTH_CALLBACK_INVALID" });
+    if (!state) {
+      return back({
+        oauth_error: declined ? "declined" : "OAUTH_CALLBACK_INVALID",
+      });
+    }
 
     const cookieName = await bindingCookieName(state);
     const bindingCookie = getCookie(c, cookieName);
@@ -328,6 +353,11 @@ export function createStaffOAuthRoutes(
 
     // redirectTo was validated at start; re-resolve defensively anyway.
     const path = resolveRedirectPath(c.env, requestState.redirectTo);
+
+    // A cancelled authorization still carries the state, so the owner goes
+    // back to the page they started from and sees why nothing happened.
+    if (declined) return back({ oauth_error: "declined" }, path);
+    if (!code) return back({ oauth_error: "OAUTH_CALLBACK_INVALID" }, path);
 
     // A redirect endpoint cannot answer with a JSON error: the browser is
     // mid-navigation, so every failure past this point becomes ?oauth_error.
@@ -388,8 +418,8 @@ export function createStaffOAuthRoutes(
 
       const resultCode = generateState();
       const completeNonce = generateState();
-      setCookie(c, COMPLETE_COOKIE, completeNonce, {
-        ...completeCookieOptions(env, provider),
+      setCookie(c, await completeCookieName(resultCode), completeNonce, {
+        ...completeCookieOptions(env),
         maxAge: OAUTH_CODE_TTL_SECONDS,
       });
       const pending: PendingSignIn = {
@@ -420,13 +450,10 @@ export function createStaffOAuthRoutes(
     // requests racing each other; a wrong cookie still burns it.
     const raw = await getStore(c.env).take(resultKey(code));
     const pending = raw ? (JSON.parse(raw) as PendingSignIn) : null;
-    const completeNonce = getCookie(c, COMPLETE_COOKIE);
-    if (pending) {
-      deleteCookie(
-        c,
-        COMPLETE_COOKIE,
-        completeCookieOptions(c.env as OAuthEnv, pending.provider),
-      );
+    const cookieName = await completeCookieName(code);
+    const completeNonce = getCookie(c, cookieName);
+    if (completeNonce) {
+      deleteCookie(c, cookieName, completeCookieOptions(c.env as OAuthEnv));
     }
     if (
       !pending ||
