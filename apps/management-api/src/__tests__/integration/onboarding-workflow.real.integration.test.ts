@@ -632,7 +632,7 @@ describe("Onboarding public API workflow — real integration", () => {
       login_slug: expect.stringMatching(/^shop-[0-9a-f]{8}$/),
       country_code: "TW",
       timezone: "Asia/Taipei",
-      settings: JSON.stringify({ currency: "TWD" }),
+      settings: JSON.stringify({ currency: "TWD", autoAcceptOrders: true }),
       city: "台中市",
     });
   });
@@ -1183,7 +1183,7 @@ describe("Onboarding public API workflow — real integration", () => {
       email: "tan.mei@example.com",
       country_code: "MY",
       timezone: "Asia/Kuala_Lumpur",
-      settings: JSON.stringify({ currency: "MYR" }),
+      settings: JSON.stringify({ currency: "MYR", autoAcceptOrders: true }),
       is_available: 0,
       is_active: 1,
     });

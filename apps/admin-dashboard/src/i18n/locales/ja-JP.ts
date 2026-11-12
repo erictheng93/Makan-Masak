@@ -403,7 +403,7 @@ const jaJP: Messages = {
   orders: {
     stats: {
       pending: "未処理",
-      preparing: "準備中",
+      preparing: "進行中",
       completed: "完了",
       cancelled: "キャンセル",
     },
@@ -3129,7 +3129,8 @@ const jaJP: Messages = {
       acceptGuestOrdersDesc:
         "お客様がテーブルおよび店舗QRコードから注文を送信できるようにします",
       autoConfirm: "注文の自動確認",
-      autoConfirmDesc: "新しい注文を手動確認なしで自動確認",
+      autoConfirmDesc:
+        "新しい注文を自動で受け付けます。オフの場合、スタッフが確認するまで注文はキッチンに表示されません。",
       prepTimeAlert: "調理時間アラート",
       prepTimeAlertDesc: "注文が調理時間を超過した場合にアラートを送信",
       defaultPrepTime: "デフォルト調理時間（分）",

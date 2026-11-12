@@ -562,7 +562,8 @@ local state from the primary worktree.
 
 ### User Role Management
 
-- API: `POST/PUT /api/v1/users/{restaurant_id}`
+- API: `POST /api/v1/users` (body carries `restaurantId`), `PUT /api/v1/users/:id`
+- Staff log in with `username` plus the shop's login slug (`shop`, `restaurants.login_slug`) and password, not an email (`loginSchema` in `apps/api/src/features/authentication/schemas/validation.ts`)
 - Role definitions: `apps/api/src/shared/constants/index.ts`
 
 ### Deleting a restaurant for good

@@ -238,6 +238,8 @@ export interface NewOrderEvent extends BaseRealtimeEvent {
     orderSource?: PlatformSource;
     /** 訂單備註 */
     notes?: string;
+    /** 履約方式（僅 type；不含地址/電話）。舊伺服器不帶此欄位。 */
+    deliveryInfo?: { type?: "dine_in" | "takeaway" | "delivery" };
     /** 顧客資訊 */
     customer?: {
       name?: string;

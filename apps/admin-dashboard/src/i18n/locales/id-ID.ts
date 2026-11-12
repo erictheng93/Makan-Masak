@@ -407,7 +407,7 @@ const idID: Messages = {
   orders: {
     stats: {
       pending: "Menunggu",
-      preparing: "Menyiapkan",
+      preparing: "Sedang berjalan",
       completed: "Selesai",
       cancelled: "Dibatalkan",
     },
@@ -3145,7 +3145,8 @@ const idID: Messages = {
       acceptGuestOrdersDesc:
         "Izinkan pelanggan mengirim pesanan dari kode QR meja dan toko",
       autoConfirm: "Konfirmasi Pesanan Otomatis",
-      autoConfirmDesc: "Otomatis konfirmasi pesanan baru tanpa tinjauan manual",
+      autoConfirmDesc:
+        "Pesanan baru diterima otomatis. Jika nonaktif, pesanan menunggu konfirmasi staf sebelum terlihat di dapur.",
       prepTimeAlert: "Peringatan Waktu Persiapan",
       prepTimeAlertDesc:
         "Kirim peringatan saat pesanan melebihi waktu persiapan",

@@ -160,7 +160,13 @@ function regionForNewRestaurant(
   return {
     countryCode,
     timezone: profile.timezone,
-    settings: { ...settings, currency: profile.currency },
+    // New shops accept orders automatically unless the caller said otherwise;
+    // isAutoAcceptOrdersEnabled still treats absence as off for older shops.
+    settings: {
+      ...settings,
+      autoAcceptOrders: settings?.autoAcceptOrders !== false,
+      currency: profile.currency,
+    },
   };
 }
 

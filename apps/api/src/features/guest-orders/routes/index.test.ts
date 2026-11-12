@@ -1042,7 +1042,7 @@ describe("guest order routes", () => {
       success: true,
       data: { order: { id: 501 } },
     });
-    expect(getOrder).toHaveBeenCalledWith("501", true);
+    expect(getOrder).toHaveBeenCalledWith("501");
   });
 
   it("validates guest item additions and order state", async () => {
@@ -1169,7 +1169,7 @@ describe("guest order routes", () => {
       data: { order: { status: "cancelled" } },
     });
     expect(cancelOrder).toHaveBeenCalledWith("501", "Cancelled by guest");
-    expect(getOrder).toHaveBeenCalledWith("501", false);
+    expect(getOrder).toHaveBeenCalledWith("501");
     // No reverse lookup is stored, so the slot holding this order is found
     // from the token this request presented; the slot of order 499 stays.
     expect(env.EPHEMERAL.delete).toHaveBeenCalledWith(

@@ -406,14 +406,8 @@ export class OrdersService implements IOrdersService {
    * Always reads D1. There is no KV copy of an order: KV's daily write and
    * delete quota is far smaller than D1's read quota, and a cached order was
    * stale right after the realtime event that prompted the read.
-   * `_includeItems` is unused (items always come back); it stays so the many
-   * positional callers keep compiling.
    */
-  async getOrder(
-    id: string,
-    _includeItems: boolean = true,
-    caller?: CallerContext,
-  ): Promise<Order | null> {
+  async getOrder(id: string, caller?: CallerContext): Promise<Order | null> {
     try {
       const order = await this.baseOrderService.getOrder(id);
       if (!order) return null;
@@ -1307,7 +1301,7 @@ export class OrdersService implements IOrdersService {
   // Receipt and Export
   async generateReceipt(orderId: string): Promise<OrderReceipt> {
     try {
-      const order = await this.getOrder(orderId, true);
+      const order = await this.getOrder(orderId);
       if (!order) throw notFound("Order not found", "ORDER_NOT_FOUND");
 
       // Build receipt data
@@ -1433,6 +1427,11 @@ export class OrdersService implements IOrdersService {
           totalAmount: order.totalAmount,
           orderSource: order.orderSource,
           notes: order.notes,
+          // Type only: a table-less dine-in (shop code) is otherwise
+          // indistinguishable from takeaway on the kitchen board.
+          deliveryInfo: order.deliveryInfo?.type
+            ? { type: order.deliveryInfo.type }
+            : undefined,
           customer: order.customerInfo
             ? {
                 name: order.customerInfo.name,

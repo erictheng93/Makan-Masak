@@ -659,7 +659,7 @@ app.get(
 
     logger.debug("Getting order details", { orderId: id, userId: user.id });
 
-    const order = await ordersService.getOrder(id, true, toCallerContext(user));
+    const order = await ordersService.getOrder(id, toCallerContext(user));
 
     if (!order) {
       throw notFound("Order not found");

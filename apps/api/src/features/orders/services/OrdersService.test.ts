@@ -200,6 +200,38 @@ describe("OrdersService realtime broadcasts", () => {
     });
   });
 
+  it.each(["takeaway", "dine_in"] as const)(
+    "carries deliveryInfo.type %s on the table-less new_order event",
+    async (type) => {
+      createBaseOrder.mockResolvedValue({
+        id: 1002,
+        restaurantId: "restaurant-1",
+        tableId: undefined,
+        orderNumber: "A002",
+        status: "pending",
+        totalAmount: 60,
+        deliveryInfo: { type, address: "secret street", phone: "0900" },
+        items: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const service = new OrdersService(createEnv() as never);
+
+      await service.createOrder({
+        restaurantId: "restaurant-1",
+        items: [{ menuItemId: 101, quantity: 1 }],
+        deliveryInfo: { type },
+        isGuestOrder: true,
+      } as never);
+
+      expect(broadcastNewOrder).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ deliveryInfo: { type } }),
+        }),
+      );
+    },
+  );
+
   it("broadcasts market checkout child orders to restaurant and kitchen realtime rooms", async () => {
     createBaseOrder.mockResolvedValue({
       id: 1001,
@@ -1005,7 +1037,7 @@ describe("OrdersService workflows", () => {
     );
 
     await expect(
-      service.getOrder("42", true, {
+      service.getOrder("42", {
         userId: "unassigned-owner",
         userRole: 1,
       }),
