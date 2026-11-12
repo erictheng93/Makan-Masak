@@ -510,13 +510,17 @@ const listImage = computed(() =>
   ),
 );
 
-// The featured block is a full-width h-40 card. A 390px phone lays it out at
-// 334px, so DPR 3 genuinely needs the large variant.
+// The featured block is a full-width h-40 card, about 260-380px wide. Capped
+// at medium (600px): on a 3x phone the browser otherwise fetched large, three
+// 257 KB photos for cards that look the same at 158 KB (measured on
+// production, 2026-11-12).
 const featuredImage = computed(() =>
   menuImageAttrs(
     props.item.imageUrl,
     props.item.imageVariants,
     "(min-width: 1024px) 382px, 334px",
+    "medium",
+    "medium",
   ),
 );
 
