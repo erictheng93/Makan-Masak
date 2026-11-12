@@ -371,26 +371,24 @@ async function loadEntry() {
 
     restaurant.value = res;
 
+    // Checked first: a switched-off shop fails every verification, and telling
+    // that diner "the shop changed its sticker" sends them, and then the owner,
+    // after a reprint when the fix is the shop-mode switch. Also carries the
+    // entries that arrive with no code at all (a bookmarked link, the
+    // recent-restaurants picker).
+    if (!res.enableShopMode) {
+      blockedReason.value = "shopDisabled";
+      return;
+    }
+
     // Either the code is not the shop's current sticker, or it verified against
     // a different restaurant than the path claims — trusting one half without
-    // the other is how a mismatched pair walks in. Checked ahead of the
-    // shop-mode flag because "ask the shop for the current code" is the more
-    // actionable thing to tell someone holding a retired sticker.
+    // the other is how a mismatched pair walks in.
     if (
       verification &&
       (!verification.valid || verification.restaurantId !== props.restaurantId)
     ) {
       blockedReason.value = "qrRevoked";
-      return;
-    }
-
-    // Carries the entries that arrive with no code at all — a bookmarked link,
-    // the recent-restaurants picker — which is where the old `settings.enable*`
-    // reads let a switched-off shop straight through. Redundant after a passing
-    // verification, which already requires the flag, and cheap to keep so the
-    // page never depends on which branch it came down.
-    if (!res.enableShopMode) {
-      blockedReason.value = "shopDisabled";
       return;
     }
 
