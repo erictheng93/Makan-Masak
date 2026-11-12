@@ -6,6 +6,7 @@ import {
 } from "./helpers/real-test-app";
 import { buildSeedHelpers } from "./helpers/seed-helper";
 import { readData, readError, readEnvelope } from "../helpers/read-json";
+import { ephemeralStore } from "../../shared/utils/ephemeral-store";
 import { ReviewContracts, ContractHelpers } from "../../contracts";
 import type { ZodType } from "zod";
 import type {
@@ -115,7 +116,7 @@ describe("Reviews — real integration", () => {
   /** A guest token exactly as `POST /guest-orders` mints it. */
   async function mintGuestToken(orderId: string, restaurantId: string) {
     const token = `gt_${"b".repeat(64)}`;
-    await testApp.env.CACHE_KV.put(
+    await ephemeralStore(testApp.env).put(
       `guest_token:${token}`,
       JSON.stringify({
         orderId,
@@ -123,6 +124,7 @@ describe("Reviews — real integration", () => {
         guestName: "Integration Guest",
         createdAt: Date.now(),
       }),
+      { expirationTtl: 4 * 60 * 60 },
     );
     return token;
   }

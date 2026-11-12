@@ -26,6 +26,12 @@ const broadcastOrderCancelled = vi.hoisted(() => vi.fn());
 const generateEventId = vi.hoisted(() => vi.fn());
 const createKitchenTicket = vi.hoisted(() => vi.fn());
 
+// Guest tokens and locks live in the D1 ephemeral store; tests hand it a fake
+// through a test-only env field so it stays distinct from CACHE_KV.
+vi.mock("../../../shared/utils/ephemeral-store", () => ({
+  ephemeralStore: (env: { EPHEMERAL: unknown }) => env.EPHEMERAL,
+}));
+
 vi.mock("../../pos/services/ReceiptService", () => ({
   ReceiptService: function ReceiptService() {
     return { createKitchenTicket };
@@ -87,6 +93,7 @@ vi.mock("@makanmasak/database", () => ({
 function createEnv(
   options: {
     cacheGet?: (key: string, type?: "json") => Promise<unknown>;
+    ephemeralGet?: (key: string) => Promise<string | null>;
   } = {},
 ) {
   const subscriptionKey =
@@ -128,6 +135,10 @@ function createEnv(
       })),
       put: vi.fn(),
       delete: vi.fn(),
+    },
+    EPHEMERAL: {
+      get: vi.fn(async (key: string) => options.ephemeralGet?.(key) ?? null),
+      delete: vi.fn(async () => undefined),
     },
   };
 }
@@ -1044,7 +1055,7 @@ describe("OrdersService workflows", () => {
 
   it("clears guest active locks when status updates enter terminal states", async () => {
     const env = createEnv({
-      cacheGet: async (key) =>
+      ephemeralGet: async (key) =>
         key === "guest_active_lookup:42"
           ? "guest_active:restaurant-1:token:guest-token"
           : null,
@@ -1070,16 +1081,16 @@ describe("OrdersService workflows", () => {
       previous as never,
     );
 
-    expect(env.CACHE_KV.get).toHaveBeenCalledWith("guest_active_lookup:42");
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.get).toHaveBeenCalledWith("guest_active_lookup:42");
+    expect(env.EPHEMERAL.delete).toHaveBeenCalledWith(
       "guest_active:restaurant-1:token:guest-token",
     );
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith("guest_active_lookup:42");
+    expect(env.EPHEMERAL.delete).toHaveBeenCalledWith("guest_active_lookup:42");
   });
 
   it("clears guest active locks when orders are cancelled through the service", async () => {
     const env = createEnv({
-      cacheGet: async (key) =>
+      ephemeralGet: async (key) =>
         key === "guest_active_lookup:42"
           ? "guest_active:restaurant-1:token:guest-token"
           : null,
@@ -1094,11 +1105,11 @@ describe("OrdersService workflows", () => {
       "Customer requested cancellation",
     );
     expect(releaseCouponUsageForCancelledOrder).toHaveBeenCalledWith("42");
-    expect(env.CACHE_KV.get).toHaveBeenCalledWith("guest_active_lookup:42");
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.get).toHaveBeenCalledWith("guest_active_lookup:42");
+    expect(env.EPHEMERAL.delete).toHaveBeenCalledWith(
       "guest_active:restaurant-1:token:guest-token",
     );
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith("guest_active_lookup:42");
+    expect(env.EPHEMERAL.delete).toHaveBeenCalledWith("guest_active_lookup:42");
   });
 
   it("maps non-cancellable order cancellations to a conflict error", async () => {

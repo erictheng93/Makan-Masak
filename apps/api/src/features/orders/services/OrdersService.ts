@@ -34,6 +34,7 @@ import type {
 } from "@makanmasak/shared-types";
 import { RestaurantOrderPushService } from "../../push/services/RestaurantOrderPushService";
 import { ReceiptService } from "../../pos/services/ReceiptService";
+import { ephemeralStore } from "../../../shared/utils/ephemeral-store";
 import { ORDER_STATUS_TRANSITIONS, ROLE_STATUS_PERMISSIONS } from "../types";
 import {
   clearGuestActiveOrderLock,
@@ -887,7 +888,7 @@ export class OrdersService implements IOrdersService {
           // refund-release marker, making retries a no-op before decrementing
           // the coupon counter.
           this.couponService.releaseUsageForCancelledOrder(id),
-          clearGuestActiveOrderLock(this.cacheKV, id),
+          clearGuestActiveOrderLock(ephemeralStore(this.env), id),
           this.logOrderActivity(
             id,
             "ORDER_CANCELLED",

@@ -26,6 +26,9 @@ export function useLiveOrderRefresh(refresh: () => unknown) {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
       timer = null;
+      // A hidden tab fetches nothing; the view's poller catches up when the
+      // tab comes back to the foreground.
+      if (document.hidden) return;
       void refresh();
     }, DEBOUNCE_MS);
   };

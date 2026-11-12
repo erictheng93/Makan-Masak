@@ -2,10 +2,16 @@ import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
 import { rateLimitMiddleware } from "./rateLimiter";
 
+// Guest tokens and locks live in the D1 ephemeral store; tests hand it a fake
+// through a test-only env field so it stays distinct from CACHE_KV.
+vi.mock("../shared/utils/ephemeral-store", () => ({
+  ephemeralStore: (env: { EPHEMERAL: unknown }) => env.EPHEMERAL,
+}));
+
 /**
- * Cloudflare KV rejects any expirationTtl below 60 seconds. The fake enforces
- * that so a TTL derived from a shrinking window cannot silently pass in tests
- * and then 500 in production.
+ * Cloudflare KV rejects any expirationTtl below 60 seconds. The counters now
+ * live in D1, which has no such floor, but the limiter still clamps; the fake
+ * keeps enforcing the floor so that clamp cannot regress unnoticed.
  */
 const KV_MIN_EXPIRATION_TTL = 60;
 
@@ -93,7 +99,7 @@ describe("rateLimitMiddleware", () => {
   it("limits by tenant identity before IP and isolates tenants sharing an IP", async () => {
     const kv = createKv();
     const app = createApp(kv);
-    const env = { CACHE_KV: kv };
+    const env = { DB: {}, EPHEMERAL: kv };
 
     const firstTenantA = await app.fetch(
       new Request("https://test/", {
@@ -130,7 +136,7 @@ describe("rateLimitMiddleware", () => {
     // maxRequests high enough that every call takes the increment path, which
     // derives its TTL from the *remaining* window rather than the full one.
     const app = createApp(kv, { maxRequests: 10 });
-    const env = { CACHE_KV: kv };
+    const env = { DB: {}, EPHEMERAL: kv };
 
     // Real traffic arrives seconds apart, so the remaining window shrinks below
     // 60s. An in-process loop finishes inside a millisecond and rounds back up
@@ -163,7 +169,7 @@ describe("rateLimitMiddleware", () => {
   it("accepts windows shorter than the KV minimum TTL", async () => {
     const kv = createKv();
     const app = createApp(kv, { windowMs: 30_000, maxRequests: 10 });
-    const env = { CACHE_KV: kv };
+    const env = { DB: {}, EPHEMERAL: kv };
 
     const first = await app.fetch(tenantRequest("tenant-a"), env as never);
     const second = await app.fetch(tenantRequest("tenant-a"), env as never);
@@ -178,7 +184,7 @@ describe("rateLimitMiddleware", () => {
   it("still returns 429 rather than 500 once the limit is reached", async () => {
     const kv = createKv();
     const app = createApp(kv, { maxRequests: 2 });
-    const env = { CACHE_KV: kv };
+    const env = { DB: {}, EPHEMERAL: kv };
 
     const statuses: number[] = [];
     for (let i = 0; i < 4; i++) {
@@ -194,7 +200,7 @@ describe("rateLimitMiddleware", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const kv = createKv({ failPut: true });
     const app = createApp(kv);
-    const env = { CACHE_KV: kv };
+    const env = { DB: {}, EPHEMERAL: kv };
 
     // A limiter outage must not take the endpoint down with it.
     const response = await app.fetch(tenantRequest("tenant-a"), env as never);

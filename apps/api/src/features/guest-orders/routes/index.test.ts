@@ -25,6 +25,12 @@ vi.mock("@makanmasak/database", async (importOriginal) => ({
   createDatabase: databaseMocks.createDatabase,
 }));
 
+// Guest tokens and locks live in the D1 ephemeral store; tests hand it a fake
+// through a test-only env field so it stays distinct from CACHE_KV.
+vi.mock("../../../shared/utils/ephemeral-store", () => ({
+  ephemeralStore: (env: { EPHEMERAL: unknown }) => env.EPHEMERAL,
+}));
+
 vi.mock("../../qr-codes/services/assert-dine-in-qr", () => ({
   assertDineInQr,
 }));
@@ -147,13 +153,10 @@ function createMockDb() {
 function createEnv(
   options: {
     customer?: Record<string, unknown> | null;
-    rateLimitKV?: Map<string, string> | null;
   } = {},
 ) {
   const kv = new Map<string, string>();
-  // Absent by default so the existing cases keep exercising the ordering path
-  // rather than the throttle; the throttle fails open without it.
-  const rateLimitStore = options.rateLimitKV ?? null;
+  const ephemeral = new Map<string, string>();
   return {
     DB: {
       prepare: vi.fn(() => ({
@@ -171,17 +174,15 @@ function createEnv(
         kv.delete(key);
       }),
     },
-    RATE_LIMIT_KV: rateLimitStore
-      ? {
-          get: vi.fn(async (key: string) => rateLimitStore.get(key) ?? null),
-          put: vi.fn(async (key: string, value: string) => {
-            rateLimitStore.set(key, value);
-          }),
-          delete: vi.fn(async (key: string) => {
-            rateLimitStore.delete(key);
-          }),
-        }
-      : undefined,
+    EPHEMERAL: {
+      get: vi.fn(async (key: string) => ephemeral.get(key) ?? null),
+      put: vi.fn(async (key: string, value: string) => {
+        ephemeral.set(key, value);
+      }),
+      delete: vi.fn(async (key: string) => {
+        ephemeral.delete(key);
+      }),
+    },
   };
 }
 
@@ -348,12 +349,12 @@ describe("guest order routes", () => {
       undefined,
       expect.objectContaining({}),
     );
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.put).toHaveBeenCalledWith(
       "guest_token:gt_test_token",
       expect.stringContaining('"orderId":"501"'),
       { expirationTtl: 14400 },
     );
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.put).toHaveBeenCalledWith(
       "guest_active:restaurant-1:token:gt_test_token",
       "501",
       { expirationTtl: 7200 },
@@ -520,7 +521,7 @@ describe("guest order routes", () => {
   it("throttles a flood of guest orders aimed at one restaurant", async () => {
     // Rejected before any database work — the flooder should not get to spend
     // a D1 read per attempt.
-    const env = createEnv({ rateLimitKV: new Map() });
+    const env = createEnv();
     const app = createRoutesWithApiErrorHandler();
     const burstLimit = Math.ceil(
       GUEST_ORDER_THROTTLE.requests * GUEST_ORDER_THROTTLE.burstMultiplier,
@@ -761,7 +762,7 @@ describe("guest order routes", () => {
       [`guest_active:restaurant-1:token:${activeGuestToken}:1`, "502"],
       [`guest_active:restaurant-1:token:${activeGuestToken}:2`, "503"],
     ]) {
-      await duplicateEnv.CACHE_KV.put(key, id);
+      await duplicateEnv.EPHEMERAL.put(key, id);
     }
     setSelectFixtures({ restaurants: [[activeGuestRestaurant()]] });
 
@@ -797,7 +798,7 @@ describe("guest order routes", () => {
       [":1", "502"],
       [":2", "503"],
     ]) {
-      await env.CACHE_KV.put(
+      await env.EPHEMERAL.put(
         `guest_active:restaurant-1:device:${deviceId}${suffix}`,
         id,
       );
@@ -832,7 +833,7 @@ describe("guest order routes", () => {
     setSelectFixtures({ restaurants: [[activeGuestRestaurant()]] });
     createOrder.mockResolvedValueOnce({ id: 502, orderNumber: "G002" });
     const env = createEnv();
-    await env.CACHE_KV.put(
+    await env.EPHEMERAL.put(
       `guest_active:restaurant-1:device:${deviceId}`,
       "501",
     );
@@ -848,12 +849,12 @@ describe("guest order routes", () => {
 
     expect(response.status).toBe(201);
     expect(createOrder).toHaveBeenCalledOnce();
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.put).toHaveBeenCalledWith(
       `guest_active:restaurant-1:device:${deviceId}:1`,
       "502",
       expect.objectContaining({ expirationTtl: expect.any(Number) }),
     );
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.put).toHaveBeenCalledWith(
       "guest_active_lookup:502",
       `guest_active:restaurant-1:device:${deviceId}:1`,
       expect.objectContaining({ expirationTtl: expect.any(Number) }),
@@ -877,12 +878,12 @@ describe("guest order routes", () => {
     );
 
     expect(response.status).toBe(201);
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.put).toHaveBeenCalledWith(
       `guest_active:restaurant-1:device:${deviceId}`,
       "501",
       { expirationTtl: 7200 },
     );
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.put).toHaveBeenCalledWith(
       "guest_active_lookup:501",
       `guest_active:restaurant-1:device:${deviceId}`,
       { expirationTtl: 7200 },
@@ -1144,11 +1145,11 @@ describe("guest order routes", () => {
       status: "cancelled",
     });
     const env = createEnv();
-    await env.CACHE_KV.put(
+    await env.EPHEMERAL.put(
       `guest_active:restaurant-1:token:${CANCELLING_GUEST_TOKEN}:1`,
       "501",
     );
-    await env.CACHE_KV.put(
+    await env.EPHEMERAL.put(
       `guest_active:restaurant-1:token:${CANCELLING_GUEST_TOKEN}`,
       "499",
     );
@@ -1171,17 +1172,19 @@ describe("guest order routes", () => {
     expect(getOrder).toHaveBeenCalledWith("501", false);
     // No reverse lookup is stored, so the slot holding this order is found
     // from the token this request presented; the slot of order 499 stays.
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.delete).toHaveBeenCalledWith(
       `guest_active:restaurant-1:token:${CANCELLING_GUEST_TOKEN}:1`,
     );
-    expect(env.CACHE_KV.delete).not.toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.delete).not.toHaveBeenCalledWith(
       `guest_active:restaurant-1:token:${CANCELLING_GUEST_TOKEN}`,
     );
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith("guest_active_lookup:501");
+    expect(env.EPHEMERAL.delete).toHaveBeenCalledWith(
+      "guest_active_lookup:501",
+    );
     // The token is scoped to this one order and expires on its own. Deleting
     // it here made the tracking page's refetch right after a successful cancel
     // fail, while a staff cancellation never deleted it.
-    expect(env.CACHE_KV.delete).not.toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.delete).not.toHaveBeenCalledWith(
       `guest_token:${CANCELLING_GUEST_TOKEN}`,
     );
   });
@@ -1199,7 +1202,7 @@ describe("guest order routes", () => {
     // The device rotated its token since the order was created (it ordered
     // again elsewhere), so the key stored at creation is the authority.
     const creationKey = `guest_active:restaurant-1:token:gt_${"b".repeat(64)}`;
-    await env.CACHE_KV.put("guest_active_lookup:501", creationKey);
+    await env.EPHEMERAL.put("guest_active_lookup:501", creationKey);
 
     const response = await routes.fetch(
       new Request("https://test/501/cancel", {
@@ -1210,9 +1213,11 @@ describe("guest order routes", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith(creationKey);
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith("guest_active_lookup:501");
-    expect(env.CACHE_KV.delete).not.toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.delete).toHaveBeenCalledWith(creationKey);
+    expect(env.EPHEMERAL.delete).toHaveBeenCalledWith(
+      "guest_active_lookup:501",
+    );
+    expect(env.EPHEMERAL.delete).not.toHaveBeenCalledWith(
       `guest_active:restaurant-1:token:${CANCELLING_GUEST_TOKEN}`,
     );
   });

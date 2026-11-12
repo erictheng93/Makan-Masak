@@ -40,7 +40,6 @@ interface QuotaUser {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const CACHE_TTL_SECONDS = 30;
 
 export function quotaExceeded(
   meterKey: MeterKey,
@@ -110,11 +109,8 @@ async function getAggregatedCount<E extends { Bindings: Env }>(
   meterKey: MeterKey,
   cycleStartAt: number,
 ): Promise<number> {
-  const cacheKey = `quota:${restaurantId}:${meterKey}:${cycleStartAt}`;
-  const kv = c.env.CACHE_KV;
-  const cached = await kv.get<number>(cacheKey, "json").catch(() => null);
-  if (typeof cached === "number") return cached;
-
+  // Not cached in KV: this is a one-row indexed read, cheaper than the KV
+  // get + put that used to front it, and KV writes are the scarce quota.
   const row = await c.env.DB.prepare(
     `SELECT total_quantity
        FROM usage_meters
@@ -126,13 +122,7 @@ async function getAggregatedCount<E extends { Bindings: Env }>(
     .bind(restaurantId, meterKey, cycleStartAt)
     .first<{ total_quantity: number }>();
 
-  const total = row?.total_quantity ?? 0;
-  await kv
-    .put(cacheKey, JSON.stringify(total), {
-      expirationTtl: CACHE_TTL_SECONDS,
-    })
-    .catch(() => undefined);
-  return total;
+  return row?.total_quantity ?? 0;
 }
 
 async function getPendingCount<E extends { Bindings: Env }>(

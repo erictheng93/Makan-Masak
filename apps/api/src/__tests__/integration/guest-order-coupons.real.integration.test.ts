@@ -21,6 +21,7 @@ import {
 } from "./helpers/real-test-app";
 import { buildSeedHelpers } from "./helpers/seed-helper";
 import { readData, readError } from "../helpers/read-json";
+import { ephemeralStore } from "../../shared/utils/ephemeral-store";
 
 const ENDPOINT = "https://test/api/v1/guest-orders";
 const DEVICE_A = "11111111-1111-4111-8111-111111111111";
@@ -354,11 +355,10 @@ describe("Guest coupon checkout — real D1 (#382)", () => {
       .update(orders)
       .set({ status: "delivered" })
       .where(eq(orders.id, orderId));
-    const key = await testApp.env.CACHE_KV.get(
-      `guest_active_lookup:${orderId}`,
-    );
+    const store = ephemeralStore(testApp.env);
+    const key = await store.get(`guest_active_lookup:${orderId}`);
     expect(key).toBeTruthy();
-    await testApp.env.CACHE_KV.delete(key!);
-    await testApp.env.CACHE_KV.delete(`guest_active_lookup:${orderId}`);
+    await store.delete(key!);
+    await store.delete(`guest_active_lookup:${orderId}`);
   }
 });

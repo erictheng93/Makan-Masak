@@ -10,6 +10,12 @@ import {
 } from "./guestAuth";
 import { ApiError } from "../shared/utils/api-error";
 
+// Guest tokens and locks live in the D1 ephemeral store; tests hand it a fake
+// through a test-only env field so it stays distinct from CACHE_KV.
+vi.mock("../shared/utils/ephemeral-store", () => ({
+  ephemeralStore: (env: { EPHEMERAL: unknown }) => env.EPHEMERAL,
+}));
+
 /**
  * The middleware throws ApiError and leaves rendering to the app-wide handler
  * that app-factory installs. A bare `new Hono()` has none, so Hono's default
@@ -44,7 +50,7 @@ describe("guestTokenAuth", () => {
 
     const response = await app.fetch(
       new Request("https://api.test/orders/order-1"),
-      { CACHE_KV: createKv(null) } as never,
+      { EPHEMERAL: createKv(null) } as never,
     );
 
     await expect(response.json()).resolves.toMatchObject({
@@ -67,7 +73,7 @@ describe("guestTokenAuth", () => {
         headers: { Authorization: "Bearer gt_abc" },
       }),
       {
-        CACHE_KV: createKv({
+        EPHEMERAL: createKv({
           orderId: "order-1",
           restaurantId: "rest-1",
           guestName: "Ada",
@@ -99,7 +105,7 @@ describe("guestTokenAuth", () => {
         headers: { Authorization: "Bearer gt_abc" },
       }),
       {
-        CACHE_KV: createKv({
+        EPHEMERAL: createKv({
           orderId: "order-1",
           restaurantId: "rest-1",
           guestName: "Ada",
@@ -128,7 +134,7 @@ describe("guestTokenAuth", () => {
         param: vi.fn(() => "order-1"),
       },
       env: {
-        CACHE_KV: createKv({
+        EPHEMERAL: createKv({
           orderId: "order-1",
           restaurantId: "rest-1",
           guestName: "Ada",
@@ -160,7 +166,7 @@ describe("guestSessionAuth", () => {
         headers: { Authorization: "Bearer gt_abc" },
       }),
       {
-        CACHE_KV: createKv({
+        EPHEMERAL: createKv({
           restaurantId: "rest-1",
           phoneLastDigits: "1234",
           createdAt: Date.now(),
@@ -187,7 +193,7 @@ describe("guestSessionAuth", () => {
         headers: { Authorization: "Bearer gt_abc" },
       }),
       {
-        CACHE_KV: createKv({
+        EPHEMERAL: createKv({
           restaurantId: "rest-1",
           phoneLastDigits: "1234",
           createdAt: Date.now(),
@@ -214,7 +220,7 @@ describe("guestSessionAuth", () => {
         header: vi.fn(() => "Bearer gt_abc"),
       },
       env: {
-        CACHE_KV: createKv({
+        EPHEMERAL: createKv({
           restaurantId: "rest-1",
           phoneLastDigits: "1234",
           createdAt: Date.now(),
@@ -231,12 +237,12 @@ describe("guestSessionAuth", () => {
   });
 });
 
-describe("guest auth KV failures", () => {
+describe("guest auth store failures", () => {
   it.each([
     ["guestTokenAuth", guestTokenAuth],
     ["guestSessionAuth", guestSessionAuth],
   ] as const)(
-    "%s returns 503 and does not call next when the KV lookup throws",
+    "%s returns 503 and does not call next when the store lookup throws",
     async (_name, middleware) => {
       const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const handler = vi.fn();
@@ -256,7 +262,7 @@ describe("guest auth KV failures", () => {
         new Request("https://api.test/orders/order-1", {
           headers: { Authorization: "Bearer gt_abc" },
         }),
-        { CACHE_KV: kv } as never,
+        { EPHEMERAL: kv } as never,
       );
 
       expect(response.status).toBe(503);
