@@ -13,7 +13,7 @@
     "test:coverage": "vitest run --coverage",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
-    "deploy:prod": "wrangler pages deploy dist --project-name=makanmasak-onboarding --branch=main"
+    "deploy:prod": "node ../../scripts/pages-deploy.cjs --project makanmasak-onboarding"
   },
   "dependencies": {
     "@headlessui/vue": "^1.7.0",

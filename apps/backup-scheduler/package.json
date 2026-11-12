@@ -11,7 +11,7 @@
     "lint": "pnpm --filter @makanmasak/api lint",
     "test": "pnpm run build",
     "deploy": "wrangler deploy",
-    "deploy:prod": "wrangler deploy --env production"
+    "deploy:prod": "node ../../scripts/api-deploy.cjs --env production"
   },
   "devDependencies": {
     "wrangler": "^4.156.1"

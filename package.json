@@ -64,6 +64,7 @@
     "db:test-migrations": "npx tsx scripts/test-migrations-v2.ts",
     "setup:secrets": "npx tsx scripts/setup-secrets.ts",
     "script": "npx tsx",
+    "deploy:status": "node scripts/deploy-status.cjs",
     "smoke:order-flow": "node scripts/smoke-order-flow.mjs",
     "check:prod-config": "node scripts/check-production-config.cjs",
     "check:vitest-results": "node scripts/check-vitest-results.cjs",

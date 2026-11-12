@@ -958,6 +958,24 @@ what "the factory check" refers to.
 4. **WebSocket Disconnections**: Monitor Durable Objects health
 5. **Windows: `pnpm dev` fails with `*** std::terminate() called with no exception` followed by `MiniflareCoreError [ERR_RUNTIME_FAILURE]`**: First seen on wrangler 4.84.x (the repo now pins `^4.131.1`), this is a Windows regression triggered by **any** `inspector_port = N` line inside the `[dev]` block of a `wrangler.toml`. It reproduces on every port value (9229/9230/9500, etc.), on both Node 22 and Node 24, and on every installed workerd binary — port availability is not the factor; the toml field itself crashes the InspectorProxyWorker. **Every Workers app that has a `[dev]` block — `api`, `management-api`, `realtime`, `image-processor` — already has `inspector_port` commented out** in its `wrangler.toml` with an inline note (`backup-scheduler` is cron-only and has no `[dev]` block). Do not reintroduce it. If you need a pinned DevTools port, pass it via CLI flag (`wrangler dev --inspector-port N`) instead, which does not crash. Debug hint: first line to run if you see `std::terminate` in a future wrangler bump is `grep -rn "^inspector_port" apps/`.
 
+### Deploys record their commit
+
+Every `deploy:prod` refuses a dirty tree for its build inputs and attaches the
+commit: Workers go through `scripts/api-deploy.cjs` (commit in the version
+message, tag for api's rollback floor), Pages apps through
+`scripts/pages-deploy.cjs` (`--commit-hash` / `--commit-message`). The Pages
+script also builds the app's workspace dependencies with
+`turbo run build --filter=<app>...`, so it works from a fresh worktree;
+`node ../../scripts/pages-deploy.cjs --project <p> --build-only` stops before
+the upload. `pnpm deploy:status` (read-only, needs `wrangler login`) prints each
+service's deployed commit and how many commits touching its inputs `origin/main`
+is ahead; deploys made before this show as `unknown`.
+
+After deploying api, realtime, customer-app, admin-dashboard or kitchen-display
+the script reminds you to run `pnpm smoke:order-flow`. The manual-only workflow
+`.github/workflows/smoke-order-flow.yml` runs it in CI and needs the repository
+secrets `SMOKE_ADMIN_USERNAME` and `SMOKE_ADMIN_PASSWORD` (administrator tier).
+
 ### Debug Tools
 
 - Worker logs: `pnpm wrangler tail`
