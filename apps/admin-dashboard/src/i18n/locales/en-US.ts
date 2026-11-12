@@ -3125,7 +3125,8 @@ const enUS: Messages = {
       acceptGuestOrdersDesc:
         "Allow customers to submit orders from table and shop QR codes",
       autoConfirm: "Auto-Confirm Orders",
-      autoConfirmDesc: "Automatically confirm new orders without manual review",
+      autoConfirmDesc:
+        "New orders are accepted automatically. When off, orders wait for staff confirmation before the kitchen sees them.",
       prepTimeAlert: "Preparation Time Alert",
       prepTimeAlertDesc: "Send alert when order exceeds preparation time",
       defaultPrepTime: "Default Preparation Time (minutes)",

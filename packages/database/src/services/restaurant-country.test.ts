@@ -61,6 +61,40 @@ describe("restaurant country on create", () => {
     });
   });
 
+  it("turns auto-accept on for a new shop that did not choose", async () => {
+    const created = await service().createRestaurant(base);
+    await expect(stored(String(created.id))).resolves.toMatchObject({
+      settings: expect.objectContaining({ autoAcceptOrders: true }),
+    });
+  });
+
+  it("keeps an explicit autoAcceptOrders=false at creation", async () => {
+    const created = await service().createRestaurant({
+      ...base,
+      settings: { autoAcceptOrders: false },
+    } as typeof base);
+    await expect(stored(String(created.id))).resolves.toMatchObject({
+      settings: expect.objectContaining({ autoAcceptOrders: false }),
+    });
+  });
+
+  it("persists autoAcceptOrders=false on update and keeps other keys", async () => {
+    const created = await service().createRestaurant({
+      ...base,
+      settings: { enableTakeaway: true },
+    } as typeof base);
+    await service().updateRestaurant(String(created.id), {
+      settings: { autoAcceptOrders: false },
+    });
+    await expect(stored(String(created.id))).resolves.toMatchObject({
+      settings: expect.objectContaining({
+        autoAcceptOrders: false,
+        enableTakeaway: true,
+        currency: "TWD",
+      }),
+    });
+  });
+
   it("derives MY and MYR from a Malaysian city", async () => {
     const created = await service().createRestaurant({
       ...base,

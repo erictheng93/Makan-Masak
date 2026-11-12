@@ -3165,7 +3165,8 @@ const zhTWCore = {
       acceptGuestOrders: "接受顧客掃碼點餐",
       acceptGuestOrdersDesc: "允許顧客透過桌台與店家 QR Code 送出訂單",
       autoConfirm: "自動確認訂單",
-      autoConfirmDesc: "新訂單自動確認，無需人工審核",
+      autoConfirmDesc:
+        "新訂單自動接單。關閉後，訂單需由員工確認才會出現在廚房。",
       prepTimeAlert: "訂單準備時間提醒",
       prepTimeAlertDesc: "訂單超過準備時間時發送提醒",
       defaultPrepTime: "預設準備時間（分鐘）",

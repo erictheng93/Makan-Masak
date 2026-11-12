@@ -36,7 +36,7 @@ describe("buildProvisionedRestaurantValues", () => {
     expect(values).toMatchObject({
       countryCode: "TW",
       timezone: "Asia/Taipei",
-      settings: { currency: "TWD" },
+      settings: { currency: "TWD", autoAcceptOrders: true },
       city: "台中市",
     });
   });

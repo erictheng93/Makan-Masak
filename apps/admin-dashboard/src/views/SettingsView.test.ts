@@ -377,6 +377,43 @@ describe("SettingsView guest ordering availability", () => {
     );
   });
 
+  it("shows a stored auto-accept value and saves the owner's change", async () => {
+    vi.mocked(api.get).mockImplementation(async (url: string) =>
+      apiGetResponse(
+        url === "/restaurants/restaurant-1"
+          ? {
+              name: "Vendor",
+              district: "Datong",
+              settings: { autoAcceptOrders: true },
+            }
+          : {},
+      ),
+    );
+    const wrapper = await mountSettings();
+    const checkbox = wrapper
+      .findAll<HTMLInputElement>('input[type="checkbox"]')
+      .find((input) =>
+        input.element.parentElement?.parentElement?.textContent?.includes(
+          "settings.orders.autoConfirm",
+        ),
+      );
+    expect(checkbox?.element.checked).toBe(true);
+
+    await checkbox?.setValue(false);
+    await wrapper
+      .findAll("button")
+      .find((button) => button.text() === "settings.saveSettings")
+      ?.trigger("click");
+    await flushPromises();
+
+    expect(api.put).toHaveBeenCalledWith(
+      "/restaurants/restaurant-1",
+      expect.objectContaining({
+        settings: expect.objectContaining({ autoAcceptOrders: false }),
+      }),
+    );
+  });
+
   it.each([true, false])(
     "preserves authoritative fulfillment columns over stale JSON (%s)",
     async (enabled) => {

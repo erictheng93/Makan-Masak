@@ -136,7 +136,7 @@ export function buildProvisionedRestaurantValues(
     city: application.city ?? profile.cities[0],
     countryCode: profile.countryCode,
     timezone: profile.timezone,
-    settings: { currency: profile.currency },
+    settings: { currency: profile.currency, autoAcceptOrders: true },
     phone: application.phone,
     email: application.contactEmail,
     isAvailable: false,
