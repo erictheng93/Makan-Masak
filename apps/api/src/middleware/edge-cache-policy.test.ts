@@ -460,6 +460,13 @@ describe("isPublicApiCacheableRequest", () => {
     await get("/api/v1/restaurants/restaurant-1?tableId=1");
     await get("/api/v1/restaurants/restaurant-1?tableId=2");
     expect(restaurantHandler).toHaveBeenCalledTimes(1);
+
+    // A parameter nobody has classified stays in the key: if a handler starts
+    // reading it, two values must never share one cached response.
+    await get("/api/v1/restaurants/restaurant-1?lang=en&tableId=1");
+    await get("/api/v1/restaurants/restaurant-1?lang=ja&utm_source=qr");
+    await get("/api/v1/restaurants/restaurant-1?lang=ja&tableId=9");
+    expect(restaurantHandler).toHaveBeenCalledTimes(3);
   });
 
   // A menu write answers before its cache clears, but realtime must not go
