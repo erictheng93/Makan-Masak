@@ -14,6 +14,13 @@ export interface KitchenOrder {
     | "uber_eats"
     | "foodpanda"
     | "grabfood";
+  deliveryInfo?: {
+    type: "dine_in" | "takeaway" | "delivery";
+    address?: string;
+    phone?: string;
+    instructions?: string;
+    deliveryFee?: number;
+  };
   items: KitchenOrderItem[];
   customerName?: string;
   notes?: string;

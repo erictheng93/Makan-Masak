@@ -57,6 +57,31 @@ describe("OrderCard", () => {
     expect(mountOrderCard("Tabletop 4").text()).toContain("桌 Tabletop 4");
   }, 10_000);
 
+  // Found on production: the kitchen API sent no fulfilment type, so a
+  // takeaway order with no table read "Dine-in" and "Table No Table".
+  it("marks a takeaway order as takeaway and shows no table for it", () => {
+    const wrapper = mount(OrderCard, {
+      props: {
+        order: makeOrder({
+          tableName: "No Table",
+          deliveryInfo: { type: "takeaway" },
+        }),
+        statusType: "pending",
+      },
+      global: { plugins: [createPinia()] },
+    });
+
+    expect(wrapper.find('[data-order-type="takeaway"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="kitchen-order-table"]').exists()).toBe(
+      false,
+    );
+    expect(
+      mountOrderCard("Table 4")
+        .find('[data-testid="kitchen-order-table"]')
+        .exists(),
+    ).toBe(true);
+  });
+
   it("emits item and order start actions for pending items", async () => {
     const order = makeOrder({
       id: 42,

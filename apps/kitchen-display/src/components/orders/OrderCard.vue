@@ -29,7 +29,11 @@
         >
           {{ order.orderNumber }}
         </span>
-        <span v-if="order.tableName" class="text-lg font-bold text-blue-700">
+        <span
+          v-if="order.tableName && order.tableName !== 'No Table'"
+          data-testid="kitchen-order-table"
+          class="text-lg font-bold text-blue-700"
+        >
           {{ t("orders.table") }} {{ displayTableName }}
         </span>
       </div>
@@ -40,6 +44,7 @@
           <!-- Order type badge -->
           <span
             :class="orderTypeBadge.class"
+            :data-order-type="order.deliveryInfo?.type ?? 'dine_in'"
             class="rounded-full px-2.5 py-0.5 text-sm font-semibold"
           >
             {{ orderTypeBadge.label }}

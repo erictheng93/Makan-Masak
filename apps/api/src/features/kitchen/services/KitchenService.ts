@@ -110,6 +110,8 @@ export class KitchenService implements IKitchenService {
           tableName: tableLabel(order.table?.number, order.tableId),
           status: order.status,
           orderSource: order.orderSource,
+          // Without this the board labels every order dine-in, takeaway included.
+          deliveryInfo: order.deliveryInfo ?? undefined,
           items: (order.items || []).map((item) => {
             // item.status is already a string — pass through directly.
             const itemStatus =

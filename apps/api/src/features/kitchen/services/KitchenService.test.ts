@@ -188,6 +188,7 @@ describe("KitchenService", () => {
           table: null,
           status: "preparing",
           orderSource: "market_checkout",
+          deliveryInfo: { type: "takeaway", deliveryFee: 0 },
           items: [
             {
               id: 502,
@@ -261,6 +262,8 @@ describe("KitchenService", () => {
         id: 102,
         tableId: 0,
         tableName: "No Table",
+        // The board cannot tell takeaway from dine-in without this.
+        deliveryInfo: { type: "takeaway", deliveryFee: 0 },
         customerName: "Guest",
         totalItems: 1,
         elapsedTime: 40,
