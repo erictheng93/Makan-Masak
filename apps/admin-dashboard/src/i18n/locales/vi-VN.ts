@@ -402,7 +402,7 @@ const viVN: Messages = {
   orders: {
     stats: {
       pending: "Chờ xử lý",
-      preparing: "Đang chuẩn bị",
+      preparing: "Đang xử lý",
       completed: "Hoàn thành",
       cancelled: "Đã hủy",
     },

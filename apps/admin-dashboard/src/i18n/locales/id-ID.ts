@@ -407,7 +407,7 @@ const idID: Messages = {
   orders: {
     stats: {
       pending: "Menunggu",
-      preparing: "Menyiapkan",
+      preparing: "Sedang berjalan",
       completed: "Selesai",
       cancelled: "Dibatalkan",
     },

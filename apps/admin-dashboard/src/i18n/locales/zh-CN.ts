@@ -395,7 +395,7 @@ const zhCN: Messages = {
   orders: {
     stats: {
       pending: "待处理",
-      preparing: "准备中",
+      preparing: "进行中",
       completed: "已完成",
       cancelled: "已取消",
     },

@@ -407,7 +407,7 @@ const enUS: Messages = {
   orders: {
     stats: {
       pending: "Pending",
-      preparing: "Preparing",
+      preparing: "In progress",
       completed: "Completed",
       cancelled: "Cancelled",
     },

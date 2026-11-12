@@ -3115,3 +3115,59 @@ describe("OrderService multiple coupons", () => {
     expect(await testDb.drizzle.select().from(couponUsage)).toHaveLength(0);
   });
 });
+
+describe("OrderService getOrderStatistics status buckets", () => {
+  let testDb: TestDatabase;
+
+  beforeAll(async () => {
+    testDb = await createTestDatabase();
+  }, REAL_D1_SETUP_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await testDb?.dispose();
+  });
+
+  beforeEach(async () => {
+    await testDb.truncateAll();
+    await seedMenuItem(testDb);
+  });
+
+  // The admin Orders page labels `preparingOrders` as 進行中 (in progress):
+  // confirmed + preparing + ready share one bucket on purpose. refunded is in
+  // no bucket, only in totalOrders.
+  it("maps all eight statuses onto the four stat buckets", async () => {
+    const service = new OrderService(testDb.bindings.DB, {
+      JWT_SECRET: "test",
+    });
+    const statuses = [
+      "pending",
+      "confirmed",
+      "preparing",
+      "ready",
+      "delivered",
+      "paid",
+      "refunded",
+      "cancelled",
+    ] as const;
+    for (const status of statuses) {
+      const order = await service.createOrder({
+        restaurantId,
+        items: [{ menuItemId, quantity: 1 }],
+      });
+      await testDb.drizzle
+        .update(orders)
+        .set({ status })
+        .where(eq(orders.id, order.id));
+    }
+
+    await expect(service.getOrderStatistics(restaurantId)).resolves.toEqual(
+      expect.objectContaining({
+        totalOrders: 8,
+        pendingOrders: 1,
+        preparingOrders: 3,
+        completedOrders: 2,
+        cancelledOrders: 1,
+      }),
+    );
+  });
+});
