@@ -168,6 +168,12 @@ const signedInCustomer = vi.hoisted(
   () => ({ value: null }) as { value: { id: string } | null },
 );
 
+// Guest tokens and locks live in the D1 ephemeral store; tests hand it a fake
+// through a test-only env field so it stays distinct from CACHE_KV.
+vi.mock("../../../shared/utils/ephemeral-store", () => ({
+  ephemeralStore: (env: { EPHEMERAL: unknown }) => env.EPHEMERAL,
+}));
+
 vi.mock("../../../middleware/auth", () => ({
   authMiddleware: vi.fn(async (c, next) => {
     c.set("user", adminUser);
@@ -320,11 +326,13 @@ const MARKET_PAID_HOLDER_HEADERS = {
 
 function createEnv(dbFirstRows: unknown[] = []) {
   const kv = new Map<string, string>();
+  // Guest tokens and active-order locks live in the D1 ephemeral store.
+  const ephemeral = new Map<string, string>();
   // A real shopper reaches the mutating endpoints holding the guest token
   // minted when the checkout was created; the gate on those routes resolves it
-  // out of KV. Seeded through the backing map rather than the `put` mock so it
-  // does not show up in tests that assert on KV writes.
-  kv.set(
+  // out of the store. Seeded through the backing map rather than the `put` mock
+  // so it does not show up in tests that assert on writes.
+  ephemeral.set(
     `guest_token:${MARKET_HOLDER_TOKEN}`,
     JSON.stringify({
       orderId: "1001",
@@ -333,7 +341,7 @@ function createEnv(dbFirstRows: unknown[] = []) {
       createdAt: 0,
     }),
   );
-  kv.set(
+  ephemeral.set(
     `guest_token:${MARKET_PAID_HOLDER_TOKEN}`,
     JSON.stringify({
       orderId: "101",
@@ -381,6 +389,15 @@ function createEnv(dbFirstRows: unknown[] = []) {
       }),
       delete: vi.fn(async (key: string) => {
         kv.delete(key);
+      }),
+    },
+    EPHEMERAL: {
+      get: vi.fn(async (key: string) => ephemeral.get(key) ?? null),
+      put: vi.fn(async (key: string, value: string) => {
+        ephemeral.set(key, value);
+      }),
+      delete: vi.fn(async (key: string) => {
+        ephemeral.delete(key);
       }),
     },
   };
@@ -962,7 +979,7 @@ describe("market checkout routes", () => {
     });
     // A brand-new anonymous shopper presents no guest token, so there is no
     // prior identity to look up — nothing may be keyed off the client address.
-    const activeLookups = env.CACHE_KV.get.mock.calls
+    const activeLookups = env.EPHEMERAL.get.mock.calls
       .map(([key]: [string]) => key)
       .filter((key: string) => key.startsWith("guest_active:"));
     expect(activeLookups).toEqual([]);
@@ -971,17 +988,17 @@ describe("market checkout routes", () => {
     // token, which is the one the customer app keeps as its bearer. Keying each
     // vendor on its own minted token would leave every lock but the first
     // unreadable on the next checkout.
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.put).toHaveBeenCalledWith(
       "guest_active:restaurant-1:token:guest-token-1",
       "1001",
       { expirationTtl: 7200 },
     );
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.put).toHaveBeenCalledWith(
       "guest_active:restaurant-2:token:guest-token-1",
       "1002",
       { expirationTtl: 7200 },
     );
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.put).toHaveBeenCalledWith(
       "guest_active_lookup:1001",
       "guest_active:restaurant-1:token:guest-token-1",
       { expirationTtl: 7200 },
@@ -1126,7 +1143,7 @@ describe("market checkout routes", () => {
     const env = createEnv();
     // All three open-order slots at this vendor are taken.
     for (const suffix of ["", ":1", ":2"]) {
-      await env.CACHE_KV.put(
+      await env.EPHEMERAL.put(
         `guest_active:restaurant-1:token:${ACTIVE_GUEST_TOKEN}${suffix}`,
         "order-1",
       );
@@ -1252,7 +1269,7 @@ describe("market checkout routes", () => {
     );
 
     expect(response.status).toBe(201);
-    const activeLookups = env.CACHE_KV.get.mock.calls
+    const activeLookups = env.EPHEMERAL.get.mock.calls
       .map(([key]: [string]) => key)
       .filter((key: string) => key.startsWith("guest_active:"));
     expect(activeLookups).toEqual([
@@ -1263,12 +1280,12 @@ describe("market checkout routes", () => {
       `guest_active:restaurant-2:device:${GUEST_DEVICE_ID}:1`,
       `guest_active:restaurant-2:device:${GUEST_DEVICE_ID}:2`,
     ]);
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.put).toHaveBeenCalledWith(
       `guest_active:restaurant-1:device:${GUEST_DEVICE_ID}`,
       "1001",
       { expirationTtl: 7200 },
     );
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.put).toHaveBeenCalledWith(
       `guest_active:restaurant-2:device:${GUEST_DEVICE_ID}`,
       "1002",
       { expirationTtl: 7200 },
@@ -1291,7 +1308,7 @@ describe("market checkout routes", () => {
         totalAmountCents: 8000,
       });
     const env = createEnv();
-    await env.CACHE_KV.put(
+    await env.EPHEMERAL.put(
       `guest_active:restaurant-1:device:${GUEST_DEVICE_ID}`,
       "900",
     );
@@ -1304,12 +1321,12 @@ describe("market checkout routes", () => {
     );
 
     expect(response.status).toBe(201);
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.put).toHaveBeenCalledWith(
       `guest_active:restaurant-1:device:${GUEST_DEVICE_ID}:1`,
       "1001",
       { expirationTtl: 7200 },
     );
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.put).toHaveBeenCalledWith(
       `guest_active:restaurant-2:device:${GUEST_DEVICE_ID}`,
       "1002",
       { expirationTtl: 7200 },
@@ -1324,7 +1341,7 @@ describe("market checkout routes", () => {
     const env = createEnv();
     // All three open-order slots at this vendor are taken.
     for (const suffix of ["", ":1", ":2"]) {
-      await env.CACHE_KV.put(
+      await env.EPHEMERAL.put(
         `guest_active:restaurant-2:device:${GUEST_DEVICE_ID}${suffix}`,
         "1002",
       );
@@ -1351,7 +1368,7 @@ describe("market checkout routes", () => {
     const env = createEnv();
     // All three open-order slots at this vendor are taken.
     for (const suffix of ["", ":1", ":2"]) {
-      await env.CACHE_KV.put(
+      await env.EPHEMERAL.put(
         `guest_active:restaurant-1:device:${GUEST_DEVICE_ID}${suffix}`,
         "1001",
       );
@@ -1596,13 +1613,13 @@ describe("market checkout routes", () => {
 
     // Its active-order lock, reverse lookup, and guest token are cleared so a
     // retry starts clean.
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.delete).toHaveBeenCalledWith(
       "guest_active:restaurant-1:token:guest-token-1",
     );
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.delete).toHaveBeenCalledWith(
       "guest_active_lookup:1001",
     );
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.delete).toHaveBeenCalledWith(
       "guest_token:guest-token-1",
     );
 
@@ -1781,7 +1798,7 @@ describe("market checkout routes", () => {
       orderId: 1001,
       guestToken: "guest-token-1",
     });
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.put).toHaveBeenCalledWith(
       "guest_token:guest-token-1",
       expect.stringContaining('"orderId":"1001"'),
       { expirationTtl: 14400 },
@@ -1873,7 +1890,7 @@ describe("market checkout routes", () => {
     );
 
     expect(response.status).toBe(403);
-    expect(env.CACHE_KV.put).not.toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.put).not.toHaveBeenCalledWith(
       "guest_token:guest-token-1",
       expect.any(String),
       expect.any(Object),
@@ -1927,7 +1944,7 @@ describe("market checkout routes", () => {
     );
 
     expect(response.status).toBe(429);
-    expect(env.CACHE_KV.put).not.toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.put).not.toHaveBeenCalledWith(
       "guest_token:guest-token-1",
       expect.any(String),
       expect.any(Object),
@@ -1979,7 +1996,7 @@ describe("market checkout routes", () => {
     expect(env.CACHE_KV.delete).toHaveBeenCalledWith(
       "market_checkout_recover_attempts:checkout-1",
     );
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.put).toHaveBeenCalledWith(
       "guest_token:guest-token-1",
       expect.stringContaining('"orderId":"1001"'),
       { expirationTtl: 14400 },
@@ -2051,7 +2068,7 @@ describe("market checkout routes", () => {
     expect(env.CACHE_KV.delete).toHaveBeenCalledWith(
       "market_checkout_recover_attempts:checkout-1",
     );
-    expect(env.CACHE_KV.put).not.toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.put).not.toHaveBeenCalledWith(
       "guest_token:guest-token-1",
       expect.any(String),
       expect.any(Object),
@@ -2496,7 +2513,7 @@ describe("market checkout routes", () => {
       "market_checkout:checkout-1",
       JSON.stringify(unpaidCheckoutSessionFixture()),
     );
-    await env.CACHE_KV.put("guest_token:gt_corrupt-token", "{not json");
+    await env.EPHEMERAL.put("guest_token:gt_corrupt-token", "{not json");
 
     const response = await withSilencedRouteError(() =>
       routes.fetch(
@@ -2520,7 +2537,7 @@ describe("market checkout routes", () => {
     );
     // A shopper who ordered elsewhere in between carries a valid guest token
     // for an order that is not part of this checkout.
-    await env.CACHE_KV.put(
+    await env.EPHEMERAL.put(
       "guest_token:gt_other-checkout",
       JSON.stringify({
         orderId: "9999",

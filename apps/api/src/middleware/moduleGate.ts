@@ -32,8 +32,13 @@ import {
   resolveRegionPolicies,
 } from "../shared/policy/regionPolicies";
 
-// KV cache TTL: 5 minutes.  Short enough to make kill-switch effective quickly.
-export const CACHE_TTL_SECONDS = 300;
+// KV cache TTL: 1 hour. Every code path that changes is_active, plan_tier or
+// module_overrides calls invalidateSubscriptionCacheForEnv, so the TTL only
+// bounds changes made behind the code's back: after editing shop_subscriptions
+// by hand (the manual kill switch), delete the `subscription:{restaurantId}`
+// key too. It was 5 minutes, which cost a KV write per restaurant per 5
+// minutes of traffic against a 1,000-a-day Free-plan budget.
+export const CACHE_TTL_SECONDS = 3600;
 
 export interface CachedSubscription {
   isActive: boolean;

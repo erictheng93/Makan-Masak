@@ -32,7 +32,9 @@ import {
 } from "@makanmasak/shared-types";
 import { ApiError } from "../utils/api-error";
 
-export const REGION_POLICY_CACHE_TTL_SECONDS = 300;
+// The management API deletes the key on every policy change, so this only
+// bounds hand edits. An hour keeps the miss-driven KV writes rare.
+export const REGION_POLICY_CACHE_TTL_SECONDS = 3600;
 
 export interface RegionPolicyDeps {
   DB: D1Database;

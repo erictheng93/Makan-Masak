@@ -5,14 +5,13 @@ import type {
   OrderStatusUpdateEvent,
 } from "@makanmasak/shared-types";
 import { RealtimeEventType as EventType } from "@makanmasak/shared-types";
-
-interface KVLike {
-  get(key: string): Promise<unknown>;
-  delete(key: string): Promise<unknown>;
-}
+import {
+  ephemeralStore,
+  type EphemeralStore,
+} from "../../../shared/utils/ephemeral-store";
 
 interface FinalizationEnv {
-  CACHE_KV: KVLike;
+  DB: D1Database;
   REALTIME_SESSION?: DurableObjectNamespace;
 }
 
@@ -41,23 +40,23 @@ const GUEST_ACTIVE_RELEASE_STATUSES = new Set<OrderStatus>([
 ]);
 
 export async function clearGuestActiveOrderLock(
-  cacheKV: KVLike,
+  store: Pick<EphemeralStore, "get" | "delete">,
   orderId: string,
 ): Promise<void> {
   try {
     const lookupKey = `guest_active_lookup:${orderId}`;
-    const activeOrderKey = await cacheKV.get(lookupKey);
+    const activeOrderKey = await store.get(lookupKey);
     if (typeof activeOrderKey !== "string" || !activeOrderKey) {
       return;
     }
 
     await Promise.allSettled([
-      cacheKV.delete(activeOrderKey),
-      cacheKV.delete(lookupKey),
+      store.delete(activeOrderKey),
+      store.delete(lookupKey),
     ]);
   } catch {
     // Guest active locks are a recovery aid; status transitions must not fail
-    // after the database update because KV cleanup was unavailable.
+    // after the database update because lock cleanup was unavailable.
   }
 }
 
@@ -85,7 +84,7 @@ export async function finalizeOrderStatusSideEffects({
   ];
 
   if (GUEST_ACTIVE_RELEASE_STATUSES.has(newStatus)) {
-    sideEffects.push(clearGuestActiveOrderLock(env.CACHE_KV, order.id));
+    sideEffects.push(clearGuestActiveOrderLock(ephemeralStore(env), order.id));
   }
 
   await Promise.all(sideEffects);

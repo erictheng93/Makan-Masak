@@ -13,6 +13,7 @@ import { parseSignedQRUrl, verifyQRSignature } from "@makanmasak/utils";
 import type { Env } from "../../../shared/types";
 import type { GuestTokenData } from "../../../middleware/guestAuth";
 import { ConsoleLogger } from "../../../core/monitoring";
+import { ephemeralStore } from "../../../shared/utils/ephemeral-store";
 import type {
   GroupOrderRealtimeTokenRequest,
   GroupOrderRealtimeTokenResponse,
@@ -816,7 +817,7 @@ export class RealtimeAuthService {
     | { error: string }
   > {
     if (request.guestToken) {
-      const tokenData = (await this.env.CACHE_KV.get(
+      const tokenData = (await ephemeralStore(this.env).get(
         `guest_token:${request.guestToken}`,
         "json",
       )) as GuestTokenData | null;

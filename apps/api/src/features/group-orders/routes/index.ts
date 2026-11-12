@@ -20,6 +20,7 @@ import {
   publicRateLimit,
   strictRateLimit,
 } from "../../../middleware/rateLimit";
+import { ephemeralStore } from "../../../shared/utils/ephemeral-store";
 import { meterEmit } from "../../../shared/utils/meter";
 import { toCsvRow } from "../../../shared/utils/csv";
 import {
@@ -764,7 +765,7 @@ app.post(
       createdAt: Date.now(),
     };
     const expirationTtl = 4 * 60 * 60;
-    await c.env.CACHE_KV.put(
+    await ephemeralStore(c.env).put(
       `guest_token:${guestToken}`,
       JSON.stringify(tokenData),
       { expirationTtl },

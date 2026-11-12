@@ -22,6 +22,7 @@ import {
   notFound,
 } from "../../../shared/utils/api-error";
 import { enforceQuota } from "../../../middleware/quotaGate";
+import { ephemeralStore } from "../../../shared/utils/ephemeral-store";
 import { meterEmit } from "../../../shared/utils/meter";
 import { rateLimitMiddleware } from "../../../middleware/rateLimiter";
 import {
@@ -640,7 +641,7 @@ app.post("/", optionalCanonicalCustomerAuthMiddleware, async (c) => {
   await Promise.all(
     [...activeSlotKeysByRestaurant].map(async ([restaurantId, slotKeys]) => {
       const holders = await Promise.all(
-        slotKeys.map((key) => c.env.CACHE_KV.get(key)),
+        slotKeys.map((key) => ephemeralStore(c.env).get(key)),
       );
       const freeSlot = holders.findIndex((orderId) => !orderId);
       if (freeSlot !== -1) {
@@ -756,15 +757,15 @@ app.post("/", optionalCanonicalCustomerAuthMiddleware, async (c) => {
         guestToken,
       });
 
-      await c.env.CACHE_KV.put(
+      await ephemeralStore(c.env).put(
         `guest_token:${guestToken}`,
         JSON.stringify(tokenData),
         { expirationTtl: fourHoursInSeconds },
       );
-      await c.env.CACHE_KV.put(activeOrderKey, String(childOrder.id), {
+      await ephemeralStore(c.env).put(activeOrderKey, String(childOrder.id), {
         expirationTtl: twoHoursInSeconds,
       });
-      await c.env.CACHE_KV.put(
+      await ephemeralStore(c.env).put(
         `guest_active_lookup:${childOrder.id}`,
         activeOrderKey,
         { expirationTtl: twoHoursInSeconds },
@@ -1520,7 +1521,7 @@ app.post(
       Date.now() + fourHoursInSeconds * 1000,
     ).toISOString();
 
-    await c.env.CACHE_KV.put(
+    await ephemeralStore(c.env).put(
       `guest_token:${guestToken}`,
       JSON.stringify(tokenData),
       { expirationTtl: fourHoursInSeconds },
@@ -2284,7 +2285,9 @@ async function isMarketCheckoutOwner(
   ].filter((token): token is string => Boolean(token));
 
   for (const token of candidates) {
-    const rawGuestOrder = await c.env.CACHE_KV.get(`guest_token:${token}`);
+    const rawGuestOrder = await ephemeralStore(c.env).get(
+      `guest_token:${token}`,
+    );
     if (!rawGuestOrder) continue;
 
     try {
@@ -2885,9 +2888,9 @@ async function compensateFailedMarketCheckout(
     }
 
     const cleanup = await Promise.allSettled([
-      env.CACHE_KV.delete(`guest_token:${item.guestToken}`),
-      env.CACHE_KV.delete(item.activeOrderKey),
-      env.CACHE_KV.delete(`guest_active_lookup:${item.orderId}`),
+      ephemeralStore(env).delete(`guest_token:${item.guestToken}`),
+      ephemeralStore(env).delete(item.activeOrderKey),
+      ephemeralStore(env).delete(`guest_active_lookup:${item.orderId}`),
     ]);
     if (cleanup.some((result) => result.status === "rejected")) {
       compensationFailed = true;

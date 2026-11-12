@@ -23,6 +23,7 @@
  * than an escalating block.
  */
 
+import { ephemeralStore } from "../../../shared/utils/ephemeral-store";
 import { GeoIntelligentRateLimiter } from "../../../middleware/geo-rate-limiting";
 import { ApiError } from "../../../shared/utils/api-error";
 import type { Env } from "../../../types/env";
@@ -74,16 +75,12 @@ export async function enforceGuestOrderThrottle(
   c: ThrottleContext,
   restaurantId: string,
 ): Promise<void> {
-  const rateLimitKV = c.env.RATE_LIMIT_KV;
-  if (!rateLimitKV) {
-    // Same posture as applyRateLimit's own catch: availability beats
-    // enforcement when the counter store is unreachable.
-    return;
-  }
-
   const ip = c.req.header("CF-Connecting-IP") || "unknown";
   const limiter = new GeoIntelligentRateLimiter(
-    rateLimitKV,
+    // D1, not RATE_LIMIT_KV: this counter is written on every guest order and
+    // KV allows 1,000 writes a day on the Free plan. applyRateLimit fails open
+    // when the store is unreachable — availability beats enforcement here.
+    ephemeralStore(c.env),
     c.env.ANALYTICS_ENGINE,
     resolveWaitUntil(c),
     c.env,

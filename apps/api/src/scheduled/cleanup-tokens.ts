@@ -4,6 +4,7 @@
  * Cloudflare Workers Cron Trigger
  */
 
+import { ephemeralStore } from "../shared/utils/ephemeral-store";
 import { drizzle } from "drizzle-orm/d1";
 import { and, inArray, lt } from "drizzle-orm";
 import {
@@ -146,4 +147,12 @@ export async function cleanupOldLogs(env: Env): Promise<void> {
   } catch (error) {
     console.error("[Cron] Error cleaning up old logs:", error);
   }
+}
+
+/**
+ * `ephemeral_kv` rows are ignored once expired but never removed by readers,
+ * and guest orders and rate-limit counters add to it all day.
+ */
+export async function cleanupExpiredEphemeralKeys(env: Env): Promise<void> {
+  await ephemeralStore(env).deleteExpired();
 }
