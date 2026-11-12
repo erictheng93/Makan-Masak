@@ -42,7 +42,15 @@ function innerOf(tpl, tag, from) {
 function hasName(inner) {
   if (/\{\{|<slot\b|(?:^|\s)(?::|v-bind:)?(?:alt|aria-label)\s*=/.test(inner))
     return true;
-  return inner.replace(/<[^>]*>/g, "").trim() !== "";
+  // Strip tags until nothing changes: one pass over "<<b>i>" leaves "<i>",
+  // which would count as text. This only decides "is there visible text";
+  // the result is never written out as HTML.
+  let text = inner;
+  for (let prev; prev !== text; ) {
+    prev = text;
+    text = text.replace(/<[^>]*>/g, "");
+  }
+  return text.trim() !== "";
 }
 
 function findUnnamed(source) {
