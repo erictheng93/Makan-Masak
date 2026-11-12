@@ -78,27 +78,26 @@ export function isPublicApiCacheableRequest(
 }
 
 /**
- * Query parameters that change the BODY of each cacheable route, keyed by the
- * same shapes as isPublicApiCacheableRequest. Everything else (tableId, seat
- * and tracking parameters) is dropped from the cache key, so every table's QR
- * link shares one entry instead of each getting its own Cache API and KV copy.
+ * Query parameters known NOT to change a cacheable response: the table a QR
+ * code was scanned at, and click-tracking parameters. They are dropped from
+ * the cache key, so every table's QR link shares one entry instead of each
+ * getting its own Cache API and KV copy of an identical menu.
  *
- * Add a parameter here the moment its handler starts reading it; an omission
- * serves one variant of the response to requests that asked for another.
- *  - menu/:restaurantId: `includeAll` is the only query the handler reads
- *    (features/menu/routes/index.ts), and it only matters to an authenticated
- *    owner/admin, who bypasses this cache. Kept in the key anyway: it is cheap
- *    and keeps the explicitly invalidated `:includeAll=true` key meaningful.
- *  - restaurants/:id and coupons/available/:restaurantId read no query at all.
+ * This is a deny-list on purpose. Any parameter not named here stays in the
+ * key, so a handler that starts reading a new one (a language, a filter) gets
+ * its own cache entries without anyone remembering this file. Forgetting to
+ * add a neutral parameter costs duplicate entries; an allow-list that forgets
+ * a meaningful one serves one visitor the response another asked for.
  */
+const RESPONSE_NEUTRAL_QUERY = new Set(["tableId", "utm", "fbclid", "gclid"]);
+
 function cacheKeyQuery(method: string, path: string, rawQuery: string): string {
-  if (!isPublicApiCacheableRequest(method, path)) return rawQuery;
-  const segments = path.split("/").filter(Boolean);
-  const allowed = segments[2] === "menu" ? ["includeAll"] : [];
-  const params = new URLSearchParams(rawQuery);
-  const kept = new URLSearchParams();
-  for (const name of allowed)
-    for (const value of params.getAll(name)) kept.append(name, value);
+  if (!rawQuery || !isPublicApiCacheableRequest(method, path)) return rawQuery;
+  const kept = new URLSearchParams(rawQuery);
+  for (const name of [...kept.keys()]) {
+    if (RESPONSE_NEUTRAL_QUERY.has(name) || name.startsWith("utm_"))
+      kept.delete(name);
+  }
   return kept.toString();
 }
 
