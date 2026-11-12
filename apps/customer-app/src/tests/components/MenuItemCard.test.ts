@@ -66,9 +66,9 @@ describe("MenuItemCard", () => {
     const img = wrapper.get("img");
 
     expect(img.attributes("srcset")).toBe(
-      "https://images.example.com/thumbnail.jpg 150w, https://images.example.com/small.jpg 300w",
+      "https://images.example.com/thumbnail.jpg 150w, https://images.example.com/small.jpg 300w, https://images.example.com/medium.jpg 600w, https://images.example.com/large.jpg 1200w",
     );
-    expect(img.attributes("sizes")).toBe("70px");
+    expect(img.attributes("sizes")).toBe("(min-width: 769px) 80px, 70px");
   });
 
   it("keeps a thumbnail src so srcset-less clients never load medium", () => {
@@ -97,9 +97,9 @@ describe("MenuItemCard", () => {
     const img = wrapper.get("img");
 
     expect(img.attributes("src")).toBe("https://images.example.com/medium.jpg");
-    // No candidates exist, so the attribute must be absent rather than empty —
-    // an empty srcset would suppress the src in some browsers.
-    expect(img.attributes("srcset")).toBeUndefined();
+    expect(img.attributes("srcset")).toBe(
+      "https://images.example.com/medium.jpg 600w",
+    );
   });
 
   it("still builds a candidate list when only one variant size exists", () => {
@@ -115,7 +115,7 @@ describe("MenuItemCard", () => {
     });
 
     expect(wrapper.get("img").attributes("srcset")).toBe(
-      "https://images.example.com/small.jpg 300w",
+      "https://images.example.com/small.jpg 300w, https://images.example.com/medium.jpg 600w",
     );
   });
 
@@ -131,7 +131,7 @@ describe("MenuItemCard", () => {
 
     expect(img.attributes("src")).toBe("https://images.example.com/medium.jpg");
     expect(img.attributes("srcset")).toBe(
-      "https://images.example.com/medium.jpg 600w, https://images.example.com/large.jpg 1200w",
+      "https://images.example.com/thumbnail.jpg 150w, https://images.example.com/small.jpg 300w, https://images.example.com/medium.jpg 600w, https://images.example.com/large.jpg 1200w",
     );
     expect(img.attributes("sizes")).toBe("(min-width: 1024px) 382px, 334px");
   });
@@ -172,8 +172,10 @@ describe("MenuItemCard", () => {
     expect(img.attributes("src")).toBe(
       "https://images.example.com/original.jpg",
     );
+    // No candidates: srcset and sizes are both absent, never empty — an empty
+    // srcset would suppress the src in some browsers.
     expect(img.attributes("srcset")).toBeUndefined();
-    expect(img.attributes("sizes")).toBe("(min-width: 1024px) 382px, 334px");
+    expect(img.attributes("sizes")).toBeUndefined();
   });
 
   // A tracked count of 0 used to read as "tracking is off", so the card offered

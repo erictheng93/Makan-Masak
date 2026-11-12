@@ -10,15 +10,11 @@
         <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
           <img
             v-if="item.menuItem.imageUrl"
-            :src="
-              getImageUrl(
-                item.menuItem.imageVariants?.thumbnail ||
-                  item.menuItem.imageUrl,
-              )
-            "
+            v-bind="thumb"
             :alt="getLocalizedMenuName(item.menuItem, currentLanguage)"
             class="w-full h-full object-cover"
             loading="lazy"
+            decoding="async"
             @error="handleImageError"
           />
           <div
@@ -197,6 +193,7 @@ import { ref, computed } from "vue";
 import { useCurrency } from "@/composables/useCurrency";
 import type { CartItem } from "@makanmasak/shared-types";
 import { useI18n } from "@/composables/useI18n";
+import { menuImageAttrs } from "@/utils/menu-image";
 import { getLocalizedMenuName } from "@/utils/localized-menu-content";
 
 // Props
@@ -251,12 +248,15 @@ const customizationText = computed(() => {
 });
 
 // Methods
-const getImageUrl = (url: string) => {
-  if (url.startsWith("/")) {
-    return `${import.meta.env.VITE_IMAGE_BASE_URL || ""}${url}`;
-  }
-  return url;
-};
+// w-16 is 56px under the 14px mobile root, 64px above 768px. DPR 3 -> small.
+const thumb = computed(() =>
+  menuImageAttrs(
+    props.item.menuItem.imageUrl,
+    props.item.menuItem.imageVariants,
+    "(min-width: 769px) 64px, 56px",
+    "thumbnail",
+  ),
+);
 
 const handleImageError = (event: Event) => {
   const img = event.target as HTMLImageElement;

@@ -22,9 +22,7 @@
       >
         <img
           v-if="item.imageUrl"
-          :src="featuredImageSrc"
-          :srcset="featuredImageSrcset"
-          sizes="(min-width: 1024px) 382px, 334px"
+          v-bind="featuredImage"
           :alt="getLocalizedMenuName(item, currentLanguage)"
           loading="lazy"
           class="w-full h-full object-cover lazy-image"
@@ -206,9 +204,7 @@
             >
               <img
                 v-if="item.imageUrl"
-                :src="listImageSrc"
-                :srcset="listImageSrcset"
-                sizes="70px"
+                v-bind="listImage"
                 :alt="getLocalizedMenuName(item, currentLanguage)"
                 loading="lazy"
                 class="w-full h-full object-cover lazy-image"
@@ -389,6 +385,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useCurrency } from "@/composables/useCurrency";
+import { menuImageAttrs } from "@/utils/menu-image";
 import { menuItemElementId } from "@/utils/shopMenuDeepLink";
 import type {
   MenuItem,
@@ -500,61 +497,28 @@ const originalPrice = computed(() => {
 });
 
 // Methods
-const getImageUrl = (url: string) => {
-  // 如果是相對路徑，轉換為絕對路徑
-  if (url.startsWith("/")) {
-    return `${import.meta.env.VITE_IMAGE_BASE_URL || ""}${url}`;
-  }
-  return url;
-};
 
-// The standard list thumbnail renders in a w-20 box, which is 70px because this
-// app's root font-size is 14px. DPR 2 therefore needs ~140 device px and DPR 3
-// needs ~210, so offering both candidates lets the browser pick per device
-// instead of hardcoding one size and being wrong on half of them (#65).
-//
-// The sizes hint is deliberately "70px" and not "5rem": the preload scanner
-// resolves rem against the default 16px root before this app's CSS applies, so
-// "5rem" reads as 80px there and pushes DPR 2 up to the 300w candidate. Measured
-// in a browser — "5rem" picks small on both DPR 2 and 3, "70px" picks thumbnail
-// on DPR 2 and small on DPR 3.
-const listImageSrc = computed(() => {
-  // The template's v-if narrows item.imageUrl, but that narrowing does not
-  // reach here, so the empty case is handled explicitly.
-  const url =
-    props.item.imageVariants?.thumbnail ||
-    props.item.imageVariants?.medium ||
-    props.item.imageUrl;
+// The list thumbnail renders in a w-20 box: 70px under the app's 14px mobile
+// root, 80px above 768px (where the root is 16px). Keep sizes in px, see
+// menu-image.ts. DPR 2 then fetches thumbnail, DPR 3 small.
+const listImage = computed(() =>
+  menuImageAttrs(
+    props.item.imageUrl,
+    props.item.imageVariants,
+    "(min-width: 769px) 80px, 70px",
+    "thumbnail",
+  ),
+);
 
-  return url ? getImageUrl(url) : undefined;
-});
-
-const listImageSrcset = computed(() => {
-  const variants = props.item.imageVariants;
-  const candidates = [
-    variants?.thumbnail && `${getImageUrl(variants.thumbnail)} 150w`,
-    variants?.small && `${getImageUrl(variants.small)} 300w`,
-  ].filter(Boolean);
-
-  // Items uploaded before the variant pipeline have neither; fall back to src.
-  return candidates.length > 0 ? candidates.join(", ") : undefined;
-});
-
-const featuredImageSrc = computed(() => {
-  const url = props.item.imageVariants?.medium || props.item.imageUrl;
-
-  return url ? getImageUrl(url) : undefined;
-});
-
-const featuredImageSrcset = computed(() => {
-  const variants = props.item.imageVariants;
-  const candidates = [
-    variants?.medium && `${getImageUrl(variants.medium)} 600w`,
-    variants?.large && `${getImageUrl(variants.large)} 1200w`,
-  ].filter(Boolean);
-
-  return candidates.length > 0 ? candidates.join(", ") : undefined;
-});
+// The featured block is a full-width h-40 card. A 390px phone lays it out at
+// 334px, so DPR 3 genuinely needs the large variant.
+const featuredImage = computed(() =>
+  menuImageAttrs(
+    props.item.imageUrl,
+    props.item.imageVariants,
+    "(min-width: 1024px) 382px, 334px",
+  ),
+);
 
 const _handleImageError = (event: Event) => {
   // 圖片載入失敗時的處理
