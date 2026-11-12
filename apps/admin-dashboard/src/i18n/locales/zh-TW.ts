@@ -2187,6 +2187,27 @@ const zhTWCore = {
 
   // 認證
   auth: {
+    oauth: {
+      divider: "或使用其他方式登入",
+      google: "使用 Google 登入",
+      line: "使用 LINE 登入",
+      providers: { google: "Google", line: "LINE" },
+      signingIn: "正在完成登入…",
+      completeFailed: "登入未能完成，請重新操作一次。",
+      errors: {
+        declined: "你已取消授權，未進行登入。",
+        OAUTH_IDENTITY_NOT_LINKED:
+          "這個帳號尚未連結任何店主帳號。請先用帳號密碼登入，再到「設定 > 安全」的「登入方式」連結。",
+        OAUTH_STATE_INVALID: "登入已逾時或已使用過，請重新操作一次。",
+        OAUTH_CALLBACK_INVALID: "登入回應不完整，請重新操作一次。",
+        OAUTH_VERIFICATION_FAILED: "無法驗證你的身分，請稍後再試。",
+        OAUTH_IDENTITY_ALREADY_LINKED: "這個帳號已連結到其他店主帳號。",
+        OAUTH_PROVIDER_ALREADY_LINKED:
+          "你的帳號已連結過此登入方式，請先解除連結再重新連結。",
+        OAUTH_LINK_NOT_ALLOWED: "只有店主可以連結登入方式。",
+        generic: "登入失敗，請稍後再試。",
+      },
+    },
     adminLogin: "管理後台登入",
     username: "帳號",
     password: "密碼",
@@ -3318,6 +3339,23 @@ const zhTWCore = {
       duration: "通知顯示時間（秒）",
     },
     security: {
+      signInMethods: {
+        title: "登入方式",
+        description: "連結 Google 或 LINE 後，可以不輸入密碼直接登入。",
+        linkedOn: "連結於 {date}",
+        link: "連結",
+        unlink: "解除連結",
+        unlinkTitle: "解除連結",
+        unlinkMessage: "確定要解除 {provider} 的連結嗎？之後將無法用它登入。",
+        lastMethod:
+          "這是你唯一的登入方式。請先設定密碼或連結其他登入方式，再解除連結。",
+        linked: "已連結 {provider}",
+        unlinked: "已解除連結",
+        loadFailed: "無法載入登入方式",
+        linkFailed: "無法開始連結，請稍後再試",
+        unlinkFailed: "解除連結失敗，請稍後再試",
+        none: "尚未連結任何帳號",
+      },
       changePassword: {
         title: "修改密碼",
         description:

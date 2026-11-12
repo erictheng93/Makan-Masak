@@ -1999,6 +1999,27 @@ const zhCN: Messages = {
     noResults: "找不到餐厅",
   },
   auth: {
+    oauth: {
+      divider: "或使用其他方式登录",
+      google: "使用 Google 登录",
+      line: "使用 LINE 登录",
+      providers: { google: "Google", line: "LINE" },
+      signingIn: "正在完成登录…",
+      completeFailed: "登录未能完成，请重新操作一次。",
+      errors: {
+        declined: "你已取消授权，未进行登录。",
+        OAUTH_IDENTITY_NOT_LINKED:
+          "这个账号尚未关联任何店主账号。请先用账号密码登录，再到“设置 > 安全”的“登录方式”进行关联。",
+        OAUTH_STATE_INVALID: "登录已超时或已使用过，请重新操作一次。",
+        OAUTH_CALLBACK_INVALID: "登录响应不完整，请重新操作一次。",
+        OAUTH_VERIFICATION_FAILED: "无法验证你的身份，请稍后再试。",
+        OAUTH_IDENTITY_ALREADY_LINKED: "这个账号已关联到其他店主账号。",
+        OAUTH_PROVIDER_ALREADY_LINKED:
+          "你的账号已关联过此登录方式，请先解除关联再重新关联。",
+        OAUTH_LINK_NOT_ALLOWED: "只有店主可以关联登录方式。",
+        generic: "登录失败，请稍后再试。",
+      },
+    },
     adminLogin: "管理后台登录",
     username: "账号",
     password: "密码",
@@ -3114,6 +3135,23 @@ const zhCN: Messages = {
       duration: "通知显示时间（秒）",
     },
     security: {
+      signInMethods: {
+        title: "登录方式",
+        description: "关联 Google 或 LINE 后，可以不输入密码直接登录。",
+        linkedOn: "关联于 {date}",
+        link: "关联",
+        unlink: "解除关联",
+        unlinkTitle: "解除关联",
+        unlinkMessage: "确定要解除 {provider} 的关联吗？之后将无法用它登录。",
+        lastMethod:
+          "这是你唯一的登录方式。请先设置密码或关联其他登录方式，再解除关联。",
+        linked: "已关联 {provider}",
+        unlinked: "已解除关联",
+        loadFailed: "无法加载登录方式",
+        linkFailed: "无法开始关联，请稍后再试",
+        unlinkFailed: "解除关联失败，请稍后再试",
+        none: "尚未关联任何账号",
+      },
       changePassword: {
         title: "修改密码",
         description:

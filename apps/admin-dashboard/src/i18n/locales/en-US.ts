@@ -2139,6 +2139,31 @@ const enUS: Messages = {
     noResults: "No restaurants found",
   },
   auth: {
+    oauth: {
+      divider: "Or sign in with",
+      google: "Sign in with Google",
+      line: "Sign in with LINE",
+      providers: { google: "Google", line: "LINE" },
+      signingIn: "Finishing sign-in...",
+      completeFailed: "Sign-in could not be completed. Please try again.",
+      errors: {
+        declined: "You cancelled the authorization, so you were not signed in.",
+        OAUTH_IDENTITY_NOT_LINKED:
+          "This account is not linked to any shop owner account. Sign in with your username and password first, then link it under Settings > Security > Sign-in methods.",
+        OAUTH_STATE_INVALID:
+          "The sign-in expired or was already used. Please try again.",
+        OAUTH_CALLBACK_INVALID:
+          "The sign-in response was incomplete. Please try again.",
+        OAUTH_VERIFICATION_FAILED:
+          "We could not verify your identity. Please try again later.",
+        OAUTH_IDENTITY_ALREADY_LINKED:
+          "This account is already linked to another shop owner account.",
+        OAUTH_PROVIDER_ALREADY_LINKED:
+          "Your account already has this sign-in method linked. Unlink it first to link a different one.",
+        OAUTH_LINK_NOT_ALLOWED: "Only shop owners can link sign-in methods.",
+        generic: "Sign-in failed. Please try again later.",
+      },
+    },
     adminLogin: "Admin Dashboard Login",
     username: "Username",
     password: "Password",
@@ -3282,6 +3307,25 @@ const enUS: Messages = {
       duration: "Notification Display Duration (seconds)",
     },
     security: {
+      signInMethods: {
+        title: "Sign-in methods",
+        description:
+          "Link Google or LINE to sign in without typing your password.",
+        linkedOn: "Linked on {date}",
+        link: "Link",
+        unlink: "Unlink",
+        unlinkTitle: "Unlink",
+        unlinkMessage:
+          "Unlink {provider}? You will no longer be able to sign in with it.",
+        lastMethod:
+          "This is your only sign-in method. Set a password or link another provider before unlinking it.",
+        linked: "{provider} linked",
+        unlinked: "Unlinked",
+        loadFailed: "Could not load sign-in methods",
+        linkFailed: "Could not start linking. Please try again later.",
+        unlinkFailed: "Could not unlink. Please try again later.",
+        none: "No accounts linked yet",
+      },
       changePassword: {
         title: "Change password",
         description:

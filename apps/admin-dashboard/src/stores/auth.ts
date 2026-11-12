@@ -11,6 +11,7 @@ import {
   setAuthRefreshHandler,
 } from "@/utils/errorHandler";
 import { getAuthToken } from "@/utils/authTokenProvider";
+import { completeStaffOAuth } from "@/services/staffOAuthService";
 import { rememberShop } from "@/utils/loginShop";
 import { useModuleAccessStore } from "@makanmasak/shared/stores/moduleAccess";
 import { getApiErrorStatus } from "@makanmasak/shared/utils/unknown";
@@ -323,6 +324,30 @@ export const useAuthStore = defineStore("auth", () => {
     }).message,
   });
 
+  /** Session storage shared by every way of signing in (password, OAuth). */
+  const establishSession = (
+    data: { token: string; user: User },
+    shop?: string,
+  ) => {
+    token.value = data.token;
+    user.value = data.user;
+    rememberShop(user.value?.loginSlug ?? shop);
+
+    authClient.tokens.setTokens(token.value!);
+    authClient.tokens.setUser(user.value);
+    api.setAuthToken(token.value!);
+    authClient.tokens.scheduleProactiveRefresh(token.value!);
+
+    // Bootstrap only loads module access when the app starts already
+    // authenticated, so logging in from the login page would otherwise
+    // leave `effectiveModules` empty for the rest of the session and hide
+    // every module-gated feature until a manual reload. Forced because a
+    // previous user's entry may still be cached in this page session.
+    // Deliberately not awaited: login must not block on it, and the store
+    // records its own failures.
+    void useModuleAccessStore().fetch({ force: true });
+  };
+
   const login = async (username: string, password: string, shop?: string) => {
     isLoading.value = true;
     try {
@@ -333,24 +358,7 @@ export const useAuthStore = defineStore("auth", () => {
       }>("/auth/login", { username, password, ...(shop ? { shop } : {}) });
 
       if (response.data.success && response.data.data) {
-        token.value = response.data.data.token;
-        user.value = response.data.data.user;
-        rememberShop(user.value?.loginSlug ?? shop);
-
-        authClient.tokens.setTokens(token.value!);
-        authClient.tokens.setUser(user.value);
-        api.setAuthToken(token.value!);
-        authClient.tokens.scheduleProactiveRefresh(token.value!);
-
-        // Bootstrap only loads module access when the app starts already
-        // authenticated, so logging in from the login page would otherwise
-        // leave `effectiveModules` empty for the rest of the session and hide
-        // every module-gated feature until a manual reload. Forced because a
-        // previous user's entry may still be cached in this page session.
-        // Deliberately not awaited: login must not block on it, and the store
-        // records its own failures.
-        void useModuleAccessStore().fetch({ force: true });
-
+        establishSession(response.data.data, shop);
         return { success: true } satisfies LoginResult;
       }
 
@@ -365,6 +373,23 @@ export const useAuthStore = defineStore("auth", () => {
     } finally {
       isLoading.value = false;
     }
+  };
+
+  /** Trades the one-time code from the Google / LINE callback for a session. */
+  const loginWithOAuth = async (code: string): Promise<LoginResult> => {
+    isLoading.value = true;
+    try {
+      const response = await completeStaffOAuth(code);
+      if (response.data.success && response.data.data) {
+        establishSession(response.data.data);
+        return { success: true };
+      }
+    } catch {
+      // fall through: the code is burned either way, one message covers it
+    } finally {
+      isLoading.value = false;
+    }
+    return { success: false, error: t("auth.oauth.completeFailed") };
   };
 
   const logout = async () => {
@@ -575,6 +600,7 @@ export const useAuthStore = defineStore("auth", () => {
     selectRestaurant,
     clearRestaurant,
     login,
+    loginWithOAuth,
     logout,
     checkAuth,
     refreshToken,
