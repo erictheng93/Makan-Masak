@@ -49,9 +49,14 @@ export function menuImageAttrs(
   imageVariants: unknown,
   sizes: string,
   fallback: VariantName = "medium",
+  // Largest variant worth offering. A 3x phone asks for three times the CSS
+  // width, which on a card buys nothing visible for twice the bytes.
+  largest: VariantName = "large",
 ): MenuImageAttrs {
   const variants = parseVariants(imageVariants);
-  const srcset = WIDTHS.filter(([name]) => variants[name])
+  const limit = WIDTHS.findIndex(([name]) => name === largest);
+  const srcset = WIDTHS.slice(0, limit + 1)
+    .filter(([name]) => variants[name])
     .map(([name, w]) => `${resolveImageUrl(variants[name]!)} ${w}w`)
     .join(", ");
   const src = variants[fallback] || variants.medium || imageUrl || undefined;

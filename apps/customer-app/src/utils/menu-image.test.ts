@@ -19,6 +19,14 @@ describe("menuImageAttrs", () => {
     });
   });
 
+  it("offers nothing larger than the cap it is given", () => {
+    const attrs = menuImageAttrs(v.medium, v, "334px", "medium", "medium");
+    expect(attrs.srcset).toBe(
+      `${v.thumbnail} 150w, ${v.small} 300w, ${v.medium} 600w`,
+    );
+    expect(attrs.src).toBe(v.medium);
+  });
+
   it("accepts variants stored as a JSON string", () => {
     const attrs = menuImageAttrs(v.medium, JSON.stringify(v), "100vw");
     expect(attrs.src).toBe(v.medium);

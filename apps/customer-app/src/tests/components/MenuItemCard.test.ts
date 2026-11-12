@@ -119,7 +119,9 @@ describe("MenuItemCard", () => {
     );
   });
 
-  it("offers medium and large candidates for the featured large image", () => {
+  // Capped at medium: a 3x phone used to fetch large (257 KB) for a card
+  // about 260px wide, where medium (158 KB) looks the same.
+  it("offers the featured image up to medium, never large", () => {
     const wrapper = mount(MenuItemCard, {
       props: {
         item: menuItem(),
@@ -131,7 +133,7 @@ describe("MenuItemCard", () => {
 
     expect(img.attributes("src")).toBe("https://images.example.com/medium.jpg");
     expect(img.attributes("srcset")).toBe(
-      "https://images.example.com/thumbnail.jpg 150w, https://images.example.com/small.jpg 300w, https://images.example.com/medium.jpg 600w, https://images.example.com/large.jpg 1200w",
+      "https://images.example.com/thumbnail.jpg 150w, https://images.example.com/small.jpg 300w, https://images.example.com/medium.jpg 600w",
     );
     expect(img.attributes("sizes")).toBe("(min-width: 1024px) 382px, 334px");
   });
