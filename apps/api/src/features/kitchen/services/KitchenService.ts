@@ -373,7 +373,7 @@ export class KitchenService implements IKitchenService {
     userId: string,
   ): Promise<string> {
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      const order = await this.ordersService.getOrder(orderId, true);
+      const order = await this.ordersService.getOrder(orderId);
       if (!order) {
         throw new Error("Order disappeared while updating a kitchen item");
       }

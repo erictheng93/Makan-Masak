@@ -347,7 +347,7 @@ app.get("/:id", guestTokenAuth, async (c) => {
   if (!orderId) throw badRequest("Missing order id");
 
   const ordersService = new OrdersService(c.env);
-  const order = await ordersService.getOrder(orderId, true);
+  const order = await ordersService.getOrder(orderId);
 
   if (!order) {
     throw notFound("Order not found");
@@ -367,7 +367,7 @@ app.post(
     const data = c.get("validatedBody");
 
     const ordersService = new OrdersService(c.env);
-    const order = await ordersService.getOrder(orderId, true);
+    const order = await ordersService.getOrder(orderId);
 
     if (!order) {
       throw notFound("Order not found");
@@ -404,7 +404,7 @@ app.post("/:id/cancel", guestTokenAuth, async (c) => {
   if (!orderId) throw badRequest("Missing order id");
 
   const ordersService = new OrdersService(c.env);
-  const order = await ordersService.getOrder(orderId, false);
+  const order = await ordersService.getOrder(orderId);
 
   if (!order) {
     throw notFound("Order not found");

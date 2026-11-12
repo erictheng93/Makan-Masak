@@ -1005,7 +1005,7 @@ describe("OrdersService workflows", () => {
     );
 
     await expect(
-      service.getOrder("42", true, {
+      service.getOrder("42", {
         userId: "unassigned-owner",
         userRole: 1,
       }),

@@ -1728,8 +1728,8 @@ describe("market checkout routes", () => {
         };
       };
     };
-    expect(getOrder).toHaveBeenNthCalledWith(1, 1001, false);
-    expect(getOrder).toHaveBeenNthCalledWith(2, 1002, false);
+    expect(getOrder).toHaveBeenNthCalledWith(1, 1001);
+    expect(getOrder).toHaveBeenNthCalledWith(2, 1002);
     expect(json.data.checkout.childOrders[0]).toMatchObject({
       status: "preparing",
       paymentStatus: "pending",
@@ -6725,7 +6725,7 @@ describe("market checkout routes", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(getOrder).toHaveBeenCalledWith(1001, false);
+    expect(getOrder).toHaveBeenCalledWith(1001);
     const json = (await response.json()) as {
       data: {
         checkout: {
