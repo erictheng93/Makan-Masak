@@ -288,6 +288,7 @@ export class RestaurantService extends BaseService {
       type?: string;
       district?: string;
       isAvailable?: boolean;
+      includeInactive?: boolean;
     } = {},
   ) {
     try {
@@ -298,6 +299,7 @@ export class RestaurantService extends BaseService {
         type,
         district,
         isAvailable,
+        includeInactive = false,
       } = params;
       const { offset } = this.createPagination(page, limit);
 
@@ -322,8 +324,8 @@ export class RestaurantService extends BaseService {
         conditions.push(eq(restaurants.isAvailable, isAvailable));
       }
 
-      // 總是篩選啟用的餐廳
-      conditions.push(eq(restaurants.isActive, true));
+      // 預設只列出啟用的餐廳；includeInactive 僅供平台管理員使用
+      if (!includeInactive) conditions.push(eq(restaurants.isActive, true));
 
       const whereClause =
         conditions.length > 0 ? and(...conditions) : undefined;
@@ -360,6 +362,7 @@ export class RestaurantService extends BaseService {
           shopQrSettings: restaurants.shopQrSettings,
           shopQrVersion: restaurants.shopQrVersion,
           isDemo: restaurants.isDemo,
+          loginSlug: restaurants.loginSlug,
           supportsDelivery: restaurants.supportsDelivery,
           supportsTakeaway: restaurants.supportsTakeaway,
           shopQrCode: restaurants.shopQrCode,

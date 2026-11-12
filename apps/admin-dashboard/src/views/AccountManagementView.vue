@@ -16,6 +16,7 @@ import type { Restaurant, PlatformUser, AdminTier } from "@/types";
 import { UserRole, ADMIN_TIERS } from "@/types";
 import { useAuthStore } from "@/stores/auth";
 import { resolveUserFacingError } from "@makanmasak/shared/utils/user-facing-error";
+import ShopManagementPanel from "@/components/shops/ShopManagementPanel.vue";
 import ResetPasswordModal from "@/components/employees/ResetPasswordModal.vue";
 
 const { t } = useI18n();
@@ -33,7 +34,7 @@ const canManageAdmin = (admin: PlatformUser) =>
 // Tab State
 // ============================================================
 
-type TabType = "owners" | "admins";
+type TabType = "owners" | "admins" | "shops";
 const activeTab = ref<TabType>("owners");
 
 // ============================================================
@@ -366,6 +367,19 @@ function switchTab(tab: TabType) {
           @click="switchTab('admins')"
         >
           {{ t("accountManagement.tabAdmins") }}
+        </button>
+        <button
+          class="pb-3 text-sm font-medium border-b-2 transition-colors"
+          :class="
+            activeTab === 'shops'
+              ? 'border-blue-600 text-blue-700'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          "
+          :data-active="activeTab === 'shops'"
+          data-testid="account-management-tab-shops"
+          @click="switchTab('shops')"
+        >
+          {{ t("shopManagement.tab") }}
         </button>
       </nav>
     </div>
@@ -1089,6 +1103,11 @@ function switchTab(tab: TabType) {
         </div>
       </div>
     </template>
+
+    <ShopManagementPanel
+      v-if="activeTab === 'shops'"
+      :can-manage="isAdministrator"
+    />
 
     <ResetPasswordModal
       :user="resetTarget"

@@ -41,6 +41,9 @@ export interface Restaurant {
   phone: string;
   email: string;
   settings: RestaurantSettings;
+  loginSlug?: string | null;
+  isActive?: boolean;
+  isDemo?: boolean;
   createdAt: string;
   updatedAt: string;
 }

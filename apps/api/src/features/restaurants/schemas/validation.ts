@@ -372,6 +372,11 @@ const restaurantFilterSchema = z.lazy(() =>
       .string()
       .transform((val) => val === "true")
       .optional(),
+    // Honoured only for role 0 (see the list route); ignored for everyone else.
+    includeInactive: z
+      .string()
+      .transform((val) => val === "true")
+      .optional(),
   }),
 );
 
@@ -447,7 +452,14 @@ const qrCodeParam = z.lazy(() =>
 // carries its own code (SLUG_INVALID / SLUG_RESERVED / SLUG_TAKEN).
 const updateLoginSlugSchema = z.object({ loginSlug: z.string().max(100) });
 
+const permanentDeleteSchema = z.object({
+  // Typed by the administrator; must equal the restaurant's name.
+  confirmName: z.string().min(1, "Type the restaurant's name to confirm"),
+  acknowledgeFinancialRecords: z.boolean().optional(),
+});
+
 export const restaurantSchemas = {
+  permanentDelete: permanentDeleteSchema,
   updateLoginSlug: updateLoginSlugSchema,
   // Parameters
   params: idParam,

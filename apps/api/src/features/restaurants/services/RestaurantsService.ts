@@ -214,7 +214,10 @@ export class RestaurantsService {
       );
 
       // Try to get from cache first
-      const cached = await this.cache.get(cacheKey);
+      // The admin view of deactivated shops must not be served from a stale list.
+      const cached = filters.includeInactive
+        ? null
+        : await this.cache.get(cacheKey);
       if (cached) {
         this.logger.debug("Returning cached restaurants");
         return cached as RestaurantListResult;
@@ -227,10 +230,13 @@ export class RestaurantsService {
         type: filters.type,
         district: filters.district,
         isAvailable: filters.isAvailable,
+        ...(filters.includeInactive ? { includeInactive: true } : {}),
       });
 
       // Cache the result
-      await this.cache.set(cacheKey, result, CACHE_TTL.MEDIUM);
+      if (!filters.includeInactive) {
+        await this.cache.set(cacheKey, result, CACHE_TTL.MEDIUM);
+      }
 
       this.logger.info("Retrieved restaurants", {
         count: result.restaurants.length,
