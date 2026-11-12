@@ -30,6 +30,7 @@ import {
   verifyJwtToken,
 } from "../../../middleware/auth";
 import { validateBody } from "../../../middleware/validation";
+import { ephemeralStore } from "../../../shared/utils/ephemeral-store";
 import {
   ApiError,
   badRequest,
@@ -48,7 +49,7 @@ import {
   isProviderConfigured,
   OAUTH_PROVIDERS,
   type OAuthEnv,
-} from "../services/oauth/providers";
+} from "../../../shared/oauth/providers";
 import {
   consumeRequestState,
   deriveCodeChallenge,
@@ -58,9 +59,9 @@ import {
   OAUTH_STATE_TTL_SECONDS,
   sanitizeRedirectTo,
   saveRequestState,
-} from "../services/oauth/state";
-import { exchangeCodeForIdToken } from "../services/oauth/tokenExchange";
-import { verifyIdToken } from "../services/oauth/idToken";
+} from "../../../shared/oauth/state";
+import { exchangeCodeForIdToken } from "../../../shared/oauth/tokenExchange";
+import { verifyIdToken } from "../../../shared/oauth/idToken";
 import {
   createCustomerForIdentity,
   findActiveCustomerIdByEmail,
@@ -81,6 +82,7 @@ const routes = new Hono<{ Bindings: Env }>();
 const OAUTH_RESULT_TTL_SECONDS = 120;
 
 const OAUTH_BINDING_COOKIE_PREFIX = "oauth_binding_";
+const COMPLETE_COOKIE_PREFIX = "customer_oauth_complete_";
 
 /**
  * One binding cookie per pending state, so a second start (double-click, a
@@ -114,7 +116,45 @@ function bindingCookieOptions(env: OAuthEnv, provider: CustomerOAuthProvider) {
   };
 }
 
-type PendingResult =
+/**
+ * Sent only to POST /auth/oauth/complete, for as long as the code lives. Apple
+ * form-posts its callback cross-site, so POST providers keep SameSite=None
+ * exactly like the binding cookie: that is certain to be stored from such a
+ * response, where a Lax cookie set there is browser-dependent. It is still
+ * HttpOnly, Secure and path-scoped to one route that also needs the code.
+ */
+function completeCookieOptions(env: OAuthEnv, provider: CustomerOAuthProvider) {
+  return { ...bindingCookieOptions(env, provider), path: completePath(env) };
+}
+
+/** Provider-independent: every provider's callback path ends the same way. */
+function completePath(env: OAuthEnv): string {
+  return new URL(buildRedirectUri(env, "google")).pathname.replace(
+    "/google/callback",
+    "/complete",
+  );
+}
+
+/**
+ * One cookie per code, like the binding cookie per state: two sign-ins
+ * finishing in one browser must not overwrite each other's nonce.
+ */
+async function completeCookieName(code: string) {
+  const digest = await deriveCodeChallenge(code);
+  return `${COMPLETE_COOKIE_PREFIX}${digest.slice(0, 16)}`;
+}
+
+type PendingBinding = {
+  /**
+   * SHA-256 of the completion cookie's value, set on the browser the callback
+   * redirected. Without it the one-time code is a bearer value: an attacker
+   * could hand their own code to a victim's browser and sign the victim in to
+   * the attacker's account (login CSRF).
+   */
+  bindingHash: string;
+};
+
+type PendingOutcome =
   | { kind: "session"; customerId: string; redirectTo?: string }
   | {
       kind: "needs_linking";
@@ -123,6 +163,8 @@ type PendingResult =
       maskedEmail: string;
       redirectTo?: string;
     };
+
+type PendingResult = PendingBinding & PendingOutcome;
 
 function resultKey(code: string): string {
   return `oauth_result:${code}`;
@@ -335,9 +377,22 @@ async function handleCallback(c: Context<{ Bindings: Env }>) {
   });
 
   const resultCode = generateState();
-  await c.env.CACHE_KV.put(resultKey(resultCode), JSON.stringify(pending), {
-    expirationTtl: OAUTH_RESULT_TTL_SECONDS,
+  const completeNonce = generateState();
+  setCookie(c, await completeCookieName(resultCode), completeNonce, {
+    ...completeCookieOptions(env, provider),
+    maxAge: OAUTH_RESULT_TTL_SECONDS,
   });
+  const stored: PendingResult = {
+    ...pending,
+    bindingHash: await deriveCodeChallenge(completeNonce),
+  };
+  await ephemeralStore(c.env).put(
+    resultKey(resultCode),
+    JSON.stringify(stored),
+    {
+      expirationTtl: OAUTH_RESULT_TTL_SECONDS,
+    },
+  );
 
   const destination = new URL(
     `${appBaseUrl(c.env)}${requestState.redirectTo ?? "/login"}`,
@@ -363,7 +418,7 @@ async function resolveIdentity({
   profile: OAuthProfile;
   requestState: { linkCustomerId?: string; redirectTo?: string };
   now: number;
-}): Promise<PendingResult> {
+}): Promise<PendingOutcome> {
   const existing = await findLiveIdentity(c.env, provider, providerUid);
 
   if (existing) {
@@ -441,17 +496,29 @@ const completeSchema = z.lazy(() =>
  */
 routes.post("/auth/oauth/complete", validateBody(completeSchema), async (c) => {
   const { code } = c.get("validatedBody") as { code: string };
-  const key = resultKey(code);
-  const raw = await c.env.CACHE_KV.get(key, "json");
-  await c.env.CACHE_KV.delete(key);
-
-  if (!raw) {
+  // take() is one statement, so two racing requests cannot both redeem the
+  // code; a missing or wrong cookie still burns it.
+  const raw = await ephemeralStore(c.env).take(resultKey(code));
+  const pending = raw ? (JSON.parse(raw) as PendingResult) : null;
+  const cookieName = await completeCookieName(code);
+  const completeNonce = getCookie(c, cookieName);
+  if (completeNonce) {
+    deleteCookie(c, cookieName, {
+      secure: true,
+      sameSite: "None",
+      path: completePath(c.env as OAuthEnv),
+    });
+  }
+  if (
+    !pending ||
+    !completeNonce ||
+    (await deriveCodeChallenge(completeNonce)) !== pending.bindingHash
+  ) {
     throw badRequest(
       "Sign-in result expired or already used",
       "OAUTH_RESULT_INVALID",
     );
   }
-  const pending = raw as PendingResult;
 
   if (pending.kind === "needs_linking") {
     const bindingToken = await issueBindingToken(c.env, {

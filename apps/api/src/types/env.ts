@@ -119,6 +119,8 @@ export interface Env {
 
   // Optional variables
   API_BASE_URL?: string;
+  /** Admin dashboard origin; the only place staff OAuth may redirect back to. */
+  ADMIN_APP_URL?: string;
   INTERNAL_API_TOKEN?: string;
   SLACK_WEBHOOK_URL?: string;
   REALTIME_SERVICE_URL?: string; // URL for realtime WebSocket service (HTTP)

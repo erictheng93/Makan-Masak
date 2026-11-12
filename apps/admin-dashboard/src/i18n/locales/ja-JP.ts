@@ -2038,6 +2038,33 @@ const jaJP: Messages = {
     noResults: "レストランが見つかりません",
   },
   auth: {
+    oauth: {
+      divider: "または次の方法でログイン",
+      google: "Google でログイン",
+      line: "LINE でログイン",
+      providers: { google: "Google", line: "LINE" },
+      signingIn: "ログインを完了しています…",
+      completeFailed:
+        "ログインを完了できませんでした。もう一度お試しください。",
+      errors: {
+        declined: "認可をキャンセルしたため、ログインしませんでした。",
+        OAUTH_IDENTITY_NOT_LINKED:
+          "このアカウントはどのオーナーアカウントにも連携されていません。先にユーザー名とパスワードでログインし、「設定 > セキュリティ > ログイン方法」から連携してください。",
+        OAUTH_STATE_INVALID:
+          "ログインの有効期限が切れたか、すでに使用されています。もう一度お試しください。",
+        OAUTH_CALLBACK_INVALID:
+          "ログインの応答が不完全でした。もう一度お試しください。",
+        OAUTH_VERIFICATION_FAILED:
+          "本人確認ができませんでした。しばらくしてからお試しください。",
+        OAUTH_IDENTITY_ALREADY_LINKED:
+          "このアカウントはすでに別のオーナーアカウントに連携されています。",
+        OAUTH_PROVIDER_ALREADY_LINKED:
+          "このログイン方法はすでに連携されています。いったん連携を解除してから連携し直してください。",
+        OAUTH_LINK_NOT_ALLOWED:
+          "ログイン方法を連携できるのはオーナーのみです。",
+        generic: "ログインに失敗しました。しばらくしてからお試しください。",
+      },
+    },
     adminLogin: "管理ダッシュボードログイン",
     username: "ユーザー名",
     password: "パスワード",
@@ -3186,6 +3213,27 @@ const jaJP: Messages = {
       duration: "通知表示時間（秒）",
     },
     security: {
+      signInMethods: {
+        title: "ログイン方法",
+        description:
+          "Google または LINE を連携すると、パスワードなしでログインできます。",
+        linkedOn: "連携日 {date}",
+        link: "連携",
+        unlink: "連携解除",
+        unlinkTitle: "連携解除",
+        unlinkMessage:
+          "{provider} の連携を解除しますか？以後はこの方法でログインできません。",
+        lastMethod:
+          "これが唯一のログイン方法です。パスワードを設定するか別の方法を連携してから解除してください。",
+        linked: "{provider} を連携しました",
+        unlinked: "連携を解除しました",
+        loadFailed: "ログイン方法を読み込めませんでした",
+        linkFailed:
+          "連携を開始できませんでした。しばらくしてからお試しください。",
+        unlinkFailed:
+          "連携を解除できませんでした。しばらくしてからお試しください。",
+        none: "連携済みのアカウントはありません",
+      },
       changePassword: {
         title: "パスワード変更",
         description:

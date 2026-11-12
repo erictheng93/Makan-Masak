@@ -35,6 +35,7 @@ import {
 // Import service and validation schemas
 import { AuthService as DefaultAuthService } from "../services/AuthService";
 import { authSchemas } from "../schemas/validation";
+import { createStaffOAuthRoutes } from "./oauth";
 import type {
   AuthFailureReason,
   LoginData,
@@ -191,6 +192,18 @@ export function createAuthRoutes(
 
   // Create router
   const authRoutes = new Hono<{ Bindings: Env }>();
+
+  // Google / LINE sign-in and identity management (/oauth/*, /identities*).
+  authRoutes.route(
+    "/",
+    createStaffOAuthRoutes({
+      authMiddleware,
+      AuthService,
+      setRefreshCookie: setStaffRefreshCookie,
+      extractRequestInfo,
+      getWaitUntil,
+    }),
+  );
 
   // User Login - POST /login
   authRoutes.post("/login", validateBody(authSchemas.login), async (c) => {

@@ -2038,6 +2038,32 @@ const viVN: Messages = {
     noResults: "Không tìm thấy nhà hàng",
   },
   auth: {
+    oauth: {
+      divider: "Hoặc đăng nhập bằng",
+      google: "Đăng nhập bằng Google",
+      line: "Đăng nhập bằng LINE",
+      providers: { google: "Google", line: "LINE" },
+      signingIn: "Đang hoàn tất đăng nhập...",
+      completeFailed: "Không thể hoàn tất đăng nhập. Vui lòng thử lại.",
+      errors: {
+        declined: "Bạn đã hủy ủy quyền nên chưa được đăng nhập.",
+        OAUTH_IDENTITY_NOT_LINKED:
+          "Tài khoản này chưa được liên kết với tài khoản chủ quán nào. Hãy đăng nhập bằng tên đăng nhập và mật khẩu trước, rồi liên kết tại Cài đặt > Bảo mật > Phương thức đăng nhập.",
+        OAUTH_STATE_INVALID:
+          "Phiên đăng nhập đã hết hạn hoặc đã được sử dụng. Vui lòng thử lại.",
+        OAUTH_CALLBACK_INVALID:
+          "Phản hồi đăng nhập không đầy đủ. Vui lòng thử lại.",
+        OAUTH_VERIFICATION_FAILED:
+          "Không thể xác minh danh tính của bạn. Vui lòng thử lại sau.",
+        OAUTH_IDENTITY_ALREADY_LINKED:
+          "Tài khoản này đã được liên kết với tài khoản chủ quán khác.",
+        OAUTH_PROVIDER_ALREADY_LINKED:
+          "Tài khoản của bạn đã liên kết phương thức này. Hãy hủy liên kết trước khi liên kết lại.",
+        OAUTH_LINK_NOT_ALLOWED:
+          "Chỉ chủ quán mới có thể liên kết phương thức đăng nhập.",
+        generic: "Đăng nhập thất bại. Vui lòng thử lại sau.",
+      },
+    },
     adminLogin: "Đăng nhập quản trị",
     username: "Tên đăng nhập",
     password: "Mật khẩu",
@@ -3187,6 +3213,25 @@ const viVN: Messages = {
       duration: "Thời gian hiển thị thông báo (giây)",
     },
     security: {
+      signInMethods: {
+        title: "Phương thức đăng nhập",
+        description:
+          "Liên kết Google hoặc LINE để đăng nhập mà không cần nhập mật khẩu.",
+        linkedOn: "Liên kết ngày {date}",
+        link: "Liên kết",
+        unlink: "Hủy liên kết",
+        unlinkTitle: "Hủy liên kết",
+        unlinkMessage:
+          "Hủy liên kết {provider}? Bạn sẽ không thể đăng nhập bằng phương thức này nữa.",
+        lastMethod:
+          "Đây là phương thức đăng nhập duy nhất của bạn. Hãy đặt mật khẩu hoặc liên kết phương thức khác trước khi hủy.",
+        linked: "Đã liên kết {provider}",
+        unlinked: "Đã hủy liên kết",
+        loadFailed: "Không thể tải phương thức đăng nhập",
+        linkFailed: "Không thể bắt đầu liên kết. Vui lòng thử lại sau.",
+        unlinkFailed: "Không thể hủy liên kết. Vui lòng thử lại sau.",
+        none: "Chưa liên kết tài khoản nào",
+      },
       changePassword: {
         title: "Đổi mật khẩu",
         description:

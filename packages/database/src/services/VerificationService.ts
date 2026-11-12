@@ -368,6 +368,7 @@ export class VerificationService extends BaseService {
           .set({
             passwordHash,
             passwordChangedAt,
+            passwordSetAt: passwordChangedAt,
             tokenVersion: sql`${users.tokenVersion} + 1`,
           })
           .where(eq(users.id, verification.userId!)),

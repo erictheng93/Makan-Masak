@@ -65,6 +65,22 @@ export class D1EphemeralStore implements EphemeralStore {
     await this.db.delete(ephemeralKv).where(eq(ephemeralKv.key, key));
   }
 
+  /**
+   * Read and delete in one statement. For one-time values: a get followed by a
+   * delete lets two concurrent requests both read the value.
+   */
+  async take(key: string): Promise<string | null> {
+    const [row] = await this.db
+      .delete(ephemeralKv)
+      .where(eq(ephemeralKv.key, key))
+      .returning({
+        value: ephemeralKv.value,
+        expiresAt: ephemeralKv.expiresAt,
+      });
+    if (!row || row.expiresAt.getTime() <= this.now()) return null;
+    return row.value;
+  }
+
   /** For the daily cleanup cron; readers already ignore expired rows. */
   async deleteExpired(): Promise<void> {
     await this.db

@@ -145,6 +145,43 @@
         </div>
       </form>
 
+      <div aria-live="polite">
+        <p
+          v-if="oauthMessage"
+          :role="oauthMessage.kind === 'error' ? 'alert' : 'status'"
+          data-testid="oauth-message"
+          :data-kind="oauthMessage.kind"
+          class="rounded-2xl bg-white p-4 text-sm shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+          :class="
+            oauthMessage.kind === 'error' ? 'text-ios-red' : 'text-ios-text'
+          "
+        >
+          {{ oauthMessage.text }}
+        </p>
+      </div>
+
+      <section
+        v-if="providers.length > 0"
+        data-testid="oauth-section"
+        class="rounded-3xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] space-y-3"
+        :aria-busy="oauthBusy"
+      >
+        <p class="text-center text-sm text-ios-text/60">
+          {{ t("auth.oauth.divider") }}
+        </p>
+        <button
+          v-for="provider in providers"
+          :key="provider"
+          type="button"
+          :data-testid="`oauth-${provider}`"
+          :disabled="oauthBusy"
+          class="w-full rounded-full bg-ios-bg px-4 py-3 text-sm font-semibold text-ios-text transition-colors duration-200 ease-out hover:bg-ios-bg/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue disabled:opacity-50"
+          @click="startOAuth(provider)"
+        >
+          {{ t(`auth.oauth.${provider}`) }}
+        </button>
+      </section>
+
       <!-- Chef redirect prompt -->
       <div
         v-if="showChefRedirect"
@@ -183,6 +220,12 @@ import {
 } from "@/utils/loginRedirect";
 import { useI18n } from "@/i18n";
 import { api } from "@/services/api";
+import {
+  fetchStaffOAuthProviders,
+  oauthErrorMessageKey,
+  staffOAuthStartUrl,
+  type StaffOAuthProvider,
+} from "@/services/staffOAuthService";
 import { getApiErrorStatus } from "@makanmasak/shared/utils/unknown";
 import {
   clearRememberedShop,
@@ -280,6 +323,56 @@ const validateForm = () => {
   return true;
 };
 
+const providers = ref<StaffOAuthProvider[]>([]);
+const oauthBusy = ref(false);
+const oauthMessage = ref<{ kind: "error" | "notice"; text: string } | null>(
+  null,
+);
+
+/** Back to this very login page (so /s/:slug returns to itself) and its redirect. */
+const oauthReturnPath = () => {
+  const redirect = readLoginRedirect(route.query[LOGIN_REDIRECT_QUERY]);
+  return redirect
+    ? `${route.path}?${LOGIN_REDIRECT_QUERY}=${encodeURIComponent(redirect)}`
+    : route.path;
+};
+
+const startOAuth = (provider: StaffOAuthProvider) => {
+  window.location.assign(staffOAuthStartUrl(provider, oauthReturnPath()));
+};
+
+/** Handles ?oauth_code / ?oauth_error on return from the provider. */
+const handleOAuthReturn = async () => {
+  const first = (v: unknown) => (typeof v === "string" ? v : undefined);
+  const code = first(route.query.oauth_code);
+  const failure = first(route.query.oauth_error);
+  if (!code && !failure) return;
+
+  // Strip first: a reload or Back must never resubmit a single-use code.
+  const { oauth_code: _c, oauth_error: _e, ...query } = route.query;
+  await router.replace({ path: route.path, query });
+
+  if (failure && !code) {
+    oauthMessage.value = {
+      kind: failure === "declined" ? "notice" : "error",
+      text: t(oauthErrorMessageKey(failure)),
+    };
+    return;
+  }
+  if (!code) return;
+
+  oauthBusy.value = true;
+  oauthMessage.value = { kind: "notice", text: t("auth.oauth.signingIn") };
+  const result = await authStore.loginWithOAuth(code);
+  oauthBusy.value = false;
+  if (result.success) {
+    oauthMessage.value = null;
+    router.push(postLoginTarget());
+  } else {
+    oauthMessage.value = { kind: "error", text: result.error };
+  }
+};
+
 // Chef redirect state — shown when a chef tries to log in here
 const showChefRedirect = ref(false);
 
@@ -327,6 +420,8 @@ const handleSubmit = async () => {
 // Auto-redirect if already authenticated
 onMounted(() => {
   void loadShopContext();
+  void fetchStaffOAuthProviders().then((list) => (providers.value = list));
+  void handleOAuthReturn();
   if (authStore.isAuthenticated) {
     if (authStore.user?.role === UserRole.CHEF) {
       // Chef shouldn't be in admin dashboard — show redirect

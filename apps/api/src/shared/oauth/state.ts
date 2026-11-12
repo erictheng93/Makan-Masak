@@ -8,7 +8,8 @@
  */
 
 import type { CustomerOAuthProvider } from "@makanmasak/shared-types";
-import { timingSafeEqual } from "../../../../shared/utils/timing-safe-equal";
+import { timingSafeEqual } from "../utils/timing-safe-equal";
+import type { EphemeralStore } from "../utils/ephemeral-store";
 
 /** Long enough for a human to finish a provider login, short enough to expire. */
 export const OAUTH_STATE_TTL_SECONDS = 600;
@@ -24,6 +25,8 @@ export interface OAuthRequestState {
    * so the callback cannot be tricked into linking to a different account.
    */
   linkCustomerId?: string;
+  /** Staff-flow equivalent of `linkCustomerId`: the `users.id` that started a link. */
+  linkUserId?: string;
   /**
    * SHA-256 of the random value set as an HttpOnly cookie on the browser that
    * started the flow. The callback must present the cookie, so a state minted
@@ -72,7 +75,7 @@ function stateKey(provider: CustomerOAuthProvider, state: string): string {
 }
 
 export async function saveRequestState(
-  kv: KVNamespace,
+  kv: EphemeralStore,
   provider: CustomerOAuthProvider,
   state: string,
   value: OAuthRequestState,
@@ -95,7 +98,7 @@ export async function saveRequestState(
  * at the provider. This delete is the near layer of that pair, not the only one.
  */
 export async function consumeRequestState(
-  kv: KVNamespace,
+  kv: EphemeralStore,
   provider: CustomerOAuthProvider,
   state: string,
   bindingHash: string | undefined,
@@ -134,6 +137,8 @@ export async function consumeRequestState(
       typeof value.linkCustomerId === "string"
         ? value.linkCustomerId
         : undefined,
+    linkUserId:
+      typeof value.linkUserId === "string" ? value.linkUserId : undefined,
   };
 }
 

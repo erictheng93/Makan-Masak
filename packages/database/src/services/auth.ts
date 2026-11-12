@@ -217,6 +217,18 @@ export interface AuthResult {
   error?: string;
 }
 
+type SessionUser = {
+  id: string;
+  username: string;
+  fullName: string;
+  role: number;
+  restaurantId: string | null;
+  adminTier: string | null;
+  isActive: boolean;
+  tokenVersion: number;
+  loginSlug: string | null;
+};
+
 export class AuthService extends BaseService {
   // 用戶登入
   // Failed-attempt lockout is NOT handled here. The only caller is the
@@ -240,6 +252,7 @@ export class AuthService extends BaseService {
           username: users.username,
           fullName: users.fullName,
           passwordHash: users.passwordHash,
+          passwordSetAt: users.passwordSetAt,
           role: users.role,
           restaurantId: users.restaurantId,
           adminTier: users.adminTier,
@@ -317,85 +330,157 @@ export class AuthService extends BaseService {
         };
       }
 
-      // 生成 JWT tokens
-      const jwtSecret = this.env.JWT_SECRET;
-      if (!jwtSecret || jwtSecret.length < 32) {
-        throw new Error(
-          "JWT_SECRET must be set and at least 32 characters for security",
-        );
-      }
-      const accessTokenExpiry = new Date(Date.now() + ACCESS_TOKEN_TTL_MS);
-      const tokenVersion = normalizeTokenVersion(user.tokenVersion);
-
-      const accessToken = sign(
-        accessTokenPayload(user, tokenVersion),
-        jwtSecret,
-        { expiresIn: ACCESS_TOKEN_EXPIRES_IN },
-      );
-
-      const refreshToken = sign(
-        refreshTokenPayload(user, tokenVersion),
-        jwtSecret,
-        { expiresIn: "7d" },
-      );
-
-      // Keep valid sessions on other devices: a successful login mints a new
-      // token pair, which prevents fixation for this login without disrupting
-      // an active POS, KDS, or mobile session for the same staff account.
-      //
-      // D1 runs this three-write batch as one ordered transaction. The expired
-      // session sweep must precede the insert so it cannot touch the session we
-      // are creating.
-      const now = new Date();
-      const writes: [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]] = [
-        this.db
-          .delete(sessions)
-          .where(
-            and(lt(sessions.expiresAt, now), eq(sessions.userId, user.id)),
-          ) as BatchItem<"sqlite">,
-        this.db.insert(sessions).values({
-          id: crypto.randomUUID(),
-          userId: user.id,
-          token: accessToken,
-          refreshToken,
-          userAgent: data.deviceInfo?.userAgent,
-          ipAddress: data.deviceInfo?.ipAddress,
-          deviceInfo: data.deviceInfo,
-          location: data.location,
-          expiresAt: accessTokenExpiry,
-          isActive: true,
-        }) as BatchItem<"sqlite">,
-        this.db
+      // A password that just verified is a usable one. The 0044 backfill could
+      // only infer that from a recorded login, so accounts that had never
+      // signed in are caught here. Deliberately not on the OAuth path.
+      if (!user.passwordSetAt) {
+        await this.db
           .update(users)
-          .set({ lastLoginAt: now, updatedAt: now })
-          .where(eq(users.id, user.id)) as BatchItem<"sqlite">,
-      ];
+          .set({ passwordSetAt: new Date() })
+          .where(eq(users.id, user.id));
+      }
 
-      await this.db.batch(writes);
-
-      return {
-        success: true,
-        user: {
-          id: user.id,
-          publicId: user.id,
-          username: user.username,
-          fullName: user.fullName,
-          role: user.role,
-          restaurantId: user.restaurantId,
-          adminTier: user.adminTier,
-          loginSlug: user.loginSlug,
-          isActive: user.isActive,
-          tokenVersion: user.tokenVersion,
-        },
-        tokens: {
-          accessToken,
-          refreshToken,
-          expiresAt: accessTokenExpiry,
-        },
-      };
+      return await this.issueLoginSession(user, data);
     } catch (error) {
       this.handleError(error, "login");
     }
+  }
+
+  /**
+   * Session for an account whose identity a trusted provider already proved
+   * (OAuth). Applies the same account gates as password login -- active, not
+   * deleted -- and always requires an active, undeleted restaurant, which the
+   * password path only enforces when the caller names a shop.
+   */
+  async loginVerifiedUser(
+    userId: string,
+    data: Pick<LoginData, "deviceInfo" | "location">,
+  ): Promise<AuthResult> {
+    try {
+      const [user] = await this.db
+        .select({
+          id: users.id,
+          username: users.username,
+          fullName: users.fullName,
+          role: users.role,
+          restaurantId: users.restaurantId,
+          adminTier: users.adminTier,
+          isActive: users.isActive,
+          tokenVersion: users.tokenVersion,
+          loginSlug: restaurants.loginSlug,
+        })
+        .from(users)
+        .innerJoin(restaurants, eq(restaurants.id, users.restaurantId))
+        .where(
+          and(
+            eq(users.id, userId),
+            eq(users.isActive, true),
+            isNull(users.deletedAt),
+            eq(restaurants.isActive, true),
+            isNull(restaurants.deletedAt),
+          ),
+        )
+        .limit(1)
+        .all();
+
+      if (!user || user.role === 5) {
+        return {
+          success: false,
+          reason: "invalid_credentials",
+          error: "Account is not available",
+        };
+      }
+      return await this.issueLoginSession(user, data);
+    } catch (error) {
+      this.handleError(error, "loginVerifiedUser");
+    }
+  }
+
+  /**
+   * Everything after the credential check: token pair, session row, last-login
+   * stamp. Password login and OAuth sign-in both end here, so a session means
+   * the same thing whichever way it was reached.
+   */
+  private async issueLoginSession(
+    user: SessionUser,
+    data: Pick<LoginData, "deviceInfo" | "location">,
+  ): Promise<AuthResult> {
+    // 生成 JWT tokens
+    const jwtSecret = this.env.JWT_SECRET;
+    if (!jwtSecret || jwtSecret.length < 32) {
+      throw new Error(
+        "JWT_SECRET must be set and at least 32 characters for security",
+      );
+    }
+    const accessTokenExpiry = new Date(Date.now() + ACCESS_TOKEN_TTL_MS);
+    const tokenVersion = normalizeTokenVersion(user.tokenVersion);
+
+    const accessToken = sign(
+      accessTokenPayload(user, tokenVersion),
+      jwtSecret,
+      { expiresIn: ACCESS_TOKEN_EXPIRES_IN },
+    );
+
+    const refreshToken = sign(
+      refreshTokenPayload(user, tokenVersion),
+      jwtSecret,
+      { expiresIn: "7d" },
+    );
+
+    // Keep valid sessions on other devices: a successful login mints a new
+    // token pair, which prevents fixation for this login without disrupting
+    // an active POS, KDS, or mobile session for the same staff account.
+    //
+    // D1 runs this three-write batch as one ordered transaction. The expired
+    // session sweep must precede the insert so it cannot touch the session we
+    // are creating.
+    const now = new Date();
+    const writes: [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]] = [
+      this.db
+        .delete(sessions)
+        .where(
+          and(lt(sessions.expiresAt, now), eq(sessions.userId, user.id)),
+        ) as BatchItem<"sqlite">,
+      this.db.insert(sessions).values({
+        id: crypto.randomUUID(),
+        userId: user.id,
+        token: accessToken,
+        refreshToken,
+        userAgent: data.deviceInfo?.userAgent,
+        ipAddress: data.deviceInfo?.ipAddress,
+        deviceInfo: data.deviceInfo,
+        location: data.location,
+        expiresAt: accessTokenExpiry,
+        isActive: true,
+      }) as BatchItem<"sqlite">,
+      this.db
+        .update(users)
+        .set({ lastLoginAt: now, updatedAt: now })
+        .where(eq(users.id, user.id)) as BatchItem<"sqlite">,
+    ];
+
+    await this.db.batch(writes);
+
+    return {
+      success: true,
+      user: {
+        id: user.id,
+        publicId: user.id,
+        username: user.username,
+        fullName: user.fullName,
+        role: user.role,
+        restaurantId: user.restaurantId,
+        adminTier: user.adminTier,
+        loginSlug: user.loginSlug,
+        isActive: user.isActive,
+        tokenVersion: user.tokenVersion,
+      },
+      tokens: {
+        accessToken,
+        refreshToken,
+        expiresAt: accessTokenExpiry,
+      },
+    };
   }
 
   // 用戶註冊
@@ -459,6 +544,7 @@ export class AuthService extends BaseService {
           phone: data.phone,
           fullName: data.fullName,
           passwordHash,
+          passwordSetAt: new Date(),
           role: data.role,
           restaurantId: data.restaurantId,
           isActive: true,
@@ -872,6 +958,7 @@ export class AuthService extends BaseService {
         .set({
           passwordHash: newPasswordHash,
           passwordChangedAt: new Date(),
+          passwordSetAt: new Date(),
           tokenVersion: sql`${users.tokenVersion} + 1`,
           updatedAt: new Date(),
         })

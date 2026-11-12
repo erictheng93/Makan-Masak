@@ -1,8 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
 import {
   getAppleClientSecret,
   AppleClientSecretError,
-} from "./appleClientSecret";
+} from "../../../../shared/oauth/appleClientSecret";
 import {
   createCustomerForIdentity,
   findActiveCustomerIdByEmail,
@@ -17,11 +21,60 @@ import {
   consumeRequestState,
   deriveCodeChallenge,
   saveRequestState,
-} from "./state";
-import { exchangeCodeForIdToken } from "./tokenExchange";
-import { OAUTH_PROVIDERS, type OAuthEnv } from "./providers";
+} from "../../../../shared/oauth/state";
+import { exchangeCodeForIdToken } from "../../../../shared/oauth/tokenExchange";
+import {
+  OAUTH_PROVIDERS,
+  type OAuthEnv,
+} from "../../../../shared/oauth/providers";
 import oauthRoutes from "../../routes/oauth";
 import { ApiError } from "../../../../shared/utils/api-error";
+import { issueCustomerSession } from "../CustomerSessionService";
+
+// The route builds its store from env.DB (a D1 binding). Swap only that
+// factory: the store itself stays the real D1EphemeralStore, here over
+// better-sqlite3 with the real ephemeral_kv migration, so take()'s single
+// DELETE ... RETURNING and expiry are exercised rather than faked.
+const store = vi.hoisted(() => ({
+  sqlite: undefined as unknown,
+  now: 1_000_000,
+}));
+vi.mock("../../../../shared/utils/ephemeral-store", async (importActual) => {
+  const actual =
+    await importActual<
+      typeof import("../../../../shared/utils/ephemeral-store")
+    >();
+  return {
+    ...actual,
+    ephemeralStore: () =>
+      new actual.D1EphemeralStore(
+        drizzle(store.sqlite as Database.Database) as never,
+        () => store.now,
+      ),
+  };
+});
+vi.mock("../CustomerSessionService", async (importActual) => ({
+  ...(await importActual<typeof import("../CustomerSessionService")>()),
+  issueCustomerSession: vi.fn(),
+}));
+
+beforeEach(() => {
+  const sqlite = new Database(":memory:");
+  const file = fileURLToPath(
+    new URL(
+      "../../../../../../../packages/database/migrations_fresh/0043_ephemeral_kv.sql",
+      import.meta.url,
+    ).href,
+  );
+  for (const statement of readFileSync(file, "utf8").split(
+    "--> statement-breakpoint",
+  )) {
+    sqlite.exec(statement);
+  }
+  store.sqlite = sqlite;
+  store.now = 1_000_000;
+  vi.mocked(issueCustomerSession).mockReset();
+});
 
 function buildEnv(overrides: Partial<OAuthEnv> = {}): OAuthEnv {
   return {
@@ -512,6 +565,42 @@ oauthRoutes.onError((error, context) => {
   return context.json({ code: "UNEXPECTED" }, 500);
 });
 
+const COMPLETE_COOKIE_PREFIX = "customer_oauth_complete_";
+
+/** The per-code completion cookie as a request header value. */
+async function cookieFor(code: string, value = "nonce") {
+  const digest = await deriveCodeChallenge(code);
+  return `${COMPLETE_COOKIE_PREFIX}${digest.slice(0, 16)}=${value}`;
+}
+
+async function seedResult(code: string, pending: Record<string, unknown>) {
+  const { ephemeralStore } =
+    await import("../../../../shared/utils/ephemeral-store");
+  await ephemeralStore({} as never).put(
+    `oauth_result:${code}`,
+    JSON.stringify({
+      ...pending,
+      bindingHash: await deriveCodeChallenge("nonce"),
+    }),
+    { expirationTtl: 120 },
+  );
+}
+
+function complete(code: string, cookie?: string) {
+  return oauthRoutes.request(
+    "https://api.example.test/auth/oauth/complete",
+    {
+      method: "POST",
+      body: JSON.stringify({ code }),
+      headers: {
+        "Content-Type": "application/json",
+        ...(cookie ? { cookie } : {}),
+      },
+    },
+    { ...buildEnv(), JWT_SECRET: "test-secret" } as never,
+  );
+}
+
 describe("OAuth start route", () => {
   it("advertises configured providers and saves a PKCE-bound redirect request", async () => {
     const values = new Map<string, string>();
@@ -645,24 +734,91 @@ describe("OAuth start route", () => {
     expect(cache.delete).toHaveBeenCalledWith("oauth_state:google:expired");
   });
 
-  it("consumes an OAuth result code before rejecting an expired completion", async () => {
-    const cache = {
-      get: vi.fn(async () => null),
-      delete: vi.fn(),
-    } as unknown as KVNamespace;
-    const response = await oauthRoutes.request(
-      "https://api.example.test/auth/oauth/complete",
-      {
-        method: "POST",
-        body: JSON.stringify({ code: "expired-result" }),
-        headers: { "Content-Type": "application/json" },
-      },
-      { ...buildEnv(), CACHE_KV: cache } as never,
+  it("rejects an unknown or expired result code", async () => {
+    const res = await complete("expired-result");
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ code: "OAUTH_RESULT_INVALID" });
+    expect(issueCustomerSession).not.toHaveBeenCalled();
+  });
+
+  it("rejects a result code after its lifetime without issuing a session", async () => {
+    await seedResult("code", { kind: "session", customerId: "cust-1" });
+    store.now += 121_000;
+    const res = await complete("code", await cookieFor("code"));
+    expect(res.status).toBe(400);
+    expect(issueCustomerSession).not.toHaveBeenCalled();
+  });
+
+  it("redeems a code once: the second attempt is refused and issues no session", async () => {
+    vi.mocked(issueCustomerSession).mockResolvedValue({
+      accessToken: "access",
+      expiresIn: 900,
+    } as never);
+    await seedResult("code", { kind: "session", customerId: "cust-1" });
+    const cookie = await cookieFor("code");
+
+    const first = await complete("code", cookie);
+    expect(first.status).toBe(200);
+    expect(await first.json()).toMatchObject({
+      data: { needsLinking: false, accessToken: "access" },
+    });
+    expect(first.headers.get("set-cookie")).toContain(
+      `${cookie.split("=")[0]}=;`,
     );
 
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ code: "OAUTH_RESULT_INVALID" });
-    expect(cache.delete).toHaveBeenCalledWith("oauth_result:expired-result");
+    const second = await complete("code", cookie);
+    expect(second.status).toBe(400);
+    expect(await second.json()).toEqual({ code: "OAUTH_RESULT_INVALID" });
+    expect(issueCustomerSession).toHaveBeenCalledOnce();
+    expect(issueCustomerSession).toHaveBeenCalledWith(
+      expect.anything(),
+      "cust-1",
+    );
+  });
+
+  it.each([
+    ["no cookie", () => undefined],
+    ["a different value", (name: string) => `${name}=attacker`],
+    ["another cookie name", () => "customer_other=nonce"],
+  ])("refuses and burns a code presented with %s", async (_label, make) => {
+    const cookie = make((await cookieFor("code")).split("=")[0]);
+    await seedResult("code", { kind: "session", customerId: "cust-1" });
+
+    const refused = await complete("code", cookie);
+    expect(refused.status).toBe(400);
+    expect(await refused.json()).toEqual({ code: "OAUTH_RESULT_INVALID" });
+
+    const retry = await complete("code", await cookieFor("code"));
+    expect(retry.status).toBe(400);
+    expect(issueCustomerSession).not.toHaveBeenCalled();
+  });
+
+  it("binds the needs_linking result too", async () => {
+    const pending = {
+      kind: "needs_linking",
+      provider: "google",
+      providerUid: "uid-1",
+      maskedEmail: "a***@example.test",
+    } as const;
+    await seedResult("bad", pending);
+    const refused = await complete("bad", undefined);
+    expect(refused.status).toBe(400);
+    expect(await complete("bad", await cookieFor("bad"))).toHaveProperty(
+      "status",
+      400,
+    );
+
+    await seedResult("good", pending);
+    const ok = await complete("good", await cookieFor("good"));
+    expect(ok.status).toBe(200);
+    expect(await ok.json()).toMatchObject({
+      data: {
+        needsLinking: true,
+        provider: "google",
+        bindingToken: expect.any(String),
+      },
+    });
+    expect(issueCustomerSession).not.toHaveBeenCalled();
   });
 
   it("accepts Apple form-post cancellations and rejects unknown or unconfigured start providers", async () => {
@@ -830,8 +986,31 @@ describe("OAuth callback identity resolution", () => {
           "oauth_code",
         ),
       ).toEqual(expect.any(String));
-      expect([...stored.keys()]).toContainEqual(
+      expect([...stored.keys()]).not.toContainEqual(
         expect.stringMatching(/^oauth_result:/),
+      );
+      const code = new URL(
+        response.headers.get("location") as string,
+      ).searchParams.get("oauth_code") as string;
+      const setCookies = response.headers.getSetCookie();
+      const completeSetCookie = setCookies.find((v) =>
+        v.startsWith(COMPLETE_COOKIE_PREFIX),
+      ) as string;
+      expect(completeSetCookie).toMatch(/HttpOnly/i);
+      expect(completeSetCookie).toMatch(/Secure/i);
+      expect(completeSetCookie).toMatch(/SameSite=Lax/i);
+      expect(completeSetCookie).toContain(
+        "Path=/api/v1/customer/auth/oauth/complete",
+      );
+      const { ephemeralStore } =
+        await import("../../../../shared/utils/ephemeral-store");
+      const parked = JSON.parse(
+        (await ephemeralStore({} as never).get(
+          `oauth_result:${code}`,
+        )) as string,
+      ) as { bindingHash: string };
+      expect(parked.bindingHash).toBe(
+        await deriveCodeChallenge(/^[^=]+=([^;]+)/.exec(completeSetCookie)![1]),
       );
     } finally {
       vi.unstubAllGlobals();

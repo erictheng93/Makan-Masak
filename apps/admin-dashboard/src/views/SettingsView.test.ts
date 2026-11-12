@@ -988,3 +988,36 @@ describe("SettingsView shop QR management", () => {
     );
   });
 });
+
+describe("SettingsView sign-in methods card", () => {
+  async function mountAs(role: number) {
+    vi.mocked(useAuthStore).mockReturnValue({
+      restaurantId: "restaurant-1",
+      user: { role },
+    } as unknown as ReturnType<typeof useAuthStore>);
+    vi.mocked(useRoute).mockReturnValue({
+      query: {},
+    } as unknown as ReturnType<typeof useRoute>);
+    vi.mocked(api.get).mockResolvedValue(apiGetResponse({}));
+    vi.mocked(marketsService.listMarkets).mockResolvedValue([]);
+    vi.mocked(marketsService.listRestaurantMemberships).mockResolvedValue([]);
+    vi.mocked(marketsService.listJoinRequests).mockResolvedValue([]);
+    const wrapper = mount(SettingsView, {
+      global: {
+        stubs: {
+          ...settingsStubs,
+          SignInMethodsCard: { template: '<div data-testid="signin-stub" />' },
+        },
+      },
+    });
+    await flushPromises();
+    return wrapper;
+  }
+
+  it("shows the card to owners only", async () => {
+    const owner = await mountAs(1);
+    expect(owner.find('[data-testid="signin-stub"]').exists()).toBe(true);
+    const cashier = await mountAs(4);
+    expect(cashier.find('[data-testid="signin-stub"]').exists()).toBe(false);
+  });
+});

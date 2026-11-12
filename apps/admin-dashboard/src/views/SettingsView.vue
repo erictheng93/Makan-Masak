@@ -1764,6 +1764,7 @@
   <!-- 安全設定 -->
   <div v-show="activeTab === 'security'" class="space-y-8">
     <ChangePasswordCard />
+    <SignInMethodsCard v-if="authStore.user?.role === UserRole.OWNER" />
     <!-- 密碼政策 -->
     <div class="ui-panel bg-white rounded-lg shadow p-6">
       <h3 class="text-lg font-semibold text-gray-900 mb-4">
@@ -1935,6 +1936,7 @@ import {
 import { useRoute } from "vue-router";
 import { CheckCircleIcon } from "@heroicons/vue/24/outline";
 import ChangePasswordCard from "@/components/settings/ChangePasswordCard.vue";
+import SignInMethodsCard from "@/components/settings/SignInMethodsCard.vue";
 import IntegrationsSettings from "@/components/settings/IntegrationsSettings.vue";
 import StaffLoginLinkCard from "@/components/settings/StaffLoginLinkCard.vue";
 import { UserRole } from "@/types";
