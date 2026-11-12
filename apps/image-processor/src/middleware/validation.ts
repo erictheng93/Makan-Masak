@@ -273,51 +273,6 @@ export const validateFileType = (allowedMimeTypes: string[]) => {
   };
 };
 
-// 圖片尺寸驗證中間件
-export const validateImageDimensions = (options: {
-  maxWidth?: number;
-  maxHeight?: number;
-  minWidth?: number;
-  minHeight?: number;
-  aspectRatio?: { width: number; height: number; tolerance?: number };
-}) => {
-  return async (c: Context<{ Bindings: Env }>, next: Next) => {
-    try {
-      const file = c.get("file") as File;
-
-      if (file && file.type.startsWith("image/")) {
-        // 在實際應用中，這裡需要解析圖片來獲取尺寸
-        // 由於 Workers 環境限制，這裡提供基本的文件大小檢查
-
-        const {
-          maxWidth: _maxWidth,
-          maxHeight: _maxHeight,
-          minWidth: _minWidth,
-          minHeight: _minHeight,
-          aspectRatio: _aspectRatio,
-        } = options;
-
-        // 注意：在 Workers 中解析圖片尺寸需要使用 WebP 或其他支持的 API
-        // 這裡提供一個簡化的實現示例
-
-        // 實際實現中，你可能需要：
-        // 1. 使用 ImageMagick WASM 版本
-        // 2. 使用 Canvas API（如果可用）
-        // 3. 使用第三方服務來獲取圖片信息
-
-        console.log(
-          "Image dimension validation - feature needs implementation",
-        );
-      }
-
-      await next();
-    } catch (error) {
-      console.error("Image dimension validation error:", error);
-      await next();
-    }
-  };
-};
-
 // 安全檢查中間件 - 檢查圖片是否包含惡意內容
 export const securityScan = async (
   c: Context<{ Bindings: Env }>,

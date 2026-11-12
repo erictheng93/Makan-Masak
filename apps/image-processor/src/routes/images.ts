@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { ImageService } from "../services/image-service";
+import { readImageDimensions } from "../utils/image-dimensions";
 import {
   authMiddleware,
   optionalAuth,
@@ -41,18 +42,10 @@ const generateUniqueFilename = (originalFilename: string): string => {
   return `${baseName}-${timestamp}-${random}.${extension}`;
 };
 
-const extractImageMetadata = async (
-  file: File,
-): Promise<{
-  width?: number;
-  height?: number;
-  format?: string;
-  size: number;
-  exif?: Record<string, unknown>;
-}> => ({
-  size: file.size,
-  format: file.type,
-});
+// Far above anything the dashboard produces (2048px long edge) or a phone
+// shoots, and below the point where one upload can exhaust a browser decoding
+// it: a few kilobytes of PNG can declare a 60000x60000 canvas.
+const MAX_IMAGE_DIMENSION_PX = 8192;
 
 const isUploadFile = (value: FormDataEntryValue): value is File =>
   typeof value === "object" &&
@@ -255,6 +248,39 @@ app.post(
         return variantFiles;
       }
 
+      // Refuse a variant whose header declares more pixels than we allow.
+      // One whose size cannot be read is let through and logged instead: the
+      // reader is ours, and a staff member's real photo failing to upload
+      // costs more than storing one image without its width and height.
+      let originalSize: { width: number; height: number } | undefined;
+      for (const { variant, file: variantFile } of variantFiles) {
+        const size = readImageDimensions(
+          new Uint8Array(await variantFile.arrayBuffer()),
+        );
+        if (!size) {
+          console.warn(
+            `Image dimensions unreadable: variant=${variant} type=${variantFile.type} bytes=${variantFile.size}`,
+          );
+          continue;
+        }
+        if (
+          size.width > MAX_IMAGE_DIMENSION_PX ||
+          size.height > MAX_IMAGE_DIMENSION_PX
+        ) {
+          return c.json(
+            {
+              success: false,
+              error: `Image too large. Maximum dimension: ${MAX_IMAGE_DIMENSION_PX}px`,
+              variant,
+              ...size,
+              maxDimension: MAX_IMAGE_DIMENSION_PX,
+            },
+            400,
+          );
+        }
+        if (variant === "original") originalSize = size;
+      }
+
       const uploadRestaurantId =
         user.role === 0 ? query.restaurantId : user.restaurantId;
 
@@ -294,7 +320,6 @@ app.post(
         throw error;
       }
 
-      const imageMetadata = await extractImageMetadata(file);
       const variants = imageService.buildVariantUrls(imageId, uploadedVariants);
 
       // Save metadata to database
@@ -303,8 +328,8 @@ app.post(
         originalFilename: file.name,
         mimeType: file.type,
         size: file.size,
-        width: imageMetadata.width,
-        height: imageMetadata.height,
+        width: originalSize?.width,
+        height: originalSize?.height,
         variants,
         uploadedAt: new Date().toISOString(),
         uploadedBy: user.id,
@@ -313,7 +338,6 @@ app.post(
         tags,
         altText: query.altText,
         caption: query.caption,
-        exifData: imageMetadata.exif,
       };
 
       const saveResult = await imageService.saveImageMetadata(
