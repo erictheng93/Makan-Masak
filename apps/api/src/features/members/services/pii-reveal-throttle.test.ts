@@ -10,6 +10,11 @@ const mocks = vi.hoisted(() => ({
   constructed: [] as unknown[][],
 }));
 
+// The counters live in the D1 ephemeral store; hand it the fake on the env.
+vi.mock("../../../shared/utils/ephemeral-store", () => ({
+  ephemeralStore: (env: { EPHEMERAL: unknown }) => env.EPHEMERAL,
+}));
+
 vi.mock("../../../middleware/geo-rate-limiting", () => ({
   GeoIntelligentRateLimiter: vi.fn(function GeoIntelligentRateLimiter(
     ...args: unknown[]
@@ -22,7 +27,7 @@ vi.mock("../../../middleware/geo-rate-limiting", () => ({
 function createContext(overrides: Record<string, unknown> = {}) {
   return {
     env: {
-      RATE_LIMIT_KV: { get: vi.fn(), put: vi.fn() },
+      EPHEMERAL: { get: vi.fn(), put: vi.fn() },
       ANALYTICS_ENGINE: undefined,
       ...(overrides.env as object satisfies object | undefined),
     },
@@ -96,17 +101,14 @@ describe("enforcePiiRevealThrottle", () => {
     });
   });
 
-  it("fails open when the counter store is missing, rather than blocking the reveal", async () => {
-    // Deliberate: availability beats enforcement when KV is unreachable, and
-    // the audit row is what makes an unbounded burst detectable afterwards.
-    const c = createContext({
-      env: { RATE_LIMIT_KV: undefined, ANALYTICS_ENGINE: undefined },
-    });
+  it("counts in the ephemeral store, not RATE_LIMIT_KV", async () => {
+    const c = createContext();
 
-    await expect(
-      enforcePiiRevealThrottle(c, "user-42"),
-    ).resolves.toBeUndefined();
-    expect(mocks.applyRateLimit).not.toHaveBeenCalled();
+    await enforcePiiRevealThrottle(c, "user-42");
+
+    expect(mocks.constructed[0][0]).toBe(
+      (c as { env: { EPHEMERAL: unknown } }).env.EPHEMERAL,
+    );
   });
 
   it("still runs when executionCtx is unavailable", async () => {

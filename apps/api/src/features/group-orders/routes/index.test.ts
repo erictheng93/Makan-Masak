@@ -175,8 +175,8 @@ function createRateLimitEnv() {
   const kv = new Map<string, string>();
   return {
     DB: {},
-    EPHEMERAL: { put: vi.fn(async () => undefined) },
-    CACHE_KV: {
+    // Guest tokens and the per-route rate-limit counters share this store.
+    EPHEMERAL: {
       get: vi.fn(async (key: string) => kv.get(key) ?? null),
       put: vi.fn(
         async (

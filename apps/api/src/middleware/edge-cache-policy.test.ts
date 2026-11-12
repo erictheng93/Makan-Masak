@@ -369,6 +369,99 @@ describe("isPublicApiCacheableRequest", () => {
     });
   });
 
+  it("shares one entry across table links but not across response-affecting queries", async () => {
+    const cacheEntries = new Map<string, Response>();
+    vi.stubGlobal("caches", {
+      default: {
+        async match(key: RequestInfo | URL) {
+          return cacheEntries.get(String(key))?.clone();
+        },
+        async put(key: RequestInfo | URL, response: Response) {
+          cacheEntries.set(String(key), response.clone());
+        },
+        async delete(key: RequestInfo | URL) {
+          return cacheEntries.delete(String(key));
+        },
+      },
+    });
+    const kvEntries = new Map<string, string>();
+    const cacheKv = {
+      async get(key: string, options?: { type?: string }) {
+        const value = kvEntries.get(key);
+        if (value === undefined) return null;
+        return options?.type === "json" ? JSON.parse(value) : value;
+      },
+      put: vi.fn(async (key: string, value: string) => {
+        kvEntries.set(key, value);
+      }),
+      async delete(key: string) {
+        kvEntries.delete(key);
+      },
+    };
+
+    const app = new Hono();
+    app.use(
+      "*",
+      smartCacheMiddleware({
+        defaultTtl: 300,
+        cacheTags: () => ["restaurant:restaurant-1"],
+        shouldCache: (c) =>
+          isPublicApiCacheableRequest(c.req.method, c.req.path),
+      }),
+    );
+    const menuHandler = vi.fn((c) =>
+      c.json({
+        success: true,
+        data: { variant: c.req.query("includeAll") ?? "public" },
+      }),
+    );
+    app.get("/api/v1/menu/:restaurantId", menuHandler);
+    const restaurantHandler = vi.fn((c) =>
+      c.json({ success: true, data: { id: "restaurant-1" } }),
+    );
+    app.get("/api/v1/restaurants/:id", restaurantHandler);
+
+    const env = { CACHE_KV: cacheKv };
+    const executionCtx = {
+      waitUntil: vi.fn(),
+      passThroughOnException: vi.fn(),
+    };
+    const get = (url: string) =>
+      app.request(url, undefined, env as never, executionCtx as never);
+
+    await get("/api/v1/menu/restaurant-1?tableId=1");
+    const otherTable = await get("/api/v1/menu/restaurant-1?tableId=2&utm=qr");
+    const bare = await get("/api/v1/menu/restaurant-1");
+    const includeAll = await get("/api/v1/menu/restaurant-1?includeAll=true");
+
+    // Three table/bare links shared one handler run; includeAll got its own.
+    expect(menuHandler).toHaveBeenCalledTimes(2);
+    await expect(otherTable.json()).resolves.toMatchObject({ cached: true });
+    await expect(bare.json()).resolves.toMatchObject({
+      data: { variant: "public" },
+      cached: true,
+    });
+    await expect(includeAll.json()).resolves.toMatchObject({
+      data: { variant: "true" },
+    });
+    expect(
+      cacheKv.put.mock.calls.filter(([key]) =>
+        key.startsWith("GET:/api/v1/menu"),
+      ),
+    ).toEqual([
+      ["GET:/api/v1/menu/restaurant-1:", expect.any(String), expect.anything()],
+      [
+        "GET:/api/v1/menu/restaurant-1:includeAll=true",
+        expect.any(String),
+        expect.anything(),
+      ],
+    ]);
+
+    await get("/api/v1/restaurants/restaurant-1?tableId=1");
+    await get("/api/v1/restaurants/restaurant-1?tableId=2");
+    expect(restaurantHandler).toHaveBeenCalledTimes(1);
+  });
+
   // A menu write answers before its cache clears, but realtime must not go
   // out until both tiers are clear, or a client refetches into a stale copy.
   it("answers a menu write first, then clears query cache, edge cache, and only then pushes", async () => {

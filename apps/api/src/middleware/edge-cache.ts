@@ -77,6 +77,31 @@ export function isPublicApiCacheableRequest(
   return isRestaurantMenu || isRestaurantDetail || isAvailableCoupons;
 }
 
+/**
+ * Query parameters that change the BODY of each cacheable route, keyed by the
+ * same shapes as isPublicApiCacheableRequest. Everything else (tableId, seat
+ * and tracking parameters) is dropped from the cache key, so every table's QR
+ * link shares one entry instead of each getting its own Cache API and KV copy.
+ *
+ * Add a parameter here the moment its handler starts reading it; an omission
+ * serves one variant of the response to requests that asked for another.
+ *  - menu/:restaurantId: `includeAll` is the only query the handler reads
+ *    (features/menu/routes/index.ts), and it only matters to an authenticated
+ *    owner/admin, who bypasses this cache. Kept in the key anyway: it is cheap
+ *    and keeps the explicitly invalidated `:includeAll=true` key meaningful.
+ *  - restaurants/:id and coupons/available/:restaurantId read no query at all.
+ */
+function cacheKeyQuery(method: string, path: string, rawQuery: string): string {
+  if (!isPublicApiCacheableRequest(method, path)) return rawQuery;
+  const segments = path.split("/").filter(Boolean);
+  const allowed = segments[2] === "menu" ? ["includeAll"] : [];
+  const params = new URLSearchParams(rawQuery);
+  const kept = new URLSearchParams();
+  for (const name of allowed)
+    for (const value of params.getAll(name)) kept.append(name, value);
+  return kept.toString();
+}
+
 function isCacheableApiResponse(data: unknown): data is CacheableApiResponse {
   return (
     typeof data === "object" &&
@@ -481,7 +506,8 @@ export function smartCacheMiddleware(
 
     const method = c.req.method;
     const path = c.req.path;
-    const query = c.req.url.includes("?") ? c.req.url.split("?")[1] : "";
+    const rawQuery = c.req.url.includes("?") ? c.req.url.split("?")[1] : "";
+    const query = cacheKeyQuery(method, path, rawQuery);
     const cacheKey = `${method}:${path}:${query}`;
 
     // shouldCache decides whether this request should be cached, but we still

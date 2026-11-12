@@ -1,4 +1,7 @@
-import type { EphemeralStore } from "../shared/utils/ephemeral-store";
+import {
+  ephemeralStore,
+  type EphemeralStore,
+} from "../shared/utils/ephemeral-store";
 import { Context, Next } from "hono";
 import { verifyJwtToken } from "./auth";
 import type { Env } from "../types/env";
@@ -230,7 +233,7 @@ const TRUSTED_ASNS = new Set([
 
 export class GeoIntelligentRateLimiter {
   constructor(
-    // KV for the global limiter; the guest-order throttle passes the D1 store.
+    // D1 ephemeral store (KV free-tier writes are too scarce for counters).
     private rateLimitKV: EphemeralStore,
     private analyticsEngine: AnalyticsEngine | undefined,
     private context: Pick<ExecutionContext, "waitUntil">,
@@ -924,7 +927,7 @@ export function geoIntelligentRateLimitMiddleware(
     }
 
     const rateLimiter = new GeoIntelligentRateLimiter(
-      c.env.RATE_LIMIT_KV,
+      ephemeralStore(c.env),
       c.env.ANALYTICS_ENGINE,
       c.executionCtx,
       c.env,

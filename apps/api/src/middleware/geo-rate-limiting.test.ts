@@ -8,6 +8,12 @@ import {
 import type { CustomRateLimit } from "./geo-rate-limiting";
 import type { Env } from "../types/env";
 
+// Rate-limit counters live in the D1 ephemeral store. The tests keep their fake
+// on the typed env field RATE_LIMIT_KV and hand it to the store from there.
+vi.mock("../shared/utils/ephemeral-store", () => ({
+  ephemeralStore: (env: { RATE_LIMIT_KV: unknown }) => env.RATE_LIMIT_KV,
+}));
+
 const JWT_SECRET = "test-secret-for-rate-limit-identity-32b";
 
 /**

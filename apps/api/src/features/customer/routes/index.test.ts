@@ -25,6 +25,11 @@ const jwt = vi.hoisted(() => ({
 // silently drops every middleware it forgets to list, so a route's guard
 // disappears without any test noticing — and the missing export only surfaces
 // when some other route happens to import it.
+// Rate-limit counters live in the D1 ephemeral store; hand it the fake on the env.
+vi.mock("../../../shared/utils/ephemeral-store", () => ({
+  ephemeralStore: (env: { EPHEMERAL: unknown }) => env.EPHEMERAL,
+}));
+
 vi.mock("../../../middleware/auth", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../middleware/auth")>()),
   canonicalCustomerAuthMiddleware: vi.fn(async (c: Context, next: Next) => {
@@ -242,12 +247,12 @@ function request(
 ) {
   const db = (envOverrides.DB as ReturnType<typeof createDb>) ?? createDb();
   const rateLimitKv =
-    (envOverrides.RATE_LIMIT_KV as ReturnType<typeof createKv>) ?? createKv();
+    (envOverrides.EPHEMERAL as ReturnType<typeof createKv>) ?? createKv();
   const tokenKv =
     (envOverrides.TOKEN_BLACKLIST as ReturnType<typeof createKv>) ?? createKv();
   const env = {
     DB: db,
-    RATE_LIMIT_KV: rateLimitKv,
+    EPHEMERAL: rateLimitKv,
     TOKEN_BLACKLIST: tokenKv,
     JWT_SECRET: "x".repeat(32),
     NODE_ENV: "test",
@@ -350,7 +355,7 @@ describe("customer identity routes", () => {
       {
         phone: "+886912345678",
       },
-      { DB: db, RATE_LIMIT_KV: rateLimitKv },
+      { DB: db, EPHEMERAL: rateLimitKv },
     );
     const body = await (await response).json<OtpRequestBody>();
 
@@ -880,7 +885,7 @@ describe("customer identity routes", () => {
         DB: createDb({
           first: [passwordIdentityRow({ provider_uid: phone })],
         }),
-        RATE_LIMIT_KV: createKv({ ...spentQuota }),
+        EPHEMERAL: createKv({ ...spentQuota }),
       },
     ).response;
     const unknown = await request(
@@ -889,7 +894,7 @@ describe("customer identity routes", () => {
       { identifier: phone },
       {
         DB: createDb({ first: [null] }),
-        RATE_LIMIT_KV: createKv({ ...spentQuota }),
+        EPHEMERAL: createKv({ ...spentQuota }),
       },
     ).response;
 
@@ -1159,7 +1164,7 @@ describe("customer identity routes", () => {
         password: "long-password",
         displayName: "Phone User",
       },
-      { DB: db, RATE_LIMIT_KV: rateLimitKv },
+      { DB: db, EPHEMERAL: rateLimitKv },
     ).response;
     const body = await response.json();
 
@@ -1304,7 +1309,7 @@ describe("customer identity routes", () => {
       "/auth/resend-verification",
       "POST",
       { identifier: phone },
-      { DB: knownDb, RATE_LIMIT_KV: createKv({ ...spentQuota }) },
+      { DB: knownDb, EPHEMERAL: createKv({ ...spentQuota }) },
     ).response;
     const unknown = await request(
       "/auth/resend-verification",
@@ -1312,7 +1317,7 @@ describe("customer identity routes", () => {
       { identifier: phone },
       {
         DB: createDb({ first: [null] }),
-        RATE_LIMIT_KV: createKv({ ...spentQuota }),
+        EPHEMERAL: createKv({ ...spentQuota }),
       },
     ).response;
 

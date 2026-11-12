@@ -13,6 +13,7 @@
  */
 
 import { GeoIntelligentRateLimiter } from "../../../middleware/geo-rate-limiting";
+import { ephemeralStore } from "../../../shared/utils/ephemeral-store";
 import { ApiError } from "../../../shared/utils/api-error";
 import type { Env } from "../../../types/env";
 
@@ -49,14 +50,11 @@ export async function enforcePiiRevealThrottle(
   c: ThrottleContext,
   actorId: string,
 ): Promise<void> {
-  const rateLimitKV = c.env.RATE_LIMIT_KV;
-  // Same posture as applyRateLimit's own catch: availability beats enforcement
-  // when the counter store is unreachable. The audit row is what makes an
-  // unbounded burst detectable after the fact.
-  if (!rateLimitKV) return;
-
+  // applyRateLimit fails open when the counter store is unreachable:
+  // availability beats enforcement. The audit row is what makes an unbounded
+  // burst detectable after the fact.
   const limiter = new GeoIntelligentRateLimiter(
-    rateLimitKV,
+    ephemeralStore(c.env),
     c.env.ANALYTICS_ENGINE,
     resolveWaitUntil(c),
     c.env,
