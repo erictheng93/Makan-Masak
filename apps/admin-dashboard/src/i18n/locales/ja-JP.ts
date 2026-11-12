@@ -403,7 +403,7 @@ const jaJP: Messages = {
   orders: {
     stats: {
       pending: "未処理",
-      preparing: "準備中",
+      preparing: "進行中",
       completed: "完了",
       cancelled: "キャンセル",
     },

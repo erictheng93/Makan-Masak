@@ -3,6 +3,7 @@ import {
   COUNTRY_PROFILES,
   SUPPORTED_COUNTRIES,
   citiesForCountry,
+  countryForCity,
   defaultOnboardingLocale,
   normalizeCountryCode,
 } from "./locale";
@@ -59,5 +60,18 @@ describe("defaultOnboardingLocale", () => {
   it("writes to an applicant in the country's language", () => {
     expect(defaultOnboardingLocale("TW")).toBe("zh-TW");
     expect(defaultOnboardingLocale("MY")).toBe("ms-MY");
+  });
+});
+
+describe("countryForCity", () => {
+  it.each(["台北市", "臺北市", "台中市", "台南市", "台東縣"])(
+    "treats 台 and 臺 alike: %s is Taiwan",
+    (city) => {
+      expect(countryForCity(city)).toBe("TW");
+    },
+  );
+
+  it("returns null for an unknown city", () => {
+    expect(countryForCity("火星市")).toBeNull();
   });
 });

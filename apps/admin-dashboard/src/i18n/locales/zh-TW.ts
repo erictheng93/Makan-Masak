@@ -399,7 +399,7 @@ const zhTWCore = {
   orders: {
     stats: {
       pending: "待處理",
-      preparing: "準備中",
+      preparing: "進行中",
       completed: "已完成",
       cancelled: "已取消",
     },

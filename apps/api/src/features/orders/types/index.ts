@@ -364,7 +364,7 @@ export interface OrderReceipt {
 export interface IOrdersService {
   // Core CRUD Operations
   createOrder(data: CreateOrderData, userId?: string): Promise<Order>;
-  getOrder(id: string, includeItems?: boolean): Promise<Order | null>;
+  getOrder(id: string): Promise<Order | null>;
   getOrders(
     filters: OrderQueryFilters,
     userId?: string,

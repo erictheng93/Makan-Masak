@@ -2315,7 +2315,7 @@ async function hydrateMarketCheckoutSession(
   const childOrders = await Promise.all(
     session.childOrders.map(async (child) => {
       try {
-        const order = await ordersService.getOrder(child.orderId, false);
+        const order = await ordersService.getOrder(child.orderId);
         if (!order) return child;
 
         return {
