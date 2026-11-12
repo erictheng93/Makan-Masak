@@ -217,3 +217,13 @@ export type {
   FeedbackFilters,
   FeedbackStats,
 } from "./FeedbackService";
+
+export {
+  countRestaurantData,
+  deleteRestaurantData,
+  getRestaurantDeletionPlan,
+} from "./restaurant-deletion";
+export type {
+  RestaurantDeletionCount,
+  RestaurantDeletionPlan,
+} from "./restaurant-deletion";

@@ -565,6 +565,27 @@ local state from the primary worktree.
 - API: `POST/PUT /api/v1/users/{restaurant_id}`
 - Role definitions: `apps/api/src/shared/constants/index.ts`
 
+### Deleting a restaurant for good
+
+Two steps, both through the API, never by hand-written SQL:
+
+1. `DELETE /api/v1/restaurants/:id` deactivates the shop and keeps its history.
+   This is the everyday action.
+2. `DELETE /api/v1/restaurants/:id/permanent` removes the shop and every row
+   that belongs to it. Administrator tier only, the shop must already be
+   deactivated, the body must carry the shop's exact name (`confirmName`), and
+   payment or receipt records need `acknowledgeFinancialRecords: true`.
+   `GET /api/v1/restaurants/:id/deletion-preview` shows the row counts first.
+
+The table list is derived from the schema's foreign keys
+(`packages/database/src/services/restaurant-deletion.ts`), not kept by hand,
+and the whole delete is one D1 batch: a row the plan does not know about that
+still points at the restaurant aborts it and nothing is deleted. A new table
+changes the inline snapshot in
+`apps/api/src/__tests__/integration/restaurant-deletion.real.integration.test.ts`;
+read that diff rather than regenerating it blindly. Platform data (customer
+accounts, stored value) is never touched.
+
 ### Disabling a shop or changing its plan by hand
 
 The API caches each restaurant's plan, active flag, module overrides and

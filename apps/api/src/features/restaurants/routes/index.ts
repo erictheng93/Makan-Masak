@@ -26,6 +26,7 @@ import {
 
 import { isValidLoginSlug } from "@makanmasak/database";
 import { RestaurantsService } from "../services/RestaurantsService";
+import { RestaurantDeletionService } from "../services/RestaurantDeletionService";
 import { raiseSearchSyncFailedAlert } from "../../alerts/producers";
 import { restaurantSchemas } from "../schemas/validation";
 import { MarketsService } from "../../markets/services/MarketsService";
@@ -879,6 +880,57 @@ app.delete(
       },
       HTTP_STATUS.OK,
     );
+  },
+);
+
+/** Deleting a shop for good is reserved for the top admin tier. */
+function assertAdministrator(user: { role: number; adminTier?: string }) {
+  if (user.role !== USER_ROLES.ADMIN || user.adminTier !== "administrator") {
+    throw forbidden(
+      "Only administrators can delete a restaurant",
+      "ADMINISTRATOR_REQUIRED",
+    );
+  }
+}
+
+/**
+ * GET /:id/deletion-preview - What a permanent delete would remove
+ * (administrators only). Reads only.
+ */
+app.get(
+  "/:id/deletion-preview",
+  authMiddleware,
+  requireRole([USER_ROLES.ADMIN]),
+  validateParams(commonSchemas.idParam),
+  async (c) => {
+    assertAdministrator(c.get("user"));
+    const { id } = c.get("validatedParams");
+    const data = await new RestaurantDeletionService(c.env).preview(id);
+    return c.json({ success: true, data }, HTTP_STATUS.OK);
+  },
+);
+
+/**
+ * DELETE /:id/permanent - Delete a deactivated restaurant and all its data
+ * (administrators only). Irreversible.
+ * Body: { confirmName, acknowledgeFinancialRecords? }
+ */
+app.delete(
+  "/:id/permanent",
+  authMiddleware,
+  requireRole([USER_ROLES.ADMIN]),
+  validateParams(commonSchemas.idParam),
+  validateBody(restaurantSchemas.permanentDelete),
+  async (c) => {
+    const user = c.get("user");
+    assertAdministrator(user);
+    const { id } = c.get("validatedParams");
+    const data = await new RestaurantDeletionService(c.env).delete(
+      id,
+      c.get("validatedBody"),
+      { id: String(user.id) },
+    );
+    return c.json({ success: true, data }, HTTP_STATUS.OK);
   },
 );
 
