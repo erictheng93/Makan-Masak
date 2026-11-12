@@ -709,3 +709,46 @@ describe("admin auth store — what a rejected login tells the reader", () => {
     expect(result).toEqual({ success: false, error: "auth.loginFailed" });
   });
 });
+
+describe("auth store loginWithOAuth", () => {
+  const owner = { id: "u1", role: UserRole.OWNER, loginSlug: "noodle" } as User;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setActivePinia(createPinia());
+  });
+
+  it("posts the code and stores the session like a password login", async () => {
+    vi.mocked(api.post).mockResolvedValue(
+      axiosResponse({
+        data: { success: true, data: { token: "tok", user: owner } },
+      }),
+    );
+    const store = useAuthStore();
+
+    const result = await store.loginWithOAuth("code-1");
+
+    expect(result).toEqual({ success: true });
+    expect(api.post).toHaveBeenCalledOnce();
+    expect(api.post).toHaveBeenCalledWith("/auth/oauth/complete", {
+      code: "code-1",
+    });
+    expect(authClient.tokens.setTokens).toHaveBeenCalledWith("tok");
+    expect(api.setAuthToken).toHaveBeenCalledWith("tok");
+    expect(store.user).toEqual(expect.objectContaining({ id: "u1" }));
+  });
+
+  it("stores nothing when the code is rejected", async () => {
+    vi.mocked(api.post).mockRejectedValue({ response: { status: 400 } });
+    const store = useAuthStore();
+
+    const result = await store.loginWithOAuth("burned");
+
+    expect(result).toEqual({
+      success: false,
+      error: "auth.oauth.completeFailed",
+    });
+    expect(authClient.tokens.setTokens).not.toHaveBeenCalled();
+    expect(store.user).toBeNull();
+  });
+});

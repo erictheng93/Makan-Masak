@@ -2159,6 +2159,33 @@ const idID: Messages = {
     noResults: "Restoran tidak ditemukan",
   },
   auth: {
+    oauth: {
+      divider: "Atau masuk dengan",
+      google: "Masuk dengan Google",
+      line: "Masuk dengan LINE",
+      providers: { google: "Google", line: "LINE" },
+      signingIn: "Menyelesaikan proses masuk...",
+      completeFailed:
+        "Proses masuk tidak dapat diselesaikan. Silakan coba lagi.",
+      errors: {
+        declined: "Anda membatalkan otorisasi, jadi tidak masuk.",
+        OAUTH_IDENTITY_NOT_LINKED:
+          "Akun ini belum terhubung ke akun pemilik toko mana pun. Masuk dulu dengan nama pengguna dan kata sandi, lalu hubungkan di Pengaturan > Keamanan > Metode masuk.",
+        OAUTH_STATE_INVALID:
+          "Proses masuk sudah kedaluwarsa atau sudah digunakan. Silakan coba lagi.",
+        OAUTH_CALLBACK_INVALID:
+          "Respons masuk tidak lengkap. Silakan coba lagi.",
+        OAUTH_VERIFICATION_FAILED:
+          "Kami tidak dapat memverifikasi identitas Anda. Silakan coba lagi nanti.",
+        OAUTH_IDENTITY_ALREADY_LINKED:
+          "Akun ini sudah terhubung ke akun pemilik toko lain.",
+        OAUTH_PROVIDER_ALREADY_LINKED:
+          "Akun Anda sudah menghubungkan metode ini. Putuskan dulu sebelum menghubungkan lagi.",
+        OAUTH_LINK_NOT_ALLOWED:
+          "Hanya pemilik toko yang dapat menghubungkan metode masuk.",
+        generic: "Gagal masuk. Silakan coba lagi nanti.",
+      },
+    },
     adminLogin: "Masuk Dasbor Admin",
     username: "Nama Pengguna",
     password: "Kata Sandi",
@@ -3204,6 +3231,26 @@ const idID: Messages = {
       duration: "Durasi Tampilan Notifikasi (detik)",
     },
     security: {
+      signInMethods: {
+        title: "Metode masuk",
+        description:
+          "Hubungkan Google atau LINE untuk masuk tanpa mengetik kata sandi.",
+        linkedOn: "Terhubung pada {date}",
+        link: "Hubungkan",
+        unlink: "Putuskan",
+        unlinkTitle: "Putuskan",
+        unlinkMessage:
+          "Putuskan {provider}? Anda tidak akan bisa masuk dengan metode ini lagi.",
+        lastMethod:
+          "Ini satu-satunya metode masuk Anda. Atur kata sandi atau hubungkan metode lain sebelum memutuskan.",
+        linked: "{provider} terhubung",
+        unlinked: "Terputus",
+        loadFailed: "Tidak dapat memuat metode masuk",
+        linkFailed:
+          "Tidak dapat memulai penghubungan. Silakan coba lagi nanti.",
+        unlinkFailed: "Tidak dapat memutuskan. Silakan coba lagi nanti.",
+        none: "Belum ada akun terhubung",
+      },
       changePassword: {
         title: "Ubah kata sandi",
         description:
