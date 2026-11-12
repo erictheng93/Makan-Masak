@@ -550,6 +550,7 @@ import { useI18n } from "@/i18n";
 import { useDateFormatter } from "@/composables/useDateFormatter";
 import { useAuthStore } from "@/stores/auth";
 import { api, unwrapApiData } from "@/services/api";
+import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import type {
   Order as ApiOrder,
   OrderItem as ApiOrderItem,
@@ -603,7 +604,10 @@ let timeInterval: NodeJS.Timeout | null = null;
 // ponytail: polls every 15s because ServiceLayout opens no realtime socket;
 // subscribe to ORDER_STATUS_UPDATE instead once it does.
 const ORDER_POLL_MS = 15_000;
-let orderPoll: NodeJS.Timeout | null = null;
+const orderPoller = createVisibilityAwarePoller({
+  intervalMs: ORDER_POLL_MS,
+  onTick: () => refreshOrders(),
+});
 
 // 訂單數據 - fetched from API
 const orders = ref<ServiceOrder[]>([]);
@@ -1064,13 +1068,13 @@ onMounted(() => {
   timeInterval = setInterval(updateCurrentTime, 1000);
 
   // Fetch orders from API
-  orderPoll = setInterval(() => void refreshOrders(), ORDER_POLL_MS);
+  orderPoller.start();
   void refreshOrders();
 });
 
 onUnmounted(() => {
   if (timeInterval) clearInterval(timeInterval);
-  if (orderPoll) clearInterval(orderPoll);
+  orderPoller.stop();
 });
 </script>
 

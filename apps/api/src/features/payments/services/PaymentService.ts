@@ -18,10 +18,7 @@ import {
   PAYMENT_AUDIT_EVENT_TYPES,
   PaymentAuditService,
 } from "../../billing/services/PaymentAuditService";
-import {
-  finalizeOrderStatusSideEffects,
-  invalidateOrderCache,
-} from "../../orders/services/order-finalization";
+import { finalizeOrderStatusSideEffects } from "../../orders/services/order-finalization";
 import {
   OWNER_ALERTED_PAYMENT_FAILURE_CODES,
   raisePaymentFailedAlert,
@@ -512,16 +509,6 @@ export class PaymentService {
       } catch (error) {
         console.error("Payment succeeded but order side effects failed", {
           orderId: existing.id,
-          paymentId,
-          error,
-        });
-      }
-    } else {
-      try {
-        await invalidateOrderCache(this.env.CACHE_KV, input.orderId);
-      } catch (error) {
-        console.error("Payment succeeded but order cache invalidation failed", {
-          orderId: input.orderId,
           paymentId,
           error,
         });

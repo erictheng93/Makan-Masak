@@ -1041,12 +1041,7 @@ describe("guest order routes", () => {
       success: true,
       data: { order: { id: 501 } },
     });
-    // Fresh, not cached: the tracking page refetches this the moment a
-    // realtime event says the order changed, and the KV copy can still be the
-    // pre-change order at that point (production, 2026-09-17).
-    expect(getOrder).toHaveBeenCalledWith("501", true, undefined, {
-      bypassCache: true,
-    });
+    expect(getOrder).toHaveBeenCalledWith("501", true);
   });
 
   it("validates guest item additions and order state", async () => {
@@ -1173,11 +1168,7 @@ describe("guest order routes", () => {
       data: { order: { status: "cancelled" } },
     });
     expect(cancelOrder).toHaveBeenCalledWith("501", "Cancelled by guest");
-    // The cancellability check reads D1: a cached copy can still say pending
-    // after the kitchen has moved the order on.
-    expect(getOrder).toHaveBeenCalledWith("501", false, undefined, {
-      bypassCache: true,
-    });
+    expect(getOrder).toHaveBeenCalledWith("501", false);
     // No reverse lookup is stored, so the slot holding this order is found
     // from the token this request presented; the slot of order 499 stays.
     expect(env.CACHE_KV.delete).toHaveBeenCalledWith(

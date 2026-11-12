@@ -150,4 +150,29 @@ describe("createVisibilityAwarePoller", () => {
     poller.tick();
     expect(onTick).toHaveBeenCalledTimes(1);
   });
+
+  it("drops to the live interval while something else keeps the data current", () => {
+    const onTick = vi.fn();
+    let live = true;
+    const poller = createVisibilityAwarePoller({
+      intervalMs: 1000,
+      liveIntervalMs: 10_000,
+      isLive: () => live,
+      onTick,
+    });
+
+    poller.start();
+    vi.advanceTimersByTime(9000);
+    expect(onTick).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(1000);
+    expect(onTick).toHaveBeenCalledTimes(1);
+
+    // Socket drops: back to every tick.
+    live = false;
+    vi.advanceTimersByTime(2000);
+    expect(onTick).toHaveBeenCalledTimes(3);
+
+    poller.stop();
+  });
 });

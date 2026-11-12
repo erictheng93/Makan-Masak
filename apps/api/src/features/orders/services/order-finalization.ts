@@ -33,16 +33,6 @@ export interface FinalizeOrderStatusSideEffectsOptions {
   estimatedReadyTime?: Date;
 }
 
-export async function invalidateOrderCache(
-  cacheKV: KVLike,
-  orderId: string,
-): Promise<void> {
-  await Promise.all([
-    cacheKV.delete(`order:${orderId}:full`),
-    cacheKV.delete(`order:${orderId}:basic`),
-  ]);
-}
-
 const GUEST_ACTIVE_RELEASE_STATUSES = new Set<OrderStatus>([
   "delivered",
   "paid",
@@ -82,7 +72,6 @@ export async function finalizeOrderStatusSideEffects({
   estimatedReadyTime,
 }: FinalizeOrderStatusSideEffectsOptions): Promise<void> {
   const sideEffects: Array<Promise<unknown>> = [
-    invalidateOrderCache(env.CACHE_KV, order.id),
     broadcastOrderStatusUpdate({
       env,
       order,

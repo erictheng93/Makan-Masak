@@ -306,7 +306,8 @@ describe("OrdersService realtime broadcasts", () => {
       }),
     );
     const deferred: Promise<unknown>[] = [];
-    const service = new OrdersService(createEnv() as never);
+    const env = createEnv();
+    const service = new OrdersService(env as never);
 
     const order = await service.createOrder(
       {
@@ -326,6 +327,12 @@ describe("OrdersService realtime broadcasts", () => {
     );
     releaseBroadcast();
     await deferred[0];
+    // Orders are not copied into KV: its daily write quota is too small.
+    expect(env.CACHE_KV.put).not.toHaveBeenCalledWith(
+      expect.stringMatching(/^order:/),
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
   it("carries the table number into the new-order event so the admin badge can render", async () => {
@@ -980,25 +987,6 @@ describe("OrdersService workflows", () => {
     },
   );
 
-  it("enforces cached order restaurant access before returning data", async () => {
-    const env = createEnv({
-      cacheGet: async (key) =>
-        key === "order:42:full"
-          ? createOrder({ restaurantId: "restaurant-2" })
-          : null,
-    });
-    const service = new OrdersService(env as never);
-
-    await expect(
-      service.getOrder("42", true, {
-        userId: "10",
-        userRole: 2,
-        userRestaurantId: "restaurant-1",
-      }),
-    ).rejects.toMatchObject({ code: "FORBIDDEN" });
-    expect(getBaseOrder).not.toHaveBeenCalled();
-  });
-
   it("denies an unassigned tenant role access to an order", async () => {
     const service = new OrdersService(createEnv() as never);
     getBaseOrder.mockResolvedValue(
@@ -1013,7 +1001,7 @@ describe("OrdersService workflows", () => {
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
-  it("updates order status with version guard, cache invalidation, and realtime event", async () => {
+  it("updates order status with version guard and realtime event", async () => {
     const env = createEnv();
     const previous = createOrder({ status: "confirmed", version: 7 });
     const updated = createOrder({ status: "preparing", version: 8 });
@@ -1039,8 +1027,6 @@ describe("OrdersService workflows", () => {
       notes: "started",
       expectedVersion: 7,
     });
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith("order:42:full");
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith("order:42:basic");
     expect(broadcastOrderStatusUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         type: RealtimeEventType.ORDER_STATUS_UPDATE,
@@ -1158,17 +1144,6 @@ describe("OrdersService workflows", () => {
     const env = createEnv();
     const service = new OrdersService(env as never);
 
-    const cachedOrder = createOrder({ id: "42" });
-    const cachedEnv = createEnv({
-      cacheGet: async (key) => (key === "order:42:basic" ? cachedOrder : null),
-    });
-    await expect(
-      new OrdersService(cachedEnv as never).getOrder("42", false, {
-        userId: "1",
-        userRole: 0,
-      }),
-    ).resolves.toBe(cachedOrder);
-
     getBaseOrder.mockResolvedValueOnce(null);
     await expect(service.deleteOrder("404", "10")).resolves.toBe(false);
 
@@ -1181,8 +1156,6 @@ describe("OrdersService workflows", () => {
     cancelBaseOrder.mockResolvedValueOnce(createOrder({ status: "cancelled" }));
     await expect(service.deleteOrder("42", "10")).resolves.toBe(true);
     expect(cancelBaseOrder).toHaveBeenCalledWith("42", "Order deleted");
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith("order:42:full");
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith("order:42:basic");
 
     updateBaseOrderItemStatus.mockRejectedValueOnce(
       new Error("Order item status conflict: stale version"),
@@ -1192,20 +1165,17 @@ describe("OrdersService workflows", () => {
     });
   });
 
-  it("drops the cached order when an item moves, so the detail read is not stale", async () => {
-    const env = createEnv();
-    const service = new OrdersService(env as never);
+  it("passes an item status change to the base service", async () => {
+    const service = new OrdersService(createEnv() as never);
     updateBaseOrderItemStatus.mockResolvedValueOnce(undefined);
 
-    await service.updateItemStatus(501, "ready", undefined, "42");
+    await service.updateItemStatus(501, "ready");
 
     expect(updateBaseOrderItemStatus).toHaveBeenCalledWith(
       501,
       "ready",
       undefined,
     );
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith("order:42:full");
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith("order:42:basic");
   });
 
   it("covers status history and search fallback paths", async () => {
@@ -1746,11 +1716,6 @@ describe("OrdersService workflows", () => {
     expect(receipt.timestamps.deliveredAt).toEqual(
       new Date("2026-06-07T01:28:00.000Z"),
     );
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
-      "order:42:full",
-      expect.any(String),
-      { expirationTtl: 300 },
-    );
   });
 
   it("generates receipts with fallback restaurant, table, item, and payment fields", async () => {
@@ -1849,8 +1814,6 @@ describe("OrdersService workflows", () => {
       }),
     );
     expect(broadcastNewOrder).not.toHaveBeenCalled();
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith("order:42:full");
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith("order:42:basic");
   });
 
   /**
@@ -2013,7 +1976,6 @@ describe("OrdersService workflows", () => {
         }),
       }),
     );
-    expect(env.CACHE_KV.delete).toHaveBeenCalledWith("order:42:full");
   });
 
   it("refuses a caller from another restaurant before touching the order", async () => {
@@ -2446,34 +2408,21 @@ describe("OrdersService order reads", () => {
     getBaseOrder.mockReset();
   });
 
-  it("serves a cached order when one is present", async () => {
-    const cached = createOrder({ id: "42", status: "pending" });
-    const env = createEnv({
-      cacheGet: async (key) => (key === "order:42:full" ? cached : null),
-    });
-    const service = new OrdersService(env as never);
-
-    await expect(service.getOrder("42")).resolves.toEqual(cached);
-    expect(getBaseOrder).not.toHaveBeenCalled();
-  });
-
-  // A diner's tracking page refetches when a realtime event arrives. The event
-  // is sent alongside the KV delete, not after it, and KV deletes are
-  // eventually consistent across locations, so the cache can still hold the
-  // pre-change order. Reading it there reverted a cancelled order to pending.
-  it("reads the database and leaves the cache alone when asked to bypass it", async () => {
-    const stale = createOrder({ id: "42", status: "pending" });
+  // A KV copy reverted a cancelled order to pending on the tracking page, and
+  // each one cost KV writes the Free plan caps at 1,000 a day.
+  it("reads the database and never touches KV", async () => {
     const fresh = createOrder({ id: "42", status: "cancelled" });
     const env = createEnv({
-      cacheGet: async (key) => (key === "order:42:full" ? stale : null),
+      cacheGet: async () => createOrder({ id: "42", status: "pending" }),
     });
     getBaseOrder.mockResolvedValue(fresh);
     const service = new OrdersService(env as never);
 
-    await expect(
-      service.getOrder("42", true, undefined, { bypassCache: true }),
-    ).resolves.toMatchObject({ status: "cancelled" });
-    expect(env.CACHE_KV.get).not.toHaveBeenCalledWith("order:42:full", "json");
+    await expect(service.getOrder("42")).resolves.toMatchObject({
+      status: "cancelled",
+    });
+    expect(getBaseOrder).toHaveBeenCalledWith("42");
+    expect(env.CACHE_KV.get).not.toHaveBeenCalled();
     expect(env.CACHE_KV.put).not.toHaveBeenCalled();
   });
 });

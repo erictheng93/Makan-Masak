@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { orders, paymentTransactions } from "@makanmasak/database";
+import {
+  orders,
+  paymentTransactions,
+  RealtimeBroadcastService,
+} from "@makanmasak/database";
 import { createSelectFixtureDb } from "@makanmasak/database/testing";
 import type { KVNamespace } from "@cloudflare/workers-types";
 import type { Env } from "../../../types/env";
@@ -1083,7 +1087,7 @@ describe("PaymentService", () => {
     });
   });
 
-  it("invalidates order cache and broadcasts paid status when payment closes the order", async () => {
+  it("broadcasts paid status when payment closes the order", async () => {
     const { db } = createD1();
     const setup = envWithRealtime(db);
     queueOrderRows([
@@ -1114,8 +1118,6 @@ describe("PaymentService", () => {
       },
     );
 
-    expect(setup.cacheKV.delete).toHaveBeenCalledWith("order:order-101:full");
-    expect(setup.cacheKV.delete).toHaveBeenCalledWith("order:order-101:basic");
     // kitchen + admin rooms (admin added in bug-inventory fix #1), plus the
     // per-order customer room that 2b894649 added so the diner's order
     // tracking page updates on payment.
@@ -1143,7 +1145,10 @@ describe("PaymentService", () => {
   it("does not fail a committed payment when close-order side effects fail", async () => {
     const { db } = createD1();
     const setup = envWithRealtime(db);
-    setup.cacheKV.delete.mockRejectedValueOnce(new Error("kv unavailable"));
+    vi.spyOn(
+      RealtimeBroadcastService.prototype,
+      "broadcastOrderStatusUpdate",
+    ).mockRejectedValueOnce(new Error("realtime unavailable"));
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     queueOrderRows([[order()]]);
     mockOrderUpdate([{ status: "paid", paymentStatus: "paid" }]);

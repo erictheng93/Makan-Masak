@@ -286,6 +286,7 @@ import { useI18n } from "@/i18n";
 import { useAuthStore } from "@/stores/auth";
 import { useDashboardStore } from "@/stores/dashboard";
 import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
+import { useLiveOrderRefresh } from "@/composables/useLiveOrderRefresh";
 import type { ChartData, TopMenuItem } from "@/types";
 import { useDateFormatter } from "@/composables/useDateFormatter";
 import {
@@ -431,8 +432,12 @@ const navigateToOrder = () => {
 // The refresh used to live in the dashboard store and reloaded only the stat
 // cards, leaving both charts as first loaded; it also kept running in a
 // background tab. Poll the same refreshData the button uses instead.
+// These numbers only move when an order does, so while the socket is up order
+// events drive the refresh and the poll is a 5-minute safety net.
+const { isLive } = useLiveOrderRefresh(() => refreshData());
 const dashboardPoller = createVisibilityAwarePoller({
   intervalMs: 30_000,
+  isLive,
   onTick: () => {
     if (isLoading.value) return;
     return refreshData();

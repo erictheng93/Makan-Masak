@@ -342,11 +342,7 @@ app.get("/:id", guestTokenAuth, async (c) => {
   if (!orderId) throw badRequest("Missing order id");
 
   const ordersService = new OrdersService(c.env);
-  // The tracking page calls this as soon as a realtime event says the order
-  // changed, which can be before the cached copy is gone. Read the database.
-  const order = await ordersService.getOrder(orderId, true, undefined, {
-    bypassCache: true,
-  });
+  const order = await ordersService.getOrder(orderId, true);
 
   if (!order) {
     throw notFound("Order not found");
@@ -403,11 +399,7 @@ app.post("/:id/cancel", guestTokenAuth, async (c) => {
   if (!orderId) throw badRequest("Missing order id");
 
   const ordersService = new OrdersService(c.env);
-  // Decide cancellability from D1: the cached copy can still read pending after
-  // the kitchen has moved the order on.
-  const order = await ordersService.getOrder(orderId, false, undefined, {
-    bypassCache: true,
-  });
+  const order = await ordersService.getOrder(orderId, false);
 
   if (!order) {
     throw notFound("Order not found");

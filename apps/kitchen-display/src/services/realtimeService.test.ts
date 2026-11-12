@@ -20,6 +20,7 @@ class MockWebSocket {
   onerror: ((event: Event) => void) | null = null;
   onclose: ((event: CloseEvent) => void) | null = null;
   close = vi.fn();
+  send = vi.fn();
 
   constructor(public readonly url: string) {
     MockWebSocket.instances.push(this);
@@ -100,5 +101,24 @@ describe("KitchenRealtimeService reconnect", () => {
     // random() = 0 is the low edge of the jitter: half of each 3s/6s/12s step.
     const delays = setTimeoutSpy.mock.calls.map(([, ms]) => ms);
     expect(delays).toEqual([1_500, 3_000, 6_000]);
+  });
+
+  it("closes a socket that stops answering heartbeats", async () => {
+    const service = new KitchenRealtimeService();
+    await service.connect("r1");
+    const ws = MockWebSocket.instances.at(-1)!;
+    ws.open();
+
+    vi.advanceTimersByTime(30_000);
+    expect(ws.send).toHaveBeenCalledWith("ping");
+    ws.onmessage?.({ data: "pong" } as MessageEvent);
+    vi.advanceTimersByTime(10_000);
+    expect(ws.close).not.toHaveBeenCalled();
+
+    // Next ping goes unanswered.
+    vi.advanceTimersByTime(30_000);
+    expect(ws.close).toHaveBeenCalledWith(4000, expect.any(String));
+
+    service.disconnect();
   });
 });

@@ -709,6 +709,7 @@ import { useCurrency } from "@/composables/useCurrency";
 import { useDateFormatter } from "@/composables/useDateFormatter";
 import { useOrderStore } from "@/stores/order";
 import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
+import { useLiveOrderRefresh } from "@/composables/useLiveOrderRefresh";
 import { useVirtualScroll } from "@/composables/useVirtualScroll";
 import { useConfirmModal } from "@/composables/useConfirmModal";
 import OrderItemsEditor from "@/components/orders/OrderItemsEditor.vue";
@@ -1122,13 +1123,19 @@ const getTypeText = (type: string) => {
   return texts[type] || type;
 };
 
-// Realtime keeps the list current while the socket is up; this covers a
-// dropped socket and the stat cards, which no realtime event updates.
+// While the socket is up, order events drive the refetch and the poller drops
+// to a 60s safety net (a failed broadcast leaves the socket looking healthy);
+// with the socket down it polls every 30s as before.
+const refetchOrdersAndStats = () =>
+  Promise.all([orderStore.refetchOrders(), refreshOrderStats()]);
+const { isLive } = useLiveOrderRefresh(refetchOrdersAndStats);
 const ordersPoller = createVisibilityAwarePoller({
   intervalMs: 30_000,
+  isLive,
+  liveIntervalMs: 60_000,
   onTick: async () => {
     if (isLoading.value) return;
-    await Promise.all([orderStore.refetchOrders(), refreshOrderStats()]);
+    await refetchOrdersAndStats();
   },
 });
 
