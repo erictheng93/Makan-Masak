@@ -5,7 +5,7 @@
  * provider's email. An identity exists because a signed-in owner attached it.
  */
 
-import { and, eq, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import {
   createDatabase,
   userAuthIdentities,
@@ -58,6 +58,27 @@ export async function findLiveIdentity(
     )
     .limit(1);
   return row ?? null;
+}
+
+/** Whether `identityId` is still a live link to `userId`, and that user is an owner. */
+export async function isLiveOwnerIdentity(
+  db: Db,
+  identityId: string,
+  userId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ role: users.role })
+    .from(userAuthIdentities)
+    .innerJoin(users, eq(users.id, userAuthIdentities.userId))
+    .where(
+      and(
+        eq(userAuthIdentities.id, identityId),
+        eq(userAuthIdentities.userId, userId),
+        live,
+      ),
+    )
+    .limit(1);
+  return row?.role === USER_ROLES.OWNER;
 }
 
 export async function touchLastUsed(db: Db, id: string, now: number) {
@@ -195,33 +216,38 @@ export async function revokeIdentity(
     .limit(1);
   if (!target) throw notFound("Sign-in method not found", "IDENTITY_NOT_FOUND");
 
-  const [{ others }] = await db
-    .select({ others: sql<number>`COUNT(*)` })
-    .from(userAuthIdentities)
-    .where(
-      and(
-        eq(userAuthIdentities.userId, userId),
-        live,
-        ne(userAuthIdentities.id, identityId),
-      ),
-    );
-  if (!others) {
-    const [user] = await db
-      .select({ passwordSetAt: users.passwordSetAt })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-    if (!user?.passwordSetAt) {
-      throw conflict(
-        "Cannot remove the only remaining sign-in method",
-        "LAST_AUTH_METHOD",
-      );
-    }
-  }
-
-  await db
+  // One statement decides and writes. Checking first and revoking second let
+  // two concurrent unlinks each see the other identity as still live and both
+  // succeed, leaving the owner with no way in.
+  const revoked = await db
     .update(userAuthIdentities)
     .set({ revokedAt: new Date(now) })
-    .where(and(eq(userAuthIdentities.id, identityId), live));
+    .where(
+      and(
+        eq(userAuthIdentities.id, identityId),
+        eq(userAuthIdentities.userId, userId),
+        live,
+        sql`(
+          EXISTS (
+            SELECT 1 FROM ${userAuthIdentities} AS other
+             WHERE other.user_id = ${userId}
+               AND other.revoked_at_ms IS NULL
+               AND other.id <> ${identityId}
+          )
+          OR EXISTS (
+            SELECT 1 FROM ${users}
+             WHERE ${users.id} = ${userId}
+               AND ${users.passwordSetAt} IS NOT NULL
+          )
+        )`,
+      ),
+    )
+    .returning({ id: userAuthIdentities.id });
+  if (revoked.length === 0) {
+    throw conflict(
+      "Cannot remove the only remaining sign-in method",
+      "LAST_AUTH_METHOD",
+    );
+  }
   return { provider: target.provider };
 }

@@ -246,6 +246,34 @@ describe("staff OAuth identities", () => {
       await expect(revokeIdentity(db, "a", id, 20)).resolves.toBeDefined();
     });
 
+    it("never lets two concurrent unlinks remove both sign-in methods", async () => {
+      const { sqlite, db, id } = await ownerWithGoogle(null);
+      const line = await linkIdentity(db, {
+        userId: "a",
+        provider: "line",
+        providerUid: "line-1",
+        profile,
+        now: 11,
+      });
+
+      const results = await Promise.allSettled([
+        revokeIdentity(db, "a", id, 20),
+        revokeIdentity(db, "a", line.id, 20),
+      ]);
+
+      expect(results.map((r) => r.status).sort()).toEqual([
+        "fulfilled",
+        "rejected",
+      ]);
+      expect(
+        sqlite
+          .prepare(
+            "SELECT COUNT(*) AS n FROM user_auth_identities WHERE revoked_at_ms IS NULL",
+          )
+          .get(),
+      ).toEqual({ n: 1 });
+    });
+
     it("cannot touch another user's identity", async () => {
       const { sqlite, db, id } = await ownerWithGoogle(5);
       insertUser(sqlite, { id: "b", username: "b" });

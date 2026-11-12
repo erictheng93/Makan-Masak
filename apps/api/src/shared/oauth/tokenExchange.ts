@@ -59,6 +59,12 @@ export interface ExchangeCodeOptions {
   provider: CustomerOAuthProvider;
   code: string;
   codeVerifier: string;
+  /**
+   * The redirect URI the authorize request used. Providers reject the exchange
+   * unless it matches byte for byte, so a flow with its own callback (staff)
+   * must pass it. Defaults to the customer callback.
+   */
+  redirectUri?: string;
   cache?: KVNamespace;
   fetchImpl?: typeof fetch;
 }
@@ -68,6 +74,7 @@ export async function exchangeCodeForIdToken({
   provider,
   code,
   codeVerifier,
+  redirectUri,
   cache,
   fetchImpl = fetch,
 }: ExchangeCodeOptions): Promise<TokenExchangeResult> {
@@ -81,7 +88,7 @@ export async function exchangeCodeForIdToken({
     grant_type: "authorization_code",
     code,
     // Must match the authorize request byte for byte, hence the shared builder.
-    redirect_uri: buildRedirectUri(env, provider),
+    redirect_uri: redirectUri ?? buildRedirectUri(env, provider),
     client_id: clientId,
     client_secret: await resolveClientSecret(env, provider, cache),
     code_verifier: codeVerifier,

@@ -252,6 +252,7 @@ export class AuthService extends BaseService {
           username: users.username,
           fullName: users.fullName,
           passwordHash: users.passwordHash,
+          passwordSetAt: users.passwordSetAt,
           role: users.role,
           restaurantId: users.restaurantId,
           adminTier: users.adminTier,
@@ -327,6 +328,16 @@ export class AuthService extends BaseService {
           error: "Invalid username or password",
           failedAccountId: user.id,
         };
+      }
+
+      // A password that just verified is a usable one. The 0044 backfill could
+      // only infer that from a recorded login, so accounts that had never
+      // signed in are caught here. Deliberately not on the OAuth path.
+      if (!user.passwordSetAt) {
+        await this.db
+          .update(users)
+          .set({ passwordSetAt: new Date() })
+          .where(eq(users.id, user.id));
       }
 
       return await this.issueLoginSession(user, data);

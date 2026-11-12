@@ -53,6 +53,7 @@ import { exchangeCodeForIdToken } from "../../../shared/oauth/tokenExchange";
 import { verifyIdToken } from "../../../shared/oauth/idToken";
 import {
   findLiveIdentity,
+  isLiveOwnerIdentity,
   isStaffOAuthProvider,
   linkIdentity,
   listIdentities,
@@ -72,6 +73,8 @@ const COMPLETE_COOKIE = "staff_oauth_complete";
 
 interface PendingSignIn {
   userId: string;
+  /** Re-checked at completion: unlinking must stop a pending sign-in too. */
+  identityId: string;
   provider: StaffOAuthProvider;
   /**
    * SHA-256 of the value in COMPLETE_COOKIE, set on the browser the callback
@@ -135,9 +138,9 @@ function adminOrigin(env: Env): string {
 
 /**
  * Reduce `redirectTo` to a path on the admin origin. A same-origin absolute URL
- * is accepted for convenience; any other origin, a protocol-relative `//host`
- * or a backslash trick is rejected rather than quietly dropped, so a bad link
- * is noticed instead of landing somewhere unexpected.
+ * is accepted for convenience; anything that resolves to another origin is
+ * rejected rather than quietly dropped, so a bad link is noticed instead of
+ * landing somewhere unexpected.
  */
 function resolveRedirectPath(env: Env, raw: string | undefined): string {
   const value = raw?.trim();
@@ -147,17 +150,23 @@ function resolveRedirectPath(env: Env, raw: string | undefined): string {
       "redirectTo must stay on the admin dashboard",
       "REDIRECT_INVALID",
     );
-  if (value.startsWith("/")) {
-    if (value.startsWith("//") || value.includes("\\")) throw bad();
-    return value;
-  }
+  // Judge the URL the browser will actually follow, not the raw string: the
+  // parser drops tabs and newlines, so "/\t/evil.example" is "//evil.example".
+  const origin = adminOrigin(env);
   let url: URL;
   try {
-    url = new URL(value);
+    url = new URL(value, origin);
   } catch {
     throw bad();
   }
-  if (url.origin !== adminOrigin(env)) throw bad();
+  if (
+    url.origin !== origin ||
+    value.includes("\\") ||
+    // "/.//host" keeps the admin origin here but resolves to //host next time.
+    url.pathname.startsWith("//")
+  ) {
+    throw bad();
+  }
   return `${url.pathname}${url.search}`;
 }
 
@@ -293,7 +302,9 @@ export function createStaffOAuthRoutes(
     const origin = adminOrigin(c.env);
 
     const back = (params: Record<string, string>, path = "/") => {
-      const url = new URL(path, origin);
+      let url = new URL(path, origin);
+      // Last line of defence: never leave the admin origin, whatever `path` is.
+      if (url.origin !== origin) url = new URL("/", origin);
       for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
       return c.redirect(url.toString(), 302);
     };
@@ -326,6 +337,7 @@ export function createStaffOAuthRoutes(
         provider,
         code,
         codeVerifier: requestState.codeVerifier,
+        redirectUri: buildRedirectUri(env, provider, "staff"),
         cache: c.env.CACHE_KV,
       });
       const verified = await verifyIdToken({
@@ -382,6 +394,7 @@ export function createStaffOAuthRoutes(
       });
       const pending: PendingSignIn = {
         userId: identity.userId,
+        identityId: identity.id,
         provider,
         bindingHash: await deriveCodeChallenge(completeNonce),
       };
@@ -423,6 +436,19 @@ export function createStaffOAuthRoutes(
       throw badRequest(
         "Sign-in result expired or already used",
         "OAUTH_RESULT_INVALID",
+      );
+    }
+
+    if (
+      !(await isLiveOwnerIdentity(
+        getDb(c.env),
+        pending.identityId,
+        pending.userId,
+      ))
+    ) {
+      throw unauthorized(
+        "This sign-in method is no longer linked",
+        "OAUTH_IDENTITY_NOT_LINKED",
       );
     }
 

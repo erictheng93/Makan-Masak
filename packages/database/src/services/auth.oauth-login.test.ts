@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
+import bcrypt from "bcryptjs";
 import { describe, expect, it } from "vitest";
 import { AuthService } from "./auth";
 
@@ -8,6 +9,7 @@ const MIGRATIONS = [
   "0000_baseline_strict.sql",
   "0040_users_admin_tier.sql",
   "0041_restaurant_login_slug.sql",
+  "0044_user_auth_identities.sql",
 ];
 
 /** Just enough of the D1 binding for drizzle's d1 driver, over better-sqlite3. */
@@ -136,5 +138,41 @@ describe("AuthService.loginVerifiedUser", () => {
     );
     expect(result.tokens).toBeUndefined();
     expect(sessions(sqlite)).toBe(0);
+  });
+});
+
+describe("AuthService.login", () => {
+  it("records that the password is usable the first time it verifies", async () => {
+    const { sqlite, service } = setup();
+    // Cost 4: this test is about the marker, not the hash strength.
+    sqlite
+      .prepare("UPDATE users SET password_hash = ? WHERE id = 'u1'")
+      .run(await bcrypt.hash("correct horse", 4));
+    const marker = () =>
+      (
+        sqlite
+          .prepare("SELECT password_set_at_ms AS at FROM users WHERE id = 'u1'")
+          .get() as { at: number | null }
+      ).at;
+    expect(marker()).toBeNull();
+
+    const wrong = await service.login({
+      username: "owner",
+      password: "wrong",
+    } as never);
+    expect(wrong.success).toBe(false);
+    expect(marker()).toBeNull();
+
+    const ok = await service.login({
+      username: "owner",
+      password: "correct horse",
+    } as never);
+    expect(ok.success).toBe(true);
+    expect(marker()).toEqual(expect.any(Number));
+
+    // The OAuth path proves nothing about a password and must not set it.
+    sqlite.prepare("UPDATE users SET password_set_at_ms = NULL").run();
+    await service.loginVerifiedUser("u1", {});
+    expect(marker()).toBeNull();
   });
 });

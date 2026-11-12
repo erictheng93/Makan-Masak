@@ -296,6 +296,9 @@ describe("start", () => {
     "https://evil.example.test/steal",
     "//evil.example.test",
     "/\\evil.example.test",
+    // The URL parser drops tabs, so this is //evil.example.test to a browser.
+    "/\t/evil.example.test",
+    "/.//evil.example.test",
     "javascript:alert(1)",
   ])("rejects redirectTo %s", async (target) => {
     const h = buildHarness();
@@ -685,5 +688,51 @@ describe("identities", () => {
     const retry = await send(completeCookie(res));
     expect(retry.status).toBe(400);
     expect(h.auth.loginWithOAuth).not.toHaveBeenCalled();
+  });
+
+  it("exchanges the code with the staff callback as redirect_uri", async () => {
+    const h = buildHarness();
+    insertUser(h.sqlite, { id: "owner" });
+    const { fetchImpl } = await h.signInAs("any-sub");
+
+    const tokenCall = fetchImpl.mock.calls.find(
+      ([url]) => url === OAUTH_PROVIDERS.google.tokenUrl,
+    ) as unknown as [string, { body: string }];
+    // Providers reject an exchange whose redirect_uri differs from the one the
+    // authorize request used; the customer callback path would be refused.
+    expect(new URLSearchParams(tokenCall[1].body).get("redirect_uri")).toMatch(
+      /\/api\/v1\/auth\/oauth\/google\/callback$/,
+    );
+  });
+
+  it("refuses a pending sign-in once the provider has been unlinked", async () => {
+    const h = buildHarness();
+    insertUser(h.sqlite, { id: "owner" });
+    h.sqlite
+      .prepare(
+        `INSERT INTO user_auth_identities (id, user_id, provider, provider_uid, created_at_ms)
+         VALUES ('i1', 'owner', 'google', 'owner-sub', 1)`,
+      )
+      .run();
+    const { res } = await h.signInAs("owner-sub");
+    const code = h.outcome(res).params.oauth_code;
+
+    h.sqlite
+      .prepare(
+        "UPDATE user_auth_identities SET revoked_at_ms = 2 WHERE id = 'i1'",
+      )
+      .run();
+
+    const complete = await h.request("/oauth/complete", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        cookie: completeCookie(res),
+      },
+      body: JSON.stringify({ code }),
+    });
+    expect(complete.status).toBe(401);
+    expect(h.auth.loginWithOAuth).not.toHaveBeenCalled();
+    expect(h.setRefreshCookie).not.toHaveBeenCalled();
   });
 });
