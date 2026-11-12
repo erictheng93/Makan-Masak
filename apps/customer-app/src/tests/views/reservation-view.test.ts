@@ -270,4 +270,52 @@ describe("ReservationView", () => {
     );
     expect(wrapper.text()).toContain("serviceBooking.cancelSuccess");
   });
+
+  // The customer-real E2E caught this: filling the date and party size each
+  // fire @change and "check slots" fires a third load; a slot picked while a
+  // later load was in flight was reset to the first slot, and the table was
+  // booked for 18:00 instead of the 19:30 the diner chose.
+  it("keeps a slot the diner picked while a reload was in flight", async () => {
+    const open = (time: string) => ({
+      time,
+      available: true,
+      remainingCapacity: 8,
+      remainingTables: 2,
+      occupancyRate: 0,
+    });
+    const twoOpenSlots = {
+      date: "2026-09-23",
+      partySize: 1,
+      slots: [open("18:00"), open("19:30")],
+    };
+    vi.mocked(reservationsApi.getAvailability).mockResolvedValue(twoOpenSlots);
+    const wrapper = mountView();
+    await flushPromises();
+
+    let finishReload!: (value: typeof twoOpenSlots) => void;
+    vi.mocked(reservationsApi.getAvailability).mockReturnValueOnce(
+      new Promise((resolve) => (finishReload = resolve)),
+    );
+    await wrapper
+      .get('[data-testid="reservation-load-slots"]')
+      .trigger("click");
+    await wrapper
+      .findAll('[data-testid="reservation-slot"]')[1]
+      .trigger("click");
+    finishReload(twoOpenSlots);
+    await flushPromises();
+
+    await wrapper.get('[data-testid="reservation-name"]').setValue("Ada");
+    await wrapper
+      .get('[data-testid="reservation-phone"]')
+      .setValue("0912345678");
+    await wrapper.get('[data-testid="reservation-create"]').trigger("submit");
+    await flushPromises();
+
+    expect(reservationsApi.create).toHaveBeenCalledOnce();
+    expect(reservationsApi.create).toHaveBeenCalledWith(
+      expect.objectContaining({ reservationTime: "19:30" }),
+      expect.any(String),
+    );
+  });
 });
