@@ -71,6 +71,26 @@ describe("orders store realtime events", () => {
     });
   });
 
+  it("uses the event's deliveryInfo.type for a table-less dine-in order", () => {
+    const store = useOrdersStore();
+
+    store.handleSSEEvent({
+      type: "new_order",
+      eventId: "evt-dine-in",
+      timestamp: 1780308000000,
+      restaurantId: "restaurant-1",
+      data: {
+        orderId: 1003,
+        orderNumber: "A003",
+        items: [],
+        totalAmount: 0,
+        deliveryInfo: { type: "dine_in" },
+      },
+    } as unknown as KitchenSSEEvent);
+
+    expect(store.orders[0]?.deliveryInfo?.type).toBe("dine_in");
+  });
+
   it("keeps a pending NEW_ORDER off the board and refetches once it is confirmed", () => {
     const store = useOrdersStore();
 

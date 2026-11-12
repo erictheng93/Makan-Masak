@@ -62,6 +62,15 @@ const timestampToIso = (timestamp: KitchenSSEEvent["timestamp"]) => {
     : date.toISOString();
 };
 
+const eventDeliveryType = (
+  info: unknown,
+): "dine_in" | "takeaway" | "delivery" | undefined => {
+  const type = isRecord(info) ? info.type : undefined;
+  return type === "dine_in" || type === "takeaway" || type === "delivery"
+    ? type
+    : undefined;
+};
+
 const buildKitchenOrderFromRealtimeData = (
   data: Record<string, unknown>,
   timestamp: KitchenSSEEvent["timestamp"],
@@ -104,7 +113,11 @@ const buildKitchenOrderFromRealtimeData = (
     // were already on the board, so "confirmed" stays the fallback.
     status: isOrderStatus(data.status) ? data.status : "confirmed",
     deliveryInfo: {
-      type: Number.isFinite(tableId) ? "dine_in" : "takeaway",
+      // Table-based guess is only the fallback for servers that predate
+      // deliveryInfo on the event (a shop-code dine-in has no table).
+      type:
+        eventDeliveryType(data.deliveryInfo) ??
+        (Number.isFinite(tableId) ? "dine_in" : "takeaway"),
     },
     orderSource:
       typeof data.orderSource === "string"

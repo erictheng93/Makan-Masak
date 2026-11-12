@@ -335,11 +335,12 @@ describe("AuthService", () => {
     // The handed-off work is real work, and it completes once unblocked.
     releaseCacheSet.forEach((release) => release());
     await Promise.all(deferred);
-    expect(mocks.cache.set).toHaveBeenCalledWith(
-      "user-session:user-7:access-token",
-      expect.objectContaining({ userId: "user-7" }),
-      expect.any(Number),
-    );
+    // A bearer token must never appear in a KV key name (keys are listable).
+    expect(
+      mocks.cache.set.mock.calls.every(
+        ([key]) => !String(key).includes("access-token"),
+      ),
+    ).toBe(true);
     expect(mocks.cache.delete).toHaveBeenCalledWith("failed-login-user:user-7");
   });
 
@@ -387,11 +388,12 @@ describe("AuthService", () => {
         expiresIn: 3600,
       },
     });
-    expect(mocks.cache.set).toHaveBeenCalledWith(
-      "user-session:user-7:access-token",
-      { userId: "user-7", token: "access-token", cached: true },
-      expect.any(Number),
-    );
+    // A bearer token must never appear in a KV key name (keys are listable).
+    expect(
+      mocks.cache.set.mock.calls.every(
+        ([key]) => !String(key).includes("access-token"),
+      ),
+    ).toBe(true);
     expect(mocks.cache.set).toHaveBeenCalledWith(
       "security-event:1780790400000",
       expect.objectContaining({
@@ -632,11 +634,12 @@ describe("AuthService", () => {
       user: { id: "user-8", restaurantId: "restaurant-1" },
       tokens: { accessToken: "refreshed-access", expiresIn: 3600 },
     });
-    expect(mocks.cache.set).toHaveBeenCalledWith(
-      "user-session:user-8:refreshed-access",
-      { userId: "user-8", token: "refreshed-access", cached: true },
-      expect.any(Number),
-    );
+    // A bearer token must never appear in a KV key name (keys are listable).
+    expect(
+      mocks.cache.set.mock.calls.every(
+        ([key]) => !String(key).includes("refreshed-access"),
+      ),
+    ).toBe(true);
   });
 
   it("logs out single or all sessions and maps logout errors to false", async () => {

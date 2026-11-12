@@ -1433,6 +1433,11 @@ export class OrdersService implements IOrdersService {
           totalAmount: order.totalAmount,
           orderSource: order.orderSource,
           notes: order.notes,
+          // Type only: a table-less dine-in (shop code) is otherwise
+          // indistinguishable from takeaway on the kitchen board.
+          deliveryInfo: order.deliveryInfo?.type
+            ? { type: order.deliveryInfo.type }
+            : undefined,
           customer: order.customerInfo
             ? {
                 name: order.customerInfo.name,
