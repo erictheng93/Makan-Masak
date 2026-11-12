@@ -268,7 +268,10 @@ describe("permanent restaurant deletion (real D1)", () => {
       confirmName: "Leaving Shop",
     });
     const body = (await response.json()) as {
-      data: { totalRows: number; tables: Array<{ table: string }> };
+      data: {
+        totalRows: number;
+        tables: Array<{ table: string; rows: number }>;
+      };
     };
 
     expect(response.status).toBe(200);
@@ -284,6 +287,22 @@ describe("permanent restaurant deletion (real D1)", () => {
         "categories",
         "coupons",
       ]),
+    );
+    // Real counts, taken before the delete. D1's own change counts are not
+    // usable: production reported 38 rows for a table this shop had none in.
+    expect(body.data.tables).toEqual(
+      expect.arrayContaining([
+        { table: "restaurants", rows: 1 },
+        { table: "orders", rows: 1 },
+        { table: "order_items", rows: 1 },
+        { table: "seats", rows: 1 },
+      ]),
+    );
+    expect(body.data.tables.map((entry) => entry.table)).not.toContain(
+      "leave_types",
+    );
+    expect(body.data.totalRows).toBe(
+      body.data.tables.reduce((sum, entry) => sum + entry.rows, 0),
     );
     expect(await exists(gone.id)).toBe(false);
     expect(await countRestaurantData(db(), gone.id)).toEqual([]);

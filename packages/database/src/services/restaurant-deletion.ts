@@ -284,11 +284,16 @@ export async function countRestaurantData(
 /**
  * Delete the restaurant and every row that belongs to it, atomically. Callers
  * decide whether the delete is allowed; this function only carries it out.
+ *
+ * Returns nothing on purpose. D1's `meta.changes` is not a row count for the
+ * statement it comes back with: on production it reported 38 rows deleted from
+ * a table that has only ever held one, and it includes rows touched by
+ * triggers. Use `countRestaurantData` beforehand for numbers to show anyone.
  */
 export async function deleteRestaurantData(
   db: Db,
   restaurantId: string,
-): Promise<RestaurantDeletionCount[]> {
+): Promise<void> {
   const plan = getRestaurantDeletionPlan();
 
   const nullifies = plan.nullifies.map((entry) => {
@@ -317,19 +322,11 @@ export async function deleteRestaurantData(
       .where(selectorFor(db, plan, entry.name, restaurantId)),
   );
 
-  const results = (await db.batch([
+  await db.batch([
     // Lets a foreign-key cycle be emptied in either order; the check still
     // runs at commit, so it never lets an orphan through.
     db.run(sql`PRAGMA defer_foreign_keys = ON`),
     ...nullifies,
     ...deletes,
-  ] as never)) as unknown as Array<{ meta?: { changes?: number } }>;
-
-  const offset = 1 + nullifies.length;
-  return plan.deletes
-    .map((entry, index) => ({
-      table: entry.name,
-      rows: Number(results[offset + index]?.meta?.changes ?? 0),
-    }))
-    .filter((entry) => entry.rows > 0);
+  ] as never);
 }
