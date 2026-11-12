@@ -46,8 +46,32 @@ export default defineConfig({
         ],
         skipWaiting: true,
         clientsClaim: true,
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,woff2}"],
+        // App shell only: root files (index.html, icons, push/cleanup scripts)
+        // plus the entry and the vendor chunks index.html modulepreloads.
+        // Route chunks and lazy libraries (maplibre, zxing, pmtiles...) are
+        // cached on first use by the /assets/ rule below. A new eager vendor
+        // chunk must be added here, otherwise it is only runtime-cached.
+        globPatterns: [
+          "*.{js,css,html,ico,png,svg,jpg,jpeg,webp,woff2}",
+          "assets/{index,vendor,vue-core,vue-router,vue-i18n,intlify,pinia,tanstack-query,heroicons,zod,axios}-*.{js,css}",
+        ],
         runtimeCaching: [
+          // Hashed, immutable build output. Only 200s are stored: the Pages
+          // Function answers a missing asset with 404 (no-store), and a
+          // failed chunk load must stay retryable.
+          {
+            urlPattern: ({ url, sameOrigin }) =>
+              sameOrigin && url.pathname.startsWith("/assets/"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "assets-cache",
+              cacheableResponse: { statuses: [200] },
+              expiration: {
+                maxEntries: 150,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+              },
+            },
+          },
           // The API has a server-side public cache. Do not duplicate it in
           // Cache Storage: menu and restaurant reads may carry credentials,
           // while orders and tracking must always stay live.
