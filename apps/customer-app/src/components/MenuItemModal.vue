@@ -19,7 +19,8 @@
         <div class="relative h-64 bg-gray-100">
           <img
             v-if="item.imageUrl"
-            :src="getImageUrl(item.imageVariants?.large || item.imageUrl)"
+            v-bind="heroImage"
+            decoding="async"
             :alt="getLocalizedMenuName(item, currentLanguage)"
             class="w-full h-full object-cover"
             @error="handleImageError"
@@ -233,6 +234,7 @@ import type {
 } from "@makanmasak/shared-types";
 import CustomizationOptions from "./CustomizationOptions.vue";
 import { useI18n } from "@/composables/useI18n";
+import { menuImageAttrs } from "@/utils/menu-image";
 import { getLocalizedMenuName } from "@/utils/localized-menu-content";
 
 // Props
@@ -345,12 +347,16 @@ const buttonText = computed(() => {
 });
 
 // Methods
-const getImageUrl = (url: string) => {
-  if (url.startsWith("/")) {
-    return `${import.meta.env.VITE_IMAGE_BASE_URL || ""}${url}`;
-  }
-  return url;
-};
+// Hero is the first thing in the opened sheet, so it is not lazy. The sheet is
+// w-full max-w-md: 392px under the 14px mobile root, 448px above 768px.
+const heroImage = computed(() =>
+  menuImageAttrs(
+    props.item?.imageUrl,
+    props.item?.imageVariants,
+    "(min-width: 769px) 448px, min(100vw, 392px)",
+    "large",
+  ),
+);
 
 const handleImageError = (event: Event) => {
   const img = event.target as HTMLImageElement;

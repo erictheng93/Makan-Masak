@@ -5,10 +5,11 @@
       <div class="w-12 h-12 rounded-xl overflow-hidden bg-gray-100">
         <img
           v-if="item.menuItem?.imageUrl"
-          :src="getImageUrl(item.menuItem.imageUrl)"
+          v-bind="thumb"
           :alt="getLocalizedMenuName(item.menuItem, currentLanguage)"
           class="w-full h-full object-cover"
           loading="lazy"
+          decoding="async"
           @error="handleImageError"
         />
         <div
@@ -93,6 +94,7 @@ import { computed } from "vue";
 import { useCurrency } from "@/composables/useCurrency";
 import { type OrderItem } from "@makanmasak/shared-types";
 import { useI18n } from "@/composables/useI18n";
+import { menuImageAttrs } from "@/utils/menu-image";
 import { getLocalizedMenuName } from "@/utils/localized-menu-content";
 
 // Props
@@ -166,12 +168,17 @@ const statusClasses = computed(() => {
 });
 
 // Methods
-const getImageUrl = (url: string) => {
-  if (url.startsWith("/")) {
-    return `${import.meta.env.VITE_IMAGE_BASE_URL || ""}${url}`;
-  }
-  return url;
-};
+// w-12 is 42px under the 14px mobile root, 48px above 768px. Order payloads
+// carry no imageVariants yet, so this resolves to the plain imageUrl.
+const thumb = computed(() =>
+  menuImageAttrs(
+    props.item.menuItem?.imageUrl,
+    (props.item.menuItem as { imageVariants?: unknown } | undefined)
+      ?.imageVariants,
+    "(min-width: 769px) 48px, 42px",
+    "thumbnail",
+  ),
+);
 
 const handleImageError = (event: Event) => {
   const img = event.target as HTMLImageElement;
