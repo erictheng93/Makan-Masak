@@ -6,6 +6,10 @@
     data-testid="menu-grid-container"
     :class="gridCols"
     @scroll="handleScroll"
+    @wheel.passive="endJump"
+    @touchstart.passive="endJump"
+    @pointerdown="endJump"
+    @keydown="endJump"
   >
     <!-- Virtual spacer for items before visible area -->
     <div
@@ -140,7 +144,29 @@ const measure = () => {
         changed = true;
       }
     });
-  if (changed) measuredRows.value = next;
+  if (!changed) return;
+
+  // Rows above the viewport just took their real height, which moves
+  // everything below them. Hold the view still: keep a pending jump aimed at
+  // its row, otherwise keep the first visible row where it was.
+  const anchorRow = jumpTarget?.row ?? firstVisibleRow.value;
+  const offset = jumpTarget ? 0 : scrollTop.value - rowTops.value[anchorRow];
+  measuredRows.value = next;
+  const top = (rowTops.value[anchorRow] ?? 0) + offset;
+  if (jumpTarget) {
+    const { behavior } = jumpTarget;
+    nextTick(() => element.scrollTo({ top, behavior }));
+  } else if (top !== scrollTop.value) {
+    nextTick(() => {
+      element.scrollTop = top;
+      scrollTop.value = element.scrollTop;
+    });
+  }
+};
+// Set while a scrollToMenuItem is still travelling; any user scroll input ends it.
+let jumpTarget: { row: number; behavior: "auto" | "smooth" } | null = null;
+const endJump = () => {
+  jumpTarget = null;
 };
 let resizeObserver: ResizeObserver | undefined;
 
@@ -236,6 +262,12 @@ const afterHeight = computed(() =>
 const handleScroll = (event: Event) => {
   const target = event.target as HTMLElement;
   scrollTop.value = target.scrollTop;
+  if (
+    jumpTarget &&
+    measuredRows.value.has(jumpTarget.row) &&
+    Math.abs(target.scrollTop - rowTops.value[jumpTarget.row]) < 1
+  )
+    endJump();
 };
 
 const scrollToTop = (behavior: "auto" | "smooth" = "smooth") => {
@@ -265,10 +297,19 @@ const scrollToMenuItem = (
 
   const row = Math.floor(itemIndex / columns.value);
   const scrollPosition = rowTops.value[row] ?? 0;
+  jumpTarget = { row };
+
+  // An animated scroll across rows that were never measured is re-aimed on
+  // every frame and never arrives, so only animate over known ground.
+  const from = Math.min(firstVisibleRow.value, row);
+  const to = Math.max(firstVisibleRow.value, row);
+  let measuredPath = true;
+  for (let r = from; r <= to && measuredPath; r++)
+    measuredPath = measuredRows.value.has(r);
 
   container.value.scrollTo({
     top: scrollPosition,
-    behavior,
+    behavior: measuredPath ? behavior : "auto",
   });
 };
 
@@ -330,6 +371,8 @@ defineExpose({
   /* Rows take their card's height; the fixed container height would
      otherwise hold them at the minimum and clip the card's action row. */
   grid-auto-rows: max-content;
+  /* The component anchors the view itself as rows are measured. */
+  overflow-anchor: none;
 }
 
 .virtual-grid-item {
