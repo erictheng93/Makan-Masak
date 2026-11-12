@@ -99,10 +99,7 @@ describe("RestaurantDeletionService", () => {
       { table: "orders", rows: 3 },
       { table: "restaurants", rows: 1 },
     ]);
-    mocks.deleteRestaurantData.mockResolvedValue([
-      { table: "orders", rows: 3 },
-      { table: "restaurants", rows: 1 },
-    ]);
+    mocks.deleteRestaurantData.mockResolvedValue(undefined);
     // Read in this order before the delete: image rows, then staff rows.
     mocks.selectRows
       .mockResolvedValueOnce([{ id: "image-1" }])
@@ -239,9 +236,15 @@ describe("RestaurantDeletionService", () => {
           resourceId: RESTAURANT_ID,
         }),
       );
+      // The numbers are the count taken before the delete, not whatever the
+      // delete statements report.
       expect(result).toEqual(
         expect.objectContaining({
           restaurant: { id: RESTAURANT_ID, name: "Leaving Shop" },
+          tables: [
+            { table: "orders", rows: 3 },
+            { table: "restaurants", rows: 1 },
+          ],
           totalRows: 4,
           imagesRemoved: 2,
           cacheKeysRemoved: 2,

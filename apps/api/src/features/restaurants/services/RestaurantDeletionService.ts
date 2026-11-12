@@ -135,8 +135,10 @@ export class RestaurantDeletionService {
         .where(eq(users.restaurantId, restaurantId)),
     ]);
 
-    const tables = await deleteRestaurantData(this.db, restaurantId);
-    const totalRows = tables.reduce((sum, entry) => sum + entry.rows, 0);
+    // Counted just before the delete; the delete itself reports no usable
+    // numbers (see deleteRestaurantData).
+    const { tables, totalRows } = preview;
+    await deleteRestaurantData(this.db, restaurantId);
 
     // The restaurant is gone from here on. What follows is tidying, and a
     // failure in it must not be reported as a failed delete.
