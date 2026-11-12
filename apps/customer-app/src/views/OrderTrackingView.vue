@@ -370,7 +370,7 @@
 
 <script setup lang="ts">
 import { getGuestOrderToken } from "@/utils/guest-order-tokens";
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
 import { useToast } from "vue-toastification";
@@ -574,6 +574,15 @@ const { connectionStatus, connect, disconnect } = useWebSocket({
   getUrl: getGuestRealtimeUrl,
   onMessage: handleWebSocketMessage,
   onAuthFailure: clearGuestRealtimeCache,
+});
+
+// The order is read once on mount and the socket opens a moment later, so a
+// status change in between reaches neither; the same goes for anything that
+// happens while a dropped socket reconnects. Catch up whenever it comes up.
+watch(connectionStatus, (status) => {
+  if (status === "connected") {
+    void queryClient.invalidateQueries({ queryKey: ["order", props.orderId] });
+  }
 });
 
 const {
