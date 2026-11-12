@@ -66,6 +66,7 @@ export default {
       cleanupExpiredTokens,
       cleanupOldLogs,
       cleanupExpiredIdempotencyKeys,
+      cleanupExpiredEphemeralKeys,
     } = await import("./scheduled/cleanup-tokens");
 
     // Each job gets its own try/catch. They used to share one, so a single
@@ -106,6 +107,10 @@ export default {
         const idempotency = await cleanupExpiredIdempotencyKeys(env);
         console.log("[Cron] Idempotency cleanup result:", idempotency);
       });
+
+      await runJob("ephemeral key cleanup", () =>
+        cleanupExpiredEphemeralKeys(env),
+      );
     }
 
     // Weekly cleanup on Sunday at 3 AM UTC: Clean old logs

@@ -34,11 +34,11 @@ import type {
 } from "@makanmasak/shared-types";
 import { RestaurantOrderPushService } from "../../push/services/RestaurantOrderPushService";
 import { ReceiptService } from "../../pos/services/ReceiptService";
+import { ephemeralStore } from "../../../shared/utils/ephemeral-store";
 import { ORDER_STATUS_TRANSITIONS, ROLE_STATUS_PERMISSIONS } from "../types";
 import {
   clearGuestActiveOrderLock,
   finalizeOrderStatusSideEffects,
-  invalidateOrderCache as invalidateOrderCacheKeys,
 } from "./order-finalization";
 import type {
   CreateOrderData,
@@ -320,8 +320,6 @@ export class OrdersService implements IOrdersService {
         order = confirmedOrder;
       }
 
-      // The cache write stays awaited: a deferred put could land after a
-      // later status change has cleared the key and re-cache a stale copy.
       // The audit row, realtime broadcast and web push never feed the response
       // (each logs and swallows its own failure), so a caller with waitUntil
       // lets them finish after it.
@@ -341,9 +339,8 @@ export class OrdersService implements IOrdersService {
       ];
       if (options.defer) {
         options.defer(Promise.allSettled(bestEffort));
-        await this.cacheOrder(order);
       } else {
-        await Promise.all([this.cacheOrder(order), ...bestEffort]);
+        await Promise.all(bestEffort);
       }
 
       this.logger.info("Order created successfully", {
@@ -406,43 +403,23 @@ export class OrdersService implements IOrdersService {
   }
 
   /**
-   * `bypassCache` reads the database and neither reads nor refreshes the KV
-   * copy. Use it where a read follows a realtime event: writes broadcast and
-   * delete the cached order concurrently, and KV deletes are eventually
-   * consistent across locations, so the cached copy can still be the order as
-   * it was before the change the event announced.
+   * Always reads D1. There is no KV copy of an order: KV's daily write and
+   * delete quota is far smaller than D1's read quota, and a cached order was
+   * stale right after the realtime event that prompted the read.
+   * `_includeItems` is unused (items always come back); it stays so the many
+   * positional callers keep compiling.
    */
   async getOrder(
     id: string,
-    includeItems: boolean = true,
+    _includeItems: boolean = true,
     caller?: CallerContext,
-    { bypassCache = false }: { bypassCache?: boolean } = {},
   ): Promise<Order | null> {
     try {
-      const cacheKey = `order:${id}:${includeItems ? "full" : "basic"}`;
-      if (!bypassCache) {
-        const cached = (await this.cacheKV.get(
-          cacheKey,
-          "json",
-        )) as Order | null;
-        if (cached) {
-          this.assertRestaurantAccess(cached, caller);
-          return cached;
-        }
-      }
-
-      // Get from base service
       const order = await this.baseOrderService.getOrder(id);
       if (!order) return null;
 
       // Defence-in-depth: verify caller has access to this order's restaurant
       this.assertRestaurantAccess(order, caller);
-
-      if (!bypassCache) {
-        await this.cacheKV.put(cacheKey, JSON.stringify(order), {
-          expirationTtl: 300,
-        }); // 5 minutes
-      }
 
       return order;
     } catch (error) {
@@ -471,7 +448,6 @@ export class OrdersService implements IOrdersService {
         "DELIVERY_ALREADY_CLAIMED",
       );
     }
-    await invalidateOrderCacheKeys(this.cacheKV, id);
     return claimed;
   }
 
@@ -559,7 +535,6 @@ export class OrdersService implements IOrdersService {
       );
 
       await Promise.all([
-        this.invalidateOrderCache(id),
         this.logOrderActivity(
           id,
           "ORDER_ITEMS_ADDED",
@@ -631,7 +606,6 @@ export class OrdersService implements IOrdersService {
       );
 
       await Promise.all([
-        this.invalidateOrderCache(id),
         this.logOrderActivity(
           id,
           "ORDER_DISCOUNT_APPLIED",
@@ -713,7 +687,6 @@ export class OrdersService implements IOrdersService {
       );
 
       await Promise.all([
-        this.invalidateOrderCache(id),
         this.logOrderActivity(
           id,
           newQuantity === 0
@@ -761,9 +734,6 @@ export class OrdersService implements IOrdersService {
       // Use base service cancel method
       await this.baseOrderService.cancelOrder(id, "Order deleted");
 
-      // Clear cache
-      await this.invalidateOrderCache(id);
-
       // Log activity
       await this.logOrderActivity(
         id,
@@ -789,14 +759,9 @@ export class OrdersService implements IOrdersService {
     itemId: number,
     status: string,
     notes?: string,
-    orderId?: string,
   ): Promise<void> {
     try {
       await this.baseOrderService.updateOrderItemStatus(itemId, status, notes);
-      // GET /orders/:id serves items from a five-minute cache, and an item
-      // moving does not always move the order (only the first and the last do),
-      // so without this the detail page keeps showing the old item statuses.
-      if (orderId) await this.invalidateOrderCache(orderId);
     } catch (error) {
       if (
         error instanceof Error &&
@@ -923,8 +888,7 @@ export class OrdersService implements IOrdersService {
           // refund-release marker, making retries a no-op before decrementing
           // the coupon counter.
           this.couponService.releaseUsageForCancelledOrder(id),
-          this.invalidateOrderCache(id),
-          clearGuestActiveOrderLock(this.cacheKV, id),
+          clearGuestActiveOrderLock(ephemeralStore(this.env), id),
           this.logOrderActivity(
             id,
             "ORDER_CANCELLED",
@@ -1646,22 +1610,6 @@ export class OrdersService implements IOrdersService {
   }
 
   // Private helper methods
-  private async cacheOrder(order: Order): Promise<void> {
-    const serialized = JSON.stringify(order);
-    await Promise.all([
-      this.cacheKV.put(`order:${order.id}:full`, serialized, {
-        expirationTtl: 300,
-      }),
-      this.cacheKV.put(`order:${order.id}:basic`, serialized, {
-        expirationTtl: 300,
-      }),
-    ]);
-  }
-
-  private async invalidateOrderCache(orderId: string): Promise<void> {
-    await invalidateOrderCacheKeys(this.cacheKV, orderId);
-  }
-
   /**
    * Write one row to `audit_logs`.
    *

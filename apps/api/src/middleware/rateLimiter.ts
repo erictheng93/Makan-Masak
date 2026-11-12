@@ -1,11 +1,15 @@
 /**
  * Rate Limiter Middleware
  * Prevents abuse by limiting requests per IP address
- * Uses Cloudflare KV for distributed rate limiting
+ * Counters live in the D1 ephemeral store (KV's free write quota is too small)
  */
 
 import { Context, Next } from "hono";
 import type { Env } from "../types/env";
+import {
+  ephemeralStore,
+  type EphemeralStore,
+} from "../shared/utils/ephemeral-store";
 
 export interface RateLimitConfig {
   windowMs: number; // Time window in milliseconds
@@ -51,7 +55,7 @@ function kvExpirationTtl(seconds: number): number {
  */
 export class RateLimiter {
   constructor(
-    private kv: KVNamespace,
+    private kv: EphemeralStore,
     private config: RateLimitConfig,
   ) {}
 
@@ -126,7 +130,7 @@ export class RateLimiter {
  */
 async function enforceRateLimit(
   c: Context<{ Bindings: Env }>,
-  kv: KVNamespace,
+  kv: EphemeralStore,
   config: RateLimitConfig,
   key: string,
 ): Promise<Response | null> {
@@ -164,12 +168,11 @@ async function enforceRateLimit(
 
 export function rateLimitMiddleware(config: RateLimitConfig) {
   return async (c: Context<{ Bindings: Env }>, next: Next) => {
-    const kv = c.env.CACHE_KV;
-
-    if (!kv) {
-      console.warn("CACHE_KV not available, skipping rate limiting");
+    if (!c.env.DB) {
+      console.warn("DB not available, skipping rate limiting");
       return next();
     }
+    const kv = ephemeralStore(c.env);
 
     const tenant = c.get("tenant" as never) as RateLimitTenant | undefined;
     const user = c.get("user" as never) as RateLimitUser | undefined;
@@ -259,8 +262,8 @@ export const RateLimitPresets = {
  */
 export function userRateLimitMiddleware(config: RateLimitConfig) {
   return async (c: Context<{ Bindings: Env }>, next: Next) => {
-    const kv = c.env.CACHE_KV;
-    if (!kv) return next();
+    if (!c.env.DB) return next();
+    const kv = ephemeralStore(c.env);
 
     // Get user ID from request body or JWT
     const userId =

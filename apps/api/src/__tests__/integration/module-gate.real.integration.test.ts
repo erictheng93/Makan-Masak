@@ -855,7 +855,7 @@ describe("role 0 bypass", () => {
 // ─── 9. KV cache behaviour ───────────────────────────────────────────────────
 
 describe("subscription cache", () => {
-  it("uses the exact key `subscription:<restaurantId>` with a 300s TTL", async () => {
+  it("uses the exact key `subscription:<restaurantId>` with a 3600s TTL", async () => {
     const restaurantId = tierRestaurantId.pro as string;
     await attemptGate("pos", { role: 1, restaurantId });
 
@@ -863,7 +863,7 @@ describe("subscription cache", () => {
     expect(kv.puts).toHaveLength(1);
     expect(kv.puts[0]).toMatchObject({
       key: `subscription:${restaurantId}`,
-      options: { expirationTtl: 300 },
+      options: { expirationTtl: 3600 },
     });
     expect(JSON.parse(kv.puts[0].value)).toEqual({
       isActive: true,

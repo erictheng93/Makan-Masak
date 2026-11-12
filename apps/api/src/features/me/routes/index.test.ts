@@ -331,7 +331,7 @@ describe("me routes", () => {
         trialEndsAt: trialEndsAt.getTime(),
         countryCode: null,
       }),
-      { expirationTtl: 300 },
+      { expirationTtl: 3600 },
     );
     expect(subscriptionMocks.getEffectiveModules).toHaveBeenCalledWith({
       planTier: "enterprise",
@@ -369,7 +369,7 @@ describe("me routes", () => {
         trialEndsAt: null,
         countryCode: null,
       }),
-      { expirationTtl: 300 },
+      { expirationTtl: 3600 },
     );
   });
 

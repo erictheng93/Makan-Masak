@@ -326,8 +326,7 @@ describe("KitchenService", () => {
       "ready",
       "plated",
     );
-    expect(serviceMocks.kvDelete).toHaveBeenCalledWith("order:order-101:full");
-    expect(serviceMocks.kvDelete).toHaveBeenCalledWith("order:order-101:basic");
+    expect(serviceMocks.kvDelete).not.toHaveBeenCalled();
     expect(serviceMocks.prepare).toHaveBeenCalledWith(
       expect.stringContaining("JOIN orders o ON o.id = oi.order_id"),
     );
@@ -391,7 +390,7 @@ describe("KitchenService", () => {
     });
   });
 
-  it("defers realtime work past the response and clears the order cache before it", async () => {
+  it("defers realtime work past the response", async () => {
     const deferred: Promise<unknown>[] = [];
     let releaseBroadcast!: () => void;
     serviceMocks.broadcastOrderItemStatusUpdate.mockReturnValue(
@@ -412,7 +411,6 @@ describe("KitchenService", () => {
     // The slow broadcast has not settled, yet the call returned.
     expect(result.status).toBe("ready");
     expect(deferred).toHaveLength(1);
-    expect(serviceMocks.kvDelete).toHaveBeenCalledTimes(2);
     expect(serviceMocks.broadcastOrderItemStatusUpdate).toHaveBeenCalledOnce();
     expect(serviceMocks.broadcastEvent).toHaveBeenCalledWith(
       "admin",

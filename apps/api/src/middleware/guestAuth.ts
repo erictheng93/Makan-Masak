@@ -1,11 +1,12 @@
 /**
  * Guest Token Authentication Middleware
  * Validates KV-stored guest tokens for unauthenticated order access.
- * Token format: "gt_" + 32-byte random hex, stored in CACHE_KV with 4hr TTL.
+ * Token format: "gt_" + 32-byte random hex, stored in the D1 ephemeral store with 4hr TTL.
  */
 
 import { Context, Next } from "hono";
 import type { Env } from "../types/env";
+import { ephemeralStore } from "../shared/utils/ephemeral-store";
 import {
   ApiError,
   forbidden,
@@ -47,7 +48,7 @@ export const guestTokenAuth = async (
 
   try {
     const kvKey = `guest_token:${token}`;
-    const tokenData = (await c.env.CACHE_KV.get(
+    const tokenData = (await ephemeralStore(c.env).get(
       kvKey,
       "json",
     )) as GuestTokenData | null;
@@ -94,7 +95,7 @@ export const guestSessionAuth = async (
 
   try {
     const kvKey = `guest_token:${token}`;
-    const tokenData = (await c.env.CACHE_KV.get(
+    const tokenData = (await ephemeralStore(c.env).get(
       kvKey,
       "json",
     )) as GuestSessionData | null;

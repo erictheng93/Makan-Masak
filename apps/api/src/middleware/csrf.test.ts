@@ -34,7 +34,7 @@ function installApiErrorHandler(app: Hono) {
 
 function createApp() {
   const app = new Hono();
-  app.use("*", csrfProtection({ useDoubleSubmit: true }));
+  app.use("*", csrfProtection());
   app.put("/api/v1/orders/:id/status", (c) =>
     c.json({ success: true, orderId: c.req.param("id") }),
   );
@@ -233,7 +233,6 @@ describe("csrfProtection excludePaths", () => {
     app.use(
       "*",
       csrfProtection({
-        useDoubleSubmit: true,
         excludePaths: [
           "/api/v1/waiting-list$",
           "/api/v1/waiting-list/*$",

@@ -5,8 +5,13 @@ import {
   enforceGuestOrderThrottle,
 } from "./guest-order-throttle";
 
+// The throttle counts in the D1 ephemeral store; hand it the fake on the env.
+vi.mock("../../../shared/utils/ephemeral-store", () => ({
+  ephemeralStore: (env: { EPHEMERAL: unknown }) => env.EPHEMERAL,
+}));
+
 /**
- * In-memory stand-in for RATE_LIMIT_KV. The real limiter keeps one counter per
+ * In-memory stand-in for the counter store. The real limiter keeps one counter per
  * fixed window and interpolates the previous one, so a map is enough to make
  * the sliding window behave exactly as it does in production.
  */
@@ -36,7 +41,7 @@ function createContext(
     "rateLimitKV" in options ? options.rateLimitKV : createRateLimitKV();
 
   const context = {
-    env: { RATE_LIMIT_KV: rateLimitKV, ANALYTICS_ENGINE: undefined },
+    env: { EPHEMERAL: rateLimitKV, ANALYTICS_ENGINE: undefined },
     req: {
       header: (name: string) => (name === "CF-Connecting-IP" ? ip : undefined),
       raw: new Request("https://api.test/api/v1/guest-orders", {
@@ -156,9 +161,11 @@ describe("enforceGuestOrderThrottle", () => {
   });
 
   it("serves the order when the counter store is unavailable", async () => {
-    // Availability beats enforcement: a KV outage must not stop a night market
+    // Availability beats enforcement: a D1 outage must not stop a night market
     // from taking orders.
-    const { context } = createContext({ rateLimitKV: undefined });
+    const rateLimitKV = createRateLimitKV();
+    rateLimitKV.get.mockRejectedValue(new Error("D1 unavailable"));
+    const { context } = createContext({ rateLimitKV });
 
     await expect(submit(context)).resolves.toBeUndefined();
   });

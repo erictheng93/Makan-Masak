@@ -565,6 +565,24 @@ local state from the primary worktree.
 - API: `POST/PUT /api/v1/users/{restaurant_id}`
 - Role definitions: `apps/api/src/shared/constants/index.ts`
 
+### Disabling a shop or changing its plan by hand
+
+The API caches each restaurant's plan, active flag, module overrides and
+country code in KV under `subscription:{restaurantId}` for **one hour**
+(`CACHE_TTL_SECONDS` in `apps/api/src/middleware/moduleGate.ts`), and
+country-level module policies for the same time
+(`apps/api/src/shared/policy/regionPolicies.ts`). The admin routes, the billing
+webhook and the management API's policy routes delete the key themselves, so
+changes made through them apply at once. A direct SQL edit does not:
+
+- After editing `shop_subscriptions` or `restaurants.country_code` by hand —
+  the emergency kill switch included — also delete the KV key, or the old
+  entitlements stay in force for up to an hour:
+  `pnpm wrangler kv key delete "subscription:<restaurantId>" --namespace-id <CACHE_KV id> --remote`
+- The TTL was 5 minutes until #468. It was raised because every cache miss is
+  a KV write, and KV allows 1,000 writes a day on the Free plan. Do not lower
+  it to make hand edits faster; delete the key.
+
 ### Menu Items
 
 - API: `POST /api/v1/menu/{restaurant_id}/items`

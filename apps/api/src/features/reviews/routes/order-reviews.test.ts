@@ -19,6 +19,12 @@ const authState = vi.hoisted((): { customer: AuthCustomer | null } => ({
   customer: null,
 }));
 
+// Guest tokens and locks live in the D1 ephemeral store; tests hand it a fake
+// through a test-only env field so it stays distinct from CACHE_KV.
+vi.mock("../../../shared/utils/ephemeral-store", () => ({
+  ephemeralStore: (env: { EPHEMERAL: unknown }) => env.EPHEMERAL,
+}));
+
 vi.mock("drizzle-orm/d1", () => ({
   drizzle: vi.fn(() => drizzleMocks.db),
 }));
@@ -104,7 +110,7 @@ function createEnv(kv: Record<string, unknown> = {}) {
     return raw === undefined ? null : JSON.parse(raw);
   });
   return {
-    env: { DB: {}, CACHE_KV: { get } } as unknown as Env,
+    env: { DB: {}, EPHEMERAL: { get } } as unknown as Env,
     kvGet: get,
   };
 }

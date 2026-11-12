@@ -21,7 +21,6 @@ import type {
   OrderItemStatusUpdate,
 } from "../types";
 import { OrdersService } from "../../orders/services/OrdersService";
-import { invalidateOrderCache } from "../../orders/services/order-finalization";
 import { forbidden } from "../../../shared/utils/api-error";
 import {
   and,
@@ -248,10 +247,6 @@ export class KitchenService implements IKitchenService {
       // status update.
       const itemChanged = scopedItem.previous_status !== statusUpdate.status;
       if (itemChanged) {
-        // No orderId: the detail-cache clear is a KV write (~400ms) that the
-        // parent reconciliation (a bypassCache D1 read) does not depend on, so
-        // it runs beside it below. The response still waits for it, because a
-        // client that refetches right after must not read the old statuses.
         await this.ordersService.updateItemStatus(
           itemId,
           statusUpdate.status,
@@ -259,12 +254,10 @@ export class KitchenService implements IKitchenService {
         );
       }
 
-      const [orderStatus] = await Promise.all([
-        this.syncOrderStatusAfterItemUpdate(orderId, userId),
-        itemChanged
-          ? invalidateOrderCache(this.env.CACHE_KV, orderId)
-          : undefined,
-      ]);
+      const orderStatus = await this.syncOrderStatusAfterItemUpdate(
+        orderId,
+        userId,
+      );
 
       // A same-status replay has already emitted this event when it first
       // succeeded. Avoid a duplicate notification while still returning the
@@ -367,7 +360,7 @@ export class KitchenService implements IKitchenService {
    * the items it happened to receive.
    *
    * Status writes deliberately go through OrdersService.updateOrderStatus:
-   * that is where version-CAS, timestamps, cache invalidation and realtime
+   * that is where version-CAS, timestamps and realtime
    * notifications are owned. A concurrent chef can win the CAS between our
    * fresh read and write; rereading once then makes that winner a successful,
    * idempotent outcome rather than reporting an error after this request has
@@ -378,12 +371,7 @@ export class KitchenService implements IKitchenService {
     userId: string,
   ): Promise<string> {
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      const order = await this.ordersService.getOrder(
-        orderId,
-        true,
-        undefined,
-        { bypassCache: true },
-      );
+      const order = await this.ordersService.getOrder(orderId, true);
       if (!order) {
         throw new Error("Order disappeared while updating a kitchen item");
       }

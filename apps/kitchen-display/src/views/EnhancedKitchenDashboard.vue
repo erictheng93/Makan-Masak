@@ -439,6 +439,11 @@ const updateCurrentTime = () => {
 
 // Auto-refresh logic
 let refreshInterval: ReturnType<typeof setInterval> | null = null;
+// Bounds how late a ticket can appear if an event is never sent (a failed
+// broadcast leaves the socket looking healthy). Raise only after measuring
+// delivery in a real shop.
+const LIVE_POLL_INTERVAL_MS = 60_000;
+let lastPollAt = Date.now();
 let timeInterval: ReturnType<typeof setInterval> | null = null;
 let realtimeSubscriptionId: string | null = null;
 let menuSubscriptionId: string | null = null;
@@ -447,6 +452,16 @@ let disposed = false;
 const startAutoRefresh = () => {
   if (settingsStore.autoRefresh && refreshInterval === null) {
     refreshInterval = setInterval(() => {
+      // Realtime events (and the catch-up fetch on reconnect) keep the board
+      // current while the socket is up, so the poll only runs as a fallback
+      // then: every tick when disconnected, once a minute when connected.
+      if (
+        isRealtimeConnected.value &&
+        Date.now() - lastPollAt < LIVE_POLL_INTERVAL_MS
+      ) {
+        return;
+      }
+      lastPollAt = Date.now();
       fetchOrders();
     }, settingsStore.refreshInterval * 1000);
   }

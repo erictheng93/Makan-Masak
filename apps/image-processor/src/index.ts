@@ -165,17 +165,10 @@ app.get("/health", async (c) => {
 
     try {
       const kvStart = Date.now();
-      const testKey = `health-${Date.now()}`;
-      await c.env.IMAGE_CACHE.put(testKey, "test", { expirationTtl: 60 });
-      const value = await c.env.IMAGE_CACHE.get(testKey);
+      // Read-only probe of a key that is never written: this route is public,
+      // and a put per call let anyone drain the account's daily KV writes.
+      await c.env.IMAGE_CACHE.get("health:sentinel");
       kvResponseTime = Date.now() - kvStart;
-
-      if (value !== "test") {
-        kvStatus = "degraded";
-      }
-
-      // 清理測試數據
-      await c.env.IMAGE_CACHE.delete(testKey);
     } catch (error) {
       kvStatus = "unhealthy";
       console.error("KV health check failed:", error);

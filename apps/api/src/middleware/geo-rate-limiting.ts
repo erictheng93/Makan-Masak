@@ -1,3 +1,4 @@
+import type { EphemeralStore } from "../shared/utils/ephemeral-store";
 import { Context, Next } from "hono";
 import { verifyJwtToken } from "./auth";
 import type { Env } from "../types/env";
@@ -229,7 +230,8 @@ const TRUSTED_ASNS = new Set([
 
 export class GeoIntelligentRateLimiter {
   constructor(
-    private rateLimitKV: KVNamespace,
+    // KV for the global limiter; the guest-order throttle passes the D1 store.
+    private rateLimitKV: EphemeralStore,
     private analyticsEngine: AnalyticsEngine | undefined,
     private context: Pick<ExecutionContext, "waitUntil">,
     private env: Env,
@@ -466,7 +468,7 @@ export class GeoIntelligentRateLimiter {
   }> {
     try {
       const blockKey = `block:${identifier}`;
-      const blockData = await this.rateLimitKV.get(blockKey, { type: "json" });
+      const blockData = await this.rateLimitKV.get(blockKey, "json");
 
       if (!blockData) {
         return { blocked: false };

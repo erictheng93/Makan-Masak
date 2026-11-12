@@ -15,6 +15,7 @@ import {
   notFound,
   unauthorized,
 } from "../../../shared/utils/api-error";
+import { ephemeralStore } from "../../../shared/utils/ephemeral-store";
 import { ReviewService } from "../services/ReviewService";
 import {
   orderReviewParamSchema,
@@ -87,7 +88,7 @@ async function authorizeOrderReviewer(
 
   const guestToken = getGuestBearerToken(authorization);
   if (guestToken) {
-    const tokenData = (await c.env.CACHE_KV.get(
+    const tokenData = (await ephemeralStore(c.env).get(
       `guest_token:${guestToken}`,
       "json",
     )) as GuestTokenData | null;

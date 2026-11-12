@@ -412,6 +412,7 @@
 </template>
 
 <script setup lang="ts">
+import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "@/i18n";
@@ -901,17 +902,16 @@ const handleEmergencyAlert = async (alertId: string, action: string) => {
 };
 
 // --- Lifecycle: fetch data + polling ---
-let updateInterval: ReturnType<typeof setInterval>;
+// Paused while the tab is hidden: each tick is ~6 requests.
+const dataPoller = createVisibilityAwarePoller({
+  intervalMs: 30_000,
+  onTick: () => fetchAllData(),
+});
 
 onMounted(async () => {
   await fetchAllData();
-  // Refresh every 30 seconds
-  updateInterval = setInterval(fetchAllData, 30000);
+  dataPoller.start();
 });
 
-onUnmounted(() => {
-  if (updateInterval) {
-    clearInterval(updateInterval);
-  }
-});
+onUnmounted(() => dataPoller.stop());
 </script>

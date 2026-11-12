@@ -75,6 +75,7 @@ interface SseAuthTokenPayload extends AuthTokenPayload {
 }
 
 const MAX_ACCESS_TOKEN_AGE_SECONDS = 72 * 60 * 60;
+const LAST_SEEN_RESOLUTION_MS = 60 * 60 * 1000;
 
 /**
  * Support admins read everything but write only their own session and shop
@@ -477,12 +478,16 @@ export const canonicalCustomerAuthMiddleware = async (
       throw unauthorized("Customer not found or inactive", "CUSTOMER_INACTIVE");
     }
 
+    // Hourly resolution: an UPDATE per request spent a D1 row write on every
+    // customer call; one that matches no row writes nothing.
+    const seenAt = Date.now();
     await c.env.DB.prepare(
       `UPDATE customers
           SET last_seen_at_ms = ?, updated_at_ms = ?
-        WHERE id = ?`,
+        WHERE id = ?
+          AND (last_seen_at_ms IS NULL OR last_seen_at_ms < ?)`,
     )
-      .bind(Date.now(), Date.now(), customer.id)
+      .bind(seenAt, seenAt, customer.id, seenAt - LAST_SEEN_RESOLUTION_MS)
       .run();
 
     c.set("customer", customer);

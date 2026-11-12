@@ -63,6 +63,12 @@ interface MockAuthContext {
   json(body: { success: false }, status: 403): Response;
 }
 
+// Guest tokens and locks live in the D1 ephemeral store; tests hand it a fake
+// through a test-only env field so it stays distinct from CACHE_KV.
+vi.mock("../../../shared/utils/ephemeral-store", () => ({
+  ephemeralStore: (env: { EPHEMERAL: unknown }) => env.EPHEMERAL,
+}));
+
 vi.mock("../../../middleware/auth", () => ({
   authMiddleware: vi.fn(async (c, next) => {
     c.set("user", currentUser.value);
@@ -169,6 +175,7 @@ function createRateLimitEnv() {
   const kv = new Map<string, string>();
   return {
     DB: {},
+    EPHEMERAL: { put: vi.fn(async () => undefined) },
     CACHE_KV: {
       get: vi.fn(async (key: string) => kv.get(key) ?? null),
       put: vi.fn(
@@ -911,7 +918,7 @@ describe("group orders routes", () => {
       memberId,
       "member-session",
     );
-    expect(env.CACHE_KV.put).toHaveBeenCalledWith(
+    expect(env.EPHEMERAL.put).toHaveBeenCalledWith(
       `guest_token:${body.data.guestToken}`,
       expect.stringContaining('"orderId":"order-1"'),
       { expirationTtl: 4 * 60 * 60 },
@@ -951,7 +958,7 @@ describe("group orders routes", () => {
       ),
     );
     expect(unfinishedResponse.status).toBe(400);
-    expect(env.CACHE_KV.put).not.toHaveBeenCalled();
+    expect(env.EPHEMERAL.put).not.toHaveBeenCalled();
   });
 
   /**

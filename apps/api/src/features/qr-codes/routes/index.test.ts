@@ -55,6 +55,12 @@ vi.mock("../../../shared/middleware", async (importOriginal) => {
   };
 });
 
+// The per-route limiter counts in the D1 ephemeral store; tests hand it a fake
+// through a test-only env field.
+vi.mock("../../../shared/utils/ephemeral-store", () => ({
+  ephemeralStore: (env: { EPHEMERAL: unknown }) => env.EPHEMERAL,
+}));
+
 vi.mock("../services/QrCodesService", () => ({
   QrCodesService: class {
     generateQR = qrServiceFns.generateQR;
@@ -131,7 +137,7 @@ function request(
   body?: unknown,
   options: {
     headers?: Record<string, string>;
-    cacheKv?: {
+    rateLimitStore?: {
       get: (key: string, type?: string) => Promise<unknown>;
       put: (
         key: string,
@@ -151,7 +157,7 @@ function request(
         ...options.headers,
       },
     },
-    { DB: {}, CACHE_KV: options.cacheKv ?? {} } as never,
+    { DB: {}, CACHE_KV: {}, EPHEMERAL: options.rateLimitStore } as never,
   );
 }
 
@@ -561,7 +567,7 @@ describe("QR code routes", () => {
 
   it("rate limits public signed QR verification before repeated DB lookups", async () => {
     const entries = new Map<string, string>();
-    const cacheKv = {
+    const rateLimitStore = {
       async get(key: string, type?: string) {
         const value = entries.get(key);
         if (value === undefined) return null;
@@ -589,7 +595,7 @@ describe("QR code routes", () => {
         undefined,
         {
           headers: { "CF-Connecting-IP": "203.0.113.10" },
-          cacheKv,
+          rateLimitStore,
         },
       );
     }

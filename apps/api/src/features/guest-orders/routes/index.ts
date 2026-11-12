@@ -49,6 +49,7 @@ import {
   conflict,
 } from "../../../shared/utils/api-error";
 import { enforceQuota } from "../../../middleware/quotaGate";
+import { ephemeralStore } from "../../../shared/utils/ephemeral-store";
 import { meterEmit } from "../../../shared/utils/meter";
 import { validateBody } from "../../../shared/middleware";
 import { deferAfterResponse } from "../../../shared/utils/defer-after-response";
@@ -104,7 +105,7 @@ app.post(
         .from(restaurants)
         .where(eq(restaurants.id, data.restaurantId))
         .get(),
-      Promise.all(activeSlotKeys.map((key) => c.env.CACHE_KV.get(key))),
+      Promise.all(activeSlotKeys.map((key) => ephemeralStore(c.env).get(key))),
       isDineIn
         ? db.select().from(tables).where(eq(tables.id, data.tableId!)).get()
         : undefined,
@@ -298,21 +299,25 @@ app.post(
           value: guestToken,
         });
     await Promise.all([
-      c.env.CACHE_KV.put(
+      ephemeralStore(c.env).put(
         `guest_token:${guestToken}`,
         JSON.stringify(tokenData),
         {
           expirationTtl: fourHoursInSeconds,
         },
       ),
-      c.env.CACHE_KV.put(activeOrderKey, String(order.id), {
+      ephemeralStore(c.env).put(activeOrderKey, String(order.id), {
         expirationTtl: twoHoursInSeconds,
       }),
       // Reverse mapping so any cancel path (admin DELETE, guest cancel, cleanup
       // jobs) can locate and clear the active-order key from the order id alone.
-      c.env.CACHE_KV.put(`guest_active_lookup:${order.id}`, activeOrderKey, {
-        expirationTtl: twoHoursInSeconds,
-      }),
+      ephemeralStore(c.env).put(
+        `guest_active_lookup:${order.id}`,
+        activeOrderKey,
+        {
+          expirationTtl: twoHoursInSeconds,
+        },
+      ),
     ]);
     await meterEmit(c, "orders.created", {
       restaurantId: data.restaurantId,
@@ -342,11 +347,7 @@ app.get("/:id", guestTokenAuth, async (c) => {
   if (!orderId) throw badRequest("Missing order id");
 
   const ordersService = new OrdersService(c.env);
-  // The tracking page calls this as soon as a realtime event says the order
-  // changed, which can be before the cached copy is gone. Read the database.
-  const order = await ordersService.getOrder(orderId, true, undefined, {
-    bypassCache: true,
-  });
+  const order = await ordersService.getOrder(orderId, true);
 
   if (!order) {
     throw notFound("Order not found");
@@ -403,11 +404,7 @@ app.post("/:id/cancel", guestTokenAuth, async (c) => {
   if (!orderId) throw badRequest("Missing order id");
 
   const ordersService = new OrdersService(c.env);
-  // Decide cancellability from D1: the cached copy can still read pending after
-  // the kitchen has moved the order on.
-  const order = await ordersService.getOrder(orderId, false, undefined, {
-    bypassCache: true,
-  });
+  const order = await ordersService.getOrder(orderId, false);
 
   if (!order) {
     throw notFound("Order not found");
@@ -434,7 +431,7 @@ app.post("/:id/cancel", guestTokenAuth, async (c) => {
   const lookupKey = `guest_active_lookup:${orderId}`;
   // Without the mapping, free whichever of this device's slots holds the order.
   let activeOrderKeys: string[] = [];
-  const mappedKey = await c.env.CACHE_KV.get(lookupKey);
+  const mappedKey = await ephemeralStore(c.env).get(lookupKey);
   if (mappedKey) {
     activeOrderKeys = [mappedKey];
   } else if (requestLockIdentity) {
@@ -443,15 +440,15 @@ app.post("/:id/cancel", guestTokenAuth, async (c) => {
       requestLockIdentity,
     );
     const holders = await Promise.all(
-      slotKeys.map((key) => c.env.CACHE_KV.get(key)),
+      slotKeys.map((key) => ephemeralStore(c.env).get(key)),
     );
     activeOrderKeys = slotKeys.filter(
       (_, slot) => holders[slot] === String(orderId),
     );
   }
   await Promise.allSettled([
-    ...activeOrderKeys.map((key) => c.env.CACHE_KV.delete(key)),
-    c.env.CACHE_KV.delete(lookupKey),
+    ...activeOrderKeys.map((key) => ephemeralStore(c.env).delete(key)),
+    ephemeralStore(c.env).delete(lookupKey),
   ]);
 
   // The guest token is left in place. It is scoped to this order and expires

@@ -21,6 +21,14 @@ export interface VisibilityAwarePollerOptions {
    * flicking between tabs does not spend a request.
    */
   shouldCatchUp?: () => boolean;
+  /**
+   * Whether something else (a connected realtime socket) is keeping the data
+   * current. While it returns true, ticks run every `liveIntervalMs` instead,
+   * as a safety net rather than the source of truth.
+   */
+  isLive?: () => boolean;
+  /** Defaults to 5 minutes. */
+  liveIntervalMs?: number;
 }
 
 export interface VisibilityAwarePoller {
@@ -35,18 +43,28 @@ export interface VisibilityAwarePoller {
 export function createVisibilityAwarePoller(
   options: VisibilityAwarePollerOptions,
 ): VisibilityAwarePoller {
-  const { intervalMs, onTick, shouldCatchUp } = options;
+  const {
+    intervalMs,
+    onTick,
+    shouldCatchUp,
+    isLive,
+    liveIntervalMs = 5 * 60_000,
+  } = options;
 
   let timer: ReturnType<typeof setInterval> | null = null;
+  let lastTickAt = Date.now();
 
   const runTick = () => {
     if (document.hidden) return;
+    if (isLive?.() && Date.now() - lastTickAt < liveIntervalMs) return;
+    lastTickAt = Date.now();
     void onTick();
   };
 
   const handleVisibilityChange = () => {
     if (document.hidden) return;
     if (shouldCatchUp && !shouldCatchUp()) return;
+    lastTickAt = Date.now();
     void onTick();
   };
 

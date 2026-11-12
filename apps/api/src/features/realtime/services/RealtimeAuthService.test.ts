@@ -122,6 +122,12 @@ function setSelectFixtures(
   );
 }
 
+// Guest tokens and locks live in the D1 ephemeral store; tests hand it a fake
+// through a test-only env field so it stays distinct from CACHE_KV.
+vi.mock("../../../shared/utils/ephemeral-store", () => ({
+  ephemeralStore: (env: { EPHEMERAL: unknown }) => env.EPHEMERAL,
+}));
+
 vi.mock("drizzle-orm/d1", () => ({
   drizzle: vi.fn(() => mocks.db),
 }));
@@ -1093,7 +1099,7 @@ describe("RealtimeAuthService", () => {
     setSelectFixtures({
       orders: [[{ id: "42", restaurantId: "restaurant-1" }]],
     });
-    const service = createService({ CACHE_KV: cache });
+    const service = createService({ EPHEMERAL: cache });
 
     const response = await service.generateGuestToken({
       restaurantId: "restaurant-1",
@@ -1132,7 +1138,7 @@ describe("RealtimeAuthService", () => {
       },
     });
     setSelectFixtures({ orders: [[]] });
-    const service = createService({ CACHE_KV: cache });
+    const service = createService({ EPHEMERAL: cache });
 
     await expect(
       service.generateGuestToken({
@@ -1397,7 +1403,7 @@ describe("RealtimeAuthService", () => {
 
   it("returns guest token validation errors", async () => {
     const service = createService({
-      CACHE_KV: createKV({
+      EPHEMERAL: createKV({
         "guest_token:wrong": {
           restaurantId: "restaurant-2",
           orderId: "99",
@@ -1537,7 +1543,7 @@ describe("RealtimeAuthService", () => {
 
   it("wraps unexpected guest token validation failures", async () => {
     const service = createService({
-      CACHE_KV: {
+      EPHEMERAL: {
         get: vi.fn(async () => {
           throw new Error("kv unavailable");
         }),

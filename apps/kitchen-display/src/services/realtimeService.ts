@@ -20,6 +20,13 @@ const STABLE_CONNECTION_MS = 30_000;
 const RECONNECT_DELAY_MS = 3_000;
 const MAX_RECONNECT_DELAY_MS = 30_000;
 const MAX_RECONNECT_ATTEMPTS = 5;
+// The server auto-answers the literal text "ping" without waking the room, so
+// this is free. It is what makes "connected" trustworthy: the dashboard stops
+// polling while connected, and a half-open socket would otherwise show a stale
+// board with no error.
+const HEARTBEAT_INTERVAL_MS = 30_000;
+const HEARTBEAT_TIMEOUT_MS = 10_000;
+const HEARTBEAT_TIMEOUT_CLOSE_CODE = 4000;
 
 export interface KitchenRealtimeSubscription {
   id: string;
@@ -35,6 +42,8 @@ class KitchenRealtimeService {
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private stableTimer: ReturnType<typeof setTimeout> | null = null;
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private pongTimer: ReturnType<typeof setTimeout> | null = null;
   private restaurantId: string | null = null;
 
   get status() {
@@ -57,6 +66,7 @@ class KitchenRealtimeService {
       this.ws = new WebSocket(auth.wsUrl);
       this.ws.onopen = () => {
         this.statusValue.value = "connected";
+        this.startHeartbeat();
         this.clearStableTimer();
         this.stableTimer = setTimeout(() => {
           this.reconnectAttempts = 0;
@@ -64,6 +74,10 @@ class KitchenRealtimeService {
         }, STABLE_CONNECTION_MS);
       };
       this.ws.onmessage = (message) => {
+        if (message.data === "pong") {
+          this.clearPongTimer();
+          return;
+        }
         try {
           this.handleMessage(JSON.parse(message.data) as RealtimeEvent);
         } catch (error) {
@@ -77,6 +91,7 @@ class KitchenRealtimeService {
       this.ws.onclose = (event) => {
         this.ws = null;
         this.statusValue.value = "disconnected";
+        this.stopHeartbeat();
         this.clearStableTimer();
         if (event.code !== 1000 && event.code !== 1001) {
           this.scheduleReconnect();
@@ -90,6 +105,7 @@ class KitchenRealtimeService {
   }
 
   disconnect(): void {
+    this.stopHeartbeat();
     this.clearStableTimer();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
@@ -153,6 +169,36 @@ class KitchenRealtimeService {
         subscription.callback(event);
       }
     });
+  }
+
+  private startHeartbeat(): void {
+    this.stopHeartbeat();
+    this.heartbeatTimer = setInterval(() => {
+      const ws = this.ws;
+      if (ws?.readyState !== WebSocket.OPEN) return;
+      ws.send("ping");
+      this.clearPongTimer();
+      // A non-1000 close code sends onclose down the reconnect path.
+      this.pongTimer = setTimeout(
+        () => ws.close(HEARTBEAT_TIMEOUT_CLOSE_CODE, "Heartbeat timeout"),
+        HEARTBEAT_TIMEOUT_MS,
+      );
+    }, HEARTBEAT_INTERVAL_MS);
+  }
+
+  private clearPongTimer(): void {
+    if (this.pongTimer) {
+      clearTimeout(this.pongTimer);
+      this.pongTimer = null;
+    }
+  }
+
+  private stopHeartbeat(): void {
+    this.clearPongTimer();
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
   }
 
   private clearStableTimer(): void {

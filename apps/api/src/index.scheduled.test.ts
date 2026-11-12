@@ -13,6 +13,7 @@ vi.mock("./scheduled/cleanup-tokens", () => ({
   cleanupExpiredTokens: vi.fn(),
   cleanupOldLogs: vi.fn(),
   cleanupExpiredIdempotencyKeys: vi.fn(),
+  cleanupExpiredEphemeralKeys: vi.fn(),
 }));
 vi.mock("./workers/group-order-expiry", () => ({
   GROUP_ORDER_EXPIRY_CRON: "*/5 * * * *",

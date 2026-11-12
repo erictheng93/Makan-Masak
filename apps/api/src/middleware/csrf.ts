@@ -65,19 +65,12 @@ interface CSRFOptions {
    * both routes.
    */
   excludeRoutes?: Array<{ path: string; methods: string[] }>;
-
-  /**
-   * Enable double-submit cookie pattern
-   * @default true
-   */
-  useDoubleSubmit?: boolean;
 }
 
 const defaultOptions: Required<CSRFOptions> = {
   protectedMethods: ["POST", "PUT", "DELETE", "PATCH"],
   excludePaths: ["/api/v1/auth/login", "/api/v1/auth/register"],
   excludeRoutes: [],
-  useDoubleSubmit: true,
 };
 
 function getCookieValue(cookieHeader: string | undefined, name: string) {
@@ -242,30 +235,14 @@ export function csrfProtection(options: CSRFOptions = {}) {
         );
       }
 
-      if (opts.useDoubleSubmit) {
-        // Double-submit cookie pattern: validate token from cookie matches header
-        const cookieHeader = c.req.header("Cookie");
-        const tokenFromCookie =
-          getCookieValue(cookieHeader, CSRF_COOKIE_NAME) ??
-          getCookieValue(cookieHeader, LEGACY_CSRF_COOKIE_NAME);
+      // Double-submit cookie pattern: validate token from cookie matches header
+      const cookieHeader = c.req.header("Cookie");
+      const tokenFromCookie =
+        getCookieValue(cookieHeader, CSRF_COOKIE_NAME) ??
+        getCookieValue(cookieHeader, LEGACY_CSRF_COOKIE_NAME);
 
-        if (!tokenFromCookie || tokenFromCookie !== tokenFromHeader) {
-          throw forbidden("CSRF token validation failed", "CSRF_TOKEN_INVALID");
-        }
-      } else {
-        // Server-side validation: check token from KV store
-        if (c.env.CACHE_KV) {
-          const storedToken = await c.env.CACHE_KV.get(
-            `csrf:${tokenFromHeader}`,
-          );
-
-          if (!storedToken) {
-            throw forbidden(
-              "CSRF token validation failed",
-              "CSRF_TOKEN_EXPIRED_OR_INVALID",
-            );
-          }
-        }
+      if (!tokenFromCookie || tokenFromCookie !== tokenFromHeader) {
+        throw forbidden("CSRF token validation failed", "CSRF_TOKEN_INVALID");
       }
 
       await next();
@@ -279,15 +256,6 @@ export function csrfProtection(options: CSRFOptions = {}) {
  */
 export async function generateCSRFTokenHandler(c: Context<{ Bindings: Env }>) {
   const token = generateCSRFToken();
-
-  // Store token in KV for server-side validation (optional)
-  if (c.env.CACHE_KV) {
-    await c.env.CACHE_KV.put(
-      `csrf:${token}`,
-      JSON.stringify({ created: Date.now() }),
-      { expirationTtl: CSRF_TOKEN_EXPIRY / 1000 },
-    );
-  }
 
   // Set cookie for double-submit pattern
   const cookieOptions = buildCookieOptions(token);
@@ -320,15 +288,6 @@ export function attachCSRFToken() {
       // Only attach token to successful authentication responses
       if (c.res.status === 200 && c.req.path.includes("/auth/")) {
         const token = generateCSRFToken();
-
-        // Store in KV
-        if (c.env.CACHE_KV) {
-          await c.env.CACHE_KV.put(
-            `csrf:${token}`,
-            JSON.stringify({ created: Date.now() }),
-            { expirationTtl: CSRF_TOKEN_EXPIRY / 1000 },
-          );
-        }
 
         // Add to response headers
         c.res.headers.set("X-CSRF-Token", token);
