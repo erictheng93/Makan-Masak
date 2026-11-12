@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "wrangler dev --persist-to ../../.wrangler/shared-state --inspector-port 9234",
     "deploy": "wrangler deploy",
-    "deploy:prod": "wrangler deploy --env production",
+    "deploy:prod": "node ../../scripts/api-deploy.cjs --env production",
     "deploy:staging": "node ../../scripts/staging/assert-ready.cjs wrangler.toml && wrangler deploy --env staging",
     "build": "tsc && wrangler deploy --dry-run --env=\"\"",
     "build:prod": "tsc && wrangler deploy --dry-run --env production",

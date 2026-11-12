@@ -13,6 +13,12 @@
  * Otherwise the version is tagged with its commit so the rollback guard can
  * check it against apps/api/rollback-floor.json.
  *
+ * Despite the name it serves every production Worker (api, management-api,
+ * realtime, image-processor, backup-scheduler): the app is the cwd's
+ * `apps/<name>`, so each version carries the commit in its message and
+ * `pnpm deploy:status` can read it back. The tag only matters to api's
+ * rollback guard.
+ *
  * A script rather than `--tag "$(git ...)"` in package.json because pnpm runs
  * scripts through cmd on Windows.
  */
@@ -21,8 +27,12 @@ const path = require("path");
 const { execFileSync, spawnSync } = require("child_process");
 
 const ROOT = path.resolve(__dirname, "..");
-/** Everything `wrangler deploy` in apps/api bundles or resolves from. */
-const BUILD_INPUTS = ["apps/api", "packages", "package.json", "pnpm-lock.yaml"];
+const cwdApp = path.relative(ROOT, process.cwd()).split(path.sep).join("/");
+const APP = /^apps\/[^/]+$/.test(cwdApp) ? cwdApp : "apps/api";
+/** Everything `wrangler deploy` in the app bundles or resolves from. */
+const BUILD_INPUTS = [APP, "packages", "package.json", "pnpm-lock.yaml"];
+/** Workers whose deploy should be followed by the production smoke check. */
+const SMOKE_APPS = new Set(["apps/api", "apps/realtime"]);
 
 /**
  * Paths with uncommitted or untracked changes among the build inputs, parsed
@@ -63,7 +73,7 @@ function main() {
   );
   if (dirty.length > 0 && !allowDirty) {
     console.error(
-      "✗ Refusing to deploy the API: these build inputs have uncommitted or untracked changes, and wrangler would ship them:",
+      `✗ Refusing to deploy ${APP}: these build inputs have uncommitted or untracked changes, and wrangler would ship them:`,
     );
     for (const file of dirty.slice(0, 20)) console.error(`    ${file}`);
     if (dirty.length > 20) console.error(`    … and ${dirty.length - 20} more`);
@@ -97,6 +107,9 @@ function main() {
     ],
     { stdio: "inherit", shell: process.platform === "win32" },
   );
+  if (result.status === 0 && SMOKE_APPS.has(APP)) {
+    console.log("\n→ Now run: pnpm smoke:order-flow");
+  }
   process.exit(result.status ?? 1);
 }
 

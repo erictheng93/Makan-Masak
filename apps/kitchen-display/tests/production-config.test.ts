@@ -29,10 +29,10 @@ describe("kitchen-display production config", () => {
       readFileSync(resolve(appRoot, "package.json"), "utf-8"),
     ) as { scripts?: Record<string, string> };
 
-    // Refuse a dirty tree first (Codex edits the main checkout live), then
-    // always build, so the uploaded dist is this commit and nothing else.
+    // pages-deploy.cjs refuses a dirty tree, builds the app and its workspace
+    // dependencies, then uploads with the commit attached.
     expect(pkg.scripts?.["deploy:prod"]).toMatch(
-      /^node \.\.\/\.\.\/scripts\/require-clean-build\.cjs && pnpm run build && wrangler pages deploy /,
+      /^node \.\.\/\.\.\/scripts\/pages-deploy\.cjs --project makanmasak-kitchen$/,
     );
   });
 });
