@@ -566,6 +566,22 @@ local state from the primary worktree.
 - Staff log in with `username` plus the shop's login slug (`shop`, `restaurants.login_slug`) and password, not an email (`loginSchema` in `apps/api/src/features/authentication/schemas/validation.ts`)
 - Role definitions: `apps/api/src/shared/constants/index.ts`
 
+### Checking the ordering flow on a deployed stack
+
+`pnpm smoke:order-flow` drives the real apps in a browser — diner, owner,
+kitchen — against production (or `SMOKE_*_URL` for another stack). It creates
+its own restaurant and removes it again through the permanent delete below, so
+it never touches a real shop and leaves nothing behind. It needs an
+administrator-tier account in `SMOKE_ADMIN_USERNAME` / `SMOKE_ADMIN_PASSWORD`;
+never commit those.
+
+Run it after deploying `apps/api`, `apps/realtime`, the customer app, the admin
+dashboard or the kitchen display. It covers a table-code order with staff
+confirmation, shop-code takeaway and dine-in with auto-accept, the kitchen
+board catching up after going offline, and a diner cancelling. Both defects it
+was written after (#476, #478) had passed CI. The demo restaurant cannot be
+used for this: it refuses orders by design.
+
 ### Deleting a restaurant for good
 
 Two steps, both through the API, never by hand-written SQL:
