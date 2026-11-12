@@ -582,6 +582,17 @@ board catching up after going offline, and a diner cancelling. Both defects it
 was written after (#476, #478) had passed CI. The demo restaurant cannot be
 used for this: it refuses orders by design.
 
+`SMOKE_ONBOARDING=1` adds the path a real shop arrives by: public application,
+approval, the owner setting a password from the setup link and signing in,
+then purging the application. **Staging only.** It writes application and
+tenant records to the management database, which the permanent delete does not
+reach, and approval mails the applicant where email is on, so the script exits
+with an error if `SMOKE_MANAGE_API_URL` is the production host. Staging has
+email off and no Slack webhook. A staging run takes the `SMOKE_*_URL` set for
+`api-staging`, `customer-staging`, `admin-staging`, `kitchen-staging` and the
+staging management API, with the platform administrator from
+`.wrangler/staging-credentials.json` (gitignored; see `scripts/staging/seed.cjs`).
+
 ### Deleting a restaurant for good
 
 Two steps, both through the API, never by hand-written SQL:

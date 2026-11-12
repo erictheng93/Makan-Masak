@@ -28,6 +28,21 @@ const CUSTOMER = process.env.SMOKE_CUSTOMER_URL ?? "https://makanmasak.com";
 const ADMIN = process.env.SMOKE_ADMIN_URL ?? "https://admin.makanmasak.com";
 const KITCHEN =
   process.env.SMOKE_KITCHEN_URL ?? "https://kitchen.makanmasak.com";
+// The shop-application scenario writes application and tenant records to the
+// management database and, where email is on, mails the applicant. It is
+// therefore opt-in and refuses production outright: run it against staging.
+const MANAGE = process.env.SMOKE_MANAGE_API_URL;
+const PRODUCTION_MANAGE_HOST = "manage-api.makanmasak.com";
+const ONBOARDING = process.env.SMOKE_ONBOARDING === "1";
+if (
+  ONBOARDING &&
+  (!MANAGE || new URL(MANAGE).host === PRODUCTION_MANAGE_HOST)
+) {
+  console.error(
+    "SMOKE_ONBOARDING=1 needs SMOKE_MANAGE_API_URL pointing at a non-production management API (it leaves application records and can send mail).",
+  );
+  process.exit(2);
+}
 const ARTIFACTS =
   process.env.SMOKE_ARTIFACTS ??
   join(tmpdir(), `smoke-order-flow-${Date.now()}`);
@@ -86,7 +101,7 @@ async function apiSession(body) {
     ?.split("=")
     .slice(1)
     .join("=");
-  return async (method, path, payload) => {
+  const session = async (method, path, payload) => {
     const call = await fetch(`${API}/api/v1${path}`, {
       method,
       headers: {
@@ -105,6 +120,44 @@ async function apiSession(body) {
       );
     }
     return data.data ?? data;
+  };
+  session.token = json.data.token;
+  return session;
+}
+
+/** The management API takes its own token, exchanged for an admin's. */
+async function managementSession(adminToken) {
+  const call = (method, path, payload, token) =>
+    fetch(`${MANAGE}/api/v1${path}`, {
+      method,
+      headers: {
+        origin: ADMIN,
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+        ...(payload ? { "content-type": "application/json" } : {}),
+      },
+      body: payload ? JSON.stringify(payload) : undefined,
+    });
+  const exchanged = await call("POST", "/auth/exchange", { token: adminToken });
+  const body = await exchanged.json();
+  if (!exchanged.ok) {
+    throw new Error(
+      `management sign-in ${exchanged.status}: ${JSON.stringify(body.error ?? body)}`,
+    );
+  }
+  const token = body.data?.token ?? body.token;
+  return async (method, path, payload, { allow = [] } = {}) => {
+    const response = await call(method, path, payload, token);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok && !allow.includes(response.status)) {
+      throw new Error(
+        `${method} ${path} -> ${response.status} ${JSON.stringify(data.error ?? data)}`,
+      );
+    }
+    return {
+      status: response.status,
+      data: data.data ?? data,
+      error: data.error,
+    };
   };
 }
 
@@ -463,7 +516,6 @@ try {
   }
   console.log(`  screenshots: ${ARTIFACTS}`);
 } finally {
-  await browser.close();
   if (restaurant && admin && process.env.SMOKE_KEEP !== "1") {
     try {
       await admin("DELETE", `/restaurants/${restaurant.id}`);
@@ -483,6 +535,168 @@ try {
     console.log(`  kept  ${restaurant.name} (${restaurant.id})`);
   }
 }
+
+// --- Applying to open a shop: the path every real shop arrives by ----------
+// The order flow above builds its shop as an administrator, so it never
+// touches the application form, approval, or the owner's first sign-in.
+let application;
+let onboarded;
+let management;
+if (ONBOARDING) {
+  const pagesBefore = pages.length;
+  try {
+    const stamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 12);
+    const ownerPassword = [crypto.randomUUID(), "Zz", "9", "!"].join("");
+
+    await step("an applicant submits the public shop application", async () => {
+      const response = await fetch(`${MANAGE}/api/v1/onboarding/applications`, {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: ADMIN },
+        body: JSON.stringify({
+          businessName: `ZZ smoke apply ${stamp}`,
+          contactName: "Smoke Check",
+          // Reserved for documentation (RFC 2606): can never be delivered to.
+          contactEmail: `smoke-${stamp}@example.com`,
+          contactPhone: "0200000000",
+          address: "1 Smoke Test Road",
+          district: "Test",
+          city: "臺北市",
+          countryCode: "TW",
+          latitude: 25.033,
+          longitude: 121.565,
+          locale: "zh-TW",
+        }),
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          `application ${response.status}: ${JSON.stringify(body.error ?? body)}`,
+        );
+      }
+      if (!body.data?.applicationId) {
+        throw new Error(`no application id in ${JSON.stringify(body)}`);
+      }
+      application = { id: body.data.applicationId };
+      return application.id;
+    });
+
+    await step(
+      "the platform approves it and a shop is provisioned",
+      async () => {
+        if (!admin) admin = await apiSession({ username, password });
+        management = await managementSession(admin.token);
+        const approved = await management(
+          "POST",
+          `/admin/onboarding/applications/${application.id}/approve`,
+          {},
+        );
+        onboarded = approved.data.ownerAccount;
+        if (!onboarded?.setupPasswordLink || !onboarded.restaurantId) {
+          throw new Error(
+            `no owner account in ${JSON.stringify(approved.data)}`,
+          );
+        }
+        return `setup link delivery: ${JSON.stringify(approved.data.credentialDelivery?.status ?? approved.data.credentialDelivery ?? "n/a")}`;
+      },
+    );
+
+    let shop;
+    await step("the new shop starts with auto-accept on", async () => {
+      shop = await admin("GET", `/restaurants/${onboarded.restaurantId}`);
+      expectEqual(shop.settings?.autoAcceptOrders, true, "autoAcceptOrders");
+      return shop.loginSlug;
+    });
+
+    await step(
+      "the owner sets a password from the setup link and signs in",
+      async () => {
+        const context = await browser.newContext({
+          viewport: { width: 1366, height: 900 },
+          locale: "zh-TW",
+        });
+        const page = watch(await context.newPage(), "new-owner");
+        const link = new URL(onboarded.setupPasswordLink);
+        await page.goto(`${ADMIN}${link.pathname}${link.search}`, {
+          waitUntil: "networkidle",
+        });
+        await page.fill("#new-password", ownerPassword);
+        await page.fill("#confirm-password", ownerPassword);
+        await page.locator('button[type="submit"]').first().click();
+        await page
+          .locator("#password-reset-success")
+          .waitFor({ timeout: LIVE_MS });
+        await page.goto(`${ADMIN}/s/${shop.loginSlug}`, {
+          waitUntil: "networkidle",
+        });
+        await page.fill("#username", onboarded.username);
+        await page.fill("#password", ownerPassword);
+        await page.locator('button[type="submit"]').first().click();
+        await page.waitForURL((url) => url.pathname.startsWith("/dashboard"), {
+          timeout: LIVE_MS,
+        });
+        return new URL(page.url()).pathname;
+      },
+    );
+  } catch {
+    failed = true;
+    mkdirSync(ARTIFACTS, { recursive: true });
+    for (const [index, { page, tag }] of pages.entries()) {
+      if (index < pagesBefore) continue;
+      await page
+        .screenshot({
+          path: join(ARTIFACTS, `${index}-${tag}.png`),
+          fullPage: true,
+        })
+        .catch(() => {});
+    }
+    console.log(`  screenshots: ${ARTIFACTS}`);
+  } finally {
+    if (application && process.env.SMOKE_KEEP !== "1") {
+      try {
+        if (!admin) admin = await apiSession({ username, password });
+        management ??= await managementSession(admin.token);
+        const path = `/admin/onboarding/applications/${application.id}`;
+        // The platform's own purge first: it is what an operator would use,
+        // and it removes the shop when nothing else references it.
+        let purge = await management("DELETE", path, undefined, {
+          allow: [409],
+        });
+        let how = "purge";
+        if (purge.status === 409 && onboarded?.restaurantId) {
+          const refusal = purge.error?.code ?? "409";
+          const shop = await admin(
+            "GET",
+            `/restaurants/${onboarded.restaurantId}`,
+          );
+          await admin("DELETE", `/restaurants/${onboarded.restaurantId}`);
+          await admin(
+            "DELETE",
+            `/restaurants/${onboarded.restaurantId}/permanent`,
+            { confirmName: shop.name, acknowledgeFinancialRecords: true },
+          );
+          purge = await management("DELETE", path);
+          how = `purge refused with ${refusal}; permanent delete, then purge`;
+        }
+        const gone = await management("GET", path, undefined, {
+          allow: [404],
+        });
+        expectEqual(gone.status, 404, "application after purge");
+        console.log(`  ok    application and its shop removed (${how})`);
+      } catch (error) {
+        failed = true;
+        console.log(
+          `  FAIL  application NOT removed: ${error.message}\n        application ${application.id}, restaurant ${onboarded?.restaurantId ?? "none"} — remove by hand`,
+        );
+      }
+    } else if (application) {
+      console.log(`  kept  application ${application.id}`);
+    }
+  }
+} else {
+  console.log("  skip  shop application (staging only: SMOKE_ONBOARDING=1)");
+}
+
+await browser.close();
 
 const passed = results.filter((result) => result.ok).length;
 console.log(
