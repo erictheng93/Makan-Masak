@@ -3127,7 +3127,7 @@ const viVN: Messages = {
         "Cho phép khách gửi đơn từ mã QR bàn và mã QR cửa hàng",
       autoConfirm: "Tự động xác nhận đơn hàng",
       autoConfirmDesc:
-        "Tự động xác nhận đơn hàng mới mà không cần duyệt thủ công",
+        "Đơn hàng mới được tự động chấp nhận. Khi tắt, đơn chờ nhân viên xác nhận trước khi bếp nhìn thấy.",
       prepTimeAlert: "Cảnh báo thời gian chuẩn bị",
       prepTimeAlertDesc:
         "Gửi cảnh báo khi đơn hàng vượt quá thời gian chuẩn bị",
