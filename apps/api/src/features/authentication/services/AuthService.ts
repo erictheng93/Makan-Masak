@@ -182,7 +182,6 @@ export class AuthService implements IAuthService {
         // after the client already has its answer.
         await this.runInBackground(
           Promise.all([
-            this.cacheUserSession(result.user.id, result.tokens.accessToken),
             this.logSecurityEvent({
               type: "LOGIN",
               userId: result.user.id,
@@ -303,7 +302,6 @@ export class AuthService implements IAuthService {
     if (result.success && result.user && result.tokens) {
       await this.runInBackground(
         Promise.all([
-          this.cacheUserSession(result.user.id, result.tokens.accessToken),
           this.logSecurityEvent({
             type: "LOGIN",
             userId: result.user.id,
@@ -442,9 +440,6 @@ export class AuthService implements IAuthService {
       };
 
       if (result.success && result.user && result.tokens) {
-        // Update cached session
-        await this.cacheUserSession(result.user.id, result.tokens.accessToken);
-
         this.logger.debug("Token refresh successful", {
           userId: result.user.id,
         });
@@ -1219,21 +1214,6 @@ export class AuthService implements IAuthService {
       creatorId,
       targetRole,
     });
-  }
-
-  private async cacheUserSession(userId: string, token: string): Promise<void> {
-    try {
-      const sessionKey = `user-session:${userId}:${token}`;
-      await this.cache.set(
-        sessionKey,
-        { userId, token, cached: true },
-        CACHE_TTL.MEDIUM,
-      );
-    } catch (error) {
-      this.logger.error("Failed to cache user session", error as Error, {
-        userId,
-      });
-    }
   }
 
   /** Per-account lockout, read after the shop-scoped lookup, before bcrypt. */
