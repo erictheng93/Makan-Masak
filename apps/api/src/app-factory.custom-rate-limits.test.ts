@@ -4,6 +4,9 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 const meterEmit = vi.hoisted(() => vi.fn(async () => undefined));
 
 vi.mock("./shared/utils/meter", () => ({ meterEmit }));
+vi.mock("./shared/utils/ephemeral-store", () => ({
+  ephemeralStore: (env: { EPHEMERAL: unknown }) => env.EPHEMERAL,
+}));
 
 import { API_CUSTOM_RATE_LIMITS, createApp } from "./app-factory";
 import { geoIntelligentRateLimitMiddleware } from "./middleware/geo-rate-limiting";
@@ -66,7 +69,7 @@ describe("API_CUSTOM_RATE_LIMITS", () => {
         // Bound on purpose: with a native limiter available, only a KV-routed
         // path still consults these values.
         GLOBAL_RATE_LIMITER: { limit: vi.fn(async () => ({ success: true })) },
-        RATE_LIMIT_KV: {
+        EPHEMERAL: {
           get: vi.fn(async () => null),
           put: vi.fn(async () => undefined),
           delete: vi.fn(async () => undefined),

@@ -19,6 +19,7 @@ import {
   isCustomerConsentVersion,
 } from "@makanmasak/shared-types";
 import type { Env } from "../../../types/env";
+import { ephemeralStore } from "../../../shared/utils/ephemeral-store";
 import {
   canonicalCustomerAuthMiddleware,
   optionalCanonicalCustomerAuthMiddleware,
@@ -1395,18 +1396,19 @@ async function enforceOtpRateLimit(
 ): Promise<void> {
   const phoneKey = `customer_otp_phone:${phone}`;
   const ipKey = `customer_otp_ip:${ip ?? "unknown"}`;
-  const phoneCount = Number((await env.RATE_LIMIT_KV.get(phoneKey)) ?? "0");
-  const ipCount = Number((await env.RATE_LIMIT_KV.get(ipKey)) ?? "0");
+  const store = ephemeralStore(env);
+  const phoneCount = Number((await store.get(phoneKey)) ?? "0");
+  const ipCount = Number((await store.get(ipKey)) ?? "0");
 
   if (phoneCount >= 3 || ipCount >= 10) {
     throw badRequest("Too many OTP requests", "OTP_RATE_LIMITED");
   }
 
   await Promise.all([
-    env.RATE_LIMIT_KV.put(phoneKey, String(phoneCount + 1), {
+    store.put(phoneKey, String(phoneCount + 1), {
       expirationTtl: 60 * 60,
     }),
-    env.RATE_LIMIT_KV.put(ipKey, String(ipCount + 1), {
+    store.put(ipKey, String(ipCount + 1), {
       expirationTtl: 60 * 60,
     }),
   ]);
@@ -1494,10 +1496,9 @@ async function enforcePasswordRateLimit<E extends { Bindings: Env }>(
 ): Promise<void> {
   const identifierKey = `customer_password_${purpose}_identifier:${identifier}`;
   const ipKey = `customer_password_${purpose}_ip:${clientIp(c)}`;
-  const identifierCount = Number(
-    (await c.env.RATE_LIMIT_KV.get(identifierKey)) ?? "0",
-  );
-  const ipCount = Number((await c.env.RATE_LIMIT_KV.get(ipKey)) ?? "0");
+  const store = ephemeralStore(c.env);
+  const identifierCount = Number((await store.get(identifierKey)) ?? "0");
+  const ipCount = Number((await store.get(ipKey)) ?? "0");
 
   if (
     identifierCount >= PASSWORD_RATE_LIMIT_IDENTIFIER_MAX ||
@@ -1507,10 +1508,10 @@ async function enforcePasswordRateLimit<E extends { Bindings: Env }>(
   }
 
   await Promise.all([
-    c.env.RATE_LIMIT_KV.put(identifierKey, String(identifierCount + 1), {
+    store.put(identifierKey, String(identifierCount + 1), {
       expirationTtl: PASSWORD_RATE_LIMIT_TTL_SECONDS,
     }),
-    c.env.RATE_LIMIT_KV.put(ipKey, String(ipCount + 1), {
+    store.put(ipKey, String(ipCount + 1), {
       expirationTtl: PASSWORD_RATE_LIMIT_TTL_SECONDS,
     }),
   ]);

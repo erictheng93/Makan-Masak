@@ -1,5 +1,6 @@
 import { Context, Next } from "hono";
 import type { Env } from "../types/env";
+import { ephemeralStore } from "../shared/utils/ephemeral-store";
 
 interface RateLimitOptions {
   windowMs: number;
@@ -43,9 +44,9 @@ export function rateLimitMiddleware(options: Partial<RateLimitOptions> = {}) {
     const rateLimitKey = `rate_limit:${key}:${Math.floor(now / opts.windowMs)}`;
 
     try {
-      // SECURITY: Fail closed if KV is not available
-      if (!c.env.CACHE_KV) {
-        console.error("Rate limiting error: KV store not available");
+      // SECURITY: Fail closed if the counter store is not available
+      if (!c.env.DB) {
+        console.error("Rate limiting error: counter store not available");
         return c.json(
           {
             success: false,
@@ -60,8 +61,9 @@ export function rateLimitMiddleware(options: Partial<RateLimitOptions> = {}) {
         );
       }
 
-      // Get current count from KV store
-      const currentCount = await c.env.CACHE_KV.get(rateLimitKey);
+      // D1 ephemeral store, not KV: the KV free tier allows 1,000 writes/day
+      const store = ephemeralStore(c.env);
+      const currentCount = await store.get(rateLimitKey);
       const count = currentCount ? parseInt(currentCount) : 0;
 
       if (count >= opts.maxRequests) {
@@ -100,7 +102,7 @@ export function rateLimitMiddleware(options: Partial<RateLimitOptions> = {}) {
         // Increment counter
         const newCount = count + 1;
         const ttl = Math.ceil(opts.windowMs / 1000);
-        await c.env.CACHE_KV.put(rateLimitKey, newCount.toString(), {
+        await store.put(rateLimitKey, newCount.toString(), {
           expirationTtl: ttl,
         });
 
