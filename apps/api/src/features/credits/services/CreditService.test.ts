@@ -827,8 +827,8 @@ describe("CreditService", () => {
   it("expires stale accounts with isolated failures and concurrent-update skips", async () => {
     const { service, mockSelectResults, mockBatchResults } = createService();
     mockBatchResults([
-      [{ meta: { changes: 0 } }, { meta: { changes: 0 } }],
-      [{ meta: { changes: 1 } }, { meta: { changes: 1 } }],
+      [{ results: [] }, { results: [] }],
+      [{ results: [{ id: "acc" }] }, { results: [{ id: "ledger" }] }],
       new Error("write failed"),
     ]);
     mockSelectResults({

@@ -527,7 +527,9 @@ export class CreditService {
           account.id,
         );
         const [zeroed] = await this.env.DB.batch([zeroBalance, recordExpiry]);
-        if (zeroed.meta.changes === 0) continue; // concurrent activity won
+        // RETURNING rows, not meta.changes: D1's count also includes trigger and
+        // cascade writes and is unproven inside batches (restaurant-deletion.ts).
+        if (zeroed.results.length === 0) continue; // concurrent activity won
 
         expired += 1;
         totalExpiredCents += account.balanceCents;
@@ -788,10 +790,9 @@ export class CreditService {
       params.accountId,
     );
 
-    let updateResult: D1Result<unknown>;
     let ledgerResult: D1Result<unknown>;
     try {
-      [updateResult, ledgerResult] = await this.env.DB.batch([update, ledger]);
+      [, ledgerResult] = await this.env.DB.batch([update, ledger]);
     } catch (error) {
       // A concurrent twin can reach the strict UNIQUE insert after its own
       // preflight read. Its failed batch changed neither balance nor ledger;
@@ -808,7 +809,9 @@ export class CreditService {
       }
       throw error;
     }
-    if (updateResult.meta.changes === 0) {
+    // The ledger INSERT is gated on `changes() = 1`, so a ledger row exists
+    // exactly when the balance UPDATE matched; meta.changes is not trusted.
+    if (ledgerResult.results.length === 0) {
       if (params.requireActiveBalance) {
         throw conflict("Insufficient credit balance", "INSUFFICIENT_BALANCE");
       }
