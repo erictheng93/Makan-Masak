@@ -9,6 +9,7 @@ const websocketOptions = vi.hoisted(() => ({
   current: null as null | {
     getUrl: () => Promise<string>;
     onMessage: (message: unknown) => void;
+    connectionStatus?: { value: string };
   },
 }));
 
@@ -57,9 +58,10 @@ vi.mock("@/composables/useWebSocket", () => ({
     getUrl: () => Promise<string>;
     onMessage: (message: unknown) => void;
   }) => {
-    websocketOptions.current = options;
+    const connectionStatus = ref("disconnected");
+    websocketOptions.current = { ...options, connectionStatus };
     return {
-      connectionStatus: ref("disconnected"),
+      connectionStatus,
       connect: vi.fn(),
       disconnect: vi.fn(),
     };
@@ -343,6 +345,29 @@ describe("OrderTrackingView realtime events", () => {
   // reach only the staff rooms, and this handler dropped anything that was not
   // a status update, so an open page kept offering "取消訂單" until reloaded
   // (production, 2026-09-17).
+  // Found by the staging smoke check: the owner confirmed in the second
+  // between the page's first read and its socket opening, and the diner sat on
+  // 待確認 until they reloaded.
+  it("re-reads the order every time the socket comes up", async () => {
+    const wrapper = mountView();
+    expect(queryClient.invalidateQueries).not.toHaveBeenCalled();
+
+    websocketOptions.current!.connectionStatus!.value = "connected";
+    await nextTick();
+    expect(queryClient.invalidateQueries).toHaveBeenCalledOnce();
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["order", "1001"],
+    });
+
+    // A drop and a reconnect is the same gap again.
+    websocketOptions.current!.connectionStatus!.value = "disconnected";
+    await nextTick();
+    websocketOptions.current!.connectionStatus!.value = "connected";
+    await nextTick();
+    expect(queryClient.invalidateQueries).toHaveBeenCalledTimes(2);
+    wrapper.unmount();
+  });
+
   it("refetches and tells the diner when staff cancel the order", () => {
     queryClient.getQueryData.mockReturnValue({ id: "1001", status: "pending" });
     const wrapper = mountView();
