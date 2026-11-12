@@ -21,6 +21,14 @@ vi.mock("../../../middleware/auth", () => ({
   ),
 }));
 
+const deletionFns = vi.hoisted(() => ({ preview: vi.fn(), delete: vi.fn() }));
+
+vi.mock("../services/RestaurantDeletionService", () => ({
+  RestaurantDeletionService: vi.fn(function RestaurantDeletionService() {
+    return deletionFns;
+  }),
+}));
+
 const restaurantFns = vi.hoisted(() => ({
   getRestaurants: vi.fn(),
   getPopularRestaurants: vi.fn(),
@@ -270,6 +278,51 @@ describe("restaurants routes", () => {
     expect(restaurantFns.getRestaurants).toHaveBeenLastCalledWith({
       includeInactive: true,
     });
+  });
+
+  it("lets only an administrator preview or permanently delete a restaurant", async () => {
+    deletionFns.preview.mockResolvedValue({ totalRows: 3 });
+    deletionFns.delete.mockResolvedValue({ totalRows: 3 });
+    const body = { confirmName: "Makan" };
+
+    for (const user of [
+      { id: "user-7", username: "ops", role: 0, adminTier: "operator" },
+      { id: "user-8", username: "owner", role: 1 },
+    ] as AuthUser[]) {
+      auth.user = user;
+      expect((await request("/restaurant-1/deletion-preview")).status).toBe(
+        403,
+      );
+      expect(
+        (await request("/restaurant-1/permanent", "DELETE", body)).status,
+      ).toBe(403);
+    }
+    expect(deletionFns.preview).not.toHaveBeenCalled();
+    expect(deletionFns.delete).not.toHaveBeenCalled();
+
+    auth.user = {
+      id: "user-1",
+      username: "root",
+      role: 0,
+      adminTier: "administrator",
+    } as AuthUser;
+    expect((await request("/restaurant-1/deletion-preview")).status).toBe(200);
+    expect(deletionFns.preview).toHaveBeenCalledWith("restaurant-1");
+    expect(
+      (await request("/restaurant-1/permanent", "DELETE", body)).status,
+    ).toBe(200);
+    expect(deletionFns.delete).toHaveBeenCalledOnce();
+    expect(deletionFns.delete).toHaveBeenCalledWith(
+      "restaurant-1",
+      expect.objectContaining(body),
+      { id: "user-1" },
+    );
+
+    // The name is required before the service is ever reached.
+    expect(
+      (await request("/restaurant-1/permanent", "DELETE", {})).status,
+    ).toBe(400);
+    expect(deletionFns.delete).toHaveBeenCalledOnce();
   });
 
   it("validates public table menu entry links", async () => {
