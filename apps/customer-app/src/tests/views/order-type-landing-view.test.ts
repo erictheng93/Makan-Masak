@@ -238,6 +238,27 @@ describe("OrderTypeLandingView", () => {
       ).toBe("qrRevoked");
     });
 
+    // Found on production: with shop mode off every code fails verification,
+    // and the diner was told the shop had changed its sticker.
+    it("says the shop is not taking orders, not that the sticker is stale, when shop mode is off", async () => {
+      vi.mocked(shopQrApi.verify).mockResolvedValue({ valid: false });
+      vi.mocked(menuApi.getRestaurant).mockResolvedValue({
+        id: "restaurant-1",
+        name: "市場入口店",
+        enableShopMode: false,
+        settings: { enableDineIn: true },
+      } as never);
+
+      const wrapper = await mountAndSettle();
+
+      expect(shopQrApi.verify).toHaveBeenCalledWith("SHOP-restaurant-1");
+      expect(
+        wrapper
+          .get('[data-testid="shop-entry-blocked"]')
+          .attributes("data-block-reason"),
+      ).toBe("shopDisabled");
+    });
+
     it("blocks the no-QR path when the shop has shop mode switched off", async () => {
       delete (routeQuery as Partial<typeof routeQuery>).qr;
       vi.mocked(menuApi.getRestaurant).mockResolvedValue({
