@@ -247,7 +247,6 @@ const handleError = (event: Event) => {
 .optimized-image {
   display: block;
   max-width: 100%;
-  height: auto;
 }
 
 .optimized-image-error {
