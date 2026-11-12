@@ -2046,6 +2046,8 @@ const jaJP: Messages = {
       signingIn: "ログインを完了しています…",
       completeFailed:
         "ログインを完了できませんでした。もう一度お試しください。",
+      chooseShop: "開く店舗を選択してください",
+      unnamedShop: "名称未設定の店舗",
       errors: {
         declined: "認可をキャンセルしたため、ログインしませんでした。",
         OAUTH_IDENTITY_NOT_LINKED:
@@ -3217,6 +3219,8 @@ const jaJP: Messages = {
         title: "ログイン方法",
         description:
           "Google または LINE を連携すると、パスワードなしでログインできます。",
+        multiShopHint:
+          "複数の店舗をお持ちですか？各店舗にそれぞれのアカウントとパスワードでログインし、ここで同じ Google または LINE を連携してください。2 店舗以上を連携すると、ログイン時に開く店舗を選べます。ある店舗で連携を解除しても、他の店舗には影響しません。",
         linkedOn: "連携日 {date}",
         link: "連携",
         unlink: "連携解除",

@@ -161,7 +161,33 @@
       </div>
 
       <section
-        v-if="providers.length > 0"
+        v-if="shopChoice"
+        data-testid="oauth-shop-picker"
+        class="rounded-3xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] space-y-3"
+        :aria-busy="oauthBusy"
+        aria-labelledby="oauth-shop-picker-title"
+      >
+        <h2
+          id="oauth-shop-picker-title"
+          class="text-center text-base font-semibold text-ios-text"
+        >
+          {{ t("auth.oauth.chooseShop") }}
+        </h2>
+        <button
+          v-for="shop in shopChoice.shops"
+          :key="shop.userId"
+          type="button"
+          :data-testid="`oauth-shop-${shop.userId}`"
+          :disabled="oauthBusy"
+          class="w-full rounded-full bg-ios-bg px-4 py-3 text-sm font-semibold text-ios-text transition-colors duration-200 ease-out hover:bg-ios-bg/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ios-blue disabled:opacity-50"
+          @click="completeOAuth(shopChoice.code, shop.userId)"
+        >
+          {{ shop.restaurantName || t("auth.oauth.unnamedShop") }}
+        </button>
+      </section>
+
+      <section
+        v-else-if="providers.length > 0"
         data-testid="oauth-section"
         class="rounded-3xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] space-y-3"
         :aria-busy="oauthBusy"
@@ -225,6 +251,7 @@ import {
   oauthErrorMessageKey,
   staffOAuthStartUrl,
   type StaffOAuthProvider,
+  type StaffOAuthShop,
 } from "@/services/staffOAuthService";
 import { getApiErrorStatus } from "@makanmasak/shared/utils/unknown";
 import {
@@ -328,6 +355,8 @@ const oauthBusy = ref(false);
 const oauthMessage = ref<{ kind: "error" | "notice"; text: string } | null>(
   null,
 );
+/** Set when one Google / LINE account is linked to several shops. */
+const shopChoice = ref<{ code: string; shops: StaffOAuthShop[] } | null>(null);
 
 /** Back to this very login page (so /s/:slug returns to itself) and its redirect. */
 const oauthReturnPath = () => {
@@ -360,15 +389,23 @@ const handleOAuthReturn = async () => {
     return;
   }
   if (!code) return;
+  await completeOAuth(code);
+};
 
+const completeOAuth = async (code: string, userId?: string) => {
   oauthBusy.value = true;
   oauthMessage.value = { kind: "notice", text: t("auth.oauth.signingIn") };
-  const result = await authStore.loginWithOAuth(code);
+  const result = await authStore.loginWithOAuth(code, userId);
   oauthBusy.value = false;
   if (result.success) {
+    shopChoice.value = null;
     oauthMessage.value = null;
     router.push(postLoginTarget());
+  } else if ("shops" in result) {
+    shopChoice.value = { code, shops: result.shops };
+    oauthMessage.value = null;
   } else {
+    shopChoice.value = null;
     oauthMessage.value = { kind: "error", text: result.error };
   }
 };

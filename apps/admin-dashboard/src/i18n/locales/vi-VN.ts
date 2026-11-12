@@ -2045,6 +2045,8 @@ const viVN: Messages = {
       providers: { google: "Google", line: "LINE" },
       signingIn: "Đang hoàn tất đăng nhập...",
       completeFailed: "Không thể hoàn tất đăng nhập. Vui lòng thử lại.",
+      chooseShop: "Chọn cửa hàng để mở",
+      unnamedShop: "Cửa hàng chưa đặt tên",
       errors: {
         declined: "Bạn đã hủy ủy quyền nên chưa được đăng nhập.",
         OAUTH_IDENTITY_NOT_LINKED:
@@ -3217,6 +3219,8 @@ const viVN: Messages = {
         title: "Phương thức đăng nhập",
         description:
           "Liên kết Google hoặc LINE để đăng nhập mà không cần nhập mật khẩu.",
+        multiShopHint:
+          "Bạn có nhiều cửa hàng? Hãy đăng nhập vào từng cửa hàng bằng tài khoản và mật khẩu của cửa hàng đó, rồi liên kết cùng một tài khoản Google hoặc LINE tại đây. Khi đã liên kết từ hai cửa hàng trở lên, lúc đăng nhập bạn có thể chọn cửa hàng muốn mở. Hủy liên kết ở một cửa hàng không ảnh hưởng đến các cửa hàng khác.",
         linkedOn: "Liên kết ngày {date}",
         link: "Liên kết",
         unlink: "Hủy liên kết",

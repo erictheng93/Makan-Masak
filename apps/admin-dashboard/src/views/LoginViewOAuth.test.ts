@@ -127,8 +127,40 @@ describe("LoginView OAuth", () => {
     };
     expect(replaced.query).toEqual({ redirect: "/dashboard/menu" });
     expect(loginWithOAuth).toHaveBeenCalledOnce();
-    expect(loginWithOAuth).toHaveBeenCalledWith("abc");
+    expect(loginWithOAuth).toHaveBeenCalledWith("abc", undefined);
     expect(push).toHaveBeenCalledWith("/dashboard/menu");
+  });
+
+  it("lets an owner of several shops pick one, then signs in to it", async () => {
+    route.query = { oauth_code: "abc" };
+    loginWithOAuth
+      .mockResolvedValueOnce({
+        success: false,
+        shops: [
+          { userId: "u-a", restaurantId: "r-a", restaurantName: "Alpha Cafe" },
+          { userId: "u-b", restaurantId: "r-b", restaurantName: null },
+        ],
+      })
+      .mockResolvedValueOnce({ success: true });
+    const wrapper = await mountView();
+
+    const picker = wrapper.get('[data-testid="oauth-shop-picker"]');
+    expect(picker.text()).toContain("auth.oauth.chooseShop");
+    expect(picker.text()).toContain("Alpha Cafe");
+    expect(wrapper.get('[data-testid="oauth-shop-u-b"]').text()).toBe(
+      "auth.oauth.unnamedShop",
+    );
+    expect(push).not.toHaveBeenCalled();
+
+    await wrapper.get('[data-testid="oauth-shop-u-a"]').trigger("click");
+    await flushPromises();
+
+    expect(loginWithOAuth).toHaveBeenCalledTimes(2);
+    expect(loginWithOAuth).toHaveBeenLastCalledWith("abc", "u-a");
+    expect(push).toHaveBeenCalledWith("/dashboard");
+    expect(wrapper.find('[data-testid="oauth-shop-picker"]').exists()).toBe(
+      false,
+    );
   });
 
   it("shows an inline error and does not redirect when complete fails", async () => {

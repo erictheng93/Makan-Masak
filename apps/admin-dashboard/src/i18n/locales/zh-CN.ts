@@ -2006,6 +2006,8 @@ const zhCN: Messages = {
       providers: { google: "Google", line: "LINE" },
       signingIn: "正在完成登录…",
       completeFailed: "登录未能完成，请重新操作一次。",
+      chooseShop: "选择要进入的店",
+      unnamedShop: "未命名的店",
       errors: {
         declined: "你已取消授权，未进行登录。",
         OAUTH_IDENTITY_NOT_LINKED:
@@ -3138,6 +3140,8 @@ const zhCN: Messages = {
       signInMethods: {
         title: "登录方式",
         description: "关联 Google 或 LINE 后，可以不输入密码直接登录。",
+        multiShopHint:
+          "有多家店？每家店都要各自用账号密码登录，再到这里连结同一个 Google 或 LINE。连结两家以上后，用它登录时就能选择要进入哪一家；在某家店解除连结不影响其他店。",
         linkedOn: "关联于 {date}",
         link: "关联",
         unlink: "解除关联",

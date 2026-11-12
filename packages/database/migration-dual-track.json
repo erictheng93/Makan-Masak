@@ -178,6 +178,10 @@
     {
       "fresh": "0044_user_auth_identities.sql",
       "reason": "user_auth_identities and users.password_set_at_ms are platform-API objects; the management-api reads users through PLATFORM_DB and has no users table of its own."
+    },
+    {
+      "fresh": "0045_user_auth_identities_multi_shop.sql",
+      "reason": "Changes an index on the platform-only user_auth_identities table (0044)."
     }
   ],
   "legacyOnly": [

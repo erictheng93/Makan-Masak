@@ -5,9 +5,10 @@
  * provider's email. An identity exists because a signed-in owner attached it.
  */
 
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import {
   createDatabase,
+  restaurants,
   userAuthIdentities,
   users,
 } from "@makanmasak/database";
@@ -35,20 +36,26 @@ export interface StaffOAuthProfile {
 
 const live = isNull(userAuthIdentities.revokedAt);
 
-/** The live identity for a provider account, with the role of the user it points at. */
-export async function findLiveIdentity(
+/**
+ * Every live link of a provider account, one per shop-owner account the same
+ * person linked it to, with each user's role and shop for the shop picker.
+ */
+export async function findLiveIdentities(
   db: Db,
   provider: StaffOAuthProvider,
   providerUid: string,
 ) {
-  const [row] = await db
+  return db
     .select({
       id: userAuthIdentities.id,
       userId: userAuthIdentities.userId,
       role: users.role,
+      restaurantId: users.restaurantId,
+      restaurantName: restaurants.name,
     })
     .from(userAuthIdentities)
     .innerJoin(users, eq(users.id, userAuthIdentities.userId))
+    .leftJoin(restaurants, eq(restaurants.id, users.restaurantId))
     .where(
       and(
         eq(userAuthIdentities.provider, provider),
@@ -56,8 +63,7 @@ export async function findLiveIdentity(
         live,
       ),
     )
-    .limit(1);
-  return row ?? null;
+    .orderBy(asc(restaurants.name), asc(userAuthIdentities.createdAt));
 }
 
 /** Whether `identityId` is still a live link to `userId`, and that user is an owner. */
@@ -90,7 +96,8 @@ export async function touchLastUsed(db: Db, id: string, now: number) {
 
 /**
  * Attach a verified provider account to `userId`. Idempotent when it is
- * already linked to that same user.
+ * already linked to that same user. The same account may also be linked to
+ * other owners' rows (one person, several shops); sign-in then asks which.
  */
 export async function linkIdentity(
   db: Db,
@@ -116,14 +123,10 @@ export async function linkIdentity(
     );
   }
 
-  const existing = await findLiveIdentity(db, provider, providerUid);
+  const existing = (await findLiveIdentities(db, provider, providerUid)).find(
+    (row) => row.userId === userId,
+  );
   if (existing) {
-    if (existing.userId !== userId) {
-      throw conflict(
-        "This provider account is already linked to another user",
-        "OAUTH_IDENTITY_ALREADY_LINKED",
-      );
-    }
     await touchLastUsed(db, existing.id, now);
     return { id: existing.id };
   }
@@ -164,12 +167,12 @@ export async function linkIdentity(
       .returning({ id: userAuthIdentities.id });
     return row;
   } catch (error) {
-    // Two concurrent links lose to the partial unique indexes, not to the
-    // pre-checks above.
+    // Two concurrent links to one user lose to the partial unique index, not
+    // to the pre-checks above.
     if (error instanceof Error && /UNIQUE/i.test(error.message)) {
       throw conflict(
-        "This provider account is already linked",
-        "OAUTH_IDENTITY_ALREADY_LINKED",
+        `A ${provider} account is already linked; unlink it first`,
+        "OAUTH_PROVIDER_ALREADY_LINKED",
       );
     }
     throw error;

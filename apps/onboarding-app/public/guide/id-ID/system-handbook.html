@@ -1245,6 +1245,19 @@
               >, login ulang; jangan hanya memasukkan JWT yang ditandatangani sendiri secara manual di peramban. Tanda tangan yang valid tetap harus sesuai dengan baris sessions yang active.
             </li>
           </ol>
+          <h3>Pemilik toko masuk dengan Google / LINE (beberapa toko)</h3>
+          <p>Pemilik toko dapat masuk ke dasbor admin dengan Google atau LINE sebagai ganti kata sandi. Sistem tidak pernah mencocokkan akun lewat email, sehingga tidak dapat mengetahui toko mana yang dimiliki pemilik yang sama; setiap toko harus ditautkan sendiri-sendiri.</p>
+          <ol>
+            <li>Masuk ke dasbor admin dengan nama pengguna dan kata sandi toko A, lalu tautkan Google atau LINE di Pengaturan &gt; Keamanan &gt; Metode masuk.</li>
+            <li>Keluar, masuk dengan nama pengguna dan kata sandi toko B, lalu tautkan akun Google / LINE yang sama. Ulangi untuk setiap toko lainnya.</li>
+            <li>Setelah itu, pilih “Masuk dengan Google” atau “Masuk dengan LINE” di halaman login. Jika hanya satu toko yang ditautkan, Anda langsung masuk ke toko itu; jika dua atau lebih, muncul layar “Pilih toko yang ingin dibuka”, lalu ketuk nama tokonya.</li>
+            <li>Layar pemilihan toko kedaluwarsa setelah 5 menit; jika terjadi, ulangi login Google / LINE.</li>
+          </ol>
+          <ul>
+            <li>Layar pemilihan hanya menampilkan toko yang sudah ditautkan. Toko yang tidak muncul belum ditautkan: masuk ke toko itu dengan kata sandinya, lalu tautkan.</li>
+            <li>Pelepasan tautan berlaku per toko: melepas di toko A tidak memengaruhi toko B.</li>
+            <li>Pesan bahwa akun belum ditautkan ke akun pemilik toko mana pun berarti Google / LINE ini belum ditautkan di toko mana pun.</li>
+          </ul>
           <h3>Login pelanggan dan pemulihan akun</h3>
           <p>
             Customer App memiliki login, pendaftaran, lupa kata sandi／reset kata sandi (/forgot-password, /reset-password), verifikasi

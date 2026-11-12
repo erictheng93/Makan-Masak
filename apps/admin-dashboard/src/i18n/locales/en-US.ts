@@ -2146,6 +2146,8 @@ const enUS: Messages = {
       providers: { google: "Google", line: "LINE" },
       signingIn: "Finishing sign-in...",
       completeFailed: "Sign-in could not be completed. Please try again.",
+      chooseShop: "Choose a shop to open",
+      unnamedShop: "Unnamed shop",
       errors: {
         declined: "You cancelled the authorization, so you were not signed in.",
         OAUTH_IDENTITY_NOT_LINKED:
@@ -3311,6 +3313,8 @@ const enUS: Messages = {
         title: "Sign-in methods",
         description:
           "Link Google or LINE to sign in without typing your password.",
+        multiShopHint:
+          "Own more than one shop? Sign in to each shop with its username and password, then link the same Google or LINE account here. Once two or more shops are linked, signing in with it lets you choose which shop to open. Unlinking at one shop does not affect the others.",
         linkedOn: "Linked on {date}",
         link: "Link",
         unlink: "Unlink",

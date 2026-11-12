@@ -1246,6 +1246,19 @@
               JWT tự ký. Chữ ký hợp lệ vẫn phải khớp với một hàng sessions đang active.
             </li>
           </ol>
+          <h3>Chủ cửa hàng đăng nhập bằng Google / LINE (nhiều cửa hàng)</h3>
+          <p>Chủ cửa hàng có thể đăng nhập trang quản trị bằng Google hoặc LINE thay cho mật khẩu. Hệ thống không bao giờ đối chiếu tài khoản theo email, nên không thể biết những cửa hàng nào thuộc cùng một chủ; mỗi cửa hàng phải được liên kết riêng.</p>
+          <ol>
+            <li>Đăng nhập trang quản trị bằng tài khoản và mật khẩu của cửa hàng A, rồi liên kết Google hoặc LINE tại Cài đặt &gt; Bảo mật &gt; Phương thức đăng nhập.</li>
+            <li>Đăng xuất, đăng nhập bằng tài khoản và mật khẩu của cửa hàng B, rồi liên kết cùng tài khoản Google / LINE đó. Làm tương tự cho các cửa hàng khác.</li>
+            <li>Từ đó, chọn “Đăng nhập bằng Google” hoặc “Đăng nhập bằng LINE” trên trang đăng nhập. Nếu chỉ liên kết một cửa hàng, bạn vào thẳng cửa hàng đó; nếu từ hai cửa hàng trở lên, màn hình “Chọn cửa hàng để mở” sẽ hiện ra, bạn chạm vào tên cửa hàng.</li>
+            <li>Màn hình chọn cửa hàng hết hạn sau 5 phút; khi đó hãy đăng nhập lại bằng Google / LINE.</li>
+          </ol>
+          <ul>
+            <li>Màn hình chọn chỉ liệt kê những cửa hàng đã liên kết tài khoản. Cửa hàng không xuất hiện là chưa được liên kết: hãy đăng nhập cửa hàng đó bằng mật khẩu và liên kết.</li>
+            <li>Hủy liên kết được tính riêng từng cửa hàng: hủy ở cửa hàng A không ảnh hưởng cửa hàng B.</li>
+            <li>Thông báo tài khoản chưa liên kết với tài khoản chủ cửa hàng nào nghĩa là Google / LINE này chưa được liên kết ở cửa hàng nào.</li>
+          </ul>
           <h3>Khách hàng đăng nhập và khôi phục tài khoản</h3>
           <p>
             Customer App có đăng nhập, đăng ký, quên mật khẩu／đặt lại mật khẩu (/forgot-password, /reset-password), xác minh

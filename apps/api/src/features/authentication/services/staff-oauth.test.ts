@@ -5,7 +5,7 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { ApiError } from "../../../shared/utils/api-error";
 import {
-  findLiveIdentity,
+  findLiveIdentities,
   linkIdentity,
   listIdentities,
   revokeIdentity,
@@ -57,6 +57,7 @@ function createDb() {
   const sqlite = new Database(":memory:");
   applyMigration(sqlite, "0000_baseline_strict.sql");
   applyMigration(sqlite, "0044_user_auth_identities.sql");
+  applyMigration(sqlite, "0045_user_auth_identities_multi_shop.sql");
   return { sqlite, db: drizzle(sqlite) as unknown as Db };
 }
 
@@ -88,7 +89,7 @@ describe("migration 0044", () => {
     ]);
   });
 
-  it("lets a provider account be live for one user, and again after revoke", () => {
+  it("lets a provider account be live for several users, but once per user", () => {
     const { sqlite } = createDb();
     insertUser(sqlite, { id: "u1", username: "a" });
     insertUser(sqlite, { id: "u2", username: "b" });
@@ -99,14 +100,16 @@ describe("migration 0044", () => {
     );
 
     insert.run("i1", "u1", "google", "uid-1");
-    expect(() => insert.run("i2", "u2", "google", "uid-1")).toThrow(/UNIQUE/);
-    // one live identity per provider per user, too
+    // 0045: the same person's account may open each of their shops
+    expect(() => insert.run("i2", "u2", "google", "uid-1")).not.toThrow();
+    // one live identity per provider per user still holds
     expect(() => insert.run("i3", "u1", "google", "uid-2")).toThrow(/UNIQUE/);
+    expect(() => insert.run("i4", "u1", "google", "uid-1")).toThrow(/UNIQUE/);
 
     sqlite
       .prepare("UPDATE user_auth_identities SET revoked_at_ms = 9 WHERE id = ?")
       .run("i1");
-    expect(() => insert.run("i2", "u2", "google", "uid-1")).not.toThrow();
+    expect(() => insert.run("i3", "u1", "google", "uid-2")).not.toThrow();
   });
 });
 
@@ -115,7 +118,7 @@ describe("staff OAuth identities", () => {
     const { sqlite, db } = createDb();
     insertUser(sqlite, { id: "u1", username: "a", email: "boss@example.test" });
 
-    expect(await findLiveIdentity(db, "google", "uid-1")).toBeNull();
+    expect(await findLiveIdentities(db, "google", "uid-1")).toEqual([]);
     // An email match is irrelevant: nothing was linked, so nothing resolves.
     expect(
       sqlite.prepare("SELECT COUNT(*) AS n FROM user_auth_identities").get(),
@@ -128,9 +131,9 @@ describe("staff OAuth identities", () => {
       profile,
       now: 10,
     });
-    expect(await findLiveIdentity(db, "google", "uid-1")).toEqual(
+    expect(await findLiveIdentities(db, "google", "uid-1")).toEqual([
       expect.objectContaining({ userId: "u1", role: 1 }),
-    );
+    ]);
   });
 
   it("refuses to link a non-owner", async () => {
@@ -155,7 +158,7 @@ describe("staff OAuth identities", () => {
     ).toEqual({ n: 0 });
   });
 
-  it("refuses a provider account already linked to a different user", async () => {
+  it("links one provider account to several owners, once each", async () => {
     const { sqlite, db } = createDb();
     insertUser(sqlite, { id: "a", username: "a" });
     insertUser(sqlite, { id: "b", username: "b" });
@@ -166,16 +169,14 @@ describe("staff OAuth identities", () => {
       now: 10,
     };
 
-    await linkIdentity(db, { ...input, userId: "a" });
-    const error = await rejection(linkIdentity(db, { ...input, userId: "b" }));
-
-    expect(error).toMatchObject({
-      status: 409,
-      code: "OAUTH_IDENTITY_ALREADY_LINKED",
-    });
+    const first = await linkIdentity(db, { ...input, userId: "a" });
+    await linkIdentity(db, { ...input, userId: "b" });
+    expect(
+      (await findLiveIdentities(db, "google", "uid-1")).map((r) => r.userId),
+    ).toEqual(expect.arrayContaining(["a", "b"]));
     // linking again as the owner of the link is a no-op, not an error
     await expect(linkIdentity(db, { ...input, userId: "a" })).resolves.toEqual({
-      id: expect.any(String),
+      id: first.id,
     });
   });
 
@@ -223,7 +224,7 @@ describe("staff OAuth identities", () => {
       const { db, id } = await ownerWithGoogle(null);
       const error = await rejection(revokeIdentity(db, "a", id, 20));
       expect(error).toMatchObject({ status: 409, code: "LAST_AUTH_METHOD" });
-      expect(await findLiveIdentity(db, "google", "uid-1")).not.toBeNull();
+      expect(await findLiveIdentities(db, "google", "uid-1")).toHaveLength(1);
     });
 
     it("is allowed when a password was genuinely set", async () => {
@@ -231,7 +232,7 @@ describe("staff OAuth identities", () => {
       await expect(revokeIdentity(db, "a", id, 20)).resolves.toEqual({
         provider: "google",
       });
-      expect(await findLiveIdentity(db, "google", "uid-1")).toBeNull();
+      expect(await findLiveIdentities(db, "google", "uid-1")).toEqual([]);
     });
 
     it("is allowed when another live identity remains", async () => {

@@ -43,9 +43,22 @@ export function staffOAuthStartUrl(
   return `${resolveApiBase()}/auth/oauth/${provider}/start?redirectTo=${encodeURIComponent(redirectTo)}`;
 }
 
-/** Same envelope as POST /auth/login; the callback cookie rides along. */
-export function completeStaffOAuth(code: string) {
-  return api.post<OAuthSession>("/auth/oauth/complete", { code });
+/** One of the shops a Google / LINE account is linked to. */
+export interface StaffOAuthShop {
+  userId: string;
+  restaurantId: string | null;
+  restaurantName: string | null;
+}
+
+/**
+ * Same envelope as POST /auth/login; the callback cookie rides along. When the
+ * account is linked to several shops the first call returns the list instead
+ * of a session, and a second call with the chosen `userId` signs in.
+ */
+export function completeStaffOAuth(code: string, userId?: string) {
+  return api.post<
+    OAuthSession | { needsShopSelection: true; shops: StaffOAuthShop[] }
+  >("/auth/oauth/complete", { code, ...(userId ? { userId } : {}) });
 }
 
 export async function startStaffOAuthLink(
