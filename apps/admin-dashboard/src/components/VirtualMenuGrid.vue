@@ -154,8 +154,7 @@ const measure = () => {
   measuredRows.value = next;
   const top = (rowTops.value[anchorRow] ?? 0) + offset;
   if (jumpTarget) {
-    const { behavior } = jumpTarget;
-    nextTick(() => element.scrollTo({ top, behavior }));
+    nextTick(() => element.scrollTo({ top, behavior: "auto" }));
   } else if (top !== scrollTop.value) {
     nextTick(() => {
       element.scrollTop = top;
@@ -164,7 +163,7 @@ const measure = () => {
   }
 };
 // Set while a scrollToMenuItem is still travelling; any user scroll input ends it.
-let jumpTarget: { row: number; behavior: "auto" | "smooth" } | null = null;
+let jumpTarget: { row: number } | null = null;
 const endJump = () => {
   jumpTarget = null;
 };
