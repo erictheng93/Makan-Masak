@@ -433,6 +433,7 @@ const errorMessage = ref("");
 const successMessage = ref("");
 const bookingDate = ref(today);
 const selectedTime = ref("");
+let availabilityRequest = 0;
 const verifyCode = ref("");
 const createIdempotencyKey = ref(crypto.randomUUID());
 const lastCreatePayload = ref<string | null>(null);
@@ -466,6 +467,7 @@ async function loadRestaurant() {
 
 async function loadAvailability() {
   if (!restaurant.value || !bookingDate.value) return;
+  const request = ++availabilityRequest;
   isLoadingSlots.value = true;
   errorMessage.value = "";
   selectedTime.value = "";
@@ -475,13 +477,21 @@ async function loadAvailability() {
       date: bookingDate.value,
       partySize: form.partySize,
     });
+    if (request !== availabilityRequest) return;
     slots.value = availability.slots;
-    selectedTime.value = slots.value.find((slot) => slot.available)?.time ?? "";
+    // Keep a slot the diner picked while this load was in flight, if it is
+    // still open; resetting it booked a time they had not chosen.
+    const available = availability.slots.filter((slot) => slot.available);
+    selectedTime.value =
+      available.find((slot) => slot.time === selectedTime.value)?.time ??
+      available[0]?.time ??
+      "";
   } catch (error) {
+    if (request !== availabilityRequest) return;
     console.error("Load reservation availability failed:", error);
     errorMessage.value = t("serviceBooking.slotsFailed");
   } finally {
-    isLoadingSlots.value = false;
+    if (request === availabilityRequest) isLoadingSlots.value = false;
   }
 }
 
