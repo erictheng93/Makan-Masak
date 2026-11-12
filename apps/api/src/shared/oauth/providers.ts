@@ -15,7 +15,7 @@
  */
 
 import type { CustomerOAuthProvider } from "@makanmasak/shared-types";
-import type { Env } from "../../../../types/env";
+import type { Env } from "../../types/env";
 
 export interface OAuthProviderConfig {
   readonly provider: CustomerOAuthProvider;
@@ -135,10 +135,12 @@ export function configuredProviders(env: OAuthEnv): CustomerOAuthProvider[] {
 export function buildRedirectUri(
   env: OAuthEnv,
   provider: CustomerOAuthProvider,
+  audience: "customer" | "staff" = "customer",
 ): string {
   const base = (env.API_BASE_URL?.trim() || "http://localhost:8787").replace(
     /\/+$/,
     "",
   );
-  return `${base}/api/v1/customer/auth/oauth/${provider}/callback`;
+  const prefix = audience === "staff" ? "/api/v1" : "/api/v1/customer";
+  return `${base}${prefix}/auth/oauth/${provider}/callback`;
 }

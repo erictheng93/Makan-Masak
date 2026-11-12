@@ -48,7 +48,7 @@ import {
   isProviderConfigured,
   OAUTH_PROVIDERS,
   type OAuthEnv,
-} from "../services/oauth/providers";
+} from "../../../shared/oauth/providers";
 import {
   consumeRequestState,
   deriveCodeChallenge,
@@ -58,9 +58,9 @@ import {
   OAUTH_STATE_TTL_SECONDS,
   sanitizeRedirectTo,
   saveRequestState,
-} from "../services/oauth/state";
-import { exchangeCodeForIdToken } from "../services/oauth/tokenExchange";
-import { verifyIdToken } from "../services/oauth/idToken";
+} from "../../../shared/oauth/state";
+import { exchangeCodeForIdToken } from "../../../shared/oauth/tokenExchange";
+import { verifyIdToken } from "../../../shared/oauth/idToken";
 import {
   createCustomerForIdentity,
   findActiveCustomerIdByEmail,

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   getAppleClientSecret,
   AppleClientSecretError,
-} from "./appleClientSecret";
+} from "../../../../shared/oauth/appleClientSecret";
 import {
   createCustomerForIdentity,
   findActiveCustomerIdByEmail,
@@ -17,9 +17,12 @@ import {
   consumeRequestState,
   deriveCodeChallenge,
   saveRequestState,
-} from "./state";
-import { exchangeCodeForIdToken } from "./tokenExchange";
-import { OAUTH_PROVIDERS, type OAuthEnv } from "./providers";
+} from "../../../../shared/oauth/state";
+import { exchangeCodeForIdToken } from "../../../../shared/oauth/tokenExchange";
+import {
+  OAUTH_PROVIDERS,
+  type OAuthEnv,
+} from "../../../../shared/oauth/providers";
 import oauthRoutes from "../../routes/oauth";
 import { ApiError } from "../../../../shared/utils/api-error";
 

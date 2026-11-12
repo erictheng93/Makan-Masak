@@ -83,6 +83,9 @@ interface RateLimitTokenPayload {
 const SENSITIVE_KV_RATE_LIMIT_PATHS = [
   "/api/v1/auth/login",
   "/api/v1/auth/register",
+  // Staff OAuth start/callback/complete: substring match covers every
+  // :provider path, so each gets the durable KV counter like /auth/login.
+  "/api/v1/auth/oauth",
   "/api/v1/customers/otp",
   "/api/v1/customer/otp",
   "/api/v1/realtime/auth/guest-token",

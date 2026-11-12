@@ -516,6 +516,11 @@ export function createApp(
       excludePaths: [
         "/api/v1/auth/login",
         "/api/v1/auth/register",
+        // Exchanges a one-time OAuth code for a session before any session
+        // exists, so there is no CSRF token to present -- the same position
+        // as /auth/login above. The 256-bit single-use code is the credential,
+        // and a cross-site JSON POST is stopped by CORS preflight.
+        "/api/v1/auth/oauth/complete$",
         "/api/v1/auth/forgot-password$", // Public reset request uses no session cookie.
         // The whole canonical customer feature, not only /auth: every write
         // past /auth authenticates with `Authorization: Bearer` alone

@@ -75,6 +75,12 @@ export const users = sqliteTable(
     passwordChangedAt: integer("password_changed_at_ms", {
       mode: "timestamp_ms",
     }),
+    /**
+     * When a real password was last set. NULL means the stored hash may be an
+     * unusable random one (onboarding inserts one), so it must not count as a
+     * way to sign in. Migration 0044.
+     */
+    passwordSetAt: integer("password_set_at_ms", { mode: "timestamp_ms" }),
     tokenVersion: integer("token_version").notNull().default(1),
 
     // 驗證時間戳

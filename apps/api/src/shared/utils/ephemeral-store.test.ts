@@ -78,4 +78,17 @@ describe("D1EphemeralStore", () => {
         .run(),
     ).toThrow();
   });
+
+  it("takes a value exactly once", async () => {
+    let now = 1_000;
+    const { store } = createStore(() => now);
+    await store.put("code", "v", { expirationTtl: 60 });
+
+    expect(await store.take("code")).toBe("v");
+    expect(await store.take("code")).toBeNull();
+
+    await store.put("late", "v", { expirationTtl: 60 });
+    now += 60_000;
+    expect(await store.take("late")).toBeNull();
+  });
 });

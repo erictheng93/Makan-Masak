@@ -272,7 +272,9 @@ export interface SecurityEvent {
     | "ACCOUNT_LOCKED"
     | "PASSWORD_RESET_REQUESTED"
     | "PASSWORD_RESET_COMPLETED"
-    | "EMAIL_VERIFIED";
+    | "EMAIL_VERIFIED"
+    | "OAUTH_IDENTITY_LINKED"
+    | "OAUTH_IDENTITY_UNLINKED";
   userId?: string;
   username?: string;
   ipAddress?: string;
@@ -328,6 +330,11 @@ export interface AuthStatistics {
 export interface IAuthService {
   // Core authentication methods
   login(data: LoginData): Promise<AuthResult>;
+  loginWithOAuth(
+    userId: string,
+    provider: string,
+    ctx: { deviceInfo?: DeviceInfo; location?: LocationInfo },
+  ): Promise<AuthResult>;
   register(data: RegisterData, createdBy?: string): Promise<AuthResult>;
   refreshToken(refreshToken: string): Promise<AuthResult>;
   logout(

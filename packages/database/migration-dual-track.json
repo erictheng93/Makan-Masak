@@ -174,6 +174,10 @@
     {
       "fresh": "0043_ephemeral_kv.sql",
       "reason": "ephemeral_kv holds platform-API guest tokens, order locks and rate-limit counters; the management-api database has no use for it."
+    },
+    {
+      "fresh": "0044_user_auth_identities.sql",
+      "reason": "user_auth_identities and users.password_set_at_ms are platform-API objects; the management-api reads users through PLATFORM_DB and has no users table of its own."
     }
   ],
   "legacyOnly": [

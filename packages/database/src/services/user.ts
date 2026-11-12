@@ -170,6 +170,7 @@ export class UserService extends BaseService {
           phone: data.phone,
           fullName: data.fullName,
           passwordHash,
+          passwordSetAt: new Date(),
           role: data.role,
           restaurantId: data.restaurantId,
           adminTier:
@@ -765,6 +766,7 @@ export class UserService extends BaseService {
         .set({
           passwordHash,
           passwordChangedAt: new Date(),
+          passwordSetAt: new Date(),
           tokenVersion: sql`${users.tokenVersion} + 1`,
           updatedAt: new Date(),
         })

@@ -3,7 +3,7 @@ import {
   deriveCodeChallenge,
   generateCodeVerifier,
   sanitizeRedirectTo,
-} from "./state";
+} from "../../../../shared/oauth/state";
 import { isUsableProviderEmail, maskEmail, normalizeEmail } from "./identity";
 import {
   buildRedirectUri,
@@ -11,8 +11,8 @@ import {
   isProviderConfigured,
   OAUTH_PROVIDERS,
   type OAuthEnv,
-} from "./providers";
-import { verifyIdToken, IdTokenError } from "./idToken";
+} from "../../../../shared/oauth/providers";
+import { verifyIdToken, IdTokenError } from "../../../../shared/oauth/idToken";
 
 function buildEnv(overrides: Partial<OAuthEnv> = {}): OAuthEnv {
   return {

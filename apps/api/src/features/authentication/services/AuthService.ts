@@ -173,31 +173,7 @@ export class AuthService implements IAuthService {
         };
       }
 
-      // Transform database result to match our interface
-      const result: AuthResult = {
-        success: dbResult.success,
-        reason: dbResult.reason,
-        user: dbResult.user
-          ? {
-              ...dbResult.user,
-              role: dbResult.user.role as UserRole,
-              restaurantId: dbResult.user.restaurantId || undefined, // Keep as string
-              isVerified: false, // Would need to be fetched from database
-              twoFactorEnabled: false, // Would need to be fetched from database
-              createdAt: new Date(), // Would need to be fetched from database
-              updatedAt: new Date(), // Would need to be fetched from database
-            }
-          : undefined,
-        tokens: dbResult.tokens
-          ? {
-              ...dbResult.tokens,
-              expiresIn: Math.floor(
-                (dbResult.tokens.expiresAt.getTime() - Date.now()) / 1000,
-              ),
-            }
-          : undefined,
-        error: dbResult.error,
-      };
+      const result = this.toFeatureResult(dbResult);
 
       if (result.success && result.user && result.tokens) {
         // None of this gates the token we are about to return, and it used to
@@ -280,6 +256,80 @@ export class AuthService implements IAuthService {
       const duration = this.performance.endTimer(timer);
       this.performance.recordMetric("auth.login.duration", duration, "ms");
     }
+  }
+
+  /** Maps the database layer's login result onto this feature's shape. */
+  private toFeatureResult(
+    dbResult: Awaited<ReturnType<DatabaseAuthService["login"]>>,
+  ): AuthResult {
+    return {
+      success: dbResult.success,
+      reason: dbResult.reason,
+      user: dbResult.user
+        ? {
+            ...dbResult.user,
+            role: dbResult.user.role as UserRole,
+            restaurantId: dbResult.user.restaurantId || undefined, // Keep as string
+            isVerified: false, // Would need to be fetched from database
+            twoFactorEnabled: false, // Would need to be fetched from database
+            createdAt: new Date(), // Would need to be fetched from database
+            updatedAt: new Date(), // Would need to be fetched from database
+          }
+        : undefined,
+      tokens: dbResult.tokens
+        ? {
+            ...dbResult.tokens,
+            expiresIn: Math.floor(
+              (dbResult.tokens.expiresAt.getTime() - Date.now()) / 1000,
+            ),
+          }
+        : undefined,
+      error: dbResult.error,
+    };
+  }
+
+  /**
+   * Session for an account a provider already vouched for (staff OAuth). The
+   * database layer re-applies the account gates; the bookkeeping matches
+   * password login, tagged with the method so the two are tellable apart.
+   */
+  async loginWithOAuth(
+    userId: string,
+    provider: string,
+    ctx: { deviceInfo?: DeviceInfo; location?: LocationInfo },
+  ): Promise<AuthResult> {
+    const dbResult = await this.dbAuthService.loginVerifiedUser(userId, ctx);
+    const result = this.toFeatureResult(dbResult);
+    if (result.success && result.user && result.tokens) {
+      await this.runInBackground(
+        Promise.all([
+          this.cacheUserSession(result.user.id, result.tokens.accessToken),
+          this.logSecurityEvent({
+            type: "LOGIN",
+            userId: result.user.id,
+            username: result.user.username,
+            ipAddress: ctx.deviceInfo?.ipAddress,
+            userAgent: ctx.deviceInfo?.userAgent,
+            location: ctx.location,
+            metadata: { method: "oauth", provider },
+            severity: "LOW",
+          }),
+        ]),
+      );
+    } else {
+      await this.runInBackground(
+        this.logSecurityEvent({
+          type: "LOGIN_FAILED",
+          userId,
+          ipAddress: ctx.deviceInfo?.ipAddress,
+          userAgent: ctx.deviceInfo?.userAgent,
+          location: ctx.location,
+          metadata: { method: "oauth", provider },
+          severity: "MEDIUM",
+        }),
+      );
+    }
+    return result;
   }
 
   async register(data: RegisterData, createdBy?: string): Promise<AuthResult> {
