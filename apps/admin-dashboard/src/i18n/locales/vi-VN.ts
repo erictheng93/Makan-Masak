@@ -5933,6 +5933,49 @@ const viVN: Messages = {
       resolved: "Đã giải quyết",
     },
   },
+  shopManagement: {
+    tab: "Cửa hàng",
+    title: "Quản lý cửa hàng",
+    description:
+      "Tất cả cửa hàng, kể cả đã ngừng hoạt động. Chỉ cửa hàng đã ngừng hoạt động mới được xóa vĩnh viễn và không thể hoàn tác.",
+    name: "Tên",
+    slug: "Mã đăng nhập",
+    status: "Trạng thái",
+    demo: "Demo",
+    active: "Đang hoạt động",
+    deactivated: "Đã ngừng",
+    deactivate: "Ngừng hoạt động",
+    deletePermanently: "Xóa vĩnh viễn",
+    deactivateConfirmTitle: 'Ngừng hoạt động "{name}"?',
+    deactivateConfirmMessage:
+      "Khách và nhân viên sẽ không dùng được cửa hàng này nữa. Sau đó bạn vẫn có thể xóa vĩnh viễn.",
+    loadFailed: "Không tải được danh sách cửa hàng",
+    deactivateFailed: "Không thể ngừng hoạt động cửa hàng",
+    delete: {
+      title: 'Xóa vĩnh viễn "{name}"',
+      warning:
+        "Không thể hoàn tác. Cửa hàng và toàn bộ dữ liệu sẽ bị xóa vĩnh viễn.",
+      loading: "Đang đếm dữ liệu sẽ bị xóa...",
+      totalRows: "{count} bản ghi sẽ bị xóa",
+      tableList: "Số bản ghi bị xóa theo bảng",
+      acknowledge: "Tôi hiểu rằng hồ sơ thanh toán và biên lai cũng sẽ bị xóa",
+      typeName: 'Nhập tên cửa hàng "{name}" để xác nhận',
+      confirm: "Xóa vĩnh viễn",
+      deleting: "Đang xóa...",
+      success: "Đã xóa vĩnh viễn, {count} bản ghi bị gỡ bỏ",
+      errors: {
+        stillActive: "Cửa hàng vẫn đang hoạt động. Hãy ngừng hoạt động trước.",
+        demo: "Không thể xóa cửa hàng demo",
+        mismatch: "Tên đã nhập không khớp",
+        financialNotAcknowledged:
+          "Hãy đánh dấu để xác nhận hồ sơ thanh toán và biên lai sẽ bị xóa",
+        administratorRequired:
+          "Chỉ quản trị viên cấp cao nhất mới thực hiện được",
+        previewFailed: "Không tải được bản xem trước việc xóa",
+        failed: "Xóa vĩnh viễn thất bại",
+      },
+    },
+  },
   accountManagement: {
     accountInfo: "Thông tin tài khoản",
     adminName: "Quản trị viên",

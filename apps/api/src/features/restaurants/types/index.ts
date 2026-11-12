@@ -80,6 +80,8 @@ export interface RestaurantFilters {
   type?: string;
   district?: string;
   isAvailable?: boolean;
+  /** Platform admins only: also list deactivated restaurants. */
+  includeInactive?: boolean;
 }
 
 export interface NearbySearchParams {

@@ -5600,6 +5600,49 @@ const enUS: Messages = {
     offlineRequestQueued: "Offline request queued",
     currentlyOnline: "Currently online",
   },
+  shopManagement: {
+    tab: "Shops",
+    title: "Shops",
+    description:
+      "All shops, including deactivated ones. Permanent deletion is only available for deactivated shops and cannot be undone.",
+    name: "Name",
+    slug: "Login slug",
+    status: "Status",
+    demo: "Demo",
+    active: "Active",
+    deactivated: "Deactivated",
+    deactivate: "Deactivate",
+    deletePermanently: "Delete permanently",
+    deactivateConfirmTitle: 'Deactivate "{name}"?',
+    deactivateConfirmMessage:
+      "Customers and staff will no longer be able to use this shop. You can still delete it permanently afterwards.",
+    loadFailed: "Could not load shops",
+    deactivateFailed: "Could not deactivate the shop",
+    delete: {
+      title: 'Permanently delete "{name}"',
+      warning:
+        "This cannot be undone. The shop and all of its data will be permanently deleted.",
+      loading: "Counting the data that will be deleted...",
+      totalRows: "{count} rows will be deleted",
+      tableList: "Rows deleted per table",
+      acknowledge:
+        "I understand that payment and receipt records will also be deleted",
+      typeName: 'Type the shop name "{name}" to confirm',
+      confirm: "Delete permanently",
+      deleting: "Deleting...",
+      success: "Permanently deleted. {count} rows removed",
+      errors: {
+        stillActive: "This shop is still active. Deactivate it first.",
+        demo: "The demo shop cannot be deleted",
+        mismatch: "The name you typed does not match",
+        financialNotAcknowledged:
+          "Tick the box to confirm that payment and receipt records will be deleted",
+        administratorRequired: "Only a top-level administrator can do this",
+        previewFailed: "Could not load the deletion preview",
+        failed: "Permanent deletion failed",
+      },
+    },
+  },
   accountManagement: {
     title: "Account Management",
     tabOwners: "Owner Accounts",

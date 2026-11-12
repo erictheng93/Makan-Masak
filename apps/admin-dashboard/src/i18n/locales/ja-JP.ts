@@ -5934,6 +5934,48 @@ const jaJP: Messages = {
       resolved: "解決済み",
     },
   },
+  shopManagement: {
+    tab: "店舗管理",
+    title: "店舗管理",
+    description:
+      "停止中を含むすべての店舗を表示します。完全削除は停止済みの店舗のみ可能で、元に戻せません。",
+    name: "店名",
+    slug: "ログインコード",
+    status: "状態",
+    demo: "デモ",
+    active: "営業中",
+    deactivated: "停止中",
+    deactivate: "停止",
+    deletePermanently: "完全に削除",
+    deactivateConfirmTitle: "「{name}」を停止しますか？",
+    deactivateConfirmMessage:
+      "停止すると、顧客もスタッフもこの店舗を利用できなくなります。その後で完全に削除することもできます。",
+    loadFailed: "店舗一覧を読み込めませんでした",
+    deactivateFailed: "店舗を停止できませんでした",
+    delete: {
+      title: "「{name}」を完全に削除",
+      warning:
+        "この操作は元に戻せません。店舗とそのすべてのデータが完全に削除されます。",
+      loading: "削除されるデータを集計中…",
+      totalRows: "{count} 件のデータが削除されます",
+      tableList: "テーブルごとの削除件数",
+      acknowledge: "支払いと領収書の記録も削除されることを理解しました",
+      typeName: "確認のため店名「{name}」を入力してください",
+      confirm: "完全に削除",
+      deleting: "削除中…",
+      success: "完全に削除しました（{count} 件）",
+      errors: {
+        stillActive: "この店舗はまだ営業中です。先に停止してください",
+        demo: "デモ店舗は削除できません",
+        mismatch: "入力した店名が一致しません",
+        financialNotAcknowledged:
+          "支払いと領収書の記録が削除されることにチェックを入れてください",
+        administratorRequired: "最上位の管理者のみ実行できます",
+        previewFailed: "削除プレビューを読み込めませんでした",
+        failed: "完全削除に失敗しました",
+      },
+    },
+  },
   accountManagement: {
     accountInfo: "アカウント情報",
     adminName: "管理者",

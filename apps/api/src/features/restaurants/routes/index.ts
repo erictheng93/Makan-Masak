@@ -103,14 +103,19 @@ app.get("/", optionalAuth, validateQuery(restaurantSchemas.list), async (c) => {
     query: c.get("validatedQuery"),
   });
 
-  const query = c.get("validatedQuery");
+  const { includeInactive, ...query } = c.get("validatedQuery");
   const restaurantsService = new RestaurantsService(
     c.env.DB,
     c.env,
     c.env.CACHE_KV,
   );
 
-  const result = await restaurantsService.getRestaurants(query);
+  // Deactivated shops are visible to platform admins only; anyone else's flag is dropped.
+  const result = await restaurantsService.getRestaurants(
+    includeInactive && c.get("user")?.role === 0
+      ? { ...query, includeInactive: true }
+      : query,
+  );
 
   return c.json(
     {

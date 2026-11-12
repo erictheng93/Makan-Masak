@@ -5611,6 +5611,46 @@ const zhTWCore = {
   },
 
   // 帳號管理
+  shopManagement: {
+    tab: "店家管理",
+    title: "店家管理",
+    description:
+      "檢視所有店家（含已停用）。永久刪除僅限已停用的店家，且無法復原。",
+    name: "店名",
+    slug: "登入代碼",
+    status: "狀態",
+    demo: "示範店家",
+    active: "營運中",
+    deactivated: "已停用",
+    deactivate: "停用",
+    deletePermanently: "永久刪除",
+    deactivateConfirmTitle: "停用「{name}」？",
+    deactivateConfirmMessage:
+      "停用後顧客與員工將無法使用此店家，之後仍可永久刪除。",
+    loadFailed: "無法載入店家列表",
+    deactivateFailed: "停用店家失敗",
+    delete: {
+      title: "永久刪除「{name}」",
+      warning: "此操作無法復原。店家及其所有資料將被永久刪除。",
+      loading: "正在計算將被刪除的資料…",
+      totalRows: "共 {count} 筆資料將被刪除",
+      tableList: "各資料表刪除筆數",
+      acknowledge: "我了解付款與收據紀錄也會一併刪除",
+      typeName: "請輸入店名「{name}」以確認",
+      confirm: "永久刪除",
+      deleting: "刪除中…",
+      success: "已永久刪除，共移除 {count} 筆資料",
+      errors: {
+        stillActive: "此店家仍在營運，請先停用",
+        demo: "示範店家不可刪除",
+        mismatch: "輸入的店名不相符",
+        financialNotAcknowledged: "請先勾選確認付款與收據紀錄將被刪除",
+        administratorRequired: "僅限最高管理員操作",
+        previewFailed: "無法載入刪除預覽",
+        failed: "永久刪除失敗",
+      },
+    },
+  },
   accountManagement: {
     title: "帳號管理",
     tabOwners: "店主帳號",

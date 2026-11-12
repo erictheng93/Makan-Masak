@@ -372,6 +372,11 @@ const restaurantFilterSchema = z.lazy(() =>
       .string()
       .transform((val) => val === "true")
       .optional(),
+    // Honoured only for role 0 (see the list route); ignored for everyone else.
+    includeInactive: z
+      .string()
+      .transform((val) => val === "true")
+      .optional(),
   }),
 );
 

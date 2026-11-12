@@ -257,6 +257,21 @@ describe("restaurants routes", () => {
     );
   });
 
+  it("lists deactivated restaurants only when a platform admin asks", async () => {
+    await request("/?includeInactive=true");
+    expect(restaurantFns.getRestaurants).toHaveBeenLastCalledWith({});
+
+    auth.user = { id: "user-8", username: "owner", role: 1 };
+    await request("/?includeInactive=true");
+    expect(restaurantFns.getRestaurants).toHaveBeenLastCalledWith({});
+
+    auth.user = { id: "user-7", username: "admin", role: 0 };
+    await request("/?includeInactive=true");
+    expect(restaurantFns.getRestaurants).toHaveBeenLastCalledWith({
+      includeInactive: true,
+    });
+  });
+
   it("validates public table menu entry links", async () => {
     let res = await request("/rest-1/tables/11/validate");
 

@@ -5969,6 +5969,50 @@ const idID: Messages = {
       resolved: "Terselesaikan",
     },
   },
+  shopManagement: {
+    tab: "Toko",
+    title: "Manajemen Toko",
+    description:
+      "Semua toko, termasuk yang dinonaktifkan. Hapus permanen hanya untuk toko nonaktif dan tidak dapat dibatalkan.",
+    name: "Nama",
+    slug: "Kode login",
+    status: "Status",
+    demo: "Demo",
+    active: "Aktif",
+    deactivated: "Dinonaktifkan",
+    deactivate: "Nonaktifkan",
+    deletePermanently: "Hapus permanen",
+    deactivateConfirmTitle: 'Nonaktifkan "{name}"?',
+    deactivateConfirmMessage:
+      "Pelanggan dan staf tidak dapat lagi memakai toko ini. Anda masih bisa menghapusnya secara permanen setelahnya.",
+    loadFailed: "Gagal memuat daftar toko",
+    deactivateFailed: "Gagal menonaktifkan toko",
+    delete: {
+      title: 'Hapus permanen "{name}"',
+      warning:
+        "Tindakan ini tidak dapat dibatalkan. Toko dan seluruh datanya akan dihapus permanen.",
+      loading: "Menghitung data yang akan dihapus...",
+      totalRows: "{count} baris akan dihapus",
+      tableList: "Jumlah baris dihapus per tabel",
+      acknowledge:
+        "Saya mengerti catatan pembayaran dan struk juga akan dihapus",
+      typeName: 'Ketik nama toko "{name}" untuk konfirmasi',
+      confirm: "Hapus permanen",
+      deleting: "Menghapus...",
+      success: "Dihapus permanen. {count} baris dihapus",
+      errors: {
+        stillActive: "Toko ini masih aktif. Nonaktifkan terlebih dahulu.",
+        demo: "Toko demo tidak dapat dihapus",
+        mismatch: "Nama yang diketik tidak cocok",
+        financialNotAcknowledged:
+          "Centang untuk mengonfirmasi catatan pembayaran dan struk akan dihapus",
+        administratorRequired:
+          "Hanya administrator tingkat tertinggi yang dapat melakukannya",
+        previewFailed: "Gagal memuat pratinjau penghapusan",
+        failed: "Penghapusan permanen gagal",
+      },
+    },
+  },
   accountManagement: {
     adminName: "Admin",
     createdAtCol: "Dibuat",
