@@ -565,7 +565,13 @@ oauthRoutes.onError((error, context) => {
   return context.json({ code: "UNEXPECTED" }, 500);
 });
 
-const COMPLETE_COOKIE = "customer_oauth_complete";
+const COMPLETE_COOKIE_PREFIX = "customer_oauth_complete_";
+
+/** The per-code completion cookie as a request header value. */
+async function cookieFor(code: string, value = "nonce") {
+  const digest = await deriveCodeChallenge(code);
+  return `${COMPLETE_COOKIE_PREFIX}${digest.slice(0, 16)}=${value}`;
+}
 
 async function seedResult(code: string, pending: Record<string, unknown>) {
   const { ephemeralStore } =
@@ -738,7 +744,7 @@ describe("OAuth start route", () => {
   it("rejects a result code after its lifetime without issuing a session", async () => {
     await seedResult("code", { kind: "session", customerId: "cust-1" });
     store.now += 121_000;
-    const res = await complete("code", `${COMPLETE_COOKIE}=nonce`);
+    const res = await complete("code", await cookieFor("code"));
     expect(res.status).toBe(400);
     expect(issueCustomerSession).not.toHaveBeenCalled();
   });
@@ -749,14 +755,16 @@ describe("OAuth start route", () => {
       expiresIn: 900,
     } as never);
     await seedResult("code", { kind: "session", customerId: "cust-1" });
-    const cookie = `${COMPLETE_COOKIE}=nonce`;
+    const cookie = await cookieFor("code");
 
     const first = await complete("code", cookie);
     expect(first.status).toBe(200);
     expect(await first.json()).toMatchObject({
       data: { needsLinking: false, accessToken: "access" },
     });
-    expect(first.headers.get("set-cookie")).toContain(`${COMPLETE_COOKIE}=;`);
+    expect(first.headers.get("set-cookie")).toContain(
+      `${cookie.split("=")[0]}=;`,
+    );
 
     const second = await complete("code", cookie);
     expect(second.status).toBe(400);
@@ -769,17 +777,18 @@ describe("OAuth start route", () => {
   });
 
   it.each([
-    ["no cookie", undefined],
-    ["a different cookie", `${COMPLETE_COOKIE}=attacker`],
-    ["another cookie name", "customer_other=nonce"],
-  ])("refuses and burns a code presented with %s", async (_label, cookie) => {
+    ["no cookie", () => undefined],
+    ["a different value", (name: string) => `${name}=attacker`],
+    ["another cookie name", () => "customer_other=nonce"],
+  ])("refuses and burns a code presented with %s", async (_label, make) => {
+    const cookie = make((await cookieFor("code")).split("=")[0]);
     await seedResult("code", { kind: "session", customerId: "cust-1" });
 
     const refused = await complete("code", cookie);
     expect(refused.status).toBe(400);
     expect(await refused.json()).toEqual({ code: "OAUTH_RESULT_INVALID" });
 
-    const retry = await complete("code", `${COMPLETE_COOKIE}=nonce`);
+    const retry = await complete("code", await cookieFor("code"));
     expect(retry.status).toBe(400);
     expect(issueCustomerSession).not.toHaveBeenCalled();
   });
@@ -794,13 +803,13 @@ describe("OAuth start route", () => {
     await seedResult("bad", pending);
     const refused = await complete("bad", undefined);
     expect(refused.status).toBe(400);
-    expect(await complete("bad", `${COMPLETE_COOKIE}=nonce`)).toHaveProperty(
+    expect(await complete("bad", await cookieFor("bad"))).toHaveProperty(
       "status",
       400,
     );
 
     await seedResult("good", pending);
-    const ok = await complete("good", `${COMPLETE_COOKIE}=nonce`);
+    const ok = await complete("good", await cookieFor("good"));
     expect(ok.status).toBe(200);
     expect(await ok.json()).toMatchObject({
       data: {
@@ -985,7 +994,7 @@ describe("OAuth callback identity resolution", () => {
       ).searchParams.get("oauth_code") as string;
       const setCookies = response.headers.getSetCookie();
       const completeSetCookie = setCookies.find((v) =>
-        v.startsWith(`${COMPLETE_COOKIE}=`),
+        v.startsWith(COMPLETE_COOKIE_PREFIX),
       ) as string;
       expect(completeSetCookie).toMatch(/HttpOnly/i);
       expect(completeSetCookie).toMatch(/Secure/i);

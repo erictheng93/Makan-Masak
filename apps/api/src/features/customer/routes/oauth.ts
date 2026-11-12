@@ -82,7 +82,7 @@ const routes = new Hono<{ Bindings: Env }>();
 const OAUTH_RESULT_TTL_SECONDS = 120;
 
 const OAUTH_BINDING_COOKIE_PREFIX = "oauth_binding_";
-const COMPLETE_COOKIE = "customer_oauth_complete";
+const COMPLETE_COOKIE_PREFIX = "customer_oauth_complete_";
 
 /**
  * One binding cookie per pending state, so a second start (double-click, a
@@ -135,9 +135,18 @@ function completePath(env: OAuthEnv): string {
   );
 }
 
+/**
+ * One cookie per code, like the binding cookie per state: two sign-ins
+ * finishing in one browser must not overwrite each other's nonce.
+ */
+async function completeCookieName(code: string) {
+  const digest = await deriveCodeChallenge(code);
+  return `${COMPLETE_COOKIE_PREFIX}${digest.slice(0, 16)}`;
+}
+
 type PendingBinding = {
   /**
-   * SHA-256 of the value in COMPLETE_COOKIE, set on the browser the callback
+   * SHA-256 of the completion cookie's value, set on the browser the callback
    * redirected. Without it the one-time code is a bearer value: an attacker
    * could hand their own code to a victim's browser and sign the victim in to
    * the attacker's account (login CSRF).
@@ -369,7 +378,7 @@ async function handleCallback(c: Context<{ Bindings: Env }>) {
 
   const resultCode = generateState();
   const completeNonce = generateState();
-  setCookie(c, COMPLETE_COOKIE, completeNonce, {
+  setCookie(c, await completeCookieName(resultCode), completeNonce, {
     ...completeCookieOptions(env, provider),
     maxAge: OAUTH_RESULT_TTL_SECONDS,
   });
@@ -491,9 +500,10 @@ routes.post("/auth/oauth/complete", validateBody(completeSchema), async (c) => {
   // code; a missing or wrong cookie still burns it.
   const raw = await ephemeralStore(c.env).take(resultKey(code));
   const pending = raw ? (JSON.parse(raw) as PendingResult) : null;
-  const completeNonce = getCookie(c, COMPLETE_COOKIE);
-  if (pending) {
-    deleteCookie(c, COMPLETE_COOKIE, {
+  const cookieName = await completeCookieName(code);
+  const completeNonce = getCookie(c, cookieName);
+  if (completeNonce) {
+    deleteCookie(c, cookieName, {
       secure: true,
       sameSite: "None",
       path: completePath(c.env as OAuthEnv),
