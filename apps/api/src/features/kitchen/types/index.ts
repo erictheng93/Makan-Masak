@@ -1,3 +1,5 @@
+import type { DeliveryInfo } from "@makanmasak/shared-types";
+
 /**
  * Kitchen Feature Module Types
  */
@@ -14,13 +16,7 @@ export interface KitchenOrder {
     | "uber_eats"
     | "foodpanda"
     | "grabfood";
-  deliveryInfo?: {
-    type: "dine_in" | "takeaway" | "delivery";
-    address?: string;
-    phone?: string;
-    instructions?: string;
-    deliveryFee?: number;
-  };
+  deliveryInfo?: DeliveryInfo;
   items: KitchenOrderItem[];
   customerName?: string;
   notes?: string;
