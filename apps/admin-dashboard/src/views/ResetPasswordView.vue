@@ -12,10 +12,12 @@
         </div>
         <p class="text-sm font-semibold text-primary-700">MakanMasak</p>
         <h1 class="ui-page-heading mt-3 text-2xl font-bold text-ios-text">
-          {{ t("pages.resetPassword") }}
+          {{ isSetup ? t("auth.setupTitle") : t("pages.resetPassword") }}
         </h1>
         <p class="mt-2 text-sm text-gray-600">
-          {{ t("auth.resetPasswordSubtitle") }}
+          {{
+            isSetup ? t("auth.setupSubtitle") : t("auth.resetPasswordSubtitle")
+          }}
         </p>
       </div>
 
@@ -104,10 +106,14 @@
                 id="password-reset-success"
                 class="text-lg font-medium text-green-900"
               >
-                {{ t("auth.resetSuccess") }}
+                {{ isSetup ? t("auth.setupSuccess") : t("auth.resetSuccess") }}
               </h3>
               <p class="mt-2 text-sm text-green-700">
-                {{ t("auth.resetSuccessMessage") }}
+                {{
+                  isSetup
+                    ? t("auth.setupSuccessMessage")
+                    : t("auth.resetSuccessMessage")
+                }}
               </p>
             </div>
           </div>
@@ -134,7 +140,9 @@
               <User class="w-5 h-5 text-gray-600" />
             </div>
             <div class="ml-3">
-              <p class="text-xs text-gray-500">{{ t("auth.resetAccount") }}</p>
+              <p class="text-xs text-gray-500">
+                {{ isSetup ? t("auth.setupAccount") : t("auth.resetAccount") }}
+              </p>
               <p class="text-sm font-medium text-gray-900">{{ maskedEmail }}</p>
             </div>
           </div>
@@ -289,7 +297,9 @@
               />
               {{ t("auth.resetting") }}
             </span>
-            <span v-else>{{ t("auth.resetPasswordBtn") }}</span>
+            <span v-else>{{
+              isSetup ? t("auth.setupBtn") : t("auth.resetPasswordBtn")
+            }}</span>
           </button>
         </div>
       </form>
@@ -333,6 +343,8 @@ const router = useRouter();
 // lands on the shop's own login link.
 const shop = parseShopSlug(route.query.shop) ?? getRememberedShop();
 const loginTo = loginPathFor(shop);
+// Onboarding links carry ?purpose=setup; it only picks the copy, the token authorizes.
+const isSetup = route.query.purpose === "setup";
 const forgotPasswordTo = shop
   ? { path: "/forgot-password", query: { shop } }
   : "/forgot-password";

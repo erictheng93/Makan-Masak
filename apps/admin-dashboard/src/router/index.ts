@@ -42,7 +42,11 @@ const routes: RouteRecordRaw[] = [
     path: "/reset-password",
     name: "ResetPassword",
     component: () => import("@/views/ResetPasswordView.vue"),
-    meta: { requiresAuth: false, titleKey: "pages.resetPassword" },
+    meta: {
+      requiresAuth: false,
+      titleKey: "pages.resetPassword",
+      setupTitleKey: "auth.setupTitle",
+    },
   },
   {
     path: "/",
@@ -692,7 +696,11 @@ router.afterEach((to, _from, failure) => {
   navigationPending.value = false;
   // Set once the lazy chunk has resolved, so title and content change together.
   if (!failure) {
-    document.title = buildDocumentTitle(to.meta.titleKey as string | undefined);
+    document.title = buildDocumentTitle(
+      (to.query.purpose === "setup"
+        ? (to.meta.setupTitleKey as string | undefined)
+        : undefined) ?? (to.meta.titleKey as string | undefined),
+    );
   }
   // Navigation worked, so the stale build is behind us; the next deploy earns
   // its own attempt rather than inheriting this one.

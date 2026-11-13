@@ -2219,6 +2219,13 @@ const enUS: Messages = {
     resetSuccessMessage: "You can now login with your new password.",
     goToLogin: "Go to Login Page",
     resetAccount: "Account for password reset",
+    setupTitle: "Set your password",
+    setupSubtitle:
+      "Welcome to MakanMasak - create a password for your new account",
+    setupAccount: "Account to set up",
+    setupBtn: "Set password",
+    setupSuccess: "Password set",
+    setupSuccessMessage: "Your password is set. You can now log in.",
     newPassword: "New Password",
     newPasswordPlaceholder: "Enter new password (at least 6 characters)",
     passwordStrength: "Password strength:",
