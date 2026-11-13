@@ -120,8 +120,8 @@ const viVN: Messages = {
     apply: "Điền đơn đăng ký",
     success: "Đã gửi đơn",
     findApplication: "Tìm đơn đăng ký",
-    status: "Trạng thái đơn",
-    default: "MakanMasak Đăng ký mở quán",
+    status: "Trạng thái đơn đăng ký",
+    default: "MakanMasak - Đăng ký mở quán",
   },
 
   home: {
