@@ -47,6 +47,7 @@ import {
 } from "./geo";
 import { evaluateMarketPublicReadiness } from "../utils/publicReadiness";
 import { generateUUID } from "@makanmasak/utils";
+import { cityVariants, LEGACY_CITY_ALIASES } from "@makanmasak/shared-types";
 import { ApiError } from "../../../shared/utils/api-error";
 import {
   resolveSharedRestaurantCurrency,
@@ -373,18 +374,16 @@ export class MarketsService {
       .groupBy(markets.city, markets.district)
       .orderBy(asc(markets.city), asc(markets.district));
 
-    const areas = rows.reduce<{ city: string; districts: string[] }[]>(
-      (acc, row) => {
-        let area = acc.find((entry) => entry.city === row.city);
-        if (!area) {
-          area = { city: row.city, districts: [] };
-          acc.push(area);
-        }
-        area.districts.push(row.district);
-        return acc;
-      },
-      [],
-    );
+    // Legacy spellings (台中市) fold into the canonical one so a city is one facet.
+    const merged = new Map<string, Set<string>>();
+    for (const row of rows) {
+      const city = LEGACY_CITY_ALIASES[row.city] ?? row.city;
+      merged.set(city, (merged.get(city) ?? new Set()).add(row.district));
+    }
+    const areas = [...merged].map(([city, districts]) => ({
+      city,
+      districts: [...districts].sort(),
+    }));
 
     return { areas };
   }
@@ -401,7 +400,8 @@ export class MarketsService {
     const offset = (page - 1) * limit;
     const conditions = [eq(markets.isActive, true), isNull(markets.deletedAt)];
 
-    if (filters.city) conditions.push(eq(markets.city, filters.city));
+    if (filters.city)
+      conditions.push(inArray(markets.city, cityVariants(filters.city)));
     if (filters.district)
       conditions.push(eq(markets.district, filters.district));
     if (filters.type) conditions.push(eq(markets.type, filters.type));

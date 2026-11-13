@@ -854,7 +854,7 @@ describe("Markets API — real integration", () => {
     expect(res.status).toBe(200);
     const json = await readData<MarketAreas>(res);
     expect(json.areas).toEqual([
-      { city: "台中市", districts: ["北區", "西屯區"] },
+      { city: "臺中市", districts: ["北區", "西屯區"] },
       { city: "台北市", districts: ["萬華區"] },
     ]);
   });

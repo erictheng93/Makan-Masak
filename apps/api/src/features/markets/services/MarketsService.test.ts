@@ -341,6 +341,27 @@ describe("MarketsService", () => {
     expect(querySpy).not.toHaveBeenCalled();
   });
 
+  it("merges legacy 台中市 rows into the canonical 臺中市 area facet", async () => {
+    const { service } = createService();
+    mockSelectResults({
+      markets: [
+        [
+          { city: "台中市", district: "北區" },
+          { city: "台北市", district: "大安區" },
+          { city: "臺中市", district: "北區" },
+          { city: "臺中市", district: "西區" },
+        ],
+      ],
+    });
+
+    await expect(service["queryAreas"]()).resolves.toEqual({
+      areas: [
+        { city: "臺中市", districts: ["北區", "西區"] },
+        { city: "台北市", districts: ["大安區"] },
+      ],
+    });
+  });
+
   it("queries and caches public list, area, and detail misses", async () => {
     mocks.cache.get.mockResolvedValue(null);
     const { service } = createService("2");

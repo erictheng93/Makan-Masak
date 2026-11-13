@@ -22,6 +22,7 @@ import {
   restaurantMarketMemberships,
   restaurantServiceItems,
 } from "@makanmasak/database";
+import { cityVariants } from "@makanmasak/shared-types";
 import { boundingBoxFromCircle, distanceKm } from "../../markets/services/geo";
 import type {
   DishSearchResult,
@@ -149,7 +150,9 @@ export class DiscoveryService {
       baseConditions.push(eq(dishSearchIndex.district, filters.district));
     }
     if (filters.city) {
-      baseConditions.push(eq(restaurants.city, filters.city));
+      baseConditions.push(
+        inArray(restaurants.city, cityVariants(filters.city)),
+      );
     }
     if (filters.categoryName) {
       baseConditions.push(
@@ -502,7 +505,7 @@ export class DiscoveryService {
       conditions.push(eq(dishSearchIndex.district, filters.district));
     }
     if (filters.city) {
-      conditions.push(eq(restaurants.city, filters.city));
+      conditions.push(inArray(restaurants.city, cityVariants(filters.city)));
     }
     if (filters.catalogType) {
       conditions.push(eq(dishSearchIndex.catalogType, filters.catalogType));
@@ -626,7 +629,7 @@ export class DiscoveryService {
       conditions.push(eq(restaurants.district, filters.district));
     }
     if (filters.city) {
-      conditions.push(eq(restaurants.city, filters.city));
+      conditions.push(inArray(restaurants.city, cityVariants(filters.city)));
     }
     if (filters.cuisineType) {
       conditions.push(eq(restaurants.type, filters.cuisineType));
@@ -821,7 +824,7 @@ export class DiscoveryService {
     ];
 
     if (filters.city) {
-      conditions.push(eq(restaurants.city, filters.city));
+      conditions.push(inArray(restaurants.city, cityVariants(filters.city)));
     }
     if (filters.district) {
       conditions.push(eq(restaurants.district, filters.district));
@@ -1035,7 +1038,7 @@ export class DiscoveryService {
     ];
 
     if (filters.city) {
-      conditions.push(eq(restaurants.city, filters.city));
+      conditions.push(inArray(restaurants.city, cityVariants(filters.city)));
     }
     if (filters.district) {
       conditions.push(eq(restaurants.district, filters.district));
