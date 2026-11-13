@@ -275,7 +275,7 @@ const navigationItems = computed(() => {
     {
       name: "platform-markets",
       path: "/dashboard/platform/markets",
-      label: "市場品質",
+      label: t("pages.platformMarkets"),
       icon: MapPinned,
       visible: authStore.isAdminRole,
       section: "platform",
@@ -283,7 +283,7 @@ const navigationItems = computed(() => {
     {
       name: "platform-market-checkouts",
       path: "/dashboard/platform/market-checkouts",
-      label: "市場結帳",
+      label: t("pages.platformMarketCheckouts"),
       icon: ReceiptText,
       visible: authStore.isAdminRole,
       section: "platform",
@@ -300,7 +300,7 @@ const navigationItems = computed(() => {
     {
       name: "platform-onboarding",
       path: "/dashboard/platform/onboarding",
-      label: "開店申請",
+      label: t("pages.platformOnboarding"),
       icon: UserPlus,
       visible: authStore.isAdminRole,
       section: "platform",
@@ -515,7 +515,7 @@ const navigationItems = computed(() => {
     {
       name: "service-bookings",
       path: "/dashboard/service-bookings",
-      label: "服務預約",
+      label: t("pages.serviceBookings"),
       icon: CalendarCheck,
       visible: authStore.hasPermission([
         UserRole.ADMIN,

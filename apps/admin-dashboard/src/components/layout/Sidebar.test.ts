@@ -4,6 +4,7 @@ import { mount } from "@vue/test-utils";
 import { reactive, ref } from "vue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Sidebar from "./Sidebar.vue";
+import enUS from "@/i18n/locales/en-US";
 import { onboardingApplicationsService } from "@/services/onboardingApplicationsService";
 
 vi.mock("@/services/onboardingApplicationsService", () => ({
@@ -11,6 +12,8 @@ vi.mock("@/services/onboardingApplicationsService", () => ({
   ONBOARDING_APPLICATIONS_CHANGED: "onboarding-applications:changed",
   ONBOARDING_POLL_INTERVAL_MS: 60_000,
 }));
+
+const english = vi.hoisted(() => ({ value: false }));
 
 const routeState = reactive({
   path: "/dashboard/platform",
@@ -55,7 +58,15 @@ vi.mock("@/stores/auth", () => ({
 
 vi.mock("@/i18n", () => ({
   useI18n: () => ({
-    t: (key: string) => key,
+    t: (key: string) =>
+      english.value
+        ? ((key
+            .split(".")
+            .reduce<unknown>(
+              (node, part) => (node as Record<string, unknown>)?.[part],
+              enUS,
+            ) as string) ?? key)
+        : key,
     locale: ref("zh-TW"),
   }),
 }));
@@ -79,6 +90,7 @@ vi.mock("vue-router", () => ({
 
 describe("Sidebar", () => {
   beforeEach(() => {
+    english.value = false;
     routeState.path = "/dashboard/platform";
     authState.user = { username: "admin", role: 0 };
     authState.isAdminRole = true;
@@ -335,5 +347,31 @@ describe("Sidebar", () => {
         .find('[data-testid="nav-item-platform-markets"]')
         .attributes("data-disabled"),
     ).toBeUndefined();
+  });
+
+  it("renders no CJK nav labels in en-US for admin and shop owner", () => {
+    english.value = true;
+    authState.hasRestaurantContext = true;
+    const cjk = /[\u3000-\u9fff]/;
+
+    const admin = mountSidebar();
+    expect(
+      admin.get('[data-testid="nav-item-platform-markets"]').text(),
+    ).toContain("Market Quality");
+    expect(
+      admin.get('[data-testid="nav-item-platform-market-checkouts"]').text(),
+    ).toContain("Market Checkouts");
+    expect(
+      admin.get('[data-testid="nav-item-platform-onboarding"]').text(),
+    ).toContain("Shop Applications");
+    expect(cjk.test(admin.text())).toBe(false);
+
+    authState.user = { username: "owner", role: 1 };
+    authState.isAdminRole = false;
+    const owner = mountSidebar();
+    expect(
+      owner.get('[data-testid="nav-item-service-bookings"]').text(),
+    ).toContain("Service Bookings");
+    expect(cjk.test(owner.text())).toBe(false);
   });
 });
