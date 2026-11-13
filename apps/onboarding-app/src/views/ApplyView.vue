@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useOnboardingStore } from "@/stores/onboarding";
@@ -68,6 +68,17 @@ watch(
 );
 
 const errors = ref<Record<string, string>>({});
+const formEl = ref<HTMLFormElement | null>(null);
+
+// A field's error describes its old value; drop it as soon as the field changes.
+for (const key of Object.keys(form.value)) {
+  watch(
+    () => (form.value as Record<string, unknown>)[key],
+    () => {
+      delete errors.value[key];
+    },
+  );
+}
 const isLocating = ref(false);
 const markets = ref<MarketOption[]>([]);
 const isLoadingMarkets = ref(false);
@@ -258,7 +269,11 @@ const validate = (): boolean => {
 };
 
 const handleSubmit = async () => {
-  if (!validate()) return;
+  if (!validate()) {
+    await nextTick();
+    formEl.value?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+    return;
+  }
 
   store.clearError();
   const latitude = parseCoordinate(form.value.latitude);
@@ -347,7 +362,7 @@ const useCurrentLocation = () => {
         <p class="text-sm text-red-700">{{ submitErrorMessage }}</p>
       </div>
 
-      <form @submit.prevent="handleSubmit" class="onboarding-form">
+      <form ref="formEl" @submit.prevent="handleSubmit" class="onboarding-form">
         <!-- 餐廳名稱 -->
         <div>
           <label for="onboarding-business-name" class="label"

@@ -145,7 +145,7 @@ const zhTW = {
       addressRequired: "請輸入店家地址",
       countryRequired: "請選擇國家",
       districtRequired: "請輸入鄉鎮市區",
-      cityRequired: "請輸入縣市",
+      cityRequired: "請選擇縣市",
       latitudeRequired: "請輸入餐廳緯度",
       latitudeInvalid: "緯度需介於 -90 到 90 之間",
       longitudeRequired: "請輸入餐廳經度",

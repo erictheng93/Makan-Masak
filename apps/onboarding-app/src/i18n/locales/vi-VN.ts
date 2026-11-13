@@ -97,7 +97,7 @@ const viVN: Messages = {
       addressRequired: "Vui lòng nhập địa chỉ",
       countryRequired: "Vui lòng chọn quốc gia",
       districtRequired: "Vui lòng nhập quận",
-      cityRequired: "Vui lòng nhập thành phố",
+      cityRequired: "Vui lòng chọn thành phố",
       subdomainInvalidFormat:
         "Chỉ cho phép chữ cái viết thường, số và dấu gạch nối",
       subdomainTaken: "URL này đã được sử dụng",

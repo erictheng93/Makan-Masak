@@ -97,7 +97,7 @@ const msMY: Messages = {
       addressRequired: "Sila masukkan alamat",
       countryRequired: "Sila pilih negara",
       districtRequired: "Sila masukkan daerah",
-      cityRequired: "Sila masukkan bandar",
+      cityRequired: "Sila pilih bandar",
       subdomainInvalidFormat:
         "Hanya huruf kecil, nombor dan sempang dibenarkan",
       subdomainTaken: "URL ini sudah diambil",

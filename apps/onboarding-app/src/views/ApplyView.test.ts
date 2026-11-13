@@ -588,6 +588,55 @@ describe("Taichung spelling", () => {
   });
 });
 
+describe("validation feedback", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.store.application = null;
+    mocks.store.draft = null;
+    mocks.getMarkets.mockResolvedValue([]);
+  });
+
+  it("clears a field's error when that field changes, leaving the others", async () => {
+    const wrapper = mount(ApplyView);
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+    expect(wrapper.text()).toContain("apply.validation.businessNameRequired");
+
+    await wrapper
+      .get('[data-testid="onboarding-business-name"]')
+      .setValue("Demo Noodles");
+
+    expect(wrapper.text()).not.toContain(
+      "apply.validation.businessNameRequired",
+    );
+    expect(
+      wrapper
+        .get('[data-testid="onboarding-business-name"]')
+        .attributes("aria-invalid"),
+    ).toBeUndefined();
+    expect(wrapper.text()).toContain("apply.validation.contactNameRequired");
+  });
+
+  it("moves focus to the first invalid field after a failed submit", async () => {
+    const wrapper = mount(ApplyView, { attachTo: document.body });
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+
+    expect(document.activeElement).toBe(
+      wrapper.get('[data-testid="onboarding-business-name"]').element,
+    );
+    wrapper.unmount();
+  });
+
+  it("uses the select-wording key for the city error", async () => {
+    const wrapper = mount(ApplyView);
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+    expect(wrapper.text()).toContain("apply.validation.cityRequired");
+    expect(mocks.submitApplication).not.toHaveBeenCalled();
+  });
+});
+
 it("names both real steps and puts the address before coordinates", () => {
   const wrapper = mount(ApplyView);
   expect(wrapper.get('[aria-current="step"]').text()).toContain("apply.title");

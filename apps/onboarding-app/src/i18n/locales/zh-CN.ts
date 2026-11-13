@@ -92,7 +92,7 @@ const zhCN: Messages = {
       addressRequired: "请输入店铺地址",
       countryRequired: "请选择国家",
       districtRequired: "请输入区",
-      cityRequired: "请输入城市",
+      cityRequired: "请选择城市",
       subdomainInvalidFormat: "只能包含小写字母、数字和连字符",
       subdomainTaken: "此网址已被使用",
       tooShort: "至少需要 2 个字",

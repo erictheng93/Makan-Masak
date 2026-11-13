@@ -157,7 +157,7 @@ const enUS: Messages = {
       addressRequired: "Please enter the street address",
       countryRequired: "Please select a country",
       districtRequired: "Please enter the district",
-      cityRequired: "Please enter the city",
+      cityRequired: "Please select the city",
       latitudeRequired: "Please enter the restaurant latitude",
       latitudeInvalid: "Latitude must be between -90 and 90",
       longitudeRequired: "Please enter the restaurant longitude",

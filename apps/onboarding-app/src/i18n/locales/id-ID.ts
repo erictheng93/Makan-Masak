@@ -98,7 +98,7 @@ const idID: Messages = {
       addressRequired: "Silakan masukkan alamat",
       countryRequired: "Silakan pilih negara",
       districtRequired: "Silakan masukkan distrik",
-      cityRequired: "Silakan masukkan kota",
+      cityRequired: "Silakan pilih kota",
       subdomainInvalidFormat:
         "Hanya huruf kecil, angka, dan tanda hubung yang diperbolehkan",
       subdomainTaken: "URL ini sudah dipakai",
