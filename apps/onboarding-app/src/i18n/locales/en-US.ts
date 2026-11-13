@@ -20,6 +20,15 @@ const enUS: Messages = {
     },
   },
 
+  pageTitle: {
+    home: "Open a shop",
+    apply: "Application form",
+    success: "Application submitted",
+    findApplication: "Find my application",
+    status: "Application status",
+    default: "MakanMasak Shop Application",
+  },
+
   home: {
     hero: {
       titleLine1: "Build Your Restaurant's",
@@ -146,7 +155,7 @@ const enUS: Messages = {
         suggestionsLabel: "Suggested alternatives:",
       },
       submitting: "Submitting...",
-      next: "Next",
+      submit: "Submit application",
     },
     validation: {
       businessNameRequired: "Please enter a restaurant name",
@@ -157,7 +166,7 @@ const enUS: Messages = {
       addressRequired: "Please enter the street address",
       countryRequired: "Please select a country",
       districtRequired: "Please enter the district",
-      cityRequired: "Please enter the city",
+      cityRequired: "Please select the city",
       latitudeRequired: "Please enter the restaurant latitude",
       latitudeInvalid: "Latitude must be between -90 and 90",
       longitudeRequired: "Please enter the restaurant longitude",

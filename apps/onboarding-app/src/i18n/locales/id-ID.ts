@@ -56,7 +56,7 @@ const idID: Messages = {
           "Browser ini tidak mendukung geolokasi. Masukkan koordinat secara manual.",
         useCurrent: "Gunakan Lokasi Saat Ini",
       },
-      next: "Selanjutnya",
+      submit: "Kirim pengajuan",
       subdomain: {
         available: "URL ini tersedia",
         emptyHint: "Biarkan kosong untuk menghasilkan secara otomatis",
@@ -98,7 +98,7 @@ const idID: Messages = {
       addressRequired: "Silakan masukkan alamat",
       countryRequired: "Silakan pilih negara",
       districtRequired: "Silakan masukkan distrik",
-      cityRequired: "Silakan masukkan kota",
+      cityRequired: "Silakan pilih kota",
       subdomainInvalidFormat:
         "Hanya huruf kecil, angka, dan tanda hubung yang diperbolehkan",
       subdomainTaken: "URL ini sudah dipakai",
@@ -116,6 +116,15 @@ const idID: Messages = {
       copiedToClipboard: "Disalin ke papan klip",
     },
   },
+  pageTitle: {
+    home: "Ajukan buka toko",
+    apply: "Formulir pengajuan",
+    success: "Pengajuan terkirim",
+    findApplication: "Cari pengajuan saya",
+    status: "Status pengajuan",
+    default: "MakanMasak Pengajuan Toko",
+  },
+
   home: {
     tour: {
       title: "Dari pesanan sampai ke meja, sekilas",

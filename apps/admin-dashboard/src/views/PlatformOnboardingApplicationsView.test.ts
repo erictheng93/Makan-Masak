@@ -95,6 +95,16 @@ function buildDelivery(overrides = {}) {
   };
 }
 
+// Approve provisions a real tenant, so the row button only opens a dialog.
+async function approveRow(wrapper: ReturnType<typeof mount>, id: string) {
+  await wrapper
+    .get(`[data-testid="approve-onboarding-${id}"]`)
+    .trigger("click");
+  await wrapper
+    .get('[data-testid="approve-onboarding-dialog"] form')
+    .trigger("submit");
+}
+
 function mockList(applications: OnboardingApplication[]) {
   vi.mocked(onboardingApplicationsService.list).mockResolvedValue({
     applications,
@@ -225,9 +235,7 @@ describe("PlatformOnboardingApplicationsView", () => {
       await flushPromises();
       expect(onChanged).not.toHaveBeenCalled();
 
-      await wrapper
-        .get('[data-testid="approve-onboarding-APP-1"]')
-        .trigger("click");
+      await approveRow(wrapper, "APP-1");
       await flushPromises();
 
       expect(onChanged).toHaveBeenCalledOnce();
@@ -241,9 +249,7 @@ describe("PlatformOnboardingApplicationsView", () => {
     const wrapper = mount(PlatformOnboardingApplicationsView);
     await flushPromises();
 
-    await wrapper
-      .get('[data-testid="approve-onboarding-APP-1"]')
-      .trigger("click");
+    await approveRow(wrapper, "APP-1");
     await flushPromises();
 
     expect(onboardingApplicationsService.approve).toHaveBeenCalledWith("APP-1");
@@ -277,6 +283,9 @@ describe("PlatformOnboardingApplicationsView", () => {
     expect(wrapper.get('[data-testid="approvable-count"]').text()).toBe("1");
 
     await approveButton.trigger("click");
+    await wrapper
+      .get('[data-testid="approve-onboarding-dialog"] form')
+      .trigger("submit");
     await flushPromises();
 
     expect(onboardingApplicationsService.approve).toHaveBeenCalledWith("APP-2");
@@ -285,9 +294,7 @@ describe("PlatformOnboardingApplicationsView", () => {
   it("copies the owner username and setup link for handing over", async () => {
     const wrapper = mount(PlatformOnboardingApplicationsView);
     await flushPromises();
-    await wrapper
-      .get('[data-testid="approve-onboarding-APP-1"]')
-      .trigger("click");
+    await approveRow(wrapper, "APP-1");
     await flushPromises();
 
     const copyUsername = wrapper.get('[data-testid="copy-owner-username"]');
@@ -307,9 +314,7 @@ describe("PlatformOnboardingApplicationsView", () => {
 
     const wrapper = mount(PlatformOnboardingApplicationsView);
     await flushPromises();
-    await wrapper
-      .get('[data-testid="approve-onboarding-APP-1"]')
-      .trigger("click");
+    await approveRow(wrapper, "APP-1");
     await flushPromises();
 
     await wrapper.get('[data-testid="copy-owner-setup-link"]').trigger("click");
@@ -335,15 +340,61 @@ describe("PlatformOnboardingApplicationsView", () => {
 
     const wrapper = mount(PlatformOnboardingApplicationsView);
     await flushPromises();
-    await wrapper
-      .get('[data-testid="approve-onboarding-APP-1"]')
-      .trigger("click");
+    await approveRow(wrapper, "APP-1");
     await flushPromises();
 
     const delivery = wrapper.get('[data-testid="owner-handoff-delivery"]');
     expect(delivery.text()).toContain(
       "ONBOARDING_NOTIFICATION_EMAIL binding is not configured",
     );
+  });
+
+  describe.each([
+    ["email", "sent", "handoff.sentNote tan@example.test"],
+    ["email", "failed", "handoff.manualNote"],
+    ["email", "pending", "handoff.manualNote"],
+    ["manual", "pending", "handoff.manualNote"],
+  ] as const)("owner note for %s delivery %s", (channel, status, note) => {
+    it("matches the recorded delivery on approve and on regenerate", async () => {
+      const delivery = buildDelivery({ channel, status });
+      vi.mocked(onboardingApplicationsService.approve).mockResolvedValue({
+        tenantId: "T-1",
+        ownerAccount: buildOwnerAccount({
+          setupPasswordExpiresAt: "2020-01-01T00:00:00.000Z",
+        }),
+        credentialDelivery: delivery,
+        status: "completed",
+      });
+      const wrapper = mount(PlatformOnboardingApplicationsView);
+      await flushPromises();
+      await approveRow(wrapper, "APP-1");
+      await flushPromises();
+
+      const noteText = () =>
+        wrapper.get('[data-testid="owner-handoff-note"]').text();
+      expect(noteText()).toBe(`platformOnboarding.${note}`);
+      expect(
+        wrapper.get('[data-testid="owner-handoff-delivery"]').text(),
+      ).toContain(`platformOnboarding.deliveryStatus.${status}`);
+
+      // Regeneration replaces the delivery and must re-derive the note.
+      vi.mocked(
+        onboardingApplicationsService.regenerateSetupLink,
+      ).mockResolvedValue({
+        ownerAccount: buildOwnerAccount({
+          setupPasswordExpiresAt: "2020-01-01T00:00:00.000Z",
+        }),
+        credentialDelivery: delivery,
+      });
+      await wrapper
+        .get('[data-testid="regenerate-setup-link"]')
+        .trigger("click");
+      await wrapper
+        .get('[data-testid="confirm-regenerate-setup-link"]')
+        .trigger("click");
+      await flushPromises();
+      expect(noteText()).toBe(`platformOnboarding.${note}`);
+    });
   });
 
   it("reopens the handoff for a completed application without provisioning again", async () => {
@@ -615,9 +666,7 @@ describe("PlatformOnboardingApplicationsView", () => {
           .element as HTMLInputElement
       ).checked,
     ).toBe(true);
-    await wrapper
-      .get('[data-testid="approve-onboarding-APP-1"]')
-      .trigger("click");
+    await approveRow(wrapper, "APP-1");
     await flushPromises();
     expect(onboardingApplicationsService.approve).toHaveBeenCalledWith(
       "APP-1",
@@ -635,9 +684,7 @@ describe("PlatformOnboardingApplicationsView", () => {
     await wrapper
       .get('[data-testid="approve-market-membership-APP-1"]')
       .setValue(false);
-    await wrapper
-      .get('[data-testid="approve-onboarding-APP-1"]')
-      .trigger("click");
+    await approveRow(wrapper, "APP-1");
     await flushPromises();
     expect(onboardingApplicationsService.approve).toHaveBeenCalledWith(
       "APP-1",
@@ -658,9 +705,7 @@ describe("PlatformOnboardingApplicationsView", () => {
     const wrapper = mount(PlatformOnboardingApplicationsView);
     await flushPromises();
     mockList([]);
-    await wrapper
-      .get('[data-testid="approve-onboarding-APP-1"]')
-      .trigger("click");
+    await approveRow(wrapper, "APP-1");
     await flushPromises();
     expect(wrapper.text()).toContain(
       "platformOnboarding.market.provisionedPending",
@@ -680,6 +725,176 @@ describe("PlatformOnboardingApplicationsView", () => {
     expect(
       onboardingApplicationsService.regenerateSetupLink,
     ).not.toHaveBeenCalled();
+  });
+
+  describe("approve confirmation and summary counters", () => {
+    it("asks before approving and only provisions after confirm", async () => {
+      const wrapper = mount(PlatformOnboardingApplicationsView, {
+        attachTo: document.body,
+      });
+      await flushPromises();
+
+      await wrapper
+        .get('[data-testid="approve-onboarding-APP-1"]')
+        .trigger("click");
+      await flushPromises();
+
+      const dialog = wrapper.get('[data-testid="approve-onboarding-dialog"]');
+      expect(dialog.text()).toContain("Laksa Shop");
+      expect(dialog.text()).toContain("tan@example.test");
+      expect(onboardingApplicationsService.approve).not.toHaveBeenCalled();
+      // Cancel, not Approve: Enter on open must not provision a tenant.
+      expect(document.activeElement).toBe(
+        dialog.get('button[type="button"]').element,
+      );
+
+      await dialog.get("form").trigger("submit");
+      await flushPromises();
+
+      expect(onboardingApplicationsService.approve).toHaveBeenCalledOnce();
+      expect(onboardingApplicationsService.approve).toHaveBeenCalledWith(
+        "APP-1",
+      );
+      expect(
+        wrapper.find('[data-testid="approve-onboarding-dialog"]').exists(),
+      ).toBe(false);
+      wrapper.unmount();
+    });
+
+    it("cancels with the button or Escape without approving", async () => {
+      const wrapper = mount(PlatformOnboardingApplicationsView, {
+        attachTo: document.body,
+      });
+      await flushPromises();
+      const open = () =>
+        wrapper
+          .get('[data-testid="approve-onboarding-APP-1"]')
+          .trigger("click");
+
+      await open();
+      await wrapper
+        .get('[data-testid="approve-onboarding-dialog"] button[type="button"]')
+        .trigger("click");
+      expect(
+        wrapper.find('[data-testid="approve-onboarding-dialog"]').exists(),
+      ).toBe(false);
+
+      await open();
+      await wrapper
+        .get('[data-testid="confirm-approve-onboarding"]')
+        .trigger("keydown", { key: "Escape" });
+      expect(
+        wrapper.find('[data-testid="approve-onboarding-dialog"]').exists(),
+      ).toBe(false);
+      expect(onboardingApplicationsService.approve).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
+    it("does not prompt for Activation details on a completed application", async () => {
+      mockList([
+        buildApplication({ id: "APP-3", status: "completed", tenantId: "T-3" }),
+      ]);
+      const wrapper = mount(PlatformOnboardingApplicationsView);
+      await flushPromises();
+
+      await wrapper.get('[data-testid="owner-handoff-APP-3"]').trigger("click");
+      await flushPromises();
+
+      expect(
+        wrapper.find('[data-testid="approve-onboarding-dialog"]').exists(),
+      ).toBe(false);
+      expect(onboardingApplicationsService.approve).toHaveBeenCalledWith(
+        "APP-3",
+      );
+    });
+
+    const submitted = (id: string) => buildApplication({ id });
+    const rejected = (id: string) =>
+      buildApplication({ id, status: "rejected" });
+
+    it("updates the counters after reject", async () => {
+      mockList([submitted("APP-1"), submitted("APP-2")]);
+      const wrapper = mount(PlatformOnboardingApplicationsView);
+      await flushPromises();
+      expect(wrapper.get('[data-testid="approvable-count"]').text()).toBe("2");
+
+      mockList([submitted("APP-2"), rejected("APP-1")]);
+      await wrapper
+        .get('[data-testid="reject-onboarding-APP-1"]')
+        .trigger("click");
+      await wrapper
+        .get('[data-testid="onboarding-rejection-reason-input"]')
+        .setValue("Missing documents");
+      await wrapper.get('[role="dialog"] form').trigger("submit");
+      await flushPromises();
+
+      expect(wrapper.get('[data-testid="approvable-count"]').text()).toBe("1");
+      expect(wrapper.get('[data-testid="rejected-count"]').text()).toBe("1");
+    });
+
+    it("updates the counters after approve and after delete", async () => {
+      mockList([submitted("APP-1"), submitted("APP-2")]);
+      const wrapper = mount(PlatformOnboardingApplicationsView);
+      await flushPromises();
+
+      mockList([
+        submitted("APP-2"),
+        buildApplication({ id: "APP-1", status: "completed" }),
+      ]);
+      await approveRow(wrapper, "APP-1");
+      await flushPromises();
+      expect(wrapper.get('[data-testid="approvable-count"]').text()).toBe("1");
+
+      vi.mocked(onboardingApplicationsService.purge).mockResolvedValue({
+        purged: true,
+      });
+      mockList([submitted("APP-2")]);
+      await wrapper
+        .get('[data-testid="purge-onboarding-APP-1"]')
+        .trigger("click");
+      await wrapper
+        .get('[data-testid="onboarding-purge-confirm-input"]')
+        .setValue("Laksa Shop");
+      await wrapper
+        .get('[data-testid="purge-onboarding-dialog"] form')
+        .trigger("submit");
+      await flushPromises();
+
+      expect(wrapper.get('[data-testid="approvable-count"]').text()).toBe("1");
+      expect(wrapper.get('[data-testid="total-count"]').text()).toBe("1");
+    });
+
+    it("ignores a slower load that started before a delete", async () => {
+      mockList([submitted("APP-1"), submitted("APP-2")]);
+      const wrapper = mount(PlatformOnboardingApplicationsView);
+      await flushPromises();
+
+      let releaseStale!: (value: never) => void;
+      vi.mocked(onboardingApplicationsService.list).mockImplementationOnce(
+        () => new Promise((resolve) => (releaseStale = resolve as never)),
+      );
+      void wrapper
+        .get('[data-testid="refresh-onboarding-applications"]')
+        .trigger("click");
+      await flushPromises();
+
+      mockList([submitted("APP-2")]);
+      // The refresh button is disabled mid-load; the filter still reloads.
+      await wrapper
+        .get('[data-testid="onboarding-status-filter"]')
+        .trigger("change");
+      await flushPromises();
+      releaseStale({
+        applications: [submitted("APP-1"), submitted("APP-2")],
+        total: 2,
+        page: 1,
+        limit: 50,
+      } as never);
+      await flushPromises();
+
+      expect(wrapper.get('[data-testid="approvable-count"]').text()).toBe("1");
+      expect(wrapper.get('[data-testid="total-count"]').text()).toBe("1");
+    });
   });
 
   describe("operator-created applications", () => {

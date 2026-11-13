@@ -56,7 +56,7 @@ const viVN: Messages = {
           "Trình duyệt này không hỗ trợ định vị địa lý. Nhập tọa độ bằng tay.",
         useCurrent: "Sử dụng vị trí hiện tại",
       },
-      next: "Tiếp theo",
+      submit: "Gửi đơn đăng ký",
       subdomain: {
         available: "URL này có sẵn",
         emptyHint: "Để trống để tự động tạo",
@@ -97,7 +97,7 @@ const viVN: Messages = {
       addressRequired: "Vui lòng nhập địa chỉ",
       countryRequired: "Vui lòng chọn quốc gia",
       districtRequired: "Vui lòng nhập quận",
-      cityRequired: "Vui lòng nhập thành phố",
+      cityRequired: "Vui lòng chọn thành phố",
       subdomainInvalidFormat:
         "Chỉ cho phép chữ cái viết thường, số và dấu gạch nối",
       subdomainTaken: "URL này đã được sử dụng",
@@ -115,6 +115,15 @@ const viVN: Messages = {
       copiedToClipboard: "Đã sao chép vào bảng nhớ tạm",
     },
   },
+  pageTitle: {
+    home: "Đăng ký mở quán",
+    apply: "Điền đơn đăng ký",
+    success: "Đã gửi đơn",
+    findApplication: "Tìm đơn đăng ký",
+    status: "Trạng thái đơn",
+    default: "MakanMasak Đăng ký mở quán",
+  },
+
   home: {
     tour: {
       title: "Từ lúc gọi món đến khi lên bàn, nhìn là hiểu",

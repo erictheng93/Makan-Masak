@@ -56,7 +56,7 @@ const msMY: Messages = {
           "Penyemak imbas ini tidak menyokong geolokasi. Masukkan koordinat secara manual.",
         useCurrent: "Gunakan Lokasi Semasa",
       },
-      next: "Seterusnya",
+      submit: "Hantar permohonan",
       subdomain: {
         available: "URL ini tersedia",
         emptyHint: "Biarkan kosong untuk menjana automatik",
@@ -97,7 +97,7 @@ const msMY: Messages = {
       addressRequired: "Sila masukkan alamat",
       countryRequired: "Sila pilih negara",
       districtRequired: "Sila masukkan daerah",
-      cityRequired: "Sila masukkan bandar",
+      cityRequired: "Sila pilih bandar",
       subdomainInvalidFormat:
         "Hanya huruf kecil, nombor dan sempang dibenarkan",
       subdomainTaken: "URL ini sudah diambil",
@@ -115,6 +115,15 @@ const msMY: Messages = {
       copiedToClipboard: "Disalin ke papan keratan",
     },
   },
+  pageTitle: {
+    home: "Mohon buka kedai",
+    apply: "Borang permohonan",
+    success: "Permohonan dihantar",
+    findApplication: "Cari permohonan saya",
+    status: "Status permohonan",
+    default: "MakanMasak Permohonan Kedai",
+  },
+
   home: {
     tour: {
       title: "Dari pesanan ke meja, sekali pandang",

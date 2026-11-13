@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   COUNTRY_PROFILES,
   SUPPORTED_COUNTRIES,
+  cityVariants,
+  keywordVariants,
   citiesForCountry,
   countryForCity,
   defaultOnboardingLocale,
   normalizeCountryCode,
+  selectableCitiesForCountry,
 } from "./locale";
 
 describe("COUNTRY_PROFILES", () => {
@@ -40,6 +43,14 @@ describe("COUNTRY_PROFILES", () => {
     expect(citiesForCountry("TW")).toContain("台中市");
     expect(citiesForCountry("MY")).toContain("Kuala Lumpur");
   });
+
+  it("hides the 台中市 alias from the selectable list but still accepts it", () => {
+    const selectable = selectableCitiesForCountry("TW");
+    expect(selectable).toContain("臺中市");
+    expect(selectable).not.toContain("台中市");
+    expect(citiesForCountry("TW")).toContain("台中市");
+    expect(selectableCitiesForCountry("MY")).toEqual(citiesForCountry("MY"));
+  });
 });
 
 describe("normalizeCountryCode", () => {
@@ -73,5 +84,29 @@ describe("countryForCity", () => {
 
   it("returns null for an unknown city", () => {
     expect(countryForCity("火星市")).toBeNull();
+  });
+});
+
+describe("cityVariants", () => {
+  it("returns every spelling of a city, whichever one is given", () => {
+    expect(cityVariants("台中市").sort()).toEqual(["台中市", "臺中市"]);
+    expect(cityVariants("臺中市").sort()).toEqual(["台中市", "臺中市"]);
+    expect(cityVariants("Kuala Lumpur")).toEqual(["Kuala Lumpur"]);
+  });
+});
+
+describe("keywordVariants", () => {
+  it("adds the swapped spelling in both directions", () => {
+    expect(keywordVariants("台中")).toEqual(["台中", "臺中"]);
+    expect(keywordVariants("臺中")).toEqual(["臺中", "台中"]);
+  });
+  it("normalises every occurrence of a mixed query to each form", () => {
+    expect(keywordVariants("臺北台南").sort()).toEqual(
+      ["臺北台南", "臺北臺南", "台北台南"].sort(),
+    );
+  });
+  it("returns the query itself when it has neither character", () => {
+    expect(keywordVariants("牛肉麵")).toEqual(["牛肉麵"]);
+    expect(keywordVariants("")).toEqual([""]);
   });
 });

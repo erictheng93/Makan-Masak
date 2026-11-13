@@ -33,11 +33,15 @@ export * from "./broadcasts";
 // timezone and phone format. See locale.ts for why it is the single source.
 export {
   COUNTRY_PROFILES,
+  LEGACY_CITY_ALIASES,
   ONBOARDING_LOCALES,
   ONBOARDING_LOCALE_NAMES,
   SUPPORTED_COUNTRIES,
+  cityVariants,
+  keywordVariants,
   citiesForCountry,
   countryForCity,
+  selectableCitiesForCountry,
   defaultOnboardingLocale,
   normalizeCountryCode,
   type CountryProfile,

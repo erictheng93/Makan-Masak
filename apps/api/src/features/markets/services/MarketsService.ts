@@ -47,6 +47,8 @@ import {
 } from "./geo";
 import { evaluateMarketPublicReadiness } from "../utils/publicReadiness";
 import { generateUUID } from "@makanmasak/utils";
+import { cityVariants, LEGACY_CITY_ALIASES } from "@makanmasak/shared-types";
+import { likeAny } from "../../../shared/utils/keyword-like";
 import { ApiError } from "../../../shared/utils/api-error";
 import {
   resolveSharedRestaurantCurrency,
@@ -373,18 +375,16 @@ export class MarketsService {
       .groupBy(markets.city, markets.district)
       .orderBy(asc(markets.city), asc(markets.district));
 
-    const areas = rows.reduce<{ city: string; districts: string[] }[]>(
-      (acc, row) => {
-        let area = acc.find((entry) => entry.city === row.city);
-        if (!area) {
-          area = { city: row.city, districts: [] };
-          acc.push(area);
-        }
-        area.districts.push(row.district);
-        return acc;
-      },
-      [],
-    );
+    // Legacy spellings (台中市) fold into the canonical one so a city is one facet.
+    const merged = new Map<string, Set<string>>();
+    for (const row of rows) {
+      const city = LEGACY_CITY_ALIASES[row.city] ?? row.city;
+      merged.set(city, (merged.get(city) ?? new Set()).add(row.district));
+    }
+    const areas = [...merged].map(([city, districts]) => ({
+      city,
+      districts: [...districts].sort(),
+    }));
 
     return { areas };
   }
@@ -401,7 +401,8 @@ export class MarketsService {
     const offset = (page - 1) * limit;
     const conditions = [eq(markets.isActive, true), isNull(markets.deletedAt)];
 
-    if (filters.city) conditions.push(eq(markets.city, filters.city));
+    if (filters.city)
+      conditions.push(inArray(markets.city, cityVariants(filters.city)));
     if (filters.district)
       conditions.push(eq(markets.district, filters.district));
     if (filters.type) conditions.push(eq(markets.type, filters.type));
@@ -1066,13 +1067,13 @@ export class MarketsService {
     if (filters.q) {
       const keyword = `%${filters.q}%`;
       const searchCondition = or(
-        like(restaurants.name, keyword),
-        like(restaurants.type, keyword),
-        like(restaurants.category, keyword),
-        like(restaurants.city, keyword),
-        like(restaurants.district, keyword),
-        like(restaurantMarketMemberships.stallNumber, keyword),
-        like(restaurantMarketMemberships.locationLabel, keyword),
+        likeAny(restaurants.name, keyword),
+        likeAny(restaurants.type, keyword),
+        likeAny(restaurants.category, keyword),
+        likeAny(restaurants.city, keyword),
+        likeAny(restaurants.district, keyword),
+        likeAny(restaurantMarketMemberships.stallNumber, keyword),
+        likeAny(restaurantMarketMemberships.locationLabel, keyword),
       );
       if (searchCondition) conditions.push(searchCondition);
     }
@@ -1977,10 +1978,10 @@ export class MarketsService {
     if (query) {
       const pattern = `%${query}%`;
       const searchCondition = or(
-        like(restaurants.name, pattern),
-        like(restaurants.address, pattern),
-        like(restaurants.district, pattern),
-        like(restaurants.city, pattern),
+        likeAny(restaurants.name, pattern),
+        likeAny(restaurants.address, pattern),
+        likeAny(restaurants.district, pattern),
+        likeAny(restaurants.city, pattern),
       );
       if (searchCondition) conditions.push(searchCondition);
     }
@@ -2225,10 +2226,13 @@ export class MarketsService {
       .replace(/\s+/g, "")}%`;
 
     return or(
-      like(markets.name, pattern),
-      like(markets.slug, pattern),
-      like(markets.description, pattern),
-      like(markets.tags, pattern),
+      likeAny(markets.name, pattern),
+      likeAny(markets.slug, pattern),
+      likeAny(markets.description, pattern),
+      likeAny(markets.tags, pattern),
+      likeAny(markets.city, pattern),
+      likeAny(markets.district, pattern),
+      likeAny(markets.address, pattern),
       sql`EXISTS (
         SELECT 1
         FROM restaurant_market_memberships rmm
@@ -2238,11 +2242,11 @@ export class MarketsService {
           AND r.is_active = 1
           AND r.deleted_at_ms IS NULL
           AND (
-            r.name LIKE ${pattern}
-            OR r.type LIKE ${pattern}
-            OR r.category LIKE ${pattern}
-            OR r.description LIKE ${pattern}
-            OR r.cuisine_tags LIKE ${pattern}
+            ${likeAny(sql.raw("r.name"), pattern)}
+            OR ${likeAny(sql.raw("r.type"), pattern)}
+            OR ${likeAny(sql.raw("r.category"), pattern)}
+            OR ${likeAny(sql.raw("r.description"), pattern)}
+            OR ${likeAny(sql.raw("r.cuisine_tags"), pattern)}
           )
       )`,
       sql`EXISTS (
@@ -2257,10 +2261,10 @@ export class MarketsService {
             OR dsi.market_ids LIKE '%' || '"' || ${markets.id} || '"' || '%'
           )
           AND (
-            dsi.dish_name LIKE ${pattern}
-            OR dsi.dish_name_normalized LIKE ${normalizedPattern}
-            OR dsi.category_name LIKE ${pattern}
-            OR dsi.tags LIKE ${pattern}
+            ${likeAny(sql.raw("dsi.dish_name"), pattern)}
+            OR ${likeAny(sql.raw("dsi.dish_name_normalized"), normalizedPattern)}
+            OR ${likeAny(sql.raw("dsi.category_name"), pattern)}
+            OR ${likeAny(sql.raw("dsi.tags"), pattern)}
           )
       )`,
       sql`EXISTS (
@@ -2276,11 +2280,11 @@ export class MarketsService {
           AND rsi.is_public = 1
           AND rsi.deleted_at_ms IS NULL
           AND (
-            rsi.name LIKE ${pattern}
-            OR rsi.description LIKE ${pattern}
-            OR rsi.service_type LIKE ${pattern}
-            OR rsi.tags LIKE ${pattern}
-            OR rsi.keywords LIKE ${pattern}
+            ${likeAny(sql.raw("rsi.name"), pattern)}
+            OR ${likeAny(sql.raw("rsi.description"), pattern)}
+            OR ${likeAny(sql.raw("rsi.service_type"), pattern)}
+            OR ${likeAny(sql.raw("rsi.tags"), pattern)}
+            OR ${likeAny(sql.raw("rsi.keywords"), pattern)}
           )
       )`,
     )!;

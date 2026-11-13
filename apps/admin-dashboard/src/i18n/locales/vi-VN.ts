@@ -2120,6 +2120,13 @@ const viVN: Messages = {
     resetSuccessMessage: "Bạn có thể đăng nhập bằng mật khẩu mới.",
     goToLogin: "Đi đến trang đăng nhập",
     resetAccount: "Tài khoản đặt lại mật khẩu",
+    setupTitle: "Đặt mật khẩu của bạn",
+    setupSubtitle:
+      "Chào mừng đến với MakanMasak - hãy tạo mật khẩu cho tài khoản mới",
+    setupAccount: "Tài khoản cần đặt mật khẩu",
+    setupBtn: "Đặt mật khẩu",
+    setupSuccess: "Đã đặt mật khẩu",
+    setupSuccessMessage: "Mật khẩu đã được đặt. Bạn có thể đăng nhập ngay.",
     newPassword: "Mật khẩu mới",
     newPasswordPlaceholder: "Nhập mật khẩu mới (ít nhất 6 ký tự)",
     passwordStrength: "Độ mạnh mật khẩu:",
@@ -2157,6 +2164,12 @@ const viVN: Messages = {
     missingToken: "Thiếu token đặt lại",
   },
   platformOnboarding: {
+    approve: {
+      title: "Duyệt đơn đăng ký này?",
+      description:
+        "Duyệt {business} sẽ tạo nhà hàng, tài khoản chủ quán và gói đăng ký, đồng thời gửi liên kết thiết lập đến {email}.",
+      confirm: "Duyệt",
+    },
     purge: {
       title: "Thu hồi và xóa cửa hàng này",
       description:
@@ -2227,7 +2240,7 @@ const viVN: Messages = {
       rejected: "Đã từ chối",
     },
     stats: {
-      total: "Tổng số đơn",
+      total: "Số đơn trong bộ lọc hiện tại",
       pending: "Chờ duyệt",
       rejected: "Đã từ chối",
     },
@@ -2249,8 +2262,10 @@ const viVN: Messages = {
     plan: { trial: "Dùng thử" },
     handoff: {
       title: "{business}: thông tin kích hoạt chủ cửa hàng",
+      sentNote:
+        "Chúng tôi đã gửi liên kết đặt mật khẩu tới {email}. Bạn cũng có thể sao chép liên kết bên dưới nếu cần; liên kết có hiệu lực 24 giờ và hết hạn sau một lần dùng.",
       manualNote:
-        "Hệ thống không gửi email. Hãy chuyển tài khoản và liên kết đặt mật khẩu cho chủ cửa hàng; liên kết có hiệu lực 24 giờ và hết hạn sau một lần dùng.",
+        "Chưa có email nào được gửi. Hãy chuyển tài khoản và liên kết đặt mật khẩu cho chủ cửa hàng; liên kết có hiệu lực 24 giờ và hết hạn sau một lần dùng.",
       dismiss: "Đóng",
       delivery: "Gửi thông tin đăng nhập: {channel} · {status}",
       unavailable:
@@ -2269,7 +2284,7 @@ const viVN: Messages = {
     deliveryChannel: { email: "Email", manual: "Chuyển tay" },
     deliveryStatus: {
       sent: "Đã gửi",
-      pending: "Chờ xử lý",
+      pending: "Chưa gửi",
       failed: "Gửi thất bại",
     },
     audit: {

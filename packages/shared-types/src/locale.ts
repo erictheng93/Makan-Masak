@@ -100,6 +100,34 @@ export const citiesForCountry = (
   country: SupportedCountryCode,
 ): readonly string[] => COUNTRY_PROFILES[country].cities;
 
+/** 只在伺服端接受、不再給申請人選的舊寫法（對應到清單中的正式寫法）。 */
+export const LEGACY_CITY_ALIASES: Readonly<Record<string, string>> = {
+  台中市: "臺中市",
+};
+
+/** 同一城市的所有寫法（含自己）：用來比對庫存資料，舊資料可能存成別名。 */
+export const cityVariants = (city: string): string[] => {
+  const canonical = LEGACY_CITY_ALIASES[city] ?? city;
+  const aliases = Object.keys(LEGACY_CITY_ALIASES).filter(
+    (alias) => LEGACY_CITY_ALIASES[alias] === canonical,
+  );
+  return [...new Set([city, canonical, ...aliases])];
+};
+
+/**
+ * 關鍵字搜尋用：回傳原字串加上 台↔臺 互換後的寫法（全部出現處一起換），去重。
+ * shortcut: 只涵蓋 台/臺 這一對，升級條件是資料裡出現其他異體字（如 裏/裡）時改成對照表。
+ */
+export const keywordVariants = (q: string): string[] => [
+  ...new Set([q, q.replace(/台/g, "臺"), q.replace(/臺/g, "台")]),
+];
+
+/** 申請表下拉用：citiesForCountry 扣掉舊寫法，避免同一城市出現兩次。 */
+export const selectableCitiesForCountry = (
+  country: SupportedCountryCode,
+): readonly string[] =>
+  citiesForCountry(country).filter((city) => !(city in LEGACY_CITY_ALIASES));
+
 /**
  * 城市屬於哪一國（名稱完全符合才算）。兩國城市清單不重疊，最多對到一國；
  * 對不到回 null，呼叫端必須把 null 當「未知」，不可當成任何國家。

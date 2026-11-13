@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useOnboardingStore } from "@/stores/onboarding";
@@ -7,24 +7,31 @@ import { onboardingApi, type MarketOption } from "@/services/api";
 import { ArrowPathIcon, MapPinIcon } from "@heroicons/vue/24/outline";
 import {
   SUPPORTED_COUNTRIES,
+  LEGACY_CITY_ALIASES,
   citiesForCountry,
   normalizeCountryCode,
+  selectableCitiesForCountry,
   type SupportedCountryCode,
 } from "@makanmasak/shared-types";
 import { useI18n } from "@/i18n";
+import { isValidEmail } from "@/utils/email";
 
 const { t, locale } = useI18n();
 const router = useRouter();
 const toast = useToast();
 const store = useOnboardingStore();
 
-const persistedApplication = store.application;
+// An unfinished draft wins over the last submitted application.
+const persistedApplication = store.draft ?? store.application;
 const initialCountry = normalizeCountryCode(persistedApplication?.countryCode);
-const initialCity =
-  initialCountry &&
-  typeof persistedApplication?.city === "string" &&
-  citiesForCountry(initialCountry).includes(persistedApplication.city)
+// A saved 台中市 (legacy spelling) is shown as 臺中市, the one the dropdown offers.
+const persistedCity =
+  typeof persistedApplication?.city === "string"
     ? persistedApplication.city
+    : "";
+const initialCity =
+  initialCountry && citiesForCountry(initialCountry).includes(persistedCity)
+    ? (LEGACY_CITY_ALIASES[persistedCity] ?? persistedCity)
     : "";
 
 const form = ref({
@@ -51,7 +58,27 @@ const form = ref({
   planId: "trial" as const,
 });
 
+watch(
+  form,
+  (value) => {
+    const { planId: _plan, ...draft } = value;
+    store.saveDraft(draft);
+  },
+  { deep: true },
+);
+
 const errors = ref<Record<string, string>>({});
+const formEl = ref<HTMLFormElement | null>(null);
+
+// A field's error describes its old value; drop it as soon as the field changes.
+for (const key of Object.keys(form.value)) {
+  watch(
+    () => (form.value as Record<string, unknown>)[key],
+    () => {
+      delete errors.value[key];
+    },
+  );
+}
 const isLocating = ref(false);
 const markets = ref<MarketOption[]>([]);
 const isLoadingMarkets = ref(false);
@@ -60,8 +87,14 @@ let marketRequestId = 0;
 
 const cityOptions = computed(() => {
   const country = normalizeCountryCode(form.value.countryCode);
-  return country ? citiesForCountry(country) : [];
+  return country ? selectableCitiesForCountry(country) : [];
 });
+
+// No markets (or none yet) means there is nothing to choose, so the field is
+// hidden rather than shown as a lone disabled "independent" option.
+const showMarketField = computed(
+  () => markets.value.length > 0 || Boolean(marketError.value),
+);
 
 const loadMarkets = async (
   country: SupportedCountryCode,
@@ -190,7 +223,7 @@ const validate = (): boolean => {
 
   if (!form.value.contactEmail.trim()) {
     errors.value.contactEmail = t("apply.validation.emailRequired");
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.contactEmail)) {
+  } else if (!isValidEmail(form.value.contactEmail)) {
     errors.value.contactEmail = t("apply.validation.emailInvalid");
   }
 
@@ -236,7 +269,11 @@ const validate = (): boolean => {
 };
 
 const handleSubmit = async () => {
-  if (!validate()) return;
+  if (!validate()) {
+    await nextTick();
+    formEl.value?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+    return;
+  }
 
   store.clearError();
   const latitude = parseCoordinate(form.value.latitude);
@@ -325,7 +362,7 @@ const useCurrentLocation = () => {
         <p class="text-sm text-red-700">{{ submitErrorMessage }}</p>
       </div>
 
-      <form @submit.prevent="handleSubmit" class="onboarding-form">
+      <form ref="formEl" @submit.prevent="handleSubmit" class="onboarding-form">
         <!-- 餐廳名稱 -->
         <div>
           <label for="onboarding-business-name" class="label"
@@ -563,7 +600,7 @@ const useCurrentLocation = () => {
               {{ errors.district }}
             </p>
           </div>
-          <div>
+          <div v-if="showMarketField">
             <label for="onboarding-market" class="label">
               {{ t("apply.form.market.label") }}
             </label>
@@ -727,7 +764,7 @@ const useCurrentLocation = () => {
             {{
               store.isLoading
                 ? t("apply.form.submitting")
-                : t("apply.form.next")
+                : t("apply.form.submit")
             }}
           </button>
         </div>

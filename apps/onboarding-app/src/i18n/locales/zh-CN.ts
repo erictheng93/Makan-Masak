@@ -54,7 +54,7 @@ const zhCN: Messages = {
         unsupported: "此浏览器不支援定位功能，请手动输入座标",
         useCurrent: "使用目前位置",
       },
-      next: "下一步",
+      submit: "提交申请",
       subdomain: {
         available: "此网址可以使用",
         emptyHint: "留空将自动生成",
@@ -92,7 +92,7 @@ const zhCN: Messages = {
       addressRequired: "请输入店铺地址",
       countryRequired: "请选择国家",
       districtRequired: "请输入区",
-      cityRequired: "请输入城市",
+      cityRequired: "请选择城市",
       subdomainInvalidFormat: "只能包含小写字母、数字和连字符",
       subdomainTaken: "此网址已被使用",
       tooShort: "至少需要 2 个字",
@@ -109,6 +109,15 @@ const zhCN: Messages = {
       copiedToClipboard: "已复制到剪贴簿",
     },
   },
+  pageTitle: {
+    home: "开店申请",
+    apply: "填写申请",
+    success: "申请成功",
+    findApplication: "找回申请",
+    status: "申请状态",
+    default: "MakanMasak 开店申请",
+  },
+
   home: {
     tour: {
       title: "从点餐到出餐，一次看懂",

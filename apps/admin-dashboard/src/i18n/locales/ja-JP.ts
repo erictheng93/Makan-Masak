@@ -2121,6 +2121,13 @@ const jaJP: Messages = {
     resetSuccessMessage: "新しいパスワードでログインできます。",
     goToLogin: "ログインページへ",
     resetAccount: "パスワードリセット対象のアカウント",
+    setupTitle: "パスワードを設定",
+    setupSubtitle:
+      "MakanMasak へようこそ - 新しいアカウントのパスワードを作成してください",
+    setupAccount: "パスワードを設定するアカウント",
+    setupBtn: "パスワードを設定",
+    setupSuccess: "パスワードを設定しました",
+    setupSuccessMessage: "パスワードを設定しました。ログインできます。",
     newPassword: "新しいパスワード",
     newPasswordPlaceholder: "新しいパスワードを入力（6文字以上）",
     passwordStrength: "パスワード強度：",
@@ -2157,6 +2164,12 @@ const jaJP: Messages = {
     missingToken: "リセットトークンがありません",
   },
   platformOnboarding: {
+    approve: {
+      title: "この申請を承認しますか？",
+      description:
+        "「{business}」を承認すると、レストラン、オーナーアカウント、サブスクリプションが作成され、設定リンクが {email} にメール送信されます。",
+      confirm: "承認",
+    },
     purge: {
       title: "代理登録を取り消して店舗を削除",
       description:
@@ -2228,7 +2241,7 @@ const jaJP: Messages = {
       rejected: "却下",
     },
     stats: {
-      total: "申請総数",
+      total: "現在の絞り込みの申請数",
       pending: "審査待ち",
       rejected: "却下",
     },
@@ -2250,8 +2263,10 @@ const jaJP: Messages = {
     plan: { trial: "トライアル" },
     handoff: {
       title: "{business}：オーナー開通情報",
+      sentNote:
+        "設定リンクを {email} にメールで送信しました。必要に応じて下のリンクをコピーしてお渡しすることもできます。リンクは24時間有効で、一度使うと無効になります。",
       manualNote:
-        "メールは送信されません。アカウントとパスワード設定リンクをオーナーへお渡しください。リンクは24時間有効で、一度使うと無効になります。",
+        "メールは送信されていません。アカウントとパスワード設定リンクをオーナーへお渡しください。リンクは24時間有効で、一度使うと無効になります。",
       dismiss: "閉じる",
       delivery: "認証情報の配信：{channel} · {status}",
       unavailable:
@@ -2270,7 +2285,7 @@ const jaJP: Messages = {
     deliveryChannel: { email: "メール", manual: "手渡し" },
     deliveryStatus: {
       sent: "送信済み",
-      pending: "保留中",
+      pending: "未送信",
       failed: "送信失敗",
     },
     audit: {

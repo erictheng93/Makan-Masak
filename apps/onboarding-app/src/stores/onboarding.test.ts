@@ -136,4 +136,67 @@ describe("useOnboardingStore", () => {
     expect(store.application?.businessName).toBe("Demo Noodles");
     expect(store.assignedSubdomain).toBe("demo-noodles");
   });
+
+  describe("draft", () => {
+    const draft = {
+      businessName: "Demo Noodles",
+      countryCode: "TW",
+      city: "台中市",
+      marketId: "market-1",
+      latitude: 24.1,
+    };
+
+    it("persists a draft and restores it on a fresh store", () => {
+      useOnboardingStore().saveDraft(draft);
+
+      setActivePinia(createPinia());
+      expect(useOnboardingStore().draft).toEqual(draft);
+    });
+
+    it("clears the draft after a successful submit and on reset", async () => {
+      vi.mocked(onboardingApi.createApplication).mockResolvedValue({
+        applicationId: "app-123",
+        applicationSecret: "secret-123",
+        assignedSubdomain: "demo-noodles",
+        status: "received",
+      });
+      const store = useOnboardingStore();
+      store.saveDraft(draft);
+      await store.submitApplication(applicationData());
+      expect(store.draft).toBeNull();
+      expect(sessionStorage.getItem("onboarding_draft")).toBeNull();
+
+      store.saveDraft(draft);
+      store.reset();
+      expect(store.draft).toBeNull();
+      expect(sessionStorage.getItem("onboarding_draft")).toBeNull();
+    });
+
+    it("keeps a failed submit's draft", async () => {
+      vi.mocked(onboardingApi.createApplication).mockRejectedValue(
+        new ApiError("bad", "VALIDATION_ERROR"),
+      );
+      const store = useOnboardingStore();
+      store.saveDraft(draft);
+      await store.submitApplication(applicationData());
+      expect(sessionStorage.getItem("onboarding_draft")).not.toBeNull();
+    });
+
+    it("ignores corrupt or old-shape stored drafts", () => {
+      sessionStorage.setItem("onboarding_draft", "{not json");
+      expect(useOnboardingStore().draft).toBeNull();
+
+      sessionStorage.setItem(
+        "onboarding_draft",
+        JSON.stringify({
+          businessName: 5,
+          latitude: "x",
+          secret: "s",
+          city: "A",
+        }),
+      );
+      setActivePinia(createPinia());
+      expect(useOnboardingStore().draft).toEqual({ city: "A" });
+    });
+  });
 });

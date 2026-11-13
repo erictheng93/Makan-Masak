@@ -6,6 +6,7 @@ import Toast from "vue-toastification";
 import "vue-toastification/dist/index.css";
 import "./assets/css/main.css";
 import { initI18n } from "./i18n";
+import { syncDocumentMeta } from "./i18n/document-meta";
 
 const app = createApp(App);
 const pinia = createPinia();
@@ -23,5 +24,6 @@ initI18n()
     console.error("[onboarding] i18n initialize failed:", err);
   })
   .finally(() => {
+    syncDocumentMeta(router);
     app.mount("#app");
   });

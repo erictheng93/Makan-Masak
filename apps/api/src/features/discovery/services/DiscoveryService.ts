@@ -22,6 +22,7 @@ import {
   restaurantMarketMemberships,
   restaurantServiceItems,
 } from "@makanmasak/database";
+import { cityVariants } from "@makanmasak/shared-types";
 import { boundingBoxFromCircle, distanceKm } from "../../markets/services/geo";
 import type {
   DishSearchResult,
@@ -35,6 +36,7 @@ import { getOpeningHoursStatus, isOpenNow } from "../utils/isOpenNow";
 import { catalogResultTypeFromTags } from "../utils/catalog-result-type";
 import { normalizeSearchTags } from "../utils/search-normalization";
 import { fromCents, toRequiredCents } from "../../../shared/utils/money";
+import { likeAny } from "../../../shared/utils/keyword-like";
 import { displayCurrencyFromRestaurantSettings } from "../../../shared/utils/restaurant-currency";
 import {
   SemanticDiscoveryService,
@@ -149,7 +151,9 @@ export class DiscoveryService {
       baseConditions.push(eq(dishSearchIndex.district, filters.district));
     }
     if (filters.city) {
-      baseConditions.push(eq(restaurants.city, filters.city));
+      baseConditions.push(
+        inArray(restaurants.city, cityVariants(filters.city)),
+      );
     }
     if (filters.categoryName) {
       baseConditions.push(
@@ -216,14 +220,14 @@ export class DiscoveryService {
         // removes the existing LIKE behavior. Trigram requires >= 3 chars, so
         // 1-2 char queries fall through to LIKE only.
         this.ftsMatchCondition(rawQuery),
-        like(dishSearchIndex.dishNameNormalized, `${normalized}%`),
-        like(dishSearchIndex.tags, tagPattern),
-        like(dishSearchIndex.categoryName, tagPattern),
+        likeAny(dishSearchIndex.dishNameNormalized, `${normalized}%`),
+        likeAny(dishSearchIndex.tags, tagPattern),
+        likeAny(dishSearchIndex.categoryName, tagPattern),
         ...catalogAliasConditions,
-        like(dishSearchIndex.district, tagPattern),
-        like(restaurants.name, tagPattern),
-        like(restaurants.city, tagPattern),
-        like(restaurants.district, tagPattern),
+        likeAny(dishSearchIndex.district, tagPattern),
+        likeAny(restaurants.name, tagPattern),
+        likeAny(restaurants.city, tagPattern),
+        likeAny(restaurants.district, tagPattern),
         this.marketVendorKeywordCondition(tagPattern, filters.marketId),
         semanticMenuItemIds.length > 0
           ? inArray(dishSearchIndex.menuItemId, semanticMenuItemIds)
@@ -502,7 +506,7 @@ export class DiscoveryService {
       conditions.push(eq(dishSearchIndex.district, filters.district));
     }
     if (filters.city) {
-      conditions.push(eq(restaurants.city, filters.city));
+      conditions.push(inArray(restaurants.city, cityVariants(filters.city)));
     }
     if (filters.catalogType) {
       conditions.push(eq(dishSearchIndex.catalogType, filters.catalogType));
@@ -613,11 +617,14 @@ export class DiscoveryService {
       const pattern = `%${filters.q}%`;
       conditions.push(
         or(
-          like(restaurants.name, pattern),
-          like(restaurants.type, pattern),
-          like(restaurants.category, pattern),
-          like(restaurants.description, pattern),
-          like(restaurants.cuisineTags, pattern),
+          likeAny(restaurants.name, pattern),
+          likeAny(restaurants.type, pattern),
+          likeAny(restaurants.category, pattern),
+          likeAny(restaurants.description, pattern),
+          likeAny(restaurants.cuisineTags, pattern),
+          likeAny(restaurants.city, pattern),
+          likeAny(restaurants.district, pattern),
+          likeAny(restaurants.address, pattern),
           this.marketVendorKeywordCondition(pattern, filters.marketId),
         )!,
       );
@@ -626,7 +633,7 @@ export class DiscoveryService {
       conditions.push(eq(restaurants.district, filters.district));
     }
     if (filters.city) {
-      conditions.push(eq(restaurants.city, filters.city));
+      conditions.push(inArray(restaurants.city, cityVariants(filters.city)));
     }
     if (filters.cuisineType) {
       conditions.push(eq(restaurants.type, filters.cuisineType));
@@ -821,7 +828,7 @@ export class DiscoveryService {
     ];
 
     if (filters.city) {
-      conditions.push(eq(restaurants.city, filters.city));
+      conditions.push(inArray(restaurants.city, cityVariants(filters.city)));
     }
     if (filters.district) {
       conditions.push(eq(restaurants.district, filters.district));
@@ -859,14 +866,14 @@ export class DiscoveryService {
       const serviceTypeIntent = this.getServiceTypeIntent(q);
       const serviceAliases = this.getServiceQueryAliases(q);
       const searchConditions: SQL[] = [
-        like(restaurantServiceItems.name, pattern),
-        like(restaurantServiceItems.description, pattern),
-        like(restaurantServiceItems.keywords, pattern),
-        like(restaurantServiceItems.tags, pattern),
-        like(restaurantServiceItems.serviceType, pattern),
-        like(restaurants.name, pattern),
-        like(restaurants.city, pattern),
-        like(restaurants.district, pattern),
+        likeAny(restaurantServiceItems.name, pattern),
+        likeAny(restaurantServiceItems.description, pattern),
+        likeAny(restaurantServiceItems.keywords, pattern),
+        likeAny(restaurantServiceItems.tags, pattern),
+        likeAny(restaurantServiceItems.serviceType, pattern),
+        likeAny(restaurants.name, pattern),
+        likeAny(restaurants.city, pattern),
+        likeAny(restaurants.district, pattern),
         this.marketVendorKeywordCondition(pattern, filters.marketId),
         ...serviceAliases
           .filter((alias) => alias !== q.trim())
@@ -1035,7 +1042,7 @@ export class DiscoveryService {
     ];
 
     if (filters.city) {
-      conditions.push(eq(restaurants.city, filters.city));
+      conditions.push(inArray(restaurants.city, cityVariants(filters.city)));
     }
     if (filters.district) {
       conditions.push(eq(restaurants.district, filters.district));
@@ -2097,8 +2104,8 @@ export class DiscoveryService {
             AND ${restaurantMarketMemberships.marketId} = ${marketId}
             AND ${restaurantMarketMemberships.leftAt} IS NULL
             AND (
-              ${restaurantMarketMemberships.stallNumber} LIKE ${pattern}
-              OR ${restaurantMarketMemberships.locationLabel} LIKE ${pattern}
+              ${likeAny(restaurantMarketMemberships.stallNumber, pattern)}
+              OR ${likeAny(restaurantMarketMemberships.locationLabel, pattern)}
             )
         )`
       : sql`EXISTS (
@@ -2107,8 +2114,8 @@ export class DiscoveryService {
           WHERE ${restaurantMarketMemberships.restaurantId} = ${restaurants.id}
             AND ${restaurantMarketMemberships.leftAt} IS NULL
             AND (
-              ${restaurantMarketMemberships.stallNumber} LIKE ${pattern}
-              OR ${restaurantMarketMemberships.locationLabel} LIKE ${pattern}
+              ${likeAny(restaurantMarketMemberships.stallNumber, pattern)}
+              OR ${likeAny(restaurantMarketMemberships.locationLabel, pattern)}
             )
         )`;
   }

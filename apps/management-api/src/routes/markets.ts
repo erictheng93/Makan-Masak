@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { markets } from "@makanmasak/database";
 import {
   citiesForCountry,
+  cityVariants,
   normalizeCountryCode,
 } from "@makanmasak/shared-types";
 import { and, count, eq, inArray, isNull } from "drizzle-orm";
@@ -55,7 +56,7 @@ marketsRouter.get("/", async (c) => {
     eq(markets.isActive, true),
     isNull(markets.deletedAt),
     country ? inArray(markets.city, citiesForCountry(country)) : undefined,
-    city ? eq(markets.city, city) : undefined,
+    city ? inArray(markets.city, cityVariants(city)) : undefined,
     type ? eq(markets.type, type) : undefined,
   );
   const [marketRows, totalRows] = await Promise.all([

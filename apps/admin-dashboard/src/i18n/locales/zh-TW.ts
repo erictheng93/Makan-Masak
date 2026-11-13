@@ -2261,6 +2261,12 @@ const zhTWCore = {
     resetSuccessMessage: "現在您可以使用新密碼登入系統了。",
     goToLogin: "前往登入頁面",
     resetAccount: "重設密碼的帳號",
+    setupTitle: "設定您的密碼",
+    setupSubtitle: "歡迎使用 MakanMasak - 請為您的新帳號建立密碼",
+    setupAccount: "要設定密碼的帳號",
+    setupBtn: "設定密碼",
+    setupSuccess: "密碼已設定",
+    setupSuccessMessage: "密碼已設定完成，您現在可以登入。",
     newPassword: "新密碼",
     newPasswordPlaceholder: "請輸入新密碼（至少6個字符）",
     passwordStrength: "密碼強度：",
@@ -2298,6 +2304,12 @@ const zhTWCore = {
 
   // 儀表板
   platformOnboarding: {
+    approve: {
+      title: "核准此申請？",
+      description:
+        "核准「{business}」會建立餐廳、店主帳號與訂閱，並將設定連結寄到 {email}。",
+      confirm: "核准",
+    },
     purge: {
       title: "撤銷代建並刪除店鋪",
       description:
@@ -2365,7 +2377,7 @@ const zhTWCore = {
       rejected: "已拒絕",
     },
     stats: {
-      total: "申請總數",
+      total: "目前篩選的申請數",
       pending: "待審核",
       rejected: "已拒絕",
     },
@@ -2387,8 +2399,10 @@ const zhTWCore = {
     plan: { trial: "試用" },
     handoff: {
       title: "{business}：店主開通資訊",
+      sentNote:
+        "已將設定密碼連結寄到 {email}。需要時也可複製下方連結交給店主；連結 24 小時內有效，使用一次後即失效。",
       manualNote:
-        "系統目前不寄信。請把帳號與設定密碼連結交給店主；連結 24 小時內有效，使用一次後即失效。",
+        "未寄出任何郵件。請把帳號與設定密碼連結交給店主；連結 24 小時內有效，使用一次後即失效。",
       dismiss: "關閉",
       delivery: "憑證交付：{channel} · {status}",
       unavailable:
@@ -2407,7 +2421,7 @@ const zhTWCore = {
     deliveryChannel: { email: "Email", manual: "人工轉交" },
     deliveryStatus: {
       sent: "已寄出",
-      pending: "待處理",
+      pending: "未寄出",
       failed: "寄送失敗",
     },
     audit: {

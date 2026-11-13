@@ -1994,7 +1994,7 @@ export class OnboardingService {
       this.stripApiPath(this.env.API_BASE_URL) ||
       "http://localhost:3000";
 
-    return `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
+    return `${baseUrl}/reset-password?token=${encodeURIComponent(token)}&purpose=setup`;
   }
 
   private buildApplicationStatusLink(
