@@ -108,4 +108,20 @@ describe("city spelling variants — real D1", () => {
     ]({ q: "臺南" });
     expect(found.map((m) => m.name)).toEqual(["台南夜市"]);
   });
+
+  it("keyword matches city/address columns, not only names", async () => {
+    await seed.restaurant({ name: "阿明牛肉湯", city: "台南市" });
+    await seed.restaurant({ name: "老王牛肉湯", city: "高雄市" });
+    await seedMarket("花園夜市", "台南市");
+    await seedMarket("港邊夜市", "高雄市");
+    const discovery = new DiscoveryService(app.env.DB, kv as never);
+    const markets = new MarketsService(app.env.DB);
+
+    for (const q of ["臺南", "台南"]) {
+      const { results } = await discovery.browseRestaurants({ q });
+      expect(results.map((r) => r.name)).toEqual(["阿明牛肉湯"]);
+      const { markets: found } = await markets["queryMarkets"]({ q });
+      expect(found.map((m) => m.name)).toEqual(["花園夜市"]);
+    }
+  });
 });

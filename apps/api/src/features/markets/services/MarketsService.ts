@@ -2230,6 +2230,9 @@ export class MarketsService {
       likeAny(markets.slug, pattern),
       likeAny(markets.description, pattern),
       likeAny(markets.tags, pattern),
+      likeAny(markets.city, pattern),
+      likeAny(markets.district, pattern),
+      likeAny(markets.address, pattern),
       sql`EXISTS (
         SELECT 1
         FROM restaurant_market_memberships rmm

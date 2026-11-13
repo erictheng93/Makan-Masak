@@ -622,6 +622,9 @@ export class DiscoveryService {
           likeAny(restaurants.category, pattern),
           likeAny(restaurants.description, pattern),
           likeAny(restaurants.cuisineTags, pattern),
+          likeAny(restaurants.city, pattern),
+          likeAny(restaurants.district, pattern),
+          likeAny(restaurants.address, pattern),
           this.marketVendorKeywordCondition(pattern, filters.marketId),
         )!,
       );
