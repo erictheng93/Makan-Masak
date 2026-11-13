@@ -100,6 +100,17 @@ export const citiesForCountry = (
   country: SupportedCountryCode,
 ): readonly string[] => COUNTRY_PROFILES[country].cities;
 
+/** 只在伺服端接受、不再給申請人選的舊寫法（對應到清單中的正式寫法）。 */
+export const LEGACY_CITY_ALIASES: Readonly<Record<string, string>> = {
+  台中市: "臺中市",
+};
+
+/** 申請表下拉用：citiesForCountry 扣掉舊寫法，避免同一城市出現兩次。 */
+export const selectableCitiesForCountry = (
+  country: SupportedCountryCode,
+): readonly string[] =>
+  citiesForCountry(country).filter((city) => !(city in LEGACY_CITY_ALIASES));
+
 /**
  * 城市屬於哪一國（名稱完全符合才算）。兩國城市清單不重疊，最多對到一國；
  * 對不到回 null，呼叫端必須把 null 當「未知」，不可當成任何國家。

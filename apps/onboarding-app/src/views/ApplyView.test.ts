@@ -75,7 +75,7 @@ function deferred<T>() {
 
 async function chooseTaiwanCity(wrapper: ReturnType<typeof mount>) {
   await wrapper.get('[data-testid="onboarding-country"]').setValue("TW");
-  await wrapper.get('[data-testid="onboarding-city"]').setValue("台中市");
+  await wrapper.get('[data-testid="onboarding-city"]').setValue("臺中市");
   await flushPromises();
 }
 
@@ -146,7 +146,7 @@ describe("ApplyView locale and market selection", () => {
       .map((option) => option.text());
 
     expect(cityOptions).toContain("Kuala Lumpur");
-    expect(cityOptions).not.toContain("台中市");
+    expect(cityOptions).not.toContain("臺中市");
   });
 
   it("clears city, market, and stall when the country changes", async () => {
@@ -207,7 +207,7 @@ describe("ApplyView locale and market selection", () => {
     ]);
     expect(mocks.getMarkets).toHaveBeenCalledWith({
       country: "TW",
-      city: "台中市",
+      city: "臺中市",
     });
   });
 
@@ -244,7 +244,7 @@ describe("ApplyView locale and market selection", () => {
     const wrapper = mount(ApplyView);
 
     await wrapper.get('[data-testid="onboarding-country"]').setValue("TW");
-    await wrapper.get('[data-testid="onboarding-city"]').setValue("台中市");
+    await wrapper.get('[data-testid="onboarding-city"]').setValue("臺中市");
     await wrapper.get('[data-testid="onboarding-city"]').setValue("臺北市");
     await flushPromises();
 
@@ -263,7 +263,7 @@ describe("ApplyView locale and market selection", () => {
     const wrapper = mount(ApplyView);
 
     await wrapper.get('[data-testid="onboarding-country"]').setValue("TW");
-    await wrapper.get('[data-testid="onboarding-city"]').setValue("台中市");
+    await wrapper.get('[data-testid="onboarding-city"]').setValue("臺中市");
     await wrapper.get('[data-testid="onboarding-city"]').setValue("臺北市");
     await flushPromises();
 
@@ -413,7 +413,7 @@ describe("ApplyView locale and market selection", () => {
       contactPhone: "0912345678",
       address: "1 Fengjia Road",
       district: "Xitun District",
-      city: "台中市",
+      city: "臺中市",
       countryCode: "TW",
       latitude: 24.147736,
       longitude: 120.673648,
@@ -498,7 +498,7 @@ describe("ApplyView draft persistence", () => {
     mocks.store.draft = {
       businessName: "Demo Noodles",
       countryCode: "TW",
-      city: "台中市",
+      city: "臺中市",
       marketId: "market-1",
       stallNumber: "A-12",
       latitude: 24.1,
@@ -518,13 +518,13 @@ describe("ApplyView draft persistence", () => {
       ).value;
     expect(value("onboarding-business-name")).toBe("Demo Noodles");
     expect(value("onboarding-country")).toBe("TW");
-    expect(value("onboarding-city")).toBe("台中市");
+    expect(value("onboarding-city")).toBe("臺中市");
     expect(value("onboarding-market")).toBe("market-1");
     expect(value("onboarding-stall-number")).toBe("A-12");
     expect(value("onboarding-latitude")).toBe("24.1");
     expect(mocks.getMarkets).toHaveBeenCalledWith({
       country: "TW",
-      city: "台中市",
+      city: "臺中市",
     });
   });
 });
@@ -534,6 +534,46 @@ it("labels the only forward button as a submit action", () => {
   const button = wrapper.get('[data-testid="onboarding-submit"]');
   expect(button.attributes("type")).toBe("submit");
   expect(button.text()).toBe("apply.form.submit");
+});
+
+describe("Taichung spelling", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.store.application = null;
+    mocks.store.draft = null;
+    mocks.getMarkets.mockResolvedValue([]);
+  });
+
+  it("offers only one Taichung in the Taiwan city list", async () => {
+    const wrapper = mount(ApplyView);
+    await wrapper.get('[data-testid="onboarding-country"]').setValue("TW");
+    const options = wrapper
+      .get('[data-testid="onboarding-city"]')
+      .findAll("option")
+      .map((option) => option.text());
+    expect(options).toContain("臺中市");
+    expect(options).not.toContain("台中市");
+  });
+
+  it("shows a saved legacy 台中市 as the selectable 臺中市", async () => {
+    mocks.store.draft = {
+      countryCode: "TW",
+      city: "台中市",
+    };
+    const wrapper = mount(ApplyView);
+    await flushPromises();
+    expect(
+      (
+        wrapper.get('[data-testid="onboarding-city"]')
+          .element as HTMLSelectElement
+      ).value,
+    ).toBe("臺中市");
+    expect(mocks.getMarkets).toHaveBeenCalledWith({
+      country: "TW",
+      city: "臺中市",
+    });
+    mocks.store.draft = null;
+  });
 });
 
 it("names both real steps and puts the address before coordinates", () => {

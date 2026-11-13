@@ -7,8 +7,10 @@ import { onboardingApi, type MarketOption } from "@/services/api";
 import { ArrowPathIcon, MapPinIcon } from "@heroicons/vue/24/outline";
 import {
   SUPPORTED_COUNTRIES,
+  LEGACY_CITY_ALIASES,
   citiesForCountry,
   normalizeCountryCode,
+  selectableCitiesForCountry,
   type SupportedCountryCode,
 } from "@makanmasak/shared-types";
 import { useI18n } from "@/i18n";
@@ -22,11 +24,14 @@ const store = useOnboardingStore();
 // An unfinished draft wins over the last submitted application.
 const persistedApplication = store.draft ?? store.application;
 const initialCountry = normalizeCountryCode(persistedApplication?.countryCode);
-const initialCity =
-  initialCountry &&
-  typeof persistedApplication?.city === "string" &&
-  citiesForCountry(initialCountry).includes(persistedApplication.city)
+// A saved 台中市 (legacy spelling) is shown as 臺中市, the one the dropdown offers.
+const persistedCity =
+  typeof persistedApplication?.city === "string"
     ? persistedApplication.city
+    : "";
+const initialCity =
+  initialCountry && citiesForCountry(initialCountry).includes(persistedCity)
+    ? (LEGACY_CITY_ALIASES[persistedCity] ?? persistedCity)
     : "";
 
 const form = ref({
@@ -71,7 +76,7 @@ let marketRequestId = 0;
 
 const cityOptions = computed(() => {
   const country = normalizeCountryCode(form.value.countryCode);
-  return country ? citiesForCountry(country) : [];
+  return country ? selectableCitiesForCountry(country) : [];
 });
 
 const loadMarkets = async (

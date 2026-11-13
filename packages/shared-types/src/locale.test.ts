@@ -6,6 +6,7 @@ import {
   countryForCity,
   defaultOnboardingLocale,
   normalizeCountryCode,
+  selectableCitiesForCountry,
 } from "./locale";
 
 describe("COUNTRY_PROFILES", () => {
@@ -39,6 +40,14 @@ describe("COUNTRY_PROFILES", () => {
   it("includes the cities production already uses", () => {
     expect(citiesForCountry("TW")).toContain("台中市");
     expect(citiesForCountry("MY")).toContain("Kuala Lumpur");
+  });
+
+  it("hides the 台中市 alias from the selectable list but still accepts it", () => {
+    const selectable = selectableCitiesForCountry("TW");
+    expect(selectable).toContain("臺中市");
+    expect(selectable).not.toContain("台中市");
+    expect(citiesForCountry("TW")).toContain("台中市");
+    expect(selectableCitiesForCountry("MY")).toEqual(citiesForCountry("MY"));
   });
 });
 
