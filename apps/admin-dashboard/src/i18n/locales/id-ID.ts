@@ -2244,7 +2244,7 @@ const idID: Messages = {
     setupTitle: "Atur kata sandi Anda",
     setupSubtitle:
       "Selamat datang di MakanMasak - buat kata sandi untuk akun baru Anda",
-    setupAccount: "Akun yang akan diatur",
+    setupAccount: "Akun yang akan diatur kata sandinya",
     setupBtn: "Atur kata sandi",
     setupSuccess: "Kata sandi telah diatur",
     setupSuccessMessage: "Kata sandi telah diatur. Anda sekarang dapat masuk.",
@@ -2288,7 +2288,7 @@ const idID: Messages = {
     approve: {
       title: "Setujui pengajuan ini?",
       description:
-        "Menyetujui {business} akan membuat restoran, akun pemilik, dan langganan, lalu mengirim tautan penyiapan ke {email}.",
+        "Menyetujui “{business}” akan membuat restoran, akun pemilik, dan langganan, lalu mengirim tautan penyetelan ke {email}.",
       confirm: "Setujui",
     },
     purge: {

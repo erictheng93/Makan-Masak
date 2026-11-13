@@ -2167,7 +2167,7 @@ const viVN: Messages = {
     approve: {
       title: "Duyệt đơn đăng ký này?",
       description:
-        "Duyệt {business} sẽ tạo nhà hàng, tài khoản chủ quán và gói đăng ký, đồng thời gửi liên kết thiết lập đến {email}.",
+        "Duyệt {business} sẽ tạo nhà hàng, tài khoản chủ quán và gói đăng ký, đồng thời gửi liên kết đặt mật khẩu đến {email}.",
       confirm: "Duyệt",
     },
     purge: {
@@ -2240,7 +2240,7 @@ const viVN: Messages = {
       rejected: "Đã từ chối",
     },
     stats: {
-      total: "Số đơn trong bộ lọc hiện tại",
+      total: "Đơn trong bộ lọc hiện tại",
       pending: "Chờ duyệt",
       rejected: "Đã từ chối",
     },
