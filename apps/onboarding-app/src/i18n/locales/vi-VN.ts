@@ -115,6 +115,15 @@ const viVN: Messages = {
       copiedToClipboard: "Đã sao chép vào bảng nhớ tạm",
     },
   },
+  pageTitle: {
+    home: "Đăng ký mở quán",
+    apply: "Điền đơn đăng ký",
+    success: "Đã gửi đơn",
+    findApplication: "Tìm đơn đăng ký",
+    status: "Trạng thái đơn",
+    default: "MakanMasak Đăng ký mở quán",
+  },
+
   home: {
     tour: {
       title: "Từ lúc gọi món đến khi lên bàn, nhìn là hiểu",

@@ -116,6 +116,15 @@ const idID: Messages = {
       copiedToClipboard: "Disalin ke papan klip",
     },
   },
+  pageTitle: {
+    home: "Ajukan buka toko",
+    apply: "Formulir pengajuan",
+    success: "Pengajuan terkirim",
+    findApplication: "Cari pengajuan saya",
+    status: "Status pengajuan",
+    default: "MakanMasak Pengajuan Toko",
+  },
+
   home: {
     tour: {
       title: "Dari pesanan sampai ke meja, sekilas",

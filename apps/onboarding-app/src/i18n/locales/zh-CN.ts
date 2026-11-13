@@ -109,6 +109,15 @@ const zhCN: Messages = {
       copiedToClipboard: "已复制到剪贴簿",
     },
   },
+  pageTitle: {
+    home: "开店申请",
+    apply: "填写申请",
+    success: "申请成功",
+    findApplication: "找回申请",
+    status: "申请状态",
+    default: "MakanMasak 开店申请",
+  },
+
   home: {
     tour: {
       title: "从点餐到出餐，一次看懂",

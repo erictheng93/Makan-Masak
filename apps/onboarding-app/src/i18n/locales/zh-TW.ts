@@ -18,6 +18,15 @@ const zhTW = {
     },
   },
 
+  pageTitle: {
+    home: "開店申請",
+    apply: "填寫申請",
+    success: "申請成功",
+    findApplication: "找回申請",
+    status: "申請狀態",
+    default: "MakanMasak 開店申請",
+  },
+
   home: {
     hero: {
       titleLine1: "為您的餐廳打造",

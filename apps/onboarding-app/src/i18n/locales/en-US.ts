@@ -20,6 +20,15 @@ const enUS: Messages = {
     },
   },
 
+  pageTitle: {
+    home: "Open a shop",
+    apply: "Application form",
+    success: "Application submitted",
+    findApplication: "Find my application",
+    status: "Application status",
+    default: "MakanMasak Shop Application",
+  },
+
   home: {
     hero: {
       titleLine1: "Build Your Restaurant's",

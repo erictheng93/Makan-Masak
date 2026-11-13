@@ -115,6 +115,15 @@ const msMY: Messages = {
       copiedToClipboard: "Disalin ke papan keratan",
     },
   },
+  pageTitle: {
+    home: "Mohon buka kedai",
+    apply: "Borang permohonan",
+    success: "Permohonan dihantar",
+    findApplication: "Cari permohonan saya",
+    status: "Status permohonan",
+    default: "MakanMasak Permohonan Kedai",
+  },
+
   home: {
     tour: {
       title: "Dari pesanan ke meja, sekali pandang",

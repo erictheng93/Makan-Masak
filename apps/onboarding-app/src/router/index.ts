@@ -13,31 +13,31 @@ const routes: RouteRecordRaw[] = [
     path: "/",
     name: "Home",
     component: () => import("@/views/HomeView.vue"),
-    meta: { title: "開店申請" },
+    meta: { titleKey: "pageTitle.home" },
   },
   {
     path: "/apply",
     name: "Apply",
     component: () => import("@/views/ApplyView.vue"),
-    meta: { title: "填寫申請" },
+    meta: { titleKey: "pageTitle.apply" },
   },
   {
     path: "/success",
     name: "Success",
     component: () => import("@/views/SuccessView.vue"),
-    meta: { title: "申請成功" },
+    meta: { titleKey: "pageTitle.success" },
   },
   {
     path: "/find-application",
     name: "FindApplication",
     component: () => import("@/views/FindApplicationView.vue"),
-    meta: { title: "找回申請" },
+    meta: { titleKey: "pageTitle.findApplication" },
   },
   {
     path: "/status/:applicationId",
     name: "ApplicationStatus",
     component: () => import("@/views/ApplicationStatusView.vue"),
-    meta: { title: "申請狀態" },
+    meta: { titleKey: "pageTitle.status" },
   },
 ];
 
@@ -70,12 +70,6 @@ router.afterEach(() => {
   // Navigation worked, so the stale build is behind us; the next deploy earns
   // its own attempt rather than inheriting this one.
   clearChunkRecoveryMark(CHUNK_RELOAD_KEY);
-});
-
-router.beforeEach((to, _from, next) => {
-  const title = to.meta.title as string;
-  document.title = title ? `${title} - MakanMasak` : "MakanMasak 開店申請";
-  next();
 });
 
 export default router;
