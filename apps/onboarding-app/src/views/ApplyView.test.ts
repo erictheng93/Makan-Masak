@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
   submitApplication: vi.fn(),
   store: {
     application: null as Record<string, unknown> | null,
+    draft: null as Record<string, unknown> | null,
+    saveDraft: vi.fn(),
     applicationSecret: "tracking-secret" as string | null,
     apiErrorCode: null as string | null,
     isLoading: false,
@@ -461,6 +463,69 @@ describe("ApplyView locale and market selection", () => {
     expect(mocks.submitApplication).toHaveBeenCalledWith(
       expect.not.objectContaining({ stallNumber: expect.anything() }),
     );
+  });
+});
+
+describe("ApplyView draft persistence", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.store.application = null;
+    mocks.store.draft = null;
+    mocks.getMarkets.mockResolvedValue([]);
+  });
+
+  it("saves the draft as the applicant edits, without the plan", async () => {
+    const wrapper = mount(ApplyView);
+    await wrapper
+      .get('[data-testid="onboarding-business-name"]')
+      .setValue("Demo Noodles");
+    await wrapper
+      .get('[data-testid="onboarding-latitude"]')
+      .setValue("24.147736");
+
+    expect(mocks.store.saveDraft).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        businessName: "Demo Noodles",
+        latitude: 24.147736,
+      }),
+    );
+    expect(mocks.store.saveDraft).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ planId: expect.anything() }),
+    );
+  });
+
+  it("restores country, city and market, and the market survives its async load", async () => {
+    mocks.store.draft = {
+      businessName: "Demo Noodles",
+      countryCode: "TW",
+      city: "台中市",
+      marketId: "market-1",
+      stallNumber: "A-12",
+      latitude: 24.1,
+      longitude: 120.6,
+    };
+    mocks.getMarkets.mockResolvedValue([
+      { id: "market-1", name: "Fengjia Market" },
+    ]);
+    const wrapper = mount(ApplyView);
+    await flushPromises();
+
+    const value = (id: string) =>
+      (
+        wrapper.get(`[data-testid="${id}"]`).element as
+          | HTMLInputElement
+          | HTMLSelectElement
+      ).value;
+    expect(value("onboarding-business-name")).toBe("Demo Noodles");
+    expect(value("onboarding-country")).toBe("TW");
+    expect(value("onboarding-city")).toBe("台中市");
+    expect(value("onboarding-market")).toBe("market-1");
+    expect(value("onboarding-stall-number")).toBe("A-12");
+    expect(value("onboarding-latitude")).toBe("24.1");
+    expect(mocks.getMarkets).toHaveBeenCalledWith({
+      country: "TW",
+      city: "台中市",
+    });
   });
 });
 

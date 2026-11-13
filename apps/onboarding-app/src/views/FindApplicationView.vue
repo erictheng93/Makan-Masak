@@ -4,6 +4,7 @@ import { RouterLink } from "vue-router";
 import { EnvelopeIcon } from "@heroicons/vue/24/outline";
 import { ApiError, onboardingApi } from "@/services/api";
 import { useI18n } from "@/i18n";
+import { isValidEmail } from "@/utils/email";
 
 const { t } = useI18n();
 const email = ref("");
@@ -13,7 +14,7 @@ const error = ref("");
 
 async function submit() {
   error.value = "";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
+  if (!isValidEmail(email.value)) {
     error.value = t("findApplication.invalidEmail");
     return;
   }

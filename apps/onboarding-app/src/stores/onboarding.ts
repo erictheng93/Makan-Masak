@@ -29,6 +29,45 @@ export interface ApplicationData {
   status: "pending" | "submitted" | "approved" | "rejected";
 }
 
+// In-progress form, kept apart from the submitted application so a reload
+// (or a chunk-recovery reload after a deploy) does not wipe the applicant's work.
+const DRAFT_KEY = "onboarding_draft";
+const DRAFT_STRING_FIELDS = [
+  "businessName",
+  "contactName",
+  "contactEmail",
+  "contactPhone",
+  "address",
+  "district",
+  "countryCode",
+  "city",
+  "marketId",
+  "stallNumber",
+] as const;
+
+export type ApplicationDraft = Partial<
+  Record<(typeof DRAFT_STRING_FIELDS)[number], string>
+> & { latitude?: number | null; longitude?: number | null };
+
+function readDraft(): ApplicationDraft | null {
+  try {
+    const raw = JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? "null");
+    if (!raw || typeof raw !== "object") return null;
+    const draft: ApplicationDraft = {};
+    for (const key of DRAFT_STRING_FIELDS) {
+      if (typeof raw[key] === "string") draft[key] = raw[key];
+    }
+    for (const key of ["latitude", "longitude"] as const) {
+      if (typeof raw[key] === "number" && Number.isFinite(raw[key])) {
+        draft[key] = raw[key];
+      }
+    }
+    return draft;
+  } catch {
+    return null; // corrupt or unreadable: start with an empty form
+  }
+}
+
 export const useOnboardingStore = defineStore("onboarding", () => {
   // ============================================================
   // State
@@ -39,6 +78,7 @@ export const useOnboardingStore = defineStore("onboarding", () => {
   const applicationSecret = ref<string | null>(null);
   const assignedSubdomain = ref<string | null>(null);
   const completionResult = ref<null>(null);
+  const draft = ref<ApplicationDraft | null>(readDraft());
 
   // Loading states
   const isLoading = ref(false);
@@ -81,6 +121,7 @@ export const useOnboardingStore = defineStore("onboarding", () => {
         status: "submitted",
       };
 
+      clearDraft();
       saveToSession();
 
       return true;
@@ -131,6 +172,20 @@ export const useOnboardingStore = defineStore("onboarding", () => {
     sessionStorage.setItem("onboarding_application", JSON.stringify(data));
   }
 
+  function saveDraft(data: ApplicationDraft) {
+    draft.value = data;
+    try {
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+    } catch {
+      // Storage full or blocked: the form still works, it just won't survive a reload.
+    }
+  }
+
+  function clearDraft() {
+    draft.value = null;
+    sessionStorage.removeItem(DRAFT_KEY);
+  }
+
   /**
    * Reset all state
    */
@@ -141,6 +196,7 @@ export const useOnboardingStore = defineStore("onboarding", () => {
     assignedSubdomain.value = null;
     apiErrorCode.value = null;
     sessionStorage.removeItem("onboarding_application");
+    clearDraft();
   }
 
   /**
@@ -160,6 +216,7 @@ export const useOnboardingStore = defineStore("onboarding", () => {
     applicationSecret,
     assignedSubdomain,
     completionResult,
+    draft,
     isLoading,
     apiErrorCode,
 
@@ -169,6 +226,8 @@ export const useOnboardingStore = defineStore("onboarding", () => {
     // Actions
     submitApplication,
     setApplication,
+    saveDraft,
+    clearDraft,
     loadFromSession,
     reset,
     clearError,

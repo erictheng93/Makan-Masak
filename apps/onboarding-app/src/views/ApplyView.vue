@@ -12,13 +12,15 @@ import {
   type SupportedCountryCode,
 } from "@makanmasak/shared-types";
 import { useI18n } from "@/i18n";
+import { isValidEmail } from "@/utils/email";
 
 const { t, locale } = useI18n();
 const router = useRouter();
 const toast = useToast();
 const store = useOnboardingStore();
 
-const persistedApplication = store.application;
+// An unfinished draft wins over the last submitted application.
+const persistedApplication = store.draft ?? store.application;
 const initialCountry = normalizeCountryCode(persistedApplication?.countryCode);
 const initialCity =
   initialCountry &&
@@ -50,6 +52,15 @@ const form = ref({
   // the platform moves a shop onto a paid tier after it has been activated.
   planId: "trial" as const,
 });
+
+watch(
+  form,
+  (value) => {
+    const { planId: _plan, ...draft } = value;
+    store.saveDraft(draft);
+  },
+  { deep: true },
+);
 
 const errors = ref<Record<string, string>>({});
 const isLocating = ref(false);
@@ -190,7 +201,7 @@ const validate = (): boolean => {
 
   if (!form.value.contactEmail.trim()) {
     errors.value.contactEmail = t("apply.validation.emailRequired");
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.contactEmail)) {
+  } else if (!isValidEmail(form.value.contactEmail)) {
     errors.value.contactEmail = t("apply.validation.emailInvalid");
   }
 
