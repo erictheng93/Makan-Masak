@@ -11,6 +11,7 @@ import { markets } from "@makanmasak/database";
 import {
   ONBOARDING_LOCALES,
   citiesForCountry,
+  cityVariants,
   normalizeCountryCode,
   type SupportedCountryCode,
 } from "@makanmasak/shared-types";
@@ -120,7 +121,7 @@ export async function assertMarketInCity(
   if (!market) {
     throw badRequest("Market not found", "MARKET_NOT_FOUND");
   }
-  if (market.city !== city) {
+  if (!cityVariants(city).includes(market.city)) {
     throw badRequest(
       "Market is not in the selected city",
       "MARKET_NOT_IN_CITY",

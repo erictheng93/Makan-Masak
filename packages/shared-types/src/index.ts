@@ -37,6 +37,7 @@ export {
   ONBOARDING_LOCALES,
   ONBOARDING_LOCALE_NAMES,
   SUPPORTED_COUNTRIES,
+  cityVariants,
   citiesForCountry,
   countryForCity,
   selectableCitiesForCountry,

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   COUNTRY_PROFILES,
   SUPPORTED_COUNTRIES,
+  cityVariants,
   citiesForCountry,
   countryForCity,
   defaultOnboardingLocale,
@@ -82,5 +83,13 @@ describe("countryForCity", () => {
 
   it("returns null for an unknown city", () => {
     expect(countryForCity("火星市")).toBeNull();
+  });
+});
+
+describe("cityVariants", () => {
+  it("returns every spelling of a city, whichever one is given", () => {
+    expect(cityVariants("台中市").sort()).toEqual(["台中市", "臺中市"]);
+    expect(cityVariants("臺中市").sort()).toEqual(["台中市", "臺中市"]);
+    expect(cityVariants("Kuala Lumpur")).toEqual(["Kuala Lumpur"]);
   });
 });

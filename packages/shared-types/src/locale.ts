@@ -105,6 +105,15 @@ export const LEGACY_CITY_ALIASES: Readonly<Record<string, string>> = {
   台中市: "臺中市",
 };
 
+/** 同一城市的所有寫法（含自己）：用來比對庫存資料，舊資料可能存成別名。 */
+export const cityVariants = (city: string): string[] => {
+  const canonical = LEGACY_CITY_ALIASES[city] ?? city;
+  const aliases = Object.keys(LEGACY_CITY_ALIASES).filter(
+    (alias) => LEGACY_CITY_ALIASES[alias] === canonical,
+  );
+  return [...new Set([city, canonical, ...aliases])];
+};
+
 /** 申請表下拉用：citiesForCountry 扣掉舊寫法，避免同一城市出現兩次。 */
 export const selectableCitiesForCountry = (
   country: SupportedCountryCode,
