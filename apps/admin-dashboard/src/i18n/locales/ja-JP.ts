@@ -2121,6 +2121,13 @@ const jaJP: Messages = {
     resetSuccessMessage: "新しいパスワードでログインできます。",
     goToLogin: "ログインページへ",
     resetAccount: "パスワードリセット対象のアカウント",
+    setupTitle: "パスワードを設定",
+    setupSubtitle:
+      "MakanMasak へようこそ - 新しいアカウントのパスワードを作成してください",
+    setupAccount: "パスワードを設定するアカウント",
+    setupBtn: "パスワードを設定",
+    setupSuccess: "パスワードを設定しました",
+    setupSuccessMessage: "パスワードを設定しました。ログインできます。",
     newPassword: "新しいパスワード",
     newPasswordPlaceholder: "新しいパスワードを入力（6文字以上）",
     passwordStrength: "パスワード強度：",

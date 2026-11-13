@@ -784,6 +784,11 @@ describe("Onboarding public API workflow — real integration", () => {
       credentialDelivery: NonNullable<ApproveResult["credentialDelivery"]>;
     }>(regenerated);
     expect(result.ownerAccount.setupPasswordLink).not.toBe(oldLink);
+    expect(
+      new URL(result.ownerAccount.setupPasswordLink).searchParams.get(
+        "purpose",
+      ),
+    ).toBe("setup");
     expect(result.ownerAccount.setupPasswordExpiresAt).toBeTruthy();
     // The delivery row records the handoff, not the credential: no link, no
     // token, just who was told and when it lapses.
@@ -1140,7 +1145,7 @@ describe("Onboarding public API workflow — real integration", () => {
     expect(ownerAccount.setupPasswordLink).toBe(
       `http://localhost:3004/reset-password?token=${tokenFromLink(
         ownerAccount.setupPasswordLink,
-      )}`,
+      )}&purpose=setup`,
     );
     expect("setupPasswordToken" in ownerAccount).toBe(false);
     expect("initialPassword" in ownerAccount).toBe(false);

@@ -2120,6 +2120,13 @@ const viVN: Messages = {
     resetSuccessMessage: "Bạn có thể đăng nhập bằng mật khẩu mới.",
     goToLogin: "Đi đến trang đăng nhập",
     resetAccount: "Tài khoản đặt lại mật khẩu",
+    setupTitle: "Đặt mật khẩu của bạn",
+    setupSubtitle:
+      "Chào mừng đến với MakanMasak - hãy tạo mật khẩu cho tài khoản mới",
+    setupAccount: "Tài khoản cần đặt mật khẩu",
+    setupBtn: "Đặt mật khẩu",
+    setupSuccess: "Đã đặt mật khẩu",
+    setupSuccessMessage: "Mật khẩu đã được đặt. Bạn có thể đăng nhập ngay.",
     newPassword: "Mật khẩu mới",
     newPasswordPlaceholder: "Nhập mật khẩu mới (ít nhất 6 ký tự)",
     passwordStrength: "Độ mạnh mật khẩu:",

@@ -10,8 +10,9 @@ vi.mock("@/i18n", () => ({
 }));
 
 const push = vi.fn();
+let routeQuery: Record<string, string> = { token: "setup-token" };
 vi.mock("vue-router", () => ({
-  useRoute: () => ({ query: { token: "setup-token" } }),
+  useRoute: () => ({ query: routeQuery }),
   useRouter: () => ({ push }),
 }));
 
@@ -26,6 +27,7 @@ const SERVER_MESSAGE = "Password reset successfully";
 describe("ResetPasswordView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    routeQuery = { token: "setup-token" };
     vi.mocked(api.instance.get).mockResolvedValue({
       status: 200,
       data: { valid: true, email: "own***@example.test" },
@@ -69,6 +71,36 @@ describe("ResetPasswordView", () => {
       "password-reset-success",
     );
     expect(wrapper.text()).not.toContain(SERVER_MESSAGE);
+  });
+
+  it("shows first-time setup copy when the link carries purpose=setup", async () => {
+    routeQuery = { token: "setup-token", purpose: "setup" };
+    const wrapper = await submitNewPassword();
+
+    expect(wrapper.text()).toContain("auth.setupSuccess");
+    expect(wrapper.text()).toContain("auth.setupSuccessMessage");
+    expect(wrapper.text()).not.toContain("auth.resetSuccess");
+    expect(wrapper.get("h1").text()).toBe("auth.setupTitle");
+  });
+
+  it("shows setup copy on the form and keeps reset copy without the flag", async () => {
+    routeQuery = { token: "setup-token", purpose: "setup" };
+    const setup = mount(ResetPasswordView, {
+      global: { stubs: { RouterLink: true, "router-link": true } },
+    });
+    await flushPromises();
+    expect(setup.text()).toContain("auth.setupAccount");
+    expect(setup.text()).toContain("auth.setupBtn");
+    expect(setup.text()).not.toContain("auth.resetPasswordBtn");
+
+    routeQuery = { token: "setup-token" };
+    const reset = mount(ResetPasswordView, {
+      global: { stubs: { RouterLink: true, "router-link": true } },
+    });
+    await flushPromises();
+    expect(reset.get("h1").text()).toBe("pages.resetPassword");
+    expect(reset.text()).toContain("auth.resetPasswordBtn");
+    expect(reset.text()).not.toContain("auth.setupBtn");
   });
 
   // The API requires 8+ characters with upper, lower, a digit and one of

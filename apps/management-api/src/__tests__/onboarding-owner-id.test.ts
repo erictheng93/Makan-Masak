@@ -363,7 +363,7 @@ describe("onboarding platform owner provisioning", () => {
     )(buildApplication(), "tenant-1");
 
     expect(account.setupPasswordLink).toBe(
-      `https://admin.example.test/reset-password?token=${account.setupPasswordToken}`,
+      `https://admin.example.test/reset-password?token=${account.setupPasswordToken}&purpose=setup`,
     );
   });
 
@@ -373,7 +373,7 @@ describe("onboarding platform owner provisioning", () => {
     )(buildApplication(), "tenant-1");
 
     expect(account.setupPasswordLink).toBe(
-      `http://localhost:5173/reset-password?token=${account.setupPasswordToken}`,
+      `http://localhost:5173/reset-password?token=${account.setupPasswordToken}&purpose=setup`,
     );
   });
 

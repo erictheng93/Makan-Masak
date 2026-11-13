@@ -2241,6 +2241,13 @@ const idID: Messages = {
     resetSuccessMessage: "Anda sekarang dapat masuk dengan kata sandi baru.",
     goToLogin: "Ke Halaman Masuk",
     resetAccount: "Akun untuk atur ulang kata sandi",
+    setupTitle: "Atur kata sandi Anda",
+    setupSubtitle:
+      "Selamat datang di MakanMasak - buat kata sandi untuk akun baru Anda",
+    setupAccount: "Akun yang akan diatur",
+    setupBtn: "Atur kata sandi",
+    setupSuccess: "Kata sandi telah diatur",
+    setupSuccessMessage: "Kata sandi telah diatur. Anda sekarang dapat masuk.",
     newPassword: "Kata Sandi Baru",
     newPasswordPlaceholder: "Masukkan kata sandi baru (minimal 6 karakter)",
     passwordStrength: "Kekuatan kata sandi:",
