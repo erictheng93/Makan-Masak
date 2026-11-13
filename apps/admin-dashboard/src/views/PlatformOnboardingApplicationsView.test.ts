@@ -743,8 +743,9 @@ describe("PlatformOnboardingApplicationsView", () => {
       expect(dialog.text()).toContain("Laksa Shop");
       expect(dialog.text()).toContain("tan@example.test");
       expect(onboardingApplicationsService.approve).not.toHaveBeenCalled();
+      // Cancel, not Approve: Enter on open must not provision a tenant.
       expect(document.activeElement).toBe(
-        wrapper.get('[data-testid="confirm-approve-onboarding"]').element,
+        dialog.get('button[type="button"]').element,
       );
 
       await dialog.get("form").trigger("submit");

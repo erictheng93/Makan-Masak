@@ -707,6 +707,7 @@
         </p>
         <div class="ui-toolbar mt-5 flex justify-end gap-2">
           <button
+            ref="approveCancelButton"
             type="button"
             class="rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
             @click="closeApproveDialog"
@@ -714,7 +715,6 @@
             {{ t("common.cancel") }}
           </button>
           <button
-            ref="approveConfirmButton"
             type="submit"
             data-testid="confirm-approve-onboarding"
             class="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
@@ -907,7 +907,7 @@ const copiedField = ref<"" | CopyableField>("");
 const rejectingApplicationId = ref("");
 const rejectionReason = ref("");
 const approveTarget = ref<OnboardingApplication | null>(null);
-const approveConfirmButton = ref<HTMLButtonElement | null>(null);
+const approveCancelButton = ref<HTMLButtonElement | null>(null);
 const purgeTarget = ref<OnboardingApplication | null>(null);
 const purgeConfirmation = ref("");
 const purgeError = ref("");
@@ -1153,7 +1153,7 @@ async function copyField(field: CopyableField, value: string) {
 
 function openApproveDialog(application: OnboardingApplication) {
   approveTarget.value = application;
-  void nextTick(() => approveConfirmButton.value?.focus());
+  void nextTick(() => approveCancelButton.value?.focus());
 }
 
 function closeApproveDialog() {
