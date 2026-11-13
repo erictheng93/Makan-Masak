@@ -66,4 +66,46 @@ describe("city spelling variants — real D1", () => {
       expect(found.map((m) => m.name).sort()).toEqual(["Canonical", "Legacy"]);
     }
   });
+  it("browseRestaurants keyword matches both 台/臺 spellings", async () => {
+    await seed.restaurant({ name: "台中小館", city: "台中市" });
+    await seed.restaurant({ name: "臺中茶室", city: "臺中市" });
+    await seed.restaurant({ name: "高雄小館", city: "高雄市" });
+    const service = new DiscoveryService(app.env.DB, kv as never);
+
+    for (const q of ["台中", "臺中"]) {
+      const { results } = await service.browseRestaurants({ q });
+      expect(results.map((r) => r.name).sort()).toEqual([
+        "台中小館",
+        "臺中茶室",
+      ]);
+    }
+  });
+
+  it("queryMarkets keyword matches both 台/臺 spellings", async () => {
+    await seedMarket("台中夜市", "台中市");
+    await seedMarket("臺中市場", "臺中市");
+    await seedMarket("高雄夜市", "高雄市");
+    const service = new MarketsService(app.env.DB);
+
+    for (const q of ["台中", "臺中"]) {
+      const { markets: found } = await service["queryMarkets"]({ q });
+      expect(found.map((m) => m.name).sort()).toEqual(["台中夜市", "臺中市場"]);
+    }
+  });
+
+  it("keyword 臺南 finds restaurants and markets stored as 台南", async () => {
+    await seed.restaurant({ name: "台南小館", city: "台南市" });
+    await seed.restaurant({ name: "高雄小館", city: "高雄市" });
+    await seedMarket("台南夜市", "台南市");
+    await seedMarket("高雄夜市", "高雄市");
+
+    const discovery = new DiscoveryService(app.env.DB, kv as never);
+    const { results } = await discovery.browseRestaurants({ q: "臺南" });
+    expect(results.map((r) => r.name)).toEqual(["台南小館"]);
+
+    const { markets: found } = await new MarketsService(app.env.DB)[
+      "queryMarkets"
+    ]({ q: "臺南" });
+    expect(found.map((m) => m.name)).toEqual(["台南夜市"]);
+  });
 });

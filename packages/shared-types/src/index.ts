@@ -38,6 +38,7 @@ export {
   ONBOARDING_LOCALE_NAMES,
   SUPPORTED_COUNTRIES,
   cityVariants,
+  keywordVariants,
   citiesForCountry,
   countryForCity,
   selectableCitiesForCountry,

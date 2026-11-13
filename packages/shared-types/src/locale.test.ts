@@ -3,6 +3,7 @@ import {
   COUNTRY_PROFILES,
   SUPPORTED_COUNTRIES,
   cityVariants,
+  keywordVariants,
   citiesForCountry,
   countryForCity,
   defaultOnboardingLocale,
@@ -91,5 +92,21 @@ describe("cityVariants", () => {
     expect(cityVariants("台中市").sort()).toEqual(["台中市", "臺中市"]);
     expect(cityVariants("臺中市").sort()).toEqual(["台中市", "臺中市"]);
     expect(cityVariants("Kuala Lumpur")).toEqual(["Kuala Lumpur"]);
+  });
+});
+
+describe("keywordVariants", () => {
+  it("adds the swapped spelling in both directions", () => {
+    expect(keywordVariants("台中")).toEqual(["台中", "臺中"]);
+    expect(keywordVariants("臺中")).toEqual(["臺中", "台中"]);
+  });
+  it("normalises every occurrence of a mixed query to each form", () => {
+    expect(keywordVariants("臺北台南").sort()).toEqual(
+      ["臺北台南", "臺北臺南", "台北台南"].sort(),
+    );
+  });
+  it("returns the query itself when it has neither character", () => {
+    expect(keywordVariants("牛肉麵")).toEqual(["牛肉麵"]);
+    expect(keywordVariants("")).toEqual([""]);
   });
 });

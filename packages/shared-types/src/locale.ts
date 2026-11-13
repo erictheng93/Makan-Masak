@@ -114,6 +114,14 @@ export const cityVariants = (city: string): string[] => {
   return [...new Set([city, canonical, ...aliases])];
 };
 
+/**
+ * 關鍵字搜尋用：回傳原字串加上 台↔臺 互換後的寫法（全部出現處一起換），去重。
+ * shortcut: 只涵蓋 台/臺 這一對，升級條件是資料裡出現其他異體字（如 裏/裡）時改成對照表。
+ */
+export const keywordVariants = (q: string): string[] => [
+  ...new Set([q, q.replace(/台/g, "臺"), q.replace(/臺/g, "台")]),
+];
+
 /** 申請表下拉用：citiesForCountry 扣掉舊寫法，避免同一城市出現兩次。 */
 export const selectableCitiesForCountry = (
   country: SupportedCountryCode,
