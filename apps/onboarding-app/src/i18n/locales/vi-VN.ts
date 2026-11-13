@@ -56,7 +56,7 @@ const viVN: Messages = {
           "Trình duyệt này không hỗ trợ định vị địa lý. Nhập tọa độ bằng tay.",
         useCurrent: "Sử dụng vị trí hiện tại",
       },
-      next: "Tiếp theo",
+      submit: "Gửi đơn đăng ký",
       subdomain: {
         available: "URL này có sẵn",
         emptyHint: "Để trống để tự động tạo",

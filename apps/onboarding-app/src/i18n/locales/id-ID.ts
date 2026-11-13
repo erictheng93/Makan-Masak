@@ -56,7 +56,7 @@ const idID: Messages = {
           "Browser ini tidak mendukung geolokasi. Masukkan koordinat secara manual.",
         useCurrent: "Gunakan Lokasi Saat Ini",
       },
-      next: "Selanjutnya",
+      submit: "Kirim pengajuan",
       subdomain: {
         available: "URL ini tersedia",
         emptyHint: "Biarkan kosong untuk menghasilkan secara otomatis",

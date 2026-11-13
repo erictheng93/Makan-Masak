@@ -738,7 +738,7 @@ const useCurrentLocation = () => {
             {{
               store.isLoading
                 ? t("apply.form.submitting")
-                : t("apply.form.next")
+                : t("apply.form.submit")
             }}
           </button>
         </div>

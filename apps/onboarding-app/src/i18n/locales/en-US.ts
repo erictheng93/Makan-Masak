@@ -146,7 +146,7 @@ const enUS: Messages = {
         suggestionsLabel: "Suggested alternatives:",
       },
       submitting: "Submitting...",
-      next: "Next",
+      submit: "Submit application",
     },
     validation: {
       businessNameRequired: "Please enter a restaurant name",

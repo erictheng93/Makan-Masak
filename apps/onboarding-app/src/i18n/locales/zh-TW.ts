@@ -134,7 +134,7 @@ const zhTW = {
         suggestionsLabel: "建議的替代網址：",
       },
       submitting: "提交中...",
-      next: "下一步",
+      submit: "送出申請",
     },
     validation: {
       businessNameRequired: "請輸入餐廳名稱",

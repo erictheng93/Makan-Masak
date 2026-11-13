@@ -529,6 +529,13 @@ describe("ApplyView draft persistence", () => {
   });
 });
 
+it("labels the only forward button as a submit action", () => {
+  const wrapper = mount(ApplyView);
+  const button = wrapper.get('[data-testid="onboarding-submit"]');
+  expect(button.attributes("type")).toBe("submit");
+  expect(button.text()).toBe("apply.form.submit");
+});
+
 it("names both real steps and puts the address before coordinates", () => {
   const wrapper = mount(ApplyView);
   expect(wrapper.get('[aria-current="step"]').text()).toContain("apply.title");

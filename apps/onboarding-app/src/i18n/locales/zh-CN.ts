@@ -54,7 +54,7 @@ const zhCN: Messages = {
         unsupported: "此浏览器不支援定位功能，请手动输入座标",
         useCurrent: "使用目前位置",
       },
-      next: "下一步",
+      submit: "提交申请",
       subdomain: {
         available: "此网址可以使用",
         emptyHint: "留空将自动生成",

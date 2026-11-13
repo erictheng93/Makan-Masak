@@ -56,7 +56,7 @@ const msMY: Messages = {
           "Penyemak imbas ini tidak menyokong geolokasi. Masukkan koordinat secara manual.",
         useCurrent: "Gunakan Lokasi Semasa",
       },
-      next: "Seterusnya",
+      submit: "Hantar permohonan",
       subdomain: {
         available: "URL ini tersedia",
         emptyHint: "Biarkan kosong untuk menjana automatik",
