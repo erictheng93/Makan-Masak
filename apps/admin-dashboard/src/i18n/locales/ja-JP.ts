@@ -2157,6 +2157,12 @@ const jaJP: Messages = {
     missingToken: "リセットトークンがありません",
   },
   platformOnboarding: {
+    approve: {
+      title: "この申請を承認しますか？",
+      description:
+        "「{business}」を承認すると、レストラン、オーナーアカウント、サブスクリプションが作成され、設定リンクが {email} にメール送信されます。",
+      confirm: "承認",
+    },
     purge: {
       title: "代理登録を取り消して店舗を削除",
       description:
@@ -2228,7 +2234,7 @@ const jaJP: Messages = {
       rejected: "却下",
     },
     stats: {
-      total: "申請総数",
+      total: "現在の絞り込みの申請数",
       pending: "審査待ち",
       rejected: "却下",
     },

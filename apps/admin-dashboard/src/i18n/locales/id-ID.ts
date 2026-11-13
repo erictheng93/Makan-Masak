@@ -2278,6 +2278,12 @@ const idID: Messages = {
     missingToken: "Token atur ulang tidak ditemukan",
   },
   platformOnboarding: {
+    approve: {
+      title: "Setujui pengajuan ini?",
+      description:
+        "Menyetujui {business} akan membuat restoran, akun pemilik, dan langganan, lalu mengirim tautan penyiapan ke {email}.",
+      confirm: "Setujui",
+    },
     purge: {
       title: "Batalkan dan hapus toko ini",
       description:
@@ -2349,7 +2355,7 @@ const idID: Messages = {
       rejected: "Ditolak",
     },
     stats: {
-      total: "Total pengajuan",
+      total: "Pengajuan dalam filter ini",
       pending: "Menunggu tinjauan",
       rejected: "Ditolak",
     },

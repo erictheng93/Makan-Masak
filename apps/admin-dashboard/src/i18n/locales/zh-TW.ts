@@ -2298,6 +2298,12 @@ const zhTWCore = {
 
   // 儀表板
   platformOnboarding: {
+    approve: {
+      title: "核准此申請？",
+      description:
+        "核准「{business}」會建立餐廳、店主帳號與訂閱，並將設定連結寄到 {email}。",
+      confirm: "核准",
+    },
     purge: {
       title: "撤銷代建並刪除店鋪",
       description:
@@ -2365,7 +2371,7 @@ const zhTWCore = {
       rejected: "已拒絕",
     },
     stats: {
-      total: "申請總數",
+      total: "目前篩選的申請數",
       pending: "待審核",
       rejected: "已拒絕",
     },

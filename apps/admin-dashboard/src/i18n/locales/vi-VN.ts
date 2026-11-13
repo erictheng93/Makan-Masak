@@ -2157,6 +2157,12 @@ const viVN: Messages = {
     missingToken: "Thiếu token đặt lại",
   },
   platformOnboarding: {
+    approve: {
+      title: "Duyệt đơn đăng ký này?",
+      description:
+        "Duyệt {business} sẽ tạo nhà hàng, tài khoản chủ quán và gói đăng ký, đồng thời gửi liên kết thiết lập đến {email}.",
+      confirm: "Duyệt",
+    },
     purge: {
       title: "Thu hồi và xóa cửa hàng này",
       description:
@@ -2227,7 +2233,7 @@ const viVN: Messages = {
       rejected: "Đã từ chối",
     },
     stats: {
-      total: "Tổng số đơn",
+      total: "Số đơn trong bộ lọc hiện tại",
       pending: "Chờ duyệt",
       rejected: "Đã từ chối",
     },

@@ -2255,6 +2255,12 @@ const enUS: Messages = {
     missingToken: "Missing reset token",
   },
   platformOnboarding: {
+    approve: {
+      title: "Approve this application?",
+      description:
+        "Approving {business} creates the restaurant, the owner account and a subscription, and emails a setup link to {email}.",
+      confirm: "Approve",
+    },
     purge: {
       title: "Revoke and delete this shop",
       description:
@@ -2327,7 +2333,7 @@ const enUS: Messages = {
       rejected: "Rejected",
     },
     stats: {
-      total: "Total applications",
+      total: "Applications in this filter",
       pending: "Pending review",
       rejected: "Rejected",
     },

@@ -2106,6 +2106,12 @@ const zhCN: Messages = {
     missingToken: "缺少重设 Token",
   },
   platformOnboarding: {
+    approve: {
+      title: "批准此申请？",
+      description:
+        "批准“{business}”会创建餐厅、店主账号和订阅，并将设置链接发送到 {email}。",
+      confirm: "批准",
+    },
     purge: {
       title: "撤销代建并删除店铺",
       description:
@@ -2173,7 +2179,7 @@ const zhCN: Messages = {
       rejected: "已拒绝",
     },
     stats: {
-      total: "申请总数",
+      total: "当前筛选的申请数",
       pending: "待审核",
       rejected: "已拒绝",
     },
