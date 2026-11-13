@@ -346,6 +346,56 @@ describe("PlatformOnboardingApplicationsView", () => {
     );
   });
 
+  describe.each([
+    ["email", "sent", "handoff.sentNote tan@example.test"],
+    ["email", "failed", "handoff.manualNote"],
+    ["email", "pending", "handoff.manualNote"],
+    ["manual", "pending", "handoff.manualNote"],
+  ] as const)("owner note for %s delivery %s", (channel, status, note) => {
+    it("matches the recorded delivery on approve and on regenerate", async () => {
+      const delivery = buildDelivery({ channel, status });
+      vi.mocked(onboardingApplicationsService.approve).mockResolvedValue({
+        tenantId: "T-1",
+        ownerAccount: buildOwnerAccount({
+          setupPasswordExpiresAt: "2020-01-01T00:00:00.000Z",
+        }),
+        credentialDelivery: delivery,
+        status: "completed",
+      });
+      const wrapper = mount(PlatformOnboardingApplicationsView);
+      await flushPromises();
+      await wrapper
+        .get('[data-testid="approve-onboarding-APP-1"]')
+        .trigger("click");
+      await flushPromises();
+
+      const noteText = () =>
+        wrapper.get('[data-testid="owner-handoff-note"]').text();
+      expect(noteText()).toBe(`platformOnboarding.${note}`);
+      expect(
+        wrapper.get('[data-testid="owner-handoff-delivery"]').text(),
+      ).toContain(`platformOnboarding.deliveryStatus.${status}`);
+
+      // Regeneration replaces the delivery and must re-derive the note.
+      vi.mocked(
+        onboardingApplicationsService.regenerateSetupLink,
+      ).mockResolvedValue({
+        ownerAccount: buildOwnerAccount({
+          setupPasswordExpiresAt: "2020-01-01T00:00:00.000Z",
+        }),
+        credentialDelivery: delivery,
+      });
+      await wrapper
+        .get('[data-testid="regenerate-setup-link"]')
+        .trigger("click");
+      await wrapper
+        .get('[data-testid="confirm-regenerate-setup-link"]')
+        .trigger("click");
+      await flushPromises();
+      expect(noteText()).toBe(`platformOnboarding.${note}`);
+    });
+  });
+
   it("reopens the handoff for a completed application without provisioning again", async () => {
     mockList([
       buildApplication({ id: "APP-3", status: "completed", tenantId: "T-3" }),

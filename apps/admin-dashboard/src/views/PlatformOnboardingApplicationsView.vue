@@ -148,8 +148,8 @@
               })
             }}
           </h2>
-          <p class="mt-1 text-emerald-800">
-            {{ t("platformOnboarding.handoff.manualNote") }}
+          <p data-testid="owner-handoff-note" class="mt-1 text-emerald-800">
+            {{ handoffNote }}
           </p>
         </div>
         <button
@@ -1201,6 +1201,16 @@ function isApprovableStatus(status: OnboardingApplicationStatus) {
 function statusLabel(status: OnboardingApplicationStatus) {
   return t(`platformOnboarding.status.${status}`);
 }
+
+// Derived from the recorded delivery, so the note cannot contradict the status line.
+const handoffNote = computed(() => {
+  const delivery = ownerHandoff.value?.delivery;
+  return delivery?.channel === "email" && delivery.status === "sent"
+    ? t("platformOnboarding.handoff.sentNote", {
+        email: delivery.recipientEmail,
+      })
+    : t("platformOnboarding.handoff.manualNote");
+});
 
 function deliveryChannelLabel(channel: CredentialDelivery["channel"]) {
   return t(`platformOnboarding.deliveryChannel.${channel}`);

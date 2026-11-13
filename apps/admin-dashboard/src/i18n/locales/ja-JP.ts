@@ -2250,8 +2250,10 @@ const jaJP: Messages = {
     plan: { trial: "トライアル" },
     handoff: {
       title: "{business}：オーナー開通情報",
+      sentNote:
+        "設定リンクを {email} にメールで送信しました。必要に応じて下のリンクをコピーしてお渡しすることもできます。リンクは24時間有効で、一度使うと無効になります。",
       manualNote:
-        "メールは送信されません。アカウントとパスワード設定リンクをオーナーへお渡しください。リンクは24時間有効で、一度使うと無効になります。",
+        "メールは送信されていません。アカウントとパスワード設定リンクをオーナーへお渡しください。リンクは24時間有効で、一度使うと無効になります。",
       dismiss: "閉じる",
       delivery: "認証情報の配信：{channel} · {status}",
       unavailable:
@@ -2270,7 +2272,7 @@ const jaJP: Messages = {
     deliveryChannel: { email: "メール", manual: "手渡し" },
     deliveryStatus: {
       sent: "送信済み",
-      pending: "保留中",
+      pending: "未送信",
       failed: "送信失敗",
     },
     audit: {

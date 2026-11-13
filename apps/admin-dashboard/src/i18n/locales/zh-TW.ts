@@ -2387,8 +2387,10 @@ const zhTWCore = {
     plan: { trial: "試用" },
     handoff: {
       title: "{business}：店主開通資訊",
+      sentNote:
+        "已將設定密碼連結寄到 {email}。需要時也可複製下方連結交給店主；連結 24 小時內有效，使用一次後即失效。",
       manualNote:
-        "系統目前不寄信。請把帳號與設定密碼連結交給店主；連結 24 小時內有效，使用一次後即失效。",
+        "未寄出任何郵件。請把帳號與設定密碼連結交給店主；連結 24 小時內有效，使用一次後即失效。",
       dismiss: "關閉",
       delivery: "憑證交付：{channel} · {status}",
       unavailable:
@@ -2407,7 +2409,7 @@ const zhTWCore = {
     deliveryChannel: { email: "Email", manual: "人工轉交" },
     deliveryStatus: {
       sent: "已寄出",
-      pending: "待處理",
+      pending: "未寄出",
       failed: "寄送失敗",
     },
     audit: {

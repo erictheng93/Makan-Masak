@@ -2371,8 +2371,10 @@ const idID: Messages = {
     plan: { trial: "Uji coba" },
     handoff: {
       title: "{business}: detail aktivasi pemilik",
+      sentNote:
+        "Kami telah mengirim tautan penyetelan ke {email}. Anda juga dapat menyalinnya di bawah bila perlu; tautan berlaku 24 jam dan hangus setelah sekali pakai.",
       manualNote:
-        "Sistem tidak mengirim email. Serahkan nama pengguna dan tautan penyetelan kata sandi kepada pemilik; tautan berlaku 24 jam dan hangus setelah sekali pakai.",
+        "Tidak ada email yang terkirim. Serahkan nama pengguna dan tautan penyetelan kata sandi kepada pemilik; tautan berlaku 24 jam dan hangus setelah sekali pakai.",
       dismiss: "Tutup",
       delivery: "Pengiriman kredensial: {channel} · {status}",
       unavailable:
@@ -2391,7 +2393,7 @@ const idID: Messages = {
     deliveryChannel: { email: "Email", manual: "Serah terima manual" },
     deliveryStatus: {
       sent: "Terkirim",
-      pending: "Menunggu",
+      pending: "Tidak terkirim",
       failed: "Gagal terkirim",
     },
     audit: {
