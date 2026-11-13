@@ -130,9 +130,24 @@ describe("ApplyView locale and market selection", () => {
     expect(
       wrapper.get('[data-testid="onboarding-city"]').attributes("disabled"),
     ).toBeDefined();
-    expect(
-      wrapper.get('[data-testid="onboarding-market"]').attributes("disabled"),
-    ).toBeDefined();
+    expect(wrapper.find('[data-testid="onboarding-market"]').exists()).toBe(
+      false,
+    );
+  });
+
+  it("hides the market field when the city has no markets, shows it when it has", async () => {
+    const wrapper = mount(ApplyView);
+    await chooseTaiwanCity(wrapper);
+    expect(wrapper.find('[data-testid="onboarding-market"]').exists()).toBe(
+      false,
+    );
+
+    mocks.getMarkets.mockResolvedValue([{ id: "m1", name: "Fengjia Market" }]);
+    await wrapper.get('[data-testid="onboarding-city"]').setValue("臺北市");
+    await flushPromises();
+    expect(wrapper.find('[data-testid="onboarding-market"]').exists()).toBe(
+      true,
+    );
   });
 
   it("only offers cities that belong to the chosen country", async () => {
@@ -171,12 +186,9 @@ describe("ApplyView locale and market selection", () => {
           .element as HTMLSelectElement
       ).value,
     ).toBe("");
-    expect(
-      (
-        wrapper.get('[data-testid="onboarding-market"]')
-          .element as HTMLSelectElement
-      ).value,
-    ).toBe("");
+    expect(wrapper.find('[data-testid="onboarding-market"]').exists()).toBe(
+      false,
+    );
     expect(
       wrapper.find('[data-testid="onboarding-stall-number"]').exists(),
     ).toBe(false);

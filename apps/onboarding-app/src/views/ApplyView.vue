@@ -79,6 +79,12 @@ const cityOptions = computed(() => {
   return country ? selectableCitiesForCountry(country) : [];
 });
 
+// No markets (or none yet) means there is nothing to choose, so the field is
+// hidden rather than shown as a lone disabled "independent" option.
+const showMarketField = computed(
+  () => markets.value.length > 0 || Boolean(marketError.value),
+);
+
 const loadMarkets = async (
   country: SupportedCountryCode,
   city: string,
@@ -579,7 +585,7 @@ const useCurrentLocation = () => {
               {{ errors.district }}
             </p>
           </div>
-          <div>
+          <div v-if="showMarketField">
             <label for="onboarding-market" class="label">
               {{ t("apply.form.market.label") }}
             </label>
