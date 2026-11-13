@@ -2106,6 +2106,12 @@ const zhCN: Messages = {
     missingToken: "缺少重设 Token",
   },
   platformOnboarding: {
+    approve: {
+      title: "批准此申请？",
+      description:
+        "批准“{business}”会创建餐厅、店主账号和订阅，并将设置链接发送到 {email}。",
+      confirm: "批准",
+    },
     purge: {
       title: "撤销代建并删除店铺",
       description:
@@ -2173,7 +2179,7 @@ const zhCN: Messages = {
       rejected: "已拒绝",
     },
     stats: {
-      total: "申请总数",
+      total: "当前筛选的申请数",
       pending: "待审核",
       rejected: "已拒绝",
     },
@@ -2195,8 +2201,10 @@ const zhCN: Messages = {
     plan: { trial: "试用" },
     handoff: {
       title: "{business}：店主开通资讯",
+      sentNote:
+        "已将设定密码连结寄到 {email}。需要时也可复制下方连结交给店主；连结 24 小时内有效，使用一次后即失效。",
       manualNote:
-        "系统目前不寄信。请把帐号与设定密码连结交给店主；连结 24 小时内有效，使用一次后即失效。",
+        "未寄出任何邮件。请把帐号与设定密码连结交给店主；连结 24 小时内有效，使用一次后即失效。",
       dismiss: "关闭",
       delivery: "凭证交付：{channel} · {status}",
       unavailable:
@@ -2215,7 +2223,7 @@ const zhCN: Messages = {
     deliveryChannel: { email: "Email", manual: "人工转交" },
     deliveryStatus: {
       sent: "已寄出",
-      pending: "待处理",
+      pending: "未寄出",
       failed: "寄送失败",
     },
     audit: {

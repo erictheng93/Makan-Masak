@@ -2255,6 +2255,12 @@ const enUS: Messages = {
     missingToken: "Missing reset token",
   },
   platformOnboarding: {
+    approve: {
+      title: "Approve this application?",
+      description:
+        "Approving {business} creates the restaurant, the owner account and a subscription, and emails a setup link to {email}.",
+      confirm: "Approve",
+    },
     purge: {
       title: "Revoke and delete this shop",
       description:
@@ -2327,7 +2333,7 @@ const enUS: Messages = {
       rejected: "Rejected",
     },
     stats: {
-      total: "Total applications",
+      total: "Applications in this filter",
       pending: "Pending review",
       rejected: "Rejected",
     },
@@ -2349,8 +2355,10 @@ const enUS: Messages = {
     plan: { trial: "Trial" },
     handoff: {
       title: "{business}: owner activation details",
+      sentNote:
+        "We emailed the setup link to {email}. You can also copy it below if needed; it works for 24 hours and expires once used.",
       manualNote:
-        "No email is sent. Hand the username and setup link to the owner; the link works for 24 hours and expires once used.",
+        "No email was sent. Hand the username and setup link to the owner; the link works for 24 hours and expires once used.",
       dismiss: "Close",
       delivery: "Credential delivery: {channel} · {status}",
       unavailable:
@@ -2369,7 +2377,7 @@ const enUS: Messages = {
     deliveryChannel: { email: "Email", manual: "Manual handoff" },
     deliveryStatus: {
       sent: "Sent",
-      pending: "Pending",
+      pending: "Not sent",
       failed: "Failed",
     },
     audit: {

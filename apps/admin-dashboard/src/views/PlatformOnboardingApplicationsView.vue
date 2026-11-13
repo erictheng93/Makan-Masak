@@ -61,7 +61,12 @@
         <div class="text-sm font-medium text-gray-500">
           {{ t("platformOnboarding.stats.total") }}
         </div>
-        <div class="mt-1 text-2xl font-bold text-gray-900">{{ total }}</div>
+        <div
+          data-testid="total-count"
+          class="mt-1 text-2xl font-bold text-gray-900"
+        >
+          {{ total }}
+        </div>
       </div>
       <div class="ui-panel rounded-2xl bg-white p-4 shadow-ios-card">
         <div class="text-sm font-medium text-gray-500">
@@ -148,8 +153,8 @@
               })
             }}
           </h2>
-          <p class="mt-1 text-emerald-800">
-            {{ t("platformOnboarding.handoff.manualNote") }}
+          <p data-testid="owner-handoff-note" class="mt-1 text-emerald-800">
+            {{ handoffNote }}
           </p>
         </div>
         <button
@@ -485,7 +490,7 @@
                       actionId === application.id ||
                       !isApprovableStatus(application.status)
                     "
-                    @click="approveApplication(application)"
+                    @click="openApproveDialog(application)"
                   >
                     {{ t("platformOnboarding.actions.approve") }}
                   </button>
@@ -674,6 +679,54 @@
     </div>
 
     <div
+      v-if="approveTarget"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="approve-application-title"
+      data-testid="approve-onboarding-dialog"
+      @keydown.esc="closeApproveDialog"
+    >
+      <form
+        class="ui-panel w-full max-w-md rounded-2xl bg-white p-6 shadow-ios-card"
+        @submit.prevent="confirmApprove"
+      >
+        <h2
+          id="approve-application-title"
+          class="text-lg font-semibold text-gray-900"
+        >
+          {{ t("platformOnboarding.approve.title") }}
+        </h2>
+        <p class="mt-1 text-sm text-gray-600">
+          {{
+            t("platformOnboarding.approve.description", {
+              business: approveTarget.businessName,
+              email: approveTarget.contactEmail,
+            })
+          }}
+        </p>
+        <div class="ui-toolbar mt-5 flex justify-end gap-2">
+          <button
+            ref="approveCancelButton"
+            type="button"
+            class="rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            @click="closeApproveDialog"
+          >
+            {{ t("common.cancel") }}
+          </button>
+          <button
+            type="submit"
+            data-testid="confirm-approve-onboarding"
+            class="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+            :disabled="Boolean(actionId)"
+          >
+            {{ t("platformOnboarding.approve.confirm") }}
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div
       v-if="purgeTarget"
       class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4"
       role="dialog"
@@ -793,7 +846,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import {
   onboardingApplicationsService,
   ONBOARDING_APPLICATIONS_CHANGED,
@@ -853,6 +906,8 @@ const ownerHandoff = ref<OwnerHandoff | null>(null);
 const copiedField = ref<"" | CopyableField>("");
 const rejectingApplicationId = ref("");
 const rejectionReason = ref("");
+const approveTarget = ref<OnboardingApplication | null>(null);
+const approveCancelButton = ref<HTMLButtonElement | null>(null);
 const purgeTarget = ref<OnboardingApplication | null>(null);
 const purgeConfirmation = ref("");
 const purgeError = ref("");
@@ -892,7 +947,11 @@ const canRegenerateSetupLink = computed(
     (!ownerHandoff.value?.account || isLinkExpired.value),
 );
 
+// Only the newest load may write: a poll that started before a delete and
+// resolves after it would otherwise put the old rows and counts back.
+let latestLoad = 0;
 async function loadApplications() {
+  const load = ++latestLoad;
   isLoading.value = true;
   error.value = "";
   try {
@@ -900,13 +959,15 @@ async function loadApplications() {
       status: statusFilter.value || undefined,
       limit: 50,
     });
+    if (load !== latestLoad) return;
     applications.value = result.applications;
     total.value = result.total;
   } catch (loadError) {
+    if (load !== latestLoad) return;
     console.error("Failed to load onboarding applications:", loadError);
     error.value = t("platformOnboarding.errors.load");
   } finally {
-    isLoading.value = false;
+    if (load === latestLoad) isLoading.value = false;
   }
 }
 
@@ -1090,6 +1151,22 @@ async function copyField(field: CopyableField, value: string) {
   }
 }
 
+function openApproveDialog(application: OnboardingApplication) {
+  approveTarget.value = application;
+  void nextTick(() => approveCancelButton.value?.focus());
+}
+
+function closeApproveDialog() {
+  approveTarget.value = null;
+}
+
+async function confirmApprove() {
+  const application = approveTarget.value;
+  if (!application) return;
+  closeApproveDialog();
+  await approveApplication(application);
+}
+
 function openRejectDialog(applicationId: string) {
   rejectingApplicationId.value = applicationId;
   rejectionReason.value = "";
@@ -1201,6 +1278,16 @@ function isApprovableStatus(status: OnboardingApplicationStatus) {
 function statusLabel(status: OnboardingApplicationStatus) {
   return t(`platformOnboarding.status.${status}`);
 }
+
+// Derived from the recorded delivery, so the note cannot contradict the status line.
+const handoffNote = computed(() => {
+  const delivery = ownerHandoff.value?.delivery;
+  return delivery?.channel === "email" && delivery.status === "sent"
+    ? t("platformOnboarding.handoff.sentNote", {
+        email: delivery.recipientEmail,
+      })
+    : t("platformOnboarding.handoff.manualNote");
+});
 
 function deliveryChannelLabel(channel: CredentialDelivery["channel"]) {
   return t(`platformOnboarding.deliveryChannel.${channel}`);
