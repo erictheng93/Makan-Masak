@@ -2004,7 +2004,7 @@
                 <tr>
                   <td>訂閱、設定與監控</td>
                   <td>/dashboard/billing、settings、monitoring</td>
-                  <td>功能模組、幣別與營業設定、監控讀值。</td>
+                  <td>訂閱與用量（店主自助更換方案、查看用量）、功能模組、幣別與營業設定、監控讀值。</td>
                 </tr>
               </tbody>
             </table>
@@ -3613,7 +3613,7 @@ Authorization: Bearer &lt;交換得到的management token&gt;</code></pre>
             gate。地區政策仍是一般店家有效模組的上限。
           </p>
           <p>
-            module_overrides是稀疏覆蓋：true強開、false強關、沒有key回方案默認。變更plan會清空override，因此升級／降級後再核對例外授權。API
+            module_overrides是稀疏覆蓋：true強開、false強關、沒有key回方案默認。平台人員（管理後台的訂閱操作）變更plan會清空override，店主在後台「訂閱與用量」自行變更plan則保留override，所以平台人員改方案後要再核對例外授權。店主自助變更：升級（含離開試用）立即生效並重新開始30天用量週期，降級於本期結束時生效且生效前可取消，僅店主（與平台人員）可操作。API
             boolean patch與刪除override key的語義不同，不能把false當回預設。
           </p>
           <h3>模組、配額、功能旗標</h3>

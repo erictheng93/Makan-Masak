@@ -164,7 +164,7 @@
         <tr><td>Pemesanan Daring</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
         <tr><td>Kasir POS</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
         <tr><td>Tampilan Dapur</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
-        <tr><td>Pencetakan Resi</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
+        <tr><td>Pencetakan Struk</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
         <tr><td>Kupon</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
         <tr><td>Reservasi</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
         <tr><td>Analisis</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
@@ -285,7 +285,7 @@
   <ol>
     <li>Di bagian "Pilih paket" pada halaman <span class="btn-label">Paket &amp; Pemakaian</span>, temukan paket lebih rendah yang ingin Anda tuju.</li>
     <li>Tekan <span class="btn-label">Jadwalkan downgrade, berlaku 15 Des</span> pada kartu (tanggalnya adalah akhir periode ini).</li>
-    <li>Jendela konfirmasi menampilkan "Berlaku di akhir periode ini (tanggal); sampai saat itu fitur paket saat ini tetap tersedia." dan "Penggunaan pada paket baru dihitung ulang sejak tanggal berlaku.", serta daftar "Fitur yang akan hilang" dan "Yang akan berubah", misalnya "3 reservasi mendatang tidak akan dapat dilihat lagi di dasbor". Periksa satu per satu.</li>
+    <li>Jendela konfirmasi menampilkan "Berlaku di akhir periode ini (tanggal); sampai saat itu fitur paket saat ini tetap tersedia." dan "Penggunaan pada paket baru dihitung ulang sejak tanggal berlaku.", serta daftar "Fitur yang akan hilang" dan "Yang akan berubah", misalnya "3 reservasi mendatang tetap disimpan: pelanggan masih bisa melihat atau membatalkannya, tetapi dasbor tidak lagi dapat mengelola atau menerima reservasi baru. Pulih saat upgrade". Periksa satu per satu.</li>
     <li>Jika yakin, tekan <span class="btn-label">Konfirmasi jadwal downgrade</span>, lalu Anda akan melihat "Downgrade ke Standar telah dijadwalkan".</li>
   </ol>
   <p>Setelah dijadwalkan, pemberitahuan oranye muncul di bagian atas halaman: "Downgrade ke Standar dijadwalkan pada 15 Des", dan kartu paket diberi label "Dijadwalkan berlaku 15 Des". Jika Anda menjadwalkan downgrade lain, jadwal itu menggantikan yang sebelumnya.</p>
@@ -312,8 +312,8 @@
         <li><strong>Kupon</strong> milik toko tidak dapat dipakai lagi; promo dari platform sendiri tidak terpengaruh.</li>
       </ul>
     </li>
-    <li><strong>Integrasi Platform:</strong> pesanan dari platform pengiriman tetap terus masuk, dan Anda tetap dapat <strong>memutus koneksi</strong> integrasi dari dasbor; namun pengaturan integrasi lainnya dan layar daftarnya ditutup. Jendela konfirmasi downgrade mungkin menampilkan "platform pengiriman yang terhubung akan diputus", artinya Anda tidak akan dapat mengelolanya dari dasbor, bukan berarti platform memutusnya secara otomatis.</li>
-    <li><strong>Manajemen Staf:</strong> jadwal shift yang sudah dibuat dan pengajuan cuti yang menunggu tidak dapat dilihat atau diproses. <strong>Inventaris:</strong> stok bahan tidak lagi dilacak.</li>
+    <li><strong>Integrasi Platform:</strong> pesanan dari platform pengiriman tetap terus masuk, dan Anda tetap dapat <strong>memutus koneksi</strong> integrasi dari dasbor; namun Anda tidak dapat lagi mengatur atau menyinkronkan integrasi, dan layar pengaturan serta daftarnya ditutup.</li>
+    <li><strong>Manajemen Staf:</strong> jadwal shift yang sudah dibuat dan pengajuan cuti yang menunggu tetap disimpan, tetapi layar jadwal dan cuti ditutup. <strong>Inventaris:</strong> pesanan tetap mengurangi stok secara otomatis, tetapi Anda tidak dapat lagi melihat atau mengelolanya; semuanya pulih saat Anda upgrade.</li>
   </ul>
   <p class="note">Sebelum downgrade, jendela konfirmasi memberi tahu jumlah yang terdampak berdasarkan data toko Anda yang sebenarnya; mohon periksa dengan teliti sebelum menekan "Konfirmasi jadwal downgrade".</p>
 </section>
@@ -346,7 +346,7 @@
   </details>
   <details>
     <summary>"Langganan sedang nonaktif sehingga paket tidak dapat diubah. Hubungi dukungan."</summary>
-    <p>Saat langganan dinonaktifkan oleh platform, Anda tidak dapat mengganti paket sendiri; silakan hubungi petugas platform.</p>
+    <p>Saat langganan dinonaktifkan oleh platform, Anda tidak dapat mengganti paket sendiri; silakan kirim permintaan di halaman "Umpan Balik" agar petugas platform membantu.</p>
   </details>
 </section>
 
@@ -359,7 +359,7 @@
     <li><strong>Downgrade dibatalkan</strong>.</li>
     <li><strong>Pemakaian mencapai batas</strong>: untuk setiap jenis pemakaian, email hanya dikirim sekali dalam satu periode.</li>
   </ul>
-  <p class="note">Saat ini isi email pemberitahuan tersebut berbahasa Inggris.</p>
+  <p class="note">Saat ini semua email pemberitahuan dikirim dalam bahasa Inggris.</p>
 </section>
 
 <section class="card" id="who">
@@ -407,7 +407,7 @@
   <h2>Butuh bantuan</h2>
   <ul>
     <li>Di sudut kanan atas bagian "Pilih paket" pada halaman <span class="btn-label">Paket &amp; Pemakaian</span> terdapat tautan "Panduan paket dan penggunaan" yang membuka halaman ini.</li>
-    <li>Jika paket tidak dapat diubah, langganan dinonaktifkan, atau Anda ingin memastikan paket mana yang cocok untuk toko Anda, hubungi petugas platform (pihak yang mengaktifkan akun toko Anda).</li>
+    <li>Jika paket tidak dapat diubah, langganan dinonaktifkan, atau Anda punya pertanyaan tentang paket, kirimkan di halaman <span class="btn-label">Umpan Balik</span> pada menu sebelah kiri dasbor; petugas platform akan menanganinya di sana. (Ini tempat toko melaporkan masalah ke platform, bukan halaman "Ulasan" pelanggan.)</li>
   </ul>
 </section>
 

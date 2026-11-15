@@ -1991,7 +1991,7 @@
                 <tr>
                   <td>Subscription, setting at monitoring</td>
                   <td>/dashboard/billing, settings, monitoring</td>
-                  <td>Mga feature module, currency at setting ng operasyon, mga basa ng monitoring.</td>
+                  <td>Plan &amp; Usage (self-service na pagpapalit ng plan ng may-ari), mga feature module, currency at setting ng operasyon, mga basa ng monitoring.</td>
                 </tr>
               </tbody>
             </table>
@@ -3588,7 +3588,7 @@ Authorization: Bearer &lt;management token na nakuha sa pagpapalit&gt;</code></p
             gate. Ang patakaran ng rehiyon pa rin ang pinakamataas na limitasyon ng epektibong module ng karaniwang restaurant.
           </p>
           <p>
-            Ang module_overrides ay sparse na override: ang true ay pilit na naka-on, ang false ay pilit na naka-off, at kapag walang key ay babalik sa default ng plan. Ang pagbabago ng plan ay maglilinis ng override, kaya pagkatapos mag-upgrade／mag-downgrade ay muling suriin ang mga exception na awtorisasyon. Magkaiba ang semantics ng API
+            Ang module_overrides ay sparse na override: ang true ay pilit na naka-on, ang false ay pilit na naka-off, at kapag walang key ay babalik sa default ng plan. Ang pagbabago ng plan ng platform staff ay naglilinis ng override, habang ang pagbabagong ginawa mismo ng may-ari ng tindahan sa "Plan &amp; Usage" ay nagpapanatili nito, kaya pagkatapos ng pagbabago ng platform staff ay muling suriin ang mga exception na awtorisasyon. Self-service ng may-ari: ang upgrade (kasama ang paglabas sa trial) ay agad na may bisa at nagsisimula ulit ng 30-araw na period ng paggamit; ang downgrade ay may bisa sa katapusan ng period at maaaring kanselahin bago iyon; tanging ang may-ari ng tindahan (at platform staff) ang maaaring gumawa nito. Magkaiba ang semantics ng API
             boolean patch at ng pagbura ng override key, at hindi dapat ituring na pagbabalik sa default ang false.
           </p>
           <h3>Module, quota, feature flag</h3>

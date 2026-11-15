@@ -2384,7 +2384,7 @@
                   <td>Subscription, settings and monitoring</td>
                   <td>/dashboard/billing, settings, monitoring</td>
                   <td>
-                    Feature modules, currency and business settings, monitoring
+                    Plan &amp; Usage (owner self-service plan changes and usage), feature modules, currency and business settings, monitoring
                     readings.
                   </td>
                 </tr>
@@ -4558,9 +4558,7 @@ Authorization: Bearer &lt;the management token obtained from the exchange&gt;</c
           </p>
           <p>
             module_overrides is a sparse overlay: true force-enables, false
-            force-disables, and no key falls back to the plan default. Changing the
-            plan clears the overrides, so after an upgrade / downgrade, re-check
-            exceptional authorizations. An API boolean patch and deleting an
+            force-disables, and no key falls back to the plan default. A plan change made by platform staff clears the overrides, whereas a change the shop owner makes themselves under Plan &amp; Usage keeps them, so re-check exceptional authorizations after a platform-staff change. Owner self-service: an upgrade (including leaving the trial) takes effect immediately and restarts the 30-day usage period; a downgrade takes effect at the end of the period and can be cancelled before then; only the shop owner (and platform staff) can do it. An API boolean patch and deleting an
             override key have different semantics, and false must not be treated
             as returning to the default.
           </p>
