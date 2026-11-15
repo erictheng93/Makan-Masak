@@ -4990,6 +4990,9 @@ const viVN: Messages = {
     },
   },
   integrations: {
+    limitedTitle: "Nền tảng giao hàng đang kết nối",
+    limitedNotice:
+      "Đơn hàng từ nền tảng này vẫn tiếp tục đến. Bạn có thể ngắt kết nối tại đây, nhưng gói hiện tại không cho chỉnh cài đặt hay đồng bộ thực đơn.",
     title: "Tích hợp nền tảng giao hàng",
     subtitle:
       "Kết nối nền tảng giao hàng để quản lý đơn hàng và thực đơn từ các nền tảng khác",
@@ -6449,13 +6452,13 @@ const viVN: Messages = {
     moduleNames: {
       analytics: "Phân tích",
       coupons: "Phiếu giảm giá",
-      loyalty: "Lòng trung thành",
+      loyalty: "Chương trình thân thiết",
       platform_integration: "Tích hợp nền tảng",
       online_ordering: "Đặt hàng trực tuyến",
       menu_management: "Quản lý thực đơn",
-      table_management: "Quản lý bảng",
+      table_management: "Quản lý bàn",
       ai_analytics: "Phân tích AI",
-      kitchen_display: "trưng bày nhà bếp",
+      kitchen_display: "Màn hình bếp",
       receipt_printing: "In biên lai",
       reservations: "Đặt chỗ",
       pos: "Thu ngân POS",
@@ -6599,18 +6602,19 @@ const viVN: Messages = {
       open_cash_shift:
         "Còn {count} ca thu ngân chưa đóng: hãy đóng ca trong POS trước khi hạ cấp",
       future_reservations:
-        "{count} lượt đặt bàn sắp tới sẽ không còn xem được trong trang quản trị",
+        "{count} lượt đặt bàn sắp tới vẫn được giữ: khách vẫn xem hoặc hủy được, nhưng trang quản trị không còn quản lý hay nhận đặt bàn mới. Sẽ khôi phục khi nâng cấp",
       future_service_bookings:
-        "{count} lượt đặt dịch vụ sắp tới sẽ không còn xem được trong trang quản trị",
-      active_coupons: "{count} phiếu giảm giá đang dùng sẽ ngừng áp dụng",
+        "{count} lượt đặt dịch vụ sắp tới vẫn được giữ: khách vẫn xem hoặc hủy được, nhưng trang quản trị không còn quản lý hay nhận đặt mới. Sẽ khôi phục khi nâng cấp",
+      active_coupons:
+        "{count} phiếu giảm giá của cửa hàng vẫn được giữ nhưng ngừng áp dụng (khuyến mãi của nền tảng giao hàng không bị ảnh hưởng). Dùng lại được khi nâng cấp",
       scheduled_shifts:
-        "{count} ca làm đã xếp lịch sẽ không còn xem được trong trang quản trị",
+        "{count} ca làm đã xếp lịch vẫn được giữ, nhưng màn hình xếp ca sẽ đóng. Sẽ khôi phục khi nâng cấp",
       pending_leave_requests:
-        "{count} đơn xin nghỉ đang chờ duyệt sẽ không thể xử lý được nữa",
+        "{count} đơn xin nghỉ đang chờ duyệt vẫn được giữ, nhưng màn hình nghỉ phép sẽ đóng. Sẽ khôi phục khi nâng cấp",
       tracked_ingredients:
-        "Tồn kho của {count} nguyên liệu sẽ không còn được theo dõi",
+        "Tồn kho của {count} nguyên liệu vẫn tự động trừ theo đơn hàng, nhưng bạn không thể xem hay quản lý. Sẽ khôi phục khi nâng cấp",
       connected_platforms:
-        "{count} nền tảng giao hàng đang kết nối sẽ bị ngắt kết nối",
+        "{count} nền tảng giao hàng vẫn tiếp tục gửi đơn; sau khi thay đổi, bạn vẫn có thể ngắt kết nối trong trang quản trị nhưng không thể chỉnh cài đặt hay đồng bộ thực đơn",
     },
     errors: {
       unchanged: "Bạn đang dùng gói này rồi.",

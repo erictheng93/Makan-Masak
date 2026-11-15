@@ -4986,6 +4986,9 @@ const zhTWCore = {
     },
   },
   integrations: {
+    limitedTitle: "已連線的外送平台",
+    limitedNotice:
+      "來自此平台的訂單仍會持續送進來。你可以在這裡中斷連線，但目前的方案無法調整設定或同步菜單。",
     title: "外送平台串接",
     subtitle: "連接外送平台以統一管理來自不同平台的訂單和菜單",
     deliveryIntegration: "外送平台串接",
@@ -6699,13 +6702,20 @@ const zhTWRuntimeKeys = {
     impact: {
       open_cash_shift:
         "有 {count} 個尚未結束的收銀班次，請先到 POS 結束班次再降級",
-      future_reservations: "{count} 筆未來的訂位將無法在後台查看",
-      future_service_bookings: "{count} 筆未來的服務預約將無法在後台查看",
-      active_coupons: "{count} 張使用中的優惠券將停止適用",
-      scheduled_shifts: "{count} 個已排定的班表將無法在後台查看",
-      pending_leave_requests: "{count} 件待審核的請假申請將無法處理",
-      tracked_ingredients: "{count} 項食材的庫存將停止追蹤",
-      connected_platforms: "{count} 個已連接的外送平台將中斷連線",
+      future_reservations:
+        "{count} 筆未來的訂位會保留，顧客仍可查看或取消，但後台無法再管理，也不能接受新訂位；升級後會恢復",
+      future_service_bookings:
+        "{count} 筆未來的服務預約會保留，顧客仍可查看或取消，但後台無法再管理，也不能接受新預約；升級後會恢復",
+      active_coupons:
+        "{count} 張店內優惠券會保留但停止適用（外送平台的促銷不受影響）；升級後會恢復",
+      scheduled_shifts:
+        "{count} 個已排定的班表會保留，但排班畫面將關閉；升級後會恢復",
+      pending_leave_requests:
+        "{count} 件待審核的請假申請會保留，但請假畫面將關閉；升級後會恢復",
+      tracked_ingredients:
+        "{count} 項食材的庫存仍會隨訂單自動扣除，但無法再查看或管理；升級後會恢復",
+      connected_platforms:
+        "{count} 個外送平台仍會持續送單；變更後你仍可在後台中斷連線，但無法再調整設定或同步菜單",
     },
     errors: {
       unchanged: "您已經在使用這個方案。",

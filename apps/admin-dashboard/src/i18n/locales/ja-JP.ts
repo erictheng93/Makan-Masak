@@ -4995,6 +4995,9 @@ const jaJP: Messages = {
     },
   },
   integrations: {
+    limitedTitle: "連携中のデリバリープラットフォーム",
+    limitedNotice:
+      "このプラットフォームからの注文は引き続き届きます。ここで連携を解除できますが、現在のプランでは設定の変更やメニュー同期はできません。",
     title: "デリバリープラットフォーム連携",
     subtitle:
       "デリバリープラットフォームを接続して、各プラットフォームからの注文とメニューを管理",
@@ -6449,10 +6452,10 @@ const jaJP: Messages = {
       coupons: "クーポン",
       analytics: "分析",
       ai_analytics: "AI分析",
-      loyalty: "忠誠心",
+      loyalty: "ロイヤルティプログラム",
       online_ordering: "オンライン注文",
       kitchen_display: "キッチンディスプレイ",
-      platform_integration: "プラットフォームの統合",
+      platform_integration: "デリバリープラットフォーム連携",
       menu_management: "メニュー管理",
       reservations: "予約",
       table_management: "テーブル管理",
@@ -6598,17 +6601,19 @@ const jaJP: Messages = {
       open_cash_shift:
         "未終了のレジシフトが {count} 件あります。ダウングレード前に POS で終了してください",
       future_reservations:
-        "今後の予約 {count} 件は管理画面で確認できなくなります",
+        "今後の予約 {count} 件は保持され、お客様は引き続き確認・キャンセルできますが、管理画面では管理も新規受付もできなくなります。アップグレードすると元に戻ります",
       future_service_bookings:
-        "今後のサービス予約 {count} 件は管理画面で確認できなくなります",
-      active_coupons: "利用中のクーポン {count} 件が使えなくなります",
+        "今後のサービス予約 {count} 件は保持され、お客様は引き続き確認・キャンセルできますが、管理画面では管理も新規受付もできなくなります。アップグレードすると元に戻ります",
+      active_coupons:
+        "店舗のクーポン {count} 件は保持されますが、適用されなくなります（デリバリープラットフォームの販促は影響なし）。アップグレードすると再び使えます",
       scheduled_shifts:
-        "予定済みのシフト {count} 件は管理画面で確認できなくなります",
+        "予定済みのシフト {count} 件は保持されますが、シフト画面は閉じます。アップグレードすると元に戻ります",
       pending_leave_requests:
-        "承認待ちの休暇申請 {count} 件を処理できなくなります",
-      tracked_ingredients: "食材 {count} 件の在庫管理が停止します",
+        "承認待ちの休暇申請 {count} 件は保持されますが、休暇画面は閉じます。アップグレードすると元に戻ります",
+      tracked_ingredients:
+        "食材 {count} 件の在庫は注文に応じて引き続き自動で引き落とされますが、確認や管理はできなくなります。アップグレードすると元に戻ります",
       connected_platforms:
-        "連携中のデリバリープラットフォーム {count} 件が切断されます",
+        "デリバリープラットフォーム {count} 件からは引き続き注文が届きます。変更後も管理画面で連携を解除できますが、設定の変更やメニュー同期はできなくなります",
     },
     errors: {
       unchanged: "すでにこのプランをご利用中です。",

@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6">
     <!-- Header -->
-    <div class="bg-white rounded-lg shadow p-6">
+    <div v-if="!limited" class="bg-white rounded-lg shadow p-6">
       <h3 class="text-lg font-semibold text-gray-900 mb-2">
         {{ t("integrations.title") }}
       </h3>
@@ -10,10 +10,23 @@
       </p>
     </div>
 
+    <!-- Plan without the integration: only what an existing connection needs. -->
+    <h3
+      v-if="limited && uberEats.enabled"
+      class="text-lg font-semibold text-gray-900"
+      data-testid="integrations-limited-title"
+    >
+      {{ t("integrations.limitedTitle") }}
+    </h3>
+
     <!-- Platform Cards -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Uber Eats Card -->
-      <div class="bg-white rounded-lg shadow p-6">
+      <div
+        v-if="!limited || uberEats.enabled"
+        class="bg-white rounded-lg shadow p-6"
+        data-testid="integration-uber-eats"
+      >
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center space-x-3">
             <div
@@ -115,7 +128,14 @@
 
         <!-- Connected: Config -->
         <div v-else class="space-y-4">
-          <div class="flex items-center justify-between py-2">
+          <p
+            v-if="limited"
+            class="text-sm text-gray-600"
+            data-testid="integration-orders-continue"
+          >
+            {{ t("integrations.limitedNotice") }}
+          </p>
+          <div v-if="!limited" class="flex items-center justify-between py-2">
             <div>
               <p class="text-sm font-medium text-gray-900">
                 {{ t("integrations.autoAccept") }}
@@ -147,7 +167,7 @@
             </button>
           </div>
 
-          <div class="flex items-center justify-between py-2">
+          <div v-if="!limited" class="flex items-center justify-between py-2">
             <div>
               <p class="text-sm font-medium text-gray-900">
                 {{ t("integrations.menuSync") }}
@@ -180,6 +200,7 @@
           </div>
 
           <div
+            v-if="!limited"
             class="flex items-center justify-between py-2 border-t border-gray-100"
           >
             <div>
@@ -225,7 +246,7 @@
       </div>
 
       <!-- Foodpanda Card (Coming Soon) -->
-      <div class="bg-white rounded-lg shadow p-6 opacity-60">
+      <div v-if="!limited" class="bg-white rounded-lg shadow p-6 opacity-60">
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center space-x-3">
             <div
@@ -255,7 +276,7 @@
     </div>
 
     <!-- Webhook Logs -->
-    <div class="bg-white rounded-lg shadow p-6">
+    <div v-if="!limited" class="bg-white rounded-lg shadow p-6">
       <div class="flex items-center justify-between mb-4">
         <h4 class="font-semibold text-gray-900">
           {{ t("integrations.webhookLogs") }}
@@ -387,7 +408,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from "vue";
+import { computed, ref, reactive, onMounted } from "vue";
+import { useModuleAccessStore } from "@makanmasak/shared/stores/moduleAccess";
 import { useI18n } from "@/i18n";
 import { useAuthStore } from "@/stores/auth";
 import { apiClient, unwrapApiPayload } from "@/services/api";
@@ -398,6 +420,17 @@ const { t } = useI18n();
 const { formatShortDateTime } = useDateFormatter();
 
 const authStore = useAuthStore();
+const moduleAccess = useModuleAccessStore();
+
+// Once access has loaded, a plan without delivery-platform integration may
+// still hold a connection (orders keep arriving). Offer only to see and cut it:
+// the API gates connect, configure, sync and logs.
+const limited = computed(
+  () =>
+    moduleAccess.isLoaded &&
+    (moduleAccess.effectiveModules as Record<string, boolean | undefined>)
+      .platform_integration !== true,
+);
 
 const showConnectForm = ref(false);
 const showLogs = ref(false);

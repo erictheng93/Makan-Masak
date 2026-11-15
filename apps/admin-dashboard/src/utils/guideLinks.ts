@@ -11,13 +11,25 @@ const ONBOARDING_ORIGIN = (
 /** Handbook folder per UI language; zh-TW is the master at the guide root. */
 const GUIDE_LOCALE_PATH: Record<string, string> = {
   "en-US": "en-US/",
+  "zh-CN": "zh-CN/",
   "ja-JP": "ja-JP/",
   "vi-VN": "vi-VN/",
   "id-ID": "id-ID/",
 };
 
-/** Part 16 of the handbook: plans, modules, quotas and regional policy. */
-export function plansGuideUrl(locale: string): string {
+/** Sections of the plans-and-usage guide worth a deep link. */
+export type PlansGuideAnchor = "trial" | "limit" | "downgrade";
+
+/** The owner guide on plans and usage; no anchor means the top of the page. */
+export function plansGuideUrl(
+  locale: string,
+  anchor?: PlansGuideAnchor,
+): string {
   const folder = GUIDE_LOCALE_PATH[locale] ?? "";
-  return `${ONBOARDING_ORIGIN}/guide/${folder}system-handbook.html#modules-heading`;
+  return `${ONBOARDING_ORIGIN}/guide/${folder}plans-and-usage.html${anchor ? `#${anchor}` : ""}`;
+}
+
+/** Path of a locale's page under `public/guide/` (used to check it exists). */
+export function plansGuideRelativePath(locale: string): string {
+  return `${GUIDE_LOCALE_PATH[locale] ?? ""}plans-and-usage.html`;
 }

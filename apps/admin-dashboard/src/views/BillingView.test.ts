@@ -273,7 +273,12 @@ describe("BillingView plan section", () => {
     expect(modal.sections).toEqual([
       { heading: "新增的功能", items: ["POS 收銀"] },
       { heading: "將失去的功能", items: ["數據分析"] },
-      { heading: "變更後的影響", items: ["12 筆未來的訂位將無法在後台查看"] },
+      {
+        heading: "變更後的影響",
+        items: [
+          "12 筆未來的訂位會保留，顧客仍可查看或取消，但後台無法再管理，也不能接受新訂位；升級後會恢復",
+        ],
+      },
     ]);
 
     expect(changePlan).toHaveBeenCalledOnce();
@@ -438,7 +443,7 @@ describe("BillingView plan section", () => {
 
     expect(
       wrapper.get('[data-testid="billing-plans-guide"]').attributes("href"),
-    ).toMatch(/\/guide\/system-handbook\.html#modules-heading$/);
+    ).toMatch(/\/guide\/plans-and-usage\.html$/);
   });
 
   it("calls a pure gain an upgrade, and a paid plan that loses features a change", async () => {
@@ -483,6 +488,7 @@ describe("BillingView plan section", () => {
 
     const modal = confirm.mock.calls[0][0];
     expect(modal.confirmLabel).toBe("確認排定降級");
+    expect(modal.help.href).toMatch(/plans-and-usage\.html#downgrade$/);
     expect(modal.message).toContain("新方案的用量自生效日起重新計算");
   });
 

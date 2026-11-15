@@ -12,6 +12,8 @@ export interface ConfirmModalOptions {
   confirmDisabled?: boolean;
   /** A way out to the page that resolves the condition; closes the modal. */
   link?: { to: RouteLocationRaw; label: string };
+  /** An external explainer, opened in a new tab; does not close the modal. */
+  help?: { href: string; label: string };
 }
 
 export interface ConfirmModalState extends ConfirmModalOptions {
@@ -32,6 +34,7 @@ export function useConfirmModal() {
         sections: options.sections,
         confirmDisabled: options.confirmDisabled,
         link: options.link,
+        help: options.help,
         resolve,
       };
     });

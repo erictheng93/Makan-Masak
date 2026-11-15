@@ -656,6 +656,13 @@ function buildConfirm(option: PlanOption, impact: PlanImpact) {
         : t("billing.confirm.confirmUpgrade"),
     sections,
     confirmDisabled: blocking.length > 0,
+    help:
+      option.action === "downgrade"
+        ? {
+            href: plansGuideUrl(locale.value, "downgrade"),
+            label: t("billing.plans.guide"),
+          }
+        : undefined,
     link: blocking.some((i) => i.key === "open_cash_shift")
       ? { to: { name: "POSCheckout" }, label: t("billing.confirm.goToPos") }
       : undefined,

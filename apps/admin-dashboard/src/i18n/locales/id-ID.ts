@@ -5020,6 +5020,9 @@ const idID: Messages = {
     },
   },
   integrations: {
+    limitedTitle: "Platform pengiriman yang terhubung",
+    limitedNotice:
+      "Pesanan dari platform ini tetap masuk. Anda dapat memutus koneksi di sini, tetapi paket saat ini tidak dapat mengubah pengaturan atau menyinkronkan menu.",
     title: "Integrasi Platform Pengiriman",
     subtitle:
       "Hubungkan platform pengiriman untuk mengelola pesanan dan menu dari berbagai platform",
@@ -6490,7 +6493,7 @@ const idID: Messages = {
       analytics: "Analisis",
       ai_analytics: "Analisis AI",
       platform_integration: "Integrasi Platform",
-      receipt_printing: "Pencetakan Resi",
+      receipt_printing: "Pencetakan Struk",
       kitchen_display: "Tampilan Dapur",
       online_ordering: "Pemesanan Daring",
       menu_management: "Manajemen Menu",
@@ -6639,17 +6642,19 @@ const idID: Messages = {
       open_cash_shift:
         "Masih ada {count} shift kasir yang terbuka: tutup di POS sebelum downgrade",
       future_reservations:
-        "{count} reservasi mendatang tidak akan dapat dilihat lagi di dasbor",
+        "{count} reservasi mendatang tetap disimpan: pelanggan masih bisa melihat atau membatalkannya, tetapi dasbor tidak lagi dapat mengelola atau menerima reservasi baru. Pulih saat upgrade",
       future_service_bookings:
-        "{count} pemesanan layanan mendatang tidak akan dapat dilihat lagi di dasbor",
-      active_coupons: "{count} kupon aktif akan berhenti berlaku",
+        "{count} pemesanan layanan mendatang tetap disimpan: pelanggan masih bisa melihat atau membatalkannya, tetapi dasbor tidak lagi dapat mengelola atau menerima pemesanan baru. Pulih saat upgrade",
+      active_coupons:
+        "{count} kupon toko tetap disimpan tetapi berhenti berlaku (promosi platform pengiriman tidak terpengaruh). Berlaku lagi saat upgrade",
       scheduled_shifts:
-        "{count} shift terjadwal tidak akan dapat dilihat lagi di dasbor",
+        "{count} shift terjadwal tetap disimpan, tetapi layar penjadwalan ditutup. Pulih saat upgrade",
       pending_leave_requests:
-        "{count} pengajuan cuti yang menunggu tidak dapat diproses lagi",
-      tracked_ingredients: "Stok {count} bahan tidak akan dilacak lagi",
+        "{count} pengajuan cuti yang menunggu tetap disimpan, tetapi layar cuti ditutup. Pulih saat upgrade",
+      tracked_ingredients:
+        "Stok {count} bahan tetap berkurang otomatis oleh pesanan, tetapi tidak dapat lagi dilihat atau dikelola. Pulih saat upgrade",
       connected_platforms:
-        "{count} platform pengiriman yang terhubung akan diputus",
+        "{count} platform pengiriman tetap mengirim pesanan; setelah perubahan Anda masih dapat memutus koneksi di dasbor, tetapi tidak dapat lagi mengubah pengaturan atau menyinkronkan menu",
     },
     errors: {
       unchanged: "Anda sudah menggunakan paket ini.",

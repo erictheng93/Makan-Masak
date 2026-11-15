@@ -4857,6 +4857,9 @@ const zhCN: Messages = {
     },
   },
   integrations: {
+    limitedTitle: "已连接的外卖平台",
+    limitedNotice:
+      "来自此平台的订单仍会持续送进来。你可以在这里断开连接，但当前的方案无法调整设置或同步菜单。",
     title: "外送平台对接",
     subtitle: "连接外送平台以统一管理来自不同平台的订单和菜单",
     deliveryIntegration: "外送平台对接",
@@ -6413,13 +6416,20 @@ const zhCN: Messages = {
     impact: {
       open_cash_shift:
         "有 {count} 个尚未结束的收银班次，请先到 POS 结束班次再降级",
-      future_reservations: "{count} 笔未来的预订将无法在后台查看",
-      future_service_bookings: "{count} 笔未来的服务预约将无法在后台查看",
-      active_coupons: "{count} 张使用中的优惠券将停止适用",
-      scheduled_shifts: "{count} 个已排定的班表将无法在后台查看",
-      pending_leave_requests: "{count} 件待审核的请假申请将无法处理",
-      tracked_ingredients: "{count} 项食材的库存将停止跟踪",
-      connected_platforms: "{count} 个已连接的外卖平台将断开连接",
+      future_reservations:
+        "{count} 笔未来的预订会保留，顾客仍可查看或取消，但后台无法再管理，也不能接受新预订；升级后会恢复",
+      future_service_bookings:
+        "{count} 笔未来的服务预约会保留，顾客仍可查看或取消，但后台无法再管理，也不能接受新预约；升级后会恢复",
+      active_coupons:
+        "{count} 张店内优惠券会保留但停止适用（外卖平台的促销不受影响）；升级后会恢复",
+      scheduled_shifts:
+        "{count} 个已排定的班表会保留，但排班页面将关闭；升级后会恢复",
+      pending_leave_requests:
+        "{count} 件待审核的请假申请会保留，但请假页面将关闭；升级后会恢复",
+      tracked_ingredients:
+        "{count} 项食材的库存仍会随订单自动扣减，但无法再查看或管理；升级后会恢复",
+      connected_platforms:
+        "{count} 个外卖平台仍会持续送单；更改后你仍可在后台断开连接，但无法再调整设置或同步菜单",
     },
     errors: {
       unchanged: "您已经在使用这个方案。",

@@ -79,6 +79,16 @@
               >
                 {{ modalState.link.label }}
               </RouterLink>
+              <a
+                v-if="modalState.help"
+                :href="modalState.help.href"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="mb-4 block text-[13px] font-semibold text-ios-blue"
+                data-testid="confirm-modal-help"
+              >
+                {{ modalState.help.label }}
+              </a>
               <div class="flex gap-2.5 justify-center">
                 <button
                   data-testid="confirm-modal-cancel"

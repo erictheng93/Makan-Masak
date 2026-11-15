@@ -13,6 +13,15 @@
       <p class="mt-2 text-sm leading-6 text-ios-secondary">
         {{ t("billing.trialExpiredBanner") }}
       </p>
+      <a
+        :href="plansGuideUrl(locale, 'trial')"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="mt-3 block text-sm font-semibold text-ios-blue"
+        data-testid="trial-expired-modal-guide"
+      >
+        {{ t("billing.plans.guide") }}
+      </a>
       <div class="mt-6 flex flex-col gap-2">
         <button
           type="button"
@@ -41,12 +50,13 @@ import { useModuleAccess } from "@makanmasak/shared/composables/useModuleAccess"
 import { useI18n } from "@/i18n";
 import { useAuthStore } from "@/stores/auth";
 import { UserRole } from "@/types";
+import { plansGuideUrl } from "@/utils/guideLinks";
 
 // Shown once per login: auth.ts clears this key on logout, so signing in again
 // (even in the same tab) brings the notice back, while a reload does not.
 const SEEN_KEY = "trial_expired_modal_seen";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const authStore = useAuthStore();
 const { isTrialExpired } = useModuleAccess();
 const dialogRef = ref<HTMLDialogElement | null>(null);

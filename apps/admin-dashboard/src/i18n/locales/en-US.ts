@@ -4992,6 +4992,9 @@ const enUS: Messages = {
     },
   },
   integrations: {
+    limitedTitle: "Connected delivery platforms",
+    limitedNotice:
+      "Orders from this platform keep arriving. You can disconnect it here, but your current plan cannot change its settings or sync the menu.",
     title: "Delivery Platform Integration",
     subtitle:
       "Connect delivery platforms to manage orders and menus from different platforms",
@@ -6601,18 +6604,19 @@ const enUS: Messages = {
       open_cash_shift:
         "{count} cash shift(s) still open: close them in POS before downgrading",
       future_reservations:
-        "{count} future reservation(s) will no longer be viewable in the dashboard",
+        "{count} future reservation(s) are kept: diners can still view or cancel them, but the dashboard can no longer manage them or take new ones. They come back on upgrade",
       future_service_bookings:
-        "{count} future service booking(s) will no longer be viewable in the dashboard",
-      active_coupons: "{count} active coupon(s) will stop applying",
+        "{count} future service booking(s) are kept: diners can still view or cancel them, but the dashboard can no longer manage them or take new ones. They come back on upgrade",
+      active_coupons:
+        "{count} shop coupon(s) are kept but stop applying (delivery-platform promotions are unaffected). They work again on upgrade",
       scheduled_shifts:
-        "{count} scheduled shift(s) will no longer be viewable in the dashboard",
+        "{count} scheduled shift(s) are kept, but the scheduling screens close. They come back on upgrade",
       pending_leave_requests:
-        "{count} pending leave request(s) can no longer be processed",
+        "{count} pending leave request(s) are kept, but the leave screens close. They come back on upgrade",
       tracked_ingredients:
-        "Stock for {count} ingredient(s) will no longer be tracked",
+        "Stock for {count} ingredient(s) is still deducted automatically by orders, but you can no longer view or manage it. It comes back on upgrade",
       connected_platforms:
-        "{count} connected delivery platform(s) will be disconnected",
+        "{count} delivery platform(s) will keep sending orders; after the change you can still disconnect in the dashboard, but you can no longer change settings or sync the menu",
     },
     errors: {
       unchanged: "You are already on this plan.",
