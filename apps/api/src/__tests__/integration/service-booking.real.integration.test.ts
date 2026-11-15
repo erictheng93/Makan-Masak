@@ -23,6 +23,7 @@ import {
 import {
   restaurants,
   restaurantServiceItems,
+  shopSubscriptions,
   serviceBookings,
   serviceBookingSlots,
   coupons,
@@ -67,6 +68,10 @@ async function seedRestaurant(
     district: "West",
     phone: "0900000000",
   });
+  // Public create/waitlist routes are gated on the `reservations` module.
+  await testDb.drizzle
+    .insert(shopSubscriptions)
+    .values({ restaurantId: id, planTier: "pro" });
 }
 
 async function seedService(options: {

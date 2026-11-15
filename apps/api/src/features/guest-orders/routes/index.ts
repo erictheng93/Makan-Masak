@@ -53,6 +53,7 @@ import { ephemeralStore } from "../../../shared/utils/ephemeral-store";
 import { meterEmit } from "../../../shared/utils/meter";
 import { validateBody } from "../../../shared/middleware";
 import { deferAfterResponse } from "../../../shared/utils/defer-after-response";
+import { assertOrderCouponsAllowed } from "../../coupons/services/coupons-module";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -194,6 +195,12 @@ app.post(
         data.restaurantId,
       );
     }
+
+    await assertOrderCouponsAllowed(
+      c.env,
+      data.restaurantId,
+      Boolean(data.couponCode || data.couponCodes?.length),
+    );
 
     // 4. Create order via OrdersService
     const fulfillmentType =

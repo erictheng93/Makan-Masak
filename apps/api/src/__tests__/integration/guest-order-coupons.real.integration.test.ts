@@ -14,6 +14,8 @@ import {
   eq,
   menuItems,
   orders,
+  shopSubscriptions,
+  type PlanTier,
 } from "@makanmasak/database";
 import {
   createRealIntegrationTestApp,
@@ -49,6 +51,28 @@ describe("Guest coupon checkout — real D1 (#382)", () => {
   });
   afterAll(async () => {
     await testApp?.dispose();
+  });
+
+  it("refuses a coupon at a shop whose plan lacks coupons, and still takes the plain order", async () => {
+    const shop = await seedShop("basic");
+    const coupon = await seed.coupon(shop.restaurantId, {
+      discountType: "fixed",
+      discountValueCents: 2000,
+    });
+
+    const refused = await postOrder(shop, coupon.code);
+    expect(refused.status).toBe(400);
+    expect(await readError(refused)).toMatchObject({ code: "COUPON_INVALID" });
+    const usage = await testApp.testDb.drizzle
+      .select()
+      .from(couponUsage)
+      .where(eq(couponUsage.couponId, coupon.id));
+    expect(usage).toHaveLength(0);
+
+    const plain = await postOrder(shop, undefined);
+    expect(plain.status).toBe(201);
+    const created = await readData<CreatedOrder>(plain);
+    expect(created.order.discountAmount).toBe(0);
   });
 
   it.each([
@@ -302,8 +326,12 @@ describe("Guest coupon checkout — real D1 (#382)", () => {
     expect(await usedCount(coupon.id)).toBe(1);
   });
 
-  async function seedShop(): Promise<Shop> {
+  async function seedShop(planTier: PlanTier = "pro"): Promise<Shop> {
     const restaurant = await seed.restaurant({ enableShopMode: true });
+    // Coupons are honoured only where the plan includes the `coupons` module.
+    await testApp.testDb.drizzle
+      .insert(shopSubscriptions)
+      .values({ restaurantId: String(restaurant.id), planTier });
     const item = await seed.menuItem(restaurant.id);
     return { restaurantId: restaurant.id, menuItemId: item.id };
   }

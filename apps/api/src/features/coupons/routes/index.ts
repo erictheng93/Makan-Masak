@@ -22,6 +22,7 @@ import {
   validateParams,
 } from "../../../middleware/validation";
 import { CouponsService } from "../services/CouponsService";
+import { resolveRestaurantIdFromJsonBody } from "../../../shared/utils/request-restaurant";
 import {
   validateCouponSchema,
   createCouponSchema,
@@ -112,6 +113,9 @@ routes.post(
   "/validate",
   optionalCanonicalCustomerAuthMiddleware,
   validateBody(validateCouponSchema),
+  // The two diner endpoints answer for the shop named in the request, so a
+  // shop that dropped the module stops advertising and honouring coupons.
+  moduleGate("coupons", resolveRestaurantIdFromJsonBody),
   async (c) => {
     const data = c.get("validatedBody") as ValidateCouponInput;
     const customer = c.get("customer");
@@ -151,6 +155,7 @@ routes.post(
 routes.get(
   "/available/:restaurantId",
   validateParams(restaurantIdParamSchema),
+  moduleGate("coupons", (c) => c.req.param("restaurantId")),
   async (c) => {
     const { restaurantId } = c.get("validatedParams") as RestaurantIdParamInput;
     const couponsService = createCouponsService(c.env);

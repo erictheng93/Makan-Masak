@@ -153,9 +153,21 @@ function createMockDb() {
 function createEnv(
   options: {
     customer?: Record<string, unknown> | null;
+    /** Cached plan of restaurant-1; coupons are honoured only on plans with them. */
+    planTier?: "basic" | "pro";
   } = {},
 ) {
-  const kv = new Map<string, string>();
+  const kv = new Map<string, string>([
+    [
+      "subscription:restaurant-1",
+      JSON.stringify({
+        isActive: true,
+        planTier: options.planTier ?? "pro",
+        moduleOverrides: {},
+        trialEndsAt: null,
+      }),
+    ],
+  ]);
   const ephemeral = new Map<string, string>();
   return {
     DB: {
@@ -166,7 +178,10 @@ function createEnv(
       })),
     },
     CACHE_KV: {
-      get: vi.fn(async (key: string) => kv.get(key) ?? null),
+      get: vi.fn(async (key: string, type?: string) => {
+        const value = kv.get(key) ?? null;
+        return value !== null && type === "json" ? JSON.parse(value) : value;
+      }),
       put: vi.fn(async (key: string, value: string) => {
         kv.set(key, value);
       }),
@@ -609,6 +624,24 @@ describe("guest order routes", () => {
       undefined,
       expect.objectContaining({}),
     );
+  });
+
+  it("refuses a coupon at a shop whose plan lacks the coupons module", async () => {
+    setSelectFixtures({ restaurants: [[activeGuestRestaurant()]] });
+    const response = await createRoutesWithApiErrorHandler().fetch(
+      new Request("https://test/", {
+        method: "POST",
+        headers: { "X-Guest-Device-Id": "guest-device-identifier-123" },
+        body: JSON.stringify(validGuestOrderBody({ couponCodes: ["SAVE10"] })),
+      }),
+      createEnv({ planTier: "basic" }) as never,
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "COUPON_INVALID" },
+    });
+    expect(createOrder).not.toHaveBeenCalled();
   });
 
   it("accepts the sticker that is currently live", async () => {

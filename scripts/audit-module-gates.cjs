@@ -5,6 +5,14 @@ const path = require("node:path");
 
 const ROOT = path.resolve(__dirname, "..");
 
+// Presence check only: it proves each file calls moduleGate for its module
+// somewhere, not that every route sits behind it. A diner route registered
+// before a router's `app.use("/*", moduleGate(...))` passes here while being
+// ungated, which is how the public reservation/booking/queue/coupon leaks went
+// unnoticed. Route coverage lives in tests that hit the routes with and
+// without the module: the features' routes/module-gate.test.ts files and
+// apps/api/src/__tests__/integration/diner-module-gates.real.integration.test.ts.
+
 const PROTECTED = [
   ["/menu/*", "menu_management", "apps/api/src/features/menu/routes/index.ts"],
   [
@@ -50,6 +58,11 @@ const PROTECTED = [
     "/reservations/*",
     "reservations",
     "apps/api/src/features/reservations/routes/index.ts",
+  ],
+  [
+    "/service-bookings/*",
+    "reservations",
+    "apps/api/src/features/service-bookings/routes/index.ts",
   ],
   [
     "/waiting-list/*",

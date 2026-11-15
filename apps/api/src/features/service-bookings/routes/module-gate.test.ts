@@ -12,8 +12,9 @@
  * missing/misplaced `app.use("/*", moduleGate(...))` line fails these tests.
  * The gate's own tier x module matrix is exhaustively covered in
  * middleware/moduleGate.test.ts; this file only proves the wiring: which
- * tiers get through on a staff route, and that public routes registered
- * before the auth boundary are never touched by the gate at all.
+ * tiers get through on a staff route, that a diner cannot START a booking
+ * at a shop without the module, and that an existing booking can still be
+ * read, cancelled and paid there (those routes never touch the gate).
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -53,6 +54,11 @@ vi.mock("../../../middleware/rateLimiter", () => ({
 
 const listByRestaurant = vi.hoisted(() => vi.fn());
 const createBooking = vi.hoisted(() => vi.fn());
+const createRecurringBookings = vi.hoisted(() => vi.fn());
+const joinWaitlist = vi.hoisted(() => vi.fn());
+const getByConfirmationCode = vi.hoisted(() => vi.fn());
+const cancelByConfirmationCode = vi.hoisted(() => vi.fn());
+const payWithCredits = vi.hoisted(() => vi.fn());
 
 vi.mock("../services/ServiceBookingService", () => ({
   MAX_BATCH_SLOT_CREATION_COUNT: 1000,
@@ -60,6 +66,11 @@ vi.mock("../services/ServiceBookingService", () => ({
     return {
       listByRestaurant,
       createBooking,
+      createRecurringBookings,
+      joinWaitlist,
+      getByConfirmationCode,
+      cancelByConfirmationCode,
+      payWithCredits,
     };
   }),
 }));
@@ -116,18 +127,22 @@ class FakeKv {
 
 function subscription(
   planTier: CachedSubscription["planTier"],
+  moduleOverrides: Record<string, boolean> = {},
 ): CachedSubscription {
-  return { isActive: true, planTier, moduleOverrides: {}, trialEndsAt: null };
+  return { isActive: true, planTier, moduleOverrides, trialEndsAt: null };
 }
 
 /** Real moduleGate reads only CACHE_KV on a cache hit; DB stays poisoned to prove that. */
 function envWithSubscription(
   restaurantId: string,
   planTier: CachedSubscription["planTier"],
+  moduleOverrides: Record<string, boolean> = {},
 ) {
   return {
     DB: poisonedBinding("DB"),
-    CACHE_KV: new FakeKv({ [restaurantId]: subscription(planTier) }),
+    CACHE_KV: new FakeKv({
+      [restaurantId]: subscription(planTier, moduleOverrides),
+    }),
   } as unknown as Record<string, unknown>;
 }
 
@@ -236,29 +251,100 @@ describe("service-bookings staff routes are gated on the reservations module", (
   });
 });
 
-describe("public service-bookings routes bypass the staff auth/module boundary", () => {
-  it("POST / (public booking creation) succeeds without a staff subscription", async () => {
-    createBooking.mockResolvedValue({
-      id: "booking-1",
-      restaurantId: "rest-basic",
-      status: "pending",
-    });
+const bookingBody = {
+  serviceItemId: 10,
+  customerName: "Guest",
+  customerPhone: "0911222333",
+  bookingDate: "2026-06-05",
+  bookingTime: "14:00",
+};
 
-    const res = await req("/", "POST", poisonedEnv(), {
-      restaurantId: "rest-basic",
-      serviceItemId: 10,
-      customerName: "Guest",
-      customerPhone: "0911222333",
-      bookingDate: "2026-06-05",
-      bookingTime: "14:00",
+describe("public service-bookings routes and the reservations module", () => {
+  it("lets a diner book at a shop whose plan includes reservations, without staff auth", async () => {
+    createBooking.mockResolvedValue({ id: "booking-1", status: "pending" });
+
+    const res = await req("/", "POST", envWithSubscription("rest-pro", "pro"), {
+      ...bookingBody,
+      restaurantId: "rest-pro",
     });
 
     expect(res.status).toBe(201);
     expect(createBooking).toHaveBeenCalledOnce();
-    // The strongest possible proof: authMiddleware (and therefore the
-    // moduleGate registered immediately after it) never ran for this
-    // request, and neither binding the gate would touch was accessed —
-    // the poisoned Proxies would have thrown otherwise.
+    expect(createBooking).toHaveBeenCalledWith(
+      expect.objectContaining({ restaurantId: "rest-pro" }),
+    );
     expect(authMiddlewareCalls.count).toBe(0);
+  });
+
+  it.each([
+    ["/", bookingBody],
+    [
+      "/recurring",
+      {
+        ...bookingBody,
+        bookingDate: undefined,
+        startDate: "2026-06-05",
+        count: 2,
+      },
+    ],
+    ["/waitlist", bookingBody],
+  ])("refuses POST %s at a shop without the module", async (path, body) => {
+    const res = await req(
+      path,
+      "POST",
+      envWithSubscription("rest-basic", "basic"),
+      { ...body, restaurantId: "rest-basic" },
+    );
+
+    expect(res.status).toBe(403);
+    await expect(res.json()).resolves.toMatchObject({
+      error: { code: "MODULE_NOT_ENABLED" },
+    });
+    expect(createBooking).not.toHaveBeenCalled();
+    expect(createRecurringBookings).not.toHaveBeenCalled();
+    expect(joinWaitlist).not.toHaveBeenCalled();
+  });
+
+  it("refuses a voucher where the shop has reservations but not coupons", async () => {
+    const res = await req(
+      "/",
+      "POST",
+      envWithSubscription("rest-basic", "basic", { reservations: true }),
+      { ...bookingBody, restaurantId: "rest-basic", voucherCode: "SAVE10" },
+    );
+
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toMatchObject({
+      error: { code: "VOUCHER_NOT_APPLICABLE" },
+    });
+    expect(createBooking).not.toHaveBeenCalled();
+  });
+
+  it("still serves an existing booking's lookup, cancel and payment with the module gone", async () => {
+    getByConfirmationCode.mockResolvedValue({ id: "booking-1" });
+    cancelByConfirmationCode.mockResolvedValue({ id: "booking-1" });
+    payWithCredits.mockResolvedValue({ id: "booking-1" });
+
+    // Poisoned bindings: none of these paths may consult the subscription.
+    const lookup = await req("/verify/CODE-1", "GET", poisonedEnv());
+    const cancel = await req(
+      "/verify/CODE-1/cancel",
+      "POST",
+      poisonedEnv(),
+      {},
+    );
+    const pay = await req("/booking-1/pay", "POST", poisonedEnv(), {
+      creditCardPublicId: "card-1",
+    });
+
+    expect([lookup.status, cancel.status, pay.status]).toEqual([200, 200, 200]);
+    expect(getByConfirmationCode).toHaveBeenCalledWith(
+      "CODE-1",
+      expect.objectContaining({ requireContact: false }),
+    );
+    expect(cancelByConfirmationCode).toHaveBeenCalledOnce();
+    expect(payWithCredits).toHaveBeenCalledWith(
+      expect.objectContaining({ bookingId: "booking-1" }),
+    );
   });
 });
