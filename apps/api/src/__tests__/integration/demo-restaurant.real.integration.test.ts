@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { orders, waitingList } from "@makanmasak/database";
+import { orders, shopSubscriptions, waitingList } from "@makanmasak/database";
 import {
   createRealIntegrationTestApp,
   type RealIntegrationTestApp,
@@ -31,6 +31,11 @@ describe("Demo restaurant — real D1", () => {
       isDemo,
       name: isDemo ? "Showcase Kitchen" : "Real Kitchen",
     });
+    // Like every restaurant-creation path, give the shop its trial row, so the
+    // demo refusal is what is tested rather than a missing subscription.
+    await testApp.testDb.drizzle
+      .insert(shopSubscriptions)
+      .values({ restaurantId: String(restaurant.id), planTier: "trial" });
     const item = await seed.menuItem(restaurant.id);
     return { restaurantId: restaurant.id, menuItemId: item.id };
   }

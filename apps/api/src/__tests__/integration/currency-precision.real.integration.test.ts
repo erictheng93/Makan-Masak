@@ -73,6 +73,9 @@ describe("currency precision — real integration", () => {
       },
     });
     const restaurantId = String(restaurant.id);
+    // Every restaurant-creation path provisions a subscription; coupons on
+    // orders are honoured only where it includes `coupons`.
+    await insertActiveSubscription(restaurantId);
     await seed.user({
       id: 1,
       role: 0,
@@ -203,7 +206,6 @@ describe("currency precision — real integration", () => {
       ] as const) {
         await testApp.testDb.truncateAll();
         const { restaurantId, token } = await restaurantWith({ currency });
-        await insertActiveSubscription(restaurantId);
         const item = await seed.menuItem(restaurantId, { isAvailable: true });
         const [category] = await testApp.testDb.drizzle
           .select({ categoryId: menuItems.categoryId })
