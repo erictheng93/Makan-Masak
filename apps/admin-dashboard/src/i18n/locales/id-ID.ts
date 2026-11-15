@@ -6646,7 +6646,7 @@ const idID: Messages = {
       future_service_bookings:
         "{count} pemesanan layanan mendatang tetap disimpan: pelanggan masih bisa melihat atau membatalkannya, tetapi dasbor tidak lagi dapat mengelola atau menerima pemesanan baru. Pulih saat upgrade",
       active_coupons:
-        "{count} kupon toko tetap disimpan tetapi berhenti berlaku (promosi platform pengiriman tidak terpengaruh). Berlaku lagi saat upgrade",
+        "{count} kupon toko tetap disimpan tetapi berhenti berlaku (kupon yang diterbitkan platform MakanMasak tidak terpengaruh). Berlaku lagi saat upgrade",
       scheduled_shifts:
         "{count} shift terjadwal tetap disimpan, tetapi layar penjadwalan ditutup. Pulih saat upgrade",
       pending_leave_requests:

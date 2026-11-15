@@ -6606,7 +6606,7 @@ const viVN: Messages = {
       future_service_bookings:
         "{count} lượt đặt dịch vụ sắp tới vẫn được giữ: khách vẫn xem hoặc hủy được, nhưng trang quản trị không còn quản lý hay nhận đặt mới. Sẽ khôi phục khi nâng cấp",
       active_coupons:
-        "{count} phiếu giảm giá của cửa hàng vẫn được giữ nhưng ngừng áp dụng (khuyến mãi của nền tảng giao hàng không bị ảnh hưởng). Dùng lại được khi nâng cấp",
+        "{count} phiếu giảm giá của cửa hàng vẫn được giữ nhưng ngừng áp dụng (phiếu do nền tảng MakanMasak phát hành không bị ảnh hưởng). Dùng lại được khi nâng cấp",
       scheduled_shifts:
         "{count} ca làm đã xếp lịch vẫn được giữ, nhưng màn hình xếp ca sẽ đóng. Sẽ khôi phục khi nâng cấp",
       pending_leave_requests:

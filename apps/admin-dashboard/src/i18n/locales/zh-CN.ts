@@ -6421,7 +6421,7 @@ const zhCN: Messages = {
       future_service_bookings:
         "{count} 笔未来的服务预约会保留，顾客仍可查看或取消，但后台无法再管理，也不能接受新预约；升级后会恢复",
       active_coupons:
-        "{count} 张店内优惠券会保留但停止适用（外卖平台的促销不受影响）；升级后会恢复",
+        "{count} 张店内优惠券会保留但停止适用（平台发行的优惠券不受影响）；升级后会恢复",
       scheduled_shifts:
         "{count} 个已排定的班表会保留，但排班页面将关闭；升级后会恢复",
       pending_leave_requests:

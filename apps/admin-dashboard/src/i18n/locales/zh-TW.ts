@@ -5007,7 +5007,7 @@ const zhTWCore = {
     notSynced: "尚未同步",
     syncing: "同步中...",
     syncNow: "立即同步",
-    disconnect: "斷開連接",
+    disconnect: "中斷連線",
     comingSoon: "即將推出",
     foodpandaComingSoon: "Foodpanda 串接功能即將推出，敬請期待",
     webhookLogs: "Webhook 紀錄",
@@ -5023,7 +5023,7 @@ const zhTWCore = {
     confirmDisconnectDesc:
       "斷開 Uber Eats 連接後，將無法再接收來自該平台的訂單。已存在的訂單不受影響。",
     disconnecting: "斷開中...",
-    confirmDisconnect: "確認斷開",
+    confirmDisconnect: "確認中斷連線",
     syncStatus: {
       syncing: "同步中",
       success: "成功",
@@ -6707,7 +6707,7 @@ const zhTWRuntimeKeys = {
       future_service_bookings:
         "{count} 筆未來的服務預約會保留，顧客仍可查看或取消，但後台無法再管理，也不能接受新預約；升級後會恢復",
       active_coupons:
-        "{count} 張店內優惠券會保留但停止適用（外送平台的促銷不受影響）；升級後會恢復",
+        "{count} 張店內優惠券會保留但停止適用（平台發行的優惠券不受影響）；升級後會恢復",
       scheduled_shifts:
         "{count} 個已排定的班表會保留，但排班畫面將關閉；升級後會恢復",
       pending_leave_requests:

@@ -67,7 +67,7 @@ describe("IntegrationsSettings without the platform_integration module", () => {
     expect(
       wrapper.get('[data-testid="integration-orders-continue"]').text(),
     ).toContain("訂單仍會持續送進來");
-    expect(wrapper.text()).toContain("斷開連接");
+    expect(wrapper.text()).toContain("中斷連線");
     expect(wrapper.find('[role="switch"]').exists()).toBe(false);
     expect(wrapper.text()).not.toContain("立即同步");
     expect(wrapper.text()).not.toContain("Foodpanda");
@@ -75,12 +75,12 @@ describe("IntegrationsSettings without the platform_integration module", () => {
 
     const button = wrapper
       .findAll("button")
-      .find((b) => b.text() === "斷開連接")!;
+      .find((b) => b.text() === "中斷連線")!;
     await button.trigger("click");
     await flushPromises();
     const confirm = wrapper
       .findAll("button")
-      .find((b) => b.text() === "確認斷開")!;
+      .find((b) => b.text() === "確認中斷連線")!;
     await confirm.trigger("click");
     await flushPromises();
 

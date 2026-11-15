@@ -6608,7 +6608,7 @@ const enUS: Messages = {
       future_service_bookings:
         "{count} future service booking(s) are kept: diners can still view or cancel them, but the dashboard can no longer manage them or take new ones. They come back on upgrade",
       active_coupons:
-        "{count} shop coupon(s) are kept but stop applying (delivery-platform promotions are unaffected). They work again on upgrade",
+        "{count} shop coupon(s) are kept but stop applying (coupons issued by the MakanMasak platform are unaffected). They work again on upgrade",
       scheduled_shifts:
         "{count} scheduled shift(s) are kept, but the scheduling screens close. They come back on upgrade",
       pending_leave_requests:
