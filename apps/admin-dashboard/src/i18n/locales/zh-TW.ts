@@ -6688,6 +6688,13 @@ const zhTWRuntimeKeys = {
       effectiveCycleEnd:
         "將於本期結束（{date}）生效，在此之前仍可使用目前方案的功能。",
       trialNoReturn: "離開試用版後，無法再回到試用版。",
+      limitsLower: "用量上限將降低",
+      limitLowered: {
+        orders: "每期訂單上限將由 {from} 降為 {to}",
+        print: "每期列印上限將由 {from} 降為 {to}",
+        ai: "每期 AI 請求上限將由 {from} 降為 {to}",
+      },
+      trialNoReturnLimits: "離開試用版後無法再切回，額度降低後只能再升級方案",
       gained: "新增的功能",
       lost: "將失去的功能",
       blocking: "需要先處理",

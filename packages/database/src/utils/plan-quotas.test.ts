@@ -13,6 +13,13 @@ describe("PLAN_QUOTAS", () => {
     });
   });
 
+  it("gives basic shops 5000 orders, more than the 3000 trial", () => {
+    expect(PLAN_QUOTAS.basic["orders.created"]).toEqual({
+      soft: 4_000,
+      hard: 5_000,
+    });
+  });
+
   it("keeps the soft limit at 80% of the hard limit for every quota", () => {
     for (const quotas of Object.values(PLAN_QUOTAS)) {
       for (const quota of Object.values(quotas)) {

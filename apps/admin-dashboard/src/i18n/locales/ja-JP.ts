@@ -6585,6 +6585,14 @@ const jaJP: Messages = {
       effectiveCycleEnd:
         "今期の終了時（{date}）に反映されます。それまでは現在のプランの機能を利用できます。",
       trialNoReturn: "トライアルを終了すると、トライアルには戻れません。",
+      limitsLower: "利用上限が下がります",
+      limitLowered: {
+        orders: "期間あたりの注文数の上限が {from} から {to} に下がります",
+        print: "期間あたりの印刷数の上限が {from} から {to} に下がります",
+        ai: "期間あたりの AI リクエスト数の上限が {from} から {to} に下がります",
+      },
+      trialNoReturnLimits:
+        "トライアルを終了すると元には戻せません。上限が下がった後は、上位のプランにアップグレードする以外に引き上げられません。",
       gained: "利用できるようになる機能",
       lost: "利用できなくなる機能",
       blocking: "先に対応が必要です",

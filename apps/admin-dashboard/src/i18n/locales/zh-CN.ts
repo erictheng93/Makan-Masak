@@ -6402,6 +6402,13 @@ const zhCN: Messages = {
       effectiveCycleEnd:
         "将于本期结束（{date}）生效，在此之前仍可使用当前方案的功能。",
       trialNoReturn: "离开试用版后，无法再回到试用版。",
+      limitsLower: "用量上限将降低",
+      limitLowered: {
+        orders: "每期订单上限将由 {from} 降为 {to}",
+        print: "每期打印上限将由 {from} 降为 {to}",
+        ai: "每期 AI 请求上限将由 {from} 降为 {to}",
+      },
+      trialNoReturnLimits: "离开试用版后无法再切回，额度降低后只能再升级方案",
       gained: "新增的功能",
       lost: "将失去的功能",
       blocking: "需要先处理",

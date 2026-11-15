@@ -6588,6 +6588,14 @@ const enUS: Messages = {
       effectiveCycleEnd:
         "Takes effect at the end of this period ({date}); until then you keep your current plan's features.",
       trialNoReturn: "Once you leave the trial you cannot go back to it.",
+      limitsLower: "Usage limits will go down",
+      limitLowered: {
+        orders: "Orders per period limit will drop from {from} to {to}",
+        print: "Print jobs per period limit will drop from {from} to {to}",
+        ai: "AI requests per period limit will drop from {from} to {to}",
+      },
+      trialNoReturnLimits:
+        "Once you leave the trial you cannot switch back. After a limit goes down, the only way up is a higher plan.",
       gained: "What you gain",
       lost: "What you lose",
       blocking: "Resolve this first",
