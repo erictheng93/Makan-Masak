@@ -21,6 +21,8 @@ import {
   type FormattedUser,
   type UserStats,
 } from "../types";
+import { isCurrencyAlignedCents } from "@makanmasak/utils";
+import { resolveRestaurantCurrency } from "../../../shared/utils/restaurant-currency";
 import { KVCacheService } from "../../../core/cache";
 import { ManagementTenantClient } from "../../../services/managementTenantClient";
 
@@ -52,6 +54,7 @@ interface UserRecord {
   role: number;
   restaurantId?: string | null;
   adminTier?: string | null;
+  hourlyRateCents?: number | null;
   email?: string | null;
   fullName?: string | null;
   phone?: string | null;
@@ -138,8 +141,62 @@ export class UsersService {
     );
   }
 
-  formatUser(user: UserRecord): FormattedUser {
+  /** Wages are visible to platform admins and to the owner of the same shop only. */
+  canSeeWage(viewer: CurrentUser | undefined, targetRestaurantId?: unknown) {
+    if (!viewer) return false;
+    if (viewer.role === USER_ROLES.ADMIN) return true;
+    return (
+      viewer.role === USER_ROLES.OWNER &&
+      viewer.restaurantId != null &&
+      targetRestaurantId != null &&
+      String(viewer.restaurantId) === String(targetRestaurantId)
+    );
+  }
+
+  /**
+   * Gate for writing `hourlyRateCents`. Roles 2-4 are refused outright (also
+   * for their own row); an owner only for their own shop. Non-null values must
+   * sit on the restaurant currency's step (TWD: whole dollars = x100 cents).
+   */
+  private async assertWageWritable(
+    currentUser: CurrentUser,
+    targetRestaurantId: string | null | undefined,
+    cents: number | null | undefined,
+  ): Promise<void> {
+    if (cents === undefined) return;
+    if (
+      currentUser.role !== USER_ROLES.ADMIN &&
+      currentUser.role !== USER_ROLES.OWNER
+    ) {
+      throw forbidden("Only owners can set wages", "WAGE_FORBIDDEN");
+    }
+    if (!targetRestaurantId) {
+      throw badRequest(
+        "Platform accounts have no hourly wage",
+        "WAGE_NOT_APPLICABLE",
+      );
+    }
+    if (!this.canSeeWage(currentUser, targetRestaurantId)) {
+      throw forbidden("Only owners can set wages", "WAGE_FORBIDDEN");
+    }
+    if (cents === null) return;
+    const currency = await resolveRestaurantCurrency(
+      this.env.DB,
+      targetRestaurantId,
+    );
+    if (!isCurrencyAlignedCents(cents, currency)) {
+      throw badRequest(
+        `Hourly rate must be a whole ${currency} amount`,
+        "CURRENCY_PRECISION",
+      );
+    }
+  }
+
+  formatUser(user: UserRecord, viewer?: CurrentUser): FormattedUser {
     return {
+      ...(this.canSeeWage(viewer, user.restaurantId)
+        ? { hourlyRateCents: user.hourlyRateCents ?? null }
+        : {}),
       id: user.id,
       username: user.username,
       role: user.role,
@@ -208,7 +265,9 @@ export class UsersService {
           );
 
     return {
-      data: result.users.map((user: UserRecord) => this.formatUser(user)),
+      data: result.users.map((user: UserRecord) =>
+        this.formatUser(user, currentUser),
+      ),
       pagination: result.pagination,
     };
   }
@@ -223,7 +282,7 @@ export class UsersService {
       throw forbidden("Access denied");
     }
 
-    return this.formatUser(targetUser);
+    return this.formatUser(targetUser, currentUser);
   }
 
   async createUser(
@@ -260,6 +319,12 @@ export class UsersService {
       );
     }
 
+    await this.assertWageWritable(
+      currentUser,
+      effectiveRestaurantId,
+      userData.hourlyRateCents,
+    );
+
     const dbUserData = {
       ...userData,
       restaurantId: effectiveRestaurantId,
@@ -294,7 +359,7 @@ export class UsersService {
       }
     }
 
-    return this.formatUser(newUser);
+    return this.formatUser(newUser, currentUser);
   }
 
   async updateUser(
@@ -308,8 +373,14 @@ export class UsersService {
       throw forbidden("Access denied");
     }
 
+    await this.assertWageWritable(
+      currentUser,
+      targetUser.restaurantId,
+      updateData.hourlyRateCents,
+    );
+
     const updatedUser = await this.userService.updateUser(userId, updateData);
-    return this.formatUser(updatedUser);
+    return this.formatUser(updatedUser, currentUser);
   }
 
   /**
@@ -348,7 +419,7 @@ export class UsersService {
     }
 
     if (targetUser.role === role) {
-      return this.formatUser(targetUser);
+      return this.formatUser(targetUser, currentUser);
     }
 
     const updatedUser = await this.userService.changeUserRole(userId, role, {
@@ -356,7 +427,7 @@ export class UsersService {
       restaurantId: targetUser.restaurantId ?? null,
       previousRole: targetUser.role,
     });
-    return this.formatUser(updatedUser);
+    return this.formatUser(updatedUser, currentUser);
   }
 
   async changePassword(
@@ -473,7 +544,7 @@ export class UsersService {
     await new KVCacheService(this.env.CACHE_KV).delete(
       `user-profile:${userId}`,
     );
-    return this.formatUser({ ...target, adminTier });
+    return this.formatUser({ ...target, adminTier }, currentUser);
   }
 
   async getUserStats(
@@ -537,6 +608,8 @@ export class UsersService {
       limit,
     );
 
-    return results.map((user: UserRecord) => this.formatUser(user));
+    return results.map((user: UserRecord) =>
+      this.formatUser(user, currentUser),
+    );
   }
 }

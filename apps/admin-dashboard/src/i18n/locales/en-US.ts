@@ -1894,6 +1894,14 @@ const enUS: Messages = {
     },
   },
   dailyPnl: {
+    export: {
+      label: "Export",
+      csv: "CSV",
+      excel: "Excel",
+      print: "Print",
+      item: "Item",
+      amount: "Amount",
+    },
     mode: { label: "View", day: "Day", range: "Range" },
     fees: {
       payment: "Payment fees (estimated)",
@@ -1903,7 +1911,9 @@ const enUS: Messages = {
     },
     labor: {
       title: "Labor (scheduled shifts)",
-      missingRate: "{count} shift(s) have no hourly rate and are not counted",
+      missingRate:
+        "{count} shift(s) have no wage on the employee or rate on the shift template and are not counted",
+      setWage: "Set wages in Employees",
       expenseNote:
         "Wages for scheduled staff are already counted automatically under Labor. Use the Labor expense category only for wages outside the schedule, to avoid counting them twice.",
     },
@@ -1913,13 +1923,24 @@ const enUS: Messages = {
       paymentMethods: "Payment fee rates",
       platforms: "Delivery platform commission",
       save: "Save rates",
-      appliesToPast:
-        "Rates apply to past days too, so earlier statements will change.",
       loadFailed: "Could not load fee rates. Please try again.",
       saveFailed: "Could not save fee rates. Please try again.",
       invalid: "Rates must be between 0 and 100, with at most two decimals.",
       saved: "Fee rates saved.",
       close: "Close",
+      appliesFromDate:
+        "Rates apply from the effective date onward; earlier days keep the rates they had.",
+      effectiveFrom: "Effective from",
+      history: "History",
+      historyHint:
+        "Select an entry to load it into the form; saving replaces the version with that date.",
+      fromStart: "From the start",
+      allZero: "All 0%",
+      dateInvalid: "The effective date cannot be in the future.",
+      tooManyVersions:
+        "Rate versions are capped at 60; reuse an existing effective date.",
+      conflict:
+        "Someone else just updated the rates. The form was reloaded; please try again.",
       methods: {
         cash: "Cash",
         card: "Credit Card",
@@ -1949,12 +1970,11 @@ const enUS: Messages = {
       invalid: "Invalid date range: at most 92 days, and not in the future.",
       totals: "Range totals",
       hint: "Select a day to open its daily statement.",
-      export: "Export CSV",
       tableLabel: "Daily profit and loss breakdown",
       columns: {
         date: "Date",
         orders: "Orders",
-        netRevenue: "Net revenue",
+        netRevenue: "Net revenue (ex. tax)",
         cogs: "COGS",
         grossProfit: "Gross profit",
         fees: "Fees & commission",
@@ -1974,7 +1994,12 @@ const enUS: Messages = {
       discount: "Discounts",
       refund: "Refunds",
       net: "Net revenue",
-      taxService: "Incl. tax {tax} / service charge {service}",
+      collected: "Amount collected",
+      tax: "Tax collected",
+      netExTax: "Net revenue (ex. tax)",
+      collectedNote:
+        "Amount collected is the revenue figure shown in Analytics.",
+      serviceMemo: "Incl. service charge {service}",
       orders: "{count} orders",
     },
     cogs: {
@@ -2020,6 +2045,7 @@ const enUS: Messages = {
     },
     errors: {
       loadFailed: "Could not load the statement. Please try again.",
+      exportFailed: "Export failed, please try again.",
       precision: "That amount is not a valid step for this currency.",
       notFound: "That expense was not found. It may already be deleted.",
       addFailed: "Could not add the expense. Please try again.",
@@ -4138,6 +4164,9 @@ const enUS: Messages = {
         "Employees you remove appear here and can be restored at any time.",
     },
     modal: {
+      hourlyRateLabel: "Hourly wage ({symbol}, optional)",
+      hourlyRateHint:
+        "Used for labor cost in the P&L; leave blank to use the shift template's rate.",
       editTitle: "Edit Employee",
       addTitle: "Add Employee",
       usernameLabel: "Username",
@@ -4197,6 +4226,8 @@ const enUS: Messages = {
       createdSignIn: "Employee created. They sign in at {url}",
     },
     errors: {
+      hourlyRatePrecision:
+        "The hourly wage does not fit this currency's smallest unit.",
       saveFailed: "Save failed",
       resetFailed: "Password reset failed",
       toggleFailed: "Status toggle failed",

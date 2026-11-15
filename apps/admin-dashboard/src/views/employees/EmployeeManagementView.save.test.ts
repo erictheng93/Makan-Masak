@@ -142,4 +142,17 @@ describe("EmployeeManagementView save", () => {
     expect(toastError).toHaveBeenCalledOnce();
     expect(toastError).toHaveBeenCalledWith(expect.any(String));
   });
+
+  it("maps CURRENCY_PRECISION to a translated wage message", async () => {
+    createUser.mockRejectedValue({
+      response: {
+        data: { error: { code: "CURRENCY_PRECISION", message: "bad" } },
+      },
+    });
+    const wrapper = await openAndSubmit();
+    await flushPromises();
+
+    expect(toastError).toHaveBeenCalledWith("users.errors.hourlyRatePrecision");
+    wrapper.unmount();
+  });
 });

@@ -23,6 +23,7 @@ export interface ApiUser {
   lastLoginAt?: string | null;
   createdAt: string;
   profileImageUrl?: string | null;
+  hourlyRateCents?: number | null;
 }
 
 export function mapApiUser(user: ApiUser) {
@@ -42,5 +43,8 @@ export function mapApiUser(user: ApiUser) {
     lastLoginAt: user.lastLoginAt ?? null,
     createdAt: user.createdAt,
     profileImageUrl: user.profileImageUrl ?? undefined,
+    ...(user.hourlyRateCents !== undefined
+      ? { hourlyRateCents: user.hourlyRateCents }
+      : {}),
   };
 }

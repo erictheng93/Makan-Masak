@@ -1,17 +1,23 @@
 <template>
-  <div class="ui-page min-h-screen bg-ios-bg p-4 md:p-6">
+  <div class="pnl-print-page ui-page min-h-screen bg-ios-bg p-4 md:p-6">
     <div class="mx-auto max-w-3xl">
       <header class="mb-4">
         <h1 class="ui-page-heading text-[22px] font-bold text-ios-text">
           {{ t("dailyPnl.title") }}
         </h1>
-        <p class="mt-1 text-[13px] text-ios-secondary">
+        <p class="pnl-noprint mt-1 text-[13px] text-ios-secondary">
           {{ t("dailyPnl.description") }}
+        </p>
+        <p
+          data-testid="pnl-print-period"
+          class="pnl-print-only mt-1 text-[14px] text-ios-text"
+        >
+          {{ printPeriod }}
         </p>
       </header>
 
       <!-- Same place in both modes; only the date input comes and goes. -->
-      <div class="mb-4 flex flex-wrap items-end gap-3">
+      <div class="pnl-noprint mb-4 flex flex-wrap items-end gap-3">
         <div
           role="group"
           :aria-label="t('dailyPnl.mode.label')"
@@ -56,11 +62,46 @@
             class="mt-1 block rounded-xl bg-white px-3 py-2 text-[14px] text-ios-text shadow-ios-sm outline-none"
           />
         </label>
+        <div
+          v-if="restaurantId && exportReady"
+          role="group"
+          :aria-label="t('dailyPnl.export.label')"
+          class="ml-auto flex items-center gap-2"
+        >
+          <span class="text-[12px] font-medium text-ios-secondary">
+            {{ t("dailyPnl.export.label") }}
+          </span>
+          <button
+            type="button"
+            data-testid="pnl-export-csv"
+            class="rounded-full bg-white px-4 py-2 text-[13px] font-semibold text-ios-text shadow-ios-sm transition-colors duration-200"
+            @click="exportCsv"
+          >
+            {{ t("dailyPnl.export.csv") }}
+          </button>
+          <button
+            type="button"
+            data-testid="pnl-export-xlsx"
+            class="rounded-full bg-white px-4 py-2 text-[13px] font-semibold text-ios-text shadow-ios-sm transition-colors duration-200"
+            @click="exportXlsx"
+          >
+            {{ t("dailyPnl.export.excel") }}
+          </button>
+          <button
+            type="button"
+            data-testid="pnl-print"
+            class="rounded-full bg-ios-blue px-4 py-2 text-[13px] font-semibold text-white transition-colors duration-200"
+            @click="printPage"
+          >
+            {{ t("dailyPnl.export.print") }}
+          </button>
+        </div>
       </div>
 
       <PnlRatesForm
         v-if="ratesOpen && restaurantId"
         :restaurant-id="restaurantId"
+        :today="today"
         @close="ratesOpen = false"
         @saved="onRatesSaved"
       />
@@ -79,6 +120,7 @@
         :today="today"
         :refresh-key="rangeKey"
         @pick="pickDay"
+        @loaded="rangeData = $event"
       />
 
       <div
@@ -162,10 +204,26 @@
                 {{ money(statement.revenue.refundCents) }}
               </dd>
             </div>
+            <template v-if="statement.revenue.taxCents > 0">
+              <div class="flex justify-between py-1.5">
+                <dt class="text-ios-text">
+                  {{ t("dailyPnl.revenue.collected") }}
+                </dt>
+                <dd data-testid="pnl-collected" class="tabular-nums">
+                  {{ money(statement.revenue.collectedCents) }}
+                </dd>
+              </div>
+              <div class="flex justify-between py-1.5">
+                <dt class="text-ios-text">− {{ t("dailyPnl.revenue.tax") }}</dt>
+                <dd data-testid="pnl-tax" class="tabular-nums">
+                  {{ money(statement.revenue.taxCents) }}
+                </dd>
+              </div>
+            </template>
             <div
               class="flex justify-between rounded-xl bg-ios-bg px-3 py-2 font-bold"
             >
-              <dt class="text-ios-text">= {{ t("dailyPnl.revenue.net") }}</dt>
+              <dt class="text-ios-text">= {{ netRevenueLabel }}</dt>
               <dd data-testid="pnl-net-revenue" class="tabular-nums">
                 {{ money(statement.revenue.netRevenueCents) }}
               </dd>
@@ -173,8 +231,7 @@
           </dl>
           <p class="mt-2 text-[12px] text-ios-secondary">
             {{
-              t("dailyPnl.revenue.taxService", {
-                tax: money(statement.revenue.taxCents),
+              t("dailyPnl.revenue.serviceMemo", {
                 service: money(statement.revenue.serviceChargeCents),
               })
             }}
@@ -186,6 +243,13 @@
                 })
               }}
             </span>
+          </p>
+          <p
+            v-if="statement.revenue.taxCents > 0"
+            data-testid="pnl-collected-note"
+            class="mt-1 text-[12px] text-ios-secondary"
+          >
+            {{ t("dailyPnl.revenue.collectedNote") }}
           </p>
 
           <dl class="mt-1 text-[14px]">
@@ -226,7 +290,7 @@
               <button
                 type="button"
                 data-testid="pnl-fees-setup"
-                class="font-semibold text-ios-blue underline underline-offset-2"
+                class="pnl-noprint font-semibold text-ios-blue underline underline-offset-2"
                 @click="ratesOpen = true"
               >
                 {{ t("dailyPnl.fees.setRates") }}
@@ -283,6 +347,13 @@
                 count: statement.labor.shiftsMissingRate,
               })
             }}
+            <RouterLink
+              to="/dashboard/employees"
+              data-testid="pnl-labor-set-wage"
+              class="pnl-noprint font-semibold text-ios-blue underline underline-offset-2"
+            >
+              {{ t("dailyPnl.labor.setWage") }}
+            </RouterLink>
           </p>
 
           <div
@@ -347,7 +418,7 @@
                   :data-testid="`pnl-expense-delete-${expense.id}`"
                   :aria-label="`${t('dailyPnl.expenses.delete')}: ${categoryLabel(expense.category)} ${money(expense.amountCents)}`"
                   :disabled="busy"
-                  class="rounded-full p-2 text-ios-red transition-colors duration-200 hover:bg-ios-red-soft disabled:opacity-50"
+                  class="pnl-noprint rounded-full p-2 text-ios-red transition-colors duration-200 hover:bg-ios-red-soft disabled:opacity-50"
                   @click="removeExpense(expense)"
                 >
                   <Trash2 class="h-4 w-4" aria-hidden="true" />
@@ -361,7 +432,7 @@
 
           <form
             data-testid="pnl-expense-form"
-            class="mt-4 flex flex-wrap items-end gap-3"
+            class="pnl-noprint mt-4 flex flex-wrap items-end gap-3"
             @submit.prevent="submitExpense"
           >
             <label class="text-[12px] font-medium text-ios-secondary">
@@ -413,7 +484,7 @@
               {{ t("dailyPnl.expenses.add") }}
             </button>
           </form>
-          <p class="mt-3 text-[12px] text-ios-secondary">
+          <p class="pnl-noprint mt-3 text-[12px] text-ios-secondary">
             {{ t("dailyPnl.labor.expenseNote") }}
           </p>
         </section>
@@ -423,7 +494,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { RouterLink } from "vue-router";
 import { Trash2 } from "lucide-vue-next";
 import { useToast } from "vue-toastification";
@@ -443,12 +514,19 @@ import {
   type DailyExpense,
   type DailyPnl,
   type ExpenseCategory,
+  type PnlRange,
 } from "@/services/pnlService";
 import PnlRangePanel from "@/components/pnl/PnlRangePanel.vue";
 import PnlRatesForm from "@/components/pnl/PnlRatesForm.vue";
 import { extractApiErrorCode } from "@/utils/errorHandler";
 import {
   PNL_STATUS_CLASS,
+  buildPnlDayCsv,
+  buildPnlDaySheet,
+  buildPnlRangeCsv,
+  buildPnlRangeSheet,
+  downloadCsv,
+  downloadXlsx,
   formatPnlMoney,
   pnlStatus,
   pnlStatusLabel,
@@ -484,6 +562,7 @@ const modes = computed(() => [
   { id: "range" as const, label: t("dailyPnl.mode.range") },
 ]);
 const statement = ref<DailyPnl | null>(null);
+const rangeData = ref<PnlRange | null>(null);
 const isLoading = ref(false);
 const busy = ref(false);
 const form = reactive<{
@@ -517,6 +596,100 @@ const grossMarginLabel = computed(() => {
 
 function money(cents: number): string {
   return formatPnlMoney(cents, currency.value);
+}
+
+/** Exports and print act on whatever the current mode has on screen. */
+const exportReady = computed(() =>
+  mode.value === "day" ? statement.value !== null : rangeData.value !== null,
+);
+
+const printPeriod = computed(() =>
+  mode.value === "range" && rangeData.value
+    ? `${rangeData.value.from} – ${rangeData.value.to}`
+    : date.value,
+);
+
+const netRevenueLabel = computed(() =>
+  (statement.value?.revenue.taxCents ?? 0) > 0
+    ? t("dailyPnl.revenue.netExTax")
+    : t("dailyPnl.revenue.net"),
+);
+
+const rangeHeaders = computed(() => ({
+  date: t("dailyPnl.range.columns.date"),
+  orders: t("dailyPnl.range.columns.orders"),
+  netRevenue: t("dailyPnl.range.columns.netRevenue"),
+  cogs: t("dailyPnl.range.columns.cogs"),
+  grossProfit: t("dailyPnl.range.columns.grossProfit"),
+  fees: t("dailyPnl.range.columns.fees"),
+  labor: t("dailyPnl.range.columns.labor"),
+  expenses: t("dailyPnl.range.columns.expenses"),
+  netProfit: t("dailyPnl.range.columns.netProfit"),
+  totals: t("dailyPnl.range.totals"),
+}));
+
+const dayLabels = computed(() => ({
+  date: t("dailyPnl.date"),
+  item: t("dailyPnl.export.item"),
+  amount: t("dailyPnl.export.amount"),
+  grossSales: t("dailyPnl.revenue.grossSales"),
+  discount: t("dailyPnl.revenue.discount"),
+  refund: t("dailyPnl.revenue.refund"),
+  collected: t("dailyPnl.revenue.collected"),
+  tax: t("dailyPnl.revenue.tax"),
+  netRevenue: t("dailyPnl.revenue.netExTax"),
+  cogs: t("dailyPnl.cogs.title"),
+  grossProfit: t("dailyPnl.cogs.grossProfit"),
+  grossMargin: t("dailyPnl.cogs.grossMargin"),
+  paymentFee: t("dailyPnl.fees.payment"),
+  platformCommission: t("dailyPnl.fees.platform"),
+  labor: t("dailyPnl.labor.title"),
+  expenses: t("dailyPnl.expenses.title"),
+  entries: t("dailyPnl.expenses.entryTitle"),
+  category: t("dailyPnl.expenses.category"),
+  note: t("dailyPnl.expenses.note"),
+  netProfit: t("dailyPnl.net.title"),
+}));
+
+function exportCsv(): void {
+  if (mode.value === "range" && rangeData.value) {
+    const r = rangeData.value;
+    downloadCsv(
+      buildPnlRangeCsv(r, rangeHeaders.value),
+      `pnl_${r.from}_${r.to}.csv`,
+    );
+  } else if (mode.value === "day" && statement.value) {
+    downloadCsv(
+      buildPnlDayCsv(statement.value, dayLabels.value, categoryLabel),
+      `pnl_${statement.value.date}.csv`,
+    );
+  }
+}
+
+async function exportXlsx(): Promise<void> {
+  const sheetName = t("dailyPnl.title");
+  try {
+    if (mode.value === "range" && rangeData.value) {
+      const r = rangeData.value;
+      await downloadXlsx(
+        buildPnlRangeSheet(r, rangeHeaders.value),
+        `pnl_${r.from}_${r.to}.xlsx`,
+        sheetName,
+      );
+    } else if (mode.value === "day" && statement.value) {
+      await downloadXlsx(
+        buildPnlDaySheet(statement.value, dayLabels.value, categoryLabel),
+        `pnl_${statement.value.date}.xlsx`,
+        sheetName,
+      );
+    }
+  } catch {
+    toast.error(t("dailyPnl.errors.exportFailed"));
+  }
+}
+
+function printPage(): void {
+  window.print();
 }
 
 function pickDay(day: string): void {
@@ -653,4 +826,57 @@ async function removeExpense(expense: DailyExpense): Promise<void> {
 }
 
 onMounted(() => void load());
+onUnmounted(() => {
+  rangeData.value = null;
+});
 </script>
+
+<!-- Unscoped on purpose (it has to reach the layout shell), but every rule is
+     behind body:has(.pnl-print-page), so it cannot touch any other page. -->
+<style>
+.pnl-print-only {
+  display: none;
+}
+
+@media print {
+  body:has(.pnl-print-page) .pnl-print-only {
+    display: block;
+  }
+  body:has(.pnl-print-page) .pnl-noprint,
+  body:has(.pnl-print-page) .admin-shell > :not(.min-w-0),
+  body:has(.pnl-print-page) .admin-shell > .min-w-0 > :not(main),
+  body:has(.pnl-print-page) .Vue-Toastification__container,
+  body:has(.pnl-print-page) .nav-progress {
+    display: none !important;
+  }
+  body:has(.pnl-print-page) .admin-shell,
+  body:has(.pnl-print-page) .admin-shell > .min-w-0,
+  body:has(.pnl-print-page) .admin-content {
+    display: block;
+    height: auto;
+    overflow: visible;
+  }
+  body:has(.pnl-print-page) .pnl-print-page {
+    min-height: 0;
+    padding: 0;
+    background: #fff;
+  }
+  body:has(.pnl-print-page) .pnl-print-page .ui-panel {
+    box-shadow: none;
+    break-inside: avoid;
+  }
+  body:has(.pnl-print-page) .pnl-table-wrap {
+    overflow: visible;
+  }
+  body:has(.pnl-print-page) .pnl-table {
+    min-width: 0;
+    font-size: 11px;
+  }
+  body:has(.pnl-print-page) .pnl-table .sticky {
+    position: static;
+  }
+  body:has(.pnl-print-page) .pnl-table tr {
+    break-inside: avoid;
+  }
+}
+</style>

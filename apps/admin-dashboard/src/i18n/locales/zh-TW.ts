@@ -1944,6 +1944,14 @@ const zhTWCore = {
   },
   // 顧客評價（#286）
   dailyPnl: {
+    export: {
+      label: "匯出",
+      csv: "CSV",
+      excel: "Excel",
+      print: "列印",
+      item: "項目",
+      amount: "金額",
+    },
     mode: { label: "檢視方式", day: "單日", range: "區間" },
     fees: {
       payment: "金流手續費（估算）",
@@ -1953,7 +1961,8 @@ const zhTWCore = {
     },
     labor: {
       title: "人事成本（排班）",
-      missingRate: "{count} 個班次沒有時薪，未計入",
+      missingRate: "{count} 個班次的員工與班別都沒有設定時薪，未計入",
+      setWage: "前往員工管理設定時薪",
       expenseNote:
         "排班人員的薪資已自動計入「人事成本」，「人事」類別請只填排班以外的薪資，避免重複計算。",
     },
@@ -1963,12 +1972,21 @@ const zhTWCore = {
       paymentMethods: "金流手續費率",
       platforms: "外送平台抽成",
       save: "儲存費率",
-      appliesToPast: "費率會套用到過去的日期，歷史損益表也會跟著改變。",
       loadFailed: "無法載入費率，請再試一次。",
       saveFailed: "儲存費率失敗，請再試一次。",
       invalid: "費率必須介於 0 到 100 之間，最多兩位小數。",
       saved: "已儲存費率。",
       close: "關閉",
+      appliesFromDate:
+        "費率從生效日起適用，生效日之前的日期沿用當時的費率，不會改變。",
+      effectiveFrom: "生效日",
+      history: "歷史版本",
+      historyHint: "點選一筆載入表單修改；儲存時會取代同一生效日的版本。",
+      fromStart: "最初",
+      allZero: "全部 0%",
+      dateInvalid: "生效日不可晚於今天。",
+      tooManyVersions: "費率版本已達上限（60 筆），請改用既有的生效日。",
+      conflict: "費率剛被其他人更新，請重新載入後再試。",
       methods: {
         cash: "現金",
         card: "信用卡",
@@ -1997,12 +2015,11 @@ const zhTWCore = {
       invalid: "日期區間無效，最長 92 天且不可超過今天。",
       totals: "區間合計",
       hint: "點選任一天可查看當日損益表。",
-      export: "匯出 CSV",
       tableLabel: "每日損益明細",
       columns: {
         date: "日期",
         orders: "訂單數",
-        netRevenue: "淨營收",
+        netRevenue: "淨營收（未稅）",
         cogs: "銷貨成本",
         grossProfit: "毛利",
         fees: "手續費與抽成",
@@ -2022,7 +2039,11 @@ const zhTWCore = {
       discount: "折扣",
       refund: "退款",
       net: "淨營收",
-      taxService: "含稅額 {tax}／服務費 {service}",
+      collected: "實收金額",
+      tax: "代收稅額",
+      netExTax: "淨營收（未稅）",
+      collectedNote: "實收金額與「數據分析」顯示的營收相同。",
+      serviceMemo: "含服務費 {service}",
       orders: "{count} 筆訂單",
     },
     cogs: {
@@ -2067,6 +2088,7 @@ const zhTWCore = {
     },
     errors: {
       loadFailed: "無法載入損益表，請再試一次。",
+      exportFailed: "匯出失敗，請再試一次。",
       precision: "金額不符合此幣別的最小單位。",
       notFound: "找不到這筆費用，可能已被刪除。",
       addFailed: "新增費用失敗，請再試一次。",
@@ -4157,6 +4179,8 @@ const zhTWCore = {
       archivedDescription: "移除員工後會出現在這裡，可隨時復原。",
     },
     modal: {
+      hourlyRateLabel: "時薪（{symbol}，選填）",
+      hourlyRateHint: "用於損益表的人事成本；留空則使用班別設定的時薪。",
       editTitle: "編輯員工",
       addTitle: "新增員工",
       usernameLabel: "用戶名",
@@ -4215,6 +4239,7 @@ const zhTWCore = {
       createdSignIn: "已新增員工。員工請從 {url} 登入",
     },
     errors: {
+      hourlyRatePrecision: "時薪不符合此幣別的最小單位。",
       saveFailed: "儲存失敗",
       resetFailed: "重置密碼失敗",
       toggleFailed: "狀態切換失敗",

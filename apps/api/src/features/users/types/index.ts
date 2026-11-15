@@ -25,6 +25,7 @@ export interface CreateUserData {
   role: number;
   restaurantId?: string;
   adminTier?: AdminTier;
+  hourlyRateCents?: number | null;
   address?: string;
   dateOfBirth?: string;
   profileImageUrl?: string;
@@ -44,6 +45,8 @@ export interface UpdateUserData {
   preferences?: UserPreferences;
   isActive?: boolean;
   isVerified?: boolean;
+  /** Owner/admin only; null clears. */
+  hourlyRateCents?: number | null;
 }
 
 /**
@@ -113,6 +116,8 @@ export interface FormattedUser {
   restaurantId?: string | null;
   /** Role 0 only. */
   adminTier?: string | null;
+  /** Salary: present only for role 0 and the same shop's owner. */
+  hourlyRateCents?: number | null;
   email?: string | null;
   fullName?: string | null;
   phone?: string | null;

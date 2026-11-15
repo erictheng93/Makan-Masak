@@ -86,6 +86,69 @@ describe("RestaurantService.updateRestaurant", () => {
     });
   });
 
+  it("never writes pnlRates from incoming settings; the stored list stays", async () => {
+    const stored = {
+      versions: [
+        {
+          effectiveFrom: "2026-01-01",
+          paymentFeeBps: { card: 250 },
+          platformCommissionBps: {},
+        },
+      ],
+    };
+    const capturedSet: Record<string, unknown>[] = [];
+    const updateBuilder = {
+      set: vi.fn((values: Record<string, unknown>) => {
+        capturedSet.push(values);
+        return updateBuilder;
+      }),
+      where: vi.fn(() => updateBuilder),
+      returning: vi.fn(async () => [
+        {
+          id: "restaurant-1",
+          name: "Makan",
+          settings: { currency: "TWD" },
+          createdAt: new Date("2026-01-01T00:00:00.000Z"),
+          updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+        },
+      ]),
+    };
+    const db = {
+      query: {
+        restaurants: {
+          findFirst: vi.fn(async () => ({
+            settings: { currency: "TWD", pnlRates: stored },
+          })),
+        },
+      },
+      select: vi.fn(() => {
+        const builder = {
+          from: vi.fn(() => builder),
+          where: vi.fn(() => builder),
+        };
+        return builder;
+      }),
+      update: vi.fn(() => updateBuilder),
+    };
+    const incoming = {
+      allowGuestOrders: false,
+      pnlRates: { paymentFeeBps: { card: 9999 } },
+    };
+
+    await createServiceWithDb(db).updateRestaurant("restaurant-1", {
+      settings: incoming,
+    });
+
+    expect(db.update).toHaveBeenCalledWith(restaurants);
+    expect(capturedSet[0].settings).toEqual({
+      currency: "TWD",
+      allowGuestOrders: false,
+      pnlRates: stored,
+    });
+    // The caller's object is not mutated.
+    expect(incoming).toHaveProperty("pnlRates");
+  });
+
   it("preserves currency from legacy double-encoded settings", async () => {
     const capturedSet: Record<string, unknown>[] = [];
     const updateBuilder = {

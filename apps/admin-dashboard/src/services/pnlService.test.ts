@@ -112,4 +112,21 @@ describe("pnlService", () => {
       platformCommissionBps: {},
     });
   });
+
+  it("sends the effective date with the rates", async () => {
+    vi.mocked(api.put).mockResolvedValueOnce({
+      data: { success: true, data: { history: [] } },
+    } as never);
+
+    await pnlService.saveRates("shop-1", {
+      paymentFeeBps: {},
+      platformCommissionBps: {},
+      effectiveFrom: "2026-11-10",
+    });
+    expect(api.put).toHaveBeenCalledWith("/pnl/shop-1/rates", {
+      paymentFeeBps: {},
+      platformCommissionBps: {},
+      effectiveFrom: "2026-11-10",
+    });
+  });
 });

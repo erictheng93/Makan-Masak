@@ -1066,14 +1066,16 @@ so a token can never be replayed against a different room.
 
 | Method | Path | Description | Auth |
 | ------ | ---- | ----------- | ---- |
-| GET | `/pnl/:restaurantId/daily?date=YYYY-MM-DD` | 取得單日損益表（省略 `date` 取預設日）；含營收、`cogs`（`itemsMissingCost` 為缺成本品項數）、`fees`（付款手續費與外送平台抽成）、`labor`（`costCents`、`shifts`、`shiftsMissingRate`）、`expenses` 區塊與 `netProfitCents` | Admin / Owner |
-| GET | `/pnl/:restaurantId/range?from=&to=` | 區間損益表：逐日 `days` 與加總 `totals`；最多 92 天，`from` 不可晚於 `to`，否則 `PNL_RANGE_INVALID` 400 | Admin / Owner |
-| GET | `/pnl/:restaurantId/rates` | 取得付款手續費與平台抽成費率（bps）及店內可用的付款方式／平台 | Admin / Owner |
-| PUT | `/pnl/:restaurantId/rates` | 設定 `paymentFeeBps`（0–10000，鍵須為店內出現過的付款方式）與 `platformCommissionBps`（鍵為已知平台，缺漏視為 0）；成功後清除餐廳快取 | Admin / Owner |
+| GET | `/pnl/:restaurantId/daily?date=YYYY-MM-DD` | 取得單日損益表（省略 `date` 取預設日）；含營收（`collectedCents` = 實收扣退款、含稅，與營收報表一致；`taxCents` = 退款後按比例保留的稅額，每日四捨五入一次；`netRevenueCents` = `collectedCents − taxCents`，服務費仍計入營收）、`cogs`（`itemsMissingCost` 為缺成本品項數）、`fees`（付款手續費與外送平台抽成，以含稅實收為基數、套用當日生效的費率版本；`configured` 表示當日版本有非零費率）、`labor`（每班時薪 = 下班打卡時的快照，否則員工時薪，否則班別時薪；`costCents`、`shifts`、`shiftsMissingRate` = 三者皆無的班數）、`expenses` 區塊與 `netProfitCents` | Admin / Owner |
+| GET | `/pnl/:restaurantId/range?from=&to=` | 區間損益表：逐日 `days` 與加總 `totals`（`netRevenueCents` 不含稅，每日依當日費率版本計費）；最多 92 天，`from` 不可晚於 `to`，否則 `PNL_RANGE_INVALID` 400 | Admin / Owner |
+| GET | `/pnl/:restaurantId/rates` | 取得店家今日（店家時區）生效的付款手續費與平台抽成費率（bps）、該版本的 `effectiveFrom`（無版本時為 `null`）、`history`（所有版本，新到舊）及店內可用的付款方式／平台 | Admin / Owner |
+| PUT | `/pnl/:restaurantId/rates` | 新增一個費率版本：`paymentFeeBps`（0–10000，鍵須為店內出現過的付款方式）、`platformCommissionBps`（鍵為已知平台，缺漏視為 0）、選填 `effectiveFrom`（真實日期且不可晚於店家當日，否則 `PNL_RATES_DATE_INVALID` 400；預設店家當日）。同日期的版本會被取代；最多保留 60 個版本（`PNL_RATES_TOO_MANY_VERSIONS` 400）。舊格式（無 `versions`）視為自 1970-01-01 起生效，首次儲存時轉換保留。寫入為比對後更新，與另一次儲存衝突兩次時回 `PNL_RATES_CONFLICT` 409。回應同 GET；成功後清除餐廳快取 | Admin / Owner |
 | POST | `/pnl/:restaurantId/expenses` | 新增支出（`date` 不可晚於店家當日，否則 `EXPENSE_DATE_IN_FUTURE` 400；`category`、`amountCents` > 0、選填 `note` ≤ 200 字），回應 201 | Admin / Owner |
 | DELETE | `/pnl/:restaurantId/expenses/:expenseId` | 軟刪除支出；不存在、已刪除或屬於他店皆回 `EXPENSE_NOT_FOUND` 404 | Admin / Owner |
 
-錯誤碼：`VALIDATION_ERROR` 400（日期、類別、金額或費率鍵不合法）、`PNL_RANGE_INVALID` 400、`EXPENSE_DATE_IN_FUTURE` 400、`FORBIDDEN` 403、`RESTAURANT_NOT_FOUND` 404、`EXPENSE_NOT_FOUND` 404。
+錯誤碼：`VALIDATION_ERROR` 400（日期、類別、金額或費率鍵不合法）、`PNL_RANGE_INVALID` 400、`PNL_RATES_DATE_INVALID` 400、`PNL_RATES_TOO_MANY_VERSIONS` 400、`EXPENSE_DATE_IN_FUTURE` 400、`FORBIDDEN` 403、`RESTAURANT_NOT_FOUND` 404、`EXPENSE_NOT_FOUND` 404、`PNL_RATES_CONFLICT` 409。
+
+`settings.pnlRates` 只能經由 `PUT /pnl/:restaurantId/rates` 寫入；`PUT /restaurants/:id` 的 settings 不接受此鍵，也不會覆寫已存的版本。
 
 ### SEO (mounted at `/`) — 2 routes
 

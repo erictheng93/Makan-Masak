@@ -404,6 +404,47 @@ describe("scheduling routes", () => {
     });
   });
 
+  it("strips the wage snapshot from schedule responses for non-managers, keeps it for owners", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const body = async (r: Response): Promise<{ data: any }> => r.json();
+    const wageRow = {
+      id: 10,
+      employeeId: "user-42",
+      hourlyRateCents: 20000,
+      shiftTemplate: { id: 1, name: "Dinner", hourlyRateCents: 15000 },
+    };
+    serviceFns.getSchedules.mockResolvedValue({ items: [wageRow], total: 1 });
+    serviceFns.getSchedule.mockResolvedValue(wageRow);
+    serviceFns.clockOut.mockResolvedValue({ id: 10, hourlyRateCents: 20000 });
+
+    let res = await request("/rest-1/schedules");
+    expect((await body(res)).data[0].hourlyRateCents).toBe(20000);
+
+    auth.user = {
+      id: "user-42",
+      username: "chef",
+      role: 2,
+      restaurantId: "rest-1",
+    };
+    res = await request("/rest-1/schedules");
+    const [item] = (await body(res)).data;
+    expect(item).not.toHaveProperty("hourlyRateCents");
+    // The template rate predates the snapshot and stays visible to staff.
+    expect(item.shiftTemplate).toEqual({
+      id: 1,
+      name: "Dinner",
+      hourlyRateCents: 15000,
+    });
+
+    res = await request("/schedules/10");
+    expect((await body(res)).data).not.toHaveProperty("hourlyRateCents");
+
+    res = await request("/schedules/10/clock-out", "POST", {
+      scheduleId: 10,
+    });
+    expect((await body(res)).data).not.toHaveProperty("hourlyRateCents");
+  });
+
   it("exports attendance reports as CSV with attachment headers", async () => {
     const res = await request(
       "/rest-1/attendance-report/export?startDate=2026-06-10&endDate=2026-06-11&employeeId=42",

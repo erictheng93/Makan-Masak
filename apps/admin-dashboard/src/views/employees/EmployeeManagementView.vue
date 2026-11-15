@@ -106,6 +106,7 @@
       :is-open="showModal"
       :employee="editingEmployee"
       :saving="saving"
+      :can-edit-wage="canEditWage"
       :field-errors="fieldErrors"
       @close="closeModal"
       @save="handleSave"
@@ -136,6 +137,8 @@ import { createVisibilityAwarePoller } from "@/services/visibilityAwarePoller";
 import EmployeeFormModal from "@/components/employees/EmployeeFormModal.vue";
 import ResetPasswordModal from "@/components/employees/ResetPasswordModal.vue";
 import type { Employee, EmployeeFormData } from "@/types/employee";
+import { UserRole } from "@/types";
+import { extractApiErrorCode } from "@/utils/errorHandler";
 import { isRecord } from "@makanmasak/shared/utils/unknown";
 import { resolveUserFacingError } from "@makanmasak/shared/utils/user-facing-error";
 import {
@@ -158,6 +161,10 @@ const toast = useToast();
 const employeeList = useEmployeeList();
 const authStore = useAuthStore();
 
+// The API only accepts and returns the wage for owners and platform admins.
+const canEditWage = computed(
+  () => authStore.isAdminRole || authStore.userRole === UserRole.OWNER,
+);
 const showModal = ref(false);
 const editingEmployee = ref<Employee | null>(null);
 const pendingLeaveCount = ref(0);
@@ -335,6 +342,11 @@ const handleSave = async (form: EmployeeFormData, isEdit: boolean) => {
       }
     }
     fieldErrors.value = mapped;
+
+    if (extractApiErrorCode(error) === "CURRENCY_PRECISION") {
+      toast.error(t("users.errors.hourlyRatePrecision"));
+      return;
+    }
 
     if (Object.keys(mapped).length === 0 || unmapped.length > 0) {
       toast.error(

@@ -219,6 +219,7 @@ describe("pnl routes behaviour", () => {
       { ...validRates, paymentFeeBps: { card: -1 } },
       { ...validRates, paymentFeeBps: { card: 2.5 } },
       { paymentFeeBps: { card: 250 } },
+      { ...validRates, effectiveFrom: 20260301 },
     ]) {
       expect((await putRates(bad)).status).toBe(400);
     }
@@ -230,6 +231,15 @@ describe("pnl routes behaviour", () => {
     expect(setRates).toHaveBeenCalledWith(
       SHOP,
       expect.objectContaining({ paymentFeeBps: { card: 250 } }),
+    );
+
+    // The date's calendar/future checks are the service's (PNL_RATES_DATE_INVALID).
+    expect(
+      (await putRates({ ...validRates, effectiveFrom: "2026-03-01" })).status,
+    ).toBe(200);
+    expect(setRates).toHaveBeenLastCalledWith(
+      SHOP,
+      expect.objectContaining({ effectiveFrom: "2026-03-01" }),
     );
   });
 });

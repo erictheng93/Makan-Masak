@@ -1,7 +1,7 @@
 <template>
   <section
     data-testid="pnl-rates"
-    class="ui-panel mb-4 rounded-3xl bg-white p-5 shadow-ios-sm"
+    class="ui-panel pnl-noprint mb-4 rounded-3xl bg-white p-5 shadow-ios-sm"
   >
     <div class="flex items-center justify-between gap-3">
       <h2 class="text-[15px] font-bold text-ios-text">
@@ -17,7 +17,7 @@
       </button>
     </div>
     <p class="mt-1 text-[12px] text-ios-secondary">
-      {{ t("dailyPnl.rates.appliesToPast") }}
+      {{ t("dailyPnl.rates.appliesFromDate") }}
     </p>
 
     <p
@@ -46,6 +46,17 @@
       class="mt-4"
       @submit.prevent="save"
     >
+      <label class="mb-4 block text-[12px] font-medium text-ios-secondary">
+        {{ t("dailyPnl.rates.effectiveFrom") }}
+        <input
+          v-model="effectiveFrom"
+          type="date"
+          :max="today"
+          required
+          data-testid="pnl-rates-effective-from"
+          class="mt-1 block rounded-xl bg-ios-bg px-3 py-2 text-[14px] text-ios-text outline-none"
+        />
+      </label>
       <fieldset
         v-for="group in groups"
         :key="group.id"
@@ -86,6 +97,46 @@
         {{ t("dailyPnl.rates.save") }}
       </button>
     </form>
+
+    <div
+      v-if="rates && rates.history.length > 0"
+      data-testid="pnl-rates-history"
+      class="mt-5"
+    >
+      <h3 class="text-[13px] font-bold text-ios-text">
+        {{ t("dailyPnl.rates.history") }}
+      </h3>
+      <p class="mt-0.5 text-[12px] text-ios-secondary">
+        {{ t("dailyPnl.rates.historyHint") }}
+      </p>
+      <ul class="mt-2 space-y-1.5">
+        <li v-for="version in rates.history" :key="version.effectiveFrom">
+          <button
+            type="button"
+            :data-testid="`pnl-rates-history-${version.effectiveFrom}`"
+            :aria-pressed="effectiveFrom === version.effectiveFrom"
+            class="flex w-full flex-wrap items-baseline gap-x-3 rounded-2xl bg-ios-bg px-3 py-2 text-left text-[13px] text-ios-text transition-colors duration-200"
+            :class="
+              effectiveFrom === version.effectiveFrom
+                ? 'ring-2 ring-ios-blue'
+                : ''
+            "
+            @click="pick(version)"
+          >
+            <span class="font-semibold tabular-nums">
+              {{
+                version.effectiveFrom === LEGACY_DATE
+                  ? t("dailyPnl.rates.fromStart")
+                  : version.effectiveFrom
+              }}
+            </span>
+            <span class="min-w-0 text-ios-secondary">{{
+              summary(version)
+            }}</span>
+          </button>
+        </li>
+      </ul>
+    </div>
   </section>
 </template>
 
@@ -93,9 +144,17 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import { useToast } from "vue-toastification";
 import { useI18n } from "@/i18n";
-import { pnlService, type PnlRates } from "@/services/pnlService";
+import {
+  pnlService,
+  type PnlRates,
+  type PnlRatesVersion,
+} from "@/services/pnlService";
+import { extractApiErrorCode } from "@/utils/errorHandler";
 
-const props = defineProps<{ restaurantId: string }>();
+/** Server marker for rates that predate versioning. */
+const LEGACY_DATE = "1970-01-01";
+
+const props = defineProps<{ restaurantId: string; today: string }>();
 const emit = defineEmits<{ saved: []; close: [] }>();
 
 const { t } = useI18n();
@@ -104,6 +163,7 @@ const toast = useToast();
 const rates = ref<PnlRates | null>(null);
 const loading = ref(false);
 const saving = ref(false);
+const effectiveFrom = ref(props.today);
 // Percent text per key, so "2.75" round-trips without float drift.
 const paymentPct = reactive<Record<string, number | string>>({});
 const platformPct = reactive<Record<string, number | string>>({});
@@ -182,6 +242,30 @@ function fill(
   for (const key of keys) target[key] = (bps[key] ?? 0) / 100;
 }
 
+/** One line of the non-zero rates in a version, e.g. "現金 2%, LINE Pay 1.5%". */
+function summary(version: PnlRatesVersion): string {
+  const parts = [
+    ...Object.entries(version.paymentFeeBps).map(
+      ([key, bps]) => [methodLabel(key), bps] as const,
+    ),
+    ...Object.entries(version.platformCommissionBps).map(
+      ([key, bps]) => [platformLabel(key), bps] as const,
+    ),
+  ]
+    .filter(([, bps]) => bps > 0)
+    .map(([label, bps]) => `${label} ${bps / 100}%`);
+  return parts.length > 0 ? parts.join(", ") : t("dailyPnl.rates.allZero");
+}
+
+/** Load a past version into the form; saving then replaces that date. */
+function pick(version: PnlRatesVersion): void {
+  const current = rates.value;
+  if (!current) return;
+  fill(paymentPct, version.paymentFeeBps, current.paymentMethods);
+  fill(platformPct, version.platformCommissionBps, current.platforms);
+  effectiveFrom.value = version.effectiveFrom;
+}
+
 async function load(): Promise<void> {
   loading.value = true;
   try {
@@ -228,14 +312,31 @@ async function save(): Promise<void> {
   }
   saving.value = true;
   try {
-    await pnlService.saveRates(props.restaurantId, {
+    const saved = await pnlService.saveRates(props.restaurantId, {
       paymentFeeBps,
       platformCommissionBps,
+      effectiveFrom: effectiveFrom.value,
     });
+    // The response is the GET shape: refresh the history list from it.
+    if (saved?.history) rates.value = { ...current, ...saved };
     toast.success(t("dailyPnl.rates.saved"));
     emit("saved");
-  } catch {
-    toast.error(t("dailyPnl.rates.saveFailed"));
+  } catch (cause) {
+    switch (extractApiErrorCode(cause)) {
+      case "PNL_RATES_DATE_INVALID":
+        toast.error(t("dailyPnl.rates.dateInvalid"));
+        break;
+      case "PNL_RATES_TOO_MANY_VERSIONS":
+        toast.error(t("dailyPnl.rates.tooManyVersions"));
+        break;
+      case "PNL_RATES_CONFLICT":
+        toast.error(t("dailyPnl.rates.conflict"));
+        // Someone else saved first: show what is stored now.
+        await load();
+        break;
+      default:
+        toast.error(t("dailyPnl.rates.saveFailed"));
+    }
   } finally {
     saving.value = false;
   }

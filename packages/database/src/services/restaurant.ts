@@ -423,7 +423,10 @@ export class RestaurantService extends BaseService {
           where: eq(restaurants.id, id),
         });
         const existingSettings = settingsRecord(existing?.settings);
-        const incomingSettings = settingsRecord(data.settings);
+        // pnlRates is a validated versions list owned by PUT /pnl/:id/rates;
+        // this generic path keeps whatever is stored instead.
+        const incomingSettings = { ...settingsRecord(data.settings) };
+        delete incomingSettings.pnlRates;
 
         updateData.settings = {
           ...existingSettings,

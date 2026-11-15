@@ -689,3 +689,88 @@ describe("SchedulingService.getShiftTemplates", () => {
     ]);
   });
 });
+
+describe("SchedulingService wage snapshot on completion", () => {
+  function service() {
+    return new SchedulingService(testDb.bindings.DB, { JWT_SECRET: "test" });
+  }
+
+  async function seedShift(opts: {
+    id: number;
+    userRate: number | null;
+    templateRate: number | null;
+  }) {
+    await testDb.db
+      .prepare("UPDATE users SET hourly_rate_cents = ? WHERE id = ?")
+      .bind(opts.userRate, employeeId)
+      .run();
+    await testDb.db
+      .prepare(
+        `INSERT INTO shift_templates
+           (id, restaurant_id, name, start_time, end_time, duration_minutes,
+            break_duration_minutes, hourly_rate_cents, created_by, created_at_ms, updated_at_ms)
+         VALUES (?, 'sched-rest', 'T', '09:00', '13:00', 240, 0, ?, ?, 1735689600000, 1735689600000)`,
+      )
+      .bind(opts.id, opts.templateRate, ownerId)
+      .run();
+    await testDb.db
+      .prepare(
+        `INSERT INTO employee_schedules
+           (id, restaurant_id, employee_id, shift_template_id, work_date,
+            start_time, end_time, break_duration_minutes, scheduled_hours,
+            clock_in_time_ms, status, created_by, created_at_ms, updated_at_ms)
+         VALUES (?, 'sched-rest', ?, ?, '2026-09-01', '09:00', '13:00', 0, 4,
+                 1735689600000, 'confirmed', ?, 1735689600000, 1735689600000)`,
+      )
+      .bind(opts.id, employeeId, opts.id, ownerId)
+      .run();
+  }
+
+  async function clockOut(id: number) {
+    return service().clockOut({
+      scheduleId: id,
+      employeeId,
+      clockOutTime: new Date(1735689600000 + 4 * 3600_000),
+      restaurantId: "sched-rest",
+    });
+  }
+
+  it("prefers the employee's own wage over the template rate", async () => {
+    await seedShift({ id: 1, userRate: 20000, templateRate: 15000 });
+    const done = await clockOut(1);
+    expect(done).toEqual(
+      expect.objectContaining({ status: "completed", hourlyRateCents: 20000 }),
+    );
+  });
+
+  it("falls back to the template rate when the employee has none", async () => {
+    await seedShift({ id: 2, userRate: null, templateRate: 15000 });
+    expect((await clockOut(2)).hourlyRateCents).toBe(15000);
+  });
+
+  it("stores null when neither rate is set", async () => {
+    await seedShift({ id: 3, userRate: null, templateRate: null });
+    expect((await clockOut(3)).hourlyRateCents).toBeNull();
+  });
+
+  it("snapshots on an admin status update to completed, once", async () => {
+    await seedShift({ id: 4, userRate: 18000, templateRate: null });
+    const first = await service().updateSchedule(
+      4,
+      { status: "completed", hourlyRateCents: 1 },
+      "sched-rest",
+    );
+    expect(first.hourlyRateCents).toBe(18000);
+
+    await testDb.db
+      .prepare("UPDATE users SET hourly_rate_cents = 99900 WHERE id = ?")
+      .bind(employeeId)
+      .run();
+    const again = await service().updateSchedule(
+      4,
+      { status: "completed" },
+      "sched-rest",
+    );
+    expect(again.hourlyRateCents).toBe(18000);
+  });
+});

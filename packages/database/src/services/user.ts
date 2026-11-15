@@ -61,6 +61,8 @@ export interface CreateUserData {
   password: string;
   role: number;
   restaurantId?: string;
+  /** Integer cents; callers must have authorised and validated it. */
+  hourlyRateCents?: number | null;
   /** Role 0 only; defaults to operator. Ignored for every other role. */
   adminTier?: AdminTier;
   address?: string;
@@ -79,6 +81,8 @@ export interface UpdateUserData {
   preferences?: UserPreferences;
   isActive?: boolean;
   isVerified?: boolean;
+  /** Integer cents; null clears. Callers must have authorised and validated it. */
+  hourlyRateCents?: number | null;
 }
 
 export interface UserRoleChangeAudit {
@@ -173,6 +177,7 @@ export class UserService extends BaseService {
           passwordSetAt: new Date(),
           role: data.role,
           restaurantId: data.restaurantId,
+          hourlyRateCents: data.hourlyRateCents ?? null,
           adminTier:
             data.role === USER_ROLES.ADMIN
               ? (data.adminTier ?? "operator")
@@ -199,6 +204,7 @@ export class UserService extends BaseService {
           ? String(newUser.restaurantId)
           : null,
         adminTier: newUser.adminTier ?? null,
+        hourlyRateCents: newUser.hourlyRateCents ?? null,
         address: newUser.address ? String(newUser.address) : null,
         dateOfBirth: newUser.dateOfBirth ? String(newUser.dateOfBirth) : null,
         profileImageUrl: newUser.profileImageUrl
@@ -243,6 +249,7 @@ export class UserService extends BaseService {
           fullName: users.fullName,
           role: users.role,
           restaurantId: users.restaurantId,
+          hourlyRateCents: users.hourlyRateCents,
           address: users.address,
           dateOfBirth: users.dateOfBirth,
           profileImageUrl: users.profileImageUrl,
@@ -273,6 +280,7 @@ export class UserService extends BaseService {
         fullName: user.fullName ? String(user.fullName) : null,
         role: Number(user.role),
         restaurantId: user.restaurantId ? String(user.restaurantId) : null,
+        hourlyRateCents: user.hourlyRateCents ?? null,
         address: user.address ? String(user.address) : null,
         dateOfBirth: user.dateOfBirth ? String(user.dateOfBirth) : null,
         profileImageUrl: user.profileImageUrl
@@ -329,6 +337,7 @@ export class UserService extends BaseService {
           fullName: users.fullName,
           role: users.role,
           restaurantId: users.restaurantId,
+          hourlyRateCents: users.hourlyRateCents,
           address: users.address,
           dateOfBirth: users.dateOfBirth,
           profileImageUrl: users.profileImageUrl,
@@ -369,6 +378,7 @@ export class UserService extends BaseService {
             fullName: users.fullName,
             role: users.role,
             restaurantId: users.restaurantId,
+            hourlyRateCents: users.hourlyRateCents,
             address: users.address,
             dateOfBirth: users.dateOfBirth,
             profileImageUrl: users.profileImageUrl,
@@ -529,6 +539,7 @@ export class UserService extends BaseService {
           fullName: users.fullName,
           role: users.role,
           restaurantId: users.restaurantId,
+          hourlyRateCents: users.hourlyRateCents,
           isActive: users.isActive,
           isVerified: users.isVerified,
           totalOrders: users.totalOrders,
@@ -562,6 +573,7 @@ export class UserService extends BaseService {
         fullName: user.fullName ? String(user.fullName) : null,
         role: Number(user.role),
         restaurantId: user.restaurantId ? String(user.restaurantId) : null,
+        hourlyRateCents: user.hourlyRateCents ?? null,
         isActive: Boolean(Number(user.isActive)),
         isVerified: Boolean(Number(user.isVerified)),
         totalOrders: user.totalOrders ? Number(user.totalOrders) : 0,
@@ -638,6 +650,7 @@ export class UserService extends BaseService {
           fullName: users.fullName,
           role: users.role,
           restaurantId: users.restaurantId,
+          hourlyRateCents: users.hourlyRateCents,
           adminTier: users.adminTier,
           isActive: users.isActive,
           isVerified: users.isVerified,
@@ -671,6 +684,7 @@ export class UserService extends BaseService {
         fullName: user.fullName ? String(user.fullName) : null,
         role: Number(user.role),
         restaurantId: user.restaurantId ? String(user.restaurantId) : null,
+        hourlyRateCents: user.hourlyRateCents ?? null,
         adminTier: user.adminTier ?? null,
         isActive: Boolean(Number(user.isActive)),
         isVerified: Boolean(Number(user.isVerified)),
@@ -885,6 +899,7 @@ export class UserService extends BaseService {
           // endpoints, which reads these. Leaving them out published
           // `isActive: undefined` on every hit.
           restaurantId: users.restaurantId,
+          hourlyRateCents: users.hourlyRateCents,
           isActive: users.isActive,
           isVerified: users.isVerified,
           createdAt: users.createdAt,
@@ -906,6 +921,7 @@ export class UserService extends BaseService {
           ? String(user.profileImageUrl)
           : null,
         restaurantId: user.restaurantId ? String(user.restaurantId) : null,
+        hourlyRateCents: user.hourlyRateCents ?? null,
         isActive: Boolean(Number(user.isActive)),
         isVerified: Boolean(Number(user.isVerified)),
         createdAt: isoOrNull(user.createdAt),

@@ -41,6 +41,9 @@ export const ratesSchema = z.object({
     z.enum(Object.values(PLATFORM_TYPES)),
     bps,
   ),
+  // Calendar and not-in-the-future checks need the shop's today, so
+  // PnlService.setRates answers both with PNL_RATES_DATE_INVALID.
+  effectiveFrom: z.string().max(10).optional(),
 });
 
 export type RestaurantParamInput = z.infer<typeof restaurantParamSchema>;

@@ -51,6 +51,8 @@ export const users = sqliteTable(
     role: integer("role").notNull().default(USER_ROLES.CASHIER), // 預設為收銀員，顧客應使用 customers 表
     restaurantId: text("restaurant_id"), // 引用 restaurants.public_id (TEXT)
     adminTier: text("admin_tier", { enum: ADMIN_TIERS }),
+    /** Own hourly wage in integer cents; salary data, owners/admins only. Migration 0048. */
+    hourlyRateCents: integer("hourly_rate_cents"),
 
     // 個人資訊
     address: text("address"),

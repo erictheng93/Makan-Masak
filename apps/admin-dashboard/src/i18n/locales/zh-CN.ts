@@ -1763,6 +1763,14 @@ const zhCN: Messages = {
     },
   },
   dailyPnl: {
+    export: {
+      label: "导出",
+      csv: "CSV",
+      excel: "Excel",
+      print: "打印",
+      item: "项目",
+      amount: "金额",
+    },
     mode: { label: "查看方式", day: "单日", range: "区间" },
     fees: {
       payment: "支付手续费（估算）",
@@ -1772,7 +1780,8 @@ const zhCN: Messages = {
     },
     labor: {
       title: "人事成本（排班）",
-      missingRate: "{count} 个班次没有时薪，未计入",
+      missingRate: "{count} 个班次的员工和班次都没有设置时薪，未计入",
+      setWage: "前往员工管理设置时薪",
       expenseNote:
         "排班人员的工资已自动计入“人事成本”，“人事”类别请只填排班以外的工资，避免重复计算。",
     },
@@ -1782,12 +1791,21 @@ const zhCN: Messages = {
       paymentMethods: "支付手续费率",
       platforms: "外卖平台抽成",
       save: "保存费率",
-      appliesToPast: "费率会应用到过去的日期，历史损益表也会随之改变。",
       loadFailed: "无法加载费率，请重试。",
       saveFailed: "保存费率失败，请重试。",
       invalid: "费率必须在 0 到 100 之间，最多两位小数。",
       saved: "已保存费率。",
       close: "关闭",
+      appliesFromDate:
+        "费率从生效日起适用，生效日之前的日期沿用当时的费率，不会改变。",
+      effectiveFrom: "生效日",
+      history: "历史版本",
+      historyHint: "点选一条载入表单修改；保存时会替换同一生效日的版本。",
+      fromStart: "最初",
+      allZero: "全部 0%",
+      dateInvalid: "生效日不能晚于今天。",
+      tooManyVersions: "费率版本已达上限（60 条），请改用已有的生效日。",
+      conflict: "费率刚被其他人更新，请重新加载后再试。",
       methods: {
         cash: "现金",
         card: "信用卡",
@@ -1816,12 +1834,11 @@ const zhCN: Messages = {
       invalid: "日期区间无效，最长 92 天且不可超过今天。",
       totals: "区间合计",
       hint: "点击任意一天可查看当日损益表。",
-      export: "导出 CSV",
       tableLabel: "每日损益明细",
       columns: {
         date: "日期",
         orders: "订单数",
-        netRevenue: "净营收",
+        netRevenue: "净营收（未税）",
         cogs: "销货成本",
         grossProfit: "毛利",
         fees: "手续费与抽成",
@@ -1841,7 +1858,11 @@ const zhCN: Messages = {
       discount: "折扣",
       refund: "退款",
       net: "净营收",
-      taxService: "含税额 {tax}／服务费 {service}",
+      collected: "实收金额",
+      tax: "代收税额",
+      netExTax: "净营收（未税）",
+      collectedNote: "实收金额与“数据分析”显示的营收相同。",
+      serviceMemo: "含服务费 {service}",
       orders: "{count} 笔订单",
     },
     cogs: {
@@ -1886,6 +1907,7 @@ const zhCN: Messages = {
     },
     errors: {
       loadFailed: "无法加载损益表，请重试。",
+      exportFailed: "导出失败，请重试。",
       precision: "金额不符合此币别的最小单位。",
       notFound: "找不到这笔费用，可能已被删除。",
       addFailed: "新增费用失败，请重试。",
@@ -4037,6 +4059,8 @@ const zhCN: Messages = {
       archivedDescription: "移除员工后会出现在这里，可随时恢复。",
     },
     modal: {
+      hourlyRateLabel: "时薪（{symbol}，选填）",
+      hourlyRateHint: "用于损益表的人事成本；留空则使用班次设置的时薪。",
       editTitle: "编辑员工",
       addTitle: "新增员工",
       usernameLabel: "用户名",
@@ -4095,6 +4119,7 @@ const zhCN: Messages = {
       createdSignIn: "已添加员工。员工请从 {url} 登录",
     },
     errors: {
+      hourlyRatePrecision: "时薪不符合此币种的最小单位。",
       saveFailed: "保存失败",
       resetFailed: "重置密码失败",
       toggleFailed: "状态切换失败",

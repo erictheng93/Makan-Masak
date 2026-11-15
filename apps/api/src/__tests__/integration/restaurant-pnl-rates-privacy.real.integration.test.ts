@@ -122,4 +122,19 @@ describe("restaurant pnlRates privacy — real integration", () => {
       pnlRates: PNL_RATES,
     });
   });
+
+  it("never writes pnlRates through the generic settings save", async () => {
+    const shop = await shopWithOwner();
+
+    // The key is dropped, not refused: PUT /pnl/:id/rates is its only writer.
+    const res = await update(shop.restaurantId, shop.token, {
+      allowGuestOrders: false,
+      pnlRates: { versions: [] },
+    });
+
+    expect(res.status).toBe(200);
+    expect(await storedSettings(shop.restaurantId)).toMatchObject({
+      pnlRates: PNL_RATES,
+    });
+  });
 });

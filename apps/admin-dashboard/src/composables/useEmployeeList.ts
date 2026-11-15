@@ -10,6 +10,7 @@ import type {
 } from "@/types/employee";
 import type { EmployeeSchedule } from "@/types/scheduling";
 import { t } from "@/i18n";
+import { useCurrency } from "@/composables/useCurrency";
 import { resolveUserFacingError } from "@makanmasak/shared/utils/user-facing-error";
 import { mapApiUser, type ApiUser, type UserId } from "@/types/api-user";
 
@@ -60,6 +61,16 @@ const patchUser = (id: UserId, patch: Partial<Employee>) => {
 
 export function useEmployeeList() {
   const authStore = useAuthStore();
+  const { majorToCents } = useCurrency();
+
+  /** Blank → null (clears it), 0 stays 0, undefined → field not sent. */
+  const wagePayload = (form: EmployeeFormData) =>
+    form.hourlyRate === undefined
+      ? {}
+      : {
+          hourlyRateCents:
+            form.hourlyRate === "" ? null : majorToCents(form.hourlyRate),
+        };
 
   // In-flight fetch promise for deduplication
   let fetchUsersPromise: Promise<void> | null = null;
@@ -250,6 +261,7 @@ export function useEmployeeList() {
       // The API's email is optional but rejects "" — omit it when blank.
       email: form.email.trim() || undefined,
       role: form.role,
+      ...wagePayload(form),
     });
     await fetchUsers();
     // Initialize leave balances for new employee (non-blocking)
@@ -271,6 +283,7 @@ export function useEmployeeList() {
     await api.put(`/users/${employee.id}`, {
       fullName: form.fullName,
       email: form.email.trim() || undefined,
+      ...wagePayload(form),
     });
 
     if (form.role !== employee.role) {
@@ -288,6 +301,7 @@ export function useEmployeeList() {
       email: form.email.trim(),
       role: form.role,
       ...activeFields(isActive),
+      ...wagePayload(form),
     });
   };
 

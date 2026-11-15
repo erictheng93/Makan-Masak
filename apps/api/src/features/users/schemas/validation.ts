@@ -14,6 +14,15 @@ const restaurantIdInputSchema = z
   .union([z.string().trim().min(1), z.number().int().positive()])
   .optional();
 
+/** Salary data: integer cents, null clears. Currency alignment is checked in the service. */
+const hourlyRateCentsSchema = z
+  .number()
+  .int()
+  .min(0)
+  .max(Number.MAX_SAFE_INTEGER)
+  .nullable()
+  .optional();
+
 // Strong password schema - requires 8+ characters with uppercase, lowercase, number, and special character
 const strongPasswordSchema = z
   .string()
@@ -37,6 +46,7 @@ export const createUserSchema = z.lazy(() =>
     role: z.number().int().min(0).max(4),
     restaurantId: restaurantIdInputSchema,
     adminTier: z.enum(ADMIN_TIERS).optional(),
+    hourlyRateCents: hourlyRateCentsSchema,
     address: z.string().max(200).optional(),
     dateOfBirth: z.string().optional(),
     profileImageUrl: z.url().optional(),
@@ -59,6 +69,7 @@ export const updateUserSchema = z.lazy(() =>
       preferences: z.any().optional(),
       isActive: z.boolean().optional(),
       isVerified: z.boolean().optional(),
+      hourlyRateCents: hourlyRateCentsSchema,
     })
     .strict(),
 );

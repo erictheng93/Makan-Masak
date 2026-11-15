@@ -71,6 +71,8 @@ function addOrder(
     status?: string;
     paymentMethod?: string;
     orderSource?: string;
+    tax?: number;
+    service?: number;
     lines?: {
       menuItemId: number;
       quantity: number;
@@ -85,7 +87,7 @@ function addOrder(
       `INSERT INTO orders (id, restaurant_id, status, payment_status, total_amount_cents,
          discount_amount_cents, refund_amount_cents, tax_amount_cents, service_charge_cents, created_at_ms, updated_at_ms, order_number,
          payment_method, order_source)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 100, 50, ?, 0, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
     )
     .run(
       id,
@@ -95,6 +97,8 @@ function addOrder(
       o.total,
       o.discount ?? 0,
       o.refund ?? 0,
+      o.tax ?? 100,
+      o.service ?? 50,
       Date.parse(o.createdAt),
       id,
       o.paymentMethod ?? "cash",
@@ -181,17 +185,19 @@ describe("PnlService.getDaily", () => {
 
     expect(result.currency).toBe("TWD");
     expect(result.revenue).toEqual({
+      collectedCents: 12000,
       grossSalesCents: 15000, // 9000+5000 totals + 1000 discount
       discountCents: 1000,
       refundCents: 2000,
-      netRevenueCents: 12000,
+      // tax 100 + 100*3000/5000 = 160 -> NT$2, carved out of revenue
+      netRevenueCents: 11800,
       taxCents: 200,
       serviceChargeCents: 100,
       orderCount: 2,
     });
     // 2*300 + 0 (uncosted) + 1*300; the cancelled line is excluded
     expect(result.cogs).toEqual({ totalCents: 900, itemsMissingCost: 1 });
-    expect(result.grossProfitCents).toBe(11100);
+    expect(result.grossProfitCents).toBe(10900);
     expect(result.expenses.totalCents).toBe(205000);
     expect(result.expenses.byCategory).toEqual(
       expect.arrayContaining([
@@ -212,7 +218,7 @@ describe("PnlService.getDaily", () => {
       shifts: 0,
       shiftsMissingRate: 0,
     });
-    expect(result.netProfitCents).toBe(11100 - 205000);
+    expect(result.netProfitCents).toBe(10900 - 205000);
   });
 
   it("cuts the day at the restaurant timezone and defaults to its today", async () => {
@@ -228,9 +234,9 @@ describe("PnlService.getDaily", () => {
 
     const tenth = await svc.getDaily(SHOP); // NOW is the 10th in Taipei
     expect(tenth.date).toBe("2026-03-10");
-    expect(tenth.revenue.netRevenueCents).toBe(3000);
+    expect(tenth.revenue.collectedCents).toBe(3000);
     expect(
-      (await svc.getDaily(SHOP, "2026-03-09")).revenue.netRevenueCents,
+      (await svc.getDaily(SHOP, "2026-03-09")).revenue.collectedCents,
     ).toBe(4000);
   });
 });
@@ -301,17 +307,22 @@ function addSchedule(
     actualHours: number;
     overtimeHours?: number;
     status?: string;
+    employeeId?: string;
+    /** The rate snapshot clock-out stores. */
+    rate?: number | null;
   },
 ) {
   const worked = (s.status ?? "completed") === "completed";
   sqlite
     .prepare(
       `INSERT INTO employee_schedules (restaurant_id, employee_id, shift_template_id, work_date, start_time, end_time,
-         scheduled_hours, actual_hours, overtime_hours, status, clock_in_time_ms, clock_out_time_ms, created_by, created_at_ms, updated_at_ms)
-       VALUES (?, 'emp-1', ?, ?, '09:00', '17:00', 8, ?, ?, ?, ?, ?, 'u1', 0, 0)`,
+         scheduled_hours, actual_hours, overtime_hours, status, clock_in_time_ms, clock_out_time_ms, created_by, created_at_ms, updated_at_ms,
+         hourly_rate_cents)
+       VALUES (?, ?, ?, ?, '09:00', '17:00', 8, ?, ?, ?, ?, ?, 'u1', 0, 0, ?)`,
     )
     .run(
       SHOP,
+      s.employeeId ?? "emp-1",
       s.templateId,
       s.workDate,
       s.actualHours,
@@ -319,7 +330,27 @@ function addSchedule(
       s.status ?? "completed",
       worked ? 1 : null,
       worked ? 2 : null,
+      s.rate ?? null,
     );
+}
+
+function addEmployee(
+  sqlite: Database.Database,
+  id: string,
+  rate: number | null,
+) {
+  sqlite
+    .prepare(
+      "INSERT INTO users (id, username, full_name, password_hash, role, restaurant_id, hourly_rate_cents, created_at_ms, updated_at_ms) VALUES (?, ?, 'E', 'x', 4, ?, ?, 0, 0)",
+    )
+    .run(id, id, SHOP, rate);
+}
+
+function storedPnlRates(sqlite: Database.Database) {
+  const row = sqlite
+    .prepare("SELECT settings FROM restaurants WHERE id = ?")
+    .get(SHOP) as { settings: string };
+  return JSON.parse(row.settings).pnlRates;
 }
 
 describe("PnlService fees", () => {
@@ -369,7 +400,14 @@ describe("PnlService fees", () => {
     expect(JSON.parse(raw.settings)).toMatchObject({
       currency: "TWD",
       taxRate: 5,
-      pnlRates: { paymentFeeBps: { card: 250, cash: 0 } },
+      pnlRates: {
+        versions: [
+          {
+            effectiveFrom: "2026-03-10",
+            paymentFeeBps: { card: 250, cash: 0 },
+          },
+        ],
+      },
     });
   });
 
@@ -539,6 +577,7 @@ describe("PnlService.getRange", () => {
     await svc.setRates(SHOP, {
       paymentFeeBps: { card: 300 },
       platformCommissionBps: { foodpanda: 2500 },
+      effectiveFrom: "2026-03-01",
     });
     const item = addMenuItem(sqlite, SHOP, 400);
     // 2026-03-08 00:00:00 Taipei: first instant of the window
@@ -611,10 +650,10 @@ describe("PnlService.getRange", () => {
       }
     }
     expect(range.totals).toEqual(sum);
-    // 15500 + 20000, fee 465 -> 500, commission 5000, labor 144000
+    // 15500 + 20000 less tax 100 + 100, fee 465 -> 500, commission 5000, labor 144000
     expect(range.totals).toMatchObject({
       orderCount: 2,
-      netRevenueCents: 35500,
+      netRevenueCents: 35300,
       cogsCents: 1550,
       feesCents: 5500,
       laborCents: 144000,
@@ -635,5 +674,348 @@ describe("PnlService.getRange", () => {
     ).rejects.toMatchObject({ code: "PNL_RANGE_INVALID" });
     const ok = await svc.getRange(SHOP, "2026-01-01", "2026-04-02");
     expect(ok.days).toHaveLength(92);
+  });
+});
+
+describe("PnlService labor rates", () => {
+  it("prefers the clock-out snapshot, then the employee wage, then the template", async () => {
+    const sqlite = createDb();
+    seed(sqlite);
+    const template = addTemplate(sqlite, 20000);
+    addEmployee(sqlite, "paid", 30000);
+    addEmployee(sqlite, "unpaid", null);
+    // employee wage beats the template: 2h * NT$300
+    addSchedule(sqlite, {
+      workDate: "2026-03-10",
+      templateId: template,
+      actualHours: 2,
+      employeeId: "paid",
+    });
+    // the snapshot beats both: 2h * NT$100
+    addSchedule(sqlite, {
+      workDate: "2026-03-10",
+      templateId: template,
+      actualHours: 2,
+      employeeId: "paid",
+      rate: 10000,
+    });
+    // no wage: the template, 2h * NT$200
+    addSchedule(sqlite, {
+      workDate: "2026-03-10",
+      templateId: template,
+      actualHours: 2,
+      employeeId: "unpaid",
+    });
+    // nothing at all
+    addSchedule(sqlite, {
+      workDate: "2026-03-10",
+      templateId: null,
+      actualHours: 2,
+      employeeId: "unpaid",
+    });
+    const svc = service(sqlite);
+
+    expect((await svc.getDaily(SHOP, "2026-03-10")).labor).toEqual({
+      costCents: 60000 + 20000 + 40000,
+      shifts: 4,
+      shiftsMissingRate: 1,
+    });
+
+    // A raise moves the unsnapshotted shift only.
+    sqlite
+      .prepare("UPDATE users SET hourly_rate_cents = 50000 WHERE id = 'paid'")
+      .run();
+    expect((await svc.getDaily(SHOP, "2026-03-10")).labor.costCents).toBe(
+      100000 + 20000 + 40000,
+    );
+  });
+});
+
+describe("PnlService revenue excludes tax", () => {
+  it("carves retained tax out of revenue, pro rata to refunds, rounded per day", async () => {
+    const sqlite = createDb();
+    seed(sqlite);
+    // 03-06: subtotal 10000 + service 1000 + tax 500 = 11500
+    addOrder(sqlite, {
+      createdAt: "2026-03-06T01:00:00Z",
+      total: 11500,
+      tax: 500,
+      service: 1000,
+    });
+    // 03-07: refunded 20% -> tax 400
+    addOrder(sqlite, {
+      createdAt: "2026-03-07T01:00:00Z",
+      total: 11500,
+      refund: 2300,
+      paymentStatus: "partial_refunded",
+      tax: 500,
+      service: 1000,
+    });
+    // 03-08: fully refunded -> tax 0
+    addOrder(sqlite, {
+      createdAt: "2026-03-08T01:00:00Z",
+      total: 11500,
+      refund: 11500,
+      paymentStatus: "refunded",
+      tax: 500,
+    });
+    // 03-09: 500 * 7000 / 10500 = 333.3, twice = 666.7 -> NT$7 (once per day, not per order)
+    for (let i = 0; i < 2; i++) {
+      addOrder(sqlite, {
+        createdAt: "2026-03-09T01:00:00Z",
+        total: 10500,
+        refund: 3500,
+        paymentStatus: "partial_refunded",
+        tax: 500,
+      });
+    }
+    const svc = service(sqlite);
+    const revenue = async (date: string) =>
+      (await svc.getDaily(SHOP, date)).revenue;
+
+    expect(await revenue("2026-03-06")).toMatchObject({
+      collectedCents: 11500,
+      taxCents: 500,
+      // service charge stays in revenue
+      netRevenueCents: 11000,
+      serviceChargeCents: 1000,
+    });
+    expect(await revenue("2026-03-07")).toMatchObject({
+      collectedCents: 9200,
+      taxCents: 400,
+      netRevenueCents: 8800,
+    });
+    expect(await revenue("2026-03-08")).toMatchObject({
+      collectedCents: 0,
+      taxCents: 0,
+      netRevenueCents: 0,
+    });
+    expect(await revenue("2026-03-09")).toMatchObject({
+      collectedCents: 14000,
+      taxCents: 700,
+      netRevenueCents: 13300,
+    });
+    const range = await svc.getRange(SHOP, "2026-03-06", "2026-03-09");
+    expect(range.days.map((d) => d.netRevenueCents)).toEqual([
+      11000, 8800, 0, 13300,
+    ]);
+  });
+
+  it("keeps sen for MYR and charges fees on the collected amount", async () => {
+    const sqlite = createDb();
+    seed(sqlite, '{"currency":"MYR"}');
+    const svc = service(sqlite);
+    await svc.setRates(SHOP, {
+      paymentFeeBps: { card: 1000 },
+      platformCommissionBps: {},
+    });
+    addOrder(sqlite, {
+      createdAt: "2026-03-10T01:00:00Z",
+      total: 10500,
+      refund: 3500,
+      paymentStatus: "partial_refunded",
+      tax: 500,
+      paymentMethod: "card",
+    });
+
+    const daily = await svc.getDaily(SHOP, "2026-03-10");
+
+    expect(daily.revenue).toMatchObject({
+      collectedCents: 7000,
+      taxCents: 333,
+      netRevenueCents: 6667,
+    });
+    // 10% of 7000 (tax included), not of 6667
+    expect(daily.fees.paymentFeeCents).toBe(700);
+  });
+});
+
+describe("PnlService rate versions", () => {
+  const card = (bps: number) => ({
+    paymentFeeBps: { card: bps },
+    platformCommissionBps: {},
+  });
+
+  it("charges each day of a range at the version in force that day", async () => {
+    const sqlite = createDb();
+    seed(sqlite);
+    const svc = service(sqlite);
+    await svc.setRates(SHOP, { ...card(100), effectiveFrom: "2026-03-01" });
+    await svc.setRates(SHOP, { ...card(1000), effectiveFrom: "2026-03-09" });
+    for (const day of ["2026-02-28", "2026-03-08", "2026-03-09"]) {
+      addOrder(sqlite, {
+        createdAt: `${day}T01:00:00Z`,
+        total: 10000,
+        tax: 0,
+        paymentMethod: "card",
+      });
+    }
+
+    const range = await svc.getRange(SHOP, "2026-02-28", "2026-03-09");
+
+    const fees = Object.fromEntries(
+      range.days.map((d) => [d.date, d.feesCents]),
+    );
+    // before the first version: nothing; then 1%, then 10%
+    expect(fees).toMatchObject({
+      "2026-02-28": 0,
+      "2026-03-08": 100,
+      "2026-03-09": 1000,
+    });
+    expect((await svc.getDaily(SHOP, "2026-02-28")).fees.configured).toBe(
+      false,
+    );
+    expect((await svc.getDaily(SHOP, "2026-03-08")).fees.configured).toBe(true);
+
+    const rates = await svc.getRates(SHOP);
+    expect(rates).toMatchObject({
+      effectiveFrom: "2026-03-09",
+      paymentFeeBps: { card: 1000 },
+    });
+    expect(rates.history.map((v) => v.effectiveFrom)).toEqual([
+      "2026-03-09",
+      "2026-03-01",
+    ]);
+  });
+
+  it("reads the legacy shape as one version since 1970, and the first save converts it", async () => {
+    const sqlite = createDb();
+    seed(
+      sqlite,
+      '{"pnlRates":{"paymentFeeBps":{"card":250},"platformCommissionBps":{"uber_eats":3000}}}',
+    );
+    const svc = service(sqlite);
+    addOrder(sqlite, {
+      createdAt: "2026-03-04T01:00:00Z",
+      total: 20000,
+      paymentMethod: "card",
+    });
+
+    const before = await svc.getRates(SHOP);
+    expect(before).toMatchObject({
+      effectiveFrom: "1970-01-01",
+      paymentFeeBps: { card: 250 },
+      platformCommissionBps: { uber_eats: 3000 },
+    });
+    expect(before.history).toHaveLength(1);
+    // 2.5% of 20000 = 500 -> NT$5
+    expect((await svc.getDaily(SHOP, "2026-03-04")).fees.paymentFeeCents).toBe(
+      500,
+    );
+
+    await svc.setRates(SHOP, { ...card(100), effectiveFrom: "2026-03-05" });
+
+    expect(storedPnlRates(sqlite)).toEqual({
+      versions: [
+        expect.objectContaining({
+          effectiveFrom: "1970-01-01",
+          paymentFeeBps: expect.objectContaining({ card: 250 }),
+          platformCommissionBps: expect.objectContaining({ uber_eats: 3000 }),
+        }),
+        expect.objectContaining({
+          effectiveFrom: "2026-03-05",
+          paymentFeeBps: expect.objectContaining({ card: 100 }),
+        }),
+      ],
+    });
+    // the day before the new version keeps the legacy rate
+    expect((await svc.getDaily(SHOP, "2026-03-04")).fees.paymentFeeCents).toBe(
+      500,
+    );
+  });
+
+  it("replaces a same-date version, defaults to today, and rejects bad dates", async () => {
+    const sqlite = createDb();
+    seed(sqlite);
+    const svc = service(sqlite);
+
+    await svc.setRates(SHOP, card(100));
+    const saved = await svc.setRates(SHOP, {
+      ...card(200),
+      effectiveFrom: "2026-03-10",
+    });
+
+    expect(saved.effectiveFrom).toBe("2026-03-10");
+    expect(saved.history).toHaveLength(1);
+    expect(saved.history[0].paymentFeeBps.card).toBe(200);
+    for (const effectiveFrom of ["2026-03-11", "2026-02-31", "yesterday"]) {
+      await expect(
+        svc.setRates(SHOP, { ...card(300), effectiveFrom }),
+      ).rejects.toMatchObject({ code: "PNL_RATES_DATE_INVALID", status: 400 });
+    }
+    expect(storedPnlRates(sqlite).versions).toHaveLength(1);
+  });
+
+  it("keeps at most 60 versions", async () => {
+    const sqlite = createDb();
+    const versions = Array.from({ length: 60 }, (_, i) => ({
+      effectiveFrom: new Date(Date.parse("2025-12-01") + i * 86_400_000)
+        .toISOString()
+        .slice(0, 10),
+      paymentFeeBps: { card: i },
+      platformCommissionBps: {},
+    }));
+    seed(sqlite, JSON.stringify({ pnlRates: { versions } }));
+    const svc = service(sqlite);
+
+    await expect(
+      svc.setRates(SHOP, { ...card(1), effectiveFrom: "2026-03-10" }),
+    ).rejects.toMatchObject({
+      code: "PNL_RATES_TOO_MANY_VERSIONS",
+      status: 400,
+    });
+    // replacing one still fits
+    const saved = await svc.setRates(SHOP, {
+      ...card(1),
+      effectiveFrom: versions[59].effectiveFrom,
+    });
+    expect(saved.history).toHaveLength(60);
+  });
+
+  it("re-reads once when another save lands between read and write", async () => {
+    const sqlite = createDb();
+    seed(sqlite);
+    const svc = service(sqlite);
+    const internals = svc as unknown as {
+      loadRestaurant: (id: string) => Promise<unknown>;
+    };
+    const load = internals.loadRestaurant.bind(svc);
+    let reads = 0;
+    let racing = 1;
+    internals.loadRestaurant = async (id) => {
+      const shop = await load(id);
+      reads += 1;
+      if (racing-- > 0) {
+        sqlite
+          .prepare(
+            "UPDATE restaurants SET settings = json_set(settings, '$.pnlRates', json(?)) WHERE id = ?",
+          )
+          .run(
+            JSON.stringify({
+              versions: [{ effectiveFrom: `2026-03-0${reads}`, ...card(100) }],
+            }),
+            SHOP,
+          );
+      }
+      return shop;
+    };
+
+    const saved = await svc.setRates(SHOP, {
+      ...card(200),
+      effectiveFrom: "2026-03-05",
+    });
+
+    expect(reads).toBe(2);
+    expect(saved.history.map((v) => v.effectiveFrom)).toEqual([
+      "2026-03-05",
+      "2026-03-01",
+    ]);
+    expect(storedPnlRates(sqlite).versions).toHaveLength(2);
+
+    // A save that loses the race twice is refused, not silently merged.
+    racing = 2;
+    await expect(
+      svc.setRates(SHOP, { ...card(300), effectiveFrom: "2026-03-06" }),
+    ).rejects.toMatchObject({ code: "PNL_RATES_CONFLICT", status: 409 });
   });
 });
