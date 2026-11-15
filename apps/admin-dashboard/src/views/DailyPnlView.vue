@@ -1,16 +1,51 @@
 <template>
   <div class="ui-page min-h-screen bg-ios-bg p-4 md:p-6">
     <div class="mx-auto max-w-3xl">
-      <header class="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 class="ui-page-heading text-[22px] font-bold text-ios-text">
-            {{ t("dailyPnl.title") }}
-          </h1>
-          <p class="mt-1 text-[13px] text-ios-secondary">
-            {{ t("dailyPnl.description") }}
-          </p>
+      <header class="mb-4">
+        <h1 class="ui-page-heading text-[22px] font-bold text-ios-text">
+          {{ t("dailyPnl.title") }}
+        </h1>
+        <p class="mt-1 text-[13px] text-ios-secondary">
+          {{ t("dailyPnl.description") }}
+        </p>
+      </header>
+
+      <!-- Same place in both modes; only the date input comes and goes. -->
+      <div class="mb-4 flex flex-wrap items-end gap-3">
+        <div
+          role="group"
+          :aria-label="t('dailyPnl.mode.label')"
+          class="flex rounded-full bg-white p-1 shadow-ios-sm"
+        >
+          <button
+            v-for="option in modes"
+            :key="option.id"
+            type="button"
+            :data-testid="`pnl-mode-${option.id}`"
+            :aria-pressed="mode === option.id"
+            class="rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors duration-200"
+            :class="
+              mode === option.id ? 'bg-ios-blue text-white' : 'text-ios-text'
+            "
+            @click="mode = option.id"
+          >
+            {{ option.label }}
+          </button>
         </div>
-        <label class="text-[12px] font-medium text-ios-secondary">
+        <button
+          v-if="restaurantId"
+          type="button"
+          data-testid="pnl-rates-open"
+          :aria-expanded="ratesOpen"
+          class="rounded-full bg-white px-4 py-2 text-[13px] font-semibold text-ios-text shadow-ios-sm transition-colors duration-200"
+          @click="ratesOpen = !ratesOpen"
+        >
+          {{ t("dailyPnl.rates.open") }}
+        </button>
+        <label
+          v-if="mode === 'day'"
+          class="text-[12px] font-medium text-ios-secondary"
+        >
           {{ t("dailyPnl.date") }}
           <input
             v-model="date"
@@ -21,7 +56,14 @@
             class="mt-1 block rounded-xl bg-white px-3 py-2 text-[14px] text-ios-text shadow-ios-sm outline-none"
           />
         </label>
-      </header>
+      </div>
+
+      <PnlRatesForm
+        v-if="ratesOpen && restaurantId"
+        :restaurant-id="restaurantId"
+        @close="ratesOpen = false"
+        @saved="onRatesSaved"
+      />
 
       <div
         v-if="!restaurantId"
@@ -30,6 +72,14 @@
       >
         {{ t("dailyPnl.noRestaurant") }}
       </div>
+
+      <PnlRangePanel
+        v-else-if="mode === 'range'"
+        :restaurant-id="restaurantId"
+        :today="today"
+        :refresh-key="rangeKey"
+        @pick="pickDay"
+      />
 
       <div
         v-else-if="statement === null && isLoading"
@@ -138,13 +188,13 @@
             </span>
           </p>
 
-          <div class="mt-5 flex justify-between text-[15px] font-bold">
-            <h2 class="text-ios-text">{{ t("dailyPnl.cogs.title") }}</h2>
-            <span data-testid="pnl-cogs" class="tabular-nums">
-              − {{ money(statement.cogs.totalCents) }}
-            </span>
-          </div>
-          <dl class="mt-2 text-[14px]">
+          <dl class="mt-1 text-[14px]">
+            <div class="flex justify-between py-1.5">
+              <dt class="text-ios-text">− {{ t("dailyPnl.cogs.title") }}</dt>
+              <dd data-testid="pnl-cogs" class="tabular-nums">
+                {{ money(statement.cogs.totalCents) }}
+              </dd>
+            </div>
             <div
               class="flex justify-between rounded-xl bg-ios-bg px-3 py-2 font-bold"
             >
@@ -166,38 +216,80 @@
             {{ t("dailyPnl.costNote") }}
           </p>
 
-          <div class="mt-5 flex justify-between text-[15px] font-bold">
-            <h2 class="text-ios-text">{{ t("dailyPnl.expenses.title") }}</h2>
-            <span data-testid="pnl-expenses-total" class="tabular-nums">
-              − {{ money(statement.expenses.totalCents) }}
-            </span>
-          </div>
-          <p
-            v-if="statement.expenses.byCategory.length === 0"
-            class="mt-2 text-[13px] text-ios-secondary"
-          >
-            {{ t("dailyPnl.expenses.empty") }}
-          </p>
-          <dl v-else class="mt-2 text-[14px]">
+          <dl class="mt-3 text-[14px]">
+            <div
+              v-if="!statement.fees.configured"
+              data-testid="pnl-fees-unconfigured"
+              class="py-1.5 text-[13px] text-ios-secondary"
+            >
+              {{ t("dailyPnl.fees.notConfigured") }}
+              <button
+                type="button"
+                data-testid="pnl-fees-setup"
+                class="font-semibold text-ios-blue underline underline-offset-2"
+                @click="ratesOpen = true"
+              >
+                {{ t("dailyPnl.fees.setRates") }}
+              </button>
+            </div>
+            <template v-else>
+              <div class="flex justify-between py-1.5">
+                <dt class="text-ios-text">
+                  − {{ t("dailyPnl.fees.payment") }}
+                </dt>
+                <dd data-testid="pnl-payment-fee" class="tabular-nums">
+                  {{ money(statement.fees.paymentFeeCents) }}
+                </dd>
+              </div>
+              <div class="flex justify-between py-1.5">
+                <dt class="text-ios-text">
+                  − {{ t("dailyPnl.fees.platform") }}
+                </dt>
+                <dd data-testid="pnl-platform-commission" class="tabular-nums">
+                  {{ money(statement.fees.platformCommissionCents) }}
+                </dd>
+              </div>
+            </template>
+            <div class="flex justify-between py-1.5">
+              <dt class="text-ios-text">− {{ t("dailyPnl.labor.title") }}</dt>
+              <dd data-testid="pnl-labor" class="tabular-nums">
+                {{ money(statement.labor.costCents) }}
+              </dd>
+            </div>
+            <div class="flex justify-between py-1.5">
+              <dt class="text-ios-text">
+                − {{ t("dailyPnl.expenses.title") }}
+              </dt>
+              <dd data-testid="pnl-expenses-total" class="tabular-nums">
+                {{ money(statement.expenses.totalCents) }}
+              </dd>
+            </div>
             <div
               v-for="row in statement.expenses.byCategory"
               :key="row.category"
-              class="flex justify-between py-1.5"
+              class="flex justify-between py-1 pl-5 text-[13px] text-ios-secondary"
             >
-              <dt class="text-ios-text">{{ categoryLabel(row.category) }}</dt>
+              <dt>{{ categoryLabel(row.category) }}</dt>
               <dd class="tabular-nums">{{ money(row.amountCents) }}</dd>
             </div>
           </dl>
+          <p
+            v-if="statement.labor.shiftsMissingRate > 0"
+            data-testid="pnl-labor-missing-rate"
+            class="mt-1 text-[12px] text-ios-secondary"
+          >
+            {{
+              t("dailyPnl.labor.missingRate", {
+                count: statement.labor.shiftsMissingRate,
+              })
+            }}
+          </p>
 
           <div
             data-testid="pnl-net-profit"
-            :data-status="isLoss ? 'loss' : 'profit'"
+            :data-status="netStatus"
             class="mt-6 flex items-center justify-between rounded-2xl px-4 py-4"
-            :class="
-              isLoss
-                ? 'bg-ios-red-soft text-ios-red-deep'
-                : 'bg-ios-green-soft text-ios-green-deep'
-            "
+            :class="netClass"
           >
             <div class="flex items-center gap-2">
               <span class="text-[15px] font-bold">
@@ -207,7 +299,7 @@
                 data-testid="pnl-net-label"
                 class="rounded-full bg-white px-2.5 py-0.5 text-[12px] font-bold"
               >
-                {{ isLoss ? t("dailyPnl.net.loss") : t("dailyPnl.net.profit") }}
+                {{ netLabel }}
               </span>
             </div>
             <span
@@ -221,7 +313,7 @@
 
         <section class="ui-panel mt-4 rounded-3xl bg-white p-5 shadow-ios-sm">
           <h2 class="text-[15px] font-bold text-ios-text">
-            {{ t("dailyPnl.expenses.title") }}
+            {{ t("dailyPnl.expenses.entryTitle") }}
           </h2>
 
           <ul
@@ -321,6 +413,9 @@
               {{ t("dailyPnl.expenses.add") }}
             </button>
           </form>
+          <p class="mt-3 text-[12px] text-ios-secondary">
+            {{ t("dailyPnl.labor.expenseNote") }}
+          </p>
         </section>
       </template>
     </div>
@@ -335,7 +430,6 @@ import { useToast } from "vue-toastification";
 import {
   DEFAULT_CURRENCY,
   currencyStepCents,
-  formatCurrency,
   getCurrencySymbol,
   normalizeCurrencyCode,
   roundToCurrencyCents,
@@ -350,7 +444,15 @@ import {
   type DailyPnl,
   type ExpenseCategory,
 } from "@/services/pnlService";
+import PnlRangePanel from "@/components/pnl/PnlRangePanel.vue";
+import PnlRatesForm from "@/components/pnl/PnlRatesForm.vue";
 import { extractApiErrorCode } from "@/utils/errorHandler";
+import {
+  PNL_STATUS_CLASS,
+  formatPnlMoney,
+  pnlStatus,
+  pnlStatusLabel,
+} from "@/utils/pnl";
 
 /**
  * 日帳損益表。All figures arrive as integer cents plus the statement's own
@@ -374,6 +476,13 @@ function localDay(): string {
 
 const today = localDay();
 const date = ref(today);
+const mode = ref<"day" | "range">("day");
+const ratesOpen = ref(false);
+const rangeKey = ref(0);
+const modes = computed(() => [
+  { id: "day" as const, label: t("dailyPnl.mode.day") },
+  { id: "range" as const, label: t("dailyPnl.mode.range") },
+]);
 const statement = ref<DailyPnl | null>(null);
 const isLoading = ref(false);
 const busy = ref(false);
@@ -392,7 +501,11 @@ const amountStep = computed(() =>
   String(currencyStepCents(currency.value) / 100),
 );
 
-const isLoss = computed(() => (statement.value?.netProfitCents ?? 0) < 0);
+const netStatus = computed(() =>
+  pnlStatus(statement.value?.netProfitCents ?? 0),
+);
+const netClass = computed(() => PNL_STATUS_CLASS[netStatus.value]);
+const netLabel = computed(() => pnlStatusLabel(netStatus.value, t));
 
 const grossMarginLabel = computed(() => {
   const current = statement.value;
@@ -403,8 +516,17 @@ const grossMarginLabel = computed(() => {
 });
 
 function money(cents: number): string {
-  const text = formatCurrency(Math.abs(cents) / 100, currency.value);
-  return cents < 0 ? `−${text}` : text;
+  return formatPnlMoney(cents, currency.value);
+}
+
+function pickDay(day: string): void {
+  date.value = day;
+  mode.value = "day";
+}
+
+async function onRatesSaved(): Promise<void> {
+  rangeKey.value += 1;
+  await load(true);
 }
 
 // Literal keys, so the i18n parity scan can see every one of them.
@@ -427,6 +549,9 @@ function reportError(cause: unknown, fallback: string): void {
   switch (extractApiErrorCode(cause)) {
     case "CURRENCY_PRECISION":
       toast.error(t("dailyPnl.errors.precision"));
+      return;
+    case "EXPENSE_DATE_IN_FUTURE":
+      toast.error(t("dailyPnl.errors.dateInFuture"));
       return;
     case "EXPENSE_NOT_FOUND":
       toast.error(t("dailyPnl.errors.notFound"));

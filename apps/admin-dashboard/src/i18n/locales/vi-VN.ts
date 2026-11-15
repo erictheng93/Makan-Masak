@@ -1793,6 +1793,75 @@ const viVN: Messages = {
     },
   },
   dailyPnl: {
+    mode: { label: "Chế độ xem", day: "Một ngày", range: "Khoảng ngày" },
+    fees: {
+      payment: "Phí thanh toán (ước tính)",
+      platform: "Hoa hồng nền tảng (ước tính)",
+      notConfigured: "Chưa thiết lập tỷ lệ phí",
+      setRates: "Thiết lập tỷ lệ phí",
+    },
+    labor: {
+      title: "Nhân công (theo ca)",
+      missingRate: "{count} ca chưa có lương theo giờ nên không được tính",
+      expenseNote:
+        "Lương của nhân viên theo ca đã được tự động tính vào Nhân công. Chỉ dùng nhóm chi phí Nhân sự cho lương ngoài lịch ca để tránh tính trùng.",
+    },
+    rates: {
+      open: "Tỷ lệ phí",
+      title: "Thiết lập tỷ lệ phí",
+      paymentMethods: "Tỷ lệ phí thanh toán",
+      platforms: "Hoa hồng nền tảng giao hàng",
+      save: "Lưu tỷ lệ",
+      appliesToPast:
+        "Tỷ lệ áp dụng cho cả các ngày trước, nên báo cáo cũ cũng sẽ thay đổi.",
+      loadFailed: "Không thể tải tỷ lệ phí. Vui lòng thử lại.",
+      saveFailed: "Không thể lưu tỷ lệ phí. Vui lòng thử lại.",
+      invalid: "Tỷ lệ phải từ 0 đến 100, tối đa hai chữ số thập phân.",
+      saved: "Đã lưu tỷ lệ phí.",
+      close: "Đóng",
+      methods: {
+        cash: "Tiền mặt",
+        card: "Thẻ tín dụng",
+        online: "Thanh toán trực tuyến",
+        ewallet: "Ví điện tử",
+        digital_wallet: "Ví điện tử",
+        bank_transfer: "Chuyển khoản",
+        other: "Khác",
+        split: "Chia thanh toán",
+        line_pay: "LINE Pay",
+        ecpay: "ECPay",
+        newebpay: "NewebPay",
+        stripe: "Stripe",
+      },
+      platformNames: {
+        uber_eats: "Uber Eats",
+        foodpanda: "Foodpanda",
+        grabfood: "GrabFood",
+      },
+    },
+    range: {
+      from: "Từ ngày",
+      to: "Đến ngày",
+      clamped: "Khoảng tối đa {days} ngày; ngày bắt đầu đã được điều chỉnh.",
+      loadFailed: "Không thể tải báo cáo theo khoảng. Vui lòng thử lại.",
+      invalid:
+        "Khoảng ngày không hợp lệ: tối đa 92 ngày và không được ở tương lai.",
+      totals: "Tổng khoảng ngày",
+      hint: "Chọn một ngày để xem báo cáo ngày đó.",
+      export: "Xuất CSV",
+      tableLabel: "Chi tiết lãi lỗ theo ngày",
+      columns: {
+        date: "Ngày",
+        orders: "Đơn hàng",
+        netRevenue: "Doanh thu ròng",
+        cogs: "Giá vốn",
+        grossProfit: "Lợi nhuận gộp",
+        fees: "Phí & hoa hồng",
+        labor: "Nhân công",
+        expenses: "Chi phí vận hành",
+        netProfit: "Lãi/lỗ",
+      },
+    },
     title: "Báo cáo lãi lỗ theo ngày",
     description:
       "Mỗi ngày một báo cáo: doanh thu, giá vốn hàng bán và chi phí hoạt động, để biết hôm nay lãi hay lỗ.",
@@ -1813,6 +1882,7 @@ const viVN: Messages = {
       grossMargin: "Biên lợi nhuận gộp",
     },
     expenses: {
+      entryTitle: "Chi tiết chi phí",
       title: "Chi phí hoạt động",
       empty: "Chưa có chi phí hoạt động trong ngày này",
       category: "Loại",
@@ -1834,6 +1904,7 @@ const viVN: Messages = {
       title: "Lãi lỗ trong ngày",
       profit: "Lãi",
       loss: "Lỗ",
+      even: "Hòa vốn",
     },
     warning: {
       missingCost:
@@ -1841,7 +1912,7 @@ const viVN: Messages = {
       manageMenu: "Đặt giá vốn trong quản lý thực đơn",
     },
     costNote:
-      "Giá vốn hàng bán tính theo giá vốn HIỆN TẠI của từng món, nên đổi giá vốn cũng làm thay đổi lợi nhuận gộp của các ngày trước.",
+      "Giá vốn được ghi nhận tại thời điểm bán. Các đơn cũ chưa ghi giá vốn sẽ dùng giá vốn hiện tại của món.",
     toast: {
       added: "Đã thêm chi phí.",
       deleted: "Đã xóa chi phí.",
@@ -1853,6 +1924,7 @@ const viVN: Messages = {
       addFailed: "Không thể thêm chi phí. Vui lòng thử lại.",
       deleteFailed: "Không thể xóa chi phí. Vui lòng thử lại.",
       amountInvalid: "Nhập số tiền lớn hơn 0.",
+      dateInFuture: "Không thể ghi chi phí cho ngày trong tương lai.",
     },
   },
   reviews: {

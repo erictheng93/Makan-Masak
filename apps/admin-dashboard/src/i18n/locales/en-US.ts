@@ -1894,6 +1894,75 @@ const enUS: Messages = {
     },
   },
   dailyPnl: {
+    mode: { label: "View", day: "Day", range: "Range" },
+    fees: {
+      payment: "Payment fees (estimated)",
+      platform: "Platform commission (estimated)",
+      notConfigured: "Fee rates not set up yet",
+      setRates: "Set fee rates",
+    },
+    labor: {
+      title: "Labor (scheduled shifts)",
+      missingRate: "{count} shift(s) have no hourly rate and are not counted",
+      expenseNote:
+        "Wages for scheduled staff are already counted automatically under Labor. Use the Labor expense category only for wages outside the schedule, to avoid counting them twice.",
+    },
+    rates: {
+      open: "Fee rates",
+      title: "Fee rate settings",
+      paymentMethods: "Payment fee rates",
+      platforms: "Delivery platform commission",
+      save: "Save rates",
+      appliesToPast:
+        "Rates apply to past days too, so earlier statements will change.",
+      loadFailed: "Could not load fee rates. Please try again.",
+      saveFailed: "Could not save fee rates. Please try again.",
+      invalid: "Rates must be between 0 and 100, with at most two decimals.",
+      saved: "Fee rates saved.",
+      close: "Close",
+      methods: {
+        cash: "Cash",
+        card: "Credit Card",
+        online: "Online",
+        ewallet: "E-wallet",
+        digital_wallet: "Digital Wallet",
+        bank_transfer: "Bank Transfer",
+        other: "Other",
+        split: "Split payment",
+        line_pay: "LINE Pay",
+        ecpay: "ECPay",
+        newebpay: "NewebPay",
+        stripe: "Stripe",
+      },
+      platformNames: {
+        uber_eats: "Uber Eats",
+        foodpanda: "Foodpanda",
+        grabfood: "GrabFood",
+      },
+    },
+    range: {
+      from: "From",
+      to: "To",
+      clamped:
+        "The range is limited to {days} days; the start date was adjusted.",
+      loadFailed: "Could not load the range statement. Please try again.",
+      invalid: "Invalid date range: at most 92 days, and not in the future.",
+      totals: "Range totals",
+      hint: "Select a day to open its daily statement.",
+      export: "Export CSV",
+      tableLabel: "Daily profit and loss breakdown",
+      columns: {
+        date: "Date",
+        orders: "Orders",
+        netRevenue: "Net revenue",
+        cogs: "COGS",
+        grossProfit: "Gross profit",
+        fees: "Fees & commission",
+        labor: "Labor",
+        expenses: "Expenses",
+        netProfit: "Net profit",
+      },
+    },
     title: "Daily P&L statement",
     description:
       "One statement per day: revenue, cost of goods and operating expenses, so you can see whether today made or lost money.",
@@ -1914,6 +1983,7 @@ const enUS: Messages = {
       grossMargin: "Gross margin",
     },
     expenses: {
+      entryTitle: "Expense entries",
       title: "Operating expenses",
       empty: "No operating expenses for this day",
       category: "Category",
@@ -1935,6 +2005,7 @@ const enUS: Messages = {
       title: "Net profit for the day",
       profit: "Profit",
       loss: "Loss",
+      even: "Break-even",
     },
     warning: {
       missingCost:
@@ -1942,7 +2013,7 @@ const enUS: Messages = {
       manageMenu: "Set costs in menu management",
     },
     costNote:
-      "Cost of goods uses each item's current cost, so changing a cost also changes the gross profit of past days.",
+      "Cost of goods is recorded at the time of sale. Older orders without a recorded cost use the item's current cost.",
     toast: {
       added: "Expense added.",
       deleted: "Expense deleted.",
@@ -1954,6 +2025,7 @@ const enUS: Messages = {
       addFailed: "Could not add the expense. Please try again.",
       deleteFailed: "Could not delete the expense. Please try again.",
       amountInvalid: "Enter an amount greater than 0.",
+      dateInFuture: "Expenses cannot be dated in the future.",
     },
   },
   reviews: {

@@ -1791,6 +1791,76 @@ const jaJP: Messages = {
     },
   },
   dailyPnl: {
+    mode: { label: "表示", day: "日次", range: "期間" },
+    fees: {
+      payment: "決済手数料（概算）",
+      platform: "プラットフォーム手数料（概算）",
+      notConfigured: "手数料率が未設定です",
+      setRates: "手数料率を設定",
+    },
+    labor: {
+      title: "人件費（シフト）",
+      missingRate: "{count} 件のシフトに時給がないため含まれていません",
+      expenseNote:
+        "シフト勤務者の給与は「人件費」に自動計上されています。「人件費」カテゴリにはシフト外の給与のみを入力し、二重計上を避けてください。",
+    },
+    rates: {
+      open: "手数料率",
+      title: "手数料率の設定",
+      paymentMethods: "決済手数料率",
+      platforms: "配達プラットフォーム手数料",
+      save: "保存",
+      appliesToPast:
+        "手数料率は過去の日付にも適用され、過去の損益表も変わります。",
+      loadFailed: "手数料率を読み込めませんでした。もう一度お試しください。",
+      saveFailed: "手数料率を保存できませんでした。もう一度お試しください。",
+      invalid: "手数料率は 0〜100、小数点以下は 2 桁までです。",
+      saved: "手数料率を保存しました。",
+      close: "閉じる",
+      methods: {
+        cash: "現金",
+        card: "クレジットカード",
+        online: "オンライン決済",
+        ewallet: "電子ウォレット",
+        digital_wallet: "デジタルウォレット",
+        bank_transfer: "銀行振込",
+        other: "その他",
+        split: "分割会計",
+        line_pay: "LINE Pay",
+        ecpay: "ECPay",
+        newebpay: "NewebPay",
+        stripe: "Stripe",
+      },
+      platformNames: {
+        uber_eats: "Uber Eats",
+        foodpanda: "Foodpanda",
+        grabfood: "GrabFood",
+      },
+    },
+    range: {
+      from: "開始日",
+      to: "終了日",
+      clamped: "期間は最長 {days} 日です。開始日を調整しました。",
+      loadFailed:
+        "期間の損益表を読み込めませんでした。もう一度お試しください。",
+      invalid:
+        "日付の範囲が無効です。最長 92 日で、未来の日付は指定できません。",
+      totals: "期間合計",
+      hint: "日付を選ぶとその日の損益表を表示します。",
+      export: "CSV を出力",
+      tableLabel: "日別損益の内訳",
+      columns: {
+        date: "日付",
+        orders: "注文数",
+        netRevenue: "純売上",
+        cogs: "売上原価",
+        grossProfit: "粗利",
+        fees: "手数料・コミッション合計",
+        labor: "人件費",
+        expenses: "営業費用",
+        netProfit: "損益",
+      },
+    },
     title: "日次損益計算書",
     description:
       "1日ごとに売上・売上原価・営業費用をまとめ、今日が黒字か赤字かをひと目で確認できます。",
@@ -1811,6 +1881,7 @@ const jaJP: Messages = {
       grossMargin: "粗利率",
     },
     expenses: {
+      entryTitle: "費用の明細",
       title: "営業費用",
       empty: "この日の営業費用はありません",
       category: "区分",
@@ -1832,6 +1903,7 @@ const jaJP: Messages = {
       title: "本日の損益",
       profit: "黒字",
       loss: "赤字",
+      even: "収支ゼロ",
     },
     warning: {
       missingCost:
@@ -1839,7 +1911,7 @@ const jaJP: Messages = {
       manageMenu: "メニュー管理で原価を設定",
     },
     costNote:
-      "売上原価は各商品の「現在の」原価で計算します。原価を変更すると過去の日の粗利も変わります。",
+      "売上原価は販売時点で記録されます。原価が記録されていない過去の注文は、商品の現在の原価で計算します。",
     toast: {
       added: "費用を追加しました。",
       deleted: "費用を削除しました。",
@@ -1851,6 +1923,7 @@ const jaJP: Messages = {
       addFailed: "費用を追加できませんでした。もう一度お試しください。",
       deleteFailed: "費用を削除できませんでした。もう一度お試しください。",
       amountInvalid: "0 より大きい金額を入力してください。",
+      dateInFuture: "未来の日付の費用は登録できません。",
     },
   },
   reviews: {

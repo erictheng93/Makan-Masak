@@ -1060,17 +1060,20 @@ so a token can never be replayed against a different room.
 | PUT | `/shop-payments/:restaurantId/:provider` | 更新商戶連線、設定或密鑰 | Admin / Owner |
 | DELETE | `/shop-payments/:restaurantId/:provider` | 中斷商戶連線並移除密鑰 | Admin / Owner |
 
-### Daily P&L (`/pnl`) — 3 routes
+### Daily P&L (`/pnl`) — 6 routes
 
 日帳損益表。需要認證，僅限平台管理員（role 0）與店主（role 1）；店主只能存取自己的店家（`FORBIDDEN` 403）。與 `/analytics/financial-report` 共用 `analytics` 模組閘門。日期為真實日曆日 `YYYY-MM-DD`；金額為整數 cents。
 
 | Method | Path | Description | Auth |
 | ------ | ---- | ----------- | ---- |
-| GET | `/pnl/:restaurantId/daily?date=YYYY-MM-DD` | 取得單日損益表（省略 `date` 取預設日） | Admin / Owner |
-| POST | `/pnl/:restaurantId/expenses` | 新增支出（`date`、`category`、`amountCents` > 0、選填 `note` ≤ 200 字），回應 201 | Admin / Owner |
+| GET | `/pnl/:restaurantId/daily?date=YYYY-MM-DD` | 取得單日損益表（省略 `date` 取預設日）；含營收、`cogs`（`itemsMissingCost` 為缺成本品項數）、`fees`（付款手續費與外送平台抽成）、`labor`（`costCents`、`shifts`、`shiftsMissingRate`）、`expenses` 區塊與 `netProfitCents` | Admin / Owner |
+| GET | `/pnl/:restaurantId/range?from=&to=` | 區間損益表：逐日 `days` 與加總 `totals`；最多 92 天，`from` 不可晚於 `to`，否則 `PNL_RANGE_INVALID` 400 | Admin / Owner |
+| GET | `/pnl/:restaurantId/rates` | 取得付款手續費與平台抽成費率（bps）及店內可用的付款方式／平台 | Admin / Owner |
+| PUT | `/pnl/:restaurantId/rates` | 設定 `paymentFeeBps`（0–10000，鍵須為店內出現過的付款方式）與 `platformCommissionBps`（鍵為已知平台，缺漏視為 0）；成功後清除餐廳快取 | Admin / Owner |
+| POST | `/pnl/:restaurantId/expenses` | 新增支出（`date` 不可晚於店家當日，否則 `EXPENSE_DATE_IN_FUTURE` 400；`category`、`amountCents` > 0、選填 `note` ≤ 200 字），回應 201 | Admin / Owner |
 | DELETE | `/pnl/:restaurantId/expenses/:expenseId` | 軟刪除支出；不存在、已刪除或屬於他店皆回 `EXPENSE_NOT_FOUND` 404 | Admin / Owner |
 
-錯誤碼：`VALIDATION_ERROR` 400（日期、類別或金額不合法）、`FORBIDDEN` 403、`RESTAURANT_NOT_FOUND` 404、`EXPENSE_NOT_FOUND` 404。
+錯誤碼：`VALIDATION_ERROR` 400（日期、類別、金額或費率鍵不合法）、`PNL_RANGE_INVALID` 400、`EXPENSE_DATE_IN_FUTURE` 400、`FORBIDDEN` 403、`RESTAURANT_NOT_FOUND` 404、`EXPENSE_NOT_FOUND` 404。
 
 ### SEO (mounted at `/`) — 2 routes
 

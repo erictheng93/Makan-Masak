@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { EXPENSE_CATEGORIES } from "@makanmasak/database";
+import { EXPENSE_CATEGORIES, PLATFORM_TYPES } from "@makanmasak/database";
 
 /** YYYY-MM-DD that is a real calendar day (rejects 2026-02-31). */
 const dateSchema = z
@@ -29,7 +29,23 @@ export const createExpenseSchema = z.object({
   note: z.string().trim().max(200).optional(),
 });
 
+/** Range length is checked by the service (PNL_RANGE_INVALID), not here. */
+export const rangeQuerySchema = z.object({ from: dateSchema, to: dateSchema });
+
+const bps = z.number().int().min(0).max(10_000);
+/** Unknown platform keys are rejected here; missing keys mean 0. */
+export const ratesSchema = z.object({
+  // Keys depend on the shop's orders, so PnlService.setRates checks them.
+  paymentFeeBps: z.record(z.string().min(1).max(50), bps),
+  platformCommissionBps: z.partialRecord(
+    z.enum(Object.values(PLATFORM_TYPES)),
+    bps,
+  ),
+});
+
 export type RestaurantParamInput = z.infer<typeof restaurantParamSchema>;
 export type ExpenseParamInput = z.infer<typeof expenseParamSchema>;
 export type DailyQueryInput = z.infer<typeof dailyQuerySchema>;
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
+export type RangeQueryInput = z.infer<typeof rangeQuerySchema>;
+export type RatesInput = z.infer<typeof ratesSchema>;

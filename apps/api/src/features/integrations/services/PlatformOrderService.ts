@@ -109,6 +109,7 @@ export class PlatformOrderService {
       .select({
         platformItemId: platformMenuMappings.platformItemId,
         menuItemId: platformMenuMappings.menuItemId,
+        costPriceCents: menuItems.costPriceCents,
       })
       .from(platformMenuMappings)
       .innerJoin(
@@ -126,7 +127,7 @@ export class PlatformOrderService {
       );
 
     const platformToInternalMap = new Map(
-      mappings.map((m) => [m.platformItemId, m.menuItemId]),
+      mappings.map((m) => [m.platformItemId, m]),
     );
 
     // Create internal order
@@ -139,8 +140,16 @@ export class PlatformOrderService {
 
     const orderId = generateUUID();
     const consumedItems = parsedOrder.items.flatMap((item) => {
-      const menuItemId = platformToInternalMap.get(item.platformItemId);
-      return menuItemId == null ? [] : [{ item, menuItemId }];
+      const mapping = platformToInternalMap.get(item.platformItemId);
+      return mapping == null
+        ? []
+        : [
+            {
+              item,
+              menuItemId: mapping.menuItemId,
+              unitCostCents: mapping.costPriceCents,
+            },
+          ];
     });
     const writes: BatchItem<"sqlite">[] = [
       this.db.insert(orders).values({
@@ -169,7 +178,7 @@ export class PlatformOrderService {
     ];
 
     // Create order items
-    for (const { item, menuItemId } of consumedItems) {
+    for (const { item, menuItemId, unitCostCents } of consumedItems) {
       const unitPriceCents = item.unitPriceCents;
       const totalPriceCents = unitPriceCents * item.quantity;
 
@@ -180,6 +189,7 @@ export class PlatformOrderService {
           quantity: item.quantity,
           unitPriceCents,
           totalPriceCents,
+          unitCostCents,
           itemSnapshot: { name: item.name },
           notes: item.notes,
           customizations: item.customizations?.length

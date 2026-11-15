@@ -8,15 +8,21 @@ import {
   validateQuery,
 } from "../../../shared/middleware";
 import { forbidden, notFound } from "../../../shared/utils/api-error";
+import { KVCacheService } from "../../../core/cache";
+import { invalidateRestaurantMenuEdgeCache } from "../../../middleware/edge-cache";
 import { PnlService } from "../services/PnlService";
 import {
   createExpenseSchema,
   dailyQuerySchema,
   expenseParamSchema,
+  rangeQuerySchema,
+  ratesSchema,
   restaurantParamSchema,
   type CreateExpenseInput,
   type DailyQueryInput,
   type ExpenseParamInput,
+  type RangeQueryInput,
+  type RatesInput,
   type RestaurantParamInput,
 } from "../schemas/validation";
 import type { Env } from "../../../types/env";
@@ -59,6 +65,64 @@ app.get(
     const { date } = c.get("validatedQuery") as DailyQueryInput;
 
     const data = await new PnlService(c.env.DB).getDaily(restaurantId, date);
+    return c.json({ success: true, data });
+  },
+);
+
+/** GET /api/v1/pnl/:restaurantId/range?from=YYYY-MM-DD&to=YYYY-MM-DD (at most 92 days) */
+app.get(
+  "/:restaurantId/range",
+  requireRole(PNL_ROLES),
+  validateParams(restaurantParamSchema),
+  validateQuery(rangeQuerySchema),
+  async (c) => {
+    const { restaurantId } = c.get("validatedParams") as RestaurantParamInput;
+    assertRestaurantScope(c.env, c.get("user"), restaurantId);
+    const { from, to } = c.get("validatedQuery") as RangeQueryInput;
+
+    const data = await new PnlService(c.env.DB).getRange(
+      restaurantId,
+      from,
+      to,
+    );
+    return c.json({ success: true, data });
+  },
+);
+
+/** GET /api/v1/pnl/:restaurantId/rates */
+app.get(
+  "/:restaurantId/rates",
+  requireRole(PNL_ROLES),
+  validateParams(restaurantParamSchema),
+  async (c) => {
+    const { restaurantId } = c.get("validatedParams") as RestaurantParamInput;
+    assertRestaurantScope(c.env, c.get("user"), restaurantId);
+
+    const data = await new PnlService(c.env.DB).getRates(restaurantId);
+    return c.json({ success: true, data });
+  },
+);
+
+/** PUT /api/v1/pnl/:restaurantId/rates */
+app.put(
+  "/:restaurantId/rates",
+  requireRole(PNL_ROLES),
+  validateParams(restaurantParamSchema),
+  validateBody(ratesSchema),
+  async (c) => {
+    const { restaurantId } = c.get("validatedParams") as RestaurantParamInput;
+    assertRestaurantScope(c.env, c.get("user"), restaurantId);
+    const body = c.get("validatedBody") as RatesInput;
+
+    const data = await new PnlService(c.env.DB).setRates(restaurantId, body);
+    // GET /restaurants/:id serves settings from two caches: RestaurantsService's
+    // KV row and the edge response cache. Drop both, as restaurant writes do.
+    if (c.env.CACHE_KV) {
+      await new KVCacheService(c.env.CACHE_KV).delete(
+        `restaurant:${restaurantId}`,
+      );
+      await invalidateRestaurantMenuEdgeCache(c.env, restaurantId);
+    }
     return c.json({ success: true, data });
   },
 );

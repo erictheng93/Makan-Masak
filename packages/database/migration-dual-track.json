@@ -186,6 +186,10 @@
     {
       "fresh": "0046_restaurant_expenses.sql",
       "reason": "restaurant_expenses feeds the platform API's daily P&L statement; the management API has no orders or restaurant ledger to pair against."
+    },
+    {
+      "fresh": "0047_order_items_unit_cost.sql",
+      "reason": "order_items is a platform-API table; the management-api database has no order_items."
     }
   ],
   "legacyOnly": [

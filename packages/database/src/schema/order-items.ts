@@ -23,6 +23,8 @@ export const orderItems = sqliteTable(
     // 價格資訊
     unitPriceCents: integer("unit_price_cents"),
     totalPriceCents: integer("total_price_cents"),
+    // Menu cost at sale time; NULL = unknown then (distinct from 0).
+    unitCostCents: integer("unit_cost_cents"),
 
     // 菜品資訊快照（防止菜單變更影響歷史訂單）
     itemSnapshot: text("item_snapshot", { mode: "json" }).$type<{
