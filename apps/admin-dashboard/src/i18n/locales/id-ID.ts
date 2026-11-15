@@ -6626,6 +6626,14 @@ const idID: Messages = {
         "Berlaku di akhir periode ini ({date}); sampai saat itu fitur paket saat ini tetap tersedia.",
       trialNoReturn:
         "Setelah keluar dari uji coba, Anda tidak dapat kembali ke uji coba.",
+      limitsLower: "Batas penggunaan akan turun",
+      limitLowered: {
+        orders: "Batas pesanan per periode akan turun dari {from} menjadi {to}",
+        print: "Batas cetak per periode akan turun dari {from} menjadi {to}",
+        ai: "Batas permintaan AI per periode akan turun dari {from} menjadi {to}",
+      },
+      trialNoReturnLimits:
+        "Setelah keluar dari uji coba, Anda tidak dapat kembali. Setelah batas turun, Anda hanya bisa naik ke paket yang lebih tinggi.",
       gained: "Fitur yang Anda dapatkan",
       lost: "Fitur yang akan hilang",
       blocking: "Selesaikan ini dahulu",

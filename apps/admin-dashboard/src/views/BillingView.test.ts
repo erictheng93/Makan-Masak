@@ -59,7 +59,7 @@ function option(overrides: Partial<PlanOption> = {}): PlanOption {
     gainedModules: ["pos"],
     lostModules: [],
     quotas: {
-      "orders.created": { soft: 800, hard: 1000 },
+      "orders.created": { soft: 4000, hard: 5000 },
       "print.jobs": null,
       "ai.requests": { soft: 0, hard: 0 },
       "storage.bytes": { soft: 1, hard: 5_000_000_000 },
@@ -166,7 +166,7 @@ describe("BillingView plan section", () => {
     const basic = wrapper.get('[data-testid="plan-card-basic"]');
     expect(
       basic.get('[data-testid="plan-basic-limit-orders"]').text(),
-    ).toContain("1,000");
+    ).toContain("5,000");
     // Basic has neither printing nor AI: "not included", never "unlimited".
     expect(
       basic.get('[data-testid="plan-basic-limit-print"]').text(),
@@ -558,5 +558,181 @@ describe("BillingView plan section", () => {
     expect(wrapper.find('[data-testid="billing-plans-error"]').exists()).toBe(
       false,
     );
+  });
+
+  describe("reduced limits in the confirmation", () => {
+    const limit = (hard: number | null) =>
+      hard === null ? null : { soft: hard * 0.8, hard };
+    const printing = ["menu_management", "receipt_printing", "ai_analytics"];
+
+    function plans(
+      currentTier: PlanOverview["currentTier"],
+      from: Partial<PlanOption>,
+      to: Partial<PlanOption>,
+    ) {
+      getPlan.mockResolvedValue(
+        overview({
+          currentTier,
+          options: [
+            option({ tier: currentTier, action: "current", ...from }),
+            option({ tier: "basic", action: "downgrade", ...to }),
+          ],
+        }),
+      );
+    }
+
+    async function openConfirm() {
+      getImpact.mockResolvedValue(impact({ toTier: "basic" }));
+      const wrapper = await mountView();
+      await action(wrapper, "basic").trigger("click");
+      await flushPromises();
+      return confirm.mock.calls[0][0] as {
+        message: string;
+        sections: Array<{
+          heading: string;
+          items: string[];
+          caution?: boolean;
+        }>;
+      };
+    }
+
+    it("lists each lowered limit with separators, and 不限 as the old unlimited value", async () => {
+      plans(
+        "enterprise",
+        {
+          modules: printing,
+          quotas: {
+            "orders.created": null,
+            "print.jobs": limit(10000),
+            "ai.requests": limit(100),
+          },
+        },
+        {
+          modules: printing,
+          quotas: {
+            "orders.created": limit(5000),
+            "print.jobs": limit(3000),
+            "ai.requests": limit(10),
+          },
+        },
+      );
+      const modal = await openConfirm();
+
+      expect(modal.sections).toContainEqual({
+        heading: "用量上限將降低",
+        items: [
+          "每期訂單上限將由 不限 降為 5,000",
+          "每期列印上限將由 10,000 降為 3,000",
+          "每期 AI 請求上限將由 100 降為 10",
+        ],
+        caution: true,
+      });
+      // Not the trial: the irreversibility sentence stays out of it.
+      expect(JSON.stringify(modal)).not.toContain("無法再");
+    });
+
+    it("shows nothing for an increase, an equal limit or an unlimited target", async () => {
+      plans(
+        "pro",
+        {
+          modules: printing,
+          quotas: {
+            "orders.created": limit(5000),
+            "print.jobs": limit(3000),
+            "ai.requests": limit(10),
+          },
+        },
+        {
+          modules: printing,
+          quotas: {
+            "orders.created": limit(10000),
+            "print.jobs": limit(3000),
+            "ai.requests": null,
+          },
+        },
+      );
+      const modal = await openConfirm();
+
+      expect(modal.sections.some((x) => x.heading === "用量上限將降低")).toBe(
+        false,
+      );
+    });
+
+    it("does not list a meter whose feature the target plan lacks", async () => {
+      plans(
+        "pro",
+        {
+          modules: printing,
+          quotas: {
+            "orders.created": limit(10000),
+            "print.jobs": limit(10000),
+          },
+        },
+        {
+          modules: ["menu_management"],
+          quotas: { "orders.created": limit(5000), "print.jobs": null },
+        },
+      );
+      const modal = await openConfirm();
+      const section = modal.sections.find(
+        (x) => x.heading === "用量上限將降低",
+      );
+
+      expect(section?.items).toEqual(["每期訂單上限將由 10,000 降為 5,000"]);
+    });
+
+    it("says the trial cannot be re-entered once, inside the reduced-limit section", async () => {
+      plans(
+        "trial",
+        { quotas: { "orders.created": limit(3000) } },
+        { quotas: { "orders.created": limit(2000) } },
+      );
+      const modal = await openConfirm();
+      const section = modal.sections.find(
+        (x) => x.heading === "用量上限將降低",
+      );
+
+      expect(section?.items).toEqual([
+        "每期訂單上限將由 3,000 降為 2,000",
+        "離開試用版後無法再切回，額度降低後只能再升級方案",
+      ]);
+      expect(JSON.stringify(modal)).not.toContain("無法再回到試用版");
+      expect(modal.message).toContain("本期用量將從 0 重新計算");
+    });
+
+    it("keeps the existing irreversibility sentence when leaving the trial raises limits", async () => {
+      plans(
+        "trial",
+        { quotas: { "orders.created": limit(3000) } },
+        { quotas: { "orders.created": limit(5000) } },
+      );
+      const modal = await openConfirm();
+
+      expect(modal.message.match(/無法再回到試用版/g)).toHaveLength(1);
+      expect(modal.sections.some((x) => x.heading === "用量上限將降低")).toBe(
+        false,
+      );
+    });
+
+    it("shows the reduction for a scheduled downgrade and keeps the fresh-usage line", async () => {
+      plans(
+        "enterprise",
+        { quotas: { "orders.created": null } },
+        {
+          effective: "cycle_end",
+          effectiveAt: NOW + 10 * 86_400_000,
+          quotas: { "orders.created": limit(10000) },
+        },
+      );
+      const modal = await openConfirm();
+
+      expect(modal.sections).toContainEqual(
+        expect.objectContaining({
+          heading: "用量上限將降低",
+          items: ["每期訂單上限將由 不限 降為 10,000"],
+        }),
+      );
+      expect(modal.message).toContain("新方案的用量自生效日起重新計算");
+    });
   });
 });

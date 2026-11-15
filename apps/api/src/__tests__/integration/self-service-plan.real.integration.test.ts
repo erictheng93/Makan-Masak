@@ -579,7 +579,7 @@ describe("quota counter after an immediate upgrade", () => {
         meterKey: "orders.created",
         cycleStartAt: new Date(cycleStart),
         cycleEndAt: new Date(cycleEnd),
-        totalQuantity: 1000,
+        totalQuantity: 5000,
       } as never);
     // An unfolded bucket from before the change, keyed under the old cycle.
     await db()
@@ -641,7 +641,7 @@ describe("quota counter after an immediate upgrade", () => {
         meterKey: "orders.created",
         cycleStartAt: new Date(now - DAY),
         cycleEndAt: new Date(now + 29 * DAY),
-        totalQuantity: 1000,
+        totalQuantity: 5000,
       } as never);
 
     for (let i = 0; i < 3; i++) {

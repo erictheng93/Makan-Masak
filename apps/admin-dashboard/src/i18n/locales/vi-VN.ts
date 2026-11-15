@@ -6586,6 +6586,14 @@ const viVN: Messages = {
         "Có hiệu lực vào cuối kỳ này ({date}); đến lúc đó bạn vẫn dùng các tính năng của gói hiện tại.",
       trialNoReturn:
         "Sau khi rời gói dùng thử, bạn không thể quay lại gói dùng thử.",
+      limitsLower: "Giới hạn sử dụng sẽ giảm",
+      limitLowered: {
+        orders: "Giới hạn đơn hàng mỗi kỳ sẽ giảm từ {from} xuống {to}",
+        print: "Giới hạn lệnh in mỗi kỳ sẽ giảm từ {from} xuống {to}",
+        ai: "Giới hạn yêu cầu AI mỗi kỳ sẽ giảm từ {from} xuống {to}",
+      },
+      trialNoReturnLimits:
+        "Sau khi rời gói dùng thử, bạn không thể quay lại. Khi giới hạn đã giảm, bạn chỉ có thể nâng lên gói cao hơn.",
       gained: "Tính năng bạn có thêm",
       lost: "Tính năng bạn sẽ mất",
       blocking: "Cần xử lý trước",

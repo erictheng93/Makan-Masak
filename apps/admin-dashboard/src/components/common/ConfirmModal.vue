@@ -55,8 +55,12 @@
                 v-for="section in modalState.sections"
                 :key="section.heading"
                 class="mb-4 text-left"
+                :class="
+                  section.caution ? 'rounded-xl bg-ios-warning/10 p-3' : ''
+                "
                 data-testid="confirm-modal-section"
                 :data-blocking="section.blocking ? 'true' : 'false'"
+                :data-caution="section.caution ? 'true' : 'false'"
               >
                 <p class="text-[13px] font-semibold text-ios-text mb-1.5">
                   {{ section.heading }}
@@ -64,7 +68,11 @@
                 <ul
                   class="list-disc space-y-1 pl-5 text-[13px]"
                   :class="
-                    section.blocking ? 'text-ios-red' : 'text-ios-secondary'
+                    section.blocking
+                      ? 'text-ios-red'
+                      : section.caution
+                        ? 'text-ios-text'
+                        : 'text-ios-secondary'
                   "
                 >
                   <li v-for="item in section.items" :key="item">{{ item }}</li>

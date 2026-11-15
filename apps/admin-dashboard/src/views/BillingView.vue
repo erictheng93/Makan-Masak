@@ -584,9 +584,48 @@ async function reportError(caught: unknown) {
   await loadPlan();
 }
 
+// Enforced meters whose limit drops. A meter whose feature the target plan
+// lacks is already listed under "what you lose", so it is skipped here.
+const ENFORCED_METERS = [
+  ["orders.created", "orders"],
+  ["print.jobs", "print"],
+  ["ai.requests", "ai"],
+] as const;
+
+function loweredLimits(option: PlanOption): string[] {
+  const current = plan.value?.options.find(
+    (o) => o.tier === plan.value?.currentTier,
+  );
+  if (!current) return [];
+  const show = (hard: number | undefined) =>
+    hard === undefined
+      ? t("billing.plans.unlimited")
+      : formatCount(hard, locale.value);
+  return ENFORCED_METERS.flatMap(([meter, key]) => {
+    const module = QUOTA_MODULE[meter];
+    if (
+      module &&
+      !(option.modules.includes(module) && current.modules.includes(module))
+    )
+      return [];
+    const from = current.quotas[meter]?.hard;
+    const to = option.quotas[meter]?.hard;
+    // `null` / absent = unlimited, which can only go down.
+    if (to === undefined || (from !== undefined && to >= from)) return [];
+    return [
+      t(`billing.confirm.limitLowered.${key}`, {
+        from: show(from),
+        to: show(to),
+      }),
+    ];
+  });
+}
+
 function buildConfirm(option: PlanOption, impact: PlanImpact) {
   const plan_ = tierLabel(option.tier);
   const cycleEnd = option.effective === "cycle_end" && option.effectiveAt;
+  const lowered = loweredLimits(option);
+  const leavingTrial = plan.value?.currentTier === "trial";
   const message = [
     cycleEnd
       ? t("billing.confirm.effectiveCycleEnd", {
@@ -596,9 +635,7 @@ function buildConfirm(option: PlanOption, impact: PlanImpact) {
     cycleEnd
       ? t("billing.confirm.usageFreshScheduled")
       : t("billing.confirm.usageFresh"),
-    plan.value?.currentTier === "trial"
-      ? t("billing.confirm.trialNoReturn")
-      : "",
+    leavingTrial && !lowered.length ? t("billing.confirm.trialNoReturn") : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -607,6 +644,7 @@ function buildConfirm(option: PlanOption, impact: PlanImpact) {
     heading: string;
     items: string[];
     blocking?: boolean;
+    caution?: boolean;
   }> = [];
   if (option.gainedModules.length) {
     sections.push({
@@ -621,6 +659,15 @@ function buildConfirm(option: PlanOption, impact: PlanImpact) {
     sections.push({
       heading: t("billing.confirm.lost"),
       items: lost.map(moduleLabel),
+    });
+  }
+  if (lowered.length) {
+    sections.push({
+      heading: t("billing.confirm.limitsLower"),
+      items: leavingTrial
+        ? [...lowered, t("billing.confirm.trialNoReturnLimits")]
+        : lowered,
+      caution: true,
     });
   }
   const sentence = (item: PlanImpact["items"][number]) =>

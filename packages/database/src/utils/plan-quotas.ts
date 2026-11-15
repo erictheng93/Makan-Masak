@@ -18,7 +18,7 @@ export const PLAN_QUOTAS: Record<
     "storage.bytes": { soft: 800_000_000, hard: 1_000_000_000 },
   },
   basic: {
-    "orders.created": { soft: 800, hard: 1000 },
+    "orders.created": { soft: 4_000, hard: 5_000 },
     "api.requests": { soft: 80_000, hard: 100_000 },
     "print.jobs": { soft: 800, hard: 1000 },
     "storage.bytes": { soft: 4_000_000_000, hard: 5_000_000_000 },

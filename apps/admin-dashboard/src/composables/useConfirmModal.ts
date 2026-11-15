@@ -7,7 +7,13 @@ export interface ConfirmModalOptions {
   message: string;
   confirmLabel: string;
   /** Scannable detail under the message, one bulleted list per heading. */
-  sections?: Array<{ heading: string; items: string[]; blocking?: boolean }>;
+  sections?: Array<{
+    heading: string;
+    items: string[];
+    blocking?: boolean;
+    /** A warning panel: something the reader loses and may not expect. */
+    caution?: boolean;
+  }>;
   /** Greys the confirm button, e.g. while a blocking condition holds. */
   confirmDisabled?: boolean;
   /** A way out to the page that resolves the condition; closes the modal. */
