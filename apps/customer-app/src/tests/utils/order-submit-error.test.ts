@@ -133,6 +133,9 @@ describe("getOrderSubmitErrorI18nKey", () => {
     ["TABLE_UNAVAILABLE", 409, "toast.orderSubmitTableUnavailable"],
     ["COUPON_INVALID", 400, "toast.couponFailed"],
     ["MINIMUM_ORDER_NOT_MET", 400, "toast.orderSubmitBelowMinimum"],
+    // A plan limit is not rate limiting: retrying never helps.
+    ["QUOTA_EXCEEDED", 429, "toast.orderSubmitQuotaExceeded"],
+    ["RATE_LIMIT_EXCEEDED", 429, "errors.tooManyRequests"],
   ])(
     "maps the createOrder rejection %s to its own toast",
     (code, status, key) => {

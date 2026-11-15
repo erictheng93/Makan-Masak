@@ -115,6 +115,38 @@ describe("JoinWaitingListView", () => {
     wrapper.unmount();
   });
 
+  it.each([
+    ["queue snapshot", "getQueueStatus"],
+    ["wait estimate", "estimateWait"],
+  ] as const)(
+    "shows the unavailable state once when the %s is refused",
+    async (_name, failing) => {
+      if (failing === "estimateWait") {
+        vi.mocked(waitingListApi.getQueueStatus).mockResolvedValueOnce({
+          totalWaiting: 1,
+        } as never);
+      }
+      vi.mocked(waitingListApi[failing]).mockRejectedValueOnce({
+        code: "MODULE_NOT_ENABLED",
+        status: 403,
+      });
+      const wrapper = mount(JoinWaitingListView, {
+        props: { restaurantId: "restaurant-1" },
+        global: { stubs: { QueueListIcon: true } },
+      });
+      await flushPromises();
+
+      expect(wrapper.get('[data-testid="module-unavailable"]').text()).toBe(
+        "toast.orderSubmitModuleWaitingList",
+      );
+      expect(wrapper.find("form").exists()).toBe(false);
+      expect(wrapper.text()).not.toContain("waitingList.errors.estimateFailed");
+      expect(wrapper.find('[data-testid="queue-summary"]').exists()).toBe(
+        false,
+      );
+    },
+  );
+
   it("keeps a verified no-ticket response on the lookup form", async () => {
     vi.mocked(waitingListApi.lookup).mockRejectedValue({ status: 404 });
     const wrapper = mount(JoinWaitingListView, {

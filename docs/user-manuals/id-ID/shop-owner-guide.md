@@ -3,6 +3,7 @@
 > **Versi**: 2.0
 > **Terakhir Diperbarui**: 2025-10-26
 > **Untuk**: Pemilik Restoran, Manajer
+> **Paket, uji coba, dan pemakaian**: Pemilik toko mengganti paket sendiri di "Paket & Pemakaian" pada dasbor admin (upgrade berlaku segera, downgrade berlaku di akhir periode, tanpa pembayaran online). Lihat [Paket, uji coba, dan pemakaian](../id-ID/plans-and-usage.html).
 
 ---
 

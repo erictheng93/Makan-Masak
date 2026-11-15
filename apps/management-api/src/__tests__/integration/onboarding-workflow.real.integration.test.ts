@@ -178,6 +178,11 @@ function createPlatformDb() {
       trial_ends_at_ms INTEGER,
       billing_cycle_start_at_ms INTEGER,
       billing_cycle_end_at_ms INTEGER,
+      -- migrations_fresh/0049: drizzle inserts name every column.
+      pending_plan_tier TEXT,
+      pending_effective_at_ms INTEGER,
+      pending_requested_by TEXT,
+      pending_requested_at_ms INTEGER,
       notes TEXT,
       created_at_ms INTEGER NOT NULL,
       updated_at_ms INTEGER NOT NULL,

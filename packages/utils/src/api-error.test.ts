@@ -21,4 +21,13 @@ describe("sanitizeApiErrorDetails", () => {
       },
     });
   });
+
+  it("keeps meterKey so a 429 names the quota that was hit", () => {
+    expect(
+      sanitizeApiErrorDetails({
+        meterKey: "orders.created",
+        dedupKey: "x",
+      }),
+    ).toEqual({ meterKey: "orders.created", dedupKey: "[REDACTED]" });
+  });
 });

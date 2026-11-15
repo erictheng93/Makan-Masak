@@ -45,7 +45,10 @@ const ORDER_SUBMIT_ERROR_KEYS: Record<string, string> = {
   WAITING_LIST_TICKET_NOT_ACTIVE: "toast.orderSubmitFailed",
   WAITING_LIST_PHONE_MISMATCH: "toast.invalidPhoneNumber",
   RATE_LIMIT_EXCEEDED: "errors.tooManyRequests",
-  QUOTA_EXCEEDED: "errors.tooManyRequests",
+  // The shop used up its plan for the period. Retrying never helps, so this must
+  // not read as "too many requests"; and a diner must never be told about
+  // quotas or plans -- only that the shop is not taking online orders.
+  QUOTA_EXCEEDED: "toast.orderSubmitQuotaExceeded",
 };
 
 const QR_ERROR_PREFIXES = ["TABLE_QR_", "SEAT_QR_"];

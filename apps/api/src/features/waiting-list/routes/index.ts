@@ -17,6 +17,7 @@ import {
   requireWaitingRestaurantScope,
 } from "../../../shared/services/waiting-ticket-access";
 import { moduleGate } from "../../../middleware/moduleGate";
+import { resolveRestaurantIdFromJsonBody } from "../../../shared/utils/request-restaurant";
 import { WaitingListService } from "@makanmasak/database";
 import type { Env } from "../../../types/env";
 import type { AuthUser } from "../../../middleware/auth";
@@ -67,38 +68,46 @@ async function waitUntilBackgroundTasks(
  * POST /waiting-list
  * 加入候位列表
  */
-app.post("/", optionalCanonicalCustomerAuthMiddleware, async (c) => {
-  const body = await c.req.json<JoinWaitingListRequest>();
-  const customer = c.get("customer");
-  const service = new WaitingListService(c.env.DB, c.env);
+// Joining and the queue snapshot shown before joining need the `reservations`
+// module; a shop without it has no screen to call the ticket. Lookup, history,
+// read, cancel and confirm stay open so an existing ticket is never stranded.
+app.post(
+  "/",
+  optionalCanonicalCustomerAuthMiddleware,
+  moduleGate("reservations", resolveRestaurantIdFromJsonBody),
+  async (c) => {
+    const body = await c.req.json<JoinWaitingListRequest>();
+    const customer = c.get("customer");
+    const service = new WaitingListService(c.env.DB, c.env);
 
-  // 驗證必填欄位
-  if (
-    !body.restaurantId ||
-    !body.customerName ||
-    !body.customerPhone ||
-    !body.partySize
-  ) {
-    throw badRequest("缺少必填欄位");
-  }
+    // 驗證必填欄位
+    if (
+      !body.restaurantId ||
+      !body.customerName ||
+      !body.customerPhone ||
+      !body.partySize
+    ) {
+      throw badRequest("缺少必填欄位");
+    }
 
-  requireWaitingRestaurantScope(c.env, body.restaurantId);
-  const entry = await service.joinWaitingList({
-    ...body,
-    customerId: customer?.id,
-  });
-  if (entry.alreadyJoined) await requireWaitingTicketAccess(c, entry);
-  await waitUntilBackgroundTasks(c, service);
+    requireWaitingRestaurantScope(c.env, body.restaurantId);
+    const entry = await service.joinWaitingList({
+      ...body,
+      customerId: customer?.id,
+    });
+    if (entry.alreadyJoined) await requireWaitingTicketAccess(c, entry);
+    await waitUntilBackgroundTasks(c, service);
 
-  return c.json(
-    {
-      success: true,
-      data: { ...entry, waitingToken: issueWaitingTicketToken(c.env, entry) },
-      message: `已加入候位，號碼 ${entry.queueDisplay}`,
-    },
-    201,
-  );
-});
+    return c.json(
+      {
+        success: true,
+        data: { ...entry, waitingToken: issueWaitingTicketToken(c.env, entry) },
+        message: `已加入候位，號碼 ${entry.queueDisplay}`,
+      },
+      201,
+    );
+  },
+);
 
 /**
  * GET /waiting-list/lookup?restaurantId=&phone=
@@ -221,37 +230,45 @@ app.get(
  * GET /waiting-list/queue-status/:restaurantId
  * 查詢餐廳候位狀態
  */
-app.get("/queue-status/:restaurantId", async (c) => {
-  const restaurantId = c.req.param("restaurantId");
-  const service = new WaitingListService(c.env.DB, c.env);
+app.get(
+  "/queue-status/:restaurantId",
+  moduleGate("reservations", (c) => c.req.param("restaurantId")),
+  async (c) => {
+    const restaurantId = c.req.param("restaurantId") ?? "";
+    const service = new WaitingListService(c.env.DB, c.env);
 
-  const status = await service.getQueueStatus(restaurantId);
+    const status = await service.getQueueStatus(restaurantId);
 
-  return c.json({
-    success: true,
-    data: status,
-  });
-});
+    return c.json({
+      success: true,
+      data: status,
+    });
+  },
+);
 
 /**
  * GET /waiting-list/estimate-wait/:restaurantId
  * 估算等待時間（公開）
  */
-app.get("/estimate-wait/:restaurantId", async (c) => {
-  const restaurantId = c.req.param("restaurantId");
-  const partySize = parseInt(c.req.query("partySize") || "2");
-  const service = new WaitingListService(c.env.DB, c.env);
+app.get(
+  "/estimate-wait/:restaurantId",
+  moduleGate("reservations", (c) => c.req.param("restaurantId")),
+  async (c) => {
+    const restaurantId = c.req.param("restaurantId") ?? "";
+    const partySize = parseInt(c.req.query("partySize") || "2");
+    const service = new WaitingListService(c.env.DB, c.env);
 
-  const estimate = await service.estimateWaitTime({
-    restaurantId,
-    partySize,
-  });
+    const estimate = await service.estimateWaitTime({
+      restaurantId,
+      partySize,
+    });
 
-  return c.json({
-    success: true,
-    data: estimate,
-  });
-});
+    return c.json({
+      success: true,
+      data: estimate,
+    });
+  },
+);
 
 /**
  * DELETE /waiting-list/:id

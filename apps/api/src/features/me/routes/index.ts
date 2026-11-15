@@ -5,6 +5,7 @@ import {
   loadCachedSubscription,
   regionDisabledModules,
 } from "../../../middleware/moduleGate";
+import { isMeterEnforced } from "../../../middleware/quotaGate";
 import { SubscriptionService } from "../../subscriptions/services/SubscriptionService";
 import { UsageService } from "../../billing/services/UsageService";
 import type { ModuleKey } from "@makanmasak/database";
@@ -87,7 +88,16 @@ router.get("/usage", async (c) => {
   }
 
   const usage = await new UsageService(c.env.DB).getCurrentUsage(restaurantId);
-  return c.json({ success: true, data: usage });
+  return c.json({
+    success: true,
+    data: {
+      ...usage,
+      meters: usage.meters.map((meter) => ({
+        ...meter,
+        enforced: isMeterEnforced(c.env, meter.meterKey),
+      })),
+    },
+  });
 });
 
 function emptyModuleAccess(restaurantId: string | null) {

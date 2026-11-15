@@ -10,6 +10,16 @@ vi.mock("../services/ServiceBookingService", () => ({
 
 import app from "./index";
 
+// The public create routes are gated on the shop's `reservations` module.
+const entitledKv = {
+  get: async () => ({
+    isActive: true,
+    planTier: "pro",
+    moduleOverrides: {},
+    trialEndsAt: null,
+  }),
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   createBooking.mockResolvedValue({
@@ -30,7 +40,7 @@ function req(path: string, method = "GET", body?: unknown) {
     },
     {
       DB: {},
-      CACHE_KV: {},
+      CACHE_KV: entitledKv,
     } as unknown as Record<string, unknown>,
   );
 }

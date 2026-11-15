@@ -65,10 +65,12 @@ It works in **both directions**:
 - `{"online_ordering": false}` revokes `online_ordering` from a shop whose tier does include it.
 - A key that is absent falls back to the plan default.
 
-Overrides beat plan defaults but lose to the two coarser controls: `is_active = 0`
-(kill switch) and an expired trial are both evaluated *before* the override, so
-an override can never keep a suspended or expired shop running. See the
-resolution order in [API Gates](#api-gates).
+Overrides beat plan defaults but lose to the kill switch (`is_active = 0`,
+evaluated *before* the override) and to the region policy (`modules.disabled`,
+evaluated after it), so an override can never keep a suspended shop running or
+switch on a module the shop's country disables. An expired trial is **not** a
+control here: it is nag-only and never denies anything. See the resolution
+order in [API Gates](#api-gates).
 
 ### Applying an override
 
@@ -84,9 +86,10 @@ Content-Type: application/json
 The payload is a **sparse patch**: `SubscriptionService.updateModules` merges it
 into the existing map rather than replacing it, so untouched keys survive. The
 admin dashboard's Subscriptions page exposes the same call as a per-module
-toggle chip. Note that `changePlan`
+toggle chip. Note that the admin `changePlan`
 (`PATCH /api/v1/admin/subscriptions/:restaurantId/plan`) deliberately resets
-`module_overrides` to `{}` — switching tiers wipes every override.
+`module_overrides` to `{}` — an admin tier switch wipes every override. The
+owner's self-service change (see [Plan Changes](#plan-changes)) keeps them.
 
 Direct SQL (remote D1, break-glass) — write the whole map:
 
@@ -119,13 +122,14 @@ reset-to-default case is not reachable over HTTP today — use the SQL form.
 
 Both readers of a subscription — `moduleGate` and `GET /api/v1/me/modules` —
 read/write the KV key `subscription:${restaurantId}` with
-`CACHE_TTL_SECONDS = 300` (**5 minutes**). The admin routes call
-`invalidateSubscriptionCache` (`apps/api/src/middleware/moduleGate.ts`) after
-every module, plan, and status change, so API-driven edits take effect within
-seconds.
+`CACHE_TTL_SECONDS = 3600` (**1 hour**). The admin routes and the owner
+plan-change paths call `invalidateSubscriptionCache` /
+`invalidateSubscriptionCacheForEnv` (`apps/api/src/middleware/moduleGate.ts`)
+after every module, plan, and status change, so API-driven edits take effect
+within seconds.
 
 **If you change `shop_subscriptions` directly in D1, nothing invalidates that
-key** and the change will not take effect until the TTL lapses — up to 5 minutes
+key** and the change will not take effect until the TTL lapses — up to an hour
 of stale allow/deny for both the API gate and the frontend module list. Delete
 the key yourself:
 
@@ -144,9 +148,12 @@ or D1.
 `resolveModule` then decides access in this order:
 
 1. `is_active === false` → denied (kill switch).
-2. `plan_tier === 'trial'` and `trial_ends_at_ms` is set and now past it → denied.
-3. `module_overrides[module]` if the key is present → use that value.
-4. Otherwise `PLAN_DEFAULT_MODULES[plan_tier][module] ?? false`.
+2. `module_overrides[module]` if the key is present → use that value.
+3. Otherwise `PLAN_DEFAULT_MODULES[plan_tier][module] ?? false`.
+4. If the module is in the country's `modules.disabled` region policy → denied.
+
+An expired trial (`plan_tier = 'trial'` past `trial_ends_at_ms`) is not checked:
+the shop keeps every trial module and the clients show a reminder.
 
 Blocked requests get one of four `403` codes:
 
@@ -155,6 +162,7 @@ Blocked requests get one of four `403` codes:
 | `NO_RESTAURANT` | The authenticated user has no `restaurantId` (thrown before any subscription lookup) |
 | `SUBSCRIPTION_NOT_FOUND` | No `shop_subscriptions` row for the restaurant — it was never onboarded |
 | `MODULE_NOT_ENABLED` | Everything else — plan default or override says no, or the kill switch is off |
+| `MODULE_NOT_AVAILABLE_IN_REGION` | Enabled by plan/override, but the country's region policy disables it |
 
 Current protected prefixes live in `apps/api/src/app-factory.ts`. Coverage is
 enforced by the pre-commit `scripts/audit-module-gates.cjs` check ("Module gate
@@ -185,9 +193,19 @@ render a loading slot while the store is empty.
 
 ## Usage Metering
 
-Usage writes are append-only in `usage_events`, then the scheduled
-`usage-aggregator` worker rolls them up into per-cycle `usage_meters` rows every
-five minutes.
+Per-request meters are counted in hourly `usage_meter_buckets` rows (one per
+restaurant, meter and hour); the daily `storage.bytes` snapshot is still an
+`usage_events` row. The `usage-aggregator` worker runs **hourly** (`0 * * * *`)
+and folds closed buckets and pending events into per-cycle `usage_meters` rows.
+Every reader of a current total (`quotaGate`, `UsageService`, the plan page)
+adds the not-yet-folded buckets, so the current hour is visible.
+
+The cycle a total belongs to is resolved in one place,
+`apps/api/src/shared/utils/usage-cycle.ts` (`resolveUsageCycle`), used by
+`quotaGate`, `UsageService`, the aggregator and `PlanChangeService`: a non-trial
+shop with both billing dates uses them; a trial inside its window uses
+`[created_at, trial_ends_at)`; anything else (an expired trial, or a paid shop
+with NULL billing dates) uses the UTC calendar month.
 
 | Meter key | Source | Unit |
 | --- | --- | --- |
@@ -216,15 +234,52 @@ after that the counter restarts each calendar month.
 
 - `disabled`: bypass quota checks.
 - `warn`: return `X-Quota-Warning` after the soft limit.
-- `enforce`: return `429 QUOTA_EXCEEDED` at the hard limit.
+- `enforce`: return `429 QUOTA_EXCEEDED` at the hard limit. `error.details`
+  carries `{ meterKey, hardLimit, current }`; `meterKey` is what tells a client
+  a shop-level limit apart from request throttling.
+
+The first time a meter reaches its hard limit in a cycle, the platform gets a
+Slack message (`quota_hard`) and the owner gets an email at `restaurants.email`
+(`quota_hard_owner`); both are deduped per meter per cycle in
+`notification_dispatch_log`.
 
 ## Usage APIs
 
 - `GET /api/v1/me/usage` returns the current restaurant cycle and meter
-  progress for the authenticated staff user.
+  progress for the authenticated staff user. Each meter carries
+  `state: "ok" | "warning" | "over"` (the soft/hard thresholds `quotaGate`
+  applies) and `enforced` (true only for a gated meter while
+  `QUOTA_ENFORCEMENT_MODE=enforce`).
 - `GET /api/v1/admin/subscriptions/:restaurantId/usage` returns current usage
   plus recent cycle aggregates.
 - `GET /api/v1/admin/subscriptions/:restaurantId/usage/events` returns paged
   raw events for debugging and billing disputes.
 
 The admin dashboard exposes this data from the Subscriptions page's Usage tab.
+
+## Plan Changes
+
+Shop owners (role 1, own shop) and platform admins (role 0, `?restaurantId=`)
+change the plan themselves under `/api/v1/billing/plan` — routes and error codes
+in `docs/api/README.md`. There is no online payment; a change is a plain switch,
+implemented in `apps/api/src/features/billing/services/PlanChangeService.ts`.
+
+- Paid tiers rank `basic < pro < enterprise`. An upgrade, or leaving `trial` for
+  any paid tier, applies at once: the tier changes, any scheduled downgrade is
+  dropped, `module_overrides` is kept, and a fresh 30-day billing cycle starts
+  at the moment of the change, so every usage counter restarts from zero.
+- A downgrade is stored in `shop_subscriptions.pending_*` (migration `0049`)
+  with `pending_effective_at_ms` = the end of the current cycle (the billing
+  cycle end, or the end of the UTC month when the shop has no billing dates).
+- A shop never returns to `trial`.
+- Leaving `pos` while a cash shift is open is refused for an immediate change
+  and deferred for a scheduled one.
+- The daily `15 2 * * *` cron applies due downgrades before `closeDueCycles`;
+  applying one first snapshots the ending cycle on the old tier, then starts
+  the next cycle on the new tier at the effective time (rolled forward if the
+  cron ran late). The owner's next `GET`/`POST` on the plan applies a due
+  change too. `moduleGate` and `quotaGate` ignore pending changes.
+- An immediate change does not snapshot the partial cycle it ends: there is no
+  proration and nothing reads that snapshot.
+- The admin `PATCH /api/v1/admin/subscriptions/:restaurantId/plan` is
+  unchanged: immediate, wipes overrides, keeps the billing dates.

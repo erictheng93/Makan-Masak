@@ -69,7 +69,8 @@ function buildUsageSnapshot(planTier: PlanTier, rows: UsageMeterRow[]) {
 export class BillingCycleService {
   constructor(private readonly env: Env) {}
 
-  async closeDueCycles(now = Date.now()) {
+  /** `restaurantId` narrows the sweep to one shop (the plan-change applier). */
+  async closeDueCycles(now = Date.now(), restaurantId?: string) {
     const rows = await this.env.DB.prepare(
       `SELECT id, restaurant_id, plan_tier, module_overrides,
               billing_cycle_start_at_ms, billing_cycle_end_at_ms
@@ -78,10 +79,11 @@ export class BillingCycleService {
           AND plan_tier != 'trial'
           AND billing_cycle_start_at_ms IS NOT NULL
           AND billing_cycle_end_at_ms IS NOT NULL
-          AND billing_cycle_end_at_ms <= ?
+          AND billing_cycle_end_at_ms <= ?1
+          AND (?2 IS NULL OR restaurant_id = ?2)
         LIMIT 250`,
     )
-      .bind(now)
+      .bind(now, restaurantId ?? null)
       .all<DueSubscriptionRow>();
 
     let closed = 0;

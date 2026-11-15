@@ -17,6 +17,12 @@ import {
   type SelectFixtures,
 } from "@makanmasak/database/testing";
 
+// The shop-voucher module check is exercised against real D1 in
+// market-checkout-voucher.real.integration.test.ts; here every shop has it.
+vi.mock("../../coupons/services/coupons-module", () => ({
+  couponsModuleEnabled: vi.fn(async () => true),
+}));
+
 /**
  * Select fixtures are keyed by table, not by call order: `from(table)`
  * decides which queue a query draws from, so adding a query against one

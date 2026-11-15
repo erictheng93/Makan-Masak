@@ -194,6 +194,10 @@
     {
       "fresh": "0048_employee_hourly_rate.sql",
       "reason": "users and employee_schedules are platform-API tables; the management-api reads users through PLATFORM_DB and has no scheduling tables."
+    },
+    {
+      "fresh": "0049_shop_subscription_pending_plan.sql",
+      "reason": "Adds the scheduled-downgrade columns to the platform shop_subscriptions table, which apps/api reads and writes. The management DB has its own shop_subscriptions table (apps/management-api/migrations/0008) with no reader for plan state; it is deliberately left alone."
     }
   ],
   "legacyOnly": [

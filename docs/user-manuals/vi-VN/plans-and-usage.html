@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gói, thời gian dùng thử và mức sử dụng - MakanMasak</title>
+<style>
+  :root {
+    --bg: #F2F2F7;
+    --card: #FFFFFF;
+    --text: #1C1C1E;
+    --muted: #6E6E73;
+    --primary-strong: #B04F09; /* onboarding primary-700, text on white (5.3:1) */
+    --brand: #F38020; /* Cloudflare orange, onboarding primary-500: fills only */
+    --success: #34C759;
+    --warning: #FF9500;
+    --error: #FF3B30;
+    --soft-blue: #E8F1FF;
+    --soft-orange: #FFF4E5;
+    --soft-green: #EAF8EE;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    font-size: 17px;
+    line-height: 1.75;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+  header { text-align: center; margin-bottom: 28px; }
+  header h1 { font-size: 30px; margin: 0 0 6px; }
+  header p { color: var(--muted); margin: 0; }
+  .langs { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; margin: 0 0 20px; font-size: 15px; }
+  .langs a { color: var(--primary-strong); font-weight: 600; }
+  .langs [aria-current] { color: var(--muted); font-weight: 600; }
+  .card {
+    background: var(--card);
+    border-radius: 24px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    scroll-margin-top: 16px;
+  }
+  h2 { font-size: 22px; margin: 0 0 12px; }
+  h3 { font-size: 18px; margin: 20px 0 8px; }
+  .step-no {
+    flex: none;
+    width: 28px; height: 28px;
+    border-radius: 999px;
+    background: var(--brand);
+    color: var(--text); /* #1C1C1E on #F38020 is 6.4:1; white is 2.65:1 */
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .toc a { display: inline-block; background: #FEF4EA; color: var(--primary-strong); border-radius: 999px; padding: 4px 14px; font-weight: 600; font-size: 15px; text-decoration: none; }
+  .tip, .warn, .ok {
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin: 14px 0;
+  }
+  .tip { background: var(--soft-blue); }
+  .warn { background: var(--soft-orange); }
+  .ok { background: var(--soft-green); }
+  .tip > strong:first-child, .warn > strong:first-child, .ok > strong:first-child { display: block; margin-bottom: 2px; }
+  .btn-label {
+    display: inline-block;
+    background: var(--brand);
+    color: var(--text); /* #1C1C1E on #F38020 is 6.4:1; white is 2.65:1 */
+    border-radius: 999px;
+    padding: 0 12px;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  .table-scroll { overflow-x: auto; margin: 8px 0 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 16px; }
+  th, td { text-align: left; padding: 10px 8px; vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 14px; }
+  tr + tr td { box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.06); }
+  td:first-child { font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .yes { color: #1E7B38; font-weight: 700; }
+  .no { color: var(--muted); }
+  .note { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+  ol, ul { padding-left: 22px; }
+  li { margin: 4px 0; }
+  details { background: var(--bg); border-radius: 16px; padding: 12px 16px; margin: 10px 0; }
+  summary { font-weight: 600; cursor: pointer; }
+  footer { text-align: center; color: var(--muted); font-size: 14px; margin-top: 28px; }
+  @media (max-width: 520px) {
+    body { font-size: 16px; }
+    main { padding: 24px 16px 48px; }
+    .card { padding: 20px 16px; }
+    table { font-size: 14px; }
+    th, td { padding: 8px 4px; }
+  }
+  @media print {
+    body { background: #FFFFFF; font-size: 13pt; }
+    .card { box-shadow: none; break-inside: avoid; border-radius: 0; padding: 12px 0; }
+    details { background: none; }
+    details > * { display: block; }
+    .langs, .toc { display: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>Gói, thời gian dùng thử và mức sử dụng</h1>
+  <p>Hướng dẫn dành cho chủ quán: cách xem gói và mức sử dụng hiện tại, cũng như tự đổi gói</p>
+</header>
+
+<p class="langs" aria-label="Ngôn ngữ">
+  <span aria-current="page">Tiếng Việt</span>
+  <a href="../plans-and-usage.html" hreflang="zh-Hant">繁體中文</a>
+  <a href="../zh-CN/plans-and-usage.html" hreflang="zh-Hans">简体中文</a>
+  <a href="../en-US/plans-and-usage.html" hreflang="en">English</a>
+  <a href="../ja-JP/plans-and-usage.html" hreflang="ja">日本語</a>
+  <a href="../id-ID/plans-and-usage.html" hreflang="id">Bahasa Indonesia</a>
+</p>
+
+<section class="card" id="overview">
+  <h2>Những điểm chính</h2>
+  <ul>
+    <li>MakanMasak có bốn gói: <strong>Dùng thử, Tiêu chuẩn, Chuyên nghiệp, Doanh nghiệp</strong>. Mỗi cửa hàng mới đều bắt đầu từ gói <strong>Dùng thử</strong> trong <strong>180 ngày</strong>, với đầy đủ mọi tính năng.</li>
+    <li><strong>Hết thời gian dùng thử, cửa hàng không bị khóa.</strong> Hệ thống chỉ nhắc bạn chọn gói, quán vẫn bán hàng như bình thường.</li>
+    <li>Mỗi gói có <strong>giới hạn mức sử dụng</strong> như số đơn hàng và số lệnh in. Khi dùng đến 80%, hệ thống sẽ nhắc bạn; khi dùng hết, đơn hàng mới và việc in hóa đơn sẽ tạm dừng cho đến kỳ tính tiếp theo hoặc đến khi bạn nâng cấp gói.</li>
+    <li><strong>Chính chủ quán</strong> tự đổi gói trong trang quản trị tại <span class="btn-label">Gói &amp; Mức dùng</span>, <strong>không cần thanh toán trực tuyến</strong> và cũng không cần liên hệ hỗ trợ.</li>
+    <li><strong>Nâng cấp có hiệu lực ngay</strong> và mức sử dụng được tính lại từ 0; <strong>hạ cấp chỉ có hiệu lực vào cuối kỳ hiện tại</strong>, và bạn có thể hủy trước đó.</li>
+    <li>Trang này không đề cập đến bất kỳ khoản phí nào. Nếu sau này có thu phí, nền tảng sẽ thông báo riêng.</li>
+  </ul>
+  <ul class="toc" aria-label="Nội dung trang này">
+    <li><a href="#plans">So sánh bốn gói</a></li>
+    <li><a href="#trial">Thời gian dùng thử</a></li>
+    <li><a href="#usage">Cách tính mức sử dụng</a></li>
+    <li><a href="#limit">Khi dùng hết giới hạn</a></li>
+    <li><a href="#upgrade">Nâng cấp</a></li>
+    <li><a href="#downgrade">Hạ cấp và hủy hạ cấp</a></li>
+    <li><a href="#lost-features">Ảnh hưởng khi mất tính năng</a></li>
+    <li><a href="#special">Trường hợp đặc biệt</a></li>
+    <li><a href="#emails">Email thông báo</a></li>
+    <li><a href="#who">Ai được đổi gói</a></li>
+    <li><a href="#faq">Câu hỏi thường gặp</a></li>
+    <li><a href="#help">Cần hỗ trợ</a></li>
+  </ul>
+</section>
+
+<section class="card" id="plans">
+  <h2>So sánh bốn gói</h2>
+  <h3>Tính năng đi kèm</h3>
+  <div class="table-scroll" role="region" aria-label="Tính năng đi kèm của từng gói" tabindex="0">
+    <table>
+      <thead>
+        <tr><th scope="col">Tính năng</th><th scope="col">Dùng thử</th><th scope="col">Tiêu chuẩn</th><th scope="col">Chuyên nghiệp</th><th scope="col">Doanh nghiệp</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Quản lý thực đơn</td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="yes" aria-label="Có">✓</span></td></tr>
+        <tr><td>Quản lý bàn</td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="yes" aria-label="Có">✓</span></td></tr>
+        <tr><td>Đặt hàng trực tuyến</td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="yes" aria-label="Có">✓</span></td></tr>
+        <tr><td>Thu ngân POS</td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="no" aria-label="Không có">—</span></td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="yes" aria-label="Có">✓</span></td></tr>
+        <tr><td>Màn hình bếp</td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="no" aria-label="Không có">—</span></td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="yes" aria-label="Có">✓</span></td></tr>
+        <tr><td>In biên lai</td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="no" aria-label="Không có">—</span></td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="yes" aria-label="Có">✓</span></td></tr>
+        <tr><td>Phiếu giảm giá</td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="no" aria-label="Không có">—</span></td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="yes" aria-label="Có">✓</span></td></tr>
+        <tr><td>Đặt chỗ</td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="no" aria-label="Không có">—</span></td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="yes" aria-label="Có">✓</span></td></tr>
+        <tr><td>Phân tích</td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="no" aria-label="Không có">—</span></td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="yes" aria-label="Có">✓</span></td></tr>
+        <tr><td>Phân tích AI</td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="no" aria-label="Không có">—</span></td><td><span class="no" aria-label="Không có">—</span></td><td><span class="yes" aria-label="Có">✓</span></td></tr>
+        <tr><td>Tích hợp nền tảng</td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="no" aria-label="Không có">—</span></td><td><span class="no" aria-label="Không có">—</span></td><td><span class="yes" aria-label="Có">✓</span></td></tr>
+        <tr><td>Chương trình thân thiết</td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="no" aria-label="Không có">—</span></td><td><span class="no" aria-label="Không có">—</span></td><td><span class="yes" aria-label="Có">✓</span></td></tr>
+        <tr><td>Kho nguyên liệu</td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="no" aria-label="Không có">—</span></td><td><span class="no" aria-label="Không có">—</span></td><td><span class="yes" aria-label="Có">✓</span></td></tr>
+        <tr><td>Quản lý nhân sự</td><td><span class="yes" aria-label="Có">✓</span></td><td><span class="no" aria-label="Không có">—</span></td><td><span class="no" aria-label="Không có">—</span></td><td><span class="yes" aria-label="Có">✓</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Bảng trên là nội dung tiêu chuẩn của từng gói. Nhân viên nền tảng có thể bật hoặc tắt riêng từng tính năng cho một cửa hàng; các thiết lập riêng đó được giữ nguyên khi bạn tự đổi gói. Một số tính năng chưa mở ở một số quốc gia hoặc khu vực, nên dù gói có bao gồm thì cũng sẽ không hiển thị.</p>
+
+  <h3>Giới hạn mức sử dụng</h3>
+  <div class="table-scroll" role="region" aria-label="Giới hạn mức sử dụng của từng gói" tabindex="0">
+    <table>
+      <thead>
+        <tr><th scope="col">Hạng mục</th><th scope="col" class="num">Dùng thử</th><th scope="col" class="num">Tiêu chuẩn</th><th scope="col" class="num">Chuyên nghiệp</th><th scope="col" class="num">Doanh nghiệp</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Đơn hàng mỗi kỳ</td><td class="num">3.000 (tổng cho cả thời gian dùng thử)</td><td class="num">1.000</td><td class="num">10.000</td><td class="num">Không giới hạn</td></tr>
+        <tr><td>Lệnh in mỗi kỳ</td><td class="num">3.000 (tổng cho cả thời gian dùng thử)</td><td class="num"><span class="no">Không bao gồm</span></td><td class="num">10.000</td><td class="num">Không giới hạn</td></tr>
+        <tr><td>Yêu cầu AI mỗi kỳ</td><td class="num">10</td><td class="num"><span class="no">Không bao gồm</span></td><td class="num"><span class="no">Không bao gồm</span></td><td class="num">Không giới hạn</td></tr>
+        <tr><td>Dung lượng lưu trữ</td><td class="num">1 GB</td><td class="num">5 GB</td><td class="num">50 GB</td><td class="num">Không giới hạn</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Cách tính “kỳ” xem ở mục “Cách tính mức sử dụng” bên dưới. “Không bao gồm” nghĩa là gói đó không có tính năng tương ứng (gói Tiêu chuẩn không có In biên lai; gói Tiêu chuẩn và Chuyên nghiệp không có Phân tích AI), nên cũng không có hạn mức này; nếu nền tảng bật riêng tính năng đó cho cửa hàng của bạn thì áp dụng theo thiết lập của nền tảng. Số liệu dung lượng lưu trữ chỉ để tham khảo, dùng đến giới hạn cũng không bị chặn. “Yêu cầu API” cũng xuất hiện trong danh sách mức sử dụng, nhưng chỉ để ghi nhận và không chặn bất kỳ thao tác nào.</p>
+</section>
+
+<section class="card" id="trial">
+  <h2>Thời gian dùng thử</h2>
+  <ul>
+    <li>Mỗi cửa hàng mới đều bắt đầu từ gói <strong>Dùng thử</strong> trong <strong>180 ngày</strong>, với đầy đủ mọi tính năng.</li>
+    <li>Ở trang <span class="btn-label">Gói &amp; Mức dùng</span>, bên dưới gói hiện tại có dòng “Còn N ngày dùng thử”.</li>
+    <li>Giới hạn đơn hàng và lệnh in của gói Dùng thử là <strong>tổng cho cả thời gian dùng thử</strong> (mỗi loại 3.000), không tính lại theo từng tháng.</li>
+  </ul>
+  <h3>Sau khi hết thời gian dùng thử</h3>
+  <div class="ok">
+    <strong>Không có gì bị tắt</strong>
+    Mọi tính năng vẫn dùng bình thường, quán không cần ngừng bán. Trang quản trị chỉ hiện lời nhắc: phía trên cùng có một biểu ngữ “Thời gian dùng thử đã kết thúc. Mọi tính năng vẫn hoạt động bình thường, nhưng vui lòng chọn một gói để ủng hộ MakanMasak.”, và mỗi lần đăng nhập còn hiện một lần cửa sổ “Thời gian dùng thử đã kết thúc”; bạn có thể bấm “Tiếp tục” để đóng, hoặc bấm “Chọn gói” để đi chọn gói ngay.
+  </div>
+  <ul>
+    <li>Sau khi hết thời gian dùng thử và trước khi bạn chọn gói, giới hạn mức sử dụng vẫn là con số của gói Dùng thử, nhưng được tính <strong>theo tháng dương lịch</strong> (đặt lại về 0 vào đầu mỗi tháng).</li>
+    <li>Rời gói Dùng thử (chọn Tiêu chuẩn, Chuyên nghiệp hoặc Doanh nghiệp) <strong>có hiệu lực ngay</strong>.</li>
+    <li><strong>Đã rời gói Dùng thử thì không thể quay lại.</strong> Gói Dùng thử chỉ dành cho cửa hàng mới mở.</li>
+  </ul>
+</section>
+
+<section class="card" id="usage">
+  <h2>Cách tính mức sử dụng và nơi xem</h2>
+  <p>Hệ thống tính ba loại mức sử dụng có giới hạn:</p>
+  <ul>
+    <li><strong>Tạo đơn hàng</strong>: mỗi đơn hàng mới tạo được tính 1. Bao gồm đơn khách đặt trực tuyến hoặc quét mã QR, đơn nhóm, thanh toán gộp nhiều cửa hàng, và đơn do nhân viên tạo thay khách.</li>
+    <li><strong>Lệnh in</strong>: mỗi lần in một hóa đơn được tính 1.</li>
+    <li><strong>Yêu cầu AI</strong>: được tính khi dùng tính năng Phân tích AI.</li>
+  </ul>
+  <h3>“Một kỳ” kéo dài bao lâu</h3>
+  <div class="table-scroll" role="region" aria-label="Kỳ tính mức sử dụng" tabindex="0">
+    <table>
+      <thead>
+        <tr><th scope="col">Tình huống của bạn</th><th scope="col">Cách tính mức sử dụng</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Trong thời gian dùng thử</td><td>Cộng dồn cho cả thời gian dùng thử (180 ngày), không tính lại</td></tr>
+        <tr><td>Hết thời gian dùng thử, chưa chọn gói</td><td>Theo từng tháng dương lịch, đặt lại về 0 vào đầu tháng</td></tr>
+        <tr><td>Tiêu chuẩn, Chuyên nghiệp, Doanh nghiệp</td><td>Mỗi kỳ 30 ngày, tính từ thời điểm bạn chọn gói đó; hết kỳ sẽ tự chuyển sang kỳ mới và bắt đầu lại từ 0</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Ranh giới của tháng dương lịch được tính theo giờ quốc tế (UTC), nên sẽ lệch so với giờ địa phương; ví dụ ở Việt Nam, mức sử dụng được đặt lại về 0 vào 7 giờ sáng ngày 1 hằng tháng.</p>
+  <h3>Xem ở đâu</h3>
+  <ol>
+    <li>Đăng nhập trang quản trị, chọn <span class="btn-label">Gói &amp; Mức dùng</span> ở menu bên trái.</li>
+    <li>Khu vực “Mức dùng kỳ này” liệt kê số lượng đã dùng của từng hạng mục, giới hạn, cùng ngày bắt đầu và ngày kết thúc của kỳ.</li>
+    <li>Thanh tiến độ đổi màu theo mức sử dụng: dưới 80% là màu xanh dương, đạt 80% là màu cam, dùng hết là màu đỏ.</li>
+  </ol>
+  <h3>Lời nhắc khi sắp dùng hết</h3>
+  <p>Khi dùng đến <strong>80%</strong> giới hạn, phía trên cùng trang quản trị sẽ hiện biểu ngữ màu cam, ví dụ “Đã dùng 85% số đơn hàng của kỳ này (2.550/3.000)”, kèm nút <span class="btn-label">Xem các gói</span>. Bạn có thể bấm ✕ bên phải để tạm đóng (sẽ không hiện lại trong phiên đăng nhập này). Lời nhắc này chỉ chủ quán mới thấy.</p>
+</section>
+
+<section class="card" id="limit">
+  <h2>Điều gì xảy ra khi dùng hết giới hạn</h2>
+  <p>Sau khi mức sử dụng chạm giới hạn, cho đến khi <strong>kỳ tính tiếp theo bắt đầu</strong> hoặc <strong>bạn nâng cấp gói</strong>:</p>
+  <ul>
+    <li><strong>Đơn hàng mới bị từ chối</strong>: khách không thể đặt món trực tuyến hay quét mã QR, nhân viên cũng không thể tạo đơn thay khách hay mở đơn nhóm. <strong>Các đơn đã được tạo không bị ảnh hưởng</strong>, vẫn chế biến, phục vụ và thanh toán như bình thường.</li>
+    <li><strong>Không thể in hóa đơn</strong>.</li>
+    <li>Các tính năng khác không bị ảnh hưởng.</li>
+  </ul>
+  <p>Lúc này phía trên cùng trang quản trị sẽ hiện biểu ngữ màu đỏ và không thể đóng: “Đã đạt giới hạn đơn hàng: khách hiện không thể đặt món” hoặc “Đã đạt giới hạn in: hiện không thể in hóa đơn và phiếu”. Hệ thống cũng gửi cho bạn một email thông báo (xem mục “Email thông báo”).</p>
+  <div class="tip">
+    <strong>Cách khôi phục nhanh nhất: nâng cấp gói</strong>
+    Nâng cấp có hiệu lực ngay và mức sử dụng được tính lại từ 0, nên cửa hàng vừa dùng hết giới hạn có thể nhận đơn lại ngay sau khi nâng cấp. Cách làm xem ở mục tiếp theo.
+  </div>
+  <p>Phía khách chỉ thấy thông báo “hiện không thể đặt món”. Bạn nên xử lý ngay khi thấy biểu ngữ màu cam lúc mức sử dụng sắp hết, đừng đợi đến khi khách hỏi mới biết.</p>
+</section>
+
+<section class="card" id="upgrade">
+  <h2>Nâng cấp gói (có hiệu lực ngay)</h2>
+  <p>Nâng cấp là đổi từ gói thấp lên gói cao hơn: <strong>Tiêu chuẩn → Chuyên nghiệp → Doanh nghiệp</strong>. Đổi từ gói Dùng thử sang <strong>bất kỳ</strong> gói nào khác cũng có hiệu lực ngay; khi chuyển sang gói có ít tính năng hơn gói Dùng thử (ví dụ Tiêu chuẩn), nút trên thẻ gói là <span class="btn-label">Đổi ngay</span> và nút trong cửa sổ xác nhận là <span class="btn-label">Xác nhận thay đổi</span>.</p>
+  <ol>
+    <li>Đăng nhập trang quản trị, chọn <span class="btn-label">Gói &amp; Mức dùng</span> ở menu bên trái. (Nút <span class="btn-label">Xem các gói</span> trên biểu ngữ nhắc mức sử dụng và nút <span class="btn-label">Chọn gói</span> trên biểu ngữ hết thời gian dùng thử đều đưa bạn thẳng đến bước tiếp theo.)</li>
+    <li>Cuộn xuống khu vực “<strong>Chọn gói</strong>”. Bốn gói mỗi gói một thẻ, ghi giới hạn mỗi kỳ và các tính năng đi kèm; gói đang dùng được đánh dấu “Gói hiện tại”.</li>
+    <li>Ở thẻ của gói bạn muốn, bấm <span class="btn-label">Nâng cấp ngay</span>.</li>
+    <li>Màn hình hiện cửa sổ xác nhận “Chuyển sang gói ○○”, ghi “Có hiệu lực ngay.” và “Mức sử dụng của kỳ này sẽ được tính lại từ 0.”, đồng thời liệt kê “Tính năng bạn có thêm”. Kiểm tra xong, bấm <span class="btn-label">Xác nhận nâng cấp</span>.</li>
+    <li>Khi thấy “Đã đổi sang gói ○○” là đã xong. Biểu ngữ màu cam hoặc đỏ ở phía trên cùng sẽ biến mất sau ít phút.</li>
+  </ol>
+  <div class="ok">
+    <strong>Sau khi nâng cấp</strong>
+    Tính năng mới xuất hiện ngay; mức sử dụng về 0 và kỳ 30 ngày mới bắt đầu từ lúc này; nếu trước đó bạn đã lên lịch hạ cấp thì lịch đó cũng bị hủy. Toàn bộ quá trình không cần thanh toán, cũng không cần liên hệ ai.
+  </div>
+</section>
+
+<section class="card" id="downgrade">
+  <h2>Hạ cấp gói và hủy hạ cấp</h2>
+  <p>Hạ cấp là đổi từ gói cao xuống gói thấp, ví dụ Chuyên nghiệp → Tiêu chuẩn. Hạ cấp <strong>không có hiệu lực ngay</strong> mà chờ đến <strong>cuối kỳ hiện tại</strong>; trước đó bạn vẫn dùng đầy đủ tính năng của gói hiện tại.</p>
+  <h3>Lên lịch hạ cấp</h3>
+  <ol>
+    <li>Trong khu vực “Chọn gói” của trang <span class="btn-label">Gói &amp; Mức dùng</span>, tìm gói thấp hơn mà bạn muốn chuyển sang.</li>
+    <li>Bấm <span class="btn-label">Lên lịch hạ cấp, có hiệu lực ngày ○ tháng ○</span> trên thẻ (ngày đó chính là ngày kết thúc kỳ hiện tại).</li>
+    <li>Cửa sổ xác nhận ghi “Có hiệu lực vào cuối kỳ này (ngày ○ tháng ○); đến lúc đó bạn vẫn dùng các tính năng của gói hiện tại.” và “Mức sử dụng của gói mới được tính lại từ ngày có hiệu lực.”, đồng thời liệt kê “Tính năng bạn sẽ mất” và “Những gì thay đổi”, ví dụ “3 lượt đặt bàn sắp tới vẫn được giữ: khách vẫn xem hoặc hủy được, nhưng trang quản trị không còn quản lý hay nhận đặt bàn mới. Sẽ khôi phục khi nâng cấp”. Hãy đọc kỹ từng mục.</li>
+    <li>Nếu chắc chắn muốn đổi, bấm <span class="btn-label">Xác nhận lên lịch hạ cấp</span>, bạn sẽ thấy “Đã lên lịch hạ cấp xuống gói ○○”.</li>
+  </ol>
+  <p>Sau khi lên lịch, phía trên cùng trang sẽ hiện thông báo màu cam “Đã lên lịch hạ cấp xuống gói ○○ vào ngày ○ tháng ○”, và thẻ gói cũng ghi “Có hiệu lực vào ngày ○ tháng ○”. Nếu bạn lên lịch hạ cấp sang một gói khác, lịch mới sẽ thay thế lịch cũ.</p>
+  <h3>Thời điểm có hiệu lực</h3>
+  <p>Khi kết thúc kỳ, hệ thống tự động chuyển sang gói mới, bắt đầu một kỳ mới và tính mức sử dụng lại từ 0. Hệ thống xử lý các thay đổi đã lên lịch mỗi ngày một lần, nên thời điểm đổi thực tế có thể muộn hơn ngày hiển thị vài giờ; trước đó bạn vẫn ở gói cũ.</p>
+  <h3>Hủy hạ cấp đã lên lịch</h3>
+  <ol>
+    <li>Trên thông báo màu cam ở đầu trang <span class="btn-label">Gói &amp; Mức dùng</span>, bấm <span class="btn-label">Hủy hạ cấp</span> (trên thẻ gói được lên lịch chuyển sang, nút cũng đổi thành đúng nút này).</li>
+    <li>Xác nhận trong cửa sổ “Hủy việc hạ cấp đã lên lịch?”; bạn sẽ tiếp tục dùng gói hiện tại. Khi thấy “Đã hủy hạ cấp” là đã xong.</li>
+  </ol>
+  <p>Sau khi đã có hiệu lực thì không thể hủy nữa; muốn quay lại gói cũ, hãy làm theo các bước ở mục “Nâng cấp” để nâng cấp lần nữa.</p>
+</section>
+
+<section class="card" id="lost-features">
+  <h2>Điều gì xảy ra khi mất một tính năng</h2>
+  <p>Sau khi hạ cấp (hoặc rời gói Dùng thử để sang gói có ít tính năng hơn), những tính năng không có trong gói mới được xử lý như sau:</p>
+  <ul>
+    <li><strong>Các màn hình tương ứng trong trang quản trị sẽ bị đóng.</strong> Ví dụ khi hạ xuống gói Tiêu chuẩn, bạn không thể vào các màn hình Thu ngân POS, Màn hình bếp, Phiếu giảm giá, Đặt chỗ và Phân tích nữa.</li>
+    <li><strong>Dữ liệu của bạn không bị xóa.</strong> Các bản ghi như đặt bàn, đặt dịch vụ, ca làm, nguyên liệu, phiếu giảm giá vẫn còn, chỉ là tạm thời không xem được; khi nâng cấp lại lên gói có các tính năng này, mọi thứ sẽ trở lại.</li>
+    <li><strong>Phía khách:</strong>
+      <ul>
+        <li>Khách <strong>không thể tạo thêm</strong> lượt đặt bàn trực tuyến, đặt dịch vụ, hay xếp hàng chờ; thông tin hàng chờ theo thời gian thực cũng không còn.</li>
+        <li>Khách <strong>vẫn có thể xem và hủy</strong> các lượt đặt bàn, đặt dịch vụ và hàng chờ đã có.</li>
+        <li><strong>Phiếu giảm giá</strong> của chính cửa hàng không còn dùng được; phiếu do nền tảng MakanMasak phát hành không bị ảnh hưởng.</li>
+      </ul>
+    </li>
+    <li><strong>Tích hợp nền tảng:</strong> đơn hàng từ các nền tảng giao hàng vẫn tiếp tục gửi về, và bạn vẫn có thể <strong>ngắt kết nối</strong> tích hợp trong trang quản trị; nhưng bạn không thể thiết lập hay đồng bộ tích hợp nữa, và các màn hình thiết lập, danh sách của tích hợp sẽ bị đóng.</li>
+    <li><strong>Quản lý nhân sự:</strong> ca làm đã xếp lịch và đơn xin nghỉ đang chờ duyệt vẫn được giữ, nhưng màn hình xếp ca và nghỉ phép sẽ đóng. <strong>Kho nguyên liệu:</strong> đơn hàng vẫn tự động trừ tồn kho, nhưng bạn không thể xem hay quản lý nữa; mọi thứ sẽ khôi phục khi nâng cấp.</li>
+  </ul>
+  <p class="note">Trước khi hạ cấp, cửa sổ xác nhận sẽ cho bạn biết số lượng bị ảnh hưởng dựa trên dữ liệu thực tế của cửa hàng; hãy xem kỹ trước khi bấm “Xác nhận lên lịch hạ cấp”.</p>
+</section>
+
+<section class="card" id="special">
+  <h2>Trường hợp đặc biệt</h2>
+  <details open>
+    <summary>Còn ca thu ngân chưa đóng</summary>
+    <p>Khi đổi từ gói có POS sang gói không có POS (Chuyên nghiệp hoặc Doanh nghiệp → Tiêu chuẩn; hoặc Dùng thử → Tiêu chuẩn), bạn phải đóng ca thu ngân trước.</p>
+    <ul>
+      <li><strong>Trường hợp có hiệu lực ngay (Dùng thử sang Tiêu chuẩn, nút là “Đổi ngay”):</strong> nếu ca chưa đóng, hệ thống sẽ không cho bạn đổi và hiện thông báo “Vẫn còn ca thu ngân chưa đóng. Hãy đóng ca trong POS trước khi hạ cấp.” Cửa sổ xác nhận có nút <span class="btn-label">Đến POS để đóng ca</span> để bạn đi thẳng đến đó.</li>
+      <li><strong>Hạ cấp đã lên lịch:</strong> nếu đến ngày có hiệu lực mà ca vẫn còn mở, việc hạ cấp sẽ <strong>chờ đến khi ca được đóng mới có hiệu lực</strong>. Trang sẽ hiển thị “Đã lên lịch hạ cấp xuống gói ○○, nhưng vẫn còn ca thu ngân chưa đóng. Việc hạ cấp chỉ có hiệu lực sau khi đóng ca.” Hãy nhớ đóng ca sớm.</li>
+    </ul>
+  </details>
+  <details>
+    <summary>Gói hiển thị “Không khả dụng”: gói này chưa có ở khu vực của bạn</summary>
+    <p>Một số gói chưa mở ở một số quốc gia hoặc khu vực; thẻ gói sẽ ghi “Gói này chưa có ở khu vực của bạn.” và nút không bấm được. Hãy chọn gói khác.</p>
+  </details>
+  <details>
+    <summary>Gói Dùng thử hiển thị “Không khả dụng”</summary>
+    <p>Đã rời gói Dùng thử thì không thể quay lại; thẻ gói sẽ ghi “Gói dùng thử chỉ dành cho cửa hàng mới và không thể quay lại.”</p>
+  </details>
+  <details>
+    <summary>“Gói vừa được người khác thay đổi”</summary>
+    <p>Nếu một tài khoản chủ quán khác hoặc nhân viên nền tảng cũng đổi gói cùng lúc với bạn, bạn sẽ thấy “Gói vừa được người khác thay đổi. Trang đã được làm mới, vui lòng kiểm tra rồi thử lại.” Thao tác của bạn <strong>chưa</strong> được thực hiện, trang đã được cập nhật theo trạng thái mới nhất; bạn chỉ cần kiểm tra rồi làm lại một lần.</p>
+  </details>
+  <details>
+    <summary>“Bạn đang dùng gói này rồi” hoặc “Không còn lịch hạ cấp nào”</summary>
+    <p>Nghĩa là thông tin trên màn hình đã cũ (ví dụ bạn đã thao tác ở một tab khác); hệ thống sẽ tự làm mới trang, bạn không cần làm gì thêm.</p>
+  </details>
+  <details>
+    <summary>“Đăng ký đang bị vô hiệu hóa nên không thể đổi gói”</summary>
+    <p>Khi đăng ký bị nền tảng vô hiệu hóa, bạn không thể tự đổi gói; hãy gửi yêu cầu ở trang “Phản hồi” để nhân viên nền tảng hỗ trợ.</p>
+  </details>
+</section>
+
+<section class="card" id="emails">
+  <h2>Email thông báo bạn sẽ nhận được</h2>
+  <p>Trong các trường hợp sau, hệ thống sẽ gửi email đến địa chỉ liên hệ mà cửa hàng đã đăng ký (hãy kiểm tra đó là hộp thư bạn thường xem):</p>
+  <ul>
+    <li><strong>Gói đã thay đổi</strong>: khi nâng cấp có hiệu lực ngay, hoặc khi hạ cấp đã lên lịch đến hạn và có hiệu lực.</li>
+    <li><strong>Đã lên lịch hạ cấp</strong>: email ghi rõ ngày có hiệu lực và nhắc rằng bạn có thể hủy trong trang quản trị.</li>
+    <li><strong>Đã hủy hạ cấp</strong>.</li>
+    <li><strong>Mức sử dụng đã đạt giới hạn</strong>: mỗi hạng mục chỉ gửi một lần trong cùng một kỳ.</li>
+  </ul>
+  <p class="note">Hiện tại tất cả email thông báo đều được gửi bằng tiếng Anh.</p>
+</section>
+
+<section class="card" id="who">
+  <h2>Ai được đổi gói</h2>
+  <p>Chỉ <strong>chủ quán</strong> (và nhân viên nền tảng) mới thấy <span class="btn-label">Gói &amp; Mức dùng</span> và đổi được gói. Các tài khoản nhân viên khác như đầu bếp, nhân viên phục vụ, thu ngân không thấy trang này và cũng không thể thay đổi. Biểu ngữ nhắc mức sử dụng cũng chỉ hiển thị cho chủ quán.</p>
+</section>
+
+<section class="card" id="faq">
+  <h2>Câu hỏi thường gặp</h2>
+  <details>
+    <summary>Hết hạn dùng thử thì cửa hàng của tôi có bị khóa không?</summary>
+    <p>Không. Hết thời gian dùng thử, mọi tính năng vẫn dùng được, trang quản trị chỉ nhắc bạn chọn gói. Chỉ có điều giới hạn mức sử dụng sẽ được tính lại theo từng tháng (vẫn là con số của gói Dùng thử).</p>
+  </details>
+  <details>
+    <summary>Sau khi nâng cấp, mức sử dụng cũ có về 0 không?</summary>
+    <p>Có. Nâng cấp có hiệu lực ngay, kỳ 30 ngày mới bắt đầu từ lúc nâng cấp và mức sử dụng tính lại từ 0, nên cửa hàng đang không nhận được đơn vì dùng hết giới hạn có thể nhận đơn lại ngay sau khi nâng cấp.</p>
+  </details>
+  <details>
+    <summary>Hạ cấp rồi thì dữ liệu có mất không?</summary>
+    <p>Không. Các bản ghi vẫn được giữ lại, chỉ là những màn hình quản trị liên quan tạm thời bị đóng; khi nâng cấp lại lên gói có tính năng đó, dữ liệu sẽ trở lại.</p>
+  </details>
+  <details>
+    <summary>Vì sao khách nói không đặt món được?</summary>
+    <p>Nguyên nhân thường gặp nhất là số đơn hàng của kỳ này đã đạt giới hạn. Hãy vào <span class="btn-label">Gói &amp; Mức dùng</span> xem “Mức dùng kỳ này”; nếu số đơn đã đầy, phía trên cùng sẽ có biểu ngữ màu đỏ. Nâng cấp gói sẽ khôi phục ngay; nếu không nâng cấp, bạn phải chờ đến khi kỳ tính tiếp theo bắt đầu.</p>
+  </details>
+  <details>
+    <summary>Có thể quay lại gói Dùng thử không?</summary>
+    <p>Không. Đã rời gói Dùng thử thì không thể quay lại, gói Dùng thử chỉ dành cho cửa hàng mới mở.</p>
+  </details>
+  <details>
+    <summary>Hạ cấp có thể có hiệu lực ngay không?</summary>
+    <p>Không. Hạ cấp luôn có hiệu lực vào cuối kỳ hiện tại, và bạn có thể hủy trước đó.</p>
+  </details>
+  <details>
+    <summary>Đổi gói có mất phí không?</summary>
+    <p>Hiện tại đổi gói trong trang quản trị không cần thanh toán trực tuyến. Nếu sau này có bất kỳ khoản phí nào, nền tảng sẽ thông báo riêng.</p>
+  </details>
+  <details>
+    <summary>Đã dùng hết giới hạn nhưng tôi không muốn nâng cấp thì sao?</summary>
+    <p>Bạn có thể chờ đến khi kỳ tính tiếp theo bắt đầu (sau khi hết thời gian dùng thử là ngày 1 tháng sau; với gói trả phí là ngày kết thúc của kỳ hiện tại, hiển thị ở góc trên bên phải của “Mức dùng kỳ này”). Trước đó, đơn hàng mới và việc in hóa đơn sẽ tạm dừng.</p>
+  </details>
+</section>
+
+<section class="card" id="help">
+  <h2>Cần hỗ trợ</h2>
+  <ul>
+    <li>Ở góc trên bên phải khu vực “Chọn gói” trong <span class="btn-label">Gói &amp; Mức dùng</span> có liên kết “Hướng dẫn về gói và mức sử dụng”, sẽ mở trang này.</li>
+    <li>Nếu không đổi được gói, đăng ký bị vô hiệu hóa, hoặc bạn có bất kỳ thắc mắc nào về gói, hãy gửi ở trang <span class="btn-label">Phản hồi</span> trong menu bên trái của trang quản trị; nhân viên nền tảng sẽ xử lý tại đó. (Đây là nơi cửa hàng báo vấn đề cho nền tảng, không phải trang “Đánh giá” của khách.)</li>
+  </ul>
+</section>
+
+<footer>MakanMasak · Gói, thời gian dùng thử và mức sử dụng · Dựa trên hoạt động của hệ thống tính đến tháng 11/2026</footer>
+
+</main>
+</body>
+</html>

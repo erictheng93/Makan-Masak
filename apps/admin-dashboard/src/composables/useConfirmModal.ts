@@ -1,10 +1,19 @@
 import { ref } from "vue";
+import type { RouteLocationRaw } from "vue-router";
 
 export interface ConfirmModalOptions {
   type?: "danger" | "warning";
   title: string;
   message: string;
   confirmLabel: string;
+  /** Scannable detail under the message, one bulleted list per heading. */
+  sections?: Array<{ heading: string; items: string[]; blocking?: boolean }>;
+  /** Greys the confirm button, e.g. while a blocking condition holds. */
+  confirmDisabled?: boolean;
+  /** A way out to the page that resolves the condition; closes the modal. */
+  link?: { to: RouteLocationRaw; label: string };
+  /** An external explainer, opened in a new tab; does not close the modal. */
+  help?: { href: string; label: string };
 }
 
 export interface ConfirmModalState extends ConfirmModalOptions {
@@ -22,6 +31,10 @@ export function useConfirmModal() {
         title: options.title,
         message: options.message,
         confirmLabel: options.confirmLabel,
+        sections: options.sections,
+        confirmDisabled: options.confirmDisabled,
+        link: options.link,
+        help: options.help,
         resolve,
       };
     });

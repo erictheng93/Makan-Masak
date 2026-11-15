@@ -3,6 +3,7 @@
 > **Phiên bản**: 2.0
 > **Cập nhật**: 2025-10-26
 > **Đối tượng**: Chủ nhà hàng, Quản lý
+> **Gói, dùng thử và mức dùng**: Chủ cửa hàng tự đổi gói tại "Gói & Mức dùng" trong trang quản trị (nâng cấp có hiệu lực ngay, hạ cấp có hiệu lực vào cuối kỳ, không cần thanh toán trực tuyến). Xem [Gói, dùng thử và mức dùng](../vi-VN/plans-and-usage.html).
 
 ---
 

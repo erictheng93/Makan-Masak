@@ -6,12 +6,16 @@
  * See docs/superpowers/specs/2026-06-03-service-reservation-system.md.
  */
 
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { z } from "zod";
+import { drizzle } from "drizzle-orm/d1";
+import { eq } from "drizzle-orm";
 import { authMiddleware, requireRole } from "../../../middleware/auth";
 import type { AuthUser } from "../../../middleware/auth";
 import { moduleGate } from "../../../middleware/moduleGate";
 import { rateLimitMiddleware } from "../../../middleware/rateLimiter";
+import { resolveRestaurantIdFromJsonBody } from "../../../shared/utils/request-restaurant";
+import { refusesShopCoupons } from "../../coupons/services/coupons-module";
 import type { Env } from "../../../types/env";
 import {
   badRequest,
@@ -19,6 +23,7 @@ import {
   notFound,
 } from "../../../shared/utils/api-error";
 import {
+  restaurantServiceItems,
   SERVICE_BOOKING_STATUS,
   type ServiceBookingStatus,
 } from "@makanmasak/database";
@@ -174,24 +179,55 @@ function countBatchSlots(
 }
 
 // ── Public ─────────────────────────────────────────────
+// Starting something new (availability, create, recurring, waitlist) needs the
+// shop's `reservations` module: without it the shop has no screen to serve the
+// booking. Pay, verify, .ics and cancel stay open so an existing booking — and
+// money already taken for it — is never stranded by a downgrade.
 
-app.get("/availability", async (c) => {
+function availabilityServiceItemId(c: Context): number {
   const serviceItemId = Number(c.req.query("serviceItemId"));
-  const date = c.req.query("date") ?? "";
   if (!Number.isInteger(serviceItemId) || serviceItemId <= 0) {
     throw badRequest("serviceItemId is required", "SERVICE_ITEM_ID_REQUIRED");
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    throw badRequest("date (YYYY-MM-DD) is required", "DATE_REQUIRED");
-  }
-  const slots = await new ServiceBookingService(c.env).getAvailability({
-    serviceItemId,
-    date,
-  });
-  return c.json({ success: true, data: { slots } });
-});
+  return serviceItemId;
+}
 
-app.post("/", async (c) => {
+// Availability names only the service item; gate on the restaurant owning it.
+async function serviceItemRestaurantId(
+  c: Context<{ Bindings: Env }>,
+): Promise<string> {
+  const item = await drizzle(c.env.DB)
+    .select({ restaurantId: restaurantServiceItems.restaurantId })
+    .from(restaurantServiceItems)
+    .where(eq(restaurantServiceItems.id, availabilityServiceItemId(c)))
+    .get();
+  if (!item) throw notFound("Service not found", "SERVICE_NOT_FOUND");
+  return item.restaurantId;
+}
+
+const reservationsGateByBody = moduleGate(
+  "reservations",
+  resolveRestaurantIdFromJsonBody,
+);
+
+app.get(
+  "/availability",
+  moduleGate("reservations", serviceItemRestaurantId),
+  async (c) => {
+    const serviceItemId = availabilityServiceItemId(c);
+    const date = c.req.query("date") ?? "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      throw badRequest("date (YYYY-MM-DD) is required", "DATE_REQUIRED");
+    }
+    const slots = await new ServiceBookingService(c.env).getAvailability({
+      serviceItemId,
+      date,
+    });
+    return c.json({ success: true, data: { slots } });
+  },
+);
+
+app.post("/", reservationsGateByBody, async (c) => {
   const body = await c.req.json();
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
@@ -201,29 +237,42 @@ app.post("/", async (c) => {
       parsed.error.flatten().fieldErrors,
     );
   }
+  if (
+    parsed.data.voucherCode &&
+    (await refusesShopCoupons(c.env, parsed.data.restaurantId, [
+      parsed.data.voucherCode,
+    ]))
+  ) {
+    throw badRequest("This voucher does not apply", "VOUCHER_NOT_APPLICABLE");
+  }
   const booking = await new ServiceBookingService(c.env).createBooking(
     parsed.data,
   );
   return c.json({ success: true, data: { booking } }, 201);
 });
 
-app.post("/recurring", recurringCreateRateLimit, async (c) => {
-  const body = await c.req.json();
-  const parsed = recurringCreateSchema.safeParse(body);
-  if (!parsed.success) {
-    throw badRequest(
-      "Validation failed",
-      "VALIDATION_ERROR",
-      parsed.error.flatten().fieldErrors,
-    );
-  }
-  const bookings = await new ServiceBookingService(
-    c.env,
-  ).createRecurringBookings(parsed.data);
-  return c.json({ success: true, data: { bookings } }, 201);
-});
+app.post(
+  "/recurring",
+  recurringCreateRateLimit,
+  reservationsGateByBody,
+  async (c) => {
+    const body = await c.req.json();
+    const parsed = recurringCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      throw badRequest(
+        "Validation failed",
+        "VALIDATION_ERROR",
+        parsed.error.flatten().fieldErrors,
+      );
+    }
+    const bookings = await new ServiceBookingService(
+      c.env,
+    ).createRecurringBookings(parsed.data);
+    return c.json({ success: true, data: { bookings } }, 201);
+  },
+);
 
-app.post("/waitlist", waitlistRateLimit, async (c) => {
+app.post("/waitlist", waitlistRateLimit, reservationsGateByBody, async (c) => {
   const body = await c.req.json();
   const parsed = waitlistSchema.safeParse(body);
   if (!parsed.success) {

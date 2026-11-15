@@ -3,11 +3,16 @@ import {
   NOTIFICATION_CHANNELS,
   NOTIFICATION_DISPATCH_STATUSES,
   createEmailProvider,
+  drizzle,
+  restaurants,
+  type MeterKey,
+  type PlanTier,
   type BillingNotificationKind,
   type NotificationChannel,
   type NotificationDispatchStatus,
 } from "@makanmasak/database";
 import { generateUUID } from "@makanmasak/utils";
+import { eq } from "drizzle-orm";
 import type { Env } from "../../../types/env";
 
 interface DispatchInput {
@@ -301,6 +306,61 @@ export class BillingReminderService {
 
     return { attempted };
   }
+}
+
+/** Name and billing email of a restaurant, for owner-facing billing mail. */
+export async function restaurantContact(
+  db: Env["DB"],
+  restaurantId: string,
+): Promise<{ name: string; email: string | null } | null> {
+  const [row] = await drizzle(db)
+    .select({ name: restaurants.name, email: restaurants.email })
+    .from(restaurants)
+    .where(eq(restaurants.id, restaurantId))
+    .limit(1);
+  return row ?? null;
+}
+
+const METER_LABELS: Record<MeterKey, string> = {
+  "orders.created": "orders",
+  "print.jobs": "receipt prints",
+  "ai.requests": "AI requests",
+  "api.requests": "API requests",
+  "storage.bytes": "storage",
+};
+
+// English only, like every other billing email (trial reminders above).
+export function quotaHardOwnerCopy(restaurantName: string, meterKey: MeterKey) {
+  const what = METER_LABELS[meterKey] ?? meterKey;
+  return {
+    subject: `MakanMasak: ${restaurantName} has reached its ${what} limit`,
+    text: `${restaurantName} has used all the ${what} included in its plan for this billing cycle. New ${what} are paused until the next cycle starts. You can upgrade your plan from the admin dashboard; an upgrade takes effect immediately.`,
+  };
+}
+
+const formatDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+
+export function planChangeCopy(
+  event: "applied" | "scheduled" | "cancelled",
+  restaurantName: string,
+  input: { fromTier: PlanTier; toTier: PlanTier; effectiveAt: number },
+) {
+  if (event === "applied") {
+    return {
+      subject: `Your MakanMasak plan is now ${input.toTier}`,
+      text: `${restaurantName} moved from the ${input.fromTier} plan to the ${input.toTier} plan on ${formatDay(input.effectiveAt)} (UTC). A new billing cycle started then.`,
+    };
+  }
+  if (event === "scheduled") {
+    return {
+      subject: `Your MakanMasak plan will change to ${input.toTier}`,
+      text: `${restaurantName} will move from the ${input.fromTier} plan to the ${input.toTier} plan on ${formatDay(input.effectiveAt)} (UTC), at the end of the current billing cycle. Until then nothing changes. You can cancel this from the admin dashboard.`,
+    };
+  }
+  return {
+    subject: "Your MakanMasak plan change was cancelled",
+    text: `The scheduled move of ${restaurantName} to the ${input.toTier} plan has been cancelled. ${restaurantName} stays on the ${input.fromTier} plan.`,
+  };
 }
 
 export { BILLING_NOTIFICATION_KINDS, NOTIFICATION_CHANNELS };

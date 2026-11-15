@@ -9,6 +9,7 @@ import { normalizeE164Phone } from "@makanmasak/utils";
 import { authMiddleware, requireRole } from "../../../middleware/auth";
 import { idempotencyMiddleware } from "../../../middleware/idempotency";
 import { moduleGate } from "../../../middleware/moduleGate";
+import { resolveRestaurantIdFromJsonBody } from "../../../shared/utils/request-restaurant";
 import { rateLimitMiddleware } from "../../../middleware/rateLimiter";
 import {
   validateBody,
@@ -147,6 +148,9 @@ app.post(
   "/",
   publicReservationCreateRateLimit,
   validateBody(publicReservationSchema),
+  // A shop that dropped the module can no longer see new bookings, so stop
+  // taking them. Lookup and cancel below stay open for existing ones.
+  moduleGate("reservations", resolveRestaurantIdFromJsonBody),
   idempotencyMiddleware({ scope: "public-reservation-create" }),
   async (c) => {
     const body = c.get("validatedBody") as CreateReservationRequest;
@@ -215,6 +219,7 @@ app.get(
   "/availability",
   publicReservationAvailabilityRateLimit,
   validateQuery(publicReservationAvailabilitySchema),
+  moduleGate("reservations", (c) => c.req.query("restaurantId")),
   async (c) => {
     const query = c.get("validatedQuery") as z.infer<
       typeof publicReservationAvailabilitySchema

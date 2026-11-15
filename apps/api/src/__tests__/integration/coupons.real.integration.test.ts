@@ -130,6 +130,8 @@ describe("Coupons API — real integration", () => {
     await testApp.testDb.truncateAll();
     const restaurant = await seed.restaurant();
     restaurantId = String(restaurant.id);
+    // The diner endpoints (validate, available) are gated on `coupons`.
+    await insertActiveSubscription(restaurantId);
 
     // Seed the admin user row with id=1 so downstream user lookups
     // (e.g., createdBy, audit logs) do not trip on a missing FK.

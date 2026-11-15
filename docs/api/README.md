@@ -349,6 +349,8 @@ Authorization: Bearer <your_jwt_token>
 
 ### Reservations (`/reservations`) — 15 routes
 
+Public create and availability answer 403 `MODULE_NOT_ENABLED` when the named restaurant's plan lacks `reservations`; verify and cancel stay open for existing reservations.
+
 | Method | Path                                | Description  | Auth      |
 | ------ | ----------------------------------- | ------------ | --------- |
 | POST   | `/reservations`                     | 建立預約     | Public    |
@@ -381,6 +383,8 @@ Authorization: Bearer <your_jwt_token>
 
 ### Waiting List (`/waiting-list`) — 12 routes
 
+Join, queue-status and estimate-wait answer 403 `MODULE_NOT_ENABLED` when the restaurant's plan lacks `reservations`; an existing ticket can still be read, confirmed and cancelled.
+
 | Method | Path                                        | Description  | Auth      |
 | ------ | ------------------------------------------- | ------------ | --------- |
 | POST   | `/waiting-list`                             | 加入候位     | Public    |
@@ -397,6 +401,8 @@ Authorization: Bearer <your_jwt_token>
 | POST   | `/waiting-list/batch-call`                  | 批量叫號     | Protected |
 
 ### Coupons (`/coupons`) — 13 routes
+
+The `coupons` module governs a shop's own coupons (`restaurant_id` set); platform coupons (`restaurant_id` NULL) work at every shop. Where the plan lacks `coupons`, validate answers 403 `MODULE_NOT_ENABLED` for a shop coupon, available lists platform coupons only, order creation (`/orders`, `/guest-orders`, `/orders/preview-coupon`) refuses a shop coupon with 400 `COUPON_INVALID`, and a market-checkout voucher owned by that shop gets 400 `VOUCHER_NOT_APPLICABLE`.
 
 | Method | Path                               | Description    | Auth      |
 | ------ | ---------------------------------- | -------------- | --------- |
@@ -664,6 +670,8 @@ agent's restaurant and register scope.
 
 ### Integrations (`/integrations`) — 10 routes
 
+The admin routes need `platform_integration`, except `GET` and `DELETE /integrations/:restaurantId/:platform`, which stay open to the owner so a shop that lost the module can still see and disconnect an integration.
+
 **管理端：**
 
 | Method | Path                                              | Description  | Auth      |
@@ -816,11 +824,55 @@ so a token can never be replayed against a different room.
 | GET | `/credits/cards/:publicId/ledger` | 卡片帳務明細 | Admin |
 | GET | `/credits/accounting/export` | 匯出儲值負債帳本 CSV | Admin |
 
-### Billing (`/billing`) — 1 route
+### Billing (`/billing`) — 5 routes
 
 | Method | Path | Description | Auth |
 | ------ | ---- | ----------- | ---- |
 | POST | `/billing/webhooks/:provider` | 計費供應商 webhook 回呼 | Public (signature verified) |
+| GET | `/billing/plan` | 目前方案、計量週期、排程中的降級與各方案選項（模組／配額） | Owner / Admin |
+| GET | `/billing/plan/impact?planTier=` | 換到該方案會失去的模組與受影響項目數 | Owner / Admin |
+| POST | `/billing/plan/change` | 店主自助換方案（無線上付款） | Owner / Admin |
+| DELETE | `/billing/plan/pending` | 取消排程中的降級 | Owner / Admin |
+
+`/billing/plan*` 只開放 role 0 與 1，走一般的 auth + Origin/CSRF 檢查
+（`/billing/webhooks` 的 CSRF 豁免是路徑前綴，碰不到 `/billing/plan`）。
+店主（role 1）一律作用在自己的店，帶別家的 `?restaurantId=` 回 403；平台管理員
+（role 0）必須帶 `?restaurantId=`，否則 400。回應都是 `{ success: true, data }`，
+寫入類回傳與 `GET /billing/plan` 相同的形狀。
+
+規則（`features/billing/services/PlanChangeService.ts`）：
+
+- 付費方案排序 basic < pro < enterprise。升級立即生效；降級在當期計量週期結束時
+  生效（有 `billing_cycle_*` 時取其結束時間，否則取當月 UTC 月底）。離開 trial
+  到任何付費方案一律立即生效；不能回到 trial。
+- 立即生效時清掉排程中的降級、保留平台管理員給的 `module_overrides`，並開一個新的
+  30 天計量週期（`billing_cycle_start = now`），用量計數因此從 0 開始——已達配額的
+  店升級後馬上能再接單。
+- 再送一個降級會取代排程中的那個；送「目前方案」一律 409 `PLAN_UNCHANGED`，
+  取消只走 `DELETE /billing/plan/pending`。
+- 錯誤：409 `PLAN_UNCHANGED`、409 `PLAN_TRIAL_NOT_REENTERABLE`、
+  400 `PLAN_NOT_AVAILABLE_IN_REGION`、409 `SUBSCRIPTION_INACTIVE`、
+  409 `PLAN_CHANGE_BLOCKED_OPEN_SHIFT`（立即生效且目標方案沒有 `pos`、店裡還有
+  開著的收銀班）、409 `PLAN_CHANGE_CONFLICT`（並發寫入，重新載入再試）、
+  404 `PLAN_NO_PENDING_CHANGE`。
+- 到期的降級由每日 `15 2 * * *` cron 套用（在 `closeDueCycles` 之前，先以舊方案
+  快照結束的週期），店主下一次 `GET /billing/plan` 或 `POST /billing/plan/change`
+  也會順手套用（staging 沒有 cron）。目標方案沒有 `pos` 而收銀班還開著時會延後，
+  `pendingChange.deferredReason` 為 `"open_cash_shift"`。`moduleGate` / `quotaGate`
+  不看排程中的降級：套用前一律依舊方案放行。
+- 每次請求、取消與套用各寫一筆 `payment_audit_log`（`plan_change`）與一筆
+  `audit_logs`（`action = plan_change`，`user_id` 為操作者，cron 套用時為 NULL），
+  並寄英文 email 給 `restaurants.email`（`plan_change_applied` /
+  `plan_change_scheduled` / `plan_change_cancelled`，經 `notification_dispatch_log`
+  去重）。
+
+**店家層級配額（429 `QUOTA_EXCEEDED`）。** `quotaGate` 在店家當期用量達硬上限且
+`QUOTA_ENFORCEMENT_MODE=enforce` 時回 429，`error.details` 為
+`{ meterKey, hardLimit, current }`。用 `details.meterKey` 分辨「這家店的方案用完了」
+與一般請求限流（限流的 429 沒有 `meterKey`）。錯誤 details 的去敏感化會遮蔽名稱含
+`key` 的欄位，`meterKey` 是明列的例外（`packages/utils/src/api-error.ts`）。
+某個 meter 在一個週期內第一次撞到硬上限時，除了原本的平台 Slack 通知，也會寄一封
+英文 email 給店主（`quota_hard_owner`，每 meter 每週期一次）。
 
 ### Markets (`/markets`) — 5 routes
 
@@ -894,6 +946,8 @@ so a token can never be replayed against a different room.
 | GET | `/market-checkouts/:id` | 結帳詳情（公開） | Public |
 
 ### Service Bookings (`/service-bookings`) — 21 routes
+
+Availability, create, recurring and waitlist answer 403 `MODULE_NOT_ENABLED` when the restaurant's plan lacks `reservations` (a shop-owned voucher on create needs `coupons`, else 400 `VOUCHER_NOT_APPLICABLE`; platform vouchers always apply); pay, verify, ICS and cancel stay open for existing bookings.
 
 | Method | Path | Description | Auth |
 | ------ | ---- | ----------- | ---- |
@@ -987,7 +1041,7 @@ so a token can never be replayed against a different room.
 | Method | Path | Description | Auth |
 | ------ | ---- | ----------- | ---- |
 | GET | `/me/modules` | 取得訂閱模組與方案層級 | Protected |
-| GET | `/me/usage` | 取得當期用量 | Protected |
+| GET | `/me/usage` | 取得當期用量；每個 meter 帶 `state`（`ok` / `warning` / `over`，與 `quotaGate` 同一組軟／硬上限）與 `enforced`（`QUOTA_ENFORCEMENT_MODE=enforce` 且該 meter 真的有路由在擋：`orders.created`、`print.jobs`、`ai.requests`） | Protected |
 | GET | `/me/me` | 取得顧客檔案與偏好 | Protected |
 | PATCH | `/me/me` | 更新顧客檔案 | Protected |
 | DELETE | `/me/me` | 刪除顧客帳號 | Protected |

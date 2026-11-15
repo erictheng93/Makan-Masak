@@ -209,7 +209,7 @@ describe("SubscriptionService.updateModules", () => {
 });
 
 describe("SubscriptionService.changePlan and setActive", () => {
-  it("changePlan resets overrides to the new plan defaults", async () => {
+  it("changePlan resets overrides and drops a scheduled downgrade", async () => {
     const sub = buildSub({ moduleOverrides: { pos: true } });
     const { service, mutationDb } = createService({
       select: { shopSubscriptions: [[sub]] },
@@ -217,7 +217,14 @@ describe("SubscriptionService.changePlan and setActive", () => {
     });
     await service.changePlan("rest-1", "enterprise");
     expect(mutationDb.updated).toEqual([
-      { planTier: "enterprise", moduleOverrides: {} },
+      {
+        planTier: "enterprise",
+        moduleOverrides: {},
+        pendingPlanTier: null,
+        pendingEffectiveAt: null,
+        pendingRequestedBy: null,
+        pendingRequestedAt: null,
+      },
     ]);
   });
 

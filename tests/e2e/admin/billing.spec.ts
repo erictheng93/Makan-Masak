@@ -139,7 +139,7 @@ test.describe("訂閱與帳務 (real API)", () => {
     await assertNoOverlayError(page);
   });
 
-  test("plan changes route to the support channel that actually exists", async ({
+  test("the owner can compare plans and act on them in the page", async ({
     page,
   }) => {
     test.setTimeout(180_000);
@@ -152,13 +152,18 @@ test.describe("訂閱與帳務 (real API)", () => {
     });
     await assertAuthenticated(page);
 
-    // Deliberately not an "upgrade" button: no self-serve plan change exists
-    // anywhere in the product, so one would be a dead end. This asserts the
-    // link goes somewhere real instead.
-    const cta = page.getByTestId("billing-contact-support");
-    await expect(cta).toBeVisible();
-    await cta.click();
-    await expect(page).toHaveURL(/\/dashboard\/feedback$/);
+    // Plan changes are self-service now (no mail link, no support-ticket
+    // detour): one card per plan the API offers, exactly one marked current.
+    // This only reads; it never clicks a plan action, because leaving the
+    // trial cannot be undone through the product.
+    await expect(page.getByTestId("billing-plans")).toBeVisible();
+    await expect(
+      page.locator('[data-testid^="plan-card-"]').first(),
+    ).toBeVisible();
+    await expect(page.getByTestId("plan-current-marker")).toHaveCount(1);
+    await expect(page.getByTestId("billing-plans-guide")).toBeVisible();
+    await expect(page.getByTestId("billing-upgrade-action")).toHaveCount(0);
+    await expect(page.getByTestId("billing-contact-support")).toHaveCount(0);
 
     await assertNoOverlayError(page);
   });

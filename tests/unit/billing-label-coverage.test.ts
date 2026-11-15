@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { METER_KEYS } from "../../packages/database/src/schema/usage-events";
-import { MODULES } from "../../packages/database/src/schema/subscriptions";
+import {
+  MODULES,
+  PLAN_TIERS,
+} from "../../packages/database/src/schema/subscriptions";
 import {
   meterMessagePath,
   moduleMessagePath,
@@ -47,10 +50,13 @@ describe("billing label coverage", () => {
   const paths = [
     ...Object.values(METER_KEYS).map(meterMessagePath),
     ...Object.values(MODULES).map(moduleMessagePath),
+    // The plan name shown on the owner's billing page and plan cards. `pro`
+    // was missing once, and a missing tier prints its raw key.
+    ...Object.values(PLAN_TIERS).map((tier) => `billing.tier.${tier}`),
   ];
 
   for (const [locale, messages] of Object.entries(catalogs)) {
-    it(`names every usage meter and plan module in ${locale}`, () => {
+    it(`names every usage meter, plan module and plan tier in ${locale}`, () => {
       const missing = paths.filter((path) => {
         const value = lookup(messages, path);
         return typeof value !== "string" || value.trim() === "";

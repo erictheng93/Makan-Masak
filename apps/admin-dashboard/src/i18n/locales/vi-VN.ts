@@ -895,6 +895,12 @@ const viVN: Messages = {
     loadFailed: "Tải thất bại",
     saveFailed: "Lưu thất bại",
     deleteFailed: "Xóa thất bại",
+    quota: {
+      orders: "Đã đạt giới hạn đơn hàng của kỳ này",
+      print: "Đã đạt giới hạn in của kỳ này",
+      ai: "Đã đạt giới hạn yêu cầu AI của kỳ này",
+      generic: "Đã đạt giới hạn sử dụng của kỳ này",
+    },
     subscription: {
       noRestaurant:
         "Tài khoản của bạn chưa được liên kết với bất kỳ nhà hàng nào. Hãy yêu cầu quản trị viên của bạn chỉ định một địa chỉ rồi thử lại.",
@@ -4984,6 +4990,9 @@ const viVN: Messages = {
     },
   },
   integrations: {
+    limitedTitle: "Nền tảng giao hàng đang kết nối",
+    limitedNotice:
+      "Đơn hàng từ nền tảng này vẫn tiếp tục đến. Bạn có thể ngắt kết nối tại đây, nhưng gói hiện tại không cho chỉnh cài đặt hay đồng bộ thực đơn.",
     title: "Tích hợp nền tảng giao hàng",
     subtitle:
       "Kết nối nền tảng giao hàng để quản lý đơn hàng và thực đơn từ các nền tảng khác",
@@ -6443,13 +6452,13 @@ const viVN: Messages = {
     moduleNames: {
       analytics: "Phân tích",
       coupons: "Phiếu giảm giá",
-      loyalty: "Lòng trung thành",
+      loyalty: "Chương trình thân thiết",
       platform_integration: "Tích hợp nền tảng",
       online_ordering: "Đặt hàng trực tuyến",
       menu_management: "Quản lý thực đơn",
-      table_management: "Quản lý bảng",
+      table_management: "Quản lý bàn",
       ai_analytics: "Phân tích AI",
-      kitchen_display: "trưng bày nhà bếp",
+      kitchen_display: "Màn hình bếp",
       receipt_printing: "In biên lai",
       reservations: "Đặt chỗ",
       pos: "Thu ngân POS",
@@ -6504,26 +6513,16 @@ const viVN: Messages = {
     trialExpiredAction: "Chọn gói",
     trialExpiredTitle: "Thời gian dùng thử đã kết thúc",
     trialExpiredContinue: "Tiếp tục",
-    upgradeTitle: "Nâng cấp gói",
-    upgradeBody:
-      "Chưa có thanh toán trực tuyến. Hãy gửi email cho chúng tôi để được thiết lập gói. Trong thời gian này mọi tính năng vẫn hoạt động bình thường.",
-    upgradeAction: "Gửi email để nâng cấp",
-    upgradeMailSubject: "Nâng cấp gói MakanMasak",
     usageTitle: "Mức dùng kỳ này",
     usageEmpty: "Chưa có dữ liệu sử dụng trong kỳ này.",
     modulesTitle: "Tính năng đi kèm",
     moduleOn: "Bật",
     moduleOff: "Tắt",
-    changePlanTitle: "Cần đổi gói?",
-    changePlanHint:
-      "Việc đổi gói do đội ngũ nền tảng xử lý. Hãy gửi phiếu hỗ trợ, chúng tôi sẽ liên hệ với bạn.",
-    changePlanCta: "Gửi phiếu hỗ trợ",
     loadFailed: "Không tải được thông tin gói. Vui lòng thử lại.",
     tier: {
       trial: "Dùng thử",
-      basic: "Cơ bản",
-      standard: "Tiêu chuẩn",
-      premium: "Cao cấp",
+      basic: "Tiêu chuẩn",
+      pro: "Chuyên nghiệp",
       enterprise: "Doanh nghiệp",
     },
     meter: {
@@ -6531,7 +6530,103 @@ const viVN: Messages = {
       api_requests: "Yêu cầu API",
       print_jobs: "Lệnh in",
       ai_requests: "Yêu cầu AI",
-      storage_bytes: "Dung lượng lưu trữ (byte)",
+      storage_bytes: "Dung lượng lưu trữ",
+    },
+    quota: {
+      viewPlans: "Xem các gói",
+      warning: {
+        orders: "Đã dùng {pct}% số đơn hàng của kỳ này ({used}/{limit})",
+        print: "Đã dùng {pct}% số lệnh in của kỳ này ({used}/{limit})",
+        ai: "Đã dùng {pct}% số yêu cầu AI của kỳ này ({used}/{limit})",
+      },
+      over: {
+        orders: "Đã đạt giới hạn đơn hàng: khách hiện không thể đặt món",
+        print: "Đã đạt giới hạn in: hiện không thể in hóa đơn và phiếu",
+        ai: "Đã đạt giới hạn yêu cầu AI: các tính năng AI tạm thời không khả dụng",
+      },
+    },
+    plans: {
+      title: "Chọn gói",
+      hint: "Có thể đổi gói bất cứ lúc nào, không cần thanh toán trực tuyến. Nâng cấp có hiệu lực ngay; hạ cấp có hiệu lực vào cuối kỳ hiện tại và có thể hủy trước đó.",
+      guide: "Hướng dẫn về gói và mức sử dụng",
+      loadFailed: "Không tải được thông tin gói. Vui lòng thử lại sau.",
+      unlimited: "Không giới hạn",
+      upgradeNow: "Nâng cấp ngay",
+      notIncluded: "Không bao gồm",
+      changeNow: "Đổi ngay",
+      downgradeNow: "Hạ cấp ngay",
+      scheduleDowngrade: "Lên lịch hạ cấp, có hiệu lực {date}",
+      unavailable: "Không khả dụng",
+      unavailableRegion: "Gói này chưa có ở khu vực của bạn.",
+      unavailableTrial:
+        "Gói dùng thử chỉ dành cho cửa hàng mới và không thể quay lại.",
+      changed: "Đã đổi sang gói {plan}",
+      scheduled: "Đã lên lịch hạ cấp xuống gói {plan}",
+      limit: {
+        orders: "Đơn hàng mỗi kỳ",
+        print: "Lệnh in mỗi kỳ",
+        ai: "Yêu cầu AI mỗi kỳ",
+        storage: "Dung lượng lưu trữ",
+      },
+    },
+    pending: {
+      scheduled: "Đã lên lịch hạ cấp xuống gói {plan} vào {date}",
+      waitingShift:
+        "Đã lên lịch hạ cấp xuống gói {plan}, nhưng vẫn còn ca thu ngân chưa đóng. Việc hạ cấp chỉ có hiệu lực sau khi đóng ca.",
+      cancel: "Hủy hạ cấp",
+      cancelTitle: "Hủy việc hạ cấp đã lên lịch?",
+      cancelMessage: "Bạn sẽ tiếp tục dùng gói hiện tại.",
+      cancelled: "Đã hủy hạ cấp",
+      badge: "Có hiệu lực vào {date}",
+    },
+    confirm: {
+      title: "Chuyển sang gói {plan}",
+      effectiveNow: "Có hiệu lực ngay.",
+      effectiveCycleEnd:
+        "Có hiệu lực vào cuối kỳ này ({date}); đến lúc đó bạn vẫn dùng các tính năng của gói hiện tại.",
+      trialNoReturn:
+        "Sau khi rời gói dùng thử, bạn không thể quay lại gói dùng thử.",
+      gained: "Tính năng bạn có thêm",
+      lost: "Tính năng bạn sẽ mất",
+      blocking: "Cần xử lý trước",
+      impact: "Những gì thay đổi",
+      goToPos: "Đến POS để đóng ca",
+      confirmChange: "Xác nhận thay đổi",
+      confirmScheduleDowngrade: "Xác nhận lên lịch hạ cấp",
+      usageFresh: "Mức sử dụng của kỳ này sẽ được tính lại từ 0.",
+      usageFreshScheduled:
+        "Mức sử dụng của gói mới được tính lại từ ngày có hiệu lực.",
+      confirmUpgrade: "Xác nhận nâng cấp",
+    },
+    impact: {
+      open_cash_shift:
+        "Còn {count} ca thu ngân chưa đóng: hãy đóng ca trong POS trước khi hạ cấp",
+      future_reservations:
+        "{count} lượt đặt bàn sắp tới vẫn được giữ: khách vẫn xem hoặc hủy được, nhưng trang quản trị không còn quản lý hay nhận đặt bàn mới. Sẽ khôi phục khi nâng cấp",
+      future_service_bookings:
+        "{count} lượt đặt dịch vụ sắp tới vẫn được giữ: khách vẫn xem hoặc hủy được, nhưng trang quản trị không còn quản lý hay nhận đặt mới. Sẽ khôi phục khi nâng cấp",
+      active_coupons:
+        "{count} phiếu giảm giá của cửa hàng vẫn được giữ nhưng ngừng áp dụng (phiếu do nền tảng MakanMasak phát hành không bị ảnh hưởng). Dùng lại được khi nâng cấp",
+      scheduled_shifts:
+        "{count} ca làm đã xếp lịch vẫn được giữ, nhưng màn hình xếp ca sẽ đóng. Sẽ khôi phục khi nâng cấp",
+      pending_leave_requests:
+        "{count} đơn xin nghỉ đang chờ duyệt vẫn được giữ, nhưng màn hình nghỉ phép sẽ đóng. Sẽ khôi phục khi nâng cấp",
+      tracked_ingredients:
+        "Tồn kho của {count} nguyên liệu vẫn tự động trừ theo đơn hàng, nhưng bạn không thể xem hay quản lý. Sẽ khôi phục khi nâng cấp",
+      connected_platforms:
+        "{count} nền tảng giao hàng vẫn tiếp tục gửi đơn; sau khi thay đổi, bạn vẫn có thể ngắt kết nối trong trang quản trị nhưng không thể chỉnh cài đặt hay đồng bộ thực đơn",
+    },
+    errors: {
+      unchanged: "Bạn đang dùng gói này rồi.",
+      trialNotReenterable: "Không thể quay lại gói dùng thử.",
+      notInRegion: "Gói này chưa có ở khu vực của bạn.",
+      inactive:
+        "Đăng ký đang bị vô hiệu hóa nên không thể đổi gói. Vui lòng liên hệ hỗ trợ.",
+      openShift:
+        "Vẫn còn ca thu ngân chưa đóng. Hãy đóng ca trong POS trước khi hạ cấp.",
+      conflict:
+        "Gói vừa được người khác thay đổi. Trang đã được làm mới, vui lòng kiểm tra rồi thử lại.",
+      noPending: "Không còn lịch hạ cấp nào. Trang đã được làm mới.",
     },
   },
 };

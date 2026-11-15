@@ -129,7 +129,11 @@ export class SubscriptionService {
     return updated;
   }
 
-  /** Upgrade/downgrade the plan tier and reset module overrides to the new plan defaults */
+  /**
+   * Admin tier switch: immediate, resets module overrides to the new plan
+   * defaults, and drops any owner-scheduled downgrade — otherwise the stale
+   * downgrade would apply at cycle end on top of the admin's choice.
+   */
   async changePlan(restaurantId: string, planTier: PlanTier) {
     const sub = await this.getByRestaurantId(restaurantId);
     if (!sub)
@@ -137,7 +141,14 @@ export class SubscriptionService {
 
     const [updated] = await this.db
       .update(shopSubscriptions)
-      .set({ planTier, moduleOverrides: {} })
+      .set({
+        planTier,
+        moduleOverrides: {},
+        pendingPlanTier: null,
+        pendingEffectiveAt: null,
+        pendingRequestedBy: null,
+        pendingRequestedAt: null,
+      })
       .where(eq(shopSubscriptions.restaurantId, restaurantId))
       .returning();
 

@@ -23,6 +23,10 @@ import {
 } from "../../../middleware/validation";
 import { CouponsService } from "../services/CouponsService";
 import {
+  couponsModuleEnabled,
+  refusesShopCoupons,
+} from "../services/coupons-module";
+import {
   validateCouponSchema,
   createCouponSchema,
   updateCouponSchema,
@@ -114,6 +118,20 @@ routes.post(
   validateBody(validateCouponSchema),
   async (c) => {
     const data = c.get("validatedBody") as ValidateCouponInput;
+    // A shop without the `coupons` module stops honouring its own coupons;
+    // platform promotions still validate there.
+    if (
+      await refusesShopCoupons(
+        c.env,
+        data.restaurantId,
+        data.codes ?? (data.code ? [data.code] : []),
+      )
+    ) {
+      throw forbidden(
+        "This feature is not included in your current plan.",
+        "MODULE_NOT_ENABLED",
+      );
+    }
     const customer = c.get("customer");
     const couponsService = createCouponsService(c.env);
     const guestIdentity = customer
@@ -155,8 +173,13 @@ routes.get(
     const { restaurantId } = c.get("validatedParams") as RestaurantIdParamInput;
     const couponsService = createCouponsService(c.env);
 
-    const availableCoupons =
+    const allAvailable =
       await couponsService.getAvailableCouponsForUser(restaurantId);
+    // Without the `coupons` module the shop's own programme is off; platform
+    // promotions (restaurant_id IS NULL) are still offered there.
+    const availableCoupons = (await couponsModuleEnabled(c.env, restaurantId))
+      ? allAvailable
+      : allAvailable.filter((coupon) => coupon.restaurantId == null);
 
     return c.json({
       success: true,

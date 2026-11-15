@@ -18,7 +18,9 @@
             class="fixed inset-0 bg-black/30 backdrop-blur-sm"
             @click="close(false)"
           />
-          <div class="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full">
+          <div
+            class="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full max-h-[90vh] overflow-y-auto"
+          >
             <div class="p-6 text-center">
               <div
                 class="mx-auto flex items-center justify-center h-12 w-12 rounded-full mb-4"
@@ -49,6 +51,44 @@
               >
                 {{ modalState.message }}
               </p>
+              <div
+                v-for="section in modalState.sections"
+                :key="section.heading"
+                class="mb-4 text-left"
+                data-testid="confirm-modal-section"
+                :data-blocking="section.blocking ? 'true' : 'false'"
+              >
+                <p class="text-[13px] font-semibold text-ios-text mb-1.5">
+                  {{ section.heading }}
+                </p>
+                <ul
+                  class="list-disc space-y-1 pl-5 text-[13px]"
+                  :class="
+                    section.blocking ? 'text-ios-red' : 'text-ios-secondary'
+                  "
+                >
+                  <li v-for="item in section.items" :key="item">{{ item }}</li>
+                </ul>
+              </div>
+              <RouterLink
+                v-if="modalState.link"
+                :to="modalState.link.to"
+                class="mb-4 inline-block text-[14px] font-semibold text-ios-blue"
+                data-testid="confirm-modal-link"
+                @click="close(false)"
+              >
+                {{ modalState.link.label }}
+              </RouterLink>
+              <a
+                v-if="modalState.help"
+                :href="modalState.help.href"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="mb-4 block text-[13px] font-semibold text-ios-blue"
+                data-testid="confirm-modal-help"
+              >
+                {{ modalState.help.label }}
+              </a>
               <div class="flex gap-2.5 justify-center">
                 <button
                   data-testid="confirm-modal-cancel"
@@ -59,7 +99,8 @@
                 </button>
                 <button
                   data-testid="confirm-modal-confirm"
-                  class="px-5 py-2.5 text-[14px] font-semibold text-white rounded-full transition-colors"
+                  :disabled="modalState.confirmDisabled"
+                  class="px-5 py-2.5 text-[14px] font-semibold text-white rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   :class="
                     modalState.type === 'danger'
                       ? 'bg-ios-error hover:bg-ios-error/90 shadow-[0_2px_8px_rgba(255,59,48,0.25)]'
@@ -80,6 +121,7 @@
 
 <script setup lang="ts">
 import { AlertTriangle } from "lucide-vue-next";
+import { RouterLink } from "vue-router";
 import { useI18n } from "@/i18n";
 import { useConfirmModal } from "@/composables/useConfirmModal";
 import { vDialogFocus } from "@/utils/dialog-focus";

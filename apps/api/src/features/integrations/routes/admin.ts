@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type MiddlewareHandler } from "hono";
 import { z } from "zod";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, and, desc } from "drizzle-orm";
@@ -50,7 +50,6 @@ function assertRestaurantScope(
 // All admin routes require admin (0) or shop owner (1) role
 adminRoutes.use("/*", authMiddleware);
 adminRoutes.use("/*", requireRole([0, 1]));
-adminRoutes.use("/*", moduleGate("platform_integration"));
 adminRoutes.use("/:restaurantId", async (c, next) => {
   assertRestaurantScope(c.get("user"), c.req.param("restaurantId"));
   await next();
@@ -60,8 +59,16 @@ adminRoutes.use("/:restaurantId/*", async (c, next) => {
   await next();
 });
 
+// Gated per route, not router-wide: a shop that drops the module keeps
+// receiving platform orders until it disconnects, so reading one integration
+// (the settings screen's status) and disconnecting it stay open. Everything
+// else needs `platform_integration`.
+const platformIntegrationGate = moduleGate("platform_integration");
+const integrationGate: MiddlewareHandler<IntegrationAdminEnv> = (c, next) =>
+  platformIntegrationGate(c as never, next);
+
 // GET /:restaurantId — list all integrations
-adminRoutes.get("/:restaurantId", async (c) => {
+adminRoutes.get("/:restaurantId", integrationGate, async (c) => {
   const restaurantId = c.req.param("restaurantId");
   const service = new PlatformIntegrationService(c.env);
   const integrations = await service.getIntegrations(restaurantId);
@@ -70,7 +77,7 @@ adminRoutes.get("/:restaurantId", async (c) => {
 
 // GET /:restaurantId/webhook-logs — list webhook logs
 // Registered before /:restaurantId/:platform to avoid being shadowed by the dynamic segment
-adminRoutes.get("/:restaurantId/webhook-logs", async (c) => {
+adminRoutes.get("/:restaurantId/webhook-logs", integrationGate, async (c) => {
   const restaurantId = c.req.param("restaurantId");
   const platform = c.req.query("platform") as PlatformType | undefined;
   const limit = c.req.query("limit") ? parseInt(c.req.query("limit")!) : 50;
@@ -129,6 +136,7 @@ const connectPlatformSchema = z.lazy(() =>
 // POST /:restaurantId/:platform/connect — connect platform
 adminRoutes.post(
   "/:restaurantId/:platform/connect",
+  integrationGate,
   validateBody(connectPlatformSchema),
   async (c) => {
     const restaurantId = c.req.param("restaurantId");
@@ -151,7 +159,7 @@ adminRoutes.post(
 );
 
 // PUT /:restaurantId/:platform — update config
-adminRoutes.put("/:restaurantId/:platform", async (c) => {
+adminRoutes.put("/:restaurantId/:platform", integrationGate, async (c) => {
   const restaurantId = c.req.param("restaurantId");
   const platform = c.req.param("platform") as PlatformType;
   const body = await c.req.json<UpdatePlatformConfigRequest>();
@@ -182,39 +190,47 @@ adminRoutes.delete("/:restaurantId/:platform", async (c) => {
 });
 
 // POST /:restaurantId/:platform/menu-sync — trigger menu sync
-adminRoutes.post("/:restaurantId/:platform/menu-sync", async (c) => {
-  const restaurantId = c.req.param("restaurantId");
-  const platform = c.req.param("platform") as PlatformType;
+adminRoutes.post(
+  "/:restaurantId/:platform/menu-sync",
+  integrationGate,
+  async (c) => {
+    const restaurantId = c.req.param("restaurantId");
+    const platform = c.req.param("platform") as PlatformType;
 
-  if (!isPlatformAdapterSupported(platform)) {
-    throw new ApiError(
-      "INTEGRATION_NOT_AVAILABLE",
-      `${platform} integration is not available yet`,
-      501,
-    );
-  }
+    if (!isPlatformAdapterSupported(platform)) {
+      throw new ApiError(
+        "INTEGRATION_NOT_AVAILABLE",
+        `${platform} integration is not available yet`,
+        501,
+      );
+    }
 
-  const service = new PlatformMenuSyncService(c.env);
-  await service.syncMenu(restaurantId, platform);
-  return c.json({ success: true, message: "Menu sync completed" });
-});
+    const service = new PlatformMenuSyncService(c.env);
+    await service.syncMenu(restaurantId, platform);
+    return c.json({ success: true, message: "Menu sync completed" });
+  },
+);
 
 // GET /:restaurantId/:platform/orders — list platform orders
-adminRoutes.get("/:restaurantId/:platform/orders", async (c) => {
-  const restaurantId = c.req.param("restaurantId");
-  const platform = c.req.param("platform") as PlatformType;
+adminRoutes.get(
+  "/:restaurantId/:platform/orders",
+  integrationGate,
+  async (c) => {
+    const restaurantId = c.req.param("restaurantId");
+    const platform = c.req.param("platform") as PlatformType;
 
-  const filters: PlatformOrdersFilter = {
-    platform,
-    platformStatus: c.req.query("status") ?? undefined,
-    limit: c.req.query("limit") ? parseInt(c.req.query("limit")!) : 50,
-    page: c.req.query("page") ? parseInt(c.req.query("page")!) : 1,
-  };
+    const filters: PlatformOrdersFilter = {
+      platform,
+      platformStatus: c.req.query("status") ?? undefined,
+      limit: c.req.query("limit") ? parseInt(c.req.query("limit")!) : 50,
+      page: c.req.query("page") ? parseInt(c.req.query("page")!) : 1,
+    };
 
-  const service = new PlatformOrderService(c.env);
-  const orders = await service.getPlatformOrders(restaurantId, filters);
+    const service = new PlatformOrderService(c.env);
+    const orders = await service.getPlatformOrders(restaurantId, filters);
 
-  return c.json({ data: orders });
-});
+    return c.json({ data: orders });
+  },
+);
 
 export default adminRoutes;

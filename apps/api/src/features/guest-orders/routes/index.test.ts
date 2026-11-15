@@ -155,7 +155,18 @@ function createEnv(
     customer?: Record<string, unknown> | null;
   } = {},
 ) {
-  const kv = new Map<string, string>();
+  const kv = new Map<string, string>([
+    [
+      "subscription:restaurant-1",
+      JSON.stringify({
+        isActive: true,
+        // restaurant-1 has `coupons`, so coupon orders reach the service.
+        planTier: "pro",
+        moduleOverrides: {},
+        trialEndsAt: null,
+      }),
+    ],
+  ]);
   const ephemeral = new Map<string, string>();
   return {
     DB: {
@@ -166,7 +177,10 @@ function createEnv(
       })),
     },
     CACHE_KV: {
-      get: vi.fn(async (key: string) => kv.get(key) ?? null),
+      get: vi.fn(async (key: string, type?: string) => {
+        const value = kv.get(key) ?? null;
+        return value !== null && type === "json" ? JSON.parse(value) : value;
+      }),
       put: vi.fn(async (key: string, value: string) => {
         kv.set(key, value);
       }),

@@ -213,6 +213,23 @@ describe("ServiceBookingView", () => {
     }
   });
 
+  it("shows a calm unavailable state when the shop no longer takes bookings", async () => {
+    vi.mocked(serviceBookingsApi.getAvailability).mockRejectedValue({
+      code: "MODULE_NOT_ENABLED",
+      status: 403,
+    });
+    const wrapper = mountView();
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="module-unavailable"]').text()).toBe(
+      "toast.orderSubmitModuleServiceBooking",
+    );
+    expect(wrapper.find('[data-testid="service-booking-date"]').exists()).toBe(
+      false,
+    );
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+  });
+
   it("loads service details and availability slots", async () => {
     const wrapper = mountView();
     await flushPromises();

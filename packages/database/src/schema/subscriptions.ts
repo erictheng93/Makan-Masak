@@ -149,6 +149,17 @@ export const shopSubscriptions = sqliteTable("shop_subscriptions", {
     mode: "timestamp_ms",
   }),
 
+  // Owner-scheduled downgrade, applied at pendingEffectiveAt (migration 0049).
+  // All four are set together or all NULL.
+  pendingPlanTier: text("pending_plan_tier").$type<PlanTier>(),
+  pendingEffectiveAt: integer("pending_effective_at_ms", {
+    mode: "timestamp_ms",
+  }),
+  pendingRequestedBy: text("pending_requested_by"),
+  pendingRequestedAt: integer("pending_requested_at_ms", {
+    mode: "timestamp_ms",
+  }),
+
   // Internal admin notes (not visible to shop owner)
   notes: text("notes"),
 

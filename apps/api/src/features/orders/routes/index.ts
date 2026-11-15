@@ -21,6 +21,7 @@ import { OrdersService } from "../services/OrdersService";
 import { resolveCouponCustomerIdentity } from "../../guest-orders/services/guest-coupon-identity";
 import { assertShopOrderingEnabled } from "../services/shop-mode-gate";
 import { resolveRestaurantIdFromJsonBody } from "../../../shared/utils/request-restaurant";
+import { assertOrderCouponsAllowed } from "../../coupons/services/coupons-module";
 import { ConsoleLogger } from "../../../core/monitoring";
 import type { Env } from "../../../shared/types";
 import type { AuthUser } from "../../../middleware/auth";
@@ -254,6 +255,9 @@ app.post(
   async (c) => {
     const data: CouponPreviewInput = c.get("validatedBody");
     const user: AuthUser = c.get("user");
+    await assertOrderCouponsAllowed(c.env, data.restaurantId, [
+      data.couponCode,
+    ]);
     const ordersService = new OrdersService(c.env);
 
     logger.info("Previewing coupon", {
@@ -386,6 +390,12 @@ app.post(
         data.restaurantId,
       );
     }
+
+    await assertOrderCouponsAllowed(
+      c.env,
+      data.restaurantId,
+      data.couponCodes ?? (data.couponCode ? [data.couponCode] : []),
+    );
 
     // Transform data for service
     const createOrderData = {

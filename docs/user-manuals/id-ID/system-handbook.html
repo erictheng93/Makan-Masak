@@ -2000,7 +2000,7 @@
                 <tr>
                   <td>Langganan, pengaturan, dan pemantauan</td>
                   <td>/dashboard/billing、settings、monitoring</td>
-                  <td>Modul fitur, pengaturan mata uang dan operasional, nilai pemantauan.</td>
+                  <td>Paket &amp; Pemakaian (perubahan paket mandiri oleh pemilik), modul fitur, pengaturan mata uang dan operasional, nilai pemantauan.</td>
                 </tr>
               </tbody>
             </table>
@@ -3606,7 +3606,7 @@ Authorization: Bearer &lt;management token hasil penukaran&gt;</code></pre>
             gate. Kebijakan wilayah tetap menjadi batas atas modul efektif untuk restoran biasa.
           </p>
           <p>
-            module_overrides adalah penimpaan jarang: true memaksa aktif, false memaksa mati, tanpa key kembali ke default paket. Mengubah plan akan mengosongkan override, jadi setelah upgrade／downgrade periksa ulang otorisasi pengecualian. Semantik API
+            module_overrides adalah penimpaan jarang: true memaksa aktif, false memaksa mati, tanpa key kembali ke default paket. Perubahan plan oleh staf platform mengosongkan override, sedangkan perubahan yang dilakukan sendiri oleh pemilik toko di "Paket &amp; Pemakaian" mempertahankannya, jadi setelah perubahan oleh staf platform periksa ulang otorisasi pengecualian. Layanan mandiri pemilik: upgrade (termasuk keluar dari uji coba) berlaku segera dan memulai ulang periode pemakaian 30 hari; downgrade berlaku di akhir periode dan dapat dibatalkan sebelumnya; hanya pemilik toko (dan staf platform) yang dapat melakukannya. Semantik API
             boolean patch dan menghapus key override berbeda, false tidak boleh dianggap kembali ke default.
           </p>
           <h3>Modul, kuota, flag fitur</h3>

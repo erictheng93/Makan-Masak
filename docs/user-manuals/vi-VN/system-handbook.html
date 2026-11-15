@@ -2002,7 +2002,7 @@
                 <tr>
                   <td>Đăng ký dịch vụ, thiết lập và giám sát</td>
                   <td>/dashboard/billing、settings、monitoring</td>
-                  <td>Mô-đun chức năng, thiết lập loại tiền và kinh doanh, các chỉ số giám sát.</td>
+                  <td>Gói &amp; Mức dùng (chủ cửa hàng tự đổi gói), mô-đun chức năng, thiết lập loại tiền và kinh doanh, các chỉ số giám sát.</td>
                 </tr>
               </tbody>
             </table>
@@ -3607,7 +3607,7 @@ Authorization: Bearer &lt;management token nhận được sau khi đổi&gt;</c
             gate. Chính sách khu vực vẫn là giới hạn trên của mô-đun hiệu lực đối với nhà hàng thông thường.
           </p>
           <p>
-            module_overrides là ghi đè thưa: true bật cưỡng bức, false tắt cưỡng bức, không có key thì quay về mặc định của gói. Đổi plan sẽ xóa sạch override, nên sau khi nâng cấp／hạ cấp phải đối chiếu lại các ủy quyền ngoại lệ. Ngữ nghĩa của API
+            module_overrides là ghi đè thưa: true bật cưỡng bức, false tắt cưỡng bức, không có key thì quay về mặc định của gói. Nhân sự nền tảng đổi plan sẽ xóa sạch override, còn khi chủ cửa hàng tự đổi trong "Gói &amp; Mức dùng" thì override được giữ nguyên, nên sau khi nhân sự nền tảng đổi gói phải đối chiếu lại các ủy quyền ngoại lệ. Chủ cửa hàng tự phục vụ: nâng cấp (kể cả rời gói dùng thử) có hiệu lực ngay và bắt đầu lại kỳ dùng 30 ngày; hạ cấp có hiệu lực vào cuối kỳ và có thể hủy trước đó; chỉ chủ cửa hàng (và nhân sự nền tảng) mới thực hiện được. Ngữ nghĩa của API
             boolean patch và xóa override key khác nhau, không thể coi false là quay về mặc định.
           </p>
           <h3>Mô-đun, hạn mức, cờ tính năng</h3>

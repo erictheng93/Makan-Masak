@@ -6,8 +6,17 @@
   >
     <span>{{ t("billing.trialExpiredBanner") }}</span>
     <div class="flex shrink-0 items-center gap-2">
+      <a
+        :href="plansGuideUrl(locale, 'trial')"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="font-medium underline"
+        data-testid="trial-expired-banner-guide"
+      >
+        {{ t("billing.plans.guide") }}
+      </a>
       <router-link
-        :to="{ name: 'Billing' }"
+        :to="{ name: 'Billing', hash: '#plans' }"
         class="rounded-full bg-ios-orange px-4 py-1.5 font-medium text-white"
       >
         {{ t("billing.trialExpiredAction") }}
@@ -30,8 +39,9 @@ import { useModuleAccess } from "@makanmasak/shared/composables/useModuleAccess"
 import { useI18n } from "@/i18n";
 import { useAuthStore } from "@/stores/auth";
 import { UserRole } from "@/types";
+import { plansGuideUrl } from "@/utils/guideLinks";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const authStore = useAuthStore();
 const { isTrialExpired } = useModuleAccess();
 

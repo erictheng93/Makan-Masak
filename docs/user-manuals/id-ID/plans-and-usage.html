@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paket, Masa Uji Coba, dan Pemakaian - MakanMasak</title>
+<style>
+  :root {
+    --bg: #F2F2F7;
+    --card: #FFFFFF;
+    --text: #1C1C1E;
+    --muted: #6E6E73;
+    --primary-strong: #B04F09; /* onboarding primary-700, text on white (5.3:1) */
+    --brand: #F38020; /* Cloudflare orange, onboarding primary-500: fills only */
+    --success: #34C759;
+    --warning: #FF9500;
+    --error: #FF3B30;
+    --soft-blue: #E8F1FF;
+    --soft-orange: #FFF4E5;
+    --soft-green: #EAF8EE;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.75;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+  header { text-align: center; margin-bottom: 28px; }
+  header h1 { font-size: 30px; margin: 0 0 6px; }
+  header p { color: var(--muted); margin: 0; }
+  .langs { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; margin: 0 0 20px; font-size: 15px; }
+  .langs a { color: var(--primary-strong); font-weight: 600; }
+  .langs [aria-current] { color: var(--muted); font-weight: 600; }
+  .card {
+    background: var(--card);
+    border-radius: 24px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    scroll-margin-top: 16px;
+  }
+  h2 { font-size: 22px; margin: 0 0 12px; }
+  h3 { font-size: 18px; margin: 20px 0 8px; }
+  .step-no {
+    flex: none;
+    width: 28px; height: 28px;
+    border-radius: 999px;
+    background: var(--brand);
+    color: var(--text); /* #1C1C1E on #F38020 is 6.4:1; white is 2.65:1 */
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .toc a { display: inline-block; background: #FEF4EA; color: var(--primary-strong); border-radius: 999px; padding: 4px 14px; font-weight: 600; font-size: 15px; text-decoration: none; }
+  .tip, .warn, .ok {
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin: 14px 0;
+  }
+  .tip { background: var(--soft-blue); }
+  .warn { background: var(--soft-orange); }
+  .ok { background: var(--soft-green); }
+  .tip > strong:first-child, .warn > strong:first-child, .ok > strong:first-child { display: block; margin-bottom: 2px; }
+  .btn-label {
+    display: inline-block;
+    background: var(--brand);
+    color: var(--text); /* #1C1C1E on #F38020 is 6.4:1; white is 2.65:1 */
+    border-radius: 999px;
+    padding: 0 12px;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  .table-scroll { overflow-x: auto; margin: 8px 0 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 16px; }
+  th, td { text-align: left; padding: 10px 8px; vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 14px; }
+  tr + tr td { box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.06); }
+  td:first-child { font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .yes { color: #1E7B38; font-weight: 700; }
+  .no { color: var(--muted); }
+  .note { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+  ol, ul { padding-left: 22px; }
+  li { margin: 4px 0; }
+  details { background: var(--bg); border-radius: 16px; padding: 12px 16px; margin: 10px 0; }
+  summary { font-weight: 600; cursor: pointer; }
+  footer { text-align: center; color: var(--muted); font-size: 14px; margin-top: 28px; }
+  @media (max-width: 520px) {
+    body { font-size: 16px; }
+    main { padding: 24px 16px 48px; }
+    .card { padding: 20px 16px; }
+    table { font-size: 14px; }
+    th, td { padding: 8px 4px; }
+  }
+  @media print {
+    body { background: #FFFFFF; font-size: 13pt; }
+    .card { box-shadow: none; break-inside: avoid; border-radius: 0; padding: 12px 0; }
+    details { background: none; }
+    details > * { display: block; }
+    .langs, .toc { display: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>Paket, Masa Uji Coba, dan Pemakaian</h1>
+  <p>Panduan untuk pemilik toko: cara melihat paket dan pemakaian Anda, serta mengganti paket sendiri</p>
+</header>
+
+<p class="langs" aria-label="Bahasa">
+  <span aria-current="page">Bahasa Indonesia</span>
+  <a href="../plans-and-usage.html" hreflang="zh-Hant-TW">繁體中文</a>
+  <a href="../zh-CN/plans-and-usage.html" hreflang="zh-Hans">简体中文</a>
+  <a href="../en-US/plans-and-usage.html" hreflang="en">English</a>
+  <a href="../ja-JP/plans-and-usage.html" hreflang="ja">日本語</a>
+  <a href="../vi-VN/plans-and-usage.html" hreflang="vi">Tiếng Việt</a>
+</p>
+
+<section class="card" id="overview">
+  <h2>Ringkasan</h2>
+  <ul>
+    <li>MakanMasak memiliki empat paket: <strong>Uji coba, Standar, Profesional, Enterprise</strong>. Setiap toko baru dimulai dengan paket <strong>Uji coba</strong> selama <strong>180 hari</strong>, dengan semua fitur dapat digunakan.</li>
+    <li><strong>Saat masa uji coba berakhir, toko Anda tidak dinonaktifkan.</strong> Sistem hanya mengingatkan Anda untuk memilih paket, dan toko tetap beroperasi seperti biasa.</li>
+    <li>Setiap paket memiliki <strong>batas pemakaian</strong> seperti jumlah pesanan dan jumlah cetak. Anda akan diingatkan saat pemakaian mencapai 80%; jika sudah penuh, pesanan baru dan pencetakan struk dihentikan sementara sampai periode hitung berikutnya atau sampai Anda meningkatkan paket.</li>
+    <li>Paket diganti oleh <strong>pemilik toko sendiri</strong> di dasbor melalui <span class="btn-label">Paket &amp; Pemakaian</span>, <strong>tanpa pembayaran online</strong> dan tanpa perlu menghubungi dukungan.</li>
+    <li><strong>Upgrade berlaku segera</strong> dan pemakaian dihitung ulang dari 0; <strong>downgrade baru berlaku di akhir periode berjalan</strong> dan dapat dibatalkan sebelum itu.</li>
+    <li>Halaman ini tidak membahas biaya apa pun. Jika di kemudian hari ada biaya, platform akan mengumumkannya tersendiri.</li>
+  </ul>
+  <ul class="toc" aria-label="Isi halaman ini">
+    <li><a href="#plans">Perbandingan empat paket</a></li>
+    <li><a href="#trial">Masa uji coba</a></li>
+    <li><a href="#usage">Cara pemakaian dihitung</a></li>
+    <li><a href="#limit">Saat pemakaian penuh</a></li>
+    <li><a href="#upgrade">Upgrade</a></li>
+    <li><a href="#downgrade">Downgrade dan pembatalan</a></li>
+    <li><a href="#lost-features">Dampak kehilangan fitur</a></li>
+    <li><a href="#special">Kasus khusus</a></li>
+    <li><a href="#emails">Email pemberitahuan</a></li>
+    <li><a href="#who">Siapa yang dapat mengubah</a></li>
+    <li><a href="#faq">Pertanyaan umum</a></li>
+    <li><a href="#help">Butuh bantuan</a></li>
+  </ul>
+</section>
+
+<section class="card" id="plans">
+  <h2>Perbandingan empat paket</h2>
+  <h3>Fitur yang termasuk</h3>
+  <div class="table-scroll" role="region" aria-label="Fitur yang termasuk di setiap paket" tabindex="0">
+    <table>
+      <thead>
+        <tr><th scope="col">Fitur</th><th scope="col">Uji coba</th><th scope="col">Standar</th><th scope="col">Profesional</th><th scope="col">Enterprise</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Manajemen Menu</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
+        <tr><td>Manajemen Meja</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
+        <tr><td>Pemesanan Daring</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
+        <tr><td>Kasir POS</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
+        <tr><td>Tampilan Dapur</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
+        <tr><td>Pencetakan Struk</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
+        <tr><td>Kupon</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
+        <tr><td>Reservasi</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
+        <tr><td>Analisis</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
+        <tr><td>Analisis AI</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
+        <tr><td>Integrasi Platform</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
+        <tr><td>Loyalitas</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
+        <tr><td>Inventaris</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
+        <tr><td>Manajemen Staf</td><td><span class="yes" aria-label="Termasuk">✓</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="no" aria-label="Tidak termasuk">—</span></td><td><span class="yes" aria-label="Termasuk">✓</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Tabel di atas adalah isi standar setiap paket. Petugas platform dapat mengaktifkan atau menonaktifkan fitur tertentu untuk satu toko secara khusus, dan pengaturan khusus tersebut tetap dipertahankan saat Anda mengganti paket sendiri. Beberapa fitur tidak tersedia di negara atau wilayah tertentu, sehingga tidak akan muncul meskipun termasuk dalam paket.</p>
+
+  <h3>Batas pemakaian</h3>
+  <div class="table-scroll" role="region" aria-label="Batas pemakaian setiap paket" tabindex="0">
+    <table>
+      <thead>
+        <tr><th scope="col">Item</th><th scope="col" class="num">Uji coba</th><th scope="col" class="num">Standar</th><th scope="col" class="num">Profesional</th><th scope="col" class="num">Enterprise</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Pesanan per periode</td><td class="num">3.000 (total selama masa uji coba)</td><td class="num">1.000</td><td class="num">10.000</td><td class="num">Tanpa batas</td></tr>
+        <tr><td>Cetak per periode</td><td class="num">3.000 (total selama masa uji coba)</td><td class="num"><span class="no">Tidak termasuk</span></td><td class="num">10.000</td><td class="num">Tanpa batas</td></tr>
+        <tr><td>Permintaan AI per periode</td><td class="num">10</td><td class="num"><span class="no">Tidak termasuk</span></td><td class="num"><span class="no">Tidak termasuk</span></td><td class="num">Tanpa batas</td></tr>
+        <tr><td>Penyimpanan</td><td class="num">1 GB</td><td class="num">5 GB</td><td class="num">50 GB</td><td class="num">Tanpa batas</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Cara menghitung "periode" dijelaskan di bagian "Cara pemakaian dihitung" di bawah. "Tidak termasuk" berarti paket itu tidak memiliki fiturnya, sehingga tidak ada kuotanya (paket Standar tidak memiliki pencetakan struk; paket Standar dan Profesional tidak memiliki Analisis AI); jika platform mengaktifkan fitur itu khusus untuk toko Anda, pengaturan platform yang berlaku. Angka penyimpanan hanya sebagai acuan; mencapai batas tidak akan memblokir apa pun. "Permintaan API" juga muncul di daftar pemakaian, tetapi hanya sebagai catatan dan tidak memblokir operasi apa pun.</p>
+</section>
+
+<section class="card" id="trial">
+  <h2>Masa uji coba</h2>
+  <ul>
+    <li>Setiap toko baru dimulai dengan paket <strong>Uji coba</strong> selama <strong>180 hari</strong>, dengan semua fitur dapat digunakan.</li>
+    <li>Di halaman <span class="btn-label">Paket &amp; Pemakaian</span>, di bawah paket saat ini tertulis "Sisa 120 hari masa uji coba".</li>
+    <li>Batas pesanan dan cetak pada paket Uji coba adalah <strong>total selama seluruh masa uji coba</strong> (masing-masing 3.000), bukan dihitung ulang setiap bulan.</li>
+  </ul>
+  <h3>Setelah masa uji coba berakhir</h3>
+  <div class="ok">
+    <strong>Tidak ada yang dimatikan</strong>
+    Semua fitur tetap dapat digunakan dan toko tidak perlu tutup. Dasbor hanya menampilkan pengingat: banner di bagian atas bertuliskan "Masa uji coba Anda telah berakhir. Semua fitur tetap berfungsi, tetapi mohon pilih paket untuk mendukung MakanMasak.", dan setiap kali Anda masuk akan muncul sekali jendela "Masa uji coba telah berakhir". Anda dapat menutupnya dengan "Lanjutkan", atau menekan "Pilih paket" untuk langsung memilih paket.
+  </div>
+  <ul>
+    <li>Setelah masa uji coba berakhir dan sebelum Anda memilih paket, batas pemakaian tetap angka paket Uji coba, tetapi dihitung <strong>per bulan kalender</strong> (kembali ke 0 setiap awal bulan).</li>
+    <li>Keluar dari paket Uji coba (memilih Standar, Profesional, atau Enterprise) <strong>berlaku segera</strong>.</li>
+    <li><strong>Setelah keluar dari paket Uji coba, Anda tidak dapat kembali ke paket Uji coba.</strong> Paket Uji coba hanya untuk toko baru.</li>
+  </ul>
+</section>
+
+<section class="card" id="usage">
+  <h2>Cara pemakaian dihitung dan di mana melihatnya</h2>
+  <p>Sistem menghitung tiga jenis pemakaian yang memiliki batas:</p>
+  <ul>
+    <li><strong>Pesanan dibuat</strong>: setiap pesanan baru dihitung 1. Termasuk pesanan yang dibuat pelanggan secara online atau lewat QR Code, pesanan grup, pembayaran gabungan lintas toko, dan pesanan yang dibuat staf atas nama pelanggan.</li>
+    <li><strong>Tugas cetak</strong>: setiap pencetakan struk dihitung 1.</li>
+    <li><strong>Permintaan AI</strong>: dihitung saat Anda menggunakan fitur Analisis AI.</li>
+  </ul>
+  <h3>Berapa lama satu "periode"</h3>
+  <div class="table-scroll" role="region" aria-label="Periode penghitungan pemakaian" tabindex="0">
+    <table>
+      <thead>
+        <tr><th scope="col">Kondisi Anda</th><th scope="col">Cara pemakaian dihitung</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Selama masa uji coba</td><td>Total seluruh masa uji coba (180 hari), tidak dihitung ulang</td></tr>
+        <tr><td>Masa uji coba berakhir, belum memilih paket</td><td>Per bulan kalender, kembali ke 0 di awal bulan</td></tr>
+        <tr><td>Standar, Profesional, Enterprise</td><td>Setiap 30 hari sejak saat Anda memilih paket itu; saat periode habis, otomatis masuk periode berikutnya dan dimulai dari 0</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Awal dan akhir bulan kalender mengikuti Waktu Universal Terkoordinasi (UTC), sehingga ada selisih dengan waktu setempat. Misalnya, di Indonesia bagian barat (WIB), pemakaian kembali ke 0 pada pukul 07.00 tanggal 1 setiap bulan.</p>
+  <h3>Di mana melihatnya</h3>
+  <ol>
+    <li>Masuk ke dasbor, lalu pilih <span class="btn-label">Paket &amp; Pemakaian</span> di menu sebelah kiri.</li>
+    <li>Bagian "Pemakaian siklus ini" menampilkan jumlah yang sudah terpakai untuk setiap item, batasnya, serta tanggal mulai dan berakhirnya periode ini.</li>
+    <li>Bilah kemajuan berubah warna sesuai pemakaian: biru jika di bawah 80%, oranye saat mencapai 80%, dan merah jika sudah penuh.</li>
+  </ol>
+  <h3>Pengingat saat hampir habis</h3>
+  <p>Saat pemakaian mencapai <strong>80%</strong> dari batas, banner oranye muncul di bagian atas dasbor, misalnya "85% pesanan periode ini telah terpakai (2.550/3.000)", dengan tombol <span class="btn-label">Lihat paket</span> di sampingnya. Anda dapat menutupnya dengan ✕ di sebelah kanan (tidak ditampilkan lagi selama sesi masuk ini). Pengingat ini hanya terlihat oleh pemilik toko.</p>
+</section>
+
+<section class="card" id="limit">
+  <h2>Apa yang terjadi saat pemakaian penuh</h2>
+  <p>Setelah pemakaian mencapai batas, sampai <strong>periode hitung berikutnya dimulai</strong> atau <strong>Anda meningkatkan paket</strong>:</p>
+  <ul>
+    <li><strong>Pesanan baru ditolak</strong>: pelanggan tidak dapat memesan secara online atau lewat QR Code, dan staf juga tidak dapat membuat pesanan baru atas nama pelanggan atau membuka pesanan grup. <strong>Pesanan yang sudah masuk tidak terpengaruh</strong> dan tetap diproses, disajikan, dan dibayar seperti biasa.</li>
+    <li><strong>Struk tidak dapat dicetak</strong>.</li>
+    <li>Fitur lainnya tidak terpengaruh.</li>
+  </ul>
+  <p>Saat itu, banner merah yang tidak dapat ditutup muncul di bagian atas dasbor: "Batas pesanan tercapai: pelanggan saat ini tidak dapat memesan" atau "Batas cetak tercapai: struk dan tiket saat ini tidak dapat dicetak". Sistem juga mengirim email pemberitahuan kepada Anda (lihat "Email pemberitahuan").</p>
+  <div class="tip">
+    <strong>Cara tercepat untuk pulih: upgrade paket</strong>
+    Upgrade berlaku segera dan pemakaian dihitung ulang dari 0, sehingga toko yang baru saja penuh dapat langsung menerima pesanan lagi. Langkah-langkahnya ada di bagian berikutnya.
+  </div>
+  <p>Pelanggan hanya akan melihat bahwa saat ini mereka tidak dapat memesan. Sebaiknya Anda menanganinya saat pemakaian hampir habis (ketika banner oranye muncul), jangan menunggu sampai pelanggan memberi tahu Anda.</p>
+</section>
+
+<section class="card" id="upgrade">
+  <h2>Upgrade paket (berlaku segera)</h2>
+  <p>Upgrade berarti pindah dari paket yang lebih rendah ke yang lebih tinggi: <strong>Standar → Profesional → Enterprise</strong>. Pindah dari Uji coba ke <strong>paket mana pun</strong> yang berbayar juga berlaku segera; jika pindah ke paket dengan fitur lebih sedikit daripada Uji coba (misalnya Standar), tombol di kartu bertuliskan <span class="btn-label">Ganti sekarang</span> dan tombol di jendela konfirmasi bertuliskan <span class="btn-label">Konfirmasi perubahan</span>.</p>
+  <ol>
+    <li>Masuk ke dasbor, lalu pilih <span class="btn-label">Paket &amp; Pemakaian</span> di menu sebelah kiri. (<span class="btn-label">Lihat paket</span> pada banner pengingat pemakaian dan <span class="btn-label">Pilih paket</span> pada banner masa uji coba berakhir akan langsung membawa Anda ke langkah berikutnya.)</li>
+    <li>Gulir ke bagian "<strong>Pilih paket</strong>". Empat paket ditampilkan sebagai kartu masing-masing, dengan batas per periode dan fitur yang termasuk; paket Anda saat ini diberi label "Paket saat ini".</li>
+    <li>Pada kartu paket yang Anda inginkan, tekan <span class="btn-label">Upgrade sekarang</span>.</li>
+    <li>Jendela konfirmasi "Ganti ke Profesional" muncul, bertuliskan "Berlaku segera." dan "Penggunaan periode ini akan dihitung ulang dari 0.", beserta daftar "Fitur yang Anda dapatkan". Jika sudah sesuai, tekan <span class="btn-label">Konfirmasi upgrade</span>.</li>
+    <li>Saat muncul "Paket diubah menjadi Profesional", prosesnya selesai. Banner oranye atau merah di bagian atas akan segera hilang.</li>
+  </ol>
+  <div class="ok">
+    <strong>Setelah upgrade</strong>
+    Fitur baru langsung muncul; pemakaian kembali ke 0 dan periode 30 hari yang baru dimulai sejak saat ini; jika sebelumnya Anda menjadwalkan downgrade, jadwal itu ikut dibatalkan. Seluruh prosesnya tanpa pembayaran dan tanpa perlu menghubungi siapa pun.
+  </div>
+</section>
+
+<section class="card" id="downgrade">
+  <h2>Downgrade paket dan membatalkan downgrade</h2>
+  <p>Downgrade berarti pindah dari paket yang lebih tinggi ke yang lebih rendah, misalnya Profesional → Standar. Downgrade <strong>tidak berlaku segera</strong>, melainkan baru berganti <strong>di akhir periode berjalan</strong>, dan sampai saat itu Anda tetap dapat memakai semua fitur paket saat ini.</p>
+  <h3>Menjadwalkan downgrade</h3>
+  <ol>
+    <li>Di bagian "Pilih paket" pada halaman <span class="btn-label">Paket &amp; Pemakaian</span>, temukan paket lebih rendah yang ingin Anda tuju.</li>
+    <li>Tekan <span class="btn-label">Jadwalkan downgrade, berlaku 15 Des</span> pada kartu (tanggalnya adalah akhir periode ini).</li>
+    <li>Jendela konfirmasi menampilkan "Berlaku di akhir periode ini (tanggal); sampai saat itu fitur paket saat ini tetap tersedia." dan "Penggunaan pada paket baru dihitung ulang sejak tanggal berlaku.", serta daftar "Fitur yang akan hilang" dan "Yang akan berubah", misalnya "3 reservasi mendatang tetap disimpan: pelanggan masih bisa melihat atau membatalkannya, tetapi dasbor tidak lagi dapat mengelola atau menerima reservasi baru. Pulih saat upgrade". Periksa satu per satu.</li>
+    <li>Jika yakin, tekan <span class="btn-label">Konfirmasi jadwal downgrade</span>, lalu Anda akan melihat "Downgrade ke Standar telah dijadwalkan".</li>
+  </ol>
+  <p>Setelah dijadwalkan, pemberitahuan oranye muncul di bagian atas halaman: "Downgrade ke Standar dijadwalkan pada 15 Des", dan kartu paket diberi label "Dijadwalkan berlaku 15 Des". Jika Anda menjadwalkan downgrade lain, jadwal itu menggantikan yang sebelumnya.</p>
+  <h3>Kapan berlaku</h3>
+  <p>Saat periode berjalan berakhir, sistem otomatis beralih ke paket baru dan memulai periode baru dengan pemakaian dari 0. Sistem memproses perubahan terjadwal sekali sehari, sehingga pergantian sebenarnya bisa terjadi beberapa jam setelah tanggal yang tampil di layar; sampai saat itu Anda masih memakai paket semula.</p>
+  <h3>Membatalkan downgrade yang dijadwalkan</h3>
+  <ol>
+    <li>Di pemberitahuan oranye pada bagian atas halaman <span class="btn-label">Paket &amp; Pemakaian</span>, tekan <span class="btn-label">Batalkan downgrade</span> (pada kartu paket tujuan downgrade, tombolnya juga berubah menjadi tombol yang sama).</li>
+    <li>Konfirmasi di jendela "Batalkan downgrade yang dijadwalkan?"; Anda akan tetap menggunakan paket saat ini. Saat muncul "Downgrade dibatalkan", prosesnya selesai.</li>
+  </ol>
+  <p>Setelah downgrade berlaku, pembatalan tidak lagi dapat dilakukan; untuk kembali, ikuti langkah "Upgrade" sekali lagi.</p>
+</section>
+
+<section class="card" id="lost-features">
+  <h2>Apa yang terjadi setelah kehilangan suatu fitur</h2>
+  <p>Setelah downgrade (atau keluar dari Uji coba ke paket dengan fitur lebih sedikit), fitur yang tidak ada di paket baru ditangani sebagai berikut:</p>
+  <ul>
+    <li><strong>Layar terkait di dasbor ditutup.</strong> Misalnya setelah turun ke paket Standar, layar Kasir POS, Tampilan Dapur, Kupon, Reservasi, dan Analisis tidak dapat dibuka lagi.</li>
+    <li><strong>Data Anda tidak dihapus.</strong> Catatan reservasi, pemesanan layanan, jadwal shift, bahan, kupon, dan lainnya tetap ada, hanya tidak terlihat untuk sementara; jika nanti Anda upgrade kembali ke paket yang memiliki fitur tersebut, semuanya pulih.</li>
+    <li><strong>Sisi pelanggan:</strong>
+      <ul>
+        <li>Pelanggan <strong>tidak dapat lagi menambah</strong> reservasi online dan pemesanan layanan, serta tidak dapat masuk daftar tunggu; status antrean daftar tunggu secara langsung juga tidak lagi tersedia.</li>
+        <li>Pelanggan <strong>tetap dapat melihat dan membatalkan</strong> reservasi, pemesanan layanan, dan daftar tunggu yang sudah mereka miliki.</li>
+        <li><strong>Kupon</strong> milik toko tidak dapat dipakai lagi; kupon yang diterbitkan platform MakanMasak tidak terpengaruh.</li>
+      </ul>
+    </li>
+    <li><strong>Integrasi Platform:</strong> pesanan dari platform pengiriman tetap terus masuk, dan Anda tetap dapat <strong>memutus koneksi</strong> integrasi dari dasbor; namun Anda tidak dapat lagi mengatur atau menyinkronkan integrasi, dan layar pengaturan serta daftarnya ditutup.</li>
+    <li><strong>Manajemen Staf:</strong> jadwal shift yang sudah dibuat dan pengajuan cuti yang menunggu tetap disimpan, tetapi layar jadwal dan cuti ditutup. <strong>Inventaris:</strong> pesanan tetap mengurangi stok secara otomatis, tetapi Anda tidak dapat lagi melihat atau mengelolanya; semuanya pulih saat Anda upgrade.</li>
+  </ul>
+  <p class="note">Sebelum downgrade, jendela konfirmasi memberi tahu jumlah yang terdampak berdasarkan data toko Anda yang sebenarnya; mohon periksa dengan teliti sebelum menekan "Konfirmasi jadwal downgrade".</p>
+</section>
+
+<section class="card" id="special">
+  <h2>Kasus khusus</h2>
+  <details open>
+    <summary>Masih ada shift kasir yang belum ditutup</summary>
+    <p>Saat pindah dari paket yang memiliki POS ke paket tanpa POS (Profesional atau Enterprise → Standar; atau Uji coba → Standar), shift kasir harus ditutup terlebih dahulu.</p>
+    <ul>
+      <li><strong>Jika berlaku segera (Uji coba ke Standar, dengan tombol "Ganti sekarang"):</strong> selama shift belum ditutup, sistem tidak mengizinkan pergantian dan menampilkan "Masih ada shift kasir yang terbuka. Tutup di POS sebelum downgrade." Di jendela konfirmasi ada <span class="btn-label">Buka POS untuk menutup shift</span> yang dapat langsung Anda tekan.</li>
+      <li><strong>Downgrade yang dijadwalkan:</strong> jika pada tanggal berlaku shift masih terbuka, downgrade akan <strong>baru berlaku setelah shift ditutup</strong>. Halaman menampilkan "Downgrade ke Standar telah dijadwalkan, tetapi masih menunggu shift kasir yang terbuka ditutup." Mohon segera tutup shift.</li>
+    </ul>
+  </details>
+  <details>
+    <summary>Paket tampil "Tidak tersedia": paket ini belum disediakan di wilayah Anda</summary>
+    <p>Beberapa paket belum dibuka di negara atau wilayah tertentu; kartunya bertuliskan "Paket ini belum tersedia di wilayah Anda." dan tombolnya tidak dapat ditekan. Silakan pilih paket lain.</p>
+  </details>
+  <details>
+    <summary>Paket Uji coba tampil "Tidak tersedia"</summary>
+    <p>Setelah keluar dari paket Uji coba, Anda tidak dapat kembali, dan kartunya bertuliskan "Uji coba hanya untuk toko baru dan tidak dapat dipakai kembali."</p>
+  </details>
+  <details>
+    <summary>"Paket baru saja diubah oleh orang lain"</summary>
+    <p>Jika ada akun pemilik toko lain atau petugas platform yang mengubah paket pada saat yang sama dengan Anda, Anda akan melihat "Paket baru saja diubah oleh orang lain. Halaman sudah dimuat ulang; periksa lalu coba lagi." Tindakan Anda <strong>tidak</strong> dijalankan dan layar sudah diperbarui ke kondisi terbaru; cukup periksa lalu ulangi tindakan Anda.</p>
+  </details>
+  <details>
+    <summary>"Anda sudah menggunakan paket ini" atau "Tidak ada lagi downgrade yang dijadwalkan"</summary>
+    <p>Artinya informasi di layar sudah kedaluwarsa (misalnya Anda sudah melakukannya di tab lain). Sistem memperbarui layar secara otomatis dan Anda tidak perlu berbuat apa-apa.</p>
+  </details>
+  <details>
+    <summary>"Langganan sedang nonaktif sehingga paket tidak dapat diubah. Hubungi dukungan."</summary>
+    <p>Saat langganan dinonaktifkan oleh platform, Anda tidak dapat mengganti paket sendiri; silakan kirim permintaan di halaman "Umpan Balik" agar petugas platform membantu.</p>
+  </details>
+</section>
+
+<section class="card" id="emails">
+  <h2>Email pemberitahuan yang akan Anda terima</h2>
+  <p>Dalam situasi berikut, sistem mengirim email ke alamat email kontak yang terdaftar untuk toko (pastikan itu kotak masuk yang memang Anda baca):</p>
+  <ul>
+    <li><strong>Paket telah diubah</strong>: saat upgrade berlaku segera, atau saat downgrade terjadwal mulai berlaku.</li>
+    <li><strong>Downgrade telah dijadwalkan</strong>: email menyebutkan tanggal berlakunya dan bahwa Anda dapat membatalkannya di dasbor.</li>
+    <li><strong>Downgrade dibatalkan</strong>.</li>
+    <li><strong>Pemakaian mencapai batas</strong>: untuk setiap jenis pemakaian, email hanya dikirim sekali dalam satu periode.</li>
+  </ul>
+  <p class="note">Saat ini semua email pemberitahuan dikirim dalam bahasa Inggris.</p>
+</section>
+
+<section class="card" id="who">
+  <h2>Siapa yang dapat mengubah paket</h2>
+  <p>Hanya <strong>pemilik toko</strong> (dan petugas platform) yang dapat melihat <span class="btn-label">Paket &amp; Pemakaian</span> dan mengubah paket. Akun staf lain seperti koki, pramusaji, dan kasir tidak dapat melihat halaman ini maupun mengubahnya. Banner pengingat pemakaian juga hanya ditampilkan kepada pemilik toko.</p>
+</section>
+
+<section class="card" id="faq">
+  <h2>Pertanyaan umum</h2>
+  <details>
+    <summary>Masa uji coba saya habis, apakah toko akan dinonaktifkan?</summary>
+    <p>Tidak. Setelah masa uji coba berakhir, semua fitur tetap dapat digunakan dan dasbor hanya mengingatkan Anda untuk memilih paket. Hanya saja, batas pemakaian dihitung ulang setiap bulan (masih dengan angka paket Uji coba).</p>
+  </details>
+  <details>
+    <summary>Setelah upgrade, apakah pemakaian sebelumnya kembali ke 0?</summary>
+    <p>Ya. Upgrade berlaku segera, periode 30 hari yang baru dimulai sejak saat upgrade dan pemakaian dihitung dari 0, sehingga toko yang tidak dapat menerima pesanan karena pemakaian penuh dapat langsung menerima pesanan lagi setelah upgrade.</p>
+  </details>
+  <details>
+    <summary>Apakah data hilang setelah downgrade?</summary>
+    <p>Tidak. Semua catatan tetap disimpan, hanya layar dasbor terkait yang ditutup sementara; jika nanti Anda upgrade kembali ke paket yang memiliki fitur itu, datanya muncul lagi.</p>
+  </details>
+  <details>
+    <summary>Mengapa pelanggan mengatakan tidak dapat memesan?</summary>
+    <p>Penyebab yang paling umum adalah jumlah pesanan periode ini sudah mencapai batas. Buka <span class="btn-label">Paket &amp; Pemakaian</span> di dasbor dan lihat "Pemakaian siklus ini"; jika pesanan sudah penuh, akan ada banner merah di bagian atas. Upgrade paket langsung memulihkannya; jika tidak upgrade, Anda harus menunggu periode hitung berikutnya dimulai.</p>
+  </details>
+  <details>
+    <summary>Bisakah saya kembali ke paket Uji coba?</summary>
+    <p>Tidak. Setelah keluar dari paket Uji coba, Anda tidak dapat kembali, karena paket Uji coba hanya untuk toko baru.</p>
+  </details>
+  <details>
+    <summary>Bisakah downgrade berlaku segera?</summary>
+    <p>Tidak. Downgrade selalu berlaku di akhir periode berjalan dan dapat dibatalkan sebelum itu.</p>
+  </details>
+  <details>
+    <summary>Apakah mengganti paket dikenai biaya?</summary>
+    <p>Saat ini mengganti paket di dasbor tidak memerlukan pembayaran online. Jika di kemudian hari ada biaya apa pun, platform akan mengumumkannya tersendiri.</p>
+  </details>
+  <details>
+    <summary>Pemakaian sudah penuh, tetapi saya tidak ingin upgrade. Apa yang harus dilakukan?</summary>
+    <p>Anda dapat menunggu periode hitung berikutnya dimulai (setelah masa uji coba berakhir, yaitu tanggal 1 bulan depan; untuk paket berbayar, yaitu tanggal berakhirnya periode berjalan yang tampil di sudut kanan atas "Pemakaian siklus ini"). Sampai saat itu, pesanan baru dan pencetakan struk dihentikan sementara.</p>
+  </details>
+</section>
+
+<section class="card" id="help">
+  <h2>Butuh bantuan</h2>
+  <ul>
+    <li>Di sudut kanan atas bagian "Pilih paket" pada halaman <span class="btn-label">Paket &amp; Pemakaian</span> terdapat tautan "Panduan paket dan penggunaan" yang membuka halaman ini.</li>
+    <li>Jika paket tidak dapat diubah, langganan dinonaktifkan, atau Anda punya pertanyaan tentang paket, kirimkan di halaman <span class="btn-label">Umpan Balik</span> pada menu sebelah kiri dasbor; petugas platform akan menanganinya di sana. (Ini tempat toko melaporkan masalah ke platform, bukan halaman "Ulasan" pelanggan.)</li>
+  </ul>
+</section>
+
+<footer>MakanMasak · Paket, Masa Uji Coba, dan Pemakaian · Berdasarkan perilaku sistem per November 2026</footer>
+
+</main>
+</body>
+</html>

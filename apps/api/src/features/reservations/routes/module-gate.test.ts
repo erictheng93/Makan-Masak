@@ -1,8 +1,9 @@
 /**
- * The customer reservation endpoint is deliberately public: a diner does not
- * have a staff session, so applying the staff subscription gate to it would
- * turn every legitimate booking into NO_RESTAURANT. This test locks that
- * boundary while still proving all staff reservation routes are gated.
+ * The customer reservation endpoints are public: a diner has no staff session,
+ * so they are gated on the restaurant named in the request instead. A diner
+ * cannot start a reservation (or browse slots) at a shop whose plan lacks the
+ * module, but can still look up and cancel one made before the downgrade.
+ * Staff reservation routes stay gated on the staff member's own restaurant.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -24,6 +25,8 @@ const createReservation = vi.hoisted(() => vi.fn());
 const getPublicReservationRestaurant = vi.hoisted(() => vi.fn());
 const getReservationById = vi.hoisted(() => vi.fn());
 const cancelReservation = vi.hoisted(() => vi.fn());
+const getReservationByCode = vi.hoisted(() => vi.fn());
+const getAvailableSlots = vi.hoisted(() => vi.fn());
 
 vi.mock("../../../middleware/auth", () => ({
   authMiddleware: vi.fn(async (c: Context, next: Next) => {
@@ -46,16 +49,17 @@ vi.mock("../../../middleware/rateLimiter", () => ({
     next(),
 }));
 
-vi.mock("@makanmasak/database", () => ({
-  PLAN_DEFAULT_MODULES: {
-    basic: { reservations: false },
-  },
+vi.mock("@makanmasak/database", async (importOriginal) => ({
+  // Real plan table and region defaults: the gate decides as in production.
+  ...(await importOriginal<typeof import("@makanmasak/database")>()),
   ReservationService: class {
     listReservations = listReservations;
     createReservation = createReservation;
     getPublicReservationRestaurant = getPublicReservationRestaurant;
     getReservationById = getReservationById;
     cancelReservation = cancelReservation;
+    getReservationByCode = getReservationByCode;
+    getAvailableSlots = getAvailableSlots;
   },
 }));
 
@@ -102,6 +106,31 @@ function poisonedBinding(label: string): unknown {
       },
     },
   );
+}
+
+function envWithPlan(restaurantId: string, planTier: "basic" | "pro") {
+  return {
+    DB: poisonedBinding("DB"),
+    CACHE_KV: new FakeKv({
+      [restaurantId]: {
+        isActive: true,
+        planTier,
+        moduleOverrides: {},
+        trialEndsAt: null,
+      },
+    }),
+  };
+}
+
+function dinerBooking(restaurantId: string) {
+  return {
+    restaurantId,
+    customerName: "Guest",
+    customerPhone: "0911222333",
+    partySize: 2,
+    reservationDate: "2026-10-01",
+    reservationTime: "18:30",
+  };
 }
 
 function request(
@@ -157,33 +186,56 @@ describe("reservation staff gate and public customer boundary", () => {
     expect(listReservations).not.toHaveBeenCalled();
   });
 
-  it("allows a public diner to create a reservation without touching staff auth or subscriptions", async () => {
+  it("lets a diner create a reservation at a shop with the module, without staff auth", async () => {
+    getPublicReservationRestaurant.mockResolvedValue({ id: "rest-pro" });
     createReservation.mockResolvedValue({
       id: "reservation-1",
-      restaurantId: "rest-basic",
+      restaurantId: "rest-pro",
       status: "pending",
     });
 
     const response = await request(
       "/",
       "POST",
-      {
-        DB: poisonedBinding("DB"),
-        CACHE_KV: poisonedBinding("CACHE_KV"),
-      },
-      {
-        restaurantId: "rest-basic",
-        customerName: "Guest",
-        customerPhone: "0911222333",
-        partySize: 2,
-        reservationDate: "2026-10-01",
-        reservationTime: "18:30",
-      },
+      envWithPlan("rest-pro", "pro"),
+      dinerBooking("rest-pro"),
     );
 
     expect(response.status).toBe(201);
     expect(authMiddlewareCalls.count).toBe(0);
     expect(createReservation).toHaveBeenCalledOnce();
+    expect(createReservation).toHaveBeenCalledWith(
+      expect.objectContaining({ restaurantId: "rest-pro" }),
+    );
+  });
+
+  it("refuses a new reservation at a shop whose plan lacks the module", async () => {
+    const response = await request(
+      "/",
+      "POST",
+      envWithPlan("rest-basic", "basic"),
+      dinerBooking("rest-basic"),
+    );
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "MODULE_NOT_ENABLED" },
+    });
+    expect(createReservation).not.toHaveBeenCalled();
+  });
+
+  it("stops advertising slots at a shop whose plan lacks the module", async () => {
+    const response = await request(
+      "/availability?restaurantId=rest-basic&date=2026-10-01&partySize=2",
+      "GET",
+      envWithPlan("rest-basic", "basic"),
+    );
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "MODULE_NOT_ENABLED" },
+    });
+    expect(getAvailableSlots).not.toHaveBeenCalled();
   });
 
   it("returns a sanitized 404 before a missing restaurant can reach slot allocation", async () => {
@@ -192,18 +244,8 @@ describe("reservation staff gate and public customer boundary", () => {
     const response = await request(
       "/",
       "POST",
-      {
-        DB: poisonedBinding("DB"),
-        CACHE_KV: poisonedBinding("CACHE_KV"),
-      },
-      {
-        restaurantId: "missing-restaurant",
-        customerName: "Guest",
-        customerPhone: "0911222333",
-        partySize: 2,
-        reservationDate: "2026-10-01",
-        reservationTime: "18:30",
-      },
+      envWithPlan("missing-restaurant", "pro"),
+      dinerBooking("missing-restaurant"),
     );
 
     expect(response.status).toBe(404);
@@ -215,6 +257,36 @@ describe("reservation staff gate and public customer boundary", () => {
       },
     });
     expect(createReservation).not.toHaveBeenCalled();
+  });
+
+  it("still looks up and cancels an existing reservation after the module is gone", async () => {
+    const existing = {
+      id: "reservation-1",
+      restaurantId: "rest-basic",
+      confirmationCode: "VALID-CODE",
+    };
+    getReservationByCode.mockResolvedValue(existing);
+    getReservationById.mockResolvedValue(existing);
+    cancelReservation.mockResolvedValue({ ...existing, status: "cancelled" });
+
+    // Poisoned bindings: neither path may consult the subscription.
+    const env = {
+      DB: poisonedBinding("DB"),
+      CACHE_KV: poisonedBinding("CACHE_KV"),
+    };
+    const lookup = await request("/verify/VALID-CODE", "GET", env);
+    const cancel = await request("/reservation-1/cancel", "DELETE", env, {
+      confirmationCode: "VALID-CODE",
+    });
+
+    expect(lookup.status).toBe(200);
+    expect(cancel.status).toBe(200);
+    expect(getReservationByCode).toHaveBeenCalledWith("VALID-CODE");
+    expect(cancelReservation).toHaveBeenCalledWith(
+      "reservation-1",
+      undefined,
+      "rest-basic",
+    );
   });
 
   it("keeps an invalid public cancellation confirmation as a 403", async () => {

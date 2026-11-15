@@ -3,7 +3,6 @@ import { unionAll } from "drizzle-orm/sqlite-core";
 import {
   METER_KEYS,
   PLAN_QUOTAS,
-  TRIAL_DURATION_DAYS,
   drizzle,
   usageEvents,
   usageMeterBuckets,
@@ -13,6 +12,11 @@ import {
 import type { D1Database } from "@makanmasak/database";
 import { generateUUID } from "@makanmasak/utils";
 import { sumUnfoldedBucketQuantities } from "../../../shared/utils/usage-buckets";
+import { quotaState } from "../../../middleware/quotaGate";
+import {
+  calendarMonthCycle,
+  resolveUsageCycle,
+} from "../../../shared/utils/usage-cycle";
 
 interface SubscriptionRow {
   plan_tier: PlanTier;
@@ -66,8 +70,17 @@ export class UsageService {
   async getCurrentUsage(restaurantId: string, now = Date.now()) {
     const subscription = await this.getSubscription(restaurantId);
     const cycle = subscription
-      ? this.resolveCycle(subscription, now)
-      : this.fallbackMonthlyCycle(now);
+      ? resolveUsageCycle(
+          {
+            planTier: subscription.plan_tier,
+            trialEndsAtMs: subscription.trial_ends_at_ms,
+            billingCycleStartAtMs: subscription.billing_cycle_start_at_ms,
+            billingCycleEndAtMs: subscription.billing_cycle_end_at_ms,
+            createdAtMs: subscription.created_at_ms,
+          },
+          now,
+        )
+      : calendarMonthCycle(now);
     const planTier = subscription?.plan_tier ?? null;
 
     const meters = await this.getMeterTotals(
@@ -104,6 +117,7 @@ export class UsageService {
           softLimit: quota?.soft ?? null,
           hardLimit: quota?.hard ?? null,
           percentage: quota ? total / quota.hard : null,
+          state: quotaState(total, quota),
         };
       }),
     };
@@ -364,38 +378,6 @@ export class UsageService {
     return new Map(
       (rows.results ?? []).map((row) => [row.meter_key, row.total_quantity]),
     );
-  }
-
-  private resolveCycle(subscription: SubscriptionRow, now: number) {
-    if (
-      subscription.plan_tier !== "trial" &&
-      subscription.billing_cycle_start_at_ms !== null &&
-      subscription.billing_cycle_end_at_ms !== null
-    ) {
-      return {
-        startAt: subscription.billing_cycle_start_at_ms,
-        endAt: subscription.billing_cycle_end_at_ms,
-      };
-    }
-
-    if (subscription.plan_tier === "trial") {
-      const endAt =
-        subscription.trial_ends_at_ms ??
-        subscription.created_at_ms + TRIAL_DURATION_DAYS * DAY_MS;
-      // An expired trial keeps its tier (nag-only), so once the trial window
-      // is over usage goes to monthly cycles like any other plan.
-      if (now < endAt) return { startAt: subscription.created_at_ms, endAt };
-    }
-
-    return this.fallbackMonthlyCycle(now);
-  }
-
-  private fallbackMonthlyCycle(now: number) {
-    const date = new Date(now);
-    return {
-      startAt: Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1),
-      endAt: Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1),
-    };
   }
 
   private parseMetadata(value: UsageEventRow["metadata"]) {

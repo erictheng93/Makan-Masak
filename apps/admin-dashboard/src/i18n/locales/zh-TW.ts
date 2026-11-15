@@ -1023,6 +1023,12 @@ const zhTWCore = {
     deleteFailed: "刪除失敗",
     // 訂閱 / 方案問題（後端 moduleGate 回的 403）。這些不是權限或登入問題，
     // 文案必須讓店家知道「登入是好的，要處理的是方案」。
+    quota: {
+      orders: "已達本期訂單上限",
+      print: "已達本期列印上限",
+      ai: "已達本期 AI 請求上限",
+      generic: "已達本期用量上限",
+    },
     subscription: {
       subscriptionNotFound:
         "找不到此餐廳的訂閱方案，功能尚未開通。您的登入沒有問題，請聯絡客服協助開通。",
@@ -4980,6 +4986,9 @@ const zhTWCore = {
     },
   },
   integrations: {
+    limitedTitle: "已連線的外送平台",
+    limitedNotice:
+      "來自此平台的訂單仍會持續送進來。你可以在這裡中斷連線，但目前的方案無法調整設定或同步菜單。",
     title: "外送平台串接",
     subtitle: "連接外送平台以統一管理來自不同平台的訂單和菜單",
     deliveryIntegration: "外送平台串接",
@@ -4998,7 +5007,7 @@ const zhTWCore = {
     notSynced: "尚未同步",
     syncing: "同步中...",
     syncNow: "立即同步",
-    disconnect: "斷開連接",
+    disconnect: "中斷連線",
     comingSoon: "即將推出",
     foodpandaComingSoon: "Foodpanda 串接功能即將推出，敬請期待",
     webhookLogs: "Webhook 紀錄",
@@ -5014,7 +5023,7 @@ const zhTWCore = {
     confirmDisconnectDesc:
       "斷開 Uber Eats 連接後，將無法再接收來自該平台的訂單。已存在的訂單不受影響。",
     disconnecting: "斷開中...",
-    confirmDisconnect: "確認斷開",
+    confirmDisconnect: "確認中斷連線",
     syncStatus: {
       syncing: "同步中",
       success: "成功",
@@ -6608,34 +6617,114 @@ const zhTWRuntimeKeys = {
     trialExpiredAction: "選擇方案",
     trialExpiredTitle: "試用期已結束",
     trialExpiredContinue: "繼續使用",
-    upgradeTitle: "升級方案",
-    upgradeBody:
-      "目前尚未提供線上自助升級。請來信聯絡我們，我們會協助您開通方案，在此之前所有功能仍可正常使用。",
-    upgradeAction: "來信升級方案",
-    upgradeMailSubject: "升級 MakanMasak 方案",
     usageTitle: "本期用量",
     usageEmpty: "本期尚無用量紀錄。",
     modulesTitle: "方案包含的功能",
     moduleOn: "已啟用",
     moduleOff: "未啟用",
-    changePlanTitle: "需要調整方案？",
-    changePlanHint:
-      "方案變更目前由平台團隊處理，請透過支援工單提出，我們會與你聯繫。",
-    changePlanCta: "提出支援工單",
     loadFailed: "無法載入訂閱資訊，請稍後再試。",
     tier: {
-      trial: "試用",
-      basic: "基本",
-      standard: "標準",
-      premium: "進階",
-      enterprise: "企業",
+      trial: "試用版",
+      basic: "標準版",
+      pro: "專業版",
+      enterprise: "企業版",
     },
     meter: {
       orders_created: "建立訂單",
       api_requests: "API 請求",
       print_jobs: "列印工作",
       ai_requests: "AI 請求",
-      storage_bytes: "儲存空間（位元組）",
+      storage_bytes: "儲存空間",
+    },
+    quota: {
+      viewPlans: "查看方案",
+      warning: {
+        orders: "本期訂單已使用 {pct}%（{used}/{limit}）",
+        print: "本期列印已使用 {pct}%（{used}/{limit}）",
+        ai: "本期 AI 請求已使用 {pct}%（{used}/{limit}）",
+      },
+      over: {
+        orders: "已達訂單上限，顧客目前無法下單",
+        print: "已達列印上限，目前無法列印收據與單據",
+        ai: "已達 AI 請求上限，AI 功能暫時無法使用",
+      },
+    },
+    plans: {
+      title: "選擇方案",
+      hint: "可隨時變更方案，不需線上付款。升級立即生效；降級於本期結束時生效，生效前可取消。",
+      guide: "方案與用量說明",
+      loadFailed: "無法載入方案資訊，請稍後再試。",
+      unlimited: "不限",
+      upgradeNow: "立即升級",
+      notIncluded: "不含",
+      changeNow: "立即變更",
+      downgradeNow: "立即降級",
+      scheduleDowngrade: "排定降級，{date} 生效",
+      unavailable: "無法選擇",
+      unavailableRegion: "此方案在您所在的地區尚未提供。",
+      unavailableTrial: "試用版僅限新店家，無法再回到試用版。",
+      changed: "方案已變更為{plan}",
+      scheduled: "已排定降級為{plan}",
+      limit: {
+        orders: "每期訂單",
+        print: "每期列印",
+        ai: "每期 AI 請求",
+        storage: "儲存空間",
+      },
+    },
+    pending: {
+      scheduled: "已排定於 {date} 降級為 {plan}",
+      waitingShift:
+        "已排定降級為 {plan}，但仍有未結束的收銀班次，結束班次後才會生效。",
+      cancel: "取消降級",
+      cancelTitle: "取消排定的降級？",
+      cancelMessage: "取消後將繼續使用目前的方案。",
+      cancelled: "已取消降級",
+      badge: "已排定於 {date} 生效",
+    },
+    confirm: {
+      title: "變更為{plan}",
+      effectiveNow: "將立即生效。",
+      effectiveCycleEnd:
+        "將於本期結束（{date}）生效，在此之前仍可使用目前方案的功能。",
+      trialNoReturn: "離開試用版後，無法再回到試用版。",
+      gained: "新增的功能",
+      lost: "將失去的功能",
+      blocking: "需要先處理",
+      impact: "變更後的影響",
+      goToPos: "前往 POS 結束班次",
+      confirmChange: "確認變更",
+      confirmScheduleDowngrade: "確認排定降級",
+      usageFresh: "本期用量將從 0 重新計算。",
+      usageFreshScheduled: "新方案的用量自生效日起重新計算。",
+      confirmUpgrade: "確認升級",
+    },
+    impact: {
+      open_cash_shift:
+        "有 {count} 個尚未結束的收銀班次，請先到 POS 結束班次再降級",
+      future_reservations:
+        "{count} 筆未來的訂位會保留，顧客仍可查看或取消，但後台無法再管理，也不能接受新訂位；升級後會恢復",
+      future_service_bookings:
+        "{count} 筆未來的服務預約會保留，顧客仍可查看或取消，但後台無法再管理，也不能接受新預約；升級後會恢復",
+      active_coupons:
+        "{count} 張店內優惠券會保留但停止適用（平台發行的優惠券不受影響）；升級後會恢復",
+      scheduled_shifts:
+        "{count} 個已排定的班表會保留，但排班畫面將關閉；升級後會恢復",
+      pending_leave_requests:
+        "{count} 件待審核的請假申請會保留，但請假畫面將關閉；升級後會恢復",
+      tracked_ingredients:
+        "{count} 項食材的庫存仍會隨訂單自動扣除，但無法再查看或管理；升級後會恢復",
+      connected_platforms:
+        "{count} 個外送平台仍會持續送單；變更後你仍可在後台中斷連線，但無法再調整設定或同步菜單",
+    },
+    errors: {
+      unchanged: "您已經在使用這個方案。",
+      trialNotReenterable: "無法回到試用版。",
+      notInRegion: "此方案在您所在的地區尚未提供。",
+      inactive: "訂閱目前已停用，無法變更方案，請聯絡客服。",
+      openShift: "仍有未結束的收銀班次，請先到 POS 結束班次再降級。",
+      conflict: "方案剛剛已被其他人變更，已為您更新畫面，請確認後再試。",
+      noPending: "目前沒有排定的降級，已為您更新畫面。",
     },
   },
 };
