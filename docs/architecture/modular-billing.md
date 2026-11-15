@@ -208,6 +208,10 @@ means unlimited. `quotaGate()` applies only to request-scoped paid meters:
 `orders.created`, `print.jobs`, and `ai.requests`. `api.requests` and
 `storage.bytes` are visible in reporting but are not request-blocking gates.
 
+Trial shops get 3000 `orders.created` and 3000 `print.jobs` (soft limit at 80%)
+per trial cycle, which runs from shop creation to `trial_ends_at_ms` (180 days);
+after that the counter restarts each calendar month.
+
 `QUOTA_ENFORCEMENT_MODE` controls behavior:
 
 - `disabled`: bypass quota checks.
