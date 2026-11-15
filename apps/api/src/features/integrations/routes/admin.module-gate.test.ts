@@ -22,7 +22,12 @@ const getPlatformOrders = vi.hoisted(() => vi.fn());
 
 vi.mock("../../../shared/middleware", () => ({
   authMiddleware: vi.fn(async (c: Context, next: Next) => {
-    c.set("user", { id: "owner-1", role: 1, restaurantId: "rest-1" });
+    c.set("user", {
+      id: "owner-1",
+      username: "owner",
+      role: 1,
+      restaurantId: "rest-1",
+    });
     await next();
   }),
   requireRole: vi.fn(
