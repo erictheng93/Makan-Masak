@@ -158,6 +158,20 @@ describe("CartView coupon selection", () => {
     wrapper.unmount();
   });
 
+  it("drops the coupon and unblocks checkout when the shop takes no coupons", async () => {
+    const wrapper = render();
+    apiPost.mockRejectedValueOnce({ code: "MODULE_NOT_ENABLED", status: 403 });
+    await enterCode(wrapper, "TEN");
+
+    expect(wrapper.findAll('[data-testid="selected-coupon"]')).toHaveLength(0);
+    expect(wrapper.text()).toContain("toast.couponModuleDisabled");
+    expect(wrapper.text()).not.toContain("toast.couponValidationError");
+    expect(
+      wrapper.get('[data-testid="submit-order-btn"]').attributes("disabled"),
+    ).toBeUndefined();
+    wrapper.unmount();
+  });
+
   it("blocks incompatible or stale previews and allows removing an invalid selection", async () => {
     const wrapper = render();
     await enterCode(wrapper, "TEN");

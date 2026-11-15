@@ -318,4 +318,22 @@ describe("ReservationView", () => {
       expect.any(String),
     );
   });
+
+  it("shows a calm unavailable state, not an error, when the shop has no reservations", async () => {
+    vi.mocked(reservationsApi.getAvailability).mockRejectedValue({
+      code: "MODULE_NOT_ENABLED",
+      status: 403,
+    });
+    const wrapper = mountView();
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="module-unavailable"]').text()).toBe(
+      "toast.orderSubmitModuleReservation",
+    );
+    // No form, no alert, nothing inviting another date.
+    expect(wrapper.find('[data-testid="reservation-date"]').exists()).toBe(
+      false,
+    );
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+  });
 });

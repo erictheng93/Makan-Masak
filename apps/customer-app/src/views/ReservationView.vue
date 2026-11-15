@@ -47,6 +47,11 @@
         {{ loadError }}
       </section>
 
+      <ModuleUnavailable
+        v-else-if="moduleUnavailable"
+        :message="t(moduleUnavailableI18nKey('reservation'))"
+      />
+
       <template v-else-if="restaurant">
         <section
           class="rounded-2xl bg-ios-card p-4 shadow-card-sm"
@@ -396,6 +401,11 @@
 </template>
 
 <script setup lang="ts">
+import ModuleUnavailable from "@/components/ModuleUnavailable.vue";
+import {
+  isModuleNotEnabled,
+  moduleUnavailableI18nKey,
+} from "@/utils/module-unavailable";
 import { onMounted, reactive, ref, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import type {
@@ -430,6 +440,8 @@ const isCancelling = ref(false);
 const loadError = ref("");
 const messageContext = ref("availability");
 const errorMessage = ref("");
+// The shop no longer offers this feature: a calm state, never a retry prompt.
+const moduleUnavailable = ref(false);
 const successMessage = ref("");
 const bookingDate = ref(today);
 const selectedTime = ref("");
@@ -488,6 +500,10 @@ async function loadAvailability() {
       "";
   } catch (error) {
     if (request !== availabilityRequest) return;
+    if (isModuleNotEnabled(error)) {
+      moduleUnavailable.value = true;
+      return;
+    }
     console.error("Load reservation availability failed:", error);
     errorMessage.value = t("serviceBooking.slotsFailed");
   } finally {
@@ -535,6 +551,10 @@ async function createReservation() {
     confirmation?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
     confirmation?.focus();
   } catch (error) {
+    if (isModuleNotEnabled(error)) {
+      moduleUnavailable.value = true;
+      return;
+    }
     console.error("Create reservation failed:", error);
     errorMessage.value = t("serviceBooking.createFailed");
   } finally {

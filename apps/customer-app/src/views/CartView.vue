@@ -638,6 +638,10 @@ import type { CreateGuestOrderRequest } from "@/services/orderApi";
 import menuApi from "@/services/menuApi";
 import { useCurrency } from "@/composables/useCurrency";
 import { getOrderSubmitErrorI18nKey } from "@/utils/order-submit-error";
+import {
+  isModuleNotEnabled,
+  moduleUnavailableI18nKey,
+} from "@/utils/module-unavailable";
 import type {
   AppliedCoupon,
   CreateOrderRequest,
@@ -1025,8 +1029,18 @@ watch(
         couponValidationMessage.value = result.error || t("toast.couponFailed");
         couponValidationError.value = true;
       }
-    } catch {
+    } catch (error) {
       if (request !== couponPreviewRequest) return;
+      if (isModuleNotEnabled(error)) {
+        // The shop does not take coupons: drop the entry so checkout is not
+        // held behind a validation that can never pass. Clearing the codes
+        // re-runs this watcher, which resets the message, so set it after.
+        selectedCodes.value = [];
+        couponCode.value = "";
+        couponValidationMessage.value = t(moduleUnavailableI18nKey("coupon"));
+        couponValidationError.value = false;
+        return;
+      }
       couponValidationMessage.value = t("toast.couponValidationError");
       couponValidationError.value = true;
     } finally {

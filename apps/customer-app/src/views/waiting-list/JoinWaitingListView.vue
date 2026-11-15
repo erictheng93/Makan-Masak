@@ -18,8 +18,12 @@
           </div>
         </div>
 
+        <ModuleUnavailable
+          v-if="moduleUnavailable"
+          :message="t(moduleUnavailableI18nKey('waitingList'))"
+        />
         <section
-          v-if="queueStatus || waitEstimate"
+          v-else-if="queueStatus || waitEstimate"
           data-testid="queue-summary"
           class="bg-ios-bg rounded-2xl p-5 grid grid-cols-2 gap-4 animate-slide-up"
         >
@@ -47,7 +51,11 @@
             </p>
           </div>
         </section>
-        <form class="space-y-4" @submit.prevent="handleJoin">
+        <form
+          v-if="!moduleUnavailable"
+          class="space-y-4"
+          @submit.prevent="handleJoin"
+        >
           <label class="block">
             <span class="text-sm font-medium text-ios-text">{{
               t("waitingList.form.name")
@@ -163,6 +171,11 @@
 </template>
 
 <script setup lang="ts">
+import ModuleUnavailable from "@/components/ModuleUnavailable.vue";
+import {
+  isModuleNotEnabled,
+  moduleUnavailableI18nKey,
+} from "@/utils/module-unavailable";
 import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { QueueListIcon } from "@heroicons/vue/24/outline";
@@ -208,6 +221,7 @@ const notes = ref("");
 const queueStatus = ref<QueueStatus | null>(null);
 const waitEstimate = ref<WaitTimeEstimateResult | null>(null);
 const formMessage = ref("");
+const moduleUnavailable = ref(false);
 const isSubmitting = ref(false);
 
 const partySizes = [1, 2, 3, 4, 5, 6, 7, 8];
@@ -288,7 +302,11 @@ const handleJoin = async () => {
     // had just taken neither shown nor saved.
     routeToTicket(ticket);
     void enrollWaitingListPush();
-  } catch {
+  } catch (error) {
+    if (isModuleNotEnabled(error)) {
+      moduleUnavailable.value = true;
+      return;
+    }
     formMessage.value = t("waitingList.errors.joinFailed");
   } finally {
     isSubmitting.value = false;
@@ -347,11 +365,17 @@ const handleHistory = () => {
 };
 
 const loadQueueSnapshot = async () => {
-  queueStatus.value = await waitingListApi.getQueueStatus(props.restaurantId);
-  waitEstimate.value = await waitingListApi.estimateWait(
-    props.restaurantId,
-    partySize.value,
-  );
+  try {
+    queueStatus.value = await waitingListApi.getQueueStatus(props.restaurantId);
+    waitEstimate.value = await waitingListApi.estimateWait(
+      props.restaurantId,
+      partySize.value,
+    );
+  } catch (error) {
+    // The shop does not offer a waiting list: one calm state, not a rejection
+    // nobody catches. Other failures leave the summary out, as before.
+    if (isModuleNotEnabled(error)) moduleUnavailable.value = true;
+  }
 };
 
 const restoreLastTicket = async (): Promise<boolean> => {
@@ -387,8 +411,12 @@ watch(partySize, () => {
       waitEstimate.value = estimate;
       formMessage.value = "";
     })
-    .catch(() => {
+    .catch((error) => {
       waitEstimate.value = null;
+      if (isModuleNotEnabled(error)) {
+        moduleUnavailable.value = true;
+        return;
+      }
       formMessage.value = t("waitingList.errors.estimateFailed");
     });
 });
