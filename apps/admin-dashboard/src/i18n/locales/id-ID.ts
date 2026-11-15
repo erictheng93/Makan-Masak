@@ -1911,6 +1911,75 @@ const idID: Messages = {
     },
   },
   dailyPnl: {
+    mode: { label: "Tampilan", day: "Harian", range: "Rentang" },
+    fees: {
+      payment: "Biaya pembayaran (perkiraan)",
+      platform: "Komisi platform (perkiraan)",
+      notConfigured: "Tarif biaya belum diatur",
+      setRates: "Atur tarif biaya",
+    },
+    labor: {
+      title: "Tenaga kerja (jadwal shift)",
+      missingRate: "{count} shift belum punya upah per jam dan tidak dihitung",
+      expenseNote:
+        "Upah staf terjadwal sudah dihitung otomatis di Tenaga kerja. Gunakan kategori biaya Tenaga kerja hanya untuk upah di luar jadwal agar tidak dihitung ganda.",
+    },
+    rates: {
+      open: "Tarif biaya",
+      title: "Pengaturan tarif biaya",
+      paymentMethods: "Tarif biaya pembayaran",
+      platforms: "Komisi platform pengiriman",
+      save: "Simpan tarif",
+      appliesToPast:
+        "Tarif berlaku juga untuk hari-hari sebelumnya, sehingga laporan lama ikut berubah.",
+      loadFailed: "Tidak dapat memuat tarif biaya. Silakan coba lagi.",
+      saveFailed: "Tidak dapat menyimpan tarif biaya. Silakan coba lagi.",
+      invalid: "Tarif harus antara 0 dan 100, maksimal dua desimal.",
+      saved: "Tarif biaya disimpan.",
+      close: "Tutup",
+      methods: {
+        cash: "Tunai",
+        card: "Kartu Kredit",
+        online: "Pembayaran online",
+        ewallet: "E-wallet",
+        digital_wallet: "Dompet Digital",
+        bank_transfer: "Transfer Bank",
+        other: "Lainnya",
+        split: "Bayar terpisah",
+        line_pay: "LINE Pay",
+        ecpay: "ECPay",
+        newebpay: "NewebPay",
+        stripe: "Stripe",
+      },
+      platformNames: {
+        uber_eats: "Uber Eats",
+        foodpanda: "Foodpanda",
+        grabfood: "GrabFood",
+      },
+    },
+    range: {
+      from: "Dari",
+      to: "Sampai",
+      clamped: "Rentang maksimal {days} hari; tanggal mulai disesuaikan.",
+      loadFailed: "Tidak dapat memuat laporan rentang. Silakan coba lagi.",
+      invalid:
+        "Rentang tanggal tidak valid: maksimal 92 hari dan tidak boleh di masa depan.",
+      totals: "Total rentang",
+      hint: "Pilih satu hari untuk membuka laporan harian.",
+      export: "Ekspor CSV",
+      tableLabel: "Rincian laba rugi harian",
+      columns: {
+        date: "Tanggal",
+        orders: "Pesanan",
+        netRevenue: "Pendapatan bersih",
+        cogs: "HPP",
+        grossProfit: "Laba kotor",
+        fees: "Biaya & komisi",
+        labor: "Tenaga kerja",
+        expenses: "Biaya operasional",
+        netProfit: "Laba/rugi",
+      },
+    },
     title: "Laporan laba rugi harian",
     description:
       "Satu laporan per hari: pendapatan, harga pokok penjualan, dan biaya operasional, supaya terlihat hari ini untung atau rugi.",
@@ -1931,6 +2000,7 @@ const idID: Messages = {
       grossMargin: "Margin kotor",
     },
     expenses: {
+      entryTitle: "Rincian biaya",
       title: "Biaya operasional",
       empty: "Belum ada biaya operasional pada hari ini",
       category: "Kategori",
@@ -1952,6 +2022,7 @@ const idID: Messages = {
       title: "Laba rugi hari ini",
       profit: "Laba",
       loss: "Rugi",
+      even: "Impas",
     },
     warning: {
       missingCost:
@@ -1959,7 +2030,7 @@ const idID: Messages = {
       manageMenu: "Atur harga pokok di manajemen menu",
     },
     costNote:
-      "Harga pokok penjualan memakai harga pokok SAAT INI dari setiap item, jadi mengubah harga pokok juga mengubah laba kotor hari-hari sebelumnya.",
+      "HPP dicatat saat penjualan. Pesanan lama tanpa HPP tercatat memakai HPP item saat ini.",
     toast: {
       added: "Biaya ditambahkan.",
       deleted: "Biaya dihapus.",
@@ -1971,6 +2042,7 @@ const idID: Messages = {
       addFailed: "Tidak dapat menambah biaya. Silakan coba lagi.",
       deleteFailed: "Tidak dapat menghapus biaya. Silakan coba lagi.",
       amountInvalid: "Masukkan jumlah lebih dari 0.",
+      dateInFuture: "Biaya tidak boleh bertanggal di masa depan.",
     },
   },
   reviews: {

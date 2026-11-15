@@ -218,6 +218,7 @@ type PreparedOrderItem = {
   totalPrice: number;
   unitPriceCents: number;
   totalPriceCents: number;
+  unitCostCents: number | null;
   customizations: SelectedCustomizations | undefined;
   notes: string | undefined;
   itemSnapshot: {
@@ -2473,6 +2474,8 @@ export class OrderService extends BaseService {
         totalPrice,
         unitPriceCents,
         totalPriceCents,
+        // Cost at sale time, so a later cost edit cannot rewrite past COGS.
+        unitCostCents: menuItem.costPriceCents ?? null,
         customizations,
         notes: item.notes,
         itemSnapshot: {

@@ -110,6 +110,19 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Settings as any client may see them. Every restaurant payload (public read,
+ * lists, shop-QR lookup, the KV-cached copy) passes through mapToRestaurant,
+ * so this is the one place `pnlRates` — a shop's fee and commission rates,
+ * owner-only via /pnl/rates — is kept out of them.
+ */
+function clientSettings<T extends object>(settings: T | null): T | undefined {
+  if (!settings || typeof settings !== "object") return settings ?? undefined;
+  const copy = { ...settings } as Record<string, unknown>;
+  delete copy.pnlRates;
+  return copy as T;
+}
+
 function settingsRecord(value: unknown): Record<string, unknown> {
   if (typeof value === "string") {
     try {
@@ -920,7 +933,7 @@ export class RestaurantService extends BaseService {
       logoUrl: restaurant.logoUrl ?? undefined,
       bannerUrl: restaurant.bannerUrl ?? undefined,
       imageUrls: restaurant.imageUrls ?? undefined,
-      settings: restaurant.settings ?? undefined,
+      settings: clientSettings(restaurant.settings),
       timezone: restaurant.timezone,
       rating: restaurant.rating ?? undefined,
       reviewCount: restaurant.reviewCount,

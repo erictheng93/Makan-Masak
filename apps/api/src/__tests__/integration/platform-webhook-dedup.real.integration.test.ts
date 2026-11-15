@@ -208,6 +208,29 @@ describe("platform webhook deduplication", () => {
     ]);
   });
 
+  it("snapshots the mapped menu item's cost on the line and keeps it after a cost edit", async () => {
+    const { restaurantId, menuItemId, service } = await setupRestaurant();
+    const setCost = (costPriceCents: number) =>
+      testDb.drizzle
+        .update(menuItems)
+        .set({ costPriceCents })
+        .where(eq(menuItems.id, menuItemId));
+    await setCost(250);
+
+    const orderId = await service.processWebhook(
+      "uber_eats",
+      uberPayload("uber-order-cost"),
+      restaurantId,
+    );
+    await setCost(300);
+
+    const lines = await testDb.drizzle
+      .select({ unitCostCents: orderItems.unitCostCents })
+      .from(orderItems)
+      .where(eq(orderItems.orderId, orderId));
+    expect(lines).toEqual([{ unitCostCents: 250 }]);
+  });
+
   it("maps a redelivered platform order to the same internal order and leaves no orphan", async () => {
     const { restaurantId, service } = await setupRestaurant();
 

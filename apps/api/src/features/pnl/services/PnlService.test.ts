@@ -69,15 +69,23 @@ function addOrder(
     refund?: number;
     paymentStatus?: string;
     status?: string;
-    lines?: { menuItemId: number; quantity: number; status?: string }[];
+    paymentMethod?: string;
+    orderSource?: string;
+    lines?: {
+      menuItemId: number;
+      quantity: number;
+      status?: string;
+      unitCost?: number | null;
+    }[];
   },
 ) {
   const id = `order-${++seq}`;
   sqlite
     .prepare(
       `INSERT INTO orders (id, restaurant_id, status, payment_status, total_amount_cents,
-         discount_amount_cents, refund_amount_cents, tax_amount_cents, service_charge_cents, created_at_ms, updated_at_ms, order_number)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 100, 50, ?, 0, ?)`,
+         discount_amount_cents, refund_amount_cents, tax_amount_cents, service_charge_cents, created_at_ms, updated_at_ms, order_number,
+         payment_method, order_source)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 100, 50, ?, 0, ?, ?, ?)`,
     )
     .run(
       id,
@@ -89,13 +97,21 @@ function addOrder(
       o.refund ?? 0,
       Date.parse(o.createdAt),
       id,
+      o.paymentMethod ?? "cash",
+      o.orderSource ?? "direct",
     );
   for (const line of o.lines ?? []) {
     sqlite
       .prepare(
-        "INSERT INTO order_items (order_id, menu_item_id, quantity, status, created_at_ms, updated_at_ms) VALUES (?, ?, ?, ?, 0, 0)",
+        "INSERT INTO order_items (order_id, menu_item_id, quantity, status, unit_cost_cents, created_at_ms, updated_at_ms) VALUES (?, ?, ?, ?, ?, 0, 0)",
       )
-      .run(id, line.menuItemId, line.quantity, line.status ?? "served");
+      .run(
+        id,
+        line.menuItemId,
+        line.quantity,
+        line.status ?? "served",
+        line.unitCost ?? null,
+      );
   }
 }
 
@@ -186,6 +202,16 @@ describe("PnlService.getDaily", () => {
     expect(result.expenses.byCategory).toHaveLength(2);
     expect(result.expenses.items.map((i) => i.id)).toContain(rent.id);
     expect(result.expenses.items.map((i) => i.id)).not.toContain(gone.id);
+    expect(result.fees).toEqual({
+      paymentFeeCents: 0,
+      platformCommissionCents: 0,
+      configured: false,
+    });
+    expect(result.labor).toEqual({
+      costCents: 0,
+      shifts: 0,
+      shiftsMissingRate: 0,
+    });
     expect(result.netProfitCents).toBe(11100 - 205000);
   });
 
@@ -249,5 +275,365 @@ describe("PnlService expenses", () => {
         .prepare("SELECT deleted_at_ms FROM restaurant_expenses WHERE id = ?")
         .get(e.id),
     ).toEqual({ deleted_at_ms: NOW });
+  });
+});
+
+function addTemplate(
+  sqlite: Database.Database,
+  rate: number | null,
+  multiplier = 1.5,
+) {
+  return Number(
+    sqlite
+      .prepare(
+        "INSERT INTO shift_templates (restaurant_id, name, start_time, end_time, duration_minutes, hourly_rate_cents, overtime_multiplier, created_at_ms, updated_at_ms) VALUES (?, 'shift', '09:00', '17:00', 480, ?, ?, 0, 0)",
+      )
+      .run(SHOP, rate, multiplier).lastInsertRowid,
+  );
+}
+
+/** Shaped like SchedulingService.clockOut leaves a worked shift. */
+function addSchedule(
+  sqlite: Database.Database,
+  s: {
+    workDate: string;
+    templateId: number | null;
+    actualHours: number;
+    overtimeHours?: number;
+    status?: string;
+  },
+) {
+  const worked = (s.status ?? "completed") === "completed";
+  sqlite
+    .prepare(
+      `INSERT INTO employee_schedules (restaurant_id, employee_id, shift_template_id, work_date, start_time, end_time,
+         scheduled_hours, actual_hours, overtime_hours, status, clock_in_time_ms, clock_out_time_ms, created_by, created_at_ms, updated_at_ms)
+       VALUES (?, 'emp-1', ?, ?, '09:00', '17:00', 8, ?, ?, ?, ?, ?, 'u1', 0, 0)`,
+    )
+    .run(
+      SHOP,
+      s.templateId,
+      s.workDate,
+      s.actualHours,
+      s.overtimeHours ?? 0,
+      s.status ?? "completed",
+      worked ? 1 : null,
+      worked ? 2 : null,
+    );
+}
+
+describe("PnlService fees", () => {
+  it("rounds the fee once per day/method/source group to whole TWD, on the post-refund amount", async () => {
+    const sqlite = createDb();
+    seed(sqlite, '{"currency":"TWD","taxRate":5}');
+    const svc = service(sqlite);
+    await svc.setRates(SHOP, {
+      paymentFeeBps: { card: 250 },
+      platformCommissionBps: { uber_eats: 3000 },
+    });
+    // card group: 15500 + 15500 + (10000 - 4000) = 37000
+    for (let i = 0; i < 2; i++) {
+      addOrder(sqlite, {
+        createdAt: "2026-03-10T01:00:00Z",
+        total: 15500,
+        paymentMethod: "card",
+      });
+    }
+    addOrder(sqlite, {
+      createdAt: "2026-03-10T01:00:00Z",
+      total: 10000,
+      refund: 4000,
+      paymentStatus: "partial_refunded",
+      paymentMethod: "card",
+    });
+    addOrder(sqlite, {
+      createdAt: "2026-03-10T01:00:00Z",
+      total: 20000,
+      paymentMethod: "cash",
+      orderSource: "uber_eats",
+    });
+
+    const result = await svc.getDaily(SHOP, "2026-03-10");
+
+    // 2.5% of 37000 = 925 -> NT$9 (without the refund: 1025 -> NT$10)
+    expect(result.fees).toEqual({
+      paymentFeeCents: 900,
+      platformCommissionCents: 6000,
+      configured: true,
+    });
+    expect(result.netProfitCents).toBe(result.grossProfitCents - 6900);
+    // The rates write merged into settings instead of replacing them.
+    const raw = sqlite
+      .prepare("SELECT settings FROM restaurants WHERE id = ?")
+      .get(SHOP) as { settings: string };
+    expect(JSON.parse(raw.settings)).toMatchObject({
+      currency: "TWD",
+      taxRate: 5,
+      pnlRates: { paymentFeeBps: { card: 250, cash: 0 } },
+    });
+  });
+
+  it("keeps sen for MYR", async () => {
+    const sqlite = createDb();
+    seed(sqlite, '{"currency":"MYR"}');
+    const svc = service(sqlite);
+    await svc.setRates(SHOP, {
+      paymentFeeBps: { card: 250 },
+      platformCommissionBps: {},
+    });
+    // 2.5% of 31100 = 777.5 -> 778 sen (TWD would give 800)
+    for (let i = 0; i < 2; i++) {
+      addOrder(sqlite, {
+        createdAt: "2026-03-10T01:00:00Z",
+        total: 15550,
+        paymentMethod: "card",
+      });
+    }
+
+    const result = await svc.getDaily(SHOP, "2026-03-10");
+
+    expect(result.currency).toBe("MYR");
+    expect(result.fees.paymentFeeCents).toBe(778);
+  });
+
+  it("reads unset rates as zero and lists the allowed keys", async () => {
+    const sqlite = createDb();
+    seed(sqlite);
+
+    const rates = await service(sqlite).getRates(SHOP);
+
+    expect(rates.paymentMethods).toEqual(
+      expect.arrayContaining(["cash", "card", "online", "ewallet"]),
+    );
+    expect(rates.platforms).toEqual(["uber_eats", "foodpanda", "grabfood"]);
+    expect(rates.paymentFeeBps.card).toBe(0);
+    expect(rates.platformCommissionBps.foodpanda).toBe(0);
+  });
+});
+
+describe("PnlService payment-method keys", () => {
+  it("offers a method seen on the shop's orders, accepts a rate for it and charges it", async () => {
+    const sqlite = createDb();
+    seed(sqlite);
+    const svc = service(sqlite);
+    addOrder(sqlite, {
+      createdAt: "2026-03-10T01:00:00Z",
+      total: 20000,
+      paymentMethod: "line_pay",
+    });
+    addOrder(sqlite, {
+      createdAt: "2026-03-10T01:00:00Z",
+      total: 1000,
+      paymentMethod: "split",
+    });
+
+    const before = await svc.getRates(SHOP);
+    expect(before.paymentMethods.slice(-2)).toEqual(["line_pay", "split"]);
+    expect(before.paymentMethods[0]).toBe("cash");
+    expect(before.paymentFeeBps.line_pay).toBe(0);
+    await expect(
+      svc.setRates(SHOP, {
+        paymentFeeBps: { bitcoin: 100 },
+        platformCommissionBps: {},
+      }),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR", status: 400 });
+
+    const saved = await svc.setRates(SHOP, {
+      paymentFeeBps: { line_pay: 220 },
+      platformCommissionBps: {},
+    });
+    expect(saved.paymentFeeBps).toMatchObject({ line_pay: 220, split: 0 });
+    expect((await svc.getRates(SHOP)).paymentFeeBps.line_pay).toBe(220);
+
+    // 2.2% of 20000 = 440 -> NT$4
+    const daily = await svc.getDaily(SHOP, "2026-03-10");
+    expect(daily.fees).toMatchObject({
+      paymentFeeCents: 400,
+      configured: true,
+    });
+  });
+});
+
+describe("PnlService labor", () => {
+  it("costs worked shifts from the template rate, overtime at its multiplier", async () => {
+    const sqlite = createDb();
+    seed(sqlite);
+    const day = addTemplate(sqlite, 20000, 2);
+    const odd = addTemplate(sqlite, 15000);
+    const noRate = addTemplate(sqlite, null);
+    // 8 regular + 1 overtime (overtime is inside actual): 8*200 + 1*200*2 = NT$2000
+    addSchedule(sqlite, {
+      workDate: "2026-03-10",
+      templateId: day,
+      actualHours: 9,
+      overtimeHours: 1,
+    });
+    // 2.33h * 15000 = 34950 -> NT$350, rounded per shift
+    addSchedule(sqlite, {
+      workDate: "2026-03-10",
+      templateId: odd,
+      actualHours: 2.33,
+    });
+    addSchedule(sqlite, {
+      workDate: "2026-03-10",
+      templateId: noRate,
+      actualHours: 4,
+    });
+    addSchedule(sqlite, {
+      workDate: "2026-03-10",
+      templateId: null,
+      actualHours: 4,
+    });
+    // not worked / another day: not counted
+    addSchedule(sqlite, {
+      workDate: "2026-03-10",
+      templateId: day,
+      actualHours: 0,
+      status: "scheduled",
+    });
+    addSchedule(sqlite, {
+      workDate: "2026-03-09",
+      templateId: day,
+      actualHours: 8,
+    });
+
+    const result = await service(sqlite).getDaily(SHOP, "2026-03-10");
+
+    expect(result.labor).toEqual({
+      costCents: 235000,
+      shifts: 4,
+      shiftsMissingRate: 2,
+    });
+    expect(result.netProfitCents).toBe(-235000);
+  });
+});
+
+describe("PnlService COGS", () => {
+  it("prefers the sale-time cost snapshot over the current menu cost", async () => {
+    const sqlite = createDb();
+    seed(sqlite);
+    const item = addMenuItem(sqlite, SHOP, 300);
+    const uncosted = addMenuItem(sqlite, SHOP, null);
+    addOrder(sqlite, {
+      createdAt: "2026-03-10T01:00:00Z",
+      total: 9000,
+      lines: [
+        { menuItemId: item, quantity: 2, unitCost: 250 }, // snapshot
+        { menuItemId: item, quantity: 1 }, // pre-0047: current 300
+        { menuItemId: uncosted, quantity: 1, unitCost: 0 }, // a real 0 cost
+        { menuItemId: uncosted, quantity: 1 }, // no cost anywhere
+      ],
+    });
+
+    const result = await service(sqlite).getDaily(SHOP, "2026-03-10");
+
+    expect(result.cogs).toEqual({ totalCents: 800, itemsMissingCost: 1 });
+  });
+});
+
+describe("PnlService.getRange", () => {
+  it("returns every day, each equal to the daily statement, and column totals", async () => {
+    const sqlite = createDb();
+    seed(sqlite);
+    const svc = service(sqlite);
+    await svc.setRates(SHOP, {
+      paymentFeeBps: { card: 300 },
+      platformCommissionBps: { foodpanda: 2500 },
+    });
+    const item = addMenuItem(sqlite, SHOP, 400);
+    // 2026-03-08 00:00:00 Taipei: first instant of the window
+    addOrder(sqlite, {
+      createdAt: "2026-03-07T16:00:00Z",
+      total: 15500,
+      paymentMethod: "card",
+      lines: [{ menuItemId: item, quantity: 3 }],
+    });
+    // 2026-03-07 23:59:59 Taipei: just outside
+    addOrder(sqlite, { createdAt: "2026-03-07T15:59:59Z", total: 99900 });
+    // 2026-03-10 23:59:59 Taipei: last instant of the window
+    addOrder(sqlite, {
+      createdAt: "2026-03-10T15:59:59Z",
+      total: 20000,
+      orderSource: "foodpanda",
+      lines: [{ menuItemId: item, quantity: 1, unitCost: 350 }],
+    });
+    // 2026-03-11 00:00 Taipei: just outside
+    addOrder(sqlite, { createdAt: "2026-03-10T16:00:00Z", total: 88800 });
+    addSchedule(sqlite, {
+      workDate: "2026-03-10",
+      templateId: addTemplate(sqlite, 18000),
+      actualHours: 8,
+    });
+    await svc.createExpense(SHOP, "u1", {
+      date: "2026-03-08",
+      category: "rent",
+      amountCents: 100000,
+    });
+
+    const range = await svc.getRange(SHOP, "2026-03-08", "2026-03-10");
+
+    expect(range.days.map((d) => d.date)).toEqual([
+      "2026-03-08",
+      "2026-03-09",
+      "2026-03-10",
+    ]);
+    expect(range.days[1]).toEqual({
+      date: "2026-03-09",
+      orderCount: 0,
+      netRevenueCents: 0,
+      cogsCents: 0,
+      grossProfitCents: 0,
+      feesCents: 0,
+      laborCents: 0,
+      expensesCents: 0,
+      netProfitCents: 0,
+    });
+    for (const row of range.days) {
+      const daily = await svc.getDaily(SHOP, row.date);
+      expect(row).toEqual({
+        date: daily.date,
+        orderCount: daily.revenue.orderCount,
+        netRevenueCents: daily.revenue.netRevenueCents,
+        cogsCents: daily.cogs.totalCents,
+        grossProfitCents: daily.grossProfitCents,
+        feesCents:
+          daily.fees.paymentFeeCents + daily.fees.platformCommissionCents,
+        laborCents: daily.labor.costCents,
+        expensesCents: daily.expenses.totalCents,
+        netProfitCents: daily.netProfitCents,
+      });
+    }
+    const { date: _date, ...zero } = range.days[1];
+    const sum = { ...zero };
+    for (const row of range.days) {
+      for (const key of Object.keys(sum) as (keyof typeof sum)[]) {
+        sum[key] += row[key];
+      }
+    }
+    expect(range.totals).toEqual(sum);
+    // 15500 + 20000, fee 465 -> 500, commission 5000, labor 144000
+    expect(range.totals).toMatchObject({
+      orderCount: 2,
+      netRevenueCents: 35500,
+      cogsCents: 1550,
+      feesCents: 5500,
+      laborCents: 144000,
+      expensesCents: 100000,
+    });
+  });
+
+  it("rejects from after to, and more than 92 days", async () => {
+    const sqlite = createDb();
+    seed(sqlite);
+    const svc = service(sqlite);
+
+    await expect(
+      svc.getRange(SHOP, "2026-03-10", "2026-03-09"),
+    ).rejects.toMatchObject({ code: "PNL_RANGE_INVALID" });
+    await expect(
+      svc.getRange(SHOP, "2026-01-01", "2026-04-03"), // 93 days
+    ).rejects.toMatchObject({ code: "PNL_RANGE_INVALID" });
+    const ok = await svc.getRange(SHOP, "2026-01-01", "2026-04-02");
+    expect(ok.days).toHaveLength(92);
   });
 });

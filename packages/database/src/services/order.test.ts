@@ -1093,6 +1093,49 @@ describe("OrderService createOrder atomicity", () => {
     expect(item.orderCount).toBe(3);
   });
 
+  it("snapshots the menu item's cost on each line and keeps it after a cost edit", async () => {
+    const service = new OrderService(testDb.bindings.DB, {
+      JWT_SECRET: "test",
+    });
+    const setCost = (costPriceCents: number | null) =>
+      testDb.drizzle
+        .update(menuItems)
+        .set({ costPriceCents })
+        .where(eq(menuItems.id, menuItemId));
+    const storedCosts = async (orderId: string) =>
+      (
+        await testDb.drizzle
+          .select({ unitCostCents: orderItems.unitCostCents })
+          .from(orderItems)
+          .where(eq(orderItems.orderId, orderId))
+          .orderBy(orderItems.id)
+      ).map((row) => row.unitCostCents);
+
+    await setCost(400);
+    const order = await service.createOrder({
+      restaurantId,
+      items: [{ menuItemId, quantity: 1 }],
+    });
+    expect(await storedCosts(order.id)).toEqual([400]);
+    // Cost is the owner's margin data; the mapped order never carries it.
+    expect(order.items?.[0]).not.toHaveProperty("unitCostCents");
+
+    await setCost(450);
+    const updated = await service.addItemsToOrder(order.id, [
+      { menuItemId, quantity: 1 },
+    ]);
+    expect(await storedCosts(order.id)).toEqual([400, 450]);
+    expect(updated.items?.[1]).not.toHaveProperty("unitCostCents");
+
+    await setCost(null);
+    const unknownCost = await service.createOrder({
+      restaurantId,
+      items: [{ menuItemId, quantity: 1 }],
+    });
+    expect(await storedCosts(unknownCost.id)).toEqual([null]);
+    expect(await storedCosts(order.id)).toEqual([400, 450]);
+  });
+
   it("rejects added items after payment completes without closing the order", async () => {
     const service = new OrderService(testDb.bindings.DB, {
       JWT_SECRET: "test",
